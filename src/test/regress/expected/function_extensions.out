@@ -319,7 +319,7 @@ explain select * from srf_testtab, test_srf();
          ->  Seq Scan on srf_testtab  (cost=0.00..1.01 rows=1 width=6)
          ->  Function Scan on test_srf  (cost=0.25..10.25 rows=334 width=32)
  Planning time: 0.220 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
@@ -332,7 +332,7 @@ explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
          ->  Hash  (cost=1.01..1.01 rows=1 width=6)
                ->  Seq Scan on srf_testtab  (cost=0.00..1.01 rows=1 width=6)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 -- Test ALTER FUNCTION, and that \df displays the EXECUTE ON correctly

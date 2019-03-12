@@ -17,7 +17,7 @@ m/^WARNING:  gpmon:.*Connection refused.*/
 
 m/^ Optimizer status:.*/
 m/^ Optimizer: PQO version .*/
-m/^ Optimizer: legacy query optimizer/
+m/^ Optimizer: Postgres query optimizer/
 m/^ Settings:.*/
 
 # There are a number of NOTICE and HINT messages around table distribution,

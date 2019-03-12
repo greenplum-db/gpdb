@@ -54,7 +54,7 @@ and usename='xxx' and datname='xxx';
    ->  Hash
          ->  Seq Scan on pg_database d
                Filter: (datname = 'xxx'::name)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 -- Planner test: constant folding in subplan testexpr  produces no error

@@ -1202,7 +1202,7 @@ explain select cn, count(*) over (order by dt range between '2 day'::interval pr
                Sort Key: dt
                ->  Seq Scan on tbl5246_sale  (cost=0.00..3.12 rows=4 width=8)
  Settings:  enable_nestloop=on; optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 drop table qp_misc_jiras.tbl5246_sale;
@@ -1662,7 +1662,7 @@ explain select * from qp_misc_jiras.tbl6833_anl; -- should not hit cdbRelSize();
    ->  Append  (cost=10000000000.00..20000000002.00 rows=1 width=12)
          ->  Seq Scan on tbl6833_anl_1_prt_bb_1  (cost=10000000000.00..10000000001.00 rows=1 width=12)
          ->  Seq Scan on tbl6833_anl_1_prt_bb_2  (cost=10000000000.00..10000000001.00 rows=1 width=12)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_anl%'; -- should show relpages = 1.0
@@ -1684,7 +1684,7 @@ explain select * from qp_misc_jiras.tbl6833_vac; -- should not hit cdbRelSize();
    ->  Append  (cost=10000000000.00..20000000002.00 rows=1 width=12)
          ->  Seq Scan on tbl6833_vac_1_prt_bb_1  (cost=10000000000.00..10000000001.00 rows=1 width=12)
          ->  Seq Scan on tbl6833_vac_1_prt_bb_2  (cost=10000000000.00..10000000001.00 rows=1 width=12)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_vac%'; -- should show relpages = 1.0
@@ -2369,7 +2369,7 @@ explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping 
                                        ->  Sort  (cost=10000008018.50..10000008233.75 rows=28700 width=4)
                                              Sort Key: tbl7553_test.i, tbl7553_test.i
                                              ->  Seq Scan on tbl7553_test  (cost=10000000000.00..10000000961.00 rows=28700 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
@@ -2397,7 +2397,7 @@ explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping 
                                              Sort Key: tbl7553_test.j, tbl7553_test.j
                                              ->  Seq Scan on tbl7553_test  (cost=0.00..9.61 rows=287 width=4)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (16 rows)
 
 select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
@@ -3021,7 +3021,7 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..2683.00 rows=28700 width=4)
                                        Hash Key: t2.j
                                        ->  Seq Scan on tbl5994_test t2  (cost=0.00..961.00 rows=28700 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
@@ -3041,7 +3041,7 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                  ->  Seq Scan on tbl5994_test t1  (cost=0.00..961.00 rows=28700 width=8)
                                  ->  Hash  (cost=961.00..961.00 rows=28700 width=4)
                                        ->  Seq Scan on tbl5994_test t2  (cost=0.00..961.00 rows=28700 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 set enable_groupagg=on;
@@ -3063,7 +3063,7 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..2683.00 rows=28700 width=4)
                                  Hash Key: t2.j
                                  ->  Seq Scan on tbl5994_test t2  (cost=0.00..961.00 rows=28700 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
@@ -3083,7 +3083,7 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                  ->  Seq Scan on tbl5994_test t1  (cost=0.00..961.00 rows=28700 width=8)
                                  ->  Hash  (cost=961.00..961.00 rows=28700 width=4)
                                        ->  Seq Scan on tbl5994_test t2  (cost=0.00..961.00 rows=28700 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 drop table qp_misc_jiras.tbl5994_test;
@@ -3116,7 +3116,7 @@ explain analyze select reltablespace  from pg_class where oid = (select reltoast
  Statement statistics:
    Memory used: 1000K bytes
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
  Total runtime: 0.068 ms
 (15 rows)
 
@@ -3283,7 +3283,7 @@ group by 1, 2;
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..0.04 rows=1 width=32)
                                  ->  Seq Scan on bar_6325 c  (cost=0.00..0.00 rows=1 width=32)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (12 rows)
 
 -- start_ignore
@@ -3416,7 +3416,7 @@ explain select x, "median"(y) from qp_misc_jiras.tbl9613 group by x; -- this sho
                Sort Key: x
                ->  Seq Scan on tbl9613  (cost=0.00..5.96 rows=166 width=36)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select x, "median"(y) from qp_misc_jiras.tbl9613 group by x; -- this should be allowed
@@ -3435,7 +3435,7 @@ explain select x, median2(y) from qp_misc_jiras.tbl9613 group by x; -- this shou
                Sort Key: x
                ->  Seq Scan on tbl9613  (cost=0.00..5.96 rows=166 width=36)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select x, median2(y) from qp_misc_jiras.tbl9613 group by x; -- this should be disallowed
@@ -3545,7 +3545,7 @@ else 'Unidentify' end
                      Group By: CASE WHEN ir_voice_sms_and_data.ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[]) THEN 'MO'::text ELSE 'foo'::text END, CASE WHEN ir_voice_sms_and_data.ir_call_type_group_code::text = ANY ('{H,VH,PCB}'::text[]) THEN 'Thailland'::text ELSE 'Unidentify'::text END
                      ->  Seq Scan on ir_voice_sms_and_data  (cost=0.00..0.01 rows=1 width=54)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (10 rows)
 
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
@@ -3738,7 +3738,7 @@ explain select  * from qp_misc_jiras.test_heap where ctid='(0,1)' and gp_segment
          TID Cond: ctid = '(0,1)'::tid
          Filter: gp_segment_id >= 0
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 select  * from qp_misc_jiras.test_heap where ctid='(0,1)' and gp_segment_id >= 0;
@@ -3761,7 +3761,7 @@ explain select  * from qp_misc_jiras.test_ao where ctid='(33554432,1)' and gp_se
    ->  Seq Scan on test_ao  (cost=0.00..13.91 rows=1 width=8)
          Filter: gp_segment_id >= 0 AND ctid = '(33554432,1)'::tid
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 select  * from qp_misc_jiras.test_ao where ctid='(33554432,1)' and gp_segment_id >= 0;
@@ -3784,7 +3784,7 @@ explain select  * from qp_misc_jiras.test_co where ctid='(33554432,1)' and gp_se
    ->  Seq Scan on test_co  (cost=0.00..13.91 rows=1 width=8)
          Filter: gp_segment_id >= 0 AND ctid = '(33554432,1)'::tid
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 select  * from qp_misc_jiras.test_co where ctid='(33554432,1)' and gp_segment_id >= 0;
@@ -3922,7 +3922,7 @@ explain select * from qp_misc_jiras.r;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..13.00 rows=1000 width=8)
    ->  Seq Scan on r  (cost=0.00..13.00 rows=334 width=8)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (4 rows)
 
 explain analyze select * from qp_misc_jiras.r,qp_misc_jiras.s where r.a=s.b;
@@ -3952,7 +3952,7 @@ explain analyze select * from qp_misc_jiras.r,qp_misc_jiras.s where r.a=s.b;
  Statement statistics:
    Memory used: 1945600K bytes
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
  Total runtime: 127.268 ms
 (31 rows)
 
@@ -4527,7 +4527,7 @@ explain select 1 as t1 where 1 <= ALL (select x from tbl_z);
      ->  Materialize  (cost=10000000000.00..10000001544.50 rows=32100 width=4)
            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000001063.00 rows=96300 width=4)
                  ->  Seq Scan on tbl_z  (cost=10000000000.00..10000001063.00 rows=32100 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 set gp_enable_relsize_collection = on;
@@ -4541,7 +4541,7 @@ explain select 1 as t1 where 1 <= ALL (select x from tbl_z);
      ->  Materialize  (cost=10000000000.00..10000000015.44 rows=321 width=4)
            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000010.63 rows=963 width=4)
                  ->  Seq Scan on tbl_z  (cost=10000000000.00..10000000010.63 rows=321 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 drop table if exists tbl_z;

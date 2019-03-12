@@ -412,7 +412,7 @@ drop table t1, t2, t3;
 -- for further improvement (e.g. referring subplan code to do broadcast
 -- for base rel if needed, which needs much effort and does not seem to
 -- be deserved given we will probably refactor related code for the lateral
--- support in the near future). For the query and guc settings below, legacy
+-- support in the near future). For the query and guc settings below, Postgres
 -- planner can not generate a plan.
 set enable_nestloop = 1;
 set enable_material = 0;

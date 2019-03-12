@@ -3141,7 +3141,7 @@ explain analyze select reltablespace  from pg_class where oid = (select reltoast
  Statement statistics:
    Memory used: 1000K bytes
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
  Total runtime: 0.085 ms
 (15 rows)
 

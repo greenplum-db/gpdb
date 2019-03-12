@@ -438,7 +438,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
          Sort Key: id
          ->  Index Scan using propertyisnullindex on gisttable1  (cost=0.00..701.27 rows=1 width=51)
                Index Cond: (property IS NULL)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 --end_ignore
@@ -485,7 +485,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
          Sort Key: id
          ->  Index Scan using propertyisnullindex on gisttable1  (cost=0.00..701.27 rows=1 width=36)
                Index Cond: (property IS NULL)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 --end_ignore
@@ -1107,7 +1107,7 @@ SELECT owner, property FROM GistTable1
                Recheck Cond: (property IS NULL)
                ->  Bitmap Index Scan on propertyisnullindex
                      Index Cond: (property IS NULL)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 -- ----------------------------------------------------------------------
@@ -1733,7 +1733,7 @@ SELECT owner, property FROM GistTable1
                Recheck Cond: (property IS NULL)
                ->  Bitmap Index Scan on propertyisnullindex
                      Index Cond: (property IS NULL)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 -- ----------------------------------------------------------------------
@@ -2359,7 +2359,7 @@ SELECT owner, property FROM GistTable1
                Recheck Cond: (property IS NULL)
                ->  Bitmap Index Scan on propertyisnullindex
                      Index Cond: (property IS NULL)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 -- ----------------------------------------------------------------------
@@ -2985,7 +2985,7 @@ SELECT owner, property FROM GistTable1
                Recheck Cond: (property IS NULL)
                ->  Bitmap Index Scan on propertyisnullindex
                      Index Cond: (property IS NULL)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 -- ----------------------------------------------------------------------

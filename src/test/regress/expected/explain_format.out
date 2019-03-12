@@ -43,7 +43,7 @@ EXPLAIN SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT 
                                  ->  Seq Scan on boxes  (cost=0.00..879.00 rows=25967 width=12)
          ->  Hash  (cost=596.00..596.00 rows=16534 width=36)
                ->  Seq Scan on box_locations  (cost=0.00..596.00 rows=16534 width=36)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 -- explain_processing_on
@@ -72,7 +72,7 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
    (slice2)    Executor memory: 2128K bytes avg x 3 workers, 2128K bytes max (seg0).
    (slice3)    Executor memory: 1104K bytes avg x 3 workers, 1104K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Execution time: 29.929 ms
 (22 rows)
 
@@ -232,7 +232,7 @@ QUERY PLAN
                 Plan Rows: 49600
                 Plan Width: 36
   Settings: 
-    Optimizer: "legacy query optimizer"
+    Optimizer: "Postgres query optimizer"
 (1 row)
 --- Check Explain Analyze YAML output that include the slices information
 -- explain_processing_off
@@ -416,7 +416,7 @@ QUERY PLAN
   Statement statistics: 
     Memory used: 128000
   Settings: 
-    Optimizer: "legacy query optimizer"
+    Optimizer: "Postgres query optimizer"
   Execution Time: 8.490
 (1 row)
 -- explain_processing_on
@@ -442,7 +442,7 @@ QUERY PLAN
       "Alias": "generate_series"
     },
     "Settings": {
-      "Optimizer": "legacy query optimizer"
+      "Optimizer": "Postgres query optimizer"
     }
   }
 ]
@@ -457,7 +457,7 @@ QUERY PLAN
       <Alias>generate_series</Alias>
     </Plan>
     <Settings>
-      <Optimizer>legacy query optimizer</Optimizer>
+      <Optimizer>Postgres query optimizer</Optimizer>
     </Settings>
   </Query>
 </explain>

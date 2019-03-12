@@ -2045,7 +2045,7 @@ no_unique_path:			/* failure exit */
  *                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..8.00 rows=100 width=18)
  *                                        ->  Seq Scan on s  (cost=0.00..4.00 rows=34 width=18)
  *  Settings:  optimizer=off
- *  Optimizer status: legacy query optimizer
+ *  Optimizer status: Postgres query optimizer
  * (14 rows)
  *
  *

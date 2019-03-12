@@ -478,7 +478,7 @@ explain (costs off) select * from nv_parent where d between '2011-08-01' and '20
                Filter: ((d >= '08-01-2011'::date) AND (d <= '08-31-2011'::date))
          ->  Seq Scan on nv_child_2011
                Filter: ((d >= '08-01-2011'::date) AND (d <= '08-31-2011'::date))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 create table nv_child_2009 (check (d between '2009-01-01'::date and '2009-12-31'::date)) inherits (nv_parent);
@@ -493,7 +493,7 @@ explain (costs off) select * from nv_parent where d between '2011-08-01'::date a
                Filter: ((d >= '08-01-2011'::date) AND (d <= '08-31-2011'::date))
          ->  Seq Scan on nv_child_2011
                Filter: ((d >= '08-01-2011'::date) AND (d <= '08-31-2011'::date))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (costs off) select * from nv_parent where d between '2009-08-01'::date and '2009-08-31'::date;
@@ -509,7 +509,7 @@ explain (costs off) select * from nv_parent where d between '2009-08-01'::date a
                Filter: ((d >= '08-01-2009'::date) AND (d <= '08-31-2009'::date))
          ->  Seq Scan on nv_child_2009
                Filter: ((d >= '08-01-2009'::date) AND (d <= '08-31-2009'::date))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 -- after validation, the constraint should be used
@@ -525,7 +525,7 @@ explain (costs off) select * from nv_parent where d between '2009-08-01'::date a
                Filter: ((d >= '08-01-2009'::date) AND (d <= '08-31-2009'::date))
          ->  Seq Scan on nv_child_2009
                Filter: ((d >= '08-01-2009'::date) AND (d <= '08-31-2009'::date))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 -- add an inherited NOT VALID constraint
@@ -2230,7 +2230,7 @@ explain (verbose, costs off) select * from at_view_2;
    Output: bt.id, bt.stuff, (to_json(ROW(bt.id, bt.stuff)))
    ->  Seq Scan on public.at_base_table bt
          Output: bt.id, bt.stuff, to_json(ROW(bt.id, bt.stuff))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: constraint_exclusion=partition
 (6 rows)
 
@@ -2274,7 +2274,7 @@ explain (verbose, costs off) select * from at_view_2;
    Output: bt.id, bt.stuff, (to_json(ROW(bt.id, bt.stuff, NULL)))
    ->  Seq Scan on public.at_base_table bt
          Output: bt.id, bt.stuff, to_json(ROW(bt.id, bt.stuff, NULL))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: constraint_exclusion=partition
 (6 rows)
 

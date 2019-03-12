@@ -1126,7 +1126,7 @@
   <topic id="cpu_index_tuple_cost">
     <title>cpu_index_tuple_cost</title>
     <body>
-      <p>For the legacy query optimizer (planner), sets the estimate of the cost of processing each
+      <p>For the Postgres query optimizer (planner), sets the estimate of the cost of processing each
         index row during an index scan. This is measured as a fraction of the cost of a sequential
         page fetch.</p>
       <table id="cpu_index_tuple_cost_table">
@@ -1155,7 +1155,7 @@
   <topic id="cpu_operator_cost">
     <title>cpu_operator_cost</title>
     <body>
-      <p>For the legacy query optimizer (planner), sets the estimate of the cost of processing each
+      <p>For the Postgres query optimizer (planner), sets the estimate of the cost of processing each
         operator in a WHERE clause. This is measured as a fraction of the cost of a sequential page
         fetch. </p>
       <table id="cpu_operator_cost_table">
@@ -1184,7 +1184,7 @@
   <topic id="cpu_tuple_cost">
     <title>cpu_tuple_cost</title>
     <body>
-      <p>For the legacy query optimizer (planner), Sets the estimate of the cost of processing each
+      <p>For the Postgres query optimizer (planner), Sets the estimate of the cost of processing each
         row during a query. This is measured as a fraction of the cost of a sequential page
         fetch.</p>
       <table id="cpu_tuple_cost_table">
@@ -1213,8 +1213,8 @@
   <topic id="cursor_tuple_fraction">
     <title>cursor_tuple_fraction</title>
     <body>
-      <p>Tells the legacy query optimizer (planner) how many rows are expected to be fetched in a
-        cursor query, thereby allowing the legacy optimizer to use this information to optimize the
+      <p>Tells the Postgres query optimizer (planner) how many rows are expected to be fetched in a
+        cursor query, thereby allowing the Postgres optimizer to use this information to optimize the
         query plan. The default of 1 means all rows will be fetched. </p>
       <table id="cursor_tuple_fraction_table">
         <tgroup cols="3">
@@ -1575,7 +1575,7 @@
       <p>Sets the default statistics sampling target (the number of values that are stored in the
         list of common values) for table columns that have not had a column-specific target set via
           <codeph>ALTER TABLE SET STATISTICS</codeph>. Larger values may improve the quality of the
-        legacy query optimizer (planner) estimates. </p>
+        Postgres query optimizer (planner) estimates. </p>
       <table id="default_statistics_target_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -1792,7 +1792,7 @@
     <title>effective_cache_size</title>
     <body>
       <p>Sets the assumption about the effective size of the disk cache that is available to a
-        single query for the legacy query optimizer (planner). This is factored into estimates of
+        single query for the Postgres query optimizer (planner). This is factored into estimates of
         the cost of using an index; a higher value makes it more likely index scans will be used, a
         lower value makes it more likely sequential scans will be used. This parameter has no effect
         on the size of shared memory allocated by a Greenplum server instance, nor does it reserve
@@ -1823,7 +1823,7 @@
   <topic id="enable_bitmapscan">
     <title>enable_bitmapscan</title>
     <body>
-      <p>Enables or disables the use of bitmap-scan plan types by the legacy query optimizer
+      <p>Enables or disables the use of bitmap-scan plan types by the Postgres query optimizer
         (planner). Note that this is different than a Bitmap Index Scan. A Bitmap Scan means that
         indexes will be dynamically converted to bitmaps in memory when appropriate, giving faster
         index performance on complex queries against very large tables. It is used when there are
@@ -1855,7 +1855,7 @@
   <topic id="enable_groupagg">
     <title>enable_groupagg</title>
     <body>
-      <p>Enables or disables the use of group aggregation plan types by the legacy query optimizer
+      <p>Enables or disables the use of group aggregation plan types by the Postgres query optimizer
         (planner).</p>
       <table id="enable_groupagg_table">
         <tgroup cols="3">
@@ -1883,7 +1883,7 @@
   <topic id="enable_hashagg">
     <title>enable_hashagg</title>
     <body>
-      <p>Enables or disables the use of hash aggregation plan types by the legacy query optimizer
+      <p>Enables or disables the use of hash aggregation plan types by the Postgres query optimizer
         (planner). </p>
       <table id="enable_hashagg_table">
         <tgroup cols="3">
@@ -1911,7 +1911,7 @@
   <topic id="enable_hashjoin">
     <title>enable_hashjoin</title>
     <body>
-      <p>Enables or disables the use of hash-join plan types by the legacy query optimizer
+      <p>Enables or disables the use of hash-join plan types by the Postgres query optimizer
         (planner).</p>
       <table id="enable_hashjoin_table">
         <tgroup cols="3">
@@ -1939,7 +1939,7 @@
   <topic id="enable_indexscan">
     <title>enable_indexscan</title>
     <body>
-      <p>Enables or disables the use of index-scan plan types by the legacy query optimizer
+      <p>Enables or disables the use of index-scan plan types by the Postgres query optimizer
         (planner).</p>
       <table id="enable_indexscan_table">
         <tgroup cols="3">
@@ -1967,7 +1967,7 @@
   <topic id="enable_mergejoin">
     <title>enable_mergejoin</title>
     <body>
-      <p>Enables or disables the use of merge-join plan types by the legacy query optimizer
+      <p>Enables or disables the use of merge-join plan types by the Postgres query optimizer
         (planner). Merge join is based on the idea of sorting the left- and right-hand tables into
         order and then scanning them in parallel. So, both data types must be capable of being fully
         ordered, and the join operator must be one that can only succeed for pairs of values that
@@ -1999,9 +1999,9 @@
   <topic id="enable_nestloop">
     <title>enable_nestloop</title>
     <body>
-      <p>Enables or disables the use of nested-loop join plans by the legacy query optimizer
+      <p>Enables or disables the use of nested-loop join plans by the Postgres query optimizer
         (planner). It's not possible to suppress nested-loop joins entirely, but turning this
-        variable off discourages the legacy optimizer from using one if there are other methods
+        variable off discourages the Postgres optimizer from using one if there are other methods
         available. </p>
       <table id="enable_nestloop_table">
         <tgroup cols="3">
@@ -2029,9 +2029,9 @@
   <topic id="enable_seqscan">
     <title>enable_seqscan</title>
     <body>
-      <p>Enables or disables the use of sequential scan plan types by the legacy query optimizer
+      <p>Enables or disables the use of sequential scan plan types by the Postgres query optimizer
         (planner). It's not possible to suppress sequential scans entirely, but turning this
-        variable off discourages the legacy optimizer from using one if there are other methods
+        variable off discourages the Postgres optimizer from using one if there are other methods
         available.</p>
       <table id="enable_seqscan_table">
         <tgroup cols="3">
@@ -2059,9 +2059,9 @@
   <topic id="enable_sort">
     <title>enable_sort</title>
     <body>
-      <p>Enables or disables the use of explicit sort steps by the legacy query optimizer (planner).
+      <p>Enables or disables the use of explicit sort steps by the Postgres query optimizer (planner).
         It's not possible to suppress explicit sorts entirely, but turning this variable off
-        discourages the legacy optimizer from using one if there are other methods available.</p>
+        discourages the Postgres optimizer from using one if there are other methods available.</p>
       <table id="enable_sort_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -2088,7 +2088,7 @@
   <topic id="enable_tidscan">
     <title>enable_tidscan</title>
     <body>
-      <p>Enables or disables the use of tuple identifier (TID) scan plan types by the legacy query
+      <p>Enables or disables the use of tuple identifier (TID) scan plan types by the Postgres query
         optimizer (planner).</p>
       <table id="enable_tidscan_table">
         <tgroup cols="3">
@@ -2205,7 +2205,7 @@
   <topic id="from_collapse_limit">
     <title>from_collapse_limit</title>
     <body>
-      <p>The legacy query optimizer (planner) will merge sub-queries into upper queries if the
+      <p>The Postgres query optimizer (planner) will merge sub-queries into upper queries if the
         resulting FROM list would have no more than this many items. Smaller values reduce planning
         time but may yield inferior query plans.</p>
       <table id="from_collapse_limit_table">
@@ -2639,15 +2639,15 @@
         </ul></p>
       <p>For a <cmdname>CREATE TABLE AS</cmdname> command that does not contain a distribution
           clause:<ul id="ul_ejv_m1b_kr">
-          <li>If the legacy query optimizer creates the table, and the value of the parameter is
+          <li>If the Postgres query optimizer creates the table, and the value of the parameter is
               <codeph>off</codeph>, the table distribution policy is determined based on the
             command.</li>
-          <li>If the legacy query optimizer creates the table, and the value of the parameter is
+          <li>If the Postgres query optimizer creates the table, and the value of the parameter is
               <codeph>on</codeph>, the table distribution policy is random.</li>
           <li>If GPORCA creates the table, the table distribution policy is random. The parameter
             value has no affect. </li>
         </ul></p>
-      <p>For information about the legacy query optimizer and GPORCA, see "Querying Data" in the
+      <p>For information about the Postgres query optimizer and GPORCA, see "Querying Data" in the
           <cite>Greenplum Database Administrator Guide</cite>. </p>
       <table id="table_hh5_kgp_kq">
         <tgroup cols="3">
@@ -2863,7 +2863,7 @@
     <title>gp_enable_adaptive_nestloop</title>
     <body>
       <p>Enables the use a new type of join node called "Adaptive Nestloop" at query execution time
-        by the legacy query optimizer (planner). This causes the legacy optimizer to favor a
+        by the Postgres query optimizer (planner). This causes the Postgres optimizer to favor a
         hash-join over a nested-loop join if the number of rows on the outer side of the join
         exceeds a precalculated threshold. This parameter improves performance of index operations,
         which previously favored slower nested-loop joins. </p>
@@ -3023,7 +3023,7 @@
   <topic id="gp_enable_fast_sri">
     <title>gp_enable_fast_sri</title>
     <body>
-      <p>When set to <codeph>on</codeph>, the legacy query optimizer (planner) plans single row
+      <p>When set to <codeph>on</codeph>, the Postgres query optimizer (planner) plans single row
         inserts so that they are sent directly to the correct segment instance (no motion operation
         required). This significantly improves performance of single-row-insert statements.</p>
       <table id="gp_enable_fast_sri_table">
@@ -3119,7 +3119,7 @@
     <body>
       <p>Enables or disables gathering data to a single node to compute distinct-qualified
         aggregates on grouping extension queries. When this parameter and
-          <codeph>gp_enable_groupext_distinct_pruning</codeph> are both enabled, the legacy query
+          <codeph>gp_enable_groupext_distinct_pruning</codeph> are both enabled, the Postgres query
         optimizer (planner) uses the cheaper plan.</p>
       <table id="gp_enable_groupext_distinct_gather_table">
         <tgroup cols="3">
@@ -3149,7 +3149,7 @@
     <body>
       <p>Enables or disables three-phase aggregation and join to compute distinct-qualified
         aggregates on grouping extension queries. Usually, enabling this parameter generates a
-        cheaper query plan that the legacy query optimizer (planner) will use in preference to
+        cheaper query plan that the Postgres query optimizer (planner) will use in preference to
         existing plan.</p>
       <table id="gp_enable_groupext_distinct_pruning_table">
         <tgroup cols="3">
@@ -3177,7 +3177,7 @@
   <topic id="gp_enable_multiphase_agg">
     <title>gp_enable_multiphase_agg</title>
     <body>
-      <p>Enables or disables the use of two or three-stage parallel aggregation plans legacy query
+      <p>Enables or disables the use of two or three-stage parallel aggregation plans Postgres query
         optimizer (planner). This approach applies to any subquery with aggregation. If
           <codeph>gp_enable_multiphase_agg</codeph> is off, then<codeph>
           gp_enable_agg_distinct</codeph> and <codeph>gp_enable_agg_distinct_pruning</codeph> are
@@ -3208,7 +3208,7 @@
   <topic id="gp_enable_predicate_propagation">
     <title>gp_enable_predicate_propagation</title>
     <body>
-      <p>When enabled, the legacy query optimizer (planner) applies query predicates to both table
+      <p>When enabled, the Postgres query optimizer (planner) applies query predicates to both table
         expressions in cases where the tables are joined on their distribution key column(s).
         Filtering both tables prior to doing the join (when possible) is more efficient.</p>
       <table id="gp_enable_predicate_propagation_table">
@@ -3303,7 +3303,7 @@
   <topic id="gp_enable_relsize_collection">
     <title>gp_enable_relsize_collection</title>
     <body>
-      <p>Enables GPORCA and the legacy query optimizer (planner) to use the estimated size of a
+      <p>Enables GPORCA and the Postgres query optimizer (planner) to use the estimated size of a
         table (<codeph>pg_relation_size</codeph> function) if there are no statistics for the table.
         By default, GPORCA and the planner use a default value to estimate the number of rows if
         statistics are not available. The default behavior improves query optimization time and
@@ -4342,7 +4342,7 @@
   <topic id="gp_motion_cost_per_row">
     <title>gp_motion_cost_per_row</title>
     <body>
-      <p>Sets the legacy query optimizer (planner) cost estimate for a Motion operator to transfer a
+      <p>Sets the Postgres query optimizer (planner) cost estimate for a Motion operator to transfer a
         row from one segment to another, measured as a fraction of the cost of a sequential page
         fetch. If 0, then the value used is two times the value of <i>cpu_tuple_cost</i>.</p>
       <table id="gp_motion_cost_per_row_table">
@@ -4882,9 +4882,9 @@
   <topic id="gp_segments_for_planner">
     <title>gp_segments_for_planner</title>
     <body>
-      <p>Sets the number of primary segment instances for the legacy query optimizer (planner) to
+      <p>Sets the number of primary segment instances for the Postgres query optimizer (planner) to
         assume in its cost and size estimates. If 0, then the value used is the actual number of
-        primary segments. This variable affects the legacy optimizer's estimates of the number of
+        primary segments. This variable affects the Postgres optimizer's estimates of the number of
         rows handled by each sending and receiving process in Motion operators.</p>
       <table id="gp_segments_for_planner_table">
         <tgroup cols="3">
@@ -5057,7 +5057,7 @@
     <title>gp_statistics_pullup_from_child_partition</title>
     <body>
       <p>Enables the use of statistics from child tables when planning queries on the parent table
-        by the legacy query optimizer (planner).</p>
+        by the Postgres query optimizer (planner).</p>
       <table id="gp_statistics_pullup_from_child_partition_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -5084,7 +5084,7 @@
   <topic id="gp_statistics_use_fkeys">
     <title>gp_statistics_use_fkeys</title>
     <body>
-      <p>When enabled, allows the legacy query optimizer (planner) to use foreign key information
+      <p>When enabled, allows the Postgres query optimizer (planner) to use foreign key information
         stored in the system catalog to optimize joins between foreign keys and primary keys. </p>
       <table id="gp_statistics_use_fkeys_table">
         <tgroup cols="3">
@@ -5523,7 +5523,7 @@
   <topic id="join_collapse_limit">
     <title>join_collapse_limit</title>
     <body>
-      <p>The legacy query optimizer (planner) will rewrite explicit inner <codeph>JOIN</codeph>
+      <p>The Postgres query optimizer (planner) will rewrite explicit inner <codeph>JOIN</codeph>
         constructs into lists of <codeph>FROM</codeph> items whenever a list of no more than this
         many items in total would result. By default, this variable is set the same as
           <i>from_collapse_limit</i>, which is appropriate for most uses. Setting it to 1 prevents
@@ -6255,7 +6255,7 @@
   <topic id="log_planner_stats">
     <title>log_planner_stats</title>
     <body>
-      <p>For each query, write performance statistics of the legacy query optimizer (planner) to the
+      <p>For each query, write performance statistics of the Postgres query optimizer (planner) to the
         server log. This is a crude profiling instrument. Cannot be enabled together with
           <i>log_statement_stats</i>.</p>
       <table id="log_planner_stats_table">
@@ -6951,13 +6951,13 @@
     <title>optimizer</title>
     <body>
       <p>Enables or disables GPORCA when running SQL queries. The default is <codeph>on</codeph>. If
-        you disable GPORCA, Greenplum Database uses only the legacy query optimizer. </p>
-      <p>GPORCA co-exists with the legacy query optimizer. With GPORCA enabled, Greenplum Database
+        you disable GPORCA, Greenplum Database uses only the Postgres query optimizer. </p>
+      <p>GPORCA co-exists with the Postgres query optimizer. With GPORCA enabled, Greenplum Database
         uses GPORCA to generate an execution plan for a query when possible. If GPORCA cannot be
-        used, then the legacy query optimizer is used. </p>
+        used, then the Postgres query optimizer is used. </p>
       <p>The <cmdname>optimizer</cmdname> parameter can be set for a database system, an individual
         database, or a session or query.</p>
-      <p>For information about the legacy query optimizer and GPORCA, see <xref
+      <p>For information about the Postgres query optimizer and GPORCA, see <xref
           href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator
         Guide</cite></ph>.</p>
@@ -6990,7 +6990,7 @@
       <p>For a partitioned table, controls whether the <codeph>ROOTPARTITION</codeph> keyword is
         required to collect root partition statistics when the <cmdname>ANALYZE</cmdname> command is
         run on the table. GPORCA uses the root partition statistics when generating a query plan.
-        The legacy query optimizer does not use these statistics. </p>
+        The Postgres query optimizer does not use these statistics. </p>
       <p>The default setting for the parameter is <codeph>on</codeph>, the <codeph>ANALYZE</codeph>
         command can collect root partition statistics without the <codeph>ROOTPARTITION</codeph>
         keyword. Root partition statistics are collected when you run <codeph>ANALYZE</codeph> on
@@ -7003,7 +7003,7 @@
         parameter should also be <codeph>on</codeph>. For information about collecting table
         statistics on partitioned tables, see <codeph><xref href="../sql_commands/ANALYZE.xml"
           /></codeph>.</p>
-      <p>For information about the legacy query optimizer and GPORCA, see <xref
+      <p>For information about the Postgres query optimizer and GPORCA, see <xref
           href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator
         Guide</cite></ph>.</p>
@@ -7179,7 +7179,7 @@
     <body>
       <p dir="ltr">When GPORCA is enabled (the default), this parameter allows GPORCA to execute
         catalog queries that run only on the Greenplum Database master. For the default value
-          <codeph>off</codeph>, only the legacy query optimizer can execute catalog queries that run
+          <codeph>off</codeph>, only the Postgres query optimizer can execute catalog queries that run
         only on the Greenplum Database master.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
@@ -7988,7 +7988,7 @@
   <topic id="random_page_cost">
     <title>random_page_cost</title>
     <body>
-      <p>Sets the estimate of the cost of a nonsequentially fetched disk page for the legacy query
+      <p>Sets the estimate of the cost of a nonsequentially fetched disk page for the Postgres query
         optimizer (planner). This is measured as a multiple of the cost of a sequential page fetch.
         A higher value makes it more likely a sequential scan will be used, a lower value makes it
         more likely an index scan will be used.</p>
@@ -8282,7 +8282,7 @@
   <topic id="seq_page_cost">
     <title>seq_page_cost</title>
     <body>
-      <p>For the legacy query optimizer (planner), sets the estimate of the cost of a disk page
+      <p>For the Postgres query optimizer (planner), sets the estimate of the cost of a disk page
         fetch that is part of a series of sequential fetches. </p>
       <table id="seq_page_cost_table">
         <tgroup cols="3">

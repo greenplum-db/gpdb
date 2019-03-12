@@ -1599,7 +1599,7 @@ EXPLAIN SELECT count(unnest(foo)) FROM tbl_agg_srf;
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1.07 rows=1 width=8)
          ->  Aggregate  (cost=1.02..1.03 rows=1 width=8)
                ->  Seq Scan on tbl_agg_srf  (cost=0.00..1.01 rows=1 width=33)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 SELECT count(unnest(foo)) FROM tbl_agg_srf;

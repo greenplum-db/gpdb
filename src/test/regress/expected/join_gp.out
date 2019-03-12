@@ -165,7 +165,7 @@ explain select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
                      ->  Seq Scan on t2  (cost=0.00..4.75 rows=1 width=12)
                            Filter: ((100 <= x) AND (y <= x) AND (y = 100))
  Settings:  optimizer=off; optimizer_segments=2
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (11 rows)
 
 reset optimizer_segments;
@@ -321,7 +321,7 @@ explain select a from foo where a<1 and a>1 and not exists (select c from bar wh
 ------------------------------------------
  Result  (cost=0.00..0.01 rows=1 width=0)
    One-Time Filter: false
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (3 rows)
 
 select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
@@ -506,7 +506,7 @@ explain (costs off) select X.a from input_table X full join (select a from input
          ->  Sort
                Sort Key: input_table.a
                ->  Seq Scan on input_table
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 -- Cleanup
@@ -537,7 +537,7 @@ explain select * from t5370 a , t5370_2 b where a.name=b.name;
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..33.00 rows=334 width=7)
                      Hash Key: b.name
                      ->  Seq Scan on t5370_2 b  (cost=0.00..13.00 rows=334 width=7)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 drop table t5370;
@@ -566,7 +566,7 @@ explain (costs off) select * from t6215 a full join t6215 b on true;
          ->  Seq Scan on t6215 a
          ->  Materialize
                ->  Seq Scan on t6215 b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 select * from t6215 a full join t6215 b on true;
@@ -629,7 +629,7 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
                      ->  Hash
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                  ->  Seq Scan on t3
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a IS NULL OR (t1.c = t3.c));
@@ -652,7 +652,7 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
                      ->  Seq Scan on t2
                      ->  Hash
                            ->  Seq Scan on t3
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a = t3.a);
@@ -676,7 +676,7 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
                      ->  Hash
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                  ->  Seq Scan on t3
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a is distinct from t3.a);
@@ -701,7 +701,7 @@ explain select * from t3 join (select t1.a t1a, t1.b t1b, t1.c t1c, t2.a t2a, t2
                      ->  Seq Scan on t1  (cost=0.00..13.00 rows=334 width=12)
                      ->  Hash  (cost=2.02..2.02 rows=1 width=12)
                            ->  Seq Scan on t3  (cost=0.00..2.02 rows=1 width=12)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 select * from t3 join (select t1.a t1a, t1.b t1b, t1.c t1c, t2.a t2a, t2.b t2b, t2.c t2c from t1 left join t2 on (t1.a = t2.a)) t on (t1a = t3.a) WHERE (t2a IS NULL OR (t1c = t3.a));
@@ -743,7 +743,7 @@ explain select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 lef
                                                    ->  Hash  (cost=2.10..2.10 rows=2 width=12)
                                                          ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.10 rows=2 width=12)
                                                                ->  Seq Scan on t3 t3_1  (cost=0.00..2.02 rows=1 width=12)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (27 rows)
 
 select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t2 on t1.a = t2.a) tt 
@@ -768,7 +768,7 @@ drop table t1, t2, t3;
 -- for further improvement (e.g. referring subplan code to do broadcast
 -- for base rel if needed, which needs much effort and does not seem to
 -- be deserved given we will probably refactor related code for the lateral
--- support in the near future). For the query and guc settings below, legacy
+-- support in the near future). For the query and guc settings below, Postgres
 -- planner can not generate a plan.
 set enable_nestloop = 1;
 set enable_material = 0;
@@ -785,7 +785,7 @@ explain select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;
                      ->  Materialize  (cost=0.16..18479.11 rows=10000 width=0)
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.16..18329.11 rows=10000 width=0)
                                  ->  Index Only Scan using tenk2_unique2 on tenk2  (cost=0.16..17929.11 rows=3334 width=0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;

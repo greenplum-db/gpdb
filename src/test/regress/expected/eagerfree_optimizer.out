@@ -1876,7 +1876,7 @@ explain analyze select *, exists(select 1 from pg_class where oid = c.oid) as du
                  Heap Fetches: 1252
    (slice0)    Executor memory: 382K bytes.
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 1.681 ms
 (13 rows)
 

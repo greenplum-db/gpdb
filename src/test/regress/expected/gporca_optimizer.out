@@ -9717,7 +9717,7 @@ DETAIL:  No plan has been computed for required properties
                Filter: i = 2 AND t = '2'::text
          ->  Seq Scan on bm_dyn_test_onepart_1_prt_part5  (cost=0.00..1.01 rows=1 width=10)
                Filter: i = 2 AND t = '2'::text
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 select * from orca.bm_dyn_test_onepart where i=2 and t='2';
@@ -10365,7 +10365,7 @@ DETAIL:  DXL-to-PlStmt Translation: ScalarArrayOpExpr condition on index scan no
    ->  Seq Scan on btree_test  (cost=0.00..2.25 rows=1 width=4)
          Filter: a = ANY ('{1,47}'::integer[])
  Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
@@ -10377,7 +10377,7 @@ DETAIL:  DXL-to-PlStmt Translation: ScalarArrayOpExpr condition on index scan no
    ->  Seq Scan on btree_test  (cost=0.00..2.25 rows=1 width=4)
          Filter: a = ANY ('{2,47}'::integer[])
  Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
@@ -10389,7 +10389,7 @@ DETAIL:  DXL-to-PlStmt Translation: ScalarArrayOpExpr condition on index scan no
    ->  Seq Scan on btree_test  (cost=0.00..2.25 rows=1 width=4)
          Filter: a = ANY ('{1,2}'::integer[])
  Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
@@ -10401,7 +10401,7 @@ DETAIL:  DXL-to-PlStmt Translation: ScalarArrayOpExpr condition on index scan no
    ->  Seq Scan on btree_test  (cost=0.00..2.38 rows=1 width=4)
          Filter: a = ANY ('{1,2,47}'::integer[])
  Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 -- Test Bitmap index scan with in list
@@ -10514,7 +10514,7 @@ LOG:  Planner produced plan :0
                                  ->  Sort  (cost=8552.10..8767.35 rows=28700 width=8)
                                        Sort Key: a, b
                                        ->  Shared Scan (share slice:id 2:0)  (cost=1391.50..1494.60 rows=28700 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (31 rows)
 
 reset client_min_messages;

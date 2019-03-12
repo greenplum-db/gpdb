@@ -714,7 +714,7 @@ explain select count(*) from mpp7638 where a =1;
                            Filter: (a = 1)
                      ->  Seq Scan on mpp7638_1_prt_9  (cost=0.00..988.75 rows=24 width=0)
                            Filter: a = 1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (24 rows)
 
 alter table mpp7638 set distributed by (a, b, c);
@@ -930,7 +930,7 @@ explain select * from (select * from mpp7620 where key=200) ss where key =200;
    ->  Seq Scan on mpp7620  (cost=0.00..1.01 rows=1 width=10)
          Filter: (key = 200)
  Planning time: 0.436 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
@@ -939,7 +939,7 @@ explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=20
  Insert on zoompp7620  (cost=0.00..1.01 rows=1 width=4)
    ->  Seq Scan on mpp7620  (cost=0.00..1.01 rows=1 width=4)
          Filter: key = 200
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (4 rows)
 
 explain select key from mpp7620 where mpp7620.key=200;
@@ -949,7 +949,7 @@ explain select key from mpp7620 where mpp7620.key=200;
    ->  Seq Scan on mpp7620  (cost=0.00..1.01 rows=1 width=4)
          Filter: (key = 200)
  Planning time: 0.321 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 --start_ignore
@@ -1001,7 +1001,7 @@ explain select * from table_a where a0=3;
    ->  Seq Scan on table_a  (cost=0.00..1.01 rows=1 width=16)
          Filter: (a0 = 3)
  Planning time: 0.457 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 explain select a0 from table_a where a0 in (select max(a1) from table_a);
@@ -1018,7 +1018,7 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a);
                            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.01..1.06 rows=1 width=4)
                                  ->  Aggregate  (cost=1.01..1.02 rows=1 width=4)
                                        ->  Seq Scan on table_a table_a_1  (cost=0.00..1.01 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 select a0 from table_a where a0 in (select max(a1) from table_a);
@@ -1058,7 +1058,7 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a where a0
                                  ->  Aggregate  (cost=1.01..1.02 rows=1 width=4)
                                        ->  Seq Scan on table_a table_a_1  (cost=0.00..1.01 rows=1 width=4)
                                              Filter: a0 = 1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 --start_ignore

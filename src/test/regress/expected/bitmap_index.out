@@ -614,7 +614,7 @@ explain select * from unlogged_test where c1 = 100;
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..200.45 rows=1 width=4)
    ->  Index Scan using unlogged_test_idx on unlogged_test  (cost=0.00..200.45 rows=1 width=4)
          Index Cond: c1 = 100
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 select * from unlogged_test where c1 = 100;

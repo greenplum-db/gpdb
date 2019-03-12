@@ -78,7 +78,7 @@ explain update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..8.00 rows=100 width=18)
                                        ->  Seq Scan on s  (cost=0.00..4.00 rows=34 width=18)
  Planning time: 1.342 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
@@ -98,7 +98,7 @@ explain delete from s where exists (select 1 from r where s.a = r.b);
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..8.00 rows=100 width=14)
                                        ->  Seq Scan on s  (cost=0.00..4.00 rows=34 width=14)
  Planning time: 1.130 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 delete from s where exists (select 1 from r where s.a = r.b);

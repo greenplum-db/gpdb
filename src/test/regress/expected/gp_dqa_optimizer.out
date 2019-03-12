@@ -95,7 +95,7 @@ explain (costs off) select count(distinct d), count(distinct dt) from dqa_t1;
                            ->  HashAggregate
                                  Group Key: share0_ref2.dt
                                  ->  Shared Scan (share slice:id 2:0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 select count(distinct d), count(distinct c), count(distinct dt) from dqa_t1;
@@ -134,7 +134,7 @@ explain (costs off) select count(distinct d), count(distinct c), count(distinct 
                            ->  HashAggregate
                                  Group Key: share0_ref3.dt
                                  ->  Shared Scan (share slice:id 4:0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 select count(distinct d), count(distinct dt) from dqa_t1 group by c;
@@ -179,7 +179,7 @@ explain (costs off) select count(distinct d), count(distinct dt) from dqa_t1 gro
                                        ->  Shared Scan (share slice:id 2:0)
                                              ->  Materialize
                                                    ->  Seq Scan on dqa_t1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (25 rows)
 
 select count(distinct d), count(distinct dt) from dqa_t1 group by d;
@@ -233,7 +233,7 @@ explain (costs off) select count(distinct d), count(distinct dt) from dqa_t1 gro
                                  ->  Shared Scan (share slice:id 1:0)
                                        ->  Materialize
                                              ->  Seq Scan on dqa_t1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (21 rows)
 
 select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d;
@@ -502,7 +502,7 @@ explain (costs off) select count(distinct c), count(distinct dt) from dqa_t1;
                            ->  HashAggregate
                                  Group Key: share0_ref2.dt
                                  ->  Shared Scan (share slice:id 3:0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (22 rows)
 
 select count(distinct c), count(distinct dt), i from dqa_t1 group by i;
@@ -549,7 +549,7 @@ explain (costs off) select count(distinct c), count(distinct dt), i from dqa_t1 
                                        ->  Shared Scan (share slice:id 2:0)
                                              ->  Materialize
                                                    ->  Seq Scan on dqa_t1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (25 rows)
 
 select count(distinct i), count(distinct c), d from dqa_t1 group by d;
@@ -603,7 +603,7 @@ explain (costs off) select count(distinct i), count(distinct c), d from dqa_t1 g
                                  ->  Shared Scan (share slice:id 1:0)
                                        ->  Materialize
                                              ->  Seq Scan on dqa_t1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (21 rows)
 
 select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where dqa_t1.c = dqa_t2.c;

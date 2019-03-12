@@ -305,7 +305,7 @@ explain SELECT * from information_schema.key_column_usage;
    ->  Hash  (cost=49.33..49.33 rows=1111 width=70)
          ->  Seq Scan on pg_attribute a  (cost=0.00..49.33 rows=3333 width=70)
                Filter: (NOT attisdropped)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (25 rows)
 
 -- github issue 5794.

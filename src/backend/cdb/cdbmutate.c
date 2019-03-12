@@ -1425,7 +1425,7 @@ process_targetlist_for_splitupdate(Relation resultRel, List *targetlist,
 }
 
 /*
- * In legacy planner, we add a SplitUpdate node at top so that updating on distribution
+ * In Postgres planner, we add a SplitUpdate node at top so that updating on distribution
  * columns could be handled. The SplitUpdate will split each update into delete + insert.
  *
  * There are several important points should be highlighted:

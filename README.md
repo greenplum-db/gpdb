@@ -100,7 +100,7 @@ Once build and started, run `psql` and check the GPOPT (e.g. GPORCA) version:
 select gp_opt_version();
 ```
 
-To turn GPORCA off and use legacy planner for query optimization:
+To turn GPORCA off and use Postgres planner for query optimization:
 ```
 set optimizer=off;
 ```

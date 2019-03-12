@@ -986,7 +986,7 @@ drop table b;
 -- different levels -- so this is legal again...
 drop table if exists a;
 
--- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to legacy query optimizer
+-- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to Postgres query optimizer
 --       for queries with partition elimination over FULL OUTER JOIN
 --       between partitioned tables.
 
@@ -1012,7 +1012,7 @@ partition by list (p2)
 -- end_ignore
 
 -- VERIFY
--- expect GPOPT fall back to legacy query optimizer
+-- expect GPOPT fall back to Postgres query optimizer
 -- since GPOPT don't support partition elimination through full outer joins
 select * from s1 full outer join s2 on s1.d1 = s2.d2 and s1.p1 = s2.p2 where s1.p1 = 1;
 

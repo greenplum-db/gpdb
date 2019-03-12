@@ -276,7 +276,7 @@ explain select array(select x from csq_m1); -- no initplan
  Result  (cost=1.00..1.01 rows=1 width=0)
    InitPlan 1 (returns $0)
      ->  Seq Scan on csq_m1  (cost=0.00..1.00 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 select array(select x from csq_m1); -- {1}
@@ -293,7 +293,7 @@ explain select array(select x from csq_d1); -- initplan
      ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
            ->  Seq Scan on csq_d1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 select array(select x from csq_d1); -- {1}
@@ -1490,7 +1490,7 @@ EXPLAIN SELECT '' AS three, f1, f2
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.36 rows=7 width=12)
                            ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..3.08 rows=3 width=12)
                                  Filter: f3 IS NOT NULL
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 ANALYZE tenk1;
@@ -1514,7 +1514,7 @@ WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..387.00 rows=3334 width=244)
                      Hash Key: b.unique2
                      ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=244)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 -- Correlated subselects
@@ -1597,7 +1597,7 @@ EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
                            Hash Key: subselect_tbl_1.f2
                            ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..3.08 rows=3 width=12)
                                  Filter: f3 IS NOT NULL
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 --

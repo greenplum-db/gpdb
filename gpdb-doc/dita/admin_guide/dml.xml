@@ -362,7 +362,7 @@
             an update operation and a later transaction executes an update or delete and the query
             plan contains a motion operator.</li>
           <li>Concurrent update transactions on the same distribution key of a heap table that are
-            executed by the Greenplum Database legacy query optimizer.</li>
+            executed by the Greenplum Database Postgres query optimizer.</li>
           <li>Concurrent update transactions on the same row of a hash table that are executed by
             the GPORCA optimizer.</li>
         </ul></p>

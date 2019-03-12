@@ -373,10 +373,10 @@
     <abstract>These parameters control aspects of SQL query processing such as query operators and
       operator settings and statistics sampling.</abstract>
     <topic id="topic22" xml:lang="en">
-      <title>Legacy Query Optimizer Operator Control Parameters</title>
+      <title>Postgres Query Optimizer Operator Control Parameters</title>
       <body>
-        <p>The following parameters control the types of plan operations the legacy query optimizer
-          can use. Enable or disable plan operations to force the legacy optimizer to choose a
+        <p>The following parameters control the types of plan operations the Postgres query optimizer
+          can use. Enable or disable plan operations to force the Postgres optimizer to choose a
           different plan. This is useful for testing and comparing query performance using different
           plan types.</p>
         <simpletable id="kh158625" frame="none">
@@ -470,7 +470,7 @@
       </body>
     </topic>
     <topic id="topic23" xml:lang="en">
-      <title>Legacy Query Optimizer Costing Parameters</title>
+      <title>Postgres Query Optimizer Costing Parameters</title>
       <body>
         <note type="warning">Do not adjust these query costing parameters. They are tuned to reflect
           Greenplum Database hardware configurations and typical workloads. All of these parameters
@@ -635,7 +635,7 @@
       </body>
     </topic>
     <topic id="topic28" xml:lang="en">
-      <title>Other Legacy Query Optimizer Configuration Parameters</title>
+      <title>Other Postgres Query Optimizer Configuration Parameters</title>
       <body>
         <simpletable id="d1e746" frame="none">
           <strow>

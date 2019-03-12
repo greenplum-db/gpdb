@@ -93,7 +93,7 @@ WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
          ->  Seq Scan on mpp22263  (cost=0.00..219.00 rows=3967 width=244)
          ->  Hash  (cost=0.03..0.03 rows=1 width=36)
                ->  Values Scan on "*VALUES*"  (cost=0.00..0.03 rows=1 width=36)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (7 rows)
 
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
@@ -145,7 +145,7 @@ explain (costs off) select count(*) over (partition by g) from generate_series(1
    ->  Sort
          Sort Key: g
          ->  Function Scan on generate_series g
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 --
@@ -159,33 +159,33 @@ explain (costs off) select count(*) over (partition by g) from generate_series(1
 CREATE EXTERNAL WEB TABLE dummy_ext_tab (x text) EXECUTE 'echo foo' FORMAT 'text';
 -- External Table Scan
 explain (format json, costs off) SELECT * FROM dummy_ext_tab;
-                 QUERY PLAN                  
----------------------------------------------
- [                                          +
-   {                                        +
-     "Plan": {                              +
-       "Node Type": "Gather Motion",        +
-       "Senders": 3,                        +
-       "Receivers": 1,                      +
-       "Slice": 1,                          +
-       "Segments": 3,                       +
-       "Gang Type": "primary reader",       +
-       "Plans": [                           +
-         {                                  +
-           "Node Type": "External Scan",    +
-           "Parent Relationship": "Outer",  +
-           "Slice": 1,                      +
-           "Segments": 3,                   +
-           "Gang Type": "primary reader",   +
-           "Relation Name": "dummy_ext_tab",+
-           "Alias": "dummy_ext_tab"         +
-         }                                  +
-       ]                                    +
-     },                                     +
-     "Settings": {                          +
-       "Optimizer": "legacy query optimizer"+
-     }                                      +
-   }                                        +
+                   QUERY PLAN                  
+-----------------------------------------------
+ [                                            +
+   {                                          +
+     "Plan": {                                +
+       "Node Type": "Gather Motion",          +
+       "Senders": 3,                          +
+       "Receivers": 1,                        +
+       "Slice": 1,                            +
+       "Segments": 3,                         +
+       "Gang Type": "primary reader",         +
+       "Plans": [                             +
+         {                                    +
+           "Node Type": "External Scan",      +
+           "Parent Relationship": "Outer",    +
+           "Slice": 1,                        +
+           "Segments": 3,                     +
+           "Gang Type": "primary reader",     +
+           "Relation Name": "dummy_ext_tab",  +
+           "Alias": "dummy_ext_tab"           +
+         }                                    +
+       ]                                      +
+     },                                       +
+     "Settings": {                            +
+       "Optimizer": "Postgres query optimizer"+
+     }                                        +
+   }                                          +
  ]
 (1 row)
 
@@ -194,25 +194,25 @@ CREATE TEMP TABLE dummy_aotab (x int4) WITH (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 explain (format yaml, costs off) SELECT * FROM dummy_aotab;
-               QUERY PLAN                
------------------------------------------
- - Plan:                                +
-     Node Type: "Gather Motion"         +
-     Senders: 3                         +
-     Receivers: 1                       +
-     Slice: 1                           +
-     Segments: 3                        +
-     Gang Type: "primary reader"        +
-     Plans:                             +
-       - Node Type: "Seq Scan"          +
-         Parent Relationship: "Outer"   +
-         Slice: 1                       +
-         Segments: 3                    +
-         Gang Type: "primary reader"    +
-         Relation Name: "dummy_aotab"   +
-         Alias: "dummy_aotab"           +
-   Settings:                            +
-     Optimizer: "legacy query optimizer"
+                 QUERY PLAN                
+-------------------------------------------
+ - Plan:                                  +
+     Node Type: "Gather Motion"           +
+     Senders: 3                           +
+     Receivers: 1                         +
+     Slice: 1                             +
+     Segments: 3                          +
+     Gang Type: "primary reader"          +
+     Plans:                               +
+       - Node Type: "Seq Scan"            +
+         Parent Relationship: "Outer"     +
+         Slice: 1                         +
+         Segments: 3                      +
+         Gang Type: "primary reader"      +
+         Relation Name: "dummy_aotab"     +
+         Alias: "dummy_aotab"             +
+   Settings:                              +
+     Optimizer: "Postgres query optimizer"
 (1 row)
 
 -- DML node (with ORCA)
@@ -240,7 +240,7 @@ explain (format xml, costs off) insert into dummy_aotab values (1);
        </Plans>                                             +
      </Plan>                                                +
      <Settings>                                             +
-       <Optimizer>legacy query optimizer</Optimizer>        +
+       <Optimizer>Postgres query optimizer</Optimizer>      +
      </Settings>                                            +
    </Query>                                                 +
  </explain>
@@ -274,7 +274,7 @@ explain SELECT * from information_schema.key_column_usage;
    ->  Hash  (cost=49.33..49.33 rows=1111 width=70)
          ->  Seq Scan on pg_attribute a  (cost=0.00..49.33 rows=3333 width=70)
                Filter: (NOT attisdropped)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (25 rows)
 
 -- github issue 5794.
@@ -288,7 +288,7 @@ explain analyze SELECT * FROM explaintest;
    (slice0)    Executor memory: 322K bytes.
    (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 2.600 ms
 (8 rows)
 

@@ -274,7 +274,7 @@ CREATE OPERATOR CLASS abs_int_hash_ops FOR TYPE int4
   OPERATOR 1 |=|,
   FUNCTION 1 abshashfunc(int);</codeblock></p>
             <p>Also, create less than and greater than operators, and a btree operator class for
-              them. We don't need them for our queries, but the Greenplum Database legacy query
+              them. We don't need them for our queries, but the Greenplum Database Postgres query
               planner will not consider co-location of joins without
               them.<codeblock>CREATE FUNCTION abslt(int, int) RETURNS BOOL AS
 $$
@@ -330,7 +330,7 @@ INSERT INTO btab VALUES (-1), (0), (1), (2);</codeblock></p>
                -&gt;  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: atab.a
                      -&gt;  Seq Scan on atab
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 </codeblock></p>
           </section>

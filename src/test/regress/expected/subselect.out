@@ -652,7 +652,7 @@ explain (verbose, costs off)
    InitPlan 2 (returns $1)
      ->  Result
            Output: 'regression'::name
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (verbose, costs off)
@@ -667,7 +667,7 @@ explain (verbose, costs off)
          InitPlan 1 (returns $0)
            ->  Result
                  Output: random()
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 explain (verbose, costs off)
@@ -685,7 +685,7 @@ explain (verbose, costs off)
      ->  Result
            Output: 'regression'::name
            One-Time Filter: ("*VALUES*".column1 = "*VALUES*".column1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 explain (verbose, costs off)
@@ -701,7 +701,7 @@ explain (verbose, costs off)
            ->  Result
                  Output: random()
                  One-Time Filter: ("*VALUES*".column1 = "*VALUES*".column1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 --
@@ -781,7 +781,7 @@ select * from int4_tbl where
                                    Output: a.unique1
                                    ->  Seq Scan on public.tenk1 a
                                          Output: a.unique1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (28 rows)
 
@@ -817,7 +817,7 @@ select * from int4_tbl o where (f1, f1) in
                            Output: i.f1, (generate_series(1, 2) / 10)
                            ->  Seq Scan on public.int4_tbl i
                                  Output: i.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 select * from int4_tbl o where (f1, f1) in

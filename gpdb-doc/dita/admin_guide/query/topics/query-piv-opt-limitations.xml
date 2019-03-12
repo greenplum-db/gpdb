@@ -4,7 +4,7 @@
   <title>GPORCA Limitations</title>
   <abstract>
     <shortdesc>There are limitations in Greenplum Database when using the default GPORCA optimizer.
-      GPORCA and the legacy query optimizer currently coexist in Greenplum Database because GPORCA
+      GPORCA and the Postgres query optimizer currently coexist in Greenplum Database because GPORCA
       does not support all Greenplum Database features. </shortdesc>
   </abstract>
   <body>
@@ -60,7 +60,7 @@
             overhead due to GPORCA enhancements for determining an optimal query execution
             plan.</li>
           <li><cmdname>ANALYZE</cmdname> - For GPORCA, the <cmdname>ANALYZE</cmdname> command
-            generates root partition statistics for partitioned tables. For the legacy optimizer,
+            generates root partition statistics for partitioned tables. For the Postgres optimizer,
             these statistics are not generated.</li>
           <li>DML operations - For GPORCA, DML enhancements including the support of updates on
             partition and distribution keys might require additional overhead. </li>

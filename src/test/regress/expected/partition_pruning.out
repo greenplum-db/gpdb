@@ -120,7 +120,7 @@ EXPLAIN EXECUTE prep_prune;
    ->  Append  (cost=10000000000.00..10000000003.12 rows=1 width=12)
          ->  Seq Scan on pt_lt_tab_1_prt_part1  (cost=10000000000.00..10000000003.12 rows=1 width=12)
                Filter: col2 = 10::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- Also test that Params are const-evaluated.
@@ -132,7 +132,7 @@ EXPLAIN EXECUTE prep_prune_param(10);
    ->  Append  (cost=10000000000.00..10000000003.12 rows=1 width=12)
          ->  Seq Scan on pt_lt_tab_1_prt_part1  (cost=10000000000.00..10000000003.12 rows=1 width=12)
                Filter: col2 = 10::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- @description B-tree single index key = non-partitioning key
@@ -174,7 +174,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: (col1 < 10)
                            ->  Index Scan using pt_lt_tab_1_prt_part5_col1_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
                                  Index Cond: (col1 < 10)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (20 rows)
 
 SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
@@ -202,7 +202,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: (col1 > 50)
                            ->  Index Scan using pt_lt_tab_1_prt_part5_col1_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
                                  Index Cond: (col1 > 50)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 SELECT * FROM pt_lt_tab WHERE col1 = 25 ORDER BY col2,col3 LIMIT 5;
@@ -231,7 +231,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 = 25 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: (col1 = 25)
                            ->  Index Scan using pt_lt_tab_1_prt_part5_col1_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
                                  Index Cond: (col1 = 25)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 SELECT * FROM pt_lt_tab WHERE col1 <> 10 ORDER BY col2,col3 LIMIT 5;
@@ -264,7 +264,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 <> 10 ORDER BY col2,col3 LIMIT 5;
                                  Filter: col1 <> 10
                            ->  Seq Scan on pt_lt_tab_1_prt_part5  (cost=10000000000.00..10000000003.12 rows=3 width=12)
                                  Filter: col1 <> 10
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 SELECT * FROM pt_lt_tab WHERE col1 > 10 AND col1 < 50 ORDER BY col2,col3 LIMIT 5;
@@ -305,7 +305,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 10 AND col1 < 50 ORDER BY col2,col3
                                  Recheck Cond: ((col1 > 10) AND (col1 < 50))
                                  ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_idx  (cost=0.00..10000.24 rows=4 width=0)
                                        Index Cond: ((col1 > 10) AND (col1 < 50))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (26 rows)
 
 SELECT * FROM pt_lt_tab WHERE col1 > 10 OR col1 = 25 ORDER BY col2,col3 LIMIT 5;
@@ -363,7 +363,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 10 OR col1 = 25 ORDER BY col2,col3 
                                              Index Cond: (col1 > 10)
                                        ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_idx  (cost=0.00..1000.14 rows=1 width=0)
                                              Index Cond: (col1 = 25)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (43 rows)
 
 SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 LIMIT 5;
@@ -400,7 +400,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 
                                  Index Cond: ((col1 >= 10) AND (col1 <= 25))
                            ->  Index Scan using pt_lt_tab_1_prt_part5_col1_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
                                  Index Cond: ((col1 >= 10) AND (col1 <= 25))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (22 rows)
 
 DROP INDEX idx1;
@@ -435,7 +435,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 < 10 ORDER BY col2,col3 LIMIT 5;
                                  Recheck Cond: (col2 < 10::numeric)
                                  ->  Bitmap Index Scan on pt_lt_tab_1_prt_part1_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
                                        Index Cond: (col2 < 10::numeric)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 > 50 ORDER BY col2,col3 LIMIT 5;
@@ -451,7 +451,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 50 ORDER BY col2,col3 LIMIT 5;
          Sort Key: pt_lt_tab.col2, pt_lt_tab.col3
          ->  Result  (cost=0.00..0.01 rows=1 width=0)
                One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
@@ -472,7 +472,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
                      ->  Append  (cost=0.14..1100.15 rows=1 width=12)
                            ->  Index Scan using pt_lt_tab_1_prt_part3_col2_idx on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
                                  Index Cond: (col2 = 25::numeric)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
@@ -505,7 +505,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
                                  Filter: col2 <> 10::numeric
                            ->  Seq Scan on pt_lt_tab_1_prt_part5  (cost=10000000000.00..10000000003.12 rows=3 width=12)
                                  Filter: col2 <> 10::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col2 < 50 ORDER BY col2,col3 LIMIT 5;
@@ -544,7 +544,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col2 < 50 ORDER BY col2,col3
                                  Recheck Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
                                  ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
                                        Index Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (24 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 > 10 OR col2 = 50 ORDER BY col2,col3 LIMIT 5;
@@ -595,7 +595,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 OR col2 = 50 ORDER BY col2,col3 
                                              Index Cond: (col2 > 10::numeric)
                                        ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
                                              Index Cond: (col2 = 50::numeric)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (36 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 LIMIT 5;
@@ -636,7 +636,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
                                  Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                                  ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
                                        Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (26 rows)
 
 DROP INDEX idx1;
@@ -679,7 +679,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: (col1 < 10)
                            ->  Index Scan using pt_lt_tab_1_prt_part5_col1_col2_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
                                  Index Cond: (col1 < 10)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (20 rows)
 
 SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
@@ -707,7 +707,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: (col1 > 50)
                            ->  Index Scan using pt_lt_tab_1_prt_part5_col1_col2_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
                                  Index Cond: (col1 > 50)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
@@ -728,7 +728,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
                      ->  Append  (cost=0.14..10100.22 rows=1 width=12)
                            ->  Index Scan using pt_lt_tab_1_prt_part3_col1_col2_idx on pt_lt_tab_1_prt_part3  (cost=0.14..10100.22 rows=1 width=12)
                                  Index Cond: (col2 = 25::numeric)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
@@ -761,7 +761,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
                                  Filter: col2 <> 10::numeric
                            ->  Seq Scan on pt_lt_tab_1_prt_part5  (cost=10000000000.00..10000000003.12 rows=3 width=12)
                                  Filter: col2 <> 10::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col1 = 10 ORDER BY col2,col3 LIMIT 5;
@@ -787,7 +787,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col1 = 10 ORDER BY col2,col3
                                  Index Cond: ((col1 = 10) AND (col2 > 10::numeric))
                            ->  Index Scan using pt_lt_tab_1_prt_part5_col1_col2_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
                                  Index Cond: ((col1 = 10) AND (col2 > 10::numeric))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 > 10.00 OR col1 = 50 ORDER BY col2,col3 LIMIT 5;
@@ -845,7 +845,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10.00 OR col1 = 50 ORDER BY col2,co
                                              Index Cond: (col2 > 10.00)
                                        ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
                                              Index Cond: (col1 = 50)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (43 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 LIMIT 5;
@@ -886,7 +886,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
                                  Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                                  ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
                                        Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (26 rows)
 
 DROP INDEX idx1;
@@ -928,7 +928,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: col1 < 10
                            ->  Index Scan using pt_lt_tab_df_1_prt_def_col2_col1_key on pt_lt_tab_df_1_prt_def  (cost=0.14..10100.24 rows=1 width=12)
                                  Index Cond: col1 < 10
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (22 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
@@ -965,7 +965,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
                                  Recheck Cond: col1 > 50
                                  ->  Bitmap Index Scan on pt_lt_tab_df_1_prt_def_col2_col1_key  (cost=0.00..10000.23 rows=4 width=0)
                                        Index Cond: col1 > 50
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (22 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
@@ -988,7 +988,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: col2 = 25::numeric
                            ->  Index Scan using pt_lt_tab_df_1_prt_def_col2_col1_key on pt_lt_tab_df_1_prt_def  (cost=0.14..900.15 rows=1 width=12)
                                  Index Cond: col2 = 25::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
@@ -1023,7 +1023,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
                                  Filter: col2 <> 10::numeric
                            ->  Seq Scan on pt_lt_tab_df_1_prt_def  (cost=10000000000.00..10000000003.16 rows=5 width=12)
                                  Filter: col2 <> 10::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (20 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 > 10 AND col1 = 10 ORDER BY col2,col3 LIMIT 5;
@@ -1051,7 +1051,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 10 AND col1 = 10 ORDER BY col2,c
                                  Index Cond: col2 > 10::numeric AND col1 = 10
                            ->  Index Scan using pt_lt_tab_df_1_prt_def_col2_col1_key on pt_lt_tab_df_1_prt_def  (cost=0.14..7800.25 rows=1 width=12)
                                  Index Cond: col2 > 10::numeric AND col1 = 10
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 > 10.00 OR col1 = 50 ORDER BY col2,col3 LIMIT 5;
@@ -1116,7 +1116,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 10.00 OR col1 = 50 ORDER BY col2
                                              Index Cond: col2 > 10.00
                                        ->  Bitmap Index Scan on pt_lt_tab_df_1_prt_def_col2_col1_key  (cost=0.00..10000.23 rows=1 width=0)
                                              Index Cond: col1 = 50
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (50 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 between 10 AND 50 ORDER BY col2,col3 LIMIT 5;
@@ -1159,7 +1159,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 between 10 AND 50 ORDER BY col2,co
                                        Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
                            ->  Index Scan using pt_lt_tab_df_1_prt_def_col2_col1_key on pt_lt_tab_df_1_prt_def  (cost=0.14..900.15 rows=1 width=12)
                                  Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 ALTER TABLE pt_lt_tab_df DROP CONSTRAINT col2_col1_unique;
@@ -1209,7 +1209,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 1 AND 50 ORDER BY col2,col3 L
                                  Recheck Cond: col2 >= 1::numeric AND col2 <= 50::numeric
                                  ->  Bitmap Index Scan on idx5  (cost=0.00..10000.24 rows=4 width=0)
                                        Index Cond: col2 >= 1::numeric AND col2 <= 50::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 > 5 ORDER BY col2,col3 LIMIT 5;
@@ -1252,7 +1252,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 5 ORDER BY col2,col3 LIMIT 5;
                                  Recheck Cond: col2 > 5::numeric
                                  ->  Bitmap Index Scan on idx5  (cost=0.00..10000.21 rows=4 width=0)
                                        Index Cond: col2 > 5::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 = 5 ORDER BY col2,col3 LIMIT 5;
@@ -1273,7 +1273,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 5 ORDER BY col2,col3 LIMIT 5;
                      ->  Append  (cost=0.14..1100.15 rows=1 width=12)
                            ->  Index Scan using idx1 on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
                                  Index Cond: col2 = 5::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 DROP INDEX idx1;
@@ -1319,7 +1319,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 between 1 AND 100 ORDER BY col1 LI
                            Index Cond: col1 >= 1 AND col1 <= 100
                      ->  Index Scan using idx6 on pt_lt_tab_df_1_prt_def  (cost=0.14..7998.23 rows=4 width=12)
                            Index Cond: col1 >= 1 AND col1 <= 100
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col1 > 50 ORDER BY col1 LIMIT 5;
@@ -1353,7 +1353,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 > 50 ORDER BY col1 LIMIT 5;
                            Index Cond: col1 > 50
                      ->  Index Scan using idx6 on pt_lt_tab_df_1_prt_def  (cost=0.14..7998.21 rows=4 width=12)
                            Index Cond: col1 > 50
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col1 < 50 ORDER BY col1 LIMIT 5;
@@ -1387,7 +1387,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 < 50 ORDER BY col1 LIMIT 5;
                            Index Cond: col1 < 50
                      ->  Index Scan using idx6 on pt_lt_tab_df_1_prt_def  (cost=0.14..900.15 rows=1 width=12)
                            Index Cond: col1 < 50
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 DROP INDEX idx1;
@@ -1447,7 +1447,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 between 1 AND 100 ORDER BY col2,co
                                  Recheck Cond: col2 >= 1::numeric AND col2 <= 100::numeric
                                  ->  Bitmap Index Scan on idx6  (cost=0.00..7700.24 rows=4 width=0)
                                        Index Cond: col2 >= 1::numeric AND col2 <= 100::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (32 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 > 50 ORDER BY col2,col3 LIMIT 5;
@@ -1474,7 +1474,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 50 ORDER BY col2,col3 LIMIT 5;
                                  Recheck Cond: col2 > 50::numeric
                                  ->  Bitmap Index Scan on idx6  (cost=0.00..7700.21 rows=4 width=0)
                                        Index Cond: col2 > 50::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
@@ -1497,7 +1497,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: col2 = 50::numeric
                            ->  Index Scan using idx6 on pt_lt_tab_df_1_prt_def  (cost=0.14..900.15 rows=1 width=12)
                                  Index Cond: col2 = 50::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
@@ -1532,7 +1532,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 <> 10 ORDER BY col2,col3 LIMIT 5;
                                  Filter: col2 <> 10::numeric
                            ->  Seq Scan on pt_lt_tab_df_1_prt_def  (cost=10000000000.00..10000000003.16 rows=5 width=12)
                                  Filter: col2 <> 10::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (20 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 between 1 AND 100 ORDER BY col2,col3 LIMIT 5;
@@ -1579,7 +1579,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 between 1 AND 100 ORDER BY col2,co
                                  Recheck Cond: col2 >= 1::numeric AND col2 <= 100::numeric
                                  ->  Bitmap Index Scan on idx6  (cost=0.00..7700.24 rows=4 width=0)
                                        Index Cond: col2 >= 1::numeric AND col2 <= 100::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (32 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 < 50 AND col1 > 10 ORDER BY col2,col3 LIMIT 5;
@@ -1630,7 +1630,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 < 50 AND col1 > 10 ORDER BY col2,c
                            ->  Index Scan using idx6 on pt_lt_tab_df_1_prt_def  (cost=0.14..900.16 rows=1 width=12)
                                  Index Cond: col2 < 50::numeric
                                  Filter: col1 > 10
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (36 rows)
 
 DROP INDEX idx1;
@@ -1667,7 +1667,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 51 ORDER BY col2,col3 LIMIT 5;
                      ->  Append  (cost=10000000000.00..10000000003.16 rows=4 width=12)
                            ->  Seq Scan on pt_lt_tab_df_1_prt_def  (cost=10000000000.00..10000000003.16 rows=4 width=12)
                                  Filter: col2 > 51::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
@@ -1690,7 +1690,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: col2 = 50::numeric
                            ->  Seq Scan on pt_lt_tab_df_1_prt_def  (cost=10000000000.00..10000000003.16 rows=1 width=12)
                                  Filter: col2 = 50::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 DROP INDEX idx1;
@@ -1738,7 +1738,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 50 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: col2 = 50::numeric
                            ->  Index Scan using idx6 on pt_lt_tab_df_1_prt_def  (cost=0.14..900.15 rows=1 width=12)
                                  Index Cond: col2 = 50::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col2 > 10 AND col1 between 1 AND 100 ORDER BY col2,col3 LIMIT 5;
@@ -1781,7 +1781,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 10 AND col1 between 1 AND 100 OR
                                  Recheck Cond: col2 > 10::numeric AND col1 >= 1 AND col1 <= 100
                                  ->  Bitmap Index Scan on idx6  (cost=0.00..7700.26 rows=3 width=0)
                                        Index Cond: col2 > 10::numeric AND col1 >= 1 AND col1 <= 100
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 SELECT * FROM pt_lt_tab_df WHERE col1 = 10 ORDER BY col2,col3 LIMIT 5;
@@ -1812,7 +1812,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 = 10 ORDER BY col2,col3 LIMIT 5;
                                  Index Cond: col1 = 10
                            ->  Index Scan using idx6 on pt_lt_tab_df_1_prt_def  (cost=0.14..10100.24 rows=1 width=12)
                                  Index Cond: col1 = 10
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (20 rows)
 
 DROP INDEX idx1;
@@ -1845,7 +1845,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 35 ORDER BY col2,col3 LIMIT 5;
                                  Filter: col2 = 35::numeric
                            ->  Seq Scan on pt_lt_tab_df_1_prt_def  (cost=10000000000.00..10000000003.16 rows=1 width=12)
                                  Filter: col2 = 35::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 DROP INDEX idx1;
@@ -1889,7 +1889,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 15 ORDER BY col2,col3 LIMIT 5;
                                  Recheck Cond: col2 > 15::numeric
                                  ->  Bitmap Index Scan on idx6  (cost=0.00..7700.21 rows=4 width=0)
                                        Index Cond: col2 > 15::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (22 rows)
 
 DROP INDEX idx1;
@@ -1950,7 +1950,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col4 is False ORDER BY col2,col3 LIMIT 5;
                                  Filter: (col4 IS FALSE)
                                  ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
                                        Index Cond: (col4 = false)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (26 rows)
 
 SELECT * FROM pt_lt_tab WHERE col4 = False ORDER BY col2,col3 LIMIT 5;
@@ -1991,7 +1991,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col4 = False ORDER BY col2,col3 LIMIT 5;
                                  Filter: (NOT col4)
                                  ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
                                        Index Cond: (col4 = false)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (26 rows)
 
 SELECT * FROM pt_lt_tab WHERE col2 > 41 ORDER BY col2,col3 LIMIT 5;
@@ -2016,7 +2016,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 41 ORDER BY col2,col3 LIMIT 5;
                      ->  Append  (cost=10000000000.00..10000000003.12 rows=4 width=8)
                            ->  Seq Scan on pt_lt_tab_1_prt_part5  (cost=10000000000.00..10000000003.12 rows=4 width=8)
                                  Filter: col2 > 41::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 ALTER TABLE pt_lt_tab DROP column col4;
@@ -2042,7 +2042,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 41 ORDER BY col2,col3 LIMIT 5;
                      ->  Append  (cost=10000000000.00..10000000003.12 rows=4 width=7)
                            ->  Seq Scan on pt_lt_tab_1_prt_part5  (cost=10000000000.00..10000000003.12 rows=4 width=7)
                                  Filter: col2 > 41::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 --
@@ -2114,7 +2114,7 @@ EXPLAIN SELECT * FROM pt_complex WHERE i = 1 AND j = 1;
                Filter: (j = 1)
                ->  Bitmap Index Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p12_i_idx  (cost=0.00..100.65 rows=22 width=0)
                      Index Cond: (i = 1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (23 rows)
 
 --
@@ -2159,7 +2159,7 @@ explain select * from ds_4 where month_id = '200800';
    ->  Append  (cost=10000000000.00..10000000280.00 rows=5 width=196)
          ->  Seq Scan on ds_4_1_prt_p200800  (cost=10000000000.00..10000000280.00 rows=5 width=196)
                Filter: month_id::text = '200800'::text
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- now we can evaluate this function at planning/prune time
@@ -2173,7 +2173,7 @@ explain select * from ds_4 where month_id::int = 200800;
    ->  Append  (cost=10000000000.00..10000000352.00 rows=5 width=196)
          ->  Seq Scan on ds_4_1_prt_p200800  (cost=10000000000.00..10000000352.00 rows=5 width=196)
                Filter: month_id::integer = 200800
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- this will be satisfied by 200800
@@ -2187,7 +2187,7 @@ explain select * from ds_4 where month_id::int - 801 < 200000;
    ->  Append  (cost=10000000000.00..10000000388.00 rows=1600 width=196)
          ->  Seq Scan on ds_4_1_prt_p200800  (cost=10000000000.00..10000000388.00 rows=1600 width=196)
                Filter: (month_id::integer - 801) < 200000
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- test OR case -- should NOT get pruning
@@ -2204,7 +2204,7 @@ explain select * from ds_4 where month_id::int - 801 < 200000 OR count_vas > 10;
                Filter: (month_id::integer - 801) < 200000 OR count_vas > 10
          ->  Seq Scan on ds_4_1_prt_p200803  (cost=10000000000.00..10000000424.00 rows=2667 width=196)
                Filter: (month_id::integer - 801) < 200000 OR count_vas > 10
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 -- test AND case -- should still get pruning
@@ -2218,7 +2218,7 @@ explain select * from ds_4 where month_id::int - 801 < 200000 AND count_vas > 10
    ->  Append  (cost=10000000000.00..10000000424.00 rows=924 width=196)
          ->  Seq Scan on ds_4_1_prt_p200800  (cost=10000000000.00..10000000424.00 rows=924 width=196)
                Filter: count_vas > 10 AND (month_id::integer - 801) < 200000
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- test expression case : should get pruning
@@ -2232,7 +2232,7 @@ explain select * from ds_4 where case when month_id = '200800' then 100 else 2 e
    ->  Append  (cost=10000000000.00..10000000316.00 rows=5 width=196)
          ->  Seq Scan on ds_4_1_prt_p200800  (cost=10000000000.00..10000000316.00 rows=5 width=196)
                Filter: CASE WHEN month_id::text = '200800'::text THEN 100 ELSE 2 END = 100
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- test expression case : should get pruning
@@ -2246,7 +2246,7 @@ explain select * from ds_4 where case when month_id = '200800' then NULL else 2 
    ->  Append  (cost=10000000000.00..10000000280.00 rows=5 width=196)
          ->  Seq Scan on ds_4_1_prt_p200800  (cost=10000000000.00..10000000280.00 rows=5 width=196)
                Filter: CASE WHEN month_id::text = '200800'::text THEN NULL::integer ELSE 2 END IS NULL
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- should still get pruning here -- count_vas is only used in the path for month id = 200800
@@ -2260,7 +2260,7 @@ explain select * from ds_4 where case when month_id::int = 200800 then count_vas
    ->  Append  (cost=10000000000.00..10000000352.00 rows=5 width=196)
          ->  Seq Scan on ds_4_1_prt_p200800  (cost=10000000000.00..10000000352.00 rows=5 width=196)
                Filter: CASE WHEN month_id::integer = 200800 THEN count_vas ELSE 2 END IS NULL
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- do one that matches a couple partitions
@@ -2276,7 +2276,7 @@ explain select * from ds_4 where month_id::int in (200801, 1,55,6,6,6,6,66,565,6
                Filter: month_id::integer = ANY ('{200801,1,55,6,6,6,6,66,565,65,65,200803}'::integer[])
          ->  Seq Scan on ds_4_1_prt_p200803  (cost=10000000000.00..10000000532.00 rows=58 width=196)
                Filter: month_id::integer = ANY ('{200801,1,55,6,6,6,6,66,565,65,65,200803}'::integer[])
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- cleanup
@@ -2349,7 +2349,7 @@ explain select * from ds_2 where month_id::int in (200808, 1315) order by month_
          ->  Append  (cost=10000000000.00..10000000352.00 rows=10 width=196)
                ->  Seq Scan on ds_2_1_prt_p200808  (cost=10000000000.00..10000000352.00 rows=10 width=196)
                      Filter: month_id::integer = ANY ('{200808,1315}'::integer[])
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 -- start_ignore
@@ -2367,7 +2367,7 @@ explain  select * from ds_2 where month_id::int in (200808, 200801, 2008010) ord
                      Filter: month_id::integer = ANY ('{200808,200801,2008010}'::integer[])
                ->  Seq Scan on ds_2_1_prt_p200808  (cost=10000000000.00..10000000370.00 rows=15 width=196)
                      Filter: month_id::integer = ANY ('{200808,200801,2008010}'::integer[])
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 reset optimizer_segments;
@@ -3241,7 +3241,7 @@ explain select * from sales where date = '2011-01-01' and region = 'usa';
          ->  Index Scan using sales_1_prt_2_2_prt_usa_date_idx on sales_1_prt_2_2_prt_usa  (cost=0.12..200.14 rows=1 width=19)
                Index Cond: (date = '01-01-2011'::date)
                Filter: (region = 'usa'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (21 rows)
 
 select * from sales where date = '2011-01-01' and region = 'usa';

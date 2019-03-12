@@ -1725,7 +1725,7 @@ EXPLAIN SELECT * FROM pt_complex WHERE i = 1 AND j = 1;
                Filter: (j = 1)
                ->  Bitmap Index Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p12_i_idx  (cost=0.00..100.65 rows=22 width=0)
                      Index Cond: (i = 1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (23 rows)
 
 --

@@ -85,7 +85,7 @@ explain select c1 from t1 where c1 not in
          ->  Hash  (cost=2.25..2.25 rows=5 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.25 rows=5 width=4)
                      ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select c1 from t1 where c1 not in 
@@ -119,7 +119,7 @@ explain select c1 from t1 where c1 not in
                      ->  Hash  (cost=2.15..2.15 rows=3 width=4)
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
                                  ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (13 rows)
 
 select c1 from t1 where c1 not in 
@@ -164,7 +164,7 @@ explain select c1 from t1 where c1 not in
                                              ->  Hash  (cost=1.10..1.10 rows=2 width=4)
                                                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.10 rows=2 width=4)
                                                          ->  Seq Scan on t4  (cost=0.00..1.02 rows=1 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (18 rows)
 
 select c1 from t1 where c1 not in 
@@ -201,7 +201,7 @@ explain select c1 from t1,
                      ->  Hash  (cost=2.15..2.15 rows=3 width=4)
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
                                  ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (12 rows)
 
 select c1 from t1, 
@@ -236,7 +236,7 @@ explain select c1 from t1,
          ->  Hash  (cost=2.15..2.15 rows=3 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
                      ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 select c1 from t1, 
@@ -263,7 +263,7 @@ explain select c1 from t1 where c1 not in
          ->  Hash  (cost=2.25..2.25 rows=5 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.25 rows=5 width=4)
                      ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 select c1 from t1 where c1 not in 
@@ -292,7 +292,7 @@ explain select c1 from t1 where c1 > 6 and c1 not in
          ->  Hash  (cost=2.25..2.25 rows=5 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.25 rows=5 width=4)
                      ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 select c1 from t1 where c1 > 6 and c1 not in 
@@ -322,7 +322,7 @@ explain select c1 from t1,t2 where c1 not in
                            ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
          ->  Hash  (cost=3.05..3.05 rows=2 width=4)
                ->  Seq Scan on t2  (cost=0.00..3.05 rows=2 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 select c1 from t1,t2 where c1 not in 
@@ -412,7 +412,7 @@ explain select x,y from l1 where (x,y) not in
                                                    Group Key: l1_1.y
                                                    ->  Seq Scan on l1 l1_1  (cost=0.00..3.12 rows=2 width=8)
                                                          Filter: y < 4
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 select x,y from l1 where (x,y) not in
@@ -442,7 +442,7 @@ explain select * from g1 where (a,b,c) not in
          ->  Materialize  (cost=3.53..3.83 rows=10 width=12)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.50 rows=10 width=12)
                      ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=12)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select * from g1 where (a,b,c) not in 
@@ -478,7 +478,7 @@ explain select c1 from t1, t2 where c1 not in
          ->  Hash  (cost=2.05..2.05 rows=2 width=4)
                ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (15 rows)
 
 select c1 from t1, t2 where c1 not in 
@@ -546,7 +546,7 @@ explain select c1 from t1 where c1 not in
                                  ->  Seq Scan on t2  (cost=0.00..2.08 rows=1 width=4)
                                        Filter: c2 > 2 AND c2 > 3
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (13 rows)
 
 select c1 from t1 where c1 not in 
@@ -662,7 +662,7 @@ explain select (case when c1%2 = 0
                                    ->  Hash  (cost=2.10..2.10 rows=2 width=4)
                                          ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..2.10 rows=2 width=4)
                                                ->  Seq Scan on t4  (cost=0.00..2.02 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (23 rows)
 
 select (case when c1%2 = 0 
@@ -695,7 +695,7 @@ explain select c1 from t1 where not c1 >= some (select c2 from t2);
          ->  Materialize  (cost=2.27..2.42 rows=5 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.25 rows=5 width=4)
                      ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select c1 from t1 where not c1 >= some (select c2 from t2);
@@ -716,7 +716,7 @@ explain select c2 from t2 where not c2 < all (select c2 from t2);
          ->  Materialize  (cost=0.00..3.33 rows=5 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.25 rows=5 width=4)
                      ->  Seq Scan on t2 t2_1  (cost=0.00..3.05 rows=2 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 select c2 from t2 where not c2 < all (select c2 from t2);
@@ -742,7 +742,7 @@ explain select c3 from t3 where not c3 <> any (select c4 from t4);
          ->  Materialize  (cost=1.11..1.17 rows=2 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.10 rows=2 width=4)
                      ->  Seq Scan on t4  (cost=0.00..1.02 rows=1 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select c3 from t3 where not c3 <> any (select c4 from t4);
@@ -774,7 +774,7 @@ explain select c1 from t1 where c1 not in (select c2 from t2 order by c2 limit 3
                                                          Sort Key: t2.c2
                                                          ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (19 rows)
 
 select c1 from t1 where c1 not in (select c2 from t2 order by c2 limit 3) order by c1;
@@ -804,7 +804,7 @@ explain select c1 from t1 where c1 =all (select c2 from t2 where c2 > -1 and c2 
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.12 rows=1 width=4)
                      ->  Seq Scan on t2  (cost=0.00..2.08 rows=1 width=4)
                            Filter: c2 > (-1) AND c2 <= 1
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 select c1 from t1 where c1 =all (select c2 from t2 where c2 > -1 and c2 <= 1);
@@ -826,7 +826,7 @@ explain select c1 from t1 where c1 <>all (select c2 from t2);
          ->  Hash  (cost=2.25..2.25 rows=5 width=4)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.25 rows=5 width=4)
                      ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select c1 from t1 where c1 <>all (select c2 from t2);
@@ -857,7 +857,7 @@ explain select c1 from t1 where c1 <=all (select c2 from t2 where c2 not in (sel
                            ->  Hash  (cost=2.35..2.35 rows=7 width=4)
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.35 rows=7 width=4)
                                        ->  Seq Scan on t1n  (cost=0.00..2.07 rows=3 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (13 rows)
 
 select c1 from t1 where c1 <=all (select c2 from t2 where c2 not in (select c1n from t1n));
@@ -894,7 +894,7 @@ explain select c1 from t1 where not c1 =all (select c2 from t2 where not c2 >all
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
                                        ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (14 rows)
 
 select c1 from t1 where not c1 =all (select c2 from t2 where not c2 >all (select c3 from t3));
@@ -932,7 +932,7 @@ explain select c1 from t1 where not c1 <>all (select c1n from t1n where c1n <all
                                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.04 rows=1 width=4)
                                          ->  Seq Scan on t3  (cost=0.00..2.04 rows=1 width=4)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (15 rows)
 
 select c1 from t1 where not c1 <>all (select c1n from t1n where c1n <all (select c3 from t3 where c3 = c1n));
@@ -957,7 +957,7 @@ explain select c1 from t1 where not c1 >=all (select c2 from t2 where c2 = c1);
          ->  Hash  (cost=2.05..2.05 rows=2 width=4)
                ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 select c1 from t1 where not c1 >=all (select c2 from t2 where c2 = c1);
@@ -978,7 +978,7 @@ explain select c1 from t1 where not exists (select c2 from t2 where c2 = c1);
          ->  Hash  (cost=2.05..2.05 rows=2 width=4)
                ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select c1 from t1 where not exists (select c2 from t2 where c2 = c1);
@@ -1009,7 +1009,7 @@ explain select c1 from t1 where not exists (select c2 from t2 where c2 not in (s
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
                                  ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (15 rows)
 
 select c1 from t1 where not exists (select c2 from t2 where c2 not in (select c3 from t3) and c2 = c1);
@@ -1049,7 +1049,7 @@ explain select c1 from t1 where not exists (select c2 from t2 where exists (sele
                      ->  Hash  (cost=2.15..2.15 rows=3 width=4)
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
                                  ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 select c1 from t1 where not exists (select c2 from t2 where exists (select c3 from t3) and c2 <>all (select c3 from t3) and c2 = c1);
@@ -1105,7 +1105,7 @@ explain select c1 from t1 where c1 not in (select c2 from t2 where c2 > 4) and c
          ->  Hash  (cost=2.06..2.06 rows=1 width=4)
                ->  Seq Scan on t2  (cost=0.00..2.06 rows=1 width=4)
                      Filter: c2 > 4
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 select c1 from t1 where c1 not in (select c2 from t2 where c2 > 4) and c1 is not null;
@@ -1157,7 +1157,7 @@ explain select c1 from t1 where c1::absint not in
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.35 rows=7 width=4)
                      ->  Seq Scan on t1n  (cost=0.00..3.07 rows=3 width=4)
  Planning time: 0.865 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 select c1 from t1 where c1::absint not in

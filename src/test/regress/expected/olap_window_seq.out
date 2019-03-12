@@ -7685,7 +7685,7 @@ explain select n from ( select row_number() over () from (values (0)) as t(x) ) 
    ->  WindowAgg  (cost=0.00..0.01 rows=1 width=0)
          ->  Values Scan on "*VALUES*"  (cost=0.00..0.01 rows=1 width=0)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 -- Test for MPP-11645
@@ -7901,7 +7901,7 @@ explain select count(*) over (order by i), count(*) over (partition by i order b
                ->  Sort  (cost=7208.12..7402.87 rows=25967 width=8)
                      Sort Key: i, j
                      ->  Seq Scan on redundant_sort_check  (cost=0.00..879.00 rows=25967 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 -- End of MPP-13710
@@ -8174,7 +8174,7 @@ FROM foo;
                                              ->  Sort  (cost=3.27..3.29 rows=4 width=16)
                                                    Sort Key: a, c, b, d
                                                    ->  Seq Scan on foo  (cost=0.00..3.10 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (25 rows)
 
 drop table foo;
@@ -8205,7 +8205,7 @@ explain select k from ( select row_number() over()+2 as k from window_preds unio
          ->  WindowAgg  (cost=0.00..1.02 rows=1 width=0)
                ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.01 rows=1 width=0)
                      ->  Seq Scan on window_preds window_preds_1  (cost=0.00..1.01 rows=1 width=0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 select k from ( select row_number() over()+2 as k from window_preds union all select row_number() over()+2 as k from window_preds) as t where k = 3;
@@ -8230,7 +8230,7 @@ explain insert into window_preds select k from ( select row_number() over()+2 as
                      ->  WindowAgg  (cost=0.00..1.02 rows=1 width=0)
                            ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.01 rows=1 width=0)
                                  ->  Seq Scan on window_preds window_preds_2  (cost=0.00..1.01 rows=1 width=0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 insert into window_preds select k from ( select row_number() over()+2 as k from window_preds union all select row_number() over()+2 as k from window_preds) as t where k = 3;
@@ -8255,7 +8255,7 @@ explain SELECT t.k FROM window_preds p1, window_preds p2, (SELECT ROW_NUMBER() O
                            ->  WindowAgg  (cost=0.00..1.02 rows=1 width=0)
                                  ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1.01 rows=1 width=0)
                                        ->  Seq Scan on window_preds window_preds_1  (cost=0.00..1.01 rows=1 width=0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 SELECT t.k FROM window_preds p1, window_preds p2, (SELECT ROW_NUMBER() OVER() AS k FROM window_preds union all SELECT ROW_NUMBER() OVER() AS k FROM window_preds) AS t WHERE t.k = 1 limit 1;
@@ -8287,7 +8287,7 @@ explain with CTE as (select i, row_number() over (partition by j) j from window_
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                                        Hash Key: window_preds_1.j
                                        ->  Seq Scan on window_preds window_preds_1  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (21 rows)
 
 insert into window_preds with CTE as (select i, row_number() over (partition by j) j from window_preds union all select i, row_number() over (partition by j) from window_preds) select * from cte where j = 1;
@@ -8303,7 +8303,7 @@ explain select k from ( select k from (select row_number() over() as k from wind
                      ->  Seq Scan on window_preds  (cost=0.00..1.01 rows=1 width=0)
    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.04 rows=1 width=8)
          ->  Seq Scan on window_preds window_preds_1  (cost=0.00..1.01 rows=1 width=0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 select k from ( select k from (select row_number() over() as k from window_preds) f union all select 1::bigint as k from window_preds) as t where k = 1;
@@ -8349,7 +8349,7 @@ explain insert into window_preds select k from ( select k from (select row_numbe
                                        ->  Seq Scan on window_preds window_preds_1  (cost=0.00..1.01 rows=1 width=0)
                      ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.04 rows=1 width=8)
                            ->  Seq Scan on window_preds window_preds_2  (cost=0.00..1.01 rows=1 width=0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 insert into window_preds select k from ( select k from (select row_number() over() as k from window_preds) f union all select 1::bigint as k from window_preds) as t where k = 1;
@@ -8376,7 +8376,7 @@ explain with CTE as (select i, row_number() over (partition by j) j from window_
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                                        Hash Key: window_preds_1.j
                                        ->  Seq Scan on window_preds window_preds_1  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (21 rows)
 
 insert into window_preds with CTE as (select i, row_number() over (partition by j) j from window_preds union all select i, row_number() over (partition by j) from window_preds) select * from cte where i = 1;

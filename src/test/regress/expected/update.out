@@ -343,7 +343,7 @@ EXPLAIN (COSTS OFF ) UPDATE tab3 SET C1 = C1 + 1, C5 = C5+1;
          Hash Key: ((c1 + 1)), c2, c3
          ->  Split
                ->  Seq Scan on tab3
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 -- clean up

@@ -778,7 +778,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
                 href="../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
                 >gp_default_storage_options</xref></codeph>.</p></li>
       </ul>
-      <note type="important">The current Greenplum Database legacy optimizer allows list partitions
+      <note type="important">The current Greenplum Database Postgres optimizer allows list partitions
         with multi-column (composite) partition keys. GPORCA does not support composite keys, so
         using composite partition keys is not recommended.</note>
     </section>

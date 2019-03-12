@@ -1150,7 +1150,7 @@ EXPLAIN SELECT b FROM bar GROUP BY b;
          ->  Append  (cost=0.00..16.00 rows=334 width=4)
                ->  Seq Scan on bar_1_prt_1  (cost=0.00..8.00 rows=167 width=4)
                ->  Seq Scan on bar_1_prt_2  (cost=0.00..8.00 rows=167 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- CLEANUP
@@ -1198,7 +1198,7 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
    (slice0)    Executor memory: 386K bytes.
    (slice1)    Executor memory: 142K bytes avg x 3 workers, 142K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 4.237 ms
 (19 rows)
 
@@ -1243,7 +1243,7 @@ EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
                Filter: profile_key = 99999999::numeric
          ->  Seq Scan on part_tbl_1_prt_p20151110_2_prt_other_services  (cost=0.00..1.01 rows=1 width=25)
                Filter: profile_key = 99999999::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 SELECT * FROM part_tbl WHERE profile_key = 99999999;
@@ -1330,7 +1330,7 @@ explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate par
                      ->  Seq Scan on r_part_1_prt_7 r2_6  (cost=0.00..1.00 rows=1 width=8)
                      ->  Seq Scan on r_part_1_prt_8 r2_7  (cost=0.00..1.00 rows=1 width=8)
                      ->  Seq Scan on r_part_1_prt_9 r2_8  (cost=0.00..1.00 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 -- the numbers in the filter should be both on segment 0
@@ -1343,7 +1343,7 @@ explain select * from r_part where a in (7,8); -- should eliminate partitions
                Filter: a = ANY ('{7,8}'::integer[])
          ->  Seq Scan on r_part_1_prt_8  (cost=0.00..1.01 rows=1 width=8)
                Filter: a = ANY ('{7,8}'::integer[])
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- Test partition elimination in prepared statements
@@ -1377,7 +1377,7 @@ explain select * from r_part where a = 1 order by a,b; -- should eliminate parti
          ->  Append  (cost=0.00..1.01 rows=1 width=8)
                ->  Seq Scan on r_part_1_prt_1  (cost=0.00..1.01 rows=1 width=8)
                      Filter: a = 1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 --force_explain
@@ -1391,7 +1391,7 @@ explain execute f1(1); -- should eliminate partitions
          ->  Append  (cost=0.00..1.01 rows=1 width=8)
                ->  Seq Scan on r_part_1_prt_1  (cost=0.00..1.01 rows=1 width=8)
                      Filter: a = 1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 --force_explain
@@ -1405,7 +1405,7 @@ explain execute f2(2); -- should eliminate partitions
          ->  Append  (cost=0.00..1.01 rows=1 width=8)
                ->  Seq Scan on r_part_1_prt_2  (cost=0.00..1.01 rows=1 width=8)
                      Filter: a = 2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 -- Test partition elimination on CO tables
@@ -1418,7 +1418,7 @@ explain select * from r_co where a=2; -- should eliminate partitions
    ->  Append  (cost=0.00..1.01 rows=1 width=8)
          ->  Seq Scan on r_co_1_prt_2  (cost=0.00..1.01 rows=1 width=8)
                Filter: a = 2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- test partition elimination in prepared statements on CO tables
@@ -1434,7 +1434,7 @@ explain execute f3(2); -- should eliminate partitions
          ->  Append  (cost=0.00..1.01 rows=1 width=8)
                ->  Seq Scan on r_co_1_prt_2  (cost=0.00..1.01 rows=1 width=8)
                      Filter: a = 2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 -- start_ignore
@@ -1472,7 +1472,7 @@ explain select * from fact where dd < '2009-01-02'::date; -- partitions eliminat
    ->  Append  (cost=0.00..1.00 rows=1 width=40)
          ->  Seq Scan on fact_1_prt_1  (cost=0.00..1.00 rows=1 width=40)
                Filter: dd < '01-02-2009'::date
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 explain select * from fact where dd < to_date('2009-01-02','YYYY-MM-DD'); -- partitions eliminated
@@ -1482,7 +1482,7 @@ explain select * from fact where dd < to_date('2009-01-02','YYYY-MM-DD'); -- par
    ->  Append  (cost=0.00..1.00 rows=1 width=40)
          ->  Seq Scan on fact_1_prt_1  (cost=0.00..1.00 rows=1 width=40)
                Filter: dd < '01-02-2009'::date
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 explain select * from fact where dd < current_date; --partitions eliminated
@@ -1493,7 +1493,7 @@ explain select * from fact where dd < current_date; --partitions eliminated
          ->  Seq Scan on fact_1_prt_1  (cost=0.00..1.00 rows=1 width=40)
                Filter: dd < '10-22-2017'::date
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 -- Test partition elimination in prepared statements
@@ -1506,7 +1506,7 @@ explain execute f1('2009-01-02'::date); -- should eliminate partitions
    ->  Append  (cost=0.00..1.00 rows=1 width=40)
          ->  Seq Scan on fact_1_prt_1  (cost=0.00..1.00 rows=1 width=40)
                Filter: dd < '01-02-2009'::date
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- force_explain
@@ -1517,7 +1517,7 @@ explain execute f1(to_date('2009-01-02', 'YYYY-MM-DD')); -- should eliminate par
    ->  Append  (cost=0.00..1.00 rows=1 width=40)
          ->  Seq Scan on fact_1_prt_1  (cost=0.00..1.00 rows=1 width=40)
                Filter: dd < '01-02-2009'::date
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- start_ignore

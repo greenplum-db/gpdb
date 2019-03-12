@@ -246,7 +246,7 @@ order by thousand, tenthous;
    Merge Key: thousand, tenthous
    ->  Index Only Scan using tenk1_thous_tenthous on tenk1
          Index Cond: (ROW(thousand, tenthous) >= ROW(997, 5000))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 select thousand, tenthous from tenk1
@@ -296,7 +296,7 @@ select a,b from test_table where (a,b) > ('a','a') order by a,b;
    Merge Key: a, b
    ->  Index Only Scan using test_table_a_b_idx on test_table
          Index Cond: (ROW(a, b) > ROW('a'::text, 'a'::text))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 select a,b from test_table where (a,b) > ('a','a') order by a,b;
@@ -318,7 +318,7 @@ where i8 in (row(123,456)::int8_tbl, '(4567890123456789,123)');
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on int8_tbl i8
          Filter: (i8.* = ANY (ARRAY[ROW(123::bigint, 456::bigint)::int8_tbl, '(4567890123456789,123)'::int8_tbl]))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 select * from int8_tbl i8
@@ -634,7 +634,7 @@ select row_to_json(q) from
    ->  Subquery Scan on q
          ->  Index Only Scan using tenk1_thous_tenthous on tenk1
                Index Cond: ((thousand = 42) AND (tenthous < 2000))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 select row_to_json(q) from
@@ -715,7 +715,7 @@ select r, r is null as isnull, r is not null as isnotnull from r;
    Output: r.*, (r.* IS NULL), (r.* IS NOT NULL)
    ->  Values Scan on "*VALUES*"
          Output: "*VALUES*".column1, "*VALUES*".column2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 with r(a,b) as

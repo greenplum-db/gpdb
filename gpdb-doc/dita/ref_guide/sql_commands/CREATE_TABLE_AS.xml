@@ -163,10 +163,10 @@
             table distribution policy if the <cmdname>DISTRIBUTED BY</cmdname> clause is not
             specified when you create a table. Greenplum Database follows these rules to create a
             table if a distribution policy is not specified.<ul id="ul_ejv_m1b_kr">
-              <li>If the legacy query optimizer creates the table, and the value of the parameter is
+              <li>If the Postgres query optimizer creates the table, and the value of the parameter is
                   <codeph>off</codeph>, the table distribution policy is determined based on the
                 command.</li>
-              <li>If the legacy query optimizer creates the table, and the value of the parameter is
+              <li>If the Postgres query optimizer creates the table, and the value of the parameter is
                   <codeph>on</codeph>, the table distribution policy is random.</li>
               <li>If GPORCA creates the table, the table distribution policy is random. The
                 parameter value has no effect. </li>
@@ -174,7 +174,7 @@
           <pd>For more information about setting the default table distribution policy, see <xref
               href="../config_params/guc-list.xml#gp_create_table_random_default_distribution"
                 ><codeph>gp_create_table_random_default_distribution</codeph></xref>. For
-            information about the legacy query optimizer and GPORCA, see <xref
+            information about the Postgres query optimizer and GPORCA, see <xref
               href="../../admin_guide/query/topics/query.xml#topic1">Querying Data</xref> in the
               <cite>Greenplum Database Administrator Guide</cite>.</pd>
         </plentry>

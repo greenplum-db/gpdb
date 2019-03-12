@@ -421,7 +421,7 @@ explain select x,y from l1 where (x,y) not in
                                                    Group Key: l1_1.y
                                                    ->  Seq Scan on l1 l1_1  (cost=0.00..3.12 rows=2 width=8)
                                                          Filter: y < 4
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 select x,y from l1 where (x,y) not in
@@ -451,7 +451,7 @@ explain select * from g1 where (a,b,c) not in
          ->  Materialize  (cost=3.53..3.83 rows=10 width=12)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.50 rows=10 width=12)
                      ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=12)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (10 rows)
 
 select * from g1 where (a,b,c) not in 

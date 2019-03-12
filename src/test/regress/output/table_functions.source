@@ -1419,7 +1419,7 @@ explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example SCATTER BY a+1) )
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.12 rows=4 width=16)
                Hash Key: (example.a + 1)
                ->  Seq Scan on example  (cost=0.00..3.12 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 SELECT * FROM multiset_5( TABLE( SELECT * FROM example SCATTER BY a+1) ) order by a,b;
@@ -1767,7 +1767,7 @@ explain SELECT * FROM example where (a,b) in (select * from multiset_5( TABLE(SE
                      Hash Key: a
                      ->  Table Function Scan on multiset_5  (cost=0.00..3.20 rows=4 width=36)
                            ->  Seq Scan on example example_1  (cost=0.00..3.10 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 explain SELECT * FROM example where (a,b) in (select * from multiset_5( TABLE(SELECT a, b from example scatter by b) ));
@@ -1784,7 +1784,7 @@ explain SELECT * FROM example where (a,b) in (select * from multiset_5( TABLE(SE
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.10 rows=4 width=16)
                                  Hash Key: example_1.b
                                  ->  Seq Scan on example example_1  (cost=0.00..3.10 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 explain SELECT * FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) in (select a,b from example);
@@ -1799,7 +1799,7 @@ explain SELECT * FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) i
                      ->  Seq Scan on example example_1  (cost=0.00..3.10 rows=4 width=16)
          ->  Hash  (cost=3.10..3.10 rows=4 width=16)
                ->  Seq Scan on example  (cost=0.00..3.10 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 explain SELECT * FROM multiset_5( TABLE(SELECT a, b from example scatter by b)) where (a,b) in (select a,b from example);
@@ -1816,7 +1816,7 @@ explain SELECT * FROM multiset_5( TABLE(SELECT a, b from example scatter by b)) 
                            ->  Seq Scan on example example_1  (cost=0.00..3.10 rows=4 width=16)
          ->  Hash  (cost=3.10..3.10 rows=4 width=16)
                ->  Seq Scan on example  (cost=0.00..3.10 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 explain SELECT * FROM multiset_5( TABLE( SELECT * from example_r) );
@@ -1836,7 +1836,7 @@ explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example_r SCATTER by a||b
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.18 rows=4 width=16)
                Hash Key: (example_r.a::text || example_r.b)
                ->  Seq Scan on example_r  (cost=0.00..3.18 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example_r SCATTER by b, a, a||b) );
@@ -1847,7 +1847,7 @@ explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example_r SCATTER by b, a
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.18 rows=4 width=16)
                Hash Key: example_r.b, example_r.a, (example_r.a::text || example_r.b)
                ->  Seq Scan on example_r  (cost=0.00..3.18 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example_r SCATTER RANDOMLY) );
@@ -1886,7 +1886,7 @@ explain SELECT * FROM example_r WHERE (10, 'hello') in (SELECT * FROM multiset_5
                                    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.12..3.22 rows=1 width=8)
                                          ->  Aggregate  (cost=3.12..3.13 rows=1 width=8)
                                                ->  Seq Scan on example_r example_r_1  (cost=0.00..3.10 rows=4 width=0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 explain SELECT * FROM multiset_5( TABLE( SELECT * from example_v) );
@@ -1910,7 +1910,7 @@ explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example WHERE a >= (SELEC
                        ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.12..3.22 rows=1 width=4)
                              ->  Aggregate  (cost=3.12..3.13 rows=1 width=4)
                                    ->  Seq Scan on example example_1  (cost=0.00..3.10 rows=4 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 explain WITH cte AS (SELECT * FROM example) SELECT * FROM multiset_5( TABLE ( SELECT * FROM cte ) )  order by a, b;
@@ -1943,7 +1943,7 @@ explain WITH cte AS (SELECT * FROM example) SELECT x.* FROM multiset_5( TABLE ( 
                                              ->  Aggregate  (cost=0.23..0.24 rows=1 width=8)
                                                    ->  Subquery Scan on cte  (cost=0.00..0.20 rows=4 width=0)
                                                          ->  Seq Scan on example example_1  (cost=0.00..3.10 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 explain select * from multiset_2( TABLE( SELECT distinct a.a, b.b from example a, example b where a.a = b.a) ) order by 1,2;
@@ -1961,7 +1961,7 @@ explain select * from multiset_2( TABLE( SELECT distinct a.a, b.b from example a
                            ->  Seq Scan on example a  (cost=0.00..3.10 rows=4 width=4)
                            ->  Hash  (cost=3.10..3.10 rows=4 width=16)
                                  ->  Seq Scan on example b  (cost=0.00..3.10 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 explain select * from multiset_2( TABLE( SELECT distinct a.a, b.b from example a join example b using (a) ) ) order by 1,2;
@@ -1979,7 +1979,7 @@ explain select * from multiset_2( TABLE( SELECT distinct a.a, b.b from example a
                            ->  Seq Scan on example a  (cost=0.00..3.10 rows=4 width=4)
                            ->  Hash  (cost=3.10..3.10 rows=4 width=16)
                                  ->  Seq Scan on example b  (cost=0.00..3.10 rows=4 width=16)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 explain select * from multiset_2( TABLE ( SELECT * FROM example WHERE a = 2 ) ) WHERE a = 2;

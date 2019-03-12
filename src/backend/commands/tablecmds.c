@@ -14848,7 +14848,7 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 
 		/* Step (a) */
 		/*
-		 * Force the use of legacy query optimizer, since PQO will not
+		 * Force the use of Postgres query optimizer, since PQO will not
 		 * redistribute the tuples if the current and required distributions
 		 * are both RANDOM even when reorganize is set to "true"
 		 */
@@ -15362,7 +15362,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			ldistro = make_distributedby_for_rel(rel);
 
 		/*
-		 * Force the use of legacy query optimizer, since PQO will not
+		 * Force the use of Postgres query optimizer, since PQO will not
 		 * redistribute the tuples if the current and required distributions
 		 * are both RANDOM even when reorganize is set to "true"
 		 */
@@ -15371,7 +15371,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 		if (saveOptimizerGucValue)
 			ereport(LOG,
-					(errmsg("ALTER SET DISTRIBUTED BY: falling back to legacy query optimizer to ensure re-distribution of tuples.")));
+					(errmsg("ALTER SET DISTRIBUTED BY: falling back to Postgres query optimizer to ensure re-distribution of tuples.")));
 
 		GpPolicy *original_policy = NULL;
 

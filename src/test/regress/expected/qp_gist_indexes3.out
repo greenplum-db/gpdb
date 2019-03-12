@@ -155,7 +155,7 @@ EXPLAIN SELECT id, property AS "Property" FROM GistTable3
          ->  Bitmap Index Scan on gistindex3a  (cost=0.00..100.29 rows=2 width=0)
                Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (7 rows)
 
 VACUUM ANALYZE GistTable3;
@@ -174,7 +174,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable3
    ->  Index Scan using gistindex3a on gisttable3  (cost=0.00..200.28 rows=1 width=36)
          Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 -- ----------------------------------------------------------------------
@@ -213,7 +213,7 @@ EXPLAIN SELECT id, property AS "Property" FROM GistTable3
    ->  Index Scan using gistindex3a on gisttable3  (cost=0.00..200.27 rows=1 width=36)
          Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 -- ----------------------------------------------------------------------

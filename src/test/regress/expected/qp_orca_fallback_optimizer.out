@@ -12,7 +12,7 @@ DETAIL:  Feature not supported: INSERT with constraints
 --------------------------------------------------------
  Insert on constr_tab  (cost=0.00..0.01 rows=1 width=0)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 set optimizer_enable_dml_constraints=on;
@@ -42,7 +42,7 @@ DETAIL:  Feature not supported: UPDATE with constraints
          Hash Key: a
          ->  Split  (cost=0.00..1.01 rows=1 width=22)
                ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 explain update constr_tab set b = 10;
@@ -52,7 +52,7 @@ DETAIL:  Feature not supported: UPDATE with constraints
 -----------------------------------------------------------------
  Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
    ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 set optimizer_enable_dml_constraints=on;
@@ -82,7 +82,7 @@ DETAIL:  Feature not supported: UPDATE with constraints
          Hash Key: a
          ->  Split  (cost=0.00..1.01 rows=1 width=22)
                ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 DROP TABLE IF EXISTS constr_tab;
@@ -104,7 +104,7 @@ DETAIL:  Feature not supported: UPDATE with constraints
          Hash Key: a, b
          ->  Split  (cost=0.00..1.01 rows=1 width=22)
                ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 DROP TABLE IF EXISTS constr_tab;
@@ -200,7 +200,7 @@ DETAIL:  Feature not supported: ONLY in the FROM clause
 -----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..11000.00 rows=1000000 width=8)
    ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 EXPLAIN INSERT INTO heap_t1 SELECT * FROM ONLY ext_table_no_fallback;
@@ -212,6 +212,6 @@ DETAIL:  Feature not supported: ONLY in the FROM clause
    ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..11000.00 rows=333334 width=8)
          Hash Key: ext_table_no_fallback.b
          ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 

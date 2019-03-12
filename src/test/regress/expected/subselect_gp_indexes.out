@@ -85,7 +85,7 @@ explain select (select id1 from (select * from choose_seqscan_t2) foo where id2=
                  ->  Materialize  (cost=0.00..3.63 rows=1 width=4)
                        ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.62 rows=1 width=4)
                              ->  Seq Scan on choose_seqscan_t2  (cost=0.00..3.62 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 -- then, a sequential scan is chosen because I need a motion to move choose_seqscan_t2
@@ -142,7 +142,7 @@ explain select (select id1 from (select * from choose_indexscan_t2) foo where id
          SubPlan 1  (slice1; segments: 1)
            ->  Index Scan using choose_indexscan_t2_idx on choose_indexscan_t2  (cost=0.14..2.16 rows=1 width=4)
                  Index Cond: (id2 = choose_indexscan_t1.id2)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 -- then an indexscan is chosen because it is correct to do this on a replicated table since no motion is required

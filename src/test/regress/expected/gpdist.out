@@ -652,7 +652,7 @@ explain (costs off) select even.i from even left outer join odd on (even.i = odd
                ->  Seq Scan on even
                ->  Hash
                      ->  Seq Scan on odd
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 -- But this does.
@@ -671,7 +671,7 @@ explain (costs off) select even.i from even right outer join odd on (even.i = od
                            ->  Seq Scan on odd
                            ->  Hash
                                  ->  Seq Scan on even
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 -- Check that we can track the distribution through multiple FULL OUTER JOINs.
@@ -692,7 +692,7 @@ explain (costs off) select * from a full join b on (a.i=b.i) full join c on (b.i
                      ->  Seq Scan on b
          ->  Hash
                ->  Seq Scan on c
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);

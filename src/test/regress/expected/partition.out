@@ -6892,7 +6892,7 @@ explain select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.
                            Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
                      ->  Seq Scan on foo_p_1_prt_6  (cost=0.00..5.50 rows=1 width=34)
                            Filter: t IS NOT NULL AND a = ('{1}'::integer[])[1]
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (21 rows)
 
 reset optimizer_segments;

@@ -200,7 +200,7 @@ EXPLAIN SELECT * FROM geometricTypes
    ->  Seq Scan on geometrictypes  (cost=0.00..5262.64 rows=1 width=129)
          Filter: c ~= '<(1255,7955),1227>'::circle
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 SELECT * FROM geometricTypes 
@@ -218,7 +218,7 @@ EXPLAIN SELECT * FROM geometricTypes
    ->  Seq Scan on geometrictypes  (cost=0.00..5262.64 rows=1 width=129)
          Filter: b ~= '(7352,7352),(7350,-3128)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 SELECT * FROM geometricTypes 
@@ -236,7 +236,7 @@ EXPLAIN SELECT * FROM geometricTypes
    ->  Seq Scan on geometrictypes  (cost=0.00..5262.64 rows=1 width=129)
          Filter: p ~= '((4679,8579),(4670,-3232))'::polygon
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 -- ----------------------------------------------------------------------
@@ -275,7 +275,7 @@ EXPLAIN SELECT * FROM geometricTypes
          Index Cond: c ~= '<(1255,7955),1227>'::circle
          Filter: c ~= '<(1255,7955),1227>'::circle
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 SELECT * FROM geometricTypes 
@@ -293,7 +293,7 @@ EXPLAIN SELECT * FROM geometricTypes
    ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..200.56 rows=1 width=129)
          Index Cond: b ~= '(7352,7352),(7350,-3128)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 SELECT * FROM geometricTypes 
@@ -312,7 +312,7 @@ EXPLAIN SELECT * FROM geometricTypes
          Index Cond: p ~= '((4679,8579),(4670,-3232))'::polygon
          Filter: p ~= '((4679,8579),(4670,-3232))'::polygon
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 -- ----------------------------------------------------------------------
@@ -374,7 +374,7 @@ EXPLAIN SELECT * FROM gone
          Index Cond: already_gone ~= '<(-3176,7824),3174>'::circle
          Filter: already_gone ~= '<(-3176,7824),3174>'::circle
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 ROLLBACK WORK;
@@ -396,7 +396,7 @@ EXPLAIN SELECT * FROM gone
    ->  Seq Scan on gone  (cost=0.00..176.00 rows=1 width=129)
          Filter: already_gone ~= '<(-3176,7824),3174>'::circle
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 SET optimizer_enable_tablescan = False;
@@ -420,7 +420,7 @@ EXPLAIN SELECT * FROM gone
          Index Cond: paragon ~= '((7625,8425),(7643,7849))'::polygon
          Filter: paragon ~= '((7625,8425),(7643,7849))'::polygon
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 ROLLBACK WORK;
@@ -441,7 +441,7 @@ EXPLAIN SELECT * FROM gone
          Index Cond: paragon ~= '((7625,8425),(7643,7849))'::polygon
          Filter: paragon ~= '((7625,8425),(7643,7849))'::polygon
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 CREATE INDEX box_of_rain ON gone USING GiST (too_far_gone) 
@@ -465,7 +465,7 @@ EXPLAIN SELECT * FROM gone
    ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
          Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 ROLLBACK WORK;
@@ -484,7 +484,7 @@ EXPLAIN SELECT * FROM gone
    ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
          Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 BEGIN WORK;
@@ -504,7 +504,7 @@ EXPLAIN SELECT * FROM gone
    ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
          Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 ROLLBACK WORK;
@@ -526,7 +526,7 @@ EXPLAIN SELECT * FROM gone
    ->  Index Scan using box_of_rain on gone  (cost=0.00..200.29 rows=1 width=129)
          Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 ROLLBACK WORK;
@@ -547,7 +547,7 @@ EXPLAIN SELECT * FROM gone
    ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
          Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 REINDEX TABLE gone;
@@ -566,7 +566,7 @@ EXPLAIN SELECT * FROM gone
    ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
          Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 ROLLBACK WORK;
@@ -585,7 +585,7 @@ EXPLAIN SELECT * FROM gone
    ->  Index Scan using box_of_rain on gone  (cost=0.00..200.28 rows=1 width=129)
          Index Cond: too_far_gone ~= '(7342,8385),(7338,6538)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 DROP TABLE IF EXISTS gone;
@@ -619,7 +619,7 @@ EXPLAIN SELECT * FROM geometricTypes
          Index Cond: c ~= '<(1255,7955),1227>'::circle
          Filter: c ~= '<(1255,7955),1227>'::circle
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 SELECT * FROM geometricTypes 
@@ -637,7 +637,7 @@ EXPLAIN SELECT * FROM geometricTypes
    ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..202.21 rows=1 width=129)
          Index Cond: b ~= '(7352,7352),(7350,-3128)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 SELECT * FROM geometricTypes 
@@ -656,7 +656,7 @@ EXPLAIN SELECT * FROM geometricTypes
          Index Cond: p ~= '((4679,8579),(4670,-3232))'::polygon
          Filter: p ~= '((4679,8579),(4670,-3232))'::polygon
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 -- ----------------------------------------------------------------------
@@ -687,7 +687,7 @@ EXPLAIN SELECT * FROM geometricTypes
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..201.27 rows=1 width=129)
    ->  Index Scan using gt_index_c on geometrictypes  (cost=0.00..201.27 rows=1 width=129)
          Index Cond: c ~= '<(-3197,7903),3150>'::circle AND c << '<(7879,8779),7868>'::circle
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 SELECT * FROM geometricTypes 
@@ -705,7 +705,7 @@ EXPLAIN SELECT * FROM geometricTypes
    ->  Index Scan using gt_index_b on geometrictypes  (cost=0.00..200.37 rows=1 width=129)
          Index Cond: b ~= '(7352,7352),(7350,-3128)'::box AND b << '(8479,7579),(8441,-3121)'::box
  Settings:  enable_seqscan=off; optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 SELECT * FROM geometricTypes 
@@ -724,7 +724,7 @@ EXPLAIN SELECT * FROM geometricTypes
          Index Cond: p ~= '((1252,8252),(1274,7975))'::polygon AND p << '((8778,6578),(8765,8265))'::polygon
          Filter: p ~= '((1252,8252),(1274,7975))'::polygon AND p << '((8778,6578),(8765,8265))'::polygon
  Settings:  enable_seqscan=off; optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 -- ----------------------------------------------------------------------
@@ -778,7 +778,7 @@ EXPLAIN SELECT * FROM geometricTypesPartition
                Recheck Cond: (c ~= '<(8479,-3121),8441>'::circle)
                ->  Bitmap Index Scan on geometrictypespartition_1_prt_2_c_idx  (cost=0.00..100.48 rows=9 width=0)
                      Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 DROP TABLE IF EXISTS geometricTypesPartition;
@@ -828,7 +828,7 @@ EXPLAIN SELECT * FROM textSearch
          Index Cond: t @@ '''test'''::tsquery
          Filter: t @@ '''test'''::tsquery
  Settings:  enable_seqscan=off; optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 DROP TABLE IF EXISTS textSearch;
@@ -881,7 +881,7 @@ EXPLAIN SELECT count(*) FROM gist_tbl, gist_tbl2
                            Index Cond: gist_tbl.p <@ gist_tbl2.p
                            Filter: gist_tbl.p <@ gist_tbl2.p
  Settings:  enable_seqscan=off; optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (11 rows)
 
 -- ----------------------------------------------------------------------

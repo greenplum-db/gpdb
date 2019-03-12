@@ -644,7 +644,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	ExplainOpenGroup("Settings", "Settings", true, es);
 	
 	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
-		ExplainProperty("Optimizer", "legacy query optimizer", false, es);
+		ExplainProperty("Optimizer", "Postgres query optimizer", false, es);
 #ifdef USE_ORCA
 	else
 		ExplainPropertyStringInfo("Optimizer", es, "PQO version %s", OptVersion());

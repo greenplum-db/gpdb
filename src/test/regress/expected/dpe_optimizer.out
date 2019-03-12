@@ -1748,7 +1748,7 @@ explain select * from dim inner join malp on (dim.i = malp.i);
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                            Hash Key: dim.i
                            ->  Seq Scan on dim  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (20 rows)
 
 set gp_dynamic_partition_pruning = off;

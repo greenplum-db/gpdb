@@ -110,7 +110,7 @@ explain (costs off)
    ->  Index Scan using ec0_pkey on ec0
          Index Cond: (ff = 42::bigint)
          Filter: (f1 = 42::bigint)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 explain (costs off)
@@ -121,7 +121,7 @@ explain (costs off)
    ->  Index Scan using ec0_pkey on ec0
          Index Cond: (ff = '42'::int8alias1)
          Filter: (f1 = '42'::int8alias1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 explain (costs off)
@@ -132,7 +132,7 @@ explain (costs off)
    ->  Index Scan using ec1_pkey on ec1
          Index Cond: (ff = '42'::int8alias1)
          Filter: (f1 = '42'::int8alias1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 explain (costs off)
@@ -142,7 +142,7 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on ec1
          Filter: ((ff = f1) AND (f1 = '42'::int8alias2))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 explain (costs off)
@@ -157,7 +157,7 @@ explain (costs off)
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Index Scan using ec1_pkey on ec1
                            Index Cond: ((ff = 42::bigint) AND (ff = 42::bigint))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (costs off)
@@ -172,7 +172,7 @@ explain (costs off)
          ->  Materialize
                ->  Seq Scan on ec2
                      Filter: (x1 = '42'::int8alias1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (costs off)
@@ -188,7 +188,7 @@ explain (costs off)
          ->  Materialize
                ->  Seq Scan on ec2
                      Filter: (42::bigint = x1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 explain (costs off)
@@ -203,7 +203,7 @@ explain (costs off)
          ->  Materialize
                ->  Seq Scan on ec2
                      Filter: (x1 = '42'::int8alias1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (costs off)
@@ -217,7 +217,7 @@ explain (costs off)
                      Filter: (x1 = '42'::int8alias2)
          ->  Index Scan using ec1_pkey on ec1
                Index Cond: (ff = ec2.x1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 create index ec1_expr1 on ec1((ff + 1));
@@ -248,7 +248,7 @@ explain (costs off)
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Index Scan using ec1_pkey on ec1
                            Index Cond: (ff = 42::bigint)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 explain (costs off)
@@ -279,7 +279,7 @@ explain (costs off)
                      ->  Index Scan using ec1_pkey on ec1
                            Index Cond: ((ff = 42::bigint) AND (ff = 42::bigint))
                            Filter: (ff = f1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 explain (costs off)
@@ -325,7 +325,7 @@ explain (costs off)
                                  ->  Seq Scan on ec1 ec1_5
                                  ->  Seq Scan on ec1 ec1_6
                      ->  Seq Scan on ec1 ec1_4
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (27 rows)
 
 -- let's try that as a mergejoin
@@ -374,7 +374,7 @@ explain (costs off)
                                  ->  Seq Scan on ec1 ec1_5
                                  ->  Seq Scan on ec1 ec1_6
                      ->  Seq Scan on ec1 ec1_4
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (27 rows)
 
 -- check partially indexed scan
@@ -405,7 +405,7 @@ explain (costs off)
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Index Scan using ec1_pkey on ec1
                            Index Cond: (ff = 42::bigint)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 -- let's try that as a mergejoin
@@ -435,6 +435,6 @@ explain (costs off)
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Index Scan using ec1_pkey on ec1
                            Index Cond: (ff = 42::bigint)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 

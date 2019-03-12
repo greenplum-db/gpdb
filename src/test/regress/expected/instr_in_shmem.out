@@ -125,7 +125,7 @@ EXPLAIN ANALYZE SELECT count(*) FROM a a1, a a2, a a3;
    (slice2)    Executor memory: 62K bytes avg x 3 workers, 62K bytes max (seg0).
    (slice3)    Executor memory: 158K bytes avg x 3 workers, 158K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Execution time: 73.541 ms
 (20 rows)
 
@@ -144,7 +144,7 @@ EXPLAIN SELECT count(*) FROM a where id < (1/(select count(*) where 1=0));
                ->  Seq Scan on a  (cost=0.00..3.75 rows=6 width=0)
                      Filter: (id < (1 / $0))
  Planning time: 0.414 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 EXPLAIN SELECT count(*) FROM a a1, a a2, a a3;
@@ -163,7 +163,7 @@ EXPLAIN SELECT count(*) FROM a a1, a a2, a a3;
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..5.50 rows=50 width=0)
                                  ->  Seq Scan on a a3  (cost=0.00..3.50 rows=17 width=0)
  Planning time: 0.556 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 -- Expected result is 1 row, means only current query in instrument slots,

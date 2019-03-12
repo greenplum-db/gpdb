@@ -189,7 +189,7 @@ explain select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 wh
                                    ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
                                          ->  Broadcast Motion 3:3  (slice16; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
                                                ->  Seq Scan on csq_t2_1_prt_4 csq_t2_1_prt_4_3  (cost=0.00..1176.25 rows=29 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (102 rows)
 
 select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1; -- expected (4,2)
@@ -222,7 +222,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x < -1);
                              ->  Seq Scan on mrs_t1 mrs_t1_1  (cost=0.00..3.25 rows=1 width=0)
                                    Filter: x < (-1)
          ->  Seq Scan on mrs_t1  (cost=0.00..3.20 rows=7 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 select * from mrs_t1 where exists (select x from mrs_t1 where x < -1) order by 1;
@@ -243,7 +243,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x = 1);
                              ->  Seq Scan on mrs_t1 mrs_t1_1  (cost=0.00..3.25 rows=1 width=0)
                                    Filter: x = 1
          ->  Seq Scan on mrs_t1  (cost=0.00..3.20 rows=7 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 select * from mrs_t1 where exists (select x from mrs_t1 where x = 1) order by 1;
@@ -281,7 +281,7 @@ explain select * from mrs_t1 where x in (select x-95 from mrs_t1) or x < 5;
            ->  Materialize  (cost=0.00..3.35 rows=7 width=4)
                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.25 rows=7 width=4)
                        ->  Seq Scan on mrs_t1 mrs_t1_1  (cost=0.00..3.25 rows=7 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 select * from mrs_t1 where x in (select x-95 from mrs_t1) or x < 5 order by 1;
@@ -341,7 +341,7 @@ explain select array(select x from csq_m1); -- no initplan
    InitPlan 1 (returns $0)
      ->  Seq Scan on csq_m1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 select array(select x from csq_m1); -- {1}
@@ -358,7 +358,7 @@ explain select array(select x from csq_d1); -- initplan
      ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
            ->  Seq Scan on csq_d1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 select array(select x from csq_d1); -- {1}
@@ -446,7 +446,7 @@ explain select * from csq_m1 where x not in (select x from csq_d1) or x < -100; 
            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=2 width=4)
                  ->  Seq Scan on csq_d1  (cost=0.00..1.02 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
@@ -469,7 +469,7 @@ explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; 
                  ->  Broadcast Motion 1:3  (slice1)  (cost=0.00..1.03 rows=3 width=4)
                        ->  Seq Scan on csq_m1  (cost=0.00..1.03 rows=3 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- (4)
@@ -519,7 +519,7 @@ explain SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (7 rows)
 
 SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
@@ -538,7 +538,7 @@ explain SELECT * FROM csq_r WHERE a not IN (SELECT * FROM csq_f(csq_r.a));
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (7 rows)
 
 SELECT * FROM csq_r WHERE a not IN (SELECT * FROM csq_f(csq_r.a));
@@ -556,7 +556,7 @@ explain SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (7 rows)
 
 SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
@@ -575,7 +575,7 @@ explain SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (7 rows)
 
 SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
@@ -594,7 +594,7 @@ explain SELECT * FROM csq_r WHERE a > (SELECT csq_f FROM csq_f(csq_r.a) limit 1)
            ->  Limit  (cost=0.00..0.01 rows=1 width=4)
                  ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 SELECT * FROM csq_r WHERE a > (SELECT csq_f FROM csq_f(csq_r.a) limit 1);
@@ -612,7 +612,7 @@ explain SELECT * FROM csq_r WHERE a < ANY (SELECT csq_f FROM csq_f(csq_r.a));
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (7 rows)
 
 SELECT * FROM csq_r WHERE a < ANY (SELECT csq_f FROM csq_f(csq_r.a));
@@ -630,7 +630,7 @@ explain SELECT * FROM csq_r WHERE a <= ALL (SELECT csq_f FROM csq_f(csq_r.a));
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (7 rows)
 
 SELECT * FROM csq_r WHERE a <= ALL (SELECT csq_f FROM csq_f(csq_r.a));
@@ -653,7 +653,7 @@ explain SELECT * FROM csq_r WHERE a IN (SELECT csq_f FROM csq_f(csq_r.a),csq_r);
                        ->  Materialize  (cost=0.00..1.01 rows=1 width=0)
                              ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=0)
                                    ->  Seq Scan on csq_r csq_r_1  (cost=0.00..1.01 rows=1 width=0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 SELECT * FROM csq_r WHERE a IN (SELECT csq_f FROM csq_f(csq_r.a),csq_r);
@@ -694,7 +694,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                            Group By: t1.t
                            ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (12 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t);
@@ -726,7 +726,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                                        Group By: t1.v::text
                                        ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (16 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.v);
@@ -760,7 +760,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                                        Group By: t1.n
                                        ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=7)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (18 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n=t1.n);
@@ -794,7 +794,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                                        Group By: t1.n + 1::numeric
                                        ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=7)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (18 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + 1=t1.n + 1);
@@ -828,7 +828,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                                        Group By: (t1.i + 1)::numeric
                                        ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (18 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + 1=t1.i + 1);
@@ -856,7 +856,7 @@ explain select * from csq_pullup t0 where not exists (select 1 from csq_pullup t
                ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=4)
                      Filter: t IS NOT NULL AND i = 1
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 select * from csq_pullup t0 where not exists (select 1 from csq_pullup t1 where t0.t=t1.t and t1.i = 1);
@@ -881,7 +881,7 @@ explain select * from csq_pullup t0 where not exists (select 1 from csq_pullup t
                      ->  Seq Scan on csq_pullup t1  (cost=0.00..1.01 rows=1 width=4)
                            Filter: (i + 1) IS NOT NULL
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (10 rows)
 
 select * from csq_pullup t0 where not exists (select 1 from csq_pullup t1 where t0.i=t1.i + 1);
@@ -913,7 +913,7 @@ explain select * from subselect_t1 where x in (select y from subselect_t2);
          ->  Hash  (cost=1.03..1.03 rows=1 width=4)
                ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select * from subselect_t1 where x in (select y from subselect_t2);
@@ -937,7 +937,7 @@ explain select * from subselect_t1 where x in (select y from subselect_t2 union 
                ->  Append  (cost=0.00..4.06 rows=2 width=4)
                      ->  Seq Scan on subselect_t2  (cost=0.00..2.03 rows=1 width=4)
                      ->  Seq Scan on subselect_t2 subselect_t2_1  (cost=0.00..2.03 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 select * from subselect_t1 where x in (select y from subselect_t2 union all select y from subselect_t2);
@@ -959,7 +959,7 @@ explain select count(*) from subselect_t1 where x in (select y from subselect_t2
                      ->  Hash  (cost=1.03..1.03 rows=1 width=4)
                            ->  Seq Scan on subselect_t2  (cost=0.00..1.03 rows=1 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (10 rows)
 
 select count(*) from subselect_t1 where x in (select y from subselect_t2);
@@ -984,7 +984,7 @@ explain select count(*) from subselect_t1 where x in (select y from subselect_t2
                            ->  Append  (cost=0.00..4.06 rows=2 width=4)
                                  ->  Seq Scan on subselect_t2  (cost=0.00..2.03 rows=1 width=4)
                                  ->  Seq Scan on subselect_t2 subselect_t2_1  (cost=0.00..2.03 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 select count(*) from subselect_t1 where x in (select y from subselect_t2 union all select y from subselect_t2);
@@ -1063,7 +1063,7 @@ explain select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
  Result  (cost=1063.00..1063.01 rows=1 width=0)
    One-Time Filter: false
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (4 rows)
 
 explain select * from t1 where a=1 and a=2 and a > (select t2.b from t2)
@@ -1073,7 +1073,7 @@ select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
 ------------------------------------------
  Result  (cost=0.00..0.01 rows=1 width=0)
    One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 select * from t1 where a=1 and a=2 and a > (select t2.b from t2)
@@ -1091,7 +1091,7 @@ where t1.a = foo.a;
  Result  (cost=1063.00..1063.01 rows=1 width=0)
    One-Time Filter: false
  Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (4 rows)
 
 select * from t1,
@@ -1122,7 +1122,7 @@ explain select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
                                                ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (14 rows)
 
 explain select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
@@ -1140,7 +1140,7 @@ explain select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
                                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
                                          ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (13 rows)
 
 select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
@@ -1229,7 +1229,7 @@ from
                        ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=0)
                              ->  Seq Scan on t1_mpp_24563 t1  (cost=0.00..1.01 rows=1 width=0)
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (17 rows)
 
 drop table t1_mpp_24563;
@@ -1281,7 +1281,7 @@ explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                        ->  Materialize  (cost=0.00..683.98 rows=16 width=4)
                              ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..683.75 rows=47 width=4)
                                    ->  Seq Scan on t_mpp_20470_ptr2 a_1  (cost=0.00..683.75 rows=16 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (20 rows)
 
 drop view v1_mpp_20470;
@@ -1447,7 +1447,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.24 rows=3 width=4)
                            Hash Key: subselect_tbl_1.f2
                            ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..3.08 rows=3 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
@@ -1470,7 +1470,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
                                  ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..3.08 rows=3 width=4)
                            ->  Hash  (cost=3.08..3.08 rows=3 width=4)
                                  ->  Seq Scan on subselect_tbl subselect_tbl_2  (cost=0.00..3.08 rows=3 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 EXPLAIN SELECT '' AS three, f1, f2
@@ -1490,7 +1490,7 @@ EXPLAIN SELECT '' AS three, f1, f2
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.36 rows=7 width=12)
                            ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..3.08 rows=3 width=12)
                                  Filter: f3 IS NOT NULL
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 ANALYZE tenk1;
@@ -1514,7 +1514,7 @@ WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..387.00 rows=3334 width=244)
                      Hash Key: b.unique2
                      ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=244)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 -- Correlated subselects
@@ -1534,7 +1534,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
                      ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=8)
                            Filter: f1 = f2
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (12 rows)
 
 EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
@@ -1555,7 +1555,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
                            Hash Key: subselect_tbl.f2
                            ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=12)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (13 rows)
 
 EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
@@ -1576,7 +1576,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
                            ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=12)
                                  Filter: f2 = f3::integer
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (13 rows)
 
 EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
@@ -1597,7 +1597,7 @@ EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
                            Hash Key: subselect_tbl_1.f2
                            ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..3.08 rows=3 width=12)
                                  Filter: f3 IS NOT NULL
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 --
@@ -1621,7 +1621,7 @@ EXPLAIN select count(*) from
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.00 rows=3334 width=4)
                                        Hash Key: b.hundred
                                        ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 EXPLAIN select count(distinct ss.ten) from
@@ -1643,7 +1643,7 @@ EXPLAIN select count(distinct ss.ten) from
                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.00 rows=3334 width=4)
                                              Hash Key: b.hundred
                                              ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 EXPLAIN select count(*) from
@@ -1663,7 +1663,7 @@ EXPLAIN select count(*) from
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.00 rows=3334 width=4)
                                        Hash Key: b.hundred
                                        ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 EXPLAIN select count(distinct ss.ten) from
@@ -1685,7 +1685,7 @@ EXPLAIN select count(distinct ss.ten) from
                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.00 rows=3334 width=4)
                                              Hash Key: b.hundred
                                              ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 --
@@ -1711,7 +1711,7 @@ EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) F
                        ->  Materialize  (cost=0.00..237.08 rows=3335 width=4)
                              ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..187.05 rows=3335 width=4)
                                    ->  Seq Scan on tenk1 tenk1_1  (cost=0.00..187.05 rows=3335 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
@@ -1765,7 +1765,7 @@ EXPLAIN SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup
                                  ->  Seq Scan on dedup_test3_1_prt_1  (cost=0.00..1.10 rows=4 width=4)
          ->  Hash  (cost=2.04..2.04 rows=2 width=8)
                ->  Seq Scan on dedup_test2  (cost=0.00..2.04 rows=2 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
@@ -1780,7 +1780,7 @@ EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN 
 ------------------------------------------
  Result  (cost=0.00..0.01 rows=1 width=0)
    One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN (SELECT a FROM dedup_test1);
@@ -1788,7 +1788,7 @@ EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN 
 ------------------------------------------
  Result  (cost=0.00..0.01 rows=1 width=0)
    One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND EXISTS (SELECT b FROM dedup_test1) AND dedup_test3.b IN (SELECT b FROM dedup_test1);
@@ -1796,7 +1796,7 @@ EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND EXISTS (SELECT b 
 ------------------------------------------
  Result  (cost=1.53..0.54 rows=1 width=0)
    One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 -- start_ignore

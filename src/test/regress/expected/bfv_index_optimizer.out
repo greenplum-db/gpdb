@@ -447,7 +447,7 @@ explain select * from tbl_ab where b::oid=1;
    ->  Seq Scan on tbl_ab  (cost=0.00..1176.25 rows=29 width=8)
          Filter: b::oid = 1::oid
  Settings:  optimizer=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 drop table tbl_ab;

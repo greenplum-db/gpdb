@@ -901,7 +901,7 @@ UPDATE rw_view1 v SET bb='Updated row 2' WHERE rw_view1_aa(v)=2
    ->  Update on base_tbl
          ->  Seq Scan on base_tbl
                Filter: (a = 2)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 DROP TABLE base_tbl CASCADE;
@@ -1101,7 +1101,7 @@ EXPLAIN (verbose, costs off) UPDATE rw_view1 SET b = b + 1 RETURNING *;
          Output: base_tbl.a, base_tbl.b
          ->  Seq Scan on public.base_tbl
                Output: base_tbl.a, (base_tbl.b + 1), base_tbl.ctid, base_tbl.gp_segment_id
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (8 rows)
 
@@ -1637,7 +1637,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
          SubPlan 2  (slice0; segments: 1)
            ->  Materialize
                  ->  Seq Scan on ref_tbl r_1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
@@ -1660,7 +1660,7 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
          SubPlan 2  (slice1; segments: 3)
            ->  Materialize
                  ->  Seq Scan on ref_tbl r_2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 DROP TABLE base_tbl, ref_tbl CASCADE;
@@ -1882,7 +1882,7 @@ EXPLAIN (costs off) SELECT * FROM rw_view1 WHERE snoop(person);
          Filter: snoop(rw_view1.person)
          ->  Seq Scan on base_tbl
                Filter: (visibility = 'public'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 EXPLAIN (costs off) UPDATE rw_view1 SET person=person WHERE snoop(person);
@@ -1964,7 +1964,7 @@ EXPLAIN (costs off) SELECT * FROM rw_view2 WHERE snoop(person);
                Filter: snoop(rw_view1.person)
                ->  Seq Scan on base_tbl
                      Filter: (visibility = 'public'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 EXPLAIN (costs off) UPDATE rw_view2 SET person=person WHERE snoop(person);
@@ -2025,7 +2025,7 @@ EXPLAIN (costs off) DELETE FROM rw_view1 WHERE id = 1 AND snoop(data);
                      Filter: snoop(base_tbl.data)
                      ->  Seq Scan on base_tbl base_tbl_2
                            Filter: ((NOT deleted) AND (id = 1))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 DELETE FROM rw_view1 WHERE id = 1 AND snoop(data);
@@ -2132,7 +2132,7 @@ UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a = 3;
  Result
    Output: 100, t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id
    One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a = 3;
@@ -2239,7 +2239,7 @@ UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
                                        ->  Seq Scan on public.t111 t111_4
                                              Output: t111_4.ctid, t111_4.tableoid, t111_4.a
                                              Filter: ((t111_4.a > 5) AND (t111_4.a = 8))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (90 rows)
 
 UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
