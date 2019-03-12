@@ -24,8 +24,8 @@ ALTER SYSTEM RESET ALL</codeblock>
         such configuration entries. </p>
       
       <p> Values set with <codeph>ALTER SYSTEM</codeph> will be effective after the next server
-        configuration reload (<codeph>SIGHUP</codeph> or <codeph>pg_ctl reload</codeph>), or after
-        the next server restart in the case of parameters that can only be changed at server
+        configuration reload (<codeph>gpstop -u</codeph>), or after the next server restart
+          (<codeph>gpstop -r</codeph>) in the case of parameters that can only be changed at server
         start.</p>
       
       <p> Only superusers can use <codeph>ALTER SYSTEM</codeph>. Also, since this command acts

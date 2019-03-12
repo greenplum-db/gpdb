@@ -67,7 +67,7 @@
             <li>The Greenplum Database input function for the <codeph>jsonb</codeph> data type is
               more strict. It does not allow Unicode escapes for non-ASCII characters (those above
                 <codeph>U+007F</codeph>) unless the database encoding is UTF8. It also rejects
-                <codeph>\u0000</codeph> , which cannot be represented in the Greenplum Database
+                <codeph>\u0000</codeph>, which cannot be represented in the Greenplum Database
                 <codeph>text</codeph> type, and it requires that any use of Unicode surrogate pairs
               to designate characters outside the Unicode Basic Multilingual Plane be correct. Valid
               Unicode escapes, except for <codeph>\u0000</codeph>, are converted to the equivalent

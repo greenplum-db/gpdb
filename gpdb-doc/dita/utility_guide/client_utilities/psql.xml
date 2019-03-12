@@ -817,25 +817,6 @@ hello 10</codeblock></pd>
           <pd>If the query fails or does not return one row, no variables are changed.</pd>
         </plentry>
         <plentry>
-          <pt>\gset [<varname>prefix</varname>]</pt>
-          <pd>Sends the current query input buffer to the server and stores the query's output
-            into <codeph>psql</codeph> variables. The query to be executed must return exactly
-            one row. Each column of the row is stored into a separate variable, named the same
-            as the column. For example:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
--&gt; \gset
-=&gt; \echo :var1 :var2
-hello 10
-</codeblock></pd>
-         <pd>If you specify a <varname>prefix</varname>, that string is prepended to the query's
-           column names to create the variable names to use:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
--&gt; \gset result_
-=&gt; \echo :result_var1 :result_var2
-hello 10</codeblock></pd>
-          <pd>If a column result is NULL, the corresponding variable is unset rather than being
-            set.</pd>
-          <pd>If the query fails or does not return one row, no variables are changed.</pd>
-        </plentry>
-        <plentry>
           <pt>\h | \help [<varname>sql_command</varname>]</pt>
           <pd>Gives syntax help on the specified SQL command. If a command is not specified, then
               <codeph>psql</codeph> will list all the commands for which syntax help is available.
@@ -928,7 +909,7 @@ lo_import 152801</codeblock>
         </plentry>
         <plentry>
           <pt>\o | \out [ <varname>filename</varname>  ]</pt>
-          <pt>\o | out [ <codeph>|</codeph>
+          <pt>\o | \out [ <codeph>|</codeph>
             <varname>command</varname> ]</pt>
           <pd>Saves future query results to the file <varname>filename</varname> or pipes future
             results to the shell command <varname>command</varname>. If no argument is specified,
@@ -1199,7 +1180,7 @@ testdb=> \setenv LESS -imx4F</codeblock></pd>
         </plentry>
         <plentry>
           <pt>\w | \write <varname>filename</varname></pt>
-          <pt>\w | \write <varname>command</varname></pt>
+          <pt>\w | \write <codeph>|</codeph> <varname>command</varname></pt>
           <pd>Outputs the current query buffer to the file <varname>filename</varname> or pipes it
             to the shell command <varname>command</varname>.</pd>
         </plentry>
@@ -1208,12 +1189,6 @@ testdb=> \setenv LESS -imx4F</codeblock></pd>
           <pd>Repeatedly execute the current query buffer (like <codeph>\g</codeph>) until
             interrupted or the query fails. Wait the specified number of seconds (default 2) between
             executions.</pd>
-        </plentry>
-        <plentry>
-          <pt>\watch [<varname>seconds</varname>]</pt>
-          <pd>Repeatedly execute the current query buffer (like <codeph>\g</codeph>) until
-            interrupted or the query fails. Wait the specified number of seconds (default 2)
-            between executions.</pd>
         </plentry>
         <plentry>
           <pt>\x [ on | off | auto ]</pt>

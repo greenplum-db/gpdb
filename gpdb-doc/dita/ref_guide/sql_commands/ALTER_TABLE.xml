@@ -435,7 +435,7 @@ where <varname>action</varname> is one of:
                                         Administrator Guide</cite>.</note>
                         <p>All the forms of ALTER TABLE that act on a single table, except
                                         <codeph>RENAME</codeph> and <codeph>SET SCHEMA</codeph>, can
-                                be combined into a list of multiple alterations to applied together.
+                                be combined into a list of multiple alterations to apply together.
                                 For example, it is possible to add several columns and/or alter the
                                 type of several columns in a single command. This is particularly
                                 useful with large tables, since only one pass over the table need be
@@ -908,7 +908,7 @@ where <varname>action</varname> is one of:
                                 columns.</p>
                         <p>Adding a <codeph>CHECK</codeph> or <codeph>NOT NULL</codeph> constraint
                                 requires scanning the table to verify that existing rows meet the
-                                constraint, but does not require a taable rewrite.</p>
+                                constraint, but does not require a table rewrite.</p>
                         <p>When a column is added with <codeph>ADD COLUMN</codeph>, all existing
                                 rows in the table are initialized with the column's default value,
                                 or <codeph>NULL</codeph> if no <codeph>DEFAULT</codeph> clause is

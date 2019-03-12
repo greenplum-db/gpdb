@@ -9,13 +9,9 @@
       variant subsumes all the others, and also resets additional state.
   </p>
 </section><section id="section4"><title>Parameters</title><parml><plentry><pt>PLANS</pt><pd>Releases all cached query plans, forcing re-planning to occur
-  the next time the associated prepared statement is used.</pd></plentry><plentry><pt>SEQUENCES</pt><pd>Discards all cached sequence-related state,
-    including <codeph>currval()</codeph>/<codeph>lastval()</codeph>
-      information and any preallocated sequence values that have not
-      yet been returned by <codeph>nextval()</codeph>.
-        (See <codeph>CREATE SEQUENCE</codeph> for a description of
-          preallocated sequence values.)
-  </pd></plentry>
+  the next time the associated prepared statement is used.</pd></plentry><plentry><pt>SEQUENCES</pt><pd>Discards all cached sequence-related state, including any preallocated sequence values that have
+            not yet been returned by <codeph>nextval()</codeph>. (See <codeph>CREATE
+              SEQUENCE</codeph> for a description of preallocated sequence values.) </pd></plentry>
         <plentry>
           <pt>TEMPORARY/TEMP</pt>
           <pd>Drops all temporary tables created in the current session.</pd>
