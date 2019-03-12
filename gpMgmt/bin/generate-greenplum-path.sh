@@ -44,6 +44,7 @@ cat <<EOF
 #setup PYTHONHOME
 if [ -x \$GPHOME/ext/python/bin/python ]; then
     PYTHONHOME="\$GPHOME/ext/python"
+    export PYTHONHOME
 fi
 EOF
 
@@ -100,6 +101,5 @@ EOF
 
 cat <<EOF
 export PYTHONPATH
-export PYTHONHOME
 EOF
 
