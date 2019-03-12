@@ -88,6 +88,10 @@ class GpConfig(GpTestCase):
         ])
         sys.argv = ["gpconfig"]  # reset to relatively empty args list
 
+        # GUC object for testing string quoting
+        self.guc = Mock()
+        self.guc.vartype = "string"
+
         shared_dir = os.path.join(self.temp_dir, ParseGuc.DESTINATION_DIR)
         _mkdir_p(shared_dir, 0755)
         self.guc_disallowed_readonly_file = os.path.abspath(os.path.join(shared_dir, ParseGuc.DESTINATION_FILENAME))
@@ -376,6 +380,42 @@ class GpConfig(GpTestCase):
         except Exception:
             pass
         self.assertEqual(len(self.subject.read_only_gucs), 2)
+
+    def test_quote_string_not_already_quoted(self):
+        value = "teststring"
+        expected = "'teststring'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_already_quoted(self):
+        value = "'teststring'"
+        expected = "'teststring'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_quoted_with_double_quotes(self):
+        value = "\"teststring\""
+        expected = "'\"teststring\"'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_with_internal_single_quote(self):
+        value = "test'string"
+        expected = "'test''string'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_with_internal_backslash(self):
+        value = "test\\string"
+        expected = "'test\\\\string'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_with_single_quote_and_backslash(self):
+        value = "test\\'string"
+        expected = "'test\\\\''string'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
 
     def setup_for_testing_quoting_string_values(self, vartype, value, additional_args=None):
         sys.argv = ["gpconfig", "--change", "my_property_name", "--value", value]
