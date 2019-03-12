@@ -351,7 +351,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           <pd>
             <codeph>INCLUDING ALL</codeph> is an abbreviated form of
             <codeph>INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES 
-     INCLUDING STORAGE INCLUDING COMMENTS</codeph>
+     INCLUDING STORAGE INCLUDING COMMENTS</codeph>.
           </pd>
           <pd> Note that unlike <codeph>INHERITS</codeph>, columns and constraints copied by
               <codeph>LIKE</codeph> are not merged with similarly named columns and constraints. If
