@@ -3020,7 +3020,8 @@
         The default is <codeph>off</codeph>, the Global Deadlock Detector is disabled. </p>
       <p>If the Global Deadlock Detector is disabled (the default), Greenplum Database executes
         concurrent update and delete operations on a heap table serially.</p>
-      <p>If the Global Deadlock Detector is enabled, it can determine that a deadlock exists, and
+      <p>If the Global Deadlock Detector is enabled, concurrent updates are permitted and the Global 
+        Deadlock Detector determines when a deadlock exists, and
         breaks the deadlock by cancelling one or more backend processes associated with the youngest
         transaction(s) involved. </p>
       <p>When the Global Deadlock Detector determines a deadlock exists for the following types of
