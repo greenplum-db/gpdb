@@ -3024,19 +3024,6 @@
         Deadlock Detector determines when a deadlock exists, and
         breaks the deadlock by cancelling one or more backend processes associated with the youngest
         transaction(s) involved. </p>
-      <p>When the Global Deadlock Detector determines a deadlock exists for the following types of
-        transactions, only one of the transactions will succeed. The other transactions will fail
-        with an error indicating that concurrent updates to the same row is not allowed.<ul
-          id="ul_bxf_mpp_5gb">
-          <li>Concurrent transactions on the same row of a heap table where the first transaction is
-            an update operation and a later transaction executes an update or delete and the query
-            plan contains a motion operator.</li>
-          <li>Concurrent update transactions on the same distribution key of a heap table that are
-            executed by the Greenplum Database legacy query optimizer.</li>
-          <li>Concurrent update transactions on the same row of a hash table that are executed by
-            the GPORCA optimizer.</li>
-        </ul></p>
-      <p>The parameter can be set for a database system, an individual database, or a session.</p>
       <table id="table_vcm_p3r_qgb">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
