@@ -1,0 +1,110 @@
+include: helpers/server_helpers.sql;
+CREATE
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+
+-- Allow extra time for mirror promotion to complete recovery to avoid
+-- gprecoverseg BEGIN failures due to gang creation failure as some primaries
+-- are not up. Setting these increase the number of retries in gang creation in
+-- case segment is in recovery. Approximately we want to wait 30 seconds.
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 120 --skipvalidation --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 1000 --skipvalidation --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+1:CREATE TABLE t(a int, b int);
+CREATE
+
+1:SELECT gp_inject_fault_infinite('checkpoint_after_redo_calculated', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault_infinite 
+--------------------------
+ t                        
+(1 row)
+2&:CHECKPOINT;  <waiting ...>
+3:INSERT INTO t VALUES (1, 0);
+INSERT 1
+
+-- Force WAL to switch xlog files explicitly
+-- start_ignore
+1U:SELECT pg_switch_xlog();
+-- end_ignore
+3:INSERT INTO t SELECT 0, i FROM generate_series(1, 25)i;
+INSERT 25
+
+1:SELECT gp_inject_fault_infinite('checkpoint_after_redo_calculated', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault_infinite 
+--------------------------
+ t                        
+(1 row)
+2<:  <... completed>
+CHECKPOINT
+
+-- Here we must force immediately shutdown primary without triggering another
+-- checkpoint otherwise we would undo all of our previous work to ensure that
+-- checkpoint record has redo record on another wal segment.
+-1U: SELECT pg_ctl((SELECT datadir FROM gp_segment_configuration c WHERE c.role='p' AND c.content=1), 'stop', 'immediate');
+ pg_ctl                                               
+------------------------------------------------------
+ waiting for server to shut down done
+server stopped
+ 
+(1 row)
+
+-- Make sure we see the segment is down before trying to recover...
+4:SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+4:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 1;
+ role | preferred_role 
+------+----------------
+ m    | p              
+ p    | m              
+(2 rows)
+
+!\retcode gprecoverseg -a;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- loop while segments come in sync
+do $$ begin /* in func */ for i in 1..120 loop /* in func */ if (select count(*) = 2 from gp_segment_configuration where content = 1 and mode = 's') then /* in func */ return; /* in func */ end if; /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ end; /* in func */ $$;
+DO
+
+!\retcode gprecoverseg -ar;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- loop while segments come in sync
+do $$ begin /* in func */ for i in 1..120 loop /* in func */ if (select count(*) = 2 from gp_segment_configuration where content = 1 and mode = 's') then /* in func */ return; /* in func */ end if; /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ end; /* in func */ $$;
+DO
+
+-- verify no segment is down after recovery
+1:SELECT COUNT(*) FROM gp_segment_configuration WHERE status = 'd';
+ count 
+-------
+ 0     
+(1 row)
+
+!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --masteronly;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
