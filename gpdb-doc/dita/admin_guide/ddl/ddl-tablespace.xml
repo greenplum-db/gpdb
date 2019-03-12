@@ -135,15 +135,15 @@ CREATE TABLE foo(i int);
     <body>
       <p>You can move temporary or transaction files to a specific tablespace to improve database
         performance when running queries, creating backups, and to store data more sequentially. </p>
-      <p>Unless otherwise specified, temporary and transaction files are stored together with all
-        user data. The default location of temporary files,
-          &lt;<varname>data_dir</varname>>/&lt;<varname>seg_ID</varname>>/base/pgsql_tmp.</p>
       <p>The Greenplum Database server configuration parameter <codeph>temp_tablespaces</codeph>
-        controls the location for temporary files.</p>
-      <p>This variable specifies tablespaces in which to create temporary objects (temp tables and
-        indexes on temp tables) when a <codeph>CREATE</codeph> command does not explicitly specify a
-        tablespace. Temporary files for purposes such as sorting large data sets are also created in
-        these tablespaces.</p>
+        controls the location for both temporary tables and temporary spill files for hash aggregate
+        and hash join queries. (Temporary spill files for other query types are stored with general
+        segment data in
+          <codeph>&lt;<varname>data_dir</varname>>/&lt;<varname>seg_ID</varname>>/base/pgsql_tmp</codeph>.)</p>
+      <p><codeph>temp_tablespaces</codeph> specifies tablespaces in which to create temporary
+        objects (temp tables and indexes on temp tables) when a <codeph>CREATE</codeph> command does
+        not explicitly specify a tablespace. Temporary files for purposes such as sorting large data
+        sets are also created in these tablespaces.</p>
       <p>Also note the following information about temporary or transaction files:</p>
       <ul id="ul_z3v_51j_lfb">
         <li>You can dedicate only one tablespace for temporary or transaction files, although you
