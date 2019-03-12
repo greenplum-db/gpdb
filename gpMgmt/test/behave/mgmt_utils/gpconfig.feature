@@ -5,8 +5,6 @@ Feature: gpconfig integration tests
     # because any existing postgresql.conf file could already have the first value in it a priori
     # NOTE: since we are restarting the database with the given paramaters, do not change parameters
     #   that will cause the database to not restart given your machine setup.
-    # TODO: TODO_XX below are strings that work on master but not on 6X_STABLE because PR 7602 has
-    #   not yet been backported.
 
     @concourse_cluster
     @demo_cluster
@@ -74,9 +72,8 @@ Feature: gpconfig integration tests
         | gp_resource_group_cpu_limit |  real    | 0.4        | 0.5      | 0.5        | 0.5        | 0.33              | 0.33                   | 0.7          | 0.7               | 0.7               |
         | application_name            |  string  | xxxxxx     | bodhi    | 'bodhi'    | bodhi      | lucy              | 'lucy'                 | bengie       | 'bengie'          | bengie            |
         | application_name            |  string  | yyyyyy     | 'bod hi' | 'bod hi'   | bod hi     | 'lu cy'           | 'lu cy'                | 'ben gie'    | 'ben gie'         | ben gie           |
-#TODO_XX| application_name            |  string  | zzzzzz     | ''       | ''         |            | ''                | ''                     | ''           | ''                |                   |
+        | application_name            |  string  | zzzzzz     | ''       | ''         |            | ''                | ''                     | ''           | ''                |                   |
 
-    @skip
     @concourse_cluster
     @demo_cluster
     Scenario Outline: gpconfig edge cases for type: <type>
@@ -109,7 +106,7 @@ Feature: gpconfig integration tests
     # NOTE: <value> is a command-line value
     Examples:
         | guc              | type     | seed_value | value   | file_value | live_value |
-#TODO_XX| application_name |  string  |  boo       |  "'\''" | '\\'''     |  \'        |
+        | application_name |  string  |  boo       |  "'\''" | '\\'''     |  \'        |
        #| application_name |  string  |  boo       |  'C:\\home\\fun'  | 'C:\\home\\fun' | 'C:\\home\\fun' |
 
     @concourse_cluster
@@ -177,4 +174,4 @@ Feature: gpconfig integration tests
         | gp_resource_group_cpu_limit |  real    | 0.4        |
         | application_name            |  string  | bengie     |
         | application_name            |  string  | 'ben gie'  |
-#TODO_XX| application_name            |  string  | ''         |
+        | application_name            |  string  | ''         |
