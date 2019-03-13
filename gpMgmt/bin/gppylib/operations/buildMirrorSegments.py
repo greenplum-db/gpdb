@@ -150,11 +150,16 @@ class GpMirrorToBuild:
 
 
 class GpMirrorListToBuild:
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, showProgressInplace=True):
+    class Progress:
+        NONE = 0
+        INPLACE = 1
+        SEQUENTIAL = 2
+
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
-        self.__showProgressInplace = showProgressInplace
+        self.__progressMode = progressMode
         self.__parallelDegree = parallelDegree
         self.__forceoverwrite = forceoverwrite
         self.__additionalWarnings = additionalWarnings or []
@@ -410,7 +415,7 @@ class GpMirrorListToBuild:
                         (dbid, usedDataDirectories.get(path), hostName, path))
                 usedDataDirectories[path] = dbid
 
-    def _join_and_show_segment_progress(self, cmds, inplace=False, outfile=sys.stdout, interval=0.1):
+    def _join_and_show_segment_progress(self, cmds, inplace=False, outfile=sys.stdout, interval=1):
         written = False
 
         def print_progress():
@@ -455,11 +460,11 @@ class GpMirrorListToBuild:
 
         if self.__quiet:
             self.__pool.join()
+        elif progressCmds:
+            self._join_and_show_segment_progress(progressCmds,
+                                                 inplace=self.__progressMode == GpMirrorListToBuild.Progress.INPLACE)
         else:
-            if progressCmds:
-                self._join_and_show_segment_progress(progressCmds, inplace=self.__showProgressInplace)
-            else:
-                base.join_and_indicate_progress(self.__pool)
+            base.join_and_indicate_progress(self.__pool)
 
         if not suppressErrorCheck:
             self.__pool.check_results()
@@ -556,7 +561,7 @@ class GpMirrorListToBuild:
         # file when one done. A new file is generated for each run of
         # gprecoverseg based on a timestamp.
         #
-        # There is race between when the pg_basbackup log file is created and
+        # There is race between when the pg_basebackup log file is created and
         # when the progress command is run. Thus, the progress command touches
         # the file to ensure its present before tailing.
         self.__logger.info('Configuring new segments')
@@ -565,8 +570,9 @@ class GpMirrorListToBuild:
         removeCmds= []
         for hostName in destSegmentByHost.keys():
             for segment in destSegmentByHost[hostName]:
-                progressCmds.append(
-                    GpMirrorListToBuild.ProgressCommand("tail the last line of the file",
+                if self.__progressMode != GpMirrorListToBuild.Progress.NONE:
+                    progressCmds.append(
+                        GpMirrorListToBuild.ProgressCommand("tail the last line of the file",
                                        "set -o pipefail; touch -a {0}; tail -1 {0} | tr '\\r' '\\n' | tail -1".format(
                                            pipes.quote(segment.progressFile)),
                                        segment.getSegmentDbId(),

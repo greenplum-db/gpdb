@@ -133,6 +133,19 @@ class GpRecoverSegmentProgram:
         if self.__options.showProgressInplace is None:
             self.__options.showProgressInplace = sys.stdout.isatty()
 
+
+    def getProgressMode(self):
+        if self.__options.showProgress:
+            if self.__options.showProgressInplace:
+                progressMode = GpMirrorListToBuild.Progress.INPLACE
+            else:
+                progressMode = GpMirrorListToBuild.Progress.SEQUENTIAL
+        else:
+            progressMode = GpMirrorListToBuild.Progress.NONE
+
+        return progressMode
+
+
     def outputToFile(self, mirrorBuilder, gpArray, fileName):
         lines = []
 
@@ -258,7 +271,7 @@ class GpRecoverSegmentProgram:
 
         return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                    self.__options.parallelDegree, forceoverwrite=True,
-                                   showProgressInplace=self.__options.showProgressInplace)
+                                   progressMode=self.getProgressMode())
 
     def findAndValidatePeersForFailedSegments(self, gpArray, failedSegments):
         dbIdToPeerMap = gpArray.getDbIdToPeerMap()
@@ -395,7 +408,7 @@ class GpRecoverSegmentProgram:
                                    self.__options.parallelDegree,
                                    interfaceHostnameWarnings,
                                    forceoverwrite=True,
-                                   showProgressInplace=self.__options.showProgressInplace)
+                                   progressMode=self.getProgressMode())
 
     def _output_segments_with_persistent_mirroring_disabled(self, segs_persistent_mirroring_disabled=None):
         if segs_persistent_mirroring_disabled:
@@ -697,6 +710,9 @@ class GpRecoverSegmentProgram:
         loggingGroup.add_option("-s", None, default=None, action='store_false',
                                 dest='showProgressInplace',
                                 help='Show pg_basebackup progress sequentially instead of inplace')
+        loggingGroup.add_option("--no-progress",
+                                dest="showProgress", default=True, action="store_false",
+                                help="Suppress pg_basebackup progress output")
 
         addTo = OptionGroup(parser, "Connection Options")
         parser.add_option_group(addTo)
