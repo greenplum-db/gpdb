@@ -4893,18 +4893,21 @@ PROCESS_SEGMENT_DATA:
 				 */
 				if (resultRelInfo->ri_partSlot != NULL)
 				{
+					int relnatts;
 					AttrMap *map = resultRelInfo->ri_partInsertMap;
 					Assert(map != NULL);
 
 					slot = resultRelInfo->ri_partSlot;
 					ExecClearTuple(slot);
+					relnatts = resultRelInfo->ri_RelationDesc->rd_att->natts;
+
 					partValues = slot_get_values(resultRelInfo->ri_partSlot);
 					partNulls = slot_get_isnull(resultRelInfo->ri_partSlot);
-					MemSet(partValues, 0, attr_count * sizeof(Datum));
-					MemSet(partNulls, true, attr_count * sizeof(bool));
+					MemSet(partValues, 0, relnatts * sizeof(Datum));
+					MemSet(partNulls, true, relnatts * sizeof(bool));
 
 					reconstructTupleValues(map, baseValues, baseNulls, (int) num_phys_attrs,
-										   partValues, partNulls, (int) attr_count);
+										   partValues, partNulls, (int) relnatts);
 					ExecStoreVirtualTuple(slot);
 				}
 				else
