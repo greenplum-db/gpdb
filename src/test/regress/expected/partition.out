@@ -8168,7 +8168,7 @@ select * from sales order by pkid;
 drop table sales cascade;
 NOTICE:  drop cascades to default for table newpart column pkid
 -- Exchage partiton table with a table having dropped column
-create table exchange_part(a int, b int) partition by range(b) (start (0) end (10) every (1));
+create table exchange_part(a int, b int) partition by range(b) (start (0) end (10) every (5));
 NOTICE:  CREATE TABLE will create partition "exchange_part_1_prt_1" for table "exchange_part"
 NOTICE:  CREATE TABLE will create partition "exchange_part_1_prt_2" for table "exchange_part"
 NOTICE:  CREATE TABLE will create partition "exchange_part_1_prt_3" for table "exchange_part"
