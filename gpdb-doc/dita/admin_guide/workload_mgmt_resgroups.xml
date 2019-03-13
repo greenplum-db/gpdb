@@ -524,8 +524,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         version 4.4.73-5.1 or newer. <p>If you use RedHat 6 and the performance with resource groups
           is acceptable for your use case, upgrade your kernel to version 2.6.32-696 or higher to
           benefit from other fixes to the cgroups implementation. </p><p>SuSE 11 does not have a
-          kernel version that resolves this issue; resource groups are still considered to be an
-          experimental feature on this platform. <ph otherprops="pivotal">Resource groups are not
+          kernel version that resolves this issue; resource groups are still considered to be a Beta feature on this platform. <ph otherprops="pivotal">Resource groups are not
             supported on SuSE 11 for production use.</ph></p></note>
       <section id="topic833" xml:lang="en">
         <title>Prerequisite</title>

@@ -24,8 +24,7 @@ SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
         </section>
         <section id="section3">
             <p><b>Note:</b>
-                <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is
-                not recommended for production use.</p>
+                <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</p>
             <title>Description</title>
             <p><codeph>SELECT INTO</codeph> creates a new table and fills it with data computed by a
                 query. The data is not returned to the client, as it is with a normal
@@ -33,10 +32,8 @@ SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
                 associated with the output columns of the <codeph>SELECT</codeph>. </p>
             <p>The <codeph>RECURSIVE</codeph> keyword can be enabled by setting the server
                 configuration parameter <codeph>gp_recursive_cte_prototype</codeph> to
-                    <codeph>true</codeph>.<note type="warning">The <codeph>RECURSIVE</codeph>
-                    keyword is an experimental feature and is not intended for use in a production
-                    environment. Experimental features are subject to change without notice in
-                    future releases.</note></p>
+                    <codeph>true</codeph>.<note type="note">The <codeph>RECURSIVE</codeph> keyword
+                    is a Beta feature.</note></p>
         </section>
         <section id="section4">
             <title>Parameters</title>
