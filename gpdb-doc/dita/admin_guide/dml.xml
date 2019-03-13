@@ -182,7 +182,8 @@
       </p>
       <p>Using <codeph>UPDATE</codeph> in Greenplum Database has the following restrictions:</p>
       <ul>
-        <li id="ix155050">The Greenplum distribution key columns may not be updated.</li>
+        <li id="ix155050">While GPORCA supports updates to Greenplum distribution key columns, the
+          Postgres planner does not.</li>
         <li id="ix142137">If mirrors are enabled, you cannot use <codeph>STABLE</codeph> or
             <codeph>VOLATILE</codeph> functions in an <codeph>UPDATE</codeph> statement.</li>
         <li id="ix155339">Greenplum Database partitioning columns cannot be updated.</li>
