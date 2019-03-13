@@ -145,7 +145,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         gpArray = GpArray([self.master, self.primary])
 
-        with self.assertRaisesRegexp(Exception, r"On host samehost, port 1111 for segment with dbid 2 conflicts with port for segment dbid 1"):
+        with self.assertRaisesRegexp(Exception, r"Segment dbid's 1 and 2 on host samehost cannot have the same port 1111"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
     def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_QE_replication_ports_differ(self):
@@ -157,7 +157,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         gpArray = GpArray([self.master, self.primary])
 
-        with self.assertRaisesRegexp(Exception, r"On host samehost, replication port 2 for segment with dbid 2222 conflicts with a port for segment dbid 1"):
+        with self.assertRaisesRegexp(Exception, r"Segment dbid's 1 and 2 on host samehost cannot have the same replication port 2222"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
     def test_checkForPortAndDirectoryConflicts__checks_QE_replication_port_is_set(self):
@@ -165,7 +165,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         gpArray = GpArray([self.master, self.primary])
 
-        with self.assertRaisesRegexp(Exception, r"On host primaryhost, the replication port is not set for segment with dbid 2"):
+        with self.assertRaisesRegexp(Exception, r"Replication port is not set for segment dbid 2 on host primaryhost"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
     def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_both_QE_replication_port_and_port_differ(self):
@@ -177,7 +177,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         gpArray = GpArray([self.master, self.primary])
 
-        with self.assertRaisesRegexp(Exception, r"On host samehost, segment with dbid 2 has equal port and replication port"):
+        with self.assertRaisesRegexp(Exception, r"Segment dbid 2 on host samehost cannot have the same value 3333 for port and replication port"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
     def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_data_directories_differ(self):
@@ -189,7 +189,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         gpArray = GpArray([self.master, self.primary])
 
-        with self.assertRaisesRegexp(Exception, r"On host samehost, directory \(base or filespace\) for segment with dbid 2 conflicts with a directory \(base or filespace\) for segment dbid 1; directory: /data"):
+        with self.assertRaisesRegexp(Exception, r"Segment dbid's 1 and 2 on host samehost cannot have the same data directory '/data'"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
 if __name__ == '__main__':

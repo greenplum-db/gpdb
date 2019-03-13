@@ -480,23 +480,22 @@ class GpMirrorListToBuild:
                 dbid = segment.getSegmentDbId()
                 if port in usedPorts:
                     raise Exception(
-                        "On host %s, port %s for segment with dbid %s conflicts with port for segment dbid %s" %
-                        (hostName, port, dbid, usedPorts.get(port)))
+                        "Segment dbid's %s and %s on host %s cannot have the same port %s." %
+                        (usedPorts.get(port), dbid, hostName, port))
 
                 if segment.isSegmentQE():
                     if replicationPort is None:
-                        raise Exception("On host %s, the replication port is not set for segment with dbid %s" %
-                                        (hostName, dbid))
+                        raise Exception("Replication port is not set for segment dbid %s on host %s." %
+                                        (dbid, hostName))
 
                     if replicationPort in usedPorts:
                         raise Exception(
-                            "On host %s, replication port %s for segment with dbid %s conflicts "
-                            "with a port for segment dbid %s" %
-                            (hostName, dbid, replicationPort, usedPorts.get(replicationPort)))
+                            "Segment dbid's %s and %s on host %s cannot have the same replication port %s." %
+                            (usedPorts.get(replicationPort), dbid, hostName, replicationPort))
 
                     if port == replicationPort:
-                        raise Exception("On host %s, segment with dbid %s has equal port and replication port" %
-                                        (hostName, dbid))
+                        raise Exception("Segment dbid %s on host %s cannot have the same value %s for port and replication port." %
+                                        (dbid, hostName, port))
 
                 usedPorts[port] = dbid
                 usedPorts[replicationPort] = dbid
@@ -509,9 +508,8 @@ class GpMirrorListToBuild:
                 for path in paths:
                     if path in usedDataDirectories:
                         raise Exception(
-                            "On host %s, directory (base or filespace) for segment with dbid %s conflicts with a "
-                            "directory (base or filespace) for segment dbid %s; directory: %s" %
-                            (hostName, dbid, usedDataDirectories.get(path), path))
+                            "Segment dbid's %s and %s on host %s cannot have the same data directory '%s'." %
+                            (usedDataDirectories.get(path), dbid, hostName, path))
                     usedDataDirectories[path] = dbid
 
     def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, actionVerb, suppressErrorCheck=False):
