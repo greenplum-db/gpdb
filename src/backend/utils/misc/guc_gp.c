@@ -2975,7 +2975,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"writable_external_table_bufsize", PGC_USERSET, EXTERNAL_TABLES,
-			gettext_noop("Buffer size in kilo bytes for writable external table before writing data to gpfdist."),
+			gettext_noop("Buffer size in kilobytes for writable external table before writing data to gpfdist."),
 			gettext_noop("Valid value is between 32K and 128M: [32, 131072]."),
 			GUC_UNIT_KB | GUC_NOT_IN_SAMPLE
 		},
