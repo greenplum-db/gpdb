@@ -35,7 +35,7 @@ where content = 0;
 0Uq:
 
 -- fully recover the failed primary as new mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF --no-progress;
 
 -- loop while segments come in sync
 do $$
@@ -94,7 +94,7 @@ create tablespace mirror_promotion_tablespace location '/tmp/mirror_promotion_ta
 create table mirror_promotion_tblspc_heap_table (a int) tablespace mirror_promotion_tablespace;
 
 -- -- now, let's fully recover the mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF  --no-progress;
 
 drop table mirror_promotion_tblspc_heap_table;
 drop tablespace mirror_promotion_tablespace;

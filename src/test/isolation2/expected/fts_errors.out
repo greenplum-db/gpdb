@@ -190,7 +190,7 @@ server stopped
 (1 row)
 
 -- fully recover the failed primary as new mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF --no-progress;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
