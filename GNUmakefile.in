@@ -11,6 +11,7 @@ include $(top_builddir)/src/Makefile.global
 $(call recurse,all install,src config)
 
 all:
+	$(MAKE) -C contrib/auto_explain all
 	$(MAKE) -C contrib/file_fdw all
 	$(MAKE) -C contrib/formatter all
 	$(MAKE) -C contrib/formatter_fixedwidth all
@@ -44,6 +45,7 @@ html man:
 	$(MAKE) -C doc $@
 
 install:
+	$(MAKE) -C contrib/auto_explain $@
 	#$(MAKE) -C contrib/file_fdw $@ # GPDB_91_MERGE_FIXME: disable installation until it's officially supported.
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@
@@ -139,6 +141,7 @@ $(call recurse,installcheck-world, \
 			   src/test/ \
 			   src/pl \
 			   src/interfaces/gppc \
+			   contrib/auto_explain \
 			   contrib/formatter_fixedwidth \
 			   contrib/extprotocol \
 			   contrib/dblink \
