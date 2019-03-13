@@ -3912,7 +3912,7 @@ select * from sales order by pkid;
 drop table sales cascade;
 
 -- Exchage partiton table with a table having dropped column
-create table exchange_part(a int, b int) partition by range(b) (start (0) end (10) every (1));
+create table exchange_part(a int, b int) partition by range(b) (start (0) end (10) every (5));
 create table exchange1(a int, c int, b int);
 alter table exchange1 drop column c;
 alter table exchange_part exchange partition for (1) with table exchange1;
