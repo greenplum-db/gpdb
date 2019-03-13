@@ -22,12 +22,8 @@
  * Statistics related parameters.
  */
 
-double			analyze_relative_error = 0.25;
 bool			gp_statistics_pullup_from_child_partition = FALSE;
 bool			gp_statistics_use_fkeys = FALSE;
-int				gp_statistics_blocks_target = 25;
-double			gp_statistics_ndistinct_scaling_ratio_threshold = 0.10;
-double			gp_statistics_sampling_threshold = 10000;
 
 typedef struct
 {

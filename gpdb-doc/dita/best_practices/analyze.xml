@@ -44,15 +44,6 @@
         may improve the quality of the query planner’s estimates, especially for columns with
         irregular data patterns. <codeph>default_statistics_target</codeph> can be set at the
         master/session level and requires a reload. </p>
-      <p>The <codeph>gp_analyze_relative_error</codeph> configuration parameter affects the sampling
-        rate during statistics collection to determine cardinality in a column. For example, a value
-        of .5 is equivalent to an acceptable error of 50%. The default is .25. Use the
-          <codeph>gp_analyze_relative_error</codeph> parameter to set the acceptable estimated
-        relative error in the cardinality of a table. If statistics do not produce good estimates of
-        cardinality for a particular table attribute, decreasing the relative error fraction
-        (accepting less errors) tells the system to sample more rows. However, it is not recommended
-        to reduce this below 0.1 as it will increase <codeph>ANALYZE</codeph> time
-        substantially.</p>
     </section>
     <section>
       <title>When to Run ANALYZE</title>

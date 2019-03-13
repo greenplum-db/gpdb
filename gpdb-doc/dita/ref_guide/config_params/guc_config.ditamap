@@ -74,7 +74,6 @@
             <topicref href="guc-list.xml#extra_float_digits"/>
             <topicref href="guc-list.xml#from_collapse_limit"/>
             <topicref href="guc-list.xml#gp_adjust_selectivity_for_outerjoins"/>
-            <topicref href="guc-list.xml#gp_analyze_relative_error"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction_threshold"/>
             <topicref href="guc-list.xml#gp_autostats_mode"/>

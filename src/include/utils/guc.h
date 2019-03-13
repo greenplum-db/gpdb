@@ -238,7 +238,6 @@ extern bool	Debug_print_full_dtm;
 extern bool	Debug_print_snapshot_dtm;
 extern bool Debug_disable_distributed_snapshot;
 extern bool Debug_abort_after_distributed_prepared;
-extern bool Debug_abort_after_segment_prepared;
 extern bool Debug_appendonly_print_insert;
 extern bool Debug_appendonly_print_insert_tuple;
 extern bool Debug_appendonly_print_scan;
@@ -252,15 +251,11 @@ extern bool Debug_appendonly_print_read_block;
 extern bool Debug_appendonly_print_append_block;
 extern bool Debug_appendonly_print_segfile_choice;
 extern bool test_AppendOnlyHash_eviction_vs_just_marking_not_inuse;
-extern int  Debug_appendonly_bad_header_print_level;
 extern bool Debug_appendonly_print_datumstream;
 extern bool Debug_appendonly_print_visimap;
 extern bool Debug_appendonly_print_compaction;
-extern bool gp_crash_recovery_abort_suppress_fatal;
 extern bool Debug_bitmap_print_insert;
-extern bool Test_appendonly_override;
 extern bool enable_checksum_on_tables;
-extern int  Test_compresslevel_override;
 extern int  gp_max_local_distributed_cache;
 extern bool gp_local_distributed_cache_stats;
 extern bool gp_appendonly_verify_block_checksums;
@@ -287,9 +282,7 @@ extern bool Debug_datumstream_block_write_check_integrity;
 extern bool Debug_datumstream_read_print_varlena_info;
 extern bool Debug_datumstream_write_use_small_initial_buffers;
 extern bool	Debug_database_command_print;
-extern bool gp_startup_integrity_checks;
 extern bool Debug_resource_group;
-extern bool gp_crash_recovery_suppress_ao_eof;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
 extern bool gp_enable_exchange_default_partition;
@@ -313,10 +306,6 @@ extern bool gp_ignore_window_exclude;
 
 extern bool gp_ignore_error_table;
 
-extern bool rle_type_compression_stats;
-
-extern bool	Debug_print_server_processes;
-extern bool Debug_print_control_checkpoints;
 extern bool	Debug_dtm_action_primary;
 
 extern bool gp_log_optimization_time;
@@ -399,8 +388,6 @@ extern int	tcp_keepalives_interval;
 extern int	tcp_keepalives_count;
 
 extern int	gp_connection_send_timeout;
-
-extern int  WalSendClientTimeout;
 
 extern bool create_restartpoint_on_ckpt_record_replay;
 

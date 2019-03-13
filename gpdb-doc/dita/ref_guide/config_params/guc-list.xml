@@ -153,9 +153,6 @@
               <xref href="#gp_adjust_selectivity_for_outerjoins"/>
             </li>
             <li>
-              <xref href="#gp_analyze_relative_error"/>
-            </li>
-            <li>
               <xref href="#gp_appendonly_compaction"/>
             </li>
             <li>
@@ -2251,37 +2248,6 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
-              <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_analyze_relative_error">
-    <title>gp_analyze_relative_error</title>
-    <body>
-      <p>Sets the estimated acceptable error in the cardinality of the table " a value of 0.5 is
-        supposed to be equivalent to an acceptable error of 50% (this is the default value used in
-        PostgreSQL). If the statistics collected during <codeph>ANALYZE</codeph> are not producing
-        good estimates of cardinality for a particular table attribute, decreasing the relative
-        error fraction (accepting less error) tells the system to sample more rows.</p>
-      <table id="gp_analyze_relative_error_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">floating point &lt; 1.0</entry>
-              <entry colname="col2">0.25</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

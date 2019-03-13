@@ -532,10 +532,6 @@
                 <xref href="guc-list.xml#default_statistics_target" type="section"
                   >default_statistics_target </xref>
               </p>
-              <p>
-                <xref href="guc-list.xml#gp_analyze_relative_error" type="section"
-                  >gp_analyze_relative_error</xref>
-              </p>
             </stentry>
           </strow>
         </simpletable>

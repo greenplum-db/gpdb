@@ -551,9 +551,6 @@
             <li id="kh158362">
               <codeph>default_statistics_target </codeph>
             </li>
-            <li id="kh158369">
-              <codeph>gp_analyze_relative_error</codeph>
-            </li>
           </ul>
         </body>
       </topic>
