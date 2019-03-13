@@ -244,7 +244,6 @@ extern bool Debug_appendonly_print_scan;
 extern bool Debug_appendonly_print_scan_tuple;
 extern bool Debug_appendonly_print_delete;
 extern bool Debug_appendonly_print_storage_headers;
-extern bool Debug_appendonly_print_verify_write_block;
 extern bool Debug_appendonly_use_no_toast;
 extern bool Debug_appendonly_print_blockdirectory;
 extern bool Debug_appendonly_print_read_block;

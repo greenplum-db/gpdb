@@ -262,6 +262,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("got invalid formatversion value: NULL")));
+	AORelationVersion_CheckValid(fsinfo->formatversion);
 
 	/* get the state */
 	fsinfo->state = DatumGetInt16(
@@ -441,9 +442,13 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 
 		/* get the file format version number */
 		formatversion = fastgetattr(tuple, Anum_pg_aoseg_formatversion, pg_aoseg_dsc, &isNull);
-		Assert(!isNull || appendOnlyMetaDataSnapshot == SnapshotAny);
-		if (!isNull)
-			oneseginfo->formatversion = (int64) DatumGetInt16(formatversion);
+		if (isNull)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("got invalid formatversion value: NULL")));
+
+		AORelationVersion_CheckValid(formatversion);
+		oneseginfo->formatversion = DatumGetInt16(formatversion);
 
 		/* get the state */
 		state = fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull);
@@ -453,7 +458,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid state value: NULL")));
 		else
-			oneseginfo->state = (int64) DatumGetInt16(state);
+			oneseginfo->state = DatumGetInt16(state);
 
 		/* get the uncompressed eof */
 		eof_uncompressed = fastgetattr(tuple, Anum_pg_aoseg_eofuncompressed, pg_aoseg_dsc, &isNull);
