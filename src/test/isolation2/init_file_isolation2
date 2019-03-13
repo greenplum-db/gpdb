@@ -42,5 +42,6 @@ s/^DETAIL:  Process \d+ waits for ShareLock on transaction \d+; blocked by proce
 m/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./
 s/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./Process PID waits for ShareLock on transaction XID; blocked by process PID./
 
-
+m/^ERROR:  Error on receive from  pid=\d+: server closed the connection unexpectedly/
+s/^ERROR:  Error on receive from  pid=\d+: server closed the connection unexpectedly/ERROR:  Error on receive from  pid=PID: server closed the connection unexpectedly/
 -- end_matchsubs
