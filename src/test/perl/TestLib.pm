@@ -34,6 +34,7 @@ our @EXPORT = qw(
   system_or_bail
   system_log
   run_log
+  run_command
 
   command_ok
   command_fails
@@ -268,6 +269,16 @@ END
 		system_log('pg_ctl', '-D', $test_server_datadir, '-m',
 		  'immediate', 'stop');
 	}
+}
+
+sub run_command
+{
+	my ($cmd) = @_;
+	my ($stdout, $stderr);
+	my $result = IPC::Run::run $cmd, '>', \$stdout, '2>', \$stderr;
+	chomp($stdout);
+	chomp($stderr);
+	return ($stdout, $stderr);
 }
 
 sub psql
