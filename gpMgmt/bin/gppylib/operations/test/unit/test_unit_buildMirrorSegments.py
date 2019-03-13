@@ -2,7 +2,7 @@
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
-from gppylib.gparray import GpDB
+from gppylib.gparray import GpArray, GpDB
 from gppylib.test.unit.gp_unittest import *
 import tempfile, os, shutil
 from gppylib.commands.base import CommandResult
@@ -13,6 +13,14 @@ from gppylib.operations.startSegments import StartSegmentsResult
 
 class buildMirrorSegmentsTestCase(GpTestCase):
     def setUp(self):
+        self.master = GpDB(content=-1, preferred_role='p', dbid=1, role='p', mode='s',
+                           status='u', hostname='masterhost', address='masterhost-1',
+                           port=1111, datadir='/masterdir', replicationPort=2222)
+
+        self.primary = GpDB(content=0, preferred_role='p', dbid=2, role='p', mode='s',
+                            status='u', hostname='primaryhost', address='primaryhost-1',
+                            port=3333, datadir='/primary', replicationPort=4444)
+
         self.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
         self.apply_patches([
         ])
@@ -127,6 +135,62 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         self.assertFalse(result)
         self.logger.warn.assert_any_call('Failed to start segment.  The fault prober will shortly mark it as down. '
                                          'Segment: sdw1:/data/primary0:content=0:dbid=2:mode=s:status=u: REASON: reason')
+
+    def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_ports_differ(self):
+        self.master.hostname = "samehost"
+        self.primary.hostname = "samehost"
+
+        self.master.port = 1111
+        self.primary.port = 1111
+
+        gpArray = GpArray([self.master, self.primary])
+
+        with self.assertRaisesRegexp(Exception, r"On host samehost, port 1111 for segment with dbid 2 conflicts with port for segment dbid 1"):
+            self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
+
+    def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_QE_replication_ports_differ(self):
+        self.master.hostname = "samehost"
+        self.primary.hostname = "samehost"
+
+        self.master.replicationPort = 2222
+        self.primary.replicationPort = 2222
+
+        gpArray = GpArray([self.master, self.primary])
+
+        with self.assertRaisesRegexp(Exception, r"On host samehost, replication port 2 for segment with dbid 2222 conflicts with a port for segment dbid 1"):
+            self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
+
+    def test_checkForPortAndDirectoryConflicts__checks_QE_replication_port_is_set(self):
+        self.primary.replicationPort = None
+
+        gpArray = GpArray([self.master, self.primary])
+
+        with self.assertRaisesRegexp(Exception, r"On host primaryhost, the replication port is not set for segment with dbid 2"):
+            self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
+
+    def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_both_QE_replication_port_and_port_differ(self):
+        self.master.hostname = "samehost"
+        self.primary.hostname = "samehost"
+
+        self.primary.port = 3333
+        self.primary.replicationPort = 3333
+
+        gpArray = GpArray([self.master, self.primary])
+
+        with self.assertRaisesRegexp(Exception, r"On host samehost, segment with dbid 2 has equal port and replication port"):
+            self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
+
+    def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_data_directories_differ(self):
+        self.master.hostname = "samehost"
+        self.primary.hostname = "samehost"
+
+        self.master.datadir = "/data"
+        self.primary.datadir = "/data"
+
+        gpArray = GpArray([self.master, self.primary])
+
+        with self.assertRaisesRegexp(Exception, r"On host samehost, directory \(base or filespace\) for segment with dbid 2 conflicts with a directory \(base or filespace\) for segment dbid 1; directory: /data"):
+            self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
 if __name__ == '__main__':
     run_tests()
