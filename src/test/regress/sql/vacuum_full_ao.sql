@@ -22,3 +22,13 @@ select pg_relation_size((select segrelid from pg_appendonly where relid = 'vfao'
 
 vacuum full vfao;
 select pg_relation_size((select segrelid from pg_appendonly where relid = 'vfao'::regclass)) from gp_dist_random('gp_id') where gp_segment_id = 1;
+
+-- github issue https://github.com/greenplum-db/gpdb/issues/7050
+
+drop table if exists ao;
+create table ao (a int, b box) with(appendonly=true) distributed by (a);
+create index gist_ao on ao using gist (b);
+insert into ao select i, ('(0,'||i||', 1,'||i+1||')')::box from generate_series(1,5)i;
+update ao set b = '((1,1),(4,4))' where a = 1;
+vacuum ao;
+drop table ao;
