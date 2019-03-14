@@ -50,7 +50,10 @@
                 creating an external table definition based on the source data defined, and
                 executing an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
                     <codeph>MERGE</codeph> operation to load the source data into the target table
-                in the database.</p>
+                in the database.<note id="gpload-limitation"><codeph>MERGE</codeph> and
+                        <codeph>UPDATE</codeph> operations are not supported if the target table
+                    column name is a reserved keyword, has capital letters, or includes any
+                    character that requires quotes (") to identify the column.</note></p>
             <p>The operation, including any SQL commands specified in the <codeph>SQL</codeph>
                 collection of the YAML control file (see <xref href="#topic1/section7"
                     type="section" format="dita"/>), are performed as a single transaction to
@@ -655,7 +658,11 @@
                                                 table where the rows have
                                                   <codeph>MATCH_COLUMNS</codeph> attribute values
                                                 equal to those of the input data, and the optional
-                                                  <codeph>UPDATE_CONDITION</codeph> is true. </pd>
+                                                  <codeph>UPDATE_CONDITION</codeph> is true.
+                                                  <codeph>UPDATE</codeph> is not supported if the
+                                                target table column name is a reserved keyword, has
+                                                capital letters, or includes any character that
+                                                requires quotes (") to identify the column.</pd>
                                             <pd><option>MERGE</option> - Inserts new rows and
                                                 updates the <codeph>UPDATE_COLUMNS</codeph> of
                                                 existing rows where <codeph>FOOBAR</codeph>
@@ -673,7 +680,11 @@
                                                 that are the same, only one new row for that value
                                                 will be inserted. Use
                                                   <codeph>UPDATE_CONDITION</codeph> to filter out
-                                                the rows to discard.</pd>
+                                                the rows to discard. <codeph>MERGE</codeph> is not
+                                                supported if the target table column name is a
+                                                reserved keyword, has capital letters, or includes
+                                                any character that requires quotes (") to identify
+                                                the column.</pd>
                                         </plentry>
                                         <plentry>
                                             <pt id="cfmatchcolumns">MATCH_COLUMNS</pt>

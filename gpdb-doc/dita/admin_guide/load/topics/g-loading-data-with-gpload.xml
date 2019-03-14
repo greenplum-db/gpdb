@@ -9,7 +9,10 @@
                 <codeph>gpfdists</codeph>). It handles parallel file-based external table setup and
             allows users to configure their data format, external table definition, and
                 <cmdname>gpfdist</cmdname> or <codeph>gpfdists</codeph> setup in a single
-            configuration file.</p>
+            configuration file.<note id="gpload-limitation"><codeph>MERGE</codeph> and
+                    <codeph>UPDATE</codeph> operations are not supported if the target table column
+                name is a reserved keyword, has capital letters, or includes any character that
+                requires quotes (") to identify the column.</note></p>
         <section id="du168147">
             <title>To use gpload</title>
             <ol>
