@@ -206,7 +206,7 @@ Feature: expand the cluster by adding more segments
         Then the number of segments have been saved
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
         Then verify that the cluster has 3 new segments
-        When the user runs gpexpand against database "gptest" to redistribute
+        When the user runs gpexpand to redistribute
         Then the numsegments of table "ext_test" is 4
 
     @gpexpand_icw_db_concourse
