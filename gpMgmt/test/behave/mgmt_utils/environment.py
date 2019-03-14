@@ -1,6 +1,8 @@
 import os
 import shutil
 
+from pygresql import pg
+
 from test.behave_utils.utils import drop_database_if_exists, start_database_if_not_started,\
                                             create_database, \
                                             run_command, check_user_permissions, run_gpcommand
@@ -67,6 +69,15 @@ def before_scenario(context, scenario):
         drop_database_if_exists(context, 'testdb')
 
 def after_scenario(context, scenario):
+    # Clean up after any steps that create a tablespace.
+    if 'tablespace' in context:
+        name, path = context.tablespace
+        with dbconn.connect(dbconn.DbURL()) as conn:
+            db = pg.DB(conn)
+            db.query("DROP TABLESPACE IF EXISTS %s" % name)
+
+        shutil.rmtree(path)
+
     if 'gpexpand' in context.feature.tags \
         or 'gpaddmirrors' in context.feature.tags \
         or 'gpinitstandby' in context.feature.tags \

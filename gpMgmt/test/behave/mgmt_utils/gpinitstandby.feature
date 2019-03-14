@@ -95,3 +95,10 @@ Feature: Tests for gpinitstandby feature
         When the user runs pg_controldata against the standby data directory
         Then pg_controldata should print "Data page checksum version:           0" to stdout
 
+    Scenario: gpinitstandby works with tablespaces
+        Given the database is running
+          And the standby is not initialized
+          And a tablespace is created
+         When the user runs gpinitstandby with options " "
+         Then gpinitstandby should return a return code of 0
+          And the tablespace directories got created on the standby
