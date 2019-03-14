@@ -37,14 +37,8 @@ endif
 aomd_filehandler.c: % : $(top_srcdir)/src/backend/access/appendonly/%
 	rm -f $@ && $(LN_S) $< .
 
-# If ONLINE_EXPAND is set, the job should not contain any test cases with
-# restarting cluster operation, so this check should be disabled.
-ifndef ONLINE_EXPAND
 check: test_gpdb.sh all
 	bash $< -C -r -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
-else
-check:
-endif
 
 installcheck: test_gpdb.sh all
 	bash $< -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
