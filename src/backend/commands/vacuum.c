@@ -2866,6 +2866,8 @@ vacuum_appendonly_index(Relation indexRelation,
 	pg_rusage_init(&ru0);
 
 	ivinfo.index = indexRelation;
+	ivinfo.analyze_only = false;
+	ivinfo.estimated_count = false;
 	ivinfo.message_level = elevel;
 	ivinfo.num_heap_tuples = rel_tuple_count;
 	ivinfo.strategy = vac_strategy;
