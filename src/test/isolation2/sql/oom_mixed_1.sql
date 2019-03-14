@@ -1,5 +1,6 @@
 show gp_vmem_protect_limit;
 
+-- start_ignore
 select 3 as oom_test;
 (select count(*) from 
 (select o0.o_orderkey from 
@@ -21,6 +22,7 @@ left outer join orders o14 on o13.o_orderkey = o14.o_orderkey
 left outer join orders o15 on o14.o_orderkey = o15.o_orderkey)
 order by o0.o_orderkey) as foo
 );
+-- end_ignore
 
 select count(*) from orders;
 select pg_sleep(10);

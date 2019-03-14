@@ -3,6 +3,7 @@ select pg_sleep(10);
 select * from lineitem where l_orderkey < 100 order by 1, 2, 3, 4, 5;
 select count(ps_suppkey) from partsupp where ps_partkey < 10 group by ps_suppkey;
 
+-- start_ignore
 explain analyze select 'foo7',
 supp_nation,
 cust_nation,
@@ -42,4 +43,5 @@ order by
 supp_nation,
 cust_nation,
 l_year;
+-- end_ignore
 
