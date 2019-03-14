@@ -137,11 +137,9 @@
             <p>Add a standby master instance to your Greenplum Database system specifying a
                 different port:</p>
             <codeblock>gpinitstandby -s myhost -P 2222</codeblock>
-            <p>If you specify the same host name as the active Greenplum Database master, the
-                installed Greenplum Database software that is used as a standby master must be in a
-                separate location from the active Greenplum Database master. You must also specify a
-                different port number with the <codeph>-P</codeph> option and a standby data
-                directory with the <codeph>-S</codeph> option. </p>
+            <p>If you specify the same host name as the active Greenplum Database master, you must
+                also specify a different port number with the <codeph>-P</codeph> option and a
+                standby data directory with the <codeph>-S</codeph> option. </p>
             <p>Remove the existing standby master from your Greenplum system configuration:</p>
             <codeblock>gpinitstandby -r</codeblock>
         </section>

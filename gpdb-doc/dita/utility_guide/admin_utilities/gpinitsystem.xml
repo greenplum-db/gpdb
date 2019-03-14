@@ -239,17 +239,19 @@
                 </plentry>
                 <plentry>
                     <pt>-P <varname>standby_master_port</varname></pt>
-                    <pd>Optional. If you configure a standby master instance with
-                            <codeph>-s</codeph>, specify its port number using this option. The
-                        Greenplum Database software must already be installed and configured on the
+                    <pd>If you configure a standby master instance with <codeph>-s</codeph>, specify
+                        its port number using this option. The default port is the same as the
+                        master port. To run the standby and master on the same host, you must use
+                        this option to specify a different port for the standby. The Greenplum
+                        Database software must already be installed and configured on the standby
                         host.</pd>
                 </plentry>
                 <plentry>
                     <pt>-F <varname>standby_master_datadir</varname></pt>
-                    <pd>Optional. If you configure a standby master host with <codeph>-s</codeph>,
-                        use this option to specify its data directory. If you configure a standby on
-                        the same host as the master instance, the master and standby must have
-                        separate data directories.</pd>
+                    <pd>If you configure a standby master host with <codeph>-s</codeph>, use this
+                        option to specify its data directory. If you configure a standby on the same
+                        host as the master instance, the master and standby must have separate data
+                        directories.</pd>
                 </plentry>
                 <plentry>
                     <pt>--su_password=<varname>superuser_password</varname> | -e
