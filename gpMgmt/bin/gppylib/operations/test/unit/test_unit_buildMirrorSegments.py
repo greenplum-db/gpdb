@@ -177,7 +177,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         gpArray = GpArray([self.master, self.primary])
 
-        with self.assertRaisesRegexp(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same port 1111."):
+        with self.assertRaisesRegexp(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same port 1111"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
     def test_checkForPortAndDirectoryConflicts__given_the_same_host_checks_data_directories_differ(self):
@@ -189,7 +189,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         gpArray = GpArray([self.master, self.primary])
 
-        with self.assertRaisesRegexp(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same data directory '/data'."):
+        with self.assertRaisesRegexp(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same data directory '/data'"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
 
 if __name__ == '__main__':
