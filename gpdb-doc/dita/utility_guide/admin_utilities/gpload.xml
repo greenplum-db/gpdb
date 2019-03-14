@@ -662,7 +662,7 @@
                                                   <codeph>UPDATE</codeph> is not supported if the
                                                 target table column name is a reserved keyword, has
                                                 capital letters, or includes any character that
-                                                requires quotes (") to identify the column.</pd>
+                                                requires quotes (" ") to identify the column.</pd>
                                             <pd><option>MERGE</option> - Inserts new rows and
                                                 updates the <codeph>UPDATE_COLUMNS</codeph> of
                                                 existing rows where <codeph>FOOBAR</codeph>
@@ -683,7 +683,7 @@
                                                 the rows to discard. <codeph>MERGE</codeph> is not
                                                 supported if the target table column name is a
                                                 reserved keyword, has capital letters, or includes
-                                                any character that requires quotes (") to identify
+                                                any character that requires quotes (" ") to identify
                                                 the column.</pd>
                                         </plentry>
                                         <plentry>
