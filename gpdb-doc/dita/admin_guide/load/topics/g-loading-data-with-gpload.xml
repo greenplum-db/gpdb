@@ -12,7 +12,7 @@
             configuration file.<note id="gpload-limitation"><codeph>MERGE</codeph> and
                     <codeph>UPDATE</codeph> operations are not supported if the target table column
                 name is a reserved keyword, has capital letters, or includes any character that
-                requires quotes (") to identify the column.</note></p>
+                requires quotes (" ") to identify the column.</note></p>
         <section id="du168147">
             <title>To use gpload</title>
             <ol>

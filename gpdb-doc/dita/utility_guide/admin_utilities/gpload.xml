@@ -53,7 +53,7 @@
                 in the database.<note id="gpload-limitation"><codeph>MERGE</codeph> and
                         <codeph>UPDATE</codeph> operations are not supported if the target table
                     column name is a reserved keyword, has capital letters, or includes any
-                    character that requires quotes (") to identify the column.</note></p>
+                    character that requires quotes (" ") to identify the column.</note></p>
             <p>The operation, including any SQL commands specified in the <codeph>SQL</codeph>
                 collection of the YAML control file (see <xref href="#topic1/section7"
                     type="section" format="dita"/>), are performed as a single transaction to
