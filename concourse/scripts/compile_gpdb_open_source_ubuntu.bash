@@ -37,6 +37,7 @@ function build_gpdb() {
           --with-libraries=${CWD}/depends/build/lib \
           --with-includes=${CWD}/depends/build/include \
           --prefix=${GREENPLUM_INSTALL_DIR} \
+          --with-extra-version="-oss" \
           ${CONFIGURE_FLAGS}
         make -j4 -s
         LD_LIBRARY_PATH=${CWD}/depends/build/lib make install
