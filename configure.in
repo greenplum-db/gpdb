@@ -39,7 +39,6 @@ AC_SUBST(PG_MAJORVERSION)
 AC_DEFINE_UNQUOTED(PG_MAJORVERSION, "$PG_MAJORVERSION", [PostgreSQL major version as a string])
 
 [PG_VERSION="$PG_PACKAGE_VERSION"]
-dnl Greenplum co-opts the --with-extra-version value to append to Only the Greenplum version
 PGAC_ARG_REQ(with, extra-version, [STRING], [append STRING to version], [], [])
 AC_DEFINE_UNQUOTED(PG_VERSION, "$PG_PACKAGE_VERSION", [Postgres version Greenplum Database is based on])
 
