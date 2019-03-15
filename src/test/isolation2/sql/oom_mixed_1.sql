@@ -27,4 +27,6 @@ order by o0.o_orderkey) as foo
 select count(*) from orders;
 select pg_sleep(10);
 select * from lineitem where l_orderkey < 100 order by 1, 2, 3, 4 ,5;
+-- start_ignore
 select count(ps_suppkey) from partsupp where ps_partkey < 10 group by ps_suppkey limit 1;
+-- end_ignore

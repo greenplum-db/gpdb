@@ -28,8 +28,10 @@ select pg_sleep(10);
 select * from lineitem where l_orderkey < 100 order by 1, 2, 3, 4 ,5;
 ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=3751)
 DETAIL:  Per-query VM protect limit reached: current limit is 2048 kB, requested 524312 bytes, available 0 MB
+-- start_ignore
 select count(ps_suppkey) from partsupp where ps_partkey < 10 group by ps_suppkey limit 1;
  count 
 -------
  1     
 (1 row)
+-- end_ignore
