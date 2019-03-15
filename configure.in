@@ -2587,10 +2587,6 @@ AC_SUBST(BLD_ARCH)
 
 GP_VERSION_LONG=`bash ./getversion`
 
-if test "$with_extra_version" = "" ; then
-  with_extra_version="-oss"
-fi
-
 GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
 
 echo $GP_VERSION_LONG > VERSION
