@@ -263,7 +263,7 @@
 
  CREATE FUNCTION gp_rle_type_decompress(internal, int4, internal, int4, internal, internal) RETURNS void LANGUAGE internal IMMUTABLE AS 'rle_type_decompress' WITH(OID=9917, DESCRIPTION="Type specific RLE decompressor");
 
- CREATE FUNCTION gp_rle_type_validator(internal) RETURNS void LANGUAGE internal IMMUTABLE AS 'rle_type_validator' WITH(OID=9923, DESCRIPTION="Type speific RLE compression validator");
+ CREATE FUNCTION gp_rle_type_validator(internal) RETURNS void LANGUAGE internal IMMUTABLE AS 'rle_type_validator' WITH(OID=9923, DESCRIPTION="Type specific RLE compression validator");
 
  CREATE FUNCTION gp_dummy_compression_constructor(internal, internal, bool) RETURNS internal LANGUAGE internal VOLATILE AS 'dummy_compression_constructor' WITH (OID=7064, DESCRIPTION="Dummy compression destructor");
 
@@ -407,19 +407,19 @@
 
  CREATE FUNCTION complex_gte(complex, complex) RETURNS bool  LANGUAGE internal IMMUTABLE STRICT AS 'complex_gte' WITH (OID=7596);
 
-CREATE FUNCTION gp_hyperloglog_in(value cstring) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_in' WITH (OID=7158, DESCRIPTION="Decode a bytea into gp_hyperloglog_counter");
+CREATE FUNCTION gp_hyperloglog_in(value cstring) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_in' WITH (OID=7158, DESCRIPTION="Decode a bytea into gp_hyperloglog counter");
 
-CREATE FUNCTION gp_hyperloglog_out(counter gp_hyperloglog_estimator) RETURNS cstring  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_out' WITH (OID=7159, DESCRIPTION="Encode an gp_hyperloglog_counter into a bytea");
+CREATE FUNCTION gp_hyperloglog_out(counter gp_hyperloglog_estimator) RETURNS cstring  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_out' WITH (OID=7159, DESCRIPTION="Encode a gp_hyperloglog counter into a bytea");
 
-CREATE FUNCTION gp_hyperloglog_comp(counter gp_hyperloglog_estimator) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_comp' WITH (OID=7160, DESCRIPTION="Compress an hyperloglog counter");
+CREATE FUNCTION gp_hyperloglog_comp(counter gp_hyperloglog_estimator) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_comp' WITH (OID=7160, DESCRIPTION="Compress a gp_hyperloglog counter");
 
-CREATE FUNCTION gp_hyperloglog_merge(estimator1 gp_hyperloglog_estimator, estimator2 gp_hyperloglog_estimator) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE AS 'gp_hyperloglog_merge' WITH (OID=7161, DESCRIPTION="Merge two hyperloglog counters into one");
+CREATE FUNCTION gp_hyperloglog_merge(estimator1 gp_hyperloglog_estimator, estimator2 gp_hyperloglog_estimator) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE AS 'gp_hyperloglog_merge' WITH (OID=7161, DESCRIPTION="Merge two gp_hyperloglog counters into one");
 
-CREATE FUNCTION gp_hyperloglog_get_estimate(counter gp_hyperloglog_estimator) RETURNS float8  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_get_estimate' WITH (OID=7162, DESCRIPTION="Estimates the number of distinct values stored in an hyperloglog counter");
+CREATE FUNCTION gp_hyperloglog_get_estimate(counter gp_hyperloglog_estimator) RETURNS float8  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_get_estimate' WITH (OID=7162, DESCRIPTION="Estimates the number of distinct values stored in a gp_hyperloglog counter");
 
-CREATE FUNCTION gp_hyperloglog_add_item_agg_default(counter gp_hyperloglog_estimator, item anyelement) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE AS 'gp_hyperloglog_add_item_agg_default' WITH (OID=7163, DESCRIPTION="Includes a data value into a hyperloglog counter");
+CREATE FUNCTION gp_hyperloglog_add_item_agg_default(counter gp_hyperloglog_estimator, item anyelement) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE AS 'gp_hyperloglog_add_item_agg_default' WITH (OID=7163, DESCRIPTION="Includes a data value into a gp_hyperloglog counter");
 
-CREATE FUNCTION gp_hyperloglog_accum(anyelement) RETURNS gp_hyperloglog_estimator LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=7164, proisagg="t", DESCRIPTION="Adds every data value to a hyperloglog counter and returns the counter");
+CREATE FUNCTION gp_hyperloglog_accum(anyelement) RETURNS gp_hyperloglog_estimator LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=7164, proisagg="t", DESCRIPTION="Adds every data value to a gp_hyperloglog counter and returns the counter");
 
 CREATE FUNCTION pg_get_table_distributedby(oid) RETURNS text LANGUAGE internal STABLE STRICT AS 'pg_get_table_distributedby' WITH (OID=6232, DESCRIPTION="deparse DISTRIBUTED BY clause for a given relation");
 
