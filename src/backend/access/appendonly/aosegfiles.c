@@ -1764,16 +1764,10 @@ aorow_compression_ratio_internal(Relation parentrel)
 	 */
 	aosegrel = heap_open(segrelid, AccessShareLock);
 	initStringInfo(&sqlstmt);
-	if (Gp_role == GP_ROLE_DISPATCH)
-		appendStringInfo(&sqlstmt, "select sum(eof), sum(eofuncompressed) "
-						 "from gp_dist_random('%s.%s')",
-						 get_namespace_name(RelationGetNamespace(aosegrel)),
-						 RelationGetRelationName(aosegrel));
-	else
-		appendStringInfo(&sqlstmt, "select eof, eofuncompressed "
-						 "from %s.%s",
-						 get_namespace_name(RelationGetNamespace(aosegrel)),
-						 RelationGetRelationName(aosegrel));
+	appendStringInfo(&sqlstmt, "select sum(eof), sum(eofuncompressed) "
+					 "from gp_dist_random('%s.%s')",
+					 get_namespace_name(RelationGetNamespace(aosegrel)),
+					 RelationGetRelationName(aosegrel));
 
 	heap_close(aosegrel, AccessShareLock);
 
