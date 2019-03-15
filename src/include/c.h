@@ -912,12 +912,6 @@ typedef NameData *Name;
 			strncpy(_dst, (src), _len); \
 			_dst[_len-1] = '\0'; \
 		} \
-		else \
-			/* upstream does not have the branch code. Without this, coverity \
-			 * warns potential len as 0 (e.g. potential overflow though with \
-			 * low probability, etc) in some code. \
-			 */ \
-			_dst[0] = '\0'; \
 	} while (0)
 
 
