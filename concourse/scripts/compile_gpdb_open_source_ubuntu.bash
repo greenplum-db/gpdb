@@ -31,13 +31,17 @@ function build_gpdb() {
         # TODO: remove this flag after adding zstd to the ubuntu build images
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --without-zstd"
         CWD=$(pwd)
-        LD_LIBRARY_PATH=${CWD}/depends/build/lib CC=$(which gcc) CXX=$(which g++) ./configure --enable-mapreduce --enable-orafce --with-gssapi --with-perl --with-libxml \
+        LD_LIBRARY_PATH=${CWD}/depends/build/lib CC=$(which gcc) CXX=$(which g++) ./configure --with-extra-version="-oss" \
+          --enable-mapreduce \
+          --enable-orafce \
+          --with-gssapi \
+          --with-perl \
+          --with-libxml \
           --with-python \
           --enable-debug-extensions \
           --with-libraries=${CWD}/depends/build/lib \
           --with-includes=${CWD}/depends/build/include \
           --prefix=${GREENPLUM_INSTALL_DIR} \
-          --with-extra-version="-oss" \
           ${CONFIGURE_FLAGS}
         make -j4 -s
         LD_LIBRARY_PATH=${CWD}/depends/build/lib make install

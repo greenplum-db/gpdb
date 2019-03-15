@@ -45,8 +45,15 @@ function install_system_deps() {
 function build_gpdb() {
   pushd gpdb_src
     source /opt/gcc_env.sh
-    CC=$(which gcc) CXX=$(which g++) ./configure --enable-mapreduce --with-perl --with-libxml --with-extra-version="-oss" \
-        --disable-orca --with-python --disable-gpfdist --with-zstd --prefix=${GREENPLUM_INSTALL_DIR}
+    CC=$(which gcc) CXX=$(which g++) ./configure --with-extra-version="-oss" \
+      --with-perl \
+      --with-python \
+      --with-libxml \
+      --with-zstd \
+      --enable-mapreduce \
+      --disable-orca \
+      --disable-gpfdist \
+      --prefix=${GREENPLUM_INSTALL_DIR}
     # Use -j4 to speed up the build. (Doesn't seem worth trying to guess a better
     # value based on number of CPUs or anything like that. Going above -j4 wouldn't
     # make it much faster, and -j4 is small enough to not hurt too badly even on
