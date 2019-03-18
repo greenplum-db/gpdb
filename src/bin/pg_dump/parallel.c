@@ -228,8 +228,6 @@ static char *readMessageFromPipe(int fd);
 
 #define messageStartsWith(msg, prefix) \
 	(strncmp(msg, prefix, strlen(prefix)) == 0)
-#define messageEquals(msg, pattern) \
-	(strcmp(msg, pattern) == 0)
 
 
 /*
