@@ -66,6 +66,10 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         as <codeph>gpfdist</codeph>, which is useful for high speed data loading. </p>
       <note type="warning"> Use of the <codeph>ON SEGMENT</codeph> clause is recommended for expert
         users only.</note>
+      <p>When <codeph>PROGRAM</codeph> is specified, the server executes the given command and reads
+        from the standard output of the program, or writes to the standard input of the program. The
+        command must be specified from the viewpoint of the server, and be executable by the gpadmin
+        user.</p>
       <p>When <codeph>STDIN</codeph> or <codeph>STDOUT</codeph> is specified, data is transmitted
         via the connection between the client and the master. <codeph>STDIN</codeph> and
           <codeph>STDOUT</codeph> cannot be used with the <codeph>ON SEGMENT</codeph> clause.</p>
