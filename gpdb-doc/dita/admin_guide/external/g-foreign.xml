@@ -7,23 +7,23 @@
      allowing you to access data that resides outside of Greenplum using
      regular SQL queries. Such data is referred to as <i>foreign</i> or
      external data.</p>
-    <p>You can access foreign data with help from a <i>foreign data wrapper</i>.
-      A foreign data wrapper is a library that communicates with an remote
+    <p>You can access foreign data with help from a <i>foreign-data wrapper</i>.
+      A foreign-data wrapper is a library that communicates with a remote
       data source. This library hides the source-specific connection and data
-      access details. Some foreign data wrappers will be available as Greenplum
+      access details. Some foreign-data wrappers will be available as Greenplum
       Database contrib modules, including <codeph>file_fdw</codeph> and
-      <codeph>postgres_fdw</codeph>. If none of the existing foreign data wrappers
+      <codeph>postgres_fdw</codeph>. If none of the existing foreign-data wrappers
       suit your needs, you can write your own as described in
       <xref href="g-devel-fdw.xml#topic1"/>.</p>
     <p>To access foreign data, you create a <i>foreign server</i> object,
       which defines how to connect to a particular remote data source
-      according to the set of options used by its supporting foreign data
+      according to the set of options used by its supporting foreign-data
       wrapper. Then you create one or more <i>foreign tables</i>, which
       define the structure of the remote data. A foreign table can be used in
       queries just like a normal table, but a foreign table has no storage in
       the Greenplum Database server. Whenever a foreign table is accessed,
-      Greenplum Database asks the foreign data wrapper to fetch data from, or
-      update data in, the remote source.</p>
+      Greenplum Database asks the foreign-data wrapper to fetch data from, or
+      update data in (if supported by the wrapper), the remote source.</p>
     <p>Accessing remote data may require authenticating to the remote data
       source. This information can be provided by a <i>user mapping</i>,
       which can provide additional data such as a user name and password
