@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Use the PXF HDFS connector to read and write Parquet-format data. This section decribes how to read and write HDFS files that are stored in Parquet format, including how to create, query, and insert into an external table that references files in the HDFS data store.
+Use the PXF HDFS connector to read and write Parquet-format data. This section decribes how to read and write HDFS files that are stored in Parquet format, including how to create, query, and insert into external tables that reference files in the HDFS data store.
 
 PXF currently supports reading and writing primitive Parquet data types only.
 
@@ -77,15 +77,19 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
 
 <a id="customopts"></a>
-The PXF `hdfs:parquet` profile supports write compression. You specify the compression codec via a custom option in the `CREATE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:parquet` profile supports the following custom options:
+The PXF `hdfs:parquet` profile supports encoding- and compression-related write options. You specify these write options in the `CREATE WRITABLE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:parquet` profile supports the following custom options:
 
-| Option  | Value Description |
+| Write Option  | Value Description |
 |-------|-------------------------------------|
-| COMPRESSION_CODEC    | The compression codec alias. Supported compression codecs for writing Parquet data include: `snappy`, `gzip`, `lzo`, and `uncompressed` . If this option is not provided, PXF compresses the data using snappy compression. |
+| COMPRESSION_CODEC    | The compression codec alias. Supported compression codecs for writing Parquet data include: `snappy`, `gzip`, `lzo`, and `uncompressed` . If this option is not provided, PXF compresses the data using `snappy` compression. |
+| ROWGROUP_SIZE | A Parquet file consists of one or more row groups, a logical partitioning of the data into rows. `ROWGROUP_SIZE` identifies the size (in bytes) of the row group. The default row group size is `8 * 1024 * 1024`. |
+| PAGE_SIZE | A row group consists of column chunks which are divided up into pages. `PAGE_SIZE` is the size (in bytes) of such a page. The default page size is `1024 * 1024`. |
+| DICTIONARY_PAGE_SIZE | Dictionary encoding is enabled by default when PXF writes Parquet files. There is a single dictionary page per column, per row group. `DICTIONARY_PAGE_SIZE` is similar to `PAGE_SIZE`, but for the dictionary. The default dictionary page size is `512 * 1024`. |
+| PARQUET_VERSION | The Parquet version; values `v1` and `v2` are supported. The default Parquet version is `v1`. |
 
 **Note**: You must explicitly specify `uncompressed` if you do not want PXF to compress the data.
 
-Parquet files that you write to HDFS have the following naming format: `<file>.<compress_extension>.parquet`, for example `1547061635-0000004417_0.gz.parquet`.
+Parquet files that you write to HDFS with PXF have the following naming format: `<file>.<compress_extension>.parquet`, for example `1547061635-0000004417_0.gz.parquet`.
 
 ## <a id="parquet_write"></a> Example
 
@@ -126,7 +130,7 @@ In this example, you create a Parquet-format writable external table that refere
 4. Query the readable external table `read_pxf_parquet`:
 
     ``` sql
-    gpadmin=# SELECT * FROM read_pxf_parquet ORDER BY total_sales;
+    postgres=# SELECT * FROM read_pxf_parquet ORDER BY total_sales;
     ```
 
     ``` pre

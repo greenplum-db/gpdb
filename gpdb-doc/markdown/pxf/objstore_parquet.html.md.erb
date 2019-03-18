@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The PXF object store connectors support reading and writing Parquet-format data. This section decribes how to use PXF to access Parquet-format data in an object store, including how to create and query an external table that references a Parquet file in the store.
+The PXF object store connectors support reading and writing Parquet-format data. This section decribes how to use PXF to access Parquet-format data in an object store, including how to create and query external tables that references a Parquet file in the store.
 
 <div class="note">PXF Parquet write support is a Beta feature.</div>
 
@@ -67,7 +67,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<path&#8209;to&#8209;dir\>    | The absolute path to the directory in the object store. |
 | PROFILE=\<objstore\>:parquet    | The `PROFILE` keyword must identify the specific object store. For example, `s3:parquet`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. |
-| \<custom&#8209;option\>=\<value\> | Parquet-specific custom options are described in the [PXF HDFS Parquet documentation](hdfs_parquet.html#customopts). |
+| \<custom&#8209;option\>=\<value\> | Parquet-specific custom write options are described in the [PXF HDFS Parquet documentation](hdfs_parquet.html#customopts). |
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
 
@@ -77,7 +77,7 @@ If you are accessing an S3 object store, you can provide S3 credentials directly
 
 Refer to the [Example](hdfs_parquet.html#parquet_write) in the PXF HDFS Parquet documentation for a Parquet write/read example. Modifications that you must make to run the example with an object store include:
 
-- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the writable external table. For example, if your server name is `s3srvcfg`:
+- Using the `CREATE WRITABLE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the writable external table. For example, if your server name is `s3srvcfg`:
 
     ``` sql
     CREATE WRITABLE EXTERNAL TABLE pxf_tbl_parquet_s3 (location text, month text, number_of_orders int, total_sales double precision)
