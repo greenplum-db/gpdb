@@ -99,7 +99,7 @@ def suggested_git_branch():
 
     branch = subprocess.check_output("git rev-parse --abbrev-ref HEAD", shell=True).rstrip()
 
-    if branch == "master" or branch == "5X_STABLE":
+    if branch == "master" or branch == "5X_STABLE" or branch == "6X_STABLE":
         return default_branch
     else:
         return branch
