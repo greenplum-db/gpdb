@@ -139,7 +139,8 @@ RESET ALL</codeblock></section>
               <codeph>RESET</codeph> is used, the function-local setting is removed, and the
             function executes with the value present in its environment. Use <codeph>RESET
               ALL</codeph> to clear all function-local settings. <codeph>SET FROM CURRENT</codeph>
-            applies the session's current value of the parameter when the function is entered.</pd>
+            saves the value of the parameter that is current when <codeph>ALTER FUNCTION</codeph> is
+            executed as the value to be applied when the function is entered.</pd>
         </plentry>
         <plentry>
           <pt>RESTRICT</pt>
