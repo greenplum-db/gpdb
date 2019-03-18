@@ -8,7 +8,7 @@ VERSION=$(perl -e 'while(<>){print $1 if (/^PACKAGE_VERSION='\''(.+)'\''$/)}' < 
 BUILDNUMBER=dev
 
 # Call git describe, and convert it to a semi-semantic version, like
-# 5.0.0-alpha.0+dev.52.g123abc
+# 6.0.0-beta.0+dev.52.g123abc
 generate_dev_version() {
     git describe | perl -pe 's/(.*)-([0-9]*)-(g[0-9a-f]*)/\1+dev.\2.\3/'
 }
