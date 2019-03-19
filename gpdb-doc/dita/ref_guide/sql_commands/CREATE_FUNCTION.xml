@@ -290,8 +290,9 @@ SELECT foo();</codeblock><p>In
                     <pd>The <codeph>SET</codeph> clause applies a value to a session configuration
                         parameter when the function is entered. The configuration parameter is
                         restored to its prior value when the function exits. <codeph>SET FROM
-                            CURRENT</codeph> applies the session's current value of the parameter
-                        when the function is entered.</pd>
+                            CURRENT</codeph> saves the value of the parameter that is current when
+                            <codeph>CREATE FUNCTION</codeph> is executed as the value to be applied
+                        when the function is entered. </pd>
                 </plentry>
                 <plentry>
                     <pt><varname>definition</varname></pt>
@@ -308,7 +309,11 @@ SELECT foo();</codeblock><p>In
                         dynamically loadable object, and <varname>link_symbol</varname> is the name
                         of the function in the C language source code. If the link symbol is
                         omitted, it is assumed to be the same as the name of the SQL function being
-                        defined. It is recommended to locate shared libraries either relative to
+                        defined. The C names
+                        of all functions must be different, so you must give overloaded C
+                        functions different C names (for example, use the argument types as
+                        part of the C names).
+                        It is recommended to locate shared libraries either relative to
                             <codeph>$libdir</codeph> (which is located at
                             <codeph>$GPHOME/lib</codeph>) or through the dynamic library path (set
                         by the <codeph>dynamic_library_path</codeph> server configuration
