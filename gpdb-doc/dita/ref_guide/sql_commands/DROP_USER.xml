@@ -11,9 +11,10 @@
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>DROP USER</codeph> is an alias for <codeph><xref href="DROP_ROLE.xml#topic1"
-            type="topic" format="dita"/></codeph>. See <codeph><xref href="DROP_ROLE.xml#topic1"
-            type="topic" format="dita"/></codeph> for more information.</p>
+      <p><codeph>DROP USER</codeph> is simply an alternate spelling of <codeph><xref
+            href="DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph>. See <codeph><xref
+            href="DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph> for more
+        information.</p>
     </section>
     <section id="section5">
       <title>Compatibility</title>
