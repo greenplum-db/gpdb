@@ -798,42 +798,6 @@ endif
 libcopy=(cd $(1) && $(TAR) cf - $(2)) | (cd $(3) && $(TAR) xvf -)$(check_pipe_for_errors)
 
 copylibs : thirdparty-dist
-	if [ `uname -s` = 'SunOS' ]; then cp `ldd $(INSTLOC)/bin/psql | grep gcc | head -1 | awk '{print $$3}'` $(INSTLOC)/lib; fi
-	if [ `uname -s` = 'Darwin' ] ; then \
-	    for lib in `otool -L $(INSTLOC)/bin/psql | egrep 'libssl|libcrypto|libcom_err|libkrb5|curl|readline|numa' | awk '{print $$1}'`; do \
-	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
-	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
-	        if [ -f $(BLD_THIRDPARTY_LIB_DIR)/`basename $$lib` ]; then \
-	            echo "cp -p $(BLD_THIRDPARTY_LIB_DIR)/`basename $$lib` $(INSTLOC)/lib/" ; \
-	            cp -p $(BLD_THIRDPARTY_LIB_DIR)/`basename $$lib` $(INSTLOC)/lib/ ; \
-	        else \
-	            echo "cp -p $$lib $(INSTLOC)/lib/" ; \
-	            cp -p $$lib $(INSTLOC)/lib/ ; \
-	        fi ; \
-	    done ; \
-	fi
-	if [ `uname -s` != 'Darwin' -a `uname -s` != 'AIX' ] ; then \
-	    for lib in `ldd $(INSTLOC)/bin/psql | egrep 'readline|numa' | awk '{print $$3}' | sort -u`; do \
-	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
-	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
-	        echo "cp -p $$lib $(INSTLOC)/lib" ; \
-	        cp -p $$lib $(INSTLOC)/lib ; \
-	    done ; \
-	fi
-	if [ `uname -s` = 'AIX' ] ; then \
-	    for lib in `ldd $(INSTLOC)/bin/psql | egrep 'libssl|libcrypto|libcom_err|curl|readline|numa' | awk -F\( '{print $$1}' | sort -u`; do \
-	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
-	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
-	        echo "cp -p $$lib $(INSTLOC)/lib" ; \
-	        cp -p $$lib $(INSTLOC)/lib ; \
-	    done ; \
-	    for lib in `ldd $(INSTLOC)/bin/gpfdist | egrep 'libbz2|libz' | awk -F\( '{print $$1}' | sort -u`; do \
-	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
-	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
-	        echo "cp -p $$lib $(INSTLOC)/lib" ; \
-	        cp -p $$lib $(INSTLOC)/lib ; \
-	    done ; \
-	fi
 	# Create the python directory to flag to build scripts that python has been handled
 	mkdir -p $(INSTLOC)/ext/python
 	@if [ ! -z "$(PYTHONHOME)" ]; then \
@@ -845,21 +809,6 @@ copylibs : thirdparty-dist
 	fi
 	mkdir -p $(INSTLOC)/etc
 	mkdir -p $(INSTLOC)/include
-ifeq "$(findstring $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 aix5_ppc_32 aix5_ppc_64 aix7_ppc_64 win32 win64)" ""
-	# Copy curl header file
-	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/curl $(INSTLOC)/include/
-endif
-ifeq "$(findstring $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 aix5_ppc_32 win32 win64)" ""
-ifneq "$(BLD_ARCH)" "osx104_x86"
-	cp -rp $(BLD_THIRDPARTY_BIN_DIR)/openssl $(INSTLOC)/bin/
-	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/openssl $(INSTLOC)/include/
-	cp -rp $(BLD_THIRDPARTY_DIR)/ssl/openssl.cnf $(INSTLOC)/etc/
-else
-	cp -rp /usr/bin/openssl $(INSTLOC)/bin/
-	cp -rp /usr/include/openssl $(INSTLOC)/include/
-	cp -rp /System/Library/OpenSSL/openssl.cnf $(INSTLOC)/etc/
-endif
-endif
 
 ifeq "$(BLD_ARCH)" "win32"
 	# Copy kfw dlls
