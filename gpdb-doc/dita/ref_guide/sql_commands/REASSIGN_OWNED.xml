@@ -42,10 +42,10 @@
       <p><codeph>REASSIGN OWNED</codeph> requires privileges on both the
         source role(s) and the target role.</p>
       <p>The <xref href="DROP_OWNED.xml#topic1"><codeph>DROP OWNED</codeph></xref> command is an
-        alternative that drops all the database objects owned by one or more roles. <codeph>DROP
-          OWNED</codeph> requires privileges only on the source role(s).</p>
-      <p>The <codeph>REASSIGN OWNED</codeph> command does not affect the privileges granted to the
-        old roles in objects that are not owned by them. Use <codeph>DROP OWNED</codeph> to revoke
+        alternative that simply drops all of the database objects owned by one or more roles.
+          <codeph>DROP OWNED</codeph> requires privileges only on the source role(s).</p>
+      <p>The <codeph>REASSIGN OWNED</codeph> command does not affect any privileges granted to the
+        old roles for objects that are not owned by them. Use <codeph>DROP OWNED</codeph> to revoke
         those privileges.</p>
     </section>
     <section id="section6">
@@ -56,7 +56,7 @@
     </section>
     <section id="section7">
       <title>Compatibility</title>
-      <p>The <codeph>REASSIGN OWNED</codeph> statement is a Greenplum Database extension. </p>
+      <p>The <codeph>REASSIGN OWNED</codeph> command is a Greenplum Database extension. </p>
     </section>
     <section id="section8">
       <title>See Also</title>
