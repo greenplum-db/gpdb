@@ -83,8 +83,12 @@
             <pt>-b | --blobs</pt>
             <pd>Include large objects in the dump. This is the default behavior except when
                 <codeph>--schema</codeph>, <codeph>--table</codeph>, or
-                <codeph>--schema-only</codeph> is specified, so the <codeph>-b</codeph> switch is
-              only useful to add large objects to selective dumps.<note>Greenplum Database does not
+                <codeph>--schema-only</codeph> is specified. The <codeph>-b</codeph> switch is
+              only useful add large objects to dumps
+              where a specific schema or table has been requested. Note that
+              blobs are considered data and therefore will be included when
+              <codeph>--data-only</codeph> is used, but not when <codeph>--schema-only</codeph> is.
+              <note>Greenplum Database does not
                 support the PostgreSQL <xref
                   href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
                   scope="external">large object facility</xref> for streaming user data that is
@@ -153,7 +157,7 @@
                   href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. The tar
               format is compatible with the directory format; extracting a tar-format archive
               produces a valid directory-format archive. However, the tar format does not support
-              compression and has a limit of 8 GB on the size of individual tables. Also, the
+              compression. Also, when using tar format the
               relative order of table data items cannot be changed during restore.</pd>
           </plentry>
           <plentry>
@@ -376,6 +380,12 @@
             </pd>
           </plentry>
           <plentry>
+            <pt><codeph>--if-exists</codeph></pt>
+            <pd> Use conditional commands (i.e. add an <codeph>IF EXISTS</codeph> clause) when
+              cleaning database objects. This option is not valid unless <codeph>--clean</codeph> is
+              also specified. </pd>
+          </plentry>         
+          <plentry>
             <pt>--inserts</pt>
             <pd>Dump data as <codeph>INSERT</codeph> commands (rather than <codeph>COPY</codeph>).
               This will make restoration very slow; it is mainly useful for making dumps that can be
@@ -563,17 +573,26 @@
           <codeph>pg_dump</codeph> emits commands to disable triggers on user tables before
         inserting the data and commands to re-enable them after the data has been inserted. If the
         restore is stopped in the middle, the system catalogs may be left in the wrong state.</p>
-      <p>Members of <codeph>tar</codeph> archives are limited to a size less than 8 GB. (This is an
-        inherent limitation of the <codeph>tar</codeph> file format.) Therefore this format cannot
-        be used if the textual representation of any one table exceeds that size. The total size of
-        a tar archive and any of the other output formats is not limited, except possibly by the
-        operating system.</p>
       <p>The dump file produced by <codeph>pg_dump</codeph> does not contain the statistics used by
         the optimizer to make query planning decisions. Therefore, it is wise to run
-          <codeph>ANALYZE</codeph> after restoring from a dump file to ensure optimal performance.</p>
+          <codeph>ANALYZE</codeph> after restoring from a dump file to ensure optimal
+        performance.</p>
       <p>The database activity of <codeph>pg_dump</codeph> is normally collected by the statistics
         collector. If this is undesirable, you can set parameter <codeph>track_counts</codeph> to
         false via <codeph>PGOPTIONS</codeph> or the <codeph>ALTER USER</codeph> command.</p>
+      <p>Because <codeph>pg_dump</codeph> may be used to transfer data to newer versions of
+        Greenplum Database, the output of <codeph>pg_dump</codeph> can be expected to load into
+        Greenplum Database versions newer than <codeph>pg_dump</codeph>'s version.
+          <codeph>pg_dump</codeph> can also dump from Greenplum Database versions older than its own
+        version. However, <codeph>pg_dump</codeph> cannot dump from Greenplum Database versions
+        newer than its own major version; it will refuse to even try, rather than risk making an
+        invalid dump. Also, it is not guaranteed that <codeph>pg_dump</codeph>'s output can be
+        loaded into a server of an older major version — not even if the dump was taken from a
+        server of that version. Loading a dump file into an older server may require manual editing
+        of the dump file to remove syntax not understood by the older server. Use of the
+          <codeph>--quote-all-identifiers</codeph> option is recommended in cross-version cases, as
+        it can prevent problems arising from varying reserved-word lists in different Greenplum
+        Database versions.</p>
     </section>
     <section id="section8">
       <title>Examples</title>
