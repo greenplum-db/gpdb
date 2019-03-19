@@ -519,14 +519,14 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/server-rc-(.*)-rhel6_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/master/server-rc-(.*)-rhel6_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_centos7_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/master/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
 
 # DEPRECATED: Use the above GCS resources instead of these S3 resources.
 - name: bin_gpdb_centos6_rc_s3
@@ -536,7 +536,7 @@ resources:
     bucket: {{gpdb-stable-builds-bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: release_candidates/bin_gpdb_centos6/gpdb6/((rc-build-type))/bin_gpdb.tar.gz
+    versioned_file: release_candidates/bin_gpdb_centos6/master/((rc-build-type))/bin_gpdb.tar.gz
 - name: bin_gpdb_centos7_rc_s3
   type: s3
   source:
@@ -544,7 +544,7 @@ resources:
     bucket: {{gpdb-stable-builds-bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: release_candidates/bin_gpdb_centos7/gpdb6/((rc-build-type))/bin_gpdb.tar.gz
+    versioned_file: release_candidates/bin_gpdb_centos7/master/((rc-build-type))/bin_gpdb.tar.gz
 
     ## - name: bin_gpdb_sles11_rc
     ##   type: s3
@@ -553,7 +553,7 @@ resources:
     ##     bucket: {{gpdb-stable-builds-bucket-name}}
     ##     region_name: {{aws-region}}
     ##     secret_access_key: {{bucket-secret-access-key}}
-    ##     versioned_file: release_candidates/bin_gpdb_sles11/gpdb6/((rc-build-type))/bin_gpdb.tar.gz
+    ##     versioned_file: release_candidates/bin_gpdb_sles11/master/((rc-build-type))/bin_gpdb.tar.gz
 
 {% endif %}
 {% if "ubuntu16" in os_types %}
