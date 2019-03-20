@@ -1,0 +1,148 @@
+\! echo "Enable SSL in postgresql.conf with master only..."
+Enable SSL in postgresql.conf with master only...
+\! echo "#BEGIN SSLINFO CONF" >> $MASTER_DATA_DIRECTORY/postgresql.conf
+\! echo "ssl=on" >> $MASTER_DATA_DIRECTORY/postgresql.conf
+\! echo "ssl_ciphers='HIGH:MEDIUM:+3DES:!aNULL'" >> $MASTER_DATA_DIRECTORY/postgresql.conf
+\! echo "ssl_cert_file='server.crt'" >> $MASTER_DATA_DIRECTORY/postgresql.conf
+\! echo "ssl_key_file='server.key'" >> $MASTER_DATA_DIRECTORY/postgresql.conf
+\! echo "ssl_ca_file='root.crt'" >> $MASTER_DATA_DIRECTORY/postgresql.conf
+\! echo "#END SSLINFO CONF" >> $MASTER_DATA_DIRECTORY/postgresql.conf
+\! echo "preparing CRTs and KEYs"
+preparing CRTs and KEYs
+\! cp -f data/root.crt   $MASTER_DATA_DIRECTORY/
+\! cp -f data/server.crt $MASTER_DATA_DIRECTORY/
+\! cp -f data/server.key $MASTER_DATA_DIRECTORY/
+\! chmod 400 $MASTER_DATA_DIRECTORY/server.key
+\! chmod 644 $MASTER_DATA_DIRECTORY/server.crt
+\! chmod 644 $MASTER_DATA_DIRECTORY/root.crt
+\! mkdir -p ~/.postgresql
+\! cp -f data/root.crt         ~/.postgresql/
+\! cp -f data/postgresql.crt   ~/.postgresql/
+\! cp -f data/postgresql.key   ~/.postgresql/
+\! chmod 400 ~/.postgresql/postgresql.key
+\! chmod 644 ~/.postgresql/postgresql.crt
+\! chmod 644 ~/.postgresql/root.crt
+\! gpstop -arf 2>&1  >/dev/null
+\! echo "gpstop ret = $?"
+gpstop ret = 0
+\c - - localhost
+CREATE EXTENSION sslinfo;
+SELECT ssl_is_used();
+ ssl_is_used 
+-------------
+ t
+(1 row)
+
+SELECT ssl_version();
+ ssl_version 
+-------------
+ TLSv1.2
+(1 row)
+
+SELECT ssl_cipher();
+         ssl_cipher          
+-----------------------------
+ ECDHE-RSA-AES256-GCM-SHA384
+(1 row)
+
+SELECT ssl_client_cert_present();
+ ssl_client_cert_present 
+-------------------------
+ t
+(1 row)
+
+SELECT ssl_client_serial();
+  ssl_client_serial   
+----------------------
+ 15147712520003294635
+(1 row)
+
+SELECT ssl_client_dn();
+                                   ssl_client_dn                                    
+------------------------------------------------------------------------------------
+ /CN=client.example.com/C=CN/ST=Qingdao/L=ClientLocality/O=SSLINFO-Client/OU=Client
+(1 row)
+
+SELECT ssl_issuer_dn();
+                               ssl_issuer_dn                               
+---------------------------------------------------------------------------
+ /CN=root.example.com/C=CN/ST=Beijing/L=RootLocality/O=SSLINFO-dev/OU=Test
+(1 row)
+
+SELECT ssl_client_dn_field('CN') AS client_dn_CN;
+    client_dn_cn    
+--------------------
+ client.example.com
+(1 row)
+
+SELECT ssl_client_dn_field('C') AS client_dn_C;
+ client_dn_c 
+-------------
+ CN
+(1 row)
+
+SELECT ssl_client_dn_field('ST') AS client_dn_ST;
+ client_dn_st 
+--------------
+ Qingdao
+(1 row)
+
+SELECT ssl_client_dn_field('L') AS client_dn_L;
+  client_dn_l   
+----------------
+ ClientLocality
+(1 row)
+
+SELECT ssl_client_dn_field('O') AS client_dn_O;
+  client_dn_o   
+----------------
+ SSLINFO-Client
+(1 row)
+
+SELECT ssl_client_dn_field('OU') AS client_dn_OU;
+ client_dn_ou 
+--------------
+ Client
+(1 row)
+
+SELECT ssl_issuer_field('CN') AS issuer_CN;
+    issuer_cn     
+------------------
+ root.example.com
+(1 row)
+
+SELECT ssl_issuer_field('C') AS issuer_C;
+ issuer_c 
+----------
+ CN
+(1 row)
+
+SELECT ssl_issuer_field('ST') AS issuer_ST;
+ issuer_st 
+-----------
+ Beijing
+(1 row)
+
+SELECT ssl_issuer_field('L') AS issuer_L;
+   issuer_l   
+--------------
+ RootLocality
+(1 row)
+
+SELECT ssl_issuer_field('O') AS issuer_O;
+  issuer_o   
+-------------
+ SSLINFO-dev
+(1 row)
+
+SELECT ssl_issuer_field('OU') AS issuer_OU;
+ issuer_ou 
+-----------
+ Test
+(1 row)
+
+DROP EXTENSION sslinfo;
+\! sed -ri '/#BEGIN SSLINFO CONF/,/#END SSLINFO CONF/d' $MASTER_DATA_DIRECTORY/postgresql.conf
+\! gpstop -arf 2>&1  >/dev/null
+\! echo "gpstop ret = $?"
+gpstop ret = 0
