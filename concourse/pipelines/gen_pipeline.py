@@ -194,7 +194,7 @@ def how_to_use_generated_pipeline_message():
         msg += '    -p gpdb_master_without_asserts \\\n'
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml \\\n' # pylint: disable=line-too-long
+        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.prod.yml \\\n' # pylint: disable=line-too-long
         msg += '    -v pipeline-name=gpdb_master_without_asserts\n'
     else:
         pipeline_name = os.path.basename(ARGS.output_filepath).rsplit('.', 1)[0]
