@@ -4,8 +4,6 @@ default: all
 
 BLD_TOP=..
 
-GPAUX_DIR=$(BLD_TOP)/gpAux/
-
 ext_dir=$(BLD_TOP)/gpAux/ext
 
 top_builddir = ..
