@@ -1023,8 +1023,7 @@ where <varname>action</varname> is one of:
                         <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
 (char_length(zipcode) = 5);</codeblock>
                         <p>To add a check constraint only to a table and not to its children:</p>
-                        <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK (char_length(zipcode) = 5) NO INHERIT 
-;</codeblock>
+                        <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK (char_length(zipcode) = 5) NO INHERIT;</codeblock>
                         <p>(The check constraint will not be inherited by future children, either.)</p>
 
                         <p>Remove a check constraint from a table and all of its children:</p>

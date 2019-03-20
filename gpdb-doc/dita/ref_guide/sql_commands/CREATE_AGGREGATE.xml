@@ -139,7 +139,6 @@
         of <codeph>get_fn_expr_argtype</codeph> to identify the actual argument type
           in the current call.
     </p>
-    
       <p> An aggregate can optionally support <i>moving-aggregate mode</i>, as described in <xref
           href="https://www.postgresql.org/docs/9.4/xaggr.html#XAGGR-MOVING-AGGREGATES"
           scope="external" format="html">Moving-Aggregate Mode</xref> in the PostgreSQL
@@ -149,31 +148,25 @@
         and <codeph>MINITCOND</codeph> parameters. Except for <codeph>MINVFUNC</codeph>, these
         parameters work like the corresponding simple-aggregate parameters without
           <codeph>M</codeph>; they define a separate implementation of the aggregate that includes
-        an inverse transition function. </p>
-    
-    <p>
-      The syntax with <codeph>ORDER BY</codeph> in the parameter list creates
-      a special type of aggregate called an <i>ordered-set
-        aggregate</i>; or if <codeph>HYPOTHETICAL</codeph> is specified, then
-          a <i>hypothetical-set aggregate</i> is created.  These
-          aggregates operate over groups of sorted values in order-dependent ways,
-          so that specification of an input sort order is an essential part of a
-          call. Also, they can have <i>direct</i> arguments, which are
-            arguments that are evaluated only once per aggregation rather than once
-            per input row.  Hypothetical-set aggregates are a subclass of ordered-set
-            aggregates in which some of the direct arguments are required to match,
-            in number and data types, the aggregated argument columns.  This allows
-            the values of those direct arguments to be added to the collection of
-            aggregate-input rows as an additional "hypothetical" row.
-    </p>
+        an inverse transition function. </p>   
+      <p>The syntax with <codeph>ORDER BY</codeph> in the parameter list creates a special type of
+        aggregate called an <i>ordered-set aggregate</i>; or if <codeph>HYPOTHETICAL</codeph> is
+        specified, then a <i>hypothetical-set aggregate</i> is created. These aggregates operate
+        over groups of sorted values in order-dependent ways, so that specification of an input sort
+        order is an essential part of a call. Also, they can have <i>direct</i> arguments, which are
+        arguments that are evaluated only once per aggregation rather than once per input row.
+        Hypothetical-set aggregates are a subclass of ordered-set aggregates in which some of the
+        direct arguments are required to match, in number and data types, the aggregated argument
+        columns. This allows the values of those direct arguments to be added to the collection of
+        aggregate-input rows as an additional "hypothetical" row. </p>
     <p>Single argument aggregate functions, such as min or
         max, can sometimes be optimized by looking into an index instead of scanning every input
         row. If this aggregate can be so optimized, indicate it by specifying a sort operator. The
         basic requirement is that the aggregate must yield the first element in the sort ordering
         induced by the operator; in other
-        words:</p><codeblock>SELECT <varname>agg</varname>(<varname>col</varname>) FROM <varname>tab</varname>; </codeblock><p>must be
-        equivalent
-        to:</p><codeblock>SELECT <varname>col</varname> FROM <varname>tab</varname> ORDER BY <varname>col</varname> USING <varname>sortop</varname> LIMIT 1;</codeblock><p>Further
+        words:</p><codeblock>SELECT <varname>agg</varname>(<varname>col</varname>) FROM <varname>tab</varname>; </codeblock>
+      <p>must be equivalent to:</p>
+    <codeblock>SELECT <varname>col</varname> FROM <varname>tab</varname> ORDER BY <varname>col</varname> USING <varname>sortop</varname> LIMIT 1;</codeblock><p>Further
         assumptions are that the aggregate function ignores <codeph>NULL</codeph> inputs, and that
         it delivers a <codeph>NULL</codeph> result if and only if there were no non-null inputs.
         Ordinarily, a data type's <codeph>&lt;</codeph> operator is the proper sort operator for
