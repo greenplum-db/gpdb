@@ -23,12 +23,12 @@ def impl(context):
 
     with dbconn.connect(dbconn.DbURL()) as conn:
         sql = "SELECT dbid FROM gp_segment_configuration WHERE content=-1 AND role='m';"
-        dbid = dbconn.execSQLForSingleton(conn, sql)
+        standby_dbid = dbconn.execSQLForSingleton(conn, sql)
 
     for d in tablespace_dirs:
-        if d.endswith("_db{}".format(dbid)):
+        if d.endswith("_db{}".format(standby_dbid)):
             return
 
     raise Exception('Expected to find a standby tablespace directory ending in "_db%d" but found %r' % (
-        dbid, sorted(tablespace_dirs)
+        standby_dbid, sorted(tablespace_dirs)
     ))
