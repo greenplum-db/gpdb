@@ -476,6 +476,9 @@
               <xref href="#local_preload_libraries"/>
             </li>
             <li>
+              <xref href="#lock_timeout"/>
+            </li>
+            <li>
               <xref href="#log_autostats"/>
             </li>
             <li>
@@ -5859,6 +5862,49 @@
               <entry colname="col1"/>
               <entry colname="col2"/>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="lock_timeout">
+    <title>lock_timeout</title>
+    <body>
+      <p>Abort any statement that waits longer than the specified number of
+        milliseconds while attempting to acquire a lock on a table, index,
+        row, or other database object. The time limit applies separately to
+        each lock acquisition attempt. The limit applies both to explicit
+        locking requests (such as <codeph>LOCK TABLE</codeph>, or
+        <codeph>SELECT FOR UPDATE</codeph> without <codeph>NOWAIT</codeph>)
+        and to implicitly-acquired locks. If <codeph>log_min_error_statement</codeph>
+        is set to <codeph>ERROR</codeph> or lower, Greenplum Database logs the
+        statement that timed out. A value of zero (the default) turns off this 
+        lock wait monitoring.</p>
+      <p>Unlike <codeph><xref href="#statement_timeout" format="dita"/></codeph>,
+        this timeout can only occur while waiting for locks. Note that if
+        <codeph>statement_timeout</codeph> is nonzero, it is rather pointless
+        to set <codeph>lock_timeout</codeph> to the same or larger value,
+        since the statement timeout would always trigger first.</p>
+      <note>Setting <codeph>lock_timeout</codeph> in <codeph>postgresql.conf</codeph>
+        is not recommended because it would affect all sessions</note>
+      <table id="lock_timeout_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - <codeph>INT_MAX</codeph> millisecs</entry>
+              <entry colname="col2">0 millisecs</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

@@ -184,6 +184,7 @@
             <topicref href="guc-list.xml#lc_time"/>
             <topicref href="guc-list.xml#listen_addresses"/>
             <topicref href="guc-list.xml#local_preload_libraries"/>
+            <topicref href="guc-list.xml#lock_timeout"/>
             <topicref href="guc-list.xml#log_autostats"/>
             <topicref href="guc-list.xml#log_connections"/>
             <topicref href="guc-list.xml#log_disconnections"/>

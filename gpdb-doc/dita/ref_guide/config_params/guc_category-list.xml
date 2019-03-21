@@ -1069,6 +1069,10 @@
           </stentry>
           <stentry>
             <p>
+              <xref href="guc-list.xml#lock_timeout" type="section"
+                >lock_timeout</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#max_locks_per_transaction" type="section"
                 >max_locks_per_transaction</xref>
             </p>
