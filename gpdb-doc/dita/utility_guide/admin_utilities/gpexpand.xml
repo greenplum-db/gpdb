@@ -172,7 +172,7 @@
         </plentry>
         <plentry>
           <pt>[-t | --tardir] <varname>directory</varname></pt>
-          <pd>The fully qualified path to a <varname>directory</varname> on segment hosts were the
+          <pd>The fully qualified path to a <varname>directory</varname> on segment hosts where the
               <codeph>gpexpand</codeph> utility copies a temporary tar file. The file contains
             Greenplum Database files that are used to create segment instances. The default
             directory is the user home directory.</pd>
