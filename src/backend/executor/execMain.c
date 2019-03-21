@@ -1747,7 +1747,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 				containRoot = true;
 			}
 
-			/* FIXME: does relid here have to be the root's OID? */
 			estate->es_result_partitions = BuildPartitionNodeFromRoot(relid);
 
 			/*
