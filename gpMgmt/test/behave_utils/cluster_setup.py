@@ -127,8 +127,11 @@ class TestCluster:
     def reset_cluster(self):
         reset_hosts(self.hosts, test_base_dir = self.base_dir)
 
-    def create_cluster(self, with_mirrors=False):
+    def create_cluster(self, with_mirrors=False, mirroring_configuration='group'):
         # Generate the config files to initialize the cluster
+        # todo: DATA_DIRECTORY and MIRROR_DATA_DIRECTORY should have only one directory, not 2 when specifying spread
+        if mirroring_configuration not in ['group', 'spread']:
+            raise Exception('Mirroring configuration must be group or spread')
         self.mirror_enabled = with_mirrors
         self._generate_gpinit_config_files()
         assert os.path.exists(self.init_file)
@@ -136,7 +139,8 @@ class TestCluster:
 
         # run gpinitsystem
         clean_env = 'unset MASTER_DATA_DIRECTORY; unset PGPORT;'
-        gpinitsystem_cmd = clean_env + 'gpinitsystem -a -c  %s ' % (self.init_file)
+        segment_mirroring_option = '-S' if mirroring_configuration == 'spread' else ''
+        gpinitsystem_cmd = clean_env + 'gpinitsystem -a -c  %s %s' % (self.init_file, segment_mirroring_option)
         res = run_shell_command(gpinitsystem_cmd, 'run gpinitsystem', verbose=True)
         # initsystem returns 1 for warnings and 2 for errors
         if res['rc'] > 1:

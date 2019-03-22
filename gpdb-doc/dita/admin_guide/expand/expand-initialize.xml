@@ -7,7 +7,7 @@
     instances and create the expansion schema. </shortdesc>
   <body>
     <p>The first time you run <codeph><xref href="../../utility_guide/admin_utilities/gpexpand.xml"
-          >gpexand</xref></codeph> with a valid input file it creates and initializes segment
+          >gpexpand</xref></codeph> with a valid input file it creates and initializes segment
       instances and creates the expansion schema. After these steps are completed, running
         <codeph>gpexpand</codeph> detects if the expansion schema has been created and, if so,
       performs table redistribution. </p>
@@ -79,7 +79,7 @@
               segments on new hosts.</li>
             <li id="no168559">If you are adding new primary segments, enter the new primary data
               directory root for the new segments. Do not specify the actual data directory name,
-              which is created automatically by <codeph>gpexpand </codeph>based on the existing data
+              which is created automatically by <codeph>gpexpand</codeph> based on the existing data
               directory names. <p>For example, if your existing data directories are as
                 follows:</p><codeblock>/gpdata/primary/gp0
 /gpdata/primary/gp1</codeblock><p>then
@@ -198,20 +198,18 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
           <li id="no160392">Log in on the master host as the user who will run your Greenplum
             Database system; for example, <codeph>gpadmin</codeph>.</li>
           <li id="no161427">Run the <codeph>gpexpand</codeph> utility, specifying the input file
-            with <codeph>-i</codeph>. Optionally, use <codeph>-D</codeph> to specify the database in
-            which to create the expansion schema. For
-              example:<codeblock>$ gpexpand -i input_file -D database1</codeblock><p>The utility
-              detects if an expansion schema exists for the Greenplum Database system. If a schema
-              exists, remove it with <codeph>gpexpand -c</codeph> before you start a new expansion
-              operation. See <xref href="expand-rm-schema.xml" type="topic" format="dita"
-              />.</p><p>When the new segments are initialized and the expansion schema is created,
-              the utility prints a success message and exits. </p></li>
+            with <codeph>-i</codeph>. For
+              example:<codeblock>$ gpexpand -i input_file</codeblock><p>The utility detects if an
+              expansion schema exists for the Greenplum Database system. If a
+                <i>gpexpand</i> schema exists, remove it with <codeph>gpexpand -c</codeph>
+              before you start a new expansion operation. See <xref href="expand-rm-schema.xml"
+                type="topic" format="dita"/>.</p><p>When the new segments are initialized and the
+              expansion schema is created, the utility prints a success message and exits. </p></li>
         </ol>
         <p>When the initialization process completes, you can connect to Greenplum Database and view
-          the expansion schema. The schema resides in the database you specified with
-            <codeph>-D</codeph> or in the database specified by the <codeph>PGDATABASE</codeph>
-          environment variable. For more information, see <xref href="expand-planning.xml#topic9"
-            type="topic" format="dita"/>.</p>
+          the expansion schema. The <i>gpexpand</i> schema resides in the
+            postgres database. For more information, see <xref
+            href="expand-planning.xml#topic9" type="topic" format="dita"/>.</p>
       </section>
     </body>
   </topic>
@@ -219,13 +217,28 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
     <title>Rolling Back a Failed Expansion Setup</title>
     <body>
       <p>You can roll back an expansion setup operation (adding segment instances and segment hosts)
-        only if the operation fails. </p>
+        only if the operation fails.</p>
       <p>If the expansion fails during the initialization step, while the database is down, you must
         first restart the database in master-only mode by running the <codeph>gpstart -m</codeph>
         command. </p>
-      <p>Roll back the failed expansion with the following command, specifying the database that
-        contains the expansion
-        schema:<codeblock>gpexpand --rollback -D <i>database_name</i></codeblock></p>
+      <p>Roll back the failed expansion with the following
+        command:<codeblock>gpexpand --rollback</codeblock></p>
+    </body>
+  </topic>
+  <topic id="topic_wkv_kkd_chb">
+    <title>Monitoring the Cluster Expansion State</title>
+    <body>
+      <p>At any time, you can check the state of cluster expansion by running the
+          <codeph>gpstate</codeph> utility with the <codeph>-x</codeph> flag: </p>
+      <codeblock>$ gpstate -x</codeblock>
+      <p>If the expansion schema exists in the postgres database, <codeph>gpstate
+          -x</codeph> reports on the progress of the expansion. During the first expansion phase,
+          <codeph>gpstate</codeph> reports on the progress of new segment intialization.  During the
+        second phase, <codeph>gpstate</codeph> reports on the progress of table redistribution, and
+        whether redistribution is paused or active. </p>
+      <p>You can also query the expansion schema to see expansion status. See <xref
+          href="expand-redistribute.xml#topic31"/> for more information.</p>
+
     </body>
   </topic>
 </topic>

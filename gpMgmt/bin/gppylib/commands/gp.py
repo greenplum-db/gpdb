@@ -856,7 +856,9 @@ class ConfigureNewSegment(Command):
     def __init__(self, name, confinfo, logdir, newSegments=False, tarFile=None,
                  batchSize=None, verbose=False,ctxt=LOCAL, remoteHost=None, validationOnly=False, writeGpIdFileOnly=False,
                  forceoverwrite=False):
+
         cmdStr = '$GPHOME/bin/lib/gpconfigurenewsegment -c \"%s\" -l %s' % (confinfo, pipes.quote(logdir))
+
         if newSegments:
             cmdStr += ' -n'
         if tarFile:
@@ -899,7 +901,6 @@ class ConfigureNewSegment(Command):
                         : <segment dbid>
         """
         result = {}
-
         for segIndex, seg in enumerate(segments):
             if primaryMirror == 'primary' and seg.isSegmentPrimary() == False:
                continue
@@ -923,13 +924,16 @@ class ConfigureNewSegment(Command):
                 isPrimarySegment = "false"
                 isTargetReusedLocationString = "false"
 
-            result[hostname] += '%s:%d:%s:%s:%d:%d:%s:%s' % (seg.getSegmentDataDirectory(), seg.getSegmentPort(),
+            progressFile = getattr(seg, 'progressFile', "")
+
+            result[hostname] += '%s:%d:%s:%s:%d:%d:%s:%s:%s' % (seg.getSegmentDataDirectory(), seg.getSegmentPort(),
                                                           isPrimarySegment,
                                                           isTargetReusedLocationString,
                                                           seg.getSegmentDbId(),
                                                           seg.getSegmentContentId(),
                                                           primaryHostname,
-                                                          primarySegmentPort
+                                                          primarySegmentPort,
+                                                          progressFile
             )
         return result
 

@@ -128,6 +128,7 @@ install: generate_greenplum_path_file
 	rm -rf $(DESTDIR)$(prefix)/bin/src
 	rm -rf $(DESTDIR)$(prefix)/bin/gppylib
 	rm -rf $(DESTDIR)$(prefix)/bin/gpload_test
+	rm -rf $(DESTDIR)$(prefix)/bin/README*
 	find $(DESTDIR)$(prefix)/lib/python/gppylib -name test -type d | xargs rm -rf
 
 clean distclean:

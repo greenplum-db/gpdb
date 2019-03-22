@@ -10,7 +10,7 @@ Synopsis
 gprecoverseg [-p <new_recover_host>[,...]]
              |-i <recover_config_file> 
              [-d <master_data_directory>] [-B <parallel_processes>] 
-             [-F] [-a] [-q] [-l <logfile_directory>]
+             [-F] [-a] [-q] [-s] [--no-progress] [-l <logfile_directory>]
 
 
 gprecoverseg -r
@@ -218,6 +218,18 @@ This option rebalances primary and mirror segments by returning them to
 their preferred roles. All segments must be valid and synchronized before 
 running gprecoverseg -r. If there are any in progress queries, they will 
 be cancelled and rolled back.
+
+-s
+
+Show pg_basebackup progress sequentially instead of inplace. Useful when
+writing to a file, or if a tty does not support escape sequences. Defaults to
+showing the progress inplace.
+
+
+--no-progress
+
+Do no show pg_basebackup progress. Useful when writing to a
+file. Defaults to showing the progress.
 
 
 -v

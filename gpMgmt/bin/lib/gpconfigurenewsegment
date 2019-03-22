@@ -40,7 +40,7 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, contentid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                    syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName):
+                 syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName, logfileDirectory, progressFile):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -57,7 +57,8 @@ class ConfExpSegCmd(Command):
         self.syncWithSegmentHostname = syncWithSegmentHostname
         self.syncWithSegmentPort = syncWithSegmentPort
         self.replicationSlotName = replicationSlotName
-
+        self.logfileDirectory = logfileDirectory
+        self.progressFile = progressFile
         #
         # validationOnly if True then we validate directories and other simple things only; we don't
         #                actually configure the segment
@@ -122,11 +123,15 @@ class ConfExpSegCmd(Command):
                    return
 
                 if not self.isPrimary:
-                    # Log pg_basebackup output to the same directory as gpconfigurenewsegment
-                    pgbasebackup_start_time = datetime.datetime.today().strftime('%Y%m%d_%H%M%S')
-                    pgbasebackup_progress_temp_file = '%s/pg_basebackup.%s.dbid%s.out' % (gplog.get_logger_dir(),
-                                                                                          pgbasebackup_start_time,
-                                                                                          self.dbid)
+                    # If the caller does not specify a pg_basebackup
+                    # progress file, then create a temporary one and handle
+                    # its deletion upon success.
+                    shouldDeleteProgressFile = False
+                    if not self.progressFile:
+                        shouldDeleteProgressFile = True
+                        self.progressFile = '%s/pg_basebackup.%s.dbid%s.out' % (gplog.get_logger_dir(),
+                                                                                datetime.datetime.today().strftime('%Y%m%d_%H%M%S'),
+                                                                                self.dbid)
                     # Create a mirror based on the primary
                     cmd = PgBaseBackup(pgdata=self.datadir,
                                        host=self.syncWithSegmentHostname,
@@ -134,13 +139,13 @@ class ConfExpSegCmd(Command):
                                        replication_slot_name=self.replicationSlotName,
                                        forceoverwrite=self.forceoverwrite,
                                        target_gp_dbid=self.dbid,
-                                       logfile=pgbasebackup_progress_temp_file)
+                                       logfile=self.progressFile)
                     try:
-                        logger.info("Running pg_basebackup with progress output temporarily in %s" % pgbasebackup_progress_temp_file)
+                        logger.info("Running pg_basebackup with progress output temporarily in %s" % self.progressFile)
                         cmd.run(validateAfter=True)
-
                         self.set_results(CommandResult(0, '', '', True, False))
-                        os.remove(pgbasebackup_progress_temp_file)
+                        if shouldDeleteProgressFile:
+                            os.remove(self.progressFile)
                     except Exception, e:
                         self.set_results(CommandResult(1,'',e,True,False))
                         raise
@@ -319,6 +324,7 @@ try:
         # they will be junk data passed through the config.
         primaryHostName = seg[6]
         primarySegmentPort = int(seg[7])
+        progressFile = seg[8]
 
         cmd = ConfExpSegCmd( name = 'Configure segment directory'
                            , cmdstr = ' '.join(sys.argv)
@@ -336,6 +342,8 @@ try:
                            , validationOnly = options.validationOnly
                            , forceoverwrite = options.forceoverwrite
                            , replicationSlotName = options.replicationSlotName
+                           , logfileDirectory = options.logfileDirectory
+                           , progressFile= progressFile
                            )
         pool.addCommand(cmd)
 

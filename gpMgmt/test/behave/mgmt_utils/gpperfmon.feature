@@ -15,7 +15,7 @@ Feature: gpperfmon
     Scenario: install gpperfmon
         Given the environment variable "PGDATABASE" is set to "template1"
         Given the database "gpperfmon" does not exist
-        When the user runs "gpperfmon_install --port 15432 --enable --password foo"
+        When the user installs gpperfmon
         Then gpperfmon_install should return a return code of 0
         Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
         Then verify that the last line of the file "pg_hba.conf" in the master data directory contains the string "host     all         gpmon         ::1/128    md5"

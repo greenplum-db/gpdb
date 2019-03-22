@@ -7,11 +7,11 @@
   <body>
     <p>After creating an expansion schema, you can redistribute tables across the entire system with
           <codeph><xref href="../../utility_guide/admin_utilities/gpexpand.xml"
-        >gpexand</xref></codeph>. Aim to run this during low-use hours when the utility's CPU usage
-      and table locks have minimal impact on operations. Rank tables to redistribute the largest or
-      most critical tables first.</p>
+        >gpexpand</xref></codeph>. Plan to run this during low-use hours when the utility's CPU
+      usage and table locks have minimal impact on operations. Rank tables to redistribute the
+      largest or most critical tables first.</p>
     <note>When redistributing data, Greenplum Database must be running in production mode. Greenplum
-      Database cannot be restricted mode or in master mode. The <codeph><xref
+      Database cannot be in restricted mode or in master mode. The <codeph><xref
           href="../../utility_guide/admin_utilities/gpstart.xml">gpstart</xref></codeph> options
         <codeph>-R</codeph> or <codeph>-m</codeph> cannot be specified to start Greenplum
       Database.</note>
@@ -53,7 +53,7 @@
           <codeph>orders</codeph>. When table redistribution begins, <codeph>lineitem</codeph> is
         redistributed first, followed by <codeph>orders</codeph> and all other tables in
           <i>gpexpand.status_detail</i>. To exclude a table from redistribution, remove the table
-        from <i>gpexpand.status_detail</i>. </p>
+        from the <i>gpexpand.status_detail</i> table. </p>
     </body>
   </topic>
   <topic id="topic30" xml:lang="en">
@@ -85,6 +85,8 @@
         the estimated rate of table redistribution and estimated time to completion. You can query
         the table <i><xref href="../../ref_guide/system_catalogs/gp_expansion_tables.xml"
             >gpexpand.status_detail</xref></i> for per-table status information.</p>
+      <p>See also <xref href="expand-initialize.xml#topic_wkv_kkd_chb"/> for information about
+        monitoring the overall expansion progress with the <codeph>gpstate</codeph> utility.</p>
     </body>
     <topic id="topic32" xml:lang="en">
       <title>Viewing Expansion Status</title>
@@ -92,7 +94,7 @@
         <p>After the first table completes redistribution, <i>gpexpand.expansion_progress</i>
           calculates its estimates and refreshes them based on all tables' redistribution rates.
           Calculations restart each time you start a table redistribution session with
-            <codeph>gpexpand</codeph>. To monitor progress, connect to Greenplum Data\base using
+            <codeph>gpexpand</codeph>. To monitor progress, connect to Greenplum Database using
             <codeph>psql</codeph> or another supported client; query
             <i>gpexpand.expansion_progress</i> with a command like the following:</p>
         <p>

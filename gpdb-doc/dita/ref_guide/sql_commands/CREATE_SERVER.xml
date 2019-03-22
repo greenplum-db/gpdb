@@ -55,7 +55,7 @@
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt>mpp_execute { 'master | 'any' | 'all segments' }</pt>
+                    <pt>mpp_execute { 'master' | 'any' | 'all segments' }</pt>
                     <pd>
                         <p>An option that identifies the host from which the foreign data-wrapper
                             requests data: <ul id="ul_zcg_2vd_mgb">

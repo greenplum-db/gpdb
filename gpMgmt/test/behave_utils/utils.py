@@ -163,7 +163,7 @@ def check_database_is_running(context):
 
     pgport = int(os.environ['PGPORT'])
 
-    running_status = chk_local_db_running(master_data_dir, pgport)
+    running_status = chk_local_db_running(os.environ.get('MASTER_DATA_DIRECTORY'), pgport)
     gpdb_running = running_status[0] and running_status[1] and running_status[2] and running_status[3]
 
     return gpdb_running
@@ -181,8 +181,13 @@ def start_database(context):
 
 
 def stop_database_if_started(context):
-    if check_database_is_running(context):
+    try:
         stop_database(context)
+    except Exception, err:
+        if check_database_is_running(context):
+            raise Exception(err)
+        else:
+            context.exception = None
 
 
 def stop_database(context):

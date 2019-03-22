@@ -307,7 +307,8 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
 def addStandardLoggingAndHelpOptions(parser, includeNonInteractiveOption, includeUsageOption=False):
     """
     Add the standard options for help and logging
-    to the specified parser object.
+    to the specified parser object. Returns the logging OptionGroup so that
+    callers may modify as needed.
     """
     parser.set_usage('%prog [--help] [options] ')
     parser.remove_option('-h')
@@ -330,6 +331,7 @@ def addStandardLoggingAndHelpOptions(parser, includeNonInteractiveOption, includ
     if includeNonInteractiveOption:
         addTo.add_option('-a', dest="interactive", action='store_false', default=True,
                          help="quiet mode, do not require user input for confirmations")
+    return addTo
 
 
 def addMasterDirectoryOptionForSingleClusterProgram(addTo):

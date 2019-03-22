@@ -28,7 +28,7 @@ all : devel
 .PHONY : autoconf
 
 # Internal functions which are invoked by other rules within this makefile
-.PHONY : copydocs mgmtcopy copylibs
+.PHONY : mgmtcopy copylibs
 .PHONY : greenplum_path RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
 .PHONY : gccVersionCheck clients gppkg
 
@@ -79,7 +79,6 @@ RELEASE=devel
 GPDIR=greenplum-db-$(RELEASE)
 PLRDIR=greenplum-plr-$(RELEASE)
 CLIENTSDIR=greenplum-clients-$(RELEASE)
-GPDOCDIR=$(CURDIR)/docs/release
 
 DISTPATH=$(GPROOT)/$(GPDIR)
 CLIENTSDISTPATH=$(GPROOT)/$(CLIENTSDIR)
@@ -327,7 +326,6 @@ define BUILD_STEPS
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
-	@$(MAKE) copydocs INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
 	@$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTSINSTLOC=$(CLIENTSINSTLOC)
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTSINSTLOC)
@@ -351,7 +349,6 @@ define BUILD_STEPS
 	cd $(BUILDDIR)/src/bin/gpfdist && $(MAKE) install
 	@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
-	@$(MAKE) copydocs INSTLOC=$(INSTLOC)
 	if [ "$(findstring hpux_ia64,$(BLD_ARCH))" = "hpux_ia64" ]; then \
 	  cd $(GPMGMT)/bin && $(MAKE) pygresql LDFLAGS="" INSTLOC=$(INSTLOC) ; \
 	elif [ "$(findstring win,$(BLD_ARCH))" != "win" ]; then \
@@ -757,22 +754,6 @@ else
 	@cd extensions/pgbouncer/source && ./configure --with-libevent=$(BLD_TOP)/ext/$(BLD_ARCH) --prefix=$(INSTLOC) --enable-evdns --with-pam
 	$(MAKE) -C extensions/pgbouncer/source install
 endif
-
-copydocs :
-	@if [ ! -d $($INSTLOC)/docs ] ; then mkdir -p $(INSTLOC)/docs; fi
-	@if [ ! -d $(GPDOCDIR) ] ; then \
-	    echo "Error Copying Documentation: $(GPDOCDIR) is not present"; \
-	else  echo "Copying Documentation" ;  \
-	    if [ -d $(INSTLOC)/doc/postgresql/contrib ] ; then \
-	        mkdir -p $(INSTLOC)/docs/contrib ; \
-	        echo "Copying postgresql contrib documentation" ; \
-		cp -r $(INSTLOC)/doc/postgresql/contrib/* $(INSTLOC)/docs/contrib ; \
-	    fi ; \
-	fi
-	@if [ -d $(INSTLOC)/doc ] ; then \
-	    echo "Removing $(INSTLOC)/doc" ; \
-	    rm -rf $(INSTLOC)/doc ; \
-	fi
 
 mgmtcopy :
 	#Copy the management utilities
