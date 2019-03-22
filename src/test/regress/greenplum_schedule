@@ -30,7 +30,7 @@ test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parame
 test: spi_processed64bit
 test: python_processed64bit
 
-test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gpcopy_encoding gp_create_table gp_create_view window_views namespace_gp
+test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gpcopy_encoding gp_create_table gp_create_view window_views namespace_gp replication_slots
 
 test: filter gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var guc_gp gp_explain distributed_transactions explain_format
 
