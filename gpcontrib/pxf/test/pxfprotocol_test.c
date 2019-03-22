@@ -142,7 +142,6 @@ test_pxfprotocol_import_first_call(void **state)
 	/* uri has been initialized */
 	assert_true(context->uri.data != NULL);
 	/* no write file name for import case */
-	assert_int_equal(context->write_file_name.len, 0);
 	assert_true(context->relation != NULL);
 	/* relation pointer is copied */
 	assert_int_equal(context->relation, relation);
@@ -208,7 +207,6 @@ test_pxfprotocol_import_last_call(void **state)
 
 	/* init data in context that will be cleaned up */
 	initStringInfo(&call_context->uri);
-	initStringInfo(&call_context->write_file_name);
 
 	/* set mock behavior for bridge cleanup */
 	expect_value(gpbridge_cleanup, context, call_context);
@@ -279,7 +277,6 @@ test_pxfprotocol_export_first_call(void **state)
 	/* uri has been initialized */
 	assert_true(context->uri.data != NULL);
 	/* write file name initialized, but empty, since it is filled by another component */
-	assert_int_equal(context->write_file_name.len, 0);
 	assert_true(context->relation != NULL);
 	/* relation pointer is copied */
 	assert_int_equal(context->relation, relation);
@@ -345,7 +342,6 @@ test_pxfprotocol_export_last_call(void **state)
 
 	/* init data in context that will be cleaned up */
 	initStringInfo(&call_context->uri);
-	initStringInfo(&call_context->write_file_name);
 
 	/* set mock behavior for bridge cleanup */
 	expect_value(gpbridge_cleanup, context, call_context);

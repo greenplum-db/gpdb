@@ -38,7 +38,6 @@ typedef struct
 	GPHDUri        *gphd_uri;
 	StringInfoData uri;
 	ListCell       *current_fragment;
-	StringInfoData write_file_name;
 	Relation       relation;
 	char           *filterstr;
 	ProjectionInfo *proj_info;

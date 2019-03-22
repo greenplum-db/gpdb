@@ -25,7 +25,6 @@
 /* helper function declarations */
 static void build_uri_for_read(gphadoop_context *context);
 static void build_uri_for_write(gphadoop_context *context);
-static void build_file_name_for_write(gphadoop_context *context);
 static void add_querydata_to_http_headers(gphadoop_context *context);
 static void set_current_fragment_headers(gphadoop_context *context);
 static size_t fill_buffer(gphadoop_context *context, char *start, size_t size);
@@ -86,7 +85,7 @@ gpbridge_import_start(gphadoop_context *context)
 void
 gpbridge_export_start(gphadoop_context *context)
 {
-	build_file_name_for_write(context);
+	elog(DEBUG2, "pxf: file name for write: %s", context->gphd_uri->data);
 	build_uri_for_write(context);
 	context->churl_headers = churl_headers_init();
 	add_querydata_to_http_headers(context);
@@ -139,7 +138,8 @@ gpbridge_write(gphadoop_context *context, char *databuf, int datalen)
 	if (datalen > 0)
 	{
 		n = churl_write(context->churl_handle, databuf, datalen);
-		elog(DEBUG5, "pxf gpbridge_write: wrote %zu bytes to %s", n, context->write_file_name.data);
+		elog(DEBUG5, "pxf gpbridge_write: segment %d wrote %zu bytes to %s",
+			GpIdentity.segindex, n, context->gphd_uri->data);
 	}
 
 	return (int) n;
@@ -165,28 +165,10 @@ build_uri_for_read(gphadoop_context *context)
 static void
 build_uri_for_write(gphadoop_context *context)
 {
-	appendStringInfo(&context->uri, "http://%s/%s/%s/Writable/stream?path=%s",
-					 get_authority(), PXF_SERVICE_PREFIX, PXF_VERSION, context->write_file_name.data);
-	elog(DEBUG2, "pxf: uri %s with file name for write: %s", context->uri.data, context->write_file_name.data);
-}
-
-/*
- * Builds a unique file name for write per segment, based on
- * directory name from the table's URI, the transaction id (XID) and segment id.
- * e.g. with path in URI '/data/writable/table1', XID 1234 and segment id 3,
- * the file name will be '/data/writable/table1/1234_3'.
- */
-static void
-build_file_name_for_write(gphadoop_context *context)
-{
-	char		xid[TMGIDSIZE];
-
-	if (!getDistributedTransactionIdentifier(xid))
-		elog(ERROR, "Unable to obtain distributed transaction id");
-
-	appendStringInfo(&context->write_file_name, "/%s/%s_%d",
-					 context->gphd_uri->data, xid, GpIdentity.segindex);
-	elog(DEBUG2, "pxf: file name for write: %s", context->write_file_name.data);
+	appendStringInfo(&context->uri, "http://%s/%s/%s/Writable/stream?path=",
+					 get_authority(), PXF_SERVICE_PREFIX, PXF_VERSION);
+	elog(DEBUG2, "pxf: uri %s with file name for write: %s",
+		context->uri.data, context->gphd_uri->data);
 }
 
 

@@ -137,23 +137,13 @@ test_gpbridge_export_start(void **state)
 	/* init data in context that will be cleaned up */
 	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
 	initStringInfo(&context->uri);
-	initStringInfo(&context->write_file_name);
 	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
 	context->gphd_uri->data = "path";
 	context->gphd_uri->profile = "profile";
 
-	/* expectations for creating file name for write */
-	char		xid[TMGIDSIZE]="abcdefghijklmnopqrstu";
-
-	GpIdentity.segindex = 3;
-	char* expected_file_name = psprintf("/%s/%s_%d", "path", xid, 3);
-	expect_any(getDistributedTransactionIdentifier, id);
-	will_assign_memory(getDistributedTransactionIdentifier, id, xid, TMGIDSIZE);
-	will_return(getDistributedTransactionIdentifier, true);
-
 	/* expectation for remote uri construction */
 	will_return(get_authority, "abc:123");
-	char* expected_uri = psprintf("http://abc:123/pxf/v15/Writable/stream?path=%s", expected_file_name);
+	char* expected_uri = "http://abc:123/pxf/v15/Writable/stream?path=";
 
 	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
 	will_return(churl_headers_init, headers);
@@ -171,7 +161,6 @@ test_gpbridge_export_start(void **state)
 	gpbridge_export_start(context);
 
 	/* assert call results */
-	assert_string_equal(context->write_file_name.data, expected_file_name);
 	assert_string_equal(context->uri.data, expected_uri);
 	assert_int_equal(context->churl_headers, headers);
 	assert_int_equal(context->churl_handle, handle);
@@ -486,16 +475,21 @@ test_gpbridge_read_last_fragment_finished(void **state)
 }
 
 void
-test_gpbridge_write_data(void **state) {
+test_gpbridge_write_data(void **state)
+{
 	/* init data in context */
-	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
-	initStringInfo(&context->write_file_name);
-	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
-	context->churl_handle = handle;
+	gphadoop_context
+		         *context =
+		(gphadoop_context *) palloc0(sizeof(gphadoop_context));
+	CHURL_HANDLE handle   = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
+
+	context->gphd_uri       = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	context->gphd_uri->data = "path";
+	context->churl_handle   = handle;
 
 	/* set mock behavior */
-	char*	databuf = "foo";
-	int		datalen = 3;
+	char *databuf = "foo";
+	int  datalen  = 3;
 	expect_value(churl_write, handle, context->churl_handle);
 	expect_value(churl_write, buf, databuf);
 	expect_value(churl_write, bufsize, datalen);
@@ -508,6 +502,7 @@ test_gpbridge_write_data(void **state) {
 	assert_int_equal(bytes_written, 3);
 
 	/* cleanup */
+	pfree(context->gphd_uri);
 	pfree(handle);
 	pfree(context);
 }
