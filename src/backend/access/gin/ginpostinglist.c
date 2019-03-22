@@ -70,8 +70,15 @@
  * than enough. It's tempting to derive this from MaxHeapTuplesPerPage, and
  * use the minimum number of bits, but that would require changing the on-disk
  * format if MaxHeapTuplesPerPage changes. Better to leave some slack.
+ *
+ *
+ * Greenplum modification:
+ *
+ * Greenplum's append-only tables use the full 16 bit offset number range, so
+ * Greenplum removes the storage optimization made by Postgres for heap tables.
+ *
  */
-#define MaxHeapTuplesPerPageBits		11
+#define MaxHeapTuplesPerPageBits		16
 
 static inline uint64
 itemptr_to_uint64(const ItemPointer iptr)
