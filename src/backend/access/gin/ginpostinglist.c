@@ -71,7 +71,7 @@
  * use the minimum number of bits, but that would require changing the on-disk
  * format if MaxHeapTuplesPerPage changes. Better to leave some slack.
  */
-#define MaxHeapTuplesPerPageBits		11
+#define MaxHeapTuplesPerPageBits		16
 
 static inline uint64
 itemptr_to_uint64(const ItemPointer iptr)
