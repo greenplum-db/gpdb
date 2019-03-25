@@ -42,21 +42,23 @@ void pfree(void *pointer) { /* something */ };
 void test__encode_varbyte_less_than_127(void **state) {
     uint64 val;
 	unsigned char **list;
-	unsigned char **result_list;
+	unsigned char *result_list;
 
 	// 1 is not encoded
 	val = 1;
-	list = malloc(sizeof(unsigned char));
-	result_list = list;
-	encode_varbyte(val, &list);
+	list = calloc(1, sizeof(unsigned char *));
+    result_list = *list = calloc(1, sizeof(unsigned char));
+		
+	encode_varbyte(val, list);
+	
  	assert_int_equal(*result_list, 1);
  	assert_int_equal(*result_list, 0x01);
 
 	// 126 is not encoded
 	val = 126;
-	list = malloc(sizeof(unsigned char));
-	result_list = list;
-	encode_varbyte(val, &list);
+	list = calloc(1, sizeof(unsigned char *));
+	result_list = *list = calloc(1, sizeof(unsigned char));
+	encode_varbyte(val, list);
  	assert_int_equal(*result_list, 0x7e);
  	assert_int_equal(*result_list, 126);	
 }
@@ -65,42 +67,118 @@ void test__encode_varbyte_less_than_127(void **state) {
 void test__encode_varbyte_just_larger_than_127(void **state) {
     uint64 val;
 	unsigned char **list;
-	unsigned char **result_list;
-
-	assert_int_equal(1, 129 >> 7);
+	unsigned char *result_list;
 
 	val = 129;
-	result_list = list = malloc(2*sizeof(unsigned char));
-	encode_varbyte(val, &list);
+	list = calloc(2, sizeof(unsigned char *));
+	result_list = *list = calloc(1, sizeof(unsigned char));
+	encode_varbyte(val, list);
 
-	unsigned char *value = result_list;
- 	assert_int_equal(*value, 0x81);
- 	assert_int_equal(*value, 129);	
+ 	assert_int_equal(*result_list, 0x81);
+ 	assert_int_equal(*result_list, 129);	
 }
-
 
 void test__encode_varbyte_just_larger_than_255(void **state) {
     uint64 val;
 	unsigned char **list;
-	unsigned char **result_list;
+	unsigned char *result_list;
 
 	val = 256;
-	result_list = list = malloc(2*sizeof(unsigned char));
-	encode_varbyte(val, &list);
+	list = calloc(2, sizeof(unsigned char));
+	result_list = *list = calloc(1, sizeof(unsigned char));
+	encode_varbyte(val, list);
 
-	unsigned char *value = result_list;
- 	assert_int_equal(*value, 0x80);
- 	assert_int_equal(*value, 128);
+ 	assert_int_equal(*(result_list), 0x80);
+ 	assert_int_equal(*(result_list), 128);
 	
- 	assert_int_equal(*(value+1), 0x02);
- 	assert_int_equal(*(value+1), 2);
+ 	assert_int_equal(*(result_list+1), 0x02);
+ 	assert_int_equal(*(result_list+1), 2);
 }
 
 
-void test__decode_varbyte(void **state) {
- 	assert_int_equal(0, 0);
+void test__decode_varbyte_can_decode_1(void **state) {
+	uint64 value;
+	unsigned char **list;
+	unsigned char *original_list;
+	unsigned char *result_list;
+
+	list = calloc(17, sizeof(unsigned char *));
+	original_list = result_list = *list = calloc(1, sizeof(unsigned char));
+	encode_varbyte(1, list);
+	decode_varbyte(&original_list);
+ 	assert_int_equal(*result_list, 1);
 }
 
+
+void test__decode_varbyte_can_decode_128(void **state) {
+	uint64 value;
+	unsigned char **list;
+	unsigned char **original_list;
+	unsigned char *result_list;
+
+	original_list = list = calloc(17, sizeof(unsigned char *));
+    result_list = *list = calloc(1, sizeof(unsigned char));
+
+	value = 128;
+	encode_varbyte(value, list);
+	decode_varbyte(original_list);
+	
+ 	assert_int_equal(*result_list, 0x80);
+}
+
+
+void test__decode_varbyte_can_decode_256(void **state) {
+	uint64 value;
+	unsigned char **list;
+	unsigned char **original_list;
+	unsigned char *result_list;
+
+	original_list = list = calloc(17, sizeof(unsigned char *));
+	result_list = *list = calloc(1, sizeof(unsigned char));
+	
+	value = 257;
+	encode_varbyte(value, list);
+	decode_varbyte(original_list);
+
+ 	assert_int_equal(*result_list, 0x81);
+ 	assert_int_equal(*(result_list+1), 0x02);
+}
+
+
+void test__decode_varbyte_can_decode_x(void **state) {
+	uint64 value;
+	uint64 return_value;
+	unsigned char **list;
+	unsigned char **original_list;
+	unsigned char *result_list;
+
+	list = calloc(17, sizeof(unsigned char *));
+	original_list = list;
+	
+	
+	for( int i = 0; i < 17; i++)
+		list[i] = calloc(1, sizeof(unsigned char));
+
+	result_list = list[0];
+
+	value = 1;
+	
+	debugger();
+	
+	encode_varbyte(value, list);
+
+	debugger();
+	
+	assert_int_equal(*result_list, value);
+	
+	return_value = decode_varbyte(original_list);
+
+	debugger();
+
+ 	assert_int_equal(return_value, value);
+}
+
+void debugger() {};
 
 int
 main(int argc, char *argv[])
@@ -111,9 +189,14 @@ main(int argc, char *argv[])
 		unit_test(test__encode_varbyte_less_than_127),
 		unit_test(test__encode_varbyte_just_larger_than_127),
 		unit_test(test__encode_varbyte_just_larger_than_255),
-		unit_test(test__decode_varbyte)
+		/*
+		unit_test(test__decode_varbyte_can_decode_1),
+		unit_test(test__decode_varbyte_can_decode_128),
+		unit_test(test__decode_varbyte_can_decode_256),
+		*/
+		unit_test(test__decode_varbyte_can_decode_x)
 	};
-
+	
 	return run_tests(tests);
 }
 
