@@ -810,11 +810,6 @@ copylibs : thirdparty-dist
 	mkdir -p $(INSTLOC)/etc
 	mkdir -p $(INSTLOC)/include
 
-ifeq "$(BLD_ARCH)" "win32"
-	# Copy kfw dlls
-	cp -rp $(BLD_TOP)/ext/win32/kfw-3-2-2/lib/*dll $(INSTLOC)/lib/
-endif
-
 greenplum_path:
 	mkdir -p $(INSTLOC)
 	unset LIBPATH; \
