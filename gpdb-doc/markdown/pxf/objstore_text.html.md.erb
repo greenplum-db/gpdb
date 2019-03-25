@@ -238,7 +238,7 @@ To run this example, you must:
 
 ## <a id="write_text"></a>Writing Text Data
 
-The "\<objstore\>:text" profiles support writing single line plain text data to an object store. When you create a writable external table with the PXF, you specify the name of a directory. When you insert records into a writable external table, the block(s) of data that you insert are written to one or more files in the directory that you specified.
+The "\<objstore\>:text" profiles support writing single line plain text data to an object store. When you create a writable external table with PXF, you specify the name of a directory. When you insert records into a writable external table, the block(s) of data that you insert are written to one or more files in the directory that you specified.
 
 **Note**: External tables that you create with a writable profile can only be used for `INSERT` operations. If you want to query the data that you inserted, you must create a separate readable external table that references the directory.
 
