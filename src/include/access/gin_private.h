@@ -992,4 +992,14 @@ ginCompareItemPointers(ItemPointer a, ItemPointer b)
 #define ginCompareItemPointers(a, b) ItemPointerCompare(a, b)
 #endif   /* PG_USE_INLINE */
 
+
+/*
+ * varbyte functions
+ */
+void encode_varbyte(uint64 val, unsigned char **ptr);
+uint64 decode_varbyte(unsigned char **ptr);
+
+
 #endif   /* GIN_PRIVATE_H */
+
+

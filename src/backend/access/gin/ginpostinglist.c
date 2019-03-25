@@ -105,7 +105,7 @@ uint64_to_itemptr(uint64 val, ItemPointer iptr)
 /*
  * Varbyte-encode 'val' into *ptr. *ptr is incremented to next integer.
  */
-static void
+void
 encode_varbyte(uint64 val, unsigned char **ptr)
 {
 	unsigned char *p = *ptr;
@@ -123,7 +123,7 @@ encode_varbyte(uint64 val, unsigned char **ptr)
 /*
  * Decode varbyte-encoded integer at *ptr. *ptr is incremented to next integer.
  */
-static uint64
+uint64
 decode_varbyte(unsigned char **ptr)
 {
 	uint64		val;
