@@ -57,9 +57,5 @@ jobs:
     file: gpdb_src/concourse/tasks/scan_with_coverity.yml
     image: centos-coverity
     params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
       COVERITY_TOKEN: {{coverity_token}}
       COVERITY_EMAIL: {{coverity_email}}
