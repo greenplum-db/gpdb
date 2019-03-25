@@ -83,7 +83,7 @@ The PXF `hdfs:parquet` profile supports encoding- and compression-related write 
 |-------|-------------------------------------|
 | COMPRESSION_CODEC    | The compression codec alias. Supported compression codecs for writing Parquet data include: `snappy`, `gzip`, `lzo`, and `uncompressed` . If this option is not provided, PXF compresses the data using `snappy` compression. |
 | ROWGROUP_SIZE | A Parquet file consists of one or more row groups, a logical partitioning of the data into rows. `ROWGROUP_SIZE` identifies the size (in bytes) of the row group. The default row group size is `8 * 1024 * 1024` bytes. |
-| PAGE_SIZE | A row group consists of column chunks which are divided up into pages. `PAGE_SIZE` is the size (in bytes) of such a page. The default page size is `1024 * 1024` bytes. |
+| PAGE_SIZE | A row group consists of column chunks that are divided up into pages. `PAGE_SIZE` is the size (in bytes) of such a page. The default page size is `1024 * 1024` bytes. |
 | DICTIONARY_PAGE_SIZE | Dictionary encoding is enabled by default when PXF writes Parquet files. There is a single dictionary page per column, per row group. `DICTIONARY_PAGE_SIZE` is similar to `PAGE_SIZE`, but for the dictionary. The default dictionary page size is `512 * 1024` bytes. |
 | PARQUET_VERSION | The Parquet version; values `v1` and `v2` are supported. The default Parquet version is `v1`. |
 
