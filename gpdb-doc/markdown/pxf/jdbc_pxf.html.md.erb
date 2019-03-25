@@ -25,7 +25,7 @@ Some of your data may already reside in an external SQL database. PXF provides a
 
 This section describes how to use the PXF JDBC connector to access data in an external SQL database, including how to create and query or insert data into a PXF external table that references a table in an external database.
 
-**Note**: The JDBC Connector does not guarantee consistency when writing to an external SQL database. Be aware that if an `INSERT` operation fails, some data may be written to the external database table. If you require consistency for writes, consider writing to a staging table in the external database, and loading to the target table only after verifying the write operation.
+<div class="note">The JDBC Connector does not guarantee consistency when writing to an external SQL database. Be aware that if an <code>INSERT</code> operation fails, some data may be written to the external database table. If you require consistency for writes, consider writing to a staging table in the external database, and loading to the target table only after verifying the write operation.</div>
 
 ## <a id="prereq"></a>Prerequisites
 
@@ -35,10 +35,7 @@ Before you access an external SQL database using the PXF JDBC connector, ensure 
 - You can identify the PXF user configuration directory (`$PXF_CONF`).
 - Connectivity exists between all Greenplum Database segment hosts and the external SQL database.
 - You have configured your external SQL database for user access from all Greenplum Database segment hosts.
-
-The PXF JDBC connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR file. If you require a different JDBC JAR file(s), ensure that:
-
-- You have installed the JDBC driver JAR files for the external SQL database in the `$PXF_CONF/lib` directory on each segment host. Be sure to install JDBC driver JAR files that are compatible with your JRE version. See [Registering PXF JAR Dependencies](reg_jar_depend.html) for additional information.
+- You have registered any JDBC driver JAR dependencies, and you have created one or more named PXF JDBC Connector server configurations as described in [Configuring the PXF JDBC Connector](jdbc_cfg.html).
 
 ## <a id="datatypes"></a>Data Types Supported
 
@@ -62,12 +59,12 @@ To access data in an external SQL database, you create a readable or writable Gr
 
 Use the following syntax to create a Greenplum Database external table that references an external SQL database table and uses the JDBC connector to read or write data:
 
-``` sql
+<pre>
 CREATE [READABLE | WRITABLE] EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<external-table-name>?PROFILE=Jdbc[&<custom-option>=<value>[...]]')
+LOCATION ('pxf://<external-table-name>?<b>PROFILE=Jdbc[&SERVER=&lt;servername>]</b>[&&lt;custom-option>=&lt;value>[...]]')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
-```
+</pre>
 
 The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command are described in the table below.
 
@@ -75,6 +72,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 |-------|-------------------------------------|
 | \<external&#8209;table&#8209;name\>    | The full name of the external table. Depends on the external SQL database, may include a schema name and a table name. |
 | PROFILE    | The `PROFILE` keyword value must specify `Jdbc`. |
+| SERVER=\<servername\>   | The named server configuration that PXF uses to access the external SQL database. |
 | \<custom&#8209;option\>  | \<custom-option\> is profile-specific. `Jdbc` profile-specific options are discussed in the next section.|
 | FORMAT 'CUSTOM' | The JDBC `CUSTOM` `FORMAT` supports the built-in `'pxfwritable_import'` `FORMATTER` function for read operations and the built-in `'pxfwritable_export'` function for write operations. |
 
@@ -85,19 +83,16 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 
 You include JDBC connector custom options in the `LOCATION` URI, prefacing each option with an ampersand `&`.
 
-The `Jdbc` profile supports the following \<custom-option\> values:
+The `Jdbc` profile supports the following connection-related \<custom-option\>s:
 
-| Option Name   | Operation | Description
-|---------------|------------|--------|
-| JDBC_DRIVER | Read, Write | The JDBC driver class name. (Required) |
-| DB_URL | Read, Write | The external database URL. Depends on the external SQL database, typically includes at least the hostname, port, and database name. (Required) |
-| USER | Read, Write | The database user name. Required if `PASS` is provided. |
-| PASS | Read, Write | The database password for `USER`. Required if `USER` is provided. |
-| BATCH_SIZE | Write | Integer identifying the number of `INSERT` operations to batch to the external SQL database. PXF always validates a `BATCH_SIZE` option, even when provided on a read operation. Batching is enabled by default. |
-| POOL_SIZE | Write | Enable thread pooling on `INSERT` operations and identify the number of threads in the pool. Thread pooling is disabled by default. |
-| PARTITION_BY | Read | The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\> values. A null `PARTITION_BY` defaults to a single fragment. |
-| RANGE | Read | Required when `PARTITION_BY` is specified. The query range, \<start-value\>[:\<end-value\>]. When the partition column is an `enum` type, `RANGE` must specify a list of values, each of which forms its own fragment. If the partition column is an `int` or `date` type, `RANGE` must specify a finite left-closed range. That is, the range includes the \<start-value\> but does *not* include the \<end-value\>. If the partition column is a `date` type, use the `yyyy-MM-dd` date format. |
-| INTERVAL | Read | Required when `PARTITION_BY` is specified and of the `int` or `date` type. The interval, \<interval-value\>[:\<interval-unit\>], of one fragment. Specify the size of the fragment in \<interval-value\>. If the partition column is a `date` type, use the \<interval-unit\> to specify `year`, `month`, or `day`. |
+| Custom Option Name   | jdbc-site.xml Property Name | Description
+|----------------------|-----------------------------|--------|
+| JDBC_DRIVER | jdbc.driver | The JDBC driver class name. (Required) |
+| DB_URL | jdbc.url | The external database URL. Depends on the external SQL database, typically includes at least the hostname, port, and database name. (Required) |
+| USER | jdbc.user | The database user name. Required if `PASS` is provided. |
+| PASS | jdbc.password | The database password for `USER`. Required if `USER` is provided. |
+
+<div class="note">If you provide a <code>SERVER=&lt;servername></code> in the <code>CREATE EXTERNAL TABLE</code> <code>LOCATION</code> clause, any connection option that you include in the <code>LOCATION</code> clause overrides the value that you specified in the <code>&lt;servername></code>'s <code>jdbc-site.xml</code> configuration file.</div>
 
 Example JDBC \<custom-option\> connection strings:
 
@@ -105,6 +100,16 @@ Example JDBC \<custom-option\> connection strings:
 &JDBC_DRIVER=org.postgresql.Driver&DB_URL=jdbc:postgresql://gpmaster:5432/pgtestdb&USER=pguser1&PASS=changeme
 &JDBC_DRIVER=com.mysql.jdbc.Driver&DB_URL=jdbc:mysql://mysqlhost:3306/testdb&USER=user1&PASS=changeme
 ```
+
+Additional \<custom-option\>s supported by the `Jdbc` profile include:
+
+| Option Name   | Operation | Description
+|---------------|------------|--------|
+| BATCH_SIZE | Write | Integer identifying the number of `INSERT` operations to batch to the external SQL database. PXF always validates a `BATCH_SIZE` option, even when provided on a read operation. Batching is enabled by default. |
+| POOL_SIZE | Write | Enable thread pooling on `INSERT` operations and identify the number of threads in the pool. Thread pooling is disabled by default. |
+| PARTITION_BY | Read | The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\> values. A null `PARTITION_BY` defaults to a single fragment. |
+| RANGE | Read | Required when `PARTITION_BY` is specified. The query range, \<start-value\>[:\<end-value\>]. When the partition column is an `enum` type, `RANGE` must specify a list of values, each of which forms its own fragment. If the partition column is an `int` or `date` type, `RANGE` must specify a finite left-closed range. That is, the range includes the \<start-value\> but does *not* include the \<end-value\>. If the partition column is a `date` type, use the `yyyy-MM-dd` date format. |
+| INTERVAL | Read | Required when `PARTITION_BY` is specified and of the `int` or `date` type. The interval, \<interval-value\>[:\<interval-unit\>], of one fragment. Specify the size of the fragment in \<interval-value\>. If the partition column is a `date` type, use the \<interval-unit\> to specify `year`, `month`, or `day`. |
 
 #### <a id="batching"></a>Batching Insert Operations (Write)
 
@@ -159,6 +164,7 @@ In this example, you:
 
 - Create a PostgreSQL database and table, and insert data into the table
 - Create a PostgreSQL user and assign all privileges on the table to the user
+- Configure the PXF JDBC Connector to access the PostgreSQL database
 - Create a PXF readable external table that references the PostgreSQL table
 - Read the data in the PostgreSQL table
 - Create a PXF writable external table that references the PostgreSQL table
@@ -210,23 +216,39 @@ Perform the following steps to create a PostgreSQL table named `forpxf_table1` i
 
 7. Update the PostgreSQL configuration to allow user `pxfuser1` to access `pgtestdb` from each Greenplum Database segment host. This configuration is specific to your PostgreSQL environment. You will update the `/var/lib/pgsql/pg_hba.conf` file and then restart the PostgreSQL server.
 
-8. Construct the JDBC connection string, substituting your PostgreSQL server hostname and port number. For example:
 
-    ``` pre
-    &JDBC_DRIVER=org.postgresql.Driver&DB_URL=jdbc:postgresql://pserver:5432/pgtestdb&USER=pxfuser1&PASS=changeme
-    ```
+#### <a id="ex_jdbconfig"></a>Configure the JDBC Connector 
 
-    Save this string for use later.
-
-
-#### <a id="ex_jdbconfig"></a>Configure PXF
-
-You must download the PostgreSQL driver JAR file to your system, copy the JAR file to the PXF user configuration directory, and then restart PXF.
+You must create a JDBC server configuration for PostgreSQL, download the PostgreSQL driver JAR file to your system, copy the JAR file to the PXF user configuration directory, synchronize PXF configuration, and then restart PXF.
 
 1. Log in to the Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
+    ```
+
+2. Create a JDBC server configuration for PostgreSQL as described in [Example Configuration Procedure](jdbc_cfg.html#cfg_proc), naming the server/directory `pgsrvcfg`. The `jdbc-site.xml` file contents should look similar to the following (substitute your PostgreSQL host system for `pgserverhost`):
+
+    ``` xml
+    <?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <property>
+        <name>jdbc.driver</name>
+        <value>org.postgresql.Driver</value>
+    </property>
+    <property>
+        <name>jdbc.url</name>
+        <value>jdbc:postgresql://pgserverhost:5432/pgtestdb</value>
+    </property>
+    <property>
+        <name>jdbc.user</name>
+        <value>pxfuser1</value>
+    </property>
+    <property>
+        <name>jdbc.password</name>
+        <value>changeme</value>
+    </property>
+</configuration>
     ```
 
 2. [Download](https://jdbc.postgresql.org/download.html) a PostgreSQL JDBC driver JAR file and note the location of the downloaded file.
@@ -253,11 +275,9 @@ Perform the following procedure to create a PXF external table that references t
 
     ``` sql
     gpadmin=# CREATE EXTERNAL TABLE pxf_tblfrompg(id int)
-                LOCATION ('pxf://public.forpxf_table1?PROFILE=Jdbc&JDBC_DRIVER=org.postgresql.Driver&DB_URL=jdbc:postgresql://pserver:5432/pgtestdb&USER=pxfuser1&PASS=changeme')
+                LOCATION ('pxf://public.forpxf_table1?PROFILE=Jdbc&SERVER=pgsvrcfg')
                 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
-
-    Substitute the `DB_URL` string that you constructed in the previous exercise.
 
 2. Display all rows of the `pxf_tblfrompg` table:
 
@@ -279,11 +299,9 @@ Perform the following procedure to insert some data into the `forpxf_table1` Pos
 
     ``` sql
     gpadmin=# CREATE WRITABLE EXTERNAL TABLE pxf_writeto_postgres(id int)
-                LOCATION ('pxf://public.forpxf_table1?PROFILE=Jdbc&JDBC_DRIVER=org.postgresql.Driver&DB_URL=jdbc:postgresql://pserver:5432/pgtestdb&USER=pxfuser1&PASS=changeme')
+                LOCATION ('pxf://public.forpxf_table1?PROFILE=Jdbc&SERVER=pgsrvcfg')
               FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export');
     ```
-
-    Again, substitute the `DB_URL` string that you constructed in the previous exercise.
 
 4. Insert some data into the `pxf_writeto_postgres` table. For example:
 

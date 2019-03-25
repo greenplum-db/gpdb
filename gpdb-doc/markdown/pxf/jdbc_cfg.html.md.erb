@@ -1,0 +1,123 @@
+---
+title: Configuring the JDBC Connector (Optional)
+---
+
+You can use PXF to access an external SQL database including MySQL, ORACLE, PostgreSQL, and Hive. This topic describes how to configure the PXF JDBC Connector to access these external data sources.
+
+*If you do not plan to use the PXF JDBC Connector, then you do not need to perform this procedure.*
+
+## <a id="about_cfg"></a>About JDBC Configuration
+
+To access data in an external SQL database with the PXF JDBC Connector, you must:
+
+- Register an appropriate JDBC driver JAR file
+- Specify the JDBC driver class name, database URL, and client credentials
+
+### <a id="cfg_jar"></a>JDBC Driver JAR Registration
+
+The PXF JDBC connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR file. If you require a different JDBC driver, ensure that you install the JDBC driver JAR file for the external SQL database in the `$PXF_CONF/lib` directory on each segment host. Be sure to install JDBC driver JAR files that are compatible with your JRE version. See [Registering PXF JAR Dependencies](reg_jar_depend.html) for additional information.
+
+### <a id="cfg_server"></a>JDBC Server Configuration
+
+PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies the minimum set of properties that you must configure to use the PXF JDBC Connector.
+
+The properties in the `jdbc-site.xml` server template file follow:
+
+| Property       | Description                                | Value |
+|----------------|--------------------------------------------|-------|
+| jdbc.driver | Class name of the JDBC driver. | The JDBC driver Java class name; for example `org.postgresql.Driver`. |
+| jdbc.url | The URL that the JDBC driver uses to connect to the database. | The database connection URL (database-specific); for example `jdbc:postgresql://phost:pport/pdatabase`. |
+| jdbc.user | The database user name. | Your user name for connecting to the database. |
+| jdbc.password | The password for `jdbc.user`. | Your password for connecting to the database. |
+
+<div class="note">When you configure a PXF JDBC server, you specify the external database user credentials to PXF in clear text in a configuration file.</div>
+
+When you configure the PXF JDBC Connector to access an external SQL database, you add at least one named PXF server configuration for the connector. You:
+
+1. Choose a name for the server configuration.
+2. Create the directory `$PXF_CONF/servers/<server_name>`.
+3. Copy the PXF `jdbc-site.xml` template configuration file to the new server directory.
+4. Fill in appropriate values for the properties in the template file.
+5. Add additional properties and values if required for your environment.
+6. Synchronize the server configuration to each Greenplum Database segment host.
+7. Publish the PXF server name(s) to your Greenplum Database end users as appropriate.
+
+The Greenplum Database user specifies the `<server_name>` in the `CREATE EXTERNAL TABLE` `LOCATION` clause `SERVER` option to access the external SQL database. For example, if you created a server configuration and named the server directory `pgsrvcfg`:
+
+<pre>
+CREATE EXTERNAL TABLE pxf_ext_tbl(name text, orders int)
+  LOCATION ('pxf://schema.tblname?PROFILE=Jdbc&<b>SERVER=pgsrvcfg</b>')
+FORMAT 'TEXT' (delimiter=E',');
+</pre>
+
+<div class="note info">A Greenplum Database user who queries or writes to an external table that specifies a server name accesses the external SQL database with the credentials configured for that server.</div>
+
+While not recommended, you can override a JDBC server configuration by directly specifying the driver, database URL, and/or user credentials via custom options in the `CREATE EXTERNAL TABLE` command `LOCATION` clause. Refer to [Accessing an SQL Database with JDBC](jdbc_pxf.html) for additional information.
+
+## <a id="cfg_proc"></a>Example Configuration Procedure
+
+Ensure that you have initialized PXF before you configure a JDBC Connector server.
+
+In this procedure, you name and add a PXF JDBC server configuration for a PostgreSQL database and synchronize the server configuration(s) to all segment hosts.
+
+1. Log in to your Greenplum Database master node:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    ```
+
+2. Choose a name for the JDBC server. You will provide the name to Greenplum users that you choose to allow to reference tables in the external SQL database as the configured user.
+
+    **Note**: The server name `default` is reserved.
+
+3. Create the `$PXF_HOME/servers/<server_name>` directory. For example, use the following command to create a JDBC server configuration named `pg_user1_testdb`:
+
+    ``` shell
+    gpadmin@gpmaster$ mkdir $PXF_CONF/servers/pg_user1_testdb
+    ````
+
+4. Copy the PXF JDBC server template file to the server configuration directory. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ cp $PXF_CONF/templates/jdbc-site.xml $PXF_CONF/servers/pg_user1_testdb/
+    ```
+        
+5. Open the template server configuration file in the editor of your choice, and provide appropriate property values for your environment. For example, if you are configuring access to a PostgreSQL database named `testdb` on a PostgreSQL instance running on the host named `pgserverhost` for the user named `user1`:
+
+    ``` pre
+    <?xml version="1.0" encoding="UTF-8"?>
+    <configuration>
+        <property>
+            <name>jdbc.driver</name>
+            <value>org.postgresql.Driver</value>
+        </property>
+        <property>
+            <name>jdbc.url</name>
+            <value>jdbc:postgresql://pgserverhost:5432/testdb</value>
+        </property>
+        <property>
+            <name>jdbc.user</name>
+            <value>user1</value>
+        </property>
+        <property>
+            <name>jdbc.password</name>
+            <value>changeme</value>
+        </property>
+    </configuration>
+    ```
+6. Save your changes and exit the editor.
+
+7. Use the `pxf cluster sync` command to copy the new server configurations to each Greenplum Database segment host. For example:
+    
+    ``` shell
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
+    ```
+
+## <a id="client-cfg-update"></a>Adding or Updating JDBC Server Configuration
+
+If you add a new, or update an existing, JDBC server configuration on the Greenplum Database master host, you must re-sync the PXF configuration to the Greenplum Database cluster:
+
+``` shell
+gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
+```
+
