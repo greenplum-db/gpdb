@@ -116,7 +116,7 @@ def parseargs():
                       help='hostname of system to create standby master on')
     optgrp.add_option('-P', '--standby-port', type='int', dest='standby_port',
                       help='port of system to create standby master on')
-    optgrp.add_option('-F', '--standby-datadir', type='string', dest='standby_datadir',
+    optgrp.add_option('-S', '--standby-datadir', type='string', dest='standby_datadir',
                       help='datadir of standby master')
     optgrp.add_option('-n', '--no-update', action='store_true', dest='no_update',
                       help='do not update system catalog tables')
@@ -155,9 +155,9 @@ def parseargs():
         logger.error('Options -s and -n cannot be specified together.')
         parser.exit(2, None)
 
-    # -F and -n are exclusive
+    # -S and -n are exclusive
     if options.standby_datadir and options.no_update:
-        logger.error('Options -F and -n cannot be specified together.')
+        logger.error('Options -S and -n cannot be specified together.')
         parser.exit(2, None)
 
     # -s and -r are exclusive
@@ -590,6 +590,12 @@ def validate_standby_init(options, array, standby_datadir):
         logger.error('Data directory already exists on host %s' % options.standby_host)
         if array.standbyMaster:
             logger.error('If you want to just start the stopped standby, use the -n option')
+        if options.standby_host == array.master.hostname:
+            logger.error(
+                'If you want to initialize a new standby on the same host as '
+                'the master (not recommended), use -S and -P to specify a new '
+                'data directory and port'
+            )
         raise GpInitStandbyException('master data directory exists')
 
     # disallow to create the same host/port

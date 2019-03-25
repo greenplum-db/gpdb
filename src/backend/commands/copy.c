@@ -3274,12 +3274,12 @@ CopyFromErrorCallback(void *arg)
 		if (cstate->cur_attname)
 			errcontext("COPY %s, line %s, column %s",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno),
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 					   cstate->cur_attname);
 		else
 			errcontext("COPY %s, line %s",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno));
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno));
 	}
 	else
 	{
@@ -3291,7 +3291,7 @@ CopyFromErrorCallback(void *arg)
 			attval = limit_printout_length(cstate->cur_attval);
 			errcontext("COPY %s, line %s, column %s: \"%s\"",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno),
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 					   cstate->cur_attname, attval);
 			pfree(attval);
 		}
@@ -3300,7 +3300,7 @@ CopyFromErrorCallback(void *arg)
 			/* error is relevant to a particular column, value is NULL */
 			errcontext("COPY %s, line %s, column %s: null input",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno),
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 					   cstate->cur_attname);
 		}
 		else
@@ -3323,7 +3323,7 @@ CopyFromErrorCallback(void *arg)
 				lineval = limit_printout_length(cstate->line_buf.data);
 				errcontext("COPY %s, line %s: \"%s\"",
 						   cstate->cur_relname,
-						   linenumber_atoi(buffer, cstate->cur_lineno),
+						   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 						   lineval);
 				pfree(lineval);
 			}
@@ -3339,7 +3339,7 @@ CopyFromErrorCallback(void *arg)
 				 */
 				errcontext("COPY %s, line %s",
 						   cstate->cur_relname,
-						   linenumber_atoi(buffer, cstate->cur_lineno));
+						   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno));
 			}
 		}
 	}
@@ -3868,7 +3868,7 @@ CopyFrom(CopyState cstate)
 				MemSet(partNulls, true, relnatts * sizeof(bool));
 
 				reconstructTupleValues(map, baseValues, baseNulls, (int) num_phys_attrs,
-									   partValues, partNulls, (int) attr_count);
+									   partValues, partNulls, relnatts);
 				ExecStoreVirtualTuple(slot);
 			}
 			else

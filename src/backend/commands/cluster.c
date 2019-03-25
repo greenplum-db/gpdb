@@ -65,6 +65,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdboidsync.h"
+#include "libpq/pqformat.h"
 
 /*
  * This struct is used to pass around the information on tables to be
@@ -839,6 +840,9 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose,
 	Relation	NewHeap,
 				OldHeap,
 				OldIndex;
+	Relation	relRelation;
+	HeapTuple	reltup;
+	Form_pg_class	relform;
 	TupleDesc	oldTupDesc;
 	TupleDesc	newTupDesc;
 	int			natts;
@@ -857,6 +861,7 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose,
 	double		num_tuples = 0,
 				tups_vacuumed = 0,
 				tups_recently_dead = 0;
+	BlockNumber num_pages;
 	int			elevel = verbose ? INFO : DEBUG2;
 	PGRUsage	ru0;
 
@@ -1184,6 +1189,8 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose,
 	/* Reset rd_toastoid just to be tidy --- it shouldn't be looked at again */
 	NewHeap->rd_toastoid = InvalidOid;
 
+	num_pages = RelationGetNumberOfBlocks(NewHeap);
+
 	/* Log what we did */
 	ereport(elevel,
 			(errmsg("\"%s\": found %.0f removable, %.0f nonremovable row versions in %u pages",
@@ -1203,6 +1210,35 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose,
 		index_close(OldIndex, NoLock);
 	heap_close(OldHeap, NoLock);
 	heap_close(NewHeap, NoLock);
+
+	/* Update pg_class to reflect the correct values of pages and tuples. */
+	relRelation = heap_open(RelationRelationId, RowExclusiveLock);
+
+	reltup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(OIDNewHeap));
+	if (!HeapTupleIsValid(reltup))
+		elog(ERROR, "cache lookup failed for relation %u", OIDNewHeap);
+	relform = (Form_pg_class) GETSTRUCT(reltup);
+
+	relform->relpages = num_pages;
+	relform->reltuples = num_tuples;
+
+	/* Don't update the stats for pg_class.  See swap_relation_files. */
+	if (OIDOldHeap != RelationRelationId)
+	{
+		simple_heap_update(relRelation, &reltup->t_self, reltup);
+
+		/* keep the catalog indexes up to date */
+		CatalogUpdateIndexes(relRelation, reltup);
+	}
+	else
+		CacheInvalidateRelcacheByTuple(reltup);
+
+	/* Clean up. */
+	heap_freetuple(reltup);
+	heap_close(relRelation, RowExclusiveLock);
+
+	/* Make the update visible */
+	CommandCounterIncrement();
 }
 
 /*
@@ -1291,7 +1327,8 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 					MultiXactId cutoffMulti,
 					Oid *mapped_tables)
 {
-	Relation	relRelation;
+	Relation	relRelation,
+				rel;
 	HeapTuple	reltup1,
 				reltup2;
 	Form_pg_class relform1,
@@ -1586,6 +1623,20 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 							mapped_tables);
 	}
 
+	/* swap size statistics too, since new rel has freshly-updated stats */
+	if (swap_stats)
+	{
+		rel = relation_open(r1, AccessShareLock);
+
+		vac_update_relstats(rel, relform1->relpages, relform1->reltuples,
+							relform1->relallvisible,
+							relform1->relhaspkey,
+							relform1->relfrozenxid,
+							relform1->relminmxid,
+							false,
+							true /* isvacuum */);
+		relation_close(rel, AccessShareLock);
+	}
 	/* Clean up. */
 	heap_freetuple(reltup1);
 	heap_freetuple(reltup2);

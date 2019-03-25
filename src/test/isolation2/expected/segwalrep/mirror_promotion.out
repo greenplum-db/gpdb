@@ -64,7 +64,7 @@ select content, preferred_role, role, status, mode from gp_segment_configuration
 0Uq: ... <quitting>
 
 -- fully recover the failed primary as new mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF --no-progress;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
@@ -163,7 +163,7 @@ create table mirror_promotion_tblspc_heap_table (a int) tablespace mirror_promot
 CREATE
 
 -- -- now, let's fully recover the mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF  --no-progress;
 -- start_ignore
 -- end_ignore
 (exited with code 0)

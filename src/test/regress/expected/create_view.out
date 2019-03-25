@@ -1543,7 +1543,7 @@ explain (costs off) select * from tt18v;
    ->  Append
          ->  Seq Scan on int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
          ->  Seq Scan on int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- check display of ScalarArrayOp with a sub-select

@@ -33,6 +33,9 @@ from the named table. Only the named table is truncated, not its child
 tables.</p><p><codeph>TRUNCATE</codeph> will not truncate any sub-tables of a partitioned
 table. If you specify a sub-table of a partitioned table, <codeph>TRUNCATE</codeph>
   will not remove rows from the sub-table and its child tables.</p>
+              <p> <codeph>TRUNCATE</codeph> is not MVCC-safe. After truncation, the table will
+                appear empty to concurrent transactions, if they are using a snapshot
+                taken before the truncation occurred.</p>
       <p><codeph>TRUNCATE</codeph> is transaction-safe with respect to the data in the tables: the
         truncation will be safely rolled back if the surrounding transaction does not commit.</p>
       <p><codeph>TRUNCATE</codeph> acquires an <codeph>ACCESS EXCLUSIVE</codeph> lock on each table

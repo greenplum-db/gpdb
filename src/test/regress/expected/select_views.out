@@ -1340,7 +1340,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_property_normal WHERE f_leak(passwd);
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on customer
          Filter: (f_leak(passwd) AND (name = 'regress_alice'::text))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 SELECT * FROM my_property_secure WHERE f_leak(passwd);
@@ -1358,7 +1358,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure WHERE f_leak(passwd);
          Filter: f_leak(my_property_secure.passwd)
          ->  Seq Scan on customer
                Filter: (name = 'regress_alice'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 --
@@ -1386,7 +1386,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_normal WHERE f_leak(cnum);
          ->  Hash
                ->  Seq Scan on customer l
                      Filter: (name = 'regress_alice'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 SELECT * FROM my_credit_card_secure WHERE f_leak(cnum);
@@ -1408,7 +1408,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_secure WHERE f_leak(cnum);
                ->  Hash
                      ->  Seq Scan on customer l
                            Filter: (name = 'regress_alice'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 --
@@ -1445,7 +1445,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_normal
                                  ->  Hash
                                        ->  Seq Scan on customer l_1
                                              Filter: (name = 'regress_alice'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 SELECT * FROM my_credit_card_usage_secure
@@ -1479,7 +1479,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_secure
                                  ->  Hash
                                        ->  Seq Scan on customer l
                                              Filter: (name = 'regress_alice'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 --

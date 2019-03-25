@@ -28,6 +28,10 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
     ALTER [ COLUMN ] <varname>column_name</varname> SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
     ALTER [ COLUMN ] <varname>column_name</varname> RESET ( <varname>attribute_option</varname> [, ... ] )
     ALTER [ COLUMN ] <varname>column_name</varname> OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ])
+    DISABLE TRIGGER [ <varname>trigger_name</varname> | ALL | USER ]
+    ENABLE TRIGGER [ <varname>trigger_name</varname> | ALL | USER ]
+    ENABLE REPLICA TRIGGER <varname>trigger_name</varname>
+    ENABLE ALWAYS TRIGGER <varname>trigger_name</varname>
     OWNER TO <varname>new_owner</varname>
     OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ] )</codeblock>
         </section>
@@ -38,20 +42,30 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                 <plentry>
                     <pt>ADD COLUMN</pt>
                     <pd>
-                        <p>This form adds a new column to the foreign table, using the same syntax as <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref></codeph>.
-                          Unlike the case when you add a column to a regular table, nothing happens to the underlying storage: this action simply declares that some new column is now accessible through the foreign table.</p>
+                        <p>This form adds a new column to the foreign table, using the same syntax
+                            as <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN
+                                    TABLE</xref></codeph>. Unlike the case when you add a column to
+                            a regular table, nothing happens to the underlying storage: this action
+                            simply declares that some new column is now accessible through the
+                            foreign table.</p>
                     </pd>
                 </plentry>
                 <plentry>
                     <pt>DROP COLUMN [ IF EXISTS ]</pt>
                     <pd>
-                        <p>This form drops a column from a foreign table. You must specify <codeph>CASCADE</codeph> if any objects outside of the table depend on the column; for example, views. If you specify <codeph>IF EXISTS</codeph> and the column does not exist, no error is thrown. Greenplum Database issues a notice instead.</p>
+                        <p>This form drops a column from a foreign table. You must specify
+                                <codeph>CASCADE</codeph> if any objects outside of the table depend
+                            on the column; for example, views. If you specify <codeph>IF
+                                EXISTS</codeph> and the column does not exist, no error is thrown.
+                            Greenplum Database issues a notice instead.</p>
                     </pd>
                 </plentry>
                 <plentry>
                     <pt>IF EXISTS</pt>
                     <pd>
-                        <p>If you specify <codeph>IF EXISTS</codeph> and the foreign table does not exist, no error is thrown. Greenplum Database issues a notice instead.</p>
+                        <p>If you specify <codeph>IF EXISTS</codeph> and the foreign table does not
+                            exist, no error is thrown. Greenplum Database issues a notice
+                            instead.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -63,10 +77,10 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                 <plentry>
                     <pt>SET/DROP DEFAULT</pt>
                     <pd>
-                        <p>These forms set or remove the default value for a column. Default
-                          values apply only in subsequent <codeph>INSERT</codeph> or
-                          <codeph>UPDATE</codeph> commands; they do not cause rows already in
-                          the table to change.</p>
+                        <p>These forms set or remove the default value for a column. Default values
+                            apply only in subsequent <codeph>INSERT</codeph> or
+                                <codeph>UPDATE</codeph> commands; they do not cause rows already in
+                            the table to change.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -78,29 +92,42 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                 <plentry>
                     <pt>SET STATISTICS</pt>
                     <pd>
-                        <p>This form sets the per-column statistics-gathering target for
-                          subsequent <codeph>ANALYZE</codeph> operations.  See the similar
-                          form of <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref></codeph> for more details.</p>
+                        <p>This form sets the per-column statistics-gathering target for subsequent
+                                <codeph>ANALYZE</codeph> operations. See the similar form of
+                                    <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER
+                                TABLE</xref></codeph> for more details.</p>
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt>SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ...] ] )</pt>
+                    <pt>SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ...]
+                        ] )</pt>
                     <pt>RESET ( <varname>attribute_option</varname> [, ... ] )</pt>
                     <pd>
-                        <p>This form sets or resets per-attribute options. See the similar 
-                          form of <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref></codeph> for more details.</p>
+                        <p>This form sets or resets per-attribute options. See the similar form of
+                                    <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER
+                                TABLE</xref></codeph> for more details.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>DISABLE/ENABLE [ REPLICA | ALWAYS ] TRIGGER</pt>
+                    <pd>
+                        <p>These forms configure the firing of trigger(s) belonging to the foreign
+                            table. See the similar form of <xref href="ALTER_TABLE.xml#topic1">ALTER
+                                TABLE</xref> for more details.</p>
                     </pd>
                 </plentry>
                 <plentry>
                     <pt>OWNER</pt>
                     <pd>
-                        <p>This form changes the owner of the foreign table to the specified user.</p>
+                        <p>This form changes the owner of the foreign table to the specified
+                            user.</p>
                     </pd>
                 </plentry>
                 <plentry>
                     <pt>RENAME</pt>
                     <pd>
-                        <p>The <codeph>RENAME</codeph> forms change the name of a foreign table or the name of an individual column in a foreign table.</p>
+                        <p>The <codeph>RENAME</codeph> forms change the name of a foreign table or
+                            the name of an individual column in a foreign table.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -110,9 +137,15 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt>OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ] )</pt>
+                    <pt>OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname>
+                            ['<varname>value</varname>'] [, ... ] )</pt>
                     <pd>
-                        <p>Change options for the foreign table. <codeph>ADD</codeph>, <codeph>SET</codeph>, and <codeph>DROP</codeph> specify the action to perform. If no operation is explicitly specified, the default operation is <codeph>ADD</codeph>. Option names must be unique. Greenplum Database validates names and values using the server's foreign-data wrapper.</p>
+                        <p>Change options for the foreign table. <codeph>ADD</codeph>,
+                                <codeph>SET</codeph>, and <codeph>DROP</codeph> specify the action
+                            to perform. If no operation is explicitly specified, the default
+                            operation is <codeph>ADD</codeph>. Option names must be unique.
+                            Greenplum Database validates names and values using the server's
+                            foreign-data wrapper.</p>
                     </pd>
                 </plentry>
             </parml>
@@ -162,6 +195,30 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                     <pt>RESTRICT</pt>
                     <pd>
                         <p>Refuse to drop the column if there are any dependent objects. This is the default behavior.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>trigger_name</varname></pt>
+                    <pd>
+                        <p>Name of a single trigger to disable or enable.</p>
+                    </pd>
+                </plentry>
+                
+                <plentry>
+                    <pt>ALL</pt>
+                    <pd>
+                        <p>Disable or enable all triggers belonging to the foreign table. (This
+                            requires superuser privilege if any of the triggers are internally
+                            generated triggers. The core system does not add such triggers to
+                            foreign tables, but add-on code could do so.) </p>
+                    </pd>
+                </plentry>
+                
+                <plentry>
+                    <pt>USER</pt>
+                    <pd>
+                        <p>Disable or enable all triggers belonging to the foreign table except for
+                            internally generated triggers. </p>
                     </pd>
                 </plentry>
                 <plentry>

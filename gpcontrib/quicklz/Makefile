@@ -5,7 +5,7 @@ OBJS = quicklz_compression.o
 CFLAGS_SL += -lquicklz
 LDFLAGS_SL += -lquicklz
 
-REGRESS = compression_quicklz
+REGRESS = AORO_quicklz AOCO_quicklz quicklz_column_compression compression_quicklz
 
 ifdef USE_PGXS
   PGXS := $(shell pg_config --pgxs)

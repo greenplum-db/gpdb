@@ -18,7 +18,7 @@ Gather Motion 3:1  (slice1; segments: 3)
         Sort Key: id
         ->  Index Scan using test_dc_data on test_dc
               Index Cond: (data = 34)
-Optimizer: legacy query optimizer
+Optimizer: Postgres query optimizer
 step explains: EXPLAIN (COSTS OFF) EXECUTE getrow_seq;
 QUERY PLAN     
 
@@ -28,7 +28,7 @@ Gather Motion 3:1  (slice1; segments: 3)
         Sort Key: id, data
         ->  Seq Scan on test_dc
               Filter: ((data)::text = '34'::text)
-Optimizer: legacy query optimizer
+Optimizer: Postgres query optimizer
 step select2: SELECT * FROM test_dc WHERE data=34 ORDER BY id,data;
 id             data           
 

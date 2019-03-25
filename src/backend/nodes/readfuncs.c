@@ -885,8 +885,9 @@ _readIndexStmt(void)
 	READ_BOOL_FIELD(deferrable);
 	READ_BOOL_FIELD(initdeferred);
 	READ_BOOL_FIELD(concurrent);
-	READ_STRING_FIELD(altconname);
 	READ_BOOL_FIELD(is_split_part);
+	READ_OID_FIELD(parentIndexId);
+	READ_OID_FIELD(parentConstraintId);
 
 	READ_DONE();
 }

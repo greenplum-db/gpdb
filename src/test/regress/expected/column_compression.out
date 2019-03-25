@@ -421,6 +421,8 @@ drop table ccddl_co, ccddl;
 -- Expect: failure
 -----------------------------------------------------------------------
 -- only support CO tables
+create table ccddl (i int encoding (compresstype=RLE_TYPE));
+ERROR:  ENCODING clause only supported with column oriented tables
 create table ccddl (i int encoding (compresstype=zlib));
 ERROR:  ENCODING clause only supported with column oriented tables
 create table ccddl (i int encoding (compresstype=zlib))
@@ -1742,6 +1744,15 @@ execute ccddlcheck;
 (2 rows)
 
 drop table ccddl;
+create table ccddl (i int42) with(appendonly = true, orientation=column);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+execute ccddlcheck;
+ relname | attnum |                     attoptions                      
+---------+--------+-----------------------------------------------------
+ ccddl   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(1 row)
+
+drop table ccddl;
 -- Shouldn't apply type default encoding in these cases
 create table ccddl (i int42);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
@@ -1762,11 +1773,36 @@ drop table ccddl;
 create table ccddl (i int42) with (appendonly = true, orientation=column,
 compresstype=none);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+alter type int42 set default encoding (compresstype=RLE_TYPE);
+alter table ccddl add column j int42 default '1'::int42;
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
+ relname | attnum |                       attoptions                        
+---------+--------+---------------------------------------------------------
  ccddl   |      1 | {compresstype=none,compresslevel=0,blocksize=32768}
-(1 row)
+ ccddl   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(2 rows)
+
+drop table ccddl;
+create table ccddl (i int42) with(appendonly = true, orientation=row);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+alter type int42 set default encoding (compresstype=RLE_TYPE);
+alter table ccddl add column j int42 default '1'::int42;
+-- No results are returned from the attribute encoding check, as compression with rle is not supported for row tables
+execute ccddlcheck;
+ relname | attnum | attoptions 
+---------+--------+------------
+(0 rows)
+
+drop table ccddl;
+create table ccddl (i int42) with(appendonly = true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+alter type int42 set default encoding (compresstype=RLE_TYPE);
+alter table ccddl add column j int42 default '1'::int42;
+-- No results are returned from the attribute encoding check, as compression with rle is not supported for heap tables
+execute ccddlcheck;
+ relname | attnum | attoptions 
+---------+--------+------------
+(0 rows)
 
 drop table ccddl;
 -- We used to accept SQL standard aliases for the built-in types,

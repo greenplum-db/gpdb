@@ -1,0 +1,193 @@
+--
+-- test that index-backed constraints have matching index and constraint names
+--    under all possibilities we can think of and that we cannot break this
+--    invariant
+--
+-- We have type(UNIQUE, PRIMARY KEY, EXCLUSION) x 
+--         create(CREATE TABLE usage, ALTER TABLE ADD CONSTRAINT usage) x
+--         rename(as is, RENAME CONSTRAINT, RENAME INDEX)
+--
+-- We do try all rename() with both create() as we assume that once a
+--         constraint has been created, it acts the same. 
+--
+DROP schema IF EXISTS index_constraint_naming;
+NOTICE:  schema "index_constraint_naming" does not exist, skipping
+CREATE schema index_constraint_naming;
+SET search_path='index_constraint_naming';
+DROP FUNCTION IF EXISTS constraints_and_indices();
+NOTICE:  function constraints_and_indices() does not exist, skipping
+CREATE FUNCTION constraints_and_indices() RETURNS TABLE(table_name regclass, constraint_name name, index_name regclass, constraint_type char)
+  LANGUAGE SQL STABLE STRICT AS $fn$
+    SELECT
+      con.conrelid::regclass,
+      con.conname,
+      con.conindid::regclass,
+      con.contype::char
+    FROM
+        pg_constraint con
+    JOIN
+        pg_namespace ns
+    ON
+        con.connamespace = ns.oid
+    WHERE
+        con.contype != 'c'
+    AND
+        ns.nspname = 'index_constraint_naming'
+    ORDER BY conrelid
+  ;
+$fn$;
+-- UNIQUE CONSTRAINT
+-- UNIQUE CONSTRAINT: make sure  a simple table has constraint and index names matching
+CREATE TABLE st_u (a int, b int, UNIQUE(a,b));
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='u');
+ table_name | constraint_name |  index_name  | constraint_type 
+------------+-----------------+--------------+-----------------
+ st_u       | st_u_a_b_key    | st_u_a_b_key | u
+(1 row)
+
+-- UNIQUE CONSTRAINT: create table LIKE st and check constraint propagates
+CREATE TABLE st_u_like (LIKE st_u INCLUDING CONSTRAINTS INCLUDING INDEXES);
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='u');
+ table_name |  constraint_name  |    index_name     | constraint_type 
+------------+-------------------+-------------------+-----------------
+ st_u       | st_u_a_b_key      | st_u_a_b_key      | u
+ st_u_like  | st_u_like_a_b_key | st_u_like_a_b_key | u
+(2 rows)
+
+-- UNIQUE CONSTRAINT: create table INHERITS st and check constraint NOT inherited
+CREATE TABLE st_u_inherits (c int) INHERITS (st_u);
+NOTICE:  table has parent, setting distribution columns to match parent table
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='u');
+ table_name |  constraint_name  |    index_name     | constraint_type 
+------------+-------------------+-------------------+-----------------
+ st_u       | st_u_a_b_key      | st_u_a_b_key      | u
+ st_u_like  | st_u_like_a_b_key | st_u_like_a_b_key | u
+(2 rows)
+
+-- UNIQUE CONSTRAINT 2: make sure  a simple table has constraint and index names matching
+CREATE TABLE st_u2 (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ALTER TABLE st_u2 ADD UNIQUE(a,b);
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='u');
+ table_name |  constraint_name  |    index_name     | constraint_type 
+------------+-------------------+-------------------+-----------------
+ st_u       | st_u_a_b_key      | st_u_a_b_key      | u
+ st_u_like  | st_u_like_a_b_key | st_u_like_a_b_key | u
+ st_u2      | st_u2_a_b_key     | st_u2_a_b_key     | u
+(3 rows)
+
+-- UNIQUE CONSTRAINT: ALTER CONSTRAINT NAME
+ALTER TABLE st_u2 RENAME CONSTRAINT st_u2_a_b_key TO st_u2_a_b_key_r;
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='u');
+ table_name |  constraint_name  |    index_name     | constraint_type 
+------------+-------------------+-------------------+-----------------
+ st_u       | st_u_a_b_key      | st_u_a_b_key      | u
+ st_u_like  | st_u_like_a_b_key | st_u_like_a_b_key | u
+ st_u2      | st_u2_a_b_key_r   | st_u2_a_b_key_r   | u
+(3 rows)
+
+-- UNIQUE CONSTRAINT: ALTER INDEX
+ALTER INDEX st_u2_a_b_key_r RENAME TO st_u2_a_b_key_r_i;
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='u');
+ table_name |  constraint_name  |    index_name     | constraint_type 
+------------+-------------------+-------------------+-----------------
+ st_u       | st_u_a_b_key      | st_u_a_b_key      | u
+ st_u_like  | st_u_like_a_b_key | st_u_like_a_b_key | u
+ st_u2      | st_u2_a_b_key_r_i | st_u2_a_b_key_r_i | u
+(3 rows)
+
+-- UNIQUE CONSTRAINT: cannot rename constraint to existing name
+ALTER TABLE st_u2 RENAME CONSTRAINT st_u2_a_b_key_r_i TO st_u_a_b_key;
+ERROR:  relation "st_u_a_b_key" already exists
+-- UNIQUE CONSTRAINT: cannot rename index to existing name
+ALTER INDEX st_u2_a_b_key_r_i RENAME TO st_u_a_b_key;
+ERROR:  relation "st_u_a_b_key" already exists
+-- PRIMARY KEY CONSTRAINT
+-- PRIMARY KEY CONSTRAINT: make sure  a simple table has constraint and index names matching
+CREATE TABLE st_pk (a int, b int, PRIMARY KEY(a,b));
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='p');
+ table_name | constraint_name | index_name | constraint_type 
+------------+-----------------+------------+-----------------
+ st_pk      | st_pk_pkey      | st_pk_pkey | p
+(1 row)
+
+-- PRIMARY KEY CONSTRAINT: create table LIKE st and check constraint propagates
+CREATE TABLE st_pk_like (LIKE st_pk INCLUDING CONSTRAINTS INCLUDING INDEXES);
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='p');
+ table_name | constraint_name |   index_name    | constraint_type 
+------------+-----------------+-----------------+-----------------
+ st_pk      | st_pk_pkey      | st_pk_pkey      | p
+ st_pk_like | st_pk_like_pkey | st_pk_like_pkey | p
+(2 rows)
+
+-- PRIMARY KEY CONSTRAINT: create table INHERITS st and check constraint NOT inherited
+CREATE TABLE st_pk_inherits (c int) INHERITS (st_pk);
+NOTICE:  table has parent, setting distribution columns to match parent table
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='p');
+ table_name | constraint_name |   index_name    | constraint_type 
+------------+-----------------+-----------------+-----------------
+ st_pk      | st_pk_pkey      | st_pk_pkey      | p
+ st_pk_like | st_pk_like_pkey | st_pk_like_pkey | p
+(2 rows)
+
+-- PRIMARY KEY CONSTRAINT 2: make sure  a simple table has constraint and index names matching
+CREATE TABLE st_pk2 (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ALTER TABLE st_pk2 ADD PRIMARY KEY(a,b);
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='p');
+ table_name | constraint_name |   index_name    | constraint_type 
+------------+-----------------+-----------------+-----------------
+ st_pk      | st_pk_pkey      | st_pk_pkey      | p
+ st_pk_like | st_pk_like_pkey | st_pk_like_pkey | p
+ st_pk2     | st_pk2_pkey     | st_pk2_pkey     | p
+(3 rows)
+
+-- PRIMARY KEY CONSTRAINT: ALTER CONSTRAINT NAME
+ALTER TABLE st_pk2 RENAME CONSTRAINT st_pk2_pkey TO st_pk2_pkey_r;
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='p');
+ table_name | constraint_name |   index_name    | constraint_type 
+------------+-----------------+-----------------+-----------------
+ st_pk      | st_pk_pkey      | st_pk_pkey      | p
+ st_pk_like | st_pk_like_pkey | st_pk_like_pkey | p
+ st_pk2     | st_pk2_pkey_r   | st_pk2_pkey_r   | p
+(3 rows)
+
+-- PRIMARY KEY CONSTRAINT: ALTER INDEX
+ALTER INDEX st_pk2_pkey_r RENAME TO st_pk2_pkey_r_i;
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='p');
+ table_name | constraint_name |   index_name    | constraint_type 
+------------+-----------------+-----------------+-----------------
+ st_pk      | st_pk_pkey      | st_pk_pkey      | p
+ st_pk_like | st_pk_like_pkey | st_pk_like_pkey | p
+ st_pk2     | st_pk2_pkey_r_i | st_pk2_pkey_r_i | p
+(3 rows)
+
+-- PRIMARY KEY CONSTRAINT: cannot rename constraint to existing name
+ALTER TABLE st_pk2 RENAME CONSTRAINT st_pk2_pkey_r_i  TO st_pk_pkey;
+ERROR:  relation "st_pk_pkey" already exists
+-- PRIMARY KEY CONSTRAINT: cannot rename index to existing name
+ALTER INDEX st_pk2_pkey_r_i RENAME TO st_pk_pkey;
+ERROR:  relation "st_pk_pkey" already exists
+-- EXCLUSION CONSTRAINT
+-- EXCLUSION CONSTRAINT: GPDB does not support exclusion constraints
+CREATE TABLE st_x (a int, b int, EXCLUDE (a with =, b with =));
+ERROR:  GPDB does not support exclusion constraints.
+-- Should fail
+SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='x');
+ table_name | constraint_name | index_name | constraint_type 
+------------+-----------------+------------+-----------------
+(0 rows)
+
+-- U_P
+ALTER TABLE st_u2 RENAME CONSTRAINT st_u2_a_b_key_r_i TO st_pk_pkey;
+ERROR:  relation "st_pk_pkey" already exists
+ALTER INDEX st_u2_a_b_key_r_i RENAME TO st_pk_pkey;
+ERROR:  relation "st_pk_pkey" already exists
+-- P_U
+ALTER TABLE st_pk2 RENAME CONSTRAINT st_pk2_pkey_r_i TO st_u2_a_b_key_r_i;
+ERROR:  relation "st_u2_a_b_key_r_i" already exists
+ALTER INDEX st_pk2_pkey_r_i RENAME TO st_u2_a_b_key_r_i;
+ERROR:  relation "st_u2_a_b_key_r_i" already exists

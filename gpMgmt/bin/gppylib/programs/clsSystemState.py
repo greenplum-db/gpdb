@@ -6,25 +6,22 @@
 # THIS IMPORT SHOULD COME FIRST
 from gppylib.mainUtils import *
 
-from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
-import os, sys, getopt, socket, StringIO, signal
+from optparse import OptionGroup
+import sys
 import collections
-import datetime
 from contextlib import closing
-import re
 
 from pygresql import pgdb
 
-from gppylib import gparray, gplog, pgconf, userinput, utils
-from gppylib.commands import base, gp, pg, unix
-from gppylib.db import catalog, dbconn
+from gppylib import gparray, gplog
+from gppylib.commands import base, gp
+from gppylib.db import dbconn
 from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.operations.startSegments import *
 from gppylib.operations.buildMirrorSegments import *
-from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
-from gppylib.utils import toNonNoneString, checkNotNone, readAllLinesFromFile, writeLinesToFile, TableLogger
+from gppylib.utils import TableLogger
 
 logger = gplog.get_default_logger()
 
@@ -143,7 +140,7 @@ class GpStateData:
                 VALUE__MASTER_REPORTS_STATUS,
                 VALUE__MIRROR_SEGMENT_STATUS,
                 VALUE__NONMIRROR_DATABASE_STATUS]
-                
+
         self.__allValues = {}
         for k in [VALUE__SEGMENT_STATUS, VALUE__DBID, VALUE__CONTENTID,
                     VALUE__HAS_DATABASE_STATUS_WARNING,
@@ -562,7 +559,6 @@ class GpSystemStateProgram:
         """
         logger.info("Gathering data from segments...")
         segmentsByHost = GpArray.getSegmentsByHostName(gpArray.getDbList())
-        segmentData = {}
         hostNameToCmd = {}
         for hostName, segments in segmentsByHost.iteritems():
             cmd = gp.GpGetSegmentStatusValues("get segment version status", segments,
@@ -598,11 +594,9 @@ class GpSystemStateProgram:
             logger.info("Physical mirroring is not configured")
             return 1
 
-        primarySegments = [ seg for seg in gpArray.getSegDbList() if seg.isSegmentPrimary(current_role=True) ]
         mirrorSegments = [ seg for seg in gpArray.getSegDbList() if seg.isSegmentMirror(current_role=True) ]
         contentIdToMirror = GpArray.getSegmentsByContentId(mirrorSegments)
 
-        hasWarnings = False
         hostNameToResults = self.__fetchAllSegmentData(gpArray)
         data = self.__buildGpStateData(gpArray, hostNameToResults)
 
@@ -773,11 +767,6 @@ class GpSystemStateProgram:
     def __showExpandStatus(self, gpEnv):
         st = gp.get_gpexpand_status()
 
-        tabLog = TableLogger().setWarnWithArrows(True)
-        tabLog.addSeparator()
-        tabLog.outputTable()
-        tabLog = None
-
         if st.phase == 0:
             logger.info("Cluster Expansion State = No Expansion Detected")
         elif st.phase == 1:
@@ -931,7 +920,7 @@ class GpSystemStateProgram:
         hasWarnings = hasWarnings or tabLog.hasWarnings()
 
         self.__addClusterDownWarning(gpArray, data)
-        
+
         if hasWarnings:
             logger.warn("*****************************************************" )
             logger.warn("Warnings have been generated during status processing" )
@@ -1042,7 +1031,6 @@ class GpSystemStateProgram:
             flush_left=row[4],
             replay_location=row[5],
             replay_left=row[6],
-            backend_start=row[7]
         )
 
     @staticmethod
@@ -1064,7 +1052,6 @@ class GpSystemStateProgram:
         flush_left = kwargs.pop('flush_left', None)
         replay_location = kwargs.pop('replay_location', None)
         replay_left = kwargs.pop('replay_left', None)
-        backend_start = kwargs.pop('backend_start', None)
 
         if kwargs:
             raise TypeError('unexpected keyword argument {!r}'.format(kwargs.keys()[0]))
@@ -1194,67 +1181,6 @@ class GpSystemStateProgram:
 
             data.setSegmentProbablyDown(seg, peerPrimary, databaseStatusIsWarning)
         return data
-
-    def __abbreviateBytes(self, numBytes):
-        """
-        Abbreviate bytes with 3 bytes of precision (so 1.45GB but also 12.3GB), except for numBytes < 1024
-
-
-        SAMPLE TEST:
-
-        def testAbbreviateBytes(bytes, expected=""):
-            # logger.info(" %s abbreviates to %s" % (bytes, self.__abbreviateBytes(bytes)))
-            if expected != self.__abbreviateBytes(bytes):
-                raise Exception("Invalid abbreviation for %s : %s" % (bytes, self.__abbreviateBytes(bytes)))
-
-        testAbbreviateBytes(0, "0 bytes")
-        testAbbreviateBytes(1, "1 byte")
-        testAbbreviateBytes(2, "2 bytes")
-        testAbbreviateBytes(13, "13 bytes")
-        testAbbreviateBytes(656, "656 bytes")
-        testAbbreviateBytes(999, "999 bytes")
-        testAbbreviateBytes(1000, "1000 bytes")
-        testAbbreviateBytes(1001, "1001 bytes")
-        testAbbreviateBytes(1024, "1.00 kB")
-        testAbbreviateBytes(1301, "1.27 kB")
-        testAbbreviateBytes(13501, "13.2 kB")
-        testAbbreviateBytes(135401, "132 kB")
-        testAbbreviateBytes(1354015, "1.29 MB")
-        testAbbreviateBytes(13544015, "12.9 MB")
-        testAbbreviateBytes(135440154, "129 MB")
-        testAbbreviateBytes(1354401574, "1.26 GB")
-        testAbbreviateBytes(13544015776, "12.6 GB")
-        testAbbreviateBytes(135440157769, "126 GB")
-        testAbbreviateBytes(1354401577609, "1.23 TB")
-        testAbbreviateBytes(13544015776094, "12.3 TB")
-        testAbbreviateBytes(135440157760944, "123 TB")
-        testAbbreviateBytes(1754401577609464, "1.56 PB")
-        testAbbreviateBytes(17544015776094646, "15.6 PB")
-        testAbbreviateBytes(175440157760946475, "156 PB")
-        testAbbreviateBytes(175440157760945555564, "155822 PB")
-
-
-        """
-        abbreviations = [
-            (1024L*1024*1024*1024*1024, "PB"),
-            (1024L*1024*1024*1024, "TB"),
-            (1024L*1024*1024, "GB"),
-            (1024L*1024, "MB"),
-            (1024L, "kB"),
-            (1, "bytes")]
-
-        if numBytes == 1:
-            return "1 byte"
-        for factor, suffix in abbreviations:
-            if numBytes >= factor:
-                break
-
-        precision = 3
-        precisionForDisplay = precision - len('%d' % int(numBytes/factor))
-        if precisionForDisplay < 0 or numBytes < 1024:
-            precisionForDisplay = 0
-
-        return '%.*f %s' % (precisionForDisplay, float(numBytes) / factor, suffix)
 
     def __showQuickStatus(self, gpEnv, gpArray):
 
@@ -1598,6 +1524,3 @@ class GpSystemStateProgram:
             raise ProgramArgumentValidationException(\
                             "too many arguments: only options may be specified", True)
         return GpSystemStateProgram(options)
-    
-        
-    

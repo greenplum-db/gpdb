@@ -336,3 +336,11 @@ Alter table part_t1 expand table;
 Select gp_segment_id, count(*) from part_t1 group by gp_segment_id;
 
 drop table part_t1;
+
+-- start_ignore
+-- We need to do a cluster expansion which will check if there are partial
+-- tables, we need to drop the partial tables to keep the cluster expansion
+-- run correctly.
+reset search_path;
+drop schema test_reshuffle_ao cascade;
+-- end_ignore

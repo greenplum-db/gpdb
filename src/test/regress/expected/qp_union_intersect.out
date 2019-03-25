@@ -1759,7 +1759,7 @@ order by 1,2;
          ->  Aggregate
                ->  Gather Motion 3:1  (slice2; segments: 3)
                      ->  Seq Scan on mergeappend_test r_1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 -- This used to trip an assertion in MotionStateFinderWalker(), when we were
@@ -1808,7 +1808,7 @@ order by 1,2;
    (slice1)    Executor memory: 121K bytes avg x 3 workers, 140K bytes max (seg0).  Work_mem: 49K bytes max.
    (slice2)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Execution time: 2.496 ms
 (23 rows)
 

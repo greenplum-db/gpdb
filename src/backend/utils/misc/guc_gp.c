@@ -107,8 +107,6 @@ bool		Debug_print_full_dtm = false;
 bool		Debug_print_snapshot_dtm = false;
 bool		Debug_disable_distributed_snapshot = false;
 bool		Debug_abort_after_distributed_prepared = false;
-bool		Debug_print_server_processes = false;
-bool		Debug_print_control_checkpoints = false;
 bool		Debug_appendonly_print_insert = false;
 bool		Debug_appendonly_print_insert_tuple = false;
 bool		Debug_appendonly_print_scan = false;
@@ -122,20 +120,13 @@ bool		Debug_appendonly_print_read_block = false;
 bool		Debug_appendonly_print_append_block = false;
 bool		Debug_appendonly_print_segfile_choice = false;
 bool        test_AppendOnlyHash_eviction_vs_just_marking_not_inuse = false;
-int			Debug_appendonly_bad_header_print_level = ERROR;
 bool		Debug_appendonly_print_datumstream = false;
 bool		Debug_appendonly_print_visimap = false;
 bool		Debug_appendonly_print_compaction = false;
 bool		Debug_resource_group = false;
-bool		gp_crash_recovery_abort_suppress_fatal = false;
 bool		Debug_bitmap_print_insert = false;
-bool		Test_appendonly_override = false;
 bool		Test_print_direct_dispatch_info = false;
-bool		gp_test_orientation_override = false;
 bool		gp_permit_relation_node_change = false;
-int			Test_compresslevel_override = 0;
-int			Test_blocksize_override = 0;
-int			Test_safefswritesize_override = 0;
 int			gp_max_local_distributed_cache = 1024;
 bool		gp_appendonly_verify_block_checksums = true;
 bool		gp_appendonly_verify_write_block = false;
@@ -165,11 +156,6 @@ char	   *memory_profiler_dataset_id = "none";
 char	   *memory_profiler_query_id = "none";
 int			memory_profiler_dataset_size = 0;
 
-bool		rle_type_compression_stats = false;
-
-bool		Debug_database_command_print = false;
-bool		gp_startup_integrity_checks = true;
-
 /* WAL based replication debug GUCs */
 bool		debug_walrepl_snd = false;
 bool		debug_walrepl_syncrep = false;
@@ -179,17 +165,12 @@ bool		debug_basebackup = false;
 /* Latch mechanism debug GUCs */
 bool		debug_latch = false;
 
-bool		gp_crash_recovery_suppress_ao_eof = false;
 bool		gp_keep_all_xlog = false;
 
 #define DEBUG_DTM_ACTION_PRIMARY_DEFAULT true
 bool		Debug_dtm_action_primary = DEBUG_DTM_ACTION_PRIMARY_DEFAULT;
 
 bool		gp_log_optimization_time = false;
-
-int			Debug_delay_prepare_broadcast_ms = 0;
-int			Debug_delay_commit_broadcast_ms = 0;
-int			Debug_delay_abort_broadcast_ms = 0;
 
 int			Debug_dtm_action = DEBUG_DTM_ACTION_NONE;
 
@@ -211,8 +192,6 @@ int			Debug_dtm_action_nestinglevel = DEBUG_DTM_ACTION_NESTINGLEVEL_DEFAULT;
 bool		gp_encoding_check_locale_compatibility;
 
 int			gp_connection_send_timeout;
-
-int			WalSendClientTimeout = 30000;		/* 30 seconds. */
 
 bool create_restartpoint_on_ckpt_record_replay = false;
 
@@ -1004,17 +983,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_crash_recovery_abort_suppress_fatal", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Warning about crash recovery abort transaction issue"),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_crash_recovery_abort_suppress_fatal,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_select_invisible", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Use dummy snapshot for MVCC visibility calculation."),
 			NULL,
@@ -1579,28 +1547,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"debug_database_command_print", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print database command debugging information."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_database_command_print,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"test_appendonly_override", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("For testing purposes, change the default of the appendonly create table option."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Test_appendonly_override,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"test_print_direct_dispatch_info", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("For testing purposes, print information about direct dispatch decisions."),
 			NULL,
@@ -1640,27 +1586,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_disable_tuple_hints,
 		true,
-		NULL, NULL, NULL
-	},
-	{
-		{"debug_print_server_processes", PGC_SUSET, LOGGING_WHAT,
-			gettext_noop("Prints server process management to server log."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_print_server_processes,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"debug_print_control_checkpoints", PGC_SUSET, LOGGING_WHAT,
-			gettext_noop("Prints pg_control file checkpoint changes to server log."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_print_control_checkpoints,
-		false,
 		NULL, NULL, NULL
 	},
 
@@ -1754,17 +1679,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"rle_type_compression_stats", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("show compression ratio stats for rle_type compression"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&rle_type_compression_stats,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"debug_resource_group", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Prints resource groups debug logs."),
 			NULL,
@@ -1826,17 +1740,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&debug_latch,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_crash_recovery_suppress_ao_eof", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Warning about crash recovery append only eof issue"),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_crash_recovery_suppress_ao_eof,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3072,7 +2975,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"writable_external_table_bufsize", PGC_USERSET, EXTERNAL_TABLES,
-			gettext_noop("Buffer size in kilo bytes for writable external table before writing data to gpfdist."),
+			gettext_noop("Buffer size in kilobytes for writable external table before writing data to gpfdist."),
 			gettext_noop("Valid value is between 32K and 128M: [32, 131072]."),
 			GUC_UNIT_KB | GUC_NOT_IN_SAMPLE
 		},
@@ -3111,17 +3014,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		&Debug_dtm_action_nestinglevel,
 		DEBUG_DTM_ACTION_NESTINGLEVEL_DEFAULT, 0, 1000,
 		NULL, NULL, NULL
-	},
-
-	{
-		{"test_compresslevel_override", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("For testing purposes, the override value for compresslevel when non-default."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Test_compresslevel_override,
-		DEFAULT_COMPRESS_LEVEL, 0, 9, NULL,
-		NULL, NULL
 	},
 
 	{
@@ -3878,17 +3770,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"wal_send_client_timeout", PGC_SIGHUP, GP_ARRAY_TUNING,
-			gettext_noop("The time in milliseconds for a backend process to wait on the WAL Send server to finish a request to the QD mirroring standby."),
-			NULL,
-			GUC_UNIT_MS | GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&WalSendClientTimeout,
-		30000, 100, INT_MAX / 1000,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gpperfmon_port", PGC_POSTMASTER, UNGROUPED,
 			gettext_noop("Sets the port number of gpperfmon."),
 			NULL,
@@ -3962,16 +3843,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 
-	{
-		{"gp_statistics_blocks_target", PGC_USERSET, STATS_ANALYZE,
-			gettext_noop("The number of blocks to be sampled to estimate reltuples/relpages for heap tables."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_statistics_blocks_target,
-		25, 1, 1000,
-		NULL, NULL, NULL
-	},
 	{
 		{"gp_resqueue_priority_local_interval", PGC_POSTMASTER, RESOURCES_MGM,
 			gettext_noop("A measure of how often a backend process must consider backing off."),
@@ -4330,16 +4201,6 @@ struct config_real ConfigureNamesReal_gp[] =
 	},
 
 	{
-		{"gp_analyze_relative_error", PGC_USERSET, STATS_ANALYZE,
-			gettext_noop("target relative error fraction for row sampling during analyze"),
-			NULL
-		},
-		&analyze_relative_error,
-		0.25, 0, 1.0,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_selectivity_damping_factor", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Factor used in selectivity damping."),
 			gettext_noop("Values 1..N, 1 = basic damping, greater values emphasize damping"),
@@ -4347,28 +4208,6 @@ struct config_real ConfigureNamesReal_gp[] =
 		},
 		&gp_selectivity_damping_factor,
 		1.0, 1.0, DBL_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_statistics_ndistinct_scaling_ratio_threshold", PGC_USERSET, STATS_ANALYZE,
-			gettext_noop("If the ratio of number of distinct values of an attribute to the number of rows is greater than this value, it is assumed that ndistinct will scale with table size."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_statistics_ndistinct_scaling_ratio_threshold,
-		0.10, 0.001, 1.0,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_statistics_sampling_threshold", PGC_USERSET, STATS_ANALYZE,
-			gettext_noop("Only tables larger than this size will be sampled."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_statistics_sampling_threshold,
-		20000.0, 0.0, DBL_MAX,
 		NULL, NULL, NULL
 	},
 

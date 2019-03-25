@@ -17,8 +17,8 @@
   <topic id="topic_axc_qk4_ccb">
     <title>Installing citext</title>
     <body>
-      <p>Before you can use the <codeph>citext</codeph> data type, run the installation script <codeph>$GPHOME/share/postgresql/contrib/citext.sql</codeph> in each database where you want to use the type:</p>
-      <codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/citext.sql</codeblock>
+      <p>Before you can use the <codeph>citext</codeph> data type, you must register the extension in each database in which you want to use the type:</p>
+      <codeblock>$ psql -d testdb -c "CREATE EXTENSION citext"</codeblock>
     </body>
   </topic>
   <topic id="topic_m4v_r5j_ccb">
@@ -66,7 +66,6 @@ SELECT * FROM users WHERE nick = 'Larry';
     <title>Limitations</title>
     <body>
       <ul id="ul_jmp_bvj_ccb">
-        <li>A column of type <codeph>citext</codeph> cannot be part of a primary key or distribution key in a <codeph>CREATE TABLE</codeph> statement. </li>
         <li>
           <p>The <codeph>citext</codeph> type's case-folding behavior depends on the <codeph>LC_CTYPE</codeph> setting of your database. How it compares values is therefore determined when the database is created. It is not truly case-insensitive in the terms defined by the Unicode standard. Effectively, what this means is that, as long as you're happy with your collation, you should be happy with <codeph>citext</codeph>'s comparisons. But if you have data in different languages stored in your database, users of one language may find their query results are not as expected if the collation is for another language.</p>
         </li>

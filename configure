@@ -777,6 +777,7 @@ GCOV
 enable_debug
 enable_gpperfmon
 enable_orafce
+enable_debug_extensions
 enable_pxf
 enable_gpfdist
 enable_rpath
@@ -846,6 +847,7 @@ enable_spinlocks
 enable_atomics
 enable_gpfdist
 enable_pxf
+enable_debug_extensions
 enable_orafce
 enable_gpperfmon
 enable_debug
@@ -1533,6 +1535,8 @@ Optional Features:
   --disable-atomics       do not use atomic operations
   --disable-gpfdist       do not use gpfdist
   --disable-pxf           do not build pxf
+  --enable-debug-extensions
+                          include debug extensions in gpcontrib
   --enable-orafce         build with Oracle compatibility functions
   --enable-gpperfmon      build with gpperfmon
   --enable-debug          build with debugging symbols (-g)
@@ -3540,6 +3544,34 @@ if test "${enable_pxf+set}" = set; then :
 
 else
   enable_pxf=yes
+
+fi
+
+
+
+
+#
+# include debug extensions in gpcontrib
+#
+
+
+# Check whether --enable-debug-extensions was given.
+if test "${enable_debug_extensions+set}" = set; then :
+  enableval=$enable_debug_extensions;
+  case $enableval in
+    yes)
+      :
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-debug-extensions option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_debug_extensions=no
 
 fi
 
@@ -13994,7 +14026,7 @@ int
 main ()
 {
 
-return strncmp("3.28.", GPORCA_VERSION_STRING, 5);
+return strncmp("3.30.", GPORCA_VERSION_STRING, 5);
 
   ;
   return 0;
@@ -14004,7 +14036,7 @@ if ac_fn_cxx_try_run "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
 else
-  as_fn_error $? "Your ORCA version is expected to be 3.28.XXX" "$LINENO" 5
+  as_fn_error $? "Your ORCA version is expected to be 3.30.XXX" "$LINENO" 5
 
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
@@ -20057,10 +20089,6 @@ BLD_ARCH=`echo $BLD_ARCH`
 # Get the Greenplum version string from VERSION
 
 GP_VERSION_LONG=`bash ./getversion`
-
-if test "$with_extra_version" = "" ; then
-  with_extra_version="-oss"
-fi
 
 GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
 

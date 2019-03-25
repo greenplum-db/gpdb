@@ -140,29 +140,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 drop index mpp3033a_unique1;
-WARNING:  only dropped the index "mpp3033a_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_unique2;
-WARNING:  only dropped the index "mpp3033a_unique2"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_hundred;
-WARNING:  only dropped the index "mpp3033a_hundred"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_stringu1;
-WARNING:  only dropped the index "mpp3033a_stringu1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique1;
-WARNING:  only dropped the index "mpp3033b_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique2;
-WARNING:  only dropped the index "mpp3033b_unique2"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_hundred;
-WARNING:  only dropped the index "mpp3033b_hundred"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_stringu1;
-WARNING:  only dropped the index "mpp3033b_stringu1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 CREATE INDEX mpp3033a_unique1 ON mpp3033a (unique1);
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa"
 NOTICE:  building index for child partition "mpp3033a_1_prt_bb"
@@ -240,29 +224,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 drop index mpp3033a_unique1;
-WARNING:  only dropped the index "mpp3033a_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_unique2;
-WARNING:  only dropped the index "mpp3033a_unique2"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_hundred;
-WARNING:  only dropped the index "mpp3033a_hundred"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_stringu1;
-WARNING:  only dropped the index "mpp3033a_stringu1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique1;
-WARNING:  only dropped the index "mpp3033b_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique2;
-WARNING:  only dropped the index "mpp3033b_unique2"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_hundred;
-WARNING:  only dropped the index "mpp3033b_hundred"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_stringu1;
-WARNING:  only dropped the index "mpp3033b_stringu1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 CREATE UNIQUE INDEX mpp3033a_unique1 ON mpp3033a (unique1);
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa"
 NOTICE:  building index for child partition "mpp3033a_1_prt_bb"
@@ -346,8 +314,6 @@ select count(*) from mpp3033b;
 (1 row)
 
 drop index mpp3033a_unique1;
-WARNING:  only dropped the index "mpp3033a_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_unique2;
 ERROR:  index "mpp3033a_unique2" does not exist
 drop index mpp3033a_hundred;
@@ -355,8 +321,6 @@ ERROR:  index "mpp3033a_hundred" does not exist
 drop index mpp3033a_stringu1;
 ERROR:  index "mpp3033a_stringu1" does not exist
 drop index mpp3033b_unique1;
-WARNING:  only dropped the index "mpp3033b_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique2;
 ERROR:  index "mpp3033b_unique2" does not exist
 drop index mpp3033b_hundred;
@@ -687,29 +651,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 drop index mpp3033a_unique1;
-WARNING:  only dropped the index "mpp3033a_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_unique2;
-WARNING:  only dropped the index "mpp3033a_unique2"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_hundred;
-WARNING:  only dropped the index "mpp3033a_hundred"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_stringu1;
-WARNING:  only dropped the index "mpp3033a_stringu1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique1;
-WARNING:  only dropped the index "mpp3033b_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique2;
-WARNING:  only dropped the index "mpp3033b_unique2"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_hundred;
-WARNING:  only dropped the index "mpp3033b_hundred"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_stringu1;
-WARNING:  only dropped the index "mpp3033b_stringu1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 CREATE INDEX mpp3033a_unique1 ON mpp3033a (unique1);
 NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa_1"
@@ -867,29 +815,13 @@ select count(*) from mpp3033b;
 (1 row)
 
 drop index mpp3033a_unique1;
-WARNING:  only dropped the index "mpp3033a_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_unique2;
-WARNING:  only dropped the index "mpp3033a_unique2"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_hundred;
-WARNING:  only dropped the index "mpp3033a_hundred"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_stringu1;
-WARNING:  only dropped the index "mpp3033a_stringu1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique1;
-WARNING:  only dropped the index "mpp3033b_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique2;
-WARNING:  only dropped the index "mpp3033b_unique2"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_hundred;
-WARNING:  only dropped the index "mpp3033b_hundred"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_stringu1;
-WARNING:  only dropped the index "mpp3033b_stringu1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 CREATE UNIQUE INDEX mpp3033a_unique1 ON mpp3033a (unique1);
 NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa_1"
@@ -1059,8 +991,6 @@ select count(*) from mpp3033b;
 (1 row)
 
 drop index mpp3033a_unique1;
-WARNING:  only dropped the index "mpp3033a_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033a_unique2;
 ERROR:  index "mpp3033a_unique2" does not exist
 drop index mpp3033a_hundred;
@@ -1068,8 +998,6 @@ ERROR:  index "mpp3033a_hundred" does not exist
 drop index mpp3033a_stringu1;
 ERROR:  index "mpp3033a_stringu1" does not exist
 drop index mpp3033b_unique1;
-WARNING:  only dropped the index "mpp3033b_unique1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index mpp3033b_unique2;
 ERROR:  index "mpp3033b_unique2" does not exist
 drop index mpp3033b_hundred;
@@ -1245,3 +1173,37 @@ insert into mpp6379( a, b ) values( 2, '20090102' );
 ERROR:  duplicate key value violates unique constraint "mpp6379_1_prt_p2_pkey"
 DETAIL:  Key (a, b)=(2, 01-02-2009) already exists.
 drop table mpp6379;
+-- Creating an index on a partitioned table makes the partitions
+-- automatically get the index
+create table idxpart (a int, b int, c text)
+partition by range (a)
+subpartition by range(b)
+subpartition template
+  (start(1) end (3))
+(start (1) end (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "idxpart_1_prt_1" for table "idxpart"
+NOTICE:  CREATE TABLE will create partition "idxpart_1_prt_1_2_prt_1" for table "idxpart_1_prt_1"
+-- relhassubclass of a partitioned index is false before creating any partition.
+-- It will be set after the first partition is created.
+create index idxpart_idx on idxpart (a);
+select relhassubclass from pg_class where relname = 'idxpart_idx';
+ relhassubclass 
+----------------
+ t
+(1 row)
+
+drop index idxpart_idx;
+-- Even with partitions, relhassubclass should not be set if a partitioned
+-- index is created only on the parent.
+set sql_inheritance to off;
+create index idxpart_idx on idxpart(a);
+set sql_inheritance to on;
+select relhassubclass from pg_class where relname = 'idxpart_idx';
+ relhassubclass 
+----------------
+ f
+(1 row)
+
+drop index idxpart_idx;

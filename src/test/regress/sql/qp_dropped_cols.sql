@@ -7437,7 +7437,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_char ADD COLUMN col1 char 
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_addcol_dml_char_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_char_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_char) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_char_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_char including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_char_candidate VALUES('g','z',1,'g','g');
 
 -- Exchange 
@@ -7490,7 +7490,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_decimal ADD COLUMN col1 de
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_addcol_dml_decimal_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_decimal_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_decimal) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_decimal_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_decimal including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_decimal_candidate VALUES(2.00,'z',1,2.00,2.00);
 
 -- Exchange 
@@ -7543,7 +7543,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_int4 ADD COLUMN col1 int4 
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_addcol_dml_int4_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_int4_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_int4) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_int4_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_int4 including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_int4_candidate VALUES(20000000,'z',1,20000000,20000000);
 
 -- Exchange 
@@ -7596,7 +7596,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_int8 ADD COLUMN col1 int8 
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_addcol_dml_int8_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_int8_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_int8) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_int8_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_int8 including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_int8_candidate VALUES(200000000000000000,'z',1,200000000000000000,200000000000000000);
 
 -- Exchange 
@@ -7649,7 +7649,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_interval ADD COLUMN col1 i
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_addcol_dml_interval_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_interval_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_interval) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_interval_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_interval including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_interval_candidate VALUES('10 secs','z',1,'10 secs','10 secs');
 
 -- Exchange 
@@ -7702,7 +7702,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_numeric ADD COLUMN col1 nu
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_addcol_dml_numeric_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_numeric_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_numeric) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_addcol_dml_numeric_candidate( like mpp21090_xchange_pttab_dropcol_addcol_dml_numeric including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_addcol_dml_numeric_candidate VALUES(2.000000,'z',1,2.000000,2.000000);
 
 -- Exchange 
@@ -7754,7 +7754,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_dml_char DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_dml_char_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_char_candidate( like mpp21090_xchange_pttab_dropcol_dml_char) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_char_candidate( like mpp21090_xchange_pttab_dropcol_dml_char including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_char_candidate VALUES('g','z',1,'g');
 
 -- Exchange 
@@ -7806,7 +7806,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_dml_decimal DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_dml_decimal_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_decimal_candidate( like mpp21090_xchange_pttab_dropcol_dml_decimal) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_decimal_candidate( like mpp21090_xchange_pttab_dropcol_dml_decimal including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_decimal_candidate VALUES(2.00,'z',1,2.00);
 
 -- Exchange 
@@ -7858,7 +7858,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_dml_int4 DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_dml_int4_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_int4_candidate( like mpp21090_xchange_pttab_dropcol_dml_int4) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_int4_candidate( like mpp21090_xchange_pttab_dropcol_dml_int4 including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_int4_candidate VALUES(20000000,'z',1,20000000);
 
 -- Exchange 
@@ -7910,7 +7910,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_dml_int8 DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_dml_int8_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_int8_candidate( like mpp21090_xchange_pttab_dropcol_dml_int8) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_int8_candidate( like mpp21090_xchange_pttab_dropcol_dml_int8 including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_int8_candidate VALUES(200000000000000000,'z',1,200000000000000000);
 
 -- Exchange 
@@ -7962,7 +7962,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_dml_interval DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_dml_interval_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_interval_candidate( like mpp21090_xchange_pttab_dropcol_dml_interval) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_interval_candidate( like mpp21090_xchange_pttab_dropcol_dml_interval including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_interval_candidate VALUES('10 secs','z',1,'10 secs');
 
 -- Exchange 
@@ -8014,7 +8014,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_dml_numeric DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_dml_numeric_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_numeric_candidate( like mpp21090_xchange_pttab_dropcol_dml_numeric) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_dml_numeric_candidate( like mpp21090_xchange_pttab_dropcol_dml_numeric including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_dml_numeric_candidate VALUES(2.000000,'z',1,2.000000);
 
 -- Exchange 
@@ -8069,7 +8069,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_idx_dml_char DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_idx_dml_char_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_char_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_char) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_char_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_char including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_char_candidate VALUES('g','z',1,'g');
 
 -- Exchange 
@@ -8124,7 +8124,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_idx_dml_decimal DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_idx_dml_decimal_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_decimal_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_decimal) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_decimal_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_decimal including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_decimal_candidate VALUES(2.00,'z',1,2.00);
 
 -- Exchange 
@@ -8179,7 +8179,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_idx_dml_int4 DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_idx_dml_int4_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_int4_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_int4) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_int4_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_int4 including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_int4_candidate VALUES(20000000,'z',1,20000000);
 
 -- Exchange 
@@ -8234,7 +8234,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_idx_dml_int8 DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_idx_dml_int8_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_int8_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_int8) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_int8_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_int8 including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_int8_candidate VALUES(200000000000000000,'z',1,200000000000000000);
 
 -- Exchange 
@@ -8289,7 +8289,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_idx_dml_interval DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_idx_dml_interval_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_interval_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_interval) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_interval_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_interval including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_interval_candidate VALUES('10 secs','z',1,'10 secs');
 
 -- Exchange 
@@ -8344,7 +8344,7 @@ ALTER TABLE mpp21090_xchange_pttab_dropcol_idx_dml_numeric DROP COLUMN col1;
 
 -- Create Candidate table for Exchange
 DROP TABLE IF EXISTS mpp21090_xchange_pttab_dropcol_idx_dml_numeric_candidate;
-CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_numeric_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_numeric) distributed randomly;
+CREATE TABLE mpp21090_xchange_pttab_dropcol_idx_dml_numeric_candidate( like mpp21090_xchange_pttab_dropcol_idx_dml_numeric including indexes) distributed randomly;
 INSERT INTO mpp21090_xchange_pttab_dropcol_idx_dml_numeric_candidate VALUES(2.000000,'z',1,2.000000);
 
 -- Exchange 

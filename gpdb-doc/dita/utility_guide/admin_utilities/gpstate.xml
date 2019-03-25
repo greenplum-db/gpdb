@@ -8,7 +8,7 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpstate</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
-          [<b>-s</b> | <b>-b</b> | <b>-Q</b><ph> | <b>-e</b>] [<b>-m</b> | <b>-c</b></ph>] [<b>-p</b>] [<b>-i</b>] [<b>-f</b>] [<b>-v</b> | <b>-q</b>] 
+          [<b>-s</b> | <b>-b</b> | <b>-Q</b><ph> | <b>-e</b>] [<b>-m</b> | <b>-c</b></ph>] [<b>-p</b>] [<b>-i</b>] [<b>-f</b>] [<b>-v</b> | <b>-q</b>] | <b>-x</b> 
           [<b>-l</b> <varname>log_directory</varname>]
 
 <b>gpstate</b> <b>-?</b> | <b>-h</b> | <b>--help</b></codeblock>
@@ -102,6 +102,11 @@
           <pt>-v (verbose output)</pt>
           <pd>Optional. Displays error messages and outputs detailed status and progress
             information.</pd>
+        </plentry>
+        <plentry>
+          <pt>-x (expand)</pt>
+          <pd>Optional. Displays detailed information about the progress and state of a Greenplum
+            system expansion.</pd>
         </plentry>
         <plentry>
           <pt>-? | -h | --help (help)</pt>
@@ -372,7 +377,8 @@
     <section id="section7">
       <title>See Also</title>
       <p><codeph><xref href="gpstart.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="gplogfilter.xml#topic1" type="topic" format="dita"/></codeph></p>
+            <codeph><xref href="gpexpand.xml#topic1"/></codeph><codeph><xref
+            href="gplogfilter.xml#topic1" type="topic" format="dita"/></codeph></p>
     </section>
   </body>
 </topic>

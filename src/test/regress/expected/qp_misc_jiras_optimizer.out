@@ -1371,7 +1371,7 @@ lstg_desc_txt text
 WITH (appendonly=true, compresslevel=5) distributed by (lstg_id) PARTITION BY RANGE(cre_time)
 (
 START ('2009-05-26 00:00:00'::timestamp without time zone) 
-END ('2009-06-30 00:00:00'::timestamp without time zone) EVERY ('1 day'::interval) WITH (appendonly=true, compresslevel=5)
+END ('2009-06-05 00:00:00'::timestamp without time zone) EVERY ('1 day'::interval) WITH (appendonly=true, compresslevel=5)
 );
 NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_1" for table "tbl6419_test"
 NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_2" for table "tbl6419_test"
@@ -1383,31 +1383,6 @@ NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_7" for table "tb
 NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_8" for table "tbl6419_test"
 NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_9" for table "tbl6419_test"
 NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_10" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_11" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_12" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_13" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_14" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_15" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_16" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_17" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_18" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_19" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_20" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_21" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_22" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_23" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_24" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_25" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_26" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_27" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_28" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_29" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_30" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_31" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_32" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_33" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_34" for table "tbl6419_test"
-NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_35" for table "tbl6419_test"
 insert into qp_misc_jiras.tbl6419_test values( 123, '2009-06-01', 12, '2009-06-01 01:01:01', 'aaaaaa');
 select * from qp_misc_jiras.tbl6419_test where icedt::text = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
  lstg_id | icedt | icehr | cre_time | lstg_desc_txt 
@@ -3141,7 +3116,7 @@ explain analyze select reltablespace  from pg_class where oid = (select reltoast
  Statement statistics:
    Memory used: 1000K bytes
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
  Total runtime: 0.085 ms
 (15 rows)
 
@@ -3178,7 +3153,7 @@ drop table qp_misc_jiras.tbl2976_3;
 create table qp_misc_jiras.tbl8258 (a int, b double precision)
 PARTITION BY RANGE(b)
 (START (1::double precision) END (100::double precision)
-EVERY ((10)::double precision),
+EVERY ((20)::double precision),
 PARTITION p1 START (100::double precision) END (150::double precision));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -3187,18 +3162,13 @@ NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_2" for table "tbl8258
 NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_3" for table "tbl8258"
 NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_4" for table "tbl8258"
 NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_5" for table "tbl8258"
-NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_6" for table "tbl8258"
-NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_7" for table "tbl8258"
-NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_8" for table "tbl8258"
-NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_9" for table "tbl8258"
-NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_10" for table "tbl8258"
 NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_p1" for table "tbl8258"
 select pg_get_partition_def('qp_misc_jiras.tbl8258'::regclass, true);
                                        pg_get_partition_def                                       
 --------------------------------------------------------------------------------------------------
  PARTITION BY RANGE(b)                                                                           +
            (                                                                                     +
-           START (1::double precision) END (100::double precision) EVERY (10::double precision), +
+           START (1::double precision) END (100::double precision) EVERY (20::double precision), +
            PARTITION p1 START (100::double precision) END (150::double precision)                +
            )
 (1 row)

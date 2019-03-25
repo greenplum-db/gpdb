@@ -420,6 +420,18 @@ DROP TABLE inherit_t1_p1 CASCADE;
 
 
 --
+-- Cannot expand a native view and transformed view
+--
+CREATE TABLE expand_table1(a int) distributed by (a);
+CREATE TABLE expand_table2(a int) distributed by (a);
+CREATE VIEW expand_view AS select * from expand_table1;
+CREATE rule "_RETURN" AS ON SELECT TO expand_table2
+    DO INSTEAD SELECT * FROM expand_table1;
+ALTER TABLE expand_table2 EXPAND TABLE;
+ALTER TABLE expand_view EXPAND TABLE;
+ALTER TABLE expand_table1 EXPAND TABLE;
+
+--
 -- Test expanding a table with a domain type as distribution key.
 --
 select gp_debug_set_create_table_default_numsegments(2);
@@ -435,3 +447,11 @@ select gp_segment_id, count(*) from expand_domain_tab group by gp_segment_id;
 alter table expand_domain_tab expand table;
 select gp_segment_id, count(*) from expand_domain_tab group by gp_segment_id;
 select numsegments from gp_distribution_policy where localoid='expand_domain_tab'::regclass;
+
+-- start_ignore
+-- We need to do a cluster expansion which will check if there are partial
+-- tables, we need to drop the partial tables to keep the cluster expansion
+-- run correctly.
+reset search_path;
+drop schema test_reshuffle cascade;
+-- end_ignore

@@ -212,7 +212,7 @@ alter table stud_emp rename to pg_toast_stud_emp;
 alter table pg_toast_stud_emp rename to stud_emp;
 -- renaming index should rename constraint as well
 ALTER TABLE onek ADD CONSTRAINT onek_unique1_constraint UNIQUE (unique1);
-ALTER INDEX onek_unique1_key RENAME TO onek_unique1_constraint_foo;
+ALTER INDEX onek_unique1_constraint RENAME TO onek_unique1_constraint_foo;
 ALTER TABLE onek DROP CONSTRAINT onek_unique1_constraint_foo;
 -- renaming constraint
 ALTER TABLE onek ADD CONSTRAINT onek_check_constraint CHECK (unique1 >= 0);
@@ -220,8 +220,8 @@ ALTER TABLE onek RENAME CONSTRAINT onek_check_constraint TO onek_check_constrain
 ALTER TABLE onek DROP CONSTRAINT onek_check_constraint_foo;
 -- renaming constraint should rename index as well
 ALTER TABLE onek ADD CONSTRAINT onek_unique1_constraint UNIQUE (unique1);
-DROP INDEX onek_unique1_key;  -- to see whether it's there
-ERROR:  cannot drop index onek_unique1_key because constraint onek_unique1_constraint on table onek requires it
+DROP INDEX onek_unique1_constraint;  -- to see whether it's there
+ERROR:  cannot drop index onek_unique1_constraint because constraint onek_unique1_constraint on table onek requires it
 HINT:  You can drop constraint onek_unique1_constraint on table onek instead.
 ALTER TABLE onek RENAME CONSTRAINT onek_unique1_constraint TO onek_unique1_constraint_foo;
 DROP INDEX onek_unique1_constraint_foo;  -- to see whether it's there
@@ -478,7 +478,7 @@ explain (costs off) select * from nv_parent where d between '2011-08-01' and '20
                Filter: ((d >= '08-01-2011'::date) AND (d <= '08-31-2011'::date))
          ->  Seq Scan on nv_child_2011
                Filter: ((d >= '08-01-2011'::date) AND (d <= '08-31-2011'::date))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 create table nv_child_2009 (check (d between '2009-01-01'::date and '2009-12-31'::date)) inherits (nv_parent);
@@ -493,7 +493,7 @@ explain (costs off) select * from nv_parent where d between '2011-08-01'::date a
                Filter: ((d >= '08-01-2011'::date) AND (d <= '08-31-2011'::date))
          ->  Seq Scan on nv_child_2011
                Filter: ((d >= '08-01-2011'::date) AND (d <= '08-31-2011'::date))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (costs off) select * from nv_parent where d between '2009-08-01'::date and '2009-08-31'::date;
@@ -509,7 +509,7 @@ explain (costs off) select * from nv_parent where d between '2009-08-01'::date a
                Filter: ((d >= '08-01-2009'::date) AND (d <= '08-31-2009'::date))
          ->  Seq Scan on nv_child_2009
                Filter: ((d >= '08-01-2009'::date) AND (d <= '08-31-2009'::date))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 -- after validation, the constraint should be used
@@ -525,7 +525,7 @@ explain (costs off) select * from nv_parent where d between '2009-08-01'::date a
                Filter: ((d >= '08-01-2009'::date) AND (d <= '08-31-2009'::date))
          ->  Seq Scan on nv_child_2009
                Filter: ((d >= '08-01-2009'::date) AND (d <= '08-31-2009'::date))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 -- add an inherited NOT VALID constraint
@@ -820,7 +820,7 @@ alter table atacc1 add constraint atacc_test1 unique (test);
 insert into atacc1 (test) values (2);
 -- should fail
 insert into atacc1 (test) values (2);
-ERROR:  duplicate key value violates unique constraint "atacc1_test_key"
+ERROR:  duplicate key value violates unique constraint "atacc_test1"
 DETAIL:  Key (test)=(2) already exists.
 -- should succeed
 -- In GPDB, we must insert enough values so as to cause duplicates to
@@ -834,7 +834,7 @@ ERROR:  cannot create unique index on system column
 -- this errors out in Greenplum for a different reason: we don't support
 -- SET DATA TYPE on an indexed column yet
 alter table atacc1 alter column test type integer using 0;
-ERROR:  relation "atacc1_test_key" already exists  (seg2 127.0.1.1:25434 pid=8596)
+ERROR:  relation "atacc_test1" already exists  (seg2 127.0.1.1:25434 pid=8596)
 drop table atacc1;
 -- let's do one where the unique constraint fails when added
 create table atacc1 ( test int ) distributed by (test);
@@ -843,7 +843,7 @@ insert into atacc1 (test) values (2);
 insert into atacc1 (test) values (2);
 -- add a unique constraint (fails)
 alter table atacc1 add constraint atacc_test1 unique (test);
-ERROR:  could not create unique index "atacc1_test_key"
+ERROR:  could not create unique index "atacc_test1"
 DETAIL:  Key (test)=(2) is duplicated.
 insert into atacc1 (test) values (3);
 drop table atacc1;
@@ -862,7 +862,7 @@ alter table atacc1 add constraint atacc_test1 unique (test, test2);
 insert into atacc1 (test,test2) values (4,4);
 -- should fail
 insert into atacc1 (test,test2) values (4,4);
-ERROR:  duplicate key value violates unique constraint "atacc1_test_test2_key"
+ERROR:  duplicate key value violates unique constraint "atacc_test1"
 DETAIL:  Key (test, test2)=(4, 4) already exists.
 -- should all succeed
 insert into atacc1 (test,test2) values (4,5);
@@ -889,7 +889,7 @@ alter table atacc1 add constraint atacc_test1 primary key (test);
 insert into atacc1 (test) values (2);
 -- should fail
 insert into atacc1 (test) values (2);
-ERROR:  duplicate key value violates unique constraint "atacc1_pkey"
+ERROR:  duplicate key value violates unique constraint "atacc_test1"
 DETAIL:  Key (test)=(2) already exists.
 -- should succeed
 insert into atacc1 (test) values (4);
@@ -913,7 +913,7 @@ insert into atacc1 (test) values (2);
 insert into atacc1 (test) values (2);
 -- add a primary key (fails)
 alter table atacc1 add constraint atacc_test1 primary key (test);
-ERROR:  could not create unique index "atacc1_pkey"
+ERROR:  could not create unique index "atacc_test1"
 DETAIL:  Key (test)=(2) is duplicated.
 insert into atacc1 (test) values (3);
 drop table atacc1;
@@ -955,7 +955,7 @@ ERROR:  multiple primary keys for table "atacc1" are not allowed
 insert into atacc1 (test,test2) values (4,4);
 -- should fail
 insert into atacc1 (test,test2) values (4,4);
-ERROR:  duplicate key value violates unique constraint "atacc1_pkey"
+ERROR:  duplicate key value violates unique constraint "atacc_test1"
 DETAIL:  Key (test, test2)=(4, 4) already exists.
 insert into atacc1 (test,test2) values (NULL,3);
 ERROR:  null value in column "test" violates not-null constraint
@@ -2230,7 +2230,7 @@ explain (verbose, costs off) select * from at_view_2;
    Output: bt.id, bt.stuff, (to_json(ROW(bt.id, bt.stuff)))
    ->  Seq Scan on public.at_base_table bt
          Output: bt.id, bt.stuff, to_json(ROW(bt.id, bt.stuff))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: constraint_exclusion=partition
 (6 rows)
 
@@ -2274,7 +2274,7 @@ explain (verbose, costs off) select * from at_view_2;
    Output: bt.id, bt.stuff, (to_json(ROW(bt.id, bt.stuff, NULL)))
    ->  Seq Scan on public.at_base_table bt
          Output: bt.id, bt.stuff, to_json(ROW(bt.id, bt.stuff, NULL))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: constraint_exclusion=partition
 (6 rows)
 
@@ -2873,7 +2873,7 @@ ALTER TABLE IF EXISTS tt8 SET SCHEMA alter2;
  a      | integer | 
  f1     | integer | not null default 0
 Indexes:
-    "tt8_pkey" PRIMARY KEY, btree (f1)
+    "xxx" PRIMARY KEY, btree (f1)
 Check constraints:
     "tt8_f_check" CHECK (f1 >= 0 AND f1 <= 10)
 Distributed by: (f1)

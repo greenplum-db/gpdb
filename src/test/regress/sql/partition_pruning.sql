@@ -148,12 +148,6 @@ SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 LIMIT 5;
 EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 LIMIT 5;
 
 DROP INDEX idx1;
--- have to drop the indexes on the partitions explicitly.
-DROP INDEX pt_lt_tab_1_prt_part1_col1_idx;
-DROP INDEX pt_lt_tab_1_prt_part2_col1_idx;
-DROP INDEX pt_lt_tab_1_prt_part3_col1_idx;
-DROP INDEX pt_lt_tab_1_prt_part4_col1_idx;
-DROP INDEX pt_lt_tab_1_prt_part5_col1_idx;
 
 -- @description B-tree single index key = partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col2);
@@ -195,14 +189,6 @@ SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 LIMIT 5;
 EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 LIMIT 5;
 
 DROP INDEX idx1;
--- have to drop the indexes on the partitions explicitly.
-DROP INDEX pt_lt_tab_1_prt_part1_col2_idx;
-DROP INDEX pt_lt_tab_1_prt_part2_col2_idx;
-DROP INDEX pt_lt_tab_1_prt_part3_col2_idx;
-DROP INDEX pt_lt_tab_1_prt_part4_col2_idx;
-DROP INDEX pt_lt_tab_1_prt_part5_col2_idx;
-
-
 
 -- @description multi-column unique constraint (= b-tree index). Essentially the
 -- same as the previous case, but the columns are the other way 'round, and we

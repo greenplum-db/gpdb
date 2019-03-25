@@ -181,7 +181,7 @@
           <pd>Optional. Specifies a table to include in the backup. The table must be in the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
             character other than a lowercase letter, number, or an underscore character, then you
-            must include that name single quotes. See <xref href="#topic1/table_names" format="dita"
+            must include that name in single quotes. See <xref href="#topic1/table_names" format="dita"
               >Schema and Table Names</xref> for information about characters that are supported in
             schema and table names.</pd>
           <pd>You can specify this option multiple times. You cannot combine this option with a

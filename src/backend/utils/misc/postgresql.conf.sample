@@ -433,8 +433,6 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 
 #default_statistics_target = 100	# range 1 - 10000 (target # of
 					# histogram bins)
-#gp_analyze_relative_error = 0.25	# range 0.0 - 1.0 (target relative
-					# error fraction)
 					
 # - Query/Index Statistics Collector -
 

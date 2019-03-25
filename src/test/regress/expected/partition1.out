@@ -309,37 +309,6 @@ NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_3" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_4" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_5" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_6" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_7" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_8" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_9" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_10" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_11" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_12" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_13" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_14" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_15" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_16" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_17" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_18" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_19" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_20" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_21" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_22" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_23" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_24" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_25" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_26" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_27" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_28" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_29" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_30" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_31" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_32" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_33" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_34" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_35" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_36" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_37" for table "ggg"
 drop table ggg cascade;
 -- bad - legal if end of aa not inclusive
 create table ggg (a char(1), b date, d char(3))
@@ -369,37 +338,6 @@ NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_3" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_4" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_5" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_6" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_7" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_8" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_9" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_10" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_11" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_12" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_13" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_14" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_15" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_16" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_17" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_18" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_19" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_20" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_21" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_22" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_23" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_24" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_25" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_26" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_27" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_28" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_29" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_30" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_31" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_32" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_33" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_34" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_35" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_36" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_37" for table "ggg"
 drop table ggg cascade;
 -- legal if end of aa not inclusive
 create table ggg (a char(1), b date, d char(3))
@@ -1651,7 +1589,7 @@ ERROR:  table "b" does not exist
 -- MPP-3988: allow same column in multiple partitioning keys at
 -- different levels -- so this is legal again...
 drop table if exists a;
--- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to legacy query optimizer
+-- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to Postgres query optimizer
 --       for queries with partition elimination over FULL OUTER JOIN
 --       between partitioned tables.
 -- SETUP
@@ -1679,7 +1617,7 @@ NOTICE:  CREATE TABLE will create partition "s2_1_prt_1" for table "s2"
 NOTICE:  CREATE TABLE will create partition "s2_1_prt_2" for table "s2"
 -- end_ignore
 -- VERIFY
--- expect GPOPT fall back to legacy query optimizer
+-- expect GPOPT fall back to Postgres query optimizer
 -- since GPOPT don't support partition elimination through full outer joins
 select * from s1 full outer join s2 on s1.d1 = s2.d2 and s1.p1 = s2.p2 where s1.p1 = 1;
  d1 | p1 | d2 | p2 
@@ -2268,15 +2206,6 @@ create table dcl_messaging_test
         message_create_date     timestamp(3) not null,
         trace_socket            varchar(1024) null,
         trace_count             varchar(1024) null,
-        variable_01             varchar(1024) null,
-        variable_02             varchar(1024) null,
-        variable_03             varchar(1024) null,
-        variable_04             varchar(1024) null,
-        variable_05             varchar(1024) null,
-        variable_06             varchar(1024) null,
-        variable_07             varchar(1024) null,
-        variable_08             varchar(1024) null,
-        variable_09             varchar(1024) null,
         variable_10             varchar(1024) null,
         variable_11             varchar(1024) null,
         variable_12             varchar(1024) null,
@@ -2287,52 +2216,12 @@ create table dcl_messaging_test
         variable_17             varchar(1024) null,
         variable_18             varchar(1024) null,
         variable_19             varchar(1024) null,
-        variable_20             varchar(1024) null,
-        variable_21             varchar(1024) null,
-        variable_22             varchar(1024) null,
-        variable_23             varchar(1024) null,
-        variable_24             varchar(1024) null,
-        variable_25             varchar(1024) null,
-        variable_26             varchar(1024) null,
-        variable_27             varchar(1024) null,
-        variable_28             varchar(1024) null,
-        variable_29             varchar(1024) null,
-        variable_30             varchar(1024) null,
-        variable_31             varchar(1024) null,
-        variable_32             varchar(1024) null,
-        variable_33             varchar(1024) null,
-        variable_34             varchar(1024) null,
-        variable_35             varchar(1024) null,
-        variable_36             varchar(1024) null,
-        variable_37             varchar(1024) null,
-        variable_38             varchar(1024) null,
-        variable_39             varchar(1024) null,
-        variable_40             varchar(1024) null,
-        variable_41             varchar(1024) null,
-        variable_42             varchar(1024) null,
-        variable_43             varchar(1024) null,
-        variable_44             varchar(1024) null,
-        variable_45             varchar(1024) null,
-        variable_46             varchar(1024) null,
-        variable_47             varchar(1024) null,
-        variable_48             varchar(1024) null,
-        variable_49             varchar(1024) null,
-        variable_50             varchar(1024) null,
-        variable_51             varchar(1024) null,
-        variable_52             varchar(1024) null,
-        variable_53             varchar(1024) null,
-        variable_54             varchar(1024) null,
-        variable_55             varchar(1024) null,
-        variable_56             varchar(1024) null,
-        variable_57             varchar(1024) null,
-        variable_58             varchar(1024) null,
-        variable_59             varchar(1024) null,
-        variable_60             varchar(1024) null
+        variable_20             varchar(1024) null
 )
 distributed by (message_create_date)
 partition by range (message_create_date)
 (
-    START (timestamp '2011-09-01') END (timestamp '2011-09-15') EVERY (interval '1 day'),
+    START (timestamp '2011-09-01') END (timestamp '2011-09-10') EVERY (interval '1 day'),
     DEFAULT PARTITION outlying_dates
 );
 NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_outlying_dates" for table "dcl_messaging_test"
@@ -2345,11 +2234,6 @@ NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_7" for tab
 NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_8" for table "dcl_messaging_test"
 NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_9" for table "dcl_messaging_test"
 NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_10" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_11" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_12" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_13" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_14" for table "dcl_messaging_test"
-NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_15" for table "dcl_messaging_test"
 -- partial index
 create index dcl_messaging_test_index13 on dcl_messaging_test(variable_13) where message_create_date > '2011-09-02';
 NOTICE:  building index for child partition "dcl_messaging_test_1_prt_outlying_dates"
@@ -2387,10 +2271,10 @@ NOTICE:  building index for child partition "dcl_messaging_test_1_prt_15"
 alter table dcl_messaging_test drop default partition;
 NOTICE:  dropped partition "outlying_dates" for relation "dcl_messaging_test"
 -- ADD case
-alter table dcl_messaging_test add partition start (timestamp '2011-09-15') inclusive end (timestamp '2011-09-16') exclusive;
+alter table dcl_messaging_test add partition start (timestamp '2011-09-10') inclusive end (timestamp '2011-09-11') exclusive;
 NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_r1571743545" for table "dcl_messaging_test"
 -- EXCHANGE case
-create table dcl_candidate(like dcl_messaging_test) with (appendonly=true);
+create table dcl_candidate(like dcl_messaging_test including indexes) with (appendonly=true);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into dcl_candidate(message_create_date) values (timestamp '2011-09-06');
 alter table dcl_messaging_test exchange partition for ('2011-09-06') with table dcl_candidate;
@@ -2636,7 +2520,7 @@ drop table foo;
 -- created tables due to split.
 drop table mpp14613_list;
 --
--- Drop index on a partitioned table. The indexes on the partitions remain.
+-- Drop index on a partitioned table. The indexes on the partitions are removed.
 --
 create table pt_indx_tab (c1 integer, c2 int, c3 text) partition by range (c1) (partition A start (integer '0') end (integer '5') every (integer '1'));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
@@ -2665,8 +2549,6 @@ select count(*) from pg_index where indrelid='pt_indx_tab_1_prt_a_1'::regclass;
 (1 row)
 
 drop index pt_indx_drop;
-WARNING:  only dropped the index "pt_indx_drop"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 select count(*) from pg_index where indrelid='pt_indx_tab'::regclass;
  count 
 -------
@@ -2676,7 +2558,7 @@ select count(*) from pg_index where indrelid='pt_indx_tab'::regclass;
 select count(*) from pg_index where indrelid='pt_indx_tab_1_prt_a_1'::regclass;
  count 
 -------
-     1
+     0
 (1 row)
 
 --
@@ -2786,33 +2668,24 @@ select * from pg_indexes where tablename like 'mpp7635%';
  public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_aoi_table2_1_prt_2_id_idx |            | CREATE INDEX mpp7635_aoi_table2_1_prt_2_id_idx ON public.mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
 (3 rows)
 
--- Drop it. This only drops it from the root table, not the partitions.
+-- Drop it
 DROP INDEX mpp7635_ix3;
-WARNING:  only dropped the index "mpp7635_ix3"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 select * from pg_indexes where tablename like 'mpp7635%';
- schemaname |         tablename          |             indexname             | tablespace |                                               indexdef                                                
-------------+----------------------------+-----------------------------------+------------+-------------------------------------------------------------------------------------------------------
- public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_aoi_table2_1_prt_1_id_idx |            | CREATE INDEX mpp7635_aoi_table2_1_prt_1_id_idx ON public.mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
- public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_aoi_table2_1_prt_2_id_idx |            | CREATE INDEX mpp7635_aoi_table2_1_prt_2_id_idx ON public.mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
-(2 rows)
+ schemaname | tablename | indexname | tablespace | indexdef 
+------------+-----------+-----------+------------+----------
+(0 rows)
 
--- Create it again. This creates the index on the partitions, too, so you
--- end up with duplicate indexes on the partitions. It's a bit silly, but
--- should still work, and not throw a "relation already exists" error, for
--- example.
+-- Create it again.
 CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 (id);
 NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_1"
 NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
 select * from pg_indexes where tablename like 'mpp7635%';
- schemaname |         tablename          |             indexname              | tablespace |                                               indexdef                                                
-------------+----------------------------+------------------------------------+------------+-------------------------------------------------------------------------------------------------------
- public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_aoi_table2_1_prt_1_id_idx  |            | CREATE INDEX mpp7635_aoi_table2_1_prt_1_id_idx ON public.mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
- public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_aoi_table2_1_prt_2_id_idx  |            | CREATE INDEX mpp7635_aoi_table2_1_prt_2_id_idx ON public.mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
- public     | mpp7635_aoi_table2         | mpp7635_ix3                        |            | CREATE INDEX mpp7635_ix3 ON public.mpp7635_aoi_table2 USING btree (id)
- public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_aoi_table2_1_prt_1_id_idx1 |            | CREATE INDEX mpp7635_aoi_table2_1_prt_1_id_idx1 ON public.mpp7635_aoi_table2_1_prt_1 USING btree (id)
- public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_aoi_table2_1_prt_2_id_idx1 |            | CREATE INDEX mpp7635_aoi_table2_1_prt_2_id_idx1 ON public.mpp7635_aoi_table2_1_prt_2 USING btree (id)
-(5 rows)
+ schemaname |         tablename          |             indexname             | tablespace |                                               indexdef                                               
+------------+----------------------------+-----------------------------------+------------+------------------------------------------------------------------------------------------------------
+ public     | mpp7635_aoi_table2         | mpp7635_ix3                       |            | CREATE INDEX mpp7635_ix3 ON public.mpp7635_aoi_table2 USING btree (id)
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_aoi_table2_1_prt_1_id_idx |            | CREATE INDEX mpp7635_aoi_table2_1_prt_1_id_idx ON public.mpp7635_aoi_table2_1_prt_1 USING btree (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_aoi_table2_1_prt_2_id_idx |            | CREATE INDEX mpp7635_aoi_table2_1_prt_2_id_idx ON public.mpp7635_aoi_table2_1_prt_2 USING btree (id)
+(3 rows)
 
 --
 -- Test handling of NULL values in SPLIT PARTITION.

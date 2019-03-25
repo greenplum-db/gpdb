@@ -638,7 +638,7 @@ select first_value(max(x)) over (), y
                            ->  HashAggregate
                                  Group Key: (tenk1.ten + tenk1.four)
                                  ->  Seq Scan on tenk1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 -- test non-default frame specifications
@@ -1091,7 +1091,7 @@ WHERE depname = 'sales';
                            Sort Key: empsalary.empno, empsalary.enroll_date
                            ->  Seq Scan on empsalary
                                  Filter: ((depname)::text = 'sales'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 -- Test Sort node reordering
@@ -1112,7 +1112,7 @@ FROM empsalary;
                ->  Sort
                      Sort Key: depname, salary, enroll_date, empno
                      ->  Seq Scan on empsalary
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 -- Test pushdown of quals into a subquery containing window functions
@@ -1135,7 +1135,7 @@ WHERE depname = 'sales';
                            Sort Key: (((empsalary.depname)::text || 'A'::text))
                            ->  Seq Scan on empsalary
                                  Filter: ((depname)::text = 'sales'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 -- pushdown is unsafe because there's a PARTITION BY clause without depname:
@@ -1162,7 +1162,7 @@ WHERE depname = 'sales';
                                  ->  Sort
                                        Sort Key: empsalary.depname
                                        ->  Seq Scan on empsalary
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 -- pushdown is unsafe because the subquery contains window functions and the qual is volatile:
@@ -1187,7 +1187,7 @@ WHERE depname = 'sales' OR RANDOM() > 0.5;
                            ->  Sort
                                  Sort Key: (((empsalary.depname)::text || 'A'::text)), empsalary.depname
                                  ->  Seq Scan on empsalary
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 -- cleanup

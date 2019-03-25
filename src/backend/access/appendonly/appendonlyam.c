@@ -173,7 +173,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 	Relation	reln = scan->aos_rd;
 	int			segno = -1;
 	int64		eof = 0;
-	int			formatversion = -1;
+	int			formatversion = -2; /* some invalid value */
 	bool		finished_all_files = true;	/* assume */
 	int32		fileSegNo;
 

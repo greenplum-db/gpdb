@@ -74,7 +74,6 @@
             <topicref href="guc-list.xml#extra_float_digits"/>
             <topicref href="guc-list.xml#from_collapse_limit"/>
             <topicref href="guc-list.xml#gp_adjust_selectivity_for_outerjoins"/>
-            <topicref href="guc-list.xml#gp_analyze_relative_error"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction_threshold"/>
             <topicref href="guc-list.xml#gp_autostats_mode"/>
@@ -241,7 +240,6 @@
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
             <topicref href="guc-list.xml#password_encryption"/>
             <topicref href="guc-list.xml#password_hash_algorithm"/>
-            <topicref href="guc-list.xml#pgstat_track_activity_query_size"/>
             <topicref href="guc-list.xml#pljava_classpath"/>
             <topicref href="guc-list.xml#pljava_classpath_insecure"/>
             <topicref href="guc-list.xml#pljava_statement_cache_size"/>
@@ -276,8 +274,7 @@
             <topicref href="guc-list.xml#temp_buffers"/>
             <topicref href="guc-list.xml#TimeZone"/>
             <topicref href="guc-list.xml#timezone_abbreviations"/>
-            <topicref href="guc-list.xml#track_activities"/>
-            <topicref href="guc-list.xml#track_counts"/>
+            <topicref href="guc-list.xml#track_activity_query_size"/>
             <topicref href="guc-list.xml#transaction_isolation"/>
             <topicref href="guc-list.xml#transaction_read_only"/>
             <topicref href="guc-list.xml#transform_null_equals"/>

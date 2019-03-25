@@ -80,11 +80,15 @@ test: dtm_retry
 
 # The appendonly test cannot be run concurrently with tests that have
 # serializable transactions (may conflict with AO vacuum operations).
-test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish partial_table subselect_gp_indexes
+test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish subselect_gp_indexes
+
+test: partial_table
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
 test: partition partition1 partition_indexing parruleord partition_storage partition_ddl partition_with_user_defined_function partition_unlogged partition_subquery
+
+test: index_constraint_naming index_constraint_naming_partition index_constraint_naming_upgrade
 # 'partition_locking' gets confused if other backends run concurrently and
 # hold locks.
 test: partition_locking
@@ -116,7 +120,7 @@ test: resource_group_gucs
 test: wrkloadadmin
 
 # expand_table tests may affect the result of 'gp_explain', keep them below that
-test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco
+test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression
 test: rle rle_delta dsp not_out_of_shmem_exit_slots
 
 # direct dispatch tests
@@ -220,7 +224,7 @@ test: vacuum_full_freeze_heap
 test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
 
-test: ao_checksum_corruption AOCO_Compression2 table_statistics fts_error
+test: ao_checksum_corruption AOCO_Compression AORO_Compression table_statistics fts_error
 test: metadata_track
 test: workfile_mgr_test
 test: session_reset

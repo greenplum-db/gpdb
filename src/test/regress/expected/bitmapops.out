@@ -70,7 +70,7 @@ EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
                            ->  Bitmap Index Scan on i_bmtest2_c  (cost=0.00..17.60 rows=420 width=0)
                                  Index Cond: (c = 1)
  Planning time: 1.441 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
@@ -101,7 +101,7 @@ EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
                            ->  Bitmap Index Scan on i_bmtest2_c  (cost=0.00..17.99 rows=437 width=0)
                                  Index Cond: (c = 1)
  Planning time: 0.468 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
@@ -143,7 +143,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
                            ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..17.79 rows=428 width=0)
                                  Index Cond: (c = 1)
  Planning time: 1.009 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
@@ -171,7 +171,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND 
                                  ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..17.79 rows=428 width=0)
                                        Index Cond: (c = 1)
  Planning time: 0.504 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
@@ -196,7 +196,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
                            ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..17.79 rows=428 width=0)
                                  Index Cond: (c = 1)
  Planning time: 0.370 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
@@ -224,7 +224,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR (b = 1 AND c = 1) OR d
                            ->  Bitmap Index Scan on i_bmtest_ao_d  (cost=0.00..16.99 rows=392 width=0)
                                  Index Cond: (d = 1)
  Planning time: 0.520 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
@@ -260,7 +260,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
                            ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..17.14 rows=400 width=0)
                                  Index Cond: (c = 1)
  Planning time: 1.587 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
@@ -288,7 +288,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AN
                                  ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..18.28 rows=450 width=0)
                                        Index Cond: (c = 1)
  Planning time: 0.495 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
@@ -313,7 +313,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
                            ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..18.28 rows=450 width=0)
                                  Index Cond: (c = 1)
  Planning time: 0.366 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
@@ -341,7 +341,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR
                            ->  Bitmap Index Scan on i_bmtest_aocs_d  (cost=0.00..16.82 rows=385 width=0)
                                  Index Cond: (d = 1)
  Planning time: 0.480 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;

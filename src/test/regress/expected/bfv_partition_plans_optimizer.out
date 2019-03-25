@@ -176,11 +176,7 @@ select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp218
 
 -- CLEANUP
 drop index index_2;
-WARNING:  only dropped the index "index_2"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index index_1;
-WARNING:  only dropped the index "index_1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop table if exists mpp21834_t2;
 drop table if exists mpp21834_t1;
 reset optimizer_enable_hashjoin;
@@ -708,11 +704,7 @@ select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = 'hello0';
 
 -- CLEANUP
 drop index ptid_idx;
-WARNING:  only dropped the index "ptid_idx"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index pt1_idx;
-WARNING:  only dropped the index "pt1_idx"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop table if exists mpp24151_t;
 drop table if exists mpp24151_pt;
 reset optimizer_enable_dynamictablescan;
@@ -969,12 +961,8 @@ select * from dbs where c2= 15 and c3 = 5;
 
 -- CLEANUP
 drop index dbs_index;
-WARNING:  only dropped the index "dbs_index"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop table if exists dbs;
 drop index dis_index;
-WARNING:  only dropped the index "dis_index"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop table if exists dis;
 drop table if exists dts;
 reset optimizer_enable_dynamictablescan;

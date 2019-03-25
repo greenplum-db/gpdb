@@ -484,7 +484,7 @@ explain (costs off)
                Index Cond: ((a || b) = 'ab'::text)
          ->  Index Only Scan using t2_pkey on t2
                Index Cond: (ab = 'ab'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 explain (costs off)
@@ -507,7 +507,7 @@ explain (costs off)
                                  Index Cond: ((a || b) = 'ab'::text)
                            ->  Index Only Scan using t2_pkey on t2
                                  Index Cond: (ab = 'ab'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 --
@@ -543,7 +543,7 @@ explain (costs off)
                            ->  Seq Scan on t1c
                            ->  Seq Scan on t2
                            ->  Seq Scan on t2c
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
   SELECT * FROM
@@ -586,7 +586,7 @@ select event_id
                ->  Seq Scan on events
                ->  Seq Scan on events_child
                ->  Seq Scan on other_events
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 drop table events_child, events, other_events;
@@ -603,7 +603,7 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
          ->  Seq Scan on tenk1 b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 -- Test that we push quals into UNION sub-selects only when it's safe
@@ -623,7 +623,7 @@ WHERE x < 4;
                ->  Result
                ->  Result
                      One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 SELECT * FROM
@@ -654,7 +654,7 @@ ORDER BY x;
                ->  Append
                      ->  Result
                      ->  Result
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 SELECT * FROM
@@ -689,7 +689,7 @@ WHERE x > 3;
                            InitPlan 1 (returns $0)
                              ->  Result
                      ->  Result
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 SELECT * FROM
@@ -725,7 +725,7 @@ select * from
                ->  Append
                      ->  Seq Scan on t3 a
                      ->  Seq Scan on t3 b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 select * from

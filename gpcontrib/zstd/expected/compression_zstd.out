@@ -1,9 +1,31 @@
 -- Tests for zstd compression.
+-- Check that callbacks are registered
+SELECT * FROM pg_compression WHERE compname = 'zstd';
+ compname |   compconstructor   |   compdestructor   |  compcompressor  |  compdecompressor  |   compvalidator   | compowner 
+----------+---------------------+--------------------+------------------+--------------------+-------------------+-----------
+ zstd     | gp_zstd_constructor | gp_zstd_destructor | gp_zstd_compress | gp_zstd_decompress | gp_zstd_validator |        10
+(1 row)
+
 CREATE TABLE zstdtest (id int4, t text) WITH (appendonly=true, compresstype=zstd, orientation=column);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- Check that the reloptions on the table shows compression type
+-- This is order sensitive to base on the order that the options were declared in the DDL of the table.
+SELECT reloptions[2] FROM pg_class WHERE relname = 'zstdtest';
+    reloptions     
+-------------------
+ compresstype=zstd
+(1 row)
+
 INSERT INTO zstdtest SELECT g, 'foo' || g FROM generate_series(1, 100000) g;
 INSERT INTO zstdtest SELECT g, 'bar' || g FROM generate_series(1, 100000) g;
+-- Check that we actually compressed data
+SELECT get_ao_compression_ratio('zstdtest');
+ get_ao_compression_ratio 
+--------------------------
+                     2.62
+(1 row)
+
 -- Check contents, at the beginning of the table and at the end.
 SELECT * FROM zstdtest ORDER BY (id, t) LIMIT 5;
  id |  t   
@@ -88,3 +110,9 @@ ERROR:  compresstype "zstd" can't be used with compresslevel 0
 CREATE TABLE zstdtest_invalid (id int4) WITH (appendonly=true, compresstype=zstd, compresslevel=20);
 ERROR:  value 20 out of bounds for option "compresslevel"
 DETAIL:  Valid values are between "0" and "19".
+-- CREATE TABLE for heap table with compresstype=zstd should fail
+CREATE TABLE zstdtest_heap (id int4, t text) WITH (compresstype=zstd);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  invalid option "compresstype" for base relation
+HINT:  "compresstype" is only valid for Append Only relations, create an AO relation to use "compresstype".

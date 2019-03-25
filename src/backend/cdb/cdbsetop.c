@@ -350,8 +350,6 @@ make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 									   -1.0,
 									   false /* useExecutorVarFormat */ );
 
-		/* FIXME: numsegments */
-
 		motion = make_sorted_union_motion(root,
 										  subplan,
 										  sort->numCols,
@@ -366,8 +364,6 @@ make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 	}
 	else
 	{
-		/* FIXME: numsegments */
-
 		motion = make_union_motion(subplan, false, subplan->flow->numsegments);
 	}
 
@@ -410,10 +406,7 @@ make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan)
 
 	if (hashexprs)
 	{
-		/*
-		 * FIXME: ALL as numsegments is correct,
-		 *        but can we decide a better value?
-		 */
+		/* Distribute to ALL to maximize parallelism */
 		return make_hashed_motion(subplan,
 								  hashexprs,
 								  hashopfamilies,
@@ -443,8 +436,6 @@ Motion *
 make_motion_hash(PlannerInfo *root, Plan *subplan, List *hashExprs, List *hashOpfamilies)
 {
 	Assert(subplan->flow != NULL);
-
-	/* FIXME: numsegments */
 
 	return make_hashed_motion(subplan,
 							  hashExprs,
@@ -479,8 +470,6 @@ make_motion_hash_exprs(PlannerInfo *root, Plan *subplan, List *hashExprs)
 		opfamily = cdb_default_distribution_opfamily_for_type(exprType(expr));
 		hashOpfamilies = lappend_oid(hashOpfamilies, opfamily);
 	}
-
-	/* FIXME: numsegments */
 
 	return make_hashed_motion(subplan,
 							  hashExprs,

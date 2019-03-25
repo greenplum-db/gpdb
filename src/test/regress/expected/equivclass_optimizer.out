@@ -121,7 +121,7 @@ explain (costs off)
    ->  Index Scan using ec0_pkey on ec0
          Index Cond: (ff = '42'::int8alias1)
          Filter: (f1 = '42'::int8alias1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 explain (costs off)
@@ -171,7 +171,7 @@ explain (costs off)
          ->  Materialize
                ->  Seq Scan on ec2
                      Filter: (x1 = '42'::int8alias1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (costs off)

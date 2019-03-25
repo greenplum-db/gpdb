@@ -22,7 +22,10 @@ itself is extremely slow. </p><p>If you do need to order a table in this way to 
           <codeph>clusterdb</codeph> would not be relevant.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Cluster all databases. </pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt><pd>Specifies the name of the database to be clustered. If this is not
 specified, the database name is read from the environment variable <codeph>PGDATABASE</codeph>.
 If that is not set, the user name specified for the connection is used.</pd></plentry><plentry><pt>-e | --echo</pt><pd>Echo the commands that <codeph>clusterdb</codeph> generates and sends
-to the server.</pd></plentry><plentry><pt>-q | --quiet</pt><pd>Do not display a response.</pd></plentry><plentry><pt>-t <varname>table</varname> | --table=<varname>table</varname></pt><pd>Cluster the named table only.</pd></plentry><plentry><pt>-v | --verbose</pt><pd>Print detailed information during processing.</pd></plentry>
+  to the server.</pd></plentry><plentry><pt>-q | --quiet</pt><pd>Do not display a response.</pd></plentry><plentry>
+          <pt>-t <varname>table</varname> | --table=<varname>table</varname></pt>
+          <pd>Cluster the named table only. Multiple tables can be clustered by writing multiple
+              <codeph>-t</codeph> switches. </pd></plentry><plentry><pt>-v | --verbose</pt><pd>Print detailed information during processing.</pd></plentry>
         <plentry>
           <pt>-V | --version</pt>
           <pd>Print the <codeph>clusterdb</codeph> version and exit.</pd>
@@ -47,4 +50,3 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
               be used, and if that does not exist, <codeph>template1</codeph> will be used. </pd>
           </plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To cluster the database <codeph>test</codeph>:</p><codeblock>clusterdb test</codeblock><p>To cluster a single table <codeph>foo</codeph> in a database named <codeph>xyzzy</codeph>:</p><codeblock>clusterdb --table foo xyzzyb</codeblock></section><section id="section7"><title>See Also</title><p><ph otherprops="op-print"><codeph>CLUSTER</codeph> in the <i>Greenplum Database Reference
             Guide</i></ph><ph otherprops="op-help"><codeph><xref href="../../ref_guide/sql_commands/CLUSTER.xml#topic1"/></codeph></ph></p></section></body></topic>
-

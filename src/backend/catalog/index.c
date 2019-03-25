@@ -45,6 +45,7 @@
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_constraint.h"
+#include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_opclass.h"
@@ -60,6 +61,7 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "parser/parser.h"
+#include "rewrite/rewriteManip.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
 #include "storage/predicate.h"
@@ -191,6 +193,43 @@ relationHasPrimaryKey(Relation rel)
 		if (!HeapTupleIsValid(indexTuple))		/* should not happen */
 			elog(ERROR, "cache lookup failed for index %u", indexoid);
 		result = ((Form_pg_index) GETSTRUCT(indexTuple))->indisprimary;
+		ReleaseSysCache(indexTuple);
+		if (result)
+			break;
+	}
+
+	list_free(indexoidlist);
+
+	return result;
+}
+
+/*
+ * relationHasUniqueIndex -
+ *
+ *	See whether an existing relation has a unique index.
+ */
+bool
+relationHasUniqueIndex(Relation rel)
+{
+	bool		result = false;
+	List	   *indexoidlist;
+	ListCell   *indexoidscan;
+
+	/*
+	 * Get the list of index OIDs for the table from the relcache, and look up
+	 * each one in the pg_index syscache until we find one marked unique
+	 */
+	indexoidlist = RelationGetIndexList(rel);
+
+	foreach(indexoidscan, indexoidlist)
+	{
+		Oid			indexoid = lfirst_oid(indexoidscan);
+		HeapTuple	indexTuple;
+
+		indexTuple = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(indexoid));
+		if (!HeapTupleIsValid(indexTuple))		/* should not happen */
+			elog(ERROR, "cache lookup failed for index %u", indexoid);
+		result = ((Form_pg_index) GETSTRUCT(indexTuple))->indisunique;
 		ReleaseSysCache(indexTuple);
 		if (result)
 			break;
@@ -718,6 +757,8 @@ Oid
 index_create(Relation heapRelation,
 			 const char *indexRelationName,
 			 Oid indexRelationId,
+			 Oid parentIndexRelid,
+			 Oid parentConstraintId,
 			 Oid relFileNode,
 			 IndexInfo *indexInfo,
 			 List *indexColNames,
@@ -735,7 +776,7 @@ index_create(Relation heapRelation,
 			 bool skip_build,
 			 bool concurrent,
 			 bool is_internal,
-			 const char *altConName)
+			 Oid *constraintId)
 {
 	Oid			heapRelationId = RelationGetRelid(heapRelation);
 	Relation	pg_class;
@@ -962,6 +1003,13 @@ index_create(Relation heapRelation,
 	 */
 	CacheInvalidateRelcache(heapRelation);
 
+	/* update pg_inherits and the parent's relhassubclass, if needed */
+	if (OidIsValid(parentIndexRelid))
+	{
+		StoreSingleInheritance(indexRelationId, parentIndexRelid, 1);
+		SetRelationHasSubclass(parentIndexRelid, true);
+	}
+
 	/*
 	 * Register constraint and dependencies for the index.
 	 *
@@ -988,26 +1036,22 @@ index_create(Relation heapRelation,
 		if (isconstraint)
 		{
 			char		constraintType;
-			const char *constraintName = indexRelationName;
+			ObjectAddress localaddr;
 
-			if ( altConName )
-			{
-				constraintName = altConName;
-			}
 
 			/*
 			 * Let's make sure that the constraint name is unique
 			 * for this relation.
 			 */
-			Assert(constraintName);
+			Assert(indexRelationName);
 			if (ConstraintNameIsUsed(CONSTRAINT_RELATION,
 									 RelationGetRelid(heapRelation),
 									 RelationGetNamespace(heapRelation),
-									 constraintName))
+									 indexRelationName))
 				ereport(ERROR,
 						(errcode(ERRCODE_DUPLICATE_OBJECT),
 						 errmsg("constraint \"%s\" for relation \"%s\" already exists",
-								constraintName, RelationGetRelationName(heapRelation))));
+								indexRelationName, RelationGetRelationName(heapRelation))));
 
 			if (isprimary)
 				constraintType = CONSTRAINT_PRIMARY;
@@ -1021,10 +1065,11 @@ index_create(Relation heapRelation,
 				constraintType = 0;		/* keep compiler quiet */
 			}
 
-			index_constraint_create(heapRelation,
+			localaddr = index_constraint_create(heapRelation,
 									indexRelationId,
+									parentConstraintId,
 									indexInfo,
-									constraintName,
+									indexRelationName,
 									constraintType,
 									deferrable,
 									initdeferred,
@@ -1033,10 +1078,15 @@ index_create(Relation heapRelation,
 									false,		/* no old dependencies */
 									allow_system_table_mods,
 									is_internal);
+			if (constraintId)
+				*constraintId = localaddr.objectId;
 		}
 		else
 		{
 			bool		have_simple_col = false;
+			DependencyType	deptype;
+
+			deptype = OidIsValid(parentIndexRelid) ? DEPENDENCY_INTERNAL_AUTO : DEPENDENCY_AUTO;
 
 			/* Create auto dependencies on simply-referenced columns */
 			for (i = 0; i < indexInfo->ii_NumIndexAttrs; i++)
@@ -1047,7 +1097,7 @@ index_create(Relation heapRelation,
 					referenced.objectId = heapRelationId;
 					referenced.objectSubId = indexInfo->ii_KeyAttrNumbers[i];
 
-					recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
+					recordDependencyOn(&myself, &referenced, deptype);
 
 					have_simple_col = true;
 				}
@@ -1065,12 +1115,22 @@ index_create(Relation heapRelation,
 				referenced.objectId = heapRelationId;
 				referenced.objectSubId = 0;
 
-				recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
+				recordDependencyOn(&myself, &referenced, deptype);
 			}
 
 			/* Non-constraint indexes can't be deferrable */
 			Assert(!deferrable);
 			Assert(!initdeferred);
+		}
+
+		/* Store dependency on parent index, if any */
+		if (OidIsValid(parentIndexRelid))
+		{
+			referenced.classId = RelationRelationId;
+			referenced.objectId = parentIndexRelid;
+			referenced.objectSubId = 0;
+
+			recordDependencyOn(&myself, &referenced, DEPENDENCY_INTERNAL_AUTO);
 		}
 
 		/* Store dependency on collations */
@@ -1217,9 +1277,10 @@ index_create(Relation heapRelation,
  * allow_system_table_mods: allow table to be a system catalog
  * is_internal: index is constructed due to internal process
  */
-void
+ObjectAddress
 index_constraint_create(Relation heapRelation,
 						Oid indexRelationId,
+						Oid parentConstraintId,
 						IndexInfo *indexInfo,
 						const char *constraintName,
 						char constraintType,
@@ -1235,6 +1296,9 @@ index_constraint_create(Relation heapRelation,
 	ObjectAddress myself,
 				referenced;
 	Oid			conOid;
+	bool		islocal;
+	bool		noinherit;
+	int			inhcount;
 
 	/* constraint creation support doesn't work while bootstrapping */
 	Assert(!IsBootstrapProcessingMode());
@@ -1265,6 +1329,19 @@ index_constraint_create(Relation heapRelation,
 		deleteDependencyRecordsForClass(RelationRelationId, indexRelationId,
 										RelationRelationId, DEPENDENCY_AUTO);
 
+	if (OidIsValid(parentConstraintId))
+	{
+		islocal = false;
+		inhcount = 1;
+		noinherit = false;
+	}
+	else
+	{
+		islocal = true;
+		inhcount = 0;
+		noinherit = true;
+	}
+
 	/*
 	 * Construct a pg_constraint entry.
 	 */
@@ -1292,9 +1369,9 @@ index_constraint_create(Relation heapRelation,
 								   NULL,		/* no check constraint */
 								   NULL,
 								   NULL,
-								   true,		/* islocal */
-								   0,	/* inhcount */
-								   true,		/* noinherit */
+								   islocal,
+								   inhcount,
+								   noinherit,
 								   is_internal);
 
 	/*
@@ -1312,6 +1389,18 @@ index_constraint_create(Relation heapRelation,
 	referenced.objectSubId = 0;
 
 	recordDependencyOn(&myself, &referenced, DEPENDENCY_INTERNAL);
+
+	/*
+	 * Also, if this is a constraint on a partition, mark it as depending
+	 * on the constraint in the parent.
+	 */
+	if (OidIsValid(parentConstraintId))
+	{
+		ObjectAddress	parentConstr;
+
+		ObjectAddressSet(parentConstr, ConstraintRelationId, parentConstraintId);
+		recordDependencyOn(&referenced, &parentConstr, DEPENDENCY_INTERNAL_AUTO);
+	}
 
 	/*
 	 * If the constraint is deferrable, create the deferred uniqueness
@@ -1405,6 +1494,8 @@ index_constraint_create(Relation heapRelation,
 		heap_freetuple(indexTuple);
 		heap_close(pg_index, RowExclusiveLock);
 	}
+
+	return referenced;
 }
 
 /*
@@ -1673,6 +1764,11 @@ index_drop(Oid indexId, bool concurrent)
 	 */
 	DeleteRelationTuple(indexId);
 
+	/*
+	 * fix INHERITS relation
+	 */
+	DeleteInheritsTuple(indexId, InvalidOid);
+	
 	/* MPP-6929: metadata tracking */
 	MetaTrackDropObject(RelationRelationId, 
 						indexId);
@@ -1766,7 +1862,116 @@ BuildIndexInfo(Relation index)
 	ii->ii_Concurrent = false;
 	ii->ii_BrokenHotChain = false;
 
+	ii->ii_Am = index->rd_rel->relam;
+
 	return ii;
+}
+
+/*
+ * CompareIndexInfo
+ *		Return whether the properties of two indexes (in different tables)
+ *		indicate that they have the "same" definitions.
+ *
+ * Note: passing collations and opfamilies separately is a kludge.  Adding
+ * them to IndexInfo may result in better coding here and elsewhere.
+ *
+ * Use convert_tuples_by_name_map(index2, index1) to build the attmap.
+ */
+bool
+CompareIndexInfo(IndexInfo *info1, IndexInfo *info2,
+				 Oid *collations1, Oid *collations2,
+				 Oid *opfamilies1, Oid *opfamilies2,
+				 AttrNumber *attmap, int maplen)
+{
+	int		i;
+
+	if (info1->ii_Unique != info2->ii_Unique)
+		return false;
+
+	/* indexes are only equivalent if they have the same access method */
+	if (info1->ii_Am != info2->ii_Am)
+		return false;
+
+	/* and same number of attributes */
+	if (info1->ii_NumIndexAttrs != info2->ii_NumIndexAttrs)
+		return false;
+
+	/*
+	 * and columns match through the attribute map (actual attribute numbers
+	 * might differ!)  Note that this implies that index columns that are
+	 * expressions appear in the same positions.  We will next compare the
+	 * expressions themselves.
+	 */
+	for (i = 0; i < info1->ii_NumIndexAttrs; i++)
+	{
+		if (maplen < info2->ii_KeyAttrNumbers[i])
+			elog(ERROR, "incorrect attribute map");
+
+		if (attmap[info2->ii_KeyAttrNumbers[i] - 1] !=
+			info1->ii_KeyAttrNumbers[i])
+			return false;
+
+		if (collations1[i] != collations2[i])
+			return false;
+		if (opfamilies1[i] != opfamilies2[i])
+			return false;
+	}
+
+	/*
+	 * For expression indexes: either both are expression indexes, or neither
+	 * is; if they are, make sure the expressions match.
+	 */
+	if ((info1->ii_Expressions != NIL) != (info2->ii_Expressions != NIL))
+		return false;
+	if (info1->ii_Expressions != NIL)
+	{
+		bool	found_whole_row;
+		Node   *mapped;
+
+		mapped = map_variable_attnos((Node *) info2->ii_Expressions,
+									 1, 0, attmap, maplen,
+									 &found_whole_row);
+		if (found_whole_row)
+		{
+			/*
+			 * we could throw an error here, but seems out of scope for this
+			 * routine.
+			 */
+			return false;
+		}
+
+		if (!equal(info1->ii_Expressions, mapped))
+			return false;
+	}
+
+	/* Partial index predicates must be identical, if they exist */
+	if ((info1->ii_Predicate == NULL) != (info2->ii_Predicate == NULL))
+		return false;
+	if (info1->ii_Predicate != NULL)
+	{
+		bool	found_whole_row;
+		Node   *mapped;
+
+		mapped = map_variable_attnos((Node *) info2->ii_Predicate,
+									 1, 0, attmap, maplen,
+									 &found_whole_row);
+		if (found_whole_row)
+		{
+			/*
+			 * we could throw an error here, but seems out of scope for this
+			 * routine.
+			 */
+			return false;
+		}
+		if (!equal(info1->ii_Predicate, mapped))
+			return false;
+	}
+
+	/* No support currently for comparing exclusion indexes. */
+	if (info1->ii_ExclusionOps != NULL || info2->ii_ExclusionOps != NULL)
+		return false;
+
+	return true;
 }
 
 /* ----------------

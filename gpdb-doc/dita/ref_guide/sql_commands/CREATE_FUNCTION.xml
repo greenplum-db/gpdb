@@ -103,14 +103,14 @@ SELECT foo();</codeblock><p>In
                 </plentry>
                 <plentry>
                     <pt><varname>argname</varname></pt>
-                    <pd>The name of an argument. Some languages (currently only PL/pgSQL) let you
-                        use the name in the function body. For other languages the name of an input
-                        argument is just extra documentation, so far as
-                        the function itself is concerned; but you can use input argument names
-                        when calling a function to improve readability. In any case, the name of 
-                        an output argument is significant, since it defines the column name in the 
-                        result row type. (If you omit the name for an output argument, the system 
-                        will choose a default column name.) </pd>
+                    <pd>The name of an argument. Some languages (currently only SQL and PL/pgSQL)
+                        let you use the name in the function body. For other languages the name of
+                        an input argument is just extra documentation, so far as the function itself
+                        is concerned; but you can use input argument names when calling a function
+                        to improve readability. In any case, the name of an output argument is
+                        significant, since it defines the column name in the result row type. (If
+                        you omit the name for an output argument, the system will choose a default
+                        column name.) </pd>
                 </plentry>
                 <plentry>
                     <pt><varname>argtype</varname></pt>
@@ -427,7 +427,7 @@ $SomeTag$Dianne's horse$SomeTag$</codeblock>
                     <li>The function cannot be in the <codeph>FROM</codeph> clause of a query.</li>
                     <li>The function cannot be in the <codeph>SELECT</codeph> list of a query with a
                             <codeph>FROM</codeph> clause.</li>
-                    <li>A query that includes the function falls back from GPORCA to the legacy
+                    <li>A query that includes the function falls back from GPORCA to the Postgres
                         query planner.</li>
                 </ul></sectiondiv></section>
         <section id="section8"><title>Examples</title><p>A very simple addition
@@ -512,7 +512,9 @@ $$ LANGUAGE plpgsql;</codeblock>If
                 available languages. </p><p>For compatibility with some other database systems,
                     <varname>argmode</varname> can be written either before or after
                     <varname>argname</varname>. But only the first way is standard-compliant. </p>
-            <p>The SQL standard does not specify parameter defaults.</p>
+            <p>For parameter defaults, the SQL standard specifies only the syntax with
+                the <codeph>DEFAULT</codeph> key word. The syntax
+                with <codeph>=</codeph> is used in T-SQL and Firebird.</p>
         </section>
         <section id="section10"><title>See Also</title><p><codeph><xref
                         href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,

@@ -222,8 +222,8 @@
     <title>Planning New Segment Initialization</title>
     <body>
       <p>Expanding Greenplum Database can be performed when the system is up and available. Run
-          <codeph>gpexpand</codeph> to initialize new segments instances into the array and create
-        an expansion schema.</p>
+          <codeph>gpexpand</codeph> to initialize new segment instances into the array and create an
+        expansion schema.</p>
       <p>The time required depends on the number of schema objects in the Greenplum system and other
         factors related to hardware performance. In most environments, the initialization of new
         segments requires less than thirty minutes offline.</p>
@@ -232,7 +232,7 @@
           <li><codeph>gppkg</codeph></li>
           <li><codeph>gpconfig</codeph></li>
           <li><codeph>gpcheck</codeph></li>
-          <li><codeph>gpcheckat</codeph></li>
+          <li><codeph>gpcheckcat</codeph></li>
         </ul></p>
       <note type="warning">Do not run <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> during
         system expansion. Locks obtained for backups can interfere with the expansion process and
@@ -278,7 +278,7 @@
           have. You can increase the segments per host or add new segments to existing hosts.</p>
         <p>For example, if existing hosts currently have two segments per host, you can use
             <codeph>gpexpand</codeph> to initialize two additional segments on existing hosts for a
-          total of four segments and four new segments on new hosts. </p>
+          total of four segments and initialize four new segments on new hosts. </p>
         <p>The interactive process for creating an expansion input file prompts for this option; you
           can also specify new segment directories manually in the input configuration file. For
           more information, see <xref href="expand-initialize.xml#topic23" type="topic"
@@ -288,9 +288,8 @@
     <topic id="topic9" xml:lang="en">
       <title id="no165172">About the Expansion Schema</title>
       <body>
-        <p>At initialization, <codeph>gpexpand</codeph> creates an expansion schema. If you do not
-          specify a database at initialization (<codeph>gpexpand -D</codeph>), the schema is created
-          in the database indicated by the <codeph>PGDATABASE</codeph> environment variable.</p>
+        <p>At initialization, the <codeph>gpexpand</codeph> utility creates an expansion schema
+          named <i>gpexpand</i> in the postgres database. </p>
         <p>The expansion schema stores metadata for each table in the system so its status can be
           tracked throughout the expansion process. The expansion schema consists of two tables and
           a view for tracking expansion operation progress:</p>
@@ -343,7 +342,7 @@
           Manipulating the redistribution order can help adjust for limited disk space and restore
           optimal query performance for high-priority queries sooner. </p>
         <section>
-          <title>Table Redstribution Methods</title>
+          <title>Table Redistribution Methods</title>
           <p>There are two methods of redistributing data when performing a Greenplum Database
             expansion. <ul id="ul_hkz_jdv_kgb">
               <li><codeph>rebuild</codeph> - Create a new table, copy all the data from the old to
@@ -399,14 +398,14 @@
             following:<ul id="ul_ocf_3fr_g4">
             <li id="no163863">Uncompressed append-optimized tables expand 10% faster than heap
               tables.</li>
-            <li id="no170207">Append-optimized tables are defined to use data compression expand at
-              a significantly slower rate than uncompressed append-optimized tables, potentially up
-              to 80% slower.</li>
+            <li id="no170207">Append-optimized tables that are defined to use data compression
+              expand at a significantly slower rate than uncompressed append-optimized tables,
+              potentially up to 80% slower.</li>
             <li id="no170253">Systems with data compression such as ZFS/LZJB take longer to
               redistribute.</li>
           </ul></p>
         <note type="important">If your system hosts use data compression, use identical compression
-          setting on the new hosts to avoid disk space shortage. </note>
+          settings on the new hosts to avoid disk space shortage. </note>
       </body>
     </topic>
     <topic id="topic16" xml:lang="en">

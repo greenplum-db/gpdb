@@ -120,9 +120,6 @@
           <li id="jb158767">
             <codeph>default_statistics_target</codeph>
           </li>
-          <li id="jb158800">
-            <codeph>gp_analyze_relative_error</codeph>
-          </li>
         </ul>
         <p>These parameters control statistics sampling at the system level. It is better to sample
           only increased statistics for columns used most frequently in query predicates. You can

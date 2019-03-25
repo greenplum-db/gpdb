@@ -59,20 +59,25 @@
           </plentry>
           <plentry>
             <pt>-c | --clean</pt>
-            <pd>Clean (drop) database objects before recreating them.</pd>
+            <pd>Clean (drop) database objects before recreating them. (This might generate some
+              harmless error messages, if any objects were not present in the destination
+              database.)</pd>
           </plentry>
           <plentry>
             <pt>-C | --create</pt>
-            <pd>Create the database before restoring into it. (When this option is used, the
-              database named with <codeph>-d</codeph> is used only to issue the initial
-                <codeph>CREATE DATABASE</codeph> command. All data is restored into the database
-              name that appears in the archive.) </pd>
+            <pd>Create the database before restoring into it. If <codeph>--clean</codeph> is also
+              specified, drop and recreate the target database before connecting to it.</pd>
+            <pd>When this option is used, the database named with <codeph>-d</codeph> is used only
+              to issue the initial <codeph>DROP DATABASE</codeph> and <codeph>CREATE
+                DATABASE</codeph> commands. All data is restored into the database name that appears
+              in the archive.</pd>
           </plentry>
           <plentry>
             <pt>-d <varname>dbname</varname> | --dbname=<varname>dbname</varname></pt>
-            <pd>Connect to this database and restore directly into this database. The default is to
-              use the <codeph>PGDATABASE</codeph> environment variable setting, or the same name as
-              the current system user.</pd>
+            <pd>Connect to this database and restore directly into this database. This utility, like
+              most other Greenplum Database utilities, also uses the environment variables supported
+              by <codeph>libpq</codeph>. However it does not read <codeph>PGDATABASE</codeph> when a
+              database name is not supplied.</pd>
           </plentry>
           <plentry>
             <pt>-e | --exit-on-error</pt>
@@ -102,29 +107,22 @@
             <pd>Restore definition of named index only. </pd>
           </plentry>
           <plentry>
-            <pt>-j | --number-of-jobs |
-              --jobs=<varname>number-of-jobs</varname></pt>
-            <pd>Run the most time-consuming parts of <codeph>pg_restore</codeph>
-              — those which load data, create indexes, or create constraints —
-              using multiple concurrent jobs. This option can dramatically
-              reduce the time to restore a large database to a server running on
-              a multiprocessor machine.</pd>
-            <pd>Each job is one process or one thread, depending on the
-              operating system, and uses a separate connection to the
-              server.</pd>
-            <pd>The optimal value for this option depends on the hardware setup
-              of the server, of the client, and of the network. Factors include
-              the number of CPU cores and the disk setup. A good place to start
-              is the number of CPU cores on the server, but values larger than
-              that can also lead to faster restore times in many cases. Of
-              course, values that are too high will lead to decreased
-              performance because of thrashing. </pd>
-            <pd>Only the custom archive format is supported with this option.
-              The input file must be a regular file (not, for example, a pipe).
-              This option is ignored when emitting a script rather than
-              connecting directly to a database server. Also, multiple jobs
-              cannot be used together with the option
-                <codeph>--single-transaction</codeph>.</pd>
+            <pt>-j | --number-of-jobs | --jobs=<varname>number-of-jobs</varname></pt>
+            <pd>Run the most time-consuming parts of <codeph>pg_restore</codeph> — those which load
+              data, create indexes, or create constraints — using multiple concurrent jobs. This
+              option can dramatically reduce the time to restore a large database to a server
+              running on a multiprocessor machine.</pd>
+            <pd>Each job is one process or one thread, depending on the operating system, and uses a
+              separate connection to the server.</pd>
+            <pd>The optimal value for this option depends on the hardware setup of the server, of
+              the client, and of the network. Factors include the number of CPU cores and the disk
+              setup. A good place to start is the number of CPU cores on the server, but values
+              larger than that can also lead to faster restore times in many cases. Of course,
+              values that are too high will lead to decreased performance because of thrashing. </pd>
+            <pd>Only the custom archive format is supported with this option. The input file must be
+              a regular file (not, for example, a pipe). This option is ignored when emitting a
+              script rather than connecting directly to a database server. Also, multiple jobs
+              cannot be used together with the option <codeph>--single-transaction</codeph>.</pd>
           </plentry>
           <plentry>
             <pt>-l | --list</pt>
@@ -177,17 +175,19 @@
           <plentry>
             <pt>-S <varname>username</varname> | --superuser=<varname>username</varname></pt>
             <pd>Specify the superuser user name to use when disabling triggers. This is only
-              relevant if <codeph>--disable-triggers</codeph> is used.<note>Greenplum Database does not support user-defined triggers.</note></pd>
+              relevant if <codeph>--disable-triggers</codeph> is used.<note>Greenplum Database does
+                not support user-defined triggers.</note></pd>
           </plentry>
           <plentry>
             <pt>-t <varname>table</varname> | --table=<varname>table</varname></pt>
-            <pd>Restore definition and/or data of named table only. This can be
-              combined with the <codeph>-n</codeph> option to specify a schema.</pd>
+            <pd>Restore definition and/or data of named table only. Multiple tables may be specified
+              with multiple <codeph>-t</codeph> switches. This can be combined with the
+                <codeph>-n</codeph> option to specify a schema.</pd>
           </plentry>
           <plentry>
             <pt>-T <varname>trigger</varname> | --trigger=<varname>trigger</varname></pt>
-            <pd>Restore named trigger only.<note>Greenplum Database does not support
-                user-defined triggers.</note></pd>
+            <pd>Restore named trigger only.<note>Greenplum Database does not support user-defined
+                triggers.</note></pd>
           </plentry>
           <plentry>
             <pt>-v | --verbose</pt>
@@ -204,20 +204,19 @@
           </plentry>
           <plentry>
             <pt>-1 | --single-transaction</pt>
-            <pd>Execute the restore as a single transaction. This ensures that
-              either all the commands complete successfully, or no changes are
-              applied.</pd>
+            <pd>Execute the restore as a single transaction. This ensures that either all the
+              commands complete successfully, or no changes are applied.</pd>
           </plentry>
           <plentry>
             <pt>--disable-triggers</pt>
-            <pd>This option is only relevant when performing a data-only restore. It instructs
+            <pd>This option is relevant only when performing a data-only restore. It instructs
                 <codeph>pg_restore</codeph> to execute commands to temporarily disable triggers on
               the target tables while the data is reloaded. Use this if you have triggers on the
               tables that you do not want to invoke during data reload. The commands emitted for
-                <codeph>--disable-triggers</codeph> must be done as superuser. So, you should also
-              specify a superuser name with <codeph>-S</codeph>, or preferably run
-                <codeph>pg_restore</codeph> as a superuser. <note>Greenplum Database
-                does not support user-defined triggers.</note></pd>
+                <codeph>--disable-triggers</codeph> must be done as superuser. So you should also
+              specify a superuser name with <codeph>-S</codeph> or, preferably, run
+                <codeph>pg_restore</codeph> as a superuser. <note>Greenplum Database does not
+                support user-defined triggers.</note></pd>
           </plentry>
           <plentry>
             <pt>--no-data-for-failed-tables</pt>
@@ -230,8 +229,8 @@
           </plentry>
           <plentry>
             <pt>--no-security-labels</pt>
-            <pd>Do not output commands to restore security labels, even if the archive
-              contains them.</pd>
+            <pd>Do not output commands to restore security labels, even if the archive contains
+              them.</pd>
           </plentry>
           <plentry>
             <pt>--no-tablespaces</pt>
@@ -255,7 +254,7 @@
           <plentry>
             <pt>-? | --help</pt>
             <pd>Show help about <codeph>pg_restore</codeph> command line arguments, and exit.</pd>
-        </plentry>
+          </plentry>
         </parml>
       </sectiondiv>
       <sectiondiv id="section5">

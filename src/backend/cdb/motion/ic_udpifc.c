@@ -502,7 +502,7 @@ static ICGlobalControlInfo ic_control_info;
  *
  */
 #define UNACK_QUEUE_RING_SLOTS_NUM (2000)
-#define TIMER_SPAN (Gp_interconnect_timer_period * 1000)	/* default: 5ms */
+#define TIMER_SPAN (Gp_interconnect_timer_period * 1000ULL)	/* default: 5ms */
 #define TIMER_CHECKING_PERIOD (Gp_interconnect_timer_checking_period)	/* default: 20ms */
 #define UNACK_QUEUE_RING_LENGTH (UNACK_QUEUE_RING_SLOTS_NUM * TIMER_SPAN)
 
@@ -1874,20 +1874,21 @@ sendStatusQueryMessage(MotionConn *conn, int fd, uint32 seq)
 static void
 putRxBufferAndSendAck(MotionConn *conn, AckSendParam *param)
 {
-	icpkthdr   *buf = NULL;
+	icpkthdr   *buf;
+	uint32		seq;
 
 	buf = (icpkthdr *) conn->pkt_q[conn->pkt_q_head];
-	uint32		seq = buf->seq;
-
-#ifdef AMS_VERBOSE_LOGGING
-	elog(LOG, "putRxBufferAndSendAck conn %p pkt [seq %d] for node %d route %d, [head seq] %d queue size %d, queue head %d queue tail %d", conn, buf->seq, buf->motNodeId, conn->route, conn->conn_info.seq - conn->pkt_q_size, conn->pkt_q_size, conn->pkt_q_head, conn->pkt_q_tail);
-#endif
-
 	if (buf == NULL)
 	{
 		pthread_mutex_unlock(&ic_control_info.lock);
 		elog(FATAL, "putRxBufferAndSendAck: buffer is NULL");
 	}
+
+	seq = buf->seq;
+
+#ifdef AMS_VERBOSE_LOGGING
+	elog(LOG, "putRxBufferAndSendAck conn %p pkt [seq %d] for node %d route %d, [head seq] %d queue size %d, queue head %d queue tail %d", conn, seq, buf->motNodeId, conn->route, conn->conn_info.seq - conn->pkt_q_size, conn->pkt_q_size, conn->pkt_q_head, conn->pkt_q_tail);
+#endif
 
 	conn->pkt_q[conn->pkt_q_head] = NULL;
 	conn->pBuff = NULL;
@@ -1895,7 +1896,7 @@ putRxBufferAndSendAck(MotionConn *conn, AckSendParam *param)
 	conn->pkt_q_size--;
 
 #ifdef AMS_VERBOSE_LOGGING
-	elog(LOG, "putRxBufferAndSendAck conn %p pkt [seq %d] for node %d route %d, [head seq] %d queue size %d, queue head %d queue tail %d", conn, buf->seq, buf->motNodeId, conn->route, conn->conn_info.seq - conn->pkt_q_size, conn->pkt_q_size, conn->pkt_q_head, conn->pkt_q_tail);
+	elog(LOG, "putRxBufferAndSendAck conn %p pkt [seq %d] for node %d route %d, [head seq] %d queue size %d, queue head %d queue tail %d", conn, seq, buf->motNodeId, conn->route, conn->conn_info.seq - conn->pkt_q_size, conn->pkt_q_size, conn->pkt_q_head, conn->pkt_q_tail);
 #endif
 
 	putRxBufferToFreeList(&rx_buffer_pool, buf);
@@ -3522,7 +3523,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 	elog((gp_interconnect_log_stats ? LOG : DEBUG1), "Interconnect State: "
 		 "isSender %d isReceiver %d "
 		 "snd_queue_depth %d recv_queue_depth %d Gp_max_packet_size %d "
-		 "UNACK_QUEUE_RING_SLOTS_NUM %d TIMER_SPAN %d DEFAULT_RTT %d "
+		 "UNACK_QUEUE_RING_SLOTS_NUM %d TIMER_SPAN %lld DEFAULT_RTT %d "
 		 "forceEOS %d, gp_interconnect_id %d ic_id_last_teardown %d "
 		 "snd_buffer_pool.count %d snd_buffer_pool.maxCount %d snd_sock_bufsize %d recv_sock_bufsize %d "
 		 "snd_pkt_count %d retransmits %d crc_errors %d"

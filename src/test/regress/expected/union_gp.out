@@ -250,7 +250,7 @@ union
                                        ->  Limit  (cost=0.00..1.01 rows=1 width=4)
                                              ->  Seq Scan on test1  (cost=0.00..1.01 rows=1 width=4)
                ->  External Scan on test2  (cost=0.00..0.00 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 --

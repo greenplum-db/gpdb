@@ -24,6 +24,9 @@
 #include "catalog/catalog.h"
 #include "catalog/index.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_constraint.h"
+#include "catalog/pg_inherits.h"
+#include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_tablespace.h"
@@ -85,7 +88,6 @@ static void ComputeIndexAttrs(IndexInfo *indexInfo,
 static char *ChooseIndexNameAddition(List *colnames);
 static void RangeVarCallbackForReindexIndex(const RangeVar *relation,
 								Oid relId, Oid oldRelId, void *arg);
-static bool relationHasUniqueIndex(Relation rel);
 
 
 /*
@@ -277,6 +279,7 @@ CheckIndexCompatible(Oid oldId,
 	indexInfo->ii_ExclusionOps = NULL;
 	indexInfo->ii_ExclusionProcs = NULL;
 	indexInfo->ii_ExclusionStrats = NULL;
+	indexInfo->ii_Am = accessMethodId;
 	typeObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
 	collationObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
 	classObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
@@ -409,6 +412,7 @@ DefineIndex(Oid relationId,
 	Oid			accessMethodId;
 	Oid			namespaceId;
 	Oid			tablespaceId;
+	Oid			createdConstraintId = InvalidOid;
 	List	   *indexColNames;
 	Relation	rel;
 	Relation	indexRelation;
@@ -430,7 +434,6 @@ DefineIndex(Oid relationId,
 	Snapshot	snapshot;
 	bool		need_longlock = true;
 	bool		shouldDispatch;
-	char	   *altconname = stmt ? stmt->altconname : NULL;
 	int			i;
 
 	if (Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode())
@@ -708,6 +711,7 @@ DefineIndex(Oid relationId,
 	indexInfo->ii_ReadyForInserts = !stmt->concurrent;
 	indexInfo->ii_Concurrent = stmt->concurrent;
 	indexInfo->ii_BrokenHotChain = false;
+	indexInfo->ii_Am = accessMethodId;
 
 	typeObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
 	collationObjectId = (Oid *) palloc(numberOfAttributes * sizeof(Oid));
@@ -798,14 +802,15 @@ DefineIndex(Oid relationId,
 	 * index.  The caller should also decline any index build.
 	 */
 	Assert(!OidIsValid(stmt->oldNode) || (skip_build && !stmt->concurrent));
-
+	
 	/*
 	 * Make the catalog entries for the index, including constraints. Then, if
 	 * not skip_build || concurrent, actually build the index.
 	 */
 	indexRelationId =
-		index_create(rel, indexRelationName, indexRelationId, stmt->oldNode,
-					 indexInfo, indexColNames,
+		index_create(rel, indexRelationName, indexRelationId, stmt->parentIndexId,
+					 stmt->parentConstraintId,
+					 stmt->oldNode, indexInfo, indexColNames,
 					 accessMethodId, tablespaceId,
 					 collationObjectId, classObjectId,
 					 coloptions, reloptions, stmt->primary,
@@ -813,7 +818,7 @@ DefineIndex(Oid relationId,
 					 allowSystemTableMods,
 					 skip_build || stmt->concurrent,
 					 stmt->concurrent, !check_rights,
-					 altconname);
+					 &createdConstraintId);
 
 	if (shouldDispatch)
 	{
@@ -875,12 +880,16 @@ DefineIndex(Oid relationId,
 			foreach(lc, my_part_oids)
 			{
 				Oid			childRelid = lfirst_oid(lc);
-				Relation	childrel;
+				Relation childrel;
+				List   *childidxs;
+				ListCell *cell;
 				AttrNumber *attmap;
-				int			maplen;
+				bool	found = false;
+				int		maplen;
 				char	   *childnamespace_name;
 
 				childrel = heap_open(childRelid, lockmode);
+				childidxs = RelationGetIndexList(childrel);
 				attmap =
 					convert_tuples_by_name_map(RelationGetDescr(childrel),
 											   parentDesc,
@@ -889,8 +898,100 @@ DefineIndex(Oid relationId,
 
 				childnamespace_name = get_namespace_name(RelationGetNamespace(childrel));
 
+				foreach(cell, childidxs)
+				{
+					Oid			cldidxid = lfirst_oid(cell);
+					Relation	cldidx;
+					IndexInfo  *cldIdxInfo;
+
+					/* this index is already partition of another one */
+					if (has_superclass(cldidxid))
+						continue;
+
+					cldidx = index_open(cldidxid, lockmode);
+					cldIdxInfo = BuildIndexInfo(cldidx);
+					if (CompareIndexInfo(cldIdxInfo, indexInfo,
+										 cldidx->rd_indcollation,
+										 collationObjectId,
+										 cldidx->rd_opfamily,
+										 opfamOids,
+										 attmap, maplen))
+					{
+						Oid		cldConstrOid = InvalidOid;
+
+						/*
+						 * Found a match.
+						 *
+						 * If this index is being created in the parent
+						 * because of a constraint, then the child needs to
+						 * have a constraint also, so look for one.  If there
+						 * is no such constraint, this index is no good, so
+						 * keep looking.
+						 */
+						if (createdConstraintId != InvalidOid)
+						{
+							cldConstrOid =
+								get_relation_idx_constraint_oid(childRelid,
+																cldidxid);
+							if (cldConstrOid == InvalidOid)
+							{
+								index_close(cldidx, lockmode);
+								continue;
+							}
+						}
+
+						/* Attach index to parent and we're done. */
+						IndexSetParentIndex(cldidx, indexRelationId);
+						if (createdConstraintId != InvalidOid)
+							ConstraintSetParentConstraint(cldConstrOid,
+														  createdConstraintId);
+
+						if (shouldDispatch)
+						{
+							AlterTableCmd *altertableCmd = makeNode(AlterTableCmd);
+							altertableCmd->subtype = AT_PartAttachIndex;
+
+							AlterPartitionId *alterpartId = makeNode(AlterPartitionId);
+							alterpartId->idtype = AT_AP_IDRangeVar;
+							alterpartId->partiddef = (Node*) makeRangeVar(get_namespace_name(cldidx->rd_rel->relnamespace),
+																		  RelationGetRelationName(cldidx), -1);
+
+							AlterPartitionCmd * alterpartCmd = makeNode(AlterPartitionCmd);
+							alterpartCmd->partid = (Node*) alterpartId;
+
+							altertableCmd->def = (Node*) alterpartCmd;
+
+							AlterTableStmt *alterstmt = makeNode(AlterTableStmt);
+							alterstmt->relation = makeRangeVar(get_namespace_name(namespaceId),
+																	   indexRelationName, -1);
+							alterstmt->relkind = OBJECT_INDEX;
+
+							alterstmt->cmds = lappend(alterstmt->cmds, altertableCmd);
+
+							CdbDispatchUtilityStatement((Node *) alterstmt,
+														DF_CANCEL_ON_ERROR |
+														DF_WITH_SNAPSHOT |
+														DF_NEED_TWO_PHASE,
+														GetAssignedOidsForDispatch(),
+														NULL);
+						}
+
+						found = true;
+						/* keep lock till commit */
+						index_close(cldidx, NoLock);
+						break;
+					}
+
+					index_close(cldidx, lockmode);
+				}
+
+				list_free(childidxs);
 				heap_close(childrel, NoLock);
 
+				/*
+				 * If no matching index was found, create our own.
+				 */
+				if (!found)
 				{
 					IndexStmt  *childStmt = copyObject(stmt);
 					bool		found_whole_row;
@@ -929,6 +1030,14 @@ DefineIndex(Oid relationId,
 					childStmt->relation = makeRangeVar(childnamespace_name,
 													   get_rel_name(childRelid), -1);
 					childStmt->idxname = NULL;
+					/*
+					 * GPDB: Because we need to dispatch these values to the
+					 * segments, put the parentIndexId and the
+					 * parentConstraintId in the IndexStmt. In upstream
+					 * Postgres these fields are parameters to DefineIndex.
+					 */
+					childStmt->parentIndexId = indexRelationId;
+					childStmt->parentConstraintId = createdConstraintId;
 
 					DefineIndex(childRelid, childStmt,
 								InvalidOid,			/* no predefined OID */
@@ -938,8 +1047,12 @@ DefineIndex(Oid relationId,
 
 				pfree(attmap);
 			}
-
 		}
+		/*
+		 * In postgres the base relation of partitioned tables does not have
+		 * storage. In GPDB the base relation DOES have storage so we probably need to
+		 * finish up here?
+		 */
 		else
 		{
 			if (need_longlock)
@@ -947,6 +1060,10 @@ DefineIndex(Oid relationId,
 			else
 				heap_close(rel, lockmode);
 		}
+		/*
+		 * Indexes on partitioned tables are not themselves built, so we're
+		 * done here.
+		 */
 		return indexRelationId;
 	}
 
@@ -2069,43 +2186,6 @@ ChooseIndexColumnNames(List *indexElems)
 }
 
 /*
- * relationHasUniqueIndex -
- *
- *	See whether an existing relation has a unique index.
- */
-static bool
-relationHasUniqueIndex(Relation rel)
-{
-	bool		result = false;
-	List	   *indexoidlist;
-	ListCell   *indexoidscan;
-
-	/*
-	 * Get the list of index OIDs for the table from the relcache, and look up
-	 * each one in the pg_index syscache until we find one marked unique
-	 */
-	indexoidlist = RelationGetIndexList(rel);
-
-	foreach(indexoidscan, indexoidlist)
-	{
-		Oid			indexoid = lfirst_oid(indexoidscan);
-		HeapTuple	indexTuple;
-
-		indexTuple = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(indexoid));
-		if (!HeapTupleIsValid(indexTuple))		/* should not happen */
-			elog(ERROR, "cache lookup failed for index %u", indexoid);
-		result = ((Form_pg_index) GETSTRUCT(indexTuple))->indisunique;
-		ReleaseSysCache(indexTuple);
-		if (result)
-			break;
-	}
-
-	list_free(indexoidlist);
-
-	return result;
-}
-
-/*
  * ReindexIndex
  *		Recreate a specific index.
  */
@@ -2469,4 +2549,149 @@ ReindexDatabase(ReindexStmt *stmt)
 	MemoryContextDelete(private_context);
 
 	return MyDatabaseId;
+}
+
+/*
+ * Insert or delete an appropriate pg_inherits tuple to make the given index
+ * be a partition of the indicated parent index.
+ *
+ * This also corrects the pg_depend information for the affected index.
+ */
+void
+IndexSetParentIndex(Relation partitionIdx, Oid parentOid)
+{
+	Relation	pg_inherits;
+	ScanKeyData	key[2];
+	SysScanDesc	scan;
+	Oid			partRelid = RelationGetRelid(partitionIdx);
+	HeapTuple	tuple;
+	bool		fix_dependencies;
+
+	/* Make sure this is an index */
+	Assert(partitionIdx->rd_rel->relkind == RELKIND_INDEX);
+	/*
+	 * Scan pg_inherits for rows linking our index to some parent.
+	 */
+	pg_inherits = relation_open(InheritsRelationId, RowExclusiveLock);
+	ScanKeyInit(&key[0],
+				Anum_pg_inherits_inhrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(partRelid));
+	ScanKeyInit(&key[1],
+				Anum_pg_inherits_inhseqno,
+				BTEqualStrategyNumber, F_INT4EQ,
+				Int32GetDatum(1));
+	scan = systable_beginscan(pg_inherits, InheritsRelidSeqnoIndexId, true,
+							  NULL, 2, key);
+	tuple = systable_getnext(scan);
+
+	if (!HeapTupleIsValid(tuple))
+	{
+		if (parentOid == InvalidOid)
+		{
+			/*
+			 * No pg_inherits row, and no parent wanted: nothing to do in
+			 * this case.
+			 */
+			fix_dependencies = false;
+		}
+		else
+		{
+			Datum	values[Natts_pg_inherits];
+			bool	isnull[Natts_pg_inherits];
+
+			/*
+			 * No pg_inherits row exists, and we want a parent for this index,
+			 * so insert it.
+			 */
+			values[Anum_pg_inherits_inhrelid - 1] = ObjectIdGetDatum(partRelid);
+			values[Anum_pg_inherits_inhparent - 1] =
+					ObjectIdGetDatum(parentOid);
+			values[Anum_pg_inherits_inhseqno - 1] = Int32GetDatum(1);
+			memset(isnull, false, sizeof(isnull));
+
+			tuple = heap_form_tuple(RelationGetDescr(pg_inherits),
+									values, isnull);
+
+			simple_heap_insert(pg_inherits, tuple);
+			CatalogUpdateIndexes(pg_inherits, tuple);
+
+			fix_dependencies = true;
+		}
+	}
+	else
+	{
+		Form_pg_inherits	inhForm = (Form_pg_inherits) GETSTRUCT(tuple);
+
+		if (parentOid == InvalidOid)
+		{
+			/*
+			 * There exists a pg_inherits row, which we want to clear; do so.
+			 */
+			simple_heap_delete(pg_inherits, &tuple->t_self);
+			fix_dependencies = true;
+		}
+		else
+		{
+			/*
+			 * A pg_inherits row exists.  If it's the same we want, then we're
+			 * good; if it differs, that amounts to a corrupt catalog and
+			 * should not happen.
+			 */
+			if (inhForm->inhparent != parentOid)
+			{
+				/* unexpected: we should not get called in this case */
+				elog(ERROR, "bogus pg_inherit row: inhrelid %u inhparent %u",
+					 inhForm->inhrelid, inhForm->inhparent);
+			}
+
+			/* already in the right state */
+			fix_dependencies = false;
+		}
+	}
+
+	/* done with pg_inherits */
+	systable_endscan(scan);
+	relation_close(pg_inherits, RowExclusiveLock);
+
+	/* set relhassubclass if an index partition has been added to the parent */
+	if (OidIsValid(parentOid))
+		SetRelationHasSubclass(parentOid, true);
+
+	if (fix_dependencies)
+	{
+		ObjectAddress partIdx;
+
+		/*
+		 * Insert/delete pg_depend rows.  If setting a parent, add an
+		 * INTERNAL_AUTO dependency to the parent index; if making standalone,
+		 * remove all existing rows and put back the regular dependency on the
+		 * table.
+		 */
+		ObjectAddressSet(partIdx, RelationRelationId, partRelid);
+
+		if (OidIsValid(parentOid))
+		{
+			ObjectAddress	parentIdx;
+
+			ObjectAddressSet(parentIdx, RelationRelationId, parentOid);
+			recordDependencyOn(&partIdx, &parentIdx, DEPENDENCY_INTERNAL_AUTO);
+		}
+		else
+		{
+			ObjectAddress	partitionTbl;
+
+			ObjectAddressSet(partitionTbl, RelationRelationId,
+							 partitionIdx->rd_index->indrelid);
+
+			deleteDependencyRecordsForClass(RelationRelationId, partRelid,
+											RelationRelationId,
+											DEPENDENCY_INTERNAL_AUTO);
+
+			recordDependencyOn(&partIdx, &partitionTbl, DEPENDENCY_AUTO);
+		}
+
+		/* make our updates visible */
+		CommandCounterIncrement();
+	}
 }

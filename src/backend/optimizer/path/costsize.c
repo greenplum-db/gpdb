@@ -4644,14 +4644,7 @@ int planner_segment_count(GpPolicy *policy)
  */
 double global_work_mem(PlannerInfo *root)
 {
-	int segment_count;
-	if (root)
-	{
-		Assert(root->config->cdbpath_segments > 0);
-		segment_count = root->config->cdbpath_segments;
-	}
-	else
-		segment_count = planner_segment_count(NULL);
+	int			segment_count = planner_segment_count(NULL);
 
 	return (double) planner_work_mem * 1024L * segment_count;	
 }

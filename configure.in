@@ -39,7 +39,6 @@ AC_SUBST(PG_MAJORVERSION)
 AC_DEFINE_UNQUOTED(PG_MAJORVERSION, "$PG_MAJORVERSION", [PostgreSQL major version as a string])
 
 [PG_VERSION="$PG_PACKAGE_VERSION"]
-dnl Greenplum co-opts the --with-extra-version value to append to Only the Greenplum version
 PGAC_ARG_REQ(with, extra-version, [STRING], [append STRING to version], [], [])
 AC_DEFINE_UNQUOTED(PG_VERSION, "$PG_PACKAGE_VERSION", [Postgres version Greenplum Database is based on])
 
@@ -211,6 +210,13 @@ AC_SUBST(enable_gpfdist)
 PGAC_ARG_BOOL(enable, pxf, yes,
              [do not build pxf])
 AC_SUBST(enable_pxf)
+
+#
+# include debug extensions in gpcontrib
+#
+PGAC_ARG_BOOL(enable, debug-extensions, no,
+              [include debug extensions in gpcontrib])
+AC_SUBST(enable_debug_extensions)
 
 #
 # orafce
@@ -2579,10 +2585,6 @@ AC_SUBST(BLD_ARCH)
 # Get the Greenplum version string from VERSION
 
 GP_VERSION_LONG=`bash ./getversion`
-
-if test "$with_extra_version" = "" ; then
-  with_extra_version="-oss"
-fi
 
 GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
 

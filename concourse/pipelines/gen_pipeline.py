@@ -51,6 +51,7 @@ JOBS_THAT_ARE_GATES = ['gate_icw_start',
                        'gate_icw_end',
                        'gate_replication_start',
                        'gate_resource_groups_start',
+                       'gate_gpperfmon_start',
                        'gate_cli_start',
                        'gate_ud_start',
                        'gate_advanced_analytics_start',
@@ -193,7 +194,7 @@ def how_to_use_generated_pipeline_message():
         msg += '    -p gpdb_master_without_asserts \\\n'
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml \\\n' # pylint: disable=line-too-long
+        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.prod.yml \\\n' # pylint: disable=line-too-long
         msg += '    -v pipeline-name=gpdb_master_without_asserts\n'
     else:
         pipeline_name = os.path.basename(ARGS.output_filepath).rsplit('.', 1)[0]
@@ -247,7 +248,7 @@ if __name__ == "__main__":
     PARSER.add_argument('-a', '--test_sections',
                         action='store',
                         dest='test_sections',
-                        choices=['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions'],
+                        choices=['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions', 'Gpperfmon'],
                         default=['ICW'],
                         nargs='+',
                         help='Select tests sections to run')
@@ -267,7 +268,7 @@ if __name__ == "__main__":
 
     if ARGS.pipeline_type == 'prod':
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
-        ARGS.test_sections = ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions']
+        ARGS.test_sections = ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions', 'Gpperfmon']
 
     # if generating a dev pipeline but didn't specify an output, don't overwrite the master pipeline
     if ARGS.pipeline_type != 'prod' and os.path.basename(ARGS.output_filepath) == default_output_filename:

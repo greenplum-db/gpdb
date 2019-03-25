@@ -169,7 +169,7 @@ test: reindex/serializable_reindex_with_drop_column_ao_part reindex/serializable
 test: reindex/serializable_reindex_with_drop_column_part_heap
 test: reindex/serializable_reindex_with_drop_index_ao reindex/serializable_reindex_with_drop_index_heap
 test: reindex/repeatable_read_reindex_with_insert_heap
-test: reindex/repeatable_read_reindex_with_insert_part_heap reindex/vacuum_anal_while_reindex_ao_btree
+test: reindex/repeatable_read_reindex_with_insert_part_heap reindex/vacuum_analyze_while_reindex_ao_btree
 test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_btree reindex/vacuum_while_reindex_heap_btree_toast
 
 # Cancel test
@@ -182,3 +182,18 @@ test: concurrent_update_epq
 
 # Tests for getting numsegments in utility mode
 test: upgrade_numsegments
+# Memory accounting tests
+
+# OOM tests start
+test: create_memory_accounting_tables 
+test: setup_memory_accounting
+test: oom_query
+test: oom_mixed_1 oom_mixed_2 oom_simple
+test: restore_memory_accounting_default
+# Sleep and OOM tests end
+
+# Too many exec accounts test start
+test: setup_too_many_exec_accounts
+test: oom_too_many_accounts
+test: restore_memory_accounting_default
+#Too many exec account tests end

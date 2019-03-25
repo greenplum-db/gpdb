@@ -65,7 +65,7 @@ explain select f.id from co_nestloop_idxscan.bar b, co_nestloop_idxscan.foo f wh
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..100.36 rows=1 width=0)
                      Index Cond: f.id = b.id
  Settings:  enable_hashjoin=off; enable_seqscan=off; optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (10 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;

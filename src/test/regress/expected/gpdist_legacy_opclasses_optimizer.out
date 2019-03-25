@@ -156,7 +156,7 @@ explain (costs off) select * from legacy_int a inner join modern_int b on a.id =
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
                      Hash Key: b.id
                      ->  Seq Scan on modern_int b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 select * from legacy_int a inner join modern_int b on a.id = b.id;
@@ -202,7 +202,7 @@ explain (costs off) select * from legacy_int a inner join modern_text b on a.id:
                ->  Seq Scan on legacy_int a
          ->  Hash
                ->  Seq Scan on modern_text b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 select * from legacy_int a inner join modern_text b on a.id::text = b.t;
@@ -250,7 +250,7 @@ explain (costs off) select * from modern_int a inner join legacy_domain_over_int
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
                      Hash Key: a.id
                      ->  Seq Scan on modern_int a
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 create type colors as enum ('red', 'green', 'blue');

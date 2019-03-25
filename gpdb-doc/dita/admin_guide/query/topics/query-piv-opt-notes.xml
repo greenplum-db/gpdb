@@ -43,7 +43,7 @@
       <li><codeph>optimizer_sort_factor</codeph> controls the cost factor that GPORCA applies to
         sorting operations during query optimization. The cost factor can be adjusted for queries
         when data skew is present. </li>
-      <li><codeph>gp_enable_relsize_collection</codeph> controls how GPORCA (and the legacy query
+      <li><codeph>gp_enable_relsize_collection</codeph> controls how GPORCA (and the Postgres query
         optimizer) handle a table without statistics. By default, GPORCA uses a default value to
         estimate the number of rows if statistics are not available. When this value is
           <codeph>on</codeph>, GPORCA uses the estimated size of a table if there are no statistics

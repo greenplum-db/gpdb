@@ -4926,3 +4926,30 @@ SELECT * FROM information_schema.tables WHERE table_name IN ('wet_pos4', 'exttab
  regression    | public       | wet_pos4       | BASE TABLE |                              |                      |                           |                          |                        | YES                | NO       | 
 (2 rows)
 
+--
+-- Test external table can be safely expanded
+--
+-- start_ignore
+create extension if not exists gp_debug_numsegments;
+-- end_ignore
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+create writable external table ext_w_expand(a text, b text) location('gpfdist://foo:7070/ext_w_expand.out') format 'text';
+select numsegments from gp_distribution_policy where localoid = 'ext_w_expand'::regclass;
+ numsegments 
+-------------
+           2
+(1 row)
+
+alter external table ext_w_expand expand table;
+select numsegments from gp_distribution_policy where localoid = 'ext_w_expand'::regclass;
+ numsegments 
+-------------
+           3
+(1 row)
+
+drop external table ext_w_expand;

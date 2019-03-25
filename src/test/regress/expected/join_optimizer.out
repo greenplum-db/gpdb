@@ -2177,7 +2177,7 @@ select aa, bb, unique1, unique1
 -----------------------------------
  Result
    One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 select aa, bb, unique1, unique1
@@ -3560,7 +3560,7 @@ left join unnest(v1ys) as u1(u1y) on u1y = v2y;
          ->  Function Scan on unnest u1
          ->  Hash
                ->  Values Scan on "*VALUES*_1"
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 select * from
@@ -4174,7 +4174,7 @@ where ss1.c2 = 0;
                            Output: (i41.f1), (i8.q1), (i8.q2), (i42.f1), (i43.f1), ((42))
                            ->  Seq Scan on public.text_tbl
                                  Output: i41.f1, i8.q1, i8.q2, i42.f1, i43.f1, (42)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=on
 (42 rows)
 
@@ -4706,7 +4706,7 @@ explain (costs off)
          ->  Seq Scan on tenk1 a
          ->  Hash
                ->  Seq Scan on int4_tbl b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 select unique2, x.*
@@ -4727,7 +4727,7 @@ explain (costs off)
          ->  Seq Scan on tenk1
          ->  Hash
                ->  Seq Scan on int4_tbl x
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 explain (costs off)
@@ -4741,7 +4741,7 @@ explain (costs off)
          ->  Seq Scan on tenk1
          ->  Hash
                ->  Seq Scan on int4_tbl x
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 select unique2, x.*
@@ -4766,7 +4766,7 @@ explain (costs off)
          ->  Seq Scan on tenk1
          ->  Hash
                ->  Seq Scan on int4_tbl x
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- check scoping of lateral versus parent references
@@ -4808,7 +4808,7 @@ explain (costs off)
                ->  Nested Loop
                      ->  Seq Scan on tenk1 a
                      ->  Function Scan on generate_series g
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 explain (costs off)
@@ -4821,7 +4821,7 @@ explain (costs off)
                ->  Nested Loop
                      ->  Seq Scan on tenk1 a
                      ->  Function Scan on generate_series g
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- don't need the explicit LATERAL keyword for functions
@@ -4835,7 +4835,7 @@ explain (costs off)
                ->  Nested Loop
                      ->  Seq Scan on tenk1 a
                      ->  Function Scan on generate_series g
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- lateral with UNION ALL subselect
@@ -4854,7 +4854,7 @@ explain (costs off)
                            Filter: (g.g = q1)
                      ->  Seq Scan on int8_tbl b
                            Filter: (g.g = q2)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 select * from generate_series(100,200) g,
@@ -4887,7 +4887,7 @@ explain (costs off)
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                  Hash Key: b.unique2
                                  ->  Seq Scan on tenk1 b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 select count(*) from tenk1 a,
@@ -5226,7 +5226,7 @@ select * from
          ->  Seq Scan on public.int8_tbl b
                Output: b.q1, b.q2, a.q2
                Filter: (a.q2 = b.q1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (14 rows)
 
@@ -5265,7 +5265,7 @@ select * from
          ->  Seq Scan on public.int8_tbl b
                Output: b.q1, b.q2, COALESCE(a.q2, 42::bigint)
                Filter: (a.q2 = b.q1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (14 rows)
 
@@ -5304,7 +5304,7 @@ select * from int4_tbl i left join
                Output: j.f1
                ->  Seq Scan on public.int2_tbl j
                      Output: j.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (13 rows)
 
@@ -5333,7 +5333,7 @@ select * from int4_tbl i left join
          ->  Seq Scan on public.int2_tbl j
                Output: j.f1, COALESCE(i.*)
                Filter: (i.f1 = j.f1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (11 rows)
 
@@ -5375,7 +5375,7 @@ select * from int4_tbl a,
                            Output: b.f1
                            ->  Seq Scan on public.int4_tbl b
                                  Output: b.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (22 rows)
 
@@ -5447,7 +5447,7 @@ select * from
                                  Output: c.q1
                                  ->  Seq Scan on public.int8_tbl c
                                        Output: c.q1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (24 rows)
 
@@ -5551,7 +5551,7 @@ select * from
          Output: ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
          ->  Result
                Output: (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (38 rows)
 
@@ -5617,7 +5617,7 @@ select c.*,a.*,ss1.q1,ss2.q1,ss3.* from
                      Output: i.f1
                      ->  Seq Scan on public.int4_tbl i
                            Output: i.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (50 rows)
 
@@ -5645,7 +5645,7 @@ select * from
          Output: (3)
          ->  Result
                Output: 3
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 -- check handling of nested appendrels inside LATERAL
@@ -5701,7 +5701,7 @@ select * from
                              Output: tenk1.unique1, tenk1.unique2
                              ->  Seq Scan on public.tenk1
                                    Output: tenk1.unique1, tenk1.unique2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (22 rows)
 
 select * from

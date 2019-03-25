@@ -31,7 +31,9 @@ PG_FUNCTION_INFO_V1(zstd_compress);
 PG_FUNCTION_INFO_V1(zstd_decompress);
 PG_FUNCTION_INFO_V1(zstd_validator);
 
+#ifndef UNIT_TESTING
 PG_MODULE_MAGIC;
+#endif
 
 /* Internal state for zstd */
 typedef struct zstd_state

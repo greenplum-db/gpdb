@@ -300,7 +300,7 @@ shouldPickInstrInShmem(NodeTag tag)
 		case T_SeqScan:
 
 			/*
-			 * If table has many partitions, legacy planner will generate a
+			 * If table has many partitions, Postgres planner will generate a
 			 * plan with many SCAN nodes under a APPEND node. If the number of
 			 * partitions are too many, this plan will occupy too many slots.
 			 * Here is a limitation on number of shmem slots used by scan

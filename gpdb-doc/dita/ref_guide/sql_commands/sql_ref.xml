@@ -77,6 +77,9 @@
       <li id="ad142566">
         <xref href="./ALTER_SERVER.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li id="altersystem">
+        <xref href="./ALTER_SYSTEM.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad140304">
         <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/>
       </li>

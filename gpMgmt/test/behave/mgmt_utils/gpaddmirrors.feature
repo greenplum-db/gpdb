@@ -37,7 +37,7 @@ Feature: Tests for gpaddmirrors
         And the database is killed on hosts "mdw,sdw1,sdw2,sdw3"
         And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
         And gpaddmirrors adds mirrors in spread configuration
-        Then verify the database has mirrors in spread configuration
+        Then verify that mirror segments are in "spread" configuration
         And the user runs "gpstop -aqM fast"
 
     Scenario: gpaddmirrors with a default master data directory

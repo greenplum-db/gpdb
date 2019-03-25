@@ -1516,7 +1516,7 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 				 * Since we have introduced Global Deadlock Detector, only for ao
 				 * table should we upgrade the lock.
 				 */
-				if (rte->relid > FirstNormalObjectId &&
+				if (rte->relid >= FirstNormalObjectId &&
 					(plannedstmt->commandType == CMD_UPDATE ||
 					 plannedstmt->commandType == CMD_DELETE) &&
 					CondUpgradeRelLock(rte->relid))
@@ -1606,7 +1606,7 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					 * Catalog tables are replicated across cluster and don't
 					 * suffer from the deadlock.
 					 */
-					if (rte->relid > FirstNormalObjectId &&
+					if (rte->relid >= FirstNormalObjectId &&
 						(parsetree->commandType == CMD_UPDATE ||
 						 parsetree->commandType == CMD_DELETE) &&
 						CondUpgradeRelLock(rte->relid))

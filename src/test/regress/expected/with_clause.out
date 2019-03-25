@@ -2100,7 +2100,7 @@ explain (costs off) with t as (select * from with_test1) select * from t where i
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Seq Scan on with_test1
          Filter: (i = 10)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 -- Test to validate an old bug which caused incorrect results when a subquery

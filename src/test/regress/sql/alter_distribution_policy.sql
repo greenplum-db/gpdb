@@ -421,3 +421,10 @@ select policytype, distkey, distclass from gp_distribution_policy where localoid
 CREATE TABLE tstab (i int4, t tsvector) distributed by (i);
 CREATE UNIQUE INDEX tstab_idx ON tstab(t);
 INSERT INTO tstab VALUES (1, 'foo');
+
+-- ALTER TABLE SET DISTRIBUTED RANDOMLY should not work on a table
+-- that has a primary key or unique index.
+CREATE TABLE alter_table_with_primary_key (a int primary key);
+ALTER TABLE alter_table_with_primary_key SET DISTRIBUTED RANDOMLY;
+CREATE TABLE alter_table_with_unique_index (a int unique);
+ALTER TABLE alter_table_with_unique_index SET DISTRIBUTED RANDOMLY;

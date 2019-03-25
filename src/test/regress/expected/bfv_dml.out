@@ -186,7 +186,7 @@ explain update update_pk_test set b = 5;
  Update on update_pk_test  (cost=0.00..1.01 rows=1 width=14)
    ->  Seq Scan on update_pk_test  (cost=0.00..1.01 rows=1 width=14)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (4 rows)
 
 update update_pk_test set b = 5;
@@ -204,7 +204,7 @@ explain update update_pk_test set a = 5;
          Hash Key: a
          ->  Split  (cost=0.00..1.01 rows=1 width=14)
                ->  Seq Scan on update_pk_test  (cost=0.00..1.01 rows=1 width=14)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 update update_pk_test set a = 5;

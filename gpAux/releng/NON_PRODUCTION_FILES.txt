@@ -1,6 +1,5 @@
 bin/explain.pl
 bin/explain.pm
-bin/gpaddmirrors
 bin/gptorment.pl
 bin/lib/gptest.py
 bin/pgbench

@@ -127,6 +127,25 @@ class GpRecoverSegmentProgram:
         self.__pool = None
         self.logger = logger
 
+        # If user did not specify a value for showProgressInplace and
+        # stdout is a tty then send escape sequences to gprecoverseg
+        # output. Otherwise do not show progress inplace.
+        if self.__options.showProgressInplace is None:
+            self.__options.showProgressInplace = sys.stdout.isatty()
+
+
+    def getProgressMode(self):
+        if self.__options.showProgress:
+            if self.__options.showProgressInplace:
+                progressMode = GpMirrorListToBuild.Progress.INPLACE
+            else:
+                progressMode = GpMirrorListToBuild.Progress.SEQUENTIAL
+        else:
+            progressMode = GpMirrorListToBuild.Progress.NONE
+
+        return progressMode
+
+
     def outputToFile(self, mirrorBuilder, gpArray, fileName):
         lines = []
 
@@ -251,7 +270,8 @@ class GpRecoverSegmentProgram:
         self._output_segments_with_persistent_mirroring_disabled(segs_with_persistent_mirroring_disabled)
 
         return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
-                                   self.__options.parallelDegree, forceoverwrite=True)
+                                   self.__options.parallelDegree, forceoverwrite=True,
+                                   progressMode=self.getProgressMode())
 
     def findAndValidatePeersForFailedSegments(self, gpArray, failedSegments):
         dbIdToPeerMap = gpArray.getDbIdToPeerMap()
@@ -387,7 +407,8 @@ class GpRecoverSegmentProgram:
         return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                    self.__options.parallelDegree,
                                    interfaceHostnameWarnings,
-                                   forceoverwrite=True)
+                                   forceoverwrite=True,
+                                   progressMode=self.getProgressMode())
 
     def _output_segments_with_persistent_mirroring_disabled(self, segs_persistent_mirroring_disabled=None):
         if segs_persistent_mirroring_disabled:
@@ -626,7 +647,7 @@ class GpRecoverSegmentProgram:
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
                                               len(mirrorBuilder.getMirrorsToBuild()), True)
 
-            self.trigger_fts_probe(gpArray)
+            self.trigger_fts_probe(port=gpEnv.getMasterPort())
 
             self.logger.info("******************************************************************")
             self.logger.info("Updating segments for streaming is completed.")
@@ -636,9 +657,9 @@ class GpRecoverSegmentProgram:
 
         sys.exit(0)
 
-    def trigger_fts_probe(self, gpArray):
+    def trigger_fts_probe(self, port=0):
         self.logger.info('Triggering FTS probe')
-        with dbconn.connect(dbconn.DbURL()) as conn:
+        with dbconn.connect(dbconn.DbURL(port=port)) as conn:
             res = dbconn.execSQL(conn, "SELECT gp_request_fts_probe_scan()")
         return res.fetchall()
 
@@ -685,7 +706,13 @@ class GpRecoverSegmentProgram:
                            version='%prog version $Revision$')
         parser.setHelp(help)
 
-        addStandardLoggingAndHelpOptions(parser, True)
+        loggingGroup = addStandardLoggingAndHelpOptions(parser, True)
+        loggingGroup.add_option("-s", None, default=None, action='store_false',
+                                dest='showProgressInplace',
+                                help='Show pg_basebackup progress sequentially instead of inplace')
+        loggingGroup.add_option("--no-progress",
+                                dest="showProgress", default=True, action="store_false",
+                                help="Suppress pg_basebackup progress output")
 
         addTo = OptionGroup(parser, "Connection Options")
         parser.add_option_group(addTo)

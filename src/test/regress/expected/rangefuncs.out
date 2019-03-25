@@ -1979,7 +1979,7 @@ select x from int8_tbl, extractq2(int8_tbl) f(x);
          ->  Function Scan on f
                Output: f.x
                Function Call: int8_tbl.q2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 select x from int8_tbl, extractq2(int8_tbl) f(x);
@@ -2009,7 +2009,7 @@ select x from int8_tbl, extractq2_2(int8_tbl) f(x);
          Output: ((int8_tbl.*).q2)
          ->  Result
                Output: (int8_tbl.*).q2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 select x from int8_tbl, extractq2_2(int8_tbl) f(x);
@@ -2044,7 +2044,7 @@ select x from int8_tbl, extractq2_append(int8_tbl) f(x);
                      Output: (int8_tbl.*).q2
                ->  Result
                      Output: (int8_tbl.*).q2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 select x from int8_tbl, extractq2_append(int8_tbl) f(x);

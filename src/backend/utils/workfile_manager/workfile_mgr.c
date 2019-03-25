@@ -61,37 +61,6 @@
  */
 int			gp_workfile_max_entries = 8192;
 
-/*
- * Shared memory data structures.
- *
- * One workfile_set per workfile. Each workfile_set entry is owned by a backend.
- *
- * Per-query summary. These could be computed by scanning the workfile_set array,
- * but we keep a summary in a separate hash table so that we can quickly detect
- * if the per-query limit is exceeded. This is needed to enforce
- * gp_workfile_limit_files_per_query
- *
- * Local:
- *
- * In addition to the bookkeeping in shared memory, we keep an array in backend
- * private memory. The array is indexed by the virtual file descriptor, File.
- */
-
-typedef struct WorkFileUsagePerQuery
-{
-	/* hash key */
-	int32		session_id;
-	int32		command_count;
-
-	int32		refcount;		/* number of working sets */
-
-	int32		num_files;
-	uint64		total_bytes;
-
-	bool		active;
-
-} WorkFileUsagePerQuery;
-
 #define SizeOfWorkFileUsagePerQueryKey (2 * sizeof(int32));
 
 typedef struct workfile_set WorkFileSetSharedEntry;

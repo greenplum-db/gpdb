@@ -208,8 +208,6 @@ def validate_options(options, args, parser):
         logger.error('Master data directory %s does not exist.' % options.master_data_directory)
         parser.exit()
 
-    options.pgport = int(os.getenv('PGPORT', 5432))
-
     return options, args
 
 
@@ -276,6 +274,7 @@ status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
                           table_oid oid,
                           root_partition_name text,
                           rank int,
+                          external_writable bool,
                           status text,
                           expansion_started timestamp,
                           expansion_finished timestamp,
@@ -379,9 +378,12 @@ class GpExpandStatus():
         self._master_data_directory = master_data_directory
         self._master_mirror = master_mirror
         self._status_filename = master_data_directory + '/gpexpand.status'
-        self._status_standby_filename = master_data_directory + '/gpexpand.standby.status'
+        if master_mirror:
+            self._status_standby_filename = master_mirror.getSegmentDataDirectory() \
+                                            + '/gpexpand.status'
+            self._segment_configuration_standby_filename = master_mirror.getSegmentDataDirectory() \
+                                            + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE
         self._fp = None
-        self._fp_standby = None
         self._temp_dir = None
         self._input_filename = None
         self._gp_segment_configuration_backup = None
@@ -421,32 +423,30 @@ class GpExpandStatus():
         """Creates a new gpexpand status file"""
         try:
             self._fp = open(self._status_filename, 'w')
-            if self._master_mirror:
-                self._fp_standby = open(self._status_standby_filename, 'w')
-                self._fp_standby.write('UNINITIALIZED:None\n')
-                self._fp_standby.flush()
             self._fp.write('UNINITIALIZED:None\n')
             self._fp.flush()
+            os.fsync(self._fp)
             self._status.append('UNINITIALIZED')
             self._status_info.append('None')
         except IOError:
             raise
 
-        self._sync_status_file()
+        if self._master_mirror:
+            self._sync_status_file()
 
     def _sync_status_file(self):
         """Syncs the gpexpand status file with the master mirror"""
-        if self._master_mirror:
-            cpCmd = Scp('gpexpand copying status file to master mirror',
-                        srcFile=self._status_standby_filename,
-                        dstFile=self._status_filename,
-                        dstHost=self._master_mirror.getSegmentHostName())
-            cpCmd.run(validateAfter=True)
+        cpCmd = Scp('gpexpand copying status file to master mirror',
+                    srcFile=self._status_filename,
+                    dstFile=self._status_standby_filename,
+                    dstHost=self._master_mirror.getSegmentHostName())
+        cpCmd.run(validateAfter=True)
 
-    def set_status(self, status, status_info=None):
+    def set_status(self, status, status_info=None, force=False):
         """Sets the current status.  gpexpand status must be set in
            proper order.  Any out of order status result in an
-           InvalidStatusError exception"""
+           InvalidStatusError exception. But if force is True, setting
+           status out of order is allowded"""
         self.logger.debug("Transitioning from %s to %s" % (self._status[-1], status))
 
         if not self._fp:
@@ -454,17 +454,18 @@ class GpExpandStatus():
         if not self._status_values.has_key(status):
             raise InvalidStatusError('%s is an invalid gpexpand status' % status)
         # Only allow state transitions forward or backward 1
+        # If force is True, allow write any status
         if self._status and \
-                        self._status_values[status] != self._status_values[self._status[-1]] + 1:
+                        self._status_values[status] != self._status_values[self._status[-1]] + 1 and \
+                        not force:
             raise InvalidStatusError('Invalid status transition from %s to %s' % (self._status[-1], status))
-        if self._master_mirror:
-            self._fp_standby.write('%s:%s\n' % (status, status_info))
-            self._fp_standby.flush()
-            self._sync_status_file()
         self._fp.write('%s:%s\n' % (status, status_info))
         self._fp.flush()
+        os.fsync(self._fp)
         self._status.append(status)
         self._status_info.append(status_info)
+        if self._master_mirror:
+            self._sync_status_file()
 
     def get_current_status(self):
         """Gets the current status that has been written to the gpexpand
@@ -483,17 +484,12 @@ class GpExpandStatus():
         if self._fp:
             self._fp.close()
             self._fp = None
-        if self._fp_standby:
-            self._fp_standby.close()
-            self._fp_standby = None
         if os.path.exists(self._status_filename):
             os.unlink(self._status_filename)
-        if os.path.exists(self._status_standby_filename):
-            os.unlink(self._status_standby_filename)
         if self._master_mirror:
             RemoveFile.remote('gpexpand master mirror status file cleanup',
                               self._master_mirror.getSegmentHostName(),
-                              self._status_filename)
+                              self._status_standby_filename)
 
     def remove_segment_configuration_backup_file(self):
         """ Remove the segment configuration backup file """
@@ -501,6 +497,20 @@ class GpExpandStatus():
         if self._gp_segment_configuration_backup != None and os.path.exists(
                 self._gp_segment_configuration_backup) == True:
             os.unlink(self._gp_segment_configuration_backup)
+        if self._master_mirror:
+            RemoveFile.remote('gpexpand master mirror segment configuration backup file cleanup',
+                              self._master_mirror.getSegmentHostName(),
+                              self._segment_configuration_standby_filename)
+
+    def sync_segment_configuration_backup_file(self):
+        """ Sync the segment configuration backup file to standby """
+        if self._master_mirror:
+            self.logger.debug("Sync segment configuration backup file")
+            cpCmd = Scp('gpexpand copying segment configuration backup file to master mirror',
+                        srcFile=self._gp_segment_configuration_backup,
+                        dstFile=self._segment_configuration_standby_filename,
+                        dstHost=self._master_mirror.getSegmentHostName())
+            cpCmd.run(validateAfter=True)
 
     def get_temp_dir(self):
         """Gets temp dir that was used during template creation"""
@@ -527,15 +537,21 @@ class GpExpandStatus():
         """Sets the filename of the gp_segment_configuration backup file"""
         self._gp_segment_configuration_backup = filename
 
-    def is_standby(self):
-        """Returns True if running on standby"""
-        return os.path.exists(self._master_data_directory + self._status_standby_filename)
-
     def can_rollback(self, status):
         """Return if it can rollback under current status"""
-        if int(self._status_values[status]) > int(self._status_values['UPDATE_CATALOG_DONE']):
+        if int(self._status_values[status]) >= int(self._status_values['UPDATE_CATALOG_DONE']):
             return False
         return True
+
+    def rewind(self, status, status_info=None):
+        """
+        Rewind to a particular status.
+        """
+        self.logger.debug("Rewind the status to %s" % status)
+
+        if not self._fp:
+            self._fp = open(self._status_filename, 'a+')
+        self.set_status(status, status_info, True)
 
 
 # -------------------------------------------------------------------------
@@ -939,9 +955,6 @@ class gpexpand:
                 raise ExpansionError('Catalog has been changed, the cluster can not rollback.')
 
             elif status[0] == 'BUILD_SEGMENT_TEMPLATE_STARTED':
-                if self.statusLogger.is_standby():
-                    self.logger.info('Running on standby master, skipping segment template rollback')
-                    continue
                 self.logger.info('Rolling back segment template build')
                 SegmentTemplate.cleanup_build_segment_template('gpexpand_schema.tar', status[1])
 
@@ -1124,6 +1137,7 @@ class gpexpand:
             self.options.master_data_directory + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE)
         self.gparray.dumpToFile(self.statusLogger.get_gp_segment_configuration_backup())
         self.statusLogger.set_status('UPDATE_CATALOG_STARTED', self.statusLogger.get_gp_segment_configuration_backup())
+        self.statusLogger.sync_segment_configuration_backup_file()
 
         # Mark expansion segment primaries not in sync
         for seg in self.gparray.getExpansionSegDbList():
@@ -1345,6 +1359,8 @@ class gpexpand:
 
         self.conn.commit()
 
+        inject_fault('gpexpand retry after releaseing catalog lock fault injection')
+
         self.statusLogger.set_status('SETUP_EXPANSION_SCHEMA_DONE')
 
     def prepare_schema(self):
@@ -1399,24 +1415,24 @@ class gpexpand:
     c.oid as tableoid,
     NULL as root_partition_name,
     2 as rank,
+    pe.writable is not null as external_writable,
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
     %s as source_bytes
 FROM
-            pg_class c
+    pg_class c
     JOIN pg_namespace n ON (c.relnamespace=n.oid)
     JOIN pg_catalog.gp_distribution_policy p on (c.oid = p.localoid)
     LEFT JOIN pg_partition pp on (c.oid=pp.parrelid)
     LEFT JOIN pg_partition_rule pr on (c.oid=pr.parchildrelid)
+    LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
 WHERE
     pp.parrelid is NULL
     AND pr.parchildrelid is NULL
     AND n.nspname != 'gpexpand'
     AND n.nspname != 'pg_bitmapindex'
     AND c.relpersistence != 't'
-    AND c.relstorage != 'x'
-
                   """ % (undone_status, src_bytes_str)
         self.logger.debug(sql)
         table_conn = self.connect_database(dbname)
@@ -1472,6 +1488,7 @@ SELECT
     c.oid as tableoid,
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as root_partition_name,
     2 as rank,
+    false as external_writable,
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
@@ -1736,7 +1753,7 @@ class ExpandTable():
         if row is not None:
             (self.dbname, self.fq_name, self.table_oid,
              self.root_partition_name,
-             self.rank, self.status,
+             self.rank, self.external_writable, self.status,
              self.expansion_started, self.expansion_finished,
              self.source_bytes) = row
         if self.fq_name == self.root_partition_name:
@@ -1745,10 +1762,10 @@ class ExpandTable():
     def add_table(self, conn):
         insertSQL = """INSERT INTO gpexpand.status_detail
                             VALUES ('%s','%s',%s,
-                                    '%s',%d,'%s','%s','%s',%d)
+                                    '%s',%d,'%s','%s','%s','%s',%d)
                     """ % (self.dbname.replace("'", "''"), self.fq_name.replace("'", "''"), self.table_oid,
                            self.root_partition_name.replace("'", "''"),
-                           self.rank, self.status,
+                           self.rank, self.external_writable, self.status,
                            self.expansion_started, self.expansion_finished,
                            self.source_bytes)
         logger.info('Added table %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
@@ -1790,12 +1807,9 @@ class ExpandTable():
     def expand(self, table_conn, cancel_flag):
         # for root partition, we want to expand whose partition in one shot
         # TODO: expand leaf partitions seperately in parallel
-        if self.is_root_partition:
-            only_str = ""
-        else:
-            only_str = "ONLY"
-
-        sql = 'ALTER TABLE %s %s EXPAND TABLE' % (only_str, self.fq_name)
+        only_str = "" if self.is_root_partition else "ONLY"
+        external_str = "EXTERNAL" if self.external_writable else ""
+        sql = 'ALTER %s TABLE %s %s EXPAND TABLE' % (external_str, only_str, self.fq_name)
 
         logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
         logger.debug("Expand SQL: %s" % sql.decode('utf-8'))
@@ -2209,7 +2223,7 @@ def main(options, args, parser):
             configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog())
         configurationInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
 
-        dburl = dbconn.DbURL(dbname=DBNAME)
+        dburl = dbconn.DbURL(dbname=DBNAME, port=gpEnv.getMasterPort())
 
         gpexpand_db_status = gpexpand.prepare_gpdb_state(logger, dburl, options)
 
@@ -2245,7 +2259,7 @@ def main(options, args, parser):
                     logger.error('There is no partially completed setup to rollback.')
                     sys.exit(1)
                 _gp_expand.rollback(dburl)
-                logger.info('Rollback complete.  Greenplum Database can now be started')
+                logger.info('Rollback complete.')
                 sys.exit(0)
             except ExpansionError, e:
                 logger.error(e)
@@ -2277,6 +2291,36 @@ def main(options, args, parser):
             _gp_expand.cleanup_new_segments()
             _gp_expand.update_catalog()
             _gp_expand.unlock_catalog()
+            _gp_expand.setup_schema()
+            _gp_expand.prepare_schema()
+            _gp_expand.sync_new_mirrors()
+            logger.info('************************************************')
+            logger.info('Initialization of the system expansion complete.')
+            logger.info('To begin table expansion onto the new segments')
+            logger.info('rerun gpexpand')
+            logger.info('************************************************')
+        elif gpexpand_file_status is not None and not _gp_expand.statusLogger.can_rollback(gpexpand_file_status):
+            """
+            gpexpand cannot rollback if new segments are online and catalog lock has been released in phase1
+            So if gpexpand fails after releasing catalog lock in phase1, it must retry the failing work
+            """
+            logger.warn('The last gpexpand setup did not complete successfully.')
+            logger.warn('But you can not rollback to the original state, for new segments have been online.')
+            logger.warn('So retry the failing work again in gpexpand setup.')
+
+            """Clean the schema first"""
+            conn = dbconn.connect(_gp_expand.dburl, encoding='UTF8')
+            dbconn.execSQL(conn, drop_schema_sql)
+            conn.commit()
+            conn.close()
+
+            """
+            Reset status to UPDATA_CATALOG_DONE
+            So following work can continue
+            """
+            _gp_expand.statusLogger.rewind('UPDATE_CATALOG_DONE', 'Reset status forcedly to retry the following work')
+
+            """Redo the following work"""
             _gp_expand.setup_schema()
             _gp_expand.prepare_schema()
             _gp_expand.sync_new_mirrors()

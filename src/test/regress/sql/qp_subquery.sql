@@ -1,12 +1,8 @@
--- start_ignore
 create schema qp_subquery;
 set search_path to qp_subquery;
-CREATE TABLE SUBSELECT_TBL1 (
-  							f1 integer,
-							f2 integer,
-  							f3 float
-						);
-		
+
+begin;
+CREATE TABLE SUBSELECT_TBL1 (f1 integer, f2 integer, f3 float);
 INSERT INTO SUBSELECT_TBL1 VALUES (1, 2, 3); 
 INSERT INTO SUBSELECT_TBL1 VALUES (2, 3, 4); 
 INSERT INTO SUBSELECT_TBL1 VALUES (3, 4, 5); 
@@ -14,8 +10,8 @@ INSERT INTO SUBSELECT_TBL1 VALUES (1, 1, 1);
 INSERT INTO SUBSELECT_TBL1 VALUES (2, 2, 2); 
 INSERT INTO SUBSELECT_TBL1 VALUES (3, 3, 3); 
 INSERT INTO SUBSELECT_TBL1 VALUES (6, 7, 8); 
-INSERT INTO SUBSELECT_TBL1 VALUES (8, 9, NULL); 
--- end_ignore
+INSERT INTO SUBSELECT_TBL1 VALUES (8, 9, NULL);
+commit;
 
 SELECT '' AS eight, * FROM SUBSELECT_TBL1 ORDER BY 2,3,4;
                         
@@ -54,28 +50,23 @@ SELECT 1 AS zero WHERE 1 NOT IN (SELECT 1);
 SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
                                 FROM SUBSELECT_TBL1 upper
                                 WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL1 WHERE f1 = upper.f1);
-                         
 
 SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
                                 FROM SUBSELECT_TBL1 upper
                                 WHERE f1 IN
                                 (SELECT f2 FROM SUBSELECT_TBL1 WHERE CAST(upper.f2 AS float) = f3);
 
-                         
-
 SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
                                 FROM SUBSELECT_TBL1 upper
                                 WHERE f3 IN (SELECT upper.f1 + f2 FROM SUBSELECT_TBL1
                                 WHERE f2 = CAST(f3 AS integer));
-                         
 
 SELECT '' AS five, f1 AS "Correlated Field"
                                 FROM SUBSELECT_TBL1
                                 WHERE (f1, f2) IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL1
                                 WHERE f3 IS NOT NULL);
-                         
 
--- start_ignore
+begin;
 create table join_tab1 ( i integer, j integer, t text);
 INSERT INTO join_tab1 VALUES (1, 4, 'one');
 INSERT INTO join_tab1 VALUES (2, 3, 'two');
@@ -88,12 +79,7 @@ INSERT INTO join_tab1 VALUES (8, 8, 'eight');
 INSERT INTO join_tab1 VALUES (0, NULL, 'zero');
 INSERT INTO join_tab1 VALUES (NULL, NULL, 'null');
 INSERT INTO join_tab1 VALUES (NULL, 0, 'zero');
--- end_ignore
 
-select * from join_tab1 order by i, t;				
-                         
-
--- start_ignore
 create table join_tab2 ( i integer, k integer);
 INSERT INTO join_tab2 VALUES (1, -1);
 INSERT INTO join_tab2 VALUES (2, 2);
@@ -104,9 +90,8 @@ INSERT INTO join_tab2 VALUES (5, -5);
 INSERT INTO join_tab2 VALUES (0, NULL);
 INSERT INTO join_tab2 VALUES (NULL, NULL);
 INSERT INTO join_tab2 VALUES (NULL, 0);
--- end_ignore
-select * from join_tab2; 
-                         
+commit;
+
 select * from ( SELECT '' AS "col", * FROM join_tab1 AS tx)A;
                          
 
@@ -136,68 +121,47 @@ select 25 = any ('{1,2,25}');
 select 'abc' = any('{abc,d,e}');
                          
 
--- start_ignore
 create table subq_abc(a int);
 insert into subq_abc values(1);
 insert into subq_abc values(9);
 insert into subq_abc values(3);
 insert into subq_abc values(6);
--- end_ignore
-select * from subq_abc;
-                         
 
 SELECT 9 = any (select * from subq_abc);
-                         
 
 select null::int >= any ('{}');
-                         
 
 select 'abc' = any('{" "}');
-                         
 
 select 33.4 = any (array[1,2,3]);
-                         
 
 select 40 = all ('{3,4,40,10}');
-                         
 
 select 55 >= all ('{1,2,55}');
-			 
 
 select 25 = all ('{25,25,25}');
-		          
 
 select 'abc' = all('{abc}');
-                         
 
 select 'abc' = all('{abc,d,e}');
-                         
 
 select 'abc' = all('{"abc"}');
-                         
 
 select 'abc' = all('{" "}');
-                         
 
 select null::int >= all ('{1,2,33}');
-                         
 
 select null::int >= all ('{}');
-                         
 
 select 33.4 > all (array[1,2,3]);                       
-                         
 
--- start_ignore
 create table emp_list(empid int,name char(20),sal float); 
 insert into emp_list values(1,'empone',1000); 
 insert into emp_list values(2,'emptwo',2000); 
 insert into emp_list values(3,'empthree',3000); 
 insert into emp_list values(4,'empfour',4000); 
 insert into emp_list values(5,'empfive',4000); 
--- end_ignore
-select * from emp_list;
-                       
+
 
 select name from emp_list where sal=(select max(sal) from emp_list);
                         
@@ -224,9 +188,8 @@ select to_char(Avg(sum_col1),'9999999.9999999') from (select sum(s1) as sum_col1
                       
 
 select g2,count(*) from (select I, count(*) as g2 from join_tab1 group by I) as vtable group by g2;
-                      
 
--- start_ignore
+begin;
 create table join_tab4 ( i integer, j integer, t text);
 insert into join_tab4 values (1,7,'sunday'); 
 insert into join_tab4 values (2,6,'monday');
@@ -235,9 +198,8 @@ insert into join_tab4 values (4,4,'wedday');
 insert into join_tab4 values (5,3,'thuday');
 insert into join_tab4 values (6,2,'friday');
 insert into join_tab4 values (7,1,'satday');
--- end_ignore
-select * from join_tab4;
-                      
+commit;
+
 
 select i,j,t from (select * from (select i,j,t from join_tab1)as dtab1 
 				UNION select * from(select i,j,t from join_tab4) as dtab2 )as mtab; 	
@@ -250,42 +212,25 @@ select * from join_tab1 where i = (select i from join_tab4);
          
 --
 -- Testing NOT-IN Subquery
---              
-
--- start_ignore
+--
 create table Tbl8352_t1(a int, b int) distributed by (a);
 create table Tbl8352_t2(a int, b int) distributed by (a);
 insert into Tbl8352_t1 values(1,null),(null,1),(1,1),(null,null);
--- end_ignore
-
-select * from Tbl8352_t1 order by 1,2;
-
--- start_ignore
 insert into Tbl8352_t2 values(1,1);
--- end_ignore
 
-select * from Tbl8352_t2;
 select * from Tbl8352_t1 where (Tbl8352_t1.a,Tbl8352_t1.b) not in (select Tbl8352_t2.a,Tbl8352_t2.b from Tbl8352_t2);
 
--- start_ignore
 create table Tbl8352_t1a(a int, b int) distributed by (a);
 create table Tbl8352_t2a(a int, b int) distributed by (a);
 insert into Tbl8352_t1a values(1,2),(3,null),(null,4),(null,null);
--- end_ignore
-
-select * from Tbl8352_t1a order by 1,2;
-
--- start_ignore
 insert into Tbl8352_t2a values(1,2);
--- end_ignore
 
-select * from Tbl8352_t2a;
 select * from Tbl8352_t1a where (Tbl8352_t1a.a,Tbl8352_t1a.b) not in (select Tbl8352_t2a.a,Tbl8352_t2a.b from Tbl8352_t2a) order by 1,2;
 
 select (1,null::int) not in (select 1,1);
 select (3,null::int) not in (select 1,1);
 
--- start_ignore
+begin;
 create table t1(a int, b int);
 create table t2(a int, b int);
 create table t3(a int, b int);
@@ -308,7 +253,7 @@ create table i1(a int, b int);
 create table i2(a int, b int);
 
 insert into i1 values(1,2);
--- end_ignore
+commit;
 
 --
 -- not in subquery involving vars from different rels with inner join
@@ -345,16 +290,13 @@ select t1.a, t2.b from t1 full outer join t2 on  (t1.a=t2.a and ((t1.a,t2.b) not
 
 select t1.a,t2.b from t1 left join (t2 inner join t3 on (t3.a not in (select t4.a from t4))) on (t1.a=t2.a);
 
--- start_ignore
+begin;
 create table Tbl01(a int, b int, c int);
-
 insert into Tbl01 values(1,2,3);
 insert into Tbl01 values(4,5,6);
 insert into Tbl01 values(7,8,9);
 insert into Tbl01 values(null,11,12);
-
 create table Tbl03(a int);
-
 insert into Tbl03 values(1),(4);
 
 create or replace function foo(int) returns int as $$
@@ -362,40 +304,32 @@ create or replace function foo(int) returns int as $$
 	       	    else null::int
 	       end;
 $$ language sql immutable;
--- end_ignore
+commit;
 
 select Tbl01.*,foo(Tbl01.a) as foo from Tbl01; -- showing foo values
 
 select Tbl01.* from Tbl01 where foo(Tbl01.a) not in (select a from Tbl03);
 
--- start_ignore
 create table Tbl02 as select Tbl01.*,foo(Tbl01.a) as foo from Tbl01;
--- end_ignore
 
 select Tbl02.* from Tbl02 where foo not in (select a from Tbl03);
 
--- start_ignore
+begin;
 create table Tbl04(a int, b int);
 insert into Tbl04 values(1,2),(3,4),(5,6);
-
 create table Tbl05(a int, b int);
 insert into Tbl05 values(1,2);
-
 create table Tbl06(a int, b int);
 insert into Tbl06 values(1,2),(3,4);
-
 create table i3(a int not null, b int not null);
 insert into i3 values(1,2);
-
 create table Tbl07(a int, b int);
 insert into Tbl07 values(1,2),(3,4),(null,null);
-
 create table Tbl08(a int, b int);
 insert into Tbl08 values(1,2),(3,4),(null,null);
-
 create table Tbl09(a int, b int);
 insert into Tbl09 values(1,2),(5,null),(null,8);
--- end_ignore
+commit;
 
 --
 -- Positive cases: We should be inferring non-nullability of the not-in subquery. This should result in HLASJ.
@@ -521,17 +455,13 @@ select Tbl04.* from Tbl04 where (Tbl04.a,Tbl04.b) not in (select i3.a,i3.b from 
 select Tbl04.* from Tbl04 where (Tbl04.a,Tbl04.b) not in (select Tbl05.a,Tbl05.b from Tbl05 where (Tbl05.a IN (select i3.a from i3)) AND (Tbl05.b IN (select i3.b from i3)));
 
 -- additional queries
-
--- start_ignore
 drop table if exists Tbl04;
-
 create table Tbl04(x int, y int);
 insert into Tbl04 values(1,2);
 insert into Tbl04 values(3,4);
 
 create table Tbl10(x int, y int);
 insert into Tbl10 values(1,null);
--- end_ignore
 
 select * from Tbl04 where (x,y) not in (select x,y from Tbl10);
 
@@ -539,12 +469,11 @@ select * from Tbl04 where (x,y) not in (select 1,y from Tbl10);
 
 select * from tbl10 where y not in (select 1 where false);
 
--- start_ignore
 alter table Tbl10 alter column x set not null;
--- end_ignore
+
 select * from Tbl04 where (x,y) not in (select x,y from Tbl10);
 
--- start_ignore
+begin;
 create table TblText1(a text, b text);
 create table TblText2(a text, b text);
 create table TblText3(a text, b text);
@@ -558,7 +487,7 @@ insert into TblText2 select * from TblText1;
 
 insert into TblText3 values('florian','waas');
 insert into TblText3 values('oak','barrett');
--- end_ignore
+commit;
 
 SELECT TblText1.a, TblText2.b FROM TblText1 JOIN TblText2 ON TblText1.a = TblText2.a WHERE ((NOT (TblText1.a, TblText2.b) IN (SELECT TblText3.a, TblText3.b FROM TblText3)));
 
@@ -567,7 +496,7 @@ SELECT TblText1.a, TblText2.b FROM TblText1 JOIN TblText2 ON TblText1.a = TblTex
 --
 -- Delete
 --
--- start_ignore
+begin;
 create table TabDel1(a int, b int);
 insert into TabDel1 values(1,2),(3,4),(5,6);
 
@@ -578,20 +507,18 @@ insert into TabDel3 values(1,2);
 
 create table TabDel4(a int not null, b int not null);
 insert into TabDel4 values(1,2);
--- end_ignore
+commit;
 
 explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- do not support this because we produce NLASJ
 
 explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- support this
--- start_ignore
 delete from TabDel2 where TabDel2.a not in (select a from TabDel4); 
--- end_ignore
 select * from TabDel2;
 
 --
 -- Update
 --
--- start_ignore
+begin;
 create table TblUp1(a int, b int);
 insert into TblUp1 values(1,2),(3,4),(5,6);
 
@@ -602,8 +529,7 @@ insert into TblUp3 values(1,2);
 
 create table TblUp4(a int not null, b int not null);
 insert into TblUp4 values(1,2);
-
--- end_ignore
+commit;
 
 -- planner does not support updates on distribution keys
 update TblUp1 set a=100 where a not in (select a from TblUp3);
@@ -614,7 +540,7 @@ select * from TblUp2;
 --
 -- Check for correct results for subqueries nested inside a scalar expression
 --
--- start_ignore
+begin;
 create table subselect_tab1 (a int, b text, c int);
 create table subselect_tab2 (a int, b int, c int);
 create table subselect_tab3 (a int, b text, c int);
@@ -623,7 +549,7 @@ insert into subselect_tab1 VALUES (100, 'false', 1);
 insert into subselect_tab1 VALUES (200, 'true', 2);
 insert into subselect_tab2 VALUES (2,2,2);
 insert into subselect_tab3 VALUES (200, 'falseg', 1);
--- end_ignore
+commit;
 
 -- scalar subquery in a null test expression
 select * from subselect_tab1 where (select b from subselect_tab2) is null;
@@ -649,11 +575,6 @@ SELECT * FROM subselect_tab3 WHERE (NOT EXISTS(SELECT c FROM subselect_tab2)) IN
 
 -- Test to verify that planner for subqueries, generates different copy of SubPlans referring to the same initplan
 -- and does not Assert on the subplan's being same
--- start_ignore
-drop table if exists append_rel2;
-drop table if exists append_rel1;
-drop table if exists append_rel;
--- end_ignore
 create table append_rel(att1 int, att2 int);
 create table append_rel1(att3 int) INHERITS (append_rel);
 create table append_rel2(att4 int) INHERITS(append_rel);
@@ -661,6 +582,5 @@ insert into append_rel values(1,10),(2,20),(3,30);
 explain with test as (select * from (select * from append_rel) p where att1 in (select att1 from append_rel where att2 >= 19) ) select att2 from append_rel where att1 in (select att1 from test where att2 <= 21);
 with test as (select * from (select * from append_rel) p where att1 in (select att1 from append_rel where att2 >= 19) ) select att2 from append_rel where att1 in (select att1 from test where att2 <= 21);
 
--- start_ignore
+set client_min_messages='warning';
 drop schema qp_subquery cascade;
--- end_ignore

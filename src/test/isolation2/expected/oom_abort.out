@@ -1,0 +1,3 @@
+select count(1) from lineitem as a, lineitem as b where a.l_orderkey = b.l_orderkey;
+ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=4410)
+DETAIL:  Per-query VM protect limit reached: current limit is 2048 kB, requested 8388712 bytes, available 1 MB

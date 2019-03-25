@@ -23,11 +23,11 @@ RESET gp_allow_rename_relation_without_lock;
 -- MPP-20466 Dis-allow duplicate constraint names for same table
 create table dupconstr (
 						i int,
-						j int constraint test CHECK (j > 10))
+						j int constraint dup_constraint CHECK (j > 10))
 						distributed by (i);
 -- should fail because of duplicate constraint name
-alter table dupconstr add constraint test unique (i);
-alter table dupconstr add constraint test primary key (i);
+alter table dupconstr add constraint dup_constraint unique (i);
+alter table dupconstr add constraint dup_constraint primary key (i);
 -- cleanup
 drop table dupconstr;
 

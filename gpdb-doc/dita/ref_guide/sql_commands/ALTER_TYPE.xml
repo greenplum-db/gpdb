@@ -4,10 +4,10 @@
 <topic id="topic1"><title id="bb137420">ALTER TYPE</title><body><p id="sql_command_desc">Changes the definition of a data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">
 ALTER TYPE <varname>name</varname> <varname>action</varname> [, ... ]
 ALTER TYPE <varname>name</varname> OWNER TO <varname>new_owner</varname>
-ALTER TYPE <varname>name</varname> RENAME ATTRIBUTE <varname>attribute_name</varname> TO <varname>new_attribute_name</varname>
-ALTER TYPE <varname>name</varname> RENAME TO <varname>new_name</varname> [ CASCADE | RESTRICT ]
+ALTER TYPE <varname>name</varname> RENAME ATTRIBUTE <varname>attribute_name</varname> TO <varname>new_attribute_name</varname> [ CASCADE | RESTRICT ]
+ALTER TYPE <varname>name</varname> RENAME TO <varname>new_name</varname>
 ALTER TYPE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
-ALTER TYPE <varname>name</varname> ADD VALUE <varname>new_enum_value</varname> [ { BEFORE | AFTER } <varname>existing_enum_value</varname> ]
+ALTER TYPE <varname>name</varname> ADD VALUE [ IF NOT EXISTS ] <varname>new_enum_value</varname> [ { BEFORE | AFTER } <varname>existing_enum_value</varname> ]
 ALTER TYPE <varname>name</varname> SET DEFAULT ENCODING ( <varname>storage_directive</varname> )
 
 where <varname>action</varname> is one of:
@@ -40,10 +40,14 @@ where <varname>action</varname> is one of:
         <li>
           <b><codeph>SET SCHEMA</codeph></b> — Moves the type into another schema. </li>
         <li>
-          <b><codeph>ADD VALUE [ BEFORE | AFTER ]</codeph></b> — Adds a new value to an
-          enum type. If the new value's place in the enum's ordering is not specified using
-            <codeph>BEFORE</codeph> or <codeph>AFTER</codeph>, then the new item is placed at the
-          end of the list of values. </li>
+          <b><codeph>ADD VALUE [ IF NOT EXISTS ] [ BEFORE | AFTER ]</codeph></b> — Adds a new value
+          to an enum type. The new value's place in the enum's ordering can be specified as being
+            <codeph>BEFORE</codeph> or <codeph>AFTER</codeph> one of the existing values. Otherwise,
+          the new item is added at the end of the list of values. <p>If <codeph>IF NOT
+              EXISTS</codeph> is specified, it is not an error if the type already contains the new
+            value; a notice is issued but no other action is taken. Otherwise, an error will occur
+            if the new value is already present.</p>
+        </li>
         <li>
           <b><codeph>CASCADE</codeph></b> — Automatically propagate the operation to typed tables of
           the type being altered, and their descendants. </li>

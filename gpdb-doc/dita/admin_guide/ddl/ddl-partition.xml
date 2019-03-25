@@ -243,7 +243,7 @@ PARTITION BY LIST (gender)
   DEFAULT PARTITION other );
 </codeblock>
         </p>
-        <note>The current Greenplum Database legacy optimizer allows list partitions with
+        <note>The current Greenplum Database Postgres optimizer allows list partitions with
           multi-column (composite) partition keys. A range partition only allows a single column as
           the partition key. The Greenplum Query Optimizer does not support composite keys, so you
           should not use composite partition keys.</note>
@@ -343,7 +343,7 @@ GRANT SELECT ON sales TO guest;
         <p>GPORCA, the Greenplum next generation query optimizer, supports uniform multi-level
           partitioned tables. If GPORCA is enabled (the default) and the multi-level partitioned
           table is not uniform, Greenplum Database executes queries against the table with the
-          legacy query optimizer. For information about uniform multi-level partitioned tables, see
+          Postgres query optimizer. For information about uniform multi-level partitioned tables, see
             <xref href="../query/topics/query-piv-uniform-part-tbl.xml#topic1"/>.</p>
         <p>For information about exchanging a leaf child partition with an external table, see <xref
             href="#topic_yhz_gpn_qs" format="dita"/>.</p>
@@ -351,7 +351,7 @@ GRANT SELECT ON sales TO guest;
           an external table:</p>
         <ul id="ul_byq_wdd_bt">
           <li>Queries that run against partitioned tables that contain external table partitions are
-            executed with the legacy query optimizer.</li>
+            executed with the Postgres query optimizer.</li>
           <li>The external table partition is a read only external table. Commands that attempt to
             access or modify data in the external table partition return an error. For example:<ul
               id="ul_ugr_try_bt">
@@ -688,8 +688,8 @@ PARTITION other;
           partition swaps one table in place of an existing partition. You can exchange partitions
           only at the lowest level of your partition hierarchy (only partitions that contain data
           can be exchanged). </p>
-        <p>You cannot exchange a partition with a replicated table. You cannot exchange a partition
-          with a partitioned table or a child partition of a partitioned table.</p>
+        <p>You cannot exchange a partition with a replicated table. Exchanging a partition with a partitioned table or a child partition of a partitioned
+          table is not supported.</p>
         <p>Partition exchange can be useful for data loading. For example, load a staging table and
           swap the loaded table into your partition design. You can use partition exchange to change
           the storage type of older partitions to append-optimized tables. For example:</p>

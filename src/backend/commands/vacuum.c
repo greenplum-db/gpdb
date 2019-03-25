@@ -2423,6 +2423,8 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 								   save_userid,
 								   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 			dispatchVacuum(vacstmt, &stats_context);
+
+			vac_update_relstats_from_list(stats_context.updated_stats);
 		}
 	}
 	else

@@ -10,7 +10,7 @@ explain insert into constr_tab values (1,2,3);
 ------------------------------------------------
  Insert on constr_tab  (cost=0.00..0.01 rows=1 width=0)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (3 rows)
 
 set optimizer_enable_dml_constraints=on;
@@ -19,7 +19,7 @@ explain insert into constr_tab values (1,2,3);
 ------------------------------------------------
  Insert on constr_tab  (cost=0.00..0.01 rows=1 width=0)
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (3 rows)
 
 -- The remaining tests require a row in the table.
@@ -33,7 +33,7 @@ explain update constr_tab set a = 10;
          Hash Key: a
          ->  Split  (cost=0.00..1.01 rows=1 width=22)
                ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 explain update constr_tab set b = 10;
@@ -41,7 +41,7 @@ explain update constr_tab set b = 10;
 -----------------------------------------------------------------
  Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
    ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (3 rows)
 
 set optimizer_enable_dml_constraints=on;
@@ -50,7 +50,7 @@ explain update constr_tab set b = 10;
 -----------------------------------------------------------------
  Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
    ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (3 rows)
 
 -- Same, with NOT NULL constraint.
@@ -66,7 +66,7 @@ explain update constr_tab set a = 10;
          Hash Key: a
          ->  Split  (cost=0.00..1.01 rows=1 width=22)
                ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 DROP TABLE IF EXISTS constr_tab;
@@ -82,7 +82,7 @@ explain update constr_tab set b = 10;
          Hash Key: a, b
          ->  Split  (cost=0.00..1.01 rows=1 width=22)
                ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 DROP TABLE IF EXISTS constr_tab;
@@ -98,7 +98,7 @@ explain update constr_tab set a = 10;
          Hash Key: a
          ->  Split  (cost=0.00..1.01 rows=1 width=22)
                ->  Seq Scan on constr_tab  (cost=0.00..1.01 rows=1 width=22)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 -- Test ORCA fallback on "FROM ONLY"
@@ -151,7 +151,7 @@ EXPLAIN SELECT * FROM ext_table_no_fallback;
 -----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..11000.00 rows=1000000 width=8)
    ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 EXPLAIN SELECT * FROM ONLY ext_table_no_fallback;
@@ -159,7 +159,7 @@ EXPLAIN SELECT * FROM ONLY ext_table_no_fallback;
 -----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..11000.00 rows=1000000 width=8)
    ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 EXPLAIN INSERT INTO heap_t1 SELECT * FROM ONLY ext_table_no_fallback;
@@ -169,6 +169,6 @@ EXPLAIN INSERT INTO heap_t1 SELECT * FROM ONLY ext_table_no_fallback;
    ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..11000.00 rows=333334 width=8)
          Hash Key: ext_table_no_fallback.b
          ->  External Scan on ext_table_no_fallback  (cost=0.00..11000.00 rows=333334 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 

@@ -182,7 +182,8 @@
           Guide</cite>.</p>
       <note type="important">PL/Java requires a Java environment on each Greenplum Database host.
         Ensure that the same Java environment is at the same location on all hosts: masters and
-        segments.</note>
+        segments. For example, to install OpenJDK
+        11:<codeblock>$ yum install -y java-11-openjdk</codeblock></note>
       <p>To install and use PL/Java:</p>
       <ol>
         <li>Specify the Java version used by PL/Java. Set the environment variables

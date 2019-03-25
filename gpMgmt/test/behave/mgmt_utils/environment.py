@@ -4,12 +4,14 @@ import shutil
 from test.behave_utils.utils import drop_database_if_exists, start_database_if_not_started,\
                                             create_database, \
                                             run_command, check_user_permissions, run_gpcommand
+from steps.mirrors_mgmt_utils import MirrorMgmtContext
 from gppylib.db import dbconn
 
-def before_feature(context, feature):
 
+def before_feature(context, feature):
     # we should be able to run gpexpand without having a cluster initialized
-    if 'gpexpand' in feature.tags or 'gpaddmirrors' in feature.tags or 'gpstate' in feature.tags:
+    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors']
+    if set(context.feature.tags).intersection(tags_to_skip):
         return
 
     drop_database_if_exists(context, 'testdb')
@@ -52,26 +54,35 @@ def before_feature(context, feature):
         dbconn.execSQL(context.conn, 'insert into t3 values(1, 4)')
         context.conn.commit()
 
+
 def after_feature(context, feature):
     if 'analyzedb' in feature.tags:
         context.conn.close()
     if 'minirepro' in feature.tags:
         context.conn.close()
 
+
 def before_scenario(context, scenario):
-    if 'gpexpand' in context.feature.tags or 'gpaddmirrors' in context.feature.tags or 'gpstate' in context.feature.tags:
+    if 'gpmovemirrors' in context.feature.tags:
+        context.mirror_context = MirrorMgmtContext()
+
+    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors']
+    if set(context.feature.tags).intersection(tags_to_skip):
         return
 
     if 'analyzedb' not in context.feature.tags:
         start_database_if_not_started(context)
         drop_database_if_exists(context, 'testdb')
 
+
 def after_scenario(context, scenario):
-    if 'gpexpand' in context.feature.tags \
-        or 'gpaddmirrors' in context.feature.tags \
-        or 'gpinitstandby' in context.feature.tags \
-        or 'gpstate' in context.feature.tags:
+    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpinitstandby']
+    if set(context.feature.tags).intersection(tags_to_skip):
         return
+
+    if 'gpmovemirrors' in context.feature.tags:
+        if 'temp_base_dir' in context:
+            shutil.rmtree(context.temp_base_dir)
 
     if 'analyzedb' not in context.feature.tags:
         start_database_if_not_started(context)

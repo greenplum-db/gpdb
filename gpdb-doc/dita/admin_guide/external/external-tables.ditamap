@@ -28,6 +28,9 @@
       </topicref>
     </topicref>
     <topicref href="pxf-overview.xml" navtitle="Accessing External Data with PXF"/>
+    <topicref href="g-foreign.xml" navtitle="Accessing External Data with Foreign Tables">
+      <topicref href="g-devel-fdw.xml"/>
+    </topicref>
     <topicref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml"/>
   </topicref>
 </map>

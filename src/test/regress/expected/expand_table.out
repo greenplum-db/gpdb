@@ -1025,6 +1025,19 @@ drop cascades to table inherit_t1_p4
 drop cascades to table inherit_t1_p3
 drop cascades to table inherit_t1_p5
 --
+-- Cannot expand a native view and transformed view
+--
+CREATE TABLE expand_table1(a int) distributed by (a);
+CREATE TABLE expand_table2(a int) distributed by (a);
+CREATE VIEW expand_view AS select * from expand_table1;
+CREATE rule "_RETURN" AS ON SELECT TO expand_table2
+    DO INSTEAD SELECT * FROM expand_table1;
+ALTER TABLE expand_table2 EXPAND TABLE;
+ERROR:  "expand_table2" is not a table
+ALTER TABLE expand_view EXPAND TABLE;
+ERROR:  "expand_view" is not a table
+ALTER TABLE expand_table1 EXPAND TABLE;
+--
 -- Test expanding a table with a domain type as distribution key.
 --
 select gp_debug_set_create_table_default_numsegments(2);
@@ -1059,3 +1072,10 @@ select numsegments from gp_distribution_policy where localoid='expand_domain_tab
            3
 (1 row)
 
+-- start_ignore
+-- We need to do a cluster expansion which will check if there are partial
+-- tables, we need to drop the partial tables to keep the cluster expansion
+-- run correctly.
+reset search_path;
+drop schema test_reshuffle cascade;
+-- end_ignore

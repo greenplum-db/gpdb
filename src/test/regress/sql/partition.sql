@@ -1524,11 +1524,16 @@ alter table mpp3621 add partition a9 start ('2007-06-01') end ('2007-07-01');
 
 drop table mpp3621;
 
--- Check for MPP-3679
-create table list_test (a text, b text) partition by list (a) (partition foo
-values ('foo'), partition bar values ('bar'), default partition baz);
-alter table list_test split default partition at ('baz') into (partition bing,
-default partition);
+-- Check for MPP-3679 and MPP-3692
+create table list_test (a text, b text) partition by list (a) (
+  partition foo values ('foo'),
+  partition bar values ('bar'),
+  default partition baz);
+insert into list_test values ('foo', 'blah');
+insert into list_test values ('bar', 'blah');
+insert into list_test values ('baz', 'blah');
+alter table list_test split default partition at ('baz')
+  into (partition bing, default partition);
 drop table list_test;
 
 -- MPP-3816: cannot drop column  which is the subject of partition config
@@ -1761,11 +1766,11 @@ drop table mpp_5397;
 
 -- MPP-4987 -- make sure we can't damage a partitioning configuration
 -- MPP-8405: disallow OIDS on partitioned tables 
-create table rank_damage (i int, j int) with oids partition by range(j) (start(1) end(10)
-every(1));
+create table rank_damage (i int, j int) with oids
+partition by range(j) (start(1) end(5) every(1));
 -- this works
-create table rank_damage (i int, j int)  partition by range(j) (start(1) end(10)
-every(1));
+create table rank_damage (i int, j int)
+partition by range(j) (start(1) end(5) every(1));
 -- should all fail
 alter table rank_damage_1_prt_1 no inherit rank_damage;
 create table rank2_damage(like rank_damage);
@@ -2114,7 +2119,20 @@ create index ti_j_idx on ti using bitmap(j);
 select * from pg_indexes where schemaname = 'public' and tablename like 'ti%';
 alter table ti add partition p3 start(3) end(10);
 select * from pg_indexes where schemaname = 'public' and tablename like 'ti%';
+-- Should not be able to drop child indexes added implicitly via ADD PARTITION
+drop index ti_1_prt_p3_i_idx;
+drop index ti_1_prt_p3_j_idx;
 alter table ti split partition p3 at (7) into (partition pnew1, partition pnew2);
+select * from pg_indexes where schemaname = 'public' and tablename like 'ti%';
+-- Should not be able to drop child indexes added implicitly via SPLIT PARTITION
+drop index ti_1_prt_pnew1_i_idx;
+drop index ti_1_prt_pnew1_j_idx;
+drop index ti_1_prt_pnew2_i_idx;
+drop index ti_1_prt_pnew2_j_idx;
+-- Index drop should cascade to all partitions- including those later added via
+-- ADD PARTITION or SPLIT PARTITION
+drop index ti_pkey;
+drop index ti_j_idx;
 select * from pg_indexes where schemaname = 'public' and tablename like 'ti%';
 drop table ti;
 
@@ -3889,13 +3907,13 @@ select gp_segment_id, relname from gp_dist_random('pg_class') where relkind = 'r
 alter table sales drop column tax;
 
 create table newpart(like sales);
-alter table newpart add constraint partable_pkey primary key(pkid, option3);
+alter table newpart add constraint newpart_pkey primary key(pkid, option3);
 alter table sales split partition for(1) at (50) into (partition aa1, partition aa2);
 
 select table_schema, table_name, constraint_name, constraint_type
 	from information_schema.table_constraints
 	where table_name in ('sales', 'newpart')
-	and constraint_name = 'partable_pkey'
+	and constraint_name in ('partable_pkey', 'newpart_pkey')
 	order by table_name desc;
 
 alter table sales exchange partition for (101) with table newpart;
@@ -3911,6 +3929,42 @@ alter table sales exchange partition for (101) with table newpart2;
 select * from sales order by pkid;
 drop table sales cascade;
 
+-- Exchage partiton table with a table having dropped column
+create table exchange_part(a int, b int) partition by range(b) (start (0) end (10) every (5));
+create table exchange1(a int, c int, b int);
+alter table exchange1 drop column c;
+alter table exchange_part exchange partition for (1) with table exchange1;
+copy exchange_part from STDIN DELIMITER as '|';
+9794 | 1
+9795 | 2
+9797 | 3
+9799 | 4
+9801 | 5
+9802 | 6
+9803 | 7
+9806 | 8
+9807 | 9
+9808 | 1
+9810 | 2
+9814 | 3
+9815 | 4
+9817 | 5
+9818 | 6
+9822 | 7
+9824 | 8
+9825 | 9
+9827 | 1
+9828 | 2
+9831 | 3
+9832 | 4
+9836 | 5
+9840 | 6
+9843 | 7
+9844 | 8
+\.
+select * from exchange_part;
+drop table exchange_part;
+drop table exchange1;
 -- Ensure that new partitions get the correct attributes (MPP17110)
 CREATE TABLE pt_tab_encode (a int, b text)
 with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
@@ -3936,3 +3990,28 @@ create table at_list (i int) partition by list(i) (partition p1 values(1));
 
 alter table at_list add partition foo2 start(6) end (10);
 alter table at_range add partition test values(5);
+
+-- Ensure array type for the non-partition table is there after partition exchange.
+CREATE TABLE pt_xchg(a int) PARTITION BY RANGE(a) (START(1) END(4) EVERY (2));
+create table xchg_tab1(a int);
+CREATE SCHEMA xchg_schema;
+create table xchg_schema.xchg_tab2(a int);
+alter table pt_xchg exchange partition for (1) with table xchg_tab1;
+alter table pt_xchg exchange partition for (3) with table xchg_schema.xchg_tab2;
+
+select a.typowner=b.typowner from pg_type a join pg_type b on true where a.typname = 'xchg_tab1' and b.typname = '_xchg_tab1';
+
+select nspname from pg_namespace join pg_type on pg_namespace.oid = pg_type.typnamespace where pg_type.typname = 'xchg_tab1' or pg_type.typname = '_xchg_tab1';
+select nspname from pg_namespace join pg_type on pg_namespace.oid = pg_type.typnamespace where pg_type.typname = 'xchg_tab2' or pg_type.typname = '_xchg_tab2';
+
+select typname from pg_type where typelem = 'xchg_tab1'::regtype;
+select typname from pg_type where typelem = 'xchg_schema.xchg_tab2'::regtype;
+
+select typname from pg_type where typarray = '_xchg_tab1'::regtype;
+select typname from pg_type where typarray = 'xchg_schema._xchg_tab2'::regtype;
+
+alter table pt_xchg exchange partition for (1) with table xchg_tab1;
+select a.typowner=b.typowner from pg_type a join pg_type b on true where a.typname = 'xchg_tab1' and b.typname = '_xchg_tab1';
+select nspname from pg_namespace join pg_type on pg_namespace.oid = pg_type.typnamespace where pg_type.typname = 'xchg_tab1' or pg_type.typname = '_xchg_tab1';
+select typname from pg_type where typelem = 'xchg_tab1'::regtype;
+select typname from pg_type where typarray = '_xchg_tab1'::regtype;

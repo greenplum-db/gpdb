@@ -172,6 +172,8 @@ CreateAOAuxiliaryTable(
 										 aoauxiliary_idxname,
 										 InvalidOid,
 										 InvalidOid,
+										 InvalidOid,
+										 InvalidOid,
 										 indexInfo,
 										 indexColNames,
 										 BTREE_AM_OID,

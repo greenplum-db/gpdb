@@ -95,7 +95,7 @@ explain (costs off) update base_tbl set a=a+1;
                ->  Seq Scan on child_a
    ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)
          ->  Seq Scan on child_b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 update base_tbl set a = 5;
@@ -154,7 +154,7 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                        ->  Broadcast Motion 3:3  (slice4; segments: 3)
                                              ->  Seq Scan on keo1 a
                                                    Filter: ((user_vie_fiscal_year_period_sk)::text = $2)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (30 rows)
 
 UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
@@ -194,7 +194,7 @@ EXPLAIN (COSTS OFF) DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS
                      ->  HashAggregate
                            Group Key: keo5_1.x
                            ->  Seq Scan on keo5 keo5_1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
@@ -503,7 +503,7 @@ explain update nosplitupdate set a=0 where a=1 and a<1;
    ->  Result  (cost=0.00..0.01 rows=1 width=0)
          One-Time Filter: false
  Planning time: 0.271 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- test split-update when split-node's flow is entry
@@ -526,7 +526,7 @@ explain update tsplit_entry set c = s.a from (select count(*) as a from gp_segme
                                  ->  Aggregate  (cost=1.00..1.01 rows=1 width=8)
                                        ->  Seq Scan on gp_segment_configuration  (cost=0.00..1.00 rows=1 width=0)
  Planning time: 1.088 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 update tsplit_entry set c = s.a from (select count(*) as a from gp_segment_configuration) s;

@@ -316,7 +316,8 @@
         </ul></p>
       <p>You can design a custom mirroring configuration and use the Greenplum <codeph><xref
             href="../utility_guide/admin_utilities/gpaddmirrors.xml">gpaddmirrors</xref></codeph> or
-          <codeph>gpmovemirrors</codeph> utilities to set up the configuration.</p>
+          <xref href="../utility_guide/admin_utilities/gpmovemirrors.xml">gpaddmirrors</xref>
+        utilities to set up the configuration.</p>
       <p><i>Block mirroring</i> is a custom mirror configuration that divides hosts in the cluster
         into equally sized blocks and distributes mirrors evenly to hosts within the block. If a
         primary segment fails, its mirror on another host within the same block becomes the active

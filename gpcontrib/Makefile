@@ -16,11 +16,21 @@ include $(top_builddir)/src/Makefile.global
 #
 # targets built via top_builddir/GNUmakefile
 #
-recurse_targets = gp_sparse_vector \
-               gp_debug_numsegments \
+recurse_targets = ""
+
+ifeq "$(enable_debug_extensions)" "yes"
+	recurse_targets = gp_sparse_vector \
                gp_distribution_policy \
                gp_internal_tools \
-               gp_inject_fault
+               gp_debug_numsegments \
+               gp_inject_fault \
+               gp_replica_check
+else
+	recurse_targets = gp_sparse_vector \
+               gp_distribution_policy \
+               gp_internal_tools
+endif
+
 ifeq "$(with_zstd)" "yes"
 	recurse_targets += zstd
 endif

@@ -69,7 +69,7 @@ static uint64 DoPortalRunFetch(Portal portal,
 				 int64 count,
 				 DestReceiver *dest);
 static void DoPortalRewind(Portal portal);
-static void PortalSetBackoffWeight(Portal portal);
+static void PortalBackoffEntryInit(Portal portal);
 
 /*
  * CreateQueryDesc
@@ -630,8 +630,8 @@ PortalStart(Portal portal, ParamListInfo params,
 		 */
 		portal->strategy = ChoosePortalStrategy(portal->stmts);
 
-		/* Initialize the backoff weight for this backend */
-		PortalSetBackoffWeight(portal);
+		/* Initialize the backoff entry for this backend */
+		PortalBackoffEntryInit(portal);
 
 		/*
 		 * Fire her up according to the strategy
@@ -1923,35 +1923,16 @@ DoPortalRewind(Portal portal)
 }
 
 /*
- * Computes the backoff weight (for query prioritization) for this backend,
- * and initializes the corresponding BackoffBackendEntry.
+ * Initializes the corresponding BackoffBackendEntry for this backend
  */
 static void
-PortalSetBackoffWeight(Portal portal)
+PortalBackoffEntryInit(Portal portal)
 {
-	int weight = BackoffDefaultWeight();
-
 	if (gp_enable_resqueue_priority &&
 		(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) &&
 		gp_session_id > -1)
 	{
-		/*
-		 * GPDB_94_MERGE_FIXME: cannot do catalog lookups, if we're not in a
-		 * transaction. superuser() requires a catalog lookup (unless the
-		 * current userid is cached).
-		 */
-		if (!IsTransactionState())
-			return;
-
-		if (superuser())
-		{
-			weight = BackoffSuperuserStatementWeight();
-		} else
-		{
-			weight = ResourceQueueGetPriorityWeight(portal->queueId);
-		}
-
-		/* Initialize the SHM backend entry with the computed backoff weight */
-		BackoffBackendEntryInit(gp_session_id, gp_command_count, weight);
+		/* Initialize the SHM backend entry */
+		BackoffBackendEntryInit(gp_session_id, gp_command_count, portal->queueId);
 	}
 }

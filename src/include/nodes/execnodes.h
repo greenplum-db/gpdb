@@ -84,6 +84,7 @@ typedef struct IndexInfo
 	bool		ii_ReadyForInserts;
 	bool		ii_Concurrent;
 	bool		ii_BrokenHotChain;
+	Oid			ii_Am;
 } IndexInfo;
 
 /* ----------------

@@ -14,7 +14,7 @@
           [<b>-n </b> <varname>parallel_processes</varname>]
         | {<b>-r</b>|<b>--rollback</b>}
         | {<b>-c</b>|<b>--clean</b>}
-        [<b>-D</b> <varname>database_name</varname>] [<b>-v</b>|<b>--verbose</b>] [<b>-s</b>|<b>--silent</b>]
+        [<b>-v</b>|<b>--verbose</b>] [<b>-s</b>|<b>--silent</b>]
         [{<b>-t</b>|<b>--tardir</b>} <varname>directory </varname>]
         [<b>-S</b>|<b>--simple-progress </b>]
 
@@ -64,8 +64,8 @@
       <p>In addition to initializing the segment instances, the initialization phase performs these
         actions:</p>
       <ul>
-        <li id="kt138259">Creates an expansion schema to store the status of the expansion
-          operation, including detailed status for tables.</li>
+        <li id="kt138259">Creates an expansion schema named <i>gpexpand</i> in the postgres database
+          to store the status of the expansion operation, including detailed status for tables.</li>
       </ul>
       <p>In the table data redistribution phase, <codeph>gpexpand</codeph> redistributes table data
         to rebalance the data across the old and new segment instances.</p>
@@ -118,13 +118,6 @@
           <pd>Duration of the expansion session from beginning to end.</pd>
         </plentry>
         <plentry>
-          <pt>-D <varname>database_name</varname></pt>
-          <pd>Specifies the database in which to create the expansion schema and tables. If this
-            option is not given, the setting for the environment variable
-              <codeph>PGDATABASE</codeph> is used. The database templates
-              <varname>template1</varname> and <varname>template0</varname> cannot be used.</pd>
-        </plentry>
-        <plentry>
           <pt>-e | --end '<varname>YYYY-MM-DD hh:mm:ss</varname>'</pt>
           <pd>Ending date and time for the expansion session.</pd>
         </plentry>
@@ -148,7 +141,7 @@
           <pd>Specifies the name of the expansion configuration file, which contains one line for
             each segment to be added in the format of:</pd>
           <pd>
-            <varname>hostname:address:port:fselocation:dbid:content:preferred_role:replication_port</varname>
+            <varname>hostname:address:port:datadir:dbid:content:preferred_role</varname>
           </pd>
         </plentry>
         <plentry>
@@ -162,9 +155,7 @@
         </plentry>
         <plentry>
           <pt>-r | --rollback</pt>
-          <pd>Roll back a failed expansion setup operation. If the rollback command fails, attempt
-            again using the <codeph>-D</codeph> option to specify the database that contains the
-            expansion schema for the operation that you want to roll back.</pd>
+          <pd>Roll back a failed expansion setup operation. </pd>
         </plentry>
         <plentry>
           <pt>-s | --silent</pt>
@@ -177,7 +168,7 @@
             utility does not record the relation size information and status information in the
             table <i>gpexpand.status_detail</i>. </pd>
           <pd>Specifying this option can improve performance by reducing the amount of progress
-            information written to the <codeph>gpexpand</codeph> tables.</pd>
+            information written to the <i>gpexpand</i> tables.</pd>
         </plentry>
         <plentry>
           <pt>[-t | --tardir] <varname>directory</varname></pt>
@@ -204,7 +195,7 @@
     <section id="section6">
       <title>Examples</title>
       <p>Run <codeph>gpexpand</codeph> with an input file to initialize new segments and create the
-        expansion schema in the default database:</p>
+        expansion schema in the postgres database:</p>
       <codeblock>$ gpexpand -i input_file</codeblock>
       <p>Run <codeph>gpexpand</codeph> for sixty hours maximum duration to redistribute tables to
         new segments:</p>

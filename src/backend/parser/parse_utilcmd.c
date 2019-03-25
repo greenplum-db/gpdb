@@ -151,6 +151,7 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 	CreateStmtContext cxt;
 	List	   *result;
 	List	   *save_alist;
+	List	   *save_root_partition_alist = NIL;
 	ListCell   *elements;
 	Oid			namespaceid;
 	Oid			existing_relid;
@@ -340,7 +341,8 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 	/*
 	 * Postprocess constraints that give rise to index definitions.
 	 */
-	transformIndexConstraints(&cxt, stmt->is_add_part || stmt->is_split_part);
+	if (!stmt->is_part_child || stmt->is_split_part || stmt->is_add_part)
+		transformIndexConstraints(&cxt, stmt->is_add_part || stmt->is_split_part);
 
 	/*
 	 * Carry any deferred analysis statements forward.  Added for MPP-13750
@@ -449,6 +451,17 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("PARTITION BY clause cannot be used with DISTRIBUTED REPLICATED clause")));
+
+	/*
+	 * Save the alist for root partitions before transformPartitionBy adds the
+	 * child create statements.
+	 */
+	if (stmt->partitionBy && !stmt->is_part_child)
+	{
+		save_root_partition_alist = cxt.alist;
+		cxt.alist = NIL;
+	}
+
 	/*
 	 * Process table partitioning clause
 	 */
@@ -462,6 +475,8 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 
 	result = lappend(cxt.blist, stmt);
 	result = list_concat(result, cxt.alist);
+	if (stmt->partitionBy && !stmt->is_part_child)
+		result = list_concat(result, save_root_partition_alist);
 	result = list_concat(result, save_alist);
 
 	MemoryContextDelete(cxt.tempCtx);
@@ -1204,7 +1219,7 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 	List	   *indexprs;
 	ListCell   *indexpr_item;
 	Oid			indrelid;
-	Oid			constraintId;
+	Oid			constraintId = InvalidOid;
 	int			keyno;
 	Oid			keycoltype;
 	Datum		datum;
@@ -1345,24 +1360,13 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 		index->isconstraint = false;
 
 	/*
-	 * If the index backs a constraint, use the same name for the constraint
-	 * as the source uses. This is particularly important for partitioned
-	 * tables, as some places assume that when a partitioned table has
-	 * a constraint, the constraint has the same name in all the partitions.
+	 * GPDB: If we are splitting a partition, or creating a new child
+	 * partition, set the parents of the relation in the index statement.
 	 */
-	if (index->isconstraint)
+	if (cxt->issplitpart || cxt->iscreatepart)
 	{
-		char	   *conname;
-
-		if (!OidIsValid(constraintId))
-			constraintId = get_index_constraint(source_relid);
-
-		conname = GetConstraintNameByOid(constraintId);
-		if (!conname)
-			elog(ERROR, "could not find constraint that index \"%s\" backs in source table",
-				 RelationGetRelationName(source_idx));
-
-		index->altconname = conname;
+		index->parentIndexId = source_relid;
+		index->parentConstraintId = constraintId;
 	}
 
 	/* Get the index expressions, if any */
@@ -2655,14 +2659,10 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 	index->deferrable = constraint->deferrable;
 	index->initdeferred = constraint->initdeferred;
 
-	/*
-	 * We used to force the index name to be the constraint name, but they
-	 * are in different namespaces and so have different  requirements for
-	 * uniqueness. Here we leave the index name alone and put the constraint
-	 * name in the IndexStmt, for use in DefineIndex.
-	 */
-	index->idxname = NULL;	/* DefineIndex will choose name */
-	index->altconname = constraint->conname; /* User may have picked the name. */
+	if (constraint->conname != NULL)
+		index->idxname = pstrdup(constraint->conname);
+	else
+		index->idxname = NULL;	/* DefineIndex will choose name */
 
 	index->relation = cxt->relation;
 	index->accessMethod = constraint->access_method ? constraint->access_method : DEFAULT_INDEX_TYPE;

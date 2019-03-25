@@ -3265,7 +3265,7 @@ set enable_nestloop=on;
 --                                  ->  Seq Scan on a
 --                      ->  Index Only Scan using c_i_j_idx on c
 --                            Index Cond: (j = (a.i + b.i)) [4]
---  Optimizer: legacy query optimizer
+--  Optimizer: Postgres query optimizer
 -- (14 rows)
 --
 -- The crucal parts are:

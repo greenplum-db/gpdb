@@ -636,6 +636,8 @@ NOTICE:  table "co_cr_sub_partzlib8192_1_defexch" does not exist, skipping
  
 Insert into co_cr_sub_partzlib8192_1_exch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where  a1=10 and a2!='C';
 Insert into co_cr_sub_partzlib8192_1_defexch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where a1 =10 and a2!='C';
+CREATE INDEX ON co_cr_sub_partzlib8192_1_exch USING bitmap (a1);
+CREATE INDEX ON co_cr_sub_partzlib8192_1_exch (a9);
 Alter table co_cr_sub_partzlib8192_1 alter partition FOR (RANK(1)) exchange partition sp1 with table co_cr_sub_partzlib8192_1_exch;
 NOTICE:  exchanged partition "sp1" of partition for rank 1 of relation "co_cr_sub_partzlib8192_1" with relation "co_cr_sub_partzlib8192_1_exch"
 \d+ co_cr_sub_partzlib8192_1_1_prt_1_2_prt_sp1
@@ -686,6 +688,9 @@ NOTICE:  exchanged partition "sp1" of partition for rank 1 of relation "co_cr_su
  a41    | smallint                    |                                                                            | plain    |              | zlib             | 1                 | 32768      | 
  a42    | integer                     |                                                                            | plain    |              | zlib             | 1                 | 32768      | 
 Checksum: t
+Indexes:
+    "co_cr_sub_partzlib8192_1_exch_a1_idx" bitmap (a1)
+    "co_cr_sub_partzlib8192_1_exch_a9_idx" btree (a9)
 Check constraints:
     "co_cr_sub_partzlib8192_1_1_prt_1_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "co_cr_sub_partzlib8192_1_1_prt_1_check" CHECK (a1 >= 1 AND a1 < 1001)
@@ -1101,6 +1106,8 @@ NOTICE:  table "co_cr_sub_partzlib8192_1_2_defexch" does not exist, skipping
  
 Insert into co_cr_sub_partzlib8192_1_2_exch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where  a1=10 and a2!='C';
 Insert into co_cr_sub_partzlib8192_1_2_defexch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where a1 =10 and a2!='C';
+CREATE INDEX ON co_cr_sub_partzlib8192_1_2_exch USING bitmap (a1);
+CREATE INDEX ON co_cr_sub_partzlib8192_1_2_exch(a9);
 Alter table co_cr_sub_partzlib8192_1_2 alter partition p2 exchange partition FOR (RANK(1)) with table co_cr_sub_partzlib8192_1_2_exch;
 \d+ co_cr_sub_partzlib8192_1_2_1_prt_p2_2_prt_2
                                                                  Append-Only Columnar Table "public.co_cr_sub_partzlib8192_1_2_1_prt_p2_2_prt_2"
@@ -1150,6 +1157,9 @@ Alter table co_cr_sub_partzlib8192_1_2 alter partition p2 exchange partition FOR
  a41    | smallint                    |                                                                              | plain    |              | zlib             | 1                 | 32768      | 
  a42    | integer                     |                                                                              | plain    |              | zlib             | 1                 | 32768      | 
 Checksum: t
+Indexes:
+    "co_cr_sub_partzlib8192_1_2_exch_a1_idx" bitmap (a1)
+    "co_cr_sub_partzlib8192_1_2_exch_a9_idx" btree (a9)
 Check constraints:
     "co_cr_sub_partzlib8192_1_2_1_prt_p2_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
     "co_cr_sub_partzlib8192_1_2_1_prt_p2_check" CHECK (a2 = 'M    '::bpchar)
@@ -1636,6 +1646,8 @@ NOTICE:  table "co_wt_sub_partrle_type8192_1_defexch" does not exist, skipping
  
 Insert into co_wt_sub_partrle_type8192_1_exch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where  a1=10 and a2!='C';
 Insert into co_wt_sub_partrle_type8192_1_defexch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where a1 =10 and a2!='C';
+CREATE INDEX ON co_wt_sub_partrle_type8192_1_exch USING bitmap (a1);
+CREATE INDEX ON co_wt_sub_partrle_type8192_1_exch(a9);
 Alter table co_wt_sub_partrle_type8192_1 alter partition FOR (RANK(1)) exchange partition sp1 with table co_wt_sub_partrle_type8192_1_exch;
 NOTICE:  exchanged partition "sp1" of partition for rank 1 of relation "co_wt_sub_partrle_type8192_1" with relation "co_wt_sub_partrle_type8192_1_exch"
 \d+ co_wt_sub_partrle_type8192_1_1_prt_1_2_prt_sp1
@@ -1686,6 +1698,9 @@ NOTICE:  exchanged partition "sp1" of partition for rank 1 of relation "co_wt_su
  a41    | smallint                    |                                                                                | plain    |              | zlib             | 1                 | 32768      | 
  a42    | integer                     |                                                                                | plain    |              | zlib             | 1                 | 32768      | 
 Checksum: t
+Indexes:
+    "co_wt_sub_partrle_type8192_1_exch_a1_idx" bitmap (a1)
+    "co_wt_sub_partrle_type8192_1_exch_a9_idx" btree (a9)
 Check constraints:
     "co_wt_sub_partrle_type8192_1_1_prt_1_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "co_wt_sub_partrle_type8192_1_1_prt_1_check" CHECK (a1 >= 1 AND a1 < 1001)
@@ -2095,6 +2110,8 @@ NOTICE:  table "co_wt_sub_partrle_type8192_1_2_defexch" does not exist, skipping
  
 Insert into co_wt_sub_partrle_type8192_1_2_exch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where  a1=10 and a2!='C';
 Insert into co_wt_sub_partrle_type8192_1_2_defexch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where a1 =10 and a2!='C';
+CREATE INDEX ON co_wt_sub_partrle_type8192_1_2_exch USING bitmap (a1);
+CREATE INDEX ON co_wt_sub_partrle_type8192_1_2_exch (a9);
 Alter table co_wt_sub_partrle_type8192_1_2 alter partition p1 exchange partition FOR (RANK(1)) with table co_wt_sub_partrle_type8192_1_2_exch;
 \d+ co_wt_sub_partrle_type8192_1_2_1_prt_p1_2_prt_2
                                                                  Append-Only Columnar Table "public.co_wt_sub_partrle_type8192_1_2_1_prt_p1_2_prt_2"
@@ -2144,6 +2161,9 @@ Alter table co_wt_sub_partrle_type8192_1_2 alter partition p1 exchange partition
  a41    | smallint                    |                                                                                  | plain    |              | zlib             | 1                 | 32768      | 
  a42    | integer                     |                                                                                  | plain    |              | zlib             | 1                 | 32768      | 
 Checksum: t
+Indexes:
+    "co_wt_sub_partrle_type8192_1_2_exch_a1_idx" bitmap (a1)
+    "co_wt_sub_partrle_type8192_1_2_exch_a9_idx" btree (a9)
 Check constraints:
     "co_wt_sub_partrle_type8192_1_2_1_prt_p1_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
     "co_wt_sub_partrle_type8192_1_2_1_prt_p1_check" CHECK (a2 = 'M    '::bpchar)
@@ -2636,6 +2656,8 @@ NOTICE:  table "ao_wt_sub_partzlib8192_5_defexch" does not exist, skipping
  
 Insert into ao_wt_sub_partzlib8192_5_exch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where  a1=10 and a2!='C';
 Insert into ao_wt_sub_partzlib8192_5_defexch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where a1 =10 and a2!='C';
+CREATE INDEX ON ao_wt_sub_partzlib8192_5_exch USING bitmap (a1);
+CREATE INDEX ON ao_wt_sub_partzlib8192_5_exch (a9);
 Alter table ao_wt_sub_partzlib8192_5 alter partition FOR (RANK(1)) exchange partition sp1 with table ao_wt_sub_partzlib8192_5_exch;
 NOTICE:  exchanged partition "sp1" of partition for rank 1 of relation "ao_wt_sub_partzlib8192_5" with relation "ao_wt_sub_partzlib8192_5_exch"
 \d+ ao_wt_sub_partzlib8192_5_1_prt_1_2_prt_sp1
@@ -2689,6 +2711,9 @@ Compression Type: zlib
 Compression Level: 1
 Block Size: 32768
 Checksum: t
+Indexes:
+    "ao_wt_sub_partzlib8192_5_exch_a1_idx" bitmap (a1)
+    "ao_wt_sub_partzlib8192_5_exch_a9_idx" btree (a9)
 Check constraints:
     "ao_wt_sub_partzlib8192_5_1_prt_1_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "ao_wt_sub_partzlib8192_5_1_prt_1_check" CHECK (a1 >= 1 AND a1 < 1001)
@@ -3107,6 +3132,8 @@ NOTICE:  table "ao_wt_sub_partzlib8192_5_2_defexch" does not exist, skipping
  
 Insert into ao_wt_sub_partzlib8192_5_2_exch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where  a1=10 and a2!='C';
 Insert into ao_wt_sub_partzlib8192_5_2_defexch(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where a1 =10 and a2!='C';
+CREATE INDEX ON ao_wt_sub_partzlib8192_5_2_exch USING bitmap (a1);
+CREATE INDEX ON ao_wt_sub_partzlib8192_5_2_exch (a9);
 Alter table ao_wt_sub_partzlib8192_5_2 alter partition p1 exchange partition FOR (RANK(1)) with table ao_wt_sub_partzlib8192_5_2_exch;
 \d+ ao_wt_sub_partzlib8192_5_2_1_prt_p1_2_prt_2
                                            Append-Only Table "public.ao_wt_sub_partzlib8192_5_2_1_prt_p1_2_prt_2"
@@ -3159,6 +3186,9 @@ Compression Type: zlib
 Compression Level: 1
 Block Size: 32768
 Checksum: t
+Indexes:
+    "ao_wt_sub_partzlib8192_5_2_exch_a1_idx" bitmap (a1)
+    "ao_wt_sub_partzlib8192_5_2_exch_a9_idx" btree (a9)
 Check constraints:
     "ao_wt_sub_partzlib8192_5_2_1_prt_p1_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
     "ao_wt_sub_partzlib8192_5_2_1_prt_p1_check" CHECK (a2 = 'M    '::bpchar)
@@ -3877,6 +3907,7 @@ Select count(*) from co_create_type_rle_type_8192_4;
     32
 (1 row)
 
+-- Given an AO/CO with zlib type compression
 Drop table if exists mpp17012_compress_test2;
 NOTICE:  table "mpp17012_compress_test2" does not exist, skipping
 create table mpp17012_compress_test2 (
@@ -3907,7 +3938,9 @@ Checksum: t
 Distributed by: (col1)
 Options: appendonly=true, orientation=column
 
+-- When I insert data
 insert into mpp17012_compress_test2 values('a',generate_series(1,250),'ksjdhfksdhfksdhfksjhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+-- Then the data will be compressed according to a consistent compression ratio
 select pg_size_pretty(pg_relation_size('mpp17012_compress_test2')),
 get_ao_compression_ratio('mpp17012_compress_test2');
  pg_size_pretty | get_ao_compression_ratio 
@@ -3915,11 +3948,46 @@ get_ao_compression_ratio('mpp17012_compress_test2');
  712 bytes      |                    36.75
 (1 row)
 
--- compute compression ratio on empty aorow table
-create table empty_aorow_table (c int) with (appendonly=true) distributed by (c);
-select get_ao_compression_ratio('empty_aorow_table');
- get_ao_compression_ratio 
---------------------------
-                        1
+-- Test that an AO/CO table with compresstype zlib and invalid compress level will error at create
+create table a_aoco_table_with_zlib_and_invalid_compression_level(col text) WITH (APPENDONLY=true, COMPRESSTYPE=zlib, compresslevel=-1, ORIENTATION=column);
+ERROR:  value -1 out of bounds for option "compresslevel"
+DETAIL:  Valid values are between "0" and "19".
+-- Check that callbacks are registered
+SELECT * FROM pg_compression WHERE compname='zlib';
+ compname |   compconstructor   |   compdestructor   |  compcompressor  |  compdecompressor  |   compvalidator   | compowner 
+----------+---------------------+--------------------+------------------+--------------------+-------------------+-----------
+ zlib     | gp_zlib_constructor | gp_zlib_destructor | gp_zlib_compress | gp_zlib_decompress | gp_zlib_validator |        10
+(1 row)
+
+-- Given an AO/CO with RLE type compression
+create table a_aoco_table_with_rle_type_compression(col int) WITH (APPENDONLY=true, COMPRESSTYPE=rle_type, compresslevel=1, ORIENTATION=column);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select pg_size_pretty(pg_relation_size('a_aoco_table_with_rle_type_compression')),
+       get_ao_compression_ratio('a_aoco_table_with_rle_type_compression');
+ pg_size_pretty | get_ao_compression_ratio 
+----------------+--------------------------
+ 0 bytes        |                       -1
+(1 row)
+
+-- When I insert data
+insert into a_aoco_table_with_rle_type_compression select i from generate_series(1,100)i;
+-- Then the data will be compressed according to a consistent compression ratio
+select pg_size_pretty(pg_relation_size('a_aoco_table_with_rle_type_compression')),
+       get_ao_compression_ratio('a_aoco_table_with_rle_type_compression');
+ pg_size_pretty | get_ao_compression_ratio 
+----------------+--------------------------
+ 296 bytes      |                     1.81
+(1 row)
+
+-- Test that an AO/CO table with compresstype rle and invalid compress level will error at create
+create table a_aoco_table_with_rle_type_and_invalid_compression_level(col int) WITH (APPENDONLY=true, COMPRESSTYPE=rle_type, compresslevel=-1, ORIENTATION=column);
+ERROR:  value -1 out of bounds for option "compresslevel"
+DETAIL:  Valid values are between "0" and "19".
+-- Check that callbacks are registered
+SELECT * FROM pg_compression WHERE compname='rle_type';
+ compname |     compconstructor     |     compdestructor     |    compcompressor    |    compdecompressor    |     compvalidator     | compowner 
+----------+-------------------------+------------------------+----------------------+------------------------+-----------------------+-----------
+ rle_type | gp_rle_type_constructor | gp_rle_type_destructor | gp_rle_type_compress | gp_rle_type_decompress | gp_rle_type_validator |        10
 (1 row)
 

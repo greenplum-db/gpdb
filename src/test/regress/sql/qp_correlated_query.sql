@@ -1,18 +1,13 @@
-
 -- ----------------------------------------------------------------------
 -- Test: setup.sql
 -- ----------------------------------------------------------------------
-
--- start_ignore
 create schema qp_correlated_query;
 set search_path to qp_correlated_query;
--- end_ignore
 
 -- ----------------------------------------------------------------------
 -- Test: csq_heap_in.sql (Correlated Subquery: CSQ using IN clause (Heap))
 -- ----------------------------------------------------------------------
-
--- start_ignore
+begin;
 create table qp_csq_t1(a int, b int) distributed by (a);
 insert into qp_csq_t1 values (1,2);
 insert into qp_csq_t1 values (3,4);
@@ -89,7 +84,8 @@ insert into E values(99,7);
 insert into E values(78,62);
 
 analyze E;
--- end_ignore
+
+commit;
 
 -- -- -- --
 -- Basic queries with IN clause
@@ -272,18 +268,14 @@ select * from A where not exists (select sum(c.i) from C where C.i = A.i group b
 -- ----------------------------------------------------------------------
 -- Test:  Correlated Subquery: CSQ using DML (Heap) 
 -- ----------------------------------------------------------------------
-
--- start_ignore
-drop table if exists qp_csq_t4;
+begin;
 create table qp_csq_t4(a int, b int) distributed by (b);
 insert into qp_csq_t4 values (1,2);
 insert into qp_csq_t4 values (3,4);
 insert into qp_csq_t4 values (5,6);
 insert into qp_csq_t4 values (7,8);
-
 analyze qp_csq_t4;
-
--- end_ignore
+commit;
 
 -- -- -- --
 -- Basic CSQ with UPDATE statements
@@ -381,15 +373,13 @@ select A.i from A group by A.i having min(A.i) not in (select B.i from B where A
 select A.i, B.i, C.j from A, B, C group by A.j,A.i,B.i,C.j having max(A.j) = any(select max(C.j) from C where C.j = A.j) order by A.i, B.i, C.j limit 10; 
 select A.i, B.i, C.j from A, B, C where exists (select C.j from C group by C.j having max(C.j) = all (select min(B.j) from B)) order by A.i, B.i, C.j limit 10;
 
--- start_ignore
-drop table if exists csq_emp;
+begin;
 create table csq_emp(name text, department text, salary numeric);
 insert into csq_emp values('a','adept',11200.00);
 insert into csq_emp values('b','adept',22222.00);
 insert into csq_emp values('c','bdept',99222.00);
-
 analyze csq_emp;
--- end_ignore
+commit;
 
 SELECT name, department, salary FROM csq_emp ea group by name, department,salary
   HAVING avg(salary) >
@@ -400,14 +390,9 @@ SELECT name, department, salary FROM csq_emp ea group by name, department,salary
 -- Test: Correlated Subquery: CSQ with multi-row subqueries (Heap)
 -- ----------------------------------------------------------------------
 
--- start_ignore
-drop table if exists Employee;
-drop table if exists product;
-drop table if exists product_order;
-drop table if exists job;
-
 -- Multi-row queries (See http://www.java2s.com/Tutorial/Oracle/0040__Query-Select/0680__Multiple-Row-Subquery.htm)
 -- Using IN clause with multi-row subqueries
+begin;
 create table Employee(
       ID                 VARCHAR(4)         NOT NULL,
       First_Name         VARCHAR(10),
@@ -418,7 +403,6 @@ create table Employee(
       City               VARCHAR(10),
       Description        VARCHAR(15)
    ) distributed by(ID);
-
 insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description) 
     values ('01','Jason', 'Martin', to_date('19960725','YYYYMMDD'), to_date('20060725','YYYYMMDD'), 1234.56, 'Toronto',  'Programmer');
 insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
@@ -435,28 +419,46 @@ insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, Ci
     values('07','David',    'Larry',   to_date('19901231','YYYYMMDD'), to_date('19980212','YYYYMMDD'), 7897.78,'New York',  'Manager');
 insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description)
     values('08','James',    'Cat',     to_date('19960917','YYYYMMDD'), to_date('20020415','YYYYMMDD'), 1232.78,'Vancouver', 'Tester');
-
 analyze Employee;
--- end_ignore
 
-select count(*) from Employee;
+create table job (
+      EMPNO         VARCHAR(4),
+      jobtitle      VARCHAR(20)
+    );
+insert into job (EMPNO, Jobtitle) values ('01','Tester');
+insert into job (EMPNO, Jobtitle) values ('02','Accountant');
+insert into job (EMPNO, Jobtitle) values ('03','Developer');
+insert into job (EMPNO, Jobtitle) values ('04','COder');
+insert into job (EMPNO, Jobtitle) values ('05','Director');
+insert into job (EMPNO, Jobtitle) values ('06','Mediator');
+insert into job (EMPNO, Jobtitle) values ('07','Proffessor');
+insert into job (EMPNO, Jobtitle) values ('08','Programmer');
+insert into job (EMPNO, Jobtitle) values ('09','Developer');
+analyze job;
+
+commit;
 
 SELECT id, first_name FROM employee WHERE id IN 
     (SELECT id FROM employee WHERE first_name LIKE '%e%') order by id;
 
+-- Multiple Column Subqueries
+SELECT id, first_name, salary from employee
+    where (id, salary) IN
+        (SELECT id, MIN(salary) FROM employee GROUP BY id) order by id;
 
+-- Uses NOT IN to check if an id is not in the list of id values in the employee table
+SELECT id, first_name, last_name
+  FROM employee
+  WHERE id NOT IN (SELECT empno FROM job);
 
 -- Using UPDATE  (Update products that aren't selling)
--- start_ignore
-drop table if exists product_order;
-
+begin;
 CREATE TABLE product_order (
          product_name  VARCHAR(25),
          salesperson   VARCHAR(3),
          order_date    DATE,
          quantity      decimal(4,2)
     );
-
 INSERT INTO product_order VALUES ('Product 1', 'CA', '14-JUL-03', 1);
 INSERT INTO product_order VALUES ('Product 2', 'BB', '14-JUL-03', 75);
 INSERT INTO product_order VALUES ('Product 3', 'GA', '14-JUL-03', 2);
@@ -464,10 +466,7 @@ INSERT INTO product_order VALUES ('Product 4', 'GA', '15-JUL-03', 8);
 INSERT INTO product_order VALUES ('Product 4', 'GA', '15-JUL-03', 8);
 INSERT INTO product_order VALUES ('Product 6', 'CA', '16-JUL-03', 5);
 INSERT INTO product_order VALUES ('Product 7', 'CA', '17-JUL-03', 1);
-
 analyze product_order;
-
-drop table if exists product;
 
 CREATE TABLE product (
          product_name     VARCHAR(25) PRIMARY KEY,
@@ -475,18 +474,14 @@ CREATE TABLE product (
          quantity_on_hand decimal(5,0),
          last_stock_date  DATE
     ) distributed by (product_name);
-
 INSERT INTO product VALUES ('Product 1', 99,  1,    '15-JAN-03');
 INSERT INTO product VALUES ('Product 2', 75,  1000, '15-JAN-02');
 INSERT INTO product VALUES ('Product 3', 50,  100,  '15-JAN-03');
 INSERT INTO product VALUES ('Product 4', 25,  10000, null);
 INSERT INTO product VALUES ('Product 5', 9.95,1234, '15-JAN-04');
 INSERT INTO product VALUES ('Product 6', 45,  1,    TO_DATE('December 31, 2008, 11:30 P.M.','Month dd, YYYY, HH:MI P.M.'));
-
 analyze product;
--- end_ignore
-
-select count(*) from product;
+commit;
 
 UPDATE product SET product_price = product_price * .9 
     where product_name NOT IN (SELECT DISTINCT product_name FROM product_order);
@@ -494,190 +489,24 @@ UPDATE product SET product_price = product_price * .9
 SELECT * FROM  product order by product_name;
 
 -- Show products that aren't selling
--- start_ignore
-drop table if exists product;
-
-CREATE TABLE product (
-         product_name     VARCHAR(25) PRIMARY KEY,
-         product_price    decimal(4,2),
-         quantity_on_hand decimal(5,0),
-         last_stock_date  DATE
-    ) distributed by (product_name);
-
-INSERT INTO product VALUES ('Product 1', 99,  1,    '15-JAN-03');
-INSERT INTO product VALUES ('Product 2', 75,  1000, '15-JAN-02');
-INSERT INTO product VALUES ('Product 3', 50,  100,  '15-JAN-03');
-INSERT INTO product VALUES ('Product 4', 25,  10000, null);
-INSERT INTO product VALUES ('Product 5', 9.95,1234, '15-JAN-04');
-INSERT INTO product VALUES ('Product 6', 45,  1,    TO_DATE('December 31, 2008, 11:30 P.M.','Month dd, YYYY, HH:MI P.M.'));
-
-analyze product;
-
-drop table if exists product_order;
-
-CREATE TABLE product_order (
-         product_name  VARCHAR(25),
-         salesperson   VARCHAR(3),
-         order_date    DATE,
-         quantity      decimal(4,2)
-    );
-
-INSERT INTO product_order VALUES ('Product 1', 'CA', '14-JUL-03', 1);
-INSERT INTO product_order VALUES ('Product 2', 'BB', '14-JUL-03', 75);
-INSERT INTO product_order VALUES ('Product 3', 'GA', '14-JUL-03', 2);
-INSERT INTO product_order VALUES ('Product 4', 'GA', '15-JUL-03', 8);
-INSERT INTO product_order VALUES ('Product 5', 'LB', '15-JUL-03', 20);
-INSERT INTO product_order VALUES ('Product 6', 'CA', '16-JUL-03', 5);
-INSERT INTO product_order VALUES ('Product 7', 'CA', '17-JUL-03', 1);
-
-analyze product_order;
--- end_ignore
-
-SELECT * FROM product_order ORDER BY product_name;
 SELECT * FROM product
 	 WHERE  product_name NOT IN (SELECT DISTINCT product_name FROM product_order)
 	 ORDER BY product_name;
 
--- Uses NOT IN to check if an id is not in the list of id values in the employee table
--- start_ignore
-drop table if exists job;
-
-create table job (
-      EMPNO         INTEGER,
-      jobtitle      VARCHAR(20)
-    );
-
-insert into job (EMPNO, Jobtitle) values (1,'Tester');
-insert into job (EMPNO, Jobtitle) values (2,'Accountant');
-insert into job (EMPNO, Jobtitle) values (3,'Developer');
-insert into job (EMPNO, Jobtitle) values (4,'COder');
-insert into job (EMPNO, Jobtitle) values (5,'Director');
-insert into job (EMPNO, Jobtitle) values (6,'Mediator');
-insert into job (EMPNO, Jobtitle) values (7,'Proffessor');
-insert into job (EMPNO, Jobtitle) values (8,'Programmer');
-insert into job (EMPNO, Jobtitle) values (9,'Developer');
-
-analyze job;
-
-drop table if exists Employee;
-
-create table Employee(
-      EMPNO         INTEGER,
-      ENAME         VARCHAR(15),
-      HIREDATE      DATE,
-      ORIG_SALARY   INTEGER,
-      CURR_SALARY   INTEGER,
-      REGION        VARCHAR(1),
-      MANAGER_ID    INTEGER
-    );
-
-insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
-    values (1, 'Jason', to_date('19960725','YYYYMMDD'), 1234, 8767, 'E', 2);
-
-insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
-    values (2, 'John', to_date('19970715','YYYYMMDD'), 2341, 3456, 'W', 3);
-
-insert into Employee(EMPNO,  EName,   HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
-    values (3, 'Joe', to_date('19860125','YYYYMMDD'), 4321, 5654, 'E', 3);
-
-insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
-    values (4, 'Tom', to_date('20060913','YYYYMMDD'), 2413, 6787, 'W', 4);
-
-insert into Employee(EMPNO,  EName,   HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
-    values (5, 'Jane', to_date('20050417','YYYYMMDD'), 7654, 4345, 'E',4);
-
-insert into Employee(EMPNO,  EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
-    values (6, 'James', to_date('20040718','YYYYMMDD'), 5679, 6546, 'W', 5);
-
-insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
-    values (7, 'Jodd', to_date('20030720','YYYYMMDD'), 5438, 7658, 'E', 6);
-
-insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION)
-    values (8, 'Joke', to_date('20020101','YYYYMMDD'), 8765, 4543, 'W');
-
-insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION)
-    values (9, 'Jack',  to_date('20010829','YYYYMMDD'), 7896, 1232, 'E');
-
-analyze Employee;
--- end_ignore
-
-SELECT empno, ename
-  FROM employee
-  WHERE empno NOT IN (SELECT empno FROM job);
-
--- Multiple Column Subqueries
--- start_ignore
-drop table if exists Employee;
-
-create table Employee(
-      ID                 VARCHAR(4) NOT NULL,
-      First_Name         VARCHAR(10),
-      Last_Name          VARCHAR(10),
-      Start_Date         DATE,
-      End_Date           DATE,
-      Salary             DECIMAL(8,2),
-      City               VARCHAR(10),
-      Description        VARCHAR(15)
-   ) distributed by (ID);
-
-insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
-     values ('01','Jason',    'Martin',  to_date('19960725','YYYYMMDD'), to_date('20060725','YYYYMMDD'), 1234.56, 'Toronto',  'Programmer');
-
-insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
-     values('02','Alison',   'Mathews', to_date('19760321','YYYYMMDD'), to_date('19860221','YYYYMMDD'), 6661.78, 'Vancouver','Tester');
-
-insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
-     values('03','James',    'Smith',   to_date('19781212','YYYYMMDD'), to_date('19900315','YYYYMMDD'), 6544.78, 'Vancouver','Tester');
-
-insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
-     values('04','Celia',    'Rice',    to_date('19821024','YYYYMMDD'), to_date('19990421','YYYYMMDD'), 2344.78, 'Vancouver','Manager');
-
-insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
-     values('05','Robert',   'Black',   to_date('19840115','YYYYMMDD'), to_date('19980808','YYYYMMDD'), 2334.78, 'Vancouver','Tester');
-
-insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary, City,  Description)
-     values('06','Linda',    'Green',   to_date('19870730','YYYYMMDD'), to_date('19960104','YYYYMMDD'), 4322.78,'New York',  'Tester');
-
-insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary, City,  Description)
-     values('07','David',    'Larry',   to_date('19901231','YYYYMMDD'), to_date('19980212','YYYYMMDD'), 7897.78,'New York',  'Manager');
-
-insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description)
-     values('08','James', 'Cat', to_date('19960917','YYYYMMDD'), to_date('20020415','YYYYMMDD'), 1232.78,'Vancouver', 'Tester');
-
-analyze Employee;
--- end_ignore
-
-SELECT id, first_name, salary from employee
-    where (id, salary) IN
-        (SELECT id, MIN(salary) FROM employee GROUP BY id) order by id;
-
-
-
 -- ----------------------------------------------------------------------
 -- Test: Misc Queries
 -- ----------------------------------------------------------------------
-
--- start_ignore
-drop table if exists with_test1 cascade;
-
 create table with_test1 (i int, t text, value int);
-
 insert into with_test1 select i%10, 'text' || i%20, i%30 from generate_series(0, 99) i;
-
 analyze with_test1;
 
-drop table if exists with_test2 cascade;
-
 create table with_test2 (i int, t text, value int);
-
 insert into with_test2 select i%100, 'text' || i%200, i%300 from generate_series(0, 999) i;
-
 insert into with_test2
 select i, i || '', total
 from (select i, sum(value) as total from with_test1 group by i) as tmp;
 
 analyze with_test2;
--- end_ignore
 
 select with_test2.* from with_test2
 where value < any (select sum(value) from with_test1 group by i having i = with_test2.i) order by i, t, value;
@@ -685,7 +514,6 @@ where value < any (select sum(value) from with_test1 group by i having i = with_
 select with_test2.* from with_test2
 where value < all (select sum(value) from with_test1 group by i having i = with_test2.i) order by i, t, value;
 
--- start_ignore
 drop table if exists csq_emp;
 create table csq_emp(name text, department text, salary numeric) distributed by (name);
 insert into csq_emp values('a','adept',11200.00);
@@ -698,9 +526,7 @@ insert into csq_emp values('g','adept',90343.00);
 insert into csq_emp values('h','adept',11200.00);
 insert into csq_emp values('i','bdept',11200.00);
 insert into csq_emp values('j','adept',11200.00);
-
 analyze csq_emp;
--- end_ignore
 
 SELECT name, department, salary FROM csq_emp ea
   WHERE salary IN
@@ -747,15 +573,10 @@ SELECT name, department, salary FROM csq_emp ea group by name, department,salary
     (SELECT salary FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
 
 
--- start_ignore
-drop table if exists t1;
-
 CREATE OR REPLACE FUNCTION f(a int) RETURNS int AS $$ select $1 $$ LANGUAGE SQL;
 CREATE TABLE t1(a int) distributed by (a);
 INSERT INTO t1 VALUES (1);
-
 analyze t1;
--- end_ignore
 
 SELECT * FROM t1 WHERE a IN (SELECT * FROM f(t1.a));
 
@@ -763,12 +584,6 @@ SELECT * FROM t1 WHERE exists (SELECT * FROM f(t1.a));
 
 SELECT * FROM t1 where a not in (SELECT f FROM f(t1.a));
 
--- start_ignore
-DROP TABLE IF EXISTS tversion;
-DROP TABLE IF EXISTS qp_tjoin1;
-DROP TABLE IF EXISTS qp_tjoin2;
-DROP TABLE IF EXISTS qp_tjoin3;
-DROP TABLE IF EXISTS qp_tjoin4;
 
 CREATE TABLE tversion (
     rnum integer NOT NULL,
@@ -806,7 +621,6 @@ CREATE TABLE qp_tjoin4 (
     c2 character(2)
 ) DISTRIBUTED BY (rnum);
 
-
 COPY qp_tjoin1 (rnum, c1, c2) FROM stdin;
 1	20	25
 0	10	15
@@ -825,7 +639,6 @@ COPY qp_tjoin3 (rnum, c1, c2) FROM stdin;
 0	10	XX
 \.
 
-
 COPY qp_tjoin4 (rnum, c1, c2) FROM stdin;
 0	20	ZZ
 \.
@@ -835,7 +648,6 @@ analyze qp_tjoin1;
 analyze qp_tjoin2;
 analyze qp_tjoin3;
 analyze qp_tjoin4;
--- end_ignore
 
 select qp_tjoin1.rnum, qp_tjoin1.c1, case when 10 in ( select 1 from tversion ) then 'yes' else 'no' end from qp_tjoin1 order by rnum;
 
@@ -847,18 +659,12 @@ select rnum, c1, c2 from qp_tjoin2 where 75 > all ( select c2 from qp_tjoin1) or
 
 select rnum, c1, c2 from qp_tjoin2 where 20 > all ( select c1 from qp_tjoin1) order by rnum;
 
--- start_ignore
-DROP TABLE IF EXISTS qp_tab1;
-DROP TABLE IF EXISTS qp_tab2;
-DROP TABLE IF EXISTS qp_tab3;
-
 CREATE TABLE qp_tab1(a int, b int);
 CREATE TABLE qp_tab2(c int, d int);
 CREATE TABLE qp_tab3(e int, f int);
 INSERT INTO qp_tab1 VALUES (1,2);
 INSERT INTO qp_tab2 VALUES (3,4);
 INSERT INTO qp_tab3 VALUES (4,5);
--- end_ignore
 
 EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELECT 1 FROM qp_tab1 f2 WHERE f1.a = f2.a);
 
@@ -868,16 +674,10 @@ SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS 
 -- ----------------------------------------------------------------------
 -- Test: non-equivalence clauses
 -- ----------------------------------------------------------------------
-
--- start_ignore
-DROP TABLE IF EXISTS qp_non_eq_a;
-DROP TABLE IF EXISTS qp_non_eq_b;
-
 CREATE TABLE qp_non_eq_a (i int, f float8);
 CREATE TABLE qp_non_eq_b (i int, f float8);
 INSERT INTO qp_non_eq_a VALUES (1, '0'), (2, '-0');
 INSERT INTO qp_non_eq_b VALUES (3, '0'), (1, '-0');
--- end_ignore
 
 EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b.f AND qp_non_eq_a.f::text <> '-0';
 SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b.f AND qp_non_eq_a.f::text <> '-0';
@@ -908,8 +708,5 @@ SELECT * FROM qp_nl_tab1 t1 WHERE t1.c1 + 5 > ANY(SELECT t2.c2 FROM qp_nl_tab2 t
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
-
-
--- start_ignore
+set client_min_messages='warning';
 drop schema qp_correlated_query cascade;
--- end_ignore

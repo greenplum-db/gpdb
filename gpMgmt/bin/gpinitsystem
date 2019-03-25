@@ -1544,7 +1544,7 @@ CREATE_STANDBY_QD () {
 			INIT_STANDBY_ARGS+=" -P $STANDBY_PORT"
 		fi
 		if [ x"" != x"$STANDBY_DATADIR" ]; then
-			INIT_STANDBY_ARGS+=" -F $STANDBY_DATADIR"
+			INIT_STANDBY_ARGS+=" -S $STANDBY_DATADIR"
 		fi
 		if [ $HBA_HOSTNAMES -eq 1 ]; then
 		    INIT_STANDBY_ARGS+=" --hba-hostnames"

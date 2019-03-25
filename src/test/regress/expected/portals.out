@@ -1000,7 +1000,7 @@ DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on onek
          Filter: (stringu1 = 'DZAAAA'::name)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';

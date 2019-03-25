@@ -649,6 +649,8 @@ GetResqueueCapabilityEntry(Oid  queueid)
 	Relation	 rel;
 	TupleDesc	 tupdesc;
 
+	Assert(IsTransactionState());
+
 	/* SELECT * FROM pg_resqueuecapability WHERE resqueueid = :1 */
 	rel = heap_open(ResQueueCapabilityRelationId, AccessShareLock);
 

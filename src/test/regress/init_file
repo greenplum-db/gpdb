@@ -17,7 +17,7 @@ m/^WARNING:  gpmon:.*Connection refused.*/
 
 m/^ Optimizer status:.*/
 m/^ Optimizer: PQO version .*/
-m/^ Optimizer: legacy query optimizer/
+m/^ Optimizer: Postgres query optimizer/
 m/^ Settings:.*/
 
 # There are a number of NOTICE and HINT messages around table distribution,
@@ -112,6 +112,8 @@ m/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have cons
 s/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge.*/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:XXX)/
 m/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/
 s/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)/
+m/ERROR:  invalid partition constraint on "[^"]+".*/
+s/ERROR:  invalid partition constraint on "[^"]+".*/ERROR:  invalid partition constraint on "[^"]+".*(cdbpartition.c:XXX)/
 
 # Mask out gp_execution_segment()
 m/One-Time Filter: \(gp_execution_segment\(\) = \d+/

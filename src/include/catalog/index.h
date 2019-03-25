@@ -15,6 +15,7 @@
 #define INDEX_H
 
 #include "access/relscan.h"     /* Relation, Snapshot */
+#include "catalog/objectaddress.h"
 #include "executor/tuptable.h"  /* TupTableSlot */
 #include "nodes/execnodes.h"
 
@@ -42,6 +43,7 @@ typedef enum
 
 
 extern bool relationHasPrimaryKey(Relation rel);
+extern bool relationHasUniqueIndex(Relation rel);
 extern void index_check_primary_key(Relation heapRel,
 						IndexInfo *indexInfo,
 						bool is_alter_table);
@@ -49,6 +51,8 @@ extern void index_check_primary_key(Relation heapRel,
 extern Oid index_create(Relation heapRelation,
 			 const char *indexRelationName,
 			 Oid indexRelationId,
+			 Oid parentIndexRelid,
+			 Oid parentConstraintId,
 			 Oid relFileNode,
 			 IndexInfo *indexInfo,
 			 List *indexColNames,
@@ -66,10 +70,11 @@ extern Oid index_create(Relation heapRelation,
 			 bool skip_build,
 			 bool concurrent,
 			 bool is_internal,
-			 const char *altConName);
+			 Oid *constraintId);
 
-extern void index_constraint_create(Relation heapRelation,
+extern ObjectAddress index_constraint_create(Relation heapRelation,
 						Oid indexRelationId,
+						Oid parentConstraintId,
 						IndexInfo *indexInfo,
 						const char *constraintName,
 						char constraintType,
@@ -84,6 +89,11 @@ extern void index_constraint_create(Relation heapRelation,
 extern void index_drop(Oid indexId, bool concurrent);
 
 extern IndexInfo *BuildIndexInfo(Relation index);
+
+extern bool CompareIndexInfo(IndexInfo *info1, IndexInfo *info2,
+				 Oid *collations1, Oid *collations2,
+				 Oid *opfamilies1, Oid *opfamilies2,
+				 AttrNumber *attmap, int maplen);
 
 extern void FormIndexDatum(IndexInfo *indexInfo,
 			   TupleTableSlot *slot,
@@ -123,5 +133,7 @@ extern bool reindex_relation(Oid relid, int flags);
 extern bool ReindexIsProcessingHeap(Oid heapOid);
 extern bool ReindexIsProcessingIndex(Oid indexOid);
 extern Oid	IndexGetRelation(Oid indexId, bool missing_ok);
+
+extern void IndexSetParentIndex(Relation idx, Oid parentOid);
 
 #endif   /* INDEX_H */

@@ -345,7 +345,6 @@ num_distcols_in_grouplist(List *gc)
 PlannerConfig *DefaultPlannerConfig(void)
 {
 	PlannerConfig *c1 = (PlannerConfig *) palloc(sizeof(PlannerConfig));
-	c1->cdbpath_segments = planner_segment_count(NULL);
 	c1->enable_sort = enable_sort;
 	c1->enable_hashagg = enable_hashagg;
 	c1->enable_groupagg = enable_groupagg;

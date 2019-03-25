@@ -380,7 +380,9 @@ SELECT DISTINCT ON (location) location, time, report
           <plentry>
             <pt>NATURAL</pt>
             <pd><codeph>NATURAL</codeph> is shorthand for a <codeph>USING</codeph> list that
-              mentions all columns in the two tables that have the same names.</pd>
+              mentions all columns in the two tables that have the same names. If there are no
+              common column names, <codeph>NATURAL</codeph> is equivalent to <codeph>ON
+                TRUE</codeph>. </pd>
           </plentry>
         </parml></sectiondiv>
       <sectiondiv id="section7"><b>The WHERE Clause</b><p>The optional <codeph>WHERE</codeph> clause
@@ -404,14 +406,23 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
           arbitrary expression formed from input-column values. In case of ambiguity, a
             <codeph>GROUP BY</codeph> name will be interpreted as an input-column name rather than
           an output column name.</p><p>Aggregate functions, if any are used, are computed across all
-          rows making up each group, producing a separate value for each group (whereas without
-            <codeph>GROUP BY</codeph>, an aggregate produces a single value computed across all the
-          selected rows). When <codeph>GROUP BY</codeph> is present, it is not valid for the
-            <codeph>SELECT</codeph> list expressions to refer to ungrouped columns except within
-          aggregate functions or if the ungrouped column is functionally dependent on the grouped
-          columns, since there would otherwise be more than one possible value to return for an
-          ungrouped column. A functional dependency exists if the grouped columns (or a subset
-          thereof) are the primary key of the table containing the ungrouped column.</p><p>Greenplum
+          rows making up each group, producing a separate value for each group. (If there are
+          aggregate functions but no <codeph>GROUP BY</codeph> clause, the query is treated as
+          having a single group comprising all the selected rows.) The set of rows fed to each
+          aggregate function can be further filtered by attaching a <codeph>FILTER</codeph> clause
+          to the aggregate function call. When a <codeph>FILTER</codeph> clause is present, only
+          those rows matching it are included in the input to that aggregate function.</p><p>When
+            <codeph>GROUP BY</codeph> is present, or any aggregate functions are present, it is not
+          valid for the <codeph>SELECT</codeph> list expressions to refer to ungrouped columns
+          except within aggregate functions or when the ungrouped column is functionally dependent
+          on the grouped columns, since there would otherwise be more than one possible value to
+          return for an ungrouped column. A functional dependency exists if the grouped columns (or
+          a subset thereof) are the primary key of the table containing the ungrouped column.</p><p>
+          Keep in mind that all aggregate functions are evaluated before evaluating any "scalar"
+          expressions in the <codeph>HAVING</codeph> clause or <codeph>SELECT</codeph> list. This
+          means that, for example, a <codeph>CASE</codeph> expression cannot be used to skip
+          evaluation of an aggregate function; see<xref
+            href="../../admin_guide/query/topics/defining-queries.xml#topic25"/>. </p><p>Greenplum
           Database has the following additional OLAP grouping extensions (often referred to as
             <i>supergroups</i>):</p><parml>
           <plentry>
@@ -560,8 +571,8 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
                 frame</i> for window functions that depend on the frame (not all do). The window
               frame is a set of related rows for each row of the query (called the <i>current
                 row</i>). The <codeph><varname>frame_clause</varname></codeph> can be one of
-              <codeblock>[ RANGE | ROWS ] <varname>frame_start</varname>
-[ RANGE | ROWS ] BETWEEN <varname>frame_start</varname> AND <varname>frame_end</varname></codeblock>where
+              <codeblock>{ RANGE | ROWS } <varname>frame_start</varname>
+{ RANGE | ROWS } BETWEEN <varname>frame_start</varname> AND <varname>frame_end</varname></codeblock>where
                   <codeph><varname>frame_start</varname></codeph> and
                   <codeph><varname>frame_end</varname></codeph> can be one of<ul id="ul_ehq_kws_1gb">
                 <li><codeph>UNBOUNDED PRECEDING</codeph></li>
@@ -581,9 +592,10 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
                 PRECEDING</codeph> is not allowed. </pd>
             <pd>The default framing option is <codeph>RANGE UNBOUNDED PRECEDING</codeph>, which is
               the same as <codeph>RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</codeph>; it
-              sets the frame to be all rows from the partition start up through the current row's
-              last peer in the <codeph>ORDER BY</codeph> ordering (which means all rows if there is
-              no <codeph>ORDER BY</codeph>). In general, <codeph>UNBOUNDED PRECEDING</codeph> means
+              sets the frame to be all rows from the partition start up through the current row's 
+              last peer (a row that <codeph>ORDER
+                BY</codeph> considers equivalent to the current row, or all rows if there
+                is no <codeph>ORDER BY</codeph>). In general, <codeph>UNBOUNDED PRECEDING</codeph> means
               that the frame starts with the first row of the partition, and similarly
                 <codeph>UNBOUNDED FOLLOWING</codeph> means that the frame ends with the last row of
               the partition (regardless of <codeph>RANGE</codeph> or <codeph>ROWS</codeph> mode). In
@@ -600,8 +612,8 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <pd>Beware that the <codeph>ROWS</codeph> options can produce unpredictable results if
               the <codeph>ORDER BY</codeph> ordering does not order the rows uniquely. The
                 <codeph>RANGE</codeph> options are designed to ensure that rows that are peers in
-              the <codeph>ORDER BY</codeph> ordering are treated alike; any two peer rows will be
-              both in or both not in the frame. </pd>
+              the <codeph>ORDER BY</codeph> ordering are treated alike; all peer rows will be in the
+              same frame. </pd>
             <pd>Use either a <codeph>ROWS</codeph> or <codeph>RANGE</codeph> clause to express the
               bounds of the window. The window bound can be one, many, or all rows of a partition.
               You can express the bound of the window either in terms of a range of data values
@@ -662,7 +674,8 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           filters individual rows before the application of <codeph>GROUP BY</codeph>, while
             <codeph>HAVING</codeph> filters group rows created by <codeph>GROUP BY</codeph>. Each
           column referenced in <varname>condition</varname> must unambiguously reference a grouping
-          column, unless the reference appears within an aggregate function.</p><p>The presence of
+            column, unless the reference appears within an aggregate function or the ungrouped column is
+            functionally dependent on the grouping columns.</p><p>The presence of
             <codeph>HAVING</codeph> turns a query into a grouped query even if there is no
             <codeph>GROUP BY</codeph> clause. This is the same as what happens when the query
           contains aggregate functions but no <codeph>GROUP BY</codeph> clause. All the selected
@@ -802,9 +815,14 @@ OFFSET <varname>start</varname></codeblock><p>where
             <codeph>OFFSET 0</codeph>.</p><p>SQL:2008 introduced a different syntax to achieve the
           same result, which Greenplum Database also supports. It is:
           <codeblock>OFFSET <varname>start</varname> [ ROW | ROWS ]
-            FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY</codeblock></p><p>In this syntax, to write
-          anything except a simple integer constant for start or count, you must write parentheses
-          around it. If count is omitted in a <codeph>FETCH</codeph> clause, it defaults to 1.
+            FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY</codeblock></p><p>In this syntax, the <varname>start</varname>
+              or <varname>count</varname> value is required by
+              the standard to be a literal constant, a parameter, or a variable name;
+              as a Greenplum Database extension, other expressions
+              are allowed, but will generally need to be enclosed in parentheses to avoid
+              ambiguity.
+              If <varname>count</varname> is
+              omitted in a <codeph>FETCH</codeph> clause, it defaults to 1.            
             <codeph>ROW</codeph> and <codeph>ROWS</codeph> as well as <codeph>FIRST</codeph> and
             <codeph>NEXT</codeph> are noise words that don't influence the effects of these clauses.
           According to the standard, the <codeph>OFFSET</codeph> clause must come before the
@@ -841,52 +859,27 @@ KEY SHARE</codeblock></p><note> By default,
             >gp_enable_global_deadlock_detector</xref> configuration parameter to true. See <xref
             href="../../admin_guide/dml.xml#topic_gdd"> Global Deadlock Detector</xref> in the
             <cite>Greenplum Database Administrator Guide</cite> for information about the Global
-          Deadlock Detector.</note><p><codeph>FOR UPDATE</codeph> causes the rows accessed by the
-            <codeph>SELECT</codeph> statement to be locked as though for update. This prevents them
-          from being modified or deleted by other transactions until the current transaction ends.
-          That is, other transactions that attempt <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>,
-            <codeph>SELECT FOR UPDATE</codeph>, <codeph>SELECT FOR NO KEY UPDATE</codeph>,
-            <codeph>SELECT FOR SHARE</codeph>, or <codeph>SELECT FOR KEY SHARE</codeph> of these
-          rows will be blocked until the current transaction ends; conversely, <codeph>SELECT FOR
-            UPDATE</codeph> will wait for a concurrent transaction that has run any of those
-          commands on the same row, and will then lock and return the updated row (or no row, if the
-          row was deleted). Within a <codeph>REPEATABLE READ</codeph> or
-            <codeph>SERIALIZABLE</codeph> transaction, however, an error will be thrown if a row to
-          be locked has changed since the transaction started.</p><p><codeph>FOR NO KEY
-            UPDATE</codeph> behaves similarly to <codeph>FOR UPDATE</codeph>, except that the lock
-          acquired is weaker: this lock will not block <codeph>SELECT FOR KEY SHARE</codeph>
-          commands that attempt to acquire a lock on the same rows. This lock mode is also acquired
-          by any <codeph>UPDATE</codeph> that does not acquire a <codeph>FOR UPDATE</codeph>
-          lock.</p><p><codeph>FOR SHARE</codeph> behaves similarly, except that it acquires a shared
-          rather than exclusive lock on each retrieved row. A shared lock blocks other transactions
-          from performing <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, <codeph>SELECT FOR
-            UPDATE</codeph>, or <codeph>SELECT FOR NO KEY UPDATE</codeph> on these rows, but it does
-          not prevent them from performing <codeph>SELECT FOR SHARE</codeph> or <codeph>SELECT FOR
-            KEY SHARE</codeph>.</p><p><codeph>FOR KEY SHARE</codeph> behaves similarly to
-            <codeph>FOR SHARE</codeph>, except that the lock is weaker: <codeph>SELECT FOR
-            UPDATE</codeph> is blocked, but not <codeph>SELECT FOR NO KEY UPDATE</codeph>. A
-          key-shared lock blocks other transactions from performing <codeph>DELETE</codeph> or any
-            <codeph>UPDATE</codeph> that changes the key values, but not other
-            <codeph>UPDATE</codeph>, and neither does it prevent <codeph>SELECT FOR NO KEY
-            UPDATE</codeph>, <codeph>SELECT FOR SHARE</codeph>, or <codeph>SELECT FOR KEY
-            SHARE</codeph>.</p><p>To prevent the operation from waiting for other transactions to
-          commit, use the <codeph>NOWAIT</codeph> option. With <codeph>NOWAIT</codeph>, the
-          statement reports an error, rather than waiting, if a selected row cannot be locked
-          immediately. Note that <codeph>NOWAIT</codeph> applies only to the row-level lock(s) — the
-          required <codeph>ROW SHARE</codeph> table-level lock is still taken in the ordinary way.
-          You can use LOCK with the <codeph>NOWAIT</codeph> option first, if you need to acquire the
-          table-level lock without waiting.</p><p>If specific tables are named in a locking clause,
-          then only rows coming from those tables are locked; any other tables used in the
-            <codeph>SELECT</codeph> are simply read as usual. A locking clause without a table list
-          affects all tables used in the statement. If a locking clause is applied to a view or
-          sub-query, it affects all tables used in the view or sub-query. However, these clauses do
-          not apply to <codeph>WITH</codeph> queries referenced by the primary query. If you want
-          row locking to occur within a <codeph>WITH</codeph> query, specify a locking clause within
-          the <codeph>WITH</codeph> query.</p><p>Multiple locking clauses can be written if it is
+          Deadlock Detector.</note><p>For more information on each row-level lock mode, refer to
+            <xref href="https://www.postgresql.org/docs/9.4/explicit-locking.html" format="html"
+            scope="external">Explicit Locking</xref> in the PostgreSQL documentation.</p><p>To
+          prevent the operation from waiting for other transactions to commit, use the
+            <codeph>NOWAIT</codeph> option. With <codeph>NOWAIT</codeph>, the statement reports an
+          error, rather than waiting, if a selected row cannot be locked immediately. Note that
+            <codeph>NOWAIT</codeph> applies only to the row-level lock(s) — the required <codeph>ROW
+            SHARE</codeph> table-level lock is still taken in the ordinary way. You can use LOCK
+          with the <codeph>NOWAIT</codeph> option first, if you need to acquire the table-level lock
+          without waiting.</p><p>If specific tables are named in a locking clause, then only rows
+          coming from those tables are locked; any other tables used in the <codeph>SELECT</codeph>
+          are simply read as usual. A locking clause without a table list affects all tables used in
+          the statement. If a locking clause is applied to a view or sub-query, it affects all
+          tables used in the view or sub-query. However, these clauses do not apply to
+            <codeph>WITH</codeph> queries referenced by the primary query. If you want row locking
+          to occur within a <codeph>WITH</codeph> query, specify a locking clause within the
+            <codeph>WITH</codeph> query.</p><p>Multiple locking clauses can be written if it is
           necessary to specify different locking behavior for different tables. If the same table is
           mentioned (or implicitly affected) by both more than one locking clause, then it is
-          processed as if it was only specified by the strongest one. Similarly, a table is processed
-          as <codeph>NOWAIT</codeph> if that is specified in any of the clauses affecting
+          processed as if it was only specified by the strongest one. Similarly, a table is
+          processed as <codeph>NOWAIT</codeph> if that is specified in any of the clauses affecting
           it.</p><p>The locking clauses cannot be used in contexts where returned rows cannot be
           clearly identified with individual table rows; for example they cannot be used with
           aggregation.</p><p>When a locking clause appears at the top level of a

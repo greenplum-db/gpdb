@@ -406,3 +406,26 @@ alter table mpp6379 add partition p2 end(date '2009-01-03');
 insert into mpp6379( a, b ) values( 2, '20090102' );
 insert into mpp6379( a, b ) values( 2, '20090102' );
 drop table mpp6379;
+
+-- Creating an index on a partitioned table makes the partitions
+-- automatically get the index
+create table idxpart (a int, b int, c text)
+partition by range (a)
+subpartition by range(b)
+subpartition template
+  (start(1) end (3))
+(start (1) end (3));
+
+-- relhassubclass of a partitioned index is false before creating any partition.
+-- It will be set after the first partition is created.
+create index idxpart_idx on idxpart (a);
+select relhassubclass from pg_class where relname = 'idxpart_idx';
+drop index idxpart_idx;
+
+-- Even with partitions, relhassubclass should not be set if a partitioned
+-- index is created only on the parent.
+set sql_inheritance to off;
+create index idxpart_idx on idxpart(a);
+set sql_inheritance to on;
+select relhassubclass from pg_class where relname = 'idxpart_idx';
+drop index idxpart_idx;

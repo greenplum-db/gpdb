@@ -85,7 +85,7 @@ extern ExternalInsertDesc external_insert_init(Relation rel);
 extern Oid	external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup);
 extern void external_insert_finish(ExternalInsertDesc extInsertDesc);
 extern void external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, bool header, uint32 scancounter);
-extern char *linenumber_atoi(char buffer[20], int64 linenumber);
+extern char *linenumber_atoi(char *buffer, size_t bufsz, int64 linenumber);
 
 /* prototypes for functions in url_execute.c */
 extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);

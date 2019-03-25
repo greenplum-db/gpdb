@@ -165,7 +165,6 @@ typedef struct VPgClassStats
 /* GUC parameters */
 extern PGDLLIMPORT int default_statistics_target;		/* PGDLLIMPORT for
 														 * PostGIS */
-extern PGDLLIMPORT double analyze_relative_error;
 extern int	vacuum_freeze_min_age;
 extern int	vacuum_freeze_table_age;
 extern int	vacuum_multixact_freeze_min_age;

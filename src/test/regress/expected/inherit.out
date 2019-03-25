@@ -1267,7 +1267,7 @@ select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 l
                                  ->  Limit
                                        ->  Seq Scan on int4_tbl
                                              Filter: ((f1 < 10) AND (f1 > (-10)))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 limit 1) ss on id = f1;
@@ -1298,7 +1298,7 @@ select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 l
                                  ->  Limit
                                        ->  Seq Scan on int4_tbl
                                              Filter: ((f1 < 10) AND (f1 > (-10)))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 limit 1) ss on id = f1;
@@ -1356,7 +1356,7 @@ explain (verbose, costs off) select * from matest0 order by 1-id;
                            Output: matest2.id, matest2.name
                      ->  Seq Scan on public.matest3
                            Output: matest3.id, matest3.name
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: enable_indexscan=off, optimizer=off
 (19 rows)
 
@@ -1389,7 +1389,7 @@ explain (verbose, costs off) select min(1-id) from matest0;
                            Output: matest2.id
                      ->  Seq Scan on public.matest3
                            Output: matest3.id
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: enable_indexscan=off, optimizer=off
 (17 rows)
 
@@ -1424,7 +1424,7 @@ explain (verbose, costs off) select * from matest0 order by 1-id;
                      Output: matest2.id, matest2.name, (1 - matest2.id)
          ->  Index Scan using matest3i on public.matest3
                Output: matest3.id, matest3.name, (1 - matest3.id)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: enable_bitmapscan=off, enable_seqscan=off, optimizer=off
 (18 rows)
 
@@ -1469,7 +1469,7 @@ explain (verbose, costs off) select min(1-id) from matest0;
                              ->  Index Scan using matest3i on public.matest3
                                    Output: matest3.id, (1 - matest3.id)
                                    Index Cond: ((1 - matest3.id) IS NOT NULL)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: enable_bitmapscan=off, enable_seqscan=off, optimizer=off
 (29 rows)
 
@@ -1519,7 +1519,7 @@ order by t1.b limit 10;
                                                    Filter: (c = d)
                                              ->  Seq Scan on matest1 t2_1
                                                    Filter: (c = d)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 reset enable_nestloop;
@@ -1547,7 +1547,7 @@ ORDER BY thousand, tenthous;
          ->  Sort
                Sort Key: tenk1_1.thousand, tenk1_1.thousand
                ->  Index Only Scan using tenk1_thous_tenthous on tenk1 tenk1_1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (costs off)
@@ -1565,7 +1565,7 @@ ORDER BY thousand, tenthous;
          ->  Sort
                Sort Key: (42), (42)
                ->  Index Only Scan using tenk1_hundred on tenk1 tenk1_1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (costs off)
@@ -1583,7 +1583,7 @@ ORDER BY thousand, tenthous;
          ->  Sort
                Sort Key: tenk1_1.thousand, ((random())::integer)
                ->  Index Only Scan using tenk1_thous_tenthous on tenk1 tenk1_1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 -- Check min/max aggregate optimization
@@ -1602,7 +1602,7 @@ SELECT min(x) FROM
                ->  Append
                      ->  Index Only Scan using tenk1_unique1 on tenk1 a
                      ->  Index Only Scan using tenk1_unique2 on tenk1 b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 explain (costs off)
@@ -1619,7 +1619,7 @@ SELECT min(y) FROM
                      ->  Append
                            ->  Index Only Scan using tenk1_unique1 on tenk1 a
                            ->  Index Only Scan using tenk1_unique2 on tenk1 b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 -- XXX planner doesn't recognize that index on unique2 is sufficiently sorted
@@ -1638,7 +1638,7 @@ ORDER BY x, y;
          ->  Append
                ->  Index Only Scan using tenk1_thous_tenthous on tenk1 a
                ->  Index Only Scan using tenk1_unique2 on tenk1 b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 -- exercise rescan code path via a repeatedly-evaluated subquery
@@ -1665,7 +1665,7 @@ FROM generate_series(1, 3) g(i);
                        ->  Sort
                              Sort Key: ((d_1.d + g.i))
                              ->  Function Scan on generate_series d_1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 SELECT

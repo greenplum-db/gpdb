@@ -1818,7 +1818,7 @@ selectDumpableCast(CastInfo *cast)
 	if (checkExtensionMembership(&cast->dobj))
 		return;					/* extension membership overrides all else */
 
-	if (cast->dobj.catId.oid <= (Oid) FirstNormalObjectId)
+	if (cast->dobj.catId.oid < (Oid) FirstNormalObjectId)
 		cast->dobj.dump = false;
 	else
 		cast->dobj.dump = include_everything;
@@ -1838,7 +1838,7 @@ selectDumpableProcLang(ProcLangInfo *plang)
 	if (checkExtensionMembership(&plang->dobj))
 		return;					/* extension membership overrides all else */
 
-	if (plang->dobj.catId.oid <= (Oid) FirstNormalObjectId)
+	if (plang->dobj.catId.oid < (Oid) FirstNormalObjectId)
 		plang->dobj.dump = false;
 	else
 		plang->dobj.dump = include_everything;
@@ -1857,7 +1857,7 @@ selectDumpableProcLang(ProcLangInfo *plang)
 static void
 selectDumpableExtension(ExtensionInfo *extinfo)
 {
-	if (binary_upgrade && extinfo->dobj.catId.oid <= (Oid) FirstNormalObjectId)
+	if (binary_upgrade && extinfo->dobj.catId.oid < (Oid) FirstNormalObjectId)
 		extinfo->dobj.dump = false;
 	else
 		extinfo->dobj.dump = include_everything;

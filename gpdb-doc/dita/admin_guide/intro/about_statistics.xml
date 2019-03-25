@@ -336,17 +336,6 @@
         <p>When calculating statistics for large tables, Greenplum Database creates a smaller table
           by sampling the base table. If the table is partitioned, samples are taken from all
           partitions. </p>
-        <p>If the number of rows in the base table is estimated to be less than the value of the
-            <codeph>gp_statistics_sampling_threshold</codeph> configuration parameter, the entire
-          base table is used to calculate the statistics. </p>
-        <p>If a sample table is created, the number of rows in the sample is calculated to provide a
-          maximum acceptable relative error. The amount of acceptable error is specified with the
-            <codeph>gp_analyze_relative_error</codeph> system configuration parameter, which is set
-          to .25 (25%) by default. This is usually sufficiently accurate to generate correct query
-          plans. If <codeph>ANALYZE</codeph> is not producing good estimates for a table column, you
-          can increase the sample size by setting the <codeph>gp_analyze_relative_error</codeph>
-          configuration parameter to a lower value. Beware that setting this parameter to a low
-          value can lead to a very large sample size and dramatically increase analyze time. </p>
       </section>
       <section id="section_u5p_brv_mt">
         <title>Updating Statistics</title>
@@ -378,7 +367,7 @@
           tables are always analyzed. </p><p>If GPORCA is enabled (the default), you also need to
           run <codeph>ANALYZE</codeph> or <codeph>ANALYZE ROOTPARTITION</codeph> to refresh the root
           partition statistics. GPORCA requires statistics at the root level for partitioned tables.
-          The legacy optimizer does not use these statistics. </p><p>The time to analyze a
+          The Postgres optimizer does not use these statistics. </p><p>The time to analyze a
           partitioned table is similar to the time to analyze a non-partitioned table with the same
           data since <codeph>ANALYZE ROOTPARTITION</codeph> does not collect statistics on the leaf
           partitions (the data is only sampled). The <codeph>analyzedb</codeph> utility updates root
@@ -415,7 +404,7 @@
           individual column. By default, the target is 25. The default target can be changed by
           setting a server configuration parameter and the target can be set for any column using
           the <codeph>ALTER TABLE</codeph> command. Larger values increase the time needed to do
-            <codeph>ANALYZE</codeph>, but may improve the quality of the legacy query optimizer
+            <codeph>ANALYZE</codeph>, but may improve the quality of the Postgres query optimizer
           (planner) estimates.</p>
         <p>Set the system default statistics target to a different value by setting the
             <codeph>default_statistics_target</codeph> server configuration parameter. The default

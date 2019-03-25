@@ -242,24 +242,6 @@ class Segment:
         return res
 
     # --------------------------------------------------------------------
-    def createTemplate(self, dstDir):
-        """
-        Create a tempate given the information in this Segment.
-        """
-
-        # Make sure we have enough room in the dstDir to fit the segment.
-        duCmd = DiskUsage( name = "srcDir"
-                           , directory = dstDir
-                           )
-        duCmd.run(validateAfter=True)
-        requiredSize = duCmd.get_bytes_used()
-        logger.info("Starting copy of segment dbid %d to location %s" % (int(self.getSegmentDbId()), dstDir))
-
-        cpCmd = LocalDirCopy("Copy system data directory", self.getSegmentDataDirectory(), dstDir)
-        cpCmd.run(validateAfter = True)
-        res = cpCmd.get_results()
-
-    # --------------------------------------------------------------------
     # Six simple helper functions to identify what role a segment plays:
     #  + QD (Query Dispatcher)
     #     + master

@@ -1400,3 +1400,13 @@ CREATE TABLE tstab (i int4, t tsvector) distributed by (i);
 CREATE UNIQUE INDEX tstab_idx ON tstab(t);
 ERROR:  UNIQUE index must contain all columns in the distribution key of relation "tstab"
 INSERT INTO tstab VALUES (1, 'foo');
+-- ALTER TABLE SET DISTRIBUTED RANDOMLY should not work on a table
+-- that has a primary key or unique index.
+CREATE TABLE alter_table_with_primary_key (a int primary key);
+ALTER TABLE alter_table_with_primary_key SET DISTRIBUTED RANDOMLY;
+ERROR:  cannot set to DISTRIBUTED RANDOMLY because relation has primary Key
+HINT:  Drop the primary key first
+CREATE TABLE alter_table_with_unique_index (a int unique);
+ALTER TABLE alter_table_with_unique_index SET DISTRIBUTED RANDOMLY;
+ERROR:  cannot set to DISTRIBUTED RANDOMLY because relation has unique index
+HINT:  Drop the unique index first

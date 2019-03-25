@@ -333,14 +333,6 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 
 (13 rows)
 
 DROP INDEX idx1;
-WARNING:  only dropped the index "idx1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
--- have to drop the indexes on the partitions explicitly.
-DROP INDEX pt_lt_tab_1_prt_part1_col1_idx;
-DROP INDEX pt_lt_tab_1_prt_part2_col1_idx;
-DROP INDEX pt_lt_tab_1_prt_part3_col1_idx;
-DROP INDEX pt_lt_tab_1_prt_part4_col1_idx;
-DROP INDEX pt_lt_tab_1_prt_part5_col1_idx;
 -- @description B-tree single index key = partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col2);
 NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"
@@ -541,8 +533,6 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
 (14 rows)
 
 DROP INDEX idx1;
-WARNING:  only dropped the index "idx1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 -- @description multiple column b-tree index
 CREATE INDEX idx1 on pt_lt_tab(col1,col2);
 NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"
@@ -734,14 +724,6 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
 (14 rows)
 
 DROP INDEX idx1;
-WARNING:  only dropped the index "idx1"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
--- have to drop the indexes on the partitions explicitly.
-DROP INDEX pt_lt_tab_1_prt_part1_col2_idx;
-DROP INDEX pt_lt_tab_1_prt_part2_col2_idx;
-DROP INDEX pt_lt_tab_1_prt_part3_col2_idx;
-DROP INDEX pt_lt_tab_1_prt_part4_col2_idx;
-DROP INDEX pt_lt_tab_1_prt_part5_col2_idx;
 -- @description multi-column unique constraint (= b-tree index). Essentially the
 -- same as the previous case, but the columns are the other way 'round, and we
 -- do this on the table with default partition.
@@ -1743,7 +1725,7 @@ EXPLAIN SELECT * FROM pt_complex WHERE i = 1 AND j = 1;
                Filter: (j = 1)
                ->  Bitmap Index Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p12_i_idx  (cost=0.00..100.65 rows=22 width=0)
                      Index Cond: (i = 1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (23 rows)
 
 --

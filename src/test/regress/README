@@ -34,3 +34,16 @@ pg_regress as:
 
     ./pg_regress --ao-dir=uao uao_ddl/create_ao_tables_row \
     uao_ddl/create_ao_tables_column
+
+
+Testing setup without teardown, allowing DB objects to persist
+--------------------------------------------------------------
+Please leave objects behind in the regression database.
+
+The regression database that results from installcheck-world
+in the regress directory is utilized for integration testing
+of auxiliary tools such as gpbackup and gpupgrade. When writing
+testcases for new object types, a set of objects should be
+preserved in the regression database and not be dropped
+at the end of the test suite, to ensure coverage in the
+tests of auxiliary tools.

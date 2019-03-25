@@ -30,7 +30,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
          ->  HashAggregate
                Group Key: t.type
                ->  Seq Scan on t
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 CREATE MATERIALIZED VIEW tm AS SELECT type, sum(amt) AS totamt FROM t GROUP BY type WITH NO DATA;
@@ -75,7 +75,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
                ->  HashAggregate
                      Group Key: t.type
                      ->  Seq Scan on t
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 CREATE MATERIALIZED VIEW tvm AS SELECT * FROM tv ORDER BY type;
@@ -111,7 +111,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
                                        ->  HashAggregate
                                              Group Key: t.type
                                              ->  Seq Scan on t
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 CREATE MATERIALIZED VIEW tvvm AS SELECT * FROM tvv;
@@ -242,7 +242,7 @@ EXPLAIN (costs off)
             QUERY PLAN             
 -----------------------------------
  Seq Scan on tmm
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (2 rows)
 
 EXPLAIN (costs off)
@@ -251,7 +251,7 @@ EXPLAIN (costs off)
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on tvmm
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 EXPLAIN (costs off)
@@ -260,7 +260,7 @@ EXPLAIN (costs off)
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on tvvm
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 SELECT * FROM tmm;
@@ -292,7 +292,7 @@ EXPLAIN (costs off)
             QUERY PLAN             
 -----------------------------------
  Seq Scan on tmm
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (2 rows)
 
 EXPLAIN (costs off)
@@ -301,7 +301,7 @@ EXPLAIN (costs off)
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on tvmm
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 EXPLAIN (costs off)
@@ -310,7 +310,7 @@ EXPLAIN (costs off)
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on tvvm
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 SELECT * FROM tmm;

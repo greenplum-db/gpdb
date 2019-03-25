@@ -553,7 +553,7 @@ explain (costs off)
                            ->  Seq Scan on t1c
                            ->  Seq Scan on t2
                            ->  Seq Scan on t2c
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
   SELECT * FROM
@@ -597,7 +597,7 @@ select event_id
                ->  Seq Scan on events
                ->  Seq Scan on events_child
                ->  Seq Scan on other_events
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 drop table events_child, events, other_events;
@@ -711,7 +711,7 @@ WHERE x > 3;
                            InitPlan 1 (returns $0)
                              ->  Result
                      ->  Result
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 SELECT * FROM

@@ -57,8 +57,8 @@
             <li>Greenplum Database software is installed. </li>
             <li>Databases and database objects are created in the new segment instances on the new
               segment hosts. </li>
-            <li>The <i>gpexpand</i> schema is created in the master database. You can use the tables
-              in the schema to monitor and control the expansion process.</li>
+            <li>The <i>gpexpand</i> schema is created in the postgres database. You can use the
+              tables and view in the schema to monitor and control the expansion process.</li>
           </ul><p>After the system has been updated, the new segment instances on the new segment
             hosts are available.</p><ul id="ul_dy3_xxn_kgb">
             <li>New segments are immediately available and participate in new queries and data
@@ -90,7 +90,7 @@
           file</xref>:<codeblock>gpexpand -f <i>hosts_file</i></codeblock></li>
       <li id="no166063">To <xref href="expand-initialize.xml#expand-initialize">initialize segments
           and create the expansion
-            schema</xref>:<codeblock>gpexpand -i <i>input_file</i> -D <i>database_name</i></codeblock><p><codeph>gpexpand</codeph>
+            schema</xref>:<codeblock>gpexpand -i <i>input_file</i></codeblock><p><codeph>gpexpand</codeph>
           creates a data directory, copies user tables from all existing databases on the new
           segments, and captures metadata for each table in an expansion schema for status tracking.
           After this process completes, the expansion operation is committed and

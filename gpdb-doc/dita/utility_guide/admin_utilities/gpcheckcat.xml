@@ -123,17 +123,19 @@
               extraneous entries</p>
             <p><codeph>owner</codeph> - Check table ownership that is inconsistent with the master
               database</p>
-            <p><codeph>orphaned_toast_tables</codeph> - Check for orphaned TOAST tables.
-              <note>One way a TOAST table can become orphaned is if the
+
+            <p><codeph>orphaned_toast_tables</codeph> - Check for orphaned TOAST tables. 
+              <note>There are several ways a TOAST table can become orphaned where a repair script
+                cannot be generated and a manual catalog change is required. One way is if the
                   <codeph>reltoastrelid</codeph> entry in <i>pg_class</i> points to an incorrect
-                TOAST table (a TOAST table mismatch). Fixing this type of orphaned TOAST table
-                requires a manual catalog change. If a manual change is required,<ph
-                  otherprops="oss-only"> update the <i>pg_depend</i> TOAST table entry and set the
-                    <codeph>refobjid</codeph> field to the correct dependent table.</ph><ph
-                  otherprops="pivotal"> contact Pivotal
-                Support.</ph></note></p><p><codeph>part_integrity</codeph> - Check
-                <i>pg_partition</i> branch integrity, partition with OIDs, partition distribution
-              policy</p>
+                TOAST table (a TOAST table mismatch). Another way is if both the
+                  <codeph>reltoastrelid</codeph> in <i>pg_class</i> is missing and the
+                  <codeph>pg_depend</codeph> entry is missing (a double orphan TOAST table). If a
+                manual catalog change is needed, <codeph>gpcheckcat</codeph> will display detailed
+                steps you can follow to update the catalog. <ph otherprops="pivotal">Contact Pivotal
+                  Support if you need help with the catalog change.</ph></note></p>
+            <p><codeph>part_integrity</codeph> - Check <i>pg_partition</i> branch integrity,
+              partition with OIDs, partition distribution policy</p>
             <p><codeph>part_constraint</codeph> - Check constraints on partitioned tables</p>
             <p><codeph>unique_index_violation</codeph> - Check tables that have columns with the
               unique index constraint for duplicate entries</p>

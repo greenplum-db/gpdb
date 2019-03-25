@@ -1,0 +1,10 @@
+# Generated subdirectories
+/tmp_check/
+/results/
+/log/
+
+regression.diffs
+regression.out
+
+stdin
+stdout

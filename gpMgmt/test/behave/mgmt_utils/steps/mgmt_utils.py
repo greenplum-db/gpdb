@@ -22,6 +22,7 @@ import psutil
 from behave import given, when, then
 from datetime import datetime, timedelta
 from time import sleep
+from os import path
 
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
@@ -150,6 +151,14 @@ def impl(context, dbname, cname):
         del context.named_conns[cname]
     context.named_conns[cname] = dbconn.connect(dbconn.DbURL(dbname=dbname))
 
+@given('the user create a writable external table with name "{tabname}"')
+def impl(conetxt, tabname):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        sql = ("create writable external table {tabname}(a int) location "
+               "('gpfdist://host.invalid:8000/file') format 'text'").format(tabname=tabname)
+        dbconn.execSQL(conn, sql)
+        conn.commit()
 
 @given('the user executes "{sql}" with named connection "{cname}"')
 def impl(context, cname, sql):
@@ -311,7 +320,6 @@ def impl(context, env_var):
     os.environ[env_var] = context.orig_env[env_var]
 
     del context.orig_env[env_var]
-
 
 @given('the user runs "{command}"')
 @when('the user runs "{command}"')
@@ -637,7 +645,7 @@ def run_gpinitstandby(context, hostname, port, standby_data_dir, options='', rem
         # We do not set port nor data dir here to test gpinitstandby's ability to autogather that info
         cmd = "gpinitstandby -a -s %s" % hostname
     else:
-        cmd = "gpinitstandby -a -s %s -P %s -F %s" % (hostname, port, standby_data_dir)
+        cmd = "gpinitstandby -a -s %s -P %s -S %s" % (hostname, port, standby_data_dir)
 
     run_gpcommand(context, cmd + ' ' + options)
 
@@ -646,6 +654,14 @@ def impl(context):
     hostname = get_master_hostname('postgres')[0][0]
     temp_data_dir = tempfile.mkdtemp() + "/standby_datadir"
     run_gpinitstandby(context, hostname, os.environ.get("PGPORT"), temp_data_dir)
+
+@when('the user initializes a standby on the same host as master and the same data directory')
+def impl(context):
+    hostname = get_master_hostname('postgres')[0][0]
+    master_port = int(os.environ.get("PGPORT"))
+
+    cmd = "gpinitstandby -a -s %s -P %d" % (hostname, master_port + 1)
+    run_gpcommand(context, cmd)
 
 @when('the user runs gpinitstandby with options "{options}"')
 @then('the user runs gpinitstandby with options "{options}"')
@@ -721,7 +737,7 @@ def impl(context):
         # We do not set port nor data dir here to test gpinitstandby's ability to autogather that info
         cmd = "gpinitstandby -a -s %s" % context.master_hostname
     else:
-        cmd = "gpinitstandby -a -s %s -P %s -F %s" % (context.master_hostname, context.master_port, master_data_dir)
+        cmd = "gpinitstandby -a -s %s -P %s -S %s" % (context.master_hostname, context.master_port, master_data_dir)
 
     context.execute_steps(u'''Then the user runs command "%s" from standby master''' % cmd)
 
@@ -1732,17 +1748,23 @@ def impl(context, table_name, db_name):
         dbconn.execSQL(conn, index_qry)
         conn.commit()
 
+@when("the user installs gpperfmon")
+def impl(context):
+    master_port = os.getenv('PGPORT', 15432)
+    cmd = "gpperfmon_install --port {master_port} --enable --password foo".format(master_port=master_port)
+    run_command(context, cmd)
 
 @given('gpperfmon is configured and running in qamode')
 @then('gpperfmon is configured and running in qamode')
 def impl(context):
+    master_port = os.getenv('PGPORT', 15432)
     target_line = 'qamode = 1'
     gpperfmon_config_file = "%s/gpperfmon/conf/gpperfmon.conf" % os.getenv("MASTER_DATA_DIRECTORY")
     if not check_db_exists("gpperfmon", "localhost"):
         context.execute_steps(u'''
-                              When the user runs "gpperfmon_install --port 15432 --enable --password foo"
+                              When the user runs "gpperfmon_install --port {master_port} --enable --password foo"
                               Then gpperfmon_install should return a return code of 0
-                              ''')
+                              '''.format(master_port=master_port))
 
     if not file_contains_line(gpperfmon_config_file, target_line):
         context.execute_steps(u'''
@@ -1919,14 +1941,12 @@ def impl(context, gppkg_name):
 def impl(context, gppkg_name):
     _remove_gppkg_from_host(context, gppkg_name, is_master_host=True)
 
-
-@given('gpAdminLogs directory has no "{prefix}" files')
-def impl(context, prefix):
+@then('gpAdminLogs directory has no "{expected_file}" files')
+def impl(context, expected_file):
     log_dir = _get_gpAdminLogs_directory()
-    items = glob.glob('%s/%s_*.log' % (log_dir, prefix))
-    for item in items:
-        os.remove(item)
-
+    files_found = glob.glob('%s/%s' % (log_dir, expected_file))
+    if files_found:
+        raise Exception("expected no %s files in %s, but found %s" % (expected_file, log_dir, files_found))
 
 @given('"{filepath}" is copied to the install directory')
 def impl(context, filepath):
@@ -2009,14 +2029,25 @@ def step_impl(context, abbreviated_timezone):
     if context.startup_timezone != abbreviated_timezone:
         raise Exception("Expected timezone in startup.log to be %s, but it was %s" % (abbreviated_timezone, context.startup_timezone))
 
+@given("a working directory of the test as '{working_directory}' with mode '{mode}'")
+def impl(context, working_directory, mode):
+    _create_working_directory(context, working_directory, mode)
+
 @given("a working directory of the test as '{working_directory}'")
 def impl(context, working_directory):
+    _create_working_directory(context, working_directory)
+
+def _create_working_directory(context, working_directory, mode=''):
     context.working_directory = working_directory
     # Don't fail if directory already exists, which can occur for the first scenario
     shutil.rmtree(context.working_directory, ignore_errors=True)
-    os.mkdir(context.working_directory)
+    if (mode != ''):
+        os.mkdir(context.working_directory, int(mode,8))
+    else:
+        os.mkdir(context.working_directory)
 
-def _create_cluster(context, master_host, segment_host_list):
+
+def _create_cluster(context, master_host, segment_host_list, with_mirrors=False, mirroring_configuration='group'):
     if segment_host_list == "":
         segment_host_list = []
     else:
@@ -2028,41 +2059,32 @@ def _create_cluster(context, master_host, segment_host_list):
         with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
             curs = dbconn.execSQL(conn, "select count(*) from gp_segment_configuration where role='m';")
             count = curs.fetchall()[0][0]
-            if count == 0:
+            if not with_mirrors and count == 0:
                 print "Skipping creating a new cluster since the cluster is primary only already."
+                return
+            elif with_mirrors and count > 0:
+                print "Skipping creating a new cluster since the cluster has mirrors already."
                 return
     except:
         pass
 
     testcluster = TestCluster(hosts=[master_host]+segment_host_list, base_dir=context.working_directory)
     testcluster.reset_cluster()
-    testcluster.create_cluster(with_mirrors=False)
-    context.gpexpand_mirrors_enabled = False
+    testcluster.create_cluster(with_mirrors=with_mirrors, mirroring_configuration=mirroring_configuration)
+    context.gpexpand_mirrors_enabled = with_mirrors
 
 @then('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
 @given('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
 def impl(context, master_host, segment_host_list):
-    _create_cluster(context, master_host, segment_host_list)
+    _create_cluster(context, master_host, segment_host_list, with_mirrors=False)
 
-@given('a cluster is created with mirrors on "{master_host}" and "{segment_host}"')
-def impl(context, master_host, segment_host):
-    del os.environ['MASTER_DATA_DIRECTORY']
-    os.environ['MASTER_DATA_DIRECTORY'] = os.path.join(context.working_directory,
-                                                       'data/master/gpseg-1')
-    try:
-        with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
-            curs = dbconn.execSQL(conn, "select count(*) from gp_segment_configuration where role='m';")
-            count = curs.fetchall()[0][0]
-            if count > 0:
-                print "Skipping creating a new cluster since the cluster has mirrors already."
-                return
-    except:
-        pass
+@given('a cluster is created with mirrors on "{master_host}" and "{segment_host_list}"')
+def impl(context, master_host, segment_host_list):
+    _create_cluster(context, master_host, segment_host_list, with_mirrors=True, mirroring_configuration='group')
 
-    testcluster = TestCluster(hosts=[master_host,segment_host], base_dir=context.working_directory)
-    testcluster.reset_cluster()
-    testcluster.create_cluster(with_mirrors=True)
-    context.gpexpand_mirrors_enabled = True
+@given('a cluster is created with "{mirroring_configuration}" segment mirroring on "{master_host}" and "{segment_host_list}"')
+def impl(context, mirroring_configuration, master_host, segment_host_list):
+    _create_cluster(context, master_host, segment_host_list, with_mirrors=True, mirroring_configuration=mirroring_configuration)
 
 @given('the user runs gpexpand interview to add {num_of_segments} new segment and {num_of_hosts} new host "{hostnames}"')
 @when('the user runs gpexpand interview to add {num_of_segments} new segment and {num_of_hosts} new host "{hostnames}"')
@@ -2156,6 +2178,18 @@ sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
     if ret_code != 0:
         raise Exception("gpexpand exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
 
+@when('the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check')
+def impl(context):
+    inputfile_contents = """sdw1:sdw1:20502:/data/gpdata/gpexpand/data/primary/gpseg2:7:2:p
+sdw1:sdw1:21502:/data/gpdata/gpexpand/data/mirror/gpseg2:8:2:m"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    inputfile_name = "%s/gpexpand_inputfile_%s" % (context.working_directory, timestamp)
+    with open(inputfile_name, 'w') as fd:
+        fd.write(inputfile_contents)
+
+    gpexpand = Gpexpand(context, working_directory=context.working_directory)
+    gpexpand.initialize_segments()
+
 @given('the master pid has been saved')
 def impl(context):
     data_dir = os.path.join(context.working_directory,
@@ -2171,6 +2205,20 @@ def impl(context):
         return
 
     raise Exception("The master pid has been changed.\nprevious: %s\ncurrent: %s" % (context.master_pid, current_master_pid))
+
+@then('the numsegments of table "{tabname}" is {numsegments}')
+def impl(context, tabname, numsegments):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = "select numsegments from gp_distribution_policy where localoid = '{tabname}'::regclass".format(tabname=tabname)
+        ns = dbconn.execSQLForSingleton(conn, query)
+
+    if ns == int(numsegments):
+        return
+
+    raise Exception("The numsegments of the writable external table {tabname} is {ns} (expected to be {numsegments})".format(tabname=tabname,
+                                                                                                                             ns=str(ns),
+                                                                                                                             numsegments=str(numsegments)))
 
 @given('the number of segments have been saved')
 @then('the number of segments have been saved')
@@ -2331,13 +2379,17 @@ def impl(context, hostnames):
                       remoteHost=host)
         cmd.run(validateAfter=True)
 
+@given("a temporary directory under '{tmp_base_dir}' with mode '{mode}' is created")
 @given('a temporary directory under "{tmp_base_dir}" to expand into')
-def impl(context, tmp_base_dir):
+def make_temp_dir(context,tmp_base_dir, mode=''):
     if not tmp_base_dir:
         raise Exception("tmp_base_dir cannot be empty")
     if not os.path.exists(tmp_base_dir):
         os.mkdir(tmp_base_dir)
     context.temp_base_dir = tempfile.mkdtemp(dir=tmp_base_dir)
+    if mode:
+        os.chmod(path.normpath(path.join(tmp_base_dir, context.temp_base_dir)),
+                 int(mode,8))
 
 @given('the new host "{hostnames}" is ready to go')
 def impl(context, hostnames):
@@ -2768,3 +2820,37 @@ def impl(context, dbname):
             UPDATE pg_class SET reltoastrelid = 0 WHERE oid = 'borked'::regclass;
         """)
         conn.commit()
+
+@then('verify status file and gp_segment_configuration backup file exist on standby')
+def impl(context):
+    status_file = 'gpexpand.status'
+    gp_segment_configuration_backup = 'gpexpand.gp_segment_configuration'
+
+    query = "select hostname, datadir from gp_segment_configuration where content = -1 order by dbid"
+    conn = dbconn.connect(dbconn.DbURL(dbname='postgres'))
+    res = dbconn.execSQL(conn, query).fetchall()
+    master = res[0]
+    standby = res[1]
+
+    master_datadir = master[1]
+    standby_host = standby[0]
+    standby_datadir = standby[1]
+
+    standby_remote_statusfile = "%s:%s/%s" % (standby_host, standby_datadir, status_file)
+    standby_local_statusfile = "%s/%s.standby" % (master_datadir, status_file)
+    standby_remote_gp_segment_configuration_file = "%s:%s/%s" % \
+            (standby_host, standby_datadir, gp_segment_configuration_backup)
+    standby_local_gp_segment_configuration_file = "%s/%s.standby" % \
+            (master_datadir, gp_segment_configuration_backup)
+
+    cmd = Command(name="Copy standby file to master", cmdStr='scp %s %s' % \
+            (standby_remote_statusfile, standby_local_statusfile))
+    cmd.run(validateAfter=True)
+    cmd = Command(name="Copy standby file to master", cmdStr='scp %s %s' % \
+            (standby_remote_gp_segment_configuration_file, standby_local_gp_segment_configuration_file))
+    cmd.run(validateAfter=True)
+
+    if not os.path.exists(standby_local_statusfile):
+        raise Exception('file "%s" is not exist' % standby_remote_statusfile)
+    if not os.path.exists(standby_local_gp_segment_configuration_file):
+        raise Exception('file "%s" is not exist' % standby_remote_gp_segment_configuration_file)

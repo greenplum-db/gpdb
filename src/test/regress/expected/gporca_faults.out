@@ -49,7 +49,7 @@ EXPLAIN SELECT * FROM func1_nosql_vol(5), foo;
          ->  Materialize  (cost=1.01..1.02 rows=1 width=8)
                ->  Seq Scan on foo  (cost=0.00..1.01 rows=1 width=8)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select gp_inject_fault('opt_relcache_translator_catalog_access', 'reset', 1);

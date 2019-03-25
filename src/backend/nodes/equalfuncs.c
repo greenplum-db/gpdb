@@ -1388,8 +1388,9 @@ _equalIndexStmt(const IndexStmt *a, const IndexStmt *b)
 	COMPARE_SCALAR_FIELD(deferrable);
 	COMPARE_SCALAR_FIELD(initdeferred);
 	COMPARE_SCALAR_FIELD(concurrent);
-	COMPARE_STRING_FIELD(altconname);
 	COMPARE_SCALAR_FIELD(is_split_part);
+	COMPARE_SCALAR_FIELD(parentIndexId);
+	COMPARE_SCALAR_FIELD(parentConstraintId);
 
 	return true;
 }

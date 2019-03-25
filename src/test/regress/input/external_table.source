@@ -3551,3 +3551,23 @@ SELECT * FROM tbl_ext_gpformatter;
 -- Test information_schema views for external tables
 --
 SELECT * FROM information_schema.tables WHERE table_name IN ('wet_pos4', 'exttab_basic_1');
+
+--
+-- Test external table can be safely expanded
+--
+
+-- start_ignore
+create extension if not exists gp_debug_numsegments;
+-- end_ignore
+
+select gp_debug_set_create_table_default_numsegments(2);
+
+create writable external table ext_w_expand(a text, b text) location('gpfdist://foo:7070/ext_w_expand.out') format 'text';
+
+select numsegments from gp_distribution_policy where localoid = 'ext_w_expand'::regclass;
+
+alter external table ext_w_expand expand table;
+
+select numsegments from gp_distribution_policy where localoid = 'ext_w_expand'::regclass;
+
+drop external table ext_w_expand;

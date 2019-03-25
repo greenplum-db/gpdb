@@ -27,7 +27,7 @@ ALTER TABLE ALL IN TABLESPACE <varname>name</varname> [ OWNED BY <varname>role_n
 
 ALTER TABLE [IF EXISTS] [ONLY] <varname>name</varname> SET 
      WITH (REORGANIZE=true|false)
-   | DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]} [, ... ] )
+   | DISTRIBUTED BY ({<varname>column_name</varname> [<varname>opclass</varname>]} [, ... ] )
    | DISTRIBUTED RANDOMLY
    | DISTRIBUTED REPLICATED 
 
@@ -42,12 +42,12 @@ where <varname>action</varname> is one of:
       [<varname>column_constraint</varname> [ ... ]]
       [ COLLATE <varname>collation</varname> ]
       [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
-  DROP [COLUMN] [IF EXISTS] <varname>column</varname> [RESTRICT | CASCADE]
-  ALTER [COLUMN] <varname>column</varname> [ SET DATA ] TYPE <varname>type</varname> [COLLATE <varname>collation</varname>] [USING <varname>expression</varname>]
-  ALTER [COLUMN] <varname>column</varname> SET DEFAULT <varname>expression</varname>
-  ALTER [COLUMN] <varname>column</varname> DROP DEFAULT
-  ALTER [COLUMN] <varname>column</varname> { SET | DROP } NOT NULL
-  ALTER [COLUMN] <varname>column</varname> SET STATISTICS <varname>integer</varname>
+  DROP [COLUMN] [IF EXISTS] <varname>column_name</varname> [RESTRICT | CASCADE]
+  ALTER [COLUMN] <varname>column_name</varname> [ SET DATA ] TYPE <varname>type</varname> [COLLATE <varname>collation</varname>] [USING <varname>expression</varname>]
+  ALTER [COLUMN] <varname>column_name</varname> SET DEFAULT <varname>expression</varname>
+  ALTER [COLUMN] <varname>column_name</varname> DROP DEFAULT
+  ALTER [COLUMN] <varname>column_name</varname> { SET | DROP } NOT NULL
+  ALTER [COLUMN] <varname>column_name</varname> SET STATISTICS <varname>integer</varname>
   ALTER [COLUMN] column SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
   ALTER [COLUMN] column RESET ( <varname>attribute_option</varname> [, ... ] )
   ADD <varname>table_constraint</varname> [NOT VALID]
@@ -164,14 +164,16 @@ where <varname>action</varname> is one of:
                                         default conversion is the same as an assignment cast from
                                         old data type to new. A <codeph>USING</codeph> clause must
                                         be provided if there is no implicit or assignment cast from
-                                        old to new type.</li>
+                                        old to new type.<note>GPORCA supports collation only when
+                                                all columns in the query use the same collation. If
+                                                columns in the query use different collations, then
+                                                Greenplum uses the Postgres query
+                                        planner.</note></li>
                                 <li id="ay136904"><b>SET/DROP DEFAULT</b> — Sets or removes the
-                                        default value for a column. The default values only apply to
-                                        subsequent <codeph>INSERT</codeph> commands. They do not
-                                        cause rows already in the table to change. Defaults may also
-                                        be created for views, in which case they are inserted into
-                                        statements on the view before the view's <codeph>ON
-                                                INSERT</codeph> rule is applied. </li>
+                                        default value for a column. Default values only apply in
+                                        subsequent <codeph>INSERT</codeph> or
+                                                <codeph>UPDATE</codeph> commands; they do not cause
+                                        rows already in the table to change. </li>
                                 <li id="ay136929"><b>SET/DROP NOT NULL</b> — Changes whether a
                                         column is marked to allow null values or to reject null
                                         values. You can only use <codeph>SET NOT NULL</codeph> when
@@ -370,7 +372,7 @@ where <varname>action</varname> is one of:
                                         child-table constraints for all <codeph>CHECK</codeph>
                                         constraints of the parent, except those marked
                                         non-inheritable (that is, created with <codeph>ALTER TABLE
-                                                ONLY</codeph>) in the parent, which are ignored; all
+                                                ... ADD CONSTRAINT ... NO INHERIT</codeph>) in the parent, which are ignored; all
                                         child-table constraints matched must not be marked
                                         non-inheritable. Currently <codeph>UNIQUE</codeph>,
                                                 <codeph>PRIMARY KEY</codeph>, and <codeph>FOREIGN
@@ -394,10 +396,24 @@ where <varname>action</varname> is one of:
                                         file(s) associated with the table to the new tablespace.
                                         Indexes on the table, if any, are not moved; but they can be
                                         moved separately with additional <codeph>SET
-                                                TABLESPACE</codeph> commands. See also
-                                                <codeph>CREATE TABLESPACE</codeph>. If changing the
-                                        tablespace of a partitioned table, all child table
-                                        partitions will also be moved to the new tablespace. </li>
+                                                TABLESPACE</codeph> commands. All tables in the
+                                        current database in a tablespace can be moved by using the
+                                                <codeph>ALL IN TABLESPACE</codeph> form, which will
+                                        lock all tables to be moved first and then move each one.
+                                        This form also supports <codeph>OWNED BY</codeph>, which
+                                        will only move tables owned by the roles specified. If the
+                                                <codeph>NOWAIT</codeph> option is specified then the
+                                        command will fail if it is unable to acquire all of the
+                                        locks required immediately. Note that system catalogs are
+                                        not moved by this command, use <codeph>ALTER
+                                                DATABASE</codeph> or explicit <codeph>ALTER
+                                                TABLE</codeph> invocations instead if desired. The
+                                                <codeph>information_schema</codeph> relations are
+                                        not considered part of the system catalogs and will be
+                                        moved. See also <codeph>CREATE TABLESPACE</codeph>. If
+                                        changing the tablespace of a partitioned table, all child
+                                        table partitions will also be moved to the new tablespace.
+                                </li>
                                 <li id="ay137292"><b>RENAME</b> — Changes the name of a table (or an
                                         index, sequence, or view), the name of an individual column
                                         in a table, or the name of a constraint of the table. There
@@ -419,9 +435,16 @@ where <varname>action</varname> is one of:
                                 For more information about the precedence of compression settings,
                                 see "Using Compression" in the <cite>Greenplum Database
                                         Administrator Guide</cite>.</note>
+                        <p>All the forms of ALTER TABLE that act on a single table, except
+                                        <codeph>RENAME</codeph> and <codeph>SET SCHEMA</codeph>, can
+                                be combined into a list of multiple alterations to apply together.
+                                For example, it is possible to add several columns and/or alter the
+                                type of several columns in a single command. This is particularly
+                                useful with large tables, since only one pass over the table need be
+                                made. </p>
                         <p>You must own the table to use <codeph>ALTER TABLE</codeph>. To change the
-                                schema of a table, you must also have <codeph>CREATE</codeph>
-                                privilege on the new schema. To add the table as a new child of a
+                                schema or tablespace of a table, you must also have <codeph>CREATE</codeph>
+                                privilege on the new schema or tablespace. To add the table as a new child of a
                                 parent table, you must own the parent table as well. To alter the
                                 owner, you must also be a direct or indirect member of the new
                                 owning role, and that role must have <codeph>CREATE</codeph>
@@ -476,7 +499,7 @@ where <varname>action</varname> is one of:
                         <parml>
                                 <plentry>
                                         <pt>
-                                                <varname>column</varname>
+                                                <varname>column_name</varname>
                                         </pt>
                                         <pd>Name of a new or existing column. Note that Greenplum
                                                 Database distribution key columns must be treated
@@ -486,7 +509,7 @@ where <varname>action</varname> is one of:
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>new_column</varname>
+                                                <varname>new_column_name</varname>
                                         </pt>
                                         <pd>New name for an existing column.</pd>
                                 </plentry>
@@ -586,7 +609,7 @@ where <varname>action</varname> is one of:
                                                 100 is the default.</pd>
                                 </plentry>
                                 <plentry>
-                                        <pt>DISTRIBUTED BY ({<varname>column</varname>
+                                        <pt>DISTRIBUTED BY ({<varname>column_name</varname>
                                                   [<varname>opclass</varname>]}) | DISTRIBUTED
                                                 RANDOMLY | DISTRIBUTED REPLICATED</pt>
                                         <pd>Specifies the distribution policy for a table. Changing
@@ -777,9 +800,8 @@ where <varname>action</varname> is one of:
                                                 column with a check constraint or a <codeph>NOT
                                                   NULL</codeph> constraint.</pd>
                                         <pd>You cannot exchange a partition with a replicated table.
-                                                You cannot exchange a partition with a partitioned
-                                                table or a child partition of a partitioned
-                                                table.</pd>
+                                                Exchanging a partition with a partitioned table or a child partition of a partitioned
+                                                table is not supported.</pd>
                                         <pd><b>WITH</b> | <b>WITHOUT VALIDATION</b> - Validates that
                                                 the data in the table matches the
                                                   <codeph>CHECK</codeph> constraint of the partition
@@ -887,7 +909,7 @@ where <varname>action</varname> is one of:
                                 columns.</p>
                         <p>Adding a <codeph>CHECK</codeph> or <codeph>NOT NULL</codeph> constraint
                                 requires scanning the table to verify that existing rows meet the
-                                constraint.</p>
+                                constraint, but does not require a table rewrite.</p>
                         <p>When a column is added with <codeph>ADD COLUMN</codeph>, all existing
                                 rows in the table are initialized with the column's default value,
                                 or <codeph>NULL</codeph> if no <codeph>DEFAULT</codeph> clause is
@@ -913,11 +935,18 @@ where <varname>action</varname> is one of:
                                 reclaimed over time as existing rows are updated. If you drop the
                                 system <codeph>oid</codeph> column, however, the table is rewritten
                                 immediately.</p>
-                        <p> To force an immediate rewrite of the table, you can use <codeph>VACUUM
-                                        FULL</codeph>, <codeph>CLUSTER</codeph>, or one of the forms
-                                of <codeph>ALTER TABLE</codeph> that forces a rewrite. This results
-                                in no semantically-visible change in the table, but gets rid of
-                                no-longer-useful data. </p>
+                        <p> To force immediate reclamation of space occupied by a dropped column,
+                                you can execute one of the forms of <codeph>ALTER TABLE</codeph>
+                                that performs a rewrite of the whole table. This results in
+                                reconstructing each row with the dropped column replaced by a null
+                                value. </p>
+                        <p> The rewriting forms of <codeph>ALTER TABLE</codeph> are not MVCC-safe.
+                                After a table rewrite, the table will appear empty to concurrent
+                                transactions, if they are using a snapshot taken before the rewrite
+                                occurred. See <xref
+                                        href="https://www.postgreql.org/docs/9.4/mvcc-caveats.html"
+                                        scope="external" format="html">MVCC Caveats</xref> for more
+                                details. </p>
                         <p> The <codeph>USING</codeph> option of <codeph>SET DATA TYPE</codeph> can
                                 actually specify any expression involving the old values of the row;
                                 that is, it can refer to other columns as well as the one being
@@ -955,8 +984,8 @@ where <varname>action</varname> is one of:
                                         <codeph>OWNER</codeph>, and <codeph>TABLESPACE</codeph>
                                 actions never recurse to descendant tables; that is, they always act
                                 as though <codeph>ONLY</codeph> were specified. Adding a constraint
-                                recurses only for <codeph>CHECK</codeph> constraints that are not marked 
-                                <codeph>NO INHERIT</codeph>.</p>
+                                recurses only for <codeph>CHECK</codeph> constraints that are not
+                                marked <codeph>NO INHERIT</codeph>.</p>
                         <p>These <codeph>ALTER PARTITION</codeph> operations are supported if no
                                 data is changed on a partitioned table that contains a leaf child
                                 partition that has been exchanged to use an external table.
@@ -994,13 +1023,13 @@ where <varname>action</varname> is one of:
                         <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
 (char_length(zipcode) = 5);</codeblock>
                         <p>To add a check constraint only to a table and not to its children:</p>
-                        <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK NO INHERIT 
-(char_length(zipcode) = 5);</codeblock>
+                        <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK (char_length(zipcode) = 5) NO INHERIT 
+;</codeblock>
                         <p>(The check constraint will not be inherited by future children, either.)</p>
 
                         <p>Remove a check constraint from a table and all of its children:</p>
                         <codeblock>ALTER TABLE distributors DROP CONSTRAINT zipchk;</codeblock>
-                        <p>Remove a check constraint from a table only:</p>
+                        <p>Remove a check constraint from one table only:</p>
                         <codeblock>ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;</codeblock>
                         <p>(The check constraint remains in place for any child tables that inherit
                                         <codeph>distributors</codeph>.)</p>

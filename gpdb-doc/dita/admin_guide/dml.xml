@@ -182,7 +182,8 @@
       </p>
       <p>Using <codeph>UPDATE</codeph> in Greenplum Database has the following restrictions:</p>
       <ul>
-        <li id="ix155050">The Greenplum distribution key columns may not be updated.</li>
+        <li id="ix155050">While GPORCA supports updates to Greenplum distribution key columns, the
+          Postgres planner does not.</li>
         <li id="ix142137">If mirrors are enabled, you cannot use <codeph>STABLE</codeph> or
             <codeph>VOLATILE</codeph> functions in an <codeph>UPDATE</codeph> statement.</li>
         <li id="ix155339">Greenplum Database partitioning columns cannot be updated.</li>
@@ -338,20 +339,34 @@
         deadlocks. This algorithm allows Greenplum Database to relax concurrent update and delete
         restrictions on heap tables. (Greenplum Database still employs table-level locking on AO/CO
         tables, restricting concurrent <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
-          <codeph>SELECT...FOR UPDATE</codeph> operations.) By default, the Global Deadlock Detector
-        is disabled. You can enable the Global Deadlock Detector by setting the server configuration
-        parameter <xref
+          <codeph>SELECT...FOR UPDATE</codeph> operations.) </p>
+      <p>By default, the Global Deadlock Detector is disabled and Greenplum Database executes the
+        concurrent update and delete operations on a heap table serially. You can enable these
+        concurrent updates and have the Global Deadlock Detector determine when a deadlock
+        exists by setting the server configuration parameter <xref
           href="../ref_guide/config_params/guc-list.xml#gp_enable_global_deadlock_detector"
             ><codeph>gp_enable_global_deadlock_detector</codeph></xref>. </p>
-      <p>If the Global Deadlock Detector determines that deadlock exists, it breaks the deadlock by
-        cancelling one or more backend processes associated with the youngest transaction(s)
-        involved.</p>
-      <p>The Global Deadlock Detector backend process is automatically started on the master host
-        when you start Greenplum Database. You configure the interval at which the Global Deadlock
-        Detector collects and analyzes lock waiting data via the <codeph><xref
+      <p>When the Global Deadlock Detector is enabled, the backend process is automatically started
+        on the master host when you start Greenplum Database. You configure the interval at which
+        the Global Deadlock Detector collects and analyzes lock waiting data via the <codeph><xref
             href="../ref_guide/config_params/guc-list.xml#gp_global_deadlock_detector_period"
             type="section">gp_global_deadlock_detector_period</xref></codeph> server configuration
         parameter.</p>
+      <p>If the Global Deadlock Detector determines that deadlock exists, it breaks the deadlock by
+        cancelling one or more backend processes associated with the youngest transaction(s)
+        involved. </p>
+      <p>When the Global Deadlock Detector determines a deadlock exists for the following types of
+        transactions, only one of the transactions will succeed. The other transactions will fail
+        with an error indicating that concurrent updates to the same row is not allowed.<ul
+          id="ul_bxf_mpp_5gb">
+          <li>Concurrent transactions on the same row of a heap table where the first transaction is
+            an update operation and a later transaction executes an update or delete and the query
+            plan contains a motion operator.</li>
+          <li>Concurrent update transactions on the same distribution key of a heap table that are
+            executed by the Greenplum Database Postgres query optimizer.</li>
+          <li>Concurrent update transactions on the same row of a hash table that are executed by
+            the GPORCA optimizer.</li>
+        </ul></p>
       <note>Greenplum Database uses the interval specified in the <codeph><xref
             href="../ref_guide/config_params/guc-list.xml#deadlock_timeout" type="section"
             >deadlock_timeout</xref></codeph> server configuration parameter for local deadlock
@@ -375,15 +390,6 @@
       <p>When it cancels a transaction to break a deadlock, the Global Deadlock Detector reports the
         following error message:</p>
       <codeblock>ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"</codeblock>
-      <p>When the Global Deadlock Detector is enabled, Greenplum Database returns an error for these
-        types of concurrent operations.</p>
-      <ul id="ul_trv_qqr_qgb">
-        <li>Concurrent update operations on a table distribution key</li>
-        <li>Concurrent update operations where a subplan in a query plan contains a motion
-          operation</li>
-      </ul>
-      <p>When the Global Deadlock Detector is disabled, Greenplum Database executes the concurrent
-        operations serially. </p>
     </body>
   </topic>
   <topic id="topic9" xml:lang="en">

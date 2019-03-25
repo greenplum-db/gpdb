@@ -440,6 +440,7 @@ select * from testbug_char5 order by 1,2;
 begin work;
 create table testbug_char5_exchange (timest character varying(6), user_id numeric(16,0) NOT NULL, tag1 char(5), tag2 char(5))
   with (appendonly=true, compresstype=zlib, compresslevel=3) distributed by (user_id);
+create index on testbug_char5_exchange using btree(tag1);
 insert into testbug_char5_exchange values ('201205', 3333, '2', '2');
 alter table testbug_char5 truncate partition part201205;
 select count(*) from testbug_char5;

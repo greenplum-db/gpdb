@@ -3,13 +3,19 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="dn20941">DISCARD</title><body><p id="sql_command_desc">Discards the session state.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DISCARD { ALL | PLANS | TEMPORARY | TEMP }</codeblock></section><section id="section3">
       <title>Description</title>
-      <p><codeph>DISCARD</codeph> releases internal resources associated with a database session.
-        These resources are normally released at the end of the session. <codeph>DISCARD
-          TEMP</codeph> drops all temporary tables created in the current session. <codeph>DISCARD
-          PLANS</codeph> releases all internally cached query plans. <codeph>DISCARD ALL</codeph>
-        resets a session to its original state, discarding temporary resources and resetting
-        session-local configuration changes.</p>
-    </section><section id="section4"><title>Parameters</title><parml><plentry><pt>TEMPORARY, TEMP</pt><pd>Drops all temporary tables created in the current session.</pd></plentry><plentry><pt>PLANS</pt><pd>Releases all cached query plans.</pd></plentry><plentry><pt>ALL</pt><pd>Releases all temporary resources associated with the current session and resets the session to
+  <p><codeph>DISCARD</codeph> releases internal resources associated with a database session. This command is useful for partially or fully
+    resetting the session's state. There are several subcommands to
+    release different types of resources; the <codeph>DISCARD ALL</codeph>
+      variant subsumes all the others, and also resets additional state.
+  </p>
+</section><section id="section4"><title>Parameters</title><parml><plentry><pt>PLANS</pt><pd>Releases all cached query plans, forcing re-planning to occur
+  the next time the associated prepared statement is used.</pd></plentry><plentry><pt>SEQUENCES</pt><pd>Discards all cached sequence-related state, including any preallocated sequence values that have
+            not yet been returned by <codeph>nextval()</codeph>. (See <codeph>CREATE
+              SEQUENCE</codeph> for a description of preallocated sequence values.) </pd></plentry>
+        <plentry>
+          <pt>TEMPORARY/TEMP</pt>
+          <pd>Drops all temporary tables created in the current session.</pd>
+        </plentry><plentry><pt>ALL</pt><pd>Releases all temporary resources associated with the current session and resets the session to
             its initial state. Currently, this has the same effect as executing the following
             sequence of statements:
             <codeblock>SET SESSION AUTHORIZATION DEFAULT;
@@ -19,4 +25,5 @@ CLOSE ALL;
 UNLISTEN *;
 SELECT pg_advisory_unlock_all();
 DISCARD PLANS;
+DISCARD SEQUENCES;
 DISCARD TEMP;</codeblock></pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>DISCARD ALL</codeph> cannot be executed inside a transaction block.</p></section><section id="section6"><title>Compatibility</title><p><codeph>DISCARD</codeph>  is a Greenplum Database extension.</p></section></body></topic>

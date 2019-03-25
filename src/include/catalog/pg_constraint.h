@@ -256,6 +256,8 @@ extern char * GetConstraintNameByOid(Oid constraintId);
 
 extern void AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
 					  Oid newNspId, bool isType, ObjectAddresses *objsMoved);
+extern void ConstraintSetParentConstraint(Oid childConstrId,
+							  Oid parentConstrId);
 /**
  * Identify primary key column from foreign key column.
  */
@@ -264,6 +266,7 @@ extern bool ConstraintGetPrimaryKeyOf(Oid relid, AttrNumber attno,
 extern void get_constraint_relation_oids(Oid constraint_oid, Oid *conrelid, Oid *confrelid);
 extern Oid	get_relation_constraint_oid(Oid relid, const char *conname, bool missing_ok);
 extern Oid	get_domain_constraint_oid(Oid typid, const char *conname, bool missing_ok);
+extern Oid	get_relation_idx_constraint_oid(Oid relationId, Oid indexId);
 
 extern bool check_functional_grouping(Oid relid,
 						  Index varno, Index varlevelsup,
