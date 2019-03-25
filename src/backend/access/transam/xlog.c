@@ -5557,13 +5557,6 @@ exitArchiveRecovery(TimeLineID endTLI, XLogSegNo endLogSegNo)
 	unlink(recoveryPath);		/* ignore any error */
 
 	/*
-	 * Rename the config file out of the way, so that we don't accidentally
-	 * re-enter archive recovery mode in a subsequent crash.
-	 */
-	unlink(RECOVERY_COMMAND_DONE);
-	durable_rename(RECOVERY_COMMAND_FILE, RECOVERY_COMMAND_DONE, FATAL);
-
-	/*
 	 * Response to FTS probes after this point will not indicate that we are a
 	 * mirror because the am_mirror flag is set based on existence of
 	 * RECOVERY_COMMAND_FILE.  New libpq connections to the postmaster should
@@ -5571,6 +5564,14 @@ exitArchiveRecovery(TimeLineID endTLI, XLogSegNo endLogSegNo)
 	 * mirror.
 	 */
 	ResetMirrorReadyFlag();
+
+	/*
+	 * Rename the config file out of the way, so that we don't accidentally
+	 * re-enter archive recovery mode in a subsequent crash.
+	 */
+	unlink(RECOVERY_COMMAND_DONE);
+	durable_rename(RECOVERY_COMMAND_FILE, RECOVERY_COMMAND_DONE, FATAL);
+
 	ereport(LOG,
 			(errmsg("archive recovery complete")));
 }
