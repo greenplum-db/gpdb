@@ -12,6 +12,8 @@ Column projection is automatically enabled for the `pxf` external table protocol
 - PXF JDBC Connector, `Jdbc` profile
 - PXF Hadoop and Object Store Connectors, `hdfs:parquet`, `adl:parquet`, `gs:parquet`,`s3:parquet`, and `wasbs:parquet` profiles
 
+**Note:** PXF may disable column projection in cases where it cannot successfully serialize a query filter; for example, when the `WHERE` clause resolves to a `boolean` type.
+
 To summarize, all of the following criteria must be met for column projection to occur:
 
 * The external data source that you are accessing must support column projection. For example, Hive supports column projection for ORC-format data, and certain SQL databases support column projection.
