@@ -2,7 +2,7 @@
 title: About Column Projection in PXF
 ---
 
-PXF supports column projection. When column projection is enabled (the default), only the columns required by a `SELECT` query on an external table are returned from the external data source. This process can improve query performance, and can also reduce the amount of data that is transferred to Greenplum Database.
+PXF supports column projection, and it is always enabled. With column projection, only the columns required by a `SELECT` query on an external table are returned from the external data source. This process can improve query performance, and can also reduce the amount of data that is transferred to Greenplum Database.
 
 **Note:** Some external data sources do not support column projection. If a query accesses a data source that does not support column projection, the query is instead executed without it, and the data is filtered after it is transferred to Greenplum Database.
 
