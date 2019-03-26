@@ -214,14 +214,6 @@ extern void LWLockReleaseAll(void);
 extern bool LWLockHeldByMe(LWLock *lock);
 extern bool LWLockHeldExclusiveByMe(LWLock *lock);
 
-#ifdef USE_TEST_UTILS_X86
-// GPDB_94_MERGE_FIXME: do these still work? Are they still needed?
-extern uint32 LWLocksHeld(void);
-extern LWLock *LWLockHeldLatest(void);
-extern void *LWLockHeldLatestCaller(void);
-extern const char *LWLocksHeldStackTraces(void);
-#endif /* USE_TEST_UTILS_X86 */
-
 extern bool LWLockAcquireWithVar(LWLock *lock, uint64 *valptr, uint64 val);
 extern bool LWLockWaitForVar(LWLock *lock, uint64 *valptr, uint64 oldval, uint64 *newval);
 extern void LWLockUpdateVar(LWLock *lock, uint64 *valptr, uint64 value);

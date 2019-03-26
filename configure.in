@@ -797,13 +797,6 @@ PGAC_ARG_BOOL(enable, debugntuplestore, no, [enable debug_ntuplestore (for debug
                          [Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore)])])
 
 #
-# Enable testing utilities
-#
-PGAC_ARG_BOOL(enable, testutils, no, [enable testing utilities],
-              [AC_DEFINE([USE_TEST_UTILS], 1,
-                         [Define to 1 to build with testing utilities. (--enable-testutils)])])
-
-#
 # Enable Greenplum ORCA optimizer
 #
 PGAC_ARG_BOOL(enable, orca, yes, [disable ORCA optimizer],

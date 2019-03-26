@@ -863,7 +863,6 @@ with_CC
 enable_depend
 enable_cassert
 enable_debugntuplestore
-enable_testutils
 enable_orca
 enable_mapreduce
 enable_gpcloud
@@ -1548,7 +1547,6 @@ Optional Features:
   --enable-cassert        enable assertion checks (for debugging)
   --enable-debugntuplestore
                           enable debug_ntuplestore (for debugging)
-  --enable-testutils      enable testing utilities
   --disable-orca          disable ORCA optimizer
   --enable-mapreduce      enable Greenplum Mapreduce support
   --disable-gpcloud       disable gpcloud support
@@ -6510,35 +6508,6 @@ $as_echo "#define USE_DEBUG_NTUPLESTORE 1" >>confdefs.h
 
 else
   enable_debugntuplestore=no
-
-fi
-
-
-
-#
-# Enable testing utilities
-#
-
-
-# Check whether --enable-testutils was given.
-if test "${enable_testutils+set}" = set; then :
-  enableval=$enable_testutils;
-  case $enableval in
-    yes)
-
-$as_echo "#define USE_TEST_UTILS 1" >>confdefs.h
-
-      ;;
-    no)
-      :
-      ;;
-    *)
-      as_fn_error $? "no argument expected for --enable-testutils option" "$LINENO" 5
-      ;;
-  esac
-
-else
-  enable_testutils=no
 
 fi
 

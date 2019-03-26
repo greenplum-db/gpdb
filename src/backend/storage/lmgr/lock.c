@@ -826,14 +826,6 @@ LockAcquireExtended(const LOCKTAG *locktag,
 			return LOCKACQUIRE_ALREADY_HELD;
 	}
 	
-#ifdef USE_TEST_UTILS_X86
-	if (gp_test_deadlock_hazard && !dontWait)
-	{
-		/* blocking lock request, check if any lightweight lock is already held */
-		LWLockHeldDetect(locktag, lockmode);
-	}
-#endif /* USE_TEST_UTILS_X86 */
-
 	/*
 	 * lockHolder is the gang member that should hold and manage locks for this
 	 * transaction.  In Utility mode, or on the QD, it's allways myself.

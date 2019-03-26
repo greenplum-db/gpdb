@@ -5157,11 +5157,6 @@ PostgresMain(int argc, char *argv[],
 		 */
 		DoingCommandRead = true;
 
-#ifdef USE_TEST_UTILS
-		/* reset time slice */
-		TimeSliceReset();
-#endif /* USE_TEST_UTILS */
-
 		/*
 		 * (2b) Check for temp table delete reset session work.
 		 * Also clean up idle resources.

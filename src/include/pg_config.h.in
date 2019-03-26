@@ -981,9 +981,6 @@
 /* Define to select SysV-style shared memory. */
 #undef USE_SYSV_SHARED_MEMORY
 
-/* Define to 1 to build with testing utilities. (--enable-testutils) */
-#undef USE_TEST_UTILS
-
 /* Define to select unnamed POSIX semaphores. */
 #undef USE_UNNAMED_POSIX_SEMAPHORES
 
