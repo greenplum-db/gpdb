@@ -3,7 +3,7 @@
                       'gpcheckcat',
                       'gpinitstandby',
                       'gpactivatestandby'] %}
-{% set CLI_2_suites = ['replication_slots'] %}
+{% set CLI_2_suites = [] %}
 
 {% set gppkg_additional_task = "
         - task: setup_gppkg_second_install
@@ -26,6 +26,8 @@
                       {'name': 'gpinitsystem',
                        'use_concourse_cluster': false},
                       {'name': 'gpstate',
+                       'use_concourse_cluster': false},
+                      {'name': 'replication_slots',
                        'use_concourse_cluster': false}
                     ] %}
 
