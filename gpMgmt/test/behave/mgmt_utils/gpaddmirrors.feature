@@ -1,6 +1,10 @@
 @gpaddmirrors
 Feature: Tests for gpaddmirrors
 
+########################### @concourse_cluster tests ###########################
+# The @concourse_cluster tag denotes the scenario that requires a remote cluster
+
+    @concourse_cluster
     Scenario: gprecoverseg works correctly on a newly added mirror
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is killed on hosts "mdw,sdw1,sdw2"
@@ -15,6 +19,7 @@ Feature: Tests for gpaddmirrors
         And the segments are synchronized
         And the user runs "gpstop -aqM fast"
 
+    @concourse_cluster
     Scenario: gpaddmirrors puts mirrors on the same hosts when there is a standby configured
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is killed on hosts "mdw,sdw1,sdw2,sdw3"
@@ -30,8 +35,7 @@ Feature: Tests for gpaddmirrors
         Then mirror hostlist matches the one saved in context
         And the user runs "gpstop -aqM fast"
 
-    # This test requires a bigger cluster than the other gpaddmirrors tests.
-    @gpaddmirrors_spread
+    @concourse_cluster
     Scenario: gpaddmirrors puts mirrors on different host
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is killed on hosts "mdw,sdw1,sdw2,sdw3"
@@ -40,6 +44,7 @@ Feature: Tests for gpaddmirrors
         Then verify that mirror segments are in "spread" configuration
         And the user runs "gpstop -aqM fast"
 
+    @concourse_cluster
     Scenario: gpaddmirrors with a default master data directory
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is killed on hosts "mdw,sdw1"
@@ -48,7 +53,7 @@ Feature: Tests for gpaddmirrors
         Then verify the database has mirrors
         And the user runs "gpstop -aqM fast"
 
-    @gpaddmirrors_temp_directory
+    @concourse_cluster
     Scenario: gpaddmirrors with a given master data directory [-d <master datadir>]
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is killed on hosts "mdw,sdw1"
@@ -57,7 +62,7 @@ Feature: Tests for gpaddmirrors
         Then verify the database has mirrors
         And the user runs "gpstop -aqM fast"
 
-    @gpaddmirrors_mirrors_restart
+    @concourse_cluster
     Scenario: gpaddmirrors mirrors are recognized after a cluster restart
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is killed on hosts "mdw,sdw1"
@@ -73,7 +78,7 @@ Feature: Tests for gpaddmirrors
         And the segments are synchronized
         And the user runs "gpstop -aqM fast"
 
-    @gpaddmirrors_workload
+    @concourse_cluster
     Scenario: gpaddmirrors when the primaries have data
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is killed on hosts "mdw,sdw1"

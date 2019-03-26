@@ -30,7 +30,10 @@
                       {'name': 'gpcheckcat',
                        'use_concourse_cluster': true},
                       {'name': 'gprecoverseg',
-                       'use_concourse_cluster': true}
+                       'use_concourse_cluster': true},
+                      {'name': 'gpaddmirrors',
+                       'use_concourse_cluster': true,
+                       'additional_ccp_vars': 'number_of_nodes: 4'},
                     ] %}
 
 ## ======================================================================
@@ -125,7 +128,6 @@ groups:
 {% for test in CLI_TESTS %}
   - [[ test.name ]]
 {% endfor %}
-  - gpaddmirrors
   - gpexpand
   - check_centos
 {% endif %}
@@ -301,7 +303,6 @@ groups:
 {% for test in CLI_TESTS %}
   - [[ test.name ]]
 {% endfor %}
-  - gpaddmirrors
   - gpexpand
   - check_centos
   - compile_gpdb_centos6
@@ -1845,42 +1846,6 @@ jobs:
     params:
       TEST_OS: centos
 
-- name: gpaddmirrors
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_cli_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_cli_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: ccp-image
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        number_of_nodes: 4
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: ccp-image
-    params:
-      BEHAVE_FLAGS: --tags=gpaddmirrors
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-
 {% for test in CLI_TESTS %}
 - name: [[ test.name ]]
   plan:
@@ -2224,7 +2189,6 @@ jobs:
  ##     - MADlib_Test_orca_centos7
  ##     - MADlib_Test_planner_centos7
       - pg_upgrade
-      - gpaddmirrors
       - gpexpand
       - check_centos
       - interconnect
