@@ -31,10 +31,13 @@ typedef struct BufferedAppend
 	/*
 	 * Large-write memory level members.
 	 */
-    int32      			 maxBufferLen;
+
+    /* AO block size plus additional space cost of compression algorithm */
+    int32      			 maxBufferWithCompressionOverrrunLen;
+    /* buffer will be flushed to disk when maxLargeWriteLen is reached  */
     int32      			 maxLargeWriteLen;
 
-	uint8                *memory;
+    uint8                *memory;
     int32                memoryLen;
 
     uint8                *largeWriteMemory;
@@ -97,7 +100,7 @@ extern void BufferedAppendInit(
 	BufferedAppend *bufferedAppend,
 	uint8          *memory,
 	int32          memoryLen,
-	int32          maxBufferLen,
+	int32          maxBufferWithCompressionOverrrunLen,
 	int32          maxLargeWriteLen,
 	char           *relationName);
 

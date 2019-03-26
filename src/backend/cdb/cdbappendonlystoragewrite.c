@@ -131,21 +131,21 @@ AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 	 */
 	storageWrite->maxBufferWithCompressionOverrrunLen =
 		storageWrite->maxBufferLen + storageWrite->compressionOverrunLen;
-	storageWrite->largeWriteLen = 2 * storageWrite->maxBufferLen;
+	storageWrite->maxLargeWriteLen = 2 * storageWrite->maxBufferLen;
 	Assert(storageWrite->maxBufferWithCompressionOverrrunLen <= storageWrite->largeWriteLen);
 
 	memoryLen = BufferedAppendMemoryLen
 		(
 		 storageWrite->maxBufferWithCompressionOverrrunLen, /* maxBufferLen */
-		 storageWrite->largeWriteLen);
+		 storageWrite->maxLargeWriteLen);
 
 	memory = (uint8 *) palloc(memoryLen);
 
 	BufferedAppendInit(&storageWrite->bufferedAppend,
 					   memory,
 					   memoryLen,
-					    /* maxBufferLen */ storageWrite->maxBufferWithCompressionOverrrunLen,
-					   storageWrite->largeWriteLen,
+					   storageWrite->maxBufferWithCompressionOverrrunLen,
+					   storageWrite->maxLargeWriteLen,
 					   relationName);
 
 	elogif(Debug_appendonly_print_insert || Debug_appendonly_print_append_block, LOG,
@@ -154,7 +154,7 @@ AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 		   (storageWrite->storageAttributes.compress ? "true" : "false"),
 		   storageWrite->storageAttributes.compressLevel,
 		   storageWrite->maxBufferWithCompressionOverrrunLen,
-		   storageWrite->largeWriteLen);
+		   storageWrite->maxLargeWriteLen);
 
 	/*
 	 * When doing VerifyBlock, allocate the extra buffers.
