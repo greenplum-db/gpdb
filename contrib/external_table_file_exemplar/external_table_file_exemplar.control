@@ -1,0 +1,5 @@
+# external_table_file_exemplar extension
+comment = 'foreign-data wrapper for external table flat file access'
+default_version = '1.0'
+module_pathname = '$libdir/external_table_file_exemplar'
+relocatable = true

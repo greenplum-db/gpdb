@@ -11,6 +11,7 @@ include $(top_builddir)/src/Makefile.global
 $(call recurse,all install,src config)
 
 all:
+	$(MAKE) -C contrib/external_table_file_exemplar all
 	$(MAKE) -C contrib/file_fdw all
 	$(MAKE) -C contrib/formatter all
 	$(MAKE) -C contrib/formatter_fixedwidth all
@@ -48,6 +49,7 @@ install:
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
+	$(MAKE) -C contrib/external_table_file_exemplar $@
 	$(MAKE) -C contrib/extprotocol $@
 	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/indexscan $@ 

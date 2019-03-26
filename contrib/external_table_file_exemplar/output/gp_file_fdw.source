@@ -1,0 +1,54 @@
+--
+-- Test foreign-data wrapper file_fdw. Greenplum MPP specific
+--
+-- Clean up in case a prior regression run failed
+SET client_min_messages TO 'error';
+DROP ROLE IF EXISTS file_fdw_superuser, file_fdw_user, no_priv_user;
+RESET client_min_messages;
+CREATE ROLE file_fdw_superuser LOGIN SUPERUSER; -- is a superuser
+-- Install file_fdw
+CREATE EXTENSION file_fdw;
+-- file_fdw_superuser owns fdw-related objects
+SET ROLE file_fdw_superuser;
+CREATE SERVER file_server FOREIGN DATA WRAPPER file_fdw OPTIONS (mpp_execute 'any');
+-- create user mappings and grant privilege to test users
+SET ROLE file_fdw_superuser;
+CREATE USER MAPPING FOR file_fdw_superuser SERVER file_server OPTIONS (mpp_execute 'master'); -- error
+ERROR:  invalid option "mpp_execute"
+HINT:  There are no valid options in this context.
+CREATE USER MAPPING FOR file_fdw_superuser SERVER file_server;
+-- MPP tests
+CREATE FOREIGN TABLE text_csv_any (
+    word1 text, word2 text
+) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv', mpp_execute 'any');
+SELECT * FROM text_csv_any;
+ERROR:  file_fdw does not support mpp_execute option 'any'
+CREATE FOREIGN TABLE text_csv_all (
+    word1 text, word2 text
+) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/text<SEGID>.csv', mpp_execute 'all segments');
+SELECT * FROM text_csv_all ORDER BY word1;
+ word1 | word2 
+-------+-------
+ AAA   | aaa
+ BBB   | abc
+ FOO   | bar
+(3 rows)
+
+CREATE FOREIGN TABLE text_csv_any_from_server (
+    word1 text, word2 text
+) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv');
+SELECT * FROM text_csv_any_from_server;
+ERROR:  file_fdw does not support mpp_execute option 'any'
+-- cleanup
+RESET ROLE;
+DROP EXTENSION file_fdw CASCADE;
+NOTICE:  drop cascades to 5 other objects
+DETAIL:  drop cascades to server file_server
+drop cascades to user mapping for file_fdw_superuser
+drop cascades to foreign table text_csv_any
+drop cascades to foreign table text_csv_all
+drop cascades to foreign table text_csv_any_from_server
+DROP ROLE file_fdw_superuser;

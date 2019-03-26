@@ -13,6 +13,7 @@ SUBDIRS = \
 		dict_int	\
 		dict_xsyn	\
 		dummy_seclabel	\
+		external_table_file_exemplar	\
 		file_fdw	\
 		fuzzystrmatch	\
 		hstore		\
