@@ -3,8 +3,7 @@
                       'gpcheckcat',
                       'gpinitstandby',
                       'gpactivatestandby'] %}
-{% set CLI_2_suites = ['analyzedb',
-                      'gpinitsystem',
+{% set CLI_2_suites = ['gpinitsystem',
                       'gpstate',
                       'replication_slots'] %}
 
@@ -23,7 +22,9 @@
                        'use_concourse_cluster': false},
                       {'name': 'gppkg',
                        'use_concourse_cluster': true,
-                       'additional_tasks': gppkg_additional_task}
+                       'additional_tasks': gppkg_additional_task},
+                      {'name': 'analyzedb',
+                       'use_concourse_cluster': false}
                     ] %}
 
 ## ======================================================================
