@@ -7,6 +7,12 @@
                       'gpinitsystem',
                       'gpstate',
                       'replication_slots'] %}
+{% set CLI_TESTS = [
+                      {'name': 'gpmovemirrors',
+                       'use_concourse_cluster': true,
+                       'additional_ccp_vars': 'number_of_nodes: 4'}
+                    ] %}
+
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
 ##  / _` | '__/ _ \| | | | '_ \/ __|
@@ -99,11 +105,12 @@ groups:
 {% for test_name in CLI_1_suites + CLI_2_suites %}
   - [[ test_name ]]
 {% endfor %}
+{% for test in CLI_TESTS %}
+  - [[ test.name ]]
+{% endfor %}
   - gpaddmirrors
   - gpexpand
   - gpcheck
-  - gpmovemirrors_concourse_cluster
-  - gpmovemirrors_demo_cluster
   - gppkg
   - check_centos
 {% endif %}
@@ -279,11 +286,12 @@ groups:
 {% for test_name in CLI_1_suites + CLI_2_suites %}
   - [[ test_name ]]
 {% endfor %}
+{% for test in CLI_TESTS %}
+  - [[ test.name ]]
+{% endfor %}
   - gpaddmirrors
   - gpexpand
   - gpcheck
-  - gpmovemirrors_concourse_cluster
-  - gpmovemirrors_demo_cluster
   - gppkg
   - check_centos
   - compile_gpdb_centos6
@@ -1907,16 +1915,6 @@ jobs:
       BEHAVE_TAGS: gpcheck_as_gpadmin
       GPCHECK_SETUP: true
 
-- name: gpmovemirrors_demo_cluster
-  plan:
-  - aggregate: *gets_for_behave
-  - task: gpmovemirrors_demo_cluster
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: gpdb6-centos6-test
-    params:
-      BEHAVE_FLAGS: --tags=gpmovemirrors --tags=demo_cluster
-      GPCHECK_SETUP: false
-
 {% for test_name in CLI_2_suites %}
 - name: [[ test_name ]]
   plan:
@@ -1980,41 +1978,59 @@ jobs:
   ensure:
     <<: *set_failed
 
-- name: gpmovemirrors_concourse_cluster
+{% for test in CLI_TESTS %}
+- name: [[ test.name ]]
   plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_cli_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_cli_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: ccp-image
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        number_of_nodes: 4
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: ccp-image
-    params:
-      BEHAVE_FLAGS: --tags=gpmovemirrors --tags=concourse_cluster
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
+    - aggregate:
+      - get: gpdb_src
+        params:
+          submodules:
+            - gpMgmt/bin/pythonSrc/ext
+        passed: [gate_cli_start]
+      - get: gpdb6-centos6-test
+    - aggregate:
+      {% if test.use_concourse_cluster %}
+      - do:
+        - get: gpdb_binary
+          resource: bin_gpdb_centos6
+          passed: [gate_cli_start]
+          trigger: [[ test_trigger ]]
+        - get: ccp_src
+        - get: ccp-image
+        - put: terraform
+          params:
+            <<: *ccp_default_params
+            vars:
+              <<: *ccp_default_vars
+              [[ test.additional_ccp_vars ]]
+        - task: gen_cluster
+          file: ccp_src/ci/tasks/gen_cluster.yml
+          params:
+            <<: *ccp_gen_cluster_default_params
+        - task: gpinitsystem
+          file: ccp_src/ci/tasks/gpinitsystem.yml
+        - task: [[ test.name ]]_concourse_cluster_tests
+          file: gpdb_src/concourse/tasks/run_behave.yml
+          image: ccp-image
+          params:
+            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
+          on_success:
+            <<: *ccp_destroy
+          ensure:
+            <<: *set_failed
+      {% endif %}
+      - do:
+        - get: bin_gpdb
+          resource: bin_gpdb_centos6
+          passed: [gate_cli_start]
+          trigger: [[ test_trigger ]]
+        - task: [[ test.name ]]_demo_cluster_tests
+          file: gpdb_src/concourse/tasks/behave_gpdb.yml
+          image: gpdb6-centos6-test
+          params:
+            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=demo_cluster
+
+{% endfor %}
 
 {% if "centos6" in os_types and "ICW" in test_sections %}
 - name: pg_upgrade
@@ -2299,6 +2315,9 @@ jobs:
                     CLI_2_suites %}
       - [[ test_name ]]
 {% endfor %}
+{% for test in CLI_TESTS %}
+      - [[ test.name ]]
+{% endfor %}
  ##     - madlib_build_gppkg
  ##     - MADlib_Test_orca_centos6
  ##     - MADlib_Test_planner_centos6
@@ -2308,8 +2327,6 @@ jobs:
       - gpaddmirrors
       - gpexpand
       - gpcheck
-      - gpmovemirrors_concourse_cluster
-      - gpmovemirrors_demo_cluster
       - gppkg
       - check_centos
       - interconnect
@@ -2326,6 +2343,9 @@ jobs:
 {% for test_name in CLI_1_suites +
                     CLI_2_suites %}
       - [[ test_name ]]
+{% endfor %}
+{% for test in CLI_TESTS %}
+      - [[ test.name ]]
 {% endfor %}
  ##     - MADlib_Test_orca_centos6
  ##     - MADlib_Test_planner_centos6
