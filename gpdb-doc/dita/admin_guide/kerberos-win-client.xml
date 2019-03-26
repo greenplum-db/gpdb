@@ -93,7 +93,7 @@ kinit
           you can run the Windows utility <codeph>chcp</codeph> to change the code page. This is an
           example of the warning and fix.</p>
         <codeblock>psql -h prod1.example.local warehouse
-psql (8.3.23)
+psql (9.4.20)
 WARNING: Console code page (850) differs from Windows code page (1252)
  8-bit characters might not work correctly. See psql reference
  page "Notes for Windows users" for details.
@@ -105,7 +105,7 @@ chcp 1252
 Active code page: 1252
 
 psql -h prod1.example.local warehouse
-psql (8.3.23)
+psql (9.4.20)
 Type "help" for help.</codeblock>
       </section>
       <section id="win_keytab">

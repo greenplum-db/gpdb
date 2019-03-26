@@ -127,7 +127,7 @@
                     PL/Perl language from the database named <codeph>testdb</codeph>: </p>
                 <codeblock>
 $ psql -d testdb
-psql (8.3.23)
+psql (9.4.20)
 Type "help" for help.
 
 testdb=# DROP LANGUAGE plperl;
