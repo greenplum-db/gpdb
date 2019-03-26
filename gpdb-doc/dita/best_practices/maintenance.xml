@@ -41,7 +41,7 @@
               benchmark program (optionally <codeph>netperf)</codeph> to test network performance.
               The test is run in one of three modes: parallel pair test (<codeph>-r N</codeph>),
               serial pair test (<codeph>-r n</codeph>), or full-matrix test (<codeph>-r
-              M)</codeph>.The minimum, maximum, average, and median transfer rates are reported in
+              M)</codeph>. The minimum, maximum, average, and median transfer rates are reported in
               megabytes per second. </li>
           </ul>To obtain valid numbers from <codeph>gpcheckperf</codeph>, the database system must
           be stopped. The numbers from <codeph>gpcheckperf</codeph> can be inaccurate even if the

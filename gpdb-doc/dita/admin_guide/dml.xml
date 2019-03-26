@@ -325,7 +325,7 @@
           </ul>
         </section>
         <p id="ix141505">The default transaction isolation level in Greenplum Database is
-            <codeph>READ COMITTED</codeph>. To change the isolation level for a transaction, declare
+            <codeph>READ COMMITTED</codeph>. To change the isolation level for a transaction, declare
           the isolation level when you <codeph>BEGIN</codeph> the transaction or use the <codeph>SET
             TRANSACTION</codeph> command after the transaction starts.</p>
       </body>

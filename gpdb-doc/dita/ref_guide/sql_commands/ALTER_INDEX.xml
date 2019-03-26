@@ -33,7 +33,7 @@ on the stored data.</li>
           The fillfactor for an index is a percentage that determines how full the index method will
           try to pack index pages. Index contents will not be modified immediately by this command.
           Use <codeph>REINDEX</codeph> to rebuild the index to get the desired effects. </li><li id="ap136527"><b>RESET</b> — Resets storage parameters for the index to their defaults. The
-          build-in index methods all accept a single parameter: <varname>fillfactor</varname>. As
+          built-in index methods all accept a single parameter: <varname>fillfactor</varname>. As
           with <codeph>SET</codeph>, a <codeph>REINDEX</codeph> may be needed to update the index
           entirely.</li></ul></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing index to alter.
 </pd></plentry><plentry><pt><varname>new_name</varname></pt><pd>New name for the index. </pd></plentry><plentry><pt><varname>tablespace_name</varname></pt><pd>The tablespace to which the index will be moved. </pd></plentry><plentry><pt><varname>storage_parameter</varname></pt>

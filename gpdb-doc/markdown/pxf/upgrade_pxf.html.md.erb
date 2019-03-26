@@ -65,7 +65,7 @@ After you upgrade to the new version of Greenplum Database, perform the followin
         gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
            <update the file>
         ```
-    2. Simlarly, if you updated the `pxf-profiles.xml` configuration file in your *PXF.from* installation, re-apply those changes to `$PXF_CONF/conf/pxf-profiles.xml` on the master host.
+    2. Similarly, if you updated the `pxf-profiles.xml` configuration file in your *PXF.from* installation, re-apply those changes to `$PXF_CONF/conf/pxf-profiles.xml` on the master host.
 
         **Note:** Starting in Greenplum Database version 5.12, the package name for PXF classes was changed to use the prefix `org.greenplum.*`. If you are upgrading from an older *PXF.from* version and you customized the `pxf-profiles.xml` file, you must change any `org.apache.hawq.pxf.*` references to `org.greenplum.pxf.*` when you re-apply your changes.
     3. If you updated the `pxf-log4j.properties` configuration file in your *PXF.from* installation, re-apply those changes to `$PXF_CONF/conf/pxf-log4j.properties` on the master host.
