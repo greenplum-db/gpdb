@@ -1,6 +1,5 @@
 
-{% set CLI_1_suites = ['gprecoverseg',
-                      'gpcheckcat'] %}
+{% set CLI_1_suites = ['gprecoverseg'] %}
 
 {% set gppkg_additional_task = "
         - task: setup_gppkg_second_install
@@ -29,6 +28,8 @@
                       {'name': 'gpactivatestandby',
                        'use_concourse_cluster': true},
                       {'name': 'gpinitstandby',
+                       'use_concourse_cluster': true},
+                      {'name': 'gpcheckcat',
                        'use_concourse_cluster': true}
                     ] %}
 
