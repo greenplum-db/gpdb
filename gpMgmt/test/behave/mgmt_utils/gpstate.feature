@@ -1,7 +1,10 @@
 @gpstate
 Feature: gpstate tests
 
-    @basic_info_mirrors_failed_over
+########################### @demo_cluster tests ###########################
+# The @demo_cluster tag denotes the scenario can run locally
+
+    @demo_cluster
     Scenario: gpstate -b logs cluster for a cluster where the mirrors failed over to primary
         Given a standard local demo cluster is running
         And the database is running
@@ -40,7 +43,7 @@ Feature: gpstate tests
             | Total number mirror segments acting as primary segments = 3 .* <<<<<<<<                |
             | Total number mirror segments acting as mirror segments  = 0                            |
 
-    @cluster_config_mirrors_are_acting_as_primary
+    @demo_cluster
     Scenario: gpstate -c logs cluster info for a cluster where all mirrors are failed over
         Given a standard local demo cluster is running
         And the database is running
@@ -54,7 +57,7 @@ Feature: gpstate tests
             | Mirror Active, Primary Failed | Not In Sync | \S+     | .*/dbfast3/demoDataDir2 | [0-9]+ | \S+    | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ |
          And gpstate should print "3 segment\(s\) configured as mirror\(s\) are acting as primaries" to stdout
 
-    @cluster_config_segments_are_unsynchronized
+    @demo_cluster
     Scenario: gpstate -c logs cluster info for a cluster that is unsynchronized
         Given a standard local demo cluster is running
         When user kills all mirror processes
@@ -67,7 +70,7 @@ Feature: gpstate tests
             | Primary Active, Mirror Failed | Not In Sync | \S+     | .*/dbfast3/demoDataDir2 | [0-9]+ | \S+    | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ |
          And gpstate should print "3 primary segment\(s\) are not synchronized" to stdout
 
-    @cluster_config_no_mirrors
+    @demo_cluster
     Scenario: gpstate -c logs cluster info for a cluster with no mirrors
         Given the cluster is generated with "3" primaries only
         When the user runs "gpstate -c"
@@ -78,7 +81,7 @@ Feature: gpstate tests
             | \S+     | .*/dbfast2/demoDataDir1 | [0-9]+ |
             | \S+     | .*/dbfast3/demoDataDir2 | [0-9]+ |
 
-    @basic_info_without_standby
+    @demo_cluster
     Scenario: gpstate -b logs cluster for a cluster without standbys
         Given the cluster is generated with "3" primaries only
         And the user runs "gpstate -b"
@@ -101,14 +104,14 @@ Feature: gpstate tests
             | Mirror Segment Status                                                       |
             | Mirrors not configured on this array                                        |
 
-    @list_segments_with_errors_no_errors
+    @demo_cluster
     Scenario: gpstate -e logs no errors when there are none
         Given a standard local demo cluster is running
         And the user runs "gpstate -e"
         Then gpstate should print "Segment Mirroring Status Report" to stdout
         And gpstate should print "All segments are running normally" to stdout
 
-    @list_segments_with_errors_after_failover
+    @demo_cluster
     Scenario: gpstate -e logs errors when mirrors have failed over
         Given a standard local demo cluster is running
           And user kills all primary processes
@@ -133,7 +136,7 @@ Feature: gpstate tests
             | \S+     | [0-9]+ | Down          | Down in configuration |
             | \S+     | [0-9]+ | Down          | Down in configuration |
 
-    @default_cluster_config
+    @demo_cluster
     Scenario: gpstate -c logs cluster info for a mirrored cluster
         Given a standard local demo cluster is running
         When the user runs "gpstate -c"
@@ -143,7 +146,7 @@ Feature: gpstate tests
             | Primary Active, Mirror Available | Synchronized | \S+     | .*/dbfast2/demoDataDir1 | [0-9]+ | \S+    | .*/dbfast_mirror2/demoDataDir1 | [0-9]+ |
             | Primary Active, Mirror Available | Synchronized | \S+     | .*/dbfast3/demoDataDir2 | [0-9]+ | \S+    | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ |
 
-    @basic_info
+    @demo_cluster
     Scenario: gpstate -b logs cluster for a default cluster
         Given a standard local demo cluster is running
         And the user runs "gpstate -b"
@@ -179,7 +182,7 @@ Feature: gpstate tests
             | Total number mirror segments acting as primary segments = 0                            |
             | Total number mirror segments acting as mirror segments  = 3                            |
 
-    @master_standyby_details_default_cluster
+    @demo_cluster
     Scenario: gpstate -f logs master standyby details
         Given a standard local demo cluster is running
         When the user runs "gpstate -f"
@@ -197,7 +200,7 @@ Feature: gpstate tests
             | Flush Location: \S+                            |
             | Replay Location: \S+                           |
 
-    @mirror_details_default_cluster
+    @demo_cluster
     Scenario: gpstate -m logs mirror details
         Given a standard local demo cluster is running
         When the user runs "gpstate -m"
@@ -208,7 +211,7 @@ Feature: gpstate tests
             | \S+    | .*/dbfast_mirror2/demoDataDir1 | [0-9]+ | Passive | Synchronized |
             | \S+    | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ | Passive | Synchronized |
 
-    @mirror_details_failed_over
+    @demo_cluster
     Scenario: gpstate -m warns when mirrors have failed over to primary
         Given a standard local demo cluster is running
           And user kills all primary processes
@@ -223,7 +226,7 @@ Feature: gpstate tests
         And gpstate should print "3 segment\(s\) configured as mirror\(s\) are acting as primaries" to stdout
         And gpstate should print "3 mirror segment\(s\) acting as primaries are not synchronized" to stdout
 
-    @port_details_default_cluster
+    @demo_cluster
     Scenario: gpstate -p logs port details
         Given a standard local demo cluster is running
         When the user runs "gpstate -p"
@@ -238,7 +241,7 @@ Feature: gpstate tests
             | \S+  | .*/dbfast3/demoDataDir2         | [0-9]+ |
             | \S+  | .*/dbfast_mirror3/demoDataDir2  | [0-9]+ |
 
-    @detailed_status_with_a_default_cluster
+    @demo_cluster
     Scenario: gpstate -s logs detailed information
         Given a standard local demo cluster is running
         When the user runs "gpstate -s"
@@ -346,7 +349,7 @@ Feature: gpstate tests
             | Configuration reports status as = Up                   |
             | Segment status                  = Up                   |
 
-    @version
+    @demo_cluster
     Scenario: gpstate -i logs version info for all segments
         Given a standard local demo cluster is running
         When the user runs "gpstate -i"
@@ -362,7 +365,7 @@ Feature: gpstate tests
 		  | \S+  | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ | PostgreSQL [0-9]+\.[0-9]+\.[0-9]+ \(Greenplum Database [0-9]+\.[0-9]+\.[0-9]+.*\) |
 		And gpstate should print "All segments are running the same software version" to stdout
 
-    @version_with_mirrors_marked_down
+    @demo_cluster
     Scenario: gpstate -i warns if any mirrors are marked down
         Given a standard local demo cluster is running
           And user kills all mirror processes
@@ -380,7 +383,7 @@ Feature: gpstate tests
 		  | \S+  | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ | unable to retrieve version                                                        |
 		And gpstate should print "Unable to retrieve version data from all segments" to stdout
 
-    @version_with_killed_mirrors
+    @demo_cluster
     Scenario: gpstate -i warns if any up mirrors cannot be contacted
         Given a standard local demo cluster is running
           And user kills all mirror processes
@@ -399,7 +402,7 @@ Feature: gpstate tests
 		  | \S+  | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ | unable to retrieve version                                                        |
 		And gpstate should print "Unable to retrieve version data from all segments" to stdout
 
-    @gpexpand_status
+    @demo_cluster
     Scenario: gpstate -x logs gpexpand status
         Given the cluster is generated with "3" primaries only
          When the user runs "gpstate -x"
