@@ -73,7 +73,7 @@ function _main() {
 
     time gen_env
 
-    if [ "$GPCHECK_SETUP" = "true" ]; then
+    if echo "$BEHAVE_TAGS" "$BEHAVE_FLAGS" | grep -q "gpcheck\b"; then
         time gpcheck_setup
     fi
 

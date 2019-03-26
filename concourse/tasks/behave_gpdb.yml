@@ -9,6 +9,5 @@ params:
   BEHAVE_TAGS: ""
   BEHAVE_FLAGS: ""
   BLDWRAP_POSTGRES_CONF_ADDONS: ""
-  GPCHECK_SETUP: false
 run:
   path: gpdb_src/concourse/scripts/behave_gpdb.bash
