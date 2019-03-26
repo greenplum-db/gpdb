@@ -165,7 +165,7 @@ $ chmod 400 /home/gpadmin/gpdb-kerberos.keytab</codeblock>
             information about the <codeph>pg_hba.conf</codeph> file, see <xref
               href="https://www.postgresql.org/docs/8.4/auth-pg-hba-conf.html"
               scope="external" format="html">The pg_hba.conf file</xref> in the
-            Postgres documentation.</p>
+            PostgreSQL documentation.</p>
         </li>
         <li>Restart Greenplum Database after updating the
               <codeph>krb_server_keyfile</codeph> parameter and the

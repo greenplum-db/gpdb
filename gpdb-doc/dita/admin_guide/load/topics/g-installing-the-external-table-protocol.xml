@@ -25,7 +25,7 @@
         </p>
         <p>For more information on compiling and linking dynamically-loaded functions and examples
             of compiling C source code to create a shared library on other operating systems, see
-            the Postgres documentation at <xref
+            the PostgreSQL documentation at <xref
                 href="https://www.postgresql.org/docs/8.4/xfunc-c.html#DFUNC" scope="external"
                 format="html">
                 <ph>https://www.postgresql.org/docs/8.4/xfunc-c.html#DFUNC</ph>
