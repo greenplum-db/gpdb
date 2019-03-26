@@ -311,10 +311,8 @@
           The legacy optimizer does not use these statistics. </p><p>The time to analyze a
           partitioned table is similar to the time to analyze a non-partitioned table with the same
           data since <codeph>ANALYZE ROOTPARTITION</codeph> does not collect statistics on the leaf
-          partitions (the data is only sampled). The <codeph>analyzedb</codeph> utility updates root
-          partition statistics by default but you can add the <codeph>--skip_root_stats</codeph>
-          option to leave root partition statistics empty if you do not use GPORCA. </p>The
-        Greenplum Database server configuration parameter <codeph><xref
+          partitions (the data is only sampled). </p><p>The Greenplum Database server configuration
+        parameter <codeph><xref
             href="../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
             >optimizer_analyze_root_partition</xref></codeph> affects when statistics are collected
         on the root partition of a partitioned table. If the parameter is <codeph>on</codeph> (the
@@ -323,14 +321,13 @@
         collected when you run <codeph>ANALYZE</codeph> on the root partition, or when you run
           <codeph>ANALYZE</codeph> on a child leaf partition of the partitioned table and the other
         child leaf partitions have statistics. If the parameter is <codeph>off</codeph>, you must
-        run <codeph>ANALZYE ROOTPARTITION</codeph> to collect root partition statistics.<p>If you do
+        run <codeph>ANALYZE ROOTPARTITION</codeph> to collect root partition statistics.</p><p>If you do
           not intend to execute queries on partitioned tables with GPORCA (setting the server
           configuration parameter <codeph><xref
-              href="../../ref_guide/config_params/guc-list.xml#optimizer"
-              >optimizer</xref></codeph> to <codeph>off</codeph>), you can also set the server
-          configuration parameter <codeph>optimizer_analyze_root_partition</codeph> to
-            <codeph>off</codeph> to limit when <codeph>ANALYZE</codeph> updates the root partition
-          statistics. </p></section>
+              href="../../ref_guide/config_params/guc-list.xml#optimizer">optimizer</xref></codeph>
+          to <codeph>off</codeph>), you can also set the server configuration parameter
+            <codeph>optimizer_analyze_root_partition</codeph> to <codeph>off</codeph> to limit when
+            <codeph>ANALYZE</codeph> updates the root partition statistics. </p></section>
       <section> </section>
     </body>
   </topic>

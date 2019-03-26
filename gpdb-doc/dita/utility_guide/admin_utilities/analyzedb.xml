@@ -56,14 +56,12 @@
         <b>Partitioned Append-Optimized Tables</b>
         <p>For a partitioned, append-optimized table, <cmdname>analyzedb</cmdname> checks the
           partitioned table root partition and leaf partitions. If needed, the utility updates
-          statistics for non-current partitions and the root partition. </p>
-        <p dir="ltr">The root partition statistics is required by GPORCA. By default, the
-            <cmdname>analyzedb</cmdname> utility collects statistics on the root partition of a
-          partitioned table if the statistics do not exist. If any of the leaf partitions have stale
-          statistics, <cmdname>analyzedb</cmdname> also refreshes the root partition statistics. The
-          cost of refreshing the root level statistics is comparable to analyzing one leaf
-          partition. You can specify the option <codeph>--skip_root_stats</codeph> to disable
-          collection of statistics on the root partition of a partitioned table.</p>
+          statistics for non-current partitions and the root partition. </p><p dir="ltr">The root
+          partition statistics is required by GPORCA. By default, the <cmdname>analyzedb</cmdname>
+          utility collects statistics on the root partition of a partitioned table if the statistics
+          do not exist. If any of the leaf partitions have stale statistics,
+            <cmdname>analyzedb</cmdname> also refreshes the root partition statistics. The cost of
+          refreshing the root level statistics is comparable to analyzing one leaf partition. </p>
       </sectiondiv>
     </section>
     <section><title>Notes</title><p>The <cmdname>analyzedb</cmdname> utility updates append
@@ -171,10 +169,9 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
         <plentry>
           <pt>--skip_root_stats</pt>
           <pd>For a partitioned table, skip refreshing root partition statistics if only some of the
-            leaf partitions statistics require updating. </pd>
-          <pd>When updating statistics for a partitioned table and you know which leaf partition
-            statistics require updating, you can specify those partitions and this option to improve
-            performance.</pd>
+            leaf partitions statistics require updating. This is the default behavior. This option
+            is deprecated<ph otherprops="pivotal"> and is removed in Greenplum Database
+            6.0</ph>.</pd>
           <pd>For information about how statistics are collected for partitioned tables, see
                 <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"
               >ANALYZE</xref></codeph>.</pd>
