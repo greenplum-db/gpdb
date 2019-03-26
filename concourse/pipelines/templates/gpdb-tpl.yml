@@ -10,7 +10,9 @@
 {% set CLI_TESTS = [
                       {'name': 'gpmovemirrors',
                        'use_concourse_cluster': true,
-                       'additional_ccp_vars': 'number_of_nodes: 4'}
+                       'additional_ccp_vars': 'number_of_nodes: 4'},
+                      {'name': 'gpcheck',
+                       'use_concourse_cluster': false}
                     ] %}
 
 ## ======================================================================
@@ -110,7 +112,6 @@ groups:
 {% endfor %}
   - gpaddmirrors
   - gpexpand
-  - gpcheck
   - gppkg
   - check_centos
 {% endif %}
@@ -291,7 +292,6 @@ groups:
 {% endfor %}
   - gpaddmirrors
   - gpexpand
-  - gpcheck
   - gppkg
   - check_centos
   - compile_gpdb_centos6
@@ -1895,30 +1895,21 @@ jobs:
     <<: *set_failed
 
 {% endfor %}
-- name: gpcheck
+
+{% for test_name in CLI_2_suites %}
+- name: [[ test_name ]]
   plan:
-  - aggregate: &gets_for_behave
+  - aggregate:
     - get: gpdb_src
       params:
         submodules:
-        - gpMgmt/bin/pythonSrc/ext
+          - gpMgmt/bin/pythonSrc/ext
       passed: [gate_cli_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos6-test
-  - task: gpcheck_as_gpadmin
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: gpdb6-centos6-test
-    params:
-      BEHAVE_TAGS: gpcheck_as_gpadmin
-      GPCHECK_SETUP: true
-
-{% for test_name in CLI_2_suites %}
-- name: [[ test_name ]]
-  plan:
-  - aggregate: *gets_for_behave
   - task: [[ test_name ]]
     file: gpdb_src/concourse/tasks/behave_gpdb.yml
     image: gpdb6-centos6-test
@@ -2326,7 +2317,6 @@ jobs:
       - pg_upgrade
       - gpaddmirrors
       - gpexpand
-      - gpcheck
       - gppkg
       - check_centos
       - interconnect
@@ -2350,7 +2340,6 @@ jobs:
  ##     - MADlib_Test_orca_centos6
  ##     - MADlib_Test_planner_centos6
       - gpexpand
-      - gpcheck
       - gppkg
       - check_centos
       - interconnect
