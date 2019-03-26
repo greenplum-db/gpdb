@@ -1495,11 +1495,13 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 	else
 	{
 		List 	*all_relids = NIL;
-		Oid		 relid = getrelid(linitial_int(plannedstmt->resultRelations), rangeTable);
+		Oid		relid = getrelid(linitial_int(plannedstmt->resultRelations), rangeTable);
+		bool	containRoot = true;
 
 		if (rel_is_child_partition(relid))
 		{
 			relid = rel_partition_get_master(relid);
+			containRoot = false;
 		}
 
 		estate->es_result_partitions = BuildPartitionNodeFromRoot(relid);
@@ -1510,6 +1512,30 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 		all_relids = lappend_oid(all_relids, relid);
 		all_relids = list_concat(all_relids,
 								 all_partition_relids(estate->es_result_partitions));
+
+		/*
+		 * For partition table, INSERT plan only contains the root table
+		 * in the result relations, whereas DELETE and UPDATE contain
+		 * both root table and the partition tables.
+		 *
+		 * INSERT needs to explicitly lock the partition tables here on
+		 * QD, otherwise if AppendOnly VACUUM drop phase runs
+		 * concurrently and with perfect timing, AO VACUUM may finish
+		 * successfully on QD but skip the drop phase on QE because
+		 * INSERT is holding an RowExclusiveLock on the partition table
+		 * on QE. This leads to inconsistent segfile state between QD
+		 * and QE, and it will fail the next operation on the same
+		 * segfile. Hence locking the partition tables on QD as well to
+		 * prevent this edge case.
+		 */
+		if (operation == CMD_INSERT && containRoot)
+		{
+			foreach(l, all_relids)
+			{
+				Oid	relid = lfirst_oid(l);
+				LockRelationOid(relid, RowExclusiveLock);
+			}
+		}
 		
         /* 
          * We also assign a segno for a deletion operation.

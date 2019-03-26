@@ -150,11 +150,14 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
  partlockt         | RowExclusiveLock    | relation                 | master
  partlockt_1_prt_1 | AccessExclusiveLock | append-only segment file | master
  partlockt_1_prt_1 | AccessShareLock     | relation                 | master
+ partlockt_1_prt_1 | RowExclusiveLock    | relation                 | master
  partlockt_1_prt_2 | AccessExclusiveLock | append-only segment file | master
  partlockt_1_prt_2 | AccessShareLock     | relation                 | master
+ partlockt_1_prt_2 | RowExclusiveLock    | relation                 | master
  partlockt_1_prt_3 | AccessExclusiveLock | append-only segment file | master
  partlockt_1_prt_3 | AccessShareLock     | relation                 | master
-(7 rows)
+ partlockt_1_prt_3 | RowExclusiveLock    | relation                 | master
+(10 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |        mode         |         locktype         |    node    
@@ -272,10 +275,19 @@ begin;
 -- insert locking
 insert into partlockt values(3, 'f');
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
- coalesce  |       mode       | locktype |  node  
------------+------------------+----------+--------
- partlockt | RowExclusiveLock | relation | master
-(1 row)
+     coalesce      |       mode       | locktype |  node  
+-------------------+------------------+----------+--------
+ partlockt         | RowExclusiveLock | relation | master
+ partlockt_1_prt_1 | RowExclusiveLock | relation | master
+ partlockt_1_prt_2 | RowExclusiveLock | relation | master
+ partlockt_1_prt_3 | RowExclusiveLock | relation | master
+ partlockt_1_prt_4 | RowExclusiveLock | relation | master
+ partlockt_1_prt_5 | RowExclusiveLock | relation | master
+ partlockt_1_prt_6 | RowExclusiveLock | relation | master
+ partlockt_1_prt_7 | RowExclusiveLock | relation | master
+ partlockt_1_prt_8 | RowExclusiveLock | relation | master
+ partlockt_1_prt_9 | RowExclusiveLock | relation | master
+(10 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |       mode       | locktype |   node    
