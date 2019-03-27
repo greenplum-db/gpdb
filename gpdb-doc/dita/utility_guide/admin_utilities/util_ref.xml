@@ -200,16 +200,15 @@
             </row>
             <row>
               <entry colname="col1">
-                <codeph id="km164272">gpsyncmaster</codeph>
+                <codeph id="km164272">pg_basebackup</codeph>
               </entry>
-              <entry colname="col2">This is the Greenplum program that starts the
-                  <codeph>gpsyncagent</codeph> process on the standby master host. Administrators do
-                not call this program directly, but do so through the management scripts that
-                initialize and/or activate a standby master for a Greenplum Database system. This
-                process is responsible for keeping the standby master up to date with the primary
-                master via a transaction log replication process.</entry>
+              <entry colname="col2">This program makes a binary copy of a single database instance.
+                Greenplum Database uses it for tasks such as creating a standby master instance, or
+                recovering a mirror segment when a full copy is needed. This utility must not be
+                directly used to back up Greenplum Database segment instances because it does not
+                produce MPP-consistent backups.</entry>
               <entry colname="col3"><codeph><xref href="gpinitstandby.xml#topic1" type="topic"
-                    format="dita"/></codeph>, <codeph><xref href="gpactivatestandby.xml#topic1"
+                    format="dita"/></codeph>, <codeph><xref href="gprecoverseg.xml#topic1"
                     type="topic" format="dita"/></codeph></entry>
             </row>
             <row>
