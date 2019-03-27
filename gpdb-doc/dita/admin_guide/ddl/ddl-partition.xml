@@ -688,8 +688,8 @@ PARTITION other;
           partition swaps one table in place of an existing partition. You can exchange partitions
           only at the lowest level of your partition hierarchy (only partitions that contain data
           can be exchanged). </p>
-        <p>You cannot exchange a partition with a replicated table. You cannot exchange a partition
-          with a partitioned table or a child partition of a partitioned table.</p>
+        <p>You cannot exchange a partition with a replicated table. Exchanging a partition with a partitioned table or a child partition of a partitioned
+          table is not supported.</p>
         <p>Partition exchange can be useful for data loading. For example, load a staging table and
           swap the loaded table into your partition design. You can use partition exchange to change
           the storage type of older partitions to append-optimized tables. For example:</p>

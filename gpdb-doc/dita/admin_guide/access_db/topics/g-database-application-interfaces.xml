@@ -48,7 +48,7 @@
                   <entry colname="col1">Perl DBI</entry>
                   <entry colname="col2">pgperl</entry>
                   <entry colname="col3">
-                     <xref href="http://search.cpan.org/dist/DBD-Pg/" scope="external" format="html"
+                     <xref href="https://metacpan.org/release/DBD-Pg" scope="external" format="html"
                      />
                   </entry>
                </row>
@@ -63,7 +63,7 @@
                   <entry colname="col1">libpq C Library</entry>
                   <entry colname="col2">libpq</entry>
                   <entry colname="col3">
-                     <xref href="https://www.postgresql.org/docs/8.3/libpq.html" scope="external" format="html"/>
+                     <xref href="https://www.postgresql.org/docs/9.4/libpq.html" scope="external" format="html"/>
                   </entry>
                </row>
             </tbody>

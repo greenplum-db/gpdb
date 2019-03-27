@@ -27,7 +27,7 @@ ALTER TABLE ALL IN TABLESPACE <varname>name</varname> [ OWNED BY <varname>role_n
 
 ALTER TABLE [IF EXISTS] [ONLY] <varname>name</varname> SET 
      WITH (REORGANIZE=true|false)
-   | DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]} [, ... ] )
+   | DISTRIBUTED BY ({<varname>column_name</varname> [<varname>opclass</varname>]} [, ... ] )
    | DISTRIBUTED RANDOMLY
    | DISTRIBUTED REPLICATED 
 
@@ -42,12 +42,12 @@ where <varname>action</varname> is one of:
       [<varname>column_constraint</varname> [ ... ]]
       [ COLLATE <varname>collation</varname> ]
       [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
-  DROP [COLUMN] [IF EXISTS] <varname>column</varname> [RESTRICT | CASCADE]
-  ALTER [COLUMN] <varname>column</varname> [ SET DATA ] TYPE <varname>type</varname> [COLLATE <varname>collation</varname>] [USING <varname>expression</varname>]
-  ALTER [COLUMN] <varname>column</varname> SET DEFAULT <varname>expression</varname>
-  ALTER [COLUMN] <varname>column</varname> DROP DEFAULT
-  ALTER [COLUMN] <varname>column</varname> { SET | DROP } NOT NULL
-  ALTER [COLUMN] <varname>column</varname> SET STATISTICS <varname>integer</varname>
+  DROP [COLUMN] [IF EXISTS] <varname>column_name</varname> [RESTRICT | CASCADE]
+  ALTER [COLUMN] <varname>column_name</varname> [ SET DATA ] TYPE <varname>type</varname> [COLLATE <varname>collation</varname>] [USING <varname>expression</varname>]
+  ALTER [COLUMN] <varname>column_name</varname> SET DEFAULT <varname>expression</varname>
+  ALTER [COLUMN] <varname>column_name</varname> DROP DEFAULT
+  ALTER [COLUMN] <varname>column_name</varname> { SET | DROP } NOT NULL
+  ALTER [COLUMN] <varname>column_name</varname> SET STATISTICS <varname>integer</varname>
   ALTER [COLUMN] column SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
   ALTER [COLUMN] column RESET ( <varname>attribute_option</varname> [, ... ] )
   ADD <varname>table_constraint</varname> [NOT VALID]
@@ -170,12 +170,10 @@ where <varname>action</varname> is one of:
                                                 Greenplum uses the Postgres query
                                         planner.</note></li>
                                 <li id="ay136904"><b>SET/DROP DEFAULT</b> — Sets or removes the
-                                        default value for a column. The default values only apply to
-                                        subsequent <codeph>INSERT</codeph> commands. They do not
-                                        cause rows already in the table to change. Defaults may also
-                                        be created for views, in which case they are inserted into
-                                        statements on the view before the view's <codeph>ON
-                                                INSERT</codeph> rule is applied. </li>
+                                        default value for a column. Default values only apply in
+                                        subsequent <codeph>INSERT</codeph> or
+                                                <codeph>UPDATE</codeph> commands; they do not cause
+                                        rows already in the table to change. </li>
                                 <li id="ay136929"><b>SET/DROP NOT NULL</b> — Changes whether a
                                         column is marked to allow null values or to reject null
                                         values. You can only use <codeph>SET NOT NULL</codeph> when
@@ -374,7 +372,7 @@ where <varname>action</varname> is one of:
                                         child-table constraints for all <codeph>CHECK</codeph>
                                         constraints of the parent, except those marked
                                         non-inheritable (that is, created with <codeph>ALTER TABLE
-                                                ONLY</codeph>) in the parent, which are ignored; all
+                                                ... ADD CONSTRAINT ... NO INHERIT</codeph>) in the parent, which are ignored; all
                                         child-table constraints matched must not be marked
                                         non-inheritable. Currently <codeph>UNIQUE</codeph>,
                                                 <codeph>PRIMARY KEY</codeph>, and <codeph>FOREIGN
@@ -501,7 +499,7 @@ where <varname>action</varname> is one of:
                         <parml>
                                 <plentry>
                                         <pt>
-                                                <varname>column</varname>
+                                                <varname>column_name</varname>
                                         </pt>
                                         <pd>Name of a new or existing column. Note that Greenplum
                                                 Database distribution key columns must be treated
@@ -511,7 +509,7 @@ where <varname>action</varname> is one of:
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>new_column</varname>
+                                                <varname>new_column_name</varname>
                                         </pt>
                                         <pd>New name for an existing column.</pd>
                                 </plentry>
@@ -611,7 +609,7 @@ where <varname>action</varname> is one of:
                                                 100 is the default.</pd>
                                 </plentry>
                                 <plentry>
-                                        <pt>DISTRIBUTED BY ({<varname>column</varname>
+                                        <pt>DISTRIBUTED BY ({<varname>column_name</varname>
                                                   [<varname>opclass</varname>]}) | DISTRIBUTED
                                                 RANDOMLY | DISTRIBUTED REPLICATED</pt>
                                         <pd>Specifies the distribution policy for a table. Changing
@@ -802,9 +800,8 @@ where <varname>action</varname> is one of:
                                                 column with a check constraint or a <codeph>NOT
                                                   NULL</codeph> constraint.</pd>
                                         <pd>You cannot exchange a partition with a replicated table.
-                                                You cannot exchange a partition with a partitioned
-                                                table or a child partition of a partitioned
-                                                table.</pd>
+                                                Exchanging a partition with a partitioned table or a child partition of a partitioned
+                                                table is not supported.</pd>
                                         <pd><b>WITH</b> | <b>WITHOUT VALIDATION</b> - Validates that
                                                 the data in the table matches the
                                                   <codeph>CHECK</codeph> constraint of the partition
@@ -1026,13 +1023,13 @@ where <varname>action</varname> is one of:
                         <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
 (char_length(zipcode) = 5);</codeblock>
                         <p>To add a check constraint only to a table and not to its children:</p>
-                        <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK NO INHERIT 
-(char_length(zipcode) = 5);</codeblock>
+                        <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK (char_length(zipcode) = 5) NO INHERIT 
+;</codeblock>
                         <p>(The check constraint will not be inherited by future children, either.)</p>
 
                         <p>Remove a check constraint from a table and all of its children:</p>
                         <codeblock>ALTER TABLE distributors DROP CONSTRAINT zipchk;</codeblock>
-                        <p>Remove a check constraint from a table only:</p>
+                        <p>Remove a check constraint from one table only:</p>
                         <codeblock>ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;</codeblock>
                         <p>(The check constraint remains in place for any child tables that inherit
                                         <codeph>distributors</codeph>.)</p>

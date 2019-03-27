@@ -5,7 +5,7 @@
   ditaarch:DITAArchVersion="1.1"
   domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
   class="- topic/topic ">
-  <title id="me143671" class="- topic/title ">Oracle Compatibility Functions</title>
+  <title id="me143671" class="- topic/title ">orafce</title>
   <shortdesc>Describes the Oracle Compatibility SQL functions in Greenplum Database. These functions
     target PostgreSQL but can also be used in Greenplum Database.</shortdesc>
   <topic id="topic_fpb_kbk_4gb">

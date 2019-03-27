@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_khf_ltc_vbb">
+  <title>Additional Supplied Modules</title>
+  <body>
+     <p>This section describes additional modules available in the Greenplum Database
+      installation. These modules may be PostgreSQL- or Greenplum-sourced.</p>
+     <p otherprops="oss-only"><codeph>contrib</codeph> modules are typically
+       packaged as extensions. You register a module in a database using the
+       <codeph><xref href="../sql_commands/CREATE_EXTENSION.xml#topic1">CREATE EXTENSION</xref></codeph>
+       command. You remove a module from a database with <codeph><xref href="../sql_commands/DROP_EXTENSION.xml#topic1">DROP EXTENSION</xref></codeph>.</p>
+     <p>The following Greenplum Database and PostgreSQL <codeph>contrib</codeph>
+        modules are installed; refer to the linked module documentation for usage
+        instructions.</p>
+     <ul>
+       <li><codeph><xref href="citext.xml" scope="peer" format="dita"
+              >citext</xref></codeph> - Provides a case-insensitive, multibyte-aware text
+          data type.</li>
+       <li><codeph><xref href="dblink.xml" scope="peer" format="dita"
+              >dblink</xref></codeph> - Provides connections to other Greenplum and PostgreSQL
+         databases.</li>
+       <li><codeph><xref href="fuzzystrmatch.xml" scope="peer"
+             format="dita">fuzzystrmatch</xref></codeph> - Determines similarities and differences
+         between strings.</li>
+       <li><codeph><xref
+          href="https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/gp_sparse_vector/README"
+          format="html" scope="external">gp_sparse_vector</xref></codeph> - Implements
+         a Greenplum Database data type that uses compressed storage of zeros to help
+         with floating point calculations.</li>
+       <li><codeph><xref href="hstore.xml" scope="peer" format="dita"
+             >hstore</xref></codeph> - Provides a data type for storing sets of key/value pairs
+         within a single PostgreSQL value.</li>
+       <li><codeph><xref href="orafce_ref.xml" scope="peer" format="dita"
+             >orafce</xref></codeph> - Provides Greenplum Database-specific Oracle
+          SQL compatibility functions.</li>
+       <li><codeph><xref href="https://www.postgresql.org/docs/9.4/pageinspect.html"
+             scope="external" format="html">pageinspect</xref></codeph> - Functions for low level
+         inspection of the contents of database pages; available to superusers only.</li>
+       <li><codeph><xref href="pgcrypto.xml" scope="peer" format="dita"
+             >pgcrypto</xref></codeph> - Provides cryptographic functions for Greenplum
+         Database.</li>
+     </ul>
+   </body>
+</topic>

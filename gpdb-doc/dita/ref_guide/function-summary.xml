@@ -869,7 +869,7 @@ SELECT foo();
           as <codeph>to_json</codeph> except for offering a pretty-printing option. The behavior
           described for <codeph>to_json</codeph> likewise applies to each individual value converted
           by the other JSON creation functions.</note>
-        <note>The <xref href="../utility_guide/hstore.xml">hstore</xref> extension has a cast from
+        <note>The <xref href="modules/hstore.xml">hstore</xref> extension has a cast from
             <codeph>hstore</codeph> to <codeph>json</codeph>, so that <codeph>hstore</codeph> values
           converted via the JSON creation functions will be represented as JSON objects, not as
           primitive string values.</note>

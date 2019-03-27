@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_lv4_czp_fz">
-  <title>dblink Functions</title>
+  <title>dblink</title>
   <shortdesc>The <codeph>dblink</codeph> module supports connections to other Greenplum Database
     databases from within a database session. These databases can reside in the same Greenplum
     Database system, or in a remote system. </shortdesc>
@@ -56,7 +56,7 @@ INSERT 0 2</codeblock></p>
           These commands create a small table in the <codeph>postgres</codeph> database, which you
           will later query from the <codeph>testdb</codeph> database using
           <codeph>dblink</codeph>:<codeblock>$ <b>psql -d postgres</b>
-psql (8.3.23)
+psql (9.4.20)
 Type "help" for help.
 
 postgres=# <b>CREATE TABLE testdblink (a int, b text) DISTRIBUTED BY (a);</b>

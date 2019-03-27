@@ -1759,7 +1759,35 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			 *     get each element's relation oid.
 			 */
 			if (containRoot)
-				all_relids = find_all_inheritors(relid, NoLock, NULL);
+			{
+				/*
+				 * For partition table, INSERT plan only contains the root table
+				 * in the result relations, whereas DELETE and UPDATE contain
+				 * both root table and the partition tables.
+				 *
+				 * Without locking the partition relations on QD when INSERT
+				 * the following dead lock scenario may happen between INSERT and
+				 * AppendOnly VACUUM drop phase on the partition table:
+				 *
+				 * 1. AO VACUUM drop on QD: acquired AccessExclusiveLock
+				 * 2. INSERT on QE: acquired RowExclusiveLock
+				 * 3. AO VACUUM drop on QE: waiting for AccessExclusiveLock
+				 * 4. INSERT on QD: waiting for AccessShareLock at ExecutorEnd()
+				 *
+				 * 2 blocks 3, 1 blocks 4, 1 and 2 will not release their locks
+				 * until 3 and 4 proceed. Hence INSERT needs to Lock the partition
+				 * tables on QD here (before 2) to prevent this dead lock.
+				 *
+				 * FIXME: Ideally we may want to
+				 * 1) Lock the partition table during the parse stage just as when
+				 *    we lock the root oid
+				 * 2) Only lock the particular partition table that we are
+				 *    inserting into, right now we don't have that info here.
+				 */
+				lockmode = (operation == CMD_INSERT && rel_is_partitioned(relid)) ?
+					RowExclusiveLock : NoLock;
+				all_relids = find_all_inheritors(relid, lockmode, NULL);
+			}
 			else
 			{
 				ListCell *lc;

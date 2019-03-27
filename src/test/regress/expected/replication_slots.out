@@ -1,0 +1,25 @@
+-- When I create a replication slot on the master
+-- Then I should expect an error warning me that
+--   my command is only run on the current segment.
+select pg_create_physical_replication_slot('some_replication_slot');
+WARNING:  replication slot "some_replication_slot" created only on this segment
+HINT:  Creating replication slots on a single segment is not advised.  Replication slots are automatically created by management tools.
+ pg_create_physical_replication_slot 
+-------------------------------------
+ (some_replication_slot,)
+(1 row)
+
+-- And I should see that my replication slot exists
+select pg_get_replication_slots();
+        pg_get_replication_slots         
+-----------------------------------------
+ (some_replication_slot,,physical,,f,,,)
+(1 row)
+
+-- Cleanup:
+select pg_drop_replication_slot('some_replication_slot');
+ pg_drop_replication_slot 
+--------------------------
+ 
+(1 row)
+

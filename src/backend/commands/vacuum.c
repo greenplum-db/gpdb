@@ -675,7 +675,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 	{
 		Assert(Gp_role == GP_ROLE_EXECUTE);
 		lmode = AccessExclusiveLock;
-
+		SIMPLE_FAULT_INJECTOR(VacuumRelationOpenRelationDuringDropPhase);
 	}
 	else if (!(vacstmt->options & VACOPT_VACUUM))
 		lmode = ShareUpdateExclusiveLock;

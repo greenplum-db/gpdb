@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="ij138244">citext Data Type</title>
+  <title id="ij138244">citext</title>
   <body>
-    <p>The citext module provides a case-insensitive character string type, <codeph>citext</codeph>. Essentially, it internally calls the <codeph>lower</codeph> function when comparing values. Otherwise, it behaves almost exactly like the <codeph>text</codeph> data type.</p>
+    <p>The citext module provides a case-insensitive character string data type, <codeph>citext</codeph>. Essentially, it internally calls the <codeph>lower</codeph> function when comparing values. Otherwise, it behaves almost exactly like the <codeph>text</codeph> data type.</p>
     <p>The standard method to perform case-insensitive matches on text values is to use the <codeph>lower</codeph> function when comparing values, for example</p>
     <codeblock>SELECT * FROM tab WHERE lower(col) = LOWER(?);</codeblock>
     <p>This method works well, but has drawbacks:</p>

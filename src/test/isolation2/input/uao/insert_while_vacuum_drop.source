@@ -1,0 +1,55 @@
+-- @Description Ensures that an INSERT while VACUUM drop phase does not leave
+-- the segfile state inconsistent on master and the primary.
+--
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+select gp_inject_fault('all', 'reset', 1);
+
+-- Helper function
+CREATE or REPLACE FUNCTION wait_until_acquired_lock_on_rel (rel_name text, lmode text, segment_id integer) RETURNS /*in func*/
+  bool AS $$ /*in func*/
+declare /*in func*/
+  result bool; /*in func*/
+begin /*in func*/
+result := false; /*in func*/
+-- Wait until lock is acquired /*in func*/
+while result = false loop /*in func*/
+select l.granted INTO result /*in func*/
+from pg_locks l, pg_class c /*in func*/
+where l.relation = c.oid /*in func*/
+  and c.relname=rel_name /*in func*/
+  and l.mode=lmode /*in func*/
+  and l.gp_segment_id=segment_id; /*in func*/
+if result = false then /*in func*/
+  perform pg_sleep(0.1); /*in func*/
+end if; /*in func*/
+end loop; /*in func*/
+return result; /*in func*/
+end; /*in func*/
+$$ language plpgsql;
+
+-- Given an append only table with partitions that is ready to be compacted
+CREATE TABLE insert_while_vacuum_drop_@orientation@ (a int, b int) with (appendonly=true, orientation=@orientation@)
+  DISTRIBUTED BY (a)
+  PARTITION BY RANGE (b)
+(START (1) END (2) EVERY (1));
+
+INSERT INTO insert_while_vacuum_drop_@orientation@ VALUES (1, 1);
+DELETE FROM insert_while_vacuum_drop_@orientation@;
+
+-- And VACUUM drop phase is blocked before it opens the child relation on the primary
+SELECT gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+1&: VACUUM insert_while_vacuum_drop_@orientation@;
+SELECT gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_phase', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- And INSERT is blocked until it acquires the RowExclusiveLock on the child relation
+2&: INSERT INTO insert_while_vacuum_drop_@orientation@ VALUES (1, 1);
+SELECT wait_until_acquired_lock_on_rel('insert_while_vacuum_drop_@orientation@_1_prt_1', 'RowExclusiveLock', content) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Reset the fault on VACUUM and the two sessions should not be blocking each other
+SELECT gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+1<:
+2<:
+
+-- The following INSERT transaction should still work and should not fail on
+-- "ERROR cannot insert into segno (1) for AO relid <XX> that is in state AOSEG_STATE_AWAITING_DROP"
+INSERT INTO insert_while_vacuum_drop_@orientation@ VALUES (1, 1);

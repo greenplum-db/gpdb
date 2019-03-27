@@ -873,10 +873,6 @@ jobs:
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: gpdb6-centos6-build
     params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
       TASK_OS: centos
@@ -916,10 +912,6 @@ jobs:
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: gpdb6-centos7-build
     params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
       TASK_OS: centos
@@ -1044,10 +1036,6 @@ jobs:
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: gpdb6-centos6-build
     params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
       TASK_OS: centos

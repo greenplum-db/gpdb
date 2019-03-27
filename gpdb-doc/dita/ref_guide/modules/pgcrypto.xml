@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<dita>
+  <topic id="topic_qml_2rd_yz">
+    <title>pgcrypto</title>
+    <body>
+      <p>Greenplum Database is installed with an optional module of encryption/decryption
+        functions called <codeph>pgcrypto</codeph>. The <codeph>pgcrypto</codeph>
+        functions allow database administrators to store certain columns of data
+        in encrypted form. This adds an extra layer of protection for sensitive
+        data, as data stored in Greenplum Database in encrypted form cannot be
+        read by anyone who does not have the encryption key, nor can it be read
+        directly from the disks.</p>
+      <note>The <codeph>pgcrypto</codeph> functions run inside the database server,
+        which means that all the data and passwords move between
+        <codeph>pgcrypto</codeph> and the client application in clear-text. For
+        optimal security, consider also using SSL connections between the client
+        and the Greenplum master server.</note>
+      <p>See
+            <xref href="https://www.postgresql.org/docs/9.4/pgcrypto.html" format="html"
+            scope="external">pgcrypto</xref> in the PostgreSQL documentation for more information
+          about the individual functions in this module.</p>
+    </body>
+  </topic>
+</dita>

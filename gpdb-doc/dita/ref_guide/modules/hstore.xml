@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_vcn_jkq_1bb">
- <title>hstore Functions</title>
+ <title>hstore</title>
  <body>
   <p>The <codeph>hstore</codeph> module implements a data type for storing sets of (key,value) pairs
    within a single Greenplum Database data field. This can be useful in various scenarios, such as

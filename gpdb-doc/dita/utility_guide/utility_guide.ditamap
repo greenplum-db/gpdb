@@ -75,12 +75,9 @@
                 <topicref href="client_utilities/vacuumdb.xml"/>
             </topicref>
         </topicref>
-        <topicref href="contrib-modules.xml">
-            <topicref href="citext.xml"/>
-            <topicref href="dblink.xml"/>
-            <topicref href="hstore.xml"/>
-            <topicref href="orafce_ref.xml"/>
-            <topicref href="passwordcheck.xml"/>
+        <topicref href="contrib-programs.xml">
+            <topicref href="https://www.postgresql.org/docs/9.4/pgupgrade.html" format="html" scope="external" navtitle="pg_upgrade" linking="none"/>
+            <topicref href="https://www.postgresql.org/docs/9.4/pgxlogdump.html" format="html" scope="external" navtitle="pg_xlogdump" linking="none"/>
         </topicref>
     </topicref>
 </map>

@@ -65,7 +65,7 @@ The template configuration file for Azure Blob Storage is `$PXF_CONF/templates/w
 
 | Property       | Description                                | Value |
 |----------------|--------------------------------------------|-------|
-| dfs.adls.oauth2.access.token.provider.type | The token type. | Must specify `ClientCredential`. |
+| fs.adl.oauth2.access.token.provider.type | The token type. | Must specify `ClientCredential`. |
 | fs.azure.account.key.\<YOUR_AZURE_BLOB_STORAGE_ACCOUNT_NAME\>.blob.core.windows.net | The Azure account key. | Replace <YOUR_AZURE_BLOB_STORAGE_ACCOUNT_NAME\> with your account key. |
 | fs.AbstractFileSystem.wasbs.impl | The file system class name. | Must specify `org.apache.hadoop.fs.azure.Wasbs`. |
 
@@ -76,10 +76,10 @@ The template configuration file for Azure Data Lake is `$PXF_CONF/templates/adl-
 
 | Property       | Description                                | Value |
 |----------------|--------------------------------------------|-------|
-| dfs.adls.oauth2.access.token.provider.type | The type of token. | Must specify `ClientCredential`. |
-| dfs.adls.oauth2.refresh.url | The Azure endpoint to which to connect. | Your refresh URL. |
-| dfs.adls.oauth2.client.id | The Azure account client ID. | Your client ID (UUID). |
-| dfs.adls.oauth2.credential | The password for the Azure account client ID. | Your password. |
+| fs.adl.oauth2.access.token.provider.type | The type of token. | Must specify `ClientCredential`. |
+| fs.adl.oauth2.refresh.url | The Azure endpoint to which to connect. | Your refresh URL. |
+| fs.adl.oauth2.client.id | The Azure account client ID. | Your client ID (UUID). |
+| fs.adl.oauth2.credential | The password for the Azure account client ID. | Your password. |
 
 
 ### <a id="gcs_cfg"></a>Google Cloud Storage Server Configuration

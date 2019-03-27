@@ -19,9 +19,9 @@ EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>EXPLAIN</codeph> displays the query plan that the Greenplum planner generates for
-        the supplied statement. Query plans are a tree plan of nodes. Each node in the plan
-        represents a single operation, such as table scan, join, aggregation or a sort.</p>
+      <p><codeph>EXPLAIN</codeph> displays the query plan that the Greenplum or Postgres planner
+        generates for the supplied statement. Query plans are a tree plan of nodes. Each node in the
+        plan represents a single operation, such as table scan, join, aggregation or a sort.</p>
       <p>Plans should be read from the bottom up as each node feeds rows into the node directly
         above it. The bottom nodes of a plan are usually table scan operations (sequential, index or
         bitmap index scans). If the query requires joins, aggregations, or sorts (or other
@@ -139,12 +139,13 @@ ROLLBACK;</codeblock></note>
         </plentry>
         <plentry>
           <pt>TIMING</pt>
-          <pd>Include the actual startup time and time spent in the node in the output. The
-            overhead of repeatedly reading the system clock can slow down the query significantly on
-            some systems, so it may be useful to set this parameter to <codeph>FALSE</codeph> when
-            only actual row counts, and not exact times, are needed. This parameter may only be used
-            when <codeph>ANALYZE</codeph> is also enabled. It defaults to <codeph>TRUE</codeph>.
-          </pd>
+          <pd>Include actual startup time and time spent in each node in the output. The overhead of
+            repeatedly reading the system clock can slow down the query significantly on some
+            systems, so it may be useful to set this parameter to <codeph>FALSE</codeph> when only
+            actual row counts, and not exact times, are needed. Run time of the entire statement is
+            always measured, even when node-level timing is turned off with this option. This
+            parameter may only be used when <codeph>ANALYZE</codeph> is also enabled. It defaults to
+              <codeph>TRUE</codeph>. </pd>
         </plentry>
         <plentry>
           <pt>FORMAT</pt>

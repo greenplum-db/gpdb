@@ -388,7 +388,7 @@ root     29622 29566  0 12:50 pts/16   00:00:00 grep 15673</codeblock>
           the node, the size of the cluster, SQL access, concurrency, workload, and skew. There are
           generally six to eight segments per host, but large clusters should have fewer segments
           per host. When using partitioning and columnar storage it is important to balance the
-          total number of files in the cluster ,but it is <i>more</i> important to consider the
+          total number of files in the cluster, but it is <i>more</i> important to consider the
           number of files per segment and the total number of files on a node. </p>
         <p>Example DCA V2 64GB Memory per Node</p>
         <ul id="ul_nyy_tgb_3r">

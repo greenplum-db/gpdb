@@ -2,6 +2,8 @@
 
 #include "fmgr.h"
 #include "utils/metrics_utils.h"
+#include "nodes/execnodes.h"
+#include "nodes/print.h"
 
 PG_MODULE_MAGIC;
 
@@ -35,7 +37,7 @@ test_hook(QueryMetricsStatus status, void* args)
 			ereport(WARNING, (errmsg("Plan node initializing")));
 			break;
 		case METRICS_PLAN_NODE_EXECUTING:
-			ereport(WARNING, (errmsg("Plan node executing")));
+			ereport(WARNING, (errmsg("Plan node executing node_type: %s", plannode_type(((PlanState *)args)->plan))));
 			break;
 		case METRICS_PLAN_NODE_FINISHED:
 			ereport(WARNING, (errmsg("Plan node finished")));

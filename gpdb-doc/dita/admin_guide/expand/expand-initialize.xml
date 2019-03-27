@@ -233,7 +233,7 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
       <codeblock>$ gpstate -x</codeblock>
       <p>If the expansion schema exists in the postgres database, <codeph>gpstate
           -x</codeph> reports on the progress of the expansion. During the first expansion phase,
-          <codeph>gpstate</codeph> reports on the progress of new segment intialization.  During the
+          <codeph>gpstate</codeph> reports on the progress of new segment initialization.  During the
         second phase, <codeph>gpstate</codeph> reports on the progress of table redistribution, and
         whether redistribution is paused or active. </p>
       <p>You can also query the expansion schema to see expansion status. See <xref

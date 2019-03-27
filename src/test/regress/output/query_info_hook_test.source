@@ -1,11 +1,12 @@
 LOAD '@abs_builddir@/query_info_hook_test/query_info_hook_test@DLSUFFIX@';
 SET client_min_messages='warning';
+SET optimizer=off;
 -- Test Normal case
 SELECT * FROM generate_series(1, 3);
 WARNING:  Query submit
 WARNING:  Query start
 WARNING:  Plan node initializing
-WARNING:  Plan node executing
+WARNING:  Plan node executing node_type: FUNCTIONSCAN
 WARNING:  Plan node finished
 WARNING:  Query Done
  generate_series 
@@ -25,7 +26,7 @@ SELECT * FROM error_in_execution();
 WARNING:  Query submit
 WARNING:  Query start
 WARNING:  Plan node initializing
-WARNING:  Plan node executing
+WARNING:  Plan node executing node_type: FUNCTIONSCAN
 WARNING:  Query Error
 ERROR:  error in function execution
 -- Test Error case: Error out in planner.
@@ -36,7 +37,7 @@ select pg_cancel_backend(pg_backend_pid());
 WARNING:  Query submit
 WARNING:  Query start
 WARNING:  Plan node initializing
-WARNING:  Plan node executing
+WARNING:  Plan node executing node_type: RESULT
 WARNING:  Query Canceling
 WARNING:  Query Canceled
 ERROR:  canceling statement due to user request
@@ -46,12 +47,38 @@ ALTER TABLE queryInfoHookTable1 SET DISTRIBUTED BY (name);
 WARNING:  Query submit
 WARNING:  Query start
 WARNING:  Plan node initializing
-WARNING:  Plan node executing
+WARNING:  Plan node executing node_type: RESULT
 WARNING:  Plan node finished
 WARNING:  Query Done
 WARNING:  Query submit
 WARNING:  Query start
 WARNING:  Plan node initializing
+WARNING:  Plan node executing node_type: MOTION
 WARNING:  Plan node finished
 WARNING:  Plan node finished
 WARNING:  Query Done
+-- Test Hash node
+CREATE TABLE tb_a(a int);
+SELECT a FROM tb_a WHERE a IN (SELECT max(a) FROM tb_a);
+WARNING:  Query submit
+WARNING:  Query start
+WARNING:  Plan node initializing
+WARNING:  Plan node executing node_type: MOTION
+WARNING:  Plan node executing node_type: HASHJOIN
+WARNING:  Plan node executing node_type: HASH
+WARNING:  Plan node finished
+WARNING:  Query Done
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Query Done
+ a 
+---
+(0 rows)
+

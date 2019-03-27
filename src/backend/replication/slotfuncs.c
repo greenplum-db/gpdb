@@ -32,6 +32,13 @@ check_permissions(void)
 				 (errmsg("must be superuser or replication role to use replication slots"))));
 }
 
+static void
+warn_slot_only_created_on_segment(const char *name) {
+	ereport(WARNING,
+			(errmsg("replication slot \"%s\" created only on this segment", name),
+			 errhint("Creating replication slots on a single segment is not advised.  Replication slots are automatically created by management tools.")));
+}
+
 /*
  * SQL function for creating a new physical (streaming replication)
  * replication slot.
@@ -55,6 +62,8 @@ pg_create_physical_replication_slot(PG_FUNCTION_ARGS)
 	check_permissions();
 
 	CheckSlotRequirements();
+
+	warn_slot_only_created_on_segment(NameStr(*name));
 
 	/* acquire replication slot, this will check for conflicting names */
 	ReplicationSlotCreate(NameStr(*name), false, RS_PERSISTENT);

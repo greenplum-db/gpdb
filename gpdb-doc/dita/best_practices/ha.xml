@@ -130,7 +130,7 @@
         work, so performance can be degraded until the balance is restored by recovering the
         original primary. </p>
       <p>Administrators perform the recovery while Greenplum Database is up and running by running
-        the <codeph>gprecoverseg</codeph> utility.This utility locates the failed segments, verifies
+        the <codeph>gprecoverseg</codeph> utility. This utility locates the failed segments, verifies
         they are valid, and compares the transactional state with the currently active segment to
         determine changes made while the segment was offline. <codeph>gprecoverseg</codeph>
         synchronizes the changed database files with the active segment and brings the segment back

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map title="Additional Supplied Modules">
+  <topicref href="intro.xml" navtitle="Additional Supplied Modules">
+    <topicref href="citext.xml" linking="none"/>
+    <topicref href="dblink.xml" linking="none"/>
+    <topicref href="fuzzystrmatch.xml" linking="none"/>
+    <topicref href="https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/gp_sparse_vector/README" format="html" scope="external" navtitle="gp_sparse_vector" linking="none"/>
+    <topicref href="hstore.xml" linking="none"/>
+    <topicref href="orafce_ref.xml" linking="none"/>
+    <topicref href="https://www.postgresql.org/docs/9.4/pageinspect.html" scope="external" format="html" navtitle="pageinspect" linking="none"/>
+    <topicref href="pgcrypto.xml" linking="none"/>
+  </topicref>
+</map>

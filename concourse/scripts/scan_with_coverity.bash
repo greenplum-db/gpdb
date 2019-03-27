@@ -31,8 +31,6 @@ function generate_build_number() {
 
 function make_sync_tools() {
   pushd gpdb_src/gpAux
-    # Requires these variables in the env:
-    # IVYREPO_HOST IVYREPO_REALM IVYREPO_USER IVYREPO_PASSWD
     make sync_tools
     # We have compiled LLVM with native zlib on CentOS6 and not from
     # the zlib downloaded from artifacts.  Therefore, remove the zlib

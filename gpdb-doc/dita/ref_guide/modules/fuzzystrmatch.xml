@@ -2,9 +2,9 @@
 <!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <dita>
   <topic id="topic_fstrm">
-    <title>Greenplum Fuzzy String Match Extension</title>
+    <title>fuzzystrmatch</title>
     <body>
-      <p>The Greenplum Database Fuzzy String Match extension provides functions to determine
+      <p>The <codeph>fuzzystrmatch</codeph> module provides functions to determine
         similarities and distance between strings based on various algorithms.</p>
       <ul id="ul_ltl_rym_hp">
         <li>
@@ -24,12 +24,12 @@
         </li>
       </ul>
       <p>The Greenplum Database installation contains the files required for the functions in this
-        extension module and SQL scripts to define the extension functions in a database and remove
+        module and SQL scripts to define the module functions in a database and remove
         the functions from a database. </p>
       <note type="warning">The functions <apiname>soundex</apiname>, <apiname>metaphone</apiname>,
           <apiname>dmetaphone</apiname>, and <apiname>dmetaphone_alt</apiname> do not work well with
         multibyte encodings (such as UTF-8).</note>
-      <p>The Greenplum Database Fuzzy String Match extension is based on the PostgreSQL
+      <p>The Greenplum Database Fuzzy String Match is based on the PostgreSQL
         fuzzystrmatch module.</p>
     </body>
     <topic id="topic_soundex">
@@ -154,16 +154,19 @@ dmetaphone_alt(text <varname>source</varname>) returns text</codeblock>
       </body>
     </topic>
     <topic id="topic_install">
-      <title>Installing and Uninstalling the Fuzzy String Match Functions</title>
+      <title>Registering the fuzzystrmatch Functions</title>
       <body>
-        <p>Greenplum Database supplies SQL scripts to install and uninstall the Fuzzy String Match
-          extension functions.</p>
-        <p>To install the functions in a database, run the following SQL script:</p>
-        <codeblock>psql -f $GPHOME/share/postgresql/contrib/fuzzystrmatch.sql</codeblock>
-        <p>To uninstall the functions, run the following SQL script:</p>
-        <codeblock>psql -f $GPHOME/share/postgresql/contrib/uninstall_fuzzystrmatch.sql</codeblock>
-        <note>When you uninstall the Fuzzy String Match functions from a database, routines that you
-          created in the database that use the functions will no longer work.</note>
+        <p>Greenplum Database supplies SQL scripts to register the <codeph>fuzzystrmatch</codeph>
+          module functions.</p>
+        <p>Before you can use <codeph>fuzzystrmatch</codeph> functions, you must register
+          the <codeph>fuzzystrmatch</codeph> extension in each database in which you want
+          to use the functions:</p>
+        <codeblock>psql -d testdb -c "CREATE EXTENSION fuzzystrmatch"</codeblock>
+        <p>To remove the functions from a database:</p>
+        <codeblock>psql -d testdb -c "DROP EXTENSION fuzzystrmatch"</codeblock>
+        <note>When you remove the <codeph>fuzzystrmatch</codeph>functions from a database,
+          UDFs that you created in the database that use the functions will no longer
+          work.</note>
       </body>
     </topic>
   </topic>
