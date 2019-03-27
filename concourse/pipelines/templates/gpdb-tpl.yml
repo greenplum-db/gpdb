@@ -545,7 +545,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: bin_gpdb_centos6/gpdb_branch_master/icw_green/bin_gpdb.tar.gz
+    versioned_file: bin_gpdb_centos6/gpdb_branch_6X_STABLE/icw_green/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos6_rc
   type: gcs
