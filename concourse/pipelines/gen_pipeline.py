@@ -18,7 +18,7 @@
 # under the License.
 # ----------------------------------------------------------------------
 
-"""Generate pipeline (default: gpdb_master-generated.yml) from template (default:
+"""Generate pipeline (default: gpdb_6X_STABLE-generated.yml) from template (default:
 templates/gpdb-tpl.yml).
 
 Python module requirements:
@@ -183,19 +183,19 @@ def how_to_use_generated_pipeline_message():
         msg += 'NOTE: You can set the production pipelines with the following:\n\n'
         msg += 'fly -t gpdb-prod \\\n'
         msg += '    set-pipeline \\\n'
-        msg += '    -p gpdb_master \\\n'
+        msg += '    -p 6X_STABLE \\\n'
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.prod.yml \\\n'
-        msg += '    -v pipeline-name=gpdb_master\n\n'
+        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.prod.yml \\\n'
+        msg += '    -v pipeline-name=6X_STABLE\n\n'
 
         msg += 'fly -t gpdb-prod \\\n'
         msg += '    set-pipeline \\\n'
-        msg += '    -p gpdb_master_without_asserts \\\n'
+        msg += '    -p 6X_STABLE_without_asserts \\\n'
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml \\\n' # pylint: disable=line-too-long
-        msg += '    -v pipeline-name=gpdb_master_without_asserts\n'
+        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE_without_asserts-ci-secrets.prod.yml \\\n' # pylint: disable=line-too-long
+        msg += '    -v pipeline-name=6X_STABLE_without_asserts\n'
     else:
         pipeline_name = os.path.basename(ARGS.output_filepath).rsplit('.', 1)[0]
         msg += 'NOTE: You can set the developer pipeline with the following:\n\n'
@@ -204,7 +204,7 @@ def how_to_use_generated_pipeline_message():
         msg += '    -p %s \\\n' % pipeline_name
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \\\n'
+        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.dev.yml \\\n'
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \\\n'
         msg += '    -v gpdb-git-remote=%s \\\n' % suggested_git_remote()
         msg += '    -v gpdb-git-branch=%s \\\n' % suggested_git_branch()
@@ -224,7 +224,7 @@ if __name__ == "__main__":
                         default="gpdb-tpl.yml",
                         help='Name of template to use, in templates/')
 
-    default_output_filename = "gpdb_master-generated.yml"
+    default_output_filename = "gpdb_6X_STABLE-generated.yml"
     PARSER.add_argument('-o', '--output',
                         action='store',
                         dest='output_filepath',
@@ -270,7 +270,7 @@ if __name__ == "__main__":
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
         ARGS.test_sections = ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions', 'Gpperfmon']
 
-    # if generating a dev pipeline but didn't specify an output, don't overwrite the master pipeline
+    # if generating a dev pipeline but didn't specify an output, don't overwrite the 6X_STABLE pipeline
     if ARGS.pipeline_type != 'prod' and os.path.basename(ARGS.output_filepath) == default_output_filename:
         default_dev_output_filename = 'gpdb-' + ARGS.pipeline_type + '-' + ARGS.user + '.yml'
         ARGS.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
