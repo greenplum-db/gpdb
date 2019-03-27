@@ -17,4 +17,4 @@ run:
 params:
   ACTION: build
   MODE: orca
-  CONFIGURE_OPTION: --disable-gpcloud
+  CONFIGURE_OPTION: --disable-gpcloud --enable-debug-extensions
