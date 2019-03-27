@@ -86,7 +86,7 @@ static const struct FileFdwOption valid_options[] = {
 
 	/* Error handling */
 	{"reject_limit", ForeignTableRelationId},
-	{"reject_limit_kind", ForeignTableRelationId},
+	{"is_reject_limit_rows", ForeignTableRelationId},
 
 	/*
 	 * based on the non custom options
@@ -1290,10 +1290,10 @@ fileBeginForeignScan(ForeignScanState *node, int eflags)
 			char *val = defGetString(def);
 			festate->custom.reject_limit = atoi(val);
 		}
-		else if (strcmp(def->defname, "reject_limit_kind") == 0)
+		else if (strcmp(def->defname, "is_reject_limit_rows") == 0)
 		{
 			char *val = defGetString(def);
-			festate->custom.is_reject_limit_rows = !!(strcmp(val, "rows") == 0);
+			festate->custom.is_reject_limit_rows = !!atoi(val);
 		}
 	}
 
