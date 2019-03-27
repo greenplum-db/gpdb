@@ -70,10 +70,10 @@
                 source database and how to manage data in the destination database.<ul
                     id="ul_ehn_fvx_vdb">
                     <li>You must use one and only one of these options to specify the data to be
-                        copied from the source database: -<codeph>-full</codeph>,
+                        copied from the source database: <codeph>--full</codeph>,
                             <codeph>--dbname</codeph>, <codeph>--include-table</codeph>, or
                             <codeph>--include-table-file</codeph>. </li>
-                    <li>You must use one of these options to specify how manage data in the
+                    <li>You must use one of these options to specify how to manage data in the
                         destination database: <codeph>--skip-existing</codeph>,
                             <codeph>--truncate</codeph>, <codeph>--drop</codeph>, or
                             <codeph>--append</codeph>.<p>If you specify both the
@@ -92,6 +92,16 @@
             <p>The user IDs connecting to the source and destination Greenplum Database systems, the
                     <codeph>--source-user</codeph> and <codeph>--dest-user</codeph>, must have
                 appropriate access to the systems.</p>
+            <p>If Kerberos authentication is enabled for Greenplum Database, <codeph>gpcopy</codeph>
+                can authenticate with Kerberos. Run the <codeph>kinit</codeph> command to obtain a
+                ticket-granting ticket from the KDC server before you execute
+                    <codeph>gpcopy</codeph>. The <codeph>PGKRBSRVNAME</codeph> environment variable
+                specifies the Kerberos service name for Greenplum Database. If your Greenplum
+                Database service name is different than the default (<codeph>postgres</codeph>) set
+                the <codeph>PGKRBSRVNAME</codeph> environment variable with the correct service name
+                before you run <codeph>gpcopy</codeph>.  See <xref
+                    href="../../admin_guide/kerberos.xml#topic1"/> for information about enabling
+                Kerberos authentication with Greenplum Database.</p>
             <p>The source and destination Greenplum Database segment hosts need to be able to
                 communicate with each other. To ensure that the segment hosts can communicate, you
                 can use a tool such as the Linux <codeph>netperf</codeph> utility. </p>
@@ -276,7 +286,7 @@
                 </plentry>
                 <plentry>
                     <pt>--include-table-file <varname>table-file</varname></pt>
-                    <pd>The location and name of file containing a list of fully qualified table
+                    <pd>The location and name of a file containing a list of fully qualified table
                         names to copy from the Greenplum Database source system. To specify multiple
                         files, specify this option for each
                         file.<codeblock>--include-table-file &lt;<varname>path_to_file1</varname>> --include-table-file &lt;<varname>path_to_file2</varname>></codeblock></pd>
