@@ -631,7 +631,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	EACH ELSE ENABLE_P ENCODING ENCRYPTED END_P ENUM_P ESCAPE EVENT EXCEPT
 	EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN
-	EXTENSION EXTERNAL EXTRACT
+	EXTENSION EXTERNAL EXTERNALEX EXTRACT
 
 	FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING FOR
 	FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
@@ -873,6 +873,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc EXECUTE
 			%nonassoc EXPLAIN
 			%nonassoc EXTERNAL
+			%nonassoc EXTERNALEX
 			%nonassoc FETCH
 			%nonassoc FIELDS
 			%nonassoc FILL
@@ -6630,6 +6631,8 @@ AlterForeignServerStmt: ALTER SERVER name foreign_server_version alter_generic_o
  *
  *		QUERY:
  *             CREATE FOREIGN TABLE relname (...) SERVER name (...)
+ *		OR:
+ *             CREATE EXTERNALEX TABLE relname (...) OPTIONS (...)
  *
  *****************************************************************************/
 
@@ -6662,6 +6665,60 @@ CreateForeignTableStmt:
 					/* FDW-specific data */
 					n->servername = $12;
 					n->options = $13;
+					$$ = (Node *) n;
+				}
+		| CREATE EXTERNALEX TABLE qualified_name
+			'(' OptTableElementList ')'
+			LOCATION '(' generic_option_arg ')'
+			FORMAT Sconst format_opt
+			OptSingleRowErrorHandling
+			create_generic_options
+				{
+					CreateForeignTableStmt *n = makeNode(CreateForeignTableStmt);
+					$4->relpersistence = RELPERSISTENCE_PERMANENT;
+					n->base.relation = $4;
+					n->base.tableElts = $6;
+					n->base.inhRelations = NIL;
+					n->base.if_not_exists = false;
+					/* FDW-specific data */
+					n->servername = "external_table_server";
+					n->options = $16;
+
+					/* Add location into the options list as 'filename' */
+					n->options = lappend(n->options, makeDefElem("filename", $10));
+
+					/* Add format into the options list as 'format' */
+					n->options = lappend(n->options, makeDefElem("format", (Node *) makeString($13)));
+
+					/* Add format options if exists into options */
+					if ($14)
+					{
+						StringInfoData flattened;
+						initStringInfo(&flattened);
+						ListCell *lc;
+						bool first = true;
+						foreach(lc, $14)
+						{
+							DefElem *def = (DefElem *)lfirst(lc);
+							if (first)
+								appendStringInfo(&flattened, "%s", defGetString(def));
+							else
+								appendStringInfo(&flattened, " %s %s", def->defname, defGetString(def));
+							first = false;
+						}
+						n->options = lappend(n->options, makeDefElem("formatter", (Node *)makeString(flattened.data)));
+						pfree(flattened.data);
+					}
+
+					/* Add Single Row Error Handling into options */
+					/* At the moment only limit and kind are supported */
+					SingleRowErrorDesc *sreh = (SingleRowErrorDesc *)$15;
+					if (sreh)
+					{
+						n->options = lappend(n->options, makeDefElem("reject_limit", (Node *)makeInteger(sreh->rejectlimit)));
+						n->options = lappend(n->options, makeDefElem("is_reject_limit_rows", (Node *)makeInteger(sreh->is_limit_in_rows)));
+					}
+
 					$$ = (Node *) n;
 				}
 		;
@@ -7668,6 +7725,7 @@ drop_type:	TABLE									{ $$ = OBJECT_TABLE; }
 			| MATERIALIZED VIEW						{ $$ = OBJECT_MATVIEW; }
 			| INDEX									{ $$ = OBJECT_INDEX; }
 			| FOREIGN TABLE							{ $$ = OBJECT_FOREIGN_TABLE; }
+			| EXTERNALEX TABLE						{ $$ = OBJECT_FOREIGN_TABLE; }
 			| EVENT TRIGGER 						{ $$ = OBJECT_EVENT_TRIGGER; }
 			| TYPE_P								{ $$ = OBJECT_TYPE; }
 			| DOMAIN_P								{ $$ = OBJECT_DOMAIN; }
@@ -7888,6 +7946,7 @@ comment_type:
 			| EXTENSION							{ $$ = OBJECT_EXTENSION; }
 			| ROLE								{ $$ = OBJECT_ROLE; }
 			| FOREIGN TABLE						{ $$ = OBJECT_FOREIGN_TABLE; }
+			| EXTERNALEX TABLE					{ $$ = OBJECT_FOREIGN_TABLE; }
 			| SERVER							{ $$ = OBJECT_FOREIGN_SERVER; }
 			| FOREIGN DATA_P WRAPPER			{ $$ = OBJECT_FDW; }
 			| EVENT TRIGGER						{ $$ = OBJECT_EVENT_TRIGGER; }
@@ -15639,6 +15698,7 @@ unreserved_keyword:
 			| EXPLAIN
 			| EXTENSION
 			| EXTERNAL
+			| EXTERNALEX
 			| FAMILY
 			| FIELDS
 			| FILL
