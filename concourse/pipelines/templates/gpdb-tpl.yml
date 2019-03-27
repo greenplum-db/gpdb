@@ -7,12 +7,23 @@
                       'gpinitsystem',
                       'gpstate',
                       'replication_slots'] %}
+
+{% set gppkg_additional_task = "
+        - task: setup_gppkg_second_install
+          file: gpdb_src/concourse/tasks/gppkg_behave.yml
+          params:
+            SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate"
+%}
+
 {% set CLI_TESTS = [
                       {'name': 'gpmovemirrors',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
                       {'name': 'gpcheck',
-                       'use_concourse_cluster': false}
+                       'use_concourse_cluster': false},
+                      {'name': 'gppkg',
+                       'use_concourse_cluster': true,
+                       'additional_tasks': gppkg_additional_task}
                     ] %}
 
 ## ======================================================================
@@ -112,7 +123,6 @@ groups:
 {% endfor %}
   - gpaddmirrors
   - gpexpand
-  - gppkg
   - check_centos
 {% endif %}
 {% if "AA" in test_sections %}
@@ -292,7 +302,6 @@ groups:
 {% endfor %}
   - gpaddmirrors
   - gpexpand
-  - gppkg
   - check_centos
   - compile_gpdb_centos6
 {% if "centos6" in os_types and "ICW" in test_sections %}
@@ -1819,45 +1828,6 @@ jobs:
       passed:
       - compile_gpdb_centos6
 
-- name: gppkg
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_cli_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_cli_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: ccp-image
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: setup_gppkg_second_install
-    file: gpdb_src/concourse/tasks/gppkg_behave.yml
-    params:
-      SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: ccp-image
-    params:
-      BEHAVE_FLAGS: --tags=gppkg
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-
 {% for test_name in CLI_1_suites %}
 - name: [[ test_name ]]
   plan:
@@ -2000,6 +1970,7 @@ jobs:
             <<: *ccp_gen_cluster_default_params
         - task: gpinitsystem
           file: ccp_src/ci/tasks/gpinitsystem.yml
+        [[ test.additional_tasks ]]
         - task: [[ test.name ]]_concourse_cluster_tests
           file: gpdb_src/concourse/tasks/run_behave.yml
           image: ccp-image
@@ -2317,7 +2288,6 @@ jobs:
       - pg_upgrade
       - gpaddmirrors
       - gpexpand
-      - gppkg
       - check_centos
       - interconnect
     - get: bin_gpdb_centos6
@@ -2340,7 +2310,6 @@ jobs:
  ##     - MADlib_Test_orca_centos6
  ##     - MADlib_Test_planner_centos6
       - gpexpand
-      - gppkg
       - check_centos
       - interconnect
     - get: bin_gpdb_centos7
