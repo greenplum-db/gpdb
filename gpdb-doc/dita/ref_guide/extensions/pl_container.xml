@@ -253,23 +253,21 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
       <p>Ensure your Greenplum Database system meets the following prerequisites:</p>
       <ul id="ul_ztj_kzp_dw">
         <li>PL/Container is supported on <ph otherprops="pivotal">Pivotal </ph>Greenplum Database
-          5.2.x on Red Hat Enterprise Linux (RHEL) 7.x or 6.6+ (or later) and CentOS 7.x or 6.6+ (or
-          later).</li>
+          5.2.x on Red Hat Enterprise Linux (RHEL) 7.x (or later) and CentOS 7.x (or later).<note
+            id="plc-issue">PL/Container is not supported on RHEL/CentOS 6.x systems, because those
+            platforms do not officially support Docker.</note></li>
         <li>These are Docker host operating system prerequisites.<p>RHEL or CentOS 7.x - Minimum
             supported Linux OS kernel version is 3.10. RHEL 7.x and CentOS 7.x use this kernel
-            version.</p><p>RHEL or CentOS 6.6+ - Minimum supported Linux OS kernel version
-            2.6.32-431</p><p>You can check your kernel version with the command <codeph>uname
+            version.</p><p>You can check your kernel version with the command <codeph>uname
               -r</codeph></p>
           <note>The Red Hat provided, maintained, and supported version of Docker is only available
-            on RHEL 7. Red Hat does not recommend running any version of Docker on any RHEL 6
-            releases. Docker feature developments are tied to RHEL7.x infrastructure components for
+            on RHEL 7. Docker feature developments are tied to RHEL7.x infrastructure components for
             kernel, devicemapper (thin provisioning, direct lvm), sVirt and systemd.</note></li>
       </ul>
       <ul id="ul_b5j_kzp_dw">
         <li>Docker is installed on Greenplum Database hosts (master, primary and all standby
             hosts)<ul id="ul_z2t_bxd_rbb">
             <li>For RHEL or CentOS 7.x - Docker 17.05</li>
-            <li>RHEL or CentOS 6.6+ - Docker 1.7</li>
           </ul><p>See <xref href="#topic_ydt_rtc_rbb" format="dita"/>.</p></li>
         <li>On each Greenplum Database host the <codeph>gpadmin</codeph> user should be part of the
             <codeph>docker</codeph> group for the user to be able to manage Docker images and
@@ -1431,8 +1429,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
     <title>Installing Docker</title>
     <body>
       <p>To use PL/Container, Docker must be installed on all Greenplum Database host systems. The
-        these instructions show how to set up the Docker service on CentOS 6 and CentOS 7.
-        Installing on RHEL 6 or RHEL 7 is a similar process.</p>
+        these instructions show how to set up the Docker service on CentOS 7. Installing on RHEL 7
+        is a similar process.</p>
       <p>Before performing the Docker installation ensure these requirements are met.<ul
           id="ul_ygx_ms2_rbb">
           <li>The CentOS <codeph>extras</codeph> repository is accessible.</li>
