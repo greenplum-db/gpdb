@@ -1334,7 +1334,6 @@ fileIterateForeignScan(ForeignScanState *node)
 {
 	FileFdwExecutionState *festate = (FileFdwExecutionState *) node->fdw_state;
 	TupleTableSlot *slot = node->ss.ss_ScanTupleSlot;
-	bool		found;
 	ErrorContextCallback errcallback;
 
 	/* Set up callback to identify error line number. */
@@ -1356,23 +1355,21 @@ fileIterateForeignScan(ForeignScanState *node)
 	 * foreign tables.
 	 */
 	ExecClearTuple(slot);
-	HeapTuple	tuple;
 
 	if (!festate->iscustom)
+	{
+		bool found;
 		found = NextCopyFrom(festate->cstate, NULL,
 							 slot_get_values(slot), slot_get_isnull(slot),
 							 NULL);
+		if (found)
+			ExecStoreVirtualTuple(slot);
+	}
 	else
 	{
+		HeapTuple	tuple;
 		tuple = dirrect_call(festate);
-		found = tuple != NULL;
-	}
-
-	if (found)
-	{
-		if (!festate->iscustom)
-			ExecStoreVirtualTuple(slot);
-		else
+		if (tuple)
 			ExecStoreHeapTuple(tuple, slot, InvalidBuffer, false);
 	}
 
