@@ -1,6 +1,4 @@
 
-{% set CLI_1_suites = [] %}
-
 {% set gppkg_additional_task = "
         - task: setup_gppkg_second_install
           file: gpdb_src/concourse/tasks/gppkg_behave.yml
@@ -124,9 +122,6 @@ groups:
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_cli_start
-{% for test_name in CLI_1_suites %}
-  - [[ test_name ]]
-{% endfor %}
 {% for test in CLI_TESTS %}
   - [[ test.name ]]
 {% endfor %}
@@ -303,9 +298,6 @@ groups:
 - name: CLI
   jobs:
   - gate_cli_start
-{% for test_name in CLI_1_suites %}
-  - [[ test_name ]]
-{% endfor %}
 {% for test in CLI_TESTS %}
   - [[ test.name ]]
 {% endfor %}
@@ -1837,44 +1829,6 @@ jobs:
       passed:
       - compile_gpdb_centos6
 
-{% for test_name in CLI_1_suites %}
-- name: [[ test_name ]]
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_cli_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_cli_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: ccp-image
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: ccp-image
-    params:
-      BEHAVE_FLAGS: --tags=[[ test_name ]]
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-
-{% endfor %}
-
 - name: check_centos
   plan:
   - aggregate:
@@ -2261,9 +2215,6 @@ jobs:
       - gpperfmon_centos7
       - gpperfmon_sles12
  ##     - resource_group_sles12
-{% for test_name in CLI_1_suites %}
-      - [[ test_name ]]
-{% endfor %}
 {% for test in CLI_TESTS %}
       - [[ test.name ]]
 {% endfor %}
@@ -2287,9 +2238,6 @@ jobs:
       - icw_extensions_gpcloud_centos6
  ##   - client_loader_remote_test_aix
       - resource_group_centos6
-{% for test_name in CLI_1_suites %}
-      - [[ test_name ]]
-{% endfor %}
 {% for test in CLI_TESTS %}
       - [[ test.name ]]
 {% endfor %}
