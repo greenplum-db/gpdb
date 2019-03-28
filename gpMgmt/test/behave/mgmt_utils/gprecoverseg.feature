@@ -1,13 +1,10 @@
-# NOTE: this behave suite depends on the cluster under test having at least 2 distinct hosts. See @multinode tags
-
 @gprecoverseg
 Feature: gprecoverseg tests
-    @multinode
-    Scenario: gprecoverseg behave test requires a cluster with at least 2 hosts
-        Given the database is running
-        Given database "gptest" exists
-        And the information of a "mirror" segment on a remote host is saved
+  
+########################### @demo_cluster tests ###########################
+# The @demo_cluster tag denotes the scenario can run locally
 
+    @demo_cluster
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
         And user kills a primary postmaster process
@@ -21,6 +18,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
+    @demo_cluster
     Scenario: gprecoverseg displays pg_basebackup progress to the user
         Given the database is running
         And all the segments are running
@@ -34,6 +32,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
+    @demo_cluster
     Scenario: gprecoverseg does not display pg_basebackup progress to the user when --no-progress option is specified
         Given the database is running
         And all the segments are running
@@ -47,30 +46,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    Scenario: When gprecoverseg full recovery is executed and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And the "primary" segment information is saved
-        When the postmaster.pid file on "primary" segment is saved
-        And user kills a primary postmaster process
-        When user can start transactions
-        And the background pid is killed on "primary" segment
-        And we run a sample background script to generate a pid on "primary" segment
-        And we generate the postmaster.pid file with the background pid on "primary" segment
-        And the user runs "gprecoverseg -F -a"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-        And gprecoverseg should print "Skipping to stop segment.* on host.* since it is not a postgres process" to stdout
-        And all the segments are running
-        And the segments are synchronized
-        When the user runs "gprecoverseg -ra"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-        And the segments are synchronized
-        And the backup pid file is deleted on "primary" segment
-        And the background pid is killed on "primary" segment
-
+    @demo_cluster
     Scenario: When gprecoverseg incremental recovery uses pg_rewind to recover and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
         Given the database is running
         And all the segments are running
@@ -95,6 +71,7 @@ Feature: gprecoverseg tests
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
 
+    @demo_cluster
     Scenario: Pid does not correspond to any running process
         Given the database is running
         And all the segments are running
@@ -116,7 +93,41 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the backup pid file is deleted on "primary" segment
 
-    @multinode
+########################### @concourse_cluster tests ###########################
+# The @concourse_cluster tag denotes the scenario that requires a remote cluster
+
+    @concourse_cluster
+    Scenario: gprecoverseg behave test requires a cluster with at least 2 hosts
+        Given the database is running
+        Given database "gptest" exists
+        And the information of a "mirror" segment on a remote host is saved
+
+    @concourse_cluster
+    Scenario: When gprecoverseg full recovery is executed and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And the "primary" segment information is saved
+        When the postmaster.pid file on "primary" segment is saved
+        And user kills a primary postmaster process
+        When user can start transactions
+        And the background pid is killed on "primary" segment
+        And we run a sample background script to generate a pid on "primary" segment
+        And we generate the postmaster.pid file with the background pid on "primary" segment
+        And the user runs "gprecoverseg -F -a"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+        And gprecoverseg should print "Skipping to stop segment.* on host.* since it is not a postgres process" to stdout
+        And all the segments are running
+        And the segments are synchronized
+        When the user runs "gprecoverseg -ra"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+        And the segments are synchronized
+        And the backup pid file is deleted on "primary" segment
+        And the background pid is killed on "primary" segment
+
+    @concourse_cluster
     Scenario: gprecoverseg full recovery testing
         Given the database is running
         And all the segments are running
@@ -131,7 +142,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    @multinode
+    @concourse_cluster
     Scenario: gprecoverseg with -i and -o option
         Given the database is running
         And all the segments are running
@@ -149,7 +160,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    @multinode
+    @concourse_cluster
     Scenario: gprecoverseg should not throw exception for empty input file
         Given the database is running
         And all the segments are running
@@ -166,8 +177,7 @@ Feature: gprecoverseg tests
         Then all the segments are running
         And the segments are synchronized
 
-    @multinode
-    @gprecoverseg_checksums
+    @concourse_cluster
     Scenario: gprecoverseg should use the same setting for data_checksums for a full recovery
         Given the database is running
         And results of the sql "show data_checksums" db "template1" are stored in the context
