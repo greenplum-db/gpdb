@@ -6,7 +6,7 @@
             SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate"
 %}
 
-{% set CLI_TESTS = [
+{% set CLI_BEHAVE_TESTS = [
                       {'name': 'gpmovemirrors',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
@@ -125,7 +125,7 @@ groups:
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_cli_start
-{% for test in CLI_TESTS %}
+{% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]
 {% endfor %}
   - gpexpand
@@ -300,7 +300,7 @@ groups:
 - name: CLI
   jobs:
   - gate_cli_start
-{% for test in CLI_TESTS %}
+{% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]
 {% endfor %}
   - gpexpand
@@ -1846,7 +1846,7 @@ jobs:
     params:
       TEST_OS: centos
 
-{% for test in CLI_TESTS %}
+{% for test in CLI_BEHAVE_TESTS %}
 - name: [[ test.name ]]
   plan:
     - aggregate:
@@ -2180,7 +2180,7 @@ jobs:
       - gpperfmon_centos7
       - gpperfmon_sles12
  ##     - resource_group_sles12
-{% for test in CLI_TESTS %}
+{% for test in CLI_BEHAVE_TESTS %}
       - [[ test.name ]]
 {% endfor %}
  ##     - madlib_build_gppkg
@@ -2202,7 +2202,7 @@ jobs:
       - icw_extensions_gpcloud_centos6
  ##   - client_loader_remote_test_aix
       - resource_group_centos6
-{% for test in CLI_TESTS %}
+{% for test in CLI_BEHAVE_TESTS %}
       - [[ test.name ]]
 {% endfor %}
  ##     - MADlib_Test_orca_centos6
