@@ -2344,7 +2344,7 @@ static struct config_int ConfigureNamesInt[] =
 			GUC_UNIT_KB
 		},
 		&Log_RotationSize,
-		0, 0, INT_MAX / 1024,
+		1 * 1024 * 1024, 0, INT_MAX / 1024,
 		NULL, NULL, NULL
 	},
 
