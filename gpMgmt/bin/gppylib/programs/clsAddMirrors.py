@@ -211,8 +211,7 @@ class GpMirrorBuildCalculator:
 
     def getGroupMirrors(self):
         """
-         Side-effect: self.__gpArray and other fields are updated to contain the returned segments AND
-                      to change the replication port values of the primaries as needed
+         Side-effect: self.__gpArray and other fields are updated to contain the returned segments
         """
 
         hosts = self.__primariesByHost.keys()
@@ -231,8 +230,7 @@ class GpMirrorBuildCalculator:
 
     def getSpreadMirrors(self):
         """
-         Side-effect: self.__gpArray is updated to contain the returned segments AND to
-                      change the replication port values of the primaries as needed
+         Side-effect: self.__gpArray is updated to contain the returned segments
         """
 
         hosts = self.__primariesByHost.keys()

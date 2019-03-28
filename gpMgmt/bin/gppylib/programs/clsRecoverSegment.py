@@ -75,7 +75,7 @@ class PortAssigner:
 
     def findAndReservePort(self, hostName, address):
         """
-        Find an unused port of the given type (normal postmaster or replication port)
+        Find a port not used by any postmaster process.
         When found, add an entry:  usedPorts[port] = True   and return the port found
         Otherwise raise an exception labeled with the given address
         """
