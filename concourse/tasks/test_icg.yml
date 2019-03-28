@@ -10,12 +10,15 @@ inputs:
   - name: bin_gpdb
 outputs:
   - name: icg_output
-run:
-  path: gpdb_src/concourse/scripts/build_gpdb.py
-  args:
-    - --mode=orca
-    - --gpdb_name=bin_gpdb
-    - --action=test
-    - --configure-option=--disable-gpcloud
 params:
-  BLDWRAP_POSTGRES_CONF_ADDONS: statement_mem=250MB
+  BLDWRAP_POSTGRES_CONF_ADDONS:
+  MODE:
+  ACTION:
+  CONFIGURE_OPTION:
+  GPDB_BINARY:
+run:
+  path: sh
+  args:
+  - -exc
+  - |
+    gpdb_src/concourse/scripts/build_gpdb.py ${MODE} ${ACTION} ${CONFIGURE_OPTION} ${GPDB_BINARY}

@@ -51,9 +51,7 @@ Please do not create any more exceptions, and remove these as the occasion arise
 
 * `package_tarball.yml` is being used by
   [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
-* `test_with_planner.yml` is being used by
-  [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
-* `test_with_orca.yml` is being used by
+* `test_icg.yml` is being used by
   [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
 * `build_with_orca.yml` is being used by
   [a gporca pipeline](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)

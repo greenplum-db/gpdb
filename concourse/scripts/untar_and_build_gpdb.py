@@ -31,10 +31,10 @@ elif assert_mode != 'disable-cassert':
 
 print "Beginning to {0}".format(action)
 if action == 'build':
-    build_gpdb_cmd = "gpdb_main_src/concourse/scripts/build_gpdb.py --mode={0} --output_dir=bin_gpdb/install --action={1} --configure-option='{2}' --orca-in-gpdb-install-location bin_orca bin_xerces".format(mode, action, configure_option)
+    build_gpdb_cmd = "gpdb_main_src/concourse/scripts/build_gpdb.py --mode={0} --output_dir=gpdb_binary/install --action={1} --configure-option='{2}' --orca-in-gpdb-install-location bin_orca bin_xerces".format(mode, action, configure_option)
     exec_command(build_gpdb_cmd)
 
-    package_tarball_cmd = "env src_root=bin_gpdb/install dst_tarball=package_tarball/bin_gpdb.tar.gz gpdb_main_src/concourse/scripts/package_tarball.bash"
+    package_tarball_cmd = "env src_root=gpdb_binary/install dst_tarball=package_tarball/bin_gpdb.tar.gz gpdb_main_src/concourse/scripts/package_tarball.bash"
     exec_command(package_tarball_cmd)
 
 elif action.startswith('test'):

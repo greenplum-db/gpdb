@@ -15,7 +15,7 @@ outputs:
 run:
   path: gpdb_main_src/concourse/scripts/untar_and_build_gpdb.py
 params:
-  MODE: planner
-  ACTION: test
-  BLDWRAP_POSTGRES_CONF_ADDONS: statement_mem=250MB
-  CONFIGURE_OPTION: --disable-gpcloud
+  MODE:
+  ACTION:
+  BLDWRAP_POSTGRES_CONF_ADDONS:
+  CONFIGURE_OPTION:

@@ -4,17 +4,23 @@ image_resource:
   source:
     repository: pivotaldata/qp-gpdbdev
 inputs:
+  - name: gporca-commits-to-test
   - name: bin_orca
   - name: bin_xerces
-  - name: gpdb_tarball
-  - name: gpdb_main_src
-  - name: gporca-commits-to-test 
-outputs:
   - name: bin_gpdb
+    optional: true
+  - name: gpdb_main_src
+  - name: gpdb_tarball
+  - name: explain_test_suite
+    optional: true
+outputs:
+  - name: gpdb_binary
   - name: package_tarball
+  - name: icg_output
 run:
   path: gpdb_main_src/concourse/scripts/untar_and_build_gpdb.py
 params:
-  ACTION: build
-  MODE: orca
-  CONFIGURE_OPTION: --disable-gpcloud --enable-debug-extensions
+  ACTION:
+  MODE:
+  CONFIGURE_OPTION:
+  BLDWRAP_POSTGRES_CONF_ADDONS: statement_mem=250MB

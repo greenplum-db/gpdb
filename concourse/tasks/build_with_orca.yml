@@ -9,13 +9,15 @@ inputs:
   - name: gpdb_src
 outputs:
   - name: bin_gpdb
+params:
+  MODE:
+  OUTPUTDIR:
+  ACTION:
+  CONFIGURE_OPTION:
+  OTHER_CONFIGS:
 run:
-  path: gpdb_src/concourse/scripts/build_gpdb.py
+  path: sh
   args:
-    - --mode=orca
-    - --output_dir=bin_gpdb/install
-    - --action=build
-    - --configure-option=--disable-gpcloud --enable-debug-extensions
-    - --orca-in-gpdb-install-location
-    - bin_orca
-    - bin_xerces
+  - -exc
+  - |
+    gpdb_src/concourse/scripts/build_gpdb.py ${MODE} ${OUTPUTDIR} ${ACTION} ${CONFIGURE_OPTION} ${OTHER_CONFIGS}
