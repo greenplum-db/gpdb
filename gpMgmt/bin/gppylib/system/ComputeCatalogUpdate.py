@@ -96,7 +96,7 @@ class ComputeCatalogUpdate:
 
         # create a map of the segments which we can't update in the 
         # ordinary way either because they were on the forceMap or
-        # they differ in an attribute other than mode, status or replication port
+        # they differ in an attribute other than mode or status
         removeandaddmap = {}
         for seg in initial_segment_to_update:
             dbid = seg.getSegmentDbId()

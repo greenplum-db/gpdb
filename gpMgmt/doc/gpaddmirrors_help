@@ -157,14 +157,11 @@ OPTIONS
 -p <port_offset>
 
  Optional. This number is used to calculate the database ports 
- and replication ports used for mirror segments. The default offset 
- is 1000. Mirror port assignments are calculated as follows: 
+ used for mirror segments. The default offset is 1000. Mirror
+ port assignments are calculated as follows:
 	primary port + offset = mirror database port
-	primary port + (2 * offset) = mirror replication port
-	primary port + (3 * offset) = primary replication port
  For example, if a primary segment has port 50001, then its mirror 
- will use a database port of 51001, a mirror replication port of 
- 52001, and a primary replication port of 53001 by default.
+ will use a database port of 51001 by default.
 
 
 -s
@@ -199,8 +196,8 @@ EXAMPLES
 
 Add mirroring to an existing Greenplum Database system using 
 the same set of hosts as your primary data. Calculate the mirror 
-database and replication ports by adding 100 to the current 
-primary segment port numbers:
+database ports by adding 100 to the current primary segment port
+numbers:
 
   $ gpaddmirrors -p 100
 
