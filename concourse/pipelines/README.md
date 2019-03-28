@@ -27,7 +27,7 @@ The following workflow should be followed:
 
 * Edit the template file (`templates/gpdb-tpl.yml`).
 * Generate the pipeline. During this step, the pipeline release jobs will be validated.
-* Use the Concourse `fly` command to set the pipeline (`gpdb_master-generated.yml`).
+* Use the Concourse `fly` command to set the pipeline (`gpdb_6X_STABLE-generated.yml`).
 * Once the pipeline is validated to function properly, commit the updated template and pipeline.
 
 ## Requirements
@@ -57,7 +57,7 @@ gen_pipeline.py -h|--help
 ### Create Production Pipeline
 
 The `./gen_pipeline.py -t prod` command will generate the production
-pipeline (`gpdb_master-generated.yml`). All supported platforms and
+pipeline (`gpdb_6X_STABLE-generated.yml`). All supported platforms and
 test sections are included. The pipeline release jobs will be
 validated. The output of the utility will provide details of the
 pipeline generated. Following standard conventions, two `fly`
@@ -71,14 +71,14 @@ $ ./gen_pipeline.py -t prod
 ======================================================================
 Validate Pipeline Release Jobs
 ----------------------------------------------------------------------
-all jobs accounted for
+Pipeline validated: all jobs accounted for
 
 ======================================================================
   Generate Pipeline type: .. : prod
-  Pipeline file ............ : gpdb_master-generated.yml
+  Pipeline file ............ : ~/workspace/gpdb/concourse/pipelines/gpdb_6X_STABLE-generated.yml
   Template file ............ : gpdb-tpl.yml
   OS Types ................. : ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
-  Test sections ............ : ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep']
+  Test sections ............ : ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions', 'Gpperfmon']
   test_trigger ............. : True
 ======================================================================
 
@@ -86,20 +86,22 @@ NOTE: You can set the production pipelines with the following:
 
 fly -t gpdb-prod \
     set-pipeline \
-    -p gpdb_master \
-    -c gpdb_master-generated.yml \
+    -p 6X_STABLE \
+    -c ~/workspace/gpdb/concourse/pipelines/gpdb_6X_STABLE-generated.yml \
     -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.prod.yml
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.prod.yml \
+    -v pipeline-name=6X_STABLE
 
 fly -t gpdb-prod \
     set-pipeline \
-    -p gpdb_master_without_asserts \
-    -c gpdb_master-generated.yml \
+    -p 6X_STABLE_without_asserts \
+    -c ~/workspace/gpdb/concourse/pipelines/gpdb_6X_STABLE-generated.yml \
     -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE_without_asserts-ci-secrets.prod.yml \
+    -v pipeline-name=6X_STABLE_without_asserts
 ```
 
-The generated pipeline file `gpdb_master-generated.yml` will be set,
+The generated pipeline file `gpdb_6X_STABLE-generated.yml` will be set,
 validated and ultimately committed (including the updated pipeline
 template) to the source repository.
 
@@ -121,7 +123,7 @@ $ ./gen_pipeline.py -t dpm -u curry -a CLI
 
 ======================================================================
   Generate Pipeline type: .. : dpm
-  Pipeline file ............ : gpdb-dpm-curry.yml
+  Pipeline file ............ : ~/workspace/gpdb/concourse/pipelines/gpdb-dpm-curry.yml
   Template file ............ : gpdb-tpl.yml
   OS Types ................. : ['centos6']
   Test sections ............ : ['CLI']
@@ -133,26 +135,27 @@ NOTE: You can set the developer pipeline with the following:
 fly -t gpdb-dev \
     set-pipeline \
     -p gpdb-dpm-curry \
-    -c gpdb-dpm-curry.yml \
+    -c ~/workspace/gpdb/concourse/pipelines/gpdb-dpm-curry.yml \
     -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.dev.yml \
     -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
-    -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
-    -v gpdb-git-branch=<branch-name>
+    -v gpdb-git-remote=https://github.com/<github-user>/gpdb \
+    -v gpdb-git-branch=<branch-name> \
+    -v pipeline-name=gpdb-dpm-curry
 ```
 
-Use the following to generate a pipeline with `ICW` and `CS` test jobs
+Use the following to generate a pipeline with `ICW` and `CLI` test jobs
 for `centos6` and `sles` platforms.
 
 ```
-$ ./gen_pipeline.py -t cs -u durant -O {centos6,sles} -a {ICW,CS}
+$ ./gen_pipeline.py -t cli -u durant -O {centos6,sles} -a {ICW,CLI}
 
 ======================================================================
-  Generate Pipeline type: .. : cs
-  Pipeline file ............ : gpdb-cs-durant.yml
+  Generate Pipeline type: .. : cli
+  Pipeline file ............ : ~/workspace/gpdb/concourse/pipelines/gpdb-cli-durant.yml
   Template file ............ : gpdb-tpl.yml
   OS Types ................. : ['centos6', 'sles']
-  Test sections ............ : ['ICW', 'CS']
+  Test sections ............ : ['ICW', 'CLI']
   test_trigger ............. : True
 ======================================================================
 
@@ -160,11 +163,12 @@ NOTE: You can set the developer pipeline with the following:
 
 fly -t gpdb-dev \
     set-pipeline \
-    -p gpdb-cs-durant \
-    -c gpdb-cs-durant.yml \
+    -p gpdb-cli-durant \
+    -c ~/workspace/gpdb/concourse/pipelines/gpdb-cli-durant.yml \
     -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.dev.yml \
     -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
-    -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
-    -v gpdb-git-branch=<branch-name>
+    -v gpdb-git-remote=https://github.com/<github-user>/gpdb \
+    -v gpdb-git-branch=<branch-name> \
+    -v pipeline-name=gpdb-cli-durant
 ```
