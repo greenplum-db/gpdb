@@ -3,7 +3,6 @@
                       'gpcheckcat',
                       'gpinitstandby',
                       'gpactivatestandby'] %}
-{% set CLI_2_suites = [] %}
 
 {% set gppkg_additional_task = "
         - task: setup_gppkg_second_install
@@ -120,7 +119,7 @@ groups:
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_cli_start
-{% for test_name in CLI_1_suites + CLI_2_suites %}
+{% for test_name in CLI_1_suites %}
   - [[ test_name ]]
 {% endfor %}
 {% for test in CLI_TESTS %}
@@ -299,7 +298,7 @@ groups:
 - name: CLI
   jobs:
   - gate_cli_start
-{% for test_name in CLI_1_suites + CLI_2_suites %}
+{% for test_name in CLI_1_suites %}
   - [[ test_name ]]
 {% endfor %}
 {% for test in CLI_TESTS %}
@@ -1871,27 +1870,6 @@ jobs:
 
 {% endfor %}
 
-{% for test_name in CLI_2_suites %}
-- name: [[ test_name ]]
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-          - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_cli_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_cli_start]
-      trigger: [[ test_trigger ]]
-    - get: gpdb6-centos6-test
-  - task: [[ test_name ]]
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: gpdb6-centos6-test
-    params:
-      BEHAVE_TAGS: [[ test_name ]]
-
-{% endfor %}
 - name: check_centos
   plan:
   - aggregate:
@@ -2278,8 +2256,7 @@ jobs:
       - gpperfmon_centos7
       - gpperfmon_sles12
  ##     - resource_group_sles12
-{% for test_name in CLI_1_suites +
-                    CLI_2_suites %}
+{% for test_name in CLI_1_suites %}
       - [[ test_name ]]
 {% endfor %}
 {% for test in CLI_TESTS %}
@@ -2305,8 +2282,7 @@ jobs:
       - icw_extensions_gpcloud_centos6
  ##   - client_loader_remote_test_aix
       - resource_group_centos6
-{% for test_name in CLI_1_suites +
-                    CLI_2_suites %}
+{% for test_name in CLI_1_suites %}
       - [[ test_name ]]
 {% endfor %}
 {% for test in CLI_TESTS %}
