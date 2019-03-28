@@ -25,7 +25,7 @@ Feature: gpinitsystem tests
         And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
         # stop db and make sure cluster config exists so that we can manually initialize standby
         And the cluster config is generated with data_checksums "1"
-        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -s localhost -P 21100 -F /wrong/path -h ../gpAux/gpdemo/hostfile"
+        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -s localhost -P 21100 -S /wrong/path -h ../gpAux/gpdemo/hostfile"
         Then gpinitsystem should return a return code of 1
         And gpinitsystem should not print "To activate the Standby Master Segment in the event of Master" to stdout
         And gpinitsystem should print "Cluster setup finished, but Standby Master failed to initialize. Review contents of log files for errors." to stdout
@@ -67,7 +67,7 @@ Feature: gpinitsystem tests
         And the user runs command "rm -rf $MASTER_DATA_DIRECTORY/newstandby"
         And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
         And the cluster config is generated with data_checksums "1"
-        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -s localhost -P 21100 -F $MASTER_DATA_DIRECTORY/newstandby -h ../gpAux/gpdemo/hostfile"
+        When the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -s localhost -P 21100 -S $MASTER_DATA_DIRECTORY/newstandby -h ../gpAux/gpdemo/hostfile"
         Then gpinitsystem should return a return code of 0
         And gpinitsystem should print "Log file scan check passed" to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db

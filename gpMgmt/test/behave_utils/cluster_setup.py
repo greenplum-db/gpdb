@@ -139,7 +139,7 @@ class TestCluster:
 
         # run gpinitsystem
         clean_env = 'unset MASTER_DATA_DIRECTORY; unset PGPORT;'
-        segment_mirroring_option = '-S' if mirroring_configuration == 'spread' else ''
+        segment_mirroring_option = '--mirror-mode=spread' if mirroring_configuration == 'spread' else ''
         gpinitsystem_cmd = clean_env + 'gpinitsystem -a -c  %s %s' % (self.init_file, segment_mirroring_option)
         res = run_shell_command(gpinitsystem_cmd, 'run gpinitsystem', verbose=True)
         # initsystem returns 1 for warnings and 2 for errors

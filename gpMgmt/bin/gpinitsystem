@@ -73,7 +73,7 @@ TMP_HOSTNAME_FILE=/tmp/hostname_test_file.$$
 PARALLEL_STATUS_FILE=/tmp/gpinitsystem_parallel_status_file.$$
 GPCREATESEG=$WORKDIR/lib/gpcreateseg.sh
 ULIMIT_WARN=0
-MIRROR_TYPE=0
+MIRROR_TYPE=0 # 0 = group, 1 = spread
 REMOTE_HOST_COUNT=0
 SINGLE_HOST_BATCH_LIMIT=4
 INPUT_CONFIG=""
@@ -135,7 +135,7 @@ USAGE () {
 		$ECHO "          Also see gpinitsystem_INSTRUCTIONS file for greater detail on"
 		$ECHO "          the operation and configuration of this script"
 		$ECHO "      -e, <password>, password to set for Greenplum superuser in database [default $GP_PASSWD]"
-		$ECHO "      -F, standby_datadir [optiona]"
+		$ECHO "      -S, standby_datadir [optional]"
 		$ECHO "      -h, gp_hostlist_file [optional]"
 		$ECHO "          Contains a list of all segment instance hostnames required to participate in"
 		$ECHO "          the new Greenplum instance. Normally set in gp_config_file."
@@ -664,7 +664,7 @@ END_PYTHON_CODE
 	if [ $MIRRORING -eq 1 ] && [ $MIRROR_TYPE -eq 1 ];then
 	# Mirroring is on and spread mirror configuration has been requested, make sure sufficient hosts
 		if [ $NUM_SEP_HOSTS -eq 1 ] || [ $NUM_SEP_HOSTS -le $NUM_DATADIR ];then
-			LOG_MSG "[FATAL]:-Request made for spread mirroring via -S option, but insufficient hosts available" 1
+			LOG_MSG "[FATAL]:-Request made for spread mirroring via --mirror-mode option, but insufficient hosts available" 1
 			LOG_MSG "[INFO]:-Number of separate hosts must be greater than number of segment instances per host" 1
 			ERROR_EXIT "[FATAL]:-Unable to continue" 2
 		else
@@ -672,7 +672,7 @@ END_PYTHON_CODE
 		fi 
 	fi
 	if [ $MIRRORING -eq 0 ] && [ $MIRROR_TYPE -eq 1 ];then
-		LOG_MSG "[WARN]:-Option -S supplied, but no mirrors have been defined, ignoring -S option" 1
+		LOG_MSG "[WARN]:-Option --mirror-mode supplied, but no mirrors have been defined, ignoring --mirror-mode option" 1
 		MIRROR_TYPE=0
 		EXIT_STATUS=1
 	fi
@@ -1953,11 +1953,22 @@ SET_DCA_CONFIG_SETTINGS () {
 	fi
 }
 
+SET_MIRROR_MODE() {
+	local mode=$1
+	if [ "$mode" == 'group' ]; then
+		MIRROR_TYPE=0
+	elif [ "$mode" == 'spread' ]; then
+		MIRROR_TYPE=1
+	else
+		ERROR_EXIT "[FATAL]:-'$mode' is an invalid mirroring mode.  Valid options are 'group' and 'spread'." 2
+	fi
+}
+
 #******************************************************************************
 # Main Section
 #******************************************************************************
 trap 'ERROR_EXIT "[FATAL]:-Received INT or TERM signal" 2' INT TERM
-while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
+while getopts ":vaqe:c:l:-:p:m:h:n:s:P:S:b:DB:I:O:" opt
 		do
 		case $opt in
 				v ) print_version ;;
@@ -1972,11 +1983,10 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
 				b ) NEW_BUFFERS=$OPTARG ;;
 				s ) STANDBY_HOSTNAME=$OPTARG ;;
 				P ) STANDBY_PORT=$OPTARG ;;
-				F ) STANDBY_DATADIR=$OPTARG ;;
+				S ) STANDBY_DATADIR=$OPTARG ;;
 				n ) REQ_LOCALE_SETTING=$OPTARG ;;
 				D ) DEBUG_LEVEL=1 ;;
 				B ) BATCH_DEFAULT=$OPTARG ;;
-				S ) MIRROR_TYPE=1 ;;
 				I ) INPUT_CONFIG=$OPTARG ;;
 				O ) OUTPUT_CONFIG=$OPTARG ;;
 				- ) # Long options ...
@@ -1993,6 +2003,8 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
 						"lc-monetary"     ) LCMONETARY=$VAL ;;
 						"lc-numeric"      ) LCNUMERIC=$VAL ;;
 						"lc-time"         ) LCTIME=$VAL ;;
+						"mirror-mode"     ) SET_MIRROR_MODE $VAL ;;
+						"standby-datadir" ) STANDBY_DATADIR=$VAL ;;
 						"help"            ) USAGE "print_doc" ;;
 						"version"         ) print_version ;;
 						* ) LOG_MSG "[ERROR]:-Unknown option --$NAME" 1; USAGE ;;
