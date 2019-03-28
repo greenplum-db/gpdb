@@ -204,9 +204,9 @@
               </entry>
               <entry colname="col2">This program makes a binary copy of a single database instance.
                 Greenplum Database uses it for tasks such as creating a standby master instance, or
-                recovering a mirror segment when a full copy is needed. This utility must not be
-                directly used to back up Greenplum Database segment instances because it does not
-                produce MPP-consistent backups.</entry>
+                recovering a mirror segment when a full copy is needed. Do not use this utility to
+                back up Greenplum Database segment instances because it does not produce
+                MPP-consistent backups.</entry>
               <entry colname="col3"><codeph><xref href="gpinitstandby.xml#topic1" type="topic"
                     format="dita"/></codeph>, <codeph><xref href="gprecoverseg.xml#topic1"
                     type="topic" format="dita"/></codeph></entry>
