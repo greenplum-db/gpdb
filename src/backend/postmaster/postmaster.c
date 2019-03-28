@@ -156,7 +156,7 @@ void FtsProbeMain(int argc, char *argv[]);
  */
 bool am_mirror = false;
 /* GPDB specific flag to handle deadlocks during parallel segment start. */
-bool pm_launch_walreceiver = false;
+volatile bool *pm_launch_walreceiver = NULL;
 
 /*
  * Possible types of a backend. Beyond being the possible bkend_type values in
@@ -2183,12 +2183,23 @@ initMasks(fd_set *rmask)
  * This function is called right after removing RECOVERY_COMMAND_FILE upon
  * receiving a promotion request.
  */
-void
+void inline
 ResetMirrorReadyFlag(void)
 {
-	pm_launch_walreceiver = false;
+	*pm_launch_walreceiver = false;
 }
 
+static inline void
+SetMirrorReadyFlag(void)
+{
+	*pm_launch_walreceiver = true;
+}
+
+static inline bool
+GetMirrorReadyFlag(void)
+{
+	return *pm_launch_walreceiver;
+}
 
 /*
  * Read a client's startup packet and do something according to it.
@@ -2601,7 +2612,15 @@ retry1:
 		case CAC_MIRROR_READY:
 			if (am_ftshandler)
 			{
-				Assert(am_mirror);
+				/* Even if the connection state is MIRROR_READY, the role
+				 * may change to primary during promoting. Hence, we need
+				 * to decline this connection to avoid confusion. This needs
+				 * to wait until promotion is finished and pmState changed
+				 * to PM_RUN.
+				 */
+				if (!am_mirror)
+					ereport(FATAL,
+							(errmsg("mirror is being promoted.")));
 				break;
 			}
 
@@ -2764,7 +2783,7 @@ canAcceptConnections(void)
 		 * If the wal receiver has been launched at least once, return that
 		 * the mirror is ready.
 		 */
-		else if (pm_launch_walreceiver)
+		else if (GetMirrorReadyFlag())
 			return CAC_MIRROR_READY;
 		else if (!FatalError &&
 				 (pmState == PM_STARTUP ||
@@ -6143,7 +6162,7 @@ MaybeStartWalReceiver(void)
 		WalReceiverRequested = false;
 
 		/* wal receiver has been launched */
-		pm_launch_walreceiver = true;
+		SetMirrorReadyFlag();
 	}
 }
 

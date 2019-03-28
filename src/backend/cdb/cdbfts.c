@@ -45,6 +45,8 @@
 volatile FtsProbeInfo *ftsProbeInfo = NULL;	/* Probe process updates this structure */
 static LWLockId ftsControlLock;
 
+extern volatile bool *pm_launch_walreceiver;
+
 /*
  * get fts share memory size
  */
@@ -73,6 +75,7 @@ FtsShmemInit(void)
 	/* Initialize locks and shared memory area */
 	ftsControlLock = shared->ControlLock;
 	ftsProbeInfo = &shared->fts_probe_info;
+	pm_launch_walreceiver = &shared->pm_launch_walreceiver;
 
 	if (!IsUnderPostmaster)
 	{
@@ -80,6 +83,7 @@ FtsShmemInit(void)
 		ftsControlLock = shared->ControlLock;
 
 		shared->fts_probe_info.fts_statusVersion = 0;
+		shared->pm_launch_walreceiver = false;
 	}
 }
 

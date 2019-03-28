@@ -33,7 +33,7 @@
 typedef struct FtsProbeInfo
 {
 	volatile uint8		fts_statusVersion;
-	volatile uint8      probeTick;
+	volatile uint8		probeTick;
 	volatile uint8		fts_status[FTS_MAX_DBS];
 } FtsProbeInfo;
 
@@ -41,8 +41,9 @@ typedef struct FtsProbeInfo
 
 typedef struct FtsControlBlock
 {
-	LWLockId	ControlLock;
-	FtsProbeInfo fts_probe_info;
+	LWLockId		ControlLock;
+	FtsProbeInfo	fts_probe_info;
+	volatile bool	pm_launch_walreceiver;
 }	FtsControlBlock;
 
 extern volatile FtsProbeInfo *ftsProbeInfo;
