@@ -171,9 +171,8 @@ Feature: expand the cluster by adding more segments
     @gpexpand_verify_redistribution
     Scenario: Verify data is correctly redistributed after expansion
         Given a working directory of the test as '/data/gpdata/gpexpand'
-        And the database is killed on hosts "localhost"
-        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And the database is not running
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And the cluster is generated with "1" primaries only
         And database "gptest" exists
         And the user connects to "gptest" with named connection "default"
@@ -194,9 +193,8 @@ Feature: expand the cluster by adding more segments
     @gpexpand_verify_writable_external_redistribution
     Scenario: Verify policy of writable external table is correctly updated after redistribution 
         Given a working directory of the test as '/data/gpdata/gpexpand'
-        And the database is killed on hosts "localhost"
-        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And the database is not running
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And the cluster is generated with "1" primaries only
         And database "gptest" exists
         And the user create a writable external table with name "ext_test"
