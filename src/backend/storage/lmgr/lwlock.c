@@ -417,14 +417,9 @@ LWLockAssign(void)
 #ifdef LOCK_DEBUG
 
 static void
-LWLockTryLockWaiting(
-		PGPROC	   *proc, 
-		LWLockId lockid, 
-		LWLockMode mode)
+LWLockTryLockWaiting(PGPROC *proc, volatile LWLock *l)
 {
-	volatile LWLock *lock = &(LWLockArray[lockid].lock);
-	int 			milliseconds = 0;
-	int				exclusivePid;
+	int 		milliseconds = 0;
 	
 	while(true)
 	{
@@ -432,46 +427,13 @@ LWLockTryLockWaiting(
 		if (PGSemaphoreTryLock(&proc->sem))
 		{
 			if (milliseconds >= 750)
-				elog(LOG, "Done waiting on lockid %d", lockid);
+				elog(LOG, "Done waiting on lockid %d", T_ID(l));
 			return;
 		}
 
 		milliseconds += 5;
 		if (milliseconds == 750)
-		{
-			int l;
-			int count = 0;
-			char buffer[200];
-
-			SpinLockAcquire(&lock->mutex);
-			
-			if (lock->exclusive > 0)
-				exclusivePid = lock->exclusivePid;
-			else
-				exclusivePid = 0;
-			
-			SpinLockRelease(&lock->mutex);
-
-			memcpy(buffer, "none", 5);
-			
-			for (l = 0; l < num_held_lwlocks; l++)
-			{
-				if (l == 0)
-					count += sprintf(&buffer[count],"(");
-				else
-					count += sprintf(&buffer[count],", ");
-				
-				count += sprintf(&buffer[count],
-							    "lockid %d",
-							    held_lwlocks[l]);
-			}
-			if (num_held_lwlocks > 0)
-				count += sprintf(&buffer[count],")");
-				
-			elog(LOG, "Waited .75 seconds on lockid %d with no success. Exclusive pid %d. Already held: %s", 
-				 lockid, exclusivePid, buffer);
-
-		}
+			elog(LOG, "Waited .75 seconds on lockid %d with no success", T_ID(l));
 	}
 }
 
@@ -716,10 +678,10 @@ LWLockAcquireCommon(LWLock *l, LWLockMode mode, uint64 *valptr, uint64 val)
 		for (;;)
 		{
 			/* "false" means cannot accept cancel/die interrupt here. */
-#ifndef LOCK_DEBUG
-			PGSemaphoreLock(&proc->sem, false);
+#ifdef LOCK_DEBUG
+			LWLockTryLockWaiting(proc, lock);
 #else
-			LWLockTryLockWaiting(proc, lockid, mode);
+			PGSemaphoreLock(&proc->sem, false);
 #endif
 			if (!proc->lwWaiting)
 				break;
