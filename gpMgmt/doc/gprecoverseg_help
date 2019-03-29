@@ -228,7 +228,7 @@ showing the progress inplace.
 
 --no-progress
 
-Do no show pg_basebackup progress. Useful when writing to a
+Do not show pg_basebackup progress. Useful when writing to a
 file. Defaults to showing the progress.
 
 
