@@ -288,7 +288,7 @@ class GPCatalog():
         Some catalogs have columns that, for one reason or another, we
         need to mark as being different between the segments and the master.
         
-        These fall into two catagories:
+        These fall into two categories:
            - Bugs (marked with the appropriate jiras)
            - A small number of "special" columns
         """
@@ -505,7 +505,7 @@ class GPCatalogTable():
             self._coltypes[attname] = typname
 
         # If a primary key was not specified try to locate a unique index
-        # If a table has mutiple matching indexes, we'll pick the first index 
+        # If a table has multiple matching indexes, we'll pick the first index
         # order by indkey to avoid the issue of MPP-16663. 
         if self._pkey == []:
             qry = """
