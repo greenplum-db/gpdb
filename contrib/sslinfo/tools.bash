@@ -4,21 +4,21 @@ function sslinfo_prepare() {
 echo "Enable SSL in postgresql.conf with master only..."
 standby_data=`gpstate -f | sed -n '/Standby data directory/s/.*Standby data directory\s\+=\s*//p'`
 
-echo "#BEGIN SSLINFO CONF" >> $MASTER_DATA_DIRECTORY/postgresql.conf
+echo "#BEGIN SSLINFO CONF : BEGIN ANCHOR##" >> $MASTER_DATA_DIRECTORY/postgresql.conf
 echo "ssl=on" >> $MASTER_DATA_DIRECTORY/postgresql.conf
 echo "ssl_ciphers='HIGH:MEDIUM:+3DES:!aNULL'" >> $MASTER_DATA_DIRECTORY/postgresql.conf
 echo "ssl_cert_file='server.crt'" >> $MASTER_DATA_DIRECTORY/postgresql.conf
 echo "ssl_key_file='server.key'" >> $MASTER_DATA_DIRECTORY/postgresql.conf
 echo "ssl_ca_file='root.crt'" >> $MASTER_DATA_DIRECTORY/postgresql.conf
-echo "#END SSLINFO CONF" >> $MASTER_DATA_DIRECTORY/postgresql.conf
+echo "#END SSLINFO CONF : END ANCHOR##" >> $MASTER_DATA_DIRECTORY/postgresql.conf
 
-echo "#BEGIN SSLINFO CONF" >> $standby_data/postgresql.conf
+echo "#BEGIN SSLINFO CONF : BEGIN ANCHOR##" >> $standby_data/postgresql.conf
 echo "ssl=on" >> $standby_data/postgresql.conf
 echo "ssl_ciphers='HIGH:MEDIUM:+3DES:!aNULL'" >> $standby_data/postgresql.conf
 echo "ssl_cert_file='server.crt'" >> $standby_data/postgresql.conf
 echo "ssl_key_file='server.key'" >> $standby_data/postgresql.conf
 echo "ssl_ca_file='root.crt'" >> $standby_data/postgresql.conf
-echo "#END SSLINFO CONF" >> $standby_data/postgresql.conf
+echo "#END SSLINFO CONF : END ANCHOR##" >> $standby_data/postgresql.conf
 
 echo "preparing CRTs and KEYs"
 cp -f data/root.crt   $MASTER_DATA_DIRECTORY/
@@ -47,8 +47,8 @@ chmod 644 ~/.postgresql/root.crt
 function sslinfo_clean() {
 echo "restore SSL in postgresql.conf with master only"
 standby_data=`gpstate -f | sed -n '/Standby data directory/s/.*Standby data directory\s\+=\s*//p'`
-sed -i '/#BEGIN SSLINFO CONF/,/#END SSLINFO CONF/d' $MASTER_DATA_DIRECTORY/postgresql.conf
-sed -i '/#BEGIN SSLINFO CONF/,/#END SSLINFO CONF/d' $standby_data/postgresql.conf
+sed -i '/#BEGIN SSLINFO CONF : BEGIN ANCHOR##/,/#END SSLINFO CONF : END ANCHOR##/d' $MASTER_DATA_DIRECTORY/postgresql.conf
+sed -i '/#BEGIN SSLINFO CONF : BEGIN ANCHOR##/,/#END SSLINFO CONF : END ANCHOR##/d' $standby_data/postgresql.conf
 }
 
 case "$1" in
