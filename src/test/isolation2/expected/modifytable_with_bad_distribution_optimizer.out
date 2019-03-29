@@ -1,0 +1,117 @@
+-- start_matchsubs
+-- m/nodeDML.c:\d+/
+-- s/nodeDML.c:\d+/nodeDML.c:XXX/
+-- m/nodeModifyTable.c:\d+/
+-- s/nodeModifyTable.c:\d+/nodeModifyTable.c:XXX/
+-- end_matchsubs
+
+create table bad_distribution1 (a int, b int) distributed by (a);
+CREATE
+create table pbad_distribution1 (a int, b int) distributed by (a) PARTITION BY RANGE(a) (START(1) END(9) EVERY (4));
+CREATE
+create table help_distribution (a int, b int) distributed by (a);
+CREATE
+
+-- insert & verify test prerequisite: (2,2), (7,7) on seg0, (1,1) on seg1, (5,5) on seg2.
+insert into bad_distribution1 values(2,2), (1,1), (5, 5), (7, 7);
+INSERT 4
+insert into pbad_distribution1 values(2,2), (1,1), (5, 5), (7, 7);
+INSERT 4
+select gp_segment_id, * from bad_distribution1 order by a;
+ gp_segment_id | a | b 
+---------------+---+---
+ 1             | 1 | 1 
+ 0             | 2 | 2 
+ 2             | 5 | 5 
+ 0             | 7 | 7 
+(4 rows)
+delete from bad_distribution1 where a = 7;
+DELETE 1
+delete from pbad_distribution1 where a = 7;
+DELETE 1
+-- populate the help table.
+insert into help_distribution select s,s from generate_series(1,10) s;
+INSERT 10
+
+-- insert (7,7) on unexpected seg, i.e. seg2. Note 'insert into bad_distribution1 values(7,7)' does not work.
+2U: insert into bad_distribution1 select s,s from generate_series(7,7) s;
+INSERT 1
+2U: insert into pbad_distribution1_1_prt_2 select s,s from generate_series(7,7) s;
+INSERT 1
+2Uq: ... <quitting>
+
+analyze bad_distribution1;
+ANALYZE
+analyze pbad_distribution1;
+ANALYZE
+analyze help_distribution;
+ANALYZE
+
+-- Test update on distribution key. Expect error.
+update bad_distribution1 set a=a+1;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg2) (nodeDML.c:149)  (seg0 127.0.0.1:25432 pid=21878) (nodeDML.c:149)
+update pbad_distribution1 set a=a+1;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg2) (nodeDML.c:149)  (seg0 127.0.0.1:25432 pid=21878) (nodeDML.c:149)
+
+-- Test delete. Expect error for orca plan.
+explain verbose delete from bad_distribution1 using (select * from help_distribution where b < 20) s where s.a = bad_distribution1.b;
+ QUERY PLAN                                                                                                                                
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..862.12 rows=2 width=1)                                                                                                
+   Output: bad_distribution1.a, bad_distribution1.b, "outer".ColRef_0018, bad_distribution1.ctid                                           
+   ->  Result  (cost=0.00..862.00 rows=2 width=22)                                                                                         
+         Output: bad_distribution1.a, bad_distribution1.b, bad_distribution1.ctid, bad_distribution1.gp_segment_id, 0                      
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=18)                                           
+               Output: bad_distribution1.a, bad_distribution1.b, bad_distribution1.ctid, bad_distribution1.gp_segment_id                   
+               Hash Key: bad_distribution1.a                                                                                               
+               ->  Hash Join  (cost=0.00..862.00 rows=2 width=18)                                                                          
+                     Output: bad_distribution1.a, bad_distribution1.b, bad_distribution1.ctid, bad_distribution1.gp_segment_id             
+                     Hash Cond: (bad_distribution1.b = help_distribution.a)                                                                
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=18)                               
+                           Output: bad_distribution1.a, bad_distribution1.b, bad_distribution1.ctid, bad_distribution1.gp_segment_id       
+                           Hash Key: bad_distribution1.b                                                                                   
+                           ->  Seq Scan on public.bad_distribution1  (cost=0.00..431.00 rows=2 width=18)                                   
+                                 Output: bad_distribution1.a, bad_distribution1.b, bad_distribution1.ctid, bad_distribution1.gp_segment_id 
+                     ->  Hash  (cost=431.00..431.00 rows=4 width=4)                                                                        
+                           Output: help_distribution.a                                                                                     
+                           ->  Seq Scan on public.help_distribution  (cost=0.00..431.00 rows=4 width=4)                                    
+                                 Output: help_distribution.a                                                                               
+                                 Filter: (help_distribution.b < 20)                                                                        
+ Optimizer: PQO version 3.32.2                                                                                                             
+(21 rows)
+delete from bad_distribution1 using (select * from help_distribution where b < 20) s where s.a = bad_distribution1.b;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg2) (nodeDML.c:149)  (seg0 127.0.0.1:25432 pid=21878) (nodeDML.c:149)
+delete from pbad_distribution1 using (select * from help_distribution where b < 20) s where s.a = pbad_distribution1.b;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg2) (nodeDML.c:149)  (seg0 127.0.0.1:25432 pid=21878) (nodeDML.c:149)
+
+-- Test update on non-distribution key. Expect ok.
+update bad_distribution1 set b=b+1;
+UPDATE 4
+update pbad_distribution1 set b=b+1;
+UPDATE 4
+
+-- check the final results.
+select * from bad_distribution1 order by 1;
+ a | b 
+---+---
+ 1 | 2 
+ 2 | 3 
+ 5 | 6 
+ 7 | 8 
+(4 rows)
+select * from pbad_distribution1 order by 1;
+ a | b 
+---+---
+ 1 | 2 
+ 2 | 3 
+ 5 | 6 
+ 7 | 8 
+(4 rows)
+
+-- cleanup.
+drop table bad_distribution1;
+DROP
+drop table pbad_distribution1;
+DROP
+drop table help_distribution;
+DROP
