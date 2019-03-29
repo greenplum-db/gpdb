@@ -74,7 +74,12 @@ get_authority(void)
 const char *
 get_pxf_host(void)
 {
-	return getenv(ENV_PXF_HOST) ? getenv(ENV_PXF_HOST) : PXF_DEFAULT_HOST;
+	const char *hStr = getenv(ENV_PXF_HOST);
+	if (hStr)
+		elog(DEBUG3, "read environment variable %s=%s", ENV_PXF_HOST, hStr);
+	else
+		elog(DEBUG3, "environment variable %s was not supplied", ENV_PXF_HOST);
+	return hStr ? hStr : PXF_DEFAULT_HOST;
 }
 
 /* Returns the PXF Port defined in the PXF_PORT
@@ -84,5 +89,9 @@ const int
 get_pxf_port(void)
 {
 	char *pStr = getenv(ENV_PXF_PORT);
+	if (pStr)
+		elog(DEBUG3, "read environment variable %s=%s", ENV_PXF_PORT, pStr);
+	else
+		elog(DEBUG3, "environment variable %s was not supplied", ENV_PXF_PORT);
 	return pStr ? (int) strtol(pStr, &pStr, 10) : PXF_DEFAULT_PORT;
 }
