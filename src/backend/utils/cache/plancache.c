@@ -1510,25 +1510,31 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 				 * RowExclusiveLock is acquired in PostgreSQL here.  Greenplum
 				 * acquires ExclusiveLock to avoid distributed deadlock due to
 				 * concurrent UPDATE/DELETE on the same table.  This is in
-				 * parity with CdbTryOpenRelation().  Catalog tables are
-				 * replicated across cluster and don't suffer from the
-				 * deadlock.
-				 * Since we have introduced Global Deadlock Detector, only for ao
-				 * table should we upgrade the lock.
+				 * parity with CdbTryOpenRelation(). If it is heap table and
+				 * the GDD is enabled, we could acquire RowExclusiveLock here.
 				 */
-				if (rte->relid >= FirstNormalObjectId &&
-					(plannedstmt->commandType == CMD_UPDATE ||
+				if ((plannedstmt->commandType == CMD_UPDATE ||
 					 plannedstmt->commandType == CMD_DELETE) &&
 					CondUpgradeRelLock(rte->relid))
 					lockmode = ExclusiveLock;
 				else
 					lockmode = RowExclusiveLock;
 			}
-			else if ((rc = get_plan_rowmark(plannedstmt->rowMarks, rt_index)) != NULL &&
-					 RowMarkRequiresRowShareLock(rc->markType))
-				lockmode = RowShareLock;
 			else
-				lockmode = AccessShareLock;
+			{
+				/*
+				 * Select for update should acquire ExclusiveLock, see
+				 * discussion on https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
+				 */
+				rc = get_plan_rowmark(plannedstmt->rowMarks, rt_index);
+				if (rc != NULL)
+				{
+					lockmode = RowMarkRequiresRowShareLock(rc->markType) ?
+						RowShareLock : ExclusiveLock;
+				}
+				else
+					lockmode = AccessShareLock;
+			}
 
 			if (acquire)
 				LockRelationOid(rte->relid, lockmode);
@@ -1599,25 +1605,37 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 				if (rt_index == parsetree->resultRelation)
 				{
 					/*
-					 * RowExclusiveLock is acquired in PostgreSQL here.
-					 * Greenplum acquires ExclusiveLock to avoid distributed
-					 * deadlock due to concurrent UPDATE/DELETE on the same
-					 * table.  This is in parity with CdbTryOpenRelation().
-					 * Catalog tables are replicated across cluster and don't
-					 * suffer from the deadlock.
+					 * RowExclusiveLock is acquired in PostgreSQL here.  Greenplum
+					 * acquires ExclusiveLock to avoid distributed deadlock due to
+					 * concurrent UPDATE/DELETE on the same table.  This is in
+					 * parity with CdbTryOpenRelation(). If it is heap table and
+					 * the GDD is enabled, we could acquire RowExclusiveLock here.
 					 */
-					if (rte->relid >= FirstNormalObjectId &&
-						(parsetree->commandType == CMD_UPDATE ||
+					if ((parsetree->commandType == CMD_UPDATE ||
 						 parsetree->commandType == CMD_DELETE) &&
 						CondUpgradeRelLock(rte->relid))
 						lockmode = ExclusiveLock;
 					else
 						lockmode = RowExclusiveLock;
 				}
-				else if (get_parse_rowmark(parsetree, rt_index) != NULL)
-					lockmode = RowShareLock;
 				else
-					lockmode = AccessShareLock;
+				{
+					/*
+					 * Select for update should acquire ExclusiveLock, see
+					 * discussion on https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
+					 */
+					RowMarkClause *rc;
+
+					rc = get_parse_rowmark(parsetree, rt_index);
+					if (rc != NULL)
+					{
+						lockmode = rc->strength >= LCS_FORNOKEYUPDATE ?
+							ExclusiveLock : RowShareLock;
+					}
+					else
+						lockmode = AccessShareLock;
+				}
+
 				if (acquire)
 					LockRelationOid(rte->relid, lockmode);
 				else

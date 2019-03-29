@@ -1065,26 +1065,13 @@ addRangeTableEntry(ParseState *pstate,
 	 * from postgres to allow for required lock promotion for distributed
 	 * AO tables.
 	 * select for update should lock the whole table, we do it here.
+	 * See discussion on https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
 	 */
 	locking = getLockedRefname(pstate, refname);
 	if (locking)
 	{
-		if (locking->strength >= LCS_FORNOKEYUPDATE)
-		{
-			Oid relid;
-			
-			relid = RangeVarGetRelid(relation, lockmode, false);
-			
-			rel = try_heap_open(relid, NoLock, true);
-			if (!rel)
-				elog(ERROR, "open relation(%u) fail", relid);
-			lockmode = IsSystemRelation(rel) ? RowExclusiveLock : ExclusiveLock;
-			heap_close(rel, NoLock);
-		}
-		else
-		{
-			lockmode = RowShareLock;
-		}
+		lockmode = locking->strength >= LCS_FORNOKEYUPDATE ?
+			ExclusiveLock : RowShareLock;
 		nowait = locking->noWait;
 	}
 

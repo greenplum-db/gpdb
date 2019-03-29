@@ -48,6 +48,7 @@
 #include "optimizer/tlist.h"
 #include "parser/parse_coerce.h"
 #include "parser/parsetree.h"
+#include "storage/lmgr.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 #include "utils/selfuncs.h"
@@ -1335,9 +1336,9 @@ expand_inherited_tables(PlannerInfo *root)
 static void
 expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 {
-	Query	   *parse = root->parse;
+	Query	    *parse = root->parse;
+	PlanRowMark *oldrc = NULL;
 	Oid			parentOID;
-	PlanRowMark *oldrc;
 	Relation	oldrelation;
 	LOCKMODE	lockmode;
 	List	   *inhOIDs;
@@ -1372,20 +1373,35 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	 * to the query, we must obtain an appropriate lock, because this will be
 	 * the first use of those relations in the parse/rewrite/plan pipeline.
 	 *
-	 * If the parent relation is the query's result relation, then we need
-	 * RowExclusiveLock.  Otherwise, if it's accessed FOR UPDATE/SHARE, we
-	 * need RowShareLock; otherwise AccessShareLock.  We can't just grab
-	 * AccessShareLock because then the executor would be trying to upgrade
-	 * the lock, leading to possible deadlocks.  (This code should match the
-	 * parser and rewriter.)
+	 * If the parent relation is the query's result relation, then we need to
+	 * deduce the lockmode based on the relation's kind,operation type and the
+	 * GDD's status.  Otherwise, if it's accessed FOR UPDATE/SHARE, we
+	 * need ExclusiveLock for the case that need lock tuples, or RowShareLock;
+	 * (See discussion on https://groups.google.com/a/greenplum.org/forum/#!searchin/gpdb-dev/0ow3bJTTAAAJ)
+	 * otherwise AccessShareLock. We can't just grab AccessShareLock because
+	 * then the executor would be trying to upgrade the lock, leading to possible
+	 * deadlocks.  (This code should match the parser and rewriter.)
 	 */
-	oldrc = get_plan_rowmark(root->rowMarks, rti);
 	if (rti == parse->resultRelation)
-		lockmode = RowExclusiveLock;
-	else if (oldrc && RowMarkRequiresRowShareLock(oldrc->markType))
-		lockmode = RowShareLock;
+	{
+		if ((parse->commandType == CMD_UPDATE ||
+			 parse->commandType == CMD_DELETE) &&
+			CondUpgradeRelLock(rte->relid))
+			lockmode = ExclusiveLock;
+		else
+			lockmode = RowExclusiveLock;
+	}
 	else
-		lockmode = AccessShareLock;
+	{
+		oldrc = get_plan_rowmark(root->rowMarks, rti);
+		if (oldrc != NULL)
+		{
+			lockmode = RowMarkRequiresRowShareLock(oldrc->markType) ?
+				RowShareLock : ExclusiveLock;
+		}
+		else
+			lockmode = AccessShareLock;
+	}
 
 	/* Scan for all members of inheritance set, acquire needed locks */
 	inhOIDs = find_all_inheritors(parentOID, lockmode, NULL);

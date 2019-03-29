@@ -1204,19 +1204,13 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 	 */
 	if (lockmode == RowExclusiveLock)
 	{
-		rel = try_heap_open(relid, NoLock, noWait);
-		if (!rel)
-			return NULL;
-
 		if (Gp_role == GP_ROLE_DISPATCH &&
-			(!gp_enable_global_deadlock_detector ||
-			 RelationIsAppendOptimized(rel)))
+			CondUpgradeRelLock(relid))
 		{
 			lockmode = ExclusiveLock;
 			if (lockUpgraded != NULL)
 				*lockUpgraded = true;
 		}
-		relation_close(rel, NoLock);
     }
 
 	rel = try_heap_open(relid, lockmode, noWait);

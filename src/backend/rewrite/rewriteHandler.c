@@ -125,8 +125,9 @@ AcquireRewriteLocks(Query *parsetree,
 					bool forExecute,
 					bool forUpdatePushedDown)
 {
-	ListCell   *l;
-	int			rt_index;
+	ListCell      *l;
+	int			   rt_index;
+	RowMarkClause *rc;
 	acquireLocksOnSubLinks_context context;
 
 	context.for_execute = forExecute;
@@ -162,30 +163,32 @@ AcquireRewriteLocks(Query *parsetree,
 				 * CDB: The proper lock mode depends on whether the relation is
 				 * local or distributed, which is discovered by heap_open().
 				 * To handle this we make use of CdbOpenRelation().
+				 * 
+				 * For update should hold ExclusiveLock, see the discussion on
+				 * https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
+				 *
+				 * Update|DELETE may have to upgrade the locks, and CdbOpenRelation will do
+				 * more check for AO table and GDD's status.
 				 */
 				needLockUpgrade = false;
 				if (!forExecute)
 					lockmode = AccessShareLock;
 				else if (rt_index == parsetree->resultRelation)
+				{
 					lockmode = RowExclusiveLock;
+					needLockUpgrade = (parsetree->commandType != CMD_INSERT);
+				}
 				else if (forUpdatePushedDown ||
 						 get_parse_rowmark(parsetree, rt_index) != NULL)
 					lockmode = RowShareLock;
 				else
 					lockmode = AccessShareLock;
 
-				/* Target of INSERT/UPDATE/DELETE? */
-				if (rt_index == parsetree->resultRelation)
+				rc = get_parse_rowmark(parsetree, rt_index);
+				if (rc != NULL)
 				{
-					lockmode = RowExclusiveLock;
-					if (parsetree->commandType != CMD_INSERT)
-						needLockUpgrade = true;
-				}
-
-				/* FOR UPDATE/SHARE? */
-				else if (get_parse_rowmark(parsetree, rt_index) != NULL)
-				{
-					needLockUpgrade = true;
+					lockmode = rc->strength >= LCS_FORNOKEYUPDATE ?
+						ExclusiveLock : RowShareLock;
 				}
 
 				/* Take a lock either using CDB lock promotion or not */
