@@ -15,6 +15,7 @@
 #include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/varbit.h"
+#include "foreign/fdwapi.h"
 #include "miscadmin.h"
 #include "funcapi.h"
 
@@ -197,7 +198,17 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 		 * more comfortable.)
 		 */
 		rows = (HeapTuple *) palloc0(targrows * sizeof(HeapTuple));
-		if (inherited)
+
+		if(RelationGetForm(onerel)->relkind == RELSTORAGE_FOREIGN && RelationIsExternal(onerel))
+		{
+			FdwRoutine *fdwroutine;
+			fdwroutine = GetFdwRoutineForRelation(onerel, false);
+			numrows = fdwroutine->AcquireSampleRows(onerel, DEBUG1,
+													rows, targrows,
+													&totalrows, &totaldeadrows);
+
+		}
+		else if (inherited)
 		{
 			numrows = acquire_inherited_sample_rows(onerel, DEBUG1,
 													rows, targrows,

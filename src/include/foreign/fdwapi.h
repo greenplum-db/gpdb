@@ -98,7 +98,7 @@ typedef int (*AcquireSampleRowsFunc) (Relation relation, int elevel,
 
 typedef bool (*AnalyzeForeignTable_function) (Relation relation,
 												 AcquireSampleRowsFunc *func,
-													BlockNumber *totalpages);
+													Datum totalpagesorsize);
 
 /*
  * FdwRoutine is the struct returned by a foreign-data wrapper's handler
@@ -144,6 +144,7 @@ typedef struct FdwRoutine
 
 	/* Support functions for ANALYZE */
 	AnalyzeForeignTable_function AnalyzeForeignTable;
+	AcquireSampleRowsFunc AcquireSampleRows;
 } FdwRoutine;
 
 
