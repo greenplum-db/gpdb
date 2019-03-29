@@ -638,10 +638,7 @@ get_dest_address(CURL *curl_handle)
 	/* add dest url, if any, and curl was nice to tell us */
 	if (CURLE_OK == curl_easy_getinfo(curl_handle, CURLINFO_PRIMARY_IP, &dest_url) && dest_url)
 	{
-		char *pStr = getenv(ENV_PXF_PORT);
-		int  port  = pStr ? (int) strtol(pStr, &pStr, 10) : PXF_DEFAULT_PORT;
-
-		return psprintf("'%s:%d'", dest_url, port);
+		return psprintf("'%s:%d'", dest_url, get_pxf_port());
 	}
 	return dest_url;
 }

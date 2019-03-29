@@ -65,9 +65,24 @@ concat(int num_args,...)
 char *
 get_authority(void)
 {
-	char *host = getenv(ENV_PXF_HOST) ? getenv(ENV_PXF_HOST) : PXF_DEFAULT_HOST;
-	char *pStr = getenv(ENV_PXF_PORT);
-	int  port  = pStr ? (int) strtol(pStr, &pStr, 10) : PXF_DEFAULT_PORT;
+	return psprintf("%s:%d", get_pxf_host(), get_pxf_port());
+}
 
-	return psprintf("%s:%d", host, port);
+/* Returns the PXF Host defined in the PXF_HOST
+ * environment variable or the default when undefined
+ */
+const char *
+get_pxf_host(void)
+{
+	return getenv(ENV_PXF_HOST) ? getenv(ENV_PXF_HOST) : PXF_DEFAULT_HOST;
+}
+
+/* Returns the PXF Port defined in the PXF_PORT
+ * environment variable or the default when undefined
+ */
+const int
+get_pxf_port(void)
+{
+	char *pStr = getenv(ENV_PXF_PORT);
+	return pStr ? (int) strtol(pStr, &pStr, 10) : PXF_DEFAULT_PORT;
 }
