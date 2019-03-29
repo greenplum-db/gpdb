@@ -1,9 +1,9 @@
 Pkgname: sample
 Architecture: x86_64
 OS: rhel6
-Version: sample-0.0.1-6.0.0-x86_64
+Version: sample-0.0.1-7.0.0-x86_64
 GPDBVersion: 6
-Description: Sample GPDB 6 package
+Description: Sample GPDB 7 package
 PostInstall:
 # On master node only
 - Master:  "echo 'This is a sample message shown after successful installation';"

@@ -625,7 +625,7 @@
 #define PACKAGE_NAME "Greenplum Database"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Greenplum Database 6.0.0-alpha"
+#define PACKAGE_STRING "Greenplum Database 7.0.0-alpha"
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "9.4.20"
