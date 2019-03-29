@@ -158,7 +158,7 @@ class GPCatalog():
         for [relname, relisshared] in curs.getresult():
             self._tables[relname] = GPCatalogTable(self, relname)
             # Note: stupid API returns t/f for boolean value
-            self._tables[relname]._setShared(relisshared is 't')
+            self._tables[relname]._setShared(relisshared == 't')
         
         # The tidycat.pl utility has been used to generate a json file 
         # describing aspects of the catalog that we can not currently
