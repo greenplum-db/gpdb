@@ -1,6 +1,40 @@
 @gprecoverseg
 Feature: gprecoverseg tests
 
+    Scenario: incremental recovery works with tablespaces
+        Given the database is running
+          And a tablespace is created with data
+          And user kills a primary postmaster process
+          And user can start transactions
+         When the user runs "gprecoverseg -a"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+
+        Given another tablespace is created with data
+         When the user runs "gprecoverseg -ra"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+          And the other tablespace is valid
+
+    Scenario: full recovery works with tablespaces
+        Given the database is running
+          And a tablespace is created with data
+          And user kills a primary postmaster process
+          And user can start transactions
+         When the user runs "gprecoverseg -a -F"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+
+        Given another tablespace is created with data
+         When the user runs "gprecoverseg -ra"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+          And the other tablespace is valid
+
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
         And user kills a primary postmaster process
