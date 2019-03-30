@@ -76,6 +76,10 @@ def before_scenario(context, scenario):
 
 
 def after_scenario(context, scenario):
+    if 'tablespaces' in context:
+        for tablespace in context.tablespaces.values():
+            tablespace.cleanup()
+
     tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpinitstandby']
     if set(context.feature.tags).intersection(tags_to_skip):
         return
