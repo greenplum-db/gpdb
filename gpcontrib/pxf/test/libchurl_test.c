@@ -10,6 +10,7 @@
 #define UNIT_TESTING
 
 /* include unit under test */
+#include "../src/pxfutils.c"
 #include "../src/libchurl.c"
 
 /* include mock files */
