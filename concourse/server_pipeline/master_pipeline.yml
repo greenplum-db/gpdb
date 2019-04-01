@@ -1,19 +1,9 @@
-resource_types:
-  - name: pull-request
-    type: docker-image
-    source:
-      repository: teliaoss/github-pr-resource
-
-
 resources:
   - name: gpdb_src
-    type: pull-request
+    type: git
     source:
-      repository: greenplum-db/gpdb
-      access_token: {{gpdb-git-access-token}}
-      ignore_paths:
-      - gpdb-doc/*
-      - README*
+      uri: https://github.com/greenplum-db/gpdb.git
+      branch: master
 
   - name: docker-image
     type: docker-image
@@ -23,28 +13,7 @@ resources:
 
       
 anchors:
-  - &pr_failure
-    put: report_pr_failure
-    resource: gpdb_src
-    params:
-      path: gpdb_src
-      status: failure
-      
-  - &pr_pending
-    put: report_pr_pending
-    resource: gpdb_src
-    params:
-      path: gpdb_src
-      status: pending
-      
-  - &pr_success
-    put: report_pr_success
-    resource: gpdb_src
-    params:
-      path: gpdb_src
-      status: success
-
-  - &fetch_pr
+  - &fetch_source
     get: gpdb_src
     trigger: true
     version: every
@@ -57,7 +26,7 @@ anchors:
 tasks:
   - &task
     image: image
-    file: gpdb_src/concourse/pr_pipeline/task.yml
+    file: gpdb_src/concourse/server_pipeline/task.yml
     timeout: 2h
     
   - &test_installcheck_world_with_planner
@@ -81,14 +50,9 @@ jobs:
     max_in_flight: 10
     plan:
     - aggregate:
-      - *fetch_pr
+      - *fetch_source
       - *fetch_image
-      on_success: *pr_pending
-      on_failure: *pr_failure
 
     - aggregate:
       - *test_installcheck_world_with_orca
       - *test_installcheck_world_with_planner
-      on_failure: *pr_failure
-
-    - *pr_success

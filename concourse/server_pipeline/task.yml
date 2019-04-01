@@ -2,7 +2,7 @@ platform: linux
 inputs:
   - name: gpdb_src
 run:
-  path: ./concourse/pr_pipeline/runner.bash
+  path: ./concourse/server_pipeline/runner.bash
   dir: gpdb_src
 params:
   # default params to empty, override from pipeline
