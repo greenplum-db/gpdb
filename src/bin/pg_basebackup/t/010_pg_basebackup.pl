@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use Cwd;
 use TestLib;
-use Test::More tests => 33;
+use Test::More tests => 34;
 
 program_help_ok('pg_basebackup');
 program_version_ok('pg_basebackup');
@@ -31,23 +31,18 @@ system_or_bail 'pg_ctl', '-D', "$tempdir/pgdata", 'reload';
 command_fails(['pg_basebackup', '-D', "$tempdir/backup"],
 	'pg_basebackup fails without specifiying the target greenplum db id');
 
-
 #
-# GPDB: The minimum value of max_wal_senders is 2 in GPDB
+# GPDB: The default value of max_wal_senders is 10 in GPDB
 # instead of 0 in Postgres.
 #
-# This test is disabled because it is difficult to
-# set up an environment that consumes all of the slots
-# without setting up mirrors.
-#
-# open CONF, ">>$tempdir/pgdata/postgresql.conf";
-# print CONF "max_wal_senders = 0\n";
-# close CONF;
-# restart_test_server;
+open CONF, ">>$tempdir/pgdata/postgresql.conf";
+print CONF "max_wal_senders = 0\n";
+close CONF;
+restart_test_server;
 
-# command_fails(
-# 	[ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123' ],
-# 	'pg_basebackup fails because of WAL configuration');
+command_fails(
+	[ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123' ],
+	'pg_basebackup fails because of WAL configuration');
 
 open CONF, ">>$tempdir/pgdata/postgresql.conf";
 print CONF "max_wal_senders = 2\n";
