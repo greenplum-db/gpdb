@@ -14,7 +14,7 @@ function set_env() {
 ## ----------------------------------------------------------------------
 
 function install_gpdb() {
-    [ ! -d /usr/local/greenplum-db-devel ] && mkdir -p /usr/local/greenplum-db-devel
+    mkdir -p /usr/local/greenplum-db-devel
     tar -xzf bin_gpdb/bin_gpdb.tar.gz -C /usr/local/greenplum-db-devel
 }
 
