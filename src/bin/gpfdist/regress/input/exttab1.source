@@ -37,7 +37,7 @@ on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 3; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); while ! curl 127.0.0.1:7070; do sleep 1; done; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
@@ -136,7 +136,7 @@ DROP EXTERNAL TABLE EXT_REGION;
 -- gpfdist in csv (mpp-1519, etc)
 --
 CREATE EXTERNAL WEB TABLE gpfdist_csv_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 3; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); while ! curl 127.0.0.1:7070; do sleep 1; done; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 -- 
