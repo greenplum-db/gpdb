@@ -1,29 +1,206 @@
-CREATE TABLE PG_STAT_LAST_OPERATION_TEST (foo int) DISTRIBUTED BY (foo);
-SELECT classname, objname, schemaname, actionname, subtype 
-FROM pg_stat_operations WHERE schemaname = 'public' 
-AND objname = 'pg_stat_last_operation_test'
-AND actionname = 'CREATE';
- classname |           objname           | schemaname | actionname | subtype 
------------+-----------------------------+------------+------------+---------
- pg_class  | pg_stat_last_operation_test | public     | CREATE     | TABLE
+CREATE SCHEMA mdt_test;
+SET search_path = mdt_test;
+-- CREATE VIEW
+CREATE VIEW
+	pg_stat_last_operation_testview AS
+SELECT
+	c.relname AS objname, staactionname AS actionname, stasubtype AS subtype
+FROM
+	pg_stat_last_operation lo
+		JOIN pg_catalog.pg_class c ON (
+			c.oid = lo.objid
+		)
+		JOIN pg_catalog.pg_namespace nsp ON (
+			c.relnamespace = nsp.oid AND nsp.nspname = 'mdt_test'
+		)
+ORDER BY
+	statime;  
+SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'CREATE';
+             objname             | actionname | subtype 
+---------------------------------+------------+---------
+ pg_stat_last_operation_testview | CREATE     | VIEW
 (1 row)
 
-SELECT classname, objname, schemaname, actionname, subtype 
-FROM pg_stat_operations WHERE schemaname = 'public' 
-AND objname = 'pg_stat_last_operation_test'
-AND actionname = 'TRUNCATE';
- classname | objname | schemaname | actionname | subtype 
------------+---------+------------+------------+---------
+ 
+-- CREATE TABLE
+CREATE TABLE pg_stat_last_operation_test (foo int) DISTRIBUTED BY (foo);
+CREATE TABLE mdt_test_part1 (
+  id int,
+  rank int,
+  year date,
+  gender char(1))
+DISTRIBUTED BY (id, gender, year)
+PARTITION BY list (gender)
+SUBPARTITION BY range (year)
+SUBPARTITION TEMPLATE (start (date '2001-01-01'))
+(VALUES ('M'), VALUES ('F'));
+NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_1" for table "mdt_test_part1"
+NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_1_2_prt_1" for table "mdt_test_part1_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_2" for table "mdt_test_part1"
+NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_2_2_prt_1" for table "mdt_test_part1_1_prt_2"
+ALTER TABLE mdt_test_part1 ADD DEFAULT PARTITION default_part;
+NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_default_part" for table "mdt_test_part1"
+NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_default_part_2_prt_1" for table "mdt_test_part1_1_prt_default_part"
+CREATE TABLE mdt_all_types (
+  a int,
+  col001 char DEFAULT 'z',
+  col002 numeric,
+  col003 boolean DEFAULT false,
+  col004 bit(3) DEFAULT '111',
+  col005 text DEFAULT 'pookie',
+  col006 integer[] DEFAULT '{5, 4, 3, 2, 1}',
+  col007 character varying(512) DEFAULT 'Now is the time',
+  col008 character varying DEFAULT 'Now is the time',
+  col009 character varying(512)[],
+  col010 numeric(8),
+  col011 int,
+  col012 double precision,
+  col013 bigint,
+  col014 char(8),
+  col015 bytea,
+  col016 timestamp with time zone,
+  col017 interval,
+  col018 cidr,
+  col019 inet,
+  col020 macaddr,
+  col021 serial,
+  col022 money,
+  col023 bigserial,
+  col024 timetz,
+  col025 circle,
+  col026 box,
+  col027 name,
+  col028 path,
+  col029 int2,
+  col031 bit varying(256),
+  col032 date,
+  col034 lseg,
+  col035 point,
+  col036 polygon,
+  col037 real,
+  col039 time,
+  col040 timestamp
+)
+WITH (appendonly=true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'CREATE';
+                  objname                  | actionname | subtype  
+-------------------------------------------+------------+----------
+ pg_stat_last_operation_testview           | CREATE     | VIEW
+ pg_stat_last_operation_test               | CREATE     | TABLE
+ mdt_test_part1                            | CREATE     | TABLE
+ mdt_test_part1_1_prt_1                    | CREATE     | TABLE
+ mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
+ mdt_test_part1_1_prt_2                    | CREATE     | TABLE
+ mdt_test_part1_1_prt_2_2_prt_1            | CREATE     | TABLE
+ mdt_test_part1_1_prt_default_part         | CREATE     | TABLE
+ mdt_test_part1_1_prt_default_part_2_prt_1 | CREATE     | TABLE
+ mdt_all_types_col021_seq                  | CREATE     | SEQUENCE
+ mdt_all_types_col023_seq                  | CREATE     | SEQUENCE
+ mdt_all_types                             | CREATE     | TABLE
+(12 rows)
+
+-- GRANT
+GRANT ALL ON mdt_all_types TO public;
+SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'PRIVILEGE';
+    objname    | actionname | subtype 
+---------------+------------+---------
+ mdt_all_types | PRIVILEGE  | GRANT
+(1 row)
+
+-- VACUUM
+VACUUM ANALYZE mdt_all_types ;
+SELECT * FROM pg_stat_last_operation_testview WHERE actionname in ('VACUUM','ANALYZE');
+    objname    | actionname | subtype 
+---------------+------------+---------
+ mdt_all_types | VACUUM     | 
+ mdt_all_types | ANALYZE    | 
+(2 rows)
+
+SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_all_%');
+         objname          | actionname | subtype  
+--------------------------+------------+----------
+ mdt_all_types_col021_seq | CREATE     | SEQUENCE
+ mdt_all_types_col023_seq | CREATE     | SEQUENCE
+ mdt_all_types            | CREATE     | TABLE
+ mdt_all_types_col021_seq | ALTER      | OWNED BY
+ mdt_all_types_col023_seq | ALTER      | OWNED BY
+ mdt_all_types            | PRIVILEGE  | GRANT
+ mdt_all_types            | VACUUM     | 
+ mdt_all_types            | ANALYZE    | 
+(8 rows)
+
+-- TRUNCATE
+SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'TRUNCATE';
+ objname | actionname | subtype 
+---------+------------+---------
 (0 rows)
 
-insert into PG_STAT_LAST_OPERATION_TEST select generate_series(1,100);
-truncate PG_STAT_LAST_OPERATION_TEST;
-SELECT classname, objname, schemaname, actionname, subtype 
-FROM pg_stat_operations WHERE schemaname = 'public' 
-AND objname = 'pg_stat_last_operation_test'
-AND actionname = 'TRUNCATE';
- classname |           objname           | schemaname | actionname | subtype 
------------+-----------------------------+------------+------------+---------
- pg_class  | pg_stat_last_operation_test | public     | TRUNCATE   | 
+INSERT INTO pg_stat_last_operation_test SELECT generate_series(1, 5);
+TRUNCATE pg_stat_last_operation_test;
+SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'TRUNCATE';
+           objname           | actionname | subtype 
+-----------------------------+------------+---------
+ pg_stat_last_operation_test | TRUNCATE   | 
 (1 row)
+
+-- DROP TABLE
+SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'DROP';
+ objname | actionname | subtype 
+---------+------------+---------
+(0 rows)
+
+SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
+                  objname                  | actionname | subtype  
+-------------------------------------------+------------+----------
+ mdt_test_part1                            | CREATE     | TABLE
+ mdt_test_part1_1_prt_1                    | CREATE     | TABLE
+ mdt_test_part1_1_prt_1                    | ALTER      | INHERIT
+ mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
+ mdt_test_part1_1_prt_1_2_prt_1            | ALTER      | INHERIT
+ mdt_test_part1_1_prt_2                    | CREATE     | TABLE
+ mdt_test_part1_1_prt_2                    | ALTER      | INHERIT
+ mdt_test_part1_1_prt_2_2_prt_1            | CREATE     | TABLE
+ mdt_test_part1_1_prt_2_2_prt_1            | ALTER      | INHERIT
+ mdt_test_part1_1_prt_default_part         | CREATE     | TABLE
+ mdt_test_part1_1_prt_default_part         | ALTER      | INHERIT
+ mdt_test_part1_1_prt_default_part_2_prt_1 | CREATE     | TABLE
+ mdt_test_part1_1_prt_default_part_2_prt_1 | ALTER      | INHERIT
+ mdt_test_part1                            | PARTITION  | ADD
+ mdt_all_types_col021_seq                  | CREATE     | SEQUENCE
+ mdt_all_types_col023_seq                  | CREATE     | SEQUENCE
+ mdt_all_types                             | CREATE     | TABLE
+ mdt_all_types_col021_seq                  | ALTER      | OWNED BY
+ mdt_all_types_col023_seq                  | ALTER      | OWNED BY
+ mdt_all_types                             | PRIVILEGE  | GRANT
+ mdt_all_types                             | VACUUM     | 
+ mdt_all_types                             | ANALYZE    | 
+(22 rows)
+
+DROP TABLE mdt_all_types;
+SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
+                  objname                  | actionname | subtype 
+-------------------------------------------+------------+---------
+ mdt_test_part1                            | CREATE     | TABLE
+ mdt_test_part1_1_prt_1                    | CREATE     | TABLE
+ mdt_test_part1_1_prt_1                    | ALTER      | INHERIT
+ mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
+ mdt_test_part1_1_prt_1_2_prt_1            | ALTER      | INHERIT
+ mdt_test_part1_1_prt_2                    | CREATE     | TABLE
+ mdt_test_part1_1_prt_2                    | ALTER      | INHERIT
+ mdt_test_part1_1_prt_2_2_prt_1            | CREATE     | TABLE
+ mdt_test_part1_1_prt_2_2_prt_1            | ALTER      | INHERIT
+ mdt_test_part1_1_prt_default_part         | CREATE     | TABLE
+ mdt_test_part1_1_prt_default_part         | ALTER      | INHERIT
+ mdt_test_part1_1_prt_default_part_2_prt_1 | CREATE     | TABLE
+ mdt_test_part1_1_prt_default_part_2_prt_1 | ALTER      | INHERIT
+ mdt_test_part1                            | PARTITION  | ADD
+(14 rows)
+
+DROP TABLE mdt_test_part1;
+SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
+ objname | actionname | subtype 
+---------+------------+---------
+(0 rows)
 

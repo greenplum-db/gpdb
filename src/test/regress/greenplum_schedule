@@ -225,7 +225,6 @@ test: vacuum_full_heap
 test: vacuum_full_heap_bitmapindex
 
 test: ao_checksum_corruption AOCO_Compression AORO_Compression table_statistics fts_error
-test: metadata_track
 test: workfile_mgr_test
 test: session_reset
 
