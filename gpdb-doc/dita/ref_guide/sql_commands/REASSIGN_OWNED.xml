@@ -12,11 +12,8 @@
     <section id="section3">
       <title>Description</title>
       <p><codeph>REASSIGN OWNED</codeph> changes the ownership of database objects owned by any of
-<<<<<<< HEAD
+
         the <varname>old_role</varname>s to <varname>new_role</varname>. </p>
-=======
-        the l<varname>old_role</varname>s to <varname>new_role</varname>. </p>
->>>>>>> REASSIGN OWNED. edits. Remove qualification that it doesn't change the database ownership
     </section>
     <section id="section4">
       <title>Parameters</title>

@@ -310,7 +310,7 @@ SELECT foo();</codeblock><p>In
                         of the function in the C language source code. If the link symbol is
                         omitted, it is assumed to be the same as the name of the SQL function being
                         defined. The C names
-                        of all functions must be different, so you must give overloaded C
+                        of all functions must be different, so you must give overloaded SQL
                         functions different C names (for example, use the argument types as
                         part of the C names).
                         It is recommended to locate shared libraries either relative to
