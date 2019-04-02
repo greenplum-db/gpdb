@@ -1,10 +1,6 @@
 @gpinitsystem
 Feature: gpinitsystem tests
 
-########################### @demo_cluster tests ###########################
-# The @demo_cluster tag denotes the scenario can run locally
-
-    @demo_cluster
     Scenario: gpinitsystem creates a cluster with data_checksums on
         Given the database is initialized with checksum "on"
         When the user runs "gpconfig -s data_checksums"
@@ -13,7 +9,6 @@ Feature: gpinitsystem tests
         And gpconfig should print "Master  value: on" to stdout
         And gpconfig should print "Segment value: on" to stdout
 
-    @demo_cluster
     Scenario: gpinitsystem creates a cluster with data_checksums off
         Given the database is initialized with checksum "off"
         When the user runs "gpconfig -s data_checksums"
@@ -22,7 +17,6 @@ Feature: gpinitsystem tests
         And gpconfig should print "Master  value: off" to stdout
         And gpconfig should print "Segment value: off" to stdout
 
-    @demo_cluster
     Scenario: gpinitsystem should warn but not fail when standby cannot be instantiated
         Given the database is running
         And all the segments are running
@@ -37,7 +31,6 @@ Feature: gpinitsystem tests
         And gpinitsystem should print "Cluster setup finished, but Standby Master failed to initialize. Review contents of log files for errors." to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
-    @demo_cluster
     Scenario: gpinitsystem generates an output configuration file and then starts cluster with data_checksums on
         Given the cluster config is generated with data_checksums "on"
         When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
@@ -52,7 +45,6 @@ Feature: gpinitsystem tests
         And gpconfig should print "Master  value: on" to stdout
         And gpconfig should print "Segment value: on" to stdout
 
-    @demo_cluster
     Scenario: gpinitsystem generates an output configuration file and then starts cluster with data_checksums off
         Given the cluster config is generated with data_checksums "off"
         When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O /tmp/output_config_file"
@@ -67,7 +59,6 @@ Feature: gpinitsystem tests
         And gpconfig should print "Master  value: off" to stdout
         And gpconfig should print "Segment value: off" to stdout
 
-    @demo_cluster
     Scenario: gpinitsystem should warn but not fail when standby cannot be instantiated
         Given the database is running
         And all the segments are running
@@ -81,7 +72,6 @@ Feature: gpinitsystem tests
         And gpinitsystem should print "Log file scan check passed" to stdout
         And sql "select * from gp_toolkit.__gp_user_namespaces" is executed in "postgres" db
 
-    @demo_cluster
     Scenario: gpinitsystem creates a cluster in default timezone
         Given the database is not running
         And the environment variable "TZ" is not set
@@ -97,7 +87,6 @@ Feature: gpinitsystem tests
         And the startup timezone is saved
         And the startup timezone matches the system timezone
 
-    @demo_cluster
     Scenario: gpinitsystem creates a cluster using TZ
         Given the database is not running
         And the environment variable "TZ" is set to "US/Hawaii"
@@ -112,7 +101,6 @@ Feature: gpinitsystem tests
         And the startup timezone is saved
         And the startup timezone matches "HST"
 
-    @demo_cluster
     Scenario: gpinitsystem should print FQDN in pg_hba.conf when HBA_HOSTNAMES=1
         Given the cluster config is generated with HBA_HOSTNAMES "1"
         When generate cluster config file "/tmp/output_config_file"
@@ -121,7 +109,6 @@ Feature: gpinitsystem tests
         Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
 
-    @demo_cluster
     Scenario: gpinitsystem should print CIDR in pg_hba.conf when HBA_HOSTNAMES=0
         Given the cluster config is generated with HBA_HOSTNAMES "0"
         When generate cluster config file "/tmp/output_config_file"
@@ -130,7 +117,6 @@ Feature: gpinitsystem tests
         Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains CIDR only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains CIDR only for trusted host
 
-    @demo_cluster
     Scenario: gpinitsystem should print FQDN in pg_hba.conf for standby when HBA_HOSTNAMES=1
         Given the database is running
         And all the segments are running

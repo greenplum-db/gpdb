@@ -1,10 +1,6 @@
 @gprecoverseg
 Feature: gprecoverseg tests
-  
-########################### @demo_cluster tests ###########################
-# The @demo_cluster tag denotes the scenario can run locally
 
-    @demo_cluster
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
         And user kills a primary postmaster process
@@ -18,7 +14,6 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
-    @demo_cluster
     Scenario: gprecoverseg displays pg_basebackup progress to the user
         Given the database is running
         And all the segments are running
@@ -32,7 +27,6 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    @demo_cluster
     Scenario: gprecoverseg does not display pg_basebackup progress to the user when --no-progress option is specified
         Given the database is running
         And all the segments are running
@@ -46,7 +40,6 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    @demo_cluster
     Scenario: When gprecoverseg incremental recovery uses pg_rewind to recover and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
         Given the database is running
         And all the segments are running
@@ -71,7 +64,6 @@ Feature: gprecoverseg tests
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
 
-    @demo_cluster
     Scenario: Pid does not correspond to any running process
         Given the database is running
         And all the segments are running
