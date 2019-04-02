@@ -12,6 +12,9 @@
 /* include unit under test */
 #include "../src/pxfutils.c"
 
+/* helper functions */
+static void restore_env(const char *name, const char *value);
+
 void
 test_normalize_key_name(void **state)
 {
@@ -74,6 +77,60 @@ test_get_authority(void **state)
 	pfree(authority);
 }
 
+void
+test_get_authority_from_env(void **state)
+{
+	const char *pStore = getenv(ENV_PXF_PORT);
+	const char *hStore = getenv(ENV_PXF_HOST);
+
+	setenv(ENV_PXF_HOST, "bar.com", 1);
+	setenv(ENV_PXF_PORT, "777", 1);
+
+	char	*authority = get_authority();
+	assert_string_equal(authority, "bar.com:777");
+	pfree(authority);
+
+	restore_env(ENV_PXF_PORT, pStore);
+	restore_env(ENV_PXF_HOST, hStore);
+}
+
+void
+test_get_pxf_port_with_env_var_set(void **state)
+{
+	// store the existing value of the environment variable
+	const char *store = getenv(ENV_PXF_PORT);
+	setenv(ENV_PXF_PORT, "6162", 1);
+
+	const int port = get_pxf_port();
+	assert_int_equal(port, 6162);
+
+	// restore environment variable
+	restore_env(ENV_PXF_PORT, store);
+}
+
+void
+test_get_pxf_host_with_env_var_set(void **state)
+{
+	// store the existing value of the environment variable
+	const char *store = getenv(ENV_PXF_HOST);
+	setenv(ENV_PXF_HOST, "foo.com", 1);
+
+	const char *host = get_pxf_host();
+	assert_string_equal(host, "foo.com");
+
+	// restore environment variable
+	restore_env(ENV_PXF_HOST, store);
+}
+
+static void
+restore_env(const char *name, const char *value)
+{
+	if (value)
+		setenv(name, value, 1);
+	else
+		unsetenv(name);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -81,7 +138,10 @@ main(int argc, char *argv[])
 
 	const		UnitTest tests[] = {
 		unit_test(test_normalize_key_name),
-		unit_test(test_get_authority)
+		unit_test(test_get_authority),
+		unit_test(test_get_authority_from_env),
+		unit_test(test_get_pxf_port_with_env_var_set),
+		unit_test(test_get_pxf_host_with_env_var_set),
 	};
 
 	MemoryContextInit();
