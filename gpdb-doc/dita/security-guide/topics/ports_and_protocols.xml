@@ -14,23 +14,32 @@
       to coordinate database operations with the segments. The <codeph>gpstate -p</codeph> command,
       executed on the Greenplum master, lists the port assignments for the Greenplum master and the
       primary segments and mirrors. For example:
-      <codeblock>[gpadmin@mdw ~]$ gpstate -p
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-Starting gpstate with args: -p
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.6.0 build 62994'
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 8.2.15 (Greenplum Database 4.3.6.0 build 62994) on x86_64-unknown-linux-gnu, compiled by GCC gcc (GCC) 4.4.2 compiled on Jul 24 2015 11:35:08'
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-Obtaining Segment details from master...
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:--Master segment instance  /data/master/gpseg-1  port = 5432
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:--Segment instance port assignments
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-----------------------------------
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-   Host   Datadir                Port
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-   sdw1   /data/primary/gpseg0   40000
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-   sdw2   /data/mirror/gpseg0    50000
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-   sdw2   /data/primary/gpseg1   40000
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-   sdw1   /data/mirror/gpseg1    50001
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-   sdw3   /data/primary/gpseg2   40000
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-   sdw4   /data/mirror/gpseg2    50000
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-   sdw4   /data/primary/gpseg3   40000
-20160126:15:40:22:028389 gpstate:mdw:gpadmin-[INFO]:-   sdw3   /data/mirror/gpseg3    50001
+      <codeblock>[gpadmin@mdw ~]$ gpstate -p 20190403:02:57:04:011030 gpstate:mdw:gpadmin-[INFO]:-Starting gpstate with args: -p
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 5.17.0 build commit:fc9a9d4cad8dd4037b9bc07bf837c0b958726103'
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 8.3.23 (Greenplum Database 5.17.0 build commit:fc9a9d4cad8dd4037b9bc07bf837c0b958726103) on x86_64-pc-linux-gnu, compiled by GCC gcc (GCC) 6.2.0, 64-bit compiled on Feb 13 2019 15:26:34'
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-Obtaining Segment details from master...
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:--Master segment instance  /data/master/gpseg-1  port = 5432
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:--Segment instance port assignments
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-----------------------------------
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   Host   Datadir                Port
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw1   /data/primary/gpseg0   20000
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw2   /data/mirror/gpseg0    21000
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw1   /data/primary/gpseg1   20001
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw2   /data/mirror/gpseg1    21001
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw1   /data/primary/gpseg2   20002
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw2   /data/mirror/gpseg2    21002
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw2   /data/primary/gpseg3   20000
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw3   /data/mirror/gpseg3    21000
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw2   /data/primary/gpseg4   20001
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw3   /data/mirror/gpseg4    21001
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw2   /data/primary/gpseg5   20002
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw3   /data/mirror/gpseg5    21002
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw3   /data/primary/gpseg6   20000
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw1   /data/mirror/gpseg6    21000
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw3   /data/primary/gpseg7   20001
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw1   /data/mirror/gpseg7    21001
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw3   /data/primary/gpseg8   20002
+20190403:02:57:05:011030 gpstate:mdw:gpadmin-[INFO]:-   sdw1   /data/mirror/gpseg8    21002
 </codeblock></p>
     <p>Additional Greenplum Database network connections are created for features such as standby
       replication, segment mirroring, statistics collection, and data exchange between segments.
