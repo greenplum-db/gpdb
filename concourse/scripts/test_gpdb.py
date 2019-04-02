@@ -53,6 +53,7 @@ def configure():
                             "--with-perl",
                             "--with-libxml",
                             "--with-python",
+                            "--with-openssl",
                             # TODO: remove this flag after zstd is vendored in the installer for ubuntu
                             "--without-zstd",
                             "--with-libs=/usr/local/gpdb/lib",
