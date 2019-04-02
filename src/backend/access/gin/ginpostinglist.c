@@ -86,7 +86,6 @@ itemptr_to_uint64(const ItemPointer iptr)
 	uint64		val;
 
 	Assert(ItemPointerIsValid(iptr));
-	Assert(iptr->ip_posid < (1 << MaxHeapTuplesPerPageBits));
 
 	val = iptr->ip_blkid.bi_hi;
 	val <<= 16;
