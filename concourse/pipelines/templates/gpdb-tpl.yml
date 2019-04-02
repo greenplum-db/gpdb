@@ -24,9 +24,9 @@
                       {'name': 'replication_slots',
                        'use_concourse_cluster': false},
                       {'name': 'gpactivatestandby',
-                       'use_concourse_cluster': true},
+                       'use_concourse_cluster': false},
                       {'name': 'gpinitstandby',
-                       'use_concourse_cluster': true},
+                       'use_concourse_cluster': false},
                       {'name': 'gpcheckcat',
                        'use_concourse_cluster': true},
                       {'name': 'gprecoverseg',
@@ -1897,7 +1897,7 @@ jobs:
           file: gpdb_src/concourse/tasks/behave_gpdb.yml
           image: gpdb6-centos6-test
           params:
-            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=demo_cluster
+            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster
 
 {% endfor %}
 
