@@ -95,6 +95,20 @@ test_get_authority_from_env(void **state)
 }
 
 void
+test_get_pxf_port_fails_with_invalid_value(void **state)
+{
+	// store the existing value of the environment variable
+	const char *store = getenv(ENV_PXF_PORT);
+	setenv(ENV_PXF_PORT, "bad_value", 1);
+
+	const int port = get_pxf_port();
+	assert_int_equal(port, 0);
+
+	// restore environment variable
+	restore_env(ENV_PXF_PORT, store);
+}
+
+void
 test_get_pxf_port_with_env_var_set(void **state)
 {
 	// store the existing value of the environment variable
@@ -142,6 +156,7 @@ main(int argc, char *argv[])
 		unit_test(test_get_authority_from_env),
 		unit_test(test_get_pxf_port_with_env_var_set),
 		unit_test(test_get_pxf_host_with_env_var_set),
+		unit_test(test_get_pxf_port_fails_with_invalid_value)
 	};
 
 	MemoryContextInit();

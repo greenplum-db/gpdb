@@ -88,10 +88,22 @@ get_pxf_host(void)
 const int
 get_pxf_port(void)
 {
+	char *endptr = NULL;
 	char *pStr = getenv(ENV_PXF_PORT);
-	if (pStr)
-		elog(DEBUG3, "read environment variable %s=%s", ENV_PXF_PORT, pStr);
+	int port = PXF_DEFAULT_PORT;
+
+	if (pStr) {
+		port = (int) strtol(pStr, &endptr, 10);
+
+		if (pStr == endptr)
+			elog(ERROR, "unable to parse PXF port number %s=%s", ENV_PXF_PORT, pStr);
+		else
+			elog(DEBUG3, "read environment variable %s=%s", ENV_PXF_PORT, pStr);
+	}
 	else
+	{
 		elog(DEBUG3, "environment variable %s was not supplied", ENV_PXF_PORT);
-	return pStr ? (int) strtol(pStr, &pStr, 10) : PXF_DEFAULT_PORT;
+	}
+
+	return port;
 }
