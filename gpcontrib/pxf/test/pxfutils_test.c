@@ -101,8 +101,24 @@ test_get_pxf_port_fails_with_invalid_value(void **state)
 	const char *store = getenv(ENV_PXF_PORT);
 	setenv(ENV_PXF_PORT, "bad_value", 1);
 
-	const int port = get_pxf_port();
-	assert_int_equal(port, 0);
+	MemoryContext old_context = CurrentMemoryContext;
+
+	PG_TRY();
+	{
+		get_pxf_port();
+	}
+	PG_CATCH();
+	{
+		MemoryContextSwitchTo(old_context);
+		ErrorData  *edata = CopyErrorData();
+
+		assert_true(edata->elevel == ERROR);
+		char	   *expected_message = pstrdup("unable to parse PXF port number PXF_PORT=bad_value");
+
+		assert_string_equal(edata->message, expected_message);
+		pfree(expected_message);
+	}
+	PG_END_TRY();
 
 	// restore environment variable
 	restore_env(ENV_PXF_PORT, store);
