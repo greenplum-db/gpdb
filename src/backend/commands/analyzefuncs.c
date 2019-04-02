@@ -199,7 +199,7 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 		 */
 		rows = (HeapTuple *) palloc0(targrows * sizeof(HeapTuple));
 
-		if(RelationGetForm(onerel)->relkind == RELSTORAGE_FOREIGN && RelationIsExternal(onerel))
+		if(RelationIsForeign(onerel))
 		{
 			FdwRoutine *fdwroutine;
 			fdwroutine = GetFdwRoutineForRelation(onerel, false);

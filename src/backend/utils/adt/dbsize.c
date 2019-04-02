@@ -465,7 +465,7 @@ pg_relation_size(PG_FUNCTION_ARGS)
 	if (rel == NULL)
 		PG_RETURN_NULL();
 
-	if(RelationGetForm(rel)->relkind == RELSTORAGE_FOREIGN && RelationIsExternal(rel))
+	if(RelationIsForeign(rel))
 	{
 		FdwRoutine *fdwroutine;
 		bool        ok = false;
