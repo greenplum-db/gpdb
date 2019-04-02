@@ -38,6 +38,7 @@ function build_gpdb() {
           --with-perl \
           --with-libxml \
           --with-python \
+	  --with-openssl \
           --enable-debug-extensions \
           --with-libraries=${CWD}/depends/build/lib \
           --with-includes=${CWD}/depends/build/include \
