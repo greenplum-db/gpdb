@@ -421,6 +421,7 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 ERROR:  failed to acquire resources on one or more segments
 DETAIL:  timeout expired
  (seg0 127.0.0.1:40000)
+set gp_segment_connect_timeout to 0;
 select gp_inject_fault('process_startup_packet', 'resume', 2);
 NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11314)
  gp_inject_fault 
@@ -435,7 +436,6 @@ NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11314)
  t
 (1 row)
 
-set gp_segment_connect_timeout to 0;
 select gp_inject_fault('process_startup_packet', 'sleep', '', '', '', 1, 1, 2, 2::smallint);
 NOTICE:  Success:  (seg0 127.0.0.1:40000 pid=11337)
  gp_inject_fault 
