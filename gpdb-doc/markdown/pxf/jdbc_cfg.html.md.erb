@@ -10,7 +10,7 @@ You can use PXF to access an external SQL database including MySQL, ORACLE, Post
 
 To access data in an external SQL database with the PXF JDBC Connector, you must:
 
-- Register an appropriate JDBC driver JAR file
+- Register a compatible JDBC driver JAR file
 - Specify the JDBC driver class name, database URL, and client credentials
 
 ### <a id="cfg_jar"></a>JDBC Driver JAR Registration
@@ -27,8 +27,8 @@ The properties in the `jdbc-site.xml` server template file follow:
 |----------------|--------------------------------------------|-------|
 | jdbc.driver | Class name of the JDBC driver. | The JDBC driver Java class name; for example `org.postgresql.Driver`. |
 | jdbc.url | The URL that the JDBC driver uses to connect to the database. | The database connection URL (database-specific); for example `jdbc:postgresql://phost:pport/pdatabase`. |
-| jdbc.user | The database user name. | Your user name for connecting to the database. |
-| jdbc.password | The password for `jdbc.user`. | Your password for connecting to the database. |
+| jdbc.user | The database user name. | The user name for connecting to the database. |
+| jdbc.password | The password for `jdbc.user`. | The password for connecting to the database. |
 
 <div class="note">When you configure a PXF JDBC server, you specify the external database user credentials to PXF in clear text in a configuration file.</div>
 
@@ -38,7 +38,6 @@ When you configure the PXF JDBC Connector to access an external SQL database, yo
 2. Create the directory `$PXF_CONF/servers/<server_name>`.
 3. Copy the PXF `jdbc-site.xml` template configuration file to the new server directory.
 4. Fill in appropriate values for the properties in the template file.
-5. Add additional properties and values if required for your environment.
 6. Synchronize the server configuration to each Greenplum Database segment host.
 7. Publish the PXF server name(s) to your Greenplum Database end users as appropriate.
 
@@ -84,7 +83,7 @@ In this procedure, you name and add a PXF JDBC server configuration for a Postgr
         
 5. Open the template server configuration file in the editor of your choice, and provide appropriate property values for your environment. For example, if you are configuring access to a PostgreSQL database named `testdb` on a PostgreSQL instance running on the host named `pgserverhost` for the user named `user1`:
 
-    ``` pre
+    ``` xml
     <?xml version="1.0" encoding="UTF-8"?>
     <configuration>
         <property>
