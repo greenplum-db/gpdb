@@ -17,8 +17,7 @@
               >citext</xref></codeph> - Provides a case-insensitive, multibyte-aware text
           data type.</li>
        <li><codeph><xref href="dblink.xml" scope="peer" format="dita"
-              >dblink</xref></codeph> - Provides connections to other Greenplum and PostgreSQL
-         databases.</li>
+              >dblink</xref></codeph> - Provides connections to other Greenplum databases.</li>
        <li><codeph><xref href="fuzzystrmatch.xml" scope="peer"
              format="dita">fuzzystrmatch</xref></codeph> - Determines similarities and differences
          between strings.</li>
