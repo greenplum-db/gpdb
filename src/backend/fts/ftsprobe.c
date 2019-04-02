@@ -621,7 +621,7 @@ probeRecordResponse(fts_segment_info *ftsInfo, PGresult *result)
 	Assert (retryRequested);
 	ftsInfo->result.retryRequested = *retryRequested;
 
-	elogif(gp_log_fts >= GPVARS_VERBOSITY_TERSE, LOG,
+	elogif(gp_log_fts >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "FTS: segment (content=%d, dbid=%d, role=%c) reported "
 		   "isMirrorUp %d, isInSync %d, isSyncRepEnabled %d, "
 		   "isRoleMirror %d, and retryRequested %d to the prober.",
