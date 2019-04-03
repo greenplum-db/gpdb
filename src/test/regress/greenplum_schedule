@@ -86,7 +86,7 @@ test: partial_table
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
-test: partition partition1 partition_indexing parruleord partition_storage partition_ddl partition_with_user_defined_function partition_unlogged partition_subquery
+test: partition partition1 partition_indexing parruleord partition_storage partition_ddl partition_with_user_defined_function partition_unlogged partition_subquery partition_with_user_defined_function_that_truncates
 
 test: index_constraint_naming index_constraint_naming_partition index_constraint_naming_upgrade
 # 'partition_locking' gets confused if other backends run concurrently and
