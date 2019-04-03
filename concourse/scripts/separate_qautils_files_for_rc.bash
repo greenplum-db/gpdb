@@ -9,7 +9,7 @@ main() {
   QAUTILS_DIR="$(mktemp -d)"
 
   INTERMEDIATE_PLACE="$(mktemp -d)"
-  tar zxf "$INPUT_TARBALL" -C "$INTERMEDIATE_PLACE"
+  tar zxf $INPUT_TARBALL -C "$INTERMEDIATE_PLACE"
 
   pushd "$INTERMEDIATE_PLACE"
     echo "Move files listed in $ABS_QAUTILS_FILES"
