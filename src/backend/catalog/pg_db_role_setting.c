@@ -174,7 +174,7 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
 
 	systable_endscan(scan);
 
-	/* update pg_stat_last_shoperation for metadata tracking */
+	/* update gp_stat_last_shoperation for metadata tracking */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		char	   *alter_subtype;

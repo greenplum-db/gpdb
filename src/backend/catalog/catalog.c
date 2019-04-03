@@ -52,8 +52,8 @@
 
 #include "catalog/gp_configuration_history.h"
 #include "catalog/gp_segment_config.h"
-#include "catalog/pg_stat_last_operation.h"
-#include "catalog/pg_stat_last_shoperation.h"
+#include "catalog/gp_stat_last_operation.h"
+#include "catalog/gp_stat_last_shoperation.h"
 
 #include "catalog/gp_id.h"
 #include "catalog/gp_version.h"

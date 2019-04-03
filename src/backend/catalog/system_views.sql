@@ -945,7 +945,7 @@ where
  ) p1;
 
 -- metadata tracking
-CREATE VIEW pg_stat_operations
+CREATE VIEW gp_stat_operations
 AS
 SELECT 
 'pg_authid' AS classname, 
@@ -967,7 +967,7 @@ c.statime
 FROM 
 pg_authid a, 
 (pg_authid b FULL JOIN
-pg_stat_last_shoperation c ON ((b.oid = c.stasysid))) WHERE ((a.oid
+gp_stat_last_shoperation c ON ((b.oid = c.stasysid))) WHERE ((a.oid
 = c.objid) AND (c.classid = (SELECT pg_class.oid FROM pg_class WHERE
 (pg_class.relname = 'pg_authid'::name))))
 UNION 
@@ -990,7 +990,7 @@ c.stasubtype AS subtype,
 c.statime 
 FROM pg_class
 a, pg_namespace n, (pg_authid b FULL JOIN 
-pg_stat_last_operation c ON ((b.oid =
+gp_stat_last_operation c ON ((b.oid =
 c.stasysid))) WHERE 
 a.relnamespace = n.oid AND
 ((a.oid = c.objid) AND (c.classid = (SELECT
@@ -1015,7 +1015,7 @@ c.staactionname AS actionname,
 c.stasubtype AS subtype,
 --
 c.statime
-FROM pg_namespace a, (pg_authid b FULL JOIN pg_stat_last_operation c ON
+FROM pg_namespace a, (pg_authid b FULL JOIN gp_stat_last_operation c ON
 ((b.oid = c.stasysid))) WHERE ((a.oid = c.objid) AND (c.classid =
 (SELECT pg_class.oid FROM pg_class WHERE ((pg_class.relname =
 'pg_namespace'::name) AND (pg_class.relnamespace = (SELECT
@@ -1038,7 +1038,7 @@ c.staactionname AS actionname,
 c.stasubtype AS subtype,
 --
 c.statime
-FROM pg_database a, (pg_authid b FULL JOIN pg_stat_last_shoperation c ON
+FROM pg_database a, (pg_authid b FULL JOIN gp_stat_last_shoperation c ON
 ((b.oid = c.stasysid))) WHERE ((a.oid = c.objid) AND (c.classid =
 (SELECT pg_class.oid FROM pg_class WHERE ((pg_class.relname =
 'pg_database'::name) AND (pg_class.relnamespace = (SELECT
@@ -1061,7 +1061,7 @@ c.staactionname AS actionname,
 c.stasubtype AS subtype,
 --
 c.statime
-FROM pg_tablespace a, (pg_authid b FULL JOIN pg_stat_last_shoperation c ON
+FROM pg_tablespace a, (pg_authid b FULL JOIN gp_stat_last_shoperation c ON
 ((b.oid = c.stasysid))) WHERE ((a.oid = c.objid) AND (c.classid =
 (SELECT pg_class.oid FROM pg_class WHERE ((pg_class.relname =
 'pg_tablespace'::name) AND (pg_class.relnamespace = (SELECT
@@ -1085,14 +1085,14 @@ c.stasubtype AS subtype,
 --
 c.statime 
 FROM pg_resqueue a, (pg_authid
-b FULL JOIN pg_stat_last_shoperation c ON ((b.oid = c.stasysid)))
+b FULL JOIN gp_stat_last_shoperation c ON ((b.oid = c.stasysid)))
 WHERE ((a.oid = c.objid) AND (c.classid = (SELECT pg_class.oid FROM
 pg_class WHERE ((pg_class.relname = 'pg_resqueue'::name) AND
 (pg_class.relnamespace = (SELECT pg_namespace.oid FROM pg_namespace
 WHERE (pg_namespace.nspname = 'pg_catalog'::name))))))) ORDER BY 9;
 
 CREATE VIEW
-pg_stat_partition_operations
+gp_stat_partition_operations
 AS
 SELECT pso.*,
 CASE WHEN  pr.parlevel IS NOT NULL 
@@ -1102,7 +1102,7 @@ pcns.relname AS parenttablename,
 pcns.nspname AS parentschemaname,
 pr.parrelid AS parent_relid
 FROM
-(pg_stat_operations pso
+(gp_stat_operations pso
 LEFT OUTER JOIN
 pg_partition_rule ppr
 ON pso.objid=ppr.parchildrelid

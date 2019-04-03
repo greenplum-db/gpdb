@@ -14,6 +14,8 @@
 #include "postgres.h"
 
 #include "catalog/gp_configuration_history.h"
+#include "catalog/gp_stat_last_operation.h"
+#include "catalog/gp_stat_last_shoperation.h"
 #include "catalog/pg_auth_time_constraint.h"
 #include "catalog/pg_description.h"
 #include "catalog/pg_namespace.h"
@@ -21,8 +23,6 @@
 #include "catalog/pg_partition_encoding.h"
 #include "catalog/pg_partition_rule.h"
 #include "catalog/pg_shdescription.h"
-#include "catalog/pg_stat_last_operation.h"
-#include "catalog/pg_stat_last_shoperation.h"
 #include "catalog/pg_statistic.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"

@@ -64,8 +64,8 @@ truncated anyway after copying to new segments. These catalog tables are:
     pg_partition_encoding
     pg_partition_rule
     pg_shdescription
-    pg_stat_last_operation
-    pg_stat_last_shoperation
+    gp_stat_last_operation
+    gp_stat_last_shoperation
     pg_statistic
 
 ## 2. Redistribution phase

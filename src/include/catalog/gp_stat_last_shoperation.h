@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * pg_stat_last_shoperation.h
+ * gp_stat_last_shoperation.h
  *
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
@@ -15,8 +15,8 @@
  *
  *-------------------------------------------------------------------------
  */
-#ifndef PG_STAT_LAST_SHOPERATION_H
-#define PG_STAT_LAST_SHOPERATION_H
+#ifndef GP_STAT_LAST_SHOPERATION_H
+#define GP_STAT_LAST_SHOPERATION_H
 
 #include "catalog/genbki.h"
 
@@ -24,11 +24,11 @@
 
 #define timestamptz Datum
 
-#define StatLastShOpRelationName		"pg_stat_last_shoperation"
+#define StatLastShOpRelationName		"gp_stat_last_shoperation"
 
 #define StatLastShOpRelationId 6056
 
-CATALOG(pg_stat_last_shoperation,6056)  BKI_SHARED_RELATION BKI_WITHOUT_OIDS
+CATALOG(gp_stat_last_shoperation,6056)  BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 {
 	/* unique key */
 	Oid			classid;		/* OID of table containing object */
@@ -40,7 +40,7 @@ CATALOG(pg_stat_last_shoperation,6056)  BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	NameData	stausename;		/* name of user (when action was performed) */
 	text		stasubtype;		/* action subtype */
 	timestamptz	statime;
-} FormData_pg_statlastshop;
+} FormData_gp_statlastshop;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
 FOREIGN_KEY(classid REFERENCES pg_class(oid));
@@ -49,23 +49,23 @@ FOREIGN_KEY(stasysid REFERENCES pg_authid(oid));
 #undef timestamptz
 
 /* ----------------
- *		Form_pg_statlastshop corresponds to a pointer to a tuple with
- *		the format of pg_statlastshop relation.
+ *		Form_gp_statlastshop corresponds to a pointer to a tuple with
+ *		the format of gp_stat_last_shoperation relation.
  * ----------------
  */
-typedef FormData_pg_statlastshop *Form_pg_statlastshop;
+typedef FormData_gp_statlastshop *Form_gp_statlastshop;
 
 /* ----------------
- *		compiler constants for pg_stat_last_shoperation
+ *		compiler constants for gp_stat_last_shoperation
  * ----------------
  */
-#define Natts_pg_statlastshop				7
-#define Anum_pg_statlastshop_classid		1
-#define Anum_pg_statlastshop_objid			2
-#define Anum_pg_statlastshop_staactionname	3
-#define Anum_pg_statlastshop_stasysid		4
-#define Anum_pg_statlastshop_stausename		5
-#define Anum_pg_statlastshop_stasubtype		6
-#define Anum_pg_statlastshop_statime		7
+#define Natts_gp_statlastshop				7
+#define Anum_gp_statlastshop_classid		1
+#define Anum_gp_statlastshop_objid			2
+#define Anum_gp_statlastshop_staactionname	3
+#define Anum_gp_statlastshop_stasysid		4
+#define Anum_gp_statlastshop_stausename		5
+#define Anum_gp_statlastshop_stasubtype		6
+#define Anum_gp_statlastshop_statime		7
 
-#endif   /* PG_STAT_LAST_SHOPERATION_H */
+#endif   /* GP_STAT_LAST_SHOPERATION_H */

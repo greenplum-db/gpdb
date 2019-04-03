@@ -63,7 +63,7 @@ POSTGRES_BKI_SRCS = $(addprefix $(top_srcdir)/src/include/catalog/,\
 	pg_proc_callback.h \
 	pg_partition_encoding.h \
 	pg_type_encoding.h \
-	pg_stat_last_operation.h pg_stat_last_shoperation.h \
+	gp_stat_last_operation.h gp_stat_last_shoperation.h \
 	toasting.h indexing.h \
     )
 

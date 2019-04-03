@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * pg_stat_last_operation.h
+ * gp_stat_last_operation.h
  *
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
@@ -15,8 +15,8 @@
  *
  *-------------------------------------------------------------------------
  */
-#ifndef PG_STAT_LAST_OPERATION_H
-#define PG_STAT_LAST_OPERATION_H
+#ifndef GP_STAT_LAST_OPERATION_H
+#define GP_STAT_LAST_OPERATION_H
 
 #include "catalog/genbki.h"
 
@@ -34,7 +34,7 @@
 
 #define timestamptz Datum
 
-CATALOG(pg_stat_last_operation,6052) BKI_WITHOUT_OIDS
+CATALOG(gp_stat_last_operation,6052) BKI_WITHOUT_OIDS
 {
 	/* unique key */
 	Oid			classid;		/* OID of table containing object */
@@ -46,7 +46,7 @@ CATALOG(pg_stat_last_operation,6052) BKI_WITHOUT_OIDS
 	NameData	stausename;		/* name of user (when action was performed) */
 	text		stasubtype;		/* action subtype */
 	timestamptz	statime;
-} FormData_pg_statlastop;
+} FormData_gp_statlastop;
 
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -56,23 +56,23 @@ FOREIGN_KEY(stasysid REFERENCES pg_authid(oid));
 #undef timestamptz
 
 /* ----------------
- *		Form_pg_statlastop corresponds to a pointer to a tuple with
- *		the format of pg_statlastop relation.
+ *		Form_gp_statlastop corresponds to a pointer to a tuple with
+ *		the format of gp_stat_last_operation relation.
  * ----------------
  */
-typedef FormData_pg_statlastop *Form_pg_statlastop;
+typedef FormData_gp_statlastop *Form_gp_statlastop;
 
 /* ----------------
- *		compiler constants for pg_stat_last_operation
+ *		compiler constants for gp_stat_last_operation
  * ----------------
  */
-#define Natts_pg_statlastop					7
-#define Anum_pg_statlastop_classid			1
-#define Anum_pg_statlastop_objid			2
-#define Anum_pg_statlastop_staactionname	3
-#define Anum_pg_statlastop_stasysid			4
-#define Anum_pg_statlastop_stausename		5
-#define Anum_pg_statlastop_stasubtype		6
-#define Anum_pg_statlastop_statime			7
+#define Natts_gp_statlastop					7
+#define Anum_gp_statlastop_classid			1
+#define Anum_gp_statlastop_objid			2
+#define Anum_gp_statlastop_staactionname	3
+#define Anum_gp_statlastop_stasysid			4
+#define Anum_gp_statlastop_stausename		5
+#define Anum_gp_statlastop_stasubtype		6
+#define Anum_gp_statlastop_statime			7
 
-#endif   /* PG_STAT_LAST_OPERATION_H */
+#endif   /* GP_STAT_LAST_OPERATION_H */

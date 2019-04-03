@@ -329,14 +329,14 @@ DECLARE_UNIQUE_INDEX(gp_fastsequence_objid_objmod_index, 6067, on gp_fastsequenc
 #define FastSequenceObjidObjmodIndexId 6067
 
 /* MPP-6929: metadata tracking */
-DECLARE_UNIQUE_INDEX(pg_statlastop_classid_objid_staactionname_index, 6054, on pg_stat_last_operation using btree(classid oid_ops, objid oid_ops, staactionname name_ops));
+DECLARE_UNIQUE_INDEX(pg_statlastop_classid_objid_staactionname_index, 6054, on gp_stat_last_operation using btree(classid oid_ops, objid oid_ops, staactionname name_ops));
 #define StatLastOpClassidObjidStaactionnameIndexId  6054
 
 /* Note: no dbid */
-DECLARE_INDEX(pg_statlastshop_classid_objid_index, 6057, on pg_stat_last_shoperation using btree(classid oid_ops, objid oid_ops));
+DECLARE_INDEX(pg_statlastshop_classid_objid_index, 6057, on gp_stat_last_shoperation using btree(classid oid_ops, objid oid_ops));
 #define StatLastShOpClassidObjidIndexId  6057
 
-DECLARE_UNIQUE_INDEX(pg_statlastshop_classid_objid_staactionname_index, 6058, on pg_stat_last_shoperation using btree(classid oid_ops, objid oid_ops, staactionname name_ops));
+DECLARE_UNIQUE_INDEX(pg_statlastshop_classid_objid_staactionname_index, 6058, on gp_stat_last_shoperation using btree(classid oid_ops, objid oid_ops, staactionname name_ops));
 #define StatLastShOpClassidObjidStaactionnameIndexId  6058
 
 DECLARE_UNIQUE_INDEX(pg_resqueue_oid_index, 6027, on pg_resqueue using btree(oid oid_ops));

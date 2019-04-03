@@ -253,7 +253,7 @@ select * from pg_stats where tablename like 'p3_sales%' order by tablename, attn
  public     | p3_sales_1_prt_2_2_prt_2_3_prt_usa | year    | f         |         0 |         4 |       -0.5 | {2002}           | {1}               |                  |           1 |                   |                        | 
 (5 rows)
 
-select count(*) from pg_stat_last_operation pgl, pg_class pgc where pgl.objid=pgc.oid and pgc.relname like 'p3_sales%';
+select count(*) from gp_stat_last_operation pgl, pg_class pgc where pgl.objid=pgc.oid and pgc.relname like 'p3_sales%';
  count 
 -------
     45

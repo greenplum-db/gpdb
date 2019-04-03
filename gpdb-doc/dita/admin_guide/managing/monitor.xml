@@ -320,7 +320,7 @@ Distributed by: (sale_id)
       <topic id="topic25" xml:lang="en">
         <title>Viewing the Last Operation Performed</title>
         <body>
-          <p>You can use the system views <i>pg_stat_operations</i> and
+          <p>You can use the system views <i>gp_stat_operations</i> and
               <i>pg_stat_partition_operations</i> to look up actions performed on an object, such as
             a table. For example, to see the actions performed on a table, such as when it was
             created and when it was last vacuumed and analyzed:</p>
@@ -328,7 +328,7 @@ Distributed by: (sale_id)
             <codeblock>=&gt; SELECT schemaname as schema, objname as table, 
    usename as role, actionname as action, 
    subtype as type, statime as time 
-   FROM pg_stat_operations 
+   FROM gp_stat_operations
    WHERE objname='cust';
  schema | table | role | action  | type  | time
 --------+-------+------+---------+-------+--------------------------

@@ -163,10 +163,10 @@
         <xref href="./pg_shdescription.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="eu150416">
-        <xref href="./pg_stat_last_operation.xml#topic1" type="topic" format="dita"/>
+        <xref href="./gp_stat_last_operation.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="eu150417">
-        <xref href="./pg_stat_last_shoperation.xml#topic1" type="topic" format="dita"/>
+        <xref href="./gp_stat_last_shoperation.xml#topic1" type="topic" format="dita"/>
       </li>
       <li><xref href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/></li>
       <li id="eu149970">

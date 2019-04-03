@@ -76,7 +76,7 @@ GET_REQUESTED_AO_DATA_TABLE_INFO_SQL = """
 """
 
 GET_REQUESTED_LAST_OP_INFO_SQL = """
-    SELECT PGN.nspname, PGC.relname, objid, staactionname, stasubtype, statime FROM pg_stat_last_operation, pg_class PGC, pg_namespace PGN
+    SELECT PGN.nspname, PGC.relname, objid, staactionname, stasubtype, statime FROM gp_stat_last_operation, pg_class PGC, pg_namespace PGN
     WHERE objid = PGC.oid
     AND objid in (%s)
     AND PGC.relnamespace = PGN.oid
