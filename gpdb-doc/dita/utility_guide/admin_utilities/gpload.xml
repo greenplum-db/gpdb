@@ -50,7 +50,11 @@
                 creating an external table definition based on the source data defined, and
                 executing an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
                     <codeph>MERGE</codeph> operation to load the source data into the target table
-                in the database.<note id="gpload-limitation"><codeph>MERGE</codeph> and
+                in the database.<note><codeph>gpfdist</codeph> and <codeph>gpload</codeph> are
+                    compatible only with the Greenplum Database major version in which they are
+                    shipped. For example, a <codeph>gpfdist</codeph> utility that is installed with
+                    Greenplum Database 4.x cannot be used with Greenplum Database 5.x or
+                    6.x.</note><note id="gpload-limitation"><codeph>MERGE</codeph> and
                         <codeph>UPDATE</codeph> operations are not supported if the target table
                     column name is a reserved keyword, has capital letters, or includes any
                     character that requires quotes (" ") to identify the column.</note></p>

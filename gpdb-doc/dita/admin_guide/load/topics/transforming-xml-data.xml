@@ -12,6 +12,10 @@
          <codeph>gpfdist</codeph> in text format and converts them to the foreign data
       format.</shortdesc>
    <body>
+      <note><codeph>gpfdist</codeph> and <codeph>gpload</codeph> are compatible only with the
+         Greenplum Database major version in which they are shipped. For example, a
+            <codeph>gpfdist</codeph> utility that is installed with Greenplum Database 4.x cannot be
+         used with Greenplum Database 5.x or 6.x.</note>
       <p>This topic describes the tasks to set up data transformations that work with
             <codeph>gpfdist</codeph> to read or write external data files with formats that
          Greenplum Database does not support. </p>
