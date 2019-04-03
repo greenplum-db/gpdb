@@ -24,8 +24,6 @@
 
 #define timestamptz Datum
 
-#define StatLastShOpRelationName		"pg_stat_last_shoperation"
-
 #define StatLastShOpRelationId 6056
 
 CATALOG(pg_stat_last_shoperation,6056)  BKI_SHARED_RELATION BKI_WITHOUT_OIDS
