@@ -42,13 +42,14 @@ class Tablespace:
 
         shutil.rmtree(self.path)
 
-    def verify(self):
+    def verify(self, hostname=None, port=0):
         """
         Verify tablespace functionality by ensuring the tablespace can be
         written to, read from, and the initial data is still correctly
         distributed.
         """
-        with dbconn.connect(dbconn.DbURL(dbname=self.dbname)) as conn:
+        url = dbconn.DbURL(hostname=hostname, port=port, dbname=self.dbname)
+        with dbconn.connect(url) as conn:
             db = pg.DB(conn)
             data = db.query("SELECT gp_segment_id, i FROM tbl").getresult()
 
@@ -152,6 +153,11 @@ def _create_tablespace_with_data(context, name):
 @then('the tablespace is valid')
 def impl(context):
     context.tablespaces["outerspace"].verify()
+
+
+@then('the tablespace is valid on the standby master')
+def impl(context):
+    context.tablespaces["outerspace"].verify(context.standby_hostname, context.standby_port)
 
 
 @then('the other tablespace is valid')

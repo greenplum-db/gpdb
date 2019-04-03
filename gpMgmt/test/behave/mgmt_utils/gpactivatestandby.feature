@@ -60,3 +60,17 @@ Feature: gpactivatestandby
         Then the user runs command "gpstate -m" from standby master
         And verify gpstate with options "-m" output is correct
         And clean up and revert back to original master
+
+    Scenario: tablespaces work
+        Given the database is running
+          And the standby is not initialized
+          And a tablespace is created with data
+         When the user runs gpinitstandby with options " "
+         Then gpinitstandby should return a return code of 0
+          And verify the standby master entries in catalog
+         When the master goes down
+          And the user runs gpactivatestandby with options " "
+         Then gpactivatestandby should return a return code of 0
+          And verify the standby master is now acting as master
+          And the tablespace is valid on the standby master
+          And clean up and revert back to original master
