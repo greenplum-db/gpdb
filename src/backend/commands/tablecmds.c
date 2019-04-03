@@ -1574,11 +1574,17 @@ ExecuteTruncate(TruncateStmt *stmt)
 	SubTransactionId mySubid;
 	ListCell   *cell;
 	List *partList = NIL;
+	List *relationsToTruncate = NIL;
+
+	/*
+	 * Copy list to ensure we do not modify a cached plan
+	 */
+	relationsToTruncate = list_copy(stmt->relations);
 
 	/*
 	 * Check if table has partitions and add them too
 	 */
-	foreach(cell, stmt->relations)
+	foreach(cell, relationsToTruncate)
 	{
 		RangeVar   *rv = lfirst(cell);
 		Relation	rel;
@@ -1596,12 +1602,12 @@ ExecuteTruncate(TruncateStmt *stmt)
 		heap_close(rel, NoLock);
 	}
 
-	stmt->relations = list_concat(partList, stmt->relations);
+	relationsToTruncate = list_concat(partList, relationsToTruncate);
 
 	/*
 	 * Open, exclusive-lock, and check all the explicitly-specified relations
 	 */
-	foreach(cell, stmt->relations)
+	foreach(cell, relationsToTruncate)
 	{
 		RangeVar   *rv = lfirst(cell);
 		Relation	rel;
