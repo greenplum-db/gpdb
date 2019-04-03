@@ -23,8 +23,12 @@ function _main() {
 		cat "$curdir/baseline/$f" >> baseline_combined.out
 	done
 
-	tar czvf explain_test_results.tar.gz results_combined.out baseline_combined.out
-	cp explain_test_results.tar.gz diffs/
+	tarball_name=explain_test_results.tar.gz
+	if [ ! -z "${prefix}" ]; then
+	    tarball_name="explain_test_${prefix}_results.tar.gz"
+	fi
+	tar czvf $tarball_name results_combined.out baseline_combined.out
+	cp $tarball_name diffs/
 	cp simple.diffs diffs/
 
 	echo "======================================================================"

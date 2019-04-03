@@ -65,35 +65,43 @@ class GpBuild(GpdbBuildBase):
             && source gpAux/gpdemo/gpdemo-env.sh && PGOPTIONS='-c optimizer={1}' \
             {2} \"".format(INSTALL_DIR, self.mode, make_command)], cwd="gpdb_src", shell=True)
 
-    def _run_gpdb_command(self, command, stdout=None, stderr=None):
-        runcmd = "runuser gpadmin -c \"source {0}/greenplum_path.sh \
-            && source gpdb_src/gpAux/gpdemo/gpdemo-env.sh && {1} \"".format(
-                INSTALL_DIR, command)
+    def _run_gpdb_command(self, command, stdout=None, stderr=None, source_env_cmd=''):
+        cmd = "source {0}/greenplum_path.sh && source gpdb_src/gpAux/gpdemo/gpdemo-env.sh".format(INSTALL_DIR)
+        if len(source_env_cmd) != 0:
+            #over ride the command if requested
+            cmd = source_env_cmd
+        runcmd = "runuser gpadmin -c \"{0} && {1} \"".format(cmd, command)
         print "Executing {}".format(runcmd)
         return subprocess.call([runcmd], shell=True, stdout=stdout, stderr=stderr)
 
-    def run_explain_test_suite(self):
-        status = self.create_demo_cluster()
-        fail_on_error(status)
-        status = self._run_gpdb_command("createdb")
-        fail_on_error(status)
-        status = self._run_gpdb_command("psql -f sql/schema.sql")
-        fail_on_error(status)
-
-        with open("load_stats.txt", "w") as f:
-            status = self._run_gpdb_command("psql -f sql/stats.sql", stdout=f)
-        if status:
-            with open("load_stats.txt", "r") as f:
-                print f.read()
+    def run_explain_test_suite(self, dbexists):
+        source_env_cmd = ''
+        if dbexists:
+            source_env_cmd='source {0}/greenplum_path.sh && source ~/.bash_profile '.format(INSTALL_DIR)
+        else:
+            status = self.create_demo_cluster()
             fail_on_error(status)
+            status = self._run_gpdb_command("createdb")
+            fail_on_error(status)
+            status = self._run_gpdb_command("psql -f sql/schema.sql")
+            fail_on_error(status)
+
+            with open("load_stats.txt", "w") as f:
+                status = self._run_gpdb_command("psql -f sql/stats.sql", stdout=f)
+            if status:
+                with open("load_stats.txt", "r") as f:
+                    print f.read()
+                fail_on_error(status)
 
         # Now run the queries !!
         os.mkdir('out')
+        status = 0
         for fsql in os.listdir("sql"):
             if fsql.endswith('.sql') and fsql not in ['stats.sql', 'schema.sql']:
                 output_fname = 'out/{}'.format(fsql.replace('.sql', '.out'))
                 with open(output_fname, 'w') as fout:
-                    self._run_gpdb_command("psql -a -f sql/{}".format(fsql), stdout=fout, stderr=fout)
+                    current_status = self._run_gpdb_command("psql -a -f sql/{}".format(fsql), stdout=fout, stderr=fout, source_env_cmd=source_env_cmd)
+                    status = status if status != 0 else current_status
                 with open(output_fname, 'r') as fout:
                     print fout.read()
 
