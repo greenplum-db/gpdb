@@ -348,7 +348,7 @@
             order to combine them into an ending internal state.</pd>
           <pd>Note that this function is also called in hash aggregate mode within a segment.
             Therefore, if you call this aggregate function without a combine function, hash
-            aggregate is never chosen. Since hash aggregate is efficient, consider defining combine
+            aggregate is never chosen. Since hash aggregate is efficient, consider defining a combine
             function whenever possible.</pd>
         </plentry>
       </parml></section>
@@ -416,12 +416,8 @@ Aggregate (cost=1.10..1.11 rows=1 width=32)  
       width=32)
      -&gt; Aggregate (cost=1.04..1.05 rows=1 width=32)
        -&gt; Seq Scan on t1 (cost=0.00..1.03 rows=2 width=8)
- (4 rows)</codeblock></section><section id="section8"><title>Compatibility</title><p>The SQL standard does not provide for user-defined aggregate functions.</p>
-      <p>The Greenplum Database <codeph>CREATE AGGREGATE</codeph> command is based on the PostgreSQL
-        command. Greenplum Database adds the <codeph><varname>combinefunc</varname></codeph>,
-            <codeph><varname>serialfunc</varname></codeph>, and
-            <codeph><varname>deserialfunc</varname></codeph> functions to allow aggregates to
-        execute on the segments in parallel. </p></section><section id="section9"><title>See Also</title><p><codeph><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
+ (4 rows)</codeblock></section><section id="section8"><title>Compatibility</title><p><codeph>CREATE AGGREGATE</codeph> is a Greenplum Database language extension. The SQL standard
+        does not provide for user-defined aggregate functions.</p></section><section id="section9"><title>See Also</title><p><codeph><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./DROP_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
         /></codeph></p></section></body></topic>
