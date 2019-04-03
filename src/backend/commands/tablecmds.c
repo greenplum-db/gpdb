@@ -1840,8 +1840,8 @@ ExecuteTruncate(TruncateStmt *stmt)
 			{
 				Relation toast_rel = relation_open(toast_relid, AccessExclusiveLock);
 				RelationSetNewRelfilenode(toast_rel, RecentXmin, minmulti);
-				if (rel->rd_rel->relpersistence == RELPERSISTENCE_UNLOGGED)
-					heap_create_init_fork(rel);
+				if (toast_rel->rd_rel->relpersistence == RELPERSISTENCE_UNLOGGED)
+					heap_create_init_fork(toast_rel);
 				heap_close(toast_rel, NoLock);
 			}
 
