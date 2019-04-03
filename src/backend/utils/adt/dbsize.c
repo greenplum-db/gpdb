@@ -472,12 +472,12 @@ pg_relation_size(PG_FUNCTION_ARGS)
 
 		fdwroutine = GetFdwRoutineForRelation(rel, false);
 
-		if (fdwroutine->AnalyzeForeignTable != NULL)
-			ok = fdwroutine->AnalyzeForeignTable(rel, NULL, &size);
+		if (fdwroutine->GetRelationSize != NULL)
+			ok = fdwroutine->GetRelationSize(rel, &size);
 
 		if (!ok)
 			ereport(WARNING,
-					(errmsg("skipping \"%s\" --- cannot analyze this foreign table",
+					(errmsg("skipping \"%s\" --- cannot calculate this foreign table size",
 							RelationGetRelationName(rel))));
 
 		relation_close(rel, AccessShareLock);
