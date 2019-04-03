@@ -60,6 +60,7 @@ def _write_datadir_config_for_three_mirrors():
     return datadir_config
 
 
+@when("gpaddmirrors adds 3 mirrors")
 def add_three_mirrors(context):
     datadir_config = _write_datadir_config_for_three_mirrors()
     mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
