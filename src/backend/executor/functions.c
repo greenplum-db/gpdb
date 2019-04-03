@@ -590,6 +590,9 @@ init_execution_state(List *queryTree_list,
 			else
 				stmt = (Node *) pg_plan_query(queryTree, 0, NULL);
 
+	 		if (IsA(stmt, PlannedStmt))
+				((PlannedStmt*)stmt)->metricsQueryType = FUNCTION_INNER_QUERY;
+
 			/*
 			 * Precheck all commands for validity in a function.  This should
 			 * generally match the restrictions spi.c applies.
@@ -918,7 +921,7 @@ postquel_start(execution_state *es, SQLFunctionCachePtr fcache)
 								 InvalidSnapshot,
 								 dest,
 								 fcache->paramLI,
-								 GP_INSTRUMENT_OPTS);
+								 INSTRUMENT_NONE);
 
 		/* GPDB hook for collecting query info */
 		if (query_info_collect_hook)

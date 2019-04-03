@@ -144,6 +144,11 @@ typedef struct PlannedStmt
 	 */
 	IntoClause *intoClause;
 	CopyIntoClause *copyIntoClause;
+
+	/* 
+ 	 * GPDB: whether a query is a SPI inner query for extension usage 
+ 	 */
+	uint		metricsQueryType;
 } PlannedStmt;
 
 /*

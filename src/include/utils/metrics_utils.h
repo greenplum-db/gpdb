@@ -15,6 +15,11 @@
 #ifndef METRICS_UTILS_H
 #define METRICS_UTILS_H 
 
+/* whether the query is a spi/function inner/top-level query or for extension usage */
+#define	TOP_LEVEL_QUERY 	 (0U)
+#define	SPI_INNER_QUERY 	 (1U)
+#define	FUNCTION_INNER_QUERY 	 (2U)
+
 typedef enum
 {	
 	METRICS_PLAN_NODE_INITIALIZE = 100,
@@ -26,7 +31,9 @@ typedef enum
 	METRICS_QUERY_DONE,
 	METRICS_QUERY_ERROR,
 	METRICS_QUERY_CANCELING,
-	METRICS_QUERY_CANCELED
+	METRICS_QUERY_CANCELED,
+
+	METRICS_INNER_QUERY_DONE = 300
 } QueryMetricsStatus;
 
 typedef void (*query_info_collect_hook_type)(QueryMetricsStatus, void *);

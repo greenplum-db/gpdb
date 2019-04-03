@@ -132,6 +132,7 @@ _copyPlannedStmt(const PlannedStmt *from)
 
 	COPY_NODE_FIELD(intoClause);
 	COPY_NODE_FIELD(copyIntoClause);
+	COPY_SCALAR_FIELD(metricsQueryType);
 
 	return newnode;
 }

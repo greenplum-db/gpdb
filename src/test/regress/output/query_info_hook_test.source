@@ -8,7 +8,7 @@ WARNING:  Query start
 WARNING:  Plan node initializing
 WARNING:  Plan node executing node_type: FUNCTIONSCAN
 WARNING:  Plan node finished
-WARNING:  Query Done
+WARNING:  Query done
  generate_series 
 -----------------
                1
@@ -49,14 +49,14 @@ WARNING:  Query start
 WARNING:  Plan node initializing
 WARNING:  Plan node executing node_type: RESULT
 WARNING:  Plan node finished
-WARNING:  Query Done
+WARNING:  Query done
 WARNING:  Query submit
 WARNING:  Query start
 WARNING:  Plan node initializing
 WARNING:  Plan node executing node_type: MOTION
 WARNING:  Plan node finished
 WARNING:  Plan node finished
-WARNING:  Query Done
+WARNING:  Query done
 -- Test Hash node
 CREATE TABLE tb_a(a int);
 SELECT a FROM tb_a WHERE a IN (SELECT max(a) FROM tb_a);
@@ -67,7 +67,7 @@ WARNING:  Plan node executing node_type: MOTION
 WARNING:  Plan node executing node_type: HASHJOIN
 WARNING:  Plan node executing node_type: HASH
 WARNING:  Plan node finished
-WARNING:  Query Done
+WARNING:  Query done
 WARNING:  Plan node finished
 WARNING:  Plan node finished
 WARNING:  Plan node finished
@@ -77,8 +77,98 @@ WARNING:  Plan node finished
 WARNING:  Plan node finished
 WARNING:  Plan node finished
 WARNING:  Plan node finished
-WARNING:  Query Done
+WARNING:  Query done
  a 
 ---
 (0 rows)
+
+DROP TABLE tb_a;
+-- Test SPI
+CREATE OR REPLACE FUNCTION spi_func() RETURNS setof record
+LANGUAGE plpgsql AS $$
+DECLARE
+    obj1 record;
+BEGIN
+    FOR obj1 IN SELECT * FROM tb_b
+    LOOP
+        RETURN next obj1;
+    END LOOP;
+    RETURN;
+END
+$$;
+SELECT * FROM spi_func() AS (a int) order by 1; 
+WARNING:  Query submit
+WARNING:  Query start
+WARNING:  Plan node initializing
+WARNING:  Plan node executing node_type: SORT
+WARNING:  Plan node executing node_type: FUNCTIONSCAN
+WARNING:  SPI inner query submit
+CONTEXT:  PL/pgSQL function spi_func() line 5 at FOR over SELECT rows
+WARNING:  SPI inner query start
+CONTEXT:  PL/pgSQL function spi_func() line 5 at FOR over SELECT rows
+WARNING:  Plan node of SPI inner query initializing
+CONTEXT:  PL/pgSQL function spi_func() line 5 at FOR over SELECT rows
+WARNING:  Plan node of SPI inner query executing node_type: MOTION
+CONTEXT:  PL/pgSQL function spi_func() line 5 at FOR over SELECT rows
+WARNING:  Plan node of SPI inner query finished
+CONTEXT:  PL/pgSQL function spi_func() line 5 at FOR over SELECT rows
+WARNING:  Plan node of SPI inner query finished
+CONTEXT:  PL/pgSQL function spi_func() line 5 at FOR over SELECT rows
+WARNING:  Inner query done
+CONTEXT:  PL/pgSQL function spi_func() line 5 at FOR over SELECT rows
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Query done
+ a  
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+(10 rows)
+
+-- Test function
+SELECT CASE WHEN information_schema._pg_truetypmod(a.*, b.*) > 0 THEN 0 ELSE 0 END
+FROM
+  (SELECT * FROM pg_catalog.pg_attribute LIMIT 1) a,
+  (SELECT * FROM pg_catalog.pg_type LIMIT 1) b
+;
+WARNING:  Query submit
+WARNING:  Query start
+WARNING:  Plan node initializing
+WARNING:  Plan node executing node_type: NESTLOOP
+WARNING:  Plan node executing node_type: LIMIT
+WARNING:  Plan node executing node_type: SEQSCAN
+WARNING:  Plan node executing node_type: MATERIAL
+WARNING:  Plan node executing node_type: LIMIT
+WARNING:  Plan node executing node_type: SEQSCAN
+WARNING:  function inner query submit
+CONTEXT:  SQL function "_pg_truetypmod" statement 1
+WARNING:  function inner query start
+CONTEXT:  SQL function "_pg_truetypmod" statement 1
+WARNING:  Plan node of function inner query initializing
+CONTEXT:  SQL function "_pg_truetypmod" statement 1
+WARNING:  Plan node of function inner query executing node_type: RESULT
+CONTEXT:  SQL function "_pg_truetypmod" statement 1
+WARNING:  Plan node of function inner query finished
+CONTEXT:  SQL function "_pg_truetypmod" statement 1
+WARNING:  Inner query done
+CONTEXT:  SQL function "_pg_truetypmod" statement 1
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Plan node finished
+WARNING:  Query done
+ case 
+------
+    0
+(1 row)
 
