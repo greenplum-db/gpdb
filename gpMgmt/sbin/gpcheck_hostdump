@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 '''
-USAGE:   gpcheck_hostdump [--appliance] [--linux] [--solaris]
+USAGE:   gpcheck_hostdump [--appliance] [--linux]
          where --appliance will do a dump of appliance server
          where --linux will do a dump of a generic linux server 
-         where --solaris will do a dump of a generic solaris server 
 '''
 
 import os, sys, re, tempfile, subprocess, pickle, glob, stat, time
@@ -11,10 +10,9 @@ import os, sys, re, tempfile, subprocess, pickle, glob, stat, time
 try:
     from optparse import Option, OptionParser 
     from gppylib.gpparseopts import OptParser, OptChecker
-    from gppylib.gpcheckutil import HostType, ApplianceOutputData, GenericLinuxOutputData, GenericSolarisOutputData
+    from gppylib.gpcheckutil import HostType, ApplianceOutputData, GenericLinuxOutputData
     from gppylib.gpcheckutil import chkconfig, omreport, grubconf, mounts, GpMount, GpMount, inittab, ntp
     from gppylib.gpcheckutil import securetty, ioschedulers, blockdev, bcu, rclocal, sysctl, limitsconf, limitsconf_entry, uname, connectemc
-    from gppylib.gpcheckutil import solaris_etc_system, solaris_etc_project, solaris_etc_user_attr
 except ImportError, e:    
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -640,90 +638,6 @@ def collectSecuretty():
     
     return data
         
-# returns poulated object of type: solaris_etc_system
-def collectSolarisEtcSystem():
-
-    # create dictionary
-    data = solaris_etc_system()
-
-    # comments begin with either a * or #
-    # lines we care about look like: set rlim_fd_max=262144
-
-    try:
-        for line in open("/etc/system", "r"):
-
-            line = line.strip()
-            if line.startswith("#"):
-                continue
-            if line.startswith("*"):
-                continue
-            words = line.split("set ")
-            if len(words) != 2:
-                continue
-            words = words[1].split("=")
-            if len(words) != 2:
-                continue
-            key = words[0].strip()
-            value = words[1].strip()
-            data.parameters[key] = value
-
-    except Exception, e:
-        data.errormsg = e.__str__()
-
-    return data
-
-# returns poulated object of type: solaris_etc_project
-def collectSolarisEtcProject():
-    
-    # store list of lines
-    # ignore lines that start with # or do not contain :
-    data = solaris_etc_project()
-
-    try:
-        for line in open("/etc/project", "r"):
-
-            val = line.strip()
-            if val.startswith("#"):
-                continue
-            if not re.search(":", val):
-                continue
-            data.lines.append(val)
-
-    except Exception, e:
-        data.errormsg = e.__str__()
-
-    return data
-
-# returns poulated object of type: solaris_etc_user_attr
-def collectSolarisEtcUserAttr():
-
-    # store list of lines
-    # ignore lines that start with # or do not contain :
-    data = solaris_etc_user_attr()
-
-    try:
-        for line in open("/etc/user_attr", "r"):
-
-            val = line.strip()
-            if val.startswith("#"):
-                continue
-            if not re.search(":", val):
-                continue
-            data.lines.append(val)
-
-    except Exception, e:
-        data.errormsg = e.__str__()
- 
-    return data
-
-def processGenericSolarisServer():
-    global output
-    output = GenericSolarisOutputData()
-    output.etc_system = collectSolarisEtcSystem()
-    output.etc_project = collectSolarisEtcProject()
-    output.etc_user_attr = collectSolarisEtcUserAttr()
-    output.uname = collectUname()
-
 def processGenericLinuxServer():
 
     global output
@@ -767,7 +681,6 @@ def parseargs():
     parser.add_option('-h', '-?', '--help', action='store_true')
     parser.add_option('--appliance',  action='store_true')
     parser.add_option('--linux',  action='store_true')
-    parser.add_option('--solaris',  action='store_true')
     (options, args) = parser.parse_args()
 
     global gphome
@@ -779,9 +692,6 @@ def parseargs():
     if options.help:
         print __doc__
         return True
-
-    if options.solaris:
-        hosttype = HostType.GPCHECK_HOSTTYPE_GENERIC_SOLARIS
 
     if options.linux:
         hosttype = HostType.GPCHECK_HOSTTYPE_GENERIC_LINUX
@@ -803,8 +713,6 @@ if hosttype == HostType.GPCHECK_HOSTTYPE_APPLIANCE:
     processApplianceServer()
 elif hosttype == HostType.GPCHECK_HOSTTYPE_GENERIC_LINUX:
     processGenericLinuxServer()
-elif hosttype == HostType.GPCHECK_HOSTTYPE_GENERIC_SOLARIS:
-    processGenericSolarisServer()
    
 (fd, filename) = tempfile.mkstemp(dir='/tmp', prefix='gpcheck_dump', text=True)
 fd = open(filename, "wb")

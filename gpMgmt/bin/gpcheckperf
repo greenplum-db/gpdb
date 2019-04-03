@@ -127,8 +127,6 @@ def getPlatform():
         return 'linux'
     if sys.platform.find('darwin') >= 0:
         return 'darwin'
-    if sys.platform.find('sunos5') >= 0:
-        return 'sunos5'
     return '?'
 
 
@@ -151,17 +149,6 @@ def getMemory():
         word_list = out.strip().split(' ')
         val = int(word_list[1])
         return val
-
-    if getPlatform() == 'sunos5':
-        ok, out = run("sh -c \"/usr/sbin/prtconf | awk '/^Memory/{print}'\"")
-        if not ok:
-            return 0
-        word_list = out.strip().split(' ')
-        val = int(word_list[2])
-        factor = word_list[3]
-        if factor == 'Megabytes':
-            return val * 1024 * 1024
-        return 0
 
     return 0
 

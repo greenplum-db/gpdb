@@ -4,9 +4,6 @@ include $(top_builddir)/src/Makefile.global
 
 BLD_OS := $(shell uname -s)
 BLD_OS_VER := $(shell uname -r)
-ifneq "$(findstring $(BLD_OS)-$(BLD_OS_VER),SunOS-5.8 SunOS-5.9)" ""
-BLD_CPPFLAGS_SOLARIS_OLD_VERSIONS=-D_REENTRANT
-endif
 
 ifdef srcdir
 INCDIR= $(srcdir)/include
@@ -26,7 +23,7 @@ OBJS = mapred_test.o
 
 include $(top_srcdir)/src/Makefile.shlib
 
-override CPPFLAGS += $(BLD_CPPFLAGS_SOLARIS_OLD_VERSIONS) -I$(SRCDIR) -I$(INCDIR) -I$(libpq_srcdir)
+override CPPFLAGS += -I$(SRCDIR) -I$(INCDIR) -I$(libpq_srcdir)
 
 FILES     = main.o mapred.o parse.o yaml_scan.o yaml_parse.o 
 GENFILES  = yaml_parse.h yaml_parse.c yaml_scan.c yaml_scan.h

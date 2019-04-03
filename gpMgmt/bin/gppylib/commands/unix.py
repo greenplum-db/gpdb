@@ -22,12 +22,11 @@ logger = get_default_logger()
 # global variable for our platform
 SYSTEM = "unknown"
 
-SUNOS = "sunos"
 LINUX = "linux"
 DARWIN = "darwin"
 FREEBSD = "freebsd"
 OPENBSD = "openbsd"
-platform_list = [SUNOS, LINUX, DARWIN, FREEBSD, OPENBSD]
+platform_list = [LINUX, DARWIN, FREEBSD, OPENBSD]
 
 curr_platform = platform.uname()[0].lower()
 
@@ -245,23 +244,6 @@ class LinuxPlatform(GenericPlatform):
 
     def getPing6(self):
         return findCmdInPath('ping6')
-
-
-class SolarisPlatform(GenericPlatform):
-    def __init__(self):
-        pass
-
-    def getName(self):
-        return "sunos"
-
-    def getDiskFreeCmd(self):
-        return findCmdInPath('df') + " -bk"
-
-    def getTarCmd(self):
-        return findCmdInPath('gtar')
-
-    def getIfconfigCmd(self):
-        return findCmdInPath('ifconfig') + ' -a inet'
 
 
 class DarwinPlatform(GenericPlatform):
@@ -718,9 +700,7 @@ def getDescendentProcesses(pid):
 
 # --------------global variable initialization ----------------------
 
-if curr_platform == SUNOS:
-    SYSTEM = SolarisPlatform()
-elif curr_platform == LINUX:
+if curr_platform == LINUX:
     SYSTEM = LinuxPlatform()
 elif curr_platform == DARWIN:
     SYSTEM = DarwinPlatform()

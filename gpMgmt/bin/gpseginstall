@@ -121,8 +121,8 @@ def parseargs():
         logger.error("GPHOME not set")
         return True
 
-    if SYSTEM.getName() != "linux" and SYSTEM.getName() != "sunos":
-        logger.error("This utility is only supported on the linux and solaris operating system")
+    if SYSTEM.getName() != "linux":
+        logger.error("This utility is only supported on the linux operating system")
         return True
 
     if SYSTEM.getName() == "linux":

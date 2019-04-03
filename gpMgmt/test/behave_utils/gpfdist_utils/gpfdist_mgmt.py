@@ -30,8 +30,6 @@ class Gpfdist:
         self.host = remoteHost
         self.ps_command = 'ps'
         self.source_file = remote_source_file
-        if platform.system() in ['SunOS']:
-            self.ps_command = '/bin/ps'
 
     def startGpfdist(self):
         if self.host in ('127.0.0.1',socket.gethostbyname(socket.gethostname()),socket.gethostname(),'localhost'):

@@ -985,7 +985,7 @@ def impl(context, second):
 
 
 def get_opened_files(filename, pidfile):
-    cmd = "if [ `uname -s` = 'SunOS' ]; then CMD=pfiles; else CMD='lsof -p'; fi && PATH=$PATH:/usr/bin:/usr/sbin $CMD `cat %s` | grep %s | wc -l" % (
+    cmd = "PATH=$PATH:/usr/bin:/usr/sbin lsof -p `cat %s` | grep %s | wc -l" % (
     pidfile, filename)
     return commands.getstatusoutput(cmd)
 

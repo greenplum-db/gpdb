@@ -10,7 +10,6 @@ try:
     from gppylib import gplog, pgconf
     from gppylib.commands import gp
     from gppylib.commands.base import Command, ExecutionError
-    from gppylib.commands.unix import curr_platform, SUNOS
     from gppylib.db import dbconn
     from gppylib.gparray import GpArray
     from gppylib.gpversion import GpVersion
@@ -189,10 +188,6 @@ class GpPkgProgram:
             else:
                 BuildGppkg(self.build, None).run()
             return
-
-        #Check for RPM and Solaris OS
-        if curr_platform == SUNOS:
-            raise ExceptionNoStackTraceNeeded('gppkg is not supported on Solaris')
 
         if platform.linux_distribution()[0] == 'Ubuntu':
             try:
