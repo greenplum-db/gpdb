@@ -56,6 +56,19 @@ Feature: Tests for gpmovemirrors
         And the segments are synchronized
         And verify that mirrors are recognized after a restart
 
+    Scenario: tablespaces work
+        Given a standard local demo cluster is created
+          And a tablespace is created with data
+          And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+          And a 'good' gpmovemirrors file is created
+         When the user runs gpmovemirrors
+         Then gpmovemirrors should return a return code of 0
+          And verify the database has mirrors
+          And all the segments are running
+          And the segments are synchronized
+          And verify that mirrors are recognized after a restart
+          And the tablespace is valid
+
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 
