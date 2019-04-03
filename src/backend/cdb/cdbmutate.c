@@ -2697,6 +2697,12 @@ void assign_plannode_id(PlannedStmt *stmt)
 	}
 }
 
+static bool
+targetlist_matches_lefttree_targetlist(Plan plan)
+{
+    return tlist_same_exprs(plan.targetlist, plan.lefttree->targetlist);
+}
+
 /* 
  * We can "zap" a Result node if it has an Append node as its left tree and
  * no other complications (initplans, etc.) and its target list is
@@ -2714,6 +2720,14 @@ static bool can_zap_result(Result *res)
 	  )
 		return false;
 
+	/*
+	 * We cannot zap a result node if the target lists do not match
+	 * The result node is responsible for providing the correct target 
+	 * list to the append node.
+	 */
+	if (!targetlist_matches_lefttree_targetlist(res->plan))
+  	    return false;
+	
 	foreach(lc, res->plan.targetlist)
 	{
 		TargetEntry *te = (TargetEntry *) lfirst(lc);

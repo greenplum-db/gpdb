@@ -31,7 +31,7 @@ extern TargetEntry *tlist_member_ignoring_RelabelType(Expr *expr, List *targetli
 extern List *flatten_tlist(List *tlist);
 extern List *add_to_flat_tlist(List *tlist, List *vars, bool resjunk);
 
-// Added to Greenplum while tracking Postgres REL9_4_STABLE
+// Added to Greenplum while tracking Postgres 8.3.23
 extern bool tlist_same_exprs(List *tlist1, List *tlist2);
 
 extern TargetEntry *get_sortgroupref_tle(Index sortref,
