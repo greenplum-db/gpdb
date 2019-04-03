@@ -1,6 +1,19 @@
 @gpaddmirrors
 Feature: Tests for gpaddmirrors
 
+    Scenario: tablespaces work
+        Given the cluster is generated with "3" primaries only
+          And a tablespace is created with data
+         When gpaddmirrors adds 3 mirrors
+          And an FTS probe is triggered
+          And the segments are synchronized
+         Then verify the database has mirrors
+          And the tablespace is valid
+
+         When user kills all primary processes
+          And user can start transactions
+         Then the tablespace is valid
+
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 
