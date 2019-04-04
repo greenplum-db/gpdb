@@ -312,6 +312,11 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col3"/>
             </row>
             <row>
+              <entry><codeph>ALTER SYSTEM</codeph></entry>
+              <entry><b>NO</b></entry>
+              <entry/>
+            </row>
+            <row>
               <entry colname="col1"><codeph>ALTER TABLE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Unsupported Clauses / Options:</b><p><codeph>CLUSTER
