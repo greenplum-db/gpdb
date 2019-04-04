@@ -254,3 +254,8 @@ CREATE TEMP TABLE explicitly_temp (a int primary key);			-- also OK
 CREATE TEMP TABLE pg_temp.doubly_temp (a int primary key);		-- also OK
 CREATE TEMP TABLE public.temp_to_perm (a int primary key);		-- not OK
 DROP TABLE unlogged1, public.unlogged2;
+
+-- Test github issue #7340. truncating a toast unlogged table fails.
+CREATE UNLOGGED TABLE unlogged_toast (a text);
+TRUNCATE unlogged_toast;
+DROP TABLE unlogged_toast;
