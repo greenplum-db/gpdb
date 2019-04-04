@@ -6,6 +6,29 @@ CREATE
 create unlogged table unlogged_heap_table_managers ( id int, name text ) distributed by (id);
 CREATE
 
+-- skip FTS probes to make the test deterministic.
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ t                        
+(1 row)
+SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+SELECT gp_wait_until_triggered_fault('fts_probe', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ t                             
+(1 row)
 
 -- expect: insert/update/select works
 insert into unlogged_heap_table_managers values (1, 'Joe');
@@ -59,3 +82,8 @@ UPDATE 1
 5: drop table unlogged_heap_table_managers;
 DROP
 
+SELECT gp_inject_fault('fts_probe', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ t               
+(1 row)
