@@ -248,7 +248,7 @@ select count(*) = 2 as mirror_up from gp_segment_configuration
 -- make sure leave the test only after mirror is in sync to avoid
 -- affecting other tests. Thumb rule: leave cluster in same state as
 -- test started.
-select wait_for_mirror_sync((select dbid::smallint from gp_segment_configuration c where c.role='p' and c.content=0));
+select wait_for_mirror_sync(0::smallint);
  wait_for_mirror_sync 
 ----------------------
  
