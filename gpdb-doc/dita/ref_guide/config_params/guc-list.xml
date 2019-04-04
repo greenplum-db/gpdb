@@ -5886,6 +5886,12 @@
         <codeph>statement_timeout</codeph> is nonzero, it is rather pointless
         to set <codeph>lock_timeout</codeph> to the same or larger value,
         since the statement timeout would always trigger first.</p>
+      <p>Greenplum Database uses the <codeph><xref href="#deadlock_timeout" format="dita"/></codeph>
+        and <codeph><xref href="#gp_global_deadlock_detector_period" format="dita"/></codeph>
+        to trigger local and global deadlock detection. Note that if <codeph>lock_timeout</codeph>
+        is turned on and set to a value smaller than these deadlock detection
+        timeouts, Greenplum Database will abort a statement before it would 
+        ever trigger a deadlock check in that session.</p>
       <note>Setting <codeph>lock_timeout</codeph> in <codeph>postgresql.conf</codeph>
         is not recommended because it would affect all sessions</note>
       <table id="lock_timeout_table">

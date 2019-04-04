@@ -373,6 +373,13 @@
         detection. Because the local and global deadlock detection algorithms differ, the cancelled
         process(es) may differ depending upon which detector (local or global) Greenplum Database
         triggers first.</note>
+       <note>If the <codeph><xref
+            href="../ref_guide/config_params/guc-list.xml#lock_timeout" type="section"
+            >lock_timeout</xref></codeph> server configuration parameter
+         is turned on and set to a value smaller than <codeph>deadlock_timeout</codeph>
+         and <codeph>gp_global_deadlock_detector_period</codeph>, Greenplum Database
+         will abort a statement before it would ever trigger a deadlock check in that
+         session.</note>
       <p>To view lock waiting information for all segments, run the
           <codeph>pg_dist_wait_status()</codeph> user-defined function. You can use the output of
         this function to determine which transactions are waiting on locks, which transactions are
