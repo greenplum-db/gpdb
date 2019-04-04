@@ -307,6 +307,13 @@ main(int argc, char **argv)
 		exit_nicely(1);
 	}
 
+	/* Complain if neither -f nor -d was specified (except if dumping TOC) */
+	if (!opts->dbname && !opts->filename && !opts->tocSummary)
+	{
+		write_msg(NULL,"one of -d/--dbname and -f/--file must be specified\n");
+		exit_nicely(1);
+	}
+
 	/* Should get at most one of -d and -f, else user is confused */
 	if (opts->dbname)
 	{
