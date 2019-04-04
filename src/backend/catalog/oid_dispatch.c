@@ -112,6 +112,7 @@
 #include "nodes/pg_list.h"
 #include "executor/execdesc.h"
 #include "utils/memutils.h"
+#include "utils/rbtree.h"
 #include "miscadmin.h"
 
 /* #define OID_DISPATCH_DEBUG */
@@ -144,10 +145,16 @@ static List *dispatch_oids = NIL;
 
 /*
  * These will be used by the schema restoration process during binary upgrade,
- * so any new object must not use any Oid on this list or else there will be
- * collisions.
+ * so any new object must not use any Oid in this structure or else there will
+ * be collisions.
  */
-static List *binary_upgrade_preassigned_oids = NIL;
+typedef struct
+{
+	RBNode		rbnode;
+	Oid			oid;
+} OidPreassignment;
+
+static RBTree *binary_upgrade_preassigned_oids;
 
 /*
  * Create an OidAssignment struct, for a catalog table tuple.
@@ -797,6 +804,42 @@ GetPreassignedOidForType(Oid namespaceOid, const char *typname,
  */
 
 /*
+ * Support functions for the Red-Black Tree which is used to keep the Oid
+ * preassignments from the schema restore process during binary upgrade.
+ */
+static int
+rbtree_cmp(const RBNode *a, const RBNode *b, void *arg)
+{
+	const OidPreassignment *prea = (const OidPreassignment *) a;
+	const OidPreassignment *preb = (const OidPreassignment *) b;
+
+	return prea->oid - preb->oid;
+}
+
+static RBNode *
+rbtree_alloc(void *arg)
+{
+	return (RBNode *) palloc(sizeof(OidPreassignment));
+}
+
+static void
+rbtree_free(RBNode *node, void *arg)
+{
+	pfree(node);
+}
+
+/*
+ * The RB Tree combiner function will be called when a new node has the same
+ * key as an existing node (when rbtree_alloc() returns zero). For this
+ * particular usecase the only value we have is the key, so make it a no-op.
+ */
+static void
+rbtree_combine(RBNode *existing __attribute__((unused)), const RBNode *new __attribute__((unused)), void *arg)
+{
+	return;
+}
+
+/*
  * Remember an Oid which will be used in schema restoration during binary
  * upgrade, such that we can prohibit any new object to consume Oids which
  * will lead to collision.
@@ -805,6 +848,8 @@ void
 MarkOidPreassignedFromBinaryUpgrade(Oid oid)
 {
 	MemoryContext		oldcontext;
+	OidPreassignment	node;
+	bool				isnew;
 
 	if (!IsBinaryUpgrade)
 		elog(ERROR, "MarkOidPreassignedFromBinaryUpgrade called, but not in binary upgrade mode");
@@ -814,13 +859,18 @@ MarkOidPreassignedFromBinaryUpgrade(Oid oid)
 
 	oldcontext = MemoryContextSwitchTo(TopMemoryContext);
 
-	/*
-	 * A list is hardly the best data structure for this as the number of OIDs
-	 * kept here can be quite high for a large schema. Implementing a better
-	 * store which enables quick lookups is a TODO for now.
-	 */
-	binary_upgrade_preassigned_oids =
-		lappend_oid(binary_upgrade_preassigned_oids, oid);
+	if (!binary_upgrade_preassigned_oids)
+	{
+		binary_upgrade_preassigned_oids = rb_create(sizeof(OidPreassignment),
+													rbtree_cmp,
+													rbtree_combine,
+													rbtree_alloc,
+													rbtree_free,
+													NULL);
+	}
+
+	node.oid = oid;
+	rb_insert(binary_upgrade_preassigned_oids, (RBNode *) &node, &isnew);
 
 	MemoryContextSwitchTo(oldcontext);
 }
@@ -1019,6 +1069,7 @@ bool
 IsOidAcceptable(Oid oid)
 {
 	ListCell *lc;
+	OidPreassignment pre;
 
 	foreach(lc, preassigned_oids)
 	{
@@ -1028,5 +1079,9 @@ IsOidAcceptable(Oid oid)
 			return false;
 	}
 
-	return !(list_member_oid(binary_upgrade_preassigned_oids, oid));
+	if (binary_upgrade_preassigned_oids == NULL)
+		return true;
+
+	pre.oid = oid;
+	return (rb_find(binary_upgrade_preassigned_oids, (RBNode *) &pre) == NULL);
 }
