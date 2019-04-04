@@ -74,15 +74,16 @@ Mirror Data Directory Location: %s' % (self.host, self.port, self.datname,
 
 def create_restartpoint_on_ckpt_record_replay(set):
     if set:
-        cmd = "gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation; gpstop -u"
+        cmd = "gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation && gpstop -u"
     else:
-        cmd = "gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation; gpstop -u"
+        cmd = "gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation && gpstop -u"
     print cmd
     try:
         res = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
         print res
     except subprocess.CalledProcessError, e:
         print 'returncode: (%s), cmd: (%s), output: (%s)' % (e.returncode, e.cmd, e.output)
+        sys.exit(2)
 
 def install_extension(databases):
     get_datname_sql = ''' SELECT datname FROM pg_database WHERE datname != 'template0' '''
