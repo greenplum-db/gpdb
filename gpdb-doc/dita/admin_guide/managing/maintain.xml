@@ -276,15 +276,27 @@ VACUUM cust_info;</codeblock></p>
       <title id="np157220">Database Server Log Files</title>
       <body>
         <p>Greenplum Database log output tends to be voluminous, especially at higher debug levels,
-          and you do not need to save it indefinitely. Administrators rotate the log files
-          periodically so new log files are started and old ones are removed.</p>
-        <p>Greenplum Database has log file rotation enabled on the master and all segment instances.
-          Daily log files are created in the <codeph>pg_log</codeph> subdirectory of the master and
-          each segment data directory using the following naming convention:
-              <codeph>gpdb-<i>YYYY</i>-<i>MM</i>-<i>DD_hhmmss</i>.csv</codeph>. Although log files
-          are rolled over daily, they are not automatically truncated or deleted. Administrators
-          need to implement scripts or programs to periodically clean up old log files in the
+          and you do not need to save it indefinitely. Administrators should purge older log files
+          periodically.</p>
+        <p>Greenplum Database by default has log file rotation enabled for the master and segment
+          database logs. Log files are created in the <codeph>pg_log</codeph> subdirectory of the
+          master and each segment data directory using the following naming convention:
+              <codeph>gpdb-<i>YYYY</i>-<i>MM</i>-<i>DD_hhmmss</i>.csv</codeph>. Administrators need
+          to implement scripts or programs to periodically clean up old log files in the
             <codeph>pg_log</codeph> directory of the master and each segment instance.</p>
+        <p>Log rotation can be triggered by the size of the current log file or the age of the
+          current log file. The <codeph>log_rotation_size</codeph> configuration parameter sets the
+          size of an individual log file that triggers log rotation. When the log file size is equal
+          to or greater than the specified size, the file is closed and a new log file is created.
+          The <codeph>log_rotation_size</codeph> value is specified in kilobytes. The default is
+          1048576 kilobytes, or 1GB. If <codeph>log_rotation_size</codeph> is set to 0, size-based
+          rotation is disabled.</p>
+        <p>The <codeph>log_rotation_age</codeph> configuration parameter specifies the age of a log
+          file that triggers rotation. When the specified amount of time has elapsed since the log
+          file was created, the file is closed and a new log file is created. The default
+            <codeph>log_rotation_age</codeph>, 1d, creates a new log file 24 hours after the current
+          log file was created. If <codeph>log_rotation_age</codeph> is set to 0, time-based
+          rotation is disabled.</p>
         <p>For information about viewing the database server log files, see <xref
             href="monitor.xml#topic28" type="topic" format="dita"/>.</p>
       </body>

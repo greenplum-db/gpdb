@@ -6250,8 +6250,8 @@
   <topic id="log_rotation_age">
     <title>log_rotation_age</title>
     <body>
-      <p>Determines the maximum lifetime of an individual log file. After this time has elapsed, a
-        new log file will be created. Set to zero to disable time-based creation of new log
+      <p>Determines the lifetime of an individual log file. When this amount of time has elapsed, 
+        the file is closed and a new log file is created. Set to zero to disable time-based creation of new log
         files.</p>
       <table id="log_rotation_age_table">
         <tgroup cols="3">
@@ -6279,9 +6279,9 @@
   <topic id="log_rotation_size">
     <title>log_rotation_size</title>
     <body>
-      <p>Determines the maximum size of an individual log file. After this many kilobytes have been
-        emitted into a log file, a new log file will be created. Set to zero to disable size-based
-        creation of new log files.</p>
+      <p>Determines the size of an individual log file that triggers rotation. When the log file
+        size is equal to or greater than this size, the file is closed and a new log file is
+        created. Set to zero to disable size-based creation of new log files. </p>
       <p>The maximum value is INT_MAX/1024. If an invalid value is specified, the default value is
         used. INT_MAX is the largest value that can be stored as an integer on your system. </p>
       <table id="log_rotation_size_table">
@@ -6299,7 +6299,7 @@
           <tbody>
             <row>
               <entry colname="col1">number of kilobytes</entry>
-              <entry colname="col2">0</entry>
+              <entry colname="col2">1048576</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>

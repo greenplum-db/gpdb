@@ -673,6 +673,17 @@
             </row>
             <row>
               <entry>
+                <p>log_rotation_size</p>
+              </entry>
+              <entry>0 - INT_MAX/1024 kilobytes</entry>
+              <entry>1048576</entry>
+              <entry>
+                <p>When greater than 0, a new log file is created when this number of kilobytes have
+                  been written to the log. </p>
+              </entry>
+            </row>
+            <row>
+              <entry>
                 <p> log_rotation_age </p>
               </entry>
               <entry>
@@ -682,9 +693,9 @@
                 <p> 1d </p>
               </entry>
               <entry>
-                <p> Determines the maximum lifetime of an individual log file. After this time has
-                  elapsed, a new log file will be created. Set to zero to disable time-based
-                  creation of new log files. </p>
+                <p> Determines the lifetime of an individual log file. When this amount of time has
+                  elapsed since the current log file was created, a new log file will be created.
+                  Set to zero to disable time-based creation of new log files. </p>
               </entry>
             </row>
             <row>

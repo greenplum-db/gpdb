@@ -118,9 +118,14 @@
     <p>To search log files on the segment hosts, use the Greenplum <codeph>gplogfilter</codeph>
       utility with <codeph>gpssh</codeph> to connect to segment hosts from the master host. You can
       identify corresponding log entries in segment logs by the <codeph>statement_id</codeph>. </p>
-    <p>The <codeph>log_rotation_age</codeph> configuration parameter specifies when a new log file
-      is automatically created while a database instance is running. By default, a new log file is
-      created every day. </p>
+    <p>Greenplum Database can be configured to rotate database logs based on the size or age of the
+      current log file. The <codeph>log_rotation_size</codeph> configuration parameter sets the size
+      of an individual log file that triggers rotation. When the current log file size is equal to
+      or greater than this size, the file is closed and a new log file is created. The
+        <codeph>log_rotation_age</codeph> configuration parameter specifies the age of the current
+      log file that triggers rotation. When the specified time has elapsed since the current log
+      file was created, a new log file is created. The default <codeph>log_rotation_age</codeph>,
+      1d, creates a new log file 24 hours after the current log file was created.</p>
 
   </body>
 </topic>
