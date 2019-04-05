@@ -17,4 +17,4 @@ endif
 # GPDB_94_MERGE_FIXME: Enable btree, gin and gist when physical and logical
 # order is equivalent.
 installcheck: install
-	gp_replica_check.py -r="heap, sequence, ao"
+	time gp_replica_check.py -r="heap, sequence, ao"

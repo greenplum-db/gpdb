@@ -159,7 +159,7 @@ $(call recurse,installcheck-world, \
 .PHONY: installcheck-gpcheckcat
 installcheck-world: installcheck-gpcheckcat
 installcheck-gpcheckcat:
-	gpcheckcat -A
+	time gpcheckcat -A
 $(call recurse,installcheck-world,gpcontrib/gp_replica_check,installcheck)
 $(call recurse,installcheck-world,contrib/pg_upgrade,check)
 

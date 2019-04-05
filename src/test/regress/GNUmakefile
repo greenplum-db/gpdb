@@ -193,7 +193,7 @@ check-tests: all tablespace-setup
 installcheck: installcheck-good
 
 installcheck-good: all twophase_pqexecparams hooktest query_info_hook_test
-	$(pg_regress_installcheck) $(REGRESS_OPTS)  --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --ao-dir=uao $(EXTRA_TESTS)
+	time $(pg_regress_installcheck) $(REGRESS_OPTS)  --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --ao-dir=uao $(EXTRA_TESTS)
 
 installcheck-parallel: all tablespace-setup
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule $(MAXCONNOPT) $(EXTRA_TESTS)
