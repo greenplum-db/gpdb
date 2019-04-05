@@ -2,9 +2,6 @@
 top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 
-BLD_OS := $(shell uname -s)
-BLD_OS_VER := $(shell uname -r)
-
 ifdef srcdir
 INCDIR= $(srcdir)/include
 SRCDIR= $(srcdir)/src
