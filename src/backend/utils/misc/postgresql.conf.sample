@@ -111,7 +111,8 @@
 					# 0 selects the system default
 #tcp_keepalives_count = 0		# TCP_KEEPCNT;
 					# 0 selects the system default
-
+#tcp_user_timeout = 0			# TCP_USER_TIMEOUT, in milliseconds;
+					# 0 selects the system default
 
 #------------------------------------------------------------------------------
 # RESOURCE USAGE (except WAL)

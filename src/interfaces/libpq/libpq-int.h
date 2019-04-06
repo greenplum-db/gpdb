@@ -350,6 +350,7 @@ struct pg_conn
 								 * displayed (OBSOLETE, NOT USED) */
 	char	   *connect_timeout;	/* connection timeout (numeric string) */
 	char	   *client_encoding_initial;		/* encoding to use */
+	char	   *pgtcp_user_timeout; /* tcp user timeout (numeric string) */
 	char	   *pgoptions;		/* options to start the backend with */
 	char	   *appname;		/* application name */
 	char	   *fbappname;		/* fallback application name */

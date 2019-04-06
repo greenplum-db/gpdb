@@ -398,6 +398,7 @@ extern bool gp_encoding_check_locale_compatibility;
 extern int	tcp_keepalives_idle;
 extern int	tcp_keepalives_interval;
 extern int	tcp_keepalives_count;
+extern int	tcp_user_timeout;
 
 extern int	gp_connection_send_timeout;
 
