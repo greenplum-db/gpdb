@@ -359,31 +359,28 @@ def parse_gpmovemirrors_line(filename, lineno, line):
     """
     Parse a line in the gpmovemirrors configuration file other than the first.
 
-    >>> line = "[::1]:40001:/Users/ctaylor/data/m2/gpseg1 [::2]:40101:50101:/Users/ctaylor/data/m2/gpseg1:/fs1"
-    >>> fixed, flex = parse_gpmovemirrors_line('file', 1, line, ['fs1'])
-    >>> fixed["oldAddress"], fixed["newAddress"]
+    >>> line = "[::1]:40001:/Users/ctaylor/data/m2/gpseg1 [::2]:40101:/Users/ctaylor/data/m2/gpseg1"
+    >>> rows = parse_gpmovemirrors_line('file', 1, line)
+    >>> rows["oldAddress"], rows["newAddress"]
     ('::1', '::2')
-    >>> flex
-    {'fs1': '/fs1'}
 
     """
     groups = len(line.split())
     if groups != 2:
         msg = "need two groups of fields delimited by a space for old and new mirror, not %d" % groups
         raise ExceptionNoStackTraceNeeded("%s:%s:%s LINE >>%s\n%s" % (filename, lineno, caller(), line, msg))
-    fixed = {}
-    flexible = {}
+    rows = {}
     p = LineParser(caller(), filename, lineno, line)
-    p.handle_field('[oldAddress]', fixed) # [oldAddress] indicates possible IPv6 address
-    p.handle_field('oldPort', fixed)
-    p.handle_field('oldDataDirectory', fixed, delimiter=' ', stripchars=' \t') # MPP-15675 note stripchars here and next line
-    p.handle_field('[newAddress]', fixed, stripchars=' \t') # [newAddress] indicates possible IPv6 address
-    p.handle_field('newPort', fixed)
-    p.handle_field('newDataDirectory', fixed)
+    p.handle_field('[oldAddress]', rows) # [oldAddress] indicates possible IPv6 address
+    p.handle_field('oldPort', rows)
+    p.handle_field('oldDataDirectory', rows, delimiter=' ', stripchars=' \t') # MPP-15675 note stripchars here and next line
+    p.handle_field('[newAddress]', rows, stripchars=' \t') # [newAddress] indicates possible IPv6 address
+    p.handle_field('newPort', rows)
+    p.handle_field('newDataDirectory', rows)
     if p.rest is not None:
         msg = "unexpected characters after mirror fields >>%s" % p.rest
         raise ExceptionNoStackTraceNeeded("%s:%s:%s LINE >>%s\n%s" % (filename, lineno, caller(), line, msg))
-    return fixed, flexible
+    return rows
 
 
 ################

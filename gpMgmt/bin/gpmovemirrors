@@ -176,31 +176,14 @@ def lookupGpdb(address, port, dataDirectory):
 
 
 # -------------------------------------------------------------------------
-def lookupFilespaces(gpdb):
-    """ Look up the segment's filespaces, and return map of filespace name : location. """
-
-    retValue = {}
-    gpdbFilespaceDict = gpdb.getSegmentFilespaces()
-
-    for oid in gpdbFilespaceDict:
-        if oid == SYSTEM_FILESPACE:
-            continue
-        name = gpArrayInstance.getFileSpaceName(oid)
-        location = gpdbFilespaceDict[oid]
-        retValue[name] = location
-    return retValue
-
-
-# -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 class Mirror:
     """ This class represents information about a mirror. """
 
-    def __init__(self, address, port, dataDirectory, filespaces):
+    def __init__(self, address, port, dataDirectory):
         self.address = address
         self.port = port
         self.dataDirectory = dataDirectory
-        self.filespaces = filespaces
 
     def __str__(self):
         tempStr = "address = " + str(self.address) + '\n'
@@ -217,7 +200,6 @@ class Configuration:
     def __init__(self):
         self.inputFile = None
         self.fileData = None
-        self.filespaceNames = []
         self.oldMirrorList = []
         self.newMirrorList = []
 
@@ -227,7 +209,7 @@ class Configuration:
         with open(inputFile) as f:
 
             for lineno, line in line_reader(f):
-                rowMap, newFilespaces = parse_gpmovemirrors_line(inputFile, lineno, line)
+                rowMap = parse_gpmovemirrors_line(inputFile, lineno, line)
 
                 oldAddress = rowMap['oldAddress']
                 oldPort = rowMap['oldPort']
@@ -242,11 +224,9 @@ class Configuration:
                         raise Exception(
                             "Old mirror segment is not currently in a mirror role: address = %s, port = %s, segment data directory = %s"
                             % (oldAddress, str(oldPort), oldDataDirectory))
-                oldFilespaces = {}
                 oldMirror = Mirror(address=oldAddress
                                    , port=oldPort
                                    , dataDirectory=oldDataDirectory
-                                   , filespaces=oldFilespaces
                                    )
                 self.oldMirrorList.append(oldMirror)
                 newAddress = rowMap['newAddress']
@@ -255,7 +235,6 @@ class Configuration:
                 newMirror = Mirror(address=newAddress
                                    , port=newPort
                                    , dataDirectory=newDataDirectory
-                                   , filespaces=newFilespaces
                                    )
                 self.newMirrorList.append(newMirror)
 
@@ -374,13 +353,6 @@ try:
             cmd = RemoveDirectory("remove old mirror segment directories", mirror.dataDirectory, ctxt=REMOTE,
                                   remoteHost=mirror.address)
             pool.addCommand(cmd)
-            for filespaceName in mirror.filespaces.keys():
-                logger.info(
-                    "About to remove old mirror filespace directory: " + filespaceName + " : " + mirror.filespaces[
-                        filespaceName])
-                cmd = RemoveDirectory("remove old mirror segment directories", mirror.filespaces[filespaceName],
-                                      ctxt=REMOTE, remoteHost=mirror.address)
-                pool.addCommand(cmd)
 
         # Wait for the segments to finish
         try:
