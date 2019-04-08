@@ -27,5 +27,3 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
-
-REGRESS_OPTS += --init-file=$(top_builddir)/src/test/regress/init_file

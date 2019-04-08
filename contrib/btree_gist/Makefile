@@ -17,7 +17,7 @@ REGRESS = init int2 int4 int8 float4 float8 cash oid timestamp timestamptz \
 
 SHLIB_LINK += $(filter -lm, $(LIBS))
 
-REGRESS_OPTS = --dbname=$(PL_TESTDB) --init-file=$(srcdir)/init_file
+REGRESS_OPTS = --dbname=$(PL_TESTDB)
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config
