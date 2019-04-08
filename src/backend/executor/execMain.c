@@ -3323,9 +3323,6 @@ ExecInsert(TupleTableSlot *slot,
 		!isUpdate)
 	{
 		HeapTuple tuple = ExecFetchSlotHeapTuple(slot);
-
-		Assert(planGen == PLANGEN_PLANNER);
-
 		ExecARInsertTriggers(estate, resultRelInfo, tuple);
 	}
 }
