@@ -16,10 +16,10 @@ from gp_segment_configuration where content = 0 and role = 'p';
 -- Allow extra time for mirror promotion to complete recovery to avoid
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries
 -- are not up. Setting these increase the number of retries in gang creation in
--- case segment is in recovery. Approximately we want to wait 30 seconds.
+-- case segment is in recovery. Approximately we want to wait 2 minutes at most.
 -- start_ignore
 \!gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly
-\!gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly
+\!gpconfig -c gp_gang_creation_retry_timer -v 1000 --skipvalidation --masteronly
 \!gpstop -u
 -- end_ignore
 -- Wait a few seconds, to ensure the config changes take effect.
