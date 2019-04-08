@@ -74,12 +74,15 @@ SELECT count(*) FROM timetmp WHERE a >  '10:57:11'::time;
 
 EXPLAIN (COSTS OFF)
 SELECT a, a <-> '10:57:11' FROM timetmp ORDER BY a <-> '10:57:11' LIMIT 3;
-                          QUERY PLAN                          
---------------------------------------------------------------
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
  Limit
-   ->  Index Scan using timeidx on timetmp
-         Order By: (a <-> '10:57:11'::time without time zone)
-(3 rows)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a <-> '10:57:11'::time without time zone))
+         ->  Limit
+               ->  Index Scan using timeidx on timetmp
+                     Order By: (a <-> '10:57:11'::time without time zone)
+(7 rows)
 
 SELECT a, a <-> '10:57:11' FROM timetmp ORDER BY a <-> '10:57:11' LIMIT 3;
     a     |    ?column?     
