@@ -33,9 +33,9 @@
        <li><codeph><xref href="orafce_ref.xml" scope="peer" format="dita"
              >orafce</xref></codeph> - Provides Greenplum Database-specific Oracle
           SQL compatibility functions.</li>
-       <li><codeph><xref href="https://www.postgresql.org/docs/9.4/pageinspect.html"
-             scope="external" format="html">pageinspect</xref></codeph> - Functions for low level
-         inspection of the contents of database pages; available to superusers only.</li>
+       <li><codeph><xref href="pageinspect.xml" scope="peer" format="dita"
+             >pageinspect</xref></codeph> - Provides functions for low level inspection
+         of the contents of database pages; available to superusers only.</li>
        <li><codeph><xref href="pgcrypto.xml" scope="peer" format="dita"
              >pgcrypto</xref></codeph> - Provides cryptographic functions for Greenplum
          Database.</li>
