@@ -6250,9 +6250,9 @@
   <topic id="log_rotation_age">
     <title>log_rotation_age</title>
     <body>
-      <p>Determines the lifetime of an individual log file. When this amount of time has elapsed, 
-        the file is closed and a new log file is created. Set to zero to disable time-based creation of new log
-        files.</p>
+      <p>Determines the amount of time Greenplum Database writes messages to the active log file.
+        When this amount of time has elapsed, the file is closed and a new log file is created. Set
+        to zero to disable time-based creation of new log files.</p>
       <table id="log_rotation_age_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
