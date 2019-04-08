@@ -33,6 +33,29 @@ Feature: Tests for gpmovemirrors
         And the segments are synchronized
         And verify that mirrors are recognized after a restart
 
+    Scenario: gpmovemirrors can change the port of mirrors within a single host
+        Given a standard local demo cluster is created
+        And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+        And a 'samedir' gpmovemirrors file is created
+        When the user runs gpmovemirrors
+        Then gpmovemirrors should return a return code of 0
+        And verify the database has mirrors
+        And all the segments are running
+        And the segments are synchronized
+        And verify that mirrors are recognized after a restart
+
+    Scenario: gpmovemirrors gives a warning when passed identical attributes for new and old mirrors
+        Given a standard local demo cluster is created
+        And a gpmovemirrors directory under '/tmp/gpmovemirrors' with mode '0700' is created
+        And a 'identicalAttributes' gpmovemirrors file is created
+        When the user runs gpmovemirrors
+        Then gpmovemirrors should return a return code of 0
+	And gpmovemirrors should print a "request to move a mirror with identical attributes" warning
+	And verify the database has mirrors
+        And all the segments are running
+        And the segments are synchronized
+        And verify that mirrors are recognized after a restart
+
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 

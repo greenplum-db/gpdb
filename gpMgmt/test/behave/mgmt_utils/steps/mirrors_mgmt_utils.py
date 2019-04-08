@@ -233,6 +233,20 @@ def impl(context, file_type):
                                        mirror.getSegmentPort(),
                                        context.mirror_context.working_directory)
         contents = '%s %s' % (valid_config, badhost_config)
+    elif file_type == 'samedir':
+        valid_config_with_same_dir = '%s:%s:%s' % (
+            mirror.getSegmentHostName(),
+            mirror.getSegmentPort() + 1000,
+            mirror.getSegmentDataDirectory()
+        )
+        contents = '%s %s' % (valid_config, valid_config_with_same_dir)
+    elif file_type == 'identicalAttributes':
+        valid_config_with_identical_attributes = '%s:%s:%s' % (
+            mirror.getSegmentHostName(),
+            mirror.getSegmentPort(),
+            mirror.getSegmentDataDirectory()
+        )
+        contents = '%s %s' % (valid_config, valid_config_with_identical_attributes)
     elif file_type == 'good':
         valid_config_with_different_dir = '%s:%s:%s' % (
             mirror.getSegmentHostName(),
@@ -281,7 +295,7 @@ def impl(context, mirror_config):
     input_filename = "/tmp/gpmovemirrors_input_%s" % mirror_config
     line_template = "%s:%d:%s %s:%d:%s\n"
 
-    # The mirrors for contents 0 and 3 are excluded from the two maps below because they are the same in either configuration    
+    # The mirrors for contents 0 and 3 are excluded from the two maps below because they are the same in either configuration
     # NOTE: this configuration of the GPDB cluster assumes that configuration set up in concourse's
     #   gpinitsystem task.  The maps below are from {contentID : (port|hostname)}.
 
