@@ -261,8 +261,7 @@
           <li id="no165386"><b>Grouped Mirroring</b> — Add at least two new hosts so the mirrors for
             the first host can reside on the second host, and the mirrors for the second host can
             reside on the first. This is the default type of mirroring if you enable segment
-            mirroring during system initialization if you enable segment mirroring for an existing
-            system.</li>
+            mirroring during system initialization.</li>
           <li><b>Block Mirroring</b> — Adding one or more blocks of host systems. For example add a
             block of four or eight hosts. Block mirroring is a custom mirroring configuration. For
             more information about block mirroring, see <xref
