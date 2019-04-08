@@ -1413,7 +1413,6 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -a -d incr_analyze -t public.sales"
         Then output should contain both "-public.sales_1_prt_default_dates" and "-public.sales_1_prt_2"
         And output should contain both "-public.sales_1_prt_3" and "-public.sales_1_prt_4"
-        And output should not contain "analyze rootpartition public.sales"
         And "public.sales_1_prt_2" should appear in the latest state files
         And "public.sales_1_prt_3" should appear in the latest state files
         And "public.sales_1_prt_4" should appear in the latest state files
@@ -1429,7 +1428,6 @@ Feature: Incrementally analyze the database
         Then output should not contain "-public.sales_1_prt_default_dates"
         And output should not contain "-public.sales_1_prt_3"
         And output should contain both "-public.sales_1_prt_2" and "-public.sales_1_prt_4"
-        And output should not contain "analyze rootpartition public.sales"
         And "public.sales_1_prt_2" should appear in the latest state files
         And "public.sales_1_prt_4" should appear in the latest state files
 
@@ -1514,7 +1512,6 @@ Feature: Incrementally analyze the database
         Then output should not contain "-public.sales_1_prt_default_dates"
         And output should not contain "-public.sales_1_prt_3"
         And output should not contain "-public.sales_1_prt_4"
-        And output should not contain "analyze rootpartition public.sales"
         And analyzedb should print "-public.sales_1_prt_2" to stdout
         And "public.sales_1_prt_2" should appear in the latest state files
         And "public.sales_1_prt_4" should appear in the latest state files
@@ -1593,7 +1590,6 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -a -d incr_analyze -t public.sales"
         Then output should contain both "-public.sales_1_prt_2" and "-public.sales_1_prt_3"
         And output should not contain "-public.sales_1_prt_4"
-        And output should not contain "analyze rootpartition public.sales"
         And analyzedb should print "-public.sales_1_prt_default_dates" to stdout
         And "public.sales_1_prt_2" should appear in the latest state files
         And "public.sales_1_prt_3" should appear in the latest state files
@@ -1696,6 +1692,7 @@ Feature: Incrementally analyze the database
         Then analyzedb should print "There are no tables or partitions to be analyzed" to stdout
         And "public.sales_1_prt_2" should appear in the latest state files
         And "public.sales_1_prt_3" should appear in the latest state files
+        And "public.sales" should appear in the latest report file
 
     # request mid-level
     @analyzedb_core @analyzedb_partition_tables
