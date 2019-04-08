@@ -180,10 +180,11 @@ def lookupGpdb(address, port, dataDirectory):
 class Mirror:
     """ This class represents information about a mirror. """
 
-    def __init__(self, address, port, dataDirectory):
+    def __init__(self, address, port, dataDirectory, inPlace=False):
         self.address = address
         self.port = port
         self.dataDirectory = dataDirectory
+        self.inPlace = inPlace
 
     def __str__(self):
         tempStr = "address = " + str(self.address) + '\n'
@@ -224,14 +225,21 @@ class Configuration:
                         raise Exception(
                             "Old mirror segment is not currently in a mirror role: address = %s, port = %s, segment data directory = %s"
                             % (oldAddress, str(oldPort), oldDataDirectory))
-                oldMirror = Mirror(address=oldAddress
-                                   , port=oldPort
-                                   , dataDirectory=oldDataDirectory
-                                   )
-                self.oldMirrorList.append(oldMirror)
                 newAddress = rowMap['newAddress']
                 newPort = rowMap['newPort']
                 newDataDirectory = rowMap['newDataDirectory']
+
+                inPlace = (oldAddress == newAddress and oldDataDirectory == newDataDirectory)
+                if inPlace and oldPort == newPort:
+                    logger.warn("input file %s contained request to move a mirror with identical attributes (%s, %s, %s)"
+                                % (inputFile, newAddress, newPort, newDataDirectory))
+
+                oldMirror = Mirror(address=oldAddress
+                                   , port=oldPort
+                                   , dataDirectory=oldDataDirectory
+                                   , inPlace=inPlace
+                                   )
+                self.oldMirrorList.append(oldMirror)
                 newMirror = Mirror(address=newAddress
                                    , port=newPort
                                    , dataDirectory=newDataDirectory
@@ -344,11 +352,12 @@ try:
     cmd.run(validateAfter=True)
 
     """ Delete old mirror directories. """
-    totalDirsToDelete = len(newConfig.oldMirrorList)
+    mirrorsToDelete = [mirror for mirror in newConfig.oldMirrorList if not mirror.inPlace]
+    totalDirsToDelete = len(mirrorsToDelete)
     numberOfWorkers = min(totalDirsToDelete, options.batch_size)
     if numberOfWorkers > 1:
         pool = WorkerPool(numWorkers=numberOfWorkers)
-        for mirror in newConfig.oldMirrorList:
+        for mirror in mirrorsToDelete:
             logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
             cmd = RemoveDirectory("remove old mirror segment directories", mirror.dataDirectory, ctxt=REMOTE,
                                   remoteHost=mirror.address)

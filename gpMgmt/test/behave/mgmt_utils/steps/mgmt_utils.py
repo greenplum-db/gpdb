@@ -417,7 +417,6 @@ def impl(context, HOST, port, dir, ctxt):
                       gp_source_file)
     gpfdist.cleanupGpfdist()
 
-
 @then('{command} should print "{err_msg}" error message')
 def impl(context, command, err_msg):
     check_err_msg(context, err_msg)
@@ -425,6 +424,7 @@ def impl(context, command, err_msg):
 
 @when('{command} should print "{out_msg}" to stdout')
 @then('{command} should print "{out_msg}" to stdout')
+@then('{command} should print a "{out_msg}" warning')
 def impl(context, command, out_msg):
     check_stdout_msg(context, out_msg)
 
