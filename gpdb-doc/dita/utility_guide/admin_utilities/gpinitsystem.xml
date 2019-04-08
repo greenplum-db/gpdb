@@ -13,15 +13,16 @@
             [<b>-h</b> <varname>hostfile_gpinitsystem</varname>]
             [<b>-B</b> <varname>parallel_processes</varname>] 
             [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
-            [<b>-s</b> <varname>standby_master_host</varname> 
-                [<b>-P</b> <varname>standby_master_port</varname>] [-F <varname>standby_master_datadir</varname>]]
+            [<b>-s</b> <varname>standby_master_host</varname>
+                [<b>-P</b> <varname>standby_master_port</varname>]
+                [<b>-S</b> <varname>standby_master_datadir</varname> | <b>--standby_datadir</b>=<varname>standby_master_datadir</varname>]]
             [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>]
             [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
             [<b>-n <varname>locale</varname> | --locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
             [<b>--lc-ctype</b>=<varname>locale</varname>] [<b>--lc-messages</b>=<varname>locale</varname>] 
             [<b>--lc-monetary</b>=<varname>locale</varname>] [<b>--lc-numeric</b>=<varname>locale</varname>] 
             [<b>--lc-time</b>=<varname>locale</varname>] [<b>-e</b> <varname>password</varname> | <b>--su_password</b>=<varname>password</varname>] 
-            [<b>-S</b>] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
+            [<b>--mirror-mode</b>={group|spread}] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
             [<b>-I</b> <varname>input_configuration_file</varname>]
             [<b>-O</b> <varname>output_configuration_file</varname>]
 
@@ -247,7 +248,8 @@
                         host.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-F <varname>standby_master_datadir</varname></pt>
+                    <pt>--standby_dir=<varname>standby_master_datadir</varname> |
+                            -S <varname>standby_master_datadir</varname></pt>
                     <pd>If you configure a standby master host with <codeph>-s</codeph>, use this
                         option to specify its data directory. If you configure a standby on the same
                         host as the master instance, the master and standby must have separate data
@@ -269,13 +271,13 @@
                         </ul></pd>
                 </plentry>
                 <plentry>
-                    <pt>-S</pt>
-                    <pd>If mirroring parameters are specified, spreads the mirror segments across
-                        the available hosts. The default is to group the set of mirror segments
-                        together on an alternate host from their primary segment set. Mirror
-                        spreading places each mirror on a different host within the Greenplum
-                        Database array. Spreading is only allowed if the number of hosts is greater
-                        than the number of segment instances.</pd>
+                    <pt>--mirror_mode={group|spread}</pt>
+                    <pd>Use this option to specify the placement of mirror segment instances on the
+                        segment hosts.The default, <codeph>group</codeph>, groups the set of mirror
+                        segments together on an alternate host from their primary segment set.
+                            <codeph>spread</codeph> places each mirror segment on a different host
+                        within the Greenplum Database array. Spreading is only allowed if the number
+                        of hosts is greater than the number of segment instances per host.</pd>
                 </plentry>
                 <plentry>
                     <pt>-v | --version</pt>
@@ -493,24 +495,20 @@ declare -a MIRROR_ARRAY=(
         <section id="section6">
             <title>Examples</title>
             <p>Initialize a Greenplum Database array by supplying a cluster configuration file and a
-                segment host address file, and set up a spread mirroring (<codeph>-S</codeph>)
-                configuration:</p>
-            <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
-hostfile_gpinitsystem -S</codeblock>
+                segment host address file, and set up a spread mirroring
+                    (<codeph>--mirror-mode=spread</codeph>) configuration:</p>
+            <codeblock>$ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem --mirror-mode=spread</codeblock>
             <p>Initialize a Greenplum Database array and set the superuser remote password:</p>
-            <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
-hostfile_gpinitsystem --su-password=mypassword</codeblock>
+            <codeblock>$ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem --su-password=mypassword</codeblock>
             <p>Initialize a Greenplum Database array with an optional standby master host:</p>
-            <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
-hostfile_gpinitsystem -s host09</codeblock>
+            <codeblock>$ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem -s host09</codeblock>
             <p>Instead of initializing a Greenplum Database array, write the provided configuration
                 to an output file. The output file uses the <codeph>QD_PRIMARY_ARRAY</codeph> and
                     <codeph>PRIMARY_ARRAY</codeph> parameters to define master and segment
                 hosts:</p>
-            <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
-hostfile_gpinitsystem -S -O cluster_init.config</codeblock>
+            <codeblock>$ gpinitsystem -c gpinitsystem_config -h hostfile_gpinitsystem --mirror-mode=spread -O cluster_init.config</codeblock>
             <p>Initialize a Greenplum Database using an input configuration file (a file that
-                defines the Greenplum Database array using <codeph>QD_PRIMARY_ARRAY</codeph> and
+                defines the Greenplum Database array) using <codeph>QD_PRIMARY_ARRAY</codeph> and
                     <codeph>PRIMARY_ARRAY</codeph> parameters:</p>
             <codeblock>$ gpinitsystem -I cluster_init.config</codeblock>
         </section>
