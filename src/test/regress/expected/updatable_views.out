@@ -1586,6 +1586,10 @@ DEALLOCATE PREPARE ins;
 DROP TABLE base_tbl CASCADE;
 NOTICE:  drop cascades to view rw_view1
 -- WITH CHECK OPTION with subquery
+--
+-- GPDB: Currently we can't execute a subplan under a
+-- update or delete node on a segment so we error out
+--
 CREATE TABLE base_tbl (a int);
 CREATE TABLE ref_tbl (a int PRIMARY KEY);
 INSERT INTO ref_tbl SELECT * FROM generate_series(1,10);
@@ -1594,17 +1598,18 @@ CREATE VIEW rw_view1 AS
   WHERE EXISTS(SELECT 1 FROM ref_tbl r WHERE r.a = b.a)
   WITH CHECK OPTION;
 INSERT INTO rw_view1 VALUES (5); -- ok
---start_ignore
+ERROR:  can not reliably evaluate WITH CHECK OPTION for view "rw_view1"
 INSERT INTO rw_view1 VALUES (15); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
-DETAIL:  Failing row contains (15).
---end_ignore
+ERROR:  can not reliably evaluate WITH CHECK OPTION for view "rw_view1"
+--
+-- GPDB: Since BOTH the above INSERT statements fail in our implementation,
+-- INSERT INTO base_tbl to properly test the update statements below
+--
+INSERT INTO base_tbl VALUES (5);
 UPDATE rw_view1 SET a = a + 5; -- ok
---start_ignore
+ERROR:  can not reliably evaluate WITH CHECK OPTION for view "rw_view1"
 UPDATE rw_view1 SET a = a + 5; -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
-DETAIL:  Failing row contains (15).
---end_ignore
+ERROR:  can not reliably evaluate WITH CHECK OPTION for view "rw_view1"
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
                    QUERY PLAN                    
 -------------------------------------------------
@@ -2366,6 +2371,10 @@ DROP TABLE tx3;
 -- Test handling of vars from correlated subqueries in quals from outer
 -- security barrier views, per bug #13988
 --
+--
+-- GPDB: Currently we can't execute a subplan under a
+-- update or delete node on a segment so we error out
+--
 CREATE TABLE t1 (a int, b text, c int);
 INSERT INTO t1 VALUES (1, 'one', 10);
 CREATE TABLE t2 (cc int);
@@ -2376,28 +2385,27 @@ CREATE VIEW v1 WITH (security_barrier = true) AS
 CREATE VIEW v2 WITH (security_barrier = true) AS
   SELECT * FROM v1 WHERE EXISTS (SELECT 1 FROM t2 WHERE t2.cc = v1.c)
   WITH CHECK OPTION;
---start_ignore
 INSERT INTO v2 VALUES (2, 'two', 20); -- ok
+ERROR:  can not reliably evaluate WITH CHECK OPTION for view "v2"
 INSERT INTO v2 VALUES (-2, 'minus two', 20); -- not allowed
 ERROR:  new row violates WITH CHECK OPTION for view "v1"
 DETAIL:  Failing row contains (-2, minus two, 20).
 INSERT INTO v2 VALUES (3, 'three', 30); -- not allowed
-ERROR:  new row violates WITH CHECK OPTION for view "v2"
-DETAIL:  Failing row contains (3, three, 30).
+ERROR:  can not reliably evaluate WITH CHECK OPTION for view "v2"
 UPDATE v2 SET b = 'ONE' WHERE a = 1; -- ok
+ERROR:  can not reliably evaluate WITH CHECK OPTION for view "v2"
 UPDATE v2 SET a = -1 WHERE a = 1; -- not allowed
 ERROR:  new row violates WITH CHECK OPTION for view "v1"
 DETAIL:  Failing row contains (-1, one, 10).
 UPDATE v2 SET c = 30 WHERE a = 1; -- not allowed
-ERROR:  new row violates WITH CHECK OPTION for view "v2"
-DETAIL:  Failing row contains (1, one, 30).
+ERROR:  can not reliably evaluate WITH CHECK OPTION for view "v2"
 DELETE FROM v2 WHERE a = 2; -- ok
 SELECT * FROM v2;
  a |  b  | c  
 ---+-----+----
  1 | one | 10
 (1 row)
---end_ignore
+
 DROP VIEW v2;
 DROP VIEW v1;
 DROP TABLE t2;

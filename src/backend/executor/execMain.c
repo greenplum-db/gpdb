@@ -3178,21 +3178,18 @@ ExecWithCheckOptions(ResultRelInfo *resultRelInfo,
 		 * to the view. Sometimes we need to execute a subplan to help check.
 		 * The subplan is executed under the update or delete node on segment.
 		 * But we can't correctly execute a mpp subplan in the segment. So let's
-		 * disable the check first.
+		 * error out on the caution side.
 		 */
 		ListCell *l;
-		bool is_subplan = false;
 		foreach(l, (List*)wcoExpr)
 		{
 			ExprState  *clause = (ExprState *) lfirst(l);
 			if (*(clause->evalfunc) == (ExprStateEvalFunc)ExecAlternativeSubPlan)
-			{
-				is_subplan = true;
-				break;
-			}
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("can not reliably evaluate WITH CHECK OPTION for view \"%s\"",
+								wco->viewname)));
 		}
-		if (is_subplan)
-			continue;
 
 		/*
 		 * WITH CHECK OPTION checks are intended to ensure that the new tuple

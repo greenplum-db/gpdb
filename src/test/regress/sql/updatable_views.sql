@@ -727,7 +727,10 @@ DEALLOCATE PREPARE ins;
 DROP TABLE base_tbl CASCADE;
 
 -- WITH CHECK OPTION with subquery
-
+--
+-- GPDB: Currently we can't execute a subplan under a
+-- update or delete node on a segment so we error out
+--
 CREATE TABLE base_tbl (a int);
 CREATE TABLE ref_tbl (a int PRIMARY KEY);
 INSERT INTO ref_tbl SELECT * FROM generate_series(1,10);
@@ -738,14 +741,15 @@ CREATE VIEW rw_view1 AS
   WITH CHECK OPTION;
 
 INSERT INTO rw_view1 VALUES (5); -- ok
---start_ignore
 INSERT INTO rw_view1 VALUES (15); -- should fail
---end_ignore
 
+--
+-- GPDB: Since BOTH the above INSERT statements fail in our implementation,
+-- INSERT INTO base_tbl to properly test the update statements below
+--
+INSERT INTO base_tbl VALUES (5);
 UPDATE rw_view1 SET a = a + 5; -- ok
---start_ignore
 UPDATE rw_view1 SET a = a + 5; -- should fail
---end_ignore
 
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
@@ -1100,6 +1104,10 @@ DROP TABLE tx3;
 -- Test handling of vars from correlated subqueries in quals from outer
 -- security barrier views, per bug #13988
 --
+--
+-- GPDB: Currently we can't execute a subplan under a
+-- update or delete node on a segment so we error out
+--
 CREATE TABLE t1 (a int, b text, c int);
 INSERT INTO t1 VALUES (1, 'one', 10);
 
@@ -1114,7 +1122,6 @@ CREATE VIEW v2 WITH (security_barrier = true) AS
   SELECT * FROM v1 WHERE EXISTS (SELECT 1 FROM t2 WHERE t2.cc = v1.c)
   WITH CHECK OPTION;
 
---start_ignore
 INSERT INTO v2 VALUES (2, 'two', 20); -- ok
 INSERT INTO v2 VALUES (-2, 'minus two', 20); -- not allowed
 INSERT INTO v2 VALUES (3, 'three', 30); -- not allowed
@@ -1125,7 +1132,6 @@ UPDATE v2 SET c = 30 WHERE a = 1; -- not allowed
 
 DELETE FROM v2 WHERE a = 2; -- ok
 SELECT * FROM v2;
---end_ignore
 
 DROP VIEW v2;
 DROP VIEW v1;
