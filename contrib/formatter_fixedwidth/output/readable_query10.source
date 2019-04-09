@@ -10,7 +10,8 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in',
 -- Note field "col_null" is always loaded with null value
 -- regardless null string and preserve_blanks settings.
 select * from tbl_ext_fixedwidth where col_null is null order by s1;
-ERROR:  the fixed width formatter requires a length specification for each one of the external table columns being used (currently <5>, however format string has <4>  (seg0 slice1 killnz1:64100 pid=5914)
+ERROR:  mismatch in column length specification
+DETAIL:  The fixed width formatter requires a length specification for each one of the external table columns being used (currently 5, however format string has 4).
 CONTEXT:  External table tbl_ext_fixedwidth
 -- This is true even using "LIKE other table" syntax when creating ext table
 -- Create heap table "missing_col_null", which has default value 'NULL' for column "col_null"
@@ -59,5 +60,6 @@ Execute on: all segments
 
 -- Note field "col_null" is loaded with null value
 select * from tbl_ext_fixedwidth where col_null is null order by s1;
-ERROR:  the fixed width formatter requires a length specification for each one of the external table columns being used (currently <5>, however format string has <4>  (seg1 slice1 killnz1:64101 pid=5916)
+ERROR:  mismatch in column length specification
+DETAIL:  The fixed width formatter requires a length specification for each one of the external table columns being used (currently 5, however format string has 4).
 CONTEXT:  External table tbl_ext_fixedwidth

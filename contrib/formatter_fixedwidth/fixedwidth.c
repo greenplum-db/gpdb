@@ -251,7 +251,7 @@ make_null_val_with_blanks(char *value, int field_size)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_STRING_DATA_LENGTH_MISMATCH),
-				 errmsg("The size of the NULL value cannot be bigger than the field size")));
+				 errmsg("the size of the null_value cannot be bigger than the field size")));
 	}
 	
 	ret = (char*)palloc(actual_size);
@@ -344,9 +344,10 @@ validate_format_params(FormatConfig *format_in_config, TupleDesc tupdesc)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_COLUMN),
-				errmsg("the fixed width formatter requires a length specification for each one of the"
-					   " external table columns being used (currently <%d>, however format string has <%d>",
-					   num_fields_in_table_list, num_fields_in_format_string)));
+				 errmsg("mismatch in column length specification"),
+				 errdetail("The fixed width formatter requires a length specification for each one of the "
+						   "external table columns being used (currently %d, however format string has %d).",
+						   num_fields_in_table_list, num_fields_in_format_string)));
 	}
 	
 	foreach(l, format_in_config->fldNames)
@@ -367,8 +368,10 @@ validate_format_params(FormatConfig *format_in_config, TupleDesc tupdesc)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_COLUMN),
-					 errmsg("the fixed width formatter requires a length specification for each one of the "
-							"external table columns being used (missing field <%s>", name)));			
+					 errmsg("missing column definition in length specification"),
+					 errdetail("The fixed width formatter requires a length specification for each one of the "
+							   "external table columns being used (missing field \"%s\").",
+							   name)));
 		}
 	}
 }
@@ -437,10 +440,8 @@ get_tuple_info(TupleDesc tupdesc, int *r_ncolumns, format_t **r_myData, char **d
 		FORMATTER_SET_USER_CTX(fcinfo, myData);
 	}
 	if (myData->ncols != ncolumns)
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("formatter_export: unexpected change of output record type")));	
-	
+		elog(ERROR, "formatter_export: unexpected change of output record type");
+
 	/* break the input tuple into fields */
 	tuple.t_len = HeapTupleHeaderGetDatumLength(rec);
 	ItemPointerSetInvalid(&(tuple.t_self));
@@ -525,8 +526,10 @@ get_actual_line_size(FormatConfig *format_in_config, char *line_start, int cur_s
 		 */
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_EXCEPTION),
-	             errmsg("The line delimiter specified in the Formatter arguments: <%s> is not located in the data file", 
-						format_in_config->line_delimiter)));			
+				 errmsg("line delimiter \"%s\" is missing in data file",
+						format_in_config->line_delimiter),
+				 errdetail("The line delimiter specified in the Formatter arguments: \"%s\" is not located in the data file",
+						   format_in_config->line_delimiter)));
 	}
 
 	actual_fields_size = line_end - line_start; 
@@ -539,8 +542,8 @@ get_actual_line_size(FormatConfig *format_in_config, char *line_start, int cur_s
 		
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_EXCEPTION),
-	             errmsg("Expected line size from the formatting string: %d, but the actual size is: %d", 
-						format_in_config->fields_tot_size, actual_fields_size)));			
+				 errmsg("expected line size from the formatting string is %d, actual size is %d",
+						format_in_config->fields_tot_size, actual_fields_size)));
 	}
 	
 	row_size = actual_fields_size + format_in_config->line_delimiter_length;
@@ -571,9 +574,8 @@ fixedwidth_out(PG_FUNCTION_ARGS)
 	if (!CALLED_AS_FORMATTER(fcinfo))
 		ereport(ERROR,
 				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-				 errmsg("fixedwidth_out: not called by format manager")));	
-	
-	
+				 errmsg("fixedwidth_out: not called by format manager")));
+
 	tupdesc = FORMATTER_GET_TUPDESC(fcinfo);
 	get_tuple_info(tupdesc, &ncolumns, &myData, &data, fcinfo, &format_out_config);
 	
@@ -757,8 +759,7 @@ fixedwidth_in(PG_FUNCTION_ARGS)
 				FORMATTER_SET_DATACURSOR(fcinfo, data_cur);
 				ereport(ERROR,
 						(errcode(ERRCODE_DATA_EXCEPTION),
-						 errmsg("Last line in the file contains an incomplete tuple")));
-				
+						 errmsg("last line in the file contains an incomplete tuple")));
 			}
 			else if (saw_eof && (remaining == 1))
 			{
@@ -819,9 +820,9 @@ fixedwidth_in(PG_FUNCTION_ARGS)
 			if (nullval == NULL || cur_null_with_blanks == NULL)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("A null_value was not defined. When preserve_blanks is on, a null_value \
-								 must be defined in the formatter arguments string")));
-			
+						 errmsg("null_value was not defined"),
+						 errdetail("When preserve_blanks is on, a null_value must be defined in the formatter arguments string.")));
+
 			/* extract field value while treating blanks as data */
 			extract_field(data_buf + data_cur, field_size, true, &(myData->one_val));
 

@@ -83,8 +83,8 @@ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_toomanyfields.tbl')       
 FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
-ERROR:  Expected line size from the formatting string: 120, but the actual size is: 125  (seg0 slice1 @hostname@:40000 pid=11440)
-DETAIL:  External table tbl_ext_fixedwidth
+ERROR:  expected line size from the formatting string is 120, actual size is 125
+CONTEXT:  External table tbl_ext_fixedwidth
 -- 4.  import data into table with string and numeric fields - too few fields error  -- no reject limit
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
@@ -92,8 +92,8 @@ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_toofewfields.tbl')       
 FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
-ERROR:  Expected line size from the formatting string: 120, but the actual size is: 105  (seg1 slice1 @hostname@:40001 pid=11441)
-DETAIL:  External table tbl_ext_fixedwidth
+ERROR:  expected line size from the formatting string is 120, actual size is 105
+CONTEXT:  External table tbl_ext_fixedwidth
 -- 5.  import data into table with string and numeric fields - field too long error -- no reject limit
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
@@ -194,8 +194,8 @@ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
 FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', n1='5', s2='10', s3='10', dt='20', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
-ERROR:  the fixed width formatter requires a length specification for each one of the external table columns being used (missing field <s3>  (seg1 slice1 @hostname@:40001 pid=11441)
-DETAIL:  External table tbl_ext_fixedwidth
+ERROR:  missing column definition in length specification
+CONTEXT:  External table tbl_ext_fixedwidth
 -- 12. import data into table with string and numeric fields -- NULL value loaded when NULL value defined
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
@@ -270,8 +270,8 @@ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth
 LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_blankfields.tbl')       
 FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15', preserve_blanks='on');
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
-ERROR:  A null_value was not defined. When preserve_blanks is on, a null_value 								 must be defined in the formatter arguments string  (seg0 slice1 @hostname@:40000 pid=11440)
-DETAIL:  External table tbl_ext_fixedwidth
+ERROR:  null_value was not defined
+CONTEXT:  External table tbl_ext_fixedwidth
 -- 15. import data into table with string and numeric fields - FORMAT string syntax error  -- preserve_blanks with NULL defined
 --     trailing blanks are loaded, blank fields are loaded as  strings, only fields with the null value are loaded as NULL
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
