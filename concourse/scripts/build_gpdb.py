@@ -12,6 +12,8 @@ from builds.GpBuild import GpBuild
 
 INSTALL_DIR = "/usr/local/gpdb"
 DEPENDENCY_INSTALL_DIR = "/usr/local"
+SCRIPT_LOC=os.path.dirname(os.path.realpath(__file__))
+GPDB_SRC_DIR="{0}/../../".format(SCRIPT_LOC)
 
 
 def copy_installed(output_dir):
@@ -31,7 +33,7 @@ def print_compiler_version():
 
 
 def create_gpadmin_user():
-    status = subprocess.call("gpdb_src/concourse/scripts/setup_gpadmin_user.bash")
+    status = subprocess.call("{0}/concourse/scripts/setup_gpadmin_user.bash".format(GPDB_SRC_DIR))
     os.chmod('/bin/ping', os.stat('/bin/ping').st_mode | stat.S_ISUID)
     if status:
         return status
@@ -57,9 +59,8 @@ def copy_output():
                   "----------------------------------------------------------------------")
             with open(diff_file, 'r') as fin:
                 print fin.read()
-    shutil.copyfile("gpdb_src/src/test/regress/regression.diffs", "icg_output/regression.diffs")
-    shutil.copyfile("gpdb_src/src/test/regress/regression.out", "icg_output/regression.out")
-
+    shutil.copyfile("{0}/src/test/regress/regression.diffs".format(GPDB_SRC_DIR), "icg_output/regression.diffs")
+    shutil.copyfile("{0}/src/test/regress/regression.out".format(GPDB_SRC_DIR), "icg_output/regression.out")
 
 def install_dependencies(ci_common, dependencies, install_dir):
     for dependency in dependencies:
