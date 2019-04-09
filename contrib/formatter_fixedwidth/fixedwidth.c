@@ -23,7 +23,7 @@ Datum fixedwidth_in(PG_FUNCTION_ARGS);
 typedef struct formatConfig
 {
 	/*
-	 * Normaly we would have only one list of structs, each struct containing three fields:
+	 * Normally we would have only one list of structs, each struct containing three fields:
 	 * name, size, index. The reason we use three lists here is because we work with the infrastructure
 	 * function CopyGetAttnums, which expects as input a list of names and returns a list of indexes.
 	 * fldIndexes - holds the index of each field fetched from the file, into the fields description array
@@ -36,7 +36,7 @@ typedef struct formatConfig
 	int         fields_tot_size;
 	
 	/*
-	 * formating parameters
+	 * formatting parameters
 	 */
 	int         preserve_blanks;
 	char       *null_value;
@@ -266,7 +266,7 @@ make_null_val_with_blanks(char *value, int field_size)
 /*
  * make_val_with_blanks
  *
- * Pad one string value with blanks, so the size will corespond to the fixedwidth 
+ * Pad one string value with blanks, so the size will correspond to the fixedwidth
  * required by the format. Make sure to encode the string into external table
  * encoding before writing it out (if conversion is needed).
  *
@@ -707,8 +707,8 @@ fixedwidth_in(PG_FUNCTION_ARGS)
 	else 
 	{
 		/*
-		 * This line is not finish. Next buffer will bring the remaining of the line.
-		 * So the line number shpuld not grow.
+		 * This line is not finished. Next buffer will bring the remaining of the line.
+		 * So the line number should not grow.
 		 */
 		if (eof_is_lf)
 			myData->lineno--;			
@@ -773,8 +773,8 @@ fixedwidth_in(PG_FUNCTION_ARGS)
 			else 
 			{
 				/*
-				 * This line is not finish. Next buffer will bring the remaining of the line.
-				 * So the line number shpuld not grow.
+				 * This line is not finished. Next buffer will bring the remaining of the line.
+				 * So the line number should not grow.
 				 */
 				if (eof_is_lf)
 					myData->lineno--;			
