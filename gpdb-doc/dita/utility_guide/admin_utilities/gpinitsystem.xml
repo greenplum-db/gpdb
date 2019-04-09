@@ -273,11 +273,14 @@
                 <plentry>
                     <pt>--mirror_mode={group|spread}</pt>
                     <pd>Use this option to specify the placement of mirror segment instances on the
-                        segment hosts.The default, <codeph>group</codeph>, groups the set of mirror
-                        segments together on an alternate host from their primary segment set.
-                            <codeph>spread</codeph> places each mirror segment on a different host
-                        within the Greenplum Database array. Spreading is only allowed if the number
-                        of hosts is greater than the number of segment instances per host.</pd>
+                        segment hosts. The default, <codeph>group</codeph>, groups the mirror
+                        segments for all of a host's primary segments on a single alternate host.
+                            <codeph>spread</codeph> spreads mirror segments for the primary segments
+                        on a host across different hosts in the Greenplum Database array. Spreading
+                        is only allowed if the number of hosts is greater than the number of segment
+                        instances per host. See <xref
+                            href="../../admin_guide/highavail/topics/g-overview-of-segment-mirroring.xml#topic3"
+                        /> for information about Greenplum Database mirroring strategies. </pd>
                 </plentry>
                 <plentry>
                     <pt>-v | --version</pt>
