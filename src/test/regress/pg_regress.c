@@ -1766,11 +1766,11 @@ open_file_for_reading(const char *filename) {
 static void
 print_contents_of_file(const char* filename) {
 	FILE *file;
-	int character;
+	char string[1024];
 
 	file = open_file_for_reading(filename);
-	while ((character = fgetc(file)) != EOF)
-		fprintf(stdout, "%c", character);
+	while (fgets(string, sizeof(string), file))
+		fprintf(stdout, "%s", string);
 
 	fclose(file);
 }
