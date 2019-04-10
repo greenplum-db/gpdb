@@ -185,11 +185,6 @@ endif
 
 # Functions for use in this and including makefiles
 
-# function: echocute
-# purpose: echo the argument to stdout and then execute the argument
-# issue: GNU make-3.79.1 on 32-bit Linux can't handle this
-echocute=echo "$(1)"; $(1)
-
 # function: check_pipe_for_errors
 # purpose: detect cases where a member of a pipe sequence fails; make normally only checks the last command in the pipe
 ifeq "$(origin check_pipe_for_errors)" "undefined"
