@@ -679,7 +679,7 @@
               <entry>1048576</entry>
               <entry>
                 <p>When greater than 0, a new log file is created when this number of kilobytes have
-                  been written to the log. </p>
+                  been written to the log. Set to zero to disable size-based creation of new log files. </p>
               </entry>
             </row>
             <row>

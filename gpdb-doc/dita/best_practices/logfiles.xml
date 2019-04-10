@@ -118,7 +118,7 @@
     <p>To search log files on the segment hosts, use the Greenplum <codeph>gplogfilter</codeph>
       utility with <codeph>gpssh</codeph> to connect to segment hosts from the master host. You can
       identify corresponding log entries in segment logs by the <codeph>statement_id</codeph>. </p>
-    <p>Greenplum Database can be configured to rotate database logs based on the size or age of the
+    <p>Greenplum Database can be configured to rotate database logs based on the size and/or age of the
       current log file. The <codeph>log_rotation_size</codeph> configuration parameter sets the size
       of an individual log file that triggers rotation. When the current log file size is equal to
       or greater than this size, the file is closed and a new log file is created. The
