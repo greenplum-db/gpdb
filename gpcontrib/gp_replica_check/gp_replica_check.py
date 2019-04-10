@@ -34,7 +34,6 @@ import subprocess
 import threading
 import Queue
 import pipes  # for shell-quoting, pipes.quote()
-import time
 
 class ReplicaCheck(threading.Thread):
     def __init__(self, segrow, datname, relation_types):

@@ -6,7 +6,7 @@ import time
 
 from gppylib.mainUtils import *
 
-from gppylib.utils import checkNotNone, appendNewEntriesToHbaFile
+from gppylib.utils import checkNotNone
 from gppylib.db import dbconn
 from gppylib import gparray, gplog
 from gppylib.commands import unix
