@@ -1793,7 +1793,7 @@ def removeFastSequence(db):
     '''
     MPP-14758: gp_fastsequence does not get cleanup after a failed transaction (AO/CO)
     Note: this is slightly different from the normal foreign key check
-          because it streches the cross reference across segments.
+          because it stretches the cross reference across segments.
           This makes it safe in the event of cross consistency issues with pg_class,
           but may not repair some issues when there are cross consistency problems
     '''
@@ -1817,7 +1817,7 @@ def removeFastSequence(db):
               """
         curs = db.query(qry)
         for row in curs.dictresult():
-            seg = row['dbid']  # dbid of targetted segment
+            seg = row['dbid']  # dbid of targeted segment
             name = 'gp_fastsequence tuple'  # for comment purposes
             table = 'gp_fastsequence'  # table name
             cols = {'objid': row['objid']}  # column name and value
@@ -3050,7 +3050,7 @@ def runAllChecks():
         if len(GV.ReSync):
             maybeRemove = "# "
 
-        # use the per-dbid loop for removal and for contraint
+        # use the per-dbid loop for removal and for constraint
         # name adjustments
 
         dbids = set(GV.Remove.keys())
@@ -4269,7 +4269,7 @@ def main():
         myprint("Error: only Greenplum database version >= 4.0 are supported\n")
         sys.exit(GV.retcode)
 
-    # gpcheckcat should check gpexpand runnning status
+    # gpcheckcat should check gpexpand running status
     check_gpexpand()
 
     GV.cfg = getGPConfiguration()

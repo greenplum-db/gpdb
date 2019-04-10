@@ -103,7 +103,7 @@ class GpPkgProgram:
 
         addMasterDirectoryOptionForSingleClusterProgram(add_to)
 
-        # TODO: AK: Eventually, these options may need to be flexible enough to accept mutiple packages
+        # TODO: AK: Eventually, these options may need to be flexible enough to accept multiple packages
         # in one invocation. If so, the structure of this parser may need to change.
         add_to.add_option('-i', '--install', help='install the given gppkg', metavar='<package>')
         add_to.add_option('-u', '--update', help='update the given gppkg', metavar='<package>')

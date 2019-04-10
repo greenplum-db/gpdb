@@ -326,7 +326,7 @@ class GpMirrorListToBuild:
             self.__logger.info("Starting mirrors")
             start_all_successful = self.__startAll(gpEnv, gpArray, mirrorsToStart)
         finally:
-            # Reenable Ctrl-C
+            # Re-enable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
 
         return start_all_successful
@@ -592,7 +592,7 @@ class GpMirrorListToBuild:
                                                           suppressErrorCheck=False,
                                                           progressCmds=progressCmds)
 
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(removeCmds, "removing pg_basebackup progres logfiles",
+        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(removeCmds, "removing pg_basebackup progress logfiles",
                                                           suppressErrorCheck=False)
 
         #

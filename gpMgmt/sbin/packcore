@@ -48,9 +48,9 @@ def _findBinary(fileCmdOutput):
 
 def _getLibraryListWithLDD(binary):
     # We manually seed this with a few libraries that are missed
-    # This may not be needed for all proces, but will round out the
+    # This may not be needed for all processes, but will round out the
     # postgres binary debugging
-    # TODO: Look a ways to distinguise a 32 vs. 64 bit executable
+    # TODO: Look at ways to distinguish a 32 vs. 64 bit executable
     libraries = ['/lib64/libgcc_s.so.1', '/lib64/libnss_files.so.2', '/lib/libgcc_s.so.1', '/lib/libnss_files.so.2']
     ldd_output = Popen('ldd `which postgres`', shell=True, stdout=PIPE)
     for line in ldd_output.stdout:
@@ -200,7 +200,7 @@ def parseArgs():
     u = '''%prog [options] core_file
 This will create an archive with the core file and all required
 libraries for analysis.  The preference is to use GDB so that we can
-resolve dependancies for extensions.'''
+resolve dependencies for extensions.'''
 
     parser = OptionParser(version='%prog: 0.4beta', usage=u)
     parser.add_option('-b', '--binary', action='store', type='string', dest='binary', metavar='PROGRAMME', help='The full path to the binary that created the core file.  Used when packcore cannot determine the source binary')

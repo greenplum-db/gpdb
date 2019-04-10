@@ -190,7 +190,7 @@ def verify_lines_in_file(fname, expected):
 def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
     """
     Reads the partition state for an AO or AOCS relation, which is the sum of
-    the modication counters over all ao segment files.
+    the modification counters over all ao segment files.
     The sum might be an invalid number even when the relation contains tuples.
     The reason is that the master aoseg info tuple for segno 0 is not there
     after the CTAS. Vacuum will correct in missing state on the master.

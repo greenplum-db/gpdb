@@ -53,7 +53,7 @@ def canonicalize_address(addr):
     '[2620:0:170:610::13]'
 
     @param addr: the address to possibly encase in [ ]
-    @returns:    the addresss, encased in [] if necessary
+    @returns:    the address, encased in [] if necessary
     """
     if ':' not in addr: return addr
     if '[' in addr: return addr

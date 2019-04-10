@@ -537,7 +537,7 @@ def collectInittab():
     
     return data
 
-# returns populated ojbect of type: ntp
+# returns populated object of type: ntp
 def collectNtpd():
 
     data = ntp()

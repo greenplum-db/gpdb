@@ -762,7 +762,7 @@ def get_host_map(hostlist):
 
 def runNetPerfTestMatrix():
     '''
-        Runs full matrix network test where each host connnects with
+        Runs full matrix network test where each host connects with
             every link on every other host.
         Returns performance results and a dictionary mapping segment_name
             to hostname

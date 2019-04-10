@@ -186,7 +186,7 @@ def interactive():
         except IOError:
             pass
 
-        # MPP-4054 - let's check the permissons before we register
+        # MPP-4054 - let's check the permissions before we register
         try:
             f = open(histfile, 'a')
             atexit.register(readline.write_history_file, histfile)

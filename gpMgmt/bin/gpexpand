@@ -903,7 +903,7 @@ class gpexpand:
         # make sure gpexpand schema doesn't exist since it wasn't in DB provided
         if not gpexpand_db_status:
             """
-            MPP-14145 - If there's no discernable status, the schema must not exist.
+            MPP-14145 - If there's no discernible status, the schema must not exist.
 
             The checks in get_status_from_db claim to look for existence of the 'gpexpand' schema, but more accurately they're
             checking for non-emptiness of the gpexpand.status table. If the table were empty, but the schema did exist, gpexpand would presume
@@ -1805,7 +1805,7 @@ class ExpandTable():
 
     def expand(self, table_conn, cancel_flag):
         # for root partition, we want to expand whose partition in one shot
-        # TODO: expand leaf partitions seperately in parallel
+        # TODO: expand leaf partitions separately in parallel
         only_str = "" if self.is_root_partition else "ONLY"
         external_str = "EXTERNAL" if self.external_writable else ""
         sql = 'ALTER %s TABLE %s %s EXPAND TABLE' % (external_str, only_str, self.fq_name)
