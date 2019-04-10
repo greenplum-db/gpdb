@@ -27,16 +27,12 @@ include $(BLD_TOP)/Makefile.thirdparty
 HERE:=$(shell pwd -L)
 
 # override MPP_ARCH values on BLD_ARCH's not native to the build server (e.g., 32-bit builds on 64-bit OSes)
-sol10_x86_32_MPP_ARCH=SOL-i386
-sol10_sparc_64_MPP_ARCH=SOL10-sparc_64
-sol10_sparc_32_MPP_ARCH=SOL10-sparc_32
 ifneq "$($(BLD_ARCH)_MPP_ARCH)" ""
 export MPP_ARCH=$($(BLD_ARCH)_MPP_ARCH)
 endif
 
 # take over the gcc version we use
 BLD_CC=gcc
-hpux_ia64_CC=gcc
 osx106_x86_CC=gcc
 
 ifneq "$($(BLD_ARCH)_CC)" ""
@@ -46,7 +42,6 @@ export CPP=$(subst gcc,cpp,$(BLD_CC))
 export CXX=$(subst gcc,g++,$(BLD_CC))
 endif
 
-sol10_x86_64_CXX=g++ -m64
 ifneq "$($(BLD_ARCH)_CXX)" ""
 export CXX=$($(BLD_ARCH)_CXX)
 endif
@@ -57,9 +52,6 @@ aix5_ppc_64_PATH_PREPEND=/opt/freeware/bin
 aix5_ppc_32_PATH_PREPEND=/opt/freeware/bin
 aix7_ppc_64_PATH_PREPEND=/opt/freeware/bin
 osx106_x86_PATH_PREPEND=$(BLD_THIRDPARTY_BIN_DIR)
-sol10_x86_32_PATH_PREPEND=/opt/python32-2.5.1/bin
-sol10_sparc_64_PATH_PREPEND=/opt/gcc-4.1.1/bin
-sol10_sparc_32_PATH_PREPEND=/opt/python32-2.5.1/bin:/opt/gcc-4.1.1/bin
 BLD_PATH_PREPEND=$($(BLD_ARCH)_PATH_PREPEND)
 ifneq "$(BLD_PATH_PREPEND)" ""
 export PATH:=$(BLD_PATH_PREPEND):$(PATH)
@@ -71,10 +63,6 @@ endif
 aix5_ppc_64_LD_LIBRARY_PATH_PREPEND=/opt/freeware/lib
 aix5_ppc_32_LD_LIBRARY_PATH_PREPEND=/opt/freeware/lib
 aix7_ppc_64_LD_LIBRARY_PATH_PREPEND=/opt/freeware/lib
-ifneq "$(BLD_LD_LIBRARY_PATH_FIXED)" "true"
-sol10_x86_32_LD_LIBRARY_PATH_PREPEND=/opt/python32-2.5.1/lib
-sol10_sparc_32_LD_LIBRARY_PATH_PREPEND=/opt/python32-2.5.1/lib
-endif
 BLD_LD_LIBRARY_PATH_PREPEND=$($(BLD_ARCH)_LD_LIBRARY_PATH_PREPEND)
 ifneq "$(BLD_LD_LIBRARY_PATH_PREPEND)" ""
 export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE):=$(BLD_LD_LIBRARY_PATH_PREPEND):$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE))
@@ -85,14 +73,9 @@ export BLD_LD_LIBRARY_PATH_FIXED=true
 aix5_ppc_32_PYTHONHOME=/opt/pware
 aix5_ppc_64_PYTHONHOME=/opt/pware64
 aix7_ppc_64_PYTHONHOME=/opt/freeware
-hpux_ia64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.5.6
 osx106_x86_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
 rhel6_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
 rhel7_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
-sol10_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
-sol10_x86_32_PYTHONHOME=/opt/python32-2.5.1
-sol10_sparc_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
-sol10_sparc_32_PYTHONHOME=/opt/python32-2.5.1
 suse10_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
 suse11_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
 sles11_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
@@ -144,15 +127,9 @@ endif
 export NO_M64=1
 
 # 32-bit/64-bit compiler/linker flag settings
-hpux_ia64_BLD_CFLAGS=-mlp64 -D_XOPEN_SOURCE_EXTENDED
 osx106_x86_BLD_CFLAGS=-m32 -march=i686
 rhel6_x86_64_BLD_CFLAGS=-m64 -gdwarf-2 -gstrict-dwarf
 rhel7_x86_64_BLD_CFLAGS=-m64
-sol10_sparc_64_BLD_CFLAGS=-m64 -mcpu=v9
-sol10_sparc_32_BLD_CFLAGS=-m32
-sol10_sparc_BLD_CFLAGS=-m64 -mcpu=v9
-sol10_x86_64_BLD_CFLAGS=-m64
-sol10_x86_32_BLD_CFLAGS=-m32
 suse10_x86_64_BLD_CFLAGS=-m64
 suse11_x86_64_BLD_CFLAGS=-m64
 sles11_x86_64_BLD_CFLAGS=-m64
@@ -179,7 +156,6 @@ endif
 
 BLD_BITS:=$(strip $(findstring 32,$(BLD_ARCH)) $(findstring 64,$(BLD_ARCH)))
 ifeq "$(BLD_BITS)" ""
-sol10_sparc_BLD_BITS=64
 osx106_x86_BLD_BITS=32
 aix5_ppc_64_BLD_BITS=64
 aix5_ppc_32_BLD_BITS=32
@@ -200,11 +176,6 @@ GREP=grep
 aix5_ppc_64_GREP=/opt/freeware/bin/grep
 aix5_ppc_32_GREP=/opt/freeware/bin/grep
 aix7_ppc_64_GREP=/opt/freeware/bin/grep
-sol10_x86_64_GREP=ggrep
-sol10_x86_32_GREP=ggrep
-sol10_sparc_64_GREP=ggrep
-sol10_sparc_32_GREP=ggrep
-sol10_sparc_GREP=ggrep
 ifneq "$($(BLD_ARCH)_GREP)" ""
 GREP=$($(BLD_ARCH)_GREP)
 endif
@@ -214,11 +185,6 @@ TAR=tar
 aix5_ppc_32_TAR=gtar
 aix5_ppc_64_TAR=gtar
 aix7_ppc_64_TAR=gtar
-sol10_x86_32_TAR=gtar
-sol10_x86_64_TAR=gtar
-sol10_sparc_TAR=gtar
-sol10_sparc_32_TAR=gtar
-sol10_sparc_64_TAR=gtar
 ifneq "$($(BLD_ARCH)_TAR)" ""
 TAR=$($(BLD_ARCH)_TAR)
 endif
@@ -227,11 +193,6 @@ endif
 aix5_ppc_32_AWK=gawk
 aix5_ppc_64_AWK=gawk
 aix7_ppc_64_AWK=gawk
-sol10_x86_32_AWK=nawk
-sol10_x86_64_AWK=nawk
-sol10_sparc_AWK=nawk
-sol10_sparc_32_AWK=nawk
-sol10_sparc_64_AWK=nawk
 ifneq "$($(BLD_ARCH)_AWK)" ""
 AWK=$($(BLD_ARCH)_AWK)
 else

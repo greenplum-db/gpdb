@@ -160,7 +160,6 @@ endif
 
 aix7_ppc_64_CONFIGFLAGS=--disable-gpcloud --without-readline --without-libcurl --disable-orca --disable-pxf --without-zstd $(APR_CONFIG)
 win32_CONFIGFLAGS=--with-gssapi --without-libcurl --disable-orca --disable-pxf --disable-gpcloud --without-libbz2 $(APR_CONFIG)
-sol10_x86_64_CONFIGFLAGS= --with-libxml $(APR_CONFIG)
 rhel6_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
 rhel7_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
 suse11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce --without-zstd $(APR_CONFIG) $(APU_CONFIG)
@@ -309,9 +308,6 @@ export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE)=$(BLD_LD_LIBRARY_PATH)
 aix5_ppc_64_GPDB_BUILDSET=partial
 aix5_ppc_32_GPDB_BUILDSET=partial
 aix7_ppc_64_GPDB_BUILDSET=aix_subset
-sol10_x86_64_GPDB_BUILDSET=partial
-sol10_x86_32_GPDB_BUILDSET=partial
-sol10_sparc_32_GPDB_BUILDSET=partial
 win64_GPDB_BUILDSET=partial
 win32_GPDB_BUILDSET=partial
 BLD_GPDB_BUILDSET=$($(BLD_ARCH)_GPDB_BUILDSET)
@@ -567,11 +563,6 @@ AIX_CLIENTS_LIBS_PWARE=libbz2.a libiconv.a libintl.a libncurses.a libpanel.a lib
 CLIENTS_FILESET_LIB_PWARE=$($(BLD_OS)_CLIENTS_LIBS_PWARE)
 
 ifeq "$(MPP_ARCH)" ""
-sol10_x86_64_MPP_ARCH=SOL-x86_64
-sol10_x86_32_MPP_ARCH=SOL-i386
-sol10_sparc_MPP_ARCH=SOL10-sparc
-sol10_sparc_64_MPP_ARCH=SOL10-sparc_64
-sol10_sparc_32_MPP_ARCH=SOL10-sparc_32
 rhel6_x86_64_MPP_ARCH=RHEL6-x86_64
 rhel7_x86_64_MPP_ARCH=RHEL7-x86_64
 osx106_x86_MPP_ARCH=OSX-i386
