@@ -505,7 +505,7 @@ checkDispatchResult(CdbDispatcherState *ds,
 			 * FTS to perform a probe before checking the segment
 			 * state.
 			 */
-			FtsNotifyProber();
+			FtsNotifyProber(false);
 			checkSegmentAlive(pParms);
 
 			if (pParms->waitMode != DISPATCH_WAIT_NONE)

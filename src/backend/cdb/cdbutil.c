@@ -580,7 +580,7 @@ cdbcomponent_updateCdbComponents(void)
 	}
 	PG_CATCH();
 	{
-		FtsNotifyProber();
+		FtsNotifyProber(true);
 
 		PG_RE_THROW();
 	}
@@ -610,7 +610,7 @@ cdbcomponent_getCdbComponents()
 	}
 	PG_CATCH();
 	{
-		FtsNotifyProber();
+		FtsNotifyProber(true);
 
 		PG_RE_THROW();
 	}

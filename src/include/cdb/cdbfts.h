@@ -35,6 +35,7 @@ typedef struct FtsProbeInfo
 	volatile uint8		fts_statusVersion;
 	volatile uint8		probeTick;
 	volatile uint8		fts_status[FTS_MAX_DBS];
+	volatile bool       inProgress;
 } FtsProbeInfo;
 
 #define FTS_MAX_TRANSIENT_STATE 100
@@ -57,6 +58,6 @@ extern bool FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor **, int);
 extern bool verifyFtsSyncCount(void);
 extern void ftsLock(void);
 extern void ftsUnlock(void);
-extern void FtsNotifyProber(void);
+extern void FtsNotifyProber(bool wait_for_current_probe_to_finish);
 extern uint8 getFtsVersion(void);
 #endif   /* CDBFTS_H */

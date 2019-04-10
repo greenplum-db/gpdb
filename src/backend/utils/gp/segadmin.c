@@ -833,7 +833,14 @@ gp_request_fts_probe_scan(PG_FUNCTION_ARGS)
 		PG_RETURN_BOOL(false);
 	}
 
-	FtsNotifyProber();
+	FtsNotifyProber(true);
 
 	PG_RETURN_BOOL(true);
 }
+
+
+
+
+
+
+

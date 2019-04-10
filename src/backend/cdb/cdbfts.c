@@ -83,6 +83,7 @@ FtsShmemInit(void)
 		ftsControlLock = shared->ControlLock;
 
 		shared->fts_probe_info.fts_statusVersion = 0;
+		shared->fts_probe_info.inProgress = false;
 		shared->pm_launch_walreceiver = false;
 	}
 }
@@ -99,21 +100,57 @@ ftsUnlock(void)
 	LWLockRelease(ftsControlLock);
 }
 
+static void
+sleep_until_current_probe_is_finished(void)
+{
+	while(ftsProbeInfo->inProgress)
+	{
+		pg_usleep(50000);
+		CHECK_FOR_INTERRUPTS();
+	}
+}
+
+static void
+mark_probe_in_progress(void)
+{
+	ftsProbeInfo->inProgress = true;
+}
+
+static void
+mark_probe_finished(void)
+{
+	ftsProbeInfo->inProgress = false;
+}
+
+/* sit and spin */
+static void
+sleep_until_fts_wakens(const uint8 currentTick)
+{
+	while (currentTick == ftsProbeInfo->probeTick)
+	{
+		pg_usleep(50000);
+		CHECK_FOR_INTERRUPTS();
+	}
+}
+
 void
-FtsNotifyProber(void)
+FtsNotifyProber(bool wait_for_current_probe_to_finish)
 {
 	Assert(Gp_role == GP_ROLE_DISPATCH);
+	
+	if (wait_for_current_probe_to_finish)
+		sleep_until_current_probe_is_finished();
+
+	mark_probe_in_progress();
+	
 	uint8 probeTick = ftsProbeInfo->probeTick;
 
 	/* signal fts-probe */
 	SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
 
-	/* sit and spin */
-	while (probeTick == ftsProbeInfo->probeTick)
-	{
-		pg_usleep(50000);
-		CHECK_FOR_INTERRUPTS();
-	}
+	sleep_until_fts_wakens(probeTick);
+
+	mark_probe_finished();
 }
 
 /*

@@ -291,7 +291,7 @@ create_gang_retry:
 	}
 	PG_CATCH();
 	{
-		FtsNotifyProber();
+		FtsNotifyProber(false);
 		/* FTS shows some segment DBs are down */
 		if (FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
 		{
