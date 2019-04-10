@@ -133,7 +133,8 @@
                         to <codeph>gpinitsystem</codeph>. </pd>
                 </plentry>
                 <plentry>
-                    <pt>--locale=<varname>locale</varname> | -n <varname>locale</varname></pt>
+                    <pt> -n <varname>locale</varname> | --locale=<varname>locale</varname>
+                    </pt>
                     <pd>Sets the default locale used by Greenplum Database. If not specified, the
                             <codeph>LC_ALL</codeph>, <codeph>LC_COLLATE</codeph>, or
                             <codeph>LANG</codeph> environment variable of the master host determines
@@ -197,7 +198,7 @@
                             <codeph>~/gpAdminLogs</codeph>.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--max_connections=number | -m <varname>number</varname></pt>
+                    <pt> -m <varname>number</varname> | --max_connections=number</pt>
                     <pd>Sets the maximum number of client connections allowed to the master. The
                         default is 250.</pd>
                 </plentry>
@@ -227,7 +228,7 @@
                         still written to the log file.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--shared_buffers=<varname>size</varname> | -b <varname>size</varname></pt>
+                    <pt> -b <varname>size</varname> | --shared_buffers=<varname>size</varname></pt>
                     <pd>Sets the amount of memory a Greenplum server instance uses for shared memory
                         buffers. You can specify sizing in kilobytes (kB), megabytes (MB) or
                         gigabytes (GB). The default is 125MB.</pd>
@@ -248,16 +249,16 @@
                         host.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--standby_dir=<varname>standby_master_datadir</varname> |
-                            -S <varname>standby_master_datadir</varname></pt>
+                    <pt>-S <varname>standby_master_datadir</varname> |
+                            --standby_dir=<varname>standby_master_datadir</varname></pt>
                     <pd>If you configure a standby master host with <codeph>-s</codeph>, use this
                         option to specify its data directory. If you configure a standby on the same
                         host as the master instance, the master and standby must have separate data
                         directories.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--su_password=<varname>superuser_password</varname> | -e
-                            <varname>superuser_password</varname></pt>
+                    <pt> -e <varname>superuser_password</varname> |
+                            --su_password=<varname>superuser_password</varname></pt>
                     <pd>Use this option to specify the password to set for the Greenplum Database
                         superuser account (such as <codeph>gpadmin</codeph>). If this option is not
                         specified, the default password <codeph>gparray</codeph> is assigned to the
