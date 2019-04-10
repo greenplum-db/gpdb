@@ -79,10 +79,6 @@ BLD_THIRDPARTY_LIB_DIR=$(BLD_THIRDPARTY)/$(BLD_ARCH)/lib
 # a distri- bution fileset.
 # ----------------------------------------------------------------------
 
-ifeq "$(findstring osx,$(BLD_ARCH))" "osx"
-BLD_MAC_PREFIX=DY
-endif
-
 ifeq "$(findstring $(BLD_THIRDPARTY_LIB_DIR),$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE)))" ""
 tmpLD_LIBRARY_PATH=$(BLD_THIRDPARTY_LIB_DIR):$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE))
 export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE):=$(tmpLD_LIBRARY_PATH)
@@ -119,9 +115,6 @@ BLD_ZLIB-1.2.3_INCDIR=$(BLD_ZLIB_HOME)/include
 .PHONY: thirdparty-dist thirdparty-dist-base thirdparty-dist-exceptions
 
 BLD_DYLIB_NAME=so
-ifeq "$(findstring osx,$(BLD_ARCH))" "osx"
-BLD_DYLIB_NAME=dylib
-endif
 ifeq "$(findstring aix,$(BLD_ARCH))" "aix"
 BLD_DYLIB_NAME=a
 endif

@@ -3,11 +3,6 @@
 # ----------------------------------------------------------------------
 
 case "`uname -s`" in
-    Darwin)
-    # Currently we build any OSX version as 10.6.
-    BLD_ARCH_HOST=osx106_x86
-    ;;
-
     Linux)
     if [ -f /etc/redhat-release ]; then
         case "`cat /etc/redhat-release`" in

@@ -104,7 +104,7 @@ ISCONFIG=$(GPPGDIR)/GNUmakefile
 ## On these platforms, we do the full build including the server. On other
 ## platforms, we do a client-only build.
 ##
-SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 linux_x86_64 osx106_x86
+SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 linux_x86_64
 
 #---------------------------------------------------------------------
 # GPPKG
@@ -165,7 +165,6 @@ rhel7_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --
 suse11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce --without-zstd $(APR_CONFIG) $(APU_CONFIG)
 sles11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce --without-zstd $(APR_CONFIG) $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-osx106_x86_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
 ubuntu1604_amd64_CONFIGFLAGS=--enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --without-zstd ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
@@ -235,8 +234,6 @@ win32_LDFLAGS=LDFLAGS="-L/usr/i686-pc-mingw32/sys-root/mingw/lib -L$(BLD_TOP)/ex
 win32_CONFIG_ADDITIONS=--build=x86_x64-unknown-linux-gnu --host=i686-pc-mingw32 --without-zlib --without-libbz2 --enable-debug CC=/usr/bin/i686-pc-mingw32-gcc $(win32_LIBS) $(win32_LDFLAGS) CPP= CPPFLAGS="-I/usr/i686-pc-mingw32/sys-root/mingw/include -I$(BLD_TOP)/ext/win32/kfw-3-2-2/inc/krb5 -I$(BLD_THIRDPARTY_INCLUDE_DIR) -I$(GPPGDIR)/src/bin/gpfdist/ext/include $(BLD_THIRDPARTY_OPENSSL_INCLUDES)"
 win64_CONFIG_ADDITIONS=--build=x86_x64-unknown-linux-gnu --host=x86_64-pc-mingw64 --without-zlib --without-libbz2 --enable-debug CC=/usr/local/mingw64/bin/x86_64-w64-mingw32-gcc LDFLAGS=-L/usr/local/mingw64/x86_64-w64-mingw32/lib CPP= CPPFLAGS=-I/usr/local/mingw64/x86_64-w64-mingw32/include
 CONFIG_ADDITIONS=$($(BLD_ARCH)_CONFIG_ADDITIONS)
-
-osx105_x86_GPFDIST_LDFLAGS=-Wl,-search_paths_first
 
 CONFIGFLAGS+= $(CONFIG_ADDITIONS)
 
@@ -565,7 +562,6 @@ CLIENTS_FILESET_LIB_PWARE=$($(BLD_OS)_CLIENTS_LIBS_PWARE)
 ifeq "$(MPP_ARCH)" ""
 rhel6_x86_64_MPP_ARCH=RHEL6-x86_64
 rhel7_x86_64_MPP_ARCH=RHEL7-x86_64
-osx106_x86_MPP_ARCH=OSX-i386
 sles11_x86_64_MPP_ARCH=SLES11-x86_64
 ifneq "$($(BLD_ARCH)_MPP_ARCH)" ""
 export MPP_ARCH=$($(BLD_ARCH)_MPP_ARCH)
