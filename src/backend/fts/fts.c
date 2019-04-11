@@ -50,6 +50,7 @@
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
+#include "utils/timeout.h"
 
 #include "catalog/pg_authid.h"
 #include "catalog/pg_database.h"
@@ -88,6 +89,7 @@ static pid_t ftsprobe_forkexec(void);
 #endif
 NON_EXEC_STATIC void ftsMain(int argc, char *argv[]);
 static void FtsLoop(void);
+static void TimeoutHandler(void);
 
 static CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext);
 
@@ -212,7 +214,7 @@ ftsMain(int argc, char *argv[])
 	pqsignal(SIGINT, sigIntHandler);
 	pqsignal(SIGTERM, die);
 	pqsignal(SIGQUIT, quickdie); /* we don't do any ftsprobe specific cleanup, just use the standard. */
-	pqsignal(SIGALRM, SIG_IGN);
+	InitializeTimeouts();		/* establishes SIGALRM handler */
 
 	pqsignal(SIGPIPE, SIG_IGN);
 	pqsignal(SIGUSR1, procsignal_sigusr1_handler);
@@ -220,6 +222,11 @@ ftsMain(int argc, char *argv[])
 	pqsignal(SIGUSR2, RequestShutdown);
 	pqsignal(SIGFPE, FloatExceptionHandler);
 	pqsignal(SIGCHLD, SIG_DFL);
+
+	RegisterTimeout(DEADLOCK_TIMEOUT, TimeoutHandler);
+	RegisterTimeout(STATEMENT_TIMEOUT, TimeoutHandler);
+	RegisterTimeout(LOCK_TIMEOUT, TimeoutHandler);
+	RegisterTimeout(GANG_TIMEOUT, TimeoutHandler);
 
 	/*
 	 * Copied from bgwriter
@@ -580,4 +587,10 @@ bool
 FtsIsActive(void)
 {
 	return (!skipFtsProbe && !shutdown_requested);
+}
+
+static void
+TimeoutHandler(void)
+{
+	kill(MyProcPid, SIGINT);
 }

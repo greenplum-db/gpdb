@@ -44,6 +44,7 @@
 #include "libpq/libpq-be.h"
 #include "executor/spi.h"
 #include "utils/sharedsnapshot.h"
+#include "utils/timeout.h"
 
 #include "gdddetector.h"
 
@@ -60,6 +61,7 @@ static int  doDeadLockCheck(void);
 static void buildWaitGraph(GddCtx *ctx);
 static void breakDeadLock(GddCtx *ctx);
 static void dumpCancelResult(StringInfo str, List *xids);
+static void TimeoutHandler(void);
 
 static MemoryContext	gddContext;
 static MemoryContext    oldContext;
@@ -190,7 +192,7 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	pqsignal(SIGINT, StatementCancelHandler);
 	pqsignal(SIGTERM, die);
 	pqsignal(SIGQUIT, quickdie); /* we don't do any seq-server specific cleanup, just use the standard. */
-	pqsignal(SIGALRM, SIG_IGN);
+	InitializeTimeouts();
 
 	pqsignal(SIGPIPE, SIG_IGN);
 	pqsignal(SIGUSR1, procsignal_sigusr1_handler);
@@ -198,6 +200,11 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	pqsignal(SIGUSR2, RequestShutdown);
 	pqsignal(SIGFPE, FloatExceptionHandler);
 	pqsignal(SIGCHLD, SIG_DFL);
+
+	RegisterTimeout(DEADLOCK_TIMEOUT, TimeoutHandler);
+	RegisterTimeout(STATEMENT_TIMEOUT, TimeoutHandler);
+	RegisterTimeout(LOCK_TIMEOUT, TimeoutHandler);
+	RegisterTimeout(GANG_TIMEOUT, TimeoutHandler);
 
 	/*
 	 * Create a resource owner to keep track of our resources (currently only
@@ -575,4 +582,10 @@ dumpCancelResult(StringInfo str, List *xids)
 		if (lnext(cell))
 			appendStringInfo(str, ",");
 	}
+}
+
+static void
+TimeoutHandler(void)
+{
+	kill(MyProcPid, SIGINT);
 }
