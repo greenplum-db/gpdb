@@ -2165,7 +2165,6 @@ SELECT * FROM y;
 -- Nested RECURSIVE queries with double self-referential joins are planned by
 -- joining two WorkTableScans, which GPDB cannot do yet. Ensure that we error
 -- out with a descriptive message.
-SET gp_recursive_cte TO ON;
 WITH RECURSIVE r1 AS (
 	SELECT 1 AS a
 	UNION ALL
