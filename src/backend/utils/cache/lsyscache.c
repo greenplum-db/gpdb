@@ -1658,7 +1658,27 @@ trigger_enabled(Oid triggerid)
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for trigger %u", triggerid);
 
-	result = ((Form_pg_trigger) GETSTRUCT(tp))->tgenabled;
+	char tgenabled = ((Form_pg_trigger) GETSTRUCT(tp))->tgenabled;
+	switch (tgenabled)
+	{
+		case TRIGGER_FIRES_ON_ORIGIN:
+			/* fallthrough */
+			/*
+			 * FIXME: we should probably return false when
+			 * SessionReplicationRole isn't SESSION_REPLICATION_ROLE_ORIGIN,
+			 * but does that means we'll also have to flush ORCA's metadata
+			 * cache on every assignment of session_replication_role?
+			 */
+		case TRIGGER_FIRES_ALWAYS:
+			result = true;
+			break;
+		case TRIGGER_FIRES_ON_REPLICA:
+		case TRIGGER_DISABLED:
+			result = false;
+			break;
+		default:
+			elog(ERROR, "Unknown trigger type: %c", tgenabled);
+	}
 
 	systable_endscan(sscan);
 	table_close(rel, AccessShareLock);
