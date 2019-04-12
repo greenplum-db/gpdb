@@ -27,7 +27,7 @@ tasks:
   - &task
     image: image
     file: gpdb_src/concourse/server_pipeline/task.yml
-    timeout: 2h
+    timeout: 3h
     
   - &test_installcheck_world_with_planner
     <<: *task
