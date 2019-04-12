@@ -321,7 +321,6 @@ def main():
             'Interconnect',
             'CLI',
             'UD',
-            'AA',
             'Extensions',
             'Gpperfmon'
         ]
