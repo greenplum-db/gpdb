@@ -68,8 +68,6 @@ static ChunkTransportStateEntry *startOutgoingConnections(ChunkTransportState *t
 						 int *pOutgoingCount);
 
 static void format_fd_set(StringInfo buf, int nfds, mpp_fd_set *fds, char *pfx, char *sfx);
-static char *format_sockaddr(struct sockaddr *sa, char *buf, int bufsize);
-
 static void setupOutgoingConnection(ChunkTransportState *transportStates,
 						ChunkTransportStateEntry *pEntry, MotionConn *conn);
 static void updateOutgoingConnection(ChunkTransportState *transportStates,
@@ -598,10 +596,10 @@ setupOutgoingConnection(ChunkTransportState *transportStates, ChunkTransportStat
 #ifdef ENABLE_IC_PROXY
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
 	{
-		/* 
+		/*
 		 * Using libuv pipe to register backend to proxy.
 		 * ic_proxy_backend_connect only appends the connect request into
-		 * connection queue and waits for the libuv_run_loop to handle the queue. 
+		 * connection queue and waits for the libuv_run_loop to handle the queue.
 		 */
 		ic_proxy_backend_connect(transportStates->proxyContext,
 								 pEntry, conn, true);
@@ -807,7 +805,7 @@ sendRegisterMessage(ChunkTransportState *transportStates, ChunkTransportStateEnt
 					 errdetail("getsockname sockfd=%d remote=%s: %m",
 							   conn->sockfd, conn->remoteHostAndPort)));
 		}
-		format_sockaddr((struct sockaddr *) &localAddr, conn->localHostAndPort,
+		format_sockaddr(&localAddr, conn->localHostAndPort,
 						sizeof(conn->localHostAndPort));
 
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE)
@@ -1202,7 +1200,7 @@ acceptIncomingConnection(void)
 	conn->remoteContentId = -2;
 
 	/* Save remote and local host:port strings for error messages. */
-	format_sockaddr((struct sockaddr *) &remoteAddr, conn->remoteHostAndPort,
+	format_sockaddr(&remoteAddr, conn->remoteHostAndPort,
 					sizeof(conn->remoteHostAndPort));
 	addrsize = sizeof(localAddr);
 	if (getsockname(newsockfd, (struct sockaddr *) &localAddr, &addrsize))
@@ -1213,7 +1211,7 @@ acceptIncomingConnection(void)
 				 errdetail("getsockname sockfd=%d remote=%s: %m",
 						   newsockfd, conn->remoteHostAndPort)));
 	}
-	format_sockaddr((struct sockaddr *) &localAddr, conn->localHostAndPort,
+	format_sockaddr(&localAddr, conn->localHostAndPort,
 					sizeof(conn->localHostAndPort));
 
 	/* make socket non-blocking */
@@ -1334,11 +1332,11 @@ SetupTCPInterconnect(EState *estate)
 				{
 					incoming_count++;
 
-					/* 
+					/*
 					 * Using libuv pipe to register backend to proxy.
 					 * ic_proxy_backend_connect only appends the connect request
 					 * into connection queue and waits for the libuv_run_loop to
-					 * handle the queue. 
+					 * handle the queue.
 					 */
 					ic_proxy_backend_connect(interconnect_context->proxyContext,
 											 pEntry, conn, false /* isSender */);
@@ -2212,80 +2210,6 @@ format_fd_set(StringInfo buf, int nfds, mpp_fd_set *fds, char *pfx, char *sfx)
 	appendStringInfoString(buf, sfx);
 }
 
-static char *
-format_sockaddr(struct sockaddr *sa, char *buf, int bufsize)
-{
-	/* Save remote host:port string for error messages. */
-	if (sa->sa_family == AF_INET)
-	{
-		struct sockaddr_in *sin = (struct sockaddr_in *) sa;
-		uint32		saddr = ntohl(sin->sin_addr.s_addr);
-
-		snprintf(buf, bufsize, "%d.%d.%d.%d:%d",
-				 (saddr >> 24) & 0xff,
-				 (saddr >> 16) & 0xff,
-				 (saddr >> 8) & 0xff,
-				 saddr & 0xff,
-				 ntohs(sin->sin_port));
-	}
-#ifdef HAVE_IPV6
-	else if (sa->sa_family == AF_INET6)
-	{
-		char		remote_port[32] = {'\0'};
-
-		if (bufsize > 10)
-		{
-			buf[0] = '[';
-
-			/*
-			 * inet_ntop isn't portable. //inet_ntop(AF_INET6,
-			 * &sin6->sin6_addr, buf, bufsize - 8);
-			 *
-			 * postgres has a standard routine for converting addresses to
-			 * printable format, which works for IPv6, IPv4, and Unix domain
-			 * sockets.  I've changed this routine to use that, but I think
-			 * the entire format_sockaddr routine could be replaced with it.
-			 */
-			int			ret = pg_getnameinfo_all((const struct sockaddr_storage *) sa, sizeof(struct sockaddr_storage),
-												 buf + 1, bufsize - 10,
-												 remote_port, sizeof(remote_port),
-												 NI_NUMERICHOST | NI_NUMERICSERV);
-
-			if (ret != 0)
-			{
-				elog(LOG, "getnameinfo returned %d: %s, and says %s port %s", ret, gai_strerror(ret), buf, remote_port);
-
-				/*
-				 * Fall back to using our internal inet_ntop routine, which
-				 * really is for inet datatype This is because of a bug in
-				 * solaris, where getnameinfo sometimes fails Once we find out
-				 * why, we can remove this
-				 */
-				snprintf(remote_port, sizeof(remote_port), "%d", ((struct sockaddr_in6 *) sa)->sin6_port);
-
-				/*
-				 * This is nasty: our internal inet_net_ntop takes
-				 * PGSQL_AF_INET6, not AF_INET6, which is very odd... They are
-				 * NOT the same value (even though PGSQL_AF_INET == AF_INET
-				 */
-#define PGSQL_AF_INET6	(AF_INET + 1)
-				inet_net_ntop(PGSQL_AF_INET6, sa, sizeof(struct sockaddr_in6), buf + 1, bufsize - 10);
-				elog(LOG, "Our alternative method says %s]:%s", buf, remote_port);
-
-			}
-			buf += strlen(buf);
-			strcat(buf, "]");
-			buf++;
-		}
-		snprintf(buf, 8, ":%s", remote_port);
-	}
-#endif
-	else
-		snprintf(buf, bufsize, "?host?:?port?");
-
-	return buf;
-}								/* format_sockaddr */
-
 static void
 flushInterconnectListenerBacklog(void)
 {
@@ -2326,7 +2250,7 @@ flushInterconnectListenerBacklog(void)
 				if (gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE)
 				{
 					/* Get remote and local host:port strings for message. */
-					format_sockaddr((struct sockaddr *) &remoteAddr, remoteHostAndPort,
+					format_sockaddr(&remoteAddr, remoteHostAndPort,
 									sizeof(remoteHostAndPort));
 					addrsize = sizeof(localAddr);
 					if (getsockname(newfd, (struct sockaddr *) &localAddr, &addrsize))
@@ -2339,7 +2263,7 @@ flushInterconnectListenerBacklog(void)
 					}
 					else
 					{
-						format_sockaddr((struct sockaddr *) &localAddr, localHostAndPort,
+						format_sockaddr(&localAddr, localHostAndPort,
 										sizeof(localHostAndPort));
 						ereport(DEBUG2, (errmsg("Interconnect clearing incoming connection "
 												"from remote=%s to local=%s.  sockfd=%d.",
@@ -2622,7 +2546,7 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 
 		struct timeval timeout = tval;
 		int	nfds = pEntry->highReadSock;
-		
+
 		/* make sure we check for these. */
 		ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 
@@ -2651,7 +2575,7 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 		if (skipSelect)
 			break;
 
-		/* 
+		/*
 		 * Also monitor the events on dispatch fds, eg, errors or sequence
 		 * request from QEs.
 		 */

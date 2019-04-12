@@ -872,3 +872,37 @@ interconnect_abort_callback(ResourceReleasePhase phase,
 		}
 	}
 }
+
+/*
+ * format_sockaddr
+ *			Format a sockaddr to a human readable string
+ *
+ * This function must be kept threadsafe, elog/ereport/palloc etc are not
+ * allowed within this function.
+ */
+char *
+format_sockaddr(struct sockaddr_storage *sa, char *buf, size_t len)
+{
+	int			ret;
+	char		remote_host[NI_MAXHOST];
+	char		remote_port[NI_MAXSERV];
+
+	ret = pg_getnameinfo_all(sa, sizeof(struct sockaddr_storage),
+							 remote_host, sizeof(remote_host),
+							 remote_port, sizeof(remote_port),
+							 NI_NUMERICHOST | NI_NUMERICSERV);
+
+	if (ret != 0)
+		snprintf(buf, len, "?host?:?port?");
+	else
+	{
+#ifdef HAVE_IPV6
+		if (sa->ss_family == AF_INET6)
+			snprintf(buf, len, "[%s]:%s", remote_host, remote_port);
+		else
+#endif
+			snprintf(buf, len, "%s:%s", remote_host, remote_port);
+	}
+
+	return buf;
+}

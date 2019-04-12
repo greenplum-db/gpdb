@@ -322,4 +322,6 @@ extern void TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
 extern uint32 getActiveMotionConns(void);
 extern void adjustMasterRouting(Slice *recvSlice);
 
+extern char *format_sockaddr(struct sockaddr_storage *sa, char *buf, size_t len);
+
 #endif   /* ML_IPC_H */

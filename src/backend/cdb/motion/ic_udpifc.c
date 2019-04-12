@@ -671,7 +671,6 @@ static ChunkTransportStateEntry *startOutgoingUDPConnections(ChunkTransportState
 							int *pOutgoingCount);
 static void setupOutgoingUDPConnection(ChunkTransportState *transportStates,
 						   ChunkTransportStateEntry *pEntry, MotionConn *conn);
-static char *formatSockAddr(struct sockaddr *sa, char *buf, int bufsize);
 
 /* Connection hash table functions. */
 static bool initConnHashTable(ConnHashTable *ht, MemoryContext ctx);
@@ -2804,7 +2803,7 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 	getSockAddr(&conn->peer, &conn->peer_len, cdbProc->listenerAddr, cdbProc->listenerPort);
 
 	/* Save the destination IP address */
-	formatSockAddr((struct sockaddr *) &conn->peer, conn->remoteHostAndPort,
+	format_sockaddr(&conn->peer, conn->remoteHostAndPort,
 				   sizeof(conn->remoteHostAndPort));
 
 	Assert(conn->peer.ss_family == AF_INET || conn->peer.ss_family == AF_INET6);
@@ -5756,96 +5755,6 @@ doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID)
 }
 
 /*
- * formatSockAddr
- * 		Format sockaddr.
- *
- * NOTE: Because this function can be called in a thread (rxThreadFunc),
- * it must not use services such as elog, ereport, palloc/pfree and StringInfo.
- * elog is NOT thread-safe.  Developers should instead use something like:
- *
- *	if (DEBUG3 >= log_min_messages)
- *		write_log("my brilliant log statement here.");
- */
-char *
-formatSockAddr(struct sockaddr *sa, char *buf, int bufsize)
-{
-	/* Save remote host:port string for error messages. */
-	if (sa->sa_family == AF_INET)
-	{
-		struct sockaddr_in *sin = (struct sockaddr_in *) sa;
-		uint32		saddr = ntohl(sin->sin_addr.s_addr);
-
-		snprintf(buf, bufsize, "%d.%d.%d.%d:%d",
-				 (saddr >> 24) & 0xff,
-				 (saddr >> 16) & 0xff,
-				 (saddr >> 8) & 0xff,
-				 saddr & 0xff,
-				 ntohs(sin->sin_port));
-	}
-#ifdef HAVE_IPV6
-	else if (sa->sa_family == AF_INET6)
-	{
-		char		remote_port[32];
-
-		remote_port[0] = '\0';
-		buf[0] = '\0';
-
-		if (bufsize > 10)
-		{
-			buf[0] = '[';
-			buf[1] = '\0';		/* in case getnameinfo fails */
-
-			/*
-			 * inet_ntop isn't portable. //inet_ntop(AF_INET6,
-			 * &sin6->sin6_addr, buf, bufsize - 8);
-			 *
-			 * postgres has a standard routine for converting addresses to
-			 * printable format, which works for IPv6, IPv4, and Unix domain
-			 * sockets.  I've changed this routine to use that, but I think
-			 * the entire formatSockAddr routine could be replaced with it.
-			 */
-			int			ret = pg_getnameinfo_all((const struct sockaddr_storage *) sa, sizeof(struct sockaddr_in6),
-												 buf + 1, bufsize - 10,
-												 remote_port, sizeof(remote_port),
-												 NI_NUMERICHOST | NI_NUMERICSERV);
-
-			if (ret != 0)
-			{
-				write_log("getnameinfo returned %d: %s, and says %s port %s",
-						  ret, gai_strerror(ret), buf, remote_port);
-
-				/*
-				 * Fall back to using our internal inet_ntop routine, which
-				 * really is for inet datatype This is because of a bug in
-				 * solaris, where getnameinfo sometimes fails Once we find out
-				 * why, we can remove this
-				 */
-				snprintf(remote_port, sizeof(remote_port), "%d", ((struct sockaddr_in6 *) sa)->sin6_port);
-
-				/*
-				 * This is nasty: our internal inet_net_ntop takes
-				 * PGSQL_AF_INET6, not AF_INET6, which is very odd... They are
-				 * NOT the same value (even though PGSQL_AF_INET == AF_INET
-				 */
-#define PGSQL_AF_INET6	(AF_INET + 1)
-				inet_net_ntop(PGSQL_AF_INET6, sa, sizeof(struct sockaddr_in6), buf + 1, bufsize - 10);
-				write_log("Our alternative method says %s]:%s", buf, remote_port);
-
-			}
-			buf += strlen(buf);
-			strcat(buf, "]");
-			buf++;
-		}
-		snprintf(buf, 8, ":%s", remote_port);
-	}
-#endif
-	else
-		snprintf(buf, bufsize, "?host?:?port?");
-
-	return buf;
-}								/* formatSockAddr */
-
-/*
  * dispatcherAYT
  * 		Check the connection from the dispatcher to verify that it is still there.
  *
@@ -6618,7 +6527,7 @@ handleMismatch(icpkthdr *pkt, struct sockaddr_storage *peer, int peer_len)
 				write_log("ACKING PACKET WITH FLAGS: pkt->seq %d 0x%x [pkt->icId %d last-teardown %d interconnect_id %d]",
 						  pkt->seq, dummyconn.conn_info.flags, pkt->icId, rx_control_info.lastTornIcId, ic_control_info.ic_instance_id);
 
-			formatSockAddr((struct sockaddr *) &dummyconn.peer, buf, sizeof(buf));
+			format_sockaddr(&dummyconn.peer, buf, sizeof(buf));
 
 			if (DEBUG1 >= log_min_messages)
 				write_log("ACKING PACKET TO %s", buf);
