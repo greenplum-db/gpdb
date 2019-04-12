@@ -62,9 +62,9 @@
         word is only allowed as an "AS" column label name.</p>
       <p>If you get spurious parser errors for commands that contain any of the listed key words as
         an identifier you should try to quote the identifier to see if the problem goes away.</p>
-      <p>Before studying the table, note that that the fact that a key word is not reserved does not
-        mean that the feature related to the word is not implemented. Conversely, the presence of a
-        key word does not indicate the existence of a feature.</p>
+      <p>Before studying the table, note the fact that a key word is not reserved does not mean that
+        the feature related to the word is not implemented. Conversely, the presence of a key word
+        does not indicate the existence of a feature.</p>
       <table id="table_yjz_3hb_jhb">
         <title>SQL Key Words</title>
         <tgroup cols="3">
