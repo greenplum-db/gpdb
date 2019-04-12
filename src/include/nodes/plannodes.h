@@ -281,6 +281,7 @@ typedef struct Plan
 	 * The parent motion node of a plan node.
 	 */
 	struct Plan *motionNode;
+	struct RelOptInfo *rel;
 } Plan;
 
 /* ----------------

@@ -1386,6 +1386,7 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	}
 
 	rel->subroot = subroot;
+	rel->subplan->rel = rel;
 
 	/* Isolate the params needed by this specific subplan */
 	rel->subplan_params = root->plan_params;

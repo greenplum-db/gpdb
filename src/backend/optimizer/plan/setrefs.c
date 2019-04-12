@@ -1290,7 +1290,9 @@ set_subqueryscan_references(PlannerInfo *root,
 	Plan	   *result;
 
 	/* Need to look up the subquery's RelOptInfo, since we need its subroot */
-	rel = find_base_rel(root, plan->scan.scanrelid);
+	rel = plan->subplan->rel;
+	if (!rel)
+		rel = find_base_rel(root, plan->scan.scanrelid);
 	/*
 	 * The Assert() on RelOptInfo's subplan being same as the
 	 * subqueryscan's subplan, is valid in Upstream but not for GPDB,
