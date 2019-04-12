@@ -73,7 +73,7 @@ bool am_ftshandler = false;
  * STATIC VARIABLES
  */
 
-static bool skipFtsProbe = false;
+static bool skip_fts_probe = false;
 
 static volatile bool shutdown_requested = false;
 static volatile bool probe_requested = false;
@@ -514,14 +514,14 @@ void FtsLoop()
 
 		/* Reset this as we are performing the probe */
 		probe_requested = false;
-		skipFtsProbe = false;
+		skip_fts_probe = false;
 
 #ifdef FAULT_INJECTOR
 		if (SIMPLE_FAULT_INJECTOR(FtsProbe) == FaultInjectorTypeSkip)
-			skipFtsProbe = true;
+			skip_fts_probe = true;
 #endif
 
-		if (skipFtsProbe || !has_mirrors)
+		if (skip_fts_probe || !has_mirrors)
 		{
 			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 				   "skipping FTS probes due to %s",
@@ -579,5 +579,5 @@ void FtsLoop()
 bool
 FtsIsActive(void)
 {
-	return (!skipFtsProbe && !shutdown_requested);
+	return (!skip_fts_probe && !shutdown_requested);
 }
