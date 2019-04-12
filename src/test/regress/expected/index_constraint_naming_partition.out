@@ -54,7 +54,6 @@ $fn$;
 --displays all dependencies and their types
 DROP FUNCTION IF EXISTS dependencies();
 NOTICE:  function dependencies() does not exist, skipping
-SET gp_recursive_cte TO on;
 CREATE FUNCTION dependencies() RETURNS TABLE( depname NAME, classtype "char", depnsoid OID,
                                               refname NAME, refclasstype "char", refnsoid OID,
                                               classid REGCLASS,  objid OID, objsubid INTEGER,

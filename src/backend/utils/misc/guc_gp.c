@@ -288,7 +288,7 @@ bool		gp_dynamic_partition_pruning = true;
 bool		gp_log_dynamic_partition_pruning = false;
 bool		gp_cte_sharing = false;
 bool		gp_enable_relsize_collection = false;
-bool		gp_recursive_cte = false;
+bool		gp_recursive_cte = true;
 
 /* Optimizer related gucs */
 bool		optimizer;
@@ -1984,7 +1984,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_recursive_cte,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 
 	{
@@ -1994,7 +1994,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_recursive_cte,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 
 	{
