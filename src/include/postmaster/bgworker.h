@@ -58,6 +58,7 @@
  */
 #define BGWORKER_BACKEND_DATABASE_CONNECTION		0x0002
 
+#define BGWORKER_APPLICATIONNAME "bgworker"
 
 typedef void (*bgworker_main_type) (Datum main_arg);
 

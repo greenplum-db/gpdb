@@ -6231,6 +6231,10 @@ BackgroundWorkerInitializeConnection(char *dbname, char *username)
 {
 	BackgroundWorker *worker = MyBgworkerEntry;
 
+    set_config_option("application_name",BGWORKER_APPLICATIONNAME,
+                      PGC_USERSET,PGC_S_SESSION,
+                      GUC_ACTION_SAVE, true, 0);
+
 	/* XXX is this the right errcode? */
 	if (!(worker->bgw_flags & BGWORKER_BACKEND_DATABASE_CONNECTION))
 		ereport(FATAL,
