@@ -13,7 +13,7 @@ $(BEHAVE_BIN):
 
 # To pass in custom flags as behave args(such as multiple flags),
 # use flags=--tags=foo, --tags=-bar
-behave: $(BEHAVE_BIN)
+behave: $(BEHAVE_BIN) install_sample_gppkg
 	@echo "Running behave on management scripts..."
 	@if [ -n """$(flags)""" ]; then \
 		PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH):$(GPMGMT_SRC):$(PEXPECT_LIB) python $(BEHAVE_BIN) $(GPMGMT_SRC)/test/behave/* -s -k $(flags) 2>&1 ; \
@@ -23,3 +23,9 @@ behave: $(BEHAVE_BIN)
 		echo "Please specify tags=tagname or flags=[behave flags]"; \
 		exit 1; \
 	fi
+.PHONY: install_sample_gppkg
+install_sample_gppkg:
+	bash demo/gppkg/generate_sample_gppkg.sh demo/gppkg/
+	# the DIR /tmp/sample-gppkg/ is hardcoded in demo/gppkg/generate_sample_gppkg.sh
+	cp -f /tmp/sample-gppkg/sample.gppkg test/behave/mgmt_utils/steps/data/
+
