@@ -2,14 +2,14 @@
 title: Configuring the PXF Agent Host and Port (Optional)
 ---
 
-By default, a PXF agent started on a segment host listens on port number `5888` on `localhost`. You can configure PXF to start on a different port number, or use a different hostname or IP address to identify the host. If your Greenplum Database cluster requires this custom configuration, you will set one or both of the environment variables identified below:
+By default, a PXF agent started on a segment host listens on port number `5888` on `localhost`. You can configure PXF to start on a different port number, or use a different hostname or IP address. To change the default configuration, you will set one or both of the environment variables identified below:
 
 |   Environment Variable  |  Description      |
 --------------------------+--------------------
-|   PXF_HOST  | The name of the host. The default host name is `localhost`.  |
+|   PXF_HOST  | The name of the host or IP address. The default host name is `localhost`.  |
 |   PXF_PORT  | The port number on which the PXF agent listens for requests on the host. The default port number is `5888`.  |
 
-You set the environment variables in the `gpadmin` user's `.bashrc` shell login file on each segment host.
+Set the environment variables in the `gpadmin` user's `.bashrc` shell login file on each segment host.
 
 <div class="note">You must restart both Greenplum Database and PXF when you configure the agent host and/or port in this manner. Consider performing this configuration during a scheduled down time.</div>
 
