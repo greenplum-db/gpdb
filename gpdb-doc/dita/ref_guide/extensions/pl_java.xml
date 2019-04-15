@@ -16,9 +16,9 @@
         <xref href="#topic4" type="topic" format="dita"/>
       </li>
       <li otherprops="pivotal">
-        <xref href="#topic7" format="dita"/></li>
-      <li otherprops="pivotal">
         <xref href="#topic6" format="dita"/></li>
+      <li otherprops="pivotal">
+        <xref href="#topic7" format="dita"/></li>
       <li id="pv161254">
         <xref href="#topic13" type="topic" format="dita"/>
       </li>
@@ -244,51 +244,6 @@
       </body>
     </topic>
   </topic>
-  <topic id="topic7" xml:lang="en" otherprops="pivotal">
-    <title>Uninstalling PL/Java</title>
-    <body>
-      <ul id="ul_zsz_fs5_b1b">
-        <li id="pv165655"><xref href="#topic8" type="topic" format="dita"/>
-        </li>
-        <li id="pv165686"><xref href="#topic9" type="topic" format="dita"/>
-        </li>
-      </ul>
-    </body>
-    <topic id="topic8" xml:lang="en">
-      <title id="pv165472">Remove PL/Java Support for a Database</title>
-      <body>
-        <p>Use the <codeph>DROP EXTENSION</codeph> command to remove support for PL/Java from a
-          database. For example, this command disables the PL/Java language in "testdb". </p>
-        <codeblock>$ psql -d testdb -c 'DROP EXTENSION pljava;'</codeblock>
-        <note>The PL/Java <codeph>uninstall.sql</codeph> script, used in previous releases to remove
-          the language registration, is deprecated.</note>
-      </body>
-    </topic>
-    <topic id="topic9" xml:lang="en">
-      <title id="pv165506">Uninstall the Java JAR files and Software Package</title>
-      <body>
-        <p>If no databases have PL/Java as a registered language, remove the Java JAR files and
-          uninstall the Greenplum PL/Java extension with the <codeph>gppkg</codeph> utility. </p>
-        <ol id="ol_atz_fs5_b1b">
-          <li id="pv165538">Remove the <codeph>pljava_classpath</codeph> server configuration
-            parameter from the <codeph>postgresql.conf</codeph> file on all Greenplum Database
-            hosts. For example:<codeblock>$ gpconfig -r pljava_classpath</codeblock></li>
-          <li id="pv165539">Remove the JAR files from the directories where they were installed on
-            all Greenplum Database hosts. For information about JAR file installation directories,
-            see <xref href="#topic6" format="dita"/>.</li>
-          <li id="pv160641">Use the Greenplum <codeph>gppkg</codeph> utility with the
-              <codeph>-r</codeph> option to uninstall the PL/Java extension. This example uninstalls
-            the PL/Java extension on a Linux
-              system:<codeblock>$ gppkg -r pljava-1.4.3</codeblock><p>You can run the
-                <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
-              the installed extensions and their versions.</p></li>
-          <li dir="ltr">Reload
-            <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
-          <li id="pv158621">Restart the database.<codeblock>$ gpstop -r </codeblock></li>
-        </ol>
-      </body>
-    </topic>
-  </topic>
   <topic id="topic6" xml:lang="en">
     <title id="pv161784">Enabling PL/Java and Installing JAR Files</title>
     <body>
@@ -297,8 +252,8 @@
       <ol id="ol_dpn_qr5_b1b">
         <li id="pv162268">Enable PL/Java in a database by executing the <codeph>CREATE
             EXTENSION</codeph> command to register the language. For example, this command enables
-          PL/Java on the database
-            <codeph>testdb</codeph>:<codeblock>$ psql -d testdb -c 'CREATE EXTENSION pljava;'</codeblock><note>The
+          PL/Java in the <codeph>testdb</codeph>
+            database:<codeblock>$ psql -d testdb -c 'CREATE EXTENSION pljava;'</codeblock><note>The
             PL/Java <codeph>install.sql</codeph> script, used in previous releases to register the
             language, is deprecated.</note></li>
         <li id="pv160325">Copy your Java archives (JAR files) to the same directory on all Greenplum
@@ -329,6 +284,52 @@
           <codeblock>$ psql -f $GPHOME/share/postgresql/pljava/examples.sql</codeblock></li>
       </ol>
     </body>
+  </topic>
+  <topic id="topic7" xml:lang="en" otherprops="pivotal">
+    <title>Uninstalling PL/Java</title>
+    <body>
+      <ul id="ul_zsz_fs5_b1b">
+        <li id="pv165655"><xref href="#topic8" type="topic" format="dita"/>
+        </li>
+        <li id="pv165686"><xref href="#topic9" type="topic" format="dita"/>
+        </li>
+      </ul>
+    </body>
+    <topic id="topic8" xml:lang="en">
+      <title id="pv165472">Remove PL/Java Support for a Database</title>
+      <body>
+        <p>Use the <codeph>DROP EXTENSION</codeph> command to remove support for PL/Java from a
+          database. For example, this command disables the PL/Java language in the
+            <codeph>testdb</codeph> database: </p>
+        <codeblock>$ psql -d testdb -c 'DROP EXTENSION pljava;'</codeblock>
+        <note>The PL/Java <codeph>uninstall.sql</codeph> script, used in previous releases to remove
+          the language registration, is deprecated.</note>
+      </body>
+    </topic>
+    <topic id="topic9" xml:lang="en">
+      <title id="pv165506">Uninstall the Java JAR files and Software Package</title>
+      <body>
+        <p>If no databases have PL/Java as a registered language, remove the Java JAR files and
+          uninstall the Greenplum PL/Java extension with the <codeph>gppkg</codeph> utility. </p>
+        <ol id="ol_atz_fs5_b1b">
+          <li id="pv165538">Remove the <codeph>pljava_classpath</codeph> server configuration
+            parameter from the <codeph>postgresql.conf</codeph> file on all Greenplum Database
+            hosts. For example:<codeblock>$ gpconfig -r pljava_classpath</codeblock></li>
+          <li id="pv165539">Remove the JAR files from the directories where they were installed on
+            all Greenplum Database hosts. For information about JAR file installation directories,
+            see <xref href="#topic6" format="dita"/>.</li>
+          <li id="pv160641">Use the Greenplum <codeph>gppkg</codeph> utility with the
+              <codeph>-r</codeph> option to uninstall the PL/Java extension. This example uninstalls
+            the PL/Java extension on a Linux
+              system:<codeblock>$ gppkg -r pljava-1.4.3</codeblock><p>You can run the
+                <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
+              the installed extensions and their versions.</p></li>
+          <li dir="ltr">Reload
+            <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
+          <li id="pv158621">Restart the database.<codeblock>$ gpstop -r </codeblock></li>
+        </ol>
+      </body>
+    </topic>
   </topic>
   <topic id="topic13" xml:lang="en">
     <title id="pv158066">Writing PL/Java functions</title>
