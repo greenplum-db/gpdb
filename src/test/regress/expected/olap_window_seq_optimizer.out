@@ -8518,4 +8518,127 @@ View definition:
  SELECT sum(DISTINCT g.g / 2) OVER (PARTITION BY g.g / 4) AS sum
    FROM generate_series(1, 5) g(g);
 
+-- These are tests for pushing down filter predicates in window functions.
+CREATE TABLE window_part_sales (trans_id int, date date, region text)
+DISTRIBUTED BY (trans_id)
+PARTITION BY RANGE (date)
+SUBPARTITION BY LIST (region)
+SUBPARTITION TEMPLATE
+( SUBPARTITION usa VALUES ('usa'),
+DEFAULT SUBPARTITION other_regions)
+(START (date '2011-01-01') INCLUSIVE
+END (date '2011-06-01') EXCLUSIVE
+EVERY (INTERVAL '1 month'),
+DEFAULT PARTITION outlying_dates );
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_outlying_dates" for table "window_part_sales"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_outlying_dates_2_prt_usa" for table "window_part_sales_1_prt_outlying_dates"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_outlying_dates_2_prt_other_regions" for table "window_part_sales_1_prt_outlying_dates"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_2" for table "window_part_sales"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_2_2_prt_usa" for table "window_part_sales_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_2_2_prt_other_regions" for table "window_part_sales_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_3" for table "window_part_sales"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_3_2_prt_usa" for table "window_part_sales_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_3_2_prt_other_regions" for table "window_part_sales_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_4" for table "window_part_sales"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_4_2_prt_usa" for table "window_part_sales_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_4_2_prt_other_regions" for table "window_part_sales_1_prt_4"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_5" for table "window_part_sales"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_5_2_prt_usa" for table "window_part_sales_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_5_2_prt_other_regions" for table "window_part_sales_1_prt_5"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_6" for table "window_part_sales"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_6_2_prt_usa" for table "window_part_sales_1_prt_6"
+NOTICE:  CREATE TABLE will create partition "window_part_sales_1_prt_6_2_prt_other_regions" for table "window_part_sales_1_prt_6"
+-- When there is no PARTITION BY in the window function, we do not want to push down any of the filter predicates.
+EXPLAIN WITH cte as (SELECT *, row_number() over () FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' AND region = 'usa';
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..431.00 rows=1 width=24)
+   Filter: ((date > '03-01-2011'::date) AND (region = 'usa'::text))
+   ->  WindowAgg  (cost=0.00..431.00 rows=1 width=24)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+               ->  Sequence  (cost=0.00..431.00 rows=1 width=16)
+                     ->  Partition Selector for window_part_sales (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 12 (out of 12)
+                     ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
+ Optimizer: PQO version 3.33.0
+(9 rows)
+
+-- If there is a PARTITION BY in the window function, we can push down ONLY the predicates that match the PARTITION BY column.
+EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' AND region = 'usa';
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=24)
+   ->  Result  (cost=0.00..431.00 rows=1 width=24)
+         Filter: (date > '03-01-2011'::date)
+         ->  WindowAgg  (cost=0.00..431.00 rows=1 width=24)
+               Partition By: region
+               ->  Sort  (cost=0.00..431.00 rows=1 width=16)
+                     Sort Key: region
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                           Hash Key: region
+                           ->  Sequence  (cost=0.00..431.00 rows=1 width=16)
+                                 ->  Partition Selector for window_part_sales (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                       Partitions selected: 6 (out of 12)
+                                 ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
+                                       Filter: (region = 'usa'::text)
+ Optimizer: PQO version 3.33.0
+(15 rows)
+
+-- When both columns in the filter predicates are in the window function, it is possible to push both down.
+EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' AND region = 'usa';
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=24)
+   ->  WindowAgg  (cost=0.00..431.00 rows=1 width=24)
+         Partition By: date, region
+         ->  Sort  (cost=0.00..431.00 rows=1 width=16)
+               Sort Key: date, region
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                     Hash Key: date, region
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=16)
+                           ->  Partition Selector for window_part_sales (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 8 (out of 12)
+                           ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
+                                 Filter: ((date > '03-01-2011'::date) AND (region = 'usa'::text))
+ Optimizer: PQO version 3.33.0
+(13 rows)
+
+-- When the column in the filter predicates is also present in the window function, it is possible to push it down.
+EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE region = 'usa';
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=24)
+   ->  WindowAgg  (cost=0.00..431.00 rows=1 width=24)
+         Partition By: date, region
+         ->  Sort  (cost=0.00..431.00 rows=1 width=16)
+               Sort Key: date, region
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                     Hash Key: date, region
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=16)
+                           ->  Partition Selector for window_part_sales (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 6 (out of 12)
+                           ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
+                                 Filter: (region = 'usa'::text)
+ Optimizer: PQO version 3.33.0
+(13 rows)
+
+-- When there is a disjunct in the filter predicates, it is not possible to push down either into the window function.
+EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' OR region = 'usa';
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=24)
+   ->  WindowAgg  (cost=0.00..431.00 rows=1 width=24)
+         Partition By: date, region
+         ->  Sort  (cost=0.00..431.00 rows=1 width=16)
+               Sort Key: date, region
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                     Hash Key: date, region
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=16)
+                           ->  Partition Selector for window_part_sales (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 12 (out of 12)
+                           ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
+                                 Filter: ((date > '03-01-2011'::date) OR (region = 'usa'::text))
+ Optimizer: PQO version 3.33.0
+(13 rows)
+
 -- End of Test
