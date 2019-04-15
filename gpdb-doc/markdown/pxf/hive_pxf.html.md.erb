@@ -665,11 +665,11 @@ The PXF Hive connector supports the Hive partitioning feature and directory stru
 
 To take advantage of PXF partition filtering pushdown, the Hive and PXF partition field names must be the same. Otherwise, PXF ignores partition filtering and the filtering is performed on the Greenplum Database side, impacting performance.
 
-**Note:** The Hive connector filters only on partition columns, not on other table attributes.
-
-PXF filter pushdown is enabled by default. You configure PXF filter pushdown as described in [Configuring Filter Pushdown](using_pxf.html#filter-pushdown).
+<div class="note">The PXF Hive connector filters only on partition columns, not on other table attributes. Additionally, filter pushdown is supported only for those data types and operators identified in <a href="filter_push.html">About Filter Pushdown</a>. Be sure to disable filter pushdown when your query includes unsupported operators and data types.</div>
 
 To use PXF filter pushdown with Hive, the `hive-site.xml` configuration parameter `hive.metastore.integral.jdo.pushdown` must be set to `true`.
+
+PXF filter pushdown is enabled by default. You configure PXF filter pushdown as described in [About Filter Pushdown](filter_push.html).
 
 
 ### <a id="hive_homog_part"></a>Example: Using the Hive Profile to Access Partitioned Homogenous Data
