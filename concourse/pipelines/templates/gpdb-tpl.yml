@@ -397,8 +397,8 @@ resources:
 - name: gpdb_src_binary_swap
   type: git
   source:
-    branch: master
-    uri: https://github.com/greenplum-db/gpdb.git
+    branch: {{gpdb-binary-swap-git-tag}}
+    uri: {{gpdb-binary-swap-git-remote}}
     ignore_paths:
     - gpdb-doc/*
     - README*
@@ -1043,12 +1043,12 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos6-test
   - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
     image: gpdb6-centos6-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
-      TEST_BINARY_SWAP: false
+      TEST_BINARY_SWAP: {{test-binary-swap}}
       CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icw_gporca_centos6
@@ -1145,7 +1145,6 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
-      TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
