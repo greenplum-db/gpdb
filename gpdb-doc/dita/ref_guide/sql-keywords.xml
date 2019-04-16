@@ -9,14 +9,9 @@
     <section>
       <title>Reserved Identifiers </title>
     </section>
-    <p>Greenplum Database has built-in database objects that are a part of the database management
-      system. These objects include schemas, tables, views, functions, tablespaces, resource queues,
-      resource groups, and many others. The names of these <i>system objects</i> are reserved, and
-      should not generally be used in user applications.</p>
-    <p>Names beginning with <codeph>gp_</codeph> and <codeph>pg_</codeph> are reserved for Greenplum
-      Database and PostgreSQL. The parser does not complain unless you attempt to use a name that is
-      already in use, but avoiding names beginning with these prefixes prevents conflicts that could
-      occur in future versions of Greenplum Database.</p>
+    <p>In the Greenplum Database system, names beginning with <codeph>gp_</codeph> and
+        <codeph>pg_</codeph> are reserved and should not be used as names for user-created objects,
+      such as tables, views, and functions.</p>
     <p>The resource group names <codeph>admin_group</codeph>, <codeph>default_group</codeph>, and
         <codeph>none</codeph> are reserved. The resource queue name <codeph>pg_default</codeph> is
       reserved.</p>
