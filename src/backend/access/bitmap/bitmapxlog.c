@@ -112,10 +112,12 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
 		Buffer		metabuf;
 
 		metabuf = XLogReadBufferExtended(xlrec->bm_node, xlrec->bm_fork,
-												BM_METAPAGE, RBM_ZERO_AND_LOCK);
+										 BM_METAPAGE, RBM_NORMAL);
 		if (!BufferIsValid(metabuf))
  			return;
-		
+
+		LockBuffer(metabuf, BUFFER_LOCK_EXCLUSIVE);
+
 		metapage = (BMMetaPage) PageGetContents(BufferGetPage(metabuf));
 		if (PageGetLSN(BufferGetPage(metabuf)) < lsn)
 		{
