@@ -24,7 +24,7 @@ pushd ${NEW_DIR}
 popd
 
 # Install our ABI compliance checker. TODO: move to Concourse inputs.
-apt-get update && apt-get install -y libelf-dev elfutils
+apt-get update && apt-get install -y libelf-dev elfutils html2text
 git clone https://github.com/lvc/vtable-dumper
 make -C vtable-dumper && make -C vtable-dumper install prefix=/usr/local
 
@@ -49,6 +49,9 @@ pushd abi
             failed+="$binary "
         fi
     done
+
+    # Convert each output file to raw text
+    find . -name compat_report.html -exec sh -c 'html2text {} > `dirname {}`/compat_report.txt' \;
 popd
 
 if [ -n "$failed" ]; then
