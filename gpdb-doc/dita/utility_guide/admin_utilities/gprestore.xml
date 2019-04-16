@@ -78,10 +78,6 @@
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
         />.</p>
     </section>
-    <note type="warning">Do not run the <codeph>gprestore</codeph> utility during a Greenplum
-      Database system expansion. Also note that backup sets you created before the expansion may not
-      be compatible with the expanded cluster. See <xref href="gpexpand.xml#topic1"/> for more
-      information about expanding a Greenplum Database system.</note>
     <note>This utility uses secure shell (SSH) connections between systems to perform its tasks. In
       large Greenplum Database deployments, cloud deployments, or deployments with a large number of
       segments per host, this utility may exceed the host's maximum threshold for unauthenticated

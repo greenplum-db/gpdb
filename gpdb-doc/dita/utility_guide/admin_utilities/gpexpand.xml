@@ -41,9 +41,16 @@
             <codeph>gpstart</codeph> options <codeph>-R</codeph> or <codeph>-m</codeph> cannot be
           specified to start Greenplum Database. </li>      
       </ul>
-      <note type="warning">Do not run the
-          <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> utilities while system expansion is
-        in process.</note>
+      <note>These utilities cannot be run while <codeph>gpexpand</codeph> is performing segment
+        initialization.
+        <ul id="ul_c3w_wdp_lgb">
+          <li><codeph>gpbackup</codeph></li>
+          <li><codeph>gpcheck</codeph></li>
+          <li><codeph>gpcheckcat</codeph></li>
+          <li><codeph>gpconfig</codeph></li>
+          <li><codeph>gppkg</codeph></li>
+          <li><codeph>gprestore</codeph></li>
+        </ul></note>
       <p>For information about preparing a system for expansion, see <xref
           href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
           System</xref><ph otherprops="op-print"> in the <cite>Greenplum Database Administrator

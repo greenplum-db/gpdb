@@ -228,15 +228,16 @@
         factors related to hardware performance. In most environments, the initialization of new
         segments requires less than thirty minutes offline.</p>
       <p>These utilities cannot be run while <codeph>gpexpand</codeph> is performing segment
-          initialization.<ul id="ul_c3w_wdp_lgb">
-          <li><codeph>gppkg</codeph></li>
-          <li><codeph>gpconfig</codeph></li>
+          initialization.
+        <ul id="ul_c3w_wdp_lgb">
+          <li><codeph>gpbackup</codeph></li>
           <li><codeph>gpcheck</codeph></li>
           <li><codeph>gpcheckcat</codeph></li>
+          <li><codeph>gpconfig</codeph></li>
+          <li><codeph>gppkg</codeph></li>
+          <li><codeph>gprestore</codeph></li>
         </ul></p>
-      <note type="warning">Do not run <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> during
-        system expansion. Locks obtained for backups can interfere with the expansion process and
-        invalid backup sets could be created. </note>
+
       <note type="important">After you begin initializing new segments, you can no longer restore
         the system using backup files created for the pre-expansion system. When initialization
         successfully completes, the expansion is committed and cannot be rolled back. </note>

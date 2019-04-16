@@ -71,6 +71,10 @@
               be dropped during a backup, you can exclude the tables from a backup with a
                 <codeph>gpbackup</codeph> table filtering option such as
                 <codeph>--exclude-table</codeph> or <codeph>--exclude-schema</codeph>.</p></li>
+          <li>A backup created with <codeph>gpbackup</codeph> can only be restored to a Greenplum
+            Database cluster with the same number of segment instances as the source cluster. If you
+            run <codeph>gpexpand</codeph> to add segments to the cluster, backups you made before
+            starting the expand cannot be restored after the expansion has completed.</li>
         </ul></p>
     </body>
   </topic>
