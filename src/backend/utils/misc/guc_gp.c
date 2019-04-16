@@ -352,6 +352,7 @@ bool		optimizer_enable_hashjoin;
 bool		optimizer_enable_dynamictablescan;
 bool		optimizer_enable_indexscan;
 bool		optimizer_enable_tablescan;
+bool		optimizer_enable_full_join;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -2528,6 +2529,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_enable_broadcast_nestloop_outer_child,
 		true,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_enable_full_join", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables the optimizer's support of full outer joins."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_full_join,
+		false,
 		NULL, NULL, NULL
 	},
 	{

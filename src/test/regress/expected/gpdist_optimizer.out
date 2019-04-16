@@ -686,56 +686,20 @@ create temporary table a as select generate_series(1, 5) as i distributed by (i)
 create temporary table b as select generate_series(2, 6) as i distributed by (i);
 create temporary table c as select generate_series(3, 7) as i distributed by (i);
 explain (costs off) select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
-   ->  Result
-         ->  Sequence
-               ->  Shared Scan (share slice:id 3:2)
-                     ->  Materialize
-                           ->  Sequence
-                                 ->  Shared Scan (share slice:id 3:4)
-                                       ->  Materialize
-                                             ->  Seq Scan on a
-                                 ->  Sequence
-                                       ->  Shared Scan (share slice:id 3:5)
-                                             ->  Materialize
-                                                   ->  Seq Scan on b
-                                       ->  Append
-                                             ->  Hash Left Join
-                                                   Hash Cond: (share4_ref2.i = share5_ref2.i)
-                                                   ->  Shared Scan (share slice:id 3:4)
-                                                   ->  Hash
-                                                         ->  Shared Scan (share slice:id 3:5)
-                                             ->  Result
-                                                   ->  Hash Anti Join
-                                                         Hash Cond: (share5_ref3.i = share4_ref3.i)
-                                                         ->  Shared Scan (share slice:id 3:5)
-                                                         ->  Hash
-                                                               ->  Shared Scan (share slice:id 3:4)
-               ->  Sequence
-                     ->  Shared Scan (share slice:id 3:3)
-                           ->  Materialize
-                                 ->  Seq Scan on c
-                     ->  Append
-                           ->  Hash Left Join
-                                 Hash Cond: (share2_ref2.i_1 = share3_ref2.i)
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                       Hash Key: share2_ref2.i_1
-                                       ->  Shared Scan (share slice:id 1:2)
-                                 ->  Hash
-                                       ->  Shared Scan (share slice:id 3:3)
-                           ->  Result
-                                 ->  Hash Anti Join
-                                       Hash Cond: (share3_ref3.i = share2_ref3.i_1)
-                                       ->  Shared Scan (share slice:id 3:3)
-                                       ->  Hash
-                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                                   Hash Key: share2_ref3.i_1
-                                                   ->  Result
-                                                         ->  Shared Scan (share slice:id 2:2)
- Optimizer: PQO version 3.9.0
-(47 rows)
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Full Join
+         Hash Cond: (b.i = c.i)
+         ->  Hash Full Join
+               Hash Cond: (a.i = b.i)
+               ->  Seq Scan on a
+               ->  Hash
+                     ->  Seq Scan on b
+         ->  Hash
+               ->  Seq Scan on c
+ Optimizer: Postgres query optimizer
+(11 rows)
 
 select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
  i | i | i 

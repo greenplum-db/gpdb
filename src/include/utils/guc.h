@@ -469,6 +469,7 @@ extern bool optimizer_enable_dynamictablescan;
 extern bool optimizer_enable_indexscan;
 extern bool optimizer_enable_tablescan;
 extern bool optimizer_enable_eageragg;
+extern bool optimizer_enable_full_join;
 
 /* Optimizer plan enumeration related GUCs */
 extern bool optimizer_enumerate_plans;

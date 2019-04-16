@@ -2266,37 +2266,19 @@ select * from
   j1_tbl full join
   (select * from j2_tbl order by j2_tbl.i desc, j2_tbl.k asc) j2_tbl
   on j1_tbl.i = j2_tbl.i and j1_tbl.i = j2_tbl.k;
-                                                       QUERY PLAN                                                       
-------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)
-   ->  Result
-         ->  Sequence
-               ->  Shared Scan (share slice:id 5:0)
-                     ->  Materialize
-                           ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                                 ->  Seq Scan on j1_tbl
-               ->  Sequence
-                     ->  Shared Scan (share slice:id 5:1)
-                           ->  Materialize
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       ->  Seq Scan on j2_tbl
-                     ->  Append
-                           ->  Hash Left Join
-                                 Hash Cond: ((share0_ref2.i = share1_ref2.i) AND (share0_ref2.i = share1_ref2.k))
-                                 ->  Shared Scan (share slice:id 5:0)
-                                 ->  Hash
-                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)
-                                             ->  Shared Scan (share slice:id 1:1)
-                           ->  Result
-                                 ->  Hash Anti Join
-                                       Hash Cond: ((share1_ref3.i = share0_ref3.i) AND (share1_ref3.k = share0_ref3.i))
-                                       ->  Shared Scan (share slice:id 5:1)
-                                       ->  Hash
-                                             ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                                   ->  Result
-                                                         ->  Shared Scan (share slice:id 2:0)
- Optimizer: PQO version 3.9.0
-(28 rows)
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Merge Full Join
+         Merge Cond: ((j2_tbl.i = j1_tbl.i) AND (j2_tbl.k = j1_tbl.i))
+         ->  Sort
+               Sort Key: j2_tbl.i, j2_tbl.k
+               ->  Seq Scan on j2_tbl
+         ->  Sort
+               Sort Key: j1_tbl.i
+               ->  Seq Scan on j1_tbl
+ Optimizer: Postgres query optimizer
+(10 rows)
 
 select * from
   j1_tbl full join
@@ -2842,49 +2824,25 @@ SELECT qq, unique1
   ( SELECT COALESCE(q2, -1) AS qq FROM int8_tbl b ) AS ss2
   USING (qq)
   INNER JOIN tenk1 c ON qq = unique2;
-                                                      QUERY PLAN                                                      
-----------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice7; segments: 3)
-   ->  Result
-         ->  Nested Loop
-               Join Filter: true
-               ->  Result
-                     ->  Broadcast Motion 3:3  (slice6; segments: 3)
-                           ->  Result
-                                 ->  Sequence
-                                       ->  Shared Scan (share slice:id 6:0)
-                                             ->  Materialize
-                                                   ->  Redistribute Motion 3:3  (slice5; segments: 3)
-                                                         ->  Result
-                                                               ->  Seq Scan on int8_tbl int8_tbl_1
-                                       ->  Sequence
-                                             ->  Shared Scan (share slice:id 6:1)
-                                                   ->  Materialize
-                                                         ->  Result
-                                                               ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                                                                     ->  Seq Scan on int8_tbl
-                                             ->  Append
-                                                   ->  Hash Left Join
-                                                         Hash Cond: (share0_ref2.qq = share1_ref2.qq)
-                                                         ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                                               Hash Key: share0_ref2.qq
-                                                               ->  Shared Scan (share slice:id 1:0)
-                                                         ->  Hash
-                                                               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                                                     Hash Key: share1_ref2.qq
-                                                                     ->  Shared Scan (share slice:id 2:1)
-                                                   ->  Result
-                                                         ->  Hash Anti Join
-                                                               Hash Cond: (share1_ref3.qq = share0_ref3.qq)
-                                                               ->  Shared Scan (share slice:id 6:1)
-                                                               ->  Hash
-                                                                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                                                                           ->  Result
-                                                                                 ->  Shared Scan (share slice:id 3:0)
-               ->  Index Scan using tenk1_unique2 on tenk1
-                     Index Cond: (unique2 = (COALESCE(share0_ref2.qq, share1_ref2.qq)))
- Optimizer: PQO version 2.74.0
-(40 rows)
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
+   ->  Hash Join
+         Hash Cond: (c.unique2 = COALESCE((COALESCE(a.q1, 0::bigint)), (COALESCE(b.q2, (-1)::bigint))))
+         ->  Seq Scan on tenk1 c
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                     ->  Hash Full Join
+                           Hash Cond: (COALESCE(a.q1, 0::bigint) = COALESCE(b.q2, (-1)::bigint))
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Hash Key: COALESCE(a.q1, 0::bigint)
+                                 ->  Seq Scan on int8_tbl a
+                           ->  Hash
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Hash Key: COALESCE(b.q2, (-1)::bigint)
+                                       ->  Seq Scan on int8_tbl b
+ Optimizer: Postgres query optimizer
+(16 rows)
 
 SELECT qq, unique1
   FROM
@@ -4201,47 +4159,26 @@ select * from
   left join
     (tenk1 as a1 full join (select 1 as id) as yy on (a1.unique1 = yy.id))
   on (xx.id = coalesce(yy.id));
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)
-   ->  Hash Left Join
-         Hash Cond: ("outer".id = COALESCE(share1_ref2.id))
-         ->  Result
-               ->  Result
-                     ->  Result
+   ->  Hash Right Join
+         Hash Cond: (COALESCE((1)) = (1))
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: COALESCE((1))
+               ->  Hash Full Join
+                     Hash Cond: (a1.unique1 = (1))
+                     ->  Seq Scan on tenk1 a1
+                     ->  Hash
+                           ->  Redistribute Motion 1:3  (slice1; segments: 1)
+                                 Hash Key: (1)
+                                 ->  Result
          ->  Hash
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                     Hash Key: COALESCE(share1_ref2.id)
+               ->  Redistribute Motion 1:3  (slice3; segments: 1)
+                     Hash Key: (1)
                      ->  Result
-                           ->  Sequence
-                                 ->  Shared Scan (share slice:id 3:0)
-                                       ->  Materialize
-                                             ->  Seq Scan on tenk1
-                                 ->  Sequence
-                                       ->  Shared Scan (share slice:id 3:1)
-                                             ->  Materialize
-                                                   ->  Result
-                                                         ->  Result
-                                                               One-Time Filter: (gp_execution_segment() = 2)
-                                                               ->  Result
-                                       ->  Append
-                                             ->  Hash Left Join
-                                                   Hash Cond: (share0_ref2.unique1 = share1_ref2.id)
-                                                   ->  Shared Scan (share slice:id 3:0)
-                                                   ->  Hash
-                                                         ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                                               Hash Key: share1_ref2.id
-                                                               ->  Shared Scan (share slice:id 1:1)
-                                             ->  Result
-                                                   ->  Hash Anti Join
-                                                         Hash Cond: (share1_ref3.id = share0_ref3.unique1)
-                                                         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                                               Hash Key: share1_ref3.id
-                                                               ->  Shared Scan (share slice:id 2:1)
-                                                         ->  Hash
-                                                               ->  Shared Scan (share slice:id 3:0)
- Optimizer: PQO version 3.9.0
-(38 rows)
+ Optimizer: Postgres query optimizer
+(17 rows)
 
 select * from
   (select 1 as id) as xx
@@ -4274,41 +4211,22 @@ explain (costs off)
 
 explain (costs off)
   select * from tenk1 a full join tenk1 b using(unique2) where unique2 = 42;
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice4; segments: 3)
-   ->  Result
-         ->  Result
-               Filter: ((COALESCE(share0_ref2.unique2, share1_ref2.unique2)) = 42)
-               ->  Result
-                     ->  Sequence
-                           ->  Shared Scan (share slice:id 4:0)
-                                 ->  Materialize
-                                       ->  Seq Scan on tenk1 tenk1_1
-                           ->  Sequence
-                                 ->  Shared Scan (share slice:id 4:1)
-                                       ->  Materialize
-                                             ->  Seq Scan on tenk1
-                                 ->  Append
-                                       ->  Hash Left Join
-                                             Hash Cond: (share0_ref2.unique2 = share1_ref2.unique2)
-                                             ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                                   Hash Key: share0_ref2.unique2
-                                                   ->  Shared Scan (share slice:id 1:0)
-                                             ->  Hash
-                                                   ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                                         Hash Key: share1_ref2.unique2
-                                                         ->  Shared Scan (share slice:id 2:1)
-                                       ->  Result
-                                             ->  Hash Anti Join
-                                                   Hash Cond: (share1_ref3.unique2 = share0_ref3.unique2)
-                                                   ->  Shared Scan (share slice:id 4:1)
-                                                   ->  Hash
-                                                         ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                                                               ->  Result
-                                                                     ->  Shared Scan (share slice:id 3:0)
- Optimizer: PQO version 2.74.0
-(32 rows)
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Hash Full Join
+         Hash Cond: (a.unique2 = b.unique2)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: a.unique2
+               ->  Index Scan using tenk1_unique2 on tenk1 a
+                     Index Cond: (unique2 = 42)
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: b.unique2
+                     ->  Index Scan using tenk1_unique2 on tenk1 b
+                           Index Cond: (unique2 = 42)
+ Optimizer: Postgres query optimizer
+(13 rows)
 
 --
 -- test that quals attached to an outer join have correct semantics,

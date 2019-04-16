@@ -6562,6 +6562,8 @@ select rank() over(partition by a, case when b = 0 then a+b end order by b asc) 
 
 -- alias
 select foo.d from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  d  
 ----
   1
@@ -6607,6 +6609,8 @@ select foo.d from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
 (40 rows)
 
 select 1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  v 
 ---
  1
@@ -6652,6 +6656,8 @@ select 1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
 (40 rows)
 
 select * from orca.r where a in (select count(*)+1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d+r.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  a | b 
 ---+---
  2 | 2
