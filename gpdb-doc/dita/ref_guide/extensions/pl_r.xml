@@ -85,6 +85,18 @@
         </body>
       </topic>
     </topic>
+    <topic id="topic5" xml:lang="en">
+      <title>Enabling PL/R Language Support</title>
+      <body>
+        <p>For each database that requires its use, register the PL/R language with the SQL command
+            <codeph>CREATE EXTENSION</codeph>. Because PL/R is an untrusted language, only
+          superusers can register PL/R with a database. For example, run this command as the
+            <codeph>gpadmin</codeph> system to register the language with the database named
+            <i>testdb</i>:</p>
+        <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plr;'</codeblock>
+        <p>PL/R is registered as an untrusted language.</p>
+      </body>
+    </topic>
     <topic id="topic6" xml:lang="en" otherprops="pivotal">
       <title id="py213692">Uninstalling PL/R</title>
       <body>
@@ -103,12 +115,11 @@
         <title id="py216910">Remove PL/R Support for a Database</title>
         <body>
           <p>For a database that no longer requires the PL/R language, remove support for PL/R with
-            the SQL command <codeph>DROP LANGUAGE</codeph> or the Greenplum Database
-              <codeph>droplang</codeph> utility. Because PL/R is an untrusted language, only
-            superusers can remove support for the PL/R language from a database. For example,
-            running this command as the gpadmin user removes support for PL/R from the database
-            named <i>testdb</i>:</p>
-          <codeblock>$ droplang plr -d testdb</codeblock>
+            the SQL command <codeph>DROP EXTENSION</codeph>. Because PL/R is an untrusted language,
+            only superusers can remove support for the PL/R language from a database. For example,
+            run this command as the <codeph>gpadmin</codeph> user to remove support for PL/R from
+            the database named <i>testdb</i>:</p>
+          <codeblock>$ psql -d testdb -c 'DROP EXTENSION plr;'</codeblock>
         </body>
       </topic>
       <topic id="topic8" xml:lang="en">
@@ -124,18 +135,6 @@
           <codeblock>$ gpstop -r</codeblock>
         </body>
       </topic>
-    </topic>
-    <topic id="topic5" xml:lang="en">
-      <title>Enabling PL/R Language Support</title>
-      <body>
-        <p>For each database that requires its use, register the PL/R language with the SQL command
-            <codeph>CREATE LANGUAGE</codeph> or the utility <codeph>createlang</codeph>. Because
-          PL/R is an untrusted language, only superusers can register PL/R with a database. For
-          example, running this command as the <codeph>gpadmin</codeph> system user registers the
-          language with the database named <i>testdb</i>:</p>
-        <codeblock>$ createlang plr -d testdb</codeblock>
-        <p>PL/R is registered as an untrusted language.</p>
-      </body>
     </topic>
     <topic id="topic9" xml:lang="en">
       <title id="py214084">Examples</title>

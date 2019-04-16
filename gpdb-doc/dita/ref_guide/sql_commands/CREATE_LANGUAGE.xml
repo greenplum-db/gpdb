@@ -105,10 +105,10 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
                     </pt>
                     <pd>The name of the new procedural language. The name must be unique among the
                         languages in the database. Built-in support is included for
-                            <codeph>plpgsql</codeph>, <codeph>plperl</codeph>,
-                            <codeph>plpythonu</codeph>, and <codeph>plr</codeph>. The languages
-                            <codeph>plpgsql</codeph> (PL/pgSQL) and <codeph>plpythonu</codeph>
-                        (PL/Python) are installed by default in Greenplum Database.</pd>
+                            <codeph>plpgsql</codeph>, <codeph>plperl</codeph>, and
+                            <codeph>plpythonu</codeph>. The languages <codeph>plpgsql</codeph>
+                        (PL/pgSQL) and <codeph>plpythonu</codeph> (PL/Python) are installed by
+                        default in Greenplum Database.</pd>
                 </plentry>
                 <plentry>
                     <pt>HANDLER <varname>call_handler</varname></pt>
@@ -169,8 +169,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
         <section id="section6">
             <title>Examples</title>
             <p>The preferred way of creating any of the standard procedural languages:</p>
-            <codeblock>CREATE LANGUAGE plperl;
-CREATE LANGUAGE plr;</codeblock>
+            <codeblock>CREATE LANGUAGE plperl;</codeblock>
             <p>For a language not known in the <codeph>pg_pltemplate</codeph> catalog:</p>
             <codeblock>CREATE FUNCTION plsample_call_handler() RETURNS 
 language_handler
