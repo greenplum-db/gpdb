@@ -37,7 +37,7 @@ select groupname from gp_toolkit.gp_resgroup_config
 select rsgname from gp_toolkit.gp_resgroup_status
   where rsgname not like 'rg_dump_test%'
   order by groupid;
-    rsgname    
+ rsgname 
 ---------
 (0 rows)
 
