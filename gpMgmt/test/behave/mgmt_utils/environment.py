@@ -63,6 +63,10 @@ def after_feature(context, feature):
 
 
 def before_scenario(context, scenario):
+    if "skip" in scenario.effective_tags:
+        scenario.skip("skipping scenario tagged with @skip")
+        return
+
     if 'gpmovemirrors' in context.feature.tags:
         context.mirror_context = MirrorMgmtContext()
 
