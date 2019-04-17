@@ -61,10 +61,8 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = [
     'compile_gpdb_binary_swap_centos6',
     'icw_gporca_centos6_gpos_memory',
     'walrep_2',
-    'client_loader_remote_test_aix',
     'compile_gpdb_sles11',
     'compile_gpdb_ubuntu16',
-    'compile_gpdb_aix7_remote', 
     'icw_gporca_sles11', 
     'icw_gporca_sles12', 
     'icw_planner_sles12', 
@@ -235,7 +233,7 @@ if __name__ == "__main__":
                         action='store',
                         dest='os_types',
                         default=['centos6'],
-                        choices=['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16'],
+                        choices=['centos6', 'centos7', 'sles', 'win', 'ubuntu16'],
                         nargs='+',
                         help='List of OS values to support')
 
@@ -267,7 +265,7 @@ if __name__ == "__main__":
     ARGS = PARSER.parse_args()
 
     if ARGS.pipeline_type == 'prod':
-        ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
+        ARGS.os_types = ['centos6', 'centos7', 'sles', 'win', 'ubuntu16']
         ARGS.test_sections = ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions', 'Gpperfmon']
 
     # if generating a dev pipeline but didn't specify an output, don't overwrite the 6X_STABLE pipeline

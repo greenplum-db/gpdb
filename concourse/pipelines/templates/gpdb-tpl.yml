@@ -61,12 +61,6 @@ groups:
 {% if "ubuntu16" in os_types %}
   - compile_gpdb_ubuntu16
 {% endif %}
-{% if "aix7" in os_types %}
-  - compile_gpdb_aix7_remote
-{% endif %}
-{% if "aix7" in os_types %}
-  - client_loader_remote_test_aix
-{% endif %}
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
 {% if "centos6" in os_types %}
@@ -184,19 +178,6 @@ groups:
 {% if "ubuntu16" in os_types %}
   - compile_gpdb_ubuntu16
 {% endif %}
-{% if "aix7" in os_types %}
-  - compile_gpdb_aix7_remote
-{% endif %}
-
-## ======================================================================
-
-- name: ClientsLoaders
-  jobs:
-{% if "aix7" in os_types %}
-  - compile_gpdb_aix7_remote
-  - client_loader_remote_test_aix
-{% endif %}
-
 {% if "ICW" in test_sections %}
 ## ======================================================================
 
@@ -403,16 +384,6 @@ resources:
     versioned_file: ((pipeline-name))/icw_gporca_centos6_dump/dump.sql.xz
 
 {% endif %}
-{% if "aix7" in os_types %}
-- name: aix_environments
-  type: pool
-  source:
-    uri: {{concourse-resource-pools-git-remote}}
-    branch: master
-    pool: client_loader_remote_aix
-    private_key: {{concourse-resource-pools-git-key}}
-
-{% endif %}
 - name: gpdb_src
   type: git
   source:
@@ -506,7 +477,7 @@ resources:
     versioned_file: centos7/python-2.7.12.tar.gz
 
 {% endif %}
-{% if "centos6" in os_types or "sles" in os_types or "aix7" in os_types %}
+{% if "centos6" in os_types or "sles" in os_types %}
 - name: gpdb6-centos6-build
   type: docker-image
   source:
@@ -644,22 +615,6 @@ resources:
     versioned_file: ((pipeline-name))/bin_gpdb_sles11/bin_gpdb.tar.gz
 
 {% endif %}
-{% if "aix7" in os_types %}
-- name: installer_aix7_gpdb_clients
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: ((pipeline-name))/installer_aix7_gpdb_clients/greenplum-clients-(.*)-aix7_ppc_64.zip
-
-- name: installer_aix7_gpdb_loaders
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: ((pipeline-name))/installer_aix7_gpdb_loaders/greenplum-loaders-(.*)-aix7_ppc_64.zip
-
-{% endif %}
 {% if "ubuntu16" in os_types %}
 - name: deb_package_ubuntu16
   type: gcs
@@ -667,16 +622,6 @@ resources:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/deb_package_ubuntu16/greenplum-db.deb
-
-{% endif %}
-{% if "aix7" in os_types %}
-- name: nightly-trigger
-  type: time
-  source:
-    location: America/Los_Angeles
-    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
-    start: 6:00 AM
-    stop: 7:00 AM
 
 {% endif %}
 {% if "AA" in test_sections %}
@@ -1073,85 +1018,6 @@ jobs:
         file: gpdb_artifacts/bin_gpdb.tar.gz
 
 {% endif %}
-{% if "aix7" in os_types %}
-- name: compile_gpdb_aix7_remote
-  serial: true
-  plan:
-  # Compile gpdb on a remote AIX machine, triggered by concourse.
-  # We need to serialize this job to avoid overwhelming workload
-  # on remote machine.
-  - aggregate:
-    - get: nightly-trigger
-      trigger: true
-    - get: gpdb_src
-    - get: gpdb6-centos6-build
-  - task: compile_gpdb_aix7_remote
-    file: gpdb_src/concourse/tasks/compile_gpdb_remote.yml
-    image: gpdb6-centos6-build
-    params:
-      REMOTE_HOST: {{remote_host_build}}
-      REMOTE_PORT: {{remote_port_build}}
-      REMOTE_USER: {{remote_user_build}}
-      REMOTE_KEY: {{remote_key_build}}
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      BLD_TARGETS: "clients loaders"
-  - aggregate:
-    - put: installer_aix7_gpdb_clients
-      params:
-        file: gpdb_artifacts/greenplum-clients-*-aix7_ppc_64.zip
-    - put: installer_aix7_gpdb_loaders
-      params:
-        file: gpdb_artifacts/greenplum-loaders-*-aix7_ppc_64.zip
-
-- name: client_loader_remote_test_aix
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - compile_gpdb_aix7_remote
-      - compile_gpdb_centos6
-    - get: installer_aix7_gpdb_clients
-      passed:
-      - compile_gpdb_aix7_remote
-    - get: installer_aix7_gpdb_loaders
-      passed:
-      - compile_gpdb_aix7_remote
-      trigger: true
-    - get: bin_gpdb
-      passed:
-      - compile_gpdb_centos6
-      resource: bin_gpdb_centos6
-    - get: gpdb6-centos6-test
-    - put: aix_environments
-      params: {acquire: true}
-  - task: ic_gpdb_cl
-    file: gpdb_src/concourse/tasks/ic_gpdb_remote.yml
-    image: gpdb6-centos6-test
-    params:
-      BLD_TARGETS: "clients loaders"
-      REMOTE_HOST: {{remote_host_test}}
-      REMOTE_PORT: {{remote_port_test}}
-      REMOTE_USER: {{remote_user_test}}
-      REMOTE_KEY: {{remote_key_test}}
-    ensure:
-      do:
-      - task: cleanup_aix
-        file: gpdb_src/concourse/tasks/aix_remote_cleanup.yml
-        image: gpdb6-centos6-test
-        params:
-          REMOTE_HOST: {{remote_host_test}}
-          REMOTE_PORT: {{remote_port_test}}
-          REMOTE_USER: {{remote_user_test}}
-          REMOTE_KEY: {{remote_key_test}}
-      - put: aix_environments
-        params: {release: aix_environments}
-
-{% endif %}
-
 {% if "ICW" in test_sections %}
 ## ======================================================================
 ##  ___ ______        __
@@ -2160,7 +2026,6 @@ jobs:
       - compile_gpdb_centos7
  ##     - compile_gpdb_sles11
  ##     - compile_gpdb_ubuntu16
- ##     - compile_gpdb_aix7_remote
       - icw_planner_centos6
       - icw_gporca_centos6
       - icw_gporca_centos7
@@ -2200,7 +2065,6 @@ jobs:
       - icw_gporca_centos6
       - icw_planner_ictcp_centos6
       - icw_extensions_gpcloud_centos6
- ##   - client_loader_remote_test_aix
       - resource_group_centos6
 {% for test in CLI_BEHAVE_TESTS %}
       - [[ test.name ]]
