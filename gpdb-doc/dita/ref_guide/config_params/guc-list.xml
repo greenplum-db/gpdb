@@ -246,10 +246,6 @@
             <li>
               <xref href="#gp_enable_sort_limit"/>
             </li>
-          </ul>
-        </stentry>
-        <stentry>
-          <ul id="ul_wwy_bmx_wp">
             <li>
               <xref href="#gp_external_enable_exec"/>
             </li>
@@ -283,6 +279,10 @@
             <li>
               <xref href="#gp_hashjoin_tuples_per_bucket"/>
             </li>
+          </ul>
+        </stentry>
+        <stentry>
+          <ul id="ul_wwy_bmx_wp">
             <li>
               <xref href="#gp_ignore_error_table"/>
             </li>
@@ -511,10 +511,6 @@
             <li>
               <xref href="#log_min_messages"/>
             </li>
-          </ul>
-        </stentry>
-        <stentry>
-          <ul id="ul_d5f_hmx_wp">
             <li>
               <xref href="#log_parser_stats"/>
             </li>
@@ -549,6 +545,10 @@
             <li>
               <xref href="#max_connections"/>
             </li>
+          </ul>
+        </stentry>
+        <stentry>
+          <ul id="ul_d5f_hmx_wp">
             <li>
               <xref href="#max_files_per_process"/>
             </li>
