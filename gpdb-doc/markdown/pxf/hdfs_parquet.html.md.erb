@@ -50,6 +50,8 @@ To read and write Parquet primitive data types in Greenplum Database, map Parque
 | int64 | Bigint |
 | int96 | Timestamp |
 
+**Note**: When writing to Parquet, PXF converts a `timestamp` to universal time (UT) before converting to `int96`.
+
 
 ## <a id="profile_cet"></a>Creating the External Table
 
