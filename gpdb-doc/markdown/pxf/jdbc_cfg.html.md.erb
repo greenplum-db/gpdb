@@ -13,9 +13,9 @@ To access data in an external SQL database with the PXF JDBC Connector, you must
 - Register a compatible JDBC driver JAR file
 - Specify the JDBC driver class name, database URL, and client credentials
 
-In previous releases of Greenplum Database, you may have specified the JDBC driver class name, database URL, and client credentials via options that you provided in the `CREATE EXTERNAL TABLE` command. PXF now supports file-based server configuration for the JDBC Connector. This configuration, described below, allows you to specify these options and credentials in a file.
+In previous releases of Greenplum Database, you may have specified the JDBC driver class name, database URL, and client credentials via options in the `CREATE EXTERNAL TABLE` command. PXF now supports file-based server configuration for the JDBC Connector. This configuration, described below, allows you to specify these options and credentials in a file.
 
-**Note**: PXF external tables that you previously created that directly specified the JDBC connection options will continue to work. If you want to move these tables to use JDBC file-based server configuration, you must create a server configuration, drop the external tables, and then recreate them specifying an appropriate `SERVER=<servercfg>` clause.
+**Note**: PXF external tables that you previously created that directly specified the JDBC connection options will continue to work. If you want to move these tables to use JDBC file-based server configuration, you must create a server configuration, drop the external tables, and then recreate the tables specifying an appropriate `SERVER=<servercfg>` clause.
 
 ### <a id="cfg_jar"></a>JDBC Driver JAR Registration
 
