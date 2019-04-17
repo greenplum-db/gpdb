@@ -58,7 +58,7 @@ JOBS_THAT_ARE_GATES = ['gate_compile_start', 'gate_compile_end',
                        'gate_filerep_start', 'gate_filerep_end',
                        'gate_release_candidate_start']
 JOBS_THAT_ARE_PAUSED = ['DPM_backup-restore_netbackup_part1', 'DPM_backup-restore_netbackup_part2', 'DPM_backup-restore_netbackup_part3']
-JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6', 'compile_gpdb_ubuntu16_oss_abi', 'client_loader_remote_test_aix'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES + JOBS_THAT_ARE_PAUSED
+JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_aix7_remote', 'compile_gpdb_binary_swap_centos6', 'compile_gpdb_ubuntu16_oss_abi', 'client_loader_remote_test_aix'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES + JOBS_THAT_ARE_PAUSED
 
 def suggested_git_remote():
     default_remote = "<https://github.com/<github-user>/gpdb>"

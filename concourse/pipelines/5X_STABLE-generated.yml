@@ -4433,7 +4433,7 @@ jobs:
       - compile_gpdb_ubuntu16
       - compile_gpdb_ubuntu16_oss
       - compile_gpdb_windows_cl
-      - compile_gpdb_aix7_remote
+      # - compile_gpdb_aix7_remote
       - icw_planner_centos6
       - icw_gporca_centos6
       - icw_planner_ictcp_centos6
