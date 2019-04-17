@@ -186,6 +186,18 @@
                     expansion, use <codeph>gpexpand -a</codeph>, and post-expansion, use
                       <codeph>analyze</codeph>.</p></entry>
               </row>
+              <row>
+                <entry namest="c1" nameend="c2"><p><b>Back Up Databases</b></p><ph>* System is up
+                    and available</ph></entry>
+              </row>
+              <row>
+                <entry><image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
+                    id="image_ogk_mj4_lhb"/></entry>
+                <entry>Back up databases using the <codeph>gpbackup</codeph> utility. Backups you
+                  created before you began the system expansion cannot be restored to the newly
+                  expanded system because the <codeph>gprestore</codeph> utility can only restore
+                  backups to a Greenplum Database system with the same number of segments.</entry>
+              </row>
             </tbody>
           </tgroup>
         </table></p>
