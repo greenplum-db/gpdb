@@ -123,7 +123,7 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
 
     # ignore concourse v2.x variable interpolation
     pipeline_yml_cleaned = re.sub('{{', '', re.sub('}}', '', raw_pipeline_yml))
-    pipeline = yaml.load(pipeline_yml_cleaned)
+    pipeline = yaml.safe_load(pipeline_yml_cleaned)
 
     jobs_raw = pipeline['jobs']
     all_job_names = [job['name'] for job in jobs_raw]
