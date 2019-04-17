@@ -597,7 +597,10 @@ def impl(context, dir, dbconn):
 @then(
     'the user "{USER}" creates filespace_config file for "{fs_name}" on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
 def impl(context, USER, HOST, PORT, fs_name, config_file, dir):
-    user = os.environ.get(USER)
+    if USER:
+        user = os.environ.get(USER)
+    else:
+        user = None
     host = os.environ.get(HOST)
     port = os.environ.get(PORT)
     if not dir.startswith("/"):
@@ -611,13 +614,16 @@ def impl(context, USER, HOST, PORT, fs_name, config_file, dir):
 @when(
     'the user "{USER}" creates filespace on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
 def impl(context, USER, HOST, PORT, config_file, dir):
-    user = os.environ.get(USER)
+    if USER:
+        user = "-U %s" % os.environ.get(USER)
+    else:
+        user = ""
     host = os.environ.get(HOST)
     port = os.environ.get(PORT)
     if not dir.startswith("/"):
         dir = os.environ.get(dir)
     config_file_path = dir + "/" + config_file
-    cmdStr = 'gpfilespace -h %s -p %s -U %s -c "%s"' % (host, port, user, config_file_path)
+    cmdStr = 'gpfilespace -h %s -p %s %s -c "%s"' % (host, port, user, config_file_path)
     run_command(context, cmdStr)
 
 
@@ -4053,6 +4059,20 @@ def impl(context, seg):
     cmd.run(validateAfter=True)
 
 
+@then('the temporary filespace file is deleted on saved "{seg}" segment')
+def impl(context, seg):
+    if seg == "primary":
+        data_dir = context.primary_datadir
+        hostname = context.primary_segdbname
+    elif seg == "mirror":
+        data_dir = context.mirror_datadir
+        hostname = context.mirror_segdbname
+
+    cmd = Command(name="Remove filespace file", cmdStr='rm -f %s' % (os.path.join(data_dir, 'gp_temporary_files_filespace')),
+                  remoteHost=hostname, ctxt=REMOTE)
+    cmd.run(validateAfter=True)
+
+
 @given('the user creates an init config file "{to_file}" without mirrors')
 @when('the user creates an init config file "{to_file}" without mirrors')
 @then('the user creates an init config file "{to_file}" without mirrors')
@@ -4990,6 +5010,11 @@ def impl(context, seg):
         context.mirror_port = to_save_segs[0].getSegmentPort()
     elif seg == "primary":
         to_save_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
+        context.primary_segdbId = to_save_segs[0].getSegmentDbId()
+        context.primary_segcid = to_save_segs[0].getSegmentContentId()
+        context.primary_segdbname = to_save_segs[0].getSegmentHostName()
+        context.primary_datadir = to_save_segs[0].getSegmentDataDirectory()
+        context.primary_port = to_save_segs[0].getSegmentPort()
     elif seg == "master":
         to_save_segs = [seg for seg in gparray.getDbList() if seg.isSegmentMaster()]
 
@@ -5780,11 +5805,6 @@ def impl(context):
                             "%d") % rank
 
         return
-
-@given('an FTS probe is triggered')
-def impl(context):
-    with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
-        dbconn.execSQLForSingleton(conn, "SELECT gp_request_fts_probe_scan()")
 
 @then('verify that gpstart on original master fails due to lower Timeline ID')
 def step_impl(context):

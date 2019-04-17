@@ -297,7 +297,9 @@ class CheckFilespaceConsistency(Operation):
                                                                            PG_SYSTEM_FILESPACE).run()).run()
         cur_filespace_entries = GetFilespaceEntriesDict(GetCurrentFilespaceEntries(self.gparray,
                                                                                    self.file_type).run()).run()
-        for seg in self.gparray.getDbList():
+        # Don't check segments that are down, as their flat files may be missing
+        upSegments = [seg for seg in self.gparray.getDbList() if seg.isSegmentUp()]
+        for seg in upSegments:
             dbid = seg.getSegmentDbId()
             flat_file_location = os.path.join(pg_system_fs_entries[dbid][2],
                                               flat_file)

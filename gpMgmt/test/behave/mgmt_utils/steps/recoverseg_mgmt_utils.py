@@ -135,6 +135,11 @@ def impl(context, cid):
     if row_count != 1:
         raise Exception('Expected mirror segment cid %s to be down, but it is up.' % cid)
 
+@when('the mirror with content id "{cid}" is forcibly marked down in config')
+def impl(context, cid):
+    with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
+        dbconn.execSQL(conn, "SET allow_system_table_mods='dml'; UPDATE gp_segment_configuration SET status='d' WHERE role='m' AND content=%s" % cid)
+
 @given('user runs the command "{cmd}" on segment "{cid}"')
 @when('user runs the command "{cmd}" on segment "{cid}"')
 @then('user runs the command "{cmd}" on segment "{cid}"')
