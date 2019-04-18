@@ -253,7 +253,7 @@
             <entry>char</entry>
              <entry></entry>
             <entry>Columns used to form “replica identity” for rows: d = default (primary key, if
-              any), n = nothing, f = all columns i = index with indisreplident set, or
+              any), n = nothing, f = all columns i = index with <codeph>indisreplident</codeph> set, or
               default</entry>
           </row>
           <row>
