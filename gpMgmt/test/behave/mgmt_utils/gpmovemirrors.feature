@@ -97,4 +97,20 @@ Feature: Tests for gpmovemirrors
         And the segments are synchronized
         And verify that mirror segments are in "group" configuration
         And verify that mirrors are recognized after a restart
-        And the user runs "gpstop -aqM fast"
+
+    @concourse_cluster
+    Scenario: tablespaces work on a multi-host environment
+        Given verify that mirror segments are in "group" configuration
+          And a tablespace is created with data
+          And a sample gpmovemirrors input file is created in "spread" configuration
+         When the user runs "gpmovemirrors --input=/tmp/gpmovemirrors_input_spread"
+         Then gpmovemirrors should return a return code of 0
+          And verify the database has mirrors
+          And all the segments are running
+          And the segments are synchronized
+          And verify that mirrors are recognized after a restart
+          And the tablespace is valid
+
+         When user kills all primary processes
+          And user can start transactions
+         Then the tablespace is valid
