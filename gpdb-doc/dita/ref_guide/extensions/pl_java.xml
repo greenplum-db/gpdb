@@ -302,6 +302,9 @@
           database. For example, this command disables the PL/Java language in the
             <codeph>testdb</codeph> database: </p>
         <codeblock>$ psql -d testdb -c 'DROP EXTENSION pljava;'</codeblock>
+        <p> The default command fails if any existing objects (such as functions) depend on the
+          language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent objects,
+          including functions that you created with PL/Java. </p>
         <note>The PL/Java <codeph>uninstall.sql</codeph> script, used in previous releases to remove
           the language registration, is deprecated.</note>
       </body>

@@ -105,38 +105,25 @@
             <title>Enabling PL/Perl Support</title>
             <body>
                 <p> For each database in which you want to enable PL/Perl, register the language
-                    using the SQL <codeph><xref href="../sql_commands/CREATE_LANGUAGE.xml#topic1"
-                            >CREATE LANGUAGE</xref></codeph> command or the Greenplum Database
-                            <codeph><xref
-                            href="../../utility_guide/client_utilities/createlang.xml#topic1"
-                            >createlang</xref></codeph> utility. For example, run the following
+                    using the SQL <codeph><xref href="../sql_commands/CREATE_EXTENSION.xml">CREATE
+                            EXTENSION</xref></codeph> command. For example, run the following
                     command as the <codeph>gpadmin</codeph> user to register the trusted PL/Perl
                     language for the database named <codeph>testdb</codeph>: </p>
-                <codeblock>$ createlang plperl -d testdb</codeblock>
+                <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plperl;'</codeblock>
             </body>
         </topic>
         <topic id="topic62" xml:lang="en">
             <title>Removing PL/Perl Support</title>
             <body>
                 <p> To remove support for PL/Perl from a database, run the SQL <codeph><xref
-                            href="../sql_commands/DROP_LANGUAGE.xml#topic1">DROP
-                        LANGUAGE</xref></codeph> command or the Greenplum Database <codeph><xref
-                            href="../../utility_guide/client_utilities/droplang.xml#topic1"
-                            >droplang</xref></codeph> utility. For example, run the following
-                    command as the <codeph>gpadmin</codeph> user to remove support for the trusted
-                    PL/Perl language from the database named <codeph>testdb</codeph>: </p>
-                <codeblock>
-$ psql -d testdb
-psql (9.4.20)
-Type "help" for help.
-
-testdb=# DROP LANGUAGE plperl;
-</codeblock>
-                <p> The default <codeph>DROP LANGUAGE</codeph> behavior is
-                    <codeph>RESTRICT</codeph>; the command fails if any existing objects (such as
-                    functions) depend on the language. Specify the <codeph>CASCADE</codeph> clause
-                    to also drop all dependent objects, including functions that you created with
-                    PL/Perl. </p>
+                            href="../sql_commands/CREATE_EXTENSION.xml">CREATE
+                        EXTENSION</xref></codeph> command. For example, run the following command as
+                    the <codeph>gpadmin</codeph> user to remove support for the trusted PL/Perl
+                    language from the database named <codeph>testdb</codeph>: </p>
+                <codeblock>$ psql -d testdb -c 'DROP EXTENSION plperl;'</codeblock>
+                <p> The default command fails if any existing objects (such as functions) depend on
+                    the language. Specify the <codeph>CASCADE</codeph> option to also drop all
+                    dependent objects, including functions that you created with PL/Perl. </p>
             </body>
         </topic>
     </topic>

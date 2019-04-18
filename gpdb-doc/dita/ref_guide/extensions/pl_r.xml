@@ -120,6 +120,9 @@
             run this command as the <codeph>gpadmin</codeph> user to remove support for PL/R from
             the database named <i>testdb</i>:</p>
           <codeblock>$ psql -d testdb -c 'DROP EXTENSION plr;'</codeblock>
+          <p> The default command fails if any existing objects (such as functions) depend on the
+            language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent
+            objects, including functions that you created with PL/R. </p>
         </body>
       </topic>
       <topic id="topic8" xml:lang="en">

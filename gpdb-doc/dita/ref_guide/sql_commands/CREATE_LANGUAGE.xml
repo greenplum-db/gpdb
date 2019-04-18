@@ -19,9 +19,9 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
             <p><codeph>CREATE LANGUAGE</codeph> registers a new procedural language with a Greenplum
                 database. Subsequently, functions and trigger procedures can be defined in this new
                 language.</p> 
-            <note>Some procedural languages for Greenplum Database have been made into "extensions,"
-                and should therefore be installed with <xref href="CREATE_EXTENSION.xml#topic1"/>,
-                not <codeph>CREATE LANGUAGE</codeph>. Using <codeph>CREATE LANGUAGE</codeph>
+            <note>Procedural languages for Greenplum Database have been made into "extensions," and
+                should therefore be installed with <xref href="CREATE_EXTENSION.xml#topic1"/>, not
+                    <codeph>CREATE LANGUAGE</codeph>. Using <codeph>CREATE LANGUAGE</codeph>
                 directly should be restricted to extension installation scripts. If you have a
                 "bare" language in your database, perhaps as a result of an upgrade, you can convert
                 it to an extension using <codeph>CREATE EXTENSION <varname>langname</varname> FROM
