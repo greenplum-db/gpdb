@@ -1,3 +1,4 @@
+import pipes
 import shutil
 import tempfile
 
@@ -5,7 +6,8 @@ from behave import given, when, then
 from pygresql import pg
 
 from gppylib.db import dbconn
-
+from gppylib.gparray import GpArray
+from test.behave_utils.utils import run_cmd
 
 class Tablespace:
     def __init__(self, name):
@@ -14,6 +16,10 @@ class Tablespace:
         self.dbname = 'tablespace_db_%s' % name
         self.table_counter = 0
         self.initial_data = None
+
+        gparray = GpArray.initFromCatalog(dbconn.DbURL())
+        for host in gparray.getHostList():
+            run_cmd('ssh %s mkdir -p %s' % (pipes.quote(host), pipes.quote(self.path)))
 
         with dbconn.connect(dbconn.DbURL()) as conn:
             db = pg.DB(conn)
@@ -40,7 +46,9 @@ class Tablespace:
             # before removing them below.
             _checkpoint_and_wait_for_replication_replay(db)
 
-        shutil.rmtree(self.path)
+        gparray = GpArray.initFromCatalog(dbconn.DbURL())
+        for host in gparray.getHostList():
+            run_cmd('ssh %s rm -rf %s' % (pipes.quote(host), pipes.quote(self.path)))
 
     def verify(self, hostname=None, port=0):
         """
