@@ -109,3 +109,20 @@ Feature: Tests for gpaddmirrors
         Then verify that there is a "ao" table "public.ao_table" in "gptest" with "100" rows
         Then verify that there is a "co" table "public.co_table" in "gptest" with "100" rows
         And the user runs "gpstop -aqM fast"
+
+    @concourse_cluster
+    Scenario: tablespaces work on a multi-host environment
+        Given a working directory of the test as '/tmp/gpaddmirrors'
+          And the database is not running
+          And a cluster is created with no mirrors on "mdw" and "sdw1"
+          And a tablespace is created with data
+         When gpaddmirrors adds mirrors
+         Then verify the database has mirrors
+
+         When an FTS probe is triggered
+          And the segments are synchronized
+         Then the tablespace is valid
+
+         When user stops all primary processes
+          And user can start transactions
+         Then the tablespace is valid
