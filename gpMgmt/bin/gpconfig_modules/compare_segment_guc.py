@@ -70,10 +70,16 @@ class MultiValueGuc(SegmentGuc):
 
     def report_success_format(self):
         file_val = self.primary_file_seg_guc.get_value()
-        if self.db_seg_guc:
-            result = "%s value: %s | file: %s" % (self.get_label(), self.db_seg_guc.value, self._use_dash_when_none(file_val))
+        if file_val is not None:
+            if self.db_seg_guc:
+                result = "%s value: %s | file: %s" % (self.get_label(), self.db_seg_guc.value, file_val)
+            else:
+                result = "%s value: %s" % (self.get_label(), file_val)
         else:
-            result = "%s value: %s" % (self.get_label(), file_val)
+            if self.db_seg_guc:
+                result = "%s value: %s | not set in file" % (self.get_label(), self.db_seg_guc.value)
+            else:
+                result = "No value is set on %s" % ("master" if self.get_label() == "Master " else "segments")
         return result
 
     def report_fail_format(self):
@@ -87,16 +93,17 @@ class MultiValueGuc(SegmentGuc):
         return report
 
     def _report_fail_format_with_database_and_file_gucs(self, segment_guc_obj):
-        return "[context: %s] [dbid: %s] [name: %s] [value: %s | file: %s]" % (
+        if segment_guc_obj.value is None:
+            file_tag = "not set in file"
+        else:
+            file_tag = "file: %s" % segment_guc_obj.value
+
+        return "[context: %s] [dbid: %s] [name: %s] [value: %s | %s]" % (
             self.db_seg_guc.context,
             segment_guc_obj.dbid,
             self.db_seg_guc.name,
             self.db_seg_guc.value,
-            self._use_dash_when_none(segment_guc_obj.value))
-
-    def _use_dash_when_none(self, value):
-      return value if value is not None else "-"
-
+            file_tag)
 
     def is_internally_consistent(self):
         if not self.db_seg_guc:

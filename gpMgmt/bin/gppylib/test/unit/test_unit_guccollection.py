@@ -89,8 +89,7 @@ class GucCollectionTest(GpTestCase):
         row = ['-1', 'guc_name', 'master_value', 'dbid']
         self.subject.update(FileSegmentGuc(row))
 
-        self.assertIn("Master  value: master_value | file: master_value", self.subject.report())
-        self.assertIn("Segment value: value | file: value", self.subject.report())
+        self.assertIn("Master  value: master_value | file: master_value\nSegment value: value | file: value", self.subject.report())
 
     def test_when_file_value_empty_file_compare_succeeds(self):
         row = ['0', 'guc_name', None, 'dbid']
@@ -98,8 +97,19 @@ class GucCollectionTest(GpTestCase):
         row = ['-1', 'guc_name', None, 'dbid']
         self.subject.update(FileSegmentGuc(row))
 
-        self.assertIn("Master  value: master_value | file: -", self.subject.report())
-        self.assertIn("Segment value: value | file: -", self.subject.report())
+        self.assertIn("Master  value: master_value | not set in file", self.subject.report())
+        self.assertIn("Segment value: value | not set in file", self.subject.report())
+
+    def test_values_unset_in_file_only(self):
+        self.subject = GucCollection() # remove existing DatabaseSegmentGucs
+
+        row = ['0', 'guc_name', None, 'dbid']
+        self.subject.update(FileSegmentGuc(row))
+        row = ['-1', 'guc_name', None, 'dbid']
+        self.subject.update(FileSegmentGuc(row))
+
+        self.assertIn("No value is set on master", self.subject.report())
+        self.assertIn("No value is set on segments", self.subject.report())
 
     def test_when_multiple_dbids_per_contentid_reports_failure(self):
         row = ['-1', 'guc_name', 'master_value', '1']
@@ -197,7 +207,7 @@ class GucCollectionTest(GpTestCase):
         row = ['0', 'guc_name', 'value', 'dbid4']
         self.subject.update(FileSegmentGuc(row))
 
-        self.assertIn("[context: -1] [dbid: dbid1] [name: guc_name] [value: -]\n", self.subject.report())
+        self.assertIn("[context: -1] [dbid: dbid1] [name: guc_name] [not set in file]\n", self.subject.report())
         self.assertIn("[context: -1] [dbid: dbid3] [name: guc_name] [value: master_value]\n", self.subject.report())
         self.assertIn("[context: 0] [dbid: dbid2] [name: guc_name] [value: value]\n", self.subject.report())
         self.assertIn("[context: 0] [dbid: dbid4] [name: guc_name] [value: value]", self.subject.report())
@@ -217,7 +227,7 @@ class GucCollectionTest(GpTestCase):
         row = ['1', 'guc_name', 'value', 'dbid5']
         self.subject.update(FileSegmentGuc(row))
 
-        self.assertEquals("[context: -1] [dbid: dbid1] [name: guc_name] [value: -]\n"
+        self.assertEquals("[context: -1] [dbid: dbid1] [name: guc_name] [not set in file]\n"
                           "[context: -1] [dbid: dbid3] [name: guc_name] [value: master_value]\n"
                           "[context: 0] [dbid: dbid2] [name: guc_name] [value: value]\n"
                           "[context: 0] [dbid: dbid4] [name: guc_name] [value: value]\n"

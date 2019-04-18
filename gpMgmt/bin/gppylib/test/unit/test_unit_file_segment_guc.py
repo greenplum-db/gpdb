@@ -21,6 +21,11 @@ class FileSegmentGucTest(GpTestCase):
         self.assertEquals(self.subject.report_fail_format(),
                           ["[context: contentid] [dbid: dbid] [name: guc_name] [value: value_from_file]"])
 
+    def test_report_fail_format_file_when_unset(self):
+        self.subject.value = None
+        self.assertEquals(self.subject.report_fail_format(),
+                          ["[context: contentid] [dbid: dbid] [name: guc_name] [not set in file]"])
+
     def test_init_with_insufficient_file_values_raises(self):
         row = ['contentid', 'guc_name', 'value_from_file']
         with self.assertRaisesRegexp(Exception, "must provide \['context', 'guc name', 'value', 'dbid'\]"):
@@ -33,7 +38,7 @@ class FileSegmentGucTest(GpTestCase):
         self.assertEquals(self.subject.report_success_format(), "Master  value: value")
         self.assertEqual(self.subject.dbid, '0')
 
-    def test_when_value_none_report_success_uses_hyphen(self):
+    def test_when_value_none_report_success_prints_message(self):
         self.subject.value = None
 
-        self.assertEquals(self.subject.report_success_format(), "Segment value: -")
+        self.assertEquals(self.subject.report_success_format(), "No value is set on segments")
