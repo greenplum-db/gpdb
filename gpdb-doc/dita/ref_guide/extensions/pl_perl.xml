@@ -116,10 +116,10 @@
             <title>Removing PL/Perl Support</title>
             <body>
                 <p> To remove support for PL/Perl from a database, run the SQL <codeph><xref
-                            href="../sql_commands/CREATE_EXTENSION.xml">CREATE
-                        EXTENSION</xref></codeph> command. For example, run the following command as
-                    the <codeph>gpadmin</codeph> user to remove support for the trusted PL/Perl
-                    language from the database named <codeph>testdb</codeph>: </p>
+                            href="../sql_commands/DROP_EXTENSION.xml">DROP EXTENSION</xref></codeph>
+                    command. For example, run the following command as the <codeph>gpadmin</codeph>
+                    user to remove support for the trusted PL/Perl language from the database named
+                        <codeph>testdb</codeph>: </p>
                 <codeblock>$ psql -d testdb -c 'DROP EXTENSION plperl;'</codeblock>
                 <p> The default command fails if any existing objects (such as functions) depend on
                     the language. Specify the <codeph>CASCADE</codeph> option to also drop all

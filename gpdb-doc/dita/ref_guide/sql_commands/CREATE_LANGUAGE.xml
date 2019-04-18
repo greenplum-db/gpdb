@@ -168,8 +168,10 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
         </section>
         <section id="section6">
             <title>Examples</title>
-            <p>The preferred way of creating any of the standard procedural languages:</p>
-            <codeblock>CREATE LANGUAGE plperl;</codeblock>
+            <p>The preferred way of creating any of the standard procedural languages is to use
+                    <codeph>CREATE EXTENSION</codeph> instead of <codeph>CREATE LANGUAGE</codeph>.
+                For example:</p>
+            <codeblock>CREATE EXTENSION plperl;</codeblock>
             <p>For a language not known in the <codeph>pg_pltemplate</codeph> catalog:</p>
             <codeblock>CREATE FUNCTION plsample_call_handler() RETURNS 
 language_handler
@@ -185,10 +187,13 @@ CREATE LANGUAGE plsample
         <section id="section8">
             <title>See Also</title>
             <p><codeph><xref href="ALTER_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="./DROP_LANGUAGE.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="./GRANT.xml#topic1"
-                        type="topic" format="dita"/></codeph>
+                        <codeph><xref href="CREATE_EXTENSION.xml" type="topic" format="dita"
+                    /></codeph>, <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic"
+                        format="dita"/></codeph>, <codeph><xref href="./DROP_EXTENSION.xml#topic1"
+                        type="topic" format="dita"/></codeph>, <codeph><xref
+                        href="./DROP_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
+                        <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"
+                    /></codeph>
                 <codeph><xref href="DO.xml#topic1"/></codeph></p>
         </section>
     </body>

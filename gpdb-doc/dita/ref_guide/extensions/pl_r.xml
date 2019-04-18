@@ -91,7 +91,7 @@
         <p>For each database that requires its use, register the PL/R language with the SQL command
             <codeph>CREATE EXTENSION</codeph>. Because PL/R is an untrusted language, only
           superusers can register PL/R with a database. For example, run this command as the
-            <codeph>gpadmin</codeph> system to register the language with the database named
+            <codeph>gpadmin</codeph> user to register the language with the database named
             <i>testdb</i>:</p>
         <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plr;'</codeblock>
         <p>PL/R is registered as an untrusted language.</p>
