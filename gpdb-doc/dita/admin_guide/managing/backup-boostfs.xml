@@ -35,7 +35,7 @@
             list only <userinput>Downloads &amp; Drivers</userinput> as resources. To list the most
             recent RPM near the top of your search results, sort your results by descending
             date.</p>
-         <p>The RPM supports both RHEL and SuSE.</p>
+         <p>The RPM supports both RHEL and SUSE.</p>
          <p>These steps install BoostFS and create a mounted directory that accesses a Data Domain
             system. </p>
          <p>Perform the steps on all Greenplum Database hosts. The mounted directory you create must
@@ -95,7 +95,7 @@
 $ gprestore --backup-dir /boostfs-test/ --timestamp 20171103153156 --create-db</codeblock></p>
          <p>The value <codeph>20171103153156</codeph> is the timestamp of the
                <codeph>gpbackup</codeph> backup set to restore. For information about how
-               <codeph>gpbackup</codeph> uses timesamps when creating backups, see <xref
+               <codeph>gpbackup</codeph> uses timestamps when creating backups, see <xref
                href="backup-gpbackup.xml"/>. For information about the <codeph>-timestamp</codeph>
             option, see <xref href="../../utility_guide/admin_utilities/gprestore.xml"
                >gprestore</xref>.</p>

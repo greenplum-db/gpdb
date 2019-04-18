@@ -3,13 +3,13 @@
 <topic id="topic_yrr_hqw_sbb">
   <title>Parallel Backup with gpbackup and gprestore</title>
   <body>
-    <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are Greenplum Database utilities
-      that create and restore backup sets for Greenplum Database. By default,
-        <codeph>gpbackup</codeph> stores only the object metadata files and DDL files for a backup
-      in the Greenplum Database master data directory. Greenplum Database segments use the
-        <codeph>COPY ... ON SEGMENT</codeph> command to store their data for backed-up tables in
-      compressed CSV data files, located in each segment's <filepath>backups</filepath>
-      directory.</p>
+    <p><codeph>gpbackup</codeph>, <codeph>gprestore</codeph>, and <codeph>gpbackup_manager</codeph>
+      are Greenplum Database utilities that create, restore, and manage backup sets for Greenplum
+      Database. By default, <codeph>gpbackup</codeph> stores only the object metadata files and DDL
+      files for a backup in the Greenplum Database master data directory. Greenplum Database
+      segments use the <codeph>COPY ... ON SEGMENT</codeph> command to store their data for
+      backed-up tables in compressed CSV data files, located in each segment's
+        <filepath>backups</filepath> directory.</p>
     <p>The backup metadata files contain all of the information that <codeph>gprestore</codeph>
       needs to restore a full backup set in parallel. Backup metadata also provides the framework
       for restoring only individual objects in the data set, along with any dependent objects, in
@@ -26,9 +26,13 @@
       segment host is written to CSV backup files using <codeph>COPY ... ON SEGMENT</codeph>
       commands in parallel. The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on
       each table that is backed up.</p>
-    <p>For information about the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utility
-      options, see <xref href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref> and
-        <xref href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref>.</p>
+    <p>With the <codeph>gpbackup_manager</codeph> utility, you can list the backups that have been
+      taken, get a backup report for a specific backup, and delete backups. </p>
+    <p>For information about the <codeph>gpbackup</codeph>, <codeph>gprestore</codeph>, and
+        <codeph>gpbackup_manager</codeph> utility options, see <xref
+        href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref>, <xref
+        href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref>, and <xref
+        href="../../utility_guide/admin_utilities/gpbackup_manager.xml#topic1"/>.</p>
   </body>
   <topic id="topic_vh5_1hd_tbb">
     <title>Requirements and Limitations</title>
@@ -220,11 +224,12 @@ $ <b>find /home/gpadmin/backups/ -type f</b>
 /home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_postdata.sql
 /home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_report
 /home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_toc.yaml</codeblock></p>
-      <p>When performing a backup operation, you can use the <codeph>--single-data-file</codeph> in
-        situations where the additional overhead of multiple files might be prohibitive. For
-        example, if you use a third party storage solution such as Data Domain with back ups.</p>
+      <p>When performing a backup operation, you can use the <codeph>--single-data-file</codeph>
+        option in situations where the additional overhead of multiple files might be prohibitive.
+        For example, if you use a third party storage solution such as Data Domain with back
+        ups.</p>
       <section>
-        <title>Restoring from Backup</title>
+        <title>Restoring from a Backup</title>
         <p>To use <codeph>gprestore</codeph> to restore from a backup set, you must use the
             <codeph>--timestamp</codeph> option to specify the exact timestamp value
             (<codeph>YYYYMMDDHHMMSS</codeph>) to restore. Include the <codeph>--create-db</codeph>
@@ -261,14 +266,48 @@ $ <b>gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --
           backup combined table backups into a single file per segment with the
             <codeph>gpbackup</codeph> option <codeph>--single-data-file</codeph>.</note>
       </section>
+      <section>
+        <title>Listing Backups</title>
+        <p>You can view a list of backups using the <codeph>gpbackup_manager</codeph> utility.  The
+          list includes all backups taken, including backups that have been removed from the
+          system.</p>
+        <codeblock>$ <b>gpbackup_manager list-backups</b>
+timestamp        date                       database      type          duration   deleted
+        
+20190624020100   Mon Jun 24 2019 02:01:00   sales         incremental   01:49:38
+20190623020100   Sun Jun 23 2019 02:01:00   sales         full          08:28:04  
+20190622020100   Sat Jun 22 2019 02:01:00   sales         incremental   02:01:57   true
+20190621020100   Fri Jun 21 2019 02:01:00   sales         incremental   01:45:09   true
+20190620020100   Thu Jun 20 2019 02:01:00   sales         incremental   01:57:58   true
+20190619020100   Wed Jun 19 2019 02:01:00   sales         incremental   01:55:11   true
+20190618020100   Tue Jun 18 2019 02:01:00   sales         incremental   02:09:47   true
+20190617020100   Mon Jun 17 2019 02:01:00   sales         incremental   02:11:03   true
+20190616020100   Sun Jun 16 2019 02:01:00   sales         full          08:07:22   true
+20190617152423   Mon Jun 17 2019 15:24:23   penny         full          00:00:17
+20190612154608   Wed Jun 12 2019 15:46:08   tpcds         full          00:08:21
+20190612103702   Wed Jun 12 2019 10:37:02   gpadmin       full          00:00:58   true
+20190611150524   Tue Jun 11 2019 15:05:24   penny         full          00:01:43   true
+20190611145327   Tue Jun 11 2019 14:53:27   test_db       full          00:21:24</codeblock>
+      </section>
+      <section>
+        <title>Deleting Backups</title>
+        <p>To remove a backup from the system, use the <codeph>gpbackup_manager
+            delete-backup</codeph> command.  </p>
+        <codeblock>$ <b>gpbackup_manager delete-backup</b> &lt;timestamp></codeblock>
+        <p>The command removes all of the backup files for the specified timestamp and records the
+          date the backup was deleted in the gpbackup history file. </p>
+      </section>
       <section id="report_files"><title>Report Files</title><p>When performing a backup or restore
           operation, <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> generate a report
-          file. When email notification is configured, the email sent contains the contents of the
-          report file. For information about email notification, see <xref href="#topic_qwd_d5d_tbb"
-            format="dita"/>. </p><p>The report file is placed in the Greenplum Database master
-          backup directory. The report file name contains the timestamp of the operation. These are
-          the formats of the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> report file
-          names.</p><codeblock>gpbackup_&lt;backup_timestamp>_report
+          file. </p><p>When email notification is configured, the email sent contains the contents
+          of the report file. For information about email notification, see <xref
+            href="#topic_qwd_d5d_tbb" format="dita"/>.</p><p>You can use
+            <codeph>gpbackup_manager</codeph> to view a report file by specifying the
+          timestamp.<codeblock>$ <b>gpbackup_manager display-report</b> &lt;timestamp></codeblock></p><p>Report
+          files are saved in the Greenplum Database master backup directory. A report file name
+          contains the timestamp of the operation. These are the formats of the
+            <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> report file
+        names.</p><codeblock>gpbackup_&lt;backup_timestamp>_report
 gprestore_&lt;backup_timestamp>_&lt;restore_timesamp>_report</codeblock>For
         these example report file names, <codeph>20180213114446</codeph> is the timestamp of the
         backup and <codeph>20180213115426</codeph> is the timestamp of the restore
@@ -299,17 +338,19 @@ End Time: 2018-02-13 11:54:31
 Duration: 0:00:05
 
 Restore Status: Success</codeblock></section>
-      <section>
+      <section id="section_qbd_3rv_d3b">
         <title>History File</title>
         <p>When performing a backup operation, <codeph>gpbackup</codeph> appends backup information
           in the gpbackup history file, <codeph>gpbackup_history.yaml</codeph>, in the Greenplum
           Database master data directory. The file contains the backup timestamp, information about
           the backup options, and backup set information for incremental backups. This file is not
           backed up by <codeph>gpbackup</codeph>.</p>
+        <p><codeph>gpbackup_manager</codeph> uses the history file to list backups, display backup
+          reports, and delete backups.</p>
         <p><codeph>gpbackup</codeph> uses the information in the file to find a matching backup for
           an incremental backup when you run <codeph>gpbackup</codeph> with the
             <codeph>--incremental</codeph> option and do not specify the
-            <codeph>--from-timesamp</codeph> option to indicate the backup that you want to use as
+            <codeph>--from-timestamp</codeph> option to indicate the backup that you want to use as
           the latest backup in the incremental backup set. For information about incremental
           backups, see <xref href="backup-gpbackup-incremental.xml"/>.</p>
       </section>
@@ -354,7 +395,7 @@ $ <b>gpbackup --dbname demo --exclude-schema twitter</b></codeblock></p>
         lines. For example:<codeblock>wikipedia.articles
 twitter.message</codeblock></p>
       <p>If a table or schema name uses any character other than a lowercase letter, number, or an
-        underscore character, then you must include that name in double quotes. For
+        underscore character, then you must enclose that name in double quotes. For
         example:<codeblock>beer."IPA"
 "Wine".riesling
 "Wine"."sauvignon blanc"
@@ -363,7 +404,7 @@ water.tonic</codeblock></p>
           <codeph>gpbackup</codeph> options <codeph>--include-table-file</codeph> or
           <codeph>--exclude-table-file</codeph>. For
         example:<codeblock>$ <b>gpbackup --dbname demo --include-table-file /home/gpadmin/table-list.txt</b></codeblock></p>
-      <p>You can combine <codeph>-include schema</codeph> with <codeph>--exclude-table</codeph> or
+      <p>You can combine <codeph>-include-schema</codeph> with <codeph>--exclude-table</codeph> or
           <codeph>--exclude-table-file</codeph> for a backup. This example uses
           <codeph>--include-schema</codeph> with <codeph>--exclude-table</codeph> to back up a
         schema except for a single table. </p>
