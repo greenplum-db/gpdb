@@ -65,7 +65,7 @@
         <p>For each database that requires its use, register the PL/Python language with the SQL
           command <codeph>CREATE EXTENSION</codeph>. Because PL/Python is an untrusted language,
           only superusers can register PL/Python with a database. For example, running this command
-          as the <codeph>gpadmin</codeph> system user registers PL/Python with the database named
+          as the <codeph>gpadmin</codeph> user registers PL/Python with the database named
             <codeph>testdb</codeph>:</p>
         <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plpythonu;'</codeblock>
         <p>PL/Python is registered as an untrusted language.</p>
@@ -77,8 +77,8 @@
         <p>For a database that no longer requires the PL/Python language, remove support for
           PL/Python with the SQL command <codeph>DROP EXTENSION</codeph>. Because PL/Python is an
           untrusted language, only superusers can remove support for the PL/Python language from a
-          database. For example, running this command as the <codeph>gpadmin</codeph> system user
-          removes support for PL/Python from the database named <codeph>testdb</codeph>:</p>
+          database. For example, running this command as the <codeph>gpadmin</codeph> user removes
+          support for PL/Python from the database named <codeph>testdb</codeph>:</p>
         <codeblock>$ psql -d testdb -c 'DROP EXTENSION plpythonu;'</codeblock>
         <p> The default command fails if any existing objects (such as functions) depend on the
           language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent objects,

@@ -92,7 +92,7 @@
             <codeph>CREATE EXTENSION</codeph>. Because PL/R is an untrusted language, only
           superusers can register PL/R with a database. For example, run this command as the
             <codeph>gpadmin</codeph> user to register the language with the database named
-            <i>testdb</i>:</p>
+            <codeph>testdb</codeph>:</p>
         <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plr;'</codeblock>
         <p>PL/R is registered as an untrusted language.</p>
       </body>
@@ -118,7 +118,7 @@
             the SQL command <codeph>DROP EXTENSION</codeph>. Because PL/R is an untrusted language,
             only superusers can remove support for the PL/R language from a database. For example,
             run this command as the <codeph>gpadmin</codeph> user to remove support for PL/R from
-            the database named <i>testdb</i>:</p>
+            the database named <codeph>testdb</codeph>:</p>
           <codeblock>$ psql -d testdb -c 'DROP EXTENSION plr;'</codeblock>
           <p> The default command fails if any existing objects (such as functions) depend on the
             language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent
@@ -292,8 +292,9 @@ LANGUAGE 'plr';</codeblock><p>This
       <body>
         <p>You can use the R command line to display information about the installed libraries and
           functions on the Greenplum Database host. You can also add and remove libraries from the R
-          installation. To start the R command line on the host, log into the host as the gadmin
-          user and run the script R from the directory <codeph>$GPHOME/ext/R-3.3.3/bin</codeph>.</p>
+          installation. To start the R command line on the host, log into the host as the
+            <codeph>gadmin</codeph> user and run the script R from the directory
+            <codeph>$GPHOME/ext/R-3.3.3/bin</codeph>.</p>
         <p>This R function lists the available R packages from the R command line:</p>
         <codeblock>&gt; library()</codeblock>
         <p>Display the documentation for a particular R package</p>
