@@ -510,8 +510,8 @@ CONTEXT:  COPY copy_regression_newline, line 1: "1|1
 "
 -- negative: invalid newline
 COPY copy_regression_newline from stdin with delimiter '|' newline 'blah';
-ERROR:  invalid value for NEWLINE (blah)
-HINT:  valid options are: 'LF', 'CRLF', 'CR'
+ERROR:  invalid value for NEWLINE "blah"
+HINT:  Valid options are: 'LF', 'CRLF' and 'CR'.
 -- negative: newline not yet supported for COPY TO
 COPY copy_regression_newline to stdout with delimiter '|' newline 'blah';
 ERROR:  newline currently available for data loading only, not unloading
