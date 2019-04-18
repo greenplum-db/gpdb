@@ -185,15 +185,37 @@ class GpConfig(GpTestCase):
         self.assertIn("Master  value: foo\nSegment value: foo", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
-    def test_option_f_will_report_absence_of_setting(self, mock_stdout):
+    def test_option_f_will_report_absence_of_setting_on_master(self, mock_stdout):
         sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
-        self.master_read_config.get_guc_value.return_value = "-"
+        self.master_read_config.get_guc_value.return_value = None
         self.segment_read_config.get_guc_value.return_value = "seg_value"
 
         self.subject.do_main()
 
         self.assertEqual(self.subject.LOGGER.error.call_count, 0)
-        self.assertIn("Master  value: -\nSegment value: seg_value", mock_stdout.getvalue())
+        self.assertIn("No value is set on master\nSegment value: seg_value", mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_option_f_will_report_absence_of_setting_on_segment(self, mock_stdout):
+        sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
+        self.master_read_config.get_guc_value.return_value = "master_value"
+        self.segment_read_config.get_guc_value.return_value = None
+
+        self.subject.do_main()
+
+        self.assertEqual(self.subject.LOGGER.error.call_count, 0)
+        self.assertIn("Master  value: master_value\nNo value is set on segments", mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_option_f_will_report_absence_of_setting_on_both(self, mock_stdout):
+        sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
+        self.master_read_config.get_guc_value.return_value = None
+        self.segment_read_config.get_guc_value.return_value = None
+
+        self.subject.do_main()
+
+        self.assertEqual(self.subject.LOGGER.error.call_count, 0)
+        self.assertIn("No value is set on master\nNo value is set on segments", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_option_f_will_report_difference_segments_out_of_sync(self, mock_stdout):
@@ -213,6 +235,25 @@ class GpConfig(GpTestCase):
         self.assertIn("WARNING: GUCS ARE OUT OF SYNC", mock_stdout.getvalue())
         self.assertIn("bar", mock_stdout.getvalue())
         self.assertIn("[name: my_property_name] [value: baz]", mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_option_f_will_report_difference_segments_out_of_sync_when_unset(self, mock_stdout):
+        sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
+        self.master_read_config.get_guc_value.return_value = 'foo'
+        self.segment_read_config.get_guc_value.return_value = 'bar'
+        another_segment_read_config = Mock()
+        another_segment_read_config.get_guc_value.return_value = None
+        another_segment_read_config.get_seg_content_id.return_value = 1
+        self.pool.getCompletedItems.return_value.append(another_segment_read_config)
+        self.host_cache.get_hosts.return_value.extend([self.host, self.host])
+
+        self.subject.do_main()
+
+        self.assertEqual(self.pool.addCommand.call_count, 3)
+        self.assertEqual(self.subject.LOGGER.error.call_count, 0)
+        self.assertIn("WARNING: GUCS ARE OUT OF SYNC", mock_stdout.getvalue())
+        self.assertIn("bar", mock_stdout.getvalue())
+        self.assertIn("[name: my_property_name] [not set in file]", mock_stdout.getvalue())
 
     def test_option_change_value_master_separate_succeed(self):
         db_singleton_side_effect_list.append("some happy result")
@@ -311,6 +352,30 @@ class GpConfig(GpTestCase):
         self.assertIn("Values on all segments are consistent", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
+    def test_option_file_compare_works_with_unset_values(self, mock_stdout):
+        sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
+        self.master_read_config.get_guc_value.return_value = None
+        self.master_read_config.get_seg_content_id.return_value = -1
+
+        self.segment_read_config.get_guc_value.return_value = None
+        self.segment_read_config.get_seg_content_id.return_value = 0
+
+        another_segment_read_config = Mock()
+        another_segment_read_config.get_guc_value.return_value = None
+        another_segment_read_config.get_seg_content_id.return_value = 1
+        self.pool.getCompletedItems.return_value.append(another_segment_read_config)
+
+        self.cursor.set_result_for_testing([[-1, 'my_property_name', 'foo'],
+                                            [0, 'my_property_name', 'foo'],
+                                            [1, 'my_property_name', 'foo']])
+
+        self.subject.do_main()
+
+        self.assertIn("Master  value: foo | not set in file", mock_stdout.getvalue())
+        self.assertIn("Segment value: foo | not set in file", mock_stdout.getvalue())
+        self.assertIn("Values on all segments are consistent", mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=StringIO)
     def test_option_file_compare_returns_different_value(self, mock_stdout):
         sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
         self.master_read_config.get_guc_value.return_value = 'foo'
@@ -339,6 +404,37 @@ class GpConfig(GpTestCase):
         self.assertIn("[context: 0] [dbid: 1] [name: my_property_name] [value: foo | file: foo]",
                       mock_stdout.getvalue())
         self.assertIn("[context: 1] [dbid: 2] [name: my_property_name] [value: foo | file: bar]",
+                      mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_option_file_compare_with_unset_values_on_some_segments(self, mock_stdout):
+        sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
+        self.master_read_config.get_guc_value.return_value = 'foo'
+        self.master_read_config.get_seg_content_id.return_value = -1
+        self.master_read_config.get_seg_dbid.return_value = 0
+
+        self.segment_read_config.get_guc_value.return_value = 'foo'
+        self.segment_read_config.get_seg_content_id.return_value = 0
+        self.segment_read_config.get_seg_dbid.return_value = 1
+
+        another_segment_read_config = Mock()
+        another_segment_read_config.get_guc_value.return_value = None
+        another_segment_read_config.get_seg_content_id.return_value = 1
+        another_segment_read_config.get_seg_dbid.return_value = 2
+        self.pool.getCompletedItems.return_value.append(another_segment_read_config)
+
+        self.cursor.set_result_for_testing([[-1, 'my_property_name', 'foo'],
+                                            [0, 'my_property_name', 'foo'],
+                                            [1, 'my_property_name', 'foo']])
+
+        self.subject.do_main()
+
+        self.assertIn("WARNING: GUCS ARE OUT OF SYNC: ", mock_stdout.getvalue())
+        self.assertIn("[context: -1] [dbid: 0] [name: my_property_name] [value: foo | file: foo]",
+                      mock_stdout.getvalue())
+        self.assertIn("[context: 0] [dbid: 1] [name: my_property_name] [value: foo | file: foo]",
+                      mock_stdout.getvalue())
+        self.assertIn("[context: 1] [dbid: 2] [name: my_property_name] [value: foo | not set in file]",
                       mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)

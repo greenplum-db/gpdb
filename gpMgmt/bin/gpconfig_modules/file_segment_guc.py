@@ -13,17 +13,21 @@ class FileSegmentGuc(SegmentGuc):
         self.dbid = str(row[3])
 
     def report_success_format(self):
-        return "%s value: %s" % (self.get_label(), self._use_dash_when_none(self.get_value()))
+        if self.get_value() is not None:
+            return "%s value: %s" % (self.get_label(), self.get_value())
+        return "No value is set on %s" % ("master" if self.get_label() == "Master " else "segments")
 
     def report_fail_format(self):
-        return ["[context: %s] [dbid: %s] [name: %s] [value: %s]" % (self.context, self.dbid, self.name, self._use_dash_when_none(self.get_value()))]
+        value = self.get_value()
+        if value is not None:
+            value = 'value: %s' % value
+        else:
+            value = 'not set in file'
+
+        return ["[context: %s] [dbid: %s] [name: %s] [%s]" % (self.context, self.dbid, self.name, value)]
 
     def is_internally_consistent(self):
         return True
 
     def get_value(self):
         return self.value
-
-    def _use_dash_when_none(self, value):
-        return value if value is not None else "-"
-
