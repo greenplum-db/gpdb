@@ -7,14 +7,12 @@
     <p id="sql_command_desc">Updates rows of a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE<sup>1</sup> ] <varname>with_query</varname> [, ...] ]
+      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
 UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
    SET {<varname>column</varname> = {<varname>expression</varname> | DEFAULT} |
    (<varname>column</varname> [, ...]) = ({<varname>expression</varname> | DEFAULT} [, ...])} [, ...]
    [FROM <varname>fromlist</varname>]
    [WHERE <varname>condition </varname>| WHERE CURRENT OF <varname>cursor_name</varname> ]</codeblock>
-      <p><b>Note:</b>
-        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</p>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -64,11 +62,6 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
               <codeph>WITH</codeph> clause. In such a case both sets of
               <varname>with_query</varname> can be referenced within the <codeph>UPDATE</codeph>
             query, but the second one takes precedence since it is more closely nested.</pd>
-          <pd>The <codeph>RECURSIVE</codeph> keyword is a Beta feature. By default, The
-              <codeph>RECURSIVE</codeph> keyword is not available. The keyword can be enabled by
-            setting the server configuration parameter <codeph><xref
-                href="../config_params/guc-list.xml#gp_recursive_cte"/></codeph> to
-              <codeph>true</codeph>. </pd>
           <pd>See <xref href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/> and
                 <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
         </plentry>

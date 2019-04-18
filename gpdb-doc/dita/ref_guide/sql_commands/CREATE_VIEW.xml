@@ -5,10 +5,7 @@
     [ WITH ( view_option_name [= view_option_value] [, ... ] ) ]
     AS <varname>query</varname>
     [ WITH [ CASCADED | LOCAL ] CHECK OPTION ]</codeblock></section><section id="section3"><title>Description</title>
-      <note type="warning">The <codeph>RECURSIVE</codeph> keyword is a Beta feature and is not
-        recommended for production use. <p>The <codeph>RECURSIVE</codeph> keyword can be enabled by
-          setting the server configuration parameter <codeph>gp_recursive_cte_prototype</codeph> to
-            <codeph>true</codeph>.</p></note><p><codeph>CREATE VIEW</codeph> defines a view of a query. The view is
+      <p><codeph>CREATE VIEW</codeph> defines a view of a query. The view is
 not physically materialized. Instead, the query is run every time the
 view is referenced in a query. </p><p><codeph>CREATE OR REPLACE VIEW</codeph> is similar, but if a view of the same
 name already exists, it is replaced. The new query must generate the same
