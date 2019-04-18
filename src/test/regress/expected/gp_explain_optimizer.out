@@ -40,7 +40,7 @@ EXPLAIN ANALYZE SELECT * FROM explaintest;
    (slice0)    Executor memory: 290K bytes.
    (slice1)    Executor memory: 135K bytes avg x 3 workers, 135K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
  Total runtime: 0.710 ms
 (7 rows)
 
@@ -94,7 +94,7 @@ WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
          ->  Index Scan using mpp22263_idx1 on mpp22263  (cost=0.00..2.00 rows=1 width=244)
                Index Cond: unique1 = "Values".column1
                Filter: stringu1::text = "Values".column2
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (9 rows)
 
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
@@ -151,7 +151,7 @@ explain (costs off) select count(*) over (partition by g) from generate_series(1
          ->  Sort
                Sort Key: generate_series
                ->  Function Scan on generate_series
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (7 rows)
 
 --
@@ -160,38 +160,38 @@ explain (costs off) select count(*) over (partition by g) from generate_series(1
 -- The default init_file rules contain a line to mask this out in normal
 -- text-format EXPLAIN output, but it doesn't catch these alternative formats.
 -- start_matchignore
--- m/Optimizer.*PQO version .*/
+-- m/Optimizer.*Pivotal Optimizer \(GPORCA\) version .*/
 -- end_matchignore
 CREATE EXTERNAL WEB TABLE dummy_ext_tab (x text) EXECUTE 'echo foo' FORMAT 'text';
 -- External Table Scan
 explain (format json, costs off) SELECT * FROM dummy_ext_tab;
                  QUERY PLAN                  
 ---------------------------------------------
- [                                          +
-   {                                        +
-     "Plan": {                              +
-       "Node Type": "Gather Motion",        +
-       "Senders": 3,                        +
-       "Receivers": 1,                      +
-       "Slice": 1,                          +
-       "Segments": 3,                       +
-       "Gang Type": "primary reader",       +
-       "Plans": [                           +
-         {                                  +
-           "Node Type": "External Scan",    +
-           "Parent Relationship": "Outer",  +
-           "Slice": 1,                      +
-           "Segments": 3,                   +
-           "Gang Type": "primary reader",   +
-           "Relation Name": "dummy_ext_tab",+
-           "Alias": "dummy_ext_tab"         +
-         }                                  +
-       ]                                    +
-     },                                     +
-     "Settings": {                          +
-       "Optimizer": "PQO version 2.70.0"    +
-     }                                      +
-   }                                        +
+ [                                                             +
+   {                                                           +
+     "Plan": {                                                 +
+       "Node Type": "Gather Motion",                           +
+       "Senders": 3,                                           +
+       "Receivers": 1,                                         +
+       "Slice": 1,                                             +
+       "Segments": 3,                                          +
+       "Gang Type": "primary reader",                          +
+       "Plans": [                                              +
+         {                                                     +
+           "Node Type": "External Scan",                       +
+           "Parent Relationship": "Outer",                     +
+           "Slice": 1,                                         +
+           "Segments": 3,                                      +
+           "Gang Type": "primary reader",                      +
+           "Relation Name": "dummy_ext_tab",                   +
+           "Alias": "dummy_ext_tab"                            +
+         }                                                     +
+       ]                                                       +
+     },                                                        +
+     "Settings": {                                             +
+       "Optimizer": "Pivotal Optimizer (GPORCA) version 2.70.0"+
+     }                                                         +
+   }                                                           +
  ]
 (1 row)
 
@@ -202,23 +202,23 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 explain (format yaml, costs off) SELECT * FROM dummy_aotab;
               QUERY PLAN              
 --------------------------------------
- - Plan:                             +
-     Node Type: "Gather Motion"      +
-     Senders: 3                      +
-     Receivers: 1                    +
-     Slice: 1                        +
-     Segments: 3                     +
-     Gang Type: "primary reader"     +
-     Plans:                          +
-       - Node Type: "Seq Scan"       +
-         Parent Relationship: "Outer"+
-         Slice: 1                    +
-         Segments: 3                 +
-         Gang Type: "primary reader" +
-         Relation Name: "dummy_aotab"+
-         Alias: "dummy_aotab"        +
-   Settings:                         +
-     Optimizer: "PQO version 2.70.0"
+ - Plan:                                                   +
+     Node Type: "Gather Motion"                            +
+     Senders: 3                                            +
+     Receivers: 1                                          +
+     Slice: 1                                              +
+     Segments: 3                                           +
+     Gang Type: "primary reader"                           +
+     Plans:                                                +
+       - Node Type: "Seq Scan"                             +
+         Parent Relationship: "Outer"                      +
+         Slice: 1                                          +
+         Segments: 3                                       +
+         Gang Type: "primary reader"                       +
+         Relation Name: "dummy_aotab"                      +
+         Alias: "dummy_aotab"                              +
+   Settings:                                               +
+     Optimizer: "Pivotal Optimizer (GPORCA) version 2.70.0"
 (1 row)
 
 -- DML node (with ORCA)
@@ -271,7 +271,7 @@ explain (format xml, costs off) insert into dummy_aotab values (1);
        </Plans>                                                        +
      </Plan>                                                           +
      <Settings>                                                        +
-       <Optimizer>PQO version 2.70.0</Optimizer>                       +
+       <Optimizer>Pivotal Optimizer (GPORCA) version 2.70.0</Optimizer>                       +
      </Settings>                                                       +
    </Query>                                                            +
  </explain>
@@ -319,7 +319,7 @@ explain analyze SELECT * FROM explaintest;
    (slice0)    Executor memory: 290K bytes.
    (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: PQO version 3.2.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.2.0
  Total runtime: 1.577 ms
 (8 rows)
 

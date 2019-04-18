@@ -15,7 +15,7 @@
             <codeph>optimizer=on</codeph> and GPORCA version are displayed at
           the end of the query plan. For
             example.<codeblock> Settings:  <b>optimizer=on</b>
- Optimizer status: <b>PQO version 1.584</b></codeblock><p>When
+ Optimizer status: <b>Pivotal Optimizer (GPORCA) version 1.584</b></codeblock><p>When
               Greenplum Database falls back to the Postgres optimizer to generate the
             plan, the setting <codeph>optimizer=on</codeph> and <codeph>Postgres query
               optimizer</codeph> are displayed at the end of the query plan. For

@@ -123,7 +123,7 @@ class FileState:
                 self.plans.append(self.curr_plan)
                 self.curr_plan = []
         elif optimizerMatch:
-            if (not re.search(' PQO ', line)):
+            if (not re.search(' PQO ', line) or not re.search(' Pivotal Optimizer ', line)):
                 if self.planning_time1 < 0:
                     self.comment1 = self.comment1 + "Fallback "
                 else:

@@ -1543,7 +1543,7 @@ explain (costs off) select * from tt18v;
    ->  Append
          ->  Seq Scan on int8_tbl
          ->  Seq Scan on int8_tbl int8_tbl_1
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (5 rows)
 
 -- check display of ScalarArrayOp with a sub-select

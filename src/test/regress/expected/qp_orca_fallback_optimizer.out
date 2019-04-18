@@ -26,7 +26,7 @@ explain insert into constr_tab values (1,2,3);
                      ->  Result  (cost=0.00..0.00 rows=1 width=16)
                            ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.48.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.48.0
 (8 rows)
 
 -- The remaining tests require a row in the table.
@@ -64,7 +64,7 @@ explain update constr_tab set b = 10;
          ->  Split  (cost=0.00..431.00 rows=1 width=30)
                ->  Result  (cost=0.00..431.00 rows=1 width=30)
                      ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (6 rows)
 
 -- Same, with NOT NULL constraint.
@@ -123,7 +123,7 @@ explain update constr_tab set a = 10;
                      ->  Split  (cost=0.00..431.00 rows=1 width=30)
                            ->  Result  (cost=0.00..431.00 rows=1 width=30)
                                  ->  Seq Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (9 rows)
 
 -- Test ORCA fallback on "FROM ONLY"
@@ -190,7 +190,7 @@ EXPLAIN SELECT * FROM ext_table_no_fallback;
 ---------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..472.74 rows=1000000 width=8)
    ->  External Scan on ext_table_no_fallback  (cost=0.00..437.97 rows=333334 width=8)
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
 (3 rows)
 
 EXPLAIN SELECT * FROM ONLY ext_table_no_fallback;

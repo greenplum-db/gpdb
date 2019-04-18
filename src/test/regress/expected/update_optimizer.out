@@ -346,7 +346,7 @@ EXPLAIN (COSTS OFF ) UPDATE tab3 SET C1 = C1 + 1, C5 = C5+1;
                      ->  Split
                            ->  Result
                                  ->  Seq Scan on tab3
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (9 rows)
 
 -- clean up

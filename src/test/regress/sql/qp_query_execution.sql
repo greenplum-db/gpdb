@@ -9,7 +9,7 @@ create or replace function qx_count_operator(query text, planner_operator text, 
 $$
 rv = plpy.execute('EXPLAIN '+ query)
 plan = '\n'.join([row['QUERY PLAN'] for row in rv])
-optimizer = plan.find('PQO')
+optimizer = plan.find('Pivotal Optimizer (GPORCA)')
 
 if optimizer >= 0:
     return plan.count(optimizer_operator)

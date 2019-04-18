@@ -165,7 +165,7 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                                          ->  Hash
                                                                ->  Broadcast Motion 3:3  (slice6; segments: 3)
                                                                      ->  Seq Scan on keo2
- Optimizer: PQO version 3.19.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.19.0
 (41 rows)
 
 UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
@@ -204,7 +204,7 @@ EXPLAIN (COSTS OFF) DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS
                                              ->  Gather Motion 3:1  (slice1; segments: 3)
                                                    ->  Seq Scan on keo5 keo5_1
                                                          Filter: (x < 2)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (16 rows)
 
 DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
@@ -512,7 +512,7 @@ explain update nosplitupdate set a=0 where a=1 and a<1;
                                  ->  Result  (cost=0.00..0.00 rows=0 width=18)
                                        One-Time Filter: false
  Planning time: 17.926 ms
- Optimizer: PQO version 3.16.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.16.0
 (10 rows)
 
 -- test split-update when split-node's flow is entry

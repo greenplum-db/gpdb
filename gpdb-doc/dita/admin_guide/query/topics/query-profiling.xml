@@ -199,7 +199,7 @@ Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
          ->  Aggregate  (cost=0.00..294.10 rows=1 width=8)
                ->  Seq Scan on part  (cost=0.00..97.69 rows=100040 width=1)
  Settings:  <b>optimizer=on</b>
- Optimizer status: <b>PQO version 1.584</b>
+ Optimizer status: <b>Pivotal Optimizer (GPORCA) version 1.584</b>
 (5 rows)</codeblock>
             <codeblock>explain select count(*) from part;
 

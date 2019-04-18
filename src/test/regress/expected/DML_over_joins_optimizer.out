@@ -70,7 +70,7 @@ explain update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=3334 width=4)
                                              Hash Key: r.b
                                              ->  Seq Scan on r  (cost=0.00..431.07 rows=3334 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (13 rows)
 
 update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
@@ -87,7 +87,7 @@ explain delete from s where exists (select 1 from r where s.a = r.b);
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=3334 width=4)
                                  Hash Key: r.b
                                  ->  Seq Scan on r  (cost=0.00..431.07 rows=3334 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (11 rows)
 
 delete from s where exists (select 1 from r where s.a = r.b);

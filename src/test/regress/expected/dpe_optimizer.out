@@ -83,7 +83,7 @@ explain select * from t, pt where tid = ptid;
                      Partitions selected: 6 (out of 6)
                ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
                      Index Cond: ptid = $0
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (11 rows)
 
 select * from t, pt where tid = ptid;
@@ -122,7 +122,7 @@ explain select * from t, pt where tid + 1 = ptid;
                      Partitions selected: 6 (out of 6)
                ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
                      Index Cond: ptid = ($0 + 1)
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (11 rows)
 
 select * from t, pt where tid + 1 = ptid;
@@ -162,7 +162,7 @@ explain select * from t, pt where tid = ptid and t1 = 'hello' || tid;
                      Partitions selected: 6 (out of 6)
                ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..27.00 rows=3 width=31)
                      Index Cond: ptid = $0
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (12 rows)
 
 select * from t, pt where tid = ptid and t1 = 'hello' || tid;
@@ -202,7 +202,7 @@ explain select * from t, pt where t1 = pt1 and ptid = tid;
                ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=31)
                      Index Cond: pt1 = $1
                      Filter: ptid = $0
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (12 rows)
 
 select * from t, pt where t1 = pt1 and ptid = tid;
@@ -229,7 +229,7 @@ explain select * from pt where ptid in (select tid from t where t1 = 'hello' || 
                            ->  Seq Scan on t  (cost=0.00..431.00 rows=1 width=4)
                                  Filter: t1 = ('hello'::text || tid::text)
  Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (12 rows)
 
 select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
@@ -271,7 +271,7 @@ explain select * from pt where exists (select 1 from t where tid = ptid and t1 =
                                        ->  Seq Scan on t  (cost=0.00..431.00 rows=1 width=4)
                                              Filter: t1 = ('hello'::text || tid::text)
  Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (14 rows)
 
 select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
@@ -315,7 +315,7 @@ explain select count(*) from t, pt where tid = ptid;
                                  Partitions selected: 6 (out of 6)
                            ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=1)
                                  Index Cond: ptid = $0
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (13 rows)
 
 select count(*) from t, pt where tid = ptid;
@@ -345,7 +345,7 @@ explain select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
                                  Partitions selected: 6 (out of 6)
                            ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
                                  Index Cond: ptid = $0
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (16 rows)
 
 select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
@@ -399,7 +399,7 @@ explain select * from t, pt where tid = ptid
                            Partitions selected: 6 (out of 6)
                      ->  Dynamic Index Scan on pt pt_1 (dynamic scan id: 2)  (cost=0.00..12.00 rows=3 width=31)
                            Index Cond: ptid = ($1 + 2)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (21 rows)
 
 select * from t, pt where tid = ptid
@@ -477,7 +477,7 @@ explain select count(*) from
                                        Partitions selected: 6 (out of 6)
                                  ->  Dynamic Index Scan on pt pt_1 (dynamic scan id: 2)  (cost=0.00..12.00 rows=3 width=31)
                                        Index Cond: ptid = ($1 + 2)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (23 rows)
 
 select count(*) from
@@ -509,7 +509,7 @@ explain select * from t, pt where tid = ptid;
                      Partitions selected: 6 (out of 6)
                ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
                      Index Cond: ptid = $0
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (11 rows)
 
 select * from t, pt where tid = ptid;
@@ -560,7 +560,7 @@ explain select * from t, pt where tid = ptid and pt1 = 'hello0';
                                  Partitions selected: 6 (out of 6)
                            ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=31)
                                  Index Cond: pt1 = 'hello0'::text
- Optimizer: PQO version 2.73.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.73.0
 (15 rows)
 
 select * from t, pt where tid = ptid and pt1 = 'hello0';
@@ -589,7 +589,7 @@ explain select * from t, pt where tid = ptid;
                      Partitions selected: 6 (out of 6)
                ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
                      Index Cond: ptid = $0
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (11 rows)
 
 select * from t, pt where tid = ptid;
@@ -635,7 +635,7 @@ explain select * from t, pt where t1 = pt1;
                      Partitions selected: 6 (out of 6)
                ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=31)
                      Index Cond: pt1 = $0
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (11 rows)
 
 select * from t, pt where t1 = pt1;
@@ -658,7 +658,7 @@ explain select * from t, pt where tid < ptid;
                      Partitions selected: 6 (out of 6)
                ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..108.01 rows=6 width=31)
                      Index Cond: ptid > $0
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (11 rows)
 
 select * from t, pt where tid < ptid;
@@ -768,7 +768,7 @@ explain select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
    ->  Hash  (cost=431.00..431.00 rows=1 width=19)
          ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
                ->  Seq Scan on t  (cost=0.00..431.00 rows=1 width=19)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (15 rows)
 
 select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
@@ -834,7 +834,7 @@ explain analyze select * from t, pt where tid = ptid;
    (slice2)    Executor memory: 155K bytes avg x 3 workers, 155K bytes max (seg0).
    (slice3)    
  Memory used:  128000kB
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
  Total runtime: 2.810 ms
 (17 rows)
 
@@ -862,7 +862,7 @@ explain select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' ord
                                        ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..3.00 rows=1 width=31)
                                              Index Cond: pt1 = 'hello0'::text
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (18 rows)
 
 select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt1.dist;
@@ -898,7 +898,7 @@ explain select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hell
                                                    ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..3.00 rows=1 width=11)
                                                          Index Cond: pt1 = 'hello0'::text
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (18 rows)
 
 select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
@@ -946,7 +946,7 @@ explain select * from t, pt where a = b;
                                  Partitions selected: 5 (out of 5)
                            ->  Dynamic Seq Scan on pt (dynamic scan id: 1)  (cost=0.00..431.00 rows=2 width=8)
  Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.26.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.26.0
 (15 rows)
 
 select * from t, pt where a = b;
@@ -997,7 +997,7 @@ explain select * from t, pt where a = b;
                      Filter: pt.b = t.a
                      ->  Seq Scan on t  (cost=0.00..431.00 rows=1 width=4)
  Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.29.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.29.0
 (10 rows)
 
 select * from t, pt where a = b;
@@ -1075,7 +1075,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code
                                  Partitions selected: 12 (out of 12)
                            ->  Dynamic Seq Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (14 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
@@ -1150,7 +1150,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code
                                  Partitions selected: 12 (out of 12)
                            ->  Dynamic Seq Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (14 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
@@ -1228,7 +1228,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fac
                                  Partitions selected: 12 (out of 12)
                            ->  Dynamic Seq Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (14 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
@@ -1353,7 +1353,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fac
                                  Partitions selected: 12 (out of 12)
                            ->  Dynamic Seq Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (14 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
@@ -1483,7 +1483,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.co
                            ->  Dynamic Seq Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
                                  Filter: code = 'OH'::text
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (16 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
@@ -1560,7 +1560,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.co
                            ->  Dynamic Seq Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
                                  Filter: code = 'OH'::text
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (16 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
@@ -1647,7 +1647,7 @@ explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact
                                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                                                ->  Seq Scan on dim1  (cost=0.00..431.00 rows=1 width=4)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (23 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
@@ -1683,7 +1683,7 @@ explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact
                                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                                                ->  Seq Scan on dim1  (cost=0.00..431.00 rows=1 width=4)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (23 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
@@ -1820,7 +1820,7 @@ explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
                      Filter: c.id = c.id
                      ->  Seq Scan on c  (cost=0.00..431.00 rows=7 width=6)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.13.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.13.0
 (15 rows)
 
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
@@ -1851,7 +1851,7 @@ explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
                      Filter: c.id = c.id
                      ->  Seq Scan on c  (cost=0.00..431.00 rows=7 width=6)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.13.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.13.0
 (15 rows)
 
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
@@ -1905,7 +1905,7 @@ explain select * from (select count(*) over (order by a rows between 1 preceding
                            Partitions selected: 5 (out of 5)
                      ->  Dynamic Seq Scan on pat (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (17 rows)
 
 select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);

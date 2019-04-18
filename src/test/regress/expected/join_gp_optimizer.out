@@ -23,7 +23,7 @@ explain select * from nhtest a join nhtest b using (i);
          ->  Seq Scan on nhtest  (cost=0.00..431.00 rows=1 width=9)
          ->  Hash  (cost=431.00..431.00 rows=1 width=9)
                ->  Seq Scan on nhtest nhtest_1  (cost=0.00..431.00 rows=1 width=9)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (7 rows)
 
 select * from nhtest a join nhtest b using (i);
@@ -119,7 +119,7 @@ explain select count(*) from t1,t2 where t1.x = 100 and t1.x = t2.x;
                            ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
                                  Filter: x = 100
  Settings:  optimizer=on
- Optimizer status: PQO version 2.39.2
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.39.2
 (14 rows)
 
 select count(*) from t1,t2 where t1.x = 100 and t1.x = t2.x;
@@ -142,7 +142,7 @@ explain select * from t1,t2 where t1.x = 100 and t2.x >= t1.x;
                      Filter: x = 100
          ->  Seq Scan on t2  (cost=0.00..431.00 rows=34 width=12)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.39.2
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.39.2
 (9 rows)
 
 select * from t1,t2 where t1.x = 100 and t2.x >= t1.x;
@@ -172,7 +172,7 @@ explain select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
                      ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=12)
                            Filter: y = 100
  Settings:  optimizer=on; optimizer_segments=2
- Optimizer status: PQO version 2.39.2
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.39.2
 (15 rows)
 
 reset optimizer_segments;
@@ -330,7 +330,7 @@ explain select a from foo where a<1 and a>1 and not exists (select c from bar wh
    ->  Result  (cost=0.00..0.00 rows=0 width=4)
          One-Time Filter: false
  Settings:  optimizer=on
- Optimizer status: PQO version 2.39.2
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.39.2
 (5 rows)
 
 select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
@@ -546,7 +546,7 @@ explain select * from t5370 a , t5370_2 b where a.name=b.name;
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=334 width=7)
                      Hash Key: t5370_2.name
                      ->  Seq Scan on t5370_2  (cost=0.00..431.01 rows=334 width=7)
- Optimizer: PQO version 2.70.2
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.2
 (11 rows)
 
 drop table t5370;
@@ -639,7 +639,7 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
                                  ->  Seq Scan on t3
                ->  Hash
                      ->  Seq Scan on t2
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (14 rows)
 
 select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a IS NULL OR (t1.c = t3.c));
@@ -663,7 +663,7 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
                      ->  Hash
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                  ->  Seq Scan on t3
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (12 rows)
 
 select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a = t3.a);
@@ -688,7 +688,7 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
                                  ->  Seq Scan on t3
                ->  Hash
                      ->  Seq Scan on t2
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (14 rows)
 
 select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a is distinct from t3.a);
@@ -714,7 +714,7 @@ explain select * from t3 join (select t1.a t1a, t1.b t1b, t1.c t1c, t2.a t2a, t2
                            ->  Seq Scan on t3  (cost=0.00..431.00 rows=1 width=12)
                ->  Hash  (cost=431.01..431.01 rows=333 width=12)
                      ->  Seq Scan on t2  (cost=0.00..431.01 rows=333 width=12)
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (13 rows)
 
 select * from t3 join (select t1.a t1a, t1.b t1b, t1.c t1c, t2.a t2a, t2.b t2b, t2.c t2c from t1 left join t2 on (t1.a = t2.a)) t on (t1a = t3.a) WHERE (t2a IS NULL OR (t1c = t3.a));
@@ -757,7 +757,7 @@ explain select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 lef
          ->  Hash  (cost=431.00..431.00 rows=2 width=12)
                ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=12)
                      ->  Seq Scan on t3 t3_1  (cost=0.00..431.00 rows=1 width=12)
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (28 rows)
 
 select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t2 on t1.a = t2.a) tt 
@@ -801,7 +801,7 @@ explain select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;
                            ->  Materialize  (cost=0.00..431.70 rows=10000 width=1)
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.69 rows=10000 width=1)
                                        ->  Seq Scan on tenk2  (cost=0.00..431.50 rows=3334 width=1)
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (11 rows)
 
 select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;

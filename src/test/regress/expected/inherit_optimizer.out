@@ -1559,7 +1559,7 @@ ORDER BY thousand, tenthous;
          ->  Append
                ->  Seq Scan on tenk1
                ->  Seq Scan on tenk1 tenk1_1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (8 rows)
 
 explain (costs off)
@@ -1578,7 +1578,7 @@ ORDER BY thousand, tenthous;
                      ->  Seq Scan on tenk1
                ->  Result
                      ->  Seq Scan on tenk1 tenk1_1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (10 rows)
 
 explain (costs off)
@@ -1596,7 +1596,7 @@ ORDER BY thousand, tenthous;
                ->  Seq Scan on tenk1
                ->  Result
                      ->  Seq Scan on tenk1 tenk1_1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (9 rows)
 
 -- Check min/max aggregate optimization
@@ -1615,7 +1615,7 @@ SELECT min(x) FROM
                ->  Append
                      ->  Seq Scan on tenk1
                      ->  Seq Scan on tenk1 tenk1_1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (7 rows)
 
 explain (costs off)
@@ -1632,7 +1632,7 @@ SELECT min(y) FROM
                      ->  Result
                            ->  Seq Scan on tenk1
                      ->  Seq Scan on tenk1 tenk1_1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (8 rows)
 
 -- XXX planner doesn't recognize that index on unique2 is sufficiently sorted
@@ -1651,7 +1651,7 @@ ORDER BY x, y;
          ->  Append
                ->  Seq Scan on tenk1
                ->  Seq Scan on tenk1 tenk1_1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (8 rows)
 
 -- exercise rescan code path via a repeatedly-evaluated subquery

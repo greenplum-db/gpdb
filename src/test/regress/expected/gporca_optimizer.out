@@ -2414,7 +2414,7 @@ from orca.bar1 inner join orca.bar2 on (bar1.x2 = bar2.x2) order by bar1.x1;
                                    ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=10 width=4)
                                          ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=4)
  Settings:  optimizer_segments=3
- Optimizer status: PQO version 3.9.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 3.9.0
 (23 rows)
 
 select case when bar1.x2 = bar2.x2 then coalesce((select 1 from orca.foo where bar1.x2 = bar2.x2 and bar1.x2 = random() and foo.x2 = bar2.x2),0) else 1 end as col1, bar1.x1
@@ -3493,7 +3493,7 @@ explain  select * from orca.r, orca.s where r.a is not distinct from s.c;
          ->  Seq Scan on s  (cost=0.00..431.00 rows=10 width=8)
          ->  Hash  (cost=431.00..431.00 rows=7 width=8)
                ->  Seq Scan on r  (cost=0.00..431.00 rows=7 width=8)
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (7 rows)
 
 -- explain Hash Join with equality join condition
@@ -3507,7 +3507,7 @@ explain select * from orca.r, orca.s where r.a = s.c;
          ->  Seq Scan on s  (cost=0.00..431.00 rows=10 width=8)
          ->  Index Scan using r_a on r  (cost=0.00..60.00 rows=1 width=8)
                Index Cond: a = s.c
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (7 rows)
 
 -- sort
@@ -8187,7 +8187,7 @@ explain select * from orca.t order by 1,2;
                Sort Key: timest, user_id
                ->  Dynamic Seq Scan on t (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=32)
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.630
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.630
 (10 rows)
 
 select tag2, tag1 from orca.t order by 1, 2;;
@@ -8277,7 +8277,7 @@ explain select * from orca.t_date where user_id=9;
                            Index Cond: user_id = 9::numeric
                      ->  Dynamic Seq Scan on t_date t_date_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=50)
                            Filter: user_id = 9::numeric
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (11 rows)
 
 select * from orca.t_date where user_id=9;
@@ -8331,7 +8331,7 @@ explain select * from orca.t_text where user_id=9;
                            Index Cond: user_id = 9::numeric
                      ->  Dynamic Seq Scan on t_text t_text_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=50)
                            Filter: user_id = 9::numeric
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (11 rows)
 
 select * from orca.t_text where user_id=9;
@@ -8391,7 +8391,7 @@ explain select * from orca.t_employee where user_id = 2;
          ->  Dynamic Index Scan on t_employee (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=28)
                Index Cond: user_id = 2::numeric
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.602
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.602
 (8 rows)
 
 select * from orca.t_employee where user_id = 2;
@@ -8440,7 +8440,7 @@ explain select * from orca.t_ceeval_ints where user_id=4;
                            Index Cond: user_id = 4::numeric
                      ->  Dynamic Seq Scan on t_ceeval_ints t_ceeval_ints_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=51)
                            Filter: user_id = 4::numeric
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (11 rows)
 
 select * from orca.t_ceeval_ints where user_id=4;
@@ -9580,7 +9580,7 @@ where c.cid = s.cid and s.date_sk = d.date_sk and
                                  ->  Seq Scan on datedim  (cost=0.00..431.00 rows=1 width=12)
                                        Filter: year = 2001 OR moy = 4
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.602
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.602
 (19 rows)
 
 reset optimizer_segments;
@@ -9603,7 +9603,7 @@ explain select * from orca.bm_test where i=2 and t='2';
          ->  Bitmap Index Scan on bm_test_idx  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: i = 2
  Settings:  optimizer=on
- Optimizer status: PQO version 1.602
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.602
 (8 rows)
 
 select * from orca.bm_test where i=2 and t='2';
@@ -9661,7 +9661,7 @@ explain select * from orca.bm_dyn_test where i=2 and t='2';
                ->  Dynamic Bitmap Index Scan on bm_dyn_test_1_prt_part0_i_idx  (cost=0.00..0.00 rows=0 width=0)
                      Index Cond: (i = 2)
  Planning time: 26.274 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (11 rows)
 
 select * from orca.bm_dyn_test where i=2 and t='2';
@@ -10120,7 +10120,7 @@ ORDER BY 1 asc ;
                                                                ->  Dynamic Index Scan on my_tq_agg_opt_part my_tq_agg_opt_part_1 (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=70)
                                                                      Index Cond: ets <= share0_ref3.event_ts
                                                                      Filter: sym::bpchar = share0_ref3.symbol AND bid_price::numeric < share0_ref3.trade_price AND share0_ref3.event_ts < end_ts
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (34 rows)
 
 reset optimizer_segments;
@@ -10202,7 +10202,7 @@ where ordernum between 10 and 20;
                      Hash Key: idxscan_inner.productid
                      ->  Index Scan using idxscan_inner_ordernum_key on idxscan_inner  (cost=0.00..6.00 rows=1 width=9)
                            Index Cond: ((ordernum >= 10) AND (ordernum <= 20))
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
 (10 rows)
 
 select id, comment from idxscan_outer as o join idxscan_inner as i on o.id = i.productid
@@ -10255,7 +10255,7 @@ explain select * from orca.index_test where a = 5;
    ->  Index Scan using index_test_pkey on index_test  (cost=0.00..2.00 rows=1 width=20)
          Index Cond: a = 5
  Settings:  optimizer=on
- Optimizer status: PQO version 1.602
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.602
 (5 rows)
 
 -- force_explain
@@ -10266,7 +10266,7 @@ explain select * from orca.index_test where c = 5;
    ->  Index Scan using index_test_pkey on index_test  (cost=0.00..2.00 rows=1 width=20)
          Index Cond: c = 5
  Settings:  optimizer=on
- Optimizer status: PQO version 1.602
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.602
 (5 rows)
 
 -- force_explain
@@ -10277,7 +10277,7 @@ explain select * from orca.index_test where a = 5 and c = 5;
    ->  Index Scan using index_test_pkey on index_test  (cost=0.00..2.00 rows=1 width=20)
          Index Cond: a = 5 AND c = 5
  Settings:  optimizer=on
- Optimizer status: PQO version 1.602
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.602
 (5 rows)
 
 -- renaming columns
@@ -10422,7 +10422,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1);
          ->  Bitmap Index Scan on bitmap_index  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: a = 1
  Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: PQO version 2.48.9
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.48.9
 (7 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
@@ -10434,7 +10434,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
          ->  Bitmap Index Scan on bitmap_index  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: a = ANY ('{1,47}'::integer[])
  Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: PQO version 1.647
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.647
 (7 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('2', 47);
@@ -10446,7 +10446,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('2', 47);
          ->  Bitmap Index Scan on bitmap_index  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: a = ANY ('{2,47}'::integer[])
  Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: PQO version 1.647
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.647
 (7 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
@@ -10458,7 +10458,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
          ->  Bitmap Index Scan on bitmap_index  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: a = ANY ('{1,2}'::integer[])
  Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: PQO version 1.647
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.647
 (7 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2', 47);
@@ -10468,7 +10468,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2', 47);
    ->  Seq Scan on bitmap_test  (cost=0.00..431.00 rows=2 width=4)
          Filter: a = ANY ('{1,2,47}'::integer[])
  Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: PQO version 1.647
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.647
 (5 rows)
 
 -- Test Logging for unsupported features in ORCA
@@ -10647,7 +10647,7 @@ explain select * from foo where b in ('1', '2');
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
    ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=12)
          Filter: b::text = ANY ('{1,2}'::text[])
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (4 rows)
 
 set optimizer_enable_ctas = off;
@@ -10696,7 +10696,7 @@ explain (costs off) select count(*), t2.c from input_tab1 t1 left join input_tab
                                              ->  Seq Scan on input_tab1
                                              ->  Hash
                                                    ->  Seq Scan on input_tab2
- Optimizer: PQO version 2.70.1
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.1
 (18 rows)
 
 select count(*), t2.c from input_tab1 t1 left join input_tab2 t2 on t1.a = t2.c group by t2.c;
@@ -10753,7 +10753,7 @@ FROM   (SELECT *
                                              ->  Seq Scan on tab_2  (cost=0.00..431.00 rows=1 width=7)
                      ->  Result  (cost=0.00..431.00 rows=1 width=16)
                            ->  Seq Scan on tab_3  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: PQO version 2.70.2
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.2
 (17 rows)
 
 SELECT Count(*)
@@ -10973,7 +10973,7 @@ EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 TH
                              ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
                                    ->  Seq Scan on csq_cast_param_inner  (cost=0.00..431.00 rows=1 width=4)
  Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: PQO version 2.51.3
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.51.3
 (11 rows)
 
 SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
@@ -10999,7 +10999,7 @@ EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 TH
                              ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
                                    ->  Seq Scan on csq_cast_param_inner  (cost=0.00..431.00 rows=1 width=4)
  Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: PQO version 2.51.3
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.51.3
 (11 rows)
 
 SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
@@ -11023,7 +11023,7 @@ EXPLAIN SELECT a FROM ggg WHERE a NOT IN (NULL, '');
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=2)
    ->  Seq Scan on ggg  (cost=0.00..431.00 rows=1 width=2)
          Filter: a <> ALL ('{NULL,""}'::bpchar[])
- Optimizer: PQO version 2.54.5
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.54.5
 (4 rows)
 
 EXPLAIN SELECT a FROM ggg WHERE a IN (NULL, 'x');
@@ -11033,7 +11033,7 @@ EXPLAIN SELECT a FROM ggg WHERE a IN (NULL, 'x');
    ->  Seq Scan on ggg  (cost=0.00..431.00 rows=1 width=2)
          Filter: (a = ANY ('{NULL,x}'::bpchar[]))
  Planning time: 4.708 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (5 rows)
 
 -- result node with one time filter and filter
@@ -11095,7 +11095,7 @@ EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilte
                                    ->  Result  (cost=0.00..431.00 rows=4 width=4)
                                          ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=4 width=4)
  Planning time: 65.338 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (46 rows)
 
 WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;

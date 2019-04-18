@@ -14868,7 +14868,7 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 
 		/* Step (a) */
 		/*
-		 * Force the use of Postgres query optimizer, since PQO will not
+		 * Force the use of Postgres query optimizer, since Pivotal Optimizer (GPORCA) will not
 		 * redistribute the tuples if the current and required distributions
 		 * are both RANDOM even when reorganize is set to "true"
 		 */
@@ -15382,7 +15382,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			ldistro = make_distributedby_for_rel(rel);
 
 		/*
-		 * Force the use of Postgres query optimizer, since PQO will not
+		 * Force the use of Postgres query optimizer, since Pivotal Optimizer (GPORCA) will not
 		 * redistribute the tuples if the current and required distributions
 		 * are both RANDOM even when reorganize is set to "true"
 		 */

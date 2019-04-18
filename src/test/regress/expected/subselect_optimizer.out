@@ -678,7 +678,7 @@ explain (verbose, costs off)
                      Output: 'regression'::name
                      ->  Result
                            Output: true
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
  Settings: optimizer=on
 (15 rows)
 
@@ -715,7 +715,7 @@ explain (verbose, costs off)
                      Output: 'regression'::name
                      ->  Result
                            Output: true
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
  Settings: optimizer=on
 (15 rows)
 
@@ -811,7 +811,7 @@ select * from int4_tbl where
                  Output: tenk1_1.ten
                  ->  Seq Scan on public.tenk1 tenk1_1
                        Output: tenk1_1.ten
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
  Settings: optimizer=on
 (27 rows)
 

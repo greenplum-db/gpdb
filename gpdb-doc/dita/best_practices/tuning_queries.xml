@@ -78,7 +78,7 @@
                                  ->  Sort  (cost=0.00..431.00 rows=7 width=4)
                                        Sort Key: gp_segment_id
                                        ->  Seq Scan on table1  (cost=0.00..431.00 rows=7 width=4)
- Optimizer status: PQO version 2.56.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.56.0
 (14 rows)</codeblock>
       <p>This plan has eight nodes &#x2013; Seq Scan, Sort, GroupAggregate, Result,
         Redistribute Motion, Sort, GroupAggregate, and finally Gather Motion. Each node contains three cost

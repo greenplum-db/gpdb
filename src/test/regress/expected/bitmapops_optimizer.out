@@ -64,7 +64,7 @@ EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
                      Index Cond: (c = 1)
                      Filter: ((a = 1) AND (b = 1))
  Planning time: 49.715 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (8 rows)
 
 SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
@@ -88,7 +88,7 @@ EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
                ->  Seq Scan on bmscantest2  (cost=0.00..435.26 rows=853 width=1)
                      Filter: ((a = 1) OR (b = 1) OR (c = 1))
  Planning time: 41.055 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
 SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
@@ -131,7 +131,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
                            ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..0.00 rows=0 width=0)
                                  Index Cond: (c = 1)
  Planning time: 44.164 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (15 rows)
 
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
@@ -160,7 +160,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND 
                            ->  Bitmap Index Scan on i_bmtest_ao_d  (cost=0.00..0.00 rows=0 width=0)
                                  Index Cond: (d = 1)
  Planning time: 19.186 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (18 rows)
 
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
@@ -186,7 +186,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
                            ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..0.00 rows=0 width=0)
                                  Index Cond: (c = 1)
  Planning time: 15.467 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (15 rows)
 
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
@@ -215,7 +215,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR (b = 1 AND c = 1) OR d
                            ->  Bitmap Index Scan on i_bmtest_ao_d  (cost=0.00..0.00 rows=0 width=0)
                                  Index Cond: (d = 1)
  Planning time: 14.342 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (18 rows)
 
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
@@ -252,7 +252,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
                            ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..0.00 rows=0 width=0)
                                  Index Cond: (c = 1)
  Planning time: 41.653 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (15 rows)
 
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
@@ -281,7 +281,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AN
                            ->  Bitmap Index Scan on i_bmtest_aocs_d  (cost=0.00..0.00 rows=0 width=0)
                                  Index Cond: (d = 1)
  Planning time: 22.854 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (18 rows)
 
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
@@ -307,7 +307,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
                            ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..0.00 rows=0 width=0)
                                  Index Cond: (c = 1)
  Planning time: 13.135 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (15 rows)
 
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
@@ -336,7 +336,7 @@ EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR
                            ->  Bitmap Index Scan on i_bmtest_aocs_d  (cost=0.00..0.00 rows=0 width=0)
                                  Index Cond: (d = 1)
  Planning time: 14.755 ms
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (18 rows)
 
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;

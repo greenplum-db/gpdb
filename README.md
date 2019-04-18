@@ -33,7 +33,7 @@ More information can be found on the [project website](https://greenplum.org/).
 ## Building Greenplum Database with GPORCA
 GPORCA is a cost-based optimizer which is used by Greenplum Database in
 conjunction with the PostgreSQL planner.  It is also known as just ORCA,
-and Pivotal Query Optimizer (PQO). The code for GPORCA resides in a
+and Pivotal Optimizer. The code for GPORCA resides in a
 separate repository, below are steps outlining how to build Greenplum with
 GPORCA enabled.
 

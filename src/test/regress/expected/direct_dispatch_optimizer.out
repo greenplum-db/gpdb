@@ -458,7 +458,7 @@ EXPLAIN SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHER
                        ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                              ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                    ->  Seq Scan on mpp_22019_a mpp_22019_a_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (18 rows)
 
 SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 where a2.j = b.j) and a.i = 1;
