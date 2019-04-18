@@ -103,15 +103,10 @@ s/Hash Cond: \(pg_temp_\d+/Hash Cond: \(pg_temp_#####/
 m/\d+ was concurrently dropped/
 s/\d+ was concurrently dropped/##### was concurrently dropped/
 
-# Segment number is not predictable
-m/ERROR:  There are more external files \(URLs\) than primary segments that can read them.*/
-s/ERROR:  There are more external files \(URLs\) than primary segments that can read them.*/ERROR:  There are more external files (URLs) than primary segments that can read them./
-
 # Mask out linenumber of the erroring file
 m/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge.*/
 s/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge.*/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:XXX)/
-m/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/
-s/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)/
+
 m/ERROR:  invalid partition constraint on "[^"]+".*/
 s/ERROR:  invalid partition constraint on "[^"]+".*/ERROR:  invalid partition constraint on "[^"]+".*(cdbpartition.c:XXX)/
 
