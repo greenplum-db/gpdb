@@ -30,6 +30,7 @@
 #include "catalog/namespace.h"
 #include "cdb/cdbvars.h"
 #include "utils/lsyscache.h"        /* CDB: get_rel_namespace() */
+#include "utils/guc.h"
 
 
 /*
@@ -1075,19 +1076,28 @@ LockTagIsTemp(const LOCKTAG *tag)
 }
 
 /*
- * Because of the current disign of AO table's visibility map,
+ * If gp_enable_global_deadlock_detector is set off, we always
+ * have to upgrade lock level to avoid global deadlock, and then
+ * because of the current disign of AO table's visibility map,
  * we have to keep upgrading locks for AO table.
  */
 bool
-CondUpgradeRelLock(Oid relid)
+CondUpgradeRelLock(Oid relid, bool noWait)
 {
 	Relation rel;
 	bool upgrade = false;
 
-	rel = try_relation_open(relid, NoLock, true);
+	if (!gp_enable_global_deadlock_detector)
+		return true;
+
+	/*
+	 * try_relation_open will throw error if
+	 * the relation is invaliad
+	 */
+	rel = try_relation_open(relid, NoLock, noWait);
 
 	if (!rel)
-		elog(ERROR, "Relation open failed!");
+		return false;
 	else if (RelationIsAppendOptimized(rel))
 		upgrade = true;
 	else

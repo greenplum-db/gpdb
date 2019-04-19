@@ -1,3 +1,5 @@
+test: lockmodes
+
 test: ao_partition_lock
 
 test: select_dropped_table
