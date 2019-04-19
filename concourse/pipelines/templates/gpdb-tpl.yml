@@ -15,7 +15,7 @@
                       {'name': 'replication_slots',
                        'use_concourse_cluster': false},
                       {'name': 'gpactivatestandby',
-                       'use_concourse_cluster': false},
+                       'use_concourse_cluster': true},
                       {'name': 'gpinitstandby',
                        'use_concourse_cluster': false},
                       {'name': 'gpcheckcat',
