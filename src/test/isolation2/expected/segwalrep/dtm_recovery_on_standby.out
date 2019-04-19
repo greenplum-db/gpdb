@@ -1,0 +1,119 @@
+-- Validate that standby performs DTM recovery upon promotion.
+
+include: helpers/server_helpers.sql;
+CREATE
+
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+
+-- Check that are starting with a clean slate, standby must be in sync
+-- with master.
+select application_name, state, sync_state from pg_stat_replication;
+ application_name | state     | sync_state 
+------------------+-----------+------------
+ gp_walreceiver   | streaming | sync       
+(1 row)
+
+-- Scenario1: standby broadcasts commit-prepared for a transaction
+-- that was prepared on master.
+
+-- Suspend master backend before it sends commit-prepared
+select gp_inject_fault('dtm_broadcast_commit_prepared', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault 
+-----------------
+ t               
+(1 row)
+
+1&: create table committed_by_standby(a int, b int);  <waiting ...>
+
+-- Scenario2: standby broadcasts abort-prepared for a transaction that
+-- doesn't have distributed commit recorded in XLOG.  Inject faults
+-- such that the QD backend errors out after prepare broadcast and
+-- then suspends in AbortTransaction(), before it can send abort
+-- prepared broadcast.  QEs still have the transaction as prepared.
+select gp_inject_fault('transaction_abort_after_distributed_prepared', 'error', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault 
+-----------------
+ t               
+(1 row)
+select gp_inject_fault('transaction_abort_failure', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault 
+-----------------
+ t               
+(1 row)
+
+2&: create table aborted_by_standby(a int, b int);  <waiting ...>
+
+-- Promote standby
+select pg_ctl(datadir, 'promote') from gp_segment_configuration where content = -1 and role = 'm';
+ pg_ctl            
+-------------------
+ server promoting
+ 
+(1 row)
+
+-- "-1S" means connect to standby's port assuming it's accepting
+-- connections.  This select should succeed because the create table
+-- transaction's commit prepared broadcast must have been sent by
+-- standby after promotion.
+-1S: select count(*) from committed_by_standby;
+ count 
+-------
+ 0     
+(1 row)
+
+-- Should fail because the create table transaction's abort prepared
+-- broadcast must have been sent by standby after promotion.
+-1S: select count(*) from aborted_by_standby;
+ERROR:  relation "aborted_by_standby" does not exist
+LINE 1: select count(*) from aborted_by_standby;
+                             ^
+
+-1Sq: ... <quitting>
+
+-- Reset faults.  The suspended backend will be unblocked and try to
+-- broadcast commit prepared again.  QEs ignore this request, so that
+-- broadcast is essentially a no-op.
+select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_inject_fault 
+-----------------
+ t               
+(1 row)
+1<:  <... completed>
+CREATE
+2<:  <... completed>
+ERROR:  fault triggered, fault name:'transaction_abort_after_distributed_prepared' fault type:'error'
+
+-- Destroy and recreate the standby
+select pg_ctl(datadir, 'stop', 'immediate') from gp_segment_configuration where content = -1 and role = 'm';
+ pg_ctl                                               
+------------------------------------------------------
+ waiting for server to shut down done
+server stopped
+ 
+(1 row)
+-- Standby details need to be stored in a separate table because
+-- reinitialize_standby() first removes standby from catalog and then
+-- adds it to the catalog using gpinitstandby.  If temp table is not
+-- used and the function is invoked directly on
+-- gp_segment_configuration, we get a deadlock.  The backend started
+-- by gpinitstandby needs access exclusive lock and the backend for
+-- this isolation spec is already holding an access share lock on
+-- gp_segment_configuration.
+create table standby_config as (select hostname, datadir, port, role from gp_segment_configuration where content = -1) distributed by (hostname);
+CREATE 2
+
+create or replace function reinitialize_standby() returns text as $$ import subprocess rv = plpy.execute("select hostname, datadir, port from standby_config order by role", 2) standby = rv[0] # role = 'm' master = rv[1] # role = 'p' try: cmd = 'rm -rf %s.dtm_recovery && cp -R %s %s.dtm_recovery' % (standby['datadir'], standby['datadir'], standby['datadir']) remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT) cmd = 'gpinitstandby -ar -P %d' % master['port'] remove_output += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT) cmd = 'export PGPORT=%d; gpinitstandby -a -s %s -S %s -P %d' % (master['port'], standby['hostname'], standby['datadir'], standby['port']) init_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT) except subprocess.CalledProcessError as e: plpy.info(e.output) raise 
+return remove_output + "\n" + init_output $$ language plpythonu;
+CREATE
+
+-- start_ignore
+select reinitialize_standby();
+-- end_ignore
+
+-- Sync state between master and standby must be restored at the end.
+select application_name, state, sync_state from pg_stat_replication;
+ application_name | state     | sync_state 
+------------------+-----------+------------
+ gp_walreceiver   | streaming | sync       
+(1 row)
