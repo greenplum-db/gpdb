@@ -103,7 +103,7 @@ Feature: Tests for gpaddmirrors
         And gpaddmirrors adds mirrors with temporary data dir
         And an FTS probe is triggered
         And the segments are synchronized
-        When user kills all primary processes with SIGKILL
+        When user kills all primary processes with SIGTERM
         And user can start transactions
         Then verify that there is a "heap" table "public.heap_table" in "gptest" with "100" rows
         Then verify that there is a "ao" table "public.ao_table" in "gptest" with "100" rows
