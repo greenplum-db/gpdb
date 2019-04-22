@@ -89,18 +89,17 @@ Feature: Validate command line arguments
 
     Scenario: Skip checking for filespace consistency on a down segment during startup
         Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-	And the user " " creates filespace_config file for "new_filespace" on host "localhost" with gpdb port "15432" and config "new_filespace_config" in "/tmp" directory
-	And the user " " creates filespace on host "localhost" with gpdb port "15432" and config "new_filespace_config" in "/tmp" directory
-        And the information of a "mirror" segment on any host is saved
-	When user kills a mirror process with the saved information
-	And the mirror with content id "0" is forcibly marked down in config
-        And the user runs "gpstop -aM fast"
-        And gpstop should return a return code of 0
-	Then the temporary filespace file is deleted on saved "mirror" segment
-        And the user runs "gpstart -a"
-        And gpstart should return a return code of 0
-        And all the segments are running
-        And the segments are synchronized
+          And all the segments are running
+          And the segments are synchronized
+          And the user " " creates filespace_config file for "new_filespace" on host "localhost" with gpdb port "15432" and config "new_filespace_config" in "/tmp" directory
+          And the user " " creates filespace on host "localhost" with gpdb port "15432" and config "new_filespace_config" in "/tmp" directory
+          And the information of a "mirror" segment on any host is saved
+         When user kills a mirror process with the saved information
+          And the mirror with content id "0" is forcibly marked down in config
+          And the user runs "gpstop -aM fast"
+         Then gpstop should return a return code of 0
 
+         When the temporary filespace file is deleted on saved "mirror" segment
+          And the user runs "gpstart -a"
+         Then gpstart should return a return code of 0
+          And user can start transactions

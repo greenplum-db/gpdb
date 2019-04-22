@@ -4059,7 +4059,7 @@ def impl(context, seg):
     cmd.run(validateAfter=True)
 
 
-@then('the temporary filespace file is deleted on saved "{seg}" segment')
+@when('the temporary filespace file is deleted on saved "{seg}" segment')
 def impl(context, seg):
     if seg == "primary":
         data_dir = context.primary_datadir
