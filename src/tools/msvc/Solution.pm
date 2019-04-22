@@ -535,10 +535,20 @@ sub AddProject
 	}
 	if ($self->{options}->{gss})
 	{
-		$proj->AddIncludeDir($self->{options}->{gss} . '\inc\krb5');
-		$proj->AddLibrary($self->{options}->{gss} . '\lib\i386\krb5_32.lib');
-		$proj->AddLibrary($self->{options}->{gss} . '\lib\i386\comerr32.lib');
-		$proj->AddLibrary($self->{options}->{gss} . '\lib\i386\gssapi32.lib');
+		if ($self->{platform} eq 'Win32')
+		{
+			$proj->AddIncludeDir($self->{options}->{gss} . '\inc\krb5');
+			$proj->AddLibrary($self->{options}->{gss} . '\lib\i386\krb5_32.lib');
+			$proj->AddLibrary($self->{options}->{gss} . '\lib\i386\comerr32.lib');
+			$proj->AddLibrary($self->{options}->{gss} . '\lib\i386\gssapi32.lib');
+		}
+		else
+		{
+			$proj->AddIncludeDir($self->{options}->{gss} . '\include');
+			$proj->AddLibrary($self->{options}->{gss} . '\lib\krb5_64.lib');
+			$proj->AddLibrary($self->{options}->{gss} . '\lib\comerr64.lib');
+			$proj->AddLibrary($self->{options}->{gss} . '\lib\gssapi64.lib');
+		}
 	}
 	if ($self->{options}->{iconv})
 	{
