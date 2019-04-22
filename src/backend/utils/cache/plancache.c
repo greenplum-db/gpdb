@@ -1630,8 +1630,14 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					rc = get_parse_rowmark(parsetree, rt_index);
 					if (rc != NULL)
 					{
-						lockmode = rc->strength >= LCS_FORNOKEYUPDATE ?
-							ExclusiveLock : RowShareLock;
+						if (parsetree->canOptForUpdate &&
+							rc->strength >= LCS_FORNOKEYUPDATE)
+							lockmode = RowShareLock;
+						else
+						{
+							lockmode = rc->strength >= LCS_FORNOKEYUPDATE ?
+								ExclusiveLock : RowShareLock;
+						}
 					}
 					else
 						lockmode = AccessShareLock;

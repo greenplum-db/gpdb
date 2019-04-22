@@ -34,10 +34,11 @@ BEGIN
 (5 rows)
 
 2: select * from show_locks_lockmodes;
- locktype | mode          | granted | relation   
-----------+---------------+---------+------------
- relation | ExclusiveLock | t       | t_lockmods 
-(1 row)
+ locktype | mode            | granted | relation   
+----------+-----------------+---------+------------
+ relation | AccessShareLock | t       | t_lockmods 
+ relation | ExclusiveLock   | t       | t_lockmods 
+(2 rows)
 
 1: abort;
 ABORT
@@ -183,10 +184,11 @@ BEGIN
 (8 rows)
 
 2: select * from show_locks_lockmodes;
- locktype | mode          | granted | relation      
-----------+---------------+---------+---------------
- relation | ExclusiveLock | t       | t_lockmods_ao 
-(1 row)
+ locktype | mode            | granted | relation      
+----------+-----------------+---------+---------------
+ relation | AccessShareLock | t       | t_lockmods_ao 
+ relation | ExclusiveLock   | t       | t_lockmods_ao 
+(2 rows)
 
 1: abort;
 ABORT
@@ -380,10 +382,11 @@ BEGIN
 (5 rows)
 
 2: select * from show_locks_lockmodes;
- locktype | mode          | granted | relation   
-----------+---------------+---------+------------
- relation | ExclusiveLock | t       | t_lockmods 
-(1 row)
+ locktype | mode            | granted | relation   
+----------+-----------------+---------+------------
+ relation | AccessShareLock | t       | t_lockmods 
+ relation | RowShareLock    | t       | t_lockmods 
+(2 rows)
 
 1: abort;
 ABORT
@@ -456,9 +459,9 @@ BEGIN
 (5 rows)
 
 2: select * from show_locks_lockmodes;
- locktype | mode          | granted | relation   
-----------+---------------+---------+------------
- relation | ExclusiveLock | t       | t_lockmods 
+ locktype | mode         | granted | relation   
+----------+--------------+---------+------------
+ relation | RowShareLock | t       | t_lockmods 
 (1 row)
 
 1: abort;
@@ -525,10 +528,11 @@ BEGIN
 (8 rows)
 
 2: select * from show_locks_lockmodes;
- locktype | mode          | granted | relation      
-----------+---------------+---------+---------------
- relation | ExclusiveLock | t       | t_lockmods_ao 
-(1 row)
+ locktype | mode            | granted | relation      
+----------+-----------------+---------+---------------
+ relation | AccessShareLock | t       | t_lockmods_ao 
+ relation | ExclusiveLock   | t       | t_lockmods_ao 
+(2 rows)
 
 1: abort;
 ABORT

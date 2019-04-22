@@ -47,6 +47,7 @@
 #include "parser/parse_target.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
+#include "utils/guc.h"
 #include "utils/rel.h"
 
 #include "cdb/cdbhash.h"
@@ -60,6 +61,11 @@
 #include "parser/parse_func.h"
 #include "utils/lsyscache.h"
 
+
+typedef struct SublinkSearchContext
+{
+	bool found;
+} SublinkSearchContext;
 
 /* Context for transformGroupedWindows() which mutates components
  * of a query that mixes windowing and aggregation or grouping.  It
@@ -135,6 +141,8 @@ static Node *grouped_window_mutator(Node *node, void *context);
 static Alias *make_replacement_alias(Query *qry, const char *aname);
 static char *generate_positional_name(AttrNumber attrno);
 static List*generate_alternate_vars(Var *var, grouped_window_ctx *ctx);
+static bool checkCanOptForUpdate(SelectStmt *stmt);
+static bool sublinkSearch(Node *node, void *context);
 
 /*
  * parse_analyze
@@ -239,9 +247,14 @@ parse_sub_analyze(Node *parseTree, ParseState *parentParseState,
 Query *
 transformTopLevelStmt(ParseState *pstate, Node *parseTree)
 {
+
+	Query *q;
+
 	if (IsA(parseTree, SelectStmt))
 	{
 		SelectStmt *stmt = (SelectStmt *) parseTree;
+
+		pstate->p_canOptForUpdate = checkCanOptForUpdate(stmt);
 
 		/* If it's a set-operation tree, drill down to leftmost SelectStmt */
 		while (stmt && stmt->op != SETOP_NONE)
@@ -268,7 +281,10 @@ transformTopLevelStmt(ParseState *pstate, Node *parseTree)
 		}
 	}
 
-	return transformStmt(pstate, parseTree);
+	q = transformStmt(pstate, parseTree);
+	q->canOptForUpdate = pstate->p_canOptForUpdate;
+
+	return q;
 }
 
 /*
@@ -3758,3 +3774,47 @@ setQryDistributionPolicy(IntoClause *into, Query *qry)
 													  dist->numsegments);
 	}
 }
+
+static bool
+checkCanOptForUpdate(SelectStmt *stmt)
+{
+	SublinkSearchContext ctx = {false};
+
+	if (!IS_QUERY_DISPATCHER())
+		return false;
+
+	if (!gp_enable_global_deadlock_detector)
+		return false;
+
+	if (stmt->op != SETOP_NONE)
+		return false;
+
+	if (list_length(stmt->fromClause) != 1)
+		return false;
+
+	if (!IsA(linitial(stmt->fromClause), RangeVar))
+		return false;
+
+	if (!stmt->lockingClause)
+		return false;
+
+	(void) raw_expression_tree_walker(stmt->whereClause,
+									  sublinkSearch, (void *)(&ctx));
+
+	if (ctx.found)
+		return false;
+
+	return true;
+}
+
+ static bool
+ sublinkSearch(Node *node, void *context)
+ {
+	 if (IsA(node, Query))
+	 {
+		 ((SublinkSearchContext *)context)->found = true;
+		 return false;
+	 }
+
+	 return true;
+ }
