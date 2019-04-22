@@ -2235,8 +2235,8 @@ CTranslatorDXLToPlStmt::TranslateDXLMergeJoin
 	// translate merge cond
 	List *merge_conditions_list = NIL;
 
-	const ULONG arity = merge_cond_list_dxlnode->Arity();
-	for (ULONG ul = 0; ul < arity; ul++)
+	const ULONG num_join_conds = merge_cond_list_dxlnode->Arity();
+	for (ULONG ul = 0; ul < num_join_conds; ul++)
 	{
 		CDXLNode *merge_condition_dxlnode = (*merge_cond_list_dxlnode)[ul];
 		List *merge_condition_list = TranslateDXLScCondToQual
@@ -2259,6 +2259,40 @@ CTranslatorDXLToPlStmt::TranslateDXLMergeJoin
 	plan->righttree = right_plan;
 	plan->nMotionNodes = left_plan->nMotionNodes + right_plan->nMotionNodes;
 	SetParamIds(plan);
+
+	merge_join->mergeFamilies = (Oid *) gpdb::GPDBAlloc(sizeof(Oid) * num_join_conds);
+	merge_join->mergeStrategies = (int *) gpdb::GPDBAlloc(sizeof(int) * num_join_conds);
+	merge_join->mergeNullsFirst = (bool *) gpdb::GPDBAlloc(sizeof(bool) * num_join_conds);
+
+	ListCell *lc;
+	ULONG ul = 0;
+	foreach(lc, merge_join->mergeclauses)
+	{
+		Expr *expr = (Expr *) lfirst(lc);
+
+		if (IsA(expr, OpExpr))
+		{
+			// we are ok - phew
+			OpExpr *opexpr = (OpExpr *) expr;
+			List *mergefamilies = gpdb::GetMergeJoinOpFamilies(opexpr->opno);
+
+			GPOS_ASSERT(NULL != mergefamilies && gpdb::ListLength(mergefamilies) > 0);
+
+			// Pick the first - it's probably what we want
+			merge_join->mergeFamilies[ul] = gpdb::ListNthOid(mergefamilies, 0);
+			// Make sure that the following properties match
+			// those in CPhysicalFullMergeJoin::PosRequired().
+			merge_join->mergeStrategies[ul] = BTLessStrategyNumber;
+			merge_join->mergeNullsFirst[ul] = false;
+			++ul;
+		}
+		else
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+					   GPOS_WSZ_LIT("Not an op expression in merge clause"));
+			break;
+		}
+	}
 
 	// cleanup
 	translation_context_arr_with_siblings->Release();

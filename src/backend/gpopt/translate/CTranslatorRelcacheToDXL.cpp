@@ -1613,6 +1613,7 @@ CTranslatorRelcacheToDXL::RetrieveType
 	CMDIdGPDB *mdid_op_geq = GPOS_NEW(mp) CMDIdGPDB(gpdb::GetInverseOp(ptce->lt_opr));
 	CMDIdGPDB *mdid_op_cmp = GPOS_NEW(mp) CMDIdGPDB(ptce->cmp_proc);
 	BOOL is_hashable = gpdb::IsOpHashJoinable(ptce->eq_opr);
+	BOOL is_merge_joinable = gpdb::IsOpMergeJoinable(ptce->eq_opr);
 	BOOL is_composite_type = gpdb::IsCompositeType(oid_type);
 
 	// get standard aggregates
@@ -1660,6 +1661,7 @@ CTranslatorRelcacheToDXL::RetrieveType
 						 mdid_sum,
 						 mdid_count,
 						 is_hashable,
+						 is_merge_joinable,
 						 is_composite_type,
 						 mdid_type_relid,
 						 mdid_type_array,

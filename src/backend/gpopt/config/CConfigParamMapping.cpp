@@ -374,6 +374,13 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] =
 		&optimizer_force_agg_skew_avoidance,
 		false, // m_negate_param
 		GPOS_WSZ_LIT("Always pick a plan for aggregate distinct that minimizes skew.")
+		},
+
+		{
+		EopttraceExpandFullJoin,
+		&optimizer_enable_full_join,
+		false, // m_negate_param
+		GPOS_WSZ_LIT("Enable Expand Full Join transform for converting FULL JOIN into UNION ALL.")
 		}
 };
 
@@ -520,6 +527,9 @@ CConfigParamMapping::PackConfigParamInBitset
 	{
 		traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::ExfJoinAssociativity));
 	}
+
+	// full merge join is disabled in 5x
+	traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::ExfImplementFullOuterMergeJoin));
 
 	if (!optimizer_enable_full_join)
 	{

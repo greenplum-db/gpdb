@@ -2019,6 +2019,21 @@ gpdb::IsOpHashJoinable
 }
 
 bool
+gpdb::IsOpMergeJoinable
+	(
+	Oid opno
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_operator */
+		return op_mergejoinable(opno);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+bool
 gpdb::IsOpStrict
 	(
 	Oid opno
@@ -2838,6 +2853,21 @@ gpdb::GetOpFamiliesForScOp
 	return NIL;
 }
 
+List *
+gpdb::GetMergeJoinOpFamilies
+	(
+	Oid opno
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_amop */
+
+		return get_mergejoin_opfamilies(opno);
+	}
+	GP_WRAP_END;
+	return NIL;
+}
 
 
 // Evaluates 'expr' and returns the result as an Expr.
