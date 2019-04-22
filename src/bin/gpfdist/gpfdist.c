@@ -19,7 +19,9 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef WIN32
 #include <strings.h>
+#endif
 #ifdef GPFXDIST
 #include <regex.h>
 #include <gpfxdist.h>
@@ -1294,7 +1296,7 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 {
 	int 		size;
 	const int 	whole_rows = 1; /* gpfdist must not read data with partial rows */
-	struct fstream_filename_and_offset fos = {};
+	struct fstream_filename_and_offset fos = {0};
 
 	session_t *session = r->session;
 
@@ -2141,6 +2143,8 @@ static void do_accept(int fd, short event, void* arg)
 	r->id = ++REQUEST_SEQ;
 	r->pool = pool;
 	r->sock = sock;
+
+	event_set(&r->ev, 0, 0, 0, 0);
 
 	/* use the block size specified by -m option */
 	r->outblock.data = palloc_safe(r, pool, opt.m, "out of memory when allocating buffer: %d bytes", opt.m);
@@ -4216,7 +4220,7 @@ static void do_close(int fd, short event, void *arg)
 		gwarning(r, "gpfdist shutdown the connection, while have not received response from segment");
 	}
 
-	int ret = read(r->sock, buffer, sizeof(buffer) - 1);
+	int ret = recv(r->sock, buffer, sizeof(buffer) - 1, 0);
 	if (ret < 0)
 	{
 		gwarning(r, "gpfdist read error after shutdown. errno: %d, msg: %s", errno, strerror(errno));
