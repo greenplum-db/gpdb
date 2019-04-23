@@ -180,6 +180,11 @@ GPDB supports Python3 with plpython3u UDF
 
 See [how to enable Python3](src/pl/plpython/README.md) for details.
 
+
+### Building GPDB client tools on Windows
+
+See [Building GPDB client tools on Windows](README.windows.md) for details.
+
 ## Development with Docker
 
 See [README.docker.md](README.docker.md).
