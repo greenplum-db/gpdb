@@ -150,9 +150,6 @@
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#krb_srvname" type="section">krb_srvname</xref>
-              </p>
-              <p>
                 <xref href="guc-list.xml#password_encryption" type="section"
                   >password_encryption</xref>
               </p>

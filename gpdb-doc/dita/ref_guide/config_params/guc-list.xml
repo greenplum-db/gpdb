@@ -449,9 +449,6 @@
               <xref href="#krb_server_keyfile"/>
             </li>
             <li>
-              <xref href="#krb_srvname"/>
-            </li>
-            <li>
               <xref href="#lc_collate"/>
             </li>
             <li>
@@ -1421,7 +1418,7 @@
           <tbody>
             <row>
               <entry colname="col1">Boolean</entry>
-              <entry colname="col2">off</entry>
+              <entry colname="col2">on</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -1812,7 +1809,7 @@
           <tbody>
             <row>
               <entry colname="col1">floating point</entry>
-              <entry colname="col2">512MB</entry>
+              <entry colname="col2">16GB</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -5598,33 +5595,6 @@
               <entry colname="col1">path and file name</entry>
               <entry colname="col2">unset</entry>
               <entry colname="col3">master<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="krb_srvname">
-    <title>krb_srvname</title>
-    <body>
-      <p>Sets the Kerberos service name.</p>
-      <table id="krb_srvname_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">service name</entry>
-              <entry colname="col2">postgres</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
