@@ -228,8 +228,10 @@ def impl(context, checksum_toggle):
         if ('PGDATABASE' in os.environ):
             run_command(context, "createdb %s" % os.getenv('PGDATABASE'))
 
+
 @given('the database is not running')
 @when('the database is not running')
+@then('the database is not running')
 def impl(context):
     stop_database_if_started(context)
     if has_exception(context):
@@ -2366,16 +2368,6 @@ def impl(context, hostnames):
     if hasattr(context, "temp_base_dir"):
         reset_hosts(hosts, context.temp_base_dir)
 
-@then('the database is killed on hosts "{hostnames}"')
-@given('the database is killed on hosts "{hostnames}"')
-def impl(context, hostnames):
-    hosts = hostnames.split(",")
-    for host in hosts:
-        cmd = Command(name='pkill postgres',
-                      cmdStr="pkill postgres || true",
-                      ctxt=REMOTE,
-                      remoteHost=host)
-        cmd.run(validateAfter=True)
 
 @given('user has created expansiontest tables')
 @then('user has created expansiontest tables')
