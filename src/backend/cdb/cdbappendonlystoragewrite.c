@@ -132,7 +132,7 @@ AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 	storageWrite->maxBufferWithCompressionOverrrunLen =
 		storageWrite->maxBufferLen + storageWrite->compressionOverrunLen;
 	storageWrite->maxLargeWriteLen = 2 * storageWrite->maxBufferLen;
-	Assert(storageWrite->maxBufferWithCompressionOverrrunLen <= storageWrite->largeWriteLen);
+	Assert(storageWrite->maxBufferWithCompressionOverrrunLen <= storageWrite->maxLargeWriteLen);
 
 	memoryLen = BufferedAppendMemoryLen
 		(

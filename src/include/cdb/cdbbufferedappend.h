@@ -87,7 +87,7 @@ typedef struct BufferedAppend
  * large write lengths.
  */
 extern int32 BufferedAppendMemoryLen(
-    int32                maxBufferLen,
+    int32                maxBufferWithCompressionOverrrunLen,
     int32                maxLargeWriteLen);
 
 /*

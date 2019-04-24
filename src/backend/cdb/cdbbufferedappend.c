@@ -33,14 +33,14 @@ static void BufferedAppendWrite(
  * large write lengths.
  */
 int32
-BufferedAppendMemoryLen(int32 maxBufferLen,
+BufferedAppendMemoryLen(int32 maxBufferWithCompressionOverrrunLen,
 						int32 maxLargeWriteLen)
 {
-	Assert(maxBufferLen > 0);
-	Assert(maxLargeWriteLen >= maxBufferLen);
+	Assert(maxBufferWithCompressionOverrrunLen > 0);
+	Assert(maxLargeWriteLen >= maxBufferWithCompressionOverrrunLen);
 
 	/* Large write memory areas plus adjacent extra memory for 1 buffer. */
-	return (maxLargeWriteLen + maxBufferLen);
+	return (maxLargeWriteLen + maxBufferWithCompressionOverrrunLen);
 }
 
 /*
@@ -59,9 +59,9 @@ BufferedAppendInit(BufferedAppend *bufferedAppend,
 {
 	Assert(bufferedAppend != NULL);
 	Assert(memory != NULL);
-	Assert(maxBufferLen > 0);
-	Assert(maxLargeWriteLen >= maxBufferLen);
-	Assert(memoryLen >= BufferedAppendMemoryLen(maxBufferLen, maxLargeWriteLen));
+	Assert(maxBufferWithCompressionOverrrunLen> 0);
+	Assert(maxLargeWriteLen >= maxBufferWithCompressionOverrrunLen);
+	Assert(memoryLen >= BufferedAppendMemoryLen(maxBufferWithCompressionOverrrunLen, maxLargeWriteLen));
 
 	memset(bufferedAppend, 0, sizeof(BufferedAppend));
 
@@ -271,7 +271,7 @@ BufferedAppendGetBuffer(BufferedAppend *bufferedAppend,
 	currentLargeWriteLen = bufferedAppend->largeWriteLen;
 	Assert(currentLargeWriteLen + bufferLen <=
 		   bufferedAppend->maxLargeWriteLen +
-		   bufferedAppend->maxBufferLen);
+		   bufferedAppend->maxBufferWithCompressionOverrrunLen);
 
 	bufferedAppend->bufferLen = bufferLen;
 
@@ -339,7 +339,7 @@ BufferedAppendFinishBuffer(BufferedAppend *bufferedAppend,
 
 	newLen = bufferedAppend->largeWriteLen + usedLen;
 	Assert(newLen <= bufferedAppend->maxLargeWriteLen +
-		   bufferedAppend->maxBufferLen);
+		   bufferedAppend->maxBufferWithCompressionOverrrunLen);
 	if (newLen >= bufferedAppend->maxLargeWriteLen)
 	{
 		/*
