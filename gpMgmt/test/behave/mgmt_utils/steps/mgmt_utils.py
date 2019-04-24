@@ -6,6 +6,7 @@ import json
 import yaml
 import os
 import re
+import pipes
 import platform
 import shutil
 import socket
@@ -810,100 +811,32 @@ def _process_exists(pid, host):
     cmd.run()
     return cmd.get_return_code() == 0
 
-def _wait_for_process_exit(pid, host, timeout=30):
-    """
-    Waits up to timeout (default 30) seconds for the process with the given PID
-    to exit. Returns True if this occurs within the timeout and False otherwise.
-
-    Be mindful of the inherent problems with this approach -- if you pass a PID
-    that never existed, it will appear to have "exited" here. Conversely, if the
-    OS is quick enough to recycle a process' PID after it exits, this function
-    may incorrectly show that the exit never happened.
-    """
-    end_time = datetime.now() + timedelta(seconds=timeout)
-    interval = 0.05
-
-    while _process_exists(pid, host):
-        if end_time < datetime.now():
-            # Time's up.
-            return False
-
-        # Sleep with exponential backoff and a maximum of 1 second.
-        time.sleep(interval)
-        interval = min(interval * 2, 1)
-
-    return True
 
 @given('user kills a primary postmaster process')
 @when('user kills a primary postmaster process')
 @then('user kills a primary postmaster process')
 def impl(context):
-    if hasattr(context, 'pseg'):
-        seg_data_dir = context.pseg_data_dir
-        seg_host = context.pseg_hostname
-        seg_port = context.pseg.getSegmentPort()
-    else:
-        gparray = GpArray.initFromCatalog(dbconn.DbURL())
-        for seg in gparray.getDbList():
-            if seg.isSegmentPrimary():
-                seg_data_dir = seg.getSegmentDataDirectory()
-                seg_host = seg.getSegmentHostName()
-                seg_port = seg.getSegmentPort()
-                break
-
-    pid = get_pid_for_segment(seg_data_dir, seg_host)
-    if pid is None:
-        raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
-
-    kill_process(int(pid), seg_host, signal.SIGKILL)
-    _wait_for_process_exit(pid, seg_host)
-
-    pid = get_pid_for_segment(seg_data_dir, seg_host)
-    if pid is not None:
-        raise Exception('Unable to kill postmaster with pid "%d" datadir "%s"' % (pid, seg_data_dir))
-
-    context.killed_seg_host = seg_host
-    context.killed_seg_port = seg_port
+    stop_segments(context, "primary")
 
 
 @given('user kills all {segment_type} processes')
 @when('user kills all {segment_type} processes')
 @then('user kills all {segment_type} processes')
-def impl(context, segment_type):
-    context.execute_steps(
-        u'given user kills all {} processes with SIGTERM'.format(segment_type)
-    )
-
-@given('user kills all {segment_type} processes with {signal_name}')
-@when('user kills all {segment_type} processes with {signal_name}')
-@then('user kills all {segment_type} processes with {signal_name}')
-def impl(context, segment_type, signal_name):
-    # Look up the signal code by name. This is easier in Python 3, with the
-    # introduction of signal.Signals, but for now we do it the hard way.
-    if (not signal_name.startswith('SIG')) or signal_name.startswith('SIG_'):
-        raise Exception("'{}' is not a valid signal name".format(signal_name))
-    try:
-        signal_code = signal.__dict__[signal_name]
-    except KeyError:
-        raise Exception("'{}' is not a valid signal name".format(signal_name))
-
+def stop_segments(context, segment_type):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
-    filtered_segments = filter(lambda seg: seg.preferred_role == role and seg.content != -1, gparray.getDbList())
-    for seg in filtered_segments:
-        seg_data_dir = seg.getSegmentDataDirectory()
-        seg_host = seg.getSegmentHostName()
+    segments = filter(lambda seg: seg.preferred_role == role and seg.content != -1, gparray.getDbList())
+    for seg in segments:
+        # For demo_cluster tests run on the CI gives the error 'bash: pg_ctl: command not found'
+        # Thus, need to add pg_ctl to the path when ssh'ing to a demo cluster.
+        cmd = "ssh %s 'which pg_ctl > /dev/null 2>&1 || source /usr/local/greenplum-db-devel/greenplum_path.sh && pg_ctl stop -m fast -D %s'" % (
+            pipes.quote(seg.getSegmentHostName()), pipes.quote(seg.getSegmentDataDirectory()))
 
-        pid = get_pid_for_segment(seg_data_dir, seg_host)
-        if pid is None:
-            raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
-
-        kill_process(int(pid), seg_host, signal_code)
-        _wait_for_process_exit(pid, seg_host)
-
-        pid = get_pid_for_segment(seg_data_dir, seg_host)
-        if pid is not None:
-            raise Exception('Unable to kill postmaster with pid "%d" datadir "%s"' % (pid, seg_data_dir))
+        result = run_cmd(cmd)
+        if result[0] > 0:
+            raise Exception("Failed to stop %s segment with cmd '%s'. Returned status %d with\nstdout: '%s'\nstderr: '%s'\n" % (
+                segment_type, cmd, result[0], result[1], result[2]
+            ))
 
 
 @given('user can start transactions')
