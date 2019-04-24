@@ -518,6 +518,13 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_centos6/bin_gpdb.tar.gz
 
+- name: bin_gpdb_clients_centos6
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_clients_centos6/bin_gpdb_clients.tar.gz
+
 {% endif %}
 {% if pipeline_type == "prod" %}
 - name: bin_gpdb_centos6_icw_green
@@ -570,6 +577,20 @@ resources:
     ##     secret_access_key: {{bucket-secret-access-key}}
     ##     versioned_file: release_candidates/bin_gpdb_sles11/master/((rc-build-type))/bin_gpdb.tar.gz
 
+- name: bin_gpdb_clients_centos6_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/master/clients-rc-(.*)-rhel6_x86_64((rc-build-type-gcs)).tar.gz
+
+- name: bin_gpdb_clients_centos7_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/master/clients-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+
 {% endif %}
 {% if "ubuntu16" in os_types %}
 - name: compiled_bits_ubuntu16
@@ -596,6 +617,13 @@ resources:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_centos7/bin_gpdb.tar.gz
+
+- name: bin_gpdb_clients_centos7
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_clients_centos7/bin_gpdb_clients.tar.gz
 
 {% endif %}
 {% if "sles" in os_types %}
@@ -840,11 +868,14 @@ jobs:
       CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
-      BLD_TARGETS: "clients loaders"
+      BLD_TARGETS: "clients"
   - aggregate:
     - put: bin_gpdb_centos6
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: bin_gpdb_clients_centos6
+      params:
+        file: gpdb_artifacts/gpdb-clients-centos6.tar.gz
 
 {% endif %}
 {% if "centos7" in os_types %}
@@ -879,11 +910,14 @@ jobs:
       CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
-      BLD_TARGETS: "clients loaders"
+      BLD_TARGETS: "clients"
   - aggregate:
     - put: bin_gpdb_centos7
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: bin_gpdb_clients_centos7
+      params:
+        file: gpdb_artifacts/gpdb-clients-centos7.tar.gz
 
 {% endif %}
 {% if "sles" in os_types %}
@@ -2082,6 +2116,12 @@ jobs:
  ##     - icw_gporca_sles12
  ##     - icw_planner_sles12
  ##     - resource_group_sles12
+    - get: bin_gpdb_clients_centos6
+      passed:
+      - compile_gpdb_centos6
+    - get: bin_gpdb_clients_centos7
+      passed:
+      - compile_gpdb_centos7
 
 - name: Release_Candidate
   plan:
@@ -2093,6 +2133,12 @@ jobs:
       trigger: true
       passed: [gate_release_candidate_start]
     - get: bin_gpdb_centos7
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_clients_centos6
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_clients_centos7
       trigger: true
       passed: [gate_release_candidate_start]
     - get: gpdb6-centos6-build
@@ -2108,6 +2154,8 @@ jobs:
         - name: gpdb_src
         - name: bin_gpdb_centos6
         - name: bin_gpdb_centos7
+        - name: bin_gpdb_clients_centos6
+        - name: bin_gpdb_clients_centos7
         outputs:
         - name: bin_gpdb_centos_gcs
         run:
@@ -2118,6 +2166,8 @@ jobs:
             gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
             cp -v bin_gpdb_centos6/bin_gpdb.tar.gz bin_gpdb_centos_gcs/server-rc-${gpdb_semver}-rhel6_x86_64((rc-build-type-gcs)).tar.gz
             cp -v bin_gpdb_centos7/bin_gpdb.tar.gz bin_gpdb_centos_gcs/server-rc-${gpdb_semver}-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+            cp -v bin_gpdb_clients_centos6/bin_gpdb_clients.tar.gz bin_gpdb_centos_gcs/clients-rc-${gpdb_semver}-rhel6_x86_64((rc-build-type-gcs)).tar.gz
+            cp -v bin_gpdb_clients_centos7/bin_gpdb_clients.tar.gz bin_gpdb_centos_gcs/clients-rc-${gpdb_semver}-rhel7_x86_64((rc-build-type-gcs)).tar.gz
     - task: verify_gpdb_versions
       file: gpdb_src/concourse/tasks/verify_gpdb_versions.yml
   - aggregate:
@@ -2127,6 +2177,12 @@ jobs:
     - put: bin_gpdb_centos7_rc
       params:
         file: "bin_gpdb_centos_gcs/server-rc-*rhel7*.tar.gz"
+    - put: bin_gpdb_clients_centos6_rc
+      params:
+        file: "bin_gpdb_centos_gcs/clients-rc-*rhel6*.tar.gz"
+    - put: bin_gpdb_clients_centos7_rc
+      params:
+        file: "bin_gpdb_centos_gcs/clients-rc-*rhel7*.tar.gz"
     - put: bin_gpdb_centos6_rc_s3
       params:
         file: bin_gpdb_centos6/bin_gpdb.tar.gz
