@@ -2,7 +2,7 @@
 title: pxf
 ---
 
-Manage the PXF service instance on a segment host.
+Manage PXF configuration and the PXF service instance on the local Greenplum Database host.
 
 ## <a id="topic1__section2"></a>Synopsis
 
@@ -26,16 +26,18 @@ version
 
 ## <a id="topic1__section3"></a>Description
 
-The `pxf` utility manages the PXF service instances on Greenplum Database segment hosts.
+The `pxf` utility manages the PXF configuration and the PXF service instance on the local Greenplum Database host.
 
-You can initialize, start, stop, restart the PXF service instance on a specific segment host. You can display the status of the PXF service instance running on a host. You can also synchronize PXF configuration from the master to a specific Greenplum Database segment host.
+You can initialize PXF on the master, master standby, or a specific segment host. You can also synchronize PXF configuration from the master to these hosts.
 
-To initialize, start, and stop the PXF service instance on all segment hosts in the Greenplum Database cluster, use the `pxf cluster` command. See [`pxf cluster`](pxf-cluster.html#topic1).
+You can start, stop, restart the PXF service instance on a specific segment host, or display the status of the PXF service instance running on a segment host.
+
+Use the [`pxf cluster`](pxf-cluster.html#topic1) command to initialize PXF on all hosts, synchronize PXF configuration to the Greenplum Database cluster, or to start and stop the PXF service instance on all segment hosts in the cluster.
 
 ## <a id="commands"></a>Commands
 
 <dt>cluster</dt>
-<dd>Manage the PXF service instance on all Greenplum Database segment hosts. See [`pxf cluster`](pxf-cluster.html#topic1).</dd>
+<dd>Manage PXF configuration and the PXF service instance on all Greenplum Database hosts. See [`pxf cluster`](pxf-cluster.html#topic1).</dd>
 
 <dt>help</dt>
 <dd>Display the `pxf` management utility help message and then exit.</dd>
@@ -56,7 +58,7 @@ To initialize, start, and stop the PXF service instance on all segment hosts in 
 <dd>Stop the PXF service instance running on the segment host.</dd>
 
 <dt>sync  </dt>
-<dd>Synchronize PXF configuration from the master to a specific Greenplum Database segment host. You must run `pxf sync` on the master host. See [Options](pxf.html#options).</dd>
+<dd>Synchronize PXF configuration from the master to a specific Greenplum Database host. You must run `pxf sync` on the master host. See [Options](pxf.html#options).</dd>
 
 <dt>version  </dt>
 <dd>Display the PXF version and then exit.</dd>
@@ -70,8 +72,8 @@ The `pxf init` command takes the following option:
 
 The `pxf sync` command takes the following option:
 
-<dt>\<seghost\> </dt>
-<dd>The segment host to which to synchronize PXF configuration.</dd>
+<dt>\<gphost\> </dt>
+<dd>The Greenplum Database host to which to synchronize PXF configuration. `<gphost>` must identify the standy master host or a segment host.</dd>
 
 ## <a id="topic1__section5"></a>Examples
 

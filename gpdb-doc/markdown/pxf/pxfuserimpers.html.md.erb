@@ -30,7 +30,7 @@ Perform the following procedure to turn PXF user impersonation on or off in your
     PXF_USER_IMPERSONATION="true"
     ```
 
-4. Use the `pxf cluster sync` command to copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example:
+4. Use the `pxf cluster sync` command to copy the updated `pxf-env.sh` file to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
@@ -63,7 +63,7 @@ When PXF user personation is enabled (the default), you must configure the Hadoo
     ```
 4. After changing `core-site.xml`, you must restart Hadoop for your changes to take effect.
 
-5. Copy the updated `core-site.xml` file to the PXF Hadoop configuration directory `$PXF_CONF/servers/default` on the master and on each Greenplum Database segment host.
+5. Copy the updated `core-site.xml` file to the PXF Hadoop configuration directory `$PXF_CONF/servers/default` on the master, standby master, and on each Greenplum Database segment host.
 
 ## <a id="hive"></a>Hive User Impersonation
 

@@ -56,7 +56,7 @@ PXF provides more detailed logging when the `DEBUG` level is enabled. To configu
     #log4j.logger.org.greenplum.pxf=DEBUG
     ```
 
-2. Use the `pxf cluster sync` command to copy the updated `pxf-log4j.properties` file to each segment host. For example:
+2. Use the `pxf cluster sync` command to copy the updated `pxf-log4j.properties` file to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
@@ -124,7 +124,7 @@ dbname=# SET client_min_messages=NOTICE;
 
 Because a single PXF agent (JVM) serves multiple segments on a segment host, the PXF heap size can be a limiting runtime factor. This will be more evident under concurrent workloads and/or queries against large files. You may run into situations where a query will hang or fail due to insufficient memory or the Java garbage collector impacting response times. To avert or remedy these situations, first try increasing the Java maximum heap size or decreasing the Tomcat maximum number of threads, depending upon what works best for your system configuration.
 
-**Note**: The configuration changes described in this topic require modifying config files on *each* segment node in your Greenplum Database cluster. After you perform the updates, be sure to synchronize the PXF configuration to each segment host in the cluster.
+**Note**: The configuration changes described in this topic require modifying config files on *each* segment node in your Greenplum Database cluster. After you perform the updates, be sure to synchronize the PXF configuration to the Greenplum Database cluster.
 
 You will need to re-apply these configuration changes after any PXF version upgrades.
 
@@ -152,7 +152,7 @@ Perform the following procedure to increase the heap size for the PXF agent runn
     PXF_JVM_OPTS="-Xmx3g -Xms3g"
     ```
 
-4. Use the `pxf cluster sync` command to copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example:
+4. Use the `pxf cluster sync` command to copy the updated `pxf-env.sh` file to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
@@ -189,10 +189,10 @@ Perform the following procedure to decrease the maximum number of Tomcat threads
               namePrefix="tomcat-http--"/>
     ```
 
-4. Copy the updated `server.xml` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+4. Copy the updated `server.xml` file to the standby master and each Greenplum Database segment host. For example, if `gphostfile` contains a list, one-host-per-line, of the standby master and segment hosts in your Greenplum Database cluster:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/pxf-service/conf/server.xml =:/usr/local/greenplum-db/pxf/pxf-service/conf/server.xml
+    gpadmin@gpmaster$ gpscp -v -f gphostfile $GPHOME/pxf/pxf-service/conf/server.xml =:/usr/local/greenplum-db/pxf/pxf-service/conf/server.xml
     ```
 
 5. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
@@ -217,5 +217,5 @@ export PXF_JVM_OPTS="<current_settings> -Duser.timezone=America/Chicago"
 
 You can use the `PXF_JVM_OPTS` property to set other Java options as well.
 
-As described in previous sections, you must synchronize the updated PXF configuration to each Greenplum Database segment host and restart the PXF server on each host.
+As described in previous sections, you must synchronize the updated PXF configuration to the Greenplum Database cluster and restart the PXF server on each segment host.
 

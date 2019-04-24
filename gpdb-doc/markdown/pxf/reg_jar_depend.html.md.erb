@@ -25,7 +25,7 @@ You use PXF to access data stored on external systems. Depending upon the extern
 
 PXF depends on JAR files and other configuration information provided by these additional components. The `$GPHOME/pxf/conf/pxf-private.classpath` file identifies PXF internal JAR dependencies. In most cases, PXF manages the `pxf-private.classpath` file, adding entries as necessary based on the connectors that you use.
 
-Should you need to add an additional JAR dependency for PXF, for example a JDBC driver JAR file, you must log in to the Greenplum Database master host, copy the JAR file to the PXF user configuration runtime library directory (`$PXF_CONF/lib`), sync the PXF configuration to each segment host, and then restart PXF on each host. For example:
+Should you need to add an additional JAR dependency for PXF, for example a JDBC driver JAR file, you must log in to the Greenplum Database master host, copy the JAR file to the PXF user configuration runtime library directory (`$PXF_CONF/lib`), sync the PXF configuration to the Greenplum Database cluster, and then restart PXF on each segment host. For example:
 
 ``` shell
 $ ssh gpadmin@<gpmaster>
