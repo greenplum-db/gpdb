@@ -61,9 +61,9 @@ To access data in an external SQL database, you create a readable or writable Gr
 Use the following syntax to create a Greenplum Database external table that references an external SQL database table and uses the JDBC connector to read or write data:
 
 <pre>
-CREATE [READABLE | WRITABLE] EXTERNAL TABLE <table_name>
-    ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<external-table-name>?<b>PROFILE=Jdbc[&SERVER=&lt;servername>]</b>[&&lt;custom-option>=&lt;value>[...]]')
+CREATE [READABLE | WRITABLE] EXTERNAL TABLE &lt;table_name>
+    ( &lt;column_name> &lt;data_type> [, ...] | LIKE &lt;other_table> )
+LOCATION ('pxf://&lt;external-table-name>?<b>PROFILE=Jdbc[&SERVER=&lt;servername>]</b>[&&lt;custom-option>=&lt;value>[...]]')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
 </pre>
 
