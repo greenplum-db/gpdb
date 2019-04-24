@@ -46,7 +46,7 @@ html man:
 
 install:
 	$(MAKE) -C contrib/auto_explain $@
-	#$(MAKE) -C contrib/file_fdw $@ # GPDB_91_MERGE_FIXME: disable installation until it's officially supported.
+	$(MAKE) -C contrib/file_fdw $@
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
@@ -142,6 +142,7 @@ $(call recurse,installcheck-world, \
 			   src/pl \
 			   src/interfaces/gppc \
 			   contrib/auto_explain \
+			   contrib/file_fdw \
 			   contrib/formatter_fixedwidth \
 			   contrib/extprotocol \
 			   contrib/dblink \
