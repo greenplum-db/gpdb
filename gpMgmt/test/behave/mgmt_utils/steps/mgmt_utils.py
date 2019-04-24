@@ -253,8 +253,10 @@ def impl(context, checksum_toggle):
         if ('PGDATABASE' in os.environ):
             run_command(context, "createdb %s" % os.getenv('PGDATABASE'))
 
+
 @given('the database is not running')
 @when('the database is not running')
+@then('the database is not running')
 def impl(context):
     stop_database_if_started(context)
     if has_exception(context):
