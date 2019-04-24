@@ -33,6 +33,7 @@ from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
 from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.backup_utils import Context
 from gppylib.operations.dump import get_partition_state
+from gppylib.operations.filespace import GP_TEMPORARY_FILES_FILESPACE
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
@@ -596,11 +597,8 @@ def impl(context, dir, dbconn):
     'the user "{USER}" creates filespace_config file for "{fs_name}" on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
 @then(
     'the user "{USER}" creates filespace_config file for "{fs_name}" on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
-def impl(context, USER, HOST, PORT, fs_name, config_file, dir):
-    if USER:
-        user = os.environ.get(USER)
-    else:
-        user = None
+def impl(context, USER, fs_name, HOST, PORT, config_file, dir):
+    user = os.environ.get(USER)
     host = os.environ.get(HOST)
     port = os.environ.get(PORT)
     if not dir.startswith("/"):
@@ -614,10 +612,7 @@ def impl(context, USER, HOST, PORT, fs_name, config_file, dir):
 @when(
     'the user "{USER}" creates filespace on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
 def impl(context, USER, HOST, PORT, config_file, dir):
-    if USER:
-        user = "-U %s" % os.environ.get(USER)
-    else:
-        user = ""
+    user = "-U %s" % os.environ.get(USER) if USER else None
     host = os.environ.get(HOST)
     port = os.environ.get(PORT)
     if not dir.startswith("/"):
@@ -4068,7 +4063,7 @@ def impl(context, seg):
         data_dir = context.mirror_datadir
         hostname = context.mirror_segdbname
 
-    cmd = Command(name="Remove filespace file", cmdStr='rm -f %s' % (os.path.join(data_dir, 'gp_temporary_files_filespace')),
+    cmd = Command(name="Remove filespace file", cmdStr='rm -f %s' % (os.path.join(data_dir, GP_TEMPORARY_FILES_FILESPACE)),
                   remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
 
