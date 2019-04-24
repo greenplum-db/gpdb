@@ -1534,6 +1534,8 @@ custom_fmtopts_string(const char *src)
 	char *srcdup = src ? strdup(src) : NULL;
 	char *srcdup_start = srcdup;
 	char *find_res = NULL;
+	char *srcdup_end = NULL;
+	size_t ressz = len * 2 + 2;
 	int last = 0;
 
 	if (!srcdup || !result)
@@ -1545,20 +1547,22 @@ custom_fmtopts_string(const char *src)
 		return NULL;
 	}
 
+	srcdup_end = srcdup + len;
 	while (srcdup)
 	{
 		/* find first word (a) */
 		find_res = strchr(srcdup, ' ');
 		if (!find_res)
 			break;
-		strncat(result, srcdup, (find_res - srcdup));
+		*find_res = '\0';
+		strlcat(result, srcdup, ressz);
 		/* skip space */
 		srcdup = find_res + 1;
 		/* remove E if E' */
 		if ((strlen(srcdup) > 2) && (srcdup[0] == 'E') && (srcdup[1] == '\''))
 			srcdup++;
 		/* add " = " */
-		strncat(result, " = ", 3);
+		strlcat(result, " = ", ressz);
 		/* find second word (b) until second '
 		   find \' combinations and ignore them */
 		find_res = strchr(srcdup + 1, '\'');
@@ -1568,19 +1572,23 @@ custom_fmtopts_string(const char *src)
 		}
 		if (!find_res)
 			break;
-		strncat(result, srcdup, (find_res - srcdup + 1));
-		srcdup = find_res + 1;
-		/* skip space and add ',' */
-		if (srcdup && srcdup[0] == ' ')
+		find_res++;
+		*find_res = '\0';
+		strlcat(result, srcdup, ressz);
+
+		/* move to the next token if exists and add ',' */
+		if (find_res < srcdup_end - 1)
 		{
-			srcdup++;
-			strncat(result, ",", 1);
+			srcdup = find_res + 1;
+			strlcat(result, ",", ressz);
 		}
+		else
+			srcdup = find_res;
 	}
 
 	/* fix string - remove trailing ',' or '=' */
 	last = strlen(result) - 1;
-	if (result[last] == ',' || result[last] == '=')
+	if (last >= 0 && (result[last] == ',' || result[last] == '='))
 		result[last] = '\0';
 
 	free(srcdup_start);
