@@ -1306,9 +1306,6 @@
           <strow>
             <stentry>
               <p>
-                <xref href="guc-list.xml#add_missing_from" type="section">add_missing_from</xref>
-              </p>
-              <p>
                 <xref href="guc-list.xml#array_nulls" type="section">array_nulls</xref>
               </p>
               <p>
