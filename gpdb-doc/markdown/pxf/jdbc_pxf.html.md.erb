@@ -222,7 +222,7 @@ Perform the following steps to create a PostgreSQL table named `forpxf_table1` i
 
 #### <a id="ex_jdbconfig"></a>Configure the JDBC Connector 
 
-You must create a JDBC server configuration for PostgreSQL, download the PostgreSQL driver JAR file to your system, copy the JAR file to the PXF user configuration directory, synchronize PXF configuration, and then restart PXF.
+You must create a JDBC server configuration for PostgreSQL, download the PostgreSQL driver JAR file to your system, copy the JAR file to the PXF user configuration directory, synchronize the PXF configuration, and then restart PXF.
 
 1. Log in to the Greenplum Database master node:
 
@@ -262,7 +262,7 @@ You must create a JDBC server configuration for PostgreSQL, download the Postgre
     gpadmin@gpmaster$ cp postgresql-42.2.5.jar $PXF_CONF/lib/postgresql-42.2.5.jar
     ``` 
 
-3. Synchronize PXF configuration to the Greenplum Database cluster. For example:
+3. Synchronize the PXF configuration to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync

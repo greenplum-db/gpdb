@@ -2,7 +2,7 @@
 title: pxf cluster
 ---
 
-Manage PXF configuration and the PXF service instance on all Greenplum Database hosts.
+Manage the PXF configuration and the PXF service instance on all Greenplum Database hosts.
 
 ## <a id="topic1__section2"></a>Synopsis
 
@@ -22,7 +22,7 @@ sync
 
 ## <a id="topic1__section3"></a>Description
 
-The `pxf cluster` utility command manages PXF on the standby master and all Greenplum Database segment hosts. You can use the utility to start and stop the PXF service instance on all segment hosts. You can also initialize and synchronize PXF configuration from the Greenplum Database master host to the standby master and to all segment hosts.
+The `pxf cluster` utility command manages PXF on the standby master and on all Greenplum Database segment hosts. You can use the utility to start and stop the PXF service instance on all segment hosts. You can also initialize and synchronize the PXF configuration from the Greenplum Database master host to the standby master and to all segment hosts.
 
 `pxf cluster` requires a running Greenplum Database cluster. You must run the utility on the Greenplum Database master host.
 
@@ -43,7 +43,7 @@ If you want to manage the PXF service instance on a specific segment host, use t
 <dd>Stop the PXF service instance on all segment hosts.</dd>
 
 <dt>sync  </dt>
-<dd>Synchronize PXF configuration from the master to the standby master and to all Greenplum Database segment hosts. If you have updated the PXF user configuration or added JAR files, you must also restart PXF after you synchronize PXF configuration.</dd>
+<dd>Synchronize the PXF configuration from the master to the standby master and to all Greenplum Database segment hosts. If you have updated the PXF user configuration or added JAR files, you must also restart PXF after you synchronize the PXF configuration.</dd>
 
 ## <a id="topic1__section5"></a>Examples
 

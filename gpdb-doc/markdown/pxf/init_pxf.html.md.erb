@@ -56,7 +56,7 @@ Perform the following procedure to initialize PXF on each segment host in your G
     $ ssh gpadmin@<gpmaster>
     ```
 
-4. Run the `pxf cluster init` command to initialize the PXF service on the master and, standby master, and on each segment host. For example, the following command specifies `/usr/local/greenplum-pxf` as the PXF user configuration directory for initialization:
+4. Run the `pxf cluster init` command to initialize the PXF service on the master, standby master, and on each segment host. For example, the following command specifies `/usr/local/greenplum-pxf` as the PXF user configuration directory for initialization:
 
     ``` shell
     gpadmin@gpmaster$ PXF_CONF=/usr/local/greenplum-pxf $GPHOME/pxf/bin/pxf cluster init
