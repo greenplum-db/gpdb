@@ -8774,12 +8774,18 @@
   <topic id="temp_buffers">
     <title>temp_buffers</title>
     <body>
-      <p>Sets the maximum number of temporary buffers used by each database session. These are
-        session-local buffers used only for access to temporary tables. The setting can be changed
-        within individual sessions, but only up until the first use of temporary tables within a
-        session. The cost of setting a large value in sessions that do not actually need a lot of
-        temporary buffers is only a buffer descriptor, or about 64 bytes, per increment. However if
-        a buffer is actually used, an additional 8192 bytes will be consumed. </p>
+      <p>Sets the maximum memory, in blocks, to allow for temporary buffers by each database
+        session. These are session-local buffers used only for access to temporary tables. The
+        setting can be changed within individual sessions, but only up until the first use of
+        temporary tables within a session. The cost of setting a large value in sessions that do not
+        actually need a lot of temporary buffers is only a buffer descriptor for each block, or
+        about 64 bytes, per increment. However if a buffer is actually used, an additional 32768
+        bytes will be consumed.</p>
+      <p>You can set this parameter to the number of 32K blocks (for example, <codeph>1024</codeph>
+        to allow 32MB for buffers), or specify the maximum omount of memory to allow (for example
+          <codeph>'48MB'</codeph> for 1536 blocks). The <codeph>gpconfig</codeph> utility and
+          <codeph>SHOW</codeph> command report the maximum amount of memory allowed for temporary
+        buffers.</p>
       <table id="temp_buffers_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8795,7 +8801,7 @@
           <tbody>
             <row>
               <entry colname="col1">integer</entry>
-              <entry colname="col2">1024</entry>
+              <entry colname="col2">1024 (32MB)</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
