@@ -8255,7 +8255,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">a comma- separated list of schema names</entry>
+              <entry colname="col1">a comma-separated list of schema names</entry>
               <entry colname="col2">$user,public</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
@@ -8782,7 +8782,7 @@
         about 64 bytes, per increment. However if a buffer is actually used, an additional 32768
         bytes will be consumed.</p>
       <p>You can set this parameter to the number of 32K blocks (for example, <codeph>1024</codeph>
-        to allow 32MB for buffers), or specify the maximum omount of memory to allow (for example
+        to allow 32MB for buffers), or specify the maximum amount of memory to allow (for example
           <codeph>'48MB'</codeph> for 1536 blocks). The <codeph>gpconfig</codeph> utility and
           <codeph>SHOW</codeph> command report the maximum amount of memory allowed for temporary
         buffers.</p>
