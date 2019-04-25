@@ -124,7 +124,7 @@ dbname=# SET client_min_messages=NOTICE;
 
 Because a single PXF agent (JVM) serves multiple segments on a segment host, the PXF heap size can be a limiting runtime factor. This will be more evident under concurrent workloads and/or queries against large files. You may run into situations where a query will hang or fail due to insufficient memory or the Java garbage collector impacting response times. To avert or remedy these situations, first try increasing the Java maximum heap size or decreasing the Tomcat maximum number of threads, depending upon what works best for your system configuration.
 
-**Note**: The configuration changes described in this topic require modifying config files on *each* segment node in your Greenplum Database cluster. After you perform the updates, be sure to synchronize the PXF configuration to the Greenplum Database cluster.
+**Note**: The configuration changes described in this topic require modifying config files on *each* node in your Greenplum Database cluster. After you perform the updates on the master, be sure to synchronize the PXF configuration to the Greenplum Database cluster.
 
 You will need to re-apply these configuration changes after any PXF version upgrades.
 
