@@ -419,6 +419,11 @@ DROP GROUP regressgroup1;
 DROP GROUP regressgroup2;
 
 REVOKE USAGE ON LANGUAGE sql FROM regressuser1;
+
+-- regression test: superuser create a schema and authorize it to a non-superuser
+CREATE ROLE "non_superuser_schema";
+CREATE SCHEMA test_non_superuser_schema AUTHORIZATION "non_superuser_schema";
+
 DROP USER regressuser1;
 DROP USER regressuser2;
 DROP USER regressuser3;

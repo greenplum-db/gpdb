@@ -113,18 +113,6 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 						   GetReservedPrefix(schemaName))));
 	}
 
-	/*
-	 * If the requested authorization is different from the current user,
-	 * temporarily set the current user so that the object(s) will be created
-	 * with the correct ownership.
-	 *
-	 * (The setting will be restored at the end of this routine, or in case
-	 * of error, transaction abort will clean things up.)
-	 */
-	if (saved_uid != owner_uid)
-		SetUserIdAndSecContext(owner_uid,
-							   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
-
 	/* Create the schema's namespace */
 	if (shouldDispatch || Gp_role != GP_ROLE_EXECUTE)
 	{
@@ -159,6 +147,18 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 	{
 		namespaceId = NamespaceCreate(schemaName, owner_uid);
 	}
+
+	/*
+	 * If the requested authorization is different from the current user,
+	 * temporarily set the current user so that the object(s) will be created
+	 * with the correct ownership.
+	 *
+	 * (The setting will be restored at the end of this routine, or in case of
+	 * error, transaction abort will clean things up.)
+	 */
+	if (saved_uid != owner_uid)
+		SetUserIdAndSecContext(owner_uid,
+							save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
 
 	/* Advance cmd counter to make the namespace visible */
 	CommandCounterIncrement();
