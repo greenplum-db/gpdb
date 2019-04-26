@@ -3179,28 +3179,6 @@ ExecWithCheckOptions(ResultRelInfo *resultRelInfo,
 		ExprState  *wcoExpr = (ExprState *) lfirst(l2);
 
 		/*
-		 * GPDB_94_MERGE_FIXME
-		 * When we update the view, we need to check if the updated tuple belongs
-		 * to the view. Sometimes we need to execute a subplan to help check.
-		 * The subplan is executed under the update or delete node on segment.
-		 * But we can't correctly execute a mpp subplan in the segment. So let's
-		 * disable the check first.
-		 */
-		ListCell *l;
-		bool is_subplan = false;
-		foreach(l, (List*)wcoExpr)
-		{
-			ExprState  *clause = (ExprState *) lfirst(l);
-			if (*(clause->evalfunc) == (ExprStateEvalFunc)ExecAlternativeSubPlan)
-			{
-				is_subplan = true;
-				break;
-			}
-		}
-		if (is_subplan)
-			continue;
-
-		/*
 		 * WITH CHECK OPTION checks are intended to ensure that the new tuple
 		 * is visible in the view.  If the view's qual evaluates to NULL, then
 		 * the new tuple won't be included in the view.  Therefore we need to

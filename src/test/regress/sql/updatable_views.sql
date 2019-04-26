@@ -738,14 +738,10 @@ CREATE VIEW rw_view1 AS
   WITH CHECK OPTION;
 
 INSERT INTO rw_view1 VALUES (5); -- ok
---start_ignore
 INSERT INTO rw_view1 VALUES (15); -- should fail
---end_ignore
 
 UPDATE rw_view1 SET a = a + 5; -- ok
---start_ignore
 UPDATE rw_view1 SET a = a + 5; -- should fail
---end_ignore
 
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
@@ -1114,7 +1110,6 @@ CREATE VIEW v2 WITH (security_barrier = true) AS
   SELECT * FROM v1 WHERE EXISTS (SELECT 1 FROM t2 WHERE t2.cc = v1.c)
   WITH CHECK OPTION;
 
---start_ignore
 INSERT INTO v2 VALUES (2, 'two', 20); -- ok
 INSERT INTO v2 VALUES (-2, 'minus two', 20); -- not allowed
 INSERT INTO v2 VALUES (3, 'three', 30); -- not allowed
@@ -1125,7 +1120,6 @@ UPDATE v2 SET c = 30 WHERE a = 1; -- not allowed
 
 DELETE FROM v2 WHERE a = 2; -- ok
 SELECT * FROM v2;
---end_ignore
 
 DROP VIEW v2;
 DROP VIEW v1;
