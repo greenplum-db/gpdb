@@ -1415,14 +1415,12 @@ if test "$with_libxml" = yes ; then
 fi
 
 # Check for curl.
-# CURLOPT_MAIL_FROM is introduced in curl 7.20 and only needed for email alerts.
 if test "$with_libcurl" = yes ; then
   AC_CHECK_CURL([7.19.0])
   CFLAGS="$CFLAGS $CURL_CFLAGS"
   LIBS="$LIBS $CURL_LIBS"
   AC_DEFINE([USE_CURL], 1,
           [Define to 1 to build with libcurl support. (--with-libcurl)])
-  AC_CHECK_DECLS([CURLOPT_MAIL_FROM], [], [], [#include <curl/curl.h>])
 fi
 
 # Check for bzip2
