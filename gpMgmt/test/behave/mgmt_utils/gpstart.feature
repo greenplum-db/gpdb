@@ -87,12 +87,14 @@ Feature: Validate command line arguments
         And all the segments are running
         and the segments are synchronized
 
-    Scenario: Skip checking for filespace consistency on a down segment during startup
+        @wip
+    Scenario: gpstart succeeds and prints a warning when filespaces are inconsistent
         Given the database is running
           And all the segments are running
           And the segments are synchronized
-          And the user " " creates filespace_config file for "new_filespace" on host "localhost" with gpdb port "15432" and config "new_filespace_config" in "/tmp" directory
-          And the user " " creates filespace on host "localhost" with gpdb port "15432" and config "new_filespace_config" in "/tmp" directory
+          And a filespace_config_file for filespace "new_filespace" is created using config file "new_filespace_config" in directory "/tmp"
+          And a filespace is created using config file "new_filespace_config" in directory "/tmp"
+          And temporary files are moved to the filespace new_filespace
           And the information of a "mirror" segment on any host is saved
          When user kills a mirror process with the saved information
           And the mirror with content id "0" is forcibly marked down in config
@@ -102,4 +104,10 @@ Feature: Validate command line arguments
          When the temporary filespace file is deleted on saved "mirror" segment
           And the user runs "gpstart -a"
          Then gpstart should return a return code of 0
+                # TODO: And a warning is printed
           And user can start transactions
+                # restore moving temporary files back to the default location
+		# TODO: The step below is failing because we have deleted the temporary filespace
+		#       file on the mirror
+         And temporary files are moved to the filespace default
+         And sql "drop filespace new_filespace" is executed in "template1" db

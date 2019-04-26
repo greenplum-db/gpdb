@@ -612,7 +612,7 @@ def impl(context, USER, fs_name, HOST, PORT, config_file, dir):
 @when(
     'the user "{USER}" creates filespace on host "{HOST}" with gpdb port "{PORT}" and config "{config_file}" in "{dir}" directory')
 def impl(context, USER, HOST, PORT, config_file, dir):
-    user = "-U %s" % os.environ.get(USER) if USER else None
+    user = "-U %s" % os.environ.get(USER) if USER else ""
     host = os.environ.get(HOST)
     port = os.environ.get(PORT)
     if not dir.startswith("/"):
@@ -637,10 +637,11 @@ def impl(context, config_file, dir):
     run_command(context, cmdStr)
 
 
-@given('transaction files are moved to the filespace {fs_name}')
-@then('transaction files are moved to the filespace {fs_name}')
-def impl(context, fs_name):
-    cmdStr = 'gpfilespace  --movetransfilespace "%s"' % fs_name
+@given('{fs_type} files are moved to the filespace {fs_name}')
+@then('{fs_type} files are moved to the filespace {fs_name}')
+def impl(context, fs_type, fs_name):
+    arg = "--movetransfilespace" if fs_type == "transaction" else "--movetempfilespace"
+    cmdStr = 'gpfilespace %s %s' % (arg, fs_name)
     run_command(context, cmdStr)
 
 
