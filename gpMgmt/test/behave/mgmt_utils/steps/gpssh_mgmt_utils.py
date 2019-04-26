@@ -2,6 +2,7 @@ from os import path
 import os
 import shutil
 import subprocess
+import tempfile
 
 import pipes
 
@@ -52,16 +53,50 @@ def impl(context):
        ''' % host
         context.execute_steps(cmd)
 
-@when('gpssh-exkeys is run successfully')
-def impl(context):
+def run_exkeys(hosts):
     host_opts = []
-    for host in context.gpssh_exkeys_context.allHosts():
+    for host in hosts:
         host_opts.extend(['-h', host])
 
     subprocess.check_call([
         'gpssh-exkeys',
         '-v',
     ] + host_opts)
+
+@when('gpssh-exkeys is run successfully')
+def impl(context):
+    run_exkeys(context.gpssh_exkeys_context.allHosts())
+
+@given('gpssh-exkeys is run successfully on hosts "{hosts}"')
+@when('gpssh-exkeys is run successfully on hosts "{hosts}"')
+def impl(context, hosts):
+    run_exkeys([ h.strip() for h in hosts.split(',') ])
+
+@when('gpssh-exkeys is run successfully on additional hosts "{new_hosts}"')
+def impl(context, new_hosts):
+    new_hosts = [ h.strip() for h in new_hosts.split(',') ]
+    old_hosts = [
+        h for h in context.gpssh_exkeys_context.allHosts() if h not in new_hosts
+    ]
+
+    old_host_file = tempfile.NamedTemporaryFile()
+    new_host_file = tempfile.NamedTemporaryFile()
+
+    with old_host_file, new_host_file:
+        for h in old_hosts:
+            old_host_file.write(h + '\n')
+        old_host_file.flush()
+
+        for h in new_hosts:
+            new_host_file.write(h + '\n')
+        new_host_file.flush()
+
+        subprocess.check_call([
+            'gpssh-exkeys',
+            '-v',
+            '-e', old_host_file.name,
+            '-x', new_host_file.name,
+        ])
 
 @when('gpssh-exkeys is run eok')
 def impl(context):
