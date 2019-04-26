@@ -296,9 +296,7 @@ churl_headers_cleanup(CHURL_HEADERS headers)
 	if (!settings)
 		return;
 
-	if (settings->headers)
-		curl_slist_free_all(settings->headers);
-
+	curl_slist_free_all(settings->headers);
 	pfree(settings);
 }
 
