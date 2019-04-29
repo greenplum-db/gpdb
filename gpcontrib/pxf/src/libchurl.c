@@ -72,11 +72,6 @@ typedef struct
 	/* internal buffer for upload */
 	churl_buffer *upload_buffer;
 
-	/*
-	 * holds http error code returned from remote server
-	 */
-	char	   *last_http_reponse;
-
 	/* true on upload, false on download */
 	bool		upload;
 } churl_context;
@@ -111,7 +106,6 @@ static void		check_response_status(churl_context *context);
 static void		check_response_code(churl_context *context);
 static void		check_response(churl_context *context);
 static size_t	header_callback(char *buffer, size_t size, size_t nitems, void *userp);
-static void		free_http_response(churl_context *context);
 static void		compact_internal_buffer(churl_buffer *buffer);
 static void		realloc_internal_buffer(churl_buffer *buffer, size_t required);
 static bool		handle_special_error(long response, StringInfo err);
@@ -928,8 +922,6 @@ check_response_code(churl_context *context)
 		elog(ERROR, "%s", err.data);
 
 	}
-
-	free_http_response(context);
 }
 
 /*
@@ -1083,36 +1075,14 @@ get_http_error_msg(long http_ret_code, char *msg, char *curl_error_buffer)
 	return msg;
 }
 
-void
-free_http_response(churl_context *context)
-{
-	if (!context->last_http_reponse)
-		return;
-
-	pfree(context->last_http_reponse);
-	context->last_http_reponse = NULL;
-}
-
 /*
  * Called during a perform by libcurl on either download or an upload.
- * Stores the first line of the header for error reporting
  */
 static size_t
-header_callback(char *buffer, size_t size, size_t nitems, void *userp)
+header_callback(char *buffer __attribute__((unused)), size_t size,
+				size_t nitems, void *userp __attribute__((unused)))
 {
-	const int	nbytes = size * nitems;
-	churl_context *context = (churl_context *) userp;
-
-	if (context->last_http_reponse)
-		return nbytes;
-
-	char	   *p = palloc(nbytes + 1);
-
-	memcpy(p, buffer, nbytes);
-	p[nbytes] = 0;
-	context->last_http_reponse = p;
-
-	return nbytes;
+	return (size_t)size * nitems;
 }
 
 static void
