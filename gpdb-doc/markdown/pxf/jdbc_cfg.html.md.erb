@@ -38,11 +38,13 @@ The base properties in the `jdbc-site.xml` server template file follow:
 
 #### <a id="connprop"></a>Connection-Level Properties
 
-For each connection-level property that you want PXF to pass to the JDBC driver when it establishes the connection to the external SQL database (`DriverManager.getConnection()` connection properties), add the `jdbc.connection.property.CPROP_NAME` property to `jdbc-site.xml`. Replace `CPROP_NAME` with the connection property name and specify its value:
+To set additional JDBC connection-level properties, add `jdbc.connection.property.<CPROP_NAME>` properties to `jdbc-site.xml`. PXF passes these properties to the JDBC driver when it establishes the connection to the external SQL database (`DriverManager.getConnection()`).
+
+Replace `<CPROP_NAME>` with the connection property name and specify its value:
 
 | Property       | Description                                | Value |
 |----------------|--------------------------------------------|-------|
-| jdbc.connection.property.CPROP_NAME | The name of a property (CPROP_NAME) to pass to the JDBC driver when the connection to the external SQL database is created.  | The value of the CPROP_NAME property. |
+| jdbc.connection.property.\<CPROP_NAME\> | The name of a property (\<CPROP_NAME\>) to pass to the JDBC driver when PXF establishes the connection to the external SQL database.  | The value of the \<CPROP_NAME\> property. |
 
 Example: To set the `createDatabaseIfNotExist` connection property on a JDBC connection to a MySQL database, include the following property block in `jdbc-site.xml`:
 
@@ -55,15 +57,17 @@ Example: To set the `createDatabaseIfNotExist` connection property on a JDBC con
 
 #### <a id="sessprop"></a>Session-Level Properties
 
-For each session-level parameter that you want the PXF JDBC Connector to `SET` before a query, add the `jdbc.session.property.SPROP_NAME` property to `jdbc-site.xml`. Replace `SPROP_NAME` with the session parameter name and specify its value:
+To set session-level properties, add the `jdbc.session.property.<SPROP_NAME>` property to `jdbc-site.xml`. PXF will `SET` these properties in the external database before executing a query.
+
+ Replace `<SPROP_NAME>` with the session property name and specify its value:
 
 | Property       | Description                                | Value |
 |----------------|--------------------------------------------|-------|
-| jdbc.session.property.SPROP_NAME | The name of a session parameter (SPROP_NAME) to set before query execution. | The value of the SPROP_NAME property. |
+| jdbc.session.property.\<SPROP_NAME\> | The name of a session property (\<SPROP_NAME\>) to set before query execution. | The value of the \<SPROP_NAME\> property. |
 
 **Note**: The property name and value must not include the `\n`, `\b`, or `\0` characters.
 
-The PXF JDBC Connector handles the session parameter `SET` syntax for all supported external SQL databases.
+The PXF JDBC Connector handles the session property `SET` syntax for all supported external SQL databases.
 
 Example: To set the `search_path` parameter before running a query in a PostgreSQL database, add the following property block to `jdbc-site.xml`:
 
