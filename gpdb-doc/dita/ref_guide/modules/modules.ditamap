@@ -5,7 +5,7 @@
     <topicref href="citext.xml" linking="none"/>
     <topicref href="dblink.xml" linking="none"/>
     <topicref href="fuzzystrmatch.xml" linking="none"/>
-    <topicref href="https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/gp_sparse_vector/README" format="html" scope="external" navtitle="gp_sparse_vector" linking="none"/>
+    <topicref href="gp_sparse_vector.xml" linking="none"/>
     <topicref href="hstore.xml" linking="none"/>
     <topicref href="orafce_ref.xml" linking="none"/>
     <topicref href="https://www.postgresql.org/docs/9.4/pageinspect.html" scope="external" format="html" navtitle="pageinspect" linking="none"/>
