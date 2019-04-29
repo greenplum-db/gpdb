@@ -31,7 +31,7 @@ This section describes how to use the PXF JDBC connector to access data in an ex
 
 Before you access an external SQL database using the PXF JDBC connector, ensure that:
 
-- You have configured and initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring PXF](instcfg_pxf.html) for additional information.
+- You have configured and initialized PXF, and PXF is running on each Greenplum Database segment host. See [Configuring PXF](instcfg_pxf.html) for additional information.
 - You can identify the PXF user configuration directory (`$PXF_CONF`).
 - Connectivity exists between all Greenplum Database segment hosts and the external SQL database.
 - You have configured your external SQL database for user access from all Greenplum Database segment hosts.
@@ -61,9 +61,9 @@ To access data in an external SQL database, you create a readable or writable Gr
 Use the following syntax to create a Greenplum Database external table that references an external SQL database table and uses the JDBC connector to read or write data:
 
 <pre>
-CREATE [READABLE | WRITABLE] EXTERNAL TABLE <table_name>
-    ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<external-table-name>?<b>PROFILE=Jdbc[&SERVER=&lt;servername>]</b>[&&lt;custom-option>=&lt;value>[...]]')
+CREATE [READABLE | WRITABLE] EXTERNAL TABLE &lt;table_name>
+    ( &lt;column_name> &lt;data_type> [, ...] | LIKE &lt;other_table> )
+LOCATION ('pxf://&lt;external-table-name>?<b>PROFILE=Jdbc[&SERVER=&lt;servername>]</b>[&&lt;custom-option>=&lt;value>[...]]')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
 </pre>
 
@@ -222,7 +222,7 @@ Perform the following steps to create a PostgreSQL table named `forpxf_table1` i
 
 #### <a id="ex_jdbconfig"></a>Configure the JDBC Connector 
 
-You must create a JDBC server configuration for PostgreSQL, download the PostgreSQL driver JAR file to your system, copy the JAR file to the PXF user configuration directory, synchronize PXF configuration, and then restart PXF.
+You must create a JDBC server configuration for PostgreSQL, download the PostgreSQL driver JAR file to your system, copy the JAR file to the PXF user configuration directory, synchronize the PXF configuration, and then restart PXF.
 
 1. Log in to the Greenplum Database master node:
 
@@ -262,7 +262,7 @@ You must create a JDBC server configuration for PostgreSQL, download the Postgre
     gpadmin@gpmaster$ cp postgresql-42.2.5.jar $PXF_CONF/lib/postgresql-42.2.5.jar
     ``` 
 
-3. Synchronize PXF configuration to all Greenplum Database segment hosts. For example:
+3. Synchronize the PXF configuration to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync

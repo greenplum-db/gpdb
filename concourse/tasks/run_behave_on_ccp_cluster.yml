@@ -9,4 +9,31 @@ run:
   - |
     set -ex
     ccp_src/scripts/setup_ssh_to_cluster.sh
+
+    # Install patchelf. We need to SSH as root, hence the use of
+    # cluster_env_files.
+    ssh -t ccp-$(cat cluster_env_files/terraform/name)-0 "bash -c '
+        # Our Python installation does not run standalone; it requires
+        # LD_LIBRARY_PATH which causes virtualenv to fail (because the system
+        # and vendored libpythons collide). We will try our best to install
+        # patchelf to fix this later, but it is not available on all platforms.
+        set -ex
+        if which zypper > /dev/null; then
+            zypper addrepo https://download.opensuse.org/repositories/devel:tools:building/SLE_12_SP4/devel:tools:building.repo
+            # Note that this will fail on SLES11.
+            if ! zypper --non-interactive --gpg-auto-import-keys install patchelf; then
+                set +x
+                echo \"WARNING: could not install patchelf; virtualenv may fail later\"
+                echo \"WARNING: This is a known issue on SLES11.\"
+                set -x
+            fi
+        elif which yum > /dev/null; then
+            sudo yum install -y patchelf
+        else
+            set +x
+            echo \"ERROR: install_python_hacks() does not support the current platform and should be modified\"
+            exit 1
+        fi
+    '"
+
     ssh -t mdw "$CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\""

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="2E71C10F-7A48-4F14-B13A-B3FC349037E0" Language="1033" Manufacturer="Greenplum, Inc." Name="Greenplum Clients" Version="__VERSION_PLACEHOLDER__" UpgradeCode="0EE0DD2B-0504-4B60-85E8-604852D07A9F">
-    <Package Compressed="yes" Comments="Greenplum Clients" InstallerVersion="101" Languages="1033" Manufacturer="Greenplum, Inc." Platforms="Intel" />
+    <Package Compressed="yes" Comments="Greenplum Clients" InstallerVersion="200" Languages="1033" Manufacturer="Greenplum, Inc." Platform="x64" />
     <UI>
       <Property Id="ErrorDialog"><![CDATA[ErrorDlg]]></Property>
       <Property Id="DefaultUIFont"><![CDATA[DlgFont8]]></Property>
@@ -445,7 +445,7 @@
           <Text>Select the operation you wish to perform.</Text>
         </Control>
         <Control Id="Title" Type="Text" X="15" Y="6" Width="240" Height="15" Transparent="yes" NoPrefix="yes">
-            <Text>[DlgTitleFont]Modify, Repair, or Remove [ProductName].</Text>
+          <Text>[DlgTitleFont]Modify, Repair, or Remove [ProductName].</Text>
         </Control>
         <Control Id="ChangeText" Type="Text" X="105" Y="78" Width="230" Height="20">
           <Text>Allows users to change the way features are installed.</Text>
@@ -1093,16 +1093,13 @@ If you want to review or change any of your installation settings, click Back. C
     <Binary Id="repairic" SourceFile="Binary\repairic.ico" />
     <Binary Id="Up" SourceFile="Binary\Up.ico" />
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFilesFolder" Name="PFiles">
+      <Directory Id="ProgramFiles64Folder" Name="PFiles">
         <Directory Id="gpdir" Name="Greenplum">
           <Directory Id="BASEDIR" Name="greenplum-clients-$(var.VERSION)" ShortName="bizgres1">
             <Component Id="TOPLEVELTextFiles" DiskId="1" Guid="CBED1D6A-228F-4AD2-AAD3-198B42323A22">
-               <Environment Id="CLIENTS_ENV" Action="set" Permanent="no" System="yes" Part="all" 
-                    Name="GPHOME_CLIENTS"
-                    Value="[BASEDIR]" />
-               <Environment Id="PATH_ENV" Action="set" Permanent="no" System="yes" Part="last" 
-                    Name="PATH"
-                    Value="%GPHOME_CLIENTS%bin;%GPHOME_CLIENTS%lib" />
+              <Environment Id="CLIENTS_ENV" Action="set" Permanent="no" System="yes" Part="all" Name="GPHOME_CLIENTS" Value="[BASEDIR]" />
+              <Environment Id="PYTHON_ENV" Action="set" Permanent="no" System="yes" Part="last" Name="PYTHONPATH" Value="%GPHOME_CLIENTS%\lib\python" />
+              <Environment Id="PATH_ENV" Action="set" Permanent="no" System="yes" Part="last" Name="PATH" Value="%GPHOME_CLIENTS%bin;%GPHOME_CLIENTS%lib" />
               <File Id="greenplum_clients_path.bat" Name="greenplum_clients_path.bat" ShortName="BIZGRES1.BAT" Source="$(var.SRCDIR)\greenplum_clients_path.bat" />
               <File Id="LICENSE" Name="Pivotal License" ShortName="LICENSE" Source="$(var.SRCDIR)\LICENSE" />
               <File Id="NOTICE" Name="Thirdpary Notice" ShortName="NOTICE" Source="$(var.SRCDIR)\NOTICE" />
@@ -1112,36 +1109,46 @@ If you want to review or change any of your installation settings, click Back. C
                 <File Id="psql.exe" Name="psql.exe" Source="$(var.SRCDIR)\bin\psql.exe" />
                 <File Id="pg_dump.exe" Name="pg_dump.exe" Source="$(var.SRCDIR)\bin\pg_dump.exe" />
                 <File Id="pg_dumpall.exe" Name="pg_dumpall.exe" Source="$(var.SRCDIR)\bin\pg_dumpall.exe" />
+                <File Id="gpfdist.exe" Name="gpfdist.exe" Source="$(var.SRCDIR)\bin\gpfdist.exe" />
+                <File Id="createdb.exe" Name="createdb.exe" Source="$(var.SRCDIR)\bin\createdb.exe" />
+                <File Id="libapr.dll" Name="libapr-1.dll" Source="$(var.SRCDIR)\bin\libapr-1.dll" />
+                <File Id="libpq.dll" Name="libpq.dll" Source="$(var.SRCDIR)\bin\libpq.dll" />
+                <File Id="gpload.py" Name="gpload.py" Source="$(var.SRCDIR)\bin\gpload.py" />
               </Component>
             </Directory>
             <Directory Id="TOPLEVELlib" Name="lib">
-              <Component Id="TOPLEVELlib" DiskId="1" Guid="CDFE5977-8F11-43AF-95B7-374510FA872D">
-                <File Id="libecpg.a" Name="libecpg.a" Source="$(var.SRCDIR)\lib\libecpg.a" />
-                <File Id="libecpg.dll" Name="libecpg.dll" Source="$(var.SRCDIR)\lib\libecpg.dll" />
-                <File Id="libecpg_compat.a" Name="libecpg_compat.a" ShortName="LIBECPG2.A" Source="$(var.SRCDIR)\lib\libecpg_compat.a" />
-                <File Id="libecpg_compat.dll" Name="libecpg_compat.dll" ShortName="LIBECPG2.DLL" Source="$(var.SRCDIR)\lib\libecpg_compat.dll" />
-                <File Id="libpgtypes.a" Name="libpgtypes.a" ShortName="LIBPGTY1.A" Source="$(var.SRCDIR)\lib\libpgtypes.a" />
-                <File Id="libpgtypes.dll" Name="libpgtypes.dll" ShortName="LIBPGTY1.DLL" Source="$(var.SRCDIR)\lib\libpgtypes.dll" />
-                <File Id="libpq.dll" Name="libpq.dll" Source="$(var.SRCDIR)\lib\libpq.dll" />
-                <File Id="libpq.a" Name="libpq.a" Source="$(var.SRCDIR)\lib\libpq.a" />
-                <File Id="comerr32.dll" Name="comerr32.dll" Source="$(var.SRCDIR)\lib\comerr32.dll" />
-                <File Id="gssapi32.dll" Name="gssapi32.dll" Source="$(var.SRCDIR)\lib\gssapi32.dll" />
-                <File Id="k5sprt32.dll" Name="k5sprt32.dll" Source="$(var.SRCDIR)\lib\k5sprt32.dll" />
-                <File Id="kclnt32.dll" Name="kclnt32.dll" Source="$(var.SRCDIR)\lib\kclnt32.dll" />
-                <File Id="kfwlogon.dll" Name="kfwlogon.dll" Source="$(var.SRCDIR)\lib\kfwlogon.dll" />
-                <File Id="krb4cred.dll" Name="krb4cred.dll" Source="$(var.SRCDIR)\lib\krb4cred.dll" />
-                <File Id="krb4cred_en_us.dll" Name="krb4cred_en_us.dll" Source="$(var.SRCDIR)\lib\krb4cred_en_us.dll" />
-                <File Id="krb524.dll" Name="krb524.dll" Source="$(var.SRCDIR)\lib\krb524.dll" />
-                <File Id="krb5_32.dll" Name="krb5_32.dll" Source="$(var.SRCDIR)\lib\krb5_32.dll" />
-                <File Id="krb5cred.dll" Name="krb5cred.dll" Source="$(var.SRCDIR)\lib\krb5cred.dll" />
-                <File Id="krb5cred_en_us.dll" Name="krb5cred_en_us.dll" Source="$(var.SRCDIR)\lib\krb5cred_en_us.dll" />
-                <File Id="krbcc32.dll" Name="krbcc32.dll" Source="$(var.SRCDIR)\lib\krbcc32.dll" />
-                <File Id="krbv4w32.dll" Name="krbv4w32.dll" Source="$(var.SRCDIR)\lib\krbv4w32.dll" />
-                <File Id="leashw32.dll" Name="leashw32.dll" Source="$(var.SRCDIR)\lib\leashw32.dll" />
-                <File Id="nidmgr32.dll" Name="nidmgr32.dll" Source="$(var.SRCDIR)\lib\nidmgr32.dll" />
-                <File Id="wshelp32.dll" Name="wshelp32.dll" Source="$(var.SRCDIR)\lib\wshelp32.dll" />
-                <File Id="xpprof32.dll" Name="xpprof32.dll" Source="$(var.SRCDIR)\lib\xpprof32.dll" />
-              </Component>
+              <Directory Id="PYTHONlib" Name="python">
+                <Directory Id="PYGRESQLlib" Name="pygresql">
+                  <Component Id="PYGRESQLlib" DiskId="1" Guid="CDFE5977-8F11-43AF-95B7-374510FA872D">
+                    <File Id="__init__.py.pygresql" Name="__init__.py" Source="$(var.SRCDIR)\lib\python\pygresql\__init__.py" />
+                    <File Id="_pg.pyd" Name="_pg.pyd" Source="$(var.SRCDIR)\lib\python\pygresql\_pg.pyd" />
+                    <File Id="pg.py" Name="pg.py" Source="$(var.SRCDIR)\lib\python\pygresql\pg.py" />
+                    <File Id="pgdb.py" Name="pgdb.py" Source="$(var.SRCDIR)\lib\python\pygresql\pgdb.py" />
+                    <File Id="libpq.dll.32" Name="libpq.dll" Source="$(var.SRCDIR)\lib\python\pygresql\libpq.dll" />
+                  </Component>
+                </Directory>
+                <Directory Id="YAMLlib" Name="yaml">
+                  <Component Id="YAMLlib" DiskId="1" Guid="77EAA4D5-888B-4633-BE68-8C81186EAA83">
+                    <File Id="composer.py" Name="composer.py" Source="$(var.SRCDIR)\lib\python\yaml\composer.py" />
+                    <File Id="constructor.py" Name="constructor.py" Source="$(var.SRCDIR)\lib\python\yaml\constructor.py" />
+                    <File Id="cyaml.py" Name="cyaml.py" Source="$(var.SRCDIR)\lib\python\yaml\cyaml.py" />
+                    <File Id="dumper.py" Name="dumper.py" Source="$(var.SRCDIR)\lib\python\yaml\dumper.py" />
+                    <File Id="emitter.py" Name="emitter.py" Source="$(var.SRCDIR)\lib\python\yaml\emitter.py" />
+                    <File Id="error.py" Name="error.py" Source="$(var.SRCDIR)\lib\python\yaml\error.py" />
+                    <File Id="events.py" Name="events.py" Source="$(var.SRCDIR)\lib\python\yaml\events.py" />
+                    <File Id="loader.py" Name="loader.py" Source="$(var.SRCDIR)\lib\python\yaml\loader.py" />
+                    <File Id="nodes.py" Name="nodes.py" Source="$(var.SRCDIR)\lib\python\yaml\nodes.py" />
+                    <File Id="parser.py" Name="parser.py" Source="$(var.SRCDIR)\lib\python\yaml\parser.py" />
+                    <File Id="reader.py" Name="reader.py" Source="$(var.SRCDIR)\lib\python\yaml\reader.py" />
+                    <File Id="representer.py" Name="representer.py" Source="$(var.SRCDIR)\lib\python\yaml\representer.py" />
+                    <File Id="resolver.py" Name="resolver.py" Source="$(var.SRCDIR)\lib\python\yaml\resolver.py" />
+                    <File Id="scanner.py" Name="scanner.py" Source="$(var.SRCDIR)\lib\python\yaml\scanner.py" />
+                    <File Id="serializer.py" Name="serializer.py" Source="$(var.SRCDIR)\lib\python\yaml\serializer.py" />
+                    <File Id="tokens.py" Name="tokens.py" Source="$(var.SRCDIR)\lib\python\yaml\tokens.py" />
+                    <File Id="__init__.py.yaml" Name="__init__.py" Source="$(var.SRCDIR)\lib\python\yaml\__init__.py" />
+                  </Component>
+                </Directory>
+              </Directory>
             </Directory>
           </Directory>
         </Directory>
@@ -1150,9 +1157,10 @@ If you want to review or change any of your installation settings, click Back. C
     <Media Id="1" Cabinet="greenplumClientTools.cab" EmbedCab="yes" CompressionLevel="mszip" />
     <Feature Id="Base" Level="1" ConfigurableDirectory="BASEDIR" Title="Greenplum DB Clients" Display="expand" AllowAdvertise="no" Description="Greenplum DB Clients">
       <ComponentRef Id="TOPLEVELTextFiles" />
-      <Feature Id="psql" Level="1" Title="PostgreSQL client command line tools" Description="PostgreSQL client command line tools" AllowAdvertise="no" Display="expand">
+      <Feature Id="psql" Level="1" Title="Greenplum DB client command line tools" Description="Greenplum DB client command line tools" AllowAdvertise="no" Display="expand">
         <ComponentRef Id="TOPLEVELbin" />
-        <ComponentRef Id="TOPLEVELlib" />
+        <ComponentRef Id="PYGRESQLlib" />
+        <ComponentRef Id="YAMLlib" />
       </Feature>
     </Feature>
   </Product>

@@ -26,7 +26,6 @@
             <topicref href="guc_category-list.xml#topic56"/>
         </topicref>
         <topicref href="guc-list.xml" linking="none">
-            <topicref href="guc-list.xml#add_missing_from"/>
             <topicref href="guc-list.xml#application_name"/>
             <topicref href="guc-list.xml#array_nulls"/>
             <topicref href="guc-list.xml#authentication_timeout"/>

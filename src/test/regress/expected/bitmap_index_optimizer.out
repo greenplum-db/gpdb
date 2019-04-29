@@ -616,7 +616,7 @@ explain select * from unlogged_test where c1 = 100;
          Recheck Cond: c1 = 100
          ->  Bitmap Index Scan on unlogged_test_idx  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: c1 = 100
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (6 rows)
 
 select * from unlogged_test where c1 = 100;

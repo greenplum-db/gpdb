@@ -180,11 +180,9 @@ LOGILAB_COMMON_DIR=logilab-common-$(LOGILAB_COMMON_VERSION)
 PYLINT_PYTHONPATH=$(PYLIB_DIR):$(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/
 MOCK_VERSION=1.0.1
 MOCK_DIR=mock-$(MOCK_VERSION)
-BEHAVE_VERSION=1.2.6
 SETUP_TOOLS_VERSION=36.6.0
 PARSE_VERSION=1.8.2
 ARG_PARSE_VERSION=1.2.1
-BEHAVE_DIR=behave-$(BEHAVE_VERSION)
 SETUP_TOOLS_DIR=setuptools-$(SETUP_TOOLS_VERSION)
 PARSE_DIR=parse-$(PARSE_VERSION)
 ARG_PARSE_DIR=argparse-$(ARG_PARSE_VERSION)
@@ -192,7 +190,6 @@ PYTHONSRC_INSTALL=$(PYLIB_SRC_EXT)/install
 PYTHON_VERSION=$(shell python -c "import sys; print ('%s.%s' % (sys.version_info[0:2]))")
 PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python$(PYTHON_VERSION)/site-packages
 PYTHONSRC_INSTALL_PYTHON_PATH=$(PYTHONPATH):$(PYTHONSRC_INSTALL_SITE)
-BEHAVE_BIN=$(PYTHONSRC_INSTALL)/bin/behave
 # TODO: mock-1.0.1-py2.6.egg package should be updated.
 MOCK_BIN=$(PYTHONSRC_INSTALL)/lib/python$(PYTHON_VERSION)/site-packages/mock-1.0.1-py2.6.egg
 UBUNTU_PLATFORM=$(shell if lsb_release -a 2>/dev/null | grep -q 'Ubuntu' ; then echo "Ubuntu"; fi)
@@ -220,23 +217,6 @@ $(MOCK_BIN):
 	   cd $(PYLIB_SRC_EXT)/$(MOCK_DIR)/ && \
 	   PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL) ; \
 	 fi;
-
-#
-# BEHAVE 
-#
-
-$(BEHAVE_BIN):
-	@echo "--- build $(BEHAVE_BIN)"
-	@mkdir -p $(PYTHONSRC_INSTALL_SITE)
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(BEHAVE_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(SETUP_TOOLS_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PARSE_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(ARG_PARSE_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/$(SETUP_TOOLS_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
-	@cd $(PYLIB_SRC_EXT)/$(PARSE_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
-	@cd $(PYLIB_SRC_EXT)/$(ARG_PARSE_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
-	@cd $(PYLIB_SRC_EXT)/$(BEHAVE_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
-	@echo "--- behave done"
 
 PYTHON_FILES=`grep -l --exclude=Makefile --exclude=gplogfilter "/bin/env python" *`\
 			 `grep -l "/bin/env python" $(SRC)/../sbin/*`\

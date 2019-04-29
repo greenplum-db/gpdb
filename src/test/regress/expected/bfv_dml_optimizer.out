@@ -188,7 +188,7 @@ explain update update_pk_test set b = 5;
          ->  Split  (cost=0.00..431.00 rows=1 width=22)
                ->  Result  (cost=0.00..431.00 rows=1 width=22)
                      ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (6 rows)
 
 update update_pk_test set b = 5;
@@ -211,7 +211,7 @@ explain update update_pk_test set a = 5;
                            ->  Split  (cost=0.00..431.00 rows=1 width=22)
                                  ->  Result  (cost=0.00..431.00 rows=1 width=22)
                                        ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (11 rows)
 
 update update_pk_test set a = 5;

@@ -354,7 +354,7 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a=6 WHERE a=5;
                                  ->  Result
                                        ->  Index Scan using base_tbl_pkey on base_tbl
                                              Index Cond: ((a = 5) AND (a > 0))
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (12 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view1 WHERE a=5;
@@ -364,7 +364,7 @@ EXPLAIN (costs off) DELETE FROM rw_view1 WHERE a=5;
    ->  Result
          ->  Index Scan using base_tbl_pkey on base_tbl
                Index Cond: ((a = 5) AND (a > 0))
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (5 rows)
 
 DROP TABLE base_tbl CASCADE;
@@ -435,7 +435,7 @@ EXPLAIN (costs off) UPDATE rw_view2 SET aaa=5 WHERE aaa=4;
                                  ->  Result
                                        ->  Index Scan using base_tbl_pkey on base_tbl
                                              Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (12 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view2 WHERE aaa=4;
@@ -445,7 +445,7 @@ EXPLAIN (costs off) DELETE FROM rw_view2 WHERE aaa=4;
    ->  Result
          ->  Index Scan using base_tbl_pkey on base_tbl
                Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (5 rows)
 
 DROP TABLE base_tbl CASCADE;
@@ -639,7 +639,7 @@ EXPLAIN (costs off) UPDATE rw_view2 SET a=3 WHERE a=2;
                                  Filter: ((base_tbl_1.a = 2) AND (base_tbl_1.a < 10))
                                  ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
                                        Index Cond: (a > 0)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (13 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view2 WHERE a=2;
@@ -656,7 +656,7 @@ EXPLAIN (costs off) DELETE FROM rw_view2 WHERE a=2;
                            Filter: ((base_tbl_1.a = 2) AND (base_tbl_1.a < 10))
                            ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
                                  Index Cond: (a > 0)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (12 rows)
 
 DROP TABLE base_tbl CASCADE;
@@ -2052,7 +2052,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
                                                          ->  Result
                                                                ->  Index Scan using base_tbl_pkey on base_tbl
                                                                      Index Cond: (id = 2)
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
  
  Update
    ->  Result
@@ -2070,7 +2070,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
                                                          ->  Gather Motion 3:1  (slice1; segments: 3)
                                                                ->  Index Scan using base_tbl_pkey on base_tbl
                                                                      Index Cond: (id = 2)
- Optimizer: PQO version 3.11.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.11.0
 (38 rows)
 
 INSERT INTO rw_view1 VALUES (2, 'New row 2');

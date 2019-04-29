@@ -15,7 +15,7 @@
  */
 
 /*
- * INTERFACE ROUNTINES
+ * INTERFACE ROUTINES
  *	ExecInitShareInputScan
  * 	ExecShareInputScan
  * 	ExecEndShareInputScan
@@ -794,7 +794,7 @@ shareinput_reader_notifydone(void *ctxt, int share_id)
 /*
  * shareinput_writer_waitdone
  *
- *  Called by the writer (producer) to wait for the "done" notfication from
+ *  Called by the writer (producer) to wait for the "done" notification from
  *  all readers (consumers).
  *
  *  This is a blocking operation.

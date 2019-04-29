@@ -488,7 +488,7 @@ explain (costs off)
                      ->  Seq Scan on t1
          ->  Index Scan using t2_pkey on t2
                Index Cond: (ab = 'ab'::text)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (9 rows)
 
 explain (costs off)
@@ -517,7 +517,7 @@ explain (costs off)
                                                    ->  Seq Scan on t1
                                        ->  Index Scan using t2_pkey on t2
                                              Index Cond: (ab = 'ab'::text)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (19 rows)
 
 --
@@ -620,7 +620,7 @@ explain (costs off)
                Filter: (t = 2)
                ->  Result
                      ->  Seq Scan on tenk1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (10 rows)
 
 -- Test that we push quals into UNION sub-selects only when it's safe
@@ -640,7 +640,7 @@ WHERE x < 4;
    ->  Result
          ->  Result
                One-Time Filter: false
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (9 rows)
 
 SELECT * FROM
@@ -676,7 +676,7 @@ ORDER BY x;
                      ->  Result
                            ->  Result
                                  One-Time Filter: false
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (15 rows)
 
 SELECT * FROM
@@ -747,7 +747,7 @@ select * from
          ->  Hash
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Seq Scan on int4_tbl
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
 (10 rows)
 
 select * from

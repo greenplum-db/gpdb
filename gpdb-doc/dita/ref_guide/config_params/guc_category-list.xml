@@ -150,9 +150,6 @@
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#krb_srvname" type="section">krb_srvname</xref>
-              </p>
-              <p>
                 <xref href="guc-list.xml#password_encryption" type="section"
                   >password_encryption</xref>
               </p>
@@ -1305,9 +1302,6 @@
         <simpletable frame="none" id="simpletable_bx3_r1v_bdb">
           <strow>
             <stentry>
-              <p>
-                <xref href="guc-list.xml#add_missing_from" type="section">add_missing_from</xref>
-              </p>
               <p>
                 <xref href="guc-list.xml#array_nulls" type="section">array_nulls</xref>
               </p>

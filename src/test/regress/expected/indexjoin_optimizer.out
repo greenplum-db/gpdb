@@ -50,7 +50,7 @@ ORDER BY 1 asc ;
                                              ->  Hash  (cost=431.01..431.01 rows=140 width=25)
                                                    ->  Seq Scan on my_tt_agg_small  (cost=0.00..431.01 rows=140 width=25)
  Settings:  optimizer=on; optimizer_nestloop_factor=1
- Optimizer status: PQO version 2.32.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.32.0
 (22 rows)
 
   
@@ -114,7 +114,7 @@ ORDER BY 1 asc ;
                                                    ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=676 width=20)
                                                          Hash Key: (my_tq_agg_small.sym)::bpchar
                                                          ->  Seq Scan on my_tq_agg_small  (cost=0.00..431.03 rows=676 width=20)
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
 (20 rows)
 
 reset optimizer_segments;

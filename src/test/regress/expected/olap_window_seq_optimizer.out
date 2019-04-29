@@ -7911,7 +7911,7 @@ explain select count(*) over (order by i), count(*) over (partition by i order b
                                  Sort Key: i
                                  ->  Seq Scan on redundant_sort_check  (cost=0.00..431.00 rows=1 width=8)
  Settings:  optimizer=on
- Optimizer status: PQO version 1.675
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.675
 (15 rows)
 
 -- End of MPP-13710
@@ -8120,7 +8120,7 @@ explain select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, 
                            ->  Hash  (cost=431.00..431.00 rows=5 width=4)
                                  ->  Seq Scan on foo  (cost=0.00..431.00 rows=5 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 1.622
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.622
 (16 rows)
 
 drop table foo, bar;
@@ -8192,7 +8192,7 @@ FROM foo;
                                                                      Sort Key: a, b, c, d
                                                                      ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=16)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.45.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.45.0
 (31 rows)
 
 drop table foo;
@@ -8227,7 +8227,7 @@ explain select k from ( select row_number() over()+2 as k from window_preds unio
                ->  WindowAgg  (cost=0.00..431.00 rows=1 width=8)
                      ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                            ->  Seq Scan on window_preds window_preds_1  (cost=0.00..431.00 rows=1 width=1)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (14 rows)
 
 select k from ( select row_number() over()+2 as k from window_preds union all select row_number() over()+2 as k from window_preds) as t where k = 3;
@@ -8257,7 +8257,7 @@ explain insert into window_preds select k from ( select row_number() over()+2 as
                                  ->  WindowAgg  (cost=0.00..431.00 rows=1 width=8)
                                        ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                                              ->  Seq Scan on window_preds window_preds_1  (cost=0.00..431.00 rows=1 width=1)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (18 rows)
 
 insert into window_preds select k from ( select row_number() over()+2 as k from window_preds union all select row_number() over()+2 as k from window_preds) as t where k = 3;
@@ -8285,7 +8285,7 @@ explain SELECT t.k FROM window_preds p1, window_preds p2, (SELECT ROW_NUMBER() O
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                                  ->  Seq Scan on window_preds window_preds_1  (cost=0.00..431.00 rows=1 width=1)
                            ->  Seq Scan on window_preds  (cost=0.00..431.00 rows=1 width=1)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (22 rows)
 
 SELECT t.k FROM window_preds p1, window_preds p2, (SELECT ROW_NUMBER() OVER() AS k FROM window_preds union all SELECT ROW_NUMBER() OVER() AS k FROM window_preds) AS t WHERE t.k = 1 limit 1;
@@ -8317,7 +8317,7 @@ explain with CTE as (select i, row_number() over (partition by j) j from window_
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                                  Hash Key: window_preds_1.j
                                  ->  Seq Scan on window_preds window_preds_1  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (21 rows)
 
 insert into window_preds with CTE as (select i, row_number() over (partition by j) j from window_preds union all select i, row_number() over (partition by j) from window_preds) select * from cte where j = 1;
@@ -8336,7 +8336,7 @@ explain select k from ( select k from (select row_number() over() as k from wind
                Filter: "outer".k = 1
                ->  Result  (cost=0.00..431.00 rows=1 width=8)
                      ->  Seq Scan on window_preds window_preds_1  (cost=0.00..431.00 rows=1 width=1)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (12 rows)
 
 select k from ( select k from (select row_number() over() as k from window_preds) f union all select 1::bigint as k from window_preds) as t where k = 1;
@@ -8385,7 +8385,7 @@ explain insert into window_preds select k from ( select k from (select row_numbe
                                  Filter: "outer".k = 1
                                  ->  Result  (cost=0.00..431.00 rows=1 width=8)
                                        ->  Seq Scan on window_preds window_preds_1  (cost=0.00..431.00 rows=1 width=1)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (16 rows)
 
 insert into window_preds select k from ( select k from (select row_number() over() as k from window_preds) f union all select 1::bigint as k from window_preds) as t where k = 1;
@@ -8412,7 +8412,7 @@ explain with CTE as (select i, row_number() over (partition by j) j from window_
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                                        Hash Key: window_preds_1.j
                                        ->  Seq Scan on window_preds window_preds_1  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (21 rows)
 
 insert into window_preds with CTE as (select i, row_number() over (partition by j) j from window_preds union all select i, row_number() over (partition by j) from window_preds) select * from cte where i = 1;
@@ -8560,7 +8560,7 @@ EXPLAIN WITH cte as (SELECT *, row_number() over () FROM window_part_sales) SELE
                      ->  Partition Selector for window_part_sales (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
                            Partitions selected: 12 (out of 12)
                      ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
- Optimizer: PQO version 3.33.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.33.0
 (9 rows)
 
 -- If there is a PARTITION BY in the window function, we can push down ONLY the predicates that match the PARTITION BY column.
@@ -8581,7 +8581,7 @@ EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY region) FROM wind
                                        Partitions selected: 6 (out of 12)
                                  ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
                                        Filter: (region = 'usa'::text)
- Optimizer: PQO version 3.33.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.33.0
 (15 rows)
 
 -- When both columns in the filter predicates are in the window function, it is possible to push both down.
@@ -8600,7 +8600,7 @@ EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM
                                  Partitions selected: 8 (out of 12)
                            ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
                                  Filter: ((date > '03-01-2011'::date) AND (region = 'usa'::text))
- Optimizer: PQO version 3.33.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.33.0
 (13 rows)
 
 -- When the column in the filter predicates is also present in the window function, it is possible to push it down.
@@ -8619,7 +8619,7 @@ EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM
                                  Partitions selected: 6 (out of 12)
                            ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
                                  Filter: (region = 'usa'::text)
- Optimizer: PQO version 3.33.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.33.0
 (13 rows)
 
 -- When there is a disjunct in the filter predicates, it is not possible to push down either into the window function.
@@ -8638,7 +8638,7 @@ EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM
                                  Partitions selected: 12 (out of 12)
                            ->  Dynamic Seq Scan on window_part_sales (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
                                  Filter: ((date > '03-01-2011'::date) OR (region = 'usa'::text))
- Optimizer: PQO version 3.33.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.33.0
 (13 rows)
 
 -- End of Test

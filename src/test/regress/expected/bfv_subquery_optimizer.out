@@ -492,7 +492,7 @@ EXPLAIN SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
                  ->  Result  (cost=0.00..0.00 rows=1 width=6)
                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.46.3
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.46.3
 (9 rows)
 
 DROP TABLE A;

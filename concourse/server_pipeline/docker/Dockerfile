@@ -28,7 +28,7 @@ RUN apt update && apt install -y \
     inetutils-ping \
     libapr1-dev \
     libbz2-dev \
-    libcurl4-gnutls-dev \
+    libcurl4-openssl-dev \
     libevent-dev \
     libkrb5-dev \
     libpam-dev \

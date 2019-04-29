@@ -33,7 +33,7 @@ More information can be found on the [project website](https://greenplum.org/).
 ## Building Greenplum Database with GPORCA
 GPORCA is a cost-based optimizer which is used by Greenplum Database in
 conjunction with the PostgreSQL planner.  It is also known as just ORCA,
-and Pivotal Query Optimizer (PQO). The code for GPORCA resides in a
+and Pivotal Optimizer. The code for GPORCA resides in a
 separate repository, below are steps outlining how to build Greenplum with
 GPORCA enabled.
 
@@ -179,6 +179,11 @@ gpperfmon is dependent on several libraries like apr, apu, and libsigar
 GPDB supports Python3 with plpython3u UDF
 
 See [how to enable Python3](src/pl/plpython/README.md) for details.
+
+
+### Building GPDB client tools on Windows
+
+See [Building GPDB client tools on Windows](README.windows.md) for details.
 
 ## Development with Docker
 

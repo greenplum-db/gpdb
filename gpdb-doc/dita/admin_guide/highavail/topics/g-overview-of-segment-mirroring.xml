@@ -8,8 +8,12 @@
             instances: <i>primary</i> and <i>mirror</i>. Each primary segment has one corresponding
             mirror segment. A primary segment instance receives requests from the master to make
             changes to the segment data and then replicates those changes to the corresponding
-            mirror. If a primary segment becomes unavailable, database queries fail over to the
-            mirror segment.</p>
+            mirror. If Greenplum Database detects that a primary segment has failed or become
+            unavailable, it changes the role of its mirror segment to primary segment and the role
+            of the unavailable primary segment to mirror segment. Transactions in progress when the
+            failure occurred roll back and must be restarted. The administrator must then recover
+            the mirror segment, allow the mirror to syncronize with the current primary segment, and
+            then exchange the primary and mirror segments so they are in their preferred roles.</p>
         <p>If segment mirroring is not enabled, the Greenplum Database system shuts down if a
             segment instance fails. Administrators must manually recover all failed segments before
             Greenplum Database operations can resume.</p>

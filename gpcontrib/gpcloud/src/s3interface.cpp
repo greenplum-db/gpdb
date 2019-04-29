@@ -31,6 +31,7 @@ S3InterfaceService::~S3InterfaceService() {
 
 Response S3InterfaceService::getResponseWithRetries(const string &url, HTTPHeaders &headers,
                                                     uint64_t retries) {
+    string code;
     string message;
     uint64_t retry = retries;
 
@@ -43,6 +44,14 @@ Response S3InterfaceService::getResponseWithRetries(const string &url, HTTPHeade
                 S3_DIE(S3QueryAbort, "Downloading is interrupted");
             }
             S3WARN("Failed to get a good response in GET from '%s', retrying ...", url.c_str());
+        } catch (S3LogicError &e) {
+            code = e.getCode();
+            if (code == "NoSuchKey") {
+                sleep(1);
+                continue;
+            } else {
+                throw e;
+            }
         }
     };
 

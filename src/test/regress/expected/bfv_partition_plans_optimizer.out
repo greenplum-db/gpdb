@@ -1151,7 +1151,7 @@ EXPLAIN SELECT b FROM bar GROUP BY b;
                      Partitions selected: 2 (out of 2)
                ->  Dynamic Seq Scan on bar (dynamic scan id: 1)  (cost=0.00..431.01 rows=334 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.5.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.5.0
 (9 rows)
 
 -- CLEANUP
@@ -1199,7 +1199,7 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
    (slice0)    Executor memory: 386K bytes.
    (slice1)    Executor memory: 4234K bytes avg x 3 workers, 4234K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 5.260 ms
 (19 rows)
 
@@ -1244,7 +1244,7 @@ EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
                Partitions selected: 2 (out of 2)
          ->  Dynamic Index Scan on part_tbl (dynamic scan id: 1)  (cost=0.00..2.00 rows=1 width=24)
                Index Cond: profile_key = 99999999::numeric
- Optimizer status: PQO version 2.31.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.31.0
 (7 rows)
 
 SELECT * FROM part_tbl WHERE profile_key = 99999999;
@@ -1328,7 +1328,7 @@ explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate par
                                  Partitions selected: 1 (out of 9)
                            ->  Dynamic Seq Scan on r_part (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
                                  Filter: a = 1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (15 rows)
 
 -- the numbers in the filter should be both on segment 0
@@ -1341,7 +1341,7 @@ explain select * from r_part where a in (7,8); -- should eliminate partitions
                Partitions selected: 2 (out of 9)
          ->  Dynamic Seq Scan on r_part (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
                Filter: a = ANY ('{7,8}'::integer[])
- Optimizer: PQO version 2.71.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.71.0
 (7 rows)
 
 -- Test partition elimination in prepared statements
@@ -1379,7 +1379,7 @@ explain select * from r_part where a = 1 order by a,b; -- should eliminate parti
                ->  Dynamic Seq Scan on r_part (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
                      Filter: a = 1
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (12 rows)
 
 --force_explain
@@ -1397,7 +1397,7 @@ explain execute f1(1); -- should eliminate partitions
                ->  Dynamic Seq Scan on r_part (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
                      Filter: a = 1
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (12 rows)
 
 --force_explain
@@ -1415,7 +1415,7 @@ explain execute f2(2); -- should eliminate partitions
                ->  Dynamic Seq Scan on r_part (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
                      Filter: a = 2
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (12 rows)
 
 -- Test partition elimination on CO tables
@@ -1432,7 +1432,7 @@ explain select * from r_co where a=2; -- should eliminate partitions
          ->  Dynamic Seq Scan on r_co (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
                Filter: a = 2
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (9 rows)
 
 -- test partition elimination in prepared statements on CO tables
@@ -1452,7 +1452,7 @@ explain execute f3(2); -- should eliminate partitions
                ->  Dynamic Seq Scan on r_co (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
                      Filter: a = 2
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (12 rows)
 
 -- start_ignore
@@ -1494,7 +1494,7 @@ explain select * from fact where dd < '2009-01-02'::date; -- partitions eliminat
          ->  Dynamic Seq Scan on fact (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
                Filter: dd < '01-02-2009'::date
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (9 rows)
 
 explain select * from fact where dd < to_date('2009-01-02','YYYY-MM-DD'); -- partitions eliminated
@@ -1508,7 +1508,7 @@ explain select * from fact where dd < to_date('2009-01-02','YYYY-MM-DD'); -- par
          ->  Dynamic Seq Scan on fact (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
                Filter: dd < '01-02-2009'::date
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (9 rows)
 
 explain select * from fact where dd < current_date; --partitions eliminated
@@ -1522,7 +1522,7 @@ explain select * from fact where dd < current_date; --partitions eliminated
          ->  Dynamic Seq Scan on fact (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
                Filter: dd < '10-22-2017'::date
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (9 rows)
 
 -- Test partition elimination in prepared statements
@@ -1539,7 +1539,7 @@ explain execute f1('2009-01-02'::date); -- should eliminate partitions
          ->  Dynamic Seq Scan on fact (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
                Filter: dd < '01-02-2009'::date
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (9 rows)
 
 -- force_explain
@@ -1554,7 +1554,7 @@ explain execute f1(to_date('2009-01-02', 'YYYY-MM-DD')); -- should eliminate par
          ->  Dynamic Seq Scan on fact (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=16)
                Filter: dd < '01-02-2009'::date
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.47.1
 (9 rows)
 
 -- start_ignore

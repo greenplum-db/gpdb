@@ -36,7 +36,7 @@ Physical plan:
                        Output: $0,
                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
                              Output: true
- Optimizer: PQO version 2.55.2
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.2
 (13 rows)
 ```
 

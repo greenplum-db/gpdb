@@ -117,7 +117,6 @@ test_churl_init_upload(void **state)
 	assert_true(context->upload_buffer != NULL);
 	assert_true(context->curl_handle != NULL);
 	assert_true(context->multi_handle != NULL);
-	assert_true(context->last_http_reponse == NULL);
 	assert_true(context->curl_still_running == 0);
 
 	/* tear down */
@@ -156,7 +155,6 @@ test_churl_init_download(void **state)
 	assert_true(context->upload_buffer != NULL);
 	assert_true(context->curl_handle != NULL);
 	assert_true(context->multi_handle != NULL);
-	assert_true(context->last_http_reponse == NULL);
 
 	/* tear down */
 	pfree(mock_curl_handle);

@@ -620,7 +620,7 @@ explain (costs off)
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
                ->  Seq Scan on tenk1
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (5 rows)
 
 select min(unique1) from tenk1;
@@ -637,7 +637,7 @@ explain (costs off)
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
                ->  Seq Scan on tenk1
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (5 rows)
 
 select max(unique1) from tenk1;
@@ -655,7 +655,7 @@ explain (costs off)
          ->  Aggregate
                ->  Index Scan using tenk1_unique1 on tenk1
                      Index Cond: (unique1 < 42)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)
 
 select max(unique1) from tenk1 where unique1 < 42;
@@ -673,7 +673,7 @@ explain (costs off)
          ->  Aggregate
                ->  Index Scan using tenk1_unique1 on tenk1
                      Index Cond: (unique1 > 42)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)
 
 select max(unique1) from tenk1 where unique1 > 42;
@@ -693,7 +693,7 @@ explain (costs off)
          ->  Aggregate
                ->  Index Scan using tenk1_unique1 on tenk1
                      Index Cond: (unique1 > 42000)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)
 
 select max(unique1) from tenk1 where unique1 > 42000;
@@ -713,7 +713,7 @@ explain (costs off)
          ->  Aggregate
                ->  Index Scan using tenk1_thous_tenthous on tenk1
                      Index Cond: (thousand = 33)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)
 
 select max(tenthous) from tenk1 where thousand = 33;
@@ -731,7 +731,7 @@ explain (costs off)
          ->  Aggregate
                ->  Index Scan using tenk1_thous_tenthous on tenk1
                      Index Cond: (thousand = 33)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (6 rows)
 
 select min(tenthous) from tenk1 where thousand = 33;
@@ -758,7 +758,7 @@ explain (costs off)
                  ->  Materialize
                        ->  Gather Motion 3:1  (slice2; segments: 3)
                              ->  Seq Scan on tenk1
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (11 rows)
 
 select f1, (select min(unique1) from tenk1 where unique1 > f1) AS gt
@@ -781,7 +781,7 @@ explain (costs off)
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
                ->  Seq Scan on tenk1
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (5 rows)
 
 select distinct max(unique2) from tenk1;
@@ -800,7 +800,7 @@ explain (costs off)
          ->  Gather Motion 3:1  (slice1; segments: 3)
                ->  Aggregate
                      ->  Seq Scan on tenk1
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (7 rows)
 
 select max(unique2) from tenk1 order by 1;
@@ -819,7 +819,7 @@ explain (costs off)
          ->  Gather Motion 3:1  (slice1; segments: 3)
                ->  Aggregate
                      ->  Seq Scan on tenk1
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (7 rows)
 
 select max(unique2) from tenk1 order by max(unique2);
@@ -840,7 +840,7 @@ explain (costs off)
                      ->  Gather Motion 3:1  (slice1; segments: 3)
                            ->  Aggregate
                                  ->  Seq Scan on tenk1
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (9 rows)
 
 select max(unique2) from tenk1 order by max(unique2)+1;
@@ -860,7 +860,7 @@ explain (costs off)
                ->  Gather Motion 3:1  (slice1; segments: 3)
                      ->  Aggregate
                            ->  Seq Scan on tenk1
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (8 rows)
 
 select max(unique2), generate_series(1,3) as g from tenk1 order by g desc;

@@ -42,7 +42,7 @@ When you configure the PXF JDBC Connector to access an external SQL database, yo
 2. Create the directory `$PXF_CONF/servers/<server_name>`.
 3. Copy the PXF `jdbc-site.xml` template configuration file to the new server directory.
 4. Fill in appropriate values for the properties in the template file.
-6. Synchronize the server configuration to each Greenplum Database segment host.
+6. Synchronize the server configuration to the Greenplum Database cluster.
 7. Publish the PXF server name(s) to your Greenplum Database end users as appropriate.
 
 The Greenplum Database user specifies the `<server_name>` in the `CREATE EXTERNAL TABLE` `LOCATION` clause `SERVER` option to access the external SQL database. For example, if you created a server configuration and named the server directory `pgsrvcfg`:
@@ -61,7 +61,7 @@ While not recommended, you can override a JDBC server configuration by directly 
 
 Ensure that you have initialized PXF before you configure a JDBC Connector server.
 
-In this procedure, you name and add a PXF JDBC server configuration for a PostgreSQL database and synchronize the server configuration(s) to all segment hosts.
+In this procedure, you name and add a PXF JDBC server configuration for a PostgreSQL database and synchronize the server configuration(s) to the Greenplum Database cluster.
 
 1. Log in to your Greenplum Database master node:
 
@@ -110,7 +110,7 @@ In this procedure, you name and add a PXF JDBC server configuration for a Postgr
     ```
 6. Save your changes and exit the editor.
 
-7. Use the `pxf cluster sync` command to copy the new server configurations to each Greenplum Database segment host. For example:
+7. Use the `pxf cluster sync` command to copy the new server configuration to the Greenplum Database cluster. For example:
     
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync

@@ -130,7 +130,7 @@ explain (costs off) SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
                ->  Index Scan using wowidx on test_tsvector
                      Index Cond: (a @@ '''wr'' | ''qh'''::tsquery)
                      Filter: (a @@ '''wr'' | ''qh'''::tsquery)
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
 SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
@@ -204,7 +204,7 @@ explain (costs off) SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
                ->  Index Scan using wowidx on test_tsvector
                      Index Cond: (a @@ '''wr'' | ''qh'''::tsquery)
                      Filter: (a @@ '''wr'' | ''qh'''::tsquery)
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
 SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
@@ -282,7 +282,7 @@ explain (costs off) SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
          ->  Aggregate
                ->  Seq Scan on test_tsvector
                      Filter: (a @@ '''wr'' | ''qh'''::tsquery)
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (6 rows)
 
 SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';

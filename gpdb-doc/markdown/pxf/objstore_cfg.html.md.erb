@@ -46,7 +46,7 @@ When you configure a PXF object store connector, you add at least one named PXF 
 3. Copy the PXF template configuration file corresponding to the object store to the new server directory.
 4. Fill in appropriate values for the properties in the template file.
 5. Add additional properties and values if required for your environment.
-6. Synchronize the server configuration to each Greenplum Database segment host.
+6. Synchronize the server configuration to the Greenplum Database cluster.
 7. Publish the PXF server names to your Greenplum Database end users as appropriate.
 
 The Greenplum Database user specifies the server name in the `CREATE EXTERNAL TABLE` `LOCATION` clause `SERVER` option to access the object store. For example:
@@ -224,7 +224,7 @@ To enable SSE-C for a specific S3 bucket, use the property name variants that in
 
 Ensure that you have initialized PXF before you configure an object store connector.
 
-In this procedure, you name and add a PXF server configuration in the `$PXF_CONF/servers` directory on the Greenplum Database master host for each object store connector that you plan to use. You then use the `pxf cluster sync` command to sync the server configuration(s) to all segment hosts.
+In this procedure, you name and add a PXF server configuration in the `$PXF_CONF/servers` directory on the Greenplum Database master host for each object store connector that you plan to use. You then use the `pxf cluster sync` command to sync the server configuration(s) to the Greenplum Database cluster.
 
 1. Log in to your Greenplum Database master node:
 
@@ -275,7 +275,7 @@ In this procedure, you name and add a PXF server configuration in the `$PXF_CONF
 
     6. Repeat Step 3 to configure the next object store connector.
 
-4. Use the `pxf cluster sync` command to copy the new server configurations to each Greenplum Database segment host. For example:
+4. Use the `pxf cluster sync` command to copy the new server configurations to the Greenplum Database cluster. For example:
     
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
