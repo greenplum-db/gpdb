@@ -1539,7 +1539,7 @@ custom_fmtopts_string(const char *src)
 	if (!src)
 		return NULL;
 
-	to_free = srcdup = pstrdup(src);
+	to_free = srcdup = pg_strdup(src);
 	srcdup_end = srcdup + strlen(srcdup);
 	initPQExpBuffer(&result);
 
@@ -1584,7 +1584,7 @@ custom_fmtopts_string(const char *src)
 	if (last >= 0 && (result.data[last] == ',' || result.data[last] == '='))
 		result.data[last] = '\0';
 
-	free(to_free);
+	pg_free(to_free);
 	return result.data;
 }
 
