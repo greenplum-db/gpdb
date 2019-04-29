@@ -23,7 +23,7 @@ The PXF JDBC connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR 
 
 ### <a id="cfg_server"></a>JDBC Server Configuration
 
-PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies the minimum set of properties that you must configure to use the PXF JDBC Connector. The template also includes optional properties that you can set on JDBC connection establishment and before query execution in the external database session.
+PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies properties that you can configure to establish a connection to the external SQL database. The template also includes optional properties that you can set before query execution in the external database session.
 
 The base properties in the `jdbc-site.xml` server template file follow:
 
