@@ -150,6 +150,7 @@ void		libpqwalreceiver_PG_init(void);
 
 /* prototypes for functions in walreceiver.c */
 extern void WalReceiverMain(void) __attribute__((noreturn));
+extern void ProcessWalRcvInterrupts(void);
 
 /* prototypes for functions in walreceiverfuncs.c */
 extern Size WalRcvShmemSize(void);
