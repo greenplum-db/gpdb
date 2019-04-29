@@ -111,6 +111,6 @@ Feature: Tests for gpmovemirrors
           And verify that mirrors are recognized after a restart
           And the tablespace is valid
 
-         When user kills all primary processes
+         When user stops all primary processes
           And user can start transactions
          Then the tablespace is valid
