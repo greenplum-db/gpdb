@@ -23,9 +23,9 @@ The PXF JDBC connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR 
 
 ### <a id="cfg_server"></a>JDBC Server Configuration
 
-PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies the minimum set of properties that you must configure to use the PXF JDBC Connector.
+PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies the minimum set of properties that you must configure to use the PXF JDBC Connector. The template also includes optional properties that you can set on JDBC connection establishment and before query execution in the external database session.
 
-The properties in the `jdbc-site.xml` server template file follow:
+The base properties in the `jdbc-site.xml` server template file follow:
 
 | Property       | Description                                | Value |
 |----------------|--------------------------------------------|-------|
@@ -35,6 +35,46 @@ The properties in the `jdbc-site.xml` server template file follow:
 | jdbc.password | The password for `jdbc.user`. | The password for connecting to the database. |
 
 <div class="note">When you configure a PXF JDBC server, you specify the external database user credentials to PXF in clear text in a configuration file.</div>
+
+#### <a id="connprop"></a>Connection-Level Properties
+
+For each connection-level property that you want PXF to pass to the JDBC driver when it establishes the connection to the external SQL database (`DriverManager.getConnection()` connection properties), add the `jdbc.connection.property.CPROP_NAME` property to `jdbc-site.xml`. Replace `CPROP_NAME` with the connection property name and specify its value:
+
+| Property       | Description                                | Value |
+|----------------|--------------------------------------------|-------|
+| jdbc.connection.property.CPROP_NAME | The name of a property (CPROP_NAME) to pass to the JDBC driver when the connection to the external SQL database is created.  | The value of the CPROP_NAME property. |
+
+Example: To set the `createDatabaseIfNotExist` connection property on a JDBC connection to a MySQL database, include the following property block in `jdbc-site.xml`:
+
+``` xml
+<property>
+    <name>jdbc.connection.property.createDatabaseIfNotExist</name>
+    <value>true</value>
+ </property>
+```
+
+#### <a id="sessprop"></a>Session-Level Properties
+
+For each session-level parameter that you want the PXF JDBC Connector to `SET` before a query, add the `jdbc.session.property.SPROP_NAME` property to `jdbc-site.xml`. Replace `SPROP_NAME` with the session parameter name and specify its value:
+
+| Property       | Description                                | Value |
+|----------------|--------------------------------------------|-------|
+| jdbc.session.property.SPROP_NAME | The name of a session parameter (SPROP_NAME) to set before query execution. | The value of the SPROP_NAME property. |
+
+**Note**: The property name and value must not include the `\n`, `\b`, or `\0` characters.
+
+The PXF JDBC Connector handles the session parameter `SET` syntax for all supported external SQL databases.
+
+Example: To set the `search_path` parameter before running a query in a PostgreSQL database, add the following property block to `jdbc-site.xml`:
+
+``` xml
+<property>
+    <name>jdbc.session.property.search_path</name>
+    <value>public</value>
+</property>
+```
+
+## <a id="cfg_server_proc"></a>Configuration Procedure
 
 When you configure the PXF JDBC Connector to access an external SQL database, you add at least one named PXF server configuration for the connector. You:
 
@@ -55,9 +95,9 @@ FORMAT 'TEXT' (delimiter=E',');
 
 <div class="note info">A Greenplum Database user who queries or writes to an external table that specifies a server name accesses the external SQL database with the credentials configured for that server.</div>
 
-While not recommended, you can override a JDBC server configuration by directly specifying the driver, database URL, and/or user credentials via custom options in the `CREATE EXTERNAL TABLE` command `LOCATION` clause. Refer to [Accessing an SQL Database with JDBC](jdbc_pxf.html) for additional information.
+While not recommended, you can override a JDBC server configuration by directly specifying the driver, database URL, and/or user credentials via custom options in the `CREATE EXTERNAL TABLE` command `LOCATION` clause. Refer to [Overriding the JDBC Server Configuration](jdbc_pxf.html#jdbc_override) for additional information.
 
-## <a id="cfg_proc"></a>Example Configuration Procedure
+### <a id="cfg_proc" class="no-quick-link"></a>Example
 
 Ensure that you have initialized PXF before you configure a JDBC Connector server.
 

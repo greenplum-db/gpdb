@@ -74,7 +74,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<external&#8209;table&#8209;name\>    | The full name of the external table. Depends on the external SQL database, may include a schema name and a table name. |
 | PROFILE    | The `PROFILE` keyword value must specify `Jdbc`. |
 | SERVER=\<servername\>   | The named server configuration that PXF uses to access the external SQL database. |
-| \<custom&#8209;option\>  | \<custom-option\> is profile-specific. `Jdbc` profile-specific options are discussed in the next section.|
+| \<custom&#8209;option\>=\<value\>  | \<custom-option\> is profile-specific. `Jdbc` profile-specific options are discussed in the next section.|
 | FORMAT 'CUSTOM' | The JDBC `CUSTOM` `FORMAT` supports the built-in `'pxfwritable_import'` `FORMATTER` function for read operations and the built-in `'pxfwritable_export'` function for write operations. |
 
 **Note**: You cannot use the `HEADER` option in your `FORMAT` specification when you create a PXF external table.
@@ -82,27 +82,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 
 ### <a id="jdbcoptions"></a>JDBC Custom Options
 
-You include JDBC connector custom options in the `LOCATION` URI, prefacing each option with an ampersand `&`.
-
-The `Jdbc` profile supports the following connection-related \<custom-option\>s:
-
-| Custom Option Name   | jdbc-site.xml Property Name | Description
-|----------------------|-----------------------------|--------|
-| JDBC_DRIVER | jdbc.driver | The JDBC driver class name. (Required) |
-| DB_URL | jdbc.url | The external database URL. Depends on the external SQL database, typically includes at least the hostname, port, and database name. (Required) |
-| USER | jdbc.user | The database user name. Required if `PASS` is provided. |
-| PASS | jdbc.password | The database password for `USER`. Required if `USER` is provided. |
-
-<div class="note">If you provide a <code>SERVER=&lt;servername></code> in the <code>CREATE EXTERNAL TABLE</code> <code>LOCATION</code> clause, any connection option that you include in the <code>LOCATION</code> clause overrides the value that you specified in the <code>&lt;servername></code>'s <code>jdbc-site.xml</code> configuration file.</div>
-
-Example JDBC \<custom-option\> connection strings:
-
-``` pre
-&JDBC_DRIVER=org.postgresql.Driver&DB_URL=jdbc:postgresql://gpmaster:5432/pgtestdb&USER=pguser1&PASS=changeme
-&JDBC_DRIVER=com.mysql.jdbc.Driver&DB_URL=jdbc:mysql://mysqlhost:3306/testdb&USER=user1&PASS=changeme
-```
-
-Additional `CREATE EXTERNAL TABLE` \<custom-option\>s supported by the `Jdbc` profile include:
+You include JDBC connector custom options in the `LOCATION` URI, prefacing each option with an ampersand `&`. `CREATE EXTERNAL TABLE` \<custom-option\>s supported by the `Jdbc` profile include:
 
 | Option Name   | Operation | Description
 |---------------|------------|--------|
@@ -328,4 +308,28 @@ Perform the following procedure to insert some data into the `forpxf_table1` Pos
        1
     (6 rows)
     ```
+
+## <a id="jdbc_override"></a>Overriding the JDBC Server Configuration
+
+If you are accessing an external SQL database, you can override the JDBC server configuration connection parameters by directly specifying these custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+
+| Custom Option Name   | jdbc-site.xml Property Name | Description
+|----------------------|-----------------------------|--------|
+| JDBC_DRIVER | jdbc.driver | The JDBC driver class name. (Required) |
+| DB_URL | jdbc.url | The external database URL. Depends on the external SQL database, typically includes at least the hostname, port, and database name. (Required) |
+| USER | jdbc.user | The database user name. Required if `PASS` is provided. |
+| PASS | jdbc.password | The database password for `USER`. Required if `USER` is provided. |
+
+Example JDBC \<custom-option\> connection strings:
+
+``` pre
+&JDBC_DRIVER=org.postgresql.Driver&DB_URL=jdbc:postgresql://pgserverhost:5432/pgtestdb&USER=pguser1&PASS=changeme
+&JDBC_DRIVER=com.mysql.jdbc.Driver&DB_URL=jdbc:mysql://mysqlhost:3306/testdb&USER=user1&PASS=changeme
+```
+For example:
+<pre>CREATE EXTERNAL TABLE pxf_pgtbl(name text, orders int)
+  LOCATION ('pxf://public.forpxf_table1?PROFILE=Jdbc<b>&JDBC_DRIVER=org.postgresql.Driver&DB_URL=jdbc:postgresql://pgserverhost:5432/pgtestdb&USER=pxfuser1&PASS=changeme</b>')
+FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export');</pre>
+
+<div class="note warning">Credentials that you provide in this manner are visible as part of the external table definition. Do not use this method of passing credentials in a production environment.</div>
 
