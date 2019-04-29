@@ -65,7 +65,7 @@ To set session-level properties, add the `jdbc.session.property.<SPROP_NAME>` pr
 |----------------|--------------------------------------------|-------|
 | jdbc.session.property.\<SPROP_NAME\> | The name of a session property (\<SPROP_NAME\>) to set before query execution. | The value of the \<SPROP_NAME\> property. |
 
-**Note**: The property name and value must not include the `\n`, `\b`, or `\0` characters.
+**Note**: The PXF JDBC Connector passes both the session property name and property value to the external SQL database exactly as specified in the `jdbc-site.xml` server configuration file. To limit the potential threat of SQL injection, the Connector rejects any property name or value that contains the `;`, `\n`, `\b`, or `\0` characters.
 
 The PXF JDBC Connector handles the session property `SET` syntax for all supported external SQL databases.
 
