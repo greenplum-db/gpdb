@@ -1539,7 +1539,7 @@ custom_fmtopts_string(const char *src)
 	if (!src)
 		return NULL;
 
-	to_free = srcdup = strdup(src);
+	to_free = srcdup = pstrdup(src);
 	srcdup_end = srcdup + strlen(srcdup);
 	initPQExpBuffer(&result);
 
