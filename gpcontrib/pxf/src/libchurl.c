@@ -103,7 +103,6 @@ static void		enlarge_internal_buffer(churl_buffer *buffer, size_t required);
 static void		finish_upload(churl_context *context);
 static void		cleanup_curl_handle(churl_context *context);
 static void		multi_remove_handle(churl_context *context);
-static void		cleanup_internal_buffer(churl_buffer *buffer);
 static void		churl_cleanup_context(churl_context *context);
 static size_t	write_callback(char *buffer, size_t size, size_t nitems, void *userp);
 static void		fill_internal_buffer(churl_context *context, int want);
@@ -111,7 +110,6 @@ static void		churl_headers_set(churl_context *context, CHURL_HEADERS settings);
 static void		check_response_status(churl_context *context);
 static void		check_response_code(churl_context *context);
 static void		check_response(churl_context *context);
-static void		clear_error_buffer(churl_context *context);
 static size_t	header_callback(char *buffer, size_t size, size_t nitems, void *userp);
 static void		free_http_response(churl_context *context);
 static void		compact_internal_buffer(churl_buffer *buffer);
@@ -316,7 +314,6 @@ churl_init(const char *url, CHURL_HEADERS headers)
 	churl_context *context = churl_new_context();
 
 	create_curl_handle(context);
-	clear_error_buffer(context);
 
 /* Required for resolving localhost on some docker environments that
  * had intermittent networking issues when using pxf on HAWQ
@@ -488,8 +485,6 @@ churl_cleanup(CHURL_HANDLE handle, bool after_error)
 	}
 
 	cleanup_curl_handle(context);
-	cleanup_internal_buffer(context->download_buffer);
-	cleanup_internal_buffer(context->upload_buffer);
 	churl_cleanup_context(context);
 }
 
@@ -501,14 +496,6 @@ churl_new_context()
 	context->download_buffer = palloc0(sizeof(churl_buffer));
 	context->upload_buffer = palloc0(sizeof(churl_buffer));
 	return context;
-}
-
-static void
-clear_error_buffer(churl_context *context)
-{
-	if (!context)
-		return;
-	context->curl_error_buffer[0] = 0;
 }
 
 static void
@@ -702,27 +689,22 @@ multi_remove_handle(churl_context *context)
 }
 
 static void
-cleanup_internal_buffer(churl_buffer *buffer)
-{
-	if ((buffer) && (buffer->ptr))
-	{
-		pfree(buffer->ptr);
-		buffer->ptr = NULL;
-		buffer->bot = 0;
-		buffer->top = 0;
-		buffer->max = 0;
-	}
-}
-
-static void
 churl_cleanup_context(churl_context *context)
 {
 	if (context)
 	{
 		if (context->download_buffer)
+		{
+			if (context->download_buffer->ptr)
+				pfree(context->download_buffer->ptr);
 			pfree(context->download_buffer);
+		}
 		if (context->upload_buffer)
+		{
+			if (context->upload_buffer->ptr)
+				pfree(context->upload_buffer->ptr);
 			pfree(context->upload_buffer);
+		}
 
 		pfree(context);
 	}
