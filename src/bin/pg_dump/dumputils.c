@@ -1482,7 +1482,7 @@ escape_fmtopts_string(const char *src)
 	int			len = strlen(src);
 	int			i;
 	int			j;
-	char	   *result = malloc(len * 2 + 1);
+	char	   *result = pg_malloc(len * 2 + 1);
 	bool		inString = false;
 
 	for (i = 0, j = 0; i < len; i++)
