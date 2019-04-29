@@ -10,7 +10,7 @@ Feature: Tests for gpaddmirrors
          Then verify the database has mirrors
           And the tablespace is valid
 
-         When user kills all primary processes
+         When user stops all primary processes
           And user can start transactions
          Then the tablespace is valid
 
@@ -103,7 +103,7 @@ Feature: Tests for gpaddmirrors
         And gpaddmirrors adds mirrors with temporary data dir
         And an FTS probe is triggered
         And the segments are synchronized
-        When user kills all primary processes with SIGKILL
+        When user stops all primary processes
         And user can start transactions
         Then verify that there is a "heap" table "public.heap_table" in "gptest" with "100" rows
         Then verify that there is a "ao" table "public.ao_table" in "gptest" with "100" rows

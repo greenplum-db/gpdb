@@ -812,16 +812,9 @@ def _process_exists(pid, host):
     return cmd.get_return_code() == 0
 
 
-@given('user kills a primary postmaster process')
-@when('user kills a primary postmaster process')
-@then('user kills a primary postmaster process')
-def impl(context):
-    stop_segments(context, "primary")
-
-
-@given('user kills all {segment_type} processes')
-@when('user kills all {segment_type} processes')
-@then('user kills all {segment_type} processes')
+@given('user stops all {segment_type} processes')
+@when('user stops all {segment_type} processes')
+@then('user stops all {segment_type} processes')
 def stop_segments(context, segment_type):
     if segment_type not in ("primary", "mirror"):
         raise Exception("Expected segment_type to be 'primary' or 'mirror', but found '%s'." % segment_type)

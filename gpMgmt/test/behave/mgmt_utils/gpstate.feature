@@ -4,7 +4,7 @@ Feature: gpstate tests
     Scenario: gpstate -b logs cluster for a cluster where the mirrors failed over to primary
         Given a standard local demo cluster is running
         And the database is running
-        When user kills all primary processes
+        When user stops all primary processes
         And user can start transactions
         And the user runs "gpstate -b"
         Then gpstate output has rows with keys values
@@ -42,7 +42,7 @@ Feature: gpstate tests
     Scenario: gpstate -c logs cluster info for a cluster where all mirrors are failed over
         Given a standard local demo cluster is running
         And the database is running
-        When user kills all primary processes
+        When user stops all primary processes
         And user can start transactions
         And the user runs "gpstate -c"
         Then gpstate output looks like
@@ -54,7 +54,7 @@ Feature: gpstate tests
 
     Scenario: gpstate -c logs cluster info for a cluster that is unsynchronized
         Given a standard local demo cluster is running
-        When user kills all mirror processes
+        When user stops all mirror processes
         And an FTS probe is triggered
         And the user runs "gpstate -c"
         Then gpstate output looks like
@@ -104,7 +104,7 @@ Feature: gpstate tests
 
     Scenario: gpstate -e logs errors when mirrors have failed over
         Given a standard local demo cluster is running
-          And user kills all primary processes
+          And user stops all primary processes
           And user can start transactions
         When the user runs "gpstate -e"
         Then gpstate should print "Segments with Primary and Mirror Roles Switched" to stdout
@@ -199,7 +199,7 @@ Feature: gpstate tests
 
     Scenario: gpstate -m warns when mirrors have failed over to primary
         Given a standard local demo cluster is running
-          And user kills all primary processes
+          And user stops all primary processes
           And user can start transactions
         When the user runs "gpstate -m"
         Then gpstate should print "Current GPDB mirror list and status" to stdout
@@ -349,7 +349,7 @@ Feature: gpstate tests
 
     Scenario: gpstate -i warns if any mirrors are marked down
         Given a standard local demo cluster is running
-          And user kills all mirror processes
+          And user stops all mirror processes
           And an FTS probe is triggered
         When the user runs "gpstate -i"
         Then gpstate output looks like
@@ -366,7 +366,7 @@ Feature: gpstate tests
 
     Scenario: gpstate -i warns if any up mirrors cannot be contacted
         Given a standard local demo cluster is running
-          And user kills all mirror processes
+          And user stops all mirror processes
           # We intentionally do not wait for an FTS probe here; we want the
           # mirrors to still be marked up when we try to get their version.
         When the user runs "gpstate -i"
