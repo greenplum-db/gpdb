@@ -13,6 +13,9 @@ class S3Exception {
 
     virtual ~S3Exception() {
     }
+    virtual string getCode() {
+        return "";
+    }
     virtual string getMessage() {
         return "";
     }
@@ -128,6 +131,10 @@ class S3LogicError : public S3Exception {
     }
     virtual ~S3LogicError() {
     }
+    virtual string getCode() {
+        return awscode;
+    }
+
     virtual string getMessage() {
         return "AWS returns error " + awscode + " : " + message;
     }
