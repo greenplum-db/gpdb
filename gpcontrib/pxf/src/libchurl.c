@@ -864,9 +864,11 @@ check_response_status(churl_context *context)
 			appendStringInfo(&err, "transfer error (%ld): %s",
 							 status, curl_easy_strerror(status));
 
-			if (strlen(addr) != 0)
+			if (addr)
+			{
 				appendStringInfo(&err, " from %s", addr);
-			pfree(addr);
+				pfree(addr);
+			}
 			elog(ERROR, "%s", err.data);
 		}
 		elog(DEBUG2, "check_response_status: msg %d done with status OK", i++);
@@ -912,11 +914,11 @@ check_response_code(churl_context *context)
 		appendStringInfo(&err, "remote component error (%ld)", response_code);
 
 		addr = get_dest_address(context->curl_handle);
-		if (strlen(addr) != 0)
+		if (addr)
 		{
 			appendStringInfo(&err, " from %s", addr);
+			pfree(addr);
 		}
-		pfree(addr);
 
 		if (!handle_special_error(response_code, &err))
 		{
