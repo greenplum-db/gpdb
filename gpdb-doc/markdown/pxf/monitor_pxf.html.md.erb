@@ -21,11 +21,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-To display PXF status, you must explicitly request the status of the PXF service instance on each segment host in your Greenplum Database cluster.
+The `pxf cluster status` command displays the status of the PXF service instance on all segment hosts in your Greenplum Database cluster. `pxf status` displays the status of the PXF service instance on the local (segment) host.
 
 Only the `gpadmin` user can request the status of the PXF service.
 
-Perform the following procedure to request the PXF status on each segment host in your Greenplum Database cluster.
+Perform the following procedure to request the PXF status of your Greenplum Database cluster.
 
 1. Log in to the Greenplum Database master node:
 
@@ -33,9 +33,9 @@ Perform the following procedure to request the PXF status on each segment host i
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Use the `gpssh` command and a seghostfile to run the `pxf status` command on each segment host:
+2. Run the `pxf cluster status` command:
 
     ```shell
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf status"
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster status
     ```
 

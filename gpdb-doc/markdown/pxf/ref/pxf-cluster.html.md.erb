@@ -16,6 +16,7 @@ where `<command>` is:
 help
 init
 start
+status
 stop
 sync
 ```
@@ -26,11 +27,12 @@ The `pxf cluster` utility command manages PXF on the master, standby master, and
 
 - Initialize PXF configuration on all hosts in the Greenplum Database cluster.
 - Start and stop the PXF service instance on all segment hosts.
+- Display the status of the PXF service instance on all segment hosts.
 - Synchronize the PXF configuration from the Greenplum Database master host to the standby master and to all segment hosts.
 
 `pxf cluster` requires a running Greenplum Database cluster. You must run the utility on the Greenplum Database master host.
 
-If you want to manage the PXF service instance on a specific segment host, use the `pxf` utility. See [`pxf`](pxf.html#topic1).
+(If you want to manage the PXF service instance on a specific segment host, use the `pxf` utility. See [`pxf`](pxf.html#topic1).)
 
 ## <a id="commands"></a>Commands
 
@@ -42,6 +44,9 @@ If you want to manage the PXF service instance on a specific segment host, use t
 
 <dt>start</dt>
 <dd>Start the PXF service instance on all segment hosts.</dd>
+
+<dt>status  </dt>
+<dd>Display the status of the PXF service instance on all segment hosts.</dd>
 
 <dt>stop  </dt>
 <dd>Stop the PXF service instance on all segment hosts.</dd>
