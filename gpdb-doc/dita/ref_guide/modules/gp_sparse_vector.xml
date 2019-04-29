@@ -7,7 +7,7 @@
       <p>The <codeph>gp_sparse_vector</codeph> module implements a Greenplum Database 
         data type and associated functions that use compressed storage of zeros to
         make vector computations on floating point numbers faster.</p>
-      <p>The <codeph>gp_sparse_vector</codeph> module is Greenplum Database extension.</p>
+      <p>The <codeph>gp_sparse_vector</codeph> module is a Greenplum Database extension.</p>
     </body>
     <topic id="topic_reg">
       <title>Installing and Registering the Module</title>
@@ -15,7 +15,7 @@
         <p>The <codeph>gp_sparse_vector</codeph> module is installed when you install
           Greenplum Database. Before you can use any of the functions defined in the
           module, you must register the <codeph>gp_sparse_vector</codeph> extension in
-          each database in which you want to use the functions.
+          each database where you want to use the functions.
           <ph otherprops="pivotal">Refer to <xref href="../../install_guide/install_modules.xml"
             format="dita" scope="peer">Installing Additional Supplied Modules</xref>
           for more information.</ph></p>
@@ -37,14 +37,14 @@
         <p>This type of array arises often in text processing, where a dictionary may
           have 40-100K terms and the number of words in a particular document is stored
           in a vector. This array would occupy slightly more than 320KB of memory/disk,
-          most of it zeros. Any operation that you perform on this data will be doing
-          work on 40,001 fields that are not important.</p>
+          most of it zeros. Any operation that you perform on this data
+          works on 40,001 fields that are not important.</p>
         <p>The Greenplum Database built-in <codeph>array</codeph> datatype utilizes a
           bitmap for null values, but it is a poor choice for this use case because
           it is not optimized for <codeph>float8[]</codeph> or for long runs of
           zeros instead of nulls, and the bitmap is not run-length-encoding- (RLE)
-          compressed. Even if we store each zero as <codeph>NULL</codeph> in the
-          array, the bitmap for nulls would have 5KB of bits in it to mark the
+          compressed. Even if each zero were stored as a <codeph>NULL</codeph> in the
+          array, the bitmap for nulls would use 5KB to mark the
           nulls, which is not nearly as efficient as it could be.</p>
         <p>The Greenplum Database <codeph>gp_sparse_vector</codeph> module defines a
           data type and a simple RLE-based scheme that is biased toward being efficient
@@ -59,7 +59,7 @@
           <codeph>&lt;</codeph>, <codeph>&gt;</codeph>, <codeph>*</codeph>,
           <codeph>**</codeph>, <codeph>/</codeph>, <codeph>=</codeph>,
           <codeph>+</codeph>, <codeph>sum()</codeph>, <codeph>vec_count_nonzero()</codeph>,
-          etc. These operators take advantage of the efficient sparse storage format,
+          and so on. These operators take advantage of the efficient sparse storage format,
           making computations on <codeph>svec</codeph>s faster.</p>
         <p>The plus (<codeph>+</codeph>) operator adds each of the terms of two
           vectors of the same dimension together. For example, if vector
@@ -216,7 +216,7 @@ INSERT INTO corpus
 }
       4 | {0,1.38629436111989,0,0,0,0.575364144903562,0,0,0.693147180559945,0.693147180559945,0,0,0,0,0,0.575364144903562,0.693147180559945,0,0}
 </codeblock>
-        <p>We can determine the <i>angular distance</i> between one document and the
+        <p>You can determine the <i>angular distance</i> between one document and the
           rest of the documents using the ACOS of the dot product of the document
           vectors:</p>
         <codeblock>CREATE TABLE weights AS 
@@ -237,7 +237,7 @@ ORDER BY 1;
       2 |            78.82
       3 |            90.00
       4 |            80.02</codeblock>
-        <p>We can see that the angular distance between document 1 and itself is 0
+        <p>You can see that the angular distance between document 1 and itself is 0
           degrees, and between document 1 and 3 is 90 degrees because they share no
           features at all.</p>
       </body>
