@@ -34,25 +34,26 @@ SET gp_external_enable_filter_pushdown TO 'on';
 
 PXF accesses data sources using different connectors, and filter pushdown support is determined by the specific connector implementation. The following PXF connectors support filter pushdown:
 
-- Hive Connector
+- Hive Connector, all profiles
 - HBase Connector
 - JDBC Connector
 
-PXF filter pushdown can be used with these data types:
+PXF filter pushdown can be used with these data types (connector-specific):
 
-- `INT`
+- `INT2`, `INT4`, `INT8`
+- `CHAR`, `TEXT`
 - `FLOAT`
 - `NUMERIC`
 - `BOOL`
-- `CHAR`, `TEXT`
 - `DATE`, `TIMESTAMP` (JDBC connector only)
 
-PXF filter pushdown can be used with these operators:
+You can use PXF filter pushdown with these operators:
 
 - `<`, `<=`, `>=`, `>`
 - `<>`, `=`
-- `IN` operator on arrays of `INT` and `TEXT`
-- `LIKE` (only for `TEXT` fields) (JDBC connector only)
+- `AND`, `OR`
+- `IN` operator on arrays of `INT` and `TEXT` (JDBC connector only)
+- `LIKE` (`TEXT` fields, JDBC connector only)
 
 To summarize, all of the following criteria must be met for filter pushdown to occur:
 
@@ -60,4 +61,6 @@ To summarize, all of the following criteria must be met for filter pushdown to o
 * The Greenplum Database protocol that you use to access external data source must support filter pushdown. The `pxf` external table protocol supports pushdown.
 * The external data source that you are accessing must support pushdown. For example, HBase and Hive support pushdown.
 * For queries on external tables that you create with the `pxf` protocol, the underlying PXF connector must also support filter pushdown. For example, the PXF Hive, HBase, and JDBC connectors support pushdown.
+
+    - Refer to Hive [Partition Filter Pushdown](hive_pxf.html#partitionfiltering) for more information about about Hive support for this feature.
 

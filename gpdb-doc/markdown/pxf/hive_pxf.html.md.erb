@@ -29,7 +29,7 @@ The PXF Hive connector reads data stored in a Hive table. This section describes
 
 Before working with Hive table data using PXF, ensure that you have met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_prereq).
 
-If you plan to use PXF filter pushdown with Hive, ensure that the `hive-site.xml` configuration parameter `hive.metastore.integral.jdo.pushdown` exists and is set to `true`.
+*If you plan to use PXF filter pushdown with Hive integral types*, ensure that the configuration parameter `hive.metastore.integral.jdo.pushdown` exists and is set to `true` in the `hive-site.xml` in both your Hadoop cluster **and** `$PXF_CONF/servers/default/hive-site.xml`. Refer to [Updating Hadoop Configuration](client_instcfg.html#client-cfg-update) for more information.
 
 
 ## <a id="hive_fileformats"></a>Hive Data Formats
@@ -661,13 +661,18 @@ In the following example, you will create and populate a Hive table stored in OR
 
 ## <a id="partitionfiltering"></a>Partition Filter Pushdown
 
-The PXF Hive connector supports the Hive partitioning feature and directory structure. This enables partition exclusion on selected HDFS files comprising a Hive table. To use the partition filtering feature to reduce network traffic and I/O, run a query on a PXF external table using a `WHERE` clause that refers to a specific partition column in a partitioned Hive table.
+The PXF Hive connector supports Hive partitioning pruning and directory structure. This enables partition exclusion on selected HDFS files comprising a Hive table. To use the partition filtering feature to reduce network traffic and I/O, run a query on a PXF external table using a `WHERE` clause that refers to a specific partition column in a partitioned Hive table.
+
+The PXF Hive Connector partition filtering support for Hive string and integral types is described below:
+
+- The relational operators `=`, `<`, `<=`, `>`, `>=`, and `<>` are supported on string types
+- The relational operators `=` and `<>` are supported on integral types (To use partition filtering with Hive integral types, you must update the Hive configuration as described in the [Prerequisites](#prereq).)
+- The logical operators `AND` and `OR` are supported when used with the relational operators mentioned above
+- The `LIKE` string operator is not supported
 
 To take advantage of PXF partition filtering pushdown, the Hive and PXF partition field names must be the same. Otherwise, PXF ignores partition filtering and the filtering is performed on the Greenplum Database side, impacting performance.
 
-<div class="note">The PXF Hive connector filters only on partition columns, not on other table attributes. Additionally, filter pushdown is supported only for those data types and operators identified in <a href="filter_push.html">About Filter Pushdown</a>. Disable filter pushdown when your query includes unsupported operators and data types.</div>
-
-To use PXF filter pushdown with Hive, the `hive-site.xml` configuration parameter `hive.metastore.integral.jdo.pushdown` must be set to `true`.
+<div class="note">The PXF Hive connector filters only on partition columns, not on other table attributes. Additionally, filter pushdown is supported only for those data types and operators identified above. Disable filter pushdown when your query includes unsupported operators and data types.</div>
 
 PXF filter pushdown is enabled by default. You configure PXF filter pushdown as described in [About Filter Pushdown](filter_push.html).
 
