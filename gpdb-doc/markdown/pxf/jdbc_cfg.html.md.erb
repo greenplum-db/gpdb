@@ -71,16 +71,16 @@ The JDBC Connector supports the following `jdbc.connection.transactionIsolation`
 | Repeatable Read | REPEATABLE_READ |
 | Serializable | SERIALIZABLE |
 
-For example, to set the transaction isolation level to *Read committed*, add the following property block to the `jdbc-site.xml` file:
+For example, to set the transaction isolation level to *Read uncommitted*, add the following property block to the `jdbc-site.xml` file:
 
 ``` xml
 <property>
     <name>jdbc.connection.transactionIsolation</name>
-    <value>READ_COMMITTED</value>
+    <value>READ_UNCOMMITTED</value>
 </property>
 ```
 
-Different SQL databases support different transaction isolation levels. Ensure that the database supports the level that you specify.
+Different SQL databases support different transaction isolation levels. Ensure that the external database supports the level that you specify.
 
 #### <a id="sessprop"></a>Session-Level Properties
 
