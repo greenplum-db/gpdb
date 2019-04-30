@@ -1535,7 +1535,8 @@ static void
 ExecCheckXactReadOnly(PlannedStmt *plannedstmt)
 {
 	ListCell   *l;
-    int         rti;
+	int         rti;
+	char		relstorage;
 
 	/*
 	 * CREATE TABLE AS or SELECT INTO?
@@ -1564,6 +1565,14 @@ ExecCheckXactReadOnly(PlannedStmt *plannedstmt)
 			continue;
 
 		if ((rte->requiredPerms & (~ACL_SELECT)) == 0)
+			continue;
+
+		/*
+		 * External and foreign tables don't need two phase commit which is for
+		 * local mpp tables
+		 */
+		relstorage = get_rel_relstorage(rte->relid);
+		if (relstorage == RELSTORAGE_EXTERNAL || relstorage == RELSTORAGE_FOREIGN)
 			continue;
 
 		if (isTempNamespace(get_rel_namespace(rte->relid)))
