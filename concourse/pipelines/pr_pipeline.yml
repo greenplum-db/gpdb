@@ -17,6 +17,7 @@ resources:
       ignore_paths:
       - gpdb-doc/*
       - README*
+      base_branch: 6X_STABLE
 
   - name: ubuntu-gpdb-dev-16
     type: docker-image

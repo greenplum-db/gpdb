@@ -14,6 +14,7 @@ resources:
       ignore_paths:
       - gpdb-doc/*
       - README*
+      base_branch: master
 
   - name: docker-image
     type: docker-image
