@@ -228,6 +228,19 @@ def impl(context):
     context.add_cleanup(cleanup)
 
 
+@given('the local public key is backed up and removed')
+def impl(context):
+    pubkey_path = path.expanduser('~/.ssh/id_rsa.pub')
+    backup_path = '/tmp/id_rsa.pub.bak'
+
+    shutil.move(pubkey_path, backup_path)
+
+    # Make sure the key is restored at the end.
+    def cleanup():
+        shutil.move(backup_path, pubkey_path)
+    context.add_cleanup(cleanup)
+
+
 @given('the segments can only be accessed using the master key')
 def impl(context):
     host_opts = []
