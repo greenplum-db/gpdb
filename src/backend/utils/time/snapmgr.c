@@ -208,7 +208,7 @@ GetTransactionSnapshot(void)
 			if (IsolationIsSerializable())
 				CurrentSnapshot = GetSerializableTransactionSnapshot(&CurrentSnapshotData);
 			else
-				CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData);
+				CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DistributedTransactionContext);
 			/* Make a saved copy */
 			CurrentSnapshot = CopySnapshot(CurrentSnapshot);
 			FirstXactSnapshot = CurrentSnapshot;
@@ -217,7 +217,7 @@ GetTransactionSnapshot(void)
 			RegisteredSnapshots++;
 		}
 		else
-			CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData);
+			CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DistributedTransactionContext);
 
 		FirstSnapshotSet = true;
 		return CurrentSnapshot;
@@ -243,7 +243,7 @@ GetTransactionSnapshot(void)
 	/* Don't allow catalog snapshot to be older than xact snapshot. */
 	InvalidateCatalogSnapshot();
 
-	CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData);
+	CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DistributedTransactionContext);
 
 	elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 		 "[Distributed Snapshot #%u] (gxid = %u, '%s')",
@@ -272,7 +272,7 @@ GetLatestSnapshot(void)
 	if (!FirstSnapshotSet)
 		return GetTransactionSnapshot();
 
-	SecondarySnapshot = GetSnapshotData(&SecondarySnapshotData);
+	SecondarySnapshot = GetSnapshotData(&SecondarySnapshotData, DistributedTransactionContext);
 
 	return SecondarySnapshot;
 }
@@ -305,7 +305,7 @@ GetCatalogSnapshot(Oid relid)
 	DtxContext		saveDistributedTransactionContext = DistributedTransactionContext;
 	DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
 
-	Snapshot snapshot = GetNonHistoricCatalogSnapshot(relid);
+	Snapshot snapshot = GetNonHistoricCatalogSnapshot(relid, DistributedTransactionContext);
 
 	DistributedTransactionContext = saveDistributedTransactionContext;
 	return snapshot;
@@ -318,7 +318,7 @@ GetCatalogSnapshot(Oid relid)
  *		up.
  */
 Snapshot
-GetNonHistoricCatalogSnapshot(Oid relid)
+GetNonHistoricCatalogSnapshot(Oid relid, DtxContext distributedTransactionContext)
 {
 	/*
 	 * If the caller is trying to scan a relation that has no syscache, no
@@ -335,7 +335,9 @@ GetNonHistoricCatalogSnapshot(Oid relid)
 	if (CatalogSnapshot == NULL)
 	{
 		/* Get new snapshot. */
-		CatalogSnapshot = GetSnapshotData(&CatalogSnapshotData);
+		CatalogSnapshot = GetSnapshotData(
+			&CatalogSnapshotData,
+			distributedTransactionContext);
 
 		/*
 		 * Make sure the catalog snapshot will be accounted for in decisions
@@ -439,7 +441,7 @@ SetTransactionSnapshot(Snapshot sourcesnap, TransactionId sourcexid)
 	 * two variables in exported snapshot files, but it seems better to have
 	 * snapshot importers compute reasonably up-to-date values for them.)
 	 */
-	CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData);
+	CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DistributedTransactionContext);
 
 	/*
 	 * Now copy appropriate fields from the source snapshot.

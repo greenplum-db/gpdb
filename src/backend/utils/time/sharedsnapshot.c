@@ -747,7 +747,7 @@ dumpSharedLocalSnapshot_forCursor(void)
 }
 
 void
-readSharedLocalSnapshot_forCursor(Snapshot snapshot)
+readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTransactionContext)
 {
 	BufFile *f;
 	char *fname=NULL;
@@ -872,7 +872,10 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot)
 	/* we're done with file. */
 	BufFileClose(f);
 
-	SetSharedTransactionId_reader(localXid, snapshot->curcid);
+	SetSharedTransactionId_reader(
+		localXid,
+		snapshot->curcid,
+		distributedTransactionContext);
 
 	return;
 }
