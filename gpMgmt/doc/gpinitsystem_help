@@ -400,4 +400,4 @@ Initialize a Greenplum Database array with an optional standby master host:
 SEE ALSO
 *****************************************************
 
-gpseginstall, gpssh-exkeys
+gpssh-exkeys
