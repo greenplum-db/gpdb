@@ -295,20 +295,7 @@ GetCatalogSnapshot(Oid relid)
 	if (HistoricSnapshotActive())
 		return HistoricSnapshot;
 
-	/*
-	 * GPDB_94_MERGE_FIXME: This is typically the way SnapshotNow was.
-	 * I think it makes sense to use a local snapshot for this.. But
-	 * update comments, and verify all the places where this is used.
-	 * Also, do we need a TRY-CATCH block to reset DistributedTransactionContext
-	 * on error?
-	 */
-	DtxContext		saveDistributedTransactionContext = DistributedTransactionContext;
-	DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
-
-	Snapshot snapshot = GetNonHistoricCatalogSnapshot(relid, DistributedTransactionContext);
-
-	DistributedTransactionContext = saveDistributedTransactionContext;
-	return snapshot;
+	return GetNonHistoricCatalogSnapshot(relid, DTX_CONTEXT_LOCAL_ONLY);
 }
 
 /*
