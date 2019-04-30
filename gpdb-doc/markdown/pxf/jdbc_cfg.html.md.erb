@@ -55,6 +55,33 @@ Example: To set the `createDatabaseIfNotExist` connection property on a JDBC con
  </property>
 ```
 
+#### <a id="conntransiso"></a>Connection Transaction Isolation Property
+
+The SQL standard defines four transaction isolation levels. The level that you specify for a given connection to an external SQL database determines how and when the changes made by one transaction executed on the connection are visible to another.
+
+The PXF JDBC Connector exposes an optional server configuration property named `jdbc.connection.transactionIsolation` that enables you to specify the transaction isolation level. PXF sets the level (`setTransactionIsolation()`) just after establishing the connection to the external SQL database.
+
+The JDBC Connector supports the following `jdbc.connection.transactionIsolation` property values:
+
+
+| SQL Level      | PXF Property Value      |
+|----------------|-------------------------|
+| Read uncommitted | READ_UNCOMMITTED |
+| Read committed | READ_COMMITTED |
+| Repeatable Read | REPEATABLE_READ |
+| Serializable | SERIALIZABLE |
+
+For example, to set the transaction isolation level to *Read committed*, add the following property block to the `jdbc-site.xml` file:
+
+``` xml
+<property>
+    <name>jdbc.connection.transactionIsolation</name>
+    <value>READ_COMMITTED</value>
+</property>
+```
+
+Different SQL databases support different transaction isolation levels. Ensure that the database supports the level that you specify.
+
 #### <a id="sessprop"></a>Session-Level Properties
 
 To set session-level properties, add the `jdbc.session.property.<SPROP_NAME>` property to `jdbc-site.xml`. PXF will `SET` these properties in the external database before executing a query.
