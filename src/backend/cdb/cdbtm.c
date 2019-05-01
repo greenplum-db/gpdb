@@ -1369,11 +1369,16 @@ getSuperuser(Oid *userOid)
 	{
 		Datum   attrName;
 		Datum   attrNameOid;
+		Datum   attrRolvaliduntil;
+		bool    hasExpirationDate;
 
-		(void) heap_getattr(auth_tup, Anum_pg_authid_rolvaliduntil,
+		attrRolvaliduntil = heap_getattr(auth_tup, Anum_pg_authid_rolvaliduntil,
 							auth_rel->rd_att, &isNull);
+
 		/* we actually want it to be NULL, that means always valid */
-		if (!isNull)
+		hasExpirationDate = !isNull;
+
+		if (!canSuperuserPerformRecovery(hasExpirationDate, attrRolvaliduntil))
 			continue;
 
 		attrName = heap_getattr(auth_tup, Anum_pg_authid_rolname,
@@ -1397,6 +1402,17 @@ getSuperuser(Oid *userOid)
 	return suser;
 }
 
+
+bool
+canSuperuserPerformRecovery(bool hasExpirationTimestamp, TimestampTz expirationTimestamp)
+{
+  if (!hasExpirationTimestamp)
+     return true;
+
+  return expirationTimestamp >= GetCurrentTimestamp();
+}
+
+
 static char *
 ChangeToSuperuser()
 {
@@ -1410,8 +1426,13 @@ ChangeToSuperuser()
 		oldcontext = MemoryContextSwitchTo(TopMemoryContext);
 		newuser = getSuperuser(&userOid);
 		MemoryContextSwitchTo(oldcontext);
-
 		olduser = MyProcPort->user_name;
+
+		if (userOid == InvalidOid)
+		  ereport(ERROR, (errmsg("could not switch to superuser from %s", olduser),
+			       errdetail("No superuser found."),
+				  errhint("Use single-user mode to setup a valid superuser.")));
+
 		SetSessionUserId(userOid, true);
 		MyProcPort->user_name = newuser;
 	}

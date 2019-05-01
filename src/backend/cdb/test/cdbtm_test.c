@@ -4,6 +4,7 @@
 #include "cmockery.h"
 #include "postgres.h"
 
+#include "cdb/cdbtm.h"
 #include "../cdbtm.c"
 
 #define SIZE_OF_IN_PROGRESS_ARRAY (10 * sizeof(DistributedTransactionId))
@@ -29,6 +30,49 @@ void setup(TmControlBlock *controlBlock, TMGXACT *gxact_array)
 	shmGxactArray[2] = tmp_gxact++;
 	shmGxactArray[3] = tmp_gxact++;
 	shmGxactArray[4] = tmp_gxact++;
+}
+
+void
+test_canSuperuserPerformRecovery_when_no_login_expiration_date_exists(void **state)
+{
+  bool hasExpirationDate;
+  Datum expirationDate;
+
+  hasExpirationDate = false;
+  
+  bool result = canSuperuserPerformRecovery(hasExpirationDate, expirationDate);
+
+  assert_true(result);
+}
+
+void
+test_canSuperuserPerformRecovery_when_login_has_not_expired(void **state)
+{
+  bool hasExpirationDate;
+  Datum expirationDate;
+
+  hasExpirationDate = true;
+  
+  Datum jan1st2100 = TimestampGetDatum(4102444800000000);
+  
+  bool result = canSuperuserPerformRecovery(hasExpirationDate, jan1st2100);
+
+  assert_true(result);
+}
+
+void
+test_canSuperuserPerformRecovery_when_login_has_expired(void **state)
+{
+  bool hasExpirationDate;
+  Datum expirationDate;
+
+  hasExpirationDate = true;
+  
+  Datum aMillisecondAgo = TimestampGetDatum(GetCurrentTimestamp() - 1);
+  
+  bool result = canSuperuserPerformRecovery(hasExpirationDate, aMillisecondAgo);
+
+  assert_false(result);
 }
 
 void
@@ -141,7 +185,10 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] =
 	{
-		unit_test(test__createDtxSnapshot)
+	  unit_test(test__createDtxSnapshot),
+	  unit_test(test_canSuperuserPerformRecovery_when_no_login_expiration_date_exists),
+	  unit_test(test_canSuperuserPerformRecovery_when_login_has_not_expired),
+	  unit_test(test_canSuperuserPerformRecovery_when_login_has_expired)
 	};
 
 	MemoryContextInit();

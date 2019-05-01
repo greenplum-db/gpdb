@@ -343,5 +343,6 @@ extern void UtilityModeFindOrCreateDtmRedoFile(void);
 extern void UtilityModeCloseDtmRedoFile(void);
 
 extern bool doDispatchSubtransactionInternalCmd(DtxProtocolCommand cmdType);
+extern bool canSuperuserPerformRecovery(bool hasExpirationDate, TimestampTz expirationDate);
 
 #endif   /* CDBTM_H */
