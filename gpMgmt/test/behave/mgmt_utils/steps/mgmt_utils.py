@@ -372,6 +372,11 @@ def impl(context, command):
     if has_exception(context):
         raise context.exception
 
+@given('the user runs command "{command}" eok')
+@when('the user runs command "{command}" eok')
+@then('the user runs command "{command}" eok')
+def impl(context, command):
+    run_command(context, command)
 
 @when('the user runs async command "{command}"')
 def impl(context, command):

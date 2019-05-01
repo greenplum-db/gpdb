@@ -8,6 +8,7 @@ from test.behave_utils.utils import drop_database_if_exists, start_database_if_n
                                             run_command, check_user_permissions, run_gpcommand
 from steps.mirrors_mgmt_utils import MirrorMgmtContext
 from steps.gpconfig_mgmt_utils import GpConfigContext
+from steps.gpssh_exkeys_mgmt_utils import GpsshExkeysMgmtContext
 from gppylib.db import dbconn
 
 def before_all(context):
@@ -16,7 +17,7 @@ def before_all(context):
 
 def before_feature(context, feature):
     # we should be able to run gpexpand without having a cluster initialized
-    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors', 'gpconfig']
+    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors', 'gpconfig', 'gpssh-exkeys']
     if set(context.feature.tags).intersection(tags_to_skip):
         return
 
@@ -83,7 +84,10 @@ def before_scenario(context, scenario):
     if 'gpconfig' in context.feature.tags:
         context.gpconfig_context = GpConfigContext()
 
-    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors', 'gpconfig']
+    if 'gpssh-exkeys' in context.feature.tags:
+        context.gpssh_exkeys_context = GpsshExkeysMgmtContext(context)
+
+    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors', 'gpconfig', 'gpssh-exkeys']
     if set(context.feature.tags).intersection(tags_to_skip):
         return
 
@@ -93,6 +97,11 @@ def before_scenario(context, scenario):
 
 
 def after_scenario(context, scenario):
+    #TODO: you'd think that the scenario.skip() in before_scenario() would
+    #  cause this to not be needed
+    if "skip" in scenario.effective_tags:
+        return
+
     if 'tablespaces' in context:
         for tablespace in context.tablespaces.values():
             tablespace.cleanup()
@@ -102,11 +111,13 @@ def after_scenario(context, scenario):
     if set(context.feature.tags).intersection(tags_to_skip):
         return
 
-    if 'gpmovemirrors' in context.feature.tags:
+    tags_to_cleanup = ['gpmovemirrors', 'gpssh-exkeys']
+    if set(context.feature.tags).intersection(tags_to_cleanup):
         if 'temp_base_dir' in context:
             shutil.rmtree(context.temp_base_dir)
 
-    if 'analyzedb' not in context.feature.tags:
+    tags_to_not_restart_db = ['analyzedb', 'gpssh-exkeys']
+    if not set(context.feature.tags).intersection(tags_to_not_restart_db):
         start_database_if_not_started(context)
 
         home_dir = os.path.expanduser('~')
