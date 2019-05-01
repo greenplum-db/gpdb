@@ -14,6 +14,7 @@
         <li><xref href="#topic7" format="dita"/></li>
         <li><xref href="#topic_gdd" format="dita"/></li>
         <li><xref href="#topic9" format="dita"/></li>
+        <li><xref href="#topic11" format="dita"/></li>
       </ul></p>
   </body>
   <topic id="topic2" xml:lang="en">
@@ -418,6 +419,25 @@
         Greenplum database especially if updates and deletes are frequently performed on your
         database data. See the <codeph>VACUUM</codeph> command in the <cite>Greenplum Database
           Reference Guide</cite> for information about using the command.</note>
+    </body>
+  </topic>
+  <topic id="topic11" xml:lang="en">
+    <title id="ix141487">Running out of Locks</title>
+    <body>
+      <p>Greenplum Database can potentially run out of locks when a database
+        operation accesses multiple tables in a single transaction. Backup
+        and restore are examples of such operations.</p>
+      <p>When Greenplum Database runs out of locks, the error message that
+        you may observe references a shared memory error:
+        <codeblock>... "WARNING","53200","out of shared memory",,,,,,"LOCK TABLE ...
+... "ERROR","53200","out of shared memory",,"You might need to increase max_locks_per_transaction.",,,,"LOCK TABLE ...</codeblock></p>
+      <note>"shared memory" in this context refers to the shared memory of
+        the internal object: the lock slots. "Out of shared memory" does
+        <i>not</i> refer to exhaustion of system- or Greenplum-level memory
+        resources.</note>
+      <p>As the hint describes, consider increasing the
+        <xref href="../ref_guide/config_params/guc-list.xml#max_locks_per_transaction"><codeph>max_locks_per_transaction</codeph></xref>
+        server configuration parameter when you encounter this error.</p>
     </body>
   </topic>
 </topic>
