@@ -85,6 +85,11 @@ def before_scenario(context, scenario):
 
 
 def after_scenario(context, scenario):
+    #TODO: you'd think that the scenario.skip() in before_scenario() would
+    #  cause this to not be needed
+    if "skip" in scenario.effective_tags:
+        return
+
     if 'tablespaces' in context:
         for tablespace in context.tablespaces.values():
             tablespace.cleanup()
