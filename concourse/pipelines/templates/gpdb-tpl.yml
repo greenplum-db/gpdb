@@ -25,6 +25,9 @@
                       {'name': 'gpaddmirrors',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
+                      {'name': 'gpssh_exkeys',
+                       'use_concourse_cluster': true,
+                       'additional_ccp_vars': 'number_of_nodes: 4'},
                     ] %}
 
 ## ======================================================================
