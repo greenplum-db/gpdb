@@ -21,11 +21,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Some of your data may already reside in an external SQL database. PXF provides access to this data via the PXF JDBC Connector. The JDBC connector is a JDBC client. It can read data from and write data to SQL databases including MySQL, ORACLE, PostgreSQL, Apache Ignite, and Hive.
+Some of your data may already reside in an external SQL database. PXF provides access to this data via the PXF JDBC connector. The JDBC connector is a JDBC client. It can read data from and write data to SQL databases including MySQL, ORACLE, PostgreSQL, Apache Ignite, and Hive.
 
 This section describes how to use the PXF JDBC connector to access data in an external SQL database, including how to create and query or insert data into a PXF external table that references a table in an external database.
 
-<div class="note">The JDBC Connector does not guarantee consistency when writing to an external SQL database. Be aware that if an <code>INSERT</code> operation fails, some data may be written to the external database table. If you require consistency for writes, consider writing to a staging table in the external database, and loading to the target table only after verifying the write operation.</div>
+<div class="note">The JDBC connector does not guarantee consistency when writing to an external SQL database. Be aware that if an <code>INSERT</code> operation fails, some data may be written to the external database table. If you require consistency for writes, consider writing to a staging table in the external database, and loading to the target table only after verifying the write operation.</div>
 
 ## <a id="prereq"></a>Prerequisites
 
@@ -36,7 +36,7 @@ Before you access an external SQL database using the PXF JDBC connector, ensure 
 - Connectivity exists between all Greenplum Database segment hosts and the external SQL database.
 - You have configured your external SQL database for user access from all Greenplum Database segment hosts.
 - You have registered any JDBC driver JAR dependencies.
-- (Recommended) You have created one or more named PXF JDBC Connector server configurations as described in [Configuring the PXF JDBC Connector](jdbc_cfg.html).
+- (Recommended) You have created one or more named PXF JDBC connector server configurations as described in [Configuring the PXF JDBC Connector](jdbc_cfg.html).
 
 ## <a id="datatypes"></a>Data Types Supported
 
@@ -88,7 +88,7 @@ You include JDBC connector custom options in the `LOCATION` URI, prefacing each 
 |---------------|------------|--------|
 | BATCH_SIZE | Write | Integer identifying the number of `INSERT` operations to batch to the external SQL database. PXF always validates a `BATCH_SIZE` option, even when provided on a read operation. Batching is enabled by default. |
 | POOL_SIZE | Write | Enable thread pooling on `INSERT` operations and identify the number of threads in the pool. Thread pooling is disabled by default. |
-| PARTITION_BY | Read | The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\> values. A null `PARTITION_BY` defaults to a single fragment. |
+| PARTITION_BY | Read | The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\> values. If you do not identify a `PARTITION_BY` column, a single PXF instance services the read request. |
 | RANGE | Read | Required when `PARTITION_BY` is specified. The query range, \<start-value\>[:\<end-value\>]. When the partition column is an `enum` type, `RANGE` must specify a list of values, each of which forms its own fragment. If the partition column is an `int` or `date` type, `RANGE` must specify a finite left-closed range. That is, the range includes the \<start-value\> but does *not* include the \<end-value\>. If the partition column is a `date` type, use the `yyyy-MM-dd` date format. |
 | INTERVAL | Read | Required when `PARTITION_BY` is specified and of the `int` or `date` type. The interval, \<interval-value\>[:\<interval-unit\>], of one fragment. Specify the size of the fragment in \<interval-value\>. If the partition column is a `date` type, use the \<interval-unit\> to specify `year`, `month`, or `day`. |
 | QUOTE_COLUMNS | Read | Controls whether PXF should quote column names when constructing an SQL query to the external database. Specify `true` to force PXF to quote all column names; PXF does not quote column names if any other value is provided. If `QUOTE_COLUMNS` is not specified (the default), PXF automatically quotes *all* column names in the query when *any* column name:<br>- includes special characters, or <br>- is mixed case and the external database does not support unquoted mixed case identifiers. |
@@ -124,9 +124,15 @@ To disable or enable a thread pool and set the pool size, create the PXF externa
 
 #### <a id="partitioning"></a>Partitioning (Read)
 
-The PXF JDBC Connector supports simultaneous read access from PXF instances running on multiple segment hosts to an external SQL table. This feature is referred to as partitioning.
+The PXF JDBC connector supports simultaneous read access from PXF instances running on multiple segment hosts to an external SQL table. This feature is referred to as partitioning. Read partitioning is not enabled by default. To enable read partitioning, set the `PARTITION_BY`, `RANGE`, and `INTERVAL` custom options when you create the PXF external table.
 
-When you specify the `PARTITION_BY` option, tune the `INTERVAL` value and unit based upon the optimal number of JDBC connections to the target database and the optimal distribution of fragments across Greenplum Database segments. The `INTERVAL` low boundary is driven by the number of Greenplum Database segments while the high boundary is driven by the acceptable number of JDBC connections to the target database. The `INTERVAL` setting influences the number of fragments, and should ideally not be set too high nor too low. Testing with multiple values may help you select the optimal settings. 
+PXF uses the `RANGE` and `INTERVAL` values and the `PARTITON_BY` column that you specify to assign specific data rows in the external table to PXF instances running on the Greenplum Database segment hosts. This column selection is specific to PXF processing, and has no relationship to a partition column that you may have specifed for the table in the external SQL database.
+
+When you enable partitioning, the PXF JDBC connector splits a `SELECT` query into a set of small queries each of which is called a fragment. All PXF instances process a fragment simultaneously. If there are more fragments than PXF instances, some instances will process more than one fragment.
+
+The JDBC connector automatically adds extra query constraints (`WHERE` expressions) to each fragment to guarantee that every tuple of data is retrieved from the external database exactly once.
+
+When you specify the `PARTITION_BY` option, tune the `INTERVAL` value and unit based upon the optimal number of JDBC connections to the target database and the optimal distribution of external data across Greenplum Database segments. The `INTERVAL` low boundary is driven by the number of Greenplum Database segments while the high boundary is driven by the acceptable number of JDBC connections to the target database. The `INTERVAL` setting influences the number of fragments, and should ideally not be set too high nor too low. Testing with multiple values may help you select the optimal settings. 
 
 Example JDBC \<custom-option\> substrings identifying partitioning parameters:
 
@@ -136,18 +142,13 @@ Example JDBC \<custom-option\> substrings identifying partitioning parameters:
 &PARTITION_BY=color:enum&RANGE=red:yellow:blue
 ```
 
-When you enable partitioning, the PXF JDBC Connector splits a `SELECT` query into a set of small queries each of which is called a fragment. All PXF instances process a fragment simultaneously.
-
-The JDBC connector automatically adds extra query constraints (`WHERE` expressions) to each fragment to guarantee that every tuple of data is retrieved from the external database exactly once.
-
-
 ### <a id="jdbc_example_postgresql"></a>Example: Reading From and Writing to a PostgreSQL Table
 
 In this example, you:
 
 - Create a PostgreSQL database and table, and insert data into the table
 - Create a PostgreSQL user and assign all privileges on the table to the user
-- Configure the PXF JDBC Connector to access the PostgreSQL database
+- Configure the PXF JDBC connector to access the PostgreSQL database
 - Create a PXF readable external table that references the PostgreSQL table
 - Read the data in the PostgreSQL table
 - Create a PXF writable external table that references the PostgreSQL table
