@@ -468,7 +468,7 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
         a back up or restore operation completes. </p>
       <p>To have <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> send out status email
         notifications, you must place a file named <codeph>gp_email_contacts.yaml</codeph> in the
-        home directory of the user running <codeph>gpbackup</codeph> or <codeph>gpbackup</codeph> in
+        home directory of the user running <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> in
         the same directory as the utilities (<codeph>$GPHOME/bin</codeph>). A utility issues a
         message if it cannot locate a <codeph>gp_email_contacts.yaml</codeph> file in either
         location. If both locations contain a <codeph>.yaml</codeph> file, the utility uses the file
@@ -483,7 +483,9 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
         number of objects backed up or restored. For information about the contents of a
         notification email, see <xref href="#topic_qgj_b3d_tbb/report_files" format="dita"/>.</p>
       <note>The UNIX mail utility must be running on the Greenplum Database host and must be
-        configured to allow the Greenplum superuser (<codeph>gpadmin</codeph>) to send email.</note>
+        configured to allow the Greenplum superuser (<codeph>gpadmin</codeph>) to send email.
+        Also ensure that the mail program executable is locatable via the
+        <codeph>gpadmin</codeph> user's <codeph>$PATH</codeph>.</note>
     </body>
     <topic id="topic_uq5_v5v_scb">
       <title>gpbackup and gprestore Email File Format </title>
@@ -585,8 +587,8 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
             different address depending on the success or failure of the backup operation. For a
             restore operation, an email is sent to <codeph>gpadmin@example.com</codeph> only when
             the operation succeeds or completes with
-            errors.<codeblock>contacts
-  backup:
+            errors.<codeblock>contacts:
+  gpbackup:
   - address: gpadmin@example.com
     status:
       success:true
@@ -594,7 +596,7 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
     status:
       success_with_errors: true
       failure: true
-  restore:
+  gprestore:
   - address: gpadmin@example.com
     status:
       success: true
