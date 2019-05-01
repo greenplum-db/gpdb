@@ -27,6 +27,9 @@
                        'additional_ccp_vars': 'number_of_nodes: 4'},
                       {'name': 'gpconfig',
                        'use_concourse_cluster': true},
+                      {'name': 'gpssh-exkeys',
+                       'use_concourse_cluster': true,
+                       'additional_ccp_vars': 'number_of_nodes: 4'},
                     ] %}
 
 ## ======================================================================
