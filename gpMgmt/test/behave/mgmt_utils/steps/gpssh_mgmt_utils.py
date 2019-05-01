@@ -98,6 +98,19 @@ def impl(context, new_hosts):
             '-x', new_host_file.name,
         ])
 
+@when('gpssh-exkeys is run successfully with a hostfile')
+def impl(context):
+    with tempfile.NamedTemporaryFile() as host_file:
+        for h in context.gpssh_exkeys_context.allHosts():
+            host_file.write(h + '\n')
+        host_file.flush()
+
+        subprocess.check_call([
+            'gpssh-exkeys',
+            '-v',
+            '-f', host_file.name,
+        ])
+
 @when('gpssh-exkeys is run eok')
 def impl(context):
     hostsStr = " ".join(["-h %s" % host for host in context.gpssh_exkeys_context.segment_hosts])
