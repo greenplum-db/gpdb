@@ -155,6 +155,7 @@ static void ReplayRedoFromUtilityMode(void);
 static void RemoveRedoUtilityModeFile(void);
 static void performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfNotFound);
 static void performDtxProtocolAbortPrepared(const char *gid, bool raiseErrorIfNotFound);
+static bool roleHasExpired(Datum role_valid_until);
 
 extern void resetSessionForPrimaryGangLoss(bool resetSession);
 extern void CheckForResetSession(void);
@@ -1341,6 +1342,15 @@ initTM_recover_as_needed(void)
 	}
 }
 
+static bool
+roleHasExpired(Datum role_valid_until)
+{
+	TimestampTz valid_until;
+	valid_until = DatumGetTimestampTz(role_valid_until);
+
+	return valid_until < GetCurrentTimestamp();
+}
+
 static char *
 getSuperuser(Oid *userOid)
 {
@@ -1369,11 +1379,16 @@ getSuperuser(Oid *userOid)
 	{
 		Datum   attrName;
 		Datum   attrNameOid;
+		Datum   attrRolvaliduntil;
+		bool    hasExpirationDate;
 
-		(void) heap_getattr(auth_tup, Anum_pg_authid_rolvaliduntil,
+		attrRolvaliduntil = heap_getattr(auth_tup, Anum_pg_authid_rolvaliduntil,
 							auth_rel->rd_att, &isNull);
+
 		/* we actually want it to be NULL, that means always valid */
-		if (!isNull)
+		hasExpirationDate = !isNull;
+
+		if (hasExpirationDate && roleHasExpired(attrRolvaliduntil))
 			continue;
 
 		attrName = heap_getattr(auth_tup, Anum_pg_authid_rolname,
