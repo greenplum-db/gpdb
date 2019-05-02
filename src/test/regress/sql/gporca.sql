@@ -1644,6 +1644,13 @@ set allow_system_table_mods='dml';
 delete from gp_distribution_policy where localoid='rewrite_rules_1_prt_2'::regclass;
 reset allow_system_table_mods;
 
+-- full joins with predicates
+DROP TABLE IF EXISTS ffoo, fbar;
+CREATE TABLE ffoo (a, b) AS (VALUES (1, 2), (2, 3), (4, 5), (5, 6), (6, 7)) DISTRIBUTED BY (a);
+CREATE TABLE fbar (c, d) AS (VALUES (1, 42), (2, 43), (4, 45), (5, 46)) DISTRIBUTED BY (c);
+
+SELECT d FROM ffoo FULL OUTER JOIN fbar ON a = c WHERE b BETWEEN 5 and 9;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
