@@ -93,8 +93,8 @@ EXPLAIN UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
                 (SELECT min (keo4.keo_para_budget_date) FROM keo4)))
     ) t1
 WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
-                                                                                                       QUERY PLAN                                                                                                       
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                                 QUERY PLAN                                                                                                 
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Update  (cost=0.00..2586.11 rows=1 width=1)
    ->  Result  (cost=0.00..2586.00 rows=1 width=42)
          ->  Explicit Redistribute Motion 3:3  (slice8; segments: 3)  (cost=0.00..2586.00 rows=1 width=38)
@@ -102,40 +102,43 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                      ->  Result  (cost=0.00..2586.00 rows=1 width=42)
                            ->  Hash Join  (cost=0.00..2586.00 rows=1 width=66)
                                  Hash Cond: public.keo1.user_vie_project_code_pk::text = public.keo1.user_vie_project_code_pk::text
-                                 ->  Table Scan on keo1  (cost=0.00..431.00 rows=1 width=66)
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=66)
+                                       Hash Key: public.keo1.user_vie_project_code_pk
+                                       ->  Table Scan on keo1  (cost=0.00..431.00 rows=1 width=66)
                                  ->  Hash  (cost=2155.00..2155.00 rows=1 width=8)
-                                       ->  Broadcast Motion 3:3  (slice7; segments: 3)  (cost=0.00..2155.00 rows=1 width=8)
-                                             ->  Hash Join  (cost=0.00..2155.00 rows=1 width=8)
-                                                   Hash Cond: public.keo1.user_vie_project_code_pk::text = keo2.projects_pk::text
-                                                   ->  Redistribute Motion 1:3  (slice5; segments: 1)  (cost=0.00..1724.00 rows=1 width=8)
-                                                         ->  Hash Join  (cost=0.00..1724.00 rows=1 width=8)
-                                                               Hash Cond: public.keo1.user_vie_fiscal_year_period_sk::text = (max(keo3.sky_per::text))
-                                                               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-                                                                     ->  Table Scan on keo1  (cost=0.00..431.00 rows=1 width=16)
-                                                               ->  Hash  (cost=1293.00..1293.00 rows=1 width=8)
-                                                                     ->  Aggregate  (cost=0.00..1293.00 rows=1 width=8)
-                                                                           ->  Hash Join  (cost=0.00..1293.00 rows=1 width=8)
-                                                                                 Hash Cond: keo3.bky_per::text = public.keo4.keo_para_required_period::text
-                                                                                 ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-                                                                                       ->  Table Scan on keo3  (cost=0.00..431.00 rows=1 width=16)
-                                                                                 ->  Hash  (cost=862.00..862.00 rows=1 width=8)
-                                                                                       ->  Assert  (cost=0.00..862.00 rows=1 width=8)
-                                                                                             Assert Cond: (row_number()) = 1
-                                                                                             ->  Window  (cost=0.00..862.00 rows=1 width=16)
-                                                                                                   ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
-                                                                                                         Hash Cond: public.keo4.keo_para_budget_date::text = (min((min(public.keo4.keo_para_budget_date::text))))
-                                                                                                         ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-                                                                                                               ->  Table Scan on keo4  (cost=0.00..431.00 rows=1 width=16)
-                                                                                                         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
-                                                                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                                                     ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                                                                 ->  Table Scan on keo4  (cost=0.00..431.00 rows=1 width=8)
-                                                   ->  Hash  (cost=431.00..431.00 rows=1 width=8)
-                                                         ->  Broadcast Motion 3:3  (slice6; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Table Scan on keo2  (cost=0.00..431.00 rows=1 width=8)
- Optimizer status: PQO version 3.39.0
-(40 rows)
+                                       ->  Hash Join  (cost=0.00..2155.00 rows=1 width=8)
+                                             Hash Cond: public.keo1.user_vie_project_code_pk::text = keo2.projects_pk::text
+                                             ->  Redistribute Motion 1:3  (slice6; segments: 1)  (cost=0.00..1724.00 rows=1 width=8)
+                                                   Hash Key: public.keo1.user_vie_project_code_pk
+                                                   ->  Hash Join  (cost=0.00..1724.00 rows=1 width=8)
+                                                         Hash Cond: public.keo1.user_vie_fiscal_year_period_sk::text = (max(keo3.sky_per::text))
+                                                         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                                                               ->  Table Scan on keo1  (cost=0.00..431.00 rows=1 width=16)
+                                                         ->  Hash  (cost=1293.00..1293.00 rows=1 width=8)
+                                                               ->  Aggregate  (cost=0.00..1293.00 rows=1 width=8)
+                                                                     ->  Hash Join  (cost=0.00..1293.00 rows=1 width=8)
+                                                                           Hash Cond: keo3.bky_per::text = public.keo4.keo_para_required_period::text
+                                                                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                                                                                 ->  Table Scan on keo3  (cost=0.00..431.00 rows=1 width=16)
+                                                                           ->  Hash  (cost=862.00..862.00 rows=1 width=8)
+                                                                                 ->  Assert  (cost=0.00..862.00 rows=1 width=8)
+                                                                                       Assert Cond: (row_number()) = 1
+                                                                                       ->  Window  (cost=0.00..862.00 rows=1 width=16)
+                                                                                             ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+                                                                                                   Hash Cond: public.keo4.keo_para_budget_date::text = (min((min(public.keo4.keo_para_budget_date::text))))
+                                                                                                   ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                                                                                                         ->  Table Scan on keo4  (cost=0.00..431.00 rows=1 width=16)
+                                                                                                   ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+                                                                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                                               ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                                                           ->  Table Scan on keo4  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+                                                   ->  Redistribute Motion 3:3  (slice7; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                         Hash Key: keo2.projects_pk
+                                                         ->  Table Scan on keo2  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer status: PQO version 3.41.0
+(43 rows)
 
 UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b
@@ -168,7 +171,7 @@ EXPLAIN DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x F
                            Join Filter: true
                            ->  Table Scan on keo5  (cost=0.00..431.00 rows=1 width=4)
                            ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
-                                 ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=1)
+                                 ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=0.00..431.00 rows=3 width=1)
                                        ->  Limit  (cost=0.00..431.00 rows=1 width=1)
                                              ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                                                    ->  Table Scan on keo5  (cost=0.00..431.00 rows=1 width=1)
