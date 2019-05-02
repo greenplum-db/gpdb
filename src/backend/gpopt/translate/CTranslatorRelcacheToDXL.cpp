@@ -562,6 +562,7 @@ CTranslatorRelcacheToDXL::RetrieveRel
 	if (RelationIsForeign(rel))
 	{
 		// GPORCA does not support foreign data wrappers
+		gpdb::CloseRelation(rel);
 		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Foreign Data"));
 	}
 
