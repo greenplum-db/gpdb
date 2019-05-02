@@ -661,14 +661,14 @@ In the following example, you will create and populate a Hive table stored in OR
 
 ## <a id="partitionfiltering"></a>Partition Filter Pushdown
 
-The PXF Hive connector supports Hive partitioning pruning and directory structure. This enables partition exclusion on selected HDFS files comprising a Hive table. To use the partition filtering feature to reduce network traffic and I/O, run a query on a PXF external table using a `WHERE` clause that refers to a specific partition column in a partitioned Hive table.
+The PXF Hive connector supports Hive partitioning pruning and the Hive partition directory structure. This enables partition exclusion on selected HDFS files comprising a Hive table. To use the partition filtering feature to reduce network traffic and I/O, run a query on a PXF external table using a `WHERE` clause that refers to a specific partition column in a partitioned Hive table.
 
 The PXF Hive Connector partition filtering support for Hive string and integral types is described below:
 
-- The relational operators `=`, `<`, `<=`, `>`, `>=`, and `<>` are supported on string types
-- The relational operators `=` and `<>` are supported on integral types (To use partition filtering with Hive integral types, you must update the Hive configuration as described in the [Prerequisites](#prereq).)
-- The logical operators `AND` and `OR` are supported when used with the relational operators mentioned above
-- The `LIKE` string operator is not supported
+- The relational operators `=`, `<`, `<=`, `>`, `>=`, and `<>` are supported on string types.
+- The relational operators `=` and `<>` are supported on integral types (To use partition filtering with Hive integral types, you must update the Hive configuration as described in the [Prerequisites](#prereq)).
+- The logical operators `AND` and `OR` are supported when used with the relational operators mentioned above.
+- The `LIKE` string operator is not supported.
 
 To take advantage of PXF partition filtering pushdown, the Hive and PXF partition field names must be the same. Otherwise, PXF ignores partition filtering and the filtering is performed on the Greenplum Database side, impacting performance.
 
