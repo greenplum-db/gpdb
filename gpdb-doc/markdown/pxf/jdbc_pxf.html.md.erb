@@ -128,9 +128,7 @@ The PXF JDBC connector supports simultaneous read access from PXF instances runn
 
 PXF uses the `RANGE` and `INTERVAL` values and the `PARTITON_BY` column that you specify to assign specific data rows in the external table to PXF instances running on the Greenplum Database segment hosts. This column selection is specific to PXF processing, and has no relationship to a partition column that you may have specifed for the table in the external SQL database.
 
-When you enable partitioning, the PXF JDBC connector splits a `SELECT` query into a set of small queries, each of which is called a fragment. All PXF instances process a fragment simultaneously. If there are more fragments than PXF instances, some instances will process more than one fragment.
-
-The JDBC connector automatically adds extra query constraints (`WHERE` expressions) to each fragment to guarantee that every tuple of data is retrieved from the external database exactly once.
+When you enable partitioning, the PXF JDBC connector splits a `SELECT` query into a set of small queries, each of which is called a fragment. The JDBC connector automatically adds extra query constraints (`WHERE` expressions) to each fragment to guarantee that every tuple of data is retrieved from the external database exactly once.
 
 When you specify the `PARTITION_BY` option, tune the `INTERVAL` value and unit based upon the optimal number of JDBC connections to the target database and the optimal distribution of external data across Greenplum Database segments. The `INTERVAL` low boundary is driven by the number of Greenplum Database segments while the high boundary is driven by the acceptable number of JDBC connections to the target database. The `INTERVAL` setting influences the number of fragments, and should ideally not be set too high nor too low. Testing with multiple values may help you select the optimal settings. 
 
