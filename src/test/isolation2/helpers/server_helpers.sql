@@ -103,3 +103,7 @@ BEGIN
 	);
 END;
 $$ language plpgsql;
+
+create or replace function master() returns setof gp_segment_configuration as $$
+	select * from gp_segment_configuration where role='p' and content=-1;
+$$ language sql;

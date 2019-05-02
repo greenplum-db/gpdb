@@ -116,3 +116,49 @@ Fault Tolerance Service (FTS):
 
 6. SIGUSR2 is ignored by FTS now, like other background, postmaster
    use SIGTERM to stop the FTS.
+
+FTS Probe Request
+=================
+Currently there are three ways to trigger an FTS probe - two internal and one
+external:
+1. An internal regular FTS probe that is configurable with gp_fts_probe_interval
+2. An internal FTS probe triggered by the query dispatcher
+3. An external manual FTS probe from gp_request_fts_probe_scan()
+
+The following diagram illustrates the fts loop process. The upper portion of the
+loop represents a current probe in progress, and the lower portion represents a
+completed probe awaiting a trigger including the gp_fts_probe_interval timeout.
+This loop can be probed at anytime for results due to any of the above three
+mechanisms.
+
+
+              poll segments
+          +---------<--------+
+          |                  |  <-----+ request4
+          |     upper        |
+          |                  |
+          |                  ^
+      done|                  |start
+          |                  |
+          v     lower        |
+          |                  |
+          |                  |  <-----+ request1, request2, request3
+          +----------->------+
+                waitLatch
+
+
+Two main scenarios to consider:
+1) Allowing multiple probes both internal and external to reuse the same results
+when appropriate (ie: piggybacking on previous results). This is depicted as
+requests 1, 2, and 3 which should share the same results since they request
+before the start of a new fts loop, and after the results of the previous probe
+- that is in the lower portion.
+
+2) Ensuring fresh results from an external probe. This is depicted as as request
+4 incoming during a current probe in progress. This request should get fresh
+results rather than using the current results (ie: "piggybacking").
+
+
+Our implementation addresses these concerns with a probe start tick and probe
+end tick. We send a signal requesting fts results, then wait for a new loop to
+start, and then wait for that current loop to finish.
