@@ -44,6 +44,18 @@ select gp_inject_fault('transaction_abort_failure', 'suspend', dbid) from gp_seg
 
 2&: create table aborted_by_standby(a int, b int);  <waiting ...>
 
+-- Wait for the two transactions to be suspended on master
+select gp_wait_until_triggered_fault('dtm_broadcast_commit_prepared', 1, dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ t                             
+(1 row)
+select gp_wait_until_triggered_fault('transaction_abort_failure', 1, dbid) from gp_segment_configuration where content = -1 and role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ t                             
+(1 row)
+
 -- Promote standby
 select pg_ctl(datadir, 'promote') from gp_segment_configuration where content = -1 and role = 'm';
  pg_ctl            

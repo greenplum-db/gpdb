@@ -29,6 +29,12 @@ from gp_segment_configuration where content = -1 and role = 'p';
 
 2&: create table aborted_by_standby(a int, b int);
 
+-- Wait for the two transactions to be suspended on master
+select gp_wait_until_triggered_fault('dtm_broadcast_commit_prepared', 1, dbid)
+from gp_segment_configuration where content = -1 and role = 'p';
+select gp_wait_until_triggered_fault('transaction_abort_failure', 1, dbid)
+from gp_segment_configuration where content = -1 and role = 'p';
+
 -- Promote standby
 select pg_ctl(datadir, 'promote') from gp_segment_configuration
 where content = -1 and role = 'm';
