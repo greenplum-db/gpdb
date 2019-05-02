@@ -164,6 +164,7 @@ test: segwalrep/dtm_recovery_on_standby
 test: segwalrep/commit_blocking_on_standby
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
+test: fts_manual_probe
 
 # Reindex tests
 test: reindex/abort_reindex
