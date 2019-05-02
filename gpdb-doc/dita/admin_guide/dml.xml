@@ -422,7 +422,7 @@
     </body>
   </topic>
   <topic id="topic11" xml:lang="en">
-    <title id="ix141487">Running out of Locks</title>
+    <title id="ix141487">Running Out of Locks</title>
     <body>
       <p>Greenplum Database can potentially run out of locks when a database
         operation accesses multiple tables in a single transaction. Backup
