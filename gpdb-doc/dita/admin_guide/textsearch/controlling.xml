@@ -88,19 +88,16 @@
         data type. <codeph>to_tsquery</codeph> offers access to more features than
           <codeph>plainto_tsquery</codeph>, but is less forgiving about its input.</p>
       <codeblock>to_tsquery([<i>config</i> regconfig, ] <i>querytext</i> text) returns tsquery</codeblock>
-      <p><codeph>to_tsquery</codeph> creates a <codeph>tsquery</codeph> value
-        from <i>querytext</i>, which must consist of single tokens separated by
-        the Boolean operators <codeph>&amp;</codeph> (AND), <codeph>|</codeph>
-        (OR) and <codeph>!</codeph>(NOT). These operators can be grouped using
-        parentheses. In other words, the input to <codeph>to_tsquery</codeph>
-        must already follow the general rules for <codeph>tsquery</codeph>
-        input, as described in <xref
-          href="../../ref_guide/data_types.xml#topic1/text-search-types"/>.
-        The difference is that while basic <codeph>tsquery</codeph> input takes
-        the tokens at face value, <codeph>to_tsquery</codeph> normalizes each
-        token to a lexeme using the specified or default configuration, and
-        discards any tokens that are stop words according to the configuration.
-        For example:</p>
+      <p><codeph>to_tsquery</codeph> creates a <codeph>tsquery</codeph> value from <i>querytext</i>,
+        which must consist of single tokens separated by the Boolean operators
+          <codeph>&amp;</codeph> (AND), <codeph>|</codeph> (OR) and <codeph>!</codeph>(NOT). These
+        operators can be grouped using parentheses. In other words, the input to
+          <codeph>to_tsquery</codeph> must already follow the general rules for
+          <codeph>tsquery</codeph> input, as described in <xref
+          href="../../ref_guide/datatype-textsearch.xml"/>. The difference is that while basic
+          <codeph>tsquery</codeph> input takes the tokens at face value, <codeph>to_tsquery</codeph>
+        normalizes each token to a lexeme using the specified or default configuration, and discards
+        any tokens that are stop words according to the configuration. For example:</p>
       <codeblock>SELECT to_tsquery('english', 'The &amp; Fat &amp; Rats');
   to_tsquery   
 ---------------

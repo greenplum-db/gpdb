@@ -6,8 +6,8 @@
    <body>
       <p>Configuration parameters affect categories of server behaviors, such as resource
          consumption, query tuning, and authentication. Refer to <xref
-        href="../../ref_guide/config_params/guc_category-list.html">Parameter Categories</xref>
-         in the <cite>Greenplum Database Reference Guide</cite> for a list of Greenplum
-         server configuration parameter categories.</p>
+            href="../../ref_guide/config_params/guc_category-list.xml">Parameter Categories</xref>
+         in the <cite>Greenplum Database Reference Guide</cite> for a list of Greenplum server
+         configuration parameter categories.</p>
    </body>
 </topic>
