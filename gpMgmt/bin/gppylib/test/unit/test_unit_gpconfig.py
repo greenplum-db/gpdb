@@ -485,7 +485,7 @@ class GpConfig(GpTestCase):
 
     def test_quote_string_already_quoted(self):
         value = "'teststring'"
-        expected = "'teststring'"
+        expected = "'''teststring'''"
         result = self.subject.quote_string(self.guc, value)
         self.assertEqual(result, expected)
 
@@ -503,13 +503,13 @@ class GpConfig(GpTestCase):
 
     def test_quote_string_with_internal_backslash(self):
         value = "test\\string"
-        expected = "'test\\\\string'"
+        expected = "'test\\string'"
         result = self.subject.quote_string(self.guc, value)
         self.assertEqual(result, expected)
 
-    def test_quote_string_with_single_quote_and_backslash(self):
+    def test_quote_string_with_backslashed_single_quote(self):
         value = "test\\'string"
-        expected = "'test\\\\''string'"
+        expected = "'test''string'"
         result = self.subject.quote_string(self.guc, value)
         self.assertEqual(result, expected)
 
@@ -536,13 +536,6 @@ class GpConfig(GpTestCase):
 
     def test_change_of_unquoted_string_to_quoted_succeeds(self):
         self.setup_for_testing_quoting_string_values(vartype='string', value='baz')
-        self.subject.do_main()
-        self.validation_for_testing_quoting_string_values(expected_value="'baz'")
-
-    def test_change_of_master_value_with_quotes_succeeds(self):
-        already_quoted_master_value = "'baz'"
-        vartype = 'string'
-        self.setup_for_testing_quoting_string_values(vartype=vartype, value='baz', additional_args=['--mastervalue', already_quoted_master_value])
         self.subject.do_main()
         self.validation_for_testing_quoting_string_values(expected_value="'baz'")
 

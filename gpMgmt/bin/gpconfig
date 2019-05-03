@@ -365,16 +365,10 @@ def do_change(options):
         LOGGER.info("completed successfully with parameters '%s'" % params)
 
 
-# If the value is a string, escape and single-quote it as per the behavior of
-# the quote_literal() function in Postgres.
 def quote_string(guc, value):
     if value is not None and guc and guc.vartype == "string":
-        # Remove any existing single-quoting
-        if len(value) > 2 and value[0] == "'" and value[-1] == "'":
-            value = value[1:-1]
-        # Escape single quotes and backslashes
-        value = value.replace("'", "''").replace("\\", "\\\\")
-        # Single-quote the whole string
+        # Properly escape single quotes, turning \' into ''
+        value = value.replace("\\'", "'").replace("'", "''")
         value  = "'" + value + "'"
     return value
 
