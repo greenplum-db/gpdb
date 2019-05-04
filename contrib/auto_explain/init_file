@@ -12,17 +12,17 @@ s/Rows Removed by Filter: .*/Rows Removed by Filter: /
 m/Executor [mM]emory: .*/
 s/Executor [mM]emory: .*/Executor Memory: /
 
-m/Memory used:\s+[0-9kKmMgGB]+/
-s/Memory used:\s+[0-9kKmMgGB]+/Memory used:/
+m/Memory used:\s+[0-9]+[kKmMgG]B.*/
+s/Memory used:\s+[0-9]+[kKmMgG]B.*/Memory used:/
 
-m/Buckets: [0-9]+\s+Batches: [0-9]+\s+Memory Usage:\s+[0-9kKmMgG]B/
-s/Buckets: [0-9]+\s+Batches: [0-9]+\s+Memory Usage:\s+[0-9kKmMgG]B/Buckets: 524288  Batches: 1  Memory Usage: 4kB/
+m/Buckets:\s+[0-9]+\s+Batches:\s+[0-9]+\s+Memory Usage:\s+[0-9]+[kKmMgG]B.*/
+s/Buckets:\s+[0-9]+\s+Batches:\s+[0-9]+\s+Memory Usage:\s+[0-9]+[kKmMgG]B.*/Buckets: 1  Batches: 1  Memory Usage: 4kB/
 
-m/Extra Text: Hash chain length [0-9.]+ avg, [0-9]+ max, using [0-9]+ of [0-9]+ buckets/
-s/Extra Text: Hash chain length [0-9.]+ avg, [0-9]+ max, using [0-9]+ of [0-9]+ buckets/Extra Text: Hash chain length 1.5 avg, 3 max, using 91 of 524288 buckets/
+m/Extra Text: Hash chain length [0-9.]+ avg, [0-9]+ max, using [0-9]+ of [0-9]+ buckets.*/
+s/Extra Text: Hash chain length [0-9.]+ avg, [0-9]+ max, using [0-9]+ of [0-9]+ buckets.*/Extra Text: Hash chain length 1.5 avg, 3 max, using 1 of 3 buckets/
 
-m/work_mem: [0-9kKmMgG]B  Segments: [-0-9]+  Max: [0-9kKmMgG]+B.*/
-s/work_mem: [0-9kKmMgG]B  Segments: [-0-9]+  Max: [0-9kKmMgG]+B.*/work_mem: 4kB  Segments: 1  Max: 4kB/
+m/work_mem: [0-9]+[kKmMgG]B  Segments: [-0-9]+  Max: [0-9]+[kKmMgG]B.*/
+s/work_mem: [0-9]+[kKmMgG]B  Segments: [-0-9]+  Max: [0-9]+[kKmMgG]B.*/work_mem: 4kB  Segments: 1  Max: 4kB/
 -- end_matchsubs
 
 -- start_matchignore
