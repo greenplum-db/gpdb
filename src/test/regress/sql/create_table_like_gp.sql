@@ -30,3 +30,21 @@ FROM
 		JOIN pg_catalog.pg_attribute_encoding a ON (a.attrelid = c.oid)
 WHERE
 	c.relname like 't_ao_enc%';
+
+-- EXTERNAL TABLE
+CREATE EXTERNAL TABLE t_ext (a integer) LOCATION ('file://127.0.0.1/tmp/foo') FORMAT 'text';
+CREATE EXTERNAL TABLE t_ext_a (LIKE t_ext INCLUDING ALL) LOCATION ('file://127.0.0.1/tmp/foo') FORMAT 'text';
+CREATE EXTERNAL TABLE t_ext_b (LIKE t_ext) LOCATION ('file://127.0.0.1/tmp/foo') FORMAT 'text';
+
+-- Verify created tables
+SELECT
+	c.relname,
+	c.relstorage,
+	e.urilocation,
+	e.execlocation,
+	e.fmtopts
+FROM
+	pg_catalog.pg_class c
+		LEFT OUTER JOIN pg_catalog.pg_exttable e ON (c.oid = e.reloid)
+WHERE
+	c.relname LIKE 't_ext%';

@@ -877,6 +877,12 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 	setup_parser_errposition_callback(&pcbstate, cxt->pstate,
 									  table_like_clause->relation->location);
 
+	/* LIKE INCLUDING is not supported for external tables */
+	if (forceBareCol && table_like_clause->options != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("LIKE INCLUDING may not be used with this kind of relation")));
+
 	/* we could support LIKE in many cases, but worry about it another day */
 	if (cxt->isforeign)
 		ereport(ERROR,
@@ -919,11 +925,6 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 
 	tupleDesc = RelationGetDescr(relation);
 	constr = tupleDesc->constr;
-
-	if (forceBareCol && table_like_clause->options != 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("LIKE INCLUDING may not be used with this kind of relation")));
 
 	/*
 	 * Initialize column number map for map_variable_attnos().  We need this
