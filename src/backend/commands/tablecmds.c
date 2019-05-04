@@ -17615,7 +17615,7 @@ make_distributedby_for_rel(Relation rel)
  * Given a relation, get all column encodings for that relation as a list of
  * ColumnReferenceStorageDirective structures.
  */
-static List *
+List *
 rel_get_column_encodings(Relation rel)
 {
 	List **colencs = RelationGetUntransformedAttributeOptions(rel);
