@@ -4,6 +4,7 @@ INSERT INTO auto_explain_test.t1 VALUES(generate_series(0, 1000));
 CREATE TABLE auto_explain_test.t2(b int);
 INSERT INTO auto_explain_test.t2 VALUES(generate_series(0, 1000));
 
+SET enable_nestloop = ON;
 SET CLIENT_MIN_MESSAGES = LOG;
 LOAD 'auto_explain';
 SET auto_explain.log_analyze = TRUE;
