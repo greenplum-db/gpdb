@@ -411,8 +411,8 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 	}
 
 	/*
-	 * Transform DISTRIBUTED BY (or constuct a default one, if not given
-	 *  explicitly). Not for foreign tables, though.
+	 * Transform DISTRIBUTED BY (or construct a default one, if not given
+	 * explicitly). Not for foreign tables, though.
 	 */
 	if (stmt->relKind == RELKIND_RELATION)
 	{
@@ -1775,7 +1775,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 		/* Otherwise use DEFAULT as numsegments */
 		numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS();
 
-	/* Explictly specified distributed randomly, no futher check needed */
+	/* Explicitly specified distributed randomly, no further check needed */
 	if (distributedBy &&
 		(distributedBy->ptype == POLICYTYPE_PARTITIONED && distributedBy->keyCols == NIL))
 	{
@@ -4468,7 +4468,7 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext *cxt
 		newenc = lappend(newenc, c);
 	}
 
-	/* Check again incase we expanded a some column encoding clauses */
+	/* Check again in case we expanded a some column encoding clauses */
 	if (!can_enc)
 	{
 		if (found_enc)

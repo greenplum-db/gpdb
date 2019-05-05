@@ -794,7 +794,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 /*
  * This is a bit ugly... To allow these to be column aliases without
  * the "AS" keyword, and not conflict with PostgreSQL's non-standard
- * suffix operators, we need to give these a precidence.
+ * suffix operators, we need to give these a precedence.
  */
 
 %nonassoc   ABORT_P

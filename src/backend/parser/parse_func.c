@@ -2116,7 +2116,7 @@ checkTableFunctions_walker(Node *node, check_table_func_context *context)
 		return false;
 
 	/* 
-	 * TABLE() value expressions are currently only permited as parameters
+	 * TABLE() value expressions are currently only permitted as parameters
 	 * to table functions called in the FROM clause.
 	 */
 	if (IsA(node, TableValueExpr))

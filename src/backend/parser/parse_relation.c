@@ -594,7 +594,7 @@ scanRTEForColumn(ParseState *pstate, RangeTblEntry *rte, char *colname,
 	{
 		/* In GPDB, system columns like gp_segment_id, ctid, xmin/xmax seem to be
 		 * ambiguous for replicated table, replica in each segment has different
-		 * value of those columns, between sessions, different replicas are choosen
+		 * value of those columns, between sessions, different replicas are chosen
 		 * to provide data, so it's weird for users to see different system columns
 		 * between sessions. So for replicated table, we don't expose system columns
 		 * unless it's GP_ROLE_UTILITY for debug purpose.
