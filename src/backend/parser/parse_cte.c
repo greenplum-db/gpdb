@@ -1076,7 +1076,7 @@ checkWindowFuncInRecursiveTerm(SelectStmt *stmt, CteState *cstate)
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("Window Functions in a recursive query is not implemented"),
+							 errmsg("window functions in a recursive query is not implemented"),
 							 parser_errposition(cstate->pstate,
 												exprLocation((Node *) fc))));
 				}

@@ -1956,7 +1956,7 @@ isSimplyUpdatableRelation(Oid relid, bool noerror)
 		if (!noerror)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("Invalid oid: %d is not simply updatable", relid)));
+					 errmsg("invalid oid: %d is not simply updatable", relid)));
 		return false;
 	}
 

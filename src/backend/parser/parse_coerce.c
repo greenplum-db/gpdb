@@ -226,7 +226,7 @@ coerce_type(ParseState *pstate, Node *node,
 			if(elemoid == InvalidOid)
 				ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH), 
-					 errmsg("Cannot convert non-Array type to ANYARRAY")));
+					 errmsg("cannot convert non-Array type to ANYARRAY")));
 
 			memcpy(newcon, con, sizeof(Const));
 			newcon->consttype = ANYARRAYOID;

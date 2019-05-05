@@ -76,7 +76,7 @@ partition by range (b,d)
 partition aa start (2007,1) end (2008,2),
 partition bb start (2008,2) end (2009,3)
 );
-ERROR:  too many columns for RANGE partition -- only one column is allowed.
+ERROR:  too many columns for RANGE partition -- only one column is allowed
 LINE 3: partition by range (b,d)
                      ^
 drop table ggg cascade;
@@ -571,7 +571,7 @@ partition by range (b,d)
 partition aa start (2007,1) end (2008,2),
 partition bb start (2008,2) end (2009,3)
 );
-ERROR:  too many columns for RANGE partition -- only one column is allowed.
+ERROR:  too many columns for RANGE partition -- only one column is allowed
 LINE 3: partition by range (b,d)
                      ^
 drop table ggg cascade;
@@ -734,8 +734,8 @@ end (date '2006-01-01') every (interval '1 year')) (
 partition boys values ('M'),
 partition girls values ('F')
 );
-ERROR:  Cannot create a partitioned table using CREATE TABLE AS SELECT
-HINT:  Use CREATE TABLE...LIKE (followed by INSERT...SELECT) instead
+ERROR:  cannot create a partitioned table using CREATE TABLE AS SELECT
+HINT:  Use CREATE TABLE...LIKE (followed by INSERT...SELECT) instead.
 -- like is ok
 create table rank2 (like rank1)
 DISTRIBUTED BY (id, gender, year)
@@ -1458,7 +1458,7 @@ partition by range (i, j)
  start(15, '2010-01-01') end (30, '2011-01-01'),
  start(1, '2011-01-01') end (100, '2012-01-01')
 );
-ERROR:  too many columns for RANGE partition -- only one column is allowed.
+ERROR:  too many columns for RANGE partition -- only one column is allowed
 LINE 2: partition by range (i, j)
                      ^
 -- should work
@@ -1517,7 +1517,7 @@ start(2000.99, '2007-01-01 00:00:00', 'BBB')
 start(4000.95, '2007-01-01 00:00:00', 'AAA')
   end (7000.95, '2007-02-02 15:00:00', 'BBB')
 );
-ERROR:  too many columns for RANGE partition -- only one column is allowed.
+ERROR:  too many columns for RANGE partition -- only one column is allowed
 LINE 3: partition by range(n, t, s)
                      ^
 -- should work

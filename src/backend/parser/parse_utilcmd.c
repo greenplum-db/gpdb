@@ -815,7 +815,7 @@ transformTableConstraint(CreateStmtContext *cxt, Constraint *constraint)
 	if (constraint->contype == CONSTR_EXCLUSION)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("GPDB does not support exclusion constraints.")));
+				 errmsg("GPDB does not support exclusion constraints")));
 
 	switch (constraint->contype)
 	{
@@ -1676,8 +1676,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 				if(srehDesc && srehDesc->into_file)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("External web table with ON MASTER clause "
-									"cannot use LOG ERRORS feature.")));
+							 errmsg("external web table with ON MASTER clause cannot use LOG ERRORS feature")));
 			}
 		}
 	}
@@ -2500,7 +2499,7 @@ transformIndexConstraints(CreateStmtContext *cxt, bool mayDefer)
 		if(constraint->contype == CONSTR_EXCLUSION)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("GPDB does not support exclusion constraints.")));
+						errmsg("GPDB does not support exclusion constraints")));
 
 		Assert(constraint->contype == CONSTR_PRIMARY ||
 			   constraint->contype == CONSTR_UNIQUE);
@@ -2611,8 +2610,7 @@ transformIndexConstraints(CreateStmtContext *cxt, bool mayDefer)
 			
 				ereport(DEBUG1,
 						(errmsg("deferring index creation for table \"%s\"",
-								cxt->relation->relname)
-						 ));
+								cxt->relation->relname)));
 				cxt->dlist = lappend(cxt->dlist, index);
 			}
 			else
