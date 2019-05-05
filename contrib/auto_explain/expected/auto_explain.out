@@ -1,3 +1,12 @@
+CREATE SCHEMA auto_explain_test;
+CREATE TABLE auto_explain_test.t1(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO auto_explain_test.t1 VALUES(generate_series(0, 1000));
+CREATE TABLE auto_explain_test.t2(b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO auto_explain_test.t2 VALUES(generate_series(0, 1000));
 SET CLIENT_MIN_MESSAGES = LOG;
 LOAD 'auto_explain';
 LOG:  statement: LOAD 'auto_explain';
@@ -17,40 +26,37 @@ SET auto_explain.log_verbose = FALSE;
 LOG:  statement: SET auto_explain.log_verbose = FALSE;
 SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
-LOG:  duration: 0.198 ms  plan:
+LOG:  duration: 0.173 ms  plan:
 Query Text: SELECT relname FROM pg_class WHERE relname='pg_class';
 Seq Scan on pg_class  (cost=0.00..12.46 rows=1 width=64) (actual rows=1 loops=1)
   Filter: (relname = 'pg_class'::name)
-  Rows Removed by Filter: 1
+  Rows Removed by Filter: 438
   (slice0)    Executor memory: 32K bytes.
-Memory used:  12345kB
+Memory used:  128000kB
  relname  
 ----------
  pg_class
 (1 row)
 
-SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
-LOG:  statement: SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
-LOG:  duration: 18.000 ms  plan:
-Query Text: SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
-Aggregate  (cost=10000000917.67..10000000917.68 rows=1 width=1) (actual rows=1 loops=1)
-  ->  Nested Loop  (cost=10000000004.29..10000000770.18 rows=58995 width=0) (actual rows=58995 loops=1)
-        ->  Hash Join  (cost=4.29..20.29 rows=135 width=0) (actual rows=135 loops=1)
-              Hash Cond: (a.oid = pg_index.indrelid)
-              Extra Text: Hash chain length 1.5 avg, 3 max, using 91 of 262144 buckets.
-              ->  Seq Scan on pg_class a  (cost=0.00..11.37 rows=437 width=4) (actual rows=437 loops=1)
-              ->  Hash  (cost=2.60..2.60 rows=45 width=4) (actual rows=135 loops=1)
-                    Buckets: 12  Batches: 1  Memory Usage: 21kB
-                    ->  Seq Scan on pg_index  (cost=0.00..2.60 rows=135 width=4) (actual rows=135 loops=1)
-                          Filter: indisunique
-                          Rows Removed by Filter: 2
-        ->  Materialize  (cost=0.00..13.56 rows=146 width=0) (actual rows=437 loops=135)
-              ->  Seq Scan on pg_class b  (cost=0.00..11.37 rows=437 width=0) (actual rows=437 loops=1)
-  (slice0)    Executor memory: 2225K bytes.  Work_mem: 4K bytes max.
+SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+LOG:  statement: SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+LOG:  duration: 165.358 ms  plan:
+Query Text: SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+Aggregate  (cost=10000035148.67..10000035148.68 rows=1 width=8) (actual rows=1 loops=1)
+  ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=10000035148.61..10000035148.66 rows=1 width=8) (actual rows=3 loops=1)
+        ->  Aggregate  (cost=10000035148.61..10000035148.62 rows=1 width=8) (actual rows=1 loops=1)
+              ->  Nested Loop  (cost=10000000000.00..10000032643.60 rows=334001 width=0) (actual rows=340340 loops=1)
+                    ->  Seq Scan on t1  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
+                    ->  Materialize  (cost=0.00..68.06 rows=1001 width=0) (actual rows=1001 loops=340)
+                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..53.05 rows=1001 width=0) (actual rows=1001 loops=1)
+                                ->  Seq Scan on t2  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
+  (slice0)    Executor memory: 131K bytes.
+  (slice1)    Executor memory: 53K bytes avg x 3 workers, 58K bytes max (seg1).
+  (slice2)    Executor memory: 216K bytes avg x 3 workers, 216K bytes max (seg0).
 Memory used:  128000kB
- ?column? 
-----------
- t
+  count  
+---------
+ 1002001
 (1 row)
 
 SET auto_explain.log_min_duration = 1;
@@ -59,6 +65,7 @@ SET auto_explain.log_triggers = FALSE;
 LOG:  statement: SET auto_explain.log_triggers = FALSE;
 SET auto_explain.log_verbose = TRUE;
 LOG:  statement: SET auto_explain.log_verbose = TRUE;
+-- this select should not dump execution plan
 SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
  relname  
@@ -66,34 +73,39 @@ LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
  pg_class
 (1 row)
 
--- SELECT count(*)>0 FROM pg_class, pg_index WHERE oid = indrelid AND indisunique;
-SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
-LOG:  statement: SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
-LOG:  duration: 18.000 ms  plan:
-Query Text: SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
-Aggregate  (cost=10000000917.67..10000000917.68 rows=1 width=1) (actual rows=1 loops=1)
-  Output: (count(*) > 0)
-  ->  Nested Loop  (cost=10000000004.29..10000000770.18 rows=58995 width=0) (actual rows=58995 loops=1)
-        ->  Hash Join  (cost=4.29..20.29 rows=135 width=0) (actual rows=135 loops=1)
-              Hash Cond: (a.oid = pg_index.indrelid)
-              Executor Memory: 21kB  Segments: 1  Max: 4kB (segment -1)
-              work_mem: 4kB  Segments: 1  Max: 4kB (segment -1)  Workfile: (0 spilling)
-              Extra Text: Hash chain length 1.5 avg, 3 max, using 1 of 3 buckets.
-              ->  Seq Scan on pg_catalog.pg_class a  (cost=0.00..11.37 rows=437 width=4) (actual rows=437 loops=1)
-                    Output: a.oid
-              ->  Hash  (cost=2.60..2.60 rows=45 width=4) (actual rows=135 loops=1)
-                    Output: pg_index.indrelid
-                    Buckets: 21  Batches: 1  Memory Usage: 4kB
-                    ->  Seq Scan on pg_catalog.pg_index  (cost=0.00..2.60 rows=135 width=4) (actual rows=135 loops=1)
-                          Output: pg_index.indrelid
-                          Filter: pg_index.indisunique
-                          Rows Removed by Filter: 1
-        ->  Materialize  (cost=0.00..13.56 rows=146 width=0) (actual rows=437 loops=135)
-              ->  Seq Scan on pg_catalog.pg_class b  (cost=0.00..11.37 rows=437 width=0) (actual rows=437 loops=1)
-  (slice0)    Executor memory: 221K bytes.  Work_mem: 21K bytes max.
-Memory used:  54321kB
- ?column? 
-----------
- t
+-- this select should also dump plan, since it takes too much time to run
+SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+LOG:  statement: SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+LOG:  duration: 208.523 ms  plan:
+Query Text: SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+Aggregate  (cost=10000035148.67..10000035148.68 rows=1 width=8) (actual rows=1 loops=1)
+  Output: count((count(*)))
+  ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=10000035148.61..10000035148.66 rows=1 width=8) (actual rows=3 loops=1)
+        Output: (count(*))
+        ->  Aggregate  (cost=10000035148.61..10000035148.62 rows=1 width=8) (actual rows=1 loops=1)
+              Output: count(*)
+              ->  Nested Loop  (cost=10000000000.00..10000032643.60 rows=334001 width=0) (actual rows=340340 loops=1)
+                    ->  Seq Scan on auto_explain_test.t1  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
+                          Output: t1.a
+                    ->  Materialize  (cost=0.00..68.06 rows=1001 width=0) (actual rows=1001 loops=340)
+                          Output: t2.b
+                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..53.05 rows=1001 width=0) (actual rows=1001 loops=1)
+                                Output: t2.b
+                                ->  Seq Scan on auto_explain_test.t2  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
+                                      Output: t2.b
+  (slice0)    Executor memory: 131K bytes.
+  (slice1)    Executor memory: 43K bytes avg x 3 workers, 43K bytes max (seg0).
+  (slice2)    Executor memory: 216K bytes avg x 3 workers, 216K bytes max (seg0).
+Memory used:  128000kB
+  count  
+---------
+ 1002001
 (1 row)
 
+-- clean jobs
+DROP TABLE auto_explain_test.t1;
+LOG:  statement: DROP TABLE auto_explain_test.t1;
+DROP TABLE auto_explain_test.t2;
+LOG:  statement: DROP TABLE auto_explain_test.t2;
+DROP SCHEMA auto_explain_test;
+LOG:  statement: DROP SCHEMA auto_explain_test;

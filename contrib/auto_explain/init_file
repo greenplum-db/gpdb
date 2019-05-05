@@ -1,31 +1,14 @@
 -- start_matchsubs
-
-m/\(cost=[a-z_A-Z0-9. =]+\)\s+\([a-z_A-Z0-9. =]+\)/
-s/\(cost=[a-z_A-Z0-9. =]+\)\s+\([a-z_A-Z0-9. =]+\)//
-
-m/duration:.*$/
+m/duration: .*$/
 s/duration:\s+[0-9.]+\s*ms.*/duration: ms/
-
-m/Rows Removed by Filter: .*/
-s/Rows Removed by Filter: .*/Rows Removed by Filter: /
 
 m/Executor [mM]emory: .*/
 s/Executor [mM]emory: .*/Executor Memory: /
 
-m/Memory used:\s+[0-9.]+[kKmMgG]?B.*/
-s/Memory used:\s+[0-9.]+[kKmMgG]?B.*/Memory used:/
+m/Rows Removed by Filter: .*/
+s/Rows Removed by Filter: .*/Rows Removed by Filter: /
 
-m/Buckets:\s+[0-9]+\s+Batches:\s+[0-9]+\s+Memory Usage:\s+[0-9.]+[kKmMgG]?B.*/
-s/Buckets:\s+[0-9]+\s+Batches:\s+[0-9]+\s+Memory Usage:\s+[0-9.]+[kKmMgG]?B.*/Buckets: 1  Batches: 1  Memory Usage: 4kB/
+m/Memory used:\s+[0-9]+kB.*/
+s/Memory used:\s+[0-9]+kB.*/Memory used:/
 
-m/Extra Text: Hash chain length [0-9.]+ avg, [0-9.]+ max, using [0-9]+ of [0-9]+ buckets.*/
-s/Extra Text: Hash chain length [0-9.]+ avg, [0-9.]+ max, using [0-9]+ of [0-9]+ buckets.*/Extra Text: Hash chain length 1.5 avg, 3 max, using 1 of 3 buckets/
-
-m/work_mem: [0-9.]+[kKmMgG]?B  Segments: [-0-9]+  Max: [0-9.]+[kKmMgG]?B.*/
-s/work_mem: [0-9.]+[kKmMgG]?B  Segments: [-0-9]+  Max: [0-9.]+[kKmMgG]?B.*/work_mem: 4kB  Segments: 1  Max: 4kB/
 -- end_matchsubs
-
--- start_matchignore
-# orca failed to produce the expected plan, ignore this message
-m/LOG:  Planner produced plan :0/
--- end_matchignore

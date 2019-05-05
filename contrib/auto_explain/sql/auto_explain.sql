@@ -1,3 +1,9 @@
+CREATE SCHEMA auto_explain_test;
+CREATE TABLE auto_explain_test.t1(a int);
+INSERT INTO auto_explain_test.t1 VALUES(generate_series(0, 1000));
+CREATE TABLE auto_explain_test.t2(b int);
+INSERT INTO auto_explain_test.t2 VALUES(generate_series(0, 1000));
+
 SET CLIENT_MIN_MESSAGES = LOG;
 LOAD 'auto_explain';
 SET auto_explain.log_analyze = TRUE;
@@ -9,12 +15,18 @@ SET auto_explain.log_timing = FALSE;
 SET auto_explain.log_verbose = FALSE;
 
 SELECT relname FROM pg_class WHERE relname='pg_class';
-SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
+SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
 
 SET auto_explain.log_min_duration = 1;
 SET auto_explain.log_triggers = FALSE;
 SET auto_explain.log_verbose = TRUE;
 
+-- this select should not dump execution plan
 SELECT relname FROM pg_class WHERE relname='pg_class';
--- SELECT count(*)>0 FROM pg_class, pg_index WHERE oid = indrelid AND indisunique;
-SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
+-- this select should also dump plan, since it takes too much time to run
+SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+
+-- clean jobs
+DROP TABLE auto_explain_test.t1;
+DROP TABLE auto_explain_test.t2;
+DROP SCHEMA auto_explain_test;
