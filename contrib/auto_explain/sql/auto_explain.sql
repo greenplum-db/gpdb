@@ -9,11 +9,12 @@ SET auto_explain.log_timing = FALSE;
 SET auto_explain.log_verbose = FALSE;
 
 SELECT relname FROM pg_class WHERE relname='pg_class';
-SELECT count(*)>0 FROM pg_class, pg_index WHERE oid = indrelid AND indisunique;
+SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
 
 SET auto_explain.log_min_duration = 1;
 SET auto_explain.log_triggers = FALSE;
 SET auto_explain.log_verbose = TRUE;
 
 SELECT relname FROM pg_class WHERE relname='pg_class';
-SELECT count(*)>0 FROM pg_class, pg_index WHERE oid = indrelid AND indisunique;
+-- SELECT count(*)>0 FROM pg_class, pg_index WHERE oid = indrelid AND indisunique;
+SELECT count(*)>0 FROM pg_class a, pg_index, pg_class b WHERE a.oid = indrelid AND indisunique;
