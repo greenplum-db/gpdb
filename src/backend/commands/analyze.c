@@ -1524,6 +1524,15 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	*totalrows = relTuples;
 	*totaldeadrows = 0;
 	*totalblocks = relPages;
+
+	if ('h' == onerel->rd_rel->relstorage && relTuples == 0 && relPages > 0)
+	{
+		/*
+		 * NOTICE user when all sampled pages are empty
+		 */
+		ereport(NOTICE,
+			(errmsg("ANALYZE detected all empty sample pages for table %s, please run VACUUM FULL for accurate estimation.", RelationGetRelationName(onerel))));
+	}
 	if (relTuples == 0.0)
 		return 0;
 
