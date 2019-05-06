@@ -25,15 +25,16 @@ include_directories(${GPDB_SRC_DIR}/src/include
     ${GPDB_SRC_DIR}/src/port
     ${Python2_INCLUDE_DIRS})
 link_directories(${CMAKE_PREFIX_PATH}/lib)
+find_library(LIBPQ NAMES libpq HINTS ${CMAKE_INSTALL_PREFIX}/LIB)
+find_library(LIBPGPORT NAMES libpgport HINTS ${CMAKE_INSTALL_PREFIX}/LIB)
+find_library(LIBPGCOMMON NAMES libpgcommon HINTS ${CMAKE_INSTALL_PREFIX}/LIB)
 
 add_library (pygresql SHARED pgmodule.c)
-target_link_libraries(pygresql libpq libpgport libpgcommon ws2_32 secur32 ${Python2_LIBRARIES})
+target_link_libraries(pygresql ${LIBPQ} ${LIBPGPORT} ${LIBPGCOMMON} ws2_32 secur32 ${Python2_LIBRARIES})
+
 set_target_properties(pygresql PROPERTIES OUTPUT_NAME "_pg")
 set_target_properties(pygresql PROPERTIES SUFFIX ".pyd")
 install(TARGETS pygresql DESTINATION lib/python/pygresql)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/pg.py DESTINATION lib/python/pygresql)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/pgdb.py DESTINATION lib/python/pygresql)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py DESTINATION lib/python/pygresql)
-
-file(TO_CMAKE_PATH ${CMAKE_PREFIX_PATH}/lib/libpq.dll LIBPQDLL)
-install(FILES ${LIBPQDLL} DESTINATION lib/python/pygresql)
