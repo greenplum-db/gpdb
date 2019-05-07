@@ -5448,7 +5448,7 @@ RelationCacheInitFileRemove(void)
 	const char *tblspcdir = "pg_tblspc";
 	DIR		   *dir;
 	struct dirent *de;
-	char		path[MAXPGPATH + 10 + strlen(tablespace_version_directory()) + 1];
+	char		path[MAXPGPATH + 11 + get_dbid_string_length() + 1 + sizeof(GP_TABLESPACE_VERSION_DIRECTORY)];
 
 	snprintf(path, sizeof(path), "global/%s",
 			 RELCACHE_INIT_FILENAME);
@@ -5472,7 +5472,7 @@ RelationCacheInitFileRemove(void)
 		{
 			/* Scan the tablespace dir for per-database dirs */
 			snprintf(path, sizeof(path), "%s/%s/%s",
-					 tblspcdir, de->d_name, tablespace_version_directory());
+					 tblspcdir, de->d_name, GP_TABLESPACE_VERSION_DIRECTORY);
 			RelationCacheInitFileRemoveInDir(path);
 		}
 	}

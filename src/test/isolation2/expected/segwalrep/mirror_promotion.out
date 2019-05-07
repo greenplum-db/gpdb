@@ -136,9 +136,18 @@ select content, preferred_role, role, status, mode from gp_segment_configuration
 -- set GUCs to speed-up the test
 !\retcode gpconfig -r gp_fts_probe_retries --masteronly;
 -- start_ignore
+
 -- end_ignore
 (exited with code 0)
 !\retcode gpconfig -r gp_fts_probe_timeout --masteronly;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
+-- Set GUC to force tablespace drop replay to complete on mirror before
+-- removing the directory
+!\retcode gpconfig -c create_restartpoint_on_ckpt_record_replay -v on;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
@@ -156,6 +165,9 @@ select content, preferred_role, role, status, mode from gp_segment_configuration
 
 -- create tablespace to test if it works with gprecoverseg -F (pg_basebackup)
 !\retcode mkdir /tmp/mirror_promotion_tablespace_loc;
+-- start_ignore
+
+-- end_ignore
 (exited with code 0)
 create tablespace mirror_promotion_tablespace location '/tmp/mirror_promotion_tablespace_loc';
 CREATE
@@ -172,7 +184,26 @@ drop table mirror_promotion_tblspc_heap_table;
 DROP
 drop tablespace mirror_promotion_tablespace;
 DROP
+-- Force the mirror to replay the drop before moving forward with tablespace
+-- directory deletion
+checkpoint;
+CHECKPOINT
 !\retcode rm -rf /tmp/mirror_promotion_tablespace_loc;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
+-- Reset create_restartpoint_on_ckpt_record_replay guc
+!\retcode gpconfig -r create_restartpoint_on_ckpt_record_replay;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+
+-- end_ignore
 (exited with code 0)
 
 -- loop while segments come in sync

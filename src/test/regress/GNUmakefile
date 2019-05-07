@@ -160,8 +160,16 @@ submake-contrib-dummy_seclabel:
 
 .PHONY: tablespace-setup
 tablespace-setup:
-	rm -rf ./testtablespace ./testtablespace_otherloc ./testtablespace_unlogged
-	mkdir ./testtablespace ./testtablespace_otherloc ./testtablespace_unlogged
+	rm -rf ./testtablespace ./testtablespace_otherloc ./testtablespace_unlogged ./testtablespace_existing_version_dir
+	mkdir -p ./testtablespace ./testtablespace_otherloc ./testtablespace_unlogged \
+	./testtablespace_existing_version_dir/1/GPDB_99_399999991/ \
+	./testtablespace_existing_version_dir/2/GPDB_99_399999991/ \
+	./testtablespace_existing_version_dir/3/GPDB_99_399999991/ \
+	./testtablespace_existing_version_dir/4/GPDB_99_399999991/ \
+	./testtablespace_existing_version_dir/5/GPDB_99_399999991/ \
+	./testtablespace_existing_version_dir/6/GPDB_99_399999991/ \
+	./testtablespace_existing_version_dir/7/GPDB_99_399999991/ \
+	./testtablespace_existing_version_dir/8/GPDB_99_399999991/
 
 # Check for include files that are not being shipped
 .PHONY: includecheck

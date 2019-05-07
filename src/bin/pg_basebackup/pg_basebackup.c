@@ -1181,10 +1181,10 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 		/* 
 		 * Construct the new tablespace path using the given target gp dbid
 		 */
-		snprintf(gp_tablespace_filename, sizeof(filename), "%s/%s_db%d",
-				 current_path,
-				 GP_TABLESPACE_VERSION_DIRECTORY,
-				 target_gp_dbid);
+		snprintf(gp_tablespace_filename, sizeof(filename), "%s/%d/%s",
+				current_path,
+				target_gp_dbid,
+				GP_TABLESPACE_VERSION_DIRECTORY);
 	}
 
 	/*
@@ -1366,14 +1366,16 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 					filename[strlen(filename) - 1] = '\0';		/* Remove trailing slash */
 
 					mapped_tblspc_path = get_tablespace_mapping(&copybuf[157]);
-					if (symlink(mapped_tblspc_path, filename) != 0)
+					char *mapped_tblspc_path_with_dbid = psprintf("%s/%d", mapped_tblspc_path, target_gp_dbid);
+					if (symlink(mapped_tblspc_path_with_dbid, filename) != 0)
 					{
 						fprintf(stderr,
 								_("%s: could not create symbolic link from \"%s\" to \"%s\": %s\n"),
-								progname, filename, mapped_tblspc_path,
+								progname, filename, mapped_tblspc_path_with_dbid,
 								strerror(errno));
 						disconnect_and_exit(1);
 					}
+					pfree(mapped_tblspc_path_with_dbid);
 				}
 				else
 				{
@@ -1899,7 +1901,7 @@ BaseBackup(void)
 			char	   *path = (char *) get_tablespace_mapping(PQgetvalue(res, i, 1));
 			char path_with_subdir[MAXPGPATH];
 
-			sprintf(path_with_subdir, "%s/%s_db%d", path, GP_TABLESPACE_VERSION_DIRECTORY, target_gp_dbid);
+			sprintf(path_with_subdir, "%s/%d/%s", path, target_gp_dbid, GP_TABLESPACE_VERSION_DIRECTORY);
 
 			verify_dir_is_empty_or_create(path_with_subdir);
 		}

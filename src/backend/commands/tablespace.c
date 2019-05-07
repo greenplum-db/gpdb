@@ -19,16 +19,13 @@
  *
  * In GPDB, the "dbid" of the server is also embedded in the path, so that
  * multiple segments running on the host can use the same directory without
- * clashing with each other. In PostgreSQL, the version string used in the
- * path is in TABLESPACE_VERSION_DIRECTORY constant. In GPDB, use the
- * tablespace_version_directory() function, which appends the dbid,
- * instead.
+ * clashing with each other. Each database will create an additional directory
+ * identified by the dbid under the tablespace directory.  In PostgreSQL, the
+ * version string used in the path is in TABLESPACE_VERSION_DIRECTORY constant.
+ * In GPDB, use the GP_TABLESPACE_VERSION_DIRECTORY.
  *
- * Thus the full path to an arbitrary file is
- *			$PGDATA/pg_tblspc/spcoid/GPDB_MAJORVER_CATVER_db<dbid>/dboid/relfilenode
- * e.g.
- *			$PGDATA/pg_tblspc/20981/GPDB_8.5_201001061_db1/719849/83292814
- *
+ * The path to the tablespace looks like this:
+ *          /path/to/tablespace/<dbid>/GPDB_MAJOR_CATVER/dboid/relfilenode
  *
  * There are two tablespaces created at initdb time: pg_global (for shared
  * tables) and pg_default (for everything else).  For backwards compatibility
@@ -311,10 +308,10 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 
 	/*
 	 * Check that location isn't too long. Remember that we're going to append
-	 * 'PG_XXX/<dboid>/<relid>_<fork>.<nnn>'.  FYI, we never actually
+	 * '<dbid>/<GP_TABLESPACE_VERSION_DIRECTORY>/<dboid>/<relid>_<fork>.<nnn>'.  FYI, we never actually
 	 * reference the whole path here, but mkdir() uses the first two parts.
 	 */
-	if (strlen(location) + 1 + strlen(tablespace_version_directory()) + 1 +
+	if (strlen(location) + 1 + get_dbid_string_length() + 1 + strlen(GP_TABLESPACE_VERSION_DIRECTORY) + 1 +
 	  OIDCHARS + 1 + OIDCHARS + 1 + FORKNAMECHARS + 1 + OIDCHARS > MAXPGPATH)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
@@ -634,12 +631,14 @@ static void
 create_tablespace_directories(const char *location, const Oid tablespaceoid)
 {
 	char	   *linkloc;
+	char	   *location_with_dbid_dir;
 	char	   *location_with_version_dir;
 	struct stat st;
 
 	linkloc = psprintf("pg_tblspc/%u", tablespaceoid);
-	location_with_version_dir = psprintf("%s/%s", location,
-										tablespace_version_directory());
+	location_with_dbid_dir = psprintf("%s/%d", location, GpIdentity.dbid);
+	location_with_version_dir = psprintf("%s/%s", location_with_dbid_dir,
+										 GP_TABLESPACE_VERSION_DIRECTORY);
 
 	/*
 	 * Attempt to coerce target directory to safe permissions.  If this fails,
@@ -676,6 +675,31 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 								location_with_version_dir)));
 		}
 	}
+
+	/*
+	 * In GPDB each segment has a directory with its unique dbid under the
+	 * tablespace path. Unlike the location_with_version_dir, do not error out
+	 * if it already exists.
+	 */
+	if (stat(location_with_dbid_dir, &st) < 0) 
+	{
+		if (errno == ENOENT)
+		{
+			if (mkdir(location_with_dbid_dir, S_IRWXU) < 0)
+					ereport(ERROR,
+							(errcode_for_file_access(),
+								errmsg("could not create directory \"%s\": %m", location_with_dbid_dir)));
+		}
+		else
+			ereport(ERROR,
+					(errcode_for_file_access(),
+						errmsg("could not stat directory \"%s\": %m", location_with_dbid_dir)));
+
+	}
+	else
+		ereport(DEBUG1,
+				(errmsg("directory \"%s\" already exists in tablespace",
+					location_with_dbid_dir)));
 
 	/*
 	 * The creation of the version directory prevents more than one tablespace
@@ -726,13 +750,14 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 	/*
 	 * Create the symlink under PGDATA
 	 */
-	if (symlink(location, linkloc) < 0)
+	if (symlink(location_with_dbid_dir, linkloc) < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not create symbolic link \"%s\": %m",
 						linkloc)));
 
 	pfree(linkloc);
+	pfree(location_with_dbid_dir);
 	pfree(location_with_version_dir);
 }
 
@@ -755,13 +780,15 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 {
 	char	   *linkloc;
 	char	   *linkloc_with_version_dir;
+	char	    link_target_dir[MAXPGPATH + 1 + get_dbid_string_length()];
+	int		    rllen;
 	DIR		   *dirdesc;
 	struct dirent *de;
 	char	   *subfile;
 	struct stat st;
 
 	linkloc_with_version_dir = psprintf("pg_tblspc/%u/%s", tablespaceoid,
-										tablespace_version_directory());
+										GP_TABLESPACE_VERSION_DIRECTORY);
 
 	/*
 	 * Check if the tablespace still contains any files.  We try to rmdir each
@@ -860,10 +887,41 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 	 * Note: in the redo case, we'll return true if this final step fails;
 	 * there's no point in retrying it.  Also, ENOENT should provoke no more
 	 * than a warning.
+	 *
+	 * GPDB: Then remove the symlink target directory: <tablespace_location>/<dbid>
+	 * iff this directory is empty.
 	 */
 remove_symlink:
 	linkloc = pstrdup(linkloc_with_version_dir);
 	get_parent_directory(linkloc);
+
+	/* Remove the symlink target directory if it exists or is valid. */
+	rllen = readlink(linkloc, link_target_dir, sizeof(link_target_dir));
+	if(rllen < 0)
+	{
+		ereport(redo ? LOG : ERROR,
+				(errcode_for_file_access(),
+					errmsg("could not read symbolic link \"%s\": %m",
+						   linkloc)));
+	}
+	else if(rllen >= sizeof(link_target_dir))
+	{
+		ereport(redo ? LOG : ERROR,
+				(errcode_for_file_access(),
+					errmsg("symbolic link \"%s\" target is too long",
+						   linkloc)));
+	}
+	else
+	{
+		link_target_dir[rllen] = '\0';
+		if(directory_is_empty(link_target_dir) && rmdir(link_target_dir) < 0)
+			ereport(redo ? LOG : ERROR,
+				(errcode_for_file_access(),
+					errmsg("could not remove directory \"%s\": %m",
+						link_target_dir)));
+	}
+
+
 	if (lstat(linkloc, &st) == 0 && S_ISDIR(st.st_mode))
 	{
 		if (rmdir(linkloc) < 0)

@@ -69,22 +69,6 @@
 static bool IsAoSegmentClass(Form_pg_class reltuple);
 
 /*
- * Return directory name within tablespace location to use, for this server.
- * This is the GPDB replacement for PostgreSQL's TABLESPACE_VERSION_DIRECTORY
- * constant.
- */
-const char *
-tablespace_version_directory(void)
-{
-	static char path[MAXPGPATH] = "";
-
-	if (!path[0])
-		snprintf(path, MAXPGPATH, "%s_db%d", GP_TABLESPACE_VERSION_DIRECTORY, GpIdentity.dbid);
-
-	return path;
-}
-
-/*
  * Like relpath(), but gets the directory containing the data file
  * and the filename separately.
  */

@@ -153,7 +153,7 @@ calculate_database_size(Oid dbOid)
 	DIR		   *dirdesc;
 	struct dirent *direntry;
 	char		dirpath[MAXPGPATH];
-	char		pathname[MAXPGPATH + 12 + strlen(tablespace_version_directory()) + 1];
+	char		pathname[MAXPGPATH + 13 + get_dbid_string_length() + 1 + sizeof(GP_TABLESPACE_VERSION_DIRECTORY)];
 	AclResult	aclresult;
 
 	/* User must have connect privilege for target database */
@@ -186,7 +186,7 @@ calculate_database_size(Oid dbOid)
 			continue;
 
 		snprintf(pathname, sizeof(pathname), "pg_tblspc/%s/%s/%u",
-				 direntry->d_name, tablespace_version_directory(), dbOid);
+				 direntry->d_name, GP_TABLESPACE_VERSION_DIRECTORY, dbOid);
 		totalsize += db_dir_size(pathname);
 	}
 
@@ -277,7 +277,7 @@ calculate_tablespace_size(Oid tblspcOid)
 		snprintf(tblspcPath, MAXPGPATH, "global");
 	else
 		snprintf(tblspcPath, MAXPGPATH, "pg_tblspc/%u/%s", tblspcOid,
-				 tablespace_version_directory());
+				 GP_TABLESPACE_VERSION_DIRECTORY);
 
 	dirdesc = AllocateDir(tblspcPath);
 

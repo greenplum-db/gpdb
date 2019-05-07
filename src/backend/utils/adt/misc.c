@@ -301,7 +301,7 @@ pg_tablespace_databases(PG_FUNCTION_ARGS)
 				fctx->location = psprintf("base");
 			else
 				fctx->location = psprintf("pg_tblspc/%u/%s", tablespaceOid,
-										  tablespace_version_directory());
+										  GP_TABLESPACE_VERSION_DIRECTORY);
 
 			fctx->dirdesc = AllocateDir(fctx->location);
 
@@ -404,6 +404,13 @@ pg_tablespace_location(PG_FUNCTION_ARGS)
 				(errmsg("symbolic link \"%s\" target is too long",
 						sourcepath)));
 	targetpath[rllen] = '\0';
+	
+	get_parent_directory(targetpath);
+	if (strcmp(targetpath, "") == 0)
+		ereport(ERROR,
+				(errmsg("path to tablespace is not a valid path: \"%s\"",
+					sourcepath)));
+
 
 	PG_RETURN_TEXT_P(cstring_to_text(targetpath));
 #else

@@ -83,6 +83,10 @@ where content = 0;
 -- set GUCs to speed-up the test
 !\retcode gpconfig -r gp_fts_probe_retries --masteronly;
 !\retcode gpconfig -r gp_fts_probe_timeout --masteronly;
+
+-- Set GUC to force tablespace drop replay to complete on mirror before
+-- removing the directory
+!\retcode gpconfig -c create_restartpoint_on_ckpt_record_replay -v on;
 !\retcode gpstop -u;
 
 -- -- wait for content 0 (earlier mirror, now primary) to finish the promotion
@@ -98,7 +102,14 @@ create table mirror_promotion_tblspc_heap_table (a int) tablespace mirror_promot
 
 drop table mirror_promotion_tblspc_heap_table;
 drop tablespace mirror_promotion_tablespace;
+-- Force the mirror to replay the drop before moving forward with tablespace
+-- directory deletion
+checkpoint;
 !\retcode rm -rf /tmp/mirror_promotion_tablespace_loc;
+
+-- Reset create_restartpoint_on_ckpt_record_replay guc
+!\retcode gpconfig -r create_restartpoint_on_ckpt_record_replay;
+!\retcode gpstop -u;
 
 -- loop while segments come in sync
 do $$

@@ -45,3 +45,8 @@ create or replace function count_of_items_in_database_directory(user_path text, 
        results = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
        return len([result for result in results.splitlines() if result != ''])
 $$ language plpythonu;
+
+create or replace function validate_tablespace_symlink(datadir text, tablespacedir text, dbid int, tablespace_oid oid) returns boolean as $$
+    import os
+    return os.readlink('%s/pg_tblspc/%d' % (datadir, tablespace_oid)) == ('%s/%d' % (tablespacedir, dbid))
+$$ language plpythonu;
