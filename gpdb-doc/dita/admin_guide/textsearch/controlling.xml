@@ -90,7 +90,7 @@
       <codeblock>to_tsquery([<i>config</i> regconfig, ] <i>querytext</i> text) returns tsquery</codeblock>
       <p><codeph>to_tsquery</codeph> creates a <codeph>tsquery</codeph> value from <i>querytext</i>,
         which must consist of single tokens separated by the Boolean operators
-          <codeph>&amp;</codeph> (AND), <codeph>|</codeph> (OR) and <codeph>!</codeph>(NOT). These
+          <codeph>&amp;</codeph> (AND), <codeph>|</codeph> (OR), and <codeph>!</codeph>(NOT). These
         operators can be grouped using parentheses. In other words, the input to
           <codeph>to_tsquery</codeph> must already follow the general rules for
           <codeph>tsquery</codeph> input, as described in <xref
