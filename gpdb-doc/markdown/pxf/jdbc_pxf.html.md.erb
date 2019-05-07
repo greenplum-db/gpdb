@@ -86,7 +86,9 @@ You include JDBC connector custom options in the `LOCATION` URI, prefacing each 
 
 | Option Name   | Operation | Description
 |---------------|------------|--------|
-| BATCH_SIZE | Write | Integer identifying the number of `INSERT` operations to batch to the external SQL database. PXF always validates a `BATCH_SIZE` option, even when provided on a read operation. Batching is enabled by default. |
+| BATCH_SIZE | Write | Integer identifying the number of `INSERT` operations to batch to the external SQL database. PXF always validates a `BATCH_SIZE` option, even when provided on a read operation. Write batching is enabled by default; the default value is 100. |
+| FETCH_SIZE | Read | Integer identifying the number of rows to buffer when reading from an external SQL database. Read row batching is enabled by default; the default read fetch size is 1000. |
+| QUERY_TIMEOUT | Read/Write | Integer that identifies the amount of time (in seconds) that the JDBC driver waits for a statement to execute. The default wait time is infinite. |
 | POOL_SIZE | Write | Enable thread pooling on `INSERT` operations and identify the number of threads in the pool. Thread pooling is disabled by default. |
 | PARTITION_BY | Read | The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\> values. If you do not identify a `PARTITION_BY` column, a single PXF instance services the read request. |
 | RANGE | Read | Required when `PARTITION_BY` is specified. The query range, \<start-value\>[:\<end-value\>]. When the partition column is an `enum` type, `RANGE` must specify a list of values, each of which forms its own fragment. If the partition column is an `int` or `date` type, `RANGE` must specify a finite left-closed range. That is, the range includes the \<start-value\> but does *not* include the \<end-value\>. If the partition column is a `date` type, use the `yyyy-MM-dd` date format. |
@@ -96,9 +98,9 @@ You include JDBC connector custom options in the `LOCATION` URI, prefacing each 
 
 #### <a id="batching"></a>Batching Insert Operations (Write)
 
-When the JDBC driver of the external SQL database supports it, batching of `INSERT` operations may significantly increase performance.
+*When the JDBC driver of the external SQL database supports it*, batching of `INSERT` operations may significantly increase performance.
 
-Batching is enabled by default, and the default batch size is 100. To disable batching or to modify the default batch size value, create the PXF external table with a `BATCH_SIZE` setting:
+Write batching is enabled by default, and the default batch size is 100. To disable batching or to modify the default batch size value, create the PXF external table with a `BATCH_SIZE` setting:
 
 - `BATCH_SIZE=0` or `BATCH_SIZE=1` - disables batching
 - `BATCH_SIZE=(n>1)` - sets the `BATCH_SIZE` to `n`
@@ -107,6 +109,16 @@ When the external database JDBC driver does not support batching, the behaviour 
 
 - `BATCH_SIZE` omitted - The JDBC connector inserts without batching.
 - `BATCH_SIZE=(n>1)` - The `INSERT` operation fails and the connector returns an error.
+
+#### <a id="fetching"></a>Batching on Read Operations
+
+By default, the PXF JDBC connector automatically batches the rows it fetches from an external database table. The default row fetch size is 1000. To modify the default fetch size value, specify a `FETCH_SIZE` when you create the PXF external table. For example:
+
+``` pre
+FETCH_SIZE=5000
+```
+
+If the external database JDBC driver does not support batching on read, you must explicitly disable read row batching by setting `FETCH_SIZE=0`.
 
 #### <a id="threadpool"></a>Thread Pooling (Write)
 
@@ -310,16 +322,19 @@ Perform the following procedure to insert some data into the `forpxf_table1` Pos
 
 ## <a id="jdbc_override"></a>Overriding the JDBC Server Configuration
 
-If you are accessing an external SQL database, you can override the JDBC server configuration connection parameters by directly specifying these custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+You can override certain properties in a JDBC server configuration for a specific external database table by directly specifying the custom option in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 
-| Custom Option Name   | jdbc-site.xml Property Name | Description
-|----------------------|-----------------------------|--------|
-| JDBC_DRIVER | jdbc.driver | The JDBC driver class name. (Required) |
-| DB_URL | jdbc.url | The external database URL. Depends on the external SQL database, typically includes at least the hostname, port, and database name. (Required) |
-| USER | jdbc.user | The database user name. Required if `PASS` is provided. |
-| PASS | jdbc.password | The database password for `USER`. Required if `USER` is provided. |
+| Custom Option Name   | jdbc-site.xml Property Name |
+|----------------------|-----------------------------|
+| JDBC_DRIVER | jdbc.driver |
+| DB_URL | jdbc.url |
+| USER | jdbc.user |
+| PASS | jdbc.password |
+| BATCH_SIZE | jdbc.statement.batchSize |
+| FETCH_SIZE | jdbc.statement.fetchSize |
+| QUERY_TIMEOUT | jdbc.statement.queryTimeout |
 
-Example JDBC \<custom-option\> connection strings:
+Example JDBC connection strings specified via custom options:
 
 ``` pre
 &JDBC_DRIVER=org.postgresql.Driver&DB_URL=jdbc:postgresql://pgserverhost:5432/pgtestdb&USER=pguser1&PASS=changeme

@@ -19,13 +19,13 @@ In previous releases of Greenplum Database, you may have specified the JDBC driv
 
 ### <a id="cfg_jar"></a>JDBC Driver JAR Registration
 
-The PXF JDBC connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR file. If you require a different JDBC driver, ensure that you install the JDBC driver JAR file for the external SQL database in the `$PXF_CONF/lib` directory on each segment host. Be sure to install JDBC driver JAR files that are compatible with your JRE version. See [Registering PXF JAR Dependencies](reg_jar_depend.html) for additional information.
+The PXF JDBC Connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR file. If you require a different JDBC driver, ensure that you install the JDBC driver JAR file for the external SQL database in the `$PXF_CONF/lib` directory on each segment host. Be sure to install JDBC driver JAR files that are compatible with your JRE version. See [Registering PXF JAR Dependencies](reg_jar_depend.html) for additional information.
 
 ### <a id="cfg_server"></a>JDBC Server Configuration
 
-PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies properties that you can configure to establish a connection to the external SQL database. The template also includes optional properties that you can set before query execution in the external database session.
+PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies properties that you can configure to establish a connection to the external SQL database. The template also includes optional properties that you can set before query or insert command execution in the external database session.
 
-The base properties in the `jdbc-site.xml` server template file follow:
+The required properties in the `jdbc-site.xml` server template file follow:
 
 | Property       | Description                                | Value |
 |----------------|--------------------------------------------|-------|
@@ -55,6 +55,8 @@ Example: To set the `createDatabaseIfNotExist` connection property on a JDBC con
  </property>
 ```
 
+Ensure that the JDBC driver for the external SQL database supports any connection-level property that you specify.
+
 #### <a id="conntransiso"></a>Connection Transaction Isolation Property
 
 The SQL standard defines four transaction isolation levels. The level that you specify for a given connection to an external SQL database determines how and when the changes made by one transaction executed on the connection are visible to another.
@@ -82,6 +84,29 @@ For example, to set the transaction isolation level to *Read uncommitted*, add t
 
 Different SQL databases support different transaction isolation levels. Ensure that the external database supports the level that you specify.
 
+#### <a id="stateprop"></a>Statement-Level Properties
+
+The PXF JDBC Connector executes a query or insert command on an external SQL database table in a *statement*. The Connector exposes properties that enable you to configure certain aspects of the statement before the command is executed in the external database. The Connector supports the following statement-level properties:
+
+| Property       | Description                                | Value |
+|----------------|--------------------------------------------|-------|
+| jdbc.statement.batchSize | Number of rows to write to the external database table in a batch. | The number of rows. The default write batch size is 100. |
+| jdbc.statement.fetchSize | Number of rows to fetch/buffer when reading from the external database table. | The number of rows. The default read fetch size is 1000. |
+| jdbc.statement.queryTimeout | Amount of time (in seconds) the JDBC driver waits for a statement to execute. This timeout applies to statements created for both read and write operations. | The statement timeout. The default wait time is unlimited. |
+
+PXF uses the default value for any statement-level property that you do not explicitly configure.
+
+Example: To set the read fetch size to 5000, add the following property block to `jdbc-site.xml`:
+
+``` xml
+<property>
+    <name>jdbc.statement.fetchSize</name>
+    <value>5000</value>
+</property>
+```
+
+Ensure that the JDBC driver for the external SQL database supports any statement-level property that you specify.
+
 #### <a id="sessprop"></a>Session-Level Properties
 
 To set session-level properties, add the `jdbc.session.property.<SPROP_NAME>` property to `jdbc-site.xml`. PXF will `SET` these properties in the external database before executing a query.
@@ -104,6 +129,12 @@ Example: To set the `search_path` parameter before running a query in a PostgreS
     <value>public</value>
 </property>
 ```
+
+Ensure that the JDBC driver for the external SQL database supports any property that you specify.
+
+### <a id="cfg_override"></a>Overriding the JDBC Server Configuration
+
+You can override the JDBC server configuration by directly specifying certain JDBC properties via custom options in the `CREATE EXTERNAL TABLE` command `LOCATION` clause. Refer to [Overriding the JDBC Server Configuration](jdbc_pxf.html#jdbc_override) for additional information.
 
 ## <a id="cfg_server_proc"></a>Configuration Procedure
 
