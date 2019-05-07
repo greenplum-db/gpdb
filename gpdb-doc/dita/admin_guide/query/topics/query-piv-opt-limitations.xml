@@ -16,7 +16,10 @@
   <topic id="topic_kgn_vxl_vp">
     <title>Unsupported SQL Query Features</title>
     <body>
-      <p>These are unsupported features when GPORCA is enabled (the default): <ul id="ul_ndm_gyl_vp">
+      <p>Certain query features are not supported with the default GPORCA optimizer. When an
+        unsupported query is executed, Greenplum logs this notice along with the query
+        text:<codeblock>Feature not supported by the Pivotal Query Optimizer: UTILITY command</codeblock></p>
+      <p>These features are unsupported when GPORCA is enabled (the default): <ul id="ul_ndm_gyl_vp">
           <li>Indexed expressions (an index defined as expression based on one or more columns of
             the table)</li>
           <li>GIN indexing method. GPORCA supports only B-tree, bitmap, and GiST indexes. GPORCA
