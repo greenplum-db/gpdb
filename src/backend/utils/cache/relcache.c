@@ -341,7 +341,9 @@ ScanPgRelation(Oid targetRelId, bool indexOK, bool force_non_historic)
 	 * relfilenode of non mapped system relations during decoding.
 	 */
 	if (force_non_historic)
-		snapshot = GetNonHistoricCatalogSnapshot(RelationRelationId);
+		snapshot = GetNonHistoricCatalogSnapshot(
+			RelationRelationId,
+			DistributedTransactionContext);
 	else
 		snapshot = GetCatalogSnapshot(RelationRelationId);
 

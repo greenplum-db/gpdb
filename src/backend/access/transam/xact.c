@@ -2123,29 +2123,29 @@ AtSubCleanup_Memory(void)
  * DOH: this totally ignores subtransactions for now!
  */
 void
-SetSharedTransactionId_writer(void)
+SetSharedTransactionId_writer(DtxContext distributedTransactionContext)
 {
 	Assert(SharedLocalSnapshotSlot != NULL);
 	Assert(LWLockHeldByMe(SharedLocalSnapshotSlot->slotLock));
 
-	Assert(DistributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE ||
-		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
-		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER ||
-		   DistributedTransactionContext == DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT);
+	Assert(distributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE ||
+		   distributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
+		   distributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER ||
+		   distributedTransactionContext == DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT);
 
 	ereportif(Debug_print_full_dtm, LOG,
 			  (errmsg("%s setting shared xid %u -> %u",
-					  DtxContextToString(DistributedTransactionContext),
+					  DtxContextToString(distributedTransactionContext),
 					  SharedLocalSnapshotSlot->xid,
 					  TopTransactionStateData.transactionId)));
 	SharedLocalSnapshotSlot->xid = TopTransactionStateData.transactionId;
 }
 
 void
-SetSharedTransactionId_reader(TransactionId xid, CommandId cid)
+SetSharedTransactionId_reader(TransactionId xid, CommandId cid, DtxContext distributedTransactionContext)
 {
-	Assert(DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
-		   DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
+	Assert(distributedTransactionContext == DTX_CONTEXT_QE_READER ||
+		   distributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
 
 	/*
 	 * For DTX_CONTEXT_QE_READER or DTX_CONTEXT_QE_ENTRY_DB_SINGLETON, during

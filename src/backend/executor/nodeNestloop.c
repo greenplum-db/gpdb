@@ -143,6 +143,14 @@ ExecNestLoop_guts(NestLoopState *node)
 	}
 
 	/*
+	 * Prefetch JoinQual to prevent motion hazard.
+	 *
+	 * See ExecPrefetchJoinQual() for details.
+	 */
+	if (node->prefetch_joinqual && ExecPrefetchJoinQual(&node->js))
+		node->prefetch_joinqual = false;
+
+	/*
 	 * Ok, everything is setup for the join so now loop until we return a
 	 * qualifying join tuple.
 	 */
@@ -382,6 +390,7 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	nlstate->shared_outer = node->shared_outer;
 
 	nlstate->prefetch_inner = node->join.prefetch_inner;
+	nlstate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
 	
 	/*CDB-OLAP*/
 	nlstate->reset_inner = false;

@@ -73,7 +73,7 @@ test__CreateDistributedSnapshot(void **state)
 	 * Basic case, no other in progress transaction in system
 	 */
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
-	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping);
+	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping, DTX_CONTEXT_LOCAL_ONLY);
 
 	/* perform all the validations */
 	assert_true(ds->xminAllDistributedSnapshots == 20);
@@ -101,7 +101,7 @@ test__CreateDistributedSnapshot(void **state)
 	procArray->numProcs = 3;
 
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
-	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping);
+	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping, DTX_CONTEXT_LOCAL_ONLY);
 
 	/* perform all the validations */
 	assert_true(ds->xminAllDistributedSnapshots == 5);
@@ -129,7 +129,7 @@ test__CreateDistributedSnapshot(void **state)
 	procArray->numProcs = 5;
 
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
-	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping);
+	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping, DTX_CONTEXT_LOCAL_ONLY);
 
 	/* perform all the validations */
 	assert_true(ds->xminAllDistributedSnapshots == 5);
