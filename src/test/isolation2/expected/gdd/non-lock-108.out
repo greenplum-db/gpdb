@@ -1,0 +1,50 @@
+DROP TABLE IF EXISTS t108;
+DROP
+CREATE TABLE t108 (id int, val int);
+CREATE
+INSERT INTO t108 (id, val) SELECT i, i FROM generate_series(1, 100) i;
+INSERT 100
+
+10: BEGIN;
+BEGIN
+20: BEGIN;
+BEGIN
+30: BEGIN;
+BEGIN
+
+10: INSERT INTO t108 VALUES(segid(1,1),segid(1,1));
+INSERT 1
+
+20: INSERT INTO t108 VALUES(segid(1,1),segid(1,1));
+INSERT 1
+
+30: INSERT INTO t108 VALUES(segid(1,1),segid(1,1));
+INSERT 1
+
+-- ANALYZE holds ShareUpdateExclusiveLock, they conflict with each other.
+-- But they are not conflict with INSERT, So GDD graph on seg1 should be
+-- 20 -> 10 and 30 -> 10 and no cycle in this case.
+10: ANALYZE t108;
+ANALYZE
+
+20&: ANALYZE t108;  <waiting ...>
+
+30&: ANALYZE t108;  <waiting ...>
+
+SELECT pg_sleep(20);
+ pg_sleep 
+----------
+          
+(1 row)
+
+-- con10/20/30 should finish normally.
+10q: ... <quitting>
+
+20<:  <... completed>
+ANALYZE
+20q: ... <quitting>
+
+30<:  <... completed>
+ANALYZE
+30q: ... <quitting>
+
