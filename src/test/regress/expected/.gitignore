@@ -41,3 +41,6 @@ hooktest.out
 gpcopy.out
 query_info_hook_test.out
 /oid_wraparound.out
+autovacuum-template0.out
+resource_queue_function_resgroup.out
+session_reset.out
