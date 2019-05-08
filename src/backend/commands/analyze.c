@@ -1525,7 +1525,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	*totaldeadrows = 0;
 	*totalblocks = relPages;
 
-	if ('h' == onerel->rd_rel->relstorage && relTuples == 0 && relPages > 0)
+	if (RelationIsHeap(onerel) && relTuples == 0 && relPages > 0)
 	{
 		/*
 		 * NOTICE user when all sampled pages are empty
