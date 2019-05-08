@@ -78,7 +78,7 @@ After you upgrade to the new version of Greenplum Database, perform the followin
 
     1. PXF now bundles Hadoop version 2.9.2 dependent JAR files. If you registered additional Hadoop-related JAR files in `$PXF_CONF/lib`, ensure that these libraries are compabitible with Hadoop version 2.9.2.
 
-    2. The PXF JDBC connector now supports file-based server configuration. If you choose to utilize this new feature with existing external tables that reference an external SQL database, refer to to the configuration instructions in [Configuring the JDBC Connector](jdbc_cfg.xml) for additional information.
+    2. The PXF JDBC connector now supports file-based server configuration. If you choose to utilize this new feature with existing external tables that reference an external SQL database, refer to the configuration instructions in [Configuring the JDBC Connector](jdbc_cfg.xml) for additional information.
 
     3. If you plan to use Hive partition filtering with integral types, you must set the `hive.metastore.integral.jdo.pushdown` Hive property in your Hadoop cluster's `hive-site.xml` and in your PXF user configuration `$PXF_CONF/servers/default/hive-site.xml` file. See [Updating Hadoop Configuration](client_instcfg.html#client-cfg-update).
 
