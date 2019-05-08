@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# add hashbang to greenplum_path.sh
+cat << EOF
+#!/bin/bash
+EOF
+
 if [ x$1 != x ] ; then
     GPHOME_PATH=$1
 else
