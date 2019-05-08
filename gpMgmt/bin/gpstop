@@ -37,12 +37,14 @@ try:
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
-#GpstopCheckIgnoreList is a write list for pg_stat_active table check
-#
-#Before stop cluster, gpstop smart model do sanity check depends on pg_stat_active table
-#to promise no session alive. However, some background workers may want to be ignored.
-#For this propose, we maintain a write list to indicate those `application_name` can be skipped checking.
-GpstopCheckIgnoreList = ['gpdiskquota']
+"""
+GpstopCheckIgnoreList is a whitelist for pg_stat_active table check
+
+In smart model, we check `pg_stat_activity` table to promise no session alive before cluster stop routine.
+However, some background workers' life cycle are same as the cluster, so they want to be ignored in this step.
+For this propose, we maintain a whitelist to indicate those `application_name` can be skipped checking.
+"""
+GpstopCheckIgnoreList = ['gp_reserved_gpdiskquota']
 
 DEFAULT_NUM_WORKERS = 64
 logger = get_default_logger()
@@ -95,7 +97,7 @@ class GpStop:
     def __init__(self, mode, master_datadir=None,
                  parallel=DEFAULT_NUM_WORKERS, quiet=False, masteronly=False, sighup=False,
                  interactive=False, stopstandby=False, restart=False,
-                 timeout=SEGMENT_STOP_TIMEOUT_DEFAULT, logfileDirectory=False, onlyThisHost=None, checkIgnoreLst=[]):
+                 timeout=SEGMENT_STOP_TIMEOUT_DEFAULT, logfileDirectory=False, onlyThisHost=None):
         self.mode = mode
         self.master_datadir = master_datadir
         self.pool = None
@@ -111,7 +113,6 @@ class GpStop:
         self.timeout = timeout
         self.logfileDirectory = logfileDirectory
         self.onlyThisHost = onlyThisHost
-        self.checkIgnoreLst = checkIgnoreLst
 
         # some variables that will be assigned during run()
         self.gphome = None
@@ -471,7 +472,7 @@ class GpStop:
 
     ######
     def _stop_master_checks(self):
-        total_connections = len(catalog.getUserPIDs(self.conn, self.checkIgnoreLst))
+        total_connections = len(catalog.getUserPIDs(self.conn, GpstopCheckIgnoreList))
         logger.info("There are %d connections to the database" % total_connections)
 
         if total_connections > 0 and self.mode == 'smart':
@@ -952,8 +953,7 @@ class GpStop:
                       restart=options.restart,
                       timeout=options.timeout,
                       logfileDirectory=logfileDirectory,
-                      onlyThisHost=options.only_this_host,
-                      checkIgnoreLst=GpstopCheckIgnoreList)
+                      onlyThisHost=options.only_this_host)
 
 
 if __name__ == '__main__':

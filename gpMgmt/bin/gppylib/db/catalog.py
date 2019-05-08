@@ -9,6 +9,7 @@ import copy
 
 import dbconn
 from  gppylib import gplog
+from  pygresql import pg
 
 logger=gplog.get_default_logger()
 
@@ -36,11 +37,11 @@ def getDatabaseList(conn):
     sql = "SELECT datname FROM pg_catalog.pg_database"
     return basicSQLExec(conn,sql)
 
-def getUserPIDs(conn, ignoreLst):
+def getUserPIDs(conn, ignoreList):
     """dont count ourselves"""
     sql = """SELECT pid FROM pg_stat_activity WHERE pid != pg_backend_pid()"""
-    if ignoreLst != []:
-        ignoreStr = ', '.join("'"+ i +"'" for i in ignoreLst)
+    if ignoreList:
+        ignoreStr = ', '.join("'"+ pg.escape_string(i) +"'" for i in ignoreList)
         sql = sql + ' and application_name not in (' + ignoreStr +')'
 
     return basicSQLExec(conn,sql)
