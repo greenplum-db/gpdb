@@ -1531,7 +1531,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 		 * NOTICE user when all sampled pages are empty
 		 */
 		ereport(NOTICE,
-			(errmsg("ANALYZE detected all empty sample pages for table %s, please run VACUUM FULL for accurate estimation.", RelationGetRelationName(onerel))));
+			(errmsg("ANALYZE detected all empty sample pages for table %s, please run VACUUM FULL %s for accurate estimation.", RelationGetRelationName(onerel), RelationGetRelationName(onerel))));
 	}
 	if (relTuples == 0.0)
 		return 0;
