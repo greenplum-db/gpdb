@@ -546,11 +546,6 @@ static inline unsigned char *memtuple_get_nullp(MemTuple mtup, MemTupleBinding *
 {
 	return mtup->PRIVATE_mt_bits + (mtbind_has_oid(pbind) ? sizeof(Oid) : 0);
 }
-static inline int memtuple_get_nullp_len(MemTupleBinding *pbind)
-{
-	return (pbind->tupdesc->natts + 7) >> 3;
-}
-
 
 /* form a memtuple from values and isnull, to a prespecified buffer */
 MemTuple memtuple_form_to(
