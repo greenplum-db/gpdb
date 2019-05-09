@@ -38,11 +38,12 @@ except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 """
-GpstopCheckIgnoreList is a whitelist for pg_stat_active table check
+GpstopCheckIgnoreList is a whitelist to ignore when checking active database connections
 
-In smart model, we check `pg_stat_activity` table to promise no session alive before cluster stop routine.
-However, some background workers' life cycle are same as the cluster, so they want to be ignored in this step.
-For this propose, we maintain a whitelist to indicate those `application_name` can be skipped checking.
+In smart mode, we check the `pg_stat_activity` table for active sessions before calling
+the cluster stop routine. However, we need to ignore those that are part of the database
+implementation itself. For this purpose, we maintain a whitelist using its `application_name`
+field.
 """
 GpstopCheckIgnoreList = ['gp_reserved_gpdiskquota']
 
