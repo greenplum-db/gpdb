@@ -23,7 +23,7 @@ The PXF JDBC Connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR 
 
 ### <a id="cfg_server"></a>JDBC Server Configuration
 
-PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies properties that you can configure to establish a connection to the external SQL database. The template also includes optional properties that you can set before query or insert command execution in the external database session.
+PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies properties that you can configure to establish a connection to the external SQL database. The template also includes optional properties that you can set before executing query or insert commands in the external database session.
 
 The required properties in the `jdbc-site.xml` server template file follow:
 
@@ -90,9 +90,9 @@ The PXF JDBC Connector executes a query or insert command on an external SQL dat
 
 | Property       | Description                                | Value |
 |----------------|--------------------------------------------|-------|
-| jdbc.statement.batchSize | Number of rows to write to the external database table in a batch. | The number of rows. The default write batch size is 100. |
-| jdbc.statement.fetchSize | Number of rows to fetch/buffer when reading from the external database table. | The number of rows. The default read fetch size is 1000. |
-| jdbc.statement.queryTimeout | Amount of time (in seconds) the JDBC driver waits for a statement to execute. This timeout applies to statements created for both read and write operations. | The statement timeout. The default wait time is unlimited. |
+| jdbc.statement.batchSize | The number of rows to write to the external database table in a batch. | The number of rows. The default write batch size is 100. |
+| jdbc.statement.fetchSize | The number of rows to fetch/buffer when reading from the external database table. | The number of rows. The default read fetch size is 1000. |
+| jdbc.statement.queryTimeout | The amount of time (in seconds) the JDBC driver waits for a statement to execute. This timeout applies to statements created for both read and write operations. | The timeout duration in seconds. The default wait time is unlimited. |
 
 PXF uses the default value for any statement-level property that you do not explicitly configure.
 

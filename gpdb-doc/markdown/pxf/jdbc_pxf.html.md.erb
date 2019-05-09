@@ -86,8 +86,8 @@ You include JDBC connector custom options in the `LOCATION` URI, prefacing each 
 
 | Option Name   | Operation | Description
 |---------------|------------|--------|
-| BATCH_SIZE | Write | Integer identifying the number of `INSERT` operations to batch to the external SQL database. PXF always validates a `BATCH_SIZE` option, even when provided on a read operation. Write batching is enabled by default; the default value is 100. |
-| FETCH_SIZE | Read | Integer identifying the number of rows to buffer when reading from an external SQL database. Read row batching is enabled by default; the default read fetch size is 1000. |
+| BATCH_SIZE | Write | Integer that identifies the number of `INSERT` operations to batch to the external SQL database. PXF always validates a `BATCH_SIZE` option, even when provided on a read operation. Write batching is enabled by default; the default value is 100. |
+| FETCH_SIZE | Read | Integer that identifies the number of rows to buffer when reading from an external SQL database. Read row batching is enabled by default; the default read fetch size is 1000. |
 | QUERY_TIMEOUT | Read/Write | Integer that identifies the amount of time (in seconds) that the JDBC driver waits for a statement to execute. The default wait time is infinite. |
 | POOL_SIZE | Write | Enable thread pooling on `INSERT` operations and identify the number of threads in the pool. Thread pooling is disabled by default. |
 | PARTITION_BY | Read | The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\> values. If you do not identify a `PARTITION_BY` column, a single PXF instance services the read request. |
@@ -144,7 +144,7 @@ When you enable partitioning, the PXF JDBC connector splits a `SELECT` query int
 
 When you specify the `PARTITION_BY` option, tune the `INTERVAL` value and unit based upon the optimal number of JDBC connections to the target database and the optimal distribution of external data across Greenplum Database segments. The `INTERVAL` low boundary is driven by the number of Greenplum Database segments while the high boundary is driven by the acceptable number of JDBC connections to the target database. The `INTERVAL` setting influences the number of fragments, and should ideally not be set too high nor too low. Testing with multiple values may help you select the optimal settings. 
 
-Example JDBC \<custom-option\> substrings identifying partitioning parameters:
+Example JDBC \<custom-option\> substrings that identify partitioning parameters:
 
 ``` pre
 &PARTITION_BY=year:int&RANGE=2011:2013&INTERVAL=1
