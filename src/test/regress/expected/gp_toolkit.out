@@ -232,7 +232,8 @@ select * from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass
 -- Create bloat by deleting all rows
 delete from toolkit_skew;
 analyze toolkit_skew;
-NOTICE:  ANALYZE detected all empty sample pages for table toolkit_skew, please run VACUUM FULL toolkit_skew for accurate estimation.
+NOTICE:  ANALYZE detected all empty sample pages for relation "toolkit_skew".
+HINT:  Run VACUUM FULL on the relation to generate more accurate statistics.
 select btdrelpages > 40 as btdrelpages_over_40,
        btdrelpages < 80 as btdrelpages_below_80,
        btdexppages > 0 as btdexppages_over_0,

@@ -70,7 +70,8 @@ m/^NOTICE:.*Table has no attributes to distribute on./
 # the NOTICE for different tables and different number of tables. For E.g in one
 # test run it produced the following NOTICE for pg_auth and in other it
 # produced a NOTICE for pg_auth and pg_auth_constraints.
-m/^NOTICE:.*ANALYZE detected all empty sample pages for table .*, please run VACUUM FULL .* for accurate estimation/
+m/^NOTICE:.*ANALYZE detected all empty sample pages for relation .*./
+m/^HINT:.*Run VACUUM FULL on the relation to generate more accurate statistics./
 
 m/^WARNING:  could not close temporary file .*: No such file or directory/
 
