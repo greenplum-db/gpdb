@@ -7,9 +7,10 @@
       <p>The <codeph>pageinspect</codeph> module provides functions for low level
          inspection of the contents of database pages. <codeph>pageinspect</codeph>
          is available only to Greenplum Database superusers.</p>
-      <p>The Greenplum Database <codeph>pageinspect</codeph> module is equivalent
-        to the PostgreSQL <codeph>pageinspect</codeph> module. There are no
-        Greenplum Database or MPP-specific considerations for the module.</p>
+      <p>The Greenplum Database <codeph>pageinspect</codeph> module is based on the
+        PostgreSQL <codeph>pageinspect</codeph> module. The Greenplum version of the
+        module differs only in that it does not allow inspection of pages belonging to
+        append-optimized or external relations.</p>
     </body>
     <topic id="topic_reg">
       <title>Installing and Registering the Module</title>
