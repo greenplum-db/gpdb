@@ -121,6 +121,19 @@ get_raw_page_internal(text *relname, ForkNumber forknum, BlockNumber blkno)
 				 errmsg("cannot get raw page from foreign table \"%s\"",
 						RelationGetRelationName(rel))));
 
+	/* Check that this relation has the right kind of storage */
+	if (rel->rd_rel->relstorage == RELSTORAGE_AOROWS ||
+		rel->rd_rel->relstorage == RELSTORAGE_AOCOLS)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("cannot get raw page from append-optimized relation \"%s\"",
+						RelationGetRelationName(rel))));
+	if (rel->rd_rel->relstorage == RELSTORAGE_EXTERNAL)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("cannot get raw page from external relation \"%s\"",
+						RelationGetRelationName(rel))));
+
 	/*
 	 * Reject attempts to read non-local temporary relations; we would be
 	 * likely to get wrong data since we have no visibility into the owning
