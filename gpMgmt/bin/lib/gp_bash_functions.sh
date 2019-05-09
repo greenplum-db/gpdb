@@ -37,16 +37,6 @@ GP_UNIQUE_COMMAND=gpstart
 findCmdInPath() {
 		cmdtofind=$1
 
-		if [ $cmdtofind = 'awk' ] && [ `uname` = SunOS ]; then
-			if [ -f "/usr/xpg4/bin/awk" ]; then
-				CMD=/usr/xpg4/bin/awk
-				echo $CMD
-				return
-			else
-				echo $cmdtofind
-				return "Problem in gp_bash_functions, command '/usr/xpg4/bin/awk' not found. You will need to edit the script named gp_bash_functions.sh to properly locate the needed commands for your platform."
-			fi
-		fi
 		for pathel in ${CMDPATH[@]}
 				do
 				CMD=$pathel/$cmdtofind
@@ -1299,22 +1289,6 @@ LOG_FILE=$DEFLOGDIR/${PROG_NAME}_${CUR_DATE}.log
 #Set up OS type for scripts to change command lines
 OS_TYPE=`uname -s|tr '[A-Z]' '[a-z]'`
 case $OS_TYPE in
-	sunos ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a4"
-		IPV6_ADDR_LIST_CMD="$IFCONFIG -a6"
-		PS_TXT="-ef"
-		LIB_TYPE="LD_LIBRARY_PATH"
-		ZCAT=gzcat
-		# MPP-15890
-		PG_METHOD=ident
-		HOST_ARCH_TYPE="uname -i"
-		NOLINE_ECHO=/usr/bin/echo
-		DEFAULT_LOCALE_SETTING=en_US.UTF-8
-		MAIL=/bin/mailx
-		PING_TIME="1"
-		DF=`findCmdInPath df`
-		# Multi-byte tr needed on Solaris to handle [:upper:], [:lower:], etc.
-		MBTR=/usr/xpg4/bin/tr
-		DU_TXT="-s" ;;
 	linux ) IPV4_ADDR_LIST_CMD="`findCmdInPath ip` -4 address show"
 		IPV6_ADDR_LIST_CMD="`findCmdInPath ip` -6 address show"
 		PS_TXT="ax"

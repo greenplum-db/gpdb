@@ -323,6 +323,7 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(copyIntoClause);
+	WRITE_INT_FIELD(metricsQueryType);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -405,6 +406,7 @@ _outJoinPlanInfo(StringInfo str, const Join *node)
 	_outPlanInfo(str, (const Plan *) node);
 
 	WRITE_BOOL_FIELD(prefetch_inner);
+	WRITE_BOOL_FIELD(prefetch_joinqual);
 
 	WRITE_ENUM_FIELD(jointype, JoinType);
 	WRITE_NODE_FIELD(joinqual);

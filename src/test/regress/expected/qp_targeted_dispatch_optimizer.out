@@ -550,7 +550,7 @@ explain select count(*) from mpp7638 where a =1;
                      ->  Dynamic Seq Scan on mpp7638 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
                            Filter: (a = 1)
  Planning time: 101.741 ms
- Optimizer: PQO version 3.6.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.6.0
 (10 rows)
 
 alter table mpp7638 set distributed by (a, b, c);
@@ -731,7 +731,7 @@ explain select * from (select * from mpp7620 where key=200) ss where key =200;
    ->  Seq Scan on mpp7620  (cost=0.00..431.00 rows=1 width=10)
          Filter: key = 200
  Settings:  optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (5 rows)
 
 explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
@@ -743,7 +743,7 @@ explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=20
                ->  Seq Scan on mpp7620  (cost=0.00..431.00 rows=1 width=4)
                      Filter: key = 200
  Settings:  optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (7 rows)
 
 explain select key from mpp7620 where mpp7620.key=200;
@@ -753,7 +753,7 @@ explain select key from mpp7620 where mpp7620.key=200;
    ->  Seq Scan on mpp7620  (cost=0.00..431.00 rows=1 width=4)
          Filter: key = 200
  Settings:  optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (5 rows)
 
 reset test_print_direct_dispatch_info;
@@ -791,7 +791,7 @@ explain select * from table_a where a0=3;
    ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=16)
          Filter: a0 = 3
  Settings:  optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (5 rows)
 
 explain select a0 from table_a where a0 in (select max(a1) from table_a);
@@ -809,7 +809,7 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a);
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (13 rows)
 
 select a0 from table_a where a0 in (select max(a1) from table_a);
@@ -850,7 +850,7 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a where a0
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (14 rows)
 
 reset test_print_direct_dispatch_info;

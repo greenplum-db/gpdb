@@ -154,7 +154,7 @@ explain (costs off) select count(*) over (partition by g) from generate_series(1
 -- The default init_file rules contain a line to mask this out in normal
 -- text-format EXPLAIN output, but it doesn't catch these alternative formats.
 -- start_matchignore
--- m/Optimizer.*PQO version .*/
+-- m/Optimizer.*Pivotal Optimizer \(GPORCA\) version .*/
 -- end_matchignore
 CREATE EXTERNAL WEB TABLE dummy_ext_tab (x text) EXECUTE 'echo foo' FORMAT 'text';
 -- External Table Scan

@@ -104,7 +104,7 @@ ISCONFIG=$(GPPGDIR)/GNUmakefile
 ## On these platforms, we do the full build including the server. On other
 ## platforms, we do a client-only build.
 ##
-SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 linux_x86_64 osx106_x86
+SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 linux_x86_64
 
 #---------------------------------------------------------------------
 # GPPKG
@@ -114,7 +114,7 @@ SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x8
 ## Support gppkg platforms
 ##
 
-GPPKG_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 ubuntu1604_amd64
+GPPKG_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64
 
 #---------------------------------------------------------------------
 # Compiler options
@@ -160,14 +160,11 @@ endif
 
 aix7_ppc_64_CONFIGFLAGS=--disable-gpcloud --without-readline --without-libcurl --disable-orca --disable-pxf --without-zstd $(APR_CONFIG)
 win32_CONFIGFLAGS=--with-gssapi --without-libcurl --disable-orca --disable-pxf --disable-gpcloud --without-libbz2 $(APR_CONFIG)
-sol10_x86_64_CONFIGFLAGS= --with-libxml $(APR_CONFIG)
 rhel6_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
 rhel7_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
 suse11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce --without-zstd $(APR_CONFIG) $(APU_CONFIG)
 sles11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce --without-zstd $(APR_CONFIG) $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-osx106_x86_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-ubuntu1604_amd64_CONFIGFLAGS=--enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --without-zstd ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
@@ -226,7 +223,6 @@ endif
 aix5_ppc_64_CONFIG_ADDITIONS=LDFLAGS="-Wl,-bbigtoc -L/usr/lib/threads"
 aix5_ppc_32_CONFIG_ADDITIONS=LDFLAGS="-L/usr/lib/threads"
 aix7_ppc_64_CONFIG_ADDITIONS=LDFLAGS="-Wl,-bbigtoc -L/usr/lib/threads"
-hpux_ia64_CONFIG_ADDITIONS=--without-readline --without-ldap
 
 win32_GPFDIST_LDFLAGS += -L/usr/i686-pc-mingw32/sys-root/mingw/lib -L$(GPPGDIR)/src/bin/gpfdist/ext/lib
 win32_GPFDIST_CFLAGS += -I/usr/i686-pc-mingw32/sys-root/mingw/include
@@ -237,8 +233,6 @@ win32_LDFLAGS=LDFLAGS="-L/usr/i686-pc-mingw32/sys-root/mingw/lib -L$(BLD_TOP)/ex
 win32_CONFIG_ADDITIONS=--build=x86_x64-unknown-linux-gnu --host=i686-pc-mingw32 --without-zlib --without-libbz2 --enable-debug CC=/usr/bin/i686-pc-mingw32-gcc $(win32_LIBS) $(win32_LDFLAGS) CPP= CPPFLAGS="-I/usr/i686-pc-mingw32/sys-root/mingw/include -I$(BLD_TOP)/ext/win32/kfw-3-2-2/inc/krb5 -I$(BLD_THIRDPARTY_INCLUDE_DIR) -I$(GPPGDIR)/src/bin/gpfdist/ext/include $(BLD_THIRDPARTY_OPENSSL_INCLUDES)"
 win64_CONFIG_ADDITIONS=--build=x86_x64-unknown-linux-gnu --host=x86_64-pc-mingw64 --without-zlib --without-libbz2 --enable-debug CC=/usr/local/mingw64/bin/x86_64-w64-mingw32-gcc LDFLAGS=-L/usr/local/mingw64/x86_64-w64-mingw32/lib CPP= CPPFLAGS=-I/usr/local/mingw64/x86_64-w64-mingw32/include
 CONFIG_ADDITIONS=$($(BLD_ARCH)_CONFIG_ADDITIONS)
-
-osx105_x86_GPFDIST_LDFLAGS=-Wl,-search_paths_first
 
 CONFIGFLAGS+= $(CONFIG_ADDITIONS)
 
@@ -307,13 +301,9 @@ BLD_LD_LIBRARY_PATH:=$($(BLD_ARCH)_LD_LIBRARY_PATH):$($(BLD_WHERE_THE_LIBRARY_TH
 export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE)=$(BLD_LD_LIBRARY_PATH)
 
 # how much of GPDB to build by platform (default is "full")
-hpux_ia64_GPDB_BUILDSET=partial
 aix5_ppc_64_GPDB_BUILDSET=partial
 aix5_ppc_32_GPDB_BUILDSET=partial
 aix7_ppc_64_GPDB_BUILDSET=aix_subset
-sol10_x86_64_GPDB_BUILDSET=partial
-sol10_x86_32_GPDB_BUILDSET=partial
-sol10_sparc_32_GPDB_BUILDSET=partial
 win64_GPDB_BUILDSET=partial
 win32_GPDB_BUILDSET=partial
 BLD_GPDB_BUILDSET=$($(BLD_ARCH)_GPDB_BUILDSET)
@@ -349,9 +339,7 @@ define BUILD_STEPS
 	cd $(BUILDDIR)/src/bin/gpfdist && $(MAKE) install
 	@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
-	if [ "$(findstring hpux_ia64,$(BLD_ARCH))" = "hpux_ia64" ]; then \
-	  cd $(GPMGMT)/bin && $(MAKE) pygresql LDFLAGS="" INSTLOC=$(INSTLOC) ; \
-	elif [ "$(findstring win,$(BLD_ARCH))" != "win" ]; then \
+	if [ "$(findstring win,$(BLD_ARCH))" != "win" ]; then \
 	  cd $(GPMGMT)/bin && $(MAKE) pygresql INSTLOC=$(INSTLOC) ; \
 	fi
 	@$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTSINSTLOC=$(CLIENTSINSTLOC)
@@ -386,9 +374,7 @@ define BUILD_STEPS
 	cp -p $(GPMGMT)/bin/gpload $(INSTLOC)/bin/gpload
 	cp -p $(GPMGMT)/bin/gpload.py $(INSTLOC)/bin/gpload.py
 	$(MAKE) copylibs INSTLOC=$(INSTLOC)
-	if [ "$(findstring hpux_ia64,$(BLD_ARCH))" = "hpux_ia64" ]; then \
-	  cd $(GPMGMT)/bin && $(MAKE) pygresql LDFLAGS="" INSTLOC=$(INSTLOC) ; \
-	elif [ "$(findstring win,$(BLD_ARCH))" != "win" ]; then \
+	if [ "$(findstring win,$(BLD_ARCH))" != "win" ]; then \
 	  cd $(GPMGMT)/bin && $(MAKE) pygresql INSTLOC=$(INSTLOC) ; \
 	fi
 	$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTSINSTLOC=$(CLIENTSINSTLOC)
@@ -546,16 +532,11 @@ BLD_OS:=$(shell uname -s)
 endif
 AIX_CLIENTS_LIBS=libbz2.a libz.a libpq.a liblber*.a libldap*.a libyaml*.a libcrypto.so* libevent*.a
 Darwin_CLIENTS_LIBS=libcrypto.*.dylib libssl.*.dylib libpq.*.dylib* libkrb5.*.dylib libcom_err.*.dylib libldap_r-*.dylib libk5crypto.*.dylib libkrb5support.*.dylib liblber-*.dylib libyaml*.dylib
-HP-UX_CLIENTS_LIBS=libcrypto.so* libssl.so.* libz.so* libpq.so* libapr* libyaml*so*
 Linux_CLIENTS_LIBS=libpq.so*
-SunOS_CLIENTS_LIBS=libcrypto.so* libssl.so.* libgcc_s.so.1 libz.so* libpq.so* libk5crypto.so* libkrb5support.so* liblber*.so* libldap_r-*so* libcom_err.so* libkrb5.so* libyaml*so*
 define tmpCLIENTS_FILESET_LIB
 	$($(BLD_OS)_CLIENTS_LIBS)
 endef
 CLIENTS_FILESET_LIB = $(strip $(tmpCLIENTS_FILESET_LIB))
-
-hpux_ia64_CLIENTS_LIBS_GCC=libgcc_s.so libgcc_s.so.0
-hpux_ia64_CLIENTS_LIBS_GCC_LOC=/opt/hp-gcc/lib/hpux64
 
 aix7_ppc_64_CLIENTS_LIBS_GCC=libgcc_s.a
 aix7_ppc_64_CLIENTS_LIBS_GCC_LOC=/opt/freeware/lib/gcc/powerpc-ibm-aix7.1.0.0/4.8.5/ppc64/
@@ -578,14 +559,8 @@ AIX_CLIENTS_LIBS_PWARE=libbz2.a libiconv.a libintl.a libncurses.a libpanel.a lib
 CLIENTS_FILESET_LIB_PWARE=$($(BLD_OS)_CLIENTS_LIBS_PWARE)
 
 ifeq "$(MPP_ARCH)" ""
-sol10_x86_64_MPP_ARCH=SOL-x86_64
-sol10_x86_32_MPP_ARCH=SOL-i386
-sol10_sparc_MPP_ARCH=SOL10-sparc
-sol10_sparc_64_MPP_ARCH=SOL10-sparc_64
-sol10_sparc_32_MPP_ARCH=SOL10-sparc_32
 rhel6_x86_64_MPP_ARCH=RHEL6-x86_64
 rhel7_x86_64_MPP_ARCH=RHEL7-x86_64
-osx106_x86_MPP_ARCH=OSX-i386
 sles11_x86_64_MPP_ARCH=SLES11-x86_64
 ifneq "$($(BLD_ARCH)_MPP_ARCH)" ""
 export MPP_ARCH=$($(BLD_ARCH)_MPP_ARCH)

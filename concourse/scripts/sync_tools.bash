@@ -11,6 +11,10 @@ function make_sync_tools() {
     # IVYREPO_HOST IVYREPO_REALM IVYREPO_USER IVYREPO_PASSWD
     make sync_tools
   popd
+  if [ "${TARGET_OS}" = centos ]; then
+    mkdir -p orca_src
+    mv ${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/gporca*/* orca_src/
+  fi
 }
 
 function _main() {

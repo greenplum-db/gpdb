@@ -257,6 +257,10 @@ FI_IDENT(CleanupQE, "cleanup_qe")
 FI_IDENT(XLogAoInsert, "xlog_ao_insert")
 /* inject fault just before commiting alter database set tablespace */
 FI_IDENT(InsideMoveDbTransaction, "inside_move_db_transaction")
+/* inject fault just after calculating redo record and before committing checkpoint record */
+FI_IDENT(CheckpointAfterRedoCalculated, "checkpoint_after_redo_calculated")
+/* inject fault at the beginning of heap insert */
+FI_IDENT(HeapInsert, "heap_insert")
 #endif
 
 /*

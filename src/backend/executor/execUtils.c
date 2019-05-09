@@ -1682,6 +1682,87 @@ ExecGetShareNodeEntry(EState* estate, int shareidx, bool fCreate)
 	return (ShareNodeEntry *) list_nth(*estate->es_sharenode, shareidx);
 }
 
+/*
+ * Prefetch JoinQual to prevent motion hazard.
+ *
+ * A motion hazard is a deadlock between motions, a classic motion hazard in a
+ * join executor is formed by its inner and outer motions, it can be prevented
+ * by prefetching the inner plan, refer to motion_sanity_check() for details.
+ *
+ * A similar motion hazard can be formed by the outer motion and the join qual
+ * motion.  A join executor fetches a outer tuple, filters it with the join
+ * qual, then repeat the process on all the outer tuples.  When there are
+ * motions in both outer plan and the join qual then below state is possible:
+ *
+ * 0. processes A and B belong to the join slice, process C belongs to the
+ *    outer slice, process D belongs to the JoinQual slice;
+ * 1. A has read the first outer tuple and is fetching tuples from D;
+ * 2. D is waiting for ACK from B;
+ * 3. B is fetching the first outer tuple from C;
+ * 4. C is waiting for ACK from A;
+ *
+ * So a deadlock is formed A->D->B->C->A.  We can prevent it also by
+ * prefetching the join qual.
+ *
+ * An example is demonstrated and explained in test case
+ * src/test/regress/sql/deadlock2.sql.
+ *
+ * Return true if the JoinQual is prefetched.
+ */
+bool
+ExecPrefetchJoinQual(JoinState *node)
+{
+	EState	   *estate = node->ps.state;
+	ExprContext *econtext = node->ps.ps_ExprContext;
+	PlanState  *inner = innerPlanState(node);
+	PlanState  *outer = outerPlanState(node);
+	List	   *joinqual = node->joinqual;
+	TupleTableSlot *innertuple = econtext->ecxt_innertuple;
+
+	if (!joinqual)
+		return false;
+
+	/* Outer tuples should not be fetched before us */
+	Assert(econtext->ecxt_outertuple == NULL);
+
+	/* Build fake inner & outer tuples */
+	econtext->ecxt_innertuple = ExecInitNullTupleSlot(estate,
+													  ExecGetResultType(inner));
+	econtext->ecxt_outertuple = ExecInitNullTupleSlot(estate,
+													  ExecGetResultType(outer));
+
+	/* Fetch subplan with the fake inner & outer tuples */
+	ExecQual(joinqual, econtext, false);
+
+	/* Restore previous state */
+	econtext->ecxt_innertuple = innertuple;
+	econtext->ecxt_outertuple = NULL;
+
+	return true;
+}
+
+/*
+ * Decide if should prefetch joinqual.
+ *
+ * Joinqual should be prefetched when both outer and joinqual contain motions.
+ * In create_*join_plan() functions we set prefetch_joinqual according to the
+ * outer motions, now we detect for joinqual motions to make the final
+ * decision.
+ *
+ * See ExecPrefetchJoinQual() for details.
+ *
+ * This function should be called in ExecInit*Join() functions.
+ *
+ * Return true if JoinQual should be prefetched.
+ */
+bool
+ShouldPrefetchJoinQual(EState *estate, Join *join)
+{
+	return (join->prefetch_joinqual &&
+			findSenderMotion(estate->es_plannedstmt,
+							 estate->currentSliceIdInPlan));
+}
+
 /* ----------------------------------------------------------------
  *		CDB Slice Table utilities
  * ----------------------------------------------------------------

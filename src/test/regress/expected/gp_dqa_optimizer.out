@@ -31,7 +31,7 @@ explain (costs off) select count(distinct d) from dqa_t1;
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
                ->  Seq Scan on dqa_t1
- Optimizer: PQO version 3.11.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.11.0
 (5 rows)
 
 select count(distinct d) from dqa_t1 group by i;
@@ -66,7 +66,7 @@ explain (costs off) select count(distinct d) from dqa_t1 group by i;
                                  ->  Sort
                                        Sort Key: i, d
                                        ->  Seq Scan on dqa_t1
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (13 rows)
 
 select count(distinct d), count(distinct dt) from dqa_t1;
@@ -253,7 +253,7 @@ explain (costs off) select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dq
                      ->  Seq Scan on dqa_t1
                      ->  Hash
                            ->  Seq Scan on dqa_t2
- Optimizer: PQO version 3.11.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.11.0
 (9 rows)
 
 select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d group by dqa_t2.dt;
@@ -336,7 +336,7 @@ explain (costs off) select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dq
                                              ->  Seq Scan on dqa_t2
                                              ->  Hash
                                                    ->  Seq Scan on dqa_t1
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (17 rows)
 
 -- Distinct keys are not distribution keys
@@ -362,7 +362,7 @@ explain (costs off) select count(distinct c) from dqa_t1;
                                  ->  Sort
                                        Sort Key: c
                                        ->  Seq Scan on dqa_t1
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (14 rows)
 
 select count(distinct c) from dqa_t1 group by dt;
@@ -421,7 +421,7 @@ explain (costs off) select count(distinct c) from dqa_t1 group by dt;
                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                              Hash Key: c
                                              ->  Seq Scan on dqa_t1
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (15 rows)
 
 select count(distinct c) from dqa_t1 group by d;
@@ -469,7 +469,7 @@ explain (costs off) select count(distinct c) from dqa_t1 group by d;
                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                              Hash Key: c
                                              ->  Seq Scan on dqa_t1
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (15 rows)
 
 select count(distinct c), count(distinct dt) from dqa_t1;
@@ -634,7 +634,7 @@ explain (costs off) select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where d
                                              ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                                    Hash Key: dqa_t2.c
                                                    ->  Seq Scan on dqa_t2
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (20 rows)
 
 select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where dqa_t1.c = dqa_t2.c group by dqa_t2.dt;
@@ -723,7 +723,7 @@ explain (costs off) select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where d
                                                          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                                                Hash Key: dqa_t2.c
                                                                ->  Seq Scan on dqa_t2
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (23 rows)
 
 -- MPP-19037

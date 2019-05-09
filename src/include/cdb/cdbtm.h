@@ -31,12 +31,6 @@ typedef enum
 	DTX_STATE_NONE = 0,
 
 	/**
-	 * The distributed transaction is active but distributed coordination
-	 *   is not required (because it is auto-commit on the QEs).
-	 */
-	DTX_STATE_ACTIVE_NOT_DISTRIBUTED,
-
-	/**
 	 * The distributed transaction is active and requires distributed coordination
 	 *   (because it is explicit or an implicit writer transaction)
 	 */
@@ -299,8 +293,8 @@ extern void dtxCrackOpenGid(const char	*gid,
 extern DistributedTransactionId getDistributedTransactionId(void);
 extern bool getDistributedTransactionIdentifier(char *id);
 
-extern void initGxact(TMGXACT *gxact);
-extern void setCurrentGxact(void);
+extern void initGxact(TMGXACT *gxact, bool resetXid);
+extern void activeCurrentGxact(void);
 extern void	prepareDtxTransaction(void);
 extern bool isPreparedDtxTransaction(void);
 extern void getDtxLogInfo(TMGXACT_LOG *gxact_log);
@@ -316,9 +310,7 @@ extern void redoDtxCheckPoint(TMGXACT_CHECKPOINT *gxact_checkpoint);
 extern void redoDistributedCommitRecord(TMGXACT_LOG *gxact_log);
 extern void redoDistributedForgetCommitRecord(TMGXACT_LOG *gxact_log);
 
-/* @param stmt used because some plans are annotated with dispatch details which the DTM needs. */
-extern void dtmPreCommand(const char *debugCaller, const char *debugDetail, PlannedStmt *stmt,
-							bool needsTwoPhaseCommit, bool dispatchToPrimaries, bool dispatchToMirrors );
+extern void setupTwoPhaseTransaction(void);
 extern bool isCurrentDtxTwoPhase(void);
 extern DtxState getCurrentDtxState(void);
 
@@ -362,5 +354,6 @@ extern bool currentGxactWriterGangLost(void);
 extern void addToGxactTwophaseSegments(struct Gang* gp);
 
 extern int dtx_recovery_start(void);
+extern DistributedTransactionId generateGID(void);
 
 #endif   /* CDBTM_H */

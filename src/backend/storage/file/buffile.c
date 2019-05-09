@@ -63,6 +63,7 @@
 #include <zstd.h>
 #endif
 
+#include "commands/tablespace.h"
 #include "executor/instrument.h"
 #include "storage/fd.h"
 #include "storage/buffile.h"
@@ -200,7 +201,16 @@ BufFileCreateTempInSet(workfile_set *work_set, bool interXact)
 	char		filePrefix[MAXPGPATH];
 
 	snprintf(filePrefix, MAXPGPATH, "_%s_", work_set->prefix);
-
+	/*
+	 * In upstream, PrepareTempTablespaces() is called by callers of
+	 * BufFileCreateTemp*. Since we were burned once by forgetting to call it
+	 * for hyperhashagg spill files, we moved it into BufFileCreateTempInSet,
+	 * as we didn't see a reason not to.
+	 * We also posed the question upstream
+	 * https://www.postgresql.org/message-id/
+	 * CAAKRu_YwzjuGAmmaw4-8XO=OVFGR1QhY_Pq-t3wjb9ribBJb_Q@mail.gmail.com
+	 */
+	PrepareTempTablespaces();
 	pfile = OpenTemporaryFile(interXact, filePrefix);
 	Assert(pfile >= 0);
 

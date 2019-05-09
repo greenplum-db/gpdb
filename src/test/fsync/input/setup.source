@@ -1,4 +1,3 @@
 create or replace function dirty_buffers() returns setof record as
  '@abs_builddir@/fsync_helper@DLSUFFIX@', 'dirty_buffers'
   LANGUAGE C VOLATILE STRICT NO SQL;
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;

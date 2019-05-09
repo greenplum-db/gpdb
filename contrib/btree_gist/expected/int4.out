@@ -74,12 +74,15 @@ SELECT count(*) FROM int4tmp WHERE a >  237::int4;
 
 EXPLAIN (COSTS OFF)
 SELECT a, a <-> '237' FROM int4tmp ORDER BY a <-> '237' LIMIT 3;
-                QUERY PLAN                 
--------------------------------------------
+                      QUERY PLAN                       
+-------------------------------------------------------
  Limit
-   ->  Index Scan using int4idx on int4tmp
-         Order By: (a <-> 237)
-(3 rows)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a <-> 237))
+         ->  Limit
+               ->  Index Scan using int4idx on int4tmp
+                     Order By: (a <-> 237)
+(7 rows)
 
 SELECT a, a <-> '237' FROM int4tmp ORDER BY a <-> '237' LIMIT 3;
   a  | ?column? 

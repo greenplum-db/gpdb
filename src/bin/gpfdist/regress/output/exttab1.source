@@ -155,6 +155,8 @@ SELECT * FROM EXT_REGION as r, EXT_NATION as n WHERE n.N_REGIONKEY = r.R_REGIONK
 Execute error
 \! wget --header='X-GP-PROTO:0' http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 && echo "Execute successully";
 Execute successully
+\! wget --header='x-gp-proto:1' http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 && echo "Execute successully";
+Execute successully
 -- test: multiple reader for pipe is forbidden
 DROP EXTERNAL WEB TABLE IF EXISTS create_pipe;
 -- start_ignore
@@ -526,8 +528,8 @@ format 'text' ( delimiter '|' newline 'cr');
 create external table ext_willfail(a int)
 location('gpfdist://@hostname@:7070/exttab1/nation.tbl' )
 format 'text' ( delimiter '|' newline 'blah'); -- should fail with invalid newline.
-ERROR:  invalid value for NEWLINE (blah)
-HINT:  valid options are: 'LF', 'CRLF', 'CR'
+ERROR:  invalid value for NEWLINE "blah"
+HINT:  Valid options are: 'LF', 'CRLF' and 'CR'.
 select * from ext_newline1; -- should pass. using the correct linefeed. file has 'lf'.
  n_nationkey |     n_name     | n_regionkey |                                                     n_comment                                                      
 -------------+----------------+-------------+--------------------------------------------------------------------------------------------------------------------

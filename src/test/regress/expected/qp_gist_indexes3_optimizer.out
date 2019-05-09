@@ -155,7 +155,7 @@ EXPLAIN SELECT id, property AS "Property" FROM GistTable3
          ->  Bitmap Index Scan on gistindex3a  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: PQO version 2.64.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.64.0
 (7 rows)
 
 VACUUM ANALYZE GistTable3;
@@ -175,7 +175,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable3
          Index Cond: property ~= '(999,999),(998,998)'::box
          Filter: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: PQO version 2.64.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.64.0
 (6 rows)
 
 -- ----------------------------------------------------------------------
@@ -215,7 +215,7 @@ EXPLAIN SELECT id, property AS "Property" FROM GistTable3
          Index Cond: property ~= '(999,999),(998,998)'::box
          Filter: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: PQO version 2.64.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.64.0
 (6 rows)
 
 -- ----------------------------------------------------------------------

@@ -2047,6 +2047,14 @@ ANALYZE onetimefilter2;
 EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
 WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
 
+
+-- full joins with predicates
+DROP TABLE IF EXISTS ffoo, fbar;
+CREATE TABLE ffoo (a, b) AS (VALUES (1, 2), (2, 3), (4, 5), (5, 6), (6, 7)) DISTRIBUTED BY (a);
+CREATE TABLE fbar (c, d) AS (VALUES (1, 42), (2, 43), (4, 45), (5, 46)) DISTRIBUTED BY (c);
+
+SELECT d FROM ffoo FULL OUTER JOIN fbar ON a = c WHERE b BETWEEN 5 and 9;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

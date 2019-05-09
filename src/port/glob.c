@@ -876,12 +876,33 @@ g_lstat(fn, sb, pglob)
 	struct stat *sb;
 	glob_t *pglob;
 {
+#ifdef WIN32
+	/*
+	 * Behavior of stat() is not stable across C Runtime versions.
+	 * If linked to system basic msvcrt.dll it calls FindFirstFile().
+	 * If linked with normal CRT comes with Visual Studio or Redistribute
+	 * packages, it calls CreateFile(). CreateFile() is problematic here,
+	 * if path is a pipe, it will open the pipe once then close, causing
+	 * the other side to connect to the wrong pipe. Skip stat() if the
+	 * name is pipe and pretend there is one.
+	 */
+	if (wcsstr(fn, L"\\\\.\\pipe") == fn)
+	{
+		memset(sb, 0, sizeof(struct stat));
+		sb->st_dev = -1;
+		sb->st_rdev = -1;
+		sb->st_nlink = 1;
+		sb->st_mode = _S_IFIFO;
+		return 0;
+	}
+#endif
 	char buf[MAXPATHLEN];
 
 	if (g_Ctoc(fn, buf, sizeof(buf)))
 		return(-1);
 	if (pglob->gl_flags & GLOB_ALTDIRFUNC)
 		return((*pglob->gl_lstat)(buf, sb));
+
 	return(lstat(buf, sb));
 }
 
@@ -891,6 +912,26 @@ g_stat(fn, sb, pglob)
 	struct stat *sb;
 	glob_t *pglob;
 {
+#ifdef WIN32
+	/*
+	 * Behavior of stat() is not stable across C Runtime versions.
+	 * If linked to system basic msvcrt.dll it calls FindFirstFile().
+	 * If linked with normal CRT comes with Visual Studio or Redistribute
+	 * packages, it calls CreateFile(). CreateFile() is problematic here,
+	 * if path is a pipe, it will open the pipe once then close, causing
+	 * the other side to connect to the wrong pipe. Skip stat() if the
+	 * name is pipe and pretend there is one.
+	 */
+	if (wcsstr(fn, L"\\\\.\\pipe") == fn)
+	{
+		memset(sb, 0, sizeof(struct stat));
+		sb->st_dev = -1;
+		sb->st_rdev = -1;
+		sb->st_nlink = 1;
+		sb->st_mode = _S_IFIFO;
+		return 0;
+	}
+#endif
 	char buf[MAXPATHLEN];
 
 	if (g_Ctoc(fn, buf, sizeof(buf)))

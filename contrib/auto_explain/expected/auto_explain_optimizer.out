@@ -1,0 +1,110 @@
+CREATE SCHEMA auto_explain_test;
+CREATE TABLE auto_explain_test.t1(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO auto_explain_test.t1 VALUES(generate_series(0, 1000));
+CREATE TABLE auto_explain_test.t2(b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO auto_explain_test.t2 VALUES(generate_series(0, 1000));
+SET enable_nestloop = ON;
+SET CLIENT_MIN_MESSAGES = LOG;
+LOAD 'auto_explain';
+LOG:  statement: LOAD 'auto_explain';
+SET auto_explain.log_analyze = TRUE;
+LOG:  statement: SET auto_explain.log_analyze = TRUE;
+SET auto_explain.log_min_duration = 0;
+LOG:  statement: SET auto_explain.log_min_duration = 0;
+SET auto_explain.log_buffers = FALSE;
+LOG:  statement: SET auto_explain.log_buffers = FALSE;
+SET auto_explain.log_triggers = TRUE;
+LOG:  statement: SET auto_explain.log_triggers = TRUE;
+SET auto_explain.log_nested_statements = FALSE;
+LOG:  statement: SET auto_explain.log_nested_statements = FALSE;
+SET auto_explain.log_timing = FALSE;
+LOG:  statement: SET auto_explain.log_timing = FALSE;
+SET auto_explain.log_verbose = FALSE;
+LOG:  statement: SET auto_explain.log_verbose = FALSE;
+SELECT relname FROM pg_class WHERE relname='pg_class';
+LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
+LOG:  Planner produced plan :0
+LOG:  duration: 0.112 ms  plan:
+Query Text: SELECT relname FROM pg_class WHERE relname='pg_class';
+Seq Scan on pg_class  (cost=0.00..12.46 rows=1 width=64) (actual rows=1 loops=1)
+  Filter: (relname = 'pg_class'::name)
+  Rows Removed by Filter: 438
+  (slice0)    Executor memory: 32K bytes.
+Memory used:  128000kB
+ relname  
+----------
+ pg_class
+(1 row)
+
+SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+LOG:  statement: SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+LOG:  duration: 195.785 ms  plan:
+Query Text: SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+Aggregate  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=1 loops=1)
+  ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=3 loops=1)
+        ->  Aggregate  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=1 loops=1)
+              ->  Nested Loop  (cost=0.00..1326086.34 rows=334001 width=1) (actual rows=340340 loops=1)
+                    Join Filter: true
+                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=1001 width=1) (actual rows=1001 loops=1)
+                          ->  Seq Scan on t1  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1)
+                    ->  Seq Scan on t2  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1002)
+  (slice0)    Executor memory: 67K bytes.
+  (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+  (slice2)    Executor memory: 119K bytes avg x 3 workers, 119K bytes max (seg0).
+Memory used:  128000kB
+  count  
+---------
+ 1002001
+(1 row)
+
+SET auto_explain.log_min_duration = 1;
+LOG:  statement: SET auto_explain.log_min_duration = 1;
+SET auto_explain.log_triggers = FALSE;
+LOG:  statement: SET auto_explain.log_triggers = FALSE;
+SET auto_explain.log_verbose = TRUE;
+LOG:  statement: SET auto_explain.log_verbose = TRUE;
+-- this select should not dump execution plan
+SELECT relname FROM pg_class WHERE relname='pg_class';
+LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
+LOG:  Planner produced plan :0
+ relname  
+----------
+ pg_class
+(1 row)
+
+-- this select should also dump plan, since it takes too much time to run
+SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+LOG:  statement: SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+LOG:  duration: 180.126 ms  plan:
+Query Text: SELECT count(*) FROM auto_explain_test.t1, auto_explain_test.t2;
+Aggregate  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=1 loops=1)
+  Output: count((count()))
+  ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=3 loops=1)
+        Output: (count())
+        ->  Aggregate  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=1 loops=1)
+              Output: count()
+              ->  Nested Loop  (cost=0.00..1326086.34 rows=334001 width=1) (actual rows=340340 loops=1)
+                    Join Filter: true
+                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=1001 width=1) (actual rows=1001 loops=1)
+                          ->  Seq Scan on auto_explain_test.t1  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1)
+                    ->  Seq Scan on auto_explain_test.t2  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1002)
+  (slice0)    Executor memory: 67K bytes.
+  (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+  (slice2)    Executor memory: 119K bytes avg x 3 workers, 119K bytes max (seg0).
+Memory used:  128000kB
+  count  
+---------
+ 1002001
+(1 row)
+
+-- clean jobs
+DROP TABLE auto_explain_test.t1;
+LOG:  statement: DROP TABLE auto_explain_test.t1;
+DROP TABLE auto_explain_test.t2;
+LOG:  statement: DROP TABLE auto_explain_test.t2;
+DROP SCHEMA auto_explain_test;
+LOG:  statement: DROP SCHEMA auto_explain_test;

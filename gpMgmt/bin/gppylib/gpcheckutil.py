@@ -4,15 +4,12 @@ class HostType:
     GPCHECK_HOSTTYPE_UNDEFINED  = 0
     GPCHECK_HOSTTYPE_APPLIANCE = 1
     GPCHECK_HOSTTYPE_GENERIC_LINUX = 2
-    GPCHECK_HOSTTYPE_GENERIC_SOLARIS = 3
 
 def hosttype_str(type):
     if type == HostType.GPCHECK_HOSTTYPE_APPLIANCE:
         return "GPDB Appliance"
     elif type == HostType.GPCHECK_HOSTTYPE_GENERIC_LINUX:
         return "Generic Linux Cluster"
-    elif type == HostType.GPCHECK_HOSTTYPE_GENERIC_SOLARIS:
-        return "Generic Solaris Cluster"
     else:
         return "Undetected Platform"
 
@@ -184,50 +181,6 @@ class mounts:
         for k in self.entries.keys():
             output = "%s\n%s" % (output, self.entries[k].__str__())
         return output
-
-class solaris_etc_system:
-    def __init__(self):
-        self.parameters = dict() # dictionary of values
-        self.errormsg = None
-
-class solaris_etc_project:
-    def __init__(self):
-        self.lines = list() # list of lines in the file
-        self.errormsg = None
-
-class solaris_etc_user_attr:
-    def __init__(self):
-        self.lines = list() # list of lines in the file
-        self.errormsg = None
-
-class GenericSolarisOutputData:
-
-    def __init__(self):
-        self.etc_system = None
-        self.etc_project = None
-        self.etc_user_attr = None
-        self.uname = None
-
-    def __str__(self):
-
-        grc = "============= /etc/system====================\n"
-        gre = "============= /etc/system ERRORMSG===========\n"
-        output = "%s%s\n%s%s" % (grc, self.etc_system.parameters.__str__(), gre, self.etc_system.errormsg)
-
-        grc = "============= /etc/project===================\n"
-        gre = "============= /etc/project ==================\n"
-        output = "%s\n%s%s\n%s%s" % (output, grc, self.etc_project.lines.__str__(), gre, self.etc_project.errormsg)
-
-        grc = "============= /etc/user_att==================\n"
-        gre = "============= /etc/user_att==================\n"
-        output = "%s\n%s%s\n%s%s" % (output, grc, self.etc_user_attr.lines.__str__(), gre, self.etc_user_attr.errormsg)
-
-        grc = "============= UNAME==========================\n"
-        gre = "============= UNAME ERRORMSG=================\n"
-        output = "%s\n%s%s\n%s%s" % (output, grc, self.uname.__str__(), gre, self.uname.errormsg)
-
-        return output
-
 
 class GenericLinuxOutputData:
     def __init__(self):

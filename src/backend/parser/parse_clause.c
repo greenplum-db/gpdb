@@ -3801,12 +3801,11 @@ transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("type mismatch between ORDER BY and RANGE "
-								"parameter in window specification"),
+						 errmsg("type mismatch between ORDER BY and RANGE parameter in window specification"),
 						 errhint("Operations between window specification "
 								 "the ORDER BY column and RANGE parameter "
 								 "must result in a data type which can be "
-								 "cast back to the ORDER BY column type"),
+								 "cast back to the ORDER BY column type."),
 						 parser_errposition(pstate, exprLocation((Node *) expr))));
 			}
 
@@ -3829,7 +3828,7 @@ transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
 						 errhint("Operations between window specification "
 								 "the ORDER BY column and RANGE parameter "
 								 "must result in a data type which can be "
-								 "cast back to the ORDER BY column type")));
+								 "cast back to the ORDER BY column type.")));
 		}
 
 		if (IsA(node, Const))

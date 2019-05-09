@@ -218,7 +218,6 @@ static void HandleQDErrorFrame(CopyState cstate);
 
 static void CopyInitDataParser(CopyState cstate);
 static void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable);
-static void CopyEolStrToType(CopyState cstate);
 
 static GpDistributionData *InitDistributionData(CopyState cstate, EState *estate);
 static void FreeDistributionData(GpDistributionData *distData);
@@ -1688,13 +1687,18 @@ ProcessCopyOptions(CopyState cstate,
 		}
 		else
 		{
-			if(pg_strcasecmp(cstate->eol_str, "lf") != 0 &&
-			   pg_strcasecmp(cstate->eol_str, "cr") != 0 &&
-			   pg_strcasecmp(cstate->eol_str, "crlf") != 0)
+			if (pg_strcasecmp(cstate->eol_str, "lf") == 0)
+				cstate->eol_type = EOL_NL;
+			else if (pg_strcasecmp(cstate->eol_str, "cr") == 0)
+				cstate->eol_type = EOL_CR;
+			else if (pg_strcasecmp(cstate->eol_str, "crlf") == 0)
+				cstate->eol_type = EOL_CRNL;
+			else
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("invalid value for NEWLINE (%s)", cstate->eol_str),
-						errhint("valid options are: 'LF', 'CRLF', 'CR'")));
+						 errmsg("invalid value for NEWLINE \"%s\"",
+								cstate->eol_str),
+						 errhint("Valid options are: 'LF', 'CRLF' and 'CR'.")));
 		}
 	}
 
@@ -1702,10 +1706,6 @@ ProcessCopyOptions(CopyState cstate,
 	{
 		cstate->escape_off = true;
 	}
-
-	/* set end of line type if NEWLINE keyword was specified */
-	if (cstate->eol_str)
-		CopyEolStrToType(cstate);
 }
 
 /*
@@ -7169,29 +7169,6 @@ setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable)
 		/* no conversion function (both encodings are probably the same) */
 		cstate->enc_conversion_proc = NULL;
 	}
-}
-
-static void
-CopyEolStrToType(CopyState cstate)
-{
-	if (pg_strcasecmp(cstate->eol_str, "lf") == 0)
-	{
-		cstate->eol_type = EOL_NL;
-	}
-	else if (pg_strcasecmp(cstate->eol_str, "cr") == 0)
-	{
-		cstate->eol_type = EOL_CR;
-	}
-	else if (pg_strcasecmp(cstate->eol_str, "crlf") == 0)
-	{
-		cstate->eol_type = EOL_CRNL;
-		
-	}
-	else /* error. must have been validated in CopyValidateControlChars() ! */
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("internal error in CopySetEolType. Trying to set NEWLINE %s", 
-						 cstate->eol_str)));
 }
 
 static GpDistributionData *

@@ -90,9 +90,9 @@ SKIP: {
 
 	command_fails(
 		[ 'pg_basebackup', '-D', "$tempdir/backup1", '-Fp',
-		  '--target-gp-dbid', '-1'
+		  '--target-gp-dbid', '1'
 		],
-		'plain format with tablespaces fails without tablespace mapping');
+		'plain format with tablespaces fails without tablespace mapping and target-gp-dbid as the test server dbid');
 
 	command_ok(
 		[   'pg_basebackup',    '-D',
@@ -100,13 +100,13 @@ SKIP: {
 			'--target-gp-dbid', '1',
 			"-T$shorter_tempdir/tblspc1=$tempdir/tbackup/tblspc1" ],
 		'plain format with tablespaces succeeds with tablespace mapping');
-		ok(-d "$tempdir/tbackup/tblspc1", 'tablespace was relocated');
+		ok(-d "$tempdir/tbackup/tblspc1/1", 'tablespace was relocated');
 	opendir(my $dh, "$tempdir/pgdata/pg_tblspc") or die;
 	ok( (   grep
 			{
 				-l "$tempdir/backup1/pg_tblspc/$_"
 				  and readlink "$tempdir/backup1/pg_tblspc/$_" eq
-				  "$tempdir/tbackup/tblspc1"
+				  "$tempdir/tbackup/tblspc1/1"
 			  } readdir($dh)),
 		"tablespace symlink was updated");
 	closedir $dh;

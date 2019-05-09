@@ -65,23 +65,16 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
         'compile_gpdb_binary_swap_centos6',
         'icw_gporca_centos6_gpos_memory',
         'walrep_2',
-        'client_loader_remote_test_aix',
         'compile_gpdb_sles11',
-        'compile_gpdb_ubuntu16',
-        'compile_gpdb_aix7_remote',
         'icw_gporca_sles11',
         'icw_gporca_sles12',
         'icw_planner_sles12',
-        'icw_planner_ubuntu16',
-        'icw_gporca_conan_ubuntu16',
-        'gpdb_packaging_ubuntu16',
         'resource_group_sles12',
         'madlib_build_gppkg',
         'MADlib_Test_planner_centos6',
         'MADlib_Test_orca_centos6',
         'MADlib_Test_planner_centos7',
         'MADlib_Test_orca_centos7',
-        'icw_extensions_gpcloud_ubuntu16'
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
 
@@ -125,7 +118,7 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
 
     # ignore concourse v2.x variable interpolation
     pipeline_yml_cleaned = re.sub('{{', '', re.sub('}}', '', raw_pipeline_yml))
-    pipeline = yaml.load(pipeline_yml_cleaned)
+    pipeline = yaml.safe_load(pipeline_yml_cleaned)
 
     jobs_raw = pipeline['jobs']
     all_job_names = [job['name'] for job in jobs_raw]
@@ -258,7 +251,7 @@ def main():
         action='store',
         dest='os_types',
         default=['centos6'],
-        choices=['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16'],
+        choices=['centos6', 'centos7', 'sles', 'win'],
         nargs='+',
         help='List of OS values to support'
     )
@@ -313,7 +306,7 @@ def main():
     args = parser.parse_args()
 
     if args.pipeline_type == 'prod':
-        args.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
+        args.os_types = ['centos6', 'centos7', 'sles', 'win']
         args.test_sections = [
             'ICW',
             'Replication',
@@ -321,7 +314,6 @@ def main():
             'Interconnect',
             'CLI',
             'UD',
-            'AA',
             'Extensions',
             'Gpperfmon'
         ]

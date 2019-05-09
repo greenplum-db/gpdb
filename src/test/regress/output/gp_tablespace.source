@@ -29,6 +29,10 @@ BEGIN
 	return has_init_file_for_oid(relation_id);
 END;
 $$ language plpgsql;
+CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
+	RETURNS TEXT
+	AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
+    LANGUAGE C;
 -- create tablespaces we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
 CREATE TABLESPACE ul_testspace LOCATION '@testtablespace@_unlogged';
@@ -60,6 +64,26 @@ FROM gp_tablespace_location((SELECT oid FROM pg_tablespace WHERE spcname='ul_tes
             -1 | testtablespace_unlogged
 (4 rows)
 
+-- Test that test tablespaces have the catalog directory directly under their
+-- symlink
+SELECT pg_ls_dir('./pg_tblspc/' || oid) = get_tablespace_version_directory_name()
+         AS has_version_dir
+FROM pg_tablespace WHERE spcname = 'testspace';
+ has_version_dir 
+-----------------
+ t
+(1 row)
+
+-- Confirm that all the dbid directories were created under the testtablespace path
+\! ls @testtablespace@;
+1
+2
+3
+4
+5
+6
+7
+8
 -- Test moving AO/AOCO tables from one tablespace to another.
 CREATE TABLE ao_ts_table (id int4, t text) with (appendonly=true, orientation=row) distributed by (id);
 CREATE TABLE aoco_ts_table (id int4, t text) with (appendonly=true, orientation=column) distributed by (id);
@@ -240,6 +264,58 @@ FROM gp_tablespace_location((SELECT oid FROM pg_tablespace WHERE spcname='testsp
             -1 | testtablespace
 (4 rows)
 
+-- Create a tablespace with an existing GP_TABLESPACE_VERSION_DIRECTORY for
+-- another version of GPDB.
+CREATE TABLESPACE testspace_existing_version_dir LOCATION '@testtablespace@_existing_version_dir';
+SELECT * FROM
+  (SELECT pg_ls_dir('pg_tblspc/' || oid) AS versiondirs
+    FROM pg_tablespace
+    WHERE spcname = 'testspace_existing_version_dir'
+  ) a
+WHERE a.versiondirs != get_tablespace_version_directory_name();
+    versiondirs    
+-------------------
+ GPDB_99_399999991
+(1 row)
+
+SELECT count(*) FROM
+  (SELECT pg_ls_dir('pg_tblspc/' || oid) AS versiondirs
+    FROM pg_tablespace
+    WHERE spcname = 'testspace_existing_version_dir'
+  ) a
+WHERE a.versiondirs = get_tablespace_version_directory_name();
+ count 
+-------
+     1
+(1 row)
+
+-- Do not drop the dbid directory, nor the existing version directory if you
+-- drop this tablespace
+DROP TABLESPACE testspace_existing_version_dir;
+\! ls @testtablespace@_existing_version_dir/*;
+@testtablespace@_existing_version_dir/1:
+GPDB_99_399999991
+
+@testtablespace@_existing_version_dir/2:
+GPDB_99_399999991
+
+@testtablespace@_existing_version_dir/3:
+GPDB_99_399999991
+
+@testtablespace@_existing_version_dir/4:
+GPDB_99_399999991
+
+@testtablespace@_existing_version_dir/5:
+GPDB_99_399999991
+
+@testtablespace@_existing_version_dir/6:
+GPDB_99_399999991
+
+@testtablespace@_existing_version_dir/7:
+GPDB_99_399999991
+
+@testtablespace@_existing_version_dir/8:
+GPDB_99_399999991
 -- Test alter tablespace: PG does not seem to test these.
 -- test SET & OWNER
 ALTER TABLESPACE testspace_otherloc SET (random_page_cost=20.0);

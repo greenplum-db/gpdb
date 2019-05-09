@@ -32,7 +32,7 @@ explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i
          ->  Index Scan using bfv_tab1_idx1 on bfv_tab1  (cost=0.00..2.00 rows=1 width=244)
                Index Cond: unique1 = "Values".column1
                Filter: stringu1::text = "Values".column2
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (9 rows)
 
 set gp_enable_relsize_collection=on;
@@ -48,7 +48,7 @@ explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i
          ->  Index Scan using bfv_tab1_idx1 on bfv_tab1  (cost=0.00..2.00 rows=1 width=244)
                Index Cond: unique1 = "Values".column1
                Filter: stringu1::text = "Values".column2
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (9 rows)
 
 reset gp_enable_relsize_collection;
@@ -171,7 +171,7 @@ AND ft.id = dt1.id;
                                                    ->  Dynamic Seq Scan on bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=7 width=6)
                                        ->  Hash  (cost=431.00..431.00 rows=3 width=4)
                                              ->  Seq Scan on bfv_tab2_dimtabl1  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (20 rows)
 
 -- start_ignore
@@ -494,7 +494,7 @@ explain select * from nestloop_x as x, nestloop_y as y where x.i + x.j < y.j;
                ->  Seq Scan on nestloop_x  (cost=0.00..431.00 rows=7 width=8)
          ->  Index Scan using nestloop_y_idx on nestloop_y  (cost=0.00..112.01 rows=1 width=8)
                Index Cond: j > (nestloop_x.i + nestloop_x.j)
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (8 rows)
 
 select * from nestloop_x as x, nestloop_y as y where x.i + x.j < y.j;
@@ -521,7 +521,7 @@ explain select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2
                ->  Seq Scan on nestloop_x  (cost=0.00..431.00 rows=7 width=8)
          ->  Index Scan using nestloop_y_idx on nestloop_y  (cost=0.00..112.01 rows=1 width=8)
                Index Cond: j > (nestloop_x.i + nestloop_x.j + 2)
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (8 rows)
 
 select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2;
@@ -590,7 +590,7 @@ explain select * from shape_heap where c && '<(5,5), 1>'::circle;
    ->  Index Scan using shape_heap_bb_idx on shape_heap  (cost=0.00..6.00 rows=1 width=24)
          Index Cond: c && '<(5,5),1>'::circle
          Filter: c && '<(5,5),1>'::circle
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (5 rows)
 
 explain select * from shape_ao   where c && '<(5,5), 1>'::circle;
@@ -601,7 +601,7 @@ explain select * from shape_ao   where c && '<(5,5), 1>'::circle;
          Recheck Cond: c && '<(5,5),1>'::circle
          ->  Bitmap Index Scan on shape_ao_bb_idx  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: c && '<(5,5),1>'::circle
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (6 rows)
 
 explain select * from shape_aocs where c && '<(5,5), 1>'::circle;
@@ -612,7 +612,7 @@ explain select * from shape_aocs where c && '<(5,5), 1>'::circle;
          Recheck Cond: c && '<(5,5),1>'::circle
          ->  Bitmap Index Scan on shape_aocs_bb_idx  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: c && '<(5,5),1>'::circle
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (6 rows)
 
 -- Test that they return correct results.

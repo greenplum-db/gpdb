@@ -733,6 +733,15 @@ increment_command_count()
 	MyProc->queryCommandId = gp_command_count;
 }
 
+int
+get_dbid_string_length()
+{
+	char *dbid_string = psprintf("%d", GpIdentity.dbid);
+	int length = strlen(dbid_string);
+	pfree(dbid_string);
+	return length;
+}
+
 Datum mpp_execution_segment(PG_FUNCTION_ARGS);
 Datum gp_execution_dbid(PG_FUNCTION_ARGS);
 

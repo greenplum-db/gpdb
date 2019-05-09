@@ -12,7 +12,7 @@
     <p>A tablespace requires a host file system location to store its database files. In Greenplum
       Database, the file system location must exist on all hosts including the hosts running the
       master, standby master, each primary segment, and each mirror segment. </p>
-    <p>A tablespace is Greemplum Database system object (a global object), you can use a tablespace
+    <p>A tablespace is Greenplum Database system object (a global object), you can use a tablespace
       from any database if you have appropriate privileges.</p>
   </body>
   <topic id="topic13" xml:lang="en">

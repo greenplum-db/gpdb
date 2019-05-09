@@ -26,7 +26,6 @@
             <topicref href="guc_category-list.xml#topic56"/>
         </topicref>
         <topicref href="guc-list.xml" linking="none">
-            <topicref href="guc-list.xml#add_missing_from"/>
             <topicref href="guc-list.xml#application_name"/>
             <topicref href="guc-list.xml#array_nulls"/>
             <topicref href="guc-list.xml#authentication_timeout"/>
@@ -175,7 +174,6 @@
             <topicref href="guc-list.xml#keep_wal_segments"/>
             <topicref href="guc-list.xml#krb_caseins_users"/>
             <topicref href="guc-list.xml#krb_server_keyfile"/>
-            <topicref href="guc-list.xml#krb_srvname"/>
             <topicref href="guc-list.xml#lc_collate"/>
             <topicref href="guc-list.xml#lc_ctype"/>
             <topicref href="guc-list.xml#lc_messages"/>
@@ -184,6 +182,7 @@
             <topicref href="guc-list.xml#lc_time"/>
             <topicref href="guc-list.xml#listen_addresses"/>
             <topicref href="guc-list.xml#local_preload_libraries"/>
+            <topicref href="guc-list.xml#lock_timeout"/>
             <topicref href="guc-list.xml#log_autostats"/>
             <topicref href="guc-list.xml#log_connections"/>
             <topicref href="guc-list.xml#log_disconnections"/>

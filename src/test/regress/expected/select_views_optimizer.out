@@ -1346,7 +1346,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_property_normal WHERE f_leak(passwd);
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on customer
          Filter: ((name = 'regress_alice'::text) AND f_leak(passwd))
- Optimizer: PQO version 2.59.1
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.59.1
 (4 rows)
 
 SELECT * FROM my_property_secure WHERE f_leak(passwd);
@@ -1392,7 +1392,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_normal WHERE f_leak(cnum);
          ->  Index Scan using customer_dist_key_cid_key on customer
                Index Cond: ((dist_key = credit_card.dist_key) AND (cid = credit_card.cid))
                Filter: (name = 'regress_alice'::text)
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
 (9 rows)
 
 SELECT * FROM my_credit_card_secure WHERE f_leak(cnum);

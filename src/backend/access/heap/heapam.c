@@ -1204,19 +1204,13 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 	 */
 	if (lockmode == RowExclusiveLock)
 	{
-		rel = try_heap_open(relid, NoLock, noWait);
-		if (!rel)
-			return NULL;
-
 		if (Gp_role == GP_ROLE_DISPATCH &&
-			(!gp_enable_global_deadlock_detector ||
-			 RelationIsAppendOptimized(rel)))
+			CondUpgradeRelLock(relid, noWait))
 		{
 			lockmode = ExclusiveLock;
 			if (lockUpgraded != NULL)
 				*lockUpgraded = true;
 		}
-		relation_close(rel, NoLock);
     }
 
 	rel = try_heap_open(relid, lockmode, noWait);
@@ -2368,6 +2362,11 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 	bool		all_visible_cleared = false;
 
 	gp_expand_protect_catalog_changes(relation);
+
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet(HeapInsert, DDLNotSpecified, "",
+								   RelationGetRelationName(relation));
+#endif
 
 	/*
 	 * Fill in tuple header fields, assign an OID, and toast the tuple if

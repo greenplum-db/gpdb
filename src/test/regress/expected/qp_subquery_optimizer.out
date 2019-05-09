@@ -1083,7 +1083,7 @@ explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- d
                ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                            ->  Seq Scan on tabdel3  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (9 rows)
 
 explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- support this
@@ -1098,7 +1098,7 @@ explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- s
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                  ->  Seq Scan on tabdel4  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (10 rows)
 
 delete from TabDel2 where TabDel2.a not in (select a from TabDel4); 

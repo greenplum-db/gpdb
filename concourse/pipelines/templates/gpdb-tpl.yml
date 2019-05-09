@@ -1,11 +1,3 @@
-
-{% set gppkg_additional_task = "
-        - task: setup_gppkg_second_install
-          file: gpdb_src/concourse/tasks/gppkg_behave.yml
-          params:
-            SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate"
-%}
-
 {% set CLI_BEHAVE_TESTS = [
                       {'name': 'gpmovemirrors',
                        'use_concourse_cluster': true,
@@ -13,8 +5,7 @@
                       {'name': 'gpcheck',
                        'use_concourse_cluster': false},
                       {'name': 'gppkg',
-                       'use_concourse_cluster': true,
-                       'additional_tasks': gppkg_additional_task},
+                       'use_concourse_cluster': true},
                       {'name': 'analyzedb',
                        'use_concourse_cluster': false},
                       {'name': 'gpinitsystem',
@@ -24,7 +15,7 @@
                       {'name': 'replication_slots',
                        'use_concourse_cluster': false},
                       {'name': 'gpactivatestandby',
-                       'use_concourse_cluster': false},
+                       'use_concourse_cluster': true},
                       {'name': 'gpinitstandby',
                        'use_concourse_cluster': false},
                       {'name': 'gpcheckcat',
@@ -58,15 +49,6 @@ groups:
 {% if "sles" in os_types %}
   - compile_gpdb_sles11
 {% endif %}
-{% if "ubuntu16" in os_types %}
-  - compile_gpdb_ubuntu16
-{% endif %}
-{% if "aix7" in os_types %}
-  - compile_gpdb_aix7_remote
-{% endif %}
-{% if "aix7" in os_types %}
-  - client_loader_remote_test_aix
-{% endif %}
 {% if "ICW" in test_sections %}
   ## --------------------------------------------------------------------
 {% if "centos6" in os_types %}
@@ -76,6 +58,7 @@ groups:
   - icw_planner_ictcp_centos6
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
+  - gpexpand
   - pg_upgrade
 {% endif %}
 {% if "centos7" in os_types %}
@@ -86,13 +69,6 @@ groups:
   - icw_gporca_sles11
   - icw_gporca_sles12
   - icw_planner_sles12
-{% endif %}
-{% if "ubuntu16" in os_types %}
-  - icw_planner_ubuntu16
-  - icw_gporca_conan_ubuntu16
-{% endif %}
-{% if "ubuntu16" in os_types %}
-  - gpdb_packaging_ubuntu16
 {% endif %}
   - gate_icw_end
 {% endif %}
@@ -128,7 +104,6 @@ groups:
 {% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]
 {% endfor %}
-  - gpexpand
   - check_centos
 {% endif %}
 {% if "AA" in test_sections %}
@@ -150,9 +125,6 @@ groups:
 {% if "Extensions" in test_sections %}
 {% if "centos6" in os_types %}
   - icw_extensions_gpcloud_centos6
-{% endif %}
-{% if "ubuntu16" in os_types %}
-  - icw_extensions_gpcloud_ubuntu16
 {% endif %}
 {%endif %}
 
@@ -181,21 +153,6 @@ groups:
 {% if "sles" in os_types %}
   - compile_gpdb_sles11
 {% endif %}
-{% if "ubuntu16" in os_types %}
-  - compile_gpdb_ubuntu16
-{% endif %}
-{% if "aix7" in os_types %}
-  - compile_gpdb_aix7_remote
-{% endif %}
-
-## ======================================================================
-
-- name: ClientsLoaders
-  jobs:
-{% if "aix7" in os_types %}
-  - compile_gpdb_aix7_remote
-  - client_loader_remote_test_aix
-{% endif %}
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -223,13 +180,6 @@ groups:
   - icw_planner_sles12
   - compile_gpdb_sles11
 {% endif %}
-{% if "ubuntu16" in os_types %}
-  - icw_planner_ubuntu16
-  - icw_gporca_conan_ubuntu16
-  - compile_gpdb_ubuntu16
-  - gpdb_packaging_ubuntu16
-  - compile_gpdb_ubuntu16
-{% endif %}
   - gate_icw_end
 
 {% endif %}
@@ -241,9 +191,6 @@ groups:
   jobs:
 {% if "centos6" in os_types %}
   - icw_extensions_gpcloud_centos6
-{% endif %}
-{% if "ubuntu16" in os_types %}
-  - icw_extensions_gpcloud_ubuntu16
 {% endif %}
 
 {% endif %}
@@ -303,10 +250,10 @@ groups:
 {% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]
 {% endfor %}
-  - gpexpand
   - check_centos
   - compile_gpdb_centos6
 {% if "centos6" in os_types and "ICW" in test_sections %}
+  - gpexpand
   - pg_upgrade
 {% endif %}
 
@@ -403,16 +350,6 @@ resources:
     versioned_file: ((pipeline-name))/icw_gporca_centos6_dump/dump.sql.xz
 
 {% endif %}
-{% if "aix7" in os_types %}
-- name: aix_environments
-  type: pool
-  source:
-    uri: {{concourse-resource-pools-git-remote}}
-    branch: master
-    pool: client_loader_remote_aix
-    private_key: {{concourse-resource-pools-git-key}}
-
-{% endif %}
 - name: gpdb_src
   type: git
   source:
@@ -426,22 +363,14 @@ resources:
 - name: gpdb_src_binary_swap
   type: git
   source:
-    branch: master
-    uri: https://github.com/greenplum-db/gpdb.git
+    branch: {{gpdb-binary-swap-git-tag}}
+    uri: {{gpdb-binary-swap-git-remote}}
     ignore_paths:
     - gpdb-doc/*
     - README*
 
 {% endif %}
 
-{% if "ubuntu16" in os_types %}
-- name: debian_release
-  type: git
-  source:
-    branch: ((debian-release-git-branch))
-    uri: ((debian-release-git-remote))
-
-{% endif %}
 {% if "centos6" in os_types %}
 - name: libquicklz-centos6
   type: gcs
@@ -506,7 +435,7 @@ resources:
     versioned_file: centos7/python-2.7.12.tar.gz
 
 {% endif %}
-{% if "centos6" in os_types or "sles" in os_types or "aix7" in os_types %}
+{% if "centos6" in os_types or "sles" in os_types %}
 - name: gpdb6-centos6-build
   type: docker-image
   source:
@@ -533,20 +462,6 @@ resources:
     tag: latest
 
 {% endif %}
-{% if "ubuntu16" in os_types %}
-- name: ubuntu-gpdb-dev-16
-  type: docker-image
-  source:
-    repository: pivotaldata/ubuntu16.04-build
-    tag: 'gpdb5-latest'
-
-- name: ubuntu-gpdb-debian-dev-16
-  type: docker-image
-  source:
-    repository: pivotaldata/ubuntu-gpdb-debian-dev
-    tag: '16.04'
-
-{% endif %}
 {% if "centos6" in os_types %}
 - name: bin_gpdb_centos6
   type: gcs
@@ -554,6 +469,13 @@ resources:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_centos6/bin_gpdb.tar.gz
+
+- name: bin_gpdb_clients_centos6
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_clients_centos6/bin_gpdb_clients.tar.gz
 
 {% endif %}
 {% if pipeline_type == "prod" %}
@@ -607,14 +529,19 @@ resources:
     ##     secret_access_key: {{bucket-secret-access-key}}
     ##     versioned_file: release_candidates/bin_gpdb_sles11/master/((rc-build-type))/bin_gpdb.tar.gz
 
-{% endif %}
-{% if "ubuntu16" in os_types %}
-- name: compiled_bits_ubuntu16
+- name: bin_gpdb_clients_centos6_rc
   type: gcs
   source:
-    bucket: ((gcs-bucket-intermediates))
+    bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/compiled_bits_ubuntu16/compiled_bits_ubuntu16.tar.gz
+    regexp: server/published/master/clients-rc-(.*)-rhel6_x86_64((rc-build-type-gcs)).tar.gz
+
+- name: bin_gpdb_clients_centos7_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/master/clients-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
 
 {% endif %}
 {% if "centos6" in os_types %}
@@ -634,6 +561,13 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_centos7/bin_gpdb.tar.gz
 
+- name: bin_gpdb_clients_centos7
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_clients_centos7/bin_gpdb_clients.tar.gz
+
 {% endif %}
 {% if "sles" in os_types %}
 - name: bin_gpdb_sles11
@@ -642,41 +576,6 @@ resources:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_sles11/bin_gpdb.tar.gz
-
-{% endif %}
-{% if "aix7" in os_types %}
-- name: installer_aix7_gpdb_clients
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: ((pipeline-name))/installer_aix7_gpdb_clients/greenplum-clients-(.*)-aix7_ppc_64.zip
-
-- name: installer_aix7_gpdb_loaders
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: ((pipeline-name))/installer_aix7_gpdb_loaders/greenplum-loaders-(.*)-aix7_ppc_64.zip
-
-{% endif %}
-{% if "ubuntu16" in os_types %}
-- name: deb_package_ubuntu16
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/deb_package_ubuntu16/greenplum-db.deb
-
-{% endif %}
-{% if "aix7" in os_types %}
-- name: nightly-trigger
-  type: time
-  source:
-    location: America/Los_Angeles
-    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
-    start: 6:00 AM
-    stop: 7:00 AM
 
 {% endif %}
 {% if "AA" in test_sections %}
@@ -903,11 +802,14 @@ jobs:
       CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
-      BLD_TARGETS: "clients loaders"
+      BLD_TARGETS: "clients"
   - aggregate:
     - put: bin_gpdb_centos6
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: bin_gpdb_clients_centos6
+      params:
+        file: gpdb_artifacts/gpdb-clients-centos6.tar.gz
 
 {% endif %}
 {% if "centos7" in os_types %}
@@ -942,11 +844,14 @@ jobs:
       CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
-      BLD_TARGETS: "clients loaders"
+      BLD_TARGETS: "clients"
   - aggregate:
     - put: bin_gpdb_centos7
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: bin_gpdb_clients_centos7
+      params:
+        file: gpdb_artifacts/gpdb-clients-centos7.tar.gz
 
 {% endif %}
 {% if "sles" in os_types %}
@@ -980,38 +885,6 @@ jobs:
   - put: bin_gpdb_sles11
     params:
       file: gpdb_artifacts/bin_gpdb.tar.gz
-
-{% endif %}
-{% if "ubuntu16" in os_types %}
-- name: compile_gpdb_ubuntu16
-  plan:
-  - aggregate:
-    - get: reduced-frequency-trigger
-      trigger: ((reduced-frequency-trigger-flag))
-    - get: gpdb_src
-      trigger: ((gpdb_src-trigger-flag))
-    - get: ubuntu-gpdb-dev-16
-    - get: ubuntu-gpdb-debian-dev-16
-    - get: debian_release
-  - aggregate:
-    - task: compile_gpdb
-      image: ubuntu-gpdb-dev-16
-      file: gpdb_src/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
-      params:
-        CONFIGURE_FLAGS: {{configure_flags}}
-    - task: deb_create_package
-      file: gpdb_src/concourse/tasks/deb_create_package.yml
-      image: ubuntu-gpdb-debian-dev-16
-      params:
-        DEBFULLNAME: ((debian-package-maintainer-fullname))
-        DEBEMAIL: ((debian-package-maintainer-email))
-  - aggregate:
-    - put: compiled_bits_ubuntu16
-      params:
-        file: compiled_bits_ubuntu16/compiled_bits_ubuntu16.tar.gz
-    - put: deb_package_ubuntu16
-      params:
-        file: {{deb_package_ubuntu16_versioned_file}}
 
 {% endif %}
 {% if "centos6" in os_types %}
@@ -1073,84 +946,6 @@ jobs:
         file: gpdb_artifacts/bin_gpdb.tar.gz
 
 {% endif %}
-{% if "aix7" in os_types %}
-- name: compile_gpdb_aix7_remote
-  serial: true
-  plan:
-  # Compile gpdb on a remote AIX machine, triggered by concourse.
-  # We need to serialize this job to avoid overwhelming workload
-  # on remote machine.
-  - aggregate:
-    - get: nightly-trigger
-      trigger: true
-    - get: gpdb_src
-    - get: gpdb6-centos6-build
-  - task: compile_gpdb_aix7_remote
-    file: gpdb_src/concourse/tasks/compile_gpdb_remote.yml
-    image: gpdb6-centos6-build
-    params:
-      REMOTE_HOST: {{remote_host_build}}
-      REMOTE_PORT: {{remote_port_build}}
-      REMOTE_USER: {{remote_user_build}}
-      REMOTE_KEY: {{remote_key_build}}
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      BLD_TARGETS: "clients loaders"
-  - aggregate:
-    - put: installer_aix7_gpdb_clients
-      params:
-        file: gpdb_artifacts/greenplum-clients-*-aix7_ppc_64.zip
-    - put: installer_aix7_gpdb_loaders
-      params:
-        file: gpdb_artifacts/greenplum-loaders-*-aix7_ppc_64.zip
-
-- name: client_loader_remote_test_aix
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - compile_gpdb_aix7_remote
-      - compile_gpdb_centos6
-    - get: installer_aix7_gpdb_clients
-      passed:
-      - compile_gpdb_aix7_remote
-    - get: installer_aix7_gpdb_loaders
-      passed:
-      - compile_gpdb_aix7_remote
-      trigger: true
-    - get: bin_gpdb
-      passed:
-      - compile_gpdb_centos6
-      resource: bin_gpdb_centos6
-    - get: gpdb6-centos6-test
-    - put: aix_environments
-      params: {acquire: true}
-  - task: ic_gpdb_cl
-    file: gpdb_src/concourse/tasks/ic_gpdb_remote.yml
-    image: gpdb6-centos6-test
-    params:
-      BLD_TARGETS: "clients loaders"
-      REMOTE_HOST: {{remote_host_test}}
-      REMOTE_PORT: {{remote_port_test}}
-      REMOTE_USER: {{remote_user_test}}
-      REMOTE_KEY: {{remote_key_test}}
-    ensure:
-      do:
-      - task: cleanup_aix
-        file: gpdb_src/concourse/tasks/aix_remote_cleanup.yml
-        image: gpdb6-centos6-test
-        params:
-          REMOTE_HOST: {{remote_host_test}}
-          REMOTE_PORT: {{remote_port_test}}
-          REMOTE_USER: {{remote_user_test}}
-          REMOTE_KEY: {{remote_key_test}}
-      - put: aix_environments
-        params: {release: aix_environments}
-
-{% endif %}
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -1177,12 +972,12 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos6-test
   - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
     image: gpdb6-centos6-test
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
-      TEST_BINARY_SWAP: false
+      TEST_BINARY_SWAP: {{test-binary-swap}}
       CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icw_gporca_centos6
@@ -1279,7 +1074,6 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
-      TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
@@ -1381,59 +1175,6 @@ jobs:
     <<: *set_failed
 
 {% endif %}
-{% if "ubuntu16" in os_types %}
-- name: icw_planner_ubuntu16
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_ubuntu16]
-    - get: compiled_bits_ubuntu16
-      passed: [compile_gpdb_ubuntu16]
-      trigger: [[ test_trigger ]]
-    - get: ubuntu-gpdb-dev-16
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
-    image: ubuntu-gpdb-dev-16
-    params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
-      CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
-
-- name: icw_gporca_conan_ubuntu16
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules: none
-      passed: [compile_gpdb_ubuntu16]
-    - get: bin_gpdb
-      passed: [compile_gpdb_ubuntu16]
-      resource: compiled_bits_ubuntu16
-      trigger: [[ test_trigger ]]
-    - get: ubuntu-gpdb-dev-16
-  - task: icw_with_orca
-    image: ubuntu-gpdb-dev-16
-    file: gpdb_src/concourse/tasks/test_with_orca_conan.yml
-    params:
-      TEST_SUITE: "icw"
-
-- name: gpdb_packaging_ubuntu16
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - compile_gpdb_ubuntu16
-    - get: ubuntu-gpdb-debian-dev-16
-    - get: deb_package_ubuntu16
-      passed:
-      - compile_gpdb_ubuntu16
-      trigger: [[ test_trigger ]]
-  - task: test_gpdb_deb_package
-    file: gpdb_src/concourse/tasks/deb_test_package.yml
-    image: ubuntu-gpdb-debian-dev-16
-    params:
-      DEBIAN_PACKAGE: {{deb_package_ubuntu16_versioned_file}}
-
-{% endif %}
 - name: gate_icw_end
   plan:
   - aggregate:
@@ -1464,17 +1205,8 @@ jobs:
       - icw_extensions_gpcloud_centos6
 {% endif %}
 {% endif %}
-{% if 'ubuntu16' in os_types %}
-{% if "Extensions" in test_sections %}
-      - icw_extensions_gpcloud_ubuntu16
-{% endif %}
-{% endif %}
 {% if "centos7" in os_types %}
       - icw_gporca_centos7
-{% endif %}
-{% if "ubuntu16" in os_types %}
-      - icw_planner_ubuntu16
-      - icw_gporca_conan_ubuntu16
 {% endif %}
 {% if "sles" in os_types %}
       - icw_gporca_sles11
@@ -1877,9 +1609,8 @@ jobs:
             <<: *ccp_gen_cluster_default_params
         - task: gpinitsystem
           file: ccp_src/ci/tasks/gpinitsystem.yml
-        [[ test.additional_tasks ]]
         - task: [[ test.name ]]_concourse_cluster_tests
-          file: gpdb_src/concourse/tasks/run_behave.yml
+          file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
           image: ccp-image
           params:
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
@@ -1975,7 +1706,7 @@ jobs:
     image: ccp-image
     input_mapping: {sqldump: icw_gporca_centos6_dump}
   - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
+    file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
     params:
       BEHAVE_FLAGS: --tags=gpexpand
     image: ccp-image
@@ -2159,8 +1890,6 @@ jobs:
       - compile_gpdb_open_source_centos6
       - compile_gpdb_centos7
  ##     - compile_gpdb_sles11
- ##     - compile_gpdb_ubuntu16
- ##     - compile_gpdb_aix7_remote
       - icw_planner_centos6
       - icw_gporca_centos6
       - icw_gporca_centos7
@@ -2168,12 +1897,8 @@ jobs:
  ##     - icw_gporca_sles11
  ##     - icw_gporca_sles12
  ##     - icw_planner_sles12
- ##     - icw_planner_ubuntu16
- ##     - icw_gporca_conan_ubuntu16
- ##     - gpdb_packaging_ubuntu16
       - icw_planner_ictcp_centos6
       - icw_extensions_gpcloud_centos6
- ##     - icw_extensions_gpcloud_ubuntu16
       - resource_group_centos6
       - resource_group_centos7
       - gpperfmon_centos6
@@ -2200,7 +1925,6 @@ jobs:
       - icw_gporca_centos6
       - icw_planner_ictcp_centos6
       - icw_extensions_gpcloud_centos6
- ##   - client_loader_remote_test_aix
       - resource_group_centos6
 {% for test in CLI_BEHAVE_TESTS %}
       - [[ test.name ]]
@@ -2227,6 +1951,12 @@ jobs:
  ##     - icw_gporca_sles12
  ##     - icw_planner_sles12
  ##     - resource_group_sles12
+    - get: bin_gpdb_clients_centos6
+      passed:
+      - compile_gpdb_centos6
+    - get: bin_gpdb_clients_centos7
+      passed:
+      - compile_gpdb_centos7
 
 - name: Release_Candidate
   plan:
@@ -2238,6 +1968,12 @@ jobs:
       trigger: true
       passed: [gate_release_candidate_start]
     - get: bin_gpdb_centos7
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_clients_centos6
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_clients_centos7
       trigger: true
       passed: [gate_release_candidate_start]
     - get: gpdb6-centos6-build
@@ -2253,6 +1989,8 @@ jobs:
         - name: gpdb_src
         - name: bin_gpdb_centos6
         - name: bin_gpdb_centos7
+        - name: bin_gpdb_clients_centos6
+        - name: bin_gpdb_clients_centos7
         outputs:
         - name: bin_gpdb_centos_gcs
         run:
@@ -2263,6 +2001,8 @@ jobs:
             gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
             cp -v bin_gpdb_centos6/bin_gpdb.tar.gz bin_gpdb_centos_gcs/server-rc-${gpdb_semver}-rhel6_x86_64((rc-build-type-gcs)).tar.gz
             cp -v bin_gpdb_centos7/bin_gpdb.tar.gz bin_gpdb_centos_gcs/server-rc-${gpdb_semver}-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+            cp -v bin_gpdb_clients_centos6/bin_gpdb_clients.tar.gz bin_gpdb_centos_gcs/clients-rc-${gpdb_semver}-rhel6_x86_64((rc-build-type-gcs)).tar.gz
+            cp -v bin_gpdb_clients_centos7/bin_gpdb_clients.tar.gz bin_gpdb_centos_gcs/clients-rc-${gpdb_semver}-rhel7_x86_64((rc-build-type-gcs)).tar.gz
     - task: verify_gpdb_versions
       file: gpdb_src/concourse/tasks/verify_gpdb_versions.yml
   - aggregate:
@@ -2272,6 +2012,12 @@ jobs:
     - put: bin_gpdb_centos7_rc
       params:
         file: "bin_gpdb_centos_gcs/server-rc-*rhel7*.tar.gz"
+    - put: bin_gpdb_clients_centos6_rc
+      params:
+        file: "bin_gpdb_centos_gcs/clients-rc-*rhel6*.tar.gz"
+    - put: bin_gpdb_clients_centos7_rc
+      params:
+        file: "bin_gpdb_centos_gcs/clients-rc-*rhel7*.tar.gz"
     - put: bin_gpdb_centos6_rc_s3
       params:
         file: bin_gpdb_centos6/bin_gpdb.tar.gz
@@ -2327,27 +2073,5 @@ jobs:
         gpcloud_access_key_id: {{gpcloud-access-key-id}}
         gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
         TARGET_OS: centos
-{% endif %}
-
-{% if 'ubuntu16' in os_types %}
-- name: icw_extensions_gpcloud_ubuntu16
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_ubuntu16]
-      trigger: [[ test_trigger ]]
-    - get: compiled_bits_ubuntu16
-      passed: [compile_gpdb_ubuntu16]
-    - get: ubuntu-gpdb-dev-16
-  - aggregate:
-    - task: regression_tests_gpcloud_ubuntu
-      input_mapping:
-        bin_gpdb: compiled_bits_ubuntu16
-      file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
-      image: ubuntu-gpdb-dev-16
-      params:
-        gpcloud_access_key_id: {{gpcloud-access-key-id}}
-        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
-        TARGET_OS: ubuntu
 {% endif %}
 {% endif %}

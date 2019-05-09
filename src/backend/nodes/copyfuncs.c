@@ -132,6 +132,7 @@ _copyPlannedStmt(const PlannedStmt *from)
 
 	COPY_NODE_FIELD(intoClause);
 	COPY_NODE_FIELD(copyIntoClause);
+	COPY_SCALAR_FIELD(metricsQueryType);
 
 	return newnode;
 }
@@ -870,6 +871,7 @@ CopyJoinFields(const Join *from, Join *newnode)
 	CopyPlanFields((const Plan *) from, (Plan *) newnode);
 
     COPY_SCALAR_FIELD(prefetch_inner);
+	COPY_SCALAR_FIELD(prefetch_joinqual);
 
 	COPY_SCALAR_FIELD(jointype);
 	COPY_NODE_FIELD(joinqual);

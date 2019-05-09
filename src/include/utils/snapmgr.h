@@ -16,6 +16,7 @@
 #include "fmgr.h"
 #include "utils/resowner.h"
 #include "utils/snapshot.h"
+#include "cdb/cdbtm.h"
 
 
 extern bool FirstSnapshotSet;
@@ -30,7 +31,7 @@ extern Snapshot GetLatestSnapshot(void);
 extern void SnapshotSetCommandId(CommandId curcid);
 
 extern Snapshot GetCatalogSnapshot(Oid relid);
-extern Snapshot GetNonHistoricCatalogSnapshot(Oid relid);
+extern Snapshot GetNonHistoricCatalogSnapshot(Oid relid, DtxContext distributedTransactionContext);
 extern void InvalidateCatalogSnapshot(void);
 extern void InvalidateCatalogSnapshotConditionally(void);
 

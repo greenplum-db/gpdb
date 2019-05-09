@@ -406,7 +406,6 @@ errstart(int elevel, const char *filename, int lineno,
 					break;
 
 				case DTX_STATE_NONE:
-				case DTX_STATE_ACTIVE_NOT_DISTRIBUTED:
 				case DTX_STATE_ACTIVE_DISTRIBUTED:
 				case DTX_STATE_INSERTING_FORGET_COMMITTED:
 				case DTX_STATE_INSERTED_FORGET_COMMITTED:

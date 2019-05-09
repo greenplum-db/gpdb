@@ -60,7 +60,7 @@ explain analyze select d, count(*) from smallt group by d;
    (slice1)    Executor memory: 110K bytes avg x 3 workers, 110K bytes max (seg0).  Work_mem: 33K bytes max.
    (slice2)    Executor memory: 138K bytes avg x 3 workers, 138K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 3.718 ms
 (19 rows)
 
@@ -86,7 +86,7 @@ explain analyze select count(*) from (select i, t, d, count(*) from bigt group b
    (slice1)  * Executor memory: 3180K bytes avg x 3 workers, 3180K bytes max (seg0).  Work_mem: 2461K bytes max, 4866K bytes wanted.
  Memory used:  2560kB
  Memory wanted:  5265kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 363.922 ms
 (14 rows)
 
@@ -122,7 +122,7 @@ explain analyze select count(distinct d) from smallt;
    (slice1)    Executor memory: 110K bytes avg x 3 workers, 110K bytes max (seg0).  Work_mem: 33K bytes max.
    (slice2)    Executor memory: 82K bytes avg x 3 workers, 82K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 3.325 ms
 (21 rows)
 
@@ -151,7 +151,7 @@ explain analyze select count(distinct d) from bigt;
    (slice1)    Executor memory: 1171K bytes avg x 3 workers, 1171K bytes max (seg0).
    (slice2)    Executor memory: 1006K bytes avg x 3 workers, 1006K bytes max (seg0).
  Memory used:  2560kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 397.691 ms
 (17 rows)
 
@@ -232,7 +232,7 @@ where t1.d = t2.d;
    (slice2)    Executor memory: 166K bytes avg x 3 workers, 166K bytes max (seg0).
    (slice3)    Executor memory: 1226K bytes avg x 3 workers, 1226K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 7.014 ms
 (38 rows)
 
@@ -287,7 +287,7 @@ where t1.i = t2.i;
    (slice0)    Executor memory: 386K bytes.
    (slice1)    Executor memory: 1238K bytes avg x 3 workers, 1238K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 2.471 ms
 (23 rows)
 
@@ -325,7 +325,7 @@ explain analyze select d, count(*) from smallt group by d limit 5;
    (slice1)    Executor memory: 130K bytes avg x 3 workers, 130K bytes max (seg0).  Work_mem: 65K bytes max.
    (slice2)    Executor memory: 170K bytes avg x 3 workers, 170K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 4.148 ms
 (20 rows)
 
@@ -1349,7 +1349,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i;
    (slice0)    Executor memory: 322K bytes.
    (slice1)    Executor memory: 4198K bytes avg x 3 workers, 4206K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 4.129 ms
 (13 rows)
 
@@ -1430,7 +1430,7 @@ where i < (select count(*) from smallt where smallt.i = smallt2.i);
                                  ->  Sort  (cost=0.00..431.00 rows=34 width=4)
                                        Sort Key: smallt.i
                                        ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4)
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
 (14 rows)
 
 -- Sort in MergeJoin
@@ -1660,7 +1660,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i an
    (slice0)    Executor memory: 322K bytes.
    (slice1)    Executor memory: 4182K bytes avg x 3 workers, 4182K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 3.631 ms
 (15 rows)
 
@@ -1791,7 +1791,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.d = t2.d an
    (slice2)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
    (slice3)    Executor memory: 4186K bytes avg x 3 workers, 4186K bytes max (seg0).  Work_mem: 2K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 5.688 ms
 (20 rows)
 
@@ -1857,7 +1857,7 @@ and smallt.d = '2011-01-04'::date;
    (slice0)    Executor memory: 450K bytes.
    (slice1)    Executor memory: 4234K bytes avg x 3 workers, 4234K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 3.325 ms
 (14 rows)
 
@@ -1928,7 +1928,7 @@ and smallt.d = '2011-01-04'::date;
    (slice0)    Executor memory: 450K bytes.
    (slice1)    Executor memory: 4234K bytes avg x 3 workers, 4234K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 5.131 ms
 (14 rows)
 

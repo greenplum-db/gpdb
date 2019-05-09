@@ -17,11 +17,11 @@ You will need the following tools:
   flex        2.5.4a or later.  flex 2.5.35 preferred.
   gcc         4.4.2
   gfortran    4.4.2
-  greptools   2.5.1 on Linux, 2.5 on Solaris
+  greptools   2.5.1
   libtool     1.4.6 on CentOS, 1.5.22 on SuSE
   make        3.80 or later
   perl        5.8.8
-  tar (GNU)   1.14 (named or symlinked to gtar on Solaris)
+  tar (GNU)   1.14
 
 To build the Greenplum Database, run GNU make with the following options:
 

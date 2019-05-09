@@ -150,9 +150,6 @@
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#krb_srvname" type="section">krb_srvname</xref>
-              </p>
-              <p>
                 <xref href="guc-list.xml#password_encryption" type="section"
                   >password_encryption</xref>
               </p>
@@ -1069,6 +1066,10 @@
           </stentry>
           <stentry>
             <p>
+              <xref href="guc-list.xml#lock_timeout" type="section"
+                >lock_timeout</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#max_locks_per_transaction" type="section"
                 >max_locks_per_transaction</xref>
             </p>
@@ -1301,9 +1302,6 @@
         <simpletable frame="none" id="simpletable_bx3_r1v_bdb">
           <strow>
             <stentry>
-              <p>
-                <xref href="guc-list.xml#add_missing_from" type="section">add_missing_from</xref>
-              </p>
               <p>
                 <xref href="guc-list.xml#array_nulls" type="section">array_nulls</xref>
               </p>

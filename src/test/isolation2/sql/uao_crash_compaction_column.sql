@@ -30,7 +30,6 @@ begin /* in func */
 end; /* in func */
 $$ language plpgsql;
 
-3:CREATE extension if NOT EXISTS gp_inject_fault;
 3:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 --
 -- Test to validate crash at different points in AO/CO vacuum.

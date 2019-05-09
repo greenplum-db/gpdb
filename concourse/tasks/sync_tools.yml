@@ -9,6 +9,7 @@ inputs:
 
 outputs:
 - name: gpAux_ext
+- name: orca_src 
 
 run:
   path: gpdb_src/concourse/scripts/sync_tools.bash

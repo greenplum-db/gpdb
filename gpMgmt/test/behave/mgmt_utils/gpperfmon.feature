@@ -171,6 +171,5 @@ Feature: gpperfmon
         When the user runs command "pkill gpmmon"
         Then wait until the process "gpmmon" is up
         And wait until the process "gpsmon" is up
-        Then waiting "2" seconds
         # Note that the code considers partition_age + 1 as the number of partitions to keep
-        Then wait until the results from boolean sql "SELECT count(*) = 6 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) = 6 FROM pg_namespace n INNER JOIN pg_class cl ON cl.relnamespace = n.oid INNER JOIN pg_partition pp ON pp.parrelid = cl.oid INNER JOIN pg_partition_rule ppr ON ppr.paroid = pp.oid WHERE n.nspname = 'public' AND cl.relname = 'diskspace_history'" is "true"

@@ -1196,6 +1196,13 @@ CacheInvalidateHeapTuple(Relation relation,
 		relationId = gptup->localoid;
 		databaseId = MyDatabaseId;
 	}
+	else if (tupleRelId == AppendOnlyRelationId)
+	{
+		FormData_pg_appendonly *aotup = (FormData_pg_appendonly *) GETSTRUCT(tuple);
+
+		relationId = aotup->relid;
+		databaseId = MyDatabaseId;
+	}
 	else if (tupleRelId == IndexRelationId)
 	{
 		Form_pg_index indextup = (Form_pg_index) GETSTRUCT(tuple);

@@ -130,7 +130,6 @@ $$ language plpgsql;
 -- checkpoint to ensure clean xlog replication before bring down mirror
 select checkpoint_and_wait_for_replication_replay(500);
 
-create extension if not exists gp_inject_fault;
 -- Prevent FTS from probing segments as we don't want a change in
 -- cluster configuration to be triggered after the mirror is stoped
 -- temporarily in the test.  Request a scan so that the skip fault is

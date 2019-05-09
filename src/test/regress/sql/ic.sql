@@ -1,16 +1,9 @@
--- start_ignore
-SET gp_recursive_cte TO ON;
--- end_ignore
 /*
  * 
  * Functional tests
  * Parameter combination tests
  * Improve code coverage tests
  */
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
-
 CREATE SCHEMA ic_udp_test;
 SET search_path = ic_udp_test;
 

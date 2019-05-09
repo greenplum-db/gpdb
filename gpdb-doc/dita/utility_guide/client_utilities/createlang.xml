@@ -21,6 +21,8 @@
           <codeph>createlang</codeph> is a wrapper around the <codeph>SQL</codeph> command
           <codeph><xref
               href="../../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1"/></codeph>.</p>
+      <note><codeph>createlang</codeph> is deprecated and may be removed in a future release. Direct
+        use of the <codeph>CREATE EXTENSION</codeph> command is recommended instead.</note>
       <p>The procedural language packages included in the standard Greenplum Database
         distribution are:</p>
       <ul>

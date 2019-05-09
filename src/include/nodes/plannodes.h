@@ -144,6 +144,11 @@ typedef struct PlannedStmt
 	 */
 	IntoClause *intoClause;
 	CopyIntoClause *copyIntoClause;
+
+	/* 
+ 	 * GPDB: whether a query is a SPI inner query for extension usage 
+ 	 */
+	int8		metricsQueryType;
 } PlannedStmt;
 
 /*
@@ -862,6 +867,7 @@ typedef struct Join
 	List	   *joinqual;		/* JOIN quals (in addition to plan.qual) */
 
 	bool		prefetch_inner; /* to avoid deadlock in MPP */
+	bool		prefetch_joinqual; /* to avoid deadlock in MPP */
 } Join;
 
 /* ----------------

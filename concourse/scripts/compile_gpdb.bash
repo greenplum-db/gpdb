@@ -170,10 +170,25 @@ function export_gpdb_clients() {
   TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_CL_FILENAME}"
   pushd ${GREENPLUM_CL_INSTALL_DIR}
     source ./greenplum_clients_path.sh
-    python -m compileall -q -x test .
     chmod -R 755 .
     tar -czf "${TARBALL}" ./*
   popd
+}
+
+function build_xerces()
+{
+    OUTPUT_DIR="gpdb_src/gpAux/ext/${BLD_ARCH}"
+    mkdir -p xerces_patch/concourse
+    cp -r orca_src/concourse/xerces-c xerces_patch/concourse
+    cp -r orca_src/patches/ xerces_patch
+    /usr/bin/python xerces_patch/concourse/xerces-c/build_xerces.py --output_dir=${OUTPUT_DIR}
+    rm -rf build
+}
+
+function build_and_test_orca()
+{
+    OUTPUT_DIR="gpdb_src/gpAux/ext/${BLD_ARCH}"
+    orca_src/concourse/build_and_test.py --build_type=RelWithDebInfo --output_dir=${OUTPUT_DIR}
 }
 
 function _main() {
@@ -183,6 +198,8 @@ function _main() {
   case "${TARGET_OS}" in
     centos)
       prep_env_for_centos
+      build_xerces
+      build_and_test_orca
       install_deps_for_centos
       link_tools_for_centos
       ;;

@@ -77,7 +77,9 @@
             <li>After data redistribution, the query optimizer creates more efficient execution
               plans when data is not skewed.</li>
           </ul><p>When all tables have been redistributed, the expansion is complete.</p></li>
-      </ul></p>
+      </ul><note type="important">The <codeph>gprestore</codeph> utility cannot restore backups you
+        made before the expansion with the <codeph>gpbackup</codeph> utility, so back up your
+        databases immediately after the system expansion is complete.</note></p>
     <p>Redistributing table data is a long-running process that creates a large volume of network
       and disk activity. It can take days to redistribute some very large databases. To minimize the
       effects of the increased activity on business operations, system administrators can pause and
@@ -115,7 +117,7 @@
       <li id="no165990">To remove the expansion schema:<codeblock>gpexpand -c</codeblock></li>
     </ol>
     <p>For information about the <codeph><xref
-          href="../../utility_guide/admin_utilities/gpexpand.xml">gpexand</xref></codeph> utility
+          href="../../utility_guide/admin_utilities/gpexpand.xml">gpexpand</xref></codeph> utility
       and the other utilities that are used for system expansion, see the <i>Greenplum Database
         Utility Guide</i>. </p>
   </body>

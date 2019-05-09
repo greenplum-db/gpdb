@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-
 -- Test to validate that ENTRY_DB_SINGLETON reader does not cause a
 -- deadlock.
 --

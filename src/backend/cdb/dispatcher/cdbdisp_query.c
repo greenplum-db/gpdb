@@ -251,11 +251,6 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 	ListCell   *le;
 	ErrorData *qeError = NULL;
 
-	dtmPreCommand("CdbDispatchSetCommand", strCommand, NULL,
-				  false /* no two-phase commit needed for SET */,
-				  false, /* no snapshot needed for SET */
-				  false /* inCursor */ );
-
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "CdbDispatchSetCommand for command = '%s'",
 		 strCommand);
@@ -339,11 +334,9 @@ CdbDispatchCommandToSegments(const char *strCommand,
 {
 	DispatchCommandQueryParms *pQueryParms;
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
-	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
 
-	dtmPreCommand("CdbDispatchCommand", strCommand,
-				  NULL, needTwoPhase, withSnapshot,
-				  false /* inCursor */ );
+	if (needTwoPhase)
+		setupTwoPhaseTransaction();
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchCommand: %s (needTwoPhase = %s)",
@@ -379,12 +372,9 @@ CdbDispatchUtilityStatement(struct Node *stmt,
 {
 	DispatchCommandQueryParms *pQueryParms;
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
-	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
 
-	dtmPreCommand("CdbDispatchUtilityStatement",
-				  debug_query_string ? debug_query_string : "(none)",
-				  NULL, needTwoPhase, withSnapshot,
-				  false /* inCursor */ );
+	if (needTwoPhase)
+		setupTwoPhaseTransaction();
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchUtilityStatement: %s (needTwoPhase = %s)",
@@ -1410,12 +1400,9 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	Gang *primaryGang;
 	ErrorData *error = NULL;
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
-	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
 
-	dtmPreCommand("CdbDispatchCopyStart",
-				  debug_query_string ? debug_query_string : "(none)",
-				  NULL, needTwoPhase, withSnapshot,
-				  false /* inCursor */ );
+	if (needTwoPhase)
+		setupTwoPhaseTransaction();
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchCopyStart: %s (needTwoPhase = %s)",

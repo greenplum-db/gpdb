@@ -107,13 +107,22 @@ sub Install
 		'Import libraries',
 		$target . '/lib/',
 		"$conf\\",
-		"postgres\\postgres.lib",
 		"libpq\\libpq.lib",
-		"libecpg\\libecpg.lib",
 		"libpgcommon\\libpgcommon.lib",
-		"libpgport\\libpgport.lib",
-		"libpgtypes\\libpgtypes.lib",
-		"libecpg_compat\\libecpg_compat.lib");
+		"libpgport\\libpgport.lib");
+
+	if ($insttype ne "client")
+	{
+		CopyFiles(
+			'Import libraries',
+			$target . '/lib/',
+			"$conf\\",
+			"postgres\\postgres.lib",
+			"libecpg\\libecpg.lib",
+			"libpgtypes\\libpgtypes.lib",
+			"libecpg_compat\\libecpg_compat.lib");
+	}
+
 	CopyContribFiles($config, $target);
 	CopyIncludeFiles($target);
 
@@ -565,6 +574,8 @@ sub CopyIncludeFiles
 	lcopy('src/include/libpq/pqcomm.h', $target . '/include/internal/libpq/')
 	  || croak 'Could not copy pqcomm.h';
 
+	if ($insttype ne "client")
+	{
 	CopyFiles(
 		'Server headers',
 		$target . '/include/server/',
@@ -620,6 +631,7 @@ sub CopyIncludeFiles
 		$target . '/include/informix/esql/',
 		'src/interfaces/ecpg/include/',
 		split /\s+/, $1);
+	}
 }
 
 sub GenerateNLSFiles

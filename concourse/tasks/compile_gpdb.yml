@@ -8,6 +8,7 @@ inputs:
   - name: libquicklz-devel-installer
   - name: libsigar-installer
   - name: python-tarball
+  - name: orca_src
 outputs:
   - name: gpdb_artifacts
 run:

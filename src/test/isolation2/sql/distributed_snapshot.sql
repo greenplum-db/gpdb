@@ -6,7 +6,6 @@
 -- when calling DistributedLog_AdvanceOldestXmin().
 
 -- Setup
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE TABLE distributed_snapshot_test1 (a int);
 
 1: BEGIN;

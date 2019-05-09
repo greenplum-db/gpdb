@@ -89,11 +89,6 @@ static int	num_held_lwlocks = 0;
 static LWLock *held_lwlocks[MAX_SIMUL_LWLOCKS];
 static bool held_lwlocks_exclusive[MAX_SIMUL_LWLOCKS];
 
-#ifdef USE_TEST_UTILS_X86
-static void *held_lwlocks_addresses[MAX_SIMUL_LWLOCKS][MAX_FRAME_DEPTH];
-static int32 held_lwlocks_depth[MAX_SIMUL_LWLOCKS];
-#endif /* USE_TEST_UTILS_X86 */
-
 static int	lock_addin_request = 0;
 static bool lock_addin_request_allowed = true;
 
@@ -706,12 +701,6 @@ LWLockAcquireCommon(LWLock *l, LWLockMode mode, uint64 *valptr, uint64 val)
 
 	TRACE_POSTGRESQL_LWLOCK_ACQUIRE(T_NAME(l), T_ID(l), mode);
 
-#ifdef USE_TEST_UTILS_X86
-	/* keep track of stack trace where lock got acquired */
-	held_lwlocks_depth[num_held_lwlocks] =
-			gp_backtrace(held_lwlocks_addresses[num_held_lwlocks], MAX_FRAME_DEPTH);
-#endif /* USE_TEST_UTILS_X86 */
-
 	/* Add lock to list of locks held by this backend */
 	held_lwlocks_exclusive[num_held_lwlocks] = (mode == LW_EXCLUSIVE);
 	held_lwlocks[num_held_lwlocks++] = l;
@@ -788,12 +777,6 @@ LWLockConditionalAcquire(LWLock *l, LWLockMode mode)
 	}
 	else
 	{
-#ifdef USE_TEST_UTILS_X86
-		/* keep track of stack trace where lock got acquired */
-		held_lwlocks_depth[num_held_lwlocks] =
-				gp_backtrace(held_lwlocks_addresses[num_held_lwlocks], MAX_FRAME_DEPTH);
-#endif /* USE_TEST_UTILS_X86 */
-
 		/* Add lock to list of locks held by this backend */
 		held_lwlocks_exclusive[num_held_lwlocks] = (mode == LW_EXCLUSIVE);
 		held_lwlocks[num_held_lwlocks++] = l;
@@ -1213,25 +1196,11 @@ LWLockRelease(LWLock *l)
 	{
 		held_lwlocks_exclusive[i] = held_lwlocks_exclusive[i + 1];
 		held_lwlocks[i] = held_lwlocks[i + 1];
-#ifdef USE_TEST_UTILS_X86
-		/* shift stack traces */
-		held_lwlocks_depth[i] = held_lwlocks_depth[i + 1];
-		memcpy
-			(
-			held_lwlocks_addresses[i],
-			held_lwlocks_addresses[i + 1],
-			held_lwlocks_depth[i] * sizeof(*held_lwlocks_depth)
-			)
-			;
-#endif /* USE_TEST_UTILS_X86 */
 	}
 
 	// Clear out old last entry.
 	held_lwlocks_exclusive[num_held_lwlocks] = false;
 	held_lwlocks[num_held_lwlocks] = 0;
-#ifdef USE_TEST_UTILS_X86
-	held_lwlocks_depth[num_held_lwlocks] = 0;
-#endif /* USE_TEST_UTILS_X86 */
 
 	/* Acquire mutex.  Time spent holding mutex should be short! */
 	SpinLockAcquire(&lock->mutex);
@@ -1400,111 +1369,3 @@ LWLockHeldExclusiveByMe(LWLockId lockid)
 	}
 	return false;
 }
-
-#ifdef USE_TEST_UTILS_X86
-
-/*
- * Return number of locks held by my process
- */
-uint32
-LWLocksHeld()
-{
-	Assert(num_held_lwlocks >= 0);
-
-	uint32 locks = 0, i = 0;
-
-	for (i = 0; i < num_held_lwlocks; i++)
-	{
-		if (LWLOCK_IS_PREDEFINED(held_lwlocks[i]))
-		{
-			locks++;
-		}
-	}
-
-	return locks;
-}
-
-
-/*
- * Get lock id of the most lately acquired lwlock
- */
-LWLockId
-LWLockHeldLatestId()
-{
-	Assert(num_held_lwlocks > 0);
-
-	uint32 i = 0;
-
-	for (i = num_held_lwlocks; i > 0; i--)
-	{
-		if (LWLOCK_IS_PREDEFINED(held_lwlocks[i - 1]))
-		{
-			return held_lwlocks[i - 1];
-		}
-	}
-
-	Assert(!"No predefined lwlock held");
-	return MaxDynamicLWLock;
-}
-
-
-/*
- * Get caller address for the most lately acquired lwlock
- */
-void *
-LWLockHeldLatestCaller()
-{
-	Assert(num_held_lwlocks > 0);
-
-	uint32 i = 0;
-
-	for (i = num_held_lwlocks; i > 0; i--)
-	{
-		if (LWLOCK_IS_PREDEFINED(held_lwlocks[i - 1]))
-		{
-			return held_lwlocks_addresses[i - 1][1];
-		}
-	}
-
-	return 0;
-}
-
-
-/*
- * Build string containing stack traces where all exclusively-held
- * locks were acquired;
- */
-const char*
-LWLocksHeldStackTraces()
-{
-	if (num_held_lwlocks == 0)
-	{
-		return NULL;
-	}
-
-	StringInfo append = makeStringInfo();	/* palloc'd */
-	uint32 i = 0, cnt = 1;
-
-	/* append stack trace for each held lock */
-	for (i = 0; i < num_held_lwlocks; i++)
-	{
-		if (!LWLOCK_IS_PREDEFINED(held_lwlocks[i]))
-		{
-			continue;
-		}
-
-		appendStringInfo(append, "%d: LWLock %d:\n", cnt++, held_lwlocks[i] );
-
-		char *stackTrace =
-				gp_stacktrace(held_lwlocks_addresses[i], held_lwlocks_depth[i]);
-
-		Assert(stackTrace != NULL);
-		appendStringInfoString(append, stackTrace);
-		pfree(stackTrace);
-	}
-
-	Assert(append->len > 0);
-	return append->data;
-}
-
-#endif /* USE_TEST_UTILS_X86 */

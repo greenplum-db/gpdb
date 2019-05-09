@@ -21,7 +21,7 @@ explain select * from bfv_statistics_foo where a is not null and b >= 1;
    ->  Seq Scan on bfv_statistics_foo  (cost=0.00..431.00 rows=1 width=8)
          Filter: NOT a IS NULL AND b >= 1
  Settings:  optimizer=on
- Optimizer status: PQO version 2.32.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.32.0
 (5 rows)
 
 create table bfv_statistics_foo2(a int) distributed by (a);
@@ -49,7 +49,7 @@ explain select a from bfv_statistics_foo2 where a > 1 order by a;
          ->  Seq Scan on bfv_statistics_foo2  (cost=0.00..431.00 rows=5 width=4)
                Filter: a > 1
  Settings:  optimizer=on
- Optimizer status: PQO version 2.32.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.32.0
 (8 rows)
 
 -- change stats manually so that MCV and MCF numbers do not match
@@ -69,7 +69,7 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
          ->  Seq Scan on bfv_statistics_foo2  (cost=0.00..431.00 rows=3 width=4)
                Filter: a > 1
  Settings:  optimizer=on
- Optimizer status: PQO version 2.32.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.32.0
 (8 rows)
 
 --
@@ -135,7 +135,7 @@ explain select a from bfv_statistics_foo4 where a > 888;
    ->  Seq Scan on bfv_statistics_foo4  (cost=0.00..431.00 rows=1 width=4)
          Filter: a > 888
  Settings:  optimizer=on
- Optimizer status: PQO version 2.32.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.32.0
 (5 rows)
 
 --
@@ -418,7 +418,7 @@ EXPLAIN SELECT * FROM test_join_card1 t1, test_join_card2 t2, test_join_card3 t3
                ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.20 rows=3334 width=8)
                      Hash Key: (test_join_card3.b)::text
                      ->  Seq Scan on test_join_card3  (cost=0.00..431.07 rows=3334 width=8)
- Optimizer: PQO version 3.19.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.19.0
 (17 rows)
 
 -- start_ignore

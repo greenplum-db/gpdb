@@ -1,4 +1,3 @@
-1:CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 1:CREATE TABLE crash_test_redundant(c1 int);
 
 1:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;

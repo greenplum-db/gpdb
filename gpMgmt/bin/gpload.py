@@ -2888,10 +2888,6 @@ class gpload:
             else:
                 self.log(self.INFO, 'gpload failed')
 
-            ## MPP-19015 - Extra python thread shutdown time is needed on HP-UX
-            if platform.uname()[0] == 'HP-UX':
-                time.sleep(1)
-
 
 if __name__ == '__main__':
     g = gpload(sys.argv[1:])

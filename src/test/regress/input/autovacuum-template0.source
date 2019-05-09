@@ -1,5 +1,3 @@
-create extension if not exists gp_inject_fault;
-
 create or replace function test_consume_xids(int4) returns void
 as '@abs_srcdir@/regress.so', 'test_consume_xids'
 language C;

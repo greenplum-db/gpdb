@@ -43,7 +43,7 @@
           starting point,
             run:<codeblock>$ gpaddmirrors -o <i>filename</i>          </codeblock><p>The format of
             the mirror configuration file is:
-            </p><codeblock>mirror<varname>row_id</varname>=<varname>contentID</varname>:<varname>address</varname>:<varname>port</varname>:<varname>data_dir</varname></codeblock><p>Where
+            </p><codeblock>mirror<b><varname>row_id</varname></b>=<b><varname>contentID</varname></b>:<b><varname>address</varname></b>:<b><varname>port</varname></b>:<b><varname>data_dir</varname></b></codeblock><p>Where
               <codeph>row_id</codeph> is the row in the file, <varname>contentID</varname> is the
             segment instance content ID, <varname>address</varname> is the host name or IP address
             of the segment host, <varname>port</varname> is the communication port, and

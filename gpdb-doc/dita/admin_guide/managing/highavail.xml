@@ -253,10 +253,13 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
     <title id="ki155550">Detecting a Failed Segment</title>
     <body>
       <p>With mirroring enabled, Greenplum Database automatically fails over to a mirror segment
-        when a primary segment goes down. Provided one segment instance is online per portion of
-        data, users may not realize a segment is down. If a transaction is in progress when a fault
-        occurs, the in-progress transaction rolls back and restarts automatically on the
-        reconfigured set of segments.</p>
+        when a primary segment goes down. The mirror segment assumes the role of the primary segment
+        and the failed primary segment becomes the mirror. Transactions in progress when a fault
+        occurs roll back and must be restarted. When restarted the transactions run on the new
+        primary segment.</p>
+      <p>To return the Greenplum Database cluster to full redundancy and balance, an administrator
+        recovers the down mirror segment and exchanges the roles of the primary and mirror
+        segments so that both segments are in their preferred roles.</p>
       <p>If the entire Greenplum Database system becomes nonoperational due to a segment failure
         (for example, if mirroring is not enabled or not enough segments are online to access all
         user data), users will see errors when trying to connect to a database. The errors returned

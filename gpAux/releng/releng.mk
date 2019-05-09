@@ -87,7 +87,11 @@ sync_tools: opt_write_test
 	-Divyrepo.user=$(IVYREPO_USER) -Divyrepo.passwd="$(IVYREPO_PASSWD)" -quiet resolve);
 
 ifeq "$(findstring aix,$(BLD_ARCH))" ""
-	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/releases/download/v3.32.2/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+ifeq "$(findstring sles,$(BLD_ARCH))" ""
+	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/archive/v3.40.0.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+else
+	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/releases/download/v3.40.0/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+endif
 endif
 
 clean_tools: opt_write_test

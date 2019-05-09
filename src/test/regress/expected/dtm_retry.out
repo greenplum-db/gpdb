@@ -11,7 +11,6 @@ set dtx_phase2_retry_count = 11;
 --
 -- COMMIT_PREPARED
 --
-create extension if not exists gp_inject_fault;
 select gp_inject_fault('finish_prepared_start_of_function', 'error', '', '', '', 1, 10, 0, dbid)
 from gp_segment_configuration where role = 'p' and status = 'u' and content = 1;
 NOTICE:  Success:

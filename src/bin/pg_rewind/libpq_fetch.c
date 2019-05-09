@@ -176,7 +176,6 @@ libpqProcessFileList(void)
 	 * directory, they won't be copied correctly.
 	 */
 	sql =
-		"SET gp_recursive_cte TO ON;\n"
 		"WITH RECURSIVE files (path, filename, size, isdir) AS (\n"
 		"  SELECT '' AS path, filename, size, isdir FROM\n"
 		"  (SELECT pg_ls_dir('.', true, false) AS filename) AS fn,\n"

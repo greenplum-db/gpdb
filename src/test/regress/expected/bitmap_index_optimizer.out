@@ -616,7 +616,7 @@ explain select * from unlogged_test where c1 = 100;
          Recheck Cond: c1 = 100
          ->  Bitmap Index Scan on unlogged_test_idx  (cost=0.00..0.00 rows=0 width=0)
                Index Cond: c1 = 100
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (6 rows)
 
 select * from unlogged_test where c1 = 100;
@@ -629,7 +629,6 @@ drop table unlogged_test;
 --
 -- Test crash recovery
 --
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE TABLE bm_test_insert(a int) DISTRIBUTED BY (a);
 CREATE INDEX bm_a_idx ON bm_test_insert USING bitmap(a);
 CREATE TABLE bm_test_update(a int, b int) DISTRIBUTED BY (a);

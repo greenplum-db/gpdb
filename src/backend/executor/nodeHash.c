@@ -400,9 +400,6 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 		 */
 		hashtable->innerBatchFile = (BufFile **) palloc0(nbatch * sizeof(BufFile *));
 		hashtable->outerBatchFile = (BufFile **) palloc0(nbatch * sizeof(BufFile *));
-		/* The files will not be opened until needed... */
-		/* ... but make sure we have temp tablespaces established for them */
-		PrepareTempTablespaces();
 	}
 
 	/*
@@ -739,8 +736,6 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 		/* we had no file arrays before */
 		hashtable->innerBatchFile = (BufFile **) palloc0(nbatch * sizeof(BufFile *));
 		hashtable->outerBatchFile = (BufFile **) palloc0(nbatch * sizeof(BufFile *));
-		/* time to establish the temp tablespaces, too */
-		PrepareTempTablespaces();
 	}
 	else
 	{

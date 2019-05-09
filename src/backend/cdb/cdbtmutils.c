@@ -46,8 +46,6 @@ DtxStateToString(DtxState state)
 	{
 		case DTX_STATE_NONE:
 			return "None";
-		case DTX_STATE_ACTIVE_NOT_DISTRIBUTED:
-			return "Active Not Distributed";
 		case DTX_STATE_ACTIVE_DISTRIBUTED:
 			return "Active Distributed";
 		case DTX_STATE_PREPARING:

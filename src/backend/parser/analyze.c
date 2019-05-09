@@ -1030,7 +1030,7 @@ transformGroupedWindows(ParseState *pstate, Query *qry)
 
     /* Begin rewriting the outer query in place.
      */
-	qry->hasAggs = false; /* by constuction */
+	qry->hasAggs = false; /* by construction */
 	/* qry->hasSubLinks -- reevaluate later. */
 
 	/* Core of outer query input table expression: */
@@ -1063,7 +1063,7 @@ transformGroupedWindows(ParseState *pstate, Query *qry)
 	rte->eref = copyObject(alias);
 	rte->alias = alias;
 
-	/* Accomodate depth change in new subquery, Q''.
+	/* Accommodate depth change in new subquery, Q''.
 	 */
 	IncrementVarSublevelsUpInTransformGroupedWindows((Node*)subq, 1, 1);
 
@@ -2531,7 +2531,7 @@ transformSetOperationTree_internal(ParseState *pstate, SelectStmt *stmt,
 				i++;
 
 				/*
-				 * It's possible that this leaf query has a differnet number
+				 * It's possible that this leaf query has a different number
 				 * of columns than the previous ones. That's an error, but
 				 * we don't throw it here because we don't have the context
 				 * needed for a good error message. We don't know which

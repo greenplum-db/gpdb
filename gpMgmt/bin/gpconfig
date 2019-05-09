@@ -525,7 +525,7 @@ def do_main():
         do_show(options)
 
     elif options.remove or options.change:
-        # gpconfig should check gpexpand runnning status when
+        # gpconfig should check gpexpand running status when
         # it wants to modify configurations
         check_gpexpand()
 

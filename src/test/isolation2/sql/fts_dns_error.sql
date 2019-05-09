@@ -1,5 +1,4 @@
 -- Tests FTS can handle DNS error.
-create extension if not exists gp_inject_fault;
 
 -- to make test deterministic and fast
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;

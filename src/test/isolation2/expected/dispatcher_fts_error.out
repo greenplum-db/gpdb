@@ -1,7 +1,4 @@
 -- Tests FTS can handle DNS error.
-create extension if not exists gp_inject_fault;
-CREATE
-
 -- start_matchsubs
 -- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/
 -- s/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/

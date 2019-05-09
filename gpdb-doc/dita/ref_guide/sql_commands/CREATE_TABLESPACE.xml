@@ -14,7 +14,7 @@
       <title>Description</title>
       <p><codeph>CREATE TABLESPACE</codeph> registers and configures a new tablespace for your
         Greenplum Database system. The tablespace name must be distinct from the name of any
-        existing tablespace in the system. A tablespace is a Greemplum Database system object (a
+        existing tablespace in the system. A tablespace is a Greenplum Database system object (a
         global object), you can use a tablespace from any database if you have appropriate
         privileges.</p>
       <p>A tablespace allows superusers to define an alternative host file system location where the

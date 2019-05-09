@@ -411,8 +411,8 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 	}
 
 	/*
-	 * Transform DISTRIBUTED BY (or constuct a default one, if not given
-	 *  explicitly). Not for foreign tables, though.
+	 * Transform DISTRIBUTED BY (or construct a default one, if not given
+	 * explicitly). Not for foreign tables, though.
 	 */
 	if (stmt->relKind == RELKIND_RELATION)
 	{
@@ -815,7 +815,7 @@ transformTableConstraint(CreateStmtContext *cxt, Constraint *constraint)
 	if (constraint->contype == CONSTR_EXCLUSION)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("GPDB does not support exclusion constraints.")));
+				 errmsg("GPDB does not support exclusion constraints")));
 
 	switch (constraint->contype)
 	{
@@ -1676,8 +1676,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 				if(srehDesc && srehDesc->into_file)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("External web table with ON MASTER clause "
-									"cannot use LOG ERRORS feature.")));
+							 errmsg("external web table with ON MASTER clause cannot use LOG ERRORS feature")));
 			}
 		}
 	}
@@ -1775,7 +1774,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 		/* Otherwise use DEFAULT as numsegments */
 		numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS();
 
-	/* Explictly specified distributed randomly, no futher check needed */
+	/* Explicitly specified distributed randomly, no further check needed */
 	if (distributedBy &&
 		(distributedBy->ptype == POLICYTYPE_PARTITIONED && distributedBy->keyCols == NIL))
 	{
@@ -2500,7 +2499,7 @@ transformIndexConstraints(CreateStmtContext *cxt, bool mayDefer)
 		if(constraint->contype == CONSTR_EXCLUSION)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("GPDB does not support exclusion constraints.")));
+						errmsg("GPDB does not support exclusion constraints")));
 
 		Assert(constraint->contype == CONSTR_PRIMARY ||
 			   constraint->contype == CONSTR_UNIQUE);
@@ -2611,8 +2610,7 @@ transformIndexConstraints(CreateStmtContext *cxt, bool mayDefer)
 			
 				ereport(DEBUG1,
 						(errmsg("deferring index creation for table \"%s\"",
-								cxt->relation->relname)
-						 ));
+								cxt->relation->relname)));
 				cxt->dlist = lappend(cxt->dlist, index);
 			}
 			else
@@ -4468,7 +4466,7 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext *cxt
 		newenc = lappend(newenc, c);
 	}
 
-	/* Check again incase we expanded a some column encoding clauses */
+	/* Check again in case we expanded a some column encoding clauses */
 	if (!can_enc)
 	{
 		if (found_enc)

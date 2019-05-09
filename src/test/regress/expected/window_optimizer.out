@@ -640,7 +640,7 @@ select first_value(max(x)) over (), y
                                        Group Key: (ten + four)
                                        ->  Result
                                              ->  Seq Scan on tenk1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (13 rows)
 
 -- test non-default frame specifications
@@ -1119,7 +1119,7 @@ FROM empsalary;
                            ->  Sort
                                  Sort Key: depname, salary, enroll_date
                                  ->  Seq Scan on empsalary
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (14 rows)
 
 -- Test pushdown of quals into a subquery containing window functions
@@ -1146,7 +1146,7 @@ WHERE depname = 'sales';
                                        Sort Key: depname
                                        ->  Seq Scan on empsalary
                                              Filter: ((depname)::text = 'sales'::text)
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (14 rows)
 
 -- pushdown is unsafe because there's a PARTITION BY clause without depname:
@@ -1175,7 +1175,7 @@ WHERE depname = 'sales';
                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                              Hash Key: enroll_date
                                              ->  Seq Scan on empsalary
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (17 rows)
 
 -- pushdown is unsafe because the subquery contains window functions and the qual is volatile:
@@ -1201,7 +1201,7 @@ WHERE depname = 'sales' OR RANDOM() > 0.5;
                                        Sort Key: depname
                                        ->  Seq Scan on empsalary
                                              Filter: (((depname)::text = 'sales'::text) OR (random() > 0.5::double precision))
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (14 rows)
 
 -- cleanup

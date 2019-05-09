@@ -47,6 +47,9 @@
     <li>
      <xref href="env_var_ref.xml#topic1"/>
     </li>
+    <li>
+      <xref href="sql_keywords.xml#topic1"/>
+    </li>
     <li id="ac168706">
      <xref href="system_catalogs/catalog_ref.xml#topic1"/>
     </li>

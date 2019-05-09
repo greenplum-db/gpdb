@@ -96,14 +96,14 @@ class GpBuild(GpdbBuildBase):
         # Now run the queries !!
         os.mkdir('out')
         status = 0
-        for fsql in os.listdir("sql"):
+        sql_files = os.listdir("sql")
+        sql_files.sort()
+        for fsql in sql_files:
             if fsql.endswith('.sql') and fsql not in ['stats.sql', 'schema.sql']:
                 output_fname = 'out/{}'.format(fsql.replace('.sql', '.out'))
                 with open(output_fname, 'w') as fout:
                     current_status = self._run_gpdb_command("psql -a -f sql/{}".format(fsql), stdout=fout, stderr=fout, source_env_cmd=source_env_cmd)
                     status = status if status != 0 else current_status
-                with open(output_fname, 'r') as fout:
-                    print fout.read()
 
         return status
 

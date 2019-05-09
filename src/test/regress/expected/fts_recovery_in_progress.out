@@ -2,9 +2,6 @@
 -- 'fts_conn_startup_packet' is used to simulate the primary responding
 -- in-recovery to FTS, primary is not actually going through crash-recovery in
 -- test.
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
  role | preferred_role | mode | status 
 ------+----------------+------+--------

@@ -1200,7 +1200,7 @@ explain select cn, count(*) over (order by dt range between '2 day'::interval pr
                      Sort Key: dt
                      ->  Seq Scan on tbl5246_sale  (cost=0.00..431.00 rows=4 width=8)
  Settings:  enable_nestloop=on
- Optimizer status: PQO version 2.50.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.50.1
 (10 rows)
 
 drop table qp_misc_jiras.tbl5246_sale;
@@ -1637,7 +1637,7 @@ explain select * from qp_misc_jiras.tbl6833_anl; -- should not hit cdbRelSize();
                Partitions selected:  2 (out of 2)
          ->  Dynamic Seq Scan on tbl6833_anl (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (7 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_anl%'; -- should show relpages = 1.0
@@ -1661,7 +1661,7 @@ explain select * from qp_misc_jiras.tbl6833_vac; -- should not hit cdbRelSize();
                Partitions selected:  2 (out of 2)
          ->  Dynamic Seq Scan on tbl6833_vac (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (7 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_vac%'; -- should show relpages = 1.0
@@ -2344,7 +2344,7 @@ explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping 
                            Sort Key: share0_ref3.i, share0_ref3.i
                            ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=4)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=on; optimizer_force_three_stage_scalar_dqa=off
- Optimizer status: PQO version 2.51.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.51.0
 (18 rows)
 
 select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
@@ -2386,7 +2386,7 @@ explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping 
                                              Sort Key: share0_ref3.j, share0_ref3.j
                                              ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=4)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=on; optimizer_force_three_stage_scalar_dqa=off
- Optimizer status: PQO version 2.51.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.51.0
 (30 rows)
 
 select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
@@ -3005,7 +3005,7 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                                    ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                                                ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (21 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
@@ -3030,7 +3030,7 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                                    ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
                                                    ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                          ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (20 rows)
 
 set enable_groupagg=on;
@@ -3058,7 +3058,7 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                                    ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                                                ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (21 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
@@ -3083,7 +3083,7 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
                                                    ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
                                                    ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                          ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (20 rows)
 
 drop table qp_misc_jiras.tbl5994_test;
@@ -3280,7 +3280,7 @@ group by 1, 2;
                                        ->  Seq Scan on bar_6325  (cost=0.00..431.00 rows=1 width=8)
                                  ->  Seq Scan on foo_6325  (cost=0.00..431.00 rows=1 width=8)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (14 rows)
 
 -- start_ignore
@@ -3413,7 +3413,7 @@ explain select x, "median"(y) from qp_misc_jiras.tbl9613 group by x; -- this sho
                Sort Key: x
                ->  Seq Scan on tbl9613  (cost=0.00..431.00 rows=1 width=12)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (8 rows)
 
 select x, "median"(y) from qp_misc_jiras.tbl9613 group by x; -- this should be allowed
@@ -3432,7 +3432,7 @@ explain select x, median2(y) from qp_misc_jiras.tbl9613 group by x; -- this shou
                Sort Key: x
                ->  Seq Scan on tbl9613  (cost=0.00..431.00 rows=1 width=12)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (8 rows)
 
 select x, median2(y) from qp_misc_jiras.tbl9613 group by x; -- this should be disallowed
@@ -3548,7 +3548,7 @@ else 'Unidentify' end
                                        ->  Result  (cost=0.00..431.00 rows=1 width=16)
                                              ->  Seq Scan on ir_voice_sms_and_data  (cost=0.00..431.00 rows=1 width=16)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (16 rows)
 
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
@@ -3740,7 +3740,7 @@ explain select  * from qp_misc_jiras.test_heap where ctid='(0,1)' and gp_segment
    ->  Seq Scan on test_heap  (cost=0.00..431.00 rows=1 width=8)
          Filter: ctid = '(0,1)'::tid AND gp_segment_id >= 0
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (5 rows)
 
 select  * from qp_misc_jiras.test_heap where ctid='(0,1)' and gp_segment_id >= 0;
@@ -3763,7 +3763,7 @@ explain select  * from qp_misc_jiras.test_ao where ctid='(33554432,1)' and gp_se
    ->  Seq Scan on test_ao  (cost=0.00..431.00 rows=1 width=8)
          Filter: ctid = '(33554432,1)'::tid AND gp_segment_id >= 0
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (5 rows)
 
 select  * from qp_misc_jiras.test_ao where ctid='(33554432,1)' and gp_segment_id >= 0;
@@ -3786,7 +3786,7 @@ explain select  * from qp_misc_jiras.test_co where ctid='(33554432,1)' and gp_se
    ->  Seq Scan on test_co  (cost=0.00..431.00 rows=1 width=8)
          Filter: ctid = '(33554432,1)'::tid AND gp_segment_id >= 0
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (5 rows)
 
 select  * from qp_misc_jiras.test_co where ctid='(33554432,1)' and gp_segment_id >= 0;
@@ -3813,7 +3813,7 @@ explain analyze select count(*) from qp_misc_jiras.test_heap;
  Statement statistics:
    Memory used: 128000K bytes
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.684
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.684
  Total runtime: 10.892 ms
 (18 rows)
 
@@ -3925,7 +3925,7 @@ explain select * from qp_misc_jiras.r;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.04 rows=1000 width=8)
    ->  Seq Scan on r  (cost=0.00..431.01 rows=334 width=8)
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
 (4 rows)
 
 explain analyze select * from qp_misc_jiras.r,qp_misc_jiras.s where r.a=s.b;
@@ -3955,7 +3955,7 @@ explain analyze select * from qp_misc_jiras.r,qp_misc_jiras.s where r.a=s.b;
  Statement statistics:
    Memory used: 1945600K bytes
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.624
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
  Total runtime: 87.064 ms
 (31 rows)
 
@@ -4532,7 +4532,7 @@ explain select 1 as t1 where 1 <= ALL (select x from tbl_z);
                ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                      ->  Seq Scan on tbl_z  (cost=0.00..431.00 rows=1 width=1)
                            Filter: 1 > x
- Optimizer: PQO version 2.65.1
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.65.1
 (9 rows)
 
 set gp_enable_relsize_collection = on;
@@ -4552,7 +4552,7 @@ explain select 1 as t1 where 1 <= ALL (select x from tbl_z);
                                        ->  Result  (cost=0.00..431.01 rows=321 width=8)
                                              ->  Seq Scan on tbl_z  (cost=0.00..431.01 rows=321 width=4)
          ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Optimizer: PQO version 2.65.1
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.65.1
 (13 rows)
 
 drop table if exists tbl_z;

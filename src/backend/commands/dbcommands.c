@@ -2187,6 +2187,7 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 		xl_dbase_create_rec *xlrec = (xl_dbase_create_rec *) XLogRecGetData(record);
 		char	   *src_path;
 		char	   *dst_path;
+		char	   *parentdir;
 		struct stat st;
 
 		src_path = GetDatabasePath(xlrec->src_db_id, xlrec->src_tablespace_id);
@@ -2205,6 +2206,30 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 						(errmsg("some useless files may be left behind in old database directory \"%s\"",
 								dst_path)));
 		}
+
+		/*
+		 * It is possible that the tablespace was later dropped, but we are
+		 * re-redoing database create before that. In that case,
+		 * either src_path or dst_path is probably missing here and needs to
+		 * be created. We create directories here so that copy_dir() won't
+		 * fail, but do not bother to create the symlink under pg_tblspc
+		 * if the tablespace is not global/default.
+		 */
+		if (stat(src_path, &st) != 0 && pg_mkdir_p(src_path, S_IRWXU) != 0)
+		{
+			ereport(WARNING,
+					(errmsg("can not recursively create directory \"%s\"",
+							src_path)));
+		}
+		parentdir = pstrdup(dst_path);
+		get_parent_directory(parentdir);
+		if (stat(parentdir, &st) != 0 && pg_mkdir_p(parentdir, S_IRWXU) != 0)
+		{
+			ereport(WARNING,
+					(errmsg("can not recursively create directory \"%s\"",
+							parentdir)));
+		}
+		pfree(parentdir);
 
 		/*
 		 * Force dirty buffers out to disk, to ensure source database is

@@ -4,8 +4,6 @@ create table test_fastseqence ( a int, b char(20)) with (appendonly = true, orie
 create index test_fastseqence_idx on test_fastseqence(b);
 insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;
 
-create extension if not exists gp_inject_fault;
-
 select gp_inject_fault_infinite('reindex_relation', 'suspend', 2);
 
 -- The reindex_relation fault should be hit

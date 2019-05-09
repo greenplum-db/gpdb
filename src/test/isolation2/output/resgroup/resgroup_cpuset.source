@@ -1,8 +1,6 @@
 
 CREATE LANGUAGE plpythonu;
 CREATE
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
 
 CREATE RESOURCE GROUP rg1_cpuset_test WITH (memory_limit = 10, cpuset='0');
 CREATE

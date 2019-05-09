@@ -43,6 +43,7 @@
 #include "utils/syscache.h"
 
 #include "libpq-fe.h"
+#include "foreign/fdwapi.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbvars.h"
@@ -152,7 +153,7 @@ calculate_database_size(Oid dbOid)
 	DIR		   *dirdesc;
 	struct dirent *direntry;
 	char		dirpath[MAXPGPATH];
-	char		pathname[MAXPGPATH + 12 + strlen(tablespace_version_directory()) + 1];
+	char		pathname[MAXPGPATH + 13 + get_dbid_string_length() + 1 + sizeof(GP_TABLESPACE_VERSION_DIRECTORY)];
 	AclResult	aclresult;
 
 	/* User must have connect privilege for target database */
@@ -185,7 +186,7 @@ calculate_database_size(Oid dbOid)
 			continue;
 
 		snprintf(pathname, sizeof(pathname), "pg_tblspc/%s/%s/%u",
-				 direntry->d_name, tablespace_version_directory(), dbOid);
+				 direntry->d_name, GP_TABLESPACE_VERSION_DIRECTORY, dbOid);
 		totalsize += db_dir_size(pathname);
 	}
 
@@ -276,7 +277,7 @@ calculate_tablespace_size(Oid tblspcOid)
 		snprintf(tblspcPath, MAXPGPATH, "global");
 	else
 		snprintf(tblspcPath, MAXPGPATH, "pg_tblspc/%u/%s", tblspcOid,
-				 tablespace_version_directory());
+				 GP_TABLESPACE_VERSION_DIRECTORY);
 
 	dirdesc = AllocateDir(tblspcPath);
 
@@ -463,6 +464,27 @@ pg_relation_size(PG_FUNCTION_ARGS)
 	 */
 	if (rel == NULL)
 		PG_RETURN_NULL();
+
+	if(RelationIsForeign(rel))
+	{
+		FdwRoutine *fdwroutine;
+		bool        ok = false;
+
+		fdwroutine = GetFdwRoutineForRelation(rel, false);
+
+		if (fdwroutine->GetRelationSize != NULL)
+			ok = fdwroutine->GetRelationSize(rel, &size);
+
+		if (!ok)
+			ereport(WARNING,
+					(errmsg("skipping \"%s\" --- cannot calculate this foreign table size",
+							RelationGetRelationName(rel))));
+
+		relation_close(rel, AccessShareLock);
+
+		PG_RETURN_INT64(size);
+
+	}
 
 	forkNumber = forkname_to_number(text_to_cstring(forkName));
 

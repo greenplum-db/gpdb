@@ -120,6 +120,7 @@ Feature: gppkg tests
     Scenario: gppkg --migrate copies all packages from master to all segment hosts
         Given the database is running
         And the user runs "gppkg -r sample"
+        And a gphome copy is created at /tmp/gppkg_migrate on all hosts
         When a user runs "MASTER_DATA_DIRECTORY=$MASTER_DATA_DIRECTORY gppkg -r sample" with gphome "/tmp/gppkg_migrate"
         And "sample" gppkg files do not exist on any hosts
         When a user runs "MASTER_DATA_DIRECTORY=$MASTER_DATA_DIRECTORY gppkg --install $(pwd)/test/behave/mgmt_utils/steps/data/sample.gppkg" with gphome "/tmp/gppkg_migrate"

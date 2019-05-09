@@ -54,7 +54,6 @@ $fn$;
 --displays all dependencies and their types
 DROP FUNCTION IF EXISTS dependencies();
 NOTICE:  function dependencies() does not exist, skipping
-SET gp_recursive_cte TO on;
 CREATE FUNCTION dependencies() RETURNS TABLE( depname NAME, classtype "char", depnsoid OID,
                                               refname NAME, refclasstype "char", refnsoid OID,
                                               classid REGCLASS,  objid OID, objsubid INTEGER,
@@ -728,7 +727,7 @@ CONTEXT:  SQL function "recreate_two_level_table" statement 2
 (1 row)
 
 ALTER TABLE r ADD EXCLUDE (r_key WITH =,r_name WITH =);
-ERROR:  GPDB does not support exclusion constraints.
+ERROR:  GPDB does not support exclusion constraints
 SELECT * FROM dependencies_show_for_cons_idx();
       depname       | classtype |      refname       | refclasstype |    classid    | objsubid |  refclassid   | refobjsubid | deptype 
 --------------------+-----------+--------------------+--------------+---------------+----------+---------------+-------------+---------

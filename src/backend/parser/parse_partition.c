@@ -209,7 +209,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("Exceeded the maximum allowed level of partitioning of %d", gp_max_partition_level)));
+				 errmsg("exceeded the maximum allowed level of partitioning of %d", gp_max_partition_level)));
 	}
 
 	snprintf(depthstr, sizeof(depthstr), "%d", partDepth);
@@ -247,8 +247,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("too many columns for RANGE partition%s -- "
-						"only one column is allowed.",
+				 errmsg("too many columns for RANGE partition%s -- only one column is allowed",
 						at_depth),
 				 parser_errposition(cxt->pstate, pBy->location)));
 	}
@@ -278,8 +277,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 				if (list_member_int(key_attnums, i))
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("column \"%s\" specified more than once "
-									"in partitioning key",
+							 errmsg("column \"%s\" specified more than once in partitioning key",
 									colname),
 							 parser_errposition(cxt->pstate, pBy->location)));
 
@@ -372,11 +370,9 @@ transformPartitionBy(CreateStmtContext *cxt,
 				}
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-					  errmsg("%s constraint must contain all columns in the "
-							 "partition key",
-							 what),
-						 errhint("Include column \"%s\" in the %s constraint or create "
-								 "a part-wise UNIQUE index after creating the table instead.",
+						 errmsg("%s constraint must contain all columns in the partition key",
+								what),
+						 errhint("Include column \"%s\" in the %s constraint or create a part-wise UNIQUE index after creating the table instead.",
 								 strVal(partkeyname), what)));
 			}
 		}
@@ -433,8 +429,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("missing SUBPARTITION BY clause for "
-								"subpartition specification%s",
+						 errmsg("missing SUBPARTITION BY clause for subpartition specification%s",
 								at_depth),
 						 parser_errposition(cxt->pstate, pBy->location)));
 			}
@@ -562,8 +557,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("missing SUBPARTITION BY clause "
-									"for subpartition specification%s",
+							 errmsg("missing SUBPARTITION BY clause for subpartition specification%s",
 									at_depth),
 							 parser_errposition(cxt->pstate, pElem->location)));
 				}
@@ -574,8 +568,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("subpartition configuration conflicts "
-									"with subpartition template"),
+							 errmsg("subpartition configuration conflicts with subpartition template"),
 							 parser_errposition(cxt->pstate, psubBy->location)));
 				}
 
@@ -583,7 +576,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("Multi-level partitioned tables without templates are not supported")));
+							 errmsg("multi-level partitioned tables without templates are not supported")));
 				}
 
 				newSub = makeNode(PartitionBy);
@@ -2376,8 +2369,7 @@ validate_partition_spec(CreateStmtContext *cxt,
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("multiple default partitions are not "
-									"allowed"),
+							 errmsg("multiple default partitions are not allowed"),
 							 parser_errposition(cxt->pstate, pElem->location)));
 
 				}
@@ -2388,14 +2380,11 @@ validate_partition_spec(CreateStmtContext *cxt,
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("invalid use of boundary specification "
-									"for DEFAULT partition%s%s",
+							 errmsg("invalid use of boundary specification for DEFAULT partition%s%s",
 									namBuf,
 									at_depth),
 							 parser_errposition(cxt->pstate, pElem->location)));
-
 				}
-
 			}					/* end if is default */
 
 			if (pElem->partName)
@@ -2488,8 +2477,7 @@ validate_partition_spec(CreateStmtContext *cxt,
 	if (partNumber > -1 && partno != partNumber)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("PARTITIONS \"%d\" must match \"%d\" elements "
-						"in specification%s",
+				 errmsg("PARTITIONS \"%d\" must match \"%d\" elements in specification%s",
 						partNumber, partno, vstate->at_depth),
 				 parser_errposition(cxt->pstate, pBy->location)));
 
@@ -2754,7 +2742,7 @@ preprocess_range_spec(partValidationState *vstate)
 									 errmsg("could not identify operator for partitioning operation between type \"%s\" and type \"%s\"",
 											format_type_be(typ->typeOid),
 											format_type_be(rtypeId)),
-									 errhint("Add an explicit cast to the partitioning parameters")));
+									 errhint("Add an explicit cast to the partitioning parameters.")));
 
 
 						newrtypeId = ((Form_pg_operator) GETSTRUCT(optup))->oprright;
@@ -3135,8 +3123,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("invalid use of boundary specification "
-								"for DEFAULT partition%s%s",
+						 errmsg("invalid use of boundary specification for DEFAULT partition%s%s",
 								namBuf,
 								at_depth),
 						 parser_errposition(pstate, pElem->location)));
@@ -3147,8 +3134,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("invalid use of LIST boundary specification "
-								"in partition%s of type RANGE%s",
+						 errmsg("invalid use of LIST boundary specification in partition%s of type RANGE%s",
 								namBuf,
 								at_depth),
 				/* MPP-4249: use value spec location if have one */
@@ -3176,8 +3162,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("EVERY clause in partition%s "
-							"requires START and END%s",
+					 errmsg("EVERY clause in partition%s requires START and END%s",
 							namBuf,
 							at_depth),
 					 parser_errposition(pstate, pBSpec->location)));
@@ -3241,8 +3226,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("mismatch between EVERY, START and END "
-							"in partition%s%s",
+					 errmsg("mismatch between EVERY, START and END in partition%s%s",
 							namBuf,
 							at_depth),
 					 parser_errposition(pstate, pBSpec->location)));
@@ -3409,8 +3393,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 								 errmsg("EVERY parameter produces ambiguous partition rule"),
-								 parser_errposition(pstate,
-													exprLocation(n3))));
+								 parser_errposition(pstate, exprLocation(n3))));
 
 				}
 
@@ -3579,8 +3562,7 @@ validate_range_partition(partValidationState *vstate)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("invalid use of %s boundary "
-							"specification in partition clause",
+					 errmsg("invalid use of %s boundary specification in partition clause",
 							specTName),
 			/* MPP-4249: use value spec location if have one */
 					 parser_errposition(pstate,
@@ -3630,9 +3612,7 @@ validate_range_partition(partValidationState *vstate)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("invalid use of mixed named and "
-							"unnamed RANGE boundary "
-							"specifications%s",
+					 errmsg("invalid use of mixed named and unnamed RANGE boundary specifications%s",
 							vstate->at_depth),
 					 parser_errposition(pstate, spec->location)));
 
@@ -3701,8 +3681,7 @@ validate_range_partition(partValidationState *vstate)
 					/* XXX: better message */
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("START of partition%s less "
-									"than START of previous%s",
+							 errmsg("START of partition%s less than START of previous%s",
 									vstate->namBuf,
 									vstate->at_depth),
 							 parser_errposition(pstate,
@@ -3746,9 +3725,7 @@ validate_range_partition(partValidationState *vstate)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("cannot derive starting value of "
-							"partition%s based upon ending of "
-							"previous%s",
+					 errmsg("cannot derive starting value of partition%s based upon ending of previous%s",
 							vstate->namBuf,
 							vstate->at_depth),
 					 parser_errposition(pstate, spec->location)));
@@ -3832,9 +3809,7 @@ L_setprevElem:
 							vstate->namBuf,
 							vstate->at_depth),
 					 parser_errposition(pstate, spec->location)));
-
 		}
-
 	}
 
 	if (NIL == vstate->allRangeVals)
@@ -3867,8 +3842,7 @@ L_setprevElem:
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("starting value of partition%s "
-							"overlaps previous range%s",
+					 errmsg("starting value of partition%s overlaps previous range%s",
 							vstate->namBuf,
 							vstate->at_depth),
 					 parser_errposition(pstate, spec->location)));
@@ -3895,8 +3869,7 @@ L_setprevElem:
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("starting value of partition%s "
-							"overlaps previous range%s",
+					 errmsg("starting value of partition%s overlaps previous range%s",
 							vstate->namBuf,
 							vstate->at_depth),
 					 parser_errposition(pstate, spec->location)));
@@ -4303,12 +4276,10 @@ validate_list_partition(partValidationState *vstate)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("missing boundary specification in "
-						"partition%s of type LIST%s",
+				 errmsg("missing boundary specification in partition%s of type LIST%s",
 						vstate->namBuf,
 						vstate->at_depth),
-			   parser_errposition(pstate, vstate->pElem->location)));
-
+				 parser_errposition(pstate, vstate->pElem->location)));
 	}
 
 	if (!IsA(n, PartitionValuesSpec))
@@ -4316,9 +4287,7 @@ validate_list_partition(partValidationState *vstate)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 				 errmsg("invalid boundary specification for LIST partition"),
-			   parser_errposition(pstate, vstate->pElem->location)));
-
-
+				 parser_errposition(pstate, vstate->pElem->location)));
 	}
 
 	spec = (PartitionValuesSpec *) n;
@@ -4343,8 +4312,7 @@ validate_list_partition(partValidationState *vstate)
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					  errmsg("partition key has %i column%s but %i column%s "
-							 "specified in VALUES clause",
+						 errmsg("partition key has %i column%s but %i column%s specified in VALUES clause",
 							 list_length(vstate->pBy->keys),
 							 list_length(vstate->pBy->keys) ? "s" : "",
 							 nvals,
@@ -4403,8 +4371,7 @@ validate_list_partition(partValidationState *vstate)
 					{
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								 errmsg("duplicate VALUES "
-										"in partition%s%s",
+								 errmsg("duplicate VALUES in partition%s%s",
 										vstate->namBuf,
 										vstate->at_depth),
 						parser_errposition(pstate, spec->location)));
@@ -4452,8 +4419,8 @@ transformPartitionStorageEncodingClauses(List *enc)
 				if (!equal(a->encoding, b->encoding))
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("conflicting ENCODING clauses for column "
-									"\"%s\"", a->column ? a->column : "DEFAULT")));
+							 errmsg("conflicting ENCODING clauses for column \"%s\"",
+									a->column ? a->column : "DEFAULT")));
 
 				/*
 				 * We found an identical directive on the same column. You'd
@@ -4529,8 +4496,7 @@ merge_partition_encoding(ParseState *pstate, PartitionElem *elem, List *penc)
 		if (elem->colencs)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("ENCODING clause only supported with "
-							"column oriented partitions"),
+					 errmsg("ENCODING clause only supported with column oriented partitions"),
 					 parser_errposition(pstate, elem->location)));
 		else
 			return;				/* nothing more to do */
@@ -4626,7 +4592,7 @@ range_partition_walker(Node *node, void *context)
 		if (c->constisnull)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				errmsg("cannot use NULL with range partition specification"),
+					 errmsg("cannot use NULL with range partition specification"),
 					 parser_errposition(ctx->pstate, ctx->location)));
 		return false;
 	}
@@ -4637,7 +4603,7 @@ range_partition_walker(Node *node, void *context)
 		if (IsA(&c->val, Null))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				errmsg("cannot use NULL with range partition specification"),
+					 errmsg("cannot use NULL with range partition specification"),
 					 parser_errposition(ctx->pstate, ctx->location)));
 		return false;
 	}

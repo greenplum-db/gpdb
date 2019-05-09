@@ -94,7 +94,7 @@ SELECT DISTINCT (i || '/' || j)::pg_lsn f
                                              ->  Function Scan on generate_series generate_series_1
                            ->  Materialize
                                  ->  Function Scan on generate_series
- Optimizer: PQO version 3.8.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.8.0
 (21 rows)
 
 SELECT DISTINCT (i || '/' || j)::pg_lsn f

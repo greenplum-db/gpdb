@@ -1,0 +1,17 @@
+-- start_matchsubs
+m/duration: .*$/
+s/duration:\s+[0-9.]+\s*ms.*/duration: ms/
+
+m/\(cost=[a-z_A-Z0-9. =]+\)\s+\([a-z_A-Z0-9. =]+\)/
+s/\(cost=[a-z_A-Z0-9. =]+\)\s+\([a-z_A-Z0-9. =]+\)//
+
+m/Executor [mM]emory: .*/
+s/Executor [mM]emory: .*/Executor Memory: /
+
+m/Rows Removed by Filter: .*/
+s/Rows Removed by Filter: .*/Rows Removed by Filter: /
+
+m/Memory used:\s+[0-9]+kB.*/
+s/Memory used:\s+[0-9]+kB.*/Memory used:/
+
+-- end_matchsubs

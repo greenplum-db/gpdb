@@ -63,6 +63,10 @@
 	{ appendBinaryStringInfo(str, (const char *)&node->fldname, sizeof(int)); }
 
 /* Write an integer field  */
+#define WRITE_INT8_FIELD(fldname) \
+	{ appendBinaryStringInfo(str, (const char *)&node->fldname, sizeof(int8)); }
+
+/* Write an integer field  */
 #define WRITE_INT16_FIELD(fldname) \
 	{ appendBinaryStringInfo(str, (const char *)&node->fldname, sizeof(int16)); }
 
@@ -375,6 +379,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(copyIntoClause);
+	WRITE_INT8_FIELD(metricsQueryType);
 }
 
 static void

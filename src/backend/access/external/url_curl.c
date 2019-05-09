@@ -1280,6 +1280,9 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		/* set protocol */
 		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLVERSION, extssl_protocol);
 
+		/* disable session ID cache */
+		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_SESSIONID_CACHE, 0);
+
 		/* set debug */
 		if (CURLE_OK != (e = curl_easy_setopt(file->curl->handle, CURLOPT_VERBOSE, (long)extssl_libcurldebug)))
 		{

@@ -720,6 +720,7 @@ extern char *pg_get_constraintdef_string(Oid constraintId);
 extern char *pg_get_constraintexpr_string(Oid constraintId);
 extern Datum pg_get_expr(PG_FUNCTION_ARGS);
 extern Datum pg_get_expr_ext(PG_FUNCTION_ARGS);
+extern Datum pg_get_expr_ext_lock(PG_FUNCTION_ARGS);
 extern Datum pg_get_userbyid(PG_FUNCTION_ARGS);
 extern Datum pg_get_serial_sequence(PG_FUNCTION_ARGS);
 extern Datum pg_get_functiondef(PG_FUNCTION_ARGS);

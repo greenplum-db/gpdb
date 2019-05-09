@@ -15,4 +15,6 @@
 # of messages.
 -- start_matchignore
 m/^(?:HINT|NOTICE):\s+.+\'DISTRIBUTED BY\' clause.*/
+
+m/^ Optimizer: Postgres query optimizer/
 -- end_matchignore

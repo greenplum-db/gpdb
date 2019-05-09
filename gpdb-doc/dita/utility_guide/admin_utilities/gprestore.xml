@@ -78,10 +78,6 @@
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
         />.</p>
     </section>
-    <note type="warning">Do not run the <codeph>gprestore</codeph> utility during a Greenplum
-      Database system expansion. Also note that backup sets you created before the expansion may not
-      be compatible with the expanded cluster. See <xref href="gpexpand.xml#topic1"/> for more
-      information about expanding a Greenplum Database system.</note>
     <note>This utility uses secure shell (SSH) connections between systems to perform its tasks. In
       large Greenplum Database deployments, cloud deployments, or deployments with a large number of
       segments per host, this utility may exceed the host's maximum threshold for unauthenticated
@@ -354,7 +350,7 @@ $ gprestore --include-schema wikipedia --backup-dir /home/gpadmin/backups/ --tim
       <p>The following <codeph>gprestore</codeph> command specifies the timestamp 20121114064330.
         The incremental backup with the timestamps 20120714095512 and 20120914081205 and the full
         backup must be available to perform a restore.</p>
-      <codeblock>gpdbrestore --timestamp 20121114064330 --redirect-db mystest --create-db</codeblock>
+      <codeblock>gprestore --timestamp 20121114064330 --redirect-db mystest --create-db</codeblock>
     </section>
     <section id="section9">
       <title>See Also</title>

@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-
 -- TEST 1: block checkpoint on segments
 
 -- pause the 2PC after setting inCommit flag

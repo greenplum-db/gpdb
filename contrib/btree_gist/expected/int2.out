@@ -74,12 +74,15 @@ SELECT count(*) FROM int2tmp WHERE a >  237::int2;
 
 EXPLAIN (COSTS OFF)
 SELECT a, a <-> '237' FROM int2tmp ORDER BY a <-> '237' LIMIT 3;
-                QUERY PLAN                 
--------------------------------------------
+                      QUERY PLAN                       
+-------------------------------------------------------
  Limit
-   ->  Index Scan using int2idx on int2tmp
-         Order By: (a <-> 237::smallint)
-(3 rows)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a <-> 237::smallint))
+         ->  Limit
+               ->  Index Scan using int2idx on int2tmp
+                     Order By: (a <-> 237::smallint)
+(7 rows)
 
 SELECT a, a <-> '237' FROM int2tmp ORDER BY a <-> '237' LIMIT 3;
   a  | ?column? 

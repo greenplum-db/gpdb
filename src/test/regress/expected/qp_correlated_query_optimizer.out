@@ -184,7 +184,7 @@ select * from A where exists (select * from B where A.i in (select C.i from C wh
                                  ->  Seq Scan on c
                                  ->  Hash
                                        ->  Seq Scan on b
- Optimizer: PQO version 2.70.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
 (15 rows)
 
 select * from A where exists (select * from B where A.i in (select C.i from C where C.i = B.i));
@@ -224,7 +224,7 @@ select * from A,B where exists (select * from C where B.i not in (select C.i fro
                                    ->  Materialize
                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                                ->  Seq Scan on c
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
 (26 rows)
 
 select * from A,B where exists (select * from C where B.i not in (select C.i from C where C.i != 10));
@@ -428,7 +428,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C
                      ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
                                  ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (39 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i not in (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
@@ -487,7 +487,7 @@ explain select A.j from A, B, C where A.j = (select C.j from C where C.j = A.j a
                      ->  Materialize  (cost=0.00..431.00 rows=9 width=1)
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=1)
                                  ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=1)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (39 rows)
 
 select A.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i not in (select B.i from B where C.i = B.i and B.i !=10)) order by A.j limit 10;
@@ -630,7 +630,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C
                            ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
                                        ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (30 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i = any (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
@@ -684,7 +684,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C wh
                                                                ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                                      ->  Seq Scan on a a_1  (cost=0.00..431.00 rows=1 width=4)
                                                                            Filter: i = 10 AND i = 10
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (34 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C where not exists(select C.i from C,A where C.i = A.i and C.i =10)) order by A.i, B.i, C.j limit 10;
@@ -732,7 +732,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = any (select C.j from C whe
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
                                        ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.34.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.34.0
 (28 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = any (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
@@ -847,7 +847,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C wh
                            ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
                                        ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (48 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C where C.j = A.j and C.i = all (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
@@ -901,7 +901,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C wh
                                                                ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                                      ->  Seq Scan on a  (cost=0.00..431.00 rows=1 width=4)
                                                                            Filter: i = 10 AND i = 10
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (34 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C where not exists(select C.i from C,A where C.i = A.i and C.i =10)) order by A.i, B.i, C.j limit 10;
@@ -939,7 +939,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C whe
                            ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
                                        ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: PQO version 2.55.13
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.13
 (28 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
@@ -1226,7 +1226,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
          ->  Result  (cost=0.00..0.00 rows=0 width=1)
                One-Time Filter: false
  Settings:  optimizer=on
- Optimizer status: PQO version 2.42.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.42.0
 (8 rows)
 
 select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 0);
@@ -1255,7 +1255,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
                              ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
                                    ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.42.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.42.0
 (14 rows)
 
 select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5 offset 3);
@@ -1284,7 +1284,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
                              ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
                                    ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.42.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.42.0
 (14 rows)
 
 select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1 offset 0);
@@ -1311,7 +1311,7 @@ explain select C.j from C where not exists (select max(B.i) from B  where C.i = 
                                        Sort Key: b.i
                                        ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.34.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.34.0
 (17 rows)
 
 select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
@@ -1342,7 +1342,7 @@ explain select C.j from C where not exists (select max(B.i) from B  where C.i = 
                                                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
                                                      ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.34.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.34.0
 (17 rows)
 
 select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offset 1000) order by C.j;
@@ -1380,7 +1380,7 @@ explain select C.j from C where not exists (select rank() over (order by B.i) fr
                                                ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
                                                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
                                                            ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
- Optimizer status: PQO version 2.44.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.44.0
 (19 rows)
 
 select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
@@ -1405,7 +1405,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
                      ->  Sort  (cost=0.00..431.00 rows=3 width=4)
                            Sort Key: c.i
                            ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
- Optimizer status: PQO version 2.46.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.46.1
 (11 rows)
 
 select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
@@ -1428,7 +1428,7 @@ explain select A.i from A where not exists (select B.i from B where B.i in (sele
                      ->  Hash  (cost=431.00..431.00 rows=3 width=4)
                            ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.40.3
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.40.3
 (12 rows)
 
 select A.i from A where not exists (select B.i from B where B.i in (select C.i from C) and B.i = A.i);
@@ -1461,7 +1461,7 @@ explain select * from B where not exists (select * from C,A where C.i in (select
                            ->  Hash  (cost=431.00..431.00 rows=3 width=4)
                                  ->  Seq Scan on c c_1  (cost=0.00..431.00 rows=3 width=4)
                                        Filter: i <> 10
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (20 rows)
 
 select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
@@ -1502,7 +1502,7 @@ explain select * from A where A.i in (select C.j from C,B where B.i in (select i
                                                                ->  Seq Scan on c  (cost=0.00..431.00 rows=3 width=4)
                                                    ->  Hash  (cost=431.00..431.00 rows=3 width=4)
                                                          ->  Seq Scan on c c_1  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (27 rows)
 
 select * from A where A.i in (select C.j from C,B where B.i in (select i from C));
@@ -1526,7 +1526,7 @@ explain select * from A where not exists (select sum(c.i) from C where C.i = A.i
                            Sort Key: c.i
                            ->  Seq Scan on c  (cost=0.00..431.00 rows=2 width=4)
                                  Filter: i > 3
- Optimizer: PQO version 2.55.13
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.13
 (12 rows)
 
 select * from A where not exists (select sum(c.i) from C where C.i = A.i group by C.i having c.i > 3);
@@ -3637,7 +3637,7 @@ EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELEC
                            ->  Seq Scan on qp_tab1 qp_tab1_1  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on qp_tab2  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (12 rows)
 
 EXPLAIN SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
@@ -3666,7 +3666,7 @@ EXPLAIN SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE
                                                                            ->  Seq Scan on qp_tab2  (cost=0.00..431.00 rows=1 width=4)
                                                                            ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                                                                                  ->  Seq Scan on qp_tab3  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.55.12
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.12
 (24 rows)
 
 SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
@@ -3696,7 +3696,7 @@ EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
                      ->  Seq Scan on qp_non_eq_a  (cost=0.00..431.00 rows=1 width=12)
                            Filter: f::text <> '-0'::text
- Optimizer: PQO version 2.72.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.72.0
 (9 rows)
 
 SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b.f AND qp_non_eq_a.f::text <> '-0';
@@ -3717,7 +3717,7 @@ EXPLAIN SELECT * FROM qp_non_eq_a INNER JOIN qp_non_eq_b ON qp_non_eq_a.f = qp_n
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
                      ->  Seq Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
                            Filter: CASE WHEN f::text = '-0'::text THEN 1::double precision ELSE (-1)::double precision END < 0::double precision
- Optimizer: PQO version 2.72.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.72.0
 (9 rows)
 
 SELECT * FROM qp_non_eq_a INNER JOIN qp_non_eq_b ON qp_non_eq_a.f = qp_non_eq_b.f AND CASE WHEN qp_non_eq_b.f::text = '-0' THEN 1 ELSE -1::float8 END < '0';
@@ -3738,7 +3738,7 @@ EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b
          ->  Hash  (cost=431.00..431.00 rows=1 width=12)
                ->  Seq Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
                      Filter: i = 1 OR i = 2 OR i = 3
- Optimizer: PQO version 2.72.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.72.0
 (9 rows)
 
 SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b.i AND qp_non_eq_a.i = ANY('{1,2,3}'::integer[]);
@@ -3757,7 +3757,7 @@ EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b
                Filter: i::numeric = ANY ('{1,2,3}'::numeric[])
          ->  Hash  (cost=431.00..431.00 rows=1 width=12)
                ->  Seq Scan on qp_non_eq_b  (cost=0.00..431.00 rows=1 width=12)
- Optimizer: PQO version 2.72.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.72.0
 (8 rows)
 
 SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b.i AND qp_non_eq_a.i = ANY('{1,2,3}'::numeric[]);

@@ -1,3 +1,5 @@
+test: lockmodes
+
 test: ao_partition_lock
 
 test: select_dropped_table
@@ -151,6 +153,8 @@ test: segwalrep/fts_unblock_primary
 test: segwalrep/mirror_promotion
 test: segwalrep/cancel_commit_pending_replication
 test: segwalrep/twophase_tolerance_with_mirror_promotion
+test: segwalrep/failover_with_many_records
+test: segwalrep/dtm_recovery_on_standby
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 

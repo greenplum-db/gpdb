@@ -13,9 +13,6 @@
         <stentry>
           <ul id="ul_tc3_nlx_wp">
             <li>
-              <xref href="#add_missing_from"/>
-            </li>
-            <li>
               <xref href="#application_name"/>
             </li>
             <li>
@@ -246,10 +243,6 @@
             <li>
               <xref href="#gp_enable_sort_limit"/>
             </li>
-          </ul>
-        </stentry>
-        <stentry>
-          <ul id="ul_wwy_bmx_wp">
             <li>
               <xref href="#gp_external_enable_exec"/>
             </li>
@@ -283,6 +276,10 @@
             <li>
               <xref href="#gp_hashjoin_tuples_per_bucket"/>
             </li>
+          </ul>
+        </stentry>
+        <stentry>
+          <ul id="ul_wwy_bmx_wp">
             <li>
               <xref href="#gp_ignore_error_table"/>
             </li>
@@ -449,9 +446,6 @@
               <xref href="#krb_server_keyfile"/>
             </li>
             <li>
-              <xref href="#krb_srvname"/>
-            </li>
-            <li>
               <xref href="#lc_collate"/>
             </li>
             <li>
@@ -474,6 +468,9 @@
             </li>
             <li>
               <xref href="#local_preload_libraries"/>
+            </li>
+            <li>
+              <xref href="#lock_timeout"/>
             </li>
             <li>
               <xref href="#log_autostats"/>
@@ -508,10 +505,6 @@
             <li>
               <xref href="#log_min_messages"/>
             </li>
-          </ul>
-        </stentry>
-        <stentry>
-          <ul id="ul_d5f_hmx_wp">
             <li>
               <xref href="#log_parser_stats"/>
             </li>
@@ -546,6 +539,10 @@
             <li>
               <xref href="#max_connections"/>
             </li>
+          </ul>
+        </stentry>
+        <stentry>
+          <ul id="ul_d5f_hmx_wp">
             <li>
               <xref href="#max_files_per_process"/>
             </li>
@@ -826,34 +823,6 @@
       </strow>
     </simpletable>
   </body>
-  <topic id="add_missing_from">
-    <title>add_missing_from</title>
-    <body>
-      <p>Automatically adds missing table references to FROM clauses. Present for compatibility with
-        releases of PostgreSQL prior to 8.1, where this behavior was allowed by default.</p>
-      <table id="add_missing_from_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">Boolean</entry>
-              <entry colname="col2">off</entry>
-              <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="application_name">
     <title>application_name</title>
     <body>
@@ -1418,7 +1387,7 @@
           <tbody>
             <row>
               <entry colname="col1">Boolean</entry>
-              <entry colname="col2">off</entry>
+              <entry colname="col2">on</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -1794,6 +1763,10 @@
         lower value makes it more likely sequential scans will be used. This parameter has no effect
         on the size of shared memory allocated by a Greenplum server instance, nor does it reserve
         kernel disk cache; it is used only for estimation purposes.</p>
+      <p>Set this parameter to a number of 32K blocks (for example, <codeph>512</codeph> for 16MB),
+        or specify the size of the effective cache (for example, <codeph>'32MB'</codeph> for 1024
+        blocks). The <codeph>gpconfig</codeph> utility and <codeph>SHOW</codeph> command display the
+        effective cache size value in units such as 'MB' or 'kB'.</p>
       <table id="effective_cache_size_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -1809,7 +1782,7 @@
           <tbody>
             <row>
               <entry colname="col1">floating point</entry>
-              <entry colname="col2">512MB</entry>
+              <entry colname="col2">512 (16GB)</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -4337,21 +4310,18 @@
   <topic id="gp_recursive_cte">
     <title>gp_recursive_cte</title>
     <body>
-      <p>Controls the availability of the <codeph>RECURSIVE</codeph> keyword (Beta) in the
+      <p>Controls the availability of the <codeph>RECURSIVE</codeph> keyword in the
           <codeph>WITH</codeph> clause of a <codeph>SELECT [INTO]</codeph> command, or a
           <codeph>DELETE</codeph>, <codeph>INSERT</codeph> or <codeph>UPDATE</codeph> command. The
         keyword allows a subquery in the <codeph>WITH</codeph> clause of a command to reference
         itself. The default value is <codeph>false</codeph>, the <codeph>RECURSIVE</codeph> keyword
         is not allowed in the <codeph>WITH</codeph> clause of a command.</p>
-      <note type="warning">The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</note>
       <p>For information about the <codeph>RECURSIVE</codeph> keyword (Beta), see the
             <codeph><xref href="../sql_commands/SELECT.xml">SELECT</xref></codeph> command and <xref
           href="../../admin_guide/query/topics/CTE-query.xml"/>.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
-      <note>This parameter will be removed if the <codeph>RECURSIVE</codeph> keyword is promoted
-        from Beta, or if the keyword is removed from Greenplum Database.
-        This parameter was previously named <codeph>gp_recursive_cte_prototype</codeph>, but
+      <note>This parameter was previously named <codeph>gp_recursive_cte_prototype</codeph>, but
         has been renamed to reflect the current status of the implementation.</note>
       <table id="table_j4s_yyx_1bb">
         <tgroup cols="3">
@@ -4368,7 +4338,7 @@
           <tbody>
             <row>
               <entry colname="col1">Boolean</entry>
-              <entry colname="col2">false</entry>
+              <entry colname="col2">true</entry>
               <entry colname="col3">master<p>session</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -5604,33 +5574,6 @@
       </table>
     </body>
   </topic>
-  <topic id="krb_srvname">
-    <title>krb_srvname</title>
-    <body>
-      <p>Sets the Kerberos service name.</p>
-      <table id="krb_srvname_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">service name</entry>
-              <entry colname="col2">postgres</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="lc_collate">
     <title>lc_collate</title>
     <body>
@@ -5859,6 +5802,55 @@
               <entry colname="col1"/>
               <entry colname="col2"/>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="lock_timeout">
+    <title>lock_timeout</title>
+    <body>
+      <p>Abort any statement that waits longer than the specified number of
+        milliseconds while attempting to acquire a lock on a table, index,
+        row, or other database object. The time limit applies separately to
+        each lock acquisition attempt. The limit applies both to explicit
+        locking requests (such as <codeph>LOCK TABLE</codeph>, or
+        <codeph>SELECT FOR UPDATE</codeph> without <codeph>NOWAIT</codeph>)
+        and to implicitly-acquired locks. If <codeph>log_min_error_statement</codeph>
+        is set to <codeph>ERROR</codeph> or lower, Greenplum Database logs the
+        statement that timed out. A value of zero (the default) turns off this 
+        lock wait monitoring.</p>
+      <p>Unlike <codeph><xref href="#statement_timeout" format="dita"/></codeph>,
+        this timeout can only occur while waiting for locks. Note that if
+        <codeph>statement_timeout</codeph> is nonzero, it is rather pointless
+        to set <codeph>lock_timeout</codeph> to the same or larger value,
+        since the statement timeout would always trigger first.</p>
+      <p>Greenplum Database uses the <codeph><xref href="#deadlock_timeout" format="dita"/></codeph>
+        and <codeph><xref href="#gp_global_deadlock_detector_period" format="dita"/></codeph>
+        to trigger local and global deadlock detection. Note that if <codeph>lock_timeout</codeph>
+        is turned on and set to a value smaller than these deadlock detection
+        timeouts, Greenplum Database will abort a statement before it would 
+        ever trigger a deadlock check in that session.</p>
+      <note>Setting <codeph>lock_timeout</codeph> in <codeph>postgresql.conf</codeph>
+        is not recommended because it would affect all sessions</note>
+      <table id="lock_timeout_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - <codeph>INT_MAX</codeph> millisecs</entry>
+              <entry colname="col2">0 millisecs</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -6250,9 +6242,9 @@
   <topic id="log_rotation_age">
     <title>log_rotation_age</title>
     <body>
-      <p>Determines the maximum lifetime of an individual log file. After this time has elapsed, a
-        new log file will be created. Set to zero to disable time-based creation of new log
-        files.</p>
+      <p>Determines the amount of time Greenplum Database writes messages to the active log file.
+        When this amount of time has elapsed, the file is closed and a new log file is created. Set
+        to zero to disable time-based creation of new log files.</p>
       <table id="log_rotation_age_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6279,9 +6271,9 @@
   <topic id="log_rotation_size">
     <title>log_rotation_size</title>
     <body>
-      <p>Determines the maximum size of an individual log file. After this many kilobytes have been
-        emitted into a log file, a new log file will be created. Set to zero to disable size-based
-        creation of new log files.</p>
+      <p>Determines the size of an individual log file that triggers rotation. When the log file
+        size is equal to or greater than this size, the file is closed and a new log file is
+        created. Set to zero to disable size-based creation of new log files. </p>
       <p>The maximum value is INT_MAX/1024. If an invalid value is specified, the default value is
         used. INT_MAX is the largest value that can be stored as an integer on your system. </p>
       <table id="log_rotation_size_table">
@@ -6299,7 +6291,7 @@
           <tbody>
             <row>
               <entry colname="col1">number of kilobytes</entry>
-              <entry colname="col2">0</entry>
+              <entry colname="col2">1048576</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -8236,7 +8228,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">a comma- separated list of schema names</entry>
+              <entry colname="col1">a comma-separated list of schema names</entry>
               <entry colname="col2">$user,public</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
@@ -8755,12 +8747,18 @@
   <topic id="temp_buffers">
     <title>temp_buffers</title>
     <body>
-      <p>Sets the maximum number of temporary buffers used by each database session. These are
-        session-local buffers used only for access to temporary tables. The setting can be changed
-        within individual sessions, but only up until the first use of temporary tables within a
-        session. The cost of setting a large value in sessions that do not actually need a lot of
-        temporary buffers is only a buffer descriptor, or about 64 bytes, per increment. However if
-        a buffer is actually used, an additional 8192 bytes will be consumed. </p>
+      <p>Sets the maximum memory, in blocks, to allow for temporary buffers by each database
+        session. These are session-local buffers used only for access to temporary tables. The
+        setting can be changed within individual sessions, but only up until the first use of
+        temporary tables within a session. The cost of setting a large value in sessions that do not
+        actually need a lot of temporary buffers is only a buffer descriptor for each block, or
+        about 64 bytes, per increment. However if a buffer is actually used, an additional 32768
+        bytes will be consumed.</p>
+      <p>You can set this parameter to the number of 32K blocks (for example, <codeph>1024</codeph>
+        to allow 32MB for buffers), or specify the maximum amount of memory to allow (for example
+          <codeph>'48MB'</codeph> for 1536 blocks). The <codeph>gpconfig</codeph> utility and
+          <codeph>SHOW</codeph> command report the maximum amount of memory allowed for temporary
+        buffers.</p>
       <table id="temp_buffers_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8776,7 +8774,7 @@
           <tbody>
             <row>
               <entry colname="col1">integer</entry>
-              <entry colname="col2">1024</entry>
+              <entry colname="col2">1024 (32MB)</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

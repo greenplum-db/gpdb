@@ -1,6 +1,3 @@
--- start_ignore
-SET gp_recursive_cte TO ON;
--- end_ignore
 --
 -- Test inheritance features
 --

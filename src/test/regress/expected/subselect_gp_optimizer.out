@@ -112,7 +112,7 @@ explain select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 wh
                                                            ->  Partition Selector for csq_t2 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
                                                                  Partitions selected: 4 (out of 4)
                                                            ->  Dynamic Seq Scan on csq_t2 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (26 rows)
 
 select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1; -- expected (4,2)
@@ -145,7 +145,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x < -1);
                            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                                  ->  Seq Scan on mrs_t1  (cost=0.00..431.00 rows=1 width=1)
                                        Filter: x < (-1)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (11 rows)
 
 select * from mrs_t1 where exists (select x from mrs_t1 where x < -1) order by 1;
@@ -166,7 +166,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x = 1);
                            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=1)
                                  ->  Seq Scan on mrs_t1  (cost=0.00..431.00 rows=1 width=1)
                                        Filter: x = 1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (11 rows)
 
 select * from mrs_t1 where exists (select x from mrs_t1 where x = 1) order by 1;
@@ -217,7 +217,7 @@ explain select * from mrs_t1 where x in (select x-95 from mrs_t1) or x < 5;
                                                    ->  Materialize  (cost=0.00..431.00 rows=20 width=4)
                                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=20 width=4)
                                                                ->  Seq Scan on mrs_t1  (cost=0.00..431.00 rows=7 width=4)
- Optimizer: PQO version 3.27.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.27.0
 (21 rows)
 
 select * from mrs_t1 where x in (select x-95 from mrs_t1) or x < 5 order by 1;
@@ -397,7 +397,7 @@ explain select * from csq_m1 where x not in (select x from csq_d1) or x < -100; 
                                                                      ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                                                                            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
                                                                                  ->  Seq Scan on csq_d1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 3.27.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.27.0
 (24 rows)
 
 select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
@@ -434,7 +434,7 @@ explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; 
                                                          ->  Materialize  (cost=0.00..431.00 rows=3 width=4)
                                                                ->  Broadcast Motion 1:3  (slice1)  (cost=0.00..431.00 rows=9 width=4)
                                                                      ->  Seq Scan on csq_m1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 3.27.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.27.0
 (23 rows)
 
 select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- (4)
@@ -484,7 +484,7 @@ explain SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
          SubPlan 1  (slice1; segments: 3)
            ->  Result  (cost=0.00..0.00 rows=1 width=4)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (7 rows)
 
 SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
@@ -503,7 +503,7 @@ explain SELECT * FROM csq_r WHERE a not IN (SELECT * FROM csq_f(csq_r.a));
          SubPlan 1  (slice1; segments: 3)
            ->  Result  (cost=0.00..0.00 rows=1 width=4)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (7 rows)
 
 SELECT * FROM csq_r WHERE a not IN (SELECT * FROM csq_f(csq_r.a));
@@ -522,7 +522,7 @@ explain SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
            ->  Result  (cost=0.00..0.00 rows=1 width=1)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (8 rows)
 
 SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
@@ -542,7 +542,7 @@ explain SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
            ->  Result  (cost=0.00..0.00 rows=1 width=1)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (8 rows)
 
 SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
@@ -561,7 +561,7 @@ explain SELECT * FROM csq_r WHERE a > (SELECT csq_f FROM csq_f(csq_r.a) limit 1)
            ->  Limit  (cost=0.00..0.00 rows=1 width=4)
                  ->  Result  (cost=0.00..0.00 rows=1 width=4)
                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (8 rows)
 
 SELECT * FROM csq_r WHERE a > (SELECT csq_f FROM csq_f(csq_r.a) limit 1);
@@ -580,7 +580,7 @@ explain SELECT * FROM csq_r WHERE a < ANY (SELECT csq_f FROM csq_f(csq_r.a));
            ->  Result  (cost=0.00..0.00 rows=1 width=4)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.621
 (8 rows)
 
 SELECT * FROM csq_r WHERE a < ANY (SELECT csq_f FROM csq_f(csq_r.a));
@@ -599,7 +599,7 @@ explain SELECT * FROM csq_r WHERE a <= ALL (SELECT csq_f FROM csq_f(csq_r.a));
            ->  Result  (cost=0.00..0.00 rows=1 width=4)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.621
 (8 rows)
 
 SELECT * FROM csq_r WHERE a <= ALL (SELECT csq_f FROM csq_f(csq_r.a));
@@ -623,7 +623,7 @@ explain SELECT * FROM csq_r WHERE a IN (SELECT csq_f FROM csq_f(csq_r.a),csq_r);
                  ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
                        ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                              ->  Seq Scan on csq_r csq_r_1  (cost=0.00..431.00 rows=1 width=1)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (12 rows)
 
 SELECT * FROM csq_r WHERE a IN (SELECT csq_f FROM csq_f(csq_r.a),csq_r);
@@ -666,7 +666,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                                  ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                                        Sort Key: csq_pullup_1.t
                                        ->  Seq Scan on csq_pullup csq_pullup_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (14 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.t);
@@ -703,7 +703,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                                                          ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                                                                Sort Key: csq_pullup_1.v
                                                                ->  Seq Scan on csq_pullup csq_pullup_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (21 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.t=t1.v);
@@ -742,7 +742,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                                                          ->  Sort  (cost=0.00..431.00 rows=1 width=5)
                                                                Sort Key: csq_pullup_1.n
                                                                ->  Seq Scan on csq_pullup csq_pullup_1  (cost=0.00..431.00 rows=1 width=5)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (23 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n=t1.n);
@@ -770,7 +770,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                        ->  Materialize  (cost=0.00..431.00 rows=1 width=5)
                              ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
                                    ->  Seq Scan on csq_pullup csq_pullup_1  (cost=0.00..431.00 rows=1 width=5)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (12 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + 1=t1.n + 1);
@@ -798,7 +798,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                        ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                              ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                    ->  Seq Scan on csq_pullup csq_pullup_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (12 rows)
 
 select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1 where t0.n + 1=t1.i + 1);
@@ -826,7 +826,7 @@ explain select * from csq_pullup t0 where not exists (select 1 from csq_pullup t
                ->  Result  (cost=0.00..431.00 rows=1 width=4)
                      ->  Seq Scan on csq_pullup csq_pullup_1  (cost=0.00..431.00 rows=1 width=4)
                            Filter: i = 1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (9 rows)
 
 select * from csq_pullup t0 where not exists (select 1 from csq_pullup t1 where t0.t=t1.t and t1.i = 1);
@@ -851,7 +851,7 @@ explain select * from csq_pullup t0 where not exists (select 1 from csq_pullup t
                      ->  Result  (cost=0.00..431.00 rows=1 width=4)
                            ->  Result  (cost=0.00..431.00 rows=1 width=4)
                                  ->  Seq Scan on csq_pullup csq_pullup_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (10 rows)
 
 select * from csq_pullup t0 where not exists (select 1 from csq_pullup t1 where t0.i=t1.i + 1);
@@ -882,7 +882,7 @@ explain select * from subselect_t1 where x in (select y from subselect_t2);
          ->  Seq Scan on subselect_t1  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on subselect_t2  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (7 rows)
 
 select * from subselect_t1 where x in (select y from subselect_t2);
@@ -910,7 +910,7 @@ explain select * from subselect_t1 where x in (select y from subselect_t2 union 
                            ->  Seq Scan on subselect_t2 subselect_t2_1  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on subselect_t1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (13 rows)
 
 select * from subselect_t1 where x in (select y from subselect_t2 union all select y from subselect_t2);
@@ -931,7 +931,7 @@ explain select count(*) from subselect_t1 where x in (select y from subselect_t2
                      ->  Seq Scan on subselect_t1  (cost=0.00..431.00 rows=1 width=4)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                            ->  Seq Scan on subselect_t2  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (9 rows)
 
 select count(*) from subselect_t1 where x in (select y from subselect_t2);
@@ -960,7 +960,7 @@ explain select count(*) from subselect_t1 where x in (select y from subselect_t2
                                        ->  Seq Scan on subselect_t2 subselect_t2_1  (cost=0.00..431.00 rows=1 width=4)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                            ->  Seq Scan on subselect_t1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (15 rows)
 
 select count(*) from subselect_t1 where x in (select y from subselect_t2 union all select y from subselect_t2);
@@ -1041,7 +1041,7 @@ explain select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
    ->  Result  (cost=0.00..0.00 rows=0 width=4)
          One-Time Filter: false
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.621
 (5 rows)
 
 explain select * from t1 where a=1 and a=2 and a > (select t2.b from t2)
@@ -1052,7 +1052,7 @@ select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
  Result  (cost=0.00..0.00 rows=0 width=4)
    One-Time Filter: false
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.621
 (4 rows)
 
 select * from t1 where a=1 and a=2 and a > (select t2.b from t2)
@@ -1071,7 +1071,7 @@ where t1.a = foo.a;
    ->  Result  (cost=0.00..0.00 rows=0 width=8)
          One-Time Filter: false
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.621
 (5 rows)
 
 select * from t1,
@@ -1102,7 +1102,7 @@ explain select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
                              ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                    ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
  Settings:  optimizer=on; optimizer_nestloop_factor=1; optimizer_segments=3
- Optimizer status: PQO version 2.44.1
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.44.1
 (14 rows)
 
 explain select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
@@ -1121,7 +1121,7 @@ explain select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
                              ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                    ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
  Settings:  optimizer=on; optimizer_nestloop_factor=1; optimizer_segments=3
- Optimizer status: PQO version 2.39.2
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.39.2
 (14 rows)
 
 select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
@@ -1214,7 +1214,7 @@ from
                                                          ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                                                                Sort Key: t1_mpp_24563.id
                                                                ->  Seq Scan on t1_mpp_24563  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 2.55.21
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (21 rows)
 
 drop table t1_mpp_24563;
@@ -1275,7 +1275,7 @@ explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                                                                            ->  Partition Selector for t_mpp_20470 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
                                                                                  Partitions selected: 2 (out of 2)
                                                                            ->  Dynamic Seq Scan on t_mpp_20470 t_mpp_20470_1 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=12)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (29 rows)
 
 drop view v1_mpp_20470;
@@ -1442,7 +1442,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
                                  Hash Key: subselect_tbl_1.f2
                                  ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (13 rows)
 
 EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
@@ -1470,7 +1470,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
                                                    ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..431.00 rows=3 width=4)
                                              ->  Hash  (cost=431.00..431.00 rows=3 width=4)
                                                    ->  Seq Scan on subselect_tbl subselect_tbl_2  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (21 rows)
 
 EXPLAIN SELECT '' AS three, f1, f2
@@ -1533,7 +1533,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
                      ->  Seq Scan on subselect_tbl  (cost=0.00..431.00 rows=3 width=8)
                      ->  Hash  (cost=431.00..431.00 rows=3 width=8)
                            ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..431.00 rows=3 width=8)
- Optimizer: PQO version 2.75.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.75.0
 (11 rows)
 
 EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
@@ -1554,7 +1554,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=12)
                                  Hash Key: subselect_tbl_1.f2
                                  ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..431.00 rows=3 width=12)
- Optimizer: PQO version 2.75.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.75.0
 (13 rows)
 
 EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
@@ -1576,7 +1576,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
                                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
                                          ->  Seq Scan on subselect_tbl subselect_tbl_1  (cost=0.00..431.00 rows=2 width=4)
                                                Filter: f2 = f3::integer
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (14 rows)
 
 EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
@@ -1625,7 +1625,7 @@ EXPLAIN select count(*) from
                                              ->  HashAggregate  (cost=0.00..431.94 rows=34 width=4)
                                                    Group Key: tenk1_1.hundred
                                                    ->  Seq Scan on tenk1 tenk1_1  (cost=0.00..431.51 rows=3334 width=4)
- Optimizer: PQO version 2.75.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.75.0
 (17 rows)
 
 EXPLAIN select count(distinct ss.ten) from
@@ -1658,7 +1658,7 @@ EXPLAIN select count(distinct ss.ten) from
                                                                      ->  HashAggregate  (cost=0.00..431.94 rows=34 width=4)
                                                                            Group Key: tenk1_1.hundred
                                                                            ->  Seq Scan on tenk1 tenk1_1  (cost=0.00..431.51 rows=3334 width=4)
- Optimizer: PQO version 2.75.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.75.0
 (26 rows)
 
 EXPLAIN select count(*) from
@@ -1682,7 +1682,7 @@ EXPLAIN select count(*) from
                                              ->  HashAggregate  (cost=0.00..431.94 rows=34 width=4)
                                                    Group Key: tenk1_1.hundred
                                                    ->  Seq Scan on tenk1 tenk1_1  (cost=0.00..431.51 rows=3334 width=4)
- Optimizer: PQO version 2.75.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.75.0
 (17 rows)
 
 EXPLAIN select count(distinct ss.ten) from
@@ -1715,7 +1715,7 @@ EXPLAIN select count(distinct ss.ten) from
                                                                      ->  HashAggregate  (cost=0.00..431.94 rows=34 width=4)
                                                                            Group Key: tenk1_1.hundred
                                                                            ->  Seq Scan on tenk1 tenk1_1  (cost=0.00..431.51 rows=3334 width=4)
- Optimizer: PQO version 2.75.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.75.0
 (26 rows)
 
 --
@@ -1740,7 +1740,7 @@ EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) F
                                              Group Key: tenk1.unique1
                                              ->  Seq Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.36.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.36.0
 (14 rows)
 
 SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
@@ -1805,7 +1805,7 @@ EXPLAIN SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup
                                                                      ->  Partition Selector for dedup_test3 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
                                                                            Partitions selected: 1 (out of 1)
                                                                      ->  Dynamic Seq Scan on dedup_test3 (dynamic scan id: 1)  (cost=0.00..431.00 rows=4 width=4)
- Optimizer: PQO version 2.60.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.60.0
 (25 rows)
 
 SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
@@ -1836,7 +1836,7 @@ EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN 
                ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
                      Hash Key: dedup_test1_1.b
                      ->  Seq Scan on dedup_test1 dedup_test1_1  (cost=0.00..431.00 rows=2 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (19 rows)
 
 EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN (SELECT a FROM dedup_test1);
@@ -1858,7 +1858,7 @@ EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN 
                      ->  Seq Scan on dedup_test1  (cost=0.00..431.00 rows=2 width=8)
          ->  Hash  (cost=431.00..431.00 rows=2 width=4)
                ->  Seq Scan on dedup_test1 dedup_test1_1  (cost=0.00..431.00 rows=2 width=4)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (17 rows)
 
 EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND EXISTS (SELECT b FROM dedup_test1) AND dedup_test3.b IN (SELECT b FROM dedup_test1);
@@ -1898,7 +1898,7 @@ EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND EXISTS (SELECT b 
                                        ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
                                              ->  Limit  (cost=0.00..431.00 rows=1 width=1)
                                                    ->  Seq Scan on dedup_test1 dedup_test1_1  (cost=0.00..431.00 rows=2 width=1)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (35 rows)
 
 -- start_ignore

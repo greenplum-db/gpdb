@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-
 CREATE AGGREGATE example_agg(int4) (
     SFUNC = int4larger,
     STYPE = int4

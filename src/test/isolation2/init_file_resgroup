@@ -9,9 +9,6 @@ s/^[0-9:]+\sgpconfig:[^:]+:[^-]*-\[/TIMESTAMP gpconfig:SEGMENT:USER-[/
 m/\[\S+:cgroup is not properly configured:/
 s/\[\S+:cgroup is not properly configured:/\[SEGMENT:cgroup is not properly configured:/
 
-m/^ERROR:  Resource group [0-9]+ was concurrently dropped$/
-s/group [0-9]+ was/group OID was/
-
 m/^ERROR:  Out of memory  (seg\d slice\d \d+.\d+.\d+.\d+:\d+ pid=\d+)$/
 s/(seg\d+ slice\d+ \d+.\d+.\d+.\d+:\d+ pid=\d+)/(SEG SLICE ADDR:PORT pid=PID)/
 

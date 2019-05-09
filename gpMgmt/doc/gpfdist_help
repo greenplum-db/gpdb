@@ -233,10 +233,6 @@ To stop gpfdist when it is running in the background:
 
      ps ax | grep gpfdist 
 
-   OR on Solaris 
-
-     ps -ef | grep gpfdist 
-
   --Then kill the process, for example: 
 
     kill 3456 

@@ -193,7 +193,7 @@ ROLLBACK;</codeblock></note>
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.27 rows=1 width=58)
    ->  Seq Scan on names  (cost=0.00..431.27 rows=1 width=58)
          Filter: (name = 'Joelle'::text)
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (4 rows)</codeblock>
 
       <p>If we read the plan from the bottom up, the query optimizer starts by doing a sequential
@@ -216,7 +216,7 @@ ROLLBACK;</codeblock></note>
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on names
          Filter: (name = 'Joelle'::text)
- Optimizer: PQO version 3.23.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
 (4 rows)</codeblock> 
 
       <p>Here is the same query, with JSON formatting:</p>
@@ -254,7 +254,7 @@ ROLLBACK;</codeblock></note>
        ]                                      +
      },                                       +
      "Settings": {                            +
-       "Optimizer": "PQO version 3.23.0"      +
+       "Optimizer": "Pivotal Optimizer (GPORCA) version 3.23.0"      +
      }                                        +
    }                                          +
  ]
@@ -292,7 +292,7 @@ ROLLBACK;</codeblock></note>
          Plan Width: 70                                      +
          Index Cond: "(location = 'Sydney, Australia'::text)"+
    Settings:                                                 +
-     Optimizer: "PQO version 3.23.0"
+     Optimizer: "Pivotal Optimizer (GPORCA) version 3.23.0"
 (1 row)</codeblock></p>    </section>
     <section id="section7">
       <title>Compatibility</title>

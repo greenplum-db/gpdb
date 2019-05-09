@@ -4,6 +4,7 @@
 #include "utils/metrics_utils.h"
 #include "nodes/execnodes.h"
 #include "nodes/print.h"
+#include "executor/execdesc.h"
 
 PG_MODULE_MAGIC;
 
@@ -34,32 +35,127 @@ test_hook(QueryMetricsStatus status, void* args)
 	switch (status)
 	{
 		case METRICS_PLAN_NODE_INITIALIZE:
-			ereport(WARNING, (errmsg("Plan node initializing")));
+			switch (((QueryDesc *)args)->plannedstmt->metricsQueryType)
+			{
+				case TOP_LEVEL_QUERY: 
+					ereport(WARNING, (errmsg("Plan node initializing")));
+					break;
+				case SPI_INNER_QUERY:
+					ereport(WARNING, (errmsg("Plan node of SPI inner query initializing")));
+					break;
+				case FUNCTION_INNER_QUERY:
+					ereport(WARNING, (errmsg("Plan node of function inner query initializing")));
+					break;
+			}
 			break;
 		case METRICS_PLAN_NODE_EXECUTING:
-			ereport(WARNING, (errmsg("Plan node executing node_type: %s", plannode_type(((PlanState *)args)->plan))));
+			switch (((PlanState *)args)->state->es_plannedstmt->metricsQueryType)
+			{
+				case TOP_LEVEL_QUERY: 
+					ereport(WARNING, (errmsg("Plan node executing node_type: %s", 
+												plannode_type(((PlanState *)args)->plan))));
+					break;
+				case SPI_INNER_QUERY:
+					ereport(WARNING, (errmsg("Plan node of SPI inner query executing node_type: %s", 
+												plannode_type(((PlanState *)args)->plan))));
+					break;
+				case FUNCTION_INNER_QUERY:
+					ereport(WARNING, (errmsg("Plan node of function inner query executing node_type: %s", 
+											plannode_type(((PlanState *)args)->plan))));
+					break;
+			}
 			break;
 		case METRICS_PLAN_NODE_FINISHED:
-			ereport(WARNING, (errmsg("Plan node finished")));
+			switch (((PlanState *)args)->state->es_plannedstmt->metricsQueryType)
+			{
+				case TOP_LEVEL_QUERY: 
+					ereport(WARNING, (errmsg("Plan node finished")));
+					break;
+				case SPI_INNER_QUERY:
+					ereport(WARNING, (errmsg("Plan node of SPI inner query finished")));
+					break;
+				case FUNCTION_INNER_QUERY:
+					ereport(WARNING, (errmsg("Plan node of function inner query finished")));
+					break;
+			}
 			break;
 		case METRICS_QUERY_SUBMIT:
-			ereport(WARNING, (errmsg("Query submit")));
+			switch (((QueryDesc *)args)->plannedstmt->metricsQueryType)
+			{
+				case TOP_LEVEL_QUERY: 
+					ereport(WARNING, (errmsg("Query submit")));
+					break;
+				case SPI_INNER_QUERY:
+					ereport(WARNING, (errmsg("SPI inner query submit")));
+					break;
+				case FUNCTION_INNER_QUERY:
+					ereport(WARNING, (errmsg("function inner query submit")));
+					break;
+			}
 			break;
 		case METRICS_QUERY_START:
-			ereport(WARNING, (errmsg("Query start")));
+			switch (((QueryDesc *)args)->plannedstmt->metricsQueryType)
+			{
+				case TOP_LEVEL_QUERY: 
+					ereport(WARNING, (errmsg("Query start")));
+					break;
+				case SPI_INNER_QUERY:
+					ereport(WARNING, (errmsg("SPI inner query start")));
+					break;
+				case FUNCTION_INNER_QUERY:
+					ereport(WARNING, (errmsg("function inner query start")));
+					break;
+			}
 			break;
 		case METRICS_QUERY_DONE:
-			ereport(WARNING, (errmsg("Query Done")));
+			ereport(WARNING, (errmsg("Query done")));
+			break;
+		case METRICS_INNER_QUERY_DONE:
+			ereport(WARNING, (errmsg("Inner query done")));
 			break;
 		case METRICS_QUERY_ERROR:
-			ereport(WARNING, (errmsg("Query Error")));
+			switch (((QueryDesc *)args)->plannedstmt->metricsQueryType)
+			{
+				case TOP_LEVEL_QUERY: 
+					ereport(WARNING, (errmsg("Query Error")));
+					break;
+				case SPI_INNER_QUERY:
+					ereport(WARNING, (errmsg("SPI inner query Error")));
+					break;
+				case FUNCTION_INNER_QUERY:
+					ereport(WARNING, (errmsg("function inner query Error")));
+					break;
+			}
 			break;
 		case METRICS_QUERY_CANCELING:
-			ereport(WARNING, (errmsg("Query Canceling")));
+			switch (((QueryDesc *)args)->plannedstmt->metricsQueryType)
+			{
+				case TOP_LEVEL_QUERY: 
+					ereport(WARNING, (errmsg("Query Canceling")));
+					break;
+				case SPI_INNER_QUERY:
+					ereport(WARNING, (errmsg("SPI inner query Canceling")));
+					break;
+				case FUNCTION_INNER_QUERY:
+					ereport(WARNING, (errmsg("function inner query Canceling")));
+					break;
+			}
 			break;
 		case METRICS_QUERY_CANCELED:
-			ereport(WARNING, (errmsg("Query Canceled")));
+			switch (((QueryDesc *)args)->plannedstmt->metricsQueryType)
+			{
+				case TOP_LEVEL_QUERY: 
+					ereport(WARNING, (errmsg("Query Canceled")));
+					break;
+				case SPI_INNER_QUERY:
+					ereport(WARNING, (errmsg("SPI inner query Canceled")));
+					break;
+				case FUNCTION_INNER_QUERY:
+					ereport(WARNING, (errmsg("function inner query Canceled")));
+					break;
+			}
 			break;
 	}
 }
+
 

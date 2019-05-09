@@ -8354,7 +8354,7 @@ select unnest(array[a,a]), rank() over (order by a) from generate_series(2,3) a;
          ->  Sort
                Sort Key: generate_series
                ->  Function Scan on generate_series
- Optimizer: PQO version 3.30.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.30.0
 (7 rows)
 
 select unnest(array[a,a]), rank() over (order by a) from generate_series(2,3) a;

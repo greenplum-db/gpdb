@@ -85,6 +85,7 @@ SELECT * FROM EXT_REGION as r, EXT_NATION as n WHERE n.N_REGIONKEY = r.R_REGIONK
 -- test: http request header needed for gpfdist
 \! wget http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 || echo "Execute error";
 \! wget --header='X-GP-PROTO:0' http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 && echo "Execute successully";
+\! wget --header='x-gp-proto:1' http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 && echo "Execute successully";
 
 -- test: multiple reader for pipe is forbidden
 DROP EXTERNAL WEB TABLE IF EXISTS create_pipe;

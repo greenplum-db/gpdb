@@ -1693,5 +1693,32 @@ select dt, pn, corr(distinct pn, pn) over (partition by dt), sum(pn) over (parti
 create view distinct_windowagg_view as select sum(distinct g/2) OVER (partition by g/4) from generate_series (1, 5) g;
 \d+ distinct_windowagg_view
 
+-- These are tests for pushing down filter predicates in window functions.
+CREATE TABLE window_part_sales (trans_id int, date date, region text)
+DISTRIBUTED BY (trans_id)
+PARTITION BY RANGE (date)
+SUBPARTITION BY LIST (region)
+SUBPARTITION TEMPLATE
+( SUBPARTITION usa VALUES ('usa'),
+DEFAULT SUBPARTITION other_regions)
+(START (date '2011-01-01') INCLUSIVE
+END (date '2011-06-01') EXCLUSIVE
+EVERY (INTERVAL '1 month'),
+DEFAULT PARTITION outlying_dates );
+
+-- When there is no PARTITION BY in the window function, we do not want to push down any of the filter predicates.
+EXPLAIN WITH cte as (SELECT *, row_number() over () FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' AND region = 'usa';
+
+-- If there is a PARTITION BY in the window function, we can push down ONLY the predicates that match the PARTITION BY column.
+EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' AND region = 'usa';
+
+-- When both columns in the filter predicates are in the window function, it is possible to push both down.
+EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' AND region = 'usa';
+
+-- When the column in the filter predicates is also present in the window function, it is possible to push it down.
+EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE region = 'usa';
+
+-- When there is a disjunct in the filter predicates, it is not possible to push down either into the window function.
+EXPLAIN WITH cte as (SELECT *, row_number() over (PARTITION BY date,region) FROM window_part_sales) SELECT * FROM cte WHERE date > '2011-03-01' OR region = 'usa';
 
 -- End of Test

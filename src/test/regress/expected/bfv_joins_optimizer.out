@@ -669,7 +669,7 @@ explain select 1 as mrs_t1 where 1 <= ALL (select x from z);
                      ->  Seq Scan on z  (cost=0.00..431.00 rows=1 width=1)
                            Filter: 1 > x
  Settings:  optimizer=on
- Optimizer status: PQO version 1.621
+ Optimizer status: Pivotal Optimizer (GPORCA) version 1.621
 (10 rows)
 
 --
@@ -3091,7 +3091,7 @@ ON (member_group.group_id IN (12,13,14,15) AND member_subgroup.subgroup_name = r
                ->  Redistribute Motion 3:3  (slice4; segments: 3)
                      Hash Key: (region.county_name)::text
                      ->  Seq Scan on region
- Optimizer: PQO version 2.69.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.69.0
 (23 rows)
 
 -- Test colocated equijoins on coerced distribution keys
@@ -3148,7 +3148,7 @@ explain select * from nlj1, nlj2 where nlj1.a = nlj2.a;
          Join Filter: (nlj1.a = nlj2.a)
          ->  Seq Scan on nlj1  (cost=0.00..431.00 rows=1 width=8)
          ->  Seq Scan on nlj2  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: PQO version 3.2.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.2.0
 (6 rows)
 
 select * from nlj1, nlj2 where nlj1.a = nlj2.a;
@@ -3165,7 +3165,7 @@ explain select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
          Join Filter: (NOT (nlj1.a IS DISTINCT FROM nlj2.a))
          ->  Seq Scan on nlj1  (cost=0.00..431.00 rows=1 width=8)
          ->  Seq Scan on nlj2  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: PQO version 3.2.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.2.0
 (6 rows)
 
 select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
@@ -3188,7 +3188,7 @@ explain select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is n
                      ->  Result  (cost=0.00..431.00 rows=1 width=8)
                            ->  Result  (cost=0.00..431.00 rows=1 width=8)
                                  ->  Seq Scan on nlj2  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: PQO version 3.2.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.2.0
 (11 rows)
 
 select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
@@ -3208,7 +3208,7 @@ explain select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;
          ->  Materialize  (cost=0.00..431.00 rows=2 width=8)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=8)
                      ->  Seq Scan on nlj2  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: PQO version 3.2.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.2.0
 (8 rows)
 
 select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;
@@ -3298,7 +3298,7 @@ explain (costs off) select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
                            ->  Seq Scan on b
          ->  Index Scan using c_i_j_idx on c
                Index Cond: (j = (a.i + b.i))
- Optimizer: PQO version 3.21.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.21.0
 (12 rows)
 
 select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;

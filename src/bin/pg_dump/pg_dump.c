@@ -2418,8 +2418,6 @@ buildMatViewRefreshDependencies(Archive *fout)
 
 	query = createPQExpBuffer();
 
-	ExecuteSqlStatement(fout, "SET gp_recursive_cte TO ON;");
-
 	appendPQExpBufferStr(query, "WITH RECURSIVE w AS "
 						 "( "
 					"SELECT d1.objid, d2.refobjid, c2.relkind AS refrelkind "
@@ -13919,8 +13917,7 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 		appendPQExpBuffer(q, "FORMAT '%s' (%s)\n",
 						  tabfmt,
 						  customfmt ? customfmt : tmpstring);
-		free(tmpstring);
-		tmpstring = NULL;
+		pg_free(tmpstring);
 		if (customfmt)
 		{
 			free(customfmt);

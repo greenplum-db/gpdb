@@ -132,7 +132,7 @@ explain (costs off) select * from legacy_int a inner join legacy_int b on a.id =
          ->  Seq Scan on legacy_int
          ->  Hash
                ->  Seq Scan on legacy_int legacy_int_1
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
 select * from legacy_int a inner join legacy_int b on a.id = b.id;
@@ -176,7 +176,7 @@ explain (costs off) select * from modern_int a inner join modern_int b on a.id =
          ->  Seq Scan on modern_int
          ->  Hash
                ->  Seq Scan on modern_int modern_int_1
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
 select * from modern_int a inner join modern_int b on a.id = b.id;
@@ -224,7 +224,7 @@ explain (costs off) select * from legacy_domain_over_int a inner join legacy_dom
          ->  Seq Scan on legacy_domain_over_int
          ->  Hash
                ->  Seq Scan on legacy_domain_over_int legacy_domain_over_int_1
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
 explain (costs off) select * from legacy_int a inner join legacy_domain_over_int b on a.id = b.id;
@@ -236,7 +236,7 @@ explain (costs off) select * from legacy_int a inner join legacy_domain_over_int
          ->  Seq Scan on legacy_int
          ->  Hash
                ->  Seq Scan on legacy_domain_over_int
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
 explain (costs off) select * from modern_int a inner join legacy_domain_over_int b on a.id = b.id;
@@ -265,7 +265,7 @@ explain (costs off) select * from legacy_enum a inner join legacy_enum b on a.co
          ->  Seq Scan on legacy_enum
          ->  Hash
                ->  Seq Scan on legacy_enum legacy_enum_1
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
 select * from legacy_enum a inner join legacy_enum b on a.color = b.color;

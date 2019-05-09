@@ -11,13 +11,14 @@ INSERT INTO test_ne VALUES('2011-09-01', 43.7);
 INSERT INTO test_ne SELECT '2009-01-01', 10.7 FROM generate_series(1,1000);
 SET enable_indexscan to false;
 EXPLAIN (COSTS OFF) SELECT * FROM test_ne WHERE a <> '2009-01-01' AND b <> 10.7;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Bitmap Heap Scan on test_ne
-   Recheck Cond: ((a <> 'Thu Jan 01 00:00:00 2009'::timestamp without time zone) AND (b <> 10.7))
-   ->  Bitmap Index Scan on test_ne_idx
-         Index Cond: ((a <> 'Thu Jan 01 00:00:00 2009'::timestamp without time zone) AND (b <> 10.7))
-(4 rows)
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on test_ne
+         Recheck Cond: ((a <> 'Thu Jan 01 00:00:00 2009'::timestamp without time zone) AND (b <> 10.7))
+         ->  Bitmap Index Scan on test_ne_idx
+               Index Cond: ((a <> 'Thu Jan 01 00:00:00 2009'::timestamp without time zone) AND (b <> 10.7))
+(6 rows)
 
 SELECT * FROM test_ne WHERE a <> '2009-01-01' AND b <> 10.7;
             a             |   b   
@@ -27,6 +28,9 @@ SELECT * FROM test_ne WHERE a <> '2009-01-01' AND b <> 10.7;
 (2 rows)
 
 RESET enable_indexscan;
+-- The below test use an exclusion constraint, which isn't supported in GPDB
+-- so we need to ignore this test
+-- start_ignore
 -- test search for "not equals" using an exclusion constraint
 CREATE TABLE zoo (
    cage   INTEGER,
@@ -39,3 +43,4 @@ INSERT INTO zoo VALUES(123, 'lion');
 ERROR:  conflicting key value violates exclusion constraint "zoo_cage_animal_excl"
 DETAIL:  Key (cage, animal)=(123, lion) conflicts with existing key (cage, animal)=(123, zebra).
 INSERT INTO zoo VALUES(124, 'lion');
+-- end_ignore

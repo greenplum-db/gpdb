@@ -3,7 +3,6 @@
 -- the segments.
 
 -- Given we create a database
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE DATABASE alter_db_2;
 \c alter_db_2
 

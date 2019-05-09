@@ -40,7 +40,6 @@ $$ LANGUAGE plpgsql;
 -- broadcast failed before recovery. Master used to miss sending the
 -- COMMIT PREPARED across restart and instead abort the transaction
 -- after querying in-doubt prepared transactions from segments.
-1: CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- Inject fault to fail the COMMIT PREPARED always on one segment, till fault is not reset
 1: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'error', 2);
 -- create utility session to segment which will be used to reset the fault

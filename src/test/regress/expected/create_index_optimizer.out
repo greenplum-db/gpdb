@@ -386,7 +386,7 @@ SELECT * FROM fast_emp4000
                      ->  Index Scan using grect2ind on fast_emp4000
                            Index Cond: (home_base @ '(2000,1000),(200,200)'::box)
                            Filter: (home_base @ '(2000,1000),(200,200)'::box)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (10 rows)
 
 SELECT * FROM fast_emp4000
@@ -408,7 +408,7 @@ SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
                ->  Index Scan using grect2ind on fast_emp4000
                      Index Cond: (home_base && '(1000,1000),(0,0)'::box)
                      Filter: (home_base && '(1000,1000),(0,0)'::box)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
@@ -449,7 +449,7 @@ SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
                      ->  Index Scan using gpolygonind on polygon_tbl
                            Index Cond: (f1 ~ '((1,1),(2,2),(2,1))'::polygon)
                            Filter: (f1 ~ '((1,1),(2,2),(2,1))'::polygon)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (10 rows)
 
 SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
@@ -472,7 +472,7 @@ SELECT * FROM circle_tbl WHERE f1 && circle(point(1,-2), 1)
                      ->  Index Scan using gcircleind on circle_tbl
                            Index Cond: (f1 && '<(1,-2),1>'::circle)
                            Filter: (f1 && '<(1,-2),1>'::circle)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (9 rows)
 
 SELECT * FROM circle_tbl WHERE f1 && circle(point(1,-2), 1)
@@ -495,7 +495,7 @@ SELECT count(*) FROM gpolygon_tbl WHERE f1 && '(1000,1000,0,0)'::polygon;
                ->  Index Scan using ggpolygonind on gpolygon_tbl
                      Index Cond: (f1 && '((1000,1000),(0,0))'::polygon)
                      Filter: (f1 && '((1000,1000),(0,0))'::polygon)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM gpolygon_tbl WHERE f1 && '(1000,1000,0,0)'::polygon;
@@ -514,7 +514,7 @@ SELECT count(*) FROM gcircle_tbl WHERE f1 && '<(500,500),500>'::circle;
                ->  Index Scan using ggcircleind on gcircle_tbl
                      Index Cond: (f1 && '<(500,500),500>'::circle)
                      Filter: (f1 && '<(500,500),500>'::circle)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM gcircle_tbl WHERE f1 && '<(500,500),500>'::circle;
@@ -533,7 +533,7 @@ SELECT count(*) FROM point_tbl WHERE f1 <@ box '(0,0,100,100)';
                ->  Index Scan using gpointind on point_tbl
                      Index Cond: (f1 <@ '(100,100),(0,0)'::box)
                      Filter: (f1 <@ '(100,100),(0,0)'::box)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM point_tbl WHERE f1 <@ box '(0,0,100,100)';
@@ -552,7 +552,7 @@ SELECT count(*) FROM point_tbl WHERE box '(0,0,100,100)' @> f1;
                ->  Index Scan using gpointind on point_tbl
                      Index Cond: (f1 <@ '(100,100),(0,0)'::box)
                      Filter: (f1 <@ '(100,100),(0,0)'::box)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM point_tbl WHERE box '(0,0,100,100)' @> f1;
@@ -571,7 +571,7 @@ SELECT count(*) FROM point_tbl WHERE f1 <@ polygon '(0,0),(0,100),(100,100),(50,
                ->  Index Scan using gpointind on point_tbl
                      Index Cond: (f1 <@ '((0,0),(0,100),(100,100),(50,50),(100,0),(0,0))'::polygon)
                      Filter: (f1 <@ '((0,0),(0,100),(100,100),(50,50),(100,0),(0,0))'::polygon)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM point_tbl WHERE f1 <@ polygon '(0,0),(0,100),(100,100),(50,50),(100,0),(0,0)';
@@ -590,7 +590,7 @@ SELECT count(*) FROM point_tbl WHERE f1 <@ circle '<(50,50),50>';
                ->  Index Scan using gpointind on point_tbl
                      Index Cond: (f1 <@ '<(50,50),50>'::circle)
                      Filter: (f1 <@ '<(50,50),50>'::circle)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM point_tbl WHERE f1 <@ circle '<(50,50),50>';
@@ -609,7 +609,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 << '(0.0, 0.0)';
                ->  Index Scan using gpointind on point_tbl
                      Index Cond: (f1 << '(0,0)'::point)
                      Filter: (f1 << '(0,0)'::point)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 << '(0.0, 0.0)';
@@ -628,7 +628,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 >> '(0.0, 0.0)';
                ->  Index Scan using gpointind on point_tbl
                      Index Cond: (f1 >> '(0,0)'::point)
                      Filter: (f1 >> '(0,0)'::point)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 >> '(0.0, 0.0)';
@@ -647,7 +647,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 <^ '(0.0, 0.0)';
                ->  Index Scan using gpointind on point_tbl
                      Index Cond: (f1 <^ '(0,0)'::point)
                      Filter: (f1 <^ '(0,0)'::point)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 <^ '(0.0, 0.0)';
@@ -666,7 +666,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
                ->  Index Scan using gpointind on point_tbl
                      Index Cond: (f1 >^ '(0,0)'::point)
                      Filter: (f1 >^ '(0,0)'::point)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
@@ -685,7 +685,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
                ->  Index Scan using gpointind on point_tbl
                      Index Cond: (f1 ~= '(-5,-12)'::point)
                      Filter: (f1 ~= '(-5,-12)'::point)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (7 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
@@ -768,7 +768,7 @@ SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0
                      ->  Index Scan using gpointind on point_tbl
                            Index Cond: (f1 <@ '(10,10),(-10,-10)'::box)
                            Filter: (f1 <@ '(10,10),(-10,-10)'::box)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (9 rows)
 
 SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
@@ -1335,7 +1335,7 @@ SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0
                      ->  Index Scan using gpointind on point_tbl
                            Index Cond: (f1 <@ '(10,10),(-10,-10)'::box)
                            Filter: (f1 <@ '(10,10),(-10,-10)'::box)
- Optimizer: PQO version 2.68.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
 (9 rows)
 
 SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
@@ -2993,7 +2993,7 @@ SELECT * FROM tenk1
    ->  Index Scan using tenk1_thous_tenthous on tenk1
          Index Cond: (thousand = 42)
          Filter: ((tenthous = 1) OR (tenthous = 3) OR (tenthous = 42))
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (5 rows)
 
 SELECT * FROM tenk1
@@ -3014,7 +3014,7 @@ SELECT count(*) FROM tenk1
                ->  Index Scan using tenk1_hundred on tenk1
                      Index Cond: (hundred = 42)
                      Filter: ((thousand = 42) OR (thousand = 99))
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (7 rows)
 
 SELECT count(*) FROM tenk1
@@ -3045,7 +3045,7 @@ EXPLAIN (COSTS OFF)
                ->  Index Scan using dupindexcols_i on dupindexcols
                      Index Cond: ((f1 >= 'WA'::text) AND (f1 <= 'ZZZ'::text) AND (id < 1000))
                      Filter: (f1 ~<~ 'YX'::text)
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
 (7 rows)
 
 SELECT count(*) FROM dupindexcols
@@ -3147,6 +3147,6 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on tenk1
          Filter: (((thousand = 1) AND (tenthous = 1001)) OR NULL::boolean)
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
 (4 rows)
 

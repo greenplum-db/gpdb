@@ -823,12 +823,12 @@ create view pg_partitions as
                       partition by pp.oid, cl.relname, pp.parlevel, cl3.relname
                       order by pr1.parisdefault, pr1.parruleord) 
                   end as partitionrank, 
-              pg_get_expr(pr1.parlistvalues, pr1.parchildrelid) as partitionlistvalues, 
-              pg_get_expr(pr1.parrangestart, pr1.parchildrelid) as partitionrangestart, 
+              pg_get_expr(pr1.parlistvalues, pr1.parchildrelid, false, true) as partitionlistvalues, 
+              pg_get_expr(pr1.parrangestart, pr1.parchildrelid, false, true) as partitionrangestart, 
               pr1.parrangestartincl as partitionstartinclusive, 
-              pg_get_expr(pr1.parrangeend, pr1.parchildrelid) as partitionrangeend, 
+              pg_get_expr(pr1.parrangeend, pr1.parchildrelid, false, true) as partitionrangeend, 
               pr1.parrangeendincl as partitionendinclusive, 
-              pg_get_expr(pr1.parrangeevery, pr1.parchildrelid) as partitioneveryclause, 
+              pg_get_expr(pr1.parrangeevery, pr1.parchildrelid, false, true) as partitioneveryclause, 
               min(pr1.parruleord) over(
                   partition by pp.oid, cl.relname, pp.parlevel, cl3.relname
                   order by pr1.parruleord) as partitionnodefault, 
@@ -923,12 +923,12 @@ p.parlevel as partitionlevel,
 pr1.parruleord as partitionposition,
 rank() over (partition by p.oid, cl.relname, p.parlevel 
 			 order by pr1.parruleord) as partitionrank,
-pg_get_expr(pr1.parlistvalues, p.parrelid) as partitionlistvalues,
-pg_get_expr(pr1.parrangestart, p.parrelid) as partitionrangestart,
+pg_get_expr(pr1.parlistvalues, p.parrelid, false, true) as partitionlistvalues,
+pg_get_expr(pr1.parrangestart, p.parrelid, false, true) as partitionrangestart,
 pr1.parrangestartincl as partitionstartinclusive,
-pg_get_expr(pr1.parrangeend, p.parrelid) as partitionrangeend,
+pg_get_expr(pr1.parrangeend, p.parrelid, false, true) as partitionrangeend,
 pr1.parrangeendincl as partitionendinclusive,
-pg_get_expr(pr1.parrangeevery, p.parrelid) as partitioneveryclause,
+pg_get_expr(pr1.parrangeevery, p.parrelid, false, true) as partitioneveryclause,
 
 min(pr1.parruleord) over (partition by p.oid, cl.relname, p.parlevel
 	order by pr1.parruleord) as partitionnodefault,

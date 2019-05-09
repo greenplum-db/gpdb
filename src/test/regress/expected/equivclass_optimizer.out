@@ -110,7 +110,7 @@ explain (costs off)
    ->  Index Scan using ec0_pkey on ec0
          Index Cond: (ff = 42::bigint)
          Filter: ((f1 = 42::bigint) AND (ff = f1))
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (5 rows)
 
 explain (costs off)
@@ -131,7 +131,7 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on ec1
          Filter: ((ff = f1) AND (f1 = '42'::int8alias1))
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (4 rows)
 
 explain (costs off)
@@ -141,7 +141,7 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on ec1
          Filter: ((ff = f1) AND (f1 = '42'::int8alias2))
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (4 rows)
 
 explain (costs off)
@@ -156,7 +156,7 @@ explain (costs off)
                ->  Seq Scan on ec2
          ->  Index Scan using ec1_pkey on ec1
                Index Cond: ((ff = ec2.x1) AND (ff = 42::bigint))
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (9 rows)
 
 explain (costs off)
@@ -186,7 +186,7 @@ explain (costs off)
                      Filter: (42::bigint = x1)
          ->  Index Scan using ec1_pkey on ec1
                Index Cond: (ff = ec2.x1)
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (9 rows)
 
 explain (costs off)
@@ -201,7 +201,7 @@ explain (costs off)
                      Filter: (x1 = '42'::int8alias1)
          ->  Index Scan using ec1_pkey on ec1
                Index Cond: (ff = ec2.x1)
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (9 rows)
 
 explain (costs off)
@@ -216,7 +216,7 @@ explain (costs off)
                      Filter: (x1 = '42'::int8alias2)
          ->  Index Scan using ec1_pkey on ec1
                Index Cond: (ff = ec2.x1)
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (9 rows)
 
 create index ec1_expr1 on ec1((ff + 1));
@@ -250,7 +250,7 @@ explain (costs off)
                                              ->  Seq Scan on ec1 ec1_1
                            ->  Result
                                  ->  Seq Scan on ec1 ec1_2
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (17 rows)
 
 explain (costs off)
@@ -281,7 +281,7 @@ explain (costs off)
                                              ->  Seq Scan on ec1 ec1_1
                            ->  Result
                                  ->  Seq Scan on ec1 ec1_2
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (18 rows)
 
 explain (costs off)
@@ -331,7 +331,7 @@ explain (costs off)
                                              ->  Seq Scan on ec1 ec1_5
                            ->  Result
                                  ->  Seq Scan on ec1 ec1_6
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (31 rows)
 
 -- let's try that as a mergejoin
@@ -384,7 +384,7 @@ explain (costs off)
                                              ->  Seq Scan on ec1 ec1_5
                            ->  Result
                                  ->  Seq Scan on ec1 ec1_6
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (31 rows)
 
 -- check partially indexed scan
@@ -418,7 +418,7 @@ explain (costs off)
                                              ->  Seq Scan on ec1 ec1_1
                            ->  Result
                                  ->  Seq Scan on ec1 ec1_2
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (17 rows)
 
 -- let's try that as a mergejoin
@@ -451,6 +451,6 @@ explain (costs off)
                                              ->  Seq Scan on ec1 ec1_1
                            ->  Result
                                  ->  Seq Scan on ec1 ec1_2
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (17 rows)
 

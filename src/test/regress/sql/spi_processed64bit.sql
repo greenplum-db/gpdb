@@ -1,7 +1,3 @@
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
-
 DROP TABLE IF EXISTS public.spi64bittest;
 -- use a sequence as primary key, so we can update the data later on
 CREATE TABLE public.spi64bittest (id BIGSERIAL PRIMARY KEY, data BIGINT);

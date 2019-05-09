@@ -165,6 +165,7 @@
 		</topicref>
 		<topicref href="SQL2008_support.xml"/>
 		<topicref href="env_var_ref.xml" navtitle="Greenplum Environment Variables" id="env_var_ref"/>
+		<topicref href="sql-keywords.xml" navtitle="Reserved Identifiers and SQL Keywords" id="sql_keywords"/>
 		<topicref href="system_catalogs/catalog_ref.xml#topic1">
 			<topicref href="system_catalogs/catalog_ref-tables.xml#topic1"/>
 			<topicref href="system_catalogs/catalog_ref-views.xml#topic1"/>

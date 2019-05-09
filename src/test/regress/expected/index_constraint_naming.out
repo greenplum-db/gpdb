@@ -174,7 +174,7 @@ ERROR:  relation "st_pk_pkey" already exists
 -- EXCLUSION CONSTRAINT
 -- EXCLUSION CONSTRAINT: GPDB does not support exclusion constraints
 CREATE TABLE st_x (a int, b int, EXCLUDE (a with =, b with =));
-ERROR:  GPDB does not support exclusion constraints.
+ERROR:  GPDB does not support exclusion constraints
 -- Should fail
 SELECT table_name,constraint_name,index_name,constraint_type FROM constraints_and_indices() WHERE (constraint_name::text=index_name::text AND constraint_type='x');
  table_name | constraint_name | index_name | constraint_type 

@@ -1,7 +1,6 @@
 -- @Description Ensures that an INSERT while VACUUM drop phase does not leave
 -- the segfile state inconsistent on master and the primary.
 --
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 select gp_inject_fault('all', 'reset', 1);
 
 -- Helper function

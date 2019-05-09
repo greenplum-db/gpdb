@@ -10,7 +10,6 @@ create unlogged table unlogged_appendonly_table_managers (
 ) distributed by (id);
 
 -- skip FTS probes to make the test deterministic.
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
 SELECT gp_request_fts_probe_scan();
 SELECT gp_request_fts_probe_scan();
