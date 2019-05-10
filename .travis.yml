@@ -57,7 +57,6 @@ install:
   - pip install --user --upgrade pip
   - pip install --user --pre psutil
   - pip install --user lockfile
-  - pip install --user paramiko
   - pip install --user setuptools
 
 env:
