@@ -711,12 +711,13 @@ def update_postgresql_conf(options, array):
     if master.getSegmentPort() == standby.getSegmentPort():
         # nothing to do
         return
-    cmd = gp.GpAddConfigScript('update config',
-                               standby.getSegmentDataDirectory(),
-                               'port',
-                               value=str(standby.getSegmentPort()),
-                               ctxt=gp.REMOTE,
-                               remoteHost=standby.getSegmentHostName())
+    cmd_name = "add port parameter on host %s" % standby.getSegmentHostName()
+    cmd = gp.GpConfigHelper(cmd_name,
+                            standby.getSegmentDataDirectory(),
+                            'port',
+                            value=str(standby.getSegmentPort()),
+                            ctxt=gp.REMOTE,
+                            remoteHost=standby.getSegmentHostName())
     cmd.run(validateAfter=True)
 
 #-------------------------------------------------------------------------

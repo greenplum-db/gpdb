@@ -1,6 +1,16 @@
 #!/usr/bin/env python
 #
 # Copyright (c) Greenplum Inc 2009. All Rights Reserved.
+#
+# gpconfig will guarantee that all segments have valid conf files if gpconfig runs successfully, but we do not handle
+# sequence races. To be specific, suppose there are two simultaneous callers of gpconfig, U1 and U2, that modify
+# the same guc, and that both U1 and U2 succeed. Also call the resulting conf files with those respective last conf
+# lines U1 and U2. You'll either see just U1, just U2, U2U1, or U1U2. In other words, the sequence of updates isn't
+# guaranteed and one might be lost. This is on a per-segment basis. It is possible that, on a per-segment basis,
+# some segments see U1, U2, U2U1 or U1U2. If a user runs gpconfig simultaneously for the same guc with two
+# different values, both might complete successfully yet different segments might have different gucs
+# set(but each will be one of U1, U2, U1U2, U2U1). This is because we start different processes, one per segment,
+# to rewrite the file, and we do not synchronize those.
 
 import os
 import sys
@@ -251,23 +261,16 @@ def _print_gucs(gucname, gucs, options):
 def _show_all_segment_values_always(options):
     return options.show == "port"
 
-
+# FIXME: add value to cmd_name.  We do not just do this due to encoding issues.
 def do_add_config_script(pool, hostname, segs, value, options):
-    directory_string = None
-
     for seg in segs:
-
-        if directory_string:
-            directory_string = directory_string + "\n" + seg.datadir
-        else:
-            directory_string = seg.datadir
-
         print_verbosely(options, hostname, seg.hostname, seg.datadir)
-
-    cmd = GpAddConfigScript(hostname, directory_string, options.entry, value=value, removeonly=options.remove,
-                            ctxt=REMOTE,
-                            remoteHost=hostname)
-    pool.addCommand(cmd)
+        cmd_name = "add %s parameter on host %s for seg %s" % (options.entry, hostname, seg.datadir)
+        cmd = GpConfigHelper(cmd_name, seg.datadir, options.entry, value=value,
+                             removeParameter=options.remove,
+                             ctxt=REMOTE,
+                             remoteHost=hostname)
+        pool.addCommand(cmd)
 
 
 def do_change(options):
@@ -325,24 +328,27 @@ def do_change(options):
         # do the master
         if options.mastervalue or options.remove:
             print_verbosely(options, gp_array.master.hostname, gp_array.master.hostname, gp_array.master.datadir)
-            cmd = GpAddConfigScript("master", gp_array.master.datadir, options.entry, value=options.mastervalue,
-                                    removeonly=options.remove, ctxt=REMOTE, remoteHost=gp_array.master.hostname)
+            cmd_name = "remove %s parameter on master host %s" % (options.entry, gp_array.master.hostname)
+            cmd = GpConfigHelper(cmd_name, gp_array.master.datadir, options.entry, value=options.mastervalue,
+                                 removeParameter=options.remove, ctxt=REMOTE, remoteHost=gp_array.master.hostname)
             pool.addCommand(cmd)
 
             # do the standby master
             if gp_array.standbyMaster:
                 print_verbosely(options, gp_array.standbyMaster.hostname, gp_array.standbyMaster.hostname,
                                 gp_array.standbyMaster.datadir)
-                cmd = GpAddConfigScript("standbymaster", gp_array.standbyMaster.datadir, options.entry,
-                                        value=options.mastervalue, removeonly=options.remove, ctxt=REMOTE,
-                                        remoteHost=gp_array.standbyMaster.hostname)
+                cmd_name = "remove %s parameter on standbymaster host %s" % (options.entry, gp_array.standbyMaster.hostname)
+                cmd = GpConfigHelper(cmd_name, gp_array.standbyMaster.datadir, options.entry,
+                                     value=options.mastervalue, removeParameter=options.remove, ctxt=REMOTE,
+                                     remoteHost=gp_array.standbyMaster.hostname)
                 pool.addCommand(cmd)
 
         pool.join()
         items = pool.getCompletedItems()
         for i in items:
             if not i.was_successful():
-                LOGGER.error('failed updating the postgresql.conf files on host: ' + i.remoteHost)
+                LOGGER.error('failed updating the postgresql.conf files on host: %s msg:%s' %
+                             (i.remoteHost, i.get_results().stderr))
                 failure = True
 
         pool.check_results()
@@ -453,27 +459,39 @@ def log_and_raise(err_str):
     raise Exception(err_str)
 
 
-def get_gucs_from_files(gucname):
+def get_gucs_from_files(guc):
     hosts, pool = _get_hosts()
-    commands = []
+    gucs_found = []
     for host in hosts:
         for seg in host.dbs:
-            command = GpReadConfig("readConfig", seg, gucname)
-            commands.append(command)
-            pool.addCommand(command)
+            cmd_name = "get %s parameter on host %s" % (guc, host.hostname)
+            pool.addCommand(
+                GpConfigHelper(cmd_name, seg.datadir, guc,
+                               segInfo=seg, getParameter=True,
+                               ctxt=REMOTE,
+                               remoteHost=host.hostname))
 
+    failedSegs = False
     pool.join()
 
-    gucs = []
     for cmd in pool.getCompletedItems():
-        value = cmd.get_guc_value()
-        gucs.append(
-            FileSegmentGuc([cmd.get_seg_content_id(), gucname, value, cmd.get_seg_dbid()]))
+        if not cmd.was_successful():
+            LOGGER.error('failed obtaining guc %s from the postgresql.conf files on host: %s msg: %s' %
+                         (guc, cmd.remoteHost, cmd.get_results().stderr))
+            failedSegs = True
+        else:
+            gucs_found.append(
+                FileSegmentGuc([cmd.segInfo.getSegmentContentId(), guc, cmd.get_value(),
+                                cmd.segInfo.getSegmentDbId()]))
 
     pool.check_results()
     pool.haltWork()
     pool.joinWorkers()
-    return gucs
+
+    if failedSegs:
+        LOGGER.error("finished with errors obtaining guc %s from at least one file" % guc)
+
+    return gucs_found
 
 
 def _get_hosts():
