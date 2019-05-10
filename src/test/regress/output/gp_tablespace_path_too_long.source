@@ -1,0 +1,7 @@
+CREATE TABLESPACE testspace_too_long_dir LOCATION '@testtablespace@_1111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000';
+WARNING:  tablespace location "/home/adamberlin/workspace/gpdb/src/test/regress/testtablespace_1111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000" is too long for TAR
+DETAIL:  The location is used to create a symlink target from pg_tblspc. Symlink targets are truncated to 100 characters when sending a TAR (e.g the BASE_BACKUP protocol response).
+DETAIL:  The location is used to create a symlink target from pg_tblspc. Symlink targets are truncated to 100 characters when sending a TAR (e.g the BASE_BACKUP protocol response).
+DETAIL:  The location is used to create a symlink target from pg_tblspc. Symlink targets are truncated to 100 characters when sending a TAR (e.g the BASE_BACKUP protocol response).
+DETAIL:  The location is used to create a symlink target from pg_tblspc. Symlink targets are truncated to 100 characters when sending a TAR (e.g the BASE_BACKUP protocol response).
+DROP TABLESPACE testspace_too_long_dir;

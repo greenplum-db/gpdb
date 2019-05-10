@@ -99,6 +99,10 @@
 #include "cdb/cdbutil.h"
 #include "miscadmin.h"
 
+
+#define MAX_TARABLE_SYMLINK_PATH_LENGTH 100
+
+
 /* GUC variables */
 char	   *default_tablespace = NULL;
 char	   *temp_tablespaces = NULL;
@@ -317,6 +321,11 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				 errmsg("tablespace location \"%s\" is too long",
 						location)));
+
+	if ((strlen(location) + 1 + get_dbid_string_length() + 1) > MAX_TARABLE_SYMLINK_PATH_LENGTH)
+		ereport(WARNING, (errmsg("tablespace location \"%s\" is too long for TAR", location),
+						  errdetail("The location is used to create a symlink target from pg_tblspc. Symlink targets are truncated to 100 characters when sending a TAR (e.g the BASE_BACKUP protocol response).")
+						  ));
 
 	/*
 	 * Disallow creation of tablespaces named "pg_xxx"; we reserve this

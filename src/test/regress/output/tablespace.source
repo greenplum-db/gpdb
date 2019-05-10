@@ -1,3 +1,7 @@
+-- start_matchignore
+-- m/WARNING:  tablespace symlink path is too long for TAR/
+-- m/DETAIL:  The symlinked path \".*\" will be truncated to 100 characters when sending a TAR to the utilities \(e.g. pg_basebackup\)/
+-- end_matchignore
 -- create a tablespace using WITH clause
 CREATE TABLESPACE testspacewith LOCATION '@testtablespace@' WITH (some_nonexistent_parameter = true); -- fail
 ERROR:  unrecognized parameter "some_nonexistent_parameter"
