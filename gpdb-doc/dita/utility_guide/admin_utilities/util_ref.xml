@@ -34,8 +34,6 @@
           <p>
             <xref href="gpcheckcat.xml#topic1"/>
           </p>
-          <p>gpchecknet (deprecated)</p>
-          <p>gpcheckos (deprecated)</p>
           <p>
             <xref href="gpcheckperf.xml#topic1" type="topic" format="dita"/>
           </p>
@@ -101,7 +99,6 @@
           <p>
             <xref href="gppkg.xml#topic1" type="topic" format="dita"/>
           </p>
-          <p>gprebuildsystem (deprecated)</p>
           <p>
             <xref href="gprecoverseg.xml#topic1" type="topic" format="dita"/>
           </p>
@@ -110,11 +107,9 @@
           </p>
           <p>
             <xref href="gprestore.xml" type="topic" format="dita"/></p>
-          <p>gpsizecalc (deprecated)</p>
           <p>
             <xref href="gpscp.xml#topic1" type="topic" format="dita"/>
           </p>
-          <p>gpskew (deprecated)</p>
           <p>
             <xref href="gpseginstall.xml#topic1" type="topic" format="dita"/>
           </p>
