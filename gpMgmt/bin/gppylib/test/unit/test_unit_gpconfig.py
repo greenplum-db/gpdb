@@ -83,7 +83,6 @@ class GpConfig(GpTestCase):
             patch('gpconfig.dbconn.execSQLForSingleton', side_effect=singleton_side_effect),
             patch('gpconfig.GpHostCache', return_value=self.host_cache),
             patch('gpconfig.GpArray.initFromCatalog', return_value=self.gparray),
-            patch('gpconfig.GpReadConfig', return_value=self.master_read_config),
             patch('gpconfig.WorkerPool', return_value=self.pool)
         ])
         sys.argv = ["gpconfig"]  # reset to relatively empty args list

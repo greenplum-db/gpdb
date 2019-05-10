@@ -389,13 +389,6 @@ class MakeDirectory(Command):
         mkdirCmd.run(validateAfter=True)
 
 
-# -------------inline perl replace------
-class InlinePerlReplace(Command):
-    def __init__(self, name, fromStr, toStr, file, ctxt=LOCAL, remoteHost=None):
-        cmdStr = "%s -pi.bak -e's/%s/%s/g' %s" % (findCmdInPath('perl'), fromStr, toStr, file)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-
 # ------------- remove a directory recursively ------------------
 class RemoveDirectory(Command):
     """
