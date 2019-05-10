@@ -38,6 +38,6 @@ yum -y install "${dependencies[@]}"
 # so we can call cmake
 ln -s /usr/bin/cmake{3,}
 
-pip install psutil lockfile paramiko setuptools
+pip install psutil lockfile setuptools
 
 chown -R vagrant:vagrant /usr/local

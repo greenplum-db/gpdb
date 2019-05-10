@@ -40,7 +40,6 @@ RUN apt-get update -y && \
     pkg-config \
     python-dev \
     python-lockfile \
-    python-paramiko \
     python-pip \
     python-psutil \
     python-setuptools \
