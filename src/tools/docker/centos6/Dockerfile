@@ -11,7 +11,7 @@ RUN yum makecache && \
 # install all software we need
 RUN yum makecache && \
     yum -y install python-pip && \
-    yum -y install python-devel python-paramiko python-psutil python-setuptools && \
+    yum -y install python-devel python-psutil python-setuptools && \
     yum -y install apr-devel bzip2-devel expat-devel libcurl-devel && \
     yum -y install libevent-devel libuuid-devel libxml2-devel libyaml-devel libzstd-devel && \
     yum -y install openssl-devel pam-devel readline-devel snappy-devel && \

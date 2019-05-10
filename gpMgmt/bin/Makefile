@@ -32,7 +32,7 @@ core: pygresql subprocess32
 	python gpconfig_modules/parse_guc_metadata.py $(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-install: core lockfile paramiko ecdsa pycrypto stream psutil
+install: core lockfile stream psutil
 else
 install: core stream
 endif
@@ -79,28 +79,6 @@ pygresql:
 	touch $(PYLIB_DIR)/__init__.py
 
 #
-# PARAMIKO
-#
-PARAMIKO_VERSION=1.18.4
-PARAMIKO_DIR=paramiko-$(PARAMIKO_VERSION)
-paramiko:
-	@echo "--- paramiko"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PARAMIKO_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/build/lib*/paramiko $(PYLIB_DIR)/
-
-#
-# ecdsa
-#
-ECDSA_VERSION=0.13
-ECDSA_DIR=ecdsa-$(ECDSA_VERSION)
-ecdsa:
-	@echo "--- ecdsa"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(ECDSA_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(ECDSA_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(ECDSA_DIR)/build/lib*/ecdsa $(PYLIB_DIR)/
-
-#
 # LOCKFILE
 #
 # note the awk commands are used to eliminate references to code in __init__.py
@@ -125,20 +103,6 @@ subprocess32:
 		  cd $(PYLIB_SRC)/subprocess32 && CC="$(CC)" python setup.py build; \
 		  cp -f $(PYLIB_SRC)/subprocess32/build/lib.*/* $(PYLIB_DIR)/;  \
 	  fi
-
-#
-# PYCRYPTO
-#
-PYCRYPTO_VERSION=2.0.1
-PYCRYPTO_DIR=pycrypto-$(PYCRYPTO_VERSION)
-
-pycrypto:
-	@echo "--- pycrypto"
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 )" ""
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYCRYPTO_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)/ && CC="$(CC)" python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)/build/lib.*/Crypto $(PYLIB_DIR)
-endif
 
 #
 # PSI
@@ -252,8 +216,6 @@ installcheck:
 
 clean distclean:
 	rm -rf $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)
-	rm -rf $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)
-	rm -rf $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(PYLINT_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)

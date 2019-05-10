@@ -58,7 +58,6 @@ dpkg-reconfigure locales -f noninteractive
 pip install setuptools --upgrade
 pip install cffi --upgrade
 pip install lockfile
-pip install paramiko --upgrade
 pip install --pre psutil
 pip install cryptography --upgrade
 
