@@ -88,9 +88,9 @@ sync_tools: opt_write_test
 
 ifeq "$(findstring aix,$(BLD_ARCH))" ""
 ifeq "$(findstring sles,$(BLD_ARCH))" ""
-	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/archive/v3.41.0.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/archive/v3.42.0.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
 else
-	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/releases/download/v3.41.0/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/releases/download/v3.42.0/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
 endif
 endif
 
