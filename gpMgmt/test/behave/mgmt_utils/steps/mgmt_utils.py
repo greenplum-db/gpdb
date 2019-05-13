@@ -2319,13 +2319,21 @@ def impl(context, table_name):
 def impl(context, num_of_segments):
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        query = """SELECT count(*) from gp_segment_configuration where -1 < content and status = 'u'"""
-        end_data_segments = dbconn.execSQLForSingleton(conn, query)
+        query = """SELECT dbid, content, role, preferred_role, mode, status, port, hostname, address, datadir from gp_segment_configuration;"""
+        rows = dbconn.execSQL(conn, query).fetchall()
+        end_data_segments = 0
+        for row in rows:
+            content = row[1]
+            status = row[5]
+            if content > -1 and status == 'u':
+                end_data_segments += 1
 
     if int(num_of_segments) == int(end_data_segments - context.start_data_segments):
         return
 
-    raise Exception("Incorrect amount of segments.\nprevious: %s\ncurrent: %s" % (context.start_data_segments, end_data_segments))
+    raise Exception("Incorrect amount of segments.\nprevious: %s\ncurrent:"
+            "%s\ndump of gp_segment_configuration: %s" %
+            (context.start_data_segments, end_data_segments, rows))
 
 @given('the cluster is setup for an expansion on hosts "{hostnames}"')
 def impl(context, hostnames):
