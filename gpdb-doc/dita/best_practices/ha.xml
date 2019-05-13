@@ -250,8 +250,8 @@
         case, the failed component must be replaced or recovered to restore full redundancy. Until
         the failed component is recovered, the active component lacks a standby, and the system may
         not be executing optimally. For these reasons, it is important to perform recovery
-        operations promptly. Constant system monitoring and automated fault notifications through
-        SNMP and email ensure that administrators are aware of failures that demand their attention. </p>
+        operations promptly. Constant system monitoring ensures that administrators are aware of
+        failures that demand their attention. </p>
       <p>The Greenplum Database server <codeph>ftsprobe</codeph> subprocess handles fault detection.
           <codeph>ftsprobe</codeph> connects to and scans all segments and database processes at
         intervals that you can configure with the <codeph>gp_fts_probe_interval</codeph>
