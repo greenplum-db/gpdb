@@ -1,8 +1,7 @@
 import pipes
-import shutil
 import tempfile
 
-from behave import given, when, then
+from behave import given, then
 from pygresql import pg
 
 from gppylib.db import dbconn
@@ -69,6 +68,33 @@ class Tablespace:
         if sorted(data) != sorted(self.initial_data):
             raise Exception("Tablespace data is not identically distributed. Expected:\n%r\n but found:\n%r" % (
                 sorted(self.initial_data), sorted(data)))
+
+    def verify_for_gpexpand(self, hostname=None, port=0):
+        """
+        For gpexpand, we need make sure:
+          1. data is the same after redistribution finished
+          2. the table's numsegments is enlarged to the new cluster size
+        """
+        url = dbconn.DbURL(hostname=hostname, port=port, dbname=self.dbname)
+        with dbconn.connect(url) as conn:
+            db = pg.DB(conn)
+            data = db.query("SELECT gp_segment_id, i FROM tbl").getresult()
+            tbl_numsegments = dbconn.execSQLForSingleton(conn,
+                                                         "SELECT numsegments FROM gp_distribution_policy "
+                                                         "WHERE localoid = 'tbl'::regclass::oid")
+            num_segments = dbconn.execSQLForSingleton(conn,
+                                                     "SELECT COUNT(DISTINCT(content)) - 1 FROM gp_segment_configuration")
+
+        if tbl_numsegments != num_segments:
+            raise Exception("After gpexpand the numsegments for tablespace table 'tbl' %d does not match "
+                            "the number of segments in the cluster %d." % (tbl_numsegments, num_segments))
+
+        initial_data = [i for _, i in self.initial_data]
+        data_without_segid = [i for _, i in data]
+        if sorted(data_without_segid) != sorted(initial_data):
+            raise Exception("Tablespace data is not identically distributed after running gp_expand. "
+                            "Expected pre-gpexpand data:\n%\n but found post-gpexpand data:\n%r" % (
+                                sorted(self.initial_data), sorted(data)))
 
 
 def _checkpoint_and_wait_for_replication_replay(db):
@@ -171,3 +197,9 @@ def impl(context):
 @then('the other tablespace is valid')
 def impl(context):
     context.tablespaces["myspace"].verify()
+
+
+@then('the tablespace is valid after gpexpand')
+def impl(context):
+    for _, tbs in context.tablespaces.items():
+        tbs.verify_for_gpexpand()

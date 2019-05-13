@@ -329,6 +329,12 @@ class Segment:
         """
         return checkNotNone("dataDirectory", self.datadir)
 
+    def getSegmentTableSpaceDirectory(self):
+        """
+        Return the pg_tblspc location for the segment.
+        """
+        return checkNotNone("tblspcDirectory",
+                            os.path.join(self.datadir, "pg_tblspc"))
 
     # --------------------------------------------------------------------
     # setters
