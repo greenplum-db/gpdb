@@ -1,3 +1,7 @@
+-- start_matchignore
+-- m/waiting for server to shut down.* done/
+-- m/waiting for server to start.* done/
+-- end_matchignore
 -- Given no superusers exist with a null rolvaliduntil value
 set allow_system_table_mods to dml;
 create table stored_superusers (role_name text, role_valid_until timestamp);
