@@ -62,7 +62,7 @@ Perform the following procedure to initialize PXF on each segment host in your G
     gpadmin@gpmaster$ PXF_CONF=/usr/local/greenplum-pxf $GPHOME/pxf/bin/pxf cluster init
     ```
 
-    The `init` command creates the PXF web application and initializes the internal PXF configuration. The `init` command also creates the `$PXF_CONF` user configuration directory if it does not exist, and populates the directory with user-customizable configuration templates.
+    The `init` command creates the PXF web application and initializes the internal PXF configuration. The `init` command also creates the `$PXF_CONF` user configuration directory if it does not exist, and populates the `conf` and `templates` directories with user-customizable configuration templates. If `$PXF_CONF` exists, PXF updates only the `templates` directory.
 
     **Note**: The PXF service runs only on the segment hosts. However,`pxf cluster init` also sets up the PXF user configuration directories on the Greenplum Database master and standby master hosts.
 

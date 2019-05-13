@@ -90,7 +90,7 @@ Use the following syntax to create a Greenplum Database external table that refe
 ``` sql
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<hbase-table-name>?PROFILE=HBase')
+LOCATION ('pxf://<hbase-table-name>?PROFILE=HBase[&SERVER=<server_name>]')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 ```
 
@@ -100,6 +100,7 @@ HBase connector-specific keywords and values used in the [CREATE EXTERNAL TABLE]
 |-------|-------------------------------------|
 | \<hbase&#8209;table&#8209;name\>    | The name of the HBase table. |
 | PROFILE    | The `PROFILE` keyword must specify `HBase`. |
+| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | FORMAT  | The `FORMAT` clause must specify `'CUSTOM' (FORMATTER='pxfwritable_import')`.   |
 
 

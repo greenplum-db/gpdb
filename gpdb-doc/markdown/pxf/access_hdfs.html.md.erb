@@ -118,7 +118,7 @@ The PXF Hadoop connectors expose the following profiles to read, and in many cas
 | [Hive](hive_pxf.html) | stored as Parquet | Hive | n/a |
 | [HBase](hbase_pxf.html) | Any | HBase | n/a |
 
-You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references a Hadoop file, directory, or table. For example, the following command creates an external table that specifies the profile named `hdfs:text`:
+You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references a Hadoop file, directory, or table. For example, the following command creates an external table that uses the default server and specifies the profile named `hdfs:text`:
 
 ``` sql
 CREATE EXTERNAL TABLE pxf_hdfs_text(location text, month text, num_orders int, total_sales float8)

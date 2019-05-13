@@ -1,0 +1,116 @@
+---
+title: About PXF Server Configuration
+---
+
+This topic provides an overview of PXF server configuration. To configure a server, refer to the topic specific to the connector that you want to configure.
+
+You read from or write data to an external data store via a PXF connector. To access an external data store, you must provide the server location. You may also be required to provide client access credentials and other external data store-specific properties. PXF simplifies configuring access to external data stores by:
+
+- Supporting file-based configuration
+- Providing connector-specific template configuration files
+
+A PXF *Server* definition is simply a named configuration that provides access to a specific external data store as a specific user. A PXF server name is the name of a directory residing in `$PXF_CONF/servers/`. The information that you provide in a server configuration is connector-specific. PXF provides a server template file for each connector; this template identifies the minimum set of properties that you must configure to use the connector.
+
+You configure a server definition for each external data store that you will permit Greenplum Database users to access. For example, if you require access to two Hadoop clusters, you will create a PXF Hadoop server configuration for each cluster. If you require access to an Oracle and a MySQL database, you will create a PXF JDBC server configuration for each database/user combination.
+
+After you configure a PXF server, you publish the server name to Greenplum Database users as appropriate. The user need only provide the server name when they create an external table to access that external data store. PXF obtains the external data source location and access credentials from the server configuration directory identified by the server name.
+
+
+## <a id="cfgproc"></a>Server Configuration Procedure
+
+When you configure a PXF connector, you add a named PXF server configuration for the connector. Among the tasks that you perform, you may:
+
+1. Determine if you are configuring the `default` PXF server, or choose a new name for the server configuration.
+2. Create the directory `$PXF_CONF/servers/<server_name>`.
+3. Copy template or other configuration files to the new server directory.
+4. Fill in appropriate values for the properties in the template file.
+5. Add additional properties and values if required for your environment.
+6. Add other configuration information supported by the connector.
+7. Synchronize the server configuration to the Greenplum Database cluster.
+8. Publish the PXF server names to your Greenplum Database end users as appropriate.
+
+
+## <a id="default"></a>About The Default Server
+
+PXF defines a special server named `default`. When you initialize PXF, it automatically creates a `$PXF_CONF/servers/default/` directory. This directory, initially empty, identifies the default PXF server configuration. You can configure/assign the default PXF server to any external data source. For example, you may choose to assign the PXF default server to a Hadoop cluster, or to a MySQL database that you frequently access as a specific user.
+
+**Note**: You *must* configure a Hadoop server as the PXF `default` server when your Hadoop cluster utilizes Kerberos authentication.
+
+PXF automatically uses the `default` server configuration in the absence of a `CREATE EXTERNAL TABLE` command `LOCATION` clause `SERVER=<server_name>` setting.
+
+
+## <a id="templates"></a>Server Template Files
+
+PXF provides a template configuration file for each connector.  These server template configuration files, located in the `$PXF_CONF/templates/` directory, identify the minimum set of properties that you must configure to use the connector.
+
+```
+gpadmin@gpmaster$ ls $PXF_CONF/templates
+adl-site.xml   hbase-site.xml  jdbc-site.xml    s3-site.xml
+core-site.xml  hdfs-site.xml   mapred-site.xml  wasbs-site.xml
+gs-site.xml    hive-site.xml   minio-site.xml   yarn-site.xml
+```
+
+For example, the contents of the `s3-site.xml` template file follow:
+
+``` pre
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <property>
+        <name>fs.s3a.access.key</name>
+        <value>YOUR_AWS_ACCESS_KEY_ID</value>
+    </property>
+    <property>
+        <name>fs.s3a.secret.key</name>
+        <value>YOUR_AWS_SECRET_ACCESS_KEY</value>
+    </property>
+    <property>
+        <name>fs.s3a.fast.upload</name>
+        <value>true</value>
+    </property>
+</configuration>
+```
+
+<div class="note">You specify credentials to PXF in clear text in configuration files.</div>
+
+You may copy the template files for object store connectors to a new server definition and update. The template files for Hadoop connectors are a guide; when you configure access to a Hadoop cluster, you will copy several `*-site.xml` files from the Hadoop cluster to your PXF Hadoop server configuration.
+
+
+## <a id="using"></a>Using a Server Configuration
+
+To access an external data store, the Greenplum Database user specifies the server name in the `CREATE EXTERNAL TABLE` command `LOCATION` clause `SERVER=<server_name>` option. The `<server_name>` that the user provides identifies the server configuration directory from which PXF obtains the location and access credentials to the external data store.
+
+For example, the following command accesses an S3 object store using the server configuration defined in `$PXF_CONF/servers/s3srvcfg`:
+
+<pre>
+CREATE EXTERNAL TABLE pxf_ext_tbl(name text, orders int)
+  LOCATION ('pxf://BUCKET/dir/file.txt?PROFILE=s3:text&<b>SERVER=s3srvcfg</b>')
+FORMAT 'TEXT' (delimiter=E',');
+</pre>
+
+PXF automatically uses the `default` server configuration when no `SERVER=<server_name>` setting is provided.
+
+For example, if the `default` server configuration identifies a Hadoop cluster, the following example command references the HDFS file located at `/path/to/file.txt`:
+
+<pre>
+CREATE EXTERNAL TABLE pxf_ext_hdfs(location text, miles int)
+  LOCATION ('pxf://path/to/file.txt?PROFILE=hdfs:text')
+FORMAT 'TEXT' (delimiter=E',');
+</pre>
+
+<div class="note info">A Greenplum Database user who queries or writes to an external table accesses the external data store with the credentials configured for the server associated with the external table.</div>
+
+
+## <a id="srv-cfg-update"></a>Adding or Updating Server Configurations
+
+If you add new, or update existing, PXF server configurations on the Greenplum Database master host, you must re-sync the PXF configuration to the Greenplum Database cluster:
+
+``` shell
+gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
+```
+
+## <a id="override"></a>Overriding the Server Configuration
+
+Some PXF connectors (S3, JDBC) allow you to override a server configuration by directly specifying certain properties via custom options in the CREATE EXTERNAL TABLE command LOCATION clause. Refer to [Overriding the S3 Server Configuration](access_objstore.html#s3_override) and [Overriding the JDBC Server Configuration](jdbc_cfg.html#override) for additional information.
+
+<div class="note warning">When you override a server configuration, the properties and their values are visible as part of the external table defininition. Do not use this method to pass credentials in a production environment.</div>
+

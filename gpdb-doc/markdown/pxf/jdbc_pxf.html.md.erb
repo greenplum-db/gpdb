@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Some of your data may already reside in an external SQL database. PXF provides access to this data via the PXF JDBC connector. The JDBC connector is a JDBC client. It can read data from and write data to SQL databases including MySQL, ORACLE, PostgreSQL, Apache Ignite, and Hive.
+Some of your data may already reside in an external SQL database. PXF provides access to this data via the PXF JDBC connector. The JDBC connector is a JDBC client. It can read data from and write data to SQL databases including MySQL, ORACLE, PostgreSQL, and Apache Ignite.
 
 This section describes how to use the PXF JDBC connector to access data in an external SQL database, including how to create and query or insert data into a PXF external table that references a table in an external database.
 
@@ -63,7 +63,7 @@ Use the following syntax to create a Greenplum Database external table that refe
 <pre>
 CREATE [READABLE | WRITABLE] EXTERNAL TABLE &lt;table_name>
     ( &lt;column_name> &lt;data_type> [, ...] | LIKE &lt;other_table> )
-LOCATION ('pxf://&lt;external-table-name>?<b>PROFILE=Jdbc[&SERVER=&lt;servername>]</b>[&&lt;custom-option>=&lt;value>[...]]')
+LOCATION ('pxf://&lt;external-table-name>?<b>PROFILE=Jdbc[&SERVER=&lt;server_name>]</b>[&&lt;custom-option>=&lt;value>[...]]')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
 </pre>
 
@@ -73,7 +73,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 |-------|-------------------------------------|
 | \<external&#8209;table&#8209;name\>    | The full name of the external table. Depends on the external SQL database, may include a schema name and a table name. |
 | PROFILE    | The `PROFILE` keyword value must specify `Jdbc`. |
-| SERVER=\<servername\>   | The named server configuration that PXF uses to access the external SQL database. |
+| SERVER=\<server_name\>   | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | \<custom&#8209;option\>=\<value\>  | \<custom-option\> is profile-specific. `Jdbc` profile-specific options are discussed in the next section.|
 | FORMAT 'CUSTOM' | The JDBC `CUSTOM` `FORMAT` supports the built-in `'pxfwritable_import'` `FORMATTER` function for read operations and the built-in `'pxfwritable_export'` function for write operations. |
 

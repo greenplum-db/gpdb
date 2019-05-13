@@ -178,7 +178,7 @@ Use the `hdfs:json` profile to read JSON-format files from HDFS. The following s
 ``` sql
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<path-to-hdfs-file>?PROFILE=hdfs:json[&<custom-option>=<value>[...]]')
+LOCATION ('pxf://<path-to-hdfs-file>?PROFILE=hdfs:json[&SERVER=<server_name>][&<custom-option>=<value>[...]]')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 ```
 
@@ -188,6 +188,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 |-------|-------------------------------------|
 | \<path&#8209;to&#8209;hdfs&#8209;file\>    | The absolute path to the directory or file in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:json`. |
+| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | \<custom&#8209;option\>  | \<custom-option\>s are discussed below.|
 | FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `hdfs:json` profile. The `CUSTOM` `FORMAT` requires that you specify `(FORMATTER='pxfwritable_import')`. |
 
@@ -201,7 +202,7 @@ PXF supports single- and multi- line JSON records. When you want to read multi-l
 
 ## <a id="jsonexample1"></a>Example: Reading a JSON File with Single Line Records
 
-Use the following [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) SQL command to create a readable external table that references the single-line-per-record JSON data file.
+Use the following [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) SQL command to create a readable external table that references the single-line-per-record JSON data file and uses the PXF default server.
 
 ``` sql 
 CREATE EXTERNAL TABLE singleline_json_tbl(
