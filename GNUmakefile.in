@@ -24,6 +24,7 @@ all:
 	$(MAKE) -C contrib/pg_upgrade_support all
 	$(MAKE) -C contrib/pg_upgrade all
 	$(MAKE) -C contrib/pg_xlogdump all
+	$(MAKE) -C contrib/pxf_fdw all
 	$(MAKE) -C contrib/hstore all
 	$(MAKE) -C contrib/pgcrypto all
 ifeq ($(with_openssl), yes)
@@ -63,6 +64,7 @@ install:
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
 	$(MAKE) -C contrib/pg_xlogdump $@
+	$(MAKE) -C contrib/pxf_fdw $@
 	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
 ifeq ($(with_openssl), yes)

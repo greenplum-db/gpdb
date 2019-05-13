@@ -36,6 +36,7 @@ SUBDIRS = \
 		pgstattuple	\
 		pg_xlogdump	\
 		postgres_fdw	\
+		pxf_fdw		\
 		seg		\
 		spi		\
 		tcn		\
