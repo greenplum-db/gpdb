@@ -1886,7 +1886,7 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
  * Note: it's OK to scribble on the pids array, but not on the names array
  */
 static void
-wait_for_tests(PID_TYPE *pids, int *statuses, char **names, struct timeval *end_times, int num_tests)
+wait_for_tests(PID_TYPE *pids, int *statuses, char **names, int num_tests)
 {
 	int			tests_left;
 	int			i;
@@ -1941,8 +1941,6 @@ wait_for_tests(PID_TYPE *pids, int *statuses, char **names, struct timeval *end_
 				statuses[i] = (int) exit_status;
 				if (names)
 					status(" %s", names[i]);
-				if (end_times)
-					gettimeofday(&end_times[i], NULL);
 				tests_left--;
 				break;
 			}
@@ -1996,7 +1994,6 @@ run_schedule(const char *schedule, test_function tfunc)
 	_stringlist *tags[MAX_PARALLEL_TESTS];
 	PID_TYPE	pids[MAX_PARALLEL_TESTS];
 	int			statuses[MAX_PARALLEL_TESTS];
-	struct timeval end_times[MAX_PARALLEL_TESTS];
 	_stringlist *ignorelist = NULL;
 	char		scbuf[1024];
 	FILE	   *scf;
@@ -2005,7 +2002,6 @@ run_schedule(const char *schedule, test_function tfunc)
 	memset(resultfiles, 0, sizeof(_stringlist *) * MAX_PARALLEL_TESTS);
 	memset(expectfiles, 0, sizeof(_stringlist *) * MAX_PARALLEL_TESTS);
 	memset(tags, 0, sizeof(_stringlist *) * MAX_PARALLEL_TESTS);
-	memset(end_times, 0, sizeof(struct timeval) * MAX_PARALLEL_TESTS);
 
 	scf = fopen(schedule, "r");
 	if (!scf)
@@ -2022,7 +2018,6 @@ run_schedule(const char *schedule, test_function tfunc)
 		int			num_tests;
 		bool		inword;
 		int			i;
-		struct timeval start_time;
 
 		line_num++;
 
@@ -2110,12 +2105,11 @@ run_schedule(const char *schedule, test_function tfunc)
 			exit(2);
 		}
 
-		gettimeofday(&start_time, NULL);
 		if (num_tests == 1)
 		{
 			status(_("test %-24s ... "), tests[0]);
 			pids[0] = (tfunc) (tests[0], &resultfiles[0], &expectfiles[0], &tags[0]);
-			wait_for_tests(pids, statuses, NULL, end_times, 1);
+			wait_for_tests(pids, statuses, NULL, 1);
 			/* status line is finished below */
 		}
 		else if (max_connections > 0 && max_connections < num_tests)
@@ -2129,13 +2123,13 @@ run_schedule(const char *schedule, test_function tfunc)
 				if (i - oldest >= max_connections)
 				{
 					wait_for_tests(pids + oldest, statuses + oldest,
-								   tests + oldest, end_times + oldest, i - oldest);
+								   tests + oldest, i - oldest);
 					oldest = i;
 				}
 				pids[i] = (tfunc) (tests[i], &resultfiles[i], &expectfiles[i], &tags[i]);
 			}
 			wait_for_tests(pids + oldest, statuses + oldest,
-						   tests + oldest, end_times + oldest, i - oldest);
+						   tests + oldest, i - oldest);
 			status_end();
 		}
 		else
@@ -2145,7 +2139,7 @@ run_schedule(const char *schedule, test_function tfunc)
 			{
 				pids[i] = (tfunc) (tests[i], &resultfiles[i], &expectfiles[i], &tags[i]);
 			}
-			wait_for_tests(pids, statuses, tests, end_times, num_tests);
+			wait_for_tests(pids, statuses, tests, num_tests);
 			status_end();
 		}
 
@@ -2156,15 +2150,10 @@ run_schedule(const char *schedule, test_function tfunc)
 					   *el,
 					   *tl;
 			bool		differ = false;
-			double		diff_secs = 0, diff_elapse = 0;
-			struct timeval diff_start_time, diff_end_time;
 
 			if (num_tests > 1)
 				status(_("     %-24s ... "), tests[i]);
 
-			diff_secs = end_times[i].tv_usec - start_time.tv_usec;
-			diff_secs /= 1000000;
-			diff_secs += end_times[i].tv_sec - start_time.tv_sec;
 			/*
 			 * Advance over all three lists simultaneously.
 			 *
@@ -2173,7 +2162,6 @@ run_schedule(const char *schedule, test_function tfunc)
 			 * length as the other two lists.
 			 */
 
-			gettimeofday(&diff_start_time, NULL);
 			for (rl = resultfiles[i], el = expectfiles[i], tl = tags[i];
 				 rl != NULL;	/* rl and el have the same length */
 				 rl = rl->next, el = el->next,
@@ -2188,11 +2176,6 @@ run_schedule(const char *schedule, test_function tfunc)
 				}
 				differ |= newdiff;
 			}
-			gettimeofday(&diff_end_time, NULL);
-
-			diff_elapse = diff_end_time.tv_usec - diff_start_time.tv_usec;
-			diff_elapse /= 1000000;
-			diff_elapse += diff_end_time.tv_sec - diff_start_time.tv_sec;
 
 			if (differ)
 			{
@@ -2215,14 +2198,12 @@ run_schedule(const char *schedule, test_function tfunc)
 				else
 				{
 					status(_("FAILED"));
-    				status(_(" (%.2f sec)  (diff:%.2f sec)"), diff_secs, diff_elapse);
 					fail_count++;
 				}
 			}
 			else
 			{
 				status(_("ok"));
-				status(_(" (%.2f sec)  (diff:%.2f sec)"), diff_secs, diff_elapse);
 				success_count++;
 			}
 
@@ -2256,7 +2237,7 @@ run_single_test(const char *test, test_function tfunc)
 
 	status(_("test %-24s ... "), test);
 	pid = (tfunc) (test, &resultfiles, &expectfiles, &tags);
-	wait_for_tests(&pid, &exit_status, NULL, NULL, 1);
+	wait_for_tests(&pid, &exit_status, NULL, 1);
 
 	/*
 	 * Advance over all three lists simultaneously.
