@@ -255,7 +255,7 @@ def main():
 
     inputfile = args.log_file
     basefile = args.baseLog
-    makeDiffs = (args.diffDir != None)
+    makeDiffs = (args.diffDir is not None)
     diffDir = ""
     diffThreshold = -100
     diffLevel = 4
@@ -269,15 +269,15 @@ def main():
         except:
             print "Unable to create diff directory %s" % diffDir
             exit(1)
-        if args.diffThreshold != None:
+        if args.diffThreshold is not None:
             diffThreshold = args.diffThreshold
-            if args.diffLevel == None:
+            if args.diffLevel is None:
                 # if only diffThreshold is specified, then default diffLevel to COST_CHANGES
                 args.diffLevel = COST_CHANGES
-        if args.diffLevel != None:
+        if args.diffLevel is not None:
             diffLevel = args.diffLevel
     else:
-        if (args.diffThreshold != None or args.diffLevel != None):
+        if (args.diffThreshold is not None or args.diffLevel is not None):
             print "Please specify the --diffDir option with a directory name to request diff files\n"
             exit(1)
 
