@@ -121,6 +121,7 @@ static _stringlist *extra_install = NULL;
 static char *initfile = NULL;
 static char *aodir = NULL;
 static char *config_auth_datadir = NULL;
+static bool tap = false;
 static bool  ignore_plans = false;
 
 /* internal variables */
@@ -143,6 +144,7 @@ static bool postmaster_running = false;
 static int	success_count = 0;
 static int	fail_count = 0;
 static int	fail_ignore_count = 0;
+#define TEST_COUNT (fail_count + fail_ignore_count + success_count)
 
 static bool directory_exists(const char *dir);
 static void make_directory(const char *dir);
@@ -160,11 +162,15 @@ header(const char *fmt,...)
 /* This extension allows gcc to check the format string for consistency with
    the supplied arguments. */
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
-static void
-status(const char *fmt,...)
-/* This extension allows gcc to check the format string for consistency with
-   the supplied arguments. */
-__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
+static void status_internal(bool comment, const char *fmt,...) pg_attribute_printf(2, 3);
+static void status_ok(const char *testname);
+static void status_ignored(const char *testname);
+static void status_failed(const char *testname);
+static void status_start(bool single, const char *testname);
+static void status_end(void);
+#define status(...) do { status_internal(false, __VA_ARGS__); } while(0)
+#define status_comment(...) do { (status_internal(true, __VA_ARGS__)); } while(0)
+
 static void
 psql_command(const char *database, const char *query,...)
 /* This extension allows gcc to check the format string for consistency with
@@ -274,19 +280,74 @@ header(const char *fmt,...)
 	vsnprintf(tmp, sizeof(tmp), fmt, ap);
 	va_end(ap);
 
-	fprintf(stdout, "============== %-38s ==============\n", tmp);
+	if (tap)
+		fprintf(stdout, "# %s\n", tmp);
+	else
+		fprintf(stdout, "============== %-38s ==============\n", tmp);
 	fflush(stdout);
+}
+
+static void
+footer(void)
+{
+	if (tap)
+	{
+		status("1..%i\n", TEST_COUNT);
+		status_end();
+	}
+}
+
+static void
+status_ok(const char *testname)
+{
+	if (tap)
+		status("ok %i - %s", TEST_COUNT, testname);
+	else
+		status(_("ok"));
+}
+
+static void
+status_ignored(const char *testname)
+{
+	if (tap)
+		status("ok %i - %s # SKIP (ignored)", TEST_COUNT, testname);
+	else
+		status(_("failed (ignored)"));
+}
+
+static void
+status_failed(const char *testname)
+{
+	if (tap)
+		status("not ok %i - %s", TEST_COUNT, testname);
+	else
+		status(_("FAILED"));
+}
+
+static void
+status_start(bool single, const char *testname)
+{
+	/* TAP only outputs after the test has finished */
+	if (tap)
+		return;
+
+	if (single)
+		status(_("test %-24s ... "), testname);
+	else
+		status(_("     %-24s ... "), testname);
 }
 
 /*
  * Print "doing something ..." --- supplied text should not end with newline
  */
 static void
-status(const char *fmt,...)
+status_internal(bool comment, const char *fmt,...)
 {
 	va_list		ap;
 
 	va_start(ap, fmt);
+	if (comment && tap)
+		fprintf(stdout, "# ");
 	vfprintf(stdout, fmt, ap);
 	fflush(stdout);
 	va_end(ap);
@@ -294,6 +355,8 @@ status(const char *fmt,...)
 	if (logfile)
 	{
 		va_start(ap, fmt);
+		if (comment && tap)
+			fprintf(logfile, "# ");
 		vfprintf(logfile, fmt, ap);
 		va_end(ap);
 	}
@@ -2283,7 +2346,7 @@ run_schedule(const char *schedule, test_function tfunc)
 		gettimeofday(&start_time, NULL);
 		if (num_tests == 1)
 		{
-			status(_("test %-24s ... "), tests[0]);
+			status_start(true, tests[0]);
 			pids[0] = (tfunc) (tests[0], &resultfiles[0], &expectfiles[0], &tags[0]);
 			wait_for_tests(pids, statuses, NULL, end_times, 1);
 			/* status line is finished below */
@@ -2292,8 +2355,9 @@ run_schedule(const char *schedule, test_function tfunc)
 		{
 			int			oldest = 0;
 
-			status(_("parallel group (%d tests, in groups of %d): "),
-				   num_tests, max_connections);
+			status_comment(_("parallel group (%d tests, in groups of %d): "),
+						   num_tests, max_connections);
+
 			for (i = 0; i < num_tests; i++)
 			{
 				if (i - oldest >= max_connections)
@@ -2310,7 +2374,8 @@ run_schedule(const char *schedule, test_function tfunc)
 		}
 		else
 		{
-			status(_("parallel group (%d tests): "), num_tests);
+			status_comment(_("parallel group (%d tests): "), num_tests);
+
 			for (i = 0; i < num_tests; i++)
 			{
 				pids[i] = (tfunc) (tests[i], &resultfiles[i], &expectfiles[i], &tags[i]);
@@ -2330,7 +2395,7 @@ run_schedule(const char *schedule, test_function tfunc)
 			struct timeval diff_start_time, diff_end_time;
 
 			if (num_tests > 1)
-				status(_("     %-24s ... "), tests[i]);
+				status_start(false, tests[i]);
 
 			diff_secs = end_times[i].tv_usec - start_time.tv_usec;
 			diff_secs /= 1000000;
@@ -2379,26 +2444,25 @@ run_schedule(const char *schedule, test_function tfunc)
 				}
 				if (ignore)
 				{
-					status(_("failed (ignored)"));
 					fail_ignore_count++;
+					status_ignored(tests[i]);
 				}
 				else
 				{
-					status(_("FAILED"));
-    				status(_(" (%.2f sec)  (diff:%.2f sec)"), diff_secs, diff_elapse);
 					fail_count++;
+					status_failed(tests[i]);
 				}
 			}
 			else
 			{
-				status(_("ok"));
-				status(_(" (%.2f sec)  (diff:%.2f sec)"), diff_secs, diff_elapse);
 				success_count++;
+				status_ok(tests[i]);
 			}
 
 			if (statuses[i] != 0)
 				log_child_failure(statuses[i]);
 
+			status_internal(false, _(" (%.2f sec)  (diff:%.2f sec)"), diff_secs, diff_elapse);
 			status_end();
 		}
 	}
@@ -2424,7 +2488,7 @@ run_single_test(const char *test, test_function tfunc)
 			   *tl;
 	bool		differ = false;
 
-	status(_("test %-24s ... "), test);
+	status_start(true, test);
 	pid = (tfunc) (test, &resultfiles, &expectfiles, &tags);
 	wait_for_tests(&pid, &exit_status, NULL, NULL, 1);
 
@@ -2452,13 +2516,13 @@ run_single_test(const char *test, test_function tfunc)
 
 	if (differ)
 	{
-		status(_("FAILED"));
 		fail_count++;
+		status_failed(test);
 	}
 	else
 	{
-		status(_("ok"));
 		success_count++;
+		status_ok(test);
 	}
 
 	if (exit_status != 0)
@@ -2741,6 +2805,7 @@ help(void)
 	printf(_("  --prehook=NAME            pre-hook name (default \"\")\n"));
 	printf(_("  --schedule=FILE           use test ordering schedule from FILE\n"));
 	printf(_("                            (can be used multiple times to concatenate)\n"));
+	printf(_("  --tap                     use TAP format for output\n"));
 	printf(_("  --temp-install=DIR        create a temporary installation in DIR\n"));
 	printf(_("  --use-existing            use an existing installation\n"));
 	/* Please put GPDB speicifc options at the end. */
@@ -2805,6 +2870,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"ignore-plans", no_argument, NULL, 28},
 		{"prehook", required_argument, NULL, 29},
 		{"print-failure-diffs", no_argument, NULL, 30},
+		{"tap", no_argument, NULL, 31},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2939,6 +3005,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				break;
 			case 30:
 				print_failure_diffs_is_enabled = true;
+				break;
+			case 31:
+				tap = true;
 				break;
 			default:
 				/* getopt_long already emitted a complaint */
@@ -3269,8 +3338,8 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 #else
 #define ULONGPID(x) (unsigned long) (x)
 #endif
-		printf(_("running on port %d with PID %lu\n"),
-			   port, ULONGPID(postmaster_pid));
+		status_comment(_("running on port %d with PID %lu\n"),
+					   port, ULONGPID(postmaster_pid));
 	}
 	else
 	{
@@ -3377,30 +3446,43 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				 success_count + fail_count + fail_ignore_count,
 				 fail_ignore_count);
 
-	putchar('\n');
-	for (i = strlen(buf); i > 0; i--)
-		putchar('=');
-	printf("\n%s\n", buf);
-	for (i = strlen(buf); i > 0; i--)
-		putchar('=');
-	putchar('\n');
-	putchar('\n');
+	if (tap)
+		printf("# %s\n", buf);
+	else
+	{
+		putchar('\n');
+		for (i = strlen(buf); i > 0; i--)
+			putchar('=');
+		printf("\n%s\n", buf);
+		for (i = strlen(buf); i > 0; i--)
+			putchar('=');
+		putchar('\n');
+		putchar('\n');
+	}
 
 	if (file_size(difffilename) > 0)
 	{
 		if (print_failure_diffs_is_enabled)
 			print_contents_of_file(difffilename);
 
-		printf(_("The differences that caused some tests to fail can be viewed in the\n"
-				 "file \"%s\".  A copy of the test summary that you see\n"
-				 "above is saved in the file \"%s\".\n\n"),
-			   difffilename, logfilename);
+		if (tap)
+			printf(_("# The differences that caused some tests to fail can be viewed in the "
+					 "file \"%s\".  A copy of the test summary that you see "
+					 "above is saved in the file \"%s\".\n"),
+				   difffilename, logfilename);
+		else
+			printf(_("The differences that caused some tests to fail can be viewed in the\n"
+					 "file \"%s\".  A copy of the test summary that you see\n"
+					 "above is saved in the file \"%s\".\n\n"),
+				   difffilename, logfilename);
 	}
 	else
 	{
 		unlink(difffilename);
 		unlink(logfilename);
 	}
+
+	footer();
 
 	if (fail_count != 0)
 		exit(1);
