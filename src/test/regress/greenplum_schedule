@@ -23,7 +23,6 @@ test: bitmap_index gp_dump_query_oids analyze gp_owner_permission incremental_an
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
 # dispatch should always run seperately from other cases.
 test: dispatch
-test: distributed_transaction_recovery_after_restart
 
 # enable query metrics cluster GUC
 test: instr_in_shmem_setup
@@ -210,6 +209,7 @@ test: workfile_mgr_test
 test: session_reset
 
 test: psql_gp_commands pg_resetxlog
+test: distributed_transaction_recovery_after_restart
 
 # Check for shmem leak for instrumentation slots
 test: instr_in_shmem_verify
