@@ -13,7 +13,7 @@ A PXF *Server* definition is simply a named configuration that provides access t
 
 You configure a server definition for each external data store that you will permit Greenplum Database users to access. For example, if you require access to two Hadoop clusters, you will create a PXF Hadoop server configuration for each cluster. If you require access to an Oracle and a MySQL database, you will create a PXF JDBC server configuration for each database/user combination.
 
-After you configure a PXF server, you publish the server name to Greenplum Database users as appropriate. The user need only provide the server name when they create an external table to access that external data store. PXF obtains the external data source location and access credentials from the server configuration directory identified by the server name.
+After you configure a PXF server, you publish the server name to Greenplum Database users as appropriate. A user only needs to provide the server name when they create an external table that accesses the external data store. PXF obtains the external data source location and access credentials from the server configuration directory identified by the server name.
 
 
 ## <a id="cfgproc"></a>Server Configuration Procedure
@@ -32,11 +32,11 @@ When you configure a PXF connector, you add a named PXF server configuration for
 
 ## <a id="default"></a>About The Default Server
 
-PXF defines a special server named `default`. When you initialize PXF, it automatically creates a `$PXF_CONF/servers/default/` directory. This directory, initially empty, identifies the default PXF server configuration. You can configure/assign the default PXF server to any external data source. For example, you may choose to assign the PXF default server to a Hadoop cluster, or to a MySQL database that you frequently access as a specific user.
+PXF defines a special server named `default`. When you initialize PXF, it automatically creates a `$PXF_CONF/servers/default/` directory. This directory, initially empty, identifies the default PXF server configuration. You can configure and assign the default PXF server to any external data source. For example, you may choose to assign the PXF default server to a Hadoop cluster, or to a MySQL database that you frequently access as a specific user.
 
 **Note**: You *must* configure a Hadoop server as the PXF `default` server when your Hadoop cluster utilizes Kerberos authentication.
 
-PXF automatically uses the `default` server configuration in the absence of a `SERVER=<server_name>` setting in the `CREATE EXTERNAL TABLE` command `LOCATION` clause.
+PXF automatically uses the `default` server configuration if you omit the `SERVER=<server_name>` setting in the `CREATE EXTERNAL TABLE` command `LOCATION` clause.
 
 
 ## <a id="templates"></a>Server Template Files
@@ -72,7 +72,7 @@ For example, the contents of the `s3-site.xml` template file follow:
 
 <div class="note">You specify credentials to PXF in clear text in configuration files.</div>
 
-You can copy an object store template file directly to a new server definition and update the property values. When you configure access to a Hadoop cluster, you will copy several `*-site.xml` files from the Hadoop cluster to your PXF Hadoop server configuration.
+The template files for the Hadoop connectors are not intended to be modified and used for configuration, as they only provide an example of the information needed. Instead of modifying the Hadoop templates, you will copy several Hadoop `*-site.xml` files from the Hadoop cluster to your PXF Hadoop server configuration.
 
 
 ## <a id="using"></a>Using a Server Configuration
@@ -110,7 +110,7 @@ gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
 
 ## <a id="override"></a>Overriding the Server Configuration
 
-Some PXF connectors (S3, JDBC) allow you to override a server configuration by directly specifying certain properties via custom options in the CREATE EXTERNAL TABLE command LOCATION clause. Refer to [Overriding the S3 Server Configuration](access_objstore.html#s3_override) and [Overriding the JDBC Server Configuration](jdbc_cfg.html#override) for additional information.
+Some PXF connectors (S3, JDBC) allow you to override a server configuration by directly specifying certain properties via custom options in the `CREATE EXTERNAL TABLE` command `LOCATION` clause. Refer to [Overriding the S3 Server Configuration](access_objstore.html#s3_override) and [Overriding the JDBC Server Configuration](jdbc_cfg.html#override) for additional information.
 
 <div class="note warning">When you override a server configuration, the properties and their values are visible as part of the external table defininition. Do not use this method to pass credentials in a production environment.</div>
 
