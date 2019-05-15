@@ -1501,9 +1501,9 @@ CTranslatorDXLToScalar::ConvertDXLDatumToConstOid
 	constant->consttype = CMDIdGPDB::CastMdid(oid_datum_dxl->MDId())->Oid();
 	constant->consttypmod = -1;
 	constant->constcollid = InvalidOid;
-	constant->constbyval = oid_datum_dxl->IsPassedByValue();
+	constant->constbyval = true;
 	constant->constisnull = oid_datum_dxl->IsNull();
-	constant->constlen = oid_datum_dxl->Length();
+	constant->constlen = sizeof(Oid);
 
 	if (constant->constisnull)
 	{
@@ -1538,9 +1538,9 @@ CTranslatorDXLToScalar::ConvertDXLDatumToConstInt2
 	constant->consttype = CMDIdGPDB::CastMdid(datum_int2_dxl->MDId())->Oid();
 	constant->consttypmod = -1;
 	constant->constcollid = InvalidOid;
-	constant->constbyval = datum_int2_dxl->IsPassedByValue();
+	constant->constbyval = true;
 	constant->constisnull = datum_int2_dxl->IsNull();
-	constant->constlen = datum_int2_dxl->Length();
+	constant->constlen = sizeof(int16);
 
 	if (constant->constisnull)
 	{
@@ -1575,9 +1575,9 @@ CTranslatorDXLToScalar::ConvertDXLDatumToConstInt4
 	constant->consttype = CMDIdGPDB::CastMdid(datum_int4_dxl->MDId())->Oid();
 	constant->consttypmod = -1;
 	constant->constcollid = InvalidOid;
-	constant->constbyval = datum_int4_dxl->IsPassedByValue();
+	constant->constbyval = true;
 	constant->constisnull = datum_int4_dxl->IsNull();
-	constant->constlen = datum_int4_dxl->Length();
+	constant->constlen = sizeof(int32);
 
 	if (constant->constisnull)
 	{
@@ -1611,9 +1611,9 @@ CTranslatorDXLToScalar::ConvertDXLDatumToConstInt8
 	constant->consttype = CMDIdGPDB::CastMdid(datum_int8_dxl->MDId())->Oid();
 	constant->consttypmod = -1;
 	constant->constcollid = InvalidOid;
-	constant->constbyval = datum_int8_dxl->IsPassedByValue();
+	constant->constbyval = FLOAT8PASSBYVAL;
 	constant->constisnull = datum_int8_dxl->IsNull();
-	constant->constlen = datum_int8_dxl->Length();
+	constant->constlen = sizeof(int64);
 
 	if (constant->constisnull)
 	{
@@ -1647,9 +1647,9 @@ CTranslatorDXLToScalar::ConvertDXLDatumToConstBool
 	constant->consttype = CMDIdGPDB::CastMdid(datum_bool_dxl->MDId())->Oid();
 	constant->consttypmod = -1;
 	constant->constcollid = InvalidOid;
-	constant->constbyval = datum_bool_dxl->IsPassedByValue();
+	constant->constbyval = true;
 	constant->constisnull = datum_bool_dxl->IsNull();
-	constant->constlen = datum_bool_dxl->Length();
+	constant->constlen = sizeof(bool);
 
 	if (constant->constisnull)
 	{
@@ -1679,16 +1679,17 @@ CTranslatorDXLToScalar::TranslateDXLDatumGenericToScalar
 	)
 {
 	CDXLDatumGeneric *datum_generic_dxl = CDXLDatumGeneric::Cast(datum_dxl);
+	const IMDType *type = m_md_accessor->RetrieveType(datum_generic_dxl->MDId());
 
 	Const *constant = MakeNode(Const);
 	constant->consttype = CMDIdGPDB::CastMdid(datum_generic_dxl->MDId())->Oid();
 	constant->consttypmod = datum_generic_dxl->TypeModifier();
 	// GPDB_91_MERGE_FIXME: collation
 	constant->constcollid = gpdb::TypeCollation(constant->consttype);
-	constant->constbyval = datum_generic_dxl->IsPassedByValue();
-	constant->constisnull = datum_generic_dxl->IsNull();
-	constant->constlen = datum_generic_dxl->Length();
+	constant->constbyval = type->IsPassedByValue();
+	constant->constlen = type->Length();
 
+	constant->constisnull = datum_generic_dxl->IsNull();
 	if (constant->constisnull)
 	{
 		constant->constvalue = (Datum) 0;

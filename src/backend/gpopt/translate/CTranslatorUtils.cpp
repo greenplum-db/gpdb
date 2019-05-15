@@ -2180,8 +2180,6 @@ CTranslatorUtils::CreateDXLProjElemConstNULL
 	CHAR *alias_name
 	)
 {
-	BOOL is_passed_by_value = md_accessor->RetrieveType(mdid)->IsPassedByValue();
-
 	// get the id and alias for the proj elem
 	CMDName *alias_mdname = NULL;
 
@@ -2226,7 +2224,6 @@ CTranslatorUtils::CreateDXLProjElemConstNULL
 										mp,
 										mdid,
 										default_type_modifier,
-										is_passed_by_value /*fConstByVal*/,
 										true /*fConstNull*/,
 										NULL, /*pba */
 										0 /*length*/,
