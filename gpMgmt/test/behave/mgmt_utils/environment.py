@@ -5,12 +5,13 @@ from test.behave_utils.utils import drop_database_if_exists, start_database_if_n
                                             create_database, \
                                             run_command, check_user_permissions, run_gpcommand
 from steps.mirrors_mgmt_utils import MirrorMgmtContext
+from steps.gpconfig_mgmt_utils import GpConfigContext
 from gppylib.db import dbconn
 
 
 def before_feature(context, feature):
     # we should be able to run gpexpand without having a cluster initialized
-    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors']
+    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors', 'gpconfig']
     if set(context.feature.tags).intersection(tags_to_skip):
         return
 
@@ -60,7 +61,11 @@ def after_feature(context, feature):
         context.conn.close()
     if 'minirepro' in feature.tags:
         context.conn.close()
-
+    if 'gpconfig' in feature.tags:
+        context.execute_steps(u'''
+            Then the user runs "gpstop -ar"
+            And gpstop should return a return code of 0
+            ''')
 
 def before_scenario(context, scenario):
     if "skip" in scenario.effective_tags:
@@ -70,7 +75,10 @@ def before_scenario(context, scenario):
     if 'gpmovemirrors' in context.feature.tags:
         context.mirror_context = MirrorMgmtContext()
 
-    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors']
+    if 'gpconfig' in context.feature.tags:
+        context.gpconfig_context = GpConfigContext()
+
+    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpmovemirrors', 'gpconfig']
     if set(context.feature.tags).intersection(tags_to_skip):
         return
 
@@ -84,7 +92,8 @@ def after_scenario(context, scenario):
         for tablespace in context.tablespaces.values():
             tablespace.cleanup()
 
-    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpinitstandby']
+    # NOTE: gpconfig after_scenario cleanup is in the step `the gpconfig context is setup`
+    tags_to_skip = ['gpexpand', 'gpaddmirrors', 'gpstate', 'gpinitstandby', 'gpconfig']
     if set(context.feature.tags).intersection(tags_to_skip):
         return
 

@@ -424,6 +424,11 @@ def impl(context, HOST, port, dir, ctxt):
 def impl(context, command, err_msg):
     check_err_msg(context, err_msg)
 
+@when('{command} should print "{out_msg}" escaped to stdout')
+@then('{command} should print "{out_msg}" escaped to stdout')
+@then('{command} should print a "{out_msg}" escaped warning')
+def impl(context, command, out_msg):
+    check_stdout_msg(context, out_msg, True)
 
 @when('{command} should print "{out_msg}" to stdout')
 @then('{command} should print "{out_msg}" to stdout')
@@ -1314,19 +1319,115 @@ def impl(context, filename, output):
     print contents
     check_stdout_msg(context, output)
 
+@then('verify that the last line of the file "{filename}" in the master data directory contains the string "{output}" escaped')
+def impl(context, filename, output):
+    find_string_in_master_data_directory(context, filename, output, True)
+
 
 @then('verify that the last line of the file "{filename}" in the master data directory contains the string "{output}"')
 def impl(context, filename, output):
+    find_string_in_master_data_directory(context, filename, output)
+
+
+def find_string_in_master_data_directory(context, filename, output, escapeStr=False):
     contents = ''
     file_path = os.path.join(master_data_dir, filename)
     with open(file_path) as fr:
         for line in fr:
             contents = line.strip()
+    if escapeStr:
+        output = re.escape(output)
     pat = re.compile(output)
     if not pat.search(contents):
         err_str = "Expected stdout string '%s' and found: '%s'" % (output, contents)
         raise Exception(err_str)
 
+
+@given('verify that the file "{filename}" in the master data directory has "{some}" line starting with "{output}"')
+@then('verify that the file "{filename}" in the master data directory has "{some}" line starting with "{output}"')
+def impl(context, filename, some, output):
+    if (some == 'some'):
+        valuesShouldExist = True
+    elif (some == 'no'):
+        valuesShouldExist = False
+    else:
+        raise Exception("only 'some' and 'no' are valid inputs")
+    regexStr = "%s%s" % ("^[\s]*", output)
+    pat = re.compile(regexStr)
+    file_path = os.path.join(master_data_dir, filename)
+    with open(file_path) as fr:
+        for line in fr:
+            contents = line.strip()
+            match = pat.search(contents)
+            if not valuesShouldExist:
+                if match:
+                    err_str = "Expected no stdout string '%s' and found: '%s'" % (regexStr, contents)
+                    raise Exception(err_str)
+            else:
+                if match:
+                    return
+
+    if valuesShouldExist:
+        err_str = "xx Expected stdout string '%s' and found: '%s'" % (regexStr, contents)
+        raise Exception(err_str)
+
+@given('verify that the file "{filename}" in each segment data directory has "{some}" line starting with "{output}"')
+@then('verify that the file "{filename}" in each segment data directory has "{some}" line starting with "{output}"')
+def impl(context, filename, some, output):
+    try:
+        with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+            curs = dbconn.execSQL(conn, "SELECT hostname, datadir FROM gp_segment_configuration WHERE role='p' AND content > -1;")
+            result = curs.fetchall()
+            segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
+    except Exception as e:
+        raise Exception("Could not retrieve segment information: %s" % e.message)
+
+    if (some == 'some'):
+        valuesShouldExist = True
+    elif (some == 'no'):
+        valuesShouldExist = False
+    else:
+        raise Exception("only 'some' and 'no' are valid inputs")
+
+    for info in segment_info:
+        host, datadir = info
+        filepath = os.path.join(datadir, filename)
+        regex = "%s%s" % ("^[%s]*", output)
+        cmd_str = 'ssh %s "grep -c %s %s"' % (host, regex, filepath)
+        cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+        cmd.run(validateAfter=False)
+        try:
+            val = int(cmd.get_stdout().strip())
+            if not valuesShouldExist:
+                if val:
+                    raise Exception('File %s on host %s does start with "%s"(val error: %s)' % (filepath, host, output, val))
+            else:
+                if not val:
+                    raise Exception('File %s on host %s does start not with "%s"(val error: %s)' % (filepath, host, output, val))
+        except:
+            raise Exception('File %s on host %s does start with "%s"(parse error)' % (filepath, host, output))
+
+
+
+@then('verify that the last line of the file "{filename}" in each segment data directory contains the string "{output}"')
+def impl(context, filename, output):
+    segment_info = []
+    try:
+        with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+            curs = dbconn.execSQL(conn, "SELECT hostname, datadir FROM gp_segment_configuration WHERE role='p' AND content > -1;")
+            result = curs.fetchall()
+            segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
+    except Exception as e:
+        raise Exception("Could not retrieve segment information: %s" % e.message)
+
+    for info in segment_info:
+        host, datadir = info
+        filepath = os.path.join(datadir, filename)
+        cmd_str = 'ssh %s "tail -n1 %s"' % (host, filepath)
+        cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+        cmd.run(validateAfter=True)
+        if output not in cmd.get_stdout():
+            raise Exception('File %s on host %s does not contain "%s"' % (filepath, host, output))
 
 @given('the gpfdists occupying port {port} on host "{hostfile}"')
 def impl(context, port, hostfile):

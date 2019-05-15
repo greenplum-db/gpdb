@@ -125,8 +125,9 @@ def run_gpcommand_async(context, command):
     cmd = Command(name='run %s' % command, cmdStr='$GPHOME/bin/%s' % (command))
     context.asyncproc = cmd.runNoWait()
 
-
-def check_stdout_msg(context, msg):
+def check_stdout_msg(context, msg, escapeStr = False):
+    if escapeStr:
+        msg = re.escape(msg)
     pat = re.compile(msg)
     if not pat.search(context.stdout_message):
         err_str = "Expected stdout string '%s' and found: '%s'" % (msg, context.stdout_message)
