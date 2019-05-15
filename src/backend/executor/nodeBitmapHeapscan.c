@@ -671,7 +671,7 @@ BitmapAppendOnlyNext(BitmapHeapScanState *node)
 	for (;;)
 	{
 		TBMIterateResult *tbmres = node->tbmres;
-		bool		need_recheck;
+		bool		need_recheck = false;
 
 		CHECK_FOR_INTERRUPTS();
 
