@@ -25,6 +25,8 @@
                       {'name': 'gpaddmirrors',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
+                      {'name': 'gpconfig',
+                       'use_concourse_cluster': true},
                     ] %}
 
 ## ======================================================================
@@ -1626,7 +1628,7 @@ jobs:
           file: gpdb_src/concourse/tasks/behave_gpdb.yml
           image: gpdb6-centos6-test
           params:
-            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster
+            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
 
 {% endfor %}
 
