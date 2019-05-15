@@ -23,7 +23,7 @@ The PXF JDBC Connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR 
 
 ### <a id="cfg_server"></a>JDBC Server Configuration
 
-When you configure the PXF JDBC Connector, you add at least one named PXF server configuration for the connector as described in [About PXF Server Configuration](cfg_server.html#cfgproc).
+When you configure the PXF JDBC Connector, you add at least one named PXF server configuration for the connector as described in [About PXF Server Configuration](cfg_server.html#cfgproc). You can also configure one more more statically-defined queries to run against the remote SQL database.
 
 PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies properties that you can configure to establish a connection to the external SQL database. The template also includes optional properties that you can set before executing query or insert commands in the external database session.
 
@@ -133,6 +133,53 @@ Example: To set the `search_path` parameter before running a query in a PostgreS
 ```
 
 Ensure that the JDBC driver for the external SQL database supports any property that you specify.
+
+
+### <a id="namedquery"></a>JDBC Named Queries
+
+When you configure and use the PXF named query feature, you:
+
+1. [Define the query](#namedquery_define) in a text file.
+2. [Publish](#namedquery_pub) the query name.
+2. [Reference the query](#namedquery_ref) in a Greenplum Database external table definition.
+
+PXF runs the query each time you invoke a `SELECT` command on the Greenplum Database external table.
+
+Refer to [About Using Named Queries](jdbc_pxf.html#about_nq) for information about using PXF JDBC named queries.
+
+#### <a id="namedquery_define"></a>Defining a Named Query
+
+A PXF *named query* is a static query that you configure, and that PXF runs in the remote SQL database. You create a named query by adding the query statement to a text file that has the following naming format: `<query_name>.sql`. You can define one or more named queries for a JDBC server configuration. Each query must reside in a separate text file.
+
+You must locate a query text file in the PXF JDBC server configuration directory from which it will be accessed. If you want to make the query available to more than one JDBC server configuration, you must copy the query text file to the configuration directory for each JDBC server.
+
+The query text file must contain a single query that you want to run in the remote SQL database. You must contruct the query in accordance with the syntax supported by the database.
+
+For example, if a MySQL database has a `customers` table and an `orders` table, you could include the following SQL statement in a query text file:
+
+``` sql
+SELECT c.name, c.city, sum(o.amount) AS total, o.month
+  FROM customers c JOIN orders o ON c.id = o.customer_id
+  WHERE c.state = 'CO'
+GROUP BY c.name, c.city, o.month
+```
+
+Do not provide the ending semicolon (`;`) for the SQL statement.
+
+#### <a id="namedquery_pub"></a>Publishing Query Names
+
+The Greenplum Database user references a named query by name. The name of a PXF JDBC query is the base name of the query file. For example, if you define a query in a file named `report.sql`, the name of that query is `report`.
+
+Named queries are associated with a specific JDBC server configuration. You will publish the available query names to the Greenplum Database users that you allow to use the server configuration (and hence run the queries).
+
+#### <a id="namedquery_ref"></a>Referencing a Named Query
+
+The Greenplum Database user specifies `query:<query_name>` rather than the name of a remote SQL database table when they create the external table. For example, if the query is defined in the file `$PXF_CONF/servers/mydb/report.sql`, the `CREATE EXTERNAL TABLE` `LOCATION` clause would include the following components:
+
+``` sql
+LOCATION ('pxf://query:report?PROFILE=JDBC&SERVER=mydb ...')
+```
+
 
 ### <a id="cfg_override"></a>Overriding the JDBC Server Configuration
 

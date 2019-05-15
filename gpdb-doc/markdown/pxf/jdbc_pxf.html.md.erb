@@ -53,12 +53,12 @@ The PXF JDBC connector supports the following data types:
 
 Any data type not listed above is not supported by the PXF JDBC connector.
 
-## <a id="queryextdata"></a>Accessing External SQL Data
-The PXF JDBC connector supports a single profile named `Jdbc`. You can both read data from and write data to an external SQL database table with this profile.
+## <a id="queryextdata"></a>Accessing an External SQL Database
+The PXF JDBC connector supports a single profile named `Jdbc`. You can both read data from and write data to an external SQL database table with this profile. You can also use the connector to run a static, named query in external SQL database and read the results.
 
-To access data in an external SQL database, you create a readable or writable Greenplum Database external table that references the external database table. The Greenplum and external database tables must have the same definition; the column names, types, and order must match.
+To access data in a remote SQL database, you create a readable or writable Greenplum Database external table that references the remote database table. The Greenplum and external database tables must have the same definition; the column names, types, and order must match.
 
-Use the following syntax to create a Greenplum Database external table that references an external SQL database table and uses the JDBC connector to read or write data:
+Use the following syntax to create a Greenplum Database external table that references a remote SQL database table and uses the JDBC connector to read or write data:
 
 <pre>
 CREATE [READABLE | WRITABLE] EXTERNAL TABLE &lt;table_name>
@@ -67,11 +67,23 @@ LOCATION ('pxf://&lt;external-table-name>?<b>PROFILE=Jdbc[&SERVER=&lt;server_nam
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
 </pre>
 
+To read the results of a static query in the remote SQL database, you create a readable Greenplum Database external table that references the name of a query. The Greenplum external table and the result tuple(s) returned by the query must have the same definition; the column names, types, and order must match.
+
+Use the following syntax to create a Greenplum Database external table that references the result of a query executed in the remote SQL database and uses the JDBC connector to read the results:
+
+<pre>
+CREATE [READABLE] EXTERNAL TABLE &lt;table_name>
+    ( &lt;column_name> &lt;data_type> [, ...] | LIKE &lt;other_table> )
+LOCATION ('pxf://query:&lt;query_name>?<b>PROFILE=Jdbc[&SERVER=&lt;server_name>]</b>[&&lt;custom-option>=&lt;value>[...]]')
+FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
+</pre>
+
 The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command are described in the table below.
 
 | Keyword  | Value |
 |-------|-------------------------------------|
 | \<external&#8209;table&#8209;name\>    | The full name of the external table. Depends on the external SQL database, may include a schema name and a table name. |
+| query:\<query_name\>    | The name of the query to execute in the remote SQL database. |
 | PROFILE    | The `PROFILE` keyword value must specify `Jdbc`. |
 | SERVER=\<server_name\>   | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | \<custom&#8209;option\>=\<value\>  | \<custom-option\> is profile-specific. `Jdbc` profile-specific options are discussed in the next section.|
@@ -215,6 +227,8 @@ Perform the following steps to create a PostgreSQL table named `forpxf_table1` i
 
 You must create a JDBC server configuration for PostgreSQL, download the PostgreSQL driver JAR file to your system, copy the JAR file to the PXF user configuration directory, synchronize the PXF configuration, and then restart PXF.
 
+This procedure will typically be performed by the Greenplum Database administrator.
+
 1. Log in to the Greenplum Database master node:
 
     ``` shell
@@ -253,7 +267,7 @@ You must create a JDBC server configuration for PostgreSQL, download the Postgre
     gpadmin@gpmaster$ cp postgresql-42.2.5.jar $PXF_CONF/lib/postgresql-42.2.5.jar
     ``` 
 
-3. Synchronize the PXF configuration to the Greenplum Database cluster. For example:
+3. Synchronize these changes to the PXF configuration to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
@@ -269,7 +283,7 @@ Perform the following procedure to create a PXF external table that references t
 
     ``` sql
     gpadmin=# CREATE EXTERNAL TABLE pxf_tblfrompg(id int)
-                LOCATION ('pxf://public.forpxf_table1?PROFILE=Jdbc&SERVER=pgsvrcfg')
+                LOCATION ('pxf://public.forpxf_table1?PROFILE=Jdbc&SERVER=pgsrvcfg')
                 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
 
@@ -318,6 +332,200 @@ Perform the following procedure to insert some data into the `forpxf_table1` Pos
        2
        1
     (6 rows)
+    ```
+
+## <a id="about_nq"></a>About Using Named Queries
+
+The PXF JDBC Connector allows you to specify a statically-defined query to run against the remote SQL database. Consider using the PXF *named query* feature when:
+
+- The data on which you are operating resides in the the same external database.
+- You want to perform complex aggregation closer to the data source.
+- You would use, but are not allowed to create, a `VIEW` in the external database.
+
+The Greenplum Database administrator defines a query and provides appropriate users with the query name. Instead of a table name, you specify `query:<query_name>` in the `CREATE EXTERNAL TABLE` `LOCATION` clause to instruct the PXF JDBC connector to run the static query named `<query_name>` in the remote SQL database.
+
+The named query feature is supported only with readable external tables. You must create a unique Greenplum Database readable external table for each query that you want to run.
+
+The names, types, and order of the external table columns must exactly match the names, types, and order of the columns return by the query result. If the query returns the results of an aggregation or other function, be sure to use the `AS` qualifier to specify a specific column name.
+
+For example, suppose that you are working with PostgreSQL tables that have the following definitions:
+
+``` sql
+CREATE TABLE customers(id int, name text, city text, state text);
+CREATE TABLE orders(customer_id int, amount int, month int, year int);
+```
+
+And this PostgreSQL query that the administrator named `order_rpt`:
+
+``` sql
+SELECT c.name, sum(o.amount) AS total
+  FROM customers c JOIN orders o ON c.id = o.customer_id
+  WHERE c.state = 'CO'
+GROUP BY c.name
+```
+
+This query returns tuples of type `(name text, total int)`. If the `order_rpt` query is available to the PXF JDBC server named `pgserver`, you could create a Greenplum Database external table to read these query results as follows:
+
+``` sql
+CREATE EXTERNAL TABLE orderrpt_frompg(name text, total int)
+  LOCATION ('pxf://query:order_rpt?PROFILE=Jdbc&SERVER=pgserver&PARTITION_BY=month:int&RANGE=1:13&INTERVAL=3')
+FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+```
+
+This command references a query named `order_rpt` defined in the `pgserver` server configuration. It also specifies JDBC read partitioning options that provide PXF with the information that it uses to split/partition the query result data across its servers/segments.
+
+You can use named queries with the PXF column projection, filter pushdown, and partition filtering features to apply further filters on the query result data returned.
+
+### <a id="jdbc_example_namedquery"></a>Example: Reading the Results of a PostgreSQL Query
+
+In this example, you:
+
+- Use the PostgreSQL database `pgtestdb`, user `pxfuser1`, and PXF JDBC connector server configuration `pgsrvcfg` that you created in [Example: Reading From and Writing to a PostgreSQL Database](#jdbc_example_postgresql).
+- Create two PostgreSQL tables and insert data into the tables
+- Assign all privileges on the tables to `pxfuser1`
+- Define a named query that performs a complex SQL statement on the two PostgreSQL tables, and add the query to the `pgsrvcfg` JDBC server configuration
+- Create a PXF readable external table definition that matches the query result tuple and also specifies read partitioning options
+- Read the query results, making use of PXF column projection and filter pushdown
+
+#### <a id="nq_create_2pgtbl"></a>Create the PostgreSQL Tables and Assign Permissions
+
+Perform the following procedure to create PostgreSQL tables named `customers` and `orders` in the `public` schema of the database named `pgtestdb`, and grant the user named `pxfuser1` all privileges on these tables:
+
+1. Identify the host name and port of your PostgreSQL server.
+
+2. Connect to the `pgtestdb` PostgreSQL database as the `postgres` user. For example, if your PostgreSQL server is running on the default port on the host named `pserver`:
+
+    ``` shell
+    $ psql -U postgres -h pserver -d pgtestdb
+    ```
+
+3. Create a table named `customers` and insert some data into this table:
+
+    ``` sql
+    CREATE TABLE customers(id int, name text, city text, state text);
+    INSERT INTO customers VALUES (111, 'Bill', 'Helena', 'MT');
+    INSERT INTO customers VALUES (222, 'Mary', 'Athens', 'OH');
+    INSERT INTO customers VALUES (333, 'Tom', 'Denver', 'CO');
+    INSERT INTO customers VALUES (444, 'Kate', 'Helena', 'MT');
+    INSERT INTO customers VALUES (555, 'Harry', 'Columbus', 'OH');
+    INSERT INTO customers VALUES (666, 'Kim', 'Denver', 'CO');
+    INSERT INTO customers VALUES (777, 'Erik', 'Missoula', 'MT');
+    INSERT INTO customers VALUES (888, 'Laura', 'Athens', 'OH');
+    INSERT INTO customers VALUES (999, 'Matt', 'Aurora', 'CO');
+    ```
+
+4. Create a table named `orders` and insert some data into this table:
+
+    ``` sql
+    CREATE TABLE orders(customer_id int, amount int, month int, year int);
+    INSERT INTO orders VALUES (111, 12, 12, 2018);
+    INSERT INTO orders VALUES (222, 234, 11, 2018);
+    INSERT INTO orders VALUES (333, 34, 7, 2018);
+    INSERT INTO orders VALUES (444, 456, 111, 2018);
+    INSERT INTO orders VALUES (555, 56, 11, 2018);
+    INSERT INTO orders VALUES (666, 678, 12, 2018);
+    INSERT INTO orders VALUES (777, 12, 9, 2018);
+    INSERT INTO orders VALUES (888, 120, 10, 2018);
+    INSERT INTO orders VALUES (999, 120, 11, 2018);
+    ```
+
+5. Assign user `pxfuser1` all privileges on tables `customers` and `orders`, and then exit the `psql` subsystem:
+
+    ``` sql
+    GRANT ALL ON customers TO pxfuser1;
+    GRANT ALL ON orders TO pxfuser1;
+    \q
+    ```
+
+#### <a id="nq_jdbconfig"></a>Configure the Named Query
+
+In this procedure you create a named query text file, add it to the `pgsrvcfg` JDBC server configuration, and synchronize the PXF configuration to the Greenplum Database cluster.
+
+This procedure will typically be performed by the Greenplum Database administrator.
+
+1. Log in to the Greenplum Database master node:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    ```
+
+2. Navigate to the JDBC server configuration directory `pgsrvcfg`. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ cd $PXF_CONF/servers/pgsrvcfg
+    ```
+    
+3. Open a query text file named `pg_order_report.sql`in the editor of your choice. For example, to open the file with `vi`:
+
+    ``` shell
+    gpadmin@gpmaster$ vi pg_order_report.sql
+    ``` 
+
+3. Copy/paste the following query into the file:
+
+    ``` sql
+    SELECT c.name, c.city, sum(o.amount) AS total, o.month
+      FROM customers c JOIN orders o ON c.id = o.customer_id
+      WHERE c.state = 'CO'
+    GROUP BY c.name, c.city, o.month
+    ``` 
+
+4. Save the file and exit the editor.
+
+5. Synchronize these changes to the PXF configuration to the Greenplum Database cluster. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
+    ``` 
+
+#### <a id="nq_readjdbc"></a>Read the Query Results
+
+Perform the following procedure on your Greenplum Database cluster to create a PXF external table that references the query file that you created in the previous section, and then reads the query result data:
+
+1. Create the PXF external table specifying the `Jdbc` profile. For example:
+
+    ``` sql
+    CREATE EXTERNAL TABLE pxf_queryres_frompg(name text, city text, total int, month int)
+                LOCATION ('pxf://query:pg_order_report?PROFILE=Jdbc&SERVER=pgsrvcfg&PARTITION_BY=month:int&RANGE=1:13&INTERVAL=3')
+              FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+    ```
+
+2. Display all rows of the query result:
+
+    ``` sql
+    gpadmin=# SELECT * FROM pxf_queryres_frompg ORDER BY city, total;
+     name |  city  | total | month 
+    ------+--------+-------+-------
+     Matt | Aurora |   120 |    11
+     Tom  | Denver |    34 |     7
+     Kim  | Denver |   678 |    12
+    (3 rows)
+    ```
+
+3. Use column projection to display the order total per city:
+
+    ``` sql
+    gpadmin=# SELECT city, sum(total) FROM pxf_queryres_frompg GROUP BY city;
+
+      city  | sum 
+    --------+-----
+     Aurora | 120
+     Denver | 712
+    (2 rows)
+    ```
+
+4. Use predicate pushdown to filter the `total` in PostgreSQL:
+
+    ``` sql
+    gpadmin=# SELECT city, sum(total) FROM pxf_queryres_frompg 
+                WHERE total > 100
+                GROUP BY city;
+
+      city  | sum 
+    --------+-----
+     Denver | 678
+     Aurora | 120
+    (2 rows)
     ```
 
 ## <a id="jdbc_override"></a>Overriding the JDBC Server Configuration
