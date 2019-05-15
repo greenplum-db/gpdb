@@ -28,9 +28,7 @@ SET_VERSION_SCRIPTS = \
 	bin/gpsys1 \
 	bin/gpcheckcat \
 	sbin/gpconfig_helper.py \
-	sbin/gpchangeuserpassword \
 	sbin/gpcleansegmentdir.py \
-	sbin/gpfixuserlimts \
 	sbin/gpgetstatususingtransition.py \
 	sbin/gpsegstart.py \
 	sbin/gpsegstop.py \
