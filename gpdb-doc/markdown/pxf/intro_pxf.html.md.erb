@@ -18,9 +18,9 @@ Your Greenplum Database deployment consists of a master node and multiple segmen
 
 A PXF *Server* is a named configuration for a connector. A server definition provides the information required for PXF to access an external data source. This configuration information is data-store-specific, and may include server location, access credentials, and other relevant properties.
 
-The Greenplum Database administrator will configure at least one server definition for each external data store that they will permit Greenplum Database users to access, and will publish the available server names as appropriate.
+The Greenplum Database administrator will configure at least one server definition for each external data store that they will allow Greenplum Database users to access, and will publish the available server names as appropriate.
 
-You specify a `SERVER=<server_name>` setting when you create the external table to identify the server configuration from which to obtain the location and access credentials to the external data store.
+You specify a `SERVER=<server_name>` setting when you create the external table to identify the server configuration from which to obtain the configuration and credentials to access the external data store.
 
 The default PXF server is named `default` (reserved), and when configured provides the location and access information for the external data source in the absence of a `SERVER=<server_name>` setting.
 

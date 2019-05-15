@@ -36,7 +36,7 @@ PXF defines a special server named `default`. When you initialize PXF, it automa
 
 **Note**: You *must* configure a Hadoop server as the PXF `default` server when your Hadoop cluster utilizes Kerberos authentication.
 
-PXF automatically uses the `default` server configuration in the absence of a `CREATE EXTERNAL TABLE` command `LOCATION` clause `SERVER=<server_name>` setting.
+PXF automatically uses the `default` server configuration in the absence of a `SERVER=<server_name>` setting in the `CREATE EXTERNAL TABLE` command `LOCATION` clause.
 
 
 ## <a id="templates"></a>Server Template Files
@@ -72,12 +72,12 @@ For example, the contents of the `s3-site.xml` template file follow:
 
 <div class="note">You specify credentials to PXF in clear text in configuration files.</div>
 
-You may copy the template files for object store connectors to a new server definition and update. The template files for Hadoop connectors are a guide; when you configure access to a Hadoop cluster, you will copy several `*-site.xml` files from the Hadoop cluster to your PXF Hadoop server configuration.
+You can copy an object store template file directly to a new server definition and update the property values. When you configure access to a Hadoop cluster, you will copy several `*-site.xml` files from the Hadoop cluster to your PXF Hadoop server configuration.
 
 
 ## <a id="using"></a>Using a Server Configuration
 
-To access an external data store, the Greenplum Database user specifies the server name in the `CREATE EXTERNAL TABLE` command `LOCATION` clause `SERVER=<server_name>` option. The `<server_name>` that the user provides identifies the server configuration directory from which PXF obtains the location and access credentials to the external data store.
+To access an external data store, the Greenplum Database user specifies the server name in the `CREATE EXTERNAL TABLE` command `LOCATION` clause `SERVER=<server_name>` option. The `<server_name>` that the user provides identifies the server configuration directory from which PXF obtains the configuration and credentials to access the external data store.
 
 For example, the following command accesses an S3 object store using the server configuration defined in `$PXF_CONF/servers/s3srvcfg`:
 
