@@ -16,18 +16,14 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
             <title>Description</title>
             <p><codeph>CREATE LANGUAGE</codeph> registers a new procedural language with a Greenplum
                 database. Subsequently, functions and trigger procedures can be defined in this new
-<<<<<<< HEAD
-                language. </p>
-=======
                 language.</p> 
-            <note>Procedural languages for Greenplum Database have been made into "extensions," and
+            <note>Most procedural languages for Greenplum Database have been made into "extensions," and
                 should therefore be installed with <xref href="CREATE_EXTENSION.xml#topic1"/>, not
                     <codeph>CREATE LANGUAGE</codeph>. Using <codeph>CREATE LANGUAGE</codeph>
                 directly should be restricted to extension installation scripts. If you have a
                 "bare" language in your database, perhaps as a result of an upgrade, you can convert
                 it to an extension using <codeph>CREATE EXTENSION <varname>langname</varname> FROM
                     unpackaged</codeph>. </note>
->>>>>>> ca7e4f9dfd... Update PL's to use CREATE/DROP EXTENSION (#7490)
             <p>Superusers can register a new language with a Greenplum database. A database owner
                 can also register within that database any language listed in the
                     <codeph>pg_pltemplate</codeph> catalog in which the
@@ -90,22 +86,12 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                     <pt>
                         <varname>name</varname>
                     </pt>
-<<<<<<< HEAD
-                    <pd>The name of the new procedural language. The language name is case
-                        insensitive. The name must be unique among the languages in the database.
-                        Built-in support is included for <codeph>plpgsql</codeph>,
-                            <codeph>plperl</codeph>, <codeph>plpythonu</codeph>, and
-                            <codeph>plr</codeph>. The languages <codeph>plpgsql</codeph> (PL/pgSQL)
-                        and <codeph>plpythonu</codeph> (PL/Python) are installed by default in
-                        Greenplum Database.</pd>
-=======
                     <pd>The name of the new procedural language. The name must be unique among the
                         languages in the database. Built-in support is included for
                             <codeph>plpgsql</codeph>, <codeph>plperl</codeph>, and
                             <codeph>plpythonu</codeph>. The languages <codeph>plpgsql</codeph>
                         (PL/pgSQL) and <codeph>plpythonu</codeph> (PL/Python) are installed by
                         default in Greenplum Database.</pd>
->>>>>>> ca7e4f9dfd... Update PL's to use CREATE/DROP EXTENSION (#7490)
                 </plentry>
                 <plentry>
                     <pt>HANDLER <varname>call_handler</varname></pt>
@@ -165,16 +151,10 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
         </section>
         <section id="section6">
             <title>Examples</title>
-<<<<<<< HEAD
-            <p>The preferred way of creating any of the standard procedural languages:</p>
-            <codeblock>CREATE LANGUAGE plpgsql;
-CREATE LANGUAGE plr;</codeblock>
-=======
             <p>The preferred way of creating any of the standard procedural languages is to use
                     <codeph>CREATE EXTENSION</codeph> instead of <codeph>CREATE LANGUAGE</codeph>.
                 For example:</p>
             <codeblock>CREATE EXTENSION plperl;</codeblock>
->>>>>>> ca7e4f9dfd... Update PL's to use CREATE/DROP EXTENSION (#7490)
             <p>For a language not known in the <codeph>pg_pltemplate</codeph> catalog:</p>
             <codeblock>CREATE FUNCTION plsample_call_handler() RETURNS 
 language_handler
@@ -190,11 +170,6 @@ CREATE LANGUAGE plsample
         <section id="section8">
             <title>See Also</title>
             <p><codeph><xref href="ALTER_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
-<<<<<<< HEAD
-                        <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="./DROP_LANGUAGE.xml#topic1" type="topic"
-                        format="dita"/></codeph>
-=======
                         <codeph><xref href="CREATE_EXTENSION.xml" type="topic" format="dita"
                     /></codeph>, <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic"
                         format="dita"/></codeph>, <codeph><xref href="./DROP_EXTENSION.xml#topic1"
@@ -202,7 +177,6 @@ CREATE LANGUAGE plsample
                         href="./DROP_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
                         <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"
                     /></codeph>
->>>>>>> ca7e4f9dfd... Update PL's to use CREATE/DROP EXTENSION (#7490)
                 <codeph><xref href="DO.xml#topic1"/></codeph></p>
         </section>
     </body>
