@@ -127,7 +127,6 @@ AcquireRewriteLocks(Query *parsetree,
 {
 	ListCell      *l;
 	int			   rt_index;
-	RowMarkClause *rc;
 	acquireLocksOnSubLinks_context context;
 
 	context.for_execute = forExecute;
@@ -182,16 +181,22 @@ AcquireRewriteLocks(Query *parsetree,
 				}
 				else if (forUpdatePushedDown ||
 						 get_parse_rowmark(parsetree, rt_index) != NULL)
-					lockmode = RowShareLock;
+				{
+					/*
+					 * Greenplum specific behavior:
+					 * The implementation of select statement with locking clause
+					 * (for update | no key update | share | key share) in postgres
+					 * is to hold RowShareLock on tables during parsing stage, and
+					 * generate a LockRows plan node for executor to lock the tuples.
+					 * It is not easy to lock tuples in Greenplum database, since
+					 * tuples may be fetched through motion nodes.
+					 *
+					 * So in Greenplum, ExclusiveLock is held for tables in rowMarks.
+					 */
+					lockmode = ExclusiveLock;
+				}
 				else
 					lockmode = AccessShareLock;
-
-				rc = get_parse_rowmark(parsetree, rt_index);
-				if (rc != NULL)
-				{
-					lockmode = rc->strength >= LCS_FORNOKEYUPDATE ?
-						ExclusiveLock : RowShareLock;
-				}
 
 				/* Take a lock either using CDB lock promotion or not */
 				if (needLockUpgrade)

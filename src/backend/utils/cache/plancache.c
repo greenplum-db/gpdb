@@ -1522,16 +1522,20 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 			}
 			else
 			{
-				/* GPDB specific behavior
-				 * Select for update should acquire ExclusiveLock, see
-				 * discussion on https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
+				/*
+				 * Greenplum specific behavior:
+				 * The implementation of select statement with locking clause
+				 * (for update | no key update | share | key share) in postgres
+				 * is to hold RowShareLock on tables during parsing stage, and
+				 * generate a LockRows plan node for executor to lock the tuples.
+				 * It is not easy to lock tuples in Greenplum database, since
+				 * tuples may be fetched through motion nodes.
+				 *
+				 * So in Greenplum, ExclusiveLock is held for tables in rowMarks.
 				 */
 				rc = get_plan_rowmark(plannedstmt->rowMarks, rt_index);
 				if (rc != NULL)
-				{
-					lockmode = RowMarkRequiresRowShareLock(rc->markType) ?
-						RowShareLock : ExclusiveLock;
-				}
+					lockmode = ExclusiveLock;
 				else
 					lockmode = AccessShareLock;
 			}
@@ -1621,18 +1625,21 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 				else
 				{
 					/*
-					 * GPDB specific behaviour:
-					 * Select for update should acquire ExclusiveLock, see
-					 * discussion on https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
+					 * Greenplum specific behavior:
+					 * The implementation of select statement with locking clause
+					 * (for update | no key update | share | key share) in postgres
+					 * is to hold RowShareLock on tables during parsing stage, and
+					 * generate a LockRows plan node for executor to lock the tuples.
+					 * It is not easy to lock tuples in Greenplum database, since
+					 * tuples may be fetched through motion nodes.
+					 *
+					 * So in Greenplum, ExclusiveLock is held for tables in rowMarks.
 					 */
 					RowMarkClause *rc;
 
 					rc = get_parse_rowmark(parsetree, rt_index);
 					if (rc != NULL)
-					{
-						lockmode = rc->strength >= LCS_FORNOKEYUPDATE ?
-							ExclusiveLock : RowShareLock;
-					}
+						lockmode = ExclusiveLock;
 					else
 						lockmode = AccessShareLock;
 				}

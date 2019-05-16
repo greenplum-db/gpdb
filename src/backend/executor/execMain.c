@@ -1878,24 +1878,24 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		 */
 		switch (rc->markType)
 		{
-			case ROW_MARK_TABLE_EXCLUSIVE:
-				relid = getrelid(rc->rti, rangeTable);
-				relation = heap_open(relid, ExclusiveLock);
-				break;
-			case ROW_MARK_TABLE_SHARE:
-				relid = getrelid(rc->rti, rangeTable);
-				relation = heap_open(relid, RowShareLock);
-				break;
+			/*
+			 * Greenplum specific behavior:
+			 * The implementation of select statement with locking clause
+			 * (for update | no key update | share | key share) in postgres
+			 * is to hold RowShareLock on tables during parsing stage, and
+			 * generate a LockRows plan node for executor to lock the tuples.
+			 * It is not easy to lock tuples in Greenplum database, since
+			 * tuples may be fetched through motion nodes.
+			 *
+			 * So in Greenplum, ExclusiveLock is held for tables in rowMarks.
+			 */
 			case ROW_MARK_EXCLUSIVE:
 			case ROW_MARK_NOKEYEXCLUSIVE:
 			case ROW_MARK_SHARE:
 			case ROW_MARK_KEYSHARE:
-				relid = getrelid(rc->rti, rangeTable);
-				relation = heap_open(relid, RowShareLock);
-				break;
 			case ROW_MARK_REFERENCE:
 				relid = getrelid(rc->rti, rangeTable);
-				relation = heap_open(relid, AccessShareLock);
+				relation = heap_open(relid, ExclusiveLock);
 				break;
 			case ROW_MARK_COPY:
 				/* there's no real table here ... */

@@ -76,11 +76,6 @@ lnext:
 		HTSU_Result test;
 		HeapTuple	copyTuple;
 
-		/* CDB: CTIDs were not fetched for distributed relation. */
-		if (erm->markType == ROW_MARK_TABLE_EXCLUSIVE ||
-			erm->markType == ROW_MARK_TABLE_SHARE)
-			continue;
-
 		/* clear any leftover test tuple for this rel */
 		if (node->lr_epqstate.estate != NULL)
 			EvalPlanQualSetTuple(&node->lr_epqstate, erm->rti, NULL);

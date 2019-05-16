@@ -1374,7 +1374,7 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	 *
 	 * If the parent relation is the query's result relation, then we need
 	 * RowExclusiveLock.  Otherwise, if it's accessed FOR UPDATE/SHARE, we
-	 * need RowShareLock; otherwise AccessShareLock.  We can't just grab
+	 * need ExclusiveLock; otherwise AccessShareLock.  We can't just grab
 	 * AccessShareLock because then the executor would be trying to upgrade
 	 * the lock, leading to possible deadlocks.  (This code should match the
 	 * parser and rewriter.)
@@ -1382,8 +1382,21 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	oldrc = get_plan_rowmark(root->rowMarks, rti);
 	if (rti == parse->resultRelation)
 		lockmode = RowExclusiveLock;
-	else if (oldrc && RowMarkRequiresRowShareLock(oldrc->markType))
-		lockmode = RowShareLock;
+	else if (oldrc)
+	{
+		/*
+		 * Greenplum specific behavior:
+		 * The implementation of select statement with locking clause
+		 * (for update | no key update | share | key share) in postgres
+		 * is to hold RowShareLock on tables during parsing stage, and
+		 * generate a LockRows plan node for executor to lock the tuples.
+		 * It is not easy to lock tuples in Greenplum database, since
+		 * tuples may be fetched through motion nodes.
+		 *
+		 * So in Greenplum, ExclusiveLock is held for tables in rowMarks.
+		 */
+		lockmode = ExclusiveLock;
+	}
 	else
 		lockmode = AccessShareLock;
 

@@ -20,41 +20,93 @@ CREATE
 insert into t_lockmods select * from generate_series(1, 5);
 INSERT 5
 
--- 1.1.1 select for update should hold ExclusiveLock on range tables
+-- 1.1.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
 BEGIN
 1: select * from t_lockmods for update;
  c 
 ---
- 4 
- 5 
  1 
  2 
+ 5 
  3 
+ 4 
 (5 rows)
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
+1: begin;
+BEGIN
+1: select * from t_lockmods for no key update;
+ c 
+---
+ 1 
+ 2 
+ 5 
+ 3 
+ 4 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: select * from t_lockmods for share;
+ c 
+---
+ 1 
+ 2 
+ 5 
+ 3 
+ 4 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: select * from t_lockmods for key share;
+ c 
+---
+ 1 
+ 2 
+ 5 
+ 3 
+ 4 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
 
 -- 1.1.2 update | delete should hold ExclusiveLock on result relations
 1: begin;
 BEGIN
 1: update t_lockmods set c = c + 0;
 UPDATE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -62,13 +114,11 @@ ABORT
 BEGIN
 1: delete from t_lockmods;
 DELETE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -77,18 +127,22 @@ ABORT
 BEGIN
 1: insert into t_lockmods select * from generate_series(1, 5);
 INSERT 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
 -- 1.1.4 use cached plan should be consistent with no cached plan
 1: prepare select_for_update as select * from t_lockmods for update;
+PREPARE
+1: prepare select_for_nokeyupdate as select * from t_lockmods for no key update;
+PREPARE
+1: prepare select_for_share as select * from t_lockmods for share;
+PREPARE
+1: prepare select_for_keyshare as select * from t_lockmods for key share;
 PREPARE
 1: prepare update_tlockmods as update t_lockmods set c = c + 0;
 PREPARE
@@ -102,19 +156,74 @@ BEGIN
 1: execute select_for_update;
  c 
 ---
- 4 
- 5 
  1 
  2 
+ 5 
+ 4 
  3 
 (5 rows)
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
+1: abort;
+ABORT
 
+1: begin;
+BEGIN
+1: execute select_for_nokeyupdate;
+ c 
+---
+ 4 
+ 1 
+ 2 
+ 5 
+ 3 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute select_for_share;
+ c 
+---
+ 4 
+ 1 
+ 2 
+ 5 
+ 3 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute select_for_keyshare;
+ c 
+---
+ 4 
+ 1 
+ 2 
+ 5 
+ 3 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
 1: abort;
 ABORT
 
@@ -122,13 +231,11 @@ ABORT
 BEGIN
 1: execute update_tlockmods;
 EXECUTE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -136,13 +243,11 @@ ABORT
 BEGIN
 1: execute delete_tlockmods;
 EXECUTE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -150,13 +255,11 @@ ABORT
 BEGIN
 1: execute insert_tlockmods;
 EXECUTE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -166,44 +269,105 @@ CREATE
 insert into t_lockmods_ao select * from generate_series(1, 8);
 INSERT 8
 
--- 1.2.1 select for update should hold ExclusiveLock on range tables
+-- 1.2.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
 BEGIN
 1: select * from t_lockmods_ao for update;
  c 
 ---
- 2 
  4 
+ 7 
+ 2 
+ 6 
+ 8 
  1 
  3 
  5 
- 8 
- 6 
- 7 
 (8 rows)
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
+1: begin;
+BEGIN
+1: select * from t_lockmods_ao for no key update;
+ c 
+---
+ 4 
+ 7 
+ 2 
+ 6 
+ 8 
+ 1 
+ 3 
+ 5 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: select * from t_lockmods_ao for share;
+ c 
+---
+ 2 
+ 6 
+ 8 
+ 1 
+ 3 
+ 5 
+ 4 
+ 7 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: select * from t_lockmods_ao for key share;
+ c 
+---
+ 1 
+ 3 
+ 5 
+ 4 
+ 7 
+ 2 
+ 6 
+ 8 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
 
 -- 1.2.2 update | delete should hold ExclusiveLock on result relations
 1: begin;
 BEGIN
 1: update t_lockmods_ao set c = c + 0;
 UPDATE 8
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -211,13 +375,11 @@ ABORT
 BEGIN
 1: delete from t_lockmods_ao;
 DELETE 8
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -226,18 +388,22 @@ ABORT
 BEGIN
 1: insert into t_lockmods_ao select * from generate_series(1, 5);
 INSERT 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation      
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
 -- 1.2.4 use cached plan should be consistent with no cached plan
 1: prepare select_for_update_ao as select * from t_lockmods_ao for update;
+PREPARE
+1: prepare select_for_nokeyupdate_ao as select * from t_lockmods_ao for no key update;
+PREPARE
+1: prepare select_for_share_ao as select * from t_lockmods_ao for share;
+PREPARE
+1: prepare select_for_keyshare_ao as select * from t_lockmods_ao for key share;
 PREPARE
 1: prepare update_tlockmods_ao as update t_lockmods_ao set c = c + 0;
 PREPARE
@@ -251,22 +417,86 @@ BEGIN
 1: execute select_for_update_ao;
  c 
 ---
- 6 
- 7 
- 2 
- 4 
  1 
  3 
  5 
+ 2 
+ 6 
  8 
+ 4 
+ 7 
 (8 rows)
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
+1: abort;
+ABORT
 
+1: begin;
+BEGIN
+1: execute select_for_nokeyupdate_ao;
+ c 
+---
+ 1 
+ 3 
+ 5 
+ 2 
+ 6 
+ 8 
+ 4 
+ 7 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute select_for_share_ao;
+ c 
+---
+ 1 
+ 3 
+ 5 
+ 2 
+ 6 
+ 8 
+ 4 
+ 7 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute select_for_keyshare_ao;
+ c 
+---
+ 1 
+ 3 
+ 5 
+ 2 
+ 6 
+ 8 
+ 4 
+ 7 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
 1: abort;
 ABORT
 
@@ -274,13 +504,11 @@ ABORT
 BEGIN
 1: execute update_tlockmods_ao;
 EXECUTE 8
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -288,13 +516,11 @@ ABORT
 BEGIN
 1: execute delete_tlockmods_ao;
 EXECUTE 8
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -302,13 +528,11 @@ ABORT
 BEGIN
 1: execute insert_tlockmods_ao;
 EXECUTE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation      
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -317,38 +541,42 @@ ABORT
 
 -- start_ignore
 ! gpconfig -c gp_enable_global_deadlock_detector -v on;
-20190401:16:37:37:002792 gpconfig:zlv:gpadmin-[INFO]:-completed successfully with parameters '-c gp_enable_global_deadlock_detector -v on'
+20190515:15:53:44:050050 gpconfig:zlv:gpadmin-[INFO]:-completed successfully with parameters '-c gp_enable_global_deadlock_detector -v on'
 
 ! gpstop -rai;
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Starting gpstop with args: -rai
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Gathering information and validating the environment...
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Obtaining Segment details from master...
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 5.0.0-beta.3+dev.17653.g86b0b90 build dev'
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-There are 1 connections to the database
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Master host=zlv
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-No standby master host configured
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Targeting dbid [2, 3, 4] for shutdown
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel segment instance shutdown, please wait...
-20190401:16:37:37:002915 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-   Segments stopped successfully      = 3
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-   Segments with errors during stop   = 0
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown 3 of 3 segment instances 
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-No leftover gpmmon process found
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
-20190401:16:37:38:002915 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover shared memory
-20190401:16:37:39:002915 gpstop:zlv:gpadmin-[INFO]:-Restarting System...
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Starting gpstop with args: -rai
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Gathering information and validating the environment...
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Obtaining Segment details from master...
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.196.g0f8a703 build dev'
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-There are 1 connections to the database
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Master host=zlv
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20190515:15:53:44:050220 gpstop:zlv:gpadmin-[INFO]:-Stopping master standby host zlv mode=fast
+20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown standby process on zlv
+20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
+20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
+20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20190515:15:53:45:050220 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-   Segments stopped successfully      = 6
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-No leftover gpmmon process found
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover shared memory
+20190515:15:53:46:050220 gpstop:zlv:gpadmin-[INFO]:-Restarting System...
 
 -- end_ignore
 
@@ -366,7 +594,7 @@ SET
 
 -- 2.1 test for heap tables
 
--- 2.1.1 select for update should hold ExclusiveLock on range tables
+-- 2.1.1 select for (update|share|no key update |key share) should hold ExclusiveLock on range tables
 1: begin;
 BEGIN
 1: select * from t_lockmods for update;
@@ -374,17 +602,72 @@ BEGIN
 ---
  1 
  2 
- 3 
- 4 
  5 
+ 4 
+ 3 
 (5 rows)
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
+1: abort;
+ABORT
 
+1: begin;
+BEGIN
+1: select * from t_lockmods for no key update;
+ c 
+---
+ 1 
+ 2 
+ 5 
+ 3 
+ 4 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: select * from t_lockmods for share;
+ c 
+---
+ 1 
+ 2 
+ 5 
+ 3 
+ 4 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: select * from t_lockmods for key share;
+ c 
+---
+ 1 
+ 2 
+ 5 
+ 3 
+ 4 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
 1: abort;
 ABORT
 
@@ -394,13 +677,11 @@ ABORT
 BEGIN
 1: update t_lockmods set c = c + 0;
 UPDATE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -408,13 +689,11 @@ ABORT
 BEGIN
 1: delete from t_lockmods;
 DELETE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -423,18 +702,22 @@ ABORT
 BEGIN
 1: insert into t_lockmods select * from generate_series(1, 5);
 INSERT 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
 -- 2.1.4 use cached plan should be consistent with no cached plan
 1: prepare select_for_update as select * from t_lockmods for update;
+PREPARE
+1: prepare select_for_nokeyupdate as select * from t_lockmods for no key update;
+PREPARE
+1: prepare select_for_share as select * from t_lockmods for share;
+PREPARE
+1: prepare select_for_keyshare as select * from t_lockmods for key share;
 PREPARE
 1: prepare update_tlockmods as update t_lockmods set c = c + 0;
 PREPARE
@@ -448,19 +731,74 @@ BEGIN
 1: execute select_for_update;
  c 
 ---
- 1 
- 2 
  3 
  4 
+ 1 
+ 2 
  5 
 (5 rows)
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
+1: abort;
+ABORT
 
+1: begin;
+BEGIN
+1: execute select_for_nokeyupdate;
+ c 
+---
+ 4 
+ 1 
+ 2 
+ 5 
+ 3 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute select_for_share;
+ c 
+---
+ 1 
+ 2 
+ 5 
+ 3 
+ 4 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute select_for_keyshare;
+ c 
+---
+ 1 
+ 2 
+ 5 
+ 3 
+ 4 
+(5 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation   
+----------+---------------+---------+------------
+ relation | ExclusiveLock | t       | t_lockmods 
+(1 row)
 1: abort;
 ABORT
 
@@ -468,13 +806,11 @@ ABORT
 BEGIN
 1: execute update_tlockmods;
 EXECUTE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -482,13 +818,11 @@ ABORT
 BEGIN
 1: execute delete_tlockmods;
 EXECUTE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -496,40 +830,102 @@ ABORT
 BEGIN
 1: execute insert_tlockmods;
 EXECUTE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
-
 1: abort;
 ABORT
 
 -- 2.2 test for AO table
 
--- 2.2.1 select for update should hold ExclusiveLock on range tables
+-- 2.2.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
 BEGIN
 1: select * from t_lockmods_ao for update;
  c 
 ---
+ 2 
+ 6 
+ 8 
  1 
  3 
  5 
- 8 
- 6 
- 7 
- 2 
  4 
+ 7 
 (8 rows)
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
+1: abort;
+ABORT
 
+1: begin;
+BEGIN
+1: select * from t_lockmods_ao for no key update;
+ c 
+---
+ 1 
+ 3 
+ 5 
+ 4 
+ 7 
+ 2 
+ 6 
+ 8 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: select * from t_lockmods_ao for share;
+ c 
+---
+ 4 
+ 7 
+ 2 
+ 6 
+ 8 
+ 1 
+ 3 
+ 5 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: select * from t_lockmods_ao for key share;
+ c 
+---
+ 4 
+ 7 
+ 2 
+ 6 
+ 8 
+ 1 
+ 3 
+ 5 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
 1: abort;
 ABORT
 
@@ -539,13 +935,11 @@ ABORT
 BEGIN
 1: update t_lockmods_ao set c = c + 0;
 UPDATE 8
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -553,13 +947,11 @@ ABORT
 BEGIN
 1: delete from t_lockmods_ao;
 DELETE 8
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -568,18 +960,22 @@ ABORT
 BEGIN
 1: insert into t_lockmods_ao select * from generate_series(1, 5);
 INSERT 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation      
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
 -- 2.2.4 use cached plan should be consistent with no cached plan
 1: prepare select_for_update_ao as select * from t_lockmods_ao for update;
+PREPARE
+1: prepare select_for_nokeyupdate_ao as select * from t_lockmods_ao for no key update;
+PREPARE
+1: prepare select_for_share_ao as select * from t_lockmods_ao for share;
+PREPARE
+1: prepare select_for_keyshare_ao as select * from t_lockmods_ao for key share;
 PREPARE
 1: prepare update_tlockmods_ao as update t_lockmods_ao set c = c + 0;
 PREPARE
@@ -594,21 +990,85 @@ BEGIN
  c 
 ---
  2 
- 4 
+ 6 
+ 8 
  1 
  3 
  5 
- 8 
- 6 
+ 4 
  7 
 (8 rows)
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
+1: abort;
+ABORT
 
+1: begin;
+BEGIN
+1: execute select_for_nokeyupdate_ao;
+ c 
+---
+ 2 
+ 6 
+ 8 
+ 1 
+ 3 
+ 5 
+ 4 
+ 7 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute select_for_share_ao;
+ c 
+---
+ 2 
+ 6 
+ 8 
+ 1 
+ 3 
+ 5 
+ 4 
+ 7 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute select_for_keyshare_ao;
+ c 
+---
+ 2 
+ 6 
+ 8 
+ 4 
+ 7 
+ 1 
+ 3 
+ 5 
+(8 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation      
+----------+---------------+---------+---------------
+ relation | ExclusiveLock | t       | t_lockmods_ao 
+(1 row)
 1: abort;
 ABORT
 
@@ -616,13 +1076,11 @@ ABORT
 BEGIN
 1: execute update_tlockmods_ao;
 EXECUTE 8
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -630,13 +1088,11 @@ ABORT
 BEGIN
 1: execute delete_tlockmods_ao;
 EXECUTE 8
-
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -644,13 +1100,11 @@ ABORT
 BEGIN
 1: execute insert_tlockmods_ao;
 EXECUTE 5
-
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation      
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
-
 1: abort;
 ABORT
 
@@ -659,38 +1113,42 @@ ABORT
 
 -- start_ignore
 ! gpconfig -c gp_enable_global_deadlock_detector -v off;
-20190401:16:37:42:003348 gpconfig:zlv:gpadmin-[INFO]:-completed successfully with parameters '-c gp_enable_global_deadlock_detector -v off'
+20190515:15:53:50:051138 gpconfig:zlv:gpadmin-[INFO]:-completed successfully with parameters '-c gp_enable_global_deadlock_detector -v off'
 
 ! gpstop -rai;
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Starting gpstop with args: -rai
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Gathering information and validating the environment...
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Obtaining Segment details from master...
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 5.0.0-beta.3+dev.17653.g86b0b90 build dev'
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-There are 0 connections to the database
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Master host=zlv
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-No standby master host configured
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Targeting dbid [2, 3, 4] for shutdown
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel segment instance shutdown, please wait...
-20190401:16:37:42:003471 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-   Segments stopped successfully      = 3
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-   Segments with errors during stop   = 0
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown 3 of 3 segment instances 
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-No leftover gpmmon process found
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover shared memory
-20190401:16:37:43:003471 gpstop:zlv:gpadmin-[INFO]:-Restarting System...
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Starting gpstop with args: -rai
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Gathering information and validating the environment...
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Obtaining Segment details from master...
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.196.g0f8a703 build dev'
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-There are 0 connections to the database
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Master host=zlv
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
+20190515:15:53:50:051308 gpstop:zlv:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Stopping master standby host zlv mode=fast
+20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown standby process on zlv
+20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20190515:15:53:51:051308 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-0.00% of jobs completed
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-100.00% of jobs completed
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-   Segments stopped successfully      = 6
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-----------------------------------------------------
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-No leftover gpmmon process found
+20190515:15:53:52:051308 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
+20190515:15:53:53:051308 gpstop:zlv:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
+20190515:15:53:53:051308 gpstop:zlv:gpadmin-[INFO]:-Cleaning up leftover shared memory
+20190515:15:53:53:051308 gpstop:zlv:gpadmin-[INFO]:-Restarting System...
 
 -- end_ignore
 

@@ -263,15 +263,8 @@ expand_security_qual(PlannerInfo *root, List *tlist, int rt_index,
 					case ROW_MARK_COPY:
 						/* No locking needed */
 						break;
-
-					/*
-					 * Additional modes in GPDB. These are only created
-					 * later in the planning, so we should not see these.
-					 */
-					case ROW_MARK_TABLE_SHARE:
-						elog(ERROR, "unexpected ROW_MARK_TABLE_SHARE locking mode encountered while expanding security barrier view");
-					case ROW_MARK_TABLE_EXCLUSIVE:
-						elog(ERROR, "unexpected ROW_MARK_TABLE_EXCLUSIVE locking mode encountered while expanding security barrier view");
+					default:
+						elog(ERROR, "unknown rowmark type encountered while expanding security barrier view");
 				}
 				root->rowMarks = list_delete(root->rowMarks, rc);
 			}
