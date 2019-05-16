@@ -1069,12 +1069,29 @@ addRangeTableEntry(ParseState *pstate,
 	 * It is not easy to lock tuples in Greenplum database, since
 	 * tuples may be fetched through motion nodes.
 	 *
-	 * So in Greenplum, ExclusiveLock is held for tables in rowMarks.
+	 * But when Global Deadlock Detector is enabled, and the select
+	 * statement with locking clause contains only one table, we are
+	 * sure that there are no motions. For such simple cases, we could
+	 * make the behavior just the same as Postgres.
 	 */
 	locking = getLockedRefname(pstate, refname);
 	if (locking)
 	{
-		lockmode = ExclusiveLock;
+		Oid relid;
+
+		relid = RangeVarGetRelid(relation, lockmode, false);
+
+		rel = try_heap_open(relid, NoLock, true);
+		if (!rel)
+			elog(ERROR, "open relation(%u) fail", relid);
+
+		if (rel->rd_rel->relkind != RELKIND_RELATION ||
+			RelationIsAppendOptimized(rel))
+			pstate->p_canOptSelectLockingClause = false;
+
+		lockmode = pstate->p_canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
+
+		heap_close(rel, NoLock);
 		nowait = locking->noWait;
 	}
 

@@ -3104,11 +3104,44 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	 * It is not easy to lock tuples in Greenplum database, since
 	 * tuples may be fetched through motion nodes.
 	 *
-	 * So, in Greenplum, it should not emit LockRows node in plan.
+	 * But when Global Deadlock Detector is enabled, and the select
+	 * statement with locking clause contains only one table, we are
+	 * sure that there are no motions. For such simple cases, we could
+	 * make the behavior just the same as Postgres.
 	 *
 	 * The conflict with UPDATE|DELETE is implemented by locking the entire
 	 * table in ExclusiveMode. More details please refer docs.
 	 */
+	if (parse->rowMarks)
+	{
+		ListCell   *lc;
+		List   *newmarks = NIL;
+
+		foreach(lc, root->rowMarks)
+		{
+			PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
+
+			if (parse->canOptSelectLockingClause)
+			{
+				rc->canOptSelectLockingClause = true;
+				newmarks = lappend(newmarks, rc);
+			}
+		}
+
+		if (newmarks)
+		{
+			result_plan = (Plan *) make_lockrows(result_plan,
+												 newmarks,
+												 SS_assign_special_param(root));
+			result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
+
+			/*
+			 * The result can no longer be assumed sorted, since locking might
+			 * cause the sort key columns to be replaced with new values.
+			 */
+			current_pathkeys = NIL;
+		}
+	}
 
 	/*
 	 * Finally, if there is a LIMIT/OFFSET clause, add the LIMIT node.

@@ -2185,6 +2185,7 @@ _readPlanRowMark(void)
 	READ_ENUM_FIELD(markType, RowMarkType);
 	READ_BOOL_FIELD(noWait);
 	READ_BOOL_FIELD(isParent);
+	READ_BOOL_FIELD(canOptSelectLockingClause);
 
 	READ_DONE();
 }

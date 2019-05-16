@@ -1867,10 +1867,13 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		Oid			relid;
 		Relation	relation;
 		ExecRowMark *erm;
+		LOCKMODE    lm;
 
 		/* ignore "parent" rowmarks; they are irrelevant at runtime */
 		if (rc->isParent)
 			continue;
+
+		lm = rc->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
 
 		/*
 		 * If you change the conditions under which rel locks are acquired
@@ -1887,7 +1890,10 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			 * It is not easy to lock tuples in Greenplum database, since
 			 * tuples may be fetched through motion nodes.
 			 *
-			 * So in Greenplum, ExclusiveLock is held for tables in rowMarks.
+			 * But when Global Deadlock Detector is enabled, and the select
+			 * statement with locking clause contains only one table, we are
+			 * sure that there are no motions. For such simple cases, we could
+			 * make the behavior just the same as Postgres.
 			 */
 			case ROW_MARK_EXCLUSIVE:
 			case ROW_MARK_NOKEYEXCLUSIVE:
@@ -1895,7 +1901,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			case ROW_MARK_KEYSHARE:
 			case ROW_MARK_REFERENCE:
 				relid = getrelid(rc->rti, rangeTable);
-				relation = heap_open(relid, ExclusiveLock);
+				relation = heap_open(relid, lm);
 				break;
 			case ROW_MARK_COPY:
 				/* there's no real table here ... */

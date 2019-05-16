@@ -18,24 +18,54 @@ show gp_enable_global_deadlock_detector;
 create table t_lockmods (c int) distributed randomly;
 insert into t_lockmods select * from generate_series(1, 5);
 
+create table t_lockmods1 (c int) distributed randomly;
+
 -- 1.1.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
+1: explain select * from t_lockmods for update;
 1: select * from t_lockmods for update;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods for no key update;
 1: select * from t_lockmods for no key update;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods for share;
 1: select * from t_lockmods for share;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods for key share;
 1: select * from t_lockmods for key share;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods, t_lockmods1 for update;
+1: select * from t_lockmods, t_lockmods1 for update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods, t_lockmods1 for no key update;
+1: select * from t_lockmods, t_lockmods1 for no key update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods, t_lockmods1 for share;
+1: select * from t_lockmods, t_lockmods1 for share;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods, t_lockmods1 for key share;
+1: select * from t_lockmods, t_lockmods1 for key share;
 2: select * from show_locks_lockmodes;
 1: abort;
 
@@ -103,25 +133,54 @@ insert into t_lockmods select * from generate_series(1, 5);
 -- 1.2 test for AO table
 create table t_lockmods_ao (c int) with (appendonly=true) distributed randomly;
 insert into t_lockmods_ao select * from generate_series(1, 8);
+create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 
 -- 1.2.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
+1: explain select * from t_lockmods_ao for update;
 1: select * from t_lockmods_ao for update;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods_ao for no key update;
 1: select * from t_lockmods_ao for no key update;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods_ao for share;
 1: select * from t_lockmods_ao for share;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods_ao for key share;
 1: select * from t_lockmods_ao for key share;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods_ao, t_lockmods_ao1 for update;
+1: select * from t_lockmods_ao, t_lockmods_ao1 for update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods_ao, t_lockmods_ao1 for no key update;
+1: select * from t_lockmods_ao, t_lockmods_ao1 for no key update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods_ao, t_lockmods_ao1 for share;
+1: select * from t_lockmods_ao, t_lockmods_ao1 for share;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods_ao, t_lockmods_ao1 for key share;
+1: select * from t_lockmods_ao, t_lockmods_ao1 for key share;
 2: select * from show_locks_lockmodes;
 1: abort;
 
@@ -205,22 +264,50 @@ insert into t_lockmods_ao select * from generate_series(1, 8);
 
 -- 2.1.1 select for (update|share|no key update |key share) should hold ExclusiveLock on range tables
 1: begin;
+1: explain select * from t_lockmods for update;
 1: select * from t_lockmods for update;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods for no key update;
 1: select * from t_lockmods for no key update;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods for share;
 1: select * from t_lockmods for share;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods for key share;
 1: select * from t_lockmods for key share;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods, t_lockmods1 for update;
+1: select * from t_lockmods, t_lockmods1 for update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods, t_lockmods1 for no key update;
+1: select * from t_lockmods, t_lockmods1 for no key update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods, t_lockmods1 for share;
+1: select * from t_lockmods, t_lockmods1 for share;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods, t_lockmods1 for key share;
+1: select * from t_lockmods, t_lockmods1 for key share;
 2: select * from show_locks_lockmodes;
 1: abort;
 
@@ -290,25 +377,52 @@ insert into t_lockmods_ao select * from generate_series(1, 8);
 
 -- 2.2.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
+1: explain select * from t_lockmods_ao for update;
 1: select * from t_lockmods_ao for update;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods_ao for no key update;
 1: select * from t_lockmods_ao for no key update;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods_ao for share;
 1: select * from t_lockmods_ao for share;
 2: select * from show_locks_lockmodes;
 1: abort;
 
 1: begin;
+1: explain select * from t_lockmods_ao for key share;
 1: select * from t_lockmods_ao for key share;
 2: select * from show_locks_lockmodes;
 1: abort;
 
+1: begin;
+1: explain select * from t_lockmods_ao, t_lockmods_ao1 for update;
+1: select * from t_lockmods_ao, t_lockmods_ao1 for update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods_ao, t_lockmods_ao1 for no key update;
+1: select * from t_lockmods_ao, t_lockmods_ao1 for no key update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods_ao, t_lockmods_ao1 for share;
+1: select * from t_lockmods_ao, t_lockmods_ao1 for share;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: begin;
+1: explain select * from t_lockmods_ao, t_lockmods_ao1 for key share;
+1: select * from t_lockmods_ao, t_lockmods_ao1 for key share;
+2: select * from show_locks_lockmodes;
+1: abort;
 
 -- 2.2.2 update | delete should hold ExclusiveLock on result relations
 1: begin;

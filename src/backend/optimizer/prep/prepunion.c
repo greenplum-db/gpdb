@@ -1393,9 +1393,12 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 		 * It is not easy to lock tuples in Greenplum database, since
 		 * tuples may be fetched through motion nodes.
 		 *
-		 * So in Greenplum, ExclusiveLock is held for tables in rowMarks.
+		 * But when Global Deadlock Detector is enabled, and the select
+		 * statement with locking clause contains only one table, we are
+		 * sure that there are no motions. For such simple cases, we could
+		 * make the behavior just the same as Postgres.
 		 */
-		lockmode = ExclusiveLock;
+		lockmode = oldrc->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
 	}
 	else
 		lockmode = AccessShareLock;

@@ -1139,6 +1139,7 @@ _outPlanRowMark(StringInfo str, const PlanRowMark *node)
 	WRITE_ENUM_FIELD(markType, RowMarkType);
 	WRITE_BOOL_FIELD(noWait);
 	WRITE_BOOL_FIELD(isParent);
+	WRITE_BOOL_FIELD(canOptSelectLockingClause);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
