@@ -73,6 +73,7 @@
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_tablespace.h"
+#include "cdb/cdbvars.h"
 #include "pgstat.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
@@ -1394,7 +1395,7 @@ GetTempFilePath(const char *filename, bool createdir)
 	{
 		/* All other tablespaces are accessed via symlinks */
 		snprintf(tempdirpath, sizeof(tempdirpath), "pg_tblspc/%u/%s/%s",
-				 tblspcOid, tablespace_version_directory(), PG_TEMP_FILES_DIR);
+				 tblspcOid, GP_TABLESPACE_VERSION_DIRECTORY, PG_TEMP_FILES_DIR);
 	}
 
 	/*
@@ -1442,7 +1443,7 @@ OpenTemporaryFileInTablespace(Oid tblspcOid, bool rejectError,
 	{
 		/* All other tablespaces are accessed via symlinks */
 		snprintf(tempdirpath, sizeof(tempdirpath), "pg_tblspc/%u/%s/%s",
-				 tblspcOid, tablespace_version_directory(), PG_TEMP_FILES_DIR);
+				 tblspcOid, GP_TABLESPACE_VERSION_DIRECTORY, PG_TEMP_FILES_DIR);
 	}
 
 	/*
@@ -2754,7 +2755,7 @@ CleanupTempFiles(bool isProcExit)
 void
 RemovePgTempFiles(void)
 {
-	char		temp_path[MAXPGPATH + 10 + strlen(tablespace_version_directory()) + 1 + sizeof(PG_TEMP_FILES_DIR)];
+	char		temp_path[MAXPGPATH + 11 + get_dbid_string_length() + 1 + sizeof(GP_TABLESPACE_VERSION_DIRECTORY) + sizeof(PG_TEMP_FILES_DIR)];
 	DIR		   *spc_dir;
 	struct dirent *spc_de;
 
@@ -2777,11 +2778,11 @@ RemovePgTempFiles(void)
 			continue;
 
 		snprintf(temp_path, sizeof(temp_path), "pg_tblspc/%s/%s/%s",
-				 spc_de->d_name, tablespace_version_directory(), PG_TEMP_FILES_DIR);
+				 spc_de->d_name, GP_TABLESPACE_VERSION_DIRECTORY, PG_TEMP_FILES_DIR);
 		RemovePgTempFilesInDir(temp_path, true, false);
 
 		snprintf(temp_path, sizeof(temp_path), "pg_tblspc/%s/%s",
-				 spc_de->d_name, tablespace_version_directory());
+				 spc_de->d_name, GP_TABLESPACE_VERSION_DIRECTORY);
 		RemovePgTempRelationFiles(temp_path);
 	}
 

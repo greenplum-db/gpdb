@@ -629,7 +629,6 @@ drop table unlogged_test;
 --
 -- Test crash recovery
 --
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE TABLE bm_test_insert(a int) DISTRIBUTED BY (a);
 CREATE INDEX bm_a_idx ON bm_test_insert USING bitmap(a);
 CREATE TABLE bm_test_update(a int, b int) DISTRIBUTED BY (a);

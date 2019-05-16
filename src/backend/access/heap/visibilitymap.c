@@ -381,6 +381,11 @@ visibilitymap_count(Relation rel)
 	BlockNumber result = 0;
 	BlockNumber mapBlock;
 
+	if (RelationIsAppendOptimized(rel))
+		ereport(WARNING, (errmsg("visibilitymap_count called with an unsupported relstorage type: %c",
+						  rel->rd_rel->relstorage),
+						  errhint("Expected to be called with a heap relation")));
+
 	for (mapBlock = 0;; mapBlock++)
 	{
 		Buffer		mapBuffer;

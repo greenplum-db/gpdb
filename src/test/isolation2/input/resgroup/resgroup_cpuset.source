@@ -6,7 +6,6 @@ DROP TABLE IF EXISTS bigtable;
 -- end_ignore
 
 CREATE LANGUAGE plpythonu;
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 CREATE RESOURCE GROUP rg1_cpuset_test WITH (memory_limit = 10, cpuset='0');
 CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;

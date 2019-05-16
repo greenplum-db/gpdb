@@ -4,36 +4,6 @@ import socket
 import inspect
 from gppylib.commands.base import Command
 
-class GpSegInstall(Command):
-    """
-    This is a wrapper for gpseginstall
-    """
-    def __init__(self, gphome, hosts):
-        self.hostfile = '/tmp/gpseginstall_hosts'
-        self.gphome = gphome
-        self.hosts = hosts
-        cmd_str = "gpseginstall -f %s -u %s" %(self.hostfile, getpass.getuser())
-        Command.__init__(self, 'run gpseginstall', cmd_str)
-
-    def run(self, validate=True):
-        print "Running gpseginstall: %s" % self
-        with open(self.hostfile, 'w') as f:
-            for host in self.hosts[1:]:
-                f.write(host)
-                f.write('\n')
-
-        res = run_shell_command('gpssh-exkeys -f %s' %self.hostfile, 'gpssh-exkeys')
-        if res['rc'] > 0:
-            raise Exception("Failed to do gpssh-exkeys: %s" %res['stderr'])
-
-        res = run_shell_command("gpssh -f %s -e 'mkdir -p %s'" %(self.hostfile, self.gphome), 'gpssh-exkeys')
-        if res['rc'] > 0:
-            raise Exception("Failed to create gphome directories on segments: %s" %res[stderr])
-
-        Command.run(self, validateAfter=validate)
-        result = self.get_results()
-        return result
-
 class GpDeleteSystem(Command):
     """This is a wrapper for gpdeletesystem."""
     def __init__(self, mdd=None):

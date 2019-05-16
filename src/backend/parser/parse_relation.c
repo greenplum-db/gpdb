@@ -594,7 +594,7 @@ scanRTEForColumn(ParseState *pstate, RangeTblEntry *rte, char *colname,
 	{
 		/* In GPDB, system columns like gp_segment_id, ctid, xmin/xmax seem to be
 		 * ambiguous for replicated table, replica in each segment has different
-		 * value of those columns, between sessions, different replicas are choosen
+		 * value of those columns, between sessions, different replicas are chosen
 		 * to provide data, so it's weird for users to see different system columns
 		 * between sessions. So for replicated table, we don't expose system columns
 		 * unless it's GP_ROLE_UTILITY for debug purpose.
@@ -1065,26 +1065,15 @@ addRangeTableEntry(ParseState *pstate,
 	 * from postgres to allow for required lock promotion for distributed
 	 * AO tables.
 	 * select for update should lock the whole table, we do it here.
+	 * See discussion on https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
+	 * And we do not have to treat system tables different because directly dms
+	 * on system tables are rare.
 	 */
 	locking = getLockedRefname(pstate, refname);
 	if (locking)
 	{
-		if (locking->strength >= LCS_FORNOKEYUPDATE)
-		{
-			Oid relid;
-			
-			relid = RangeVarGetRelid(relation, lockmode, false);
-			
-			rel = try_heap_open(relid, NoLock, true);
-			if (!rel)
-				elog(ERROR, "open relation(%u) fail", relid);
-			lockmode = IsSystemRelation(rel) ? RowExclusiveLock : ExclusiveLock;
-			heap_close(rel, NoLock);
-		}
-		else
-		{
-			lockmode = RowShareLock;
-		}
+		lockmode = locking->strength >= LCS_FORNOKEYUPDATE ?
+			ExclusiveLock : RowShareLock;
 		nowait = locking->noWait;
 	}
 
@@ -1956,7 +1945,7 @@ isSimplyUpdatableRelation(Oid relid, bool noerror)
 		if (!noerror)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("Invalid oid: %d is not simply updatable", relid)));
+					 errmsg("invalid oid: %d is not simply updatable", relid)));
 		return false;
 	}
 

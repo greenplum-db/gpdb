@@ -4609,3 +4609,21 @@ setFPHoldTillEndXact(Oid relid)
 
 	return result;
 }
+
+/*
+ * Check whether a waiter's request lockmode conflict with
+ * the holder's hold mask
+ */
+bool
+CheckWaitLockModeConflictHoldMask(LOCKTAG tag, LOCKMODE waitLockMode, LOCKMASK holderMask)
+{
+	int			waiterConflictMask;
+	LOCKMETHODID lockmethodid = (LOCKMETHODID) tag.locktag_lockmethodid;
+
+	Assert(0 < lockmethodid && lockmethodid < lengthof(LockMethods));
+
+	waiterConflictMask = LockMethods[lockmethodid]->conflictTab[waitLockMode];
+	if (holderMask & waiterConflictMask)
+		return true;
+	return false;
+}

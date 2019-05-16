@@ -525,7 +525,8 @@ lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt)
 		vac_update_relstats(onerel,
 							vacrelstats->rel_pages,
 							vacrelstats->new_rel_tuples,
-							visibilitymap_count(onerel),
+							0, /* AO does not currently have an equivalent to
+							      Heap's 'all visible pages' */
 							vacrelstats->hasindex,
 							FreezeLimit,
 							MultiXactCutoff,

@@ -174,7 +174,6 @@
             <topicref href="guc-list.xml#keep_wal_segments"/>
             <topicref href="guc-list.xml#krb_caseins_users"/>
             <topicref href="guc-list.xml#krb_server_keyfile"/>
-            <topicref href="guc-list.xml#krb_srvname"/>
             <topicref href="guc-list.xml#lc_collate"/>
             <topicref href="guc-list.xml#lc_ctype"/>
             <topicref href="guc-list.xml#lc_messages"/>

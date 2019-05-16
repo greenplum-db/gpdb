@@ -6,6 +6,7 @@ import json
 import yaml
 import os
 import re
+import pipes
 import platform
 import shutil
 import socket
@@ -227,8 +228,10 @@ def impl(context, checksum_toggle):
         if ('PGDATABASE' in os.environ):
             run_command(context, "createdb %s" % os.getenv('PGDATABASE'))
 
+
 @given('the database is not running')
 @when('the database is not running')
+@then('the database is not running')
 def impl(context):
     stop_database_if_started(context)
     if has_exception(context):
@@ -810,100 +813,25 @@ def _process_exists(pid, host):
     cmd.run()
     return cmd.get_return_code() == 0
 
-def _wait_for_process_exit(pid, host, timeout=30):
-    """
-    Waits up to timeout (default 30) seconds for the process with the given PID
-    to exit. Returns True if this occurs within the timeout and False otherwise.
 
-    Be mindful of the inherent problems with this approach -- if you pass a PID
-    that never existed, it will appear to have "exited" here. Conversely, if the
-    OS is quick enough to recycle a process' PID after it exits, this function
-    may incorrectly show that the exit never happened.
-    """
-    end_time = datetime.now() + timedelta(seconds=timeout)
-    interval = 0.05
-
-    while _process_exists(pid, host):
-        if end_time < datetime.now():
-            # Time's up.
-            return False
-
-        # Sleep with exponential backoff and a maximum of 1 second.
-        time.sleep(interval)
-        interval = min(interval * 2, 1)
-
-    return True
-
-@given('user kills a primary postmaster process')
-@when('user kills a primary postmaster process')
-@then('user kills a primary postmaster process')
-def impl(context):
-    if hasattr(context, 'pseg'):
-        seg_data_dir = context.pseg_data_dir
-        seg_host = context.pseg_hostname
-        seg_port = context.pseg.getSegmentPort()
-    else:
-        gparray = GpArray.initFromCatalog(dbconn.DbURL())
-        for seg in gparray.getDbList():
-            if seg.isSegmentPrimary():
-                seg_data_dir = seg.getSegmentDataDirectory()
-                seg_host = seg.getSegmentHostName()
-                seg_port = seg.getSegmentPort()
-                break
-
-    pid = get_pid_for_segment(seg_data_dir, seg_host)
-    if pid is None:
-        raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
-
-    kill_process(int(pid), seg_host, signal.SIGKILL)
-    _wait_for_process_exit(pid, seg_host)
-
-    pid = get_pid_for_segment(seg_data_dir, seg_host)
-    if pid is not None:
-        raise Exception('Unable to kill postmaster with pid "%d" datadir "%s"' % (pid, seg_data_dir))
-
-    context.killed_seg_host = seg_host
-    context.killed_seg_port = seg_port
-
-
-@given('user kills all {segment_type} processes')
-@when('user kills all {segment_type} processes')
-@then('user kills all {segment_type} processes')
-def impl(context, segment_type):
-    context.execute_steps(
-        u'given user kills all {} processes with SIGTERM'.format(segment_type)
-    )
-
-@given('user kills all {segment_type} processes with {signal_name}')
-@when('user kills all {segment_type} processes with {signal_name}')
-@then('user kills all {segment_type} processes with {signal_name}')
-def impl(context, segment_type, signal_name):
-    # Look up the signal code by name. This is easier in Python 3, with the
-    # introduction of signal.Signals, but for now we do it the hard way.
-    if (not signal_name.startswith('SIG')) or signal_name.startswith('SIG_'):
-        raise Exception("'{}' is not a valid signal name".format(signal_name))
-    try:
-        signal_code = signal.__dict__[signal_name]
-    except KeyError:
-        raise Exception("'{}' is not a valid signal name".format(signal_name))
+@given('user stops all {segment_type} processes')
+@when('user stops all {segment_type} processes')
+@then('user stops all {segment_type} processes')
+def stop_segments(context, segment_type):
+    if segment_type not in ("primary", "mirror"):
+        raise Exception("Expected segment_type to be 'primary' or 'mirror', but found '%s'." % segment_type)
 
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
-    filtered_segments = filter(lambda seg: seg.preferred_role == role and seg.content != -1, gparray.getDbList())
-    for seg in filtered_segments:
-        seg_data_dir = seg.getSegmentDataDirectory()
-        seg_host = seg.getSegmentHostName()
 
-        pid = get_pid_for_segment(seg_data_dir, seg_host)
-        if pid is None:
-            raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
-
-        kill_process(int(pid), seg_host, signal_code)
-        _wait_for_process_exit(pid, seg_host)
-
-        pid = get_pid_for_segment(seg_data_dir, seg_host)
-        if pid is not None:
-            raise Exception('Unable to kill postmaster with pid "%d" datadir "%s"' % (pid, seg_data_dir))
+    segments = filter(lambda seg: seg.getSegmentRole() == role and seg.content != -1, gparray.getDbList())
+    for seg in segments:
+        # For demo_cluster tests that run on the CI gives the error 'bash: pg_ctl: command not found'
+        # Thus, need to add pg_ctl to the path when ssh'ing to a demo cluster.
+        subprocess.check_call(['ssh', seg.getSegmentHostName(),
+                               'source %s/greenplum_path.sh && pg_ctl stop -m fast -D %s' % (
+                                   pipes.quote(os.environ.get("GPHOME")), pipes.quote(seg.getSegmentDataDirectory()))
+                               ])
 
 
 @given('user can start transactions')
@@ -1406,19 +1334,6 @@ def impl(context, filename, output):
         cmd.run(validateAfter=True)
         if output not in cmd.get_stdout():
             raise Exception('File %s on host %s does not contain "%s"' % (filepath, host, output))
-
-@then('the user waits for "{process_name}" to finish running')
-def impl(context, process_name):
-    run_command(context, "ps ux | grep `which %s` | grep -v grep | awk '{print $2}' | xargs" % process_name)
-    pids = context.stdout_message.split()
-    while len(pids) > 0:
-        for pid in pids:
-            try:
-                os.kill(int(pid), 0)
-            except OSError:
-                pids.remove(pid)
-        time.sleep(10)
-
 
 @given('the gpfdists occupying port {port} on host "{hostfile}"')
 def impl(context, port, hostfile):
@@ -2404,13 +2319,21 @@ def impl(context, table_name):
 def impl(context, num_of_segments):
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        query = """SELECT count(*) from gp_segment_configuration where -1 < content and status = 'u'"""
-        end_data_segments = dbconn.execSQLForSingleton(conn, query)
+        query = """SELECT dbid, content, role, preferred_role, mode, status, port, hostname, address, datadir from gp_segment_configuration;"""
+        rows = dbconn.execSQL(conn, query).fetchall()
+        end_data_segments = 0
+        for row in rows:
+            content = row[1]
+            status = row[5]
+            if content > -1 and status == 'u':
+                end_data_segments += 1
 
     if int(num_of_segments) == int(end_data_segments - context.start_data_segments):
         return
 
-    raise Exception("Incorrect amount of segments.\nprevious: %s\ncurrent: %s" % (context.start_data_segments, end_data_segments))
+    raise Exception("Incorrect amount of segments.\nprevious: %s\ncurrent:"
+            "%s\ndump of gp_segment_configuration: %s" %
+            (context.start_data_segments, end_data_segments, rows))
 
 @given('the cluster is setup for an expansion on hosts "{hostnames}"')
 def impl(context, hostnames):
@@ -2447,16 +2370,6 @@ def impl(context, hostnames):
     if hasattr(context, "temp_base_dir"):
         reset_hosts(hosts, context.temp_base_dir)
 
-@then('the database is killed on hosts "{hostnames}"')
-@given('the database is killed on hosts "{hostnames}"')
-def impl(context, hostnames):
-    hosts = hostnames.split(",")
-    for host in hosts:
-        cmd = Command(name='pkill postgres',
-                      cmdStr="pkill postgres || true",
-                      ctxt=REMOTE,
-                      remoteHost=host)
-        cmd.run(validateAfter=True)
 
 @given('user has created expansiontest tables')
 @then('user has created expansiontest tables')

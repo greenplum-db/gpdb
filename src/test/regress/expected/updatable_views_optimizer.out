@@ -348,14 +348,13 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a=6 WHERE a=5;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: "outer".a
-                     ->  Result
-                           ->  Split
-                                 ->  Result
-                                       ->  Index Scan using base_tbl_pkey on base_tbl
-                                             Index Cond: ((a = 5) AND (a > 0))
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(12 rows)
+                     Hash Key: base_tbl.a
+                     ->  Split
+                           ->  Result
+                                 ->  Index Scan using base_tbl_pkey on base_tbl
+                                       Index Cond: ((a = 5) AND (a > 0))
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
+(11 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view1 WHERE a=5;
                        QUERY PLAN                       
@@ -429,14 +428,13 @@ EXPLAIN (costs off) UPDATE rw_view2 SET aaa=5 WHERE aaa=4;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: "outer".aaa
-                     ->  Result
-                           ->  Split
-                                 ->  Result
-                                       ->  Index Scan using base_tbl_pkey on base_tbl
-                                             Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(12 rows)
+                     Hash Key: base_tbl.a
+                     ->  Split
+                           ->  Result
+                                 ->  Index Scan using base_tbl_pkey on base_tbl
+                                       Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
+(11 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view2 WHERE aaa=4;
                           QUERY PLAN                          

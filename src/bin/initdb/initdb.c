@@ -134,7 +134,7 @@ static char *backend_output = DEVNULL;
 
 /**
  * Build the minimal set of files needed for a mirror db.  Note that this could be removed
- *  eventually if we do a smarter copy of files from primary (with postresql.conf updates)
+ *  eventually if we do a smarter copy of files from primary (with postgresql.conf updates)
  */
 static bool forMirrorOnly = false;
 static bool do_sync = true;

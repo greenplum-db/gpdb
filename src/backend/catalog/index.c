@@ -2185,8 +2185,11 @@ index_update_stats(Relation rel,
 		else
 			relpages = RelationGetNumberOfBlocks(rel);
 
-		/* GPDB_94_MERGE_FIXME: Should we do something else here for AO tables? */
-		if (rd_rel->relkind != RELKIND_INDEX)
+		/*
+		 * GPDB: In theory, it is possible to support index only scans with AO
+		 * tables, but disable them for now by setting relallvisible to 0.
+		 */
+		if (rd_rel->relkind != RELKIND_INDEX && !RelationIsAppendOptimized(rel))
 			relallvisible = visibilitymap_count(rel);
 		else	/* don't bother for indexes */
 			relallvisible = 0;

@@ -1,3 +1,2 @@
 CREATE OR REPLACE FUNCTION invalidate_buffers(Oid, Oid, Oid) RETURNS BOOL AS '@abs_builddir@/heap_checksum_helper@DLSUFFIX@', 'invalidate_buffers'
 LANGUAGE C VOLATILE STRICT NO SQL;
-CREATE EXTENSION gp_inject_fault;

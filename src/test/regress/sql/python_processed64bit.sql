@@ -1,8 +1,4 @@
 --start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
---end_ignore
-
---start_ignore
 CREATE LANGUAGE plpythonu;
 --end_ignore
 

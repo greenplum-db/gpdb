@@ -131,6 +131,13 @@ recurse_dir(const char *datadir, const char *parentpath,
 						 fullpath);
 			link_target[len] = '\0';
 
+			if(parentpath && strcmp(parentpath, "pg_tblspc") == 0)
+			{
+				/* Lop off the dbid before sending the link target. */
+				char *file_sep_before_dbid_in_link_target = strrchr(link_target, '/');
+				*file_sep_before_dbid_in_link_target = '\0';
+			}
+
 			callback(path, FILE_TYPE_SYMLINK, 0, link_target);
 
 			/*

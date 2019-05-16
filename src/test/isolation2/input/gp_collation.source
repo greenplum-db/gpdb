@@ -1,7 +1,3 @@
--- Setup fault injectors
-CREATE extension if NOT EXISTS gp_inject_fault;
-
-
 --
 -- Try and fail to import all system collations
 --

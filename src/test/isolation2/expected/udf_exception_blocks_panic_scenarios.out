@@ -41,8 +41,6 @@
 -- end_matchsubs
 
 -- skip FTS probes always
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
 SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
  gp_inject_fault_infinite 
 --------------------------

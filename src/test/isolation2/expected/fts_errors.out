@@ -3,8 +3,6 @@
 -- Content 1 is used to test the gang interaction in various
 -- sessions when a failover is triggered and mirror is promoted
 -- to primary
-create extension if not exists gp_inject_fault;
-CREATE
 
 -- start_matchsubs
 -- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/

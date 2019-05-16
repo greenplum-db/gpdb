@@ -1,6 +1,5 @@
 -- If the function AssignResGroupOnMaster() fails after getting a slot,
 -- test the slot will be unassigned correctly.
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 DROP ROLE IF EXISTS role_test;
 -- start_ignore

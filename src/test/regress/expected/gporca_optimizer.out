@@ -8271,14 +8271,13 @@ explain select * from orca.t_date where user_id=9;
    ->  Sequence  (cost=0.00..437.00 rows=1 width=20)
          ->  Partition Selector for t_date (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
                Partitions selected: 6 (out of 6)
-         ->  Result  (cost=0.00..437.00 rows=1 width=20)
-               ->  Append  (cost=0.00..437.00 rows=1 width=20)
-                     ->  Dynamic Index Scan on t_date (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=50)
-                           Index Cond: user_id = 9::numeric
-                     ->  Dynamic Seq Scan on t_date t_date_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=50)
-                           Filter: user_id = 9::numeric
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(11 rows)
+         ->  Append  (cost=0.00..437.00 rows=1 width=20)
+               ->  Dynamic Index Scan on t_date (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=20)
+                     Index Cond: (user_id = 9::numeric)
+               ->  Dynamic Seq Scan on t_date t_date_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
+                     Filter: (user_id = 9::numeric)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.35.0
+(10 rows)
 
 select * from orca.t_date where user_id=9;
    timest   | user_id | tag1  | tag2  
@@ -8325,14 +8324,13 @@ explain select * from orca.t_text where user_id=9;
    ->  Sequence  (cost=0.00..437.00 rows=1 width=20)
          ->  Partition Selector for t_text (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
                Partitions selected: 3 (out of 3)
-         ->  Result  (cost=0.00..437.00 rows=1 width=20)
-               ->  Append  (cost=0.00..437.00 rows=1 width=20)
-                     ->  Dynamic Index Scan on t_text (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=50)
-                           Index Cond: user_id = 9::numeric
-                     ->  Dynamic Seq Scan on t_text t_text_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=50)
-                           Filter: user_id = 9::numeric
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(11 rows)
+         ->  Append  (cost=0.00..437.00 rows=1 width=20)
+               ->  Dynamic Index Scan on t_text (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=20)
+                     Index Cond: (user_id = 9::numeric)
+               ->  Dynamic Seq Scan on t_text t_text_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
+                     Filter: (user_id = 9::numeric)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.35.0
+(10 rows)
 
 select * from orca.t_text where user_id=9;
    timest   | user_id | tag1  | tag2  
@@ -8434,14 +8432,13 @@ explain select * from orca.t_ceeval_ints where user_id=4;
    ->  Sequence  (cost=0.00..437.00 rows=1 width=21)
          ->  Partition Selector for t_ceeval_ints (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
                Partitions selected: 3 (out of 3)
-         ->  Result  (cost=0.00..437.00 rows=1 width=21)
-               ->  Append  (cost=0.00..437.00 rows=1 width=21)
-                     ->  Dynamic Index Scan on t_ceeval_ints (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=51)
-                           Index Cond: user_id = 4::numeric
-                     ->  Dynamic Seq Scan on t_ceeval_ints t_ceeval_ints_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=51)
-                           Filter: user_id = 4::numeric
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(11 rows)
+         ->  Append  (cost=0.00..437.00 rows=1 width=21)
+               ->  Dynamic Index Scan on t_ceeval_ints (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=21)
+                     Index Cond: (user_id = 4::numeric)
+               ->  Dynamic Seq Scan on t_ceeval_ints t_ceeval_ints_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=21)
+                     Filter: (user_id = 4::numeric)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.35.0
+(10 rows)
 
 select * from orca.t_ceeval_ints where user_id=4;
  user_id | category_id | tag1  | tag2  
@@ -10104,24 +10101,25 @@ ORDER BY 1 asc ;
                                        ->  Sequence  (cost=0.00..874.01 rows=1 width=8)
                                              ->  Partition Selector for my_tq_agg_opt_part (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
                                                    Partitions selected: 2 (out of 2)
-                                             ->  Result  (cost=0.00..874.01 rows=1 width=8)
-                                                   ->  Append  (cost=0.00..874.01 rows=1 width=8)
-                                                         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=132)
-                                                               Join Filter: true
-                                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=62)
-                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=62)
-                                                               ->  Dynamic Index Scan on my_tq_agg_opt_part (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=70)
-                                                                     Index Cond: ets <= share0_ref2.event_ts AND end_ts > share0_ref2.event_ts
-                                                                     Filter: sym::bpchar = share0_ref2.symbol AND bid_price::numeric < share0_ref2.trade_price
-                                                         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=132)
-                                                               Join Filter: true
-                                                               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=62)
-                                                                     ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=62)
-                                                               ->  Dynamic Index Scan on my_tq_agg_opt_part my_tq_agg_opt_part_1 (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=70)
-                                                                     Index Cond: ets <= share0_ref3.event_ts
-                                                                     Filter: sym::bpchar = share0_ref3.symbol AND bid_price::numeric < share0_ref3.trade_price AND share0_ref3.event_ts < end_ts
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(34 rows)
+                                             ->  Append  (cost=0.00..874.00 rows=1 width=8)
+                                                   ->  Nested Loop  (cost=0.00..437.00 rows=1 width=8)
+                                                         Join Filter: true
+                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=24)
+                                                               ->  Result  (cost=0.00..431.00 rows=1 width=24)
+                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=24)
+                                                         ->  Dynamic Index Scan on my_tq_agg_opt_part (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=1)
+                                                               Index Cond: ((ets <= share0_ref2.event_ts) AND (end_ts > share0_ref2.event_ts))
+                                                               Filter: (((sym)::bpchar = share0_ref2.symbol) AND (plusone(bid_price) < share0_ref2.trade_price))
+                                                   ->  Nested Loop  (cost=0.00..437.00 rows=1 width=8)
+                                                         Join Filter: true
+                                                         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=24)
+                                                               ->  Result  (cost=0.00..431.00 rows=1 width=24)
+                                                                     ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=24)
+                                                         ->  Dynamic Index Scan on my_tq_agg_opt_part my_tq_agg_opt_part_1 (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=1)
+                                                               Index Cond: (ets <= share0_ref3.event_ts)
+                                                               Filter: (((sym)::bpchar = share0_ref3.symbol) AND (plusone(bid_price) < share0_ref3.trade_price) AND (share0_ref3.event_ts < end_ts))
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.35.0
+(35 rows)
 
 reset optimizer_segments;
 reset optimizer_enable_constant_expression_evaluation;
@@ -11113,6 +11111,20 @@ WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onet
         1 |        0 | 10
 (10 rows)
 
+-- full joins with predicates
+DROP TABLE IF EXISTS ffoo, fbar;
+NOTICE:  table "ffoo" does not exist, skipping
+NOTICE:  table "fbar" does not exist, skipping
+CREATE TABLE ffoo (a, b) AS (VALUES (1, 2), (2, 3), (4, 5), (5, 6), (6, 7)) DISTRIBUTED BY (a);
+CREATE TABLE fbar (c, d) AS (VALUES (1, 42), (2, 43), (4, 45), (5, 46)) DISTRIBUTED BY (c);
+SELECT d FROM ffoo FULL OUTER JOIN fbar ON a = c WHERE b BETWEEN 5 and 9;
+ d  
+----
+ 46
+   
+ 45
+(3 rows)
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 NOTICE:  drop cascades to 92 other objects
@@ -11208,4 +11220,6 @@ drop cascades to function myint_numeric(myint)
 drop cascades to cast from myint to numeric
 drop cascades to table onetimefilter1
 drop cascades to table onetimefilter2
+drop cascades to table ffoo
+drop cascades to table fbar
 -- end_ignore

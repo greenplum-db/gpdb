@@ -131,7 +131,6 @@ PL/pgSQL function checkpoint_and_wait_for_replication_replay(integer) line 27 at
  t
 (1 row)
 
-create extension if not exists gp_inject_fault;
 -- Prevent FTS from probing segments as we don't want a change in
 -- cluster configuration to be triggered after the mirror is stoped
 -- temporarily in the test.  Request a scan so that the skip fault is

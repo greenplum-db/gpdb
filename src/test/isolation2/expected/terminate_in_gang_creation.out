@@ -17,9 +17,6 @@
 -- #16 createGang
 -- #17 AllocateWriterGang
 
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
-
 DROP TABLE IF EXISTS foo;
 DROP
 CREATE TABLE foo (c1 int, c2 int) DISTRIBUTED BY (c1);

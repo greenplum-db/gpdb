@@ -188,7 +188,7 @@ sub start_test_server
 
 	$ret = system_log('pg_ctl', '-D', "$tempdir/pgdata", '-w', '-l',
 	  "$log_path/postmaster.log", '-o',
-	  "--log-statement=all -c gp_role=utility --gp_dbid=-1 --gp_contentid=-1 --logging-collector=off",
+	  "--log-statement=all -c gp_role=utility --gp_dbid=1 --gp_contentid=-1 --logging-collector=off",
 	  'start');
 
 	if ($ret != 0)
@@ -208,7 +208,7 @@ sub restart_test_server
 	print("### Restarting test server\n");
 	system_log('pg_ctl', '-D', $test_server_datadir, '-w', '-l',
 	  $test_server_logfile, '-o',
-	  "--log-statement=all -c gp_role=utility --gp_dbid=-1 --gp_contentid=-1 --logging-collector=off",
+	  "--log-statement=all -c gp_role=utility --gp_dbid=1 --gp_contentid=-1 --logging-collector=off",
 	  'restart');
 }
 

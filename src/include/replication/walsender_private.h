@@ -90,8 +90,6 @@ typedef struct WalSnd
 	 */
 	int			sync_standby_priority;
 
-	bool		synchronous;
-
 	/*
 	 * Indicates whether the WalSnd represents a connection with a Greenplum
 	 * mirror in streaming mode

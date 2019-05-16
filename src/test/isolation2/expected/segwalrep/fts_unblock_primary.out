@@ -45,8 +45,6 @@ insert into fts_unblock_primary values (4);
 INSERT 1
 
 -- skip FTS probes always
-create extension if not exists gp_inject_fault;
-CREATE
 select gp_inject_fault('fts_probe', 'reset', 1);
  gp_inject_fault 
 -----------------

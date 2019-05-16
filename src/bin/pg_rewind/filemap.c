@@ -156,6 +156,7 @@ process_source_file(const char *path, file_type_t type, size_t newsize,
 					const char *link_target)
 {
 	bool		exists;
+	bool		is_gp_tablespace = false;
 	char		localpath[MAXPGPATH];
 	struct stat statbuf;
 	filemap_t  *map = filemap;
@@ -241,7 +242,11 @@ process_source_file(const char *path, file_type_t type, size_t newsize,
 			}
 
 			if (!exists)
+			{
+				is_gp_tablespace =
+						 strncmp(path, "pg_tblspc/", strlen("pg_tblspc/")) == 0;
 				action = FILE_ACTION_CREATE;
+			}
 			else
 				action = FILE_ACTION_NONE;
 			oldsize = 0;
@@ -324,6 +329,7 @@ process_source_file(const char *path, file_type_t type, size_t newsize,
 	entry->pagemap.bitmap = NULL;
 	entry->pagemap.bitmapsize = 0;
 	entry->isrelfile = isRelDataFile(path);
+	entry->is_gp_tablespace = is_gp_tablespace;
 
 	if (map->last)
 	{

@@ -142,7 +142,6 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 
 			SpinLockAcquire(&walsnd->mutex);
 			syncStandbyPresent = (walsnd->pid != 0)
-				&& (walsnd->synchronous)
 				&& ((walsnd->state == WALSNDSTATE_STREAMING)
 					|| (walsnd->state == WALSNDSTATE_CATCHUP &&
 						walsnd->caughtup_within_range));

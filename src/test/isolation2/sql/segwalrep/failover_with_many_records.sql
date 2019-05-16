@@ -1,5 +1,4 @@
 include: helpers/server_helpers.sql;
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 -- Allow extra time for mirror promotion to complete recovery to avoid
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries

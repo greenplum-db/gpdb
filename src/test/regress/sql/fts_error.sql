@@ -1,6 +1,3 @@
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';
 -- Once this fault is hit, FTS process should abort current

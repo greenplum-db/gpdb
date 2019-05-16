@@ -1170,7 +1170,6 @@ COMMIT;
 -- Test that issuing a cancel requests during COPY aborts the processing before
 -- the entire contents has been copied out. The hardcoded rowcount 57190 is the
 -- number of rows in the lineitem table.
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'reset', 1);
 SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'interrupt', 1);

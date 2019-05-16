@@ -13917,8 +13917,7 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 		appendPQExpBuffer(q, "FORMAT '%s' (%s)\n",
 						  tabfmt,
 						  customfmt ? customfmt : tmpstring);
-		free(tmpstring);
-		tmpstring = NULL;
+		pg_free(tmpstring);
 		if (customfmt)
 		{
 			free(customfmt);

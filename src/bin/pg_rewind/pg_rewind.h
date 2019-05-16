@@ -27,6 +27,8 @@ extern bool debug;
 extern bool showprogress;
 extern bool dry_run;
 
+extern int32 dbid_target;
+
 extern const char *progname;
 
 /* in parsexlog.c */

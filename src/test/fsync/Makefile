@@ -2,7 +2,7 @@ MODULES=fsync_helper
 PG_CONFIG=pg_config
 
 REGRESS = setup bgwriter_checkpoint
-REGRESS_OPTS = --dbname="fsync_regression"
+REGRESS_OPTS = --dbname="fsync_regression" --load-extension=gp_inject_fault
 
 subdir = src/test/fsync/
 top_builddir = ../../..

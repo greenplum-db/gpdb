@@ -63,7 +63,7 @@ Use the following syntax to create a Greenplum Database external table that refe
 CREATE [WRITABLE] EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION ('pxf://<path-to-hdfs-dir>
-    ?PROFILE=hdfs:parquet[&<custom-option>=<value>[...]]')
+    ?PROFILE=hdfs:parquet[&SERVER=<server_name>][&<custom-option>=<value>[...]]')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
 [DISTRIBUTED BY (<column_name> [, ... ] ) | DISTRIBUTED RANDOMLY];
 ```
@@ -74,6 +74,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 |-------|-------------------------------------|
 | \<path&#8209;to&#8209;hdfs&#8209;file\>    | The absolute path to the directory in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:parquet`. |
+| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | \<custom&#8209;option\>=\<value\>  | \<custom-option\>s are described below.|
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
@@ -86,7 +87,7 @@ The PXF `hdfs:parquet` profile supports encoding- and compression-related write 
 | COMPRESSION_CODEC    | The compression codec alias. Supported compression codecs for writing Parquet data include: `snappy`, `gzip`, `lzo`, and `uncompressed` . If this option is not provided, PXF compresses the data using `snappy` compression. |
 | ROWGROUP_SIZE | A Parquet file consists of one or more row groups, a logical partitioning of the data into rows. `ROWGROUP_SIZE` identifies the size (in bytes) of the row group. The default row group size is `8 * 1024 * 1024` bytes. |
 | PAGE_SIZE | A row group consists of column chunks that are divided up into pages. `PAGE_SIZE` is the size (in bytes) of such a page. The default page size is `1024 * 1024` bytes. |
-| DICTIONARY_PAGE_SIZE | Dictionary encoding is enabled by default when PXF writes Parquet files. There is a single dictionary page per column, per row group. `DICTIONARY_PAGE_SIZE` is similar to `PAGE_SIZE`, but for the dictionary. The default dictionary page size is `512 * 1024` bytes. |
+| DICTIONARY\_PAGE\_SIZE | Dictionary encoding is enabled by default when PXF writes Parquet files. There is a single dictionary page per column, per row group. `DICTIONARY_PAGE_SIZE` is similar to `PAGE_SIZE`, but for the dictionary. The default dictionary page size is `512 * 1024` bytes. |
 | PARQUET_VERSION | The Parquet version; values `v1` and `v2` are supported. The default Parquet version is `v1`. |
 
 **Note**: You must explicitly specify `uncompressed` if you do not want PXF to compress the data.
@@ -104,7 +105,7 @@ This example utilizes the data schema introduced in [Example: Reading Text Data 
 | number\_of\_orders | int |
 | total\_sales | float8 |
 
-In this example, you create a Parquet-format writable external table that references Parquet-format data in HDFS, insert some data into the table, and then create a readable external table to read the data.
+In this example, you create a Parquet-format writable external table that uses the default PXF server to reference Parquet-format data in HDFS, insert some data into the table, and then create a readable external table to read the data.
 
 1. Use the `hdfs:parquet` profile to create a writable external table. For example:
 

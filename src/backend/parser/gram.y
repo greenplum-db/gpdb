@@ -794,7 +794,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 /*
  * This is a bit ugly... To allow these to be column aliases without
  * the "AS" keyword, and not conflict with PostgreSQL's non-standard
- * suffix operators, we need to give these a precidence.
+ * suffix operators, we need to give these a precedence.
  */
 
 %nonassoc   ABORT_P
@@ -3626,9 +3626,7 @@ alter_table_partition_cmd:
 							if (e->subSpec)
 								ereport(ERROR,
 										(errcode(ERRCODE_SYNTAX_ERROR),
-										 errmsg("template cannot contain "
-												"specification for child "
-												"partition")));
+										 errmsg("template cannot contain specification for child partition")));
 						}
 					}
 
@@ -5283,9 +5281,7 @@ TabSubPartitionTemplate:
 							if (e->subSpec)
 								ereport(ERROR,
 										(errcode(ERRCODE_SYNTAX_ERROR),
-										 errmsg("template cannot contain "
-												"specification for child "
-												"partition")));
+										 errmsg("template cannot contain specification for child partition")));
 						}
 
 					}
@@ -5365,8 +5361,8 @@ CreateAsStmt:
 					if ($9)
 						ereport(ERROR,
                                 (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 errmsg("Cannot create a partitioned table using CREATE TABLE AS SELECT"),
-                                 errhint("Use CREATE TABLE...LIKE (followed by INSERT...SELECT) instead")));
+								 errmsg("cannot create a partitioned table using CREATE TABLE AS SELECT"),
+								 errhint("Use CREATE TABLE...LIKE (followed by INSERT...SELECT) instead.")));
 
 					$4->skipData = !($7);
 					$$ = (Node *) ctas;
@@ -5426,7 +5422,7 @@ CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_n
 									ereport(ERROR,
 											(errcode(ERRCODE_SYNTAX_ERROR),
 										 	 errmsg("EXECUTE may not be used with a regular external table"),
-										 	 errhint("Use CREATE EXTERNAL WEB TABLE instead")));							
+											 errhint("Use CREATE EXTERNAL WEB TABLE instead.")));
 								
 								/* if no ON clause specified, default to "ON ALL" */
 								if(extdesc->on_clause == NIL)
@@ -5438,14 +5434,14 @@ CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_n
 								{
 									ereport(ERROR,
 											(errcode(ERRCODE_SYNTAX_ERROR),
-									 		 errmsg("ON clause may not be used with a writable external table")));							
+											 errmsg("ON clause may not be used with a writable external table")));
 								}
 							}
 
 							if(n->sreh && n->iswritable)
 								ereport(ERROR,
 										(errcode(ERRCODE_SYNTAX_ERROR),
-										 errmsg("Single row error handling may not be used with a writable external table")));							
+										 errmsg("single row error handling may not be used with a writable external table")));
 							
 							$$ = (Node *)n;							
 						}

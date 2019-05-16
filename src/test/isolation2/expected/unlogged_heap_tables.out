@@ -7,8 +7,6 @@ create unlogged table unlogged_heap_table_managers ( id int, name text ) distrib
 CREATE
 
 -- skip FTS probes to make the test deterministic.
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
 SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
  gp_inject_fault_infinite 
 --------------------------

@@ -61,6 +61,7 @@ using namespace gpnaucrates;
 using namespace gpmd;
 
 extern bool	optimizer_enable_ctas;
+extern bool optimizer_enable_dml;
 extern bool optimizer_enable_dml_triggers;
 extern bool optimizer_enable_dml_constraints;
 extern bool optimizer_enable_multiple_distinct_aggs;
@@ -724,6 +725,11 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 	GPOS_ASSERT(CMD_INSERT == m_query->commandType);
 	GPOS_ASSERT(0 < m_query->resultRelation);
 
+	if (!optimizer_enable_dml)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("DML not enabled"));
+	}
+
 	CDXLNode *query_dxlnode = TranslateSelectQueryToDXL();
 	const RangeTblEntry *rte = (RangeTblEntry *) gpdb::ListNth(m_query->rtable, m_query->resultRelation - 1);
 
@@ -1141,6 +1147,11 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 	GPOS_ASSERT(CMD_DELETE == m_query->commandType);
 	GPOS_ASSERT(0 < m_query->resultRelation);
 
+	if (!optimizer_enable_dml)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("DML not enabled"));
+	}
+
 	CDXLNode *query_dxlnode = TranslateSelectQueryToDXL();
 	const RangeTblEntry *rte = (RangeTblEntry *) gpdb::ListNth(m_query->rtable, m_query->resultRelation - 1);
 
@@ -1192,6 +1203,11 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 {
 	GPOS_ASSERT(CMD_UPDATE == m_query->commandType);
 	GPOS_ASSERT(0 < m_query->resultRelation);
+
+	if (!optimizer_enable_dml)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("DML not enabled"));
+	}
 
 	CDXLNode *query_dxlnode = TranslateSelectQueryToDXL();
 	const RangeTblEntry *rte = (RangeTblEntry *) gpdb::ListNth(m_query->rtable, m_query->resultRelation - 1);

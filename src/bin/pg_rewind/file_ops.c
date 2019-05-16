@@ -34,7 +34,7 @@ static void create_target_dir(const char *path);
 static void remove_target_dir(const char *path);
 static void create_target_symlink(const char *path, const char *link);
 static void remove_target_symlink(const char *path);
-
+static void create_target_tablespace_layout(const char *path, const char *link);
 /*
  * Open a target file for writing. If 'trunc' is true and the file already
  * exists, it will be truncated.
@@ -156,7 +156,10 @@ create_target(file_entry_t *entry)
 			break;
 
 		case FILE_TYPE_SYMLINK:
-			create_target_symlink(entry->path, entry->link_target);
+			if(entry->is_gp_tablespace)
+				create_target_tablespace_layout(entry->path, entry->link_target);
+			else
+				create_target_symlink(entry->path, entry->link_target);
 			break;
 
 		case FILE_TYPE_REGULAR:
@@ -272,6 +275,32 @@ remove_target_symlink(const char *path)
 		pg_fatal("could not remove symbolic link \"%s\": %s\n",
 				 dstpath, strerror(errno));
 }
+
+/* Create symlink for tablespace, create tablespace target dir */
+static void
+create_target_tablespace_layout(const char *path, const char *link)
+{
+	char		dstpath[MAXPGPATH];
+
+	if (dry_run)
+		return;
+
+	/* Append the target dbid to the symlink target. */
+	link = psprintf("%s/%d", link, dbid_target);
+
+	snprintf(dstpath, sizeof(dstpath), "%s/%s", datadir_target, path);
+	if (symlink(link, dstpath) != 0)
+		pg_fatal("could not create symbolic link at \"%s\": %s\n",
+				 dstpath, strerror(errno));
+
+	/* We need to create the directory at the symlink target. */
+	if (mkdir(link, S_IRWXU) != 0)
+		pg_fatal("could not create directory \"%s\": %s\n",
+				 dstpath, strerror(errno));
+
+	pfree(link);
+}
+
 
 
 /*

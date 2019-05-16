@@ -881,6 +881,7 @@ SendBackupHeader(List *tablespaces)
 		else
 		{
 			Size		len;
+			char		*link_path_to_be_sent;
 
 			len = strlen(ti->oid);
 			pq_sendint(&buf, len, 4);
@@ -888,7 +889,18 @@ SendBackupHeader(List *tablespaces)
 
 			len = strlen(ti->path);
 			pq_sendint(&buf, len, 4);
-			pq_sendbytes(&buf, ti->path, len);
+			if(ti->rpath == NULL)
+			{
+				/* Lop off the dbid before sending the link target. */
+				char *link_path_without_dbid = pstrdup(ti->path);
+				char *file_sep_before_dbid_in_link_path =
+						strrchr(link_path_without_dbid, '/');
+				*file_sep_before_dbid_in_link_path = '\0';
+				link_path_to_be_sent = link_path_without_dbid;
+			}
+			else
+				link_path_to_be_sent = ti->path;
+			pq_sendbytes(&buf, link_path_to_be_sent, len);
 		}
 		if (ti->size >= 0)
 			send_int8_string(&buf, ti->size / 1024);
@@ -1026,8 +1038,10 @@ sendTablespace(char *path, bool sizeonly)
 	 * the version directory in it that belongs to us.
 	 */
 	snprintf(pathbuf, sizeof(pathbuf), "%s/%s", path,
-			 tablespace_version_directory());
+			 GP_TABLESPACE_VERSION_DIRECTORY);
 
+	elogif(debug_basebackup, LOG,
+		   "sendTablespace -- Sending tablespace version directory = %s", pathbuf);
 	/*
 	 * Store a directory entry in the tar file so we get the permissions
 	 * right.
@@ -1044,7 +1058,7 @@ sendTablespace(char *path, bool sizeonly)
 		return 0;
 	}
 	if (!sizeonly)
-		_tarWriteHeader(tablespace_version_directory(), NULL, &statbuf);
+		_tarWriteHeader(GP_TABLESPACE_VERSION_DIRECTORY, NULL, &statbuf);
 	size = 512;					/* Size of the header just added */
 
 	/* Send all the files in the tablespace version directory */
@@ -1234,7 +1248,10 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 				ereport(ERROR,
 						(errmsg("symbolic link \"%s\" target is too long",
 								pathbuf)));
-			linkpath[rllen] = '\0';
+
+			/* Lop off the dbid before sending the link target. */
+			char *file_sep_before_dbid_in_link_path = strrchr(linkpath, '/');
+			*file_sep_before_dbid_in_link_path = '\0';
 
 			if (!sizeonly)
 				_tarWriteHeader(pathbuf + basepathlen + 1, linkpath, &statbuf);

@@ -18,6 +18,7 @@
 #include "cdb/cdbvars.h"
 #include "funcapi.h"
 #include "libpq-fe.h"
+#include "storage/lock.h"
 #include "storage/proc.h"
 #include "utils/builtins.h"
 
@@ -187,6 +188,7 @@ pg_dist_wait_status(PG_FUNCTION_ARGS)
 	 * A relation is that:
 	 * (waiter.granted == false &&
 	 *  holder.granted == true &&
+	 *  waiter.waitLockMode conflict with holder.holdMask &&
 	 *  waiter.pid != holder.pid &&
 	 *  waiter.locktype == holder.locktype &&
 	 *  waiter.locktags == holder.locktags)
@@ -232,6 +234,13 @@ pg_dist_wait_status(PG_FUNCTION_ARGS)
 			if (!isGranted(h_lock))
 				continue;
 			if (w_lock->pid == h_lock->pid)
+				continue;
+			/* If waiter and holder have different lock methods, they must not be conflict */
+			if (w_lock->locktag.locktag_lockmethodid != h_lock->locktag.locktag_lockmethodid)
+				continue;
+			/* If waiter and holder are not conflict, should skip this edge */
+			if (!CheckWaitLockModeConflictHoldMask(w_lock->locktag,
+					w_lock->waitLockMode, h_lock->holdMask))
 				continue;
 			if (!lockEqual(w_lock, h_lock))
 				continue;

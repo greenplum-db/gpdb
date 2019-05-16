@@ -65,6 +65,4 @@ DATA(insert OID = 1664 ( pg_global	PGUID _null_ _null_ ));
 #define DEFAULTTABLESPACE_OID 1663
 #define GLOBALTABLESPACE_OID 1664
 
-extern const char *tablespace_version_directory(void);
-
 #endif   /* PG_TABLESPACE_H */

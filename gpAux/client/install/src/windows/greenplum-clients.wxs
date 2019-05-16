@@ -1111,9 +1111,22 @@ If you want to review or change any of your installation settings, click Back. C
                 <File Id="pg_dumpall.exe" Name="pg_dumpall.exe" Source="$(var.SRCDIR)\bin\pg_dumpall.exe" />
                 <File Id="gpfdist.exe" Name="gpfdist.exe" Source="$(var.SRCDIR)\bin\gpfdist.exe" />
                 <File Id="createdb.exe" Name="createdb.exe" Source="$(var.SRCDIR)\bin\createdb.exe" />
+                <File Id="createlang.exe" Name="createlang.exe" Source="$(var.SRCDIR)\bin\createlang.exe" />
+                <File Id="createuser.exe" Name="createuser.exe" Source="$(var.SRCDIR)\bin\createuser.exe" />
+                <File Id="dropdb.exe" Name="dropdb.exe" Source="$(var.SRCDIR)\bin\dropdb.exe" />
+                <File Id="droplang.exe" Name="droplang.exe" Source="$(var.SRCDIR)\bin\droplang.exe" />
+                <File Id="dropuser.exe" Name="dropuser.exe" Source="$(var.SRCDIR)\bin\dropuser.exe" />
                 <File Id="libapr.dll" Name="libapr-1.dll" Source="$(var.SRCDIR)\bin\libapr-1.dll" />
                 <File Id="libpq.dll" Name="libpq.dll" Source="$(var.SRCDIR)\bin\libpq.dll" />
+                <File Id="comerr64.dll" Name="comerr64.dll" Source="$(var.SRCDIR)\bin\comerr64.dll" />
+                <File Id="gssapi64.dll" Name="gssapi64.dll" Source="$(var.SRCDIR)\bin\gssapi64.dll" />
+                <File Id="k5sprt64.dll" Name="k5sprt64.dll" Source="$(var.SRCDIR)\bin\k5sprt64.dll" />
+                <File Id="krb5_64.dll" Name="krb5_64.dll" Source="$(var.SRCDIR)\bin\krb5_64.dll" />
+                <File Id="ssleay32.dll" Name="ssleay32.dll" Source="$(var.SRCDIR)\bin\ssleay32.dll" />
+                <File Id="libeay32.dll" Name="libeay32.dll" Source="$(var.SRCDIR)\bin\libeay32.dll" />
+                <File Id="zlib.dll" Name="zlib.dll" Source="$(var.SRCDIR)\bin\zlib.dll" />
                 <File Id="gpload.py" Name="gpload.py" Source="$(var.SRCDIR)\bin\gpload.py" />
+                <File Id="gpload.bat" Name="gpload.bat" Source="$(var.SRCDIR)\bin\gpload.bat" />
               </Component>
             </Directory>
             <Directory Id="TOPLEVELlib" Name="lib">
@@ -1124,7 +1137,6 @@ If you want to review or change any of your installation settings, click Back. C
                     <File Id="_pg.pyd" Name="_pg.pyd" Source="$(var.SRCDIR)\lib\python\pygresql\_pg.pyd" />
                     <File Id="pg.py" Name="pg.py" Source="$(var.SRCDIR)\lib\python\pygresql\pg.py" />
                     <File Id="pgdb.py" Name="pgdb.py" Source="$(var.SRCDIR)\lib\python\pygresql\pgdb.py" />
-                    <File Id="libpq.dll.32" Name="libpq.dll" Source="$(var.SRCDIR)\lib\python\pygresql\libpq.dll" />
                   </Component>
                 </Directory>
                 <Directory Id="YAMLlib" Name="yaml">

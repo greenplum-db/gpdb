@@ -12,8 +12,6 @@ create or replace function wait_for_replication_replay (retries int) returns boo
 if i >= retries then /* in func */ return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ i := i + 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
 
-3:CREATE extension if NOT EXISTS gp_inject_fault;
-CREATE
 3:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
  role | preferred_role | content | mode | status 
 ------+----------------+---------+------+--------

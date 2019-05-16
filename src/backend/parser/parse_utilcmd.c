@@ -97,7 +97,7 @@ static void transformTableConstraint(CreateStmtContext *cxt,
 						 Constraint *constraint);
 static void transformTableLikeClause(CreateStmtContext *cxt,
 						 TableLikeClause *table_like_clause,
-						 bool forceBareCol);
+						 bool forceBareCol, CreateStmt *stmt, List **stenc);
 static void transformOfType(CreateStmtContext *cxt,
 				TypeName *ofTypename);
 static IndexStmt *generateClonedIndexStmt(CreateStmtContext *cxt,
@@ -306,7 +306,7 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 				{
 					bool            isBeginning = (cxt.columns == NIL);
 
-					transformTableLikeClause(&cxt, (TableLikeClause *) element, false);
+					transformTableLikeClause(&cxt, (TableLikeClause *) element, false, stmt, &stenc);
 
 					if (Gp_role == GP_ROLE_DISPATCH && isBeginning &&
 						stmt->distributedBy == NULL &&
@@ -411,8 +411,8 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 	}
 
 	/*
-	 * Transform DISTRIBUTED BY (or constuct a default one, if not given
-	 *  explicitly). Not for foreign tables, though.
+	 * Transform DISTRIBUTED BY (or construct a default one, if not given
+	 * explicitly). Not for foreign tables, though.
 	 */
 	if (stmt->relKind == RELKIND_RELATION)
 	{
@@ -815,7 +815,7 @@ transformTableConstraint(CreateStmtContext *cxt, Constraint *constraint)
 	if (constraint->contype == CONSTR_EXCLUSION)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("GPDB does not support exclusion constraints.")));
+				 errmsg("GPDB does not support exclusion constraints")));
 
 	switch (constraint->contype)
 	{
@@ -862,7 +862,7 @@ transformTableConstraint(CreateStmtContext *cxt, Constraint *constraint)
  */
 static void
 transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_clause,
-						 bool forceBareCol)
+						 bool forceBareCol, CreateStmt *stmt, List **stenc)
 {
 	AttrNumber	parent_attno;
 	Relation	relation;
@@ -872,9 +872,16 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 	AclResult	aclresult;
 	char	   *comment;
 	ParseCallbackState pcbstate;
+	MemoryContext oldcontext;
 
 	setup_parser_errposition_callback(&pcbstate, cxt->pstate,
 									  table_like_clause->relation->location);
+
+	/* LIKE INCLUDING is not supported for external tables */
+	if (forceBareCol && table_like_clause->options != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("LIKE INCLUDING may not be used with this kind of relation")));
 
 	/* we could support LIKE in many cases, but worry about it another day */
 	if (cxt->isforeign)
@@ -918,11 +925,6 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 
 	tupleDesc = RelationGetDescr(relation);
 	constr = tupleDesc->constr;
-
-	if (forceBareCol && table_like_clause->options != 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("LIKE INCLUDING may not be used with this kind of relation")));
 
 	/*
 	 * Initialize column number map for map_variable_attnos().  We need this
@@ -1143,6 +1145,38 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 
 			index_close(parent_index, AccessShareLock);
 		}
+	}
+
+	/*
+	 * If STORAGE is included, we need to copy over the table storage params
+	 * as well as the attribute encodings.
+	 */
+	if (stmt && table_like_clause->options & CREATE_TABLE_LIKE_STORAGE)
+	{
+		/*
+		 * As we are modifying the utility statement we must make sure these
+		 * DefElem allocations can survive outside of this context.
+		 */
+		oldcontext = MemoryContextSwitchTo(CurTransactionContext);
+
+		if (relation->rd_appendonly)
+		{
+			Form_pg_appendonly ao = relation->rd_appendonly;
+
+			stmt->options = lappend(stmt->options, makeDefElem("appendonly", (Node *) makeString(pstrdup("true"))));
+			if (ao->columnstore)
+				stmt->options = lappend(stmt->options, makeDefElem("orientation", (Node *) makeString(pstrdup("column"))));
+			stmt->options = lappend(stmt->options, makeDefElem("checksum", (Node *) makeInteger(ao->checksum)));
+			stmt->options = lappend(stmt->options, makeDefElem("compresslevel", (Node *) makeInteger(ao->compresslevel)));
+			if (strlen(NameStr(ao->compresstype)) > 0)
+				stmt->options = lappend(stmt->options, makeDefElem("compresstype", (Node *) makeString(pstrdup(NameStr(ao->compresstype)))));
+		}
+
+		/*
+		 * Set the attribute encodings.
+		 */
+		*stenc = list_union(*stenc, rel_get_column_encodings(relation));
+		MemoryContextSwitchTo(oldcontext);
 	}
 
 	/*
@@ -1640,7 +1674,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 					/* LIKE */
 					bool	isBeginning = (cxt.columns == NIL);
 
-					transformTableLikeClause(&cxt, (TableLikeClause *) element, true);
+					transformTableLikeClause(&cxt, (TableLikeClause *) element, true, NULL, NULL);
 
 					if (Gp_role == GP_ROLE_DISPATCH && isBeginning &&
 						stmt->distributedBy == NULL &&
@@ -1676,8 +1710,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 				if(srehDesc && srehDesc->into_file)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("External web table with ON MASTER clause "
-									"cannot use LOG ERRORS feature.")));
+							 errmsg("external web table with ON MASTER clause cannot use LOG ERRORS feature")));
 			}
 		}
 	}
@@ -1775,7 +1808,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 		/* Otherwise use DEFAULT as numsegments */
 		numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS();
 
-	/* Explictly specified distributed randomly, no futher check needed */
+	/* Explicitly specified distributed randomly, no further check needed */
 	if (distributedBy &&
 		(distributedBy->ptype == POLICYTYPE_PARTITIONED && distributedBy->keyCols == NIL))
 	{
@@ -2500,7 +2533,7 @@ transformIndexConstraints(CreateStmtContext *cxt, bool mayDefer)
 		if(constraint->contype == CONSTR_EXCLUSION)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("GPDB does not support exclusion constraints.")));
+						errmsg("GPDB does not support exclusion constraints")));
 
 		Assert(constraint->contype == CONSTR_PRIMARY ||
 			   constraint->contype == CONSTR_UNIQUE);
@@ -2611,8 +2644,7 @@ transformIndexConstraints(CreateStmtContext *cxt, bool mayDefer)
 			
 				ereport(DEBUG1,
 						(errmsg("deferring index creation for table \"%s\"",
-								cxt->relation->relname)
-						 ));
+								cxt->relation->relname)));
 				cxt->dlist = lappend(cxt->dlist, index);
 			}
 			else
@@ -4468,7 +4500,7 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext *cxt
 		newenc = lappend(newenc, c);
 	}
 
-	/* Check again incase we expanded a some column encoding clauses */
+	/* Check again in case we expanded a some column encoding clauses */
 	if (!can_enc)
 	{
 		if (found_enc)

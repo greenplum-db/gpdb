@@ -1,11 +1,10 @@
 @gprecoverseg
 Feature: gprecoverseg tests
 
-    @skip  # tablespaces are being reworked and currently do not work with pg_rewind
     Scenario: incremental recovery works with tablespaces
         Given the database is running
           And a tablespace is created with data
-          And user kills a primary postmaster process
+          And user stops all primary processes
           And user can start transactions
          When the user runs "gprecoverseg -a"
          Then gprecoverseg should return a return code of 0
@@ -19,11 +18,10 @@ Feature: gprecoverseg tests
           And the tablespace is valid
           And the other tablespace is valid
 
-    @skip  # tablespaces are being reworked and currently do not work with pg_rewind
     Scenario: full recovery works with tablespaces
         Given the database is running
           And a tablespace is created with data
-          And user kills a primary postmaster process
+          And user stops all primary processes
           And user can start transactions
          When the user runs "gprecoverseg -a -F"
          Then gprecoverseg should return a return code of 0
@@ -39,7 +37,7 @@ Feature: gprecoverseg tests
 
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
-        And user kills a primary postmaster process
+        And user stops all primary processes
         And user can start transactions
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
@@ -54,7 +52,7 @@ Feature: gprecoverseg tests
         Given the database is running
         And all the segments are running
         And the segments are synchronized
-        And user kills all mirror processes
+        And user stops all mirror processes
         When user can start transactions
         And the user runs "gprecoverseg -F -a -s"
         Then gprecoverseg should return a return code of 0
@@ -67,7 +65,7 @@ Feature: gprecoverseg tests
         Given the database is running
         And all the segments are running
         And the segments are synchronized
-        And user kills all mirror processes
+        And user stops all mirror processes
         When user can start transactions
         And the user runs "gprecoverseg -F -a --no-progress"
         Then gprecoverseg should return a return code of 0
@@ -82,7 +80,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the "primary" segment information is saved
         When the postmaster.pid file on "primary" segment is saved
-        And user kills a primary postmaster process
+        And user stops all primary processes
         When user can start transactions
         And the background pid is killed on "primary" segment
         And we run a sample background script to generate a pid on "primary" segment
@@ -106,7 +104,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the "primary" segment information is saved
         When the postmaster.pid file on "primary" segment is saved
-        And user kills a primary postmaster process
+        And user stops all primary processes
         When user can start transactions
         And we generate the postmaster.pid file with a non running pid on the same "primary" segment
         And the user runs "gprecoverseg -a"
@@ -137,7 +135,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the "primary" segment information is saved
         When the postmaster.pid file on "primary" segment is saved
-        And user kills a primary postmaster process
+        And user stops all primary processes
         When user can start transactions
         And the background pid is killed on "primary" segment
         And we run a sample background script to generate a pid on "primary" segment
@@ -228,12 +226,11 @@ Feature: gprecoverseg tests
         # validate the the new segment has the correct setting by getting admin connection to that segment
         Then the saved primary segment reports the same value for sql "show data_checksums" db "template1" as was saved
 
-    @skip  # tablespaces are being reworked and currently do not work with pg_rewind
     @concourse_cluster
     Scenario: incremental recovery works with tablespaces on a multi-host environment
         Given the database is running
           And a tablespace is created with data
-          And user kills a primary postmaster process
+          And user stops all primary processes
           And user can start transactions
          When the user runs "gprecoverseg -a"
          Then gprecoverseg should return a return code of 0
@@ -247,12 +244,11 @@ Feature: gprecoverseg tests
           And the tablespace is valid
           And the other tablespace is valid
 
-    @skip  # tablespaces are being reworked and currently do not work with pg_rewind
     @concourse_cluster
     Scenario: full recovery works with tablespaces on a multi-host environment
         Given the database is running
           And a tablespace is created with data
-          And user kills a primary postmaster process
+          And user stops all primary processes
           And user can start transactions
          When the user runs "gprecoverseg -a -F"
          Then gprecoverseg should return a return code of 0

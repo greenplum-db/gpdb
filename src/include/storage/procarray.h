@@ -19,6 +19,7 @@
 #include "utils/snapshot.h"
 
 #include "cdb/cdbpublic.h"
+#include "cdb/cdbtm.h"
 
 struct DtxContextInfo;         /* cdb/cdbdtxcontextinfo.h */
 struct SnapshotData;           /* utils/tqual.h */
@@ -47,7 +48,7 @@ extern void ExpireOldKnownAssignedTransactionIds(TransactionId xid);
 extern int	GetMaxSnapshotXidCount(void);
 extern int	GetMaxSnapshotSubxidCount(void);
 
-extern Snapshot GetSnapshotData(Snapshot snapshot);
+extern Snapshot GetSnapshotData(Snapshot snapshot, DtxContext distributedTransactionContext);
 
 extern bool ProcArrayInstallImportedXmin(TransactionId xmin,
 							 TransactionId sourcexid);
@@ -89,7 +90,7 @@ extern void XidCacheRemoveRunningXids(TransactionId xid,
 extern PGPROC *FindProcByGpSessionId(long gp_session_id);
 extern void UpdateSerializableCommandId(CommandId curcid);
 
-extern void updateSharedLocalSnapshot(struct DtxContextInfo *dtxContextInfo, struct SnapshotData *snapshot, char* debugCaller);
+extern void updateSharedLocalSnapshot(struct DtxContextInfo *dtxContextInfo, DtxContext distributedTransactionContext, struct SnapshotData *snapshot, char* debugCaller);
 
 extern void GetSlotTableDebugInfo(void **snapshotArray, int *maxSlots);
 

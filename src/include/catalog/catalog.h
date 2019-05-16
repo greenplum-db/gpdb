@@ -25,8 +25,7 @@
 
 #define OIDCHARS		10		/* max chars printed by %u */
 /*
- * In PostgreSQL, this is called just TABLESPACE_VERSION_DIRECTORY. But in 
- * GPDB, you should use tablespace_version_directory() function instead.
+ * In PostgreSQL, this is called just TABLESPACE_VERSION_DIRECTORY..
  * This constant has been renamed so that we catch and know to modify all
  * upstream uses of TABLESPACE_VERSION_DIRECTORY.
  */

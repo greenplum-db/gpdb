@@ -2,7 +2,6 @@
 -- case we expect that the tablespace for database remains unchanged across all
 -- the segments.
 -- Given we create a database
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE DATABASE alter_db_2;
 \c alter_db_2
 -- functions to help validation later

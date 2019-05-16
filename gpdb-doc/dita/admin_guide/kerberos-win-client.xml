@@ -258,7 +258,7 @@ kinit</codeblock></li>
               <li>You need to add the Service Principal Name (SPN) attribute to the user account
                 information because the Kerberos utilities require the information during Kerberos
                 authentication. </li>
-              <li>Also, as Greenplum database has unattended startups, you must also provide the
+              <li>Also, as Greenplum Database has unattended startups, you must also provide the
                 account login details in a Kerberos keytab file.</li>
             </ul><note>Setting the SPN and creating the keytab requires AD administrative
               permissions.</note></li>

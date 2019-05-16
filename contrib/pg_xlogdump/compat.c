@@ -106,17 +106,3 @@ appendStringInfoChar(StringInfo str, char ch)
 	appendStringInfo(str, "%c", ch);
 }
 
-
-const char *
-tablespace_version_directory(void)
-{
-	static char path[MAXPGPATH] = "";
-
-	// GPDB_93_MERGE_FIXME: I hardcoded dbid 0 here, just to make this compile.
-	// Where do we get the actual value?
-	if (!path[0])
-		snprintf(path, MAXPGPATH, "%s_db%d", GP_TABLESPACE_VERSION_DIRECTORY,
-				 0 /* GpIdentity.dbid */);
-
-	return path;
-}

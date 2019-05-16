@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 import fileinput
 import os
+import pipes
 import re
 import signal
 import stat
 import time
 import glob
 import shutil
+import subprocess
 import difflib
 
 import yaml
@@ -190,6 +192,7 @@ def stop_database(context):
     if context.exception:
         raise context.exception
 
+
 def stop_primary(context, content_id):
     get_psegment_sql = 'select datadir, hostname from gp_segment_configuration where content=%i and role=\'p\';' % content_id
     with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
@@ -197,8 +200,13 @@ def stop_primary(context, content_id):
         rows = cur.fetchall()
         seg_data_dir = rows[0][0]
         seg_host = rows[0][1]
-    pid = get_pid_for_segment(seg_data_dir, seg_host)
-    kill_process(pid)
+
+    # For demo_cluster tests that run on the CI gives the error 'bash: pg_ctl: command not found'
+    # Thus, need to add pg_ctl to the path when ssh'ing to a demo cluster.
+    subprocess.check_call(['ssh', seg_host,
+                           'source %s/greenplum_path.sh && pg_ctl stop -m fast -D %s' % (
+                               pipes.quote(os.environ.get("GPHOME")), pipes.quote(seg_data_dir))
+                           ])
 
 
 def trigger_fts_probe():
@@ -625,36 +633,6 @@ def get_all_hostnames_as_list(context, dbname):
         hosts.append(master[0].strip())
 
     return hosts
-
-
-def get_pid_for_segment(seg_data_dir, seg_host):
-    cmd = Command(name='get list of postmaster processes',
-                  cmdStr='ps -eaf | grep %s' % seg_data_dir,
-                  ctxt=REMOTE,
-                  remoteHost=seg_host)
-    cmd.run(validateAfter=True)
-
-    pid = None
-    results = cmd.get_results().stdout.strip().split('\n')
-    for res in results:
-        if 'grep' not in res:
-            pid = res.split()[1]
-
-    if pid is None:
-        return None
-
-    return int(pid)
-
-
-def kill_process(pid, host=None, sig=signal.SIGTERM):
-    if host is not None:
-        cmd = Command('kill process on a given host',
-                      cmdStr='kill -%d %d' % (sig, pid),
-                      ctxt=REMOTE,
-                      remoteHost=host)
-        cmd.run(validateAfter=True)
-    else:
-        os.kill(pid, sig)
 
 def has_process_eventually_stopped(proc, host=None):
     start_time = current_time = datetime.now()

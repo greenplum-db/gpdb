@@ -7,9 +7,6 @@ CREATE
 insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;
 INSERT 100
 
-create extension if not exists gp_inject_fault;
-CREATE
-
 select gp_inject_fault_infinite('reindex_relation', 'suspend', 2);
  gp_inject_fault_infinite 
 --------------------------

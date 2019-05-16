@@ -336,6 +336,7 @@ bool		optimizer_enable_bitmapscan;
 bool		optimizer_enable_outerjoin_to_unionall_rewrite;
 bool		optimizer_enable_ctas;
 bool		optimizer_enable_partial_index;
+bool		optimizer_enable_dml;
 bool		optimizer_enable_dml_triggers;
 bool		optimizer_enable_dml_constraints;
 bool		optimizer_enable_master_only_queries;
@@ -343,6 +344,8 @@ bool		optimizer_enable_hashjoin;
 bool		optimizer_enable_dynamictablescan;
 bool		optimizer_enable_indexscan;
 bool		optimizer_enable_tablescan;
+bool		optimizer_enable_hashagg;
+bool		optimizer_enable_groupagg;
 bool		optimizer_enable_full_join;
 
 /* Optimizer plan enumeration related GUCs */
@@ -2383,6 +2386,28 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"optimizer_enable_hashagg", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables Pivotal Optimizer (GPORCA) to use hash aggregates."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_hashagg,
+		true,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_groupagg", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables Pivotal Optimizer (GPORCA) to use group aggregates."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_groupagg,
+		true,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"optimizer_force_agg_skew_avoidance", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Always pick a plan for aggregate distinct that minimizes skew."),
 			NULL,
@@ -2678,6 +2703,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_partial_index,
+		true,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_dml", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable DML plans in Pivotal Optimizer (GPORCA)."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_dml,
 		true,
 		NULL, NULL, NULL
 	},
