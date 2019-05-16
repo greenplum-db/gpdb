@@ -16,7 +16,7 @@ Ensure that you have met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_
 
 ## <a id="fileasrow"></a>Reading Multi-Line Text and JSON Files
 
-You can read single- and multi-line files into a single table row, including files with embedded linefeeds. If you are reading multiple JSON files, each file must be a complete record, and each file should contain the same record type.
+You can read single- and multi-line files into a single table row, including files with embedded linefeeds. If you are reading multiple JSON files, each file must be a complete record, and each file must contain the same record type.
 
 PXF reads the complete file data into a single row and column. When you create the external table to read multiple files, you must ensure that all of the files that you want to read are of the same (text or JSON) type. You must also specify a single `text` or `json` column, depending upon the file type.
 
@@ -114,19 +114,19 @@ Beijing,Jul,411,11600.67' > /tmp/file2.txt
 
     This file has multiple lines.
 
-4. Create a third text file. Open a file named `/tmp/file3.txt` in a text editor and copy/paste the following data into the file:
+4. Create a third text file named `/tmp/file3.txt`:
 
-    ``` pre
-    "4627 Star Rd.
-    San Francisco, CA  94107":Sept:2017
-    "113 Moon St.
-    San Diego, CA  92093":Jan:2018
-    "51 Belt Ct.
-    Denver, CO  90123":Dec:2016
-    "93114 Radial Rd.
-    Chicago, IL  60605":Jul:2017
-    "7301 Brookview Ave.
-    Columbus, OH  43213":Dec:2018
+    ``` shell
+    $ echo '"4627 Star Rd.
+San Francisco, CA  94107":Sept:2017
+"113 Moon St.
+San Diego, CA  92093":Jan:2018
+"51 Belt Ct.
+Denver, CO  90123":Dec:2016
+"93114 Radial Rd.
+Chicago, IL  60605":Jul:2017
+"7301 Brookview Ave.
+Columbus, OH  43213":Dec:2018' > /tmp/file3.txt
     ```
 
     This file includes embedded line feeds.
