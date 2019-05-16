@@ -18,7 +18,7 @@ Ensure that you have met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_
 
 You can read single- and multi-line files into a single table row, including files with embedded linefeeds. If you are reading multiple JSON files, each file must be a complete record, and each file should contain the same record type.
 
-PXF reads the complete file data into a single column. When you create the external table to read multiple files, you must ensure that all of the files that you want to read are of the same (text or JSON) type. You must also specify a single `text` or `json` column, depending upon the file type.
+PXF reads the complete file data into a single row and column. When you create the external table to read multiple files, you must ensure that all of the files that you want to read are of the same (text or JSON) type. You must also specify a single `text` or `json` column, depending upon the file type.
 
 The following syntax creates a Greenplum Database readable external table that references one or more text or JSON files on HDFS:
 
@@ -143,7 +143,7 @@ Beijing,Jul,411,11600.67' > /tmp/file2.txt
 
 7. Log in to a Greenplum Database system and start the `psql` subsystem.
 
-8. Use the `hdfs:text:multi` profile to create an external table that references the `fileasrow` HDFS directory. For example:
+8. Use the `hdfs:text:multi` profile to create an external table that references the `tdir` HDFS directory. For example:
 
     ``` sql
     CREATE EXTERNAL TABLE pxf_readfileasrow(c1 text)
