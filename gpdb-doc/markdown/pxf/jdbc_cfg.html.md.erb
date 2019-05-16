@@ -135,23 +135,24 @@ Example: To set the `search_path` parameter before running a query in a PostgreS
 Ensure that the JDBC driver for the external SQL database supports any property that you specify.
 
 
-### <a id="namedquery"></a>JDBC Named Queries
+### <a id="namedquery"></a>JDBC Named Query Configuration
 
-When you configure and use the PXF named query feature, you:
+A PXF *named query* is a static query that you configure, and that PXF runs in the remote SQL database.
 
-1. [Define the query](#namedquery_define) in a text file.
-2. [Publish](#namedquery_pub) the query name.
-2. [Reference the query](#namedquery_ref) in a Greenplum Database external table definition.
+To configure and use a PXF JDBC named query:
 
-PXF runs the query each time you invoke a `SELECT` command on the Greenplum Database external table.
+1. You [define the query](#namedquery_define) in a text file.
+2. You [publish](#namedquery_pub) the query name.
+3. The Greenplum Database user [references the query](#namedquery_ref) in a Greenplum Database external table definition.
 
-Refer to [About Using Named Queries](jdbc_pxf.html#about_nq) for information about using PXF JDBC named queries.
+PXF runs the query each time the user invokes a `SELECT` command on the Greenplum Database external table.
+
 
 #### <a id="namedquery_define"></a>Defining a Named Query
 
-A PXF *named query* is a static query that you configure, and that PXF runs in the remote SQL database. You create a named query by adding the query statement to a text file that has the following naming format: `<query_name>.sql`. You can define one or more named queries for a JDBC server configuration. Each query must reside in a separate text file.
+You create a named query by adding the query statement to a text file that has the following naming format: `<query_name>.sql`. You can define one or more named queries for a JDBC server configuration. Each query must reside in a separate text file.
 
-You must locate a query text file in the PXF JDBC server configuration directory from which it will be accessed. If you want to make the query available to more than one JDBC server configuration, you must copy the query text file to the configuration directory for each JDBC server.
+You must place a query text file in the PXF JDBC server configuration directory from which it will be accessed. If you want to make the query available to more than one JDBC server configuration, you must copy the query text file to the configuration directory for each JDBC server.
 
 The query text file must contain a single query that you want to run in the remote SQL database. You must contruct the query in accordance with the syntax supported by the database.
 
@@ -168,9 +169,9 @@ Do not provide the ending semicolon (`;`) for the SQL statement.
 
 #### <a id="namedquery_pub"></a>Publishing Query Names
 
-The Greenplum Database user references a named query by name. The name of a PXF JDBC query is the base name of the query file. For example, if you define a query in a file named `report.sql`, the name of that query is `report`.
+The Greenplum Database user references a named query by specifying the query file name without the extension. For example, if you define a query in a file named `report.sql`, the name of that query is `report`.
 
-Named queries are associated with a specific JDBC server configuration. You will publish the available query names to the Greenplum Database users that you allow to use the server configuration (and hence run the queries).
+Named queries are associated with a specific JDBC server configuration. You will provide the available query names to the Greenplum Database users that you allow to create external tables using the server configuration.
 
 #### <a id="namedquery_ref"></a>Referencing a Named Query
 
@@ -180,6 +181,7 @@ The Greenplum Database user specifies `query:<query_name>` rather than the name 
 LOCATION ('pxf://query:report?PROFILE=JDBC&SERVER=mydb ...')
 ```
 
+Refer to [About Using Named Queries](jdbc_pxf.html#about_nq) for information about using PXF JDBC named queries.
 
 ### <a id="cfg_override"></a>Overriding the JDBC Server Configuration
 
