@@ -1649,7 +1649,7 @@ connectDBStart(PGconn *conn)
 	conn->addrlist_family = hint.ai_family;
 #ifndef FRONTEND
 	// GPDB uses the high bits of the major version to indicate special internal communications
-	conn->pversion = PG_PROTOCOL(3 + 0x7000, 0);
+	conn->pversion = GPDB_INTERNAL_PROTOCOL(3, 0);
 #else
 	conn->pversion = PG_PROTOCOL(3, 0);
 #endif
@@ -1884,7 +1884,12 @@ keep_going:						/* We will come back to here until there is
 		 * reset them when we start to consider a new address (since it might
 		 * not be the same server).
 		 */
+#ifndef FRONTEND
+		// GPDB uses the high bits of the major version to indicate special internal communications
+		conn->pversion = GPDB_INTERNAL_PROTOCOL(3, 0);
+#else
 		conn->pversion = PG_PROTOCOL(3, 0);
+#endif	
 		conn->send_appname = true;
 #ifdef USE_SSL
 		/* initialize these values based on SSL mode */
