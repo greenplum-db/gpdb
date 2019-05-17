@@ -350,16 +350,16 @@ CREATE TABLE orders(customer_id int, amount int, month int, year int);
 And this PostgreSQL query that the administrator named `order_rpt`:
 
 ``` sql
-SELECT c.name, sum(o.amount) AS total
+SELECT c.name, sum(o.amount) AS total, o.month
   FROM customers c JOIN orders o ON c.id = o.customer_id
   WHERE c.state = 'CO'
 GROUP BY c.name
 ```
 
-This query returns tuples of type `(name text, total int)`. If the `order_rpt` query is defined for the PXF JDBC server named `pgserver`, you could create a Greenplum Database external table to read these query results as follows:
+This query returns tuples of type `(name text, total int, month int)`. If the `order_rpt` query is defined for the PXF JDBC server named `pgserver`, you could create a Greenplum Database external table to read these query results as follows:
 
 ``` sql
-CREATE EXTERNAL TABLE orderrpt_frompg(name text, total int)
+CREATE EXTERNAL TABLE orderrpt_frompg(name text, total int, month int)
   LOCATION ('pxf://query:order_rpt?PROFILE=Jdbc&SERVER=pgserver&PARTITION_BY=month:int&RANGE=1:13&INTERVAL=3')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 ```
