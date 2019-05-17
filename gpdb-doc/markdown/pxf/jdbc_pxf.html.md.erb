@@ -353,7 +353,7 @@ And this PostgreSQL query that the administrator named `order_rpt`:
 SELECT c.name, sum(o.amount) AS total, o.month
   FROM customers c JOIN orders o ON c.id = o.customer_id
   WHERE c.state = 'CO'
-GROUP BY c.name
+GROUP BY c.name, o.month
 ```
 
 This query returns tuples of type `(name text, total int, month int)`. If the `order_rpt` query is defined for the PXF JDBC server named `pgserver`, you could create a Greenplum Database external table to read these query results as follows:
@@ -366,7 +366,7 @@ FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 
 This command references a query named `order_rpt` defined in the `pgserver` server configuration. It also specifies JDBC read partitioning options that provide PXF with the information that it uses to split/partition the query result data across its servers/segments.
 
-The PXF JDBC connector automatically applies column projection and filter pushdown to external tables that reference named queries to further filter the query result data returned.
+The PXF JDBC connector automatically applies column projection and filter pushdown to external tables that reference named queries.
 
 ### <a id="jdbc_example_namedquery"></a>Example: Reading the Results of a PostgreSQL Query
 
@@ -476,7 +476,7 @@ Perform the following procedure on your Greenplum Database cluster to create a P
     FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
 
-    With this partitioning scheme, PXF will issue 4 queries to the remote SQL database, one query per quarter. Each query will return aggregate monthly data for each month of the target quarter. Greenplum Database will then combine the data into a single result set for you when you query the external table.
+    With this partitioning scheme, PXF will issue 4 queries to the remote SQL database, one query per quarter. Each query will return customer names and the total amount of all of their orders in a given month, aggregated per customer, per month, for each month of the target quarter. Greenplum Database will then combine the data into a single result set for you when you query the external table.
 
 2. Display all rows of the query result:
 
