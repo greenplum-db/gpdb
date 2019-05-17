@@ -472,14 +472,17 @@ Perform the following procedure on your Greenplum Database cluster to create a P
 
     ``` sql
     CREATE EXTERNAL TABLE pxf_queryres_frompg(name text, city text, total int, month int)
-                LOCATION ('pxf://query:pg_order_report?PROFILE=Jdbc&SERVER=pgsrvcfg&PARTITION_BY=month:int&RANGE=1:13&INTERVAL=3')
-              FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+      LOCATION ('pxf://query:pg_order_report?PROFILE=Jdbc&SERVER=pgsrvcfg&PARTITION_BY=month:int&RANGE=1:13&INTERVAL=3')
+    FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
+
+    With this partitioning scheme, PXF will issue 4 queries to the remote SQL database, one query per quarter. Each query will return aggregate monthly data for each month of the target quarter. Greenplum Database will then combine the data into a single result set for you when you query the external table.
 
 2. Display all rows of the query result:
 
     ``` sql
-    gpadmin=# SELECT * FROM pxf_queryres_frompg ORDER BY city, total;
+    SELECT * FROM pxf_queryres_frompg ORDER BY city, total;
+
      name |  city  | total | month 
     ------+--------+-------+-------
      Matt | Aurora |   120 |    11
@@ -491,7 +494,7 @@ Perform the following procedure on your Greenplum Database cluster to create a P
 3. Use column projection to display the order total per city:
 
     ``` sql
-    gpadmin=# SELECT city, sum(total) FROM pxf_queryres_frompg GROUP BY city;
+    SELECT city, sum(total) FROM pxf_queryres_frompg GROUP BY city;
 
       city  | sum 
     --------+-----
@@ -500,10 +503,12 @@ Perform the following procedure on your Greenplum Database cluster to create a P
     (2 rows)
     ```
 
-4. Use predicate pushdown to filter the `total` in PostgreSQL:
+    When you execute this query, PXF requests and retrieves query results for only the `city` and `total` columns, reducing the amount of data sent back to Greenplum Database.
+
+4. Provide additional filters and aggregations to filter the `total` in PostgreSQL:
 
     ``` sql
-    gpadmin=# SELECT city, sum(total) FROM pxf_queryres_frompg 
+    SELECT city, sum(total) FROM pxf_queryres_frompg 
                 WHERE total > 100
                 GROUP BY city;
 
@@ -513,6 +518,8 @@ Perform the following procedure on your Greenplum Database cluster to create a P
      Aurora | 120
     (2 rows)
     ```
+
+    In this example, PXF will add the `WHERE` filter to the subquery. This filter is pushed to and executed on the remote database system, reducing the amount of data that PXF sends back to Greenplum Database. The `GROUP BY` aggregation, however, is not pushed to the remote and is performed by Greenplum.
 
 ## <a id="jdbc_override"></a>Overriding the JDBC Server Configuration
 
