@@ -366,7 +366,7 @@ FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 
 This command references a query named `order_rpt` defined in the `pgserver` server configuration. It also specifies JDBC read partitioning options that provide PXF with the information that it uses to split/partition the query result data across its servers/segments.
 
-The PXF JDBC connector automatically applies column projection and filter pushdown to external tables referencing named queries to further filter the query result data returned.
+The PXF JDBC connector automatically applies column projection and filter pushdown to external tables that reference named queries to further filter the query result data returned.
 
 ### <a id="jdbc_example_namedquery"></a>Example: Reading the Results of a PostgreSQL Query
 
