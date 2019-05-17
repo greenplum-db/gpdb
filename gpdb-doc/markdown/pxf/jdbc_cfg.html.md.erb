@@ -23,7 +23,7 @@ The PXF JDBC Connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR 
 
 ### <a id="cfg_server"></a>JDBC Server Configuration
 
-When you configure the PXF JDBC Connector, you add at least one named PXF server configuration for the connector as described in [About PXF Server Configuration](cfg_server.html#cfgproc). You can also configure one more more statically-defined queries to run against the remote SQL database.
+When you configure the PXF JDBC Connector, you add at least one named PXF server configuration for the connector as described in [About PXF Server Configuration](cfg_server.html#cfgproc). You can also configure one or more statically-defined queries to run against the remote SQL database.
 
 PXF provides a template configuration file for the JDBC Connector. This server template configuration file, located in `$PXF_CONF/templates/jdbc-site.xml`, identifies properties that you can configure to establish a connection to the external SQL database. The template also includes optional properties that you can set before executing query or insert commands in the external database session.
 
@@ -48,7 +48,7 @@ Replace `<CPROP_NAME>` with the connection property name and specify its value:
 |----------------|--------------------------------------------|-------|
 | jdbc.connection.property.\<CPROP_NAME\> | The name of a property (\<CPROP_NAME\>) to pass to the JDBC driver when PXF establishes the connection to the external SQL database.  | The value of the \<CPROP_NAME\> property. |
 
-Example: To set the `createDatabaseIfNotExist` connection property on a JDBC connection to a MySQL database, include the following property block in `jdbc-site.xml`:
+Example: To set the `createDatabaseIfNotExist` connection property on a JDBC connection to a PostgreSQL database, include the following property block in `jdbc-site.xml`:
 
 ``` xml
 <property>
@@ -142,7 +142,7 @@ A PXF *named query* is a static query that you configure, and that PXF runs in t
 To configure and use a PXF JDBC named query:
 
 1. You [define the query](#namedquery_define) in a text file.
-2. You [publish](#namedquery_pub) the query name.
+2. You provide the [query name](#namedquery_pub) to appropriate Greenplum Database users.
 3. The Greenplum Database user [references the query](#namedquery_ref) in a Greenplum Database external table definition.
 
 PXF runs the query each time the user invokes a `SELECT` command on the Greenplum Database external table.
@@ -167,7 +167,7 @@ GROUP BY c.name, c.city, o.month
 
 Do not provide the ending semicolon (`;`) for the SQL statement.
 
-#### <a id="namedquery_pub"></a>Publishing Query Names
+#### <a id="namedquery_pub"></a>Query Naming
 
 The Greenplum Database user references a named query by specifying the query file name without the extension. For example, if you define a query in a file named `report.sql`, the name of that query is `report`.
 

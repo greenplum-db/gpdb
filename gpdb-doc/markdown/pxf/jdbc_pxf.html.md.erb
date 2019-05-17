@@ -56,7 +56,7 @@ Any data type not listed above is not supported by the PXF JDBC connector.
 ## <a id="queryextdata"></a>Accessing an External SQL Database
 The PXF JDBC connector supports a single profile named `Jdbc`. You can both read data from and write data to an external SQL database table with this profile. You can also use the connector to run a static, named query in external SQL database and read the results.
 
-To access data in a remote SQL database, you create a readable or writable Greenplum Database external table that references the remote database table. The Greenplum Database external table and the remote database table or query result tuple must have the same definition; the column names, types, and order must match.
+To access data in a remote SQL database, you create a readable or writable Greenplum Database external table that references the remote database table. The Greenplum Database external table and the remote database table or query result tuple must have the same definition; the column names and types must match.
 
 Use the following syntax to create a Greenplum Database external table that references a remote SQL database table or a query result from the remote database:
 
@@ -328,15 +328,17 @@ Perform the following procedure to insert some data into the `forpxf_table1` Pos
 
 The PXF JDBC Connector allows you to specify a statically-defined query to run against the remote SQL database. Consider using a *named query* when:
 
-- The data on which you are operating resides in the the same external database.
+- You need to join several tables that all reside in the same external database.
 - You want to perform complex aggregation closer to the data source.
 - You would use, but are not allowed to create, a `VIEW` in the external database.
+- You would rather consume computational resources in the external system to minimize utilization of Greenplum Database resources.
+- You want to run a HIVE query and control resource utilization via YARN.
 
-The Greenplum Database administrator defines a query and provides appropriate users with the query name. Instead of a table name, you specify `query:<query_name>` in the `CREATE EXTERNAL TABLE` `LOCATION` clause to instruct the PXF JDBC connector to run the static query named `<query_name>` in the remote SQL database.
+The Greenplum Database administrator defines a query and provides you with the query name to use when you create the external table. Instead of a table name, you specify `query:<query_name>` in the `CREATE EXTERNAL TABLE` `LOCATION` clause to instruct the PXF JDBC connector to run the static query named `<query_name>` in the remote SQL database.
 
 PXF supports named queries only with readable external tables. You must create a unique Greenplum Database readable external table for each query that you want to run.
 
-The names, types, and order of the external table columns must exactly match the names, types, and order of the columns return by the query result. If the query returns the results of an aggregation or other function, be sure to use the `AS` qualifier to specify a specific column name.
+The names and types of the external table columns must exactly match the names, types, and order of the columns return by the query result. If the query returns the results of an aggregation or other function, be sure to use the `AS` qualifier to specify a specific column name.
 
 For example, suppose that you are working with PostgreSQL tables that have the following definitions:
 
@@ -354,7 +356,7 @@ SELECT c.name, sum(o.amount) AS total
 GROUP BY c.name
 ```
 
-This query returns tuples of type `(name text, total int)`. If the `order_rpt` query is available to the PXF JDBC server named `pgserver`, you could create a Greenplum Database external table to read these query results as follows:
+This query returns tuples of type `(name text, total int)`. If the `order_rpt` query is defined for the PXF JDBC server named `pgserver`, you could create a Greenplum Database external table to read these query results as follows:
 
 ``` sql
 CREATE EXTERNAL TABLE orderrpt_frompg(name text, total int)
@@ -364,7 +366,7 @@ FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 
 This command references a query named `order_rpt` defined in the `pgserver` server configuration. It also specifies JDBC read partitioning options that provide PXF with the information that it uses to split/partition the query result data across its servers/segments.
 
-You can use named queries with PXF column projection, filter pushdown, and partition filtering to apply further filters on the query result data returned.
+The PXF JDBC connector automatically applies column projection and filter pushdown to external tables referencing named queries to further filter the query result data returned.
 
 ### <a id="jdbc_example_namedquery"></a>Example: Reading the Results of a PostgreSQL Query
 
