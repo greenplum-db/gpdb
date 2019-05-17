@@ -31,7 +31,7 @@ REGRESS = basictest extrafiles databases pg_xlog_symlink unclean_shutdown \
 	tablespaces_objects_created_before_promotion \
 	tablespaces_objects_created_after_promotion \
 	tablespaces_objects_removed_after_promotion
-REGRESS_OPTS=--use-existing --launcher=./launcher
+REGRESS_OPTS=--init-file=./regress_init_file --use-existing --launcher=./launcher
 
 all: pg_rewind
 
