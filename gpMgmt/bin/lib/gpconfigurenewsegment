@@ -3,6 +3,9 @@
 import datetime
 import sys
 import os
+import re
+import json
+import shutil
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
 
 from gppylib.gpparseopts import OptParser, OptChecker
@@ -170,6 +173,42 @@ class ConfExpSegCmd(Command):
                         self.set_results(extractTarCmd.get_results())
                         logger.error(extractTarCmd.get_results())
                         raise
+
+                # Restore pg_tblspc
+                tblspc_config_json = os.path.join(self.datadir,
+                                                  "pg_tblspc",
+                                                  "newTableSpaceInfo.json")
+                if os.path.exists(tblspc_config_json):
+                    # If the tablespace json config file exists,
+                    # we have to restore the tablespace files as
+                    # the json config file.
+                    #             json :: {
+                    #                         "names" : [ name::string ],
+                    #                         "oids"  : [ oid::string ],
+                    #                         "details" : {
+                    #                                          dbid::string : [ location::string ]
+                    #                                     }
+                    #                      }
+                    # newTableSpaceInfo[names] and newTableSpaceInfo[oids] are tablespace infos
+                    # that are in the same order.
+                    # newTableSpaceInfo[dbid] is a list of locations in the same order of oids.
+                    with open(tblspc_config_json) as f:
+                        tblspc_config = json.load(f)
+                        oids = tblspc_config["oids"]
+                        names = tblspc_config["names"]
+                        locations = tblspc_config["details"][str(self.dbid)]
+
+                        dumps_dir = os.path.join(self.datadir, "pg_tblspc", "dumps")
+                        for oid, location in zip(oids, locations):
+                            fn = os.listdir(os.path.join(dumps_dir, oid))[0]
+                            shutil.move(os.path.join(dumps_dir, oid, fn),
+                                        os.path.join(location, str(self.dbid)))
+                            os.unlink(os.path.join(self.datadir, "pg_tblspc", oid))
+                            os.symlink(os.path.join(location, str(self.dbid)),
+                                       os.path.join(self.datadir, "pg_tblspc", oid))
+
+                        shutil.rmtree(dumps_dir)
+                        os.remove(tblspc_config_json)
 
                 # Create pg_log for new segment in case it dosen't exist.
                 try:
