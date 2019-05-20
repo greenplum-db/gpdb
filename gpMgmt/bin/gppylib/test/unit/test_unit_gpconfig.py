@@ -492,12 +492,6 @@ class GpConfig(GpTestCase):
         result = self.subject.quote_string(self.guc, value)
         self.assertEqual(result, expected)
 
-    def test_quote_string_already_quoted(self):
-        value = "'teststring'"
-        expected = "'teststring'"
-        result = self.subject.quote_string(self.guc, value)
-        self.assertEqual(result, expected)
-
     def test_quote_string_quoted_with_double_quotes(self):
         value = "\"teststring\""
         expected = "'\"teststring\"'"
@@ -551,11 +545,11 @@ class GpConfig(GpTestCase):
         self.validation_for_testing_quoting_string_values(expected_value="'baz'")
 
     def test_change_of_master_value_with_quotes_succeeds(self):
-        already_quoted_master_value = "'baz'"
+        already_quoted_master_value = "'ba'z'"
         vartype = 'string'
-        self.setup_for_testing_quoting_string_values(vartype=vartype, value='baz', additional_args=['--mastervalue', already_quoted_master_value])
+        self.setup_for_testing_quoting_string_values(vartype=vartype, value=already_quoted_master_value, additional_args=['--mastervalue', already_quoted_master_value])
         self.subject.do_main()
-        self.validation_for_testing_quoting_string_values(expected_value="'baz'")
+        self.validation_for_testing_quoting_string_values(expected_value="'''ba''z'''")
 
     def test_change_of_master_only_quotes_succeeds(self):
         unquoted_master_value = "baz"
