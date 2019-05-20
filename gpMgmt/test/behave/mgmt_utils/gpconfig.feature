@@ -78,6 +78,7 @@ Feature: gpconfig integration tests
         | application_name             |  string  | zzzzzz     | ''       | ''         |            | ''                | ''                     | ''           | ''                |                   |
         | application_name             |  string  | boo        | "\'"     | '\\'''     | \'         | "\'"              | '\\'''                 | "\'"         | '\\'''            | \'                |
         | application_name             |  string  | boo        | "''''"   | '''''''''' | ''''       | "''"              | ''''''                 | "'"          | ''''              | '                 |
+        | search_path                  |  string  | boo        | Ομήρου   | 'Ομήρου'   | Ομήρου     | Ομήρου            | 'Ομήρου'               | Ομήρου       | 'Ομήρου'          | Ομήρου            |
 
     @concourse_cluster
     @demo_cluster
