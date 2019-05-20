@@ -869,6 +869,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_BOOL_FIELD(hasRecursive);
 	WRITE_BOOL_FIELD(hasModifyingCTE);
 	WRITE_BOOL_FIELD(hasForUpdate);
+	WRITE_BOOL_FIELD(canOptSelectLockingClause);
 	WRITE_NODE_FIELD(cteList);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(jointree);

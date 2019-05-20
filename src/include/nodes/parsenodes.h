@@ -152,7 +152,7 @@ typedef struct Query
 	bool		hasRecursive;	/* WITH RECURSIVE was specified */
 	bool		hasModifyingCTE;	/* has INSERT/UPDATE/DELETE in WITH */
 	bool		hasForUpdate;	/* FOR [KEY] UPDATE/SHARE was specified */
-	bool        canOptSelectLockingClause;
+	bool        canOptSelectLockingClause; /* Whether can do some optimization on select with locking clause */
 
 	List	   *cteList;		/* WITH list (of CommonTableExpr's) */
 

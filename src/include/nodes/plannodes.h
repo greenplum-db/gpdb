@@ -1450,7 +1450,7 @@ typedef struct PlanRowMark
 	RowMarkType markType;		/* see enum above */
 	bool		noWait;			/* NOWAIT option */
 	bool		isParent;		/* true if this is a "dummy" parent entry */
-	bool        canOptSelectLockingClause;
+	bool        canOptSelectLockingClause; /* Whether can do some optimization on select with locking clause */
 } PlanRowMark;
 
 
