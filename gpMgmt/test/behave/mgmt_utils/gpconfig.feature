@@ -21,32 +21,32 @@ Feature: gpconfig integration tests
        # set same value on master and segments
        When the user runs "gpconfig -c <guc> -v <value>"
        Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value>"
+        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value>" escaped
         And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
 
        # set value on master only, leaving segments the same
        When the user runs "gpconfig -c <guc> -v <value_master_only> --masteronly "
        Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value_master_only>"
+        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value_master_only>" escaped
         And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
 
        # set value on master with a different value from the segments
        When the user runs "gpconfig -c <guc> -v <value> -m <value_master>"
        Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value_master>"
+        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value_master>" escaped
         And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
 
        # now make sure the last changes took full effect as seen by gpconfig
        When the user runs "gpconfig -s <guc> --file"
        Then gpconfig should return a return code of 0
-        And gpconfig should print "Master[\s]*value: <file_value_master>" to stdout
-        And gpconfig should print "Segment[\s]*value: <file_value>" to stdout
+        And gpconfig should print "Master  value: <file_value_master>" escaped to stdout
+        And gpconfig should print "Segment value: <file_value>" escaped to stdout
 
        When the user runs "gpconfig -s <guc> --file-compare"
        Then gpconfig should return a return code of 0
         And gpconfig should print "GUCS ARE OUT OF SYNC" to stdout
-        And gpconfig should print "value: <seed_value> \| file: <file_value_master>" to stdout
-        And gpconfig should print "value: <seed_value> \| file: <file_value>" to stdout
+        And gpconfig should print "value: <seed_value> | file: <file_value_master>" escaped to stdout
+        And gpconfig should print "value: <seed_value> | file: <file_value>" escaped to stdout
 
        When the user runs "gpstop -ar"
        Then gpstop should return a return code of 0
@@ -60,8 +60,8 @@ Feature: gpconfig integration tests
 
        When the user runs "gpconfig -s <guc>"
        Then gpconfig should return a return code of 0
-        And gpconfig should print "Master[\s]*value: <live_value_master>" to stdout
-        And gpconfig should print "Segment[\s]*value: <live_value>" to stdout
+        And gpconfig should print "Master  value: <live_value_master>" escaped to stdout
+        And gpconfig should print "Segment value: <live_value>" escaped to stdout
 
     # test for each type documented for gpconfig
     Examples:
@@ -73,41 +73,7 @@ Feature: gpconfig integration tests
         | application_name            |  string  | xxxxxx     | bodhi    | 'bodhi'    | bodhi      | lucy              | 'lucy'                 | bengie       | 'bengie'          | bengie            |
         | application_name            |  string  | yyyyyy     | 'bod hi' | 'bod hi'   | bod hi     | 'lu cy'           | 'lu cy'                | 'ben gie'    | 'ben gie'         | ben gie           |
         | application_name            |  string  | zzzzzz     | ''       | ''         |            | ''                | ''                     | ''           | ''                |                   |
-
-    @concourse_cluster
-    @demo_cluster
-    Scenario Outline: gpconfig edge cases for type: <type>
-      Given the user runs "gpstop -ar"
-        And gpstop should return a return code of 0
-        And the gpconfig context is setup
-        And the user runs "gpconfig -c <guc> -v <seed_value>"
-        And gpconfig should return a return code of 0
-
-       # set same value on master and segments
-       When the user runs "gpconfig -c <guc> -v <value>"
-       Then gpconfig should return a return code of 0
-        And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "<guc>=<file_value>" escaped
-        And verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "<guc>=<file_value>"
-
-       # now make sure the last changes took full effect as seen by gpconfig
-       When the user runs "gpconfig -s <guc> --file"
-       Then gpconfig should return a return code of 0
-        And gpconfig should print "Master  value: <file_value>" escaped to stdout
-        And gpconfig should print "Segment value: <file_value>" escaped to stdout
-
-       When the user runs "gpstop -ar"
-        And gpstop should return a return code of 0
-
-       When the user runs "gpconfig -s <guc>"
-       Then gpconfig should return a return code of 0
-        And gpconfig should print "Master  value: <live_value>" escaped to stdout
-        And gpconfig should print "Segment value: <live_value>" escaped to stdout
-
-    # NOTE: <value> is a command-line value
-    Examples:
-        | guc              | type     | seed_value | value   | file_value | live_value |
-        | application_name |  string  |  boo       |  "'\''" | '\\'''     |  \'        |
-       #| application_name |  string  |  boo       |  'C:\\home\\fun'  | 'C:\\home\\fun' | 'C:\\home\\fun' |
+        | application_name            |  string  | boo        | "'\''"   | '\\'''     | \'         | "'\''"            | '\\'''                 | "'\''"       | '\\'''            | \'                |
 
     @concourse_cluster
     @demo_cluster
