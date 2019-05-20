@@ -78,6 +78,7 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
 
+
 def suggested_git_remote():
     """Try to guess the current git remote"""
     default_remote = "<https://github.com/<github-user>/gpdb>"
@@ -94,6 +95,7 @@ def suggested_git_remote():
 
     return remote
 
+
 def suggested_git_branch():
     """Try to guess the current git branch"""
     default_branch = "<branch-name>"
@@ -108,6 +110,7 @@ def suggested_git_branch():
 def render_template(template_filename, context):
     """Render pipeline template yaml"""
     return TEMPLATE_ENVIRONMENT.get_template(template_filename).render(context)
+
 
 def validate_pipeline_release_jobs(raw_pipeline_yml):
     """Make sure all jobs in specified pipeline that don't block release are accounted
@@ -142,6 +145,7 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     print "Pipeline validated: all jobs accounted for"
     return True
 
+
 def create_pipeline(args):
     """Generate OS specific pipeline sections"""
     if args.test_trigger_false:
@@ -173,50 +177,74 @@ def create_pipeline(args):
 
     return True
 
-def how_to_use_generated_pipeline(args):
-    """Generate a message for user explaining how to set the newly generated pipeline."""
+
+def gen_pipeline(args, pipeline_name, secret_files,
+                 git_remote=suggested_git_remote(),
+                 git_branch=suggested_git_branch()):
+
     secrets_path = os.path.expanduser('~/workspace/gp-continuous-integration/secrets')
-    msg = '\n'
-    msg += '======================================================================\n'
-    msg += '  Generate Pipeline type: .. : %s\n' % args.pipeline_type
-    msg += '  Pipeline file ............ : %s\n' % args.output_filepath
-    msg += '  Template file ............ : %s\n' % args.template_filename
-    msg += '  OS Types ................. : %s\n' % args.os_types
-    msg += '  Test sections ............ : %s\n' % args.test_sections
-    msg += '  test_trigger ............. : %s\n' % args.test_trigger_false
-    msg += '======================================================================\n\n'
+    secrets = ""
+    for secret in secret_files:
+        secrets += "-l %s/%s " % (secrets_path, secret)
+
+    return '''fly -t %s \
+set-pipeline \
+-p %s \
+-c %s \
+-l %s/gpdb_common-ci-secrets.yml \
+%s \
+-v gpdb-git-remote=%s \
+-v gpdb-git-branch=%s \
+-v pipeline-name=%s \
+
+''' % (
+        args.pipeline_type,
+        pipeline_name,
+        args.output_filepath,
+        secrets_path,
+        secrets,
+        git_remote,
+        git_branch,
+        pipeline_name
+    )
+
+
+def header(args):
+    return '''
+======================================================================
+  Generate Pipeline type: .. : %s
+  Pipeline file ............ : %s
+  Template file ............ : %s
+  OS Types ................. : %s
+  Test sections ............ : %s
+  test_trigger ............. : %s
+======================================================================
+''' % (args.pipeline_type,
+       args.output_filepath,
+       args.template_filename,
+       args.os_types,
+       args.test_sections,
+       args.test_trigger_false
+       )
+
+
+def print_fly_commands(args):
+    pipeline_name = os.path.basename(args.output_filepath).rsplit('.', 1)[0]
+    dev_note = 'NOTE: You can set the developer pipeline with the following:\n'
+
+    print header(args)
     if args.pipeline_type == 'prod':
-        msg += 'NOTE: You can set the production pipelines with the following:\n\n'
-        msg += 'fly -t gpdb-prod \\\n'
-        msg += '    set-pipeline \\\n'
-        msg += '    -p gpdb_master \\\n'
-        msg += '    -c %s \\\n' % args.output_filepath
-        msg += '    -l %s/gpdb_common-ci-secrets.yml \\\n' % secrets_path
-        msg += '    -l %s/gpdb_master-ci-secrets.prod.yml \\\n' % secrets_path
-        msg += '    -v pipeline-name=gpdb_master\n\n'
+        print 'NOTE: You can set the production pipelines with the following:\n'
+        print gen_pipeline(args, "gpdb_master", ["gpdb_master-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
+        print gen_pipeline(args, "gpdb_master_without_asserts", ["gpdb_master_without_asserts-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
 
-        msg += 'fly -t gpdb-prod \\\n'
-        msg += '    set-pipeline \\\n'
-        msg += '    -p gpdb_master_without_asserts \\\n'
-        msg += '    -c %s \\\n' % args.output_filepath
-        msg += '    -l %s/gpdb_common-ci-secrets.yml \\\n' % secrets_path
-        msg += '    -l %s/gpdb_master_without_asserts-ci-secrets.prod.yml \\\n' % secrets_path
-        msg += '    -v pipeline-name=gpdb_master_without_asserts\n'
-    else:
-        pipeline_name = os.path.basename(args.output_filepath).rsplit('.', 1)[0]
-        msg += 'NOTE: You can set the developer pipeline with the following:\n\n'
-        msg += 'fly -t gpdb-dev \\\n'
-        msg += '    set-pipeline \\\n'
-        msg += '    -p %s \\\n' % pipeline_name
-        msg += '    -c %s \\\n' % args.output_filepath
-        msg += '    -l %s/gpdb_common-ci-secrets.yml \\\n' % secrets_path
-        msg += '    -l %s/gpdb_master-ci-secrets.dev.yml \\\n' % secrets_path
-        msg += '    -l %s/ccp_ci_secrets_gpdb-dev.yml \\\n' % secrets_path
-        msg += '    -v gpdb-git-remote=%s \\\n' % suggested_git_remote()
-        msg += '    -v gpdb-git-branch=%s \\\n' % suggested_git_branch()
-        msg += '    -v pipeline-name=%s \n' % pipeline_name
+    if args.pipeline_type == 'dev':
+        print dev_note
+        print gen_pipeline(args, pipeline_name, ["gpdb_master-ci-secrets.dev.yml", "ccp_ci_secrets_gpdb-dev.yml"])
 
-    return msg
+    if args.pipeline_type == 'cm':
+        print dev_note
+        print gen_pipeline(args, pipeline_name, ["gpdb_master-ci-secrets.dev.yml", "ccp_ci_secrets_data_gpdb_cm.yml"])
 
 
 def main():
@@ -262,7 +290,7 @@ def main():
         action='store',
         dest='pipeline_type',
         default='dev',
-        help='Pipeline type (production="prod")'
+        help='Pipeline type (production="prod", cluster-management="cm")'
     )
 
     parser.add_argument(
@@ -330,7 +358,8 @@ def main():
     if not pipeline_created:
         exit(1)
 
-    print how_to_use_generated_pipeline(args)
+    print_fly_commands(args)
+
 
 if __name__ == "__main__":
     main()
