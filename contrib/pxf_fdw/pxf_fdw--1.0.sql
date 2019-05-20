@@ -16,3 +16,7 @@ AS 'MODULE_PATHNAME'
 CREATE FOREIGN DATA WRAPPER pxf_fdw
   HANDLER pxf_fdw_handler
   VALIDATOR pxf_fdw_validator;
+
+CREATE OR REPLACE FUNCTION pxf_fdw_version()
+    RETURNS pg_catalog.int4 STRICT
+AS 'MODULE_PATHNAME' LANGUAGE C;
