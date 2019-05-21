@@ -10,6 +10,7 @@
 
 #include "access/reloptions.h"
 #include "catalog/pg_foreign_data_wrapper.h"
+#include "catalog/pg_foreign_server.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
 
@@ -48,6 +49,11 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		if (strcmp(def->defname, FDW_OPTION_PROTOCOL) == 0)
 		{
 			protocol = defGetString(def);
+
+            if (catalog == ForeignServerRelationId)
+                ereport(ERROR,
+                        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+                                errmsg("the protocol option cannot be defined for servers")));
 		}
 		else
 			other_options = lappend(other_options, def);
