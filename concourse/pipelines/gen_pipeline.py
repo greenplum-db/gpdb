@@ -237,14 +237,11 @@ def print_fly_commands(args):
         print 'NOTE: You can set the production pipelines with the following:\n'
         print gen_pipeline(args, "gpdb_master", ["gpdb_master-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
         print gen_pipeline(args, "gpdb_master_without_asserts", ["gpdb_master_without_asserts-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
+        return
 
-    if args.pipeline_type == 'dev':
-        print dev_note
-        print gen_pipeline(args, pipeline_name, ["gpdb_master-ci-secrets.dev.yml", "ccp_ci_secrets_gpdb-dev.yml"])
-
-    if args.pipeline_type == 'cm':
-        print dev_note
-        print gen_pipeline(args, pipeline_name, ["gpdb_master-ci-secrets.dev.yml", "ccp_ci_secrets_data_gpdb_cm.yml"])
+    print dev_note
+    print gen_pipeline(args, pipeline_name, ["gpdb_master-ci-secrets.dev.yml",
+                                             "ccp_ci_secrets_%s.yml" % args.pipeline_type])
 
 
 def main():
@@ -290,7 +287,8 @@ def main():
         action='store',
         dest='pipeline_type',
         default='dev',
-        help='Pipeline type (production="prod", cluster-management="cm")'
+        help='Concourse target to use either: prod, dev, or <team abbreviation> '
+             'where abbreviation is found from the team\'s ccp secret file name ending.'
     )
 
     parser.add_argument(
