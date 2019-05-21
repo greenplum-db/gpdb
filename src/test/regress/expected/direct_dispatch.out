@@ -219,20 +219,16 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 --
 update direct_test set value = 'pig' where key in (1,2,3,4,5);
 INFO:  (slice 0) Dispatch command to ALL contents: 1 0 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 1 0 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 1 0 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 1 0 2
 update direct_test_two_column set value = 'pig' where key1 = 100 and key2 in (1,2,3,4);
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 1 2
 update direct_test_two_column set value = 'pig' where key1 in (100,101,102,103,104) and key2 in (1);
 INFO:  (slice 0) Dispatch command to ALL contents: 1 0 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 1 0 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 1 0 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 1 0 2
 update direct_test_two_column set value = 'pig' where key1 in (100,101) and key2 in (1,2);
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 1 2
 -- Multiple row update, where clause lists values which all hash to same segment
 -- DO direct dispatch
 -- CAN'T IMPLEMENT THIS TEST BECAUSE THE # of segments changes again (unless we use a # of segments function, and exploit the simple nature of int4 hashing -- can we do that?)
@@ -245,7 +241,7 @@ begin;
 insert into direct_test values (1,100);
 INFO:  (slice 0) Dispatch command to SINGLE content
 rollback;
-INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to SINGLE content
 begin;
 insert into direct_test values (1,100);
 INFO:  (slice 0) Dispatch command to SINGLE content
@@ -254,7 +250,7 @@ INFO:  (slice 0) Dispatch command to SINGLE content
 insert into direct_test values (3,100);
 INFO:  (slice 0) Dispatch command to SINGLE content
 rollback;
-INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to PARTIAL contents: 1 0
 -------------------
 -- MPP-7634: bitmap index scan
 --
@@ -395,27 +391,23 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 update direct_dispatch_bar set id2 = 1 where id1 = 1 and exists (select * from direct_dispatch_foo where id = 2);
 INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 1
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 -- init plan to see how transaction escalation happens
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id = (select max(id2) from direct_dispatch_bar where id1 = 5);
 INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 2 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 2 0 1
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 2 0 1
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar where id1 = 5) AND id = 3;
 INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 2 0
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 2 0
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 2 0
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar) AND id = 3;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 0 1 2
 -- tests with subplans (MPP-22019)
 CREATE TABLE MPP_22019_a ( i INT, j INT) DISTRIBUTED BY (i);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2

@@ -237,6 +237,10 @@ ReadyForQuery(CommandDest dest)
 					pq_beginmessage(&buf, 'k');
 					pq_sendint64(&buf, VmemTracker_GetMaxReservedVmemBytes());
 					pq_endmessage(&buf);
+
+					pq_beginmessage(&buf, 'x');
+					pq_sendbyte(&buf, TransactionDidWriteXLog());
+					pq_endmessage(&buf);
 				}
 
 				pq_beginmessage(&buf, 'Z');

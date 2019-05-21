@@ -181,6 +181,11 @@ pqParseInput3(PGconn *conn)
 			if (pqGetInt64(&(conn->mop_high_watermark), conn))
 				return;
 		}
+		else if (id == 'x')
+		{
+			if (pqGetc(&conn->wrote_xlog, conn))
+				return;
+		}
 #endif
 		else if (conn->asyncStatus != PGASYNC_BUSY)
 		{

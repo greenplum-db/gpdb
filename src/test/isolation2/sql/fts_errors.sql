@@ -46,9 +46,13 @@ $$ language plpgsql;
 -- no segment down.
 select count(*) from gp_segment_configuration where status = 'd';
 
+drop table if exists fts_errors_test;
+create table fts_errors_test(a int);
+
 1:BEGIN;
 1:END;
 2:BEGIN;
+2:INSERT INTO fts_errors_test SELECT * FROM generate_series(1,100);
 3:BEGIN;
 3:CREATE TEMP TABLE tmp3 (c1 int, c2 int);
 3:DECLARE c1 CURSOR for select * from tmp3;

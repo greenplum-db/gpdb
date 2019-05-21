@@ -364,10 +364,7 @@ DROP TABLE
 \! ./twophase_pqexecparams dbname=regression
 WARNING:  the distributed transaction 'Commit Prepared' broadcast failed to one or more segments for gid DUMMY
 NOTICE:  Releasing segworker group to retry broadcast.
-tuple 0: got
- i = (4 bytes) 1
- t = (11 bytes) 'joe's place'
-
+result: INSERT 0 1
 --
 -- Subtransactions with partition table DDLs.
 --
