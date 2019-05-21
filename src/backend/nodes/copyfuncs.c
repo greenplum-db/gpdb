@@ -133,6 +133,8 @@ _copyPlannedStmt(PlannedStmt *from)
 	COPY_SCALAR_FIELD(query_mem);
 	COPY_SCALAR_FIELD(metricsQueryType);
 
+	COPY_NODE_FIELD(copyIntoClause);
+
 	return newnode;
 }
 
@@ -1341,6 +1343,23 @@ _copyIntoClause(IntoClause *from)
 	COPY_NODE_FIELD(options);
 	COPY_SCALAR_FIELD(onCommit);
 	COPY_STRING_FIELD(tableSpaceName);
+
+	return newnode;
+}
+
+/*
+ * _copyIntoClause
+ */
+static CopyIntoClause *
+_copyCopyIntoClause(const CopyIntoClause *from)
+{
+	CopyIntoClause *newnode = makeNode(CopyIntoClause);
+
+	COPY_NODE_FIELD(attlist);
+	COPY_SCALAR_FIELD(is_program);
+	COPY_STRING_FIELD(filename);
+	COPY_NODE_FIELD(options);
+	COPY_NODE_FIELD(ao_segnos);
 
 	return newnode;
 }
@@ -2856,6 +2875,7 @@ _copyQuery(Query *from)
 	}
 	else
 		newnode->intoPolicy = NULL;
+	COPY_SCALAR_FIELD(isCopy);
 
 	return newnode;
 }
@@ -4719,6 +4739,9 @@ copyObject(void *from)
 			break;
 		case T_IntoClause:
 			retval = _copyIntoClause(from);
+			break;
+		case T_CopyIntoClause:
+			retval = _copyCopyIntoClause(from);
 			break;
 		case T_Var:
 			retval = _copyVar(from);

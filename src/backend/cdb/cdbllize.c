@@ -183,7 +183,7 @@ cdbparallelize(PlannerInfo *root,
 	switch (query->commandType)
 	{
 		case CMD_SELECT:
-			if (query->intoClause)
+			if (query->intoClause || query->isCopy)
 			{
 				/* SELECT INTO always created partitioned tables. */
 				context->resultSegments = true;	

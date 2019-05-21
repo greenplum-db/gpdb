@@ -1565,7 +1565,8 @@ InitRootSlices(QueryDesc *queryDesc)
 			{
 				case CMD_SELECT:
 					Assert(slice->gangType == GANGTYPE_UNALLOCATED && slice->gangSize == 0);
-					if (queryDesc->plannedstmt->intoClause != NULL)
+					if (queryDesc->plannedstmt->intoClause != NULL ||
+						queryDesc->plannedstmt->copyIntoClause != NULL)
 					{
 						slice->gangType = GANGTYPE_PRIMARY_WRITER;
 						slice->gangSize = getgpsegmentCount();
@@ -2155,7 +2156,7 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	 * Wait for them to finish and clean up the dispatching structures.
 	 * Replace current error info with QE error info if more interesting.
 	 */
-	if (estate->dispatcherState && estate->dispatcherState->primaryResults)
+	if (estate && estate->dispatcherState && estate->dispatcherState->primaryResults)
 	{
 		/*
 		 * If we are finishing a query before all the tuples of the query
@@ -2170,7 +2171,7 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	}
 
 	/* Clean up the interconnect. */
-	if (estate->es_interconnect_is_setup)
+	if (estate && estate->es_interconnect_is_setup)
 	{
 		TeardownInterconnect(estate->interconnect_context, estate->motionlayer_context, true /* force EOS */, true);
 		estate->es_interconnect_is_setup = false;

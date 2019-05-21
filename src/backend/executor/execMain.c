@@ -53,6 +53,7 @@
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbpartition.h"
+#include "commands/copy.h"
 #include "commands/tablecmds.h" /* XXX: temp for get_parts() */
 #include "commands/tablespace.h"
 #include "commands/trigger.h"
@@ -1059,6 +1060,8 @@ ExecutorEnd(QueryDesc *queryDesc)
 		 * Release EState and per-query memory context.
 		 */
 		FreeExecutorState(estate);
+
+		queryDesc->estate = NULL;
 
 		PG_RE_THROW();
 	}
@@ -2201,6 +2204,11 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	        (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer) )
 		OpenIntoRel(queryDesc);
 
+	if(queryDesc->plannedstmt->copyIntoClause != NULL)
+	{
+		queryDesc->dest = CreateCopyDestReceiver();
+		((DR_copy*)queryDesc->dest)->queryDesc = queryDesc;
+	}
 
 	if (DEBUG1 >= log_min_messages)
 			{

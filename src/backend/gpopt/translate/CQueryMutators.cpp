@@ -1314,6 +1314,8 @@ CQueryMutators::ConvertToDerivedTable
     new_query->rtable = gpdb::LAppend(new_query->rtable, rte);
     new_query->intoClause = origIntoClause;
     new_query->intoPolicy = into_policy;
+	new_query->isCopy = derived_table_query->isCopy;
+	derived_table_query->isCopy = false;
 
 	FromExpr *fromexpr = MakeNode(FromExpr);
 	fromexpr->quals = NULL;

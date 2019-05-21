@@ -252,6 +252,7 @@ _readQuery(void)
 	READ_NODE_FIELD(limitCount);
 	READ_NODE_FIELD(rowMarks);
 	READ_NODE_FIELD(setOperations);
+	READ_BOOL_FIELD(isCopy);
 	/* policy not serialized */
 
 	READ_DONE();
@@ -1479,6 +1480,7 @@ _readPlannedStmt(void)
 
 	READ_UINT64_FIELD(query_mem);
 	READ_INT8_FIELD(metricsQueryType);
+	READ_NODE_FIELD(copyIntoClause);
 	READ_DONE();
 }
 
@@ -2942,6 +2944,9 @@ readNodeBinary(void)
 				break;
 			case T_IntoClause:
 				return_value = _readIntoClause();
+				break;
+			case T_CopyIntoClause:
+				return_value = _readCopyIntoClause();
 				break;
 			case T_Var:
 				return_value = _readVar();

@@ -264,6 +264,16 @@ typedef CopyStateData *CopyState;
 #define ISOCTAL(c) (((c) >= '0') && ((c) <= '7'))
 #define OCTVALUE(c) ((c) - '0')
 
+typedef struct CopyStateData *CopyState;
+
+/* DestReceiver for COPY (SELECT) TO */
+typedef struct
+{
+	DestReceiver pub;			/* publicly-known function pointers */
+	CopyState	cstate;			/* CopyStateData for the command */
+	QueryDesc  *queryDesc;		/* QueryDesc for the copy*/
+} DR_copy;
+
 /*
  * Some platforms like macOS (since Yosemite) already define 64 bit versions
  * of htonl and nhohl so we need to guard against redefinition.
@@ -281,7 +291,8 @@ extern void ValidateControlChars(bool copy, bool load, bool csv_mode, char *deli
 								 bool header_line, bool fill_missing, char *newline,
 								 int numcols);
 extern uint64 DoCopy(const CopyStmt *stmt, const char *queryString);
-
+extern CopyState BeginCopyToOnSegment(QueryDesc *queryDesc);
+extern void EndCopyToOnSegment(CopyState cstate);
 extern DestReceiver *CreateCopyDestReceiver(void);
 
 extern List *CopyGetAttnums(TupleDesc tupDesc, Relation rel, List *attnamelist);
