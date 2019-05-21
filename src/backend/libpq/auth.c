@@ -414,7 +414,8 @@ is_internal_gpdb_conn(Port *port)
 	 * This is an internal connection if major version is three and we've set
 	 * the upper bits to 7.
 	 */
-	if (PG_PROTOCOL_MAJOR(port->proto) == 3 && port->proto >> 28 == 7)
+	if (PG_PROTOCOL_MAJOR(port->proto) == 3 &&
+			IS_GPDB_INTERNAL_PROTOCOL(port->proto))
 		return true;
 	else
 		return false;
