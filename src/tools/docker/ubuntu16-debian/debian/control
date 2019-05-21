@@ -28,4 +28,13 @@ Depends: bison,
     python-pip,
     rsync,
     zlib1g
-Description: Greenplum Database is an advanced, fully featured, open source data platform.  It provides powerful and rapid analytics on petabyte scale data volumes.  Uniquely geared toward big data analytics, Greenplum Database is powered by the world’s most advanced cost-based query optimizer delivering high analytical query performance on large data volumes.The Greenplum Database® project is released under the Apache 2 license.  We want to thank all our current community contributors and all who are interested in new contributions.  For the Greenplum Database community, no contribution is too small, we encourage all types of contributions.
+Description: Pivotal Greenplum Database
+  Greenplum Database is an advanced, fully featured, open source data platform.
+  It provides powerful and rapid analytics on petabyte scale data volumes.
+  Uniquely geared toward big data analytics, Greenplum Database is powered by
+  the world's most advanced cost-based query optimizer delivering high
+  analytical query performance on large data volumes.  The Greenplum Database®
+  project is released under the Apache 2 license.  We want to thank all our
+  current community contributors and all who are interested in new
+  contributions.  For the Greenplum Database community, no contribution is too
+  small, we encourage all types of contributions.
