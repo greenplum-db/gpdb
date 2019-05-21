@@ -120,6 +120,34 @@ Feature: gpconfig integration tests
 
     @concourse_cluster
     @demo_cluster
+    Scenario: write a newline using gpconfig
+      Given the user runs "gpstop -u"
+        And gpstop should return a return code of 0
+        And the gpconfig context is setup
+        # we do this to make sure all segment files contain this <guc>, both in file and live
+        # todo: we should instead use a custom guc here once we fix the bug that prevents us from setting custom gucs
+        And the user runs "gpconfig -c default_text_search_config -v xxxxxx"
+        And gpconfig should return a return code of 0
+        And the user runs "gpstop -u"
+        And gpstop should return a return code of 0
+
+       When the user runs "gpconfig -c default_text_search_config -v $'a\nb'"
+       Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "default_text_search_config='a\nb'" escaped
+
+       # now make sure the last changes took full effect as seen by gpconfig
+       When the user runs "gpconfig -s default_text_search_config --file"
+       Then gpconfig should return a return code of 0
+        And gpconfig should print "Master  value: 'a\nb'" escaped to stdout
+
+       When the user runs "gpstop -u"
+       Then gpstop should return a return code of 0
+
+       When the user runs "gpconfig -s default_text_search_config"
+       Then gpconfig should return a return code of 0
+        And gpconfig should print "Master  value: a\nb" to stdout
+
+    @concourse_cluster
+    @demo_cluster
     Scenario Outline: gpconfig basic removal for type: <type>
       Given the user runs "gpstop -u"
         And gpstop should return a return code of 0

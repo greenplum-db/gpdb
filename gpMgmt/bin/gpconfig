@@ -375,8 +375,10 @@ def do_change(options):
 # the quote_literal() function in Postgres.
 def quote_string(guc, value):
     if value is not None and guc and guc.vartype == "string":
-        # Escape single quotes and backslashes
-        value = value.replace("'", "''").replace("\\", "\\\\")
+        # Escape single quotes, backslashes, and newlines
+        value = value.replace("'", "''") \
+                     .replace("\\", "\\\\") \
+                     .replace("\n", "\\n")
         # Single-quote the whole string
         value = "'" + value + "'"
     return value
