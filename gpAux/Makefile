@@ -30,7 +30,7 @@ all : devel
 # Internal functions which are invoked by other rules within this makefile
 .PHONY : mgmtcopy copylibs
 .PHONY : greenplum_path RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
-.PHONY : gccVersionCheck clients gppkg
+.PHONY : gccVersionCheck clients
 
 #---------------------------------------------------------------------
 # Make 3rd-party libraries and tools
@@ -82,17 +82,14 @@ CLIENTSDIR=greenplum-clients-$(RELEASE)
 
 DISTPATH=$(GPROOT)/$(GPDIR)
 CLIENTSDISTPATH=$(GPROOT)/$(CLIENTSDIR)
-GPPKGDISTPATH=$(GPROOT)
 
 ifeq "$(DEVPATH)" ""
 BLD_HOME=$(HOME)
 DEVPATH=$(BLD_HOME)/$(GPDIR)
-GPPKGDEVPATH=$(BLD_HOME)
 CLIENTSDEVPATH=$(BLD_HOME)/$(CLIENTSDIR)
 else
 # DEVPATH has been passed in as by the build scripts
 GPROOT_DEV=$(dir $(DEVPATH))
-GPPKGDEVPATH=$(GPROOT_DEV)
 CLIENTSDEVPATH=$(GPROOT_DEV)$(CLIENTSDIR)
 endif
 
@@ -105,16 +102,6 @@ ISCONFIG=$(GPPGDIR)/GNUmakefile
 ## platforms, we do a client-only build.
 ##
 SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 linux_x86_64
-
-#---------------------------------------------------------------------
-# GPPKG
-#---------------------------------------------------------------------
-
-##
-## Support gppkg platforms
-##
-
-GPPKG_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64
 
 #---------------------------------------------------------------------
 # Compiler options
@@ -321,7 +308,6 @@ define BUILD_STEPS
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTSINSTLOC)
 	@$(MAKE) copylicense INSTLOC=$(INSTLOC) \
                          CLIENTSINSTLOC=$(CLIENTSINSTLOC)
-	@$(MAKE) gppkg INSTLOC=$(INSTLOC) GPPKGINSTLOC=$(GPPKGINSTLOC)
 endef
 
 ifeq "$(BLD_GPDB_BUILDSET)" "aix_subset"
@@ -406,7 +392,6 @@ endif
 devel : INSTCFLAGS=$(DEBUGFLAGS)
 devel : INSTLOC=$(DEVPATH)
 devel : CLIENTSINSTLOC=$(CLIENTSDEVPATH)
-devel : GPPKGINSTLOC=$(GPPKGDEVPATH)
 devel : CONFIGFLAGS+= --enable-cassert --enable-debug --enable-depend
 ifdef ENABLE_VPATH_BUILD
 devel : BUILDDIR=Debug
@@ -427,7 +412,6 @@ endif
 dist : INSTCFLAGS=$(OPTFLAGS)
 dist : INSTLOC=$(DISTPATH)
 dist : CLIENTSINSTLOC=$(CLIENTSDISTPATH)
-dist : GPPKGINSTLOC=$(GPPKGDISTPATH)
 ifdef ENABLE_VPATH_BUILD
 dist : BUILDDIR=Release
 dist : ISCONFIG=$(BUILDDIR)/GNUmakefile
@@ -738,10 +722,6 @@ mgmtcopy :
 	cp -rp $(GPMGMT)/bin/gppylib $(INSTLOC)/lib/python
 	cp -rp $(GPMGMT)/bin/ext/* $(INSTLOC)/lib/python
 	cp -rp $(GPMGMT)/bin $(INSTLOC)
-ifeq "$(findstring $(BLD_ARCH),$(GPPKG_PLATFORMS))" ""
-	@echo "Removing gppkg from distribution"
-	rm -f $(INSTLOC)/bin/gppkg
-endif
 	cp -rp $(GPMGMT)/sbin/* $(INSTLOC)/sbin/.
 	cp $(GPPGDIR)/src/test/regress/*.pl $(INSTLOC)/bin
 	cp $(GPPGDIR)/src/test/regress/*.pm $(INSTLOC)/bin
@@ -869,114 +849,3 @@ gccVersionCheck :
 	    $(BLD_CC) --version ; \
 	    exit 1 ; \
 	fi
-
-## ----------------------------------------------------------------------
-
-ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 sles11_x86_64 suse11_x86_64))
-GPPKG_SOURCES = \
-	$(NULL)
-else
-GPPKG_SOURCES = \
-	../contrib/pgcrypto \
-	extensions/postgis-2.0.3 \
-	extensions/plr \
-	$(NULL)
-	ifneq ($(wildcard ../contrib/pgpool),)
-		GPPKG_SOURCES := ../contrib/pgpool $(GPPKG_SOURCES)
-	endif
-	ifneq ($(wildcard ../contrib/dtm),)
-		GPPKG_SOURCES := ../contrib/dtm $(GPPKG_SOURCES)
-	endif
-	ifneq ($(wildcard ../contrib/pg_arcgis),)
-		GPPKG_SOURCES := ../contrib/pg_arcgis $(GPPKG_SOURCES)
-	endif
-	ifneq ($(wildcard ../contrib/pg_osm),)
-		GPPKG_SOURCES := ../contrib/pg_osm $(GPPKG_SOURCES)
-	endif
-endif
-
-## ----------------------------------------------------------------------
-
-gppkg:
-ifeq "$(findstring gppkg,$(BLD_TARGETS))" ""
-	# ---- build and packaging of gppkgs are currently disabled
-	# ---- set BLD_TARGETS="gppkg" to enable them.
-else
-ifeq "$(findstring $(BLD_ARCH),$(GPPKG_PLATFORMS))" ""
-	@echo ""
-	@echo "The gppkg build and packaging processes are not supported"
-	@echo "on this platform: $(BLD_ARCH)"
-	@echo ""
-else
-	@for source in $(GPPKG_SOURCES); do \
-		echo "";\
-		echo "====================================================================================================";\
-		echo "Starting build of gppkg: $${source}" ; \
-		echo "----------------------------------------------------------------------------------------------------";\
-		$(MAKE) -C $${source}/package INSTLOC=$(INSTLOC) BLD_ARCH=`$(BLD_TOP)/releng/set_bld_arch.sh`; \
-		RET_VAL=$$? ; \
-		if [ $$RET_VAL -ne 0 ] ; then \
-			echo "Error building gppkg: $${source}" ; \
-			exit $$RET_VAL; \
-		fi; \
-		echo "";\
-		echo "====================================================================================================";\
-		echo "Completed build of gppkg: $${source}" ;\
-		echo "____________________________________________________________________________________________________";\
-		cp $${source}/package/*.gppkg $(GPPKGINSTLOC); \
-	done
-endif
-endif
-
-ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 suse11_x86_64))
-GPPKG_ROOT_DIR = \
-	$(NULL)
-else
-GPPKG_ROOT_DIR = \
-	../contrib/pgcrypto \
-	$(NULL)
-endif
-
-installcheck-gppkg:
-	touch installcheck-gppkg.log
-ifeq "$(findstring gppkg,$(BLD_TARGETS))" ""
-    # ---- build and packaging of gppkgs are currently disabled
-    # ---- set BLD_TARGETS="gppkg" to enable them.
-else
-ifeq "$(findstring $(BLD_ARCH),$(GPPKG_PLATFORMS))" ""
-	@echo ""
-	@echo "The gppkg build and packaging processes are not supported"
-	@echo "on this platform: $(BLD_ARCH)"
-	@echo ""
-else
-	@for root_gppkg in $(GPPKG_ROOT_DIR); do \
-		echo "----------------------------------------------------------------------"; \
-		echo "installing gppkg for $${root_gppkg}"; \
-		echo "----------------------------------------------------------------------"; \
-		source $$GPHOME/greenplum_path.sh && $(MAKE) -C $${root_gppkg}/package install BLD_ARCH=`$(BLD_TOP)/releng/set_bld_arch.sh` INSTLOC=$$GPHOME; \
-		RET_VAL=$$? ; \
-		if [ $$RET_VAL -ne 0 ] ; then \
-			echo "Error running install: $${root_gppkg}" ; \
-			exit $$RET_VAL; \
-		fi; \
-	done
-
-	source $$GPHOME/greenplum_path.sh && gpstop -ar
-
-	@for root_gppkg in $(GPPKG_ROOT_DIR); do \
-		echo "----------------------------------------------------------------------"; \
-		echo "running installcheck for $${root_gppkg}"; \
-		echo "----------------------------------------------------------------------"; \
-		installcheck_dir=""; \
-		if [ -d "$${root_gppkg}/source" ]; then \
-			installcheck_dir="source"; \
-		fi; \
-		source $$GPHOME/greenplum_path.sh && $(MAKE) -C $${root_gppkg}/$${installcheck_dir} installcheck >> installcheck-gppkg.log; \
-		RET_VAL=$$? ; \
-		if [ $$RET_VAL -ne 0 ] ; then \
-			echo "Error running installcheck-gppkg : $${root_gppkg}/$${installcheck_dir}" ; \
-			exit $$RET_VAL; \
-		fi; \
-	done
-endif
-endif

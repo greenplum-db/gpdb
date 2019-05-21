@@ -70,12 +70,6 @@ function build_gpdb() {
   popd
 }
 
-function build_gppkg() {
-  pushd ${GPDB_SRC_PATH}/gpAux
-    make gppkg BLD_TARGETS="gppkg" INSTLOC="${GREENPLUM_INSTALL_DIR}" GPPKGINSTLOC="${GPDB_ARTIFACTS_DIR}" RELENGTOOLS=/opt/releng/tools
-  popd
-}
-
 function git_info() {
   pushd ${GPDB_SRC_PATH}
 
@@ -232,7 +226,7 @@ function _main() {
 
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   git_info
-  build_gppkg
+
   if [ "${TARGET_OS}" != "win32" ] ; then
       # Don't unit test when cross compiling. Tests don't build because they
       # require `./configure --with-zlib`.
