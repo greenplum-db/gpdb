@@ -1621,6 +1621,7 @@ static int session_attach(request_t* r)
 		session->active_segids[r->segid] = 1; /* mark this segid as active */
 		session->maxsegs = r->totalsegs;
 		session->requests = apr_hash_make(pool);
+		event_set(&session->ev, 0, 0, 0, 0);
 
 		if (session->tid == 0 || session->path == 0 || session->key == 0)
 			gfatal(r, "out of memory in session_attach");
