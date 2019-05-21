@@ -32,7 +32,6 @@ include: helpers/server_helpers.sql;
 4:SELECT gp_request_fts_probe_scan();
 4:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 1;
 
-SELECT count(*) FROM t;
 !\retcode gprecoverseg -a;
 
 -- loop while segments come in sync

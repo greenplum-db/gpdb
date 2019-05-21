@@ -25,6 +25,52 @@ exit_nicely(PGconn *conn)
 	exit(1);
 }
 
+
+
+/*
+ * This function prints a query result that is a fetch from the test table.
+ */
+static void
+show_results(PGresult *res)
+{
+	int			i,
+				j;
+	int			i_fnum,
+				t_fnum;
+
+
+	/* Use PQfnumber to avoid assumptions about field order in result */
+	i_fnum = PQfnumber(res, "i");
+	t_fnum = PQfnumber(res, "t");
+
+	for (i = 0; i < PQntuples(res); i++)
+	{
+		char	   *iptr;
+		char	   *tptr;
+		int			ival;
+
+		/* Get the field values (we ignore possibility they are null!) */
+		iptr = PQgetvalue(res, i, i_fnum);
+		tptr = PQgetvalue(res, i, t_fnum);
+
+		/*
+		 * The binary representation of INT4 is in network byte order, which
+		 * we'd better coerce to the local byte order.
+		 */
+		ival = ntohl(*((uint32_t *) iptr));
+
+
+		printf("tuple %d: got\n", i);
+		printf(" i = (%d bytes) %d\n",
+			   PQgetlength(res, i, i_fnum), ival);
+		printf(" t = (%d bytes) '%s'\n",
+			   PQgetlength(res, i, t_fnum), tptr);
+		printf("\n");
+	}
+}
+
+
+
 int
 main(int argc, char **argv)
 {
@@ -71,13 +117,13 @@ main(int argc, char **argv)
 
 	paramValues[0] = "joe's place";
 
-	/* Upone receving the INSERT below, the segment will error out due to the
+	/* Upone receving the SELECT below, the segment will error out due to the
 	 * fault-injector GUCs set earlier.  However, the master will retry and we
 	 * should get a message saying that retry succeeded.
 	 */
 
 	res = PQexecParams(conn,
-					   "INSERT INTO test1(t) VALUES($1)",
+					   "SELECT * FROM test1 WHERE t = $1",
 					   1,		/* one param */
 					   NULL,	/* let the backend deduce param type */
 					   paramValues,
@@ -85,14 +131,14 @@ main(int argc, char **argv)
 					   NULL,	/* default to all text params */
 					   1);		/* ask for binary results */
 
-	if (PQresultStatus(res) != PGRES_COMMAND_OK)
+	if (PQresultStatus(res) != PGRES_TUPLES_OK)
 	{
-		fprintf(stderr, "INSERT failed: %s", PQerrorMessage(conn));
+		fprintf(stderr, "SELECT failed: %s", PQerrorMessage(conn));
 		PQclear(res);
 		exit_nicely(conn);
 	}
 
-	printf("result: %s\n", PQcmdStatus(res));
+	show_results(res);
 
 	PQclear(res);
 

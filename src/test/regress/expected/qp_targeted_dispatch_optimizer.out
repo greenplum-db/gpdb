@@ -64,7 +64,8 @@ fetch c0;
 (0 rows)
 
 End;
-INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 reset test_print_direct_dispatch_info;
 -- ----------------------------------------------------------------------
 -- Test: query03.sql
@@ -95,8 +96,8 @@ update key_value_table set value=300 where key =200;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 rollback to s;
 commit;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 2 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 2 0 1
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 Begin;
 SELECT * FROM key_value_table WHERE key = 200 FOR UPDATE;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -109,7 +110,7 @@ savepoint s;
 update key_value_table set value=200 where key =300;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 rollback;
-INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 2 0 1
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
 savepoint s;
 ERROR:  SAVEPOINT can only be used in transaction blocks
 abort;

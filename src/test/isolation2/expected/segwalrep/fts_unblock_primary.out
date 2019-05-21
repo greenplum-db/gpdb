@@ -80,7 +80,7 @@ server stopped
 -- this should block since mirror is not up and sync replication is on
 2: begin;
 BEGIN
-2: insert into fts_unblock_primary values (5);
+2: insert into fts_unblock_primary values (4);
 INSERT 1
 2&: commit;  <waiting ...>
 

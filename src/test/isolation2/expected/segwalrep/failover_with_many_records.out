@@ -69,11 +69,6 @@ server stopped
  p    | m              
 (2 rows)
 
-SELECT count(*) FROM t;
- count 
--------
- 26    
-(1 row)
 !\retcode gprecoverseg -a;
 -- start_ignore
 -- end_ignore

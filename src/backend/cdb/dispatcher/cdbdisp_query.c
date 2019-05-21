@@ -246,7 +246,6 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 {
 	CdbDispatcherState *ds;
 	DispatchCommandQueryParms *pQueryParms;
-	Gang *primaryGang;
 	char	   *queryText;
 	int		queryTextLength;
 	ListCell   *le;
@@ -262,7 +261,7 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 	queryText = buildGpQueryString(pQueryParms, &queryTextLength);
 
-	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbcomponent_getCdbComponentsList());
+	AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbcomponent_getCdbComponentsList());
 
 	/* put all idle segment to a gang so QD can send SET command to them */
 	AllocateGang(ds, GANGTYPE_PRIMARY_READER, formIdleSegmentIdList());
@@ -276,7 +275,6 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 		cdbdisp_dispatchToGang(ds, rg, -1);
 	}
-	addToGxactTwophaseSegments(primaryGang);
 
 	/*
 	 * No need for two-phase commit, so no need to call
@@ -421,7 +419,7 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
 
-	if ((flags & DF_NEED_TWO_PHASE) != 0 || isDtxExplicitBegin())
+	if ((flags & DF_NEED_TWO_PHASE) != 0)
 		addToGxactTwophaseSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);
@@ -1144,7 +1142,7 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		SIMPLE_FAULT_INJECTOR(BeforeOneSliceDispatched);
 
 		cdbdisp_dispatchToGang(ds, primaryGang, si);
-		if (planRequiresTxn || isDtxExplicitBegin())
+		if (planRequiresTxn)
 			addToGxactTwophaseSegments(primaryGang);
 
 		SIMPLE_FAULT_INJECTOR(AfterOneSliceDispatched);
@@ -1429,7 +1427,7 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	cdbdisp_makeDispatchParams (ds, 1, queryText, queryTextLength);
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
-	if ((flags & DF_NEED_TWO_PHASE) != 0 || isDtxExplicitBegin())
+	if ((flags & DF_NEED_TWO_PHASE) != 0)
 		addToGxactTwophaseSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);

@@ -48,7 +48,7 @@ select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- this should block since mirror is not up and sync replication is on
 2: begin;
-2: insert into fts_unblock_primary values (5);
+2: insert into fts_unblock_primary values (4);
 2&: commit;
 
 -- this should not block due to direct dispatch to primary with active synced mirror
