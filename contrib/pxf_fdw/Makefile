@@ -1,7 +1,7 @@
 # contrib/pxf_fdw/Makefile
 
 MODULE_big = pxf_fdw
-OBJS = pxf_fdw.o
+OBJS = pxf_fdw.o pxf_option.o
 
 SHLIB_LINK += -lcurl
 
@@ -10,8 +10,6 @@ DATA = pxf_fdw--1.0.sql
 
 # Use logic also from gp_file_fdw where it executes on the segments
 REGRESS = pxf_fdw
-
-EXTRA_CLEAN = sql/pxf_fdw.sql expected/pxf_fdw.out
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config
