@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use Cwd;
 use TestLib;
-use Test::More tests => 33;
+use Test::More tests => 39;
 
 program_help_ok('pg_basebackup');
 program_version_ok('pg_basebackup');
@@ -129,6 +129,35 @@ SKIP: {
 	ok(-d "$tempdir/tbackup/tbl=spc2", 'tablespace with = sign was relocated');
 
 	psql 'postgres', "DROP TABLESPACE tblspc2;";
+
+
+	my $twenty_characters = '11111111112222222222';
+	my $longer_tempdir = "$tempdir/some_long_directory_path_$twenty_characters$twenty_characters$twenty_characters$twenty_characters$twenty_characters";
+	my $some_backup_dir = "$tempdir/backup_dir";
+	my $some_other_backup_dir = "$tempdir/other_backup_dir";
+
+	mkdir "$longer_tempdir";
+	mkdir "$some_backup_dir";
+	psql 'postgres', "CREATE TABLESPACE too_long_tablespace LOCATION '$longer_tempdir';";
+	command_warns_like([
+		'pg_basebackup',
+		'-D', "$some_backup_dir",
+		'--target-gp-dbid', '99'],
+				 qr/WARNING:  symbolic link ".*" target is too long and will not be added to the backup/,
+					   'basebackup with a tablespace that has a very long location should warn target is too long.');
+
+	mkdir "$some_other_backup_dir";
+	command_warns_like([
+		'pg_basebackup',
+		'-D', "$some_other_backup_dir",
+		'--target-gp-dbid', '99'],
+				 qr/The symbolic link with target ".*" is too long. Symlink targets with length greater than 100 characters would be truncated./,
+					   'basebackup with a tablespace that has a very long location should warn link not added to the backup.');
+
+	command_fails_like([
+		'ls', "$some_other_backup_dir/pg_tblspc/*"],
+				 qr/No such file/,
+				 'tablespace directory should be empty');
 }
 
 command_fails(

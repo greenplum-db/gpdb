@@ -49,6 +49,7 @@
 #include "utils/guc.h"
 #include "utils/ps_status.h"
 #include "utils/snapmgr.h"
+#include "utils/tarrable.h"
 #include "utils/timestamp.h"
 
 
@@ -285,6 +286,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 
 #if defined(HAVE_READLINK) || defined(WIN32)
 			rllen = readlink(fullpath, linkpath, sizeof(linkpath));
+
 			if (rllen < 0)
 			{
 				ereport(WARNING,
@@ -292,11 +294,12 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 								fullpath)));
 				continue;
 			}
-			else if (rllen >= sizeof(linkpath))
+			else if (rllen >= MAX_TARABLE_SYMLINK_PATH_LENGTH)
 			{
 				ereport(WARNING,
-						(errmsg("symbolic link \"%s\" target is too long",
-								fullpath)));
+						(errmsg("symbolic link \"%s\" target is too long and will not be added to the backup",
+								fullpath),
+						 errdetail("The symbolic link with target \"%s\" is too long. Symlink targets with length greater than %d characters would be truncated.", linkpath, MAX_TARABLE_SYMLINK_PATH_LENGTH)));
 				continue;
 			}
 			linkpath[rllen] = '\0';
