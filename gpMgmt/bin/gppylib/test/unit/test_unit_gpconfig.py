@@ -516,6 +516,12 @@ class GpConfig(GpTestCase):
         result = self.subject.quote_string(self.guc, value)
         self.assertEqual(result, expected)
 
+    def test_quote_string_with_newline(self):
+        value = "test\nstring"
+        expected = "'test\\nstring'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
     def setup_for_testing_quoting_string_values(self, vartype, value, additional_args=None):
         sys.argv = ["gpconfig", "--change", "my_property_name", "--value", value]
         if additional_args:
