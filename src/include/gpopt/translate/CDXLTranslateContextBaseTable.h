@@ -49,7 +49,7 @@ namespace gpdxl
 
 
 		private:
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// oid of the base table
 			OID m_oid;
@@ -65,7 +65,7 @@ namespace gpdxl
 
 		public:
 			// ctor/dtor
-			explicit CDXLTranslateContextBaseTable(IMemoryPool *mp);
+			explicit CDXLTranslateContextBaseTable(CMemoryPool *mp);
 
 
 			~CDXLTranslateContextBaseTable();

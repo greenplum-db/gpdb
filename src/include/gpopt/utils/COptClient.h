@@ -76,7 +76,7 @@ namespace gpoptudfs
 			const char *m_path;
 
 			// memory pool
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// communicator
 			CCommunicator *m_communicator;

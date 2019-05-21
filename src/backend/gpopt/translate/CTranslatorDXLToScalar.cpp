@@ -59,7 +59,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CTranslatorDXLToScalar::CTranslatorDXLToScalar
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	ULONG num_segments
 	)

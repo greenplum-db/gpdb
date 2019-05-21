@@ -60,7 +60,7 @@ namespace gpdxl
 			public:
 
 				// memory pool
-				IMemoryPool *m_mp;
+				CMemoryPool *m_mp;
 
 				// MD accessor to get the function name
 				CMDAccessor *m_mda;
@@ -84,7 +84,7 @@ namespace gpdxl
 				// ctor
 				SContextGrpbyPlMutator
 					(
-					IMemoryPool *mp,
+					CMemoryPool *mp,
 					CMDAccessor *mda,
 					Query *query,
 					List *groupby_tlist
@@ -181,7 +181,7 @@ namespace gpdxl
 
 			// normalize query
 			static
-			Query *NormalizeQuery(IMemoryPool *mp, CMDAccessor *md_accessor, const Query *query, ULONG query_level);
+			Query *NormalizeQuery(CMemoryPool *mp, CMDAccessor *md_accessor, const Query *query, ULONG query_level);
 
 			// check if the project list contains expressions on window operators thereby needing normalization
 			static
@@ -189,7 +189,7 @@ namespace gpdxl
 
 			// flatten expressions in window operation project list
 			static
-			Query *NormalizeWindowProjList(IMemoryPool *mp, CMDAccessor *md_accessor, const Query *query);
+			Query *NormalizeWindowProjList(CMemoryPool *mp, CMDAccessor *md_accessor, const Query *query);
 
 			// traverse the project list to extract all window functions in an arbitrarily complex project element
 			static
@@ -197,7 +197,7 @@ namespace gpdxl
 
 			// flatten expressions in project list
 			static
-			Query *NormalizeGroupByProjList(IMemoryPool *mp, CMDAccessor *md_accessor, const Query *query);
+			Query *NormalizeGroupByProjList(CMemoryPool *mp, CMDAccessor *md_accessor, const Query *query);
 
 			// make a copy of the aggref (minus the arguments)
 			static
@@ -217,7 +217,7 @@ namespace gpdxl
 
 			// pull up having clause into a select
 			static
-			Query *NormalizeHaving(IMemoryPool *mp, CMDAccessor *md_accessor, const Query *query);
+			Query *NormalizeHaving(CMemoryPool *mp, CMDAccessor *md_accessor, const Query *query);
 
 			// traverse the expression and fix the levels up of any outer reference
 			static
@@ -237,7 +237,7 @@ namespace gpdxl
 
 			// return a target entry for the aggregate or percentile expression
 			static
-			TargetEntry *PteAggregateOrPercentileExpr(IMemoryPool *mp, CMDAccessor *md_accessor, Node *node, ULONG attno);
+			TargetEntry *PteAggregateOrPercentileExpr(CMemoryPool *mp, CMDAccessor *md_accessor, Node *node, ULONG attno);
 
 			// traverse the having qual to extract all aggregate functions,
 			// fix correlated vars and return the modified having qual

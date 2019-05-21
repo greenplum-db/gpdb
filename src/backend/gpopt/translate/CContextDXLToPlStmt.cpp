@@ -35,7 +35,7 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CContextDXLToPlStmt::CContextDXLToPlStmt
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CIdGenerator *plan_id_counter,
 	CIdGenerator *motion_id_counter,
 	CIdGenerator *param_id_counter,

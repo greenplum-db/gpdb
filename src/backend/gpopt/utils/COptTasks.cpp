@@ -347,7 +347,7 @@ COptTasks::SOptimizeMinidumpContext::Cast
 CHAR *
 COptTasks::SzAllocate
 	(
-	IMemoryPool *pmp,
+	CMemoryPool *pmp,
 	ULONG ulSize
 	)
 {
@@ -431,7 +431,7 @@ COptTasks::ConvertToDXLFromMDCast
 	Oid dest_oid = gpdb::ListNthOid(relcache_ctxt->m_oid_list, 1);
 
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcExc);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	IMDCacheObjectArray *mdcache_obj_array = GPOS_NEW(mp) IMDCacheObjectArray(mp);
 
@@ -491,7 +491,7 @@ COptTasks::ConvertToDXLFromMDScalarCmp
 	CmpType cmpt = (CmpType) relcache_ctxt->m_cmp_type;
 	
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcExc);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	IMDCacheObjectArray *mdcache_obj_array = GPOS_NEW(mp) IMDCacheObjectArray(mp);
 
@@ -617,7 +617,7 @@ COptTasks::ConvertToDXLFromQueryTask
 	GPOS_ASSERT(NULL == opt_ctxt->m_query_dxl);
 
 	AUTO_MEM_POOL(amp);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	// ColId generator
 	CIdGenerator *colid_generator = GPOS_NEW(mp) CIdGenerator(GPDXL_COL_ID_START);
@@ -685,7 +685,7 @@ COptTasks::ConvertToDXLFromQueryTask
 PlannedStmt *
 COptTasks::ConvertToPlanStmtFromDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	const CDXLNode *dxlnode,
 	bool can_set_tag
@@ -729,7 +729,7 @@ COptTasks::ConvertToPlanStmtFromDXL
 CSearchStageArray *
 COptTasks::LoadSearchStrategy
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	char *path
 	)
 {
@@ -776,7 +776,7 @@ COptTasks::LoadSearchStrategy
 COptimizerConfig *
 COptTasks::CreateOptimizerConfig
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ICostModel *cost_model
 	)
 {
@@ -950,7 +950,7 @@ COptTasks::SetCostModelParams
 ICostModel *
 COptTasks::GetCostModel
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULONG num_segments
 	)
 {
@@ -994,7 +994,7 @@ COptTasks::OptimizeTask
 	opt_ctxt->m_is_unexpected_failure = false;
 
 	AUTO_MEM_POOL(amp);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	// Does the metadatacache need to be reset?
 	//
@@ -1187,7 +1187,7 @@ COptTasks::OptimizeTask
 void
 COptTasks::PrintMissingStatsWarning
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	IMdIdArray *col_stats,
 	MdidHashSet *rel_stats
@@ -1272,7 +1272,7 @@ COptTasks::OptimizeMinidumpTask
 	GPOS_ASSERT(NULL == minidump_ctxt->m_dxl_result);
 
 	AUTO_MEM_POOL(amp);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	ULONG num_segments = gpdb::GetGPSegmentCount();
 	ULONG num_segments_for_costing = optimizer_segments;
@@ -1338,7 +1338,7 @@ COptTasks::ConvertToPlanStmtFromDXLTask
 	GPOS_ASSERT(NULL != opt_ctxt->m_plan_dxl);
 
 	AUTO_MEM_POOL(amp);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	CWStringDynamic wcstr(mp);
 	COstreamString oss(&wcstr);
@@ -1411,7 +1411,7 @@ COptTasks::ConvertToDXLFromMDObjsTask
 	GPOS_ASSERT(NULL != relcache_ctxt);
 
 	AUTO_MEM_POOL(amp);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	IMDCacheObjectArray *mdcache_obj_array = GPOS_NEW(mp) IMDCacheObjectArray(mp, 1024, 1024);
 
@@ -1480,7 +1480,7 @@ COptTasks::ConvertToDXLFromRelStatsTask
 	GPOS_ASSERT(NULL != relcache_ctxt);
 
 	AUTO_MEM_POOL(amp);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	// relcache MD provider
 	CMDProviderRelcache *relcache_provider = GPOS_NEW(mp) CMDProviderRelcache(mp);
@@ -1571,7 +1571,7 @@ COptTasks::EvalExprFromDXLTask
 	GPOS_ASSERT(NULL == eval_expr_ctxt->m_dxl_result);
 
 	AUTO_MEM_POOL(amp);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	CDXLNode *input_dxl = CDXLUtils::ParseDXLToScalarExprDXLNode(mp, eval_expr_ctxt->m_dxl, NULL /*xsd_file_path*/);
 	GPOS_ASSERT(NULL != input_dxl);

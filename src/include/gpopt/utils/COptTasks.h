@@ -25,7 +25,7 @@
 // fwd decl
 namespace gpos
 {
-	class IMemoryPool;
+	class CMemoryPool;
 	class CBitSet;
 }
 
@@ -203,7 +203,7 @@ class COptTasks
 
 		// create optimizer configuration object
 		static
-		COptimizerConfig *CreateOptimizerConfig(IMemoryPool *mp, ICostModel *cost_model);
+		COptimizerConfig *CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model);
 
 		// optimize a query to a physical DXL
 		static
@@ -215,15 +215,15 @@ class COptTasks
 
 		// translate a DXL tree into a planned statement
 		static
-		PlannedStmt *ConvertToPlanStmtFromDXL(IMemoryPool *mp, CMDAccessor *md_accessor, const CDXLNode *dxlnode, bool can_set_tag);
+		PlannedStmt *ConvertToPlanStmtFromDXL(CMemoryPool *mp, CMDAccessor *md_accessor, const CDXLNode *dxlnode, bool can_set_tag);
 
 		// load search strategy from given path
 		static
-		CSearchStageArray *LoadSearchStrategy(IMemoryPool *mp, char *path);
+		CSearchStageArray *LoadSearchStrategy(CMemoryPool *mp, char *path);
 
 		// allocate memory for string
 		static
-		CHAR *SzAllocate(IMemoryPool *pmp, ULONG ulSize);
+		CHAR *SzAllocate(CMemoryPool *pmp, ULONG ulSize);
 
 		// helper for converting wide character string to regular string
 		static
@@ -247,11 +247,11 @@ class COptTasks
 
 		// generate an instance of optimizer cost model
 		static
-		ICostModel *GetCostModel(IMemoryPool *mp, ULONG num_segments);
+		ICostModel *GetCostModel(CMemoryPool *mp, ULONG num_segments);
 
 		// print warning messages for columns with missing statistics
 		static
-		void PrintMissingStatsWarning(IMemoryPool *mp, CMDAccessor *md_accessor, IMdIdArray *col_stats, MdidHashSet *phsmdidRel);
+		void PrintMissingStatsWarning(CMemoryPool *mp, CMDAccessor *md_accessor, IMdIdArray *col_stats, MdidHashSet *phsmdidRel);
 
 	public:
 

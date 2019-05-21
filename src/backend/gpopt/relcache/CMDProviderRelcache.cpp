@@ -37,7 +37,7 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CMDProviderRelcache::CMDProviderRelcache
 	(
-	IMemoryPool *mp
+	CMemoryPool *mp
 	)
 	:
 	m_mp(mp)
@@ -56,7 +56,7 @@ CMDProviderRelcache::CMDProviderRelcache
 CWStringBase *
 CMDProviderRelcache::GetMDObjDXLStr
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	IMDId *md_id
 	)

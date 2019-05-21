@@ -127,7 +127,7 @@ static const OID lag_func_oids[] =
 //---------------------------------------------------------------------------
 CTranslatorQueryToDXL::CTranslatorQueryToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	CIdGenerator *m_colid_counter,
 	CIdGenerator *cte_id_counter,
@@ -237,7 +237,7 @@ CTranslatorQueryToDXL::CTranslatorQueryToDXL
 CTranslatorQueryToDXL *
 CTranslatorQueryToDXL::QueryToDXLInstance
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	CIdGenerator *m_colid_counter,
 	CIdGenerator *cte_id_counter,
@@ -4242,7 +4242,7 @@ CTranslatorQueryToDXL::ConstructCTEAnchors
 ULongPtrArray *
 CTranslatorQueryToDXL::GenerateColIds
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULONG size
 	)
 	const
@@ -4268,7 +4268,7 @@ CTranslatorQueryToDXL::GenerateColIds
 ULongPtrArray *
 CTranslatorQueryToDXL::ExtractColIds
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	IntToUlongMap *attno_to_colid_mapping
 	)
 	const
@@ -4306,7 +4306,7 @@ CTranslatorQueryToDXL::ExtractColIds
 IntToUlongMap *
 CTranslatorQueryToDXL::RemapColIds
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	IntToUlongMap *attno_to_colid_mapping,
 	ULongPtrArray *from_list_colids,
 	ULongPtrArray *to_list_colids
