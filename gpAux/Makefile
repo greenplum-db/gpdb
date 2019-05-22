@@ -141,7 +141,7 @@ ifneq "$(findstring $(BLD_ARCH),suse11_x86_64 sles11_x86_64)" ""
 APU_CONFIG=--with-apu-config=$(BLD_THIRDPARTY_BIN_DIR)/apu-1-config
 endif
 
-ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32)" ""
+ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64)" ""
 APR_CONFIG=--with-apr-config=$(BLD_THIRDPARTY_BIN_DIR)/apr-1-config
 endif
 
@@ -162,7 +162,7 @@ CONFIGFLAGS+= $(CONFIGURE_FLAGS)
 endif
 
 # PL/Python does not compile on Tiger, skipping it on AIX
-ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32)" ""
+ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64)" ""
 PG_LANG=false
 endif
 
@@ -181,8 +181,6 @@ endif
 endif
 
 # Configure in the extra path AIX requires for pthread support
-aix5_ppc_64_PTHREADS_LIB_DIR=/usr/lib/threads
-aix5_ppc_32_PTHREADS_LIB_DIR=/usr/lib/threads
 aix7_ppc_64_PTHREADS_LIB_DIR=/usr/lib/threads
 BLD_PTHREADS_LIB_DIR=$($(BLD_ARCH)_PTHREADS_LIB_DIR)
 
@@ -193,22 +191,20 @@ CONFIGFLAGS+= --with-includes="$(CONFIG_INCLUDES)" --with-libraries="$(CONFIG_LI
 
 # Configure in "authlibs"...
 # ...without an ext/ dir copy of curl-config on Tiger or AIX
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32 rhel6_x86_64 rhel7_x86_64)" ""
+ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 rhel6_x86_64 rhel7_x86_64)" ""
 BLD_CURL_CONFIG=CURL_CONFIG=$(BLD_THIRDPARTY_BIN_DIR)/curl-config
 endif
 # ...and do not include the authlibs on Windows or AIX
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 win32 win64)" ""
+ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 win32 win64)" ""
 CONFIGFLAGS+= --with-openssl --with-pam --with-ldap $(BLD_CURL_CONFIG) $(APR_CONFIG)
 endif
 
 # ...but do include some of the authlibs on AIX
-ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_32 aix5_ppc_64)" ""
+ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64)" ""
 CONFIGFLAGS+= --with-openssl --with-pam --without-krb5 --with-ldap $(BLD_CURL_CONFIG)
 endif
 
 # Platform-specific config flags
-aix5_ppc_64_CONFIG_ADDITIONS=LDFLAGS="-Wl,-bbigtoc -L/usr/lib/threads"
-aix5_ppc_32_CONFIG_ADDITIONS=LDFLAGS="-L/usr/lib/threads"
 aix7_ppc_64_CONFIG_ADDITIONS=LDFLAGS="-Wl,-bbigtoc -L/usr/lib/threads"
 
 win32_GPFDIST_LDFLAGS += -L/usr/i686-pc-mingw32/sys-root/mingw/lib -L$(GPPGDIR)/src/bin/gpfdist/ext/lib
@@ -229,8 +225,6 @@ RECONFIG :
 	rm -f $(GPPGDIR)/GNUmakefile
 
 # avoid AIX's restricted shell
-aix5_ppc_64_CONFIG_SHELL=/usr/bin/bash
-aix5_ppc_32_CONFIG_SHELL=/usr/bin/bash
 aix7_ppc_64_CONFIG_SHELL=/usr/bin/bash
 BLD_CONFIG_SHELL=$($(BLD_ARCH)_CONFIG_SHELL)
 $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
@@ -288,8 +282,6 @@ BLD_LD_LIBRARY_PATH:=$($(BLD_ARCH)_LD_LIBRARY_PATH):$($(BLD_WHERE_THE_LIBRARY_TH
 export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE)=$(BLD_LD_LIBRARY_PATH)
 
 # how much of GPDB to build by platform (default is "full")
-aix5_ppc_64_GPDB_BUILDSET=partial
-aix5_ppc_32_GPDB_BUILDSET=partial
 aix7_ppc_64_GPDB_BUILDSET=aix_subset
 win64_GPDB_BUILDSET=partial
 win32_GPDB_BUILDSET=partial
@@ -502,8 +494,6 @@ CLIENTS_FILESET_BINEXT = $(strip $(tmpCLIENTS_FILESET_BINEXT))
 
 # define python file subset to ship by platform, as desired
 BLD_PYTHON_FILESET=.
-aix5_ppc_32_PYTHON_FILESET=bin/python* lib/python* include/python*
-aix5_ppc_64_PYTHON_FILESET=bin/python* lib/python* include/python*
 aix7_ppc_64_PYTHON_FILESET=bin/python* lib/*python* lib64/*python* include/python*
 ifneq "$($(BLD_ARCH)_PYTHON_FILESET)" ""
 BLD_PYTHON_FILESET=$($(BLD_ARCH)_PYTHON_FILESET)
@@ -528,12 +518,8 @@ aix7_ppc_64_CLIENTS_LIBS_GCC_LOC=/opt/freeware/lib/gcc/powerpc-ibm-aix7.1.0.0/4.
 FILESET_LIB_GCC=$($(BLD_ARCH)_CLIENTS_LIBS_GCC)
 FILESET_LIB_GCC_LOC=$($(BLD_ARCH)_CLIENTS_LIBS_GCC_LOC)
 
-aix5_ppc_32_CLIENTS_LIBS_PERZL=libz.a
-aix5_ppc_64_CLIENTS_LIBS_PERZL=libz.so libz.so.1 libz.so.1.2.4 libcrypto.so libcrypto.so.0.9.8 libssl.so libssl.so.0.9.8
 aix7_ppc_64_CLIENTS_LIBS_PERZL=libcrypto.a libssl.a
 
-aix5_ppc_32_CLIENTS_LIBS_PERZL_LOC=/opt/freeware/lib
-aix5_ppc_64_CLIENTS_LIBS_PERZL_LOC=/opt/pware64/lib
 aix7_ppc_64_CLIENTS_LIBS_PERZL_LOC=$(BLD_TOP)/ext/aix7_ppc_64/lib
 
 CLIENTS_FILESET_LIB_PERZL=$($(BLD_ARCH)_CLIENTS_LIBS_PERZL)

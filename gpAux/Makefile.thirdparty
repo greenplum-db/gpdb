@@ -20,8 +20,6 @@ ifeq "$(BLD_ARCH)" ""
 BLD_ARCH:=$(shell $(BLD_TOP)/releng/set_bld_arch.sh)
 endif
 
-aix5_ppc_64_BLD_BITS=64
-aix5_ppc_32_BLD_BITS=32
 aix7_ppc_64_BLD_BITS=64
 rhel6_x86_64_BLD_BITS=64
 rhel7_x86_64_BLD_BITS=64
