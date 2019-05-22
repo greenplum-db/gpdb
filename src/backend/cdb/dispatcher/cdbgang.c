@@ -339,7 +339,9 @@ makeOptions(void)
 		struct config_generic *guc = gucs[i];
 
 		if ((guc->flags & GUC_GPDB_ADDOPT) &&
-			(guc->context == PGC_USERSET || IsAuthenticatedUserSuperUser()))
+			(guc->context == PGC_USERSET ||
+			 guc->context == PGC_BACKEND ||
+			 IsAuthenticatedUserSuperUser()))
 			addOneOption(&string, guc);
 	}
 
