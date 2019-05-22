@@ -60,3 +60,42 @@ ALTER SERVER dummy_server
 CREATE USER MAPPING FOR pxf_fdw_user
     SERVER dummy_server
     OPTIONS ( protocol 'usermappingprotocol' );
+
+-- User mapping creation succeeds if protocol option is not provided
+CREATE USER MAPPING FOR pxf_fdw_user
+    SERVER dummy_server;
+
+-- User mapping alteration fails if protocol option is added
+ALTER USER MAPPING FOR pxf_fdw_user
+    SERVER dummy_server
+    OPTIONS ( ADD protocol 'usermappingprotocol' );
+
+-- ===================================================================
+-- Validation for TABLE options
+-- ===================================================================
+
+-- Table creation fails if protocol option is provided
+CREATE FOREIGN TABLE dummy_table (id int, name text)
+    SERVER dummy_server
+    OPTIONS ( protocol 'dummy2' );
+
+-- Table creation fails if resource is not provided
+CREATE FOREIGN TABLE dummy_table (id int, name text)
+    SERVER dummy_server;
+
+-- Table creation succeeds if resource is provided and protocol is not provided
+CREATE FOREIGN TABLE dummy_table (id int, name text)
+    SERVER dummy_server
+    OPTIONS ( resource '/path/to/resource' );
+
+-- Table alteration fails if protocol option is added
+ALTER FOREIGN TABLE dummy_table
+    OPTIONS ( ADD protocol 'table_protocol' );
+
+-- Table alteration fails if resource option is dropped
+ALTER FOREIGN TABLE dummy_table
+    OPTIONS ( DROP resource );
+
+-- Table alteration succeeds if resource option is set
+ALTER FOREIGN TABLE dummy_table
+    OPTIONS ( SET resource '/new/path/to/resource' );
