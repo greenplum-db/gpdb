@@ -20,7 +20,6 @@ static char *const FDW_OPTION_PROTOCOL = "protocol";
 static char *const FDW_OPTION_RESOURCE = "resource";
 
 extern Datum pxf_fdw_validator(PG_FUNCTION_ARGS);
-static char *getTypeName(Oid);
 
 /*
  * SQL functions
@@ -58,16 +57,25 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			// protocol can only be defined at the foreign-data wrapper level
 			if (catalog != ForeignDataWrapperRelationId)
 			{
-				char *typeName = getTypeName(catalog);
 				ereport(ERROR,
 				        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
 					        errmsg(
-						        "the protocol option cannot be defined at the %s level",
-						        typeName)));
+						        "the protocol option can only be defined at the foreign-data wrapper level")));
 			}
 		}
 		else if (strcmp(def->defname, FDW_OPTION_RESOURCE) == 0)
+		{
 			resource = defGetString(def);
+
+			// resource can only be defined at the foreign table level
+			if (catalog != ForeignTableRelationId)
+			{
+				ereport(ERROR,
+				        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+					        errmsg(
+						        "the resource option can only be defined at the foreign table level")));
+			}
+		}
 		else
 			other_options = lappend(other_options, def);
 	}
@@ -78,7 +86,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 		        (errcode(ERRCODE_FDW_DYNAMIC_PARAMETER_VALUE_NEEDED),
 			        errmsg(
-				        "the protocol option is required for PXF foreign-data wrappers")));
+				        "the protocol option must be defined for PXF foreign-data wrappers")));
 	}
 
 	if (catalog == ForeignTableRelationId &&
@@ -96,20 +104,4 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	ProcessCopyOptions(NULL, true, other_options, 0, true);
 
 	PG_RETURN_VOID();
-}
-
-static char *
-getTypeName(Oid catalog)
-{
-	switch (catalog)
-	{
-		case ForeignDataWrapperRelationId: return "foreign-data wrappers";
-		case ForeignServerRelationId: return "server";
-		case ForeignTableRelationId: return "foreign table";
-		case UserMappingRelationId: return "user-mapping";
-		default:
-			ereport(ERROR,
-			        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
-				        errmsg("Invalid catalog Oid")));
-	}
 }
