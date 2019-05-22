@@ -46,6 +46,8 @@ TEMPLATE_ENVIRONMENT = Environment(
     extensions=['jinja2.ext.loopcontrols']
 )
 
+BASE_BRANCH = "master"  # when branching gpdb update to 7X_STABLE, 6X_STABLE, etc.
+
 # Variables that govern pipeline validation
 RELEASE_VALIDATOR_JOB = ['Release_Candidate']
 JOBS_THAT_ARE_GATES = [
@@ -103,11 +105,11 @@ def suggested_git_branch():
         return "<branch-name>"
     return branch
 
-    branch = subprocess.check_output("git rev-parse --abbrev-ref HEAD".split()).rstrip()
 
-    if branch == "master" or branch == "5X_STABLE":
-        return default_branch
-    return branch
+def is_a_base_branch(branch):
+    # best effort in matching a base branch (5X_STABLE, 6X_STABLE, etc.)
+    matched = re.match("\d+X_STABLE", branch)
+    return matched is not None
 
 
 def render_template(template_filename, context):
@@ -238,12 +240,14 @@ def print_fly_commands(args):
     print header(args)
     if args.pipeline_target == 'prod':
         print 'NOTE: You can set the production pipelines with the following:\n'
-        print gen_pipeline(args, "gpdb_master", ["gpdb_master-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
-        print gen_pipeline(args, "gpdb_master_without_asserts", ["gpdb_master_without_asserts-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
+        print gen_pipeline(args, "gpdb_%s" % BASE_BRANCH, ["gpdb_%s-ci-secrets.prod.yml" % BASE_BRANCH],
+                           "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH)
+        print gen_pipeline(args, "gpdb_%s_without_asserts" % BASE_BRANCH, ["gpdb_%s_without_asserts-ci-secrets.prod.yml" % BASE_BRANCH],
+                           "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH)
         return
 
     print 'NOTE: You can set the developer pipeline with the following:\n'
-    print gen_pipeline(args, pipeline_name, ["gpdb_master-ci-secrets.dev.yml",
+    print gen_pipeline(args, pipeline_name, ["gpdb_%s-ci-secrets.dev.yml" % BASE_BRANCH,
                                              "ccp_ci_secrets_%s.yml" % args.pipeline_target])
 
 
@@ -263,7 +267,7 @@ def main():
         help='Name of template to use, in templates/'
     )
 
-    default_output_filename = "gpdb_master-generated.yml"
+    default_output_filename = "gpdb_%s-generated.yml" % BASE_BRANCH
     parser.add_argument(
         '-o',
         '--output',
