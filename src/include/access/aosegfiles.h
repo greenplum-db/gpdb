@@ -159,6 +159,9 @@ typedef enum
 extern FileSegInfo *NewFileSegInfo(int segno);
 
 extern void InsertInitialSegnoEntry(Relation parentrel, int segno);
+
+extern void ValidateAppendonlySegmentDataBeforeStorage(int segno);
+
  
  /*
   * GetFileSegInfo

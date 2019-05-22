@@ -2,7 +2,7 @@ subdir=src/backend/access/appendonly
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS=aomd appendonly_visimap appendonlywriter appendonly_visimap_entry
+TARGETS=aomd appendonly_visimap appendonlywriter appendonly_visimap_entry aosegfiles
 
 include $(top_builddir)/src/backend/mock.mk
 
@@ -19,3 +19,4 @@ appendonlywriter.t: \
 
 appendonly_visimap_entry.t:
 
+aosegfiles.t: $(top_builddir)/src/backend/access/appendonly/aosegfiles.o
