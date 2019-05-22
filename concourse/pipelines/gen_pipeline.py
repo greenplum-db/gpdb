@@ -159,12 +159,12 @@ def create_pipeline(args):
         'timestamp': datetime.datetime.now(),
         'os_types': args.os_types,
         'test_sections': args.test_sections,
-        'pipeline_type': args.pipeline_type,
+        'pipeline_target': args.pipeline_target,
         'test_trigger': test_trigger
     }
 
     pipeline_yml = render_template(args.template_filename, context)
-    if args.pipeline_type == 'prod':
+    if args.pipeline_target == 'prod':
         validated = validate_pipeline_release_jobs(pipeline_yml)
         if not validated:
             print "Refusing to update the pipeline file"
@@ -198,7 +198,7 @@ set-pipeline \
 -v pipeline-name=%s \
 
 ''' % (
-        args.pipeline_type,
+        args.pipeline_target,
         pipeline_name,
         args.output_filepath,
         secrets_path,
@@ -212,14 +212,14 @@ set-pipeline \
 def header(args):
     return '''
 ======================================================================
-  Generate Pipeline type: .. : %s
+  Pipeline target: ......... : %s
   Pipeline file ............ : %s
   Template file ............ : %s
   OS Types ................. : %s
   Test sections ............ : %s
   test_trigger ............. : %s
 ======================================================================
-''' % (args.pipeline_type,
+''' % (args.pipeline_target,
        args.output_filepath,
        args.template_filename,
        args.os_types,
@@ -233,7 +233,7 @@ def print_fly_commands(args):
     dev_note = 'NOTE: You can set the developer pipeline with the following:\n'
 
     print header(args)
-    if args.pipeline_type == 'prod':
+    if args.pipeline_target == 'prod':
         print 'NOTE: You can set the production pipelines with the following:\n'
         print gen_pipeline(args, "gpdb_master", ["gpdb_master-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
         print gen_pipeline(args, "gpdb_master_without_asserts", ["gpdb_master_without_asserts-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
@@ -241,7 +241,7 @@ def print_fly_commands(args):
 
     print dev_note
     print gen_pipeline(args, pipeline_name, ["gpdb_master-ci-secrets.dev.yml",
-                                             "ccp_ci_secrets_%s.yml" % args.pipeline_type])
+                                             "ccp_ci_secrets_%s.yml" % args.pipeline_target])
 
 
 def main():
@@ -283,9 +283,9 @@ def main():
 
     parser.add_argument(
         '-t',
-        '--pipeline_type',
+        '--pipeline_target',
         action='store',
-        dest='pipeline_type',
+        dest='pipeline_target',
         default='dev',
         help='Concourse target to use either: prod, dev, or <team abbreviation> '
              'where abbreviation is found from the team\'s ccp secret file name ending.'
@@ -331,7 +331,7 @@ def main():
 
     args = parser.parse_args()
 
-    if args.pipeline_type == 'prod':
+    if args.pipeline_target == 'prod':
         args.os_types = ['centos6', 'centos7', 'sles', 'win']
         args.test_sections = [
             'ICW',
@@ -346,9 +346,9 @@ def main():
 
     # if generating a dev pipeline but didn't specify an output,
     # don't overwrite the master pipeline
-    if (args.pipeline_type != 'prod' and
+    if (args.pipeline_target != 'prod' and
             os.path.basename(args.output_filepath) == default_output_filename):
-        default_dev_output_filename = 'gpdb-' + args.pipeline_type + '-' + args.user + '.yml'
+        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + args.user + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     pipeline_created = create_pipeline(args)
