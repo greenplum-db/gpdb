@@ -11,12 +11,14 @@
 #include "access/reloptions.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
+#include "catalog/pg_user_mapping.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
 
 static char *const FDW_OPTION_PROTOCOL = "protocol";
 
-extern Datum pxf_fdw_validator(PG_FUNCTION_ARGS);
+extern Datum
+pxf_fdw_validator(PG_FUNCTION_ARGS);
 
 /*
  * SQL functions
@@ -50,10 +52,17 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		{
 			protocol = defGetString(def);
 
-            if (catalog == ForeignServerRelationId)
-                ereport(ERROR,
-                        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
-                                errmsg("the protocol option cannot be defined for servers")));
+			if (catalog == ForeignServerRelationId)
+				ereport(ERROR,
+				        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+					        errmsg(
+						        "the protocol option cannot be defined at the server level")));
+			if (catalog == UserMappingRelationId)
+				ereport(ERROR,
+				        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+					        errmsg(
+						        "the protocol option cannot be defined at the user-mapping level")));
+
 		}
 		else
 			other_options = lappend(other_options, def);
@@ -64,7 +73,8 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 		        (errcode(ERRCODE_FDW_DYNAMIC_PARAMETER_VALUE_NEEDED),
-			        errmsg("the protocol option is required for PXF foreign-data wrappers")));
+			        errmsg(
+				        "the protocol option is required for PXF foreign-data wrappers")));
 	}
 
 	/*

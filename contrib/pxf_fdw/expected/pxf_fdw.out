@@ -2,6 +2,9 @@
 -- create FDW objects
 -- ===================================================================
 CREATE EXTENSION pxf_fdw;
+DROP ROLE IF EXISTS pxf_fdw_user;
+CREATE ROLE pxf_fdw_user;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- ===================================================================
 -- Validation for WRAPPER options
 -- ===================================================================
@@ -35,11 +38,19 @@ ERROR:  the protocol option is required for PXF foreign-data wrappers
 CREATE SERVER dummy_server
     FOREIGN DATA WRAPPER dummy_pxf_fdw
     OPTIONS ( protocol 'dummy2' );
-ERROR:  the protocol option cannot be defined for servers
+ERROR:  the protocol option cannot be defined at the server level
 -- Server creation succeeds if protocol option is not provided
 CREATE SERVER dummy_server
     FOREIGN DATA WRAPPER dummy_pxf_fdw;
 -- Altering a server fails if protocol option is added
 ALTER SERVER dummy_server
     OPTIONS ( ADD protocol 'dummy2' );
-ERROR:  the protocol option cannot be defined for servers
+ERROR:  the protocol option cannot be defined at the server level
+-- ===================================================================
+-- Validation for USER MAPPING options
+-- ===================================================================
+-- User mapping creation fails if protocol option is provided
+CREATE USER MAPPING FOR pxf_fdw_user
+    SERVER dummy_server
+    OPTIONS ( protocol 'usermappingprotocol' );
+ERROR:  the protocol option cannot be defined at the user-mapping level
