@@ -22,7 +22,7 @@
                 host names (or host addresses). This allows SSH connections between Greenplum hosts
                 and network interfaces without a password prompt. The utility is used to initially
                 prepare a Greenplum Database system for passwordless SSH access, and also to add
-                additional SSH keys when expanding a Greenplum Database system.</p>
+                SSH keys when expanding a Greenplum Database system.</p>
             <p>Keys are exchanged as the currently logged in user. You run the utility on the master
                 host as the <codeph>gpadmin</codeph> user (the user designated to own your Greenplum
                 Database installation). Greenplum Database management utilities require that the
