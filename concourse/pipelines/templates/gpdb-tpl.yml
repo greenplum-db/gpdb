@@ -134,7 +134,7 @@ groups:
 {%endif %}
 
 
-{% if pipeline_type == "prod" %}
+{% if pipeline_configuration == "prod" %}
 ## ======================================================================
 
 - name: Release
@@ -482,7 +482,7 @@ resources:
     versioned_file: ((pipeline-name))/bin_gpdb_clients_centos6/bin_gpdb_clients.tar.gz
 
 {% endif %}
-{% if pipeline_type == "prod" %}
+{% if pipeline_configuration == "prod" %}
 - name: bin_gpdb_centos6_icw_green
   type: s3
   source:
@@ -1217,7 +1217,7 @@ jobs:
       - icw_planner_sles12
 {% endif %}
       trigger: true
-{% if pipeline_type == "prod" and "centos6" in os_types %}
+{% if pipeline_configuration == "prod" and "centos6" in os_types %}
   - put: bin_gpdb_centos6_icw_green
     params:
       file: bin_gpdb_centos6/bin_gpdb.tar.gz
@@ -1874,7 +1874,7 @@ jobs:
 {% endif %}
 {% endif %}
 
-{% if pipeline_type == "prod" %}
+{% if pipeline_configuration == "prod" %}
 ## ======================================================================
 ##  ____      _
 ## |  _ \ ___| | ___  __ _ ___  ___

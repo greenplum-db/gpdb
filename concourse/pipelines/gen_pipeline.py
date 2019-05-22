@@ -162,12 +162,12 @@ def create_pipeline(args):
         'timestamp': datetime.datetime.now(),
         'os_types': args.os_types,
         'test_sections': args.test_sections,
-        'pipeline_type': args.pipeline_type,
+        'pipeline_configuration': args.pipeline_configuration,
         'test_trigger': test_trigger
     }
 
     pipeline_yml = render_template(args.template_filename, context)
-    if args.pipeline_type == 'prod':
+    if args.pipeline_target == 'prod':
         validated = validate_pipeline_release_jobs(pipeline_yml)
         if not validated:
             print "Refusing to update the pipeline file"
@@ -216,14 +216,14 @@ set-pipeline \
 def header(args):
     return '''
 ======================================================================
-  Generate Pipeline type: .. : %s
+  Pipeline target: ......... : %s
   Pipeline file ............ : %s
   Template file ............ : %s
   OS Types ................. : %s
   Test sections ............ : %s
   test_trigger ............. : %s
 ======================================================================
-''' % (args.pipeline_type,
+''' % (args.pipeline_target,
        args.output_filepath,
        args.template_filename,
        args.os_types,
@@ -236,7 +236,7 @@ def print_fly_commands(args):
     pipeline_name = os.path.basename(args.output_filepath).rsplit('.', 1)[0]
 
     print header(args)
-    if args.pipeline_type == 'prod':
+    if args.pipeline_target == 'prod':
         print 'NOTE: You can set the production pipelines with the following:\n'
         print gen_pipeline(args, "gpdb_master", ["gpdb_master-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
         print gen_pipeline(args, "gpdb_master_without_asserts", ["gpdb_master_without_asserts-ci-secrets.prod.yml"], "https://github.com/greenplum-db/gpdb.git", "master")
@@ -244,7 +244,7 @@ def print_fly_commands(args):
 
     print 'NOTE: You can set the developer pipeline with the following:\n'
     print gen_pipeline(args, pipeline_name, ["gpdb_master-ci-secrets.dev.yml",
-                                             "ccp_ci_secrets_%s.yml" % args.pipeline_type])
+                                             "ccp_ci_secrets_%s.yml" % args.pipeline_target])
 
 
 def main():
@@ -270,7 +270,7 @@ def main():
         action='store',
         dest='output_filepath',
         default=os.path.join(PIPELINES_DIR, default_output_filename),
-        help='Output filepath'
+        help='Output filepath to use for pipeline file, and from which to derive the pipeline name.'
     )
 
     parser.add_argument(
@@ -286,12 +286,23 @@ def main():
 
     parser.add_argument(
         '-t',
-        '--pipeline_type',
+        '--pipeline_target',
         action='store',
-        dest='pipeline_type',
+        dest='pipeline_target',
         default='dev',
         help='Concourse target to use either: prod, dev, or <team abbreviation> '
              'where abbreviation is found from the team\'s ccp secrets file name ending.'
+    )
+
+    parser.add_argument(
+        '-c',
+        '--configuration',
+        action='store',
+        dest='pipeline_configuration',
+        default='default',
+        help='Set of platforms and test sections to use; only works with dev and team targets, ignored with the prod target.'
+             'Valid options are prod (same as the prod pipeline), full (everything except release jobs), and default '
+             '(follow the -A and -O flags).'
     )
 
     parser.add_argument(
@@ -329,12 +340,33 @@ def main():
         action='store',
         dest='user',
         default=os.getlogin(),
-        help='Developer userid to use for pipeline file name.'
+        help='Developer userid to use for pipeline name and filename.'
+    )
+
+    parser.add_argument(
+        '-b',
+        '--use_branch',
+        action='store_true',
+        dest='use_branch',
+        default=False,
+        help='Use current branch to generate the pipeline name and filename.'
     )
 
     args = parser.parse_args()
 
-    if args.pipeline_type == 'prod':
+    validate_target(args.pipeline_target)
+
+    output_path_is_set = os.path.basename(args.output_filepath) != default_output_filename
+    if (args.user != os.getlogin() and args.use_branch) or \
+       (args.user != os.getlogin() and output_path_is_set) or \
+       (args.use_branch and output_path_is_set):
+        print "Only one of -b, -o, and -u may be specified."
+        exit(1)
+
+    if args.pipeline_target == 'prod':
+        args.pipeline_configuration = 'prod'
+
+    if args.pipeline_configuration == 'prod' or args.pipeline_configuration == 'full':
         args.os_types = ['centos6', 'centos7', 'sles', 'win']
         args.test_sections = [
             'ICW',
@@ -350,9 +382,11 @@ def main():
 
     # if generating a dev pipeline but didn't specify an output,
     # don't overwrite the 6X_STABLE pipeline
-    if (args.pipeline_type != 'prod' and
-            os.path.basename(args.output_filepath) == default_output_filename):
-        default_dev_output_filename = 'gpdb-' + args.pipeline_type + '-' + args.user + '.yml'
+    if args.pipeline_target != 'prod' and not output_path_is_set:
+        pipeline_file_suffix = args.user
+        if args.use_branch:
+            pipeline_file_suffix = suggested_git_branch()
+        default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     pipeline_created = create_pipeline(args)
