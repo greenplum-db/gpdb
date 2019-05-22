@@ -146,9 +146,6 @@ function export_gpdb_extensions() {
       chmod 755 greenplum-*zip*
       cp greenplum-*zip* "${GPDB_ARTIFACTS_DIR}/"
     fi
-    if ls "$GPDB_ARTIFACTS_DIR"/*.gppkg 1>/dev/null 2>&1; then
-      chmod 755 "$GPDB_ARTIFACTS_DIR"/*.gppkg
-    fi
   popd
 }
 
