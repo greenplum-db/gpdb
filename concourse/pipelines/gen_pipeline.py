@@ -27,6 +27,7 @@ Python module requirements:
 
 import argparse
 import datetime
+import glob
 import os
 import re
 import subprocess
@@ -47,6 +48,8 @@ TEMPLATE_ENVIRONMENT = Environment(
 )
 
 BASE_BRANCH = "6X_STABLE"  # when branching gpdb update to 7X_STABLE, 6X_STABLE, etc.
+
+SECRETS_PATH = os.path.expanduser('~/workspace/gp-continuous-integration/secrets')
 
 # Variables that govern pipeline validation
 RELEASE_VALIDATOR_JOB = ['Release_Candidate']
@@ -151,6 +154,13 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     return True
 
 
+def validate_target(target):
+    expected_secrets_file = "%s/ccp_ci_secrets_%s.yml" % (SECRETS_PATH, target)
+
+    if not os.path.exists(expected_secrets_file):
+        raise Exception('Invalid target "%s"; no secrets file found.  Please ensure your secrets files in %s are up to date.' % (target, SECRETS_PATH))
+
+
 def create_pipeline(args):
     """Generate OS specific pipeline sections"""
     if args.test_trigger_false:
@@ -187,10 +197,9 @@ def gen_pipeline(args, pipeline_name, secret_files,
                  git_remote=suggested_git_remote(),
                  git_branch=suggested_git_branch()):
 
-    secrets_path = os.path.expanduser('~/workspace/gp-continuous-integration/secrets')
     secrets = ""
     for secret in secret_files:
-        secrets += "-l %s/%s " % (secrets_path, secret)
+        secrets += "-l %s/%s " % (SECRETS_PATH, secret)
 
     format_args = {
         'target': args.pipeline_target,
