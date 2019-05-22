@@ -54,12 +54,10 @@ Feature: gpconfig integration tests
        When the user runs "gpstop -u"
        Then gpstop should return a return code of 0
 
-      # FIXME: a file string value of 'my_value' (quotes in file) has a live value of my_value (no quotes) and
-      #   --file-compare is currently broken on that case.
-#       When the user runs "gpconfig -s <guc> --file-compare"
-#       Then gpconfig should return a return code of 0
-#        And gpconfig should print "Master[\s]*value: <live_value_master> \| file: <file_value_master>" to stdout
-#        And gpconfig should print "Segment[\s]*value: <live_value> \| file: <file_value>" to stdout
+       When the user runs "gpconfig -s <guc> --file-compare"
+       Then gpconfig should return a return code of 0
+        And gpconfig should print "Master  value: <live_value_master> | file: <file_value_master>" escaped to stdout
+        And gpconfig should print "Segment value: <live_value> | file: <file_value>" escaped to stdout
 
        When the user runs "gpconfig -s <guc>"
        Then gpconfig should return a return code of 0

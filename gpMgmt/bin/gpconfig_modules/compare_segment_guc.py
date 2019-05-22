@@ -105,20 +105,153 @@ class MultiValueGuc(SegmentGuc):
             self.db_seg_guc.value,
             file_tag)
 
+    class ParseError(Exception):
+        """Used by _unquote()."""
+        pass
+
+    class _StringStream(object):
+        """
+        A helper class for _unquote() that implements next() and peek()
+        operations for a byte string, to turn it into a "stream".
+        """
+        def __init__(self, s):
+            self._str = s
+            self._len = len(s)
+            self._i = 0
+
+        def peek(self):
+            """
+            Returns the next character in the string without changing the
+            stream position. Returns an empty string if the end of the
+            stream is reached.
+            """
+            if self._i >= self._len:
+                return ''
+
+            return self._str[self._i]
+
+        def next(self):
+            """
+            Returns the next character in the string and advances the
+            stream by one position. Returns an empty string if the end of the
+            stream is reached.
+            """
+            if self._i >= self._len:
+                return ''
+
+            char = self._str[self._i]
+            self._i += 1
+            return char
+
+    @staticmethod
+    def _isoctal(char):
+        """Returns true if the passed string is an octal digit."""
+        return char in ('0', '1', '2', '3', '4', '5', '6', '7')
+
+    @staticmethod
+    def _unquote(guc_value):
+        """
+        Implements Postgres' GUC_scanstr(), which unquotes a quoted string from
+        the postgresql.conf file, in Python.
+
+        Differences from that implementation:
+        - GUC_scanstr() is only called after the lexer has verified that the
+          quoted string is valid. This implementation can be called with an
+          arbitrary value (and raises ParseError if the quoted string is
+          invalid).
+        - If the passed value does not begin with a single quote, it is
+          returned unchanged (and unvalidated).
+        """
+        if not guc_value:
+            raise MultiValueGuc.ParseError('parameter value is empty')
+
+        # Don't unquote values that aren't quoted.
+        if not guc_value.startswith("'"):
+            return guc_value
+
+        # Make sure we have an ending quote, then strip them.
+        if len(guc_value) == 1 or not guc_value.endswith("'"):
+            raise MultiValueGuc.ParseError('missing final single quote')
+
+        guc_value = guc_value[1:-1]
+
+        quoted = []
+        stream = MultiValueGuc._StringStream(guc_value)
+        while stream.peek():
+            char = stream.next()
+
+            if char == '\\':
+                char = stream.next()
+                if not char:
+                    raise MultiValueGuc.ParseError('invalid trailing backslash')
+
+                # Handle standard backslash escapes.
+                if char == 'b':
+                    char = '\b'
+                elif char == 'f':
+                    char = '\f'
+                elif char == 'n':
+                    char = '\n'
+                elif char == 'r':
+                    char = '\r'
+                elif char == 't':
+                    char = '\t'
+
+                # Handle octal escapes (e.g. \023).
+                elif MultiValueGuc._isoctal(char):
+                    octal = int(char)
+
+                    # Octal escapes can have a maximum of three digits.
+                    for _ in range(2):
+                        char = stream.peek()
+                        if not MultiValueGuc._isoctal(char):
+                            break
+
+                        octal = (octal << 3) + int(char)
+                        stream.next() # advance
+
+                    # Translate back to a character (truncating to one byte).
+                    char = chr(octal & 0xFF)
+
+            # Handle escaped single quotes.
+            elif char == "'":
+                char = stream.next()
+                if char != "'":
+                    raise MultiValueGuc.ParseError('invalid single quote')
+
+            quoted.append(char)
+
+        return ''.join(quoted)
+
+    @staticmethod
+    def compare_db_and_file_values(db_guc, file_guc):
+        """
+        Returns true if the db_guc value is equivalent to the file_guc value
+        after the file_guc value has been unquoted. If the file_guc value is
+        invalid (not properly quoted in the file), this always returns False.
+        """
+        try:
+            return MultiValueGuc._unquote(file_guc) == db_guc
+        except MultiValueGuc.ParseError:
+            return False
+
     def is_internally_consistent(self):
         if not self.db_seg_guc:
             return self.compare_primary_and_mirror_files()
-        else:
-            if self.primary_file_seg_guc is None:
-                return True
-            if self.primary_file_seg_guc.get_value() is None:
-                return True
-            result = True
-            if self.mirror_file_seg_guc and self.db_seg_guc:
-                result = self.mirror_file_seg_guc.value == self.db_seg_guc.value
-            if not result:
-                return result
-            return self.db_seg_guc.value == self.primary_file_seg_guc.value and result
+
+        if self.primary_file_seg_guc is None:
+            return True
+        if self.primary_file_seg_guc.get_value() is None:
+            return True
+
+        result = True
+
+        if self.mirror_file_seg_guc and self.db_seg_guc:
+            result = self.compare_db_and_file_values(self.db_seg_guc.value, self.mirror_file_seg_guc.value)
+        if not result:
+            return result
+
+        return self.compare_db_and_file_values(self.db_seg_guc.value, self.primary_file_seg_guc.value) and result
 
     def get_value(self):
         file_value = ""
