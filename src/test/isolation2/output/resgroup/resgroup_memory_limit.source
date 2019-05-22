@@ -1,8 +1,6 @@
 -- start_ignore
 DROP ROLE IF EXISTS role1_memory_test;
 DROP
-DROP RESOURCE GROUP rg0_memory_test;
-ERROR:  resource group "rg0_memory_test" does not exist
 DROP RESOURCE GROUP rg1_memory_test;
 ERROR:  resource group "rg1_memory_test" does not exist
 DROP RESOURCE GROUP rg2_memory_test;
@@ -15,7 +13,7 @@ CREATE
 CREATE OR REPLACE FUNCTION hold_memory_by_percent(float) RETURNS int AS $$ SELECT * FROM resGroupPalloc($1) $$ LANGUAGE sql;
 CREATE
 
-CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, proposed_memory_limit, memory_shared_quota, proposed_memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test' ORDER BY groupid;
+CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test' ORDER BY groupid;
 CREATE
 
 CREATE OR REPLACE VIEW memory_result AS SELECT rsgname, memory_usage from gp_toolkit.gp_resgroup_status;
@@ -34,8 +32,6 @@ CREATE
 --	rg1's shared quota: %52 - %52 => %0
 --	system free chunks: 100% - 10% - 30% - 52% => 8%
 --	memory available to one slot in rg1: 52%/2 + 0% + 8% => 34%
-CREATE RESOURCE GROUP rg0_memory_test WITH (cpu_rate_limit=1, memory_limit=30);
-CREATE
 CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=52, memory_shared_quota=0);
 CREATE
 CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
@@ -102,7 +98,7 @@ SET
  0     
 (1 row)
 1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.14 / 0.52)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=18610)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=12550)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -110,7 +106,7 @@ CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1: SET ROLE TO role1_memory_test;
 SET
 1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.42 / 0.52)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=18619)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=12562)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -215,7 +211,7 @@ SET
  0     
 (1 row)
 1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.12 / 0.52)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=19259)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=12602)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -223,7 +219,7 @@ CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1: SET ROLE TO role1_memory_test;
 SET
 1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.48 / 0.52)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=19269)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=12614)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -312,7 +308,7 @@ SET
  0     
 (1 row)
 1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.25 / 0.52)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=19875)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=12653)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -320,7 +316,7 @@ CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1: SET ROLE TO role1_memory_test;
 SET
 1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.75 / 0.52)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=19884)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=12662)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -458,7 +454,7 @@ BEGIN
  0     
 (1 row)
 2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.32 / 0.52)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=21102)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=12755)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -628,7 +624,7 @@ BEGIN
  0     
 (1 row)
 2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.39 / 0.52)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=21783)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=12866)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -799,7 +795,7 @@ BEGIN
  0     
 (1 row)
 2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.3 / 0.2)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=22464)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=12989)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -896,7 +892,7 @@ ALTER
 1: SET ROLE TO role1_memory_test;
 SET
 1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.2 / 0.3)=0;
-ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=23131)
+ERROR:  Out of memory  (seg0 slice1 10.146.0.5:25432 pid=13040)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
@@ -920,8 +916,6 @@ SET
 DROP ROLE role1_memory_test;
 DROP
 DROP ROLE role2_memory_test;
-DROP
-DROP RESOURCE GROUP rg0_memory_test;
 DROP
 DROP RESOURCE GROUP rg1_memory_test;
 DROP

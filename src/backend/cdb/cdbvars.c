@@ -700,33 +700,6 @@ gpvars_show_gp_resource_manager_policy(void)
 	}
 }
 
-bool
-gpvars_check_memory_spill_ratio(const char **newval, void **extra, GucSource source)
-{
-	ResGroupMemorySpillFromStr(*newval, "memory_spill_ratio");
-
-	return true;
-}
-
-void
-gpvars_assign_memory_spill_ratio(const char *newval, void *extra)
-{
-	int32		value = ResGroupMemorySpillFromStr(newval,
-												   "memory_spill_ratio");
-
-	memory_spill_ratio = value;
-}
-
-const char *
-gpvars_show_memory_spill_ratio(void)
-{
-	static char buf[16];
-
-	ResGroupMemorySpillToStr(memory_spill_ratio, buf, sizeof(buf));
-
-	return buf;
-}
-
 /*
  * gpvars_assign_statement_mem
  */

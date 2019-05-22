@@ -572,8 +572,8 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 	{
 		Datum				typeDatum;
 		ResGroupLimitType	type;
-		Datum				proposedDatum;
-		char				*proposed;
+		Datum				valueDatum;
+		char				*value;
 
 		typeDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_reslimittype,
 								 rel->rd_att, &isNull);
@@ -587,37 +587,36 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 
 		mask |= 1 << type;
 
-		proposedDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_proposed,
+		valueDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_value,
 									 rel->rd_att, &isNull);
-		proposed = TextDatumGetCString(proposedDatum);
+		value = TextDatumGetCString(valueDatum);
 		switch (type)
 		{
 			case RESGROUP_LIMIT_TYPE_CONCURRENCY:
-				resgroupCaps->concurrency = str2Int(proposed, 
+				resgroupCaps->concurrency = str2Int(value,
 													getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPU:
-				resgroupCaps->cpuRateLimit = str2Int(proposed, 
+				resgroupCaps->cpuRateLimit = str2Int(value,
 													 getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY:
-				resgroupCaps->memLimit = str2Int(proposed, 
+				resgroupCaps->memLimit = str2Int(value,
 												 getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-				resgroupCaps->memSharedQuota = str2Int(proposed, 
+				resgroupCaps->memSharedQuota = str2Int(value,
 													   getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-				resgroupCaps->memSpillRatio = ResGroupMemorySpillFromStr(proposed,
-																		 getResgroupOptionName(type));
+				resgroupCaps->memSpillRatio = ResGroupMemorySpillFromStr(value);
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-				resgroupCaps->memAuditor = str2Int(proposed,
+				resgroupCaps->memAuditor = str2Int(value,
 												   getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPUSET:
-				StrNCpy(resgroupCaps->cpuset, proposed, sizeof(resgroupCaps->cpuset));
+				StrNCpy(resgroupCaps->cpuset, value, sizeof(resgroupCaps->cpuset));
 				break;
 			default:
 				break;
@@ -841,7 +840,7 @@ getResgroupOptionValue(DefElem *defel, int type)
 	}
 	else if (type == RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
 	{
-		value = ResGroupMemorySpillFromStr(defGetString(defel), defel->defname);
+		value = ResGroupMemorySpillFromStr(defGetString(defel));
 	}
 	else
 	{
@@ -1270,10 +1269,6 @@ updateResgroupCapabilityEntry(Relation rel,
 	isnull[Anum_pg_resgroupcapability_value - 1] = false;
 	repl[Anum_pg_resgroupcapability_value - 1]  = true;
 
-	values[Anum_pg_resgroupcapability_proposed - 1] = CStringGetTextDatum(stringBuffer);
-	isnull[Anum_pg_resgroupcapability_proposed - 1] = false;
-	repl[Anum_pg_resgroupcapability_proposed - 1]  = true;
-
 	newTuple = heap_modify_tuple(oldTuple, RelationGetDescr(rel),
 								 values, isnull, repl);
 
@@ -1356,11 +1351,11 @@ validateCapabilities(Relation rel,
 	{
 		Datum				groupIdDatum;
 		Datum				typeDatum;
-		Datum				proposedDatum;
+		Datum				valueDatum;
 		ResGroupLimitType	reslimittype;
 		Oid					resgroupid;
-		char				*proposedStr;
-		int					proposed;
+		char				*valueStr;
+		int					value;
 		bool				isNull;
 
 		groupIdDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_resgroupid,
@@ -1382,16 +1377,16 @@ validateCapabilities(Relation rel,
 								 rel->rd_att, &isNull);
 		reslimittype = (ResGroupLimitType) DatumGetInt16(typeDatum);
 
-		proposedDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_proposed,
+		valueDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_value,
 									 rel->rd_att, &isNull);
 
 		if (reslimittype == RESGROUP_LIMIT_TYPE_CPU)
 		{
-			proposedStr = TextDatumGetCString(proposedDatum);
-			proposed = str2Int(proposedStr, getResgroupOptionName(reslimittype));
-			if (proposed != CPU_RATE_LIMIT_DISABLED)
+			valueStr = TextDatumGetCString(valueDatum);
+			value = str2Int(valueStr, getResgroupOptionName(reslimittype));
+			if (value != CPU_RATE_LIMIT_DISABLED)
 			{
-				totalCpu += proposed;
+				totalCpu += value;
 				if (totalCpu > RESGROUP_MAX_CPU_RATE_LIMIT)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1401,9 +1396,9 @@ validateCapabilities(Relation rel,
 		}
 		else if (reslimittype == RESGROUP_LIMIT_TYPE_MEMORY)
 		{
-			proposedStr = TextDatumGetCString(proposedDatum);
-			proposed = str2Int(proposedStr, getResgroupOptionName(reslimittype));
-			totalMem += proposed;
+			valueStr = TextDatumGetCString(valueDatum);
+			value = str2Int(valueStr, getResgroupOptionName(reslimittype));
+			totalMem += value;
 			if (totalMem > RESGROUP_MAX_MEMORY_LIMIT)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1417,8 +1412,8 @@ validateCapabilities(Relation rel,
 			 */
 			if (IsResGroupActivated() && !CpusetIsEmpty(caps->cpuset))
 			{
-				proposedStr = TextDatumGetCString(proposedDatum);
-				if (!CpusetIsEmpty(proposedStr))
+				valueStr = TextDatumGetCString(valueDatum);
+				if (!CpusetIsEmpty(valueStr))
 				{
 					Bitmapset *bmsOther = NULL;
 
@@ -1426,7 +1421,7 @@ validateCapabilities(Relation rel,
 
 					Assert(!bms_is_empty(bmsCurrent));
 
-					bmsOther = CpusetToBitset(proposedStr, MaxCpuSetLength);
+					bmsOther = CpusetToBitset(valueStr, MaxCpuSetLength);
 					bmsCommon = bms_intersect(bmsCurrent, bmsOther);
 
 					if (!bms_is_empty(bmsCommon))
@@ -1450,9 +1445,6 @@ validateCapabilities(Relation rel,
 /*
  * Insert one capability to the capability table.
  *
- * 'value' and 'proposed' are both used to describe a resource,
- * in this routine we assume 'proposed' has the same value as 'value'.
- *
  * @param rel      the relation
  * @param groupid  oid of the resource group
  * @param type     the resource limit type
@@ -1475,7 +1467,6 @@ insertResgroupCapabilityEntry(Relation rel,
 	new_record[Anum_pg_resgroupcapability_resgroupid - 1] = ObjectIdGetDatum(groupid);
 	new_record[Anum_pg_resgroupcapability_reslimittype - 1] = UInt16GetDatum(type);
 	new_record[Anum_pg_resgroupcapability_value - 1] = CStringGetTextDatum(value);
-	new_record[Anum_pg_resgroupcapability_proposed - 1] = CStringGetTextDatum(value);
 
 	tuple = heap_form_tuple(tupleDesc, new_record, new_record_nulls);
 	simple_heap_insert(rel, tuple);
@@ -1615,10 +1606,11 @@ checkCpusetSyntax(const char *cpuset)
  *   chunks, return (-1 * chunks);
  */
 int32
-ResGroupMemorySpillFromStr(const char *str, const char *prop)
+ResGroupMemorySpillFromStr(const char *str)
 {
 
-	int32 value;
+	int32			value;
+	const char	   *prop = "memory_spill_ratio";
 
 	/* if memory spill ratio is percentile value */
 	if (parse_int(str, &value, 0, NULL))
@@ -1627,7 +1619,8 @@ ResGroupMemorySpillFromStr(const char *str, const char *prop)
 			value > RESGROUP_MAX_MEMORY_SPILL_RATIO)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("memory_spill_ratio range is [%d, %d]",
+					 errmsg("memory_spill_ratio in percentage format must be "
+							"in the range [%d, %d]",
 							RESGROUP_MIN_MEMORY_SPILL_RATIO,
 							RESGROUP_MAX_MEMORY_SPILL_RATIO)));
 		return value;
@@ -1638,7 +1631,8 @@ ResGroupMemorySpillFromStr(const char *str, const char *prop)
 		if (value <= 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("memory_spill_ratio in absolute value format must be > 0")));
+					 errmsg("memory_spill_ratio in absolute value format must "
+							"be > 0")));
 
 		return -Max(1,
 					VmemTracker_ConvertVmemMBToChunks(value >> 10));
@@ -1657,10 +1651,6 @@ ResGroupMemorySpillFromStr(const char *str, const char *prop)
 void
 ResGroupMemorySpillToStr(int32 value, char *buf, int bufsize)
 {
-#define KB_PER_MB (1024)
-#define KB_PER_GB (1024*1024)
-#define KB_PER_TB (1024*1024*1024)
-
 	if (value >= 0)
 	{
 		/* The value is in the percentage format */
@@ -1671,8 +1661,14 @@ ResGroupMemorySpillToStr(int32 value, char *buf, int bufsize)
 		/* The value is in the absolute value format */
 
 		/* Below logic is derived from _ShowOption() */
-		int64		result = -(VmemTracker_ConvertVmemChunksToMB(value) << 10);
-		const char *unit;
+#define KB_PER_MB (1024)
+#define KB_PER_GB (1024*1024)
+#define KB_PER_TB (1024*1024*1024)
+
+		int64			result;
+		const char	   *unit;
+		
+		result = -(VmemTracker_ConvertVmemChunksToMB(value) << 10);
 		if (result % KB_PER_TB == 0)
 		{
 			result /= KB_PER_TB;

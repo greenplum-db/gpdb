@@ -1,6 +1,5 @@
 -- start_ignore
 DROP ROLE IF EXISTS role1_memory_test;
-DROP RESOURCE GROUP rg0_memory_test;
 DROP RESOURCE GROUP rg1_memory_test;
 DROP RESOURCE GROUP rg2_memory_test;
 -- end_ignore
@@ -14,8 +13,8 @@ CREATE OR REPLACE FUNCTION hold_memory_by_percent(float) RETURNS int AS $$
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE VIEW rg_mem_status AS
-	SELECT groupname, memory_limit, proposed_memory_limit,
-		   memory_shared_quota, proposed_memory_shared_quota
+	SELECT groupname, memory_limit,
+		   memory_shared_quota
 	FROM gp_toolkit.gp_resgroup_config
 	WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test'
 	ORDER BY groupid;
@@ -35,8 +34,6 @@ CREATE OR REPLACE VIEW memory_result AS SELECT rsgname, memory_usage from gp_too
 --	rg1's shared quota: %52 - %52 => %0
 --	system free chunks: 100% - 10% - 30% - 52% => 8%
 --	memory available to one slot in rg1: 52%/2 + 0% + 8% => 34%
-CREATE RESOURCE GROUP rg0_memory_test
-    WITH (cpu_rate_limit=1, memory_limit=30);
 CREATE RESOURCE GROUP rg1_memory_test
     WITH (concurrency=2, cpu_rate_limit=10,
           memory_limit=52, memory_shared_quota=0);
@@ -504,7 +501,6 @@ ALTER RESOURCE GROUP rg2_memory_test SET memory_limit 20;
 
 DROP ROLE role1_memory_test;
 DROP ROLE role2_memory_test;
-DROP RESOURCE GROUP rg0_memory_test;
 DROP RESOURCE GROUP rg1_memory_test;
 DROP RESOURCE GROUP rg2_memory_test;
 

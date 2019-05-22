@@ -91,6 +91,10 @@ static bool check_pljava_classpath_insecure(bool *newval, void **extra, GucSourc
 static void assign_pljava_classpath_insecure(bool newval, void *extra);
 static bool check_gp_resource_group_bypass(bool *newval, void **extra, GucSource source);
 
+static bool check_memory_spill_ratio(const char **newval, void **extra, GucSource source);
+static void assign_memory_spill_ratio(const char *newval, void *extra);
+static const char *show_memory_spill_ratio(void);
+
 extern struct config_generic *find_option(const char *name, bool create_placeholders, int elevel);
 
 extern bool enable_partition_rules;
@@ -4410,9 +4414,9 @@ struct config_string ConfigureNamesString_gp[] =
 		},
 		&memory_spill_ratio_str,
 		"0",
-		gpvars_check_memory_spill_ratio,
-		gpvars_assign_memory_spill_ratio,
-		gpvars_show_memory_spill_ratio
+		check_memory_spill_ratio,
+		assign_memory_spill_ratio,
+		show_memory_spill_ratio
 	},
 
 	/* for pljava */
@@ -5049,4 +5053,31 @@ check_gp_workfile_compression(bool *newval, void **extra, GucSource source)
 	}
 #endif
 	return true;
+}
+
+
+bool
+check_memory_spill_ratio(const char **newval, void **extra, GucSource source)
+{
+	ResGroupMemorySpillFromStr(*newval);
+
+	return true;
+}
+
+void
+assign_memory_spill_ratio(const char *newval, void *extra)
+{
+	int32		value = ResGroupMemorySpillFromStr(newval);
+
+	memory_spill_ratio = value;
+}
+
+const char *
+show_memory_spill_ratio(void)
+{
+	static char buf[16];
+
+	ResGroupMemorySpillToStr(memory_spill_ratio, buf, sizeof(buf));
+
+	return buf;
 }
