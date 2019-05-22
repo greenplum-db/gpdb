@@ -4,6 +4,9 @@
 
 CREATE EXTENSION pxf_fdw;
 
+DROP ROLE IF EXISTS pxf_fdw_user;
+CREATE ROLE pxf_fdw_user;
+
 -- ===================================================================
 -- Validation for WRAPPER options
 -- ===================================================================
@@ -48,3 +51,12 @@ CREATE SERVER dummy_server
 -- Altering a server fails if protocol option is added
 ALTER SERVER dummy_server
     OPTIONS ( ADD protocol 'dummy2' );
+
+-- ===================================================================
+-- Validation for USER MAPPING options
+-- ===================================================================
+
+-- User mapping creation fails if protocol option is provided
+CREATE USER MAPPING FOR pxf_fdw_user
+    SERVER dummy_server
+    OPTIONS ( protocol 'usermappingprotocol' );
