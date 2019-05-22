@@ -83,7 +83,7 @@ def suggested_git_remote():
     """Try to guess the current git remote"""
     default_remote = "<https://github.com/<github-user>/gpdb>"
 
-    remote = subprocess.check_output("git ls-remote --get-url", shell=True).rstrip()
+    remote = subprocess.check_output(["git", "ls-remote", "--get-url"]).rstrip()
 
     if "greenplum-db/gpdb"  in remote:
         return default_remote
@@ -98,9 +98,12 @@ def suggested_git_remote():
 
 def suggested_git_branch():
     """Try to guess the current git branch"""
-    default_branch = "<branch-name>"
+    branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).rstrip()
+    if branch == "master" or is_a_base_branch(branch):
+        return "<branch-name>"
+    return branch
 
-    branch = subprocess.check_output("git rev-parse --abbrev-ref HEAD", shell=True).rstrip()
+    branch = subprocess.check_output("git rev-parse --abbrev-ref HEAD".split()).rstrip()
 
     if branch == "master" or branch == "5X_STABLE":
         return default_branch
