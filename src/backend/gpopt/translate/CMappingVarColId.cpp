@@ -40,7 +40,7 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CMappingVarColId::CMappingVarColId
 	(
-	IMemoryPool *mp
+	CMemoryPool *mp
 	)
 	:
 	m_mp(mp)
@@ -506,7 +506,7 @@ CMappingVarColId::CopyMapColId
 CMappingVarColId *
 CMappingVarColId::CopyMapColId
 	(
-	IMemoryPool *mp
+	CMemoryPool *mp
 	)
 	const
 {
@@ -547,7 +547,7 @@ CMappingVarColId::CopyMapColId
 CMappingVarColId *
 CMappingVarColId::CopyRemapColId
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULongPtrArray *old_colids,
 	ULongPtrArray *new_colids
 	)

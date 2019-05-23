@@ -398,7 +398,7 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] =
 CBitSet *
 CConfigParamMapping::PackConfigParamInBitset
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULONG xform_id // number of available xforms
 	)
 {

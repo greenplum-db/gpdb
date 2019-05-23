@@ -93,10 +93,10 @@ namespace gpdxl
 
 		public:
 			// ctor: single CTE 
-			CCTEListEntry(IMemoryPool *mp, ULONG query_level, CommonTableExpr *cte, CDXLNode *cte_producer);
+			CCTEListEntry(CMemoryPool *mp, ULONG query_level, CommonTableExpr *cte, CDXLNode *cte_producer);
 			
 			// ctor: multiple CTEs
-			CCTEListEntry(IMemoryPool *mp, ULONG query_level, List *cte_list, CDXLNodeArray *dxlnodes);
+			CCTEListEntry(CMemoryPool *mp, ULONG query_level, List *cte_list, CDXLNodeArray *dxlnodes);
 
 			// dtor
 			virtual
@@ -118,7 +118,7 @@ namespace gpdxl
 			List *GetCTEProducerTargetList(const CHAR *cte_str) const;
 
 			// add a new CTE producer for this level
-			void AddCTEProducer(IMemoryPool *mp, CommonTableExpr *cte, const CDXLNode *cte_producer);
+			void AddCTEProducer(CMemoryPool *mp, CommonTableExpr *cte, const CDXLNode *cte_producer);
 	};
 
 	// hash maps mapping ULONG -> CCTEListEntry

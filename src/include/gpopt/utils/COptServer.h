@@ -108,7 +108,7 @@ namespace gpoptudfs
 			const CHAR *m_socket_path;
 
 			// memory pool for connections
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// hashtable of connections
 			ConnectionHT *m_connections_ht;
@@ -146,13 +146,13 @@ namespace gpoptudfs
 
 			// receive optimization request and construct query context for it
 			static
-			CQueryContext *RecvQuery(IMemoryPool *mp, CCommunicator *communicator, CMDAccessor *md_accessor);
+			CQueryContext *RecvQuery(CMemoryPool *mp, CCommunicator *communicator, CMDAccessor *md_accessor);
 
 			// extract query plan, serialize it and send it to client
 			static
 			void SendPlan
 				(
-				IMemoryPool *mp,
+				CMemoryPool *mp,
 				CCommunicator *communicator,
 				CMDAccessor *md_accessor,
 				CQueryContext *query_ctxt,

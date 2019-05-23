@@ -98,7 +98,7 @@ namespace gpdxl
 			CContextQueryToDXL *m_context;
 
 			// memory pool
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// source system id
 			CSystemId m_sysid;
@@ -447,14 +447,14 @@ namespace gpdxl
 			void ConstructCTEAnchors(CDXLNodeArray *dxlnodes, CDXLNode **dxl_cte_anchor_top, CDXLNode **dxl_cte_anchor_bottom);
 			
 			// generate an array of new column ids of the given size
-			ULongPtrArray *GenerateColIds(IMemoryPool *mp, ULONG size) const;
+			ULongPtrArray *GenerateColIds(CMemoryPool *mp, ULONG size) const;
 
 			// extract an array of colids from the given column mapping
-			ULongPtrArray *ExtractColIds(IMemoryPool *mp, IntToUlongMap *attno_to_colid_mapping) const;
+			ULongPtrArray *ExtractColIds(CMemoryPool *mp, IntToUlongMap *attno_to_colid_mapping) const;
 			
 			// construct a new mapping based on the given one by replacing the colid in the "From" list
 			// with the colid at the same position in the "To" list
-			IntToUlongMap *RemapColIds(IMemoryPool *mp, IntToUlongMap *attno_to_colid_mapping, ULongPtrArray *from_list_colids, ULongPtrArray *to_list_colids) const;
+			IntToUlongMap *RemapColIds(CMemoryPool *mp, IntToUlongMap *attno_to_colid_mapping, ULongPtrArray *from_list_colids, ULongPtrArray *to_list_colids) const;
 
 			// true iff this query or one of its ancestors is a DML query
 			BOOL IsDMLQuery();
@@ -497,7 +497,7 @@ namespace gpdxl
 			static
 			CTranslatorQueryToDXL *QueryToDXLInstance
 				(
-				IMemoryPool *mp,
+				CMemoryPool *mp,
 				CMDAccessor *md_accessor,
 				Query *query
 				);
