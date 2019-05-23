@@ -51,7 +51,8 @@ RUN apt update && apt install -y \
     python-psutil \
     python-yaml \
     zlib1g-dev \
-    cpanminus
+    cpanminus \
+    rsync
 
 #
 # Prepare debugging environment
