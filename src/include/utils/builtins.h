@@ -1315,7 +1315,7 @@ extern Datum pg_resgroup_get_status(PG_FUNCTION_ARGS);
 extern Datum pg_resgroup_get_status_kv(PG_FUNCTION_ARGS);
 
 /* utils/gdd/gddfuncs.c */
-extern Datum pg_dist_wait_status(PG_FUNCTION_ARGS);
+extern Datum gp_dist_wait_status(PG_FUNCTION_ARGS);
 
 /* utils/adt/matrix.c */
 extern Datum matrix_add(PG_FUNCTION_ARGS);
