@@ -452,7 +452,7 @@ copyFilesToSegments(InputOptions *pInputOpts, SegmentDatabaseArray *segDBAr)
 	unlink(hostfile_name);
 	free(cmdLine);
 
-	if (result == -1)
+	if (result != 0)
 	{
 		mpp_err_msg_cache(logError, progname, "failed to send table files to segments (%d, %d)",
 						  result, errno);
