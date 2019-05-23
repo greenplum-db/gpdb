@@ -36,16 +36,16 @@ PG_FUNCTION_INFO_V1(pxf_fdw_validator);
 Datum
 pxf_fdw_validator(PG_FUNCTION_ARGS)
 {
-	char     *protocol      = NULL;
-	char     *resource      = NULL;
-	List     *options_list  = untransformRelOptions(PG_GETARG_DATUM(0));
-	Oid      catalog        = PG_GETARG_OID(1);
-	List     *other_options = NIL;
-	ListCell *cell;
+	char	   *protocol = NULL;
+	char	   *resource = NULL;
+	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
+	Oid			catalog = PG_GETARG_OID(1);
+	List	   *other_options = NIL;
+	ListCell   *cell;
 
 	foreach(cell, options_list)
 	{
-		DefElem *def = (DefElem *) lfirst(cell);
+		DefElem    *def = (DefElem *) lfirst(cell);
 
 		/*
 		 * Separate out protocol and column-specific options
@@ -54,26 +54,24 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		{
 			protocol = defGetString(def);
 
-			// protocol can only be defined at the foreign-data wrapper level
+			/* protocol can only be defined at the foreign-data wrapper level */
 			if (catalog != ForeignDataWrapperRelationId)
 			{
 				ereport(ERROR,
-				        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
-					        errmsg(
-						        "the protocol option can only be defined at the foreign-data wrapper level")));
+						(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						 errmsg("the protocol option can only be defined at the foreign-data wrapper level")));
 			}
 		}
 		else if (strcmp(def->defname, FDW_OPTION_RESOURCE) == 0)
 		{
 			resource = defGetString(def);
 
-			// resource can only be defined at the foreign table level
+			/* resource can only be defined at the foreign table level */
 			if (catalog != ForeignTableRelationId)
 			{
 				ereport(ERROR,
-				        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
-					        errmsg(
-						        "the resource option can only be defined at the foreign table level")));
+						(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						 errmsg("the resource option can only be defined at the foreign table level")));
 			}
 		}
 		else
@@ -84,18 +82,16 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		(protocol == NULL || strcmp(protocol, "") == 0))
 	{
 		ereport(ERROR,
-		        (errcode(ERRCODE_FDW_DYNAMIC_PARAMETER_VALUE_NEEDED),
-			        errmsg(
-				        "the protocol option must be defined for PXF foreign-data wrappers")));
+				(errcode(ERRCODE_FDW_DYNAMIC_PARAMETER_VALUE_NEEDED),
+				 errmsg("the protocol option must be defined for PXF foreign-data wrappers")));
 	}
 
 	if (catalog == ForeignTableRelationId &&
 		(resource == NULL || strcmp(resource, "") == 0))
 	{
 		ereport(ERROR,
-		        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
-			        errmsg(
-				        "the resource option must be defined at the foreign table level")));
+				(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+				 errmsg("the resource option must be defined at the foreign table level")));
 	}
 
 	/*
