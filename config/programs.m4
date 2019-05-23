@@ -307,3 +307,21 @@ else
   AC_MSG_ERROR([apu-1-config is required for gpperfmon, unable to find binary])
 fi
 ]) # GPAC_PATH_APU_1_CONFIG
+
+# GPAC_PATH_RSYNC
+# ---------------
+# Check for rsync, which is used by Management utilities
+AC_DEFUN([GPAC_PATH_RSYNC],
+[
+AC_PATH_PROGS(RSYNC, rsync)
+
+if test -n "$RSYNC"; then
+  rsync_version=`$RSYNC --version 2>/dev/null | sed q`
+  if test -z "$rsync_version"; then
+    AC_MSG_ERROR([rsync is required for Greenplum utilities, unable to identify version])
+  fi
+  AC_MSG_NOTICE([using rsync $rsync_version])
+else
+  AC_MSG_ERROR([rsync is required for Greenplum utilities, unable to find binary])
+fi
+]) # GPAC_PATH_RSYNC

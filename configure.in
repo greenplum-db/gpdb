@@ -1719,6 +1719,14 @@ if test "$PORTNAME" = "openbsd"; then
   AC_CHECK_HEADERS([execinfo.h], [], [AC_MSG_ERROR([header file <execinfo.h> is required for backtrace support])])
 fi
 
+
+##
+## Programs
+##
+
+# Check for rsync
+GPAC_PATH_RSYNC
+
 ##
 ## Types, structures, compiler characteristics
 ##
