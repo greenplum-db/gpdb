@@ -20,51 +20,79 @@ Before you configure PXF for access to a secure HDFS filesystem, ensure that you
 
 - Noted the name of the Kerberos \<realm\> in which your cluster resides.
 
+- Installed the Kerberos client packages on **each** Greenplum Database segment host if they are not already installed. You must have superuser permissions to install operating system packages. For example:
+
+    ``` shell
+    root@gphost$ rpm -qa | grep krb
+    root@gphost$ yum install krb5-libs krb5-workstation
+    ```
+
 
 ## <a id="procedure"></a>Procedure
 
-Perform the following steps to configure PXF for a secure HDFS. You will perform operations on the Kerberos KDC server (either MIT Kerberos or Microsoft Active Directory) and Greenplum Database segment hosts.
+There are different procedures for configuring PXF for secure HDFS with a [Microsoft Active Directory KDC Server](#proc_ad) vs. with an [MIT Kerberos KDC Server](#proc_mit).
 
-**Perform the following steps on Active Directory domain controller**:
-Reference: https://blogs.technet.microsoft.com/heyscriptingguy/2013/08/13/add-user-principal-names-in-active-directory-via-powershell/
 
-1. Start Active Directory Users and Computers.
-2. Epand the forest domain and the top-level UNIX organizatoinal unit that fit your Greenplum user domain.
-3. Select Service Accounts, right-click, then select New->User.
-4. Type a name, eg. ServiceGreenplumPROD1, and change the logon name to gpadmin.
-5. Type and confirm the password to use for the service account in Active Directory, select the User cannot change password and Password never expires options, then click Next.
-6. Click Finish to complete the creation of the new user principal. 
-7. Open Powershell or a command prompt and run the following commands.
-	
-	``` shell
-	powershell#>ktpass -out pxf.service.keytab -princ gpadmin@EXAMPLE.COM -mapUser ServiceGreenplumPROD1 -pass ******* -crypto all -ptype KRB5_NT_PRINCIPAL
-	```
-	
-**Perform the following steps on each Greenplum Database master host**:
+### <a id="proc_ad"></a>Configuring PXF with a Microsoft Active Directory Kerberos KDC Server
 
-1. Copy pxf.service.keytab to Greenplum master host $PXF_CONF
+When you configure PXF for secure HDFS using an AD Kerberos KDC server, you will perform tasks on both the KDC server host and the Greenplum Database master host.
+
+**Perform the following steps the Active Directory domain controller**:
+
+1. Start **Active Directory Users and Computers**.
+2. Expand the forest domain and the top-level UNIX organizational unit that describe your Greenplum user domain.
+3. Select **Service Accounts**, right-click, then select **New->User**.
+4. Type a name, eg. `ServiceGreenplumPROD1`, and change the login name to `gpadmin`.
+5. Type and confirm the Active Directory service account password. Select the **User cannot change password** and **Password never expires** check boxes, then click **Next**.
+6. Click **Finish** to complete the creation of the new user principal. 
+7. Open Powershell or a command prompt and run the `ktpass` command to generate the keytab file. For example:
+
+    ``` shell
+    powershell#>ktpass -out pxf.service.keytab -princ gpadmin@EXAMPLE.COM -mapUser ServiceGreenplumPROD1 -pass ******* -crypto all -ptype KRB5_NT_PRINCIPAL
+    ```
+
+    With Active Directory, the principal and key is shared by all Greenplum Database segment hosts.
 	
-	``` shell
-	$>mv pxf.service.keytab $PXF_CONF/keytabs
-	$>chmod 400 $PXF_CONF/keytabs/pxf.service.keytab
-	```
+8. Copy the `pxf.service.keytab` file to the Greenplum master host.
+
+**Perform the following steps on the Greenplum Database master host**:
+
+1. Log in to the Greenplum Database master host. For example:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    ```
+    
+2. Locate the keytab file, copy the file to the `$PXF_CONF` user configuration directory, and set required permissions. For example:
 	
-2. Update the `PXF_KEYTAB` and `PXF_PRINCIPAL` settings, if required. Specify the location of the keytab file and the Kerberos principal, substituting your realm. *The default values for these settings are identified below*:
+    ``` shell
+    gpadmin@gpmaster$ mv pxf.service.keytab $PXF_CONF/keytabs
+    gpadmin@gpmaster$ chmod 400 $PXF_CONF/keytabs/pxf.service.keytab
+    ```
+	
+2. Open the `$PXF_CONF/conf/pxf-env.sh` file in an editor. Update the `PXF_KEYTAB` and `PXF_PRINCIPAL` settings, if required, specifying the location of the keytab file and the Kerberos principal. Replace `EXAMPLE.COM` with your Kerberos realm.
 
     ``` shell
     export PXF_KEYTAB="${PXF_CONF}/keytabs/pxf.service.keytab"
     export PXF_PRINCIPAL="gpadmin@EXAMPLE.COM"
     ```
     
-3. Sync and Restart PXF
+3. Save the file and exit the editor.
+
+4. Synchronize the PXF configuration to your Greenplum Database cluster and restart PXF. For example:
 
     ``` shell
     gpadmin@master$ $GPHOME/pxf/bin/pxf cluster sync
-    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster restart
+    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster stop
+    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster start
     ```
 
 
-**Perform the following steps on MIT Kerberos KDC server host**:
+### <a id="proc_mit"></a>Configuring PXF with an MIT Kerberos KDC Server
+
+When you configure PXF for secure HDFS using an MIT Kerberos KDC server, you will perform tasks on both the KDC server host and the Greenplum Database master host.
+
+**Perform the following steps on the MIT Kerberos KDC server host**:
 
 1.  Log in to the Kerberos KDC server as the `root` user.
 
@@ -126,28 +154,21 @@ Reference: https://blogs.technet.microsoft.com/heyscriptingguy/2013/08/13/add-us
     root@kdc-server$ ssh host3.example.com chmod 400 /etc/pxf/usercfg/keytabs/pxf.service.keytab
     ```
 
-**Perform the following steps on each Greenplum Database segment host**:
+**Perform the following steps on the Greenplum Database master host**:
 
-1. Log in to the segment host. For example:
+1. Log in to the master host. For example:
 
     ``` shell
-    $ ssh gpadmin@<seghost>
+    $ ssh gpadmin@<gpmaster>
     ```
     
-2. Install the Kerberos client packages on **each** Greenplum Database segment host if they are not already installed. You must have superuser permissions to install operating system packages. For example:
+2. Open the PXF `pxf-env.sh` user configuration file in the editor of your choice. For example, to open the file with `vi` when `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    root@seghost$ rpm -qa | grep krb
-    root@seghost$ yum install krb5-libs krb5-workstation
-    ```
-
-4. Open the PXF `pxf-env.sh` user configuration file in the editor of your choice. For example, to open the file with `vi` when `PXF_CONF=/etc/pxf/usercfg`:
-
-    ``` shell
-    gpadmin@seghost$ vi /etc/pxf/usercfg/conf/pxf-env.sh
+    gpadmin@gpmaster$ vi /etc/pxf/usercfg/conf/pxf-env.sh
     ```
     
-5. Update the `PXF_KEYTAB` and `PXF_PRINCIPAL` settings, if required. Specify the location of the keytab file and the Kerberos principal, substituting your realm. *The default values for these settings are identified below*:
+3. Update the `PXF_KEYTAB` and `PXF_PRINCIPAL` settings, if required. Specify the location of the keytab file and the Kerberos principal, substituting your realm. *The default values for these settings are identified below*:
 
     ``` shell
     export PXF_KEYTAB="${PXF_CONF}/keytabs/pxf.service.keytab"
@@ -156,9 +177,13 @@ Reference: https://blogs.technet.microsoft.com/heyscriptingguy/2013/08/13/add-us
     
     PXF automatically replaces ` _HOST` with the FQDN of the segment host.
 
-6. Restart PXF on the segment host:
+4. Save the file and exit the editor.
+
+5. Synchronize the PXF configuration to your Greenplum Database cluster and restart PXF. For example:
 
     ``` shell
-    gpadmin@seghost$ $GPHOME/pxf/bin/pxf restart
+    gpadmin@seghost$ $GPHOME/pxf/bin/pxf cluster sync
+    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster stop
+    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster start
     ```
 
