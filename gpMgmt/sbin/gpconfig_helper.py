@@ -111,7 +111,7 @@ def add_parameter(filename, name, value):
             outfile.write(line)
             new_lines = new_lines + 1
         outfile.write(bytes(name) + '=' +
-                      bytes(pickle.loads(base64.urlsafe_b64decode(value)).replace('"', '\\\"')) +
+                      bytes(pickle.loads(base64.urlsafe_b64decode(value))) +
                       os.linesep)
         new_lines = new_lines + 1
 
