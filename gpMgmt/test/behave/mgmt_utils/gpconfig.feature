@@ -74,6 +74,8 @@ Feature: gpconfig integration tests
         | application_name             |  string  | xxxxxx     | bodhi    | 'bodhi'    | bodhi      | lucy              | 'lucy'                 | bengie       | 'bengie'          | bengie            |
         | application_name             |  string  | yyyyyy     | 'bod hi' | 'bod hi'   | bod hi     | 'lu cy'           | 'lu cy'                | 'ben gie'    | 'ben gie'         | ben gie           |
         | application_name             |  string  | zzzzzz     | ''       | ''         |            | ''                | ''                     | ''           | ''                |                   |
+        | application_name             |  string  | zzzzzz     | '"hi"'   | '"hi"'     | "hi"       | '"hi"'            | '"hi"'                 | '"hi"'       | '"hi"'            | "hi"              |
+        | application_name             |  string  | zzzzzz     | "'hi'"   | '''hi'''   | 'hi'       | "'hi'"            | '''hi'''               | "'hi'"       | '''hi'''          | 'hi'              |
         | application_name             |  string  | boo        | "\'"     | '\\'''     | \'         | "\'"              | '\\'''                 | "\'"         | '\\'''            | \'                |
         | application_name             |  string  | boo        | "''''"   | '''''''''' | ''''       | "''"              | ''''''                 | "'"          | ''''              | '                 |
         | search_path                  |  string  | boo        | Ομήρου   | 'Ομήρου'   | Ομήρου     | Ομήρου            | 'Ομήρου'               | Ομήρου       | 'Ομήρου'          | Ομήρου            |
