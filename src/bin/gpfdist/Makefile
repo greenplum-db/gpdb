@@ -2,10 +2,6 @@ subdir = src/bin/gpfdist
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
-ifeq ($(PORTNAME),win32)
-  include $(top_builddir)/gpAux/Makefile.windows
-endif
-
 override CPPFLAGS := -I. $(CPPFLAGS) $(apr_includes) $(apr_cppflags) -DFRONTEND
 override CFLAGS := $(CFLAGS) $(apr_cflags)
 
