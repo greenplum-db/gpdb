@@ -29,7 +29,7 @@
    [ <b>--no-distribution-check</b> ]
    [ <b>--truncate-source-after</b> [<b>--yes</b> ] ]
    [ <b>--metadata-only</b> ]
-   { <b>--dest-host</b> <varname>dest_host</varname> [ <b>--dest-port</b> <varname>dest_port</varname> | <b>--port-range</b> <varname>dest_port_lower</varname>-<varname>dest_port_upper</varname> ]
+   { <b>--dest-host</b> <varname>dest_host</varname> [ <b>--dest-port</b> <varname>dest_port</varname> | <b>--data-port-range</b> <varname>dest_port_lower</varname>-<varname>dest_port_upper</varname> ]
       [ <b>--dest-user</b> <varname>dest_user</varname> ] }
    [ <b>--source-host</b> <varname>source_host</varname> [ <b>--source-port</b> <varname>source_port</varname> ]
    [ <b>--source-user</b> <varname>source_user</varname> ] ]
@@ -193,18 +193,18 @@
                 <plentry>
                     <pt>--dest-port <varname>dest_port</varname></pt>
                     <pd>Destination Greenplum Database port number, If neither
-                            <codeph>--dest-port</codeph> nor <codeph>--port-range</codeph> is
+                            <codeph>--dest-port</codeph> nor <codeph>--data-port-range</codeph> is
                         specified, then the default is 5432.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--port-range
+                    <pt>--data-port-range
                             <varname>dest_port_lower</varname>-<varname>dest_port_upper</varname></pt>
                     <pd>A range of port numbers to try as the destination port for Greenplum
                         Datrabase hosts. <codeph>gpcopy</codeph> uses the first available port
                         specified in the range (inclusive). <varname>dest_port_lower</varname> must
                         be greater than zero, and <varname>dest_port_upper</varname> must be a
                         greater value. If neither <codeph>--dest-port</codeph> nor
-                            <codeph>--port-range</codeph> is specified, then the default is
+                            <codeph>--data-port-range</codeph> is specified, then the default is
                         5432.</pd>
                 </plentry>
                 <plentry>
