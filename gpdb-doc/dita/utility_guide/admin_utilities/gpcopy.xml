@@ -76,10 +76,11 @@
                     <li>You must use one of these options to specify how to manage data in the
                         destination database: <codeph>--skip-existing</codeph>,
                             <codeph>--truncate</codeph>, <codeph>--drop</codeph>, or
-                            <codeph>--append</codeph>.<p>If you specify both the
-                                <codeph>--append</codeph> and <codeph>--validation</codeph> options,
-                            validation of source table data fails if a destination table contains
-                            data. </p></li>
+                            <codeph>--append</codeph>. Note, however, that these options are not
+                        compatible when you use <codeph>--dest-table</codeph> to rename the target
+                        database. .<p>If you specify both the <codeph>--append</codeph> and
+                                <codeph>--validation</codeph> options, validation of source table
+                            data fails if a destination table contains data. </p></li>
                 </ul></p>
             <p>If you specify the option <codeph>--truncate-source-after</codeph>, you must also
                 specify the <codeph>--validate</codeph> option. When
@@ -124,7 +125,9 @@
                     <pd>Append data to the table in the destination database if it already exists. </pd>
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. This option is
+                        ignored if you use <codeph>--dest-table</codeph> to change the destination
+                        database.</pd>
                 </plentry>
                 <plentry>
                     <pt>--dry-run</pt>
@@ -219,7 +222,9 @@
                         the table and creates it again. </pd>
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. This option is
+                        ignored if you use <codeph>--dest-table</codeph> to change the destination
+                        database.</pd>
                 </plentry>
                 <plentry>
                     <pt>--exclude-table
@@ -305,30 +310,43 @@
                 <plentry>
                     <pt>--dest-table
                             <varname>db</varname>.<varname>schema</varname>.<varname>table</varname></pt>
-                    <pd>Changes the database into which tables that were specified in
-                            <codeph>--include-table</codeph> are copied.
-                            (<codeph>--dest-table</codeph> does not currently support changing the
-                        destination schema or table name.) You must provide fully-qualified table
-                        names
+                    <pd>(Optional.) Changes the database where tables defined with
+                            <codeph>--include-table</codeph> are copied. Greenplum does not
+                        currently support changing the destination schema or table name. You must
+                        provide fully-qualified table names
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
                         Specify multiple tables using either a comma-separated list or by
-                        referencing regular expression capture groups defined with
+                        referencing regular expression capture groups that were defined with
                             <codeph>--include-table</codeph>.</pd>
                     <pd>If you use a comma-separated list of tables with
                             <codeph>--include-table</codeph>, use the same number position in the
                             <codeph>--dest-table</codeph> list to change the destination database of
-                        a corresponding table. For example, to move only the second table provided
-                        with <codeph>--include-table
-                            mytest.public.table1,mytest.public.table2</codeph> to a different
-                        database use a statement like <codeph>--dest-table
-                            mytest.public.table1,production.public.table2</codeph>.</pd>
-                    <pd>If you use Go language regular expressions capture groups with
+                        the corresponding table. For example, to move only the second table provided
+                        with an option
+                        like<codeblock>--include-table mytest.public.table1,mytest.public.table2</codeblock>use
+                        an option similar
+                        to:<codeblock>--dest-table mytest.public.table1,production.public.table2</codeblock></pd>
+                    <pd>If you use Go language regular expressions capture groups in
                             <codeph>--include-table</codeph> to define a set of tables, you can
                         reference the capture groups in <codeph>--dest-table</codeph> to rename the
-                        destination database. (Using capture groups to rename the schema or table
-                        name is not currently supported.) Capture groups referenced in
-                            <codeph>--dest-table</codeph> must be delimited with forward slashes (/)
-                        to indicate regular expression processing.</pd>
+                        destination database. Capture groups referenced in
+                            <codeph>--include-table</codeph> or <codeph>--dest-table</codeph> must
+                        use forward slash delimiters (/) to indicate regular expression processing.
+                        For example, to reference the capture group defined in the database string
+                        of<codeblock>--include-table testdb/(\d+)/.myschema/(\d+)/.mytable/(\d+)/</codeblock>use
+                        an option similar
+                        to:<codeblock>--dest-table productiondb/$1/.myschema/$1/.mytable/$1/</codeblock>Note
+                        that the capture group numbering starts at 1 and restarts for each component
+                        of the fully-qualified table name (database, schema, and table name).
+                        Therefore, in the above example each capture group is referenced with
+                            <codeph>/$1/</codeph> in <codeph>--dest-table</codeph>. You cannot
+                        rename the destination schema or table name components.</pd>
+                    <pd>If regular expression rules would cause more than one source table name to
+                        be remapped to the same destination table, then <codeph>gpcopy</codeph>
+                        reports an error and the command fails. The
+                        <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
+                            <codeph>--drop</codeph>, and <codeph>--append</codeph> if you use
+                            <codeph>--dest-table</codeph> to change the destination database.</pd>
                 </plentry>
                 <plentry>
                     <pt>--include-table-file <varname>table-file</varname></pt>
@@ -435,7 +453,9 @@
                         table already exists in the destination database. </pd>
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. </pd>
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. This option is
+                        ignored if you use <codeph>--dest-table</codeph> to change the destination
+                        database.</pd>
                 </plentry>
                 <plentry>
                     <pt>--source-host <varname>source_host</varname></pt>
@@ -458,7 +478,9 @@
                         database if it already exists. </pd>
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. </pd>
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. This option is
+                        ignored if you use <codeph>--dest-table</codeph> to change the destination
+                        database.</pd>
                 </plentry>
                 <plentry>
                     <pt>--truncate-source-after</pt>
