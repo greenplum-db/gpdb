@@ -11,7 +11,7 @@ Feature: gpconfig integration tests
 
     @concourse_cluster
     @demo_cluster
-    Scenario Outline: run each gpconfig command for guc type: <type>
+    Scenario Outline: running gpconfig test case: <test_case>, for guc type: <type>
       Given the user runs "gpstop -u"
         And gpstop should return a return code of 0
         And the gpconfig context is setup
@@ -64,21 +64,25 @@ Feature: gpconfig integration tests
         And gpconfig should print "Master  value: <live_value_master>" escaped to stdout
         And gpconfig should print "Segment value: <live_value>" escaped to stdout
 
-    # test for each type documented for gpconfig
     Examples:
-        | guc                          | type     | seed_value | value    | file_value | live_value | value_master_only | file_value_master_only | value_master | file_value_master | live_value_master |
-        | log_connections              |  bool    | off        | on       | on         | on         | off               | off                    | off          | off               | off               |
-        | gp_resgroup_memory_policy    |  enum    | eager_free | auto     | auto       | auto       | eager_free        | eager_free             | eager_free   | eager_free        | eager_free        |
-        | vacuum_cost_limit            |  integer | 300        | 400      | 400        | 400        | 555               | 555                    | 500          | 500               | 500               |
-        | checkpoint_completion_target |  real    | 0.4        | 0.5      | 0.5        | 0.5        | 0.33              | 0.33                   | 0.7          | 0.7               | 0.7               |
-        | application_name             |  string  | xxxxxx     | bodhi    | 'bodhi'    | bodhi      | lucy              | 'lucy'                 | bengie       | 'bengie'          | bengie            |
-        | application_name             |  string  | yyyyyy     | 'bod hi' | 'bod hi'   | bod hi     | 'lu cy'           | 'lu cy'                | 'ben gie'    | 'ben gie'         | ben gie           |
-        | application_name             |  string  | zzzzzz     | ''       | ''         |            | ''                | ''                     | ''           | ''                |                   |
-        | application_name             |  string  | zzzzzz     | '"hi"'   | '"hi"'     | "hi"       | '"hi"'            | '"hi"'                 | '"hi"'       | '"hi"'            | "hi"              |
-        | application_name             |  string  | zzzzzz     | "'hi'"   | '''hi'''   | 'hi'       | "'hi'"            | '''hi'''               | "'hi'"       | '''hi'''          | 'hi'              |
-        | application_name             |  string  | boo        | "\'"     | '\\'''     | \'         | "\'"              | '\\'''                 | "\'"         | '\\'''            | \'                |
-        | application_name             |  string  | boo        | "''''"   | '''''''''' | ''''       | "''"              | ''''''                 | "'"          | ''''              | '                 |
-        | search_path                  |  string  | boo        | Ομήρου   | 'Ομήρου'   | Ομήρου     | Ομήρου            | 'Ομήρου'               | Ομήρου       | 'Ομήρου'          | Ομήρου            |
+        | test_case                              | guc                          | type       | seed_value | value     | file_value | live_value | value_master_only | file_value_master_only | value_master | file_value_master | live_value_master |
+        | bool                                   | log_connections              | bool       | off        | on        | on         | on         | off               | off                    | off          | off               | off               |
+        | enum                                   | gp_resgroup_memory_policy    | enum       | eager_free | auto      | auto       | auto       | eager_free        | eager_free             | eager_free   | eager_free        | eager_free        |
+        | integer                                | vacuum_cost_limit            | integer    | 300        | 400       | 400        | 400        | 555               | 555                    | 500          | 500               | 500               |
+        | integer with memory unit               | statement_mem                | int w/unit | 123MB      | 500MB     | 500MB      | 500MB      | 500MB             | 500MB                  | 500MB        | 500MB             | 500MB             |
+        | integer with time unit                 | statement_timeout            | int w/unit | 1min       | 5min      | 5min       | 5min       | 5min              | 5min                   | 5min         | 5min              | 5min              |
+        | float                                  | checkpoint_completion_target | float      | 0.4        | 0.5       | 0.5        | 0.5        | 0.33              | 0.33                   | 0.7          | 0.7               | 0.7               |
+        | basic string                           | application_name             | string     | xxxxxx     | bodhi     | 'bodhi'    | bodhi      | lucy              | 'lucy'                 | bengie       | 'bengie'          | bengie            |
+        | string with spaces                     | application_name             | string     | yyyyyy     | 'bod hi'  | 'bod hi'   | bod hi     | 'bod hi'          | 'bod hi'               | 'bod hi'     | 'bod hi'          | bod hi            |
+        | different value on master and segments | application_name             | string     | yyyyyy     | 'bod hi'  | 'bod hi'   | bod hi     | 'lu cy'           | 'lu cy'                | 'ben gie'    | 'ben gie'         | ben gie           |
+        | empty string                           | application_name             | string     | zzzzzz     | ''        | ''         |            | ''                | ''                     | ''           | ''                |                   |
+        | quoted double quotes                   | application_name             | string     | zzzzzz     | '"hi"'    | '"hi"'     | "hi"       | '"hi"'            | '"hi"'                 | '"hi"'       | '"hi"'            | "hi"              |
+        | quoted single quotes                   | application_name             | string     | zzzzzz     | "'hi'"    | '''hi'''   | 'hi'       | "'hi'"            | '''hi'''               | "'hi'"       | '''hi'''          | 'hi'              |
+        | escaped single quote                   | application_name             | string     | boo        | "\'"      | '\\'''     | \'         | "\'"              | '\\'''                 | "\'"         | '\\'''            | \'                |
+        | multiple quoted single quotes          | application_name             | string     | boo        | "''''"    | '''''''''' | ''''       | "''"              | ''''''                 | "'"          | ''''              | '                 |
+        | utf-8 works                            | search_path                  | string     | boo        | Ομήρου    | 'Ομήρου'   | Ομήρου     | Ομήρου            | 'Ομήρου'               | Ομήρου       | 'Ομήρου'          | Ομήρου            |
+#       | integer with time unit with spaces     | statement_timeout            | int w/unit | 2min       | "'7 min'" | '7 min'    | 7min       | "'7 min'"         | '7 min'                | "'7 min'"    | '7 min'           | 7min              |
+# 'Integer with time unit with spaces' fails because the live server parses '7 min' as 7min, and our comparison logic does not handle this correctly.
 
     @concourse_cluster
     @demo_cluster
