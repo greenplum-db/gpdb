@@ -15,7 +15,7 @@
    { <b>--full</b> |
      { <b>--dbname</b> <varname>database1</varname>[, <varname>database2</varname> ... ] 
         [ <b>--dest-dbname</b> <varname>dest-db1</varname>[, <varname>dest-db2</varname> ... ] ] } |
-     <b>--include-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] |
+     <b>--include-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] [ <b>--dest-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] |
      <b>--include-table-file</b> <varname>table-file1</varname>
         [ <b>--include-table-file</b> <varname>table-file2</varname>] ... ] }
    [ <b>--exclude-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] ]
@@ -268,24 +268,30 @@
                 <plentry id="include-file-gpcopy">
                     <pt>--include-table
                             <varname>db</varname>.<varname>schema</varname>.<varname>table</varname></pt>
-                    <pd>A table from the source database system to copy. The fully qualified table
-                        name must be specified
+                    <pd>One or more tables from the source database system to copy. You must provide
+                        fully-qualified table names
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
                         You cannot specify views or system catalog tables. To copy multiple tables,
-                        specify a comma-separated list of table names.</pd>
-                    <pd>A set of tables can be specified using the Go language regular expression
-                        syntax. You can use regular expressions in table names and schema names.
-                        Regular expressions are not supported for database names. </pd>
-                    <pd>The regular expression pattern must be enclosed in slashes
-                                (<codeph>/<varname>RE_pattern</varname>/</codeph>). This example
+                        include a comma-separated list of table names or use regular expressions to
+                        describe a set of tables. You can optionally use
+                            <codeph>--dest-table</codeph> to change the databases into which tables
+                        in <codeph>--include-table</codeph> are copied.</pd>
+                    <pd>You can use Go language regular expressions in the database, schema, and
+                        table portions of the fully-qualified table name to define a set of input
+                        tables. The regular expression pattern must be enclosed in slashes
+                                (<codeph>/<varname>RE_pattern</varname>/</codeph>). For example,
                             <codeph>--include-table mytest.public.demo/.*/</codeph> specifies all
-                        tables that begin with <codeph>demo</codeph> in the database
-                            <codeph>mytest</codeph> in the <codeph>public</codeph> schema.</pd>
+                        tables that begin with <codeph>demo</codeph> in the <codeph>mytest</codeph>
+                        database in the <codeph>public</codeph> schema.</pd>
                     <pd>The following two examples for the <codeph>--include-table</codeph> option
                         are equivalent. They both specify a set of tables that begins with demo and
                         ends with zero or more
                         digits.<codeblock>--include-table testdb.schema1.demo/[0-9]*/
 --include-table testdb.schema1./demo[0-9]*/</codeblock></pd>
+                    <pd>Regular expression capture groups in the database portion of the
+                        fully-qualified name can be referenced in <codeph>--dest-table</codeph> to
+                        change the destination database for a table. (Using capture groups to change
+                        the schema or table name is not currently supported.)</pd>
                     <pd>If the source table does not exist, <codeph>gpcopy</codeph> returns an error
                         and quits. </pd>
                     <pd>If the destination table or database does not exist, it is created. Only the
@@ -295,6 +301,34 @@
                     <pd>This option is not allowed with the options: <codeph>--full</codeph>,
                             <codeph>--dbname</codeph>, or <codeph>--include-table-file</codeph>.
                     </pd>
+                </plentry>
+                <plentry>
+                    <pt>--dest-table
+                            <varname>db</varname>.<varname>schema</varname>.<varname>table</varname></pt>
+                    <pd>Changes the database into which tables that were specified in
+                            <codeph>--include-table</codeph> are copied.
+                            (<codeph>--dest-table</codeph> does not currently support changing the
+                        destination schema or table name.) You must provide fully-qualified table
+                        names
+                            (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
+                        Specify multiple tables using either a comma-separated list or by
+                        referencing regular expression capture groups defined with
+                            <codeph>--include-table</codeph>.</pd>
+                    <pd>If you use a comma-separated list of tables with
+                            <codeph>--include-table</codeph>, use the same number position in the
+                            <codeph>--dest-table</codeph> list to change the destination database of
+                        a corresponding table. For example, to move only the second table provided
+                        with <codeph>--include-table
+                            mytest.public.table1,mytest.public.table2</codeph> to a different
+                        database use a statement like <codeph>--dest-table
+                            mytest.public.table1,production.public.table2</codeph>.</pd>
+                    <pd>If you use Go language regular expressions capture groups with
+                            <codeph>--include-table</codeph> to define a set of tables, you can
+                        reference the capture groups in <codeph>--dest-table</codeph> to rename the
+                        destination database. (Using capture groups to rename the schema or table
+                        name is not currently supported.) Capture groups referenced in
+                            <codeph>--dest-table</codeph> must be delimited with forward slashes (/)
+                        to indicate regular expression processing.</pd>
                 </plentry>
                 <plentry>
                     <pt>--include-table-file <varname>table-file</varname></pt>
