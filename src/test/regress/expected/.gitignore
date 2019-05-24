@@ -11,6 +11,7 @@ bb_mpph.out
 /copy.out
 /create_function_1.out
 /create_function_2.out
+/default_tablespace.out
 dispatch.out
 external_table.out
 filespace.out
