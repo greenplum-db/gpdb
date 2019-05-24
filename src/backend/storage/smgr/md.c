@@ -1742,7 +1742,6 @@ DropRelationFiles(RelFileNodePendingDelete *delrels, int ndelrels, bool isRedo)
 	pfree(srels);
 }
 
-
 /*
  *	_fdvec_alloc() -- Make a MdfdVec object.
  */

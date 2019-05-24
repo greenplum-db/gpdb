@@ -242,6 +242,7 @@ test: psql_gp_commands pg_resetxlog dropdb_check_shared_buffer_cache gp_upgrade_
 test: instr_in_shmem_verify
 
 test: temp_relation
+test: alter_db_set_tablespace
 
 # This cannot run in parallel because other tests could increment the Oid
 # counters and make the Oid counter observations hardcoded in the answer file

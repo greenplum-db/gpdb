@@ -144,6 +144,7 @@ typedef struct xl_xact_commit
 	time_t		xtime;
 	uint32		xinfo;			/* info flags */
 	int			nrels;			/* number of RelFileNodes */
+	int			ndeldbs;		/* number of DbDirNodes */
 	int			nsubxacts;		/* number of subtransaction XIDs */
 	int			nmsgs;			/* number of shared inval msgs */
 	Oid			dbId;			/* MyDatabaseId */
@@ -154,6 +155,7 @@ typedef struct xl_xact_commit
 	RelFileNodePendingDelete xnodes[1];		/* VARIABLE LENGTH ARRAY */
 	/* ARRAY OF COMMITTED SUBTRANSACTION XIDs FOLLOWS */
 	/* ARRAY OF SHARED INVALIDATION MESSAGES FOLLOWS */
+	/* GPDB: ARRAY OF DbDirNodes to be dropped at commit FOLLOWS */
 	/* DISTRIBUTED XACT STUFF FOLLOWS */
 } xl_xact_commit;
 
@@ -179,11 +181,13 @@ typedef struct xl_xact_abort
 	TimestampTz xact_time;		/* time of abort */
 	time_t		xtime;
 	int			nrels;			/* number of RelFileNodes */
+	int			ndeldbs;		/* number of DbDirNodes */
 	int			nsubxacts;		/* number of subtransaction XIDs */
 	Oid         tablespace_oid_to_abort;
 	/* Array of RelFileNode(s) to drop at abort */
 	RelFileNodePendingDelete xnodes[1];		/* VARIABLE LENGTH ARRAY */
 	/* ARRAY OF ABORTED SUBTRANSACTION XIDs FOLLOWS */
+	/* GPDB: ARRAY OF DbDirNodes to be dropped at abort FOLLOWS */
 } xl_xact_abort;
 
 /* Note the intentional lack of an invalidation message array c.f. commit */
