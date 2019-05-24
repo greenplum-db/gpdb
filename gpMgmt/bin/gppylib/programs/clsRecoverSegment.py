@@ -35,13 +35,13 @@ from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
 from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
-from gppylib.parseutils import line_reader, parse_gprecoverseg_line, canonicalize_address
-from gppylib.utils import ParsedConfigFile, ParsedConfigFileRow, writeLinesToFile, \
-     normalizeAndValidateInputPath, TableLogger
+from gppylib.parseutils import line_reader, check_values, canonicalize_address
+from gppylib.utils import writeLinesToFile, normalizeAndValidateInputPath, TableLogger
 from gppylib.gphostcache import GpInterfaceToHostNameCache
 from gppylib.operations.utils import ParallelOperation
 from gppylib.operations.package import SyncPackages
 from gppylib.heapchecksum import HeapChecksum
+from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
 logger = gplog.get_default_logger()
 
@@ -157,18 +157,52 @@ class GpRecoverSegmentProgram:
             output_str = ""
             seg = mirror.getFailedSegment()
             addr = canonicalize_address(seg.getSegmentAddress())
-            output_str += ('%s:%d:%s' % (addr, seg.getSegmentPort(), seg.getSegmentDataDirectory()))
+            output_str += ('%s|%d|%s' % (addr, seg.getSegmentPort(), seg.getSegmentDataDirectory()))
 
             seg = mirror.getFailoverSegment()
             if seg is not None:
 
                 output_str += ' '
                 addr = canonicalize_address(seg.getSegmentAddress())
-                output_str += ('%s:%d:%s' % (
+                output_str += ('%s|%d|%s' % (
                     addr, seg.getSegmentPort(), seg.getSegmentDataDirectory()))
 
             lines.append(output_str)
         writeLinesToFile(fileName, lines)
+
+    def _getParsedRow(self, filename, lineno, line):
+        groups = line.split()  # NOT line.split(' ') due to MPP-15675
+        if len(groups) not in [1, 2]:
+            msg = "line %d of file %s: expected 1 or 2 groups but found %d" % (lineno, filename, len(groups))
+            raise ExceptionNoStackTraceNeeded(msg)
+        parts = groups[0].split('|')
+        if len(parts) != 3:
+            msg = "line %d of file %s: expected 3 parts on failed segment group, obtained %d" % (
+                lineno, filename, len(parts))
+            raise ExceptionNoStackTraceNeeded(msg)
+        address, port, datadir = parts
+        check_values(lineno, address=address, port=port, datadir=datadir)
+        row = {
+            'failedAddress': address,
+            'failedPort': port,
+            'failedDataDirectory': datadir,
+            'lineno': lineno
+        }
+        if len(groups) == 2:
+            parts2 = groups[1].split('|')
+            if len(parts2) != 3:
+                msg = "line %d of file %s: expected 3 parts on new segment group, obtained %d" % (
+                    lineno, filename, len(parts2))
+                raise ExceptionNoStackTraceNeeded(msg)
+            address2, port2, datadir2 = parts2
+            check_values(lineno, address=address2, port=port2, datadir=datadir2)
+            row.update({
+                'newAddress': address2,
+                'newPort': port2,
+                'newDataDirectory': datadir2
+            })
+
+        return row
 
     def getRecoveryActionsFromConfigFile(self, gpArray):
         """
@@ -177,56 +211,44 @@ class GpRecoverSegmentProgram:
         returns: a tuple (segments in change tracking disabled mode which are unable to recover, GpMirrorListToBuild object
                  containing information of segments which are able to recover)
         """
-
-        # create fileData object from config file
-        #
         filename = self.__options.recoveryConfigFile
         rows = []
         with open(filename) as f:
             for lineno, line in line_reader(f):
-                fixed, flexible = parse_gprecoverseg_line(filename, lineno, line)
-                rows.append(ParsedConfigFileRow(fixed, flexible, line))
-        fileData = ParsedConfigFile([], rows)
+                rows.append(self._getParsedRow(filename, lineno, line))
 
-        allAddresses = [row.getFixedValuesMap()["newAddress"] for row in fileData.getRows()
-                        if "newAddress" in row.getFixedValuesMap()]
-        allNoneArr = [None] * len(allAddresses)
-        interfaceLookup = GpInterfaceToHostNameCache(self.__pool, allAddresses, allNoneArr)
+        allAddresses = [row["newAddress"] for row in rows if "newAddress" in row]
+        interfaceLookup = GpInterfaceToHostNameCache(self.__pool, allAddresses, [None]*len(allAddresses))
 
         failedSegments = []
         failoverSegments = []
-        for row in fileData.getRows():
-            fixedValues = row.getFixedValuesMap()
-            flexibleValues = row.getFlexibleValuesMap()
-
+        for row in rows:
             # find the failed segment
-            failedAddress = fixedValues['failedAddress']
-            failedPort = fixedValues['failedPort']
-            failedDataDirectory = normalizeAndValidateInputPath(fixedValues['failedDataDirectory'],
-                                                                "config file", row.getLine())
+            failedAddress = row['failedAddress']
+            failedPort = row['failedPort']
+            failedDataDirectory = normalizeAndValidateInputPath(row['failedDataDirectory'],
+                                                                "config file", row['lineno'])
             failedSegment = None
             for segment in gpArray.getDbList():
-                if segment.getSegmentAddress() == failedAddress and \
-                                str(segment.getSegmentPort()) == failedPort and \
-                                segment.getSegmentDataDirectory() == failedDataDirectory:
+                if (segment.getSegmentAddress() == failedAddress
+                        and str(segment.getSegmentPort()) == failedPort
+                        and segment.getSegmentDataDirectory() == failedDataDirectory):
 
                     if failedSegment is not None:
-                        #
                         # this could be an assertion -- configuration should not allow multiple entries!
-                        #
                         raise Exception(("A segment to recover was found twice in configuration.  "
-                                         "This segment is described by address:port:directory '%s:%s:%s' "
+                                         "This segment is described by address|port|directory '%s|%s|%s' "
                                          "on the input line: %s") %
-                                        (failedAddress, failedPort, failedDataDirectory, row.getLine()))
+                                        (failedAddress, failedPort, failedDataDirectory, row['lineno']))
                     failedSegment = segment
 
             if failedSegment is None:
                 raise Exception("A segment to recover was not found in configuration.  " \
-                                "This segment is described by address:port:directory '%s:%s:%s' on the input line: %s" %
-                                (failedAddress, failedPort, failedDataDirectory, row.getLine()))
+                                "This segment is described by address|port|directory '%s|%s|%s' on the input line: %s" %
+                                (failedAddress, failedPort, failedDataDirectory, row['lineno']))
 
             failoverSegment = None
-            if "newAddress" in fixedValues:
+            if "newAddress" in row:
                 """
                 When the second set was passed, the caller is going to tell us to where we need to failover, so
                   build a failover segment
@@ -235,18 +257,18 @@ class GpRecoverSegmentProgram:
                 failoverSegment = failedSegment
                 failedSegment = failoverSegment.copy()
 
-                address = fixedValues["newAddress"]
+                address = row["newAddress"]
                 try:
-                    port = int(fixedValues["newPort"])
+                    port = int(row["newPort"])
                 except ValueError:
-                    raise Exception('Config file format error, invalid number value in line: %s' % (row.getLine()))
+                    raise Exception('Config file format error, invalid number value in line: %s' % (row['lineno']))
 
-                dataDirectory = normalizeAndValidateInputPath(fixedValues["newDataDirectory"], "config file",
-                                                              row.getLine())
+                dataDirectory = normalizeAndValidateInputPath(row["newDataDirectory"], "config file",
+                                                              row['lineno'])
 
                 hostName = interfaceLookup.getHostName(address)
                 if hostName is None:
-                    raise Exception('Unable to find host name for address %s from line:%s' % (address, row.getLine()))
+                    raise Exception('Unable to find host name for address %s from line:%s' % (address, row['lineno']))
 
                 # now update values in failover segment
                 failoverSegment.setSegmentAddress(address)

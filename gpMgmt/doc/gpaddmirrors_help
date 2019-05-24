@@ -65,12 +65,12 @@ detailed configuration file using the -i option. This is useful if
 you want your mirror segments on a completely different set of hosts 
 than your primary segments. The format of the mirror configuration file is:
 
-mirror<content>=<content>:<address>:<port>:<datadir>
+<content>|<address>|<port>|<datadir>
 
 For example:
 
-mirror0=0:sdw1-1:60000:61000:62000:/gpdata/mir1/gp0
-mirror1=1:sdw1-1:60001:61001:62001:/gpdata/mir2/gp1
+0|sdw1-1|60000|/gpdata/mirror1/gp0
+1|sdw1-1|60001|/gpdata/mirror2/gp1
 
 The gp_segment_configuration system catalog tables can help you determine
 your current primary segment configuration so that you can plan your
@@ -123,7 +123,7 @@ OPTIONS
  follows (as per attributes in the gp_segment_configuration catalog
  table):
 
-   mirror<content>=<content>:<address>:<port>:<datadir>
+   <content>|<address>|<port>|<datadir>
 
 
 -l <logfile_directory>
@@ -209,10 +209,10 @@ $ gpaddmirrors -i mirror_config_file
 
 Where the mirror_config_file looks something like this:
 
-mirror0=0:sdw1-1:52001:53001:54001:/gpdata/mir1/gp0
-mirror1=1:sdw1-2:52002:53002:54002:/gpdata/mir2/gp1
-mirror2=2:sdw2-1:52001:53001:54001:/gpdata/mir1/gp2
-mirror3=3:sdw2-2:52002:53002:54002:/gpdata/mir2/gp3
+0|sdw1-1|52001|53001|54001|/gpdata/mir1/gp0
+1|sdw1-2|52002|53002|54002|/gpdata/mir2/gp1
+2|sdw2-1|52001|53001|54001|/gpdata/mir1/gp2
+3|sdw2-2|52002|53002|54002|/gpdata/mir2/gp3
 
 
 Output a sample mirror configuration file to use with gpaddmirrors -i:
