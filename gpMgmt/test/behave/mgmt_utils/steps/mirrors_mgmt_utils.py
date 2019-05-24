@@ -223,33 +223,33 @@ def impl(context, file_type):
     segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
     mirror = segments[0].mirrorDB
 
-    valid_config = '%s:%s:%s' % (mirror.getSegmentHostName(),
+    valid_config = '%s|%s|%s' % (mirror.getSegmentHostName(),
                                  mirror.getSegmentPort(),
                                  mirror.getSegmentDataDirectory())
 
     if file_type == 'malformed':
         contents = 'I really like coffee.'
     elif file_type == 'badhost':
-        badhost_config = '%s:%s:%s' % ('badhost',
+        badhost_config = '%s|%s|%s' % ('badhost',
                                        mirror.getSegmentPort(),
                                        context.mirror_context.working_directory)
         contents = '%s %s' % (valid_config, badhost_config)
     elif file_type == 'samedir':
-        valid_config_with_same_dir = '%s:%s:%s' % (
+        valid_config_with_same_dir = '%s|%s|%s' % (
             mirror.getSegmentHostName(),
             mirror.getSegmentPort() + 1000,
             mirror.getSegmentDataDirectory()
         )
         contents = '%s %s' % (valid_config, valid_config_with_same_dir)
     elif file_type == 'identicalAttributes':
-        valid_config_with_identical_attributes = '%s:%s:%s' % (
+        valid_config_with_identical_attributes = '%s|%s|%s' % (
             mirror.getSegmentHostName(),
             mirror.getSegmentPort(),
             mirror.getSegmentDataDirectory()
         )
         contents = '%s %s' % (valid_config, valid_config_with_identical_attributes)
     elif file_type == 'good':
-        valid_config_with_different_dir = '%s:%s:%s' % (
+        valid_config_with_different_dir = '%s|%s|%s' % (
             mirror.getSegmentHostName(),
             mirror.getSegmentPort(),
             context.mirror_context.working_directory
@@ -294,7 +294,7 @@ def impl(context, mirror_config):
 
     # Port numbers and addresses are hardcoded to TestCluster values, assuming a 3-host 2-segment cluster.
     input_filename = "/tmp/gpmovemirrors_input_%s" % mirror_config
-    line_template = "%s:%d:%s %s:%d:%s\n"
+    line_template = "%s|%d|%s %s|%d|%s\n"
 
     # The mirrors for contents 0 and 3 are excluded from the two maps below because they are the same in either configuration
     # NOTE: this configuration of the GPDB cluster assumes that configuration set up in concourse's

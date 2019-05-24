@@ -33,10 +33,10 @@ try:
     from gppylib.gpcatalog import MASTER_ONLY_TABLES
     from gppylib.operations.package import SyncPackages
     from gppylib.operations.utils import ParallelOperation
-    from gppylib.parseutils import line_reader, parse_gpexpand_segment_line, \
-        canonicalize_address
+    from gppylib.parseutils import line_reader, check_values, canonicalize_address
     from gppylib.heapchecksum import HeapChecksum
     from gppylib.commands.pg import PgBaseBackup
+    from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -992,7 +992,7 @@ class gpexpand:
         logger.info("Generating input file...")
 
         for db in self.gparray.getExpansionSegDbList():
-            tempStr = "%s:%s:%d:%s:%d:%d:%s" % (canonicalize_address(db.getSegmentHostName())
+            tempStr = "%s|%s|%d|%s|%d|%d|%s" % (canonicalize_address(db.getSegmentHostName())
                                                 , canonicalize_address(db.getSegmentAddress())
                                                 , db.getSegmentPort()
                                                 , db.getSegmentDataDirectory()
@@ -1022,6 +1022,22 @@ class gpexpand:
         except Exception, e:
             raise ExpansionError('Invalid input file: %s' % e)
 
+    def _getParsedRow(self, lineno, line):
+        parts = line.split('|')
+        if len(parts) != 7:
+            raise ExceptionNoStackTraceNeeded("expected 7 parts, obtained %d" % len(parts))
+        hostname, address, port, datadir, dbid, contentId, role = parts
+        check_values(lineno, address=address, port=port, datadir=datadir, content=contentId,
+                     hostname=hostname, dbid=dbid, role=role)
+        return NewSegmentInput(hostname=hostname
+                                        , port=port
+                                        , address=address
+                                        , datadir=datadir
+                                        , dbid=dbid
+                                        , contentId=contentId
+                                        , role=role
+                                        )
+
     def read_input_files(self, inputFilename=None):
         """Reads and validates line format of the input file passed
         in on the command line via the -i arg"""
@@ -1037,45 +1053,20 @@ class gpexpand:
 
         try:
             f = open(inputFilename, 'r')
-            try:
-                for line, l in line_reader(f):
-
-                    hostname, address, port, datadir, dbid, contentId, role \
-                        = parse_gpexpand_segment_line(inputFilename, line, l)
-
-                    # Check that input values look reasonable.
-                    if hostname is None or len(hostname) == 0:
-                        raise ExpansionError("Invalid host name on line " + str(line))
-                    if address is None or len(address) == 0:
-                        raise ExpansionError("Invalid address on line " + str(line))
-                    if port is None or str(port).isdigit() == False or int(port) < 0:
-                        raise ExpansionError("Invalid port number on line " + str(line))
-                    if datadir is None or len(datadir) == 0:
-                        raise ExpansionError("Invalid data directory on line " + str(line))
-                    if dbid is None or str(dbid).isdigit() == False or int(dbid) < 0:
-                        raise ExpansionError("Invalid dbid on line " + str(line))
-                    if contentId is None or str(contentId).isdigit() == False or int(contentId) < 0:
-                        raise ExpansionError("Invalid contentId on line " + str(line))
-                    if role is None or len(role) > 1 or (role != 'p' and role != 'm'):
-                        raise ExpansionError("Invalid role on line " + str(line))
-
-                    retValue.append(NewSegmentInput(hostname=hostname
-                                                    , port=port
-                                                    , address=address
-                                                    , datadir=datadir
-                                                    , dbid=dbid
-                                                    , contentId=contentId
-                                                    , role=role
-                                                    ))
-            except ValueError:
-                raise ExpansionError('Missing or invalid value on line %d.' % line)
-            except Exception, e:
-                raise ExpansionError('Invalid input file on line %d: %s' % (line, str(e)))
-            finally:
-                f.close()
-            return retValue
+            for lineno, line in line_reader(f):
+                try:
+                    retValue.append(self._getParsedRow(lineno, line))
+                except ValueError:
+                    raise ExpansionError('Missing or invalid value on line %d of file %s.' % (lineno, inputFilename))
+                except Exception, e:
+                    raise ExpansionError('Invalid input file on line %d of file %s: %s' % (lineno, inputFilename, str(e)))
         except IOError:
-            raise ExpansionError('Input file %s not found' % self.options.filename)
+            raise ExpansionError('Input file %s not found' % inputFilename)
+        finally:
+            if f is not None:
+                f.close()
+
+        return retValue
 
     def lock_catalog(self):
         self.conn_catalog_lock = dbconn.connect(self.dburl, utility=True, encoding='UTF8')

@@ -2231,10 +2231,10 @@ def _gpexpand_redistribute(context, duration=False, endtime=False):
 
 @when('the user runs gpexpand with a static inputfile for a single-node cluster with mirrors')
 def impl(context):
-    inputfile_contents = """sdw1:sdw1:20502:/tmp/gpexpand_behave/data/primary/gpseg2:6:2:p
-sdw1:sdw1:21502:/tmp/gpexpand_behave/data/mirror/gpseg2:8:2:m
-sdw1:sdw1:20503:/tmp/gpexpand_behave/data/primary/gpseg3:7:3:p
-sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
+    inputfile_contents = """sdw1|sdw1|20502|/tmp/gpexpand_behave/data/primary/gpseg2|6|2|p
+sdw1|sdw1|21502|/tmp/gpexpand_behave/data/mirror/gpseg2|8|2|m
+sdw1|sdw1|20503|/tmp/gpexpand_behave/data/primary/gpseg3|7|3|p
+sdw1|sdw1|21503|/tmp/gpexpand_behave/data/mirror/gpseg3|9|3|m"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     inputfile_name = "%s/gpexpand_inputfile_%s" % (context.working_directory, timestamp)
     with open(inputfile_name, 'w') as fd:
@@ -2247,8 +2247,8 @@ sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
 
 @when('the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check')
 def impl(context):
-    inputfile_contents = """sdw1:sdw1:20502:/data/gpdata/gpexpand/data/primary/gpseg2:7:2:p
-sdw1:sdw1:21502:/data/gpdata/gpexpand/data/mirror/gpseg2:8:2:m"""
+    inputfile_contents = """sdw1|sdw1|20502|/data/gpdata/gpexpand/data/primary/gpseg2|7|2|p
+sdw1|sdw1|21502|/data/gpdata/gpexpand/data/mirror/gpseg2|8|2|m"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     inputfile_name = "%s/gpexpand_inputfile_%s" % (context.working_directory, timestamp)
     with open(inputfile_name, 'w') as fd:
