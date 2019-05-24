@@ -102,7 +102,7 @@ class GpBuild(GpdbBuildBase):
             if fsql.endswith('.sql') and fsql not in ['stats.sql', 'schema.sql']:
                 output_fname = 'out/{}'.format(fsql.replace('.sql', '.out'))
                 with open(output_fname, 'w') as fout:
-                    current_status = self._run_gpdb_command("env PGOPTIONS='-c optimizer_enable_full_join=on' psql -a -f sql/{}".format(fsql), stdout=fout, stderr=fout, source_env_cmd=source_env_cmd)
+                    current_status = self._run_gpdb_command("env PGOPTIONS='-c optimizer_expand_fulljoin=on' psql -a -f sql/{}".format(fsql), stdout=fout, stderr=fout, source_env_cmd=source_env_cmd)
                     print "status: {0}".format(current_status)
                     status = status if status != 0 else current_status
 

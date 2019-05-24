@@ -542,7 +542,7 @@ CConfigParamMapping::PackConfigParamInBitset
 		traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::ExfJoinAssociativity));
 	}
 
-	if (!optimizer_enable_full_join)
+	if (!optimizer_expand_fulljoin)
 	{
 		traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::ExfExpandFullOuterJoin));
 	}
