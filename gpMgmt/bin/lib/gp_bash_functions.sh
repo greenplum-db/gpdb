@@ -972,33 +972,40 @@ PING_HOST () {
 	TARGET_HOST=$1;shift
 	PING_EXIT=$1
 	if [ x"" == x"$PING_EXIT" ];then PING_EXIT=0;fi
+	OUTPUT=""
 	case $OS_TYPE in
 		darwin )
-			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1
+			OUTPUT=$($PING $PING_TIME $TARGET_HOST 2>&1 || $PING6 $PING_TIME $TARGET_HOST 2>&1)
                         ;;
 		linux )
-			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1 || $PING6 $TARGET_HOST $PING_TIME > /dev/null 2>&1
+			OUTPUT=$($PING $TARGET_HOST $PING_TIME 2>&1 || $PING6 $TARGET_HOST $PING_TIME 2>&1)
                         ;;
 		openbsd )
-			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1
+			OUTPUT=$($PING $PING_TIME $TARGET_HOST 2>&1 || $PING6 $PING_TIME $TARGET_HOST 2>&1)
                         ;;
 		* )
-			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1
+			OUTPUT=$($PING $TARGET_HOST $PING_TIME 2>&1)
 	esac
 	RETVAL=$?
 	case $RETVAL in
 		0) LOG_MSG "[INFO]:-$TARGET_HOST contact established"
                    ;;
 		1) if [ $PING_EXIT -eq 0 ];then
-			ERROR_EXIT "[FATAL]:-Unable to contact $TARGET_HOST" 2
+			ERROR_EXIT "[FATAL]:-Unable to contact $TARGET_HOST: $OUTPUT" 2
 		   else
-		        LOG_MSG "[WARN]:-Unable to contact $TARGET_HOST" 1
+			LOG_MSG "[WARN]:-Unable to contact $TARGET_HOST: $OUTPUT" 1
 		   fi
                    ;;
 		2) if [ $PING_EXIT -eq 0 ];then
-		 	ERROR_EXIT "[FATAL]:-Unknown host $TARGET_HOST" 2
+			ERROR_EXIT "[FATAL]:-Unknown host $TARGET_HOST: $OUTPUT" 2
 		   else
-			LOG_MSG "[WARN]:-Unknown host $TARGET_HOST" 1
+			LOG_MSG "[WARN]:-Unknown host $TARGET_HOST: $OUTPUT" 1
+		   fi
+                   ;;
+		*) if [ $PING_EXIT -eq 0 ];then
+			ERROR_EXIT "[FATAL]:-Cannot ping host $TARGET_HOST: $OUTPUT" 2
+		   else
+			LOG_MSG "[WARN]:-Cannot ping host $TARGET_HOST: $OUTPUT" 1
 		   fi
                    ;;
 	esac
