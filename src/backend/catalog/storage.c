@@ -58,7 +58,6 @@ typedef struct PendingRelDelete
 	bool		atCommit;		/* T=delete at commit; F=delete at abort */
 	int			nestLevel;		/* xact nesting level of request */
 	struct PendingRelDelete *next;		/* linked-list link */
-	bool		dbOperation;	/* T=operate on database; F=operate on relation */
 } PendingRelDelete;
 
 static PendingRelDelete *pendingDeletes = NULL; /* head of linked list */
@@ -115,7 +114,6 @@ RelationCreateStorage(RelFileNode rnode, char relpersistence, char relstorage)
 	pending->relnode.isTempRelation = backend == TempRelBackendId;
 	pending->atCommit = false;	/* delete if abort */
 	pending->nestLevel = GetCurrentTransactionNestLevel();
-	pending->dbOperation = false;
 	pending->next = pendingDeletes;
 	pendingDeletes = pending;
 }
@@ -160,7 +158,6 @@ RelationDropStorage(Relation rel)
 	pending->relnode.isTempRelation = rel->rd_backend == TempRelBackendId;
 	pending->atCommit = true;	/* delete if commit */
 	pending->nestLevel = GetCurrentTransactionNestLevel();
-	pending->dbOperation = false;
 	pending->next = pendingDeletes;
 	pendingDeletes = pending;
 
@@ -175,35 +172,6 @@ RelationDropStorage(Relation rel)
 	 */
 
 	RelationCloseSmgr(rel);
-}
-
-/*
- * DatabaseDropStorage
- *		Schedule unlinking of database directory at transaction commit.
- */
-void
-DatabaseDropStorage(Oid db_id, Oid tablespace_id)
-{
-	/*
-	 * Drop/Alter database cannot be part of a transaction, therefore
-	 * pendingDeletes should be empty
-	 */
-	Assert(pendingDeletes == NULL);
-	PendingRelDelete *pending;
-
-	/* Add the relation to the list of stuff to delete at commit */
-	pending = (PendingRelDelete *)
-		MemoryContextAlloc(TopMemoryContext, sizeof(PendingRelDelete));
-	pending->relnode.node.spcNode = tablespace_id;
-	pending->relnode.node.dbNode = db_id;
-	pending->relnode.node.relNode = InvalidOid;
-
-	pending->relnode.isTempRelation = false;
-	pending->atCommit = true;	/* delete if commit */
-	pending->nestLevel = GetCurrentTransactionNestLevel();
-	pending->dbOperation = true;
-	pending->next = pendingDeletes;
-	pendingDeletes = pending;
 }
 
 /*
@@ -372,16 +340,6 @@ smgrDoPendingDeletes(bool isCommit)
 			/* do deletion if called for */
 			if (pending->atCommit == isCommit)
 			{
-				if (pending->dbOperation)
-				{
-					Assert(next == NULL);
-					Assert(pending->relnode.node.relNode == InvalidOid);
-					DropDatabaseDirectory(pending->relnode.node.dbNode,
-										pending->relnode.node.spcNode);
-					pfree(pending);
-					return;
-				}
-
 				SMgrRelation srel;
 				/* GPDB: backend can only be TempRelBackendId or
 				 * InvalidBackendId for a given relfile since we don't tie temp
@@ -460,8 +418,7 @@ smgrGetPendingDeletes(bool forCommit, RelFileNodePendingDelete **ptr)
 	nrels = 0;
 	for (pending = pendingDeletes; pending != NULL; pending = pending->next)
 	{
-		if (pending->nestLevel >= nestLevel && pending->atCommit == forCommit &&
-			!pending->dbOperation
+		if (pending->nestLevel >= nestLevel && pending->atCommit == forCommit
 			/*
 			 * Greenplum allows transactions that access temporary tables to be
 			 * prepared.
@@ -479,8 +436,7 @@ smgrGetPendingDeletes(bool forCommit, RelFileNodePendingDelete **ptr)
 	*ptr = rptr;
 	for (pending = pendingDeletes; pending != NULL; pending = pending->next)
 	{
-		if (pending->nestLevel >= nestLevel && pending->atCommit == forCommit &&
-			!pending->dbOperation
+		if (pending->nestLevel >= nestLevel && pending->atCommit == forCommit
 			/*
 			 * Keep this loop condition identical to above
 			 */
@@ -493,7 +449,6 @@ smgrGetPendingDeletes(bool forCommit, RelFileNodePendingDelete **ptr)
 	}
 	return nrels;
 }
-
 /*
  *	PostPrepare_smgr -- Clean up after a successful PREPARE
  *
@@ -515,7 +470,6 @@ PostPrepare_smgr(void)
 		pfree(pending);
 	}
 }
-
 
 /*
  * AtSubCommit_smgr() --- Take care of subtransaction commit.

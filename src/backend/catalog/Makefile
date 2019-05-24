@@ -22,7 +22,7 @@ OBJS += pg_exttable.o pg_extprotocol.o \
        aoseg.o aoblkdir.o gp_fastsequence.o gp_segment_config.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
        pg_appendonly.o \
-       oid_dispatch.o aocatalog.o storage_tablespace.o
+       oid_dispatch.o aocatalog.o storage_tablespace.o storage_database.o
 
 BKIFILES = postgres.bki postgres.description postgres.shdescription
 
