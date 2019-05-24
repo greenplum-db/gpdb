@@ -33,11 +33,8 @@ function _main() {
     sles)
         export BLD_ARCH=sles11_x86_64
         ;;
-    win32)
-        export BLD_ARCH=win32
-        ;;
     *)
-        echo "only centos, sles and win32 are supported TARGET_OS'es"
+        echo "only centos, sles are supported TARGET_OS'es"
         false
         ;;
   esac
