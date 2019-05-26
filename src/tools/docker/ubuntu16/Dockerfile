@@ -1,5 +1,7 @@
 FROM ubuntu:16.04
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends apt-utils software-properties-common && \
     apt-get install -y --no-install-recommends openjdk-8-jdk && \
@@ -18,6 +20,7 @@ RUN apt-get update -y && \
     flex \
     git-core \
     iputils-ping \
+    iproute2 \
     jq \
     libapr1-dev \
     libbz2-dev \
@@ -28,7 +31,6 @@ RUN apt-get update -y && \
     libperl-dev \
     libreadline-dev \
     libssl-dev \
-    libxerces-c-dev \
     libxml2-dev \
     libyaml-dev \
     libzstd1-dev \
@@ -43,7 +45,6 @@ RUN apt-get update -y && \
     python-pip \
     python-psutil \
     python-setuptools \
-    python-software-properties \
     less \
     rsync \
     ssh \
@@ -61,13 +62,14 @@ RUN locale-gen en_US.UTF-8 && \
     cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
     chmod 0600 /root/.ssh/authorized_keys && \
     echo "root:password" | chpasswd 2> /dev/null && \
-    { ssh-keyscan localhost; ssh-keyscan 0.0.0.0; } >> /root/.ssh/known_hosts && \
     #
     sed -i -e 's|Defaults    requiretty|#Defaults    requiretty|' /etc/sudoers && \
     sed -ri 's/UsePAM yes/UsePAM no/g;s/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config && \
     sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@;s@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config && \
+    service ssh start && \
+    { ssh-keyscan localhost; ssh-keyscan 0.0.0.0; } >> /root/.ssh/known_hosts && \
     # create user gpadmin since GPDB cannot run under root
-    groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin && \
+    groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin -s /bin/bash && \
     echo "gpadmin  ALL=(ALL)       NOPASSWD: ALL" > /etc/sudoers.d/gpadmin && \
     groupadd supergroup && usermod -a -G supergroup gpadmin && \
     mkdir -p /home/gpadmin/.ssh && \
