@@ -207,3 +207,4 @@ reset gp_autostats_mode;
 CREATE SEQUENCE s_serial START 100;
 VACUUM (ANALYZE, VERBOSE) s_serial;
 DROP SEQUENCE s_serial;
+VACUUM gp_toolkit.__gp_log_master_ext;
