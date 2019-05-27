@@ -130,7 +130,7 @@ function include_zstd() {
       ubuntu) libdir=/usr/lib ;;
     esac
     cp ${libdir}/pkgconfig/libzstd.pc lib/pkgconfig
-    cp ${libdir}/libzstd.so* lib
+    cp -d ${libdir}/libzstd.so* lib
     cp /usr/include/zstd*.h include
   popd
 }
@@ -142,7 +142,7 @@ function include_quicklz() {
       centos) libdir=/usr/lib64 ;;
       ubuntu) libdir=/usr/local/lib ;;
     esac
-    cp ${libdir}/libquicklz.so* lib
+    cp -d ${libdir}/libquicklz.so* lib
   popd
 }
 
@@ -154,7 +154,7 @@ function include_libstdcxx() {
           *.py)
             ;; # we don't vendor libstdc++.so.*-gdb.py
           *)
-            cp "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
+            cp -d "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
             ;; # vendor everything else
         esac
       done
