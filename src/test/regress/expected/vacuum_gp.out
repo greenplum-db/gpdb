@@ -331,5 +331,7 @@ reset gp_autostats_mode;
 -- Check forbidden relkind for vacuum is correctly skipped
 CREATE SEQUENCE s_serial START 100;
 VACUUM (ANALYZE, VERBOSE) s_serial;
-WARNING:  skipping "s_serial" --- cannot vacuum non-tables or special system tables
+WARNING:  skipping "s_serial" --- cannot vacuum non-tables, external tables, foreign tables or special system tables
 DROP SEQUENCE s_serial;
+VACUUM gp_toolkit.__gp_log_master_ext;
+WARNING:  skipping "__gp_log_master_ext" --- cannot vacuum non-tables, external tables, foreign tables or special system tables
