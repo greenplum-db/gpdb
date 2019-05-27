@@ -1,7 +1,7 @@
 select count(*) from orders;
  count 
 -------
- 38    
+ 40    
 (1 row)
 select pg_sleep(10);
  pg_sleep 
