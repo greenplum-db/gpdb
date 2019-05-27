@@ -86,14 +86,6 @@ sync_tools: opt_write_test
 	-Divyrepo.host=$(IVYREPO_HOST) -Divyrepo.realm="$(IVYREPO_REALM)" \
 	-Divyrepo.user=$(IVYREPO_USER) -Divyrepo.passwd="$(IVYREPO_PASSWD)" -quiet resolve);
 
-ifeq "$(findstring aix,$(BLD_ARCH))" ""
-ifeq "$(findstring sles,$(BLD_ARCH))" ""
-	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/archive/v3.47.0.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
-else
-	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/releases/download/v3.47.0/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
-endif
-endif
-
 clean_tools: opt_write_test
 	@cd releng/make/dependencies; \
 	/opt/releng/apache-ant/bin/ant clean; \
