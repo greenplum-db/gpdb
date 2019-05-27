@@ -161,7 +161,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         dbconn.execSQL(conn, "COMMIT")
         conn.close()
 
-        gpArray.setSegmentsAsLoadedFromDb([seg.copy() for seg in gpArray.getDbList()])
+        gpArray.setSegmentsAsLoadedFromDb([seg.copy() for seg in gpArray.getDbList(includeExpansionSegs=True)])
 
 
     def __updateSystemConfigRemoveMirror(self, conn, seg, textForConfigTable):
