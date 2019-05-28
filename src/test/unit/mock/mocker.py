@@ -77,9 +77,6 @@ class CFile(object):
            weird code block based on preprocessor directives.
         """
         pat = re.compile(r'^}\s*$', re.MULTILINE)
-        if 'cdbfilerepconnserver' in self.path:
-            # FIXIT!: some of the files have unpleasant format.
-            pat = re.compile(r'^ ?}', re.MULTILINE)
         m = pat.search(content, index)
         if m:
             if 'cdbgroup' in self.path:

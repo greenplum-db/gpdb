@@ -88,8 +88,6 @@ FI_IDENT(FinishPreparedTransactionCommitPass2AbortingCreateNeeded, "finish_prepa
 FI_IDENT(FinishPreparedTransactionAbortPass1AbortingCreateNeeded, "finish_prepared_transaction_abort_pass1_aborting_create_needed")
 /* inject fault after physical drop and before final persistent state change is permanently stored during second pass */
 FI_IDENT(FinishPreparedTransactionAbortPass2AbortingCreateNeeded, "finish_prepared_transaction_abort_pass2_aborting_create_needed")
-/* inject fault to start verification (create pending => aborting create) */
-FI_IDENT(FileRepVerification, "filerep_verification")
 /* inject fault after transaction is prepared */
 FI_IDENT(OnePhaseTransactionCommit, "onephase_transaction_commit")
 /* inject fault before transaction commit is recorded in xlog (trigger filerep verification)*/
