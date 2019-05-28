@@ -379,18 +379,18 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         all of the data in an inheritance hierarchy.</p>
       <p>Similarly, to copy data from a partitioned table with a leaf child partition that is an
         external table, use an SQL query to copy the data. For example, if the table
-          <codeph>my_sales</codeph> contains a with a leaf child partition that is an external
-        table, this command <codeph>COPY my_sales TO stdout</codeph> returns an error. This command
-        sends the data to stdout:<codeblock>COPY (SELECT * from my_sales ) TO stdout</codeblock></p>
+          <codeph>my_sales</codeph> contains a leaf child partition that is an external table, this
+        command <codeph>COPY my_sales TO stdout</codeph> returns an error. This command sends the
+        data to stdout:<codeblock>COPY (SELECT * from my_sales ) TO stdout</codeblock></p>
       <p>The <codeph>BINARY</codeph> key word causes all data to be stored/read as binary format
         rather than as text. It is somewhat faster than the normal text mode, but a binary-format
         file is less portable across machine architectures and Greenplum Database versions. Also,
         you cannot run <codeph>COPY FROM</codeph> in single row error isolation mode if the data is
         in binary format.</p>
       <p>You must have <codeph>SELECT</codeph> privilege on the table whose values are read by
-          <codeph>COPY TO</codeph>, and insert privilege on the table into which values are inserted
-        by <codeph>COPY FROM</codeph>. It is sufficient to have column privileges on the columns
-        listed in the command.</p>
+          <codeph>COPY TO</codeph>, and <codeph>INSERT</codeph> privilege on the table into which
+        values are inserted by <codeph>COPY FROM</codeph>. It is sufficient to have column
+        privileges on the columns listed in the command.</p>
       <p>Files named in a <codeph>COPY</codeph> command are read or written directly by the database
         server, not by the client application. Therefore, they must reside on or be accessible to
         the Greenplum Database master host machine, not the client. They must be accessible to and

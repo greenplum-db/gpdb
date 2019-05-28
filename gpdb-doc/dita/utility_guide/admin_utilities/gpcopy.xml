@@ -195,7 +195,7 @@
                 </plentry>
                 <plentry>
                     <pt>--dest-port <varname>dest_port</varname></pt>
-                    <pd>Destination Greenplum Database port number, If neither
+                    <pd>Destination Greenplum Database port number. If neither
                             <codeph>--dest-port</codeph> nor <codeph>--data-port-range</codeph> is
                         specified, then the default is 5432.</pd>
                 </plentry>
@@ -203,7 +203,7 @@
                     <pt>--data-port-range
                             <varname>lower_port</varname>-<varname>upper_port</varname></pt>
                     <pd>A range of port numbers to try as the destination port for Greenplum
-                        Datrabase hosts. <codeph>gpcopy</codeph> uses the first available port
+                        Database hosts. <codeph>gpcopy</codeph> uses the first available port
                         specified in the range (inclusive). <varname>lower_port</varname> must be
                         greater than zero, and <varname>upper_port</varname> must be a greater
                         value. If neither <codeph>--dest-port</codeph> nor
