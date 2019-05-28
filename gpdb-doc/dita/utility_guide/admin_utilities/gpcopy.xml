@@ -76,11 +76,10 @@
                     <li>You must use one of these options to specify how to manage data in the
                         destination database: <codeph>--skip-existing</codeph>,
                             <codeph>--truncate</codeph>, <codeph>--drop</codeph>, or
-                            <codeph>--append</codeph>. Note, however, that these options are not
-                        compatible when you use <codeph>--dest-table</codeph> to rename the target
-                        database. .<p>If you specify both the <codeph>--append</codeph> and
-                                <codeph>--validation</codeph> options, validation of source table
-                            data fails if a destination table contains data. </p></li>
+                            <codeph>--append</codeph>.<p>If you specify both the
+                                <codeph>--append</codeph> and <codeph>--validation</codeph> options,
+                            validation of source table data fails if a destination table contains
+                            data. </p></li>
                 </ul></p>
             <p>If you specify the option <codeph>--truncate-source-after</codeph>, you must also
                 specify the <codeph>--validate</codeph> option. When
@@ -125,9 +124,7 @@
                     <pd>Append data to the table in the destination database if it already exists. </pd>
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. This option is
-                        ignored if you use <codeph>--dest-table</codeph> to change the destination
-                        database.</pd>
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
                 </plentry>
                 <plentry>
                     <pt>--dry-run</pt>
@@ -222,9 +219,7 @@
                         the table and creates it again. </pd>
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. This option is
-                        ignored if you use <codeph>--dest-table</codeph> to change the destination
-                        database.</pd>
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
                 </plentry>
                 <plentry>
                     <pt>--exclude-table
@@ -342,11 +337,11 @@
                             <codeph>/$1/</codeph> in <codeph>--dest-table</codeph>. You cannot
                         rename the destination schema or table name components.</pd>
                     <pd>If regular expression rules would cause more than one source table name to
-                        be remapped to the same destination table, then <codeph>gpcopy</codeph>
-                        reports an error and the command fails. The
-                        <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, and <codeph>--append</codeph> if you use
-                            <codeph>--dest-table</codeph> to change the destination database.</pd>
+                        be remapped to the same destination table, then the
+                            <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph> options determine
+                        how <codeph>gpcopy</codeph> handles subsequent copy requests to the existing
+                        table.</pd>
                 </plentry>
                 <plentry>
                     <pt>--include-table-file <varname>table-file</varname></pt>
@@ -453,9 +448,7 @@
                         table already exists in the destination database. </pd>
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. This option is
-                        ignored if you use <codeph>--dest-table</codeph> to change the destination
-                        database.</pd>
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
                 </plentry>
                 <plentry>
                     <pt>--source-host <varname>source_host</varname></pt>
@@ -478,9 +471,7 @@
                         database if it already exists. </pd>
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>. This option is
-                        ignored if you use <codeph>--dest-table</codeph> to change the destination
-                        database.</pd>
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
                 </plentry>
                 <plentry>
                     <pt>--truncate-source-after</pt>
