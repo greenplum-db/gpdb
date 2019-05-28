@@ -9,8 +9,9 @@ docker build -t local/gpdb-dev:centos6 centos6
 # Centos 7 (includes dependencies for building GPDB)
 docker build -t local/gpdb-dev:centos7 centos7
 
-# Ubuntu 16 (includes dependencies for building GPDB)
-docker build -t local/gpdb-dev:ubuntu16 ubuntu16
+# Ubuntu (includes dependencies for building GPDB)
+docker build -t --build-arg local/gpdb-dev:ubuntu16 ubuntu
+docker build -t --build-arg BASE_IMAGE=ubuntu:18.04 local/gpdb-dev:ubuntu18 ubuntu
 ```
 
 OR
@@ -19,6 +20,7 @@ OR
 docker pull pivotaldata/gpdb-dev:centos6
 docker pull pivotaldata/gpdb-dev:centos7
 docker pull pivotaldata/gpdb-dev:ubuntu16
+docker pull pivotaldata/gpdb-dev:ubuntu18
 ```
 
 # Build GPDB code with Docker
