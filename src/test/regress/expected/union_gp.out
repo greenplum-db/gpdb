@@ -1969,6 +1969,10 @@ select x.aa/100 aaa, x.c, y.c from cte1 x join cte1 y on x.aa=y.aa;
    1 | one  | one
 (3 rows)
 
+select from t2_ncols union select * from t2_ncols;
+ERROR:  each UNION query must have the same number of columns
+LINE 1: select from t2_ncols union select * from t2_ncols;
+                                          ^
 --
 -- Clean up
 --

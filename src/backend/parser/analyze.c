@@ -2518,30 +2518,31 @@ transformSetOperationTree_internal(ParseState *pstate, SelectStmt *stmt,
 				setop_types->ncols = numCols;
 				setop_types->leafinfos = (List **) palloc0(setop_types->ncols * sizeof(List *));
 			}
-			i = 0;
-			foreach(tl, selectQuery->targetList)
+
+			/*
+			 * It's possible that this leaf query has a different number
+			 * of columns than the previous ones. That's an error, but
+			 * we don't throw it here because we don't have the context
+			 * needed for a good error message. We don't know which
+			 * operation of the setop tree is the one where the number
+			 * of columns between the left and right branches differ.
+			 * Therefore, just return here as if nothing happened, and
+			 * we'll catch that error in the parent instead.
+			 */
+			if (numCols == setop_types->ncols)
 			{
-				TargetEntry *tle = (TargetEntry *) lfirst(tl);
+				i = 0;
+				foreach(tl, selectQuery->targetList)
+				{
+					TargetEntry *tle = (TargetEntry *) lfirst(tl);
 
-				if (tle->resjunk)
-					continue;
+					if (tle->resjunk)
+						continue;
 
-				setop_types->leafinfos[i] = lappend(setop_types->leafinfos[i],
-													(Node *) tle->expr);
-				i++;
-
-				/*
-				 * It's possible that this leaf query has a differnet number
-				 * of columns than the previous ones. That's an error, but
-				 * we don't throw it here because we don't have the context
-				 * needed for a good error message. We don't know which
-				 * operation of the setop tree is the one where the number
-				 * of columns between the left and right branches differ.
-				 * Therefore, just return here as if nothing happened, and
-				 * we'll catch that error in the parent instead.
-				 */
-				if (i == setop_types->ncols)
-					break;
+					setop_types->leafinfos[i] = lappend(setop_types->leafinfos[i],
+														(Node *) tle->expr);
+					i++;
+				}
 			}
 		}
 
