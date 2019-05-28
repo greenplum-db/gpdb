@@ -242,7 +242,7 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
             pg_stat_replication. The view lists information about the <codeph>walsender</codeph>
             process that is used for Greenplum Database master mirroring. For example, this command
             displays the process ID and state of the <codeph>walsender</codeph> process:</p>
-          <codeblock>$ psql dbname -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock>
+          <codeblock>$ psql dbname -c 'SELECT pid, state FROM pg_stat_replication;'</codeblock>
           <p>For information about the <codeph>pg_stat_replication</codeph> system view, see the
               <i>Greenplum Database Reference Guide</i>. </p>
         </section>
@@ -554,7 +554,7 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
             pg_stat_replication. The view lists information about the <codeph>walsender</codeph>
             process that is used for Greenplum Database master mirroring. For example, this command
             displays the process ID and state of the <codeph>walsender</codeph> process:</p>
-          <codeblock>$ psql dbname -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock>
+          <codeblock>$ psql dbname -c 'SELECT pid, state FROM pg_stat_replication;'</codeblock>
         </section>
       </body>
     </topic>
