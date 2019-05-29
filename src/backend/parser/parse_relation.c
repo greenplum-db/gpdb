@@ -1086,6 +1086,7 @@ addRangeTableEntry(ParseState *pstate,
 			elog(ERROR, "open relation(%u) fail", relid);
 
 		if (rel->rd_rel->relkind != RELKIND_RELATION ||
+			GpPolicyIsReplicated(rel->rd_cdbpolicy) ||
 			RelationIsAppendOptimized(rel))
 			pstate->p_canOptSelectLockingClause = false;
 

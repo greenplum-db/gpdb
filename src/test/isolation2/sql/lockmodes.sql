@@ -20,6 +20,8 @@ insert into t_lockmods select * from generate_series(1, 5);
 
 create table t_lockmods1 (c int) distributed randomly;
 
+create table t_lockmods_rep(c int) distributed replicated;
+
 -- 1.1.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
 1: explain select * from t_lockmods for update;
@@ -242,6 +244,21 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 
 1: begin;
 1: execute insert_tlockmods_ao;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+-- 1.3 With limit clause, such case should
+-- acquire ExclusiveLock on the whole table and do not generate lockrows node
+1: begin;
+1: explain select * from t_lockmods order by c limit 1 for update;
+1: select * from t_lockmods order by c limit 1 for update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+-- 1.4 For replicated table, we should lock the entire table on ExclusiveLock
+1: begin;
+1: explain select * from t_lockmods_rep for update;
+1: select * from t_lockmods_rep for update;
 2: select * from show_locks_lockmodes;
 1: abort;
 
@@ -482,6 +499,21 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 
 1: begin;
 1: execute insert_tlockmods_ao;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+-- 2.3 With limit clause, such case should
+-- acquire ExclusiveLock on the whole table and do not generate lockrows node
+1: begin;
+1: explain select * from t_lockmods order by c limit 1 for update;
+1: select * from t_lockmods order by c limit 1 for update;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+-- 2.4 For replicated table, we should lock the entire table on ExclusiveLock
+1: begin;
+1: explain select * from t_lockmods_rep for update;
+1: select * from t_lockmods_rep for update;
 2: select * from show_locks_lockmodes;
 1: abort;
 

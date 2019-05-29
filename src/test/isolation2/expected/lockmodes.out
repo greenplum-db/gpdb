@@ -23,6 +23,9 @@ INSERT 5
 create table t_lockmods1 (c int) distributed randomly;
 CREATE
 
+create table t_lockmods_rep(c int) distributed replicated;
+CREATE
+
 -- 1.1.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
 BEGIN
@@ -826,6 +829,59 @@ EXECUTE 5
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
+1: abort;
+ABORT
+
+-- 1.3 With limit clause, such case should
+-- acquire ExclusiveLock on the whole table and do not generate lockrows node
+1: begin;
+BEGIN
+1: explain select * from t_lockmods order by c limit 1 for update;
+ QUERY PLAN                                                                        
+-----------------------------------------------------------------------------------
+ Limit  (cost=2.07..2.10 rows=1 width=10)                                          
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=2.07..2.10 rows=1 width=10) 
+         Merge Key: c                                                              
+         ->  Limit  (cost=2.07..2.08 rows=1 width=10)                              
+               ->  Sort  (cost=2.07..2.09 rows=2 width=10)                         
+                     Sort Key: c                                                   
+                     ->  Seq Scan on t_lockmods  (cost=0.00..2.05 rows=2 width=10) 
+ Optimizer: Postgres query optimizer                                               
+(8 rows)
+1: select * from t_lockmods order by c limit 1 for update;
+ c 
+---
+ 1 
+(1 row)
+2: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation   
+----------+-----------------+---------+------------
+ relation | AccessShareLock | t       | t_lockmods 
+ relation | ExclusiveLock   | t       | t_lockmods 
+(2 rows)
+1: abort;
+ABORT
+
+-- 1.4 For replicated table, we should lock the entire table on ExclusiveLock
+1: begin;
+BEGIN
+1: explain select * from t_lockmods_rep for update;
+ QUERY PLAN                                                                         
+------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..1063.00 rows=96300 width=10) 
+   ->  Seq Scan on t_lockmods_rep  (cost=0.00..1063.00 rows=96300 width=10)         
+ Optimizer: Postgres query optimizer                                                
+(3 rows)
+1: select * from t_lockmods_rep for update;
+ c 
+---
+(0 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation       
+----------+-----------------+---------+----------------
+ relation | AccessShareLock | t       | t_lockmods_rep 
+ relation | ExclusiveLock   | t       | t_lockmods_rep 
+(2 rows)
 1: abort;
 ABORT
 
@@ -1689,6 +1745,59 @@ EXECUTE 5
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
+1: abort;
+ABORT
+
+-- 2.3 With limit clause, such case should
+-- acquire ExclusiveLock on the whole table and do not generate lockrows node
+1: begin;
+BEGIN
+1: explain select * from t_lockmods order by c limit 1 for update;
+ QUERY PLAN                                                                        
+-----------------------------------------------------------------------------------
+ Limit  (cost=2.07..2.10 rows=1 width=10)                                          
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=2.07..2.10 rows=1 width=10) 
+         Merge Key: c                                                              
+         ->  Limit  (cost=2.07..2.08 rows=1 width=10)                              
+               ->  Sort  (cost=2.07..2.09 rows=2 width=10)                         
+                     Sort Key: c                                                   
+                     ->  Seq Scan on t_lockmods  (cost=0.00..2.05 rows=2 width=10) 
+ Optimizer: Postgres query optimizer                                               
+(8 rows)
+1: select * from t_lockmods order by c limit 1 for update;
+ c 
+---
+ 1 
+(1 row)
+2: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation   
+----------+-----------------+---------+------------
+ relation | AccessShareLock | t       | t_lockmods 
+ relation | ExclusiveLock   | t       | t_lockmods 
+(2 rows)
+1: abort;
+ABORT
+
+-- 2.4 For replicated table, we should lock the entire table on ExclusiveLock
+1: begin;
+BEGIN
+1: explain select * from t_lockmods_rep for update;
+ QUERY PLAN                                                                         
+------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..1063.00 rows=96300 width=10) 
+   ->  Seq Scan on t_lockmods_rep  (cost=0.00..1063.00 rows=96300 width=10)         
+ Optimizer: Postgres query optimizer                                                
+(3 rows)
+1: select * from t_lockmods_rep for update;
+ c 
+---
+(0 rows)
+2: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation       
+----------+-----------------+---------+----------------
+ relation | AccessShareLock | t       | t_lockmods_rep 
+ relation | ExclusiveLock   | t       | t_lockmods_rep 
+(2 rows)
 1: abort;
 ABORT
 
