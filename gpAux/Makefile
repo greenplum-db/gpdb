@@ -138,6 +138,7 @@ rhel7_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --
 suse11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce --without-zstd $(APR_CONFIG) $(APU_CONFIG)
 sles11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce --without-zstd $(APR_CONFIG) $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
+ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
@@ -174,7 +175,7 @@ CONFIGFLAGS+= --with-includes="$(CONFIG_INCLUDES)" --with-libraries="$(CONFIG_LI
 
 # Configure in "authlibs"...
 # ...without an ext/ dir copy of curl-config on Tiger or AIX
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 rhel6_x86_64 rhel7_x86_64)" ""
+ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 rhel6_x86_64 rhel7_x86_64 ubuntu18.04_x86_64)" ""
 BLD_CURL_CONFIG=CURL_CONFIG=$(BLD_THIRDPARTY_BIN_DIR)/curl-config
 endif
 # ...and do not include the authlibs on Windows or AIX

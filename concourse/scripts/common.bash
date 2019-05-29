@@ -27,7 +27,10 @@ function setup_configure_vars() {
 }
 
 function configure() {
-  source /opt/gcc_env.sh
+  if [ -f /opt/gcc_env.sh ]; then
+    # ubuntu uses the system compiler
+    source /opt/gcc_env.sh
+  fi
   pushd gpdb_src
       # The full set of configure options which were used for building the
       # tree must be used here as well since the toplevel Makefile depends
@@ -57,7 +60,7 @@ function make_cluster() {
   export DEFAULT_QD_MAX_CONNECT=150
   export STATEMENT_MEM=250MB
   pushd gpdb_src/gpAux/gpdemo
-  su gpadmin -c "make create-demo-cluster"
+  su gpadmin -c "source /usr/local/greenplum-db-devel/greenplum_path.sh; make create-demo-cluster"
   popd
 }
 

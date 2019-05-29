@@ -129,8 +129,13 @@ def check_stdout_msg(context, msg, escapeStr = False):
     if escapeStr:
         msg = re.escape(msg)
     pat = re.compile(msg)
-    if not pat.search(context.stdout_message):
-        err_str = "Expected stdout string '%s' and found: '%s'" % (msg, context.stdout_message)
+
+    actual = context.stdout_message
+    if isinstance(msg, unicode):
+        actual = actual.decode('utf-8')
+
+    if not pat.search(actual):
+        err_str = "Expected stdout string '%s' and found: '%s'" % (msg, actual)
         raise Exception(err_str)
 
 
@@ -773,6 +778,9 @@ def wait_for_unblocked_transactions(context, num_retries=150):
         try:
             with dbconn.connect(dbconn.DbURL()) as conn:
                 # Cursor.execute() will issue an implicit BEGIN for us.
+                # Empty block of 'BEGIN' and 'END' won't start a distributed transaction,
+                # execute a DDL query to start a distributed transaction.
+                conn.cursor().execute('CREATE TEMP TABLE temp_test(a int)')
                 conn.cursor().execute('COMMIT')
                 break
         except Exception as e:

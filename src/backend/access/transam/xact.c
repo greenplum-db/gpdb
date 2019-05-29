@@ -181,6 +181,7 @@ typedef struct TransactionStateData
 	bool		startedInRecovery;		/* did we start in recovery? */
 	bool		didLogXid;		/* has xid been included in WAL record? */
 	bool		executorSaysXactDoesWrites;	/* GP executor says xact does writes */
+	bool		executorDidWriteXLog;	/* QE has wrote xlog */
 	struct TransactionStateData *parent;		/* back link to parent */
 
 	struct TransactionStateData *fastLink;        /* back link to jump to parent for efficient search */
@@ -218,6 +219,7 @@ static TransactionStateData TopTransactionStateData = {
 	false,						/* startedInRecovery */
 	false,						/* didLogXid */
 	false,						/* executorSaysXactDoesWrites */
+	false,						/* executorDidWriteXLog */
 	NULL						/* link to parent state block */
 };
 
@@ -389,14 +391,6 @@ IsAbortInProgress(void)
 }
 
 bool
-IsCommitInProgress(void)
-{
-	TransactionState s = CurrentTransactionState;
-
-	return (s->state == TRANS_COMMIT);
-}
-
-bool
 IsTransactionPreparing(void)
 {
 	TransactionState s = CurrentTransactionState;
@@ -418,6 +412,19 @@ IsAbortedTransactionBlockState(void)
 		return true;
 
 	return false;
+}
+
+bool
+TransactionDidWriteXLog(void)
+{
+	return (XactLastRecEnd != InvalidXLogRecPtr);
+}
+
+bool
+ExecutorDidWriteXLog(void)
+{
+	TransactionState s = CurrentTransactionState;
+	return s->executorDidWriteXLog;
 }
 
 void
@@ -513,6 +520,11 @@ MarkCurrentTransactionIdLoggedIfAny(void)
 		CurrentTransactionState->didLogXid = true;
 }
 
+void
+MarkCurrentTransactionWriteXLogOnExecutor(void)
+{
+	CurrentTransactionState->executorDidWriteXLog = true;
+}
 
 /*
  *	GetStableLatestTransactionId
@@ -2243,6 +2255,7 @@ StartTransaction(void)
 	 */
 	nUnreportedXids = 0;
 	s->didLogXid = false;
+	s->executorDidWriteXLog = false;
 
 	/*
 	 * must initialize resource-management stuff first
@@ -5069,6 +5082,26 @@ RollbackAndReleaseCurrentSubTransaction(void)
 	}
 }
 
+void
+CommitNotPreparedTransaction(void)
+{
+	TransactionState s = CurrentTransactionState;
+
+	while (s->blockState == TBLOCK_SUBINPROGRESS)
+	{
+		CommitSubTransaction();
+		s = CurrentTransactionState;
+	}
+
+	if (s->blockState == TBLOCK_INPROGRESS)
+	{
+		Assert(s->parent == NULL);
+		CommitTransaction();
+	}
+	s->blockState = TBLOCK_DEFAULT;
+	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
+	return;
+}
 /*
  *	AbortOutOfAnyTransaction
  *

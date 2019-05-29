@@ -16,22 +16,48 @@ function expand_glob_ensure_exists() {
   echo "${glob[0]}"
 }
 
-function prep_env_for_centos() {
-  case "${TARGET_OS_VERSION}" in
-    6|7) BLD_ARCH=rhel${TARGET_OS_VERSION}_x86_64 ;;
-    *) echo "TARGET_OS_VERSION not set or recognized for Centos/RHEL" ; exit 1 ;;
+function prep_env() {
+  case "${TARGET_OS}" in
+  centos)
+    case "${TARGET_OS_VERSION}" in
+    6 | 7) BLD_ARCH=rhel${TARGET_OS_VERSION}_x86_64 ;;
+    *)
+      echo "TARGET_OS_VERSION not set or recognized for Centos/RHEL"
+      exit 1
+      ;;
+    esac
+    ;;
+  ubuntu)
+    case "${TARGET_OS_VERSION}" in
+    18.04) BLD_ARCH=ubuntu18.04_x86_64 ;;
+    *)
+      echo "TARGET_OS_VERSION not set or recognized for Ubuntu"
+      exit 1
+      ;;
+    esac
+    ;;
   esac
 }
 
 function install_deps_for_centos() {
-  # quicklz is proprietary code that we cannot put in our public Docker images.
   rpm -i libquicklz-installer/libquicklz-*.rpm
   rpm -i libquicklz-devel-installer/libquicklz-*.rpm
   # install libsigar from tar.gz
   tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
 }
 
-function link_tools_for_centos() {
+function install_deps_for_ubuntu() {
+  dpkg --install libquicklz-installer/libquicklz-*.deb
+}
+
+function install_deps() {
+  case "${TARGET_OS}" in
+    centos) install_deps_for_centos;;
+    ubuntu) install_deps_for_ubuntu;;
+  esac
+}
+
+function link_python() {
   tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
   ln -sf $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
 }
@@ -97,37 +123,44 @@ function unittest_check_gpdb() {
 }
 
 function include_zstd() {
+  local libdir
   pushd ${GREENPLUM_INSTALL_DIR}
-    if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig
-      cp /usr/lib64/libzstd.so* lib
-      cp /usr/include/zstd*.h include
-    fi
+    case "${TARGET_OS}" in
+      centos) libdir=/usr/lib64 ;;
+      ubuntu) libdir=/usr/lib ;;
+    esac
+    cp ${libdir}/pkgconfig/libzstd.pc lib/pkgconfig
+    cp -d ${libdir}/libzstd.so* lib
+    cp /usr/include/zstd*.h include
   popd
 }
 
 function include_quicklz() {
+  local libdir
   pushd ${GREENPLUM_INSTALL_DIR}
-    if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/libquicklz.so* lib
-    fi
+    case "${TARGET_OS}" in
+      centos) libdir=/usr/lib64 ;;
+      ubuntu) libdir=/usr/local/lib ;;
+    esac
+    cp -d ${libdir}/libquicklz.so* lib
   popd
 }
 
 function include_libstdcxx() {
-  pushd /opt/gcc-6*/lib64
-    if [ "${TARGET_OS}" == "centos" ] ; then
+  if [ "${TARGET_OS}" == "centos" ] ; then
+    pushd /opt/gcc-6*/lib64
       for libfile in libstdc++.so.*; do
         case $libfile in
           *.py)
             ;; # we don't vendor libstdc++.so.*-gdb.py
           *)
-            cp "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
+            cp -d "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
             ;; # vendor everything else
         esac
       done
-    fi
-  popd
+    popd
+  fi
+
 }
 
 function export_gpdb() {
@@ -184,15 +217,15 @@ function build_and_test_orca()
 
 function _main() {
   # Copy input ext dir; assuming ext doesnt exist
-  mv gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
+  cp -a gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
 
   case "${TARGET_OS}" in
-    centos)
-      prep_env_for_centos
+    centos|ubuntu)
+      prep_env
       build_xerces
       build_and_test_orca
-      install_deps_for_centos
-      link_tools_for_centos
+      install_deps
+      link_python
       ;;
     sles)
       prep_env_for_sles
@@ -203,7 +236,7 @@ function _main() {
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --disable-pxf"
         ;;
     *)
-        echo "only centos, sles and win32 are supported TARGET_OS'es"
+        echo "only centos, sles, ubuntu, and win32 are supported TARGET_OS'es"
         false
         ;;
   esac

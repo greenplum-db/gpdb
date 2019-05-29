@@ -22,6 +22,7 @@
 
 #include "postgres.h"
 
+#include <sys/param.h>			/* for MAXHOSTNAMELEN */
 #include "access/genam.h"
 #include "catalog/gp_segment_config.h"
 #include "nodes/makefuncs.h"
@@ -48,6 +49,7 @@
 #include "postmaster/fts.h"
 #include "catalog/namespace.h"
 #include "utils/gpexpand.h"
+#include "access/xact.h"
 
 #define MAX_CACHED_1_GANGS 1
 
@@ -61,6 +63,10 @@
 	Assert((cdbinfo)->arg >= 0); \
 	Assert((cdbinfo)->cdbs->arg >= 0); \
 
+#define GPSEGCONFIGDUMPFILE "gpsegconfig_dump"
+#define GPSEGCONFIGDUMPFILETMP "gpsegconfig_dump_tmp"
+#define GPSEGCONFIGNUMATTR 9 
+
 MemoryContext CdbComponentsContext = NULL;
 static CdbComponentDatabases *cdb_component_dbs = NULL;
 
@@ -72,7 +78,10 @@ static void cleanupComponentIdleQEs(CdbComponentDatabaseInfo *cdi, bool includeW
 
 static int	CdbComponentDatabaseInfoCompare(const void *p1, const void *p2);
 
-static void getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel);
+static GpSegConfigEntry * readGpSegConfigFromCatalog(int *total_dbs);
+static GpSegConfigEntry * readGpSegConfigFromFTSFiles(int *total_dbs);
+
+static void getAddressesForDBid(GpSegConfigEntry *c, int elevel);
 static HTAB *hostSegsHashTableInit(void);
 
 static int nextQEIdentifer(CdbComponentDatabases *cdbs);
@@ -94,51 +103,236 @@ typedef struct HostSegsEntry
 } HostSegsEntry;
 
 /*
+ * Helper functions for fetching latest gp_segment_configuration outside of
+ * the transaction.
+ *
+ * In phase 2 of 2PC, current xact has been marked to TRANS_COMMIT/ABORT, 
+ * COMMIT_PREPARED or ABORT_PREPARED DTM are performed, if they failed,
+ * dispather disconnect and destroy all gangs and fetch the latest segment
+ * configurations to do RETRY_COMMIT_PREPARED or RETRY_ABORT_PREPARED,
+ * however, postgres disallow catalog lookups outside of xacts.
+ *
+ * readGpSegConfigFromFTSFiles() notify FTS to dump the configs from catalog
+ * to a flat file and then read configurations from that file.
+ */
+static GpSegConfigEntry *
+readGpSegConfigFromFTSFiles(int *total_dbs)
+{
+	FILE	*fd;
+	int		idx = 0;
+	int		array_size = 500;
+	GpSegConfigEntry *configs = NULL;
+	GpSegConfigEntry *config = NULL;
+
+	char	hostname[MAXHOSTNAMELEN];
+	char	address[MAXHOSTNAMELEN];
+	char	buf[MAXHOSTNAMELEN * 2 + 32];
+
+	Assert(!IsTransactionState());
+
+	/* notify and wait FTS to finish a probe and update the dump file */
+	FtsNotifyProber();	
+
+	fd = AllocateFile(GPSEGCONFIGDUMPFILE, "r");
+
+	if (!fd)
+		elog(ERROR, "could not open gp_segment_configutation dump file:%s:%m", GPSEGCONFIGDUMPFILE);
+
+	configs = palloc0(sizeof (GpSegConfigEntry) * array_size); 
+
+	while (fgets(buf, sizeof(buf), fd))
+	{ 
+		config = &configs[idx];
+
+		if (sscanf(buf, "%d %d %c %c %c %c %d %s %s", (int *)&config->dbid, (int *)&config->segindex,
+				   &config->role, &config->preferred_role, &config->mode, &config->status,
+				   &config->port, hostname, address) != GPSEGCONFIGNUMATTR)
+		{
+			FreeFile(fd);
+			elog(ERROR, "invalid data in gp_segment_configuration dump file: %s:%m", GPSEGCONFIGDUMPFILE);
+		}
+
+		config->hostname = pstrdup(hostname);
+		config->address = pstrdup(address);
+
+		idx++;
+		/*
+		 * Expand CdbComponentDatabaseInfo array if we've used up
+		 * currently allocated space
+		 */
+		if (idx >= array_size)
+		{
+			array_size = array_size * 2;
+			configs = (GpSegConfigEntry *)
+				repalloc(configs, sizeof(GpSegConfigEntry) * array_size);
+		}
+	}
+
+	FreeFile(fd);
+
+	*total_dbs = idx;
+	return configs;
+}
+
+/*
+ * writeGpSegConfigToFTSFiles() dump gp_segment_configuration to the file
+ * GPSEGCONFIGDUMPFILE, in $PGDATA, only FTS process can use this function.
+ *
+ * write contents to GPSEGCONFIGDUMPFILETMP first, then rename it to
+ * GPSEGCONFIGDUMPFILE, it makes lockless read and write concurrently.
+ */
+void
+writeGpSegConfigToFTSFiles(void)
+{
+	FILE	*fd;
+	int		idx = 0;
+	int		total_dbs = 0;
+	GpSegConfigEntry *configs = NULL;
+	GpSegConfigEntry *config = NULL;
+
+	Assert(IsTransactionState());
+	Assert(am_ftsprobe);
+
+	fd = AllocateFile(GPSEGCONFIGDUMPFILETMP, "w+");
+
+	if (!fd)
+		elog(ERROR, "could not create tmp file: %s: %m", GPSEGCONFIGDUMPFILETMP);
+
+	configs = readGpSegConfigFromCatalog(&total_dbs); 
+
+	for (idx = 0; idx < total_dbs; idx++)
+	{
+		config = &configs[idx];
+
+		if (fprintf(fd, "%d %d %c %c %c %c %d %s %s\n", config->dbid, config->segindex,
+					config->role, config->preferred_role, config->mode, config->status,
+					config->port, config->hostname, config->address) < 0)
+		{
+			FreeFile(fd);
+			elog(ERROR, "could not dump gp_segment_configuration to file: %s: %m", GPSEGCONFIGDUMPFILE);
+		}
+	}
+
+	FreeFile(fd);
+
+	/* rename tmp file to permanent file */
+	if (rename(GPSEGCONFIGDUMPFILETMP, GPSEGCONFIGDUMPFILE) != 0)
+		elog(ERROR, "could not rename file %s to file %s: %m",
+			 GPSEGCONFIGDUMPFILETMP, GPSEGCONFIGDUMPFILE);
+}
+
+static GpSegConfigEntry *
+readGpSegConfigFromCatalog(int *total_dbs)
+{
+	int					idx = 0;
+	int					array_size;
+	bool				isNull;
+	Datum				attr;
+	Relation			gp_seg_config_rel;
+	HeapTuple			gp_seg_config_tuple = NULL;
+	HeapScanDesc		gp_seg_config_scan;
+	GpSegConfigEntry	*configs;
+	GpSegConfigEntry	*config;
+
+	array_size = 500;
+	configs = palloc0(sizeof(GpSegConfigEntry) * array_size);
+
+	gp_seg_config_rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
+	gp_seg_config_scan = heap_beginscan_catalog(gp_seg_config_rel, 0, NULL);
+
+	while (HeapTupleIsValid(gp_seg_config_tuple = heap_getnext(gp_seg_config_scan, ForwardScanDirection)))
+	{
+		config = &configs[idx];
+
+		/* dbid */
+		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_dbid, RelationGetDescr(gp_seg_config_rel), &isNull);
+		Assert(!isNull);
+		config->dbid = DatumGetInt16(attr);
+
+		/* content */
+		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_content, RelationGetDescr(gp_seg_config_rel), &isNull);
+		Assert(!isNull);
+		config->segindex= DatumGetInt16(attr);
+
+		/* role */
+		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_role, RelationGetDescr(gp_seg_config_rel), &isNull);
+		Assert(!isNull);
+		config->role = DatumGetChar(attr);
+
+		/* preferred-role */
+		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_preferred_role, RelationGetDescr(gp_seg_config_rel), &isNull);
+		Assert(!isNull);
+		config->preferred_role = DatumGetChar(attr);
+
+		/* mode */
+		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_mode, RelationGetDescr(gp_seg_config_rel), &isNull);
+		Assert(!isNull);
+		config->mode = DatumGetChar(attr);
+
+		/* status */
+		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_status, RelationGetDescr(gp_seg_config_rel), &isNull);
+		Assert(!isNull);
+		config->status = DatumGetChar(attr);
+
+		/* hostname */
+		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_hostname, RelationGetDescr(gp_seg_config_rel), &isNull);
+		Assert(!isNull);
+		config->hostname = TextDatumGetCString(attr);
+
+		/* address */
+		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_address, RelationGetDescr(gp_seg_config_rel), &isNull);
+		Assert(!isNull);
+		config->address = TextDatumGetCString(attr);
+
+		/* port */
+		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_port, RelationGetDescr(gp_seg_config_rel), &isNull);
+		Assert(!isNull);
+		config->port = DatumGetInt32(attr);
+
+		/* datadir is not dumped*/
+
+		idx++;
+
+		/*
+		 * Expand CdbComponentDatabaseInfo array if we've used up
+		 * currently allocated space
+		 */
+		if (idx >= array_size)
+		{
+			array_size = array_size * 2;
+			configs = (GpSegConfigEntry *)
+				repalloc(configs, sizeof(GpSegConfigEntry) * array_size);
+		}
+	}
+
+	/*
+	 * We're done with the catalog config, clean them up, closing all the
+	 * relations we opened.
+	 */
+	heap_endscan(gp_seg_config_scan);
+	heap_close(gp_seg_config_rel, AccessShareLock);
+
+	*total_dbs = idx;
+	return configs;
+}
+
+/*
  *  Internal function to initialize each component info
  */
 static CdbComponentDatabases *
 getCdbComponentInfo(void)
 {
 	MemoryContext oldContext;
-	CdbComponentDatabaseInfo *pOld = NULL;
 	CdbComponentDatabaseInfo *cdbInfo;
 	CdbComponentDatabases *component_databases = NULL;
-
-	Relation	gp_seg_config_rel;
-	HeapTuple	gp_seg_config_tuple = NULL;
-	HeapScanDesc gp_seg_config_scan;
-
-	/*
-	 * Initial size for info arrays.
-	 */
-	int			segment_array_size = 500;
-	int			entry_array_size = 4;	/* we currently support a max of 2 */
-
-	/*
-	 * isNull and attr are used when getting the data for a specific column
-	 * from a HeapTuple
-	 */
-	bool		isNull;
-	Datum		attr;
-
-	/*
-	 * Local variables for fields from the rows of the tables that we are
-	 * reading.
-	 */
-	int			dbid;
-	int			content;
-
-	char		role;
-	char		preferred_role;
-	char		mode = 0;
-	char		status = 0;
+	GpSegConfigEntry *configs;
 
 	int			i;
 	int			x = 0;
+	int			total_dbs = 0;
 
 	bool		found;
 	HostSegsEntry *hsEntry;
-	bool		DNSLookupAsError = !am_ftsprobe;
 
 	if (!CdbComponentsContext)
 		CdbComponentsContext = AllocSetContextCreate(TopMemoryContext, "cdb components Context",
@@ -150,13 +344,11 @@ getCdbComponentInfo(void)
 
 	HTAB	   *hostSegsHash = hostSegsHashTableInit();
 
-	/*
-	 * Allocate component_databases return structure and
-	 * component_databases->segment_db_info array with an initial size of 128,
-	 * and component_databases->entry_db_info with an initial size of 4.  If
-	 * necessary during row fetching, we grow these by doubling each time we
-	 * run out.
-	 */
+	if (IsTransactionState())
+		configs = readGpSegConfigFromCatalog(&total_dbs);
+	else
+		configs = readGpSegConfigFromFTSFiles(&total_dbs);
+
 	component_databases = palloc0(sizeof(CdbComponentDatabases));
 
 	component_databases->numActiveQEs = 0;
@@ -165,174 +357,64 @@ getCdbComponentInfo(void)
 	component_databases->freeCounterList = NIL;
 
 	component_databases->segment_db_info =
-		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * segment_array_size);
+		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * total_dbs);
 
 	component_databases->entry_db_info =
-		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * entry_array_size);
+		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * 2);
 
-	gp_seg_config_rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
-
-	gp_seg_config_scan = heap_beginscan_catalog(gp_seg_config_rel, 0, NULL);
-
-	while (HeapTupleIsValid(gp_seg_config_tuple = heap_getnext(gp_seg_config_scan, ForwardScanDirection)))
+	for (i = 0; i < total_dbs; i++)
 	{
-		/*
-		 * Grab the fields that we need from gp_segment_configuration.  We do
-		 * this first, because until we read them, we don't know whether this
-		 * is an entry database row or a segment database row.
-		 */
-		CdbComponentDatabaseInfo *pRow;
+		CdbComponentDatabaseInfo	*pRow;
+		GpSegConfigEntry	*config = &configs[i];
 
-		/*
-		 * dbid
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_dbid, RelationGetDescr(gp_seg_config_rel), &isNull);
-		Assert(!isNull);
-		dbid = DatumGetInt16(attr);
-
-		/*
-		 * content
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_content, RelationGetDescr(gp_seg_config_rel), &isNull);
-		Assert(!isNull);
-		content = DatumGetInt16(attr);
-
-		/*
-		 * role
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_role, RelationGetDescr(gp_seg_config_rel), &isNull);
-		Assert(!isNull);
-		role = DatumGetChar(attr);
-
-		/*
-		 * preferred-role
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_preferred_role, RelationGetDescr(gp_seg_config_rel), &isNull);
-		Assert(!isNull);
-		preferred_role = DatumGetChar(attr);
-
-		/*
-		 * mode
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_mode, RelationGetDescr(gp_seg_config_rel), &isNull);
-		Assert(!isNull);
-		mode = DatumGetChar(attr);
-
-		/*
-		 * status
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_status, RelationGetDescr(gp_seg_config_rel), &isNull);
-		Assert(!isNull);
-		status = DatumGetChar(attr);
-
-		/*
-		 * Determine which array to place this rows data in: entry or segment,
-		 * based on the content field.
-		 */
-		if (content >= 0)
-		{
-			/*
-			 * if we have a dbid bigger than our array we'll have to grow the
-			 * array. (MPP-2104)
-			 */
-			if (dbid >= segment_array_size || component_databases->total_segment_dbs >= segment_array_size)
-			{
-				/*
-				 * Expand CdbComponentDatabaseInfo array if we've used up
-				 * currently allocated space
-				 */
-				segment_array_size = Max((segment_array_size * 2), dbid * 2);
-				pOld = component_databases->segment_db_info;
-				component_databases->segment_db_info = (CdbComponentDatabaseInfo *)
-					repalloc(pOld, sizeof(CdbComponentDatabaseInfo) * segment_array_size);
-			}
-
-			pRow = &component_databases->segment_db_info[component_databases->total_segment_dbs];
-			component_databases->total_segment_dbs++;
-		}
-		else
-		{
-			if (component_databases->total_entry_dbs >= entry_array_size)
-			{
-				/*
-				 * Expand CdbComponentDatabaseInfo array if we've used up
-				 * currently allocated space
-				 */
-				entry_array_size *= 2;
-				pOld = component_databases->entry_db_info;
-				component_databases->entry_db_info = (CdbComponentDatabaseInfo *)
-					repalloc(pOld, sizeof(CdbComponentDatabaseInfo) * entry_array_size);
-			}
-
-			pRow = &component_databases->entry_db_info[component_databases->total_entry_dbs];
-			component_databases->total_entry_dbs++;
-		}
-
-		pRow->cdbs = component_databases;
-		pRow->freelist = NIL;
-		pRow->dbid = dbid;
-		pRow->segindex = content;
-		pRow->role = role;
-		pRow->preferred_role = preferred_role;
-		pRow->mode = mode;
-		pRow->status = status;
-		pRow->numIdleQEs = 0;
-		pRow->numActiveQEs = 0;
-
-		/*
-		 * hostname
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_hostname, RelationGetDescr(gp_seg_config_rel), &isNull);
-		Assert(!isNull);
-		pRow->hostname = TextDatumGetCString(attr);
-
-		/*
-		 * address
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_address, RelationGetDescr(gp_seg_config_rel), &isNull);
-		Assert(!isNull);
-		pRow->address = TextDatumGetCString(attr);
-
-		/*
-		 * port
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_port, RelationGetDescr(gp_seg_config_rel), &isNull);
-		Assert(!isNull);
-		pRow->port = DatumGetInt32(attr);
-
-		pRow->hostip = NULL;
-		getAddressesForDBid(pRow, DNSLookupAsError ? ERROR : LOG);
+		/* lookup hostip/hostaddrs cache */
+		config->hostip= NULL;
+		getAddressesForDBid(config, !am_ftsprobe? ERROR : LOG);
 
 		/*
 		 * We make sure we get a valid hostip for primary here,
 		 * if hostip for mirrors can not be get, ignore the error.
 		 */
-		if (pRow->hostaddrs[0] == NULL &&
-			pRow->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
-			ereport(DNSLookupAsError ? ERROR : LOG,
+		if (config->hostaddrs[0] == NULL &&
+			config->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+			ereport(!am_ftsprobe ? ERROR : LOG,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
-					errmsg("cannot resolve network address for dbid=%d", dbid)));
+					errmsg("cannot resolve network address for dbid=%d", config->dbid)));
 
-		if (pRow->hostaddrs[0] != NULL)
-			pRow->hostip = pstrdup(pRow->hostaddrs[0]);
-		AssertImply(pRow->hostip, strlen(pRow->hostip) <= INET6_ADDRSTRLEN);
+		if (config->hostaddrs[0] != NULL)
+			config->hostip = pstrdup(config->hostaddrs[0]);
+		AssertImply(config->hostip, strlen(config->hostip) <= INET6_ADDRSTRLEN);
 
-		if (pRow->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || pRow->hostip == NULL)
+		/*
+		 * Determine which array to place this rows data in: entry or segment,
+		 * based on the content field.
+		 */
+		if (config->segindex >= 0)
+		{
+			pRow = &component_databases->segment_db_info[component_databases->total_segment_dbs];
+			component_databases->total_segment_dbs++;
+		}
+		else
+		{
+			pRow = &component_databases->entry_db_info[component_databases->total_entry_dbs];
+			component_databases->total_entry_dbs++;
+		}
+
+		pRow->cdbs = component_databases;
+		pRow->config = config;
+		pRow->freelist = NIL;
+		pRow->numIdleQEs = 0;
+		pRow->numActiveQEs = 0;
+
+		if (config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || config->hostip == NULL)
 			continue;
 
-		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, pRow->hostip, HASH_ENTER, &found);
+		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, config->hostip, HASH_ENTER, &found);
 		if (found)
 			hsEntry->segmentCount++;
 		else
 			hsEntry->segmentCount = 1;
 	}
-
-	/*
-	 * We're done with the catalog entries, clean them up, closing all the
-	 * relations we opened.
-	 */
-	heap_endscan(gp_seg_config_scan);
-	heap_close(gp_seg_config_rel, AccessShareLock);
 
 	/*
 	 * Validate that there exists at least one entry and one segment database
@@ -369,7 +451,7 @@ getCdbComponentInfo(void)
 	for (i = 0; i < component_databases->total_segment_dbs; i++)
 	{
 		if (i == 0 ||
-			(component_databases->segment_db_info[i].segindex != component_databases->segment_db_info[i - 1].segindex))
+			(component_databases->segment_db_info[i].config->segindex != component_databases->segment_db_info[i - 1].config->segindex))
 		{
 			component_databases->total_segments++;
 		}
@@ -382,7 +464,7 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (cdbInfo->dbid == GpIdentity.dbid && cdbInfo->segindex == GpIdentity.segindex)
+		if (cdbInfo->config->dbid == GpIdentity.dbid && cdbInfo->config->segindex == GpIdentity.segindex)
 		{
 			break;
 		}
@@ -408,7 +490,7 @@ getCdbComponentInfo(void)
 
 		while (x < component_databases->total_segment_dbs)
 		{
-			this_segindex = component_databases->segment_db_info[x].segindex;
+			this_segindex = component_databases->segment_db_info[x].config->segindex;
 			if (this_segindex < i)
 				x++;
 			else if (this_segindex == i)
@@ -438,10 +520,10 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->segment_db_info[i];
 
-		if (cdbInfo->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->hostip == NULL)
+		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->config->hostip == NULL)
 			continue;
 
-		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->hostip, HASH_FIND, &found);
+		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostip, HASH_FIND, &found);
 		Assert(found);
 		cdbInfo->hostSegs = hsEntry->segmentCount;
 	}
@@ -450,10 +532,10 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (cdbInfo->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->hostip == NULL)
+		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->config->hostip == NULL)
 			continue;
 
-		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->hostip, HASH_FIND, &found);
+		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostip, HASH_FIND, &found);
 		Assert(found);
 		cdbInfo->hostSegs = hsEntry->segmentCount;
 	}
@@ -966,7 +1048,7 @@ CdbComponentDatabaseInfoCompare(const void *p1, const void *p2)
 	const CdbComponentDatabaseInfo *obj1 = (CdbComponentDatabaseInfo *) p1;
 	const CdbComponentDatabaseInfo *obj2 = (CdbComponentDatabaseInfo *) p2;
 
-	int			cmp = obj1->segindex - obj2->segindex;
+	int			cmp = obj1->config->segindex - obj2->config->segindex;
 
 	if (cmp == 0)
 	{
@@ -1160,7 +1242,7 @@ getDnsAddress(char *hostname, int port, int elevel)
  * maintain the ip-lookup-cache.
  */
 static void
-getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel)
+getAddressesForDBid(GpSegConfigEntry *c, int elevel)
 {
 	char	   *name;
 
@@ -1320,14 +1402,14 @@ master_standby_dbid(void)
 	return dbid;
 }
 
-CdbComponentDatabaseInfo *
+GpSegConfigEntry *
 dbid_get_dbinfo(int16 dbid)
 {
 	HeapTuple	tuple;
 	Relation	rel;
 	ScanKeyData scankey;
 	SysScanDesc scan;
-	CdbComponentDatabaseInfo *i = NULL;
+	GpSegConfigEntry *i = NULL;
 
 	/*
 	 * Can only run on a master node, this restriction is due to the reliance
@@ -1353,7 +1435,7 @@ dbid_get_dbinfo(int16 dbid)
 		Datum		attr;
 		bool		isNull;
 
-		i = palloc(sizeof(CdbComponentDatabaseInfo));
+		i = palloc(sizeof(GpSegConfigEntry));
 
 		/*
 		 * dbid

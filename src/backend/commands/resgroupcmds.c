@@ -33,16 +33,24 @@
 #include "utils/builtins.h"
 #include "utils/datetime.h"
 #include "utils/fmgroids.h"
+#include "utils/guc.h"
 #include "utils/resgroup.h"
 #include "utils/resgroup-ops.h"
 #include "utils/resource_manager.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
 #include "utils/faultinjector.h"
+#include "utils/vmem_tracker.h"
 
 #define RESGROUP_DEFAULT_CONCURRENCY (20)
-#define RESGROUP_DEFAULT_MEM_SHARED_QUOTA (20)
-#define RESGROUP_DEFAULT_MEM_SPILL_RATIO (20)
+#define RESGROUP_DEFAULT_MEMORY_LIMIT (0)
+#define RESGROUP_DEFAULT_MEM_SHARED_QUOTA (80)
+/*
+ * The default memory_spill_ratio value is 128MB, it is in absolute value
+ * format, so it is represented as a negative value, and as its unit is chunk,
+ * so need a conversion.
+ */
+#define RESGROUP_DEFAULT_MEM_SPILL_RATIO (-VmemTracker_ConvertVmemMBToChunks(128))
 
 #define RESGROUP_DEFAULT_MEM_AUDITOR (RESGROUP_MEMORY_AUDITOR_VMTRACKER)
 #define RESGROUP_INVALID_MEM_AUDITOR (-1)
@@ -53,7 +61,7 @@
 #define RESGROUP_MIN_CPU_RATE_LIMIT	(1)
 #define RESGROUP_MAX_CPU_RATE_LIMIT	(100)
 
-#define RESGROUP_MIN_MEMORY_LIMIT	(1)
+#define RESGROUP_MIN_MEMORY_LIMIT	(0)
 #define RESGROUP_MAX_MEMORY_LIMIT	(100)
 
 #define RESGROUP_MIN_MEMORY_SHARED_QUOTA	(0)
@@ -76,7 +84,7 @@ static ResGroupLimitType getResgroupOptionType(const char* defname);
 static ResGroupCap getResgroupOptionValue(DefElem *defel, int type);
 static const char *getResgroupOptionName(ResGroupLimitType type);
 static void checkResgroupCapLimit(ResGroupLimitType type, ResGroupCap value);
-static void checkResgroupMemAuditor(ResGroupCaps *caps);
+static void checkResgroupCapConflicts(ResGroupCaps *caps);
 static void parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps);
 static void validateCapabilities(Relation rel, Oid groupid, ResGroupCaps *caps, bool newGroup);
 static void insertResgroupCapabilityEntry(Relation rel, Oid groupid, uint16 type, const char *value);
@@ -466,7 +474,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 			break;
 	}
 
-	checkResgroupMemAuditor(&caps);
+	checkResgroupCapConflicts(&caps);
 
 	validateCapabilities(pg_resgroupcapability_rel, groupid, &caps, false);
 
@@ -564,8 +572,8 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 	{
 		Datum				typeDatum;
 		ResGroupLimitType	type;
-		Datum				proposedDatum;
-		char				*proposed;
+		Datum				valueDatum;
+		char				*value;
 
 		typeDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_reslimittype,
 								 rel->rd_att, &isNull);
@@ -579,37 +587,36 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 
 		mask |= 1 << type;
 
-		proposedDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_proposed,
+		valueDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_value,
 									 rel->rd_att, &isNull);
-		proposed = TextDatumGetCString(proposedDatum);
+		value = TextDatumGetCString(valueDatum);
 		switch (type)
 		{
 			case RESGROUP_LIMIT_TYPE_CONCURRENCY:
-				resgroupCaps->concurrency = str2Int(proposed, 
+				resgroupCaps->concurrency = str2Int(value,
 													getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPU:
-				resgroupCaps->cpuRateLimit = str2Int(proposed, 
+				resgroupCaps->cpuRateLimit = str2Int(value,
 													 getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY:
-				resgroupCaps->memLimit = str2Int(proposed, 
+				resgroupCaps->memLimit = str2Int(value,
 												 getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-				resgroupCaps->memSharedQuota = str2Int(proposed, 
+				resgroupCaps->memSharedQuota = str2Int(value,
 													   getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-				resgroupCaps->memSpillRatio = str2Int(proposed,
-													  getResgroupOptionName(type));
+				resgroupCaps->memSpillRatio = ResGroupMemorySpillFromStr(value);
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-				resgroupCaps->memAuditor = str2Int(proposed,
+				resgroupCaps->memAuditor = str2Int(value,
 												   getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPUSET:
-				StrNCpy(resgroupCaps->cpuset, proposed, sizeof(resgroupCaps->cpuset));
+				StrNCpy(resgroupCaps->cpuset, value, sizeof(resgroupCaps->cpuset));
 				break;
 			default:
 				break;
@@ -831,6 +838,10 @@ getResgroupOptionValue(DefElem *defel, int type)
 		char *auditor_name = defGetString(defel);
 		value = getResGroupMemAuditor(auditor_name);
 	}
+	else if (type == RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
+	{
+		value = ResGroupMemorySpillFromStr(defGetString(defel));
+	}
 	else
 	{
 		value = defGetInt64(defel);
@@ -922,13 +933,12 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 				break;
 
 			case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-				if (value < RESGROUP_MIN_MEMORY_SPILL_RATIO ||
-					value > RESGROUP_MAX_MEMORY_SPILL_RATIO)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							errmsg("memory_spill_ratio range is [%d, %d]",
-								   RESGROUP_MIN_MEMORY_SPILL_RATIO,
-								   RESGROUP_MAX_MEMORY_SPILL_RATIO)));
+				/*
+				 * memory_spill_ratio is already checked when parsing it.
+				 *
+				 * On the other hand negative value is used as absolute value,
+				 * there is no chance to check the range now, so nothing to do.
+				 */
 				break;
 
 			case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
@@ -948,12 +958,23 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 }
 
 /*
- * Check to see if concurrency is not zero for resource group
- * with cgroup memory auditor.
+ * Check conflict settings in caps.
  */
 static void
-checkResgroupMemAuditor(ResGroupCaps *caps)
+checkResgroupCapConflicts(ResGroupCaps *caps)
 {
+	/*
+	 * When memory_limit is unlimited the memory_spill_ratio must be set in
+	 * absolute value format.
+	 */
+	if (caps->memLimit == 0 && caps->memSpillRatio > 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("when memory_limit is unlimited memory_spill_ratio must be set in absolute value format")));
+
+	/*
+	 * When memory_auditor is cgroup the concurrency must be 0.
+	 */
 	if (caps->memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP &&
 		caps->concurrency != 0)
 		ereport(ERROR,
@@ -961,22 +982,13 @@ checkResgroupMemAuditor(ResGroupCaps *caps)
 				errmsg("resource group concurrency must be 0 when group memory_auditor is %s",
 					ResGroupMemAuditorName[RESGROUP_MEMORY_AUDITOR_CGROUP])));
 
+	/*
+	 * The cgroup memory_auditor should not be used without a properly
+	 * configured cgroup memory directory.
+	 */
 	if (caps->memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP &&
 		!gp_resource_group_enable_cgroup_memory)
 	{
-		/*
-		 * Suppose the user has reconfigured the cgroup dirs by following
-		 * the gpdb documents, could it take effect at runtime (e.g. create
-		 * the resgroup again) without restart the cluster?
-		 *
-		 * It's possible but might not be reliable, as the user might
-		 * introduced unwanted changes to other cgroup dirs during the
-		 * reconfiguration (e.g. changed the permissions, moved processes
-		 * in/out).
-		 *
-		 * So we do not recheck the permissions here.
-		 */
-
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
 				 errmsg("cgroup is not properly configured for the 'cgroup' memory auditor"),
@@ -1058,11 +1070,6 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPUSET)))
 		EnsureCpusetIsAvailable(ERROR);
 
-	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY)))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("must specify memory_limit")));
-
 	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPU)) &&
 		(mask & (1 << RESGROUP_LIMIT_TYPE_CPUSET)))
 		ereport(ERROR,
@@ -1074,6 +1081,9 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				errmsg("must specify cpu_rate_limit or cpuset")));
+
+	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY)))
+		caps->memLimit = RESGROUP_DEFAULT_MEMORY_LIMIT;
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_CONCURRENCY)))
 		caps->concurrency = RESGROUP_DEFAULT_CONCURRENCY;
@@ -1087,7 +1097,7 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR)))
 		caps->memAuditor = RESGROUP_DEFAULT_MEM_AUDITOR;
 
-	checkResgroupMemAuditor(caps);
+	checkResgroupCapConflicts(caps);
 }
 
 /*
@@ -1175,7 +1185,7 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA, value);
 
-	sprintf(value, "%d", caps->memSpillRatio);
+	ResGroupMemorySpillToStr(caps->memSpillRatio, value, sizeof(value));
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO, value);
 
@@ -1246,6 +1256,10 @@ updateResgroupCapabilityEntry(Relation rel,
 	{
 		StrNCpy(stringBuffer, strValue, sizeof(stringBuffer));
 	}
+	else if (limitType == RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
+	{
+		ResGroupMemorySpillToStr((int32) value, stringBuffer, sizeof(stringBuffer));
+	}
 	else
 	{
 		snprintf(stringBuffer, sizeof(stringBuffer), "%d", value);
@@ -1254,10 +1268,6 @@ updateResgroupCapabilityEntry(Relation rel,
 	values[Anum_pg_resgroupcapability_value - 1] = CStringGetTextDatum(stringBuffer);
 	isnull[Anum_pg_resgroupcapability_value - 1] = false;
 	repl[Anum_pg_resgroupcapability_value - 1]  = true;
-
-	values[Anum_pg_resgroupcapability_proposed - 1] = CStringGetTextDatum(stringBuffer);
-	isnull[Anum_pg_resgroupcapability_proposed - 1] = false;
-	repl[Anum_pg_resgroupcapability_proposed - 1]  = true;
 
 	newTuple = heap_modify_tuple(oldTuple, RelationGetDescr(rel),
 								 values, isnull, repl);
@@ -1341,11 +1351,11 @@ validateCapabilities(Relation rel,
 	{
 		Datum				groupIdDatum;
 		Datum				typeDatum;
-		Datum				proposedDatum;
+		Datum				valueDatum;
 		ResGroupLimitType	reslimittype;
 		Oid					resgroupid;
-		char				*proposedStr;
-		int					proposed;
+		char				*valueStr;
+		int					value;
 		bool				isNull;
 
 		groupIdDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_resgroupid,
@@ -1367,16 +1377,16 @@ validateCapabilities(Relation rel,
 								 rel->rd_att, &isNull);
 		reslimittype = (ResGroupLimitType) DatumGetInt16(typeDatum);
 
-		proposedDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_proposed,
+		valueDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_value,
 									 rel->rd_att, &isNull);
 
 		if (reslimittype == RESGROUP_LIMIT_TYPE_CPU)
 		{
-			proposedStr = TextDatumGetCString(proposedDatum);
-			proposed = str2Int(proposedStr, getResgroupOptionName(reslimittype));
-			if (proposed != CPU_RATE_LIMIT_DISABLED)
+			valueStr = TextDatumGetCString(valueDatum);
+			value = str2Int(valueStr, getResgroupOptionName(reslimittype));
+			if (value != CPU_RATE_LIMIT_DISABLED)
 			{
-				totalCpu += proposed;
+				totalCpu += value;
 				if (totalCpu > RESGROUP_MAX_CPU_RATE_LIMIT)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1386,9 +1396,9 @@ validateCapabilities(Relation rel,
 		}
 		else if (reslimittype == RESGROUP_LIMIT_TYPE_MEMORY)
 		{
-			proposedStr = TextDatumGetCString(proposedDatum);
-			proposed = str2Int(proposedStr, getResgroupOptionName(reslimittype));
-			totalMem += proposed;
+			valueStr = TextDatumGetCString(valueDatum);
+			value = str2Int(valueStr, getResgroupOptionName(reslimittype));
+			totalMem += value;
 			if (totalMem > RESGROUP_MAX_MEMORY_LIMIT)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1402,8 +1412,8 @@ validateCapabilities(Relation rel,
 			 */
 			if (IsResGroupActivated() && !CpusetIsEmpty(caps->cpuset))
 			{
-				proposedStr = TextDatumGetCString(proposedDatum);
-				if (!CpusetIsEmpty(proposedStr))
+				valueStr = TextDatumGetCString(valueDatum);
+				if (!CpusetIsEmpty(valueStr))
 				{
 					Bitmapset *bmsOther = NULL;
 
@@ -1411,7 +1421,7 @@ validateCapabilities(Relation rel,
 
 					Assert(!bms_is_empty(bmsCurrent));
 
-					bmsOther = CpusetToBitset(proposedStr, MaxCpuSetLength);
+					bmsOther = CpusetToBitset(valueStr, MaxCpuSetLength);
 					bmsCommon = bms_intersect(bmsCurrent, bmsOther);
 
 					if (!bms_is_empty(bmsCommon))
@@ -1435,9 +1445,6 @@ validateCapabilities(Relation rel,
 /*
  * Insert one capability to the capability table.
  *
- * 'value' and 'proposed' are both used to describe a resource,
- * in this routine we assume 'proposed' has the same value as 'value'.
- *
  * @param rel      the relation
  * @param groupid  oid of the resource group
  * @param type     the resource limit type
@@ -1460,7 +1467,6 @@ insertResgroupCapabilityEntry(Relation rel,
 	new_record[Anum_pg_resgroupcapability_resgroupid - 1] = ObjectIdGetDatum(groupid);
 	new_record[Anum_pg_resgroupcapability_reslimittype - 1] = UInt16GetDatum(type);
 	new_record[Anum_pg_resgroupcapability_value - 1] = CStringGetTextDatum(value);
-	new_record[Anum_pg_resgroupcapability_proposed - 1] = CStringGetTextDatum(value);
 
 	tuple = heap_form_tuple(tupleDesc, new_record, new_record_nulls);
 	simple_heap_insert(rel, tuple);
@@ -1587,4 +1593,103 @@ checkCpusetSyntax(const char *cpuset)
 		return false;
 	}
 	return true;
+}
+
+/*
+ * Parse memory_spill_ratio from string.
+ *
+ * It has two input formats:
+ * - the percentage format is an integer value within [0, 100], return the
+ *   percentage;
+ * - the absolute value format is in "number unit" format, where "unit" can be
+ *   "kB", "MB", "GB" or "TB", the "number" must be > 0, it is converted to
+ *   chunks, return (-1 * chunks);
+ */
+int32
+ResGroupMemorySpillFromStr(const char *str)
+{
+
+	int32			value;
+	const char	   *prop = "memory_spill_ratio";
+
+	/* if memory spill ratio is percentile value */
+	if (parse_int(str, &value, 0, NULL))
+	{
+		if (value < RESGROUP_MIN_MEMORY_SPILL_RATIO ||
+			value > RESGROUP_MAX_MEMORY_SPILL_RATIO)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("memory_spill_ratio in percentage format must be "
+							"in the range [%d, %d]",
+							RESGROUP_MIN_MEMORY_SPILL_RATIO,
+							RESGROUP_MAX_MEMORY_SPILL_RATIO)));
+		return value;
+	}
+	/* for absolute value, all int value are allowed */
+	else if (parse_int(str, &value, GUC_UNIT_KB, NULL))
+	{
+		if (value <= 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("memory_spill_ratio in absolute value format must "
+							"be > 0")));
+
+		return -Max(1,
+					VmemTracker_ConvertVmemMBToChunks(value >> 10));
+	}
+	else
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("syntax error on capability %s", prop)));
+}
+
+/*
+ * Convert memory_spill_ratio to a string.
+ *
+ * Refer to ResGroupMemorySpillFromStr() for details of the string format.
+ */
+void
+ResGroupMemorySpillToStr(int32 value, char *buf, int bufsize)
+{
+	if (value >= 0)
+	{
+		/* The value is in the percentage format */
+		snprintf(buf, bufsize, "%d", value);
+	}
+	else
+	{
+		/* The value is in the absolute value format */
+
+		/* Below logic is derived from _ShowOption() */
+#define KB_PER_MB (1024)
+#define KB_PER_GB (1024*1024)
+#define KB_PER_TB (1024*1024*1024)
+
+		int64			result;
+		const char	   *unit;
+		
+		result = -(VmemTracker_ConvertVmemChunksToMB(value) << 10);
+		if (result % KB_PER_TB == 0)
+		{
+			result /= KB_PER_TB;
+			unit = "TB";
+		}
+		else if (result % KB_PER_GB == 0)
+		{
+			result /= KB_PER_GB;
+			unit = "GB";
+		}
+		else if (result % KB_PER_MB == 0)
+		{
+			result /= KB_PER_MB;
+			unit = "MB";
+		}
+		else
+		{
+			unit = "kB";
+		}
+
+		snprintf(buf, bufsize, INT64_FORMAT " %s",
+				 result, unit);
+	}
 }

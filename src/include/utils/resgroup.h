@@ -190,6 +190,9 @@ extern void ResGroupDumpInfo(StringInfo str);
 
 extern int ResGroupGetSegmentNum(void);
 
+extern int32 ResGroupMemorySpillFromStr(const char *str);
+extern void ResGroupMemorySpillToStr(int32 value, char *buf, int bufsize);
+
 extern Bitmapset *CpusetToBitset(const char *cpuset,
 								 int len);
 extern void BitsetToCpuset(const Bitmapset *bms,

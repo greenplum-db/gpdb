@@ -33,9 +33,12 @@ class SegmentReconfigurer:
         start_time = time.time()
         while True:
             try:
-                # this issues a BEGIN
+                # Empty block of 'BEGIN' and 'END' won't start a distributed transaction,
+                # execute a DDL query to start a distributed transaction.
                 # so the primaries'd better be up
                 conn = dbconn.connect(dburl)
+                conn.cursor().execute('CREATE TEMP TABLE temp_test(a int)')
+                conn.cursor().execute('COMMIT')
             except Exception as e:
                 now = time.time()
                 if now < start_time + self.timeout:

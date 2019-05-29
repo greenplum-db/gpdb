@@ -91,6 +91,10 @@ static bool check_pljava_classpath_insecure(bool *newval, void **extra, GucSourc
 static void assign_pljava_classpath_insecure(bool newval, void *extra);
 static bool check_gp_resource_group_bypass(bool *newval, void **extra, GucSource source);
 
+static bool check_memory_spill_ratio(char **newval, void **extra, GucSource source);
+static void assign_memory_spill_ratio(const char *newval, void *extra);
+static const char *show_memory_spill_ratio(void);
+
 extern struct config_generic *find_option(const char *name, bool create_placeholders, int elevel);
 
 extern bool enable_partition_rules;
@@ -203,6 +207,7 @@ char	   *data_directory;
  * and is kept in sync by assign_hooks.
  */
 static char *gp_resource_manager_str;
+static char *memory_spill_ratio_str;
 
 /* Backoff-related GUCs */
 bool		gp_enable_resqueue_priority;
@@ -346,7 +351,7 @@ bool		optimizer_enable_indexscan;
 bool		optimizer_enable_tablescan;
 bool		optimizer_enable_hashagg;
 bool		optimizer_enable_groupagg;
-bool		optimizer_enable_full_join;
+bool		optimizer_expand_fulljoin;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -447,6 +452,7 @@ static const struct config_enum_entry debug_dtm_action_protocol_options[] = {
 	{"prepare", DTX_PROTOCOL_COMMAND_PREPARE},
 	{"abort_some_prepared", DTX_PROTOCOL_COMMAND_ABORT_SOME_PREPARED},
 	{"commit_prepared", DTX_PROTOCOL_COMMAND_COMMIT_PREPARED},
+	{"commit_not_prepared", DTX_PROTOCOL_COMMAND_COMMIT_NOT_PREPARED},
 	{"abort_prepared", DTX_PROTOCOL_COMMAND_ABORT_PREPARED},
 	{"retry_commit_prepared", DTX_PROTOCOL_COMMAND_RETRY_COMMIT_PREPARED},
 	{"retry_abort_prepared", DTX_PROTOCOL_COMMAND_RETRY_ABORT_PREPARED},
@@ -2516,12 +2522,12 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_full_join", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enables the optimizer's support of full outer joins."),
+		{"optimizer_expand_fulljoin", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables the optimizer's support of expanding full outer joins using union all."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
-		&optimizer_enable_full_join,
+		&optimizer_expand_fulljoin,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3060,16 +3066,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		128000, 1000, INT_MAX,
 #endif
 		gpvars_check_statement_mem, NULL, NULL
-	},
-
-	{
-		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
-			gettext_noop("Sets the memory_spill_ratio for resource group."),
-			NULL
-		},
-		&memory_spill_ratio,
-		20, 0, 100,
-		NULL, NULL, NULL
 	},
 
 	{
@@ -4409,6 +4405,21 @@ struct config_string ConfigureNamesString_gp[] =
 		gpvars_show_gp_resource_manager_policy,
 	},
 
+	/*
+	 * Default value of the memory_spill_ratio GUC will be ignored.
+	 * Refer to ResGroupMemorySpillFromStr() for details of the string format.
+	 */
+	{
+		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the memory_spill_ratio for resource group.")
+		},
+		&memory_spill_ratio_str,
+		"0",
+		check_memory_spill_ratio,
+		assign_memory_spill_ratio,
+		show_memory_spill_ratio
+	},
+
 	/* for pljava */
 	{
 		{"pljava_vmoptions", PGC_SUSET, CUSTOM_OPTIONS,
@@ -5043,4 +5054,31 @@ check_gp_workfile_compression(bool *newval, void **extra, GucSource source)
 	}
 #endif
 	return true;
+}
+
+
+static bool
+check_memory_spill_ratio(char **newval, void **extra, GucSource source)
+{
+	ResGroupMemorySpillFromStr((const char *)*newval);
+
+	return true;
+}
+
+static void
+assign_memory_spill_ratio(const char *newval, void *extra)
+{
+	int32		value = ResGroupMemorySpillFromStr(newval);
+
+	memory_spill_ratio = value;
+}
+
+static const char *
+show_memory_spill_ratio(void)
+{
+	static char buf[16];
+
+	ResGroupMemorySpillToStr(memory_spill_ratio, buf, sizeof(buf));
+
+	return buf;
 }

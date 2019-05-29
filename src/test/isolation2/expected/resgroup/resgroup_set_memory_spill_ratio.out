@@ -5,7 +5,7 @@
 SHOW memory_spill_ratio;
  memory_spill_ratio 
 --------------------
- 10                 
+ 100 MB             
 (1 row)
 
 --start_ignore
@@ -58,7 +58,7 @@ SELECT 1;
  1        
 (1 row)
 
--- positive set to session level
+-- positive set to session level use work_mem
 SET MEMORY_SPILL_RATIO TO 0;
 SET
 SHOW MEMORY_SPILL_RATIO;
@@ -74,7 +74,7 @@ SELECT 1;
 
 -- negative set to session level
 SET MEMORY_SPILL_RATIO TO 101;
-ERROR:  101 is outside the valid range for parameter "memory_spill_ratio" (0 .. 100)
+ERROR:  memory_spill_ratio in percentage format must be in the range [0, 100]
 SHOW MEMORY_SPILL_RATIO;
  memory_spill_ratio 
 --------------------
@@ -112,6 +112,121 @@ SELECT 1;
  ?column? 
 ----------
  1        
+(1 row)
+
+-- positive set to session level
+SET MEMORY_SPILL_RATIO TO '20MB';
+SET
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 20 MB              
+(1 row)
+SELECT 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+
+-- positive set to session level
+SET MEMORY_SPILL_RATIO TO '20000kB';
+SET
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 19 MB              
+(1 row)
+SELECT 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+
+-- positive set to session level? can run?
+SET MEMORY_SPILL_RATIO TO '20GB';
+SET
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 20 GB              
+(1 row)
+SELECT 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+
+-- positive set to session level? can run?
+SET MEMORY_SPILL_RATIO TO '20  MB  ';
+SET
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 20 MB              
+(1 row)
+SELECT 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+
+-- negative oom when oprator memory is too large
+SET MEMORY_SPILL_RATIO TO '1TB';
+SET
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 1 TB               
+(1 row)
+SELECT * FROM gp_toolkit.gp_resgroup_config ;
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+RESET MEMORY_SPILL_RATIO;
+RESET
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '10 %';
+ERROR:  syntax error on capability memory_spill_ratio
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 30                 
+(1 row)
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '10.M';
+ERROR:  syntax error on capability memory_spill_ratio
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 30                 
+(1 row)
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '-10M';
+ERROR:  syntax error on capability memory_spill_ratio
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 30                 
+(1 row)
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '-10';
+ERROR:  memory_spill_ratio in percentage format must be in the range [0, 100]
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 30                 
+(1 row)
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '0x10M';
+ERROR:  syntax error on capability memory_spill_ratio
+SHOW MEMORY_SPILL_RATIO;
+ memory_spill_ratio 
+--------------------
+ 30                 
 (1 row)
 
 -- reset to resource group level

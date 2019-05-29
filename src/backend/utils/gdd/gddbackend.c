@@ -47,6 +47,7 @@
 #include "utils/timeout.h"
 
 #include "gdddetector.h"
+#include "gdddetectorpriv.h"
 
 #define RET_STATUS_OK 0
 #define RET_STATUS_ERROR 1
@@ -61,6 +62,9 @@ static int  doDeadLockCheck(void);
 static void buildWaitGraph(GddCtx *ctx);
 static void breakDeadLock(GddCtx *ctx);
 static void dumpCancelResult(StringInfo str, List *xids);
+extern void dumpGddCtx(GddCtx *ctx, StringInfo str);
+static void dumpGddGraph(GddGraph *graph, StringInfo str);
+static void dumpGddEdge(GddEdge *edge, StringInfo str);
 static void TimeoutHandler(void);
 
 static MemoryContext	gddContext;
@@ -418,7 +422,7 @@ doDeadLockCheck(void)
 			 */
 
 			initStringInfo(&str);
-			GddCtxDump(ctx, &str);
+			dumpGddCtx(ctx, &str);
 
 			elog(LOG,
 				 "global deadlock detected! Final graph is :%s",
@@ -582,6 +586,81 @@ dumpCancelResult(StringInfo str, List *xids)
 		if (lnext(cell))
 			appendStringInfo(str, ",");
 	}
+}
+
+/*
+ * Dump the graphs.
+ */
+void
+dumpGddCtx(GddCtx *ctx, StringInfo str)
+{
+	GddMapIter	iter;
+
+	Assert(ctx != NULL);
+	Assert(str != NULL);
+
+	appendStringInfo(str, "{");
+
+	gdd_ctx_foreach_graph(iter, ctx)
+	{
+		GddGraph	*graph = gdd_map_iter_get_ptr(iter);
+
+		dumpGddGraph(graph, str);
+
+		if (gdd_map_iter_has_next(iter))
+			appendStringInfo(str, ",");
+	}
+
+	appendStringInfo(str, "}");
+}
+
+/*
+ * Dump the verts and edges.
+ */
+static void
+dumpGddGraph(GddGraph *graph, StringInfo str)
+{
+	GddMapIter	vertiter;
+	GddListIter	edgeiter;
+	bool		first = true;
+
+	Assert(graph != NULL);
+	Assert(str != NULL);
+
+	appendStringInfo(str, "\"seg%d\": [", graph->id);
+
+	gdd_graph_foreach_out_edge(vertiter, edgeiter, graph)
+	{
+		GddEdge		*edge = gdd_list_iter_get_ptr(edgeiter);
+
+		if (first)
+			first = false;
+		else
+			appendStringInfo(str, ",");
+
+		dumpGddEdge(edge, str);
+	}
+
+	appendStringInfo(str, "]");
+}
+
+/*
+ * Dump edge.
+ */
+static void
+dumpGddEdge(GddEdge *edge, StringInfo str)
+{
+	Assert(edge != NULL);
+	Assert(edge->from != NULL);
+	Assert(edge->to != NULL);
+	Assert(str != NULL);
+
+	appendStringInfo(str, "\"%d(Master Pid: %d)%s%d(Master Pid: %d)\"",
+					 edge->from->id,
+					 GetPidByGxid(edge->from->id),
+					 edge->solid ? "==>" : "~~>",
+					 edge->to->id,
+					 GetPidByGxid(edge->to->id));
 }
 
 static void

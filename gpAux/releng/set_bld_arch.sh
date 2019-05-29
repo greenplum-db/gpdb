@@ -20,9 +20,8 @@ case "`uname -s`" in
             ;;
         esac
     fi
-    if [ -f /etc/lsb-release ]; then
-       UBUNTU_CODENAME=$(grep DISTRIB_RELEASE /etc/lsb-release | awk -F '=' '{print $2}' | tr -d '.')
-       BLD_ARCH_HOST=ubuntu${UBUNTU_CODENAME}_amd64
+    if [ -z "${BLD_ARCH_HOST}" -a -f /etc/os-release ]; then
+        BLD_ARCH_HOST="$(. /etc/os-release; echo ${ID}${VERSION_ID}_$(uname -p))"
     fi
     ;;
 

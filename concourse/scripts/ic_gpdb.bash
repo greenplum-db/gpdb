@@ -29,7 +29,9 @@ function gen_env(){
 		    exit 1
 		}
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
-		source /opt/gcc_env.sh
+		if [ -f /opt/gcc_env.sh ]; then
+		    source /opt/gcc_env.sh
+		fi
 		cd "\${1}/gpdb_src"
 		source gpAux/gpdemo/gpdemo-env.sh
 		make -s ${MAKE_TEST_COMMAND}
@@ -53,11 +55,14 @@ function _main() {
         exit 1
     fi
 
-    if [ "$TEST_OS" != "centos" -a "$TEST_OS" != "sles" ]; then
-        echo "FATAL: TEST_OS is set to an invalid value: $TEST_OS"
-	echo "Configure TEST_OS to be centos or sles"
-        exit 1
-    fi
+    case "${TEST_OS}" in
+    centos|sles|ubuntu) ;; #Valid
+    *)
+      echo "FATAL: TEST_OS is set to an invalid value: $TEST_OS"
+      echo "Configure TEST_OS to be centos, sles, or ubuntu"
+      exit 1
+      ;;
+    esac
 
     # This ugly block exists since sles11 installs kerberos at a different path that is a test-only dependency
     if [ "$TEST_OS" == "sles" ]; then

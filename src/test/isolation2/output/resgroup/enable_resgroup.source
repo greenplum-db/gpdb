@@ -44,13 +44,10 @@ DROP
 -- enable resource group and restart cluster.
 -- start_ignore
 ! gpconfig -c gp_resource_manager -v group;
-20170502:01:28:13:000367 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully
 
 ! gpconfig -c gp_resource_group_cpu_limit -v 0.9;
-20170731:09:42:33:021079 gpconfig:sdw8:nyu-[INFO]:-completed successfully
 
 ! gpconfig -c max_connections -v 250 -m 25;
-20170731:09:42:34:021163 gpconfig:sdw8:nyu-[INFO]:-completed successfully
 
 ! gpstop -rai;
 -- end_ignore
@@ -77,11 +74,31 @@ DROP
 ------------+------------+-------------+-----------
 (0 rows)
 
+-- verify the default settings
+0: SELECT * from gp_toolkit.gp_resgroup_config;
+ groupid | groupname     | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+---------+---------------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
+ 6437    | default_group | 20          | 30             | 0            | 80                  | 128 MB             | vmtracker      | -1     
+ 6438    | admin_group   | 10          | 10             | 10           | 80                  | 128 MB             | vmtracker      | -1     
+(2 rows)
+
 -- by default admin_group has concurrency set to -1 which leads to
 -- very small memory quota for each resgroup slot, correct it.
 0: ALTER RESOURCE GROUP admin_group SET concurrency 2;
 ALTER
+
+-- explicitly set memory settings
+0: ALTER RESOURCE GROUP admin_group SET memory_limit 10;
+ALTER
+0: ALTER RESOURCE GROUP default_group SET memory_limit 30;
+ALTER
+0: ALTER RESOURCE GROUP admin_group SET memory_shared_quota 80;
+ALTER
+0: ALTER RESOURCE GROUP default_group SET memory_shared_quota 80;
+ALTER
 -- in later cases we will SHOW memory_spill_ratio as first command
 -- to verify that it can be correctly loaded even for bypassed commands
-0: ALTER RESOURCE GROUP admin_group SET memory_spill_ratio 10;
+0: ALTER RESOURCE GROUP admin_group SET memory_spill_ratio '100 MB';
+ALTER
+0: ALTER RESOURCE GROUP default_group SET memory_spill_ratio '100 MB';
 ALTER

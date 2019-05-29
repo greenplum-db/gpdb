@@ -23,7 +23,7 @@ assert_postgres_version_matches() {
 yum -d1 -y install git
 
 GPDB_SRC_SHA=$(cd gpdb_src && git rev-parse HEAD)
-for bin_gpdb in bin_gpdb_centos{6,7}; do
+for bin_gpdb in bin_gpdb_{centos{6,7},ubuntu18.04}; do
   install_greenplum "$bin_gpdb"
   assert_postgres_version_matches "$GPDB_SRC_SHA"
 done

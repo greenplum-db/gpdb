@@ -11,10 +11,12 @@ function make_sync_tools() {
     # IVYREPO_HOST IVYREPO_REALM IVYREPO_USER IVYREPO_PASSWD
     make sync_tools
   popd
-  if [ "${TARGET_OS}" = centos ]; then
-    mkdir -p orca_src
-    mv ${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/gporca*/* orca_src/
-  fi
+  case "${TARGET_OS}" in
+    centos|ubuntu)
+      mkdir -p orca_src
+      mv ${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/gporca*/* orca_src/
+      ;;
+  esac
 }
 
 function _main() {
@@ -33,17 +35,22 @@ function _main() {
     sles)
         export BLD_ARCH=sles11_x86_64
         ;;
+    ubuntu)
+        export BLD_ARCH=ubuntu18.04_x86_64
+        ;;
     *)
-        echo "only centos, sles are supported TARGET_OS'es"
+        echo "only centos, sles, ubuntu are supported TARGET_OS'es"
         false
         ;;
   esac
 
-  # We have moved out of ivy for Centos{6,7}, so make sync_tools
-  # will not create the necessary directory for centos.
-  if [ "${TARGET_OS}" = centos ]; then
-    mkdir -p ${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}
-  fi
+  # We have moved out of ivy for Centos{6,7} and Ubuntu never had ivy
+  # so make sync_tools will not create the necessary directory for centos or ubuntu.
+  case "${TARGET_OS}" in
+    centos|ubuntu)
+        mkdir -p ${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}
+        ;;
+  esac
   make_sync_tools
 
   # Move ext directory to output dir.

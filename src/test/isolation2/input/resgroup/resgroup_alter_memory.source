@@ -29,8 +29,8 @@ CREATE OR REPLACE VIEW rg_activity_status AS
 	ORDER BY sess_id;
 
 CREATE OR REPLACE VIEW rg_mem_status AS
-	SELECT groupname, memory_limit, proposed_memory_limit,
-		   memory_shared_quota, proposed_memory_shared_quota
+	SELECT groupname, memory_limit,
+		   memory_shared_quota
 	FROM gp_toolkit.gp_resgroup_config
 	WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test'
 	ORDER BY groupid;

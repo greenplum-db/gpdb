@@ -51,6 +51,9 @@ groups:
 {% if "centos7" in os_types %}
   - compile_gpdb_centos7
 {% endif %}
+{% if "ubuntu18.04" in os_types %}
+  - compile_gpdb_ubuntu18.04
+{% endif %}
 {% if "sles" in os_types %}
   - compile_gpdb_sles11
 {% endif %}
@@ -69,6 +72,10 @@ groups:
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
   - icw_planner_centos7
+{% endif %}
+{% if "ubuntu18.04" in os_types %}
+  - icw_gporca_ubuntu18.04
+  - icw_planner_ubuntu18.04
 {% endif %}
 {% if "sles" in os_types %}
   - icw_gporca_sles11
@@ -134,7 +141,7 @@ groups:
 {%endif %}
 
 
-{% if pipeline_type == "prod" %}
+{% if pipeline_configuration == "prod" %}
 ## ======================================================================
 
 - name: Release
@@ -154,6 +161,9 @@ groups:
 {% endif %}
 {% if "centos7" in os_types %}
   - compile_gpdb_centos7
+{% endif %}
+{% if "ubuntu18.04" in os_types %}
+  - compile_gpdb_ubuntu18.04
 {% endif %}
 {% if "sles" in os_types %}
   - compile_gpdb_sles11
@@ -178,6 +188,10 @@ groups:
   - icw_gporca_centos7
   - icw_planner_centos7
   - compile_gpdb_centos7
+{% endif %}
+{% if "ubuntu18.04" in os_types %}
+  - icw_gporca_ubuntu18.04
+  - icw_planner_ubuntu18.04
 {% endif %}
 {% if "sles" in os_types %}
   - icw_gporca_sles11
@@ -422,6 +436,14 @@ resources:
     regexp: centos7/sigar-rhel7_x86_64-(.*)\.targz
 
 {% endif %}
+{% if "ubuntu18.04" in os_types %}
+- name: libquicklz-ubuntu18.04
+  type: gcs
+  source:
+    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
+    json_key: ((gcs-key))
+    versioned_file: ubuntu18.04/libquicklz-dev_1.5.0-1_amd64.deb
+{% endif %}
 {% if "centos6" in os_types %}
 - name: python-centos6
   type: gcs
@@ -438,6 +460,15 @@ resources:
     bucket: gp-internal-artifacts
     json_key: ((gcs-key))
     versioned_file: centos7/python-2.7.12.tar.gz
+
+{% endif %}
+{% if "ubuntu18.04" in os_types %}
+- name: python-ubuntu18.04
+  type: gcs
+  source:
+    bucket: gp-internal-artifacts
+    json_key: ((gcs-key))
+    versioned_file: ubuntu18.04/python-2.7.12.tar.gz
 
 {% endif %}
 {% if "centos6" in os_types or "sles" in os_types %}
@@ -467,6 +498,20 @@ resources:
     tag: latest
 
 {% endif %}
+{% if "ubuntu18.04" in os_types %}
+- name: gpdb6-ubuntu18.04-build
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb6-ubuntu18.04-build
+    tag: latest
+
+- name: gpdb6-ubuntu18.04-test
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb6-ubuntu18.04-test
+    tag: latest
+
+{% endif %}
 {% if "centos6" in os_types %}
 - name: bin_gpdb_centos6
   type: gcs
@@ -483,7 +528,7 @@ resources:
     versioned_file: ((pipeline-name))/bin_gpdb_clients_centos6/bin_gpdb_clients.tar.gz
 
 {% endif %}
-{% if pipeline_type == "prod" %}
+{% if pipeline_configuration == "prod" %}
 - name: bin_gpdb_centos6_icw_green
   type: s3
   source:
@@ -506,6 +551,13 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: server/published/master/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+
+- name: bin_gpdb_ubuntu18.04_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: server/published/master/server-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
 
 # DEPRECATED: Use the above GCS resources instead of these S3 resources.
 - name: bin_gpdb_centos6_rc_s3
@@ -548,6 +600,13 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: clients/published/master/clients-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
 
+- name: bin_gpdb_clients_ubuntu18.04_rc
+  type: gcs
+  source:
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: clients/published/master/clients-rc-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
+
 {% endif %}
 {% if "centos6" in os_types %}
 - name: binary_swap_gpdb_centos6
@@ -572,6 +631,22 @@ resources:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients_centos7/bin_gpdb_clients.tar.gz
+
+{% endif %}
+{% if "ubuntu18.04" in os_types %}
+- name: bin_gpdb_ubuntu18.04
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_ubuntu18.04/bin_gpdb.tar.gz
+
+- name: bin_gpdb_clients_ubuntu18.04
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_clients_ubuntu18.04/bin_gpdb_clients.tar.gz
 
 {% endif %}
 {% if "sles" in os_types %}
@@ -951,6 +1026,44 @@ jobs:
         file: gpdb_artifacts/bin_gpdb.tar.gz
 
 {% endif %}
+{% if "ubuntu18.04" in os_types %}
+- name: compile_gpdb_ubuntu18.04
+  plan:
+    - aggregate:
+        - get: reduced-frequency-trigger
+          trigger: ((reduced-frequency-trigger-flag))
+        - get: gpdb_src
+          trigger: ((gpdb_src-trigger-flag))
+        - get: gpdb6-ubuntu18.04-build
+        - get: libquicklz-installer
+          resource: libquicklz-ubuntu18.04
+        - get: python-tarball
+          resource: python-ubuntu18.04
+    - task: sync_tools
+      file: gpdb_src/concourse/tasks/sync_tools.yml
+      image: gpdb6-ubuntu18.04-build
+      params:
+        TARGET_OS: ubuntu
+        TARGET_OS_VERSION: 18.04
+        TASK_OS: ubuntu
+        TASK_OS_VERSION: 18.04
+    - task: compile_gpdb
+      image: gpdb6-ubuntu18.04-build
+      file: gpdb_src/concourse/tasks/compile_gpdb.yml
+      params:
+        CONFIGURE_FLAGS: {{configure_flags_with_extensions}}
+        TARGET_OS: ubuntu
+        TARGET_OS_VERSION: "18.04"
+        BLD_TARGETS: "clients"
+    - aggregate:
+        - put: bin_gpdb_ubuntu18.04
+          params:
+            file: gpdb_artifacts/bin_gpdb.tar.gz
+        - put: bin_gpdb_clients_ubuntu18.04
+          params:
+            file: gpdb_artifacts/gpdb-clients-ubuntu18.04.tar.gz
+
+{% endif %}
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -1080,6 +1193,44 @@ jobs:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
+
+{% endif %}
+{% if "ubuntu18.04" in os_types %}
+- name: icw_gporca_ubuntu18.04
+  plan:
+    - aggregate:
+        - get: gpdb_src
+          passed: [compile_gpdb_ubuntu18.04]
+        - get: bin_gpdb
+          resource: bin_gpdb_ubuntu18.04
+          passed: [compile_gpdb_ubuntu18.04]
+          trigger: [[ test_trigger ]]
+        - get: gpdb6-ubuntu18.04-test
+    - task: ic_gpdb
+      file: gpdb_src/concourse/tasks/ic_gpdb.yml
+      image: gpdb6-ubuntu18.04-test
+      params:
+        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+        TEST_OS: ubuntu
+        CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_planner_ubuntu18.04
+  plan:
+    - aggregate:
+        - get: gpdb_src
+          passed: [compile_gpdb_ubuntu18.04]
+        - get: bin_gpdb
+          passed: [compile_gpdb_ubuntu18.04]
+          resource: bin_gpdb_ubuntu18.04
+          trigger: [[ test_trigger ]]
+        - get: gpdb6-ubuntu18.04-test
+    - task: ic_gpdb
+      file: gpdb_src/concourse/tasks/ic_gpdb.yml
+      image: gpdb6-ubuntu18.04-test
+      params:
+        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+        TEST_OS: ubuntu
+        CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
 {% if "sles" in os_types %}
@@ -1219,7 +1370,7 @@ jobs:
       - icw_planner_sles12
 {% endif %}
       trigger: true
-{% if pipeline_type == "prod" and "centos6" in os_types %}
+{% if pipeline_configuration == "prod" and "centos6" in os_types %}
   - put: bin_gpdb_centos6_icw_green
     params:
       file: bin_gpdb_centos6/bin_gpdb.tar.gz
@@ -1876,7 +2027,7 @@ jobs:
 {% endif %}
 {% endif %}
 
-{% if pipeline_type == "prod" %}
+{% if pipeline_configuration == "prod" %}
 ## ======================================================================
 ##  ____      _
 ## |  _ \ ___| | ___  __ _ ___  ___
@@ -1894,11 +2045,14 @@ jobs:
       - compile_gpdb_centos6
       - compile_gpdb_open_source_centos6
       - compile_gpdb_centos7
+      - compile_gpdb_ubuntu18.04
  ##     - compile_gpdb_sles11
       - icw_planner_centos6
       - icw_gporca_centos6
       - icw_gporca_centos7
       - icw_planner_centos7
+      - icw_gporca_ubuntu18.04
+      - icw_planner_ubuntu18.04
  ##     - icw_gporca_sles11
  ##     - icw_gporca_sles12
  ##     - icw_planner_sles12
@@ -1962,6 +2116,15 @@ jobs:
     - get: bin_gpdb_clients_centos7
       passed:
       - compile_gpdb_centos7
+    - get: bin_gpdb_ubuntu18.04
+      trigger: true
+      passed:
+      - compile_gpdb_ubuntu18.04
+      - icw_gporca_ubuntu18.04
+      - icw_planner_ubuntu18.04
+    - get: bin_gpdb_clients_ubuntu18.04
+      passed:
+      - compile_gpdb_ubuntu18.04
 
 - name: Release_Candidate
   plan:
@@ -1975,10 +2138,16 @@ jobs:
     - get: bin_gpdb_centos7
       trigger: true
       passed: [gate_release_candidate_start]
+    - get: bin_gpdb_ubuntu18.04
+      trigger: true
+      passed: [gate_release_candidate_start]
     - get: bin_gpdb_clients_centos6
       trigger: true
       passed: [gate_release_candidate_start]
     - get: bin_gpdb_clients_centos7
+      trigger: true
+      passed: [gate_release_candidate_start]
+    - get: bin_gpdb_clients_ubuntu18.04
       trigger: true
       passed: [gate_release_candidate_start]
     - get: gpdb6-centos6-build
@@ -1987,42 +2156,30 @@ jobs:
 ##     passed: [gate_release_candidate_start]
   - aggregate:
     - task: rename_rc_artifacts
-      image: gpdb6-centos6-build
-      config:
-        platform: linux
-        inputs:
-        - name: gpdb_src
-        - name: bin_gpdb_centos6
-        - name: bin_gpdb_centos7
-        - name: bin_gpdb_clients_centos6
-        - name: bin_gpdb_clients_centos7
-        outputs:
-        - name: bin_gpdb_centos_gcs
-        run:
-          path: bash
-          args:
-          - -ec
-          - |
-            gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
-            cp -v bin_gpdb_centos6/bin_gpdb.tar.gz bin_gpdb_centos_gcs/server-rc-${gpdb_semver}-rhel6_x86_64((rc-build-type-gcs)).tar.gz
-            cp -v bin_gpdb_centos7/bin_gpdb.tar.gz bin_gpdb_centos_gcs/server-rc-${gpdb_semver}-rhel7_x86_64((rc-build-type-gcs)).tar.gz
-            cp -v bin_gpdb_clients_centos6/bin_gpdb_clients.tar.gz bin_gpdb_centos_gcs/clients-rc-${gpdb_semver}-rhel6_x86_64((rc-build-type-gcs)).tar.gz
-            cp -v bin_gpdb_clients_centos7/bin_gpdb_clients.tar.gz bin_gpdb_centos_gcs/clients-rc-${gpdb_semver}-rhel7_x86_64((rc-build-type-gcs)).tar.gz
+      file: gpdb_src/concourse/tasks/rename_rc_artifacts.yml
+      params:
+        RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
     - task: verify_gpdb_versions
       file: gpdb_src/concourse/tasks/verify_gpdb_versions.yml
   - aggregate:
     - put: bin_gpdb_centos6_rc
       params:
-        file: "bin_gpdb_centos_gcs/server-rc-*rhel6*.tar.gz"
+        file: "release_candidates/server-rc-*rhel6*.tar.gz"
     - put: bin_gpdb_centos7_rc
       params:
-        file: "bin_gpdb_centos_gcs/server-rc-*rhel7*.tar.gz"
+        file: "release_candidates/server-rc-*rhel7*.tar.gz"
+    - put: bin_gpdb_ubuntu18.04_rc
+      params:
+        file: "release_candidates/server-rc-*ubuntu18.04*.tar.gz"
     - put: bin_gpdb_clients_centos6_rc
       params:
-        file: "bin_gpdb_centos_gcs/clients-rc-*rhel6*.tar.gz"
+        file: "release_candidates/clients-rc-*rhel6*.tar.gz"
     - put: bin_gpdb_clients_centos7_rc
       params:
-        file: "bin_gpdb_centos_gcs/clients-rc-*rhel7*.tar.gz"
+        file: "release_candidates/clients-rc-*rhel7*.tar.gz"
+    - put: bin_gpdb_clients_ubuntu18.04_rc
+      params:
+        file: "release_candidates/clients-rc-*ubuntu18.04*.tar.gz"
     - put: bin_gpdb_centos6_rc_s3
       params:
         file: bin_gpdb_centos6/bin_gpdb.tar.gz

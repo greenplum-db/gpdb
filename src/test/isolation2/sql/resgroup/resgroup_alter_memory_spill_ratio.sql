@@ -5,7 +5,7 @@ CREATE RESOURCE GROUP rg_spill_test WITH
 (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=20, memory_spill_ratio=10);
 
 CREATE OR REPLACE VIEW rg_spill_status AS
-	SELECT groupname, memory_shared_quota, proposed_memory_shared_quota, memory_spill_ratio, proposed_memory_spill_ratio
+	SELECT groupname, memory_shared_quota, memory_spill_ratio
 	FROM gp_toolkit.gp_resgroup_config
 	WHERE groupname='rg_spill_test';
 

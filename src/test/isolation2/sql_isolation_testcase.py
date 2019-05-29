@@ -464,8 +464,10 @@ class SQLIsolationExecutor(object):
                 print >>output_file, line.strip(),
                 if line[0] == "!":
                     command_part = line # shell commands can use -- for multichar options like --include
-                else:
+                elif re.match(r";.*--", line) or re.match(r"^--", line):
                     command_part = line.partition("--")[0] # remove comment from line
+                else:
+                    command_part = line
                 if command_part == "" or command_part == "\n":
                     print >>output_file 
                 elif command_part.endswith(";\n") or re.match(r"^\d+[q\\<]:$", line) or re.match(r"^-?\d+[SU][q\\<]:$", line):

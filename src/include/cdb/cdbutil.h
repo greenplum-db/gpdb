@@ -39,8 +39,9 @@ typedef struct CdbComponentDatabases CdbComponentDatabases;
  *
  */
 #define COMPONENT_DBS_MAX_ADDRS (8)
-struct CdbComponentDatabaseInfo
+typedef struct GpSegConfigEntry 
 {
+	/* copy of entry in gp_segment_configuration */
 	int16		dbid;			/* the dbid of this database */
 	int16		segindex;		/* content indicator: -1 for entry database,
 								 * 0, ..., n-1 for segment database */
@@ -49,36 +50,41 @@ struct CdbComponentDatabaseInfo
 	char		preferred_role; /* what role would we "like" to have this segment in ? */
 	char		mode;
 	char		status;
-
-	char	   *hostname;		/* name or ip address of host machine */
-	char	   *address;		/* ip address of host machine */
-
-	char	   *datadir;		/* absolute path to data directory on the host. */
-
-	char	   *hostip;			/* cached lookup of name */
 	int32		port;			/* port that instance is listening on */
+	char		*hostname;		/* name or ip address of host machine */
+	char		*address;		/* ip address of host machine */
+	char		*datadir;		/* absolute path to data directory on the host. */
 
-	char	   *hostaddrs[COMPONENT_DBS_MAX_ADDRS];	/* cached lookup of names */	
-	int16		hostSegs;		/* number of primary segments on the same hosts */
-	List		*freelist;		/* list of idle segment dbs */
-	int			numIdleQEs;
-	int			numActiveQEs;
+	/* additional cached info */
+	char		*hostip;	/* cached lookup of name */
+	char		*hostaddrs[COMPONENT_DBS_MAX_ADDRS];	/* cached lookup of names */	
+} GpSegConfigEntry;
+
+struct CdbComponentDatabaseInfo
+{
+	struct GpSegConfigEntry	*config;
 
 	CdbComponentDatabases	*cdbs; /* point to owners */
+
+	int16		hostSegs;	/* number of primary segments on the same hosts */
+	List		*freelist;	/* list of idle segment dbs */
+	int			numIdleQEs;
+	int			numActiveQEs;
 };
 
+
 #define SEGMENT_IS_ACTIVE_MIRROR(p) \
-	((p)->role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR ? true : false)
+	((p)->config->role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR ? true : false)
 #define SEGMENT_IS_ACTIVE_PRIMARY(p) \
-	((p)->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY ? true : false)
+	((p)->config->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY ? true : false)
 
 #define SEGMENT_IS_ALIVE(p) \
-	((p)->status == GP_SEGMENT_CONFIGURATION_STATUS_UP ? true : false)
+	((p)->config->status == GP_SEGMENT_CONFIGURATION_STATUS_UP ? true : false)
 
 #define SEGMENT_IS_IN_SYNC(p) \
-	((p)->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ? true : false)
+	((p)->config->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ? true : false)
 #define SEGMENT_IS_NOT_INSYNC(p) \
-	((p)->mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC ? true : false)
+	((p)->config->mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC ? true : false)
 
 /* --------------------------------------------------------------------------------------------------
  * Structure for return value from getCdbSegmentDatabases()
@@ -175,6 +181,9 @@ bool cdbcomponent_qesExist(void);
 bool cdbcomponent_activeQEsExist(void);
 
 List *cdbcomponent_getCdbComponentsList(void);
+
+extern void writeGpSegConfigToFTSFiles(void);
+
 /*
  * Given total number of primary segment databases and a number of segments
  * to "skip" - this routine creates a boolean map (array) the size of total
@@ -191,7 +200,7 @@ extern bool *makeRandomSegMap(int total_primaries, int total_to_skip);
 extern char *getDnsAddress(char *name, int port, int elevel);
 
 extern int16 master_standby_dbid(void);
-extern CdbComponentDatabaseInfo *dbid_get_dbinfo(int16 dbid);
+extern GpSegConfigEntry *dbid_get_dbinfo(int16 dbid);
 extern int16 contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRole);
 
 extern int numsegmentsFromQD;

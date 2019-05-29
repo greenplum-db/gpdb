@@ -1,7 +1,7 @@
 select * from gp_toolkit.gp_resgroup_config where groupname='default_group';
- groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
----------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ groupid | groupname     | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+---------+---------------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
+ 6437    | default_group | 20          | 30             | 30           | 80                  | 100 MB             | vmtracker      | -1     
 (1 row)
 
 select rsgname , groupid , num_running , num_queueing , num_queued , num_executed , cpu_usage->'-1' as qd_cpu_usage , memory_usage->'-1'->'used' as qd_memory_used , memory_usage->'-1'->'shared_used' as qd_memory_shared_used from gp_toolkit.gp_resgroup_status where rsgname='default_group';
@@ -10,7 +10,7 @@ select rsgname , groupid , num_running , num_queueing , num_queued , num_execute
  default_group | 6437    | 0           | 0            | 0          | 0            | 0.00         | 0              | 0                     
 (1 row)
 
-select rsgname , groupid , cpu , memory_used , memory_shared_used from gp_toolkit.gp_resgroup_status_per_host s join gp_segment_configuration c on s.hostname=c.hostname and c.content=-1 where rsgname='default_group';
+select rsgname , groupid , cpu , memory_used , memory_shared_used from gp_toolkit.gp_resgroup_status_per_host s join gp_segment_configuration c on s.hostname=c.hostname and c.content=-1 and c.role='p' where rsgname='default_group';
  rsgname       | groupid | cpu  | memory_used | memory_shared_used 
 ---------------+---------+------+-------------+--------------------
  default_group | 6437    | 0.00 | 0           | 0                  
@@ -27,7 +27,33 @@ select rsgname , groupid , segment_id , cpu , memory_used , memory_shared_used f
 
 -- start_ignore
 select * from gp_toolkit.gp_resgroup_config;
+ groupid | groupname     | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
+---------+---------------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
+ 6437    | default_group | 20          | 30             | 30           | 80                  | 100 MB             | vmtracker      | -1     
+ 6438    | admin_group   | 2           | 10             | 10           | 80                  | 100 MB             | vmtracker      | -1     
+(2 rows)
 select * from gp_toolkit.gp_resgroup_status;
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration | cpu_usage                                 | memory_usage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+---------------+---------+-------------+--------------+------------+--------------+----------------------+-------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  | {"-1":0.00, "0":0.00, "1":0.00, "2":0.00} | {"-1":{"used":0, "available":0, "quota_used":0, "quota_available":0, "quota_granted":0, "quota_proposed":0, "shared_used":0, "shared_available":0, "shared_granted":0, "shared_proposed":0}, "0":{"used":0, "available":0, "quota_used":0, "quota_available":0, "quota_granted":0, "quota_proposed":0, "shared_used":0, "shared_available":0, "shared_granted":0, "shared_proposed":0}, "1":{"used":0, "available":0, "quota_used":0, "quota_available":0, "quota_granted":0, "quota_proposed":0, "shared_used":0, "shared_available":0, "shared_granted":0, "shared_proposed":0}, "2":{"used":0, "available":0, "quota_used":0, "quota_available":0, "quota_granted":0, "quota_proposed":0, "shared_used":0, "shared_available":0, "shared_granted":0, "shared_proposed":0}}                         
+ admin_group   | 6438    | 1           | 0            | 0          | 12           | @ 0                  | {"-1":0.23, "0":0.07, "1":0.09, "2":0.09} | {"-1":{"used":0, "available":68, "quota_used":6, "quota_available":6, "quota_granted":12, "quota_proposed":12, "shared_used":0, "shared_available":56, "shared_granted":56, "shared_proposed":56}, "0":{"used":0, "available":68, "quota_used":6, "quota_available":6, "quota_granted":12, "quota_proposed":12, "shared_used":0, "shared_available":56, "shared_granted":56, "shared_proposed":56}, "1":{"used":0, "available":68, "quota_used":6, "quota_available":6, "quota_granted":12, "quota_proposed":12, "shared_used":0, "shared_available":56, "shared_granted":56, "shared_proposed":56}, "2":{"used":0, "available":68, "quota_used":6, "quota_available":6, "quota_granted":12, "quota_proposed":12, "shared_used":0, "shared_available":56, "shared_granted":56, "shared_proposed":56}} 
+(2 rows)
 select * from gp_toolkit.gp_resgroup_status_per_host;
+ rsgname       | groupid | hostname   | cpu  | memory_used | memory_available | memory_quota_used | memory_quota_available | memory_quota_proposed | memory_shared_used | memory_shared_available | memory_shared_granted | memory_shared_proposed 
+---------------+---------+------------+------+-------------+------------------+-------------------+------------------------+-----------------------+--------------------+-------------------------+-----------------------+------------------------
+ admin_group   | 6438    | instance-1 | 0.46 | 2           | 270              | 24                | 24                     | 48                    | 0                  | 224                     | 224                   | 224                    
+ default_group | 6437    | instance-1 | 0.00 | 0           | 0                | 0                 | 0                      | 0                     | 0                  | 0                       | 0                     | 0                      
+(2 rows)
 select * from gp_toolkit.gp_resgroup_status_per_segment;
+ rsgname       | groupid | hostname   | segment_id | cpu  | memory_used | memory_available | memory_quota_used | memory_quota_available | memory_quota_proposed | memory_shared_used | memory_shared_available | memory_shared_granted | memory_shared_proposed 
+---------------+---------+------------+------------+------+-------------+------------------+-------------------+------------------------+-----------------------+--------------------+-------------------------+-----------------------+------------------------
+ admin_group   | 6438    | instance-1 | 2          | 0.05 | 0           | 68               | 6                 | 6                      | 12                    | 0                  | 56                      | 56                    | 56                     
+ default_group | 6437    | instance-1 | 1          | 0.00 | 0           | 0                | 0                 | 0                      | 0                     | 0                  | 0                       | 0                     | 0                      
+ default_group | 6437    | instance-1 | 0          | 0.00 | 0           | 0                | 0                 | 0                      | 0                     | 0                  | 0                       | 0                     | 0                      
+ default_group | 6437    | instance-1 | -1         | 0.00 | 0           | 0                | 0                 | 0                      | 0                     | 0                  | 0                       | 0                     | 0                      
+ admin_group   | 6438    | instance-1 | 0          | 0.05 | 0           | 68               | 6                 | 6                      | 12                    | 0                  | 56                      | 56                    | 56                     
+ default_group | 6437    | instance-1 | 2          | 0.00 | 0           | 0                | 0                 | 0                      | 0                     | 0                  | 0                       | 0                     | 0                      
+ admin_group   | 6438    | instance-1 | -1         | 0.23 | 2           | 66               | 6                 | 6                      | 12                    | 0                  | 56                      | 56                    | 56                     
+ admin_group   | 6438    | instance-1 | 1          | 0.05 | 0           | 68               | 6                 | 6                      | 12                    | 0                  | 56                      | 56                    | 56                     
+(8 rows)
 -- end_ignore
