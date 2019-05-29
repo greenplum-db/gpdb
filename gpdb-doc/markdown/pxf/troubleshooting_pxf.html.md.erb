@@ -127,7 +127,7 @@ Because a single PXF agent (JVM) serves multiple segments on a segment host, the
 **Note**: The configuration changes described in this topic require modifying config files on *each* node in your Greenplum Database cluster. After you perform the updates on the master, be sure to synchronize the PXF configuration to the Greenplum Database cluster.
 
 
-### <a id="pxf-cfgoom"></a>Configuring PXF's Out of Memory Condition Actions
+### <a id="pxf-cfgoom"></a>Configuring Out of Memory Condition Actions
 
 In an out of memory (OOM) situation, PXF returns the following error in response to a query:
 
@@ -142,7 +142,7 @@ You can configure the PXF JVM to enable/disable the following actions when it de
 
 #### <a id="pxf-cfgoom-autokill"></a>Auto-Killing the PXF Server
 
-By default, PXF is configured such that when the PXF JVM detects an out of memory condition on a segment host, it automatically runs a script that kills the PXF server running on the host. The PXF `PXF_OOM_KILL` configuration property governs this auto-kill behaviour.
+By default, PXF is configured such that when the PXF JVM detects an out of memory condition on a segment host, it automatically runs a script that kills the PXF server running on the host. The `PXF_OOM_KILL` configuration property governs this auto-kill behaviour.
 
 When auto-kill is enabled and the PXF JVM detects an OOM condition and kills the PXF server on the segment host:
 
@@ -165,9 +165,9 @@ Refer to the configuration [procedure](#pxf-cfgoom_proc) below for the instructi
  
 #### <a id="pxf-cfgoom-heapdump"></a>Dumping the Java Heap
 
-In an out of memory situation, it may be useful to capture the Java heap dump to help determine what factors contributed to the resource exhaustion. You can use the PXF `PXF_OOM_DUMP_PATH` property to configure PXF to write the heap dump to a file when it detects an OOM condition. By default, PXF does not dump the Java heap on OOM.
+In an out of memory situation, it may be useful to capture the Java heap dump to help determine what factors contributed to the resource exhaustion. You can use the `PXF_OOM_DUMP_PATH` property to configure PXF to write the heap dump to a file when it detects an OOM condition. By default, PXF does not dump the Java heap on OOM.
 
-If you choose to enable the heap dump on OOM, you must set `PXF_OOM_DUMP_PATH` to the absolute path to a file or directory. If you specify a directory, the PXF JVM writes the heap dump to the file `<directory>/java_pid<pid>.hprof`, where `<pid>` identifies the process id of the PXF server instance. Ensure that the `gpadmin` user has write access to the dump file or directory.
+If you choose to enable the heap dump on OOM, you must set `PXF_OOM_DUMP_PATH` to the absolute path to a file or directory. If you specify a directory, the PXF JVM writes the heap dump to the file `<directory>/java_pid<pid>.hprof`, where `<pid>` identifies the process ID of the PXF server instance. Ensure that the `gpadmin` user has write access to the dump file or directory.
 
 **Note**: Heap dump files are often rather large. If you enable heap dump on OOM for PXF, ensure that the `PXF_OOM_DUMP_PATH` file or directory that you specify is located on a disk with enough space to write a large file. Also, the PXF JVM writes a heap dump to a file only once. You must rename the dump file or configure a different `PXF_OOM_DUMP_PATH` to generate subsequent heap dumps.
 
@@ -183,7 +183,7 @@ Auto-kill of the PXF server on OOM is enabled by default. Heap dump generation o
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Recall the location of the PXF user configuration directory (`$PXF_CONF`). Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
+2. Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
 
     ``` shell
     gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
@@ -232,7 +232,7 @@ Perform the following procedure to increase the heap size for the PXF agent runn
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Recall the location of the PXF user configuration directory (`$PXF_CONF`). Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
+2. Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
 
     ``` shell
     gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
@@ -328,7 +328,7 @@ PXF fragment metadata caching is enabled by default. To turn off fragment metada
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Recall the location of the PXF user configuration directory (`$PXF_CONF`). Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
+2. Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
 
     ``` shell
     gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
