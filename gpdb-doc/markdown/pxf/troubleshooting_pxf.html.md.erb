@@ -169,7 +169,7 @@ In an out of memory situation, it may be useful to capture the Java heap dump to
 
 If you choose to enable the heap dump on OOM, you must set `PXF_OOM_DUMP_PATH` to the absolute path to a file or directory. If you specify a directory, the PXF JVM writes the heap dump to the file `<directory>/java_pid<pid>.hprof`, where `<pid>` identifies the process ID of the PXF server instance. Ensure that the `gpadmin` user has write access to the dump file or directory.
 
-**Note**: Heap dump files are often rather large. If you enable heap dump on OOM for PXF, ensure that the `PXF_OOM_DUMP_PATH` file or directory that you specify is located on a disk with enough space to write a large file. Also, the PXF JVM writes a heap dump to a file only once. You must rename the dump file or configure a different `PXF_OOM_DUMP_PATH` to generate subsequent heap dumps.
+**Note**: Heap dump files are often rather large. If you enable heap dump on OOM for PXF, ensure that the `PXF_OOM_DUMP_PATH` file or directory that you specify is located on a disk with enough space to write a large file. Also, the PXF JVM writes a heap dump to a file only once. If `PXF_OOM_DUMP_PATH` is not set to a directory, you must rename the dump file or configure a different `PXF_OOM_DUMP_PATH` to generate subsequent heap dumps.
 
 Refer to the configuration [procedure](#pxf-cfgoom_proc) below for the instructions to enable/disable this PXF configuration property.
 
