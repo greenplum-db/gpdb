@@ -124,12 +124,12 @@ function unittest_check_gpdb() {
 
 function include_zstd() {
   local libdir
+  case "${TARGET_OS}" in
+    centos) libdir=/usr/lib64 ;;
+    ubuntu) libdir=/usr/lib ;;
+    *) return ;;
+  esac
   pushd ${GREENPLUM_INSTALL_DIR}
-    case "${TARGET_OS}" in
-      centos) libdir=/usr/lib64 ;;
-      ubuntu) libdir=/usr/lib ;;
-      *) return ;;
-    esac
     cp ${libdir}/pkgconfig/libzstd.pc lib/pkgconfig
     cp -d ${libdir}/libzstd.so* lib
     cp /usr/include/zstd*.h include
@@ -138,12 +138,12 @@ function include_zstd() {
 
 function include_quicklz() {
   local libdir
+  case "${TARGET_OS}" in
+    centos) libdir=/usr/lib64 ;;
+    ubuntu) libdir=/usr/local/lib ;;
+    *) return ;;
+  esac
   pushd ${GREENPLUM_INSTALL_DIR}
-    case "${TARGET_OS}" in
-      centos) libdir=/usr/lib64 ;;
-      ubuntu) libdir=/usr/local/lib ;;
-      *) return ;;
-    esac
     cp -d ${libdir}/libquicklz.so* lib
   popd
 }
