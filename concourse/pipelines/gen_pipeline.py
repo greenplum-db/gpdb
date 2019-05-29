@@ -249,9 +249,10 @@ def print_fly_commands(args):
     print header(args)
     if args.pipeline_target == 'prod':
         print 'NOTE: You can set the production pipelines with the following:\n'
-        print gen_pipeline(args, "gpdb_%s" % BASE_BRANCH, ["gpdb_%s-ci-secrets.prod.yml" % BASE_BRANCH],
+        pipeline_name = "gpdb_%s" % BASE_BRANCH if BASE_BRANCH == "master" else BASE_BRANCH
+        print gen_pipeline(args, pipeline_name, ["gpdb_%s-ci-secrets.prod.yml" % BASE_BRANCH],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH)
-        print gen_pipeline(args, "gpdb_%s_without_asserts" % BASE_BRANCH, ["gpdb_%s_without_asserts-ci-secrets.prod.yml" % BASE_BRANCH],
+        print gen_pipeline(args, "%s_without_asserts" % pipeline_name, ["gpdb_%s_without_asserts-ci-secrets.prod.yml" % BASE_BRANCH],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH)
         return
 
