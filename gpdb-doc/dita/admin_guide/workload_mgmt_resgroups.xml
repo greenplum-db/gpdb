@@ -955,18 +955,18 @@ gpstart
           active or waiting in all resource groups, run the following query. If the query returns no
           results, then there are no running or queued transactions in any resource group.</p>
         <p>
-          <codeblock>=# SELECT rolname, g.rsgname, procpid, waiting, current_query, datname 
+          <codeblock>=# SELECT rolname, g.rsgname, pid, waiting, current_query, datname 
      FROM pg_roles, gp_toolkit.gp_resgroup_status g, pg_stat_activity 
      WHERE pg_roles.rolresgroup=g.groupid
         AND pg_stat_activity.usename=pg_roles.rolname;
 </codeblock>
         </p>
         <p>Sample partial query output:</p>
-        <codeblock> rolname | rsgname  | procpid | waiting |     current_query     | datname 
+        <codeblock> rolname | rsgname  | pid     | waiting |     current_query     | datname 
 ---------+----------+---------+---------+-----------------------+---------
   sammy  | rg_light |  31861  |    f    | &lt;IDLE&gt; in transaction | testdb
   billy  | rg_light |  31905  |    t    | SELECT * FROM topten; | testdb</codeblock>
-        <p>Use this output to identify the process id (<codeph>procpid</codeph>) of the transaction
+        <p>Use this output to identify the process id (<codeph>pid</codeph>) of the transaction
           you want to cancel, and then cancel the process. For example, to cancel the pending query
           identified in the sample output above:</p>
         <p>
