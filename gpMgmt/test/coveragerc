@@ -1,0 +1,14 @@
+# .coveragerc to control coverage.py
+[run]
+parallel = True
+data_file = /tmp/coverage-data
+branch = True
+
+[run]
+omit =
+    */site-packages/*
+    */bin/behave
+    */python/psutil/*
+    */python/pygresql/*
+    */python/yaml/*
+    */python/lockfile/*
