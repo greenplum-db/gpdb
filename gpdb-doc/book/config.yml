@@ -15,6 +15,13 @@ sections:
   directory: 6-0/pxf
   subnav_template: pxf-subnav
 
+- repository:
+    name: markdown
+    at_path: cloud
+  directory: 6-0/cloud
+  subnav_template: cloud-subnav
+
+
 dita_sections:
 - repository:
     name: dita
