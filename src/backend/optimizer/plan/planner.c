@@ -3064,38 +3064,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	}
 
 	/*
-	 * If ORDER BY was given and we were not able to make the plan come out in
-	 * the right order, add an explicit sort step.
-	 */
-	if (parse->sortClause)
-	{
-		if (!pathkeys_contained_in(root->sort_pathkeys, current_pathkeys))
-		{
-			result_plan = (Plan *) make_sort_from_pathkeys(root,
-														   result_plan,
-														 root->sort_pathkeys,
-														   limit_tuples,
-														   true);
-			mark_sort_locus(result_plan);
-			current_pathkeys = root->sort_pathkeys;
-			result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
-		}
-
-		if (must_gather && result_plan->flow->flotype != FLOW_SINGLETON)
-		{
-			/*
-			 * current_pathkeys might contain unneeded columns that have been
-			 * eliminated from the final target list, and we cannot maintain
-			 * such an order in the Motion anymore. So use root->sortpathkeys
-			 * rather than current_pathkeys here. (See similar case in LIMIT
-			 * handling below.
-			 */
-			current_pathkeys = root->sort_pathkeys;
-			result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys);
-		}
-	}
-
-	/*
 	 * Greenplum specific behavior:
 	 * The implementation of select statement with locking clause
 	 * (for update | no key update | share | key share) in postgres
@@ -3140,6 +3108,38 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			 * cause the sort key columns to be replaced with new values.
 			 */
 			current_pathkeys = NIL;
+		}
+	}
+
+	/*
+	 * If ORDER BY was given and we were not able to make the plan come out in
+	 * the right order, add an explicit sort step.
+	 */
+	if (parse->sortClause)
+	{
+		if (!pathkeys_contained_in(root->sort_pathkeys, current_pathkeys))
+		{
+			result_plan = (Plan *) make_sort_from_pathkeys(root,
+														   result_plan,
+														 root->sort_pathkeys,
+														   limit_tuples,
+														   true);
+			mark_sort_locus(result_plan);
+			current_pathkeys = root->sort_pathkeys;
+			result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
+		}
+
+		if (must_gather && result_plan->flow->flotype != FLOW_SINGLETON)
+		{
+			/*
+			 * current_pathkeys might contain unneeded columns that have been
+			 * eliminated from the final target list, and we cannot maintain
+			 * such an order in the Motion anymore. So use root->sortpathkeys
+			 * rather than current_pathkeys here. (See similar case in LIMIT
+			 * handling below.
+			 */
+			current_pathkeys = root->sort_pathkeys;
+			result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys);
 		}
 	}
 
