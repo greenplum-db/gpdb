@@ -738,7 +738,7 @@ sub mkvcbuild
 		$proj->AddIncludeDir('src\bin\pg_dump');
 		$proj->AddIncludeDir('src\bin\psql');
 		$proj->AddReference($libpq, $libpgcommon, $libpgport);
-		$proj->AddResourceFile('src\bin\scripts', 'PostgreSQL Utility');
+		$proj->AddResourceFile('src\bin\scripts', 'PostgreSQL Utility', 'win32');
 		$proj->AddLibrary('ws2_32.lib');
 	}
 
