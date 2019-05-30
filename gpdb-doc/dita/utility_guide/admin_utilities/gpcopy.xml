@@ -303,7 +303,7 @@
                             <codeph>--dbname</codeph>, or <codeph>--include-table-file</codeph>.
                     </pd>
                 </plentry>
-                <plentry>
+                <plentry id="dest-table-gpcopy">
                     <pt>--dest-table
                             <varname>db</varname>.<varname>schema</varname>.<varname>table</varname></pt>
                     <pd>(Optional.) Changes the database where tables defined with
@@ -346,16 +346,86 @@
                 </plentry>
                 <plentry>
                     <pt>--include-table-file <varname>table-file</varname></pt>
-                    <pd>The location and name of a file containing a list of fully qualified table
-                        names to copy from the Greenplum Database source system. To specify multiple
-                        files, specify this option for each
+                    <pd>The location and name of a text file that defines the tables and data to
+                        copy. To use multiple files, specify this option for each
                         file.<codeblock>--include-table-file &lt;<varname>path_to_file1</varname>> --include-table-file &lt;<varname>path_to_file2</varname>></codeblock></pd>
-                    <pd>In the text file, specify a single fully qualified table per line
-                            (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
-                        You cannot specify views or system catalog tables. In the file, a set of
-                        tables can be specified with regular expression syntax. See the
-                                <codeph><xref href="#topic1/include-file-gpcopy" format="dita"
-                                >--include-table</xref></codeph> option for information about using
+                    <pd>The contents of a text file can be in one of two formats:<ul
+                            id="ul_bfw_kkr_xhb">
+                            <li>One or more lines that each specifies a fully-qualified source table
+                                name and, optionally, a query to select data to copy from the table.
+                                Each line must have the
+                                    syntax:<codeblock><varname>database</varname>.<varname>schema</varname>.<varname>table</varname> [ SQL: <varname>query</varname> ]</codeblock><p>For
+                                    example:<codeblock>mydb.public.products
+mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p><p>Any
+                                    query must reference only the source table. Do not terminate the
+                                    query with a semicolon.</p></li>
+                            <li>A JSON-formatted file with one or more objects that specify the
+                                source table, optional query, and an optional destination table used
+                                to change the database where which the data is copied. JSON
+                                name-value pairs for each table object must be placed in an JSON
+                                array. For
+                                    example:<codeblock>[
+     {
+         "source": "<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>",
+         "sql": "<varname>query</varname>"
+         "dest": "<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>"
+     },
+     {
+         ...     }
+]</codeblock><p>Any
+                                    query must reference only the source table. Do not terminate the
+                                    query with a semicolon.</p><p>Keep in mind that certain
+                                    characters must be escaped in strings in order to ne be parsed
+                                    as JSON, specifically:<simpletable frame="all"
+                                        relcolwidth="1.0* 1.0*" id="simpletable_lp3_g5r_xhb">
+                                        <sthead>
+                                            <stentry>Character</stentry>
+                                            <stentry>Escape Sequence</stentry>
+                                        </sthead>
+                                        <strow>
+                                            <stentry>Backspace</stentry>
+                                            <stentry>\b</stentry>
+                                        </strow>
+                                        <strow>
+                                            <stentry>Form Feed</stentry>
+                                            <stentry>\f</stentry>
+                                        </strow>
+                                        <strow>
+                                            <stentry>Newline</stentry>
+                                            <stentry>\n</stentry>
+                                        </strow>
+                                        <strow>
+                                            <stentry>Tab</stentry>
+                                            <stentry>\t</stentry>
+                                        </strow>
+                                        <strow>
+                                            <stentry>Double Quote</stentry>
+                                            <stentry>\"</stentry>
+                                        </strow>
+                                        <strow>
+                                            <stentry>Backslash</stentry>
+                                            <stentry>\\</stentry>
+                                        </strow>
+                                    </simpletable></p></li>
+                        </ul>
+                    </pd>
+                    <pd>With either file format, you cannot specify views or system catalog
+                        tables.</pd>
+                    <pd>If a text file cannot be parsed as JSON, <codeph>gpcopy</codeph> attempts to
+                        parse each line as a source table definition.</pd>
+                    <pd>Either file format can use Go language regular expression syntax to select
+                        multiple tables. With a JSON file, capture groups defined in the
+                            <codeph>source:</codeph> table definition can be referenced in the
+                            <codeph>dest:</codeph> key to change the destination database where the
+                        data is copied. For
+                        example:<codeblock>[
+     {
+         "source": "testdb/(\\d+)/.myschema/(\\d+)/.mytable/(\\d+)/",
+         "dest": "productiondb/$1/.myschema/$1/.mytable/$1/"
+     },
+]</codeblock></pd>
+                    <pd>See the <codeph><xref href="#topic1/dest-table-gpcopy" format="dita"
+                                >--dest-table</xref></codeph> option for information about using
                         regular expressions.</pd>
                     <pd>This option cannot be specified with the <codeph>--full</codeph>,
                             <codeph>--dbname</codeph>, or <codeph>--include-table</codeph>
