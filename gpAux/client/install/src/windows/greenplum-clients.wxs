@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Id="2E71C10F-7A48-4F14-B13A-B3FC349037E0" Language="1033" Manufacturer="Greenplum, Inc." Name="Greenplum Clients" Version="__VERSION_PLACEHOLDER__" UpgradeCode="0EE0DD2B-0504-4B60-85E8-604852D07A9F">
+  <Product Id="2E71C10F-7A48-4F14-B13A-B3FC349037E0" Language="1033" Manufacturer="Pivotal, Inc." Name="Greenplum Clients" Version="__VERSION_PLACEHOLDER__" UpgradeCode="0EE0DD2B-0504-4B60-85E8-604852D07A9F">
     <Package Compressed="yes" Comments="Greenplum Clients" InstallerVersion="200" Languages="1033" Manufacturer="Greenplum, Inc." Platform="x64" />
     <UI>
       <Property Id="ErrorDialog"><![CDATA[ErrorDlg]]></Property>
