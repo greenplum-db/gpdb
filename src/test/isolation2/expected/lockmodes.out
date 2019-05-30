@@ -885,6 +885,37 @@ BEGIN
 1: abort;
 ABORT
 
+-- 1.5 test order-by's plan
+1: begin;
+BEGIN
+1: explain select * from t_lockmods order by c for update;
+ QUERY PLAN                                                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.11..2.12 rows=5 width=10) 
+   Merge Key: c                                                              
+   ->  Sort  (cost=2.11..2.12 rows=2 width=10)                               
+         Sort Key: c                                                         
+         ->  Seq Scan on t_lockmods  (cost=0.00..2.05 rows=2 width=10)       
+ Optimizer: Postgres query optimizer                                         
+(6 rows)
+1: select * from t_lockmods order by c for update;
+ c 
+---
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+(5 rows)
+1: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation   
+----------+-----------------+---------+------------
+ relation | AccessShareLock | t       | t_lockmods 
+ relation | ExclusiveLock   | t       | t_lockmods 
+(2 rows)
+1: abort;
+ABORT
+
 1q: ... <quitting>
 2q: ... <quitting>
 
@@ -1797,6 +1828,38 @@ BEGIN
 ----------+-----------------+---------+----------------
  relation | AccessShareLock | t       | t_lockmods_rep 
  relation | ExclusiveLock   | t       | t_lockmods_rep 
+(2 rows)
+1: abort;
+ABORT
+
+-- 2.5 test order-by's plan
+1: begin;
+BEGIN
+1: explain select * from t_lockmods order by c for update;
+ QUERY PLAN                                                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.16..2.17 rows=5 width=10) 
+   Merge Key: c                                                              
+   ->  Sort  (cost=2.16..2.17 rows=2 width=10)                               
+         Sort Key: c                                                         
+         ->  LockRows  (cost=0.00..2.10 rows=2 width=10)                     
+               ->  Seq Scan on t_lockmods  (cost=0.00..2.05 rows=2 width=10) 
+ Optimizer: Postgres query optimizer                                         
+(7 rows)
+1: select * from t_lockmods order by c for update;
+ c 
+---
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+(5 rows)
+1: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation   
+----------+-----------------+---------+------------
+ relation | AccessShareLock | t       | t_lockmods 
+ relation | RowShareLock    | t       | t_lockmods 
 (2 rows)
 1: abort;
 ABORT

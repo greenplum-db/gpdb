@@ -262,6 +262,13 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 2: select * from show_locks_lockmodes;
 1: abort;
 
+-- 1.5 test order-by's plan
+1: begin;
+1: explain select * from t_lockmods order by c for update;
+1: select * from t_lockmods order by c for update;
+1: select * from show_locks_lockmodes;
+1: abort;
+
 1q:
 2q:
 
@@ -515,6 +522,13 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 1: explain select * from t_lockmods_rep for update;
 1: select * from t_lockmods_rep for update;
 2: select * from show_locks_lockmodes;
+1: abort;
+
+-- 2.5 test order-by's plan
+1: begin;
+1: explain select * from t_lockmods order by c for update;
+1: select * from t_lockmods order by c for update;
+1: select * from show_locks_lockmodes;
 1: abort;
 
 1q:
