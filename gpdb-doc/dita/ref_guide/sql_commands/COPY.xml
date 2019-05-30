@@ -378,11 +378,12 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           <codeph>COPY (SELECT * FROM <varname>table</varname>) TO ...</codeph> can be used to dump
         all of the data in an inheritance hierarchy.</p>
       <p>Similarly, to copy data from a partitioned table with a leaf child partition that is an
-        external table, use an SQL query to copy the data. For example, if the table
-          <codeph>my_sales</codeph> contains a with a leaf child partition that is an external
-        table, this command <codeph>COPY my_sales TO stdout</codeph> returns an error. This command
-        sends the data to stdout:<codeblock>COPY (SELECT * from my_sales ) TO stdout</codeblock></p>
-      <p>The <codeph>BINARY</codeph> key word causes all data to be stored/read as binary format
+        external table, use an SQL query to select the data to copy. For example, if the table
+          <codeph>my_sales</codeph> contains a leaf child partition that is an external table, this
+        command <codeph>COPY my_sales TO stdout</codeph> returns an error. This command sends the
+        data to
+        <codeph>stdout</codeph>:<codeblock>COPY (SELECT * from my_sales ) TO stdout</codeblock></p>
+      <p>The <codeph>BINARY</codeph> keyword causes all data to be stored/read as binary format
         rather than as text. It is somewhat faster than the normal text mode, but a binary-format
         file is less portable across machine architectures and Greenplum Database versions. Also,
         you cannot run <codeph>COPY FROM</codeph> in single row error isolation mode if the data is
@@ -395,8 +396,9 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         server, not by the client application. Therefore, they must reside on or be accessible to
         the Greenplum Database master host machine, not the client. They must be accessible to and
         readable or writable by the Greenplum Database system user (the user ID the server runs as),
-        not the client. <codeph>COPY</codeph> naming a file is only allowed to database superusers,
-        since it allows reading or writing any file that the server has privileges to access.</p>
+        not the client. Only database superusers are permitted to name files with
+          <codeph>COPY</codeph>, because this allows reading or writing any file that the server has
+        privileges to access.</p>
       <p><codeph>COPY FROM</codeph> will invoke any triggers and check constraints on the
         destination table. However, it will not invoke rewrite rules. Note that in this release,
         violations of constraints are not evaluated for single row error isolation mode.</p>
