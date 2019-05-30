@@ -114,7 +114,7 @@ FaultInjectorTypeStringToEnum(char* faultTypeString)
 	FaultInjectorType_e	faultTypeEnum = FaultInjectorTypeMax;
 	int	ii;
 	
-	for (ii=FaultInjectorTypeNotSpecified+1; ii < FaultInjectorTypeMax; ii++)
+	for (ii=0; ii < FaultInjectorTypeMax; ii++)
 	{
 		if (strcmp(FaultInjectorTypeEnumToString[ii], faultTypeString) == 0)
 		{
@@ -131,7 +131,7 @@ FaultInjectorIdentifierStringToEnum(char* faultName)
 	FaultInjectorIdentifier_e	faultId = FaultInjectorIdMax;
 	int	ii;
 	
-	for (ii=FaultInjectorIdNotSpecified+1; ii < FaultInjectorIdMax; ii++)
+	for (ii=0; ii < FaultInjectorIdMax; ii++)
 	{
 		if (strcmp(FaultInjectorIdentifierEnumToString[ii], faultName) == 0)
 		{
@@ -1081,13 +1081,14 @@ InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
 
 	strlcpy(faultEntry.faultName, faultName, sizeof(faultEntry.faultName));
 	faultEntry.faultInjectorIdentifier = FaultInjectorIdentifierStringToEnum(faultName);
-	if (faultEntry.faultInjectorIdentifier == FaultInjectorIdMax)
+	if (faultEntry.faultInjectorIdentifier == FaultInjectorIdNotSpecified)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROTOCOL_VIOLATION),
 				 errmsg("could not recognize fault name '%s'", faultName)));
 
 	faultEntry.faultInjectorType = FaultInjectorTypeStringToEnum(type);
-	if (faultEntry.faultInjectorType == FaultInjectorTypeMax)
+	if (faultEntry.faultInjectorType == FaultInjectorTypeMax ||
+	    faultEntry.faultInjectorType == FaultInjectorTypeNotSpecified)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROTOCOL_VIOLATION),
 				 errmsg("could not recognize fault type '%s'", type)));
