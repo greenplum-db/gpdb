@@ -106,8 +106,9 @@ Performance testing has found that there is virtually no performance difference 
 #### D2 Series
 
 Storage Optimized instances with local HDD ephemeral storage that is optimized for throughput.  Ephemeral storage is lost if the nodes are stopped.  
-- Does not support snapshot backups using gpsnap utility
-- Data loss when nodes are stopped
+
+-  Does not support snapshot backups using gpsnap utility
+-  Data loss when nodes are stopped
 
 | Instance Type | Storage Type | Storage Size | Memory | vCPUs | Network Speed | Use        |
 |---------------|--------------|--------------|--------|-------|---------------|------------|
@@ -135,15 +136,17 @@ The biggest obstacle to maximizing storage performance is the throughput limit p
 
 
 ### <a id="gcp-recommend"></a>GCP Recommendations
+
 Testing has revealed that _while using the same number of vCPUs_, a cluster using a large instance type like n1-highmem-64 (64 vCPUs) will have lower performance than a cluster using more of the smaller instance types like n1-highmem-8 (8 vCPUs).  In general, use 8x more nodes in GCP than you would in another environment like AWS while using the 8 vCPU instance types.
 
 The HighMem instance type is slightly faster for higher concurrency.  Furthermore, SSD disks are slightly faster too but comes at a cost.
 
-Instance Type|Storage Type|Storage Size|Memory|vCPUs|Network Speed|Use|
-n1-standard-8|HDD|6TB or 3TB|30|8|10Gbit|Dev/Test - Production|
-n1-standard-8|SSD|1.4TB|30|8|10Gbit|Dev/Test - Production|
-n1-highmem-8|HDD|6TB or 3TB|52|8|10Gbit|Dev/Test - Production|
-n1-highmem-8|SSD|1.4TB|52|8|10Gbit|Dev/Test - Production High Concurrency|
+| Instance Type | Storage Type | Storage Size | Memory | vCPUs | Network Speed | Use                                    |
+|---------------|--------------|--------------|--------|-------|---------------|----------------------------------------|
+| n1-standard-8 | HDD          | 6TB or 3TB   | 30     | 8     | 10Gbit        | Dev/Test - Production                  |
+| n1-standard-8 | SSD          | 1.4TB        | 30     | 8     | 10Gbit        | Dev/Test - Production                  |
+| n1-highmem-8  | HDD          | 6TB or 3TB   | 52     | 8     | 10Gbit        | Dev/Test - Production                  |
+| n1-highmem-8  | SSD          | 1.4TB        | 52     | 8     | 10Gbit        | Dev/Test - Production High Concurrency |
 
 ## <a id="azure"></a>Azure
 ### <a id="az-vm-type"></a>Virtual Machine Type
@@ -168,7 +171,7 @@ Standard_E32_v3 was tested with gpcheckperf to have 1424 write and 1557 read MB/
 
 To get the max throughput from a VM in Azure, you have to use multiple disks.  For the larger instance types, you have to use upwards of 32 disks to reach the limit of a VM.  Unfortunately, memory and CPU constraints on these machines mean you have run less segments than you have disks so you have to use software RAID to utilize all of these disks.  Performance takes a hit with software RAID too so you have to try multiple configurations to optimize.
 
-The size of the disk also impacts performance, but not by much.  
+The size of the disk also impacts performance, but not by much.
 
 Software RAID not only is a little bit slower, but it also requires umount to take a snapshot.  This greatly lengthens the time it takes to take a snapshot backup.
 
