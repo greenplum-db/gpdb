@@ -69,6 +69,22 @@
             Compressing spill files may help to avoid overloading the disk subsystem with IO
             operations. </p>
         </li>
+        <li>
+          <p>
+            <b>memory_spill_ratio</b>
+          </p>
+          <p>Set <codeph>memory_spill_ratio</codeph> to increase or decrease the initial
+            amount of memory Greenplum Database allots to a query. When you set
+            <codeph>memory_spill_ratio</codeph> to 0, Greenplum Database uses the
+            <codeph>statement_mem</codeph> setting to determine the query operator memory
+            amount.</p>
+        </li>
+        <li>
+          <b>statement_mem</b>
+          <p>When <codeph>memory_spill_ratio</codeph> is 0, Greenplum Database uses the
+            <codeph>statement_mem</codeph> setting to determine the amount of memory
+            to allocate to a query.</p>
+        </li>
       </ul>
       <p>Other considerations:</p>
       <ul id="ul_xv2_phn_2z">
@@ -96,7 +112,7 @@
         <li>Use the <codeph>CONCURRENCY</codeph> resource group parameter to limit the
             number of active queries that members of a particular resource group can run
             concurrently.</li>
-        <li>Use the <codeph>MEMORY_LIMIT</codeph> and <codeph>MEMORY_SHARED_QUOTA</codeph>
+        <li>Use the <codeph>MEMORY_LIMIT</codeph> and <codeph>MEMORY_SPILL_RATIO</codeph>
             parameters to control the maximum amount of memory that queries running in the
            resource group can consume.</li>
         <li>Greenplum Database assigns unreserved memory (100 - (sum of all resource
@@ -104,7 +120,7 @@
           memory is available to all queries on a first-come, first-served basis.</li>
         <li>Alter resource groups dynamically to match the real requirements of the
           group for the workload and the time of day.</li>
-        <li>Use the <codeph>gptoolkit</codeph> views to examine resource group resource
+        <li>Use the <codeph>gp_toolkit</codeph> views to examine resource group resource
             usage and to monitor how the groups are working.</li>
         <li otherprops="pivotal">Consider using Pivotal Greenplum Command Center
           to create and manage resource groups, and to define the criteria under which
@@ -113,11 +129,13 @@
     </section>
     <section id="section113x" xml:lang="en">
       <title>Low Memory Queries</title>
-      <p>A low <codeph>memory_spill_ratio</codeph> setting (for example, in the 0-2% range)
+      <p>A low <codeph>statement_mem</codeph> setting (for example, in the 10MB range)
         has been shown to increase the performance of queries with low memory requirements.
-        Use the <codeph>memory_spill_ratio</codeph> server configuration parameter to override
+        Use the <codeph>memory_spill_ratio</codeph> and <codeph>statement_mem</codeph> server
+        configuration parameters to override
         the setting on a per-query basis. For example:
-        <codeblock>SET memory_spill_ratio=0;</codeblock></p>
+        <codeblock>SET memory_spill_ratio=0;
+SET statement_mem='10 MB';</codeblock></p>
     </section>
     <section id="section177x" xml:lang="en">
       <title>Administrative Utilities and admin_group Concurrency</title>

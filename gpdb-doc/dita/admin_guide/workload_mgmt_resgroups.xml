@@ -150,12 +150,12 @@
             </row>
             <row>
               <entry colname="col1">MEMORY_LIMIT</entry>
-              <entry colname="col2">The percentage of memory resources available to this resource
-                group.</entry>
+              <entry colname="col2">The percentage of reserved memory resources available to
+                this resource group.</entry>
             </row>
             <row>
               <entry colname="col1">MEMORY_SHARED_QUOTA</entry>
-              <entry colname="col2">The percentage of memory to share across transactions submitted
+              <entry colname="col2">The percentage of reserved memory to share across transactions submitted
                 in this resource group.</entry>
             </row>
             <row>
@@ -380,28 +380,34 @@
         <codeblock>
 rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments</codeblock>
       </p>
-      <p>Each resource group reserves a percentage of the segment memory for resource management.
+      <p>Each resource group may reserve a percentage of the segment memory for resource management.
         You identify this percentage via the <codeph>MEMORY_LIMIT</codeph> value that you specify
         when you create the resource group. The minimum <codeph>MEMORY_LIMIT</codeph> percentage you
-        can specify for a resource group is 1, the maximum is 100.</p>
+        can specify for a resource group is 0, the maximum is 100. When <codeph>MEMORY_LIMIT</codeph>
+        is 0, Greenplum Database reserves no memory for the resource group, and uses resource
+        group global shared memory to fulfill all memory requests in the group. Refer to
+        <xref href="#topic833glob" type="topic" format="dita"/>
+        for more information about resource group global shared memory.</p>
       <p>The sum of <codeph>MEMORY_LIMIT</codeph>s specified for all resource groups that you define
         in your Greenplum Database cluster must not exceed 100.</p>
     </body>
     <topic id="mem_roles" xml:lang="en">
       <title>Additional Memory Limits for Role-based Resource Groups</title>
       <body>
-        <p>The memory reserved by a resource group for roles is further divided into fixed and
+        <p>If memory is reserved for a resource group for roles (non-zero
+          <codeph>MEMORY_LIMIT</codeph>), the memory is further divided into fixed and
           shared components. The <codeph>MEMORY_SHARED_QUOTA</codeph> value that you specify when
           you create the resource group identifies the percentage of reserved resource group memory
           that may be shared among the currently running transactions. This memory is allotted on a
           first-come, first-served basis. A running transaction may use none, some, or all of the
             <codeph>MEMORY_SHARED_QUOTA</codeph>.</p>
         <p>The minimum <codeph>MEMORY_SHARED_QUOTA</codeph> that you can specify is 0, the maximum
-          is 100. The default <codeph>MEMORY_SHARED_QUOTA</codeph> is 20.</p>
+          is 100. The default <codeph>MEMORY_SHARED_QUOTA</codeph> is 80.</p>
         <p>As mentioned previously, <codeph>CONCURRENCY</codeph> identifies the maximum number of
-          concurrently running transactions permitted in a resource group for roles. The fixed
-          memory reserved by a resource group is divided into <codeph>CONCURRENCY</codeph> number of
-          transaction slots. Each slot is allocated a fixed, equal amount of resource group memory.
+          concurrently running transactions permitted in a resource group for roles. If fixed
+          memory is reserved by a resource group (non-zero <codeph>MEMORY_LIMIT</codeph>),
+          it is divided into <codeph>CONCURRENCY</codeph> number of
+          transaction slots. Each slot is allocated a fixed, equal amount of the resource group memory.
           Greenplum Database guarantees this fixed memory to each transaction. <fig
             id="fig_py5_1sl_wlrg">
             <title>Resource Group Memory Allotments</title>
@@ -425,7 +431,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
           <p>Resource group global shared memory is available only to resource groups that you
             configure with the <codeph>vmtracker</codeph> memory auditor.</p>
           <p>When available, Greenplum Database allocates global shared memory to a transaction
-            after first allocating slot and resource group shared memory. Greenplum Database
+            after first allocating slot and resource group shared memory (if applicable). Greenplum Database
             allocates resource group global shared memory to transactions on a first-come
             first-served basis.</p>
           <note>Greenplum Database tracks, but does not actively monitor, transaction memory usage
@@ -466,20 +472,26 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
             transaction spills to disk. Greenplum Database uses the
               <codeph>MEMORY_SPILL_RATIO</codeph> to determine the initial memory to allocate to a
             transaction.</p>
-          <p> The minimum <codeph>MEMORY_SPILL_RATIO</codeph> percentage that you can specify for a
-            resource group is 0. The maximum is 100. The default <codeph>MEMORY_SPILL_RATIO</codeph>
-            is 20.</p>
-          <p>You define the <codeph>MEMORY_SPILL_RATIO</codeph> when you create a resource group for
-            roles. You can selectively set this limit on a per-query basis at the session level with
-            the <codeph><xref href="../ref_guide/config_params/guc-list.xml#memory_spill_ratio"
+          <p>You can specify an integer percentage value from 0 to 100 inclusive for
+            <codeph>MEMORY_SPILL_RATIO</codeph>. The default <codeph>MEMORY_SPILL_RATIO</codeph>
+           is 0.</p>
+          <p>When <codeph>MEMORY_SPILL_RATIO</codeph> is 0, Greenplum Database uses the
+            <xref href="../ref_guide/config_params/guc-list.xml#statement_mem" format="dita"><codeph>statement_mem</codeph></xref>
+            server configuration parameter value to control operator memory.</p>
+          <note>When you set <codeph>MEMORY_LIMIT</codeph> to 0,
+            <codeph>MEMORY_SPILL_RATIO</codeph> must also be set to 0.</note>
+          <p>You can selectively set the <codeph>MEMORY_SPILL_RATIO</codeph> on a per-query basis
+            at the session level with the
+            <codeph><xref href="../ref_guide/config_params/guc-list.xml#memory_spill_ratio"
                 type="topic"/></codeph> server configuration parameter.</p>
           <section id="topic833low" xml:lang="en">
             <title>memory_spill_ratio and Low Memory Queries </title>
-            <p>A low <codeph>memory_spill_ratio</codeph> setting (for example, in the 0-2% range)
+            <p>A low <codeph>statement_mem</codeph> setting (for example, in the 10MB range)
               has been shown to increase the performance of queries with low memory requirements.
-              Use the <codeph>memory_spill_ratio</codeph> server configuration parameter to override
-              the setting on a per-query basis. For example:
-              <codeblock>SET memory_spill_ratio=0;</codeblock></p>
+              Use the <codeph>memory_spill_ratio</codeph> and <codeph>statement_mem</codeph> server
+              configuration parameters to override the setting on a per-query basis. For example:
+              <codeblock>SET memory_spill_ratio=0;
+SET statement_mem='10 MB';</codeblock></p>
           </section>
         </body>
       </topic>
@@ -702,17 +714,17 @@ gpstart
             <row>
               <entry colname="col1">MEMORY_LIMIT</entry>
               <entry colname="col2">10</entry>
-              <entry colname="col3">30</entry>
+              <entry colname="col3">0</entry>
             </row>
             <row>
               <entry colname="col1">MEMORY_SHARED_QUOTA</entry>
-              <entry colname="col2">50</entry>
-              <entry colname="col3">50</entry>
+              <entry colname="col2">80</entry>
+              <entry colname="col3">80</entry>
             </row>
             <row>
               <entry colname="col1">MEMORY_SPILL_RATIO</entry>
-              <entry colname="col2">20</entry>
-              <entry colname="col3">20</entry>
+              <entry colname="col2">0</entry>
+              <entry colname="col3">0</entry>
             </row>
             <row>
               <entry colname="col1">MEMORY_AUDITOR</entry>
@@ -733,18 +745,23 @@ gpstart
   <topic id="topic10" xml:lang="en">
     <title id="iz139857">Creating Resource Groups</title>
     <body>
-      <p><i>When you create a resource group for a role</i>, you provide a name, a CPU resource
-        allocation mode, and memory limit. You can optionally provide a concurrent transaction limit
-        and memory shared quota and spill ratio. Use the <codeph><xref
+      <p><i>When you create a resource group for a role</i>, you provide a name and a CPU resource
+        allocation mode. You can optionally provide a concurrent transaction limit and 
+        memory limit, shared quota, and spill ratio values. Use the <codeph><xref
             href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml#topic1" type="topic"
             format="dita"/></codeph> command to create a new resource group. </p>
-      <p id="iz152723">When you create a resource group for a role, you must provide
-          <codeph>CPU_RATE_LIMIT</codeph> or <codeph>CPUSET</codeph> and
-          <codeph>MEMORY_LIMIT</codeph> limit values. These limits identify the percentage of
-        Greenplum Database resources to allocate to this resource group. For example, to create a
-        resource group named <i>rgroup1</i> with a CPU limit of 20 and a memory limit of 25:</p>
+      <p id="iz152723">When you create a resource group for a role, you must provide a
+         <codeph>CPU_RATE_LIMIT</codeph> or <codeph>CPUSET</codeph> limit value. These
+         limits identify the percentage of Greenplum Database CPU resources to allocate
+         to this resource group. You may specify a <codeph>MEMORY_LIMIT</codeph> to
+         reserve a fixed amount of memory for the resource group. If you specify
+         a <codeph>MEMORY_LIMIT</codeph> of 0, Greenplum Database uses global shared memory
+         to fulfill all memory requirements for the resource group.</p>
+      <p>For example, to create
+        a resource group named <i>rgroup1</i> with a CPU limit of 20, a memory limit of 25,
+        and a memory spill ratio of 20:</p>
       <p>
-        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup1</i> WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25);
+        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup1</i> WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25, MEMORY_SPILL_RATIO=20);
 </codeblock>
       </p>
       <p>The CPU limit of 20 is shared by every role to which <codeph>rgroup1</codeph> is assigned.
@@ -768,7 +785,7 @@ gpstart
         For example:</p>
       <p>
         <codeblock>=# ALTER RESOURCE GROUP <i>rg_role_light</i> SET CONCURRENCY 7;
-=# ALTER RESOURCE GROUP <i>exec</i> SET MEMORY_LIMIT 25;
+=# ALTER RESOURCE GROUP <i>exec</i> SET MEMORY_SPILL_RATIO 25;
 =# ALTER RESOURCE GROUP <i>rgroup1</i> SET CPUSET '2,4';
 </codeblock>
       </p>
@@ -848,10 +865,8 @@ gpstart
       <body>
         <p>The <codeph><xref href="../ref_guide/system_catalogs/gp_resgroup_config.xml" type="topic"
               format="dita"/></codeph>
-          <codeph>gp_toolkit</codeph> system view displays the current and proposed limits for a
-          resource group. The proposed limit differs from the current limit when you alter the limit
-          but the new value can not be immediately applied. To view the limits of all resource
-          groups:</p>
+          <codeph>gp_toolkit</codeph> system view displays the current limits for a
+          resource group. To view the limits of all resource groups:</p>
         <p>
           <codeblock>=# SELECT * FROM gp_toolkit.gp_resgroup_config;
 </codeblock>

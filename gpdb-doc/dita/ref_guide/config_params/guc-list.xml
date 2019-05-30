@@ -6880,8 +6880,10 @@
         a per-query basis. For example, if you have a specific query that spills to disk and
         requires more memory, you may choose to set a larger <codeph>memory_spill_ratio</codeph> to
         increase the initial memory allocation.</p>
-      <p>When you set <codeph>memory_spill_ratio</codeph> at the session level, Greenplum Database
-        does not perform semantic validation on the new value until you next perform a query.</p>
+      <p>You can specify an integer percentage value from 0 to 100 inclusive. If you
+        specify a value of 0, Greenplum Database uses the
+            <xref href="#statement_mem" format="dita"><codeph>statement_mem</codeph></xref>
+            server configuration parameter value to control operator memory.</p>
       <table id="memory_spill_ratio_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

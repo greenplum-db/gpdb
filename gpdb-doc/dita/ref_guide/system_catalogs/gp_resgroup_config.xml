@@ -5,9 +5,7 @@
   <title id="fp141670">gp_resgroup_config</title>
   <body>
     <p>The <codeph>gp_toolkit.gp_resgroup_config</codeph> view allows administrators to see the
-      current CPU, memory, and concurrency limits for a resource group. The
-      view also displays proposed limit settings. A proposed limit will differ from a current
-      limit when the limit has been altered, but the new value could not be immediately applied.</p>
+      current CPU, memory, and concurrency limits for a resource group.</p>
       <note>The <codeph>gp_resgroup_config</codeph> view is valid only when resource group-based resource management is active.</note>
     <table id="fp141982">
       <title>gp_toolkit.gp_resgroup_config</title>
@@ -51,14 +49,6 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>proposed_concurrency</codeph>
-            </entry>
-            <entry colname="col2">text</entry>
-            <entry colname="col3">pg_resgroupcapability.proposed for pg_resgroupcapability.reslimittype = 1</entry>
-            <entry colname="col4">The pending concurrency value for the resource group.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
               <codeph>cpu_rate_limit</codeph>
             </entry>
             <entry colname="col2">text</entry>
@@ -75,14 +65,6 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>proposed_memory_limit</codeph>
-            </entry>
-            <entry colname="col2">text</entry>
-            <entry colname="col3">pg_resgroupcapability.proposed for pg_resgroupcapability.reslimittype = 3</entry>
-            <entry colname="col4">The pending memory limit value for the resource group.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
               <codeph>memory_shared_quota</codeph>
             </entry>
             <entry colname="col2">text</entry>
@@ -91,27 +73,11 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>proposed_memory_shared_quota</codeph>
-            </entry>
-            <entry colname="col2">text</entry>
-            <entry colname="col3">pg_resgroupcapability.proposed for pg_resgroupcapability.reslimittype = 4</entry>
-            <entry colname="col4">The pending shared memory quota value for the resource group.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
               <codeph>memory_spill_ratio</codeph>
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3">pg_resgroupcapability.value for pg_resgroupcapability.reslimittype = 5</entry>
             <entry colname="col4">The memory spill ratio (<codeph>MEMORY_SPILL_RATIO</codeph>) value specified for the resource group.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>proposed_memory_spill_ratio</codeph>
-            </entry>
-            <entry colname="col2">text</entry>
-            <entry colname="col3">pg_resgroupcapability.proposed for pg_resgroupcapability.reslimittype> = 5</entry>
-            <entry colname="col4">The pending memory spill ratio value for the resource group.</entry>
           </row>
           <row>
             <entry colname="col1">

@@ -108,17 +108,6 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>memory_quota_proposed</codeph>
-            </entry>
-            <entry colname="col2">integer</entry>
-            <entry colname="col3"></entry>
-            <entry colname="col4">The total amount of fixed memory that Greenplum Database
-              has allotted to the resource group for the segment on the host. This value
-              will be the same for all resource group and segment instance combinations
-              on a host.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
               <codeph>memory_shared_used</codeph>
             </entry>
             <entry colname="col2">integer</entry>
@@ -135,27 +124,6 @@
             <entry colname="col4">The amount of group shared memory available
               for the segment instance on the host. Resource group global shared memory
               is not included in this total.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>memory_shared_granted</codeph>
-            </entry>
-            <entry colname="col2">integer</entry>
-            <entry colname="col3"></entry>
-            <entry colname="col4">The portion of group shared memory that
-              Greenplum Database has allotted to the resource group for the segment
-              instance on the host. Resource group global shared memory is not
-              included in this value.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>memory_shared_proposed</codeph>
-            </entry>
-            <entry colname="col2">integer</entry>
-            <entry colname="col3"></entry>
-            <entry colname="col4">The total amount of group shared memory requested
-              by the resource group on the host. This value will be the same for all
-              resource group and segment instance combinations on a host.</entry>
           </row>
         </tbody>
       </tgroup>

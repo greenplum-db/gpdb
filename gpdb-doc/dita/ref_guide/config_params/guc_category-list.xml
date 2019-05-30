@@ -1187,6 +1187,9 @@
             <p>
               <xref href="guc-list.xml#memory_spill_ratio" type="section">memory_spill_ratio</xref>
             </p>
+            <p>
+              <xref href="guc-list.xml#statement_mem" type="section">statement_mem</xref>
+            </p>
             <p><xref href="guc-list.xml#vmem_process_interrupt" type="section"
                 >vmem_process_interrupt</xref></p>
           </stentry>
