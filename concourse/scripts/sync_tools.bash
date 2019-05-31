@@ -38,11 +38,8 @@ function _main() {
     ubuntu)
         export BLD_ARCH=ubuntu18.04_x86_64
         ;;
-    win32)
-        export BLD_ARCH=win32
-        ;;
     *)
-        echo "only centos, sles, ubuntu, and win32 are supported TARGET_OS'es"
+        echo "only centos, sles, ubuntu are supported TARGET_OS'es"
         false
         ;;
   esac
