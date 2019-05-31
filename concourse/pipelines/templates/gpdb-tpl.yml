@@ -54,6 +54,9 @@ groups:
 {% if "ubuntu18.04" in os_types %}
   - compile_gpdb_ubuntu18.04
 {% endif %}
+{% if "win" in os_types %}
+  - compile_gpdb_clients_windows
+{% endif %}
 {% if "sles" in os_types %}
   - compile_gpdb_sles11
 {% endif %}
@@ -167,6 +170,9 @@ groups:
 {% endif %}
 {% if "sles" in os_types %}
   - compile_gpdb_sles11
+{% endif %}
+{% if "win" in os_types %}
+  - compile_gpdb_clients_windows
 {% endif %}
 
 {% if "ICW" in test_sections %}
@@ -658,6 +664,15 @@ resources:
     versioned_file: ((pipeline-name))/bin_gpdb_sles11/bin_gpdb.tar.gz
 
 {% endif %}
+{% if "win" in os_types %}
+- name: bin_gpdb_clients_windows
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_clients_windows/bin_gpdb_clients_windows.msi
+
+{% endif %}
 {% if "AA" in test_sections %}
 - name: madlib_src
   type: git
@@ -1065,6 +1080,26 @@ jobs:
 
 {% endif %}
 
+{% if "win" in os_types %}
+- name: compile_gpdb_clients_windows
+  serial: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: gpdb6-centos6-build
+  - task: compile_gpdb_windows_remote
+    file: gpdb_src/concourse/tasks/compile_gpdb_remote_windows.yml
+    image: gpdb6-centos6-build
+    params:
+      REMOTE_HOST: {{remote_win_host_build}}
+      REMOTE_PORT: {{remote_win_port_build}}
+      REMOTE_USER: {{remote_win_user_build}}
+      REMOTE_KEY: {{remote_win_key_build}}
+  - put: bin_gpdb_clients_windows
+    params:
+      file: "gpdb_artifacts/greenplum-clients-*-x86_64.msi"
+{% endif %}
 {% if "ICW" in test_sections %}
 ## ======================================================================
 ##  ___ ______        __
