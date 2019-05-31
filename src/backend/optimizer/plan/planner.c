@@ -3065,6 +3065,30 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 
 	/*
 	 * Greenplum specific behavior:
+	 * In Postgres, the process order is sort -> rowmarks -> limit,
+	 * the reason I think is that we should only lock those tuples after
+	 * limit. Based on the one tuple one time model, the following plan
+	 *     limit
+	 *        -> lockrows
+	 *            -> sort
+	 *                -> scan
+	 * will only lock one tuple even the sort node sort all tuples.
+	 *
+	 * But for Greenplum, we might not emit lockrows plannode due to many
+	 * limitations in MPP architecture. Greenplum can only behave like
+	 * postgres in some simple cases (refer the function
+	 * `parser/analyze.c:checkCanOptSelectLockingClause` for details).
+	 * Select-statement with limit clause and locking clause  is not a
+	 * simple case, because we can only know which tuples will be output
+	 * on QD, but lock rows have to work on QEs. So for select-statement
+	 * with limit clause and locking clause will not emit lockrows plannode,
+	 * that is, in such case, it will ignore the rowmarks.
+	 *
+	 * So Greenplum changes the process order as: rowmarks(maybe) -> sort -> limit.
+	 */
+
+	/*
+	 * Greenplum specific behavior:
 	 * The implementation of select statement with locking clause
 	 * (for update | no key update | share | key share) in postgres
 	 * is to hold RowShareLock on tables during parsing stage, and
