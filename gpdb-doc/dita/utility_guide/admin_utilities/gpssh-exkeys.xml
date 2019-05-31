@@ -67,8 +67,7 @@
                         <codeph>-e</codeph>, and <codeph>-x</codeph> options.</li>
                 <li id="jw140377">Connects to each host using <codeph>ssh</codeph> and obtains the
                     user's <codeph>authorized_keys</codeph>, <codeph>known_hosts</codeph>, and
-                        <codeph>id_rsa.pub</codeph> files. If no <codeph>id_rsa.pub</codeph> exists
-                    on the host, the utility generates a key pair.</li>
+                        <codeph>id_rsa.pub</codeph> files. </li>
                 <li id="jw140378">Adds keys from the <codeph>id_rsa.pub</codeph> files obtained from
                     each host to the <codeph>authorized_keys</codeph> file of the current user.</li>
                 <li id="jw140379">Updates the <codeph>authorized_keys</codeph>,
