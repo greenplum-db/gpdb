@@ -40,7 +40,7 @@
          <title>Prerequisites</title>
          <p>The Data Domain systems that are used as local and remote backup systems for managed
             file replication must have Data Domain Boost and Replicator enabled. </p>
-         <p>The Greenplum Database master host segment hosts must be able to connect to both the
+         <p>The Greenplum Database master host must be able to connect to both the
             local Data Domain system and the remote Data Domain system.</p>
          <p>The login credentials for the local and remote Data Domain systems must be configured on
             the Greenplum master host with the <codeph>gpcrondump</codeph> utility. See "Backing Up
