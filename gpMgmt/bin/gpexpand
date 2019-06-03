@@ -1097,9 +1097,9 @@ class gpexpand:
                                 "name": tblspc_oid_names[int(oid)]}
 
         with open(filename, 'w') as f:
-            names = ":".join([tblspc_info[oid]["name"]
+            names = "|".join([tblspc_info[oid]["name"]
                               for oid in tblspc_oids])
-            oids = ":".join(tblspc_oids)
+            oids = "|".join(tblspc_oids)
             headline = "tableSpaceNameOrders={names}".format(names=names)
             secline = "tableSpaceOidOrders={oids}".format(oids=oids)
             print >>f, headline
@@ -1107,8 +1107,8 @@ class gpexpand:
 
             for db in self.gparray.getExpansionSegDbList():
                 if db.isSegmentPrimary():
-                    tmpStr = "{dbid}:{locations}"
-                    locations = ":".join([tblspc_info[oid]["location"]
+                    tmpStr = "{dbid}|{locations}"
+                    locations = "|".join([tblspc_info[oid]["location"]
                                           for oid in tblspc_oids])
                     print >>f, tmpStr.format(dbid=db.getSegmentDbId(),
                                              locations=locations)
@@ -1213,13 +1213,13 @@ class gpexpand:
         with open(tablespace_inputfile) as f:
             headline = f.readline().strip()
             secline = f.readline().strip()
-            tblspc_names = headline.split('=')[1].strip().split(':')
-            tblspc_oids = secline.split('=')[1].strip().split(':')
+            tblspc_names = headline.split('=')[1].strip().split('|')
+            tblspc_oids = secline.split('=')[1].strip().split('|')
             new_tblspc_info["names"] = tblspc_names
             new_tblspc_info["oids"] = tblspc_oids
             details = {}
             for line in f:
-                l = line.strip().split(':')
+                l = line.strip().split('|')
                 dbid = l[0]
                 locations = l[1:]
                 details[dbid] = locations
