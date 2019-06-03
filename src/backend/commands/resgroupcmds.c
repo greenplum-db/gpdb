@@ -42,14 +42,8 @@
 #include "utils/vmem_tracker.h"
 
 #define RESGROUP_DEFAULT_CONCURRENCY (20)
-#define RESGROUP_DEFAULT_MEMORY_LIMIT (0)
-#define RESGROUP_DEFAULT_MEM_SHARED_QUOTA (80)
-/*
- * The default memory_spill_ratio value is 128MB, it is in absolute value
- * format, so it is represented as a negative value, and as its unit is chunk,
- * so need a conversion.
- */
-#define RESGROUP_DEFAULT_MEM_SPILL_RATIO (-VmemTracker_ConvertVmemMBToChunks(128))
+#define RESGROUP_DEFAULT_MEM_SHARED_QUOTA (20)
+#define RESGROUP_DEFAULT_MEM_SPILL_RATIO (20)
 
 #define RESGROUP_DEFAULT_MEM_AUDITOR (RESGROUP_MEMORY_AUDITOR_VMTRACKER)
 #define RESGROUP_INVALID_MEM_AUDITOR (-1)
@@ -1081,7 +1075,9 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 				errmsg("must specify cpu_rate_limit or cpuset")));
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY)))
-		caps->memLimit = RESGROUP_DEFAULT_MEMORY_LIMIT;
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("must specify memory_limit")));
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_CONCURRENCY)))
 		caps->concurrency = RESGROUP_DEFAULT_CONCURRENCY;
