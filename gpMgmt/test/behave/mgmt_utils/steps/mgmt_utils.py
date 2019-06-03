@@ -633,21 +633,6 @@ def get_standby_host():
         return []
 
 
-@given('user does not have ssh permissions')
-def impl(context):
-    user_home = os.environ.get('HOME')
-    authorized_keys_file = '%s/.ssh/authorized_keys' % user_home
-    if os.path.exists(os.path.abspath(authorized_keys_file)):
-        shutil.move(authorized_keys_file, '%s.bk' % authorized_keys_file)
-
-
-@then('user has ssh permissions')
-def impl(context):
-    user_home = os.environ.get('HOME')
-    authorized_keys_backup_file = '%s/.ssh/authorized_keys.bk' % user_home
-    if os.path.exists(authorized_keys_backup_file):
-        shutil.move(authorized_keys_backup_file, authorized_keys_backup_file[:-3])
-
 def run_gpinitstandby(context, hostname, port, standby_data_dir, options='', remote=False):
     if '-n' in options:
         cmd = "gpinitstandby -a"
@@ -798,12 +783,6 @@ def impl(context):
                        os.getenv("GPHOME") + '/greenplum_path.sh',
                        'export MASTER_DATA_DIRECTORY=%s' % context.standby_data_dir)
 
-@given('we have exchanged keys with the cluster')
-def impl(context):
-    hostlist = get_all_hostnames_as_list(context, 'template1')
-    host_str = ' -h '.join(hostlist)
-    cmd_str = 'gpssh-exkeys %s' % host_str
-    run_gpcommand(context, cmd_str)
 
 def _process_exists(pid, host):
     """
