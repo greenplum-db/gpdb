@@ -1,0 +1,20 @@
+---
+
+platform: linux
+
+image_resource:
+  type: docker-image
+
+inputs:
+- name: gpdb_src
+- name: gpdb_staging
+- name: pivotal_gpdb
+
+outputs:
+- name: release_artifacts
+
+run:
+  path: gpdb_src/concourse/scripts/gpdb_github_release.bash
+
+params:
+  GPDB_SRC_DEPLOY_KEY:

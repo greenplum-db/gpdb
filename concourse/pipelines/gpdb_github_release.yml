@@ -1,0 +1,71 @@
+---
+
+resource_types:
+- name: pivnet
+  type: docker-image
+  source:
+    repository: pivotalcf/pivnet-resource
+    tag: latest-final
+
+# 1. Resources
+resources:
+- name: pivotal_gpdb
+  type: pivnet
+  source:
+    api_token: ((pivnet-refresh-token))
+    endpoint: ((pivnet-endpoint))
+    product_slug: ((pivnet-product-slug))
+    # product_version: 6\..*
+    # sort_by: semver
+
+- name: gpdb_src
+  type: git
+  source:
+    branch: ((gpdb-git-branch))
+    uri: ((gpdb-git-remote))
+    private_key: ((gpdb-git-deploy-key))
+
+- name: gpdb_staging
+  type: git
+  source:
+    branch: ((gpdb-staging-git-branch))
+    uri: ((gpdb-staging-git-remote))
+    private_key: ((gpdb-staging-deploy-key))
+    # tag_filter: 6.*
+
+- name: gpdb_release
+  type: github-release
+  source:
+    owner: ((gpdb-release-owner))
+    repository: ((gpdb-release-repository))
+    access_token: ((gpdb-release-access-token))
+
+- name: gpdb6-centos7-build
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb6-centos7-build
+    tag: 'latest'
+
+# 2. Jobs
+jobs:
+- name: publish_gpdb_github_release
+  plan:
+  - aggregate:
+    - get: pivotal_gpdb
+      trigger: true
+    - get: gpdb_src
+    - get: gpdb_staging
+    - get: gpdb6-centos7-build
+  - task: gpdb_github_release
+    image: gpdb6-centos7-build
+    file: gpdb_src/concourse/tasks/gpdb_github_release.yml
+    params:
+      GPDB_SRC_DEPLOY_KEY: ((gpdb-git-deploy-key))
+  - put: gpdb_release
+    params:
+      name: release_artifacts/name
+      tag: release_artifacts/tag
+      body: release_artifacts/body
+      globs:
+        - release_artifacts/*.tar.gz
+        - release_artifacts/*.zip
