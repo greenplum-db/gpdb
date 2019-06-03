@@ -17,7 +17,9 @@
         [ <b>--dest-dbname</b> <varname>dest-db1</varname>[, <varname>dest-db2</varname> ... ] ] } |
      <b>--include-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] [ <b>--dest-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] |
      <b>--include-table-file</b> <varname>table-file1</varname>
-        [ <b>--include-table-file</b> <varname>table-file2</varname>] ... ] }
+        [ <b>--include-table-file</b> <varname>table-file2</varname>] ... ] | 
+     <b>--include-table-json</b> <varname>json-table-file1</varname>
+        [ <b>--include-table-json</b> <varname>json-table-file2</varname>] ... ] }
    [ <b>--exclude-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] ]
    [ <b>--exclude-table-file</b> <varname>table-file1</varname> ]
       [ <b>--exclude-table-file</b> <varname>table-file2</varname> ] ... ] ]
@@ -57,8 +59,9 @@
                         <li>The <codeph>--dbname</codeph> option copies all user-defined tables,
                             table data, and re-creates the table indexes from specified
                             databases.</li>
-                        <li>The <codeph>--include-table</codeph> or
-                                <codeph>--include-table-file</codeph> option copies a specified set
+                        <li>The <codeph>--include-table</codeph>
+                            <codeph>--include-table-file</codeph>, or
+                                <codeph>--include-table-json</codeph> option copies a specified set
                             of user-defined tables, table data, and re-creates the table indexes. </li>
                         <li>The <codeph>--exclude-table</codeph> and
                                 <codeph>--exclude-table-file</codeph> options exclude a specified
@@ -72,8 +75,9 @@
                     id="ul_ehn_fvx_vdb">
                     <li>You must use one and only one of these options to specify the data to be
                         copied from the source database: <codeph>--full</codeph>,
-                            <codeph>--dbname</codeph>, <codeph>--include-table</codeph>, or
-                            <codeph>--include-table-file</codeph>. </li>
+                            <codeph>--dbname</codeph>, <codeph>--include-table</codeph>,
+                            <codeph>--include-table-file</codeph>, or
+                            <codeph>--include-table-json</codeph>. </li>
                     <li>You must use one of these options to specify how to manage data in the
                         destination database: <codeph>--skip-existing</codeph>,
                             <codeph>--truncate</codeph>, <codeph>--drop</codeph>, or
@@ -158,11 +162,11 @@
                         error and quits. If a destination database does not exist a database is
                         created. </pd>
                     <pd>Not valid with the <codeph>--full</codeph>,
-                        <codeph>--include-table</codeph>, or <codeph>--include-table-file</codeph>,
-                        options.</pd>
+                        <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>, or
+                            <codeph>--include-table-json</codeph> options.</pd>
                     <pd>Alternatively, you can copy a set of tables with the
-                            <codeph>--include-table</codeph>, or
-                            <codeph>--include-table-file</codeph> option.</pd>
+                            <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
+                        or <codeph>--include-table-json</codeph> option.</pd>
                 </plentry>
                 <plentry>
                     <pt>--debug</pt>
@@ -240,8 +244,8 @@
                         specify views or system catalog tables. </pd>
                     <pd>This option must be specified with one of these options:
                             <codeph>--full</codeph>, <codeph>--dbname</codeph>,
-                            <codeph>--include-table</codeph>, or
-                            <codeph>--include-table-file</codeph>. If the option
+                            <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
+                        or <codeph>--include-table-json</codeph>. If the option
                             <codeph>--exclude-table</codeph> results in no table to copy, the
                         database or schema is not created in the destination system.</pd>
                 </plentry>
@@ -263,8 +267,8 @@
                         catalog tables.</pd>
                     <pd>This option must be specified with one of these options:
                             <codeph>--full</codeph>, <codeph>--dbname</codeph>,
-                            <codeph>--include-table</codeph>, or
-                            <codeph>--include-table-file</codeph>. If the option
+                            <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
+                        or <codeph>--include-table-json</codeph>. If the option
                             <codeph>--exclude-table</codeph> results in no tables to copy, the
                         database or schema is not created in the destination system.</pd>
                 </plentry>
@@ -302,8 +306,8 @@
                         re-created only if the <codeph>--drop</codeph> option is specified.
                         Dependent objects are not copied. </pd>
                     <pd>This option is not allowed with the options: <codeph>--full</codeph>,
-                            <codeph>--dbname</codeph>, or <codeph>--include-table-file</codeph>.
-                    </pd>
+                            <codeph>--dbname</codeph>, <codeph>--include-table-file</codeph>, or
+                            <codeph>--include-table-json</codeph>. </pd>
                 </plentry>
                 <plentry id="dest-table-gpcopy">
                     <pt>--dest-table
@@ -351,22 +355,39 @@
                     <pd>The location and name of a text file that defines the tables and data to
                         copy. To use multiple files, specify this option for each
                         file.<codeblock>--include-table-file &lt;<varname>path_to_file1</varname>> --include-table-file &lt;<varname>path_to_file2</varname>></codeblock></pd>
-                    <pd>The contents of a text file can be in one of two formats:<ul
-                            id="ul_bfw_kkr_xhb">
-                            <li>One or more lines that each specifies a fully-qualified source table
-                                name and, optionally, a query to select data to copy from the table.
-                                Each line must have the
-                                    syntax:<codeblock><varname>database</varname>.<varname>schema</varname>.<varname>table</varname> [ SQL: <varname>query</varname> ]</codeblock><p>For
-                                    example:<codeblock>mydb.public.products
-mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p><p>Any
-                                    query must reference only the source table. Do not terminate the
-                                    query with a semicolon.</p></li>
-                            <li>A JSON-formatted file with one or more objects that specify the
-                                source table, optional query, and an optional destination table used
-                                to change the database where which the data is copied. JSON
-                                name-value pairs for each table object must be placed in an JSON
-                                array. For
-                                    example:<codeblock>[
+                    <pd>The text file must include one or more lines that each specifies a
+                        fully-qualified source table name and, optionally, a query to select data to
+                        copy from the table. Each line must have the
+                            syntax:<codeblock><varname>database</varname>.<varname>schema</varname>.<varname>table</varname> [ SQL: <varname>query</varname> ]</codeblock><p>For
+                            example, the following lines copy all data from
+                                <codeph>mydb.public.products</codeph>, and a subset of data from
+                                <codeph>mydb.public.sales</codeph>:<codeblock>mydb.public.products
+mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
+                    <pd>You cannot specify views or system catalog tables as source tables.</pd>
+                    <pd>Any query that you provide must reference the source table and output to the
+                        same columns of the source table. Do not terminate the query with a
+                        semicolon.</pd>
+                    <pd>You can use Go language regular expression syntax to select multiple tables.
+                        See the <codeph><xref href="#topic1/dest-table-gpcopy" format="dita"
+                                >--dest-table</xref></codeph> option for information about using
+                        regular expressions to select tables.</pd>
+                    <pd>This option cannot be specified with the <codeph>--full</codeph>,
+                            <codeph>--dbname</codeph>, or <codeph>--include-table</codeph>
+                        options.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--include-table-json <varname>json-table-file</varname></pt>
+                    <pd>The location and name of a JSON-format file that defines the tables and data
+                        to copy. In contrast to the text file used with
+                            <codeph>--include-table-file</codeph>, the JSON file can include a
+                        destination table name used to change the database into which the table data
+                        is copied.</pd>
+                    <pd>The JSON file that you provide must define one or more objects with
+                        key-value pairs to describe a source table, an optional query of the source
+                        table data to copy, and an optional destination table to indicate the
+                        database where the data is copied. Place the name-value pairs for multiple
+                        table objects in a JSON array. For
+                        example:<codeblock>[
      {
          "source": "<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>",
          "sql": "<varname>query</varname>"
@@ -374,52 +395,49 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p><p>Any
      },
      {
          ...     }
-]</codeblock><p>Any
-                                    query must reference only the source table. Do not terminate the
-                                    query with a semicolon.</p><p>Keep in mind that certain
-                                    characters must be escaped in strings in order to ne be parsed
-                                    as JSON, specifically:<simpletable frame="all"
-                                        relcolwidth="1.0* 1.0*" id="simpletable_lp3_g5r_xhb">
-                                        <sthead>
-                                            <stentry>Character</stentry>
-                                            <stentry>Escape Sequence</stentry>
-                                        </sthead>
-                                        <strow>
-                                            <stentry>Backspace</stentry>
-                                            <stentry>\b</stentry>
-                                        </strow>
-                                        <strow>
-                                            <stentry>Form Feed</stentry>
-                                            <stentry>\f</stentry>
-                                        </strow>
-                                        <strow>
-                                            <stentry>Newline</stentry>
-                                            <stentry>\n</stentry>
-                                        </strow>
-                                        <strow>
-                                            <stentry>Tab</stentry>
-                                            <stentry>\t</stentry>
-                                        </strow>
-                                        <strow>
-                                            <stentry>Double Quote</stentry>
-                                            <stentry>\"</stentry>
-                                        </strow>
-                                        <strow>
-                                            <stentry>Backslash</stentry>
-                                            <stentry>\\</stentry>
-                                        </strow>
-                                    </simpletable></p></li>
-                        </ul>
-                    </pd>
-                    <pd>With either file format, you cannot specify views or system catalog
-                        tables.</pd>
-                    <pd>If a text file cannot be parsed as JSON, <codeph>gpcopy</codeph> attempts to
-                        parse each line as a source table definition.</pd>
-                    <pd>Either file format can use Go language regular expression syntax to select
-                        multiple tables. With a JSON file, capture groups defined in the
-                            <codeph>source:</codeph> table definition can be referenced in the
-                            <codeph>dest:</codeph> key to change the destination database where the
-                        data is copied. For
+]</codeblock></pd>
+                    <pd>You cannot specify views or system catalog tables as source tables.</pd>
+                    <pd>Any query that you provide must reference the source table and output to the
+                        same columns of the source table. Do not terminate the query with a
+                        semicolon.</pd>
+                    <pd>Keep in mind that certain characters must be escaped in strings in order for
+                        them to be parsed in JSON, specifically:<simpletable frame="all"
+                            relcolwidth="1.0* 1.0*" id="simpletable_lp3_g5r_xhb">
+                            <sthead>
+                                <stentry>Character</stentry>
+                                <stentry>Escape Sequence</stentry>
+                            </sthead>
+                            <strow>
+                                <stentry>Backspace</stentry>
+                                <stentry>\b</stentry>
+                            </strow>
+                            <strow>
+                                <stentry>Form Feed</stentry>
+                                <stentry>\f</stentry>
+                            </strow>
+                            <strow>
+                                <stentry>Newline</stentry>
+                                <stentry>\n</stentry>
+                            </strow>
+                            <strow>
+                                <stentry>Tab</stentry>
+                                <stentry>\t</stentry>
+                            </strow>
+                            <strow>
+                                <stentry>Double Quote</stentry>
+                                <stentry>\"</stentry>
+                            </strow>
+                            <strow>
+                                <stentry>Backslash</stentry>
+                                <stentry>\\</stentry>
+                            </strow>
+                        </simpletable></pd>
+                    <pd>If the file cannot be parsed as JSON, <codeph>gpcopy</codeph> exits with an
+                        error.</pd>
+                    <pd>You can use Go language regular expression syntax to select multiple tables.
+                        Capture groups defined in the <codeph>source:</codeph> key can be referenced
+                        in the <codeph>dest:</codeph> key to change the destination database where
+                        the data is copied. For
                         example:<codeblock>[
      {
          "source": "testdb/(\\d+)/.myschema/(\\d+)/.mytable/(\\d+)/",
@@ -427,8 +445,8 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p><p>Any
      },
 ]</codeblock></pd>
                     <pd>See the <codeph><xref href="#topic1/dest-table-gpcopy" format="dita"
-                                >--dest-table</xref></codeph> option for information about using
-                        regular expressions.</pd>
+                                >--dest-table</xref></codeph> option for more information about
+                        using regular expressions and capture groups.</pd>
                     <pd>This option cannot be specified with the <codeph>--full</codeph>,
                             <codeph>--dbname</codeph>, or <codeph>--include-table</codeph>
                         options.</pd>
@@ -443,8 +461,8 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p><p>Any
                             <codeph>postgres</codeph>, <codeph>template0</codeph>, and
                             <codeph>template1</codeph>, are not copied.</pd>
                     <pd>This option cannot be specified with the <codeph>--dbname</codeph>,
-                            <codeph>--include-table</codeph>, or
-                            <codeph>--include-table-file</codeph> options.</pd>
+                            <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
+                        or <codeph>--include-table-json</codeph> options.</pd>
                 </plentry>
                 <plentry>
                     <pt>--no-compression</pt>
@@ -510,8 +528,9 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p><p>Any
                         user-defined functions (UDF) for the source databases. No data is
                         transferred. </pd>
                     <pd>If you specify databases with the <codeph>--dbname</codeph> option or tables
-                        with the <codeph>--include-table</codeph> or
-                            <codeph>--include-table-file</codeph> options, <codeph>gpcopy</codeph>
+                        with the <codeph>--include-table</codeph>
+                        <codeph>--include-table-file</codeph>, or
+                            <codeph>--include-table-json</codeph> options, <codeph>gpcopy</codeph>
                         creates only the tables and indexes. No data is transferred.</pd>
                     <pd>This option cannot be used with <codeph>--truncate</codeph> option.</pd>
                 </plentry>
@@ -598,16 +617,17 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p><p>Any
             <p>The utility cannot copy a row with a width greater than 1GB (a PostgreSQL
                 limitation). </p>
             <p>If you copy a set of database tables with the <codeph>--dbname</codeph>,
-                    <codeph>--include-table</codeph>, or <codeph>--include-table-file</codeph>
-                option, and the destination database does not exist, the utility creates the
-                database before copying the tables. If the destination database exists, the utility
-                creates the tables in the database if required.</p>
+                    <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>, or
+                    <codeph>--include-table-json</codeph> options, and the destination database does
+                not exist, the utility creates the database before copying the tables. If the
+                destination database exists, the utility creates the tables in the database if
+                required.</p>
             <p>The <codeph>gpcopy</codeph> utility does not copy dependent database objects unless
                 you specify the <codeph>--full</codeph> option. For example, if a table has a
                 default value on a column that is a user-defined function, that function must exist
                 in the destination system database when using the <codeph>--dbname</codeph>,
-                    <codeph>--include-table</codeph>, or <codeph>--include-table-file</codeph>
-                options. </p>
+                    <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>, or
+                    <codeph>--include-table-json</codeph> options. </p>
             <p>When copying tables, sequences defined for tables are considered table data and are
                 copied. A sequence is copied if a table is created with a serial column or if a
                 sequence is specified as a default value. The sequences are reset if you specify the
@@ -634,8 +654,9 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p><p>Any
                     quotes (<codeph>"</codeph>) at the command prompt shell. In this example, the
                     fully qualified name of the table is
                     <codeph>testdb.schema'1.table"test</codeph>.<codeblock>--include-table 'testdb."schema\'1"."table\"test"'</codeblock></p>
-                <p dir="ltr">For fully qualified table names listed in a file that is used the
-                    option <codeph>--include-table-file</codeph> or
+                <p dir="ltr">For fully qualified table names listed in a file that is used with the
+                    options <codeph>--include-table-file</codeph>,
+                        <codeph>--include-table-json</codeph>, or
                         <codeph>--exclude-table-file</codeph>, if the table name or schema name
                     contains a period (<codeph>.</codeph>), the name must be enclosed in double
                     quotes (<systemoutput>"</systemoutput>). In this example, the table
