@@ -846,60 +846,68 @@ def checkUser():
         gpcheck_info.is_root = False
 
 
-logger = get_default_logger()
-setup_tool_logging(EXECNAME,getLocalHostname(),getUserName())
+def main():
+    global logger
+    logger = get_default_logger()
+    setup_tool_logging(EXECNAME,getLocalHostname(),getUserName())
 
-if (parseargs()):
-    sys.exit(0)
-
-pool = WorkerPool()
-
-## COLLECT INPUT SECTION ###
-
-if (createTmpDir()):
-    earlyExit(True)
-
-if options.zipin:
-
-    if (readZip()):
-        earlyExit(True)
-
-else:
-    gpcheck_info = GpCheckInfo()
-
-    if (checkPlatform()):
+    if (parseargs()):
         sys.exit(0)
 
-    checkUser()
+    global pool
+    pool = WorkerPool()
 
-    if (createHostList()):
+    ## COLLECT INPUT SECTION ###
+
+    if (createTmpDir()):
         earlyExit(True)
 
-    logger.info("Detected platform: %s" % hosttype_str(gpcheck_info.host_type))
+    if options.zipin:
 
-    if (runCollections()):
+        if (readZip()):
+            earlyExit(True)
+
+    else:
+        global gpcheck_info
+        gpcheck_info = GpCheckInfo()
+
+        if (checkPlatform()):
+            sys.exit(0)
+
+        checkUser()
+
+        if (createHostList()):
+            earlyExit(True)
+
+        logger.info("Detected platform: %s" % hosttype_str(gpcheck_info.host_type))
+
+        if (runCollections()):
+            earlyExit(True)
+
+        if (readDataFiles()):
+            earlyExit(True)
+
+
+    ## GENERATE OUTPUT SECTION ###
+
+    if options.zipout:
+        filename = "./gpcheck_%s" % time.time()
+        doZip(filename)
+        cleanZip(filename)
+        earlyExit(False)
+
+    if options.stdout:
+        doPrint()
+        earlyExit(False)
+
+    if (runTests()):
         earlyExit(True)
 
-    if (readDataFiles()):
-        earlyExit(True)
+    if not found_errors:
+        logger.info("GPCHECK_NORMAL")
 
-
-## GENERATE OUTPUT SECTION ###
-
-if options.zipout:
-    filename = "./gpcheck_%s" % time.time()
-    doZip(filename)
-    cleanZip(filename)
     earlyExit(False)
 
-if options.stdout:
-    doPrint()
-    earlyExit(False)
 
-if (runTests()):
-    earlyExit(True)
-
-if not found_errors:
-    logger.info("GPCHECK_NORMAL")
-
-earlyExit(False)
+if __name__ == "__main__":
+    main()
