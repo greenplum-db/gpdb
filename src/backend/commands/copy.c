@@ -7027,9 +7027,23 @@ BeginCopyOnSegment(bool is_from,
 {
 	CopyState	cstate;
 	int			num_phys_attrs;
+	MemoryContext oldcontext;
+
 
 	/* Allocate workspace and zero all fields */
 	cstate = (CopyStateData *) palloc0(sizeof(CopyStateData));
+
+	/*
+	 * We allocate everything used by a cstate in a new memory context. This
+	 * avoids memory leaks during repeated use of COPY in a query.
+	 */
+	cstate->copycontext = AllocSetContextCreate(CurrentMemoryContext,
+												"COPY",
+												ALLOCSET_DEFAULT_MINSIZE,
+												ALLOCSET_DEFAULT_INITSIZE,
+												ALLOCSET_DEFAULT_MAXSIZE);
+
+	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
 	cstate->attnamelist = attnamelist;
 	/* Generate or convert list of attributes to process */
@@ -7085,6 +7099,8 @@ BeginCopyOnSegment(bool is_from,
 
 	cstate->copy_dest = COPY_FILE;		/* default */
 
+	MemoryContextSwitchTo(oldcontext);
+
 	return cstate;
 }
 
@@ -7108,6 +7124,7 @@ BeginCopyToOnSegment(QueryDesc *queryDesc)
 {
 	CopyState	cstate;
 	ListCell   *cur;
+	MemoryContext oldcontext;
 
 	TupleDesc	tupDesc;
 	int			num_phys_attrs;
@@ -7124,6 +7141,8 @@ BeginCopyToOnSegment(QueryDesc *queryDesc)
 	cstate = BeginCopyOnSegment(false, NULL, NULL, NULL, InvalidOid,
 								copyIntoClause->attlist,copyIntoClause->options,
 								tupDesc);
+
+	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
 	cstate->null_print_client = cstate->null_print;		/* default */
 
@@ -7254,6 +7273,8 @@ BeginCopyToOnSegment(QueryDesc *queryDesc)
 		}
 	}
 
+	MemoryContextSwitchTo(oldcontext);
+
 	return cstate;
 }
 
@@ -7269,8 +7290,6 @@ void EndCopyToOnSegment(CopyState cstate)
 		/* Need to flush out the trailer */
 		CopySendEndOfRow(cstate);
 	}
-
-	MemoryContextDelete(cstate->rowcontext);
 
 	if (cstate->is_program)
 	{
@@ -7289,6 +7308,8 @@ void EndCopyToOnSegment(CopyState cstate)
 	if (cstate->cdbsreh)
 		destroyCdbSreh(cstate->cdbsreh);
 
+	MemoryContextDelete(cstate->rowcontext);
+	MemoryContextDelete(cstate->copycontext);
 	pfree(cstate);
 }
 

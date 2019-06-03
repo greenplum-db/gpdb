@@ -172,6 +172,7 @@ typedef struct CopyStateData
 	 */
 	FmgrInfo   *out_functions;	/* lookup info for output functions */
 	MemoryContext rowcontext;	/* per-row evaluation context */
+	MemoryContext copycontext;	/* per-copy execution context */
 
 	/*
 	 * These variables are used to reduce overhead in textual COPY FROM.
