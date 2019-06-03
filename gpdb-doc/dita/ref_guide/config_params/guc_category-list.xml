@@ -410,10 +410,6 @@
                 <xref href="guc-list.xml#enable_tidscan" type="section">enable_tidscan</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_enable_adaptive_nestloop" type="section"
-                  >gp_enable_adaptive_nestloop</xref>
-              </p>
-              <p>
                 <xref href="guc-list.xml#gp_enable_agg_distinct" type="section"
                   >gp_enable_agg_distinct</xref>
               </p>
