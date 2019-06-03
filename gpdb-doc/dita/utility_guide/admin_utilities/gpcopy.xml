@@ -203,10 +203,12 @@
                     <pd>A range of port numbers to try as the destination port for Greenplum
                         Database hosts for data transfer. <codeph>gpcopy</codeph> uses the first
                         available port specified in the range (inclusive).
-                            <varname>lower_port</varname> must be greater than zero, and
-                            <varname>upper_port</varname> must be a greater value. If
-                            <codeph>--data-port-range</codeph> is not specified, then
-                            <codeph>gpcopy</codeph> uses any available port.</pd>
+                            <varname>lower_port</varname> must be greater than or equal to 1024, and
+                            <varname>upper_port</varname> must be a greater value. The number of
+                        ports specified in the range must also be greater than or equal to the
+                        number of parallel processes created with <codeph>--jobs</codeph>, if that
+                        option is specified. If <codeph>--data-port-range</codeph> is not specified,
+                        then <codeph>gpcopy</codeph> uses any available port.</pd>
                 </plentry>
                 <plentry>
                     <pt>--dest-user <varname>dest_user</varname></pt>
@@ -753,10 +755,11 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p><p>Any
                 destination system with the <codeph>--dbname</codeph> option and specifies 8
                 parallel processes with the <codeph>--jobs</codeph> option. The command specifies
                 the <codeph>--truncate</codeph> option to truncate the table and create it again if
-                it already exists in the destination database.</p>
+                it already exists in the destination database, and uses uses ports in the range
+                2000-2010 for the parallel process connections.</p>
             <codeblock dir="ltr">gpcopy --source-host mytest --source-port 1234 --source-user gpuser \
    --dest-host demohost --dest-port 1234 --dest-user gpuser \
-   --dbname database1, database2 --truncate --jobs 8</codeblock>
+   --dbname database1, database2 --truncate --jobs 8 --data-port-range 2000-2010</codeblock>
             <p dir="ltr" id="docs-internal-guid-cbf0fcbb-893d-f28a-6bc9-3caae975b2e3">This command
                 copies the specified database in a source system to a destination system with the
                     <codeph>--dbname</codeph> option and specifies 16 parallel processes with the
