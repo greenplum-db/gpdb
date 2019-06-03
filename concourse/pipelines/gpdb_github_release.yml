@@ -1,0 +1,43 @@
+---
+
+# 1. Resources
+resources:
+- name: gpdb_src
+  type: git
+  source:
+    branch: ((gpdb-git-branch))
+    uri: ((gpdb-git-remote))
+    tag_filter: 6.*
+
+- name: gpdb_release
+  type: github-release
+  source:
+    owner: ((gpdb-release-owner))
+    repository: ((gpdb-release-repository))
+    access_token: ((gpdb-release-access-token))
+
+- name: gpdb6-centos7-build
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb6-centos7-build
+    tag: 'latest'
+
+# 2. Jobs
+jobs:
+- name: publish_gpdb_github_release
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: gpdb6-centos7-build
+  - task: gpdb_github_release
+    image: gpdb6-centos7-build
+    file: gpdb_src/concourse/tasks/gpdb_github_release.yml
+  - put: gpdb_release
+    params:
+      name: release_artifacts/name
+      tag: release_artifacts/tag
+      body: release_artifacts/body
+      globs:
+        - release_artifacts/*.tar.gz
+        - release_artifacts/*.zip
