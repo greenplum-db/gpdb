@@ -265,8 +265,6 @@ typedef CopyStateData *CopyState;
 #define ISOCTAL(c) (((c) >= '0') && ((c) <= '7'))
 #define OCTVALUE(c) ((c) - '0')
 
-typedef struct CopyStateData *CopyState;
-
 /* DestReceiver for COPY (SELECT) TO */
 typedef struct
 {
