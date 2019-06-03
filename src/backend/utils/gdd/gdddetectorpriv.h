@@ -183,6 +183,8 @@ struct GddEdge
 
 	GddVert		*from;			/* the from vert */
 	GddVert		*to;			/* the to vert */
+
+	void        *data;
 };
 
 /*
