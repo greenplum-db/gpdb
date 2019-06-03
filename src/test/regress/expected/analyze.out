@@ -843,3 +843,13 @@ SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_co
 (4 rows)
 
 DROP TABLE IF EXISTS foo_stats;
+-- Test the case when we alter stats and check for integer overflow.
+CREATE TABLE foo_stats (a int, b int);
+ALTER TABLE foo_stats  ALTER COLUMN a SET statistics 100000;
+WARNING:  lowering statistics target to 10000
+WARNING:  lowering statistics target to 10000  (seg0 127.0.0.1:25432 pid=74576)
+WARNING:  lowering statistics target to 10000  (seg1 127.0.0.1:25433 pid=74577)
+WARNING:  lowering statistics target to 10000  (seg2 127.0.0.1:25434 pid=74578)
+INSERT INTO foo_stats SELECT i,i FROM generate_series(1,600000)i;
+ANALYZE foo_stats;
+DROP TABLE IF EXISTS foo_stats;

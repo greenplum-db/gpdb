@@ -3092,7 +3092,7 @@ compute_scalar_stats(VacAttrStatsP stats,
 		{
 			MemoryContext old_context;
 			Datum	   *hist_values;
-			int			nvals;
+			int64			nvals;
 
 			/* Sort the MCV items into position order to speed next loop */
 			qsort((void *) track, num_mcv,
@@ -3148,7 +3148,7 @@ compute_scalar_stats(VacAttrStatsP stats,
 			hist_values = (Datum *) palloc(num_hist * sizeof(Datum));
 			for (i = 0; i < num_hist; i++)
 			{
-				int			pos;
+				int64			pos;
 
 				pos = (i * (nvals - 1)) / (num_hist - 1);
 				hist_values[i] = datumCopy(values[pos].value,
