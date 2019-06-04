@@ -397,8 +397,8 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
          ...     }
 ]</codeblock></pd>
                     <pd>You cannot specify views or system catalog tables as source tables.</pd>
-                    <pd>Any query that you provide must reference the source table and output to the
-                        same columns of the source table. Do not terminate the query with a
+                    <pd>Any query that you provide must reference a single source table and output
+                        to the same columns of the source table. Do not terminate the query with a
                         semicolon.</pd>
                     <pd>Keep in mind that certain characters must be escaped in strings in order for
                         them to be parsed in JSON, specifically:<simpletable frame="all"
@@ -446,7 +446,10 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
 ]</codeblock></pd>
                     <pd>See the <codeph><xref href="#topic1/dest-table-gpcopy" format="dita"
                                 >--dest-table</xref></codeph> option for more information about
-                        using regular expressions and capture groups.</pd>
+                        using regular expressions and capture groups. <note>If you use regular
+                            expressions to copy multiple tables, you cannot include the
+                                <codeph>query:</codeph> key.</note>
+                    </pd>
                     <pd>This option cannot be specified with the <codeph>--full</codeph>,
                             <codeph>--dbname</codeph>, or <codeph>--include-table</codeph>
                         options.</pd>
