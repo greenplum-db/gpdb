@@ -402,4 +402,5 @@ CREATE TABLE foo_stats (a int, b int);
 ALTER TABLE foo_stats  ALTER COLUMN a SET statistics 100000;
 INSERT INTO foo_stats SELECT i,i FROM generate_series(1,600000)i;
 ANALYZE foo_stats;
+SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='foo_stats' ORDER BY attname;
 DROP TABLE IF EXISTS foo_stats;
