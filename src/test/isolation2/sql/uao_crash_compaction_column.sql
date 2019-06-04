@@ -14,7 +14,7 @@ declare
 	result bool; /* in func */
 begin /* in func */
 	i := 0; /* in func */
-	-- Wait until all mirrors has replayed up to flush location
+	-- Wait until the mirror (content 0) has replayed up to flush location
 	loop /* in func */
 		SELECT flush_location = replay_location INTO result from gp_stat_replication where gp_segment_id = 0; /* in func */
 		if result then /* in func */
