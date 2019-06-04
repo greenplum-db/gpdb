@@ -400,6 +400,10 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
                     <pd>Any query that you provide must reference a single source table and output
                         to the same columns of the source table. Do not terminate the query with a
                         semicolon.</pd>
+                    <pd>If the query includes an <codeph>ORDER BY</codeph> clause, then the target
+                        Greenplum cluster must be the same size (the same number of segments) as the
+                        source cluster. If the query includes a <codeph>WHERE</codeph> clause, then
+                        you cannot also specify the <codeph>--validate</codeph> option.</pd>
                     <pd>Keep in mind that certain characters must be escaped in strings in order for
                         them to be parsed in JSON, specifically:<simpletable frame="all"
                             relcolwidth="1.0* 1.0*" id="simpletable_lp3_g5r_xhb">
@@ -451,8 +455,10 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
                                 <codeph>query:</codeph> key.</note>
                     </pd>
                     <pd>This option cannot be specified with the <codeph>--full</codeph>,
-                            <codeph>--dbname</codeph>, or <codeph>--include-table</codeph>
-                        options.</pd>
+                            <codeph>--dbname</codeph>, <codeph>--include-table</codeph> options. You
+                        cannot use this option with <codeph>--parallelize-leaf-partitions</codeph>
+                        if the JSON file includes a <codeph>sql:</codeph> key that queries a
+                        partitioned table.</pd>
                 </plentry>
                 <plentry>
                     <pt>--full</pt>
@@ -512,6 +518,12 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
                     <pd>If the <codeph>--validate</codeph> option is also specified, the utility
                         validates each leaf partition table during the copy process and then
                         validates the entire partitioned table.</pd>
+                    <pd>This option cannot be specified with <codeph>--include-table-json</codeph>
+                        if the JSON file includes a <codeph>sql:</codeph> key that queries a
+                        partitioned table.</pd>
+                    <pd>This option cannot be specified with <codeph>--validate</codeph> if the JSON
+                        file includes a <codeph>sql:</codeph> key that contains a
+                            <codeph>WHERE</codeph> clause.</pd>
                 </plentry>
                 <plentry>
                     <pt>--quiet</pt>
@@ -599,6 +611,10 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
                         table contains data, validation fails for the table.</pd>
                     <pd>If validation for a table fails, <codeph>gpcopy</codeph> rolls back the
                         destination table. </pd>
+                    <pd>You cannot specify <codeph>--validate</codeph> with
+                            <codeph>--include-table-json</codeph> if the JSON file includes a
+                            <codeph>sql:</codeph> query that uses a <codeph>WHERE</codeph>
+                        clause.</pd>
                 </plentry>
                 <plentry>
                     <pt>--help</pt>
