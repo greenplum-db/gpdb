@@ -91,7 +91,7 @@ CREATE EXTERNAL TABLE pxf_gsc_json(location text, month text, num_orders int, to
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 </pre>
 
-## <a id="s3_override"></a>Overriding the S3 Server Configuration
+## <a id="s3_override"></a>Overriding the S3 Server Configuration via DDL
 
 If you are accessing an S3 object store, you can override the S3 server configuration by directly specifying the S3 access ID and secret key via these custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 
@@ -108,4 +108,6 @@ FORMAT 'TEXT' (delimiter=E',');</pre>
 <div class="note warning">Credentials that you provide in this manner are visible as part of the external table definition. Do not use this method of passing credentials in a production environment.</div>
 
 PXF does not support overriding Azure, Google Cloud Storage, and Minio server credentials in this manner at this time.
+
+Refer to [Configuration Property Precedence](cfg_server.html#override) for detailed information about the precedence rules that PXF uses to obtain configuration property settings for a Greenplum Database user.
 
