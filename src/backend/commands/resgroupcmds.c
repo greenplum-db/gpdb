@@ -1162,27 +1162,27 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 {
 	char value[64];
 
-	sprintf(value, "%d", caps->concurrency);
+	snprintf(value, sizeof(value), "%d", caps->concurrency);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_CONCURRENCY, value);
 
-	sprintf(value, "%d", caps->cpuRateLimit);
+	snprintf(value, sizeof(value), "%d", caps->cpuRateLimit);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_CPU, value);
 
-	sprintf(value, "%d", caps->memLimit);
+	snprintf(value, sizeof(value), "%d", caps->memLimit);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY, value);
 
-	sprintf(value, "%d", caps->memSharedQuota);
+	snprintf(value, sizeof(value), "%d", caps->memSharedQuota);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA, value);
 
-	sprintf(value, "%d", caps->memSpillRatio);
+	snprintf(value, sizeof(value), "%d", caps->memSpillRatio);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO, value);
 
-	sprintf(value, "%d", caps->memAuditor);
+	snprintf(value, sizeof(value), "%d", caps->memAuditor);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR, value);
 
