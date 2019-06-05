@@ -9,9 +9,8 @@ DROP VIEW IF EXISTS many_ops;
 DROP ROLE r1_opmem_test;
 DROP RESOURCE GROUP rg1_opmem_test;
 DROP RESOURCE GROUP rg2_opmem_test;
---end_ignore
-
 CREATE LANGUAGE plpythonu;
+--end_ignore
 
 -- a helper function to run query via SPI
 CREATE OR REPLACE FUNCTION f1_opmem_test() RETURNS void AS $$

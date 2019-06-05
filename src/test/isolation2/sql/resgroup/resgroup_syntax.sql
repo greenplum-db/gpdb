@@ -193,52 +193,22 @@ DROP RESOURCE GROUP rg_test_group;
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_shared_quota=99, memory_spill_ratio=1);
 DROP RESOURCE GROUP rg_test_group;
 
--- negative: absolute value format of memory_spill_ratio is
--- '^[1-9][0-9]*[MmGg]$'
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10 %');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10%');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10M');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10 M');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10.MB');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10.0MB');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10M ');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10B');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10K');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10X');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='-10MB');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='0 MB');
-DROP RESOURCE GROUP rg_test_group;
 -- negative: memory_spill_ratio does not accept out of range percentage values
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='-10');
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='101');
--- negative: when memory_limit is unlimited memory_spill_ratio must be set in
--- absolute value format
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=-1);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=101);
+
+-- negative: memory_spill_ratio does not accept string values
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='0');
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10');
+
+-- negative: memory_spill_ratio does not accept float values
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=10.5);
+
+-- negative: when memory_limit is unlimited memory_spill_ratio must be set to 0
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio=10);
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='10%');
 
 -- positive
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='100kB');
-DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='100MB');
-DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='100GB');
-DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='1TB');
-DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio=' 100 MB ');
-DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='0x10 MB');
-DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='010 MB');
-DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='+10 MB');
-DROP RESOURCE GROUP rg_test_group;
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0);
-DROP RESOURCE GROUP rg_test_group;
-
--- positive: memory_spill_ratio in absolute value format will be ensured to be >= 1 chunk
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='1kB');
-SELECT memory_spill_ratio FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio=0);
 DROP RESOURCE GROUP rg_test_group;
 
 -- ----------------------------------------------------------------------
@@ -308,49 +278,40 @@ ALTER RESOURCE GROUP cgroup_audited_group SET CONCURRENCY 10;
 CREATE ROLE cgroup_audited_role RESOURCE GROUP cgroup_audited_group;
 DROP RESOURCE GROUP cgroup_audited_group;
 
--- positive: memory_spill_ratio accepts both integer and string values
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='100MB');
+-- positive: memory_spill_ratio accepts integer values
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=20);
 ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio 10;
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio '10';
 DROP RESOURCE GROUP rg_test_group;
 
--- negative: memory_spill_ratio only accepts string value
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='100MB');
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio 10%;
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio 10M;
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio 10MB;
+-- negative: memory_spill_ratio only accepts integer values
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=20);
+ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio '10';
+ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio 10.5;
 DROP RESOURCE GROUP rg_test_group;
--- negative: memory_spill_ratio does not accept out of range percentage values
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='100MB');
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio '-1';
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio '101';
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio '-1MB';
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio '0MB';
+
+-- negative: memory_spill_ratio does not accept out of range values
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=20);
+ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio -1;
+ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio 101;
 DROP RESOURCE GROUP rg_test_group;
--- positive: memory_limit can be altered to unlimited if memory_spill_ratio has
--- an absolute value
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='100MB');
+
+-- positive: memory_limit can be altered to unlimited if memory_spill_ratio is 0
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=0);
 ALTER RESOURCE GROUP rg_test_group SET memory_limit 0;
 DROP RESOURCE GROUP rg_test_group;
--- negative: memory_spill_ratio only accepts an absolute value if memory_limit
--- is unlimited
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio='100MB');
+
+-- negative: memory_spill_ratio can only be set to 0 if memory_limit is unlimited
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=0, memory_spill_ratio=0);
 ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio 10;
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio '10';
 DROP RESOURCE GROUP rg_test_group;
+
 -- positive: memory_spill_ratio accepts a percentage value only if
 -- memory_limit is limited
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='100MB');
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=0);
 ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio 10;
 DROP RESOURCE GROUP rg_test_group;
--- negative: memory_limit must be limited if memory_spill_ratio has a
--- percentage value
+
+-- negative: memory_limit must be limited if memory_spill_ratio > 0
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=10);
 ALTER RESOURCE GROUP rg_test_group SET memory_limit 0;
-DROP RESOURCE GROUP rg_test_group;
--- positive: memory_spill_ratio accepts a absolute value anytime
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio='10MB');
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio '50MB';
-ALTER RESOURCE GROUP rg_test_group SET memory_limit 0;
-ALTER RESOURCE GROUP rg_test_group SET memory_spill_ratio '10MB';
 DROP RESOURCE GROUP rg_test_group;

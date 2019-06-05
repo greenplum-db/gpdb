@@ -91,10 +91,6 @@ static bool check_pljava_classpath_insecure(bool *newval, void **extra, GucSourc
 static void assign_pljava_classpath_insecure(bool newval, void *extra);
 static bool check_gp_resource_group_bypass(bool *newval, void **extra, GucSource source);
 
-static bool check_memory_spill_ratio(char **newval, void **extra, GucSource source);
-static void assign_memory_spill_ratio(const char *newval, void *extra);
-static const char *show_memory_spill_ratio(void);
-
 extern struct config_generic *find_option(const char *name, bool create_placeholders, int elevel);
 
 extern bool enable_partition_rules;
@@ -207,7 +203,6 @@ char	   *data_directory;
  * and is kept in sync by assign_hooks.
  */
 static char *gp_resource_manager_str;
-static char *memory_spill_ratio_str;
 
 /* Backoff-related GUCs */
 bool		gp_enable_resqueue_priority;
@@ -3070,6 +3065,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the memory_spill_ratio for resource group."),
+			NULL
+		},
+		&memory_spill_ratio,
+		20, 0, 100,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_resource_group_cpu_priority", PGC_POSTMASTER, RESOURCES,
 			gettext_noop("Sets the cpu priority for postgres processes when resource group is enabled."),
 			NULL
@@ -4406,21 +4411,6 @@ struct config_string ConfigureNamesString_gp[] =
 		gpvars_show_gp_resource_manager_policy,
 	},
 
-	/*
-	 * Default value of the memory_spill_ratio GUC will be ignored.
-	 * Refer to ResGroupMemorySpillFromStr() for details of the string format.
-	 */
-	{
-		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
-			gettext_noop("Sets the memory_spill_ratio for resource group.")
-		},
-		&memory_spill_ratio_str,
-		"0",
-		check_memory_spill_ratio,
-		assign_memory_spill_ratio,
-		show_memory_spill_ratio
-	},
-
 	/* for pljava */
 	{
 		{"pljava_vmoptions", PGC_SUSET, CUSTOM_OPTIONS,
@@ -5055,31 +5045,4 @@ check_gp_workfile_compression(bool *newval, void **extra, GucSource source)
 	}
 #endif
 	return true;
-}
-
-
-static bool
-check_memory_spill_ratio(char **newval, void **extra, GucSource source)
-{
-	ResGroupMemorySpillFromStr((const char *)*newval);
-
-	return true;
-}
-
-static void
-assign_memory_spill_ratio(const char *newval, void *extra)
-{
-	int32		value = ResGroupMemorySpillFromStr(newval);
-
-	memory_spill_ratio = value;
-}
-
-static const char *
-show_memory_spill_ratio(void)
-{
-	static char buf[16];
-
-	ResGroupMemorySpillToStr(memory_spill_ratio, buf, sizeof(buf));
-
-	return buf;
 }

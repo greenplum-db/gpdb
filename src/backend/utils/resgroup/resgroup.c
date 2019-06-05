@@ -2035,12 +2035,12 @@ groupGetMemSharedExpected(const ResGroupCaps *caps)
 static int32
 groupGetMemSpillTotal(const ResGroupCaps *caps)
 {
-	if (memory_spill_ratio >= 0)
-		/* memSpill is in percentage format */
+	if (memory_spill_ratio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
+		/* memSpill is in percentage mode */
 		return groupGetMemExpected(caps) * memory_spill_ratio / 100;
 	else
-		/* memSpill is in absolute value format */
-		return -memory_spill_ratio;
+		/* memSpill is in fallback mode, return statement_mem instead */
+		return VmemTracker_ConvertVmemMBToChunks(statement_mem >> 10);
 }
 
 /*
@@ -2081,15 +2081,20 @@ slotGetMemQuotaOnQE(const ResGroupCaps *caps, ResGroupData *group)
 static int32
 slotGetMemSpill(const ResGroupCaps *caps)
 {
-	if (memory_spill_ratio >= 0)
+	if (memory_spill_ratio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
 	{
-		/* memSpill is in percentage format */
+		/* memSpill is in percentage mode */
 		Assert(caps->concurrency != 0);
 		return groupGetMemSpillTotal(caps) / caps->concurrency;
 	}
 	else
-		/* memSpill is in absolute value format */
+	{
+		/*
+		 * memSpill is in fallback mode, it is an absolute value, no need to
+		 * divide by concurrency.
+		 */
 		return groupGetMemSpillTotal(caps);
+	}
 }
 
 /*
@@ -2970,7 +2975,7 @@ groupSetMemorySpillRatio(const ResGroupCaps *caps)
 {
 	char value[64];
 
-	ResGroupMemorySpillToStr(caps->memSpillRatio, value, sizeof(value));
+	snprintf(value, sizeof(value), "%d", caps->memSpillRatio);
 	set_config_option("memory_spill_ratio", value, PGC_USERSET, PGC_S_RESGROUP,
 					  GUC_ACTION_SET, true, 0);
 }

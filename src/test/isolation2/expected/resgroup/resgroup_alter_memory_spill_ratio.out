@@ -60,7 +60,7 @@ SELECT * FROM rg_spill_status;
 
 -- negative: memory_spill_ratio is larger than RESGROUP_MAX_MEMORY_SPILL_RATIO
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
-ERROR:  memory_spill_ratio in percentage format must be in the range [0, 100]
+ERROR:  memory_spill_ratio range is [0, 100]
 SELECT * FROM rg_spill_status;
  groupname     | memory_shared_quota | memory_spill_ratio 
 ---------------+---------------------+--------------------

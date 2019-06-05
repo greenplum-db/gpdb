@@ -35,6 +35,20 @@
 #define DefaultCpuset "-1"
 
 /*
+ * When setting memory_limit to 0 the group will has no reserved quota, all the
+ * memory need to be acquired from the global shared memory.
+ */
+#define RESGROUP_UNLIMITED_MEMORY_LIMIT		(0)
+
+/*
+ * When setting memory_spill_ratio to 0 the statement_mem will be used to
+ * decide the operator memory, this is called the fallback mode, the benefit is
+ * statement_mem can be set in absolute values such as "128 MB" which is easier
+ * to understand.
+ */
+#define RESGROUP_FALLBACK_MEMORY_SPILL_RATIO		(0)
+
+/*
  * Resource group capability.
  */
 typedef int32 ResGroupCap;
@@ -189,9 +203,6 @@ extern int64 ResourceGroupGetQueryMemoryLimit(void);
 extern void ResGroupDumpInfo(StringInfo str);
 
 extern int ResGroupGetSegmentNum(void);
-
-extern int32 ResGroupMemorySpillFromStr(const char *str);
-extern void ResGroupMemorySpillToStr(int32 value, char *buf, int bufsize);
 
 extern Bitmapset *CpusetToBitset(const char *cpuset,
 								 int len);

@@ -1501,10 +1501,6 @@ OptResourceGroupElem:
 				{
 					$$ = makeDefElem("memory_spill_ratio", (Node *) makeInteger($2));
 				}
-			| MEMORY_SPILL_RATIO Sconst
-				{
-					$$ = makeDefElem("memory_spill_ratio", (Node *) makeString($2));
-				}
 		;
 
 /*****************************************************************************
