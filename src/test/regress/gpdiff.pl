@@ -14,6 +14,7 @@
 use strict;
 use warnings;
 use File::Spec;
+use Text::Diff;
 use Getopt::Long qw(GetOptions);
 Getopt::Long::Configure qw(pass_through);
 
@@ -155,11 +156,11 @@ sub gpdiff_files
     $newf1 = atmsort::run($f1);
     $newf2 = atmsort::run($f2);
 
-    my $args = join(' ', @ARGV, $newf1, $newf2);
+#   my $args = join(' ', @ARGV, $newf1, $newf2);
 
 #   print "args: $args\n";
 
-    my $outi =`diff $args`;
+    my $outi = diff $newf1, $newf2;
 
     my $stat = $? >> 8; # diff status
 
@@ -171,8 +172,8 @@ sub gpdiff_files
     }
 
     # replace temp file name references with actual file names
-    $outi =~ s/$newf1/$f1/gm;
-    $outi =~ s/$newf2/$f2/gm;
+    $outi =~ s/\Q$newf1\E/\Q$f1\E/gm;
+    $outi =~ s/\Q$newf2\E/\Q$f2\E/gm;
 
     print $outi;
 
