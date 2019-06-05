@@ -106,11 +106,6 @@ MIRROR_PORT_BASE = 7000</codeblock></p>
 kernel.shmmni = 4096
 kernel.shmall = 4000000000</codeblock>
     </section>
-    <section id="gpcheck">
-      <title>Validate the Operating System </title>
-      <p>Run <codeph>gpcheck</codeph> to validate the operating system configuration. See
-          <codeph>gpcheck</codeph> in the <i>Greenplum Database Utility Guide</i>.</p>
-    </section>
     <section id="host_segs">
       <title>Number of Segments per Host</title>
       <p>Determining the number of segments to execute on each segment host has immense impact on

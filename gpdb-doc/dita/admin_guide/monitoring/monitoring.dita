@@ -288,19 +288,6 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                 </entry>
                             </row>
                             <row>
-                                <entry>Run the Greenplum <codeph>gpcheck</codeph> utility to test
-                                    that the configuration of the cluster complies with current
-                                        recommendations.<p>Recommended frequency: when creating a
-                                        cluster or adding new machines to the cluster
-                                        </p><p>Severity: IMPORTANT</p></entry>
-                                <entry>Run <codeph>gpcheck</codeph>.</entry>
-                                <entry>
-                                    <p>Work with system administration team to update configuration
-                                        according to the recommendations made by the
-                                            <codeph>gpcheck</codeph> utility.</p>
-                                </entry>
-                            </row>
-                            <row>
                                 <entry>Check for adequate I/O bandwidth and I/O skew.<p>Recommended
                                         frequency: when create a cluster or when hardware issues are
                                         suspected.</p></entry>
