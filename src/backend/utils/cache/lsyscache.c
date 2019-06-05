@@ -2046,6 +2046,9 @@ List *
 get_func_arg_types(Oid funcid)
 {
 	HeapTuple	tp;
+	Form_pg_proc procstruct;
+	oidvector *args;
+	List *result = NIL;
 
 	tp = SearchSysCache(PROCOID,
 						ObjectIdGetDatum(funcid),
@@ -2053,11 +2056,11 @@ get_func_arg_types(Oid funcid)
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for function %u", funcid);
 
-	oidvector args = ((Form_pg_proc) GETSTRUCT(tp))->proargtypes;
-	List *result = NIL;
-	for (int i = 0; i < args.dim1; i++)
+	procstruct = (Form_pg_proc) GETSTRUCT(tp);
+	args = &procstruct->proargtypes;
+	for (int i = 0; i < args->dim1; i++)
 	{
-		result = lappend_oid(result, args.values[i]);
+		result = lappend_oid(result, args->values[i]);
 	}
 
 	ReleaseSysCache(tp);
