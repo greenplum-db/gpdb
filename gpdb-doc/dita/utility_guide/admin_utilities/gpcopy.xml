@@ -425,48 +425,50 @@
             <title>Connection Options</title>
             <p>The following options specify connection information for the destination and source
                 Greenplum clusters. Only <codeph>--dest-host</codeph> is required.
-                    <codeph>--jobs</codeph>,  <codeph>--on-segment-threshold</codeph>, and
+                    <codeph>--jobs</codeph>, <codeph>--on-segment-threshold</codeph>, and
                     <codeph>--parallelize-leaf-partitions</codeph> affect the number of simultaneous
                 connections used for data transfer. <codeph>--data-port-range</codeph> defines the
-                ports used for data transfer to segments.</p>
+                ports used for data transfer to destination segments or the destination master.</p>
             <parml>
                 <plentry>
                     <pt>--dest-host <varname>dest_host</varname></pt>
-                    <pd>Required. Destination Greenplum Database hostname or IP address.</pd>
+                    <pd>Required. The destination Greenplum Database master segment hostname or IP
+                        address.</pd>
                 </plentry>
                 <plentry>
                     <pt>--dest-port <varname>dest_port</varname></pt>
-                    <pd>Destination Greenplum Database master segment port number. If
+                    <pd>The destination Greenplum Database master segment port number. If
                             <codeph>--dest-port</codeph> is not specified, then the default is
                         5432.</pd>
                 </plentry>
                 <plentry>
                     <pt>--dest-user <varname>dest_user</varname></pt>
-                    <pd>User ID that is used to connect to the destination Greenplum master. If not
-                        specified, the default is the user gpadmin. </pd>
+                    <pd>The user ID that is used to connect to the destination Greenplum master. If
+                        not specified, the default is gpadmin. </pd>
                 </plentry>
                 <plentry>
                     <pt>--source-host <varname>source_host</varname></pt>
-                    <pd>Source Greenplum Database host name or IP address. If not specified, the
-                        default host is the system running <codeph>gpcopy</codeph> (127.0.0.1).</pd>
+                    <pd>The source Greenplum Database master segment host name or IP address. If not
+                        specified, the default host is the system running <codeph>gpcopy</codeph>
+                        (127.0.0.1).</pd>
                 </plentry>
                 <plentry>
                     <pt>--source-port <varname>source_port</varname></pt>
-                    <pd>Source Greenplum Database port number. If not specified, the default is
-                        5432.</pd>
+                    <pd>The source Greenplum Database master port number. If not specified, the
+                        default is 5432.</pd>
                 </plentry>
                 <plentry>
                     <pt>--source-user <varname>source_user</varname></pt>
-                    <pd>User ID that is used to connect to the source Greenplum Database system. If
-                        not specified, the default is the user gpadmin.</pd>
+                    <pd>The user ID that is used to connect to the source Greenplum Database system.
+                        If not specified, the default is gpadmin.</pd>
                 </plentry>
                 <plentry>
                     <pt>--jobs <varname>int</varname></pt>
-                    <pd>Specify the number processes that <codeph>gpcopy</codeph> runs in parallel.
-                        The default is 4. The range is from 1 to 64.</pd>
+                    <pd>The number processes that <codeph>gpcopy</codeph> runs in parallel. The
+                        default is 4. The range is from 1 to 64.</pd>
                     <pd>The option <codeph>--jobs</codeph> produces
                             <codeph>2*<varname>n</varname>+1</codeph> database connections. The
-                        default value 4, creates 9 connections.</pd>
+                        default value, 4, creates 9 connections.</pd>
                     <pd>If you increase this option, ensure that Greenplum Database systems are
                         configured with a sufficient maximum concurrent connection value to
                         accommodate the <codeph>gpcopy</codeph> connections and other concurrent
@@ -503,15 +505,18 @@
                 <plentry>
                     <pt>--data-port-range
                             <varname>lower_port</varname>-<varname>upper_port</varname></pt>
-                    <pd>A range of port numbers to try as the destination port for Greenplum
-                        Database hosts for data transfer. <codeph>gpcopy</codeph> uses the first
-                        available port specified in the range (inclusive).
-                            <varname>lower_port</varname> must be greater than or equal to 1024, and
-                            <varname>upper_port</varname> must be a greater value. The number of
-                        ports specified in the range must also be greater than or equal to the
-                        number of parallel processes created with <codeph>--jobs</codeph>, if that
-                        option is specified. If <codeph>--data-port-range</codeph> is not specified,
-                        then <codeph>gpcopy</codeph> uses any available port.</pd>
+                    <pd>A range of port numbers to use on Greenplum Database destination hosts for
+                        data transfer. This applies to destination segment hosts or, if data is
+                        transferred using the master segment, only the master segment host.
+                            <codeph>gpcopy</codeph> uses the first available port specified in the
+                        range (inclusive). <varname>lower_port</varname> must be greater than or
+                        equal to 1024 (to avoid reserved system ports), and
+                            <varname>upper_port</varname> must be a greater value. </pd>
+                    <pd>The number of ports specified by the range must be greater than or equal to
+                        the number of parallel processes created with <codeph>--jobs</codeph>, if
+                        specified.</pd>
+                    <pd>If <codeph>--data-port-range</codeph> is not specified, then
+                            <codeph>gpcopy</codeph> uses any available port.</pd>
                 </plentry>
             </parml>
         </section>
