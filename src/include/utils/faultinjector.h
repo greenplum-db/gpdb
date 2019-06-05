@@ -65,8 +65,6 @@ typedef struct FaultInjectorEntry_s {
 	
 	char						faultName[FAULT_NAME_MAX_LENGTH];
 
-	FaultInjectorIdentifier_e	faultInjectorIdentifier;
-	
 	FaultInjectorType_e		faultInjectorType;
 	
 	int						extraArg;

@@ -87,7 +87,7 @@ FaultInjectorTypeEnumToString[] = {
 #undef FI_TYPE
 };
 
-const char*
+static const char*
 FaultInjectorIdentifierEnumToString[] = {
 #define FI_IDENT(id, str) str,
 #include "utils/faultinjector_lists.h"
@@ -114,7 +114,7 @@ FaultInjectorTypeStringToEnum(char* faultTypeString)
 	FaultInjectorType_e	faultTypeEnum = FaultInjectorTypeMax;
 	int	ii;
 	
-	for (ii=0; ii < FaultInjectorTypeMax; ii++)
+	for (ii=FaultInjectorTypeNotSpecified+1; ii < FaultInjectorTypeMax; ii++)
 	{
 		if (strcmp(FaultInjectorTypeEnumToString[ii], faultTypeString) == 0)
 		{
@@ -123,23 +123,6 @@ FaultInjectorTypeStringToEnum(char* faultTypeString)
 		}
 	}
 	return faultTypeEnum;
-}
-
-FaultInjectorIdentifier_e
-FaultInjectorIdentifierStringToEnum(char* faultName)
-{
-	FaultInjectorIdentifier_e	faultId = FaultInjectorIdMax;
-	int	ii;
-	
-	for (ii=0; ii < FaultInjectorIdMax; ii++)
-	{
-		if (strcmp(FaultInjectorIdentifierEnumToString[ii], faultName) == 0)
-		{
-			faultId = ii;
-			break;
-		}
-	}
-	return faultId;
 }
 
 DDLStatement_e
@@ -589,8 +572,8 @@ FaultInjector_InsertHashEntry(
 		return entry;
 	} 
 	
-	elog(DEBUG1, "FaultInjector_InsertHashEntry() entry_key:%d", 
-		 entry->faultInjectorIdentifier);
+	elog(DEBUG1, "FaultInjector_InsertHashEntry() name:%s", 
+		 entry->faultName);
 	
 	if (foundPtr) {
 		*exists = TRUE;
@@ -692,7 +675,6 @@ FaultInjector_NewHashEntry(
 	}
 		
 	entryLocal->faultInjectorType = entry->faultInjectorType;
-	entryLocal->faultInjectorIdentifier = entry->faultInjectorIdentifier;
 	strlcpy(entryLocal->faultName, entry->faultName, sizeof(entryLocal->faultName));
 
 	entryLocal->extraArg = entry->extraArg;
@@ -783,7 +765,7 @@ FaultInjector_SetFaultInjection(
 			HASH_SEQ_STATUS			hash_status;
 			FaultInjectorEntry_s	*entryLocal;
 			
-			if (entry->faultInjectorIdentifier == FaultInjectorIdAll) 
+			if (strcmp(entry->faultName, "all") == 0)
 			{
 				hash_seq_init(&hash_status, faultInjectorShmem->hash);
 				
@@ -863,6 +845,7 @@ FaultInjector_SetFaultInjection(
 			HASH_SEQ_STATUS			hash_status;
 			FaultInjectorEntry_s	*entryLocal;
 			bool					found = FALSE;
+			bool					faultNameIsAll;
 			int                     length;
 			
 			if (faultInjectorShmem->hash == NULL) {
@@ -873,6 +856,7 @@ FaultInjector_SetFaultInjection(
 			
 			hash_seq_init(&hash_status, faultInjectorShmem->hash);
 
+			faultNameIsAll = strcmp(entry->faultName, "all") == 0;
 			while ((entryLocal = (FaultInjectorEntry_s *) hash_seq_search(&hash_status)) != NULL) {
 				ereport(LOG,
 					(errmsg("fault injector status: "
@@ -897,8 +881,7 @@ FaultInjector_SetFaultInjection(
 							FaultInjectorStateEnumToString[entryLocal->faultInjectorState],
 						entryLocal->numTimesTriggered)));
 				
-				if (entry->faultInjectorIdentifier == entryLocal->faultInjectorIdentifier ||
-					entry->faultInjectorIdentifier == FaultInjectorIdAll)
+				if (faultNameIsAll || strcmp(entry->faultName, entryLocal->faultName) == 0)
 				{
 					length = snprintf((entry->bufOutput + length), sizeof(entry->bufOutput) - length,
 									  "fault name:'%s' "
@@ -933,7 +916,7 @@ FaultInjector_SetFaultInjection(
 		}
 		case FaultInjectorTypeResume:
 		{
-			ereport(LOG, 
+			ereport(LOG,
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							entry->faultName,
@@ -943,7 +926,7 @@ FaultInjector_SetFaultInjection(
 			
 			break;
 		}
-		default: 
+		default:
 			
 			status = FaultInjector_NewHashEntry(entry);
 			break;
@@ -1080,15 +1063,13 @@ InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
 		 startOccurrence, endOccurrence, extraArg );
 
 	strlcpy(faultEntry.faultName, faultName, sizeof(faultEntry.faultName));
-	faultEntry.faultInjectorIdentifier = FaultInjectorIdentifierStringToEnum(faultName);
-	if (faultEntry.faultInjectorIdentifier == FaultInjectorIdNotSpecified)
+	if (faultName[0] == '\0')
 		ereport(ERROR,
 				(errcode(ERRCODE_PROTOCOL_VIOLATION),
 				 errmsg("could not recognize fault name '%s'", faultName)));
 
 	faultEntry.faultInjectorType = FaultInjectorTypeStringToEnum(type);
-	if (faultEntry.faultInjectorType == FaultInjectorTypeMax ||
-	    faultEntry.faultInjectorType == FaultInjectorTypeNotSpecified)
+	if (faultEntry.faultInjectorType == FaultInjectorTypeMax)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROTOCOL_VIOLATION),
 				 errmsg("could not recognize fault type '%s'", type)));
