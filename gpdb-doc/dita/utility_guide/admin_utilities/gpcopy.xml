@@ -263,18 +263,9 @@
                     <pd>The location and name of a text file that defines the tables and data to
                         copy. To use multiple files, specify this option for each
                         file.<codeblock>--include-table-file &lt;<varname>path_to_file1</varname>> --include-table-file &lt;<varname>path_to_file2</varname>></codeblock></pd>
-                    <pd>The text file must include one or more lines that each specifies a
-                        fully-qualified source table name and, optionally, a query to select data to
-                        copy from the table. Each line must have the
-                            syntax:<codeblock><varname>database</varname>.<varname>schema</varname>.<varname>table</varname> [ SQL: <varname>query</varname> ]</codeblock><p>For
-                            example, the following lines copy all data from
-                                <codeph>mydb.public.products</codeph>, and a subset of data from
-                                <codeph>mydb.public.sales</codeph>:<codeblock>mydb.public.products
-mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
-                    <pd>You cannot specify views or system catalog tables as source tables.</pd>
-                    <pd>Any query that you provide must reference the source table and output to the
-                        same columns of the source table. Do not terminate the query with a
-                        semicolon.</pd>
+                    <pd>In the text file, specify a single fully qualified table per line
+                            (<i>database.schema.table</i>). You cannot specify views or system
+                        catalog tables.</pd>
                     <pd>You can use Go language regular expression syntax to select multiple tables.
                         See the <codeph><xref href="#topic1/dest-table-gpcopy" format="dita"
                                 >--dest-table</xref></codeph> option for information about using
