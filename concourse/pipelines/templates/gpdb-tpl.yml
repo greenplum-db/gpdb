@@ -102,6 +102,7 @@ groups:
   - gate_cli_start
 {% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]
+  - [[ test.name ]]_ubuntu18
 {% endfor %}
   - check_centos
 {% endif %}
@@ -239,8 +240,10 @@ groups:
 - name: CLI
   jobs:
   - gate_cli_start
+  - compile_gpdb_ubuntu18.04
 {% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]
+  - [[ test.name ]]_ubuntu18
 {% endfor %}
   - check_centos
   - compile_gpdb_centos6
@@ -1502,6 +1505,60 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
 
+- name: [[ test.name ]]_ubuntu18
+  plan:
+    - aggregate:
+      - get: gpdb_src
+        params:
+          submodules:
+            - gpMgmt/bin/pythonSrc/ext
+        passed: [compile_gpdb_ubuntu18.04]
+      - get: gpdb6-ubuntu18.04-test
+    - aggregate:
+      {% if test.use_concourse_cluster %}
+      - do:
+        - get: gpdb_binary
+          resource: bin_gpdb_ubuntu18.04
+          passed: [compile_gpdb_ubuntu18.04]
+          trigger: [[ test_trigger ]]
+        - get: ccp_src
+        - put: terraform
+          params:
+            <<: *ccp_default_params
+            vars:
+              <<: *ccp_default_vars
+              PLATFORM: ubuntu18.04
+              [[ test.additional_ccp_vars ]]
+        - task: gen_cluster
+          file: ccp_src/ci/tasks/gen_cluster.yml
+          params:
+            <<: *ccp_gen_cluster_default_params
+            PLATFORM: ubuntu18.04
+        - task: gpinitsystem
+          file: ccp_src/ci/tasks/gpinitsystem.yml
+        - task: [[ test.name ]]_concourse_cluster_tests
+          file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
+          image: gpdb6-ubuntu18.04-test
+          params:
+            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
+          on_success:
+            <<: *ccp_destroy
+          ensure:
+            <<: *set_failed
+      {% endif %}
+      - do:
+        - get: bin_gpdb_ubuntu18.04
+          resource: bin_gpdb_ubuntu18.04
+          passed: [compile_gpdb_ubuntu18.04]
+          trigger: [[ test_trigger ]]
+        - task: [[ test.name ]]_demo_cluster_tests
+          file: gpdb_src/concourse/tasks/behave_gpdb.yml
+          image: gpdb6-ubuntu18.04-test
+          input_mapping:
+            bin_gpdb: bin_gpdb_ubuntu18.04
+          params:
+            BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
+
 {% endfor %}
 
 {% if "centos6" in os_types and "ICW" in test_sections %}
@@ -1776,6 +1833,7 @@ jobs:
       - gpperfmon_centos7
 {% for test in CLI_BEHAVE_TESTS %}
       - [[ test.name ]]
+      - [[ test.name ]]_ubuntu18
 {% endfor %}
  ##     - madlib_build_gppkg
  ##     - MADlib_Test_orca_centos6
@@ -1824,6 +1882,9 @@ jobs:
       - compile_gpdb_ubuntu18.04
       - icw_gporca_ubuntu18.04
       - icw_planner_ubuntu18.04
+{% for test in CLI_BEHAVE_TESTS %}
+      - [[ test.name ]]_ubuntu18
+{% endfor %}
     - get: bin_gpdb_clients_ubuntu18.04
       passed:
       - compile_gpdb_ubuntu18.04
