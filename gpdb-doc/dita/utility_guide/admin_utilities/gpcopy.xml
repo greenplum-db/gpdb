@@ -21,31 +21,28 @@
         [ <b>--include-table-file</b> <varname>table-file2</varname>] ... ] | 
      <b>--include-table-json</b> <varname>json-table-file1</varname>
         [ <b>--include-table-json</b> <varname>json-table-file2</varname>] ... ] }
-
+   [ <b>--metadata-only</b> ]
    [ <b>--exclude-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] ]
    [ <b>--exclude-table-file</b> <varname>table-file1</varname> ]
       [ <b>--exclude-table-file</b> <varname>table-file2</varname> ] ... ] ]
-
-   [ <b>--skip-existing</b> | <b>--truncate</b> | <b>--drop</b> | <b>--append</b> ]
 
    { <b>--dest-host</b> <varname>dest_host</varname> [ <b>--dest-port</b> <varname>dest_port</varname> ]
       [ <b>--dest-user</b> <varname>dest_user</varname> ] }
    [ <b>--source-host</b> <varname>source_host</varname> [ <b>--source-port</b> <varname>source_port</varname> ]
    [ <b>--source-user</b> <varname>source_user</varname> ] ]
-
    [ <b>--jobs</b> <varname>int</varname> ]
-   [ <b>--data-port-range</b> <varname>lower_port</varname>-<varname>upper_port</varname> ]
-
-   [ <b>--analyze</b> ]
-   [ <b>--dry-run</b> ]
-   [ <b>--metadata-only</b> ]
-   [ <b>--no-compression</b> ]
-   [ <b>--no-distribution-check</b> ]
    [ <b>--on-segment-threshold</b> <varname>int</varname> ]
    [ <b>--parallelize-leaf-partitions</b> ] 
+   [ <b>--data-port-range</b> <varname>lower_port</varname>-<varname>upper_port</varname> ]
+
+   { <b>--skip-existing</b> | <b>--truncate</b> | <b>--drop</b> | <b>--append</b> }
+   [ <b>--analyze</b> ]
+   [ <b>--no-compression</b> ]
+   [ <b>--no-distribution-check</b> ]
    [ <b>--truncate-source-after</b> [<b>--yes</b> ] ]
    [ <b>--validate</b> <varname>type</varname> ]
 
+   [ <b>--dry-run</b> ]
    [ <b>--quiet</b> | <b>--debug</b> ]
 
 <b>gpcopy --version</b>
@@ -123,41 +120,32 @@
                 host directories for the tablespaces. </p>
         </section>
         <section id="section6">
-            <title>Options</title>
+            <title>Options for Choosing Data to Copy</title>
+            <p><codeph>gpcopy</codeph> provides a range of options to define the scope of data that
+                is copied. You can choose options to perform a full Greenplum cluster migration,
+                copy specific databases or tables, or only portions of a table using a SQL query.
+                Additional options enable you to exclude certain tables from being copied, or to
+                change the destination database into which a table's data is copied. The special
+                    <codeph>--metadata-only</codeph> instructs <codeph>gpcopy</codeph> to create the
+                necessary schema for the selected source tables, but copy no table data.</p>
+            <p>You must use at least one of the options <codeph>--full</codeph>,
+                    <codeph>--dbname</codeph>, <codeph>--include-table</codeph>,
+                    <codeph>--include-table-file</codeph>, or <codeph>--include-table-json</codeph>.
+                Use other options as needed to exclude data from the copy or to change the
+                destination database for copied tables.</p>
             <parml>
                 <plentry>
-                    <pt>--analyze</pt>
-                    <pd>Run the <codeph>ANALYZE</codeph> command on non-system tables. The default
-                        is to not run the <codeph>ANALYZE</codeph> command. The operation is
-                        performed for each table after the table data is copied.</pd>
-                </plentry>
-                <plentry>
-                    <pt>--append</pt>
-                    <pd>Append data to the table in the destination database if it already exists. </pd>
-                    <pd>At most, only one of the options can be specified:
-                            <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
-                </plentry>
-                <plentry>
-                    <pt>--dry-run</pt>
-                    <pd>When you specify this option, <codeph>gpcopy</codeph> generates a list of
-                        the migration operations that would have been performed with the specified
-                        options. The data is not migrated. </pd>
-                    <pd>The information is displayed at the command line and written to the log
-                        file.</pd>
-                </plentry>
-                <plentry>
-                    <pt>--jobs <varname>int</varname></pt>
-                    <pd>Specify the number processes that <codeph>gpcopy</codeph> runs in parallel.
-                        The default is 4. The range is from 1 to 64.</pd>
-                    <pd>The option <codeph>--jobs</codeph> produces
-                            <codeph>2*<varname>n</varname>+1</codeph> database connections. The
-                        default value 4, creates 9 connections.</pd>
-                    <pd>If you increase this option, ensure that Greenplum Database systems are
-                        configured with a sufficient maximum concurrent connection value to
-                        accommodate the <codeph>gpcopy</codeph> connections and other concurrent
-                        connections such as user connections. See the Greenplum Database server
-                        configuration parameter <codeph>max_connections</codeph>.</pd>
+                    <pt>--full</pt>
+                    <pd>This option performs a migration of a Greenplum Database source system to a
+                        destination system. </pd>
+                    <pd>A migration copies all database objects including, tables, indexes, views,
+                        roles, functions, user-defined types (UDT), resource queues, and resource
+                        groups for all user-defined databases. The default databases,
+                            <codeph>postgres</codeph>, <codeph>template0</codeph>, and
+                            <codeph>template1</codeph>, are not copied.</pd>
+                    <pd>This option cannot be specified with the <codeph>--dbname</codeph>,
+                            <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
+                        or <codeph>--include-table-json</codeph> options.</pd>
                 </plentry>
                 <plentry>
                     <pt>--dbname <varname>database</varname></pt>
@@ -176,12 +164,6 @@
                         or <codeph>--include-table-json</codeph> option.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--debug</pt>
-                    <pd>If specified, debug messages are displayed at the command prompt.</pd>
-                    <pd>This option cannot be specified with the <codeph>--quiet</codeph>
-                        option.</pd>
-                </plentry>
-                <plentry>
                     <pt>--dest-dbname <varname>database</varname></pt>
                     <pd>To copy a database to a different destination database, specify the name of
                         the destination database. For multiple databases, specify a comma-separated
@@ -197,87 +179,6 @@
                         error and quits. If a destination database does not exist a database is
                         created. </pd>
                     <pd>Valid only with the <codeph>--dbname</codeph> option.</pd>
-                </plentry>
-                <plentry>
-                    <pt>--dest-host <varname>dest_host</varname></pt>
-                    <pd>Required. Destination Greenplum Database hostname or IP address. </pd>
-                </plentry>
-                <plentry>
-                    <pt>--dest-port <varname>dest_port</varname></pt>
-                    <pd>Destination Greenplum Database master segment port number. If
-                            <codeph>--dest-port</codeph> is not specified, then the default is
-                        5432.</pd>
-                </plentry>
-                <plentry>
-                    <pt>--data-port-range
-                            <varname>lower_port</varname>-<varname>upper_port</varname></pt>
-                    <pd>A range of port numbers to try as the destination port for Greenplum
-                        Database hosts for data transfer. <codeph>gpcopy</codeph> uses the first
-                        available port specified in the range (inclusive).
-                            <varname>lower_port</varname> must be greater than or equal to 1024, and
-                            <varname>upper_port</varname> must be a greater value. The number of
-                        ports specified in the range must also be greater than or equal to the
-                        number of parallel processes created with <codeph>--jobs</codeph>, if that
-                        option is specified. If <codeph>--data-port-range</codeph> is not specified,
-                        then <codeph>gpcopy</codeph> uses any available port.</pd>
-                </plentry>
-                <plentry>
-                    <pt>--dest-user <varname>dest_user</varname></pt>
-                    <pd>User ID that is used to connect to the destination Greenplum Database
-                        system. If not specified, the default is the user gpadmin. </pd>
-                </plentry>
-                <plentry>
-                    <pt>--drop</pt>
-                    <pd>Specify this option to drop the table that is in the destination database if
-                        it already exists. Before copying table data, <codeph>gpcopy</codeph> drops
-                        the table and creates it again. </pd>
-                    <pd>At most, only one of the options can be specified:
-                            <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
-                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
-                </plentry>
-                <plentry>
-                    <pt>--exclude-table
-                            <varname>db</varname>.<varname>schema</varname>.<varname>table</varname></pt>
-                    <pd>A table from the source database system to exclude from transfer. The fully
-                        qualified table name must be specified
-                            (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>). </pd>
-                    <pd>To exclude multiple tables, specify a comma-separated list of table
-                        names.</pd>
-                    <pd>A set of tables can be specified using the Go language regular expression
-                        syntax. See the <codeph><xref href="#topic1/include-file-gpcopy"
-                                format="dita">--include-table</xref></codeph> option for information
-                        about using regular expressions.</pd>
-                    <pd>Only the specified tables are excluded, not dependent objects. You cannot
-                        specify views or system catalog tables. </pd>
-                    <pd>This option must be specified with one of these options:
-                            <codeph>--full</codeph>, <codeph>--dbname</codeph>,
-                            <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
-                        or <codeph>--include-table-json</codeph>. If the option
-                            <codeph>--exclude-table</codeph> results in no table to copy, the
-                        database or schema is not created in the destination system.</pd>
-                </plentry>
-                <plentry>
-                    <pt>--exclude-table-file <varname>table-file</varname></pt>
-                    <pd>The location and name of file containing a list of fully qualified table
-                        names to exclude from copying to the destination system. In the text file,
-                        specify a single fully qualified table per line
-                            (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
-                        To specify multiple files, specify this option for each
-                        file.<codeblock>--exclude-table-file &lt;<varname>path_to_file1</varname>> --exclude-table-file &lt;<varname>path_to_file2</varname>></codeblock></pd>
-                    <pd>In the file, a set of tables can be specified using the Go language regular
-                        expression syntax. See the <codeph><xref href="#topic1/include-file-gpcopy"
-                                format="dita">--include-table</xref></codeph> option for information
-                        about using regular expressions.</pd>
-                    <pd>If a source table does not exist, <codeph>gpcopy</codeph> displays a
-                        warning. </pd>
-                    <pd>Only the specified tables are excluded. You cannot specify views or system
-                        catalog tables.</pd>
-                    <pd>This option must be specified with one of these options:
-                            <codeph>--full</codeph>, <codeph>--dbname</codeph>,
-                            <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
-                        or <codeph>--include-table-json</codeph>. If the option
-                            <codeph>--exclude-table</codeph> results in no tables to copy, the
-                        database or schema is not created in the destination system.</pd>
                 </plentry>
                 <plentry id="include-file-gpcopy">
                     <pt>--include-table
@@ -468,42 +369,118 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
                         partitioned table.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--full</pt>
-                    <pd>This option performs a migration of a Greenplum Database source system to a
-                        destination system. </pd>
-                    <pd>A migration copies all database objects including, tables, indexes, views,
-                        roles, functions, user-defined types (UDT), resource queues, and resource
-                        groups for all user-defined databases. The default databases,
-                            <codeph>postgres</codeph>, <codeph>template0</codeph>, and
-                            <codeph>template1</codeph>, are not copied.</pd>
-                    <pd>This option cannot be specified with the <codeph>--dbname</codeph>,
+                    <pt>--metadata-only</pt>
+                    <pd>Create only the schemas specified by the command. Data is not
+                        transferred.</pd>
+                    <pd>If specified with the <codeph>--full</codeph> option,
+                            <codeph>gpcopy</codeph> replicates the complete database schema,
+                        including all tables, indexes, views, user-defined types (UDT), and
+                        user-defined functions (UDF) for the source databases. No data is
+                        transferred. </pd>
+                    <pd>If you specify databases with the <codeph>--dbname</codeph> option or tables
+                        with the <codeph>--include-table</codeph>
+                        <codeph>--include-table-file</codeph>, or
+                            <codeph>--include-table-json</codeph> options, <codeph>gpcopy</codeph>
+                        creates only the tables and indexes. No data is transferred.</pd>
+                    <pd>This option cannot be used with <codeph>--truncate</codeph> option.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--exclude-table
+                            <varname>db</varname>.<varname>schema</varname>.<varname>table</varname></pt>
+                    <pd>A table from the source database system to exclude from transfer. The fully
+                        qualified table name must be specified
+                            (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>). </pd>
+                    <pd>To exclude multiple tables, specify a comma-separated list of table
+                        names.</pd>
+                    <pd>A set of tables can be specified using the Go language regular expression
+                        syntax. See the <codeph><xref href="#topic1/include-file-gpcopy"
+                                format="dita">--include-table</xref></codeph> option for information
+                        about using regular expressions.</pd>
+                    <pd>Only the specified tables are excluded, not dependent objects. You cannot
+                        specify views or system catalog tables. </pd>
+                    <pd>This option must be specified with one of these options:
+                            <codeph>--full</codeph>, <codeph>--dbname</codeph>,
                             <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
-                        or <codeph>--include-table-json</codeph> options.</pd>
+                        or <codeph>--include-table-json</codeph>. If the option
+                            <codeph>--exclude-table</codeph> results in no table to copy, the
+                        database or schema is not created in the destination system.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--no-compression</pt>
-                    <pd>If specified, data is transferred without compression. By default,
-                            <codeph>gpcopy</codeph> compresses data during transfer from the source
-                        to the destination database when copying data to a different host.</pd>
-                    <pd>The utility does not compress data when copying data to the same host.</pd>
+                    <pt>--exclude-table-file <varname>table-file</varname></pt>
+                    <pd>The location and name of file containing a list of fully qualified table
+                        names to exclude from copying to the destination system. In the text file,
+                        specify a single fully qualified table per line
+                            (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
+                        To specify multiple files, specify this option for each
+                        file.<codeblock>--exclude-table-file &lt;<varname>path_to_file1</varname>> --exclude-table-file &lt;<varname>path_to_file2</varname>></codeblock></pd>
+                    <pd>In the file, a set of tables can be specified using the Go language regular
+                        expression syntax. See the <codeph><xref href="#topic1/include-file-gpcopy"
+                                format="dita">--include-table</xref></codeph> option for information
+                        about using regular expressions.</pd>
+                    <pd>If a source table does not exist, <codeph>gpcopy</codeph> displays a
+                        warning. </pd>
+                    <pd>Only the specified tables are excluded. You cannot specify views or system
+                        catalog tables.</pd>
+                    <pd>This option must be specified with one of these options:
+                            <codeph>--full</codeph>, <codeph>--dbname</codeph>,
+                            <codeph>--include-table</codeph>, <codeph>--include-table-file</codeph>,
+                        or <codeph>--include-table-json</codeph>. If the option
+                            <codeph>--exclude-table</codeph> results in no tables to copy, the
+                        database or schema is not created in the destination system.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section>
+            <title>Connection Options</title>
+            <p>The following options specify connection information for the destination and source
+                Greenplum clusters. Only <codeph>--dest-host</codeph> is required.
+                    <codeph>--jobs</codeph>,  <codeph>--on-segment-threshold</codeph>, and
+                    <codeph>--parallelize-leaf-partitions</codeph> affect the number of simultaneous
+                connections used for data transfer. <codeph>--data-port-range</codeph> defines the
+                ports used for data transfer to segments.</p>
+            <parml>
+                <plentry>
+                    <pt>--dest-host <varname>dest_host</varname></pt>
+                    <pd>Required. Destination Greenplum Database hostname or IP address.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--no-distribution-check</pt>
-                    <pd>Specify this option to disable table data distribution checking. By default,
-                            <codeph>gpcopy</codeph> performs data distribution checking to ensure
-                        data is distributed to segment instances correctly. If distribution checking
-                        fails, the table copy fails. </pd>
-                    <pd>The utility does not support table data distribution checking when copying a
-                        partitioned table that is defined with a leaf table that is an external
-                        table or if a leaf table is defined with a distribution policy that is
-                        different from the root partitioned table.
-                        <note type="warning">Before you perform a <codeph>gpcopy</codeph> operation
-                            with the <codeph>--no-distribution-check</codeph> option, ensure that
-                            you have a backup of the destination database and that the distribution
-                            policies of the tables that are being copied are the same in the source
-                            and destination database. Copying data into segment instances with
-                            incorrect data distribution can cause incorrect query results and can
-                            cause database corruption.</note></pd>
+                    <pt>--dest-port <varname>dest_port</varname></pt>
+                    <pd>Destination Greenplum Database master segment port number. If
+                            <codeph>--dest-port</codeph> is not specified, then the default is
+                        5432.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--dest-user <varname>dest_user</varname></pt>
+                    <pd>User ID that is used to connect to the destination Greenplum master. If not
+                        specified, the default is the user gpadmin. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--source-host <varname>source_host</varname></pt>
+                    <pd>Source Greenplum Database host name or IP address. If not specified, the
+                        default host is the system running <codeph>gpcopy</codeph> (127.0.0.1).</pd>
+                </plentry>
+                <plentry>
+                    <pt>--source-port <varname>source_port</varname></pt>
+                    <pd>Source Greenplum Database port number. If not specified, the default is
+                        5432.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--source-user <varname>source_user</varname></pt>
+                    <pd>User ID that is used to connect to the source Greenplum Database system. If
+                        not specified, the default is the user gpadmin.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--jobs <varname>int</varname></pt>
+                    <pd>Specify the number processes that <codeph>gpcopy</codeph> runs in parallel.
+                        The default is 4. The range is from 1 to 64.</pd>
+                    <pd>The option <codeph>--jobs</codeph> produces
+                            <codeph>2*<varname>n</varname>+1</codeph> database connections. The
+                        default value 4, creates 9 connections.</pd>
+                    <pd>If you increase this option, ensure that Greenplum Database systems are
+                        configured with a sufficient maximum concurrent connection value to
+                        accommodate the <codeph>gpcopy</codeph> connections and other concurrent
+                        connections such as user connections. See the Greenplum Database server
+                        configuration parameter <codeph>max_connections</codeph>.</pd>
                 </plentry>
                 <plentry>
                     <pt>--on-segment-threshold <varname>int</varname></pt>
@@ -533,29 +510,29 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
                             <codeph>WHERE</codeph> clause.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--quiet</pt>
-                    <pd>If specified, suppress status messages at the command prompt. The messages
-                        are sent only to the log file. Higher level messages such as warning and
-                        error messages are still displayed. </pd>
-                    <pd>This option cannot be specified with the <codeph>--debug</codeph>
-                        option.</pd>
+                    <pt>--data-port-range
+                            <varname>lower_port</varname>-<varname>upper_port</varname></pt>
+                    <pd>A range of port numbers to try as the destination port for Greenplum
+                        Database hosts for data transfer. <codeph>gpcopy</codeph> uses the first
+                        available port specified in the range (inclusive).
+                            <varname>lower_port</varname> must be greater than or equal to 1024, and
+                            <varname>upper_port</varname> must be a greater value. The number of
+                        ports specified in the range must also be greater than or equal to the
+                        number of parallel processes created with <codeph>--jobs</codeph>, if that
+                        option is specified. If <codeph>--data-port-range</codeph> is not specified,
+                        then <codeph>gpcopy</codeph> uses any available port.</pd>
                 </plentry>
-                <plentry>
-                    <pt>--metadata-only</pt>
-                    <pd>Create only the schemas specified by the command. Data is not
-                        transferred.</pd>
-                    <pd>If specified with the <codeph>--full</codeph> option,
-                            <codeph>gpcopy</codeph> replicates the complete database schema,
-                        including all tables, indexes, views, user-defined types (UDT), and
-                        user-defined functions (UDF) for the source databases. No data is
-                        transferred. </pd>
-                    <pd>If you specify databases with the <codeph>--dbname</codeph> option or tables
-                        with the <codeph>--include-table</codeph>
-                        <codeph>--include-table-file</codeph>, or
-                            <codeph>--include-table-json</codeph> options, <codeph>gpcopy</codeph>
-                        creates only the tables and indexes. No data is transferred.</pd>
-                    <pd>This option cannot be used with <codeph>--truncate</codeph> option.</pd>
-                </plentry>
+            </parml>
+        </section>
+        <section>
+            <title>Options for Configuring how Data is Copied</title>
+            <p><codeph>gpcopy</codeph> provides additional options that affect the way data is
+                copied between systems. You must use one of these options to specify how to manage
+                data in the destination database: <codeph>--skip-existing</codeph>,
+                    <codeph>--truncate</codeph>, <codeph>--drop</codeph>, or
+                    <codeph>--append</codeph>. Other options can be included as necessary, for
+                example, to perform additional data validation.</p>
+            <parml>
                 <plentry>
                     <pt>--skip-existing</pt>
                     <pd>Specify this option to skip copying a table from the source database if the
@@ -565,27 +542,59 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
                             <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--source-host <varname>source_host</varname></pt>
-                    <pd>Source Greenplum Database host name or IP address. If not specified, the
-                        default host is the system running <codeph>gpcopy</codeph> (127.0.0.1).</pd>
-                </plentry>
-                <plentry>
-                    <pt>--source-port <varname>source_port</varname></pt>
-                    <pd>Source Greenplum Database port number. If not specified, the default is
-                        5432.</pd>
-                </plentry>
-                <plentry>
-                    <pt>--source-user <varname>source_user</varname></pt>
-                    <pd>User ID that is used to connect to the source Greenplum Database system. If
-                        not specified, the default is the user gpadmin.</pd>
-                </plentry>
-                <plentry>
                     <pt>--truncate</pt>
                     <pd>Specify this option to truncate the table that is in the destination
-                        database if it already exists. </pd>
+                        database if it already exists.</pd>
                     <pd>At most, only one of the options can be specified:
                             <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
                             <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--drop</pt>
+                    <pd>Specify this option to drop the table that is in the destination database if
+                        it already exists. Before copying table data, <codeph>gpcopy</codeph> drops
+                        the table and creates it again. </pd>
+                    <pd>At most, only one of the options can be specified:
+                            <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--append</pt>
+                    <pd>Append data to the table in the destination database if it already exists. </pd>
+                    <pd>At most, only one of the options can be specified:
+                            <codeph>--skip-existing</codeph>, <codeph>--truncate</codeph>,
+                            <codeph>--drop</codeph>, or <codeph>--append</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--analyze</pt>
+                    <pd>Run the <codeph>ANALYZE</codeph> command on non-system tables. The default
+                        is to not run the <codeph>ANALYZE</codeph> command. The operation is
+                        performed for each table after the table data is copied.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--no-compression</pt>
+                    <pd>If specified, data is transferred without compression. By default,
+                            <codeph>gpcopy</codeph> compresses data during transfer from the source
+                        to the destination database when copying data to a different host.</pd>
+                    <pd>The utility does not compress data when copying data to the same host.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--no-distribution-check</pt>
+                    <pd>Specify this option to disable table data distribution checking. By default,
+                            <codeph>gpcopy</codeph> performs data distribution checking to ensure
+                        data is distributed to segment instances correctly. If distribution checking
+                        fails, the table copy fails. </pd>
+                    <pd>The utility does not support table data distribution checking when copying a
+                        partitioned table that is defined with a leaf table that is an external
+                        table or if a leaf table is defined with a distribution policy that is
+                        different from the root partitioned table. <note type="warning">Before you
+                            perform a <codeph>gpcopy</codeph> operation with the
+                                <codeph>--no-distribution-check</codeph> option, ensure that you
+                            have a backup of the destination database and that the distribution
+                            policies of the tables that are being copied are the same in the source
+                            and destination database. Copying data into segment instances with
+                            incorrect data distribution can cause incorrect query results and can
+                            cause database corruption.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>--truncate-source-after</pt>
@@ -623,13 +632,40 @@ mydb.public.sales SQL:select * from sales where id > 1000</codeblock></p></pd>
                             <codeph>sql:</codeph> query that uses a <codeph>WHERE</codeph>
                         clause.</pd>
                 </plentry>
+            </parml>
+        </section>
+        <section>
+            <title>Additional Options</title>
+            <parml>
                 <plentry>
-                    <pt>--help</pt>
-                    <pd>Displays the online help. </pd>
+                    <pt>--dry-run</pt>
+                    <pd>When you specify this option, <codeph>gpcopy</codeph> generates a list of
+                        the migration operations that would have been performed with the specified
+                        options. The data is not migrated. </pd>
+                    <pd>The information is displayed at the command line and written to the log
+                        file.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--quiet</pt>
+                    <pd>If specified, suppress status messages at the command prompt. The messages
+                        are sent only to the log file. Higher level messages such as warning and
+                        error messages are still displayed. </pd>
+                    <pd>This option cannot be specified with the <codeph>--debug</codeph>
+                        option.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--debug</pt>
+                    <pd>If specified, debug messages are displayed at the command prompt.</pd>
+                    <pd>This option cannot be specified with the <codeph>--quiet</codeph>
+                        option.</pd>
                 </plentry>
                 <plentry>
                     <pt>--version</pt>
                     <pd>Displays the version of this utility.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--help</pt>
+                    <pd>Displays the online help. </pd>
                 </plentry>
             </parml>
         </section>
