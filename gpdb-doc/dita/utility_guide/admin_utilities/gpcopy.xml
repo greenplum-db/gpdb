@@ -15,7 +15,8 @@
    { <b>--full</b> |
      { <b>--dbname</b> <varname>database1</varname>[, <varname>database2</varname> ... ] 
         [ <b>--dest-dbname</b> <varname>dest-db1</varname>[, <varname>dest-db2</varname> ... ] ] } |
-     <b>--include-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] [ <b>--dest-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] |
+     <b>--include-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] 
+        [ <b>--dest-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] |
      <b>--include-table-file</b> <varname>table-file1</varname>
         [ <b>--include-table-file</b> <varname>table-file2</varname>] ... ] | 
      <b>--include-table-json</b> <varname>json-table-file1</varname>
