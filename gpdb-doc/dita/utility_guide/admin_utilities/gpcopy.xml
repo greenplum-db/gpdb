@@ -222,20 +222,19 @@
                             <varname>db</varname>.<varname>schema</varname>.<varname>table</varname></pt>
                     <pd>(Optional.) Changes the database where tables defined with
                             <codeph>--include-table</codeph> are copied. Greenplum does not
-                        currently support changing the destination schema or table name. You must
-                        provide fully-qualified table names
+                        currently support changing the destination schema or table name. </pd>
+                    <pd>You must provide fully-qualified table names
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
                         Specify multiple tables using either a comma-separated list or by
                         referencing regular expression capture groups that were defined with
-                            <codeph>--include-table</codeph>.</pd>
-                    <pd>If you use a comma-separated list of tables with
-                            <codeph>--include-table</codeph>, use the same number position in the
-                            <codeph>--dest-table</codeph> list to change the destination database of
-                        the corresponding table. For example, to move only the second table provided
-                        with an option
+                            <codeph>--include-table</codeph>. If you use a comma-separated list of
+                        tables with <codeph>--include-table</codeph>, use the same number position
+                        in the <codeph>--dest-table</codeph> list to change the destination database
+                        of the corresponding table. For example, to move only the second table
+                        provided with an option
                         like<codeblock>--include-table mytest.public.table1,mytest.public.table2</codeblock>use
                         an option similar
-                        to:<codeblock>--dest-table mytest.public.table1,production.public.table2</codeblock></pd>
+                        to:<codeblock>--dest-table production.public.table1,production.public.table2</codeblock></pd>
                     <pd>If you use Go language regular expressions capture groups in
                             <codeph>--include-table</codeph> to define a set of tables, you can
                         reference the capture groups in <codeph>--dest-table</codeph> to rename the
@@ -247,8 +246,8 @@
                         an option similar
                         to:<codeblock>--dest-table productiondb/$1/.myschema/$1/.mytable/$1/</codeblock>Note
                         that the capture group numbering starts at 1 and restarts for each component
-                        of the fully-qualified table name (database, schema, and table name).
-                        Therefore, in the above example each capture group is referenced with
+                        of the fully-qualified table name (database, schema, and table). Therefore,
+                        in the above example each capture group is referenced with
                             <codeph>/$1/</codeph> in <codeph>--dest-table</codeph>. You cannot
                         rename the destination schema or table name components.</pd>
                     <pd>If regular expression rules would cause more than one source table name to
