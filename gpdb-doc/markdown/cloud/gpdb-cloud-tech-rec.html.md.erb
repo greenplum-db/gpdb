@@ -122,7 +122,7 @@ Storage Optimized instances with local HDD ephemeral storage that is optimized f
 ### <a id="gcp-vm-type"></a>Virtual Machine Type
 The two most common instance types in GCP are "Standard" or "HighMem" instance types. The only difference is the ratio of Memory to Cores.  Each offer 1 to 64 vCPUs per VM.
 #### <a id="gcp-compute"></a>Compute
-Like AWS, GCP uses Hyperthreading so 2 vCPUs equates to 1 Core.  The CPU clock speed is determined by the region in which you deploy.  
+Like AWS, GCP uses Hyperthreading, so 2 vCPUs equates to 1 Core.  The CPU clock speed is determined by the region in which you deploy.  
 #### <a id="gcp-memory"></a>Memory
 Instance type n1-standard-8 has 8 vCPUs with 30GB of RAM while n1-highmem-8 also has 8 vCPUs with 52GB of RAM.  There is also a HighCPU instance type that generally isn't ideal for Greenplum.  Like AWS and Azure, the machines with more vCPUs will have more RAM.
 #### <a id="gcp-network"></a>Network
@@ -150,9 +150,9 @@ The HighMem instance type is slightly faster for higher concurrency.  Furthermor
 
 ## <a id="azure"></a>Azure
 ### <a id="az-vm-type"></a>Virtual Machine Type
-Each VM type has limits on disk throughput so picking a VM that doesn't have a limit that is too low is essential.  Most of Azure is designed for OLTP or Application workloads which limits the choices for databases like Greenplum where throughput is more important.  Disk type also plays a part in the throughput cap, so that needs to be considered too.
+Each VM type has limits on disk throughput so picking a VM that doesn't have a limit that is too low is essential.  Most of Azure is designed for OLTP or Application workloads, which limits the choices for databases like Greenplum where throughput is more important.  Disk type also plays a part in the throughput cap, so that needs to be considered too.
 ### <a id="az-compute"></a>Compute
-Most instance types in Azure have hyperthreading enabled, which means 2 vCPUs equates to 1 core.  However, not all instance types have this feature, so for these others, 1 vCPU equates to one core.
+Most instance types in Azure have hyperthreading enabled, which means 1 vCPU equates to 2 cores.  However, not all instance types have this feature, so for these others, 1 vCPU equates to 1 core.
 
 The High Performance Compute (HPC) instance types have the fastest cores in Azure.  
 
@@ -170,7 +170,7 @@ Storage in Azure is either Premium (SSD) or Regular Storage (HDD).  The availabl
 -  Standard_E32s_v3 has a limit of 768 MB/s.
 -  Standard_E32_v3 was tested with gpcheckperf to have 1424 write and 1557 read MB/s performance.
 
-To get the maximum throughput from a VM in Azure, you have to use multiple disks.  For the larger instance types, you have to use upwards of 32 disks to reach the limit of a VM.  Unfortunately, the memory and CPU constraints on these machines means that you have to run fewer segments than you have disks, so you have to use software RAID to utilize all of these disks.  Performance takes a hit with software RAID too so you have to try multiple configurations to optimize.
+To get the maximum throughput from a VM in Azure, you have to use multiple disks.  For the larger instance types, you have to use upwards of 32 disks to reach the limit of a VM.  Unfortunately, the memory and CPU constraints on these machines means that you have to run fewer segments than you have disks, so you have to use software RAID to utilize all of these disks.  Performance takes a hit with software RAID, too, so you have to try multiple configurations to optimize.
 
 The size of the disk also impacts performance, but not by much.
 
@@ -179,18 +179,18 @@ Software RAID not only is a little bit slower, but it also requires `umount` to 
 Disks use the same network as the VMs so you start running into the Azure limits in bigger clusters when using big virtual machines with 32 disks on each one.  The overall throughput drops as you hit this limit and is most noticeable during concurrency testing.
 
 ### <a id="az-recommend"></a>Azure Recommendations
-The best instance type to use in Azure is "Standard_H16" which is one of their High Performance Compute instance types.  This instance series is the only one utilizing Inifiband but this does not include IP traffic.
+The best instance type to use in Azure is "Standard_H16" which is one of their High Performance Compute instance types.  This instance series is the only one utilizing InfiniBand, but this does not include IP traffic.
 
 
 | Instance Type             | Storage Type | Storage Size      | Memory | vCPUs<sup>3</sup> | Use                   | Notes                    |
 |---------------------------|--------------|-------------------|--------|-------------------|-----------------------|--------------------------|
 | Standard_D14_v2           | HDD          | 8x2TB<sup>2</sup> | 112    | 16                | Dev/Test - Production | Use if HPC not available |
 | Standard_H8<sup>1</sup>   | HDD          | 4x2TB<sup>2</sup> | 56     | 8                 | Dev/Test - Production |                          |
-| Standard_H168<sup>1</sup> | HDD          | 8x2TB<sup>2</sup> | 112    | 16                | Dev/Test - Production | Fastest                  |
+| Standard_H16<sup>1</sup> | HDD          | 8x2TB<sup>2</sup> | 112    | 16                | Dev/Test - Production | Fastest                  |
 
 <sup>1</sup> Not all regions have HPC instance types.
 
-<sup>2</sup> Use 2 disks in each RAID 0 volume
+<sup>2</sup> Use 2 disks in each RAID 0 volume.
 
-<sup>3</sup> 1 vCPU = 1 Core
+<sup>3</sup> Some, but not all, Azure VMs have hyperthreading. If hyperthreading is not enabled, 1 vCPU = 1 Core.
 
