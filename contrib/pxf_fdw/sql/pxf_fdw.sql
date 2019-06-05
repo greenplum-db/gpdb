@@ -38,6 +38,10 @@ CREATE FOREIGN DATA WRAPPER dummy_pxf_fdw
 ALTER FOREIGN DATA WRAPPER dummy_pxf_fdw
     OPTIONS ( DROP protocol );
 
+-- Foreign-data wrapper alteration fails if protocol option is empty
+ALTER FOREIGN DATA WRAPPER dummy_pxf_fdw
+    OPTIONS ( SET protocol '' );
+
 -- Foreign-data wrapper alteration fails if resource option is added
 ALTER FOREIGN DATA WRAPPER dummy_pxf_fdw
     OPTIONS ( ADD resource '/invalid/option/for/wrapper' );
@@ -94,7 +98,7 @@ ALTER USER MAPPING FOR pxf_fdw_user
 -- User mapping alteration fails if resource option is added
 ALTER USER MAPPING FOR pxf_fdw_user
     SERVER dummy_server
-    OPTIONS ( resource '/invalid/option/for/user/mapping' );
+    OPTIONS ( ADD resource '/invalid/option/for/user/mapping' );
 
 -- ===================================================================
 -- Validation for TABLE options
