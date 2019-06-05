@@ -35,9 +35,9 @@ It is highly encouraged to disable password authentication to the virtual machin
 ## <a id="aws"></a>Amazon Web Services (AWS)
 
 ### <a id="aws-vm-type"></a>Virtual Machine Type
-AWS provides a wide variety of virtual machine types and sizes to address virtually every use case.  Testing in AWS has found that the optimal instance types for Greenplum are "Memory Optimized" and "Storage Optimized".  These provide the most ideal balance of Memory, Network, and Storage throughput, and Compute capabilities.
+AWS provides a wide variety of virtual machine types and sizes to address virtually every use case.  Testing in AWS has found that the optimal instance types for Greenplum are "Memory Optimized" and "Storage Optimized".  These provide the ideal balance of Memory, Network, and Storage throughput, and Compute capabilities.
 
-Virtual Machine network and disk throughput limits increase as CPU and memory sizes increase.  This means the larger instance types are more ideal for Greenplum so that it can provide 10Gbit or better network performance.  
+Virtual Machine network and disk throughput limits increase as CPU and memory sizes increase.  This means the larger instance types are recommended for Greenplum so that it can provide 10Gbit or better network performance.  
 
 #### <a id="aws-compute"></a>Compute
 AWS uses Hyperthreading when reporting the number of vCPUs, therefore 2 vCPUs equates to 1 Core.  The processor types are frequently getting faster so using the latest instance type will be not only faster, but usually less expensive.  For example, the R5 series provides faster cores at a lower cost compared to R4.
@@ -46,7 +46,7 @@ AWS uses Hyperthreading when reporting the number of vCPUs, therefore 2 vCPUs eq
 This variable is pretty simple.  Greenplum needs at least 8GB of RAM per segment process to work optimally.  More RAM per segment helps with concurrency and also helps hide disk performance deficiencies.  
 
 #### <a id="aws-network"></a>Network
-AWS provides 25Gbit network performance on the largest instance types.  This alleviates any network bottleneck concerns for large Greenplum clusters in AWS.  Additionally, instance types provide 10Gbit as well as "up to 10Gbit" network performance.  For production workloads, we require 10Gbit or better network performance.
+AWS provides 25Gbit network performance on the largest instance types.  This alleviates any network bottleneck concerns for large Greenplum clusters in AWS.  Additionally, instance types provide 10Gbit as well as "up to 10Gbit" network performance.  For production workloads, Pivotal requires 10Gbit or better network performance.
 
 Loading network drivers is also required in AWS and depends on the instance type.  Some instance types use an Intel driver while others use an Amazon ENA driver.  Loading the driver requires modifying the machine image (AMI).
 
@@ -56,7 +56,7 @@ Loading network drivers is also required in AWS and depends on the instance type
 #### <a id="aws-ebs"></a>EBS
 The AWS default disk type is General Performance (GP2) which is ideal for IOP dependent applications.  It has relatively poor performance for throughput.  The operating system and swap volumes are ideal for GP2.  GP2 uses SSD disks and, relative to other disk types in AWS, is expensive.
 
-Throughput Optimized Disks (ST1) is ideal for throughput and thus, ideal for Greenplum.  These disks are based on HDD rather than SSD and are less expensive than GP2.  Performance of ST1 disks are influenced by the size disk and peaks at 12.5TB.  However, for the larger instance types have throughput limits that are larger than what a single ST1 disk can provide.  Therefore, up to 4 ST1 disks are needed to reach the throughput limit of a given virtual machine.
+Throughput Optimized Disks (ST1) is ideal for throughput and thus, ideal for Greenplum.  These disks are based on HDD rather than SSD and are less expensive than GP2.  Performance of ST1 disks is influenced by the disk size and peaks at 12.5TB.  However, the larger instance types have throughput limits that are larger than what a single ST1 disk can provide.  Therefore, up to 4 ST1 disks are needed to reach the throughput limit of a given virtual machine.
 
 EBS storage is durable so data is not lost when a virtual machine is stopped.  EBS also provides infrastructure snapshot capabilities that can be used to create volume backups.  These snapshots can be copied to different regions to provide a disaster recovery solution.  The Greenplum Cloud utility `gpsnap`, available in the AWS Cloud Marketplace, automates backup, restore, delete, and copy functions using EBS snapshots.
 
@@ -70,7 +70,7 @@ Instance types that have Ephemeral storage also are more expensive than Instance
 
 #### <a id="aws-ebs-vs-ephemeral"></a>EBS vs Ephemeral
 
-Performance testing has found that there is virtually no performance difference for Greenplum when comparing EBS vs Ephemeral storage.   Therefore, Pivotal recommends using EBS storage so that the disks are durable and disks snapshots can be used for backup and disaster recovery.
+Performance testing has found that there is virtually no performance difference for Greenplum when comparing EBS vs Ephemeral storage.   Therefore, Pivotal recommends using EBS storage so that the disks are durable and disk snapshots can be used for backup and disaster recovery.
 
 ### <a id="aws-recommend"></a>AWS Recommendations
 #### R5 Series
@@ -168,9 +168,9 @@ There is an undocumented process in Azure that periodically runs on the host mac
 Storage in Azure is either Premium (SSD) or Regular Storage (HDD).  The available sizes are the same and max out at 4TB.  Instance types either do or do not support Premium but, interestingly, the instance types that do support Premium storage, have a _lower_ throughput limit.  For example:
 
 -  Standard_E32s_v3 has a limit of 768 MB/s.
--  Standard_E32_v3 was tested with gpcheckperf to have 1424 write and 1557 read MB/s performance.
+-  Standard_E32_v3 was tested with `gpcheckperf` to have 1424 write and 1557 read MB/s performance.
 
-To get the maximum throughput from a VM in Azure, you have to use multiple disks.  For the larger instance types, you have to use upwards of 32 disks to reach the limit of a VM.  Unfortunately, the memory and CPU constraints on these machines means that you have to run fewer segments than you have disks, so you have to use software RAID to utilize all of these disks.  Performance takes a hit with software RAID, too, so you have to try multiple configurations to optimize.
+To get the maximum throughput from a VM in Azure, you have to use multiple disks.  For larger instance types, you have to use upwards of 32 disks to reach the limit of a VM.  Unfortunately, the memory and CPU constraints on these machines means that you have to run fewer segments than you have disks, so you have to use software RAID to utilize all of these disks.  Performance takes a hit with software RAID, too, so you have to try multiple configurations to optimize.
 
 The size of the disk also impacts performance, but not by much.
 
