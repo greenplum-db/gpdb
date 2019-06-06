@@ -256,8 +256,7 @@ clean distclean maintainer-clean: clean-lib
 	rm -f pg_regress_main.o pg_regress.o pg_regress$(X)
 # things created by various check targets
 	rm -f $(output_files) $(input_files)
-	rm -rf testtablespace
-	rm -rf testtablespace_otherloc
+	rm -rf ./testtablespace ./testtablespace_*
 	rm -rf $(pg_regress_clean_files)
 	rm -f data/pg_class32.data
 	rm -f gmon.out
