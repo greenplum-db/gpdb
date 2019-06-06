@@ -13,11 +13,12 @@ for COMMAND in ${PREREQ_COMMANDS}; do
 done
 
 # ----------------------------------------------------------------------
-# Retrieve root URI and commit SHA1
+# Retrieve root URI, full commit SHA1, and version
 # ----------------------------------------------------------------------
 
 URI=$( git remote -v | grep "fetch" | grep "origin" | awk '{print $2}' )
 SHA1=$( git rev-parse HEAD )
+VERSION=$( ./getversion --short )
 
 # ----------------------------------------------------------------------
 # Generate root JSON record
@@ -26,7 +27,8 @@ SHA1=$( git rev-parse HEAD )
 echo -n "
 {\"root\": {
   \"uri\": \"${URI}\",
-  \"sha1\": \"${SHA1}\"},
+  \"sha1\": \"${SHA1}\",
+  \"version\": \"${VERSION}\"},
   \"submodules\": ["
 
 # ----------------------------------------------------------------------
