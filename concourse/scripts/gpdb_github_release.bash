@@ -1,12 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 
-apk update && apk add git
+apk update && apk add --no-progress git
 
 BASE_DIR="$(pwd)"
 
-GPDB_RELEASE_COMMIT_SHA=$(git --git-dir gpdb_src/.git rev-list --tags --max-count=1)
+GPDB_RELEASE_COMMIT_SHA="$(cat gpdb_src/.git/ref)"
 GPDB_RELEASE_TAG="$(git --git-dir gpdb_src/.git describe --tags ${GPDB_RELEASE_COMMIT_SHA})"
 
 function build_gpdb_binaries_tarball(){
