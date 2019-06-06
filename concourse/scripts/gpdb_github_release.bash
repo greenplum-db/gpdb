@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+apk update && apk add git
+
 BASE_DIR="$(pwd)"
 
 GPDB_RELEASE_COMMIT_SHA=$(git --git-dir gpdb_src/.git rev-list --tags --max-count=1)

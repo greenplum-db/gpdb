@@ -1,6 +1,5 @@
 ---
 
-# 1. Resources
 resources:
 - name: gpdb_src
   type: git
@@ -16,22 +15,13 @@ resources:
     repository: ((gpdb-release-repository))
     access_token: ((gpdb-release-access-token))
 
-- name: gpdb6-centos7-build
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb6-centos7-build
-    tag: 'latest'
-
-# 2. Jobs
 jobs:
 - name: publish_gpdb_github_release
   plan:
   - aggregate:
     - get: gpdb_src
       trigger: true
-    - get: gpdb6-centos7-build
   - task: gpdb_github_release
-    image: gpdb6-centos7-build
     file: gpdb_src/concourse/tasks/gpdb_github_release.yml
   - put: gpdb_release
     params:
