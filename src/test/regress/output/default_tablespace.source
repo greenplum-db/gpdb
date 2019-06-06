@@ -1,0 +1,113 @@
+create tablespace some_default_tablespace location '@testtablespace@_default_tablespace';
+create tablespace some_database_tablespace location '@testtablespace@_database_tablespace';
+create database database_for_default_tablespace;
+\c database_for_default_tablespace;
+set default_tablespace to some_default_tablespace;
+create table some_table_in_default_tablespace (a int);
+-- expect this to be one
+select count(1) from pg_class inner join pg_tablespace ON pg_class.reltablespace = pg_tablespace.oid where spcname = 'some_default_tablespace' AND relname = 'some_table_in_default_tablespace';
+ count 
+-------
+     1
+(1 row)
+
+-- expect this to be the number of segments
+select count(1) from gp_dist_random('pg_class') segment_pg_class inner join pg_tablespace on pg_tablespace.oid = segment_pg_class.reltablespace where relname = 'some_table_in_default_tablespace' and spcname = 'some_default_tablespace';
+ count 
+-------
+     3
+(1 row)
+
+-- When I create an index with the a default tablespace set
+create index some_table_in_default_tablespace_index on some_table_in_default_tablespace(a);
+-- Then it should be created in the default tablespace
+select count(1) from pg_class inner join pg_tablespace ON pg_class.reltablespace = pg_tablespace.oid where spcname = 'some_default_tablespace' AND relname = 'some_table_in_default_tablespace_index';
+ count 
+-------
+     1
+(1 row)
+
+-- And it should be created in the default tablespace on the segments
+select count(1) from gp_dist_random('pg_class') segment_pg_class inner join pg_tablespace on pg_tablespace.oid = segment_pg_class.reltablespace where relname = 'some_table_in_default_tablespace_index' and spcname = 'some_default_tablespace';
+ count 
+-------
+     3
+(1 row)
+
+-- When I create a temporary table
+create temporary table some_temporary_table_for_default_tablespace_test (a int);
+-- Then it should not be affected by the default_tablespace GUC
+select count(1) from pg_class inner join pg_tablespace ON pg_class.reltablespace = pg_tablespace.oid where spcname = 'some_default_tablespace' AND relname = 'some_temporary_table_for_default_tablespace_test';
+ count 
+-------
+     0
+(1 row)
+
+-- And is should not be affected on the segments either
+select count(1) from gp_dist_random('pg_class') segment_pg_class inner join pg_tablespace on pg_tablespace.oid = segment_pg_class.reltablespace where relname = 'some_temporary_table_for_default_tablespace_test' and spcname = 'some_default_tablespace';
+ count 
+-------
+     0
+(1 row)
+
+-- When I create an index on a temporary table
+create index some_temporary_table_for_default_tablespace_test_index on some_temporary_table_for_default_tablespace_test(a);
+-- Then it should not be affected by the default_tablespace GUC
+select count(1) from pg_class inner join pg_tablespace ON pg_class.reltablespace = pg_tablespace.oid where spcname = 'some_default_tablespace' AND relname = 'some_temporary_table_for_default_tablespace_test_index';
+ count 
+-------
+     0
+(1 row)
+
+-- And is should not be affected on the segments either
+select count(1) from gp_dist_random('pg_class') segment_pg_class inner join pg_tablespace on pg_tablespace.oid = segment_pg_class.reltablespace where relname = 'some_temporary_table_for_default_tablespace_test_index' and spcname = 'some_default_tablespace';
+ count 
+-------
+     0
+(1 row)
+
+-- When I set a tablespace for a database
+reset default_tablespace;
+create database database_with_tablespace;
+alter database database_with_tablespace set tablespace some_database_tablespace;
+\c database_with_tablespace;
+-- And I set a default tablespace
+set default_tablespace to some_default_tablespace;
+-- Then tables and indexes that I create should be in the default tablespace
+create table table_under_database_with_default_tablespace (a int);
+create index table_under_database_with_default_tablespace_index on table_under_database_with_default_tablespace(a);
+select count(1) from pg_class inner join pg_tablespace ON pg_class.reltablespace = pg_tablespace.oid where spcname = 'some_default_tablespace' AND relname = 'table_under_database_with_default_tablespace';
+ count 
+-------
+     1
+(1 row)
+
+select count(1) from gp_dist_random('pg_class') segment_pg_class inner join pg_tablespace on pg_tablespace.oid = segment_pg_class.reltablespace where relname = 'table_under_database_with_default_tablespace' and spcname = 'some_default_tablespace';
+ count 
+-------
+     3
+(1 row)
+
+select count(1) from pg_class inner join pg_tablespace ON pg_class.reltablespace = pg_tablespace.oid where spcname = 'some_default_tablespace' AND relname = 'table_under_database_with_default_tablespace_index';
+ count 
+-------
+     1
+(1 row)
+
+select count(1) from gp_dist_random('pg_class') segment_pg_class inner join pg_tablespace on pg_tablespace.oid = segment_pg_class.reltablespace where relname = 'table_under_database_with_default_tablespace_index' and spcname = 'some_default_tablespace';
+ count 
+-------
+     3
+(1 row)
+
+-- cleanup
+\c database_for_default_tablespace
+drop table some_table_in_default_tablespace;
+\c database_with_tablespace
+drop table table_under_database_with_default_tablespace;
+\c regression;
+reset default_tablespace;
+drop database database_for_default_tablespace;
+drop database database_with_tablespace;
+drop tablespace some_default_tablespace;
+drop tablespace some_database_tablespace;
