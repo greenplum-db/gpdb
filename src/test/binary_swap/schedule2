@@ -1,6 +1,6 @@
 test: pg_dumpall_other
 test: diff_dumps
-test: inserts
+test: inserts views
 test: pg_dumpall_other
 test: gpcheckcat
 
