@@ -34,6 +34,7 @@ sreh.out
 table_functions.out
 table_functions_optimizer.out
 /tablespace.out
+/temp_tablespaces.out
 transient_types.out
 workfile_mgr_test.out
 trigger_sets_oid.out

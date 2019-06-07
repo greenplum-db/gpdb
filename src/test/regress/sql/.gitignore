@@ -12,6 +12,7 @@
 /misc.sql
 /oid_wraparound.sql
 /security_label.sql
+/temp_tablespaces.sql
 /tablespace.sql
 
 /gp_tablespace_path_too_long.sql
