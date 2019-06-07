@@ -60,13 +60,6 @@ SUBDIRS = \
 		worker_spi
 
 
-# Greenplum-specific additions (to ease merge pain).
-SUBDIRS += \
-		formatter \
-		formatter_fixedwidth \
-		extprotocol \
-		indexscan \
-
 ifeq ($(with_openssl),yes)
 SUBDIRS += sslinfo
 else

@@ -13,12 +13,8 @@ $(call recurse,all install,src config)
 all:
 	$(MAKE) -C contrib/auto_explain all
 	$(MAKE) -C contrib/file_fdw all
-	$(MAKE) -C contrib/formatter all
-	$(MAKE) -C contrib/formatter_fixedwidth all
 	$(MAKE) -C contrib/fuzzystrmatch all
-	$(MAKE) -C contrib/extprotocol all	
 	$(MAKE) -C contrib/dblink all
-	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pageinspect all  # needed by src/test/isolation
 	$(MAKE) -C contrib/pg_upgrade_support all
 	$(MAKE) -C contrib/pg_upgrade all
@@ -47,12 +43,8 @@ html man:
 install:
 	$(MAKE) -C contrib/auto_explain $@
 	$(MAKE) -C contrib/file_fdw $@
-	$(MAKE) -C contrib/formatter $@
-	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
-	$(MAKE) -C contrib/extprotocol $@
 	$(MAKE) -C contrib/dblink $@
-	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C contrib/pageinspect $@  # needed by src/test/isolation
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
@@ -143,10 +135,7 @@ $(call recurse,installcheck-world, \
 			   src/interfaces/gppc \
 			   contrib/auto_explain \
 			   contrib/file_fdw \
-			   contrib/formatter_fixedwidth \
-			   contrib/extprotocol \
 			   contrib/dblink \
-			   contrib/indexscan \
 			   contrib/hstore \
 			   contrib/pgcrypto \
 			   gpcontrib \
