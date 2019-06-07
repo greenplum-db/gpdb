@@ -22,20 +22,22 @@ function build_gpdb_binaries_tarball(){
         git archive -o "${BASE_DIR}/release_artifacts/${GPDB_RELEASE_TAG}.tar.gz" --prefix="gpdb-${GPDB_RELEASE_TAG}/"  --format=tar.gz  refs/tags/"${GPDB_RELEASE_TAG}"
         git archive -o "${BASE_DIR}/release_artifacts/${GPDB_RELEASE_TAG}.zip" --prefix="gpdb-${GPDB_RELEASE_TAG}/" --format=zip  -9 refs/tags/"${GPDB_RELEASE_TAG}"
     popd
+    echo "Created the release binaries successfully! [tar.gz, zip]"
+}
 
+function create_github_release_metadata(){
     # Prepare for the gpdb github release
     echo "${GPDB_RELEASE_TAG}" > "release_artifacts/name"
     echo "${GPDB_RELEASE_TAG}" > "release_artifacts/tag"
     echo "Greenplum-db version: ${GPDB_RELEASE_TAG}" > "release_artifacts/body"
-
-
 }
 
 function _main(){
     echo "Current Released Tag: ${GPDB_RELEASE_TAG}"
 
     build_gpdb_binaries_tarball
-    echo "Created the release binaries successfully! [tar.gz, zip]"
+    create_github_release_metadata
 }
 
 _main
+
