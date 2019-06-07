@@ -170,7 +170,9 @@ tablespace-setup:
 	./testtablespace_existing_version_dir/6/GPDB_99_399999991/ \
 	./testtablespace_existing_version_dir/7/GPDB_99_399999991/ \
 	./testtablespace_existing_version_dir/8/GPDB_99_399999991/ \
-        ./testtablespace_1111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000/
+        ./testtablespace_1111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000/ \
+	./testtablespace_default_tablespace \
+	./testtablespace_temp_tablespace
 
 # Check for include files that are not being shipped
 .PHONY: includecheck
