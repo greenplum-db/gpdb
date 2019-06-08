@@ -47,7 +47,10 @@
           <pd>The absolute path to the directory (host system file location) that will be the root
             directory for the tablespace. When registering a tablepace, the directory should be
             empty and must be owned by the Greenplum Database system user. The directory must be
-            specified by an absolute path name.</pd>
+            specified by an absolute path name of no more than 100 characters. (The location is used
+            to create a symlink target in the <filepath>pg_tblspc</filepath> directory, and symlink
+            targets are truncated to 100 characters when sending to TAR utilities such as
+              <codeph>pg_basebackup</codeph>.)</pd>
           <pd>For each segment instance, you can specify a different directory for the tablespace in
             the <codeph>WITH</codeph> clause.</pd>
         </plentry>
