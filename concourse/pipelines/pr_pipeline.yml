@@ -114,12 +114,6 @@ jobs:
             git submodule update --init --recursive
         inputs: [{ name: gpdb_pr }]
         outputs: [{ name: gpdb_src }]
-    - task: sync_tools_centos7
-      file: gpdb_pr/concourse/tasks/sync_tools.yml
-      image: gpdb6-centos7-build
-      params:
-        TARGET_OS: centos
-        TARGET_OS_VERSION: 7
     - task: compile_gpdb_centos7
       file: gpdb_pr/concourse/tasks/compile_gpdb.yml
       image: gpdb6-centos7-build
