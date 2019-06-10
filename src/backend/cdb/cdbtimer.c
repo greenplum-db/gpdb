@@ -69,7 +69,7 @@ resetTimers(struct itimers *otimers)
 	err = setitimer(ITIMER_VIRTUAL, &xtimer, p_vtimer);
 	Assert(err == 0);
 
-	err = setitimer(ITIMER_REAL, &xtimer, p_ptimer);
+	err = setitimer(ITIMER_PROF, &xtimer, p_ptimer);
 	Assert(err == 0);
 
 	/*
