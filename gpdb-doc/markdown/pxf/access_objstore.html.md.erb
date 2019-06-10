@@ -91,7 +91,7 @@ CREATE EXTERNAL TABLE pxf_gsc_json(location text, month text, num_orders int, to
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 </pre>
 
-## <a id="s3_override"></a>Overriding the S3 Server Configuration via DDL
+## <a id="s3_override"></a>Overriding the S3 Server Configuration with DDL
 
 If you are accessing an S3 object store, you can override the S3 server configuration by directly specifying the S3 access ID and secret key via these custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 

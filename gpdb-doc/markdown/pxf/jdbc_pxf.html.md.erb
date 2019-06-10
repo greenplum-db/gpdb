@@ -522,7 +522,7 @@ Perform the following procedure on your Greenplum Database cluster to create a P
 
     In this example, PXF will add the `WHERE` filter to the subquery. This filter is pushed to and executed on the remote database system, reducing the amount of data that PXF sends back to Greenplum Database. The `GROUP BY` aggregation, however, is not pushed to the remote and is performed by Greenplum.
 
-## <a id="jdbc_override"></a>Overriding the JDBC Server Configuration via DDL
+## <a id="jdbc_override"></a>Overriding the JDBC Server Configuration with DDL
 
 You can override certain properties in a JDBC server configuration for a specific external database table by directly specifying the custom option in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 
