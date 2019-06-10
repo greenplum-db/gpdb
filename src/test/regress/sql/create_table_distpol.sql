@@ -1,5 +1,9 @@
 -- Test effective distribution policy after different variants of CREATE TABLE
 
+-- start_ignore
+CREATE SCHEMA create_table_distpol;
+SET search_path TO create_table_distpol;
+-- end_ignore
 
 -- Make sure random default distribution works for CTAS
 SET gp_create_table_random_default_distribution=on;
