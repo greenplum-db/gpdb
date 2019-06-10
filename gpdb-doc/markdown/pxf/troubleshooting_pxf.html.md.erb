@@ -265,7 +265,7 @@ If increasing the maximum heap size is not suitable for your Greenplum Database 
 
 The default maximum number of Tomcat threads for PXF is 200. The `PXF_MAX_THREADS` configuration property controls this setting.
 
-PXF thread capacity is determined by the profile and whether or not the data is compressed. Set the maximum number of threads to a value that works optimally for your Greenplum Database deployment. If you plan to run large workloads on a large number of files in an external Hive data store, or you are reading compressed ORC or Parquet data, consider specifying a lower `PXF_MAX_THREADS` value.
+PXF thread capacity is determined by the profile and whether or not the data is compressed. If you plan to run large workloads on a large number of files in an external Hive data store, or you are reading compressed ORC or Parquet data, consider specifying a lower `PXF_MAX_THREADS` value.
 
 **Note**: Keep in mind that an increase in the thread count correlates with an increase in memory consumption when the thread count is exhausted.
 
@@ -286,7 +286,7 @@ Perform the following procedure to set the maximum number of Tomcat threads for 
 3. Locate the `PXF_MAX_THREADS` setting in the `pxf-env.sh` file. Uncomment the setting and update it to the desired value. For example, to set the maximum number of Tomcat threads to 100:
 
     ``` shell
-    export PXF_MAX_THREADS="100"
+    export PXF_MAX_THREADS=100
     ```
 
 3. Save the file and exit the editor.
