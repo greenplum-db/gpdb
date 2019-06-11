@@ -367,87 +367,83 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         </plentry>
       </parml>
     </section>
-    <section id="section6">
-      <title>Notes</title>
-      <p><codeph>COPY</codeph> can only be used with tables, not with external tables or views.
-        However, you can write <codeph>COPY (SELECT * FROM viewname) TO ...</codeph>
-      </p>
-      <p><codeph>COPY</codeph> only deals with the specific table named; it does not copy data to or
-        from child tables. Thus for example <codeph>COPY <varname>table</varname> TO</codeph> shows
-        the same data as <codeph>SELECT * FROM ONLY <codeph>table</codeph></codeph>. But
-          <codeph>COPY (SELECT * FROM <varname>table</varname>) TO ...</codeph> can be used to dump
-        all of the data in an inheritance hierarchy.</p>
-      <p>Similarly, to copy data from a partitioned table with a leaf child partition that is an
-        external table, use an SQL query to select the data to copy. For example, if the table
-          <codeph>my_sales</codeph> contains a leaf child partition that is an external table, this
-        command <codeph>COPY my_sales TO stdout</codeph> returns an error. This command sends the
-        data to
-        <codeph>stdout</codeph>:<codeblock>COPY (SELECT * from my_sales ) TO stdout</codeblock></p>
-      <p>The <codeph>BINARY</codeph> keyword causes all data to be stored/read as binary format
-        rather than as text. It is somewhat faster than the normal text mode, but a binary-format
-        file is less portable across machine architectures and Greenplum Database versions. Also,
-        you cannot run <codeph>COPY FROM</codeph> in single row error isolation mode if the data is
-        in binary format.</p>
-      <p>You must have <codeph>SELECT</codeph> privilege on the table whose values are read by
-          <codeph>COPY TO</codeph>, and <codeph>INSERT</codeph> privilege on the table into which
-        values are inserted by <codeph>COPY FROM</codeph>. It is sufficient to have column
-        privileges on the columns listed in the command.</p>
-      <p>Files named in a <codeph>COPY</codeph> command are read or written directly by the database
-        server, not by the client application. Therefore, they must reside on or be accessible to
-        the Greenplum Database master host machine, not the client. They must be accessible to and
-        readable or writable by the Greenplum Database system user (the user ID the server runs as),
-        not the client. Only database superusers are permitted to name files with
-          <codeph>COPY</codeph>, because this allows reading or writing any file that the server has
-        privileges to access.</p>
-      <p><codeph>COPY FROM</codeph> will invoke any triggers and check constraints on the
-        destination table. However, it will not invoke rewrite rules. Note that in this release,
-        violations of constraints are not evaluated for single row error isolation mode.</p>
-      <p><codeph>COPY</codeph> input and output is affected by <codeph>DateStyle</codeph>. To ensure
-        portability to other Greenplum Database installations that might use non-default
-          <codeph>DateStyle</codeph> settings, <codeph>DateStyle</codeph> should be set to ISO
-        before using <codeph>COPY TO</codeph>. It is also a good idea to avoid dumping data with
-          <varname>IntervalStyle</varname> set to <codeph>sql_standard</codeph>, because negative
-        interval values might be misinterpreted by a server that has a different setting for
-          <varname>IntervalStyle</varname>. </p>
+    <section id="section6"><title>Notes</title><p><codeph>COPY</codeph> can only be used with
+        tables, not with external tables or views. However, you can write <codeph>COPY (SELECT *
+          FROM viewname) TO ...</codeph>
+      </p>When the <codeph>ON SEGMENT</codeph> clause is specified, the <codeph>COPY</codeph>
+      command does not support specifying a <codeph>SELECT</codeph> statement in the <codeph>COPY
+        TO</codeph> command. For example, this command is not
+          supported.<codeblock>COPY (SELECT * FROM testtbl) TO '/tmp/mytst&lt;SEGID>' ON SEGMENT</codeblock><p><codeph>COPY</codeph>
+        only deals with the specific table named; it does not copy data to or from child tables.
+        Thus for example <codeph>COPY <varname>table</varname> TO</codeph> shows the same data as
+          <codeph>SELECT * FROM ONLY <codeph>table</codeph></codeph>. But <codeph>COPY (SELECT *
+          FROM <varname>table</varname>) TO ...</codeph> can be used to dump all of the data in an
+        inheritance hierarchy.</p><p>Similarly, to copy data from a partitioned table with a leaf
+        child partition that is an external table, use an SQL query to copy the data. For example,
+        if the table <codeph>my_sales</codeph> contains a with a leaf child partition that is an
+        external table, this command <codeph>COPY my_sales TO stdout</codeph> returns an error. This
+        command sends the data to
+        stdout:<codeblock>COPY (SELECT * from my_sales ) TO stdout</codeblock></p><p>The
+          <codeph>BINARY</codeph> key word causes all data to be stored/read as binary format rather
+        than as text. It is somewhat faster than the normal text mode, but a binary-format file is
+        less portable across machine architectures and Greenplum Database versions. Also, you cannot
+        run <codeph>COPY FROM</codeph> in single row error isolation mode if the data is in binary
+        format.</p><p>You must have <codeph>SELECT</codeph> privilege on the table whose values are
+        read by <codeph>COPY TO</codeph>, and <codeph>INSERT</codeph> privilege on the table into which values are
+        inserted by <codeph>COPY FROM</codeph>. It is sufficient to have column privileges on the
+        columns listed in the command.</p><p>Files named in a <codeph>COPY</codeph> command are read
+        or written directly by the database server, not by the client application. Therefore, they
+        must reside on or be accessible to the Greenplum Database master host machine, not the
+        client. They must be accessible to and readable or writable by the Greenplum Database system
+        user (the user ID the server runs as), not the client. <codeph>COPY</codeph> naming a file
+        is only allowed to database superusers, since it allows reading or writing any file that the
+        server has privileges to access.</p><p><codeph>COPY FROM</codeph> will invoke any triggers
+        and check constraints on the destination table. However, it will not invoke rewrite rules.
+        Note that in this release, violations of constraints are not evaluated for single row error
+        isolation mode.</p><p><codeph>COPY</codeph> input and output is affected by
+          <codeph>DateStyle</codeph>. To ensure portability to other Greenplum Database
+        installations that might use non-default <codeph>DateStyle</codeph> settings,
+          <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY TO</codeph>. It
+        is also a good idea to avoid dumping data with <varname>IntervalStyle</varname> set to
+          <codeph>sql_standard</codeph>, because negative interval values might be misinterpreted by
+          a server that has a different setting for <varname>IntervalStyle</varname>. </p>
       <p>Input data is interpreted according to <codeph>ENCODING</codeph> option or the current
         client encoding, and output data is encoded in <codeph>ENCODING</codeph> or the current
         client encoding, even if the data does not pass through the client but is read from or
-        written to a file directly by the server.</p>
-      <p>When copying XML data from a file in text mode, the server configuration parameter
-            <codeph><xref href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph>
-        affects the validation of the XML data that is copied. If the value is
-          <codeph>content</codeph> (the default), XML data is validated as an XML content fragment.
-        If the parameter value is <codeph>document</codeph>, XML data is validated as an XML
-        document. If the XML data is not valid, <codeph>COPY</codeph> returns an error.</p>
-      <p>By default, <codeph>COPY</codeph> stops operation at the first error. This should not lead
-        to problems in the event of a <codeph>COPY TO</codeph>, but the target table will already
-        have received earlier rows in a <codeph>COPY FROM</codeph>. These rows will not be visible
-        or accessible, but they still occupy disk space. This may amount to a considerable amount of
-        wasted disk space if the failure happened well into a large <codeph>COPY FROM</codeph>
-        operation. You may wish to invoke <codeph>VACUUM</codeph> to recover the wasted space.
-        Another option would be to use single row error isolation mode to filter out error rows
-        while still loading good rows. </p>
-      <p>When a <codeph>COPY FROM...ON SEGMENT</codeph> command is run, the server configuration
-        parameter <codeph>gp_enable_segment_copy_checking</codeph> controls whether the table
-        distribution policy (from the table <codeph>DISTRIBUTED</codeph> clause) is checked when
-        data is copied into the table. The default is to check the distribution policy. An error is
-        returned if the row of data violates the distribution policy for the segment instance. For
-        information about the parameter, see <xref href="../config_params/guc_config.xml#topic1"/>. </p>
-      <p>Data from a table that is generated by a <codeph>COPY TO...ON SEGMENT</codeph> command can
-        be used to restore table data with <codeph>COPY FROM...ON SEGMENT</codeph>. However, data
-        restored to the segments is distributed according to the table distribution policy at the
-        time the files were generated with the <codeph>COPY TO</codeph> command. The
-          <codeph>COPY</codeph> command might return table distribution policy errors, if you
-        attempt to restore table data and the table distribution policy was changed after the
-          <codeph>COPY FROM...ON SEGMENT</codeph> was run.</p>
-      <note>If you run <codeph>COPY FROM...ON SEGMENT</codeph> and the server configuration
-        parameter <codeph>gp_enable_segment_copy_checking</codeph> is <codeph>false</codeph>, manual
-        redistribution of table data might be required. See the <codeph>ALTER TABLE</codeph> clause
-          <codeph>WITH REORGANIZE</codeph>.</note>
-      <p>When you specify the <codeph>LOG ERRORS</codeph> clause, Greenplum Database captures errors
-        that occur while reading the external table data. You can view and manage the captured error
-        log data. </p>
-      <ul id="ul_wk3_jdj_bp">
+        written to a file directly by the server.</p><p>When copying XML data from a file in
+        text mode, the server configuration parameter <codeph><xref
+            href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph> affects the
+        validation of the XML data that is copied. If the value is <codeph>content</codeph> (the
+        default), XML data is validated as an XML content fragment. If the parameter value is
+          <codeph>document</codeph>, XML data is validated as an XML document. If the XML data is
+        not valid, <codeph>COPY</codeph> returns an error.</p><p>By default, <codeph>COPY</codeph>
+        stops operation at the first error. This should not lead to problems in the event of a
+          <codeph>COPY TO</codeph>, but the target table will already have received earlier rows in
+        a <codeph>COPY FROM</codeph>. These rows will not be visible or accessible, but they still
+        occupy disk space. This may amount to a considerable amount of wasted disk space if the
+        failure happened well into a large <codeph>COPY FROM</codeph> operation. You may wish to
+        invoke <codeph>VACUUM</codeph> to recover the wasted space. Another option would be to use
+        single row error isolation mode to filter out error rows while still loading good rows.
+        </p><p>When a <codeph>COPY FROM...ON SEGMENT</codeph> command is run, the server
+        configuration parameter <codeph>gp_enable_segment_copy_checking</codeph> controls whether
+        the table distribution policy (from the table <codeph>DISTRIBUTED</codeph> clause) is
+        checked when data is copied into the table. The default is to check the distribution policy.
+        An error is returned if the row of data violates the distribution policy for the segment
+        instance. For information about the parameter, see <xref
+          href="../config_params/guc_config.xml#topic1"/>. </p><p>Data from a table that is
+        generated by a <codeph>COPY TO...ON SEGMENT</codeph> command can be used to restore table
+        data with <codeph>COPY FROM...ON SEGMENT</codeph>. However, data restored to the segments is
+        distributed according to the table distribution policy at the time the files were generated
+        with the <codeph>COPY TO</codeph> command. The <codeph>COPY</codeph> command might return
+        table distribution policy errors, if you attempt to restore table data and the table
+        distribution policy was changed after the <codeph>COPY FROM...ON SEGMENT</codeph> was
+        run.</p><note>If you run <codeph>COPY FROM...ON SEGMENT</codeph> and the server
+        configuration parameter <codeph>gp_enable_segment_copy_checking</codeph> is
+          <codeph>false</codeph>, manual redistribution of table data might be required. See the
+          <codeph>ALTER TABLE</codeph> clause <codeph>WITH REORGANIZE</codeph>.</note><p>When you
+        specify the <codeph>LOG ERRORS</codeph> clause, Greenplum Database captures errors that
+        occur while reading the external table data. You can view and manage the captured error log
+        data. </p><ul id="ul_wk3_jdj_bp">
         <li>Use the built-in SQL function
             <codeph>gp_read_error_log('<varname>table_name</varname>')</codeph>. It requires
             <codeph>SELECT</codeph> privilege on <varname>table_name</varname>. This example
@@ -474,16 +470,14 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
             information that was not deleted due to previous database issues. If * is specified,
             database owner privilege is required. If <codeph>*.*</codeph> is specified, operating
             system super-user privilege is required.</p></li>
-      </ul>
-      <p>When a Greenplum Database user who is not a superuser runs a <codeph>COPY</codeph> command,
-        the command can be controlled by a resource queue. The resource queue must be configured
-        with the <codeph>ACTIVE_STATEMENTS</codeph> parameter that specifies a maximum limit on the
-        number of queries that can be executed by roles assigned to that queue. Greenplum Database
-        does not apply a cost value or memory value to a <codeph>COPY</codeph> command, resource
-        queues with only cost or memory limits do not affect the running of <codeph>COPY</codeph>
-        commands.</p>
-      <p>A non-superuser can run only these types of <codeph>COPY</codeph> commands:<ul
-          id="ul_bf3_2pk_zs">
+      </ul><p>When a Greenplum Database user who is not a superuser runs a <codeph>COPY</codeph>
+        command, the command can be controlled by a resource queue. The resource queue must be
+        configured with the <codeph>ACTIVE_STATEMENTS</codeph> parameter that specifies a maximum
+        limit on the number of queries that can be executed by roles assigned to that queue.
+        Greenplum Database does not apply a cost value or memory value to a <codeph>COPY</codeph>
+        command, resource queues with only cost or memory limits do not affect the running of
+          <codeph>COPY</codeph> commands.</p><p>A non-superuser can run only these types of
+          <codeph>COPY</codeph> commands:<ul id="ul_bf3_2pk_zs">
           <li><codeph>COPY FROM</codeph> command where the source is <codeph>stdin</codeph></li>
           <li><codeph>COPY TO</codeph> command where the destination is <codeph>stdout</codeph></li>
         </ul></p>
@@ -687,8 +681,6 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           necessary.<note>Tools such as <codeph>gpfdist</codeph> can be used to restore data. The
           backup/restore tools will not work with files that were manually generated with
             <codeph>COPY TO ON SEGMENT</codeph>. </note></p>
-      <p>This example uses a <codeph>SELECT</codeph> statement to copy data to files on each
-        segment:<codeblock>COPY (SELECT * FROM testtbl) TO '/tmp/mytst&lt;SEGID>' ON SEGMENT;</codeblock></p>
       <p>This example copies the data from the <codeph>lineitem</codeph> table and uses the
           <codeph>PROGRAM</codeph> clause to add the data to the
           <codeph>/tmp/lineitem_program.csv</codeph> file with <codeph>cat</codeph> utility. The
