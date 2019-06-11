@@ -1185,6 +1185,9 @@
                 >gp_vmem_protect_segworker_cache_limit</xref>
             </p>
             <p>
+              <xref href="guc-list.xml#max_statement_mem" type="section">max_statement_mem</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#memory_spill_ratio" type="section">memory_spill_ratio</xref>
             </p>
             <p>
