@@ -11,18 +11,8 @@ case "`uname -s`" in
             ;;
         esac
     fi
-    if [ -f /etc/SuSE-release ]; then
-        case "`cat /etc/SuSE-release`" in
-            *)
-                SLES_VERSION="$(grep VERSION /etc/SuSE-release | grep -o '[0-9][0-9]*')"
-                SLES_PLATFORM="$(uname -p | sed -e s/i686/x86_32/)"
-                BLD_ARCH_HOST="sles${SLES_VERSION}_${SLES_PLATFORM}"
-            ;;
-        esac
-    fi
-    if [ -f /etc/lsb-release ]; then
-       UBUNTU_CODENAME=$(grep DISTRIB_RELEASE /etc/lsb-release | awk -F '=' '{print $2}' | tr -d '.')
-       BLD_ARCH_HOST=ubuntu${UBUNTU_CODENAME}_amd64
+    if [ -z "${BLD_ARCH_HOST}" -a -f /etc/os-release ]; then
+        BLD_ARCH_HOST="$(. /etc/os-release; echo ${ID}${VERSION_ID}_$(uname -p))"
     fi
     ;;
 

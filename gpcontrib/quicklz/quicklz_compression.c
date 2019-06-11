@@ -99,7 +99,7 @@ Datum
 quicklz_constructor(PG_FUNCTION_ARGS)
 {
 #ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(MallocFailure,
+	FaultInjector_InjectFaultIfSet("malloc_failure",
 					DDLNotSpecified,
 					"", // databaseName
 					""); // tableName

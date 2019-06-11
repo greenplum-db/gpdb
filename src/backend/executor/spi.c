@@ -2652,7 +2652,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 			/*
 			 * only check number tuples if the SPI 64 bit test is NOT running
 			 */
-			if (!FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
+			if (!FaultInjector_InjectFaultIfSet("executor_run_high_processed",
 										   DDLNotSpecified,
 										   "" /* databaseName */,
 										   "" /* tableName */))

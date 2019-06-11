@@ -5,7 +5,7 @@ RUN yum makecache && \
     rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-6 && \
     yum -y install epel-release java-1.8.0-openjdk-devel && \
     yum -y install git iproute net-tools openssh-server rsync sudo time vim wget unzip && \
-    yum -y install ant-junit autoconf bison cmake3 flex gperf indent jq libtool && \
+    yum -y install ant-junit autoconf bison cmake3 flex gperf indent jq libtool make && \
     yum clean all
 
 # install all software we need

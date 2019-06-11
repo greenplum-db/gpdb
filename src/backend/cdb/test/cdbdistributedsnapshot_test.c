@@ -26,11 +26,9 @@ test__DistributedSnapshotWithLocalMapping_CommittedTest(void **state)
 
 		dslm.inProgressMappedLocalXids =
 			(TransactionId*)malloc(5 * sizeof(TransactionId));
-		dslm.maxLocalXidsCount = 5;
 
 		ds->inProgressXidArray =
 			(DistributedTransactionId*)malloc(SIZE_OF_IN_PROGRESS_ARRAY);
-		ds->maxCount = 10;
 		ds->distribSnapshotId = 12345;
 		ds->distribTransactionTimeStamp = timeStamp;
 	}

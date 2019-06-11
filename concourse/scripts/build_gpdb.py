@@ -59,8 +59,8 @@ def copy_output():
                   "----------------------------------------------------------------------")
             with open(diff_file, 'r') as fin:
                 print fin.read()
-    shutil.copyfile("{0}/src/test/regress/regression.diffs".format(GPDB_SRC_DIR), "icg_output/regression.diffs")
-    shutil.copyfile("{0}/src/test/regress/regression.out".format(GPDB_SRC_DIR), "icg_output/regression.out")
+    shutil.copyfile("gpdb_src/src/test/regress/regression.diffs", "icg_output/regression.diffs")
+    shutil.copyfile("gpdb_src/src/test/regress/regression.out", "icg_output/regression.out")
 
 def install_dependencies(ci_common, dependencies, install_dir):
     for dependency in dependencies:

@@ -1232,7 +1232,7 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 	}
 
 	/* inject fault after holding the lock */
-	SIMPLE_FAULT_INJECTOR(UpgradeRowLock);
+	SIMPLE_FAULT_INJECTOR("upgrade_row_lock");
 
 	return rel;
 }                                       /* CdbOpenRelation */
@@ -2364,7 +2364,7 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 	gp_expand_protect_catalog_changes(relation);
 
 #ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(HeapInsert, DDLNotSpecified, "",
+	FaultInjector_InjectFaultIfSet("heap_insert", DDLNotSpecified, "",
 								   RelationGetRelationName(relation));
 #endif
 

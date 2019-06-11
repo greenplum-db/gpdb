@@ -1430,7 +1430,7 @@ movedb(const char *dbname, const char *tblspcname)
 	 */
 	DatabaseDropStorage(db_id, src_tblspcoid);
 
-	SIMPLE_FAULT_INJECTOR(InsideMoveDbTransaction);
+	SIMPLE_FAULT_INJECTOR("inside_move_db_transaction");
 }
 
 /*

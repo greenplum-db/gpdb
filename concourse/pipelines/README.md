@@ -77,7 +77,7 @@ all jobs accounted for
   Generate Pipeline type: .. : prod
   Pipeline file ............ : gpdb_master-generated.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos6', 'centos7', 'sles', 'aix7', 'win']
+  OS Types ................. : ['centos6', 'centos7', 'aix7', 'win']
   Test sections ............ : ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep']
   test_trigger ............. : True
 ======================================================================
@@ -142,16 +142,16 @@ fly -t gpdb-dev \
 ```
 
 Use the following to generate a pipeline with `ICW` and `CS` test jobs
-for `centos6` and `sles` platforms.
+for `centos6` and `ubuntu18.04` platforms.
 
 ```
-$ ./gen_pipeline.py -t cs -u durant -O {centos6,sles} -a {ICW,CS}
+$ ./gen_pipeline.py -t cs -u durant -O {centos6,ubuntu18.04} -a {ICW,CS}
 
 ======================================================================
   Generate Pipeline type: .. : cs
   Pipeline file ............ : gpdb-cs-durant.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos6', 'sles']
+  OS Types ................. : ['centos6', 'ubuntu18.04']
   Test sections ............ : ['ICW', 'CS']
   test_trigger ............. : True
 ======================================================================

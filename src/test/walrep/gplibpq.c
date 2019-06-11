@@ -459,7 +459,10 @@ check_ao_record_present(unsigned char type, char *buf, Size len,
 			if (hdr->xlp_info & XLP_FIRST_IS_CONTRECORD)
 			{
 				elog(DEBUG1, "remaining length of record = %u", hdr->xlp_rem_len);
-				i += MAXALIGN(XLogPageHeaderSize(hdr) + hdr->xlp_rem_len);
+				if (hdr->xlp_rem_len > XLOG_BLCKSZ - XLogPageHeaderSize(hdr))
+					i += XLOG_BLCKSZ;
+				else
+					i += MAXALIGN(XLogPageHeaderSize(hdr) + hdr->xlp_rem_len);
 			}
 			else
 			{

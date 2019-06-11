@@ -27,19 +27,16 @@ function setup_configure_vars() {
 }
 
 function configure() {
-  source /opt/gcc_env.sh
+  if [ -f /opt/gcc_env.sh ]; then
+    # ubuntu uses the system compiler
+    source /opt/gcc_env.sh
+  fi
   pushd gpdb_src
       # The full set of configure options which were used for building the
       # tree must be used here as well since the toplevel Makefile depends
       # on these options for deciding what to test. Since we don't ship
-      # Perl on SLES we must also skip GPMapreduce as it uses pl/perl.
-      if [ "$TEST_OS" == "sles" ]; then
-        # TODO: remove this line as soon as the SLES image has zstd baked in
-        CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --without-zstd"
-        ./configure --prefix=/usr/local/greenplum-db-devel --with-python --with-libxml --enable-orafce --disable-orca ${CONFIGURE_FLAGS}
-      else
-        ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca ${CONFIGURE_FLAGS}
-      fi
+      ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca ${CONFIGURE_FLAGS}
+
   popd
 }
 
@@ -52,12 +49,9 @@ function install_and_configure_gpdb() {
 function make_cluster() {
   source /usr/local/greenplum-db-devel/greenplum_path.sh
   export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
-  # Currently, the max_concurrency tests in src/test/isolation2
-  # require max_connections of at least 129.
-  export DEFAULT_QD_MAX_CONNECT=150
   export STATEMENT_MEM=250MB
   pushd gpdb_src/gpAux/gpdemo
-  su gpadmin -c "make create-demo-cluster"
+  su gpadmin -c "source /usr/local/greenplum-db-devel/greenplum_path.sh; make create-demo-cluster"
   popd
 }
 

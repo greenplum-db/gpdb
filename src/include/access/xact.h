@@ -231,9 +231,10 @@ extern void SetSharedTransactionId_writer(DtxContext distributedTransactionConte
 extern void SetSharedTransactionId_reader(TransactionId xid, CommandId cid, DtxContext distributedTransactionContext);
 extern bool IsTransactionState(void);
 extern bool IsAbortInProgress(void);
-extern bool IsCommitInProgress(void);
 extern bool IsTransactionPreparing(void);
 extern bool IsAbortedTransactionBlockState(void);
+extern bool TransactionDidWriteXLog(void);
+extern bool ExecutorDidWriteXLog(void);
 extern void GetAllTransactionXids(
 	DistributedTransactionId	*distribXid,
 	TransactionId				*localXid,
@@ -247,6 +248,7 @@ extern TransactionId GetCurrentTransactionIdIfAny(void);
 extern TransactionId GetStableLatestTransactionId(void);
 extern SubTransactionId GetCurrentSubTransactionId(void);
 extern void MarkCurrentTransactionIdLoggedIfAny(void);
+extern void MarkCurrentTransactionWriteXLogOnExecutor(void);
 extern bool SubTransactionIsActive(SubTransactionId subxid);
 extern CommandId GetCurrentCommandId(bool used);
 extern TimestampTz GetCurrentTransactionStartTimestamp(void);
@@ -280,6 +282,7 @@ extern void ExecutorMarkTransactionDoesWrites(void);
 extern bool ExecutorSaysTransactionDoesWrites(void);
 extern char TransactionBlockStatusCode(void);
 extern void AbortOutOfAnyTransaction(void);
+extern void CommitNotPreparedTransaction(void);
 extern void PreventTransactionChain(bool isTopLevel, const char *stmtType);
 extern void RequireTransactionChain(bool isTopLevel, const char *stmtType);
 extern void WarnNoTransactionChain(bool isTopLevel, const char *stmtType);

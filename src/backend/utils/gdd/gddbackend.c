@@ -12,7 +12,6 @@
 
 #include "postgres.h"
 
-
 #include <unistd.h>
 
 #include "access/xact.h"
@@ -47,9 +46,30 @@
 #include "utils/timeout.h"
 
 #include "gdddetector.h"
+#include "gdddetectorpriv.h"
 
 #define RET_STATUS_OK 0
 #define RET_STATUS_ERROR 1
+
+#define PGLOCKS_BATCH_SIZE 32
+
+typedef struct VertSatelliteData
+{
+	int   pid;
+	int   sessionid;
+} VertSatelliteData;
+
+typedef struct EdgeSatelliteData
+{
+	char *lockmode;
+	char *locktype;
+} EdgeSatelliteData;
+
+
+#define GET_PID_FROM_VERT(vert) (((VertSatelliteData *) ((vert)->data))->pid)
+#define GET_SESSIONID_FROM_VERT(vert) (((VertSatelliteData *) ((vert)->data))->sessionid)
+#define GET_LOCKMODE_FROM_EDGE(edge) (((EdgeSatelliteData *) ((edge)->data))->lockmode)
+#define GET_LOCKTYPE_FROM_EDGE(edge) (((EdgeSatelliteData *) ((edge)->data))->locktype)
 
 #ifdef EXEC_BACKEND
 static pid_t global_deadlock_detector_forkexec(void);
@@ -61,6 +81,9 @@ static int  doDeadLockCheck(void);
 static void buildWaitGraph(GddCtx *ctx);
 static void breakDeadLock(GddCtx *ctx);
 static void dumpCancelResult(StringInfo str, List *xids);
+extern void dumpGddCtx(GddCtx *ctx, StringInfo str);
+static void dumpGddGraph(GddGraph *graph, StringInfo str);
+static void dumpGddEdge(GddEdge *edge, StringInfo str);
 static void TimeoutHandler(void);
 
 static MemoryContext	gddContext;
@@ -372,7 +395,7 @@ GlobalDeadLockDetectorLoop(void)
 		}
 
 #ifdef FAULT_INJECTOR
-		if (SIMPLE_FAULT_INJECTOR(GddProbe) == FaultInjectorTypeSkip)
+		if (SIMPLE_FAULT_INJECTOR("gdd_probe") == FaultInjectorTypeSkip)
 			continue;
 #endif
 
@@ -409,7 +432,8 @@ doDeadLockCheck(void)
 
 		if (!GddCtxEmpty(ctx))
 		{
-			StringInfoData str;
+			StringInfoData wait_graph_str;
+			StringInfoData pglock_str;
 
 			/*
 			 * At least one deadlock cycle is detected, and as all the invalid
@@ -417,12 +441,13 @@ doDeadLockCheck(void)
 			 * deadlock cycles are all valid ones.
 			 */
 
-			initStringInfo(&str);
-			GddCtxDump(ctx, &str);
+			initStringInfo(&pglock_str);
+			initStringInfo(&wait_graph_str);
+			dumpGddCtx(ctx, &wait_graph_str);
 
 			elog(LOG,
 				 "global deadlock detected! Final graph is :%s",
-				 str.data);
+				 wait_graph_str.data);
 
 			breakDeadLock(ctx);
 		}
@@ -471,7 +496,7 @@ buildWaitGraph(GddCtx *ctx)
 
 		PushActiveSnapshot(GetTransactionSnapshot());
 
-		res = SPI_execute("select * from pg_dist_wait_status();", true, 0);
+		res = SPI_execute("select * from gp_dist_wait_status();", true, 0);
 
 		PopActiveSnapshot();
 
@@ -492,13 +517,21 @@ buildWaitGraph(GddCtx *ctx)
 
 			for (i = 0; i < tuple_num; i++)
 			{
-				TransactionId waiter_xid;
-				TransactionId holder_xid;
-				HeapTuple	tuple;
-				Datum		d;
-				bool		solidedge;
-				int			segid;
+				TransactionId  waiter_xid;
+				TransactionId  holder_xid;
+				HeapTuple	   tuple;
+				Datum		   d;
+				bool		   solidedge;
+				int			   segid;
+				GddEdge       *edge;
+				VertSatelliteData *waiter_data = NULL;
+				VertSatelliteData *holder_data = NULL;
+				EdgeSatelliteData *edge_data = NULL;
 
+
+				waiter_data = (VertSatelliteData *) palloc(sizeof(VertSatelliteData));
+				holder_data = (VertSatelliteData *) palloc(sizeof(VertSatelliteData));
+				edge_data = (EdgeSatelliteData *) palloc(sizeof(EdgeSatelliteData));
 				tuple = tuptable->vals[i];
 
 				d = heap_getattr(tuple, 1, tupdesc, &isnull);
@@ -517,12 +550,39 @@ buildWaitGraph(GddCtx *ctx)
 				Assert(!isnull);
 				solidedge = DatumGetBool(d);
 
+				d = heap_getattr(tuple, 5, tupdesc, &isnull);
+				Assert(!isnull);
+				waiter_data->pid = DatumGetInt32(d);
+
+				d = heap_getattr(tuple, 6, tupdesc, &isnull);
+				Assert(!isnull);
+				holder_data->pid = DatumGetInt32(d);
+
+				d = heap_getattr(tuple, 7, tupdesc, &isnull);
+				Assert(!isnull);
+				edge_data->lockmode = TextDatumGetCString(d);
+
+				d = heap_getattr(tuple, 8, tupdesc, &isnull);
+				Assert(!isnull);
+				edge_data->locktype = TextDatumGetCString(d);
+
+				d = heap_getattr(tuple, 9, tupdesc, &isnull);
+				Assert(!isnull);
+				waiter_data->sessionid = DatumGetInt32(d);
+
+				d = heap_getattr(tuple, 10, tupdesc, &isnull);
+				Assert(!isnull);
+				holder_data->sessionid = DatumGetInt32(d);
+
 				/* Skip edges with invalid gxids */
 				if (!list_member_int(gxids, waiter_xid) ||
 					!list_member_int(gxids, holder_xid))
 					continue;
 
-				GddCtxAddEdge(ctx, segid, waiter_xid, holder_xid, solidedge);
+				edge = GddCtxAddEdge(ctx, segid, waiter_xid, holder_xid, solidedge);
+				edge->data = (void *) edge_data;
+				edge->from->data = (void *) waiter_data;
+				edge->to->data = (void *) holder_data;
 			}
 		}
 	}
@@ -542,9 +602,9 @@ buildWaitGraph(GddCtx *ctx)
 static void
 breakDeadLock(GddCtx *ctx)
 {
-	List		*xids;
-	ListCell	*cell;
-	StringInfoData str;
+	List		   *xids;
+	ListCell	   *cell;
+	StringInfoData  str;
 
 	xids = GddCtxBreakDeadLock(ctx);
 
@@ -556,8 +616,9 @@ breakDeadLock(GddCtx *ctx)
 
 	foreach(cell, xids)
 	{
+		int             pid;
+
 		TransactionId	xid = lfirst_int(cell);
-		int pid;
 
 		pid = GetPidByGxid(xid);
 		Assert(pid > 0);
@@ -582,6 +643,86 @@ dumpCancelResult(StringInfo str, List *xids)
 		if (lnext(cell))
 			appendStringInfo(str, ",");
 	}
+}
+
+/*
+ * Dump the graphs.
+ */
+void
+dumpGddCtx(GddCtx *ctx, StringInfo str)
+{
+	GddMapIter	iter;
+
+	Assert(ctx != NULL);
+	Assert(str != NULL);
+
+	appendStringInfo(str, "{");
+
+	gdd_ctx_foreach_graph(iter, ctx)
+	{
+		GddGraph	*graph = gdd_map_iter_get_ptr(iter);
+
+		dumpGddGraph(graph, str);
+
+		if (gdd_map_iter_has_next(iter))
+			appendStringInfo(str, ",");
+	}
+
+	appendStringInfo(str, "}");
+}
+
+/*
+ * Dump the verts and edges.
+ */
+static void
+dumpGddGraph(GddGraph *graph, StringInfo str)
+{
+	GddMapIter	vertiter;
+	GddListIter	edgeiter;
+	bool		first = true;
+
+	Assert(graph != NULL);
+	Assert(str != NULL);
+
+	appendStringInfo(str, "\"seg%d\": [", graph->id);
+
+	gdd_graph_foreach_out_edge(vertiter, edgeiter, graph)
+	{
+		GddEdge		*edge = gdd_list_iter_get_ptr(edgeiter);
+
+		if (first)
+			first = false;
+		else
+			appendStringInfo(str, ",");
+
+		dumpGddEdge(edge, str);
+	}
+
+	appendStringInfo(str, "]");
+}
+
+/*
+ * Dump edge.
+ */
+static void
+dumpGddEdge(GddEdge *edge, StringInfo str)
+{
+	Assert(edge != NULL);
+	Assert(edge->from != NULL);
+	Assert(edge->to != NULL);
+	Assert(str != NULL);
+
+	appendStringInfo(str,
+					 "\"p%d of dtx%d con%d waits for a %s lock on %s mode, "
+					 "blocked by p%d of dtx%d con%d\"",
+					 GET_PID_FROM_VERT(edge->from),
+					 edge->from->id,
+					 GET_SESSIONID_FROM_VERT(edge->from),
+					 GET_LOCKTYPE_FROM_EDGE(edge),
+					 GET_LOCKMODE_FROM_EDGE(edge),
+					 GET_PID_FROM_VERT(edge->to),
+					 edge->to->id,
+					 GET_SESSIONID_FROM_VERT(edge->from));
 }
 
 static void

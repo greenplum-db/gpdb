@@ -8,7 +8,7 @@ DROP RESOURCE GROUP rg_test_group;
 
 -- helper view to check the resgroup status
 CREATE OR REPLACE VIEW rg_test_monitor AS
-	SELECT groupname, concurrency, proposed_concurrency, cpu_rate_limit
+	SELECT groupname, concurrency, cpu_rate_limit
 	FROM gp_toolkit.gp_resgroup_config
 	WHERE groupname='rg_test_group';
 

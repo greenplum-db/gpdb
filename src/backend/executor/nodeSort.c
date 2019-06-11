@@ -190,7 +190,7 @@ ExecSort(SortState *node)
 			tuplesort_puttupleslot(tuplesortstate, slot);
 		}
 
-		SIMPLE_FAULT_INJECTOR(ExecSortBeforeSorting);
+		SIMPLE_FAULT_INJECTOR("execsort_before_sorting");
 
 		/*
 		 * Complete the sort.

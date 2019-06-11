@@ -34,6 +34,14 @@ static MPP_20426(void **state, TransactionId nextXid)
 	char			zeros[BLCKSZ];
 	int				bytes;
 
+	/* Setup ShmemVariableCache */
+	VariableCacheData data;
+	ShmemVariableCache = &data;
+	ShmemVariableCache->oldestXid = 3;
+	ShmemVariableCache->latestCompletedXid = 4;
+	DistributedLogShmem dls;
+	DistributedLogShared = &dls;
+
 	/* Setup DistributedLogCtl */
 	DistributedLogCtl->shared = (SlruShared) malloc(sizeof(SlruSharedData));
 	DistributedLogCtl->shared->page_buffer =
@@ -50,6 +58,10 @@ static MPP_20426(void **state, TransactionId nextXid)
 	will_return(LWLockAcquire, true);
 
 	/* This test is only for the case xid is not on the boundary. */
+	expect_value(SimpleLruDoesPhysicalPageExist, ctl, DistributedLogCtl);
+	expect_any(SimpleLruDoesPhysicalPageExist, pageno);
+	will_return(SimpleLruDoesPhysicalPageExist, true);
+
 	expect_value(SimpleLruReadPage, ctl, DistributedLogCtl);
 	expect_any(SimpleLruReadPage, pageno);
 	expect_any(SimpleLruReadPage, write_ok);
@@ -105,6 +117,10 @@ setup(TransactionId nextXid)
 	 * Map every page to buffer 0; we're only testing that the correct calls are
 	 * made to SimpleLruZeroPage().
 	 */
+	expect_value(SimpleLruDoesPhysicalPageExist, ctl, DistributedLogCtl);
+	expect_any(SimpleLruDoesPhysicalPageExist, pageno);
+	will_return(SimpleLruDoesPhysicalPageExist, true);
+
 	expect_value(SimpleLruReadPage, ctl, DistributedLogCtl);
 	expect_any(SimpleLruReadPage, pageno);
 	expect_any(SimpleLruReadPage, write_ok);

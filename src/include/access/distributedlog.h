@@ -60,7 +60,6 @@ extern bool DistributedLog_ScanForPrevCommitted(
 extern TransactionId DistributedLog_AdvanceOldestXmin(TransactionId oldestInProgressLocalXid,
 								 DistributedTransactionTimeStamp distribTimeStamp,
 								 DistributedTransactionId oldestDistribXid);
-extern void DistributedLog_AdvanceOldestXminOnQD(TransactionId oldestLocalXmin);
 extern TransactionId DistributedLog_GetOldestXmin(TransactionId oldestLocalXmin);
 
 extern Size DistributedLog_ShmemSize(void);
@@ -75,6 +74,7 @@ extern void DistributedLog_CheckPoint(void);
 extern void DistributedLog_Extend(TransactionId newestXid);
 extern bool DistributedLog_GetLowWaterXid(
 							  TransactionId *lowWaterXid);
+extern void DistributedLog_InitOldestXmin(void);
 
 /* XLOG stuff */
 #define DISTRIBUTEDLOG_ZEROPAGE		0x00

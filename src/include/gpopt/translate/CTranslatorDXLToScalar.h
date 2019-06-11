@@ -95,7 +95,7 @@ namespace gpdxl
 				const_func_ptr translate_func;
 			};
 
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// meta data accessor
 			CMDAccessor *m_md_accessor;
@@ -338,7 +338,7 @@ namespace gpdxl
 			};
 
 			// ctor
-			CTranslatorDXLToScalar(IMemoryPool *mp, CMDAccessor *md_accessor, ULONG num_segments);
+			CTranslatorDXLToScalar(CMemoryPool *mp, CMDAccessor *md_accessor, ULONG num_segments);
 
 			// translate DXL scalar operator node into an Expr expression
 			// This function is called during the translation of DXL->Query or DXL->Query

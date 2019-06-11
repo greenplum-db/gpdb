@@ -2030,7 +2030,7 @@ mergeruns(Tuplesortstate_mk *state)
 	 */
 	HOLD_INTERRUPTS();
 	FaultInjector_InjectFaultIfSet(
-								   ExecSortMKSortMergeRuns,
+								   "execsort_mksort_mergeruns",
 								   DDLNotSpecified,
 								   "", //databaseName
 								   "");

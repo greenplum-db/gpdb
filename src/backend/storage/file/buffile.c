@@ -220,7 +220,7 @@ BufFileCreateTempInSet(workfile_set *work_set, bool interXact)
 	FileSetIsWorkfile(file->file);
 	RegisterFileWithSet(file->file, work_set);
 
-	SIMPLE_FAULT_INJECTOR(WorkfileCreationFail);
+	SIMPLE_FAULT_INJECTOR("workfile_creation_failure");
 
 	return file;
 }
@@ -546,7 +546,7 @@ BufFileWrite(BufFile *file, const void *ptr, size_t size)
 	size_t		nwritten = 0;
 	size_t		nthistime;
 
-	SIMPLE_FAULT_INJECTOR(WorkfileWriteFail);
+	SIMPLE_FAULT_INJECTOR("workfile_write_failure");
 
 	switch (file->state)
 	{

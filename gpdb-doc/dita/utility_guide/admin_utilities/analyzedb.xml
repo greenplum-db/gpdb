@@ -19,6 +19,7 @@
    [ <b>--gen_profile_only</b> ]   
    [ <b>-p</b> <varname>parallel-level</varname> ]
    [ <b>--full</b> ]
+   [ <b>--skip_root_stats</b> ]
    [ <b>-v</b> | <b>--verbose</b> ]
    [ <b>--debug</b> ]
    [ <b>-a</b> ]
@@ -166,6 +167,17 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
           <pt>-p <varname>parallel-level</varname></pt>
           <pd>The number of tables that are analyzed in parallel. <varname>parallel level</varname>
             can be an integer between 1 and 10, inclusive. Default value is 5. </pd>
+        </plentry>
+        <plentry>
+          <pt>--skip_root_stats</pt>
+          <pd>For a partitioned table, skip refreshing root partition statistics if only some of the
+            leaf partitions statistics require updating. </pd>
+          <pd>When updating statistics for a partitioned table and you know which leaf partition
+            statistics require updating, you can specify those partitions and this option to improve
+            performance.</pd>
+          <pd>For information about how statistics are collected for partitioned tables, see
+                <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"
+              >ANALYZE</xref></codeph>.</pd>
         </plentry>
         <plentry>
           <pt>-s <varname>schema</varname></pt>

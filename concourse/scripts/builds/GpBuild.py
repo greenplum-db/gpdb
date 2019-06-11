@@ -101,8 +101,10 @@ class GpBuild(GpdbBuildBase):
         for fsql in sql_files:
             if fsql.endswith('.sql') and fsql not in ['stats.sql', 'schema.sql']:
                 output_fname = 'out/{}'.format(fsql.replace('.sql', '.out'))
+                # GUC name should match with name in gpdb 5X_STABLE branch
                 with open(output_fname, 'w') as fout:
-                    current_status = self._run_gpdb_command("psql -a -f sql/{}".format(fsql), stdout=fout, stderr=fout, source_env_cmd=source_env_cmd)
+                    current_status = self._run_gpdb_command("env PGOPTIONS='-c optimizer_enable_full_join=on' psql -a -f sql/{}".format(fsql), stdout=fout, stderr=fout, source_env_cmd=source_env_cmd)
+                    print "status: {0}".format(current_status)
                     status = status if status != 0 else current_status
 
         return status

@@ -150,7 +150,7 @@ test__RunawayCleaner_StartCleanup__StartsPrimaryCleanupIfPossible(void **state)
 	will_return(IsTransactionState, true);
 
 #ifdef FAULT_INJECTOR
-	expect_value(FaultInjector_InjectFaultIfSet, identifier, RunawayCleanup);
+	expect_value(FaultInjector_InjectFaultIfSet, faultName, "runaway_cleanup");
 	expect_value(FaultInjector_InjectFaultIfSet, ddlStatement, DDLNotSpecified);
 	expect_value(FaultInjector_InjectFaultIfSet, databaseName, "");
 	expect_value(FaultInjector_InjectFaultIfSet, tableName, "");
@@ -217,7 +217,7 @@ test__RunawayCleaner_StartCleanup__StartsSecondaryCleanupIfPossible(void **state
 	will_return(IsTransactionState, true);
 
 #ifdef FAULT_INJECTOR
-	expect_value(FaultInjector_InjectFaultIfSet, identifier, RunawayCleanup);
+	expect_value(FaultInjector_InjectFaultIfSet, faultName, "runaway_cleanup");
 	expect_value(FaultInjector_InjectFaultIfSet, ddlStatement, DDLNotSpecified);
 	expect_value(FaultInjector_InjectFaultIfSet, databaseName, "");
 	expect_value(FaultInjector_InjectFaultIfSet, tableName, "");

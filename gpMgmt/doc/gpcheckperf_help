@@ -246,5 +246,5 @@ $ gpcheckperf -f hostfile_gpchecknet_ic2 -r N --netperf -d /tmp
 SEE ALSO
 *****************************************************
 
-gpssh, gpscp, gpcheck
+gpssh, gpscp
 

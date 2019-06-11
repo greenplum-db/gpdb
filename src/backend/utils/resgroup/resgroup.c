@@ -1248,6 +1248,8 @@ ResourceGroupGetQueryMemoryLimit(void)
 		return 0;
 
 	memSpill = slotGetMemSpill(&slot->caps);
+	/* memSpill is already converted to chunks */
+	Assert(memSpill >= 0);
 
 	return memSpill << VmemTracker_GetChunkSizeInBits();
 }
@@ -2033,7 +2035,12 @@ groupGetMemSharedExpected(const ResGroupCaps *caps)
 static int32
 groupGetMemSpillTotal(const ResGroupCaps *caps)
 {
-	return groupGetMemExpected(caps) * memory_spill_ratio / 100;
+	if (memory_spill_ratio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
+		/* memSpill is in percentage mode */
+		return groupGetMemExpected(caps) * memory_spill_ratio / 100;
+	else
+		/* memSpill is in fallback mode, return statement_mem instead */
+		return VmemTracker_ConvertVmemMBToChunks(statement_mem >> 10);
 }
 
 /*
@@ -2074,8 +2081,20 @@ slotGetMemQuotaOnQE(const ResGroupCaps *caps, ResGroupData *group)
 static int32
 slotGetMemSpill(const ResGroupCaps *caps)
 {
-	Assert(caps->concurrency != 0);
-	return groupGetMemSpillTotal(caps) / caps->concurrency;
+	if (memory_spill_ratio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
+	{
+		/* memSpill is in percentage mode */
+		Assert(caps->concurrency != 0);
+		return groupGetMemSpillTotal(caps) / caps->concurrency;
+	}
+	else
+	{
+		/*
+		 * memSpill is in fallback mode, it is an absolute value, no need to
+		 * divide by concurrency.
+		 */
+		return groupGetMemSpillTotal(caps);
+	}
 }
 
 /*
@@ -2513,7 +2532,7 @@ AssignResGroupOnMaster(void)
 		self->caps = slot->caps;
 
 		/* Don't error out before this line in this function */
-		SIMPLE_FAULT_INJECTOR(ResGroupAssignedOnMaster);
+		SIMPLE_FAULT_INJECTOR("resgroup_assigned_on_master");
 
 		/* Add into cgroup */
 		ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
@@ -2958,7 +2977,7 @@ groupSetMemorySpillRatio(const ResGroupCaps *caps)
 
 	snprintf(value, sizeof(value), "%d", caps->memSpillRatio);
 	set_config_option("memory_spill_ratio", value, PGC_USERSET, PGC_S_RESGROUP,
-			GUC_ACTION_SET, true, 0);
+					  GUC_ACTION_SET, true, 0);
 }
 
 void
@@ -3636,7 +3655,10 @@ sessionSetSlot(ResGroupSlotData *slot)
 static ResGroupSlotData *
 sessionGetSlot(void)
 {
-	return (ResGroupSlotData *) MySessionState->resGroupSlot;
+	if (MySessionState == NULL)
+		return NULL;
+	else
+		return (ResGroupSlotData *) MySessionState->resGroupSlot;
 }
 
 /*

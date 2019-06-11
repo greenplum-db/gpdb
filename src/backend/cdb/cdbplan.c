@@ -190,6 +190,7 @@ plan_tree_mutator(Node *node,
 				FLATCOPY(newmt, mt, ModifyTable);
 				PLANMUTATE(newmt, mt);
 				MUTATE(newmt->plans, mt->plans, List *);
+				MUTATE(newmt->withCheckOptionLists, mt->withCheckOptionLists, List *);
 				return (Node *) newmt;
 			}
 			break;

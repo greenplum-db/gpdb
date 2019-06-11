@@ -139,7 +139,8 @@ extern PGDLLIMPORT LWLockPadded *MainLWLockArray;
 #define SessionStateLock			(&MainLWLockArray[PG_NUM_INDIVIDUAL_LWLOCKS + 7].lock)
 #define RelfilenodeGenLock			(&MainLWLockArray[PG_NUM_INDIVIDUAL_LWLOCKS + 8].lock)
 #define WorkFileManagerLock			(&MainLWLockArray[PG_NUM_INDIVIDUAL_LWLOCKS + 9].lock)
-#define GP_NUM_INDIVIDUAL_LWLOCKS		9
+#define DistributedLogTruncateLock	(&MainLWLockArray[PG_NUM_INDIVIDUAL_LWLOCKS + 10].lock)
+#define GP_NUM_INDIVIDUAL_LWLOCKS		10
 
 /*
  * It would probably be better to allocate separate LWLock tranches

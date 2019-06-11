@@ -79,7 +79,7 @@ cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int id
 
 	/* Segment db info */
 	segdbDesc->segment_database_info = cdbinfo;
-	segdbDesc->segindex = cdbinfo->segindex;
+	segdbDesc->segindex = cdbinfo->config->segindex;
 
 	/* Connection info, set in function cdbconn_doConnect */
 	segdbDesc->conn = NULL;
@@ -164,9 +164,9 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	}
 	else
 	{
-		Assert(cdbinfo->hostip != NULL);
+		Assert(cdbinfo->config->hostip != NULL);
 		keywords[nkeywords] = "hostaddr";
-		values[nkeywords] = cdbinfo->hostip;
+		values[nkeywords] = cdbinfo->config->hostip;
 		nkeywords++;
 	}
 
@@ -174,7 +174,7 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	values[nkeywords] = "";
 	nkeywords++;
 
-	snprintf(portstr, sizeof(portstr), "%u", cdbinfo->port);
+	snprintf(portstr, sizeof(portstr), "%u", cdbinfo->config->port);
 	keywords[nkeywords] = "port";
 	values[nkeywords] = portstr;
 	nkeywords++;
@@ -389,7 +389,7 @@ cdbconn_setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
 		appendStringInfo(&string, SEGMENT_IS_ACTIVE_PRIMARY(cdbinfo) ? "entry db" : "mirror entry db");
 
 	/* Format the connection info. */
-	appendStringInfo(&string, " %s:%d", cdbinfo->hostip, cdbinfo->port);
+	appendStringInfo(&string, " %s:%d", cdbinfo->config->hostip, cdbinfo->config->port);
 
 	/* If connected, format the QE's process id. */
 	if (segdbDesc->backendPid != 0)

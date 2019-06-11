@@ -41,6 +41,8 @@ select gp_request_fts_probe_scan();
 select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
 -- The remaining steps are to bring back the cluster to original state.
 -- start_ignore
+-- run a DDL query to make sure the mirror has finished the promotion
+1: create temp table tmp_fts_recovery(a int);
 \! gprecoverseg -av --no-progress
 -- end_ignore
 

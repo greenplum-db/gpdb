@@ -242,6 +242,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(hasRecursive);
 	READ_BOOL_FIELD(hasModifyingCTE);
 	READ_BOOL_FIELD(hasForUpdate);
+	READ_BOOL_FIELD(canOptSelectLockingClause);
 	READ_NODE_FIELD(cteList);
 	READ_NODE_FIELD(rtable);
 	READ_NODE_FIELD(jointree);
@@ -2185,6 +2186,7 @@ _readPlanRowMark(void)
 	READ_ENUM_FIELD(markType, RowMarkType);
 	READ_BOOL_FIELD(noWait);
 	READ_BOOL_FIELD(isParent);
+	READ_BOOL_FIELD(canOptSelectLockingClause);
 
 	READ_DONE();
 }

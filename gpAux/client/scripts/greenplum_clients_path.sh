@@ -11,11 +11,7 @@ if [ xDarwin = x`uname -s` ]; then
   DYLD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${GPHOME_CLIENTS}/ext/python/lib:${DYLD_LIBRARY_PATH}
   export DYLD_LIBRARY_PATH
 else
-    if [ -f /etc/SuSE-release ] && [ -d /lib64 ]; then
-        LD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:/lib64:${GPHOME_CLIENTS}/ext/python/lib:${LD_LIBRARY_PATH}
-    else
-        LD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${GPHOME_CLIENTS}/ext/python/lib:${LD_LIBRARY_PATH}
-    fi
+  LD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${GPHOME_CLIENTS}/ext/python/lib:${LD_LIBRARY_PATH}
   export LD_LIBRARY_PATH
 fi
 

@@ -45,11 +45,9 @@ test__CreateDistributedSnapshot(void **state)
 
 	ds->inProgressXidArray =
 		(DistributedTransactionId*)malloc(SIZE_OF_IN_PROGRESS_ARRAY);
-	ds->maxCount = 10;
 
 	distribSnapshotWithLocalMapping.inProgressMappedLocalXids =
 		(TransactionId*) malloc(1 * sizeof(TransactionId));
-	distribSnapshotWithLocalMapping.maxLocalXidsCount = 1;
 
 	setup(&controlBlock);
 
@@ -57,6 +55,7 @@ test__CreateDistributedSnapshot(void **state)
 	expect_value_count(LWLockHeldByMe, l, ProcArrayLock, -1);
 	will_return_count(LWLockHeldByMe, true, -1);
 #endif
+	will_return_count(getDtxStartTime, 0, -1);
 
 	ShmemVariableCache->latestCompletedDxid = 24;
 
@@ -73,7 +72,7 @@ test__CreateDistributedSnapshot(void **state)
 	 * Basic case, no other in progress transaction in system
 	 */
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
-	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping, DTX_CONTEXT_LOCAL_ONLY);
+	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping);
 
 	/* perform all the validations */
 	assert_true(ds->xminAllDistributedSnapshots == 20);
@@ -101,7 +100,7 @@ test__CreateDistributedSnapshot(void **state)
 	procArray->numProcs = 3;
 
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
-	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping, DTX_CONTEXT_LOCAL_ONLY);
+	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping);
 
 	/* perform all the validations */
 	assert_true(ds->xminAllDistributedSnapshots == 5);
@@ -129,7 +128,10 @@ test__CreateDistributedSnapshot(void **state)
 	procArray->numProcs = 5;
 
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
-	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping, DTX_CONTEXT_LOCAL_ONLY);
+	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping);
+	if (ds->count > 1)
+		qsort(ds->inProgressXidArray, ds->count,
+				sizeof(DistributedTransactionId), DistributedSnapshotMappedEntry_Compare);
 
 	/* perform all the validations */
 	assert_true(ds->xminAllDistributedSnapshots == 5);

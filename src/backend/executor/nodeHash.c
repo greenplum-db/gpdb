@@ -108,7 +108,7 @@ MultiExecHash(HashState *node)
 	hashkeys = node->hashkeys;
 	econtext = node->ps.ps_ExprContext;
 
-	SIMPLE_FAULT_INJECTOR(MultiExecHashLargeVmem);
+	SIMPLE_FAULT_INJECTOR("multi_exec_hash_large_vmem");
 
 	/*
 	 * get all inner tuples and insert into the hash table (or temp files)

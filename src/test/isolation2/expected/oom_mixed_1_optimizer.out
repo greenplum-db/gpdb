@@ -18,7 +18,7 @@ DETAIL:  Per-query VM protect limit reached: current limit is 2048 kB, requested
 select count(*) from orders;
  count 
 -------
- 38    
+ 40    
 (1 row)
 select pg_sleep(10);
  pg_sleep 

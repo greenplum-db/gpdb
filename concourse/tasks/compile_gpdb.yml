@@ -3,12 +3,12 @@ image_resource:
   type: docker-image
 inputs:
   - name: gpdb_src
-  - name: gpAux_ext
   - name: libquicklz-installer
   - name: libquicklz-devel-installer
+    optional: true
   - name: libsigar-installer
+    optional: true
   - name: python-tarball
-  - name: orca_src
 outputs:
   - name: gpdb_artifacts
 run:
@@ -19,3 +19,4 @@ params:
   BLD_TARGETS:
   OUTPUT_ARTIFACT_DIR: gpdb_artifacts
   CONFIGURE_FLAGS:
+  ORCA_TAG: v3.48.0

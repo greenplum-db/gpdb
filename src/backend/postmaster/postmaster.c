@@ -2429,7 +2429,7 @@ retry1:
 
 #ifdef FAULT_INJECTOR
 					if (FaultInjector_InjectFaultIfSet(
-							FTSConnStartupPacket,
+							"fts_conn_startup_packet",
 							DDLNotSpecified,
 							"" /* databaseName */,
 							"" /* tableName */) == FaultInjectorTypeSkip)
@@ -2440,7 +2440,7 @@ retry1:
 						 * progressing.
 						 */
 						if (FaultInjector_InjectFaultIfSet(
-							FTSRecoveryInProgress,
+							"fts_recovery_in_progress",
 							DDLNotSpecified,
 							"" /* databaseName */,
 							"" /* tableName */) == FaultInjectorTypeSkip)
@@ -2649,7 +2649,7 @@ retry1:
 
 #ifdef FAULT_INJECTOR
 	if (!am_ftshandler && !IsFaultHandler && !am_walsender &&
-		FaultInjector_InjectFaultIfSet(ProcessStartupPacketFault,
+		FaultInjector_InjectFaultIfSet("process_startup_packet",
 									   DDLNotSpecified,
 									   port->database_name /* databaseName */,
 									   "" /* tableName */) == FaultInjectorTypeSkip)

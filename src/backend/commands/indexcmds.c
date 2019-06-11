@@ -2234,7 +2234,7 @@ ReindexRelationList(List *relids)
 	PopActiveSnapshot();
 	CommitTransactionCommand();
 
-	SIMPLE_FAULT_INJECTOR(ReindexDB);
+	SIMPLE_FAULT_INJECTOR("reindex_db");
 
 	foreach (lc, relids)
 	{

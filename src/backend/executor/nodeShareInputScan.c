@@ -191,7 +191,7 @@ ExecShareInputScan(ShareInputScanState *node)
 		if(!gotOK)
 			return NULL;
 
-		SIMPLE_FAULT_INJECTOR(ExecShareInputNext);
+		SIMPLE_FAULT_INJECTOR("execshare_input_next");
 
 		return slot;
 	}

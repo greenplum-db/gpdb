@@ -84,7 +84,7 @@ CREATE ROLE role_permission;
 SET ROLE role_permission;
 select value from pg_resgroup_get_status_kv('dump');
 
-SET ROLE gpadmin;
+RESET ROLE;
 
 DROP ROLE role_dumpinfo_test;
 DROP ROLE role_permission;

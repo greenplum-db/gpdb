@@ -295,32 +295,6 @@ ReadNewTransactionId(void)
 }
 
 /*
- * Get the last safe XID, i.e. the oldest XID that might exist in any
- * database of our cluster.
- */
-TransactionId
-GetTransactionIdLimit(void)
-{
-	TransactionId xid;
-
-	LWLockAcquire(XidGenLock, LW_SHARED);
-	xid = ShmemVariableCache->oldestXid;
-	LWLockRelease(XidGenLock);
-
-	if (!TransactionIdIsNormal(xid))
-	{
-		/*
-		 * shouldn't happen, but since this value is used in the computation
-		 * of oldest xmin, which determines which tuples be safely vacuumed
-		 * away, let's be paranoid.
-		 */
-		elog(ERROR, "invalid oldestXid limit: %u", xid);
-	}
-
-	return xid;
-}
-
-/*
  * Determine the last safe XID to allocate given the currently oldest
  * datfrozenxid (ie, the oldest XID that might exist in any database
  * of our cluster), and the OID of the (or a) database with that value.

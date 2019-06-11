@@ -346,7 +346,7 @@ bool		optimizer_enable_indexscan;
 bool		optimizer_enable_tablescan;
 bool		optimizer_enable_hashagg;
 bool		optimizer_enable_groupagg;
-bool		optimizer_enable_full_join;
+bool		optimizer_expand_fulljoin;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -447,6 +447,7 @@ static const struct config_enum_entry debug_dtm_action_protocol_options[] = {
 	{"prepare", DTX_PROTOCOL_COMMAND_PREPARE},
 	{"abort_some_prepared", DTX_PROTOCOL_COMMAND_ABORT_SOME_PREPARED},
 	{"commit_prepared", DTX_PROTOCOL_COMMAND_COMMIT_PREPARED},
+	{"commit_not_prepared", DTX_PROTOCOL_COMMAND_COMMIT_NOT_PREPARED},
 	{"abort_prepared", DTX_PROTOCOL_COMMAND_ABORT_PREPARED},
 	{"retry_commit_prepared", DTX_PROTOCOL_COMMAND_RETRY_COMMIT_PREPARED},
 	{"retry_abort_prepared", DTX_PROTOCOL_COMMAND_RETRY_ABORT_PREPARED},
@@ -556,6 +557,7 @@ static const struct config_enum_entry optimizer_join_order_options[] = {
 	{"query", JOIN_ORDER_IN_QUERY},
 	{"greedy", JOIN_ORDER_GREEDY_SEARCH},
 	{"exhaustive", JOIN_ORDER_EXHAUSTIVE_SEARCH},
+	{"exhaustive2", JOIN_ORDER_EXHAUSTIVE2_SEARCH},
 	{NULL, 0}
 };
 
@@ -2516,12 +2518,12 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_enable_full_join", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enables the optimizer's support of full outer joins."),
+		{"optimizer_expand_fulljoin", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables the optimizer's support of expanding full outer joins using union all."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
-		&optimizer_enable_full_join,
+		&optimizer_expand_fulljoin,
 		false,
 		NULL, NULL, NULL
 	},
@@ -4715,7 +4717,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	{
 		{"optimizer_join_order", PGC_USERSET, QUERY_TUNING_OTHER,
 			gettext_noop("Set optimizer join heuristic model."),
-			gettext_noop("Valid values are query, greedy and exhaustive"),
+			gettext_noop("Valid values are query, greedy, exhaustive and exhaustive2"),
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_join_order,

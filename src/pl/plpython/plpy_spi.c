@@ -408,7 +408,7 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int64 rows, int status)
 #ifdef FAULT_INJECTOR
 	if (rows >= 10000 && rows <= 1000000)
 	{
-		if (FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
+		if (FaultInjector_InjectFaultIfSet("executor_run_high_processed",
 											DDLNotSpecified,
 											"" /* databaseName */,
 											"" /* tableName */) == FaultInjectorTypeSkip)

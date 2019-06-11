@@ -1522,16 +1522,23 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 			}
 			else
 			{
-				/* GPDB specific behavior
-				 * Select for update should acquire ExclusiveLock, see
-				 * discussion on https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
+				/*
+				 * Greenplum specific behavior:
+				 * The implementation of select statement with locking clause
+				 * (for update | no key update | share | key share) in postgres
+				 * is to hold RowShareLock on tables during parsing stage, and
+				 * generate a LockRows plan node for executor to lock the tuples.
+				 * It is not easy to lock tuples in Greenplum database, since
+				 * tuples may be fetched through motion nodes.
+				 *
+				 * But when Global Deadlock Detector is enabled, and the select
+				 * statement with locking clause contains only one table, we are
+				 * sure that there are no motions. For such simple cases, we could
+				 * make the behavior just the same as Postgres.
 				 */
 				rc = get_plan_rowmark(plannedstmt->rowMarks, rt_index);
 				if (rc != NULL)
-				{
-					lockmode = RowMarkRequiresRowShareLock(rc->markType) ?
-						RowShareLock : ExclusiveLock;
-				}
+					lockmode = rc->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
 				else
 					lockmode = AccessShareLock;
 			}
@@ -1621,18 +1628,24 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 				else
 				{
 					/*
-					 * GPDB specific behaviour:
-					 * Select for update should acquire ExclusiveLock, see
-					 * discussion on https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
+					 * Greenplum specific behavior:
+					 * The implementation of select statement with locking clause
+					 * (for update | no key update | share | key share) in postgres
+					 * is to hold RowShareLock on tables during parsing stage, and
+					 * generate a LockRows plan node for executor to lock the tuples.
+					 * It is not easy to lock tuples in Greenplum database, since
+					 * tuples may be fetched through motion nodes.
+					 *
+					 * But when Global Deadlock Detector is enabled, and the select
+					 * statement with locking clause contains only one table, we are
+					 * sure that there are no motions. For such simple cases, we could
+					 * make the behavior just the same as Postgres.
 					 */
 					RowMarkClause *rc;
 
 					rc = get_parse_rowmark(parsetree, rt_index);
 					if (rc != NULL)
-					{
-						lockmode = rc->strength >= LCS_FORNOKEYUPDATE ?
-							ExclusiveLock : RowShareLock;
-					}
+						lockmode = parsetree->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
 					else
 						lockmode = AccessShareLock;
 				}

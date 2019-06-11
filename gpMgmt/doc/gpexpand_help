@@ -127,7 +127,7 @@ OPTIONS
  Specifies the name of the expansion configuration file, which contains 
  one line for each segment to be added in the format of:
 
-  <hostname>:<address>:<port>:<datadir>:<dbid>:<content>:<preferred_role>
+  <hostname>|<address>|<port>|<datadir>|<dbid>|<content>|<preferred_role>
 
   ...
 

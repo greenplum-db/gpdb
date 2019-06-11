@@ -219,6 +219,7 @@ SharedSnapshotShmemSize(void)
 {
 	Size		size;
 
+	/* should be the same as PROCARRAY_MAXPROCS */
 	xipEntryCount = MaxBackends + max_prepared_xacts;
 
 	slotSize = sizeof(SharedSnapshotSlot);

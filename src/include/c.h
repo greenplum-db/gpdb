@@ -517,12 +517,6 @@ typedef uint32 DistributedTransactionId;
  */
 #define TMGIDSIZE 22
 
-/*
- * Used 21 spaces + NUL for a blank 22 character TMGIDSIZE GID.
- */
-#define TmGid_Init "                     "
-//                  123456789012345678901
-
 typedef uint32 CommandId;
 
 typedef int32  gpsegmentId;        /* CDB: type of gp_segment_id system col */

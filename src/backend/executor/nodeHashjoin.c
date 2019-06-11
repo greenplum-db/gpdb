@@ -899,7 +899,7 @@ ExecHashJoinNewBatch(HashJoinState *hjstate)
 	int			nbatch;
 	int			curbatch;
 
-	SIMPLE_FAULT_INJECTOR(FaultExecHashJoinNewBatch);
+	SIMPLE_FAULT_INJECTOR("exec_hashjoin_new_batch");
 
 	HashState  *hashState = (HashState *) innerPlanState(hjstate);
 
@@ -1448,7 +1448,7 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 				BufFileGetSize(hashtable->innerBatchFile[curbatch]);
 		}
 
-		SIMPLE_FAULT_INJECTOR(WorkfileHashJoinFailure);
+		SIMPLE_FAULT_INJECTOR("workfile_hashjoin_failure");
 
 		/*
 		 * If we want to re-use the hash table after a re-scan, don't

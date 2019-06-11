@@ -539,7 +539,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 				SetupInterconnect(estate);
 				UpdateMotionExpectedReceivers(estate->motionlayer_context, estate->es_sliceTable);
 
-				SIMPLE_FAULT_INJECTOR(QEGotSnapshotAndInterconnect);
+				SIMPLE_FAULT_INJECTOR("qe_got_snapshot_and_interconnect");
 				Assert(estate->interconnect_context);
 			}
 			PG_CATCH();
@@ -1020,7 +1020,7 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 	if (estate->es_processed >= 10000 && estate->es_processed <= 1000000)
 	//if (estate->es_processed >= 10000)
 	{
-		if (FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
+		if (FaultInjector_InjectFaultIfSet("executor_run_high_processed",
 										   DDLNotSpecified,
 										   "" /* databaseName */,
 										   "" /* tableName */) == FaultInjectorTypeSkip)
@@ -1867,10 +1867,13 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		Oid			relid;
 		Relation	relation;
 		ExecRowMark *erm;
+		LOCKMODE    lm;
 
 		/* ignore "parent" rowmarks; they are irrelevant at runtime */
 		if (rc->isParent)
 			continue;
+
+		lm = rc->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
 
 		/*
 		 * If you change the conditions under which rel locks are acquired
@@ -1878,24 +1881,27 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		 */
 		switch (rc->markType)
 		{
-			case ROW_MARK_TABLE_EXCLUSIVE:
-				relid = getrelid(rc->rti, rangeTable);
-				relation = heap_open(relid, ExclusiveLock);
-				break;
-			case ROW_MARK_TABLE_SHARE:
-				relid = getrelid(rc->rti, rangeTable);
-				relation = heap_open(relid, RowShareLock);
-				break;
+			/*
+			 * Greenplum specific behavior:
+			 * The implementation of select statement with locking clause
+			 * (for update | no key update | share | key share) in postgres
+			 * is to hold RowShareLock on tables during parsing stage, and
+			 * generate a LockRows plan node for executor to lock the tuples.
+			 * It is not easy to lock tuples in Greenplum database, since
+			 * tuples may be fetched through motion nodes.
+			 *
+			 * But when Global Deadlock Detector is enabled, and the select
+			 * statement with locking clause contains only one table, we are
+			 * sure that there are no motions. For such simple cases, we could
+			 * make the behavior just the same as Postgres.
+			 */
 			case ROW_MARK_EXCLUSIVE:
 			case ROW_MARK_NOKEYEXCLUSIVE:
 			case ROW_MARK_SHARE:
 			case ROW_MARK_KEYSHARE:
-				relid = getrelid(rc->rti, rangeTable);
-				relation = heap_open(relid, RowShareLock);
-				break;
 			case ROW_MARK_REFERENCE:
 				relid = getrelid(rc->rti, rangeTable);
-				relation = heap_open(relid, AccessShareLock);
+				relation = heap_open(relid, lm);
 				break;
 			case ROW_MARK_COPY:
 				/* there's no real table here ... */
@@ -2993,7 +2999,7 @@ ExecutePlan(EState *estate,
 			 */
 			if (estate->es_processed >= 10000 && estate->es_processed <= 1000000)
 			{
-				if (FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
+				if (FaultInjector_InjectFaultIfSet("executor_run_high_processed",
 												   DDLNotSpecified,
 												   "" /* databaseName */,
 												   "" /* tableName */) == FaultInjectorTypeSkip)
@@ -3177,28 +3183,6 @@ ExecWithCheckOptions(ResultRelInfo *resultRelInfo,
 	{
 		WithCheckOption *wco = (WithCheckOption *) lfirst(l1);
 		ExprState  *wcoExpr = (ExprState *) lfirst(l2);
-
-		/*
-		 * GPDB_94_MERGE_FIXME
-		 * When we update the view, we need to check if the updated tuple belongs
-		 * to the view. Sometimes we need to execute a subplan to help check.
-		 * The subplan is executed under the update or delete node on segment.
-		 * But we can't correctly execute a mpp subplan in the segment. So let's
-		 * disable the check first.
-		 */
-		ListCell *l;
-		bool is_subplan = false;
-		foreach(l, (List*)wcoExpr)
-		{
-			ExprState  *clause = (ExprState *) lfirst(l);
-			if (*(clause->evalfunc) == (ExprStateEvalFunc)ExecAlternativeSubPlan)
-			{
-				is_subplan = true;
-				break;
-			}
-		}
-		if (is_subplan)
-			continue;
 
 		/*
 		 * WITH CHECK OPTION checks are intended to ensure that the new tuple

@@ -46,7 +46,7 @@ namespace gpdxl
 
 		private:
 			// memory pool
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// counter for generating unique column ids
 			CIdGenerator *m_colid_counter;
@@ -64,7 +64,7 @@ namespace gpdxl
 			// ctor
 			CContextQueryToDXL
 				(
-				IMemoryPool *mp
+				CMemoryPool *mp
 				);
 
 			// dtor

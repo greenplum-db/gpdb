@@ -18,7 +18,7 @@ You will need the following tools:
   gcc         4.4.2
   gfortran    4.4.2
   greptools   2.5.1
-  libtool     1.4.6 on CentOS, 1.5.22 on SuSE
+  libtool     1.4.6 on CentOS
   make        3.80 or later
   perl        5.8.8
   tar (GNU)   1.14

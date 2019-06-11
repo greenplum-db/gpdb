@@ -14,16 +14,16 @@ install_greenplum() {
 assert_postgres_version_matches() {
   local gpdb_src_sha=$1
 
-  if [[ ! "$(postgres --gp-version)" =~ "commit:$gpdb_src_sha" ]]; then
-    echo "bin_gpdb version: '$(postgres --gp-version)' does not match gpdb_src commit: '${gpdb_src_sha}'. Exiting..."
+  if ! readelf --string-dump=.rodata $(command -v postgres) | grep -c "commit:$gpdb_src_sha" > /dev/null ; then
+    echo "bin_gpdb version: gpdb_src commit '${gpdb_src_sha}' not found in binary '$(command -v postgres)'. Exiting..."
     exit 1
   fi
 }
 
-yum -d1 -y install git
+yum -d0 -y install git
 
 GPDB_SRC_SHA=$(cd gpdb_src && git rev-parse HEAD)
-for bin_gpdb in bin_gpdb_centos{6,7}; do
+for bin_gpdb in bin_gpdb_{centos{6,7},ubuntu18.04}; do
   install_greenplum "$bin_gpdb"
   assert_postgres_version_matches "$GPDB_SRC_SHA"
 done

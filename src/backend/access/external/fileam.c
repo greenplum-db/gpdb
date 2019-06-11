@@ -2234,13 +2234,13 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 		CdbComponentDatabaseInfo *qdinfo = 
 				cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
 
-		pg_ltoa(qdinfo->port, result);
+		pg_ltoa(qdinfo->config->port, result);
 		extvar->GP_MASTER_PORT = result;
 
-		if (qdinfo->hostip != NULL)
-			extvar->GP_MASTER_HOST = pstrdup(qdinfo->hostip);
+		if (qdinfo->config->hostip != NULL)
+			extvar->GP_MASTER_HOST = pstrdup(qdinfo->config->hostip);
 		else
-			extvar->GP_MASTER_HOST = pstrdup(qdinfo->hostname);
+			extvar->GP_MASTER_HOST = pstrdup(qdinfo->config->hostname);
 	}
 
 	if (MyProcPort)

@@ -60,33 +60,35 @@ makeTestCdb(int entryCnt, int segCnt)
 	for (i = 0; i < cdb->total_entry_dbs; i++)
 	{
 		CdbComponentDatabaseInfo *cdbinfo = &cdb->entry_db_info[i];
+		cdbinfo->config = (GpSegConfigEntry*)palloc(sizeof(GpSegConfigEntry));
 
-		cdbinfo->hostip = qdHostIp;
-		cdbinfo->port = qdPort;
+		cdbinfo->config->hostip = qdHostIp;
+		cdbinfo->config->port = qdPort;
 
-		cdbinfo->dbid = 1;
-		cdbinfo->segindex = '-1';
+		cdbinfo->config->dbid = 1;
+		cdbinfo->config->segindex = '-1';
 
-		cdbinfo->role = 'p';
-		cdbinfo->preferred_role = 'p';
-		cdbinfo->status = 'u';
-		cdbinfo->mode = 's';
+		cdbinfo->config->role = 'p';
+		cdbinfo->config->preferred_role = 'p';
+		cdbinfo->config->status = 'u';
+		cdbinfo->config->mode = 's';
 	}
 
 	for (i = 0; i < cdb->total_segment_dbs; i++)
 	{
 		CdbComponentDatabaseInfo *cdbinfo = &cdb->segment_db_info[i];
+		cdbinfo->config = (GpSegConfigEntry*)palloc(sizeof(GpSegConfigEntry));
 
-		cdbinfo->hostip = segHostIp[i];
-		cdbinfo->port = segBasePort + i / 2;
+		cdbinfo->config->hostip = segHostIp[i];
+		cdbinfo->config->port = segBasePort + i / 2;
 
-		cdbinfo->dbid = i + 2;
-		cdbinfo->segindex = i / 2;
+		cdbinfo->config->dbid = i + 2;
+		cdbinfo->config->segindex = i / 2;
 
-		cdbinfo->role = i % 2 ? 'm' : 'p';
-		cdbinfo->preferred_role = i % 2 ? 'm' : 'p';
-		cdbinfo->status = 'u';
-		cdbinfo->mode = 's';
+		cdbinfo->config->role = i % 2 ? 'm' : 'p';
+		cdbinfo->config->preferred_role = i % 2 ? 'm' : 'p';
+		cdbinfo->config->status = 'u';
+		cdbinfo->config->mode = 's';
 	}
 
 	return cdb;
@@ -95,14 +97,14 @@ makeTestCdb(int entryCnt, int segCnt)
 void
 validateCdbInfo(CdbComponentDatabaseInfo *cdbinfo, int segindex)
 {
-	assert_string_equal(cdbinfo->hostip, segHostIp[segindex * 2]);
-	assert_int_equal(cdbinfo->port, segBasePort + segindex);
-	assert_int_equal(cdbinfo->dbid, segindex * 2 + 2);
-	assert_int_equal(cdbinfo->segindex, segindex);
-	assert_int_equal(cdbinfo->mode, 's');
-	assert_int_equal(cdbinfo->status, 'u');
-	assert_int_equal(cdbinfo->role, 'p');
-	assert_int_equal(cdbinfo->preferred_role, 'p');
+	assert_string_equal(cdbinfo->config->hostip, segHostIp[segindex * 2]);
+	assert_int_equal(cdbinfo->config->port, segBasePort + segindex);
+	assert_int_equal(cdbinfo->config->dbid, segindex * 2 + 2);
+	assert_int_equal(cdbinfo->config->segindex, segindex);
+	assert_int_equal(cdbinfo->config->mode, 's');
+	assert_int_equal(cdbinfo->config->status, 'u');
+	assert_int_equal(cdbinfo->config->role, 'p');
+	assert_int_equal(cdbinfo->config->preferred_role, 'p');
 }
 
 void

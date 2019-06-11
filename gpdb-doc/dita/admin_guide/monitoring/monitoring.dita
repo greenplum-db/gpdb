@@ -160,7 +160,7 @@ FROM gp_master_mirroring;</codeblock></p>
                                         minutes</p><p>Severity: IMPORTANT</p></entry>
                                 <entry>
                                     <p>Run the following <codeph>psql</codeph>
-                                        command:<codeblock>psql <i>dbname</i> -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock></p>
+                                        command:<codeblock>psql <i>dbname</i> -c 'SELECT pid, state FROM pg_stat_replication;'</codeblock></p>
                                 </entry>
                                 <entry>
                                     <p>Check the <filepath>pg_log</filepath> file from the master
@@ -285,19 +285,6 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                         <li>Work with system administration team to resolve other
                                             RAID or controller errors as soon as possible.</li>
                                     </ul>
-                                </entry>
-                            </row>
-                            <row>
-                                <entry>Run the Greenplum <codeph>gpcheck</codeph> utility to test
-                                    that the configuration of the cluster complies with current
-                                        recommendations.<p>Recommended frequency: when creating a
-                                        cluster or adding new machines to the cluster
-                                        </p><p>Severity: IMPORTANT</p></entry>
-                                <entry>Run <codeph>gpcheck</codeph>.</entry>
-                                <entry>
-                                    <p>Work with system administration team to update configuration
-                                        according to the recommendations made by the
-                                            <codeph>gpcheck</codeph> utility.</p>
                                 </entry>
                             </row>
                             <row>

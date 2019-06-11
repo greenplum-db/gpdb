@@ -675,7 +675,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 	{
 		Assert(Gp_role == GP_ROLE_EXECUTE);
 		lmode = AccessExclusiveLock;
-		SIMPLE_FAULT_INJECTOR(VacuumRelationOpenRelationDuringDropPhase);
+		SIMPLE_FAULT_INJECTOR("vacuum_relation_open_relation_during_drop_phase");
 	}
 	else if (!(vacstmt->options & VACOPT_VACUUM))
 		lmode = ShareUpdateExclusiveLock;
@@ -755,7 +755,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 
 		if (vacstmt->appendonly_phase == AOVAC_DROP)
 		{
-			SIMPLE_FAULT_INJECTOR(VacuumRelationOpenRelationDuringDropPhase);
+			SIMPLE_FAULT_INJECTOR("vacuum_relation_open_relation_during_drop_phase");
 		}
 
 		vacuum_rel(onerel, relid, vacstmt, lmode, for_wraparound);
@@ -851,7 +851,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 			 * However, we do not expect this to happen too frequently such
 			 * that all segfiles are marked.
 			 */
-			SIMPLE_FAULT_INJECTOR(VacuumRelationOpenRelationDuringDropPhase);
+			SIMPLE_FAULT_INJECTOR("vacuum_relation_open_relation_during_drop_phase");
 			onerel = try_relation_open(relid, AccessExclusiveLock, true /* dontwait */);
 
 			if (!RelationIsValid(onerel))
@@ -1947,7 +1947,7 @@ vac_update_datfrozenxid(void)
 	if (dirty)
 	{
 		heap_inplace_update(relation, tuple);
-		SIMPLE_FAULT_INJECTOR(VacuumUpdateDatFrozenXid);
+		SIMPLE_FAULT_INJECTOR("vacuum_update_dat_frozen_xid");
 	}
 
 	heap_freetuple(tuple);

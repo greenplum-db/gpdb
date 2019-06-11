@@ -1703,7 +1703,7 @@ BgBufferSync(void)
 
 #ifdef FAULT_INJECTOR
 	/* flush all buffers. */
-	if (SIMPLE_FAULT_INJECTOR(BgBufferSyncDefaultLogic) == FaultInjectorTypeSkip)
+	if (SIMPLE_FAULT_INJECTOR("bg_buffer_sync_default_logic") == FaultInjectorTypeSkip)
 		min_scan_buffers = NBuffers;
 #endif
 
@@ -1730,7 +1730,7 @@ BgBufferSync(void)
 
 #ifdef FAULT_INJECTOR
 	/* Flush all buffers. */
-	if (SIMPLE_FAULT_INJECTOR(BgBufferSyncDefaultLogic) == FaultInjectorTypeSkip)
+	if (SIMPLE_FAULT_INJECTOR("bg_buffer_sync_default_logic") == FaultInjectorTypeSkip)
 		num_to_scan = NBuffers;
 #endif
 
@@ -1740,7 +1740,7 @@ BgBufferSync(void)
 	skip_recently_used = true;
 
 #ifdef FAULT_INJECTOR
-		if (SIMPLE_FAULT_INJECTOR(BgBufferSyncDefaultLogic) == FaultInjectorTypeSkip)
+		if (SIMPLE_FAULT_INJECTOR("bg_buffer_sync_default_logic") == FaultInjectorTypeSkip)
 			skip_recently_used= false;
 #endif
 

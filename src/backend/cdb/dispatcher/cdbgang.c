@@ -331,15 +331,17 @@ makeOptions(void)
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
-	appendStringInfo(&string, " -c gp_qd_hostname=%s", qdinfo->hostip);
-	appendStringInfo(&string, " -c gp_qd_port=%d", qdinfo->port);
+	appendStringInfo(&string, " -c gp_qd_hostname=%s", qdinfo->config->hostip);
+	appendStringInfo(&string, " -c gp_qd_port=%d", qdinfo->config->port);
 
 	for (i = 0; i < ngucs; ++i)
 	{
 		struct config_generic *guc = gucs[i];
 
 		if ((guc->flags & GUC_GPDB_ADDOPT) &&
-			(guc->context == PGC_USERSET || IsAuthenticatedUserSuperUser()))
+			(guc->context == PGC_USERSET ||
+			 guc->context == PGC_BACKEND ||
+			 IsAuthenticatedUserSuperUser()))
 			addOneOption(&string, guc);
 	}
 
@@ -483,12 +485,12 @@ makeCdbProcess(SegmentDatabaseDescriptor *segdbDesc)
 	{
 		elog(ERROR, "required segment is unavailable");
 	}
-	else if (qeinfo->hostip == NULL)
+	else if (qeinfo->config->hostip == NULL)
 	{
 		elog(ERROR, "required segment IP is unavailable");
 	}
 
-	process->listenerAddr = pstrdup(qeinfo->hostip);
+	process->listenerAddr = pstrdup(qeinfo->config->hostip);
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		process->listenerPort = (segdbDesc->motionListener >> 16) & 0x0ffff;
@@ -564,9 +566,9 @@ getCdbProcessesForQD(int isPrimary)
 
 	qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
 
-	Assert(qdinfo->segindex == -1);
+	Assert(qdinfo->config->segindex == -1);
 	Assert(SEGMENT_IS_ACTIVE_PRIMARY(qdinfo));
-	Assert(qdinfo->hostip != NULL);
+	Assert(qdinfo->config->hostip != NULL);
 
 	proc = makeNode(CdbProcess);
 

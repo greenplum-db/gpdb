@@ -38,7 +38,7 @@ CREATE
 1q: ... <quitting>
 
 -- When we create a full backup
-select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', false) from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
@@ -66,7 +66,7 @@ select validate_tablespace_symlink('@testtablespace@/some_basebackup_datadir', '
 (1 row)
 
 -- When we create a full backup again for the same target using force overwrite
-select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', true) from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', true, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
@@ -157,7 +157,7 @@ CREATE
 1q: ... <quitting>
 
 -- When we create a full backup
-select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', false) from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_basebackup_datadir', false, 'stream') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                

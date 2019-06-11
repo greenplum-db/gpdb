@@ -240,7 +240,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 	 */
 	WalSndSetXLogCleanUpTo(startptr);
 
-	SIMPLE_FAULT_INJECTOR(BaseBackupPostCreateCheckpoint);
+	SIMPLE_FAULT_INJECTOR("base_backup_post_create_checkpoint");
 
 	/*
 	 * Once do_pg_start_backup has been called, ensure that any failure causes

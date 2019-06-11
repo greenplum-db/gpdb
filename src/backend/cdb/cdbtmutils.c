@@ -39,6 +39,14 @@ dtxCrackOpenGid(
 		elog(ERROR, "Bad distributed transaction identifier \"%s\"", gid);
 }
 
+void
+dtxFormGID(char *gid, DistributedTransactionTimeStamp tstamp, DistributedTransactionId gxid)
+{
+	sprintf(gid, "%u-%.10u", tstamp, gxid);
+	/* gxid is unsigned int32 and its max string length is 10 */
+	Assert(strlen(gid) < TMGIDSIZE);
+}
+
 char *
 DtxStateToString(DtxState state)
 {
@@ -86,8 +94,6 @@ DtxProtocolCommandToString(DtxProtocolCommand command)
 	{
 		case DTX_PROTOCOL_COMMAND_NONE:
 			return "None";
-		case DTX_PROTOCOL_COMMAND_STAY_AT_OR_BECOME_IMPLIED_WRITER:
-			return "Distributed Force Implied Writer";
 		case DTX_PROTOCOL_COMMAND_ABORT_NO_PREPARED:
 			return "Distributed Abort (No Prepared)";
 		case DTX_PROTOCOL_COMMAND_PREPARE:
@@ -96,6 +102,8 @@ DtxProtocolCommandToString(DtxProtocolCommand command)
 			return "Distributed Abort (Some Prepared)";
 		case DTX_PROTOCOL_COMMAND_COMMIT_PREPARED:
 			return "Distributed Commit Prepared";
+		case DTX_PROTOCOL_COMMAND_COMMIT_NOT_PREPARED:
+			return "Distributed Commit Not Prepared";
 		case DTX_PROTOCOL_COMMAND_ABORT_PREPARED:
 			return "Distributed Abort Prepared";
 		case DTX_PROTOCOL_COMMAND_RETRY_COMMIT_PREPARED:

@@ -112,113 +112,92 @@ INFO:  (slice 3) Dispatch command to SINGLE content
 -- Test for BEGIN;
 begin;
 commit;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 begin;
 abort;
-INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
 -- Test for UPDATE/DELETE/INSERT;
 -- Insert
 insert into random_2_0 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 1
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 begin;
 insert into random_2_0 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
 end;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 insert into replicate_2_1 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 1
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 begin;
 insert into replicate_2_1 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 insert into hash_3_3_2 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 0 1 2
 begin;
 insert into hash_3_3_2 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 end;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 0 1 2
 insert into replicate_3_3 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 0 1 2
 begin;
 insert into replicate_3_3 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 end;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 0 1 2
 insert into hash_2_3_4 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 1
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 begin;
 insert into hash_2_3_4 select i,i,i,i from generate_series(21, 30)i;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 1) Dispatch command to SINGLE content
 end;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 --Update
 update random_2_0 set a = a + 1;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 1
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 begin;
 update random_2_0 set a = a + 1;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 update random_2_0 set a = 1 from hash_3_3_2 where hash_3_3_2.b = random_2_0.c;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 2) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 0 1 2
 begin;
 update random_2_0 set a = 1 from hash_3_3_2 where hash_3_3_2.b = random_2_0.c;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 2) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to ALL contents: 0 1 2
 update replicate_2_1 set a = a + 1;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 1
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 begin;
 update replicate_2_1 set a = a + 1;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 -- Delete
 delete from hash_2_3_4 where a in (1, 2, 3);
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 1
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 begin;
 delete from hash_2_3_4 where a = 4 or a = 5;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Not Prepared' to PARTIAL contents: 0 1
 -- add test for table expand
 begin;
 alter table random_2_0 expand table;

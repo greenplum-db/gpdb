@@ -469,6 +469,8 @@ struct pg_conn
 	PGresult   *result;			/* result being constructed */
 	PGresult   *next_result;	/* next result (used in single-row mode) */
 
+	char		wrote_xlog;
+
 	/* Assorted state for SSL, GSS, etc */
 
 #ifdef USE_SSL

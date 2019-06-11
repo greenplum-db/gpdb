@@ -47,6 +47,7 @@
 #include "parser/parse_target.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
+#include "utils/guc.h"
 #include "utils/rel.h"
 
 #include "cdb/cdbhash.h"
@@ -90,6 +91,11 @@ typedef struct
 	int			ncols;
 	List	  **leafinfos;
 } setop_types_ctx;
+
+typedef struct QueryNodeSearchContext
+{
+	bool       found;
+} QueryNodeSearchContext;
 
 /* Hook for plugins to get control at end of parse analysis */
 post_parse_analyze_hook_type post_parse_analyze_hook = NULL;
@@ -135,6 +141,8 @@ static Node *grouped_window_mutator(Node *node, void *context);
 static Alias *make_replacement_alias(Query *qry, const char *aname);
 static char *generate_positional_name(AttrNumber attrno);
 static List*generate_alternate_vars(Var *var, grouped_window_ctx *ctx);
+static bool checkCanOptSelectLockingClause(SelectStmt *stmt);
+static bool queryNodeSearch(Node *node, void *context);
 
 /*
  * parse_analyze
@@ -239,9 +247,27 @@ parse_sub_analyze(Node *parseTree, ParseState *parentParseState,
 Query *
 transformTopLevelStmt(ParseState *pstate, Node *parseTree)
 {
+	Query *q;
+
 	if (IsA(parseTree, SelectStmt))
 	{
 		SelectStmt *stmt = (SelectStmt *) parseTree;
+
+		/*
+		 * Greenplum specific behavior:
+		 * The implementation of select statement with locking clause
+		 * (for update | no key update | share | key share) in postgres
+		 * is to hold RowShareLock on tables during parsing stage, and
+		 * generate a LockRows plan node for executor to lock the tuples.
+		 * It is not easy to lock tuples in Greenplum database, since
+		 * tuples may be fetched through motion nodes.
+		 *
+		 * But when Global Deadlock Detector is enabled, and the select
+		 * statement with locking clause contains only one table, we are
+		 * sure that there are no motions. For such simple cases, we could
+		 * make the behavior just the same as Postgres.
+		 */
+		pstate->p_canOptSelectLockingClause = checkCanOptSelectLockingClause(stmt);
 
 		/* If it's a set-operation tree, drill down to leftmost SelectStmt */
 		while (stmt && stmt->op != SETOP_NONE)
@@ -268,7 +294,10 @@ transformTopLevelStmt(ParseState *pstate, Node *parseTree)
 		}
 	}
 
-	return transformStmt(pstate, parseTree);
+	q = transformStmt(pstate, parseTree);
+	q->canOptSelectLockingClause = pstate->p_canOptSelectLockingClause;
+
+	return q;
 }
 
 /*
@@ -2518,30 +2547,31 @@ transformSetOperationTree_internal(ParseState *pstate, SelectStmt *stmt,
 				setop_types->ncols = numCols;
 				setop_types->leafinfos = (List **) palloc0(setop_types->ncols * sizeof(List *));
 			}
-			i = 0;
-			foreach(tl, selectQuery->targetList)
+
+			/*
+			 * It's possible that this leaf query has a different number
+			 * of columns than the previous ones. That's an error, but
+			 * we don't throw it here because we don't have the context
+			 * needed for a good error message. We don't know which
+			 * operation of the setop tree is the one where the number
+			 * of columns between the left and right branches differ.
+			 * Therefore, just return here as if nothing happened, and
+			 * we'll catch that error in the parent instead.
+			 */
+			if (numCols == setop_types->ncols)
 			{
-				TargetEntry *tle = (TargetEntry *) lfirst(tl);
+				i = 0;
+				foreach(tl, selectQuery->targetList)
+				{
+					TargetEntry *tle = (TargetEntry *) lfirst(tl);
 
-				if (tle->resjunk)
-					continue;
+					if (tle->resjunk)
+						continue;
 
-				setop_types->leafinfos[i] = lappend(setop_types->leafinfos[i],
-													(Node *) tle->expr);
-				i++;
-
-				/*
-				 * It's possible that this leaf query has a different number
-				 * of columns than the previous ones. That's an error, but
-				 * we don't throw it here because we don't have the context
-				 * needed for a good error message. We don't know which
-				 * operation of the setop tree is the one where the number
-				 * of columns between the left and right branches differ.
-				 * Therefore, just return here as if nothing happened, and
-				 * we'll catch that error in the parent instead.
-				 */
-				if (i == setop_types->ncols)
-					break;
+					setop_types->leafinfos[i] = lappend(setop_types->leafinfos[i],
+														(Node *) tle->expr);
+					i++;
+				}
 			}
 		}
 
@@ -3757,4 +3787,61 @@ setQryDistributionPolicy(IntoClause *into, Query *qry)
 													  policyopclasses,
 													  dist->numsegments);
 	}
+}
+
+/*
+ * checkCanOptSelectLockingClause is used to test
+ * whether a select-statement containing locking clause
+ * can behave like Postgres. We have to know it before
+ * we acquire any locks on the tables.
+ */
+static bool
+checkCanOptSelectLockingClause(SelectStmt *stmt)
+{
+	QueryNodeSearchContext ctx = {false};
+
+	if (!IS_QUERY_DISPATCHER())
+		return false;
+
+	if (!gp_enable_global_deadlock_detector)
+		return false;
+
+	if (stmt->op != SETOP_NONE)
+		return false;
+
+	if (list_length(stmt->fromClause) != 1)
+		return false;
+
+	if (!IsA(linitial(stmt->fromClause), RangeVar))
+		return false;
+
+	/*
+	 * In Greenplum, the results of limit can only be known on QD,
+	 * so we cannot lock correct tuples on QEs.
+	 */
+	if (stmt->limitCount != NULL || stmt->limitOffset != NULL)
+		return false;
+
+	if (!stmt->lockingClause)
+		return false;
+
+	(void) raw_expression_tree_walker(stmt->whereClause,
+									  queryNodeSearch, (void *)(&ctx));
+
+	if (ctx.found)
+		return false;
+
+	return true;
+}
+
+static bool
+queryNodeSearch(Node *node, void *context)
+{
+	if (IsA(node, Query))
+	{
+		((QueryNodeSearchContext *)context)->found = true;
+		return false;
+	}
+
+	return true;
 }

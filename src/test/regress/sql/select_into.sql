@@ -71,6 +71,13 @@ DROP TABLE ctas_nodata;
 DROP TABLE ctas_nodata_2;
 DROP TABLE ctas_nodata_3;
 DROP TABLE ctas_nodata_4;
+-- Test for WITH NO DATA on toast column
+CREATE TABLE ctas_base (i text);
+INSERT INTO ctas_base VALUES ('a');
+CREATE TABLE ctas_nodata AS SELECT i FROM ctas_base  WITH NO DATA; -- OK
+SELECT * FROM ctas_nodata;
+DROP TABLE ctas_base;
+DROP TABLE ctas_nodata;
 
 --
 -- CREATE TABLE AS/SELECT INTO as last command in a SQL function

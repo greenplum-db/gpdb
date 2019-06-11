@@ -241,12 +241,12 @@ However `pg_locks` lack some necessary information:
 - the waiter xid;
 - the edge type: dotted or solid;
 
-So we have to create a new udf `pg_dist_wait_status` to collect all the
+So we have to create a new udf `gp_dist_wait_status` to collect all the
 necessary information, this udf is similar to `pg_locks`, but with these
 information included, an example output:
 
 ```sql
-select * from pg_dist_wait_status();
+select * from gp_dist_wait_status();
  segid | waiter_dxid | holder_dxid | holdTillEndXact
 -------+-------------+-------------+------------
     -1 |          29 |          28 | t
@@ -287,7 +287,7 @@ time.
 
 ### Edge Classifying
 
-Edge types are detected locally by `pg_dist_wait_status` on each segment, the
+Edge types are detected locally by `gp_dist_wait_status` on each segment, the
 policies are:
 - xid waitings are solid edges;
 - relation waitings that ever been closed in `NO_LOCK` mode at least once are

@@ -253,7 +253,7 @@ InitWalSender(void)
 	/* Set up resource owner */
 	CurrentResourceOwner = ResourceOwnerCreate(NULL, "walsender top-level resource owner");
 
-	SIMPLE_FAULT_INJECTOR(InitializeWalSender);
+	SIMPLE_FAULT_INJECTOR("initialize_wal_sender");
 
 	/*
 	 * Let postmaster know that we're a WAL sender. Once we've declared us as
@@ -1898,7 +1898,7 @@ WalSndLoop(WalSndSendDataCallback send_data)
 	 */
 	for (;;)
 	{
-		SIMPLE_FAULT_INJECTOR(WalSenderLoop);
+		SIMPLE_FAULT_INJECTOR("wal_sender_loop");
 
 		/*
 		 * Emergency bailout if postmaster has died.  This is to avoid the
@@ -1956,7 +1956,7 @@ WalSndLoop(WalSndSendDataCallback send_data)
 		if (pq_flush_if_writable() != 0)
 			WalSndShutdown();
 
-		SIMPLE_FAULT_INJECTOR(WalSenderAfterCaughtupWithinRange);
+		SIMPLE_FAULT_INJECTOR("wal_sender_after_caughtup_within_range");
 
 		/* If nothing remains to be sent right now ... */
 		if (WalSndCaughtUp && !pq_is_send_pending())

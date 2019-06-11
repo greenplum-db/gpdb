@@ -399,6 +399,18 @@ select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t
   join (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t2 on t1.a = t2.a) tt1 on tt1.t1b = t3.b 
   join t3 t3_1 on tt1.t1b = t3_1.b and (tt1.t2a is NULL OR tt1.t1b = t3.b);
 
+-- test different join order enumeration methods
+set optimizer_join_order = query;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+set optimizer_join_order = greedy;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+set optimizer_join_order = exhaustive;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+set optimizer_join_order = exhaustive2;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+reset optimizer_join_order;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+
 drop table t1, t2, t3;
 
 --

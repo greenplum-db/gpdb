@@ -261,7 +261,7 @@ BackgroundWriterMain(void)
 		int			rc;
 
 #ifdef USE_ASSERT_CHECKING
-		SIMPLE_FAULT_INJECTOR(FaultInBackgroundWriterMain);
+		SIMPLE_FAULT_INJECTOR("fault_in_background_writer_main");
 #endif
 
 		/* Clear any already-pending wakeups */

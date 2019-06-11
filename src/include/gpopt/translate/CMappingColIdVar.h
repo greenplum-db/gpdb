@@ -47,13 +47,13 @@ namespace gpdxl
 	{
 		protected:
 			// memory pool
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 		public:
 
 			// ctor/dtor
 			explicit
-			CMappingColIdVar(IMemoryPool *);
+			CMappingColIdVar(CMemoryPool *);
 
 			virtual
 			~CMappingColIdVar(){}

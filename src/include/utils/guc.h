@@ -470,7 +470,7 @@ extern bool optimizer_enable_dynamictablescan;
 extern bool optimizer_enable_indexscan;
 extern bool optimizer_enable_tablescan;
 extern bool optimizer_enable_eageragg;
-extern bool optimizer_enable_full_join;
+extern bool optimizer_expand_fulljoin;
 extern bool optimizer_enable_hashagg;
 extern bool optimizer_enable_groupagg;
 
@@ -541,6 +541,7 @@ extern bool	optimizer_partition_selection_log;
 #define JOIN_ORDER_IN_QUERY                 0
 #define JOIN_ORDER_GREEDY_SEARCH            1
 #define JOIN_ORDER_EXHAUSTIVE_SEARCH        2
+#define JOIN_ORDER_EXHAUSTIVE2_SEARCH       3
 
 /* Time based authentication GUC */
 extern char  *gp_auth_time_override_str;

@@ -498,6 +498,7 @@ CopySnapshot(Snapshot snapshot)
 	Snapshot	newsnap;
 	Size		subxipoff;
 	Size		dsoff = 0;
+	Size		dslmoff = 0;
 	Size		size;
 
 	Assert(snapshot != InvalidSnapshot);
@@ -510,14 +511,15 @@ CopySnapshot(Snapshot snapshot)
 		snapshot->xcnt * sizeof(TransactionId);
 	if (snapshot->subxcnt > 0)
 		size += snapshot->subxcnt * sizeof(TransactionId);
+	dslmoff = dsoff = size;
 
 	if (snapshot->haveDistribSnapshot &&
 		snapshot->distribSnapshotWithLocalMapping.ds.count > 0)
 	{
-		dsoff = size;
 		size += snapshot->distribSnapshotWithLocalMapping.ds.count *
 			sizeof(DistributedTransactionId);
-		size += snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount *
+		dslmoff = size;
+		size += snapshot->distribSnapshotWithLocalMapping.ds.count *
 			sizeof(TransactionId);
 	}
 
@@ -554,51 +556,31 @@ CopySnapshot(Snapshot snapshot)
 	else
 		newsnap->subxip = NULL;
 
+	newsnap->distribSnapshotWithLocalMapping.ds.inProgressXidArray = NULL;
+	newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids = NULL;
 	if (snapshot->haveDistribSnapshot &&
 		snapshot->distribSnapshotWithLocalMapping.ds.count > 0)
 	{
 		newsnap->distribSnapshotWithLocalMapping.ds.inProgressXidArray =
 			(DistributedTransactionId*) ((char *) newsnap + dsoff);
+		newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids =
+			(TransactionId*) ((char *) newsnap + dslmoff);
+
 		memcpy(newsnap->distribSnapshotWithLocalMapping.ds.inProgressXidArray,
-			   snapshot->distribSnapshotWithLocalMapping.ds.inProgressXidArray,
-			   snapshot->distribSnapshotWithLocalMapping.ds.count *
-			   sizeof(DistributedTransactionId));
+				snapshot->distribSnapshotWithLocalMapping.ds.inProgressXidArray,
+				snapshot->distribSnapshotWithLocalMapping.ds.count *
+				sizeof(DistributedTransactionId));
 
-		Assert(snapshot->distribSnapshotWithLocalMapping.ds.count ==
-			   newsnap->distribSnapshotWithLocalMapping.ds.count);
-
-		/* Store -1 as the maxCount, to indicate that the array was not malloc'd */
-		newsnap->distribSnapshotWithLocalMapping.ds.maxCount = -1;
-
-		/*
-		 * Increment offset to point to next chunk of memory allocated for
-		 * cache.
-		 */
-		dsoff +=snapshot->distribSnapshotWithLocalMapping.ds.count *
-			sizeof(DistributedTransactionId);
-
-		/* Copy the local xid cache */
-		if (IS_QUERY_DISPATCHER())
+		if (snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount > 0)
 		{
-			newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids = NULL;
-			newsnap->distribSnapshotWithLocalMapping.maxLocalXidsCount = 0;
-			newsnap->distribSnapshotWithLocalMapping.currentLocalXidsCount = 0;
-		}
-		else
-		{
-			newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids =
-				(TransactionId*) ((char *) newsnap + dsoff);
+			Assert (!IS_QUERY_DISPATCHER());
+			Assert(snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount <=
+					snapshot->distribSnapshotWithLocalMapping.ds.count);
 			memcpy(newsnap->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
-				   snapshot->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
-				   snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount *
-				   sizeof(TransactionId));
-			newsnap->distribSnapshotWithLocalMapping.maxLocalXidsCount =
-				snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount;
+					snapshot->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
+					snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount *
+					sizeof(TransactionId));
 		}
-	}
-	else
-	{
-		newsnap->distribSnapshotWithLocalMapping.ds.inProgressXidArray = NULL;
 	}
 
 	return newsnap;

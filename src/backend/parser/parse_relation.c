@@ -1061,19 +1061,38 @@ addRangeTableEntry(ParseState *pstate,
 	rte->rtekind = RTE_RELATION;
 
 	/*
-	 * CDB: lock promotion around the locking clause is a little different
-	 * from postgres to allow for required lock promotion for distributed
-	 * AO tables.
-	 * select for update should lock the whole table, we do it here.
-	 * See discussion on https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/p-6_dNjnRMQ/OzTnb586AwAJ
-	 * And we do not have to treat system tables different because directly dms
-	 * on system tables are rare.
+	 * Greenplum specific behavior:
+	 * The implementation of select statement with locking clause
+	 * (for update | no key update | share | key share) in postgres
+	 * is to hold RowShareLock on tables during parsing stage, and
+	 * generate a LockRows plan node for executor to lock the tuples.
+	 * It is not easy to lock tuples in Greenplum database, since
+	 * tuples may be fetched through motion nodes.
+	 *
+	 * But when Global Deadlock Detector is enabled, and the select
+	 * statement with locking clause contains only one table, we are
+	 * sure that there are no motions. For such simple cases, we could
+	 * make the behavior just the same as Postgres.
 	 */
 	locking = getLockedRefname(pstate, refname);
 	if (locking)
 	{
-		lockmode = locking->strength >= LCS_FORNOKEYUPDATE ?
-			ExclusiveLock : RowShareLock;
+		Oid relid;
+
+		relid = RangeVarGetRelid(relation, lockmode, false);
+
+		rel = try_heap_open(relid, NoLock, true);
+		if (!rel)
+			elog(ERROR, "open relation(%u) fail", relid);
+
+		if (rel->rd_rel->relkind != RELKIND_RELATION ||
+			GpPolicyIsReplicated(rel->rd_cdbpolicy) ||
+			RelationIsAppendOptimized(rel))
+			pstate->p_canOptSelectLockingClause = false;
+
+		lockmode = pstate->p_canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
+
+		heap_close(rel, NoLock);
 		nowait = locking->noWait;
 	}
 

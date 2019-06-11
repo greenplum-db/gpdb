@@ -63,8 +63,8 @@ SET
 select value from pg_resgroup_get_status_kv('dump');
 ERROR:  only superusers can call this function
 
-SET ROLE gpadmin;
-SET
+RESET ROLE;
+RESET
 
 DROP ROLE role_dumpinfo_test;
 DROP

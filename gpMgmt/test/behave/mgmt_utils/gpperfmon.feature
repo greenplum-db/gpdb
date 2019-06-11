@@ -17,6 +17,8 @@ Feature: gpperfmon
         Given the database "gpperfmon" does not exist
         When the user installs gpperfmon
         Then gpperfmon_install should return a return code of 0
+        Then gpperfmon_install should not print "foo" to stdout
+        Then gpperfmon_install should print "\*\*\*\*\*\*\*\*" to stdout
         Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
         Then verify that the last line of the file "pg_hba.conf" in the master data directory contains the string "host     all         gpmon         ::1/128    md5"
         And verify that there is a "heap" table "database_history" in "gpperfmon"

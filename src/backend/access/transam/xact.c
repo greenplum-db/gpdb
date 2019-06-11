@@ -181,6 +181,7 @@ typedef struct TransactionStateData
 	bool		startedInRecovery;		/* did we start in recovery? */
 	bool		didLogXid;		/* has xid been included in WAL record? */
 	bool		executorSaysXactDoesWrites;	/* GP executor says xact does writes */
+	bool		executorDidWriteXLog;	/* QE has wrote xlog */
 	struct TransactionStateData *parent;		/* back link to parent */
 
 	struct TransactionStateData *fastLink;        /* back link to jump to parent for efficient search */
@@ -218,6 +219,7 @@ static TransactionStateData TopTransactionStateData = {
 	false,						/* startedInRecovery */
 	false,						/* didLogXid */
 	false,						/* executorSaysXactDoesWrites */
+	false,						/* executorDidWriteXLog */
 	NULL						/* link to parent state block */
 };
 
@@ -389,14 +391,6 @@ IsAbortInProgress(void)
 }
 
 bool
-IsCommitInProgress(void)
-{
-	TransactionState s = CurrentTransactionState;
-
-	return (s->state == TRANS_COMMIT);
-}
-
-bool
 IsTransactionPreparing(void)
 {
 	TransactionState s = CurrentTransactionState;
@@ -418,6 +412,20 @@ IsAbortedTransactionBlockState(void)
 		return true;
 
 	return false;
+}
+
+bool
+TransactionDidWriteXLog(void)
+{
+	TransactionState s = CurrentTransactionState;
+	return s->didLogXid;
+}
+
+bool
+ExecutorDidWriteXLog(void)
+{
+	TransactionState s = CurrentTransactionState;
+	return s->executorDidWriteXLog;
 }
 
 void
@@ -513,6 +521,11 @@ MarkCurrentTransactionIdLoggedIfAny(void)
 		CurrentTransactionState->didLogXid = true;
 }
 
+void
+MarkCurrentTransactionWriteXLogOnExecutor(void)
+{
+	CurrentTransactionState->executorDidWriteXLog = true;
+}
 
 /*
  *	GetStableLatestTransactionId
@@ -1442,7 +1455,7 @@ RecordTransactionCommit(void)
 			}
 			rdata[lastrdata].next = NULL;
 
-			SIMPLE_FAULT_INJECTOR(OnePhaseTransactionCommit);
+			SIMPLE_FAULT_INJECTOR("onephase_transaction_commit");
 
 			if (isDtxPrepared)
 			{
@@ -1519,7 +1532,7 @@ RecordTransactionCommit(void)
 		if (isDtxPrepared == 0 &&
 			CurrentTransactionState->blockState == TBLOCK_END)
 		{
-			FaultInjector_InjectFaultIfSet(LocalTmRecordTransactionCommit,
+			FaultInjector_InjectFaultIfSet("local_tm_record_transaction_commit",
 										   DDLNotSpecified,
 										   "",  // databaseName
 										   ""); // tableName
@@ -1576,7 +1589,7 @@ RecordTransactionCommit(void)
 #ifdef FAULT_INJECTOR
 	if (isDtxPrepared)
 	{
-		FaultInjector_InjectFaultIfSet(DtmXLogDistributedCommit,
+		FaultInjector_InjectFaultIfSet("dtm_xlog_distributed_commit",
 									   DDLNotSpecified,
 									   "",  // databaseName
 									   ""); // tableName
@@ -2176,7 +2189,7 @@ StartTransaction(void)
 
 	if (DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
 	{
-		SIMPLE_FAULT_INJECTOR(TransactionStartUnderEntryDbSingleton);
+		SIMPLE_FAULT_INJECTOR("transaction_start_under_entry_db_singleton");
 	}
 
 	/*
@@ -2243,6 +2256,7 @@ StartTransaction(void)
 	 */
 	nUnreportedXids = 0;
 	s->didLogXid = false;
+	s->executorDidWriteXLog = false;
 
 	/*
 	 * must initialize resource-management stuff first
@@ -2648,7 +2662,7 @@ CommitTransaction(void)
 	if (isPreparedDtxTransaction())
 	{
 		FaultInjector_InjectFaultIfSet(
-									   TransactionAbortAfterDistributedPrepared, 
+									   "transaction_abort_after_distributed_prepared",
 									   DDLNotSpecified,
 									   "",	// databaseName
 									   ""); // tableName
@@ -2946,7 +2960,7 @@ PrepareTransaction(void)
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot PREPARE a transaction that has operated on temporary tables")));
 #endif
-	SIMPLE_FAULT_INJECTOR(StartPrepareTx);
+	SIMPLE_FAULT_INJECTOR("start_prepare");
 
 	/*
 	 * Likewise, don't allow PREPARE after pg_export_snapshot.  This could be
@@ -3151,7 +3165,7 @@ AbortTransaction(void)
 	TransactionState s = CurrentTransactionState;
 	TransactionId latestXid;
 
-	SIMPLE_FAULT_INJECTOR(AbortTransactionFail);
+	SIMPLE_FAULT_INJECTOR("transaction_abort_failure");
 
 	/* Prevent cancel/die interrupt while cleaning up */
 	HOLD_INTERRUPTS();
@@ -5069,6 +5083,26 @@ RollbackAndReleaseCurrentSubTransaction(void)
 	}
 }
 
+void
+CommitNotPreparedTransaction(void)
+{
+	TransactionState s = CurrentTransactionState;
+
+	while (s->blockState == TBLOCK_SUBINPROGRESS)
+	{
+		CommitSubTransaction();
+		s = CurrentTransactionState;
+	}
+
+	if (s->blockState == TBLOCK_INPROGRESS)
+	{
+		Assert(s->parent == NULL);
+		CommitTransaction();
+	}
+	s->blockState = TBLOCK_DEFAULT;
+	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
+	return;
+}
 /*
  *	AbortOutOfAnyTransaction
  *

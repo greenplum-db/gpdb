@@ -455,9 +455,6 @@
                   <codeph>enable_tidscan</codeph>
                 </p>
                 <p>
-                  <codeph>gp_enable_adaptive_nestloop</codeph>
-                </p>
-                <p>
                   <codeph>gp_enable_agg_distinct</codeph>
                 </p>
               </stentry>

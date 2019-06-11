@@ -18,16 +18,7 @@ run:
         # and vendored libpythons collide). We will try our best to install
         # patchelf to fix this later, but it is not available on all platforms.
         set -ex
-        if which zypper > /dev/null; then
-            zypper addrepo https://download.opensuse.org/repositories/devel:tools:building/SLE_12_SP4/devel:tools:building.repo
-            # Note that this will fail on SLES11.
-            if ! zypper --non-interactive --gpg-auto-import-keys install patchelf; then
-                set +x
-                echo \"WARNING: could not install patchelf; virtualenv may fail later\"
-                echo \"WARNING: This is a known issue on SLES11.\"
-                set -x
-            fi
-        elif which yum > /dev/null; then
+        if which yum > /dev/null; then
             sudo yum install -y patchelf
         else
             set +x

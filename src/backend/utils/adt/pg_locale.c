@@ -1226,7 +1226,7 @@ pg_newlocale_from_collation(Oid collid)
 	cache_entry = lookup_collation_cache(collid, false);
 
 #ifdef FAULT_INJECTOR
-	SIMPLE_FAULT_INJECTOR(CollateLocaleOsLookup);
+	SIMPLE_FAULT_INJECTOR("collate_locale_os_lookup");
 #endif
 
 	if (cache_entry->locale == 0)

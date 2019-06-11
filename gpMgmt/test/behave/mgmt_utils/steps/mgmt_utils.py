@@ -1,3 +1,4 @@
+import codecs
 import math
 import fnmatch
 import getpass
@@ -632,21 +633,6 @@ def get_standby_host():
         return []
 
 
-@given('user does not have ssh permissions')
-def impl(context):
-    user_home = os.environ.get('HOME')
-    authorized_keys_file = '%s/.ssh/authorized_keys' % user_home
-    if os.path.exists(os.path.abspath(authorized_keys_file)):
-        shutil.move(authorized_keys_file, '%s.bk' % authorized_keys_file)
-
-
-@then('user has ssh permissions')
-def impl(context):
-    user_home = os.environ.get('HOME')
-    authorized_keys_backup_file = '%s/.ssh/authorized_keys.bk' % user_home
-    if os.path.exists(authorized_keys_backup_file):
-        shutil.move(authorized_keys_backup_file, authorized_keys_backup_file[:-3])
-
 def run_gpinitstandby(context, hostname, port, standby_data_dir, options='', remote=False):
     if '-n' in options:
         cmd = "gpinitstandby -a"
@@ -797,12 +783,6 @@ def impl(context):
                        os.getenv("GPHOME") + '/greenplum_path.sh',
                        'export MASTER_DATA_DIRECTORY=%s' % context.standby_data_dir)
 
-@given('we have exchanged keys with the cluster')
-def impl(context):
-    hostlist = get_all_hostnames_as_list(context, 'template1')
-    host_str = ' -h '.join(hostlist)
-    cmd_str = 'gpssh-exkeys %s' % host_str
-    run_gpcommand(context, cmd_str)
 
 def _process_exists(pid, host):
     """
@@ -1325,9 +1305,11 @@ def impl(context, filename, output):
 def find_string_in_master_data_directory(context, filename, output, escapeStr=False):
     contents = ''
     file_path = os.path.join(master_data_dir, filename)
-    with open(file_path) as fr:
-        for line in fr:
+
+    with codecs.open(file_path, encoding='utf-8') as f:
+        for line in f:
             contents = line.strip()
+
     if escapeStr:
         output = re.escape(output)
     pat = re.compile(output)
@@ -1419,7 +1401,9 @@ def impl(context, filename, output):
         cmd_str = 'ssh %s "tail -n1 %s"' % (host, filepath)
         cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
         cmd.run(validateAfter=True)
-        if output not in cmd.get_stdout():
+
+        actual = cmd.get_stdout().decode('utf-8')
+        if output not in actual:
             raise Exception('File %s on host %s does not contain "%s"' % (filepath, host, output))
 
 @given('the gpfdists occupying port {port} on host "{hostfile}"')
@@ -2214,10 +2198,10 @@ def _gpexpand_redistribute(context, duration=False, endtime=False):
 
 @when('the user runs gpexpand with a static inputfile for a single-node cluster with mirrors')
 def impl(context):
-    inputfile_contents = """sdw1:sdw1:20502:/tmp/gpexpand_behave/data/primary/gpseg2:6:2:p
-sdw1:sdw1:21502:/tmp/gpexpand_behave/data/mirror/gpseg2:8:2:m
-sdw1:sdw1:20503:/tmp/gpexpand_behave/data/primary/gpseg3:7:3:p
-sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
+    inputfile_contents = """sdw1|sdw1|20502|/tmp/gpexpand_behave/data/primary/gpseg2|6|2|p
+sdw1|sdw1|21502|/tmp/gpexpand_behave/data/mirror/gpseg2|8|2|m
+sdw1|sdw1|20503|/tmp/gpexpand_behave/data/primary/gpseg3|7|3|p
+sdw1|sdw1|21503|/tmp/gpexpand_behave/data/mirror/gpseg3|9|3|m"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     inputfile_name = "%s/gpexpand_inputfile_%s" % (context.working_directory, timestamp)
     with open(inputfile_name, 'w') as fd:
@@ -2230,8 +2214,8 @@ sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
 
 @when('the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check')
 def impl(context):
-    inputfile_contents = """sdw1:sdw1:20502:/data/gpdata/gpexpand/data/primary/gpseg2:7:2:p
-sdw1:sdw1:21502:/data/gpdata/gpexpand/data/mirror/gpseg2:8:2:m"""
+    inputfile_contents = """sdw1|sdw1|20502|/data/gpdata/gpexpand/data/primary/gpseg2|7|2|p
+sdw1|sdw1|21502|/data/gpdata/gpexpand/data/mirror/gpseg2|8|2|m"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     inputfile_name = "%s/gpexpand_inputfile_%s" % (context.working_directory, timestamp)
     with open(inputfile_name, 'w') as fd:

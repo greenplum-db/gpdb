@@ -3067,7 +3067,7 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 				conn->pkt_q_head = 0;
 				conn->pkt_q_tail = 0;
 
-				SIMPLE_FAULT_INJECTOR(InterconnectSetupPalloc);
+				SIMPLE_FAULT_INJECTOR("interconnect_setup_palloc");
 				conn->pkt_q = (uint8 **) palloc0(conn->pkt_q_capacity * sizeof(uint8 *));
 
 				/* update the max buffer count of our rx buffer pool.  */
@@ -5611,7 +5611,7 @@ doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID)
 
 #ifdef FAULT_INJECTOR
 				if (FaultInjector_InjectFaultIfSet(
-												   InterconnectStopAckIsLost,
+												   "interconnect_stop_ack_is_lost",
 												   DDLNotSpecified,
 												   "" /* databaseName */ ,
 												   "" /* tableName */ ) == FaultInjectorTypeSkip)

@@ -29,7 +29,7 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 CDXLTranslateContextBaseTable::CDXLTranslateContextBaseTable
 	(
-	IMemoryPool *mp
+	CMemoryPool *mp
 	)
 	:
 	m_mp(mp),

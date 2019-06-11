@@ -899,6 +899,14 @@ ExecSliceDependencyNode(PlanState *node)
 		for (; i < ss->numSubplans; ++i)
 			ExecSliceDependencyNode(ss->subplans[i]);
 	}
+	else if (nodeTag(node) == T_ModifyTableState)
+	{
+		int			i = 0;
+		ModifyTableState *mt = (ModifyTableState *) node;
+
+		for (; i < mt->mt_nplans; ++i)
+			ExecSliceDependencyNode(mt->mt_plans[i]);
+	}
 
 	ExecSliceDependencyNode(outerPlanState(node));
 	ExecSliceDependencyNode(innerPlanState(node));

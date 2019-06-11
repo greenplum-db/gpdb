@@ -229,7 +229,7 @@ create_gang_retry:
 			if (nfds == 0)
 				break;
 
-			SIMPLE_FAULT_INJECTOR(CreateGangInProgress);
+			SIMPLE_FAULT_INJECTOR("create_gang_in_progress");
 
 			CHECK_FOR_INTERRUPTS();
 
@@ -305,7 +305,7 @@ create_gang_retry:
 	}
 	PG_END_TRY();
 
-	SIMPLE_FAULT_INJECTOR(GangCreated);
+	SIMPLE_FAULT_INJECTOR("gang_created");
 
 	if (retry)
 	{

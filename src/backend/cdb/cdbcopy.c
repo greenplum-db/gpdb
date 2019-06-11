@@ -209,7 +209,7 @@ cdbCopyStart(CdbCopy *c, CopyStmt *stmt,
 
 	CdbDispatchCopyStart(c, (Node *) stmt, flags);
 
-	SIMPLE_FAULT_INJECTOR(CdbCopyStartAfterDispatch);
+	SIMPLE_FAULT_INJECTOR("cdb_copy_start_after_dispatch");
 }
 
 /*
@@ -502,7 +502,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 				 */
 				appendStringInfo(&io_err_msg,
 								 "primary segment %d, dbid %d, attempt blocked\n",
-								 seg, q->segment_database_info->dbid);
+								 seg, q->segment_database_info->config->dbid);
 				io_errors = true;
 			}
 		}
@@ -659,7 +659,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 			io_errors = true;
 			appendStringInfo(&io_err_msg,
 							 "Primary segment %d, dbid %d, with error: %s\n",
-							 seg, q->segment_database_info->dbid,
+							 seg, q->segment_database_info->config->dbid,
 							 PQerrorMessage(q->conn));
 
 			/* Free the PGconn object. */

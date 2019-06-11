@@ -46,12 +46,19 @@ select count(*) from gp_segment_configuration where status = 'd';
  0     
 (1 row)
 
+drop table if exists fts_errors_test;
+DROP
+create table fts_errors_test(a int);
+CREATE
+
 1:BEGIN;
 BEGIN
 1:END;
 END
 2:BEGIN;
 BEGIN
+2:INSERT INTO fts_errors_test SELECT * FROM generate_series(1,100);
+INSERT 100
 3:BEGIN;
 BEGIN
 3:CREATE TEMP TABLE tmp3 (c1 int, c2 int);

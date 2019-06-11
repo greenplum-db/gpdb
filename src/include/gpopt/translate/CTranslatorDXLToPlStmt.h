@@ -125,7 +125,7 @@ namespace gpdxl
 			}; // SContextIndexVarAttno
 
 			// memory pool
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// meta data accessor
 			CMDAccessor *m_md_accessor;
@@ -165,7 +165,7 @@ namespace gpdxl
 
 		public:
 			// ctor
-			CTranslatorDXLToPlStmt(IMemoryPool *mp, CMDAccessor *md_accessor, CContextDXLToPlStmt *dxl_to_plstmt_context, ULONG num_of_segments);
+			CTranslatorDXLToPlStmt(CMemoryPool *mp, CMDAccessor *md_accessor, CContextDXLToPlStmt *dxl_to_plstmt_context, ULONG num_of_segments);
 
 			// dtor
 			~CTranslatorDXLToPlStmt();

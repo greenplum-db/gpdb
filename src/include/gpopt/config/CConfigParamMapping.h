@@ -17,7 +17,7 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CBitSet.h"
-#include "gpos/memory/IMemoryPool.h"
+#include "gpos/memory/CMemoryPool.h"
 
 #include "naucrates/traceflags/traceflags.h"
 
@@ -69,7 +69,7 @@ namespace gpdxl
 		public:
 			// pack enabled optimizer config params in a traceflag bitset
 			static
-			CBitSet *PackConfigParamInBitset(IMemoryPool *mp, ULONG xform_id);
+			CBitSet *PackConfigParamInBitset(CMemoryPool *mp, ULONG xform_id);
 	};
 }
 

@@ -772,6 +772,47 @@ select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t
    2 |   2 |   2 |   2 | 1 | 2 | 3 |   2 |   2 |   2 |   2 |   | 2 | 2
 (4 rows)
 
+-- test different join order enumeration methods
+set optimizer_join_order = query;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+ a | b | c | a | b | c | a | b | c 
+---+---+---+---+---+---+---+---+---
+ 2 | 2 | 2 | 2 | 2 | 2 | 1 | 2 | 3
+ 2 | 2 | 2 | 2 | 2 | 2 |   | 2 | 2
+(2 rows)
+
+set optimizer_join_order = greedy;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+ a | b | c | a | b | c | a | b | c 
+---+---+---+---+---+---+---+---+---
+ 2 | 2 | 2 | 2 | 2 | 2 | 1 | 2 | 3
+ 2 | 2 | 2 | 2 | 2 | 2 |   | 2 | 2
+(2 rows)
+
+set optimizer_join_order = exhaustive;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+ a | b | c | a | b | c | a | b | c 
+---+---+---+---+---+---+---+---+---
+ 2 | 2 | 2 | 2 | 2 | 2 |   | 2 | 2
+ 2 | 2 | 2 | 2 | 2 | 2 | 1 | 2 | 3
+(2 rows)
+
+set optimizer_join_order = exhaustive2;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+ a | b | c | a | b | c | a | b | c 
+---+---+---+---+---+---+---+---+---
+ 2 | 2 | 2 | 2 | 2 | 2 | 1 | 2 | 3
+ 2 | 2 | 2 | 2 | 2 | 2 |   | 2 | 2
+(2 rows)
+
+reset optimizer_join_order;
+select * from t1 join t2 on t1.a = t2.a join t3 on t1.b = t3.b;
+ a | b | c | a | b | c | a | b | c 
+---+---+---+---+---+---+---+---+---
+ 2 | 2 | 2 | 2 | 2 | 2 | 1 | 2 | 3
+ 2 | 2 | 2 | 2 | 2 | 2 |   | 2 | 2
+(2 rows)
+
 drop table t1, t2, t3;
 --
 -- Test a bug that nestloop path previously can not generate motion above

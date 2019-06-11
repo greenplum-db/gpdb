@@ -75,14 +75,6 @@
               <row>
                 <entry>
                   <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
-                    id="image_zrz_s1m_2r"/>
-                </entry>
-                <entry>Validate the operating system environment of the new hardware or cloud
-                  resources (<codeph>gpcheck</codeph>).</entry>
-              </row>
-              <row>
-                <entry>
-                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_qkb_t1m_2r"/>
                 </entry>
                 <entry>Validate disk I/O and memory bandwidth of the new hardware or cloud resources
@@ -110,14 +102,6 @@
                 </entry>
                 <entry>Validate that there are no catalog issues
                   (<codeph>gpcheckcat</codeph>).</entry>
-              </row>
-              <row>
-                <entry>
-                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
-                    id="image_hgm_t1m_2r"/>
-                </entry>
-                <entry>Validate the operating system environment of the combined existing and new
-                  hardware or cloud resources (<codeph>gpcheck</codeph>). </entry>
               </row>
               <row>
                 <entry>
@@ -243,7 +227,6 @@
           initialization.
         <ul id="ul_c3w_wdp_lgb">
           <li><codeph>gpbackup</codeph></li>
-          <li><codeph>gpcheck</codeph></li>
           <li><codeph>gpcheckcat</codeph></li>
           <li><codeph>gpconfig</codeph></li>
           <li><codeph>gppkg</codeph></li>

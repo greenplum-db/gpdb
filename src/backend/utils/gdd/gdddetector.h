@@ -17,12 +17,19 @@
 #include "lib/stringinfo.h"
 
 typedef struct GddCtx		GddCtx;
+typedef struct GddPair		GddPair;
+typedef struct GddMap		GddMap;
+typedef struct GddMapIter	GddMapIter;
+typedef struct GddListIter	GddListIter;
+typedef struct GddEdge		GddEdge;
+typedef struct GddVert		GddVert;
+typedef struct GddGraph		GddGraph;
+typedef struct GddStat		GddStat;
 
 extern GddCtx *GddCtxNew(void);
-extern void GddCtxAddEdge(GddCtx *ctx, int segid, int from, int to, bool solid);
+extern GddEdge *GddCtxAddEdge(GddCtx *ctx, int segid, int from, int to, bool solid);
 extern void GddCtxReduce(GddCtx *ctx);
 extern List *GddCtxBreakDeadLock(GddCtx *ctx);
 extern bool GddCtxEmpty(GddCtx *ctx);
-extern void GddCtxDump(GddCtx *ctx, StringInfo str);
 
 #endif   /* GDD_DETECTOR_H */

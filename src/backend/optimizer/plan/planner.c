@@ -3064,6 +3064,78 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	}
 
 	/*
+	 * Greenplum specific behavior:
+	 * In Postgres, the process order is sort -> rowmarks -> limit,
+	 * the reason I think is that we should only lock those tuples after
+	 * limit. Based on the one tuple one time model, the following plan
+	 *     limit
+	 *        -> lockrows
+	 *            -> sort
+	 *                -> scan
+	 * will only lock one tuple even the sort node sort all tuples.
+	 *
+	 * But for Greenplum, we might not emit lockrows plannode due to many
+	 * limitations in MPP architecture. Greenplum can only behave like
+	 * postgres in some simple cases (refer the function
+	 * `parser/analyze.c:checkCanOptSelectLockingClause` for details).
+	 * Select-statement with limit clause and locking clause  is not a
+	 * simple case, because we can only know which tuples will be output
+	 * on QD, but lock rows have to work on QEs. So for select-statement
+	 * with limit clause and locking clause will not emit lockrows plannode,
+	 * that is, in such case, it will ignore the rowmarks.
+	 *
+	 * So Greenplum changes the process order as: rowmarks(maybe) -> sort -> limit.
+	 */
+
+	/*
+	 * Greenplum specific behavior:
+	 * The implementation of select statement with locking clause
+	 * (for update | no key update | share | key share) in postgres
+	 * is to hold RowShareLock on tables during parsing stage, and
+	 * generate a LockRows plan node for executor to lock the tuples.
+	 * It is not easy to lock tuples in Greenplum database, since
+	 * tuples may be fetched through motion nodes.
+	 *
+	 * But when Global Deadlock Detector is enabled, and the select
+	 * statement with locking clause contains only one table, we are
+	 * sure that there are no motions. For such simple cases, we could
+	 * make the behavior just the same as Postgres.
+	 *
+	 * The conflict with UPDATE|DELETE is implemented by locking the entire
+	 * table in ExclusiveMode. More details please refer docs.
+	 */
+	if (parse->rowMarks)
+	{
+		ListCell   *lc;
+		List   *newmarks = NIL;
+
+		foreach(lc, root->rowMarks)
+		{
+			PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
+
+			if (parse->canOptSelectLockingClause)
+			{
+				rc->canOptSelectLockingClause = true;
+				newmarks = lappend(newmarks, rc);
+			}
+		}
+
+		if (newmarks)
+		{
+			result_plan = (Plan *) make_lockrows(result_plan,
+												 newmarks,
+												 SS_assign_special_param(root));
+			result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
+
+			/*
+			 * The result can no longer be assumed sorted, since locking might
+			 * cause the sort key columns to be replaced with new values.
+			 */
+			current_pathkeys = NIL;
+		}
+	}
+
+	/*
 	 * If ORDER BY was given and we were not able to make the plan come out in
 	 * the right order, add an explicit sort step.
 	 */
@@ -3092,64 +3164,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			 */
 			current_pathkeys = root->sort_pathkeys;
 			result_plan = (Plan *) make_motion_gather(root, result_plan, current_pathkeys);
-		}
-	}
-
-	/*
-	 * If there is a FOR [KEY] UPDATE/SHARE clause, add the LockRows node.
-	 * (Note: we intentionally test parse->rowMarks not root->rowMarks here.
-	 * If there are only non-locking rowmarks, they should be handled by the
-	 * ModifyTable node instead.)
-	 */
-	if (parse->rowMarks)
-	{
-		ListCell   *lc;
-		List	   *newmarks = NIL;
-
-		/*
-		 * select for update will lock the whole table, we do it at addRangeTableEntry.
-		 * The reason is that gpdb is an MPP database, the result tuples may not be on
-		 * the same segment. And for cursor statement, reader gang cannot get Xid to lock
-		 * the tuples. (More details: https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/p-6_dNjnRMQ)
-		 * Upgrading the lock mode (see below) for distributed table is probably
-		 * not needed for all the cases and we may want to enhance this later.
-		 */
-		foreach(lc, root->rowMarks)
-		{
-			PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
-
-			if (rc->markType == ROW_MARK_EXCLUSIVE || rc->markType == ROW_MARK_SHARE)
-			{
-				RelOptInfo *brel = root->simple_rel_array[rc->rti];
-
-				if (GpPolicyIsPartitioned(brel->cdbpolicy) ||
-					GpPolicyIsReplicated(brel->cdbpolicy))
-				{
-					if (rc->markType == ROW_MARK_EXCLUSIVE)
-						rc->markType = ROW_MARK_TABLE_EXCLUSIVE;
-					else
-						rc->markType = ROW_MARK_TABLE_SHARE;
-				}
-			}
-
-			/* We only need LockRows for the tuple-level locks */
-			if (rc->markType != ROW_MARK_TABLE_EXCLUSIVE &&
-				rc->markType != ROW_MARK_TABLE_SHARE)
-				newmarks = lappend(newmarks, rc);
-		}
-
-		if (newmarks)
-		{
-			result_plan = (Plan *) make_lockrows(result_plan,
-												 newmarks,
-												 SS_assign_special_param(root));
-			result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
-
-			/*
-			 * The result can no longer be assumed sorted, since locking might
-			 * cause the sort key columns to be replaced with new values.
-			 */
-			current_pathkeys = NIL;
 		}
 	}
 

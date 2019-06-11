@@ -70,7 +70,7 @@
 
  CREATE FUNCTION pg_resgroup_get_status(IN groupid oid, OUT groupid oid, OUT num_running int4, OUT num_queueing int4, OUT num_queued int4, OUT num_executed int4, OUT total_queue_duration interval, OUT cpu_usage json, OUT memory_usage json) RETURNS SETOF pg_catalog.record LANGUAGE internal VOLATILE AS 'pg_resgroup_get_status' WITH (OID=6066, DESCRIPTION="statistics: information about resource groups");
 
- CREATE FUNCTION pg_dist_wait_status(OUT segid int4, OUT waiter_dxid xid, OUT holder_dxid xid, OUT holdTillEndXact bool) RETURNS SETOF pg_catalog.record LANGUAGE internal VOLATILE AS 'pg_dist_wait_status' WITH (OID=6036, DESCRIPTION="waiting relation information");
+ CREATE FUNCTION gp_dist_wait_status(OUT segid int4, OUT waiter_dxid xid, OUT holder_dxid xid, OUT holdTillEndXact bool, OUT waiter_lpid int4, OUT holder_lpid int4, OUT waiter_lockmode text, OUT waiter_locktype text, OUT waiter_sessionid int4, OUT holder_sessionid int4) RETURNS SETOF pg_catalog.record LANGUAGE internal VOLATILE AS 'gp_dist_wait_status' WITH (OID=6036, DESCRIPTION="waiting relation information");
 
  CREATE FUNCTION pg_resqueue_status() RETURNS SETOF record LANGUAGE internal VOLATILE STRICT AS 'pg_resqueue_status' WITH (OID=6030, DESCRIPTION="Return resource queue information");
 

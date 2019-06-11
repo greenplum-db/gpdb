@@ -1590,7 +1590,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			for (i = 0; i < db_info->total_segment_dbs && !found_match; i++)
 			{
 				CdbComponentDatabaseInfo *p = &db_info->segment_db_info[i];
-				int segind = p->segindex;
+				int segind = p->config->segindex;
 
 				/*
 				 * Assign mapping of external file to this segdb only if:
@@ -1607,7 +1607,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 				{
 					if (uri->protocol == URI_FILE)
 					{
-						if (pg_strcasecmp(uri->hostname, p->hostname) != 0 && pg_strcasecmp(uri->hostname, p->address) != 0)
+						if (pg_strcasecmp(uri->hostname, p->config->hostname) != 0 && pg_strcasecmp(uri->hostname, p->config->address) != 0)
 							continue;
 					}
 
@@ -1801,7 +1801,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 				for (i = 0; i < db_info->total_segment_dbs && !found_match; i++)
 				{
 					CdbComponentDatabaseInfo *p = &db_info->segment_db_info[i];
-					int			segind = p->segindex;
+					int			segind = p->config->segindex;
 
 					/*
 					 * Assign mapping of external file to this segdb only if:
@@ -1890,7 +1890,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			for (i = 0; i < db_info->total_segment_dbs; i++)
 			{
 				CdbComponentDatabaseInfo *p = &db_info->segment_db_info[i];
-				int			segind = p->segindex;
+				int			segind = p->config->segindex;
 
 				if (SEGMENT_IS_ACTIVE_PRIMARY(p))
 					segdb_file_map[segind] = pstrdup(prefixed_command);
@@ -1907,7 +1907,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			for (i = 0; i < db_info->total_segment_dbs; i++)
 			{
 				CdbComponentDatabaseInfo *p = &db_info->segment_db_info[i];
-				int			segind = p->segindex;
+				int			segind = p->config->segindex;
 
 				if (SEGMENT_IS_ACTIVE_PRIMARY(p))
 				{
@@ -1917,7 +1917,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 					{
 						const char *hostname = strVal(lfirst(lc));
 
-						if (pg_strcasecmp(hostname, p->hostname) == 0)
+						if (pg_strcasecmp(hostname, p->config->hostname) == 0)
 						{
 							host_taken = true;
 							break;
@@ -1933,7 +1933,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 					{
 						segdb_file_map[segind] = pstrdup(prefixed_command);
 						visited_hosts = lappend(visited_hosts,
-										   makeString(pstrdup(p->hostname)));
+										   makeString(pstrdup(p->config->hostname)));
 					}
 				}
 			}
@@ -1947,10 +1947,10 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			for (i = 0; i < db_info->total_segment_dbs; i++)
 			{
 				CdbComponentDatabaseInfo *p = &db_info->segment_db_info[i];
-				int			segind = p->segindex;
+				int			segind = p->config->segindex;
 
 				if (SEGMENT_IS_ACTIVE_PRIMARY(p) &&
-					pg_strcasecmp(hostname, p->hostname) == 0)
+					pg_strcasecmp(hostname, p->config->hostname) == 0)
 				{
 					segdb_file_map[segind] = pstrdup(prefixed_command);
 					match_found = true;
@@ -1974,7 +1974,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			for (i = 0; i < db_info->total_segment_dbs; i++)
 			{
 				CdbComponentDatabaseInfo *p = &db_info->segment_db_info[i];
-				int			segind = p->segindex;
+				int			segind = p->config->segindex;
 
 				if (SEGMENT_IS_ACTIVE_PRIMARY(p) && segind == target_segid)
 				{
@@ -2009,7 +2009,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			for (i = 0; i < db_info->total_segment_dbs; i++)
 			{
 				CdbComponentDatabaseInfo *p = &db_info->segment_db_info[i];
-				int			segind = p->segindex;
+				int			segind = p->config->segindex;
 
 				if (SEGMENT_IS_ACTIVE_PRIMARY(p))
 				{

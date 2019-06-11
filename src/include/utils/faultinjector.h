@@ -20,15 +20,8 @@
 #define Natts_fault_message_response 1
 #define Anum_fault_message_response_status 0
 
-/*
- *
- */
-typedef enum FaultInjectorIdentifier_e {
-#define FI_IDENT(id, str) id,
-#include "utils/faultinjector_lists.h"
-#undef FI_IDENT
-	FaultInjectorIdMax
-} FaultInjectorIdentifier_e;
+/* Fault name that matches all faults */
+#define FaultInjectorNameAll "all"
 
 typedef enum FaultInjectorType_e {
 #define FI_TYPE(id, str) id,
@@ -65,8 +58,6 @@ typedef struct FaultInjectorEntry_s {
 	
 	char						faultName[FAULT_NAME_MAX_LENGTH];
 
-	FaultInjectorIdentifier_e	faultInjectorIdentifier;
-	
 	FaultInjectorType_e		faultInjectorType;
 	
 	int						extraArg;
@@ -89,37 +80,15 @@ typedef struct FaultInjectorEntry_s {
 } FaultInjectorEntry_s;
 
 
-extern FaultInjectorType_e	FaultInjectorTypeStringToEnum(
-									char*		faultTypeString);
-
-extern	FaultInjectorIdentifier_e FaultInjectorIdentifierStringToEnum(
-									char*			faultName);
-
-extern DDLStatement_e FaultInjectorDDLStringToEnum(
-									char*	ddlString);
-
 extern Size FaultInjector_ShmemSize(void);
 
 extern void FaultInjector_ShmemInit(void);
 
-extern FaultInjectorType_e FaultInjector_InjectFaultNameIfSet(
+extern FaultInjectorType_e FaultInjector_InjectFaultIfSet(
 							   const char*				 faultName,
 							   DDLStatement_e			 ddlStatement,
 							   const char*				 databaseName,
 							   const char*				 tableName);
-
-extern FaultInjectorType_e FaultInjector_InjectFaultIfSet(
-							   FaultInjectorIdentifier_e identifier,
-							   DDLStatement_e			 ddlStatement,
-							   const char*				 databaseName,
-							   const char*				 tableName);
-
-extern int FaultInjector_SetFaultInjection(
-							FaultInjectorEntry_s	*entry);
-
-
-extern bool FaultInjector_IsFaultInjected(
-							char* faultName);
 
 extern char *InjectFault(
 	char *faultName, char *type, char *ddlStatement, char *databaseName,
@@ -130,15 +99,11 @@ extern void HandleFaultMessage(const char* msg);
 #ifdef FAULT_INJECTOR
 extern bool am_faulthandler;
 #define IsFaultHandler am_faulthandler
-#define SIMPLE_FAULT_INJECTOR(FaultIdentifier) \
-	FaultInjector_InjectFaultIfSet(FaultIdentifier, DDLNotSpecified, "", "")
-#define SIMPLE_FAULT_NAME_INJECTOR(FaultName) \
-	FaultInjector_InjectFaultNameIfSet(FaultName, DDLNotSpecified, "", "")
+#define SIMPLE_FAULT_INJECTOR(FaultName) \
+	FaultInjector_InjectFaultIfSet(FaultName, DDLNotSpecified, "", "")
 #else
 #define IsFaultHandler false
-#define SIMPLE_FAULT_INJECTOR(FaultIdentifier)
-#define SIMPLE_FAULT_NAME_INJECTOR(FaultName)
+#define SIMPLE_FAULT_INJECTOR(FaultName)
 #endif
 
 #endif	/* FAULTINJECTOR_H */
-

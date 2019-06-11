@@ -13,7 +13,7 @@ CREATE
 CREATE OR REPLACE FUNCTION hold_memory_by_percent(float) RETURNS int AS $$ SELECT * FROM resGroupPalloc($1) $$ LANGUAGE sql;
 CREATE
 
-CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, proposed_memory_limit, memory_shared_quota, proposed_memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test' ORDER BY groupid;
+CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test' ORDER BY groupid;
 CREATE
 
 CREATE OR REPLACE VIEW memory_result AS SELECT rsgname, memory_usage from gp_toolkit.gp_resgroup_status;
@@ -921,4 +921,3 @@ DROP RESOURCE GROUP rg1_memory_test;
 DROP
 DROP RESOURCE GROUP rg2_memory_test;
 DROP
-

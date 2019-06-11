@@ -620,7 +620,7 @@ ReadCommand(StringInfo inBuf)
 {
 	int			result;
 
-	SIMPLE_FAULT_INJECTOR(BeforeReadCommand);
+	SIMPLE_FAULT_INJECTOR("before_read_command");
 
 	if (whereToSendOutput == DestRemote)
 		result = SocketBackend(inBuf);
@@ -4885,7 +4885,7 @@ PostgresMain(int argc, char *argv[],
 	if (!(am_ftshandler || IsFaultHandler) && Gp_role == GP_ROLE_EXECUTE)
 	{
 #ifdef FAULT_INJECTOR
-		if (SIMPLE_FAULT_INJECTOR(SendQEDetailsInitBackend) != FaultInjectorTypeSkip)
+		if (SIMPLE_FAULT_INJECTOR("send_qe_details_init_backend") != FaultInjectorTypeSkip)
 #endif
 			sendQEDetails();
 	}

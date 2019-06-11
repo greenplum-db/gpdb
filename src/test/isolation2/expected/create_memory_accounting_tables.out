@@ -175,10 +175,10 @@ INSERT INTO orders VALUES (39,818,'O',326565.37,'1996-09-20','3-MEDIUM','Clerk#0
 INSERT 1
 INSERT INTO orders VALUES (64,322,'F',35831.73,'1994-07-16','3-MEDIUM','Clerk#000000661',0,'wake fluffily. sometimes ironic pinto beans about the dolphin');
 INSERT 1
-INSERT INTO orders VALUES (65,163,'P',95469.44,'1995-03-18','1-URGENT','Clerk#000000632',0,'ular requests are blithely pending orbits-- even requests against the deposit'); INSERT INTO orders VALUES (66,1292,'F',104190.66,'1994-01-20','5-LOW','Clerk#000000743',0,'y pending requests integrate');
-ERROR:  syntax error at or near "F"
-LINE 1: ...nding orbits  INSERT INTO orders VALUES (66,1292,'F',104190....
-                                                             ^
+INSERT INTO orders VALUES (65,163,'P',95469.44,'1995-03-18','1-URGENT','Clerk#000000632',0,'ular requests are blithely pending orbits-- even requests against the deposit');
+INSERT 1
+INSERT INTO orders VALUES (66,1292,'F',104190.66,'1994-01-20','5-LOW','Clerk#000000743',0,'y pending requests integrate');
+INSERT 1
 INSERT INTO orders VALUES (67,568,'O',182481.16,'1996-12-19','4-NOT SPECIFIED','Clerk#000000547',0,'symptotes haggle slyly around the furiously iron');
 INSERT 1
 INSERT INTO orders VALUES (68,286,'O',301968.79,'1998-04-18','3-MEDIUM','Clerk#000000440',0,'pinto beans sleep carefully. blithely ironic deposits haggle furiously acro');
@@ -263,10 +263,10 @@ INSERT INTO customer VALUES (18,'Customer#000000018','3txGO AiuFux3zT0Z9NYaFRnZt
 INSERT 1
 INSERT INTO customer VALUES (19,'Customer#000000019','uc,3bHIx84H,wdrmLOjVsiqXCq2tr',18,'28-396-526-5053',8914.71,'HOUSEHOLD','nag. furiously careful packages are slyly at the accounts. furiously regular in');
 INSERT 1
-INSERT INTO customer VALUES (20,'Customer#000000020','JrPk8Pqplj4Ne',22,'32-957-234-8742',7603.40,'FURNITURE','g alongside of the special excuses-- fluffily enticing packages wake'); INSERT INTO customer VALUES (21,'Customer#000000021','XYmVpr9yAHDEn',8,'18-902-614-8344',1428.25,'MACHINERY','quickly final accounts integrate blithely furiously u');
-ERROR:  syntax error at or near "Customer"
-LINE 1: ...special excuses  INSERT INTO customer VALUES (21,'Customer#0...
-                                                             ^
+INSERT INTO customer VALUES (20,'Customer#000000020','JrPk8Pqplj4Ne',22,'32-957-234-8742',7603.40,'FURNITURE','g alongside of the special excuses-- fluffily enticing packages wake');
+INSERT 1
+INSERT INTO customer VALUES (21,'Customer#000000021','XYmVpr9yAHDEn',8,'18-902-614-8344',1428.25,'MACHINERY','quickly final accounts integrate blithely furiously u');
+INSERT 1
 INSERT INTO customer VALUES (22,'Customer#000000022','QI6p41,FNs5k7RZoCCVPUTkUdYpB',3,'13-806-545-9701',591.98,'MACHINERY','s nod furiously above the furiously ironic ideas.');
 INSERT 1
 INSERT INTO customer VALUES (23,'Customer#000000023','OdY W13N7Be3OC5MpgfmcYss0Wn6TKT',3,'13-312-472-8245',3332.02,'HOUSEHOLD','deposits. special deposits cajole slyly. fluffily special deposits about the furiously');
@@ -387,10 +387,10 @@ INSERT INTO partsupp VALUES (4,5,1339,113.97,'carefully unusual ideas. packages 
 INSERT 1
 INSERT INTO partsupp VALUES (4,30,6377,591.18,'ly final courts haggle carefully regular accounts. carefully regular accounts could integrate slyly. slyly express packages about the accounts wake slyly');
 INSERT 1
-INSERT INTO partsupp VALUES (4,55,2694,51.37,'g, regular deposits: quick instructions run across the carefully ironic theodolites-- final dependencies haggle into the dependencies. f'); INSERT INTO partsupp VALUES (4,80,2480,444.37,'requests sleep quickly regular accounts. theodolites detect. carefully final depths w');
-ERROR:  syntax error at or near "requests"
-LINE 1: ...s  INSERT INTO partsupp VALUES (4,80,2480,444.37,'requests s...
-                                                             ^
+INSERT INTO partsupp VALUES (4,55,2694,51.37,'g, regular deposits: quick instructions run across the carefully ironic theodolites-- final dependencies haggle into the dependencies. f');
+INSERT 1
+INSERT INTO partsupp VALUES (4,80,2480,444.37,'requests sleep quickly regular accounts. theodolites detect. carefully final depths w');
+INSERT 1
 INSERT INTO partsupp VALUES (5,6,3735,255.88,'arefully even requests. ironic requests cajole carefully even dolphin');
 INSERT 1
 INSERT INTO partsupp VALUES (5,31,9653,50.52,'y stealthy deposits. furiously final pinto beans wake furiou');
@@ -405,9 +405,9 @@ INSERT INTO partsupp VALUES (6,32,1627,424.25,'quick packages. ironic deposits p
 INSERT 1
 INSERT INTO partsupp VALUES (6,57,3336,642.13,'final instructions. courts wake packages. blithely unusual realms along the multipliers nag');
 INSERT 1
-INSERT INTO partsupp VALUES (6,82,6451,175.32,'accounts alongside of the slyly even accounts wake carefully final instructions-- ruthless platelets wake carefully ideas. even deposits are quickly final,'); INSERT INTO partsupp VALUES (7,8,7454,763.98,'y express tithes haggle furiously even foxes. furiously ironic deposits sleep toward the furiously unusual');
-ERROR:  syntax error at or near "y"
-LINE 1: ...ns  INSERT INTO partsupp VALUES (7,8,7454,763.98,'y express ...
-                                                             ^
+INSERT INTO partsupp VALUES (6,82,6451,175.32,'accounts alongside of the slyly even accounts wake carefully final instructions-- ruthless platelets wake carefully ideas. even deposits are quickly final,');
+INSERT 1
+INSERT INTO partsupp VALUES (7,8,7454,763.98,'y express tithes haggle furiously even foxes. furiously ironic deposits sleep toward the furiously unusual');
+INSERT 1
 INSERT INTO partsupp VALUES (7,33,2770,149.66,'hould have to nag after the blithely final asymptotes. fluffily spe');
 INSERT 1

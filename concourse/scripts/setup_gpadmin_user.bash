@@ -69,11 +69,6 @@ create_gpadmin_if_not_existing() {
 setup_gpadmin_user() {
   groupadd supergroup
   case "$TEST_OS" in
-    sles)
-      groupadd gpadmin
-      user_add_cmd="/usr/sbin/useradd -G gpadmin,supergroup,tty gpadmin"
-      create_gpadmin_if_not_existing ${user_add_cmd}
-      ;;
     centos)
       user_add_cmd="/usr/sbin/useradd -G supergroup,tty gpadmin"
       create_gpadmin_if_not_existing ${user_add_cmd}
@@ -124,11 +119,7 @@ determine_os() {
     echo "centos"
     return
   fi
-  if [ -f /etc/os-release ] && grep -q '^NAME=.*SLES' /etc/os-release ; then
-    echo "sles"
-    return
-  fi
-  if lsb_release -a | grep -q 'Ubuntu' ; then
+  if grep -q ID=ubuntu /etc/os-release ; then
     echo "ubuntu"
     return
   fi

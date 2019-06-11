@@ -1031,7 +1031,7 @@ XLogWalRcvFlush(bool dying)
 	{
 #ifdef FAULT_INJECTOR
 		/* Simulate the case that the standby / mirror is lagging behind. */
-		if (SIMPLE_FAULT_INJECTOR(WalRecvSkipFlush) == FaultInjectorTypeSkip)
+		if (SIMPLE_FAULT_INJECTOR("walrecv_skip_flush") == FaultInjectorTypeSkip)
 			return;
 #endif
 

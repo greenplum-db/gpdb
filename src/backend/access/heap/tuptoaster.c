@@ -1759,7 +1759,7 @@ toast_save_datum(Relation rel, Datum value,
 	 * modified (here, we decrease it by one). The result must still fit into
 	 * TOAST_MAX_CHUNK_SIZE so that it doesn't overflow our chunk_data struct.
 	 */
-	if (FaultInjector_InjectFaultIfSet(DecreaseToastMaxChunkSize,
+	if (FaultInjector_InjectFaultIfSet("decrease_toast_max_chunk_size",
 									   DDLNotSpecified,
 									   "", /* databaseName */
 									   ""  /* tableName */) != FaultInjectorTypeNotSpecified)

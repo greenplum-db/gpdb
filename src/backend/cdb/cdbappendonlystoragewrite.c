@@ -1173,7 +1173,7 @@ AppendOnlyStorageWrite_CompressAppend(AppendOnlyStorageWrite *storageWrite,
 #ifdef FAULT_INJECTOR
 	/* Simulate that compression is not possible if the fault is set. */
 	if (FaultInjector_InjectFaultIfSet(
-			AppendOnlySkipCompression,
+			"appendonly_skip_compression",
 			DDLNotSpecified,
 			"",
 			storageWrite->relationName) == FaultInjectorTypeSkip)

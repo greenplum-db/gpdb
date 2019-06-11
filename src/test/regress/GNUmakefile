@@ -170,7 +170,8 @@ tablespace-setup:
 	./testtablespace_existing_version_dir/6/GPDB_99_399999991/ \
 	./testtablespace_existing_version_dir/7/GPDB_99_399999991/ \
 	./testtablespace_existing_version_dir/8/GPDB_99_399999991/ \
-        ./testtablespace_1111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000/
+        ./testtablespace_1111111111222222222233333333334444444444555555555566666666667777777777888888888899999999990000000000/ \
+	./testtablespace_default_tablespace
 
 # Check for include files that are not being shipped
 .PHONY: includecheck
@@ -256,8 +257,7 @@ clean distclean maintainer-clean: clean-lib
 	rm -f pg_regress_main.o pg_regress.o pg_regress$(X)
 # things created by various check targets
 	rm -f $(output_files) $(input_files)
-	rm -rf testtablespace
-	rm -rf testtablespace_otherloc
+	rm -rf ./testtablespace ./testtablespace_*
 	rm -rf $(pg_regress_clean_files)
 	rm -f data/pg_class32.data
 	rm -f gmon.out

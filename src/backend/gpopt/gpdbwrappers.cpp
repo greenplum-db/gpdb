@@ -3000,17 +3000,12 @@ gpdb::RunStaticPartitionSelection
 FaultInjectorType_e
 gpdb::InjectFaultInOptTasks
 	(
-	FaultInjectorIdentifier_e identifier
+	const char *fault_name
 	)
 {
-	/*
-	 * To activate this fault injection point, use gp_inject_fault
-	 * extension with opt_task_allocate_string_buffer as the fault
-	 * name.
-	 */
 	GP_WRAP_START;
 	{
-		return FaultInjector_InjectFaultIfSet(identifier, DDLNotSpecified, "", "");
+		return FaultInjector_InjectFaultIfSet(fault_name, DDLNotSpecified, "", "");
 	}
 	GP_WRAP_END;
 	return FaultInjectorTypeNotSpecified;

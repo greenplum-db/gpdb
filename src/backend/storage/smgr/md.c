@@ -1150,7 +1150,7 @@ mdsync(void)
 				int			failures;
 
 #ifdef FAULT_INJECTOR
-		if (SIMPLE_FAULT_INJECTOR(FsyncCounter) == FaultInjectorTypeSkip)
+		if (SIMPLE_FAULT_INJECTOR("fsync_counter") == FaultInjectorTypeSkip)
 		{
 			if (MyAuxProcType == CheckpointerProcess)
 				elog(LOG, "checkpoint performing fsync for %d/%d/%d",
