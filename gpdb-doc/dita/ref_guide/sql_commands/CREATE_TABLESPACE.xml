@@ -49,8 +49,8 @@
             empty and must be owned by the Greenplum Database system user. The directory must be
             specified by an absolute path name of no more than 100 characters. (The location is used
             to create a symlink target in the <filepath>pg_tblspc</filepath> directory, and symlink
-            targets are truncated to 100 characters when sending to TAR utilities such as
-              <codeph>pg_basebackup</codeph>.)</pd>
+            targets are truncated to 100 characters when sending to <codeph>tar</codeph> from
+            utilities such as <codeph>pg_basebackup</codeph>.)</pd>
           <pd>For each segment instance, you can specify a different directory for the tablespace in
             the <codeph>WITH</codeph> clause.</pd>
         </plentry>
@@ -64,7 +64,8 @@
           <pd>If a segment instance is not listed in the <codeph>WITH</codeph> clause, Greenplum
             Database uses the directory specified in the <codeph>LOCATION</codeph> clause.</pd>
           <pd>When registering a tablepace, the directories should be empty and must be owned by the
-            Greenplum Database system user.</pd>
+            Greenplum Database system user. Each directory must be specified by an absolute path
+            name of no more than 100 characters.</pd>
         </plentry>
       </parml>
     </section>
