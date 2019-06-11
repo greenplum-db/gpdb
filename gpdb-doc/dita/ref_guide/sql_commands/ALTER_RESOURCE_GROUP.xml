@@ -71,7 +71,7 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
             this resource group. The minimum memory percentage for a resource group is 0.
             The maximum is 100. The default value is 0.</pd>
           <pd>When <codeph>MEMORY_LIMIT</codeph> is 0, Greenplum Database reserves no
-            memory for the resource group, and uses global shared memory to fulfill all
+            memory for the resource group, but uses global shared memory to fulfill all
             memory requests in the group. If <codeph>MEMORY_LIMIT</codeph> is 0,
             <codeph>MEMORY_SPILL_RATIO</codeph> must also be 0.</pd>
           <pd>The sum of the
