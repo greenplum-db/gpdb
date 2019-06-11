@@ -76,7 +76,9 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
             <codeph>MEMORY_SPILL_RATIO</codeph> must also be 0.</pd>
           <pd>The sum of the
             <codeph>MEMORY_LIMIT</codeph>s of all resource groups defined in the
-            Greenplum Database cluster must not exceed 100.</pd>
+            Greenplum Database cluster must not exceed 100. If this sum is less
+            than 100, Greenplum Database allocates any unreserved memory to a resource
+            group global shared memory pool.</pd>
         </plentry>
         <plentry>
           <pt>MEMORY_SHARED_QUOTA <varname>integer</varname></pt>

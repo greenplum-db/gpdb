@@ -74,10 +74,13 @@
             <b>memory_spill_ratio</b>
           </p>
           <p>Set <codeph>memory_spill_ratio</codeph> to increase or decrease the amount
-            of query operator memory Greenplum Database allots to a query. When you set
-            <codeph>memory_spill_ratio</codeph> to 0, Greenplum Database uses the
-            <codeph>statement_mem</codeph> setting to determine the initial query operator
-            memory amount.</p>
+            of query operator memory Greenplum Database allots to a query. When <codeph>memory_spill_ratio</codeph>
+            is larger than 0, it represents the percentage of resource group memory to
+            allot to query operators. If concurrency is high, this memory amount may be small
+            even when <codeph>memory_spill_ratio</codeph> is set to the max value of 100.
+            When you set <codeph>memory_spill_ratio</codeph> to 0, Greenplum Database uses
+            the <codeph>statement_mem</codeph> setting to determine the initial amount of
+            query operator memory to allot.</p>
         </li>
         <li>
           <b>statement_mem</b>
