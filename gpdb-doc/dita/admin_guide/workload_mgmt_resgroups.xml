@@ -477,7 +477,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
            is 0.</p>
           <p>When <codeph>MEMORY_SPILL_RATIO</codeph> is 0, Greenplum Database uses the
             <xref href="../ref_guide/config_params/guc-list.xml#statement_mem" format="dita"><codeph>statement_mem</codeph></xref>
-            server configuration parameter value to control operator memory.</p>
+            server configuration parameter value to control initial query operator memory.</p>
           <note>When you set <codeph>MEMORY_LIMIT</codeph> to 0,
             <codeph>MEMORY_SPILL_RATIO</codeph> must also be set to 0.</note>
           <p>You can selectively set the <codeph>MEMORY_SPILL_RATIO</codeph> on a per-query basis
