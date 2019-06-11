@@ -65,7 +65,22 @@ obj_get_path(xl_mm_fs_obj *xlrec)
 
 	if (xlrec->u.dbid.master == GpIdentity.dbid)
 		path = xlrec->master_path;
-	else if (xlrec->u.dbid.mirror == GpIdentity.dbid)
+	else if (xlrec->u.dbid.mirror == GpIdentity.dbid ||
+			/* It's possible that standby is being removed so mirror dbid could
+			 * be InvalidDbid. For example, create tables in loop and then run
+			 * gpinitstandby -ra  to remove the stanby. For this case, we need
+			 * to gracefully handle, else obj_get_path() returns NULL then standby
+			 * startup process will fail, and then standby postgres will quit
+			 * after at least gp_debug_linger seconds - this makes gpinitstandby
+			 * quit after time than expected or even fail with timeout if
+			 * gp_debug_linger is configured (Note gp_debug_linger is configured
+			 * with 120 seconds if cassert is enabled). For normal release which
+			 * has gp_debug_linger set as 0, user won't feel anything when
+			 * running 'gpinitstandby -ra' since even startup process reports
+			 * failure but it quits soon and the standby is removed soon also so
+			 * the failure is meaningless.
+			 */
+			 xlrec->u.dbid.mirror == InvalidDbid)
 		path = xlrec->mirror_path;
 	else
 	{
@@ -152,7 +167,7 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		 */
 		elog(ERROR, "The object's path can not be constructed based on the xlog record. "
 				        "The dbid in the xlog record, master %u and mirror %u, does no match the current dbid %u.",
-				 GpIdentity.dbid, xlrec->u.dbid.master, xlrec->u.dbid.mirror);
+				 xlrec->u.dbid.master, xlrec->u.dbid.mirror, GpIdentity.dbid);
 	}
 
 	bool found;
@@ -487,7 +502,7 @@ mmxlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 		 */
 		elog(ERROR, "The object's path can not be constructed based on the xlog record. "
 				        "The dbid in the xlog record, master %u and mirror %u, does no match the current dbid %u.",
-				 GpIdentity.dbid, xlrec->u.dbid.master, xlrec->u.dbid.mirror);
+				 xlrec->u.dbid.master, xlrec->u.dbid.mirror, GpIdentity.dbid);
 	}
 
 	if (info == MMXLOG_CREATE_DIR)
