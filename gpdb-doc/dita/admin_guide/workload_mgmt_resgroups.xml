@@ -496,6 +496,31 @@ SET statement_mem='10 MB';</codeblock></p>
         </body>
       </topic>
     </topic>
+    <topic id="topic833fvs" xml:lang="en">
+      <title>About Reserving Resource Group Memory vs. Using Resource Group Global Shared Memory</title>
+      <body>
+        <p>When you do not reserve memory for a resource group (<codeph>MEMORY_LIMIT</codeph>
+          and <codeph>MEMORY_SPILL_RATIO</codeph> are set to 0):</p><ul>
+          <li>It increases the size of the resource group global shared memory pool.</li>
+          <li>The resource group functions similarly to a resource queue, using the
+            <xref href="../ref_guide/config_params/guc-list.xml#statement_mem" format="dita"><codeph>statement_mem</codeph></xref>
+            server configuration parameter value to control initial query operator memory.</li>
+          <li>Any query submitted in the resource group competes for resource group global
+            shared memory on a first-come, first-served basis with queries running in other
+            groups.</li>
+          <li>There is no guarantee that Greenplum Database will be able to allocate memory
+            for a query running in the resource group. The risk of a query in the group
+            encountering an out of memory (OOM) condition increases when there are many
+            concurrent queries consuming memory from the resource group global shared
+            memory pool at the same time.</li>
+        </ul>
+        <p>To reduce the risk of OOM for a query running in an important resource group,
+          consider reserving some fixed memory for the group. While reserving fixed memory
+          for a group reduces the size of the resource group global shared memory pool,
+          this may be a fair tradeoff to reduce the risk of encountering an OOM condition
+          in a query running in a critical resource group.</p>
+      </body>
+    </topic>
     <topic id="topic833cons" xml:lang="en">
       <title>Other Memory Considerations</title>
       <body>
