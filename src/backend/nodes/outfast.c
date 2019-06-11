@@ -351,6 +351,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_INT8_FIELD(metricsQueryType);
+	WRITE_NODE_FIELD(copyIntoClause);
 }
 
 static void
@@ -1392,6 +1393,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_IntoClause:
 				_outIntoClause(str, obj);
+				break;
+			case T_CopyIntoClause:
+				_outCopyIntoClause(str, obj);
 				break;
 			case T_Var:
 				_outVar(str, obj);

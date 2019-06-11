@@ -395,7 +395,8 @@ ChoosePortalStrategy(List *stmts)
 			{
 				if (query->commandType == CMD_SELECT &&
 					query->utilityStmt == NULL &&
-					query->intoClause == NULL)
+					query->intoClause == NULL &&
+					!query->isCopy)
 					return PORTAL_ONE_SELECT;
 				if (query->commandType == CMD_UTILITY &&
 					query->utilityStmt != NULL)
@@ -415,7 +416,8 @@ ChoosePortalStrategy(List *stmts)
 			{
 				if (pstmt->commandType == CMD_SELECT &&
 					pstmt->utilityStmt == NULL &&
-					pstmt->intoClause == NULL)
+					pstmt->intoClause == NULL &&
+					pstmt->copyIntoClause == NULL)
 					return PORTAL_ONE_SELECT;
 			}
 		}
@@ -520,7 +522,8 @@ FetchStatementTargetList(Node *stmt)
 		{
 			if (query->commandType == CMD_SELECT &&
 				query->utilityStmt == NULL &&
-				query->intoClause == NULL)
+				query->intoClause == NULL &&
+				!query->isCopy)
 				return query->targetList;
 			if (query->returningList)
 				return query->returningList;
@@ -533,7 +536,8 @@ FetchStatementTargetList(Node *stmt)
 
 		if (pstmt->commandType == CMD_SELECT &&
 			pstmt->utilityStmt == NULL &&
-			pstmt->intoClause == NULL)
+			pstmt->intoClause == NULL &&
+			pstmt->copyIntoClause == NULL)
 			return pstmt->planTree->targetlist;
 		if (pstmt->returningLists)
 			return (List *) linitial(pstmt->returningLists);

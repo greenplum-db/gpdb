@@ -175,8 +175,13 @@ typedef struct Query
 	 * policy for SELECT ... INTO and set operations.
 	 */
 	struct GpPolicy *intoPolicy;
-} Query;
 
+	/*
+	 * GPDB: Used to indicate this query is COPY so that its plan
+	 * would always be dispatched in parallel.
+	 */
+	bool isCopy;
+} Query;
 
 /****************************************************************************
  *	Supporting data structures for Parse Trees

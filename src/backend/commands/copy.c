@@ -65,13 +65,6 @@ extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
 extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
 extern char *make_command(const char *cmd, extvar_t *ev);
 
-/* DestReceiver for COPY (SELECT) TO */
-typedef struct
-{
-	DestReceiver pub;			/* publicly-known function pointers */
-	CopyState	cstate;			/* CopyStateData for the command */
-} DR_copy;
-
 static const char BinarySignature[11] = "PGCOPY\n\377\r\n\0";
 
 
@@ -82,6 +75,8 @@ static void CopyTo(CopyState cstate);
 extern void CopyFromDispatch(CopyState cstate);
 static void CopyFrom(CopyState cstate);
 static void CopyFromProcessDataFileHeader(CopyState cstate, CdbCopy *cdbCopy, bool *pfile_has_oids);
+static uint64 CopyToQueryOnSegment(CopyState cstate);
+static void MangleCopyFileName(CopyState cstate);
 static char *CopyReadOidAttr(CopyState cstate, bool *isnull);
 static void CopyAttributeOutText(CopyState cstate, char *string);
 static void CopyAttributeOutCSV(CopyState cstate, char *string,
@@ -93,6 +88,7 @@ static Datum CopyReadBinaryAttribute(CopyState cstate,
 									 int column_no, FmgrInfo *flinfo,
 									 Oid typioparam, int32 typmod,
 									 bool *isnull, bool skip_parsing);
+static void ProcessCopyOptions(CopyState cstate, List *options);
 
 /* Low-level communications functions */
 static void SendCopyBegin(CopyState cstate);
@@ -151,6 +147,7 @@ static unsigned int
 GetTargetSeg(GpDistributionData *distData, Datum *baseValues, bool *baseNulls);
 static ProgramPipes *open_program_pipes(char *command, bool forwrite);
 static void close_program_pipes(CopyState cstate, bool ifThrow);
+CopyIntoClause* MakeCopyIntoClause(const CopyStmt *stmt);
 
 /* ==========================================================================
  * The following macros aid in major refactoring of data processing code (in
@@ -1066,60 +1063,30 @@ void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
 
 
 /*
- *	 DoCopy executes the SQL COPY statement
+ * Process the statement option list for COPY.
  *
- * Either unload or reload contents of table <relation>, depending on <from>.
- * (<from> = TRUE means we are inserting into the table.) In the "TO" case
- * we also support copying the output of an arbitrary SELECT query.
+ * Scan the options list (a list of DefElem) and transpose the information
+ * into cstate, applying appropriate error checking.
  *
- * If <pipe> is false, transfer is between the table and the file named
- * <filename>.	Otherwise, transfer is between the table and our regular
- * input/output stream. The latter could be either stdin/stdout or a
- * socket, depending on whether we're running under Postmaster control.
+ * cstate is assumed to be filled with zeroes initially.
  *
- * Iff <binary>, unload or reload in the binary format, as opposed to the
- * more wasteful but more robust and portable text format.
+ * This is exported so that external users of the COPY API can sanity-check
+ * a list of options.  In that usage, cstate should be passed as NULL
+ * (since external users don't know sizeof(CopyStateData)) and the collected
+ * data is just leaked until CurrentMemoryContext is reset.
  *
- * Iff <oids>, unload or reload the format that includes OID information.
- * On input, we accept OIDs whether or not the table has an OID column,
- * but silently drop them if it does not.  On output, we report an error
- * if the user asks for OIDs in a table that has none (not providing an
- * OID column might seem friendlier, but could seriously confuse programs).
- *
- * If in the text format, delimit columns with delimiter <delim> and print
- * NULL values as <null_print>.
- *
- * When loading in the text format from an input stream (as opposed to
- * a file), recognize a "\." on a line by itself as EOF. Also recognize
- * a stream EOF.  When unloading in the text format to an output stream,
- * write a "." on a line by itself at the end of the data.
- *
- * Do not allow a Postgres user without superuser privilege to read from
- * or write to a file.
- *
- * Do not allow the copy if user doesn't have proper permission to access
- * the table.
+ * Note that additional checking, such as whether column names listed in FORCE
+ * QUOTE actually exist, has to be applied later.  This just checks for
+ * self-consistency of the options list.
  */
-uint64
-DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
+static void
+ProcessCopyOptions(CopyState cstate,
+				   List *options) /* false means external table */
 {
-	bool		is_from = stmt->is_from;
-	bool		pipe = (stmt->filename == NULL || Gp_role == GP_ROLE_EXECUTE);
-	List	   *attnamelist = stmt->attlist;
-	List	   *force_quote = NIL;
-	List	   *force_notnull = NIL;
-	AclMode		required_access = (is_from ? ACL_INSERT : ACL_SELECT);
-	AclResult	aclresult;
 	ListCell   *option;
-	TupleDesc	tupDesc;
-	int			num_phys_attrs;
-	uint64		processed;
-	bool		qe_copy_from = (is_from && (Gp_role == GP_ROLE_EXECUTE));
-	/* save relationOid for auto-stats */
-	Oid			relationOid = InvalidOid;
 
 	/* Extract options from the statement node tree */
-	foreach(option, stmt->options)
+	foreach(option, options)
 	{
 		DefElem    *defel = (DefElem *) lfirst(option);
 
@@ -1198,19 +1165,19 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		}
 		else if (strcmp(defel->defname, "force_quote") == 0)
 		{
-			if (force_quote)
+			if (cstate->force_quote)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			force_quote = (List *) defel->arg;
+			cstate->force_quote = (List *) defel->arg;
 		}
 		else if (strcmp(defel->defname, "force_notnull") == 0)
 		{
-			if (force_notnull)
+			if (cstate->force_notnull)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
-			force_notnull = (List *) defel->arg;
+			cstate->force_notnull = (List *) defel->arg;
 		}
 		else if (strcmp(defel->defname, "fill_missing_fields") == 0)
 		{
@@ -1248,16 +1215,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("cannot specify DELIMITER in BINARY mode")));
-
-	if (stmt->is_program && stmt->filename == NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("STDIN/STDOUT not allowed with PROGRAM")));
-
-	if (cstate->on_segment && stmt->filename == NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("STDIN and STDOUT are not supported by 'COPY ON SEGMENT'")));
 
 	/*
 	 * In PostgreSQL, HEADER is not allowed in text mode either, but in GPDB,
@@ -1298,6 +1255,70 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 	if (!cstate->csv_mode && !cstate->escape)
 		cstate->escape = "\\";			/* default escape for text mode */
+}
+
+
+/*
+ *	 DoCopy executes the SQL COPY statement
+ *
+ * Either unload or reload contents of table <relation>, depending on <from>.
+ * (<from> = TRUE means we are inserting into the table.) In the "TO" case
+ * we also support copying the output of an arbitrary SELECT query.
+ *
+ * If <pipe> is false, transfer is between the table and the file named
+ * <filename>.	Otherwise, transfer is between the table and our regular
+ * input/output stream. The latter could be either stdin/stdout or a
+ * socket, depending on whether we're running under Postmaster control.
+ *
+ * Iff <binary>, unload or reload in the binary format, as opposed to the
+ * more wasteful but more robust and portable text format.
+ *
+ * Iff <oids>, unload or reload the format that includes OID information.
+ * On input, we accept OIDs whether or not the table has an OID column,
+ * but silently drop them if it does not.  On output, we report an error
+ * if the user asks for OIDs in a table that has none (not providing an
+ * OID column might seem friendlier, but could seriously confuse programs).
+ *
+ * If in the text format, delimit columns with delimiter <delim> and print
+ * NULL values as <null_print>.
+ *
+ * When loading in the text format from an input stream (as opposed to
+ * a file), recognize a "\." on a line by itself as EOF. Also recognize
+ * a stream EOF.  When unloading in the text format to an output stream,
+ * write a "." on a line by itself at the end of the data.
+ *
+ * Do not allow a Postgres user without superuser privilege to read from
+ * or write to a file.
+ *
+ * Do not allow the copy if user doesn't have proper permission to access
+ * the table.
+ */
+uint64
+DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
+{
+	bool		is_from = stmt->is_from;
+	bool		pipe = (stmt->filename == NULL || Gp_role == GP_ROLE_EXECUTE);
+	List	   *attnamelist = stmt->attlist;
+	AclMode		required_access = (is_from ? ACL_INSERT : ACL_SELECT);
+	AclResult	aclresult;
+	TupleDesc	tupDesc;
+	int			num_phys_attrs;
+	uint64		processed;
+	bool		qe_copy_from = (is_from && (Gp_role == GP_ROLE_EXECUTE));
+	/* save relationOid for auto-stats */
+	Oid			relationOid = InvalidOid;
+
+	ProcessCopyOptions(cstate, stmt->options);
+
+	if (stmt->is_program && stmt->filename == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+						errmsg("STDIN/STDOUT not allowed with PROGRAM")));
+
+	if (cstate->on_segment && stmt->filename == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+						errmsg("STDIN and STDOUT are not supported by 'COPY ON SEGMENT'")));
 
 	/*
 	 * Error handling setup
@@ -1356,8 +1377,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 						 cstate->null_print,
 						 cstate->quote,
 						 cstate->escape,
-						 force_quote,
-						 force_notnull,
+						 cstate->force_quote,
+						 cstate->force_notnull,
 						 cstate->header_line,
 						 cstate->fill_missing,
 						 cstate->eol_str,
@@ -1390,31 +1411,10 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	cstate->copy_dest = COPY_FILE;		/* default */
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		if (cstate->on_segment) /* Save data to a local file */
+		if (cstate->on_segment)
 		{
-			StringInfoData filepath;
-			initStringInfo(&filepath);
-			appendStringInfoString(&filepath, stmt->filename);
-
-			replaceStringInfoString(&filepath, "<SEG_DATA_DIR>", DataDir);
-
-			if (strstr(stmt->filename, "<SEGID>") == NULL)
-				ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("<SEGID> is required for file name")));
-
-			char segid_buf[8];
-			snprintf(segid_buf, 8, "%d", GpIdentity.segindex);
-			replaceStringInfoString(&filepath, "<SEGID>", segid_buf);
-
-			cstate->filename = filepath.data;
-			/* Rename filename if error log needed */
-			if (NULL != cstate->cdbsreh)
-			{
-				snprintf(cstate->cdbsreh->filename,
-						 sizeof(cstate->cdbsreh->filename), "%s",
-						 filepath.data);
-			}
+			cstate->filename = stmt->filename;
+			MangleCopyFileName(cstate);
 
 			pipe = false;
 		}
@@ -1580,6 +1580,11 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		Assert(query->commandType == CMD_SELECT);
 		Assert(query->utilityStmt == NULL);
 
+		if (cstate->on_segment && IsA(query, Query))
+		{
+			query->isCopy = true;
+		}
+
 		/* Query mustn't use INTO, either */
 		if (query->intoClause)
 			ereport(ERROR,
@@ -1607,6 +1612,9 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 											ActiveSnapshot, InvalidSnapshot,
 											dest, NULL,
 											GP_INSTRUMENT_OPTS);
+		if (cstate->on_segment)
+			cstate->queryDesc->plannedstmt->copyIntoClause =
+					MakeCopyIntoClause(stmt);
 
 		if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
 		{
@@ -1641,12 +1649,12 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 	/* Convert FORCE QUOTE name list to per-column flags, check validity */
 	cstate->force_quote_flags = (bool *) palloc0(num_phys_attrs * sizeof(bool));
-	if (force_quote)
+	if (cstate->force_quote)
 	{
 		List	   *attnums;
 		ListCell   *cur;
 
-		attnums = CopyGetAttnums(tupDesc, cstate->rel, force_quote);
+		attnums = CopyGetAttnums(tupDesc, cstate->rel, cstate->force_quote);
 
 		foreach(cur, attnums)
 		{
@@ -1663,12 +1671,12 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 	/* Convert FORCE NOT NULL name list to per-column flags, check validity */
 	cstate->force_notnull_flags = (bool *) palloc0(num_phys_attrs * sizeof(bool));
-	if (force_notnull)
+	if (cstate->force_notnull)
 	{
 		List	   *attnums;
 		ListCell   *cur;
 
-		attnums = CopyGetAttnums(tupDesc, cstate->rel, force_notnull);
+		attnums = CopyGetAttnums(tupDesc, cstate->rel, cstate->force_notnull);
 
 		foreach(cur, attnums)
 		{
@@ -1681,9 +1689,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 					   NameStr(tupDesc->attrs[attnum - 1]->attname))));
 			cstate->force_notnull_flags[attnum - 1] = true;
 		}
-
-		/* keep the raw version too, we will need it later */
-		cstate->force_notnull = force_notnull;
 	}
 
 	/* Set up variables to avoid per-attribute overhead. */
@@ -1912,7 +1917,10 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		}
 	}
 	else
-		DoCopyTo(cstate);		/* copy from database to file */
+		if(Gp_role == GP_ROLE_DISPATCH && cstate->on_segment && !cstate->rel)
+			CopyToQueryOnSegment(cstate);
+		else
+			DoCopyTo(cstate);		/* copy from database to file */
 
 	/*
 	 * Close the relation or query.  If reading, we can release the
@@ -1926,6 +1934,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	{
 		/* Close down the query and free resources. */
 		ExecutorEnd(cstate->queryDesc);
+		if (Gp_role == GP_ROLE_DISPATCH && cstate->on_segment && !cstate->rel)
+			cstate->processed = cstate->queryDesc->es_processed;
 		FreeQueryDesc(cstate->queryDesc);
 		cstate->queryDesc = NULL;
 	}
@@ -1934,7 +1944,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	if(cstate->cdbsreh)
 		destroyCdbSreh(cstate->cdbsreh);
 
-	/* Clean up storage (probably not really necessary) */
 	processed = cstate->processed;
 
     /* MPP-4407. Logging number of tuples copied */
@@ -6969,6 +6978,352 @@ CopyGetAttnums(TupleDesc tupDesc, Relation rel, List *attnamelist)
 	return attnums;
 }
 
+/*
+ * Modify the filename in cstate->filename, and cstate->cdbsreh if any,
+ * for COPY ON SEGMENT.
+ *
+ * Replaces the "<SEGID>" token in the filename with this segment's ID.
+ */
+static void
+MangleCopyFileName(CopyState cstate)
+{
+	char	   *filename = cstate->filename;
+	StringInfoData filepath;
+
+	initStringInfo(&filepath);
+	appendStringInfoString(&filepath, filename);
+
+	replaceStringInfoString(&filepath, "<SEG_DATA_DIR>", DataDir);
+
+	if (strstr(filename, "<SEGID>") == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						errmsg("<SEGID> is required for file name")));
+
+	char segid_buf[8];
+	snprintf(segid_buf, 8, "%d", GpIdentity.segindex);
+	replaceStringInfoString(&filepath, "<SEGID>", segid_buf);
+
+	cstate->filename = filepath.data;
+	/* Rename filename if error log needed */
+	if (NULL != cstate->cdbsreh)
+	{
+		snprintf(cstate->cdbsreh->filename,
+				 sizeof(cstate->cdbsreh->filename), "%s",
+				 filepath.data);
+	}
+}
+
+
+static CopyState
+BeginCopyOnSegment(bool is_from,
+				   Relation rel,
+				   Node *raw_query,
+				   const char *queryString,
+				   const Oid queryRelId,
+				   List *attnamelist,
+				   List *options,
+				   TupleDesc tupDesc)
+{
+	CopyState	cstate;
+	int			num_phys_attrs;
+	MemoryContext oldcontext;
+
+
+	/* Allocate workspace and zero all fields */
+	cstate = (CopyStateData *) palloc0(sizeof(CopyStateData));
+
+	/*
+	 * We allocate everything used by a cstate in a new memory context. This
+	 * avoids memory leaks during repeated use of COPY in a query.
+	 */
+	cstate->copycontext = AllocSetContextCreate(CurrentMemoryContext,
+												"COPY",
+												ALLOCSET_DEFAULT_MINSIZE,
+												ALLOCSET_DEFAULT_INITSIZE,
+												ALLOCSET_DEFAULT_MAXSIZE);
+
+	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
+
+	cstate->attnamelist = attnamelist;
+	/* Generate or convert list of attributes to process */
+	cstate->attnumlist = CopyGetAttnums(tupDesc, cstate->rel, attnamelist);
+
+	ProcessCopyOptions(cstate, options);
+
+	num_phys_attrs = tupDesc->natts;
+
+	/* Convert FORCE QUOTE name list to per-column flags, check validity */
+	cstate->force_quote_flags = (bool *) palloc0(num_phys_attrs * sizeof(bool));
+	if (cstate->force_quote)
+	{
+		List	   *attnums;
+		ListCell   *cur;
+
+		attnums = CopyGetAttnums(tupDesc, cstate->rel, cstate->force_quote);
+
+		foreach(cur, attnums)
+		{
+			int			attnum = lfirst_int(cur);
+
+			if (!list_member_int(cstate->attnumlist, attnum))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+								errmsg("FORCE QUOTE column \"%s\" not referenced by COPY",
+									   NameStr(tupDesc->attrs[attnum - 1]->attname))));
+			cstate->force_quote_flags[attnum - 1] = true;
+		}
+	}
+
+	/* Convert FORCE NOT NULL name list to per-column flags, check validity */
+	cstate->force_notnull_flags = (bool *) palloc0(num_phys_attrs * sizeof(bool));
+	if (cstate->force_notnull)
+	{
+		List	   *attnums;
+		ListCell   *cur;
+
+		attnums = CopyGetAttnums(tupDesc, cstate->rel, cstate->force_notnull);
+
+		foreach(cur, attnums)
+		{
+			int			attnum = lfirst_int(cur);
+
+			if (!list_member_int(cstate->attnumlist, attnum))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+								errmsg("FORCE NOT NULL column \"%s\" not referenced by COPY",
+									   NameStr(tupDesc->attrs[attnum - 1]->attname))));
+			cstate->force_notnull_flags[attnum - 1] = true;
+		}
+	}
+
+	cstate->copy_dest = COPY_FILE;		/* default */
+
+	MemoryContextSwitchTo(oldcontext);
+
+	return cstate;
+}
+
+CopyIntoClause*
+MakeCopyIntoClause(const CopyStmt *stmt)
+{
+	CopyIntoClause *copyIntoClause;
+	copyIntoClause = makeNode(CopyIntoClause);
+
+	copyIntoClause->is_program = stmt->is_program;
+	copyIntoClause->ao_segnos = stmt->ao_segnos;
+	copyIntoClause->filename = stmt->filename;
+	copyIntoClause->options = stmt->options;
+	copyIntoClause->attlist = stmt->attlist;
+
+	return copyIntoClause;
+}
+
+CopyState
+BeginCopyToOnSegment(QueryDesc *queryDesc)
+{
+	CopyState	cstate;
+	ListCell   *cur;
+	MemoryContext oldcontext;
+
+	TupleDesc	tupDesc;
+	int			num_phys_attrs;
+	Form_pg_attribute *attr;
+	char	   *filename;
+	CopyIntoClause *copyIntoClause;
+
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+
+	copyIntoClause = queryDesc->plannedstmt->copyIntoClause;
+	tupDesc = queryDesc->tupDesc;
+
+
+	cstate = BeginCopyOnSegment(false, NULL, NULL, NULL, InvalidOid,
+								copyIntoClause->attlist,copyIntoClause->options,
+								tupDesc);
+
+	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
+
+	cstate->null_print_client = cstate->null_print;		/* default */
+
+	/* We use fe_msgbuf as a per-row buffer regardless of copy_dest */
+	cstate->fe_msgbuf = makeStringInfo();
+
+	cstate->filename = pstrdup(copyIntoClause->filename);
+	cstate->is_program = copyIntoClause->is_program;
+
+	if (cstate->on_segment)
+		MangleCopyFileName(cstate);
+	filename = cstate->filename;
+
+	if (cstate->is_program)
+	{
+		cstate->program_pipes = open_program_pipes(cstate->filename, true);
+		cstate->copy_file = fdopen(cstate->program_pipes->pipes[0], PG_BINARY_W);
+
+		if (cstate->copy_file == NULL)
+			ereport(ERROR,
+					(errmsg("could not execute command \"%s\": %m",
+							cstate->filename)));
+	}
+	else
+	{
+		mode_t oumask; /* Pre-existing umask value */
+		struct stat st;
+
+		/*
+		 * Prevent write to relative path ... too easy to shoot oneself in
+		 * the foot by overwriting a database file ...
+		 */
+		if (!is_absolute_path(filename))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_NAME),
+							errmsg("relative path not allowed for COPY to file")));
+
+		oumask = umask(S_IWGRP | S_IWOTH);
+		cstate->copy_file = AllocateFile(filename, PG_BINARY_W);
+		umask(oumask);
+		if (cstate->copy_file == NULL)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+							errmsg("could not open file \"%s\" for writing: %m", filename)));
+
+		// Increase buffer size to improve performance  (cmcdevitt)
+		setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
+
+		fstat(fileno(cstate->copy_file), &st);
+		if (S_ISDIR(st.st_mode))
+			ereport(ERROR,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+							errmsg("\"%s\" is a directory", filename)));
+	}
+
+	attr = tupDesc->attrs;
+	num_phys_attrs = tupDesc->natts;
+	/* Get info about the columns we need to process. */
+	cstate->out_functions = (FmgrInfo *) palloc(num_phys_attrs * sizeof(FmgrInfo));
+	foreach(cur, cstate->attnumlist)
+	{
+		int			attnum = lfirst_int(cur);
+		Oid			out_func_oid;
+		bool		isvarlena;
+
+		if (cstate->binary)
+			getTypeBinaryOutputInfo(attr[attnum - 1]->atttypid,
+									&out_func_oid,
+									&isvarlena);
+		else
+			getTypeOutputInfo(attr[attnum - 1]->atttypid,
+							  &out_func_oid,
+							  &isvarlena);
+		fmgr_info(out_func_oid, &cstate->out_functions[attnum - 1]);
+	}
+
+	/*
+	 * Create a temporary memory context that we can reset once per row to
+	 * recover palloc'd memory.  This avoids any problems with leaks inside
+	 * datatype output routines, and should be faster than retail pfree's
+	 * anyway.  (We don't need a whole econtext as CopyFrom does.)
+	 */
+	cstate->rowcontext = AllocSetContextCreate(CurrentMemoryContext,
+											   "COPY TO",
+											   ALLOCSET_DEFAULT_MINSIZE,
+											   ALLOCSET_DEFAULT_INITSIZE,
+											   ALLOCSET_DEFAULT_MAXSIZE);
+
+	if (cstate->binary)
+	{
+		/* Generate header for a binary copy */
+		int32		tmp;
+
+		/* Signature */
+		CopySendData(cstate, BinarySignature, 11);
+		/* Flags field */
+		tmp = 0;
+		if (cstate->oids)
+			tmp |= (1 << 16);
+		CopySendInt32(cstate, tmp);
+		/* No header extension */
+		tmp = 0;
+		CopySendInt32(cstate, tmp);
+	}
+	else
+	{
+		/* if a header has been requested send the line */
+		if (cstate->header_line)
+		{
+			bool		hdr_delim = false;
+
+			foreach(cur, cstate->attnumlist)
+			{
+				int			attnum = lfirst_int(cur);
+				char	   *colname;
+
+				if (hdr_delim)
+					CopySendChar(cstate, cstate->delim[0]);
+				hdr_delim = true;
+
+				colname = NameStr(attr[attnum - 1]->attname);
+
+				CopyAttributeOutCSV(cstate, colname, false,
+									list_length(cstate->attnumlist) == 1);
+			}
+
+			CopySendEndOfRow(cstate);
+		}
+	}
+
+	MemoryContextSwitchTo(oldcontext);
+
+	return cstate;
+}
+
+void EndCopyToOnSegment(CopyState cstate)
+{
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+
+	if (cstate->binary)
+	{
+		/* Generate trailer for a binary copy */
+		CopySendInt16(cstate, -1);
+
+		/* Need to flush out the trailer */
+		CopySendEndOfRow(cstate);
+	}
+
+	if (cstate->is_program)
+	{
+		close_program_pipes(cstate, true);
+	}
+	else
+	{
+		if (cstate->filename != NULL && FreeFile(cstate->copy_file))
+			ereport(ERROR,
+					(errcode_for_file_access(),
+							errmsg("could not close file \"%s\": %m",
+								   cstate->filename)));
+	}
+
+	/* Clean up single row error handling related memory */
+	if (cstate->cdbsreh)
+		destroyCdbSreh(cstate->cdbsreh);
+
+	MemoryContextDelete(cstate->rowcontext);
+	MemoryContextDelete(cstate->copycontext);
+	pfree(cstate);
+}
+
+static uint64
+CopyToQueryOnSegment(CopyState cstate)
+{
+	Assert(Gp_role != GP_ROLE_EXECUTE);
+
+	/* run the plan --- the dest receiver will send tuples */
+	ExecutorRun(cstate->queryDesc, ForwardScanDirection, 0L);
+	return 0;
+}
+
+
 #define COPY_FIND_MD_DELIM \
 md_delim = memchr(line_start, COPY_METADATA_DELIM, Min(32, cstate->line_buf.len)); \
 if(md_delim && (md_delim != line_start)) \
@@ -7499,7 +7854,10 @@ escape_quotes(const char *src)
 static void
 copy_dest_startup(DestReceiver *self __attribute__((unused)), int operation __attribute__((unused)), TupleDesc typeinfo __attribute__((unused)))
 {
-	/* no-op */
+	if (Gp_role == GP_ROLE_DISPATCH)
+		return;
+	DR_copy    *myState = (DR_copy *) self;
+	myState->cstate = BeginCopyToOnSegment(myState->queryDesc);
 }
 
 /*
@@ -7524,7 +7882,10 @@ copy_dest_receive(TupleTableSlot *slot, DestReceiver *self)
 static void
 copy_dest_shutdown(DestReceiver *self __attribute__((unused)))
 {
-	/* no-op */
+	if (Gp_role == GP_ROLE_DISPATCH)
+		return;
+	DR_copy    *myState = (DR_copy *) self;
+	EndCopyToOnSegment(myState->cstate);
 }
 
 /*

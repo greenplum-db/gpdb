@@ -319,6 +319,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_INT_FIELD(metricsQueryType);
+	WRITE_NODE_FIELD(copyIntoClause);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -1179,6 +1180,19 @@ _outIntoClause(StringInfo str, IntoClause *node)
 	WRITE_NODE_FIELD(options);
 	WRITE_ENUM_FIELD(onCommit, OnCommitAction);
 	WRITE_STRING_FIELD(tableSpaceName);
+}
+
+static void
+_outCopyIntoClause(StringInfo str, const CopyIntoClause *node)
+{
+WRITE_NODE_TYPE("COPYINTOCLAUSE");
+
+WRITE_NODE_FIELD(attlist);
+WRITE_BOOL_FIELD(is_program);
+WRITE_STRING_FIELD(filename);
+WRITE_NODE_FIELD(options);
+WRITE_NODE_FIELD(ao_segnos);
+
 }
 
 static void
@@ -4525,6 +4539,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_IntoClause:
 				_outIntoClause(str, obj);
+				break;
+			case T_CopyIntoClause:
+				_outCopyIntoClause(str, obj);
 				break;
 			case T_Var:
 				_outVar(str, obj);

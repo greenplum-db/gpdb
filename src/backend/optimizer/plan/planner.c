@@ -1943,7 +1943,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		result_plan->flow = pull_up_Flow(result_plan,
 										 getAnySubplan(result_plan),
 										 (current_pathkeys != NIL));
-
 	/*
 	 * MPP: If there's a DISTINCT clause and we're not collocated on the
 	 * distinct key, we need to redistribute on that key.  In addition, we

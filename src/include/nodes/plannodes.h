@@ -21,6 +21,7 @@
 #include "nodes/bitmapset.h"
 #include "nodes/primnodes.h"
 #include "storage/itemptr.h"
+#include "parsenodes.h"
 
 typedef struct DirectDispatchInfo
 {
@@ -146,6 +147,7 @@ typedef struct PlannedStmt
 
 	/* GPDB: whether the query is a spi/function inner/top-level query or for extension usage */
 	int8		metricsQueryType;
+	CopyIntoClause *copyIntoClause;
 } PlannedStmt;
 
 /*

@@ -370,7 +370,7 @@ get_partitioned_policy_from_flow(Plan *plan)
 Plan *
 apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 {
-	Plan				*result;
+	Plan					*result;
     ListCell			*cell;
     GpPolicy			*targetPolicy = NULL;
     GpPolicyType		targetPolicyType = POLICYTYPE_ENTRY;
@@ -406,7 +406,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	switch (query->commandType)
 	{
 		case CMD_SELECT:
-			if (query->intoClause)
+			if (query->intoClause || query->isCopy)
 			{
 				if (query->intoPolicy != NULL)
 				{
@@ -476,13 +476,14 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 							else
 								appendStringInfoString(&columnsbuf, "???");
 						}
-						ereport(NOTICE,
-								(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
-								 errmsg("Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) "
-										"named '%s' as the Greenplum Database data distribution key for this "
-										"table. ", columnsbuf.data),
-								 errhint("The 'DISTRIBUTED BY' clause determines the distribution of data."
-										 " Make sure column(s) chosen are the optimal data distribution key to minimize skew.")));
+						if (query->intoClause)
+							ereport(NOTICE,
+									(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
+									 errmsg("Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) "
+											"named '%s' as the Greenplum Database data distribution key for this "
+											"table. ", columnsbuf.data),
+									 errhint("The 'DISTRIBUTED BY' clause determines the distribution of data."
+											 " Make sure column(s) chosen are the optimal data distribution key to minimize skew.")));
 					}
 				}
 
@@ -510,7 +511,8 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 
 			}
 			
-			if (plan->flow->flotype == FLOW_PARTITIONED && !query->intoClause)
+			if (plan->flow->flotype == FLOW_PARTITIONED && !query->intoClause &&
+				!query->isCopy)
 			{
 			    /*
                  * Query result needs to be brought back to the QD.
@@ -550,7 +552,8 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
                 else
                     Insist(focusPlan(plan, false, false));
 			}
-			needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch && ! query->intoClause;
+			needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch
+					&& !query->intoClause && !query->isCopy;
 			break;
 
 		case CMD_INSERT:

@@ -207,6 +207,10 @@ autostats_get_cmdtype(QueryDesc *queryDesc, AutoStatsCmdType * pcmdType, Oid *pr
 					relationOid = RelationGetRelid(queryDesc->estate->es_into_relation_descriptor);
 				cmdType = AUTOSTATS_CMDTYPE_CTAS;
 			}
+			else if (stmt->copyIntoClause != NULL)
+			{
+				cmdType = AUTOSTATS_CMDTYPE_COPY;
+			}
 			break;
 		case CMD_INSERT:
 			rte = rt_fetch(lfirst_int(list_head(stmt->resultRelations)), stmt->rtable);
