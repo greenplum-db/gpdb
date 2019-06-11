@@ -384,7 +384,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         You identify this percentage via the <codeph>MEMORY_LIMIT</codeph> value that you specify
         when you create the resource group. The minimum <codeph>MEMORY_LIMIT</codeph> percentage you
         can specify for a resource group is 0, the maximum is 100. When <codeph>MEMORY_LIMIT</codeph>
-        is 0, Greenplum Database reserves no memory for the resource group, and uses resource
+        is 0, Greenplum Database reserves no memory for the resource group, but uses resource
         group global shared memory to fulfill all memory requests in the group. Refer to
         <xref href="#topic833glob" type="topic" format="dita"/>
         for more information about resource group global shared memory.</p>
@@ -394,7 +394,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
     <topic id="mem_roles" xml:lang="en">
       <title>Additional Memory Limits for Role-based Resource Groups</title>
       <body>
-        <p>If memory is reserved for a resource group for roles (non-zero
+        <p>If resource group memory is reserved for roles (non-zero
           <codeph>MEMORY_LIMIT</codeph>), the memory is further divided into fixed and
           shared components. The <codeph>MEMORY_SHARED_QUOTA</codeph> value that you specify when
           you create the resource group identifies the percentage of reserved resource group memory

@@ -94,7 +94,7 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
             <codeph>MEMORY_SPILL_RATIO</codeph> value is 0. When <codeph>MEMORY_SPILL_RATIO</codeph>
             is 0, Greenplum Database uses the
             <xref href="../config_params/guc-list.xml#statement_mem" format="dita"><codeph>statement_mem</codeph></xref>
-            server configuration parameter value to control query operator memory.</pd>
+            server configuration parameter value to control initial query operator memory.</pd>
         </plentry>
       </parml>
     </section>
