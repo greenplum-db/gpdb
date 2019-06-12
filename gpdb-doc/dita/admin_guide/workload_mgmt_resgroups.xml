@@ -497,7 +497,7 @@ SET statement_mem='10 MB';</codeblock></p>
       </topic>
     </topic>
     <topic id="topic833fvs" xml:lang="en">
-      <title>About Reserving Resource Group Memory vs. Using Resource Group Global Shared Memory</title>
+      <title>About Using Reserved Resource Group Memory vs. Using Resource Group Global Shared Memory</title>
       <body>
         <p>When you do not reserve memory for a resource group (<codeph>MEMORY_LIMIT</codeph>
           and <codeph>MEMORY_SPILL_RATIO</codeph> are set to 0):</p><ul>
