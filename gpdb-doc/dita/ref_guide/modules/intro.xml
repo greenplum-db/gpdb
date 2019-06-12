@@ -13,6 +13,8 @@
         modules are installed; refer to the linked module documentation for usage
         instructions.</p>
      <ul>
+      <li><codeph><xref href="autoexplain.xml#topic_fstrm"/></codeph> provides a means for logging
+        execution plans of slow statements automatically.</li>
        <li><codeph><xref href="citext.xml" format="dita"
               >citext</xref></codeph> - Provides a case-insensitive, multibyte-aware text
           data type.</li>
