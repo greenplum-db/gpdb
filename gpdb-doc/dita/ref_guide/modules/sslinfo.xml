@@ -5,7 +5,7 @@
     <title>sslinfo</title>
     <body>
       <p>The <codeph>sslinfo</codeph> module provides information about the SSL certificate that the
-        current client provided when connecting to PostgreSQL. Most functions in this module return
+        current client provided when connecting to Greenplum. Most functions in this module return
         NULL if the current connection does not use SSL.</p>
       <p>The Greenplum Database <codeph>sslinfo</codeph> module is equivalent to the PostgreSQL
           <codeph>hstore</codeph> module. There are no Greenplum Database or MPP-specific
