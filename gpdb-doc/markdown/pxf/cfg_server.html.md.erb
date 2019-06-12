@@ -1,5 +1,5 @@
 ---
-title: Configuring a PXF Server
+title: Configuring PXF Servers
 ---
 
 This topic provides an overview of PXF server configuration. To configure a server, refer to the topic specific to the connector that you want to configure.
@@ -16,8 +16,6 @@ PXF provides a server template file for each connector; this template identifies
 You will configure a server definition for each remote data store that Greenplum Database users need to access. For example, if you require access to two Hadoop clusters, you will create a PXF Hadoop server configuration for each cluster. If you require access to an Oracle and a MySQL database, you will create one or more PXF JDBC server configurations for each database.
 
 A server configuration may include default settings for user access credentials and other properties for the remote data store. You can allow Greenplum Database users to access the remote data store using the default settings, or you can configure access and other properties on a per-user basis. This allows you to configure different Greenplum Database users with different remote data store access credentials in a single PXF server definition.
-
-After you configure a PXF server, you publish the server name to Greenplum Database users who need access to the data store. A user only needs to provide the server name when they create an external table that accesses the remote data store. PXF obtains the remote data source location and access credentials from server and user configuration files residing in the server configuration directory identified by the server name.
 
 
 ## <a id="templates"></a>About Server Template Files
@@ -67,7 +65,7 @@ PXF automatically uses the `default` server configuration if you omit the `SERVE
 **Note**: You *must* configure a Hadoop server as the PXF `default` server when your Hadoop cluster utilizes Kerberos authentication.
 
 
-## <a id="cfgproc"></a>About the Server Configuration Procedure
+## <a id="cfgproc"></a>Configuring a Server
 
 When you configure a PXF connector to a remote data store, you add a named PXF server configuration for the connector. Among the tasks that you perform, you may:
 
@@ -78,11 +76,18 @@ When you configure a PXF connector to a remote data store, you add a named PXF s
 5. Add any additional configuration properties and values required for your environment.
 6. Configure one or more users for the server configuration as described in [About Configuring a PXF User](#usercfg).
 7. Synchronize the server and user configuration to the Greenplum Database cluster.
-8. Publish the PXF server names to your Greenplum Database end users as appropriate.
 
 **Note**: You must re-sync the PXF configuration to the Greenplum Database cluster after you add or update PXF server configuration.
 
-## <a id="usercfg"></a>About Configuring a PXF User
+After you configure a PXF server, you publish the server name to Greenplum Database users who need access to the data store. A user only needs to provide the server name when they create an external table that accesses the remote data store. PXF obtains the remote data source location and access credentials from server and user configuration files residing in the server configuration directory identified by the server name.
+
+To configure a PXF server, refer to the connector configuration topic:
+
+- To configure a PXF server for Hadoop, refer to [Configuring PXF Hadoop Connectors ](client_instcfg.html).
+- To configure a PXF server for an  object store, refer to [Configuring Connectors to Azure, Google Cloud Storage, Minio, and S3 Object Stores](objstore_cfg.html).
+- To configure a PXF JDBC server, refer to [Configuring the JDBC Connector ](jdbc_cfg.html).
+
+## <a id="usercfg"></a>Configuring a PXF User
 
 You can configure access to a remote data store on a per-server, per-Greenplum-user basis.
 
