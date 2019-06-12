@@ -5,7 +5,10 @@
     <title>auto_explain</title>
     <body>
       <p>The <codeph>auto_explain</codeph> module provides a means for logging execution plans of
-        slow statements automatically, without having to run EXPLAIN by hand.</p>
+        slow statements automatically, without having to run <codeph>EXPLAIN</codeph> by hand.</p>
+      <p>The Greenplum Database <codeph>auto_explain</codeph> module was modified to work in the
+        Greenplum Database MPP environment, but is otherwise equivalent in functionality to the
+        PostgreSQL <codeph>hstore</codeph> module.</p>
     </body>
     <topic id="topic_reg">
       <title>Loading the Module</title>
@@ -25,8 +28,8 @@
       <body>
         <p>See <codeph><xref href="https://www.postgresql.org/docs/9.4/auto-explain.html"
               scope="external" format="html">auto_explain</xref></codeph> in the PostgreSQL
-          documentation for detailed information about the parameters that configure this module's
-          behavior.</p>
+          documentation for detailed information about the configuration parameters that control
+          this module's behavior.</p>
       </body>
     </topic>
   </topic>
