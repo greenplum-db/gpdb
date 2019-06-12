@@ -53,6 +53,8 @@ The PXF JDBC connector supports the following data types:
 
 Any data type not listed above is not supported by the PXF JDBC connector.
 
+**Note**: The JDBC connector does not support reading or writing Hive data stored as a byte array (`byte[]`).
+
 ## <a id="queryextdata"></a>Accessing an External SQL Database
 The PXF JDBC connector supports a single profile named `Jdbc`. You can both read data from and write data to an external SQL database table with this profile. You can also use the connector to run a static, named query in external SQL database and read the results.
 
