@@ -39,7 +39,7 @@
          Database.</li>
       <li><codeph><xref href="sslinfo.xml" format="dita">sslinfo</xref></codeph> - Provides
         information about the SSL certificate that the current client provided when connecting to
-        PostgreSQL.</li>
+        Greenplum.</li>
      </ul>
    </body>
 </topic>
