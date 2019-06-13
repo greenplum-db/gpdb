@@ -8,7 +8,7 @@
         slow statements automatically, without having to run <codeph>EXPLAIN</codeph> by hand.</p>
       <p>The Greenplum Database <codeph>auto_explain</codeph> module was modified to work in the
         Greenplum Database MPP environment, but is otherwise equivalent in functionality to the
-        PostgreSQL <codeph>hstore</codeph> module.</p>
+        PostgreSQL <codeph>auto_explain</codeph> module.</p>
     </body>
     <topic id="topic_reg">
       <title>Loading the Module</title>
