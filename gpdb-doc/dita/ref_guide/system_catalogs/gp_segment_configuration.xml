@@ -68,7 +68,11 @@
             <entry colname="col3"/>
             <entry colname="col4">The synchronization status of a segment instance with its mirror
               copy. Values are <codeph>s</codeph> (synchronized) or <codeph>n</codeph> (not
-              synchronized).</entry>
+                synchronized).<note>This column always shows <codeph>n</codeph> for the master
+                segment and <codeph>s</codeph> for the standby master segment, but these values do
+                not describe the synchronization state for the master segment. Use <xref
+                  href="gp_stat_replication.xml#topic1"/> to determine the synchronization state
+                between the master and standby master.</note></entry>
           </row>
           <row>
             <entry colname="col1">
