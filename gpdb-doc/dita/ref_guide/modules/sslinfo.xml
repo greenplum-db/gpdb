@@ -8,7 +8,7 @@
         current client provided when connecting to Greenplum. Most functions in this module return
         NULL if the current connection does not use SSL.</p>
       <p>The Greenplum Database <codeph>sslinfo</codeph> module is equivalent to the PostgreSQL
-          <codeph>hstore</codeph> module. There are no Greenplum Database or MPP-specific
+          <codeph>sslinfo</codeph> module. There are no Greenplum Database or MPP-specific
         considerations for the module.</p>
     </body>
     <topic id="topic_reg">
