@@ -85,10 +85,7 @@
                     <li>You must use one of these options to specify how to manage data in the
                         destination database: <codeph>--skip-existing</codeph>,
                             <codeph>--truncate</codeph>, <codeph>--drop</codeph>, or
-                            <codeph>--append</codeph>.<p>If you specify both the
-                                <codeph>--append</codeph> and <codeph>--validation</codeph> options,
-                            validation of source table data fails if a destination table contains
-                            data. </p></li>
+                            <codeph>--append</codeph>.</li>
                 </ul></p>
             <p>If you specify the option <codeph>--truncate-source-after</codeph>, you must also
                 specify the <codeph>--validate</codeph> option. When
@@ -614,8 +611,6 @@
                             <li><codeph>md5xor</codeph> - calculates the MD5 value of all rows, then
                                 performs an XOR over the MD5 values</li>
                         </ul></pd>
-                    <pd>If you specify the <codeph>--append</codeph> option, and the destination
-                        table contains data, validation fails for the table.</pd>
                     <pd>If validation for a table fails, <codeph>gpcopy</codeph> rolls back the
                         destination table.</pd>
                 </plentry>
