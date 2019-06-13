@@ -59,6 +59,7 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <utils/faultinjector.h>
 
 #include "access/heapam.h"
 #include "access/reloptions.h"
@@ -73,6 +74,7 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
+#include "catalog/storage_tablespace.h"
 #include "commands/comment.h"
 #include "commands/seclabel.h"
 #include "commands/tablecmds.h"
@@ -403,10 +405,18 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 		rdata[1].len = strlen(location) + 1;
 		rdata[1].buffer = InvalidBuffer;
 		rdata[1].next = NULL;
-
+		
+		SIMPLE_FAULT_INJECTOR("before_xlog_create_tablespace");
 		(void) XLogInsert(RM_TBLSPC_ID, XLOG_TBLSPC_CREATE, rdata);
 	}
 
+	/*
+	 * Mark tablespace for deletion on abort.
+	 */
+	TablespaceCreateStorage(tablespaceoid);
+
+	SIMPLE_FAULT_INJECTOR("after_xlog_create_tablespace");
+	
 	/*
 	 * Force synchronous commit, to minimize the window between creating the
 	 * symlink on-disk and marking the transaction committed.  It's not great
@@ -768,6 +778,15 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 	pfree(location_with_version_dir);
 }
 
+/*
+ * Added as a function to expose destroy_tablespace_directories
+ * while minimizing the diff with upstream.
+ */
+void 
+UnlinkTablespaceDirectory(Oid tablepace_oid_to_unlink, bool isRedo) 
+{
+	destroy_tablespace_directories(tablepace_oid_to_unlink, isRedo);
+}
 
 /*
  * destroy_tablespace_directories
@@ -1670,6 +1689,8 @@ tblspc_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 	else if (info == XLOG_TBLSPC_DROP)
 	{
 		xl_tblspc_drop_rec *xlrec = (xl_tblspc_drop_rec *) XLogRecGetData(record);
+		
+		elog(DEBUG3, "replaying XLOG_TBLSPC_DROP for tablespace oid: %d", xlrec->ts_id);
 
 		/*
 		 * If we issued a WAL record for a drop tablespace it implies that

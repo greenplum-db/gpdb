@@ -1427,7 +1427,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 
 	/* Make sure files supposed to be dropped are dropped */
 	DropRelationFiles(delrels, ndelrels, false);
-
+	
 	/*
 	 * Handle cache invalidation messages.
 	 *

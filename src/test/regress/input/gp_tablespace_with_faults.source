@@ -1,0 +1,124 @@
+-- CREATE TABLESPACE
+
+create extension gp_inject_fault;
+create or replace language plpythonu;
+
+
+create or replace function remove_tablespace_directory(tablespace_dir text) returns void as $$
+	import shutil;
+	import os;
+	import subprocess
+	
+	result = subprocess.check_output("find $MASTER_DATA_DIRECTORY/../../ -name pg_tblspc", shell=True);
+
+	full_list = [ 
+		[found_tablespace_dir + '/' + tablespace_oid 
+			for tablespace_oid in os.listdir(found_tablespace_dir)
+			] for found_tablespace_dir 
+				in result.split("\n") 
+				if found_tablespace_dir 
+	]
+	
+	tablespace_links_to_remove = [
+		found_tablespace_directory 
+			for found_tablespace_directory 
+			in sum(full_list, []) 
+			if os.readlink(found_tablespace_directory).startswith(tablespace_dir) ]
+	
+	for tablespace_link_to_remove in tablespace_links_to_remove:
+		os.unlink(tablespace_link_to_remove);
+
+	try:
+		shutil.rmtree(tablespace_dir);
+	except OSError:
+		pass
+$$ LANGUAGE plpythonu;
+
+
+create or replace function setup_tablespaces_for_test(tablespace_dir text) returns void as $$
+	import os;
+	os.mkdir(tablespace_dir);
+$$ LANGUAGE plpythonu;
+
+
+create or replace function setup(dbid integer, fault_name text, fault_action_type text, tablespace_dir text) returns void as $$
+	begin
+		perform remove_tablespace_directory(tablespace_dir);
+		perform setup_tablespaces_for_test(tablespace_dir);
+		perform gp_inject_fault('all', 'reset', dbid);
+		perform gp_inject_fault(fault_name, fault_action_type, dbid);
+	end;
+$$ LANGUAGE plpgsql;
+
+
+create or replace function cleanup(dbid integer, tablespace_dir text) returns void as $$
+	begin
+		perform gp_inject_fault('all', 'reset', dbid);
+		perform remove_tablespace_directory(tablespace_dir);
+	end;
+$$ LANGUAGE plpgsql;
+
+
+create or replace function list_tablespaces(expected_number_of_tablespaces integer) returns void as $$
+	import subprocess
+	plpy.notice('finding tablespaces:')
+	result = subprocess.check_output("find $MASTER_DATA_DIRECTORY/../../ -name pg_tblspc -exec ls -l {} \;", shell=True);
+	plpy.notice(result);
+	plpy.notice('found N tablespaces:');
+	result = subprocess.check_output("find $MASTER_DATA_DIRECTORY/../../ -name pg_tblspc -exec ls {} \; | wc -l;", shell=True);
+	plpy.notice(result);	
+	plpy.notice('expected {expected_number_of_tablespaces} tablespaces'.format(expected_number_of_tablespaces=expected_number_of_tablespaces)); 
+	plpy.notice('done finding tablespaces.');
+$$ language plpythonu;
+
+
+create or replace function give_mirrors_time_to_catch_up() returns void as $$
+	select pg_sleep(1);
+$$ language sql;
+
+
+--
+-- An error before XLOG_TBLSPC_CREATE on master
+--
+-- expected: tablespace should not exist after abort
+--  
+\set dbid_under_test 2
+\set expected_number_of_tablespaces 0
+\set error_type error
+\set tablespace_location /tmp/my_tablespace_for_testing
+\set fault_to_set after_xlog_create_tablespace
+
+select setup(:dbid_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+select give_mirrors_time_to_catch_up();
+select spcname, oid from pg_tablespace;
+select list_tablespaces(:expected_number_of_tablespaces);
+DROP TABLESPACE my_tablespace_for_testing;
+select cleanup(:dbid_under_test, :'tablespace_location');
+
+
+--x XLOG_TBLSPC_CREATE (on master)
+
+--x ? - then tablespace should not exist VIA ABORT 
+
+-- XLOG_TBLSPC_CREATE (on primary)
+
+-- ? - then tablespace should not exist VIA ABORT 
+ 
+-- XLOG_XACT_PREPARE (on primary)
+
+-- ? - then tablespace should not exist VIA ABORT 
+
+-- XLOG_XACT_DISTRIBUTED_COMMIT (on master)
+
+-- ? - then tablespace should exist on disk
+ 
+-- XLOG_XACT_COMMIT_PREPARED (on primary)
+
+-- ? - then tablespace should exist on disk
+
+-- XLOG_XACT_DISTRIBUTED_FORGET (on master) 
+
+-- ? - then tablespace should exist on disk
+
+-- When the dtx[Command] fails
