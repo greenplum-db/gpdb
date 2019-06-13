@@ -810,7 +810,7 @@ DeserializeTuple(SerTupInfo *pSerInfo, StringInfo serialTup)
 			if (sz < 0)
 				elog(ERROR, "invalid length received for a CString");
 
-			p = palloc(sz + VARHDRSZ);
+			p = palloc(sz);
 
 			/* Then data */
 			pq_copymsgbytes(serialTup, p, sz);
