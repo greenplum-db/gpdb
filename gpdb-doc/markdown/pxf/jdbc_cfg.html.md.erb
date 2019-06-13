@@ -134,7 +134,7 @@ Example: To set the `search_path` parameter before running a query in a PostgreS
 
 Ensure that the JDBC driver for the external SQL database supports any property that you specify.
 
-#### <a id="jdbcimpers"></a>JDBC User Impersonation
+#### <a id="jdbcimpers"></a>About JDBC User Impersonation
 
 The PXF JDBC Connector accesses external data stores on behalf of Greenplum Database end users. When you enable PXF JDBC user impersonation, the JDBC Connector uses the Greenplum Database user name to connect to the external data store. When PXF JDBC user impersonation is disabled (the default), the behavior of the JDBC Connector is dependent upon the external data store. For example, the JDBC connector uses the settings of certain Hive authentication and impersonation properties to determine the user. In some cases, you may be required to provide a `jdbc.user` setting, or add properties to the `jdbc.url` setting in the server `jdbc-site.xml` file.
 
