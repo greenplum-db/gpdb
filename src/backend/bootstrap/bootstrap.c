@@ -23,6 +23,8 @@
 #include "catalog/index.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_type.h"
+#include "catalog/storage_tablespace.h"
+#include "commands/tablespace.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"

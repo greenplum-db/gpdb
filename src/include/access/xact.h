@@ -178,6 +178,7 @@ typedef struct xl_xact_abort
 	time_t		xtime;
 	int			nrels;			/* number of RelFileNodes */
 	int			nsubxacts;		/* number of subtransaction XIDs */
+	Oid         tablespace_oid_to_abort;
 	/* Array of RelFileNode(s) to drop at abort */
 	RelFileNodePendingDelete xnodes[1];		/* VARIABLE LENGTH ARRAY */
 	/* ARRAY OF ABORTED SUBTRANSACTION XIDs FOLLOWS */
