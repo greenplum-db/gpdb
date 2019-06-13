@@ -7094,18 +7094,5 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
                                                 : NULL,
                                               subplan);
 
-	/**
-	 * If plan has a flow node, and its child is projection capable,
-	 * then ensure all entries of hashExpr are in the targetlist.
-	 */
-	if (subplan->flow &&
-		subplan->flow->hashExprs &&
-		is_projection_capable_plan(subplan))
-	{
-		subplan->targetlist = add_to_flat_tlist_junk(subplan->targetlist,
-													 subplan->flow->hashExprs,
-													 true /* resjunk */);
-	}
-
 	return motion;
 }								/* cdbpathtoplan_create_motion_plan */

@@ -1820,3 +1820,26 @@ select * from init_main_plan_parallel where exists (select * from pg_class);
 ----+----
 (0 rows)
 
+-- A subplan whose targetlist might be expanded to make sure all entries of its
+-- hashExpr are in its targetlist, test the motion node above it also updated
+-- its targetlist, otherwise, a wrong answer or a crash happens.
+DROP TABLE IF EXISTS TEST_IN;
+NOTICE:  table "test_in" does not exist, skipping
+CREATE TABLE TEST_IN(
+    C01  FLOAT,
+    C02  NUMERIC(10,0)
+) DISTRIBUTED RANDOMLY;
+--insert repeatable records:
+INSERT INTO TEST_IN
+SELECT
+    ROUND(RANDOM()*1E1),ROUND(RANDOM()*1E1)
+FROM GENERATE_SERIES(1,1E4::BIGINT) I;
+ANALYZE TEST_IN;
+SELECT COUNT(*) FROM
+TEST_IN A
+WHERE A.C01 IN(SELECT C02 FROM TEST_IN);
+ count 
+-------
+ 10000
+(1 row)
+
