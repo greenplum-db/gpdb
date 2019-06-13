@@ -1095,7 +1095,7 @@ If you want to review or change any of your installation settings, click Back. C
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder" Name="PFiles">
         <Directory Id="gpdir" Name="Greenplum">
-          <Directory Id="BASEDIR" Name="greenplum-clients-$(var.VERSION)" ShortName="bizgres1">
+          <Directory Id="BASEDIR" Name="greenplum-clients" ShortName="bizgres1">
             <Component Id="TOPLEVELTextFiles" DiskId="1" Guid="CBED1D6A-228F-4AD2-AAD3-198B42323A22">
               <Environment Id="CLIENTS_ENV" Action="set" Permanent="no" System="yes" Part="all" Name="GPHOME_CLIENTS" Value="[BASEDIR]" />
               <Environment Id="PYTHON_ENV" Action="set" Permanent="no" System="yes" Part="last" Name="PYTHONPATH" Value="%GPHOME_CLIENTS%\lib\python" />
@@ -1103,6 +1103,7 @@ If you want to review or change any of your installation settings, click Back. C
               <File Id="greenplum_clients_path.bat" Name="greenplum_clients_path.bat" ShortName="BIZGRES1.BAT" Source="$(var.SRCDIR)\greenplum_clients_path.bat" />
               <File Id="LICENSE" Name="Pivotal License" ShortName="LICENSE" Source="$(var.SRCDIR)\LICENSE" />
               <File Id="NOTICE" Name="Thirdpary Notice" ShortName="NOTICE" Source="$(var.SRCDIR)\NOTICE" />
+              <File Id="VERSION" Name="GPDB Clients Version" ShortName="VERSION" Source="$(var.SRCDIR)\VERSION" />
             </Component>
             <Directory Id="TOPLEVELbin" Name="bin">
               <Component Id="TOPLEVELbin" DiskId="1" Guid="33133D23-0F1E-4A52-B679-D57D0A7DF727">

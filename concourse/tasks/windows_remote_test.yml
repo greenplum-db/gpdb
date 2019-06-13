@@ -1,0 +1,14 @@
+platform: linux
+inputs:
+  - name: terraform_windows
+  - name: gpdb_src
+  - name: bin_gpdb
+  - name: bin_gpdb_clients_windows
+outputs:
+  - name: bin_gpdb_clients_windows_rc
+run:
+  path: gpdb_src/concourse/scripts/ic_gpdb_remote_windows.bash
+params:
+  REMOTE_PORT:
+  REMOTE_USER:
+  REMOTE_KEY:
