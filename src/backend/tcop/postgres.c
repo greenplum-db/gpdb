@@ -4930,6 +4930,8 @@ PostgresMain(int argc, char *argv[],
 	 */
 	if (sigsetjmp(local_sigjmp_buf, 1) != 0)
 	{
+		elog(DEBUG5, "error caught. jumped back to PostgresMain local_sigjmp_buf");
+		
 		/*
 		 * NOTE: if you are tempted to add more code in this if-block,
 		 * consider the high probability that it should be in

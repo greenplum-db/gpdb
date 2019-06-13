@@ -32,6 +32,9 @@
 #include "catalog/pg_db_role_setting.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/indexing.h"
+#include "catalog/storage_tablespace.h"
+#include "commands/tablespace.h"
+
 #include "libpq/auth.h"
 #include "libpq/hba.h"
 #include "libpq/libpq-be.h"
@@ -561,6 +564,14 @@ BaseInit(void)
 	InitFileAccess();
 	smgrinit();
 	InitBufferPoolAccess();
+
+	/* 
+	 * Initialize tablespace smgr component
+	 * with knowledge of how to perform unlink.
+	 * 
+	 * Needed for xlog replay and normal operations.
+	 */
+	TablespaceStorageInit(UnlinkTablespaceDirectory);
 }
 
 /*

@@ -18,6 +18,7 @@ filespace.out
 gpcopy.out
 gptokencheck.out
 /gp_transactions.out
+/gp_tablespace_with_faults.out
 guc_env_var.out
 hooktest.out
 /largeobject.out

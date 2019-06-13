@@ -31,6 +31,7 @@
 #include "catalog/namespace.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/storage.h"
+#include "catalog/storage_tablespace.h"
 #include "commands/async.h"
 #include "commands/resgroupcmds.h"
 #include "commands/tablecmds.h"
@@ -1355,6 +1356,9 @@ RecordTransactionCommit(void)
 		if (markXidCommitted)
 			BufmgrCommit();
 
+		if (isDtxPrepared)
+			SIMPLE_FAULT_INJECTOR("before_xlog_xact_distributed_commit");
+
 		/*
 		 * Mark ourselves as within our "commit critical section".  This
 		 * forces any concurrent checkpoint to wait until we've updated
@@ -1619,6 +1623,7 @@ RecordTransactionCommit(void)
 	{
 		MyPgXact->delayChkpt = false;
 		END_CRIT_SECTION();
+		SIMPLE_FAULT_INJECTOR("after_xlog_xact_distributed_commit");
 	}
 
 	/*
@@ -1908,6 +1913,7 @@ RecordTransactionAbort(bool isSubXact)
 		SetCurrentTransactionStopTimestamp();
 		xlrec.xact_time = xactStopTimestamp;
 	}
+	xlrec.tablespace_oid_to_abort = GetPendingTablespaceForDeletion();
 	xlrec.nrels = nrels;
 	xlrec.nsubxacts = nchildren;
 	rdata[0].data = (char *) (&xlrec);
@@ -2575,6 +2581,12 @@ StartTransaction(void)
 					  LocalDistribXact_DisplayString(MyProc->pgprocno))));
 }
 
+static void
+AtEOXact_TablespaceStorage(void)
+{
+	UnscheduleTablespaceDirectoryDeletion();
+}
+
 /*
  *	CommitTransaction
  *
@@ -2813,6 +2825,7 @@ CommitTransaction(void)
 	AtEOXact_on_commit_actions(true);
 	AtEOXact_Namespace(true);
 	AtEOXact_SMgr();
+	AtEOXact_TablespaceStorage();
 	AtEOXact_Files();
 	AtEOXact_ComboCid();
 	AtEOXact_HashTables(true);
@@ -2858,7 +2871,6 @@ CommitTransaction(void)
 	if (ShouldUnassignResGroup())
 		UnassignResGroup();
 }
-
 
 /*
  *	PrepareTransaction
@@ -3311,6 +3323,7 @@ AbortTransaction(void)
 							 RESOURCE_RELEASE_AFTER_LOCKS,
 							 false, true);
 		smgrDoPendingDeletes(false);
+		DoPendingTablespaceDeletion();
 
 		AtEOXact_AppendOnly();
 		AtEOXact_GUC(false, 1);
@@ -3801,6 +3814,10 @@ void
 AbortCurrentTransaction(void)
 {
 	TransactionState s = CurrentTransactionState;
+	
+	elog(DEBUG5, "AbortCurrentTransaction for %d in state: %d", 
+		s->transactionId, 
+		s->blockState);
 
 	switch (s->blockState)
 	{
@@ -6363,6 +6380,8 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 
 	/* Make sure files supposed to be dropped are dropped */
 	DropRelationFiles(xlrec->xnodes, xlrec->nrels, true);
+
+	DoTablespaceDeletion(xlrec->tablespace_oid_to_abort);
 }
 
 static void
