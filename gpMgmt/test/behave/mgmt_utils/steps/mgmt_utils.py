@@ -843,12 +843,6 @@ def impl(context):
         raise Exception('Unable to establish a connection to database !!!')
 
 
-@given('the environment variable "{var}" is not set')
-def impl(context, var):
-    context.env_var = os.environ.get(var)
-    os.environ[var] = ''
-
-
 @given('the environment variable "{var}" is set to "{val}"')
 def impl(context, var, val):
     context.env_var = os.environ.get(var)
