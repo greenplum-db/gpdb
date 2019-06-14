@@ -3983,8 +3983,6 @@ CopyFrom(CopyState cstate)
 									   slot_get_isnull(slot));
 			skip_tuple = true;
 			processed++;
-			if (cstate->cdbsreh)
-				cstate->cdbsreh->processed++;
 		}
 
 		/* BEFORE ROW INSERT Triggers */
@@ -4802,11 +4800,14 @@ NextCopyFrom(CopyState cstate, ExprContext *econtext,
 			}
 			PG_CATCH();
 			{
-				HandleCopyError(cstate);
+				HandleCopyError(cstate); /* cdbsreh->processed is updated inside here */
 				got_error = true;
 				MemoryContextSwitchTo(oldcontext);
 			}
 			PG_END_TRY();
+
+			if (result)
+				cstate->cdbsreh->processed++;
 
 			if (!got_error)
 				return result;

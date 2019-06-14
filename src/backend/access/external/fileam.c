@@ -888,19 +888,6 @@ externalgettup_defined(FileScanDesc scan)
 		return NULL;
 	}
 
-	if (pstate->cdbsreh)
-	{
-		/*
-		 * If NextCopyFrom failed, the processed row count will have already
-		 * been updated, but we need to update it in a successful case.
-		 *
-		 * GPDB_91_MERGE_FIXME: this is almost certainly not the right place for
-		 * this, but row counts are currently scattered all over the place.
-		 * Consolidate.
-		 */
-		pstate->cdbsreh->processed++;
-	}
-
 	MemoryContextSwitchTo(oldcontext);
 
 	/* convert to heap tuple */
