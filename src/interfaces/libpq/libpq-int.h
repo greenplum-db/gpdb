@@ -241,11 +241,11 @@ struct pg_result
     int	   extraslen;
 
 	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
-	int			numRejected;
+	int64		numRejected;
 	/* GPDB: number of rows completed when COPY FROM ON SEGMENT */
 	int64		numCompleted;
 	/* GPDB: number of processed tuples for each AO partition */
-	int			naotupcounts;
+	int			naotupcounts;   /* number of aotupcounts, the count in it is an int64 */
 	PQaoRelTupCount *aotupcounts;
 };
 
