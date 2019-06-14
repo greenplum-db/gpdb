@@ -748,6 +748,12 @@ typedef NameData *Name;
 #define AssertArg(condition) assert(condition)
 #define AssertState(condition) assert(condition)
 #define AssertPointerAlignment(ptr, bndr)	((void)true)
+#define Trap(condition, errorType) \
+	do { \
+		(void) assert(!(condition)); \
+	} while (0)
+#define TrapMacro(condition, errorType) \
+	((bool) (assert(!(condition)), 0))
 
 #else							/* USE_ASSERT_CHECKING && !FRONTEND */
 
