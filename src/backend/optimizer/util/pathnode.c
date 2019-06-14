@@ -2827,10 +2827,6 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 	return pathnode;
 }
 
-/*
- * GPDB_92_MERGE_FIXME:Please check why isjoininner is removed.
- */
-
 bool
 path_contains_inner_index(Path *path)
 {

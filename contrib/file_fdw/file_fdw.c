@@ -970,7 +970,7 @@ estimate_size(PlannerInfo *root, RelOptInfo *baserel,
 							   0,
 							   JOIN_INNER,
 							   NULL,
-							   false); /* GPDB_91_MERGE_FIXME: do we need damping? */
+							   false);
 
 	nrows = clamp_row_est(nrows);
 
@@ -1052,9 +1052,6 @@ file_acquire_sample_rows(Relation onerel, int elevel,
 
 	/*
 	 * Create CopyState from FDW options.
-	 */
-	/*
-	 * GPDB_92_MERGE_FIXME: what is the expected args?
 	 */
 	cstate = BeginCopyFrom(onerel, filename, false, NULL, NULL, NIL, options, NIL);
 
