@@ -105,15 +105,17 @@ inline static bool RelFileNode_IsEmpty(
 }
 
 /*
- * Augmenting a relfilenode with a storeage type provides a way to make optimal
+ * Augmenting a relfilenode with a storage type provides a way to make optimal
  * decisions in smgr and md layer. This is purposefully kept out of RelFileNode
  * for performance concerns where RelFileNode used in a hotpath for BufferTag
- * hashing.
+ * hashing. The backend is necessary to support file-system removal of
+ * temporary relations on a two-phase commit/abort.
  */
-typedef struct RelFileNodeWithStorageType
+typedef struct RelFileNodeWithBackendAndStorageType
 {
 	RelFileNode node;
+	BackendId	backend; /* InvalidBackendId if not a temp rel */
 	char relstorage;
-} RelFileNodeWithStorageType;
+} RelFileNodeWithBackendAndStorageType;
 
 #endif   /* RELFILENODE_H */
