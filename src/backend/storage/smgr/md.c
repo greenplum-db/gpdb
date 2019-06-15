@@ -1702,7 +1702,7 @@ ForgetDatabaseFsyncRequests(Oid dbid)
  * DropRelationFiles -- drop files of all given relations
  */
 void
-DropRelationFiles(RelFileNodeWithStorageType *delrels, int ndelrels, bool isRedo)
+DropRelationFiles(RelFileNodePendingDelete *delrels, int ndelrels, bool isRedo)
 {
 	SMgrRelation *srels;
 	char         *srelstorages;
@@ -1712,7 +1712,10 @@ DropRelationFiles(RelFileNodeWithStorageType *delrels, int ndelrels, bool isRedo
 	srelstorages = palloc(sizeof(char) * ndelrels);
 	for (i = 0; i < ndelrels; i++)
 	{
-		SMgrRelation srel = smgropen(delrels[i].node, InvalidBackendId);
+		/* GPDB: backend can only be TempRelBackendId or InvalidBackendId for a
+		 * given relfile since we don't tie temp relations to their backends. */
+		SMgrRelation srel = smgropen(delrels[i].node,
+			delrels[i].isTempRelation ? TempRelBackendId : InvalidBackendId);
 
 		if (isRedo)
 		{

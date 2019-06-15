@@ -37,7 +37,11 @@ xact_desc_commit(StringInfo buf, xl_xact_commit *xlrec)
 		appendStringInfoString(buf, "; rels:");
 		for (i = 0; i < xlrec->nrels; i++)
 		{
-			char	   *path = relpathperm(xlrec->xnodes[i].node, MAIN_FORKNUM);
+			BackendId  backendId = xlrec-> xnodes[i].isTempRelation ?
+								  TempRelBackendId : InvalidBackendId;
+			char	   *path = relpathbackend(xlrec->xnodes[i].node,
+											  backendId,
+											  MAIN_FORKNUM);
 
 			appendStringInfo(buf, " %s", path);
 			pfree(path);
@@ -134,7 +138,11 @@ xact_desc_abort(StringInfo buf, xl_xact_abort *xlrec)
 		appendStringInfoString(buf, "; rels:");
 		for (i = 0; i < xlrec->nrels; i++)
 		{
-			char	   *path = relpathperm(xlrec->xnodes[i].node, MAIN_FORKNUM);
+			BackendId  backendId = xlrec-> xnodes[i].isTempRelation ?
+								  TempRelBackendId : InvalidBackendId;
+			char	   *path = relpathbackend(xlrec->xnodes[i].node,
+											  backendId,
+											  MAIN_FORKNUM);
 
 			appendStringInfo(buf, " %s", path);
 			pfree(path);

@@ -1263,7 +1263,7 @@ RecordTransactionCommit(void)
 	bool		markXidCommitted;
 	TransactionId latestXid = InvalidTransactionId;
 	int			nrels;
-	RelFileNodeWithStorageType *rels;
+	RelFileNodePendingDelete *rels;
 	int			nchildren;
 	TransactionId *children;
 	int			nmsgs = 0;
@@ -1417,7 +1417,7 @@ RecordTransactionCommit(void)
 			{
 				rdata[0].next = &(rdata[1]);
 				rdata[1].data = (char *) rels;
-				rdata[1].len = nrels * sizeof(RelFileNodeWithStorageType);
+				rdata[1].len = nrels * sizeof(RelFileNodePendingDelete);
 				rdata[1].buffer = InvalidBuffer;
 				lastrdata = 1;
 			}
@@ -1812,7 +1812,7 @@ RecordTransactionAbort(bool isSubXact)
 	TransactionId xid;
 	TransactionId latestXid;
 	int			nrels;
-	RelFileNodeWithStorageType *rels;
+	RelFileNodePendingDelete *rels;
 	int			nchildren;
 	TransactionId *children;
 	XLogRecData rdata[3];
@@ -1889,7 +1889,7 @@ RecordTransactionAbort(bool isSubXact)
 	{
 		rdata[0].next = &(rdata[1]);
 		rdata[1].data = (char *) rels;
-		rdata[1].len = nrels * sizeof(RelFileNodeWithStorageType);
+		rdata[1].len = nrels * sizeof(RelFileNodePendingDelete);
 		rdata[1].buffer = InvalidBuffer;
 		lastrdata = 1;
 	}
@@ -5922,7 +5922,7 @@ static void
 xact_redo_commit_internal(TransactionId xid, XLogRecPtr lsn,
 						  TransactionId *sub_xids, int nsubxacts,
 						  SharedInvalidationMessage *inval_msgs, int nmsgs,
-						  RelFileNodeWithStorageType *xnodes, int nrels,
+						  RelFileNodePendingDelete *xnodes, int nrels,
 						  Oid dbId, Oid tsId,
 						  uint32 xinfo,
 						  DistributedTransactionId distribXid,

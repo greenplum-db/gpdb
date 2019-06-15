@@ -1,0 +1,66 @@
+CREATE SCHEMA temp_relation;
+SET search_path TO temp_relation;
+-- Functions to assert physical existence of a temp relfilenode
+CREATE FUNCTION temp_relfilenode_master(rel text) RETURNS TABLE(gp_segment_id int)
+STRICT STABLE LANGUAGE SQL AS
+  $fn$
+  WITH
+  rel_relfilenodename AS
+    (SELECT 't_' || relfilenode AS relfilenodename FROM pg_class WHERE relname=rel),
+  db_relfilenodenames AS
+    (SELECT pg_ls_dir('./base/' || t.dboid || '/') AS relfilenodename
+      FROM (SELECT oid AS dboid FROM pg_database WHERE datname = 'regression') t)
+  SELECT gp_execution_segment()
+    FROM rel_relfilenodename r, db_relfilenodenames d
+    WHERE r.relfilenodename = d.relfilenodename;
+  $fn$
+EXECUTE ON MASTER;
+CREATE FUNCTION temp_relfilenode_segments(rel text) RETURNS TABLE(gp_segment_id int)
+STRICT STABLE LANGUAGE SQL AS
+  $fn$
+  WITH
+  rel_relfilenodename AS
+    (SELECT 't_' || relfilenode AS relfilenodename FROM pg_class WHERE relname=rel),
+  db_relfilenodenames AS
+    (SELECT pg_ls_dir('./base/' || t.dboid || '/') AS relfilenodename
+      FROM (SELECT oid AS dboid FROM pg_database WHERE datname = 'regression') t)
+  SELECT gp_execution_segment()
+    FROM rel_relfilenodename r, db_relfilenodenames d
+    WHERE r.relfilenodename = d.relfilenodename;
+  $fn$
+EXECUTE ON ALL SEGMENTS;
+CREATE FUNCTION temp_relfilenode_primaries(rel text) RETURNS TABLE(gp_segment_id int)
+STRICT STABLE LANGUAGE SQL AS
+  $fn$
+  SELECT temp_relfilenode_master(rel) AS segno
+  UNION
+  SELECT temp_relfilenode_segments(rel) AS segno
+  ORDER BY segno;
+  $fn$;
+-- When we create a temporary table
+CREATE TEMPORARY TABLE temp_table(i int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- The table's relfilenode physically exists on the master and the segment primaries
+SELECT temp_relfilenode_primaries('temp_table');
+ temp_relfilenode_primaries 
+----------------------------
+                         -1
+                          0
+                          1
+                          2
+(4 rows)
+
+-- Then after we drop the same table
+DROP TABLE temp_table;
+-- The table's relfilenode is cleaned up on the master and the segment primaries
+SELECT temp_relfilenode_primaries('temp_table');
+ temp_relfilenode_primaries 
+----------------------------
+(0 rows)
+
+DROP SCHEMA temp_relation CASCADE;
+NOTICE:  drop cascades to 3 other objects
+DETAIL:  drop cascades to function temp_relfilenode_master(text)
+drop cascades to function temp_relfilenode_segments(text)
+drop cascades to function temp_relfilenode_primaries(text)

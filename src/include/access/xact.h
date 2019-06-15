@@ -149,7 +149,7 @@ typedef struct xl_xact_commit
 	Oid			dbId;			/* MyDatabaseId */
 	Oid			tsId;			/* MyDatabaseTableSpace */
 	/* Array of RelFileNode(s) to drop at commit */
-	RelFileNodeWithStorageType xnodes[1];		/* VARIABLE LENGTH ARRAY */
+	RelFileNodePendingDelete xnodes[1];		/* VARIABLE LENGTH ARRAY */
 	/* ARRAY OF COMMITTED SUBTRANSACTION XIDs FOLLOWS */
 	/* ARRAY OF SHARED INVALIDATION MESSAGES FOLLOWS */
 	/* DISTRIBUTED XACT STUFF FOLLOWS */
@@ -179,7 +179,7 @@ typedef struct xl_xact_abort
 	int			nrels;			/* number of RelFileNodes */
 	int			nsubxacts;		/* number of subtransaction XIDs */
 	/* Array of RelFileNode(s) to drop at abort */
-	RelFileNodeWithStorageType xnodes[1];		/* VARIABLE LENGTH ARRAY */
+	RelFileNodePendingDelete xnodes[1];		/* VARIABLE LENGTH ARRAY */
 	/* ARRAY OF ABORTED SUBTRANSACTION XIDs FOLLOWS */
 } xl_xact_abort;
 
