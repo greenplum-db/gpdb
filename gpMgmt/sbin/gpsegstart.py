@@ -261,7 +261,6 @@ class GpSegStart:
                                   self.num_cids,
                                   self.era,
                                   self.mirroringMode,
-                                  self.master_checksum_version,
                                   timeout=self.timeout,
                                   specialMode=self.specialMode,
                                   wrapper=self.wrapper,
