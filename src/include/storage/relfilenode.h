@@ -108,14 +108,14 @@ inline static bool RelFileNode_IsEmpty(
  * Augmenting a relfilenode with a storage type provides a way to make optimal
  * decisions in smgr and md layer. This is purposefully kept out of RelFileNode
  * for performance concerns where RelFileNode used in a hotpath for BufferTag
- * hashing. The backend is necessary to support file-system removal of
- * temporary relations on a two-phase commit/abort.
+ * hashing. The isTempRelation flag is necessary to support file-system removal 
+ * of temporary relations on a two-phase commit/abort.
  */
-typedef struct RelFileNodeWithBackendAndStorageType
+typedef struct RelFileNodePendingDelete
 {
 	RelFileNode node;
-	BackendId	backend; /* InvalidBackendId if not a temp rel */
+	bool isTempRelation;
 	char relstorage;
-} RelFileNodeWithBackendAndStorageType;
+} RelFileNodePendingDelete;
 
 #endif   /* RELFILENODE_H */
