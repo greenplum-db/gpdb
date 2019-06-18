@@ -29,6 +29,7 @@ test: instr_in_shmem
 test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp returning_gp resource_queue_with_rule gp_types gp_index
 test: spi_processed64bit
 test: python_processed64bit
+test: gp_tablespace_with_faults
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gpcopy_encoding gp_create_table gp_create_view window_views namespace_gp replication_slots create_table_like_gp
 
