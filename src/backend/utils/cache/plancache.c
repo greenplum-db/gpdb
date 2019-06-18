@@ -68,6 +68,7 @@
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
+#include "cdb/cdbutil.h"
 
 /*
  * We must skip "overhead" operations that involve database access when the
@@ -1105,6 +1106,39 @@ cached_plan_cost(CachedPlan *plan, bool include_planner)
 			int			nrelations = list_length(plannedstmt->rtable);
 
 			result += 1000.0 * cpu_operator_cost * (nrelations + 1);
+		}
+
+		/*
+		 * For generic plan, no params will be passed to planner, which leads
+		 * to plan can not genenrate direct dispatch plan, even if all the
+		 * params are const values. Unfortunately, direct dispatch cost v.s.
+		 * full gang dispatch cost is not included in plan's total cost. But
+		 * this cost is significantly. For query could leverage direct
+		 * dispatch, dispatching it to full gangs will result in unneccessary
+		 * QEs, but these QEs still need to go through volcano model, do two
+		 * phase commit and write xlog for Prepare etc, which not only
+		 * consuming CPU but also IO to disk. 
+		 *
+		 * So correctly generating direct dispatch plan matters.  As for custom
+		 * plan, it would pass the const params to planner and is able to
+		 * generate direct dispatch plan when possible. As a result, when we
+		 * evaluate the cost of generic plan and custom plan, we should not
+		 * only consider the plan's total cost and re-plan cost, but also
+		 * consider the cost of failed to generate direct dispatch.
+		 *
+		 * Since non direct dispatch introduces additional IO, we use
+		 * seq_page_cost as base unit to measure non direct dispatch cost. The
+		 * number of unneccessary QEs also measures the amount of this cost.
+		 * Considering clusters with 100 segments v.s. 10 segments, the non
+		 * direct dispatch cost of the 100 segments cluster is definitely
+		 * higher than 10 segments cluster.
+		 */
+		if (!plannedstmt->planTree->directDispatch.isDirectDispatch)
+		{
+			int			ndirectDispatchContentIds =
+				list_length(plannedstmt->planTree->directDispatch.contentIds);
+			int			nsegments = getgpsegmentCount();
+			result += 10.0 * seq_page_cost * (nsegments - ndirectDispatchContentIds);
 		}
 	}
 
