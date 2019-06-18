@@ -647,6 +647,7 @@ ExecSquelchNode(PlanState *node)
 		case T_BitmapOrState:
 		case T_DynamicBitmapHeapScanState:
 		case T_LimitState:
+		case T_LockRowsState:
 		case T_NestLoopState:
 		case T_MergeJoinState:
 		case T_RepeatState:

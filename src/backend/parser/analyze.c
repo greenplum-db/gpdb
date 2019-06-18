@@ -3815,13 +3815,6 @@ checkCanOptSelectLockingClause(SelectStmt *stmt)
 	if (!IsA(linitial(stmt->fromClause), RangeVar))
 		return false;
 
-	/*
-	 * In Greenplum, the results of limit can only be known on QD,
-	 * so we cannot lock correct tuples on QEs.
-	 */
-	if (stmt->limitCount != NULL || stmt->limitOffset != NULL)
-		return false;
-
 	if (!stmt->lockingClause)
 		return false;
 
