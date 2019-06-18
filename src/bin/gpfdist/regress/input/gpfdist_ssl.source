@@ -21,6 +21,10 @@
 -- select * from check_ps;
 -- select * from check_env;
 
+-- drop external table if exists gpfdist_ssl_start;
+-- drop external table if exists gpfdist_ssl_not_matching_start;
+-- drop external table if exists gpfdist_ssl_stop;
+
 -- end_ignore
 
 -- --------------------------------------
