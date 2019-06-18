@@ -59,6 +59,7 @@ Feature: gppkg tests
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --install should report success because the package is not yet installed
         Given the database is running
@@ -68,6 +69,7 @@ Feature: gppkg tests
         And gppkg should print "Completed local installation of sample" to stdout
         And "sample" gppkg files exist on all hosts
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --install should report failure because the package is already installed
         Given the database is running
@@ -75,6 +77,7 @@ Feature: gppkg tests
         Then gppkg should return a return code of 2
         And gppkg should print "sample.gppkg is already installed." to stdout
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --remove should report success when the package is already installed
         Given the database is running
@@ -85,6 +88,7 @@ Feature: gppkg tests
         And gppkg should print "sample.gppkg successfully uninstalled" to stdout
         And "sample" gppkg files do not exist on any hosts
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --query should report installed packages
         Given the database is running
@@ -96,6 +100,7 @@ Feature: gppkg tests
         And gppkg should print "Starting gppkg with args: --query --all" to stdout
         And gppkg should print "sample" to stdout
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --clean (which should be named "sync") should install to the segment host that lacks a gppkg found elsewhere
         Given the database is running
@@ -106,6 +111,7 @@ Feature: gppkg tests
         And gppkg should print "The following packages will be installed on .*: sample.gppkg" to stdout
         And "sample" gppkg files exist on all hosts
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --clean (which should be named "sync") should remove on all segment hosts when gppkg does not exist in master
         Given the database is running
@@ -116,6 +122,7 @@ Feature: gppkg tests
         And gppkg should print "The following packages will be uninstalled on .*: sample.gppkg" to stdout
         And "sample" gppkg files do not exist on any hosts
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gppkg --migrate copies all packages from master to all segment hosts
         Given the database is running

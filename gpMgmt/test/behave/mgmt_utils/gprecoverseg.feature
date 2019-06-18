@@ -153,6 +153,7 @@ Feature: gprecoverseg tests
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gprecoverseg full recovery testing
         Given the database is running
@@ -168,6 +169,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gprecoverseg with -i and -o option
         Given the database is running
@@ -186,6 +188,7 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gprecoverseg should not throw exception for empty input file
         Given the database is running
@@ -203,6 +206,7 @@ Feature: gprecoverseg tests
         Then all the segments are running
         And the segments are synchronized
 
+    @skip_fixme_ubuntu18.04
     @concourse_cluster
     Scenario: gprecoverseg should use the same setting for data_checksums for a full recovery
         Given the database is running
