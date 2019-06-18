@@ -51,7 +51,7 @@ smgrDoPendingTablespaceDeletion(void)
 }
 
 void
-smgrRedoPendingTablespaceDeletion(Oid tablespace_oid_to_delete)
+smgrDoTablespaceDeletion(Oid tablespace_oid_to_delete)
 {
 	perform_pending_tablespace_deletion_internal(tablespace_oid_to_delete, true);
 }

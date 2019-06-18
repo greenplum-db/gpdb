@@ -18,7 +18,7 @@ extern void TablespaceStorageInit(void (*unlink_tablespace_dir)(Oid tablespace_d
 extern void TablespaceCreateStorage(Oid tablespaceoid);
 extern Oid smgrGetPendingTablespaceForDeletion(void);
 extern void smgrDoPendingTablespaceDeletion(void);
-extern void smgrRedoPendingTablespaceDeletion(Oid tablespace_to_delete);
+extern void smgrDoTablespaceDeletion(Oid tablespace_to_delete);
 
 
 #endif // STORAGE_TABLESPACE_H

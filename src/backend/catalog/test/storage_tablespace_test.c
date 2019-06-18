@@ -109,12 +109,12 @@ test__delete_called_when_invalid_tablespace_set_does_not_call_unlink(void **stat
 }
 
 void
-test__smgrRedoPendingTablespaceDeletion_calls_unlink_with_tablespace_oid_and_redo_flag(void **state) {
+test__smgrDoTablespaceDeletion_calls_unlink_with_tablespace_oid_and_redo_flag(void **state) {
 	setup();
 
 	TablespaceCreateStorage(66666);
 
-	smgrRedoPendingTablespaceDeletion(77777);
+	smgrDoTablespaceDeletion(77777);
 
 	assert_int_equal(unlink_called_with_tablespace_oid, 77777);
 	assert_int_equal(unlink_called_with_redo, true);
@@ -140,7 +140,7 @@ main(int argc, char *argv[])
 			test__delete_called_when_invalid_tablespace_set_does_not_call_unlink
 			),
 		unit_test(
-			test__smgrRedoPendingTablespaceDeletion_calls_unlink_with_tablespace_oid_and_redo_flag
+			test__smgrDoTablespaceDeletion_calls_unlink_with_tablespace_oid_and_redo_flag
 			)
 	};
 

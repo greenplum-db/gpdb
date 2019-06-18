@@ -55,6 +55,7 @@
 #include "access/xlogutils.h"
 #include "catalog/pg_type.h"
 #include "catalog/storage.h"
+#include "catalog/storage_tablespace.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "pg_trace.h"
@@ -175,6 +176,7 @@ static void RecordTransactionCommitPrepared(TransactionId xid,
 								SharedInvalidationMessage *invalmsgs,
 								bool initfileinval);
 static void RecordTransactionAbortPrepared(TransactionId xid,
+							   Oid tablespace_oid_to_abort,
 							   int nchildren,
 							   TransactionId *children,
 							   int nrels,
@@ -963,6 +965,7 @@ typedef struct TwoPhaseFileHeader
 	int32		nabortrels;		/* number of delete-on-abort rels */
 	int32		ninvalmsgs;		/* number of cache invalidation messages */
 	bool		initfileinval;	/* does relcache init file need invalidation? */
+	Oid			tablespace_oid_to_abort;
 	char		gid[GIDSIZE];	/* GID for transaction */
 } TwoPhaseFileHeader;
 
@@ -1062,6 +1065,7 @@ StartPrepare(GlobalTransaction gxact)
 	hdr.database = proc->databaseId;
 	hdr.prepared_at = gxact->prepared_at;
 	hdr.owner = gxact->owner;
+	hdr.tablespace_oid_to_abort = smgrGetPendingTablespaceForDeletion();
 	hdr.nsubxacts = xactGetCommittedChildren(&children);
 	hdr.ncommitrels = smgrGetPendingDeletes(true, &commitrels);
 	hdr.nabortrels = smgrGetPendingDeletes(false, &abortrels);
@@ -1158,6 +1162,8 @@ EndPrepare(GlobalTransaction gxact)
 	add_recover_post_checkpoint_prepared_transactions_map_entry(xid, &gxact->prepare_begin_lsn);
 
 	XLogFlush(gxact->prepare_lsn);
+
+	SIMPLE_FAULT_INJECTOR("after_xlog_xact_prepare_flushed");
 
 	/*
 	 * Now we may update the CLOG, if we wrote COMMIT record above
@@ -1392,6 +1398,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 										hdr->initfileinval);
 	else
 		RecordTransactionAbortPrepared(xid,
+									   hdr->tablespace_oid_to_abort,
 									   hdr->nsubxacts, children,
 									   hdr->nabortrels, abortrels);
 
@@ -1423,6 +1430,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	{
 		delrels = abortrels;
 		ndelrels = hdr->nabortrels;
+		smgrDoTablespaceDeletion(hdr->tablespace_oid_to_abort);
 	}
 
 	/* Make sure files supposed to be dropped are dropped */
@@ -2013,6 +2021,7 @@ RecordTransactionCommitPrepared(TransactionId xid,
  */
 static void
 RecordTransactionAbortPrepared(TransactionId xid,
+							   Oid tablespace_oid_to_abort,
 							   int nchildren,
 							   TransactionId *children,
 							   int nrels,
@@ -2038,6 +2047,7 @@ RecordTransactionAbortPrepared(TransactionId xid,
 	xlrec.arec.xact_time = GetCurrentTimestamp();
 	xlrec.arec.nrels = nrels;
 	xlrec.arec.nsubxacts = nchildren;
+	xlrec.arec.tablespace_oid_to_abort = tablespace_oid_to_abort;
 	rdata[0].data = (char *) (&xlrec);
 	rdata[0].len = MinSizeOfXactAbortPrepared;
 	rdata[0].buffer = InvalidBuffer;

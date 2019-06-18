@@ -6356,7 +6356,7 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 	/* Make sure files supposed to be dropped are dropped */
 	DropRelationFiles(xlrec->xnodes, xlrec->nrels, true);
 
-	smgrRedoPendingTablespaceDeletion(xlrec->tablespace_oid_to_abort);
+	smgrDoTablespaceDeletion(xlrec->tablespace_oid_to_abort);
 }
 
 static void
