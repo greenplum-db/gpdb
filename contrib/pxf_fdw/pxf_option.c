@@ -36,6 +36,7 @@ static char *const FDW_OPTION_WIRE_FORMAT = "wire_format";
 static char *const FDW_OPTION_PXF_PORT = "pxf_port";
 static char *const FDW_OPTION_PXF_HOST = "pxf_host";
 static char *const FDW_OPTION_PXF_PROTOCOL = "pxf_protocol";
+static char *const FDW_OPTION_MPP_EXECUTE = "mpp_execute";
 
 /*
  * Describes the valid copy options for objects that use this wrapper.
@@ -137,7 +138,10 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	{
 		DefElem    *def = (DefElem *) lfirst(cell);
 
-/*		check whether option is valid at it's catalog level, if not, valid error out */
+		/*
+		 * check whether option is valid at it's catalog level, if not valid,
+		 * error out
+		 */
 		ValidateOption(def->defname, catalog);
 
 		if (strcmp(def->defname, FDW_OPTION_PROTOCOL) == 0)
@@ -148,12 +152,21 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		{
 			char	   *value = defGetString(def);
 
-			if (strcmp(TextFormatName, value) != 0 && strcmp(GpdbWritableFormatName, value) != 0)
+			if (strcmp(TextFormatName, value) != 0 &&
+				strcmp(GpdbWritableFormatName, value) != 0)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
-						 errmsg(
-								"invalid wire_format value, only '%s' and '%s' are supported", TextFormatName,
+						 errmsg("invalid wire_format value, only '%s' and '%s' are supported",
+								TextFormatName,
 								GpdbWritableFormatName)));
+		}
+		else if (strcmp(def->defname, FDW_OPTION_MPP_EXECUTE) == 0)
+		{
+			if (catalog == UserMappingRelationId)
+				ereport(ERROR,
+						(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+						 errmsg("the %s option cannot be defined at the user mapping level",
+								FDW_OPTION_MPP_EXECUTE)));
 		}
 		else if (strcmp(def->defname, FDW_OPTION_FORMAT) == 0)
 		{
@@ -167,7 +180,8 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			 */
 			char	   *value = defGetString(def);
 
-			if (pg_strcasecmp(value, FDW_OPTION_FORMAT_TEXT) == 0 || pg_strcasecmp(value, FDW_OPTION_FORMAT_CSV) == 0)
+			if (pg_strcasecmp(value, FDW_OPTION_FORMAT_TEXT) == 0 ||
+				pg_strcasecmp(value, FDW_OPTION_FORMAT_CSV) == 0)
 				copy_options = lappend(copy_options, def);
 		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT) == 0)
@@ -180,19 +194,21 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			if (pStr == endptr || reject_limit < 1)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg(
-								"invalid reject_limit value '%s', should be a positive integer", pStr)));
+						 errmsg("invalid reject_limit value '%s', should be a positive integer",
+								pStr)));
 		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT_TYPE) == 0)
 		{
 			reject_limit_type = defGetString(def);
-			if (pg_strcasecmp(reject_limit_type, FDW_OPTION_REJECT_LIMIT_ROWS) != 0 &&
-				pg_strcasecmp(reject_limit_type, FDW_OPTION_REJECT_LIMIT_PERCENT) != 0)
+			if (pg_strcasecmp(reject_limit_type,
+							  FDW_OPTION_REJECT_LIMIT_ROWS) != 0 &&
+				pg_strcasecmp(reject_limit_type,
+							  FDW_OPTION_REJECT_LIMIT_PERCENT) != 0)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg(
-								"invalid reject_limit_type value, only '%s' and '%s' are supported",
-								FDW_OPTION_REJECT_LIMIT_ROWS, FDW_OPTION_REJECT_LIMIT_PERCENT)));
+						 errmsg("invalid reject_limit_type value, only '%s' and '%s' are supported",
+								FDW_OPTION_REJECT_LIMIT_ROWS,
+								FDW_OPTION_REJECT_LIMIT_PERCENT)));
 		}
 		else if (IsCopyOption(def->defname))
 			copy_options = lappend(copy_options, def);
@@ -203,8 +219,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_FDW_DYNAMIC_PARAMETER_VALUE_NEEDED),
-				 errmsg(
-						"the protocol option must be defined for PXF foreign-data wrappers")));
+				 errmsg("the protocol option must be defined for PXF foreign-data wrappers")));
 	}
 
 	if (catalog == ForeignTableRelationId &&
@@ -212,8 +227,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_FDW_DYNAMIC_PARAMETER_VALUE_NEEDED),
-				 errmsg(
-						"the resource option must be defined at the foreign table level")));
+				 errmsg("the resource option must be defined at the foreign table level")));
 	}
 
 	/* Validate reject limit */
@@ -224,8 +238,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			if (reject_limit < 2)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg(
-								"invalid (ROWS) reject_limit value '%d', valid values are 2 or larger",
+						 errmsg("invalid (ROWS) reject_limit value '%d', valid values are 2 or larger",
 								reject_limit)));
 		}
 		else
@@ -233,8 +246,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			if (reject_limit < 1 || reject_limit > 100)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg(
-								"invalid (PERCENT) reject_limit value '%d', valid values are 1 to 100",
+						 errmsg("invalid (PERCENT) reject_limit value '%d', valid values are 1 to 100",
 								reject_limit)));
 		}
 	}
@@ -342,7 +354,7 @@ PxfGetOptions(Oid foreigntableid)
 	ListCell   *lc;
 	List	   *copy_options,
 			   *other_options,
-			   *other_option_names = NULL;
+			   *other_option_name_strings = NULL;
 
 	opt = (PxfOptions *) palloc(sizeof(PxfOptions));
 	memset(opt, 0, sizeof(PxfOptions));
@@ -357,11 +369,12 @@ PxfGetOptions(Oid foreigntableid)
 	 * Extract options from FDW objects.
 	 */
 	table = GetForeignTable(foreigntableid);
-	user = GetUserMapping(GetUserId(), server->serverid);
 	server = GetForeignServer(table->serverid);
+	user = GetUserMapping(GetUserId(), server->serverid);
 	wrapper = GetForeignDataWrapper(server->fdwid);
 
 	options = NIL;
+	/* order matters here for precedence enforcement */
 	options = list_concat(options, table->options);
 	options = list_concat(options, user->options);
 	options = list_concat(options, server->options);
@@ -408,31 +421,28 @@ PxfGetOptions(Oid foreigntableid)
 		{
 			Value	   *val = makeString(def->defname);
 
-			if (!list_member(other_option_names, val))
-			{
-				other_options = lappend(other_options, def);
-				other_option_names = lappend(other_option_names, val);
-			}
+			if (list_member(other_option_name_strings, val))
+				continue;
+			other_options = lappend(other_options, def);
+			other_option_name_strings = lappend(other_option_name_strings, val);
 		}
-	} //foreach
+	}							/* foreach */
 
-		opt->copy_options = copy_options;
+	opt->copy_options = copy_options;
 	opt->options = other_options;
 
 	opt->server = server->servername;
-	opt->exec_location = wrapper->exec_location;
 
-	/*
-	 * The profile corresponds to protocol[:format]
-	 */
+	/* Follows precedence rules table > server > wrapper */
+	opt->exec_location = table->exec_location;
+
+	/* The profile corresponds to protocol[:format] */
 	opt->profile = opt->protocol;
 
 	if (opt->format)
 		opt->profile = psprintf("%s:%s", opt->protocol, opt->format);
 
-	/*
-	 * Set defaults when not provided
-	 */
+	/* Set defaults when not provided */
 	if (!opt->pxf_host)
 		opt->pxf_host = PXF_FDW_DEFAULT_HOST;
 
@@ -488,7 +498,8 @@ static const char *
 GetWireFormatName(const char *format)
 {
 	/* for text we can also have text:multi so we search for "text" */
-	if (format && (strcasestr(format, FDW_OPTION_FORMAT_TEXT) || pg_strcasecmp(format, FDW_OPTION_FORMAT_CSV) ||
+	if (format && (strcasestr(format, FDW_OPTION_FORMAT_TEXT) ||
+				   pg_strcasecmp(format, FDW_OPTION_FORMAT_CSV) ||
 				   pg_strcasecmp(format, FDW_OPTION_FORMAT_RC)))
 		return TextFormatName;
 	return GpdbWritableFormatName;
