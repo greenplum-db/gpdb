@@ -77,6 +77,11 @@ CREATE USER MAPPING FOR pxf_fdw_user
     SERVER dummy_server
     OPTIONS ( reject_limit_type 'rows' );
 
+-- User mapping creation fails if mpp_execute option is provided
+CREATE USER MAPPING FOR pxf_fdw_user
+    SERVER dummy_server
+    OPTIONS ( mpp_execute 'any' );
+
 -- User mapping creation succeeds if protocol option is not provided
 CREATE USER MAPPING FOR pxf_fdw_user
     SERVER dummy_server;
@@ -156,3 +161,7 @@ ALTER USER MAPPING FOR pxf_fdw_user
     SERVER dummy_server
     OPTIONS ( ADD reject_limit_type 'rows' );
 
+-- User mapping alteration fails if mpp_execute option is added
+ALTER USER MAPPING FOR pxf_fdw_user
+    SERVER dummy_server
+    OPTIONS ( ADD mpp_execute 'any' );
