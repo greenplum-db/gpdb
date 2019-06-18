@@ -7493,15 +7493,12 @@
   <topic id="max_statement_mem">
     <title>max_statement_mem</title>
     <body>
-      <note>The <codeph>max_statement_mem</codeph> server configuration parameter is enforced only
-        when resource queue-based resource management is active.</note>
       <p>Sets the maximum memory limit for a query. Helps avoid out-of-memory errors on a segment
         host during query processing as a result of setting <codeph><xref href="#statement_mem"
             format="dita"/>
-        </codeph>too high. When <codeph><xref href="#gp_resqueue_memory_policy" format="dita"
-          />=auto</codeph>, <codeph>statement_mem</codeph> and resource queue memory limits control
-        query memory usage. Taking into account the configuration of a single segment host,
-        calculate this setting as follows:</p>
+        </codeph>too high.</p>
+      <p>Taking into account the configuration of a single segment host,
+        calculate <codeph>max_statement_mem</codeph> as follows:</p>
       <p>
         <codeph>(seghost_physical_memory) / (average_number_concurrent_queries)</codeph>
       </p>
@@ -7546,6 +7543,11 @@
         increase the initial memory allocation.</p>
       <p>When you set <codeph>memory_spill_ratio</codeph> at the session level, Greenplum Database
         does not perform semantic validation on the new value until you next perform a query.</p>
+      <p>You can specify an integer percentage value from 0 to 100 inclusive. If you
+        specify a value of 0, Greenplum Database uses the
+            <xref href="#statement_mem" format="dita"><codeph>statement_mem</codeph></xref>
+        server configuration parameter value to control the initial query operator memory
+        amount.</p>
       <table id="memory_spill_ratio_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9218,23 +9220,33 @@
   <topic id="statement_mem">
     <title>statement_mem</title>
     <body>
-      <note>The <codeph>statement_mem</codeph> server configuration parameter is enforced only when
-        resource queue-based resource management is active.</note>
       <p>Allocates segment host memory per query. The amount of memory allocated with this parameter
         cannot exceed <codeph><xref href="#max_statement_mem" format="dita"/></codeph> or the memory
-        limit on the resource queue through which the query was submitted. When <codeph><xref
+        limit on the resource queue or resource group through which the query was submitted.
+        If additional memory is required for a query, temporary spill files on disk are used.</p>
+      <p><i>If you are using resource groups to control resource allocation in your Greenplum
+        Database cluster</i>:</p><ul>
+        <li>Greenplum Database uses <codeph>statement_mem</codeph> to control query memory
+          usage when the resource group <codeph>MEMORY_SPILL_RATIO</codeph> is set to 0.</li>
+        <li>You can use the following calculation to estimate a reasonable <codeph>statement_mem</codeph>
+          value:
+          <codeblock>rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments
+statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
+      </ul>
+      <p><i>If you are using resource queues to control resource allocation in your Greenplum
+        Database cluster</i>:</p><ul>
+        <li>When <codeph><xref
             href="#gp_resqueue_memory_policy" format="dita"/> =auto</codeph>,
           <codeph>statement_mem</codeph> and resource queue memory limits control query memory
-        usage. </p>
-      <p>If additional memory is required for a query, temporary spill files on disk are used.</p>
-      <p>This calculation can be used to estimate a reasonable value for a wide variety of
-        situations.</p>
-      <codeblock>( <varname>gp_vmem_protect_limit</varname>GB * .9 ) / <varname>max_expected_concurrent_queries</varname></codeblock>
-      <p>With the <varname>gp_vmem_protect_limit</varname> set to 8192MB (8GB) and assuming a
-        maximum of 40 concurrent queries with a 10% buffer </p>
-      <p>
-        <codeblock>(8GB * .9) / 40 = .18GB = 184MB</codeblock>
-      </p>
+        usage. </li>
+        <li>You can use the following calculation to estimate a reasonable
+          <codeph>statement_mem</codeph> value for a wide variety of situations:
+          <codeblock>( <varname>gp_vmem_protect_limit</varname>GB * .9 ) / <varname>max_expected_concurrent_queries</varname></codeblock>
+          <p>For example, with a <varname>gp_vmem_protect_limit</varname> set to 8192MB (8GB)
+            and assuming a maximum of 40 concurrent queries with a 10% buffer, you would use
+            the following calculation to determine the <codeph>statement_mem</codeph> value:</p>
+          <codeblock>(8GB * .9) / 40 = .18GB = 184MB</codeblock></li>
+      </ul>
       <p>When changing both <codeph>max_statement_mem</codeph> and <codeph>statement_mem</codeph>,
           <codeph>max_statement_mem</codeph> must be changed first, or listed first in the
           <systemoutput>postgresql.conf</systemoutput> file.</p>
