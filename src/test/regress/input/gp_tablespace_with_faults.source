@@ -78,10 +78,30 @@ $$ language sql;
 
 
 --
--- An error before XLOG_TBLSPC_CREATE on master
+-- An error after XLOG_TBLSPC_CREATE on master
 --
 -- expected: tablespace should not exist after abort
---  
+--
+\set dbid_under_test 1
+\set expected_number_of_tablespaces 0
+\set error_type error
+\set tablespace_location /tmp/my_tablespace_for_testing
+\set fault_to_set after_xlog_create_tablespace
+
+select setup(:dbid_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+select give_mirrors_time_to_catch_up();
+select spcname, oid from pg_tablespace;
+select list_tablespaces(:expected_number_of_tablespaces);
+DROP TABLESPACE my_tablespace_for_testing;
+select cleanup(:dbid_under_test, :'tablespace_location');
+
+
+--
+-- An error after XLOG_TBLSPC_CREATE on primary
+--
+-- expected: tablespace should not exist after abort
+--
 \set dbid_under_test 2
 \set expected_number_of_tablespaces 0
 \set error_type error

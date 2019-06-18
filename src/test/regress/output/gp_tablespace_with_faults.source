@@ -63,10 +63,76 @@ create or replace function give_mirrors_time_to_catch_up() returns void as $$
 	select pg_sleep(1);
 $$ language sql;
 --
--- An error before XLOG_TBLSPC_CREATE on master
+-- An error after XLOG_TBLSPC_CREATE on master
 --
 -- expected: tablespace should not exist after abort
---  
+--
+\set dbid_under_test 1
+\set expected_number_of_tablespaces 0
+\set error_type error
+\set tablespace_location /tmp/my_tablespace_for_testing
+\set fault_to_set after_xlog_create_tablespace
+select setup(:dbid_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
+NOTICE:  Success:
+CONTEXT:  SQL statement "SELECT gp_inject_fault('all', 'reset', dbid)"
+PL/pgSQL function setup(integer,text,text,text) line 5 at PERFORM
+NOTICE:  Success:
+CONTEXT:  SQL statement "SELECT gp_inject_fault(fault_name, fault_action_type, dbid)"
+PL/pgSQL function setup(integer,text,text,text) line 6 at PERFORM
+ setup 
+-------
+ 
+(1 row)
+
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+ERROR:  fault triggered, fault name:'after_xlog_create_tablespace' fault type:'error'
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select spcname, oid from pg_tablespace;
+  spcname   | oid  
+------------+------
+ pg_default | 1663
+ pg_global  | 1664
+(2 rows)
+
+select list_tablespaces(:expected_number_of_tablespaces);
+NOTICE:  finding tablespaces:
+CONTEXT:  PL/Python function "list_tablespaces"
+NOTICE:  missing error text
+CONTEXT:  PL/Python function "list_tablespaces"
+NOTICE:  found N tablespaces:
+CONTEXT:  PL/Python function "list_tablespaces"
+NOTICE:         0
+CONTEXT:  PL/Python function "list_tablespaces"
+NOTICE:  expected 0 tablespaces
+CONTEXT:  PL/Python function "list_tablespaces"
+NOTICE:  done finding tablespaces.
+CONTEXT:  PL/Python function "list_tablespaces"
+ list_tablespaces 
+------------------
+ 
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+ERROR:  tablespace "my_tablespace_for_testing" does not exist
+select cleanup(:dbid_under_test, :'tablespace_location');
+NOTICE:  Success:
+CONTEXT:  SQL statement "SELECT gp_inject_fault('all', 'reset', dbid)"
+PL/pgSQL function cleanup(integer,text) line 3 at PERFORM
+ cleanup 
+---------
+ 
+(1 row)
+
+--
+-- An error after XLOG_TBLSPC_CREATE on primary
+--
+-- expected: tablespace should not exist after abort
+--
 \set dbid_under_test 2
 \set expected_number_of_tablespaces 0
 \set error_type error
