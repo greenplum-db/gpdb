@@ -29,7 +29,8 @@ static char *const FDW_OPTION_REJECT_LIMIT_PERCENT = "percent";
 static char *const FDW_OPTION_PROTOCOL = "protocol";
 static char *const FDW_OPTION_RESOURCE = "resource";
 static char *const FDW_OPTION_FORMAT = "format";
-static char *const FDW_OPTION_REJECT_LIMIT_TYPE = "reject_limit_type"; /* valid types are row and percent */
+static char *const FDW_OPTION_REJECT_LIMIT_TYPE = "reject_limit_type";	/* valid types are row
+																		 * and percent */
 static char *const FDW_OPTION_REJECT_LIMIT = "reject_limit";
 static char *const FDW_OPTION_WIRE_FORMAT = "wire_format";
 static char *const FDW_OPTION_PXF_PORT = "pxf_port";
@@ -104,9 +105,13 @@ PG_FUNCTION_INFO_V1(pxf_fdw_validator);
  * Helper functions
  */
 static Datum ValidateCopyOptions(List *options_list, Oid catalog);
+
 static bool IsCopyOption(const char *option);
+
 static bool IsValidCopyOption(const char *option, Oid context);
+
 static const char *GetWireFormatName(const char *format);
+
 static void ValidateOption(char *, Oid);
 
 /*
@@ -119,20 +124,20 @@ static void ValidateOption(char *, Oid);
 Datum
 pxf_fdw_validator(PG_FUNCTION_ARGS)
 {
-	char     *protocol          = NULL;
-	char     *resource          = NULL;
-	char     *reject_limit_type = FDW_OPTION_REJECT_LIMIT_ROWS;
-	List     *options_list      = untransformRelOptions(PG_GETARG_DATUM(0));
-	Oid      catalog            = PG_GETARG_OID(1);
-	List     *copy_options      = NIL;
-	ListCell *cell;
-	int      reject_limit       = -1;
+	char	   *protocol = NULL;
+	char	   *resource = NULL;
+	char	   *reject_limit_type = FDW_OPTION_REJECT_LIMIT_ROWS;
+	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
+	Oid			catalog = PG_GETARG_OID(1);
+	List	   *copy_options = NIL;
+	ListCell   *cell;
+	int			reject_limit = -1;
 
 	foreach(cell, options_list)
 	{
 		DefElem    *def = (DefElem *) lfirst(cell);
 
-/*		check whether option is valid at it's catalog level, if not valid error out */
+/*		check whether option is valid at it's catalog level, if not, valid error out */
 		ValidateOption(def->defname, catalog);
 
 		if (strcmp(def->defname, FDW_OPTION_PROTOCOL) == 0)
@@ -147,7 +152,8 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
 						 errmsg(
-								"invalid wire_format value, only '%s' and '%s' are supported", TextFormatName, GpdbWritableFormatName)));
+								"invalid wire_format value, only '%s' and '%s' are supported", TextFormatName,
+								GpdbWritableFormatName)));
 		}
 		else if (strcmp(def->defname, FDW_OPTION_FORMAT) == 0)
 		{
@@ -166,24 +172,27 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT) == 0)
 		{
-			char *endptr = NULL;
-			char *pStr = defGetString(def);
+			char	   *endptr = NULL;
+			char	   *pStr = defGetString(def);
+
 			reject_limit = (int) strtol(pStr, &endptr, 10);
 
 			if (pStr == endptr || reject_limit < 1)
 				ereport(ERROR,
-				        (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-					        errmsg(
-						        "invalid reject_limit value '%s', should be a positive integer", pStr)));
+						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+						 errmsg(
+								"invalid reject_limit value '%s', should be a positive integer", pStr)));
 		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT_TYPE) == 0)
 		{
 			reject_limit_type = defGetString(def);
-			if (pg_strcasecmp(reject_limit_type, FDW_OPTION_REJECT_LIMIT_ROWS) != 0 && pg_strcasecmp(reject_limit_type, FDW_OPTION_REJECT_LIMIT_PERCENT) != 0)
+			if (pg_strcasecmp(reject_limit_type, FDW_OPTION_REJECT_LIMIT_ROWS) != 0 &&
+				pg_strcasecmp(reject_limit_type, FDW_OPTION_REJECT_LIMIT_PERCENT) != 0)
 				ereport(ERROR,
-				        (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-					        errmsg(
-						        "invalid reject_limit_type value, only '%s' and '%s' are supported", FDW_OPTION_REJECT_LIMIT_ROWS, FDW_OPTION_REJECT_LIMIT_PERCENT)));
+						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+						 errmsg(
+								"invalid reject_limit_type value, only '%s' and '%s' are supported",
+								FDW_OPTION_REJECT_LIMIT_ROWS, FDW_OPTION_REJECT_LIMIT_PERCENT)));
 		}
 		else if (IsCopyOption(def->defname))
 			copy_options = lappend(copy_options, def);
@@ -214,17 +223,19 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		{
 			if (reject_limit < 2)
 				ereport(ERROR,
-				        (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-					        errmsg(
-						        "invalid (ROWS) reject_limit value '%d', valid values are 2 or larger", reject_limit)));
+						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+						 errmsg(
+								"invalid (ROWS) reject_limit value '%d', valid values are 2 or larger",
+								reject_limit)));
 		}
 		else
 		{
 			if (reject_limit < 1 || reject_limit > 100)
 				ereport(ERROR,
-				        (errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-					        errmsg(
-						        "invalid (PERCENT) reject_limit value '%d', valid values are 1 to 100", reject_limit)));
+						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+						 errmsg(
+								"invalid (PERCENT) reject_limit value '%d', valid values are 1 to 100",
+								reject_limit)));
 		}
 	}
 
@@ -330,7 +341,8 @@ PxfGetOptions(Oid foreigntableid)
 	PxfOptions *opt;
 	ListCell   *lc;
 	List	   *copy_options,
-			   *other_options;
+			   *other_options,
+			   *other_option_names = NULL;
 
 	opt = (PxfOptions *) palloc(sizeof(PxfOptions));
 	memset(opt, 0, sizeof(PxfOptions));
@@ -345,15 +357,15 @@ PxfGetOptions(Oid foreigntableid)
 	 * Extract options from FDW objects.
 	 */
 	table = GetForeignTable(foreigntableid);
-	server = GetForeignServer(table->serverid);
 	user = GetUserMapping(GetUserId(), server->serverid);
+	server = GetForeignServer(table->serverid);
 	wrapper = GetForeignDataWrapper(server->fdwid);
 
 	options = NIL;
-	options = list_concat(options, wrapper->options);
-	options = list_concat(options, server->options);
 	options = list_concat(options, table->options);
 	options = list_concat(options, user->options);
+	options = list_concat(options, server->options);
+	options = list_concat(options, wrapper->options);
 
 	/* Loop through the options, and get the server/port */
 	foreach(lc, options)
@@ -393,17 +405,18 @@ PxfGetOptions(Oid foreigntableid)
 		else if (IsCopyOption(def->defname))
 			copy_options = lappend(copy_options, def);
 		else
+		{
+			Value	   *val = makeString(def->defname);
 
-			/*
-			 * TODO: what to do in case of duplicates (ie SERVER defines foo
-			 * option and TABLE defines foo option)
-			 */
-			/* TODO: maybe consider prepending with lcons(other_options, def) */
-			other_options = lappend(other_options, def);
+			if (!list_member(other_option_names, val))
+			{
+				other_options = lappend(other_options, def);
+				other_option_names = lappend(other_option_names, val);
+			}
+		}
+	} //foreach
 
-	}
-
-	opt->copy_options = copy_options;
+		opt->copy_options = copy_options;
 	opt->options = other_options;
 
 	opt->server = server->servername;
@@ -475,7 +488,8 @@ static const char *
 GetWireFormatName(const char *format)
 {
 	/* for text we can also have text:multi so we search for "text" */
-	if (format && (strcasestr(format, FDW_OPTION_FORMAT_TEXT) || pg_strcasecmp(format, FDW_OPTION_FORMAT_CSV) || pg_strcasecmp(format, FDW_OPTION_FORMAT_RC)))
+	if (format && (strcasestr(format, FDW_OPTION_FORMAT_TEXT) || pg_strcasecmp(format, FDW_OPTION_FORMAT_CSV) ||
+				   pg_strcasecmp(format, FDW_OPTION_FORMAT_RC)))
 		return TextFormatName;
 	return GpdbWritableFormatName;
 }
@@ -493,14 +507,14 @@ ValidateOption(char *option, Oid catalog)
 		/* option can only be defined at its catalog level */
 		if (strcmp(entry->optname, option) == 0 && catalog != entry->optcontext)
 		{
-			Relation rel = RelationIdGetRelation(entry->optcontext);
+			Relation	rel = RelationIdGetRelation(entry->optcontext);
 
 			ereport(ERROR,
-			        (errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
-				        errmsg(
-					        "the %s option can only be defined at the %s level",
-					        option,
-					        RelationGetRelationName(rel))));
+					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
+					 errmsg(
+							"the %s option can only be defined at the %s level",
+							option,
+							RelationGetRelationName(rel))));
 		}
 	}
 }
