@@ -293,8 +293,7 @@
 ]</codeblock></pd>
                     <pd>You cannot specify views or system catalog tables as source tables.</pd>
                     <pd>Any query that you provide must reference a single source table and output
-                        to the same columns of the source table. Do not terminate the query with a
-                        semicolon.</pd>
+                        to the same columns of the source table.</pd>
                     <pd>If the query includes an <codeph>ORDER BY</codeph> clause, then the target
                         Greenplum cluster must be the same size (the same number of segments) as the
                         source cluster.</pd>
