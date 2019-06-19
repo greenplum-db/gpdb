@@ -1,0 +1,391 @@
+--
+-- custom formats for external tables - short and simple functional tests.
+--
+
+-- --------------------------------------
+-- check platform and start 'gpfdist'
+-- --------------------------------------
+set optimizer_print_missing_stats = off;
+CREATE EXTERNAL WEB TABLE gpfdist_status (x text)
+execute E'( python @bindir@/lib/gppinggpfdist.py @hostname@:7575 2>&1 || echo) '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL WEB TABLE gpfdist_start (x text)
+execute E'((@bindir@/gpfdist -p 7575 -d @abs_srcdir@/data/fixedwidth/  </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7575 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL WEB TABLE gpfdist_stop (x text)
+execute E'(ps -A -o pid,comm |grep [g]pfdist |grep -v postgres: |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+-- start_ignore
+-- CREATE EXTERNAL WEB TABLE gpfdist_status (x text)
+-- execute E'( python @bindir@/gppinggpfdist.py @hostname@:7575 2>&1 || echo) '
+-- on SEGMENT 0
+-- FORMAT 'text' (delimiter '|');
+
+SELECT * FROM gpfdist_stop;
+-- SELECT * FROM gpfdist_status;
+SELECT * FROM gpfdist_start;
+-- SELECT * FROM gpfdist_status;
+-- end_ignore
+
+-- --------------------------------------
+-- the tests
+-- --------------------------------------
+
+---------------------------------------------------------------
+
+--     TESTS SUMMARY
+-- 1.  import data into table with string and numeric fields - data OK 
+-- 2.  import data into table with string and numeric fields - field type error  -- no reject limit
+-- 3.  import data into table with string and numeric fields - too many fields error  -- no reject limit
+-- 4.  import data into table with string and numeric fields - too few fields error  -- no reject limit
+-- 5.  import data into table with string and numeric fields - field too long error -- no reject limit
+-- 6.  import data into table with string and numeric fields - field type error  -- reject limit crossed
+-- 7.  import data into table with string and numeric fields - field type error  -- reject limit not crossed
+-- 8.  import data into table with string and numeric fields - field type error  -- reject limit crossed error written to error table
+-- 9.  import data into table with string and numeric fields - FORMAT string syntax error  -- field definition error
+-- 10. import data into table with string and numeric fields - FORMAT string syntax error  -- fields order does not corespond to file order
+--     canno't be caught when testing string syntax, will appear as a type error and only if the swap was between fields of different type
+-- 11. import data into table with string and numeric fields - FORMAT string syntax error  -- fields names do not corespond fields in table
+-- 12. import data into table with string and numeric fields -- NULL value loaded when NULL value defined
+-- 13. import data into table with string and numeric fields -- NULL value loaded when the field has only blanks and preserve_blanks is on
+-- 14. import data into table with string and numeric fields - FORMAT string syntax error  -- preserve_blanks without NULL definition generates error
+-- 15. import data into table with string and numeric fields - FORMAT string syntax error  -- preserve_blanks with NULL defined
+--     trailing blanks are loaded, blank fields are loaded as  strings, only fields with the null value are loaded as NULL
+-- 16. import data into table with string and numeric fields - data OK - big input file
+-- 17. import data into table with string and numeric fields - data OK - no line_delimiter in input data file
+-- 18. import data into table with string and numeric fields - data OK - line delimiter containing several chars
+-- 19. MPP-14467 import data from file - field names with spaces
+
+-- 1.  import data into table with string and numeric fields - data OK 
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 2.  import data into table with string and numeric fields - field type error  -- no reject limit 
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_fieldtype.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 3.  import data into table with string and numeric fields - too many fields error  -- no reject limit
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_toomanyfields.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 4.  import data into table with string and numeric fields - too few fields error  -- no reject limit
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_toofewfields.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 5.  import data into table with string and numeric fields - field too long error -- no reject limit
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_fieldtoolong.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 6.  import data into table with string and numeric fields - field type error  -- reject limit crossed
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_rejectlimitcrossed.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15')
+SEGMENT REJECT LIMIT 3 ROWS;
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 7.  import data into table with string and numeric fields - field type error  -- reject limit not crossed
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_rejectlimitnotcrossed.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15')
+SEGMENT REJECT LIMIT 5 ROWS;
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 8.  import data into table with string and numeric fields - field type error  -- reject limit crossed error written to error table
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_error_rejectlimitnotcrossed.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15')
+LOG ERRORS SEGMENT REJECT LIMIT 5 ROWS;
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+SELECT relname,linenum,errmsg FROM gp_read_error_log('tbl_ext_fixedwidth') ORDER BY linenum;
+DROP EXTERNAL TABLE tbl_ext_fixedwidth;
+
+-- 9.  import data into table with string and numeric fields - FORMAT string syntax error  -- field definition error
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', '10'=s2, s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 10. import data into table with string and numeric fields - FORMAT string syntax error  -- fields order does not corespond to file order
+--     canno't be caught when testing string syntax, will appear as a type error and only if the swap was between fields of different type
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', n1='5', s2='10', s3='10', dt='20', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 11. import data into table with string and numeric fields - FORMAT string syntax error  -- fields names do not corespond fields in table
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s25 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', n1='5', s2='10', s3='10', dt='20', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 12. import data into table with string and numeric fields -- NULL value loaded when NULL value defined
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_nulldefined.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15', null='NULL');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+SELECT s1 FROM tbl_ext_fixedwidth WHERE s2 IS NULL ORDER BY s1;
+SELECT n1 FROM tbl_ext_fixedwidth WHERE n2 IS NULL ORDER BY s1;
+
+-- 13. import data into table with string and numeric fields -- NULL value loaded when the field has only blanks and preserve_blanks is on
+--     by default preserve_blanks='on'
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_blankfields.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+SELECT s1 FROM tbl_ext_fixedwidth WHERE s2 IS NULL ORDER BY s1;
+SELECT n1 FROM tbl_ext_fixedwidth WHERE n2 IS NULL ORDER BY s1;
+
+-- 14. import data into table with string and numeric fields - FORMAT string error  -- preserve_blanks without NULL definition generates error
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_blankfields.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15', preserve_blanks='on');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 15. import data into table with string and numeric fields - FORMAT string syntax error  -- preserve_blanks with NULL defined
+--     trailing blanks are loaded, blank fields are loaded as  strings, only fields with the null value are loaded as NULL
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_blankfields_and_nulls.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15', preserve_blanks='on', null='NULL');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+SELECT s1 FROM tbl_ext_fixedwidth WHERE s2 IS NULL ORDER BY s1;
+
+-- 16. import data into table with string and numeric fields - data OK - big input file
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_big.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 17. import data into table with string and numeric fields - data OK - no line_delimiter in input data file
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_no_line_delimiter.tbl')      
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15', line_delim='');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 18. import data into table with string and numeric fields - data OK - line delimiter containing several chars
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+(s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_3chars_line_delimiter.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15', line_delim='@#$');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+-- 19. MPP-14467 import data from file - field names with spaces
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth 
+("s 1" char(10), "s  2" varchar(10), s3 text, "dd ttt t t" timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)                                                              
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')       
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', "s 1"='10', "s  2"='10', s3='10', "dd ttt t t"='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY "s 1";
+
+
+-- --------------------------------------
+-- WRITABLE tests
+-- --------------------------------------
+
+-- Helper to remove the output file
+DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
+CREATE EXTERNAL WEB TABLE clean_out_file (x text)
+EXECUTE E'( rm -f @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl)'
+on SEGMENT 0
+FORMAT 'text';
+
+-- export data into file - all fields have data
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth
+  (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_small_correct.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='10', s3='10', dt='20',n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM clean_out_file;
+
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth
+  (s1 char(10), s2 varchar(10), s3 text, dt timestamp, n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10', s2='10', s3='10', dt='25', n1='5', n2='10', n3='10', n4='10', n5='10', n6='10', n7='15');
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+
+-- Execute query to clean out the output file
+SELECT * FROM clean_out_file;
+
+
+-- Create WET with line_delim=E'\n'
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+    n1 smallint, n2 integer, n3 bigint, n4 decimal,
+    n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',
+    s2='10', s3='10', dt='25', n1='5', n2='10',
+    n3='10', n4='10', n5='10', n6='10', n7='15',line_delim=E'\n');
+
+-- Output data
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+
+-- Execute query to clean out the output file
+SELECT * FROM clean_out_file;
+
+
+-- Create WET with line_delim=E'\r\n'
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+    n1 smallint, n2 integer, n3 bigint, n4 decimal,
+    n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',
+    s2='10', s3='10', dt='25', n1='5', n2='10',
+    n3='10', n4='10', n5='10', n6='10', n7='15',line_delim=E'\r\n');
+
+-- Output data
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+
+-- Execute query to clean out the output file
+SELECT * FROM clean_out_file;
+
+
+-- MPP-14492
+-- Create WET with line_delim='EndOfLine', which can be arbitrary string
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+    n1 smallint, n2 integer, n3 bigint, n4 decimal,
+    n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',
+    s2='10', s3='10', dt='25', n1='5', n2='10',
+    n3='10', n4='10', n5='10', n6='10', n7='15',line_delim=E'EndOfLine');
+
+-- Output data
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+
+-- Clean out the output file
+SELECT * FROM clean_out_file;
+
+
+-- Create WET with line_delim='qwertyuiopasdfghjklzxcvbnm'
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+    s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+    n1 smallint, n2 integer, n3 bigint, n4 decimal,
+    n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',
+    s2='10', s3='10', dt='25', n1='5', n2='10',
+    n3='10', n4='10', n5='10', n6='10', n7='15',line_delim='qwertyuiopasdfghjklzxcvbnm');
+
+-- Output data
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | wc
+
+-- Clean out the output file
+SELECT * FROM clean_out_file;
+
+
+-- Create a RET
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10), s2 varchar(10), s3 text,
+  col_empty character(5),col_null character varying(5)
+)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_null.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', null='', preserve_blanks='on',
+  s1='10',s2='10', s3='10', col_empty='5', col_null='5');
+
+-- Create WET with null string defined: null='NULL'
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+CREATE WRITABLE EXTERNAL TABLE tbl_out_fixedwidth (
+  s1 char(10), s2 varchar(10), s3 text,
+  col_empty character(5),col_null character varying(5)
+)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_out.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10',s2='10',
+    s3='10', col_empty='5', col_null='5', null='NULL');
+
+-- export data to output data file
+INSERT INTO tbl_out_fixedwidth SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+
+\! cat @abs_srcdir@/data/fixedwidth/fixedwidth_out.tbl | grep NULL | wc
+
+-- Clean out the output file
+SELECT * FROM clean_out_file;
+
+
+-- --------------------------------------
+-- stop 'gpfdist'
+-- --------------------------------------
+
+-- start_ignore
+-- SELECT * FROM gpfdist_status;
+SELECT * FROM gpfdist_stop;
+-- SELECT * FROM gpfdist_status;
+-- end_ignore
+
+-- --------------------------------------
+-- clean the database
+-- --------------------------------------
+
+DROP EXTERNAL TABLE IF EXISTS gpfdist_start;
+DROP EXTERNAL TABLE IF EXISTS gpfdist_stop;
+DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
+ 
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;

@@ -44,10 +44,10 @@ function import_remote_key() {
 }
 
 function run_remote_test() {
-    source ./gpdb_src/gpAux/gpdemo/gpdemo-env.sh
-    #restart gpdb with ssl
-    export -f configure_gpdb_ssl
-    /bin/sh -c "su gpadmin -c configure_gpdb_ssl"
+    set -eo pipefail
+    if [ -f /opt/gcc_env.sh ]; then
+        source /opt/gcc_env.sh
+    fi
 
     scp -P "${REMOTE_PORT}" ./gpdb_src/concourse/scripts/windows_remote_test.ps1 "${REMOTE_USER}@${REMOTE_HOST}:"
     scp -P "${REMOTE_PORT}" ./bin_gpdb_clients_windows/*.msi "${REMOTE_USER}@${REMOTE_HOST}:"
@@ -61,6 +61,17 @@ function run_remote_test() {
     scp -P "${REMOTE_PORT}" ./gpdb_src/concourse/scripts/ic_gpdb_remote_windows.bat "${REMOTE_USER}@${REMOTE_HOST}:"
 
     ssh -T -R"${PGPORT}:127.0.0.1:${PGPORT}" -L8081:127.0.0.1:8081 -L8082:127.0.0.1:8082 -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "ic_gpdb_remote_windows.bat ${PGPORT}"
+    # run gpfdist test
+    pushd gpdb_src/src/test/regress
+    make pg_regress
+    popd
+    pushd gpdb_src/src/bin/gpfdist/remote_regress
+    echo "export REMOTE_HOST=${REMOTE_HOST}" > ssh_remote_env.sh
+    echo "export REMOTE_PORT=${REMOTE_PORT}" >> ssh_remote_env.sh
+    echo "export REMOTE_USER=${REMOTE_USER}" >> ssh_remote_env.sh
+    echo "export REMOTE_KEY=~/remote.key" >> ssh_remote_env.sh
+    make installcheck_win
+    popd
 }
 
 function create_cluster() {
@@ -72,14 +83,30 @@ function create_cluster() {
     time make_cluster
 }
 
-function _main() {
-    if [[ -z "${REMOTE_PORT}" ]]; then
+function gpadmin_run_tests(){
+    pushd "${1}"
+    REMOTE_PORT=${2}
+    REMOTE_USER=${3}
+    if [ -z "$REMOTE_PORT" ]; then
         REMOTE_PORT=22
     fi
-    yum install -y jq
     REMOTE_HOST=$(jq -r '."gpdb-clients-ip"' terraform_windows/metadata)
     export REMOTE_HOST
+    export REMOTE_PORT
+    export REMOTE_USER
+    source ./gpdb_src/gpAux/gpdemo/gpdemo-env.sh
+    source /usr/local/greenplum-db-devel/greenplum_path.sh
+    configure_gpdb_ssl
+    time import_remote_key
+    time run_remote_test
+}
 
+function _main() {
+    export -f configure_gpdb_ssl
+    export -f import_remote_key
+    export -f run_remote_test
+    export -f gpadmin_run_tests
+    yum install -y jq
     pushd bin_gpdb
         mv *.tar.gz bin_gpdb.tar.gz
     popd
@@ -89,9 +116,7 @@ function _main() {
     popd
 
     time create_cluster
-    time import_remote_key
-    time run_remote_test
-
+    su gpadmin -c 'gpadmin_run_tests $(pwd) "${REMOTE_PORT}" "${REMOTE_USER}"'
     cp bin_gpdb_clients_windows/*.msi bin_gpdb_clients_windows_rc/
     pushd bin_gpdb_clients_windows_rc
         VERSION=$(cat ../bin_gpdb_clients_windows/version)

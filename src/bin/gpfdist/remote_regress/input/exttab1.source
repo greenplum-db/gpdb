@@ -1,0 +1,532 @@
+--
+-- external tables 1 - short and simple functional tests. The full set of tests
+-- exists in cdbunit.
+--
+set optimizer_print_missing_stats = off;
+CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
+
+-- start_ignore
+-- --------------------------------------
+-- check platform
+-- --------------------------------------
+-- drop external web table if exists check_ps;
+-- CREATE EXTERNAL WEB TABLE check_ps (x text)
+-- execute E'( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)'
+-- on SEGMENT 0
+-- format 'text';
+
+-- drop external web table if exists check_env;
+-- CREATE EXTERNAL WEB TABLE check_env (x text)
+-- execute E'( env | sort)'
+-- on SEGMENT 0
+-- format 'text';
+
+-- select * from check_ps;
+-- select * from check_env;
+
+-- end_ignore
+
+
+-- --------------------------------------
+-- 'gpfdist' protocol
+-- --------------------------------------
+
+CREATE EXTERNAL WEB TABLE exttab1_gpfdist_status (x text)
+execute E'( python @bindir@/lib/gppinggpfdist.py @hostname@:7070 2>&1 || echo) '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL WEB TABLE exttab1_gpfdist_start (x text)
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL WEB TABLE exttab1_gpfdist_stop (x text)
+execute E'(ps -A -o pid,comm |grep [g]pfdist |grep -v postgres: |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+select * from exttab1_gpfdist_start;
+-- end_ignore
+
+CREATE EXTERNAL TABLE EXT_NATION  ( N_NATIONKEY  INTEGER ,
+                            N_NAME       CHAR(25) ,
+                            N_REGIONKEY  INTEGER ,
+                            N_COMMENT    VARCHAR(152))
+location ('gpfdist://@hostname@:7070/exttab1/nation.tbl' )
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL TABLE EXT_NATION_GZ  ( N_NATIONKEY  INTEGER ,
+                            N_NAME       CHAR(25) ,
+                            N_REGIONKEY  INTEGER ,
+                            N_COMMENT    VARCHAR(152))
+location ('gpfdist://@hostname@:7070/exttab1/nation.tbl.gz' )
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL TABLE EXT_NATION_MATCH  ( N_NATIONKEY  INTEGER ,
+                            N_NAME       CHAR(25) ,
+                            N_REGIONKEY  INTEGER ,
+                            N_COMMENT    VARCHAR(152))
+location ('gpfdist://@hostname@:7070/exttab1/nation.tbl*' )
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL TABLE EXT_REGION  (LIKE REG_REGION)
+location ('gpfdist://@hostname@:7070/exttab1/region.tbl' )
+FORMAT 'text' (delimiter '|');
+
+SELECT * FROM EXT_NATION;
+SELECT * FROM EXT_NATION_GZ;
+SELECT count(*) FROM EXT_NATION_MATCH;
+SELECT * FROM EXT_REGION;
+SELECT * FROM EXT_REGION as r, EXT_NATION as n WHERE n.N_REGIONKEY = r.R_REGIONKEY;
+
+-- test: http request header needed for gpfdist
+\! wget http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 || echo "Execute error";
+\! wget --header='X-GP-PROTO:0' http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 && echo "Execute successully";
+\! wget --header='x-gp-proto:1' http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 && echo "Execute successully";
+
+-- test: multiple reader for pipe is forbidden
+DROP EXTERNAL WEB TABLE IF EXISTS create_pipe;
+CREATE EXTERNAL WEB TABLE create_pipe (x text)
+execute E'(rm @abs_srcdir@/data/test_pipe; mkfifo @abs_srcdir@/data/test_pipe) > /dev/null 2>&1; echo "creating pipe..."'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+DROP EXTERNAL WEB TABLE IF EXISTS write_pipe;
+CREATE EXTERNAL WEB TABLE write_pipe (x text)
+execute E'((for i in `seq 1 5000`;do cat @abs_srcdir@/data/exttab1/nation.tbl;done > @abs_srcdir@/data/test_pipe); echo "writing pipe...")'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+
+DROP EXTERNAL WEB TABLE IF EXISTS cat_sqlout_result;
+CREATE EXTERNAL WEB TABLE cat_sqlout_result (x text)
+execute E'(grep -q "Multiple reader to a pipe is forbidden" @abs_srcdir@/data/sql1.out @abs_srcdir@/data/sql2.out && echo "Report error: Multiple reader to a pipe is forbidden";)'
+ on SEGMENT 0
+ FORMAT 'text' (delimiter '|');
+
+DROP EXTERNAL TABLE IF EXISTS pipe_ext1;
+CREATE EXTERNAL TABLE pipe_ext1(LIKE EXT_NATION)
+location ('gpfdist://@hostname@:7070/test_pipe' )
+FORMAT 'text' (delimiter '|');
+
+DROP EXTERNAL TABLE IF EXISTS pipe_ext2;
+CREATE EXTERNAL TABLE pipe_ext2(LIKE EXT_NATION)
+location ('file://@hostname@@abs_srcdir@/data/test_pipe' )
+FORMAT 'text' (delimiter '|');
+
+select * from create_pipe;
+\! psql -d gpfdist_regression -c 'select count(*) from pipe_ext1;' > @abs_srcdir@/data/sql1.out 2>&1  &
+\! psql -d gpfdist_regression -c 'select count(*) from pipe_ext2;' > @abs_srcdir@/data/sql2.out 2>&1  &
+select * from write_pipe;
+select * from cat_sqlout_result;
+
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+-- end_ignore
+
+-- drop tables
+DROP EXTERNAL TABLE EXT_NATION;
+DROP EXTERNAL TABLE EXT_NATION_GZ;
+DROP EXTERNAL TABLE EXT_NATION_MATCH;
+DROP EXTERNAL TABLE EXT_REGION;
+
+--
+-- gpfdist in csv (mpp-1519, etc)
+--
+CREATE EXTERNAL WEB TABLE gpfdist_csv_start (x text)
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+-- 
+-- "
+-- (end the double quote so emacs highlighting works correctly)
+--
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+select * from gpfdist_csv_start;
+-- end_ignore
+
+create external table ext_whois (
+source_lineno			int,
+domain_name			varchar(350),
+subdomain			varchar(150),
+tld				varchar(50),
+ip_address			inet,
+ip_address_int			bigint,
+reverse_dns			varchar(512),
+reverse_domain			varchar(350),
+registrar			varchar(200),
+registrar_referral		varchar(512),
+whois_server			varchar(512),
+harvest_date			timestamp with time zone,
+created_on			timestamp with time zone,
+update_date			timestamp with time zone,
+expire_date			timestamp with time zone,
+rank				int,
+status				char(1),
+update_status			int,
+nameserver1			varchar(512),
+nameserver1_domain_name		varchar(350),
+nameserver1_subdomain		varchar(150),
+nameserver1_tld			varchar(50),
+nameserver2			varchar(512),
+nameserver2_domain_name		varchar(350),
+nameserver2_subdomain		varchar(150),
+nameserver2_tld			varchar(50),
+nameserver3			varchar(512),
+nameserver3_domain_name		varchar(350),
+nameserver3_subdomain		varchar(150),
+nameserver3_tld			varchar(50),
+nameserver4			varchar(512),
+nameserver4_domain_name		varchar(350),
+nameserver4_subdomain		varchar(150),
+nameserver4_tld			varchar(50),
+nameserver5			varchar(512),
+nameserver5_domain_name		varchar(350),
+nameserver5_subdomain		varchar(150),
+nameserver5_tld			varchar(50),
+registrant_name			varchar(200),
+registrant_organization		varchar(200),
+registrant_email		varchar(512),
+registrant_email_domain		varchar(350),
+registrant_email_subdomain	varchar(150),
+registrant_email_tld		varchar(50),
+registrant_phone		varchar(50),
+registrant_fax			varchar(50),
+registrant_addrall		varchar(1024),
+registrant_street1		varchar(200),
+registrant_street2		varchar(200),
+registrant_street3		varchar(200),
+registrant_city			varchar(200),
+registrant_state_province	varchar(100),
+registrant_postal_code		varchar(50),
+registrant_country		varchar(100),
+tech_name			varchar(200),
+tech_organization		varchar(200),
+tech_email			varchar(512),
+tech_email_domain		varchar(350),
+tech_email_subdomain		varchar(150),
+tech_email_tld			varchar(50),
+tech_phone			varchar(50),
+tech_fax			varchar(50),
+tech_addrall			varchar(1024),
+tech_street1			varchar(200),
+tech_street2			varchar(200),
+tech_street3			varchar(200),
+tech_city			varchar(200),
+tech_state_province		varchar(100),
+tech_postal_code		varchar(50),
+tech_country			varchar(100),
+admin_name			varchar(200),
+admin_organization		varchar(200),
+admin_email			varchar(512),
+admin_email_domain		varchar(350),
+admin_email_subdomain		varchar(150),
+admin_email_tld			varchar(50),
+admin_phone			varchar(50),
+admin_fax			varchar(50),
+admin_addrall			varchar(1024),
+admin_street1			varchar(200),
+admin_street2			varchar(200),
+admin_street3			varchar(200),
+admin_city			varchar(200),
+admin_state_province		varchar(100),
+admin_postal_code		varchar(50),
+admin_country			varchar(100),
+rec_path			varchar(512),
+raw_record			text
+)
+location ('gpfdist://@hostname@:7070/exttab1/whois.csv' )
+format 'csv' ( quote as '"' header);
+-- "
+
+select count(*) from ext_whois;
+
+create table v_w as select * from ext_whois;
+
+-- sort distinct spill to disk/external sort
+select count(*) from (select * from v_w union select * from ext_whois) as foo;
+select count(*) from (select * from v_w union all select * from ext_whois) as foo;
+select count(*) from (select distinct * from ext_whois) as foo;
+select count(*) from (select * from ext_whois order by 1 limit 300000 offset 30000) as foo;
+select count(*) from (select * from ext_whois order by 1 limit 300000 offset 10) as foo;
+select source_lineno, domain_name from ext_whois order by
+source_lineno,
+domain_name,
+subdomain,
+tld,
+ip_address,
+ip_address_int,
+reverse_dns,
+reverse_domain,
+registrar,
+registrar_referral,
+whois_server,
+harvest_date,
+created_on,
+update_date,
+expire_date,
+rank,
+status,
+update_status,
+nameserver1,
+nameserver1_domain_name,
+nameserver1_subdomain,
+nameserver1_tld,
+nameserver2,
+nameserver2_domain_name,
+nameserver2_subdomain,
+nameserver2_tld,
+nameserver3,
+nameserver3_domain_name,
+nameserver3_subdomain,
+nameserver3_tld,
+nameserver4,
+nameserver4_domain_name ,
+nameserver4_subdomain,
+nameserver4_tld,
+nameserver5,
+nameserver5_domain_name,
+nameserver5_subdomain,
+nameserver5_tld,
+registrant_name,
+registrant_organization ,
+registrant_email,
+registrant_email_domain,
+registrant_email_subdomain,
+registrant_email_tld,
+registrant_phone,
+registrant_fax,
+registrant_addrall,
+registrant_street1,
+registrant_street2,
+registrant_street3,
+registrant_city,
+registrant_state_province,
+registrant_postal_code,
+registrant_country,
+tech_name,
+tech_organization,
+tech_email,
+tech_email_domain,
+tech_email_subdomain,
+tech_email_tld,
+tech_phone,
+tech_fax,
+tech_addrall,
+tech_street1,
+tech_street2,
+tech_street3,
+tech_city,
+tech_state_province,
+tech_postal_code,
+tech_country,
+admin_name,
+admin_organization,
+admin_email,
+admin_email_domain ,
+admin_email_subdomain,
+admin_email_tld,
+admin_phone,
+admin_fax,
+admin_addrall,
+admin_street1,
+admin_street2,
+admin_street3,
+admin_city,
+admin_state_province,
+admin_postal_code,
+admin_country,
+rec_path,
+raw_record limit 10 offset 10;
+
+
+
+-- test FILL EMPTY FIELDS
+create external table ext_fill1(a int, b int, c int)
+location('gpfdist://@hostname@:7070/exttab1/missing_fields1.data' )
+format 'text' ( delimiter '|' fill missing fields);
+
+create external table ext_fill2(a int, b int, c int)
+location('gpfdist://@hostname@:7070/exttab1/missing_fields2.data' )
+format 'text' ( delimiter '|' fill missing fields);
+
+-- also test force not null in addition to fill empty fields
+create external table ext_fill3_fnn(a text, b text, c text)
+location('gpfdist://@hostname@:7070/exttab1/missing_fields1.data' )
+format 'csv' ( delimiter '|' fill missing fields force not null c);
+
+create external table ext_fill4_fnn(a text, b text, c text)
+location('gpfdist://@hostname@:7070/exttab1/missing_fields1.data' )
+format 'csv' ( delimiter '|' fill missing fields force not null b,c);
+
+select * from ext_fill1 order by a,b,c; -- should pad missing attrs with nulls
+select * from ext_fill2 order by a,b,c; -- should fail due to empty data line
+select * from ext_fill3_fnn where c is null; -- should be empty
+select * from ext_fill3_fnn where b is null; -- one row result
+select * from ext_fill4_fnn where c is null or b is null; -- should be empty
+
+drop external table ext_fill1;
+drop external table ext_fill2;
+drop external table ext_fill3_fnn;
+drop external table ext_fill4_fnn;
+
+-- start_ignore
+drop external table if exists ext_newline1;
+drop external table if exists ext_newline2;
+-- end_ignore
+
+-- test NEWLINE
+create external table ext_newline1(N_NATIONKEY INT, N_NAME text, N_REGIONKEY INT, N_COMMENT text)
+location('gpfdist://@hostname@:7070/exttab1/nation.tbl' )
+format 'text' ( delimiter '|' newline 'lf');
+
+create external table ext_newline2(like ext_newline1)
+location('gpfdist://@hostname@:7070/exttab1/nation.tbl' )
+format 'text' ( delimiter '|' newline 'cr');
+
+create external table ext_willfail(a int)
+location('gpfdist://@hostname@:7070/exttab1/nation.tbl' )
+format 'text' ( delimiter '|' newline 'blah'); -- should fail with invalid newline.
+
+select * from ext_newline1; -- should pass. using the correct linefeed. file has 'lf'.
+select * from ext_newline2; -- should fail. using an incorrect linefeed. file has 'lf'.
+
+drop external table ext_newline1;
+drop external table ext_newline2;
+
+-- MPP-6698
+create external table ext_mpp6698(a text)
+location('gpfdist://@hostname@:7070/exttab1/mpp6698.data' )
+format 'csv' (quote '''');
+
+select * from ext_mpp6698 order by a; -- should ignore the quotes
+drop external table ext_mpp6698;
+
+-- MPP-12839
+create external table ext_mpp12839
+(
+  userguid varchar(36),
+  action_time timestamp without time zone,
+  action_type smallint,
+  object_id integer,
+  general_param character varying(8000),
+  plu_id smallint,
+  page_name character varying(2000),
+  browser integer,
+  platform integer,
+  filtering_data character varying(8000),
+  is_new_user boolean,
+  dummy character varying(1)
+)
+location('gpfdist://@hostname@:7070/exttab1/mpp12839*.data' )
+format 'text' (delimiter E'\177' null '' newline 'crlf')
+segment reject limit 100 rows;
+
+select * from ext_mpp12839; -- should not reach reject limit
+drop external table ext_mpp12839;
+
+--
+-- bad csv (quote must be a single char)
+--
+create external table bad_whois (
+source_lineno			int,
+domain_name			varchar(350)
+)
+location ('gpfdist://@hostname@:7070/exttab1/whois.csv' )
+format 'csv' ( header quote as 'ggg');
+select count(*) from bad_whois;
+drop external table bad_whois;
+
+--
+-- Test invalid locations
+--
+create external table bad_location1 (a int4, b text)
+location ('gpfdist://@hostname@:7070/exttab1/non_existent_dir/*' )
+format 'csv';
+select count(*) from bad_location1;
+drop external table bad_location1;
+
+create external table bad_location2 (a int4, b text)
+location ('gpfdist://@hostname@:7070/exttab1/non_existent_file.txt' )
+format 'csv';
+select count(*) from bad_location2;
+drop external table bad_location2;
+
+
+--
+-- WET tests
+--
+
+--
+-- CREATE (including LIKE, DISTRIBUTED BY)
+--
+-- positive
+create writable external table wet_pos1(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text';
+create writable external table wet_pos2(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(b);
+create writable external table wet_pos3(like wet_pos2) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(a,b);
+create writable external table wet_region(like reg_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
+create readable external table ret_region(like wet_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
+
+--
+-- WET: export some data with INSERT SELECT, INSERT and COPY. 
+--
+COPY reg_region FROM STDIN DELIMITER '|';
+0|AFRICA|lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to 
+1|AMERICA|hs use ironic, even requests. s
+\.
+INSERT INTO wet_region SELECT * from reg_region;
+
+COPY wet_region FROM STDIN DELIMITER '|';
+2|ASIA|ges. thinly even pinto beans ca
+3|EUROPE|ly final courts cajole furiously final excuse
+\.
+INSERT INTO wet_region VALUES(4,'MIDDLE EAST','uickly special');
+
+--
+-- Now use RET to see if data was exported correctly.
+-- NOTE: since we don't bother cleaning up the exported file, it may grow bigger
+-- in between runs, so we don't check for count(*), and instead check for distinct.
+--
+SELECT DISTINCT(R_NAME) FROM ret_region ORDER BY R_NAME;
+
+-- start_ignore
+DROP TABLE IF EXISTS table_multi_locations;
+DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
+-- end_ignore
+
+-- The use of more than one gpfdist. Each gpfdist points to a different file to write into
+
+CREATE TABLE table_multi_locations (a int, b text) DISTRIBUTED BY (a);
+
+INSERT INTO table_multi_locations VALUES (generate_series(1,256), 'test_1');
+
+CREATE WRITABLE EXTERNAL TABLE ext_table_multi_locations (a int, b text) LOCATION ('gpfdist://@hostname@:7070/wet_multi_locations_1.tbl', 'gpfdist://@hostname@:7070/wet_multi_locations_2.tbl') FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null');
+
+INSERT INTO ext_table_multi_locations SELECT * FROM table_multi_locations;
+
+DROP TABLE IF EXISTS table_multi_locations;
+DROP EXTERNAL TABLE IF EXISTS ext_table_multi_locations;
+
+-- start_ignore
+select * from exttab1_gpfdist_stop;
+-- end_ignore
+
+--
+-- get an error for missing gpfdist
+--
+select count(*) from ext_whois;
+
+drop external table ext_whois;
+drop external table exttab1_gpfdist_start;
+drop external table gpfdist_csv_start;
+drop external table exttab1_gpfdist_stop;
+drop external table wet_pos1;
+drop external table wet_pos2;
+drop external table wet_pos3;
+drop external table wet_region;
+drop external table ret_region;
+drop table reg_region;

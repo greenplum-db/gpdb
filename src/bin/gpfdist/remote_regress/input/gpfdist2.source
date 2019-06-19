@@ -1,0 +1,989 @@
+--
+-- GPFDIST test cases set 2. This test set is moved from cdbunit.
+--
+set optimizer_print_missing_stats = off;
+CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
+
+-- start_ignore
+-- --------------------------------------
+-- check platform
+-- --------------------------------------
+-- drop external web table if exists check_ps;
+-- CREATE EXTERNAL WEB TABLE check_ps (x text)
+-- execute E'( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)'
+-- on SEGMENT 0
+-- format 'text';
+
+-- drop external web table if exists check_env;
+-- CREATE EXTERNAL WEB TABLE check_env (x text)
+-- execute E'( env | sort)'
+-- on SEGMENT 0
+-- format 'text';
+
+-- select * from check_ps;
+-- select * from check_env;
+
+-- end_ignore
+
+
+-- --------------------------------------
+-- 'gpfdist' protocol
+-- --------------------------------------
+CREATE EXTERNAL WEB TABLE gpfdist2_start (x text)
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL WEB TABLE gpfdist2_stop (x text)
+execute E'(ps -A -o pid,comm |grep [g]pfdist |grep -v postgres: |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+-- start_ignore
+select * from gpfdist2_stop;
+select * from gpfdist2_start;
+-- end_ignore
+
+-- start_ignore
+drop table if exists lineitem;
+drop external table if exists ext_lineitem;
+-- end_ignore
+
+-- test 1 using a .gz file
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.gz'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 2 using a .bz2 file
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.bz2'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 4 column data type does not match
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(2),
+                L_SHIPMODE CHAR(1),
+                L_COMMENT VARCHAR(4)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 5 data has extra or missing attributes
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(2),
+                L_LINESTATUS CHAR(2),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(2),
+                L_LINESTATUS CHAR(2),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44),
+                L_BLAH CHAR(1)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 6 external table attributes (encoding, escape, etc)
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+        NULL AS ''
+        ESCAPE AS '#'
+)
+ENCODING 'UTF8'
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 7 external table attributes (escape off)
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+        ESCAPE 'OFF'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 8 external table attributes csv (force not null)
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'csv'
+(
+        DELIMITER AS '|'
+        FORCE NOT NULL L_COMMENT
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 9
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.csv.header'
+)
+FORMAT 'csv'
+(
+        DELIMITER AS '|'
+        QUOTE AS '"'
+        HEADER
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 10
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/bad_data/lineitem.tbl.bad'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+LOG ERRORS SEGMENT REJECT LIMIT 2
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 11
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/invalid_filename.txt'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 12
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl',
+        'gpfdist://@hostname@:7070/gpfdist2/more_data/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 13
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.*'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 14
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/bad_data/lineitem.tbl.bad'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+LOG ERRORS SEGMENT REJECT LIMIT 200
+;
+SELECT count(*) FROM ext_lineitem;
+\t
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 15
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/data/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER '|'
+)
+;
+SELECT DISTINCT L_ORDERKEY FROM ext_lineitem WHERE L_ORDERKEY > 10 GROUP BY L_ORDERKEY ORDER BY L_ORDERKEY LIMIT 10 OFFSET 2;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 16
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER '|'
+)
+;
+CREATE INDEX index ON ext_lineitem (L_ORDERKEY);
+TRUNCATE ext_lineitem;
+DELETE FROM ext_lineitem where L_ORDERKEY > 10;
+UPDATE ext_lineitem SET L_ORDERKEY = 10 where L_ORDERKEY > 10;
+INSERT INTO ext_lineitem VALUES (1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1);
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 17 different delimiter
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/more_data/lineitem.tbl.space'
+)
+FORMAT 'text'
+(
+        DELIMITER ' '
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/more_data/lineitem.tbl.comma'
+)
+FORMAT 'text'
+(
+        DELIMITER ','
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/more_data/lineitem.tbl.carrot'
+)
+FORMAT 'text'
+(
+        DELIMITER '^'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 18 without header row and header is defined in format clause
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'csv'
+(
+        DELIMITER AS '|'
+        QUOTE AS '"'
+        HEADER
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 19 with header row but header is not defined in format clause
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.csv.header'
+)
+FORMAT 'csv'
+(
+        DELIMITER AS '|'
+        QUOTE AS '"'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 20 without header row and header is not defined in format clause
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'csv'
+(
+        DELIMITER AS '|'
+        QUOTE AS '"'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 22 table creation commands
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+CREATE TABLE lineitem AS SELECT * FROM ext_lineitem;
+SELECT count(*) FROM lineitem;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+DROP TABLE lineitem;
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+
+SELECT * INTO lineitem FROM ext_lineitem;
+SELECT count(*) FROM lineitem;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+DROP TABLE lineitem;
+
+-- test 23 external table attributes text (force not null)
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+        'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+        FORCE NOT NULL L_COMMENT
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+-- test 24 inherit external table
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.gz'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+CREATE EXTERNAL TABLE ext_lineitem_copy (LIKE ext_lineitem)
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/lineitem.tbl.gz'
+)
+FORMAT 'text'
+(
+        DELIMITER AS '|'
+)
+;
+
+SELECT count(*) FROM ext_lineitem_copy;
+DROP EXTERNAL TABLE ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem_copy;
+
+-- test 25 line too long with defaults
+
+CREATE EXTERNAL TABLE ext_test (
+                id text,
+                stuff text
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/longline.txt'
+)
+FORMAT 'text'
+(
+        DELIMITER AS ','
+)
+;
+SELECT count(*) FROM ext_test;
+DROP EXTERNAL TABLE ext_test;
+
+CREATE EXTERNAL TABLE ext_test1 (
+                id text,
+                stuff text
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/longline.csv'
+)
+FORMAT 'csv'
+(
+        DELIMITER AS ','
+)
+;
+SELECT count(*) FROM ext_test1;
+DROP EXTERNAL TABLE ext_test1;
+
+CREATE EXTERNAL TABLE ext_lineitem (
+                L_ORDERKEY INT8,
+                L_PARTKEY INTEGER,
+                L_SUPPKEY INTEGER,
+                L_LINENUMBER integer,
+                L_QUANTITY decimal,
+                L_EXTENDEDPRICE decimal,
+                L_DISCOUNT decimal,
+                L_TAX decimal,
+                L_RETURNFLAG CHAR(1),
+                L_LINESTATUS CHAR(1),
+                L_SHIPDATE date,
+                L_COMMITDATE date,
+                L_RECEIPTDATE date,
+                L_SHIPINSTRUCT CHAR(25),
+                L_SHIPMODE CHAR(10),
+                L_COMMENT VARCHAR(44)
+                )
+LOCATION
+(
+      'gpfdist://@hostname@:7070/gpfdist2/lineitem_cr.tbl'
+)
+FORMAT 'csv'
+(
+        DELIMITER AS '|'
+        NEWLINE 'CR'
+)
+;
+SELECT count(*) FROM ext_lineitem;
+DROP EXTERNAL TABLE ext_lineitem;
+
+CREATE EXTERNAL TABLE ext_crlf_with_lf_column(c1 int, c2 text) LOCATION ('gpfdist://@hostname@:7070/gpfdist2/crlf_with_lf_column.csv') FORMAT 'csv' (NEWLINE 'CRLF');
+SELECT count(*) FROM ext_crlf_with_lf_column;
+DROP EXTERNAL TABLE ext_crlf_with_lf_column;
+
+CREATE EXTERNAL TABLE ext_crlf_with_lf_column(c1 int, c2 text) LOCATION ('gpfdist://@hostname@:7070/gpfdist2/crlf_with_lf_column.csv') FORMAT 'text' (DELIMITER ',' NEWLINE 'CRLF');
+SELECT count(*) FROM ext_crlf_with_lf_column;
+DROP EXTERNAL TABLE ext_crlf_with_lf_column;
+
+-- start_ignore
+select * from gpfdist2_stop;
+-- end_ignore
