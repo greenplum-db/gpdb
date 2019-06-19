@@ -42,6 +42,7 @@ typedef struct PxfOptions
 	/* Single Row Error Handling */
 	int			reject_limit;
 	bool		is_reject_limit_rows;
+	bool		log_errors;
 
 	/* FDW options */
 	char	   *protocol;		/* PXF protocol */

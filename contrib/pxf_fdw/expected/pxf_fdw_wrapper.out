@@ -113,6 +113,12 @@ CREATE FOREIGN DATA WRAPPER dummy_pxf_fdw
     VALIDATOR pxf_fdw_validator
     OPTIONS ( protocol 'dummy', reject_limit_type 'rows' );
 ERROR:  the reject_limit_type option can only be defined at the pg_foreign_table level
+-- Foreign-data wrapper creation fails if log_errors option is provided
+CREATE FOREIGN DATA WRAPPER dummy_pxf_fdw
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'dummy', log_errors 'true' );
+ERROR:  the log_errors option can only be defined at the pg_foreign_table level
 -- Foreign-data wrapper succeeds when protocol is provided
 CREATE FOREIGN DATA WRAPPER dummy_pxf_fdw
     HANDLER pxf_fdw_handler
@@ -192,3 +198,7 @@ ERROR:  the reject_limit option can only be defined at the pg_foreign_table leve
 ALTER FOREIGN DATA WRAPPER dummy_pxf_fdw
     OPTIONS ( ADD reject_limit_type 'rows' );
 ERROR:  the reject_limit_type option can only be defined at the pg_foreign_table level
+-- Foreign-data wrapper alteration fails if log_errors option is added
+ALTER FOREIGN DATA WRAPPER dummy_pxf_fdw
+    OPTIONS ( ADD log_errors 'true' );
+ERROR:  the log_errors option can only be defined at the pg_foreign_table level

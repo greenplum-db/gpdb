@@ -86,6 +86,11 @@ CREATE USER MAPPING FOR pxf_fdw_user
     SERVER dummy_server
     OPTIONS ( reject_limit_type 'rows' );
 ERROR:  the reject_limit_type option can only be defined at the pg_foreign_table level
+-- User mapping creation fails if log_errors option is provided
+CREATE USER MAPPING FOR pxf_fdw_user
+    SERVER dummy_server
+    OPTIONS ( log_errors 'true' );
+ERROR:  the log_errors option can only be defined at the pg_foreign_table level
 -- User mapping creation fails if mpp_execute option is provided
 CREATE USER MAPPING FOR pxf_fdw_user
     SERVER dummy_server
@@ -179,6 +184,11 @@ ALTER USER MAPPING FOR pxf_fdw_user
     SERVER dummy_server
     OPTIONS ( ADD reject_limit_type 'rows' );
 ERROR:  the reject_limit_type option can only be defined at the pg_foreign_table level
+-- User mapping alteration fails if log_errors option is added
+ALTER USER MAPPING FOR pxf_fdw_user
+    SERVER dummy_server
+    OPTIONS ( ADD log_errors 'true' );
+ERROR:  the log_errors option can only be defined at the pg_foreign_table level
 -- User mapping alteration fails if mpp_execute option is added
 ALTER USER MAPPING FOR pxf_fdw_user
     SERVER dummy_server

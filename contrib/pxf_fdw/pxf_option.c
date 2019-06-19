@@ -29,8 +29,8 @@ static char *const FDW_OPTION_REJECT_LIMIT_PERCENT = "percent";
 static char *const FDW_OPTION_PROTOCOL = "protocol";
 static char *const FDW_OPTION_RESOURCE = "resource";
 static char *const FDW_OPTION_FORMAT = "format";
-static char *const FDW_OPTION_REJECT_LIMIT_TYPE = "reject_limit_type";	/* valid types are row
-																		 * and percent */
+static char *const FDW_OPTION_LOG_ERRORS = "log_errors";
+static char *const FDW_OPTION_REJECT_LIMIT_TYPE = "reject_limit_type";
 static char *const FDW_OPTION_REJECT_LIMIT = "reject_limit";
 static char *const FDW_OPTION_WIRE_FORMAT = "wire_format";
 static char *const FDW_OPTION_PXF_PORT = "pxf_port";
@@ -56,6 +56,7 @@ static const struct PxfFdwOption valid_options[] = {
 	/* Error handling */
 	{FDW_OPTION_REJECT_LIMIT, ForeignTableRelationId},
 	{FDW_OPTION_REJECT_LIMIT_TYPE, ForeignTableRelationId},
+	{FDW_OPTION_LOG_ERRORS, ForeignTableRelationId},
 
 	/* Sentinel */
 	{NULL, InvalidOid}
@@ -128,6 +129,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	char	   *protocol = NULL;
 	char	   *resource = NULL;
 	char	   *reject_limit_type = FDW_OPTION_REJECT_LIMIT_ROWS;
+	bool		log_errors = -1;
 	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
 	Oid			catalog = PG_GETARG_OID(1);
 	List	   *copy_options = NIL;
@@ -210,6 +212,8 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 								FDW_OPTION_REJECT_LIMIT_ROWS,
 								FDW_OPTION_REJECT_LIMIT_PERCENT)));
 		}
+		else if (strcmp(def->defname, FDW_OPTION_LOG_ERRORS) == 0)
+			log_errors = defGetBoolean(def);
 		else if (IsCopyOption(def->defname))
 			copy_options = lappend(copy_options, def);
 	}
@@ -249,6 +253,13 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 						 errmsg("invalid (PERCENT) reject_limit value '%d', valid values are 1 to 100",
 								reject_limit)));
 		}
+	}
+	else
+	{
+		if (log_errors != -1)
+			ereport(ERROR,
+					(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+					 errmsg("the log_errors option cannot be set without reject_limit")));
 	}
 
 	/*
@@ -405,6 +416,8 @@ PxfGetOptions(Oid foreigntableid)
 			opt->reject_limit = atoi(defGetString(def));
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT_TYPE) == 0)
 			opt->is_reject_limit_rows = pg_strcasecmp(FDW_OPTION_REJECT_LIMIT_ROWS, defGetString(def)) == 0;
+		else if (strcmp(def->defname, FDW_OPTION_LOG_ERRORS) == 0)
+			opt->log_errors = defGetBoolean(def);
 		else if (strcmp(def->defname, FDW_OPTION_FORMAT) == 0)
 		{
 			opt->format = defGetString(def);
