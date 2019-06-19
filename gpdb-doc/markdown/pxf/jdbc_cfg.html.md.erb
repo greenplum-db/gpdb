@@ -136,7 +136,7 @@ Ensure that the JDBC driver for the external SQL database supports any property 
 
 #### <a id="jdbcimpers"></a>About JDBC User Impersonation
 
-The PXF JDBC Connector accesses external data stores on behalf of Greenplum Database end users. When you enable PXF JDBC user impersonation, the JDBC Connector uses the Greenplum Database user name to connect to the external data store. When PXF JDBC user impersonation is disabled (the default), the behavior of the JDBC Connector is dependent upon the external data store. For example, the JDBC connector uses the settings of certain Hive authentication and impersonation properties to determine the user. In some cases, you may be required to provide a `jdbc.user` setting, or add properties to the `jdbc.url` setting in the server `jdbc-site.xml` file.
+The PXF JDBC Connector accesses external data stores on behalf of Greenplum Database end users. When you enable PXF JDBC user impersonation, the JDBC Connector uses the name of the Greenplum Database user that accesses the PXF external table to try to connect to the external data store. When PXF JDBC user impersonation is disabled (the default), the behavior of the JDBC Connector is dependent upon the external data store. For example, the JDBC connector uses the settings of certain Hive authentication and impersonation properties to determine the user. In some cases, you may be required to provide a `jdbc.user` setting, or add properties to the `jdbc.url` setting in the server `jdbc-site.xml` file.
 
 The `pxf.impersonation.jdbc` property governs JDBC user impersonation. JDBC user impersonation is disabled by default. To enable JDBC user impersonation for a server configuration, set the property to true:
 
@@ -273,7 +273,7 @@ The PXF JDBC Connector is installed with the JAR files required to access Hive v
 
 ### <a id="cfg_server"></a>JDBC Server Configuration
 
-When you configure a PXF JDBC server for Hive access, you must specify the JDBC driver class name, database URL, and client credentials just as you would when configuring a JDBC server to an SQL database.
+When you configure a PXF JDBC server for Hive access, you must specify the JDBC driver class name, database URL, and client credentials just as you would when configuring a client connection to an SQL database.
 
 To access Hive via JDBC, you must specify the following properties and values in the `jdbc-site.xml` server configuration file:
 
@@ -282,7 +282,7 @@ To access Hive via JDBC, you must specify the following properties and values in
 | jdbc.driver | org.apache.hive.jdbc.HiveDriver |
 | jdbc.url | jdbc:hive2://\<hiveserver2_host>:\<hiveserver2_port>/\<database> |
 
-The value of the HiveServer2 authentication (`hive.server2.authentication`) and impersonation (`hive.server2.enable.doAs`) properties, and whether or not the Hadoop cluster in which the Hive service is running is utilizing Kerberos authentication, will inform the setting of other JDBC server configuration properties.
+The value of the HiveServer2 authentication (`hive.server2.authentication`) and impersonation (`hive.server2.enable.doAs`) properties, and whether or not the Hive service is utilizing Kerberos authentication, will inform the setting of other JDBC server configuration properties.
 
 The following table enumerates the Hive2 authentication and impersonation combinations supported by the PXF JDBC Connector, and identifies the JDBC server configuration required for each.
 
@@ -341,7 +341,7 @@ Perform the following procedure to configure a PXF JDBC server for Hive:
 
 6. Obtain the `hive-site.xml` file from your Hadoop cluster and examine the file.
 
-7. If the `hive.server2.authentication` property in `hive-site.xml` is set to `NOSASL`, HiveServer2 performs no authentication. You must add the following connection-level property to `jdbc-site.xml`:
+7. If the `hive.server2.authentication` property in `hive-site.xml` is set to `NOSASL`, HiveServer2 performs no authentication. Add the following connection-level property to `jdbc-site.xml`:
 
     ``` xml
     <property>
@@ -353,28 +353,28 @@ Perform the following procedure to configure a PXF JDBC server for Hive:
 
 8. If the `hive.server2.authentication` property in `hive-site.xml` is set to `NONE`, or the property is not specified, you must set the `jdbc.user` property. The value to which you set the `jdbc.user` property is dependent upon the `hive.server2.enable.doAs` impersonation setting in `hive-site.xml`:
 
-    1. If `hive.server2.enable.doAs` is set to `TRUE` (the default), Hive runs Hadoop operations on behalf of the user connecting to Hive.
-        1. *Choose/perform one of the following options*:
-            1. Set `jdbc.user` to specify the user that has read permission on all Hive data accessed by Greenplum Database. For example, to connect to Hive and run all requests as user `gpadmin`:
+    1. If `hive.server2.enable.doAs` is set to `TRUE` (the default), Hive runs Hadoop operations on behalf of the user connecting to Hive. *Choose/perform one of the following options*:
 
-                ``` xml
-                <property>
-                    <name>jdbc.user</name>
-                    <value>gpadmin</value>
-                </property>
-                ```
-            2. **Or**, turn on JDBC-level user impersonation so that PXF automatically uses the Greenplum Database user name to connect to Hive:
+        **Set** `jdbc.user` to specify the user that has read permission on all Hive data accessed by Greenplum Database. For example, to connect to Hive and run all requests as user `gpadmin`:
 
-                ``` xml
-                <property>
-                    <name>pxf.impersonation.jdbc</name>
-                    <value>true</value>
-                </property>
-                ```
-                If you enable JDBC impersonation in this manner, you must not specify a `jdbc.user` nor include the setting in the `jdbc.url`.
+        ``` xml
+        <property>
+            <name>jdbc.user</name>
+            <value>gpadmin</value>
+        </property>
+        ```
+        **Or**, turn on JDBC-level user impersonation so that PXF automatically uses the Greenplum Database user name to connect to Hive:
 
-        2. If required, create a PXF user configuration file to manage the password setting.
-    2. If `hive.server2.enable.doAs` is set to `FALSE`, Hive runs Hadoop operations as the user who started the HiveServer2 process, usually the user `hive`. PXF ignores the `jdbc.user` setting in this circumstance.
+        ``` xml
+        <property>
+            <name>pxf.impersonation.jdbc</name>
+            <value>true</value>
+        </property>
+        ```
+        If you enable JDBC impersonation in this manner, you must not specify a `jdbc.user` nor include the setting in the `jdbc.url`.
+
+    2. If required, create a PXF user configuration file to manage the password setting.
+    3. If `hive.server2.enable.doAs` is set to `FALSE`, Hive runs Hadoop operations as the user who started the HiveServer2 process, usually the user `hive`. PXF ignores the `jdbc.user` setting in this circumstance.
 
 9. If the `hive.server2.authentication` property in `hive-site.xml` is set to `KERBEROS`:
     1. Ensure that you have enabled Kerberos authentication for PXF as described in [Configuring PXF for Secure HDFS](pxf_kerbhdfs.html).
@@ -387,7 +387,7 @@ Perform the following procedure to configure a PXF JDBC server for Hive:
             <value>kerberos</value>
         </property>
         ```
-    4. You must add the `saslQop` property to `jdbc.url`, and set it to match the `hive.server2.thrift.sasl.qop` property setting in `hive-site.xml`. For example, if the `hive-site.xml` file includes the following property settting:
+    4. Add the `saslQop` property to `jdbc.url`, and set it to match the `hive.server2.thrift.sasl.qop` property setting in `hive-site.xml`. For example, if the `hive-site.xml` file includes the following property settting:
 
         ``` xml
         <property>
@@ -397,29 +397,31 @@ Perform the following procedure to configure a PXF JDBC server for Hive:
         ```
         You would add `;saslQop=auth-conf` to the `jdbc.url`.
        
-    5. You must add the HiverServer2 `principal` name to the `jdbc.url`. For example:
+    5. Add the HiverServer2 `principal` name to the `jdbc.url`. For example:
 
         <pre>
         jdbc:hive2://hs2server:10000/default;<b>principal=hive/hs2server@REALM</b>;saslQop=auth-conf
         </pre>
-    6. If `hive.server2.enable.doAs` is set to `TRUE` (the default), Hive runs Hadoop operations on behalf of the user connecting to Hive.
-        1. *Choose/perform one of the following options*:
-            1. Do not specify any additional properties. In this case, PXF initiates all Hadoop access with the identity provided in the PXF Kerberos principal (usually `gpadmin`).
-            2. Set the `hive.server2.proxy.user` property in the `jdbc.url` to specify the user that has read permission on all Hive data. For example, to connect to Hive and run all requests as the user named `integration` use the following `jdbc.url`:
+    6. If `hive.server2.enable.doAs` is set to `TRUE` (the default), Hive runs Hadoop operations on behalf of the user connecting to Hive. *Choose/perform one of the following options*:
 
-                <pre>
-                jdbc:hive2://hs2server:10000/default;principal=hive/hs2server@REALM;saslQop=auth-conf;<b>hive.server2.proxy.user=integration</b>
-                </pre>
-            3. Enable PXF JDBC impersonation in the `jdbc-site.xml` file so that PXF automatically uses the Greenplum Database user name to connect to Hive. For example:
+        **Do not** specify any additional properties. In this case, PXF initiates all Hadoop access with the identity provided in the PXF Kerberos principal (usually `gpadmin`).
 
-                ``` xml
-                <property>
-                    <name>pxf.impersonation.jdbc</name>
-                    <value>true</value>
-                </property>
-                ```
-                If you enable JDBC impersonation, you must not explicitly specify a `hive.server2.proxy.user` in the `jdbc.url`.
-        2. If required, create a PXF user configuration file to manage the password setting.
+        **Or**, set the `hive.server2.proxy.user` property in the `jdbc.url` to specify the user that has read permission on all Hive data. For example, to connect to Hive and run all requests as the user named `integration` use the following `jdbc.url`:
+
+        <pre>
+        jdbc:hive2://hs2server:10000/default;principal=hive/hs2server@REALM;saslQop=auth-conf;<b>hive.server2.proxy.user=integration</b>
+        </pre>
+
+        **Or**, enable PXF JDBC impersonation in the `jdbc-site.xml` file so that PXF automatically uses the Greenplum Database user name to connect to Hive. For example:
+
+        ``` xml
+        <property>
+            <name>pxf.impersonation.jdbc</name>
+            <value>true</value>
+        </property>
+        ```
+        If you enable JDBC impersonation, you must not explicitly specify a `hive.server2.proxy.user` in the `jdbc.url`.
+    6. If required, create a PXF user configuration file to manage the password setting.
     7. If `hive.server2.enable.doAs` is set to `FALSE`, Hive runs Hadoop operations with the identity provided by the PXF Kerberos principal (usually `gpadmin`).
 
 10. Save your changes and exit the editor.
