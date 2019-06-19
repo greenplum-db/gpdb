@@ -288,17 +288,17 @@ The following table enumerates the Hive2 authentication and impersonation combin
 
 Table heading key:
 
-- .authentication -> "hive.server2.authentication Setting"
-- .enable.doAs -> "hive.server2.enable.doAs Setting"
+- authentication -> Hive hive.server2.authentication Setting
+- enable.doAs -> Hive hive.server2.enable.doAs Setting
 
-| .authentication  |  .enable.doAs | Authentication | Configuration Required |
+| authentication  |  enable.doAs | Authenticated User | Configuration Required |
 |------------------|---------------|----------------|-------------------|
 | `NOSASL` | n/a | No authentication | Must set `jdbc.connection.property.auth` = `noSasl`  |
-| `NONE`, or not specified | `TRUE` | User name | Set `jdbc.user` |
+| `NONE`, or not specified | `TRUE` | User name that you provide | Set `jdbc.user` |
 | `NONE`, or not specified | `TRUE` | Greenplum user name | Set `pxf.impersonation.jdbc` = `true` |
 | `NONE`, or not specified | `FALSE` | Name of the user who started Hive, typically `hive`  | None |
 | `KERBEROS` | `TRUE` | Identity provided in the PXF Kerberos principal, typically `gpadmin` | None |
-| `KERBEROS` | `TRUE` | User name  | Set `hive.server2.proxy.user` in `jdbc.url`  |
+| `KERBEROS` | `TRUE` | User name that you provide  | Set `hive.server2.proxy.user` in `jdbc.url`  |
 | `KERBEROS` | `TRUE` | Greenplum user name  | Set `pxf.impersonation.jdbc` = `true` |
 | `KERBEROS` | `FALSE` | Identity provided in the PXF Kerberos principal, typically `gpadmin` |  None |
 
