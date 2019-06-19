@@ -119,6 +119,24 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the backup pid file is deleted on "primary" segment
 
+    Scenario: pg_isready functions on recovered segments
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+         When user stops all primary processes
+          And user can start transactions
+
+         When the user runs "gprecoverseg -a"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+
+         When the user runs "gprecoverseg -ar"
+         Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+          And pg_isready reports all primaries are accepting connections
+
+
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 

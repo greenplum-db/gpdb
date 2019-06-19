@@ -1125,6 +1125,14 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
 				 errmsg("System was started in master-only utility mode - only utility mode connections are allowed")));
 	}
+	else if ((Gp_session_role == GP_ROLE_DISPATCH) && !IS_QUERY_DISPATCHER())
+	{
+		ereport(FATAL,
+				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
+				 errmsg("connections to primary segments are not allowed"),
+				 errdetail("This database instance is running as a primary segment in a Greenplum cluster and does not permit direct connections."),
+				 errhint("To force a connection anyway (dangerous!), use utility mode.")));
+	}
 
 	/* Process pg_db_role_setting options */
 	process_settings(MyDatabaseId, GetSessionUserId());
