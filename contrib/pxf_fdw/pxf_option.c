@@ -134,7 +134,8 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	Oid			catalog = PG_GETARG_OID(1);
 	List	   *copy_options = NIL;
 	ListCell   *cell;
-	int			reject_limit = -1;
+	int			reject_limit = -1,
+				pxf_port;
 
 	foreach(cell, options_list)
 	{
@@ -186,6 +187,14 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 				pg_strcasecmp(value, FDW_OPTION_FORMAT_CSV) == 0)
 				copy_options = lappend(copy_options, def);
 		}
+		else if (strcmp(def->defname, FDW_OPTION_PXF_PORT) == 0)
+		{
+			pxf_port = atoi(defGetString(def));
+			if (pxf_port < 1024 || pxf_port > 65535)
+				ereport(ERROR,
+						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
+						 errmsg("invalid port number: %d. valid port numbers are 1024 to 65535", pxf_port)));
+		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT) == 0)
 		{
 			char	   *endptr = NULL;
@@ -196,8 +205,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			if (pStr == endptr || reject_limit < 1)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg("invalid reject_limit value '%s', should be a positive integer",
-								pStr)));
+						 errmsg("invalid reject_limit value '%s', should be a positive integer", pStr)));
 		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT_TYPE) == 0)
 		{
@@ -375,6 +383,7 @@ PxfGetOptions(Oid foreigntableid)
 
 	opt->reject_limit = -1;
 	opt->is_reject_limit_rows = true;
+	opt->log_errors = false;
 
 	/*
 	 * Extract options from FDW objects.
@@ -400,12 +409,7 @@ PxfGetOptions(Oid foreigntableid)
 			opt->pxf_host = defGetString(def);
 
 		else if (strcmp(def->defname, FDW_OPTION_PXF_PORT) == 0)
-		{
 			opt->pxf_port = atoi(defGetString(def));
-			/* TODO: maybe consider validating in pxf_fdw_validator */
-			if (opt->pxf_port <= 0 || opt->pxf_port >= 65535)
-				elog(ERROR, "invalid port number: %s", defGetString(def));
-		}
 		else if (strcmp(def->defname, FDW_OPTION_PXF_PROTOCOL) == 0)
 			opt->pxf_protocol = defGetString(def);
 		else if (strcmp(def->defname, FDW_OPTION_PROTOCOL) == 0)
