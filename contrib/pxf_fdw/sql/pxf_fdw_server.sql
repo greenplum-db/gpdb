@@ -77,6 +77,11 @@ CREATE SERVER dummy_server
     FOREIGN DATA WRAPPER dummy_pxf_fdw
     OPTIONS ( reject_limit_type 'rows' );
 
+-- Server creation fails if log_errors option is provided
+CREATE SERVER dummy_server
+    FOREIGN DATA WRAPPER dummy_pxf_fdw
+    OPTIONS ( log_errors 'true' );
+
 -- Server creation succeeds if protocol option is not provided
 CREATE SERVER dummy_server
     FOREIGN DATA WRAPPER dummy_pxf_fdw;
@@ -140,4 +145,8 @@ ALTER SERVER dummy_server
 -- Server alteration fails if reject_limit_type option is added
 ALTER SERVER dummy_server
     OPTIONS ( ADD reject_limit_type 'rows' );
+
+-- Server alteration fails if log_errors option is added
+ALTER SERVER dummy_server
+    OPTIONS ( ADD log_errors 'true' );
 

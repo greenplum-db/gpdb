@@ -441,13 +441,18 @@ InitCopyState(PxfFdwExecutionState * estate, Relation relation)
 	}
 	else
 	{
-		/* XXX: no error log for now */
+		/* no error log by default */
 		cstate->errMode = SREH_IGNORE;
+
+		/* select the SREH mode */
+		if (estate->options->log_errors)
+			cstate->errMode = SREH_LOG; /* errors into file */
+
 		cstate->cdbsreh = makeCdbSreh(estate->options->reject_limit,
 									  estate->options->is_reject_limit_rows,
 									  estate->options->resource,
 									  (char *) cstate->cur_relname,
-									  false /* logerrors */ );
+									  estate->options->log_errors);
 
 		cstate->cdbsreh->relid = RelationGetRelid(relation);
 	}

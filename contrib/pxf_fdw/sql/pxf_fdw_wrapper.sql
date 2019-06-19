@@ -106,6 +106,12 @@ CREATE FOREIGN DATA WRAPPER dummy_pxf_fdw
     VALIDATOR pxf_fdw_validator
     OPTIONS ( protocol 'dummy', reject_limit_type 'rows' );
 
+-- Foreign-data wrapper creation fails if log_errors option is provided
+CREATE FOREIGN DATA WRAPPER dummy_pxf_fdw
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'dummy', log_errors 'true' );
+
 -- Foreign-data wrapper succeeds when protocol is provided
 CREATE FOREIGN DATA WRAPPER dummy_pxf_fdw
     HANDLER pxf_fdw_handler
@@ -175,4 +181,8 @@ ALTER FOREIGN DATA WRAPPER dummy_pxf_fdw
 -- Foreign-data wrapper alteration fails if reject_limit_type option is added
 ALTER FOREIGN DATA WRAPPER dummy_pxf_fdw
     OPTIONS ( ADD reject_limit_type 'rows' );
+
+-- Foreign-data wrapper alteration fails if log_errors option is added
+ALTER FOREIGN DATA WRAPPER dummy_pxf_fdw
+    OPTIONS ( ADD log_errors 'true' );
 

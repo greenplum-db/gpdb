@@ -118,6 +118,16 @@ CREATE FOREIGN TABLE dummy_table_reject_limit_type (id int, name text)
     SERVER dummy_server
     OPTIONS ( resource '/path/to/resource', reject_limit '101', reject_limit_type 'percent' );
 
+-- Table creation fails if only resource and log errors are set
+CREATE FOREIGN TABLE dummy_table_log_errors (id int, name text)
+    SERVER dummy_server
+    OPTIONS ( resource '/path/to/resource', log_errors 'true' );
+
+-- Table creation fails if only log_errors is non-boolean
+CREATE FOREIGN TABLE dummy_table_log_errors (id int, name text)
+    SERVER dummy_server
+    OPTIONS ( resource '/path/to/resource', reject_limit '4', log_errors 'yes' );
+
 -- Table creation succeeds if resource is provided and reject_limit is provided correctly
 CREATE FOREIGN TABLE dummy_table_reject_limit (id int, name text)
     SERVER dummy_server
@@ -127,6 +137,11 @@ CREATE FOREIGN TABLE dummy_table_reject_limit (id int, name text)
 CREATE FOREIGN TABLE dummy_table_reject_limit_type (id int, name text)
     SERVER dummy_server
     OPTIONS ( resource '/path/to/resource', reject_limit_type 'rows', reject_limit '4' );
+
+-- Table create succeeds if resource, reject_limit, and log_errors are provided correctly
+CREATE FOREIGN TABLE dummy_table_log_errors (id int, name text)
+    SERVER dummy_server
+    OPTIONS ( resource '/path/to/resource', reject_limit '4', log_errors 'true' );
 
 -- Table alteration fails if protocol option is added
 ALTER FOREIGN TABLE dummy_table
@@ -226,3 +241,14 @@ ALTER FOREIGN TABLE dummy_table_reject_limit
 ALTER FOREIGN TABLE dummy_table_reject_limit_type
     OPTIONS ( SET reject_limit_type 'percent' );
 
+-- Table alteration succeeds for log_errors if table has valid resource and reject_limit
+ALTER FOREIGN TABLE dummy_table_log_errors
+    OPTIONS ( SET log_errors 'false' );
+
+-- Table alteration fails for log_errors if table has valid resource but no reject_limit
+ALTER FOREIGN TABLE dummy_table
+    OPTIONS ( ADD log_errors 'false' );
+
+-- Table alteration fails for log_errors if log_errors is non-boolean
+ALTER FOREIGN TABLE dummy_table_log_errors
+    OPTIONS ( SET log_errors 'no' );
