@@ -118,3 +118,10 @@ def impl(context, output):
         if segment.isSegmentMirror():
             expected = r'\(dbid {}\): {}'.format(segment.dbid, output)
             check_stdout_msg(context, expected)
+
+@then('pg_isready reports all primaries are accepting connections')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
+    for seg in primary_segs:
+        subprocess.check_call(['pg_isready', '-h', seg.getSegmentHostName(), '-p', str(seg.getSegmentPort())])
