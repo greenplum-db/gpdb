@@ -81,7 +81,7 @@
 
       <sectiondiv>
         <p><b>Configuring vm.overcommit_ratio when Resource Group-Based Resource Management is Active</b></p>
-        <p>When resource group-based resource management is active, the operating system <codeph>vm.overcommit_ratio</codeph> default value is a good starting point. Tune as necessary. If your memory utilization is too low, increase the value; if your memory or swap usage is too high, decrease the setting.</p>
+        <p>When resource group-based resource management is active, tune the operating system <codeph>vm.overcommit_ratio</codeph> as necessary. If your memory utilization is too low, increase the value; if your memory or swap usage is too high, decrease the setting.</p>
       </sectiondiv>
       <sectiondiv>
         <p><b>Configuring vm.overcommit_ratio when Resource Queue-Based Resource Management is Active</b></p>

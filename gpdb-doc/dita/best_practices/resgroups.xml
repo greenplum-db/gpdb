@@ -13,6 +13,9 @@
         <xref href="#topic_hhc_z5w_r4/section_r52_rbl_zt" format="dita"/>
       </li>
       <li>
+        <xref href="#topic_hhc_z5w_r4/toolowmem" format="dita"/>
+      </li>
+      <li>
         <xref href="#topic_hhc_z5w_r4/configuring_rg" format="dita"/>
       </li>
       <li>
@@ -41,11 +44,9 @@
           <b>vm.overcommit_ratio</b>
           <p>This Linux kernel parameter, set in <codeph>/etc/sysctl.conf</codeph>, 
             identifies the percentage of RAM that is used for application processes;
-            the remainder is reserved for the operating system. The operating system
-            default value (50 on Red Hat) is a good starting point for Greenplum
-            Database clusters employing resource group-based resource management. If
-            your memory utilization is too low, increase the value; if your memory or
-            swap usage is too high, decrease the setting.</p>
+            the remainder is reserved for the operating system. Tune the setting as
+            necessary. If your memory utilization is too low, increase the value;
+            if your memory or swap usage is too high, decrease the setting.</p>
         </li>
         <li>
           <b>gp_resource_group_memory_limit</b>
@@ -98,6 +99,18 @@
            fail.
         </li>
       </ul>
+    </section>
+    <section id="toolowmem">
+      <title>Memory Considerations when using Resource Groups</title>
+      <p>Available memory for resource groups may be limited on systems utilizing
+        low or no swap space and configured with the default <codeph>vm.overcommit_ratio</codeph>
+         and <codeph>gp_resource_group_memory_limit</codeph> settings. To ensure that
+         Greenplum Database has a reasonable per-segment-host memory limit, you may be
+         required to increase one or more of the following configuration settings:</p><ol>
+           <li>The swap size on the system.</li>
+           <li>The system's <codeph>vm.overcommit_ratio</codeph> setting.</li>
+           <li>The resource group <codeph>gp_resource_group_memory_limit</codeph> setting.</li>
+       </ol>
     </section>
     <section id="configuring_rg">
       <title>Configuring Resource Groups</title>
