@@ -346,9 +346,6 @@ devel : gccVersionCheck HOMEDEP $(ISCONFIG)
 endif
 	$(BUILD_STEPS)
 
-ifneq "$(findstring $(BLD_GPDB_BUILDSET),partial aix_subset)" ""
-	@$(MAKE) qautils-tarball INSTLOC=$(INSTLOC)
-endif
 #---------------------------------------------------------------------
 # Release builds
 #---------------------------------------------------------------------
@@ -713,14 +710,6 @@ HOMEFAIL :
 	@echo "	The HOME environment variable is not set. Please set it to continue."
 	@echo
 	@exit 1
-
-##
-## Create qautils tarball.  This file contains the utils required to
-## support cdbfast runs.
-##
-
-qautils-tarball:
-	@$(TAR) -zcf releng/qautils-$(MPP_ARCH).tar.gz -C $(INSTLOC) $(shell cat releng/QAUTILS_FILES.txt)
 
 #---------------------------------------------------------------------
 # Cleanup
