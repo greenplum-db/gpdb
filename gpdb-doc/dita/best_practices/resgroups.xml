@@ -102,8 +102,8 @@
     </section>
     <section id="toolowmem">
       <title>Memory Considerations when using Resource Groups</title>
-      <p>Available memory for resource groups may be limited on systems utilizing
-        low or no swap space and configured with the default <codeph>vm.overcommit_ratio</codeph>
+      <p>Available memory for resource groups may be limited on systems that use
+        low or no swap space, and that use the default <codeph>vm.overcommit_ratio</codeph>
          and <codeph>gp_resource_group_memory_limit</codeph> settings. To ensure that
          Greenplum Database has a reasonable per-segment-host memory limit, you may be
          required to increase one or more of the following configuration settings:</p><ol>
