@@ -160,16 +160,13 @@ jobs:
     - get: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
     - get: gpdb6-centos6-build
-  # Even though we don't ship the QA utils, we still need to strip out non-shipping files
-  - task: separate_qautils_files_for_rc_centos6
-    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
+  - task: remove_non_production_files
+    file: gpdb_src/concourse/tasks/remove_non_production_files.yml
     image: gpdb6-centos6-build
     input_mapping:
       bin_gpdb: bin_gpdb_centos6
     output_mapping:
       rc_bin_gpdb: rc_bin_gpdb_rhel6
-    params:
-      QAUTILS_TARBALL: "rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz"
   - put: bin_gpdb_centos6
     params:
       file: rc_bin_gpdb_rhel6/bin_gpdb.tar.gz
@@ -183,16 +180,13 @@ jobs:
     - get: bin_gpdb_centos7
       passed: [compile_gpdb_centos7]
     - get: gpdb6-centos7-build
-  # Even though we don't ship the QA utils, we still need to strip out non-shipping files
-  - task: separate_qautils_files_for_rc_centos7
-    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
+  - task: remove_non_production_files
+    file: gpdb_src/concourse/tasks/remove_non_production_files.yml
     image: gpdb6-centos7-build
     input_mapping:
       bin_gpdb: bin_gpdb_centos7
     output_mapping:
       rc_bin_gpdb: rc_bin_gpdb_rhel7
-    params:
-      QAUTILS_TARBALL: "rc_bin_gpdb/QAUtils-rhel7-x86_64.tar.gz"
   - put: bin_gpdb_centos7
     params:
       file: rc_bin_gpdb_rhel7/bin_gpdb.tar.gz
@@ -206,16 +200,13 @@ jobs:
     - get: bin_gpdb_ubuntu18.04
       passed: [compile_gpdb_ubuntu18.04]
     - get: gpdb6-ubuntu18.04-build
-  # Even though we don't ship the QA utils, we still need to strip out non-shipping files
-  - task: separate_qautils_files_for_rc_ubuntu18.04
-    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
+  - task: remove_non_production_files
+    file: gpdb_src/concourse/tasks/remove_non_production_files.yml
     image: gpdb6-ubuntu18.04-build
     input_mapping:
       bin_gpdb: bin_gpdb_ubuntu18.04
     output_mapping:
       rc_bin_gpdb: rc_bin_gpdb_ubuntu18.04
-    params:
-      QAUTILS_TARBALL: "rc_bin_gpdb/QAUtils-ubuntu18.04-amd64.tar.gz"
   - put: bin_gpdb_ubuntu18.04
     params:
       file: rc_bin_gpdb_ubuntu18.04/bin_gpdb.tar.gz
