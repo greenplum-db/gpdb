@@ -116,12 +116,12 @@
         <p>Use the interactive interview process to create your own input file unless your expansion
           scenario has atypical needs. </p>
         <p>The format for expansion input files is:</p>
-        <codeblock>hostname:address:port:datadir:dbid:content:preferred_role</codeblock>
+        <codeblock>hostname|address|port|datadir|dbid|content|preferred_role</codeblock>
         <p>For example:</p>
-        <codeblock>sdw5:sdw5-1:50011:/gpdata/primary/gp9:11:9:p
-sdw5:sdw5-2:50012:/gpdata/primary/gp10:12:10:p
-sdw5:sdw5-2:60011:/gpdata/mirror/gp9:13:9:m
-sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
+        <codeblock>sdw5|sdw5-1|50011|/gpdata/primary/gp9|11|9|p
+sdw5|sdw5-2|50012|/gpdata/primary/gp10|12|10|p
+sdw5|sdw5-2|60011|/gpdata/mirror/gp9|13|9|m
+sdw5|sdw5-1|60012|/gpdata/mirror/gp10|14|10|m</codeblock>
         <p>For each new segment, this format of expansion input file requires the following:</p>
         <table id="no165833">
           <title>Data for the expansion configuration file</title>
