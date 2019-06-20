@@ -298,10 +298,12 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 	entry->next = NULL;
 
 	/*
-	 * Copy memtuple into group_buf. Remember to always allocate
-	 * enough space before calling ExecCopySlotMemTupleTo() because
-	 * this function will call palloc() to allocate bigger space if
-	 * the given one is not big enough, which is what we want to avoid.
+	 * Calculate the tup_len we need.
+	 *
+	 * Since *tup_len is 0 and inline_toast is false, the only thing
+	 * memtuple_form_to() does here is calculating the tup_len.
+	 *
+	 * The memtuple_form_to() next time does the actual memtuple copy.
 	 */
 	entry->tuple_and_aggs = (void *)memtuple_form_to(hashslot->tts_mt_bind,
 													 values,
@@ -331,6 +333,9 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 		}
 	}
 
+	/*
+	 * Form memtuple into group_buf.
+	 */
 	entry->tuple_and_aggs = mpool_alloc(hashtable->group_buf,
 										MAXALIGN(MAXALIGN(tup_len) + aggs_len));
 	len = tup_len;
