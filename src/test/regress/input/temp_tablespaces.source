@@ -22,5 +22,7 @@ select count(1) from gp_dist_random('pg_class') segment_pg_class inner join pg_t
 
 drop table some_table_in_temp_tablespace;
 drop table some_non_temp_table;
+drop tablespace some_temp_tablespace;
+drop tablespace some_default_tablespace;
 reset default_tablespace;
 reset temp_tablespaces;
