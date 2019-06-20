@@ -355,24 +355,13 @@ def main():
         help='Developer userid to use for pipeline name and filename.'
     )
 
-    parser.add_argument(
-        '-b',
-        '--use_branch',
-        action='store_true',
-        dest='use_branch',
-        default=False,
-        help='Use current branch to generate the pipeline name and filename.'
-    )
-
     args = parser.parse_args()
 
     validate_target(args.pipeline_target)
 
     output_path_is_set = os.path.basename(args.output_filepath) != default_output_filename
-    if (args.user != os.getlogin() and args.use_branch) or \
-       (args.user != os.getlogin() and output_path_is_set) or \
-       (args.use_branch and output_path_is_set):
-        print("Only one of -b, -o, and -u may be specified.")
+    if (args.user != os.getlogin() and output_path_is_set):
+        print("You can only use one of --output or --user.")
         exit(1)
 
     if args.pipeline_target == 'prod':
@@ -394,9 +383,9 @@ def main():
     # if generating a dev pipeline but didn't specify an output,
     # don't overwrite the master pipeline
     if args.pipeline_target != 'prod' and not output_path_is_set:
-        pipeline_file_suffix = args.user
-        if args.use_branch:
-            pipeline_file_suffix = suggested_git_branch()
+        pipeline_file_suffix = suggested_git_branch()
+        if args.user != os.getlogin():
+            pipeline_file_suffix = args.user
         default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
