@@ -9230,7 +9230,7 @@
           usage when the resource group <codeph>MEMORY_SPILL_RATIO</codeph> is set to 0.</li>
         <li>You can use the following calculation to estimate a reasonable <codeph>statement_mem</codeph>
           value:
-          <codeblock>rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments
+          <codeblock>rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments_per_host
 statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
       </ul>
       <p><i>If you are using resource queues to control resource allocation in your Greenplum
