@@ -40,7 +40,7 @@ except ImportError, e:
 
 DEFAULT_NUM_WORKERS = 64
 logger = get_default_logger()
-
+NUMBER_OF_SECONDS_IN_A_YEAR = 31536000
 
 # ---------------------------------------------------------------
 class SegStopStatus:
@@ -81,7 +81,6 @@ def print_progress(pool, interval=10):
     # print_completed_percentage() returns True if we're done.
     while not print_completed_percentage():
         pool.join(interval)
-
 
 # ---------------------------------------------------------------
 class GpStop:
@@ -166,7 +165,9 @@ class GpStop:
                 # Disable Ctrl-C
                 signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-                self._stop_master()
+                while not self._stop_master():
+                    logger.info("foofoo")
+                    pass
             finally:
                 # Reenable Ctrl-C
                 self.cleanup()
@@ -419,31 +420,50 @@ class GpStop:
     def _stop_master(self, masterOnly=False):
         ''' shutsdown the master '''
 
-        self._stop_master_checks()
+        total_connections = None
+        if self.mode == 'smart' and self.timeout != NUMBER_OF_SECONDS_IN_A_YEAR:  #FIXME: make out-of-band
+            self.conn = dbconn.connect(self.dburl, utility=True)
+            total_connections = catalog.getUserConnectionInfo(self.conn)
+            self.conn.close()
+        elif self.mode == 'fast':
+            logger.info("Using WAIT mode of %s seconds" % self.timeout)
 
         e = GpEraFile(self.master_datadir, logger=get_logger_if_verbose())
         e.end_era()
 
         logger.info("Commencing Master instance shutdown with mode=%s" % self.mode)
         logger.info("Master segment instance directory=%s" % self.master_datadir)
+        logger.info("Master host=%s" % self.gparray.master.hostname)
 
         cmd = gp.MasterStop("stopping master", self.master_datadir, mode=self.mode, timeout=self.timeout)
         try:
+            if self.mode == 'smart' and self.timeout == NUMBER_OF_SECONDS_IN_A_YEAR:
+                signal.signal(signal.SIGINT,  lambda signo, fname : logger.info("you are waiting forever...do it yourself or keep waiting!!") )
             cmd.run(validateAfter=True)
         except ExecutionError as err:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
             logger.warning("master stop failed: %s" % err)
 
             if self.mode == 'smart':
                 logger.warning("Smart mode shutdown timed out due to: %s" % cmd.get_stderr())
+                if total_connections:
+                    # FIXME print out something cleaner
+                    logger.info("Connects to database: %s" % total_connections)
+                    logger.warning("There are other connections to this instance, shutdown mode smart aborted")
+                    logger.warning("Either remove connections, or use 'gpstop -M fast' or 'gpstop -M immediate'")
+                    logger.warning("See gpstop -? for all options")
+
                 mode_selection = userinput.ask_string("your_choice",
                                        "['(w)ait_forever', '(f)ast_mode', '(i)mmediate_mode']",
                                        'w',
                                        ['w', 'f', 'i'])
                 logger.info("your choice is %s" % mode_selection)
 
+                # FIXME: report user connections here to assist DBA(they can't access db now!)
                 if mode_selection == 'w':
-                    self.mode = 'smart'   #fixme...how to wait forever here?  Add a mode 'superslow'?
-                    logger.info("re-trying smart shutdown")
+                    self.mode = 'smart'
+                    self.timeout = NUMBER_OF_SECONDS_IN_A_YEAR   # wait for a year
+                    logger.info("re-trying smart shutdown with waiting forever")
                 elif mode_selection == 'f':
                     self.mode = 'fast'
                     logger.info("commencening fast shutdown...")
@@ -478,6 +498,8 @@ class GpStop:
                         if os.path.exists(lockfile):
                             logger.info("Clearing segment instance lock files")
                             os.remove(lockfile)
+        finally:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
 
         logger.info('Attempting forceful termination of any leftover master process')
         (succeeded, mypid, file_datadir) = pg.ReadPostmasterTempFile.local("Read master tmp file",
@@ -487,20 +509,6 @@ class GpStop:
         logger.debug("Successfully shutdown the Master instance in admin mode")
 
         return True
-
-    ######
-    def _stop_master_checks(self):
-        logger.info("Commencing Master instance shutdown with mode='%s'" % self.mode)
-        logger.info("Master host=%s" % self.gparray.master.hostname)
-
-        if self.mode == 'smart':
-            pass
-        elif self.mode == 'fast':
-            if self.timeout == SEGMENT_STOP_TIMEOUT_DEFAULT:
-                logger.info("Using standard WAIT mode of %s seconds" % SEGMENT_STOP_TIMEOUT_DEFAULT)
-            else:
-                logger.info("Using WAIT mode of %s seconds" % self.timeout)
-        pass
 
     ######
     def _stop_standby(self):

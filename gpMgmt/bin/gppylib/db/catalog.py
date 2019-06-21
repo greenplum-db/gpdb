@@ -37,9 +37,9 @@ def getDatabaseList(conn):
     sql = "SELECT datname FROM pg_catalog.pg_database"
     return basicSQLExec(conn,sql)
 
-def getUserPIDs(conn):
+def getUserConnectionInfo(conn):
     """dont count ourselves"""
-    sql = """SELECT pid FROM pg_stat_activity WHERE pid != pg_backend_pid()"""
+    sql = """SELECT pid, usename, application_name, client_addr, client_hostname, client_port, backend_start, query FROM pg_stat_activity WHERE pid != pg_backend_pid() ORDER BY usename"""
     return basicSQLExec(conn,sql)
 
 def doesSchemaExist(conn,schemaname):
