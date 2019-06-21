@@ -37,15 +37,6 @@ try:
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
-"""
-GpstopCheckIgnoreList is a whitelist to ignore when checking active database connections
-
-In smart mode, we check the `pg_stat_activity` table for active sessions before calling
-the cluster stop routine. However, we need to ignore those that are part of the database
-implementation itself. For this purpose, we maintain a whitelist using its `application_name`
-field.
-"""
-GpstopCheckIgnoreList = ['gp_reserved_gpdiskquota']
 
 DEFAULT_NUM_WORKERS = 64
 logger = get_default_logger()
@@ -206,7 +197,8 @@ class GpStop:
                     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
                     if self.onlyThisHost is None:
-                        self._stop_master()
+                        while not self._stop_master():
+                            pass
                         self._stop_standby()
                     self._stop_segments(segs)
                     self._stop_gpmmon()
@@ -427,10 +419,7 @@ class GpStop:
     def _stop_master(self, masterOnly=False):
         ''' shutsdown the master '''
 
-        self.conn = dbconn.connect(self.dburl, utility=True)
         self._stop_master_checks()
-
-        self.conn.close()
 
         e = GpEraFile(self.master_datadir, logger=get_logger_if_verbose())
         e.end_era()
@@ -441,7 +430,32 @@ class GpStop:
         cmd = gp.MasterStop("stopping master", self.master_datadir, mode=self.mode, timeout=self.timeout)
         try:
             cmd.run(validateAfter=True)
-        except:
+        except ExecutionError as err:
+            logger.warning("master stop failed: %s" % err)
+
+            if self.mode == 'smart':
+                logger.warning("Smart mode shutdown timed out due to: %s" % cmd.get_stderr())
+                mode_selection = userinput.ask_string("your_choice",
+                                       "['(w)ait_forever', '(f)ast_mode', '(i)mmediate_mode']",
+                                       'w',
+                                       ['w', 'f', 'i'])
+                logger.info("your choice is %s" % mode_selection)
+
+                if mode_selection == 'w':
+                    self.mode = 'smart'   #fixme...how to wait forever here?  Add a mode 'superslow'?
+                    logger.info("re-trying smart shutdown")
+                elif mode_selection == 'f':
+                    self.mode = 'fast'
+                    logger.info("commencening fast shutdown...")
+                elif mode_selection == 'i':
+                    self.mode = 'immediate'
+                    logger.info("commenencing immediate shutdown...")
+                else:
+                    self.mode = 'immediate'
+                    logger.info("commenencing immediate shutdown...")
+
+                return False
+
             # Didn't stop in timeout or pg_ctl failed.  So try kill
             (succeeded, mypid, file_datadir) = pg.ReadPostmasterTempFile.local("Read master tmp file",
                                                                                self.dburl.pgport).getResults()
@@ -464,6 +478,7 @@ class GpStop:
                         if os.path.exists(lockfile):
                             logger.info("Clearing segment instance lock files")
                             os.remove(lockfile)
+
         logger.info('Attempting forceful termination of any leftover master process')
         (succeeded, mypid, file_datadir) = pg.ReadPostmasterTempFile.local("Read master tmp file",
                                                                            self.dburl.pgport).getResults()
@@ -471,33 +486,20 @@ class GpStop:
 
         logger.debug("Successfully shutdown the Master instance in admin mode")
 
+        return True
+
     ######
     def _stop_master_checks(self):
-        total_connections = len(catalog.getUserPIDs(self.conn, GpstopCheckIgnoreList))
-        logger.info("There are %d connections to the database" % total_connections)
-
-        if total_connections > 0 and self.mode == 'smart':
-            logger.warning("There are other connections to this instance, shutdown mode smart aborted")
-            logger.warning("Either remove connections, or use 'gpstop -M fast' or 'gpstop -M immediate'")
-            logger.warning("See gpstop -? for all options")
-            raise ExceptionNoStackTraceNeeded("Active connections. Aborting shutdown...")
-
         logger.info("Commencing Master instance shutdown with mode='%s'" % self.mode)
         logger.info("Master host=%s" % self.gparray.master.hostname)
 
         if self.mode == 'smart':
             pass
         elif self.mode == 'fast':
-            logger.info("Detected %d connections to database" % total_connections)
-            if total_connections > 0:
-                logger.info("Switching to WAIT mode")
-                logger.info("Will wait for shutdown to complete, this may take some time if")
-                logger.info("there are a large number of active complex transactions, please wait...")
+            if self.timeout == SEGMENT_STOP_TIMEOUT_DEFAULT:
+                logger.info("Using standard WAIT mode of %s seconds" % SEGMENT_STOP_TIMEOUT_DEFAULT)
             else:
-                if self.timeout == SEGMENT_STOP_TIMEOUT_DEFAULT:
-                    logger.info("Using standard WAIT mode of %s seconds" % SEGMENT_STOP_TIMEOUT_DEFAULT)
-                else:
-                    logger.info("Using WAIT mode of %s seconds" % self.timeout)
+                logger.info("Using WAIT mode of %s seconds" % self.timeout)
         pass
 
     ######
