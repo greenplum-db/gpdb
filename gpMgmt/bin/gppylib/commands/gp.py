@@ -28,8 +28,9 @@ logger = get_default_logger()
 GPHOME=os.environ.get('GPHOME')
 
 #Default timeout for segment start
-SEGMENT_TIMEOUT_DEFAULT=600
-SEGMENT_STOP_TIMEOUT_DEFAULT=120
+#FIXME BEFORE COMMIT
+SEGMENT_TIMEOUT_DEFAULT=15
+SEGMENT_STOP_TIMEOUT_DEFAULT=10
 
 #"Command not found" return code in bash
 COMMAND_NOT_FOUND=127
