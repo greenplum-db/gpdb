@@ -101,15 +101,6 @@ our @EXPORT = qw(
 
 our ($test_localhost, $test_pghost, $last_port_assigned, @all_nodes);
 
-# Windows path to virtual file system root
-
-our $vfs_path = '';
-if ($Config{osname} eq 'msys')
-{
-	$vfs_path = `cd / && pwd -W`;
-	chomp $vfs_path;
-}
-
 INIT
 {
 
@@ -767,7 +758,7 @@ standby_mode=on
 sub enable_restoring
 {
 	my ($self, $root_node) = @_;
-	my $path = $vfs_path . $root_node->archive_dir;
+	my $path = TestLib::perl2host($root_node->archive_dir);
 	my $name = $self->name;
 
 	print "### Enabling WAL restore for node \"$name\"\n";
@@ -795,7 +786,7 @@ standby_mode = on
 sub enable_archiving
 {
 	my ($self) = @_;
-	my $path   = $vfs_path. $self->archive_dir;
+	my $path   = TestLib::perl2host($self->archive_dir);
 	my $name   = $self->name;
 
 	print "### Enabling WAL archiving for node \"$name\"\n";

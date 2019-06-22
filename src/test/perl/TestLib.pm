@@ -145,6 +145,31 @@ sub tempdir_short
 	return File::Temp::tempdir(CLEANUP => 1);
 }
 
+# Translate a Perl file name to a host file name.  Currently, this is a no-op
+# except for the case of Perl=msys and host=mingw32.  The subject need not
+# exist, but its parent directory must exist.
+sub perl2host
+{
+	my ($subject) = @_;
+	return $subject unless $Config{osname} eq 'msys';
+	my $here = cwd;
+	my $leaf;
+	if (chdir $subject) {
+		$leaf = '';
+	}
+	else {
+		$leaf = '/' . basename $subject;
+		my $parent = dirname $subject;
+		chdir $parent or die "could not chdir \"$parent\": $!";
+	}
+
+	# this odd way of calling 'pwd -W' is the only way that seems to work.
+	my $dir = qx{sh -c "pwd -W"};
+	chomp $dir;
+	chdir $here;
+	return $dir . $leaf;
+}
+
 # Initialize a new cluster for testing.
 #
 # The PGHOST environment variable is set to connect to the new cluster.
