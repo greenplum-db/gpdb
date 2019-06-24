@@ -29,16 +29,16 @@ setup()
  * Tests
  */
 void
-test__create_tablespace_storage_populates_the_pending_tablespace_deletes_list(
+test_create_tablespace_storage_populates_the_pending_tablespace_deletes_list(
 	void **state)
 {
 	setup();
 
 	Oid someTablespaceOid = 17999;
 
-	ScheduleTablespaceDirectoryDeletion(someTablespaceOid);
+	ScheduleTablespaceDirectoryDeletionForAbort(someTablespaceOid);
 
-	Oid tablespaceForDeletion = GetPendingTablespaceForDeletion();
+	Oid tablespaceForDeletion = GetPendingTablespaceForDeletionForAbort();
 
 	assert_int_equal(17999, tablespaceForDeletion);
 
@@ -46,100 +46,154 @@ test__create_tablespace_storage_populates_the_pending_tablespace_deletes_list(
 
 	someTablespaceOid = 88888;
 
-	ScheduleTablespaceDirectoryDeletion(someTablespaceOid);
+	ScheduleTablespaceDirectoryDeletionForAbort(someTablespaceOid);
 
-	tablespaceForDeletion = GetPendingTablespaceForDeletion();
+	tablespaceForDeletion = GetPendingTablespaceForDeletionForAbort();
 
 	assert_int_equal(88888, tablespaceForDeletion);
 }
 
 void
-test__get_pending_tablespace_for_deletion_returns_a_null_value_by_default(void **state)
+test_get_pending_tablespace_for_deletion_returns_a_null_value_by_default(void **state)
 {
 	setup();
 
-	Oid tablespaceForDeletion = GetPendingTablespaceForDeletion();
+	Oid tablespaceForDeletion = GetPendingTablespaceForDeletionForAbort();
 
 	assert_int_equal(InvalidOid, tablespaceForDeletion);
 }
 
 void
-test__DoPendingTablespaceDeletion_removes_the_pending_tablespace_for_deletion_so_it_is_not_deleted_by_the_next_transaction(
+test_DoPendingTablespaceDeletionForAbort_removes_the_pending_tablespace_for_deletion_so_it_is_not_deleted_by_the_next_transaction(
 	void **state)
 {
 	setup();
 
 	Oid someTablespaceOid = 99999;
 
-	ScheduleTablespaceDirectoryDeletion(someTablespaceOid);
+	ScheduleTablespaceDirectoryDeletionForAbort(someTablespaceOid);
 
-	DoPendingTablespaceDeletion();
+	DoPendingTablespaceDeletionForAbort();
 
-	Oid tablespaceForDeletion = GetPendingTablespaceForDeletion();
+	Oid tablespaceForDeletion = GetPendingTablespaceForDeletionForAbort();
 
 	assert_int_equal(InvalidOid, tablespaceForDeletion);
 }
 
 void
-test__DoPendingTablespaceDeletion_calls_unlink(void **state)
+test_DoPendingTablespaceDeletionForAbort_calls_unlink(void **state)
 {
 	setup();
 
-	ScheduleTablespaceDirectoryDeletion(99999);
+	ScheduleTablespaceDirectoryDeletionForAbort(99999);
 
-	DoPendingTablespaceDeletion();
+	DoPendingTablespaceDeletionForAbort();
 
 	assert_int_equal(unlink_called_with_tablespace_oid, 99999);
 	assert_int_equal(unlink_called_with_redo, false);
 }
 
 void
-test__delete_called_when_invalid_tablespace_set_does_not_call_unlink(void **state) 
+test_delete_called_when_invalid_tablespace_set_does_not_call_unlink(void **state) 
 {
 	setup();
 
-	ScheduleTablespaceDirectoryDeletion(InvalidOid);
+	ScheduleTablespaceDirectoryDeletionForAbort(InvalidOid);
 
-	DoPendingTablespaceDeletion();
+	DoPendingTablespaceDeletionForAbort();
 
 	assert_int_equal(unlink_called_with_tablespace_oid, NOT_CALLED_OID);
 }
 
 void
-test__DoTablespaceDeletion_calls_unlink_with_tablespace_oid_and_redo_flag(void **state) {
+test_DoTablespaceDeletionForRedoXlog_calls_unlink_with_tablespace_oid_and_redo_flag(void **state) {
 	setup();
 
-	ScheduleTablespaceDirectoryDeletion(66666);
+	ScheduleTablespaceDirectoryDeletionForAbort(66666);
 
-	DoTablespaceDeletion(77777);
+	DoTablespaceDeletionForRedoXlog(77777);
 
 	assert_int_equal(unlink_called_with_tablespace_oid, 77777);
 	assert_int_equal(unlink_called_with_redo, true);
 }
 
-void test__UnscheduleTablespaceDirectoryDeletion_removes_the_scheduled_tablespace_for_deletion(void **state)
+void test_UnscheduleTablespaceDirectoryDeletionForAbort_removes_the_scheduled_tablespace_for_deletion(void **state)
 {
 	setup();
 
-	ScheduleTablespaceDirectoryDeletion(66666);
-	UnscheduleTablespaceDirectoryDeletion();
+	ScheduleTablespaceDirectoryDeletionForAbort(66666);
+	UnscheduleTablespaceDirectoryDeletionForAbort();
 
-	Oid tablespaceForDeletion = GetPendingTablespaceForDeletion();
+	Oid tablespaceForDeletion = GetPendingTablespaceForDeletionForAbort();
 
 	assert_int_equal(tablespaceForDeletion, InvalidOid);
 
 }
 
-void test__an_UnscheduleTablespaceDirectoryDeletion_does_not_get_unlinked(void **state)
+void test_an_UnscheduleTablespaceDirectoryDeletionForAbort_does_not_get_unlinked(void **state)
 {
 	setup();
 
-	ScheduleTablespaceDirectoryDeletion(66666);
-	UnscheduleTablespaceDirectoryDeletion();
+	ScheduleTablespaceDirectoryDeletionForAbort(66666);
+	UnscheduleTablespaceDirectoryDeletionForAbort();
 	
-	DoPendingTablespaceDeletion();
+	DoPendingTablespaceDeletionForAbort();
 
 	assert_int_equal(unlink_called_with_tablespace_oid, NOT_CALLED_OID);
+}
+
+void test_a_tablespace_can_be_scheduled_for_deletion_on_commit(void **state) 
+{
+	setup();
+
+	ScheduleTablespaceDirectoryDeletionForCommit(99999);
+
+	Oid pending_tablespace_for_deletion = NULL;
+	pending_tablespace_for_deletion = GetPendingTablespaceForDeletionForCommit();
+	
+	assert_int_equal(pending_tablespace_for_deletion, 99999);
+}
+
+void test_a_tablespace_can_be_unscheduled_for_deletion_on_commit(void **state) 
+{
+	setup();
+
+	ScheduleTablespaceDirectoryDeletionForCommit(99999);
+
+	UnscheduleTablespaceDirectoryDeletionForCommit();
+
+	Oid pending_tablespace_for_deletion = NULL;
+
+	pending_tablespace_for_deletion = GetPendingTablespaceForDeletionForCommit();
+
+	assert_int_equal(pending_tablespace_for_deletion, InvalidOid);
+}
+
+void test_a_tablespace_that_is_pending_is_deleted_on_commit(void **state)
+{
+	setup();
+
+	ScheduleTablespaceDirectoryDeletionForCommit(77777);
+
+	DoPendingTablespaceDeletionForCommit();
+
+	assert_int_equal(unlink_called_with_tablespace_oid, 77777);
+	assert_int_equal(unlink_called_with_redo, false);
+}
+
+void test_a_tablespace_that_has_been_deleted_on_commit_is_no_longer_pending(void **state)
+{
+	setup();
+
+	ScheduleTablespaceDirectoryDeletionForCommit(77777);
+
+	DoPendingTablespaceDeletionForCommit();
+
+	Oid pending_tablespace_for_deletion = -1;
+	
+	pending_tablespace_for_deletion = GetPendingTablespaceForDeletionForCommit();
+	
+	assert_int_equal(pending_tablespace_for_deletion, InvalidOid);
 }
 
 int
@@ -149,27 +203,40 @@ main(int argc, char *argv[])
 
 	const UnitTest tests[] = {
 		unit_test(
-			test__create_tablespace_storage_populates_the_pending_tablespace_deletes_list),
+			test_create_tablespace_storage_populates_the_pending_tablespace_deletes_list),
 		unit_test(
-			test__get_pending_tablespace_for_deletion_returns_a_null_value_by_default),
+			test_get_pending_tablespace_for_deletion_returns_a_null_value_by_default),
 		unit_test(
-			test__DoPendingTablespaceDeletion_removes_the_pending_tablespace_for_deletion_so_it_is_not_deleted_by_the_next_transaction
+			test_DoPendingTablespaceDeletionForAbort_removes_the_pending_tablespace_for_deletion_so_it_is_not_deleted_by_the_next_transaction
 		),
 		unit_test(
-			test__DoPendingTablespaceDeletion_calls_unlink
+			test_DoPendingTablespaceDeletionForAbort_calls_unlink
 		),
 		unit_test(
-			test__delete_called_when_invalid_tablespace_set_does_not_call_unlink
+			test_delete_called_when_invalid_tablespace_set_does_not_call_unlink
 			),
 		unit_test(
-			test__DoTablespaceDeletion_calls_unlink_with_tablespace_oid_and_redo_flag
+			test_DoTablespaceDeletionForRedoXlog_calls_unlink_with_tablespace_oid_and_redo_flag
 			),
 		unit_test(
-			test__UnscheduleTablespaceDirectoryDeletion_removes_the_scheduled_tablespace_for_deletion
+			test_UnscheduleTablespaceDirectoryDeletionForAbort_removes_the_scheduled_tablespace_for_deletion
 			),
 		unit_test(
-			test__an_UnscheduleTablespaceDirectoryDeletion_does_not_get_unlinked
+			test_an_UnscheduleTablespaceDirectoryDeletionForAbort_does_not_get_unlinked
+			),
+		unit_test(
+			test_a_tablespace_can_be_scheduled_for_deletion_on_commit
+			),
+		unit_test(
+			test_a_tablespace_can_be_unscheduled_for_deletion_on_commit
+			),
+		unit_test(
+			test_a_tablespace_that_is_pending_is_deleted_on_commit
+			),
+		unit_test(
+			test_a_tablespace_that_has_been_deleted_on_commit_is_no_longer_pending
 			)
+			
 	};
 
 	return run_tests(tests);

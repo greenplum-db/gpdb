@@ -62,6 +62,10 @@ create or replace function setup(content_id integer, fault_name text, fault_acti
 		-- setup faults
 		perform gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where content = content_id and role = 'p';
 		perform gp_inject_fault2(fault_name, fault_action_type, dbid, hostname, port) from gp_segment_configuration where content = content_id and role = 'p';
+
+		-- intentionally skip fts during these tests
+		-- we know we're going to be inducing errors and panics on primaries
+		perform gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port) from gp_segment_configuration where content = content_id and role = 'p';
 	end;
 $$ LANGUAGE plpgsql;
 create or replace function cleanup(content_id integer, tablespace_location_dir text) returns void as $$
@@ -99,6 +103,7 @@ begin
 	LOOP
 		select count(1) into number_of_segments_behind from gp_stat_replication where sent_location != replay_location;
 		EXIT WHEN number_of_segments_behind = 0;
+		perform pg_sleep(0.5);
 	END LOOP;
 end;
 $$ language plpgsql;
@@ -501,6 +506,611 @@ select cleanup(:content_id_under_test, :'tablespace_location');
  
 (1 row)
 
+--
+-- DROP TABLESPACE tests
+--
+\set tablespace_location '/tmp/my_tablespace_for_testing'
+select remove_tablespace_location_directory(:'tablespace_location');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+(1 row)
+
+select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+ 
+ 
+(3 rows)
+
+select setup_tablespace_location_dir_for_test(:'tablespace_location');
+ setup_tablespace_location_dir_for_test 
+----------------------------------------
+ 
+(1 row)
+
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+DROP TABLESPACE my_tablespace_for_testing;
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select list_tablespace_dbid_dirs(0, :'tablespace_location');
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 0 tablespaces","found 0 tablespaces"}
+(1 row)
+
+-- the tablespace should no longer be in the catalog
+select * from list_tablespace_catalog_without_oid();
+ gp_segment_id | tablespace_name 
+---------------+-----------------
+             0 | pg_default
+             0 | pg_global
+             1 | pg_default
+             1 | pg_global
+             2 | pg_default
+             2 | pg_global
+            -1 | pg_default
+            -1 | pg_global
+(8 rows)
+
+select cleanup(-1, :'tablespace_location');
+ cleanup 
+---------
+ 
+(1 row)
+
+--
+-- An error after XLOG_TBLSPC_DROP
+--
+--
+\set tablespace_location '/tmp/my_tablespace_for_testing'
+select remove_tablespace_location_directory(:'tablespace_location');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+(1 row)
+
+select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+ 
+ 
+(3 rows)
+
+select setup_tablespace_location_dir_for_test(:'tablespace_location');
+ setup_tablespace_location_dir_for_test 
+----------------------------------------
+ 
+(1 row)
+
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+select gp_inject_fault2('after_xlog_tblspc_drop', 'error', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+ERROR:  fault triggered, fault name:'after_xlog_tblspc_drop' fault type:'error'
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select list_tablespace_dbid_dirs(8, :'tablespace_location');
+                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+(1 row)
+
+select * from list_tablespace_catalog_without_oid(); -- the tablespace should still exist in the catalog
+ gp_segment_id |      tablespace_name      
+---------------+---------------------------
+             0 | my_tablespace_for_testing
+             0 | pg_default
+             0 | pg_global
+             1 | my_tablespace_for_testing
+             1 | pg_default
+             1 | pg_global
+             2 | my_tablespace_for_testing
+             2 | pg_default
+             2 | pg_global
+            -1 | my_tablespace_for_testing
+            -1 | pg_default
+            -1 | pg_global
+(12 rows)
+
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select cleanup(0, :'tablespace_location');
+ cleanup 
+---------
+ 
+(1 row)
+
+--
+-- An error after XLOG_TBLSPC_DROP on master
+--
+--
+\set tablespace_location '/tmp/my_tablespace_for_testing'
+\set content_id_under_test -1
+select remove_tablespace_location_directory(:'tablespace_location');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+(1 row)
+
+select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+ 
+ 
+(3 rows)
+
+select setup_tablespace_location_dir_for_test(:'tablespace_location');
+ setup_tablespace_location_dir_for_test 
+----------------------------------------
+ 
+(1 row)
+
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+select gp_inject_fault2('after_xlog_tblspc_drop', 'error', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+ERROR:  fault triggered, fault name:'after_xlog_tblspc_drop' fault type:'error'
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select list_tablespace_dbid_dirs(8, :'tablespace_location');
+                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+(1 row)
+
+select * from list_tablespace_catalog_without_oid(); -- the tablespace should still exist in the catalog
+ gp_segment_id |      tablespace_name      
+---------------+---------------------------
+             0 | my_tablespace_for_testing
+             0 | pg_default
+             0 | pg_global
+             1 | my_tablespace_for_testing
+             1 | pg_default
+             1 | pg_global
+             2 | my_tablespace_for_testing
+             2 | pg_default
+             2 | pg_global
+            -1 | my_tablespace_for_testing
+            -1 | pg_default
+            -1 | pg_global
+(12 rows)
+
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select cleanup(:content_id_under_test, :'tablespace_location');
+ cleanup 
+---------
+ 
+(1 row)
+
+--
+-- When the tablespace is not empty, it should not be allowed to be dropped:
+--
+--
+\set tablespace_location '/tmp/my_tablespace_for_testing'
+select remove_tablespace_location_directory(:'tablespace_location');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+(1 row)
+
+select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+ 
+ 
+(3 rows)
+
+select setup_tablespace_location_dir_for_test(:'tablespace_location');
+ setup_tablespace_location_dir_for_test 
+----------------------------------------
+ 
+(1 row)
+
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+create table foobar (a int) tablespace my_tablespace_for_testing distributed by (a); 
+DROP TABLESPACE my_tablespace_for_testing;
+ERROR:  tablespace "my_tablespace_for_testing" is not empty
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select list_tablespace_dbid_dirs(8, :'tablespace_location');
+                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+(1 row)
+
+-- the tablespace should still exist in the catalog
+select * from list_tablespace_catalog_without_oid(); -- the tablespace should still exist in the catalog
+ gp_segment_id |      tablespace_name      
+---------------+---------------------------
+             0 | my_tablespace_for_testing
+             0 | pg_default
+             0 | pg_global
+             1 | my_tablespace_for_testing
+             1 | pg_default
+             1 | pg_global
+             2 | my_tablespace_for_testing
+             2 | pg_default
+             2 | pg_global
+            -1 | my_tablespace_for_testing
+            -1 | pg_default
+            -1 | pg_global
+(12 rows)
+
+drop table foobar;
+drop tablespace my_tablespace_for_testing;
+select cleanup(0, :'tablespace_location');
+ cleanup 
+---------
+ 
+(1 row)
+
+--
+-- A panic before XLOG_XACT_COMMIT_PREPARED on primary
+--
+\set tablespace_location '/tmp/my_tablespace_for_testing'
+\set content_id_under_test 0
+\set fault_type panic
+\set fault_name before_xlog_xact_commit_prepared
+select remove_tablespace_location_directory(:'tablespace_location');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+(1 row)
+
+select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+ 
+ 
+(3 rows)
+
+select setup_tablespace_location_dir_for_test(:'tablespace_location');
+ setup_tablespace_location_dir_for_test 
+----------------------------------------
+ 
+(1 row)
+
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+WARNING:  the distributed transaction 'Commit Prepared' broadcast failed to one or more segments for gid DUMMY
+NOTICE:  Releasing segworker group to retry broadcast.
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select list_tablespace_dbid_dirs(0, :'tablespace_location');
+                list_tablespace_dbid_dirs                 
+----------------------------------------------------------
+ {Success,"expected 0 tablespaces","found 0 tablespaces"}
+(1 row)
+
+select * from list_tablespace_catalog_without_oid(); -- the tablespace should no longer exist in the catalog
+ gp_segment_id | tablespace_name 
+---------------+-----------------
+             0 | pg_default
+             0 | pg_global
+             1 | pg_default
+             1 | pg_global
+             2 | pg_default
+             2 | pg_global
+            -1 | pg_default
+            -1 | pg_global
+(8 rows)
+
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+select cleanup(:content_id_under_test, :'tablespace_location');
+ cleanup 
+---------
+ 
+(1 row)
+
+--
+-- A panic after XLOG_XACT_PREPARED on primary
+--
+\set tablespace_location '/tmp/my_tablespace_for_testing'
+\set content_id_under_test 0
+\set fault_type panic
+\set fault_name after_xlog_xact_prepare_flushed
+select remove_tablespace_location_directory(:'tablespace_location');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+(1 row)
+
+select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+ 
+ 
+(3 rows)
+
+select setup_tablespace_location_dir_for_test(:'tablespace_location');
+ setup_tablespace_location_dir_for_test 
+----------------------------------------
+ 
+(1 row)
+
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+ERROR:  fault triggered, fault name:'after_xlog_xact_prepare_flushed' fault type:'panic'  (seg0 127.0.0.1:7002 pid=20870)
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select list_tablespace_dbid_dirs(8, :'tablespace_location');
+                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+(1 row)
+
+select * from list_tablespace_catalog_without_oid(); -- the tablespaces should exist in the catalog
+ gp_segment_id |      tablespace_name      
+---------------+---------------------------
+            -1 | my_tablespace_for_testing
+            -1 | pg_default
+            -1 | pg_global
+             0 | my_tablespace_for_testing
+             0 | pg_default
+             0 | pg_global
+             1 | my_tablespace_for_testing
+             1 | pg_default
+             1 | pg_global
+             2 | my_tablespace_for_testing
+             2 | pg_default
+             2 | pg_global
+(12 rows)
+
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+select cleanup(:content_id_under_test, :'tablespace_location');
+ cleanup 
+---------
+ 
+(1 row)
+
+--
+-- A panic before XLOG_XACT_PREPARED on primary
+--
+\set tablespace_location '/tmp/my_tablespace_for_testing'
+\set content_id_under_test 0
+\set fault_type panic
+\set fault_name before_xlog_xact_prepare
+\set expected_number_of_tablespaces 8
+select remove_tablespace_location_directory(:'tablespace_location');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+(1 row)
+
+select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+ 
+ 
+(3 rows)
+
+select setup_tablespace_location_dir_for_test(:'tablespace_location');
+ setup_tablespace_location_dir_for_test 
+----------------------------------------
+ 
+(1 row)
+
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'panic'
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
+                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+(1 row)
+
+select * from list_tablespace_catalog_without_oid(); -- the tablespaces should exist in the catalog
+ gp_segment_id |      tablespace_name      
+---------------+---------------------------
+             0 | my_tablespace_for_testing
+             0 | pg_default
+             0 | pg_global
+             1 | my_tablespace_for_testing
+             1 | pg_default
+             1 | pg_global
+             2 | my_tablespace_for_testing
+             2 | pg_default
+             2 | pg_global
+            -1 | my_tablespace_for_testing
+            -1 | pg_default
+            -1 | pg_global
+(12 rows)
+
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+select cleanup(:content_id_under_test, :'tablespace_location');
+ cleanup 
+---------
+ 
+(1 row)
+
+--
+-- An error before XLOG_XACT_PREPARED on primary
+--
+\set tablespace_location '/tmp/my_tablespace_for_testing'
+\set content_id_under_test 0
+\set fault_type error
+\set fault_name before_xlog_xact_prepare
+\set expected_number_of_tablespaces 8
+select remove_tablespace_location_directory(:'tablespace_location');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+(1 row)
+
+select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
+ remove_tablespace_location_directory 
+--------------------------------------
+ 
+ 
+ 
+(3 rows)
+
+select setup_tablespace_location_dir_for_test(:'tablespace_location');
+ setup_tablespace_location_dir_for_test 
+----------------------------------------
+ 
+(1 row)
+
+CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
+select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'error'
+select give_mirrors_time_to_catch_up();
+ give_mirrors_time_to_catch_up 
+-------------------------------
+ 
+(1 row)
+
+select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
+                                                                                                                                                    list_tablespace_dbid_dirs                                                                                                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {Success,"expected 8 tablespaces","found 8 tablespaces",/tmp/my_tablespace_for_testing/1,/tmp/my_tablespace_for_testing/2,/tmp/my_tablespace_for_testing/3,/tmp/my_tablespace_for_testing/4,/tmp/my_tablespace_for_testing/5,/tmp/my_tablespace_for_testing/6,/tmp/my_tablespace_for_testing/7,/tmp/my_tablespace_for_testing/8}
+(1 row)
+
+select * from list_tablespace_catalog_without_oid(); -- the tablespaces should exist in the catalog
+ gp_segment_id |      tablespace_name      
+---------------+---------------------------
+             0 | my_tablespace_for_testing
+             0 | pg_default
+             0 | pg_global
+             1 | my_tablespace_for_testing
+             1 | pg_default
+             1 | pg_global
+             2 | my_tablespace_for_testing
+             2 | pg_default
+             2 | pg_global
+            -1 | my_tablespace_for_testing
+            -1 | pg_default
+            -1 | pg_global
+(12 rows)
+
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+DROP TABLESPACE my_tablespace_for_testing;
+select cleanup(:content_id_under_test, :'tablespace_location');
+ cleanup 
+---------
+ 
+(1 row)
+
+--
+-- An error after XLOG_XACT_DISTRIBUTED_COMMIT on master
+-- tested manually, as a crash causes test to stop running.
+-- Success, expected 0 tablespaces, got 0 tablespaces
+--
 --
 -- Disable this feature as it is not the default behavior
 --

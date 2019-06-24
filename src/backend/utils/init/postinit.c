@@ -566,7 +566,7 @@ BaseInit(void)
 	InitBufferPoolAccess();
 
 	/* 
-	 * Initialize tablespace smgr component
+	 * Initialize catalog tablespace storage component
 	 * with knowledge of how to perform unlink.
 	 * 
 	 * Needed for xlog replay and normal operations.
