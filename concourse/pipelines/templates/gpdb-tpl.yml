@@ -24,7 +24,8 @@
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
                       {'name': 'gpconfig',
-                       'use_concourse_cluster': true},
+                       'use_concourse_cluster': true,
+                       'env': 'LC_CTYPE: en_US.UTF-8'},
                       {'name': 'gpssh-exkeys',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
@@ -1585,6 +1586,7 @@ jobs:
           image: ccp-image
           params:
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
+            [[ test.env ]]
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -1600,6 +1602,7 @@ jobs:
           image: gpdb6-centos6-test
           params:
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
+            [[ test.env ]]
 
 - name: [[ test.name ]]_ubuntu18
   plan:
@@ -1637,6 +1640,7 @@ jobs:
           image: gpdb6-ubuntu18.04-test
           params:
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
+            [[ test.env ]]
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -1654,6 +1658,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster
+            [[ test.env ]]
 
 {% endfor %}
 
