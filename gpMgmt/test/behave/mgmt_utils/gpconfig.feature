@@ -82,10 +82,6 @@ Feature: gpconfig integration tests
         | multiple quoted single quotes          | application_name             | string     | boo        | "''''"    | '''''''''' | ''''       | "''"              | ''''''                 | "'"          | ''''              | '                 |
 #       | integer with time unit with spaces     | statement_timeout            | int w/unit | 2min       | "'7 min'" | '7 min'    | 7min       | "'7 min'"         | '7 min'                | "'7 min'"    | '7 min'           | 7min              |
 # 'Integer with time unit with spaces' fails because the live server parses '7 min' as 7min, and our comparison logic does not handle this correctly.
-
-    @skip_fixme_ubuntu18.04
-    Examples:
-        | test_case                              | guc                          | type       | seed_value | value     | file_value | live_value | value_master_only | file_value_master_only | value_master | file_value_master | live_value_master |
         | utf-8 works                            | search_path                  | string     | boo        | Ομήρου    | 'Ομήρου'   | Ομήρου     | Ομήρου            | 'Ομήρου'               | Ομήρου       | 'Ομήρου'          | Ομήρου            |
 
     @concourse_cluster

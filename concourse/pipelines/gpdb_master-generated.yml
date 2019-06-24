@@ -1410,6 +1410,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpmovemirrors --tags=concourse_cluster
             TEST_NAME: gpmovemirrors
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -1439,6 +1440,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpmovemirrors --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gpmovemirrors
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -1489,6 +1491,7 @@ jobs:
           image: gpdb6-ubuntu18.04-test
           params:
             BEHAVE_FLAGS: --tags=gpmovemirrors --tags=concourse_cluster
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -1505,6 +1508,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gpmovemirrors --tags=~concourse_cluster,demo_cluster
+            
 
 - name: gppkg
   plan:
@@ -1542,6 +1546,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gppkg --tags=concourse_cluster
             TEST_NAME: gppkg
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -1571,6 +1576,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gppkg --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gppkg
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -1621,6 +1627,7 @@ jobs:
           image: gpdb6-ubuntu18.04-test
           params:
             BEHAVE_FLAGS: --tags=gppkg --tags=concourse_cluster
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -1637,6 +1644,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gppkg --tags=~concourse_cluster,demo_cluster
+            
 
 - name: analyzedb
   plan:
@@ -1660,6 +1668,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=analyzedb --tags=~concourse_cluster,demo_cluster
             TEST_NAME: analyzedb
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -1697,6 +1706,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=analyzedb --tags=~concourse_cluster,demo_cluster
+            
 
 - name: gpinitsystem
   plan:
@@ -1720,6 +1730,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpinitsystem --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gpinitsystem
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -1757,6 +1768,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gpinitsystem --tags=~concourse_cluster,demo_cluster
+            
 
 - name: gpstate
   plan:
@@ -1780,6 +1792,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpstate --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gpstate
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -1817,6 +1830,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gpstate --tags=~concourse_cluster,demo_cluster
+            
 
 - name: replication_slots
   plan:
@@ -1840,6 +1854,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=replication_slots --tags=~concourse_cluster,demo_cluster
             TEST_NAME: replication_slots
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -1877,6 +1892,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=replication_slots --tags=~concourse_cluster,demo_cluster
+            
 
 - name: gpactivatestandby
   plan:
@@ -1914,6 +1930,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpactivatestandby --tags=concourse_cluster
             TEST_NAME: gpactivatestandby
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -1943,6 +1960,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpactivatestandby --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gpactivatestandby
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -1993,6 +2011,7 @@ jobs:
           image: gpdb6-ubuntu18.04-test
           params:
             BEHAVE_FLAGS: --tags=gpactivatestandby --tags=concourse_cluster
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2009,6 +2028,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gpactivatestandby --tags=~concourse_cluster,demo_cluster
+            
 
 - name: gpinitstandby
   plan:
@@ -2032,6 +2052,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpinitstandby --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gpinitstandby
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -2069,6 +2090,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gpinitstandby --tags=~concourse_cluster,demo_cluster
+            
 
 - name: gpcheckcat
   plan:
@@ -2106,6 +2128,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpcheckcat --tags=concourse_cluster
             TEST_NAME: gpcheckcat
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2135,6 +2158,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpcheckcat --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gpcheckcat
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -2185,6 +2209,7 @@ jobs:
           image: gpdb6-ubuntu18.04-test
           params:
             BEHAVE_FLAGS: --tags=gpcheckcat --tags=concourse_cluster
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2201,6 +2226,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gpcheckcat --tags=~concourse_cluster,demo_cluster
+            
 
 - name: gprecoverseg
   plan:
@@ -2238,6 +2264,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gprecoverseg --tags=concourse_cluster
             TEST_NAME: gprecoverseg
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2267,6 +2294,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gprecoverseg --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gprecoverseg
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -2317,6 +2345,7 @@ jobs:
           image: gpdb6-ubuntu18.04-test
           params:
             BEHAVE_FLAGS: --tags=gprecoverseg --tags=concourse_cluster
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2333,6 +2362,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gprecoverseg --tags=~concourse_cluster,demo_cluster
+            
 
 - name: gpaddmirrors
   plan:
@@ -2370,6 +2400,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpaddmirrors --tags=concourse_cluster
             TEST_NAME: gpaddmirrors
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2399,6 +2430,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpaddmirrors --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gpaddmirrors
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -2449,6 +2481,7 @@ jobs:
           image: gpdb6-ubuntu18.04-test
           params:
             BEHAVE_FLAGS: --tags=gpaddmirrors --tags=concourse_cluster
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2465,6 +2498,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gpaddmirrors --tags=~concourse_cluster,demo_cluster
+            
 
 - name: gpconfig
   plan:
@@ -2502,6 +2536,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpconfig --tags=concourse_cluster
             TEST_NAME: gpconfig
+            LC_CTYPE: en_US.UTF-8
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2531,6 +2566,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpconfig --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gpconfig
+            LC_CTYPE: en_US.UTF-8
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -2581,6 +2617,7 @@ jobs:
           image: gpdb6-ubuntu18.04-test
           params:
             BEHAVE_FLAGS: --tags=gpconfig --tags=concourse_cluster
+            LC_CTYPE: en_US.UTF-8
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2597,6 +2634,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gpconfig --tags=~concourse_cluster,demo_cluster
+            LC_CTYPE: en_US.UTF-8
 
 - name: gpssh-exkeys
   plan:
@@ -2634,6 +2672,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpssh-exkeys --tags=concourse_cluster
             TEST_NAME: gpssh-exkeys
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2663,6 +2702,7 @@ jobs:
           params:
             BEHAVE_FLAGS: --tags=gpssh-exkeys --tags=~concourse_cluster,demo_cluster
             TEST_NAME: gpssh-exkeys
+            
           output_mapping:
             coverage: demo-coverage
         - task: publish_demo_coverage
@@ -2713,6 +2753,7 @@ jobs:
           image: gpdb6-ubuntu18.04-test
           params:
             BEHAVE_FLAGS: --tags=gpssh-exkeys --tags=concourse_cluster
+            
           on_success:
             <<: *ccp_destroy
           ensure:
@@ -2729,6 +2770,7 @@ jobs:
             bin_gpdb: bin_gpdb_ubuntu18.04
           params:
             BEHAVE_FLAGS: --tags=gpssh-exkeys --tags=~concourse_cluster,demo_cluster
+            
 
 
 - name: combine_cli_coverage
