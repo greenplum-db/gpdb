@@ -15,12 +15,19 @@
 
 
 extern void TablespaceStorageInit(void (*unlink_tablespace_dir)(Oid tablespace_dir, bool isRedo));
-extern void ScheduleTablespaceDirectoryDeletion(Oid tablespaceoid);
-extern void UnscheduleTablespaceDirectoryDeletion(void);
 
-extern Oid GetPendingTablespaceForDeletion(void);
-extern void DoPendingTablespaceDeletion(void);
-extern void DoTablespaceDeletion(Oid tablespace_to_delete);
+extern void ScheduleTablespaceDirectoryDeletionForAbort(Oid tablespaceoid);
+extern void UnscheduleTablespaceDirectoryDeletionForAbort(void);
+extern Oid GetPendingTablespaceForDeletionForAbort(void);
+extern void DoPendingTablespaceDeletionForAbort(void);
+
+extern void ScheduleTablespaceDirectoryDeletionForCommit(Oid tablespaceoid);
+extern void UnscheduleTablespaceDirectoryDeletionForCommit(void);
+extern Oid GetPendingTablespaceForDeletionForCommit(void);
+extern void DoPendingTablespaceDeletionForCommit(void);
+
+
+extern void DoTablespaceDeletionForRedoXlog(Oid tablespace_oid_to_delete);
 
 
 #endif // STORAGE_TABLESPACE_H

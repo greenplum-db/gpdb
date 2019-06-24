@@ -26,6 +26,7 @@
 #include "access/transam.h"
 #include "access/twophase.h"
 #include "access/xact.h"
+#include "access/xact_storage_tablespace.h"
 #include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "catalog/namespace.h"
@@ -1294,6 +1295,7 @@ RecordTransactionCommit(void)
 	XLogRecPtr	recptr = InvalidXLogRecPtr;
 	DistributedTransactionTimeStamp distribTimeStamp = 0;
 	DistributedTransactionId distribXid = 0;
+	Oid pending_tablespace_for_deletion = InvalidOid;
 
 	/* Like in CommitTransaction(), treat a QE reader as if there was no XID */
 	if (DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON ||
@@ -1399,6 +1401,8 @@ RecordTransactionCommit(void)
 
 		SetCurrentTransactionStopTimestamp();
 
+		pending_tablespace_for_deletion = GetPendingTablespaceForDeletionForCommit();
+
 		/*
 		 * Do we need the long commit record? If not, use the compact format.
 		 *
@@ -1415,7 +1419,8 @@ RecordTransactionCommit(void)
 		 * hardly matters.)
 		 */
 		if (nrels > 0 || ndeldbs > 0 || nmsgs > 0 || RelcacheInitFileInval ||
-			forceSyncCommit || XLogLogicalInfoActive() || isDtxPrepared)
+			forceSyncCommit || XLogLogicalInfoActive() || isDtxPrepared ||
+			OidIsValid(pending_tablespace_for_deletion))
 		{
 			XLogRecData rdata[6];
 			int			lastrdata = 0;
@@ -1438,6 +1443,9 @@ RecordTransactionCommit(void)
 			xlrec.ndeldbs = ndeldbs;
 			xlrec.nsubxacts = nchildren;
 			xlrec.nmsgs = nmsgs;
+			xlrec.tablespace_oid_to_delete_on_commit =
+				GetPendingTablespaceForDeletionForCommit();
+
 			rdata[0].data = (char *) (&xlrec);
 			rdata[0].len = MinSizeOfXactCommit;
 			rdata[0].buffer = InvalidBuffer;
@@ -1499,6 +1507,7 @@ RecordTransactionCommit(void)
 				 * be able to see this transaction only after distributed
 				 * commit xlog is written and the state is changed.
 				 */
+				elog(DEBUG5, "writing xlog_xact_distributed_commit");
 				recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_COMMIT, rdata);
 
 				insertedDistributedCommitted();
@@ -1533,6 +1542,7 @@ RecordTransactionCommit(void)
 			}
 			rdata[lastrdata].next = NULL;
 
+			elog(DEBUG5, "writing xlog_xact_commit_compact");
 			recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_COMMIT_COMPACT, rdata);
 		}
 	}
@@ -1723,6 +1733,7 @@ AtCommit_Memory(void)
 	CurTransactionContext = NULL;
 	CurrentTransactionState->curTransactionContext = NULL;
 }
+
 
 /* ----------------------------------------------------------------
  *						CommitSubTransaction stuff
@@ -1927,7 +1938,7 @@ RecordTransactionAbort(bool isSubXact)
 		SetCurrentTransactionStopTimestamp();
 		xlrec.xact_time = xactStopTimestamp;
 	}
-	xlrec.tablespace_oid_to_abort = GetPendingTablespaceForDeletion();
+	xlrec.tablespace_oid_to_delete_on_abort = GetPendingTablespaceForDeletionForAbort();
 	xlrec.nrels = nrels;
 	xlrec.ndeldbs = ndeldbs;
 	xlrec.nsubxacts = nchildren;
@@ -2605,12 +2616,6 @@ StartTransaction(void)
 					  LocalDistribXact_DisplayString(MyProc->pgprocno))));
 }
 
-static void
-AtEOXact_TablespaceStorage(void)
-{
-	UnscheduleTablespaceDirectoryDeletion();
-}
-
 /*
  *	CommitTransaction
  *
@@ -2838,9 +2843,12 @@ CommitTransaction(void)
 	 * this may take many seconds, also delay until after releasing locks.
 	 * Other backends will observe the attendant catalog changes and not
 	 * attempt to access affected files.
+	 *
+	 * Same considerations for tablespace deletion
 	 */
 	smgrDoPendingDeletes(true);
 	DoPendingDbDeletes(true);
+
 	/*
 	 * Only QD holds the session level lock this long for a movedb operation.
 	 * This is to prevent another transaction from moving database objects into
@@ -2851,6 +2859,8 @@ CommitTransaction(void)
 	if(Gp_role == GP_ROLE_DISPATCH)
 		MoveDbSessionLockRelease();
 
+	AtCommit_TablespaceStorage();
+
 	AtEOXact_AppendOnly();
 	AtCommit_Notify();
 	AtEOXact_GUC(true, 1);
@@ -2858,7 +2868,6 @@ CommitTransaction(void)
 	AtEOXact_on_commit_actions(true);
 	AtEOXact_Namespace(true);
 	AtEOXact_SMgr();
-	AtEOXact_TablespaceStorage();
 	AtEOXact_Files();
 	AtEOXact_ComboCid();
 	AtEOXact_HashTables(true);
@@ -3351,6 +3360,7 @@ AbortTransaction(void)
 		AtEOXact_RelationCache(false);
 		AtEOXact_Inval(false);
 		AtEOXact_MultiXact();
+
 		ResourceOwnerRelease(TopTransactionResourceOwner,
 							 RESOURCE_RELEASE_LOCKS,
 							 false, true);
@@ -3358,10 +3368,11 @@ AbortTransaction(void)
 							 RESOURCE_RELEASE_AFTER_LOCKS,
 							 false, true);
 		smgrDoPendingDeletes(false);
-		DoPendingTablespaceDeletion();
-		DoPendingDbDeletes(false);
 
+		DoPendingDbDeletes(false);
 		DatabaseStorageResetSessionLock();
+
+		AtAbort_TablespaceStorage();
 		AtEOXact_AppendOnly();
 		AtEOXact_GUC(false, 1);
 		AtEOXact_SPI(false);
@@ -6068,6 +6079,7 @@ xactGetCommittedChildren(TransactionId **ptr)
 static void
 xact_redo_commit_internal(TransactionId xid, XLogRecPtr lsn,
 						  TransactionId *sub_xids, int nsubxacts,
+						  Oid tablespace_oid_to_delete,
 						  SharedInvalidationMessage *inval_msgs, int nmsgs,
 						  RelFileNodePendingDelete *xnodes, int nrels,
 						  DbDirNode *deldbs, int ndeldbs,
@@ -6079,6 +6091,10 @@ xact_redo_commit_internal(TransactionId xid, XLogRecPtr lsn,
 	TransactionId max_xid;
 
 	max_xid = TransactionIdLatest(xid, nsubxacts, sub_xids);
+
+	ereportif(OidIsValid(tablespace_oid_to_delete), DEBUG5,
+		(errmsg("in xact_redo_commit_internal with tablespace oid to delete: %u",
+			tablespace_oid_to_delete)));
 
 	/*
 	 * Make sure nextXid is beyond any XID mentioned in the record.
@@ -6189,6 +6205,8 @@ xact_redo_commit_internal(TransactionId xid, XLogRecPtr lsn,
 		DropDatabaseDirectories(deldbs, ndeldbs, true);
 	}
 
+	DoTablespaceDeletionForRedoXlog(tablespace_oid_to_delete);
+
 	/*
 	 * We issue an XLogFlush() for the same reason we emit ForceSyncCommit()
 	 * in normal operation. For example, in CREATE DATABASE, we copy all files
@@ -6226,6 +6244,7 @@ xact_redo_commit(xl_xact_commit *xlrec,
 	deldbs = (DbDirNode *) &(inval_msgs[xlrec->nmsgs]);
 
 	xact_redo_commit_internal(xid, lsn, subxacts, xlrec->nsubxacts,
+	  						  xlrec->tablespace_oid_to_delete_on_commit,
 							  inval_msgs, xlrec->nmsgs,
 							  xlrec->xnodes, xlrec->nrels,
 							  deldbs, xlrec->ndeldbs,
@@ -6237,13 +6256,14 @@ xact_redo_commit(xl_xact_commit *xlrec,
 }
 
 /*
- * Utility function to call xact_redo_commit_internal  for compact form of message.
+ * Utility function to call xact_redo_commit_internal for compact form of message.
  */
 static void
 xact_redo_commit_compact(xl_xact_commit_compact *xlrec,
 						 TransactionId xid, XLogRecPtr lsn)
 {
 	xact_redo_commit_internal(xid, lsn, xlrec->subxacts, xlrec->nsubxacts,
+							  InvalidOid, /* no tablespace to delete */
 							  NULL, 0,	/* inval msgs */
 							  NULL, 0,	/* relfilenodes */
 							  NULL, 0,	/* deldbs */
@@ -6343,6 +6363,7 @@ xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
 
 		DropRelationFiles(xlrec->xnodes, xlrec->nrels, true);
 		DropDatabaseDirectories(deldbs, xlrec->ndeldbs, true);
+		DoTablespaceDeletionForRedoXlog(xlrec->tablespace_oid_to_delete_on_commit);
 	}
 
 	/*
@@ -6417,8 +6438,8 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 
 	/* Make sure files supposed to be dropped are dropped */
 	DropRelationFiles(xlrec->xnodes, xlrec->nrels, true);
-	DoTablespaceDeletion(xlrec->tablespace_oid_to_abort);
 	DropDatabaseDirectories(deldbs, xlrec->ndeldbs, true);
+	DoTablespaceDeletionForRedoXlog(xlrec->tablespace_oid_to_delete_on_abort);
 }
 
 static void
