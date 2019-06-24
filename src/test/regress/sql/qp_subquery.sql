@@ -582,5 +582,21 @@ insert into append_rel values(1,10),(2,20),(3,30);
 explain with test as (select * from (select * from append_rel) p where att1 in (select att1 from append_rel where att2 >= 19) ) select att2 from append_rel where att1 in (select att1 from test where att2 <= 21);
 with test as (select * from (select * from append_rel) p where att1 in (select att1 from append_rel where att2 >= 19) ) select att2 from append_rel where att1 in (select att1 from test where att2 <= 21);
 
+
+-- Check correct results for subqueries in the target list
+begin;
+drop table if exists temp_a, temp_b, temp_c;
+create table temp_a (a int ,b int);
+create table temp_b (b int ,c int);
+create table temp_c (c int, d int);
+insert into temp_a values (1,2), (2,3), (3,4), (4,7), (5,19), (6,13), (7,23), (7,17);
+insert into temp_b values (1,2), (2,2), (3,2), (4,2), (5,3), (6,3), (7,3), (8,3), (10,4);
+insert into temp_c values (NULL, 2), (2, 2), (4, NULL), (NULL, 3), (1, 3), (8, NULL), (7, 2), (NULL, NULL);
+commit;
+
+select sum(case when b in (select b from temp_b where t.a>c) then 1 else 0 end),sum(case when not( b in (select b from temp_b where t.a>c)) then 1 else 0 end) from temp_a t;
+select sum(case when b in (select b from temp_b where EXISTS (select sum(d) from temp_c where t.a > d)) then 1 else 0 end),sum(case when not( b in (select b from temp_b where t.a>c)) then 1 else 0 end) from temp_a t;
+select sum(case when b in (select b from temp_b where EXISTS (select sum(d) from temp_c where t.a > d or t.a > temp_b.c)) then 1 else 0 end),sum(case when not( b in (select b from temp_b, temp_c where t.a>temp_b.c or t.a > temp_c.d)) then 1 else 0 end) from temp_a t;
+
 set client_min_messages='warning';
 drop schema qp_subquery cascade;
