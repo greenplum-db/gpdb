@@ -8,7 +8,6 @@ SHLIB_LINK += -lcurl
 EXTENSION = pxf_fdw
 DATA = pxf_fdw--1.0.sql
 
-# Use logic also from gp_file_fdw where it executes on the segments
 REGRESS = pxf_fdw_wrapper pxf_fdw_server pxf_fdw_user_mapping pxf_fdw_foreign_table
 
 ifdef USE_PGXS

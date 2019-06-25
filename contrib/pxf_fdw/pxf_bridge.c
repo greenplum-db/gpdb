@@ -23,17 +23,17 @@
 #include "cdb/cdbvars.h"
 
 /* helper function declarations */
-static void BuildUriForRead(PxfBridgeContext * context);
-static void BuildUriForWrite(PxfBridgeContext * context);
-static void AddQuerydataToHttpHeaders(PxfBridgeContext * context);
-static void SetCurrentFragmentHeaders(PxfBridgeContext * context);
-static size_t FillBuffer(PxfBridgeContext * context, char *start, size_t size);
+static void BuildUriForRead(PxfContext * context);
+static void BuildUriForWrite(PxfContext * context);
+static void AddQuerydataToHttpHeaders(PxfContext * context);
+static void SetCurrentFragmentHeaders(PxfContext * context);
+static size_t FillBuffer(PxfContext * context, char *start, size_t size);
 
 /*
  * Clean up churl related data structures from the context.
  */
 void
-PxfBridgeCleanup(PxfBridgeContext * context)
+PxfBridgeCleanup(PxfContext * context)
 {
 	if (context == NULL)
 		return;
@@ -43,12 +43,6 @@ PxfBridgeCleanup(PxfBridgeContext * context)
 
 	churl_headers_cleanup(context->churl_headers);
 	context->churl_headers = NULL;
-
-/* 	if (context->gphd_uri != NULL) */
-/* 	{ */
-/* 		freeGPHDUri(context->gphd_uri); */
-/* 		context->gphd_uri = NULL; */
-/* 	} */
 
 	if (context->filterstr != NULL)
 	{
@@ -61,7 +55,7 @@ PxfBridgeCleanup(PxfBridgeContext * context)
  * Sets up data before starting import
  */
 void
-PxfBridgeImportStart(PxfBridgeContext * context)
+PxfBridgeImportStart(PxfContext * context)
 {
 	if (!context->fragments)
 		return;
@@ -83,21 +77,16 @@ PxfBridgeImportStart(PxfBridgeContext * context)
  * Sets up data before starting export
  */
 void
-pxfBridgeExportStart(PxfBridgeContext * context)
+pxfBridgeExportStart(PxfContext * context)
 {
-/* 	elog(DEBUG2, "pxf_fdw: file name for write: %s", context->gphd_uri->data); */
-/* 	BuildUriForWrite(context); */
-/* 	context->churl_headers = churl_headers_init(); */
-/* 	AddQuerydataToHttpHeaders(context); */
-/*  */
-/* 	context->churl_handle = churl_init_upload(context->uri.data, context->churl_headers); */
+	elog(ERROR, "pxf_fdw: pxfBridgeExportStart not implemented");
 }
 
 /*
  * Reads data from the PXF server into the given buffer of a given size
  */
 int
-PxfBridgeRead(PxfBridgeContext * context, char *databuf, int datalen)
+PxfBridgeRead(PxfContext * context, char *databuf, int datalen)
 {
 	size_t		n = 0;
 
@@ -131,7 +120,7 @@ PxfBridgeRead(PxfBridgeContext * context, char *databuf, int datalen)
  * Writes data from the given buffer of a given size to the PXF server
  */
 int
-PxfBridgeWrite(PxfBridgeContext * context, char *databuf, int datalen)
+PxfBridgeWrite(PxfContext * context, char *databuf, int datalen)
 {
 	size_t		n = 0;
 
@@ -148,7 +137,7 @@ PxfBridgeWrite(PxfBridgeContext * context, char *databuf, int datalen)
  * Format the URI for reading by adding PXF service endpoint details
  */
 static void
-BuildUriForRead(PxfBridgeContext * context)
+BuildUriForRead(PxfContext * context)
 {
 	FragmentData *data = (FragmentData *) lfirst(context->current_fragment);
 
@@ -161,12 +150,9 @@ BuildUriForRead(PxfBridgeContext * context)
  * Format the URI for writing by adding PXF service endpoint details
  */
 static void
-BuildUriForWrite(PxfBridgeContext * context)
+BuildUriForWrite(PxfContext * context)
 {
-/* 	appendStringInfo(&context->uri, "http://%s/%s/%s/Writable/stream?path=", */
-/* 					 get_authority(), PXF_SERVICE_PREFIX, PXF_VERSION); */
-/* 	elog(DEBUG2, "pxf: uri %s with file name for write: %s", */
-/* 		 context->uri.data, context->gphd_uri->data); */
+	elog(ERROR, "pxf_fdw: BuildUriForWrite not implemented");
 }
 
 
@@ -175,7 +161,7 @@ BuildUriForWrite(PxfBridgeContext * context)
  * by the remote component.
  */
 static void
-AddQuerydataToHttpHeaders(PxfBridgeContext * context)
+AddQuerydataToHttpHeaders(PxfContext * context)
 {
 	BuildHttpHeaders(context->churl_headers,
 					 context->options,
@@ -196,7 +182,7 @@ AddQuerydataToHttpHeaders(PxfBridgeContext * context)
  * If the fragment doesn't have user data, the header will be removed.
  */
 static void
-SetCurrentFragmentHeaders(PxfBridgeContext * context)
+SetCurrentFragmentHeaders(PxfContext * context)
 {
 	FragmentData *frag_data = (FragmentData *) lfirst(context->current_fragment);
 	int			fragment_count = list_length(context->fragments);
@@ -230,18 +216,13 @@ SetCurrentFragmentHeaders(PxfBridgeContext * context)
 		elog(DEBUG2, "pxf_fdw: SetCurrentFragmentHeaders: using profile: %s", frag_data->profile);
 
 	}
-
-	/*
-	 * if there is no profile passed in url, we expect to have
-	 * accessor+fragmenter+resolver so no action needed by this point
-	 */
 }
 
 /*
  * Read data from churl until the buffer is full or there is no more data to be read
  */
 static size_t
-FillBuffer(PxfBridgeContext * context, char *start, size_t size)
+FillBuffer(PxfContext * context, char *start, size_t size)
 {
 	size_t		n = 0;
 	char	   *ptr = start;

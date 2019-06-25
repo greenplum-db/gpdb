@@ -1,5 +1,5 @@
 /*
- * pxffilters.h
+ * pxf_filter.h
  *
  * Header for handling push down of supported scan level filters to PXF.
  *
