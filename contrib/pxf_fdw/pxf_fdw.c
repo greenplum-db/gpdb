@@ -401,13 +401,13 @@ static void
 InitCopyState(PxfFdwExecutionState * estate, Relation relation)
 {
 	List	   *fragments;
-	PxfBridgeContext *context;
+	PxfContext *context;
 	List	   *copy_options;
 	CopyState	cstate;
 
 	fragments = getFragmentList(estate->options, relation, NULL, estate->proj_info, estate->quals);
 	/* set context */
-	context = palloc0(sizeof(PxfBridgeContext));
+	context = palloc0(sizeof(PxfContext));
 
 	initStringInfo(&context->uri);
 	context->fragments = fragments;

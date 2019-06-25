@@ -2,149 +2,149 @@
 -- Validation for SERVER options
 -- ===================================================================
 -- Server creation fails if protocol option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
-    OPTIONS ( protocol 'dummy2' );
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( protocol 'pxf_fdw_test2' );
 ERROR:  the protocol option can only be defined at the pg_foreign_data_wrapper level
 -- Server creation fails if resource option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( resource '/invalid/option/for/server' );
 ERROR:  the resource option can only be defined at the pg_foreign_table level
 -- Server creation fails if wire_format option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( wire_format 'TEXT' );
 ERROR:  the wire_format option can only be defined at the pg_foreign_table level
 -- Server creation fails if delimiter option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( delimiter ' ' );
 ERROR:  invalid option "delimiter"
 -- Server creation fails if header option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( header 'TRUE' );
 ERROR:  invalid option "header"
 -- Server creation fails if quote option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( quote '`' );
 ERROR:  invalid option "quote"
 -- Server creation fails if escape option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( escape '\' );
 ERROR:  invalid option "escape"
 -- Server creation fails if null option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( null '' );
 ERROR:  invalid option "null"
 -- Server creation fails if encoding option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( encoding 'UTF-8' );
 ERROR:  invalid option "encoding"
 -- Server creation fails if newline option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( newline 'CRLF' );
 ERROR:  invalid option "newline"
 -- Server creation fails if fill_missing_fields option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( fill_missing_fields '' );
 ERROR:  invalid option "fill_missing_fields"
 -- Server creation fails if force_null option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( force_null 'true' );
 ERROR:  invalid option "force_null"
 -- Server creation fails if force_not_null option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( force_not_null 'true' );
 ERROR:  invalid option "force_not_null"
 -- Server creation fails if reject_limit option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( reject_limit '5' );
 ERROR:  the reject_limit option can only be defined at the pg_foreign_table level
 -- Server creation fails if reject_limit_type option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( reject_limit_type 'rows' );
 ERROR:  the reject_limit_type option can only be defined at the pg_foreign_table level
 -- Server creation fails if log_errors option is provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( log_errors 'true' );
 ERROR:  the log_errors option can only be defined at the pg_foreign_table level
 -- Server creation succeeds if protocol option is not provided
-CREATE SERVER dummy_server
-    FOREIGN DATA WRAPPER dummy_pxf_fdw;
+CREATE SERVER pxf_fdw_test_server
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw;
 -- Server alteration fails if protocol option is added
-ALTER SERVER dummy_server
-    OPTIONS ( ADD protocol 'dummy2' );
+ALTER SERVER pxf_fdw_test_server
+    OPTIONS ( ADD protocol 'pxf_fdw_test2' );
 ERROR:  the protocol option can only be defined at the pg_foreign_data_wrapper level
 -- Server alteration fails if resource option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD resource '/invalid/option/for/server' );
 ERROR:  the resource option can only be defined at the pg_foreign_table level
 -- Server alteration fails if header option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD header 'TRUE' );
 ERROR:  invalid option "header"
 -- Server alteration fails if wire_format option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD wire_format 'TEXT' );
 ERROR:  the wire_format option can only be defined at the pg_foreign_table level
 -- Server alteration fails if delimiter option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD delimiter ' ' );
 ERROR:  invalid option "delimiter"
 -- Server alteration fails if quote option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD quote '`' );
 ERROR:  invalid option "quote"
 -- Server alteration fails if escape option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD escape '\' );
 ERROR:  invalid option "escape"
 -- Server alteration fails if null option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD null '' );
 ERROR:  invalid option "null"
 -- Server alteration fails if encoding option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD encoding 'UTF-8' );
 ERROR:  invalid option "encoding"
 -- Server alteration fails if newline option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD newline 'CRLF' );
 ERROR:  invalid option "newline"
 -- Server alteration fails if fill_missing_fields option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD fill_missing_fields '' );
 ERROR:  invalid option "fill_missing_fields"
 -- Server alteration fails if force_null option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD force_null 'true' );
 ERROR:  invalid option "force_null"
 -- Server alteration fails if force_not_null option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD force_not_null 'true' );
 ERROR:  invalid option "force_not_null"
 -- Server alteration fails if reject_limit option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD reject_limit '5' );
 ERROR:  the reject_limit option can only be defined at the pg_foreign_table level
 -- Server alteration fails if reject_limit_type option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD reject_limit_type 'rows' );
 ERROR:  the reject_limit_type option can only be defined at the pg_foreign_table level
 -- Server alteration fails if log_errors option is added
-ALTER SERVER dummy_server
+ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD log_errors 'true' );
 ERROR:  the log_errors option can only be defined at the pg_foreign_table level

@@ -40,21 +40,21 @@ typedef struct
 	List	   *quals;
 	List	   *fragments;
 	PxfOptions *options;
-}			PxfBridgeContext;
+}			PxfContext;
 
 /* Clean up churl related data structures from the context */
-void		PxfBridgeCleanup(PxfBridgeContext * context);
+void		PxfBridgeCleanup(PxfContext * context);
 
 /* Sets up data before starting import */
-void		PxfBridgeImportStart(PxfBridgeContext * context);
+void		PxfBridgeImportStart(PxfContext * context);
 
 /* Sets up data before starting export */
-void		pxfBridgeExportStart(PxfBridgeContext * context);
+void		pxfBridgeExportStart(PxfContext * context);
 
 /* Reads data from the PXF server into the given buffer of a given size */
-int			PxfBridgeRead(PxfBridgeContext * context, char *databuf, int datalen);
+int			PxfBridgeRead(PxfContext * context, char *databuf, int datalen);
 
 /* Writes data from the given buffer of a given size to the PXF server */
-int			PxfBridgeWrite(PxfBridgeContext * context, char *databuf, int datalen);
+int			PxfBridgeWrite(PxfContext * context, char *databuf, int datalen);
 
 #endif							/* _PXFBRIDGE_H */
