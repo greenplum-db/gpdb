@@ -11,11 +11,6 @@ CREATE USER MAPPING FOR pxf_fdw_user
     SERVER pxf_fdw_test_server
     OPTIONS ( resource '/invalid/option/for/user/mapping' );
 ERROR:  the resource option can only be defined at the pg_foreign_table level
--- User mapping creation fails if wire_format option is provided
-CREATE USER MAPPING FOR pxf_fdw_user
-    SERVER pxf_fdw_test_server
-    OPTIONS ( wire_format 'TEXT' );
-ERROR:  the wire_format option can only be defined at the pg_foreign_table level
 -- User mapping creation fails if header option is provided
 CREATE USER MAPPING FOR pxf_fdw_user
     SERVER pxf_fdw_test_server
@@ -115,11 +110,6 @@ ALTER USER MAPPING FOR pxf_fdw_user
     OPTIONS ( ADD header 'TRUE' );
 ERROR:  invalid option "header"
 HINT:  There are no valid options in this context.
--- User mapping alteration fails if wire_format option is added
-ALTER USER MAPPING FOR pxf_fdw_user
-    SERVER pxf_fdw_test_server
-    OPTIONS ( ADD wire_format 'TEXT' );
-ERROR:  the wire_format option can only be defined at the pg_foreign_table level
 -- User mapping alteration fails if delimiter option is added
 ALTER USER MAPPING FOR pxf_fdw_user
     SERVER pxf_fdw_test_server

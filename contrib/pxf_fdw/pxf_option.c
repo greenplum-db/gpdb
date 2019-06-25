@@ -21,7 +21,6 @@
 
 static char *const FDW_OPTION_FORMAT_TEXT = "text";
 static char *const FDW_OPTION_FORMAT_CSV = "csv";
-static char *const FDW_OPTION_FORMAT_RC = "rc";
 
 static char *const FDW_OPTION_REJECT_LIMIT_ROWS = "rows";
 static char *const FDW_OPTION_REJECT_LIMIT_PERCENT = "percent";
@@ -32,7 +31,6 @@ static char *const FDW_OPTION_FORMAT = "format";
 static char *const FDW_OPTION_LOG_ERRORS = "log_errors";
 static char *const FDW_OPTION_REJECT_LIMIT_TYPE = "reject_limit_type";
 static char *const FDW_OPTION_REJECT_LIMIT = "reject_limit";
-static char *const FDW_OPTION_WIRE_FORMAT = "wire_format";
 static char *const FDW_OPTION_PXF_PORT = "pxf_port";
 static char *const FDW_OPTION_PXF_HOST = "pxf_host";
 static char *const FDW_OPTION_PXF_PROTOCOL = "pxf_protocol";
@@ -51,7 +49,6 @@ static const struct PxfFdwOption valid_options[] = {
 	{FDW_OPTION_PROTOCOL, ForeignDataWrapperRelationId},
 	{FDW_OPTION_RESOURCE, ForeignTableRelationId},
 	{FDW_OPTION_FORMAT, ForeignTableRelationId},
-	{FDW_OPTION_WIRE_FORMAT, ForeignTableRelationId},
 
 	/* Error handling */
 	{FDW_OPTION_REJECT_LIMIT, ForeignTableRelationId},
@@ -112,8 +109,6 @@ static bool IsCopyOption(const char *option);
 
 static bool IsValidCopyOption(const char *option, Oid context);
 
-static const char *GetWireFormatName(const char *format);
-
 static void ValidateOption(char *, Oid);
 
 /*
@@ -151,18 +146,6 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			protocol = defGetString(def);
 		else if (strcmp(def->defname, FDW_OPTION_RESOURCE) == 0)
 			resource = defGetString(def);
-		else if (strcmp(def->defname, FDW_OPTION_WIRE_FORMAT) == 0)
-		{
-			char	   *value = defGetString(def);
-
-			if (strcmp(TextFormatName, value) != 0 &&
-				strcmp(GpdbWritableFormatName, value) != 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
-						 errmsg("invalid wire_format value, only '%s' and '%s' are supported",
-								TextFormatName,
-								GpdbWritableFormatName)));
-		}
 		else if (strcmp(def->defname, FDW_OPTION_MPP_EXECUTE) == 0)
 		{
 			if (catalog == UserMappingRelationId)
@@ -430,8 +413,6 @@ PxfGetOptions(Oid foreigntableid)
 				pg_strcasecmp(opt->format, FDW_OPTION_FORMAT_CSV) == 0)
 				copy_options = lappend(copy_options, def);
 		}
-		else if (strcmp(def->defname, FDW_OPTION_WIRE_FORMAT) == 0)
-			opt->wire_format = defGetString(def);
 		else if (IsCopyOption(def->defname))
 			copy_options = lappend(copy_options, def);
 		else
@@ -469,9 +450,6 @@ PxfGetOptions(Oid foreigntableid)
 	if (!opt->pxf_protocol)
 		opt->pxf_protocol = PXF_FDW_DEFAULT_PROTOCOL;
 
-	if (!opt->wire_format)
-		opt->wire_format = GetWireFormatName(opt->format);
-
 	return opt;
 }
 
@@ -506,20 +484,6 @@ IsCopyOption(const char *option)
 			return true;
 	}
 	return false;
-}
-
-/*
- * Converts a character code for the format name into a string of format definition
- */
-static const char *
-GetWireFormatName(const char *format)
-{
-	/* for text we can also have text:multi so we search for "text" */
-	if (format && (strcasestr(format, FDW_OPTION_FORMAT_TEXT) ||
-				   pg_strcasecmp(format, FDW_OPTION_FORMAT_CSV) ||
-				   pg_strcasecmp(format, FDW_OPTION_FORMAT_RC)))
-		return TextFormatName;
-	return GpdbWritableFormatName;
 }
 
 /*

@@ -67,7 +67,6 @@ static void pxfEndForeignScan(ForeignScanState *node);
  */
 static void InitCopyState(PxfFdwExecutionState * estate, Relation relation);
 static int	PxfCallback(void *outbuf, int datasize, void *extra);
-static HeapTuple direct_call(PxfFdwExecutionState * festate);
 
 
 /*

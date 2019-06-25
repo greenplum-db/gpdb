@@ -16,11 +16,6 @@ CREATE FOREIGN TABLE pxf_fdw_test_table (id int, name text)
     SERVER pxf_fdw_test_server
     OPTIONS ( resource '' );
 
--- Table creation fails if wire_format is provided with an invalid value
-CREATE FOREIGN TABLE pxf_fdw_test_table (id int, name text)
-    SERVER pxf_fdw_test_server
-    OPTIONS ( wire_format 'BAD_FORMAT' );
-
 -- Table creation succeeds if delimiter is provided with a single one-byte char
 CREATE FOREIGN TABLE pxf_fdw_test_table_with_delim (id int, name text)
     SERVER pxf_fdw_test_server
@@ -79,11 +74,6 @@ CREATE FOREIGN TABLE pxf_fdw_test_table_with_header (id int, name text)
 CREATE FOREIGN TABLE pxf_fdw_test_table (id int, name text)
     SERVER pxf_fdw_test_server
     OPTIONS ( resource '/path/to/resource', extra 'extra_value' );
-
--- Table creation succeeds if resource is provided and wire_format is provided correctly
-CREATE FOREIGN TABLE pxf_fdw_test_table_wire_format (id int, name text)
-    SERVER pxf_fdw_test_server
-    OPTIONS ( resource '/path/to/resource', wire_format 'TEXT' );
 
 -- Table creation fails if reject_limit is < 1
 CREATE FOREIGN TABLE pxf_fdw_test_table_reject_limit (id int, name text)
@@ -158,14 +148,6 @@ ALTER FOREIGN TABLE pxf_fdw_test_table
 -- Table alteration succeeds if resource option is set
 ALTER FOREIGN TABLE pxf_fdw_test_table
     OPTIONS ( SET resource '/new/path/to/resource' );
-
--- Table alteration fails if wire_format is provided with an invalid value
-ALTER FOREIGN TABLE pxf_fdw_test_table_wire_format
-    OPTIONS ( SET wire_format 'BAD_FORMAT' );
-
--- Table alteration succeeds if wire_format is provided correctly
-ALTER FOREIGN TABLE pxf_fdw_test_table
-    OPTIONS ( ADD wire_format 'GPDBWritable' );
 
 -- Table alteration succeeds if header is provided correctly
 ALTER FOREIGN TABLE pxf_fdw_test_table_with_header

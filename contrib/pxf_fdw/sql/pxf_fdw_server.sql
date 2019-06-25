@@ -12,11 +12,6 @@ CREATE SERVER pxf_fdw_test_server
     FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( resource '/invalid/option/for/server' );
 
--- Server creation fails if wire_format option is provided
-CREATE SERVER pxf_fdw_test_server
-    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
-    OPTIONS ( wire_format 'TEXT' );
-
 -- Server creation fails if delimiter option is provided
 CREATE SERVER pxf_fdw_test_server
     FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
@@ -97,10 +92,6 @@ ALTER SERVER pxf_fdw_test_server
 -- Server alteration fails if header option is added
 ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD header 'TRUE' );
-
--- Server alteration fails if wire_format option is added
-ALTER SERVER pxf_fdw_test_server
-    OPTIONS ( ADD wire_format 'TEXT' );
 
 -- Server alteration fails if delimiter option is added
 ALTER SERVER pxf_fdw_test_server

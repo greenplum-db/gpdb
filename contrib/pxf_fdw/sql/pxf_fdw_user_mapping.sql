@@ -12,11 +12,6 @@ CREATE USER MAPPING FOR pxf_fdw_user
     SERVER pxf_fdw_test_server
     OPTIONS ( resource '/invalid/option/for/user/mapping' );
 
--- User mapping creation fails if wire_format option is provided
-CREATE USER MAPPING FOR pxf_fdw_user
-    SERVER pxf_fdw_test_server
-    OPTIONS ( wire_format 'TEXT' );
-
 -- User mapping creation fails if header option is provided
 CREATE USER MAPPING FOR pxf_fdw_user
     SERVER pxf_fdw_test_server
@@ -105,11 +100,6 @@ ALTER USER MAPPING FOR pxf_fdw_user
 ALTER USER MAPPING FOR pxf_fdw_user
     SERVER pxf_fdw_test_server
     OPTIONS ( ADD header 'TRUE' );
-
--- User mapping alteration fails if wire_format option is added
-ALTER USER MAPPING FOR pxf_fdw_user
-    SERVER pxf_fdw_test_server
-    OPTIONS ( ADD wire_format 'TEXT' );
 
 -- User mapping alteration fails if delimiter option is added
 ALTER USER MAPPING FOR pxf_fdw_user

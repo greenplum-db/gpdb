@@ -113,7 +113,8 @@ BuildHttpHeaders(CHURL_HEADERS headers,
 	churl_headers_append(headers, "X-GP-URL-PORT", pxfPortString);
 
 	churl_headers_append(headers, "X-GP-OPTIONS-PROFILE", options->profile);
-	churl_headers_append(headers, "X-GP-FORMAT", options->wire_format);
+	/* only text format is supported for FDW */
+	churl_headers_append(headers, "X-GP-FORMAT", "TEXT");
 	churl_headers_append(headers, "X-GP-DATA-DIR", options->resource);
 	churl_headers_append(headers, "X-GP-OPTIONS-SERVER", options->server);
 
