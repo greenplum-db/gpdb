@@ -105,20 +105,11 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 static void
 pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid)
 {
-	/* Bitmapset  *attrsUsed = NULL; */
-
 	elog(DEBUG5, "pxf_fdw: pxfGetForeignRelSize starts");
 
-	/* Collect all the attributes needed for joins or final output. */
-
 	/*
-	 * pull_varattnos((Node *) baserel->reltargetlist, baserel->relid,
-	 * &attrsUsed);
+	 * Use an artificial number of estimated rows
 	 */
-
-/*	Relation relation = relation_open(baserel->relid, NoLock);
-	getFragmentList(options, relation, NULL, NULL); */
-
 	baserel->rows = 1000;
 
 	elog(DEBUG5, "pxf_fdw: pxfGetForeignRelSize ends");
@@ -223,6 +214,9 @@ static void
 pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 {
 	elog(DEBUG5, "pxf_fdw: pxfExplainForeignScan starts on segment: %d", PXF_SEGMENT_ID);
+
+	/* TODO: make this a meaningful callback */
+
 	elog(DEBUG5, "pxf_fdw: pxfExplainForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
 
@@ -234,13 +228,6 @@ pxfExplainForeignScan(ForeignScanState *node, ExplainState *es)
 static void
 pxfBeginForeignScan(ForeignScanState *node, int eflags)
 {
-	List	   *quals = node->ss.ps.qual;
-	Oid			foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
-	ProjectionInfo *proj_info = node->ss.ps.ps_ProjInfo;
-	PxfFdwExecutionState *festate = NULL;
-	PxfOptions *options = NULL;
-	Relation	relation = node->ss.ss_currentRelation;
-
 	elog(DEBUG5, "pxf_fdw: pxfBeginForeignScan starts on segment: %d", PXF_SEGMENT_ID);
 
 	/*
@@ -249,19 +236,26 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
 		return;
 
+	List	   *quals = node->ss.ps.qual;
+	Oid			foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
+	ProjectionInfo *proj_info = node->ss.ps.ps_ProjInfo;
+	PxfFdwExecutionState *pxfestate = NULL;
+	PxfOptions *options = NULL;
+	Relation	relation = node->ss.ss_currentRelation;
+
 	options = PxfGetOptions(foreigntableid);
 
 	/*
 	 * Save state in node->fdw_state.  We must save enough information to call
 	 * BeginCopyFrom() again.
 	 */
-	festate = (PxfFdwExecutionState *) palloc(sizeof(PxfFdwExecutionState));
-	festate->options = options;
-	festate->proj_info = proj_info;
-	festate->quals = quals;
+	pxfestate = (PxfFdwExecutionState *) palloc(sizeof(PxfFdwExecutionState));
+	pxfestate->options = options;
+	pxfestate->proj_info = proj_info;
+	pxfestate->quals = quals;
 
-	InitCopyState(festate, relation);
-	node->fdw_state = (void *) festate;
+	InitCopyState(pxfestate, relation);
+	node->fdw_state = (void *) pxfestate;
 
 	elog(DEBUG5, "pxf_fdw: pxfBeginForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
@@ -344,6 +338,9 @@ static void
 pxfReScanForeignScan(ForeignScanState *node)
 {
 	elog(DEBUG5, "pxf_fdw: pxfReScanForeignScan starts on segment: %d", PXF_SEGMENT_ID);
+
+	/* TODO: implement reScanForeignScan */
+
 	elog(DEBUG5, "pxf_fdw: pxfReScanForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
 
