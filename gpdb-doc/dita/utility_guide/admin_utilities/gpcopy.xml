@@ -101,6 +101,11 @@
             <p>The user IDs connecting to the source and destination Greenplum Database systems, the
                     <codeph>--source-user</codeph> and <codeph>--dest-user</codeph>, must have
                 appropriate access to the systems.</p>
+            <p><codeph>gpcopy</codeph> inherits any encryption settings that are configured for the
+                specified user connection. For example, if the <codeph>--dest-user</codeph> role is
+                configured for SSL client authentication to the Greenplum cluster, then all
+                    <codeph>gpcopy</codeph> connections created for that user are SSL-encrypted as
+                well.</p>
             <p>If Kerberos authentication is enabled for Greenplum Database, <codeph>gpcopy</codeph>
                 can authenticate with Kerberos. Run the <codeph>kinit</codeph> command to obtain a
                 ticket-granting ticket from the KDC server before you execute
