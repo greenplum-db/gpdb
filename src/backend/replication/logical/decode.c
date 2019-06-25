@@ -223,7 +223,6 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	switch (info)
 	{
 		case XLOG_XACT_COMMIT:
-		case XLOG_XACT_ONE_PHASE_COMMIT:
 			{
 				xl_xact_commit *xlrec;
 				TransactionId *subxacts = NULL;
