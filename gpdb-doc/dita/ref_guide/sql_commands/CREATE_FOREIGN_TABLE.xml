@@ -119,6 +119,12 @@
                 </plentry>
             </parml>
         </section>
+        <section id="section5">
+          <title>Notes</title>
+          <p>The Pivotal Query Optimizer, GPORCA, does not support foreign
+           tables. A query on a foreign table always falls back to the Postgres
+           query optimizer.</p>
+        </section>
         <section id="section6">
             <title>Examples</title>
             <p>Create a foreign table named <codeph>films</codeph> with the server named <codeph>film_server</codeph>:</p><codeblock>CREATE FOREIGN TABLE films (

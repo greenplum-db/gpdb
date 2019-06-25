@@ -135,7 +135,7 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
       <p><codeph>VACUUM</codeph> causes a substantial increase in I/O traffic, which can cause poor
         performance for other active sessions. Therefore, it is advisable to vacuum the database at
         low usage times.</p>
-      <p><codeph>VACUUM</codeph> commands skip external tables.</p>
+      <p><codeph>VACUUM</codeph> commands skip external and foreign tables.</p>
       <p><codeph>VACUUM FULL</codeph> reclaims all expired row space, however it requires an
         exclusive lock on each table being processed, is a very expensive operation, and might take
         a long time to complete on large, distributed Greenplum Database tables. Perform
