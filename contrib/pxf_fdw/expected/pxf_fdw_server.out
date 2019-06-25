@@ -11,11 +11,6 @@ CREATE SERVER pxf_fdw_test_server
     FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( resource '/invalid/option/for/server' );
 ERROR:  the resource option can only be defined at the pg_foreign_table level
--- Server creation fails if wire_format option is provided
-CREATE SERVER pxf_fdw_test_server
-    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
-    OPTIONS ( wire_format 'TEXT' );
-ERROR:  the wire_format option can only be defined at the pg_foreign_table level
 -- Server creation fails if delimiter option is provided
 CREATE SERVER pxf_fdw_test_server
     FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
@@ -96,10 +91,6 @@ ERROR:  the resource option can only be defined at the pg_foreign_table level
 ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD header 'TRUE' );
 ERROR:  invalid option "header"
--- Server alteration fails if wire_format option is added
-ALTER SERVER pxf_fdw_test_server
-    OPTIONS ( ADD wire_format 'TEXT' );
-ERROR:  the wire_format option can only be defined at the pg_foreign_table level
 -- Server alteration fails if delimiter option is added
 ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD delimiter ' ' );

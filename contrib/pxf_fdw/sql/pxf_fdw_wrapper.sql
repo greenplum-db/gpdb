@@ -28,12 +28,6 @@ CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     VALIDATOR pxf_fdw_validator
     OPTIONS ( resource '/invalid/option/for/wrapper' );
 
--- Foreign-data wrapper creation fails if wire_format option is provided
-CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
-    HANDLER pxf_fdw_handler
-    VALIDATOR pxf_fdw_validator
-    OPTIONS ( wire_format 'TEXT' );
-
 -- Foreign-data wrapper creation fails if header option is provided
 CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     HANDLER pxf_fdw_handler
@@ -133,10 +127,6 @@ ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
 -- Foreign-data wrapper alteration fails if header option is added
 ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( ADD header 'TRUE' );
-
--- Foreign-data wrapper alteration fails if wire_format option is added
-ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
-    OPTIONS ( ADD wire_format 'TEXT' );
 
 -- Foreign-data wrapper alteration fails if delimiter option is added
 ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw

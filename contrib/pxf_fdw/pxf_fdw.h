@@ -19,9 +19,6 @@
 #define PXF_FDW_DEFAULT_HOST     "localhost"
 #define PXF_FDW_DEFAULT_PORT     5888
 
-#define GpdbWritableFormatName   "GPDBWritable"
-#define TextFormatName           "TEXT"
-
 /*
  * Structure to store the PXF options */
 typedef struct PxfOptions
@@ -48,8 +45,6 @@ typedef struct PxfOptions
 	char	   *protocol;		/* PXF protocol */
 	char	   *resource;		/* PXF resource */
 	char	   *format;			/* PXF resource format */
-	const char *wire_format;	/* undocumented serialization format between
-								 * C-client and Java */
 	char	   *profile;		/* protocol[:format] */
 
 	List	   *copy_options;	/* merged options for COPY */
@@ -67,27 +62,6 @@ typedef struct PxfFdwExecutionState
 	PxfOptions *options;		/* FDW options */
 	ProjectionInfo *proj_info;	/* Projection information */
 	List	   *quals;			/* Qualifiers for the query */
-
-	/*
-	 * custom data formatter
-	 */
-	struct custom
-	{
-		FmgrInfo   *fs_custom_formatter_func;	/* function to convert to
-												 * custom format */
-		List	   *fs_custom_formatter_params; /* list of defelems that hold
-												 * user's format parameters */
-		FormatterData *fs_formatter;
-
-		Relation	fs_rd;		/* target relation descriptor */
-		FmgrInfo   *in_functions;
-		Oid		   *typioparams;
-
-		TupleDesc	fs_tupDesc;
-
-		bool		raw_buf_done;
-
-	}			custom;
 }			PxfFdwExecutionState;
 
 /* Functions prototypes for pxf_option.c file */

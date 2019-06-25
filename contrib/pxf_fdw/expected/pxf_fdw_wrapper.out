@@ -25,12 +25,6 @@ CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     VALIDATOR pxf_fdw_validator
     OPTIONS ( resource '/invalid/option/for/wrapper' );
 ERROR:  the resource option can only be defined at the pg_foreign_table level
--- Foreign-data wrapper creation fails if wire_format option is provided
-CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
-    HANDLER pxf_fdw_handler
-    VALIDATOR pxf_fdw_validator
-    OPTIONS ( wire_format 'TEXT' );
-ERROR:  the wire_format option can only be defined at the pg_foreign_table level
 -- Foreign-data wrapper creation fails if header option is provided
 CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     HANDLER pxf_fdw_handler
@@ -141,10 +135,6 @@ ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( ADD header 'TRUE' );
 ERROR:  invalid option "header"
 HINT:  There are no valid options in this context.
--- Foreign-data wrapper alteration fails if wire_format option is added
-ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
-    OPTIONS ( ADD wire_format 'TEXT' );
-ERROR:  the wire_format option can only be defined at the pg_foreign_table level
 -- Foreign-data wrapper alteration fails if delimiter option is added
 ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( ADD delimiter ' ' );
