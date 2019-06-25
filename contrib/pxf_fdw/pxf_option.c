@@ -84,11 +84,6 @@ static const struct PxfFdwOption valid_copy_options[] = {
 	{"force_not_null", AttributeRelationId},
 	{"force_null", AttributeRelationId},
 
-	/*
-	 * {"force_quote", ForeignTableRelationId}, force_quote is not supported
-	 * by file_fdw because it's for COPY TO.
-	 */
-
 	/* Sentinel */
 	{NULL, InvalidOid}
 };
@@ -173,6 +168,11 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		else if (strcmp(def->defname, FDW_OPTION_PXF_PORT) == 0)
 		{
 			pxf_port = atoi(defGetString(def));
+
+			/*
+			 * TODO: a PXF service can be running on port 80 behind a load
+			 * balancer we need to remove this restriction (i.e. kubernetes)
+			 */
 			if (pxf_port < 1024 || pxf_port > 65535)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
@@ -261,6 +261,11 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	PG_RETURN_VOID();
 }
 
+/*
+ * Validate options for the Copy command. Postgresql has its own validation
+ * for the copy options. We only do special validation for force_not_null
+ * and force_null, because they are set at the attribute level.
+ */
 Datum
 ValidateCopyOptions(List *options_list, Oid catalog)
 {
@@ -298,14 +303,13 @@ ValidateCopyOptions(List *options_list, Oid catalog)
 					(errcode(ERRCODE_FDW_INVALID_OPTION_NAME),
 					 errmsg("invalid option \"%s\"", def->defname),
 					 buf.len > 0
-					 ? errhint("Valid options in this context are: %s",
-							   buf.data)
+					 ? errhint("Valid options in this context are: %s", buf.data)
 					 : errhint("There are no valid options in this context.")));
 		}
 
 		/*
 		 * force_not_null is a boolean option; after validation we can discard
-		 * it - it will be retrieved later in get_file_fdw_attribute_options()
+		 * it - it will be retrieved later in PxfGetOptions()
 		 */
 		if (strcmp(def->defname, "force_not_null") == 0)
 		{
@@ -419,6 +423,11 @@ PxfGetOptions(Oid foreigntableid)
 		{
 			Value	   *val = makeString(def->defname);
 
+			/*
+			 * if we have already seen this option before disregard the new
+			 * value. We only take the first value that we see. And the
+			 * precedence is table -> user mapping -> server -> wrapper
+			 */
 			if (list_member(other_option_name_strings, val))
 				continue;
 			other_options = lappend(other_options, def);
