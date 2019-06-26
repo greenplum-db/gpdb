@@ -65,7 +65,8 @@ static void pxfEndForeignScan(ForeignScanState *node);
 /*
  * Helper functions
  */
-static void InitCopyState(PxfFdwExecutionState * estate, Relation relation);
+static PxfContext * InitPxfContext(PxfFdwExecutionState *, Relation);
+static void InitCopyState(PxfContext *, PxfFdwExecutionState *);
 static int	PxfCallback(void *outbuf, int datasize, void *extra);
 
 
@@ -241,6 +242,7 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	ProjectionInfo *proj_info = node->ss.ps.ps_ProjInfo;
 	PxfFdwExecutionState *pxfestate = NULL;
 	PxfOptions *options = NULL;
+	PxfContext *context = NULL;
 	Relation	relation = node->ss.ss_currentRelation;
 
 	options = PxfGetOptions(foreigntableid);
@@ -254,10 +256,33 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	pxfestate->proj_info = proj_info;
 	pxfestate->quals = quals;
 
-	InitCopyState(pxfestate, relation);
+	context = InitPxfContext(pxfestate, relation);
+
+	InitCopyState(context, pxfestate);
 	node->fdw_state = (void *) pxfestate;
 
 	elog(DEBUG5, "pxf_fdw: pxfBeginForeignScan ends on segment: %d", PXF_SEGMENT_ID);
+}
+
+/*
+ * Initiates PxfContext data which can be used in InitCopyState()
+ */
+static PxfContext * InitPxfContext(PxfFdwExecutionState * pxfestate, Relation relation)
+{
+	PxfContext *context;
+	List	   *fragments;
+
+	fragments = getFragmentList(pxfestate->options, relation, NULL, pxfestate->proj_info, pxfestate->quals);
+
+	context = palloc0(sizeof(PxfContext));
+
+	initStringInfo(&context->uri);
+	context->fragments = fragments;
+	context->relation = relation;
+	context->filterstr = NULL;
+	context->options = pxfestate->options;
+
+	return context;
 }
 
 /*
@@ -339,12 +364,14 @@ pxfReScanForeignScan(ForeignScanState *node)
 {
 	elog(DEBUG5, "pxf_fdw: pxfReScanForeignScan starts on segment: %d", PXF_SEGMENT_ID);
 
-	Relation             relation   = node->ss.ss_currentRelation;
+	Relation	relation = node->ss.ss_currentRelation;
 	PxfFdwExecutionState *pxfestate = (PxfFdwExecutionState *) node->fdw_state;
+	PxfContext *context = NULL;
 
 	EndCopyFrom(pxfestate->cstate);
 
-	InitCopyState(pxfestate, relation);
+	context = InitPxfContext(pxfestate, relation);
+	InitCopyState(context, pxfestate);
 
 	elog(DEBUG5, "pxf_fdw: pxfReScanForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
@@ -396,27 +423,15 @@ PxfCallback(void *outbuf, int datasize, void *extra)
 }
 
 /*
- * Creates a context for the PxfCallback function
+ * Initiates a copy state for pxfBeginForeignScan() and pxfReScanForeignScan()
  */
 static void
-InitCopyState(PxfFdwExecutionState * estate, Relation relation)
+InitCopyState(PxfContext * context, PxfFdwExecutionState * pxfestate)
 {
-	List	   *fragments;
-	PxfContext *context;
 	List	   *copy_options;
 	CopyState	cstate;
 
-	fragments = getFragmentList(estate->options, relation, NULL, estate->proj_info, estate->quals);
-	/* set context */
-	context = palloc0(sizeof(PxfContext));
-
-	initStringInfo(&context->uri);
-	context->fragments = fragments;
-	context->relation = relation;
-	context->filterstr = NULL;
-	context->options = estate->options;
-
-	copy_options = estate->options->copy_options;
+	copy_options = context->options->copy_options;
 
 	PxfBridgeImportStart(context);
 
@@ -424,7 +439,7 @@ InitCopyState(PxfFdwExecutionState * estate, Relation relation)
 	 * Create CopyState from FDW options.  We always acquire all columns, so
 	 * as to match the expected ScanTupleSlot signature.
 	 */
-	cstate = BeginCopyFrom(relation,
+	cstate = BeginCopyFrom(context->relation,
 						   NULL,
 						   false,	/* is_program */
 						   &PxfCallback,	/* data_source_cb */
@@ -434,7 +449,7 @@ InitCopyState(PxfFdwExecutionState * estate, Relation relation)
 						   NIL);	/* ao_segnos */
 
 
-	if (estate->options->reject_limit == -1)
+	if (context->options->reject_limit == -1)
 	{
 		/* Default error handling - "all-or-nothing" */
 		cstate->cdbsreh = NULL; /* no SREH */
@@ -446,16 +461,16 @@ InitCopyState(PxfFdwExecutionState * estate, Relation relation)
 		cstate->errMode = SREH_IGNORE;
 
 		/* select the SREH mode */
-		if (estate->options->log_errors)
+		if (context->options->log_errors)
 			cstate->errMode = SREH_LOG; /* errors into file */
 
-		cstate->cdbsreh = makeCdbSreh(estate->options->reject_limit,
-									  estate->options->is_reject_limit_rows,
-									  estate->options->resource,
+		cstate->cdbsreh = makeCdbSreh(context->options->reject_limit,
+									  context->options->is_reject_limit_rows,
+									  context->options->resource,
 									  (char *) cstate->cur_relname,
-									  estate->options->log_errors);
+									  context->options->log_errors);
 
-		cstate->cdbsreh->relid = RelationGetRelid(relation);
+		cstate->cdbsreh->relid = RelationGetRelid(context->relation);
 	}
 
 	/* and 'fe_mgbuf' */
@@ -473,5 +488,5 @@ InitCopyState(PxfFdwExecutionState * estate, Relation relation)
 											   ALLOCSET_DEFAULT_INITSIZE,
 											   ALLOCSET_DEFAULT_MAXSIZE);
 
-	estate->cstate = cstate;
+	pxfestate->cstate = cstate;
 }
