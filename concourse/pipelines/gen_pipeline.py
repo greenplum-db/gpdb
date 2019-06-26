@@ -193,8 +193,13 @@ def create_pipeline(args):
 
 
 def gen_pipeline(args, pipeline_name, secret_files,
-                 git_remote=suggested_git_remote(),
-                 git_branch=suggested_git_branch()):
+                 git_remote=None,
+                 git_branch=None):
+
+    if git_remote is None:
+        git_remote = suggested_git_remote()
+    if git_branch is None:
+        git_branch = suggested_git_branch()
 
     secrets = ""
     for secret in secret_files:
