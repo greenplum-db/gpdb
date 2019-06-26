@@ -15,7 +15,7 @@ import tarfile
 import tempfile
 import thread
 import json
-import subprocess
+from subprocess import Popen, PIPE
 import commands
 import signal
 from collections import defaultdict
@@ -325,11 +325,18 @@ def impl(context, env_var):
 
     del context.orig_env[env_var]
 
+
 @given('the user runs "{command}"')
 @when('the user runs "{command}"')
 @then('the user runs "{command}"')
 def impl(context, command):
     run_gpcommand(context, command)
+
+
+@given('the user asynchronously sets up to end that process in {secs} seconds')
+def impl(context, secs):
+    command = "sleep 10; kill -9 %d" % context.asyncproc.pid
+    run_gpcommand_async(context, command)
 
 
 @given('the user asynchronously runs "{command}" and the process is saved')
@@ -2880,3 +2887,15 @@ def impl(context):
         raise Exception('file "%s" is not exist' % standby_remote_statusfile)
     if not os.path.exists(standby_local_gp_segment_configuration_file):
         raise Exception('file "%s" is not exist' % standby_remote_gp_segment_configuration_file)
+
+
+@when('the user runs {command} and selects {input}')
+def impl(context, command, input):
+    p = Popen(command.split(), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    stdout, stderr = p.communicate(input=input)
+
+    p.stdin.close()
+
+    context.ret_code = p.returncode
+    context.stdout_message = stdout
+    context.error_message = stderr

@@ -944,11 +944,6 @@ class GpStop:
         if options.parallel > 128 or options.parallel < 1:
             raise ProgramArgumentValidationException("Invalid value for parallel degree: %s" % options.parallel)
 
-        # Don't allow them to go below default
-        if options.timeout < SEGMENT_STOP_TIMEOUT_DEFAULT:
-            raise ProgramArgumentValidationException(
-                "Invalid timeout value.  Must be greater than %s seconds." % SEGMENT_STOP_TIMEOUT_DEFAULT)
-
         if args:
             raise ProgramArgumentValidationException(
                 "Argument %s is invalid.  Is an option missing a parameter?" % args[-1])
