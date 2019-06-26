@@ -53,16 +53,13 @@
         compatible <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
           format="html">Greenplum Clients</xref> package to meet the <codeph>gpcopy</codeph>
         dependencies.</p>
-      <p><codeph>gpcopy</codeph> inherits any encryption settings that are configured for the
-        specified user connection. For example, if the <codeph>--dest-user</codeph> role is
-        configured for SSL client authentication to the Greenplum cluster, then all
-          <codeph>gpcopy</codeph> connections created for that user are SSL-encrypted as well.</p>
       <p><codeph>gpcopy</codeph> supports migrating data from a Greenplum Database 4.3.26 or later
         cluster to a Greenplum Database 5.9 or later cluster. However Greenplum Database 4.3.26 and
         later do not include the actual <codeph>gpcopy</codeph> utility. You must manually copy the
           <codeph>gpcopy</codeph> utility from your version 5.9 or later cluster into the older
         version cluster to migrate data. For
         example:<codeblock>$ cp /usr/local/greenplum-db-5.9.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></p>
+      <p><codeph>gpcopy</codeph> does not currently suport SSL encryption for its connections.</p>
     </body>
   </topic>
   <topic id="topic_qwl_2rp_zdb">
