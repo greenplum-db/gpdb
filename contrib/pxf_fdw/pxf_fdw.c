@@ -339,7 +339,12 @@ pxfReScanForeignScan(ForeignScanState *node)
 {
 	elog(DEBUG5, "pxf_fdw: pxfReScanForeignScan starts on segment: %d", PXF_SEGMENT_ID);
 
-	/* TODO: implement reScanForeignScan */
+	Relation             relation   = node->ss.ss_currentRelation;
+	PxfFdwExecutionState *pxfestate = (PxfFdwExecutionState *) node->fdw_state;
+
+	EndCopyFrom(pxfestate->cstate);
+
+	InitCopyState(pxfestate, relation);
 
 	elog(DEBUG5, "pxf_fdw: pxfReScanForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
