@@ -426,7 +426,7 @@
                     <codeph>--parallelize-leaf-partitions</codeph> affect the number of simultaneous
                 connections used for data transfer. <codeph>--data-port-range</codeph> defines the
                 ports used for data transfer to destination segments or the destination
-                        master.<note><codeph>gpcopy</codeph> does not currently suport SSL
+                        master.<note><codeph>gpcopy</codeph> does not currently support SSL
                     encryption for its connections.</note></p>
             <parml>
                 <plentry>
@@ -690,7 +690,7 @@
             <p>The <codeph>gpcopy</codeph> utility does not copy external objects such as Greenplum
                 Database extensions, third party jar files, and shared object files. You must
                 install the external objects separately. </p>
-            <p><codeph>gpcopy</codeph> does not currently suport SSL encryption for its
+            <p><codeph>gpcopy</codeph> does not currently support SSL encryption for its
                 connections.</p>
             <sectiondiv>
                 <p><b>Specifying Table Names with Special Characters</b></p>
