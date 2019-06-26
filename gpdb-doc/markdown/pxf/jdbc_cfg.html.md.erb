@@ -151,6 +151,53 @@ The `pxf.impersonation.jdbc` property governs JDBC user impersonation. JDBC user
 
 When you enable JDBC user impersonation for a PXF server, PXF overrides the value of a `jdbc.user` property setting defined in either `jdbc-site.xml` or `<greenplum_user_name>-user.xml`, or specified in the external table DDL, with the Greenplum Database user name. For user impersonation to work effectively when the external data store requires passwords to authenticate connecting users, you must specify the `jdbc.password` setting for each user that can be impersonated in that user's `<greenplum_user_name>-user.xml` property override file. Refer to [Configuring a PXF User](cfg_server.html#usercfg) for more information about per-server, per-Greenplum-user configuration.
 
+### <a id="jdbcconpool"></a>About JDBC Connection Pooling
+
+The PXF JDBC Connector uses JDBC connection pooling implemented by [HikariCP](https://github.com/brettwooldridge/HikariCP). The Connector establishes a connection pool for a server configuration the first time that it encounters a unique combination of `jdbc.url`, `jdbc.user`, `jdbc.password`, connection properties, and pool properties settings when a user accesses (query, write) an external table that was created specifying the server configuration. The Connector reuses connections in the pool subject to certain connection and timeout settings.
+
+One or more connection pools may exist for a given server configuration, and user access to different external tables specifying the same server may share a connection pool.
+
+**Note**: If you have enabled JDBC user impersonation in a server configuration, the JDBC Connector creates a separate connection pool for each Greenplum Database user that accesses any external table that was created specifying that server configuration.
+
+The `jdbc.pool.enabled` property governs JDBC connection pooling for a server configuration. Connection pooling is enabled by default. To disable JDBC connection pooling for a server configuration, set the property to false:
+
+``` xml
+<property>
+    <name>jdbc.pool.enabled</name>
+    <value>false</value>
+</property>
+```
+
+If you disable JDBC connection pooling for a server configuration, PXF does not reuse JDBC connections for that server. PXF creates a connection to the remote database for every partition of a query, and deletes the connection when the query for that partition completes.
+
+PXF exposes connection pooling properties that you can configure in a JDBC server definition. These properties are named with the `jdbc.pool.property.` prefix and *apply to each PXF JVM*. The JDBC Connector automatically sets the following connection pool properties and default values:
+
+| Property       | Description                                | Default Value |
+|----------------|--------------------------------------------|-------|
+| jdbc.pool.property.maximumPoolSize | The maximum number of connections to the database backend. | 5 |
+| jdbc.pool.property.connectionTimeout | The maximum amount of time, in milliseconds, to wait for a connection from the pool. | 30000 |
+| jdbc.pool.property.idleTimeout | The maximum amount of time, in milliseconds, after which an inactive connection is considered idle. | 30000 |
+| jdbc.pool.property.minimumIdle | The minimum number of idle connections maintained in the connection pool. | 0 |
+
+You can set other HikariCP-specific connection pooling properties for a server configuration by specifying `jdbc.pool.property.<HIKARICP_PROP_NAME>` and the desired value in the `jdbc-site.xml` configuration file for the server. Also note that the JDBC Connector passes along any property that you specify with a `jdbc.connection.property.` prefix when it requests a connection from the JDBC `DriverManager`. Refer to [Connection-Level Properties](#connprop) above.
+
+#### <a id="jdbcconpool_tune"></a>Tuning the Maximum Connection Pool Size
+
+To not exceed the maximum number of connections allowed by the target database, while at the same time ensuring that each PXF JVM services a fair share of the JDBC connections, determine the maximum value of `maxPoolSize` based on the size of the Greenplum Database cluster as follows:
+
+``` pre
+max_conns_allowed_by_remote_db / #_greenplum_segment_hosts
+```
+
+For example, if your Greenplum Database cluster has 16 segment hosts and the target database allows 160 concurrent connections, calculate `maxPoolSize` as follows:
+
+``` pre
+160 / 16 = 10
+```
+
+In practice, you may choose to set `maxPoolSize` to a lower value, since the number of concurrent connections per JDBC query depends on the number of partitions used in the query. When a query uses no partitions, a single PXF JVM services the query. If a query uses 12 partitions, PXF establishes 12 concurrent JDBC connections to the remote database. Ideally, these connections are distributed equally among the PXF JVMs, but that is not guaranteed.
+
+
 ## <a id="namedquery"></a>JDBC Named Query Configuration
 
 A PXF *named query* is a static query that you configure, and that PXF runs in the remote SQL database.
