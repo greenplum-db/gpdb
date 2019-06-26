@@ -251,21 +251,11 @@ This procedure will typically be performed by the Greenplum Database administrat
 </configuration>
     ```
 
-2. [Download](https://jdbc.postgresql.org/download.html) a PostgreSQL JDBC driver JAR file and note the location of the downloaded file.
-
-3. Copy the JDBC driver JAR file to `$PXF_CONF/lib` on the Greenplum Database master host. For example:
-
-    ``` shell
-    gpadmin@gpmaster$ cp postgresql-42.2.6.jar $PXF_CONF/lib/postgresql-42.2.6.jar
-    ``` 
-
-3. Synchronize these changes to the PXF configuration to the Greenplum Database cluster. For example:
+3. Synchronize the PXF server configuration to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
     ``` 
-
-6. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 
 #### <a id="ex_readjdbc"></a>Read from the PostgreSQL Table
 
