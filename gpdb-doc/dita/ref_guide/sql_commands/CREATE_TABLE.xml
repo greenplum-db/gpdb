@@ -560,13 +560,16 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
         <plentry>
           <pt>TABLESPACE <varname>tablespace</varname></pt>
           <pd>The name of the tablespace in which the new table is to be created. If not specified,
-            the database's default tablespace is used.</pd>
+            the database's default tablespace is used, or <xref
+              href="../config_params/guc-list.xml#topic_k52_fqm_f3b"/> if the table is
+            temporary.</pd>
         </plentry>
         <plentry>
           <pt>USING INDEX TABLESPACE <varname>tablespace</varname></pt>
           <pd>This clause allows selection of the tablespace in which the index associated with a
               <codeph>UNIQUE</codeph> or <codeph>PRIMARY KEY</codeph> constraint will be created. If
-            not specified, the database's default tablespace is used. </pd>
+            not specified, the database's default tablespace is used, or <xref
+              href="../config_params/guc-list.xml#topic_k52_fqm_f3b"/> if the table is temporary. </pd>
         </plentry>
         <plentry>
           <pt>DISTRIBUTED BY (<varname>column</varname> [<varname>opclass</varname>], [ ... ] )</pt>

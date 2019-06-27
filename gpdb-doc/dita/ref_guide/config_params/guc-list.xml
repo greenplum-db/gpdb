@@ -731,8 +731,7 @@
               <xref href="#stats_queue_level"/>
             </li>
             <li>
-              <xref href="#superuser_reserved_connections"/>
-            </li>
+              <xref href="#superuser_reserved_connections"/></li>
             <li>
               <xref href="#tcp_keepalives_count"/>
             </li>
@@ -744,6 +743,8 @@
             </li>
             <li>
               <xref href="#temp_buffers"/>
+            </li>
+            <li><xref href="#topic_k52_fqm_f3b" format="dita"/>
             </li>
             <li>
               <xref href="#TimeZone"/>
@@ -8751,6 +8752,51 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">1024 (32MB)</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="topic_k52_fqm_f3b">
+    <title>temp_tablespaces</title>
+    <body>
+      <p>Specifies tablespaces in which to create temporary objects (temp tables and indexes on temp
+        tables) when a <codeph>CREATE</codeph> command does not explicitly specify a tablespace.
+        Temporary files for purposes such as sorting large data sets are also created in these
+        tablespaces.</p>
+      <p>The value is a list of names of tablespaces. When there is more than one name in the list,
+        Greenplum chooses a random member of the list each time a temporary object is to be created;
+        except that within a transaction, successively created temporary objects are placed in
+        successive tablespaces from the list. If the selected element of the list is an empty
+        string, Greenplum automatically uses the default tablespace of the current database
+        instead.</p>
+      <p>When <codeph>temp_tablespaces</codeph> is set interactively, specifying a nonexistent
+        tablespace is an error, as is specifying a tablespace for which the user does not have
+          <codeph>CREATE</codeph> privilege. However, when using a previously set value, nonexistent
+        tablespaces are ignored, as are tablespaces for which the user lacks <codeph>CREATE</codeph>
+        privilege. In particular, this rule applies when using a value set in
+          <codeph>postgresql.conf</codeph>.</p>
+      <p>The default value is an empty string, which results in all temporary objects being created
+        in the default tablespace of the current database.</p>
+      <p>See also <xref href="#default_tablespace" format="dita"/>.</p>
+      <table id="table_l52_fqm_f3b">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">one or more tablespace names</entry>
+              <entry colname="col2">unset</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

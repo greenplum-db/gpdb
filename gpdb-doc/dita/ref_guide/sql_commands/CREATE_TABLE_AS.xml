@@ -133,7 +133,8 @@
           <pt>TABLESPACE <varname>tablespace_name</varname></pt>
           <pd>The <varname>tablespace_name</varname> parameter is the name of the tablespace in
             which the new table is to be created. If not specified, the database's default
-            tablespace is used.</pd>
+            tablespace is used, or <xref href="../config_params/guc-list.xml#topic_k52_fqm_f3b"/> if
+            the table is temporary.</pd>
         </plentry>
         <plentry>
           <pt>AS <varname>query</varname></pt>

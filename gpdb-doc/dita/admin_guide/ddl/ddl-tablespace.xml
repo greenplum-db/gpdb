@@ -53,6 +53,12 @@
 CREATE TABLE foo(i int);
 </codeblock>
       </p>
+      <p>There is also the <codeph>temp_tablespaces</codeph> configuration parameter, which
+        determines the placement of temporary tables and indexes, as well as temporary files that
+        are used for purposes such as sorting large data sets. This can be a list of tablespace
+        names, rather than only one, so that the load associated with temporary objects can be
+        spread over multiple tablespaces. A random member of the list is picked each time a
+        temporary object is to be created.</p>
       <p>The tablespace associated with a database stores that database's system catalogs, temporary
         files created by server processes using that database, and is the default tablespace
         selected for tables and indexes created within the database, if no

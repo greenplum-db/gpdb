@@ -964,7 +964,7 @@
                 <xref href="guc-list.xml#search_path" type="section">search_path</xref>
               </p><p>
                 <xref href="guc-list.xml#statement_timeout" type="section">statement_timeout</xref>
-              </p><p>
+              </p><p><xref href="guc-list.xml#topic_k52_fqm_f3b"/></p><p>
                 <xref href="guc-list.xml#vacuum_freeze_min_age" type="section"
                   >vacuum_freeze_min_age</xref>
               </p></stentry>

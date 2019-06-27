@@ -270,6 +270,7 @@
             <topicref href="guc-list.xml#tcp_keepalives_idle"/>
             <topicref href="guc-list.xml#tcp_keepalives_interval"/>
             <topicref href="guc-list.xml#temp_buffers"/>
+            <topicref href="guc-list.xml#topic_k52_fqm_f3b"/>
             <topicref href="guc-list.xml#TimeZone"/>
             <topicref href="guc-list.xml#timezone_abbreviations"/>
             <topicref href="guc-list.xml#track_activity_query_size"/>

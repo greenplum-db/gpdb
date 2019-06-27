@@ -236,7 +236,9 @@
                                                 <varname>tablespace_name</varname>
                                         </pt>
                                         <pd>The tablespace in which to create the index. If not
-                                                specified, the default tablespace is used. </pd>
+                                                specified, the default tablespace is used, or <xref
+                                                  href="../config_params/guc-list.xml#topic_k52_fqm_f3b"
+                                                /> for indexes on temporary tables. </pd>
                                 </plentry>
                                 <plentry>
                                         <pt>
