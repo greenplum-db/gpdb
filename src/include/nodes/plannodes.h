@@ -488,7 +488,8 @@ typedef enum LogicalIndexType
 {
 	INDTYPE_BTREE = 0,
 	INDTYPE_BITMAP = 1,
-	INDTYPE_GIST = 2
+	INDTYPE_GIST = 2,
+	INDTYPE_GIN = 3
 } LogicalIndexType;
 
 typedef struct LogicalIndexInfo

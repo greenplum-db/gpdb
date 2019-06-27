@@ -55,6 +55,8 @@ test: copy copyselect
 test: create_misc create_operator
 # These depend on the above two
 test: create_index create_view
+# Depends on things setup for create_index
+test: gp_gin_index
 
 test: inherit
 
