@@ -742,7 +742,29 @@ EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN 
 EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN (SELECT a FROM dedup_test1);
 EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND EXISTS (SELECT b FROM dedup_test1) AND dedup_test3.b IN (SELECT b FROM dedup_test1);
 
+-- A subplan whose targetlist might be expanded to make sure all entries of its
+-- hashExpr are in its targetlist, test the motion node above it also updated
+-- its targetlist, otherwise, a wrong answer or a crash happens.
+DROP TABLE IF EXISTS TEST_IN;
+CREATE TABLE TEST_IN(
+    C01  FLOAT,
+    C02  NUMERIC(10,0)
+) DISTRIBUTED RANDOMLY;
+
+--insert repeatable records:
+INSERT INTO TEST_IN
+SELECT
+    ROUND(RANDOM()*1E1),ROUND(RANDOM()*1E1)
+FROM GENERATE_SERIES(1,1E4::BIGINT) I;
+
+ANALYZE TEST_IN;
+
+SELECT COUNT(*) FROM
+TEST_IN A
+WHERE A.C01 IN(SELECT C02 FROM TEST_IN);
+
 -- start_ignore
+DROP TABLE IF EXISTS TEST_IN;
 DROP TABLE IF EXISTS dedup_test1;
 DROP TABLE IF EXISTS dedup_test2;
 DROP TABLE IF EXISTS dedup_test3;
