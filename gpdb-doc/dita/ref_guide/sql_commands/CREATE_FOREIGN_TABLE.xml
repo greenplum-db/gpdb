@@ -123,7 +123,7 @@
           <title>Notes</title>
           <p>The Pivotal Query Optimizer, GPORCA, does not support foreign
            tables. A query on a foreign table always falls back to the Postgres
-           query optimizer.</p>
+           Planner.</p>
         </section>
         <section id="section6">
             <title>Examples</title>
