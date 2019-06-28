@@ -8,9 +8,9 @@ setup() {
 
   touch a b c
 
-  tar --create --gzip --file a.tar.gz a
-  tar czf ab.tar.gz a b
-  tar czf abc.tar.gz a b c
+  tar --create --gzip --file a.tar.gz ./a
+  tar czf ab.tar.gz ./{a,b}
+  tar czf abc.tar.gz ./{a,b,c}
 
   echo -e ""        > empty-NON_PRODUCTION_FILES.txt
   echo -e "a"       > a-NON_PRODUCTION_FILES.txt
@@ -34,7 +34,7 @@ comm_tarballs() {
 
 @test "test comm_tarballs with different file" {
   run comm_tarballs a.tar.gz ab.tar.gz
-  [ "$output" = "b" ]
+  [ "$output" = "./b" ]
 }
 
 main() {
@@ -55,7 +55,7 @@ main() {
   [[ "$output" =~ "rm".*$'\n'.*"a".*$'\n'.*b ]]
 }
 
-@test "it fails when there are no files to remove" {
+@test "it does nothing when there are no files to remove" {
   export INPUT_TARBALL="a.tar.gz"
   export NON_PRODUCTION_FILES="empty-NON_PRODUCTION_FILES.txt"
 
@@ -63,7 +63,7 @@ main() {
   [ "$status" -eq 0 ]
 
   run comm_tarballs "${INPUT_TARBALL}" "${OUTPUT_TARBALL}"
-  [ "$output" = "" ]
+  [ -z "$output" ]
 }
 
 @test "it works when we remove a from ab" {
@@ -74,7 +74,7 @@ main() {
   [ "$status" -eq 0 ]
 
   run comm_tarballs "${INPUT_TARBALL}" "${OUTPUT_TARBALL}"
-  [ "$output" = "a" ]
+  [ "$output" = "./a" ]
 }
 
 @test "it works when we remove ab from abc" {
@@ -85,7 +85,7 @@ main() {
   [ "$status" -eq 0 ]
 
   run comm_tarballs "${INPUT_TARBALL}" "${OUTPUT_TARBALL}"
-  [ "$output" = "ab" ]
+  [ "$output" = "./a./b" ]
 }
 
 @test "it works when we remove abc from abc" {

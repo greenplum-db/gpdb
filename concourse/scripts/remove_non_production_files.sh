@@ -10,7 +10,7 @@ main() {
 
   cd "${tmp_dir}"
   xargs rm -v < "${wd}/${NON_PRODUCTION_FILES}" || true
-  if ! tar czf "${wd}/${OUTPUT_TARBALL}" * ; then
+  if ! tar czf "${wd}/${OUTPUT_TARBALL}" ./* ; then
     echo "All files were removed so ${OUTPUT_TARBALL} cannot be created"
     exit 1
   fi
