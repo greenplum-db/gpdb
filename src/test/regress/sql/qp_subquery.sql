@@ -645,6 +645,19 @@ select * from subselect_tab1 where b::bool = exists(select c from subselect_tab2
 SELECT * FROM subselect_tab3 WHERE (EXISTS(SELECT c FROM subselect_tab2) AND NOT EXISTS (SELECT c from subselect_tab3)) IN (SELECT b::BOOL from subselect_tab1);
 SELECT * FROM subselect_tab3 WHERE (NOT EXISTS(SELECT c FROM subselect_tab2)) IN (SELECT b::boolean  from subselect_tab1);
 
+-- Check correct results for subqueries in the target list
+drop table if exists temp_a, temp_b, temp_c;
+create table temp_a (a int ,b int);
+create table temp_b (b int ,c int);
+create table temp_c (c int, d int);
+insert into temp_a values (1,2), (2,3), (3,4), (4,7), (5,19), (6,13), (7,23), (7,17);
+insert into temp_b values (1,2), (2,2), (3,2), (4,2), (5,3), (6,3), (7,3), (8,3), (10,4);
+insert into temp_c values (NULL, 2), (2, 2), (4, NULL), (NULL, 3), (1, 3), (8, NULL), (7, 2), (NULL, NULL);
+
+select sum(case when b in (select b from temp_b where t.a>c) then 1 else 0 end),sum(case when not( b in (select b from temp_b where t.a>c)) then 1 else 0 end) from temp_a t;
+select sum(case when b in (select b from temp_b where EXISTS (select sum(d) from temp_c where t.a > d)) then 1 else 0 end),sum(case when not( b in (select b from temp_b where t.a>c)) then 1 else 0 end) from temp_a t;
+select sum(case when b in (select b from temp_b where EXISTS (select sum(d) from temp_c where t.a > d or t.a > temp_b.c)) then 1 else 0 end),sum(case when not( b in (select b from temp_b, temp_c where t.a>temp_b.c or t.a > temp_c.d)) then 1 else 0 end) from temp_a t;
+
 -- start_ignore
 drop schema qp_subquery cascade;
 -- end_ignore
