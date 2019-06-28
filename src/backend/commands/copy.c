@@ -3632,7 +3632,7 @@ CopyFrom(CopyState cstate)
 	if ((resultRelInfo->ri_TrigDesc != NULL &&
 		 (resultRelInfo->ri_TrigDesc->trig_insert_before_row ||
 		  resultRelInfo->ri_TrigDesc->trig_insert_instead_row)) ||
-		cstate->volatile_defexprs)
+		cstate->volatile_defexprs || cstate->oids)
 	{
 		useHeapMultiInsert = false;
 	}
