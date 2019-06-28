@@ -7415,7 +7415,7 @@ DispatchSetPGVariable(const char *name, List *args, bool is_local)
 		if (is_local)
 			appendStringInfo(&buffer, "LOCAL ");
 
-		appendStringInfo(&buffer, "%s TO ", name);
+		appendStringInfo(&buffer, "%s TO ", quote_identifier(name));
 
 		foreach(l, args)
 		{
