@@ -131,7 +131,7 @@ installdirs-tests: installdirs
 
 # Get some extra C modules from contrib/spi and contrib/dummy_seclabel...
 
-all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) dummy_seclabel$(DLSUFFIX) tablespace-setup includecheck hooktest query_info_hook_test
+all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) dummy_seclabel$(DLSUFFIX) tablespace-setup hooktest query_info_hook_test
 
 refint$(DLSUFFIX): $(top_builddir)/contrib/spi/refint$(DLSUFFIX)
 	cp $< $@
@@ -174,11 +174,6 @@ tablespace-setup:
 	./testtablespace_default_tablespace \
 	./testtablespace_temp_tablespace \
 	./testtablespace_database_tablespace
-
-# Check for include files that are not being shipped
-.PHONY: includecheck
-includecheck:
-	$(srcdir)/checkinc.py
 
 .PHONY: hooktest
 hooktest:
