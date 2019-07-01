@@ -8766,7 +8766,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
         tables) when a <codeph>CREATE</codeph> command does not explicitly specify a tablespace.
         Temporary files for purposes such as sorting large data sets are also created in these
         tablespaces.</p>
-      <p>The value is a list of names of tablespaces. When there is more than one name in the list,
+      <p>The value is a comma-separated list of names of tablespaces. When there is more than one name in the list,
         Greenplum chooses a random member of the list each time a temporary object is to be created;
         except that within a transaction, successively created temporary objects are placed in
         successive tablespaces from the list. If the selected element of the list is an empty
