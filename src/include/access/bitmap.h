@@ -317,19 +317,6 @@ typedef struct BMTidBuildBuf
 #define WORDNO_GET_HEADER_BIT(cw_no) \
 	((BM_HRL_WORD)1 << (BM_HRL_WORD_SIZE - 1 - ((cw_no) % BM_HRL_WORD_SIZE)))
 
-/*
- * To see if the content word at n is a compressed word or not we must look
- * look in the header words h_words. Each bit in the header words corresponds
- * to a word amongst the content words. If the bit is 1, the word is compressed
- * (i.e., it is a fill word) otherwise it is uncompressed.
- *
- * See src/backend/access/bitmap/README for more details
- */
-
-#define IS_FILL_WORD(h, n) \
-	(bool) ((((h)[(n)/BM_HRL_WORD_SIZE]) & (WORDNO_GET_HEADER_BIT(n))) > 0 ? \
-			true : false)
-
 /* A simplified interface to IS_FILL_WORD */
 
 #define CUR_WORD_IS_FILL(b) \
@@ -551,6 +538,20 @@ typedef struct BMScanOpaqueData
 } BMScanOpaqueData;
 
 typedef BMScanOpaqueData *BMScanOpaque;
+
+/*
+ * To see if the content word at wordno is a compressed word or not we must look
+ * in the header words. Each bit in the header words corresponds to a word
+ * amongst the content words. If the bit is 1, the word is compressed (i.e., it
+ * is a fill word) otherwise it is uncompressed.
+ *
+ * See src/backend/access/bitmap/README for more details
+ */
+static inline bool
+IS_FILL_WORD(const BM_HRL_WORD *words, int16 wordno)
+{
+	return (words[wordno / BM_HRL_WORD_SIZE] & WORDNO_GET_HEADER_BIT(wordno)) > 0;
+}
 
 /*
  * XLOG records for bitmap index operations
