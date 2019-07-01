@@ -37,6 +37,26 @@ CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
 	RETURNS TEXT
 	AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
     LANGUAGE C;
+CREATE OR REPLACE FUNCTION insert_noop_xlog_record_master() RETURNS VOID AS
+'@abs_builddir@/regress.so', 'insert_noop_xlog_record'
+    LANGUAGE C EXECUTE ON MASTER;
+CREATE OR REPLACE FUNCTION insert_noop_xlog_record_all_segments() RETURNS SETOF VOID AS
+'@abs_builddir@/regress.so', 'insert_noop_xlog_record'
+    LANGUAGE C EXECUTE ON ALL SEGMENTS;
+CREATE OR REPLACE FUNCTION insert_noop_xlog_record() RETURNS VOID AS $$
+BEGIN
+    PERFORM insert_noop_xlog_record_master();
+    PERFORM insert_noop_xlog_record_all_segments();
+END;
+$$LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION force_mirrors_to_catch_up() RETURNS VOID AS $$
+BEGIN
+    PERFORM gp_inject_fault2('after_xlog_redo_noop', 'sleep', dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
+    PERFORM insert_noop_xlog_record();
+    PERFORM gp_wait_until_triggered_fault2('after_xlog_redo_noop', 1, dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
+    PERFORM gp_inject_fault2('after_xlog_redo_noop', 'reset', dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
+END;
+$$ LANGUAGE plpgsql;
 -- create tablespaces we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
 CREATE TABLESPACE ul_testspace LOCATION '@testtablespace@_unlogged';
@@ -78,27 +98,11 @@ FROM pg_tablespace WHERE spcname = 'testspace';
  t
 (1 row)
 
--- start_ignore
-create language plpythonu;
--- end_ignore
-CREATE or REPLACE FUNCTION wait_for_tablespace_create(retries integer, exp_num integer) RETURNS bool AS
-$$
-import os,time
-for x in range(retries):
-  num_str = os.popen("ls -lh @testtablespace@ | wc -l").read()
-  num = num_str.split("\n")
-  if num[0] == str(exp_num):
-    return True
-  time.sleep(0.1)
-return False
-$$ language plpythonu;
--- Confirm that all the dbid directories were created under the testtablespace path
---GPDB_96_MERGE_FIXME: Use 'set synchronous_commit=remote_apply' instead of the polling function
--- Each dbid has one file/directory. There are 8 dbids, so expected num is 9.
-SELECT wait_for_tablespace_create(500, 9);
- wait_for_tablespace_create 
-----------------------------
- t
+-- Ensure mirrors have applied filesystem changes
+SELECT force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
+ 
 (1 row)
 
 \! ls @testtablespace@;
@@ -318,24 +322,11 @@ WHERE a.versiondirs = get_tablespace_version_directory_name();
 -- Do not drop the dbid directory, nor the existing version directory if you
 -- drop this tablespace
 DROP TABLESPACE testspace_existing_version_dir;
-CREATE or REPLACE FUNCTION wait_for_tablespace_drop(retries integer, exp_num integer) RETURNS bool AS
-$$
-import os,time
-for x in range(retries):
-  num_str = os.popen("find @testtablespace@_existing_version_dir | wc -l").read()
-  num = num_str.split("\n")
-  if num[0] == str(exp_num):
-    return True
-  time.sleep(0.1)
-return False
-$$ language plpythonu;
--- Wait for all mirrors to drop related tablespace directories.
---GPDB_96_MERGE_FIXME: Use 'set synchronous_commit=remote_apply' instead of the polling function
--- Each dbid has two files/directories. There are 8 dbids, so expected num is 17.
-SELECT wait_for_tablespace_drop(500, 17);
- wait_for_tablespace_drop 
---------------------------
- t
+-- Ensure mirrors have applied filesystem changes
+SELECT force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
+ 
 (1 row)
 
 \! ls @testtablespace@_existing_version_dir/*;
