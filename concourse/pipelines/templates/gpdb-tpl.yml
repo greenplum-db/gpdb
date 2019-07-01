@@ -487,13 +487,14 @@ resources:
     tag: latest
 
 {% endif %}
-{% if "ubuntu18.04" in os_types %}
+
 - name: gpdb6-ubuntu18.04-build
   type: docker-image
   source:
     repository: pivotaldata/gpdb6-ubuntu18.04-build
     tag: latest
 
+{% if "ubuntu18.04" in os_types %}
 - name: gpdb6-ubuntu18.04-test
   type: docker-image
   source:
@@ -856,16 +857,15 @@ jobs:
 ##         |_|
 ## ======================================================================
 
-{% if "centos7" in os_types %}
 - name: concourse_unit_tests
   plan:
     - aggregate:
       - get: bats_core_src
       - get: gpdb_src
         trigger: true
-      - get: gpdb6-centos7-build
+      - get: gpdb6-ubuntu18.04-build
     - task: run_unit_tests
-      image: gpdb6-centos7-build
+      image: gpdb6-ubuntu18.04-build
       config:
         inputs:
           - name: bats_core_src
@@ -880,7 +880,6 @@ jobs:
             cd gpdb_src/concourse
             bats -t scripts/*.bats
             python -m unittest discover --verbose -s scripts/ -p *_test.py
-{% endif %}
 
 ## ======================================================================
 ##   ____                      _ _
