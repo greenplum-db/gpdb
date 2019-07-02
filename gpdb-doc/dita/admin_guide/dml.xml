@@ -382,19 +382,10 @@
          will abort a statement before it would ever trigger a deadlock check in that
          session.</note>
       <p>To view lock waiting information for all segments, run the
-          <codeph>pg_dist_wait_status()</codeph> user-defined function. You can use the output of
+          <codeph>gp_dist_wait_status()</codeph> user-defined function. You can use the output of
         this function to determine which transactions are waiting on locks, which transactions are
-        holding locks, and which segments are executing the transactions. Sample output of the
-          <codeph>pg_dist_wait_status()</codeph> function follows:</p>
-      <codeblock>SELECT * FROM pg_dist_wait_status();
- segid | waiter_dxid | holder_dxid | holdTillEndXact 
--------+-------------+-------------+-----------------
-    -1 |          29 |          28 | t
-     0 |          28 |          26 | t
-     0 |          27 |          29 | t
-     1 |          26 |          27 | t
-(4 rows)
-</codeblock>
+        holding locks, the lock types and mode, the waiter and holder session identifiers, and
+        which segments are executing the transactions.</p>
       <p>When it cancels a transaction to break a deadlock, the Global Deadlock Detector reports the
         following error message:</p>
       <codeblock>ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"</codeblock>
