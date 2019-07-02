@@ -108,7 +108,7 @@
             <li>Remove the existing MADlib version 1.15 rpm (this does not affect the Greenplum
               database installation):<codeblock>gppkg -r madlib-1.15.0</codeblock></li>
             <li>Manually remove the remaining MADlib
-              files:<codeblock>rm -rf /usr/local/greenplum-db-5.20.0/madlib/Versions</codeblock></li>
+              files:<codeblock>rm -rf /usr/local/greenplum-db-5.13.0/madlib/Versions</codeblock></li>
             <li>Install the newer MADlib version. For
               example:<codeblock>$ gppkg -i ./madlib-1.16-gp5-rhel7-x86_64.gppkg</codeblock></li>
             <li>Upgrade the MADlib functions in each database. For
