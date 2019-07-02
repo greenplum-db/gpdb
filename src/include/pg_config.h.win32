@@ -647,7 +647,7 @@
 
 /* Define to the name of the default PostgreSQL service principal in Kerberos.
    (--with-krb-srvnam=NAME) */
-#define PG_KRB_SRVNAM "greenplum"
+#define PG_KRB_SRVNAM "postgres"
 
 /* A string containing the version number, platform, and C compiler */
 #define PG_VERSION_STR "Uninitialized version string (win32)"
