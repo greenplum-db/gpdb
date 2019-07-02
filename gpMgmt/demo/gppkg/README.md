@@ -1,5 +1,13 @@
 # Pre-Requirements
 
+This document is used to generate a sample.gppkg or build a native rpm/deb package
+## How to build a native(rpm/deb) package for sample.gppkg ?
+`bash generate_sample_gppkg.sh buildNative`
+## How to build a gppkg from the above or existing native package ?
+`bash generate_sample_gppkg.sh buildGppkg`
+
+# THE FOLLOWING DOCUMENT IS OUTDATED.
+
 ```
 yum -y install rpmdevtools rpmlint
 ```
