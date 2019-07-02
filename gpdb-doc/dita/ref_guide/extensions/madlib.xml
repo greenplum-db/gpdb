@@ -7,6 +7,7 @@
     <p>This chapter includes the following information:</p>
     <ul>
       <li id="pz219023"><xref href="#topic2" type="topic" format="dita"/></li>
+      <li><xref href="#topic_khs_klx_g3b" format="dita"/></li>
       <li id="pz213664" otherprops="pivotal"><xref href="#topic3" type="topic" format="dita"/></li>
       <li otherprops="pivotal"><xref href="#topic_eqm_klx_hw" format="dita"/></li>
       <li id="pz213668" otherprops="pivotal"><xref href="#topic6" type="topic" format="dita"/></li>
@@ -28,6 +29,24 @@
       <p>MADlib can be used with PivotalR, an R package that enables users to interact with data
         resident in Greenplum Database using the R client. See <xref href="#topic_dxp_vq2_sv"
           format="dita"/>.</p>
+    </body>
+  </topic>
+  <topic id="topic_khs_klx_g3b">
+    <title>About Deep Learning</title>
+    <body>
+      <p>Deep learning is a type of machine learning, originally inspired by biology of the brain,
+        that uses a class of algorithms called artificial neural networks. Given the important use
+        cases that can be effectively addressed with deep learning, it is starting to become a more
+        important part of enterprise computing. </p>
+      <p>Deep learning support for Keras and TensorFlow was added to Apache MADlib starting with the
+        1.16 release. Refer to the following documents for more information about deep learning on
+        Greenplum using Apache MADlib:<ul id="ul_kyh_rlx_g3b">
+          <li><xref href="http://madlib.apache.org/docs/latest/group__grp__dl.html" format="html"
+              scope="external">MADlib user documentation</xref></li>
+          <li><xref href="https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning"
+              format="html" scope="external">Supported libraries and configuration
+              instructions</xref></li>
+        </ul></p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en" otherprops="pivotal">
