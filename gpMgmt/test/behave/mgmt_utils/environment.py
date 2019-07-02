@@ -1,5 +1,4 @@
 import os
-import platform
 import shutil
 
 import behave
@@ -75,11 +74,6 @@ def after_feature(context, feature):
             ''')
 
 def before_scenario(context, scenario):
-    if "skip_fixme_ubuntu18.04" in scenario.effective_tags:
-        if platform.linux_distribution()[0].lower() == "ubuntu" and platform.linux_distribution()[1] == "18.04":
-            scenario.skip("skipping scenario tagged with @skip_fixme_ubuntu18.04")
-            return
-
     if "skip" in scenario.effective_tags:
         scenario.skip("skipping scenario tagged with @skip")
         return
