@@ -45,6 +45,29 @@ master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
 if master_data_dir is None:
     raise Exception('Please set MASTER_DATA_DIRECTORY in environment')
 
+def show_all_installed(gphome):
+    x = platform.linux_distribution()
+    name = x[0].lower()
+    if 'ubuntu' in name:
+        return "dpkg --get-selections --admindir=%s/share/packages/database/deb | awk '{print \$1}'" % gphome
+    elif 'centos' in name:
+        return "rpm -qa --dbpath %s/share/packages/database" % gphome
+    else:
+        raise Exception('UNKNOWN platform: %s' % str(x))
+
+def remove_native_package_command(gphome, full_gppkg_name):
+    x = platform.linux_distribution()
+    name = x[0].lower()
+    if 'ubuntu' in name:
+        return 'fakeroot dpkg --force-not-root --log=/dev/null --instdir=%s --admindir=%s/share/packages/database/deb -r %s' % (gphome, gphome, full_gppkg_name)
+    elif 'centos' in name:
+        return 'rpm -e %s --dbpath %s/share/packages/database' % (full_gppkg_name, gphome)
+    else:
+        raise Exception('UNKNOWN platform: %s' % str(x))
+
+def remove_gppkg_archive_command(gphome, gppkg_name):
+    return 'rm -f %s/share/packages/archive/%s.gppkg' % (gphome, gppkg_name)
+
 def create_local_demo_cluster(context, extra_config='', with_mirrors='true', with_standby='true', num_primaries=None):
     stop_database_if_started(context)
 
@@ -1853,11 +1876,11 @@ def impl(context, gppkg_name):
     hostlist = get_all_hostnames_as_list(context, 'template1')
 
     # We can assume the GPDB is installed at the same location for all hosts
-    rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
+    command_list_all = show_all_installed(remote_gphome)
 
     for hostname in set(hostlist):
-        cmd = Command(name='check if internal rpm gppkg is installed',
-                      cmdStr=rpm_command_list_all,
+        cmd = Command(name='check if internal gppkg is installed',
+                      cmdStr=command_list_all,
                       ctxt=REMOTE,
                       remoteHost=hostname)
         cmd.run(validateAfter=True)
@@ -1874,11 +1897,11 @@ def impl(context, gppkg_name):
     hostlist = get_all_hostnames_as_list(context, 'template1')
 
     # We can assume the GPDB is installed at the same location for all hosts
-    rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
+    command_list_all = show_all_installed(remote_gphome)
 
     for hostname in set(hostlist):
-        cmd = Command(name='check if internal rpm gppkg is installed',
-                      cmdStr=rpm_command_list_all,
+        cmd = Command(name='check if internal gppkg is installed',
+                      cmdStr=command_list_all,
                       ctxt=REMOTE,
                       remoteHost=hostname)
         cmd.run(validateAfter=True)
@@ -1901,9 +1924,9 @@ def _remove_gppkg_from_host(context, gppkg_name, is_master_host):
         # matter which one we remove from
         hostname = hostlist[0]
 
-    rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
-    cmd = Command(name='get all rpm from the host',
-                  cmdStr=rpm_command_list_all,
+    command_list_all = show_all_installed(remote_gphome)
+    cmd = Command(name='get all from the host',
+                  cmdStr=command_list_all,
                   ctxt=REMOTE,
                   remoteHost=hostname)
     cmd.run(validateAfter=True)
@@ -1916,16 +1939,16 @@ def _remove_gppkg_from_host(context, gppkg_name, is_master_host):
         raise Exception("Found no matches for gppkg '%s'\n"
                         "gppkgs installed:\n%s" % (gppkg_name, installed_gppkgs))
 
-    rpm_remove_command = 'rpm -e %s --dbpath %s/share/packages/database' % (full_gppkg_name, remote_gphome)
+    remove_command = remove_native_package_command(remote_gphome, full_gppkg_name)
     cmd = Command(name='Cleanly remove from the remove host',
-                  cmdStr=rpm_remove_command,
+                  cmdStr=remove_command,
                   ctxt=REMOTE,
                   remoteHost=hostname)
     cmd.run(validateAfter=True)
 
-    remove_archive_gppgk = 'rm -f %s/share/packages/archive/%s.gppkg' % (remote_gphome, gppkg_name)
+    remove_archive_gppkg = remove_gppkg_archive_command(remote_gphome, gppkg_name)
     cmd = Command(name='Remove archive gppkg',
-                  cmdStr=remove_archive_gppgk,
+                  cmdStr=remove_archive_gppkg,
                   ctxt=REMOTE,
                   remoteHost=hostname)
     cmd.run(validateAfter=True)
