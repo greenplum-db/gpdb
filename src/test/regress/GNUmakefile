@@ -146,7 +146,7 @@ endif
 
 # And finally some extra C modules...
 
-all: all-spi tablespace-setup includecheck hooktest query_info_hook_test
+all: all-spi tablespace-setup hooktest query_info_hook_test
 
 .PHONY: all-spi
 all-spi:
@@ -157,11 +157,6 @@ all-spi:
 tablespace-setup:
 	-rm -rf ./testtablespace
 	mkdir ./testtablespace
-
-# Check for include files that are not being shipped
-.PHONY: includecheck
-includecheck:
-	$(srcdir)/checkinc.py
 
 .PHONY: hooktest
 hooktest:
@@ -185,7 +180,7 @@ pg_regress_call := $(pg_regress_call) --exclude-tests="segspace_setup segspace s
 endif
 
 check: all
-	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) --schedule=$(srcdir)/parallel_schedule 
+	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) --schedule=$(srcdir)/parallel_schedule
 
 installcheck: all
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir)
@@ -210,7 +205,7 @@ runtest: installcheck
 runtest-parallel: installcheck-parallel
 
 bigtest: all
-	$(pg_regress_call) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir) numeric_big 
+	$(pg_regress_call) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir) numeric_big
 
 bigcheck: all
 	$(pg_regress_call)  --temp-install=./tmp_check --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) --schedule=$(srcdir)/parallel_schedule numeric_big
