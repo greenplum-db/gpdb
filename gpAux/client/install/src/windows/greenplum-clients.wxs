@@ -1119,6 +1119,10 @@ If you want to review or change any of your installation settings, click Back. C
                 <File Id="dropuser.exe" Name="dropuser.exe" Source="$(var.SRCDIR)\bin\dropuser.exe" />
                 <File Id="libapr.dll" Name="libapr-1.dll" Source="$(var.SRCDIR)\bin\libapr-1.dll" />
                 <File Id="libpq.dll" Name="libpq.dll" Source="$(var.SRCDIR)\bin\libpq.dll" />
+                <File Id="krbcc64.dll" Name="krbcc64.dll" Source="$(var.SRCDIR)\bin\krbcc64.dll" />
+                <File Id="kinit.exe" Name="kinit.exe" Source="$(var.SRCDIR)\bin\kinit.exe" />
+                <File Id="klist.exe" Name="klist.exe" Source="$(var.SRCDIR)\bin\klist.exe" />
+                <File Id="kdestroy.exe" Name="kdestroy.exe" Source="$(var.SRCDIR)\bin\kdestroy.exe" />
                 <File Id="comerr64.dll" Name="comerr64.dll" Source="$(var.SRCDIR)\bin\comerr64.dll" />
                 <File Id="gssapi64.dll" Name="gssapi64.dll" Source="$(var.SRCDIR)\bin\gssapi64.dll" />
                 <File Id="k5sprt64.dll" Name="k5sprt64.dll" Source="$(var.SRCDIR)\bin\k5sprt64.dll" />
