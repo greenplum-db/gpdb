@@ -39,6 +39,10 @@
             this list.</pd>
  
         </plentry>
+        <plentry>
+          <pt><codeph>help <varname>command</varname></codeph></pt>
+          <pd>Displays a help message for the specified command.</pd>
+        </plentry>
       </parml>
     </section>
     <section>
