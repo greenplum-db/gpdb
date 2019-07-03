@@ -1,3 +1,4 @@
+$progressPreference = 'silentlyContinue'
 Invoke-WebRequest -Uri https://aka.ms/vs/15/release/VC_redist.x64.exe -OutFile VC_redist.x64.exe
 Start-Process -FilePath "VC_redist.x64.exe" -ArgumentList "/passive" -Wait -Passthru
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
