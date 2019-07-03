@@ -7,11 +7,11 @@
 -- 'gpfdists' protocol
 -- --------------------------------------
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_matching </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_matching </dev/null >/dev/null 2>&1 &); for i in `seq 1 60`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_not_matching_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_not_matching </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_not_matching </dev/null >/dev/null 2>&1 &); for i in `seq 1 60`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_stop (x text)
@@ -26,9 +26,9 @@ select * from gpfdist_ssl_stop;
 (1 row)
 
 select * from gpfdist_ssl_start;
-      x      
--------------
- starting...
+       x       
+---------------
+  9796 gpfdist
 (1 row)
 
 -- end_ignore
@@ -169,9 +169,9 @@ select * from gpfdist_ssl_stop;
 (1 row)
 
 select * from gpfdist_ssl_not_matching_start;
-      x      
--------------
- starting...
+       x       
+---------------
+ 10000 gpfdist
 (1 row)
 
 -- end_ignore
