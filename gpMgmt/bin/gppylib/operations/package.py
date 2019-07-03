@@ -510,10 +510,10 @@ class ValidateInstallDebPackage(Operation):
         already_installed = self.check_existence()
         if self.is_update:
             if not already_installed:
-                raise NotInstalledError(self.gppkg.pkgname)
+                raise NotInstalledError(self.gppkg.pkg)
         else:
             if already_installed:
-                raise AlreadyInstalledError(self.gppkg.pkgname)
+                raise AlreadyInstalledError(self.gppkg.pkg)
 
         return deb_set
 
