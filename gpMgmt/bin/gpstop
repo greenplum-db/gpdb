@@ -37,18 +37,12 @@ try:
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
-"""
-GpstopCheckIgnoreList is a whitelist to ignore when checking active database connections
-
-In smart mode, we check the `pg_stat_activity` table for active sessions before calling
-the cluster stop routine. However, we need to ignore those that are part of the database
-implementation itself. For this purpose, we maintain a whitelist using its `application_name`
-field.
-"""
-GpstopCheckIgnoreList = ['gp_reserved_gpdiskquota']
-
 DEFAULT_NUM_WORKERS = 64
 logger = get_default_logger()
+
+PG_CTL_STATUS_RUNNING = 0
+PG_CTL_STATUS_STOPPED = 3
+PG_CTL_STATUS_SLEEP_INTERVAL = 1.0  # number of seconds to sleep before issuing next pg_ctl status
 
 
 # ---------------------------------------------------------------
@@ -422,25 +416,120 @@ class GpStop:
         self.dburl = dbconn.DbURL(port=self.port, dbname='template1')
         self.gparray = GpArray.initFromCatalog(self.dburl, utility=True)
 
+    class _SigIntHandler(object):
+        def __init__(self):
+            self.interrupted = False
+
+        def _handler(self, signum, stack_frame):
+            self.interrupted = True
+
+        def enable(self):
+            self.interrupted = False
+            signal.signal(signal.SIGINT, self._handler)
+
+        def disable(self):
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+        def __enter__(self):
+            self._prev_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+            # Try to prevent easy mistakes by ensuring that SIGINT was
+            # ignored before we entered the manager.
+            if self._prev_handler != signal.SIG_IGN:
+                signal.signal(signal.SIGINT, self._prev_handler)
+                raise Exception("SIGINT disposition must be SIG_IGN before entering SigIntHandler")
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            # Put back the previous handler.
+            signal.signal(signal.SIGINT, self._prev_handler)
+            return False
+
+
+    def _is_master_stopped(self):
+        with open(os.devnull, 'w') as devnull:
+            ret = subprocess.call(['pg_ctl', 'status', '-D', self.master_datadir],
+                                  stdout=devnull)
+        if ret == PG_CTL_STATUS_STOPPED:
+            return True
+        if ret != PG_CTL_STATUS_RUNNING:
+            raise Exception('pg_ctl status failed with return code %d' % ret)
+        return False
+
+
+
+    # Send a no-wait stop to the master, and then poll for it to stop.  If the user gets impatient or
+    # the operation times out, show the connections and allow the user to upgrade the stop to fast or
+    # immediate mode.
+    def _stop_master_smart(self):
+        logger.info("Stopping master segment and waiting for user connections to finish ...")
+
+        self.conn = dbconn.connect(self.dburl, utility=True)
+        user_connections_header, user_connections = catalog.getUserConnectionInfo(self.conn)
+        self.conn.close()
+
+        ret = subprocess.call(['pg_ctl', 'stop', '-W', '-m', 'smart', '-D', self.master_datadir])
+        if ret:
+            raise Exception('pg_ctl stop smart failed')
+
+        time_waited = 0
+        wait_forever = False
+        with GpStop._SigIntHandler() as handler:
+            while not self._is_master_stopped():
+                # time.sleep() can be safely interrupted (https://docs.python.org/2/library/time.html#time.sleep)
+                handler.enable()
+                time.sleep(PG_CTL_STATUS_SLEEP_INTERVAL)
+                time_waited = time_waited + PG_CTL_STATUS_SLEEP_INTERVAL
+                handler.disable()
+
+                if handler.interrupted or (time_waited >= self.timeout and not wait_forever):
+                    handler.interrupted = False
+
+                    warn_text = """Smart mode failed to shutdown the master.\n"""
+                    if len(user_connections):
+                        warn_text += """  There were {} user connections at the start of the shutdown. Note: These connections may be outdated.
+  The following connections were found before shutting down:
+  {}\n""".format(len(user_connections), user_connections_header)
+                        for user_conn in user_connections:
+                            warn_text += "  %s" % user_conn
+
+                    logger.warn(warn_text)
+                    logger.info("Continue waiting in smart mode, stop in fast mode, or stop in immediate mode.")
+                    mode_selection = userinput.ask_string("Your_choice",
+                                                          "['(s)mart_mode', '(f)ast_mode', '(i)mmediate_mode']",
+                                                          's',
+                                                          ['s', 'f', 'i'])
+                    logger.info("Your choice was '%s'" % mode_selection)
+                    if mode_selection == 'f':
+                        self.mode = 'fast'
+                        return False
+                    elif mode_selection == 'i':
+                        self.mode = 'immediate'
+                        return False
+                    else:
+                        wait_forever = True
+                        logger.info("Continuing waiting for user connections to finish ...")
+
 
     ######
+    # NOTE: we must make sure the master is down before leaving this routine
     def _stop_master(self, masterOnly=False):
         ''' shutsdown the master '''
 
-        self.conn = dbconn.connect(self.dburl, utility=True)
-        self._stop_master_checks()
-
-        self.conn.close()
+        logger.info("Commencing Master instance shutdown with mode='%s'" % self.mode)
+        logger.info("Master segment instance directory=%s" % self.master_datadir)
 
         e = GpEraFile(self.master_datadir, logger=get_logger_if_verbose())
         e.end_era()
 
-        logger.info("Commencing Master instance shutdown with mode=%s" % self.mode)
-        logger.info("Master segment instance directory=%s" % self.master_datadir)
-
-        cmd = gp.MasterStop("stopping master", self.master_datadir, mode=self.mode, timeout=self.timeout)
         try:
-            cmd.run(validateAfter=True)
+            if self.mode == 'smart':
+                self._stop_master_smart()
+
+            # NOTE: _stop_master_smart() can change self.mode
+            if self.mode != 'smart':
+                cmd = gp.MasterStop("stopping master", self.master_datadir, mode=self.mode, timeout=self.timeout)
+                cmd.run(validateAfter=True)
         except:
             # Didn't stop in timeout or pg_ctl failed.  So try kill
             (succeeded, mypid, file_datadir) = pg.ReadPostmasterTempFile.local("Read master tmp file",
@@ -470,35 +559,6 @@ class GpStop:
         unix.kill_9_segment_processes(self.master_datadir, self.dburl.pgport, mypid)
 
         logger.debug("Successfully shutdown the Master instance in admin mode")
-
-    ######
-    def _stop_master_checks(self):
-        total_connections = len(catalog.getUserPIDs(self.conn, GpstopCheckIgnoreList))
-        logger.info("There are %d connections to the database" % total_connections)
-
-        if total_connections > 0 and self.mode == 'smart':
-            logger.warning("There are other connections to this instance, shutdown mode smart aborted")
-            logger.warning("Either remove connections, or use 'gpstop -M fast' or 'gpstop -M immediate'")
-            logger.warning("See gpstop -? for all options")
-            raise ExceptionNoStackTraceNeeded("Active connections. Aborting shutdown...")
-
-        logger.info("Commencing Master instance shutdown with mode='%s'" % self.mode)
-        logger.info("Master host=%s" % self.gparray.master.hostname)
-
-        if self.mode == 'smart':
-            pass
-        elif self.mode == 'fast':
-            logger.info("Detected %d connections to database" % total_connections)
-            if total_connections > 0:
-                logger.info("Switching to WAIT mode")
-                logger.info("Will wait for shutdown to complete, this may take some time if")
-                logger.info("there are a large number of active complex transactions, please wait...")
-            else:
-                if self.timeout == SEGMENT_STOP_TIMEOUT_DEFAULT:
-                    logger.info("Using standard WAIT mode of %s seconds" % SEGMENT_STOP_TIMEOUT_DEFAULT)
-                else:
-                    logger.info("Using WAIT mode of %s seconds" % self.timeout)
-        pass
 
     ######
     def _stop_standby(self):
@@ -887,6 +947,8 @@ class GpStop:
         addTo.add_option('--host', dest='only_this_host', type='string',
                          help='stop all segments on this host (this will only complete if failover segments are available). '
                               'hostname as displayed in gp_segment_configuration')
+        addTo.add_option('--skipvalidation', action='store_true', default=False,
+                         help="<development testing only> DO NOT USE")
 
         parser.set_defaults(verbose=False, filters=[], slice=(None, None))
         return parser
@@ -935,7 +997,7 @@ class GpStop:
             raise ProgramArgumentValidationException("Invalid value for parallel degree: %s" % options.parallel)
 
         # Don't allow them to go below default
-        if options.timeout < SEGMENT_STOP_TIMEOUT_DEFAULT:
+        if options.timeout < SEGMENT_STOP_TIMEOUT_DEFAULT and not options.skipvalidation:
             raise ProgramArgumentValidationException(
                 "Invalid timeout value.  Must be greater than %s seconds." % SEGMENT_STOP_TIMEOUT_DEFAULT)
 

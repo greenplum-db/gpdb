@@ -37,14 +37,11 @@ def getDatabaseList(conn):
     sql = "SELECT datname FROM pg_catalog.pg_database"
     return basicSQLExec(conn,sql)
 
-def getUserPIDs(conn, ignoreList):
+def getUserConnectionInfo(conn):
     """dont count ourselves"""
-    sql = """SELECT pid FROM pg_stat_activity WHERE pid != pg_backend_pid()"""
-    if ignoreList:
-        ignoreStr = ', '.join("'"+ pg.escape_string(i) +"'" for i in ignoreList)
-        sql = sql + ' and application_name not in (' + ignoreStr +')'
-
-    return basicSQLExec(conn,sql)
+    header = ["pid", "usename", "application_name", "client_addr", "client_hostname", "client_port", "backend_start", "query"]
+    sql = """SELECT pid, usename, application_name, client_addr, client_hostname, client_port, backend_start, query FROM pg_stat_activity WHERE pid != pg_backend_pid() ORDER BY usename"""
+    return header, basicSQLExec(conn,sql)
 
 def doesSchemaExist(conn,schemaname):
     sql = "SELECT nspname FROM pg_catalog.pg_namespace WHERE nspname = '%s'" % schemaname

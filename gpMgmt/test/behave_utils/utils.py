@@ -123,7 +123,10 @@ def run_gpcommand(context, command, cmd_prefix=''):
 
 def run_gpcommand_async(context, command):
     cmd = Command(name='run %s' % command, cmdStr='$GPHOME/bin/%s' % (command))
-    context.asyncproc = cmd.runNoWait()
+    asyncproc = cmd.runNoWait()
+    if 'asyncproc' not in context:
+        context.asyncproc = asyncproc
+
 
 def check_stdout_msg(context, msg, escapeStr = False):
     if escapeStr:
