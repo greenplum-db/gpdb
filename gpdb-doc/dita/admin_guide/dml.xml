@@ -385,7 +385,32 @@
           <codeph>gp_dist_wait_status()</codeph> user-defined function. You can use the output of
         this function to determine which transactions are waiting on locks, which transactions are
         holding locks, the lock types and mode, the waiter and holder session identifiers, and
-        which segments are executing the transactions.</p>
+        which segments are executing the transactions. Sample output of the
+          <codeph>gp_dist_wait_status()</codeph> function follows:</p>
+      <codeblock>SELECT * FROM pg_catalog.gp_dist_wait_status();
+-[ RECORD 1 ]----+--------------
+segid            | 0
+waiter_dxid      | 11
+holder_dxid      | 12
+holdTillEndXact  | t
+waiter_lpid      | 31249
+holder_lpid      | 31458
+waiter_lockmode  | ShareLock
+waiter_locktype  | transactionid
+waiter_sessionid | 8
+holder_sessionid | 9
+-[ RECORD 2 ]----+--------------
+segid            | 1
+waiter_dxid      | 12
+holder_dxid      | 11
+holdTillEndXact  | t
+waiter_lpid      | 31467
+holder_lpid      | 31250
+waiter_lockmode  | ShareLock
+waiter_locktype  | transactionid
+waiter_sessionid | 9
+holder_sessionid | 8
+</codeblock>
       <p>When it cancels a transaction to break a deadlock, the Global Deadlock Detector reports the
         following error message:</p>
       <codeblock>ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"</codeblock>
