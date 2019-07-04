@@ -41,6 +41,32 @@ CREATE EXTERNAL TABLE t_ext (a integer) LOCATION ('file://127.0.0.1/tmp/foo') FO
 CREATE EXTERNAL TABLE t_ext_a (LIKE t_ext INCLUDING ALL) LOCATION ('file://127.0.0.1/tmp/foo') FORMAT 'text';
 CREATE EXTERNAL TABLE t_ext_b (LIKE t_ext) LOCATION ('file://127.0.0.1/tmp/foo') FORMAT 'text';
 
+-- Verify that an external table can be dropped and then recreated in consecutive attempts
+CREATE OR REPLACE FUNCTION drop_and_recreate_external_table()
+	RETURNS void
+	LANGUAGE plpgsql
+	VOLATILE
+AS $function$
+DECLARE
+BEGIN
+DROP EXTERNAL TABLE IF EXISTS t_ext_r;
+CREATE EXTERNAL TABLE t_ext_r (
+	name varchar
+)
+LOCATION ('GPFDIST://127.0.0.1/tmp/dummy') ON ALL
+FORMAT 'CSV' ( delimiter ' ' null '' escape '"' quote '"' )
+ENCODING 'UTF8';
+END;
+$function$;
+
+do $$
+begin
+  for i in 1..5 loop
+	PERFORM drop_and_recreate_external_table();
+  end loop;
+end;
+$$;
+
 -- Verify created tables
 SELECT
 	c.relname,

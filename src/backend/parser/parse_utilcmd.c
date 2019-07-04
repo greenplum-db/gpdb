@@ -1625,13 +1625,31 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 	ListCell   *elements;
 	DistributedBy *likeDistributedBy = NULL;
 	bool	    bQuiet = false;	/* shut up transformDistributedBy messages */
-	bool		iswritable = stmt->iswritable;
+	bool		iswritable = false;
 
 	/* Set up pstate */
 	pstate = make_parsestate(NULL);
 	pstate->p_sourcetext = queryString;
 
 	memset(&cxt, 0, sizeof(CreateStmtContext));
+
+	/*
+	 * Create a temporary context in order to confine memory leaks due
+	 * to expansions within a short lived context
+	 */
+	cxt.tempCtx = AllocSetContextCreate(CurrentMemoryContext,
+							  "CreateExteranlStmt analyze context",
+							  ALLOCSET_DEFAULT_MINSIZE,
+							  ALLOCSET_DEFAULT_INITSIZE,
+							  ALLOCSET_DEFAULT_MAXSIZE);
+
+	/*
+	 * There exist transformations that might write on the passed on stmt.
+	 * Create a copy of it to both protect from (un)intentional writes and be
+	 * a bit more explicit of the intended ownership.
+	 */
+	stmt = (CreateExternalStmt *)copyObject(stmt);
+
 	cxt.pstate = pstate;
 	cxt.stmtType = "CREATE EXTERNAL TABLE";
 	cxt.relation = stmt->relation;
@@ -1648,6 +1666,8 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 
 	cxt.blist = NIL;
 	cxt.alist = NIL;
+
+	iswritable = stmt->iswritable;
 
 	/*
 	 * Run through each primary element in the table creation clause. Separate
@@ -1769,6 +1789,8 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 
 	result = lappend(cxt.blist, stmt);
 	result = list_concat(result, cxt.alist);
+
+	MemoryContextDelete(cxt.tempCtx);
 
 	return result;
 }
