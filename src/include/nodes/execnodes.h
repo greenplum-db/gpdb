@@ -366,6 +366,7 @@ typedef struct ResultRelInfo
 	List	   *ri_WithCheckOptionExprs;
 	List	  **ri_ConstraintExprs;
 	JunkFilter *ri_junkFilter;
+	AttrNumber  ri_segid_attno; /* gpdb: attribute number of "gp_segment_id" */
 	ProjectionInfo *ri_projectReturning;
 	int			tupdesc_match;
 	struct MemTupleBinding *mt_bind;
@@ -2785,6 +2786,7 @@ typedef struct DMLState
 	PlanState	ps;
 	JunkFilter *junkfilter;			/* filter that removes junk and dropped attributes */
 	TupleTableSlot *cleanedUpSlot;	/* holds 'final' tuple which matches the target relation schema */
+	AttrNumber	segid_attno;		/* attribute number of "gp_segment_id" */
 } DMLState;
 
 /*

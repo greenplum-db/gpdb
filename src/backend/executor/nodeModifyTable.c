@@ -1598,6 +1598,7 @@ ExecModifyTable(ModifyTableState *node)
 	ResultRelInfo *resultRelInfo;
 	PlanState  *subplanstate;
 	JunkFilter *junkfilter;
+	AttrNumber  segid_attno;
 	TupleTableSlot *slot;
 	TupleTableSlot *planSlot;
 	ItemPointer tupleid = NULL;
@@ -1644,6 +1645,7 @@ ExecModifyTable(ModifyTableState *node)
 	resultRelInfo = node->resultRelInfo + node->mt_whichplan;
 	subplanstate = node->mt_plans[node->mt_whichplan];
 	junkfilter = resultRelInfo->ri_junkFilter;
+	segid_attno = resultRelInfo->ri_segid_attno;
 
 	/*
 	 * es_result_relation_info must point to the currently active result
@@ -1677,11 +1679,12 @@ ExecModifyTable(ModifyTableState *node)
 			/* advance to next subplan if any */
 			node->mt_whichplan++;
 			if (node->mt_whichplan < node->mt_nplans)
-		{
+			{
 				estate->es_result_relation_info = estate->es_result_relations + node->mt_whichplan;
 				resultRelInfo = estate->es_result_relation_info;
 				subplanstate = node->mt_plans[node->mt_whichplan];
 				junkfilter = estate->es_result_relation_info->ri_junkFilter;
+				segid_attno = estate->es_result_relation_info->ri_segid_attno;
 				EvalPlanQualSetPlan(&node->mt_epqstate, subplanstate->plan,
 									node->mt_arowmarks[node->mt_whichplan]);
 				continue;
@@ -1692,6 +1695,33 @@ ExecModifyTable(ModifyTableState *node)
 
 		EvalPlanQualSetSlot(&node->mt_epqstate, planSlot);
 		slot = planSlot;
+
+		/*
+		 * Find and check gp_segment_id if needed. Run it before executing
+		 * junkfilter since that code removes all junk attributes (including
+		 * the gp_segment_id attribute) in the end.
+		 */
+		int32 segid = GpIdentity.segindex;
+		if (AttributeNumberIsValid(segid_attno) && (operation == CMD_UPDATE || operation == CMD_DELETE))
+		{
+			char		relkind;
+			Datum		datum;
+			bool		isNull;
+
+			relkind = resultRelInfo->ri_RelationDesc->rd_rel->relkind;
+			if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
+			{
+				datum = ExecGetJunkAttribute(slot,
+											 segid_attno,
+											 &isNull);
+				/* shouldn't ever get a null result... */
+				if (isNull)
+					elog(ERROR, "gp_segment_id is NULL for unknown reason");
+
+				segid = DatumGetInt32(datum);
+
+			}
+		}
 
 		oldtuple = NULL;
 		if (junkfilter != NULL)
@@ -1814,12 +1844,33 @@ ExecModifyTable(ModifyTableState *node)
 										  PLANGEN_PLANNER, true /* isUpdate */, tupleOid);
 					}
 					else /* DML_DELETE */
-						slot = ExecDelete(tupleid, oldtuple, planSlot,
-										  &node->mt_epqstate, estate, false,
-										  PLANGEN_PLANNER, true /* isUpdate */);
+					{
+							/*
+							 * Sanity check the distribution of the tuple to prevent
+							 * potential data corruption in case users manipulate data
+							 * incorrectly (e.g. insert data on incorrect segment through
+							 * utility mode) or there is bug in code, etc.
+							 */
+							if (segid != GpIdentity.segindex)
+								elog(ERROR, "distribution key of the tuple doesn't belong to "
+									 "current segment (actually from seg%d)", segid);
+							slot = ExecDelete(tupleid, oldtuple, planSlot,
+											  &node->mt_epqstate, estate, false,
+											  PLANGEN_PLANNER, true /* isUpdate */);
+					}
 				}
 				break;
 			case CMD_DELETE:
+				/*
+				 * Sanity check the distribution of the tuple to prevent
+				 * potential data corruption in case users manipulate data
+				 * incorrectly (e.g. insert data on incorrect segment through
+				 * utility mode) or there is bug in code, etc.
+				 */
+				if (segid != GpIdentity.segindex)
+					elog(ERROR, "distribution key of the tuple doesn't belong to "
+						 "current segment (actually from seg%d)", segid);
+
 				slot = ExecDelete(tupleid, oldtuple, planSlot,
 								  &node->mt_epqstate, estate, node->canSetTag,
 								  PLANGEN_PLANNER, false /* isUpdate */);
@@ -2203,6 +2254,8 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 						j->jf_junkAttNo = ExecFindJunkAttribute(j, "ctid");
 						if (!AttributeNumberIsValid(j->jf_junkAttNo))
 							elog(ERROR, "could not find junk ctid column");
+
+						resultRelInfo->ri_segid_attno = ExecFindJunkAttribute(j, "gp_segment_id");
 					}
 					else if (relkind == RELKIND_FOREIGN_TABLE)
 					{

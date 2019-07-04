@@ -1,0 +1,106 @@
+-- start_matchsubs
+-- m/nodeDML.c:\d+/
+-- s/nodeDML.c:\d+/nodeDML.c:XXX/
+-- m/nodeModifyTable.c:\d+/
+-- s/nodeModifyTable.c:\d+/nodeModifyTable.c:XXX/
+-- end_matchsubs
+
+create table bad_distribution1 (a int, b int) distributed by (a);
+CREATE
+create table pbad_distribution1 (a int, b int) distributed by (a) PARTITION BY RANGE(a) (START(1) END(9) EVERY (4));
+CREATE
+create table help_distribution (a int, b int) distributed by (a);
+CREATE
+
+-- insert & verify test prerequisite: (2,2), (7,7) on seg0, (1,1) on seg1, (5,5) on seg2.
+insert into bad_distribution1 values(2,2), (1,1), (5, 5), (7, 7);
+INSERT 4
+insert into pbad_distribution1 values(2,2), (1,1), (5, 5), (7, 7);
+INSERT 4
+select gp_segment_id, * from bad_distribution1 order by a;
+ gp_segment_id | a | b 
+---------------+---+---
+ 1             | 1 | 1 
+ 0             | 2 | 2 
+ 2             | 5 | 5 
+ 0             | 7 | 7 
+(4 rows)
+delete from bad_distribution1 where a = 7;
+DELETE 1
+delete from pbad_distribution1 where a = 7;
+DELETE 1
+-- populate the help table.
+insert into help_distribution select s,s from generate_series(1,10) s;
+INSERT 10
+
+-- insert (7,7) on unexpected seg, i.e. seg2. Note 'insert into bad_distribution1 values(7,7)' does not work.
+2U: insert into bad_distribution1 select s,s from generate_series(7,7) s;
+INSERT 1
+2U: insert into pbad_distribution1_1_prt_2 select s,s from generate_series(7,7) s;
+INSERT 1
+2Uq: ... <quitting>
+
+analyze bad_distribution1;
+ANALYZE
+analyze pbad_distribution1;
+ANALYZE
+analyze help_distribution;
+ANALYZE
+
+-- Test update on distribution key. Expect error.
+update bad_distribution1 set a=a+1;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg2) (nodeModifyTable.c:1856)  (seg0 127.0.0.1:25432 pid=24218) (nodeModifyTable.c:1856)
+update pbad_distribution1 set a=a+1;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg2) (nodeModifyTable.c:1856)  (seg0 127.0.0.1:25432 pid=24218) (nodeModifyTable.c:1856)
+
+-- Test delete. Expect error for orca plan.
+explain verbose delete from bad_distribution1 using (select * from help_distribution where b < 20) s where s.a = bad_distribution1.b;
+ QUERY PLAN                                                                                                           
+----------------------------------------------------------------------------------------------------------------------
+ Delete on public.bad_distribution1  (cost=3.17..6.37 rows=2 width=16)                                                
+   ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=3.17..6.37 rows=2 width=16)                     
+         Output: bad_distribution1.ctid, bad_distribution1.gp_segment_id, help_distribution.ctid                      
+         ->  Hash Join  (cost=3.17..6.37 rows=2 width=16)                                                             
+               Output: bad_distribution1.ctid, bad_distribution1.gp_segment_id, help_distribution.ctid                
+               Hash Cond: (help_distribution.a = bad_distribution1.b)                                                 
+               ->  Seq Scan on public.help_distribution  (cost=0.00..3.12 rows=4 width=10)                            
+                     Output: help_distribution.ctid, help_distribution.a                                              
+                     Filter: (help_distribution.b < 20)                                                               
+               ->  Hash  (cost=3.12..3.12 rows=2 width=14)                                                            
+                     Output: bad_distribution1.ctid, bad_distribution1.gp_segment_id, bad_distribution1.b             
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.12 rows=2 width=14)            
+                           Output: bad_distribution1.ctid, bad_distribution1.gp_segment_id, bad_distribution1.b       
+                           Hash Key: bad_distribution1.b                                                              
+                           ->  Seq Scan on public.bad_distribution1  (cost=0.00..3.04 rows=2 width=14)                
+                                 Output: bad_distribution1.ctid, bad_distribution1.gp_segment_id, bad_distribution1.b 
+ Optimizer: Postgres query optimizer                                                                                  
+ Settings: optimizer=off                                                                                              
+(18 rows)
+delete from bad_distribution1 using (select * from help_distribution where b < 20) s where s.a = bad_distribution1.b;
+DELETE 4
+delete from pbad_distribution1 using (select * from help_distribution where b < 20) s where s.a = pbad_distribution1.b;
+DELETE 4
+
+-- Test update on non-distribution key. Expect ok.
+update bad_distribution1 set b=b+1;
+UPDATE 0
+update pbad_distribution1 set b=b+1;
+UPDATE 0
+
+-- check the final results.
+select * from bad_distribution1 order by 1;
+ a | b 
+---+---
+(0 rows)
+select * from pbad_distribution1 order by 1;
+ a | b 
+---+---
+(0 rows)
+
+-- cleanup.
+drop table bad_distribution1;
+DROP
+drop table pbad_distribution1;
+DROP
+drop table help_distribution;
+DROP

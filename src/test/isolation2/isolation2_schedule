@@ -4,6 +4,9 @@ test: select_dropped_table
 # test update hash col under utility mode
 test: update_hash_col_utilitymode
 
+# test delete/update when there are tuples with wrong distribution on segments.
+test: modifytable_with_bad_distribution
+
 # Tests for crash recovery
 test: uao_crash_compaction_column
 test: uao_crash_compaction_row
