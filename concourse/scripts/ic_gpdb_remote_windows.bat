@@ -9,6 +9,7 @@ set PGGSSLIB=gssapi
 
 call "C:\Program Files\Greenplum\greenplum-clients\greenplum_clients_path.bat"
 kinit -k -t gpdb-krb5.keytab user1/127.0.0.1
+klist
 set path=%path%;C:\Program Files\curl-win64-mingw\bin
 psql -U gpadmin -p 15432 -h 127.0.0.1 -c "select version();" "dbname=postgres" || goto :error
 psql -U gpadmin -p 15432 -h 127.0.0.1 -c "select version();" "dbname=postgres sslmode=require" || goto :error
