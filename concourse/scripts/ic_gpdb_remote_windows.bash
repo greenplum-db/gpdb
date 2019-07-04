@@ -24,7 +24,7 @@ function configure_gpdb_ssl_kerberos() {
     echo "ssl_cert_file='server.crt'">> "${PG_CONF}"
     echo "ssl_key_file='server.key'">> "${PG_CONF}"
 
-    gpconfig -c krb_server_keyfile -v  '/home/gpadmin/gpdb-krb5.keytab'
+    gpconfig -c krb_server_keyfile -v  '/home/gpadmin/gpdb-server-krb5.keytab'
 
     PG_HBA="${MASTER_DATA_DIRECTORY}/pg_hba.conf"
     echo "hostssl   all gpadmin 0.0.0.0/0   trust">> "${PG_HBA}"
@@ -68,15 +68,14 @@ kadmin.local -q "addprinc -pw changeme root/admin"
 krb5kdc
 
 kadmin.local -q "addprinc -randkey user1/127.0.0.1@${DEFAULT_REALM}"
-kadmin.local -q "addprinc -randkey user2/127.0.0.1@${DEFAULT_REALM}"
 kadmin.local -q "addprinc -randkey postgres/127.0.0.1@${DEFAULT_REALM}"
 
 # Gernerate keys
 rm -rf /home/gpadmin/gpdb-krb5.keytab
-kadmin.local -q "xst -norandkey -k /home/gpadmin/gpdb-krb5.keytab user1/127.0.0.1@${DEFAULT_REALM}"
-kadmin.local -q "xst -norandkey -k /home/gpadmin/gpdb-krb5.keytab postgres/127.0.0.1@${DEFAULT_REALM}"
-chown gpadmin:gpadmin /home/gpadmin/gpdb-krb5.keytab
-chmod 400 /home/gpadmin/gpdb-krb5.keytab
+kadmin.local -q "xst -norandkey -k /home/gpadmin/gpdb-client-krb5.keytab user1/127.0.0.1@${DEFAULT_REALM}"
+kadmin.local -q "xst -norandkey -k /home/gpadmin/gpdb-server-krb5.keytab postgres/127.0.0.1@${DEFAULT_REALM}"
+chown gpadmin:gpadmin /home/gpadmin/gpdb-*-krb5.keytab
+chmod 400 /home/gpadmin/gpdb-*-krb5.keytab
 }
 
 # Get ssh private key from REMOTE_KEY, which is assumed to
@@ -112,7 +111,7 @@ function run_remote_test() {
     scp -P "${REMOTE_PORT}" ./gpdb_src/src/test/regress/*.pm "${REMOTE_USER}@${REMOTE_HOST}:./gpload2"
     scp -P "${REMOTE_PORT}" ./gpdb_src/concourse/scripts/ic_gpdb_remote_windows.bat "${REMOTE_USER}@${REMOTE_HOST}:"
 
-    scp -P "${REMOTE_PORT}" /home/gpadmin/gpdb-krb5.keytab "${REMOTE_USER}@${REMOTE_HOST}:./gpdb-krb5.keytab"
+    scp -P "${REMOTE_PORT}" /home/gpadmin/gpdb-client-krb5.keytab "${REMOTE_USER}@${REMOTE_HOST}:./gpdb-krb5.keytab"
     scp -P "${REMOTE_PORT}" /etc/krb5.conf "${REMOTE_USER}@${REMOTE_HOST}:./krb5.ini"
 
     ssh -T -R"${PGPORT}:127.0.0.1:${PGPORT}" -R88:127.0.0.1:88 -L8081:127.0.0.1:8081 -L8082:127.0.0.1:8082 -p "${REMOTE_PORT}" "${REMOTE_USER}@${REMOTE_HOST}" "ic_gpdb_remote_windows.bat ${PGPORT}"
