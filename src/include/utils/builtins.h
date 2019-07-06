@@ -467,7 +467,6 @@ extern Datum float84gt(PG_FUNCTION_ARGS);
 extern Datum float84ge(PG_FUNCTION_ARGS);
 extern Datum width_bucket_float8(PG_FUNCTION_ARGS);
 extern Datum pg_highest_oid(PG_FUNCTION_ARGS); /* MPP */
-extern Datum gp_max_distributed_xid(PG_FUNCTION_ARGS); /* MPP */
 extern Datum gp_distributed_xid(PG_FUNCTION_ARGS); /* MPP */
 
 /* dbsize.c */
@@ -760,7 +759,6 @@ extern Datum tidin(PG_FUNCTION_ARGS);
 extern Datum tidout(PG_FUNCTION_ARGS);
 extern Datum tidrecv(PG_FUNCTION_ARGS);
 extern Datum tidsend(PG_FUNCTION_ARGS);
-extern Datum tidtoi8(PG_FUNCTION_ARGS);     /*CDB*/
 extern Datum tideq(PG_FUNCTION_ARGS);
 extern Datum tidne(PG_FUNCTION_ARGS);
 extern Datum tidlt(PG_FUNCTION_ARGS);
@@ -1119,8 +1117,6 @@ extern Datum int4_avg_combine(PG_FUNCTION_ARGS);
 extern Datum int2_avg_accum_inv(PG_FUNCTION_ARGS);
 extern Datum int4_avg_accum_inv(PG_FUNCTION_ARGS);
 extern Datum int8_avg_accum_inv(PG_FUNCTION_ARGS);
-extern Datum float4_avg_accum(PG_FUNCTION_ARGS);
-extern Datum float8_avg_accum(PG_FUNCTION_ARGS);
 extern Datum int8_avg(PG_FUNCTION_ARGS);
 extern Datum float8_avg(PG_FUNCTION_ARGS);
 extern Datum int2int4_sum(PG_FUNCTION_ARGS);
@@ -1153,12 +1149,9 @@ extern Datum suppress_redundant_updates_trigger(PG_FUNCTION_ARGS);
 
 /* encoding support functions */
 extern Datum getdatabaseencoding(PG_FUNCTION_ARGS);
-extern Datum database_character_set(PG_FUNCTION_ARGS);
 extern Datum pg_client_encoding(PG_FUNCTION_ARGS);
 extern Datum PG_encoding_to_char(PG_FUNCTION_ARGS);
 extern Datum PG_char_to_encoding(PG_FUNCTION_ARGS);
-extern Datum PG_character_set_name(PG_FUNCTION_ARGS);
-extern Datum PG_character_set_id(PG_FUNCTION_ARGS);
 extern Datum pg_convert(PG_FUNCTION_ARGS);
 extern Datum pg_convert_to(PG_FUNCTION_ARGS);
 extern Datum pg_convert_from(PG_FUNCTION_ARGS);
@@ -1343,8 +1336,6 @@ extern Datum gp_remove_segment_mirror(PG_FUNCTION_ARGS);
 extern Datum gp_add_segment(PG_FUNCTION_ARGS);
 extern Datum gp_remove_segment(PG_FUNCTION_ARGS);
 
-extern Datum gp_prep_new_segment(PG_FUNCTION_ARGS);
-
 extern Datum gp_request_fts_probe_scan(PG_FUNCTION_ARGS);
 
 /* storage/compress.c */
@@ -1360,21 +1351,11 @@ extern Datum rle_type_compress(PG_FUNCTION_ARGS);
 extern Datum rle_type_decompress(PG_FUNCTION_ARGS);
 extern Datum rle_type_validator(PG_FUNCTION_ARGS);
 
-extern Datum delta_constructor(PG_FUNCTION_ARGS);
-extern Datum delta_destructor(PG_FUNCTION_ARGS);
-extern Datum delta_compress(PG_FUNCTION_ARGS);
-extern Datum delta_decompress(PG_FUNCTION_ARGS);
-extern Datum delta_validator(PG_FUNCTION_ARGS);
-
 extern Datum dummy_compression_constructor(PG_FUNCTION_ARGS);
 extern Datum dummy_compression_destructor(PG_FUNCTION_ARGS);
 extern Datum dummy_compression_compress(PG_FUNCTION_ARGS);
 extern Datum dummy_compression_decompress(PG_FUNCTION_ARGS);
 extern Datum dummy_compression_validator(PG_FUNCTION_ARGS);
-
-/* percentile.c */
-extern Datum percentile_cont_trans(PG_FUNCTION_ARGS);
-extern Datum percentile_disc_trans(PG_FUNCTION_ARGS);
 
 /* gp_partition_functions.c */
 struct EState;

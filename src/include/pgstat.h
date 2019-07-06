@@ -945,7 +945,6 @@ extern void pgstat_report_deadlock(void);
 extern void pgstat_initialize(void);
 extern void pgstat_bestart(void);
 
-extern void pgstat_report_txn_timestamp(TimestampTz tstamp);
 #if 0
 extern void pgstat_report_waiting(bool waiting);
 #endif

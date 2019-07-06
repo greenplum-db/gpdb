@@ -46,7 +46,6 @@ extern bool IsAutoVacuumWorkerProcess(void);
 /* Functions to start autovacuum process, called from postmaster */
 extern void autovac_init(void);
 extern int	autovac_start(void);  // OLD interface
-extern void autovac_stopped(void);  // OLD interface
 extern int	StartAutoVacLauncher(void);
 extern int	StartAutoVacWorker(void);
 

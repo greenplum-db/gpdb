@@ -351,8 +351,6 @@ extern XLogRecPtr GetFlushRecPtr(void);
 extern void GetNextXidAndEpoch(TransactionId *xid, uint32 *epoch);
 extern void RemovePromoteSignalFiles(void);
 
-extern void XLogGetRecoveryStart(char *callerStr, char *reasonStr, XLogRecPtr *redoCheckPointLoc, CheckPoint *redoCheckPoint);
-
 extern void HandleStartupProcInterrupts(void);
 extern void StartupProcessMain(void);
 extern bool CheckPromoteSignal(void);

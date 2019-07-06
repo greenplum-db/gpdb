@@ -56,6 +56,5 @@ extern TestSpec parseresult;
 extern int	spec_yyparse(void);
 
 extern int	spec_yylex(void);
-extern void spec_yyerror(const char *str);
 
 #endif   /* ISOLATIONTESTER_H */

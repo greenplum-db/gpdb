@@ -217,7 +217,6 @@ extern bool operator_exists(Oid oid);
 extern bool aggregate_exists(Oid oid);
 extern Oid get_aggregate(const char *aggname, Oid oidType);
 extern List *get_relation_keys(Oid relid);
-extern bool attname_exists(Oid relid, const char *attname);
 extern bool trigger_exists(Oid oid);
 
 extern bool check_constraint_exists(Oid oidCheckconstraint);

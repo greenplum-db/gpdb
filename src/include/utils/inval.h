@@ -33,8 +33,6 @@ extern void AtEOXact_Inval(bool isCommit);
 
 extern void AtEOSubXact_Inval(bool isCommit);
 
-extern void AtPrepare_Inval(void);
-
 extern void PostPrepare_Inval(void);
 
 extern void CommandEndInvalidationMessages(void);

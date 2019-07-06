@@ -79,7 +79,6 @@ extern void HandleSingleRowError(CdbSreh *cdbsreh);
 extern void ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected);
 extern void SendNumRows(int numrejected, int64 numcompleted);
 extern void SendNumRowsRejected(int numrejected);
-extern bool IsErrorTable(Relation rel);
 extern void ErrorIfRejectLimitReached(CdbSreh *cdbsreh);
 extern bool ExceedSegmentRejectHardLimit(CdbSreh *cdbsreh);
 extern bool IsRejectLimitReached(CdbSreh *cdbsreh);

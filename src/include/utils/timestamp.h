@@ -193,7 +193,6 @@ extern Datum timestamptz_scale(PG_FUNCTION_ARGS);
 extern Datum timestamptz_timestamp(PG_FUNCTION_ARGS);
 extern Datum timestamptz_zone(PG_FUNCTION_ARGS);
 extern Datum timestamptz_izone(PG_FUNCTION_ARGS);
-extern Datum timestamptz_timestamptz(PG_FUNCTION_ARGS);
 
 extern Datum interval_um(PG_FUNCTION_ARGS);
 extern Datum interval_pl(PG_FUNCTION_ARGS);
@@ -212,13 +211,6 @@ extern Datum interval_accum(PG_FUNCTION_ARGS);
 extern Datum interval_combine(PG_FUNCTION_ARGS);
 extern Datum interval_accum_inv(PG_FUNCTION_ARGS);
 extern Datum interval_avg(PG_FUNCTION_ARGS);
-
-extern Datum timestamp_text(PG_FUNCTION_ARGS);   /* old ones */
-extern Datum text_timestamp(PG_FUNCTION_ARGS);
-extern Datum interval_text(PG_FUNCTION_ARGS);
-extern Datum text_interval(PG_FUNCTION_ARGS);
-extern Datum timestamptz_text(PG_FUNCTION_ARGS);
-extern Datum text_timestamptz(PG_FUNCTION_ARGS);  /* */
 
 extern Datum timestamp_mi(PG_FUNCTION_ARGS);
 extern Datum timestamp_pl_interval(PG_FUNCTION_ARGS);

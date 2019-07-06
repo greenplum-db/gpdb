@@ -54,7 +54,6 @@ extern void FtsShmemInit(void);
 extern bool FtsIsSegmentDown(CdbComponentDatabaseInfo *dBInfo);
 extern bool FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor **, int);
 
-extern bool verifyFtsSyncCount(void);
 extern void ftsLock(void);
 extern void ftsUnlock(void);
 extern void FtsNotifyProber(void);
