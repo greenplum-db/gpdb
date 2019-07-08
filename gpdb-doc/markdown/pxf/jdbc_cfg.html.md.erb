@@ -153,7 +153,7 @@ When you enable JDBC user impersonation for a PXF server, PXF overrides the valu
 
 ### <a id="jdbcconpool"></a>About JDBC Connection Pooling
 
-The PXF JDBC Connector uses JDBC connection pooling implemented by [HikariCP](https://github.com/brettwooldridge/HikariCP). When a user queries or writes to an external table, the Connector establishes a connection pool for the associated server configuration each time that it encounters a unique combination of `jdbc.url`, `jdbc.user`, `jdbc.password`, connection property, and pool property settings. The Connector reuses connections in the pool subject to certain connection and timeout settings.
+The PXF JDBC Connector uses JDBC connection pooling implemented by [HikariCP](https://github.com/brettwooldridge/HikariCP). When a user queries or writes to an external table, the Connector establishes a connection pool for the associated server configuration the first time that it encounters a unique combination of `jdbc.url`, `jdbc.user`, `jdbc.password`, connection property, and pool property settings. The Connector reuses connections in the pool subject to certain connection and timeout settings.
 
 One or more connection pools may exist for a given server configuration, and user access to different external tables specifying the same server may share a connection pool.
 
@@ -168,7 +168,7 @@ The `jdbc.pool.enabled` property governs JDBC connection pooling for a server co
 </property>
 ```
 
-If you disable JDBC connection pooling for a server configuration, PXF does not reuse JDBC connections for that server. PXF creates a connection to the remote database for every partition of a query, and deletes the connection when the query for that partition completes.
+If you disable JDBC connection pooling for a server configuration, PXF does not reuse JDBC connections for that server. PXF creates a connection to the remote database for every partition of a query, and closes the connection when the query for that partition completes.
 
 PXF exposes connection pooling properties that you can configure in a JDBC server definition. These properties are named with the `jdbc.pool.property.` prefix and *apply to each PXF JVM*. The JDBC Connector automatically sets the following connection pool properties and default values:
 
