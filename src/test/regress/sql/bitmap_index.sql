@@ -266,6 +266,12 @@ drop table unlogged_test;
 --
 -- Test crash recovery
 --
+
+--
+-- disable fault-tolerance service (FTS) probing to ensure
+-- the mirror does not accidentally get promoted
+--
+SELECT gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
 CREATE TABLE bm_test_insert(a int) DISTRIBUTED BY (a);
 CREATE INDEX bm_a_idx ON bm_test_insert USING bitmap(a);
 CREATE TABLE bm_test_update(a int, b int) DISTRIBUTED BY (a);
@@ -293,6 +299,12 @@ SELECT * FROM bm_test_update WHERE b=1;
 DROP TABLE trigger_recovery_on_primaries;
 DROP TABLE bm_test_insert;
 DROP TABLE bm_test_update;
+
+--
+-- re-enable fault-tolerance service (FTS) probing after recovery completed.
+--
+SELECT gp_inject_fault2('fts_probe', 'reset', dbid, hostname, port) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
+
 
 -- If the table is AO table, it need generate some fake tuple pointer,
 -- this pointer is a little different from the heap tables pointer,

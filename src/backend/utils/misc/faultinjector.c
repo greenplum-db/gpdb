@@ -31,12 +31,16 @@
 #include "libpq/pqformat.h"
 #include "postmaster/autovacuum.h"
 #include "postmaster/bgwriter.h"
-#include "postmaster/fts.h"
 #include "storage/spin.h"
 #include "storage/shmem.h"
 #include "utils/faultinjector.h"
 #include "utils/hsearch.h"
 #include "miscadmin.h"
+
+/*
+ * internal include
+ */
+#include "faultinjector_warnings.h"
 
 #ifdef FAULT_INJECTOR
 
@@ -152,6 +156,13 @@ FiLockRelease(void)
 {	
 	SpinLockRelease(&faultInjectorShmem->lock);
 }
+
+
+void InjectFaultInit(void)
+{
+	warnings_init();
+}
+
 
 /****************************************************************
  * FAULT INJECTOR routines
@@ -967,6 +978,16 @@ InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
 		 faultName, type, ddlStatement, databaseName, tableName,
 		 startOccurrence, endOccurrence, extraArg );
 
+	faultEntry.faultInjectorType = FaultInjectorTypeStringToEnum(type);
+	faultEntry.ddlStatement = FaultInjectorDDLStringToEnum(ddlStatement);
+	faultEntry.extraArg = extraArg;
+	faultEntry.startOccurrence = startOccurrence;
+	faultEntry.endOccurrence = endOccurrence;
+
+	/*
+	 * Validations:
+	 *
+	 */
 	if (strlcpy(faultEntry.faultName, faultName, sizeof(faultEntry.faultName)) >=
 		sizeof(faultEntry.faultName))
 		ereport(ERROR,
@@ -975,7 +996,6 @@ InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
 				 errdetail("Fault name should be no more than %d characters.",
 						   FAULT_NAME_MAX_LENGTH-1)));
 
-	faultEntry.faultInjectorType = FaultInjectorTypeStringToEnum(type);
 	if (faultEntry.faultInjectorType == FaultInjectorTypeMax)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROTOCOL_VIOLATION),
@@ -988,7 +1008,6 @@ InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
 				(errcode(ERRCODE_PROTOCOL_VIOLATION),
 				 errmsg("invalid fault name '%s'", faultName)));
 
-	faultEntry.extraArg = extraArg;
 	if (faultEntry.faultInjectorType == FaultInjectorTypeSleep)
 	{
 		if (extraArg < 0 || extraArg > 7200)
@@ -997,7 +1016,6 @@ InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
 					 errmsg("invalid sleep time, allowed range [0, 7200 sec]")));
 	}
 
-	faultEntry.ddlStatement = FaultInjectorDDLStringToEnum(ddlStatement);
 	if (faultEntry.ddlStatement == DDLMax)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROTOCOL_VIOLATION),
@@ -1031,8 +1049,13 @@ InjectFault(char *faultName, char *type, char *ddlStatement, char *databaseName,
 				(errcode(ERRCODE_PROTOCOL_VIOLATION),
 				 errmsg("invalid end occurrence number, allowed range [startOccurrence, ] or -1")));
 
-	faultEntry.startOccurrence = startOccurrence;
-	faultEntry.endOccurrence = endOccurrence;
+
+	/*
+	 * Warnings:
+	 *
+	 */
+	emit_warnings(faultEntry);
+
 
 	if (FaultInjector_SetFaultInjection(&faultEntry) == STATUS_OK)
 	{

@@ -11,6 +11,7 @@
 #include "libpq/ip.h"
 #include "libpq-fe.h"
 #include "postmaster/postmaster.h"
+#include "postmaster/fts.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
@@ -20,6 +21,32 @@ PG_MODULE_MAGIC;
 
 extern Datum gp_inject_fault(PG_FUNCTION_ARGS);
 extern Datum gp_inject_fault2(PG_FUNCTION_ARGS);
+void _PG_init(void);
+
+static void
+fts_with_panic_warning(FaultInjectorEntry_s faultEntry)
+{
+	if (Gp_role == GP_ROLE_DISPATCH && !FtsIsActive()) return;
+
+	if (faultEntry.faultInjectorType == FaultInjectorTypePanic)
+		ereport(WARNING, (
+			errmsg("consider disabling FTS probes while injecting a panic."),
+				errhint("Inject an infinite 'skip' into the 'fts_probe' fault to disable FTS probing.")));
+}
+
+/*
+ * Register warning when extension is loaded.
+ *
+ */
+void
+_PG_init(void)
+{
+	InjectFaultInit();
+
+	MemoryContext oldContext = MemoryContextSwitchTo(TopMemoryContext);
+	register_fault_injection_warning(fts_with_panic_warning);
+	MemoryContextSwitchTo(oldContext);
+}
 
 PG_FUNCTION_INFO_V1(gp_inject_fault);
 Datum
@@ -104,7 +131,6 @@ gp_inject_fault2(PG_FUNCTION_ARGS)
 	char	*hostname = TextDatumGetCString(PG_GETARG_DATUM(9));
 	int		port = PG_GETARG_INT32(10);
 	char	*response;
-
 
 	/* Fast path if injecting fault in our postmaster. */
 	if (GpIdentity.dbid == dbid)
