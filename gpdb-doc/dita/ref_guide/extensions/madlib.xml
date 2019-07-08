@@ -44,7 +44,7 @@
     <topic id="topic4" xml:lang="en">
       <title>Installing the Greenplum Database MADlib Package</title>
       <body>
-        <p>Before you install the MADlib package, make sure that your Greenplum database is running,
+        <p>Before you install the MADlib package, make sure that your Greenplum atabase is running,
           you have sourced <codeph>greenplum_path.sh</codeph>, and that the<codeph>
             $MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are set.</p>
         <ol>
@@ -67,8 +67,8 @@
           MADlib functions to Greenplum Database. <codeph>madpack</codeph> is in
             <codeph>$GPHOME/madlib/bin</codeph>. </p>
         <codeblock>$ madpack [-s <varname>schema_name</varname>] -p greenplum -c <varname>user</varname>@<varname>host</varname>:<varname>port</varname>/<varname>database</varname> install</codeblock>
-        <p>For example, this command creates MADlib functions in the Greenplum database
-            <codeph>testdb</codeph> running on server <codeph>mdw</codeph> on port
+        <p>For example, this command creates MADlib functions in the 
+            <codeph>testdb</codeph> database running on server <codeph>mdw</codeph> on port
             <codeph>5432</codeph>. The <codeph>madpack</codeph> command logs in as the user
             <codeph>gpadmin</codeph> and prompts for password. The target schema is
             <codeph>madlib</codeph>.</p>
@@ -106,7 +106,7 @@
           you are upgrading from MADlib version 1.15 to version 1.15.1 or newer, follow these
             steps:<ol id="ol_itj_l4v_g3b">
             <li>Remove the existing MADlib version 1.15 rpm (this does not affect the Greenplum
-              database installation):<codeblock>gppkg -r madlib-1.15.0</codeblock></li>
+              Database installation):<codeblock>gppkg -r madlib-1.15.0</codeblock></li>
             <li>Manually remove the remaining MADlib
               files:<codeblock>rm -rf /usr/local/greenplum-db-5.13.0/madlib/Versions</codeblock></li>
             <li>Install the newer MADlib version. For
@@ -152,7 +152,7 @@ psql <varname>db_name</varname> -c "DROP FUNCTION IF EXISTS <varname>schema</var
       <title id="pz217588">Remove MADlib objects from the database</title>
       <body>
         <p>Use the <codeph>madpack uninstall</codeph> command to remove MADlib objects from a
-          Greenplum database. For example, this command removes MADlib objects from the database
+          database. For example, this command removes MADlib objects from the database
             <codeph>testdb</codeph>.</p>
         <codeblock>$ madpack  -s madlib -p greenplum -c gpadmin@mdw:5432/testdb uninstall</codeblock>
       </body>
