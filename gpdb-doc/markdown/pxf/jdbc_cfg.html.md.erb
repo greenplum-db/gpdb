@@ -153,7 +153,7 @@ When you enable JDBC user impersonation for a PXF server, PXF overrides the valu
 
 ### <a id="jdbcconpool"></a>About JDBC Connection Pooling
 
-The PXF JDBC Connector uses JDBC connection pooling implemented by [HikariCP](https://github.com/brettwooldridge/HikariCP). The Connector establishes a connection pool for a server configuration the first time that it encounters a unique combination of `jdbc.url`, `jdbc.user`, `jdbc.password`, connection properties, and pool properties settings when a user accesses (query, write) an external table that was created specifying the server configuration. The Connector reuses connections in the pool subject to certain connection and timeout settings.
+The PXF JDBC Connector uses JDBC connection pooling implemented by [HikariCP](https://github.com/brettwooldridge/HikariCP). When a user queries or writes to an external table, the Connector establishes a connection pool for the associated server configuration each time that it encounters a unique combination of `jdbc.url`, `jdbc.user`, `jdbc.password`, connection property, and pool property settings. The Connector reuses connections in the pool subject to certain connection and timeout settings.
 
 One or more connection pools may exist for a given server configuration, and user access to different external tables specifying the same server may share a connection pool.
 
@@ -183,7 +183,7 @@ You can set other HikariCP-specific connection pooling properties for a server c
 
 #### <a id="jdbcconpool_tune"></a>Tuning the Maximum Connection Pool Size
 
-To not exceed the maximum number of connections allowed by the target database, while at the same time ensuring that each PXF JVM services a fair share of the JDBC connections, determine the maximum value of `maxPoolSize` based on the size of the Greenplum Database cluster as follows:
+To not exceed the maximum number of connections allowed by the target database, and at the same time ensure that each PXF JVM services a fair share of the JDBC connections, determine the maximum value of `maxPoolSize` based on the size of the Greenplum Database cluster as follows:
 
 ``` pre
 max_conns_allowed_by_remote_db / #_greenplum_segment_hosts
