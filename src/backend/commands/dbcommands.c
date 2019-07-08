@@ -643,11 +643,19 @@ createdb(const CreatedbStmt *stmt)
 			dstpath = GetDatabasePath(dboid, dsttablespace);
 
 			/*
+			 * Register the database directory to PendingDBDelete link list
+			 * for cleanup in txn abort.
+			 */
+			ScheduleDbDirDelete(dboid, dsttablespace, false);
+
+			/*
 			 * Copy this subdirectory to the new location
 			 *
 			 * We don't need to copy subdirectories
 			 */
 			copydir(srcpath, dstpath, false);
+
+			SIMPLE_FAULT_INJECTOR("create_db_after_file_copy");
 
 			/* Record the filesystem change in XLOG */
 			{
