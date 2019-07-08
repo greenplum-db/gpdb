@@ -2221,7 +2221,6 @@ class gpload:
             if val.startswith("E'") and val.endswith("'") and len(val[2:-1].decode('unicode-escape')) == 1:
                 subval = val[2:-1]
                 if subval == "\\'":
-                    val = val
                     self.formatOpts += "%s %s " % (specify_str, val)
                 else:
                     val = subval.decode('unicode-escape')
