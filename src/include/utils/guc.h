@@ -767,7 +767,4 @@ extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource sour
 extern bool gpvars_check_gp_enable_gpperfmon(bool *newval, void **extra, GucSource source);
 extern bool gpvars_check_gp_gpperfmon_send_interval(int *newval, void **extra, GucSource source);
 
-
-extern StdRdOptions *defaultStdRdOptions(char relkind);
-
 #endif   /* GUC_H */

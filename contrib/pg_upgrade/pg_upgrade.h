@@ -676,7 +676,6 @@ void		finish_gpdb4_page_converter(void);
 
 /* file_gp.c */
 
-void copy_distributedlog(void);
 const char * rewriteHeapPageChecksum( const char *fromfile, const char *tofile,
 					 const char *schemaName, const char *relName);
 

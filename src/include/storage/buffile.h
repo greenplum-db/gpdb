@@ -54,8 +54,6 @@ extern void BufFileFlush(BufFile *file);
 extern int64 BufFileGetSize(BufFile *buffile);
 
 extern const char *BufFileGetFilename(BufFile *buffile);
-extern BufFile *BufFileCreateForOperation(char *operator_name, bool interXact);
-extern BufFile *BufFileCreateInSet(struct workfile_set *work_set, const char *fileSuffix, bool interXact);
 
 extern void BufFileSuspend(BufFile *buffile);
 extern void BufFileResume(BufFile *buffile);

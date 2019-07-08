@@ -111,14 +111,12 @@ SvecType *reallocSvec(SvecType *source);
 
 Datum svec_in(PG_FUNCTION_ARGS);
 Datum svec_out(PG_FUNCTION_ARGS);
-Datum svec_return_vector(PG_FUNCTION_ARGS);
 Datum svec_return_array(PG_FUNCTION_ARGS);
 Datum svec_send(PG_FUNCTION_ARGS);
 Datum svec_recv(PG_FUNCTION_ARGS);
 
 // Operators
 Datum svec_pow(PG_FUNCTION_ARGS);
-Datum svec_equals(PG_FUNCTION_ARGS);
 Datum svec_minus(PG_FUNCTION_ARGS);
 Datum svec_plus(PG_FUNCTION_ARGS);
 Datum svec_div(PG_FUNCTION_ARGS);

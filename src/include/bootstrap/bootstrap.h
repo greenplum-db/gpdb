@@ -31,8 +31,6 @@ extern int	numattr;
 
 extern void AuxiliaryProcessMain(int argc, char *argv[]) __attribute__((noreturn));
 
-extern void err_out(void);
-
 extern void closerel(char *name);
 extern void boot_openrel(char *name);
 

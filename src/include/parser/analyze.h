@@ -31,9 +31,6 @@ extern Query *parse_sub_analyze(Node *parseTree, ParseState *parentParseState,
 				  CommonTableExpr *parentCTE,
 				  LockingClause *lockclause_from_parent);
 
-extern List *analyzeCreateSchemaStmt(CreateSchemaStmt *stmt);
-
-
 extern Query *transformTopLevelStmt(ParseState *pstate, Node *parseTree);
 extern Query *transformStmt(ParseState *pstate, Node *parseTree);
 

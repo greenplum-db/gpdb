@@ -290,6 +290,5 @@ extern void isoweekdate2date(int isoweek, int wday, int *year, int *mon, int *md
 extern int	date2isoweek(int year, int mon, int mday);
 extern int	date2isoyear(int year, int mon, int mday);
 extern int	date2isoyearday(int year, int mon, int mday);
-extern Interval *interval_mul_internal(float8 factor, Interval *span);
 
 #endif   /* TIMESTAMP_H */

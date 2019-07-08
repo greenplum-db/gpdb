@@ -230,6 +230,4 @@ extern Datum datumCopyWithMemManager(Datum oldvalue, Datum value, bool typByVal,
 									 MemoryManagerContainer *mem_manager);
 extern void ExecSquelchAgg(AggState *aggstate);
 
-extern List *combineAggrefArgs(Aggref *aggref, List **sort_clauses);
-
 #endif   /* NODEAGG_H */

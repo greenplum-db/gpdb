@@ -27,8 +27,6 @@ extern TargetEntry *tlist_member_match_var(Var *var, List *targetlist);
 // return a list a target entries that match the node expression
 extern List *tlist_members(Node *node, List *targetlist);
 
-extern TargetEntry *tlist_member_ignoring_RelabelType(Expr *expr, List *targetlist);
-
 extern List *flatten_tlist(List *tlist, PVCAggregateBehavior aggbehavior,
 			  PVCPlaceHolderBehavior phbehavior);
 extern List *add_to_flat_tlist_junk(List *tlist, List *exprs, bool resjunk);
