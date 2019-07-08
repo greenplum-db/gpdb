@@ -157,7 +157,7 @@ The PXF JDBC Connector uses JDBC connection pooling implemented by [HikariCP](ht
 
 One or more connection pools may exist for a given server configuration, and user access to different external tables specifying the same server may share a connection pool.
 
-**Note**: If you have enabled JDBC user impersonation in a server configuration, the JDBC Connector creates a separate connection pool for each Greenplum Database user that accesses any external table that was created specifying that server configuration.
+**Note**: If you have enabled JDBC user impersonation in a server configuration, the JDBC Connector creates a separate connection pool for each Greenplum Database user that accesses any external table specifying that server configuration.
 
 The `jdbc.pool.enabled` property governs JDBC connection pooling for a server configuration. Connection pooling is enabled by default. To disable JDBC connection pooling for a server configuration, set the property to false:
 
