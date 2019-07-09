@@ -30,6 +30,7 @@ test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parame
 test: spi_processed64bit
 test: python_processed64bit
 test: gp_tablespace_with_faults
+test: createdb
 
 test: temp_tablespaces
 test: default_tablespace

@@ -675,6 +675,9 @@ createdb(const CreatedbStmt *stmt)
 				(void) XLogInsert(RM_DBASE_ID, XLOG_DBASE_CREATE, rdata);
 			}
 		}
+
+		SIMPLE_FAULT_INJECTOR("after_xlog_create_database");
+
 		heap_endscan(scan);
 		heap_close(rel, AccessShareLock);
 
