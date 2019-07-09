@@ -94,9 +94,9 @@ You include JDBC connector custom options in the `LOCATION` URI, prefacing each 
 | FETCH_SIZE | Read | Integer that identifies the number of rows to buffer when reading from an external SQL database. Read row batching is enabled by default; the default read fetch size is 1000. |
 | QUERY_TIMEOUT | Read/Write | Integer that identifies the amount of time (in seconds) that the JDBC driver waits for a statement to execute. The default wait time is infinite. |
 | POOL_SIZE | Write | Enable thread pooling on `INSERT` operations and identify the number of threads in the pool. Thread pooling is disabled by default. |
-| PARTITION_BY | Read | The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\> values. If you do not identify a `PARTITION_BY` column, a single PXF instance services the read request. |
-| RANGE | Read | Required when `PARTITION_BY` is specified. The query range, \<start-value\>[:\<end-value\>]. When the partition column is an `enum` type, `RANGE` must specify a list of values, each of which forms its own fragment. If the partition column is an `int` or `date` type, `RANGE` must specify a finite left-closed range. That is, the range includes the \<start-value\> but does *not* include the \<end-value\>. If the partition column is a `date` type, use the `yyyy-MM-dd` date format. |
-| INTERVAL | Read | Required when `PARTITION_BY` is specified and of the `int` or `date` type. The interval, \<interval-value\>[:\<interval-unit\>], of one fragment. Specify the size of the fragment in \<interval-value\>. If the partition column is a `date` type, use the \<interval-unit\> to specify `year`, `month`, or `day`. |
+| PARTITION_BY | Read | Enables read partitioning. The partition column, \<column-name\>:\<column-type\>. You may specify only one partition column. The JDBC connector supports `date`, `int`, and `enum` \<column-type\> values. If you do not identify a `PARTITION_BY` column, a single PXF instance services the read request. |
+| RANGE | Read | Required when `PARTITION_BY` is specified. The query range; its format is dependent upon the data type of the partition column. When the partition column is an `enum` type, `RANGE` must specify a list of values, \<value\>:\<value\>[:\<value\>[...]], each of which forms its own fragment. If the partition column is an `int` or `date` type, `RANGE` must specify \<start-value\>:\<end-value\> and represents the closed interval from \<start-value\> through \<end-value\>, inclusive. If the partition column is a `date` type, use the `yyyy-MM-dd` date format. |
+| INTERVAL | Read | Required when `PARTITION_BY` is specified and of the `int` or `date` type. The interval, \<interval-value\>[:\<interval-unit\>], of one fragment. Specify the size of the fragment in \<interval-value\>. If the partition column is a `date` type, use the \<interval-unit\> to specify `year`, `month`, or `day`. PXF ignores `INTERVAL` when the `PARTITION_BY` column is of the `enum` type. |
 | QUOTE_COLUMNS | Read | Controls whether PXF should quote column names when constructing an SQL query to the external database. Specify `true` to force PXF to quote all column names; PXF does not quote column names if any other value is provided. If `QUOTE_COLUMNS` is not specified (the default), PXF automatically quotes *all* column names in the query when *any* column name:<br>- includes special characters, or <br>- is mixed case and the external database does not support unquoted mixed case identifiers. |
 
 
@@ -144,17 +144,30 @@ The PXF JDBC connector supports simultaneous read access from PXF instances runn
 
 PXF uses the `RANGE` and `INTERVAL` values and the `PARTITON_BY` column that you specify to assign specific data rows in the external table to PXF instances running on the Greenplum Database segment hosts. This column selection is specific to PXF processing, and has no relationship to a partition column that you may have specified for the table in the external SQL database.
 
-When you enable partitioning, the PXF JDBC connector splits a `SELECT` query into a set of small queries, each of which is called a fragment. The JDBC connector automatically adds extra query constraints (`WHERE` expressions) to each fragment to guarantee that every tuple of data is retrieved from the external database exactly once.
-
-When you specify the `PARTITION_BY` option, tune the `INTERVAL` value and unit based upon the optimal number of JDBC connections to the target database and the optimal distribution of external data across Greenplum Database segments. The `INTERVAL` low boundary is driven by the number of Greenplum Database segments while the high boundary is driven by the acceptable number of JDBC connections to the target database. The `INTERVAL` setting influences the number of fragments, and should ideally not be set too high nor too low. Testing with multiple values may help you select the optimal settings. 
 
 Example JDBC \<custom-option\> substrings that identify partitioning parameters:
 
 ``` pre
+&PARTITION_BY=id:int&RANGE=1:100&INTERVAL=5
 &PARTITION_BY=year:int&RANGE=2011:2013&INTERVAL=1
 &PARTITION_BY=createdate:date&RANGE=2013-01-01:2016-01-01&INTERVAL=1:month
 &PARTITION_BY=color:enum&RANGE=red:yellow:blue
 ```
+
+When you enable partitioning, the PXF JDBC connector splits a `SELECT` query into a set of small queries, each of which is called a fragment. The JDBC connector automatically adds extra query constraints (`WHERE` expressions) to each fragment to guarantee that every tuple of data is retrieved from the external database exactly once.
+
+For example, when a user `SELECT`s a PXF external table created with a `LOCATION` clause that specifies `&PARTITION_BY=id:int&RANGE=1:5&INTERVAL=2`, PXF generates 5 fragments: two according to the partition settings and up to three implicitly generated fragments. The constraints associated with each fragment are as follows:
+
+- Fragment 1: WHERE (id < 1) - implicitly-generated fragment for RANGE start-bounded interval
+- Fragment 2: WHERE (id >= 1) AND (id < 3) - fragment specified by partition settings
+- Fragment 3: WHERE (id >= 3) AND (id < 5) - fragment specified by partition settings
+- Fragment 4: WHERE (id >= 5) - implicitly-generated fragment for RANGE end-bounded interval
+- Fragment 5: WHERE (id IS NULL) - implicitly-generated fragment
+
+PXF distributes the fragments among Greenplum Database segments. A PXF instance running on a segment host spawns a thread for each segment on that host that services a fragment. If the number of fragments is less than or equal to the number of Greenplum segments configured on a segment host, a single PXF instance may service all of the fragments. Each PXF instance sends its results back to Greenplum Database, where they are collected and returned to the user.
+
+When you specify the `PARTITION_BY` option, tune the `INTERVAL` value and unit based upon the optimal number of JDBC connections to the target database and the optimal distribution of external data across Greenplum Database segments. The `INTERVAL` low boundary is driven by the number of Greenplum Database segments while the high boundary is driven by the acceptable number of JDBC connections to the target database. The `INTERVAL` setting influences the number of fragments, and should ideally not be set too high nor too low. Testing with multiple values may help you select the optimal settings. 
+
 
 ### <a id="jdbc_example_postgresql"></a>Example: Reading From and Writing to a PostgreSQL Table
 
