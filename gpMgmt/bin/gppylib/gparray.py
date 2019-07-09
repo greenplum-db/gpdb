@@ -21,7 +21,7 @@ import traceback
 from gppylib.utils import checkNotNone, checkIsInt
 from gppylib    import gplog
 from gppylib.db import dbconn
-from gppylib.gpversion import GpVersion
+from gppylib.gpversion import GpVersion, MAIN_VERSION
 from gppylib.commands.unix import *
 import os
 
@@ -962,6 +962,8 @@ class GpArray:
         for row in dbconn.execSQL(conn, "SELECT version()"):
             version_str = row[0]
         version = GpVersion(version_str)
+        if not version.isVersionCurrentRelease():
+            raise Exception("Cannot connect to GPDB version %s from installed version %s"%(version.getVersionRelease(), MAIN_VERSION[0]))
 
         config_rows = dbconn.execSQL(conn, '''
         SELECT dbid, content, role, preferred_role, mode, status,
