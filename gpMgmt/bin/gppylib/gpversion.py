@@ -18,8 +18,7 @@ if sys.version_info < (2, 5, 0) or sys.version_info >= (3, 0, 0):
                      % os.path.split(__file__)[-1])
     sys.exit(1)
 
-
-MAIN_VERSION = [5,99,99]    # version number for main
+MAIN_VERSION = [6,99,99]    # version number for main
 
 
 #============================================================
@@ -48,8 +47,9 @@ class GpVersion:
                 '4.1',
                 '4.2',
                 '4.3',
-                '5'
-              ]
+                '5',
+                '6'
+    ]
 
     #------------------------------------------------------------
     def __init__(self, version):
@@ -178,9 +178,9 @@ class GpVersion:
 
 
         # If part of the conversion process above failed, throw an error,
-        except:
-            raise StandardError("Unrecognised Greenplum Version '%s'" % 
-                                str(version))
+        except Exception as e:
+            raise StandardError("Unrecognised Greenplum Version '%s' due to %s" %
+                                (str(version), str(e)))
 
     #------------------------------------------------------------
     def __cmp__(self, other):
