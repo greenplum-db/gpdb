@@ -1,5 +1,4 @@
-#!/usr/bin/bash
-
+# This bash script is internally used by sslinfo test
 function sslinfo_prepare() {
 echo "Enable SSL in postgresql.conf with master only..."
 standby_data=`gpstate -f | sed -n '/Standby data directory/s/.*Standby data directory\s\+=\s*//p'`
