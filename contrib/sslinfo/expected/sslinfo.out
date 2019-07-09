@@ -1,4 +1,4 @@
-\! bash tools.bash prepare
+\! bash config.bash prepare
 Enable SSL in postgresql.conf with master only...
 preparing CRTs and KEYs
 -- start_ignore
@@ -122,7 +122,7 @@ SELECT ssl_issuer_field('OU') AS issuer_OU;
 (1 row)
 
 DROP EXTENSION sslinfo;
-\! bash tools.bash clean
+\! bash config.bash clean
 restore SSL in postgresql.conf with master only
 -- start_ignore
 -- end_ignore

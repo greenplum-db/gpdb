@@ -1,4 +1,4 @@
-\! bash tools.bash prepare
+\! bash config.bash prepare
 -- start_ignore
 \! gpstop -arf
 -- end_ignore
@@ -30,7 +30,7 @@ SELECT ssl_issuer_field('OU') AS issuer_OU;
 
 DROP EXTENSION sslinfo;
 
-\! bash tools.bash clean
+\! bash config.bash clean
 -- start_ignore
 \! gpstop -arf
 -- end_ignore
