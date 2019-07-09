@@ -9,7 +9,7 @@
 
 \connect regression
 
-DROP VIEW IF EXISTS distinct_windowagg_view;
+DROP VIEW IF EXISTS olap_window_seq.distinct_windowagg_view;
 
 -- start_ignore
 -- This table exists to make sure that toast tables of different chunk sizes are

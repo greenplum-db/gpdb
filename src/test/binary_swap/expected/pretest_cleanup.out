@@ -7,7 +7,7 @@
 -- For these cases, drop the offending tables/features/etc. in this file, which
 -- runs before the rest of the binary swap tests.
 \connect regression
-DROP VIEW IF EXISTS distinct_windowagg_view;
+DROP VIEW IF EXISTS olap_window_seq.distinct_windowagg_view;
 -- start_ignore
 -- This table exists to make sure that toast tables of different chunk sizes are
 -- handled by GPDB. Early versions of the 5.x server will fail to dump this
