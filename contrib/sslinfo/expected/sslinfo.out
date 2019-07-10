@@ -13,16 +13,16 @@ SELECT ssl_is_used();
  t
 (1 row)
 
-SELECT ssl_version();
- ssl_version 
--------------
- TLSv1.2
+SELECT ssl_version() like 'TLSv%' AS version;
+ version 
+---------
+ t
 (1 row)
 
-SELECT ssl_cipher();
-         ssl_cipher          
------------------------------
- ECDHE-RSA-AES256-GCM-SHA384
+SELECT ssl_cipher() IS NOT NULL AS cipher_ok;
+ cipher_ok 
+-----------
+ t
 (1 row)
 
 SELECT ssl_client_cert_present();
