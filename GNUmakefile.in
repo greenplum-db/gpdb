@@ -26,6 +26,7 @@ all:
 	$(MAKE) -C contrib/pg_xlogdump all
 	$(MAKE) -C contrib/hstore all
 	$(MAKE) -C contrib/pgcrypto all
+	$(MAKE) -C contrib/sslinfo all
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
 	$(MAKE) -C gpAux/platform all
@@ -61,6 +62,7 @@ install:
 	$(MAKE) -C contrib/pg_xlogdump $@
 	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
+	$(MAKE) -C contrib/sslinfo $@
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
@@ -152,6 +154,7 @@ $(call recurse,installcheck-world, \
 			   contrib/indexscan \
 			   contrib/hstore \
 			   contrib/pgcrypto \
+			   contrib/sslinfo \
 			   gpcontrib \
 			   src/bin/ \
 			   gpMgmt/bin,installcheck)
