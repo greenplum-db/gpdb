@@ -144,11 +144,10 @@ $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib src/bin g
 # which probably indicates that we're relying on undefined behavior... we should
 # probably pull anything order-dependent out of recurse() and back into the
 # recipe body).
-# GPDB_94_MERGE_FIXME: We should stop listing each contrib module here separately.
-ICW_TARGETS = src/test src/pl src/interfaces/gppc
-ICW_TARGETS += contrib/auto_explain contrib/dblink contrib/extprotocol
-ICW_TARGETS += contrib/file_fdw contrib/formatter_fixedwidth
-ICW_TARGETS += contrib/hstore contrib/indexscan contrib/pgcrypto
+ICW_TARGETS  = src/test src/pl src/interfaces/gppc
+ICW_TARGETS += contrib/auto_explain contrib/file_fdw contrib/formatter_fixedwidth
+ICW_TARGETS += contrib/extprotocol contrib/dblink
+ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto
 # sslinfo depends on openssl
 ifeq ($(with_openssl), yes)
 ICW_TARGETS += contrib/sslinfo
