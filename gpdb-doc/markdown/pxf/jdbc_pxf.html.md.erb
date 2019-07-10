@@ -154,9 +154,9 @@ Example JDBC \<custom-option\> substrings that identify partitioning parameters:
 &PARTITION_BY=color:enum&RANGE=red:yellow:blue
 ```
 
-When you enable partitioning, the PXF JDBC connector splits a `SELECT` query into a set of small queries, each of which is called a fragment. The JDBC connector automatically adds extra query constraints (`WHERE` expressions) to each fragment to guarantee that every tuple of data is retrieved from the external database exactly once.
+When you enable partitioning, the PXF JDBC connector splits a `SELECT` query into a set of smaller queries, each of which is called a fragment. The JDBC connector automatically adds extra query constraints (`WHERE` expressions) to each fragment to guarantee that every tuple of data is retrieved from the external database exactly once.
 
-For example, when a user `SELECT`s a PXF external table created with a `LOCATION` clause that specifies `&PARTITION_BY=id:int&RANGE=1:5&INTERVAL=2`, PXF generates 5 fragments: two according to the partition settings and up to three implicitly generated fragments. The constraints associated with each fragment are as follows:
+For example, when a user queries a PXF external table created with a `LOCATION` clause that specifies `&PARTITION_BY=id:int&RANGE=1:5&INTERVAL=2`, PXF generates 5 fragments: two according to the partition settings and up to three implicitly generated fragments. The constraints associated with each fragment are as follows:
 
 - Fragment 1: WHERE (id < 1) - implicitly-generated fragment for RANGE start-bounded interval
 - Fragment 2: WHERE (id >= 1) AND (id < 3) - fragment specified by partition settings
