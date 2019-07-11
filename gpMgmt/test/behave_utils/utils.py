@@ -778,6 +778,9 @@ def wait_for_unblocked_transactions(context, num_retries=150):
         try:
             with dbconn.connect(dbconn.DbURL()) as conn:
                 # Cursor.execute() will issue an implicit BEGIN for us.
+                # Empty block of 'BEGIN' and 'END' won't start a distributed transaction,
+                # execute a DDL query to start a distributed transaction.
+                conn.cursor().execute('CREATE TEMP TABLE temp_test(a int)')
                 conn.cursor().execute('COMMIT')
                 break
         except Exception as e:
