@@ -203,6 +203,9 @@ CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tables
 -- And we create a database in the source tablespace
 CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
 
+-- And we ensure that the mirrors have applied the filesystem changes for CREATE DATABASE
+SELECT force_mirrors_to_catch_up();
+
 -- And we record the filesystem state for the database in the source tablespace
 CREATE TEMPORARY TABLE before_alter AS SELECT * FROM stat_db_objects('alter_db', 'adst_source_tablespace');
 
@@ -256,6 +259,9 @@ CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tables
 
 -- And we create a database in the source tablespace
 CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
+
+-- And we ensure that the mirrors have applied the filesystem changes for CREATE DATABASE
+SELECT force_mirrors_to_catch_up();
 
 -- And we record the filesystem state for the database in the source tablespace
 CREATE TEMPORARY TABLE before_alter AS SELECT * FROM stat_db_objects('alter_db', 'adst_source_tablespace');
@@ -317,6 +323,9 @@ CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tables
 -- And we create a database in the source tablespace
 CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
 
+-- And we ensure that the mirrors have applied the filesystem changes for CREATE DATABASE
+SELECT force_mirrors_to_catch_up();
+
 -- And we record the filesystem state for the database in the source tablespace
 CREATE TEMPORARY TABLE before_alter AS SELECT * FROM stat_db_objects('alter_db', 'adst_source_tablespace');
 
@@ -376,6 +385,9 @@ CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tables
 
 -- And we create a database in the source tablespace
 CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
+
+-- And we ensure that the mirrors have applied the filesystem changes for CREATE DATABASE
+SELECT force_mirrors_to_catch_up();
 
 -- And we record the filesystem state for the database in the source tablespace
 CREATE TEMPORARY TABLE before_alter AS SELECT * FROM stat_db_objects('alter_db', 'adst_source_tablespace');
@@ -439,6 +451,9 @@ CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tables
 -- And we create a database in the source tablespace
 CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
 
+-- And we ensure that the mirrors have applied the filesystem changes for CREATE DATABASE
+SELECT force_mirrors_to_catch_up();
+
 -- And we record the filesystem state for the database in the source tablespace
 CREATE TEMPORARY TABLE before_alter AS SELECT * FROM stat_db_objects('alter_db', 'adst_source_tablespace');
 
@@ -498,6 +513,9 @@ CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tables
 
 -- And we create a database in the source tablespace
 CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
+
+-- And we ensure that the mirrors have applied the filesystem changes for CREATE DATABASE
+SELECT force_mirrors_to_catch_up();
 
 -- And we record the filesystem state for the database in the source tablespace
 CREATE TEMPORARY TABLE before_alter AS SELECT * FROM stat_db_objects('alter_db', 'adst_source_tablespace');
@@ -561,6 +579,9 @@ CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tables
 -- And we create a database in the source tablespace
 CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
 
+-- And we ensure that the mirrors have applied the filesystem changes for CREATE DATABASE
+SELECT force_mirrors_to_catch_up();
+
 -- And we record the filesystem state for the database in the source tablespace
 CREATE TEMPORARY TABLE before_alter AS SELECT * FROM stat_db_objects('alter_db', 'adst_source_tablespace');
 
@@ -619,6 +640,9 @@ CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tables
 
 -- And we create a database in the source tablespace
 CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
+
+-- And we ensure that the mirrors have applied the filesystem changes for CREATE DATABASE
+SELECT force_mirrors_to_catch_up();
 
 -- And we record the filesystem state for the database in the source tablespace
 -- Note: We can't use a temporary table as PANICS wipe them out
@@ -682,6 +706,9 @@ CREATE TABLESPACE adst_destination_tablespace LOCATION :'adst_destination_tables
 
 -- And we create a database in the source tablespace
 CREATE DATABASE alter_db TABLESPACE adst_source_tablespace;
+
+-- And we ensure that the mirrors have applied the filesystem changes for CREATE DATABASE
+SELECT force_mirrors_to_catch_up();
 
 -- And we record the filesystem state for the database in the source tablespace
 CREATE TABLE before_alter AS SELECT * FROM stat_db_objects('alter_db', 'adst_source_tablespace');
