@@ -2,7 +2,7 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map title="Additional Supplied Modules">
   <topicref href="intro.xml" navtitle="Additional Supplied Modules">
-    <topicref href="auto-explain.xml"/>
+    <topicref href="auto-explain.xml" linking="none"/>
     <topicref href="citext.xml" linking="none"/>
     <topicref href="dblink.xml" linking="none"/>
     <topicref href="diskquota.xml" linking="none"/>

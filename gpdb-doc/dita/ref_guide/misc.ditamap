@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map title="Features, Keywords, and Compliance">
+  <topicref href="misc.xml" navtitle="SQL Features, Reserved Key Words, and Compliance in Greenplum">
+    <topicref href="feature_summary.xml" navtitle="Summary of Greenplum Features"
+                        id="feature_summary" linking="none"/>
+    <topicref href="sql-keywords.xml" navtitle="Reserved Identifiers and SQL Keywords" id="sql_keywords" linking="none"/>
+    <topicref href="SQL2008_support.xml" linking="none"/>
+  </topicref>
+</map>

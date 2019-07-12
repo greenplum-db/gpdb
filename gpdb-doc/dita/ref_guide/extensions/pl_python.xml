@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="pw216155">Greenplum PL/Python Language Extension</title>
+  <title id="pw216155">Greenplum PL/Python Language</title>
   <body>
     <p>This section contains an overview of the Greenplum Database PL/Python Language.</p>
     <ul>
