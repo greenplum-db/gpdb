@@ -17,6 +17,7 @@ test: instr_in_shmem_cleanup
 test: vacuum_full_recently_dead_tuple_due_to_distributed_snapshot
 test: resync_xlog_hints
 test: invalidated_toast_index
+test: dml_on_root_locks_all_parts
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).

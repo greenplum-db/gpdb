@@ -1505,12 +1505,12 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 	{
 		List 	*all_relids = NIL;
 		Oid		relid = getrelid(linitial_int(plannedstmt->resultRelations), rangeTable);
-		bool	containRoot = true;
+		bool	is_child_partition = false;
 
 		if (rel_is_child_partition(relid))
 		{
 			relid = rel_partition_get_master(relid);
-			containRoot = false;
+			is_child_partition = true;
 		}
 
 		estate->es_result_partitions = BuildPartitionNodeFromRoot(relid);
@@ -1523,29 +1523,38 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 								 all_partition_relids(estate->es_result_partitions));
 
 		/*
-		 * For partition table, INSERT plan only contains the root table
-		 * in the result relations, whereas DELETE and UPDATE contain
-		 * both root table and the partition tables.
+		 * For partitioned tables, in case of DELETE/UPDATE or INSERT
+		 * operation on the root table, we must acquire ExclusiveLock or
+		 * RowExclusiveLock respectively on the root and leaf
+		 * partitions, so that any other operation requesting lock
+		 * higher than AccessShareLock and ShareLock must wait on QD.
+		 * For example AO VACUUM should be blocked by the lock on the
+		 * partition table on QD taken by the DML statements, otherwise,
+		 * this leads to inconsistent segfile state between QD and QE,
+		 * and it will fail the next operation on the same segfile.
 		 *
-		 * INSERT needs to explicitly lock the partition tables here on
-		 * QD, otherwise if AppendOnly VACUUM drop phase runs
-		 * concurrently and with perfect timing, AO VACUUM may finish
-		 * successfully on QD but skip the drop phase on QE because
-		 * INSERT is holding an RowExclusiveLock on the partition table
-		 * on QE. This leads to inconsistent segfile state between QD
-		 * and QE, and it will fail the next operation on the same
-		 * segfile. Hence locking the partition tables on QD as well to
-		 * prevent this edge case.
+		 * resultRelations may not have all the entries including the
+		 * root and leaf partition tables, so explicitly acquire locks
+		 * on all the tables.  For example: INSERT / DELETE / UPDATE
+		 * plans on Partitioned tables produced by ORCA only has the
+		 * root table info in resultRelations. Similarly, INSERT plans
+		 * produced by planner only has the root table info as well.
 		 */
-		if (operation == CMD_INSERT && containRoot)
+		if (!is_child_partition && (operation == CMD_UPDATE || operation == CMD_DELETE || operation == CMD_INSERT))
 		{
+			// On QD, the lockmode is RowExclusiveLock
+			Assert(lockmode == RowExclusiveLock);
+			if (operation == CMD_UPDATE || operation == CMD_DELETE)
+			{
+				lockmode = ExclusiveLock;
+			}
 			foreach(l, all_relids)
 			{
 				Oid	relid = lfirst_oid(l);
-				LockRelationOid(relid, RowExclusiveLock);
+				LockRelationOid(relid, lockmode);
 			}
 		}
-		
+
         /* 
          * We also assign a segno for a deletion operation.
          * That segno will later be touched to ensure a correct
