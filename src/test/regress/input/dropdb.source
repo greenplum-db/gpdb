@@ -1,0 +1,165 @@
+-- start_ignore
+\! gpconfig -c create_restartpoint_on_chpt_record_replay -v on --skipvalidation;
+\! gpstop -u;
+create language plpythonu;
+-- end_ignore
+
+--list all database oid relevant directories in all node(master, segments, mirrors, etc.)
+CREATE OR REPLACE FUNCTION db_dirs(dboid oid) RETURNS setof text
+  STRICT STABLE LANGUAGE plpythonu
+as $$
+import os
+bash_cmd = "find " + os.getcwd() + "/../../ " + "-name %d -type d"
+p = os.popen(bash_cmd % dboid)
+return p.readlines()
+$$;
+
+--this group udf help test case wait mirror cacheup
+CREATE OR REPLACE FUNCTION insert_noop_xlog_record_master() RETURNS VOID AS
+'@abs_builddir@/regress.so', 'insert_noop_xlog_record'
+    LANGUAGE C EXECUTE ON MASTER;
+CREATE OR REPLACE FUNCTION insert_noop_xlog_record_all_segments() RETURNS SETOF VOID AS
+'@abs_builddir@/regress.so', 'insert_noop_xlog_record'
+    LANGUAGE C EXECUTE ON ALL SEGMENTS;
+CREATE OR REPLACE FUNCTION insert_noop_xlog_record() RETURNS VOID AS $$
+BEGIN
+    PERFORM insert_noop_xlog_record_master();
+    PERFORM insert_noop_xlog_record_all_segments();
+END;
+$$LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION force_mirrors_to_catch_up() RETURNS VOID AS $$
+BEGIN
+    PERFORM gp_inject_fault2('after_xlog_redo_noop', 'sleep', dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
+    PERFORM insert_noop_xlog_record();
+    PERFORM gp_wait_until_triggered_fault2('after_xlog_redo_noop', 1, dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
+    PERFORM gp_inject_fault2('after_xlog_redo_noop', 'reset', dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
+END;
+$$ LANGUAGE plpgsql;
+
+create database db100;
+\! psql -d db100 -c "create table test1(a int, b text)"
+\! psql -d db100 -c "insert into test1 values (1, '111'), (2, '222'), (3, '333')"
+
+
+
+--
+--CASE 1: error on segment after XLOG_DBASE_DROP
+--
+--reset status
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
+
+select gp_inject_fault2('after_xlog_dbase_drop', 'error', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+
+-- should fail
+drop database db100;
+-- Wait until replay_location = flush_location.
+select force_mirrors_to_catch_up();
+select count(*) from pg_database where datname='db100';
+\! psql -d db100 -c "select * from test1"
+select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
+
+
+
+--
+--CASE 2: error on master after XLOG_DBASE_DROP
+--
+--reset status
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
+
+select gp_inject_fault2('after_xlog_dbase_drop', 'error', dbid, hostname, port)
+from gp_segment_configuration where content=-1 and role='p';
+
+-- should fail
+drop database db100;
+-- Wait until replay_location = flush_location.
+select force_mirrors_to_catch_up();
+select count(*) from pg_database where datname='db100';
+\! psql -d db100 -c "select * from test1"
+select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
+
+
+
+--
+--CASE 3: error on segment before XLOG_XACT_PREPARED
+--
+--reset status
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
+
+select gp_inject_fault2('before_xlog_xact_prepare', 'error', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+
+-- should fail
+drop database db100;
+-- Wait until replay_location = flush_location.
+select force_mirrors_to_catch_up();
+select count(*) from pg_database where datname='db100';
+\! psql -d db100 -c "select * from test1"
+select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
+
+
+
+--
+--CASE 4: panic on segment before XLOG_XACT_PREPARED
+--
+--reset status
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
+
+select gp_inject_fault2('before_xlog_xact_prepare', 'panic', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+
+-- should fail
+drop database db100;
+-- Wait until replay_location = flush_location.
+select force_mirrors_to_catch_up();
+select count(*) from pg_database where datname='db100';
+\! psql -d db100 -c "select * from test1"
+select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
+
+
+
+--
+--CASE 5: panic on segment after XLOG_XACT_PREPARED_FLUSHED
+--
+--reset status
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
+
+select gp_inject_fault2('after_xlog_xact_prepare_flushed', 'panic', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+
+-- should fail
+drop database db100;
+-- Wait until replay_location = flush_location.
+select force_mirrors_to_catch_up();
+select count(*) from pg_database where datname='db100';
+\! psql -d db100 -c "select * from test1"
+select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
+
+
+
+--
+--CASE 6: panic on segment after XLOG_XACT_PREPARED_FLUSHED
+--
+--reset status
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
+
+select gp_inject_fault2('before_xlog_xact_commit_prepared', 'panic', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+
+-- failed, retry and success
+drop database db100;
+-- Wait until replay_location = flush_location.
+select force_mirrors_to_catch_up();
+select count(*) from pg_database where datname='db100';
+\! psql -d db100 -c "select * from test1"
+set gp_select_invisible to on;
+select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
+set gp_select_invisible to off;
+
+
+
+-- start_ignore
+select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
+\! gpconfig -r create_restartpoint_on_chpt_record_replay --skipvalidation;
+\! gpstop -u;
+-- end_ignore

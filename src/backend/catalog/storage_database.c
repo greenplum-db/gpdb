@@ -6,6 +6,7 @@
 #include "common/relpath.h"
 #include "utils/faultinjector.h"
 #include "storage/lmgr.h"
+#include "pgstat.h"
 
 typedef struct PendingDbDelete
 {
@@ -44,6 +45,7 @@ DoPendingDbDeletes(bool isCommit)
 {
 	PendingDbDelete *pending;
 	PendingDbDelete *next;
+	Oid db_id = InvalidOid;
 
 	for (pending = pendingDbDeletes; pending != NULL; pending = next)
 	{
@@ -54,6 +56,16 @@ DoPendingDbDeletes(bool isCommit)
 		if (pending->atCommit == isCommit)
 			dropDatabaseDirectory(&pending->dbDirNode,
 								  false);
+
+		/* isCommit is true for drop a database, so clean buffer manager on commit stage also */
+		if(isCommit && db_id != pending->dbDirNode.database)
+		{
+			db_id = pending->dbDirNode.database;
+
+			DropDatabaseBuffers(db_id);
+			/* Tell the stats collector to forget it immediately, too. */
+			pgstat_drop_database(db_id);
+		}
 
 		pfree(pending);
 	}

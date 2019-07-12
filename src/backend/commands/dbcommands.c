@@ -963,18 +963,6 @@ dropdb(const char *dbname, bool missing_ok)
 	 */
 	dropDatabaseDependencies(db_id);
 
-	/*
-	 * Drop pages for this database that are in the shared buffer cache. This
-	 * is important to ensure that no remaining backend tries to write out a
-	 * dirty buffer to the dead database later...
-	 */
-	DropDatabaseBuffers(db_id);
-
-	/*
-	 * Tell the stats collector to forget it immediately, too.
-	 */
-	pgstat_drop_database(db_id);
-	
 	/* MPP-6929: metadata tracking */
 	if (Gp_role == GP_ROLE_DISPATCH)
 		MetaTrackDropObject(DatabaseRelationId, db_id);
@@ -1951,10 +1939,8 @@ remove_dbtablespaces(Oid db_id)
 			continue;
 		}
 
-		if (!rmtree(dstpath, true))
-			ereport(WARNING,
-					(errmsg("some useless files may be left behind in old database directory \"%s\"",
-							dstpath)));
+		/* physically delete data files on commit stage */
+		ScheduleDbDirDelete(db_id, dsttablespace, true /* forCommit */);
 
 		/* Record the filesystem change in XLOG */
 		{
@@ -1971,6 +1957,8 @@ remove_dbtablespaces(Oid db_id)
 
 			(void) XLogInsert(RM_DBASE_ID, XLOG_DBASE_DROP, rdata);
 		}
+
+		SIMPLE_FAULT_INJECTOR("after_xlog_dbase_drop");
 
 		pfree(dstpath);
 	}
@@ -2204,9 +2192,6 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 	else if (info == XLOG_DBASE_DROP)
 	{
 		xl_dbase_drop_rec *xlrec = (xl_dbase_drop_rec *) XLogRecGetData(record);
-		char	   *dst_path;
-
-		dst_path = GetDatabasePath(xlrec->db_id, xlrec->tablespace_id);
 
 		if (InHotStandby)
 		{
@@ -2220,20 +2205,13 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 			ResolveRecoveryConflictWithDatabase(xlrec->db_id);
 		}
 
-		/* Drop pages for this database that are in the shared buffer cache */
-		DropDatabaseBuffers(xlrec->db_id);
-
 		/* Also, clean out any fsync requests that might be pending in md.c */
 		ForgetDatabaseFsyncRequests(xlrec->db_id);
 
 		/* Clean out the xlog relcache too */
 		XLogDropDatabase(xlrec->db_id);
 
-		/* And remove the physical files */
-		if (!rmtree(dst_path, true))
-			ereport(WARNING,
-					(errmsg("some useless files may be left behind in old database directory \"%s\"",
-							dst_path)));
+		ScheduleDbDirDelete(xlrec->db_id, xlrec->tablespace_id, true /* forCommit */);
 
 		if (InHotStandby)
 		{
