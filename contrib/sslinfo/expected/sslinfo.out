@@ -13,9 +13,9 @@ SELECT ssl_is_used();
  t
 (1 row)
 
-SELECT ssl_version() like 'TLSv%' AS version;
- version 
----------
+SELECT ssl_version() IS NOT NULL AS version_ok;
+ version_ok 
+------------
  t
 (1 row)
 
