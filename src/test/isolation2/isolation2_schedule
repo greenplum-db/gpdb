@@ -1,6 +1,7 @@
 test: lockmodes
 
 test: ao_partition_lock
+test: dml_on_root_locks_all_parts
 
 test: select_dropped_table
 # test update hash col under utility mode
@@ -28,6 +29,10 @@ ignore: gdd/non-lock-107
 test: gdd/avoid-qd-deadlock
 test: gdd/prepare-for-local
 test: gdd/local-deadlock-03
+test: gdd/delete-deadlock-root-leaf-concurrent-op
+test: gdd/planner_insert_while_vacuum_drop
+test: gdd/update-deadlock-root-leaf-concurrent-op
+test: gdd/dml_locks_only_targeted_table_in_query
 # gdd end
 test: gdd/end
 

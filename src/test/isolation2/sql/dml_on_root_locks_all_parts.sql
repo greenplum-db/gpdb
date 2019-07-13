@@ -1,0 +1,50 @@
+-- For partitioned tables if a DML is run on the root table, we should
+-- take ExclusiveLock on the root and the child partitions. If lock is
+-- not taken on the leaf partition on the QD, there may be issues where
+-- a concurrent DML on the leaf partition may execute first and can cause
+-- issues. For example
+-- 1. It can cause a deadlock between the 2 DML operations.
+--      Consider the below example.
+--      INSERT INTO part_tbl SELECT i, 1, i FROM generate_series(1,1000000)i;
+--      Session 1: BEGIN; DELETE FROM part_tbl; ==> Let's say it holds Exclusive lock on root table only. (not on leaf)
+--      Session 2: BEGIN; DELETE FROM part_tbl where a = 999999 or a = 1; ==> Delete will be dispatched to the segment as there is no lock on QD.
+--      If Session 1, first deletes the tuple a = 1 on segment 0, Session 2 will wait for transaction lock as it attempting to delete the same tuple.
+--      If Session 2, first deletes the tuple a = 999999 on segment 1, Session 1 will wait for transaction lock as it is attempting to delete the same tuple.
+--      This will cause a deadlock.
+--      Note: Same applies to UPDATE as well.
+DROP TABLE IF EXISTS part_tbl;
+CREATE TABLE part_tbl (a int, b int, c int) PARTITION BY RANGE (b) (start(1) end(2) every(1));
+
+INSERT INTO part_tbl SELECT i, 1, i FROM generate_series(1,12)i;
+
+1: BEGIN;
+-- DELETE will acquire Exclusive lock on root and leaf partition on QD.
+1: DELETE FROM part_tbl;
+
+-- Delete must hold an exclusive lock on the leaf partition on QD.
+SELECT GRANTED FROM pg_locks WHERE relation = 'part_tbl_1_prt_1'::regclass::oid AND mode='ExclusiveLock' AND gp_segment_id=-1 AND locktype='relation';
+
+-- DELETE on the leaf partition must wait on the QD as Session 1 already holds ExclusiveLock.
+2&: DELETE FROM part_tbl_1_prt_1 WHERE b = 10;
+SELECT relation::regclass, mode, granted FROM pg_locks WHERE gp_segment_id=-1 AND granted='f';
+
+1: COMMIT;
+2<:
+
+1: BEGIN;
+-- UPDATE will acquire Exclusive lock on root and leaf partition on QD.
+1: UPDATE part_tbl SET c = 1; 
+SELECT GRANTED FROM pg_locks WHERE relation = 'part_tbl_1_prt_1'::regclass::oid AND mode='ExclusiveLock' AND gp_segment_id=-1 AND locktype='relation';
+
+-- UPDATE on leaf must be blocked on QD as previous UPDATE acquires Exclusive lock on the root and the leaf partitions
+2&: UPDATE part_tbl_1_prt_1 set c = 10;
+SELECT relation::regclass, mode, granted FROM pg_locks WHERE gp_segment_id=-1 AND granted='f';
+
+1: COMMIT;
+2<:
+
+1: BEGIN;
+1: INSERT INTO part_tbl SELECT 1,1,1;
+SELECT GRANTED FROM pg_locks WHERE relation = 'part_tbl_1_prt_1'::regclass::oid AND mode='RowExclusiveLock' AND gp_segment_id=-1 AND locktype='relation';
+1: COMMIT;
+DROP TABLE part_tbl;

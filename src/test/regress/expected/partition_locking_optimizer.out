@@ -342,10 +342,19 @@ begin;
 delete from partlockt where i = 4;
 -- Known_opt_diff: MPP-20936
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
- coalesce  |     mode      | locktype |  node  
------------+---------------+----------+--------
- partlockt | ExclusiveLock | relation | master
-(1 row)
+     coalesce      |     mode      | locktype |  node  
+-------------------+---------------+----------+--------
+ partlockt         | ExclusiveLock | relation | master
+ partlockt_1_prt_1 | ExclusiveLock | relation | master
+ partlockt_1_prt_2 | ExclusiveLock | relation | master
+ partlockt_1_prt_3 | ExclusiveLock | relation | master
+ partlockt_1_prt_4 | ExclusiveLock | relation | master
+ partlockt_1_prt_5 | ExclusiveLock | relation | master
+ partlockt_1_prt_6 | ExclusiveLock | relation | master
+ partlockt_1_prt_7 | ExclusiveLock | relation | master
+ partlockt_1_prt_8 | ExclusiveLock | relation | master
+ partlockt_1_prt_9 | ExclusiveLock | relation | master
+(10 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
         coalesce         |       mode       | locktype |    node    
