@@ -2186,13 +2186,13 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"optimizer_dpe_stats", PGC_USERSET, LOGGING_WHAT,
+		{"optimizer_dpe_stats", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable statistics derivation for partitioned tables with dynamic partition elimination."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_dpe_stats,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 	{
