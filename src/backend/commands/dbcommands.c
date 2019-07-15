@@ -973,22 +973,6 @@ dropdb(const char *dbname, bool missing_ok)
 	pgstat_drop_database(db_id);
 
 	/*
-	 * Tell checkpointer to forget any pending fsync and unlink requests for
-	 * files in the database; else the fsyncs will fail at next checkpoint, or
-	 * worse, it will delete files that belong to a newly created database
-	 * with the same OID.
-	 */
-	ForgetDatabaseFsyncRequests(db_id);
-
-	/*
-	 * Force a checkpoint to make sure the checkpointer has received the
-	 * message sent by ForgetDatabaseFsyncRequests. On Windows, this also
-	 * ensures that background procs don't hold any open files, which would
-	 * cause rmdir() to fail.
-	 */
-	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
-
-	/*
 	 * Remove all tablespace subdirs belonging to the database.
 	 */
 	remove_dbtablespaces(db_id);
@@ -2203,27 +2187,9 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 			 */
 			LockSharedObjectForSession(DatabaseRelationId, xlrec->db_id, 0, AccessExclusiveLock);
 			ResolveRecoveryConflictWithDatabase(xlrec->db_id);
-		}
-
-		/* Also, clean out any fsync requests that might be pending in md.c */
-		ForgetDatabaseFsyncRequests(xlrec->db_id);
-
-		/* Clean out the xlog relcache too */
-		XLogDropDatabase(xlrec->db_id);
-
-		ScheduleDbDirDelete(xlrec->db_id, xlrec->tablespace_id, true /* forCommit */);
-
-		if (InHotStandby)
-		{
-			/*
-			 * Release locks prior to commit. XXX There is a race condition
-			 * here that may allow backends to reconnect, but the window for
-			 * this is small because the gap between here and commit is mostly
-			 * fairly small and it is unlikely that people will be dropping
-			 * databases that we are trying to connect to anyway.
-			 */
 			UnlockSharedObjectForSession(DatabaseRelationId, xlrec->db_id, 0, AccessExclusiveLock);
 		}
+
 	}
 	else
 		elog(PANIC, "dbase_redo: unknown op code %u", info);

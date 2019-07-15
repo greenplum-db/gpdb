@@ -233,6 +233,13 @@ from gp_segment_configuration where content=0 and role='p';
  Success:
 (1 row)
 
+select gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
 -- should fail
 drop database db100;
 ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'panic'  (seg0 10.34.49.130:25432 pid=32307)
@@ -287,6 +294,13 @@ from gp_segment_configuration where content=0 and role='p';
  Success:
 (1 row)
 
+select gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
 -- should fail
 drop database db100;
 ERROR:  fault triggered, fault name:'after_xlog_xact_prepare_flushed' fault type:'panic'  (seg0 10.34.49.130:25432 pid=32454)
@@ -335,6 +349,13 @@ select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_co
 (8 rows)
 
 select gp_inject_fault2('before_xlog_xact_commit_prepared', 'panic', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault2 
+------------------
+ Success:
+(1 row)
+
+select gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
  gp_inject_fault2 
 ------------------

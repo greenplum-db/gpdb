@@ -54,18 +54,7 @@ DoPendingDbDeletes(bool isCommit)
 		pendingDbDeletes = next;
 		/* do deletion if called for */
 		if (pending->atCommit == isCommit)
-			dropDatabaseDirectory(&pending->dbDirNode,
-								  false);
-
-		/* isCommit is true for drop a database, so clean buffer manager on commit stage also */
-		if(isCommit && db_id != pending->dbDirNode.database)
-		{
-			db_id = pending->dbDirNode.database;
-
-			DropDatabaseBuffers(db_id);
-			/* Tell the stats collector to forget it immediately, too. */
-			pgstat_drop_database(db_id);
-		}
+			dropDatabaseDirectory(&pending->dbDirNode, false);
 
 		pfree(pending);
 	}
@@ -183,6 +172,12 @@ dropDatabaseDirectory(DbDirNode *deldb, bool isRedo)
 		ereport(WARNING,
 				(errmsg("some useless files may be left behind in old database directory \"%s\"",
 						dbpath)));
+
+	/* Drop pages for this database that are in the shared buffer cache */
+	DropDatabaseBuffers(deldb->database);
+
+	/* Also, clean out any fsync requests that might be pending in md.c */
+	ForgetDatabaseFsyncRequests(deldb->database);
 
 	if (isRedo)
 		XLogDropDatabase(deldb->database);
