@@ -28,6 +28,8 @@ PXF provides two management commands that you can use for initialization:
 - [`pxf cluster init`](ref/pxf-cluster.html) - initialize all PXF service instances in the Greenplum Database cluster
 - [`pxf init`](ref/pxf.html) - initialize the PXF service instance on the current Greenplum Database host
 
+PXF also provides similar `reset` commands that you can use to reset your PXF configuration.
+
 ## <a id="init_pxf"></a> PXF Configuration Properties
 
 PXF supports both internal and user-customizable configuration properties. Initializing PXF generates PXF internal configuration files, setting default properties specific to your configuration. Initializing PXF also generates configuration file templates for user-customizable settings such as custom profiles and PXF runtime and logging settings.
@@ -39,14 +41,14 @@ PXF internal configuration files are located in your Greenplum Database installa
 During initialization, PXF creates the `$PXF_CONF` directory if necessary, and then populates it with subdirectories and template files. Refer to [PXF User Configuration Directories](about_pxf_dir.html#usercfg) for a list of these directories and their contents.
 
 
-### <a id="init-pxf-prereq" class="no-quick-link"></a>Prerequisites
+## <a id="init-pxf-prereq"></a>Prerequisites
 
 Before initializing PXF in your Greenplum Database cluster, ensure that:
 
 - Your Greenplum Database cluster is up and running.
 - You have identified the PXF user configuration directory filesystem location, `$PXF_CONF`, and that the `gpadmin` user has the necessary permissions to create, or write to, this directory.
  
-### <a id="init-pxf-steps" class="no-quick-link"></a>Procedure
+## <a id="init-pxf-steps"></a>Procedure
 
 Perform the following procedure to initialize PXF on each segment host in your Greenplum Database cluster.
 
@@ -65,4 +67,43 @@ Perform the following procedure to initialize PXF on each segment host in your G
     The `init` command creates the PXF web application and initializes the internal PXF configuration. The `init` command also creates the `$PXF_CONF` user configuration directory if it does not exist, and populates the `conf` and `templates` directories with user-customizable configuration templates. If `$PXF_CONF` exists, PXF updates only the `templates` directory.
 
     **Note**: The PXF service runs only on the segment hosts. However,`pxf cluster init` also sets up the PXF user configuration directories on the Greenplum Database master and standby master hosts.
+
+
+## <a id="pxf-reset"></a>Resetting PXF
+
+Should you need to, you can reset PXF to its uninitialized state. You might choose to reset PXF if you specified an incorrect `PXF_CONF` directory, or if you want to start the initialization procedure from scratch.
+
+When you reset PXF, PXF prompts you to confirm the operation. If you confirm, PXF removes the following runtime files and directories (where `PXF_HOME=$GPHOME/pxf`):
+
+- `$PXF_HOME/conf/pxf-private.classpath`
+- `$PXF_HOME/pxf-service`
+- `$PXF_HOME/run`
+
+PXF does not remove the `$PXF_CONF` directory during a reset operation.
+
+You must stop the PXF service instance on a segment host before you can reset PXF on the host.
+
+### <a id="reset-pxf-steps"></a>Procedure
+
+Perform the following procedure to reset PXF on each segment host in your Greenplum Database cluster.
+
+1. Log in to the Greenplum Database master node:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    ```
+
+2. Stop the PXF service instances on each segment host. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster stop
+    ```
+
+3. Reset the PXF service instances on all Greenplum hosts. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster reset
+    ```
+
+**Note**: After you reset PXF, you must (re)initialize and (re)start PXF to use the service again.
 

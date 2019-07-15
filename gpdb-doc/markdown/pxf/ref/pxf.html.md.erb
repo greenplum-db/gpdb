@@ -16,6 +16,7 @@ where \<command\> is:
 cluster
 help
 init
+reset
 restart
 start
 status
@@ -28,11 +29,11 @@ version
 
 The `pxf` utility manages the PXF configuration and the PXF service instance on the local Greenplum Database host.
 
-You can initialize PXF on the master, master standby, or a specific segment host. You can also synchronize the PXF configuration from the master to these hosts.
+You can initialize or reset PXF on the master, master standby, or a specific segment host. You can also synchronize the PXF configuration from the master to these hosts.
 
 You can start, stop, or restart the PXF service instance on a specific segment host, or display the status of the PXF service instance running on a segment host.
 
-(Use the [`pxf cluster`](pxf-cluster.html#topic1) command to initialize PXF on all hosts, synchronize the PXF configuration to the Greenplum Database cluster, or to start, stop, or display the status of the PXF service instance on all segment hosts in the cluster.)
+(Use the [`pxf cluster`](pxf-cluster.html#topic1) command to initialize or reset PXF on all hosts, synchronize the PXF configuration to the Greenplum Database cluster, or to start, stop, or display the status of the PXF service instance on all segment hosts in the cluster.)
 
 ## <a id="commands"></a>Commands
 
@@ -44,6 +45,9 @@ You can start, stop, or restart the PXF service instance on a specific segment h
 
 <dt>init</dt>
 <dd>Initialize the PXF service instance on the host. When you initialize PXF, you must identify the PXF user configuration directory via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF prompts you to accept or decline the default user configuration directory, `$HOME/pxf`, during the initialization process. See [Options](pxf.html#options).</dd>
+
+<dt>reset</dt>
+<dd>Reset the PXF service instance running on the host. Resetting removes PXF runtime files and directories, and returns PXF to an uninitialized state. You must stop the PXF service instance running on a segment host before you reset PXF on the host.</dd>
 
 <dt>restart</dt>
 <dd>Restart the PXF service instance running on the segment host.</dd>
@@ -69,6 +73,11 @@ The `pxf init` command takes the following option:
 
 <dt>-y </dt>
 <dd>Do not prompt, use the default `$PXF_CONF` directory location if the environment variable is not set.</dd>
+
+The `pxf reset` command takes the following option:
+
+<dt>-f | --force </dt>
+<dd>Do not prompt before resetting the PXF service instance; reset without user interaction.</dd>
 
 The `pxf sync` command, run on the Greenplum Database master host, takes the following option:
 
