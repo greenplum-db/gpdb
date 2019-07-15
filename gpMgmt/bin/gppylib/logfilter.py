@@ -693,21 +693,20 @@ def MatchColumns(iterable, cols):
 
     # Yield items in which a match is found for the 'include' pattern.
     for item in iterable:
-        if 1:
-            #print "item\n%s\nitem" % item
-            ret = []
-            for s in item:
-                n = 1
-                out = []
-                
-                for c in s.split('|'):
-                    if n in cols:
-                        out.append(c)
-                    n += 1
-                if len(out):
-                    #print out
-                    ret.append('|'.join(out) + "\n")
-            yield ret
+        #print "item\n%s\nitem" % item
+        ret = []
+        for s in item:
+            n = 1
+            out = []
+            
+            for c in s.split('|'):
+                if n in cols:
+                    out.append(c)
+                n += 1
+            if len(out):
+                #print out
+                ret.append('|'.join(out) + "\n")
+        yield ret
 
 #-------------------------------- Slicing --------------------------------
 
