@@ -1546,7 +1546,7 @@ jobs:
         - task: gpinitsystem
           file: ccp_src/ci/tasks/gpinitsystem.yml
         - task: [[ test.name ]]_concourse_cluster_tests
-          file: gpdb_src/concourse/tasks/run_behave.yml
+          file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
           image: ccp-image
           params:
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster
@@ -1701,7 +1701,7 @@ jobs:
     image: ccp-image
     input_mapping: {sqldump: icw_gporca_centos6_dump}
   - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
+    file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
     params:
       BEHAVE_FLAGS: --tags=gpexpand
     image: ccp-image

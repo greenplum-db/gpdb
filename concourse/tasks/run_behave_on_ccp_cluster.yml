@@ -8,5 +8,22 @@ run:
   - -c
   - |
     set -ex
+
     ccp_src/scripts/setup_ssh_to_cluster.sh
-    ssh -t mdw "$CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\""
+
+    # TODO: ask CCP maintainers for a feature to do this for us
+    scp cluster_env_files/hostfile_all mdw:/tmp
+
+    # Install patchelf. We need to SSH as root, hence the use of
+    # cluster_env_files.
+    ssh -t ccp-$(cat cluster_env_files/terraform/name)-0 "sudo bash -c '
+        source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
+        install_python_hacks
+    '"
+
+    ssh -t mdw "
+        source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
+        install_python_requirements_on_multi_host /home/gpadmin/gpdb_src/gpMgmt/requirements-dev.txt
+
+        $CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\"
+    "

@@ -1,6 +1,8 @@
 import os
 import shutil
 
+import behave
+
 from test.behave_utils.utils import drop_database_if_exists, start_database_if_not_started,\
                                             create_database, \
                                             run_command, check_user_permissions, run_gpcommand
@@ -9,6 +11,9 @@ from steps.gpconfig_mgmt_utils import GpConfigContext
 from steps.gpssh_exkeys_mgmt_utils import GpsshExkeysMgmtContext
 from gppylib.db import dbconn
 
+def before_all(context):
+    if map(int, behave.__version__.split('.')) < [1,2,6]:
+        raise Exception("Requires at least behave version 1.2.6 (found %s)" % behave.__version__)
 
 def before_feature(context, feature):
     # we should be able to run gpexpand without having a cluster initialized

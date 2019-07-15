@@ -6,15 +6,17 @@ CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${CWDIR}/common.bash"
 
 function gen_env(){
-  cat > /opt/run_test.sh <<-EOF
-
-		BEHAVE_TAGS="${BEHAVE_TAGS}"
-		BEHAVE_FLAGS="${BEHAVE_FLAGS}"
+    cat > /opt/run_test.sh <<-EOF
+		set -ex
 
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
+
 		cd "\${1}/gpdb_src/gpAux"
 		source gpdemo/gpdemo-env.sh
+
 		cd "\${1}/gpdb_src/gpMgmt/"
+		BEHAVE_TAGS="${BEHAVE_TAGS}"
+		BEHAVE_FLAGS="${BEHAVE_FLAGS}"
 		if [ ! -z "\${BEHAVE_TAGS}" ]; then
 		    make -f Makefile.behave behave tags=\${BEHAVE_TAGS}
 		else
@@ -22,7 +24,7 @@ function gen_env(){
 		fi
 	EOF
 
-	chmod a+x /opt/run_test.sh
+    chmod a+x /opt/run_test.sh
 }
 
 function _main() {
@@ -35,7 +37,12 @@ function _main() {
     time install_gpdb
     time ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash
 
-    time make_cluster
+    # Run inside a subshell so it does not pollute the environment after
+    # sourcing greenplum_path
+    time (make_cluster)
+
+    time install_python_hacks
+    time install_python_requirements_on_single_host ./gpdb_src/gpMgmt/requirements-dev.txt
 
     time gen_env
 

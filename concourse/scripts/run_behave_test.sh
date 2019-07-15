@@ -1,4 +1,5 @@
 #!/bin/bash
+set -ex
 
 BEHAVE_FLAGS=$@
 
@@ -17,5 +18,6 @@ if gpstate > /dev/null 2>&1 ; then
   gpconfig --skipvalidation -c fsync -v off
   gpstop -u
 fi
+
 cd /home/gpadmin/gpdb_src/gpMgmt
 make -f Makefile.behave behave flags="$BEHAVE_FLAGS"
