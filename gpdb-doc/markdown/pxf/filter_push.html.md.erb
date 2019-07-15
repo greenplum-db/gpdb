@@ -37,21 +37,22 @@ PXF accesses data sources using different connectors, and filter pushdown suppor
 - Hive Connector, all profiles
 - HBase Connector
 - JDBC Connector
+- S3 Connector using the Amazon S3 Select service to access CSV and Parquet data
 
 PXF filter pushdown can be used with these data types (connector-specific):
 
 - `INT2`, `INT4`, `INT8`
 - `CHAR`, `TEXT`
 - `FLOAT`
-- `NUMERIC`
+- `NUMERIC` (not the S3 connector using S3 Select)
 - `BOOL`
-- `DATE`, `TIMESTAMP` (JDBC connector only)
+- `DATE`, `TIMESTAMP` (JDBC connector and S3 connector using S3 Select only)
 
 You can use PXF filter pushdown with these operators:
 
 - `<`, `<=`, `>=`, `>`
 - `<>`, `=`
-- `AND`, `OR`
+- `AND`, `OR`, `NOT`
 - `IN` operator on arrays of `INT` and `TEXT` (JDBC connector only)
 - `LIKE` (`TEXT` fields, JDBC connector only)
 

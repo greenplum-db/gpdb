@@ -71,7 +71,10 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
 
-If you are accessing an S3 object store, you can provide S3 credentials directly in the `CREATE EXTERNAL TABLE` command as described in [Overriding the S3 Server Configuration with DDL](access_objstore.html#s3_override).
+If you are accessing an S3 object store:
+
+- You can provide S3 credentials via custom options in the `CREATE EXTERNAL TABLE` command as described in [Overriding the S3 Server Configuration with DDL](access_s3.html#s3_override).
+- If you are reading Parquet data from S3, you can direct PXF to use the S3 Select Amazon service to retrieve the data. Refer to [Using the Amazon S3 Select Service](access_s3.html#s3_select) for more information about the PXF custom option used for this purpose.
 
 ## <a id="example"></a> Example
 

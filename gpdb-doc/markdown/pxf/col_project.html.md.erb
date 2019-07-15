@@ -11,6 +11,7 @@ Column projection is automatically enabled for the `pxf` external table protocol
 - PXF Hive Connector, `HiveORC` profile
 - PXF JDBC Connector, `Jdbc` profile
 - PXF Hadoop and Object Store Connectors, `hdfs:parquet`, `adl:parquet`, `gs:parquet`,`s3:parquet`, and `wasbs:parquet` profiles
+- PXF S3 Connector using Amazon S3 Select service, `s3:parquet` and `s3:text` profiles
 
 **Note:** PXF may disable column projection in cases where it cannot successfully serialize a query filter; for example, when the `WHERE` clause resolves to a `boolean` type.
 

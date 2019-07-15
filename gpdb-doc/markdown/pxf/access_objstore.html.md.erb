@@ -28,7 +28,7 @@ PXF is installed with connectors to Azure Blob Storage, Azure Data Lake, Google 
 Before working with object store data using PXF, ensure that:
 
 - You have configured and initialized PXF, and PXF is running on each Greenplum Database segment host. See [Configuring PXF](instcfg_pxf.html) for additional information.
-- You have configured the PXF Object Store Connectors that you plan to use. Refer to [Configuring Connectors to Azure, Google Cloud Storage, Minio, and S3 Object Stores](objstore_cfg.html) for instructions.
+- You have configured the PXF Object Store Connectors that you plan to use. Refer to [Configuring Connectors to Azure and Google Cloud Storage Object Stores](objstore_cfg.html) and [Configuring Connectors to Minio and S3 Object Stores](s3_objstore_cfg.html) for instructions.
 - Time is synchronized between the Greenplum Database segment hosts and the external object store systems.
 
 
@@ -90,24 +90,4 @@ CREATE EXTERNAL TABLE pxf_gsc_json(location text, month text, num_orders int, to
   LOCATION ('pxf://dir/subdir/file.json?<b>PROFILE=gs:json&SERVER=gcssrvcfg</b>')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 </pre>
-
-## <a id="s3_override"></a>Overriding the S3 Server Configuration with DDL
-
-If you are accessing an S3 object store, you can override the S3 server configuration by directly specifying the S3 access ID and secret key via these custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
-
-| Custom Option  | Value Description |
-|-------|-------------------------------------|
-| accesskey    | The AWS account access key ID. |
-| secretkey    | The secret key associated with the AWS access key ID. |
-
-For example:
-<pre>CREATE EXTERNAL TABLE pxf_ext_tbl(name text, orders int)
-  LOCATION ('pxf://S3_BUCKET/dir/file.txt?PROFILE=s3:text&SERVER=s3srvcfg<b>&accesskey=YOURKEY&secretkey=YOURSECRET</b>')
-FORMAT 'TEXT' (delimiter=E',');</pre>
-
-<div class="note warning">Credentials that you provide in this manner are visible as part of the external table definition. Do not use this method of passing credentials in a production environment.</div>
-
-PXF does not support overriding Azure, Google Cloud Storage, and Minio server credentials in this manner at this time.
-
-Refer to [Configuration Property Precedence](cfg_server.html#override) for detailed information about the precedence rules that PXF uses to obtain configuration property settings for a Greenplum Database user.
 
