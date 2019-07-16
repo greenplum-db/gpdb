@@ -1,0 +1,130 @@
+\! bash config.bash prepare
+Enable SSL in postgresql.conf with master only...
+preparing CRTs and KEYs
+-- start_ignore
+-- end_ignore
+\! echo "gpstop begin ret = $?"
+gpstop begin ret = 0
+\c - - localhost
+CREATE EXTENSION sslinfo;
+SELECT ssl_is_used();
+ ssl_is_used 
+-------------
+ t
+(1 row)
+
+SELECT ssl_version() IS NOT NULL AS version_ok;
+ version_ok 
+------------
+ t
+(1 row)
+
+SELECT ssl_cipher() IS NOT NULL AS cipher_ok;
+ cipher_ok 
+-----------
+ t
+(1 row)
+
+SELECT ssl_client_cert_present();
+ ssl_client_cert_present 
+-------------------------
+ t
+(1 row)
+
+SELECT ssl_client_serial();
+  ssl_client_serial   
+----------------------
+ 15147712520003294635
+(1 row)
+
+SELECT ssl_client_dn();
+                                   ssl_client_dn                                    
+------------------------------------------------------------------------------------
+ /CN=client.example.com/C=CN/ST=Qingdao/L=ClientLocality/O=SSLINFO-Client/OU=Client
+(1 row)
+
+SELECT ssl_issuer_dn();
+                               ssl_issuer_dn                               
+---------------------------------------------------------------------------
+ /CN=root.example.com/C=CN/ST=Beijing/L=RootLocality/O=SSLINFO-dev/OU=Test
+(1 row)
+
+SELECT ssl_client_dn_field('CN') AS client_dn_CN;
+    client_dn_cn    
+--------------------
+ client.example.com
+(1 row)
+
+SELECT ssl_client_dn_field('C') AS client_dn_C;
+ client_dn_c 
+-------------
+ CN
+(1 row)
+
+SELECT ssl_client_dn_field('ST') AS client_dn_ST;
+ client_dn_st 
+--------------
+ Qingdao
+(1 row)
+
+SELECT ssl_client_dn_field('L') AS client_dn_L;
+  client_dn_l   
+----------------
+ ClientLocality
+(1 row)
+
+SELECT ssl_client_dn_field('O') AS client_dn_O;
+  client_dn_o   
+----------------
+ SSLINFO-Client
+(1 row)
+
+SELECT ssl_client_dn_field('OU') AS client_dn_OU;
+ client_dn_ou 
+--------------
+ Client
+(1 row)
+
+SELECT ssl_issuer_field('CN') AS issuer_CN;
+    issuer_cn     
+------------------
+ root.example.com
+(1 row)
+
+SELECT ssl_issuer_field('C') AS issuer_C;
+ issuer_c 
+----------
+ CN
+(1 row)
+
+SELECT ssl_issuer_field('ST') AS issuer_ST;
+ issuer_st 
+-----------
+ Beijing
+(1 row)
+
+SELECT ssl_issuer_field('L') AS issuer_L;
+   issuer_l   
+--------------
+ RootLocality
+(1 row)
+
+SELECT ssl_issuer_field('O') AS issuer_O;
+  issuer_o   
+-------------
+ SSLINFO-dev
+(1 row)
+
+SELECT ssl_issuer_field('OU') AS issuer_OU;
+ issuer_ou 
+-----------
+ Test
+(1 row)
+
+DROP EXTENSION sslinfo;
+\! bash config.bash clean
+restore SSL in postgresql.conf with master only
+-- start_ignore
+-- end_ignore
+\! echo "gpstop end ret = $?"
+gpstop end ret = 0

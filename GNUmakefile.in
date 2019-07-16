@@ -26,6 +26,9 @@ all:
 	$(MAKE) -C contrib/pg_xlogdump all
 	$(MAKE) -C contrib/hstore all
 	$(MAKE) -C contrib/pgcrypto all
+ifeq ($(with_openssl), yes)
+	$(MAKE) -C contrib/sslinfo all
+endif
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
 	$(MAKE) -C gpAux/platform all
@@ -61,6 +64,9 @@ install:
 	$(MAKE) -C contrib/pg_xlogdump $@
 	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
+ifeq ($(with_openssl), yes)
+	$(MAKE) -C contrib/sslinfo $@
+endif
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
@@ -138,22 +144,18 @@ $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib src/bin g
 # which probably indicates that we're relying on undefined behavior... we should
 # probably pull anything order-dependent out of recurse() and back into the
 # recipe body).
-# GPDB_94_MERGE_FIXME: We should stop listing each contrib module here separately.
-$(call recurse,installcheck-world, \
-			   src/test/ \
-			   src/pl \
-			   src/interfaces/gppc \
-			   contrib/auto_explain \
-			   contrib/citext \
-			   contrib/formatter_fixedwidth \
-			   contrib/extprotocol \
-			   contrib/dblink \
-			   contrib/indexscan \
-			   contrib/hstore \
-			   contrib/pgcrypto \
-			   gpcontrib \
-			   src/bin/ \
-			   gpMgmt/bin,installcheck)
+ICW_TARGETS  = src/test src/pl src/interfaces/gppc
+ICW_TARGETS += contrib/auto_explain contrib/citext
+ICW_TARGETS += contrib/formatter_fixedwidth
+ICW_TARGETS += contrib/extprotocol contrib/dblink
+ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto
+# sslinfo depends on openssl
+ifeq ($(with_openssl), yes)
+ICW_TARGETS += contrib/sslinfo
+endif
+ICW_TARGETS += gpcontrib src/bin gpMgmt/bin
+
+$(call recurse,installcheck-world, $(ICW_TARGETS),installcheck)
 
 # GPDB: Postgres disables the SSL tests during ICW because of the TCP port that
 # it opens to other users on the same machine during testing. GPDB makes no such
