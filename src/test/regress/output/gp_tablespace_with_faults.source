@@ -70,8 +70,9 @@ create or replace function setup(content_id integer, fault_name text, fault_acti
 $$ LANGUAGE plpgsql;
 create or replace function cleanup(content_id integer, tablespace_location_dir text) returns void as $$
 	begin
-		perform gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
+		CHECKPOINT;
 		perform give_mirrors_time_to_catch_up();
+		perform gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
 		perform remove_tablespace_location_directory(tablespace_location_dir);
 	end;
 $$ LANGUAGE plpgsql;
@@ -96,17 +97,33 @@ create or replace function list_tablespace_dbid_dirs(expected_number_of_tablespa
 		result.append(str(row))
 	return result
 $$ language plpythonu;
+CREATE OR REPLACE FUNCTION insert_noop_xlog_record_master() RETURNS VOID AS
+    '@abs_builddir@/regress.so', 'insert_noop_xlog_record'
+LANGUAGE C EXECUTE ON MASTER;
+CREATE OR REPLACE FUNCTION insert_noop_xlog_record_all_segments() RETURNS SETOF VOID AS
+'@abs_builddir@/regress.so', 'insert_noop_xlog_record'
+    LANGUAGE C EXECUTE ON ALL SEGMENTS;
+CREATE OR REPLACE FUNCTION insert_noop_xlog_record() RETURNS VOID AS $$
+BEGIN
+    PERFORM insert_noop_xlog_record_master();
+    PERFORM insert_noop_xlog_record_all_segments();
+END;
+$$LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION force_mirrors_to_catch_up() RETURNS VOID AS $$
+BEGIN
+END;
+$$ LANGUAGE plpgsql;
 create or replace function give_mirrors_time_to_catch_up() returns void as $$
-declare number_of_segments_behind integer;
 begin
-	checkpoint;
-	LOOP
-		select count(1) into number_of_segments_behind from gp_stat_replication where sent_location != replay_location;
-		EXIT WHEN number_of_segments_behind = 0;
-		perform pg_sleep(0.5);
-	END LOOP;
+    PERFORM gp_inject_fault2('after_xlog_redo_noop', 'sleep', dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
+    PERFORM insert_noop_xlog_record();
+    PERFORM gp_wait_until_triggered_fault2('after_xlog_redo_noop', 1, dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
+    PERFORM gp_inject_fault2('after_xlog_redo_noop', 'reset', dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
 end;
 $$ language plpgsql;
+create or replace function wait_for_primaries_to_restart() returns boolean as $$
+	select count(gp_segment_id) > 0 from gp_dist_random('pg_tablespace');
+$$ language sql;
 create or replace function list_tablespace_catalog() returns table(gp_segment_id int, tablespace_name text, oid oid) as $$
 	select -1 as gp_segment_id, spcname::text, oid from pg_tablespace
 	UNION ALL
@@ -238,7 +255,13 @@ select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespac
 (1 row)
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
-ERROR:  fault triggered, fault name:'after_xlog_xact_prepare_flushed' fault type:'panic'
+ERROR:  fault triggered, fault name:'after_xlog_xact_prepare_flushed' fault type:'panic'  (seg0 127.0.0.1:7002 pid=28614)
+select wait_for_primaries_to_restart();
+ wait_for_primaries_to_restart 
+-------------------------------
+ t
+(1 row)
+
 select give_mirrors_time_to_catch_up();
  give_mirrors_time_to_catch_up 
 -------------------------------
@@ -350,7 +373,13 @@ select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespac
 (1 row)
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
-ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'panic'
+ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'panic'  (seg0 127.0.0.1:7002 pid=26919)
+select wait_for_primaries_to_restart();
+ wait_for_primaries_to_restart 
+-------------------------------
+ t
+(1 row)
+
 select give_mirrors_time_to_catch_up();
  give_mirrors_time_to_catch_up 
 -------------------------------
@@ -833,6 +862,12 @@ select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from
 DROP TABLESPACE my_tablespace_for_testing;
 WARNING:  the distributed transaction 'Commit Prepared' broadcast failed to one or more segments for gid DUMMY
 NOTICE:  Releasing segworker group to retry broadcast.
+select wait_for_primaries_to_restart();
+ wait_for_primaries_to_restart 
+-------------------------------
+ t
+(1 row)
+
 select give_mirrors_time_to_catch_up();
  give_mirrors_time_to_catch_up 
 -------------------------------
@@ -905,7 +940,13 @@ select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from
 (1 row)
 
 DROP TABLESPACE my_tablespace_for_testing;
-ERROR:  fault triggered, fault name:'after_xlog_xact_prepare_flushed' fault type:'panic'  (seg0 127.0.0.1:7002 pid=20870)
+ERROR:  fault triggered, fault name:'after_xlog_xact_prepare_flushed' fault type:'panic'  (seg0 127.0.0.1:7002 pid=27567)
+select wait_for_primaries_to_restart();
+ wait_for_primaries_to_restart 
+-------------------------------
+ t
+(1 row)
+
 select give_mirrors_time_to_catch_up();
  give_mirrors_time_to_catch_up 
 -------------------------------
