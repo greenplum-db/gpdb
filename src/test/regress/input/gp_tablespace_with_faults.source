@@ -123,12 +123,6 @@ END;
 $$LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION force_mirrors_to_catch_up() RETURNS VOID AS $$
-BEGIN
-END;
-$$ LANGUAGE plpgsql;
-
-
 create or replace function give_mirrors_time_to_catch_up() returns void as $$
 begin
     PERFORM gp_inject_fault2('after_xlog_redo_noop', 'sleep', dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
