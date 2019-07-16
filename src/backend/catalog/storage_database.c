@@ -6,7 +6,8 @@
 #include "common/relpath.h"
 #include "utils/faultinjector.h"
 #include "storage/lmgr.h"
-#include "pgstat.h"
+#include "access/xlog.h"
+#include "postmaster/bgwriter.h"
 
 typedef struct PendingDbDelete
 {
@@ -165,6 +166,10 @@ static void
 dropDatabaseDirectory(DbDirNode *deldb, bool isRedo)
 {
 	char *dbpath = GetDatabasePath(deldb->database, deldb->tablespace);
+
+	/* Drop pages for this database that are in the shared buffer cache */
+	DropDatabaseBuffers(deldb->database);
+
 	/*
 	 * Remove files from the old tablespace
 	 */
@@ -172,12 +177,6 @@ dropDatabaseDirectory(DbDirNode *deldb, bool isRedo)
 		ereport(WARNING,
 				(errmsg("some useless files may be left behind in old database directory \"%s\"",
 						dbpath)));
-
-	/* Drop pages for this database that are in the shared buffer cache */
-	DropDatabaseBuffers(deldb->database);
-
-	/* Also, clean out any fsync requests that might be pending in md.c */
-	ForgetDatabaseFsyncRequests(deldb->database);
 
 	if (isRedo)
 		XLogDropDatabase(deldb->database);

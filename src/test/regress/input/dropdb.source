@@ -4,6 +4,71 @@
 create language plpythonu;
 -- end_ignore
 
+CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
+    RETURNS TEXT
+AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
+    LANGUAGE C;
+
+CREATE OR REPLACE FUNCTION stat_db_objects(datname text, spcname text)
+    RETURNS TABLE (dbid int2, relfilenode_dboid_relative_path text, size int)
+    VOLATILE LANGUAGE plpythonu
+AS
+$fn$
+import os
+db_instances = {}
+PG_DEFAULT_TSOID = 1663
+PG_GLOBAL_TSOID = 1664
+
+result = plpy.execute("SELECT get_tablespace_version_directory_name() AS tablespace_version_dir_name;")
+tablespace_version_dir_name = result[0]['tablespace_version_dir_name']
+
+result = plpy.execute("SELECT oid AS dboid FROM pg_database WHERE datname='%s'" % datname)
+dboid = result[0]['dboid']
+
+result = plpy.execute("SELECT oid AS tsoid FROM pg_tablespace WHERE spcname='%s'" % spcname)
+tsoid = result[0]['tsoid']
+
+result = plpy.execute("select dbid, datadir from gp_segment_configuration;")
+for col in range(0, result.nrows()):
+    db_instances[result[col]['dbid']] = result[col]['datadir']
+
+rows = []
+for dbid, datadir in db_instances.items():
+    relative_path_to_dboid_dir = ''
+    if tsoid == PG_DEFAULT_TSOID:
+        absolute_path_to_dboid_dir = '%s/base/%d' % (datadir, dboid)
+    elif tsoid == PG_GLOBAL_TSOID:
+        plpy.error("You can't have a database within the global tablespace")
+    else:
+        absolute_path_to_dboid_dir = '%(datadir)s/pg_tblspc/%(tsoid)d/%(tablespace_version_dir_name)s/%(dboid)d' % {
+            'datadir': datadir,
+            'tsoid': tsoid,
+            'tablespace_version_dir_name': tablespace_version_dir_name,
+            'dboid': dboid
+        }
+
+    try:
+        for relfilenode in os.listdir(absolute_path_to_dboid_dir):
+            relfilenode_absolute_path = absolute_path_to_dboid_dir + '/' + relfilenode
+            size_relfilenode = os.stat(relfilenode_absolute_path).st_size
+            row = {
+                'relfilenode_dboid_relative_path': '%d/%s' % (dboid, relfilenode),
+                'dbid': dbid,
+                'size': size_relfilenode
+            }
+
+            rows.append(row)
+    except OSError:
+        plpy.notice("dboid dir for database %s does not exist on dbid = %d" % (datname, dbid))
+        rows.append({
+            'relfilenode_dboid_relative_path': None,
+            'dbid': dbid,
+            'size': None
+        })
+
+return rows
+$fn$;
+
 --list all database oid relevant directories in all node(master, segments, mirrors, etc.)
 CREATE OR REPLACE FUNCTION db_dirs(dboid oid) RETURNS setof text
   STRICT STABLE LANGUAGE plpythonu
@@ -37,13 +102,25 @@ END;
 $$ LANGUAGE plpgsql;
 
 create database db100;
+create database db101;
 \! psql -d db100 -c "create table test1(a int, b text)"
 \! psql -d db100 -c "insert into test1 values (1, '111'), (2, '222'), (3, '333')"
+\! psql -d db101 -c "create table test1(a int, b text)"
+\! psql -d db101 -c "insert into test1 values (1, '111'), (2, '222'), (3, '333')"
 
--- start_ignore
-select * from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
--- end_ignore
 
+--
+--CASE 0: drop well
+--
+drop database db101;
+
+select count(*) from pg_database where datname='db101';
+\! psql -d db101 -c "select * from test1"
+select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db101') as foo; 
+
+
+
+CREATE TABLE before_drop AS SELECT * FROM stat_db_objects('db100', 'pg_default');
 
 --
 --CASE 1: error on segment after XLOG_DBASE_DROP
@@ -61,6 +138,10 @@ select force_mirrors_to_catch_up();
 select count(*) from pg_database where datname='db100';
 \! psql -d db100 -c "select * from test1"
 select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
+
+CREATE TABLE after_drop AS SELECT * FROM stat_db_objects('db100', 'pg_default');
+SELECT * FROM ((SELECT * FROM before_drop) EXCEPT (SELECT * FROM after_drop)) r WHERE relfilenode_dboid_relative_path NOT LIKE '%pg_internal.init';
+DROP TABLE after_drop;
 
 -- start_ignore
 select count(*) from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
@@ -85,6 +166,10 @@ select count(*) from pg_database where datname='db100';
 \! psql -d db100 -c "select * from test1"
 select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
 
+CREATE TABLE after_drop AS SELECT * FROM stat_db_objects('db100', 'pg_default');
+SELECT * FROM ((SELECT * FROM before_drop) EXCEPT (SELECT * FROM after_drop)) r WHERE relfilenode_dboid_relative_path NOT LIKE '%pg_internal.init';
+DROP TABLE after_drop;
+
 -- start_ignore
 select count(*) from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
 -- end_ignore
@@ -107,6 +192,10 @@ select force_mirrors_to_catch_up();
 select count(*) from pg_database where datname='db100';
 \! psql -d db100 -c "select * from test1"
 select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
+
+CREATE TABLE after_drop AS SELECT * FROM stat_db_objects('db100', 'pg_default');
+SELECT * FROM ((SELECT * FROM before_drop) EXCEPT (SELECT * FROM after_drop)) r WHERE relfilenode_dboid_relative_path NOT LIKE '%pg_internal.init';
+DROP TABLE after_drop;
 
 -- start_ignore
 select count(*) from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
@@ -133,6 +222,10 @@ select count(*) from pg_database where datname='db100';
 \! psql -d db100 -c "select * from test1"
 select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
 
+CREATE TABLE after_drop AS SELECT * FROM stat_db_objects('db100', 'pg_default');
+SELECT * FROM ((SELECT * FROM before_drop) EXCEPT (SELECT * FROM after_drop)) r WHERE relfilenode_dboid_relative_path NOT LIKE '%pg_internal.init';
+DROP TABLE after_drop;
+
 -- start_ignore
 select count(*) from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
 -- end_ignore
@@ -158,9 +251,9 @@ select count(*) from pg_database where datname='db100';
 \! psql -d db100 -c "select * from test1"
 select count(*)=0 from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
 
--- start_ignore
-select * from (select db_dirs(oid) from pg_database where datname='db100') as foo; 
--- end_ignore
+CREATE TABLE after_drop AS SELECT * FROM stat_db_objects('db100', 'pg_default');
+SELECT * FROM ((SELECT * FROM before_drop) EXCEPT (SELECT * FROM after_drop)) r WHERE relfilenode_dboid_relative_path NOT LIKE '%pg_internal.init';
+DROP TABLE after_drop;
 
 
 
@@ -193,6 +286,7 @@ select count(*) from (select db_dirs(oid) from pg_database where datname='db100'
 
 -- start_ignore
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
+drop table before_drop;
 \! gpconfig -r create_restartpoint_on_chpt_record_replay --skipvalidation;
 \! gpstop -u;
 -- end_ignore

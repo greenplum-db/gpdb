@@ -33,6 +33,7 @@ test: gp_tablespace_with_faults
 
 test: temp_tablespaces
 test: default_tablespace
+test: dropdb
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gpcopy_encoding gp_create_table gp_create_view window_views namespace_gp replication_slots create_table_like_gp
 

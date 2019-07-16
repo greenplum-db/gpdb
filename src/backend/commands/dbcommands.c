@@ -973,6 +973,22 @@ dropdb(const char *dbname, bool missing_ok)
 	pgstat_drop_database(db_id);
 
 	/*
+	 * Tell checkpointer to forget any pending fsync and unlink requests for
+	 * files in the database; else the fsyncs will fail at next checkpoint, or
+	 * worse, it will delete files that belong to a newly created database
+	 * with the same OID.
+	 */
+	ForgetDatabaseFsyncRequests(db_id);
+
+	/*
+	 * Force a checkpoint to make sure the checkpointer has received the
+	 * message sent by ForgetDatabaseFsyncRequests. On Windows, this also
+	 * ensures that background procs don't hold any open files, which would
+	 * cause rmdir() to fail.
+	 */
+	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
+
+	/*
 	 * Remove all tablespace subdirs belonging to the database.
 	 */
 	remove_dbtablespaces(db_id);
@@ -1920,6 +1936,7 @@ remove_dbtablespaces(Oid db_id)
 		{
 			/* Assume we can ignore it */
 			pfree(dstpath);
+
 			continue;
 		}
 
@@ -1942,10 +1959,10 @@ remove_dbtablespaces(Oid db_id)
 			(void) XLogInsert(RM_DBASE_ID, XLOG_DBASE_DROP, rdata);
 		}
 
-		SIMPLE_FAULT_INJECTOR("after_xlog_dbase_drop");
-
 		pfree(dstpath);
 	}
+
+	SIMPLE_FAULT_INJECTOR("after_xlog_dbase_drop");
 
 	heap_endscan(scan);
 	heap_close(rel, AccessShareLock);
@@ -2187,8 +2204,12 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 			 */
 			LockSharedObjectForSession(DatabaseRelationId, xlrec->db_id, 0, AccessExclusiveLock);
 			ResolveRecoveryConflictWithDatabase(xlrec->db_id);
-			UnlockSharedObjectForSession(DatabaseRelationId, xlrec->db_id, 0, AccessExclusiveLock);
 		}
+
+		ForgetDatabaseFsyncRequests(xlrec->db_id);
+
+		if (InHotStandby)
+		UnlockSharedObjectForSession(DatabaseRelationId, xlrec->db_id, 0, AccessExclusiveLock);
 
 	}
 	else
