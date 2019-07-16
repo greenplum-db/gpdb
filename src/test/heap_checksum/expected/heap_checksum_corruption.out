@@ -292,6 +292,7 @@ WARNING:  page verification failed, calculated checksum 18239 but expected 58815
 ERROR:  invalid page in block 0 of relation base/81967/81939  (seg0 slice1 127.0.0.1:25432 pid=27287)
 -- trigger recovery on primaries with multiple retries and ignore warning/notice messages
 select gp_inject_fault_infinite('finish_prepared_after_record_commit_prepared', 'panic', dbid) from gp_segment_configuration where role = 'p';
+WARNING:  consider disabling FTS probes while injecting a panic.
 NOTICE:  Success:
  gp_inject_fault_infinite 
 --------------------------

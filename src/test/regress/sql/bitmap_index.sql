@@ -271,7 +271,7 @@ drop table unlogged_test;
 -- disable fault-tolerance service (FTS) probing to ensure
 -- the mirror does not accidentally get promoted
 --
-SELECT gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
+SELECT gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
 CREATE TABLE bm_test_insert(a int) DISTRIBUTED BY (a);
 CREATE INDEX bm_a_idx ON bm_test_insert USING bitmap(a);
 CREATE TABLE bm_test_update(a int, b int) DISTRIBUTED BY (a);

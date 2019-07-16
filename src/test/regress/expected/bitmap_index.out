@@ -631,9 +631,9 @@ drop table unlogged_test;
 -- disable fault-tolerance service (FTS) probing to ensure
 -- the mirror does not accidentally get promoted
 --
-SELECT gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
- gp_inject_fault2 
-------------------
+SELECT gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
+ gp_inject_fault_infinite2 
+---------------------------
  Success:
 (1 row)
 
