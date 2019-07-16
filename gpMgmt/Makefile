@@ -110,13 +110,17 @@ install: generate_greenplum_path_file
 	$(MAKE) set_scripts_version prefix=$(prefix)
 	# Remove unwanted files.
 	rm -rf $(DESTDIR)$(prefix)/bin/ext
+	rm -rf $(DESTDIR)$(prefix)/bin/.gitignore
 	rm -rf $(DESTDIR)$(prefix)/bin/pythonSrc
 	rm -rf $(DESTDIR)$(prefix)/bin/Makefile
 	rm -rf $(DESTDIR)$(prefix)/bin/src
 	rm -rf $(DESTDIR)$(prefix)/bin/gppylib
 	rm -rf $(DESTDIR)$(prefix)/bin/gpload_test
+	rm -rf $(DESTDIR)$(prefix)/bin/.rcfile
 	rm -rf $(DESTDIR)$(prefix)/bin/README*
+	rm -rf $(DESTDIR)$(prefix)/bin/lib/.gitignore
 	find $(DESTDIR)$(prefix)/lib/python/gppylib -name test -type d | xargs rm -rf
+	find $(DESTDIR)$(prefix)/lib/python -name .gitignore -type f | xargs rm -rf
 
 clean distclean:
 	$(MAKE) -C bin $@

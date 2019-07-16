@@ -215,6 +215,13 @@ function build_and_test_orca()
     orca_src/concourse/build_and_test.py --build_type=RelWithDebInfo --output_dir=${OUTPUT_DIR}
 }
 
+function check_for_hidden_files() {
+    if find "${GREENPLUM_INSTALL_DIR}" -type f -name ".*" | grep -q "."; then
+        echo "Hidden files found in '${GREENPLUM_INSTALL_DIR}'..."
+        exit 1
+    fi
+}
+
 function _main() {
   mkdir gpdb_src/gpAux/ext
 
@@ -261,6 +268,7 @@ function _main() {
   include_zstd
   include_quicklz
   include_libstdcxx
+  check_for_hidden_files
   export_gpdb
   export_gpdb_extensions
   export_gpdb_win32_ccl
