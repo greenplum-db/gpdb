@@ -36,6 +36,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+--
+--CASE 0: createdb do well
+--
+create database dowell;
+select count(*)=0 as result from
+  (select db_dirs(oid) from pg_database where datname = 'dowell') as foo;
+
+\! psql -d dowell -c "create table test1(a int, b text)"
+\! psql -d dowell -c "insert into test1 values (1, '111'), (2, '222'), (3, '333')"
+\! psql -d dowell -c "select * from test1" 
+
+drop database dowell;
+
+
+
 --
 --CASE 1: error in segment after db file physically created
 --
@@ -117,6 +133,8 @@ set gp_select_invisible=off;
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
 select gp_inject_fault2('end_prepare_two_phase', 'panic', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
+select gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
 -- should fail
 create database db4;
 
@@ -160,6 +178,8 @@ set gp_select_invisible=off;
 --CASE 6: panic before XLOG_XACT_PREPARE on segment
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
 select gp_inject_fault2('before_xlog_xact_prepare', 'panic', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+select gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
 -- should fail
 create database db6;
