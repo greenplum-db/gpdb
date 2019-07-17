@@ -76,7 +76,7 @@
     </section>
     <section id="section_ok2_wd1_41b">
       <title>Alert Log Processing and Log Rotation</title>
-      <p>When the <codeph>gp_gperfmon_enable</codeph> server configuration parameter is set to true,
+      <p>When the <codeph>gp_enable_gpperfmon</codeph> server configuration parameter is set to true,
         the Greenplum Database syslogger writes alert messages to a <codeph>.csv</codeph> file in
         the <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs</codeph> directory. </p>
       <p>The level of messages written to the log can be set to <codeph>none</codeph>,
