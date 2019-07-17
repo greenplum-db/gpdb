@@ -8,8 +8,8 @@ from gppylib.commands.gp import GpStart
 from gppylib.db import dbconn
 
 class GpExpandTestCase(unittest.TestCase):
-   
-    EXPANSION_INPUT_FILE = 'test_expand.input' 
+
+    EXPANSION_INPUT_FILE = 'test_expand.input'
     GP_COMMAND_FAULT_POINT = 'GP_COMMAND_FAULT_POINT'
     GPMGMT_FAULT_POINT = 'GPMGMT_FAULT_POINT'
     MASTER_DATA_DIRECTORY = os.environ['MASTER_DATA_DIRECTORY']
@@ -29,13 +29,13 @@ class GpExpandTestCase(unittest.TestCase):
         os.remove(self.EXPANSION_INPUT_FILE)
         if self.GP_COMMAND_FAULT_POINT in os.environ:
             del os.environ[self.GP_COMMAND_FAULT_POINT]
-        
+
     def _create_expansion_input_file(self):
         """This code has been taken from system_management utilities
            test suite.
            creates a expansion input file"""
 
-        with dbconn.connect(dbconn.DbURL()) as conn:
+        with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
             next_dbid = dbconn.execSQLForSingletonRow(conn,
                                                       "select max(dbid)+1 \
                                                        from pg_catalog.gp_segment_configuration")[0]
@@ -56,9 +56,9 @@ class GpExpandTestCase(unittest.TestCase):
                                             where role='m'").fetchall()[0][0]
 
             if next_mir_port is None or next_mir_port == ' ' or next_mir_port == 0:
-                mirroring_on = False 
+                mirroring_on = False
             else:
-                mirroring_on = True 
+                mirroring_on = True
                 next_pri_replication_port = dbconn.execSQL(conn,
                                                            "select max(replication_port)+1 \
                                                             from pg_catalog.gp_segment_configuration \
@@ -81,13 +81,13 @@ class GpExpandTestCase(unittest.TestCase):
 
             with open(self.EXPANSION_INPUT_FILE, 'w') as outfile:
                 for i in range(self.SEGMENTS):
-                    pri_datadir = os.path.join(os.getcwd(), 'new_pri_seg%d' % i)        
-                    mir_datadir = os.path.join(os.getcwd(), 'new_mir_seg%d' % i)     
-                 
+                    pri_datadir = os.path.join(os.getcwd(), 'new_pri_seg%d' % i)
+                    mir_datadir = os.path.join(os.getcwd(), 'new_mir_seg%d' % i)
+
                     temp_str = "%s:%s:%d:%s:%d:%d:%s" % (self.primary_host_name, self.primary_host_address, next_pri_port, pri_datadir, next_dbid, next_content, 'p')
                     if mirroring_on:
                         temp_str = temp_str + ":" + str(next_pri_replication_port)
-                    temp_str = temp_str + "\n"   
+                    temp_str = temp_str + "\n"
                     outfile.write(temp_str)
 
                     if mirroring_on: # The content number for mirror is same as the primary segment's content number
@@ -96,26 +96,26 @@ class GpExpandTestCase(unittest.TestCase):
                         next_mir_port += 1
                         next_pri_replication_port += 1
                         next_mir_replication_port += 1
-            
+
                     next_pri_port += 1
                     next_dbid += 1
                     next_content += 1
-        
+
     def _create_tables(self):
-        with dbconn.connect(dbconn.DbURL()) as conn:
+        with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
             for i in range(self.NUM_TABLES):
                 dbconn.execSQL(conn, 'create table tab%d(i integer)' % i)
             conn.commit()
-       
+
     def _drop_tables(self):
-        with dbconn.connect(dbconn.DbURL()) as conn:
+        with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
             for i in range(self.NUM_TABLES):
-                dbconn.execSQL(conn, 'drop table tab%d' % i) 
+                dbconn.execSQL(conn, 'drop table tab%d' % i)
             conn.commit()
 
     def _get_dist_policies(self):
         policies = []
-        with dbconn.connect(dbconn.DbURL()) as conn:
+        with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
             cursor = dbconn.execSQL(conn, 'select * from gp_distribution_policy;').fetchall()
             for row in cursor:
                 policies.append(row)
@@ -128,16 +128,16 @@ class GpExpandTestCase(unittest.TestCase):
         cmd = Command(name='run gpexpand', cmdStr='gpexpand -i %s' % (self.EXPANSION_INPUT_FILE))
         with self.assertRaisesRegexp(ExecutionError, 'Fault Injection'):
             cmd.run(validateAfter=True)
-        
-        #Read from the pg_hba.conf file and ensure that 
+
+        #Read from the pg_hba.conf file and ensure that
         #The address of the new hosts is present.
-        cmd = Command(name='get the temp pg_hba.conf file', 
+        cmd = Command(name='get the temp pg_hba.conf file',
                       cmdStr="ls %s" % os.path.join(os.path.dirname(self.MASTER_DATA_DIRECTORY),
                                                     'gpexpand*',
                                                     'pg_hba.conf'))
         cmd.run(validateAfter=True)
         results = cmd.get_results()
-        temp_pg_hba_conf = results.stdout.strip() 
+        temp_pg_hba_conf = results.stdout.strip()
 
         actual_values = set()
         expected_values = set([self.primary_host_address, self.mirror_host_address])
@@ -156,9 +156,9 @@ class GpExpandTestCase(unittest.TestCase):
         GpStart(name='start the database').run(validateAfter=True)
 
     def test01_distribution_policy(self):
-       
+
         self._create_tables()
-        
+
         try:
             os.environ[self.GPMGMT_FAULT_POINT] = 'gpexpand MPP-14620 fault injection'
             original_dist_policies = self._get_dist_policies()
@@ -168,10 +168,9 @@ class GpExpandTestCase(unittest.TestCase):
 
             rollback = Command(name='rollback expansion', cmdStr='gpexpand -r')
             rollback.run(validateAfter=True)
-    
-            dist_policies = self._get_dist_policies() 
+
+            dist_policies = self._get_dist_policies()
 
             self.assertEqual(original_dist_policies, dist_policies)
         finally:
             self._drop_tables()
-

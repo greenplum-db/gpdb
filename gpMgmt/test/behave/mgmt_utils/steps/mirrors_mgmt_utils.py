@@ -86,7 +86,7 @@ def make_data_directory_called(data_directory_name):
 
 
 def _get_mirror_count():
-    with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
         sql = """SELECT count(*) FROM gp_segment_configuration WHERE role='m'"""
         count_row = dbconn.execSQL(conn, sql).fetchone()
         return count_row[0]

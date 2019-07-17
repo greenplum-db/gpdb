@@ -366,7 +366,7 @@ class ClusterConfiguration():
         print '%s: fetched cluster configuration' % (datetime.datetime.now())
 
         try:
-            with dbconn.connect(dburl, utility=True) as conn:
+            with dbconn.connect(dburl, utility=True, unsetSearchPath=False) as conn:
                resultsets  = dbconn.execSQL(conn, query).fetchall()
         except Exception, e:
             print e

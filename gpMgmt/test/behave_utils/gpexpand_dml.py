@@ -29,7 +29,7 @@ class TestDML(threading.Thread):
         self.prepare()
 
     def run(self):
-        conn = dbconn.connect(dbconn.DbURL(dbname=self.dbname))
+        conn = dbconn.connect(dbconn.DbURL(dbname=self.dbname), unsetSearchPath=False)
 
         self.loop(conn)
         self.verify(conn)
@@ -46,7 +46,7 @@ class TestDML(threading.Thread):
             ) DISTRIBUTED BY (c1);
         '''.format(tablename=self.tablename)
 
-        conn = dbconn.connect(dbconn.DbURL(dbname=self.dbname))
+        conn = dbconn.connect(dbconn.DbURL(dbname=self.dbname), unsetSearchPath=False)
         dbconn.execSQL(conn, sql)
 
         self.prepare_extra(conn)

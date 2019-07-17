@@ -32,7 +32,7 @@ def before_feature(context, feature):
         create_database(context, 'incr_analyze')
         drop_database_if_exists(context, 'incr_analyze_2')
         create_database(context, 'incr_analyze_2')
-        context.conn = dbconn.connect(dbconn.DbURL(dbname='incr_analyze'))
+        context.conn = dbconn.connect(dbconn.DbURL(dbname='incr_analyze'), unsetSearchPath=False)
         context.dbname = 'incr_analyze'
 
         # setting up the tables that will be used
@@ -48,7 +48,7 @@ def before_feature(context, feature):
         minirepro_db = 'minireprodb'
         drop_database_if_exists(context, minirepro_db)
         create_database(context, minirepro_db)
-        context.conn = dbconn.connect(dbconn.DbURL(dbname=minirepro_db))
+        context.conn = dbconn.connect(dbconn.DbURL(dbname=minirepro_db), unsetSearchPath=False)
         context.dbname = minirepro_db
         dbconn.execSQL(context.conn, 'create table t1(a integer, b integer)')
         dbconn.execSQL(context.conn, 'create table t2(c integer, d integer)')

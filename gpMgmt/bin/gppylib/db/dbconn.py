@@ -155,7 +155,7 @@ class DbURL:
 
 
 def connect(dburl, utility=False, verbose=False,
-            encoding=None, allowSystemTableMods=False, logConn=True):
+            encoding=None, allowSystemTableMods=False, logConn=True, unsetSearchPath=True):
 
     if utility:
         options = '-c gp_session_role=utility'
@@ -215,6 +215,7 @@ def connect(dburl, utility=False, verbose=False,
     if cnx is None:
         raise ConnectionError('Failed to connect to %s' % dbbase)
 
+    # NOTE: the code to set ALWAYS_SECURE_SEARCH_PATH_SQL below assumes it is not part of an existing transaction
     conn = pgdb.pgdbCnx(cnx)
 
     #by default, libpq will print WARNINGS to stdout
@@ -230,6 +231,11 @@ def connect(dburl, utility=False, verbose=False,
         cursor.execute("SET CLIENT_ENCODING='%s'" % encoding)
         conn.commit()
         cursor.close()
+
+    # unset search path due to CVE-2018-1058
+    if unsetSearchPath:
+        ALWAYS_SECURE_SEARCH_PATH_SQL = "SELECT pg_catalog.set_config('search_path', '', false)"
+        execSQL(conn, ALWAYS_SECURE_SEARCH_PATH_SQL).close()
 
     def __enter__(self):
         return self
