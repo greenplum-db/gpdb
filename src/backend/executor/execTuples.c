@@ -782,6 +782,7 @@ ExecMaterializeSlot(TupleTableSlot *slot)
 {
 	uint32		tuplen;
 	HeapTuple	htup;
+	void	   *htup_buf;
 
 	/*
 	 * sanity checks
@@ -790,11 +791,32 @@ ExecMaterializeSlot(TupleTableSlot *slot)
 
 	/*
 	 * If we have a regular physical tuple, and it's locally palloc'd, we have
-	 * nothing to do.
+	 * nothing to do, else make a copy.
 	 */
-	if (slot->PRIVATE_tts_heaptuple &&
-		(TupShouldFree(slot) || slot->PRIVATE_tts_heaptuple == slot->PRIVATE_tts_htup_buf))
-		return slot->PRIVATE_tts_heaptuple;
+	if (slot->PRIVATE_tts_heaptuple)
+	{
+		if (TupShouldFree(slot) || slot->PRIVATE_tts_heaptuple == slot->PRIVATE_tts_htup_buf)
+		{
+			return slot->PRIVATE_tts_heaptuple;
+		}
+		else
+		{
+			htup_buf = slot->PRIVATE_tts_htup_buf;
+			tuplen = HEAPTUPLESIZE + slot->PRIVATE_tts_heaptuple->t_len;
+
+			slot->PRIVATE_tts_htup_buf = (HeapTuple) MemoryContextAlloc(slot->tts_mcxt, tuplen);
+
+			htup = heaptuple_copy_to(slot->PRIVATE_tts_heaptuple, slot->PRIVATE_tts_htup_buf, &tuplen);
+			Assert(htup);
+
+			if (htup_buf)
+				pfree(htup_buf);
+
+			slot->PRIVATE_tts_heaptuple = htup;
+			slot->PRIVATE_tts_nvalid = 0;
+			return htup;
+		}
+	}
 
 	/*
 	 * Otherwise, copy or build a physical tuple, and store it into the slot.
