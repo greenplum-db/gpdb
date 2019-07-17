@@ -69,7 +69,7 @@ typedef struct FragmentData
 /*
  * Gets the fragments for the given uri location
  */
-extern List *getFragmentList(PxfOptions * options, Relation relation, char *filter_string, ProjectionInfo *proj_info, List *quals);
+extern List *GetFragmentList(PxfOptions * options, Relation relation, char *filter_string, ProjectionInfo *proj_info, List *quals);
 
 /*
  * Frees the given fragment

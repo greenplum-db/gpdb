@@ -27,7 +27,9 @@
 #include "cdb/cdbvars.h"
 #include "nodes/pg_list.h"
 
-/* Context for single query execution by PXF bridge */
+/*
+ * Execution state of a foreign scan using pxf_fdw.
+ */
 typedef struct
 {
 	CHURL_HEADERS churl_headers;
@@ -40,21 +42,39 @@ typedef struct
 	List	   *quals;
 	List	   *fragments;
 	PxfOptions *options;
-}			PxfContext;
+	CopyState cstate;
+}			PxfFdwScanState;
+
+/*
+ * Execution state of a foreign insert operation.
+ */
+typedef struct PxfFdwModifyState
+{
+	CopyState	cstate;			/* state of writing to PXF */
+
+	CHURL_HANDLE churl_handle;	/* curl handle */
+	CHURL_HEADERS churl_headers;	/* curl headers */
+	StringInfoData uri;			/* rest endpoint URI for modify */
+	Relation	relation;
+	PxfOptions *options;		/* FDW options */
+
+	Datum	   *values; /* List of values exported for the row */
+	bool	   *nulls; /* List of null fields for the exported row */
+}			PxfFdwModifyState;
 
 /* Clean up churl related data structures from the context */
-void		PxfBridgeCleanup(PxfContext * context);
+void		PxfBridgeCleanup(PxfFdwModifyState * context);
 
 /* Sets up data before starting import */
-void		PxfBridgeImportStart(PxfContext * context);
+void		PxfBridgeImportStart(PxfFdwScanState * pxfsstate);
 
 /* Sets up data before starting export */
-void		pxfBridgeExportStart(PxfContext * context);
+void		PxfBridgeExportStart(PxfFdwModifyState * pxfmstate);
 
 /* Reads data from the PXF server into the given buffer of a given size */
-int			PxfBridgeRead(PxfContext * context, char *databuf, int datalen);
+int PxfBridgeRead(void *outbuf, int datasize, void *extra);
 
 /* Writes data from the given buffer of a given size to the PXF server */
-int			PxfBridgeWrite(PxfContext * context, char *databuf, int datalen);
+int			PxfBridgeWrite(PxfFdwModifyState * context, char *databuf, int datalen);
 
 #endif							/* _PXFBRIDGE_H */
