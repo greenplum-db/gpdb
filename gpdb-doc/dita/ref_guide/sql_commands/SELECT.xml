@@ -20,12 +20,12 @@ SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
   [LIMIT {<varname>count</varname> | ALL}]
   [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
   [FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY]
-  [FOR {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]
+  [FOR<sup>2</sup> {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]
 
 TABLE { [ ONLY ] <varname>table_name</varname> [ * ] | <varname>with_query_name</varname> }
 </codeblock>
       <p>where <varname>with_query:</varname> is:</p>
-      <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> | <varname>values</varname> | <varname>insert</varname> | <varname>update</varname> | <varname >delete</varname> )</codeblock>
+      <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> | <varname>values</varname> | <varname>insert</varname> | <varname>update</varname> | <varname>delete</varname> )</codeblock>
       <p>where <varname>from_item</varname> can be one of:</p>
       <codeblock>[ONLY] <varname>table_name</varname> [ * ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
 ( <varname>select</varname> ) [ AS ] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] ) ]<varname>
@@ -60,7 +60,12 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
   UNBOUNDED FOLLOWING
 </codeblock></p>
       <p><b>Note:</b>
-        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is A Beta feature.</p>
+        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</p>
+      <p>
+        <sup>2</sup>When a locking clause is specified (the <codeph>FOR</codeph> clause), the Global
+        Deadlock Detector affects how table rows are locked. See item <xref href="#topic1/eg138885"
+          format="dita">12</xref> in Description and see "The Locking Clause" later in this section.
+      </p>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -90,7 +95,6 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
           window frame.</li>
         <li id="eg138848">The actual output rows are computed using the <codeph>SELECT</codeph>
           output expressions for each selected row.</li>
-
         <li id="eg138856">Using the operators <codeph>UNION</codeph>, <codeph>INTERSECT</codeph>,
           and <codeph>EXCEPT</codeph>, the output of more than one <codeph>SELECT</codeph> statement
           can be combined to form a single result set. The <codeph>UNION</codeph> operator returns
@@ -106,12 +110,21 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
           are sorted in the specified order. If <codeph>ORDER BY</codeph> is not given, the rows are
           returned in whatever order the system finds fastest to produce.</li>
         <li id="eg138878">If the <codeph>LIMIT</codeph> (or <codeph>FETCH FIRST</codeph>) or
-            <codeph>OFFSET</codeph> clause is specified, the <codeph>SELECT</codeph> statement only
+            <codeph>OFFSET</codeph> clause is specified, the <codeph>SELECT</codeph> command only
           returns a subset of the result rows.</li>
-        <li id="eg138885">If <codeph>FOR UPDATE</codeph>, <codeph>FOR NO KEY UPDATE</codeph>,
-            <codeph>FOR SHARE</codeph>,  or <codeph>FOR KEY SHARE</codeph> is specified, the
-            <codeph>SELECT</codeph> statement locks the entire table against concurrent
-          updates.</li>
+        <li id="eg138885">If the Global Deadlock Detector is disabled (the default), and you specify
+          a locking clause <codeph>FOR {UPDATE</codeph>|<codeph>NO KEY
+            UPDATE</codeph>|<codeph>SHARE</codeph>|<codeph>KEY SHARE}</codeph>, the
+            <codeph>SELECT</codeph> command locks the entire table against concurrent updates. The
+          Global Deadlock Detector affects table locking when the <codeph>FOR</codeph> clause is
+          specified. <p>If you specify a locking clause, <codeph>FOR {UPDATE</codeph>|<codeph>NO KEY
+              UPDATE</codeph>|<codeph>SHARE</codeph>|<codeph>KEY SHARE}</codeph>, the state of the
+            Global Deadlock Detector affects table locking during <codeph>SELECT</codeph> command
+            execution. If the Global Deadlock Detector is disabled (the default), the
+              <codeph>SELECT</codeph> command locks the entire table against concurrent updates.
+            </p><p>For information about using the Global Deadlock Detector with a
+              <codeph>SELECT</codeph> command with a <codeph>FOR</codeph> clause, see "The Locking
+            Clause" later in this section.</p></li>
       </ol>
       <p>You must have <codeph>SELECT</codeph> privilege on each column used in a
           <codeph>SELECT</codeph> command. The use of <codeph>FOR NO KEY UPDATE</codeph>,
@@ -133,17 +146,17 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
           the output of <codeph>RETURNING</codeph>, <i>not</i> the underlying table that the
           statement modifies, that forms the temporary table that is read by the primary query. If
             <codeph>RETURNING</codeph> is omitted, the statement is still executed, but it produces
-          no output so it cannot be referenced as a table by the primary query. </p><p>For a <codeph>SELECT</codeph> command that includes a
-            <codeph>WITH</codeph> clause, the clause can contain at most a single clause that
-          modifies table data (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
-            <codeph>DELETE</codeph> command).</p><p>A
+          no output so it cannot be referenced as a table by the primary query. </p><p>For a
+            <codeph>SELECT</codeph> command that includes a <codeph>WITH</codeph> clause, the clause
+          can contain at most a single clause that modifies table data (<codeph>INSERT</codeph>,
+            <codeph>UPDATE</codeph> or <codeph>DELETE</codeph> command).</p><p>A
             <varname>with_query_name</varname> without schema qualification must be specified for
           each query in the <codeph>WITH</codeph> clause. Optionally, a list of column names can be
           specified; if the list of column names is omitted, the names are inferred from the
           subquery. The primary query and the <codeph>WITH</codeph> queries are all (notionally)
-          executed at the same time. </p><p>If <codeph>RECURSIVE</codeph> is specified, it
-          allows a <codeph>SELECT</codeph> subquery to reference itself by name. Such a subquery has
-          the general
+          executed at the same time. </p><p>If <codeph>RECURSIVE</codeph> is specified, it allows a
+            <codeph>SELECT</codeph> subquery to reference itself by name. Such a subquery has the
+          general
           form</p><codeblock><varname>non_recursive_term</varname> UNION [ALL | DISTINCT] <varname>recursive_term</varname></codeblock><p>where
           the recursive self-reference appears on the right-hand side of the <codeph>UNION</codeph>.
           Only one recursive self-reference is permitted per query. Recursive data-modifying
@@ -192,10 +205,9 @@ SELECT * FROM foo LIMIT 5;</codeblock></p>
             <codeph>WITH</codeph> cannot be seen from other parts of the query, other than by
           reading its <codeph>RETURNING</codeph> output. If two such data-modifying statements
           attempt to modify the same row, the results are unspecified. </p>
-        <p>See <xref
-            href="../../admin_guide/query/topics/CTE-query.xml"/><ph
-            otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph>
-          for additional information.</p>
+        <p>See <xref href="../../admin_guide/query/topics/CTE-query.xml"/><ph otherprops="pivotal">
+            in the <cite>Greenplum Database Administrator Guide</cite></ph> for additional
+          information.</p>
       </sectiondiv>
       <sectiondiv id="section5">
         <b>The SELECT List</b>
@@ -222,8 +234,8 @@ SELECT * FROM foo LIMIT 5;</codeblock></p>
           simple column reference then the chosen name is the same as that column's name. In more
           complex cases, a function or type name may be used, or the system may fall back on a
           generated name such as <codeph>?column?</codeph> or
-            <codeph>column<varname>N</varname></codeph>. </p><p>An output column's name can be used to
-          refer to the column's value in <codeph>ORDER BY</codeph> and <codeph>GROUP BY</codeph>
+            <codeph>column<varname>N</varname></codeph>. </p><p>An output column's name can be used
+          to refer to the column's value in <codeph>ORDER BY</codeph> and <codeph>GROUP BY</codeph>
           clauses, but not in the <codeph>WHERE</codeph> or <codeph>HAVING</codeph> clauses; there
           you must write out the expression instead.</p><p>Instead of an expression,
             <codeph>*</codeph> can be written in the output list as a shorthand for all the columns
@@ -250,7 +262,6 @@ SELECT DISTINCT ON (location) location, time, report
           retrieves the most recent weather report for each location. But if we had not used
             <codeph>ORDER BY</codeph> to force descending order of time values for each location,
           we'd have gotten a report from an unpredictable time for each location. </p>
-          
         <p> The <codeph>DISTINCT ON</codeph> expression(s) must match the leftmost <codeph>ORDER
             BY</codeph> expression(s). The <codeph>ORDER BY</codeph> clause will normally contain
           additional expression(s) that determine the desired precedence of rows within each
@@ -516,7 +527,10 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
 GROUP BY vendor
 WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>WINDOW</codeph> clause has this general
-  form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_definition</varname>)</codeblock><p>where <varname>window_name</varname> is a name that can be referenced from <codeph>OVER</codeph> clauses or subsequent window definitions, and <varname>window_definition</varname> is:</p><codeblock>[<varname>existing_window_name</varname>]
+          form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_definition</varname>)</codeblock><p>where
+            <varname>window_name</varname> is a name that can be referenced from
+            <codeph>OVER</codeph> clauses or subsequent window definitions, and
+            <varname>window_definition</varname> is:</p><codeblock>[<varname>existing_window_name</varname>]
 [PARTITION BY <varname>expression</varname> [, ...]]
 [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...] ]
 [<varname>frame_clause</varname>] </codeblock><parml>
@@ -588,17 +602,17 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
                 PRECEDING</codeph> is not allowed. </pd>
             <pd>The default framing option is <codeph>RANGE UNBOUNDED PRECEDING</codeph>, which is
               the same as <codeph>RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</codeph>; it
-              sets the frame to be all rows from the partition start up through the current row's 
-              last peer (a row that <codeph>ORDER
-                BY</codeph> considers equivalent to the current row, or all rows if there
-                is no <codeph>ORDER BY</codeph>). In general, <codeph>UNBOUNDED PRECEDING</codeph> means
-              that the frame starts with the first row of the partition, and similarly
-                <codeph>UNBOUNDED FOLLOWING</codeph> means that the frame ends with the last row of
-              the partition (regardless of <codeph>RANGE</codeph> or <codeph>ROWS</codeph> mode). In
-                <codeph>ROWS</codeph> mode, <codeph>CURRENT ROW</codeph> means that the frame starts
-              or ends with the current row; but in <codeph>RANGE</codeph> mode it means that the
-              frame starts or ends with the current row's first or last peer in the <codeph>ORDER
-                BY</codeph> ordering. The <varname>value</varname>
+              sets the frame to be all rows from the partition start up through the current row's
+              last peer (a row that <codeph>ORDER BY</codeph> considers equivalent to the current
+              row, or all rows if there is no <codeph>ORDER BY</codeph>). In general,
+                <codeph>UNBOUNDED PRECEDING</codeph> means that the frame starts with the first row
+              of the partition, and similarly <codeph>UNBOUNDED FOLLOWING</codeph> means that the
+              frame ends with the last row of the partition (regardless of <codeph>RANGE</codeph> or
+                <codeph>ROWS</codeph> mode). In <codeph>ROWS</codeph> mode, <codeph>CURRENT
+                ROW</codeph> means that the frame starts or ends with the current row; but in
+                <codeph>RANGE</codeph> mode it means that the frame starts or ends with the current
+              row's first or last peer in the <codeph>ORDER BY</codeph> ordering. The
+                <varname>value</varname>
               <codeph>PRECEDING</codeph> and <varname>value</varname>
               <codeph>FOLLOWING</codeph> cases are currently only allowed in <codeph>ROWS</codeph>
               mode. They indicate that the frame starts or ends with the row that many rows before
@@ -670,8 +684,8 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           filters individual rows before the application of <codeph>GROUP BY</codeph>, while
             <codeph>HAVING</codeph> filters group rows created by <codeph>GROUP BY</codeph>. Each
           column referenced in <varname>condition</varname> must unambiguously reference a grouping
-            column, unless the reference appears within an aggregate function or the ungrouped column is
-            functionally dependent on the grouping columns.</p><p>The presence of
+          column, unless the reference appears within an aggregate function or the ungrouped column
+          is functionally dependent on the grouping columns.</p><p>The presence of
             <codeph>HAVING</codeph> turns a query into a grouped query even if there is no
             <codeph>GROUP BY</codeph> clause. This is the same as what happens when the query
           contains aggregate functions but no <codeph>GROUP BY</codeph> clause. All the selected
@@ -791,13 +805,12 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           only to the expression they follow; for example <codeph>ORDER BY x, y DESC</codeph> does
           not mean the same thing as <codeph>ORDER BY x DESC, y
           DESC</codeph>.</p><p>Character-string data is sorted according to the locale-specific
-          collation order that was established when the database was created.</p><p>Character-string data is sorted
-          according to the collation that applies to the column being sorted. That can be overridden
-          as needed by including a <codeph>COLLATE</codeph> clause in the
+          collation order that was established when the database was created.</p><p>Character-string
+          data is sorted according to the collation that applies to the column being sorted. That
+          can be overridden as needed by including a <codeph>COLLATE</codeph> clause in the
             <varname>expression</varname>, for example <codeph>ORDER BY mycolumn COLLATE
             "en_US"</codeph>. For information about defining collations, see <codeph><xref
-              href="./CREATE_COLLATION.xml">CREATE
-            COLLATION</xref></codeph>.</p></sectiondiv>
+              href="./CREATE_COLLATION.xml">CREATE COLLATION</xref></codeph>.</p></sectiondiv>
       <sectiondiv><b>The LIMIT Clause</b><p>The <codeph>LIMIT</codeph> clause consists of two
           independent
           sub-clauses:</p><codeblock>LIMIT {<varname>count</varname> | ALL}
@@ -811,23 +824,21 @@ OFFSET <varname>start</varname></codeblock><p>where
             <codeph>OFFSET 0</codeph>.</p><p>SQL:2008 introduced a different syntax to achieve the
           same result, which Greenplum Database also supports. It is:
           <codeblock>OFFSET <varname>start</varname> [ ROW | ROWS ]
-            FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY</codeblock></p><p>In this syntax, the <varname>start</varname>
-              or <varname>count</varname> value is required by
-              the standard to be a literal constant, a parameter, or a variable name;
-              as a Greenplum Database extension, other expressions
-              are allowed, but will generally need to be enclosed in parentheses to avoid
-              ambiguity.
-              If <varname>count</varname> is
-              omitted in a <codeph>FETCH</codeph> clause, it defaults to 1.            
-            <codeph>ROW</codeph> and <codeph>ROWS</codeph> as well as <codeph>FIRST</codeph> and
-            <codeph>NEXT</codeph> are noise words that don't influence the effects of these clauses.
-          According to the standard, the <codeph>OFFSET</codeph> clause must come before the
-            <codeph>FETCH</codeph> clause if both are present; but Greenplum Database allows either
-          order.</p><p>When using <codeph>LIMIT</codeph>, it is a good idea to use an <codeph>ORDER
-            BY</codeph> clause that constrains the result rows into a unique order. Otherwise you
-          will get an unpredictable subset of the query's rows — you may be asking for the tenth
-          through twentieth rows, but tenth through twentieth in what ordering? You don't know what
-          ordering unless you specify <codeph>ORDER BY</codeph>. </p><p>The query optimizer takes
+            FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY</codeblock></p><p>In
+          this syntax, the <varname>start</varname> or <varname>count</varname> value is required by
+          the standard to be a literal constant, a parameter, or a variable name; as a Greenplum
+          Database extension, other expressions are allowed, but will generally need to be enclosed
+          in parentheses to avoid ambiguity. If <varname>count</varname> is omitted in a
+            <codeph>FETCH</codeph> clause, it defaults to 1. <codeph>ROW</codeph> and
+            <codeph>ROWS</codeph> as well as <codeph>FIRST</codeph> and <codeph>NEXT</codeph> are
+          noise words that don't influence the effects of these clauses. According to the standard,
+          the <codeph>OFFSET</codeph> clause must come before the <codeph>FETCH</codeph> clause if
+          both are present; but Greenplum Database allows either order.</p><p>When using
+            <codeph>LIMIT</codeph>, it is a good idea to use an <codeph>ORDER BY</codeph> clause
+          that constrains the result rows into a unique order. Otherwise you will get an
+          unpredictable subset of the query's rows — you may be asking for the tenth through
+          twentieth rows, but tenth through twentieth in what ordering? You don't know what ordering
+          unless you specify <codeph>ORDER BY</codeph>. </p><p>The query optimizer takes
             <codeph>LIMIT</codeph> into account when generating a query plan, so you are very likely
           to get different plans (yielding different row orders) depending on what you use for
             <codeph>LIMIT</codeph> and <codeph>OFFSET</codeph>. Thus, using different
@@ -845,18 +856,44 @@ OFFSET <varname>start</varname></codeblock><p>where
           of<codeblock>UPDATE
 NO KEY UPDATE
 SHARE
-KEY SHARE</codeblock></p><note> By default,
-          Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables for
-            <codeph>DELETE</codeph> and <codeph>UPDATE</codeph> operations on heap tables. When the
-          Global Deadlock Detector is enabled the lock mode for <codeph>DELETE</codeph> and
-            <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. The
-          Global Deadlock Detector is enabled by setting the <xref
+KEY SHARE</codeblock></p><p>The Global Deadlock
+          Detector affects the locking used by <codeph>SELECT</codeph> queries that contain a
+          locking clause (<codeph>FOR <varname>lock_strength</varname></codeph>). The Global
+          Deadlock Detector is enabled by setting the <xref
             href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
-            >gp_enable_global_deadlock_detector</xref> configuration parameter to true. See <xref
-            href="../../admin_guide/dml.xml#topic_gdd"> Global Deadlock Detector</xref> in the
-            <cite>Greenplum Database Administrator Guide</cite> for information about the Global
-          Deadlock Detector.</note><p>For more information on each row-level lock mode, refer to
-            <xref href="https://www.postgresql.org/docs/9.4/explicit-locking.html" format="html"
+            >gp_enable_global_deadlock_detector</xref> configuration parameter to
+            <codeph>on</codeph>. See <xref href="../../admin_guide/dml.xml#topic_gdd"> Global
+            Deadlock Detector</xref> in the <cite>Greenplum Database Administrator Guide</cite> for
+          information about the Global Deadlock Detector.<ul id="ul_nxf_fmc_j3b">
+            <li>When the Global Deadlock Detector is disabled, Greenplum locks the entire tables in
+                <codeph>ACCESS SHARE</codeph> lock mode when executing a <codeph>SELECT</codeph>
+              statement with a locking clause when GPORCA is used. If the Postgres query optimizer
+              is used, the table is locked with an <codeph>EXCLUSIVE</codeph> lock. </li>
+            <li>When Global Deadlock Detector is enabled, and the Postgres query optimizer is used,
+              a <codeph>ROW SHARE</codeph> lock is used to lock the table for simple
+                <codeph>SELECT</codeph> commands. If the Postgres query optimizer is used, the query
+              plan contains a <codeph>lockrows</codeph> node. <p>Simple <codeph>SELECT</codeph>
+                queries that contain a locking clause fulfill all the following conditions: <ul
+                  id="ul_uqy_mmc_j3b">
+                  <li>The locking clause is in the top level <codeph>SELECT</codeph> context.</li>
+                  <li>The <codeph>FROM</codeph> clause contains a single table that is not a view or
+                    an append optimized table.</li>
+                  <li>The <codeph>SELECT</codeph> command does not contain a set operations such as
+                      <codeph>UNION</codeph> or <codeph>INTERSECT</codeph>
+                  </li>
+                  <li>The <codeph>SELECT</codeph> command does not contain a sublink or
+                    sub-query.</li>
+                </ul></p><p>Otherwise, table locking for a <codeph>SELECT</codeph> query that
+                contains a locking clause behaves as if the Global Deadlock Detector is
+                disabled.</p></li>
+          </ul></p>
+        <note> By default, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables
+          for <codeph>DELETE</codeph> and <codeph>UPDATE</codeph> operations on heap tables. When
+          the Global Deadlock Detector is enabled the lock mode for <codeph>DELETE</codeph> and
+            <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See
+            <xref href="../../admin_guide/dml.xml#topic1"/>.</note><p>For more information on each
+          row-level lock mode, refer to <xref
+            href="https://www.postgresql.org/docs/9.4/explicit-locking.html" format="html"
             scope="external">Explicit Locking</xref> in the PostgreSQL documentation.</p><p>To
           prevent the operation from waiting for other transactions to commit, use the
             <codeph>NOWAIT</codeph> option. With <codeph>NOWAIT</codeph>, the statement reports an
@@ -1016,10 +1053,12 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph> for
         more examples.</p>
     </section>
-    <section id="section19"><title>Compatibility</title><p>The <codeph>SELECT</codeph> statement is
-        compatible with the SQL standard, but there are some extensions and some missing features.
-        </p><sectiondiv id="section20"><b>Omitted FROM Clauses</b><p>Greenplum Database allows one to omit the
-            <codeph>FROM</codeph> clause. It has a straightforward use to compute the results of
+    <section id="section19">
+      <title>Compatibility</title>
+      <p>The <codeph>SELECT</codeph> statement is compatible with the SQL standard, but there are
+        some extensions and some missing features. </p>
+      <sectiondiv id="section20"><b>Omitted FROM Clauses</b><p>Greenplum Database allows one to omit
+          the <codeph>FROM</codeph> clause. It has a straightforward use to compute the results of
           simple expressions. For example:</p><codeblock>SELECT 2+2;</codeblock><p>Some other SQL
           databases cannot do this except by introducing a dummy one-row table from which to do the
             <codeph>SELECT</codeph>. </p><p>Note that if a <codeph>FROM</codeph> clause is not
@@ -1029,8 +1068,9 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           earlier releases, setting a server configuration parameter,
             <varname>add_missing_from</varname>, to true allowed Greenplum Database to add an
           implicit entry to the query's <codeph>FROM</codeph> clause for each table referenced by
-          the query. This is no longer allowed. </p></sectiondiv><sectiondiv id="section21"><b>Omitting the AS Key Word</b><p>In the SQL standard, the optional key
-          word <codeph>AS</codeph> can be omitted before an output column name whenever the new
+          the query. This is no longer allowed. </p></sectiondiv>
+      <sectiondiv id="section21"><b>Omitting the AS Key Word</b><p>In the SQL standard, the optional
+          key word <codeph>AS</codeph> can be omitted before an output column name whenever the new
           column name is a valid column name (that is, not the same as any reserved keyword).
           Greenplum Database is slightly more restrictive: <codeph>AS</codeph> is required if the
           new column name matches any keyword at all, reserved or not. Recommended practice is to
@@ -1046,7 +1086,8 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           trailing <codeph>* </codeph>to be written to explicitly specify the
             non-<codeph>ONLY</codeph> behavior of including child tables. The standard does not
           allow this.</p><p>(These points apply equally to all SQL commands supporting the
-            <codeph>ONLY</codeph> option.)</p></sectiondiv><sectiondiv id="section22"><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92
+            <codeph>ONLY</codeph> option.)</p></sectiondiv>
+      <sectiondiv id="section22"><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92
           standard, an <codeph>ORDER BY</codeph> clause may only use output column names or numbers,
           while a <codeph>GROUP BY</codeph> clause may only use expressions based on input column
           names. Greenplum Database extends each of these clauses to allow the other choice as well
@@ -1058,11 +1099,10 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
             <codeph>ORDER BY</codeph> or <codeph>GROUP BY</codeph> expression the same way SQL:1999
           does. </p></sectiondiv>
       <sectiondiv><b>Functional Dependencies</b>
-        <p>Greenplum Database recognizes functional dependency
-          (allowing columns to be omitted from <codeph>GROUP BY</codeph>) only when
-            a table's primary key is included in the <codeph>GROUP BY</codeph> list.
-              The SQL standard specifies additional conditions that should be
-              recognized.</p></sectiondiv>
+        <p>Greenplum Database recognizes functional dependency (allowing columns to be omitted from
+            <codeph>GROUP BY</codeph>) only when a table's primary key is included in the
+            <codeph>GROUP BY</codeph> list. The SQL standard specifies additional conditions that
+          should be recognized.</p></sectiondiv>
       <sectiondiv><b>LIMIT and OFFSET</b><p>The clauses <codeph>LIMIT</codeph> and
             <codeph>OFFSET</codeph> are Greenplum Database-specific syntax, also used by MySQL. The
           SQL:2008 standard has introduced the clauses <codeph>OFFSET .. FETCH {FIRST|NEXT}
@@ -1077,17 +1117,18 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           extension. The <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR SHARE</codeph>, and
             <codeph>FOR KEY SHARE</codeph> variants, as well as the <codeph>NOWAIT</codeph> option,
           do not appear in the standard. </p></sectiondiv>
-      <sectiondiv><b>Data-Modifying Statements in WITH</b><p>Greenplum Database allows <codeph>INSERT</codeph>,
-        <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph> to be used as <codeph>WITH</codeph>
-          queries. This is not found in the SQL standard.</p></sectiondiv>
-      <sectiondiv id="section23"><b>Nonstandard Clauses</b><p>The clause <codeph>DISTINCT ON</codeph> is
-          not defined in the SQL standard.</p></sectiondiv><sectiondiv id="section24"><b>Limited Use
-          of STABLE and VOLATILE Functions</b><p>To prevent data from becoming out-of-sync across
-          the segments in Greenplum Database, any function classified as <codeph>STABLE</codeph> or
-            <codeph>VOLATILE</codeph> cannot be executed at the segment database level if it
-          contains SQL or modifies the database in any way. See <codeph><xref
-              href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph> for more
-          information.</p></sectiondiv></section>
+      <sectiondiv><b>Data-Modifying Statements in WITH</b><p>Greenplum Database allows
+            <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph> to be used
+          as <codeph>WITH</codeph> queries. This is not found in the SQL standard.</p></sectiondiv>
+      <sectiondiv id="section23"><b>Nonstandard Clauses</b><p>The clause <codeph>DISTINCT
+            ON</codeph> is not defined in the SQL standard.</p></sectiondiv>
+      <sectiondiv id="section24"><b>Limited Use of STABLE and VOLATILE Functions</b><p>To prevent
+          data from becoming out-of-sync across the segments in Greenplum Database, any function
+          classified as <codeph>STABLE</codeph> or <codeph>VOLATILE</codeph> cannot be executed at
+          the segment database level if it contains SQL or modifies the database in any way. See
+              <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>
+          for more information.</p></sectiondiv>
+    </section>
     <section id="section25">
       <title>See Also</title>
       <p><codeph><xref href="EXPLAIN.xml#topic1" type="topic" format="dita"/></codeph></p>
