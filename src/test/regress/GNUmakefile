@@ -256,6 +256,3 @@ clean distclean maintainer-clean: clean-lib
 	rm -f $(output_files) $(input_files)
 	rm -rf ./testtablespace ./testtablespace_*
 	rm -rf $(pg_regress_clean_files)
-	rm -f data/pg_class32.data
-	rm -f gmon.out
-	rm -f $(srcdir)/sql/cppudf.sql
