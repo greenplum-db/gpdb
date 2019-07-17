@@ -70,8 +70,8 @@ create or replace function setup(content_id integer, fault_name text, fault_acti
 $$ LANGUAGE plpgsql;
 create or replace function cleanup(content_id integer, tablespace_location_dir text) returns void as $$
 	begin
-		CHECKPOINT;
-		perform give_mirrors_time_to_catch_up();
+		CHECKPOINT; -- ensure primary/master xlogs do not leak into following test
+		perform force_mirrors_to_catch_up();
 		perform gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
 		perform remove_tablespace_location_directory(tablespace_location_dir);
 	end;
@@ -109,7 +109,7 @@ BEGIN
     PERFORM insert_noop_xlog_record_all_segments();
 END;
 $$LANGUAGE plpgsql;
-create or replace function give_mirrors_time_to_catch_up() returns void as $$
+create or replace function force_mirrors_to_catch_up() returns void as $$
 begin
     PERFORM gp_inject_fault2('after_xlog_redo_noop', 'sleep', dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
     PERFORM insert_noop_xlog_record();
@@ -150,9 +150,9 @@ select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespac
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 ERROR:  fault triggered, fault name:'after_xlog_create_tablespace' fault type:'error'
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -201,9 +201,9 @@ select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespac
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 ERROR:  fault triggered, fault name:'after_xlog_create_tablespace' fault type:'error'  (seg0 127.0.0.1:7002 pid=42782)
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -258,9 +258,9 @@ select wait_for_primaries_to_restart();
  t
 (1 row)
 
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -307,9 +307,9 @@ select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespac
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'error'
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -376,9 +376,9 @@ select wait_for_primaries_to_restart();
  t
 (1 row)
 
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -431,9 +431,9 @@ select setup_tablespace_location_dir_for_test(:'tablespace_location');
 (1 row)
 
 create tablespace my_tablespace_for_testing LOCATION :'tablespace_location';
-select * from give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select * from force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -460,9 +460,9 @@ select * from list_tablespace_catalog_without_oid();
 (12 rows)
 
 -- the tablespace should exist on disk
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -498,9 +498,9 @@ select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespac
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 ERROR:  fault triggered, fault name:'before_xlog_xact_distributed_commit' fault type:'error'
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -557,9 +557,9 @@ select setup_tablespace_location_dir_for_test(:'tablespace_location');
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -623,9 +623,9 @@ select gp_inject_fault2('after_xlog_tblspc_drop', 'error', dbid, hostname, port)
 
 DROP TABLESPACE my_tablespace_for_testing;
 ERROR:  fault triggered, fault name:'after_xlog_tblspc_drop' fault type:'error'
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -659,9 +659,9 @@ select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_co
 (1 row)
 
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -706,9 +706,9 @@ select gp_inject_fault2('after_xlog_tblspc_drop', 'error', dbid, hostname, port)
 
 DROP TABLESPACE my_tablespace_for_testing;
 ERROR:  fault triggered, fault name:'after_xlog_tblspc_drop' fault type:'error'
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -742,9 +742,9 @@ select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_co
 (1 row)
 
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -780,12 +780,12 @@ select setup_tablespace_location_dir_for_test(:'tablespace_location');
 (1 row)
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
-create table foobar (a int) tablespace my_tablespace_for_testing distributed by (a); 
+create table foobar (a int) tablespace my_tablespace_for_testing distributed by (a);
 DROP TABLESPACE my_tablespace_for_testing;
 ERROR:  tablespace "my_tablespace_for_testing" is not empty
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -864,9 +864,9 @@ select wait_for_primaries_to_restart();
  t
 (1 row)
 
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -943,9 +943,9 @@ select wait_for_primaries_to_restart();
  t
 (1 row)
 
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -1022,9 +1022,9 @@ select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from
 
 DROP TABLESPACE my_tablespace_for_testing;
 ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'panic'
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 
@@ -1101,9 +1101,9 @@ select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from
 
 DROP TABLESPACE my_tablespace_for_testing;
 ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'error'
-select give_mirrors_time_to_catch_up();
- give_mirrors_time_to_catch_up 
--------------------------------
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
  
 (1 row)
 

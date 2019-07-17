@@ -74,8 +74,8 @@ $$ LANGUAGE plpgsql;
 
 create or replace function cleanup(content_id integer, tablespace_location_dir text) returns void as $$
 	begin
-		CHECKPOINT;
-		perform give_mirrors_time_to_catch_up();
+		CHECKPOINT; -- ensure primary/master xlogs do not leak into following test
+		perform force_mirrors_to_catch_up();
 		perform gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
 		perform remove_tablespace_location_directory(tablespace_location_dir);
 	end;
@@ -123,7 +123,7 @@ END;
 $$LANGUAGE plpgsql;
 
 
-create or replace function give_mirrors_time_to_catch_up() returns void as $$
+create or replace function force_mirrors_to_catch_up() returns void as $$
 begin
     PERFORM gp_inject_fault2('after_xlog_redo_noop', 'sleep', dbid, hostname, port) FROM gp_segment_configuration WHERE role='m';
     PERFORM insert_noop_xlog_record();
@@ -167,7 +167,7 @@ $$ language sql;
 
 select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select * from list_tablespace_catalog();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
 DROP TABLESPACE my_tablespace_for_testing;
@@ -187,7 +187,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 
 select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select * from list_tablespace_catalog();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
 DROP TABLESPACE my_tablespace_for_testing;
@@ -208,7 +208,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select wait_for_primaries_to_restart();
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select * from list_tablespace_catalog();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
 DROP TABLESPACE my_tablespace_for_testing;
@@ -226,7 +226,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 
 select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select * from list_tablespace_catalog();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
 DROP TABLESPACE my_tablespace_for_testing;
@@ -259,7 +259,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select wait_for_primaries_to_restart();
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select * from list_tablespace_catalog();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
 DROP TABLESPACE my_tablespace_for_testing;
@@ -279,7 +279,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 select remove_tablespace_location_directory(:'tablespace_location');
 select setup_tablespace_location_dir_for_test(:'tablespace_location');
 create tablespace my_tablespace_for_testing LOCATION :'tablespace_location';
-select * from give_mirrors_time_to_catch_up();
+select * from force_mirrors_to_catch_up();
 
 -- force an aborted transaction which should no longer see a
 --     pending tablespace for deletion
@@ -290,7 +290,7 @@ abort;
 select * from list_tablespace_catalog_without_oid();
 
 -- the tablespace should exist on disk
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
 DROP TABLESPACE my_tablespace_for_testing;
 select cleanup(:content_id_under_test, :'tablespace_location');
@@ -310,7 +310,7 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 
 select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select * from list_tablespace_catalog();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
 DROP TABLESPACE my_tablespace_for_testing;
@@ -327,7 +327,7 @@ select setup_tablespace_location_dir_for_test(:'tablespace_location');
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select list_tablespace_dbid_dirs(0, :'tablespace_location');
 -- the tablespace should no longer be in the catalog
 select * from list_tablespace_catalog_without_oid();
@@ -346,12 +346,12 @@ select setup_tablespace_location_dir_for_test(:'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select gp_inject_fault2('after_xlog_tblspc_drop', 'error', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = 0;
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select list_tablespace_dbid_dirs(8, :'tablespace_location');
 select * from list_tablespace_catalog_without_oid(); -- the tablespace should still exist in the catalog
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = 0;
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select cleanup(0, :'tablespace_location');
 
 
@@ -370,12 +370,12 @@ select setup_tablespace_location_dir_for_test(:'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select gp_inject_fault2('after_xlog_tblspc_drop', 'error', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select list_tablespace_dbid_dirs(8, :'tablespace_location');
 select * from list_tablespace_catalog_without_oid(); -- the tablespace should still exist in the catalog
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select cleanup(:content_id_under_test, :'tablespace_location');
 
 --
@@ -388,9 +388,9 @@ select remove_tablespace_location_directory(:'tablespace_location') from gp_dist
 select setup_tablespace_location_dir_for_test(:'tablespace_location');
 
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
-create table foobar (a int) tablespace my_tablespace_for_testing distributed by (a); 
+create table foobar (a int) tablespace my_tablespace_for_testing distributed by (a);
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select list_tablespace_dbid_dirs(8, :'tablespace_location');
 -- the tablespace should still exist in the catalog
 select * from list_tablespace_catalog_without_oid(); -- the tablespace should still exist in the catalog
@@ -415,7 +415,7 @@ CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
 DROP TABLESPACE my_tablespace_for_testing;
 select wait_for_primaries_to_restart();
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select list_tablespace_dbid_dirs(0, :'tablespace_location');
 select * from list_tablespace_catalog_without_oid(); -- the tablespace should no longer exist in the catalog
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
@@ -438,7 +438,7 @@ CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
 DROP TABLESPACE my_tablespace_for_testing;
 select wait_for_primaries_to_restart();
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select list_tablespace_dbid_dirs(8, :'tablespace_location');
 select * from list_tablespace_catalog_without_oid(); -- the tablespaces should exist in the catalog
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
@@ -461,7 +461,7 @@ select setup_tablespace_location_dir_for_test(:'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
 select * from list_tablespace_catalog_without_oid(); -- the tablespaces should exist in the catalog
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
@@ -484,7 +484,7 @@ select setup_tablespace_location_dir_for_test(:'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
 DROP TABLESPACE my_tablespace_for_testing;
-select give_mirrors_time_to_catch_up();
+select force_mirrors_to_catch_up();
 select list_tablespace_dbid_dirs(:expected_number_of_tablespaces, :'tablespace_location');
 select * from list_tablespace_catalog_without_oid(); -- the tablespaces should exist in the catalog
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
