@@ -41,7 +41,6 @@ on the standard options.  The following options are specific to gpdiff:
     -man                  full documentation
     -version              print gpdiff version and underlying diff version
     -verbose              print verbose info
-    -gpd_ignore_headers   ignore header lines in query output
     -gpd_ignore_plans     ignore explain plan content in input files
     -gpd_init <file>      load initialization file
 
@@ -64,16 +63,6 @@ on the standard options.  The following options are specific to gpdiff:
 =item B<-verbose>
 
     Prints verbose information.
-
-=item B<-gpd_ignore_headers>
-
-gpdiff/atmsort expect PostgreSQL "psql-style" output for SELECT
-statements, with a two line header composed of the column names,
-separated by vertical bars (|), and a "separator" line of dashes and
-pluses beneath, followed by the row output.  The psql utility performs
-some formatting to adjust the column widths to match the size of the
-row output.  Setting this parameter causes gpdiff to ignore any
-differences in the column naming and format widths globally.
 
 =item B<-gpd_ignore_plans>
 
@@ -264,7 +253,6 @@ if (1)
         "help" => sub { lazy_pod2usage(-msg => $pmsg, -exitstatus => 1) },
         "version|v" => \&print_version ,
         "verbose|Verbose" => \$glob_atmsort_args{VERBOSE},
-        "gpd_ignore_headers|gp_ignore_headers" => \$glob_atmsort_args{IGNORE_HEADERS},
         "gpd_ignore_plans|gp_ignore_plans" => \$glob_atmsort_args{IGNORE_PLANS},
         "gpd_init|gp_init_file=s" => \@{$glob_atmsort_args{INIT_FILES}}
     );

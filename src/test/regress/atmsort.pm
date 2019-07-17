@@ -36,7 +36,6 @@ my $cpref = '';
 my $dpref = '';
 
 my $glob_ignore_plans;
-my $glob_ignore_whitespace;
 my @glob_init;
 
 my $glob_orderwarn;
@@ -49,7 +48,6 @@ sub atmsort_init
 {
     my %args = (
         # defaults
-        IGNORE_HEADERS  => 0,
         IGNORE_PLANS    => 0,
         INIT_FILES      => [],
         ORDER_WARN      => 0,
@@ -60,22 +58,18 @@ sub atmsort_init
     );
 
     $glob_ignore_plans        = 0;
-    $glob_ignore_whitespace   = 0;
     @glob_init                = ();
 
     $glob_orderwarn           = 0;
     $glob_verbose             = 0;
     $glob_fqo                 = {count => 0};
 
-    my $ignore_headers;
     my $ignore_plans;
     my @init_file;
     my $verbose;
     my $orderwarn;
 
     $glob_ignore_plans        = $args{IGNORE_PLANS};
-
-    $glob_ignore_whitespace   = $ignore_headers; # XXX XXX: for now
 
     @glob_init = @{$args{INIT_FILES}};
 
@@ -930,26 +924,6 @@ sub format_query_output
     {
         my @ggg= @{$outarr};
 
-        if ($glob_ignore_whitespace)
-        {
-           my @ggg2;
-
-           for my $line (@ggg)
-           {
-              # remove all leading, trailing whitespace (changes sorting)
-              # and whitespace around column separators
-              $line =~ s/^(\s+|\s+$)//;
-              $line =~ s/\|\s+/\|/gm;
-              $line =~ s/\s+\|/\|/gm;
-
-              $line .= "\n" # replace linefeed if necessary
-                unless ($line =~ m/\n$/);
-
-              push @ggg2, $line;
-           }
-           @ggg= @ggg2;
-        }
-
         if ($glob_orderwarn)
         {
             # If no ordering cols specified (no directive), and SELECT has
@@ -998,25 +972,6 @@ sub format_query_output
     {
         my @ggg= sort @{$outarr};
 
-        if ($glob_ignore_whitespace)
-        {
-           my @ggg2;
-
-           for my $line (@ggg)
-           {
-              # remove all leading, trailing whitespace (changes sorting)
-              # and whitespace around column separators
-              $line =~ s/^(\s+|\s+$)//;
-              $line =~ s/\|\s+/\|/gm;
-              $line =~ s/\s+\|/\|/gm;
-
-              $line .= "\n" # replace linefeed if necessary
-                unless ($line =~ m/\n$/);
-
-              push @ggg2, $line;
-           }
-           @ggg= sort @ggg2;
-        }
         for my $line (@ggg)
         {
             print $atmsort_outfh $bpref, $prefix, $line;
