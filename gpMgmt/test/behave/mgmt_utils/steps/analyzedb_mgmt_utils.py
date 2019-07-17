@@ -213,7 +213,7 @@ def impl(context, mod_count, table, schema, dbname):
 
 @then('root stats are populated for partition table "{tablename}" for database "{dbname}"')
 def impl(context, tablename, dbname):
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         query = "select count(*) from pg_statistic where starelid='%s'::regclass;" % tablename
         num_tuples = dbconn.execSQLForSingleton(conn, query)
         if num_tuples == 0:
@@ -230,7 +230,7 @@ def get_mod_count_in_state_file(dbname, schema, table):
 
 
 def create_long_lived_conn(context, dbname):
-    context.long_lived_conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
+    context.long_lived_conn = dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)
 
 
 def table_found_in_state_file(dbname, qualified_table):

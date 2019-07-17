@@ -58,6 +58,19 @@ class ConnectTestCase(unittest.TestCase):
 
         self.assertEqual(actual, encoding)
 
+    def test_secure_search_path_set(self):
+
+        with dbconn.connect(self.url) as conn:
+            result = dbconn.execSQLForSingleton(conn, "SELECT setting FROM pg_settings WHERE name='search_path'")
+
+        self.assertEqual(result, '')
+
+    def test_secure_search_path_not_set(self):
+
+        with dbconn.connect(self.url, unsetSearchPath=False) as conn:
+            result = dbconn.execSQLForSingleton(conn, "SELECT setting FROM pg_settings WHERE name='search_path'")
+
+        self.assertEqual(result, '"$user",public')
 
 if __name__ == '__main__':
     unittest.main()

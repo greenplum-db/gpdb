@@ -20,12 +20,12 @@ class Tablespace:
         for host in gparray.getHostList():
             run_cmd('ssh %s mkdir -p %s' % (pipes.quote(host), pipes.quote(self.path)))
 
-        with dbconn.connect(dbconn.DbURL()) as conn:
+        with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
             db = pg.DB(conn)
             db.query("CREATE TABLESPACE %s LOCATION '%s'" % (self.name, self.path))
             db.query("CREATE DATABASE %s TABLESPACE %s" % (self.dbname, self.name))
 
-        with dbconn.connect(dbconn.DbURL(dbname=self.dbname)) as conn:
+        with dbconn.connect(dbconn.DbURL(dbname=self.dbname), unsetSearchPath=False) as conn:
             db = pg.DB(conn)
             db.query("CREATE TABLE tbl (i int) DISTRIBUTED RANDOMLY")
             db.query("INSERT INTO tbl VALUES (GENERATE_SERIES(0, 25))")
@@ -33,7 +33,7 @@ class Tablespace:
             self.initial_data = db.query("SELECT gp_segment_id, i FROM tbl").getresult()
 
     def cleanup(self):
-        with dbconn.connect(dbconn.DbURL(dbname="postgres")) as conn:
+        with dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False) as conn:
             db = pg.DB(conn)
             db.query("DROP DATABASE IF EXISTS %s" % self.dbname)
             db.query("DROP TABLESPACE IF EXISTS %s" % self.name)
@@ -56,7 +56,7 @@ class Tablespace:
         distributed.
         """
         url = dbconn.DbURL(hostname=hostname, port=port, dbname=self.dbname)
-        with dbconn.connect(url) as conn:
+        with dbconn.connect(url, unsetSearchPath=False) as conn:
             db = pg.DB(conn)
             data = db.query("SELECT gp_segment_id, i FROM tbl").getresult()
 
@@ -76,7 +76,7 @@ class Tablespace:
           2. the table's numsegments is enlarged to the new cluster size
         """
         url = dbconn.DbURL(hostname=hostname, port=port, dbname=self.dbname)
-        with dbconn.connect(url) as conn:
+        with dbconn.connect(url, unsetSearchPath=False) as conn:
             db = pg.DB(conn)
             data = db.query("SELECT gp_segment_id, i FROM tbl").getresult()
             tbl_numsegments = dbconn.execSQLForSingleton(conn,

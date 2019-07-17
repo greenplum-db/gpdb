@@ -222,7 +222,10 @@ def do_list(skipvalidation):
 def get_gucs_from_database(gucname):
     try:
         dburl = dbconn.DbURL()
-        conn = dbconn.connect(dburl, False)
+        # we always want to unset search path except when getting the
+        # 'search_path' GUC itself
+        unsetSearchPath = gucname != 'search_path'
+        conn = dbconn.connect(dburl, False, unsetSearchPath=unsetSearchPath)
         query = ToolkitQuery(gucname).query
         cursor = dbconn.execSQL(conn, query)
         # we assume that all roles are primary due to the query.
