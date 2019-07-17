@@ -120,7 +120,7 @@ install: generate_greenplum_path_file
 	rm -rf $(DESTDIR)$(prefix)/bin/README*
 	rm -rf $(DESTDIR)$(prefix)/bin/lib/.gitignore
 	find $(DESTDIR)$(prefix)/lib/python/gppylib -name test -type d | xargs rm -rf
-	find $(DESTDIR)$(prefix)/lib/python -name .gitignore -type f | xargs rm -rf
+	find $(DESTDIR)$(prefix)/lib/python -name .gitignore -type f -delete
 
 clean distclean:
 	$(MAKE) -C bin $@
