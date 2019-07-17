@@ -33,6 +33,7 @@
 #include "optimizer/restrictinfo.h"
 #include "optimizer/var.h"
 #include "parser/parsetree.h"
+#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
 PG_MODULE_MAGIC;
@@ -50,25 +51,42 @@ PG_FUNCTION_INFO_V1(pxf_fdw_handler);
  * FDW functions declarations
  */
 static void pxfGetForeignRelSize(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid);
+
 static void pxfGetForeignPaths(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid);
+
 #if (PG_VERSION_NUM <= 90500)
-static ForeignScan *pxfGetForeignPlan(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid, ForeignPath *best_path, List *tlist, List *scan_clauses);
+
+static ForeignScan *pxfGetForeignPlan(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid, ForeignPath *best_path, List *tlist,
+									  List *scan_clauses);
+
 #else
 static ForeignScan *pxfGetForeignPlan(PlannerInfo *root, RelOptInfo *baserel, Oid foreigntableid, ForeignPath *best_path, List *tlist, List *scan_clauses, Plan *outer_plan);
 #endif
+
 static void pxfExplainForeignScan(ForeignScanState *node, ExplainState *es);
+
 static void pxfBeginForeignScan(ForeignScanState *node, int eflags);
+
 static TupleTableSlot *pxfIterateForeignScan(ForeignScanState *node);
+
 static void pxfReScanForeignScan(ForeignScanState *node);
+
 static void pxfEndForeignScan(ForeignScanState *node);
+
+/* Foreign updates */
+static void pxfBeginForeignModify(ModifyTableState *mtstate, ResultRelInfo *resultRelInfo, List *fdw_private, int subplan_index, int eflags);
+static TupleTableSlot *pxfExecForeignInsert(EState *estate, ResultRelInfo *resultRelInfo, TupleTableSlot *slot, TupleTableSlot *planSlot);
+
+static void pxfEndForeignModify(EState *estate, ResultRelInfo *resultRelInfo);
+
+static int	pxfIsForeignRelUpdatable(Relation rel);
 
 /*
  * Helper functions
  */
-static PxfContext * InitPxfContext(PxfFdwExecutionState *, Relation);
-static void InitCopyState(PxfContext *, PxfFdwExecutionState *);
-static int	PxfCallback(void *outbuf, int datasize, void *extra);
-
+static void InitCopyState(PxfFdwScanState * pxfsstate);
+static void InitCopyStateForModify(PxfFdwModifyState * pxfmstate);
+static CopyState BeginCopyTo(Relation forrel, List *options);
 
 /*
  * Foreign-data wrapper handler functions:
@@ -95,6 +113,33 @@ pxf_fdw_handler(PG_FUNCTION_ARGS)
 	fdw_routine->IterateForeignScan = pxfIterateForeignScan;
 	fdw_routine->ReScanForeignScan = pxfReScanForeignScan;
 	fdw_routine->EndForeignScan = pxfEndForeignScan;
+
+	/*
+	 * foreign table insert support
+	 */
+
+	/*
+	 * AddForeignUpdateTargets set to NULL, no extra target expressions are
+	 * added
+	 */
+	fdw_routine->AddForeignUpdateTargets = NULL;
+
+	/*
+	 * PlanForeignModify set to NULL, no additional plan-time actions are
+	 * taken
+	 */
+	fdw_routine->PlanForeignModify = NULL;
+	fdw_routine->BeginForeignModify = pxfBeginForeignModify;
+	fdw_routine->ExecForeignInsert = pxfExecForeignInsert;
+
+	/*
+	 * ExecForeignUpdate and ExecForeignDelete set to NULL since updates and
+	 * deletes are not supported
+	 */
+	fdw_routine->ExecForeignUpdate = NULL;
+	fdw_routine->ExecForeignDelete = NULL;
+	fdw_routine->EndForeignModify = pxfEndForeignModify;
+	fdw_routine->IsForeignRelUpdatable = pxfIsForeignRelUpdatable;
 
 	PG_RETURN_POINTER(fdw_routine);
 }
@@ -169,12 +214,13 @@ pxfGetForeignPlan(PlannerInfo *root,
 				  List *scan_clauses,
 				  Plan *outer_plan)
 #else
+
 static ForeignScan *
 pxfGetForeignPlan(PlannerInfo *root,
 				  RelOptInfo *baserel,
 				  Oid foreigntableid,
 				  ForeignPath *best_path,
-				  List *tlist,
+				  List *tlist,	/* target list */
 				  List *scan_clauses)
 #endif
 {
@@ -240,9 +286,8 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	List	   *quals = node->ss.ps.qual;
 	Oid			foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
 	ProjectionInfo *proj_info = node->ss.ps.ps_ProjInfo;
-	PxfFdwExecutionState *pxfestate = NULL;
+	PxfFdwScanState *pxfsstate = NULL;
 	PxfOptions *options = NULL;
-	PxfContext *context = NULL;
 	Relation	relation = node->ss.ss_currentRelation;
 
 	options = PxfGetOptions(foreigntableid);
@@ -251,38 +296,24 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	 * Save state in node->fdw_state.  We must save enough information to call
 	 * BeginCopyFrom() again.
 	 */
-	pxfestate = (PxfFdwExecutionState *) palloc(sizeof(PxfFdwExecutionState));
-	pxfestate->options = options;
-	pxfestate->proj_info = proj_info;
-	pxfestate->quals = quals;
+	pxfsstate = (PxfFdwScanState *) palloc(sizeof(PxfFdwScanState));
+	initStringInfo(&pxfsstate->uri);
 
-	context = InitPxfContext(pxfestate, relation);
+	pxfsstate->options = options;
+	pxfsstate->proj_info = proj_info;
+	pxfsstate->quals = quals;
+	pxfsstate->fragments = GetFragmentList(pxfsstate->options,
+										   relation,
+										   NULL,
+										   pxfsstate->proj_info,
+										   pxfsstate->quals);
+	pxfsstate->relation = relation;
+	pxfsstate->filterstr = NULL;
 
-	InitCopyState(context, pxfestate);
-	node->fdw_state = (void *) pxfestate;
+	InitCopyState(pxfsstate);
+	node->fdw_state = (void *) pxfsstate;
 
 	elog(DEBUG5, "pxf_fdw: pxfBeginForeignScan ends on segment: %d", PXF_SEGMENT_ID);
-}
-
-/*
- * Initiates PxfContext data which can be used in InitCopyState()
- */
-static PxfContext * InitPxfContext(PxfFdwExecutionState * pxfestate, Relation relation)
-{
-	PxfContext *context;
-	List	   *fragments;
-
-	fragments = getFragmentList(pxfestate->options, relation, NULL, pxfestate->proj_info, pxfestate->quals);
-
-	context = palloc0(sizeof(PxfContext));
-
-	initStringInfo(&context->uri);
-	context->fragments = fragments;
-	context->relation = relation;
-	context->filterstr = NULL;
-	context->options = pxfestate->options;
-
-	return context;
 }
 
 /*
@@ -296,10 +327,9 @@ static PxfContext * InitPxfContext(PxfFdwExecutionState * pxfestate, Relation re
 static TupleTableSlot *
 pxfIterateForeignScan(ForeignScanState *node)
 {
-	elog(DEBUG5, "pxf_fdw: pxfIterateForeignScan Executing on segment: %d",
-		 PXF_SEGMENT_ID);
+	elog(DEBUG5, "pxf_fdw: pxfIterateForeignScan Executing on segment: %d", PXF_SEGMENT_ID);
 
-	PxfFdwExecutionState *pxfestate = (PxfFdwExecutionState *) node->fdw_state;
+	PxfFdwScanState *pxfsstate = (PxfFdwScanState *) node->fdw_state;
 	TupleTableSlot *slot = node->ss.ss_ScanTupleSlot;
 	ErrorContextCallback errcallback;
 	bool		found;
@@ -307,7 +337,7 @@ pxfIterateForeignScan(ForeignScanState *node)
 
 	/* Set up callback to identify error line number. */
 	errcallback.callback = CopyFromErrorCallback;
-	errcallback.arg = (void *) pxfestate->cstate;
+	errcallback.arg = (void *) pxfsstate->cstate;
 	errcallback.previous = error_context_stack;
 	error_context_stack = &errcallback;
 
@@ -325,14 +355,14 @@ pxfIterateForeignScan(ForeignScanState *node)
 	 */
 	ExecClearTuple(slot);
 
-	found = NextCopyFrom(pxfestate->cstate,
+	found = NextCopyFrom(pxfsstate->cstate,
 						 NULL,
 						 slot_get_values(slot),
 						 slot_get_isnull(slot),
 						 NULL);
 	if (found)
 	{
-		if (pxfestate->cstate->cdbsreh)
+		if (pxfsstate->cstate->cdbsreh)
 		{
 			/*
 			 * If NextCopyFrom failed, the processed row count will have
@@ -343,7 +373,7 @@ pxfIterateForeignScan(ForeignScanState *node)
 			 * place for this, but row counts are currently scattered all over
 			 * the place. Consolidate.
 			 */
-			pxfestate->cstate->cdbsreh->processed++;
+			pxfsstate->cstate->cdbsreh->processed++;
 		}
 
 		ExecStoreVirtualTuple(slot);
@@ -364,14 +394,10 @@ pxfReScanForeignScan(ForeignScanState *node)
 {
 	elog(DEBUG5, "pxf_fdw: pxfReScanForeignScan starts on segment: %d", PXF_SEGMENT_ID);
 
-	Relation	relation = node->ss.ss_currentRelation;
-	PxfFdwExecutionState *pxfestate = (PxfFdwExecutionState *) node->fdw_state;
-	PxfContext *context = NULL;
+	PxfFdwScanState *pxfsstate = (PxfFdwScanState *) node->fdw_state;
 
-	EndCopyFrom(pxfestate->cstate);
-
-	context = InitPxfContext(pxfestate, relation);
-	InitCopyState(context, pxfestate);
+	EndCopyFrom(pxfsstate->cstate);
+	InitCopyState(pxfsstate);
 
 	elog(DEBUG5, "pxf_fdw: pxfReScanForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
@@ -386,7 +412,7 @@ pxfEndForeignScan(ForeignScanState *node)
 	elog(DEBUG5, "pxf_fdw: pxfEndForeignScan starts on segment: %d", PXF_SEGMENT_ID);
 
 	ForeignScan *foreignScan = (ForeignScan *) node->ss.ps.plan;
-	PxfFdwExecutionState *pxfestate = (PxfFdwExecutionState *) node->fdw_state;
+	PxfFdwScanState *pxfsstate = (PxfFdwScanState *) node->fdw_state;
 
 	/* Release resources */
 	if (foreignScan->fdw_private)
@@ -395,61 +421,159 @@ pxfEndForeignScan(ForeignScanState *node)
 		pfree(foreignScan->fdw_private);
 	}
 
-	/* if pxfestate is NULL, we are in EXPLAIN; nothing to do */
-	if (pxfestate)
-	{
-		if (pxfestate->cstate->data_source_cb_extra)
-		{
-			elog(DEBUG5, "Freeing data_source_cb_extra");
-
-			pfree(pxfestate->cstate->data_source_cb_extra);
-		}
-
-		EndCopyFrom(pxfestate->cstate);
-		elog(DEBUG5, "Freeing pxfestate");
-		pfree(pxfestate);
-	}
+	/* if pxfsstate is NULL, we are in EXPLAIN; nothing to do */
+	if (pxfsstate)
+		EndCopyFrom(pxfsstate->cstate);
 
 	elog(DEBUG5, "pxf_fdw: pxfEndForeignScan ends on segment: %d", PXF_SEGMENT_ID);
 }
 
 /*
- * Callback function invoked during pxfIterateForeignScan to retrieve data from PXF
+ * pxfBeginForeignModify
+ *		Begin an insert/update/delete operation on a foreign table
+ */
+static void
+pxfBeginForeignModify(ModifyTableState *mtstate,
+					  ResultRelInfo *resultRelInfo,
+					  List *fdw_private,
+					  int subplan_index,
+					  int eflags)
+{
+	elog(DEBUG5, "pxf_fdw: pxfBeginForeignModify starts on segment: %d", PXF_SEGMENT_ID);
+
+	PxfOptions *options = NULL;
+	PxfFdwModifyState *pxfmstate = NULL;
+	Relation	relation = resultRelInfo->ri_RelationDesc;
+	TupleDesc	tupDesc;
+
+	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
+		return;
+
+	tupDesc = RelationGetDescr(relation);
+	options = PxfGetOptions(RelationGetRelid(relation));
+	pxfmstate = palloc(sizeof(PxfFdwModifyState));
+
+	initStringInfo(&pxfmstate->uri);
+	pxfmstate->relation = relation;
+	pxfmstate->options = options;
+	pxfmstate->values = (Datum *) palloc(tupDesc->natts * sizeof(Datum));
+	pxfmstate->nulls = (bool *) palloc(tupDesc->natts * sizeof(bool));
+
+	InitCopyStateForModify(pxfmstate);
+
+	resultRelInfo->ri_FdwState = pxfmstate;
+
+	elog(DEBUG5, "pxf_fdw: pxfBeginForeignModify ends on segment: %d", PXF_SEGMENT_ID);
+}
+
+/*
+ * pxfExecForeignInsert
+ *		Insert one row into a foreign table
+ */
+static TupleTableSlot *
+pxfExecForeignInsert(EState *estate,
+					 ResultRelInfo *resultRelInfo,
+					 TupleTableSlot *slot,
+					 TupleTableSlot *planSlot)
+{
+	elog(DEBUG5, "pxf_fdw: pxfExecForeignInsert starts on segment: %d", PXF_SEGMENT_ID);
+
+	PxfFdwModifyState *pxfmstate = (PxfFdwModifyState *) resultRelInfo->ri_FdwState;
+	CopyState	cstate = pxfmstate->cstate;
+	Relation	relation = resultRelInfo->ri_RelationDesc;
+	TupleDesc	tupDesc = RelationGetDescr(relation);
+	HeapTuple	tuple = ExecMaterializeSlot(slot);
+	Datum	   *values = pxfmstate->values;
+	bool	   *nulls = pxfmstate->nulls;
+
+	/* TEXT or CSV */
+	heap_deform_tuple(tuple, tupDesc, values, nulls);
+	CopyOneRowTo(cstate, HeapTupleGetOid(tuple), values, nulls);
+	CopySendEndOfRow(cstate);
+
+	StringInfo	fe_msgbuf = cstate->fe_msgbuf;
+
+	int			bytes_written = PxfBridgeWrite(pxfmstate, fe_msgbuf->data, fe_msgbuf->len);
+
+	if (bytes_written == -1)
+	{
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not write to foreign resource: %m")));
+	}
+
+	elog(DEBUG3, "pxf_fdw %d bytes written", bytes_written);
+
+	/* Reset our buffer to start clean next round */
+	cstate->fe_msgbuf->len = 0;
+	cstate->fe_msgbuf->data[0] = '\0';
+
+	elog(DEBUG5, "pxf_fdw: pxfExecForeignInsert ends on segment: %d", PXF_SEGMENT_ID);
+	return slot;
+}
+
+/*
+ * pxfEndForeignModify
+ *		Finish an insert/update/delete operation on a foreign table
+ */
+static void
+pxfEndForeignModify(EState *estate,
+					ResultRelInfo *resultRelInfo)
+{
+	elog(DEBUG5, "pxf_fdw: pxfEndForeignModify starts on segment: %d", PXF_SEGMENT_ID);
+
+	PxfFdwModifyState *pxfmstate = (PxfFdwModifyState *) resultRelInfo->ri_FdwState;
+
+	/* If pxfmstate is NULL, we are in EXPLAIN; nothing to do */
+	if (pxfmstate == NULL)
+		return;
+
+	EndCopyFrom(pxfmstate->cstate);
+	PxfBridgeCleanup(pxfmstate);
+
+	elog(DEBUG5, "pxf_fdw: pxfEndForeignModify ends on segment: %d", PXF_SEGMENT_ID);
+}
+
+/*
+ * pxfIsForeignRelUpdatable
+ *  Assume table is updatable regardless of settings.
+ *		Determine whether a foreign table supports INSERT, UPDATE and/or
+ *		DELETE.
  */
 static int
-PxfCallback(void *outbuf, int datasize, void *extra)
+pxfIsForeignRelUpdatable(Relation rel)
 {
-	return PxfBridgeRead(extra, outbuf, datasize);
+	elog(DEBUG5, "pxf_fdw: pxfIsForeignRelUpdatable starts on segment: %d", PXF_SEGMENT_ID);
+	elog(DEBUG5, "pxf_fdw: pxfIsForeignRelUpdatable ends on segment: %d", PXF_SEGMENT_ID);
+	/* Only INSERTs are allowed at the moment */
+	return (1 << CMD_INSERT) | (0 << CMD_UPDATE) | (0 << CMD_DELETE);
 }
 
 /*
  * Initiates a copy state for pxfBeginForeignScan() and pxfReScanForeignScan()
  */
 static void
-InitCopyState(PxfContext * context, PxfFdwExecutionState * pxfestate)
+InitCopyState(PxfFdwScanState * pxfsstate)
 {
-	List	   *copy_options;
 	CopyState	cstate;
 
-	copy_options = context->options->copy_options;
-
-	PxfBridgeImportStart(context);
+	PxfBridgeImportStart(pxfsstate);
 
 	/*
 	 * Create CopyState from FDW options.  We always acquire all columns, so
 	 * as to match the expected ScanTupleSlot signature.
 	 */
-	cstate = BeginCopyFrom(context->relation,
+	cstate = BeginCopyFrom(pxfsstate->relation,
 						   NULL,
 						   false,	/* is_program */
-						   &PxfCallback,	/* data_source_cb */
-						   context, /* data_source_cb_extra */
+						   &PxfBridgeRead,	/* data_source_cb */
+						   pxfsstate,	/* data_source_cb_extra */
 						   NIL, /* attnamelist */
-						   copy_options,	/* copy options */
+						   pxfsstate->options->copy_options,	/* copy options */
 						   NIL);	/* ao_segnos */
 
 
-	if (context->options->reject_limit == -1)
+	if (pxfsstate->options->reject_limit == -1)
 	{
 		/* Default error handling - "all-or-nothing" */
 		cstate->cdbsreh = NULL; /* no SREH */
@@ -461,16 +585,16 @@ InitCopyState(PxfContext * context, PxfFdwExecutionState * pxfestate)
 		cstate->errMode = SREH_IGNORE;
 
 		/* select the SREH mode */
-		if (context->options->log_errors)
+		if (pxfsstate->options->log_errors)
 			cstate->errMode = SREH_LOG; /* errors into file */
 
-		cstate->cdbsreh = makeCdbSreh(context->options->reject_limit,
-									  context->options->is_reject_limit_rows,
-									  context->options->resource,
+		cstate->cdbsreh = makeCdbSreh(pxfsstate->options->reject_limit,
+									  pxfsstate->options->is_reject_limit_rows,
+									  pxfsstate->options->resource,
 									  (char *) cstate->cur_relname,
-									  context->options->log_errors);
+									  pxfsstate->options->log_errors);
 
-		cstate->cdbsreh->relid = RelationGetRelid(context->relation);
+		cstate->cdbsreh->relid = RelationGetRelid(pxfsstate->relation);
 	}
 
 	/* and 'fe_mgbuf' */
@@ -488,5 +612,95 @@ InitCopyState(PxfContext * context, PxfFdwExecutionState * pxfestate)
 											   ALLOCSET_DEFAULT_INITSIZE,
 											   ALLOCSET_DEFAULT_MAXSIZE);
 
-	pxfestate->cstate = cstate;
+	pxfsstate->cstate = cstate;
+}
+
+/*
+ * Initiates a copy state for pxfBeginForeignModify()
+ */
+static void
+InitCopyStateForModify(PxfFdwModifyState * pxfmstate)
+{
+	List	   *copy_options;
+	CopyState	cstate;
+
+	copy_options = pxfmstate->options->copy_options;
+
+	PxfBridgeExportStart(pxfmstate);
+
+	/*
+	 * Create CopyState from FDW options.  We always acquire all columns, so
+	 * as to match the expected ScanTupleSlot signature.
+	 */
+	cstate = BeginCopyTo(pxfmstate->relation, copy_options);
+
+	/* Initialize 'out_functions', like CopyTo() would. */
+
+	TupleDesc	tupDesc = RelationGetDescr(cstate->rel);
+	Form_pg_attribute *attr = tupDesc->attrs;
+	int			num_phys_attrs = tupDesc->natts;
+
+	cstate->out_functions = (FmgrInfo *) palloc(num_phys_attrs * sizeof(FmgrInfo));
+	ListCell   *cur;
+
+	foreach(cur, cstate->attnumlist)
+	{
+		int			attnum = lfirst_int(cur);
+		Oid			out_func_oid;
+		bool		isvarlena;
+
+		getTypeOutputInfo(attr[attnum - 1]->atttypid,
+						  &out_func_oid,
+						  &isvarlena);
+		fmgr_info(out_func_oid, &cstate->out_functions[attnum - 1]);
+	}
+
+	/* and 'fe_mgbuf' */
+	cstate->fe_msgbuf = makeStringInfo();
+
+	/*
+	 * Create a temporary memory context that we can reset once per row to
+	 * recover palloc'd memory.  This avoids any problems with leaks inside
+	 * datatype input or output routines, and should be faster than retail
+	 * pfree's anyway.
+	 */
+	cstate->rowcontext = AllocSetContextCreate(CurrentMemoryContext,
+											   "PxfFdwMemCxt",
+											   ALLOCSET_DEFAULT_MINSIZE,
+											   ALLOCSET_DEFAULT_INITSIZE,
+											   ALLOCSET_DEFAULT_MAXSIZE);
+
+	pxfmstate->cstate = cstate;
+}
+
+/*
+ * Set up CopyState for writing to an foreign table.
+ */
+static CopyState BeginCopyTo(Relation forrel, List *options)
+{
+	CopyState	cstate;
+
+	Assert(RelationIsForeign(forrel));
+
+	cstate = BeginCopy(false, forrel, NULL, NULL, NIL, options, NULL);
+	cstate->dispatch_mode = COPY_DIRECT;
+
+	/*
+	 * We use COPY_CALLBACK to mean that the each line should be
+	 * left in fe_msgbuf. There is no actual callback!
+	 */
+	cstate->copy_dest = COPY_CALLBACK;
+
+	/*
+	 * Some more initialization, that in the normal COPY TO codepath, is done
+	 * in CopyTo() itself.
+	 */
+	cstate->null_print_client = cstate->null_print;		/* default */
+	if (cstate->need_transcoding)
+		cstate->null_print_client = pg_server_to_custom(cstate->null_print,
+		                                                cstate->null_print_len,
+		                                                cstate->file_encoding,
+		                                                cstate->enc_conversion_proc);
+
+	return cstate;
 }

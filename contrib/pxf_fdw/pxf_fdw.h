@@ -53,17 +53,6 @@ typedef struct PxfOptions
 								 * pxf_host, and pxf_protocol */
 }			PxfOptions;
 
-/*
- * FDW-specific information for ForeignScanState.fdw_state.
- */
-typedef struct PxfFdwExecutionState
-{
-	CopyState	cstate;			/* state of reading from PXF */
-	PxfOptions *options;		/* FDW options */
-	ProjectionInfo *proj_info;	/* Projection information */
-	List	   *quals;			/* Qualifiers for the query */
-}			PxfFdwExecutionState;
-
 /* Functions prototypes for pxf_option.c file */
 PxfOptions *PxfGetOptions(Oid foreigntableid);
 

@@ -31,11 +31,11 @@ static void pxf_array_element_end(void *state, bool isnull);
  * Returns selected fragments that have been allocated to the current segment
  */
 List *
-getFragmentList(PxfOptions * options,
-				Relation relation,
-				char *filter_string,
-				ProjectionInfo *proj_info,
-				List *quals)
+GetFragmentList(PxfOptions *options,
+                Relation relation,
+                char *filter_string,
+                ProjectionInfo *proj_info,
+                List *quals)
 {
 	List	   *data_fragments;
 

@@ -19,22 +19,33 @@
 #include "commands/defrem.h"
 #include "foreign/foreign.h"
 
-static char *const FDW_OPTION_FORMAT_TEXT = "text";
-static char *const FDW_OPTION_FORMAT_CSV = "csv";
+#define FDW_OPTION_FORMAT_TEXT "text"
+#define FDW_OPTION_FORMAT_CSV "csv"
 
-static char *const FDW_OPTION_REJECT_LIMIT_ROWS = "rows";
-static char *const FDW_OPTION_REJECT_LIMIT_PERCENT = "percent";
+#define FDW_OPTION_REJECT_LIMIT_ROWS "rows"
+#define FDW_OPTION_REJECT_LIMIT_PERCENT "percent"
 
-static char *const FDW_OPTION_PROTOCOL = "protocol";
-static char *const FDW_OPTION_RESOURCE = "resource";
-static char *const FDW_OPTION_FORMAT = "format";
-static char *const FDW_OPTION_LOG_ERRORS = "log_errors";
-static char *const FDW_OPTION_REJECT_LIMIT_TYPE = "reject_limit_type";
-static char *const FDW_OPTION_REJECT_LIMIT = "reject_limit";
-static char *const FDW_OPTION_PXF_PORT = "pxf_port";
-static char *const FDW_OPTION_PXF_HOST = "pxf_host";
-static char *const FDW_OPTION_PXF_PROTOCOL = "pxf_protocol";
-static char *const FDW_OPTION_MPP_EXECUTE = "mpp_execute";
+#define FDW_OPTION_PROTOCOL "protocol"
+#define FDW_OPTION_RESOURCE "resource"
+#define FDW_OPTION_FORMAT "format"
+#define FDW_OPTION_LOG_ERRORS "log_errors"
+#define FDW_OPTION_REJECT_LIMIT_TYPE "reject_limit_type"
+#define FDW_OPTION_REJECT_LIMIT "reject_limit"
+#define FDW_OPTION_PXF_PORT "pxf_port"
+#define FDW_OPTION_PXF_HOST "pxf_host"
+#define FDW_OPTION_PXF_PROTOCOL "pxf_protocol"
+#define FDW_OPTION_MPP_EXECUTE "mpp_execute"
+
+#define FDW_COPY_OPTION_HEADER "header"
+#define FDW_COPY_OPTION_DELIMITER "delimiter"
+#define FDW_COPY_OPTION_QUOTE "quote"
+#define FDW_COPY_OPTION_ESCAPE "escape"
+#define FDW_COPY_OPTION_NULL "null"
+#define FDW_COPY_OPTION_ENCODING "encoding"
+#define FDW_COPY_OPTION_NEWLINE "newline"
+#define FDW_COPY_OPTION_FILL_MISSING_FIELDS "fill_missing_fields"
+#define FDW_COPY_OPTION_FORCE_NOT_NULL "force_not_null"
+#define FDW_COPY_OPTION_FORCE_NULL "force_null"
 
 /*
  * Describes the valid copy options for objects that use this wrapper.
@@ -72,17 +83,17 @@ static const struct PxfFdwOption valid_copy_options[] = {
 	/* Format options */
 	/* oids option is not supported */
 	/* freeze option is not supported */
-	{"format", ForeignTableRelationId},
-	{"header", ForeignTableRelationId},
-	{"delimiter", ForeignTableRelationId},
-	{"quote", ForeignTableRelationId},
-	{"escape", ForeignTableRelationId},
-	{"null", ForeignTableRelationId},
-	{"encoding", ForeignTableRelationId},
-	{"newline", ForeignTableRelationId},
-	{"fill_missing_fields", ForeignTableRelationId},
-	{"force_not_null", AttributeRelationId},
-	{"force_null", AttributeRelationId},
+	{FDW_OPTION_FORMAT, ForeignTableRelationId},
+	{FDW_COPY_OPTION_HEADER, ForeignTableRelationId},
+	{FDW_COPY_OPTION_DELIMITER, ForeignTableRelationId},
+	{FDW_COPY_OPTION_QUOTE, ForeignTableRelationId},
+	{FDW_COPY_OPTION_ESCAPE, ForeignTableRelationId},
+	{FDW_COPY_OPTION_NULL, ForeignTableRelationId},
+	{FDW_COPY_OPTION_ENCODING, ForeignTableRelationId},
+	{FDW_COPY_OPTION_NEWLINE, ForeignTableRelationId},
+	{FDW_COPY_OPTION_FILL_MISSING_FIELDS, ForeignTableRelationId},
+	{FDW_COPY_OPTION_FORCE_NOT_NULL, AttributeRelationId},
+	{FDW_COPY_OPTION_FORCE_NULL, AttributeRelationId},
 
 	/* Sentinel */
 	{NULL, InvalidOid}
@@ -170,7 +181,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			pxf_port = atoi(defGetString(def));
 
 			/*
-			 * TODO: a PXF service can be running on port 80 behind a load
+			 * TODO: a PXF service can be running on port 80 behind a load-
 			 * balancer we need to remove this restriction (i.e. kubernetes)
 			 */
 			if (pxf_port < 1024 || pxf_port > 65535)
@@ -188,7 +199,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			if (pStr == endptr || reject_limit < 1)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg("invalid reject_limit value '%s', should be a positive integer", pStr)));
+						 errmsg("invalid %s value '%s', should be a positive integer", FDW_OPTION_REJECT_LIMIT, pStr)));
 		}
 		else if (strcmp(def->defname, FDW_OPTION_REJECT_LIMIT_TYPE) == 0)
 		{
@@ -199,7 +210,8 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 							  FDW_OPTION_REJECT_LIMIT_PERCENT) != 0)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg("invalid reject_limit_type value, only '%s' and '%s' are supported",
+						 errmsg("invalid %s value, only '%s' and '%s' are supported",
+								FDW_OPTION_REJECT_LIMIT_TYPE,
 								FDW_OPTION_REJECT_LIMIT_ROWS,
 								FDW_OPTION_REJECT_LIMIT_PERCENT)));
 		}
@@ -214,7 +226,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_FDW_DYNAMIC_PARAMETER_VALUE_NEEDED),
-				 errmsg("the protocol option must be defined for PXF foreign-data wrappers")));
+				 errmsg("the %s option must be defined for PXF foreign-data wrappers", FDW_OPTION_PROTOCOL)));
 	}
 
 	if (catalog == ForeignTableRelationId &&
@@ -222,7 +234,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_FDW_DYNAMIC_PARAMETER_VALUE_NEEDED),
-				 errmsg("the resource option must be defined at the foreign table level")));
+				 errmsg("the %s option must be defined at the foreign table level", FDW_OPTION_RESOURCE)));
 	}
 
 	/* Validate reject limit */
@@ -233,7 +245,8 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			if (reject_limit < 2)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg("invalid (ROWS) reject_limit value '%d', valid values are 2 or larger",
+						 errmsg("invalid (ROWS) %s value '%d', valid values are 2 or larger",
+								FDW_OPTION_REJECT_LIMIT,
 								reject_limit)));
 		}
 		else
@@ -241,7 +254,8 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			if (reject_limit < 1 || reject_limit > 100)
 				ereport(ERROR,
 						(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-						 errmsg("invalid (PERCENT) reject_limit value '%d', valid values are 1 to 100",
+						 errmsg("invalid (PERCENT) %s value '%d', valid values are 1 to 100",
+								FDW_OPTION_REJECT_LIMIT,
 								reject_limit)));
 		}
 	}
@@ -250,7 +264,7 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 		if (log_errors != -1)
 			ereport(ERROR,
 					(errcode(ERRCODE_FDW_INVALID_STRING_FORMAT),
-					 errmsg("the log_errors option cannot be set without reject_limit")));
+					 errmsg("the %s option cannot be set without reject_limit", FDW_OPTION_LOG_ERRORS)));
 	}
 
 	/*
@@ -311,25 +325,25 @@ ValidateCopyOptions(List *options_list, Oid catalog)
 		 * force_not_null is a boolean option; after validation we can discard
 		 * it - it will be retrieved later in PxfGetOptions()
 		 */
-		if (strcmp(def->defname, "force_not_null") == 0)
+		if (strcmp(def->defname, FDW_COPY_OPTION_FORCE_NOT_NULL) == 0)
 		{
 			if (force_not_null)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options"),
-						 errhint("option \"force_not_null\" supplied more than once for a column")));
+						 errhint("option \"%s\" supplied more than once for a column", FDW_COPY_OPTION_FORCE_NOT_NULL)));
 			force_not_null = def;
 			/* Don't care what the value is, as long as it's a legal boolean */
 			(void) defGetBoolean(def);
 		}
 		/* See comments for force_not_null above */
-		else if (strcmp(def->defname, "force_null") == 0)
+		else if (strcmp(def->defname, FDW_COPY_OPTION_FORCE_NULL) == 0)
 		{
 			if (force_null)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options"),
-						 errhint("option \"force_null\" supplied more than once for a column")));
+						 errhint("option \"%s\" supplied more than once for a column", FDW_COPY_OPTION_FORCE_NULL)));
 			force_null = def;
 			(void) defGetBoolean(def);
 		}

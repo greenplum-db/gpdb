@@ -23,94 +23,108 @@
 #include "cdb/cdbvars.h"
 
 /* helper function declarations */
-static void BuildUriForRead(PxfContext * context);
-static void BuildUriForWrite(PxfContext * context);
-static void AddQuerydataToHttpHeaders(PxfContext * context);
-static void SetCurrentFragmentHeaders(PxfContext * context);
-static size_t FillBuffer(PxfContext * context, char *start, size_t size);
+static void BuildUriForRead(PxfFdwScanState * pxfsstate);
+static void BuildUriForWrite(PxfFdwModifyState * pxfmstate);
+static void SetCurrentFragmentHeaders(PxfFdwScanState * pxfsstate);
+static size_t FillBuffer(PxfFdwScanState * pxfsstate, char *start, size_t size);
 
 /*
- * Clean up churl related data structures from the context.
+ * Clean up churl related data structures from the PXF FDW modify state.
  */
 void
-PxfBridgeCleanup(PxfContext * context)
+PxfBridgeCleanup(PxfFdwModifyState * pxfmstate)
 {
-	if (context == NULL)
+	if (pxfmstate == NULL)
 		return;
 
-	churl_cleanup(context->churl_handle, false);
-	context->churl_handle = NULL;
+	churl_cleanup(pxfmstate->churl_handle, false);
+	pxfmstate->churl_handle = NULL;
 
-	churl_headers_cleanup(context->churl_headers);
-	context->churl_headers = NULL;
+	churl_headers_cleanup(pxfmstate->churl_headers);
+	pxfmstate->churl_headers = NULL;
 
-	if (context->filterstr != NULL)
+	/* TODO: do we need to cleanup filterstr for foreign scan? */
+/*	if (pxfmstate->filterstr != NULL)
 	{
-		pfree(context->filterstr);
-		context->filterstr = NULL;
-	}
+		pfree(pxfmstate->filterstr);
+		pxfmstate->filterstr = NULL;
+	}*/
 }
 
 /*
  * Sets up data before starting import
  */
 void
-PxfBridgeImportStart(PxfContext * context)
+PxfBridgeImportStart(PxfFdwScanState * pxfsstate)
 {
-	if (!context->fragments)
+	if (!pxfsstate->fragments)
 		return;
 
-	context->current_fragment = list_head(context->fragments);
-	context->churl_headers = churl_headers_init();
+	pxfsstate->current_fragment = list_head(pxfsstate->fragments);
+	pxfsstate->churl_headers = churl_headers_init();
 
-	BuildUriForRead(context);
-	AddQuerydataToHttpHeaders(context);
-	SetCurrentFragmentHeaders(context);
+	BuildUriForRead(pxfsstate);
+	BuildHttpHeaders(pxfsstate->churl_headers,
+					 pxfsstate->options,
+					 pxfsstate->relation,
+					 NULL,
+					 pxfsstate->proj_info,
+					 pxfsstate->quals);
+	SetCurrentFragmentHeaders(pxfsstate);
 
-	context->churl_handle = churl_init_download(context->uri.data, context->churl_headers);
+	pxfsstate->churl_handle = churl_init_download(pxfsstate->uri.data, pxfsstate->churl_headers);
 
 	/* read some bytes to make sure the connection is established */
-	churl_read_check_connectivity(context->churl_handle);
+	churl_read_check_connectivity(pxfsstate->churl_handle);
 }
 
 /*
  * Sets up data before starting export
  */
 void
-pxfBridgeExportStart(PxfContext * context)
+PxfBridgeExportStart(PxfFdwModifyState * pxfmstate)
 {
-	elog(ERROR, "pxf_fdw: pxfBridgeExportStart not implemented");
+	BuildUriForWrite(pxfmstate);
+	pxfmstate->churl_headers = churl_headers_init();
+	BuildHttpHeaders(pxfmstate->churl_headers,
+					 pxfmstate->options,
+					 pxfmstate->relation,
+					 NULL,
+					 NULL,
+					 NULL);
+	pxfmstate->churl_handle = churl_init_upload(pxfmstate->uri.data, pxfmstate->churl_headers);
 }
 
 /*
  * Reads data from the PXF server into the given buffer of a given size
  */
 int
-PxfBridgeRead(PxfContext * context, char *databuf, int datalen)
+PxfBridgeRead(void *outbuf, int datasize, void *extra)
 {
 	size_t		n = 0;
+	PxfFdwScanState *pxfsstate = (PxfFdwScanState *) extra;
 
-	if (!context->fragments)
+	if (!pxfsstate->fragments)
 		return (int) n;
 
-	while ((n = FillBuffer(context, databuf, datalen)) == 0)
+	while ((n = FillBuffer(pxfsstate, outbuf, datasize)) == 0)
 	{
 		/*
 		 * done processing all data for current fragment - check if the
 		 * connection terminated with an error
 		 */
-		churl_read_check_connectivity(context->churl_handle);
+		churl_read_check_connectivity(pxfsstate->churl_handle);
 
 		/* start processing next fragment */
-		context->current_fragment = lnext(context->current_fragment);
-		if (context->current_fragment == NULL)
+		pxfsstate->current_fragment = lnext(pxfsstate->current_fragment);
+		if (pxfsstate->current_fragment == NULL)
 			return 0;
 
-		SetCurrentFragmentHeaders(context);
-		churl_download_restart(context->churl_handle, context->uri.data, context->churl_headers);
+		SetCurrentFragmentHeaders(pxfsstate);
+		churl_download_restart(pxfsstate->churl_handle, pxfsstate->uri.data, pxfsstate->churl_headers);
 
 		/* read some bytes to make sure the connection is established */
-		churl_read_check_connectivity(context->churl_handle);
+		churl_read_check_connectivity(pxfsstate->churl_handle);
 	}
 
 	return (int) n;
@@ -120,14 +134,14 @@ PxfBridgeRead(PxfContext * context, char *databuf, int datalen)
  * Writes data from the given buffer of a given size to the PXF server
  */
 int
-PxfBridgeWrite(PxfContext * context, char *databuf, int datalen)
+PxfBridgeWrite(PxfFdwModifyState * pxfmstate, char *databuf, int datalen)
 {
 	size_t		n = 0;
 
 	if (datalen > 0)
 	{
-		n = churl_write(context->churl_handle, databuf, datalen);
-/* 		elog(DEBUG5, "pxf gpbridge_write: segment %d wrote %zu bytes to %s", PXF_SEGMENT_ID, n, context->gphd_uri->data); */
+		n = churl_write(pxfmstate->churl_handle, databuf, datalen);
+		elog(DEBUG5, "pxf PxfBridgeWrite: segment %d wrote %zu bytes to %s", PXF_SEGMENT_ID, n, pxfmstate->options->resource);
 	}
 
 	return (int) n;
@@ -137,38 +151,26 @@ PxfBridgeWrite(PxfContext * context, char *databuf, int datalen)
  * Format the URI for reading by adding PXF service endpoint details
  */
 static void
-BuildUriForRead(PxfContext * context)
+BuildUriForRead(PxfFdwScanState * pxfsstate)
 {
-	FragmentData *data = (FragmentData *) lfirst(context->current_fragment);
+	FragmentData *data = (FragmentData *) lfirst(pxfsstate->current_fragment);
 
-	resetStringInfo(&context->uri);
-	appendStringInfo(&context->uri, "http://%s/%s/%s/Bridge", data->authority, PXF_SERVICE_PREFIX, PXF_VERSION);
-	elog(DEBUG2, "pxf_fdw: uri %s for read", context->uri.data);
+	resetStringInfo(&pxfsstate->uri);
+	appendStringInfo(&pxfsstate->uri, "http://%s/%s/%s/Bridge", data->authority, PXF_SERVICE_PREFIX, PXF_VERSION);
+	elog(DEBUG2, "pxf_fdw: uri %s for read", pxfsstate->uri.data);
 }
 
 /*
  * Format the URI for writing by adding PXF service endpoint details
  */
 static void
-BuildUriForWrite(PxfContext * context)
+BuildUriForWrite(PxfFdwModifyState * pxfmstate)
 {
-	elog(ERROR, "pxf_fdw: BuildUriForWrite not implemented");
-}
+	PxfOptions *options = pxfmstate->options;
 
-
-/*
- * Add key/value pairs to connection header. These values are the context of the query and used
- * by the remote component.
- */
-static void
-AddQuerydataToHttpHeaders(PxfContext * context)
-{
-	BuildHttpHeaders(context->churl_headers,
-					 context->options,
-					 context->relation,
-					 NULL,
-					 context->proj_info,
-					 context->quals);
+	resetStringInfo(&pxfmstate->uri);
+	appendStringInfo(&pxfmstate->uri, "http://%s/%s/%s/Writable/stream", psprintf("%s:%d", options->pxf_host, options->pxf_port), PXF_SERVICE_PREFIX, PXF_VERSION);
+	elog(DEBUG2, "pxf_fdw: uri %s with file name for write: %s", pxfmstate->uri.data, options->resource);
 }
 
 /*
@@ -182,37 +184,37 @@ AddQuerydataToHttpHeaders(PxfContext * context)
  * If the fragment doesn't have user data, the header will be removed.
  */
 static void
-SetCurrentFragmentHeaders(PxfContext * context)
+SetCurrentFragmentHeaders(PxfFdwScanState * pxfsstate)
 {
-	FragmentData *frag_data = (FragmentData *) lfirst(context->current_fragment);
-	int			fragment_count = list_length(context->fragments);
+	FragmentData *frag_data = (FragmentData *) lfirst(pxfsstate->current_fragment);
+	int			fragment_count = list_length(pxfsstate->fragments);
 
 	elog(DEBUG2, "pxf_fdw: set_current_fragment_source_name: source_name %s, index %s, has user data: %s ",
 		 frag_data->source_name, frag_data->index, frag_data->user_data ? "TRUE" : "FALSE");
 
-	churl_headers_override(context->churl_headers, "X-GP-DATA-DIR", frag_data->source_name);
-	churl_headers_override(context->churl_headers, "X-GP-DATA-FRAGMENT", frag_data->index);
-	churl_headers_override(context->churl_headers, "X-GP-FRAGMENT-METADATA", frag_data->fragment_md);
-	churl_headers_override(context->churl_headers, "X-GP-FRAGMENT-INDEX", frag_data->index);
+	churl_headers_override(pxfsstate->churl_headers, "X-GP-DATA-DIR", frag_data->source_name);
+	churl_headers_override(pxfsstate->churl_headers, "X-GP-DATA-FRAGMENT", frag_data->index);
+	churl_headers_override(pxfsstate->churl_headers, "X-GP-FRAGMENT-METADATA", frag_data->fragment_md);
+	churl_headers_override(pxfsstate->churl_headers, "X-GP-FRAGMENT-INDEX", frag_data->index);
 
 	if (frag_data->fragment_idx == fragment_count)
 	{
-		churl_headers_override(context->churl_headers, "X-GP-LAST-FRAGMENT", "true");
+		churl_headers_override(pxfsstate->churl_headers, "X-GP-LAST-FRAGMENT", "true");
 	}
 
 	if (frag_data->user_data)
 	{
-		churl_headers_override(context->churl_headers, "X-GP-FRAGMENT-USER-DATA", frag_data->user_data);
+		churl_headers_override(pxfsstate->churl_headers, "X-GP-FRAGMENT-USER-DATA", frag_data->user_data);
 	}
 	else
 	{
-		churl_headers_remove(context->churl_headers, "X-GP-FRAGMENT-USER-DATA", true);
+		churl_headers_remove(pxfsstate->churl_headers, "X-GP-FRAGMENT-USER-DATA", true);
 	}
 
 	if (frag_data->profile)
 	{
 		/* if current fragment has optimal profile set it */
-		churl_headers_override(context->churl_headers, "X-GP-PROFILE", frag_data->profile);
+		churl_headers_override(pxfsstate->churl_headers, "X-GP-PROFILE", frag_data->profile);
 		elog(DEBUG2, "pxf_fdw: SetCurrentFragmentHeaders: using profile: %s", frag_data->profile);
 
 	}
@@ -222,7 +224,7 @@ SetCurrentFragmentHeaders(PxfContext * context)
  * Read data from churl until the buffer is full or there is no more data to be read
  */
 static size_t
-FillBuffer(PxfContext * context, char *start, size_t size)
+FillBuffer(PxfFdwScanState * pxfsstate, char *start, size_t size)
 {
 	size_t		n = 0;
 	char	   *ptr = start;
@@ -230,7 +232,7 @@ FillBuffer(PxfContext * context, char *start, size_t size)
 
 	while (ptr < end)
 	{
-		n = churl_read(context->churl_handle, ptr, end - ptr);
+		n = churl_read(pxfsstate->churl_handle, ptr, end - ptr);
 		if (n == 0)
 			break;
 
