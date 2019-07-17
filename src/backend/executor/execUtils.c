@@ -2276,7 +2276,8 @@ uint64 PlanStateOperatorMemKB(const PlanState *ps)
 	{
 		if (IsA(ps, AggState))
 		{
-			result = ps->plan->operatorMemKB + MemoryAccounting_RequestQuotaIncrease();
+			/* Retrieve all relinquished memory (quota the other node not using) */
+			result = ps->plan->operatorMemKB + (MemoryAccounting_RequestQuotaIncrease() >> 10);
 		}
 		else
 			result = ps->plan->operatorMemKB;
