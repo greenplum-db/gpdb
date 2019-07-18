@@ -651,6 +651,7 @@ resources:
   type: git
   source:
     branch: {{madlib-git-branch}}
+    tag_filter: {{madlib-git-tag-filter}}
     uri: {{madlib-git-remote}}
 
 - name: madlib_ci
@@ -1795,9 +1796,9 @@ jobs:
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: gpdb6-centos6-test
     params:
-      TEST_OS: centos
+      TEST_OS: centos6
       ORCA: "off"
-      DBVER: gpdb6-assert
+      DBVER: gpdb6
 
 - name: MADlib_Test_orca_centos6
   plan:
@@ -1816,9 +1817,9 @@ jobs:
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: gpdb6-centos6-test
     params:
-      TEST_OS: centos
+      TEST_OS: centos6
       ORCA: "on"
-      DBVER: gpdb6-assert
+      DBVER: gpdb6
 {% endif %}
 
 {% if "centos7" in os_types %}
@@ -1839,9 +1840,9 @@ jobs:
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: gpdb6-centos7-test
     params:
-      TEST_OS: centos
+      TEST_OS: centos7
       ORCA: "off"
-      DBVER: gpdb6-assert
+      DBVER: gpdb6
 
 - name: MADlib_Test_orca_centos7
   plan:
@@ -1860,9 +1861,9 @@ jobs:
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
     image: gpdb6-centos7-test
     params:
-      TEST_OS: centos
+      TEST_OS: centos7
       ORCA: "on"
-      DBVER: gpdb6-assert
+      DBVER: gpdb6
 {% endif %}
 {% endif %}
 
@@ -1901,11 +1902,11 @@ jobs:
       - [[ test.name ]]
       - [[ test.name ]]_ubuntu18
 {% endfor %}
- ##     - madlib_build_gppkg
- ##     - MADlib_Test_orca_centos6
- ##     - MADlib_Test_planner_centos6
- ##     - MADlib_Test_orca_centos7
- ##     - MADlib_Test_planner_centos7
+      - madlib_build_gppkg
+      - MADlib_Test_orca_centos6
+      - MADlib_Test_planner_centos6
+      - MADlib_Test_orca_centos7
+      - MADlib_Test_planner_centos7
       - pg_upgrade
       - gpexpand
       - check_centos
@@ -1922,8 +1923,8 @@ jobs:
 {% for test in CLI_BEHAVE_TESTS %}
       - [[ test.name ]]
 {% endfor %}
- ##     - MADlib_Test_orca_centos6
- ##     - MADlib_Test_planner_centos6
+      - MADlib_Test_orca_centos6
+      - MADlib_Test_planner_centos6
       - gpexpand
       - check_centos
       - interconnect
@@ -1934,8 +1935,8 @@ jobs:
       - icw_gporca_centos7
       - icw_planner_centos7
       - resource_group_centos7
- ##     - MADlib_Test_orca_centos7
- ##     - MADlib_Test_planner_centos7
+      - MADlib_Test_orca_centos7
+      - MADlib_Test_planner_centos7
     - get: bin_gpdb_clients_centos6
       passed:
       - compile_gpdb_centos6

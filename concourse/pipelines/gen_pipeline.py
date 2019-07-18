@@ -74,11 +74,6 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
         'test_gpdb_clients_windows',
         'icw_gporca_centos6_gpos_memory',
         'walrep_2',
-        'madlib_build_gppkg',
-        'MADlib_Test_planner_centos6',
-        'MADlib_Test_orca_centos6',
-        'MADlib_Test_planner_centos7',
-        'MADlib_Test_orca_centos7',
     ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 )
 
