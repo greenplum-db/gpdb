@@ -31,16 +31,5 @@ install: generate_greenplum_path_file
 	    cp -rp bin/ext/yaml $(DESTDIR)$(prefix)/lib/python ; \
 	fi
 
-#ifeq "$(findstring $(BLD_ARCH),$(GPPKG_PLATFORMS))" ""
-#	@echo "Removing gppkg from distribution"
-#	rm -f $(prefix)/bin/gppkg
-#endif
-
-#	THIS NEEDS TO MOVE
-#	if [ -d demo/gpfdist_transform ]; then \
-#	  mkdir -p $(prefix)/demo; \
-#	  $(TAR) -C demo -czf $(prefix)/demo/gpfdist_transform.tar.gz gpfdist_transform; \
-#	fi
-
 clean distclean:
 	$(MAKE) -C bin $@
