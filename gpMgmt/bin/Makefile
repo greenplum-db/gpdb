@@ -11,6 +11,10 @@ ifneq "$(wildcard $(top_builddir)/src/Makefile.global)" ""
 include $(top_builddir)/src/Makefile.global
 endif
 
+SUBDIRS= stream
+
+$(recurse)
+
 #
 # SOURCE DIRECTORIES
 #
@@ -32,23 +36,14 @@ core: pygresql subprocess32
 	python gpconfig_modules/parse_guc_metadata.py $(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-install: core lockfile stream psutil
+install: core lockfile psutil
 else
-install: core stream
+install: core
 endif
 
 #
 # Python Libraries
 #
-
-#
-#  STREAM which is used by gpcheckperf for memory bandwidth testing.
-#
-STREAM_DIR=$(SRC)/src/stream
-stream:
-	@echo "--- stream"
-	cd $(STREAM_DIR) && NO_M64=TRUE $(CC) stream.c -o stream
-	cp $(STREAM_DIR)/stream $(SERVER_SRC)/lib/stream
 
 #
 # PyGreSQL
@@ -222,7 +217,6 @@ clean distclean:
 	rm -rf $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/subprocess32/build
-	rm -rf $(STREAM_DIR)/stream lib/stream
 	rm -rf *.pyc lib/*.pyc
 	rm -f analyzedbc gpactivatestandbyc gpaddmirrorsc gpcheckcatc \
 		  gpcheckperfc gpcheckresgroupimplc gpchecksubnetcfgc gpconfigc \
