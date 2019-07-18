@@ -41,6 +41,7 @@ $$ LANGUAGE plpgsql;
 --CASE 0: createdb do well
 --
 create database dowell;
+select force_mirrors_to_catch_up();
 select count(*)=0 as result from
   (select db_dirs(oid) from pg_database where datname = 'dowell') as foo;
 
