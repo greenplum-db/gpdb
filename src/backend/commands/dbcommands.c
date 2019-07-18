@@ -989,9 +989,23 @@ dropdb(const char *dbname, bool missing_ok)
 	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 
 	/*
+	 * Drop pages for this database that are in the shared buffer cache. This
+	 * is important to ensure that no remaining backend tries to write out a
+	 * dirty buffer to the dead database later...
+	 */
+	DropDatabaseBuffers(db_id);
+
+	/*
+	 * Tell the stats collector to forget it immediately, too.
+	 */
+	pgstat_drop_database(db_id);
+
+	/*
 	 * Remove all tablespace subdirs belonging to the database.
 	 */
 	remove_dbtablespaces(db_id);
+
+	SIMPLE_FAULT_INJECTOR("dropdb_after_xlog_dbase_drop");
 
 	/*
 	 * Close pg_database, but keep lock till commit.
@@ -1936,7 +1950,6 @@ remove_dbtablespaces(Oid db_id)
 		{
 			/* Assume we can ignore it */
 			pfree(dstpath);
-
 			continue;
 		}
 
@@ -1961,8 +1974,6 @@ remove_dbtablespaces(Oid db_id)
 
 		pfree(dstpath);
 	}
-
-	SIMPLE_FAULT_INJECTOR("after_xlog_dbase_drop");
 
 	heap_endscan(scan);
 	heap_close(rel, AccessShareLock);
@@ -2190,12 +2201,10 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 		 */
 		copydir(src_path, dst_path, false);
 	}
-	else if (info == XLOG_DBASE_DROP)
-	{
+	else if (info == XLOG_DBASE_DROP) {
 		xl_dbase_drop_rec *xlrec = (xl_dbase_drop_rec *) XLogRecGetData(record);
 
-		if (InHotStandby)
-		{
+		if (InHotStandby) {
 			/*
 			 * Lock database while we resolve conflicts to ensure that
 			 * InitPostgres() cannot fully re-execute concurrently. This
@@ -2206,10 +2215,21 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 			ResolveRecoveryConflictWithDatabase(xlrec->db_id);
 		}
 
+		/* Drop pages for this database that are in the shared buffer cache */
+		DropDatabaseBuffers(xlrec->db_id);
+
 		ForgetDatabaseFsyncRequests(xlrec->db_id);
 
-		if (InHotStandby)
-		UnlockSharedObjectForSession(DatabaseRelationId, xlrec->db_id, 0, AccessExclusiveLock);
+		if (InHotStandby) {
+			/*
+			 * Release locks prior to commit. XXX There is a race condition
+			 * here that may allow backends to reconnect, but the window for
+			 * this is small because the gap between here and commit is mostly
+			 * fairly small and it is unlikely that people will be dropping
+			 * databases that we are trying to connect to anyway.
+			 */
+			UnlockSharedObjectForSession(DatabaseRelationId, xlrec->db_id, 0, AccessExclusiveLock);
+		}
 
 	}
 	else

@@ -113,6 +113,8 @@ create database db101;
 --CASE 0: drop well
 --
 drop database db101;
+-- Wait until replay_location = flush_location.
+select force_mirrors_to_catch_up();
 
 select count(*) from pg_database where datname='db101';
 \! psql -d db101 -c "select * from test1"
@@ -128,7 +130,7 @@ CREATE TABLE before_drop AS SELECT * FROM stat_db_objects('db100', 'pg_default')
 --reset status
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
 
-select gp_inject_fault2('after_xlog_dbase_drop', 'error', dbid, hostname, port)
+select gp_inject_fault2('dropdb_after_xlog_dbase_drop', 'error', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
 
 -- should fail
@@ -155,7 +157,7 @@ select count(*) from (select db_dirs(oid) from pg_database where datname='db100'
 --reset status
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
 
-select gp_inject_fault2('after_xlog_dbase_drop', 'error', dbid, hostname, port)
+select gp_inject_fault2('dropdb_after_xlog_dbase_drop', 'error', dbid, hostname, port)
 from gp_segment_configuration where content=-1 and role='p';
 
 -- should fail

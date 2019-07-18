@@ -46,7 +46,6 @@ DoPendingDbDeletes(bool isCommit)
 {
 	PendingDbDelete *pending;
 	PendingDbDelete *next;
-	Oid db_id = InvalidOid;
 
 	for (pending = pendingDbDeletes; pending != NULL; pending = next)
 	{
@@ -166,9 +165,6 @@ static void
 dropDatabaseDirectory(DbDirNode *deldb, bool isRedo)
 {
 	char *dbpath = GetDatabasePath(deldb->database, deldb->tablespace);
-
-	/* Drop pages for this database that are in the shared buffer cache */
-	DropDatabaseBuffers(deldb->database);
 
 	/*
 	 * Remove files from the old tablespace

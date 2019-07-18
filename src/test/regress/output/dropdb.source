@@ -121,6 +121,13 @@ INSERT 0 3
 --CASE 0: drop well
 --
 drop database db101;
+-- Wait until replay_location = flush_location.
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
+ 
+(1 row)
+
 select count(*) from pg_database where datname='db101';
  count 
 -------
@@ -155,7 +162,7 @@ select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_co
  Success:
 (8 rows)
 
-select gp_inject_fault2('after_xlog_dbase_drop', 'error', dbid, hostname, port)
+select gp_inject_fault2('dropdb_after_xlog_dbase_drop', 'error', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
  gp_inject_fault2 
 ------------------
@@ -164,7 +171,7 @@ from gp_segment_configuration where content=0 and role='p';
 
 -- should fail
 drop database db100;
-ERROR:  fault triggered, fault name:'after_xlog_dbase_drop' fault type:'error'  (seg0 10.34.49.130:25432 pid=32307)
+ERROR:  fault triggered, fault name:'dropdb_after_xlog_dbase_drop' fault type:'error'  (seg0 10.34.49.130:25432 pid=32307)
 -- Wait until replay_location = flush_location.
 select force_mirrors_to_catch_up();
  force_mirrors_to_catch_up 
@@ -226,7 +233,7 @@ select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_co
  Success:
 (8 rows)
 
-select gp_inject_fault2('after_xlog_dbase_drop', 'error', dbid, hostname, port)
+select gp_inject_fault2('dropdb_after_xlog_dbase_drop', 'error', dbid, hostname, port)
 from gp_segment_configuration where content=-1 and role='p';
  gp_inject_fault2 
 ------------------
@@ -235,7 +242,7 @@ from gp_segment_configuration where content=-1 and role='p';
 
 -- should fail
 drop database db100;
-ERROR:  fault triggered, fault name:'after_xlog_dbase_drop' fault type:'error'
+ERROR:  fault triggered, fault name:'dropdb_after_xlog_dbase_drop' fault type:'error'
 -- Wait until replay_location = flush_location.
 select force_mirrors_to_catch_up();
  force_mirrors_to_catch_up 
