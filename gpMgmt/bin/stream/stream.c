@@ -193,8 +193,9 @@ static double	bytes[4] = {
     3 * sizeof(STREAM_TYPE) * STREAM_ARRAY_SIZE
     };
 
-extern double mysecond();
-extern void checkSTREAMresults();
+int checktick(void);
+double mysecond(void);
+extern void checkSTREAMresults(void);
 #ifdef TUNED
 extern void tuned_STREAM_Copy();
 extern void tuned_STREAM_Scale(STREAM_TYPE scalar);
@@ -381,7 +382,7 @@ main()
 # define	M	20
 
 int
-checktick()
+checktick(void)
     {
     int		i, minDelta, Delta;
     double	t1, t2, timesfound[M];
@@ -417,7 +418,7 @@ checktick()
 
 #include <sys/time.h>
 
-double mysecond()
+double mysecond(void)
 {
         struct timeval tp;
         struct timezone tzp;
@@ -430,7 +431,7 @@ double mysecond()
 #ifndef abs
 #define abs(a) ((a) >= 0 ? (a) : -(a))
 #endif
-void checkSTREAMresults ()
+void checkSTREAMresults (void)
 {
 	STREAM_TYPE aj,bj,cj,scalar;
 	STREAM_TYPE aSumErr,bSumErr,cSumErr;
