@@ -224,6 +224,10 @@ clean distclean:
 	rm -rf $(PYLIB_SRC)/subprocess32/build
 	rm -rf $(STREAM_DIR)/stream lib/stream
 	rm -rf *.pyc lib/*.pyc
-	rm -f gpcheckcatc gpexpandc
+	rm -f analyzedbc gpactivatestandbyc gpaddmirrorsc gpcheckcatc \
+		  gpcheckperfc gpcheckresgroupimplc gpchecksubnetcfgc gpconfigc \
+		  gpdeletesystemc gpexpandc gpinitstandbyc gplogfilterc gpmovemirrorsc \
+		  gppkgc gprecoversegc gpreloadc gpscpc gpsdc gpssh-exkeysc gpsshc \
+		  gpstartc gpstatec gpstopc gpsys1c minireproc
 	rm -f gpconfig_modules/gucs_disallowed_in_file.txt
 	rm -f gppylib/data/$(GP_MAJORVERSION).json
