@@ -638,23 +638,15 @@ mgmtcopy :
 	cp $(GPPGDIR)/src/test/regress/*.pm $(INSTLOC)/bin
 	if [ ! -d ${INSTLOC}/docs ] ; then mkdir ${INSTLOC}/docs ; fi
 	if [ -d $(GPMGMT)/doc ]; then cp -rp $(GPMGMT)/doc $(INSTLOC)/docs/cli_help; fi
-	if [ -d $(GPMGMT)/demo/gpmapreduce ]; then \
-	  mkdir -p $(INSTLOC)/demo; \
-	  $(TAR) -C $(GPMGMT)/demo -czf $(INSTLOC)/demo/gpmapreduce.tar.gz gpmapreduce; \
-	fi
 	if [ -d $(GPMGMT)/demo/gpfdist_transform ]; then \
 	  mkdir -p $(INSTLOC)/demo; \
 	  $(TAR) -C $(GPMGMT)/demo -czf $(INSTLOC)/demo/gpfdist_transform.tar.gz gpfdist_transform; \
 	fi
 	$(MAKE) set_scripts_version INSTLOC=$(INSTLOC)
 	# Remove unwanted files.
-	rm -rf $(INSTLOC)/bin/CVS
-	rm -rf $(INSTLOC)/doc/CVS
 	rm -rf $(INSTLOC)/bin/ext
 	rm -rf $(INSTLOC)/bin/pythonSrc
 	rm -rf $(INSTLOC)/bin/Makefile
-	rm -rf $(INSTLOC)/bin/lib/CVS
-	rm -rf $(INSTLOC)/bin/lib/.p4ignore
 	rm -rf $(INSTLOC)/bin/src
 	rm -rf $(INSTLOC)/bin/gppylib
 	find $(INSTLOC)/lib/python/gppylib -name test -type d | xargs rm -rf
