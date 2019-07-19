@@ -1,5 +1,6 @@
-default: all
+# src/bin/gpnetbench/Makefile
 
+subdir = src/bin/gpnetbench
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
@@ -16,12 +17,16 @@ gpnetbenchServer: $(SERVER_OBJS)
 gpnetbenchClient: $(CLIENT_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(CLIENT_OBJS) -o $@$(X)
 
-clean distclean maintainer-clean:
-	rm -rf $(OBJS) gpnetbenchServer$(X) gpnetbenchClient$(X)
-
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(bindir)/lib'
 
 install: all installdirs
 	$(INSTALL_PROGRAM) gpnetbenchClient$(X) '$(DESTDIR)$(bindir)/lib/gpnetbenchClient$(X)'
 	$(INSTALL_PROGRAM) gpnetbenchServer$(X) '$(DESTDIR)$(bindir)/lib/gpnetbenchServer$(X)'
+
+uninstall:
+	rm -f '$(DESTDIR)$(bindir)/lib/gpnetbenchClient$(X)'
+	rm -f '$(DESTDIR)$(bindir)/lib/gpnetbenchServer$(X)'
+
+clean distclean maintainer-clean:
+	rm -rf $(OBJS) gpnetbenchServer$(X) gpnetbenchClient$(X)

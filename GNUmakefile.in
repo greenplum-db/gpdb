@@ -31,7 +31,6 @@ ifeq ($(with_openssl), yes)
 endif
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
-	$(MAKE) -C gpAux/platform all
 	$(MAKE) -C gpcontrib all
 	+@echo "All of Greenplum Database successfully made. Ready to install."
 
@@ -70,7 +69,6 @@ endif
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
-	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C gpcontrib $@
 	+@echo "Greenplum Database installation complete."
 
@@ -99,7 +97,6 @@ clean:
 # calling top-level configure and this Makefile
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
-	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C gpMgmt $@
 
 # Important: distclean `src' last, otherwise Makefile.global
@@ -108,7 +105,6 @@ distclean maintainer-clean:
 #	$(MAKE) -C doc $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
-	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C contrib $@
 	$(MAKE) -C gpcontrib $@
 	$(MAKE) -C config $@

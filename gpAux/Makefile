@@ -63,7 +63,6 @@ BLD_CXX_LIB_DIR=$($(BLD_ARCH)_CXX_LIB_DIR)
 GPPGDIR=$(shell cd .. && pwd)
 GPMGMT=../gpMgmt
 GPPERFMON=gpperfmon
-PLATFORM=platform
 BUILDDIR=$(GPPGDIR)
 
 RELEASE=devel
