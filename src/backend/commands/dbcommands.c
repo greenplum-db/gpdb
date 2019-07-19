@@ -2230,7 +2230,6 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 			 */
 			UnlockSharedObjectForSession(DatabaseRelationId, xlrec->db_id, 0, AccessExclusiveLock);
 		}
-
 	}
 	else
 		elog(PANIC, "dbase_redo: unknown op code %u", info);

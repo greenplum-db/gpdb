@@ -6,8 +6,6 @@
 #include "common/relpath.h"
 #include "utils/faultinjector.h"
 #include "storage/lmgr.h"
-#include "access/xlog.h"
-#include "postmaster/bgwriter.h"
 
 typedef struct PendingDbDelete
 {
@@ -165,7 +163,6 @@ static void
 dropDatabaseDirectory(DbDirNode *deldb, bool isRedo)
 {
 	char *dbpath = GetDatabasePath(deldb->database, deldb->tablespace);
-
 	/*
 	 * Remove files from the old tablespace
 	 */
