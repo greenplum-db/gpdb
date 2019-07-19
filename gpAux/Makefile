@@ -30,7 +30,7 @@ all : devel
 # Internal functions which are invoked by other rules within this makefile
 .PHONY : mgmtcopy copylibs
 .PHONY : greenplum_path RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
-.PHONY : gccVersionCheck clients
+.PHONY : clients
 
 #---------------------------------------------------------------------
 # Make 3rd-party libraries and tools
@@ -340,9 +340,9 @@ devel : CONFIGFLAGS+= --enable-cassert --enable-debug --enable-depend
 ifdef ENABLE_VPATH_BUILD
 devel : BUILDDIR=Debug
 devel : ISCONFIG=$(BUILDDIR)/GNUmakefile
-devel : gccVersionCheck HOMEDEP Debug/GNUmakefile
+devel : HOMEDEP Debug/GNUmakefile
 else
-devel : gccVersionCheck HOMEDEP $(ISCONFIG)
+devel : HOMEDEP $(ISCONFIG)
 endif
 	$(BUILD_STEPS)
 
@@ -356,9 +356,9 @@ dist : CLIENTSINSTLOC=$(CLIENTSDISTPATH)
 ifdef ENABLE_VPATH_BUILD
 dist : BUILDDIR=Release
 dist : ISCONFIG=$(BUILDDIR)/GNUmakefile
-dist : gccVersionCheck GPROOTDEP RECONFIG Release/GNUmakefile
+dist : GPROOTDEP RECONFIG Release/GNUmakefile
 else
-dist : gccVersionCheck GPROOTDEP RECONFIG $(ISCONFIG)
+dist : GPROOTDEP RECONFIG $(ISCONFIG)
 endif
 	$(BUILD_STEPS)
 
@@ -368,10 +368,10 @@ dist_prof : CLIENTSINSTLOC=$(CLIENTSDISTPATH)
 ifdef ENABLE_VPATH_BUILD
 dist_prof : BUILDDIR=Release
 dist_prof : ISCONFIG=$(BUILDDIR)/GNUmakefile
-dist_prof : gccVersionCheck GPROOTDEP RECONFIG $(ISCONFIG)
+dist_prof : GPROOTDEP RECONFIG $(ISCONFIG)
 else
 dist_prof : ISCONFIG=../GNUmakefile
-dist_prof : gccVersionCheck GPROOTDEP RECONFIG $(ISCONFIG)
+dist_prof : GPROOTDEP RECONFIG $(ISCONFIG)
 endif
 	$(BUILD_STEPS)
 
@@ -379,10 +379,10 @@ dist_faultinj : CLIENTSINSTLOC=$(CLIENTSDISTPATH)
 ifdef ENABLE_VPATH_BUILD
 dist_faultinj : BUILDDIR=Release
 dist_faultinj : ISCONFIG=$(BUILDDIR)/GNUmakefile
-dist_faultinj : gccVersionCheck GPROOTDEP RECONFIG Release/GNUmakefile
+dist_faultinj : GPROOTDEP RECONFIG Release/GNUmakefile
 else
 dist_faultinj : ISCONFIG=../GNUmakefile
-dist_faultinj : gccVersionCheck GPROOTDEP RECONFIG $(ISCONFIG)
+dist_faultinj : GPROOTDEP RECONFIG $(ISCONFIG)
 endif
 	$(BUILD_STEPS)
 
@@ -551,7 +551,7 @@ PVK_FILESET = \
 
 pvk : INSTCFLAGS=$(OPTFLAGS)
 pvk : INSTLOC=$(DISTPATH)
-pvk : gccVersionCheck version GPROOTDEP
+pvk : version GPROOTDEP
 	cd $(GPMGMT)/bin && $(MAKE) stream
 	mkdir -p $(INSTLOC)/bin/lib
 	@for file in $(PVK_FILESET); do \
@@ -734,22 +734,3 @@ distclean :
 distprep : $(ISCONFIG)
 	@cd $(BUILDDIR) && $(MAKE) distprep
 
-#---------------------------------------------------------------------
-# More internal functions
-#---------------------------------------------------------------------
-
-gccVersionCheck :
-	@echo "Checking GCC version" ; \
-	$(BLD_CC) --version > /dev/null 2>&1 ; \
-	if [ $$? -ne 0 ] ; then \
-	    echo "Error running $(BLD_CC) --version" ; \
-	    $(BLD_CC) --version ; \
-	    exit 1 ; \
-	fi
-	@$(BLD_CC) --version | head -n 1 | cut -d' ' -f3 | egrep '[0-3]\.[0-4]\.[0-1]' > /dev/null 2>&1 ; \
-	if [ $$? -eq 0 ] ; then \
-	    echo "Error: GPDB must be compiled with GCC 3.4.2 or later." ; \
-	    echo "Current GCC version:" ; \
-	    $(BLD_CC) --version ; \
-	    exit 1 ; \
-	fi
