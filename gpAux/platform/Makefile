@@ -1,14 +1,8 @@
-.PHONY: gpnetbench
-all: gpnetbench
+# gpAux/platform/Makefile
 
-gpnetbench:
-	$(MAKE) -C gpnetbench all
+top_builddir = ../..
+include $(top_builddir)/src/Makefile.global
 
-clean:
-	$(MAKE) -C gpnetbench clean
+SUBDIRS= gpnetbench
 
-distclean:
-	$(MAKE) -C gpnetbench distclean
-
-install: all
-	$(MAKE) -C gpnetbench install
+$(recurse)
