@@ -7854,7 +7854,7 @@ escape_quotes(const char *src)
 static void
 copy_dest_startup(DestReceiver *self __attribute__((unused)), int operation __attribute__((unused)), TupleDesc typeinfo __attribute__((unused)))
 {
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (Gp_role != GP_ROLE_EXECUTE)
 		return;
 	DR_copy    *myState = (DR_copy *) self;
 	myState->cstate = BeginCopyToOnSegment(myState->queryDesc);
@@ -7882,7 +7882,7 @@ copy_dest_receive(TupleTableSlot *slot, DestReceiver *self)
 static void
 copy_dest_shutdown(DestReceiver *self __attribute__((unused)))
 {
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (Gp_role != GP_ROLE_EXECUTE)
 		return;
 	DR_copy    *myState = (DR_copy *) self;
 	EndCopyToOnSegment(myState->cstate);
@@ -7911,7 +7911,8 @@ CreateCopyDestReceiver(void)
 	self->pub.rDestroy = copy_dest_destroy;
 	self->pub.mydest = DestCopyOut;
 
-	self->cstate = NULL;		/* will be set later */
+	self->cstate = NULL;		/* need to be set later */
+	self->queryDesc = NULL;		/* need to be set later */
 
 	return (DestReceiver *) self;
 }

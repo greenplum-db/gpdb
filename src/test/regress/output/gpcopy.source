@@ -751,6 +751,19 @@ COPY segment_reject_limit_from to PROGRAM STDOUT log errors segment reject limit
 ERROR:  STDIN/STDOUT not allowed with PROGRAM
 -- 'COPY (SELECT ...) TO' has supported 'ON SEGMENT'
 COPY (SELECT * FROM segment_reject_limit_from) TO '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT;
+-- 'COPY (SELECT ...) TO' on utility mode
+CREATE EXTERNAL WEB TABLE copy_cmd_utility(a text, b int)
+  EXECUTE E'PGOPTIONS="-c gp_session_role=utility" \\
+    psql -p $GP_MASTER_PORT $GP_DATABASE $GP_USER -c \\
+      "COPY (SELECT * FROM pg_class) TO \'/dev/null\'"'
+  ON MASTER FORMAT 'text' (DELIMITER ' ');
+SELECT a FROM copy_cmd_utility;
+  a   
+------
+ COPY
+(1 row)
+
+DROP EXTERNAL WEB TABLE copy_cmd_utility;
 -- \copy from doesn't support on segment
 --on segment lower case
 \COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment;
