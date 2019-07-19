@@ -11,7 +11,7 @@ all : devel
 
 # Targets for building GPDB with various options
 # (development builds)
-.PHONY : devel devel_faultinj
+.PHONY : devel
 
 # (release builds)
 .PHONY : dist dist_prof
@@ -29,7 +29,7 @@ all : devel
 
 # Internal functions which are invoked by other rules within this makefile
 .PHONY : mgmtcopy copylibs
-.PHONY : greenplum_path RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
+.PHONY : RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
 .PHONY : clients
 
 #---------------------------------------------------------------------
@@ -251,7 +251,6 @@ BLD_GPDB_BUILDSET=$($(BLD_ARCH)_GPDB_BUILDSET)
 define BUILD_STEPS
 	@rm -rf $(INSTLOC)
 	cd $(BUILDDIR) && $(MAKE) $(PARALLEL_MAKE_OPTS) install
-	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
@@ -674,11 +673,6 @@ copylibs : thirdparty-dist
 	fi
 	mkdir -p $(INSTLOC)/etc
 	mkdir -p $(INSTLOC)/include
-
-greenplum_path:
-	mkdir -p $(INSTLOC)
-	unset LIBPATH; \
-	  releng/generate-greenplum-path.sh $(INSTLOC) > $(INSTLOC)/greenplum_path.sh
 
 copylicense:
 	for proddir in $(INSTLOC) $(CLIENTSINSTLOC); do \
