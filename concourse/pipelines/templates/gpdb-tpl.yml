@@ -1596,6 +1596,7 @@ jobs:
             <<: *ccp_default_params
             vars:
               <<: *ccp_default_vars
+              instance_type: n1-standard-2
               [[ test.additional_ccp_vars ]]
         - task: gen_cluster
           file: ccp_src/ci/tasks/gen_cluster.yml
@@ -1678,6 +1679,7 @@ jobs:
             <<: *ccp_default_params
             vars:
               <<: *ccp_default_vars
+              instance_type: n1-standard-2
               PLATFORM: ubuntu18.04
               [[ test.additional_ccp_vars ]]
         - task: gen_cluster
