@@ -126,19 +126,6 @@ subprocess32:
 	  fi
 
 #
-# PSI
-PSI_DIR=PSI-$(PSI_VERSION)
-
- psi:
-	@echo "--- psi"
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 )" ""
-	cd $(PYLIB_SRC)/ && $(TAR) xzf $(PSI_DIR).tar.gz
-	cd $(PYLIB_SRC)/$(PSI_DIR)/ && CC="$(CC)" python setup.py build
-	cp -r $(PYLIB_SRC)/$(PSI_DIR)/build/lib.*/psi $(PYLIB_DIR)
-endif
-
-
-#
 # PSUTIL
 #
 PSUTIL_VERSION=4.0.0
