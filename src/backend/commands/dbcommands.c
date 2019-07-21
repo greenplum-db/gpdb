@@ -973,16 +973,7 @@ dropdb(const char *dbname, bool missing_ok)
 	pgstat_drop_database(db_id);
 
 	/*
-	 * Tell checkpointer to forget any pending fsync and unlink requests for
-	 * files in the database; else the fsyncs will fail at next checkpoint, or
-	 * worse, it will delete files that belong to a newly created database
-	 * with the same OID.
-	 */
-	ForgetDatabaseFsyncRequests(db_id);
-
-	/*
-	 * Force a checkpoint to make sure the checkpointer has received the
-	 * message sent by ForgetDatabaseFsyncRequests. On Windows, this also
+	 * Force a checkpoint to make sure all buffer sync. On Windows, this also
 	 * ensures that background procs don't hold any open files, which would
 	 * cause rmdir() to fail.
 	 */
@@ -994,11 +985,6 @@ dropdb(const char *dbname, bool missing_ok)
 	 * dirty buffer to the dead database later...
 	 */
 	DropDatabaseBuffers(db_id);
-
-	/*
-	 * Tell the stats collector to forget it immediately, too.
-	 */
-	pgstat_drop_database(db_id);
 
 	/*
 	 * Remove all tablespace subdirs belonging to the database.
