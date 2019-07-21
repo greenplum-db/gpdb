@@ -15,6 +15,30 @@ Tolerance Service (FTS):
    FTS probe. When its flag is checked, it says only  Gp_entry_postmaster
    can start it.
 
+   PR 7364 has done some changes to the above implementation recently and
+   merged its code in July 2019. It no longer starts FTS probe process as
+   a dedicated auxiliary process. Instead, it is started as a background
+   worker process managed by the BackgroundWorker structure. (see
+   src/include/postmaster/bgworker.h). The PMSubProcList is still in use
+   but its definition has been changed to: 
+
+         #define MaxPMAuxProc 6 
+         static BackgroundWorker PMAuxProcList[MaxPMAuxProc]  
+
+   The most important members of the BackgroundWorker structure are two
+   function pointers. One is the pointer of the main entry function of the
+   GP background process and the other one is the pointer of the function
+   that determine if the process should be started. For FTS, the two
+   pointers are FtsProbeMain() and FtsProbeStartRule(), respectively.
+
+     Now in Postmaster, we will check the following condition:
+
+        Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH
+
+   and start the FTS probe process only when the condition is true. All
+   these are done in load_auxiliary_libraries() which now is responsible
+   for starting all GP background processes.
+
 2. The FTS probe process usually runs in a infinite loop. A few things
    could trigger a round of polling to get the health status of all
    segment nodes:
@@ -35,9 +59,18 @@ Tolerance Service (FTS):
 
     - Third, also the last, in some code running on the master node, such as
       the function cdbgang_createGang_async(), if we unfortunately hit the
-      PG_CATCH block, we will also trigger the SIGINT signal. Then the master
-      node does the same thing for the signal just like what it does in the
-      second case.
+      PG_CATCH block, we will also trigger the SIGINT signal by calling a
+      function FtsNotifyProber(). Then the master node does the same thing
+      for the signal just like what it does in the second case.
+
+      PR 7364 has also done some changes to this part. we no longer register
+      callback to the above four types of timeout events. Now we solely
+      depend on the FtsNotifyProber() function to send SIGINT signal to
+      postmaster when we hit the PG_CATCH block somewhere in the code running
+      on master node.
+
+      This might raise a question if the PR 7364 change covers the cases of
+      timeout event, or actually there is no need to care about them.
 
 3. On the master node side, the FTS probe process gets the configuration
    from catelog table pg_segement_configure, which describes the status of
@@ -82,5 +115,8 @@ Tolerance Service (FTS):
 6. The FTS probe on master supposed to run forever, but a SIGUSR2 signal may
    terminate it. Not sure how this can happen, my understanding is this might
    be used for debug purpose.
+
+   After the changes done in PR 7364, SIGUSR2 is no longer used in the FTS
+   probe service. So it is gone.
 
 
