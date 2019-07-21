@@ -6,7 +6,7 @@ This document illustrates the mechanism of a GPDB component called Fault
 Tolerance Service (FTS):
 
 1. The FTS probe process is running on the Gp_entry_postmaster (master
-   node) only. It is started by SeverLoop() of postmaster. There we start
+   node) only. It is started by ServerLoop() of postmaster. There we start
    a group of GP background processes through a structure PMSubProcList.
    PMSubProcList is an array and each entry contains the description of a
    GP background process, including the main entry function of the process
@@ -15,7 +15,7 @@ Tolerance Service (FTS):
    FTS probe. When its flag is checked, it says only  Gp_entry_postmaster
    can start it.
 
-   PR 7364 has done some changes to the above implementation recently and
+   PR 7364 has made some changes to the above implementation recently and
    merged its code in July 2019. It no longer starts FTS probe process as
    a dedicated auxiliary process. Instead, it is started as a background
    worker process managed by the BackgroundWorker structure. (see
@@ -38,6 +38,9 @@ Tolerance Service (FTS):
    and start the FTS probe process only when the condition is true. All
    these are done in load_auxiliary_libraries() which now is responsible
    for starting all GP background processes.
+
+   Note: load_auxiliary_libraries() is called outside of ServerLoop().
+         Not sure about the implication of this difference.
 
 2. The FTS probe process usually runs in a infinite loop. A few things
    could trigger a round of polling to get the health status of all
@@ -63,14 +66,15 @@ Tolerance Service (FTS):
       function FtsNotifyProber(). Then the master node does the same thing
       for the signal just like what it does in the second case.
 
-      PR 7364 has also done some changes to this part. we no longer register
-      callback to the above four types of timeout events. Now we solely
-      depend on the FtsNotifyProber() function to send SIGINT signal to
-      postmaster when we hit the PG_CATCH block somewhere in the code running
-      on master node.
+    PR 7364 has also made some changes to this part. We no longer registers
+    callback to the above four types of timeout events. Now we solely
+    rely on the FtsNotifyProber() function to send SIGINT signal to
+    postmaster when we hit the PG_CATCH block somewhere in the code running
+    on master node.
 
-      This might raise a question if the PR 7364 change covers the cases of
-      timeout event, or actually there is no need to care about them.
+    Note: Not sure about the changes of PR 7364 covers the cases of
+          timeout event. Or there is no need to care about them
+          because they have been handled in other ways.
 
 3. On the master node side, the FTS probe process gets the configuration
    from catelog table pg_segement_configure, which describes the status of
