@@ -29,17 +29,9 @@
       <ul id="ul_ojr_rvj_2p">
         <li id="nr157373">You can identify the KDC server you use for Kerberos
           authentication and the Kerberos realm for your Greenplum Database
-            system.<ul id="ul_cn2_nfc_c2b">
-            <li>If you plan to use an MIT Kerberos KDC server but have not yet
-              configured it, see <xref href="#task_setup_kdc" format="dita"/>
-              for example instructions.</li>
-            <li>If you are using an existing Active Directory KDC server, also
-              ensure that you have:<ul id="ul_oq5_tfc_c2b">
-                <li>Installed all Active Directory service roles on your AD KDC
-                  server.</li>
-                <li>Enabled the LDAP service.</li>
-              </ul></li>
-          </ul></li>
+          system. If you have not yet configured your MIT Kerberos KDC server, 
+          see <xref href="#task_setup_kdc" format="dita"/> for example
+          instructions.</li>
         <li>System time on the Kerberos Key Distribution Center (KDC) server and
           Greenplum Database master is synchronized. (For example, install the
             <codeph>ntp</codeph> package on both servers.) </li>
@@ -61,10 +53,9 @@
         <li id="nr165111"><xref href="#topic7" format="dita"/></li>
         <li><xref href="#topic_kmr_gws_d2b" format="dita"/></li>
         <li><xref href="#topic9" format="dita"/></li>
-        <li><xref href="kerberos-win-client.xml#topic_vjg_d5m_sv" format="dita"
+        <li><xref href="kerberos-lin-client.xml#topic_j1d_4qz_rz" format="dita"
           /></li>
-        <li><xref href="kerberos-win-client.xml#topic_uzb_t5m_sv" format="dita"
-          /></li>
+        <li><xref href="kerberos-win-client.xml#topic1" format="dita" /></li>
       </ul>
     </section>
   </body>
