@@ -48,7 +48,7 @@ Tolerance Service (FTS):
    postmaster needs to bring it up again.
 
 
-2. The FTS probe process usually runs in a infinite loop. A few things
+2. The FTS probe process runs in a infinite loop. A few things
    could trigger a round of polling to get the health status of all
    segment nodes:
 
