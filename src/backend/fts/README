@@ -6,81 +6,57 @@ This document illustrates the mechanism of a GPDB component called Fault
 Tolerance Service (FTS):
 
 1. The FTS probe process is running on the Gp_entry_postmaster (master
-   node) only. It is started by ServerLoop() of postmaster. There we start
-   a group of GP background processes through a structure PMSubProcList.
-   PMSubProcList is an array and each entry contains the description of a
-   GP background process, including the main entry function of the process
-   and a flag to indicate on what type (master, segment, or both) of nodes
-   this process can be started. The first entry in the array is about the
-   FTS probe. When its flag is checked, it says only  Gp_entry_postmaster
-   can start it.
-
-   PR 7364 has made some changes to the above implementation recently and
-   merged its code in July 2019. It no longer starts FTS probe process as
-   a dedicated auxiliary process. Instead, it is started as a background
-   worker process managed by the BackgroundWorker structure. (see
-   src/include/postmaster/bgworker.h). The PMSubProcList has been changed
-   to PMAuxProcList: 
-
-         #define MaxPMAuxProc 6 
-         static BackgroundWorker PMAuxProcList[MaxPMAuxProc]  
+   node) only. It starts as a background worker process managed
+   by the BackgroundWorker structure. (see src/include/postmaster/bgworker.h).
+   Greenplum sets up a group of GP background processes through an
+   array structure PMAuxProcList. There each entry is for one GP background
+   process.
 
    The most important members of the BackgroundWorker structure are two
    function pointers. One is the pointer of the main entry function of the
    GP background process and the other one is the pointer of the function
    that determine if the process should be started. For FTS, the two
    pointers are FtsProbeMain() and FtsProbeStartRule(), respectively.
+   This is hard-coded in postmaster.c.
 
-     Now in Postmaster, we will check the following condition:
+         #define MaxPMAuxProc 6 
+         static BackgroundWorker PMAuxProcList[MaxPMAuxProc]   ...
+
+     In Postmaster, we will check the following condition:
 
         Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH
 
-   and start the FTS probe process only when the condition is true.
+   The FTS probe process is started when the condition is true.
 
-   The load_auxiliary_libraries() function called in PostmasterMain()
-   will add a worker entry into postmaster's private structure
-   BackgroundWorkerList. Then PostmasterMain() will call
-   maybe_start_bgworker() to start all the system built-in
-   background processes such as FTS one by one. This is done outside
-   of the ServerLoop() of postmaster at its first time. Later,
-   maybe_start_bgworker() will also be called inside the ServerLoop().
-   This can handle those cases when a backend process is down and
-   postmaster needs to bring it up again.
+   In PostmasterMain(), the function load_auxiliary_libraries() is called
+   to register one worker entry of type BackgroundWorker into postmaster's
+   private structure BackgroundWorkerList. The above condition is checked
+   to decide if FTS is registered there.
+
+   Later in PostmasterMain(), maybe_start_bgworker() is called to start
+   all the GP background processes including FTS. This call is made
+   outside of the ServerLoop() of postmaster at the first time. Later,
+   it will also be called inside the ServerLoop() to handle the cases
+   that a backend process is down and postmaster needs to bring it up
+   again.
+
+   This is how the FTS probe process is started.
 
 
-2. The FTS probe process runs in a infinite loop. A few things
-   could trigger a round of polling to get the health status of all
-   segment nodes:
+2. The FTS probe process always runs in a infinite loop and trying to
+   do one round of polling at each iteration to get the health status
+   of all segments. At each iteration, it calls WaitLatch with timeout
+   to block itself for a while. Thus, two types of events might actually
+   trigger the polling actually. One is timeout on the latch, and the
+   other one is that someone sets the latch.
 
-    - First, the main loop of FTS process does the polling once for each
-      iteration. This might be too frequent, so FTS adds a sleep() call
-      in each iteration. This can reduce the number of polling.
+   In many code running on the master node, e.g. inside the code of the
+   function cdbgang_createGang_async(), if we hit the PG_CATCH block,
+   FtsNotifyProber() is called to signal postmaster with SIGINT, and
+   the postmaster’s SIGINT handler calls SetLatch() to unblock the FTS
+   main loop if it is now waiting on the Latch.
 
-    - Second, FTS allows some events to trigger the polling. It registers
-      a callback function for four types of events: deadlock timeout,
-      statement timeout, lock timeout, and gang timeout. The callback
-      simply signals postmaster with SIGINT, and the postmaster’s SIGINT
-      handler will set a global variable "probe_requested" to true. In the
-      main loop of FTS probe, we check this variable before we call sleep().
-      As a result, the sleep can be skipped and it looks like FTS does a
-      urgent polling. In general, it makes sense because these events
-      often occur when some segment node is down.
-
-    - Third, also the last, in some code running on the master node, such as
-      the function cdbgang_createGang_async(), if we unfortunately hit the
-      PG_CATCH block, we will also trigger the SIGINT signal by calling a
-      function FtsNotifyProber(). Then the master node does the same thing
-      for the signal just like what it does in the second case.
-
-    PR 7364 has also made some changes to this part. We no longer registers
-    callback to the above four types of timeout events. Now we solely
-    rely on the FtsNotifyProber() function to send SIGINT signal to
-    postmaster when we hit the PG_CATCH block somewhere in the code running
-    on master node.
-
-    Note: Not sure about the changes of PR 7364 covers the cases of
-          timeout event. Or there is no need to care about them
-          because they have been handled in other ways.
+   This is the way how the FTS probe process starts a round of polling.
 
 3. On the master node side, the FTS probe process gets the configuration
    from catelog table pg_segement_configure, which describes the status of
@@ -122,11 +98,6 @@ Tolerance Service (FTS):
         - Sync
         - Promote
 
-6. The FTS probe on master supposed to run forever, but a SIGUSR2 signal may
-   terminate it. Not sure how this can happen, my understanding is this might
-   be used for debug purpose.
-
-   After the changes done in PR 7364, SIGUSR2 is no longer used in the FTS
-   probe service. So it is gone.
+6. Not sure if FTS can be stopped by SIGUSR2 now.
 
 
