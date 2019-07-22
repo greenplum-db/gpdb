@@ -119,7 +119,6 @@
             <li>The lock mode for some <codeph>DELETE</codeph> and <codeph>UPDATE</codeph>
               operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
                 href="#topic_gdd" format="dita"/>.</li>
-          </ul><ul id="ul_k2w_lgd_j3b">
             <li>The lock mode for some queries with a locking clause (<codeph>SELECT...FOR
                   <varname>lock_strength</varname></codeph>) is <codeph>ROW SHARE</codeph>. See "The
               Locking Clause" in <xref href="../ref_guide/sql_commands/SELECT.xml"/>.</li>
@@ -349,12 +348,6 @@
         tables, restricting concurrent <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
           <codeph>SELECT...FOR UPDATE</codeph> operations.) </p>
       <p>By default, the Global Deadlock Detector is disabled and Greenplum Database executes the
-        concurrent update and delete operations on a heap table serially. You can enable these
-        concurrent updates and have the Global Deadlock Detector determine when a deadlock exists by
-        setting the server configuration parameter <xref
-          href="../ref_guide/config_params/guc-list.xml#gp_enable_global_deadlock_detector"
-            ><codeph>gp_enable_global_deadlock_detector</codeph></xref>. </p>
-      <p>By default, the Global Deadlock Detector is disabled and Greenplum Database executes the
         concurrent <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> operations on a heap table
         serially. You can enable these concurrent updates and have the Global Deadlock Detector
         determine when a deadlock exists by setting the server configuration parameter <xref
@@ -377,7 +370,7 @@
             an update operation and a later transaction executes an update or delete and the query
             plan contains a motion operator.</li>
           <li>Concurrent update transactions on the same distribution key of a heap table that are
-            executed by the Greenplum Database Postgres query optimizer.</li>
+            executed by the Greenplum Database Postgres planner.</li>
           <li>Concurrent update transactions on the same row of a hash table that are executed by
             the GPORCA optimizer.</li>
         </ul></p>
@@ -426,20 +419,19 @@ holder_sessionid | 8
         following error message:</p>
       <codeblock>ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"</codeblock>
       <section id="gdd_example">
-        <title>Global Deadlock Detector UPDATE and DELTE Compatibility</title>
-        <draft-comment author="msk">GDD limitations</draft-comment>
+        <title>Global Deadlock Detector UPDATE and DELETE Compatibility</title>
         <p dir="ltr">The Global Deadlock Detector can manage concurrent updates for these types of
             <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands on heap tables: </p>
         <ul id="ul_wbf_4kd_j3b">
-          <li>Simple <codeph>UPDATE</codeph> on single table. Update a non-distribution key with the
-            Postgres query optimizer. The command does not contain a <codeph>FROM</codeph> clause,
-            and no sub-query in <codeph>WHERE</codeph> clause.
+          <li>Simple <codeph>UPDATE</codeph> of a single table. Update a non-distribution key with
+            the Postgres planner. The command does not contain a <codeph>FROM</codeph> clause, or a
+            sub-query in the <codeph>WHERE</codeph> clause.
             <codeblock dir="ltr">UPDATE t SET c2 = c2 + 1 WHERE c1 > 10;</codeblock></li>
-          <li>Simple <codeph>DELETE</codeph> on single table. The command does not contain a
-              <codeph>FROM</codeph> clause, and no sub-query in the <codeph>WHERE</codeph>
+          <li>Simple <codeph>DELETE</codeph> of single table. The command does not contain a
+              <codeph>FROM</codeph> clause or a sub-query in the <codeph>WHERE</codeph>
             clause.<codeblock dir="ltr">DELETE FROM t WHERE c1 > 10;</codeblock></li>
-          <li>Split <codeph>UPDATE</codeph>. For the Postgres query optimizer, the
-              <codeph>UPDATE</codeph> command updates a distribution key.
+          <li>Split <codeph>UPDATE</codeph>. For the Postgres planner, the <codeph>UPDATE</codeph>
+            command updates a distribution key.
               <codeblock dir="ltr">UPDATE t SET c = c + 1; -- c is a distribution key</codeblock><p
               dir="ltr">For GPORCA, the <codeph>UPDATE</codeph> command updates a distribution key
               or references a distribution key.
@@ -447,10 +439,10 @@ holder_sessionid | 8
           <li>Complex <codeph>UPDATE</codeph>. The <codeph>UPDATE</codeph> command includes multiple
             table
               joins.<codeblock dir="ltr">UPDATE t SET c = t.c + 1 FROM t1 WHERE t1.c = t2.c; </codeblock><p
-              dir="ltr">Or there is sub-query in <codeph>WHERE</codeph>
-            clause.</p><codeblock dir="ltr">UPDATE t SET c = c + 1 WHERE c > ALL(SELECT * FROM t1);</codeblock></li>
-          <li>Complex <codeph>DELETE</codeph>. Complex <codeph>DELETE</codeph> command is similar to
-            a complex <codeph>UPDATE</codeph>, and involves multiple table joins or
+              dir="ltr">Or the command contains a sub-query in the <codeph>WHERE</codeph>
+              clause.</p><codeblock dir="ltr">UPDATE t SET c = c + 1 WHERE c > ALL(SELECT * FROM t1);</codeblock></li>
+          <li>Complex <codeph>DELETE</codeph>. A complex <codeph>DELETE</codeph> command is similar
+            to a complex <codeph>UPDATE</codeph>, and involves multiple table joins or a
             sub-query.<codeblock>DELETE FROM t USING t1 WHERE t > t1.c;</codeblock></li>
         </ul>
         <p dir="ltr" id="docs-internal-guid-d399d137-7fff-bade-9e13-75ac3f428afd">The following
@@ -458,7 +450,7 @@ holder_sessionid | 8
           that are manged by the Global Deadlock Detector. For example, concurrent simple
             <codeph>UPDATE</codeph> commands on the same table row are managed by the Global
           Deadlock Detector. For a concurrent complex <codeph>UPDATE</codeph> and a simple
-            <codeph>UPDATE</codeph>, only one <codeph>UPDATE</codeph> is performed, an error is
+            <codeph>UPDATE</codeph>, only one <codeph>UPDATE</codeph> is performed, and an error is
           returned for the other <codeph>UPDATE</codeph>. </p>
         <p>
           <table id="table_ev4_2kd_j3b">
@@ -483,40 +475,40 @@ holder_sessionid | 8
                   <entry dir="ltr">Simple <codeph>UPDATE</codeph></entry>
                   <entry dir="ltr">YES</entry>
                   <entry dir="ltr">YES</entry>
-                  <entry dir="ltr">X</entry>
-                  <entry dir="ltr">X</entry>
-                  <entry dir="ltr">X</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
                 </row>
                 <row>
                   <entry dir="ltr">Simple <codeph>DELETE</codeph></entry>
                   <entry dir="ltr">YES</entry>
                   <entry dir="ltr">YES</entry>
-                  <entry dir="ltr">X</entry>
+                  <entry dir="ltr">NO</entry>
                   <entry dir="ltr">YES</entry>
                   <entry dir="ltr">YES</entry>
                 </row>
                 <row>
                   <entry dir="ltr">Split <codeph>UPDATE</codeph></entry>
-                  <entry dir="ltr">X</entry>
-                  <entry dir="ltr">X</entry>
-                  <entry dir="ltr">X</entry>
-                  <entry dir="ltr">X</entry>
-                  <entry dir="ltr">X</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
                 </row>
                 <row>
                   <entry dir="ltr">Complex <codeph>UPDATE</codeph></entry>
-                  <entry dir="ltr">X</entry>
+                  <entry dir="ltr">NO</entry>
                   <entry dir="ltr">YES</entry>
-                  <entry dir="ltr">X</entry>
-                  <entry dir="ltr">X</entry>
-                  <entry dir="ltr">X</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
                 </row>
                 <row>
                   <entry dir="ltr">Complex <codeph>DELETE</codeph></entry>
-                  <entry dir="ltr">X</entry>
+                  <entry dir="ltr">NO</entry>
                   <entry dir="ltr">YES</entry>
-                  <entry dir="ltr">X</entry>
-                  <entry dir="ltr">X</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
                   <entry dir="ltr">YES</entry>
                 </row>
               </tbody>

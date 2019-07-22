@@ -867,22 +867,20 @@ KEY SHARE</codeblock></p><p>The Global Deadlock
           information about the Global Deadlock Detector.<ul id="ul_nxf_fmc_j3b">
             <li>When the Global Deadlock Detector is disabled, Greenplum locks the entire tables in
                 <codeph>ACCESS SHARE</codeph> lock mode when executing a <codeph>SELECT</codeph>
-              statement with a locking clause when GPORCA is used. If the Postgres query optimizer
-              is used, the table is locked with an <codeph>EXCLUSIVE</codeph> lock. </li>
-            <li>When Global Deadlock Detector is enabled, and the Postgres query optimizer is used,
-              a <codeph>ROW SHARE</codeph> lock is used to lock the table for simple
-                <codeph>SELECT</codeph> commands. If the Postgres query optimizer is used, the query
-              plan contains a <codeph>lockrows</codeph> node. <p>Simple <codeph>SELECT</codeph>
-                queries that contain a locking clause fulfill all the following conditions: <ul
+              statement with a locking clause when GPORCA is used. If the Postgres planner is used,
+              the table is locked with an <codeph>EXCLUSIVE</codeph> lock. </li>
+            <li>When the Global Deadlock Detector is enabled, and the Postgres planner is used, a
+                <codeph>ROW SHARE</codeph> lock is used to lock the table for simple
+                <codeph>SELECT</codeph> commands. If the Postgres planner is used, the query plan
+              contains a <codeph>lockrows</codeph> node. <p>Simple <codeph>SELECT</codeph> queries
+                that contain a locking clause fulfill all the following conditions: <ul
                   id="ul_uqy_mmc_j3b">
                   <li>The locking clause is in the top level <codeph>SELECT</codeph> context.</li>
                   <li>The <codeph>FROM</codeph> clause contains a single table that is not a view or
                     an append optimized table.</li>
-                  <li>The <codeph>SELECT</codeph> command does not contain a set operations such as
-                      <codeph>UNION</codeph> or <codeph>INTERSECT</codeph>
-                  </li>
-                  <li>The <codeph>SELECT</codeph> command does not contain a sublink or
-                    sub-query.</li>
+                  <li>The <codeph>SELECT</codeph> command does not contain a set operation such as
+                      <codeph>UNION</codeph> or <codeph>INTERSECT</codeph>.</li>
+                  <li>The <codeph>SELECT</codeph> command does not contain a sub-query.</li>
                 </ul></p><p>Otherwise, table locking for a <codeph>SELECT</codeph> query that
                 contains a locking clause behaves as if the Global Deadlock Detector is
                 disabled.</p></li>
