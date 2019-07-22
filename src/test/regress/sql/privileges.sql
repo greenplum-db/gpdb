@@ -1063,7 +1063,11 @@ DROP OWNED BY regressuser1;
 -- regression test: superuser create a schema and authorize it to a non-superuser
 CREATE ROLE "non_superuser_schema";
 CREATE SCHEMA test_non_superuser_schema AUTHORIZATION "non_superuser_schema";
+-- clean up
+DROP SCHEMA test_non_superuser_schema;
+DROP ROLE "non_superuser_schema";
 
+-- clean up file
 DROP USER regressuser1;
 DROP USER regressuser2;
 DROP USER regressuser3;
