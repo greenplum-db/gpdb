@@ -19,8 +19,8 @@ Tolerance Service (FTS):
    merged its code in July 2019. It no longer starts FTS probe process as
    a dedicated auxiliary process. Instead, it is started as a background
    worker process managed by the BackgroundWorker structure. (see
-   src/include/postmaster/bgworker.h). The PMSubProcList is still in use
-   but its definition has been changed to: 
+   src/include/postmaster/bgworker.h). The PMSubProcList has been changed
+   to PMAuxProcList: 
 
          #define MaxPMAuxProc 6 
          static BackgroundWorker PMAuxProcList[MaxPMAuxProc]  
@@ -35,12 +35,18 @@ Tolerance Service (FTS):
 
         Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH
 
-   and start the FTS probe process only when the condition is true. All
-   these are done in load_auxiliary_libraries() which now is responsible
-   for starting all GP background processes.
+   and start the FTS probe process only when the condition is true.
 
-   Note: load_auxiliary_libraries() is called outside of ServerLoop().
-         Not sure about the implication of this difference.
+   The load_auxiliary_libraries() function called in PostmasterMain()
+   will add a worker entry into postmaster's private structure
+   BackgroundWorkerList. Then PostmasterMain() will call
+   maybe_start_bgworker() to start all the system built-in
+   background processes such as FTS one by one. This is done outside
+   of the ServerLoop() of postmaster at its first time. Later,
+   maybe_start_bgworker() will also be called inside the ServerLoop().
+   This can handle those cases when a backend process is down and
+   postmaster needs to bring it up again.
+
 
 2. The FTS probe process usually runs in a infinite loop. A few things
    could trigger a round of polling to get the health status of all
