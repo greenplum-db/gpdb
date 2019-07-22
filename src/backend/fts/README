@@ -29,16 +29,16 @@ Tolerance Service (FTS):
    The FTS probe process is started when the condition is true.
 
    In PostmasterMain(), the function load_auxiliary_libraries() is called
-   to register one worker entry of type BackgroundWorker into postmaster's
-   private structure BackgroundWorkerList. The above condition is checked
-   to decide if FTS is registered there.
+   to register one BackgroundWorker entry for each GP background process
+   into postmaster's private structure BackgroundWorkerList. The above
+   condition is checked to decide if FTS is registered there or not.
 
    Later in PostmasterMain(), maybe_start_bgworker() is called to start
-   all the GP background processes including FTS. This call is made
-   outside of the ServerLoop() of postmaster at the first time. Later,
-   it will also be called inside the ServerLoop() to handle the cases
-   that a backend process is down and postmaster needs to bring it up
-   again.
+   all the GP background processes in the BackgroundWorkerList,
+   including FTS. This call is made outside of the ServerLoop() of
+   postmaster at the first time. Later, it will also be called inside
+   the ServerLoop() to handle other cases. For example, a backend process
+   is down and postmaster needs to have a chance to bring it up again.
 
    This is how the FTS probe process is started.
 
