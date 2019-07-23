@@ -507,7 +507,7 @@ SELECT * FROM ((SELECT * FROM before_drop) EXCEPT (SELECT * FROM after_drop)) r 
 
 DROP TABLE after_drop;
 --
---CASE 6: panic on segment after XLOG_XACT_PREPARED_FLUSHED
+--CASE 6: panic on segment before XLOG_XACT_COMMIT_PREPARED
 --
 --reset status
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;

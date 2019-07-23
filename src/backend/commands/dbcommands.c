@@ -2187,10 +2187,12 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 		 */
 		copydir(src_path, dst_path, false);
 	}
-	else if (info == XLOG_DBASE_DROP) {
+	else if (info == XLOG_DBASE_DROP) 
+	{
 		xl_dbase_drop_rec *xlrec = (xl_dbase_drop_rec *) XLogRecGetData(record);
 
-		if (InHotStandby) {
+		if (InHotStandby) 
+		{
 			/*
 			 * Lock database while we resolve conflicts to ensure that
 			 * InitPostgres() cannot fully re-execute concurrently. This
@@ -2206,7 +2208,8 @@ dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attri
 
 		ForgetDatabaseFsyncRequests(xlrec->db_id);
 
-		if (InHotStandby) {
+		if (InHotStandby) 
+		{
 			/*
 			 * Release locks prior to commit. XXX There is a race condition
 			 * here that may allow backends to reconnect, but the window for
