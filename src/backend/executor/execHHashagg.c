@@ -314,9 +314,7 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 
 	if (GET_TOTAL_USED_SIZE(hashtable) + MAXALIGN(MAXALIGN(tup_len) + aggs_len) >=
 		hashtable->max_mem)
-	{
-			return NULL;
-	}
+		return NULL;
 
 	/*
 	 * Form memtuple into group_buf.
@@ -362,9 +360,7 @@ makeHashAggEntryForGroup(AggState *aggstate, void *tuple_and_aggs,
 	MemoryContext oldcxt;
 
 	if (GET_TOTAL_USED_SIZE(hashtable) + input_size >= hashtable->max_mem)
-	{
-			return NULL;
-	}
+		return NULL;
 
 	copy_tuple_and_aggs = mpool_alloc(hashtable->group_buf, input_size);
 	memcpy(copy_tuple_and_aggs, tuple_and_aggs, input_size);
