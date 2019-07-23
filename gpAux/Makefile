@@ -252,7 +252,6 @@ define BUILD_STEPS
 	cd $(BUILDDIR) && $(MAKE) $(PARALLEL_MAKE_OPTS) install
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
-	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
 	@$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTSINSTLOC=$(CLIENTSINSTLOC)
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTSINSTLOC)
@@ -609,9 +608,6 @@ set_scripts_version :
 #---------------------------------------------------------------------
 # Internal functions
 #---------------------------------------------------------------------
-
-mkpgbench:
-	@cd $(BUILDDIR)/contrib/pgbench && $(MAKE) install
 
 mkpgbouncer:
 ifeq "$(shell uname -s)" "Darwin"
