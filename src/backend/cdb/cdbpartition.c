@@ -576,6 +576,91 @@ rel_is_child_partition(Oid relid)
 }
 
 /*
+ * Is relid an interior node of a partitioning hierarchy?
+ *
+ * To determine if it is an interior node or not, we need to find the depth of
+ * our partition and check if there is at least one more level below us.
+ *
+ * Call only on entry database.
+ */
+bool
+rel_is_interior_partition(Oid relid)
+{
+	HeapTuple	tuple;
+	Oid			paroid = InvalidOid;
+	bool		is_interior = false;
+	int			mylevel = 0;
+	Relation	partrulerel;
+	Relation	partrel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	Oid			partitioned_rel = InvalidOid;	/* OID of the root table of
+												 * the partition set */
+
+	/*
+	 * Find the pg_partition_rule entry to see if this is a child at all and,
+	 * if so, to locate the OID for the pg_partition entry.
+	 *
+	 * SELECT paroid FROM pg_partition_rule WHERE parchildrelid = :1
+	 */
+	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	sscan = systable_beginscan(partrulerel, PartitionRuleParchildrelidIndexId, true,
+							   NULL, 1, &scankey);
+	tuple = systable_getnext(sscan);
+
+	if (tuple)
+		paroid = ((Form_pg_partition_rule) GETSTRUCT(tuple))->paroid;
+	else
+		paroid = InvalidOid;
+
+	systable_endscan(sscan);
+	heap_close(partrulerel, AccessShareLock);
+
+	if (!OidIsValid(paroid))
+		return false;
+
+	tuple = SearchSysCache1(PARTOID, ObjectIdGetDatum(paroid));
+
+	Insist(HeapTupleIsValid(tuple));
+
+	mylevel = ((Form_pg_partition) GETSTRUCT(tuple))->parlevel;
+	partitioned_rel = ((Form_pg_partition) GETSTRUCT(tuple))->parrelid;
+	ReleaseSysCache(tuple);
+
+	/* SELECT * FROM pg_partition WHERE parrelid = :1 */
+	partrel = heap_open(PartitionRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey, Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(partitioned_rel));
+	sscan = systable_beginscan(partrel, PartitionParrelidIndexId, true,
+							   NULL, 1, &scankey);
+
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
+	{
+		/* not interested in templates */
+		if (((Form_pg_partition) GETSTRUCT(tuple))->paristemplate == false)
+		{
+			int			depth = ((Form_pg_partition) GETSTRUCT(tuple))->parlevel;
+			if (depth > mylevel)
+			{
+				is_interior = true;
+				break;
+			}
+		}
+	}
+
+	systable_endscan(sscan);
+	heap_close(partrel, AccessShareLock);
+
+	return is_interior;
+}
+
+/*
  * Is relid a leaf node of a partitioning hierarchy? If no, it does not follow
  * that it is the root.
  *

@@ -8852,6 +8852,18 @@ ATExecAddIndexConstraint(AlteredTableInfo *tab, Relation rel,
 	Assert(OidIsValid(index_oid));
 	Assert(stmt->isconstraint);
 
+	/*
+	 * Doing this on partitioned tables is not a simple feature to implement,
+	 * so let's punt for now.
+	 */
+	Oid rel_id = RelationGetRelid(rel);
+	bool is_root_or_interior_partition = rel_is_partitioned(rel_id)
+		|| rel_is_interior_partition(rel_id);
+	if (Gp_role != GP_ROLE_EXECUTE && is_root_or_interior_partition)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("ALTER TABLE / ADD CONSTRAINT USING INDEX is not supported on partitioned tables")));
+
 	indexRel = index_open(index_oid, AccessShareLock);
 
 	indexName = pstrdup(RelationGetRelationName(indexRel));

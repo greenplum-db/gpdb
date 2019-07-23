@@ -974,3 +974,19 @@ create table parttab_x (a int4, b int4) distributed by (b);
 alter table parttab exchange partition for (1) with table parttab_x;
 alter table parttab alter partition for (1) exchange partition for (1) with table parttab_x;
 
+-- add constraint using index is forbidden on root and interior partitioned tables
+create table root_part(a int, b int)
+    partition by range(b)
+        subpartition by list(b)
+            subpartition template (subpartition leaf values (1))
+        (partition interior start(1) end(2) every(1));
+-- disallowed on root partitions
+create unique index on root_part(a, b);
+alter table root_part add primary key using index root_part_a_b_idx ;
+-- disallowed on interior partitions
+create unique index on root_part_1_prt_interior(a, b);
+alter table root_part_1_prt_interior add primary key using index root_part_1_prt_interior_a_b_idx1 ;
+-- allowed on leaf partitions
+create unique index on root_part_1_prt_interior_2_prt_leaf(a, b);
+alter table root_part_1_prt_interior_2_prt_leaf add primary key using index root_part_1_prt_interior_2_prt_leaf_a_b_idx2;
+drop table root_part;

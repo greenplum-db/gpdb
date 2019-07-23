@@ -80,6 +80,8 @@ extern bool rel_has_appendonly_partition(Oid relid);
 
 extern bool rel_is_child_partition(Oid relid);
 
+extern bool rel_is_interior_partition(Oid relid);
+
 extern bool rel_is_leaf_partition(Oid relid);
 
 extern bool rel_partitioning_is_uniform(Oid rootOid);
