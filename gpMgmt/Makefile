@@ -96,8 +96,6 @@ install: generate_greenplum_path_file
 
 	$(MAKE) -C sbin $@ prefix=$(DESTDIR)$(prefix)
 
-	cp $(top_builddir)/src/test/regress/*.pl $(DESTDIR)$(prefix)/bin
-	cp $(top_builddir)/src/test/regress/*.pm $(DESTDIR)$(prefix)/bin
 	if [ ! -d ${DESTDIR}${prefix}/docs ] ; then mkdir ${DESTDIR}${prefix}/docs ; fi
 	if [ -d doc ]; then cp -rp doc $(DESTDIR)$(prefix)/docs/cli_help; fi
 
