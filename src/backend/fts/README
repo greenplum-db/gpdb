@@ -47,7 +47,7 @@ Tolerance Service (FTS):
 
 2. The FTS probe process always runs in a infinite loop and trying to
    do one round of polling at each iteration to get the health status
-   of all segments. At each iteration, it wait one a latch with timeout
+   of all segments. At each iteration, it waits on a latch with timeout
    to block itself for a while. Thus, two types of events might
    trigger the polling. One is timeout on the latch it is waiting for,
    and the other one is that someone sets the latch.
