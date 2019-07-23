@@ -775,6 +775,9 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot)
  *		for being stored on disk.  The original data may or may not be
  *		virtual, but in any case we need a private copy for heap_insert
  *		to scribble on.
+ *
+ *		Greenplum: this function is quite different from upstream because
+ *		the TupleTableSlot, HeapTuple and Memory/Minimal tuple differ.
  * --------------------------------
  */
 HeapTuple
@@ -792,6 +795,9 @@ ExecMaterializeSlot(TupleTableSlot *slot)
 	/*
 	 * If we have a regular physical tuple, and it's locally palloc'd, we have
 	 * nothing to do, else make a copy.
+	 *
+	 * Don't transform the heaptuple if possible, transforming heaptuples to
+	 * other types will lose the system columns and waste computing resources.
 	 */
 	if (slot->PRIVATE_tts_heaptuple)
 	{
@@ -821,14 +827,21 @@ ExecMaterializeSlot(TupleTableSlot *slot)
 	/*
 	 * Otherwise, copy or build a physical tuple, and store it into the slot.
 	 */
+
+	/*
+	 * Transform any tuple to a virtual tuple, system columns would be lost
+	 * here since virtual tuples have no system columns.
+	 */
 	slot_getallattrs(slot);
 
 	Assert(slot->PRIVATE_tts_nvalid == slot->tts_tupleDescriptor->natts);
 
+	/* Form a heaptuple from the virtual tuple */
 	tuplen = slot->PRIVATE_tts_htup_buf_len;
 	htup = heaptuple_form_to(slot->tts_tupleDescriptor, slot_get_values(slot), slot_get_isnull(slot),
 			slot->PRIVATE_tts_htup_buf, &tuplen);
 
+	/* The buf space is not large enough */
 	if (!htup)
 	{
 		/* enlarge the buffer and retry */
