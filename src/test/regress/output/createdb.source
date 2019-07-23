@@ -1,5 +1,4 @@
 -- start_ignore
-\! gpconfig -c create_restartpoint_on_chpt_record_replay -v on --skipvalidation;
 \! gpstop -u;
 20190709:16:49:48:083167 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Starting gpstop with args: -u
 20190709:16:49:48:083167 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Gathering information and validating the environment...
@@ -18,7 +17,7 @@ bash_cmd = "find " + os.getcwd() + "/../../ " + "-name %d -type d"
 p = os.popen(bash_cmd % dboid)
 return p.readlines()
 $$;
---this group udf help test case wait mirror cacheup
+--this group udf help test case wait mirror catch up
 CREATE OR REPLACE FUNCTION insert_noop_xlog_record_master() RETURNS VOID AS
 '@abs_builddir@/regress.so', 'insert_noop_xlog_record'
     LANGUAGE C EXECUTE ON MASTER;
@@ -107,21 +106,14 @@ select force_mirrors_to_catch_up();
  
 (1 row)
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db_with_leftover_files') as foo;
- result 
---------
- t
-(1 row)
-
--- start_ignore
 select db_dirs(oid) from pg_database where datname = 'db_with_leftover_files';
  db_dirs 
 ---------
 (0 rows)
 
--- end_ignore
 -- cleanup
 set gp_select_invisible=off;
 --
@@ -156,21 +148,14 @@ select force_mirrors_to_catch_up();
  
 (1 row)
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db2') as foo;
- result 
---------
- t
-(1 row)
-
--- start_ignore
 select db_dirs(oid) from pg_database where datname = 'db2';
  db_dirs 
 ---------
 (0 rows)
 
--- end_ignore
 set gp_select_invisible=off;
 --
 --CASE 3: error after XLOG_DBASE_CREATE on segment
@@ -204,21 +189,14 @@ select force_mirrors_to_catch_up();
  
 (1 row)
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db3') as foo;
- result 
---------
- t
-(1 row)
-
--- start_ignore
 select db_dirs(oid) from pg_database where datname = 'db3';
  db_dirs 
 ---------
 (0 rows)
 
--- end_ignore
 set gp_select_invisible=off;
 --
 --CASE 4: panic after XLOG_XACT_PREPARE on segment
@@ -243,10 +221,10 @@ from gp_segment_configuration where content=0 and role='p';
  Success:
 (1 row)
 
-select gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port)
+select gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
- gp_inject_fault2 
-------------------
+ gp_inject_fault_infinite2 
+---------------------------
  Success:
 (1 row)
 
@@ -259,71 +237,16 @@ select force_mirrors_to_catch_up();
  
 (1 row)
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db4') as foo;
- result 
---------
- t
-(1 row)
-
--- start_ignore
 select db_dirs(oid) from pg_database where datname = 'db4';
  db_dirs 
 ---------
 (0 rows)
 
--- end_ignore
 set gp_select_invisible=off;
---
---CASE 5: error before XLOG_XACT_PREPARE on segment 
---
-select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
- gp_inject_fault2 
-------------------
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
-(8 rows)
-
-select gp_inject_fault2('before_xlog_xact_prepare', 'error', dbid, hostname, port)
-from gp_segment_configuration where content=0 and role='p';
- gp_inject_fault2 
-------------------
- Success:
-(1 row)
-
--- should fail
-create database db5;
-ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'error'  (seg0 10.34.49.130:25432 pid=83280)
-select force_mirrors_to_catch_up();
- force_mirrors_to_catch_up 
----------------------------
- 
-(1 row)
-
-set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db5') as foo;
- result 
---------
- t
-(1 row)
-
--- start_ignore
-select db_dirs(oid) from pg_database where datname = 'db5';
- db_dirs 
----------
-(0 rows)
-
--- end_ignore
-set gp_select_invisible=off;
---CASE 6: panic before XLOG_XACT_PREPARE on segment
+--CASE 5: panic before XLOG_XACT_PREPARE on segment
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
  gp_inject_fault2 
 ------------------
@@ -344,15 +267,15 @@ from gp_segment_configuration where content=0 and role='p';
  Success:
 (1 row)
 
-select gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port)
+select gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
- gp_inject_fault2 
-------------------
+ gp_inject_fault_infinite2 
+---------------------------
  Success:
 (1 row)
 
 -- should fail
-create database db6;
+create database db5;
 ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'panic'  (seg0 10.34.49.130:25432 pid=83280)
 select force_mirrors_to_catch_up();
  force_mirrors_to_catch_up 
@@ -360,24 +283,26 @@ select force_mirrors_to_catch_up();
  
 (1 row)
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
 -- panic raised before transaction record, we have no hint to clean after qe restart
 select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db6') as foo;
+  (select db_dirs(oid) from pg_database where datname = 'db5') as foo;
  result 
 --------
  f
 (1 row)
 
 -- start_ignore
-select db_dirs(oid) from pg_database where datname = 'db6';
+select db_dirs(oid) from pg_database where datname = 'db5';
  db_dirs 
 ---------
 (0 rows)
 
 -- end_ignore
 set gp_select_invisible=off;
---CASE 7: error before XLOG_XACT_DISTRIBUTED_COMMIT on master
+--CASE 6: error before XLOG_XACT_DISTRIBUTED_COMMIT on master
 --reset status
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
  gp_inject_fault2 
@@ -400,7 +325,7 @@ from gp_segment_configuration where content=-1 and role='p';
 (1 row)
 
 -- should fail
-create database db7;
+create database db6;
 ERROR:  fault triggered, fault name:'before_xlog_xact_distributed_commit' fault type:'error'
 select force_mirrors_to_catch_up();
  force_mirrors_to_catch_up 
@@ -408,21 +333,14 @@ select force_mirrors_to_catch_up();
  
 (1 row)
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db7') as foo;
- result 
---------
- t
-(1 row)
-
--- start_ignore
-select db_dirs(oid) from pg_database where datname = 'db7';
+select db_dirs(oid) from pg_database where datname = 'db6';
  db_dirs 
 ---------
 (0 rows)
 
--- end_ignore
 set gp_select_invisible=off;
 -- start_ignore
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
@@ -438,7 +356,6 @@ select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_co
  Success:
 (8 rows)
 
-\! gpconfig -r create_restartpoint_on_chpt_record_replay --skipvalidation;
 \! gpstop -u;
 20190709:16:50:07:083391 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Starting gpstop with args: -u
 20190709:16:50:07:083391 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Gathering information and validating the environment...

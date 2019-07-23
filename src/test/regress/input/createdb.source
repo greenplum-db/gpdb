@@ -1,5 +1,4 @@
 -- start_ignore
-\! gpconfig -c create_restartpoint_on_chpt_record_replay -v on --skipvalidation;
 \! gpstop -u;
 create language plpythonu;
 -- end_ignore
@@ -14,7 +13,7 @@ p = os.popen(bash_cmd % dboid)
 return p.readlines()
 $$;
 
---this group udf help test case wait mirror cacheup
+--this group udf help test case wait mirror catch up
 CREATE OR REPLACE FUNCTION insert_noop_xlog_record_master() RETURNS VOID AS
 '@abs_builddir@/regress.so', 'insert_noop_xlog_record'
     LANGUAGE C EXECUTE ON MASTER;
@@ -69,13 +68,10 @@ create database db_with_leftover_files;
 -- Wait until replay_location = flush_location.
 select force_mirrors_to_catch_up();
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db_with_leftover_files') as foo;
-
--- start_ignore
 select db_dirs(oid) from pg_database where datname = 'db_with_leftover_files';
--- end_ignore
 
 -- cleanup
 set gp_select_invisible=off;
@@ -93,13 +89,10 @@ create database db2;
 
 select force_mirrors_to_catch_up();
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db2') as foo;
-
--- start_ignore
 select db_dirs(oid) from pg_database where datname = 'db2';
--- end_ignore
 
 set gp_select_invisible=off;
 
@@ -116,13 +109,10 @@ create database db3;
 
 select force_mirrors_to_catch_up();
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db3') as foo;
-
--- start_ignore
 select db_dirs(oid) from pg_database where datname = 'db3';
--- end_ignore
 
 set gp_select_invisible=off;
 
@@ -134,37 +124,37 @@ set gp_select_invisible=off;
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
 select gp_inject_fault2('end_prepare_two_phase', 'panic', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
-select gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port)
+select gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
 -- should fail
 create database db4;
 
 select force_mirrors_to_catch_up();
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db4') as foo;
-
--- start_ignore
 select db_dirs(oid) from pg_database where datname = 'db4';
--- end_ignore
 
 set gp_select_invisible=off;
 
 
 
---
---CASE 5: error before XLOG_XACT_PREPARE on segment 
---
+--CASE 5: panic before XLOG_XACT_PREPARE on segment
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
-select gp_inject_fault2('before_xlog_xact_prepare', 'error', dbid, hostname, port)
+select gp_inject_fault2('before_xlog_xact_prepare', 'panic', dbid, hostname, port)
+from gp_segment_configuration where content=0 and role='p';
+select gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port)
 from gp_segment_configuration where content=0 and role='p';
 -- should fail
 create database db5;
 
 select force_mirrors_to_catch_up();
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
+-- panic raised before transaction record, we have no hint to clean after qe restart
 select count(*)=0 as result from
   (select db_dirs(oid) from pg_database where datname = 'db5') as foo;
 
@@ -174,52 +164,24 @@ select db_dirs(oid) from pg_database where datname = 'db5';
 
 set gp_select_invisible=off;
 
-
-
---CASE 6: panic before XLOG_XACT_PREPARE on segment
-select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
-select gp_inject_fault2('before_xlog_xact_prepare', 'panic', dbid, hostname, port)
-from gp_segment_configuration where content=0 and role='p';
-select gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port)
-from gp_segment_configuration where content=0 and role='p';
--- should fail
-create database db6;
-
-select force_mirrors_to_catch_up();
-
-set gp_select_invisible=on;
--- panic raised before transaction record, we have no hint to clean after qe restart
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db6') as foo;
-
--- start_ignore
-select db_dirs(oid) from pg_database where datname = 'db6';
--- end_ignore
-
-set gp_select_invisible=off;
-
---CASE 7: error before XLOG_XACT_DISTRIBUTED_COMMIT on master
+--CASE 6: error before XLOG_XACT_DISTRIBUTED_COMMIT on master
 --reset status
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
 select gp_inject_fault2('before_xlog_xact_distributed_commit', 'error', dbid, hostname, port)
 from gp_segment_configuration where content=-1 and role='p';
 -- should fail
-create database db7;
+create database db6;
 
 select force_mirrors_to_catch_up();
 
+-- since this is a failed case, db oid is invisible, however we need it to search 
+-- our tablespace to check if has db files left over.
 set gp_select_invisible=on;
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db7') as foo;
-
--- start_ignore
-select db_dirs(oid) from pg_database where datname = 'db7';
--- end_ignore
+select db_dirs(oid) from pg_database where datname = 'db6';
 
 set gp_select_invisible=off;
 
 -- start_ignore
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
-\! gpconfig -r create_restartpoint_on_chpt_record_replay --skipvalidation;
 \! gpstop -u;
 -- end_ignore
