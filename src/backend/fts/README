@@ -28,48 +28,56 @@ Tolerance Service (FTS):
 
    The FTS probe process is started when the condition is true.
 
-   In PostmasterMain(), the function load_auxiliary_libraries() is called
-   to register one BackgroundWorker entry for each GP background process
-   into postmaster's private structure BackgroundWorkerList. The above
-   condition is checked to decide if FTS is registered there or not.
+   In the initialization phase, we register one BackgroundWorker entry
+   for each GP background process into postmaster's private structure
+   BackgroundWorkerList. When we do this, the above condition is checked
+   to decide if FTS should be registered there or not. The reader may
+   want to check load_auxiliary_libraries() for more detial.
 
-   Later in PostmasterMain(), maybe_start_bgworker() is called to start
-   all the GP background processes in the BackgroundWorkerList,
-   including FTS. This call is made outside of the ServerLoop() of
-   postmaster at the first time. Later, it will also be called inside
-   the ServerLoop() to handle other cases. For example, a backend process
-   is down and postmaster needs to have a chance to bring it up again.
+   Later, the postmaster tries to start the processes that have been
+   registered in the BackgroundWorkerList, which includes the FTS
+   probe process. For the cases that the first attempt to start
+   a particular process fails, or a process goes down for some reason
+   and then needs to be brought up again, postmaster gets the chances
+   to re-start it in its main loop. At a iteration, it checks
+   the status of these processes and acts accordingly.
 
    This is how the FTS probe process is started.
 
 
 2. The FTS probe process always runs in a infinite loop and trying to
    do one round of polling at each iteration to get the health status
-   of all segments. At each iteration, it calls WaitLatch with timeout
-   to block itself for a while. Thus, two types of events might actually
-   trigger the polling actually. One is timeout on the latch, and the
-   other one is that someone sets the latch.
+   of all segments. At each iteration, it wait one a latch with timeout
+   to block itself for a while. Thus, two types of events might
+   trigger the polling. One is timeout on the latch it is waiting for,
+   and the other one is that someone sets the latch.
 
-   In many code running on the master node, e.g. inside the code of the
-   function cdbgang_createGang_async(), if we hit the PG_CATCH block,
-   FtsNotifyProber() is called to signal postmaster with SIGINT, and
-   the postmaster’s SIGINT handler calls SetLatch() to unblock the FTS
-   main loop if it is now waiting on the Latch.
+   Certain components running on master node may interrupt FTS from its
+   wait to trigger a probe immediately. This is referred to as notifying
+   FTS. Dispatcher is one such component. As an example, it can notify
+   FTS if it encounters an error while creating a gang. The reader may
+   check FtsNotifyProber() to find more cases.
 
    This is the way how the FTS probe process starts a round of polling.
 
 3. On the master node side, the FTS probe process gets the configuration
-   from catelog table pg_segement_configure, which describes the status of
-   each segment and also tells if any of them has a mirror. In a simple
+   from catelog table gp_segment_configuration, which describes the status
+   of each segment and also tells if any of them has a mirror. In a simple
    case, we can think of that, for each unique content(or segindex) value,
    we may see a primary segment and a mirror segment. The two make a pair
    and they have the same content(or segindex) value but different dbid.
-   The FTS’s job is to periodically (sometimes event driven) poll all the
-   segments that have mirror setup. If any of them is in down status, FTS
-   promotes the mirror to be the primary (swap them). In summary, The FTS
-   probe gets the needed information of all segments from these catalog
-   tables and also update them according to the dynamically changing
-   runtime status.
+
+   FTS probes only the primary segments. Primary segments provide their own
+   status as well as their mirror's status in response. When a primary segment
+   is found to be down, FTS promotes its mirror, only if it was in-sync with
+   the primary. If the mirror is out-of-sync, this is considered "double
+   failure" and FTS does nothing. The cluster is unusable in this case.
+
+   If FTS, upon probing segments, finds any change, it would update segment
+   configuration. Dispatcher would then use the new configuration to create
+   gangs.
+
+   So FTS both read and write the catelog table.
 
 4. On the master node side: each round of the polling is done in a chain of
    calls :
@@ -84,7 +92,7 @@ Tolerance Service (FTS):
    FTS probe process connects to each primary segment node(or mirror segment
    when failover occurs) through TCP/IP. It sends requests to segment and
    waits for the responses. Once a response is received, it updates the
-   catalog table pg_segement_configure and pg_configure_history, and also
+   catalog table gp_segment_configuration and pg_configure_history, and also
    relevant memory structures accordingly.
 
 5. On the segment node side: in the main loop of PostgresMain(), we process
@@ -98,6 +106,7 @@ Tolerance Service (FTS):
         - Sync
         - Promote
 
-6. Not sure if FTS can be stopped by SIGUSR2 now.
+6. SIGUSR2 is ignored by FTS now, like other background, postmaster use
+   SIGTERM to stop the FTS.
 
 
