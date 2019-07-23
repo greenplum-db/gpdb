@@ -1,4 +1,3 @@
 bin/explain.pl
 bin/explain.pm
 bin/gptorment.pl
-bin/postgresql_conf_gp_additions
