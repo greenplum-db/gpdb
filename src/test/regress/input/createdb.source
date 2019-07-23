@@ -1,5 +1,4 @@
 -- start_ignore
-\! gpstop -u;
 create language plpythonu;
 -- end_ignore
 
@@ -137,51 +136,7 @@ set gp_select_invisible=on;
 select db_dirs(oid) from pg_database where datname = 'db4';
 
 set gp_select_invisible=off;
-
-
-
---CASE 5: panic before XLOG_XACT_PREPARE on segment
-select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
-select gp_inject_fault2('before_xlog_xact_prepare', 'panic', dbid, hostname, port)
-from gp_segment_configuration where content=0 and role='p';
-select gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port)
-from gp_segment_configuration where content=0 and role='p';
--- should fail
-create database db5;
-
-select force_mirrors_to_catch_up();
-
--- since this is a failed case, db oid is invisible, however we need it to search 
--- our tablespace to check if has db files left over.
-set gp_select_invisible=on;
--- panic raised before transaction record, we have no hint to clean after qe restart
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db5') as foo;
-
--- start_ignore
-select db_dirs(oid) from pg_database where datname = 'db5';
--- end_ignore
-
-set gp_select_invisible=off;
-
---CASE 6: error before XLOG_XACT_DISTRIBUTED_COMMIT on master
---reset status
-select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
-select gp_inject_fault2('before_xlog_xact_distributed_commit', 'error', dbid, hostname, port)
-from gp_segment_configuration where content=-1 and role='p';
--- should fail
-create database db6;
-
-select force_mirrors_to_catch_up();
-
--- since this is a failed case, db oid is invisible, however we need it to search 
--- our tablespace to check if has db files left over.
-set gp_select_invisible=on;
-select db_dirs(oid) from pg_database where datname = 'db6';
-
-set gp_select_invisible=off;
-
 -- start_ignore
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
-\! gpstop -u;
+select force_mirrors_to_catch_up();
 -- end_ignore

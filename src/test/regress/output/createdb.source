@@ -246,102 +246,6 @@ select db_dirs(oid) from pg_database where datname = 'db4';
 (0 rows)
 
 set gp_select_invisible=off;
---CASE 5: panic before XLOG_XACT_PREPARE on segment
-select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
- gp_inject_fault2 
-------------------
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
-(8 rows)
-
-select gp_inject_fault2('before_xlog_xact_prepare', 'panic', dbid, hostname, port)
-from gp_segment_configuration where content=0 and role='p';
- gp_inject_fault2 
-------------------
- Success:
-(1 row)
-
-select gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port)
-from gp_segment_configuration where content=0 and role='p';
- gp_inject_fault_infinite2 
----------------------------
- Success:
-(1 row)
-
--- should fail
-create database db5;
-ERROR:  fault triggered, fault name:'before_xlog_xact_prepare' fault type:'panic'  (seg0 10.34.49.130:25432 pid=83280)
-select force_mirrors_to_catch_up();
- force_mirrors_to_catch_up 
----------------------------
- 
-(1 row)
-
--- since this is a failed case, db oid is invisible, however we need it to search 
--- our tablespace to check if has db files left over.
-set gp_select_invisible=on;
--- panic raised before transaction record, we have no hint to clean after qe restart
-select count(*)=0 as result from
-  (select db_dirs(oid) from pg_database where datname = 'db5') as foo;
- result 
---------
- f
-(1 row)
-
--- start_ignore
-select db_dirs(oid) from pg_database where datname = 'db5';
- db_dirs 
----------
-(0 rows)
-
--- end_ignore
-set gp_select_invisible=off;
---CASE 6: error before XLOG_XACT_DISTRIBUTED_COMMIT on master
---reset status
-select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
- gp_inject_fault2 
-------------------
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
- Success:
-(8 rows)
-
-select gp_inject_fault2('before_xlog_xact_distributed_commit', 'error', dbid, hostname, port)
-from gp_segment_configuration where content=-1 and role='p';
- gp_inject_fault2 
-------------------
- Success:
-(1 row)
-
--- should fail
-create database db6;
-ERROR:  fault triggered, fault name:'before_xlog_xact_distributed_commit' fault type:'error'
-select force_mirrors_to_catch_up();
- force_mirrors_to_catch_up 
----------------------------
- 
-(1 row)
-
--- since this is a failed case, db oid is invisible, however we need it to search 
--- our tablespace to check if has db files left over.
-set gp_select_invisible=on;
-select db_dirs(oid) from pg_database where datname = 'db6';
- db_dirs 
----------
-(0 rows)
-
-set gp_select_invisible=off;
 -- start_ignore
 select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration;
  gp_inject_fault2 
@@ -356,11 +260,10 @@ select gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_co
  Success:
 (8 rows)
 
-\! gpstop -u;
-20190709:16:50:07:083391 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Starting gpstop with args: -u
-20190709:16:50:07:083391 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Gathering information and validating the environment...
-20190709:16:50:07:083391 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Obtaining Greenplum Master catalog information
-20190709:16:50:07:083391 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Obtaining Segment details from master...
-20190709:16:50:07:083391 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.487.gc712d6d8b0 build dev'
-20190709:16:50:07:083391 gpstop:Weinan-Pivotal-Mac:wwang-[INFO]:-Signalling all postmaster processes to reload
+select force_mirrors_to_catch_up();
+ force_mirrors_to_catch_up 
+---------------------------
+ 
+(1 row)
+
 -- end_ignore
