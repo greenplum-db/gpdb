@@ -335,11 +335,11 @@
   <topic id="topic_gdd" xml:lang="en">
     <title>Global Deadlock Detector</title>
     <body>
-      <p>The Greenplum Database Global Deadlock Detector backend process collects lock information
-        on all segments and uses a directed algorithm to detect the existence of local and global
-        deadlocks. This algorithm allows Greenplum Database to relax concurrent update and delete
-        restrictions on heap tables. (Greenplum Database still employs table-level locking on AO/CO
-        tables, restricting concurrent <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
+      <p>The Greenplum Database Global Deadlock Detector background worker process collects lock
+        information on all segments and uses a directed algorithm to detect the existence of local
+        and global deadlocks. This algorithm allows Greenplum Database to relax concurrent update
+        and delete restrictions on heap tables. (Greenplum Database still employs table-level
+        locking on AO/CO tables, restricting concurrent <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
           <codeph>SELECT...FOR UPDATE</codeph> operations.) </p>
       <p>By default, the Global Deadlock Detector is disabled and Greenplum Database executes the
         concurrent update and delete operations on a heap table serially. You can enable these
@@ -347,9 +347,10 @@
         exists by setting the server configuration parameter <xref
           href="../ref_guide/config_params/guc-list.xml#gp_enable_global_deadlock_detector"
             ><codeph>gp_enable_global_deadlock_detector</codeph></xref>. </p>
-      <p>When the Global Deadlock Detector is enabled, the backend process is automatically started
-        on the master host when you start Greenplum Database. You configure the interval at which
-        the Global Deadlock Detector collects and analyzes lock waiting data via the <codeph><xref
+      <p>When the Global Deadlock Detector is enabled, the background worker process is
+        automatically started on the master host when you start Greenplum Database. You configure
+        the interval at which the Global Deadlock Detector collects and analyzes lock waiting data
+        via the <codeph><xref
             href="../ref_guide/config_params/guc-list.xml#gp_global_deadlock_detector_period"
             type="section">gp_global_deadlock_detector_period</xref></codeph> server configuration
         parameter.</p>

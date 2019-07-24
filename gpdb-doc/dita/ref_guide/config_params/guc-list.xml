@@ -3538,8 +3538,8 @@
   <topic id="gp_global_deadlock_detector_period">
     <title>gp_global_deadlock_detector_period</title>
     <body>
-      <p>Specifies the executing interval (in seconds) of the global deadlock detector backend
-        process.</p>
+      <p>Specifies the executing interval (in seconds) of the global deadlock detector background
+        worker process.</p>
       <table id="gp_global_deadlock_detector_period">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
