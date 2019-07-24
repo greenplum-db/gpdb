@@ -6,85 +6,75 @@
   domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
   class="- topic/topic ">
   <title id="me143671" class="- topic/title ">orafce</title>
-  <shortdesc>Describes the Oracle Compatibility SQL functions in Greenplum Database. These functions
-    target PostgreSQL but can also be used in Greenplum Database.</shortdesc>
-  <topic id="topic_fpb_kbk_4gb">
-    <title>About the Oracle Compatibility Functions for Greenplum Database</title>
+  <body>
+    <p>The <codeph>orafce</codeph> module provides Oracle Compatibility SQL functions
+      in Greenplum Database. These functions target PostgreSQL but can also be used
+      in Greenplum.</p>
+    <p>The Greenplum Database <codeph>orafce</codeph> module is a modified version of the
+      <xref href="https://github.com/orafce/orafce" format="html"
+          scope="external">open source Orafce PostgreSQL module extension</xref>.
+      The modified <codeph>orafce</codeph> source files for Greenplum Database
+      can be found in the <codeph>gpcontrib/orafce</codeph> directory in the <xref
+        href="https://github.com/greenplum-db/gpdb" format="html" scope="external">Greenplum
+      Database open source project</xref>. The source reflects the Orafce 3.6.1 release and
+      additional commits to <xref
+        href="https://github.com/orafce/orafce/tree/3af70a28f6ab81f43c990fb5661df99a37328b8a"
+        format="html" scope="external">3af70a28f6</xref>.</p>
+     <p>There are some restrictions and limitations when you use the module in Greenplum
+       Database.</p>
+  </body>
+  <topic id="topic_reg">
+    <title>Installing and Registering the Module</title>
     <body>
-      <p>Oracle Compatibility Functions for Greenplum Database is based on the open source Orafce
-        project at <xref href="https://github.com/github.com/orafce/orafce" format="html"
-          scope="external"><codeph>https://github.com/orafce/orafce</codeph></xref>. </p>
-      <p>The modified Orafce source files for Greenplum Database can be found in the
-          <codeph>gpcontrib/orafce</codeph> directory in the <xref
-          href="https://github.com/greenplum-db/gpdb" format="html" scope="external">Greenplum
-          Database open source project</xref>. The source includes the Orafce 3.6.1 release and
-        additional commits to <xref
-          href="https://github.com/orafce/orafce/tree/3af70a28f6ab81f43c990fb5661df99a37328b8a"
-          format="html" scope="external">3af70a28f6</xref>.</p>
-      <p>The following functions are available by default in Greenplum Database and do not require
-        installing Oracle Compatibility Functions:</p>
-	<ul>
-         <li>sinh</li>
-         <li>tanh</li>
-         <li>cosh</li>
-         <li>decode (See <xref href="#topic3" format="dita"/> for more information.)</li>
-        </ul>
-      <p>For information about using the Oracle Compatibility Functions, refer to the documentation
-        at the Orafce project home at <xref
-          href="https://github.com/orafce/orafce/tree/3af70a28f6ab81f43c990fb5661df99a37328b8a"
-          format="html" scope="external">https://github.com/orafce/orafce</xref>. The source files
-        for the documentation in the Orafce project are also included in the Greenplum Database open
-        source project.</p>
-    </body>
-  </topic>
-  <topic id="topic2" xml:lang="en" ditaarch:DITAArchVersion="1.1"
-    domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
-    class="- topic/topic ">
-    <title class="- topic/title ">Installing Oracle Compatibility Functions</title>
-    <body class="- topic/body ">
       <note>Always use the Oracle Compatibility Functions module included with your Greenplum
         Database version. Before upgrading to a new Greenplum Database version, uninstall the
         compatibility functions from each of your databases, and then, when the upgrade is complete,
         reinstall the compatibility functions from the new Greenplum Database release. See the
         Greenplum Database release notes for upgrade prerequisites and procedures.</note>
-      <p>Install the Oracle Compatibility Functions in each of your databases using the
-          <codeph>CREATE EXTENSION</codeph> SQL command.</p>
-      <codeblock>$ psql -d <varname>db_name</varname> -c 'CREATE EXTENSION orafce;'</codeblock>
-      <note type="note" class="- topic/note ">Some Oracle Compatibility Functions reside in the
-          <codeph class="+ topic/ph pr-d/codeph ">oracle</codeph> schema. To access them set the
-        search path for the database to include the <codeph>oracle</codeph> schema name. For
-        example, this command sets the default search path for a database to include the
-          <codeph>oracle</codeph>
-        schema:<codeblock>ALTER DATABASE <varname>db_name</varname> SET <varname>search_path</varname> = "$user", public, oracle;</codeblock></note>
-      <p>To uninstall Oracle Compatibility Functions, drop the <codeph>orafce</codeph> extension
-        using the <codeph>DROP EXTENSION</codeph> SQL command.</p>
-      <codeblock>$ psql -d <varname>db_name</varname> -c 'DROP EXTENSION orafce;'</codeblock>
-      <p>If you are uninstalling the compatibility functions from a Greenplum Database 5.x release,
-        use this command instead:</p>
-      <codeblock>$ psql -d db_name -f $GPHOME/share/postgresql/contrib/uninstall_orafunc.sql</codeblock>
+      <p>The <codeph>orafce</codeph> module is installed when you install
+        Greenplum Database. Before you can use any of the functions defined in the
+        module, you must register the <codeph>orafce</codeph> extension in
+        each database in which you want to use the functions.
+        <ph otherprops="pivotal">Refer to <xref href="../../install_guide/install_modules.xml"
+          format="dita" scope="peer">Installing Additional Supplied Modules</xref>
+        for more information.</ph></p>
     </body>
   </topic>
+  <topic id="topic_mpp">
+    <title>Greenplum Database Considerations</title>
+    <body>
+    <p>The following functions are available by default in Greenplum Database and do not require
+      installing the Oracle Compatibility Functions:</p>
+      <ul>
+        <li>sinh()</li>
+        <li>tanh()</li>
+        <li>cosh()</li>
+        <li>decode() (See <xref href="#topic3" format="dita"/> for more information.)</li>
+      </ul>
+    </body>
   <topic id="topic3" xml:lang="en" ditaarch:DITAArchVersion="1.1"
     domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
     class="- topic/topic ">
-    <title class="- topic/title ">Oracle and Greenplum Implementation Differences</title>
+    <title class="- topic/title ">Greenplum Implementation Differences</title>
     <body class="- topic/body ">
-      <p>There are some differences in the implementation of the compatibility functions in
-        Greenplum Database from the Oracle implementation. If you use validation scripts, the output
-        may not be exactly the same as in Oracle. Some of the differences are as follows:</p>
+      <p>There are differences in the implementation of the compatibility functions in
+        Greenplum Database from the original PostgreSQL <codeph>orafce</codeph> module
+        extension implementation.  Some of the differences are as follows:</p>
       <ul class="- topic/ul ">
-        <li id="me144138" class="- topic/li ">Oracle performs a decimal round off, Greenplum
-          Database does not:<ul id="ul_yt5_bz1_1p">
-            <li>2.00 becomes 2 in Oracle</li>
-            <li>2.00 remains 2.00 in Greenplum Database</li>
+        <li id="me144138" class="- topic/li ">The original <codeph>orafce</codeph>
+          module implementation performs a decimal round off, the Greenplum
+          Database implementation does not:<ul id="ul_yt5_bz1_1p">
+            <li>2.00 becomes 2 in the original module implementation</li>
+            <li>2.00 remains 2.00 in the Greenplum Database implementation</li>
           </ul></li>
         <li id="me144139" class="- topic/li ">The provided Oracle compatibility functions handle
           implicit type conversions differently. For example, using the <codeph
             class="+ topic/ph pr-d/codeph ">decode</codeph>
             function:<codeblock>decode(<varname>expression</varname>, <varname>value</varname>, <varname>return</varname> [,<varname>value</varname>, <varname>return</varname>]...
-            [, default])</codeblock><p>Oracle
+            [, default])</codeblock><p>The original <codeph>orafce</codeph> module
+            implementation
             automatically converts <varname>expression</varname> and each <varname>value</varname>
-            to the data type of the first <varname>value</varname> before comparing. Oracle
+            to the data type of the first <varname>value</varname> before comparing. It
             automatically converts <varname>return</varname> to the same data type as the first
             result. </p><p>The Greenplum Database implementation restricts <varname>return</varname>
             and <codeph class="+ topic/ph pr-d/codeph ">default</codeph> to be of the same data
@@ -102,35 +92,65 @@ SELECT decode(1,'M',true,false);
 ERROR: Invalid input syntax for integer:<i>"M" 
 </i>LINE 1: SELECT decode(1,'M',true,false);</codeblock></li>
         <li id="me144144" class="- topic/li ">Numbers in <codeph class="+ topic/ph pr-d/codeph "
-            >bigint</codeph> format are displayed in scientific notation in Oracle, but not in
-          Greenplum Database:<ul id="ul_cld_kz1_1p">
-            <li>9223372036854775 displays as 9.2234E+15 in Oracle</li>
-            <li>9223372036854775 remains 9223372036854775 in Greenplum Database</li>
+            >bigint</codeph> format are displayed in scientific notation in the original
+         <codeph>orafce</codeph> module implementation but not in the
+          Greenplum Database implementation:<ul id="ul_cld_kz1_1p">
+            <li>9223372036854775 displays as 9.2234E+15 in the original implementation</li>
+            <li>9223372036854775 remains 9223372036854775 in the Greenplum Database implementation</li>
           </ul></li>
-        <li id="me144146" class="- topic/li ">The default date and timestamp format in Oracle is
-          different than the default format in Greenplum Database. If the following code is
+        <li id="me144146" class="- topic/li ">The default date and timestamp format in the
+          original <codeph>orafce</codeph> module implementation is
+          different than the default format in the Greenplum Database implementation. If
+          the following code is
             executed:<codeblock>CREATE TABLE TEST(date1 date, time1 timestamp, time2 
                   timestamp with time zone);
 INSERT INTO TEST VALUES ('2001-11-11','2001-12-13 
                  01:51:15','2001-12-13 01:51:15 -08:00');
-SELECT DECODE(date1, '2001-11-11', '2001-01-01') FROM TEST;</codeblock><p>Greenplum
-            Database returns the row, but Oracle returns no rows.</p><note>The correct syntax in
-            Oracle to return the row
+SELECT DECODE(date1, '2001-11-11', '2001-01-01') FROM TEST;</codeblock><p> The Greenplum
+            Database implementation returns the row, but the original implementation returns
+            no rows.</p><note>The correct syntax when using
+            the original <codeph>orafce</codeph> implementation to return the row
             is:<codeblock>SELECT DECODE(to_char(date1, 'YYYY-MM-DD'), '2001-11-11', 
               '2001-01-01') FROM TEST</codeblock></note></li>
-      </ul>
-      <p>Following are differences between using the Oracle Compatibility Functions with PostgreSQL
-        and Greenplum Database. </p>
-      <ul id="ul_njs_p4l_4gb">
-        <li>The <codeph>decode()</codeph> function is removed from the Greenplum Database Oracle
-          Compatibility Functions. The Greenplum Database parser converts <codeph>decode()</codeph>
-          -          function calls to <codeph>case</codeph> statements.</li>
-        <li>The functions in the Oracle Compatibility Functions <codeph>dbms_pipe</codeph> package
-          execute only on the Greenplum Database master host.</li>
         <li>The functions in the Oracle Compatibility Functions <codeph>dbms_alert</codeph> package
           are not implemented for Greenplum Database.</li>
+        <li>The <codeph>decode()</codeph> function is removed from the Greenplum Database Oracle
+          Compatibility Functions. The Greenplum Database parser internally converts a
+          <codeph>decode()</codeph> function call to a <codeph>CASE</codeph> statement.</li>
+      </ul>
+    </body>
+   </topic>
+  </topic>
+  <topic id="topic_using">
+    <title>Using orafce</title>
+    <body>
+      <p>Some Oracle Compatibility Functions reside in the
+          <codeph>oracle</codeph> schema. To access them, set the
+        search path for the database to include the <codeph>oracle</codeph> schema name. For
+        example, this command sets the default search path for a database to include the
+          <codeph>oracle</codeph>
+        schema:<codeblock>ALTER DATABASE <varname>db_name</varname> SET <varname>search_path</varname> = "$user", public, oracle;</codeblock></p>
+      <p>Note the following differences when using the Oracle Compatibility Functions
+        with PostgreSQL vs. using them with Greenplum Database: </p>
+      <ul id="ul_njs_p4l_4gb">
+        <li>If you use validation scripts, the output may not be exactly the same as
+          with the original <codeph>orafce</codeph> module implementation.</li>
+        <li>The functions in the Oracle Compatibility Functions <codeph>dbms_pipe</codeph> package
+          execute only on the Greenplum Database master host.</li>
         <li>The upgrade scripts in the Orafce project do not work with Greenplum Database.</li>
       </ul>
+    </body>
+  </topic>
+  <topic id="topic_info">
+    <title>Additional Module Documentation</title>
+    <body>
+      <p>Refer to the
+         <xref href="https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/orafce/README.asciidoc" format="html"
+          scope="external">README</xref> and <xref
+        href="https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/orafce/doc/orafce_documentation" format="html" scope="external">Greenplum
+      Database orafce documentation</xref> in the Greenplum Database github repository
+        for detailed information about the individual functions and supporting
+        objects provided in this module.</p>
     </body>
   </topic>
 </topic>
