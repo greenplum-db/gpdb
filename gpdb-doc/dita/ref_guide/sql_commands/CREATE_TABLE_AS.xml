@@ -109,14 +109,15 @@
                 format="dita"/></codeph> for more information about this index storage parameter. </pd>
           <pd><b>oids=FALSE</b> — This setting is the default, and it ensures that rows do not have
             object identifiers assigned to them. <ph otherprops="pivotal">Pivotal does not support
-              enabling OIDS when creating a table on a production system. </ph>On large tables, such
-            as those in a typical Greenplum Database system, using OIDs for table rows can cause
-            wrap-around of the 32-bit OID counter. Once the counter wraps around, OIDs can no longer
-            be assumed to be unique, which not only makes them useless to user applications, but can
-            also cause problems in the Greenplum Database system catalog tables. In addition,
-            excluding OIDs from a table reduces the space required to store the table on disk by 4
-            bytes per row, slightly improving performance. You cannot create OIDS on a partitioned
-            or column-oriented table (an error is displayed).</pd>
+              using <codeph>WITH OIDS</codeph> or <codeph>oids=TRUE</codeph> to assign an OID system
+              column. </ph>On large tables, such as those in a typical Greenplum Database system,
+            using OIDs for table rows can cause wrap-around of the 32-bit OID counter. Once the
+            counter wraps around, OIDs can no longer be assumed to be unique, which not only makes
+            them useless to user applications, but can also cause problems in the Greenplum Database
+            system catalog tables. In addition, excluding OIDs from a table reduces the space
+            required to store the table on disk by 4 bytes per row, slightly improving performance.
+            You cannot create OIDS on a partitioned or column-oriented table (an error is
+            displayed).</pd>
         </plentry>
         <plentry>
           <pt>ON COMMIT</pt>

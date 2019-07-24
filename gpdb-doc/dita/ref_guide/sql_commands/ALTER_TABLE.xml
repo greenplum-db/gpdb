@@ -314,20 +314,21 @@ where <varname>action</varname> is one of:
                                 <li id="ay137152"><b>SET WITHOUT OIDS</b> — Removes the OID system
                                         column from the table.<note type="warning"><ph
                                                   otherprops="pivotal">Pivotal does not support
-                                                  enabling OIDS when creating or altering a table on
-                                                  a production system. </ph>On large tables, such as
-                                                those in a typical Greenplum Database system, using
-                                                OIDs for table rows can cause wrap-around of the
-                                                32-bit OID counter. Once the counter wraps around,
-                                                OIDs can no longer be assumed to be unique, which
-                                                not only makes them useless to user applications,
-                                                but can also cause problems in the Greenplum
-                                                Database system catalog tables. In addition,
-                                                excluding OIDs from a table reduces the space
-                                                required to store the table on disk by 4 bytes per
-                                                row, slightly improving performance. You cannot
-                                                create OIDS on a partitioned or column-oriented
-                                                table (an error is displayed).</note></li>
+                                                  using <codeph>SET WITH OIDS</codeph> or
+                                                  <codeph>oids=TRUE</codeph> to assign an OID system
+                                                  column. </ph>On large tables, such as those in a
+                                                typical Greenplum Database system, using OIDs for
+                                                table rows can cause wrap-around of the 32-bit OID
+                                                counter. Once the counter wraps around, OIDs can no
+                                                longer be assumed to be unique, which not only makes
+                                                them useless to user applications, but can also
+                                                cause problems in the Greenplum Database system
+                                                catalog tables. In addition, excluding OIDs from a
+                                                table reduces the space required to store the table
+                                                on disk by 4 bytes per row, slightly improving
+                                                performance. You cannot create OIDS on a partitioned
+                                                or column-oriented table (an error is
+                                                displayed).</note></li>
                                 <li id="ay137192"><b>SET ( FILLFACTOR = <varname>value</varname>) /
                                                 RESET (FILLFACTOR)</b> — Changes the fillfactor for
                                         the table. The fillfactor for a table is a percentage
