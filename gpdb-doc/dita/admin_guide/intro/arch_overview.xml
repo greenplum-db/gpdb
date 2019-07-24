@@ -24,8 +24,7 @@
       row-oriented or column-oriented append-optimized tables can be compressed. </p>
     <p>The main differences between Greenplum Database and PostgreSQL are as follows:<ul
         id="ul_tnk_ymb_c1b">
-        <li>GPORCA is leveraged for query planning, in addition to the Postgres query planner, which
-          is based on the Postgres query planner.</li>
+        <li>GPORCA is leveraged for query planning, in addition to the Postgres Planner.</li>
         <li>Greenplum Database can use append-optimized storage.</li>
         <li>Greenplum Database has the option to use column storage, data that is logically
           organized as a table, using rows and columns that are physically stored in a

@@ -4,8 +4,7 @@
 <topic id="topic_i4y_prl_vp">
   <title>About GPORCA</title>
   <abstract>
-    <shortdesc>In Greenplum Database, the default GPORCA optmizer co-exists with the Postgres query
-      optimizer. </shortdesc>
+    <shortdesc>In Greenplum Database, the default GPORCA optmizer co-exists with the Postgres Planner. </shortdesc>
   </abstract>
   <body>
     <p>These sections describe GPORCA functionality and usage:<ul

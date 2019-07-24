@@ -267,7 +267,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             of a collatable data type). If not specified, the column data type's default collation
             is used.<note>GPORCA supports collation only when all columns in the query use the same
               collation. If columns in the query use different collations, then Greenplum uses the
-              Postgres query planner.</note></pd>
+              Postgres Planner.</note></pd>
         </plentry>
         <plentry>
           <pt>DEFAULT <varname>default_expr</varname></pt>
@@ -787,7 +787,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
                 href="../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
                 >gp_default_storage_options</xref></codeph>.</p></li>
       </ul>
-      <note type="important">The current Greenplum Database Postgres optimizer allows list partitions
+      <note type="important">The current Postgres Planner allows list partitions
         with multi-column (composite) partition keys. GPORCA does not support composite keys, so
         using composite partition keys is not recommended.</note>
     </section>

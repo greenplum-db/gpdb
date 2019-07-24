@@ -110,8 +110,7 @@ IN (<b>SELECT p_partkey FROM part p2 WHERE p2.p_retailprice = </b>
        FROM part p3 
        WHERE p3.p_brand = p1.p_brand)</b>
 );</codeblock><note>Nested
-              CSQ with skip level correlations are not supported by the Postgres query
-              optimizer.</note></li>
+              CSQ with skip level correlations are not supported by the Postgres Planner.</note></li>
           <li>CSQ with aggregate and inequality. This example contains a CSQ with an
             inequality.<codeblock>SELECT * FROM part p1 WHERE p1.p_retailprice =
  (SELECT min(p_retailprice) FROM part p2 WHERE p2.p_brand &lt;> p1.p_brand);</codeblock></li>

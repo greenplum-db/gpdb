@@ -367,7 +367,7 @@
           tables are always analyzed. </p><p>If GPORCA is enabled (the default), you also need to
           run <codeph>ANALYZE</codeph> or <codeph>ANALYZE ROOTPARTITION</codeph> to refresh the root
           partition statistics. GPORCA requires statistics at the root level for partitioned tables.
-          The Postgres optimizer does not use these statistics. </p><p>The time to analyze a
+          The Postgres Planner does not use these statistics. </p><p>The time to analyze a
           partitioned table is similar to the time to analyze a non-partitioned table with the same
           data since <codeph>ANALYZE ROOTPARTITION</codeph> does not collect statistics on the leaf
           partitions (the data is only sampled). The <codeph>analyzedb</codeph> utility updates root
@@ -403,8 +403,7 @@
           individual column. By default, the target is 25. The default target can be changed by
           setting a server configuration parameter and the target can be set for any column using
           the <codeph>ALTER TABLE</codeph> command. Larger values increase the time needed to do
-            <codeph>ANALYZE</codeph>, but may improve the quality of the Postgres query optimizer
-          (planner) estimates.</p>
+            <codeph>ANALYZE</codeph>, but may improve the quality of the Postgres Planner estimates.</p>
         <p>Set the system default statistics target to a different value by setting the
             <codeph>default_statistics_target</codeph> server configuration parameter. The default
           value is usually sufficient, and you should only raise or lower it if your tests

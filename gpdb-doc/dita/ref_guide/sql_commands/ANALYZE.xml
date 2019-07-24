@@ -248,8 +248,8 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
         statistics. </p>
       <p>If there are no statistics for the table, the server configuration parameter <codeph><xref
             href="../config_params/guc-list.xml#gp_enable_relsize_collection"/></codeph> controls
-        whether the Postgres query optimizer uses a default statistics file or estimates the size of a
-        table using the <codeph>pg_relation_size</codeph> function. By default, the Postgres optimizer
+        whether the Postgres Planner uses a default statistics file or estimates the size of a
+        table using the <codeph>pg_relation_size</codeph> function. By default, the Postgres Planner
         uses the default statistics file to estimate the number of rows if statistics are not
         available.</p>
     </section>

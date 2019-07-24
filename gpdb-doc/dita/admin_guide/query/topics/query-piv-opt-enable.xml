@@ -3,7 +3,7 @@
 <topic id="topic1">
   <title>Enabling and Disabling GPORCA</title>
   <abstract>
-    <shortdesc>By default, Greenplum Database uses GPORCA instead of the Postgres query planner.
+    <shortdesc>By default, Greenplum Database uses GPORCA instead of the Postgres Planner.
       Server configuration parameters enable or disable GPORCA.</shortdesc>
   </abstract>
   <body>

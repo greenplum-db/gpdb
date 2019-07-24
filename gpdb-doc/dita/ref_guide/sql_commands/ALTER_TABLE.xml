@@ -167,8 +167,7 @@ where <varname>action</varname> is one of:
                                         old to new type.<note>GPORCA supports collation only when
                                                 all columns in the query use the same collation. If
                                                 columns in the query use different collations, then
-                                                Greenplum uses the Postgres query
-                                        planner.</note></li>
+                                                Greenplum uses the Postgres Planner.</note></li>
                                 <li id="ay136904"><b>SET/DROP DEFAULT</b> — Sets or removes the
                                         default value for a column. Default values only apply in
                                         subsequent <codeph>INSERT</codeph> or

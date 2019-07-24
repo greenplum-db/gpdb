@@ -4,8 +4,8 @@
  
 <topic id="topic1">
   <title>Overview of GPORCA</title>
-  <abstract><shortdesc>GPORCA extends the planning and optimization capabilities of the Greenplum
-      Database Postgres optimizer. </shortdesc>GPORCA is extensible and achieves better optimization
+  <abstract><shortdesc>GPORCA extends the planning and optimization capabilities of the Postgres Planner. 
+  </shortdesc>GPORCA is extensible and achieves better optimization
     in multi-core architecture environments. Greenplum Database uses GPORCA by default to generate
     an execution plan for a query when possible.</abstract>
   <body>
@@ -15,16 +15,16 @@
         <li>Queries that contain a common table expression (CTE)</li>
         <li>Queries that contain subqueries</li>
       </ul></p>
-    <p>In Greenplum Database, GPORCA co-exists with the Postgres query optimizer. By default,
-      Greenplum Database uses GPORCA. If GPORCA cannot be used, then the Postgres query optimizer is
+    <p>In Greenplum Database, GPORCA co-exists with the Postgres Planner. By default,
+      Greenplum Database uses GPORCA. If GPORCA cannot be used, then the Postgres Planner is
       used. </p>
     <p>The following figure shows how GPORCA fits into the query planning
       architecture.</p>
     <image href="../../graphics/piv-opt.png" id="image_tqw_2bm_vp"/>
-    <note>All Postgres query optimizer (planner) server configuration parameters are ignored by
-      GPORCA. However, if Greenplum Database falls back to the Postgres optimizer, the planner server
-      configuration parameters will impact the query plan generation. For a list of Postgres query
-      optimizer (planner) server configuration parameters, see <xref
+    <note>All Postgres Planner server configuration parameters are ignored by
+      GPORCA. However, if Greenplum Database falls back to the Postgres Planner, the planner server
+      configuration parameters will impact the query plan generation. For a list of Postgres
+      Planner server configuration parameters, see <xref
         href="../../../ref_guide/config_params/guc_category-list.xml#topic21">Query Tuning
         Parameters</xref>.</note>
   </body>
