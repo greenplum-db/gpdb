@@ -312,16 +312,22 @@ def parseCommandLine():
 def connect(user=None, password=None, host=None, port=None,
             database=None, utilityMode=False):
     '''Connect to DB using parameters in GV'''
-    options = utilityMode and '-c gp_session_role=utility' or None
+    # make search path safe
+    options = '-c search_path='
+    if utilityMode:
+        options += ' -c gp_session_role=utility'
+
     if not user: user = GV.opt['-U']
     if not password: password = GV.opt['-P']
     if not host: host = GV.opt['-h']
     if not port: port = GV.opt['-p']
     if not database: database = GV.dbname
+
     try:
         logger.debug('connecting to %s:%s %s' % (host, port, database))
         db = pg.connect(host=host, port=port, user=user,
                         passwd=password, dbname=database, opt=options)
+
     except pg.InternalError, ex:
         logger.fatal('could not connect to %s: "%s"' %
                      (database, str(ex).strip()))

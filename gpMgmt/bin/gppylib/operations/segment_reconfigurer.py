@@ -5,7 +5,7 @@ from gppylib.db import dbconn
 import pygresql.pg
 
 
-FTS_PROBE_QUERY = 'SELECT gp_request_fts_probe_scan()'
+FTS_PROBE_QUERY = 'SELECT pg_catalog.gp_request_fts_probe_scan()'
 
 class SegmentReconfigurer:
     def __init__(self, logger, worker_pool, timeout):

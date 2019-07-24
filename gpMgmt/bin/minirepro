@@ -68,7 +68,8 @@ version = '1.13'
 PATH_PREFIX = '/tmp/'
 PGDUMP_FILE = 'pg_dump_out.sql'
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_catalog', 'information_schema', 'gp_toolkit')"
-pgoptions = '-c gp_session_role=utility'
+# make search path safe
+pgoptions = '-c gp_session_role=utility -c search_path='
 
 class MRQuery(object):
     def __init__(self):
