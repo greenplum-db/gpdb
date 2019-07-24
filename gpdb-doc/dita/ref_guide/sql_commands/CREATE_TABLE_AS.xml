@@ -9,7 +9,7 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE <varname>table_name</varname>
         [ (<varname>column_name</varname> [, ...] ) ]
-        [ WITH ( <varname>storage_parameter</varname> [= <varname>value</varname>] [, ... ] ) | WITH OIDS | WITHOUT OIDS ]
+        [ WITH ( <varname>storage_parameter</varname> [= <varname>value</varname>] [, ... ] ) | WITHOUT OIDS ]
         [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
         [ TABLESPACE <varname>tablespace_name</varname> ]
         AS <varname>query</varname>
@@ -23,7 +23,7 @@
    compresstype={ZLIB|ZSTD|QUICKLZ}
    compresslevel={1-19 | 1}
    fillfactor={10-100}
-   oids[=TRUE|FALSE]</codeblock>
+   [oids=FALSE]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -107,15 +107,16 @@
             option is valid only if <codeph>appendoptimized=TRUE</codeph>.</pd>
           <pd><b>fillfactor</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
                 format="dita"/></codeph> for more information about this index storage parameter. </pd>
-          <pd><b>oids</b> — Set to <codeph>oids=FALSE</codeph> (the default) so that rows do not have
-            object identifiers assigned to them. Greenplum strongly recommends that you do not
-            enable OIDS when creating a table. On large tables, such as those in a typical Greenplum
-            Database system, using OIDs for table rows can cause wrap-around of the 32-bit OID
-            counter. Once the counter wraps around, OIDs can no longer be assumed to be unique,
-            which not only makes them useless to user applications, but can also cause problems in
-            the Greenplum Database system catalog tables. In addition, excluding OIDs from a table
-            reduces the space required to store the table on disk by 4 bytes per row, slightly
-            improving performance. OIDS are not allowed on column-oriented tables.</pd>
+          <pd><b>oids=FALSE</b> — This setting is the default, and it ensures that rows do not have
+            object identifiers assigned to them. <ph otherprops="pivotal">Pivotal does not support
+              enabling OIDS when creating a table on a production system. </ph>On large tables, such
+            as those in a typical Greenplum Database system, using OIDs for table rows can cause
+            wrap-around of the 32-bit OID counter. Once the counter wraps around, OIDs can no longer
+            be assumed to be unique, which not only makes them useless to user applications, but can
+            also cause problems in the Greenplum Database system catalog tables. In addition,
+            excluding OIDs from a table reduces the space required to store the table on disk by 4
+            bytes per row, slightly improving performance. OIDS are not allowed on column-oriented
+            tables.</pd>
         </plentry>
         <plentry>
           <pt>ON COMMIT</pt>
@@ -199,11 +200,11 @@
       <codeblock>CREATE TABLE films_recent AS SELECT * FROM films WHERE 
 date_prod &gt;= '2007-01-01';</codeblock>
       <p>Create a new temporary table <codeph>films_recent</codeph>, consisting of only recent
-        entries from the table films, using a prepared statement. The new table has OIDs and will be
-        dropped at commit: </p>
+        entries from the table films, using a prepared statement. The new table will be dropped at
+        commit: </p>
       <codeblock>PREPARE recentfilms(date) AS SELECT * FROM films WHERE 
 date_prod &gt; $1;
-CREATE TEMP TABLE films_recent WITH (OIDS) ON COMMIT DROP AS 
+CREATE TEMP TABLE films_recent ON COMMIT DROP AS 
 EXECUTE recentfilms('2007-01-01');</codeblock>
     </section>
     <section id="section7">
