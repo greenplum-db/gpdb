@@ -325,7 +325,9 @@ where <varname>action</varname> is one of:
                                                 Database system catalog tables. In addition,
                                                 excluding OIDs from a table reduces the space
                                                 required to store the table on disk by 4 bytes per
-                                                row, slightly improving performance.</note></li>
+                                                row, slightly improving performance. You cannot
+                                                create OIDS on a partitioned or column-oriented
+                                                table (an error is displayed).</note></li>
                                 <li id="ay137192"><b>SET ( FILLFACTOR = <varname>value</varname>) /
                                                 RESET (FILLFACTOR)</b> — Changes the fillfactor for
                                         the table. The fillfactor for a table is a percentage
