@@ -65,7 +65,7 @@ create or replace function setup(content_id integer, fault_name text, fault_acti
 
 		-- intentionally skip fts during these tests
 		-- we know we're going to be inducing errors and panics on primaries
-		perform gp_inject_fault2('fts_probe', 'skip', dbid, hostname, port) from gp_segment_configuration where content = content_id and role = 'p';
+		perform gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port) from gp_segment_configuration where content = content_id and role = 'p';
 	end;
 $$ LANGUAGE plpgsql;
 create or replace function cleanup(content_id integer, tablespace_location_dir text) returns void as $$
