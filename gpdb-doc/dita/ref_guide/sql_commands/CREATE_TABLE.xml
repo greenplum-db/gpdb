@@ -523,16 +523,16 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           <pd>The <codeph>compresslevel</codeph> option is valid only if <codeph>appendoptimized=TRUE</codeph>.</pd>
           <pd><b>fillfactor</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
                 format="dita"/></codeph> for more information about this index storage parameter. </pd>
-          <pd><b>oids</b> — This setting is the default, and it ensures that rows do not have object
-            identifiers assigned to them. <ph otherprops="pivotal">Pivotal does not support enabling
-              OIDS when creating a table on a production system. </ph>On large tables, such as those
-            in a typical Greenplum Database system, using OIDs for table rows can cause wrap-around
-            of the 32-bit OID counter. Once the counter wraps around, OIDs can no longer be assumed
-            to be unique, which not only makes them useless to user applications, but can also cause
-            problems in the Greenplum Database system catalog tables. In addition, excluding OIDs
-            from a table reduces the space required to store the table on disk by 4 bytes per row,
-            slightly improving performance. OIDS are not allowed on partitioned tables or
-            append-optimized column-oriented tables.</pd>
+          <pd><b>oids=FALSE</b> — This setting is the default, and it ensures that rows do not have
+            object identifiers assigned to them. <ph otherprops="pivotal">Pivotal does not support
+              enabling OIDS when creating a table on a production system. </ph>On large tables, such
+            as those in a typical Greenplum Database system, using OIDs for table rows can cause
+            wrap-around of the 32-bit OID counter. Once the counter wraps around, OIDs can no longer
+            be assumed to be unique, which not only makes them useless to user applications, but can
+            also cause problems in the Greenplum Database system catalog tables. In addition,
+            excluding OIDs from a table reduces the space required to store the table on disk by 4
+            bytes per row, slightly improving performance. OIDS are not allowed on partitioned
+            tables or append-optimized column-oriented tables.</pd>
         </plentry>
         <plentry>
           <pt>ON COMMIT</pt>
@@ -718,7 +718,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           the OID column of that table, to ensure that OIDs in the table will indeed uniquely
           identify rows even after counter wrap-around. Avoid assuming that OIDs are unique across
           tables; if you need a database-wide unique identifier, use the combination of table OID
-          and row OID for the purpose.</li>
+          and row OID for that purpose.</li>
         <li>Greenplum Database has some special conditions for primary key and unique constraints
           with regards to columns that are the <i>distribution key</i> in a Greenplum table. For a
           unique constraint to be enforced in Greenplum Database, the table must be hash-distributed
