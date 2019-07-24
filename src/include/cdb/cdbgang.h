@@ -54,6 +54,9 @@ typedef struct Gang
 	/* should be destroyed if set */
 	bool noReuse;
 
+	/* the estate that assign this gang */
+	EState	   *estate;
+
 	/* memory context */
 	MemoryContext perGangContext;
 } Gang;
@@ -65,7 +68,7 @@ extern int host_segments;
 extern MemoryContext GangContext;
 extern Gang *CurrentGangCreating;
 
-extern Gang *AllocateReaderGang(GangType type, char *portal_name);
+extern Gang *AllocateReaderGang(GangType type, char *portal_name, EState *estate);
 
 extern Gang *AllocateWriterGang(void);
 
@@ -75,7 +78,7 @@ extern bool GangOK(Gang *gp);
 
 extern List *getCdbProcessesForQD(int isPrimary);
 
-extern void freeGangsForPortal(char *portal_name);
+extern void freeGangsForPortal(char *portal_name, EState *estate);
 
 extern void DisconnectAndDestroyGang(Gang *gp);
 extern void DisconnectAndDestroyAllGangs(bool resetSession);

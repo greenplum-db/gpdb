@@ -232,6 +232,7 @@ typedef enum FaultInjectorIdentifier_e {
 	FinishPreparedAfterRecordCommitPrepared,
 
 	GangCreated,
+	FreeGangInitPlan,
 
 	ResGroupAssignedOnMaster,
 

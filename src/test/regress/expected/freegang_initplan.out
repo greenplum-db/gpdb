@@ -1,0 +1,47 @@
+create extension if not exists gp_inject_fault;
+create table t_freegang_initplan(c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create or replace function f_freegang_initplan() returns int as
+$$
+begin
+  insert into t_freegang_initplan select * from generate_series(1, 10);
+  return 1;
+end;
+$$
+language plpgsql;
+select gp_inject_fault('free_gang_initplan', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('free_gang_initplan', 'skip', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+-- the following query will generate initplan, and initplan should not
+-- cleanup gang allocated to parent plan.
+create table t_freegang_initplan_test as select f_freegang_initplan();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'f_freegang_initplan' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select gp_wait_until_triggered_fault('free_gang_initplan', 1, 1);
+NOTICE:  Success:
+ gp_wait_until_triggered_fault 
+-------------------------------
+ t
+(1 row)
+
+select * from t_freegang_initplan_test;
+ f_freegang_initplan 
+---------------------
+                   1
+(1 row)
+
+drop function f_freegang_initplan();
+drop table t_freegang_initplan;
+drop table t_freegang_initplan_test;

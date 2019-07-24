@@ -1711,7 +1711,7 @@ AssignGangs(QueryDesc *queryDesc)
 			}
 			else
 			{
-				inv.vecNgangs[i] = AllocateReaderGang(GANGTYPE_PRIMARY_READER, queryDesc->portal_name);
+				inv.vecNgangs[i] = AllocateReaderGang(GANGTYPE_PRIMARY_READER, queryDesc->portal_name, estate);
 			}
 		}
 	}
@@ -1720,7 +1720,7 @@ AssignGangs(QueryDesc *queryDesc)
 		inv.vec1gangs_primary_reader = (Gang **) palloc(sizeof(Gang *) * inv.num1gangs_primary_reader);
 		for (i = 0; i < inv.num1gangs_primary_reader; i++)
 		{
-			inv.vec1gangs_primary_reader[i] = AllocateReaderGang(GANGTYPE_SINGLETON_READER, queryDesc->portal_name);
+			inv.vec1gangs_primary_reader[i] = AllocateReaderGang(GANGTYPE_SINGLETON_READER, queryDesc->portal_name, estate);
 		}
 	}
 	if (inv.num1gangs_entrydb_reader > 0)
@@ -1728,7 +1728,7 @@ AssignGangs(QueryDesc *queryDesc)
 		inv.vec1gangs_entrydb_reader = (Gang **) palloc(sizeof(Gang *) * inv.num1gangs_entrydb_reader);
 		for (i = 0; i < inv.num1gangs_entrydb_reader; i++)
 		{
-			inv.vec1gangs_entrydb_reader[i] = AllocateReaderGang(GANGTYPE_ENTRYDB_READER, queryDesc->portal_name);
+			inv.vec1gangs_entrydb_reader[i] = AllocateReaderGang(GANGTYPE_ENTRYDB_READER, queryDesc->portal_name, estate);
 		}
 	}
 
@@ -1762,7 +1762,7 @@ ReleaseGangs(QueryDesc *queryDesc)
 {
 	Assert(queryDesc != NULL);
 
-	freeGangsForPortal(queryDesc->portal_name);
+	freeGangsForPortal(queryDesc->portal_name, queryDesc->estate);
 }
 
 

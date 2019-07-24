@@ -223,4 +223,6 @@ test: oid_wraparound
 
 test: autovacuum-template0
 
+test: freegang_initplan
+
 # end of tests

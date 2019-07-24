@@ -203,7 +203,7 @@ static void test__createReaderGang(void **state)
 	mockLibpq(conn, motionListener, qePid);
 
 	cdbgang_setAsync(false);
-	Gang * gang = AllocateReaderGang(GANGTYPE_PRIMARY_READER, portalName);
+	Gang * gang = AllocateReaderGang(GANGTYPE_PRIMARY_READER, portalName, NULL);
 
 	/* validate gang */
 	assert_int_equal(gang->size, TOTOAL_SEGMENTS);

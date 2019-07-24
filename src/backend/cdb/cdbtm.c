@@ -1560,7 +1560,7 @@ initTM(void)
 
 		RestoreToUser(olduser);
 
-		freeGangsForPortal(NULL);
+		freeGangsForPortal(NULL, NULL);
 	}
 	else
 	{
@@ -1594,7 +1594,7 @@ initTM(void)
 					Persistent_PostDTMRecv_RemoveHashEntry(MyDatabaseId);
 
 					RestoreToUser(olduser);
-					freeGangsForPortal(NULL);
+					freeGangsForPortal(NULL, NULL);
 				}
 				releaseTmLock();
 			}

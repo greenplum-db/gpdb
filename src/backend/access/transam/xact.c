@@ -2862,7 +2862,7 @@ CommitTransaction(void)
 	/* we're now in a consistent state to handle an interrupt. */
 	RESUME_INTERRUPTS();
 
-	freeGangsForPortal(NULL);
+	freeGangsForPortal(NULL, NULL);
 
 	/* Release resource group slot at the end of a transaction */
 	if (ShouldUnassignResGroup())
@@ -3354,7 +3354,7 @@ AbortTransaction(void)
 	 */
 	RESUME_INTERRUPTS();
 
-	freeGangsForPortal(NULL);
+	freeGangsForPortal(NULL, NULL);
 
 	/* If a query was cancelled, then cleanup reader gangs. */
 	if (QueryCancelCleanup)
