@@ -57,7 +57,11 @@ install:
   - pip install --user --upgrade pip
   - pip install --user --pre psutil
   - pip install --user lockfile
-  - pip install --user setuptools
+  - pip install --user --upgrade setuptools
+  - pip install --user --upgrade six
+  - pip install --user --upgrade pbr
+  - pip install --user --upgrade funcsigs
+  - pip install --user mock
 
 env:
   - CC=gcc-6
@@ -87,6 +91,7 @@ script:
   - make install
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - make unittest-check
+  - make -C gpMgmt/bin unittest-check
   - postgres --version
   - initdb --version
   - createdb --version

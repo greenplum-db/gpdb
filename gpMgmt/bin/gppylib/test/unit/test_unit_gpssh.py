@@ -6,8 +6,9 @@ import sys
 from mock import patch
 
 from gp_unittest import GpTestCase
+from gppylib.db.test import skipIfRunningOnCI
 
-
+@skipIfRunningOnCI()
 class GpSshTestCase(GpTestCase):
     def setUp(self):
         # because gpssh does not have a .py extension, we have to use imp to import it

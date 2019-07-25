@@ -7,12 +7,14 @@ import sys
 import mock
 
 from gppylib.commands.base import ExecutionError
+from gppylib.db.test import skipIfRunningOnCI
 from gppylib.operations.utils import RemoteOperation, ParallelOperation
 from gppylib.operations.test_utils_helper import TestOperation, RaiseOperation, RaiseOperation_Nested, \
     RaiseOperation_Unsafe, RaiseOperation_Unpicklable, RaiseOperation_Safe, MyException, ExceptionWithArgs
 from operations.unix import ListFiles
 from test.unit.gp_unittest import GpTestCase, run_tests
 
+@skipIfRunningOnCI()
 class UtilsTestCase(GpTestCase):
     """
     Requires GPHOME set. Does actual ssh to localhost.
