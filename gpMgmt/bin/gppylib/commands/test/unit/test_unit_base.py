@@ -5,9 +5,10 @@
 
 import unittest
 from gppylib.commands.base import Command, WorkerPool, RemoteExecutionContext, GPHOME, LocalExecutionContext
+from gppylib.db.test import skipIfRunningOnCI
 from mock import patch
 
-
+@skipIfRunningOnCI()
 class WorkerPoolTestCase(unittest.TestCase):
 
     def tearDown(self):

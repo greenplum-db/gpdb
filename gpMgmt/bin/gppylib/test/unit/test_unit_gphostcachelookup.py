@@ -9,6 +9,7 @@ import os, sys
 import unittest
 from gppylib import gplog
 from gppylib.commands.base import Command, ExecutionError
+from gppylib.db.test import skipIfRunningOnCI
 
 FILEDIR=os.path.expanduser("~")
 FILENAME=".gphostcache"
@@ -24,6 +25,7 @@ except Exception, e:
 
 GPHOSTLOOKUP = os.path.join(os.getenv('GPHOME'), 'bin/lib/', 'gphostcachelookup.py')
 
+@skipIfRunningOnCI()
 class GpHostCacheLookupTestCase(unittest.TestCase):
 
     LOOKUP_FAIL_MSG = '__lookup_of_hostname_failed__'

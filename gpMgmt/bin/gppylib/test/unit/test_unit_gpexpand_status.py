@@ -5,19 +5,16 @@
 #
 
 import os
+import unittest
 
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 from gppylib.commands import gp
 from gppylib.db import dbconn
+from gppylib.db.test import skipIfDatabaseDown
 
 class Context(object):
     filename = os.path.join(gp.get_masterdatadir(), 'gpexpand.status')
-    dbname = os.getenv('PGDATABASE', 'postgres')
-    dburl = dbconn.DbURL(dbname=dbname)
-    conn = dbconn.connect(dburl)
     day = 0
-
-ctx = Context()
 
 def get_gpexpand_status():
     st = gp.get_gpexpand_status()
@@ -101,9 +98,11 @@ def expanded_table(name):
         return wrapper
     return decorator
 
+@skipIfDatabaseDown()
 class GpExpandUtils(GpTestCase):
 
     def setUp(self):
+        ctx = Context()
         ctx.day = 1
         dbconn.execSQL(ctx.conn, '''
             DROP SCHEMA IF EXISTS gpexpand CASCADE;

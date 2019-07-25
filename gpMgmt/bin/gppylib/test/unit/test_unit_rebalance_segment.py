@@ -1,11 +1,12 @@
 from mock import *
 
 from gp_unittest import *
+from gppylib.db.test import skipIfDatabaseDown
 from gppylib.gparray import GpArray, Segment
 from gppylib.commands.base import CommandResult
 from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
 
-
+@skipIfDatabaseDown()
 class RebalanceSegmentsTestCase(GpTestCase):
     def setUp(self):
         self.pool = Mock()

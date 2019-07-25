@@ -3,10 +3,12 @@
 import os
 import unittest
 
+from gppylib.db.test import skipIfDatabaseDown
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.operations.reload import GpReload
 from mock import MagicMock, Mock, mock_open, patch
 
+@skipIfDatabaseDown()
 class GpReloadTestCase(unittest.TestCase):
 
     def setUp(self):

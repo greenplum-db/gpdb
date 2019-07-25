@@ -1,10 +1,13 @@
 from mock import *
 from gp_unittest import *
+from gppylib.db.test import skipIfRunningOnCI
 from gppylib.programs.gppkg import GpPkgProgram
 
+import unittest
 import sys
 
-
+@unittest.skipUnless(sys.platform.startswith("linux"), "requires linux")
+@skipIfRunningOnCI()
 class GpPkgProgramTestCase(GpTestCase):
     def setUp(self):
         self.mock_cmd = Mock()
