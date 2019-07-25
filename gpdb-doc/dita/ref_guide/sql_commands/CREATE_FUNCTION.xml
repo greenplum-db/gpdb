@@ -433,7 +433,7 @@ $SomeTag$Dianne's horse$SomeTag$</codeblock>
                     <li>The function cannot be in the <codeph>SELECT</codeph> list of a query with a
                             <codeph>FROM</codeph> clause.</li>
                     <li>A query that includes the function falls back from GPORCA to the Postgres
-                        query planner.</li>
+                        Planner.</li>
                 </ul></sectiondiv></section>
         <section id="section8"><title>Examples</title><p>A very simple addition
                 function:</p><codeblock>CREATE FUNCTION add(integer, integer) RETURNS integer
