@@ -89,7 +89,7 @@ def get_host_list():
             master = seg.getSegmentHostName()
 
     #Deduplicate the hosts so that we
-    #dont install multiple times on the same host
+    #don't install multiple times on the same host
     segment_host_list = list(set(segment_host_list))
     if master in segment_host_list:
         segment_host_list.remove(master)
@@ -217,7 +217,7 @@ class RPMSpec:
     """Represents an RPM spec file used for creating an RPM"""
     def __init__(self, name, version, release, depends = []):
         """
-        @param depends: List of dependecies for the rpm
+        @param depends: List of dependencies for the rpm
         @type depends: List of strings
         """
         self.name = name
@@ -349,7 +349,7 @@ class GppkgTestCase(unittest.TestCase):
         @type gppkg_spec: GppkgSpec
         @param rpm_spec: The spec file required to build the main rpm
         @type rpm_spec: RPMSpec
-        @param dep_rpm_specs: List of all the dependecies of the main rpm
+        @param dep_rpm_specs: List of all the dependencies of the main rpm
         @type dep_rpm_specs: List of RPMSpecs
         @return: gppkg filename
         @rtype: string
