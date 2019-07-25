@@ -130,10 +130,20 @@ test_build_http_headers(void **state)
 	option_data2->key   = "key2";
 	option_data2->value = "value2";
 
+	List *copyOpts = NIL;
+	copyOpts = lappend(copyOpts, makeDefElem("format", (Node *)makeString("csv")));
+	copyOpts = lappend(copyOpts, makeDefElem("delimiter", (Node *)makeString("|")));
+	copyOpts = lappend(copyOpts, makeDefElem("null", (Node *)makeString("")));
+	copyOpts = lappend(copyOpts, makeDefElem("escape", (Node *)makeString("\"")));
+	copyOpts = lappend(copyOpts, makeDefElem("quote", (Node *)makeString("\"")));
+	copyOpts = lappend(copyOpts, makeDefElem("encoding", (Node *)makeString("UTF8")));
+
 	gphd_uri->options = list_make2(option_data1, option_data2);
 
 	tuple.natts = 0;
 	ext_tbl.fmtcode = 'c';
+	ext_tbl.fmtopts = "delimiter '|' null '' escape '\"' quote '\"'";
+	ext_tbl.encoding = 6;
 	input_data->rel->rd_id = 56;
 	input_data->rel->rd_att = &tuple;
 
@@ -141,7 +151,34 @@ test_build_http_headers(void **state)
 
 	expect_value(GetExtTableEntry, relid, input_data->rel->rd_id);
 	will_return(GetExtTableEntry, &ext_tbl);
+	expect_value(parseCopyFormatString, rel, input_data->rel);
+	expect_value(parseCopyFormatString, fmtstr, ext_tbl.fmtopts);
+	expect_value(parseCopyFormatString, fmttype, ext_tbl.fmtcode);
+	will_return(parseCopyFormatString, copyOpts);
+	expect_value(appendCopyEncodingOption, copyFmtOpts, copyOpts);
+	expect_value(appendCopyEncodingOption, encoding, ext_tbl.encoding);
+	will_return(appendCopyEncodingOption, copyOpts);
+
+	expect_string(normalize_key_name, key, "format");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-FORMAT"));
+	expect_string(normalize_key_name, key, "delimiter");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-DELIMITER"));
+	expect_string(normalize_key_name, key, "null");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-NULL"));
+	expect_string(normalize_key_name, key, "escape");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-ESCAPE"));
+	expect_string(normalize_key_name, key, "quote");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-QUOTE"));
+	expect_string(normalize_key_name, key, "encoding");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-ENCODING"));
+
 	expect_headers_append(input_data->headers, "X-GP-FORMAT", TextFormatName);
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-FORMAT", "csv");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-DELIMITER", "|");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-NULL", "");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-ESCAPE", "\"");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-QUOTE", "\"");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-ENCODING", "UTF8");
 	expect_headers_append(input_data->headers, "X-GP-ATTRS", "0");
 
 	expect_headers_append(input_data->headers, "X-GP-USER", "pxfuser");
