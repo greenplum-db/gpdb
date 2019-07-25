@@ -533,7 +533,8 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             system catalog tables. In addition, excluding OIDs from a table reduces the space
             required to store the table on disk by 4 bytes per row, slightly improving performance.
             You cannot create OIDS on a partitioned or column-oriented table (an error is
-            displayed).</pd>
+            displayed). This syntax is deprecated and will be removed in a future Greenplum
+            release.</pd>
         </plentry>
         <plentry>
           <pt>ON COMMIT</pt>
@@ -713,14 +714,14 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             value to one of the other string types. </p></li>
         <li><ph otherprops="pivotal">Pivotal does not support using <codeph>WITH OIDS</codeph> or
               <codeph>oids=TRUE</codeph> to assign an OID system column. </ph><ph
-            otherprops="oss-only">Using OIDs in new applications is not recommended. </ph>As an
-          alternative, use a <codeph>SERIAL</codeph> or other sequence generator as the table's
-          primary key. However, if your application does make use of OIDs to identify specific rows
-          of a table, it is recommended to create a unique constraint on the OID column of that
-          table, to ensure that OIDs in the table will indeed uniquely identify rows even after
-          counter wrap-around. Avoid assuming that OIDs are unique across tables; if you need a
-          database-wide unique identifier, use the combination of table OID and row OID for that
-          purpose.</li>
+            otherprops="oss-only">Using OIDs in new applications is not recommended. </ph> This
+          syntax is deprecated and will be removed in a future Greenplum release. As an alternative,
+          use a <codeph>SERIAL</codeph> or other sequence generator as the table's primary key.
+          However, if your application does make use of OIDs to identify specific rows of a table,
+          it is recommended to create a unique constraint on the OID column of that table, to ensure
+          that OIDs in the table will indeed uniquely identify rows even after counter wrap-around.
+          Avoid assuming that OIDs are unique across tables; if you need a database-wide unique
+          identifier, use the combination of table OID and row OID for that purpose.</li>
         <li>Greenplum Database has some special conditions for primary key and unique constraints
           with regards to columns that are the <i>distribution key</i> in a Greenplum table. For a
           unique constraint to be enforced in Greenplum Database, the table must be hash-distributed

@@ -117,7 +117,8 @@
             system catalog tables. In addition, excluding OIDs from a table reduces the space
             required to store the table on disk by 4 bytes per row, slightly improving performance.
             You cannot create OIDS on a partitioned or column-oriented table (an error is
-            displayed).</pd>
+            displayed). This syntax is deprecated and will be removed in a future Greenplum
+            release.</pd>
         </plentry>
         <plentry>
           <pt>ON COMMIT</pt>
@@ -222,7 +223,9 @@ EXECUTE recentfilms('2007-01-01');</codeblock>
         <li id="ce151723">Greenplum Database handles temporary tables differently from the standard;
           see <codeph>CREATE TABLE</codeph> for details.</li>
         <li id="ce151725">The <codeph>WITH</codeph> clause is a Greenplum Database extension;
-          neither storage parameters nor <codeph>OIDs</codeph> are in the standard. </li>
+          neither storage parameters nor <codeph>OIDs</codeph> are in the standard.  The syntax for
+          creating OID system columns is deprecated and will be removed in a future Greenplum
+          release.</li>
         <li id="ce151727">The Greenplum Database concept of tablespaces is not part of the standard.
           The <codeph>TABLESPACE</codeph> clause is an extension.</li>
       </ul>
