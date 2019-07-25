@@ -19,7 +19,7 @@ EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>EXPLAIN</codeph> displays the query plan that the Greenplum or Postgres planner
+      <p><codeph>EXPLAIN</codeph> displays the query plan that the Greenplum or Postgres Planner
         generates for the supplied statement. Query plans are a tree plan of nodes. Each node in the
         plan represents a single operation, such as table scan, join, aggregation or a sort.</p>
       <p>Plans should be read from the bottom up as each node feeds rows into the node directly

@@ -4,7 +4,7 @@
   <title>Collecting Root Partition Statistics</title>
   <shortdesc>For a partitioned table, GPORCA uses statistics of the table root partition to generate
     query plans. These statistics are used for determining the join order, for splitting and joining
-    aggregate nodes, and for costing the query steps. In contrast, the Postgres planner uses the
+    aggregate nodes, and for costing the query steps. In contrast, the Postgres Planner uses the
     statistics of each leaf partition.</shortdesc>
   <body>
     <p>If you execute queries on partitioned tables, you should collect statistics on the root
@@ -71,7 +71,7 @@
       <p>Although creating and maintaining root partition statistics is crucial for GPORCA query
         performance with partitioned tables, maintaining leaf partition statistics is also
         important. If GPORCA cannot generate a plan for a query against a partitioned table, then
-        the Postgres planner is used and leaf partition statistics are needed to produce the optimal
+        the Postgres Planner is used and leaf partition statistics are needed to produce the optimal
         plan for that query. </p>
       <p>GPORCA itself also uses leaf partition statistics for any queries that access leaf
         partitions directly, instead of using the root partition with predicates to eliminate

@@ -5,7 +5,7 @@
   <title>Changed Behavior with the GPORCA</title>
   <abstract>
     <shortdesc>There are changes to Greenplum Database behavior with the GPORCA optimizer enabled
-      (the default) as compared to the Postgres planner.</shortdesc>
+      (the default) as compared to the Postgres Planner.</shortdesc>
   </abstract>
   <body>
     <ul id="ul_v1c_kll_gr">
