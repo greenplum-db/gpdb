@@ -21,6 +21,7 @@
 #include "pxfheaders.h"
 #include "access/fileam.h"
 #include "catalog/pg_exttable.h"
+#include "commands/defrem.h"
 #include "utils/timestamp.h"
 
 /* helper function declarations */
@@ -51,11 +52,29 @@ build_http_headers(PxfInputData *input)
 	{
 		/* format */
 		ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
+		ListCell   *option;
+		List	   *copyFmtOpts = NIL;
 
 		/* pxf treats CSV as TEXT */
 		char *format = get_format_name(exttbl->fmtcode);
 
 		churl_headers_append(headers, "X-GP-FORMAT", format);
+
+		/* Parse fmtOptString here */
+		if (fmttype_is_text(exttbl->fmtcode) || fmttype_is_csv(exttbl->fmtcode))
+		{
+			copyFmtOpts = parseCopyFormatString(rel, exttbl->fmtopts, exttbl->fmtcode);
+		}
+
+		/* pass external table's encoding to copy's options */
+		copyFmtOpts = appendCopyEncodingOption(copyFmtOpts, exttbl->encoding);
+
+		/* Extract options from the statement node tree */
+		foreach(option, copyFmtOpts)
+		{
+			DefElem    *def = (DefElem *) lfirst(option);
+			churl_headers_append(headers, normalize_key_name(def->defname), defGetString(def));
+		}
 
 		/* Record fields - name and type of each field */
 		add_tuple_desc_httpheader(headers, rel);

@@ -92,4 +92,7 @@ extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
 extern int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
 extern char *make_command(const char *cmd, extvar_t *ev);
 
+extern List *parseCopyFormatString(Relation rel, char *fmtstr, char fmttype);
+extern List *appendCopyEncodingOption(List *copyFmtOpts, int encoding);
+
 #endif   /* FILEAM_H */

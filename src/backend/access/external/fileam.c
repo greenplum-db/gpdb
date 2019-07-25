@@ -88,7 +88,6 @@ static int	external_getdata_callback(void *outbuf, int datasize, void *extra);
 static int	external_getdata(URL_FILE *extfile, CopyState pstate, void *outbuf, int maxread);
 static void external_senddata(URL_FILE *extfile, CopyState pstate);
 static void external_scan_error_callback(void *arg);
-static List *parseCopyFormatString(Relation rel, char *fmtstr, char fmttype);
 static void parseCustomFormatString(char *fmtstr, char **formatter_name, List **formatter_params);
 static Oid lookupCustomFormatter(char *formatter_name, bool iswritable);
 static void justifyDatabuf(StringInfo buf);
@@ -98,7 +97,6 @@ static char *get_eol_delimiter(List *params);
 static void external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape,
 				 char *quote, int eol_type, bool header, uint32 scancounter, List *params);
 
-static List *appendCopyEncodingOption(List *copyFmtOpts, int encoding);
 
 /* ----------------------------------------------------------------
 *				   external_ interface functions
@@ -1873,7 +1871,7 @@ strtokx2(const char *s,
 	return start;
 }
 
-static List *
+List *
 parseCopyFormatString(Relation rel, char *fmtstr, char fmttype)
 {
 	char	   *token;
@@ -2291,7 +2289,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	sprintf(extvar->GP_LINE_DELIM_LENGTH, "%d", line_delim_len);
 }
 
-static List *
+List *
 appendCopyEncodingOption(List *copyFmtOpts, int encoding)
 {
 	return lappend(copyFmtOpts, makeDefElem("encoding", (Node *)makeString((char *)pg_encoding_to_char(encoding))));
