@@ -5251,13 +5251,12 @@ parseServiceFile(const char *serviceFile,
 			return 2;
 		}
 
-		/* ignore EOL at end of line, including \r in case it's a DOS file */
+		/* ignore whitespace at end of line, especially the newline */
 		len = strlen(line);
-		while (len > 0 && (line[len - 1] == '\n' ||
-						   line[len - 1] == '\r'))
+		while (len > 0 && isspace((unsigned char) line[len - 1]))
 			line[--len] = '\0';
 
-		/* ignore leading blanks */
+		/* ignore leading whitespace too */
 		while (*line && isspace((unsigned char) line[0]))
 			line++;
 
@@ -7140,14 +7139,10 @@ passwordFromFile(const char *hostname, const char *port, const char *dbname,
 			char	   *t = buf.data;
 			int			len = buf.len;
 
-			/* Remove trailing newline */
-			if (len > 0 && t[len - 1] == '\n')
-			{
-				t[--len] = '\0';
-				/* Handle DOS-style line endings, too */
-				if (len > 0 && t[len - 1] == '\r')
-					t[--len] = '\0';
-			}
+		/* Remove trailing newline, including \r in case we're on Windows */
+		while (len > 0 && (buf[len - 1] == '\n' ||
+						   buf[len - 1] == '\r'))
+			buf[--len] = '\0';
 
 			if (len > 0 &&
 				(t = pwdfMatchesString(t, hostname)) != NULL &&
