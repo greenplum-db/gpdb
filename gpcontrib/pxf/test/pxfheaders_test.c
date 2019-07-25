@@ -23,6 +23,7 @@
 #include "cmockery.h"
 
 #include "postgres.h"
+#include "nodes/makefuncs.h"
 #include "utils/memutils.h"
 
 /* Define UNIT_TESTING so that the extension can skip declaring PG_MODULE_MAGIC */
