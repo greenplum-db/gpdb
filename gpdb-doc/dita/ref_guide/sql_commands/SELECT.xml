@@ -116,13 +116,8 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
           a locking clause <codeph>FOR {UPDATE</codeph>|<codeph>NO KEY
             UPDATE</codeph>|<codeph>SHARE</codeph>|<codeph>KEY SHARE}</codeph>, the
             <codeph>SELECT</codeph> command locks the entire table against concurrent updates. The
-          Global Deadlock Detector affects table locking when the <codeph>FOR</codeph> clause is
-          specified. <p>If you specify a locking clause, <codeph>FOR {UPDATE</codeph>|<codeph>NO KEY
-              UPDATE</codeph>|<codeph>SHARE</codeph>|<codeph>KEY SHARE}</codeph>, the state of the
-            Global Deadlock Detector affects table locking during <codeph>SELECT</codeph> command
-            execution. If the Global Deadlock Detector is disabled (the default), the
-              <codeph>SELECT</codeph> command locks the entire table against concurrent updates.
-            </p><p>For information about using the Global Deadlock Detector with a
+          state of the Global Deadlock Detector affects table locking when the <codeph>FOR</codeph>
+          clause is specified. <p>For information about using the Global Deadlock Detector with a
               <codeph>SELECT</codeph> command with a <codeph>FOR</codeph> clause, see "The Locking
             Clause" later in this section.</p></li>
       </ol>
@@ -865,13 +860,11 @@ KEY SHARE</codeblock></p><p>The Global Deadlock
             <codeph>on</codeph>. See <xref href="../../admin_guide/dml.xml#topic_gdd"> Global
             Deadlock Detector</xref> in the <cite>Greenplum Database Administrator Guide</cite> for
           information about the Global Deadlock Detector.<ul id="ul_nxf_fmc_j3b">
-            <li>When the Global Deadlock Detector is disabled, Greenplum locks the entire tables in
-                <codeph>ACCESS SHARE</codeph> lock mode when executing a <codeph>SELECT</codeph>
-              statement with a locking clause when GPORCA is used. If the Postgres planner is used,
-              the table is locked with an <codeph>EXCLUSIVE</codeph> lock. </li>
-            <li>When the Global Deadlock Detector is enabled, and the Postgres planner is used, a
-                <codeph>ROW SHARE</codeph> lock is used to lock the table for simple
-                <codeph>SELECT</codeph> commands. If the Postgres planner is used, the query plan
+            <li>When the Global Deadlock Detector is disabled, Greenplum locks the entire table in
+                <codeph>EXCLUSIVE</codeph> lock mode when executing a <codeph>SELECT</codeph>
+              statement.</li>
+            <li>When the Global Deadlock Detector is enabled, a <codeph>ROW SHARE</codeph> lock is
+              used to lock the table for simple <codeph>SELECT</codeph> commands, and the query plan
               contains a <codeph>lockrows</codeph> node. <p>Simple <codeph>SELECT</codeph> queries
                 that contain a locking clause fulfill all the following conditions: <ul
                   id="ul_uqy_mmc_j3b">
