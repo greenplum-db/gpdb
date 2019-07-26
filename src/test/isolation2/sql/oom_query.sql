@@ -31,5 +31,4 @@ SELECT Count(*)
                              ON l13.l_partkey = l14.l_partkey 
                 LEFT OUTER JOIN lineitem l15 
                              ON l14.l_partkey = l15.l_partkey) 
-        ORDER  BY l0.l_partkey) AS foo; 
-
+        ORDER  BY l0.l_partkey) AS foo;

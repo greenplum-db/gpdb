@@ -49,7 +49,9 @@ DELETE 0
 1: BEGIN;
 BEGIN
 -- UPDATE will acquire Exclusive lock on root and leaf partition on QD.
-1: UPDATE part_tbl SET c = 1; SELECT GRANTED FROM pg_locks WHERE relation = 'part_tbl_1_prt_1'::regclass::oid AND mode='ExclusiveLock' AND gp_segment_id=-1 AND locktype='relation';
+1: UPDATE part_tbl SET c = 1;
+UPDATE 0
+SELECT GRANTED FROM pg_locks WHERE relation = 'part_tbl_1_prt_1'::regclass::oid AND mode='ExclusiveLock' AND gp_segment_id=-1 AND locktype='relation';
  granted 
 ---------
  t       
