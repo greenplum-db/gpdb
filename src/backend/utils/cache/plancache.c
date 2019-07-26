@@ -463,6 +463,13 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 			plan->dead = true;
 
 		/*
+		 * If the search_path has changed, invalidate the plan
+		 */
+		Assert(plansource->search_path != NULL);
+		if (!OverrideSearchPathMatchesCurrent(plansource->search_path))
+			plan->dead = true;
+
+		/*
 		 * By now, if any invalidation has happened, the inval callback
 		 * functions will have marked the plan dead.
 		 */
@@ -493,14 +500,6 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 	{
 		Snapshot	saveActiveSnapshot = ActiveSnapshot;
 		List	   *slist;
-
-		/*
-		 * Restore the search_path that was in use when the plan was made.
-		 * See comments for PushOverrideSearchPath about limitations of this.
-		 *
-		 * (XXX is there anything else we really need to restore?)
-		 */
-		PushOverrideSearchPath(plansource->search_path);
 
 		/*
 		 * If a snapshot is already set (the normal case), we can just use
@@ -631,9 +630,6 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 		PG_END_TRY();
 
 		ActiveSnapshot = saveActiveSnapshot;
-
-		/* Now we can restore current search path */
-		PopOverrideSearchPath();
 
 		/*
 		 * Store the plans into the plancache entry, advancing the generation
