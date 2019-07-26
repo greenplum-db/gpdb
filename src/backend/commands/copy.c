@@ -146,9 +146,6 @@ static const char BinarySignature[11] = "PGCOPY\n\377\r\n\0";
 
 
 /* non-export function prototypes */
-static CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
-						   const char *queryString, List *attnamelist, List *options,
-						   TupleDesc tupDesc);
 static void EndCopy(CopyState cstate);
 static CopyState BeginCopyTo(Relation rel, Node *query, const char *queryString,
 							 const char *filename, bool is_program, List *attnamelist,
@@ -1723,7 +1720,7 @@ ProcessCopyOptions(CopyState cstate,
  * If in the text format, delimit columns with delimiter <delim> and print
  * NULL values as <null_print>.
  */
-static CopyState
+CopyState
 BeginCopy(bool is_from,
 		  Relation rel,
 		  Node *raw_query,
