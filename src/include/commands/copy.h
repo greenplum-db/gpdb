@@ -286,6 +286,9 @@ extern CopyState BeginCopyFrom(Relation rel, const char *filename,
 			  bool is_program, copy_data_source_cb data_source_cb,
 			  void *data_source_cb_extra,
 			  List *attnamelist, List *options, List *ao_segnos);
+extern CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
+						   const char *queryString, List *attnamelist, List *options,
+						   TupleDesc tupDesc);
 extern CopyState
 BeginCopyToOnSegment(QueryDesc *queryDesc);
 extern void EndCopyToOnSegment(CopyState cstate);
