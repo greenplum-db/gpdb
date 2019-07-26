@@ -427,8 +427,8 @@ holder_sessionid | 8
           <li>Simple <codeph>DELETE</codeph> of single table. The command does not contain a
             sub-query in the <codeph>FROM</codeph> or <codeph>WHERE</codeph>
             clauses.<codeblock dir="ltr">DELETE FROM t WHERE c1 > 10;</codeblock></li>
-          <li>Split <codeph>UPDATE</codeph>. For the Postgres Planner, the <codeph>UPDATE</codeph>
-            command updates a distribution key.
+          <li>Split <codeph>UPDATE</codeph>. The <codeph>UPDATE</codeph> command updates a
+            distribution key.
               <codeblock dir="ltr">UPDATE t SET c = c + 1; -- c is a distribution key</codeblock><p
               dir="ltr">For GPORCA, the <codeph>UPDATE</codeph> command updates a distribution key
               or references a distribution key.
