@@ -775,6 +775,9 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot)
  *		for being stored on disk.  The original data may or may not be
  *		virtual, but in any case we need a private copy for heap_insert
  *		to scribble on.
+ *
+ *		Greenplum: this function is quite different from upstream because
+ *		the TupleTableSlot, HeapTuple and Memory/Minimal tuple differ.
  * --------------------------------
  */
 HeapTuple
@@ -782,6 +785,7 @@ ExecMaterializeSlot(TupleTableSlot *slot)
 {
 	uint32		tuplen;
 	HeapTuple	htup;
+	void	   *htup_buf;
 
 	/*
 	 * sanity checks
@@ -790,23 +794,54 @@ ExecMaterializeSlot(TupleTableSlot *slot)
 
 	/*
 	 * If we have a regular physical tuple, and it's locally palloc'd, we have
-	 * nothing to do.
+	 * nothing to do, else make a copy.
+	 *
+	 * Don't transform the heaptuple if possible, transforming heaptuples to
+	 * other types will lose the system columns and waste computing resources.
 	 */
-	if (slot->PRIVATE_tts_heaptuple &&
-		(TupShouldFree(slot) || slot->PRIVATE_tts_heaptuple == slot->PRIVATE_tts_htup_buf))
-		return slot->PRIVATE_tts_heaptuple;
+	if (slot->PRIVATE_tts_heaptuple)
+	{
+		if (TupShouldFree(slot) || slot->PRIVATE_tts_heaptuple == slot->PRIVATE_tts_htup_buf)
+		{
+			return slot->PRIVATE_tts_heaptuple;
+		}
+		else
+		{
+			htup_buf = slot->PRIVATE_tts_htup_buf;
+			tuplen = HEAPTUPLESIZE + slot->PRIVATE_tts_heaptuple->t_len;
+
+			slot->PRIVATE_tts_htup_buf = (HeapTuple) MemoryContextAlloc(slot->tts_mcxt, tuplen);
+
+			htup = heaptuple_copy_to(slot->PRIVATE_tts_heaptuple, slot->PRIVATE_tts_htup_buf, &tuplen);
+			Assert(htup);
+
+			if (htup_buf)
+				pfree(htup_buf);
+
+			slot->PRIVATE_tts_heaptuple = htup;
+			slot->PRIVATE_tts_nvalid = 0;
+			return htup;
+		}
+	}
 
 	/*
 	 * Otherwise, copy or build a physical tuple, and store it into the slot.
+	 */
+
+	/*
+	 * Transform any tuple to a virtual tuple, system columns would be lost
+	 * here since virtual tuples have no system columns.
 	 */
 	slot_getallattrs(slot);
 
 	Assert(slot->PRIVATE_tts_nvalid == slot->tts_tupleDescriptor->natts);
 
+	/* Form a heaptuple from the virtual tuple */
 	tuplen = slot->PRIVATE_tts_htup_buf_len;
 	htup = heaptuple_form_to(slot->tts_tupleDescriptor, slot_get_values(slot), slot_get_isnull(slot),
 			slot->PRIVATE_tts_htup_buf, &tuplen);
 
+	/* The buf space is not large enough */
 	if (!htup)
 	{
 		/* enlarge the buffer and retry */
