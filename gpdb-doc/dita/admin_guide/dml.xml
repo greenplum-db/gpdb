@@ -415,6 +415,103 @@ holder_sessionid | 8
       <p>When it cancels a transaction to break a deadlock, the Global Deadlock Detector reports the
         following error message:</p>
       <codeblock>ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"</codeblock>
+      <section id="gdd_example">
+        <title>Global Deadlock Detector UPDATE and DELETE Compatibility</title>
+        <p dir="ltr">The Global Deadlock Detector can manage concurrent updates for these types of
+            <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands on heap tables: </p>
+        <ul id="ul_jrm_1r4_n3b">
+          <li>Simple <codeph>UPDATE</codeph> of a single table. Update a non-distribution key with
+            the Postgres Planner. The command does not contain a <codeph>FROM</codeph> clause, or a
+            sub-query in the <codeph>WHERE</codeph> clause.
+            <codeblock dir="ltr">UPDATE t SET c2 = c2 + 1 WHERE c1 > 10;</codeblock></li>
+          <li>Simple <codeph>DELETE</codeph> of single table. The command does not contain a
+            sub-query in the <codeph>FROM</codeph> or <codeph>WHERE</codeph>
+            clauses.<codeblock dir="ltr">DELETE FROM t WHERE c1 > 10;</codeblock></li>
+          <li>Split <codeph>UPDATE</codeph>. For the Postgres Planner, the <codeph>UPDATE</codeph>
+            command updates a distribution key.
+              <codeblock dir="ltr">UPDATE t SET c = c + 1; -- c is a distribution key</codeblock><p
+              dir="ltr">For GPORCA, the <codeph>UPDATE</codeph> command updates a distribution key
+              or references a distribution key.
+              <codeblock dir="ltr">UPDATE t SET b = b + 1 WHERE c = 10; -- c is a distribution key</codeblock></p></li>
+          <li>Complex <codeph>UPDATE</codeph>. The <codeph>UPDATE</codeph> command includes multiple
+            table
+              joins.<codeblock dir="ltr">UPDATE t1 SET c = t1.c+1 FROM t2 WHERE t1.c = t2.c;</codeblock><p
+              dir="ltr">Or the command contains a sub-query in the <codeph>WHERE</codeph>
+              clause.</p><codeblock dir="ltr">UPDATE t SET c = c + 1 WHERE c > ALL(SELECT * FROM t1);</codeblock></li>
+          <li>Complex <codeph>DELETE</codeph>. A complex <codeph>DELETE</codeph> command is similar
+            to a complex <codeph>UPDATE</codeph>, and involves multiple table joins or a
+            sub-que<codeblock>DELETE FROM t USING t1 WHERE t.c > t1.c;</codeblock></li>
+        </ul>
+        <p>The following table shows the concurrent <codeph>UPDATE</codeph> or
+            <codeph>DELETE</codeph> commands that are manged by the Global Deadlock Detector. For
+          example, concurrent simple <codeph>UPDATE</codeph> commands on the same table row are
+          managed by the Global Deadlock Detector. For a concurrent complex <codeph>UPDATE</codeph>
+          and a simple <codeph>UPDATE</codeph>, only one <codeph>UPDATE</codeph> is performed, and
+          an error is returned for the other <codeph>UPDATE</codeph>. </p>
+        <p>
+          <table id="table_krm_1r4_n3b">
+            <title>Concurrent Updates and Deletes Managed by Global Deadlock Detector </title>
+            <tgroup cols="6">
+              <colspec colnum="1" colname="col1"/>
+              <colspec colnum="2" colname="col2"/>
+              <colspec colnum="3" colname="col3"/>
+              <colspec colnum="4" colname="col4"/>
+              <colspec colnum="5" colname="col5"/>
+              <colspec colnum="6" colname="col6"/>
+              <tbody>
+                <row>
+                  <entry/>
+                  <entry dir="ltr">Simple <codeph>UPDATE</codeph></entry>
+                  <entry dir="ltr">Simple <codeph>DELETE</codeph></entry>
+                  <entry dir="ltr">Split <codeph>UPDATE</codeph></entry>
+                  <entry dir="ltr">Complex <codeph>UPDATE</codeph></entry>
+                  <entry dir="ltr">Complex <codeph>DELETE</codeph></entry>
+                </row>
+                <row>
+                  <entry dir="ltr">Simple <codeph>UPDATE</codeph></entry>
+                  <entry dir="ltr">YES</entry>
+                  <entry dir="ltr">YES</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                </row>
+                <row>
+                  <entry dir="ltr">Simple <codeph>DELETE</codeph></entry>
+                  <entry dir="ltr">YES</entry>
+                  <entry dir="ltr">YES</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">YES</entry>
+                  <entry dir="ltr">YES</entry>
+                </row>
+                <row>
+                  <entry dir="ltr">Split <codeph>UPDATE</codeph></entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                </row>
+                <row>
+                  <entry dir="ltr">Complex <codeph>UPDATE</codeph></entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">YES</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                </row>
+                <row>
+                  <entry dir="ltr">Complex <codeph>DELETE</codeph></entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">YES</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">NO</entry>
+                  <entry dir="ltr">YES</entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+        </p>
+      </section>
     </body>
   </topic>
   <topic id="topic9" xml:lang="en">

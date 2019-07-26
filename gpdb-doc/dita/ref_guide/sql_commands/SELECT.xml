@@ -841,14 +841,19 @@ OFFSET <varname>start</varname></codeblock><p>where
             SHARE</codeph> are <i>locking clauses</i>; they affect how <codeph>SELECT</codeph> locks
           rows as they are obtained from the table.</p><p>The locking clause has the general
           form</p><codeblock>FOR <varname>lock_strength</varname> [OF <varname>table_name</varname> [ , ... ] ] [ NOWAIT ]</codeblock><p>where
-            <varname>lock_strength</varname> can be one
-          of<codeblock>UPDATE
-NO KEY UPDATE
-SHARE
-KEY SHARE</codeblock></p><note> By default,
-          Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables for
-            <codeph>DELETE</codeph> and <codeph>UPDATE</codeph> operations on heap tables. When the
-          Global Deadlock Detector is enabled the lock mode for <codeph>DELETE</codeph> and
+            <varname>lock_strength</varname> can be one of<ul id="ol_m3x_p54_n3b">
+            <li><codeph>FOR UPDATE</codeph> - Locks the table with an <codeph>EXCLUSIVE</codeph>
+              lock.</li>
+            <li><codeph>FOR NO KEY UPDATE</codeph> - Locks the table with an
+                <codeph>EXCLUSIVE</codeph> lock.</li>
+            <li><codeph>FOR SHARE</codeph> - Locks the table with an <codeph>ROW SHARE</codeph>
+              lock.</li>
+            <li><codeph>FOR KEY SHARE</codeph> - Locks the table with an <codeph>ROW SHARE</codeph>
+              lock.</li>
+          </ul></p>
+        <note> By default, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables
+          for <codeph>DELETE</codeph> and <codeph>UPDATE</codeph> operations on heap tables. When
+          the Global Deadlock Detector is enabled the lock mode for <codeph>DELETE</codeph> and
             <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. The
           Global Deadlock Detector is enabled by setting the <xref
             href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
