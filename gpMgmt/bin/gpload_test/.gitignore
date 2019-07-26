@@ -4,3 +4,8 @@ gpload/config
 gpload2/config
 gpload2/setup.out
 gpload2/data_file.txt
+GPTest.pm
+gpstringsubs.pl
+gpdiff.pl
+atmsort.pm
+explain.pm

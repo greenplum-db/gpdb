@@ -306,17 +306,17 @@ def isFileEqual( f1, f2, optionalFlags = "", outputPath = "", myinitfile = ""):
     # Gets the suitePath name to add init_file
     suitePath = f1[0:f1.rindex( "/" )]
     if os.path.exists(suitePath + "/init_file"):
-        (ok, out) = run('gpdiff.pl -w ' + optionalFlags + \
+        (ok, out) = run('../gpdiff.pl -w ' + optionalFlags + \
                               ' -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gp_init_file=%s/global_init_file --gp_init_file=%s/init_file '
                               '%s %s > %s 2>&1' % (LMYD, suitePath, f1, f2, dfile))
 
     else:
         if os.path.exists(myinitfile):
-            (ok, out) = run('gpdiff.pl -w ' + optionalFlags + \
+            (ok, out) = run('../gpdiff.pl -w ' + optionalFlags + \
                                   ' -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gp_init_file=%s/global_init_file --gp_init_file=%s '
                                   '%s %s > %s 2>&1' % (LMYD, myinitfile, f1, f2, dfile))
         else:
-            (ok, out) = run( 'gpdiff.pl -w ' + optionalFlags + \
+            (ok, out) = run( '../gpdiff.pl -w ' + optionalFlags + \
                               ' -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gp_init_file=%s/global_init_file '
                               '%s %s > %s 2>&1' % ( LMYD, f1, f2, dfile ) )
 
