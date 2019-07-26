@@ -72,11 +72,6 @@ The tokens are:
  from the gp_configuration table and replaces all 
  instances of the token @hostname@.
 
-=item gp_glob_connect
-
- a compound psql connect string, equivalent to the "-connect" option
- for this tool.
-
 =item gpwhich_(executable)
 
  Find the full path for the executable and substitute.  For example, 
@@ -263,14 +258,13 @@ if (1)
 
     my $hostexp = '\\@hostname\\@';
 	my $unexp = '\\@gpcurusername\\@';
-	my $gpglobconn = '\\@gp_glob_connect\\@';
 
     my $gpwhich_all  = `grep gpwhich_ $filnam`;
 	my $curdir = `pwd`;
 	chomp $curdir;
 
 #    print "$filnam\n";
-    system "perl -i -ple \' s/$hostexp/$hostname/gm; s/$unexp/$username/gm; s/$gpglobconn/$glob_connect/gm; s/$syslocaleexp/$syslocale/gm; \' $filnam\n";
+    system "perl -i -ple \' s/$hostexp/$hostname/gm; s/$unexp/$username/gm; s/$syslocaleexp/$syslocale/gm; \' $filnam\n";
 
     # replace all "which" expressions with binary
     if (defined($gpwhich_all) && length($gpwhich_all))
