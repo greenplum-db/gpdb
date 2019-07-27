@@ -621,7 +621,7 @@ class SQLIsolationTestCase:
         If a line is not ended by a semicolon ';' which is followed by 0 or more spaces, the line will be combined with next line and
         sent together as a single statement.
 
-        e.g.: Send to the server two times
+        e.g.: Send to the server separately:
         1: SELECT * FROM t1; -> send "SELECT * FROM t1;"
         SELECT * FROM t2; -> send "SELECT * FROM t2;"
 
