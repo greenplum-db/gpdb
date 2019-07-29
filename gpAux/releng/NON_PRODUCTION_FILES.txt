@@ -1,3 +1,0 @@
-bin/explain.pl
-bin/explain.pm
-bin/gptorment.pl
