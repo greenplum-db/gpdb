@@ -186,7 +186,8 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
         be inherited by another table. The hidden system columns (<codeph>ctid</codeph>,
           <codeph>cmin</codeph>, <codeph>cmax</codeph>, <codeph>xmin</codeph>,
         <codeph>xmax</codeph>, and <codeph>gp_segment_id</codeph>) cannot be referenced in user
-        queries on replicated tables because they have no single, unambiguous value.</p>
+        queries on replicated tables because they have no single, unambiguous value. Greenplum
+        Database returns a <codeph>column does not exist</codeph> error for the query.</p>
       <p>The <codeph>PARTITION BY</codeph> clause allows you to divide the table into multiple
         sub-tables (or parts) that, taken together, make up the parent table and share its schema.
         Though the sub-tables exist as independent tables, the Greenplum Database restricts their

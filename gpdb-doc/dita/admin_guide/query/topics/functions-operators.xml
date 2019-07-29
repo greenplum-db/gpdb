@@ -147,8 +147,15 @@
                 such as <codeph>setval()</codeph> are not allowed to execute on distributed data in
                 Greenplum Database because they can cause inconsistent data between segment
                 instances.</p>
-            <p>A function can execute read-only queries on replicated tables (<codeph>DISTRIBUTED REPLICATED</codeph>)
-                on the segments, but any SQL command that modifies data must execute on the master instance. </p>
+            <p>A function can execute read-only queries on replicated tables (<codeph>DISTRIBUTED
+                    REPLICATED</codeph>) on the segments, but any SQL command that modifies data
+                must execute on the master instance.
+                <note>The hidden system columns (<codeph>ctid</codeph>, <codeph>cmin</codeph>,
+                        <codeph>cmax</codeph>, <codeph>xmin</codeph>, <codeph>xmax</codeph>, and
+                        <codeph>gp_segment_id</codeph>) cannot be referenced in user queries on
+                    replicated tables because they have no single, unambiguous value. Greenplum
+                    Database returns a <codeph>column does not exist</codeph> error for the
+                    query.</note></p>
             <p>To ensure data consistency, you can safely use <codeph>VOLATILE</codeph> and
                     <codeph>STABLE</codeph> functions in statements that are evaluated on and run
                 from the master. For example, the following statements run on the master (statements

@@ -248,12 +248,12 @@ Distributed by: (sale_id)
           </p>
           <p>A table is considered to have a balanced distribution if all segments have roughly the
             same number of rows.</p>
-        <note>
-          <p>If you run this query on a replicated table it fails because Greenplum Database does
-            not permit user queries to reference the <codeph>gp_segment_id</codeph> system column in
-            replicated tables. Because every segment has all of the tables' rows, replicated tables
-            are evenly distributed by definition.</p>
-        </note>
+        <note>If you run this query on a replicated table, it fails because Greenplum Database does
+          not permit user queries to reference the system column <codeph>gp_segment_id</codeph> (or
+          the system columns <codeph>ctid</codeph>, <codeph>cmin</codeph>, <codeph>cmax</codeph>,
+            <codeph>xmin</codeph>, and <codeph>xmax</codeph>) in replicated tables. Because every
+          segment has all of the tables' rows, replicated tables are evenly distributed by
+          definition.</note>
         </body>
       </topic>
       <topic id="topic23" xml:lang="en">

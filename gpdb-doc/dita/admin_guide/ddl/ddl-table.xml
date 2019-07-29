@@ -199,6 +199,11 @@
           <li>improve query performance by making it unnecessary to broadcast frequently used tables
             to all segments.</li>
         </ul>
+        <note>The hidden system columns (<codeph>ctid</codeph>, <codeph>cmin</codeph>,
+            <codeph>cmax</codeph>, <codeph>xmin</codeph>, <codeph>xmax</codeph>, and
+            <codeph>gp_segment_id</codeph>) cannot be referenced in user queries on replicated
+          tables because they have no single, unambiguous value. Greenplum Database returns a
+            <codeph>column does not exist</codeph> error for the query.</note>
       </body>
       <topic id="topic35" xml:lang="en">
         <title>Declaring Distribution Keys</title>
