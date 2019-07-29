@@ -846,9 +846,9 @@ OFFSET <varname>start</varname></codeblock><p>where
               lock.</li>
             <li><codeph>FOR NO KEY UPDATE</codeph> - Locks the table with an
                 <codeph>EXCLUSIVE</codeph> lock.</li>
-            <li><codeph>FOR SHARE</codeph> - Locks the table with an <codeph>ROW SHARE</codeph>
+            <li><codeph>FOR SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
               lock.</li>
-            <li><codeph>FOR KEY SHARE</codeph> - Locks the table with an <codeph>ROW SHARE</codeph>
+            <li><codeph>FOR KEY SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
               lock.</li>
           </ul></p>
         <note> By default, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables

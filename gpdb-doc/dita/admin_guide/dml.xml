@@ -424,7 +424,7 @@ holder_sessionid | 8
             the Postgres Planner. The command does not contain a <codeph>FROM</codeph> clause, or a
             sub-query in the <codeph>WHERE</codeph> clause.
             <codeblock dir="ltr">UPDATE t SET c2 = c2 + 1 WHERE c1 > 10;</codeblock></li>
-          <li>Simple <codeph>DELETE</codeph> of single table. The command does not contain a
+          <li>Simple <codeph>DELETE</codeph> of a single table. The command does not contain a
             sub-query in the <codeph>FROM</codeph> or <codeph>WHERE</codeph>
             clauses.<codeblock dir="ltr">DELETE FROM t WHERE c1 > 10;</codeblock></li>
           <li>Split <codeph>UPDATE</codeph>. For the Postgres Planner, the <codeph>UPDATE</codeph>
@@ -440,7 +440,7 @@ holder_sessionid | 8
               clause.</p><codeblock dir="ltr">UPDATE t SET c = c + 1 WHERE c > ALL(SELECT * FROM t1);</codeblock></li>
           <li>Complex <codeph>DELETE</codeph>. A complex <codeph>DELETE</codeph> command is similar
             to a complex <codeph>UPDATE</codeph>, and involves multiple table joins or a
-            sub-que<codeblock>DELETE FROM t USING t1 WHERE t.c > t1.c;</codeblock></li>
+            sub-query.<codeblock>DELETE FROM t USING t1 WHERE t.c > t1.c;</codeblock></li>
         </ul>
         <p>The following table shows the concurrent <codeph>UPDATE</codeph> or
             <codeph>DELETE</codeph> commands that are manged by the Global Deadlock Detector. For
