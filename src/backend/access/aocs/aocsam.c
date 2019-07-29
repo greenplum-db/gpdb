@@ -448,7 +448,6 @@ aocs_beginscan_internal(Relation relation,
 						TupleDesc relationTupleDesc, bool *proj)
 {
 	AOCSScanDesc scan;
-	Form_pg_attribute att;
 	int			nvp;
 	int			i;
 
@@ -484,8 +483,7 @@ aocs_beginscan_internal(Relation relation,
 	scan->num_proj_atts = 0;
 	for (i = 0; i < scan->relationTupleDesc->natts; i++)
 	{
-		att = scan->relationTupleDesc->attrs[i];
-		if (proj[i] && !att->attisdropped)
+		if (proj[i])
 			scan->proj_atts[scan->num_proj_atts++] = i;
 	}
 
