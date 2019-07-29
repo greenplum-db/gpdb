@@ -33,12 +33,6 @@ class GpInitSystemTest(GpTestCase):
         output = p.stdout.read()
         self.assertIn("[INFO]:-Checking configuration parameters, please wait...", output)
 
-    def test_option_help_prints_docs_usage(self):
-        p = Popen([self.gpinitsystem_path, '--help'], stdout=PIPE)
-        output = p.stdout.read()
-        self.assertIn("Initializes a Greenplum Database system by using configuration", output)
-        self.assertNotIn("Creates a new Greenplum Database instance", output)
-
     def test_invalid_option_prints_raw_usage(self):
         p = Popen([self.gpinitsystem_path, '--unknown-option'], stdout=PIPE)
         output = p.stdout.read()
