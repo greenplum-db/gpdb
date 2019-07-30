@@ -28,8 +28,8 @@
       the Greenplum Database server. Whenever a foreign table is accessed,
       Greenplum Database asks the foreign-data wrapper to fetch data from, or
       update data in (if supported by the wrapper), the remote source.</p>
-    <note>The Pivotal Query Optimizer, GPORCA, does not support foreign tables.
-      A query on a foreign table always falls back to the Postgres Planner.</note>
+    <note>GPORCA does not support foreign tables, a query on a foreign table
+      always falls back to the Postgres Planner.</note>
     <p>Accessing remote data may require authenticating to the remote data
       source. This information can be provided by a <i>user mapping</i>,
       which can provide additional data such as a user name and password

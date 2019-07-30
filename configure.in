@@ -797,7 +797,7 @@ PGAC_ARG_BOOL(enable, debugntuplestore, no, [enable debug_ntuplestore (for debug
                          [Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore)])])
 
 #
-# Enable Greenplum ORCA optimizer
+# Enable GPORCA optimizer
 #
 PGAC_ARG_BOOL(enable, orca, yes, [disable ORCA optimizer],
               [AC_DEFINE([USE_ORCA], 1,
@@ -1704,7 +1704,7 @@ if test "$enable_mapreduce" = yes; then
   AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([header file <yaml.h> is required for Greenplum Mapreduce])])
 fi
 
-# Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
+# Check for GPORCA and supporting GPORCA OS abstraction layer header files.
 if test "$enable_orca" = yes; then
   PGAC_CHECK_ORCA_HEADERS
   PGAC_CHECK_ORCA_VERSION

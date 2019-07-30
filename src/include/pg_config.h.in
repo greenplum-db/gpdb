@@ -950,7 +950,7 @@
 /* Define to select named POSIX semaphores. */
 #undef USE_NAMED_POSIX_SEMAPHORES
 
-/* Define to 1 to build with Greenplum ORCA optimizer. (--enable-orca) */
+/* Define to 1 to build with GPORCA optimizer. (--enable-orca) */
 #undef USE_ORCA
 
 /* Define to 1 to build with PAM support. (--with-pam) */

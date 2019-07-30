@@ -6514,7 +6514,7 @@ fi
 
 
 #
-# Enable Greenplum ORCA optimizer
+# Enable GPORCA optimizer
 #
 
 
@@ -12543,7 +12543,7 @@ _ACEOF
   LIBS="-lxerces-c $LIBS"
 
 else
-  as_fn_error $? "library xerces-c is required to build with Pivotal Query Optimizer" "$LINENO" 5
+  as_fn_error $? "library xerces-c is required to build with GPORCA" "$LINENO" 5
 
 fi
 
@@ -12601,7 +12601,7 @@ _ACEOF
   LIBS="-lgpos $LIBS"
 
 else
-  as_fn_error $? "library 'gpos' is required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+  as_fn_error $? "library 'gpos' is required for GPORCA" "$LINENO" 5
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lgpdbcost" >&5
@@ -12642,7 +12642,7 @@ _ACEOF
   LIBS="-lgpdbcost $LIBS"
 
 else
-  as_fn_error $? "library 'gpdbcost' is required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+  as_fn_error $? "library 'gpdbcost' is required for GPORCA" "$LINENO" 5
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for InitDXL in -lnaucrates" >&5
@@ -12689,7 +12689,7 @@ _ACEOF
   LIBS="-lnaucrates $LIBS"
 
 else
-  as_fn_error $? "library 'naucrates' is required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+  as_fn_error $? "library 'naucrates' is required for GPORCA" "$LINENO" 5
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gpopt_init in -lgpopt" >&5
@@ -12736,7 +12736,7 @@ _ACEOF
   LIBS="-lgpopt $LIBS"
 
 else
-  as_fn_error $? "library 'gpopt' is required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+  as_fn_error $? "library 'gpopt' is required for GPORCA" "$LINENO" 5
 fi
 
 ac_ext=c
@@ -13750,7 +13750,7 @@ done
 
 fi
 
-# Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
+# Check for GPORCA and supporting GPORCA OS abstraction layer header files.
 if test "$enable_orca" = yes; then
   ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
@@ -13902,7 +13902,7 @@ if test "x$ac_cv_header_gpos__api_h" = xyes; then :
 _ACEOF
 
 else
-  as_fn_error $? "GPOS header files are required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+  as_fn_error $? "GPOS header files are required for GPORCA" "$LINENO" 5
 fi
 
 done
@@ -13916,7 +13916,7 @@ if test "x$ac_cv_header_naucrates_init_h" = xyes; then :
 _ACEOF
 
 else
-  as_fn_error $? "Naucrates header files are required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+  as_fn_error $? "Naucrates header files are required for GPORCA" "$LINENO" 5
 fi
 
 done
@@ -13930,7 +13930,7 @@ if test "x$ac_cv_header_gpopt_init_h" = xyes; then :
 _ACEOF
 
 else
-  as_fn_error $? "GPOPT header files are required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+  as_fn_error $? "GPOPT header files are required for GPORCA" "$LINENO" 5
 fi
 
 done
@@ -13944,7 +13944,7 @@ if test "x$ac_cv_header_gpdbcost_CCostModelGPDB_h" = xyes; then :
 _ACEOF
 
 else
-  as_fn_error $? "GPDB Cost Model header files are required for Pivotal Query Optimizer (orca)" "$LINENO" 5
+  as_fn_error $? "GPDB Cost Model header files are required for GPORCA" "$LINENO" 5
 fi
 
 done
