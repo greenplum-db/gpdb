@@ -59,8 +59,8 @@
             <row>
               <entry colname="col1">ROW SHARE</entry>
               <entry colname="col2">
-                <codeph>SELECT FOR SHARE, SELECT...FOR UPDATE</codeph>
-              </entry>
+                <codeph>SELECT...FOR <varname>lock_strength</varname></codeph><p>See <xref
+                    href="#topic2/lock_note" format="dita">Note</xref>.</p></entry>
               <entry colname="col3">EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
             <row>
@@ -93,7 +93,7 @@
             <row>
               <entry colname="col1">EXCLUSIVE</entry>
               <entry colname="col2"><codeph>DELETE</codeph>, <codeph>UPDATE</codeph>,
-                  <codeph>SELECT...FOR UPDATE</codeph><p>See <xref href="#topic2/lock_note"
+                  <codeph>SELECT...FOR <varname>lock_strength</varname></codeph><p>See <xref href="#topic2/lock_note"
                     format="dita">Note</xref>.</p></entry>
               <entry colname="col3">ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE
                 ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
@@ -110,13 +110,19 @@
           </tbody>
         </tgroup>
       </table>
-      <note id="lock_note">By default, Greenplum Database acquires the more restrictive
-          <codeph>EXCLUSIVE</codeph> lock (rather than <codeph>ROW EXCLUSIVE</codeph> in PostgreSQL)
-        for <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and <codeph>SELECT...FOR
-          UPDATE</codeph>.<p>When the Global Deadlock Detector is enabled, the lock mode for
-            <codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, and <codeph>SELECT...FOR
-            UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
-            href="#topic_gdd" format="dita"/>.</p></note>
+      <note id="lock_note">By default, the Global Deadlock Detector is disabled, and Greenplum
+        Database acquires the more restrictive <codeph>EXCLUSIVE</codeph> lock (rather than
+          <codeph>ROW EXCLUSIVE</codeph> in PostgreSQL) for <codeph>UPDATE</codeph>,
+          <codeph>DELETE</codeph>, and <codeph>SELECT</codeph> queries with a locking clause
+          (<codeph>FOR <varname>lock_strength</varname></codeph>).<p>When the Global Deadlock
+          Detector is enabled:<ul id="ul_yxc_kgd_j3b">
+            <li>The lock mode for some <codeph>DELETE</codeph> and <codeph>UPDATE</codeph>
+              operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
+                href="#topic_gdd" format="dita"/>.</li>
+            <li>The lock mode for some queries with a locking clause (<codeph>SELECT...FOR
+                  <varname>lock_strength</varname></codeph>) is <codeph>ROW SHARE</codeph>. See "The
+              Locking Clause" in <xref href="../ref_guide/sql_commands/SELECT.xml"/>.</li>
+          </ul></p></note>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -339,12 +345,13 @@
         information on all segments and uses a directed algorithm to detect the existence of local
         and global deadlocks. This algorithm allows Greenplum Database to relax concurrent update
         and delete restrictions on heap tables. (Greenplum Database still employs table-level
-        locking on AO/CO tables, restricting concurrent <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
-          <codeph>SELECT...FOR UPDATE</codeph> operations.) </p>
+        locking on AO/CO tables, restricting concurrent <codeph>UPDATE</codeph>,
+          <codeph>DELETE</codeph>, and <codeph>SELECT...FOR
+          <varname>lock_strength</varname></codeph> operations.) </p>
       <p>By default, the Global Deadlock Detector is disabled and Greenplum Database executes the
-        concurrent update and delete operations on a heap table serially. You can enable these
-        concurrent updates and have the Global Deadlock Detector determine when a deadlock
-        exists by setting the server configuration parameter <xref
+        concurrent <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> operations on a heap table
+        serially. You can enable these concurrent updates and have the Global Deadlock Detector
+        determine when a deadlock exists by setting the server configuration parameter <xref
           href="../ref_guide/config_params/guc-list.xml#gp_enable_global_deadlock_detector"
             ><codeph>gp_enable_global_deadlock_detector</codeph></xref>. </p>
       <p>When the Global Deadlock Detector is enabled, the background worker process is
