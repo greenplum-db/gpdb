@@ -14,7 +14,7 @@
         in brackets. For command prompt use, the best practice is to escape any brackets or put them
         inside quotation marks. For example, use either:<codeph>\[2620:0:170:610::11\]</codeph> or
           <codeph>'[2620:0:170:610::11]'</codeph>.</note></p>
-    <p>The following are the Greenplum Database management utilities.</p>
+    <p>Greenplum Database provides the following management utility programs:</p>
     <simpletable id="km162860">
       <strow>
         <stentry>

@@ -55,23 +55,21 @@
             <topicref href="../pxf/ref/pxf.html" scope="peer" navtitle="pxf"/>
             <topicref href="../pxf/ref/pxf-cluster.html" scope="peer" navtitle="pxf cluster"/>
         </topicref>
-        <topicref href="cli_ref.xml">
-            <topicref href="client_utilities/ClientUtilitySummary.xml" linking="targetonly">
-                <topicref href="client_utilities/clusterdb.xml"/>
-                <topicref href="client_utilities/createdb.xml"/>
-                <topicref href="client_utilities/createlang.xml"/>
-                <topicref href="client_utilities/createuser.xml"/>
-                <topicref href="client_utilities/dropdb.xml"/>
-                <topicref href="client_utilities/droplang.xml"/>
-                <topicref href="client_utilities/dropuser.xml"/>
-                <topicref href="client_utilities/pg_config.xml"/>
-                <topicref href="client_utilities/pg_dump.xml"/>
-                <topicref href="client_utilities/pg_dumpall.xml"/>
-                <topicref href="client_utilities/pg_restore.xml"/>
-                <topicref href="client_utilities/psql.xml"/>
-                <topicref href="client_utilities/reindexdb.xml"/>
-                <topicref href="client_utilities/vacuumdb.xml"/>
-            </topicref>
+        <topicref href="cli_ref.xml" linking="targetonly">
+            <topicref href="client_utilities/clusterdb.xml"/>
+            <topicref href="client_utilities/createdb.xml"/>
+            <topicref href="client_utilities/createlang.xml"/>
+            <topicref href="client_utilities/createuser.xml"/>
+            <topicref href="client_utilities/dropdb.xml"/>
+            <topicref href="client_utilities/droplang.xml"/>
+            <topicref href="client_utilities/dropuser.xml"/>
+            <topicref href="client_utilities/pg_config.xml"/>
+            <topicref href="client_utilities/pg_dump.xml"/>
+            <topicref href="client_utilities/pg_dumpall.xml"/>
+            <topicref href="client_utilities/pg_restore.xml"/>
+            <topicref href="client_utilities/psql.xml"/>
+            <topicref href="client_utilities/reindexdb.xml"/>
+            <topicref href="client_utilities/vacuumdb.xml"/>
         </topicref>
         <topicref href="contrib-programs.xml">
             <topicref href="https://www.postgresql.org/docs/9.4/pgupgrade.html" format="html" scope="external" navtitle="pg_upgrade" linking="none"/>
