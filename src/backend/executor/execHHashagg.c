@@ -78,10 +78,7 @@ typedef enum InputRecordType
 } InputRecordType;
 
 #define GET_BUFFER_SIZE(hashtable) \
-	(mpool_total_bytes_allocated((hashtable)->group_buf))
-
-#define GET_USED_BUFFER_SIZE(hashtable) \
-	(mpool_bytes_used((hashtable)->group_buf))
+	MemoryContextGetCurrentSpace((hashtable)->group_buf_cxt)
 
 #define SANITY_CHECK_METADATA_SIZE(hashtable) \
 	do { \
@@ -93,7 +90,7 @@ typedef enum InputRecordType
 	} while (0)
 
 #define GET_TOTAL_USED_SIZE(hashtable) \
-		(GET_USED_BUFFER_SIZE(hashtable) + (hashtable)->mem_for_metadata)
+		(GET_BUFFER_SIZE(hashtable) + (hashtable)->mem_for_metadata)
 
 #define AVAIL_MEM(hashtable) \
 		(hashtable->max_mem - GET_TOTAL_USED_SIZE(hashtable))
@@ -136,12 +133,6 @@ static void agg_hash_table_stat_upd(HashAggTable *ht);
 static void reset_agg_hash_table(AggState *aggstate, int64 nentries);
 static bool agg_hash_reload(AggState *aggstate);
 static void reCalcNumberBatches(HashAggTable *hashtable, SpillFile *spill_file);
-static inline void *mpool_cxt_alloc(void *manager, Size len);
-
-static inline void *mpool_cxt_alloc(void *manager, Size len)
-{
- 	return mpool_alloc((MPool *)manager, len);
-}
 
 /* Function: calc_hash_value
  *
@@ -267,16 +258,6 @@ adjustInputGroup(AggState *aggstate,
 	}
 }
 
-/* Function: getEmptyHashAggEntry
- *
- * Obtain a new empty HashAggEntry.
- */
-static inline HashAggEntry *
-getEmptyHashAggEntry(AggState *aggstate)
-{
-	return mpool_alloc(aggstate->hhashtable->group_buf, sizeof(HashAggEntry));
-}
-
 /* Function: makeHashAggEntryForInput
  *
  * Allocate a new hash agg entry for the given input tuple and hash key
@@ -315,9 +296,9 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 	tup_len = 0;
 	aggs_len = aggstate->numaggs * sizeof(AggStatePerGroupData);
 
-	oldcxt = MemoryContextSwitchTo(hashtable->entry_cxt);
+	oldcxt = MemoryContextSwitchTo(hashtable->group_buf_cxt);
 
-	entry = getEmptyHashAggEntry(aggstate);
+	entry = palloc0(sizeof(HashAggEntry));
 	entry->tuple_and_aggs = NULL;
 	entry->hashvalue = hashvalue;
 	entry->is_primodial = !(hashtable->is_spilling);
@@ -346,10 +327,9 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 	}
 
 	/*
-	 * Form memtuple into group_buf.
+	 * Form memtuple into group_buf_cxt.
 	 */
-	entry->tuple_and_aggs = mpool_alloc(hashtable->group_buf,
-										MAXALIGN(MAXALIGN(tup_len) + aggs_len));
+	entry->tuple_and_aggs = palloc0(MAXALIGN(MAXALIGN(tup_len) + aggs_len));
 	len = tup_len;
 	entry->tuple_and_aggs = (void *)memtuple_form_to(hashslot->tts_mt_bind,
 													 values,
@@ -391,20 +371,19 @@ makeHashAggEntryForGroup(AggState *aggstate, void *tuple_and_aggs,
 	if (GET_TOTAL_USED_SIZE(hashtable) + input_size >= hashtable->max_mem)
 		return NULL;
 
-	copy_tuple_and_aggs = mpool_alloc(hashtable->group_buf, input_size);
+	oldcxt = MemoryContextSwitchTo(hashtable->group_buf_cxt);
+
+	copy_tuple_and_aggs = palloc(input_size);
 	memcpy(copy_tuple_and_aggs, tuple_and_aggs, input_size);
 
-	/*
-	 * The deserialized transValues are not in mpool, put them
-	 * in a separate context and reset with mpool_reset
-	 */
-	oldcxt = MemoryContextSwitchTo(hashtable->serialization_cxt);
-
-	entry = getEmptyHashAggEntry(aggstate);
+	entry = palloc0(sizeof(HashAggEntry));
 	entry->hashvalue = hashvalue;
 	entry->is_primodial = !(hashtable->is_spilling);
 	entry->tuple_and_aggs = copy_tuple_and_aggs;
 	entry->next = NULL;
+
+	/* Put deserialized transValues in a separate context and reset later */
+	MemoryContextSwitchTo(hashtable->serialization_cxt);
 
 	/* Initialize per group data */
 	adjustInputGroup(aggstate, entry->tuple_and_aggs, false);
@@ -846,19 +825,19 @@ create_agg_hash_table(AggState *aggstate)
 	hashtable->pshift = 0;
 	hashtable->expandable = true;
 
-	MemoryContextSwitchTo(hashtable->entry_cxt);
-	
-	/* Initialize buffer for hash entries */
-	hashtable->group_buf = mpool_create(hashtable->entry_cxt,
-										"GroupsAndAggs Context");
-	hashtable->groupaggs = (GroupKeysAndAggs *) palloc0(sizeof(GroupKeysAndAggs));
+	/* Memory context for hash entries */
+	hashtable->group_buf_cxt = AllocSetContextCreate(aggstate->aggcontext,
+												 "GroupsAndAggs Context",
+												 ALLOCSET_DEFAULT_MINSIZE,
+												 ALLOCSET_DEFAULT_INITSIZE,
+												 ALLOCSET_DEFAULT_MAXSIZE);
 
 	/* Set hashagg's memory manager */
-	aggstate->mem_manager.alloc = mpool_cxt_alloc;
-	aggstate->mem_manager.free = NULL;
-	aggstate->mem_manager.manager = hashtable->group_buf;
+	aggstate->mem_manager.manager = hashtable->group_buf_cxt;
 	aggstate->mem_manager.realloc_ratio = 2;
 
+	MemoryContextSwitchTo(hashtable->entry_cxt);
+	hashtable->groupaggs = (GroupKeysAndAggs *) palloc0(sizeof(GroupKeysAndAggs));
 	MemoryContextSwitchTo(oldcxt);
 
 	hashtable->max_mem = 1024.0 * operatorMemKB;
@@ -1006,8 +985,25 @@ agg_hash_initial_pass(AggState *aggstate)
 			initialize_aggregates(aggstate, aggstate->peragg, hashtable->groupaggs->aggs);
 		}
 			
-		/* Advance the aggregates */
+		/*
+		 * Advance the aggregates.
+		 *
+		 * The Postgres style of transfn is calling AggCheckCallContext(),
+		 * and switching memory context to aggstate->aggcontext, before
+		 * allocating memory to make sure the memory is under control.
+		 *
+		 * Here we leverage it to let transfn allocate memory in the
+		 * group_buf_cxt, the memory context we account to decide when to spill
+		 * and reset after the hash table is spilled.
+		 *
+		 * In this way, the certain transfn doesn't need to change to account
+		 * its memory, if the implementations follow the Postgres style.
+		 *
+		 */
+		MemoryContext oldcontext = aggstate->aggcontext;
+		aggstate->aggcontext = aggstate->hhashtable->group_buf_cxt;
 		advance_aggregates(aggstate, hashtable->groupaggs->aggs);
+		aggstate->aggcontext = oldcontext;
 		
 		hashtable->num_tuples++;
 
@@ -1414,8 +1410,8 @@ spill_hash_table(AggState *aggstate)
 		}
 	}
 
-	/* Reset the buffer */
-	mpool_reset(hashtable->group_buf);
+	/* Reset the context for entries */
+	MemoryContextReset(hashtable->group_buf_cxt);
 
 	/* Reset serialization context */
 	MemoryContextReset(hashtable->serialization_cxt);
@@ -2337,7 +2333,7 @@ void reset_agg_hash_table(AggState *aggstate, int64 nentries)
 
 	hashtable->pshift = 0;
 
-	mpool_reset(hashtable->group_buf);
+	MemoryContextReset(hashtable->group_buf_cxt);
 
 	MemoryContextReset(hashtable->serialization_cxt);
 
@@ -2383,8 +2379,6 @@ void destroy_agg_hash_table(AggState *aggstate)
 		{
 			workfile_mgr_close_set(aggstate->hhashtable->work_set);
 		}
-
-		mpool_delete(aggstate->hhashtable->group_buf);
 
 		pfree(aggstate->hhashtable);
 		aggstate->hhashtable = NULL;

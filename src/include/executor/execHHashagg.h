@@ -171,11 +171,8 @@ typedef struct HashAggTable
 	/* The memory context for (de)serialization */
 	MemoryContext serialization_cxt;
 
-	/*
-	 * The space to buffer the free hash entries and AggStatePerGroups. Using this,
-	 * we can reduce palloc/pfree calls.
-	 */
-	MPool *group_buf;
+	/* The memory context for hash entries and AggStatePerGroups */
+	MemoryContext group_buf_cxt;
 
 	/* Shared temporary structure */
 	GroupKeysAndAggs   *groupaggs;
