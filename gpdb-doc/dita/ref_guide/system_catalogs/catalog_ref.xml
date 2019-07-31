@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="eu135496">System Catalog Reference</title>
+  <title id="eu135496">System Catalogs</title>
   <body>
     <p>This reference describes the Greenplum Database system catalog tables and views. System
       tables prefixed with <codeph>gp_</codeph> relate to the parallel features of Greenplum
