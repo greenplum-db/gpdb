@@ -1,4 +1,3 @@
-set enable_partition_rules = off;
 
 -- partition_list_index.sql
 
