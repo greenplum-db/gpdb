@@ -2,7 +2,7 @@
 <!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <dita>
   <topic id="topic1" xml:lang="en">
-    <title id="if135496">Greenplum Database Data Types</title>
+    <title id="if135496">Data Types</title>
     <body>
       <p>Greenplum Database has a rich set of native data types available to users. Users may also
         define new data types using the <codeph>CREATE TYPE</codeph> command. This reference shows

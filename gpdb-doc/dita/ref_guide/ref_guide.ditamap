@@ -5,7 +5,7 @@
 		format="html" otherprops="oss-only"/>
 	<topicref href="../../6-0/homenav.html" scope="external" navtitle="Pivotal Greenplum® 6.0 Documentation"
 		format="html" otherprops="pivotal"/>
-	<topicref href="ref_guide.xml" navtitle="Reference Guide">
+	<topicref href="ref_guide.xml">
 		<topicref href="sql_commands/sql_ref.xml">
 			<topicref href="GPReferenceSQLSummaryLOP.xml"/>
 			<topicref href="sql_commands/ABORT.xml"/>
@@ -163,7 +163,7 @@
 			<topicref href="sql_commands/VACUUM.xml"/>
 			<topicref href="sql_commands/VALUES.xml"/>
 		</topicref>
-		<topicref href="data_types.xml" navtitle="Greenplum Database Data Types" id="data_types">
+		<topicref href="data_types.xml" id="data_types">
 			<topicref href="datatype-datetime.xml"/>
 			<topicref href="datatype-pseudo.xml"/>
 			<topicref href="datatype-textsearch.xml"/>
@@ -172,9 +172,8 @@
 		<topicref href="function-summary.xml" id="func_summary"/>
 		<topicref href="extensions/extensions.ditamap" format="ditamap"/>
 		<topicref href="modules/modules.ditamap" format="ditamap"/>
-		<topicref href="character_sets.xml" navtitle="Character Set Support" id="character_sets"/>
-		<topicref href="config_params/guc_config.ditamap" navtitle="Server Configuration Parameters"
-			id="guc_config" format="ditamap"/>
+		<topicref href="character_sets.xml" id="character_sets"/>
+		<topicref href="config_params/guc_config.ditamap" id="guc_config" format="ditamap"/>
 		<topicref href="system_catalogs/catalog_ref.xml">
 			<topicref href="system_catalogs/catalog_ref-tables.xml#topic1"/>
 			<topicref href="system_catalogs/catalog_ref-views.xml#topic1"/>

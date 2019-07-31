@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_khf_ltc_vbb">
-  <title>Greenplum SQL Features, Reserved Key Words, and Compliance</title>
+  <title>SQL Features, Reserved and Key Words, and Compliance</title>
   <body>
      <p>This section includes topics that identify SQL features and compliance in Greenplum Database:</p>
      <ul>

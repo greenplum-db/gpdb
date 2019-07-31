@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="pt212122">Greenplum PL/pgSQL Language</title>
+  <title id="pt212122">PL/pgSQL Language</title>
   <body>
     <p>This section contains an overview of the Greenplum Database PL/pgSQL language.</p>
     <ul>
