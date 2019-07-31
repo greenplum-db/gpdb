@@ -3,7 +3,6 @@ set timezone to '+07:00';
 DROP SCHEMA IF EXISTS partition_ddl2 CASCADE;
 CREATE SCHEMA partition_ddl2;
 set search_path to partition_ddl2;
-set enable_partition_rules = off;
 
 CREATE TABLE rank (
                 id int,
@@ -14,16 +13,14 @@ CREATE TABLE rank (
 
         DISTRIBUTED BY (id, gender, year);
 
-set enable_partition_rules = off;
 
-create table rank2 (LIKE rank) 
+create table rank2 (LIKE rank)
 PARTITION BY LIST (gender) 
 SUBPARTITION BY RANGE (year) 
 SUBPARTITION TEMPLATE (start ('2000') end ('2006') every (interval '1')) 
 (PARTITION girls VALUES ('F'), PARTITION boys VALUES ('M'));
 
 drop table rank;
-set enable_partition_rules = off;
 
 create table ggg (a char(1), b char(2), d char(3))
 distributed by (a)
@@ -695,7 +692,6 @@ partition by range (a)
 alter table mpp3241 add partition zz start (-1) end (0);
 DROP TABLE mpp3241;
 
-set enable_partition_rules = off;
 
 CREATE TABLE mpp3438 (
         unique1         int4,
@@ -729,7 +725,6 @@ alter table mpp3438 alter partition aa add default partition def3;
 \d mpp3438*
 
 drop table mpp3438;
-set enable_partition_rules = false;
 
 CREATE TABLE mpp3261 (
         unique1         int4,

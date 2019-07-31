@@ -6689,7 +6689,6 @@ atpxPartAddList(Relation rel,
 	ct->distributedBy = NULL;
 	ct->partitionBy = (Node *) pBy;
 	ct->relKind = RELKIND_RELATION;
-	ct->postCreate = NULL;
 
 	ct->is_add_part = true;		/* subroutines need to know this */
 	ct->ownerid = ownerid;

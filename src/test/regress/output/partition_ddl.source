@@ -3,7 +3,6 @@ set timezone to '+07:00';
 DROP SCHEMA IF EXISTS partition_ddl2 CASCADE;
 CREATE SCHEMA partition_ddl2;
 set search_path to partition_ddl2;
-set enable_partition_rules = off;
 CREATE TABLE rank (
                 id int,
                 rank int,
@@ -11,8 +10,7 @@ CREATE TABLE rank (
                 gender char(1),
                 count int )
         DISTRIBUTED BY (id, gender, year);
-set enable_partition_rules = off;
-create table rank2 (LIKE rank) 
+create table rank2 (LIKE rank)
 PARTITION BY LIST (gender) 
 SUBPARTITION BY RANGE (year) 
 SUBPARTITION TEMPLATE (start ('2000') end ('2006') every (interval '1')) 
@@ -22,7 +20,6 @@ LINE 4: SUBPARTITION TEMPLATE (start ('2000') end ('2006') every (in...
                                       ^
 HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 drop table rank;
-set enable_partition_rules = off;
 create table ggg (a char(1), b char(2), d char(3))
 distributed by (a)
 partition by LIST (b)
@@ -2365,7 +2362,6 @@ partition by range (a)
 ( partition aa start (1) end (5) every (1) );
 alter table mpp3241 add partition zz start (-1) end (0);
 DROP TABLE mpp3241;
-set enable_partition_rules = off;
 CREATE TABLE mpp3438 (
         unique1         int4,
         unique2         int4,
@@ -2642,7 +2638,6 @@ Inherits: mpp3438_1_prt_default_part
 Distributed by: (unique1)
 
 drop table mpp3438;
-set enable_partition_rules = false;
 CREATE TABLE mpp3261 (
         unique1         int4,
         unique2         int4,

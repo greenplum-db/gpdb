@@ -4109,7 +4109,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->distributedBy = (DistributedBy *) $12;
 					n->partitionBy = $13;
 					n->relKind = RELKIND_RELATION;
-					n->postCreate = NULL;
 					$$ = (Node *)n;
 				}
 		| CREATE OptTemp TABLE IF_P NOT EXISTS qualified_name '('
@@ -4130,7 +4129,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->distributedBy = (DistributedBy *) $15;
 					n->partitionBy = $16;
 					n->relKind = RELKIND_RELATION;
-					n->postCreate = NULL;
 					$$ = (Node *)n;
 				}
 		| CREATE OptTemp TABLE qualified_name OF any_name
@@ -4151,7 +4149,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->distributedBy = (DistributedBy *) $11;
 					n->partitionBy = $12;
 					n->relKind = RELKIND_RELATION;
-                    n->postCreate = NULL;
 					$$ = (Node *)n;
 				}
 		| CREATE OptTemp TABLE IF_P NOT EXISTS qualified_name OF any_name
@@ -4172,7 +4169,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->distributedBy = (DistributedBy *) $14;
 					n->partitionBy = $15;
 					n->relKind = RELKIND_RELATION;
-                    n->postCreate = NULL;
 					$$ = (Node *)n;
 				}
 		;

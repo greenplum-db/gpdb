@@ -40,9 +40,6 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
-/* temporary rule to control whether we generate RULEs or not -- for testing */
-bool		enable_partition_rules = false;
-
 
 typedef struct
 {
@@ -77,17 +74,10 @@ typedef struct
 
 static void make_child_node(CreateStmtContext *cxt, CreateStmt *stmt, char *relname,
 				PartitionBy *curPby, Node *newSub,
-				Node *pRuleCatalog, Node *pPostCreate, Node *pConstraint,
+				Node *pRuleCatalog, Node *pConstraint,
 				Node *pStoreAttr, char *prtstr, bool bQuiet,
 				List *stenc);
 static char *deparse_partition_rule(Node *pNode, ParseState *pstate, Node *parent);
-static Node *
-make_prule_catalog(CreateStmtContext *cxt, CreateStmt *stmt,
-				   Node *partitionBy, PartitionElem *pElem,
-				   char *at_depth, char *child_name_str,
-				   char *whereExpr,
-				   Node *pWhere
-);
 static int partition_range_compare(CreateStmtContext *cxt, CreateStmt *stmt,
 						PartitionBy *pBy,
 						char *at_depth,
@@ -106,11 +96,6 @@ static Datum eval_basic_opexpr(ParseState *pstate, List *oprname,
 				  bool *typbyval, int16 *typlen,
 				  Oid *restypid,
 				  int location);
-static Node *make_prule_rulestmt(CreateStmtContext *cxt, CreateStmt *stmt,
-					Node *partitionBy, PartitionElem *pElem,
-					char *at_depth, char *child_name_str,
-					char *whereExpr,
-					Node *pWhere);
 static void preprocess_range_spec(partValidationState *vstate);
 static void validate_range_partition(partValidationState *vstate);
 static void validate_list_partition(partValidationState *vstate);
@@ -122,8 +107,7 @@ static List *make_partition_rules(CreateStmtContext *cxt, CreateStmt *stmt,
 					 char *at_depth, char *child_name_str,
 					 int partNumId, int maxPartNum,
 					 int everyOffset, int maxEveryOffset,
-					 ListCell **pp_lc_anp,
-					 bool doRuleStmt);
+					 ListCell **pp_lc_anp);
 static bool range_partition_walker(Node *node, void *context);
 
 /*----------
@@ -469,7 +453,6 @@ transformPartitionBy(CreateStmtContext *cxt,
 		PartitionElem *pElem = lc ? (PartitionElem *) lfirst(lc) : NULL;
 
 		Node	   *pRuleCatalog = NULL;
-		Node	   *pPostCreate = NULL;
 		Node	   *pConstraint = NULL;
 		Node	   *pStoreAttr = NULL;
 		char	   *relname = NULL;
@@ -681,7 +664,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 								 partitionBy, pElem, at_depth,
 								 relname, partno + 1, partNumber,
 								 everyno, everycount,
-								 &lc_anp, true);
+								 &lc_anp);
 
 			if (allRules)
 				lc_rule = list_head(allRules);
@@ -701,49 +684,6 @@ transformPartitionBy(CreateStmtContext *cxt,
 					pCon->indexspace = NULL;
 
 					pConstraint = (Node *) pCon;
-				}
-
-				lc_rule = lnext(lc_rule);
-
-				if (lc_rule)
-				{
-					pRuleCatalog = lfirst(lc_rule);
-
-					/*
-					 * look for a Rule statement to run after the relation is
-					 * created (see DefinePartitionedRelation in tablecmds.c)
-					 */
-					lc_rule = lnext(lc_rule);
-				}
-
-				if (lc_rule)
-				{
-					List	   *pL1 = NULL;
-					int		   *pInt1;
-					int		   *pInt2;
-
-					pInt1 = (int *) palloc(sizeof(int));
-					pInt2 = (int *) palloc(sizeof(int));
-
-					*pInt1 = partno + 1;
-					*pInt2 = everyno;
-
-					pL1 = list_make1(relname);	/* rule name */
-					pL1 = lappend(pL1, pInt1);	/* partition position */
-					pL1 = lappend(pL1, pInt2);	/* every position */
-
-					if (pElem && pElem->partName)
-						pL1 = lappend(pL1, pElem->partName);
-					else
-						pL1 = lappend(pL1, NULL);
-
-					pL1 = lappend(pL1, relname);		/* child name */
-					pL1 = lappend(pL1, cxt->relation->relname); /* parent name */
-
-					if (enable_partition_rules)
-						pPostCreate = (Node *) list_make2(lfirst(lc_rule), pL1);
-					else
-						pPostCreate = NULL;
 				}
 			}
 		}
@@ -783,7 +723,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 
 		stmt->is_part_parent = true;
 		make_child_node(cxt, stmt, relname, curPby, (Node *) newSub,
-						pRuleCatalog, pPostCreate, pConstraint, pStoreAttr,
+						pRuleCatalog, pConstraint, pStoreAttr,
 						prtstr, bQuiet, colencs);
 
 		if (pBSpec)
@@ -909,7 +849,7 @@ merge_part_column_encodings(CreateStmt *cs, List *stenc)
 static void
 make_child_node(CreateStmtContext *cxt, CreateStmt *stmt, char *relname,
 				PartitionBy *curPby, Node *newSub,
-				Node *pRuleCatalog, Node *pPostCreate, Node *pConstraint,
+				Node *pRuleCatalog, Node *pConstraint,
 				Node *pStoreAttr, char *prtstr, bool bQuiet,
 				List *stenc)
 {
@@ -940,9 +880,6 @@ make_child_node(CreateStmtContext *cxt, CreateStmt *stmt, char *relname,
 						"table \"%s\"",
 						cxt->stmtType, child_tab_name->relname,
 						cxt->relation->relname)));
-
-	/* set the "Post Create" rule if it exists */
-	child_tab_stmt->postCreate = pPostCreate;
 
 	/*
 	 * Deep copy the parent's table elements.
@@ -1082,12 +1019,10 @@ make_partition_rules(CreateStmtContext *cxt, CreateStmt *stmt,
 					 char *at_depth, char *child_name_str,
 					 int partNumId, int maxPartNum,
 					 int everyOffset, int maxEveryOffset,
-					 ListCell **pp_lc_anp,
-					 bool doRuleStmt
+					 ListCell **pp_lc_anp
 )
 {
 	PartitionBy *pBy = (PartitionBy *) partitionBy;
-	Node	   *pRule = NULL;
 	List	   *allRules = NULL;
 
 	Assert(pElem);
@@ -1274,25 +1209,6 @@ make_partition_rules(CreateStmtContext *cxt, CreateStmt *stmt,
 		 * RULE statement
 		 */
 		allRules = list_make1(pIndOR);
-
-		if (doRuleStmt)
-		{
-			pRule = make_prule_catalog(cxt, stmt,
-									   partitionBy, pElem,
-									   at_depth, child_name_str,
-									   ORBuf.data,
-									   pIndOR);
-
-			allRules = lappend(allRules, pRule);
-
-			pRule = make_prule_rulestmt(cxt, stmt,
-										partitionBy, pElem,
-										at_depth, child_name_str,
-										ORBuf.data,
-										pIndOR);
-
-			allRules = lappend(allRules, pRule);
-		}
 	}							/* end if LIST */
 
 	/*
@@ -1580,28 +1496,8 @@ make_partition_rules(CreateStmtContext *cxt, CreateStmt *stmt,
 
 		}						/* end for range_idx */
 
-		/*
-		 * first the CHECK constraint, then the INSERT statement, then the
-		 * RULE statement
-		 */
+		/* first the CHECK constraint, then the INSERT statement */
 		allRules = list_make1(pIndOR);
-
-		if (doRuleStmt)
-		{
-			pRule = make_prule_catalog(cxt, stmt,
-									   partitionBy, pElem,
-									   at_depth, child_name_str,
-									   ORBuf.data,
-									   pIndOR);
-			allRules = lappend(allRules, pRule);
-
-			pRule = make_prule_rulestmt(cxt, stmt,
-										partitionBy, pElem,
-										at_depth, child_name_str,
-										ORBuf.data,
-										pIndOR);
-			allRules = lappend(allRules, pRule);
-		}
 	}							/* end if RANGE */
 
 	return allRules;
@@ -1727,203 +1623,6 @@ deparse_partition_rule(Node *pNode, ParseState *pstate, Node *parent)
 	elog(ERROR, "unexpected node type %u in partitioning rule", nodeTag(pNode));
 	return NULL;
 }
-
-static Node *
-make_prule_catalog(CreateStmtContext *cxt, CreateStmt *stmt,
-				   Node *partitionBy, PartitionElem *pElem,
-				   char *at_depth, char *child_name_str,
-				   char *whereExpr,
-				   Node *pWhere
-)
-{
-	Node	   *pResult;
-	InsertStmt *pIns;
-	RangeVar   *parent_tab_name;
-	RangeVar   *child_tab_name;
-	char	   *ruleStr;
-	StringInfoData newValsBuf;
-	ListCell   *lc;
-	int			colcnt;
-
-	initStringInfo(&newValsBuf);
-
-	appendStringInfo(&newValsBuf, "VALUES (");
-	colcnt = 0;
-	foreach(lc, stmt->tableElts)		/* for all cols */
-	{
-		Node	   *pCol = lfirst(lc);
-		ColumnDef  *pColDef;
-
-		if (nodeTag(pCol) != T_ColumnDef)	/* avoid constraints, etc */
-			continue;
-
-		pColDef = (ColumnDef *) pCol;
-
-		if (colcnt)
-		{
-			appendStringInfo(&newValsBuf, ", ");
-		}
-
-		appendStringInfo(&newValsBuf, "new.%s", pColDef->colname);
-
-		colcnt++;
-	}						/* end for all cols */
-	appendStringInfo(&newValsBuf, ")");
-
-	parent_tab_name = makeNode(RangeVar);
-	parent_tab_name->catalogname = cxt->relation->catalogname;
-	parent_tab_name->schemaname = cxt->relation->schemaname;
-	parent_tab_name->relname = cxt->relation->relname;
-	parent_tab_name->location = -1;
-
-	child_tab_name = makeNode(RangeVar);
-	child_tab_name->catalogname = cxt->relation->catalogname;
-	child_tab_name->schemaname = cxt->relation->schemaname;
-	child_tab_name->relname = child_name_str;
-	child_tab_name->location = -1;
-
-	ruleStr = psprintf("CREATE RULE %s AS ON INSERT to %s WHERE %s DO INSTEAD INSERT INTO %s %s",
-					   child_name_str, parent_tab_name->relname, whereExpr, child_name_str, newValsBuf.data);
-
-	pIns = makeNode(InsertStmt);
-
-	pResult = (Node *) pIns;
-	pIns->relation = makeNode(RangeVar);
-	pIns->relation->catalogname = NULL;
-	pIns->relation->schemaname = NULL;
-	pIns->relation->relname = "partition_rule";
-	pIns->relation->location = -1;
-	pIns->returningList = NULL;
-
-	pIns->cols = NIL;
-
-	if (1)
-	{
-		List	   *vl1;
-
-		A_Const    *acs = makeNode(A_Const);
-
-		acs->val.type = T_String;
-		acs->val.val.str = pstrdup(parent_tab_name->relname);
-		acs->location = -1;
-
-		vl1 = list_make1(acs);
-
-		acs = makeNode(A_Const);
-		acs->val.type = T_String;
-		acs->val.val.str = pstrdup(child_name_str);
-		acs->location = -1;
-
-		vl1 = lappend(vl1, acs);
-
-		acs = makeNode(A_Const);
-		acs->val.type = T_String;
-		acs->val.val.str = pstrdup(whereExpr);
-		acs->location = -1;
-
-		vl1 = lappend(vl1, acs);
-
-		acs = makeNode(A_Const);
-		acs->val.type = T_String;
-		acs->val.val.str = ruleStr;
-		acs->location = -1;
-
-		vl1 = lappend(vl1, acs);
-
-		pIns->selectStmt = (Node *) makeNode(SelectStmt);
-		((SelectStmt *) pIns->selectStmt)->valuesLists =
-			list_make1(vl1);
-	}
-
-	return (pResult);
-}	/* end make_prule_catalog */
-
-static Node *
-make_prule_rulestmt(CreateStmtContext *cxt, CreateStmt *stmt,
-					Node *partitionBy, PartitionElem *pElem,
-					char *at_depth, char *child_name_str,
-					char *exprBuf,
-					Node *pWhere
-)
-{
-	Node	   *pResult = NULL;
-	RuleStmt   *pRule = NULL;
-	InsertStmt *pIns = NULL;
-	RangeVar   *parent_tab_name;
-	RangeVar   *child_tab_name;
-
-	parent_tab_name = makeNode(RangeVar);
-	parent_tab_name->catalogname = cxt->relation->catalogname;
-	parent_tab_name->schemaname = cxt->relation->schemaname;
-	parent_tab_name->relname = cxt->relation->relname;
-	parent_tab_name->location = -1;
-
-	child_tab_name = makeNode(RangeVar);
-	child_tab_name->catalogname = cxt->relation->catalogname;
-	child_tab_name->schemaname = cxt->relation->schemaname;
-	child_tab_name->relname = child_name_str;
-	child_tab_name->location = -1;
-
-	pIns = makeNode(InsertStmt);
-
-	pRule = makeNode(RuleStmt);
-	pRule->replace = false;		/* do not replace */
-	pRule->relation = parent_tab_name;
-	pRule->rulename = pstrdup(child_name_str);
-	pRule->whereClause = pWhere;
-	pRule->event = CMD_INSERT;
-	pRule->instead = true;		/* do instead */
-	pRule->actions = list_make1(pIns);
-
-	pResult = (Node *) pRule;
-
-	pIns->relation = makeNode(RangeVar);
-	pIns->relation->catalogname = cxt->relation->catalogname;
-	pIns->relation->schemaname = cxt->relation->schemaname;
-	pIns->relation->relname = child_name_str;
-	pIns->relation->location = -1;
-
-	pIns->returningList = NULL;
-
-	pIns->cols = NIL;
-
-	if (1)
-	{
-		List	   *coldefs = stmt->tableElts;
-		ListCell   *lc = NULL;
-		List	   *vl1 = NULL;
-
-		lc = list_head(coldefs);
-
-		for (; lc; lc = lnext(lc))		/* for all cols */
-		{
-			Node	   *pCol = lfirst(lc);
-			ColumnDef  *pColDef;
-			ColumnRef  *pCRef;
-
-			if (nodeTag(pCol) != T_ColumnDef)	/* avoid constraints, etc */
-				continue;
-
-			pCRef = makeNode(ColumnRef);
-
-			pColDef = (ColumnDef *) pCol;
-
-			pCRef->location = -1;
-			/* NOTE: gram.y uses "*NEW*" for "new" */
-			pCRef->fields = list_make2(makeString("*NEW*"),
-									   makeString(pColDef->colname));
-
-			vl1 = lappend(vl1, pCRef);
-		}
-
-		pIns->selectStmt = (Node *) makeNode(SelectStmt);
-		((SelectStmt *) pIns->selectStmt)->valuesLists =
-			list_make1(vl1);
-	}
-
-	return (pResult);
-}	/* end make_prule_rulestmt */
-
 
 /* XXX: major cleanup required. Get rid of gotos at least */
 static int
