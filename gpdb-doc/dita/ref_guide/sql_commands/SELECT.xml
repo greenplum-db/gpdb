@@ -848,7 +848,7 @@ OFFSET <varname>start</varname></codeblock><p>where
       <sectiondiv id="section17"><b>The Locking Clause</b><p><codeph>FOR UPDATE</codeph>,
             <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR SHARE</codeph> and <codeph>FOR KEY
             SHARE</codeph> are <i>locking clauses</i>; they affect how <codeph>SELECT</codeph> locks
-          rows as they are obtained from the table. The Global Deadlock Detector affects the locking
+          rows as they are obtained from the table. The Global Deadlock Detector effects the locking
           used by <codeph>SELECT</codeph> queries that contain a locking clause (<codeph>FOR
               <varname>lock_strength</varname></codeph>). The Global Deadlock Detector is enabled by
           setting the <xref href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
@@ -857,21 +857,21 @@ OFFSET <varname>start</varname></codeblock><p>where
             Deadlock Detector</xref> in the <cite>Greenplum Database Administrator Guide</cite> for
           information about the Global Deadlock Detector.</p><p>The locking clause has the general
           form</p><codeblock>FOR <varname>lock_strength</varname> [OF <varname>table_name</varname> [ , ... ] ] [ NOWAIT ]</codeblock><p>The
-            <varname>lock_strength</varname> can be one of these values. When the Global Deadlock
-          Detector is disabled (the default), Greenplum Database uses the specified lock.<ul id="ol_m3x_p54_n3b">
-            <li><codeph>FOR UPDATE</codeph> - Locks the table with an <codeph>EXCLUSIVE</codeph>
+            <varname>lock_strength</varname> can be one of these values. <ul id="ol_m3x_p54_n3b">
+            <li><codeph>UPDATE</codeph> - Locks the table with an <codeph>EXCLUSIVE</codeph>
               lock.</li>
-            <li><codeph>FOR NO KEY UPDATE</codeph> - Locks the table with an
-                <codeph>EXCLUSIVE</codeph> lock.</li>
-            <li><codeph>FOR SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
+            <li><codeph>NO KEY UPDATE</codeph> - Locks the table with an <codeph>EXCLUSIVE</codeph>
               lock.</li>
-            <li><codeph>FOR KEY SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
+            <li><codeph>SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
               lock.</li>
-          </ul></p><p>When the Global Deadlock Detector is enabled, a <codeph>ROW SHARE</codeph>
-          lock is used to lock the table for simple <codeph>SELECT</codeph> queries that contain a
-          locking clause, and the query plans contain a <codeph>lockrows</codeph> node. Simple
-            <codeph>SELECT</codeph> queries that contain a locking clause fulfill all the following
-          conditions: </p><ul id="ul_pf5_prm_43b">
+            <li><codeph>KEY SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
+              lock.</li>
+          </ul></p><p>When the Global Deadlock Detector is disabled (the default), Greenplum
+          Database uses the specified lock.</p><p>When the Global Deadlock Detector is enabled, a
+            <codeph>ROW SHARE</codeph> lock is used to lock the table for simple
+            <codeph>SELECT</codeph> queries that contain a locking clause, and the query plans
+          contain a <codeph>lockrows</codeph> node. Simple <codeph>SELECT</codeph> queries that
+          contain a locking clause fulfill all the following conditions: </p><ul id="ul_pf5_prm_43b">
           <li>The locking clause is in the top level <codeph>SELECT</codeph> context.</li>
           <li>The <codeph>FROM</codeph> clause contains a single table that is not a view or an
             append optimized table.</li>
