@@ -773,11 +773,14 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 	showstatctx->slices[sliceIndex].dispatchSummary = ds;
 
 	/* Signal that we've gathered all the statistics
-	 * Since QD may executes Initplan before main plan,
-	 * main plan information skip to gather.
-	 * Thus, only set this variable on slice 0
-	 * */
-	if(sliceIndex == 0)
+	 * For some query, which has initplan on top of the plan,
+	 * its `ANALYZE EXPLAIN` invoke `cdbexplain_recvExecStats`
+	 * multi-times in different recursive routine to collect
+	 * metrics on both initplan and plan. Thus, this variable
+	 * should only assign on slice 0 after gather result done
+	 * to promise all slices information have been collected.
+	 */
+	if (sliceIndex == 0)
 		showstatctx->stats_gathered = true;
 
 	/* Clean up. */

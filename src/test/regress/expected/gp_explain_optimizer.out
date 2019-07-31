@@ -58,6 +58,44 @@ WHERE et like '%Memory: %';
 (1 row)
 
 reset explain_memory_verbosity;
+EXPLAIN ANALYZE SELECT id FROM 
+( SELECT id 
+	FROM explaintest
+	WHERE id > (
+		SELECT avg(id)
+		FROM explaintest
+	)
+) as foo
+ORDER BY id
+LIMIT 1;
+                                                                                QUERY PLAN                                                                                 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..1324033.14 rows=1 width=4) (actual time=51.066..51.068 rows=1 loops=1)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324033.14 rows=1 width=4) (actual time=51.063..51.063 rows=1 loops=1)
+         Merge Key: explaintest.id
+         ->  Limit  (cost=0.00..1324033.14 rows=1 width=4) (actual time=16.459..16.468 rows=1 loops=1)
+               ->  Sort  (cost=0.00..1324033.14 rows=4 width=4) (actual time=16.456..16.456 rows=1 loops=1)
+                     Sort Key: explaintest.id
+                     Sort Method:  top-N heapsort  Memory: 51kB
+                     ->  Nested Loop  (cost=0.00..1324033.14 rows=4 width=4) (actual time=5.958..5.963 rows=3 loops=1)
+                           Join Filter: ((explaintest.id)::numeric > (pg_catalog.avg((avg(explaintest_1.id)))))
+                           ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8) (actual time=15.840..15.841 rows=1 loops=1)
+                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=4.496..4.496 rows=1 loops=1)
+                                       ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8) (actual time=0.010..4.456 rows=3 loops=1)
+                                             ->  Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=0.057..0.057 rows=1 loops=1)
+                                                   ->  Seq Scan on explaintest explaintest_1  (cost=0.00..431.00 rows=4 width=4) (actual time=0.047..0.048 rows=5 loops=1)
+                           ->  Seq Scan on explaintest  (cost=0.00..431.00 rows=4 width=4) (actual time=0.003..0.017 rows=3 loops=2)
+ Planning time: 63.227 ms
+   (slice0)    Executor memory: 156K bytes.
+   (slice1)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
+   (slice2)    Executor memory: 167K bytes (entry db).
+ * (slice3)    Executor memory: 124K bytes avg x 3 workers, 124K bytes max (seg0).  Work_mem: 65K bytes max, 1K bytes wanted.
+ Memory used:  256000kB
+ Memory wanted:  1001kB
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.61.0
+ Execution time: 131.741 ms
+(24 rows)
+
 -- Verify that the column references are OK. This tests for an old ORCA bug,
 -- where the Filter clause in the IndexScan of this query was incorrectly
 -- printed as something like:
