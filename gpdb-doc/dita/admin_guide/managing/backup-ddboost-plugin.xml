@@ -52,7 +52,7 @@
   <xref href="#topic_ddb-plugin/ddb-replication" format="dita">replication</xref>: "on" | "off"
   <xref href="#topic_ddb-plugin/ddb-remote-host" format="dita">remote_hostname</xref>: "&lt;<varname>remote-dd-host</varname>>"
   <xref href="#topic_ddb-plugin/ddb-remote-user" format="dita">remote_username</xref>: "&lt;<varname>remote-ddboost-ID</varname>>"
-  
+  <xref href="#topic_ddb-plugin/plentry_shw_bky_43b" format="dita"/>: "on" | "off"
   <xref href="#topic_ddb-plugin/ddb-remote-pwd" format="dita">remote_password</xref>: "&lt;<varname>remote-dd-pwd</varname>>"
   <xref href="#topic_ddb-plugin/ddb-remote-s-unit" format="dita">remote_storage_unit</xref>: "&lt;<varname>remote-dd-ID</varname>>"
   <xref href="#topic_ddb-plugin/ddb-remote-dir" format="dita">remote_directory</xref>: "&lt;<varname>remote-dd-dir</varname>>"</codeblock>
@@ -134,10 +134,10 @@
                   Boost user name that accesses the remote Data Domain system. There is a
                   30-character limit.</pd>
               </plentry>
-              <plentry>
+              <plentry id="plentry_shw_bky_43b">
                 <pt>remote_password_encryption</pt>
-                <pd>Optional. Specifies whether the <codeph>remote_password</codeph>  option value
-                  is encrypted. The default value is <codeph>off</codeph>. To set up password
+                <pd>Optional. Specifies whether the <codeph>remote_password</codeph> option value is
+                  encrypted. The default value is <codeph>off</codeph>. To set up password
                   encryption use the <codeph><xref
                       href="../../utility_guide/admin_utilities/gpbackup_manager.xml#topic1"/>
                     encrypt-password</codeph> command to encrypt the plain-text passwords for the DD

@@ -3,12 +3,12 @@
 <topic id="topic_yrr_hqw_sbb">
   <title>Parallel Backup with gpbackup and gprestore</title>
   <body>
-    <p><codeph>gpbackup</codeph>, <codeph>gprestore</codeph>, and <codeph>gpbackup_manager</codeph>
-      are Greenplum Database utilities that create, restore, and manage backup sets for Greenplum
-      Database. By default, <codeph>gpbackup</codeph> stores only the object metadata files and DDL
-      files for a backup in the Greenplum Database master data directory. Greenplum Database
-      segments use the <codeph>COPY ... ON SEGMENT</codeph> command to store their data for
-      backed-up tables in compressed CSV data files, located in each segment's
+    <p><codeph>gpbackup</codeph><ph otherprops="pivotal">, <codeph>gpbackup_manager</codeph></ph>
+      and <codeph>gprestore</codeph> are Greenplum Database utilities that create, restore, and
+      manage backup sets for Greenplum Database. By default, <codeph>gpbackup</codeph> stores only
+      the object metadata files and DDL files for a backup in the Greenplum Database master data
+      directory. Greenplum Database segments use the <codeph>COPY ... ON SEGMENT</codeph> command to
+      store their data for backed-up tables in compressed CSV data files, located in each segment's
         <filepath>backups</filepath> directory.</p>
     <p>The backup metadata files contain all of the information that <codeph>gprestore</codeph>
       needs to restore a full backup set in parallel. Backup metadata also provides the framework
@@ -26,13 +26,13 @@
       segment host is written to CSV backup files using <codeph>COPY ... ON SEGMENT</codeph>
       commands in parallel. The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on
       each table that is backed up.</p>
-    <p>With the <codeph>gpbackup_manager</codeph> utility, you can list the backups that have been
-      taken, get a backup report for a specific backup, and delete backups. </p>
-    <p>For information about the <codeph>gpbackup</codeph>, <codeph>gprestore</codeph>, and
-        <codeph>gpbackup_manager</codeph> utility options, see <xref
-        href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref>, <xref
-        href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref>, and <xref
-        href="../../utility_guide/admin_utilities/gpbackup_manager.xml#topic1"/>.</p>
+    <p otherprops="pivotal">With the <codeph>gpbackup_manager</codeph> utility, you can list the
+      backups that have been taken, get a backup report for a specific backup, and delete backups. </p>
+    <p>For information about these utilities and their options, see <xref
+        href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref><ph
+        otherprops="pivotal">, <xref
+          href="../../utility_guide/admin_utilities/gpbackup_manager.xml#topic1"/>,</ph> and <xref
+        href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref>.</p>
   </body>
   <topic id="topic_vh5_1hd_tbb">
     <title>Requirements and Limitations</title>
@@ -266,33 +266,24 @@ $ <b>gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --
           backup combined table backups into a single file per segment with the
             <codeph>gpbackup</codeph> option <codeph>--single-data-file</codeph>.</note>
       </section>
-      <section>
+      <section otherprops="pivotal">
         <title>Listing Backups</title>
-        <p>You can view a list of backups using the <codeph>gpbackup_manager</codeph> utility.  The
+        <p>You can view a list of backups using the <codeph>gpbackup_manager</codeph> utility. The
           list includes all backups taken, including backups that have been removed from the
           system.</p>
         <codeblock>$ <b>gpbackup_manager list-backups</b>
-timestamp        date                       database      type          duration   deleted
-        
-20190624020100   Mon Jun 24 2019 02:01:00   sales         incremental   01:49:38
-20190623020100   Sun Jun 23 2019 02:01:00   sales         full          08:28:04  
-20190622020100   Sat Jun 22 2019 02:01:00   sales         incremental   02:01:57   true
-20190621020100   Fri Jun 21 2019 02:01:00   sales         incremental   01:45:09   true
-20190620020100   Thu Jun 20 2019 02:01:00   sales         incremental   01:57:58   true
-20190619020100   Wed Jun 19 2019 02:01:00   sales         incremental   01:55:11   true
-20190618020100   Tue Jun 18 2019 02:01:00   sales         incremental   02:09:47   true
-20190617020100   Mon Jun 17 2019 02:01:00   sales         incremental   02:11:03   true
-20190616020100   Sun Jun 16 2019 02:01:00   sales         full          08:07:22   true
-20190617152423   Mon Jun 17 2019 15:24:23   penny         full          00:00:17
-20190612154608   Wed Jun 12 2019 15:46:08   tpcds         full          00:08:21
-20190612103702   Wed Jun 12 2019 10:37:02   gpadmin       full          00:00:58   true
-20190611150524   Tue Jun 11 2019 15:05:24   penny         full          00:01:43   true
-20190611145327   Tue Jun 11 2019 14:53:27   test_db       full          00:21:24</codeblock>
+  timestamp        date                       database   type            object filtering   plugin   duration   date deleted
+  20190719092809   Fri Jul 19 2019 09:28:09   sales      full            include-schema              01:49:38   Fri Jul 19 2019 09:30:34
+  20190719092716   Fri Jul 19 2019 09:27:16   sales      full            exclude-schema              08:28:04
+  20190719092609   Fri Jul 19 2019 09:26:09   sales      data-only                                   02:01:57
+  20190719092557   Fri Jul 19 2019 09:25:57   sales      metadata-only                               00:00:09
+  20190719092530   Fri Jul 19 2019 09:25:30   sales      full                                        01:57:58
+</codeblock>
       </section>
-      <section>
+      <section otherprops="pivotal">
         <title>Deleting Backups</title>
         <p>To remove a backup from the system, use the <codeph>gpbackup_manager
-            delete-backup</codeph> command.  </p>
+            delete-backup</codeph> command. </p>
         <codeblock>$ <b>gpbackup_manager delete-backup</b> &lt;timestamp></codeblock>
         <p>The command removes all of the backup files for the specified timestamp and records the
           date the backup was deleted in the gpbackup history file. </p>
@@ -301,7 +292,7 @@ timestamp        date                       database      type          duration
           operation, <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> generate a report
           file. </p><p>When email notification is configured, the email sent contains the contents
           of the report file. For information about email notification, see <xref
-            href="#topic_qwd_d5d_tbb" format="dita"/>.</p><p>You can use
+            href="#topic_qwd_d5d_tbb" format="dita"/>.</p><p otherprops="pivotal">You can use
             <codeph>gpbackup_manager</codeph> to view a report file by specifying the
           timestamp.<codeblock>$ <b>gpbackup_manager display-report</b> &lt;timestamp></codeblock></p><p>Report
           files are saved in the Greenplum Database master backup directory. A report file name
@@ -345,8 +336,8 @@ Restore Status: Success</codeblock></section>
           Database master data directory. The file contains the backup timestamp, information about
           the backup options, and backup set information for incremental backups. This file is not
           backed up by <codeph>gpbackup</codeph>.</p>
-        <p><codeph>gpbackup_manager</codeph> uses the history file to list backups, display backup
-          reports, and delete backups.</p>
+        <p otherprops="pivotal"><codeph>gpbackup_manager</codeph> uses the history file to list
+          backups, display backup reports, and delete backups.</p>
         <p><codeph>gpbackup</codeph> uses the information in the file to find a matching backup for
           an incremental backup when you run <codeph>gpbackup</codeph> with the
             <codeph>--incremental</codeph> option and do not specify the

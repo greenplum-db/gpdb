@@ -11,7 +11,7 @@
             <topicref href="admin_utilities/gpactivatestandby.xml"/>
             <topicref href="admin_utilities/gpaddmirrors.xml"/>
             <topicref href="admin_utilities/gpbackup.xml"/>
-            <topicref href="admin_utilities/gpbackup_manager.xml"/>
+            <topicref href="admin_utilities/gpbackup_manager.xml" otherprops="pivotal"/>
             <topicref href="admin_utilities/gpcheckcat.xml"/>
             <topicref href="admin_utilities/gpcheckperf.xml"/>
             <topicref href="admin_utilities/gpconfig.xml"/>

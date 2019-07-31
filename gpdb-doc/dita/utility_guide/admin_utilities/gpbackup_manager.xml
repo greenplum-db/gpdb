@@ -24,7 +24,7 @@
         </plentry>
         <plentry>
           <pt><codeph>display-report <varname>timestamp</varname></codeph></pt>
-          <pd>Display the backup report for a specified timestamp.</pd>
+          <pd>Displays the backup report for a specified timestamp.</pd>
         </plentry>
         <plentry>
           <pt><codeph>encrypt-password</codeph></pt>
@@ -33,8 +33,8 @@
         </plentry>
         <plentry>
           <pt><codeph>list-backups</codeph></pt>
-          <pd>Displays information in a list format about the backups that have been taken. If the
-            backup history file does not exist, the command exits with an error message. See <xref
+          <pd>Displays a list of backups that have been taken. If the backup history file does not
+            exist, the command exits with an error message. See <xref
               href="#topic1/table_yls_rgw_g3b" format="dita"/> for a description of the columns in
             this list.</pd>
  
@@ -50,9 +50,9 @@
       <parml>
         <plentry>
           <pt>--plugin-config <varname>config-file</varname></pt>
-          <pd>The  <codeph>delete-backup</codeph> command requires this option if the backup Is
+          <pd>The <codeph>delete-backup</codeph> command requires this option if the backup Is
             stored in s3 or a Data Domain system. The <codeph>encrypt-password</codeph> command
-            always requires this option.</pd>
+            requires this option.</pd>
         </plentry>
         <plentry>
           <pt>-h | --help </pt>
@@ -81,9 +81,42 @@
         empty for these backups.</p>
       <p>The <codeph>encrypt-password</codeph> command is used to encrypt Data Domain user passwords
         that are saved in a DD Boost plug-In configuration file. To use this option, the pgcrypto
-        extension must be enabled in the postgres database. This command enables the pgcrypto
-        extension.</p>
-      <codeblock>$ psql -d postgres -c "CREATE EXTENSION pgcrypto"</codeblock>
+        extension must be enabled in the Greenplum Database postgres database. The method for
+        installing pgcrypto differs for each Greenplum Database major version:</p>
+      <dl>
+        <dlentry>
+          <dt>Greenplum Database 4.3.x</dt>
+          <dd>
+            <ol id="ol_f1v_vrs_43b">
+              <li>Download the pgcrypto extension from <xref
+                  href="https://network.pivotal.io/products/pivotal-gpdb/" format="html"
+                  scope="external">Pivotal Network</xref>. Choose your Greenplum Database 4.3
+                release number and then download the PGCrypto Extension for your platform in the
+                Greenplum Encryption folder.</li>
+              <li>Copy the downloaded file to your Greenplum Database master host.
+                Example:<codeblock>$ scp pgcrypto-ossv1.1_pv1.3.gpdb4.3orca-rhel5-x86_64.gppkg gpadmin@mdw:~</codeblock></li>
+              <li>Log in to the master host as gpadmin and install the pgcrypto gppkg
+                file:<codeblock>$ gppkg -i pgcrypto-ossv1.1_pv1.3.gpdb4.3orca-rhel5-x86_64.gppkg</codeblock></li>
+              <li>Run the pgcrypto SQL script to install the pgcrypto functions in the postgres
+                database:<codeblock>$ psql -d postgres -f $GPHOME/share/postgresql/contrib/pgcrypto.sql</codeblock></li>
+            </ol>
+          </dd>
+        </dlentry>
+        <dlentry>
+          <dt>Greenplum Database 5.x</dt>
+          <dd>Log in to the master host as gpadmin and run the pgcrypto SQL script to install the
+            pgcrypto functions in the postgres
+            database:<codeblock>$ psql -d postgres -f $GPHOME/share/postgresql/contrib/pgcrypto.sql</codeblock></dd>
+        </dlentry>
+        <dlentry>
+          <dt>Greenplum Database 6.x</dt>
+          <dd>Log in to the master host as gpadmin and execute the <codeph>CREATE EXTENSION</codeph>
+            command in the postgres database:</dd>
+          <dd>
+            <codeblock>$ psql -d postgres -c "CREATE EXTENSION pgcrypto"</codeblock>
+          </dd>
+        </dlentry>
+      </dl>
       <p>The <codeph>encrypt-password</codeph> command prompts you to enter and then re-enter the
         password to be encrypted. To maintain password secrecy, characters entered are echoed as
         asterisks. If replication is enabled in the specified DD Boost configuration file, the
@@ -174,22 +207,13 @@
       <ol>
         <li>Display a list of the existing backups.
           <codeblock>gpadmin@mdw:$ <b>gpbackup_manager list-backups</b>
-timestamp        date                       database      type          duration   deleted
-        
-20190624020100   Mon Jun 24 2019 02:01:00   sales         incremental   01:49:38
-20190623020100   Sun Jun 23 2019 02:01:00   sales         full          08:28:04  
-20190622020100   Sat Jun 22 2019 02:01:00   sales         incremental   02:01:57   true
-20190621020100   Fri Jun 21 2019 02:01:00   sales         incremental   01:45:09   true
-20190620020100   Thu Jun 20 2019 02:01:00   sales         incremental   01:57:58   true
-20190619020100   Wed Jun 19 2019 02:01:00   sales         incremental   01:55:11   true
-20190618020100   Tue Jun 18 2019 02:01:00   sales         incremental   02:09:47   true
-20190617020100   Mon Jun 17 2019 02:01:00   sales         incremental   02:11:03   true
-20190616020100   Sun Jun 16 2019 02:01:00   sales         full          08:07:22   true
-20190617152423   Mon Jun 17 2019 15:24:23   penny         full          00:00:17
-20190612154608   Wed Jun 12 2019 15:46:08   tpcds         full          00:08:21
-20190612103702   Wed Jun 12 2019 10:37:02   gpadmin       full          00:00:58   true
-20190611150524   Tue Jun 11 2019 15:05:24   penny         full          00:01:43   true
-20190611145327   Tue Jun 11 2019 14:53:27   test_db       full          00:21:24</codeblock></li>
+  timestamp        date                       database   type            object filtering   plugin   duration   date deleted
+  20190719092809   Fri Jul 19 2019 09:28:09   sales      full            include-schema              01:49:38   Fri Jul 19 2019 09:30:34
+  20190719092716   Fri Jul 19 2019 09:27:16   sales      full            exclude-schema              01:38:45
+  20190719092609   Fri Jul 19 2019 09:26:09   sales      data-only                                   01:07:22
+  20190719092557   Fri Jul 19 2019 09:25:57   sales      metadata-only                               00:00:19
+  20190719092530   Fri Jul 19 2019 09:25:30   sales      full                                        01:50:27
+</codeblock></li>
         <li>Display the backup report for the backup with timestamp
           20190612154608.<codeblock>$ <b>gpbackup_manager display-report 20190612154608</b>
   
