@@ -772,8 +772,13 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 	/* Transfer worker counts to SliceSummary. */
 	showstatctx->slices[sliceIndex].dispatchSummary = ds;
 
-	/* Signal that we've gathered all the statistics */
-	showstatctx->stats_gathered = true;
+	/* Signal that we've gathered all the statistics
+	 * Since QD may executes Initplan before main plan,
+	 * main plan information skip to gather.
+	 * Thus, only set this variable on slice 0
+	 * */
+	if(sliceIndex == 0)
+		showstatctx->stats_gathered = true;
 
 	/* Clean up. */
 	if (ctx.msgptrs)
@@ -1948,7 +1953,7 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 			long mem_wanted;
 
 			mem_wanted = (long) PolicyAutoStatementMemForNoSpillKB(stmt,
-							(uint64) showstatctx->workmemwanted_max / 1024L);
+							(uint64) (showstatctx->workmemwanted_max + 1024) / 1024L);
 
 			if (es->format == EXPLAIN_FORMAT_TEXT)
 				appendStringInfo(es->str, "Memory wanted:  %ldkB\n", mem_wanted);
