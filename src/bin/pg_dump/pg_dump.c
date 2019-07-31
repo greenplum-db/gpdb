@@ -15876,22 +15876,21 @@ getDependencies(Archive *fout)
 	 * entries will have dependencies on their parent opfamily, which we
 	 * should drop since they'd likewise become useless self-dependencies.
 	 * (But be sure to keep deps on *other* opfamilies; see amopsortfamily.)
-	 *
 	 */
 	appendPQExpBufferStr(query, "UNION ALL\n"
-							"SELECT 'pg_opfamily'::regclass AS classid, amopfamily AS objid, refclassid, refobjid, deptype "
-							"FROM pg_depend d, pg_amop o "
-							"WHERE deptype NOT IN ('p', 'e', 'i') AND "
-							"classid = 'pg_amop'::regclass AND objid = o.oid "
-							"AND NOT (refclassid = 'pg_opfamily'::regclass AND amopfamily = refobjid)\n");
+						 "SELECT 'pg_opfamily'::regclass AS classid, amopfamily AS objid, refclassid, refobjid, deptype "
+						 "FROM pg_depend d, pg_amop o "
+						 "WHERE deptype NOT IN ('p', 'e', 'i') AND "
+						 "classid = 'pg_amop'::regclass AND objid = o.oid "
+						 "AND NOT (refclassid = 'pg_opfamily'::regclass AND amopfamily = refobjid)\n");
 
 	/* Likewise for pg_amproc entries */
 	appendPQExpBufferStr(query, "UNION ALL\n"
-							"SELECT 'pg_opfamily'::regclass AS classid, amprocfamily AS objid, refclassid, refobjid, deptype "
-							"FROM pg_depend d, pg_amproc p "
-							"WHERE deptype NOT IN ('p', 'e', 'i') AND "
-							"classid = 'pg_amproc'::regclass AND objid = p.oid "
-							"AND NOT (refclassid = 'pg_opfamily'::regclass AND amprocfamily = refobjid)\n");
+						 "SELECT 'pg_opfamily'::regclass AS classid, amprocfamily AS objid, refclassid, refobjid, deptype "
+						 "FROM pg_depend d, pg_amproc p "
+						 "WHERE deptype NOT IN ('p', 'e', 'i') AND "
+						 "classid = 'pg_amproc'::regclass AND objid = p.oid "
+						 "AND NOT (refclassid = 'pg_opfamily'::regclass AND amprocfamily = refobjid)\n");
 
 	/* Sort the output for efficiency below */
 	appendPQExpBufferStr(query, "ORDER BY 1,2");
