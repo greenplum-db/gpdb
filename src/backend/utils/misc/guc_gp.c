@@ -93,8 +93,6 @@ static bool check_gp_resource_group_bypass(bool *newval, void **extra, GucSource
 
 extern struct config_generic *find_option(const char *name, bool create_placeholders, int elevel);
 
-extern bool enable_partition_rules;
-
 extern int listenerBacklog;
 
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
@@ -1586,17 +1584,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_local_distributed_cache_stats,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"enable_partition_rules", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enable creation of RULEs to implement partitioning"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&enable_partition_rules,
 		false,
 		NULL, NULL, NULL
 	},

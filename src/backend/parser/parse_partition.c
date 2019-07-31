@@ -40,9 +40,6 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
-/* temporary rule to control whether we generate RULEs or not -- for testing */
-bool		enable_partition_rules = false;
-
 
 typedef struct
 {
@@ -733,10 +730,7 @@ transformPartitionBy(CreateStmtContext *cxt,
 					pL1 = lappend(pL1, relname);		/* child name */
 					pL1 = lappend(pL1, cxt->relation->relname); /* parent name */
 
-					if (enable_partition_rules)
-						pPostCreate = (Node *) list_make2(lfirst(lc_rule), pL1);
-					else
-						pPostCreate = NULL;
+					pPostCreate = NULL;
 				}
 			}
 		}

@@ -1,4 +1,3 @@
-set enable_partition_rules = false;
 drop table if exists d;
 NOTICE:  table "d" does not exist, skipping
 drop table if exists c;
