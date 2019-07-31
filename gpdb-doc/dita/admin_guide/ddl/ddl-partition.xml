@@ -479,7 +479,8 @@ Filter: "date"=01-07-12::date AND region='USA'::text
   <topic id="topic76" xml:lang="en">
     <title>Viewing Your Partition Design</title>
     <body>
-      <p>You can look up information about your partition design using the <i>pg_partitions</i>
+      <p>You can look up information about your partition design using the <i><xref
+            href="../../ref_guide/system_catalogs/pg_partitions.xml">pg_partitions</xref></i> system
         view. For example, to see the partition design of the <i>sales</i> table:</p>
       <p>
         <codeblock>SELECT partitionboundary, partitiontablename, partitionname, 
@@ -488,17 +489,21 @@ FROM pg_partitions
 WHERE tablename='sales';
 </codeblock>
       </p>
-      <p>The following table and views show information about partitioned tables.</p>
+      <p>The following table and views also show information about partitioned tables.</p>
       <ul id="ul_ycd_2wy_sp">
-        <li id="im211944"><i>pg_partition </i>- Tracks partitioned tables and their inheritance
-          level relationships. </li>
-        <li id="im156096"><i>pg_partition_templates</i> - Shows the subpartitions created using a
+        <li id="im211944"><i><xref href="../../ref_guide/system_catalogs/pg_partition.xml"
+              >pg_partition</xref></i>- Tracks partitioned tables and their inheritance level
+          relationships. </li>
+        <li id="im156096"><i><xref
+              href="../../ref_guide/system_catalogs/pg_partition_templates.xml#topic1"
+              >pg_partition_templates</xref></i>- Shows the subpartitions created using a
           subpartition template.</li>
-        <li id="im156103"><i>pg_partition_columns</i> - Shows the partition key columns used in a
-          partition design.</li>
+        <li id="im156103"><i><xref href="../../ref_guide/system_catalogs/pg_partition_columns.xml"
+              >pg_partition_columns</xref></i> - Shows the partition key columns used in a partition
+          design.</li>
       </ul>
-      <p>For information about Greenplum Database system catalog tables and views, see the
-          <i>Greenplum Database Reference Guide</i>. </p>
+      <p otherprops="op-print">For information about Greenplum Database system catalog tables and
+        views, see the <i>Greenplum Database Reference Guide</i>. </p>
     </body>
   </topic>
   <topic id="topic77" xml:lang="en">
@@ -540,12 +545,25 @@ WHERE tablename='sales';
         </li>
       </ul>
       <note type="important">When defining and altering partition designs, use the given partition
-        name, not the table object name. Although you can query and load any table (including
-        partitioned tables) directly using SQL commands, you can only modify the structure of a
-        partitioned table using the <codeph>ALTER TABLE...PARTITION</codeph> clauses.<p>Partitions
-          are not required to have names. If a partition does not have a name, use one of the
-          following expressions to specify a part: <codeph>PARTITION FOR (value)</codeph> or
-            )<codeph>PARTITION FOR(RANK(number)</codeph>.</p></note>
+        name, not the table object name. The given partition name is the
+          <codeph>partitionname</codeph> column value in the <i><xref
+            href="../../ref_guide/system_catalogs/pg_partitions.xml">pg_partitions</xref></i> system
+        view. Although you can query and load any table (including partitioned tables) directly
+        using SQL commands, you can only modify the structure of a partitioned table using the
+          <codeph>ALTER TABLE...PARTITION</codeph> clauses.<p>Partitions are not required to have
+          names. If a partition does not have a name, use one of the following expressions to
+          specify a part: <codeph>PARTITION FOR (value)</codeph> or ) <codeph>PARTITION
+            FOR(RANK(number)</codeph>. </p></note>
+      <p>For a multi-level partitioned table, you identify a specific partition to change with
+          <codeph>ALTER PARTITION</codeph> clauses. The clauses specify the child partition in each
+        level of the partitioned table hierarchy that is above and is linked to the target
+        partition. For example, if you have a partitioned table that consists of three levels, year,
+        quarter, and region, this <codeph>ALTER TABLE</codeph> command exchanges a leaf partition
+          <codeph>region4</codeph> with the table <codeph>region4_new</codeph>. </p>
+      <codeblock>ALTER TABLE sales <b>ALTER PARTITION yr_1 ALTER PARTITION qtr_4</b> EXCHANGE PARTITION region4 WITH TABLE region4_new ;</codeblock>
+      <p>The two <codeph>ALTER PARTITION</codeph> clauses identify which <codeph>region4</codeph>
+        partition to exchange. Both clauses are required to identify the specific partition to
+        exchange.</p>
     </body>
     <topic id="topic78" xml:lang="en">
       <title id="im172625">Adding a Partition</title>

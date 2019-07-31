@@ -33,8 +33,7 @@ ALTER TABLE [IF EXISTS] [ONLY] <varname>name</varname> SET
 
 ALTER TABLE <varname>name</varname>
    [ ALTER PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) 
-   | FOR (<varname>value</varname>) } <varname>partition_action</varname> [...] ] 
-   <varname>partition_action</varname>
+   | FOR (<varname>value</varname>) } [...] ] <varname>partition_action</varname>
 
 where <varname>action</varname> is one of:
                         
@@ -661,9 +660,12 @@ where <varname>action</varname> is one of:
                                 <plentry>
                                         <pt>ALTER [DEFAULT] PARTITION</pt>
                                         <pd>If altering a partition deeper than the first level of
-                                                partitions, the <codeph>ALTER PARTITION</codeph>
-                                                clause is used to specify which subpartition in the
-                                                hierarchy you want to alter.</pd>
+                                                partitions, use <codeph>ALTER PARTITION</codeph>
+                                                clauses to specify which subpartition in the
+                                                hierarchy you want to alter. The clauses specify the
+                                                child partition in each level of the partitioned
+                                                table hierarchy that is above and is linked to the
+                                                target partition.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>DROP [DEFAULT] PARTITION</pt>
@@ -864,7 +866,11 @@ where <varname>action</varname> is one of:
                                         <pt>
                                                 <varname>partition_name</varname>
                                         </pt>
-                                        <pd>The given name of a partition. </pd>
+                                        <pd>The given name of a partition. The given partition name
+                                                is the <codeph>partitionname</codeph> column value
+                                                in the <i><xref
+                                                  href="../../ref_guide/system_catalogs/pg_partitions.xml"
+                                                  >pg_partitions</xref></i> system view.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>FOR (RANK(number))</pt>
@@ -1058,6 +1064,15 @@ INTO (PARTITION jan09, PARTITION other);</codeblock>
                         <codeblock>ALTER TABLE sales SPLIT PARTITION FOR ('2016-01-01')
 AT ('2016-01-16')
 INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
+                        <p>For a multi-level partitioned table that consists of three levels, year,
+                                quarter, and region, exchange a leaf partition
+                                        <codeph>region4</codeph> with the table
+                                        <codeph>region4_new</codeph>. </p>
+                        <codeblock>ALTER TABLE sales ALTER PARTITION yr_1 ALTER PARTITION qtr_4 EXCHANGE PARTITION region4 WITH TABLE region4_new ;</codeblock>
+                        <p>In the previous command, the two <codeph>ALTER PARTITION</codeph> clauses
+                                identify which <codeph>region4</codeph> partition to exchange. Both
+                                clauses are required to identify the specific partition to
+                                exchange.</p>
                         <p> To recreate a primary key constraint, without blocking updates while the
                                 index is rebuilt: </p>
                         <codeblock>CREATE UNIQUE INDEX CONCURRENTLY dist_id_temp_idx ON distributors (dist_id);
