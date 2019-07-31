@@ -1604,6 +1604,7 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 			serializedVal = FunctionCallInvoke(&fcinfo);
 
 			datum_size = datumGetSize(serializedVal, byteaTranstypeByVal, byteaTranstypeLen);
+			pfree(DatumGetPointer(pergroupstate->transValue));
 			BufFileWriteOrError(file_info->wfile,
 								DatumGetPointer(serializedVal), datum_size);
 			pfree(DatumGetPointer(serializedVal));
