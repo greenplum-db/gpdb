@@ -1938,7 +1938,7 @@ strip_quotes(char *source, char quote, char escape, int encoding)
  * next on a single source string, but changing whitespace is a bad idea
  * since you might lose data.
  */
-static char *
+char *
 strtokx2(const char *s,
 		 const char *whitespace,
 		 const char *delim,

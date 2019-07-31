@@ -114,6 +114,7 @@ void expect_external_vars()
 void
 test_build_http_headers(void **state)
 {
+	const char *whitespace = " \t\n\r";
 	char		alignment[3];
 	ExtTableEntry    ext_tbl;
 	struct tupleDesc tuple;
@@ -131,6 +132,8 @@ test_build_http_headers(void **state)
 
 	tuple.natts = 0;
 	ext_tbl.fmtcode = 'c';
+	ext_tbl.fmtopts = NULL;
+	ext_tbl.encoding = 6;
 	input_data->rel->rd_id = 56;
 	input_data->rel->rd_att = &tuple;
 
@@ -138,7 +141,25 @@ test_build_http_headers(void **state)
 
 	expect_value(GetExtTableEntry, relid, input_data->rel->rd_id);
 	will_return(GetExtTableEntry, &ext_tbl);
+
+	expect_value(strtokx2, s, NULL);
+	expect_value(strtokx2, whitespace, whitespace);
+	expect_value(strtokx2, delim, NULL);
+	expect_value(strtokx2, quote, NULL);
+	expect_value(strtokx2, escape, 0);
+	expect_value(strtokx2, e_strings, false);
+	expect_value(strtokx2, del_quotes, true);
+	expect_value(strtokx2, encoding, 0);
+	will_return(strtokx2, NIL);
+
+	expect_string(normalize_key_name, key, "format");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-FORMAT"));
+	expect_string(normalize_key_name, key, "encoding");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-ENCODING"));
+
 	expect_headers_append(input_data->headers, "X-GP-FORMAT", TextFormatName);
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-FORMAT", "csv");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-ENCODING", "UTF8");
 	expect_headers_append(input_data->headers, "X-GP-ATTRS", "0");
 
 	expect_headers_append(input_data->headers, "X-GP-USER", "pxfuser");
@@ -434,12 +455,12 @@ main(int argc, char *argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const		UnitTest tests[] = {
-			unit_test(test_get_format_name),
-			unit_test_setup_teardown(test_build_http_headers, common_setup, common_teardown),
-			unit_test_setup_teardown(test_build_http_headers_no_user_error, common_setup, common_teardown),
-			unit_test_setup_teardown(test_build_http_headers_empty_user_error, common_setup, common_teardown),
-			unit_test_setup_teardown(test__build_http_header__where_is_not_supported, common_setup, common_teardown),
-			unit_test(test_add_tuple_desc_httpheader)
+		unit_test(test_get_format_name),
+		unit_test_setup_teardown(test_build_http_headers, common_setup, common_teardown),
+		unit_test_setup_teardown(test_build_http_headers_no_user_error, common_setup, common_teardown),
+		unit_test_setup_teardown(test_build_http_headers_empty_user_error, common_setup, common_teardown),
+		unit_test_setup_teardown(test__build_http_header__where_is_not_supported, common_setup, common_teardown),
+		unit_test(test_add_tuple_desc_httpheader)
 	};
 
 	MemoryContextInit();

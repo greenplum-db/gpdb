@@ -83,5 +83,6 @@ extern Oid	external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup);
 extern void external_insert_finish(ExternalInsertDesc extInsertDesc);
 extern void external_set_env_vars(extvar_t *extvar, char *uri, bool csv, char *escape, char *quote, bool header, uint32 scancounter);
 extern char *linenumber_atoi(char buffer[20], int64 linenumber);
+extern char *strtokx2(const char *s, const char *whitespace, const char *delim, const char *quote, char escape, bool e_strings, bool del_quotes, int encoding);
 
 #endif   /* FILEAM_H */
