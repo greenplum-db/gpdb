@@ -11539,11 +11539,11 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro, List *opts,
 					/* bound of -1 are fine because this has no effect on data */
 					tname->arrayBounds = lappend(tname->arrayBounds,
 												 makeInteger(-1));
-
-				/* Per column encoding settings */
-				if (col_encs)
-					cd->encoding = col_encs[attno];
 			}
+
+			/* Per column encoding settings */
+			if (col_encs)
+				cd->encoding = col_encs[attno];
 
 			tname->location = -1;
 			cd->typeName = tname;
