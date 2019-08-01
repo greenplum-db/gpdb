@@ -23,6 +23,7 @@ static void check_is_super_user(ClusterInfo *cluster);
 static void check_proper_datallowconn(ClusterInfo *cluster);
 static void check_for_prepared_transactions(ClusterInfo *cluster);
 static void check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster);
+static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
 static void check_for_reg_data_type_usage(ClusterInfo *cluster);
 static void check_for_jsonb_9_4_usage(ClusterInfo *cluster);
 static void get_bin_version(ClusterInfo *cluster);
@@ -102,6 +103,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	check_for_prepared_transactions(&old_cluster);
 	check_for_reg_data_type_usage(&old_cluster);
 	check_for_isn_and_int8_passing_mismatch(&old_cluster);
+	check_for_array_of_partition_table_types(&old_cluster);
 
 	/*
 	 * Check for various Greenplum failure cases
@@ -1009,6 +1011,72 @@ check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster)
 		check_ok();
 }
 
+static void
+check_for_array_of_partition_table_types(ClusterInfo *cluster)
+{
+	const char *const SEPARATOR = "\n";
+	int			dbnum;
+	char	   *dependee_partition_report = palloc0(1);
+
+	prep_status("Checking array types derived from partitions");
+
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			n_tables_to_check;
+		int			i;
+
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
+
+		/* Find the arraytypes derived from partitions of partitioned tables */
+		res = executeQueryOrDie(conn,
+								"SELECT td.typarray, ns.nspname || '.' || td.typname AS dependee_partition_qname "
+								"FROM (SELECT typarray, typname, typnamespace "
+								"FROM (SELECT pg_c.reltype AS rt "
+								"FROM pg_class AS pg_c JOIN pg_partitions AS pg_p ON pg_c.relname = pg_p.partitiontablename) "
+								"AS check_types JOIN pg_type AS pg_t ON check_types.rt = pg_t.oid WHERE pg_t.typarray != 0) "
+								"AS td JOIN pg_namespace AS ns ON td.typnamespace = ns.oid "
+								"ORDER BY td.typarray;");
+
+		n_tables_to_check = PQntuples(res);
+		for (i = 0; i < n_tables_to_check; i++)
+		{
+			char	   *array_type_oid_to_check = PQgetvalue(res, i, 0);
+			char	   *dependee_partition_qname = PQgetvalue(res, i, 1);
+			PGresult   *res2 = executeQueryOrDie(conn, "SELECT 1 FROM pg_depend WHERE refobjid = %s;", array_type_oid_to_check);
+
+			if (PQntuples(res2) > 0)
+			{
+				dependee_partition_report = repalloc(
+													 dependee_partition_report,
+													 strlen(dependee_partition_report) + strlen(array_type_oid_to_check) + 1 + strlen(dependee_partition_qname) + strlen(SEPARATOR) + 1
+					);
+				sprintf(
+						&(dependee_partition_report[strlen(dependee_partition_report)]),
+						"%s %s%s",
+						array_type_oid_to_check, dependee_partition_qname, SEPARATOR
+					);
+			}
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (strlen(dependee_partition_report))
+	{
+		pg_log(PG_REPORT, "fatal\n");
+		pg_fatal(
+				 "Array types derived from partitions of a partitioned table must not have dependants.\n"
+				 "OIDs of such types found and their original partitions:\n%s",
+				 dependee_partition_report
+			);
+	}
+	pfree(dependee_partition_report);
+
+	check_ok();
+}
 
 /*
  * check_for_reg_data_type_usage()
