@@ -662,10 +662,11 @@ where <varname>action</varname> is one of:
                                         <pd>If altering a partition deeper than the first level of
                                                 partitions, use <codeph>ALTER PARTITION</codeph>
                                                 clauses to specify which subpartition in the
-                                                hierarchy you want to alter. The clauses specify the
-                                                child partition in each level of the partitioned
-                                                table hierarchy that is above and is linked to the
-                                                target partition.</pd>
+                                                hierarchy you want to alter. For each partition
+                                                level in the table hierarchy that is above the
+                                                target partition, specify the partition that is
+                                                related to the target partition in an <codeph>ALTER
+                                                  PARTITION</codeph> clause.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>DROP [DEFAULT] PARTITION</pt>
@@ -1066,11 +1067,11 @@ AT ('2016-01-16')
 INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
                         <p>For a multi-level partitioned table that consists of three levels, year,
                                 quarter, and region, exchange a leaf partition
-                                        <codeph>region4</codeph> with the table
-                                        <codeph>region4_new</codeph>. </p>
-                        <codeblock>ALTER TABLE sales ALTER PARTITION yr_1 ALTER PARTITION qtr_4 EXCHANGE PARTITION region4 WITH TABLE region4_new ;</codeblock>
+                                        <codeph>region</codeph> with the table
+                                        <codeph>region_new</codeph>. </p>
+                        <codeblock>ALTER TABLE sales ALTER PARTITION year_1 ALTER PARTITION quarter_4 EXCHANGE PARTITION region WITH TABLE region_new ;</codeblock>
                         <p>In the previous command, the two <codeph>ALTER PARTITION</codeph> clauses
-                                identify which <codeph>region4</codeph> partition to exchange. Both
+                                identify which <codeph>region</codeph> partition to exchange. Both
                                 clauses are required to identify the specific partition to
                                 exchange.</p>
                         <p> To recreate a primary key constraint, without blocking updates while the
