@@ -448,14 +448,15 @@ void PolicyAutoAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memAvailableByte
 
 /*
  * What should be query mem such that memory intensive operators get a certain
- * minimum amount of memory.  Return value is in KB.
+ * minimum amount of memory.  Return value is in bytes.
  */
-uint64 PolicyAutoStatementMemForNoSpillKB(PlannedStmt *stmt, uint64 minOperatorMemKB)
+uint64
+PolicyAutoStatementMemForNoSpill(PlannedStmt *stmt, uint64 minOperatorMem)
 {
 	Assert(stmt);
-	Assert(minOperatorMemKB > 0);
+	Assert(minOperatorMem > 0);
 
-	const uint64 nonMemIntenseOpMemKB = (uint64) (*gp_resmanager_memory_policy_auto_fixed_mem);
+	const uint64 nonMemIntenseOpMem = ((uint64) (*gp_resmanager_memory_policy_auto_fixed_mem) * 1024);
 
 	PolicyAutoContext ctx;
 	exec_init_plan_tree_base(&ctx.base, stmt);
@@ -476,10 +477,10 @@ uint64 PolicyAutoStatementMemForNoSpillKB(PlannedStmt *stmt, uint64 minOperatorM
 	 * Right now, the inverse is straightforward.
 	 * TODO: Siva - employ binary search to find the right value.
 	 */
-	uint64 requiredStatementMemKB = ctx.numNonMemIntensiveOperators * nonMemIntenseOpMemKB
-									+ ctx.numMemIntensiveOperators * minOperatorMemKB;
+	uint64 requiredStatementMem = ctx.numNonMemIntensiveOperators * nonMemIntenseOpMem
+									+ ctx.numMemIntensiveOperators * minOperatorMem;
 
-	return requiredStatementMemKB;
+	return requiredStatementMem;
 }
 
 /*
