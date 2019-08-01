@@ -339,7 +339,7 @@ restrict_and_check_grant(bool is_grant, AclMode avail_goptions, bool all_privs,
 	 */
 	this_privileges = privileges & ACL_OPTION_TO_PRIVS(avail_goptions);
 	
-	 /*
+	/*
 	 * GPDB: don't do this if we're an execute node. Let the QD handle the
 	 * WARNING.
 	 */

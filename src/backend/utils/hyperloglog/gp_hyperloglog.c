@@ -113,9 +113,9 @@ gp_hll_unpack(GpHLLCounter hloglog){
 	}
 
 	/*
-	 allocate and zero an array large enough to hold all the decompressed
-	 bins
-	*/
+	 * Allocate and zero an array large enough to hold all the decompressed
+	 * bins
+	 */
 	m = POW2(hloglog->b);
 	htemp = palloc(sizeof(GpHLLData) + m);
 	memcpy(htemp, hloglog, sizeof(GpHLLData));
@@ -477,7 +477,6 @@ gp_hll_add_element(GpHLLCounter hloglog, const char * element, int elen)
 static GpHLLCounter
 gp_hll_add_hash_dense(GpHLLCounter hloglog, uint64_t hash)
 {
-
     uint64_t idx;
     uint8_t rho,entry,addn;
 
@@ -496,15 +495,17 @@ gp_hll_add_hash_dense(GpHLLCounter hloglog, uint64_t hash)
      * which is currently supported nor really necessary due to 2^(2^8) ~ 
      * 1.16E77 a number so large its not feasible to have that many unique 
      * elements. */
-    if (rho == HASH_LENGTH){
-	    addn = HASH_LENGTH;
-	    rho = (HASH_LENGTH - hloglog->b);
-	    while (addn == HASH_LENGTH && rho < POW2(hloglog->binbits)){
+	if (rho == HASH_LENGTH)
+	{
+		addn = HASH_LENGTH;
+		rho = (HASH_LENGTH - hloglog->b);
+		while (addn == HASH_LENGTH && rho < POW2(hloglog->binbits))
+		{
 		    hash = GpMurmurHash64A((const char * )&hash, HASH_LENGTH/8, HASH_SEED);
             /* zero length runs should be 1 so counter gets set */
 		    addn = __builtin_clzll(hash) + 1;
 		    rho += addn;
-	    }
+		}
     }
 
     /* keep the highest value */
@@ -514,7 +515,6 @@ gp_hll_add_hash_dense(GpHLLCounter hloglog, uint64_t hash)
     }
     
     return hloglog;
-
 }
 
 /* Just reset the counter (set all the counters to 0). We do this by

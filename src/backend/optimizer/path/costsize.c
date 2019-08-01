@@ -4671,15 +4671,19 @@ Cost incremental_hashjoin_cost(double rows, int inner_width, int outer_width, Li
 	Selectivity innerbucketsize;
 	int num_hashclauses = list_length(hashclauses);
 
-	/* Each inner row joins to a single outer row and vice versa, 
-	 * no selectivity issues. */
-	 startup_cost = 0;
-	 run_cost = 0;
+	/*
+	 * Each inner row joins to a single outer row and vice versa, no
+	 * selectivity issues.
+	 */
+	startup_cost = 0;
+	run_cost = 0;
 	
-	/* Cost of computing hash function: must do it once per input tuple. We
+	/*
+	 * Cost of computing hash function: must do it once per input tuple. We
 	 * charge one cpu_operator_cost for each column's hash function.  Also,
 	 * tack on one cpu_tuple_cost per inner row, to model the costs of
-	 * inserting the row into the hashtable. */
+	 * inserting the row into the hashtable.
+	 */
 	startup_cost += (cpu_operator_cost * num_hashclauses + cpu_tuple_cost) * rows;
 	run_cost += cpu_operator_cost * num_hashclauses * rows;
 
