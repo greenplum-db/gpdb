@@ -392,7 +392,7 @@ CTranslatorDXLToPlStmt::SetInitPlanSliceInformation(SubPlan * subplan)
 void
 CTranslatorDXLToPlStmt::SetParamIds(Plan* plan)
 {
-	List *params_node_list = gpdb::ExtractNodesPlan(plan, T_Param, true);
+	List *params_node_list = gpdb::ExtractNodesPlan(plan, T_Param, true /* descend_into_subqueries */);
 
 	ListCell *lc = NULL;
 
