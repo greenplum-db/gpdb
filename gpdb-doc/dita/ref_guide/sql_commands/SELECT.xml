@@ -118,7 +118,7 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
             <codeph>SELECT</codeph> command locks the entire table against concurrent updates when
           the Global Deadlock Detector is disabled (the default). When the Global Deadlock Detector
           is enabled, it affects some simple <codeph>SELECT</codeph> statements that contain a
-          locking clause.<p>For information about using a <codeph>FOR</codeph> clause and the affect
+          locking clause.<p>For information about using a <codeph>FOR</codeph> clause and the effect
             of the Global Deadlock Detector, see "The Locking Clause" later in this
           section.</p></li>
       </ol>
@@ -848,7 +848,7 @@ OFFSET <varname>start</varname></codeblock><p>where
       <sectiondiv id="section17"><b>The Locking Clause</b><p><codeph>FOR UPDATE</codeph>,
             <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR SHARE</codeph> and <codeph>FOR KEY
             SHARE</codeph> are <i>locking clauses</i>; they affect how <codeph>SELECT</codeph> locks
-          rows as they are obtained from the table. The Global Deadlock Detector effects the locking
+          rows as they are obtained from the table. The Global Deadlock Detector affects the locking
           used by <codeph>SELECT</codeph> queries that contain a locking clause (<codeph>FOR
               <varname>lock_strength</varname></codeph>). The Global Deadlock Detector is enabled by
           setting the <xref href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
