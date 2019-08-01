@@ -400,7 +400,30 @@ CTranslatorDXLToPlStmt::SetInitPlanSliceInformation(SubPlan * subplan)
 void
 CTranslatorDXLToPlStmt::SetParamIds(Plan* plan)
 {
-	List *params_node_list = gpdb::ExtractNodesPlan(plan, T_Param, true);
+	// Do not descend into subqueries while extracting PARAMs, since it's not
+	// really necessary for the purpose of computing extParam & allParam.
+	// It should be sufficient to look at the args list of the SUBPLAN, since any
+	// PARAM that would affect whether materialized results must be discarded,
+	// have to be passed into the SUBPLAN to begin with.
+	//
+	// In the example below, the PARAM may be an outer ref to either subtrees:
+	// case (1): it will be passed into the subplan via SubPlan 2 args and so
+	// will be captured in allParams. Thus, Materialize's results are discarded
+	// at every rescan of Subplan 2, as is expected.
+	// case (2): it will not capture the PARAM. The Materialize's results need
+	// not be discarded, since there is not relevant outer ref under it.
+	//
+	// -> Result
+	//    Filter: x = (subplan 2)
+	//      -> subtree (1)
+	//    Subplan 2
+	//      -> Material
+	//        -> Result
+	//           Filter: x = (subplan 2)
+	//             -> subtree (2)
+	//           Subplan 1
+	//             -> PARAM used somewhere
+	List *params_node_list = gpdb::ExtractNodesPlan(plan, T_Param, false /* descend_into_subqueries */);
 
 	ListCell *lc = NULL;
 
