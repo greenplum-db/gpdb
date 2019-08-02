@@ -11319,6 +11319,82 @@ SELECT d FROM ffoo FULL OUTER JOIN fbar ON a = c WHERE b BETWEEN 5 and 9;
  45
 (3 rows)
 
+-- test index left outer joins on bitmap and btree indexes on partitioned tables with and without select clause
+DROP TABLE IF EXISTS touter, tinner;
+NOTICE:  table "touter" does not exist, skipping
+NOTICE:  table "tinner" does not exist, skipping
+CREATE TABLE touter(a int, b int) DISTRIBUTED BY (a);
+CREATE TABLE tinnerbitmap(a int, b int) DISTRIBUTED BY (a) PARTITION BY range(b) (start (0) end (6) every (3));
+NOTICE:  CREATE TABLE will create partition "tinnerbitmap_1_prt_1" for table "tinnerbitmap"
+NOTICE:  CREATE TABLE will create partition "tinnerbitmap_1_prt_2" for table "tinnerbitmap"
+CREATE TABLE tinnerbtree(a int, b int) DISTRIBUTED BY (a) PARTITION BY range(b) (start (0) end (6) every (3));
+NOTICE:  CREATE TABLE will create partition "tinnerbtree_1_prt_1" for table "tinnerbtree"
+NOTICE:  CREATE TABLE will create partition "tinnerbtree_1_prt_2" for table "tinnerbtree"
+INSERT INTO touter SELECT i, i%6 FROM generate_series(1,10) i;
+INSERT INTO tinnerbitmap select i, i%6 FROM generate_series(1,1000) i;
+INSERT INTO tinnerbtree select i, i%6 FROM generate_series(1,1000) i;
+CREATE INDEX tinnerbitmap_ix ON tinnerbitmap USING bitmap(a);
+CREATE INDEX tinnerbtree_ix ON tinnerbtree USING btree(a);
+SELECT * FROM touter LEFT JOIN tinnerbitmap ON touter.a = tinnerbitmap.a;
+ a  | b | a  | b 
+----+---+----+---
+  1 | 1 |  1 | 1
+  6 | 0 |  6 | 0
+  5 | 5 |  5 | 5
+  9 | 3 |  9 | 3
+ 10 | 4 | 10 | 4
+  2 | 2 |  2 | 2
+  7 | 1 |  7 | 1
+  8 | 2 |  8 | 2
+  3 | 3 |  3 | 3
+  4 | 4 |  4 | 4
+(10 rows)
+
+SELECT * FROM touter LEFT JOIN tinnerbitmap ON touter.a = tinnerbitmap.a AND tinnerbitmap.b=10;
+ a  | b | a | b 
+----+---+---+---
+  2 | 2 |   |  
+  3 | 3 |   |  
+  4 | 4 |   |  
+  7 | 1 |   |  
+  8 | 2 |   |  
+  1 | 1 |   |  
+  5 | 5 |   |  
+  6 | 0 |   |  
+  9 | 3 |   |  
+ 10 | 4 |   |  
+(10 rows)
+
+SELECT * FROM touter LEFT JOIN tinnerbtree ON touter.a = tinnerbtree.a;
+ a  | b | a  | b 
+----+---+----+---
+  1 | 1 |  1 | 1
+  6 | 0 |  6 | 0
+  5 | 5 |  5 | 5
+  9 | 3 |  9 | 3
+ 10 | 4 | 10 | 4
+  2 | 2 |  2 | 2
+  7 | 1 |  7 | 1
+  8 | 2 |  8 | 2
+  3 | 3 |  3 | 3
+  4 | 4 |  4 | 4
+(10 rows)
+
+SELECT * FROM touter LEFT JOIN tinnerbtree ON touter.a = tinnerbtree.a AND tinnerbtree.b=10;
+ a  | b | a | b 
+----+---+---+---
+  1 | 1 |   |  
+  5 | 5 |   |  
+  6 | 0 |   |  
+  9 | 3 |   |  
+ 10 | 4 |   |  
+  2 | 2 |   |  
+  3 | 3 |   |  
+  4 | 4 |   |  
+  7 | 1 |   |  
+  8 | 2 |   |  
+(10 rows)
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 NOTICE:  drop cascades to 92 other objects
