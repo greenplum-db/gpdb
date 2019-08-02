@@ -202,7 +202,7 @@ This will create an archive with the core file and all required
 libraries for analysis.  The preference is to use GDB so that we can
 resolve dependencies for extensions.'''
 
-    parser = OptionParser(version='%prog: 0.4beta', usage=u)
+    parser = OptionParser(version='%prog: $Revision: #1 $', usage=u)
     parser.add_option('-b', '--binary', action='store', type='string', dest='binary', metavar='PROGRAMME', help='The full path to the binary that created the core file.  Used when packcore cannot determine the source binary')
     (option, args) = parser.parse_args()
     if len(args) != 1:

@@ -205,13 +205,12 @@ typedef struct AllocBlockData
  */
 typedef struct AllocChunkData
 {
-	 /*
-	  * SharedChunkHeader stores all the "shared" details
-	  * among multiple chunks, such as memoryAccount to charge,
-	  * generation of memory account, memory context that owns this
-	  * chunk etc. However, in case of a free chunk, this pointer
-	  * actually refers to the next chunk in the free list.
-	  */
+	/*
+	 * SharedChunkHeader stores all the "shared" details among multiple chunks,
+	 * such as memoryAccount to charge, generation of memory account, memory
+	 * context that owns this chunk etc. However, in case of a free chunk, this
+	 * pointer actually refers to the next chunk in the free list.
+	 */
 	struct SharedChunkHeader* sharedHeader;
 
 	Size		size;			/* size of data space allocated in chunk */

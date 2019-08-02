@@ -602,42 +602,6 @@ int gp_log_fts;
 int gp_log_interconnect;
 
 /*
- * gp_enable_gpperfmon and gp_gpperfmon_send_interval are GUCs that we'd like
- * to have propagate from master to segments but we don't want non-super users
- * to be able to set it.  Unfortunately, as long as we use libpq to connect to
- * the segments its hard to create a clean way of doing this.
- *
- * Here we check and enforce that if the value is being set on the master its being
- * done as superuser and not a regular user.
- *
- */
-bool
-gpvars_check_gp_enable_gpperfmon(bool *newval, void **extra, GucSource source)
-{
-	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster && GetCurrentRoleId() != InvalidOid && !superuser())
-	{
-		GUC_check_errcode(ERRCODE_INSUFFICIENT_PRIVILEGE);
-		GUC_check_errmsg("must be superuser to set gp_enable_gpperfmon");
-		return false;
-	}
-
-	return true;
-}
-
-bool
-gpvars_check_gp_gpperfmon_send_interval(int *newval, void **extra, GucSource source)
-{
-	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster && GetCurrentRoleId() != InvalidOid && !superuser())
-	{
-		GUC_check_errcode(ERRCODE_INSUFFICIENT_PRIVILEGE);
-		GUC_check_errmsg("must be superuser to set gp_gpperfmon_send_interval");
-		return false;
-	}
-
-	return true;
-}
-
-/*
  * gpvars_check_gp_resource_manager_policy
  * gpvars_assign_gp_resource_manager_policy
  * gpvars_show_gp_resource_manager_policy

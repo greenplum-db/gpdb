@@ -1116,7 +1116,12 @@ CTranslatorRelcacheToDXL::RetrieveIndex
 	
 		index_type = IMDIndex::EmdindBtree;
 		IMDRelation::Erelstoragetype rel_storage_type = md_rel->RetrieveRelStorageType();
-		if (GIST_AM_OID == index_rel->rd_rel->relam)
+		if (GIN_AM_OID == index_rel->rd_rel->relam)
+		{
+				index_type = IMDIndex::EmdindGin;
+				mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
+		}
+		else if (GIST_AM_OID == index_rel->rd_rel->relam)
 		{
 			index_type = IMDIndex::EmdindGist;
 			mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
@@ -1381,7 +1386,7 @@ CTranslatorRelcacheToDXL::RetrievePartTableIndex
 	default_levels_derived->Release();
 	mdid_index->AddRef();
 
-	GPOS_ASSERT(INDTYPE_BITMAP == index_info->indType || INDTYPE_BTREE == index_info->indType || INDTYPE_GIST == index_info->indType);
+	GPOS_ASSERT(INDTYPE_BITMAP == index_info->indType || INDTYPE_BTREE == index_info->indType || INDTYPE_GIST == index_info->indType || INDTYPE_GIN == index_info->indType);
 
 	IMDIndex::EmdindexType index_type = IMDIndex::EmdindBtree;
 	IMDId *mdid_item_type = NULL;
@@ -1393,6 +1398,11 @@ CTranslatorRelcacheToDXL::RetrievePartTableIndex
 	else if (INDTYPE_GIST == index_info->indType)
 	{
 		index_type = IMDIndex::EmdindGist;
+		 mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
+	}
+	else if (INDTYPE_GIN == index_info->indType)
+	{
+		index_type = IMDIndex::EmdindGin;
 		mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
 	}
 
@@ -3394,7 +3404,8 @@ CTranslatorRelcacheToDXL::IsIndexSupported
 	// index expressions and index constraints not supported
 	return gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&
 		gpdb::HeapAttIsNull(tup, Anum_pg_index_indpred) &&
-		(BTREE_AM_OID == index_rel->rd_rel->relam || BITMAP_AM_OID == index_rel->rd_rel->relam || GIST_AM_OID == index_rel->rd_rel->relam);
+		(BTREE_AM_OID == index_rel->rd_rel->relam || BITMAP_AM_OID == index_rel->rd_rel->relam || GIST_AM_OID == index_rel->rd_rel->relam ||
+		 	GIN_AM_OID == index_rel->rd_rel->relam);
 }
 
 //---------------------------------------------------------------------------

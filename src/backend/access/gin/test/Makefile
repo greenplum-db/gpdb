@@ -1,33 +1,32 @@
-root_dir=../../../../..
-cmockery_dir=$(root_dir)/src/test/unit/cmockery
-gpdb_include_dir=$(root_dir)/src/include/
-gin_dir=$(root_dir)/src/backend/access/gin
+# See README.md for notes on this Makefile
+
+top_builddir = ../../../../..
+subdir = src/backend/access/gin
+
+include $(top_builddir)/src/Makefile.global
+include $(top_srcdir)/src/Makefile.mock
 
 
+TARGETS += ginpostinglist
+
+
+.PHONY:
 clean:
-	rm -f ginpostinglist_test.o
+	@rm -f *.o *.t
+
+.PHONY:
+all: check
 
 
-install:
-	make -C $(gin_dir);
-	gcc -g ginpostinglist_test.c \
-		debugger.c \
+ginpostinglist.t: $(CMOCKERY_OBJS) $(top_srcdir)/$(subdir)/ginpostinglist.o
+	$(CC) $(CFLAGS) $(LDFLAGS) $(CPPFLAGS) \
+		$(CMOCKERY_OBJS) \
+		$(top_srcdir)/$(subdir)/ginpostinglist.o \
 		ginpostinglist_fakes.c \
-		$(cmockery_dir)/cmockery.c \
-		-Wall \
-		-I $(cmockery_dir) \
-		-I $(gpdb_include_dir) \
-		-I $(gin_dir)/test/ \
-		$(gin_dir)/ginpostinglist.o \
-		-o ginpostinglist_test.o
+		ginpostinglist_test.c \
+		-o ginpostinglist.t
 
 
-unittest-check: install
-	./ginpostinglist_test.o
-
-
-check: unittest-check
-
-
-debug: install
-	gdb --eval-command='run' ./ginpostinglist_test.o
+.PHONY:
+check: ginpostinglist.t
+	./ginpostinglist.t

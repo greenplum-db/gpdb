@@ -450,7 +450,7 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
 	snprintf(statusdir, sizeof(statusdir), "%s/pg_xlog/archive_status",
 			 basedir);
 
-	if (pg_mkdir_p(statusdir, S_IRWXU) != 0 && errno != EEXIST)
+	if (pg_mkdir_p(statusdir, S_IRWXU) != 0)
 	{
 		fprintf(stderr,
 				_("%s: could not create directory \"%s\": %s\n"),

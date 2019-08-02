@@ -1,8 +1,4 @@
-
-################################################################################ 
-# Makefile  Makefile for Python Modules and other utilities
-# Copyright Greenplum 2006-2011
-################################################################################
+# gpMgmt/bin/Makefile
 
 default: install
 
@@ -10,6 +6,36 @@ top_builddir=../..
 ifneq "$(wildcard $(top_builddir)/src/Makefile.global)" ""
 include $(top_builddir)/src/Makefile.global
 endif
+
+SUBDIRS= stream gpcheckcat_modules gpconfig_modules gpssh_modules gppylib lib
+
+$(recurse)
+
+PROGRAMS= analyzedb gpactivatestandby gpaddmirrors gpcheckcat gpcheckperf \
+	gpcheckresgroupimpl gpconfig gpdeletesystem gpexpand gpinitstandby \
+	gpinitsystem gpload gpload.py gplogfilter gpmovemirrors \
+	gppkg gprecoverseg gpreload gpscp gpsd gpssh gpssh-exkeys gpstart \
+	gpstate gpstop gpsys1 minirepro postgresql_conf_gp_additions
+
+installdirs:
+	$(MKDIR_P) '$(DESTDIR)$(bindir)/lib'
+
+installprograms: installdirs
+	for file in $(PROGRAMS); do \
+		$(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)/'$$file ; \
+		$(PERL) $(top_builddir)/putversion '$(DESTDIR)$(bindir)/'$$file ; \
+	done
+	# Symlink gpcheckcat from bin to bin/lib to maintain backward compatibility
+	if [ ! -L $(DESTDIR)$(bindir)/lib/gpcheckcat  ]; then \
+		$(LN_S) $(DESTDIR)$(bindir)/gpcheckcat $(DESTDIR)$(bindir)/lib/gpcheckcat; \
+	fi
+	$(INSTALL_DATA) gpload.bat '$(DESTDIR)$(bindir)/gpload.bat'
+
+uninstall:
+	for file in $(PROGRAMS); do \
+		rm -f '$(DESTDIR)$(bindir)/'$$file ; \
+	done
+	rm -f '$(DESTDIR)$(bindir)/gpload.bat'
 
 #
 # SOURCE DIRECTORIES
@@ -32,23 +58,14 @@ core: pygresql subprocess32
 	python gpconfig_modules/parse_guc_metadata.py $(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-install: core lockfile stream psutil
+install: installdirs installprograms core lockfile psutil
 else
-install: core stream
+install: installdirs installprograms core
 endif
 
 #
 # Python Libraries
 #
-
-#
-#  STREAM which is used by gpcheckperf for memory bandwidth testing.
-#
-STREAM_DIR=$(SRC)/src/stream
-stream:
-	@echo "--- stream"
-	cd $(STREAM_DIR) && NO_M64=TRUE $(CC) stream.c -o stream
-	cp $(STREAM_DIR)/stream $(SERVER_SRC)/lib/stream
 
 #
 # PyGreSQL
@@ -58,6 +75,10 @@ PYGRESQL_DIR=PyGreSQL-$(PYGRESQL_VERSION)
 
 pygresql:
 	@echo "--- PyGreSQL"
+	if [ ! -f $(DESTDIR)$(prefix)/greenplum_path.sh ]; then \
+		unset LIBPATH; \
+		./generate-greenplum-path.sh $(prefix) > $(DESTDIR)$(prefix)/greenplum_path.sh ; \
+	fi
 	. $(prefix)/greenplum_path.sh && unset PYTHONHOME && \
 	if [ "$(BLD_ARCH)" = 'aix7_ppc_64' ]; then \
 	    unset PYTHONPATH && cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" python_64 setup.py build; \
@@ -103,19 +124,6 @@ subprocess32:
 		  cd $(PYLIB_SRC)/subprocess32 && CC="$(CC)" python setup.py build; \
 		  cp -f $(PYLIB_SRC)/subprocess32/build/lib.*/* $(PYLIB_DIR)/;  \
 	  fi
-
-#
-# PSI
-PSI_DIR=PSI-$(PSI_VERSION)
-
- psi:
-	@echo "--- psi"
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 )" ""
-	cd $(PYLIB_SRC)/ && $(TAR) xzf $(PSI_DIR).tar.gz
-	cd $(PYLIB_SRC)/$(PSI_DIR)/ && CC="$(CC)" python setup.py build
-	cp -r $(PYLIB_SRC)/$(PSI_DIR)/build/lib.*/psi $(PYLIB_DIR)
-endif
-
 
 #
 # PSUTIL
@@ -222,8 +230,10 @@ clean distclean:
 	rm -rf $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/subprocess32/build
-	rm -rf $(STREAM_DIR)/stream lib/stream
-	rm -rf *.pyc lib/*.pyc
-	rm -f gpcheckcatc gpexpandc
+	rm -rf *.pyc
+	rm -f analyzedbc gpactivatestandbyc gpaddmirrorsc gpcheckcatc \
+		  gpcheckperfc gpcheckresgroupimplc gpchecksubnetcfgc gpconfigc \
+		  gpdeletesystemc gpexpandc gpinitstandbyc gplogfilterc gpmovemirrorsc \
+		  gppkgc gprecoversegc gpreloadc gpscpc gpsdc gpssh-exkeysc gpsshc \
+		  gpstartc gpstatec gpstopc gpsys1c minireproc
 	rm -f gpconfig_modules/gucs_disallowed_in_file.txt
-	rm -f gppylib/data/$(GP_MAJORVERSION).json

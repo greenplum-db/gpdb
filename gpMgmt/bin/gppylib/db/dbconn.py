@@ -197,6 +197,11 @@ def connect(dburl, utility=False, verbose=False,
         retries = 1
 
     options = []
+
+    # unset search path due to CVE-2018-1058
+    if unsetSearchPath:
+        options.append("-c search_path=")
+
     #by default, libpq will print WARNINGS to stdout
     if not verbose:
         options.append("-c CLIENT_MIN_MESSAGES=ERROR")
@@ -227,11 +232,6 @@ def connect(dburl, utility=False, verbose=False,
 
     # NOTE: the code to set ALWAYS_SECURE_SEARCH_PATH_SQL below assumes it is not part of an existing transaction
     conn = pgdb.pgdbCnx(cnx)
-
-    # unset search path due to CVE-2018-1058
-    if unsetSearchPath:
-        ALWAYS_SECURE_SEARCH_PATH_SQL = "SELECT pg_catalog.set_config('search_path', '', false)"
-        execSQL(conn, ALWAYS_SECURE_SEARCH_PATH_SQL).close()
 
     def __enter__(self):
         return self

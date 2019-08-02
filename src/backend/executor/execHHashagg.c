@@ -190,14 +190,20 @@ calc_hash_value(AggState* aggstate, TupleTableSlot *inputslot)
  */
 static inline void
 adjustInputGroup(AggState *aggstate, 
-				 void *input_group)
+				 void *input_group,
+				 bool temporary)
 {
 	int32 tuple_size;
 	void *datum;
 	AggStatePerGroup pergroup;
 	AggStatePerAgg peragg = aggstate->peragg;
 	int aggno;
-	
+	Size datum_size;
+	int16 byteaTranstypeLen = 0;
+	bool byteaTranstypeByVal = 0;
+	/* INTERNAL aggtype is always set to BYTEA in cdbgrouping and upstream partial-aggregation */
+	get_typlenbyval(BYTEAOID, &byteaTranstypeLen, &byteaTranstypeByVal);
+
 	tuple_size = memtuple_get_size((MemTuple)input_group);
 	pergroup = (AggStatePerGroup) ((char *)input_group +
 								   MAXALIGN(tuple_size));
@@ -209,11 +215,48 @@ adjustInputGroup(AggState *aggstate,
 	{
 		AggStatePerAgg peraggstate = &peragg[aggno];
 		AggStatePerGroup pergroupstate = &pergroup[aggno];
-		
-		if (!peraggstate->transtypeByVal &&
-			!pergroupstate->transValueIsNull)
+
+		/* Skip null transValue */
+		if (pergroupstate->transValueIsNull)
+			continue;
+
+		/* Deserialize the aggregate states loaded from the spill file */
+		if (OidIsValid(peraggstate->deserialfn_oid))
 		{
-			Size datum_size;
+			FunctionCallInfoData _dsinfo;
+			FunctionCallInfo dsinfo = &_dsinfo;
+			MemoryContext oldContext;
+
+			InitFunctionCallInfoData(_dsinfo,
+									 &peraggstate->deserialfn,
+									 2,
+									 InvalidOid,
+									 (void *) aggstate, NULL);
+
+			dsinfo->arg[0] = PointerGetDatum(datum);
+			dsinfo->argnull[0] = pergroupstate->transValueIsNull;
+			/* Dummy second argument for type-safety reasons */
+			dsinfo->arg[1] = PointerGetDatum(NULL);
+			dsinfo->argnull[1] = false;
+
+			/*
+			 * We run the deserialization functions in per-input-tuple
+			 * memory context if it's safe to be dropped after.
+			 */
+			if (temporary)
+				oldContext = MemoryContextSwitchTo(aggstate->tmpcontext->ecxt_per_tuple_memory);
+
+			pergroupstate->transValue = FunctionCallInvoke(dsinfo);
+
+			if (temporary)
+				MemoryContextSwitchTo(oldContext);
+
+			datum_size = datumGetSize(PointerGetDatum(datum), byteaTranstypeByVal, byteaTranstypeLen);
+			Assert(MAXALIGN(datum_size) - datum_size <= MAXIMUM_ALIGNOF);
+			datum = (char *)datum + MAXALIGN(datum_size);
+		}
+		else if (!peraggstate->transtypeByVal)
+		{
 			pergroupstate->transValue = PointerGetDatum(datum);
 			datum_size = datumGetSize(pergroupstate->transValue,
 									  peraggstate->transtypeByVal,
@@ -271,7 +314,7 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 
 	tup_len = 0;
 	aggs_len = aggstate->numaggs * sizeof(AggStatePerGroupData);
-	
+
 	oldcxt = MemoryContextSwitchTo(hashtable->entry_cxt);
 
 	entry = getEmptyHashAggEntry(aggstate);
@@ -297,7 +340,10 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 
 	if (GET_TOTAL_USED_SIZE(hashtable) + MAXALIGN(MAXALIGN(tup_len) + aggs_len) >=
 		hashtable->max_mem)
+	{
+		MemoryContextSwitchTo(oldcxt);
 		return NULL;
+	}
 
 	/*
 	 * Form memtuple into group_buf.
@@ -348,8 +394,12 @@ makeHashAggEntryForGroup(AggState *aggstate, void *tuple_and_aggs,
 	copy_tuple_and_aggs = mpool_alloc(hashtable->group_buf, input_size);
 	memcpy(copy_tuple_and_aggs, tuple_and_aggs, input_size);
 
-	oldcxt = MemoryContextSwitchTo(hashtable->entry_cxt);
-	
+	/*
+	 * The deserialized transValues are not in mpool, put them
+	 * in a separate context and reset with mpool_reset
+	 */
+	oldcxt = MemoryContextSwitchTo(hashtable->serialization_cxt);
+
 	entry = getEmptyHashAggEntry(aggstate);
 	entry->hashvalue = hashvalue;
 	entry->is_primodial = !(hashtable->is_spilling);
@@ -357,7 +407,7 @@ makeHashAggEntryForGroup(AggState *aggstate, void *tuple_and_aggs,
 	entry->next = NULL;
 
 	/* Initialize per group data */
-	adjustInputGroup(aggstate, entry->tuple_and_aggs);
+	adjustInputGroup(aggstate, entry->tuple_and_aggs, false);
 
 	MemoryContextSwitchTo(oldcxt);
 
@@ -762,6 +812,12 @@ create_agg_hash_table(AggState *aggstate)
 
 	hashtable->entry_cxt = AllocSetContextCreate(aggstate->aggcontext, 
 												 "HashAggTableEntryContext",
+												 ALLOCSET_DEFAULT_MINSIZE,
+												 ALLOCSET_DEFAULT_INITSIZE,
+												 ALLOCSET_DEFAULT_MAXSIZE);
+
+	hashtable->serialization_cxt = AllocSetContextCreate(hashtable->entry_cxt,
+												 "HashAggTableEntrySerializationlContext",
 												 ALLOCSET_DEFAULT_MINSIZE,
 												 ALLOCSET_DEFAULT_INITSIZE,
 												 ALLOCSET_DEFAULT_MAXSIZE);
@@ -1361,6 +1417,9 @@ spill_hash_table(AggState *aggstate)
 	/* Reset the buffer */
 	mpool_reset(hashtable->group_buf);
 
+	/* Reset serialization context */
+	MemoryContextReset(hashtable->serialization_cxt);
+
 	/* Reset in-memory entries count */
 	hashtable->num_entries = 0;
 
@@ -1484,6 +1543,13 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 	AggStatePerGroup pergroup;
 	int aggno;
 	AggStatePerAgg peragg = aggstate->peragg;
+	int32 aggstateSize = 0;
+	Size datum_size;
+	Datum serializedVal;
+	int16 byteaTranstypeLen = 0;
+	bool byteaTranstypeByVal = 0;
+	/* INTERNAL aggtype is always set to BYTEA in cdbgrouping and upstream partial-aggregation */
+	get_typlenbyval(BYTEAOID, &byteaTranstypeLen, &byteaTranstypeByVal);
 
 	Assert(file_info != NULL);
 	Assert(file_info->wfile != NULL);
@@ -1496,21 +1562,6 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 		aggstate->numaggs * sizeof(AggStatePerGroupData);
 	total_size = MAXALIGN(tuple_agg_size);
 
-	for (aggno = 0; aggno < aggstate->numaggs; aggno++)
-	{
-		AggStatePerAgg peraggstate = &peragg[aggno];
-		AggStatePerGroup pergroupstate = &pergroup[aggno];
-		
-		if (!peraggstate->transtypeByVal &&
-			!pergroupstate->transValueIsNull)
-		{
-			Size datum_size = datumGetSize(pergroupstate->transValue,
-										   peraggstate->transtypeByVal,
-										   peraggstate->transtypeLen);
-			total_size += MAXALIGN(datum_size);
-		}
-	}
-
 	BufFileWriteOrError(file_info->wfile, (char *) &total_size, sizeof(total_size));
 	BufFileWriteOrError(file_info->wfile, entry->tuple_and_aggs, tuple_agg_size);
 	Assert(MAXALIGN(tuple_agg_size) - tuple_agg_size <= MAXIMUM_ALIGNOF);
@@ -1519,26 +1570,87 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 		BufFileWriteOrError(file_info->wfile, padding_dummy, MAXALIGN(tuple_agg_size) - tuple_agg_size);
 	}
 
+	/* Write the transition aggstates */
 	for (aggno = 0; aggno < aggstate->numaggs; aggno++)
 	{
 		AggStatePerAgg peraggstate = &peragg[aggno];
 		AggStatePerGroup pergroupstate = &pergroup[aggno];
-		
-		if (!peraggstate->transtypeByVal &&
-			!pergroupstate->transValueIsNull)
+
+		/* Skip null transValue */
+		if (pergroupstate->transValueIsNull)
+			continue;
+
+		/*
+		 * If it has a serialization function, serialize it without checking
+		 * transtypeByVal since it's INTERNALOID, a pointer but set to byVal.
+		 */
+		if (OidIsValid(peraggstate->serialfn_oid))
 		{
-			Size datum_size = datumGetSize(pergroupstate->transValue,
-										   peraggstate->transtypeByVal,
-										   peraggstate->transtypeLen);
+			FunctionCallInfoData fcinfo;
+			MemoryContext old_ctx;
+
+			InitFunctionCallInfoData(fcinfo,
+									 &peraggstate->serialfn,
+									 1,
+									 InvalidOid,
+									 (void *) aggstate, NULL);
+
+			fcinfo.arg[0] = pergroupstate->transValue;
+			fcinfo.argnull[0] = pergroupstate->transValueIsNull;
+
+			/* Not necessary to do this if the serialization func has no memory leak */
+			old_ctx = MemoryContextSwitchTo(aggstate->hhashtable->serialization_cxt);
+
+			serializedVal = FunctionCallInvoke(&fcinfo);
+
+			datum_size = datumGetSize(serializedVal, byteaTranstypeByVal, byteaTranstypeLen);
+			BufFileWriteOrError(file_info->wfile,
+								DatumGetPointer(serializedVal), datum_size);
+			pfree(DatumGetPointer(serializedVal));
+
+			MemoryContextSwitchTo(old_ctx);
+		}
+		/* If it's a ByRef, write the data to the file */
+		else if (!peraggstate->transtypeByVal)
+		{
+			datum_size = datumGetSize(pergroupstate->transValue,
+									  peraggstate->transtypeByVal,
+									  peraggstate->transtypeLen);
 			BufFileWriteOrError(file_info->wfile,
 								DatumGetPointer(pergroupstate->transValue), datum_size);
-			Assert(MAXALIGN(datum_size) - datum_size <= MAXIMUM_ALIGNOF);
-			if (MAXALIGN(datum_size) - datum_size > 0)
-			{
-				BufFileWriteOrError(file_info->wfile,
-									 padding_dummy, MAXALIGN(datum_size) - datum_size);
-			}
 		}
+		/* Otherwise it's a real ByVal, do nothing */
+		else
+		{
+			continue;
+		}
+
+		Assert(MAXALIGN(datum_size) - datum_size <= MAXIMUM_ALIGNOF);
+		if (MAXALIGN(datum_size) - datum_size > 0)
+		{
+			BufFileWriteOrError(file_info->wfile,
+								padding_dummy, MAXALIGN(datum_size) - datum_size);
+		}
+		aggstateSize += MAXALIGN(datum_size);
+	}
+
+	if (aggstateSize)
+	{
+		total_size += aggstateSize;
+
+		/* Rewind to write the correct total_size */
+		if (BufFileSeek(file_info->wfile, 0, -(aggstateSize + MAXALIGN(tuple_agg_size) + sizeof(total_size)), SEEK_CUR) != 0)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not seek in hash agg temporary file: %m")));
+
+		BufFileWriteOrError(file_info->wfile, (char *) &total_size, sizeof(total_size));
+
+		/* Go back to the last offset */
+		if (BufFileSeek(file_info->wfile, 0, aggstateSize + MAXALIGN(tuple_agg_size), SEEK_CUR) != 0)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not seek in hash agg temporary file: %m")));
 	}
 
 	return (total_size + sizeof(total_size) + sizeof(entry->hashvalue));
@@ -1808,6 +1920,7 @@ agg_hash_reload(AggState *aggstate)
 										  hashkey, &isNew);
 		}
 
+		/* Combine it to the group state if it's not a new entry */
 		if (!isNew)
 		{
 			int aggno;
@@ -1816,7 +1929,12 @@ agg_hash_reload(AggState *aggstate)
 
 			setGroupAggs(hashtable, entry);
 
-			adjustInputGroup(aggstate, input);
+			/*
+			 * Adjust the input in the per tuple memory context, since the
+			 * value will be combined to the group state, we don't need the
+			 * keep the memory storing the transValue.
+			 */
+			adjustInputGroup(aggstate, input, true);
 			
 			/* Advance the aggregates for the group by applying combine function. */
 			for (aggno = 0; aggno < aggstate->numaggs; aggno++)
@@ -1829,6 +1947,7 @@ agg_hash_reload(AggState *aggstate)
 				fcinfo.arg[1] = input_pergroupstate[aggno].transValue;
 				fcinfo.argnull[1] = input_pergroupstate[aggno].transValueIsNull;
 
+				/* Combine to the transition aggstate */
 				pergroupstate->transValue =
 					invoke_agg_trans_func(aggstate,
 										  peraggstate,
@@ -2218,6 +2337,8 @@ void reset_agg_hash_table(AggState *aggstate, int64 nentries)
 	hashtable->pshift = 0;
 
 	mpool_reset(hashtable->group_buf);
+
+	MemoryContextReset(hashtable->serialization_cxt);
 
 	init_agg_hash_iter(hashtable);
 

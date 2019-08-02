@@ -2,13 +2,10 @@
 #include <stddef.h>
 #include <setjmp.h>
 #include <stdlib.h>
-
-
 #include "cmockery.h"
-#include "debugger.h"
-
 
 #include "postgres.h"
+
 #include "access/gin_private.h"
 
 

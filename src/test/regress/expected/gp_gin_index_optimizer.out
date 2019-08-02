@@ -1,0 +1,727 @@
+CREATE INDEX jidx ON testjsonb USING gin (j);
+SET optimizer_enable_tablescan = off;
+SET enable_seqscan = off;
+set enable_bitmapscan = on;
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"wait":null}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"wait": null}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"wait": null}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"wait":"CC"}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"wait": "CC"}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"wait": "CC"}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"wait":"CC", "public":true}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"wait": "CC", "public": true}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"wait": "CC", "public": true}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"age":25}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"age": 25}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"age": 25}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"age":25.0}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"age": 25.0}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"age": 25.0}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"array":["foo"]}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"array": ["foo"]}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"array": ["foo"]}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"array":["bar"]}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"array": ["bar"]}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"array": ["bar"]}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"wait":null}';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"wait":"CC"}';
+ count 
+-------
+    15
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"wait":"CC", "public":true}';
+ count 
+-------
+     2
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"age":25}';
+ count 
+-------
+     2
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"age":25.0}';
+ count 
+-------
+     2
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"array":["foo"]}';
+ count 
+-------
+     3
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"array":["bar"]}';
+ count 
+-------
+     3
+(1 row)
+
+-- exercise GIN_SEARCH_MODE_ALL
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j ? 'public';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j ? 'public'::text)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j ? 'public'::text)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j ? 'bar';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j ? 'bar'::text)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j ? 'bar'::text)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j ?| ARRAY['public','disabled'];
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j ?| '{public,disabled}'::text[])
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j ?| '{public,disabled}'::text[])
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j ?& ARRAY['public','disabled'];
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j ?& '{public,disabled}'::text[])
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j ?& '{public,disabled}'::text[])
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{}';
+ count 
+-------
+  1012
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j ? 'public';
+ count 
+-------
+   194
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j ? 'bar';
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j ?| ARRAY['public','disabled'];
+ count 
+-------
+   337
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j ?& ARRAY['public','disabled'];
+ count 
+-------
+    42
+(1 row)
+
+-- array exists - array elements should behave as keys (for GIN index scans too)
+CREATE INDEX jidx_array ON testjsonb USING gin((j->'array'));
+-- gin index on expression not support for orca
+EXPLAIN SELECT count(*) from testjsonb  WHERE j->'array' ? 'bar';
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Aggregate  (cost=400.09..400.10 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=400.03..400.08 rows=1 width=8)
+         ->  Aggregate  (cost=400.03..400.04 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=300.01..400.03 rows=1 width=0)
+                     Recheck Cond: ((j -> 'array'::text) ? 'bar'::text)
+                     ->  Bitmap Index Scan on jidx_array  (cost=0.00..300.01 rows=1 width=0)
+                           Index Cond: ((j -> 'array'::text) ? 'bar'::text)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+SELECT count(*) from testjsonb  WHERE j->'array' ? 'bar';
+ count 
+-------
+     3
+(1 row)
+
+-- type sensitive array exists - should return no rows (since "exists" only
+-- matches strings that are either object keys or array elements)
+-- gin index on expression not support for orca
+EXPLAIN SELECT count(*) from testjsonb  WHERE j->'array' ? '5'::text;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Aggregate  (cost=400.09..400.10 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=400.03..400.08 rows=1 width=8)
+         ->  Aggregate  (cost=400.03..400.04 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=300.01..400.03 rows=1 width=0)
+                     Recheck Cond: ((j -> 'array'::text) ? '5'::text)
+                     ->  Bitmap Index Scan on jidx_array  (cost=0.00..300.01 rows=1 width=0)
+                           Index Cond: ((j -> 'array'::text) ? '5'::text)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+SELECT count(*) from testjsonb  WHERE j->'array' ? '5'::text;
+ count 
+-------
+     0
+(1 row)
+
+-- However, a raw scalar is *contained* within the array
+EXPLAIN SELECT count(*) from testjsonb  WHERE j->'array' @> '5'::jsonb;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Aggregate  (cost=400.09..400.10 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=400.03..400.08 rows=1 width=8)
+         ->  Aggregate  (cost=400.03..400.04 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=300.01..400.03 rows=1 width=0)
+                     Recheck Cond: ((j -> 'array'::text) @> '5'::jsonb)
+                     ->  Bitmap Index Scan on jidx_array  (cost=0.00..300.01 rows=1 width=0)
+                           Index Cond: ((j -> 'array'::text) @> '5'::jsonb)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+SELECT count(*) from testjsonb  WHERE j->'array' @> '5'::jsonb;
+ count 
+-------
+     1
+(1 row)
+
+DROP INDEX jidx_array;
+--gin path opclass
+DROP INDEX jidx;
+CREATE INDEX jidx ON testjsonb USING gin (j jsonb_path_ops);
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"wait":null}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"wait": null}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"wait": null}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"wait":"CC"}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"wait": "CC"}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"wait": "CC"}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"wait":"CC", "public":true}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"wait": "CC", "public": true}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"wait": "CC", "public": true}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"age":25}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"age": 25}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"age": 25}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{"age":25.0}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{"age": 25.0}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{"age": 25.0}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"wait":null}';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"wait":"CC"}';
+ count 
+-------
+    15
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"wait":"CC", "public":true}';
+ count 
+-------
+     2
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"age":25}';
+ count 
+-------
+     2
+(1 row)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{"age":25.0}';
+ count 
+-------
+     2
+(1 row)
+
+-- exercise GIN_SEARCH_MODE_ALL
+EXPLAIN SELECT count(*) FROM testjsonb WHERE j @> '{}';
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33665.68 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..33665.68 rows=1 width=8)
+               ->  Bitmap Heap Scan on testjsonb  (cost=0.00..33665.68 rows=135 width=1)
+                     Recheck Cond: (j @> '{}'::jsonb)
+                     ->  Bitmap Index Scan on jidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (j @> '{}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+SELECT count(*) FROM testjsonb WHERE j @> '{}';
+ count 
+-------
+  1012
+(1 row)
+
+DROP INDEX jidx;
+-- check some corner cases for indexed nested containment (bug #13756)
+create temp table nestjsonb (j jsonb);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'j' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into nestjsonb (j) values ('{"a":[["b",{"x":1}],["b",{"x":2}]],"c":3}');
+insert into nestjsonb (j) values ('[[14,2,3]]');
+insert into nestjsonb (j) values ('[1,[14,2,3]]');
+create index on nestjsonb using gin(j jsonb_path_ops);
+explain select * from nestjsonb where j @> '{"a":[[{"x":2}]]}'::jsonb;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..68.14 rows=1 width=125)
+   ->  Bitmap Heap Scan on nestjsonb  (cost=0.00..68.14 rows=1 width=125)
+         Recheck Cond: (j @> '{"a": [[{"x": 2}]]}'::jsonb)
+         ->  Bitmap Index Scan on nestjsonb_j_idx  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (j @> '{"a": [[{"x": 2}]]}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(6 rows)
+
+explain select * from nestjsonb where j @> '{"c":3}';
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..68.14 rows=1 width=125)
+   ->  Bitmap Heap Scan on nestjsonb  (cost=0.00..68.14 rows=1 width=125)
+         Recheck Cond: (j @> '{"c": 3}'::jsonb)
+         ->  Bitmap Index Scan on nestjsonb_j_idx  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (j @> '{"c": 3}'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(6 rows)
+
+explain select * from nestjsonb where j @> '[[14]]';
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..68.14 rows=1 width=125)
+   ->  Bitmap Heap Scan on nestjsonb  (cost=0.00..68.14 rows=1 width=125)
+         Recheck Cond: (j @> '[[14]]'::jsonb)
+         ->  Bitmap Index Scan on nestjsonb_j_idx  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (j @> '[[14]]'::jsonb)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(6 rows)
+
+select * from nestjsonb where j @> '{"a":[[{"x":2}]]}'::jsonb;
+                         j                         
+---------------------------------------------------
+ {"a": [["b", {"x": 1}], ["b", {"x": 2}]], "c": 3}
+(1 row)
+
+select * from nestjsonb where j @> '{"c":3}';
+                         j                         
+---------------------------------------------------
+ {"a": [["b", {"x": 1}], ["b", {"x": 2}]], "c": 3}
+(1 row)
+
+select * from nestjsonb where j @> '[[14]]';
+        j        
+-----------------
+ [[14, 2, 3]]
+ [1, [14, 2, 3]]
+(2 rows)
+
+CREATE INDEX wowidx ON test_tsvector USING gin (a);
+-- GIN only supports bitmapscan, so no need to test plain indexscan
+explain (costs off) SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Aggregate
+               ->  Bitmap Heap Scan on test_tsvector
+                     Recheck Cond: (a @@ '''wr'' | ''qh'''::tsquery)
+                     ->  Bitmap Index Scan on wowidx
+                           Index Cond: (a @@ '''wr'' | ''qh'''::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16899.26 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=0.00..16899.26 rows=68 width=1)
+                     Recheck Cond: (a @@ '''wr'' | ''qh'''::tsquery)
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (a @@ '''wr'' | ''qh'''::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ 'wr&qh';
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16899.26 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=0.00..16899.26 rows=68 width=1)
+                     Recheck Cond: (a @@ '''wr'' & ''qh'''::tsquery)
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (a @@ '''wr'' & ''qh'''::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ 'eq&yt';
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16899.26 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=0.00..16899.26 rows=68 width=1)
+                     Recheck Cond: (a @@ '''eq'' & ''yt'''::tsquery)
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (a @@ '''eq'' & ''yt'''::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ 'eq|yt';
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16899.26 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=0.00..16899.26 rows=68 width=1)
+                     Recheck Cond: (a @@ '''eq'' | ''yt'''::tsquery)
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (a @@ '''eq'' | ''yt'''::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ '(eq&yt)|(wr&qh)';
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16899.26 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=0.00..16899.26 rows=68 width=1)
+                     Recheck Cond: (a @@ '''eq'' & ''yt'' | ''wr'' & ''qh'''::tsquery)
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (a @@ '''eq'' & ''yt'' | ''wr'' & ''qh'''::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ '(eq|yt)&(wr|qh)';
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16899.26 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=0.00..16899.26 rows=68 width=1)
+                     Recheck Cond: (a @@ '( ''eq'' | ''yt'' ) & ( ''wr'' | ''qh'' )'::tsquery)
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (a @@ '( ''eq'' | ''yt'' ) & ( ''wr'' | ''qh'' )'::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ 'w:*|q:*';
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16899.26 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=0.00..16899.26 rows=68 width=1)
+                     Recheck Cond: (a @@ '''w'':* | ''q'':*'::tsquery)
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (a @@ '''w'':* | ''q'':*'::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+-- For orca, ScalarArrayOpExpr condition on index scan not supported
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ any ('{wr,qh}');
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Aggregate  (cost=609.71..609.72 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=609.64..609.69 rows=1 width=8)
+         ->  Aggregate  (cost=609.64..609.65 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=601.24..609.24 rows=54 width=0)
+                     Recheck Cond: (a @@ ANY ('{''wr'',''qh''}'::tsquery[]))
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..601.20 rows=54 width=0)
+                           Index Cond: (a @@ ANY ('{''wr'',''qh''}'::tsquery[]))
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ 'no_such_lexeme';
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16899.26 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=0.00..16899.26 rows=68 width=1)
+                     Recheck Cond: (a @@ '''no_such_lexeme'''::tsquery)
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (a @@ '''no_such_lexeme'''::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+EXPLAIN SELECT count(*) FROM test_tsvector WHERE a @@ '!no_such_lexeme';
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..16899.26 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..16899.26 rows=1 width=8)
+               ->  Bitmap Heap Scan on test_tsvector  (cost=0.00..16899.26 rows=68 width=1)
+                     Recheck Cond: (a @@ '!''no_such_lexeme'''::tsquery)
+                     ->  Bitmap Index Scan on wowidx  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: (a @@ '!''no_such_lexeme'''::tsquery)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(8 rows)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+ count 
+-------
+   158
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'wr&qh';
+ count 
+-------
+    17
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'eq&yt';
+ count 
+-------
+     6
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'eq|yt';
+ count 
+-------
+    98
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '(eq&yt)|(wr&qh)';
+ count 
+-------
+    23
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '(eq|yt)&(wr|qh)';
+ count 
+-------
+    39
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'w:*|q:*';
+ count 
+-------
+   494
+(1 row)
+
+-- For orca, ScalarArrayOpExpr condition on index scan not supported
+SELECT count(*) FROM test_tsvector WHERE a @@ any ('{wr,qh}');
+ count 
+-------
+   158
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'no_such_lexeme';
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!no_such_lexeme';
+ count 
+-------
+   508
+(1 row)
+
+DROP INDEX wowidx;
+-- GIN index on complex array
+CREATE TABLE complex_array_table (complex_arr complex[]);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'complex_arr' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX ON complex_array_table USING gin (complex_arr);
+INSERT INTO complex_array_table VALUES (ARRAY[COMPLEX(1,3), COMPLEX(5,7)]);
+INSERT INTO complex_array_table VALUES (ARRAY[COMPLEX(2,4), COMPLEX(6,8)]);
+EXPLAIN SELECT * FROM complex_array_table WHERE complex_arr @> ARRAY[COMPLEX(2,4)];
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..68.13 rows=1 width=53)
+   ->  Bitmap Heap Scan on complex_array_table  (cost=0.00..68.13 rows=1 width=53)
+         Recheck Cond: (complex_arr @> '{"2 + 4i"}'::complex[])
+         ->  Bitmap Index Scan on complex_array_table_complex_arr_idx  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (complex_arr @> '{"2 + 4i"}'::complex[])
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(6 rows)
+
+SELECT * FROM complex_array_table WHERE complex_arr @> ARRAY[COMPLEX(2,4)];
+     complex_arr     
+---------------------
+ {"2 + 4i","6 + 8i"}
+(1 row)
+
+-- with orca bitmap table scan off and table scan off, orca should fallback to
+-- planner to use bitmap index scan, as btree index plans are not supported with gin
+set optimizer_enable_tablescan=off;
+EXPLAIN SELECT * FROM complex_array_table WHERE complex_arr @> ARRAY[COMPLEX(2,4)];
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..68.13 rows=1 width=53)
+   ->  Bitmap Heap Scan on complex_array_table  (cost=0.00..68.13 rows=1 width=53)
+         Recheck Cond: (complex_arr @> '{"2 + 4i"}'::complex[])
+         ->  Bitmap Index Scan on complex_array_table_complex_arr_idx  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (complex_arr @> '{"2 + 4i"}'::complex[])
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.58.1
+(6 rows)
+
+DROP TABLE complex_array_table;
+RESET enable_seqscan;
+RESET enable_bitmapscan;
+RESET optimizer_enable_tablescan;

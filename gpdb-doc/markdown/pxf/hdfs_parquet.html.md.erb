@@ -48,9 +48,13 @@ To read and write Parquet primitive data types in Greenplum Database, map Parque
 | float | Real |
 | int\_8, int\_16 | Smallint, Integer |
 | int64 | Bigint |
-| int96 | Timestamp |
+| int96 | Timestamp, Timestamptz |
 
-**Note**: When writing to Parquet, PXF localizes a `timestamp` to the current system timezone and converts it to universal time (UT) before finally converting to `int96`.
+<div class="note">When writing to Parquet:
+<ul>
+  <li>PXF localizes a <code>timestamp</code> to the current system timezone and converts it to universal time (UTC) before finally converting to <code>int96</code>.</li>
+  <li>PXF converts a <code>timestamptz</code> to a UTC <code>timestamp</code> and then converts to <code>int96</code>. PXF loses the time zone information during this conversion.</li>
+</ul></div>
 
 
 ## <a id="profile_cet"></a>Creating the External Table

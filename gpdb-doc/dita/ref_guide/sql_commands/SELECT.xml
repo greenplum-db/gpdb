@@ -20,7 +20,7 @@ SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
   [LIMIT {<varname>count</varname> | ALL}]
   [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
   [FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY]
-  [FOR {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]
+  [FOR<sup>2</sup> {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]
 
 TABLE { [ ONLY ] <varname>table_name</varname> [ * ] | <varname>with_query_name</varname> }
 </codeblock>
@@ -60,7 +60,12 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
   UNBOUNDED FOLLOWING
 </codeblock></p>
       <p><b>Note:</b>
-        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is A Beta feature.</p>
+        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</p>
+      <p>
+        <sup>2</sup>When a locking clause is specified (the <codeph>FOR</codeph> clause), the Global
+        Deadlock Detector affects how table rows are locked. See item <xref href="#topic1/eg138885"
+          format="dita">12</xref> in Description and see "The Locking Clause" later in this section.
+      </p>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -106,12 +111,16 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
           are sorted in the specified order. If <codeph>ORDER BY</codeph> is not given, the rows are
           returned in whatever order the system finds fastest to produce.</li>
         <li id="eg138878">If the <codeph>LIMIT</codeph> (or <codeph>FETCH FIRST</codeph>) or
-            <codeph>OFFSET</codeph> clause is specified, the <codeph>SELECT</codeph> statement only
+            <codeph>OFFSET</codeph> clause is specified, the <codeph>SELECT</codeph> command only
           returns a subset of the result rows.</li>
-        <li id="eg138885">If <codeph>FOR UPDATE</codeph>, <codeph>FOR NO KEY UPDATE</codeph>,
-            <codeph>FOR SHARE</codeph>,  or <codeph>FOR KEY SHARE</codeph> is specified, the
-            <codeph>SELECT</codeph> statement locks the entire table against concurrent
-          updates.</li>
+        <li id="eg138885">If you specify a locking clause <codeph>FOR {UPDATE</codeph>|<codeph>NO
+            KEY UPDATE</codeph>|<codeph>SHARE</codeph>|<codeph>KEY SHARE}</codeph>, the
+            <codeph>SELECT</codeph> command locks the entire table against concurrent updates when
+          the Global Deadlock Detector is disabled (the default). When the Global Deadlock Detector
+          is enabled, it affects some simple <codeph>SELECT</codeph> statements that contain a
+          locking clause.<p>For information about using a <codeph>FOR</codeph> clause and the effect
+            of the Global Deadlock Detector, see "The Locking Clause" later in this
+          section.</p></li>
       </ol>
       <p>You must have <codeph>SELECT</codeph> privilege on each column used in a
           <codeph>SELECT</codeph> command. The use of <codeph>FOR NO KEY UPDATE</codeph>,
@@ -839,29 +848,45 @@ OFFSET <varname>start</varname></codeblock><p>where
       <sectiondiv id="section17"><b>The Locking Clause</b><p><codeph>FOR UPDATE</codeph>,
             <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR SHARE</codeph> and <codeph>FOR KEY
             SHARE</codeph> are <i>locking clauses</i>; they affect how <codeph>SELECT</codeph> locks
-          rows as they are obtained from the table.</p><p>The locking clause has the general
-          form</p><codeblock>FOR <varname>lock_strength</varname> [OF <varname>table_name</varname> [ , ... ] ] [ NOWAIT ]</codeblock><p>where
-            <varname>lock_strength</varname> can be one of<ul id="ol_m3x_p54_n3b">
-            <li><codeph>FOR UPDATE</codeph> - Locks the table with an <codeph>EXCLUSIVE</codeph>
+          rows as they are obtained from the table. The Global Deadlock Detector affects the locking
+          used by <codeph>SELECT</codeph> queries that contain a locking clause (<codeph>FOR
+              <varname>lock_strength</varname></codeph>). The Global Deadlock Detector is enabled by
+          setting the <xref href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
+            >gp_enable_global_deadlock_detector</xref> configuration parameter to
+            <codeph>on</codeph>. See <xref href="../../admin_guide/dml.xml#topic_gdd"> Global
+            Deadlock Detector</xref> in the <cite>Greenplum Database Administrator Guide</cite> for
+          information about the Global Deadlock Detector.</p><p>The locking clause has the general
+          form</p><codeblock>FOR <varname>lock_strength</varname> [OF <varname>table_name</varname> [ , ... ] ] [ NOWAIT ]</codeblock><p>The
+            <varname>lock_strength</varname> can be one of these values. <ul id="ol_m3x_p54_n3b">
+            <li><codeph>UPDATE</codeph> - Locks the table with an <codeph>EXCLUSIVE</codeph>
               lock.</li>
-            <li><codeph>FOR NO KEY UPDATE</codeph> - Locks the table with an
-                <codeph>EXCLUSIVE</codeph> lock.</li>
-            <li><codeph>FOR SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
+            <li><codeph>NO KEY UPDATE</codeph> - Locks the table with an <codeph>EXCLUSIVE</codeph>
               lock.</li>
-            <li><codeph>FOR KEY SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
+            <li><codeph>SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
               lock.</li>
-          </ul></p>
-        <note> By default, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables
-          for <codeph>DELETE</codeph> and <codeph>UPDATE</codeph> operations on heap tables. When
-          the Global Deadlock Detector is enabled the lock mode for <codeph>DELETE</codeph> and
-            <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. The
-          Global Deadlock Detector is enabled by setting the <xref
-            href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
-            >gp_enable_global_deadlock_detector</xref> configuration parameter to true. See <xref
-            href="../../admin_guide/dml.xml#topic_gdd"> Global Deadlock Detector</xref> in the
-            <cite>Greenplum Database Administrator Guide</cite> for information about the Global
-          Deadlock Detector.</note><p>For more information on each row-level lock mode, refer to
-            <xref href="https://www.postgresql.org/docs/9.4/explicit-locking.html" format="html"
+            <li><codeph>KEY SHARE</codeph> - Locks the table with a <codeph>ROW SHARE</codeph>
+              lock.</li>
+          </ul></p><p>When the Global Deadlock Detector is disabled (the default), Greenplum
+          Database uses the specified lock.</p><p>When the Global Deadlock Detector is enabled, a
+            <codeph>ROW SHARE</codeph> lock is used to lock the table for simple
+            <codeph>SELECT</codeph> queries that contain a locking clause, and the query plans
+          contain a <codeph>lockrows</codeph> node. Simple <codeph>SELECT</codeph> queries that
+          contain a locking clause fulfill all the following conditions: </p><ul id="ul_pf5_prm_43b">
+          <li>The locking clause is in the top level <codeph>SELECT</codeph> context.</li>
+          <li>The <codeph>FROM</codeph> clause contains a single table that is not a view or an
+            append optimized table.</li>
+          <li>The <codeph>SELECT</codeph> command does not contain a set operation such as
+              <codeph>UNION</codeph> or <codeph>INTERSECT</codeph>.</li>
+          <li>The <codeph>SELECT</codeph> command does not contain a sub-query.</li>
+        </ul><p>Otherwise, table locking for a <codeph>SELECT</codeph> query that contains a locking
+          clause behaves as if the Global Deadlock Detector is disabled.</p>
+        <note>The Global Deadlock Detector also affects the locking used by <codeph>DELETE</codeph>
+          and <codeph>UPDATE</codeph> operations. By default, Greenplum Database acquires an
+            <codeph>EXCLUSIVE</codeph> lock on tables for <codeph>DELETE</codeph> and
+            <codeph>UPDATE</codeph> operations on heap tables. When the Global Deadlock Detector is
+          enabled, the lock mode for <codeph>DELETE</codeph> and <codeph>UPDATE</codeph> operations
+          on heap tables is <codeph>ROW EXCLUSIVE</codeph>. </note><p>For more information on each
+          row-level lock mode, refer to <xref href="https://www.postgresql.org/docs/9.4/explicit-locking.html" format="html"
             scope="external">Explicit Locking</xref> in the PostgreSQL documentation.</p><p>To
           prevent the operation from waiting for other transactions to commit, use the
             <codeph>NOWAIT</codeph> option. With <codeph>NOWAIT</codeph>, the statement reports an

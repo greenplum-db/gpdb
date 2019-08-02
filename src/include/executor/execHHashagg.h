@@ -168,6 +168,9 @@ typedef struct HashAggTable
 	SpillFile *curr_spill_file;
 	int curr_spill_level;
 
+	/* The memory context for (de)serialization */
+	MemoryContext serialization_cxt;
+
 	/*
 	 * The space to buffer the free hash entries and AggStatePerGroups. Using this,
 	 * we can reduce palloc/pfree calls.

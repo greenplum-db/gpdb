@@ -9177,9 +9177,9 @@ RecoveryRestartPoint(const CheckPoint *checkPoint)
 	volatile XLogCtlData *xlogctl = XLogCtl;
 
 	/* Update the shared RedoRecPtr */
-	 SpinLockAcquire(&xlogctl->info_lck);
-	 xlogctl->Insert.RedoRecPtr = checkPoint->redo;
-	 SpinLockRelease(&xlogctl->info_lck);
+	SpinLockAcquire(&xlogctl->info_lck);
+	xlogctl->Insert.RedoRecPtr = checkPoint->redo;
+	SpinLockRelease(&xlogctl->info_lck);
 
 	/*
 	 * Also refrain from creating a restartpoint if we have seen any

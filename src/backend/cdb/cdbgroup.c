@@ -1988,7 +1988,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 	 * GroupClause node for the DQA argument.  This is where the sort operator
 	 * for the DQA argument is selected.
 	 */
-	 {
+	{
 		SortGroupClause *gc;
 		TargetEntry *tle;
 		Oid			dqaArg_orderingop;

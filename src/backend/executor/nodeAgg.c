@@ -560,8 +560,6 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup)
 			/* DISTINCT and/or ORDER BY case */
 			Assert(slot->PRIVATE_tts_nvalid == peraggstate->numInputs);
 
-			Assert(peraggstate->deserialfn_oid == InvalidOid);
-
 			/*
 			 * If the transfn is strict, we want to check for nullity before
 			 * storing the row in the sorter, to save space if there are a lot
@@ -613,7 +611,9 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup)
 			 * deserialfn_oid will be set if we must deserialize the input state
 			 * before calling the combine function
 			 */
-			if (OidIsValid(peraggstate->deserialfn_oid))
+			if (OidIsValid(peraggstate->deserialfn_oid) &&
+				(peraggstate->aggref->aggstage == AGGSTAGE_INTERMEDIATE ||
+				 peraggstate->aggref->aggstage == AGGSTAGE_FINAL))
 			{
 				Datum		serialized = fcinfo->arg[1];
 				bool		serializednull = fcinfo->argnull[1];
@@ -887,8 +887,6 @@ finalize_aggregate(AggState *aggstate,
 	{
 		int			numFinalArgs = peraggstate->numFinalArgs;
 
-		Assert(peraggstate->serialfn_oid == InvalidOid);
-
 		/* set up aggstate->curperagg for AggGetAggref() */
 		aggstate->curperagg = peraggstate;
 
@@ -927,7 +925,9 @@ finalize_aggregate(AggState *aggstate,
 	 * serialfn_oid will be set if we must serialize the transvalue before
 	 * returning it
 	 */
-	else if (OidIsValid(peraggstate->serialfn_oid))
+	else if (OidIsValid(peraggstate->serialfn_oid) &&
+			 (peraggstate->aggref->aggstage == AGGSTAGE_INTERMEDIATE ||
+			  peraggstate->aggref->aggstage == AGGSTAGE_PARTIAL))
 	{
 		/* Don't call a strict serialization function with NULL input. */
 		if (peraggstate->serialfn.fn_strict && pergroupstate->transValueIsNull)
@@ -2249,8 +2249,10 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			{
 				if (!OidIsValid(aggform->aggserialfn))
 					elog(ERROR, "serialfunc not provided for serialization aggregation");
-				peraggstate->serialfn_oid = aggform->aggserialfn;
 			}
+
+			if (OidIsValid(aggform->aggserialfn))
+				peraggstate->serialfn_oid = aggform->aggserialfn;
 
 			/* Likewise for deserialization functions */
 			if (aggref->aggstage == AGGSTAGE_INTERMEDIATE ||
@@ -2258,8 +2260,10 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			{
 				if (!OidIsValid(aggform->aggdeserialfn))
 					elog(ERROR, "deserialfunc not provided for deserialization aggregation");
-				peraggstate->deserialfn_oid = aggform->aggdeserialfn;
 			}
+
+			if (OidIsValid(aggform->aggdeserialfn))
+				peraggstate->deserialfn_oid = aggform->aggdeserialfn;
 		}
 
 		if (OidIsValid(peraggstate->serialfn_oid))

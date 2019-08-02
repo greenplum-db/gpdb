@@ -2422,7 +2422,7 @@ SubPlanFinderWalker(Plan *node,
 			ctx->bms_subplans = bms_add_member(ctx->bms_subplans, i);
 		else
 			return false;
-	 }
+	}
 
 	/* Continue walking */
 	return plan_tree_walker((Node*)node, SubPlanFinderWalker, ctx);

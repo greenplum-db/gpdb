@@ -4970,15 +4970,10 @@
   <topic id="gp_use_legacy_hashops">
     <title>gp_use_legacy_hashops</title>
     <body>
-      <draft-comment author="msk">DRAFT <xref
-          href="https://github.com/greenplum-db/gpdb/pull/6327/commits/e6ce8e2a" format="html"
-          scope="external">gpdb/pull/6327/commits/e6ce8e2a</xref><p><b>[Q:]</b> expand changes
-          hashmethod from 0 (modulo) to 1 (jump consistent) - What happens if GUC is
-        true?</p></draft-comment>
       <p>For a table that is defined with a <codeph>DISTRIBUTED BY
           <varname>key_column</varname></codeph> clause, this parameter controls the hash algorithm
         that is used to distribute table data among segment instances. The default value is
-          <codeph>false</codeph>, use the jump constant hash algorithm. </p>
+          <codeph>false</codeph>, use the jump consistent hash algorithm. </p>
       <p>Setting the value to <codeph>true</codeph> uses the modulo hash algorithm that is
         compatible with Greenplum Database 5.x and earlier releases.</p>
       <table id="gp_interconnect_fc_method_table">

@@ -1955,8 +1955,17 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 		{
 			long mem_wanted;
 
-			mem_wanted = (long) PolicyAutoStatementMemForNoSpillKB(stmt,
-							(uint64) (showstatctx->workmemwanted_max + 1024) / 1024L);
+			mem_wanted = (long) PolicyAutoStatementMemForNoSpill(stmt,
+							(uint64) showstatctx->workmemwanted_max);
+
+			/*
+			 * Round up to a kilobyte in case we end up requiring less than
+			 * that.
+			 */
+			if (mem_wanted <= 1024L)
+				mem_wanted = 1L;
+			else
+				mem_wanted = mem_wanted / 1024L;
 
 			if (es->format == EXPLAIN_FORMAT_TEXT)
 				appendStringInfo(es->str, "Memory wanted:  %ldkB\n", mem_wanted);

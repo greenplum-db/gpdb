@@ -1,9 +1,9 @@
 #!/bin/bash
 
-set -u -e -x
+set -eux
 
 main() {
-  tar czf "$dst_tarball" -C "$src_root" .
+  tar -czf "$dst_tarball" -C "$src_root" .
 }
 
 main "$@"
