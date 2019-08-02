@@ -4056,28 +4056,6 @@ local0.*    /var/log/postgresql
 
      <variablelist>
 
-     <varlistentry id="guc-client-min-messages" xreflabel="client_min_messages">
-      <term><varname>client_min_messages</varname> (<type>enum</type>)
-      <indexterm>
-       <primary><varname>client_min_messages</> configuration parameter</primary>
-      </indexterm>
-      </term>
-      <listitem>
-       <para>
-        Controls which message levels are sent to the client.
-        Valid values are <literal>DEBUG5</>,
-        <literal>DEBUG4</>, <literal>DEBUG3</>, <literal>DEBUG2</>,
-        <literal>DEBUG1</>, <literal>LOG</>, <literal>NOTICE</>,
-        <literal>WARNING</>, <literal>ERROR</>, <literal>FATAL</>,
-        and <literal>PANIC</>.  Each level
-        includes all the levels that follow it.  The later the level,
-        the fewer messages are sent.  The default is
-        <literal>NOTICE</>.  Note that <literal>LOG</> has a different
-        rank here than in <varname>log_min_messages</>.
-       </para>
-      </listitem>
-     </varlistentry>
-
      <varlistentry id="guc-log-min-messages" xreflabel="log_min_messages">
       <term><varname>log_min_messages</varname> (<type>enum</type>)
       <indexterm>
@@ -4086,16 +4064,17 @@ local0.*    /var/log/postgresql
       </term>
       <listitem>
        <para>
-        Controls which message levels are written to the server log.
-        Valid values are <literal>DEBUG5</>, <literal>DEBUG4</>,
-        <literal>DEBUG3</>, <literal>DEBUG2</>, <literal>DEBUG1</>,
-        <literal>INFO</>, <literal>NOTICE</>, <literal>WARNING</>,
-        <literal>ERROR</>, <literal>LOG</>, <literal>FATAL</>, and
-        <literal>PANIC</>.  Each level includes all the levels that
+        Controls which <link linkend="runtime-config-severity-levels">message
+        levels</link> are written to the server log.
+        Valid values are <literal>DEBUG5</literal>, <literal>DEBUG4</literal>,
+        <literal>DEBUG3</literal>, <literal>DEBUG2</literal>, <literal>DEBUG1</literal>,
+        <literal>INFO</literal>, <literal>NOTICE</literal>, <literal>WARNING</literal>,
+        <literal>ERROR</literal>, <literal>LOG</literal>, <literal>FATAL</literal>, and
+        <literal>PANIC</literal>.  Each level includes all the levels that
         follow it.  The later the level, the fewer messages are sent
         to the log.  The default is <literal>WARNING</>.  Note that
         <literal>LOG</> has a different rank here than in
-        <varname>client_min_messages</>.
+        <xref linkend="guc-client-min-messages">.
         Only superusers can change this setting.
        </para>
       </listitem>
@@ -4112,7 +4091,9 @@ local0.*    /var/log/postgresql
         Controls which SQL statements that cause an error
         condition are recorded in the server log.  The current
         SQL statement is included in the log entry for any message of
-        the specified severity or higher.
+        the specified
+        <link linkend="runtime-config-severity-levels">severity</link>
+        or higher.
         Valid values are <literal>DEBUG5</literal>,
         <literal>DEBUG4</literal>, <literal>DEBUG3</literal>,
         <literal>DEBUG2</literal>, <literal>DEBUG1</literal>,
@@ -5343,6 +5324,32 @@ COPY postgres_log FROM '/full/path/to/logfile.csv' WITH csv;
      <title>Statement Behavior</title>
      <variablelist>
 
+     <varlistentry id="guc-client-min-messages" xreflabel="client_min_messages">
+      <term><varname>client_min_messages</varname> (<type>enum</type>)
+      <indexterm>
+       <primary><varname>client_min_messages</> configuration parameter</primary>
+      </indexterm>
+      </term>
+      <listitem>
+       <para>
+        Controls which
+        <link linkend="runtime-config-severity-levels">message levels</link>
+        are sent to the client.
+        Valid values are <literal>DEBUG5</literal>,
+        <literal>DEBUG4</literal>, <literal>DEBUG3</literal>, <literal>DEBUG2</literal>,
+        <literal>DEBUG1</literal>, <literal>LOG</literal>, <literal>NOTICE</literal>,
+        <literal>WARNING</literal>, and <literal>ERROR</literal>.
+        Each level includes all the levels that follow it.  The later the level,
+        the fewer messages are sent.  The default is
+        <literal>NOTICE</>.  Note that <literal>LOG</> has a different
+        rank here than in <xref linkend="guc-log-min-messages">.
+       </para>
+       <para>
+        <literal>INFO</literal> level messages are always sent to the client.
+       </para>
+      </listitem>
+     </varlistentry>
+
      <varlistentry id="guc-search-path" xreflabel="search_path">
       <term><varname>search_path</varname> (<type>string</type>)
       <indexterm>
@@ -5371,7 +5378,7 @@ COPY postgres_log FROM '/full/path/to/logfile.csv' WITH csv;
        <para>
         If one of the list items is the special name
         <literal>$user</literal>, then the schema having the name returned by
-        <function>SESSION_USER</> is substituted, if there is such a schema
+        <function>CURRENT_USER</> is substituted, if there is such a schema
         and the user has <literal>USAGE</> permission for it.
         (If not, <literal>$user</literal> is ignored.)
        </para>
@@ -6826,6 +6833,39 @@ dynamic_library_path = 'C:\tools\postgresql;H:\my_project\lib;$libdir'
         <productname>PostgreSQL</> is being invoked by clusterware, it may be
         useful to disable the restart so that the clusterware can gain
         control and take any actions it deems appropriate.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="guc-data-sync-retry" xreflabel="data_sync_retry">
+      <term><varname>data_sync_retry</varname> (<type>boolean</type>)
+      <indexterm>
+       <primary><varname>data_sync_retry</varname> configuration parameter</primary>
+      </indexterm>
+      </term>
+      <listitem>
+       <para>
+        When set to false, which is the default, <productname>PostgreSQL</productname>
+        will raise a PANIC-level error on failure to flush modified data files
+        to the filesystem.  This causes the database server to crash.  This
+        parameter can only be set at server start.
+       </para>
+       <para>
+        On some operating systems, the status of data in the kernel's page
+        cache is unknown after a write-back failure.  In some cases it might
+        have been entirely forgotten, making it unsafe to retry; the second
+        attempt may be reported as successful, when in fact the data has been
+        lost.  In these circumstances, the only way to avoid data loss is to
+        recover from the WAL after any failure is reported, preferably
+        after investigating the root cause of the failure and replacing any
+        faulty hardware.
+       </para>
+       <para>
+        If set to true, <productname>PostgreSQL</productname> will instead
+        report an error but continue to run so that the data flushing
+        operation can be retried in a later checkpoint.  Only set it to true
+        after investigating the operating system's treatment of buffered data
+        in case of write-back failure.
        </para>
       </listitem>
      </varlistentry>

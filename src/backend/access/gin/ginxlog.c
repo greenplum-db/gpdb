@@ -692,20 +692,60 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 	ginxlogDeletePage *data = (ginxlogDeletePage *) XLogRecGetData(record);
 	Buffer		dbuffer;
 	Buffer		pbuffer;
-	Buffer		lbuffer;
+	Buffer		lbuffer = InvalidBlockNumber;
 	Page		page;
+
+	/*
+	 * Lock left page first in order to prevent possible deadlock with
+	 * ginStepRight().
+	 */
+	if (record->xl_info & XLR_BKP_BLOCK(2))
+		lbuffer = RestoreBackupBlock(lsn, record, 2, false, true);
+	else if (data->leftBlkno != InvalidBlockNumber)
+	{
+		lbuffer = XLogReadBuffer(data->node, data->leftBlkno, false);
+		if (BufferIsValid(lbuffer))
+		{
+			page = BufferGetPage(lbuffer);
+			if (lsn > PageGetLSN(page))
+			{
+				Assert(GinPageIsData(page));
+				GinPageGetOpaque(page)->rightlink = data->rightLink;
+				PageSetLSN(page, lsn);
+				MarkBufferDirty(lbuffer);
+			}
+		}
+	}
 
 	if (record->xl_info & XLR_BKP_BLOCK(0))
 		dbuffer = RestoreBackupBlock(lsn, record, 0, false, true);
 	else
 	{
 		dbuffer = XLogReadBuffer(data->node, data->blkno, false);
+
+		/*
+		 * deleteXid field of ginxlogDeletePage was added during backpatching.
+		 * But, non-backpatched instances will continue generate WAL without
+		 * this field.  We should be able to correctly apply that.  We can
+		 * distinguish new WAL records by size their data, because
+		 * ginxlogDeletePage changes its size on both 32-bit and 64-bit
+		 * platforms.
+		 */
+		StaticAssertStmt(sizeof(ginxlogDeletePage) !=
+						 sizeof(ginxlogDeletePageOld),
+						 "ginxlogDeletePage size should be changed "
+						 "with addition of deleteXid field");
+		Assert(record->xl_len == sizeof(ginxlogDeletePage) ||
+			   record->xl_len == sizeof(ginxlogDeletePageOld));
+
 		if (BufferIsValid(dbuffer))
 		{
 			page = BufferGetPage(dbuffer);
 			if (lsn > PageGetLSN(page))
 			{
 				Assert(GinPageIsData(page));
+				if (record->xl_len == sizeof(ginxlogDeletePage))
+					GinPageSetDeleteXid(page, data->deleteXid);
 				GinPageGetOpaque(page)->flags = GIN_DELETED;
 				PageSetLSN(page, lsn);
 				MarkBufferDirty(dbuffer);
@@ -714,7 +754,7 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 	}
 
 	if (record->xl_info & XLR_BKP_BLOCK(1))
-		pbuffer = RestoreBackupBlock(lsn, record, 1, false, true);
+		(void) RestoreBackupBlock(lsn, record, 1, false, false);
 	else
 	{
 		pbuffer = XLogReadBuffer(data->node, data->parentBlkno, false);
@@ -729,30 +769,12 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 				PageSetLSN(page, lsn);
 				MarkBufferDirty(pbuffer);
 			}
+			UnlockReleaseBuffer(pbuffer);
 		}
 	}
 
-	if (record->xl_info & XLR_BKP_BLOCK(2))
-		(void) RestoreBackupBlock(lsn, record, 2, false, false);
-	else if (data->leftBlkno != InvalidBlockNumber)
-	{
-		lbuffer = XLogReadBuffer(data->node, data->leftBlkno, false);
-		if (BufferIsValid(lbuffer))
-		{
-			page = BufferGetPage(lbuffer);
-			if (lsn > PageGetLSN(page))
-			{
-				Assert(GinPageIsData(page));
-				GinPageGetOpaque(page)->rightlink = data->rightLink;
-				PageSetLSN(page, lsn);
-				MarkBufferDirty(lbuffer);
-			}
-			UnlockReleaseBuffer(lbuffer);
-		}
-	}
-
-	if (BufferIsValid(pbuffer))
-		UnlockReleaseBuffer(pbuffer);
+	if (BufferIsValid(lbuffer))
+		UnlockReleaseBuffer(lbuffer);
 	if (BufferIsValid(dbuffer))
 		UnlockReleaseBuffer(dbuffer);
 }

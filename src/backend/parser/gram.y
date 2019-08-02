@@ -2127,6 +2127,7 @@ generic_set:
 					n->name = $1;
 					$$ = n;
 				}
+		;
 
 set_rest_more:	/* Generic SET syntaxes: */
 			generic_set 						{$$ = $1;}
@@ -5542,6 +5543,7 @@ format_def_list:
 			{
 				$$ = lappend($1, $3);
 			}
+;
 
 format_def_item:
     		ColLabel '=' def_arg
@@ -5552,7 +5554,7 @@ format_def_item:
 			{
 				$$ = makeDefElem($1, (Node *) $4);
 			}
-
+;
 
 format_opt_item:
 			DELIMITER opt_as Sconst

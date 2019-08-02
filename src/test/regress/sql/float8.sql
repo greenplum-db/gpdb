@@ -277,3 +277,17 @@ TRUNCATE FLOATS;
 COPY FLOATS FROM '/tmp/floats';
 
 SELECT * FROM FLOATS ORDER BY a;
+
+-- test edge-case coercions to integer
+SELECT '32767.4'::float8::int2;
+SELECT '32767.6'::float8::int2;
+SELECT '-32768.4'::float8::int2;
+SELECT '-32768.6'::float8::int2;
+SELECT '2147483647.4'::float8::int4;
+SELECT '2147483647.6'::float8::int4;
+SELECT '-2147483648.4'::float8::int4;
+SELECT '-2147483648.6'::float8::int4;
+SELECT '9223372036854773760'::float8::int8;
+SELECT '9223372036854775807'::float8::int8;
+SELECT '-9223372036854775808.5'::float8::int8;
+SELECT '-9223372036854780000'::float8::int8;

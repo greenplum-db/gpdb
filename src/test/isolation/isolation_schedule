@@ -26,6 +26,11 @@
 #test: eval-plan-qual
 #test: lock-update-delete
 #test: lock-update-traversal
+#test: read-write-unique
+#test: read-write-unique-2
+#test: read-write-unique-3
+#test: read-write-unique-4
+test: inherit-temp
 test: delete-abort-savept
 #test: delete-abort-savept-2
 #test: aborted-keyrevoke

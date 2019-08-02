@@ -1294,9 +1294,9 @@ SELECT b, char_length(b) FROM test2;
     per byte, most significant nibble first.  The entire string is
     preceded by the sequence <literal>\x</literal> (to distinguish it
     from the escape format).  In some contexts, the initial backslash may
-    need to be escaped by doubling it, in the same cases in which backslashes
-    have to be doubled in escape format; details appear below.
-    The hexadecimal digits can
+    need to be escaped by doubling it
+    (see <xref linkend="sql-syntax-strings">).
+    For input, the hexadecimal digits can
     be either upper or lower case, and whitespace is permitted between
     digit pairs (but not within a digit pair nor in the starting
     <literal>\x</literal> sequence).
@@ -1338,9 +1338,7 @@ SELECT '\xDEADBEEF';
     values <emphasis>must</emphasis> be escaped, while all octet
     values <emphasis>can</emphasis> be escaped.  In
     general, to escape an octet, convert it into its three-digit
-    octal value and precede it
-    by a backslash (or two backslashes, if writing the value as a
-    literal using escape string syntax).
+    octal value and precede it by a backslash.
     Backslash itself (octet decimal value 92) can alternatively be represented by
     double backslashes.
     <xref linkend="datatype-binary-sqlesc">
@@ -1357,7 +1355,7 @@ SELECT '\xDEADBEEF';
        <entry>Description</entry>
        <entry>Escaped Input Representation</entry>
        <entry>Example</entry>
-       <entry>Output Representation</entry>
+       <entry>Hex Representation</entry>
       </row>
      </thead>
 
@@ -1381,7 +1379,7 @@ SELECT '\xDEADBEEF';
       <row>
        <entry>92</entry>
        <entry>backslash</entry>
-       <entry><literal>'\'</literal> or <literal>'\\134'</literal></entry>
+       <entry><literal>'\\'</literal> or <literal>'\134'</literal></entry>
        <entry><literal>SELECT '\\'::bytea;</literal></entry>
        <entry><literal>\x5c</literal></entry>
       </row>
@@ -1401,39 +1399,35 @@ SELECT '\xDEADBEEF';
    <para>
     The requirement to escape <emphasis>non-printable</emphasis> octets
     varies depending on locale settings. In some instances you can get away
-    with leaving them unescaped. Note that the result in each of the examples
-    in <xref linkend="datatype-binary-sqlesc"> was exactly one octet in
-    length, even though the output representation is sometimes
-    more than one character.
+    with leaving them unescaped.
    </para>
 
    <para>
-    The reason multiple backslashes are required, as shown
-    in <xref linkend="datatype-binary-sqlesc">, is that an input
-    string written as a string literal must pass through two parse
-    phases in the <productname>PostgreSQL</productname> server.
-    The first backslash of each pair is interpreted as an escape
-    character by the string-literal parser (assuming escape string
-    syntax is used) and is therefore consumed, leaving the second backslash of the
-    pair.  (Dollar-quoted strings can be used to avoid this level
-    of escaping.)  The remaining backslash is then recognized by the
-    <type>bytea</type> input function as starting either a three
-    digit octal value or escaping another backslash.  For example,
-    a string literal passed to the server as <literal>'\001'</literal>
-    becomes <literal>\001</literal> after passing through the
-    escape string parser. The <literal>\001</literal> is then sent
-    to the <type>bytea</type> input function, where it is converted
-    to a single octet with a decimal value of 1.  Note that the
-    single-quote character is not treated specially by <type>bytea</type>,
-    so it follows the normal rules for string literals.  (See also
-    <xref linkend="sql-syntax-strings">.)
+    The reason that single quotes must be doubled, as shown
+    in <xref linkend="datatype-binary-sqlesc">, is that this
+    is true for any string literal in a SQL command.  The generic
+    string-literal parser consumes the outermost single quotes
+    and reduces any pair of single quotes to one data character.
+    What the <type>bytea</type> input function sees is just one
+    single quote, which it treats as a plain data character.
+    However, the <type>bytea</type> input function treats
+    backslashes as special, and the other behaviors shown in
+    <xref linkend="datatype-binary-sqlesc"> are implemented by
+    that function.
+   </para>
+
+   <para>
+    In some contexts, backslashes must be doubled compared to what is
+    shown above, because the generic string-literal parser will also
+    reduce pairs of backslashes to one data character;
+    see <xref linkend="sql-syntax-strings">.
    </para>
 
    <para>
     <type>Bytea</type> octets are output in <literal>hex</literal>
     format by default.  If you change <xref linkend="guc-bytea-output">
     to <literal>escape</literal>,
-    <quote>non-printable</quote> octet are converted to
+    <quote>non-printable</quote> octets are converted to their
     equivalent three-digit octal value and preceded by one backslash.
     Most <quote>printable</quote> octets are output by their standard
     representation in the client character set, e.g.:
@@ -2410,7 +2404,7 @@ January 8 04:05:06 1999 PST
         linkend="view-pg-timezone-names">).
         <productname>PostgreSQL</productname> uses the widely-used IANA
         time zone data for this purpose, so the same time zone
-        names are also recognized by much other software.
+        names are also recognized by other software.
        </para>
       </listitem>
       <listitem>
@@ -2891,37 +2885,36 @@ SELECT EXTRACT(days from '80 hours'::interval);
    </table>
 
    <para>
-    Valid literal values for the <quote>true</quote> state are:
-    <simplelist>
-     <member><literal>TRUE</literal></member>
-     <member><literal>'t'</literal></member>
-     <member><literal>'true'</literal></member>
-     <member><literal>'y'</literal></member>
-     <member><literal>'yes'</literal></member>
-     <member><literal>'on'</literal></member>
-     <member><literal>'1'</literal></member>
-    </simplelist>
-    For the <quote>false</quote> state, the following values can be
-    used:
-    <simplelist>
-     <member><literal>FALSE</literal></member>
-     <member><literal>'f'</literal></member>
-     <member><literal>'false'</literal></member>
-     <member><literal>'n'</literal></member>
-     <member><literal>'no'</literal></member>
-     <member><literal>'off'</literal></member>
-     <member><literal>'0'</literal></member>
-    </simplelist>
-    Leading or trailing whitespace is ignored, and case does not matter.
-    The key words
-    <literal>TRUE</literal> and <literal>FALSE</literal> are the preferred
-    (<acronym>SQL</acronym>-compliant) usage.
+    Boolean constants can be represented in SQL queries by the SQL
+    key words <literal>TRUE</literal>, <literal>FALSE</literal>,
+    and <literal>NULL</literal>.
    </para>
 
    <para>
-    <xref linkend="datatype-boolean-example"> shows that
-    <type>boolean</type> values are output using the letters
-    <literal>t</literal> and <literal>f</literal>.
+    The datatype input function for type <type>boolean</type> accepts these
+    string representations for the <quote>true</quote> state:
+    <simplelist>
+     <member><literal>true</literal></member>
+     <member><literal>yes</literal></member>
+     <member><literal>on</literal></member>
+     <member><literal>1</literal></member>
+    </simplelist>
+    and these representations for the <quote>false</quote> state:
+    <simplelist>
+     <member><literal>false</literal></member>
+     <member><literal>no</literal></member>
+     <member><literal>off</literal></member>
+     <member><literal>0</literal></member>
+    </simplelist>
+    Unique prefixes of these strings are also accepted, for
+    example <literal>t</literal> or <literal>n</literal>.
+    Leading or trailing whitespace is ignored, and case does not matter.
+   </para>
+
+   <para>
+    The datatype output function for type <type>boolean</type> always emits
+    either <literal>t</literal> or <literal>f</literal>, as shown in
+    <xref linkend="datatype-boolean-example">.
    </para>
 
    <example id="datatype-boolean-example">
@@ -2943,6 +2936,27 @@ SELECT * FROM test1 WHERE a;
  t | sic est
 </programlisting>
    </example>
+
+   <para>
+    The key words <literal>TRUE</literal> and <literal>FALSE</literal> are
+    the preferred (<acronym>SQL</acronym>-compliant) method for writing
+    Boolean constants in SQL queries.  But you can also use the string
+    representations by following the generic string-literal constant syntax
+    described in <xref linkend="sql-syntax-constants-generic">, for
+    example <literal>'yes'::boolean</literal>.
+   </para>
+
+   <para>
+    Note that the parser automatically understands
+    that <literal>TRUE</literal> and <literal>FALSE</literal> are of
+    type <type>boolean</type>, but this is not so
+    for <literal>NULL</literal> because that can have any type.
+    So in some contexts you might have to cast <literal>NULL</literal>
+    to <type>boolean</type> explicitly, for
+    example <literal>NULL::boolean</literal>.  Conversely, the cast can be
+    omitted from a string-literal Boolean value in contexts where the parser
+    can deduce that the literal must be of type <type>boolean</type>.
+   </para>
   </sect1>
 
   <sect1 id="datatype-enum">
@@ -4102,9 +4116,11 @@ a0ee-bc99-9c0b-4ef8-bb6d-6bb9-bd38-0a11
    <para>
     The <type>xml</type> type can store well-formed
     <quote>documents</quote>, as defined by the XML standard, as well
-    as <quote>content</quote> fragments, which are defined by the
-    production <literal>XMLDecl? content</literal> in the XML
-    standard.  Roughly, this means that content fragments can have
+    as <quote>content</quote> fragments, which are defined by reference
+    to the more permissive
+    <ulink url="https://www.w3.org/TR/2010/REC-xpath-datamodel-20101214/#DocumentNode"><quote>document node</quote></ulink>
+    of the XQuery and XPath data model.
+    Roughly, this means that content fragments can have
     more than one top-level element or character node.  The expression
     <literal><replaceable>xmlvalue</replaceable> IS DOCUMENT</literal>
     can be used to evaluate whether a particular <type>xml</type>
@@ -4178,16 +4194,6 @@ SET xmloption TO { DOCUMENT | CONTENT };
     The default is <literal>CONTENT</literal>, so all forms of XML
     data are allowed.
    </para>
-
-   <note>
-    <para>
-     With the default XML option setting, you cannot directly cast
-     character strings to type <type>xml</type> if they contain a
-     document type declaration, because the definition of XML content
-     fragment does not accept them.  If you need to do that, either
-     use <literal>XMLPARSE</literal> or change the XML option.
-    </para>
-   </note>
 
    </sect2>
 

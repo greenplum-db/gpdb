@@ -2142,6 +2142,7 @@ do_autovacuum(void)
 		if (classForm->relpersistence == RELPERSISTENCE_TEMP)
 		{
 			int			backendID;
+			PGPROC	   *proc;
 
 			/*
 			 * GPDB_91_MERGE_FIXME: Autovacuum operates only on template0
@@ -2154,8 +2155,14 @@ do_autovacuum(void)
 			
 			backendID = GetTempNamespaceBackendId(classForm->relnamespace);
 
-			/* We just ignore it if the owning backend is still active */
-			if (backendID == MyBackendId || BackendIdGetProc(backendID) == NULL)
+			/*
+			 * We just ignore it if the owning backend is still active in the
+			 * same database.
+			 */
+			if (backendID != InvalidBackendId &&
+				(backendID == MyBackendId ||
+				 (proc = BackendIdGetProc(backendID)) == NULL ||
+				 proc->databaseId != MyDatabaseId))
 			{
 				/*
 				 * We found an orphan temp table (which was probably left

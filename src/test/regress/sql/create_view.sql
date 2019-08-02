@@ -31,6 +31,22 @@ COMMENT ON VIEW noview IS 'no view';
 COMMENT ON VIEW toyemp IS 'is a view';
 COMMENT ON VIEW toyemp IS NULL;
 
+-- These views are left around mainly to exercise special cases in pg_dump.
+
+CREATE TABLE view_base_table (key int PRIMARY KEY, data varchar(20));
+
+CREATE VIEW key_dependent_view AS
+   SELECT * FROM view_base_table GROUP BY key;
+
+ALTER TABLE view_base_table DROP CONSTRAINT view_base_table_pkey;  -- fails
+
+CREATE VIEW key_dependent_view_no_cols AS
+   SELECT FROM view_base_table GROUP BY key HAVING length(data) > 0;
+
+-- zero-column view cannot pass the gpcheckcat FK check between pg_rewrite/pg_attribute,
+-- so drop the view explicitly to workaround it.
+DROP VIEW key_dependent_view_no_cols;
+
 --
 -- CREATE OR REPLACE VIEW
 --
@@ -305,6 +321,15 @@ ALTER TABLE tmp1 RENAME TO tx1;
 \d+ aliased_view_2
 \d+ aliased_view_3
 \d+ aliased_view_4
+
+-- Test aliasing of joins
+
+create view view_of_joins as
+select * from
+  (select * from (tbl1 cross join tbl2) same) ss,
+  (tbl3 cross join tbl4) same;
+
+\d+ view_of_joins
 
 -- Test view decompilation in the face of column addition/deletion/renaming
 

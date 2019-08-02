@@ -1746,6 +1746,13 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	qry->hasWindowFuncs = pstate->p_hasWindowFuncs;
 	qry->hasFuncsWithExecRestrictions = pstate->p_hasFuncsWithExecRestrictions;
 	qry->hasAggs = pstate->p_hasAggs;
+
+	/*
+	 * GPDB_94_MERGE_FIXME: upstream commit 174fab99 postpone aggregate
+	 * checks until after collation is assigned, however,
+	 * parseCheckAggregates() will report an error in GPDB after
+	 * transformGroupedWindows(), need to revist here.
+	 */
 	if (pstate->p_hasAggs || qry->groupClause || qry->havingQual)
 		parseCheckAggregates(pstate, qry);
 

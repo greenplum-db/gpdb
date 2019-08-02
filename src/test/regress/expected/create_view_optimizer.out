@@ -25,6 +25,19 @@ COMMENT ON VIEW noview IS 'no view';
 ERROR:  relation "noview" does not exist
 COMMENT ON VIEW toyemp IS 'is a view';
 COMMENT ON VIEW toyemp IS NULL;
+-- These views are left around mainly to exercise special cases in pg_dump.
+CREATE TABLE view_base_table (key int PRIMARY KEY, data varchar(20));
+CREATE VIEW key_dependent_view AS
+   SELECT * FROM view_base_table GROUP BY key;
+ALTER TABLE view_base_table DROP CONSTRAINT view_base_table_pkey;  -- fails
+ERROR:  cannot drop constraint view_base_table_pkey on table view_base_table because other objects depend on it
+DETAIL:  view key_dependent_view depends on constraint view_base_table_pkey on table view_base_table
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+CREATE VIEW key_dependent_view_no_cols AS
+   SELECT FROM view_base_table GROUP BY key HAVING length(data) > 0;
+-- zero-column view cannot pass the gpcheckcat FK check between pg_rewrite/pg_attribute,
+-- so drop the view explicitly to workaround it.
+DROP VIEW key_dependent_view_no_cols;
 --
 -- CREATE OR REPLACE VIEW
 --
@@ -737,6 +750,41 @@ View definition:
   WHERE (EXISTS ( SELECT 1
            FROM temp_view_test.tx1 tx1_1
           WHERE tx1.y1 = tx1_1.f1));
+
+-- Test aliasing of joins
+create view view_of_joins as
+select * from
+  (select * from (tbl1 cross join tbl2) same) ss,
+  (tbl3 cross join tbl4) same;
+\d+ view_of_joins
+          View "testviewschm2.view_of_joins"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ a      | integer |           | plain   | 
+ b      | integer |           | plain   | 
+ c      | integer |           | plain   | 
+ d      | integer |           | plain   | 
+ e      | integer |           | plain   | 
+ f      | integer |           | plain   | 
+ g      | integer |           | plain   | 
+ h      | integer |           | plain   | 
+View definition:
+ SELECT ss.a,
+    ss.b,
+    ss.c,
+    ss.d,
+    same.e,
+    same.f,
+    same.g,
+    same.h
+   FROM ( SELECT same_1.a,
+            same_1.b,
+            same_1.c,
+            same_1.d
+           FROM (tbl1
+             CROSS JOIN tbl2) same_1) ss,
+    (tbl3
+     CROSS JOIN tbl4) same;
 
 -- Test view decompilation in the face of column addition/deletion/renaming
 create table tt2 (a int, b int, c int);

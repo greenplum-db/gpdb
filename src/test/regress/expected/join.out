@@ -5491,6 +5491,41 @@ select * from
  Settings: optimizer=off
 (17 rows)
 
+-- check dummy rels with lateral references (bug #15694)
+explain (verbose, costs off)
+select * from int8_tbl i8 left join lateral
+  (select *, i8.q2 from int4_tbl where false) ss on true;
+                 QUERY PLAN                 
+--------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: i8.q1, i8.q2, f1, (i8.q2)
+   ->  Nested Loop Left Join
+         Output: i8.q1, i8.q2, f1, (i8.q2)
+         ->  Seq Scan on public.int8_tbl i8
+               Output: i8.q1, i8.q2
+         ->  Result
+               Output: f1, i8.q2
+               One-Time Filter: false
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+explain (verbose, costs off)
+select * from int8_tbl i8 left join lateral
+  (select *, i8.q2 from int4_tbl i1, int4_tbl i2 where false) ss on true;
+                  QUERY PLAN                   
+-----------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: i8.q1, i8.q2, f1, f1, (i8.q2)
+   ->  Nested Loop Left Join
+         Output: i8.q1, i8.q2, f1, f1, (i8.q2)
+         ->  Seq Scan on public.int8_tbl i8
+               Output: i8.q1, i8.q2
+         ->  Result
+               Output: f1, f1, i8.q2
+               One-Time Filter: false
+ Optimizer: Postgres query optimizer
+(10 rows)
+
 -- check handling of nested appendrels inside LATERAL
 select * from
   ((select 2 as v) union all (select 3 as v)) as q1

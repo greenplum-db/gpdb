@@ -658,12 +658,11 @@ raw_heap_insert(RewriteState state, HeapTuple tup)
 			options |= HEAP_INSERT_SKIP_WAL;
 
 		/*
-		 * The new relfilenode's relcache entrye doesn't have the necessary
-		 * information to determine whether a relation should emit data for
-		 * logical decoding.  Force it to off if necessary.
+		 * While rewriting the heap for VACUUM FULL / CLUSTER, make sure data
+		 * for the TOAST table are not logically decoded.  The main heap is
+		 * WAL-logged as XLOG FPI records, which are not logically decoded.
 		 */
-		if (!RelationIsLogicallyLogged(state->rs_old_rel))
-			options |= HEAP_INSERT_NO_LOGICAL;
+		options |= HEAP_INSERT_NO_LOGICAL;
 
 		heaptup = toast_insert_or_update(state->rs_new_rel, tup, NULL,
 										 TOAST_TUPLE_TARGET, false,
@@ -985,7 +984,7 @@ logical_end_heap_rewrite(RewriteState state)
 	while ((src = (RewriteMappingFile *) hash_seq_search(&seq_status)) != NULL)
 	{
 		if (FileSync(src->vfd) != 0)
-			ereport(ERROR,
+			ereport(data_sync_elevel(ERROR),
 					(errcode_for_file_access(),
 					 errmsg("could not fsync file \"%s\": %m", src->path)));
 		FileClose(src->vfd);
@@ -1203,7 +1202,7 @@ heap_xlog_logical_rewrite(XLogRecPtr lsn, XLogRecord *r)
 	 * doesn't seem worth the trouble.
 	 */
 	if (pg_fsync(fd) != 0)
-		ereport(ERROR,
+		ereport(data_sync_elevel(ERROR),
 				(errcode_for_file_access(),
 				 errmsg("could not fsync file \"%s\": %m", path)));
 
@@ -1300,7 +1299,7 @@ CheckPointLogicalRewriteHeap(void)
 			 * but it's currently not deemed worth the effort.
 			 */
 			else if (pg_fsync(fd) != 0)
-				ereport(ERROR,
+				ereport(data_sync_elevel(ERROR),
 						(errcode_for_file_access(),
 						 errmsg("could not fsync file \"%s\": %m", path)));
 			CloseTransientFile(fd);
