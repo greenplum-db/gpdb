@@ -16,7 +16,7 @@ get_fragments(GPHDUri *uri,
 	mock();
 }
 
-void
+static void
 call_rest(GPHDUri* hadoop_uri, ClientContext* client_context, char* rest_msg)
 {
 	check_expected(hadoop_uri);

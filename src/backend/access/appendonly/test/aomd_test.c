@@ -31,11 +31,12 @@ setup_test_structures()
 #undef unlink
 #define unlink mock_unlink
 
-int mock_unlink(const char * path)
+static int
+mock_unlink(const char *path)
 {
 	int ec = 0;
 	u_int segfile = 0; /* parse the path */
-	char *tmp_path = path + strlen(PATH_TO_DATA_FILE) + 1;
+	const char *tmp_path = path + strlen(PATH_TO_DATA_FILE) + 1;
 	if (strcmp(tmp_path, "") != 0)
 	{
 		segfile = atoi(tmp_path);
@@ -63,7 +64,7 @@ int mock_unlink(const char * path)
 
 #include "../aomd.c"
 
-void
+static void
 test__AOSegmentFilePathNameLen(void **state)
 {
 	RelationData reldata;
@@ -79,7 +80,7 @@ test__AOSegmentFilePathNameLen(void **state)
 	assert_in_range(r, strlen(basepath) + 3, strlen(basepath) + 10);
 }
 
-void
+static void
 test__FormatAOSegmentFileName(void **state)
 {
 	char	   *basepath = "base/21381/123";
@@ -112,11 +113,9 @@ test__FormatAOSegmentFileName(void **state)
 	assert_int_equal(fileSegNo, 256);
 }
 
-
-void
+static void
 test__MakeAOSegmentFileName(void **state)
 {
-	char	   *basepath = "base/21381/123";
 	int32		fileSegNo;
 	char		filepathname[256];
 	RelationData reldata;
@@ -152,7 +151,7 @@ test__MakeAOSegmentFileName(void **state)
 	assert_int_equal(fileSegNo, 256);
 }
 
-void
+static void
 test_mdunlink_co_no_file_exists(void **state)
 {
 	setup_test_structures();
@@ -165,7 +164,7 @@ test_mdunlink_co_no_file_exists(void **state)
 }
 
 /* concurrency = 1 max_column = 4 */
-void
+static void
 test_mdunlink_co_4_columns_1_concurrency(void **state)
 {
 	setup_test_structures();
@@ -186,7 +185,7 @@ test_mdunlink_co_4_columns_1_concurrency(void **state)
 }
 
 /* concurrency = 1,5 max_column = 3 */
-void
+static void
 test_mdunlink_co_3_columns_2_concurrency(void **state)
 {
 	setup_test_structures();
@@ -209,7 +208,7 @@ test_mdunlink_co_3_columns_2_concurrency(void **state)
 	return;
 }
 
-void
+static void
 test_mdunlink_co_all_columns_full_concurrency(void **state)
 {
 	setup_test_structures();
@@ -227,7 +226,7 @@ test_mdunlink_co_all_columns_full_concurrency(void **state)
 	return;
 }
 
-void
+static void
 test_mdunlink_co_one_columns_one_concurrency(void **state)
 {
 	setup_test_structures();
@@ -240,7 +239,7 @@ test_mdunlink_co_one_columns_one_concurrency(void **state)
 	return;
 }
 
-void
+static void
 test_mdunlink_does_not_unlink_for_init_fork(void **state)
 {
 	setup_test_structures();
@@ -253,7 +252,7 @@ test_mdunlink_does_not_unlink_for_init_fork(void **state)
 	return;
 }
 
-void
+static void
 test_mdunlink_co_one_columns_full_concurrency(void **state)
 {
 	setup_test_structures();

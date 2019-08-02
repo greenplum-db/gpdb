@@ -8,7 +8,7 @@
 #include "utils/memutils.h"
 
 
-void
+static void
 test_validate_segno_returns_false_when_segno_less_than_zero(void **state)
 {
 	bool error_thrown = false;
@@ -26,7 +26,7 @@ test_validate_segno_returns_false_when_segno_less_than_zero(void **state)
 	assert_true(error_thrown);
 }
 
-void
+static void
 test_validate_segno_returns_true_when_segno_greater_than_or_equal_to_zero(void **state)
 {
 	bool error_thrown = false;
@@ -47,7 +47,7 @@ test_validate_segno_returns_true_when_segno_greater_than_or_equal_to_zero(void *
 	assert_false(error_thrown);
 }
 
-void
+static void
 test_validate_segno_throws_error_when_value_is_greater_than_maximum_number_of_concurrent_writers(void **state)
 {
 	bool error_thrown = false;

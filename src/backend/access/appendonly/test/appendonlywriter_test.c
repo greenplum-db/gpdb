@@ -5,7 +5,7 @@
 
 #include "../appendonlywriter.c"
 
-void
+static void
 test__AppendOnlyRelHashNew_replace_unused_entry(void **state)
 {
 	AppendOnlyWriterData writer;
@@ -85,7 +85,7 @@ test__AppendOnlyRelHashNew_replace_unused_entry(void **state)
 	assert_int_equal(writer.num_existing_aorels, 0);
 }
 
-void
+static void
 test__AppendOnlyRelHashNew_existing_entry(void **state)
 {
 	AppendOnlyWriterData writer;
@@ -118,7 +118,7 @@ test__AppendOnlyRelHashNew_existing_entry(void **state)
 	assert_true(exists);
 }
 
-void
+static void
 test__AppendOnlyRelHashNew_give_up(void **state)
 {
 	AppendOnlyWriterData writer;

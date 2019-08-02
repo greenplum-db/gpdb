@@ -6,11 +6,13 @@
 /* Fetch definition of PG_exception_stack */
 #include "postgres.h"
 
+#undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 #define errfinish errfinish_impl
 
-int errfinish_impl(int dummy __attribute__((unused)),...)
+static int
+errfinish_impl(int dummy __attribute__((unused)),...)
 {
 	PG_RE_THROW();
 }

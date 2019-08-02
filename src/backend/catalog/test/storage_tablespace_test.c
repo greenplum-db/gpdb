@@ -15,8 +15,7 @@ static void unlink_tablespace_directory(Oid tablespaceOid, bool isRedo) {
 	unlink_called_with_redo = isRedo;
 }
 
-
-void
+static void
 setup()
 {
 	unlink_called_with_redo = false;
@@ -28,7 +27,7 @@ setup()
 /*
  * Tests
  */
-void
+static void
 test_create_tablespace_storage_populates_the_pending_tablespace_deletes_list(
 	void **state)
 {
@@ -53,7 +52,7 @@ test_create_tablespace_storage_populates_the_pending_tablespace_deletes_list(
 	assert_int_equal(88888, tablespaceForDeletion);
 }
 
-void
+static void
 test_get_pending_tablespace_for_deletion_returns_a_null_value_by_default(void **state)
 {
 	setup();
@@ -63,7 +62,7 @@ test_get_pending_tablespace_for_deletion_returns_a_null_value_by_default(void **
 	assert_int_equal(InvalidOid, tablespaceForDeletion);
 }
 
-void
+static void
 test_DoPendingTablespaceDeletionForAbort_removes_the_pending_tablespace_for_deletion_so_it_is_not_deleted_by_the_next_transaction(
 	void **state)
 {
@@ -80,7 +79,7 @@ test_DoPendingTablespaceDeletionForAbort_removes_the_pending_tablespace_for_dele
 	assert_int_equal(InvalidOid, tablespaceForDeletion);
 }
 
-void
+static void
 test_DoPendingTablespaceDeletionForAbort_calls_unlink(void **state)
 {
 	setup();
@@ -93,7 +92,7 @@ test_DoPendingTablespaceDeletionForAbort_calls_unlink(void **state)
 	assert_int_equal(unlink_called_with_redo, false);
 }
 
-void
+static void
 test_delete_called_when_invalid_tablespace_set_does_not_call_unlink(void **state) 
 {
 	setup();
@@ -105,7 +104,7 @@ test_delete_called_when_invalid_tablespace_set_does_not_call_unlink(void **state
 	assert_int_equal(unlink_called_with_tablespace_oid, NOT_CALLED_OID);
 }
 
-void
+static void
 test_DoTablespaceDeletionForRedoXlog_calls_unlink_with_tablespace_oid_and_redo_flag(void **state) {
 	setup();
 
@@ -117,7 +116,8 @@ test_DoTablespaceDeletionForRedoXlog_calls_unlink_with_tablespace_oid_and_redo_f
 	assert_int_equal(unlink_called_with_redo, true);
 }
 
-void test_UnscheduleTablespaceDirectoryDeletionForAbort_removes_the_scheduled_tablespace_for_deletion(void **state)
+static void
+test_UnscheduleTablespaceDirectoryDeletionForAbort_removes_the_scheduled_tablespace_for_deletion(void **state)
 {
 	setup();
 
@@ -130,7 +130,8 @@ void test_UnscheduleTablespaceDirectoryDeletionForAbort_removes_the_scheduled_ta
 
 }
 
-void test_an_UnscheduleTablespaceDirectoryDeletionForAbort_does_not_get_unlinked(void **state)
+static void
+test_an_UnscheduleTablespaceDirectoryDeletionForAbort_does_not_get_unlinked(void **state)
 {
 	setup();
 
@@ -142,34 +143,36 @@ void test_an_UnscheduleTablespaceDirectoryDeletionForAbort_does_not_get_unlinked
 	assert_int_equal(unlink_called_with_tablespace_oid, NOT_CALLED_OID);
 }
 
-void test_a_tablespace_can_be_scheduled_for_deletion_on_commit(void **state) 
+static void
+test_a_tablespace_can_be_scheduled_for_deletion_on_commit(void **state)
 {
+	Oid pending_tablespace_for_deletion;
 	setup();
 
 	ScheduleTablespaceDirectoryDeletionForCommit(99999);
 
-	Oid pending_tablespace_for_deletion = NULL;
 	pending_tablespace_for_deletion = GetPendingTablespaceForDeletionForCommit();
 	
 	assert_int_equal(pending_tablespace_for_deletion, 99999);
 }
 
-void test_a_tablespace_can_be_unscheduled_for_deletion_on_commit(void **state) 
+static void
+test_a_tablespace_can_be_unscheduled_for_deletion_on_commit(void **state) 
 {
+	Oid pending_tablespace_for_deletion;
 	setup();
 
 	ScheduleTablespaceDirectoryDeletionForCommit(99999);
 
 	UnscheduleTablespaceDirectoryDeletionForCommit();
 
-	Oid pending_tablespace_for_deletion = NULL;
-
 	pending_tablespace_for_deletion = GetPendingTablespaceForDeletionForCommit();
 
 	assert_int_equal(pending_tablespace_for_deletion, InvalidOid);
 }
 
-void test_a_tablespace_that_is_pending_is_deleted_on_commit(void **state)
+static void
+test_a_tablespace_that_is_pending_is_deleted_on_commit(void **state)
 {
 	setup();
 
@@ -181,7 +184,8 @@ void test_a_tablespace_that_is_pending_is_deleted_on_commit(void **state)
 	assert_int_equal(unlink_called_with_redo, false);
 }
 
-void test_a_tablespace_that_has_been_deleted_on_commit_is_no_longer_pending(void **state)
+static void
+test_a_tablespace_that_has_been_deleted_on_commit_is_no_longer_pending(void **state)
 {
 	setup();
 

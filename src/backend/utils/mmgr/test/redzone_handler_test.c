@@ -24,6 +24,7 @@
 static uint32 fakeIsRunawayDetector = 0;
 extern bool sessionStateInited;
 
+#undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 /*
@@ -31,7 +32,7 @@ extern bool sessionStateInited;
  * function by re-throwing the exception, essentially falling
  * back to the next available PG_CATCH();
  */
-void
+static void
 _ExceptionalCondition()
 {
      PG_RE_THROW();
@@ -68,7 +69,7 @@ static void
 DestroySessionStateArray()
 {
 	assert_true(NULL != AllSessionStateEntries);
-	free(AllSessionStateEntries);
+	free((void *) AllSessionStateEntries);
 	AllSessionStateEntries = NULL;
 }
 
@@ -76,7 +77,7 @@ DestroySessionStateArray()
  * Acquires a SessionState entry for the specified sessionid. If an existing entry
  * is found, this method reuses that entry
  */
-static SessionState*
+static SessionState *
 AcquireSessionState(int sessionId, int vmem, int activeProcessCount)
 {
 	will_be_called_count(LWLockAcquire, 1);
@@ -103,13 +104,13 @@ AcquireSessionState(int sessionId, int vmem, int activeProcessCount)
 		MySessionState->activeProcessCount = activeProcessCount;
 	}
 
-	return MySessionState;
+	return (SessionState *) MySessionState;
 }
 /*
  * Checks if RedZoneHandler_ShmemInit() properly initializes the global variables
  * as the postmaster
  */
-void
+static void
 test__RedZoneHandler_ShmemInit__InitializesGlobalVarsWhenPostmaster(void **state)
 {
 	vmemTrackerInited = false;
@@ -156,7 +157,7 @@ test__RedZoneHandler_ShmemInit__InitializesGlobalVarsWhenPostmaster(void **state
  * Checks if RedZoneHandler_ShmemInit() properly initializes the global variables
  * when under postmaster
  */
-void
+static void
 test__RedZoneHandler_ShmemInit__InitializesUnderPostmaster(void **state)
 {
 	vmemTrackerInited = false;
@@ -184,7 +185,7 @@ test__RedZoneHandler_ShmemInit__InitializesUnderPostmaster(void **state)
 /*
  * Checks if RedZoneHandler_IsVmemRedZone() properly identifies red zone
  */
-void
+static void
 test__RedZoneHandler_IsVmemRedZone__ProperlyIdentifiesRedZone(void **state)
 {
 	vmemTrackerInited = false;
@@ -220,14 +221,14 @@ test__RedZoneHandler_IsVmemRedZone__ProperlyIdentifiesRedZone(void **state)
  * Checks if RedZoneHandler_FlagTopConsumer() allows only one detector
  * at a time
  */
-void
+static void
 test__RedZoneHandler_FlagTopConsumer__SingletonDetector(void **state)
 {
 	/* Make sure the code is exercised */
 	vmemTrackerInited = true;
 
 	/* Ensure non-null MySessionState */
-	MySessionState = 0x1234;
+	MySessionState = (SessionState *) 0x1234;
 
 	static uint32 fakeIsRunawayDetector = 0;
 	isRunawayDetector = &fakeIsRunawayDetector;
@@ -245,7 +246,7 @@ test__RedZoneHandler_FlagTopConsumer__SingletonDetector(void **state)
 /*
  * Checks if RedZoneHandler_FlagTopConsumer() finds the top consumer
  */
-void
+static void
 test__RedZoneHandler_FlagTopConsumer__FindsTopConsumer(void **state)
 {
 	/* Make sure the RedZoneHandler_FlagTopConsumer code is exercised */
@@ -288,7 +289,7 @@ test__RedZoneHandler_FlagTopConsumer__FindsTopConsumer(void **state)
  * Checks if RedZoneHandler_FlagTopConsumer() ignores the idle sessions
  * even if they are the top consumer
  */
-void
+static void
 test__RedZoneHandler_FlagTopConsumer__IgnoresIdleSession(void **state)
 {
 	/* Make sure the RedZoneHandler_FlagTopConsumer code is exercised */
@@ -331,7 +332,7 @@ test__RedZoneHandler_FlagTopConsumer__IgnoresIdleSession(void **state)
  * Checks if RedZoneHandler_FlagTopConsumer() reactivates the runaway detector
  * if there is no active session
  */
-void
+static void
 test__RedZoneHandler_FlagTopConsumer__ReactivatesDetectorIfNoActiveSession(void **state)
 {
 	/* Make sure the RedZoneHandler_FlagTopConsumer code is exercised */
@@ -374,7 +375,7 @@ test__RedZoneHandler_FlagTopConsumer__ReactivatesDetectorIfNoActiveSession(void 
  * Checks if RedZoneHandler_FlagTopConsumer() updates the CurrentVersion and
  * latestRunawayVersion
  */
-void
+static void
 test__RedZoneHandler_FlagTopConsumer__UpdatesEventVersions(void **state)
 {
 	/* Make sure the RedZoneHandler_FlagTopConsumer code is exercised */

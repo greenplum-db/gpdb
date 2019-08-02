@@ -5,7 +5,8 @@
 
 #include "../bitstream.c"
 
-void test__Bitstream__Simple(void **state)
+static void
+test__Bitstream__Simple(void **state)
 {
 	Bitstream bitstream;
 	unsigned char data[32];
@@ -50,7 +51,8 @@ void test__Bitstream__Simple(void **state)
 	assert_int_equal(tmp, 0x1FF);
 }
 
-void test__Bitstream_ErrorFlag(void **state)
+static void
+test__Bitstream_ErrorFlag(void **state)
 {
 	Bitstream bitstream;
 	unsigned char data[32];
@@ -73,7 +75,8 @@ void test__Bitstream_ErrorFlag(void **state)
 	assert_true(Bitstream_HasError(&bitstream2));
 }
 
-void test__Bitstream__Skip(void **state)
+static void
+test__Bitstream__Skip(void **state)
 {
 	Bitstream bitstream;
 	unsigned char data[32];
@@ -99,7 +102,8 @@ void test__Bitstream__Skip(void **state)
 	assert_int_equal(Bitstream_GetOffset(&bitstream2), 13);
 }
 
-void test__Bitstream__Align(void **state)
+static void
+test__Bitstream__Align(void **state)
 {
 	Bitstream bitstream;
 	unsigned char data[32];
@@ -114,7 +118,8 @@ void test__Bitstream__Align(void **state)
 	assert_int_equal(Bitstream_GetOffset(&bitstream), 32);
 }
 
-void test__Bitstream__GetAlignedData(void **state)
+static void
+test__Bitstream__GetAlignedData(void **state)
 {
 	Bitstream bitstream;
 	unsigned char data[32];
@@ -130,7 +135,8 @@ void test__Bitstream__GetAlignedData(void **state)
 	assert_int_equal(Bitstream_GetOffset(&bitstream), 32);
 }
 
-void test__Bitstream__GetRemaining(void **state)
+static void
+test__Bitstream__GetRemaining(void **state)
 {
 	Bitstream bitstream;
 	unsigned char data[4];
@@ -147,7 +153,8 @@ void test__Bitstream__GetRemaining(void **state)
 	assert_int_equal(0, Bitstream_GetRemaining(&bitstream));
 }
 
-void test__Bitstream__GetLength(void **state)
+static void
+test__Bitstream__GetLength(void **state)
 {
 	Bitstream bitstream;
 	unsigned char data[32];

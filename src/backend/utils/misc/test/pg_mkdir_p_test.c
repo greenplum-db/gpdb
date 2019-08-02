@@ -57,6 +57,7 @@
 #include "postgres.h"
 
 #include "port.h"
+#include "utils/memutils.h"
 
 #define TESTDIR "/tmp/testdir_pg_mkdir_p"
 #define DATADIR TESTDIR "/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z"
@@ -90,7 +91,7 @@ job_thread(void *arg)
  * threads to call pg_mkdir_p() to create the same dir and check for errors
  * from them.
  */
-void
+static void
 concurrent_pg_mkdir_p(int n)
 {
 	Job			jobs[n];
@@ -128,43 +129,43 @@ concurrent_pg_mkdir_p(int n)
 	assert_int_equal(failed, 0);
 }
 
-void
+static void
 test__pgmkdirp__1(void **state)
 {
 	concurrent_pg_mkdir_p(1);
 }
 
-void
+static void
 test__pgmkdirp__2(void **state)
 {
 	concurrent_pg_mkdir_p(2);
 }
 
-void
+static void
 test__pgmkdirp__4(void **state)
 {
 	concurrent_pg_mkdir_p(4);
 }
 
-void
+static void
 test__pgmkdirp__8(void **state)
 {
 	concurrent_pg_mkdir_p(8);
 }
 
-void
+static void
 test__pgmkdirp__16(void **state)
 {
 	concurrent_pg_mkdir_p(16);
 }
 
-void
+static void
 test__pgmkdirp__32(void **state)
 {
 	concurrent_pg_mkdir_p(32);
 }
 
-void
+static void
 setup(void **state)
 {
 	/* if the dir does not exist rmtree() would raise a warning, suppress it */
@@ -173,7 +174,7 @@ setup(void **state)
 	rmtree(TESTDIR, true);
 }
 
-void
+static void
 teardown(void **state)
 {
 	rmtree(TESTDIR, true);

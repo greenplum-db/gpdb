@@ -35,6 +35,7 @@ InitFakeSessionState(int activeProcessCount, int cleanupCountdown, RunawayStatus
 	MySessionState->spinLock = 0;
 }
 
+#undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 /*
@@ -42,7 +43,7 @@ InitFakeSessionState(int activeProcessCount, int cleanupCountdown, RunawayStatus
  * function by re-throwing the exception, essentially falling
  * back to the next available PG_CATCH();
  */
-void
+static void
 _ExceptionalCondition()
 {
      PG_RE_THROW();
@@ -61,8 +62,6 @@ CheckForActivation(void (*testFunc)(void))
 
 	InitFakeSessionState(0 /* activeProcessCount */, CLEANUP_COUNTDOWN_BEFORE_RUNAWAY /* cleanupCountdown */,
 			RunawayStatus_NotRunaway /* runawayStatus */, 1 /* pinCount */, 0 /* vmem */);
-
-	EventVersion oldVersion = *CurrentVersion;
 
 	activationVersion = 0;
 	deactivationVersion = 0;
@@ -101,7 +100,6 @@ CheckForDeactivationWithoutCleanup(void (*testFunc)(void))
 	InitFakeSessionState(1 /* activeProcessCount */, CLEANUP_COUNTDOWN_BEFORE_RUNAWAY /* cleanupCountdown */,
 			RunawayStatus_NotRunaway /* runawayStatus */, 1 /* pinCount */, 0 /* vmem */);
 
-	EventVersion oldVersion = *CurrentVersion;
 	/* Ensure we have a pending runaway event */
 	EventVersion fakeLatestRunawayVersion = *CurrentVersion - 1;
 	latestRunawayVersion = &fakeLatestRunawayVersion;
@@ -176,7 +174,6 @@ CheckForDeactivationWithProperCleanup(void (*testFunc)(void))
 	InitFakeSessionState(1 /* activeProcessCount */, CLEANUP_COUNTDOWN_BEFORE_RUNAWAY /* cleanupCountdown */,
 			RunawayStatus_NotRunaway /* runawayStatus */, 1 /* pinCount */, 0 /* vmem */);
 
-	EventVersion oldVersion = *CurrentVersion;
 	/* Ensure we have a pending runaway event */
 	EventVersion fakeLatestRunawayVersion = *CurrentVersion - 1;
 	latestRunawayVersion = &fakeLatestRunawayVersion;
@@ -236,7 +233,6 @@ PreventDuplicateDeactivationDuringProcExit(void (*testFunc)(void))
 	InitFakeSessionState(1 /* activeProcessCount */, CLEANUP_COUNTDOWN_BEFORE_RUNAWAY /* cleanupCountdown */,
 			RunawayStatus_NotRunaway /* runawayStatus */, 1 /* pinCount */, 0 /* vmem */);
 
-	EventVersion oldVersion = *CurrentVersion;
 	/* Ensure we have a pending runaway event */
 	EventVersion fakeLatestRunawayVersion = *CurrentVersion - 1;
 	latestRunawayVersion = &fakeLatestRunawayVersion;
@@ -297,7 +293,7 @@ PreventDuplicateDeactivationDuringProcExit(void (*testFunc)(void))
  * Checks if IdleTracker_ShmemInit() properly initializes the global variables
  * as the postmaster
  */
-void
+static void
 test__IdleTracker_ShmemInit__InitializesGlobalVarsWhenPostmaster(void **state)
 {
 	IsUnderPostmaster = false;
@@ -327,7 +323,7 @@ test__IdleTracker_ShmemInit__InitializesGlobalVarsWhenPostmaster(void **state)
 /*
  * Checks if IdleTracker_Init() activates the current process
  */
-void
+static void
 test__IdleTracker_Init__ActivatesProcess(void **state)
 {
 	CheckForActivation(&IdleTracker_Init);
@@ -336,7 +332,7 @@ test__IdleTracker_Init__ActivatesProcess(void **state)
 /*
  * Checks if IdleTracker_ActivateProcess() activates the current process
  */
-void
+static void
 test__IdleTracker_ActivateProcess__ActivatesProcess(void **state)
 {
 	CheckForActivation(&IdleTracker_ActivateProcess);
@@ -346,7 +342,7 @@ test__IdleTracker_ActivateProcess__ActivatesProcess(void **state)
  * Checks if IdleTracker_DeactivateProcess() deactivates the current process
  * when a proper cleanup was done
  */
-void
+static void
 test__IdleTracker_DeactivateProcess__DeactivatesProcessWithCleanup(void **state)
 {
 	CheckForDeactivationWithProperCleanup(&IdleTracker_DeactivateProcess);
@@ -356,7 +352,7 @@ test__IdleTracker_DeactivateProcess__DeactivatesProcessWithCleanup(void **state)
  * Checks if IdleTracker_Shutdown() deactivates the current process when a
  * proper cleanup was done
  */
-void
+static void
 test__IdleTracker_Shutdown__DeactivatesProcessWithCleanup(void **state)
 {
 	CheckForDeactivationWithProperCleanup(&IdleTracker_Shutdown);
@@ -366,7 +362,7 @@ test__IdleTracker_Shutdown__DeactivatesProcessWithCleanup(void **state)
  * Checks if IdleTracker_DeactivateProcess() deactivates the current process
  * when a proper cleanup could not be done
  */
-void
+static void
 test__IdleTracker_DeactivateProcess__DeactivatesProcessWithoutCleanup(void **state)
 {
 	CheckForDeactivationWithoutCleanup(&IdleTracker_DeactivateProcess);
@@ -376,7 +372,7 @@ test__IdleTracker_DeactivateProcess__DeactivatesProcessWithoutCleanup(void **sta
  * Checks if IdleTracker_Shutdown() deactivates the current process when a
  * proper cleanup could not be done
  */
-void
+static void
 test__IdleTracker_Shutdown__DeactivatesProcessWithoutCleanup(void **state)
 {
 	CheckForDeactivationWithoutCleanup(&IdleTracker_Shutdown);
@@ -386,7 +382,7 @@ test__IdleTracker_Shutdown__DeactivatesProcessWithoutCleanup(void **state)
  * Checks if IdleTracker_DeactivateProcess() ignores deactivation if the
  * proc_exit_inprogress is set to true
  */
-void
+static void
 test__IdleTracker_DeactivateProcess__IgnoresDeactivationDuringProcExit(void **state)
 {
 	PreventDuplicateDeactivationDuringProcExit(&IdleTracker_DeactivateProcess);
@@ -396,7 +392,7 @@ test__IdleTracker_DeactivateProcess__IgnoresDeactivationDuringProcExit(void **st
  * Checks if IdleTracker_Shutdown() ignores deactivation if the
  * proc_exit_inprogress is set to true
  */
-void
+static void
 test__IdleTracker_Shutdown__IgnoresDeactivationDuringProcExit(void **state)
 {
 	PreventDuplicateDeactivationDuringProcExit(&IdleTracker_Shutdown);

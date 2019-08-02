@@ -22,9 +22,9 @@
 /* helper functions */
 static void expect_set_headers_call(CHURL_HEADERS headers_handle, const char *header_key, const char *header_value);
 
-static const char *AUTHORITY = "127.0.0.1";
+static char *AUTHORITY = "127.0.0.1";
 
-void
+static void
 test_gpbridge_cleanup(void **state)
 {
 	/* init data in context that will be cleaned up */
@@ -57,7 +57,7 @@ test_gpbridge_cleanup(void **state)
 	pfree(context);
 }
 
-void
+static void
 test_gpbridge_import_start(void **state)
 {
 	/* init data in context that will be cleaned up */
@@ -131,7 +131,7 @@ test_gpbridge_import_start(void **state)
 	pfree(context);
 }
 
-void
+static void
 test_gpbridge_export_start(void **state)
 {
 	/* init data in context that will be cleaned up */
@@ -172,7 +172,7 @@ test_gpbridge_export_start(void **state)
 	pfree(context);
 }
 
-void
+static void
 test_gpbridge_read_one_fragment_less_than_buffer(void **state)
 {
 	/* init data in context */
@@ -211,7 +211,7 @@ test_gpbridge_read_one_fragment_less_than_buffer(void **state)
 	pfree(context);
 }
 
-void
+static void
 test_gpbridge_read_one_fragment_buffer(void **state)
 {
 	/* init data in context */
@@ -247,7 +247,7 @@ test_gpbridge_read_one_fragment_buffer(void **state)
 	pfree(context);
 }
 
-void
+static void
 test_gpbridge_read_first_fragment_buffer(void **state)
 {
 	/* init data in context that will be cleaned up */
@@ -329,7 +329,7 @@ test_gpbridge_read_first_fragment_buffer(void **state)
 	pfree(context);
 }
 
-void
+static void
 test_gpbridge_read_next_fragment_buffer(void **state)
 {
 	/* init data in context */
@@ -417,7 +417,7 @@ test_gpbridge_read_next_fragment_buffer(void **state)
 	pfree(context);
 }
 
-void
+static void
 test_gpbridge_read_last_fragment_finished(void **state)
 {
 	/* init data in context */
@@ -474,7 +474,7 @@ test_gpbridge_read_last_fragment_finished(void **state)
 	pfree(context);
 }
 
-void
+static void
 test_gpbridge_write_data(void **state)
 {
 	/* init data in context */
@@ -507,7 +507,7 @@ test_gpbridge_write_data(void **state)
 	pfree(context);
 }
 
-void
+static void
 test_gpbridge_write_no_data(void **state) {
 	/* init data in context */
 	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));

@@ -12,7 +12,9 @@
 #include "access/gin_private.h"
 
 
-BlockId make_block_id(uint16 high, uint16 low) {
+static BlockId
+make_block_id(uint16 high, uint16 low)
+{
 	BlockId block_id;
 	block_id = (BlockId) calloc(1, sizeof(BlockIdData));
 	block_id->bi_hi = high;
@@ -20,8 +22,9 @@ BlockId make_block_id(uint16 high, uint16 low) {
 	return block_id;
 }
 
-
-ItemPointer make_item_pointer(BlockId block_id, OffsetNumber offset_number) {
+static ItemPointer
+make_item_pointer(BlockId block_id, OffsetNumber offset_number)
+{
 	ItemPointer item_pointer;
 	item_pointer = (ItemPointer) calloc(1, sizeof(ItemPointerData));
 	item_pointer->ip_blkid = *block_id;
@@ -29,12 +32,13 @@ ItemPointer make_item_pointer(BlockId block_id, OffsetNumber offset_number) {
 	return item_pointer;
 }
 
-
 /*
  * Postgres expects item pointers' offsets to be less than 11 bits.
  * Greenplum append-only tables allow for the full 16 bits of OffsetNumber
  */
-void test_compress_gin_posting_list_with_item_pointer_with_offset_larger_than_eleven_bits() {
+static void
+test_compress_gin_posting_list_with_item_pointer_with_offset_larger_than_eleven_bits()
+{
 	OffsetNumber offset_number_larger_than_11_bits = 3000;
 	int number_of_item_pointers = 1;
 	int max_size = 100 * sizeof(ItemPointerData);
@@ -57,7 +61,9 @@ void test_compress_gin_posting_list_with_item_pointer_with_offset_larger_than_el
 	assert_int_equal(gin_posting_list->first.ip_posid, item_pointer->ip_posid);
 }
 
-void test_compress_gin_posting_list_with_multiple_item_pointers() {
+static void
+test_compress_gin_posting_list_with_multiple_item_pointers()
+{
 	OffsetNumber offset_number_with_all_bits_on = 65535;
 	OffsetNumber offset_number_larger_than_11_bits = 5000;
 	OffsetNumber other_offset_number_larger_than_11_bits = 5000;
@@ -119,7 +125,6 @@ void test_compress_gin_posting_list_with_multiple_item_pointers() {
 		decoded_item_pointers[1].ip_posid,
 		65535);
 }
-
 
 int
 main(int argc, char *argv[])

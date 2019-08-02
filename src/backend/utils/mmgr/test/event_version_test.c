@@ -13,7 +13,7 @@
  * Checks if EventVersion_ShmemInit attaches the global pointers and initializes
  * the versions as a postmaster
  */
-void
+static void
 test__EventVersion_ShmemInit__AttachesPointersAndInitializesValuesWhenPostmaster(void **state)
 {
 	vmemTrackerInited = false;
@@ -54,7 +54,7 @@ test__EventVersion_ShmemInit__AttachesPointersAndInitializesValuesWhenPostmaster
  * Checks if EventVersion_ShmemInit attaches the global pointers and but does not
  * initialize the versions when under postmaster
  */
-void
+static void
 test__EventVersion_ShmemInit__AttachesPointersWhenUnderPostmaster(void **state)
 {
 	vmemTrackerInited = false;

@@ -13,7 +13,7 @@
  * and converts it to "key = value,key = value" format.
  * (Example input:  formatter E'fixedwidth_in' null E' ' preserve_blanks E'on')
  */
-void 
+static void 
 test__custom_fmtopts_string(void **state)
 {
 	char* result = custom_fmtopts_string(NULL);

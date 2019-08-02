@@ -18,17 +18,17 @@
 
 /* test strings */
 const char *uri_param = "pxf://localhost:5888/tmp/dummy1";
-const char *read_string = "Hello World!\0";
+char *read_string = "Hello World!\0";
 
-void
-curl_easy_setopt_test_helper(CURL * curl_handle, CURLoption in_option)
+static void
+curl_easy_setopt_test_helper(CURL *curl_handle, CURLoption in_option)
 {
 	expect_value(curl_easy_setopt, curl, curl_handle);
 	expect_value(curl_easy_setopt, option, in_option);
 	will_return(curl_easy_setopt, CURLE_OK);
 }
 
-void
+static void
 curl_slist_append_test_helper(struct curl_slist *slist, char *header_string)
 {
 	expect_any(curl_slist_append, list);
@@ -36,7 +36,7 @@ curl_slist_append_test_helper(struct curl_slist *slist, char *header_string)
 	will_return(curl_slist_append, slist);
 }
 
-void
+static void
 test_set_curl_option(void **state)
 {
 	/* set up context with a curl_handle */
@@ -55,7 +55,7 @@ test_set_curl_option(void **state)
 }
 
 
-CURL *
+static CURL *
 test_churl_init()
 {
 	/* set mock behavior for curl handle initialization */
@@ -80,7 +80,7 @@ test_churl_init()
 	return mock_curl_handle;
 }
 
-void
+static void
 test_churl_init_upload(void **state)
 {
 	CHURL_HEADERS headers = palloc0(sizeof(CHURL_HEADERS));
@@ -126,7 +126,7 @@ test_churl_init_upload(void **state)
 	pfree(handle);
 }
 
-void
+static void
 test_churl_init_download(void **state)
 {
 	CHURL_HEADERS headers = palloc0(sizeof(CHURL_HEADERS));
@@ -164,13 +164,14 @@ test_churl_init_download(void **state)
 }
 
 /*  wrapper function to enable sideeffect testing with multiple parameters */
-void
-write_callback_wrapper(churl_context * user_context)
+static void
+write_callback_wrapper(void *ptr)
 {
+	churl_context * user_context = (churl_context *) ptr;
 	write_callback(read_string, sizeof(char), strlen(read_string) + 1, user_context);
 }
 
-void
+static void
 test_churl_read(void **state)
 {
 	/* context setup */

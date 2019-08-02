@@ -10,7 +10,7 @@
 
 #define SIZE_OF_IN_PROGRESS_ARRAY (10 * sizeof(DistributedTransactionId))
 
-void
+static void
 test__DistributedSnapshotWithLocalMapping_CommittedTest(void **state)
 {
 	DistributedSnapshotCommitted retval;

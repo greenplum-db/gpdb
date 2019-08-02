@@ -37,10 +37,10 @@
 #include "mock/pxffragment_mock.c"
 #include "mock/pxffilters_mock.c"
 
-const char *uri_no_profile = "pxf://default/tmp/dummy1?FRAGMENTER=xxx&RESOLVER=yyy&ACCESSOR=zzz";
-const char *uri_param = "pxf://localhost:5888/tmp/dummy1";
+char *uri_no_profile = "pxf://default/tmp/dummy1?FRAGMENTER=xxx&RESOLVER=yyy&ACCESSOR=zzz";
+char *uri_param = "pxf://localhost:5888/tmp/dummy1";
 
-void
+static void
 test_pxfprotocol_validate_urls(void **state)
 {
 	/* setup call info with no call context */
@@ -82,7 +82,7 @@ test_pxfprotocol_validate_urls(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_import_first_call(void **state)
 {
 	/* setup call info with no call context */
@@ -156,7 +156,7 @@ test_pxfprotocol_import_first_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_import_second_call(void **state)
 {
 	/* setup call info with call context */
@@ -193,7 +193,7 @@ test_pxfprotocol_import_second_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_import_last_call(void **state)
 {
 	/* setup call info with a call context and last call indicator */
@@ -224,7 +224,7 @@ test_pxfprotocol_import_last_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_export_first_call(void **state)
 {
 	/* setup call info with no call context */
@@ -291,7 +291,7 @@ test_pxfprotocol_export_first_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_export_second_call(void **state)
 {
 	/* setup call info with call context */
@@ -328,7 +328,7 @@ test_pxfprotocol_export_second_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_export_last_call(void **state)
 {
 	/* setup call info with a call context and last call indicator */
@@ -359,15 +359,15 @@ test_pxfprotocol_export_last_call(void **state)
 	pfree(fcinfo);
 }
 /* test setup and teardown methods */
-void
-before_test(void)
+static void
+before_test(void **state)
 {
 	/* set global variables */
 	GpIdentity.segindex = 0;
 }
 
-void
-after_test(void)
+static void
+after_test(void **state)
 {
 	/*
 	 * no-op, but the teardown seems to be required when the test fails,

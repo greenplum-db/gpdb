@@ -10,10 +10,9 @@
 #define MAX_PROCS 100
 VariableCacheData vcdata;
 
-void setup(TmControlBlock *controlBlock)
+static void
+setup(TmControlBlock *controlBlock)
 {
-	PGPROC *tmp_proc;
-
 	ShmemVariableCache = &vcdata;
 	shmNextSnapshotId = &controlBlock->NextSnapshotId;
 	shmDistribTimeStamp = &controlBlock->distribTimeStamp;
@@ -36,7 +35,7 @@ void setup(TmControlBlock *controlBlock)
 	procArray->maxProcs = MAX_PROCS;
 }
 
-void
+static void
 test__CreateDistributedSnapshot(void **state)
 {
 	TmControlBlock controlBlock;

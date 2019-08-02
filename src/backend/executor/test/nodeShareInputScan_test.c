@@ -15,16 +15,16 @@
  * Tests ExecEagerFreeShareInputScan when plan->share_type = SHARE_NOTSHARED
  * Verifies that all the pointers are set to NULL
  */
-void
+static void
 test__ExecEagerFreeShareInputScan_SHARE_NOTSHARED(void **state)
 {
 	ShareInputScanState *sisc = makeNode(ShareInputScanState);
 	ShareInputScan *plan = makeNode(ShareInputScan);
-	sisc->ss.ps.plan = plan;
+	sisc->ss.ps.plan = (Plan*) plan;
 
-	sisc->ts_markpos = FIXED_POINTER_VAL;
-	sisc->ts_pos = FIXED_POINTER_VAL;
-	sisc->ts_state = FIXED_POINTER_VAL;
+	sisc->ts_markpos = (void*)FIXED_POINTER_VAL;
+	sisc->ts_pos = (void*)FIXED_POINTER_VAL;
+	sisc->ts_state = (void*)FIXED_POINTER_VAL;
 	sisc->freed = false;
 
 	plan->share_type = SHARE_NOTSHARED;
@@ -45,17 +45,17 @@ test__ExecEagerFreeShareInputScan_SHARE_NOTSHARED(void **state)
  * Verifies that the tuplestore accessor and the tuplestore state are destroyed,
  * and that all the pointers are set to NULL
  */
-void
+static void
 test__ExecEagerFreeShareInputScan_SHARE_MATERIAL(void **state)
 {
 	ShareInputScanState *sisc = makeNode(ShareInputScanState);
 	ShareInputScan *plan = makeNode(ShareInputScan);
-	sisc->ss.ps.plan = plan;
+	sisc->ss.ps.plan = (Plan *) plan;
 
 	sisc->ts_markpos = NULL;
-	sisc->ts_pos = FIXED_POINTER_VAL;
+	sisc->ts_pos = (void*) FIXED_POINTER_VAL;
 	sisc->ts_state = (GenericTupStore *) palloc0(sizeof(GenericTupStore));
-	sisc->ts_state->matstore = FIXED_POINTER_VAL;
+	sisc->ts_state->matstore = (void *) FIXED_POINTER_VAL;
 	sisc->freed = false;
 
 	plan->share_type = SHARE_MATERIAL;

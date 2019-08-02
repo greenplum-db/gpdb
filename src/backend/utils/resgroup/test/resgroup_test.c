@@ -8,14 +8,14 @@
 #define test_with_setup_and_teardown(test_func) \
 	unit_test_setup_teardown(test_func, setup, teardown)
 
-void
+static void
 setup(void **state)
 {
 	/* reset the hook function pointer to avoid test pollution. */
 	resgroup_assign_hook = NULL;
 }
 
-void
+static void
 teardown(void **state)
 {
 	/* No-op for now. This is just to make CMockery happy. */
@@ -23,13 +23,13 @@ teardown(void **state)
 
 Oid decide_resource_group_fake_rv = InvalidOid;
 
-Oid
+static Oid
 decide_resource_group_fake()
 {
 	return decide_resource_group_fake_rv;
 }
 
-void
+static void
 test__decideResGroupId_when_resgroup_assign_hook_is_not_set(void **state)
 {
 	will_return(GetUserId, 1);
@@ -40,7 +40,7 @@ test__decideResGroupId_when_resgroup_assign_hook_is_not_set(void **state)
 	assert_int_equal(decideResGroupId(), 9);
 }
 
-void
+static void
 test__decideResGroupId_when_resgroup_assign_hook_is_set(void **state)
 {
 	decide_resource_group_fake_rv = (Oid) 5;
@@ -48,7 +48,7 @@ test__decideResGroupId_when_resgroup_assign_hook_is_set(void **state)
 	assert_int_equal(decideResGroupId(), 5);
 }
 
-void
+static void
 test__decideResGroupId_when_resgroup_assign_hook_returns_InvalidOid(void **state)
 {
 	decide_resource_group_fake_rv = InvalidOid;
@@ -62,7 +62,7 @@ test__decideResGroupId_when_resgroup_assign_hook_returns_InvalidOid(void **state
 	assert_int_equal(decideResGroupId(), 3);
 }
 
-void
+static void
 test__CpusetToBitset_bad_arguments(void **state)
 {
 	char cpuset[200];
@@ -71,7 +71,7 @@ test__CpusetToBitset_bad_arguments(void **state)
 	assert_true(!CpusetToBitset(cpuset, 200));
 }
 
-void
+static void
 test__CpusetToBitset_normal_case(void **state)
 {
 	const char *cpusetList[] = {
@@ -84,8 +84,6 @@ test__CpusetToBitset_normal_case(void **state)
 		"0-0",
 		"1000",
 	};
-	char bitset[128];
-	char expected[8][128] = {0};
 	Bitmapset	*bms1, *bms2;
 	int i;
 
@@ -157,7 +155,7 @@ test__CpusetToBitset_normal_case(void **state)
 	assert_true(bms_equal(bms1, bms2));
 }
 
-void
+static void
 test__CpusetToBitset_abnormal_case(void **state)
 {
 	const char *cpusetList[] = {
@@ -172,8 +170,6 @@ test__CpusetToBitset_abnormal_case(void **state)
 		"-",
 		"1-0",
 	};
-	char bitset[128] = {0};
-	char expected[128] = {0};
 	int i;
 
 	for (i = 0; i < sizeof(cpusetList) / sizeof(char*); ++i)
@@ -182,7 +178,7 @@ test__CpusetToBitset_abnormal_case(void **state)
 	}
 }
 
-void
+static void
 test_BitsetToCpuset(void **state)
 {
 	char cpusetList[1024] = {0};
@@ -237,7 +233,7 @@ test_BitsetToCpuset(void **state)
 	assert_string_equal(cpusetList, "0,");
 }
 
-void
+static void
 test_CpusetOperation(void **state)
 {
 	char cpuset[1024];

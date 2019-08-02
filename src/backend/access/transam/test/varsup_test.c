@@ -6,6 +6,7 @@
 /* Fetch definition of PG_exception_stack */
 #include "postgres.h"
 
+#undef ereport
 #define ereport(elevel, rest) ereport_mock(elevel, rest)
 
 static int expected_elevel;
@@ -38,7 +39,7 @@ static void expect_ereport(int log_level, int errcode)
 	expected_elevel = log_level;
 }
 
-void
+static void
 test_GetNewTransactionId_xid_stop_limit(void **state)
 {
 	VariableCacheData data;
@@ -78,7 +79,7 @@ test_GetNewTransactionId_xid_stop_limit(void **state)
 	PG_END_TRY();
 }
 
-void
+static void
 test_GetNewTransactionId_xid_warn_limit(void **state)
 {
 	const int xid = 25;
@@ -165,7 +166,7 @@ should_generate_xlog_for_next_oid(Oid expected_oid_in_xlog_rec)
  * QD nextOid: FirstNormalObjectId, QE nextOid: PG_UINT32_MAX
  * QE should set its nextOid to FirstNormalObjectId and create an xlog
  */
-void
+static void
 test_AdvanceObjectId_QD_wrapped_before_QE(void **state)
 {
 	VariableCacheData data = {.nextOid = PG_UINT32_MAX, .oidCount = 1};
@@ -188,7 +189,7 @@ test_AdvanceObjectId_QD_wrapped_before_QE(void **state)
  * QD nextOid: PG_UINT32_MAX, QE nextOid: FirstNormalObjectId
  * QE should do nothing
  */
-void
+static void
 test_AdvanceObjectId_QE_wrapped_before_QD(void **state)
 {
 	VariableCacheData data = {.nextOid = FirstNormalObjectId, .oidCount = VAR_OID_PREFETCH};
@@ -209,7 +210,7 @@ test_AdvanceObjectId_QE_wrapped_before_QD(void **state)
  * QD nextOid: FirstNormalObjectId + 2, QE nextOid: FirstNormalObjectId
  * QE should set its nextOid to FirstNormalObjectId + 2 and not create an xlog
  */
-void
+static void
 test_AdvanceObjectId_normal_flow(void **state)
 {
 	VariableCacheData data = {.nextOid = FirstNormalObjectId, .oidCount = VAR_OID_PREFETCH};

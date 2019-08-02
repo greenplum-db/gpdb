@@ -9,7 +9,7 @@
 #include "utils/elog.h"
 
 #undef elog
-#define elog
+#define elog(elevel, ...) {}
 
 /* Actual function body */
 #include "../distributedlog.c"
@@ -28,7 +28,8 @@
  * The worst scenario was for the subtransaction shared memory, which
  * follows distributed log shared memory to be overwritten.
  */
-static MPP_20426(void **state, TransactionId nextXid)
+static void
+MPP_20426(void **state, TransactionId nextXid)
 {
 	char			pages[BLCKSZ * DtxLogStartupNumPage];
 	char			zeros[BLCKSZ];
@@ -86,7 +87,7 @@ static MPP_20426(void **state, TransactionId nextXid)
 	free(DistributedLogCtl->shared);
 }
 
-void
+static void
 test_DistributedLog_Startup_MPP_20426(void **state)
 {
 	MPP_20426(state, 115064091); /* from observed issue */
@@ -107,7 +108,7 @@ setup(TransactionId nextXid)
 	DistributedLogCtl->shared->page_dirty =
 			(bool *) malloc(sizeof(bool));
 	DistributedLogCtl->shared->page_buffer[0] = &pages[0];
-	memset(pages, 0x7f, sizeof(pages));
+	memset(pages, 0x7f, sizeof(char) * BLCKSZ);
 
 	expect_value(LWLockAcquire, l, DistributedLogControlLock);
 	expect_value(LWLockAcquire, mode, LW_EXCLUSIVE);
@@ -131,7 +132,7 @@ setup(TransactionId nextXid)
 	will_be_called(LWLockRelease);
 }
 
-void
+static void
 test_BinaryUpgradeZeroesOutDistributedLogFittingOnSinglePage(void **state)
 {
 	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
@@ -155,7 +156,7 @@ test_BinaryUpgradeZeroesOutDistributedLogFittingOnSinglePage(void **state)
 	IsBinaryUpgrade = false;
 }
 
-void
+static void
 test_BinaryUpgradeZeroesOutDistributedLogFittingOnThreePages(void **state)
 {
 	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
@@ -187,7 +188,7 @@ test_BinaryUpgradeZeroesOutDistributedLogFittingOnThreePages(void **state)
 	IsBinaryUpgrade = false;
 }
 
-void
+static void
 test_BinaryUpgradeZeroesOutDistributedLogWithTransactionIdWraparound(void **state)
 {
 	TransactionId oldestActiveXid = MaxTransactionId;
@@ -215,7 +216,7 @@ test_BinaryUpgradeZeroesOutDistributedLogWithTransactionIdWraparound(void **stat
 	IsBinaryUpgrade = false;
 }
 
-void
+static void
 test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnSinglePage(void **state)
 {
 	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
@@ -239,7 +240,7 @@ test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnSinglePage(voi
 	ConvertMasterDataDirToSegment = false;
 }
 
-void
+static void
 test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnThreePages(void **state)
 {
 	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
@@ -271,7 +272,7 @@ test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnThreePages(voi
 	ConvertMasterDataDirToSegment = false;
 }
 
-void
+static void
 test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogWithTransactionIdWraparound(void **state)
 {
 	TransactionId oldestActiveXid = MaxTransactionId;

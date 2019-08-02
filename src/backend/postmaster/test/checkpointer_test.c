@@ -9,7 +9,7 @@
 
 #define MAX_BGW_REQUESTS 5
 
-void
+static void
 init_request_queue(void)
 {
 	size_t size = sizeof(CheckpointerShmemStruct) + sizeof(CheckpointerRequest)*MAX_BGW_REQUESTS;
@@ -26,7 +26,7 @@ init_request_queue(void)
  * Basic enqueue tests, including compaction upon enqueuing into a
  * full queue.
  */
-void
+static void
 test__ForwardFsyncRequest_enqueue(void **state)
 {
 	bool ret;

@@ -15,7 +15,7 @@
 /* helper functions */
 static void restore_env(const char *name, const char *value);
 
-void
+static void
 test_normalize_key_name(void **state)
 {
 	char	   *replaced = normalize_key_name("bar");
@@ -69,7 +69,7 @@ test_normalize_key_name(void **state)
 
 }
 
-void
+static void
 test_get_authority(void **state)
 {
 	char	*authority = get_authority();
@@ -77,7 +77,7 @@ test_get_authority(void **state)
 	pfree(authority);
 }
 
-void
+static void
 test_get_authority_from_env(void **state)
 {
 	const char *pStore = getenv(ENV_PXF_PORT);
@@ -94,7 +94,7 @@ test_get_authority_from_env(void **state)
 	restore_env(ENV_PXF_HOST, hStore);
 }
 
-void
+static void
 test_get_pxf_port_fails_with_invalid_value(void **state)
 {
 	// store the existing value of the environment variable
@@ -124,7 +124,7 @@ test_get_pxf_port_fails_with_invalid_value(void **state)
 	restore_env(ENV_PXF_PORT, store);
 }
 
-void
+static void
 test_get_pxf_port_with_env_var_set(void **state)
 {
 	// store the existing value of the environment variable
@@ -138,7 +138,7 @@ test_get_pxf_port_with_env_var_set(void **state)
 	restore_env(ENV_PXF_PORT, store);
 }
 
-void
+static void
 test_get_pxf_host_with_env_var_set(void **state)
 {
 	// store the existing value of the environment variable

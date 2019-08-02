@@ -15,7 +15,7 @@
  * compression, no checksum) for scanning an existing column in ALTER
  * TABLE ADD COLUMN case.
  */
-void
+static void
 test__aocs_begin_headerscan(void **state)
 {
 	AOCSHeaderScanDesc desc;
@@ -58,7 +58,7 @@ test__aocs_begin_headerscan(void **state)
 }
 
 
-void
+static void
 test__aocs_addcol_init(void **state)
 {
 	AOCSAddColumnDesc desc;

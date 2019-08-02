@@ -37,15 +37,17 @@ cdbexplain_sendExecStats(QueryDesc *queryDesc)
 	mock();
 }
 
-void
-cdbdispatch_succeed(EState *estate)
+static void
+cdbdispatch_succeed(void *ptr)
 {
+	EState *estate = (EState*) ptr;
 	estate->dispatcherState = (CdbDispatcherState *) palloc(sizeof(CdbDispatcherState));
 }
+
 /* Function passed to testing framework
  * in order to force SetupInterconnect to fail */ 
-void
-setupinterconnect_fail(void)
+static void
+setupinterconnect_fail(void *ptr)
 {
 	PG_RE_THROW();
 }
@@ -56,18 +58,18 @@ setupinterconnect_fail(void)
  * This test falls in PG_CATCH when SetupInterconnect
  * does not allocate queryDesc->estate->interconnect_context.
  * The test is successful if the */
-void 
+static void 
 test__ExecSetParamPlan__Check_Dispatch_Results(void **state) 
 {
 
-	/*Set plan to explain.*/
+	/* Set plan to explain. */
 	SubPlanState *plan = makeNode(SubPlanState);
-	plan->xprstate.expr = makeNode(SubPlanState);
-	plan->planstate = makeNode(SubPlanState);
+	plan->xprstate.expr = (Expr *) makeNode(SubPlanState);
+	plan->planstate = (PlanState *) makeNode(SubPlanState);
 	plan->planstate->instrument = (Instrumentation *)palloc(sizeof(Instrumentation));
 	plan->planstate->instrument->need_timer = true;
 	plan->planstate->instrument->need_cdb = true;
-	plan->planstate->plan = makeNode(SubPlanState);
+	plan->planstate->plan = (Plan *) makeNode(SubPlanState);
 	
 	EState *estate = CreateExecutorState();
 

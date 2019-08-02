@@ -44,12 +44,12 @@ static struct extvar_t mock_extvar;
 /* helper functions */
 static void expect_headers_append(CHURL_HEADERS headers_handle, const char *header_key, const char *header_value);
 
-void setup_gphd_uri();
-void setup_input_data();
-void setup_external_vars();
-void expect_external_vars();
+static void setup_gphd_uri(void);
+static void setup_input_data(void);
+static void setup_external_vars(void);
+static void expect_external_vars(void);
 
-void
+static void
 common_setup(void **state)
 {
 	setup_gphd_uri();
@@ -60,7 +60,7 @@ common_setup(void **state)
 /*
  * Common resource cleanup
  */
-void
+static void
 common_teardown(void **state)
 {
 	if (input_data->rel != NULL)
@@ -70,7 +70,7 @@ common_teardown(void **state)
 	pfree(gphd_uri);
 }
 
-void
+static void
 setup_gphd_uri()
 {
 	gphd_uri = palloc0(sizeof(GPHDUri));
@@ -80,7 +80,7 @@ setup_gphd_uri()
 	gphd_uri->uri = "'cos it's absolutely free";
 }
 
-void
+static void
 setup_input_data()
 {
 	Relation      rel      = (Relation) palloc0(sizeof(RelationData));
@@ -93,7 +93,7 @@ setup_input_data()
 	input_data->rel       = rel;
 }
 
-void
+static void
 setup_external_vars()
 {
 	mock_extvar.GP_USER = "pxfuser";
@@ -102,7 +102,8 @@ setup_external_vars()
 	snprintf(mock_extvar.GP_XID, sizeof(mock_extvar.GP_XID), "20");
 }
 
-void expect_external_vars()
+static void
+expect_external_vars()
 {
 	expect_any(external_set_env_vars, extvar);
 	expect_string(external_set_env_vars, uri, gphd_uri->uri);
@@ -115,7 +116,7 @@ void expect_external_vars()
 	will_be_called(external_set_env_vars);
 }
 
-void
+static void
 test_build_http_headers(void **state)
 {
 	char		alignment[3];
@@ -208,7 +209,7 @@ test_build_http_headers(void **state)
 	/* no asserts as the function just calls to set headers */
 }
 
-void
+static void
 test_build_http_headers_no_user_error(void **state)
 {
 	pfree(input_data->rel);
@@ -236,7 +237,7 @@ test_build_http_headers_no_user_error(void **state)
 	PG_END_TRY();
 }
 
-void
+static void
 test_build_http_headers_empty_user_error(void **state)
 {
 	pfree(input_data->rel);
@@ -270,7 +271,8 @@ test_build_http_headers_empty_user_error(void **state)
  * Make sure we are not sending any projection information at all,
  * to avoid incorrect results.
  */
-void test__build_http_header__where_is_not_supported(void **state)
+static void
+test__build_http_header__where_is_not_supported(void **state)
 {
 	char		alignment[3];
 	pg_ltoa(sizeof(char *), alignment);
@@ -303,7 +305,7 @@ void test__build_http_header__where_is_not_supported(void **state)
 	pfree(input_data->proj_info);
 }
 
-void
+static void
 test_add_tuple_desc_httpheader(void **state)
 {
 	/* setup mock data and expectations */
@@ -428,7 +430,7 @@ test_add_tuple_desc_httpheader(void **state)
 	pfree(headers);
 }
 
-void
+static void
 test_get_format_name(void **state)
 {
 	char	   *formatName = get_format_name('t');

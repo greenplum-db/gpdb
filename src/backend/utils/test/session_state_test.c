@@ -33,6 +33,7 @@
     	will_return_with_sideeffect(errstart, false, &_ExceptionalCondition, NULL);\
     } \
 
+#undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 /*
@@ -40,7 +41,7 @@
  * function by re-throwing the exception, essentially falling
  * back to the next available PG_CATCH();
  */
-void
+static void
 _ExceptionalCondition()
 {
      PG_RE_THROW();
@@ -78,7 +79,7 @@ static void
 DestroySessionStateArray()
 {
 	assert_true(NULL != AllSessionStateEntries);
-	free(AllSessionStateEntries);
+	free((void *)AllSessionStateEntries);
 	AllSessionStateEntries = NULL;
 }
 
@@ -86,7 +87,7 @@ DestroySessionStateArray()
  * Acquires a SessionState entry for the specified sessionid. If an existing entry
  * is found, this method reuses that entry
  */
-static SessionState*
+static SessionState *
 AcquireSessionState(int sessionId, int loglevel)
 {
 	will_be_called_count(LWLockAcquire, 1);
@@ -102,7 +103,7 @@ AcquireSessionState(int sessionId, int loglevel)
 
 	EXPECT_EREPORT(loglevel);
 	SessionState_Init();
-	return MySessionState;
+	return (SessionState *) MySessionState;
 }
 
 /* Releases a SessionState entry for the specified sessionId */
@@ -154,7 +155,7 @@ ReleaseSessionState(int sessionId)
  * Checks if SessionState_ShmemInit does nothing under postmaster.
  * Note, it is *only* expected to re-attach with an existing array.
  */
-void
+static void
 test__SessionState_ShmemInit__NoOpUnderPostmaster(void **state)
 {
 	AllSessionStateEntries = NULL;
@@ -192,7 +193,7 @@ test__SessionState_ShmemInit__NoOpUnderPostmaster(void **state)
  * Checks if SessionState_ShmemInit initializes the SessionState entries
  * when postmaster
  */
-void
+static void
 test__SessionState_ShmemInit__InitializesWhenPostmaster(void **state)
 {
 	IsUnderPostmaster = false;
@@ -215,7 +216,7 @@ test__SessionState_ShmemInit__InitializesWhenPostmaster(void **state)
 		SessionState *prev = NULL;
 		for (int j = 0; j < MaxBackends; j++)
 		{
-			SessionState *cur = &AllSessionStateEntries->sessions[j];
+			SessionState *cur = (SessionState *) &AllSessionStateEntries->sessions[j];
 			assert_true(cur->sessionId == INVALID_SESSION_ID);
 			assert_true(cur->cleanupCountdown == CLEANUP_COUNTDOWN_BEFORE_RUNAWAY);
 			assert_true(cur->runawayStatus == RunawayStatus_NotRunaway);
@@ -243,7 +244,7 @@ test__SessionState_ShmemInit__InitializesWhenPostmaster(void **state)
  * Checks if SessionState_ShmemInit initializes the usedList and freeList
  * properly
  */
-void
+static void
 test__SessionState_ShmemInit__LinkedListSanity(void **state)
 {
 	/* Only 3 entries to test the linked list sanity */
@@ -261,7 +262,7 @@ test__SessionState_ShmemInit__LinkedListSanity(void **state)
 /*
  * Checks if SessionState_Init initializes a SessionState entry after acquiring
  */
-void
+static void
 test__SessionState_Init__AcquiresAndInitializes(void **state)
 {
 	/* Only 2 entry to test initialization */
@@ -301,7 +302,7 @@ test__SessionState_Init__AcquiresAndInitializes(void **state)
  * Checks if SessionState_Init initializes the global variables
  * such as MySessionState and sessionStateInited properly
  */
-void
+static void
 test__SessionState_Init__TestSideffects(void **state)
 {
 	/* Only 2 entry to test initialization */
@@ -330,7 +331,7 @@ test__SessionState_Init__TestSideffects(void **state)
  * Checks if SessionState_Init acquires a new entry as well as
  * reuse an existing entry whenever possible
  */
-void
+static void
 test__SessionState_Init__AcquiresWithReuse(void **state)
 {
 	/* Only 3 entries to test the reuse */
@@ -358,21 +359,21 @@ test__SessionState_Init__AcquiresWithReuse(void **state)
  * Checks if SessionState_Init fails when no more SessionState entry
  * is available to satisfy a new request
  */
-void
+static void
 test__SessionState_Init__FailsIfNoFreeSessionStateEntry(void **state)
 {
 	/* Only 3 entries to exhaust the entries */
 	CreateSessionStateArray(3);
 
 	/* These should be new */
-	SessionState *first = AcquireSessionState(1, gp_sessionstate_loglevel);
-	SessionState *second = AcquireSessionState(2, gp_sessionstate_loglevel);
-	SessionState *third = AcquireSessionState(3, gp_sessionstate_loglevel);
+	AcquireSessionState(1, gp_sessionstate_loglevel);
+	AcquireSessionState(2, gp_sessionstate_loglevel);
+	AcquireSessionState(3, gp_sessionstate_loglevel);
 
 	PG_TRY();
 	{
 		/* No more SessionState entry to satisfy this request */
-		SessionState *fourth = AcquireSessionState(4, FATAL);
+		AcquireSessionState(4, FATAL);
 		assert_false("No ereport(FATAL, ...) was called");
 	}
 	PG_CATCH();
@@ -389,7 +390,7 @@ test__SessionState_Init__FailsIfNoFreeSessionStateEntry(void **state)
  * SessionState entry as appropriate. The usedList, freeList and
  * sessions array are also checked for sanity
  */
-void
+static void
 test__SessionState_Shutdown__ReleaseSessionEntry(void **state)
 {
 	/* Only 3 entries to test the reuse */
@@ -454,7 +455,7 @@ test__SessionState_Shutdown__ReleaseSessionEntry(void **state)
  * Checks if SessionState_Shutdown marks the session clean when the pinCount
  * drops to 0 (i.e., releasing the entry back to the freeList)
  */
-void
+static void
 test__SessionState_Shutdown__MarksSessionCleanUponRelease(void **state)
 {
 	/* Only 3 entries to test the reuse */

@@ -41,7 +41,7 @@ static char uri[] = "pxf://some/path/and/table.tbl?FRAGMENTER=SomeFragmenter&ACC
 /*
  * Test parsing of valid uri as given in LOCATION in a PXF external table.
  */
-void
+static void
 test_parseGPHDUri_ValidURI(void **state)
 {
 	GPHDUri    *parsed = parseGPHDUri(uri);
@@ -87,7 +87,7 @@ test_parseGPHDUri_ValidURI(void **state)
 /*
  * Negative test: parsing of uri without protocol delimiter "://"
  */
-void
+static void
 test_parseGPHDUri_NegativeTestNoProtocol(void **state)
 {
 	char	   *uri = "pxf:/some/path/and/table.tbl?FRAGMENTER=HdfsDataFragmenter";
@@ -98,7 +98,7 @@ test_parseGPHDUri_NegativeTestNoProtocol(void **state)
 /*
  * Negative test: parsing of uri without options part
  */
-void
+static void
 test_parseGPHDUri_NegativeTestNoOptions(void **state)
 {
 	char	   *uri = "pxf://some/path/and/table.tbl";
@@ -109,7 +109,7 @@ test_parseGPHDUri_NegativeTestNoOptions(void **state)
 /*
  * Negative test: parsing of a uri with a missing equal
  */
-void
+static void
 test_parseGPHDUri_NegativeTestMissingEqual(void **state)
 {
 	char	   *uri = "pxf://some/path/and/table.tbl?FRAGMENTER";
@@ -120,7 +120,7 @@ test_parseGPHDUri_NegativeTestMissingEqual(void **state)
 /*
  * Negative test: parsing of a uri with a missing key
  */
-void
+static void
 test_parseGPHDUri_NegativeTestMissingKey(void **state)
 {
 	char	   *uri = "pxf://some/path/and/table.tbl?=HdfsDataFragmenter";
@@ -131,7 +131,7 @@ test_parseGPHDUri_NegativeTestMissingKey(void **state)
 /*
  * Negative test: parsing of a uri with a missing value
  */
-void
+static void
 test_parseGPHDUri_NegativeTestMissingValue(void **state)
 {
 	char	   *uri = "pxf://some/path/and/table.tbl?FRAGMENTER=";
@@ -142,7 +142,7 @@ test_parseGPHDUri_NegativeTestMissingValue(void **state)
 /*
  * Test GPHDUri_opt_exists to check if a specified option is in the URI
  */
-void
+static void
 test_GPHDUri_opt_exists(void **state)
 {
 	char	   *uri_str = "xyz?FRAGMENTER=HdfsDataFragmenter&RESOLVER=SomeResolver";
@@ -165,7 +165,7 @@ test_GPHDUri_opt_exists(void **state)
 /*
  * Test GPHDUri_verify_no_duplicate_options to check that there are no duplicate options
  */
-void
+static void
 test_GPHDUri_verify_no_duplicate_options(void **state)
 {
 	/* No duplicates */
@@ -218,7 +218,7 @@ test_GPHDUri_verify_no_duplicate_options(void **state)
 /*
  * Test GPHDUri_verify_core_options_exist to check that all options in the expected list are present
  */
-void
+static void
 test_GPHDUri_verify_core_options_exist(void **state)
 {
 	List	   *coreOptions = list_make3("FRAGMENTER", "ACCESSOR", "RESOLVER");
@@ -282,7 +282,7 @@ test_parseGPHDUri_helper(const char *uri, const char *message)
 	PG_TRY();
 	{
 		/* This will throw a ereport(ERROR). */
-		GPHDUri    *parsed = parseGPHDUri(uri);
+		parseGPHDUri(uri);
 
 		assert_false("Expected Exception");
 	}

@@ -26,6 +26,7 @@
  * Mock PG_RE_THROW as well, because we are not using real elog.o.
  * The closest mockery is to call siglongjmp().
  */
+#undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 /* Buffer to store the last error mesage from errdetail */
@@ -35,7 +36,8 @@ static char expectedErrorMsg[ERROR_MESSAGE_MAX_LEN];
 
 static MemoryContext testMemoryContext = NULL;
 
-int errfinish_impl(int dummy __attribute__((unused)),...)
+static int
+errfinish_impl(int dummy __attribute__((unused)),...)
 {
 	/* We only throw error if the error message matches our expectation */
 	if (0 == strcmp(lastErrorMsg, expectedErrorMsg))
@@ -45,12 +47,14 @@ int errfinish_impl(int dummy __attribute__((unused)),...)
 	return 0;
 }
 
-int errmsg_impl(const char *fmt, ...)
+static int
+errmsg_impl(const char *fmt, ...)
 {
 	return 0;
 }
 
-int errdetail_internal_impl(const char* fmt, ...)
+static int
+errdetail_internal_impl(const char* fmt, ...)
 {
     StringInfoData	buf;
     initStringInfo(&buf);
@@ -192,7 +196,8 @@ test__incompatible_module_error__headerversion_identical(void **state)
 /*
  * Sets up the global data structures and the memory context
  */
-void SetupDataStructures(void **state)
+static void
+SetupDataStructures(void **state)
 {
 	lastErrorMsg[0] = '\0';
 	expectedErrorMsg[0] = '\0';
@@ -218,7 +223,8 @@ void SetupDataStructures(void **state)
 /*
  * Cleans up memory by reseting testMemoryContext
  */
-void TeardownDataStructures(void **state)
+static void
+TeardownDataStructures(void **state)
 {
 	assert_true(NULL != testMemoryContext &&
 			CurrentMemoryContext == testMemoryContext);

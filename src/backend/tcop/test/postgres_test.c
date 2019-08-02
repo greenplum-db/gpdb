@@ -9,10 +9,12 @@
  * Mock PG_RE_THROW, because we are not using real elog.o.
  * The closest mockery is to call siglongjmp().
  */
+#undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 #define errfinish errfinish_impl
-int errfinish_impl(int dummy __attribute__((unused)),...)
+static int
+errfinish_impl(int dummy __attribute__((unused)),...)
 {
 	PG_RE_THROW();
 }
@@ -41,7 +43,7 @@ int errfinish_impl(int dummy __attribute__((unused)),...)
 const char *progname = "postgres";
 
 /* List with multiple elements, return FALSE. */
-void
+static void
 test__IsTransactionExitStmtList__MultipleElementList(void **state)
 {
 	List *list = list_make2_int(1,2);
@@ -52,7 +54,7 @@ test__IsTransactionExitStmtList__MultipleElementList(void **state)
 }
 
 /*  Transaction with Exit Statement, return TRUE. */
-void
+static void
 test__IsTransactionExitStmt__IsTransactionStmt(void **state)
 {
 	TransactionStmt *stmt = makeNode(TransactionStmt);
@@ -67,7 +69,7 @@ test__IsTransactionExitStmt__IsTransactionStmt(void **state)
 }
 
 /* Query with Transaction with Exit Statement, return TRUE. */
-void
+static void
 test__IsTransactionExitStmt__IsQuery(void **state)
 {
 	TransactionStmt *stmt = makeNode(TransactionStmt);
@@ -75,7 +77,7 @@ test__IsTransactionExitStmt__IsQuery(void **state)
 	Query *query = (Query *)palloc(sizeof(Query));
 	query->type = T_Query;
 	query->commandType = CMD_UTILITY;
-	query->utilityStmt = stmt;
+	query->utilityStmt = (Node*) stmt;
 
 	List *list = list_make1(query);
 
@@ -89,7 +91,7 @@ test__IsTransactionExitStmt__IsQuery(void **state)
 /*
  * Test ProcessInterrupts when ClientConnectionLost flag is set
  */
-void
+static void
 test__ProcessInterrupts__ClientConnectionLost(void **state)
 {
 	will_be_called(DisableNotifyInterrupt);
@@ -126,7 +128,7 @@ test__ProcessInterrupts__ClientConnectionLost(void **state)
 /*
  * Test ProcessInterrupts when DoingCommandRead is set
  */
-void
+static void
 test__ProcessInterrupts__DoingCommandRead(void **state)
 {
 	InterruptHoldoffCount = 0;

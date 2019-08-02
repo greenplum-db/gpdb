@@ -12,8 +12,10 @@
 #include "catalog/pg_tablespace.h"
 
 static int
-check_relfilenode_function(const RelFileNode *value, const RelFileNode *check_value)
+check_relfilenode_function(const LargestIntegralType arg1, const LargestIntegralType arg2)
 {
+	const RelFileNode *value = (const RelFileNode *) arg1;
+	const RelFileNode *check_value = (const RelFileNode *) arg2;
 	return RelFileNodeEquals(*value, *check_value);
 }
 
@@ -85,7 +87,7 @@ ao_invalid_segment_file_test(uint8 xl_info)
  * Test that ao_insert_replay will call XLogAOSegmentFile when we cannot find
  * the AO segment file.
  */
-void
+static void
 test_ao_insert_replay_invalid_segment_file(void **state)
 {
 	ao_invalid_segment_file_test(XLOG_APPENDONLY_INSERT);
@@ -95,7 +97,7 @@ test_ao_insert_replay_invalid_segment_file(void **state)
  * Test that ao_truncate_replay will call XLogAOSegmentFile when we cannot find
  * the AO segment file.
  */
-void
+static void
 test_ao_truncate_replay_invalid_segment_file(void **state)
 {
 	ao_invalid_segment_file_test(XLOG_APPENDONLY_TRUNCATE);
