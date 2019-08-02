@@ -54,6 +54,15 @@ create or replace function setup_tablespace_location_dir_for_test(tablespace_loc
 $$ LANGUAGE plpythonu;
 
 
+create or replace function disable_fts() returns void as $$
+	begin
+		-- intentionally skip fts during these tests
+		-- we know we're going to be inducing errors and panics on primaries
+		perform gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port) from gp_segment_configuration where content = -1 and role = 'p';
+	end;
+$$ language plpgsql;
+
+
 create or replace function setup(content_id integer, fault_name text, fault_action_type text, tablespace_dir text) returns void as $$
 	begin
 		-- reset tablespace directories
@@ -64,10 +73,7 @@ create or replace function setup(content_id integer, fault_name text, fault_acti
 		-- setup faults
 		perform gp_inject_fault2('all', 'reset', dbid, hostname, port) from gp_segment_configuration where content = content_id and role = 'p';
 		perform gp_inject_fault2(fault_name, fault_action_type, dbid, hostname, port) from gp_segment_configuration where content = content_id and role = 'p';
-
-		-- intentionally skip fts during these tests
-		-- we know we're going to be inducing errors and panics on primaries
-		perform gp_inject_fault_infinite2('fts_probe', 'skip', dbid, hostname, port) from gp_segment_configuration where content = -1 and role = 'p';
+		perform disable_fts();
 	end;
 $$ LANGUAGE plpgsql;
 
@@ -411,6 +417,7 @@ select remove_tablespace_location_directory(:'tablespace_location');
 select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
 select setup_tablespace_location_dir_for_test(:'tablespace_location');
 
+select disable_fts();
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
 DROP TABLESPACE my_tablespace_for_testing;
@@ -434,6 +441,7 @@ select remove_tablespace_location_directory(:'tablespace_location');
 select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
 select setup_tablespace_location_dir_for_test(:'tablespace_location');
 
+select disable_fts();
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
 DROP TABLESPACE my_tablespace_for_testing;
@@ -458,6 +466,7 @@ select remove_tablespace_location_directory(:'tablespace_location');
 select remove_tablespace_location_directory(:'tablespace_location') from gp_dist_random('gp_id');
 select setup_tablespace_location_dir_for_test(:'tablespace_location');
 
+select disable_fts();
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';
 select gp_inject_fault2(:'fault_name', :'fault_type', dbid, hostname, port) from gp_segment_configuration where role = 'p' and content = :content_id_under_test;
 DROP TABLESPACE my_tablespace_for_testing;
