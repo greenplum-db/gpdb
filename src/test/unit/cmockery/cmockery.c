@@ -204,7 +204,7 @@ static void remove_always_return_values(ListNode * const map_head,
 		const size_t number_of_symbol_names);
 static int check_for_leftover_values(
 		const ListNode * const map_head, const char * const error_message,
-		const size_t number_of_symbol_names);
+		const size_t number_of_symbol_names) __attribute__((format(printf, 2, 0)));
 // This must be called at the beginning of a test to initialize some data
 // structures.
 static void initialize_testing(const char *test_name);
@@ -347,7 +347,7 @@ void initialize_testing(const char *test_name) {
 }
 
 
-void fail_if_leftover_values(const char *test_name) {
+static void fail_if_leftover_values(const char *test_name) {
 	int error_occurred = 0;
 	remove_always_return_values(&global_function_result_map_head, 1);
 	if (check_for_leftover_values(
@@ -506,11 +506,10 @@ static void free_value(const void *value, void *cleanup_value_data) {
 static void free_symbol_map_value(const void *value,
 		void *cleanup_value_data) {
 	SymbolMapValue * const map_value = (SymbolMapValue*)value;
-	const unsigned int children = (unsigned int)cleanup_value_data;
 	assert_true(value);
 	list_free(&map_value->symbol_values_list_head,
-			children ? free_symbol_map_value : free_value,
-					(void*)(children - 1));
+			cleanup_value_data ? free_symbol_map_value : free_value,
+			  ((int8_t *)cleanup_value_data - 1));
 	free(map_value);
 }
 
@@ -1235,7 +1234,7 @@ void _expect_any(
 			count);
 }
 
-void _will_assign(
+static void _will_assign(
 		const char* const function, const char* const parameter,
 		const char* const file, const int line,
 		const AssignParameterValue assign_function,
@@ -1389,7 +1388,7 @@ void mock_assert(const int result, const char* const expression,
 		const char* const file, const int line) {
 	if (!result) {
 		if (global_expecting_assert) {
-			longjmp(global_expect_assert_env, (int)expression);
+			longjmp(global_expect_assert_env, (intptr_t)expression);
 		} else {
 			print_error(OUTPUT_PADDING "ASSERT: %s\n", expression);
 			_fail(file, line);
@@ -1571,7 +1570,7 @@ void _test_free(void* const ptr, const char* file, const int line) {
 	unsigned int i;
 	char *block = (char*)ptr;
 	MallocBlockInfo *block_info;
-	_assert_true((int)ptr, "ptr", file, line);
+	_assert_true((intptr_t)ptr, "ptr", file, line);
 	block_info = (MallocBlockInfo*)(block - (MALLOC_GUARD_SIZE +
 			sizeof(*block_info)));
 	// Check the guard blocks.

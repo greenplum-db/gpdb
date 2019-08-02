@@ -567,10 +567,10 @@ int _run_test(
 int _run_tests(const UnitTest * const tests, const size_t number_of_tests);
 
 // Standard output and error print methods.
-void print_message(int color_code, const char* const format, ...);
-void print_error(const char* const format, ...);
-void vprint_message(int color_code, const char* const format, va_list args);
-void vprint_error(const char* const format, va_list args);
+void print_message(int color_code, const char* const format, ...) __attribute__((format(printf, 2, 0)));
+void print_error(const char* const format, ...) __attribute__((format(printf, 1, 0)));
+void vprint_message(int color_code, const char* const format, va_list args) __attribute__((format(printf, 2, 0)));
+void vprint_error(const char* const format, va_list args) __attribute__((format(printf, 1, 0)));
 
 // Parse command line arguments
 void cmockery_parse_arguments(int argc, char** argv);
