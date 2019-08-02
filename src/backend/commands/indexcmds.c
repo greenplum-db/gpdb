@@ -851,7 +851,7 @@ DefineIndex(Oid relationId,
 		 * recusing in DefineIndex. However, GPDB always sets stmt->relation
 		 * because it needs to be dispatched to the QEs.
 		 */
-		if (interpretInhOption(stmt->relation->inhOpt) && (Gp_role == GP_ROLE_DISPATCH))
+		if (Gp_role == GP_ROLE_DISPATCH)
 		{
 			List *my_part_oids = find_inheritance_children(RelationGetRelid(rel), NoLock);
 			TupleDesc	parentDesc;
