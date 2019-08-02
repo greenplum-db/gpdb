@@ -19,7 +19,7 @@ result = []
 for i in range(len(rv)):
     cur_line = rv[i]['QUERY PLAN']
     if search_text.lower() in cur_line.lower():
-        p = re.compile('.+\((segment [\d]+).+ Workfile: \(([\d+]) spilling\)')
+        p = re.compile('.+\((segment \d+).+ Workfile: \((\d+) spilling\)')
         m = p.match(cur_line)
         workfile_created = int(m.group(2))
         cur_row = int(workfile_created == nsegments)
@@ -58,7 +58,7 @@ rv = plpy.execute(explain_query)
 result = []
 for i in range(len(rv)):
     cur_line = rv[i]['QUERY PLAN']
-    p = re.compile('.+\((seg[\d]+).+ ([\d+]) overflows;')
+    p = re.compile('.+\((seg\d+).+ (\d+) overflows;')
     m = p.match(cur_line)
     if m:
       overflows = int(m.group(2))

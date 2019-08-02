@@ -18,7 +18,7 @@ result = []
 for i in range(len(rv)):
     cur_line = rv[i]['QUERY PLAN']
     if search_text.lower() in cur_line.lower():
-        p = re.compile('.+\((segment [\d]+).+ Workfile: \(([\d+]) spilling\)')
+        p = re.compile('.+\((segment \d+).+ Workfile: \((\d+) spilling\)')
         m = p.match(cur_line)
         workfile_created = int(m.group(2))
         result.append(workfile_created)
