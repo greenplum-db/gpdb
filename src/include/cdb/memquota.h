@@ -50,7 +50,7 @@ extern void PolicyEagerFreeAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memo
 /**
  * Inverse for explain analyze.
  */
-extern uint64 PolicyAutoStatementMemForNoSpillKB(PlannedStmt *stmt, uint64 minOperatorMemKB);
+extern uint64 PolicyAutoStatementMemForNoSpill(PlannedStmt *stmt, uint64 minOperatorMemKB);
 
 /**
  * Is result node memory intensive?
