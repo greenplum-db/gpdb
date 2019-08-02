@@ -18,7 +18,7 @@
  * readSharedLocalSnapshot_forCursor().  Validate that the contents read from
  * the file match what was written.
  */
-void
+static void
 test_write_read_shared_snapshot_for_cursor(void **state)
 {
 #define XCNT 5
@@ -99,7 +99,7 @@ test_write_read_shared_snapshot_for_cursor(void **state)
 		assert_true(slot.snapshot.xip[i] == snapshot.xip[i]);
 }
 
-void
+static void
 test_boundaries_of_CreateSharedSnapshotArray(void **state)
 {
 	/*
@@ -135,8 +135,8 @@ test_boundaries_of_CreateSharedSnapshotArray(void **state)
 		 * Assert that every slot xip array falls inside the boundaries of the
 		 * allocated shared snapshot.
 		 */
-		assert_true(s->snapshot.xip > fakeSharedSnapshotArray);
-		assert_true(s->snapshot.xip < (((void *)fakeSharedSnapshotArray) +
+		assert_true((uint8_t *)s->snapshot.xip > (uint8_t *)fakeSharedSnapshotArray);
+		assert_true((uint8_t *)s->snapshot.xip < (((uint8_t *)fakeSharedSnapshotArray) +
 												sharedSnapshotShmemSize));
 	}
 }

@@ -766,7 +766,6 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 	Assert(!Gp_is_writer);
 	Assert(SharedLocalSnapshotSlot != NULL);
 	Assert(snapshot->xip != NULL);
-	Assert(snapshot->subxip != NULL);
 
 	/*
 	 * Open our dump-file, this will either return a valid file, or
