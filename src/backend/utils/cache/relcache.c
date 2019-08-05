@@ -3241,49 +3241,78 @@ RelationSetNewRelfilenode(Relation relation, TransactionId freezeXid,
 	RelationDropStorage(relation);
 
 	/*
-	 * Now update the pg_class row.  However, if we're dealing with a mapped
-	 * index, pg_class.relfilenode doesn't change; instead we have to send the
-	 * update to the relation mapper.
+	 * If we're dealing with a mapped index, pg_class.relfilenode doesn't
+	 * change; instead we have to send the update to the relation mapper.
+	 *
+	 * For mapped indexes, we don't actually change the pg_class entry at all;
+	 * this is essential when reindexing pg_class itself.  That leaves us with
+	 * possibly-inaccurate values of relpages etc, but those will be fixed up
+	 * later.
 	 */
 	if (RelationIsMapped(relation))
+	{
+		/* This case is only supported for indexes */
+		Assert(relation->rd_rel->relkind == RELKIND_INDEX);
+
+		/* Since we're not updating pg_class, these had better not change */
+		Assert(classform->relfrozenxid == freezeXid);
+		Assert(classform->relminmxid == minmulti);
+
+		/*
+		 * In some code paths it's possible that the tuple update we'd
+		 * otherwise do here is the only thing that would assign an XID for
+		 * the current transaction.  However, we must have an XID to delete
+		 * files, so make sure one is assigned.
+		 */
+		(void) GetCurrentTransactionId();
+
+		/* Do the deed */
 		RelationMapUpdateMap(RelationGetRelid(relation),
 							 newrelfilenode,
 							 relation->rd_rel->relisshared,
 							 false);
+
+		/* Since we're not updating pg_class, must trigger inval manually */
+		CacheInvalidateRelcache(relation);
+	}
 	else
+	{
+		/* Normal case, update the pg_class entry */
 		classform->relfilenode = newrelfilenode;
 
-	/* These changes are safe even for a mapped relation */
-	if (relation->rd_rel->relkind != RELKIND_SEQUENCE)
-	{
-		classform->relpages = 0;	/* it's empty until further notice */
-		classform->reltuples = 0;
-		classform->relallvisible = 0;
-	}
+		/* relpages etc. never change for sequences */
+		if (relation->rd_rel->relkind != RELKIND_SEQUENCE)
+		{
+			classform->relpages = 0;	/* it's empty until further notice */
+			classform->reltuples = 0;
+			classform->relallvisible = 0;
+		}
 
-	if (TransactionIdIsValid(classform->relfrozenxid))
-	{
-		Assert(TransactionIdIsNormal(freezeXid));
-		classform->relfrozenxid = freezeXid;
-		/*
-		 * Don't know partition parent or not here but passing false is perfect
-		 * for assertion, as valid relfrozenxid means it shouldn't be parent.
-		 */
-		Assert(should_have_valid_relfrozenxid(classform->relkind,
-											  classform->relstorage, false));
-	}
-	classform->relminmxid = minmulti;
+		if (TransactionIdIsValid(classform->relfrozenxid))
+		{
+			Assert(TransactionIdIsNormal(freezeXid));
+			classform->relfrozenxid = freezeXid;
+			/*
+			 * Don't know partition parent or not here but passing false is
+			 * perfect for assertion, as valid relfrozenxid means it shouldn't
+			 * be parent.
+			 */
+			Assert(should_have_valid_relfrozenxid(classform->relkind,
+												  classform->relstorage, false));
+		}
+		classform->relminmxid = minmulti;
 
-	simple_heap_update(pg_class, &tuple->t_self, tuple);
-	CatalogUpdateIndexes(pg_class, tuple);
+		simple_heap_update(pg_class, &tuple->t_self, tuple);
+		CatalogUpdateIndexes(pg_class, tuple);
+	}
 
 	heap_freetuple(tuple);
 
 	heap_close(pg_class, RowExclusiveLock);
 
 	/*
-	 * Make the pg_class row change visible, as well as the relation map
-	 * change if any.  This will cause the relcache entry to get updated, too.
+	 * Make the pg_class row change or relation map change visible.  This will
+	 * cause the relcache entry to get updated, too.
 	 */
 	CommandCounterIncrement();
 
@@ -4413,28 +4442,51 @@ restart:
 	{
 		Oid			indexOid = lfirst_oid(l);
 		Relation	indexDesc;
-		IndexInfo  *indexInfo;
+		Datum		datum;
+		bool		isnull;
+		Node	   *indexExpressions;
+		Node	   *indexPredicate;
 		int			i;
 		bool		isKey;		/* candidate key */
 		bool		isIDKey;	/* replica identity index */
 
 		indexDesc = index_open(indexOid, AccessShareLock);
 
-		/* Extract index key information from the index's pg_index row */
-		indexInfo = BuildIndexInfo(indexDesc);
+		/*
+		 * Extract index expressions and index predicate.  Note: Don't use
+		 * RelationGetIndexExpressions()/RelationGetIndexPredicate(), because
+		 * those might run constant expressions evaluation, which needs a
+		 * snapshot, which we might not have here.  (Also, it's probably more
+		 * sound to collect the bitmaps before any transformations that might
+		 * eliminate columns, but the practical impact of this is limited.)
+		 */
+
+		datum = heap_getattr(indexDesc->rd_indextuple, Anum_pg_index_indexprs,
+							 GetPgIndexDescriptor(), &isnull);
+		if (!isnull)
+			indexExpressions = stringToNode(TextDatumGetCString(datum));
+		else
+			indexExpressions = NULL;
+
+		datum = heap_getattr(indexDesc->rd_indextuple, Anum_pg_index_indpred,
+							 GetPgIndexDescriptor(), &isnull);
+		if (!isnull)
+			indexPredicate = stringToNode(TextDatumGetCString(datum));
+		else
+			indexPredicate = NULL;
 
 		/* Can this index be referenced by a foreign key? */
-		isKey = indexInfo->ii_Unique &&
-			indexInfo->ii_Expressions == NIL &&
-			indexInfo->ii_Predicate == NIL;
+		isKey = indexDesc->rd_index->indisunique &&
+			indexExpressions == NULL &&
+			indexPredicate == NULL;
 
 		/* Is this index the configured (or default) replica identity? */
 		isIDKey = (indexOid == relreplindex);
 
 		/* Collect simple attribute references */
-		for (i = 0; i < indexInfo->ii_NumIndexAttrs; i++)
+		for (i = 0; i < indexDesc->rd_index->indnatts; i++)
 		{
-			int			attrnum = indexInfo->ii_KeyAttrNumbers[i];
+			int			attrnum = indexDesc->rd_index->indkey.values[i];
 
 			if (attrnum != 0)
 			{
@@ -4452,10 +4504,10 @@ restart:
 		}
 
 		/* Collect all attributes used in expressions, too */
-		pull_varattnos((Node *) indexInfo->ii_Expressions, 1, &indexattrs);
+		pull_varattnos(indexExpressions, 1, &indexattrs);
 
 		/* Collect all attributes in the index predicate, too */
-		pull_varattnos((Node *) indexInfo->ii_Predicate, 1, &indexattrs);
+		pull_varattnos(indexPredicate, 1, &indexattrs);
 
 		index_close(indexDesc, AccessShareLock);
 	}

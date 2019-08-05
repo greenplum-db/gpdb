@@ -296,7 +296,7 @@
 
   <para>
    In general, send bug reports to the bug report mailing list at
-   <email>pgsql-bugs@postgresql.org</email>.
+   <email>pgsql-bugs@lists.postgresql.org</email>.
    You are requested to use a descriptive subject for your email
    message, perhaps parts of the error message.
   </para>
@@ -306,7 +306,7 @@
    at the project's
    <ulink url="https://www.postgresql.org/">web site</ulink>.
    Entering a bug report this way causes it to be mailed to the
-   <email>pgsql-bugs@postgresql.org</email> mailing list.
+   <email>pgsql-bugs@lists.postgresql.org</email> mailing list.
   </para>
 
   <para>
@@ -318,8 +318,8 @@
 
   <para>
    Do not send bug reports to any of the user mailing lists, such as
-   <email>pgsql-sql@postgresql.org</email> or
-   <email>pgsql-general@postgresql.org</email>.
+   <email>pgsql-sql@lists.postgresql.org</email> or
+   <email>pgsql-general@lists.postgresql.org</email>.
    These mailing lists are for answering
    user questions, and their subscribers normally do not wish to receive
    bug reports. More importantly, they are unlikely to fix them.
@@ -327,7 +327,7 @@
 
   <para>
    Also, please do <emphasis>not</emphasis> send reports to
-   the developers' mailing list <email>pgsql-hackers@postgresql.org</email>.
+   the developers' mailing list <email>pgsql-hackers@lists.postgresql.org</email>.
    This list is for discussing the
    development of <productname>PostgreSQL</productname>, and it would be nice
    if we could keep the bug reports separate. We might choose to take up a
@@ -337,14 +337,14 @@
 
   <para>
    If you have a problem with the documentation, the best place to report it
-   is the documentation mailing list <email>pgsql-docs@postgresql.org</email>.
+   is the documentation mailing list <email>pgsql-docs@lists.postgresql.org</email>.
    Please be specific about what part of the documentation you are unhappy
    with.
   </para>
 
   <para>
    If your bug is a portability problem on a non-supported platform,
-   send mail to <email>pgsql-hackers@postgresql.org</email>,
+   send mail to <email>pgsql-hackers@lists.postgresql.org</email>,
    so we (and you) can work on
    porting <productname>PostgreSQL</productname> to your platform.
   </para>
@@ -352,14 +352,10 @@
   <note>
    <para>
     Due to the unfortunate amount of spam going around, all of the above
-    email addresses are closed mailing lists. That is, you need to be
-    subscribed to a list to be allowed to post on it.  (You need not be
-    subscribed to use the bug-report web form, however.)
-    If you would like to send mail but do not want to receive list traffic,
-    you can subscribe and set your subscription option to <literal>nomail</>.
-    For more information send mail to
-    <email>majordomo@postgresql.org</email>
-    with the single word <literal>help</> in the body of the message.
+    lists will be moderated unless you are subscribed. That means there
+    will be some delay before the email is delivered. If you wish to subscribe
+    to the lists, please visit
+    <ulink url="https://lists.postgresql.org/"></ulink> for instructions.
    </para>
   </note>
  </sect2>

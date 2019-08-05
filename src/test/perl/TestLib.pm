@@ -104,6 +104,28 @@ delete $ENV{LANGUAGE};
 delete $ENV{LC_ALL};
 $ENV{LC_MESSAGES} = 'C';
 
+delete $ENV{PGCONNECT_TIMEOUT};
+delete $ENV{PGDATA};
+delete $ENV{PGDATABASE};
+delete $ENV{PGHOSTADDR};
+delete $ENV{PGREQUIRESSL};
+delete $ENV{PGSERVICE};
+delete $ENV{PGSSLMODE};
+delete $ENV{PGUSER};
+
+if (!$ENV{PGPORT})
+{
+	$ENV{PGPORT} = 65432;
+}
+
+# Force a sane value of PGPORT
+$ENV{PGPORT} = int($ENV{PGPORT});
+if ($ENV{PGPORT} < 1024 || $ENV{PGPORT} > 65535)
+{
+	$ENV{PGPORT} = ($ENV{PGPORT} % 16384) + 49152;
+}
+
+
 #
 # Helper functions
 #

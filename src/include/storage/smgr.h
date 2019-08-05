@@ -17,6 +17,7 @@
 #define SMGR_H
 
 #include "fmgr.h"
+#include "lib/ilist.h"
 #include "storage/block.h"
 #include "storage/relfilenode.h"
 #include "storage/dbdirnode.h"
@@ -71,7 +72,7 @@ typedef struct SMgrRelationData
 	struct _MdfdVec *md_fd[MAX_FORKNUM + 1];
 
 	/* if unowned, list link in list of all unowned SMgrRelations */
-	struct SMgrRelationData *next_unowned_reln;
+	dlist_node	node;
 } SMgrRelationData;
 
 typedef SMgrRelationData *SMgrRelation;

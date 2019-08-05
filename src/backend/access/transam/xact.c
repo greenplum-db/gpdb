@@ -2254,19 +2254,37 @@ StartTransaction(void)
 	s = &TopTransactionStateData;
 	CurrentTransactionState = s;
 
-	/*
-	 * check the current transaction state
-	 */
-	if (s->state != TRANS_DEFAULT)
-		elog(WARNING, "StartTransaction while in %s state",
-			 TransStateAsString(s->state));
+	/* check the current transaction state */
+	Assert(s->state == TRANS_DEFAULT);
 
 	/*
-	 * set the current transaction state information appropriately during
-	 * start processing
+	 * Set the current transaction state information appropriately during
+	 * start processing.  Note that once the transaction status is switched
+	 * this process cannot fail until the user ID and the security context
+	 * flags are fetched below.
 	 */
 	s->state = TRANS_START;
 	s->transactionId = InvalidTransactionId;	/* until assigned */
+
+	/*
+	 * initialize current transaction state fields
+	 *
+	 * note: prevXactReadOnly is not used at the outermost level
+	 */
+	s->nestingLevel = 1;
+	s->gucNestLevel = 1;
+	s->childXids = NULL;
+	s->nChildXids = 0;
+	s->maxChildXids = 0;
+
+	/*
+	 * Once the current user ID and the security context flags are fetched,
+	 * both will be properly reset even if transaction startup fails.
+	 */
+	GetUserIdAndSecContext(&s->prevUser, &s->prevSecContext);
+
+	/* SecurityRestrictionContext should never be set outside a transaction */
+	Assert(s->prevSecContext == 0);
 
 	/*
 	 * Make sure we've reset xact state variables
@@ -2545,20 +2563,6 @@ StartTransaction(void)
 	xactStartTimestamp = stmtStartTimestamp;
 	xactStopTimestamp = 0;
 	pgstat_report_xact_timestamp(xactStartTimestamp);
-
-	/*
-	 * initialize current transaction state fields
-	 *
-	 * note: prevXactReadOnly is not used at the outermost level
-	 */
-	s->nestingLevel = 1;
-	s->gucNestLevel = 1;
-	s->childXids = NULL;
-	s->nChildXids = 0;
-	s->maxChildXids = 0;
-	GetUserIdAndSecContext(&s->prevUser, &s->prevSecContext);
-	/* SecurityRestrictionContext should never be set outside a transaction */
-	Assert(s->prevSecContext == 0);
 
 	/*
 	 * initialize other subsystems for new transaction
@@ -6427,8 +6431,7 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 		ExpireTreeKnownAssignedTransactionIds(xid, xlrec->nsubxacts, sub_xids, max_xid);
 
 		/*
-		 * There are no flat files that need updating, nor invalidation
-		 * messages to send or undo.
+		 * There are no invalidation messages to send or undo.
 		 */
 
 		/*

@@ -1724,8 +1724,11 @@ warn_or_exit_horribly(ArchiveHandle *AH,
 	{
 		write_msg(modulename, "Error from TOC entry %d; %u %u %s %s %s\n",
 				  AH->currentTE->dumpId,
-			 AH->currentTE->catalogId.tableoid, AH->currentTE->catalogId.oid,
-			  AH->currentTE->desc, AH->currentTE->tag, AH->currentTE->owner);
+				  AH->currentTE->catalogId.tableoid,
+				  AH->currentTE->catalogId.oid,
+				  AH->currentTE->desc ? AH->currentTE->desc : "(no desc)",
+				  AH->currentTE->tag ? AH->currentTE->tag : "(no tag)",
+				  AH->currentTE->owner ? AH->currentTE->owner : "(no owner)");
 	}
 	AH->lastErrorStage = AH->stage;
 	AH->lastErrorTE = AH->currentTE;
@@ -2915,6 +2918,9 @@ _doSetFixedOutputState(ArchiveHandle *AH)
 
 	/* Make sure function checking is disabled */
 	ahprintf(AH, "SET check_function_bodies = false;\n");
+
+	/* Ensure that all valid XML data will be accepted */
+	ahprintf(AH, "SET xmloption = content;\n");
 
 	/* Avoid annoying notices etc */
 	ahprintf(AH, "SET client_min_messages = warning;\n");

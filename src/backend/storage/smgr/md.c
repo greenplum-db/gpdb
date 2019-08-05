@@ -1021,7 +1021,7 @@ mdimmedsync(SMgrRelation reln, ForkNumber forknum)
 	while (v != NULL)
 	{
 		if (FileSync(v->mdfd_vfd) < 0)
-			ereport(ERROR,
+			ereport(data_sync_elevel(ERROR),
 					(errcode_for_file_access(),
 					 errmsg("could not fsync file \"%s\": %m",
 							FilePathName(v->mdfd_vfd))));
@@ -1132,10 +1132,8 @@ mdsync(void)
 		 * The bitmap manipulations are slightly tricky, because we can call
 		 * AbsorbFsyncRequests() inside the loop and that could result in
 		 * bms_add_member() modifying and even re-palloc'ing the bitmapsets.
-		 * This is okay because we unlink each bitmapset from the hashtable
-		 * entry before scanning it.  That means that any incoming fsync
-		 * requests will be processed now if they reach the table before we
-		 * begin to scan their fork.
+		 * So we detach it, but if we fail we'll merge it with any new
+		 * requests that have arrived in the meantime.
 		 */
 		for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
 		{
@@ -1145,7 +1143,8 @@ mdsync(void)
 			entry->requests[forknum] = NULL;
 			entry->canceled[forknum] = false;
 
-			while ((segno = bms_first_member(requests)) >= 0)
+			segno = -1;
+			while ((segno = bms_next_member(requests, segno)) >= 0)
 			{
 				int			failures;
 
@@ -1238,6 +1237,7 @@ mdsync(void)
 							longest = elapsed;
 						total_elapsed += elapsed;
 						processed++;
+						requests = bms_del_member(requests, segno);
 						if (log_checkpoints)
 							elog(DEBUG1, "checkpoint sync: number=%d file=%s time=%.3f msec",
 								 processed,
@@ -1266,10 +1266,23 @@ mdsync(void)
 					 */
 					if (!FILE_POSSIBLY_DELETED(errno) ||
 						failures > 0)
-						ereport(ERROR,
+					{
+						Bitmapset  *new_requests;
+
+						/*
+						 * We need to merge these unsatisfied requests with
+						 * any others that have arrived since we started.
+						 */
+						new_requests = entry->requests[forknum];
+						entry->requests[forknum] =
+							bms_join(new_requests, requests);
+
+						errno = save_errno;
+						ereport(data_sync_elevel(ERROR),
 								(errcode_for_file_access(),
 								 errmsg("could not fsync file \"%s\": %m",
 										path)));
+					}
 					else
 						ereport(DEBUG1,
 								(errcode_for_file_access(),
@@ -1439,7 +1452,7 @@ register_dirty_segment(SMgrRelation reln, ForkNumber forknum, MdfdVec *seg)
 				(errmsg("could not forward fsync request because request queue is full")));
 
 		if (FileSync(seg->mdfd_vfd) < 0)
-			ereport(ERROR,
+			ereport(data_sync_elevel(ERROR),
 					(errcode_for_file_access(),
 					 errmsg("could not fsync file \"%s\": %m",
 							FilePathName(seg->mdfd_vfd))));
@@ -1730,13 +1743,7 @@ DropRelationFiles(RelFileNodePendingDelete *delrels, int ndelrels, bool isRedo)
 
 	smgrdounlinkall(srels, ndelrels, isRedo, srelstorages);
 
-	/*
-	 * Call smgrclose() in reverse order as when smgropen() is called.
-	 * This trick enables remove_from_unowned_list() in smgrclose()
-	 * to search the SMgrRelation from the unowned list,
-	 * with O(1) performance.
-	 */
-	for (i = ndelrels - 1; i >= 0; i--)
+	for (i = 0; i < ndelrels; i++)
 		smgrclose(srels[i]);
 	pfree(srelstorages);
 	pfree(srels);

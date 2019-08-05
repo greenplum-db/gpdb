@@ -31,6 +31,7 @@
 
 #include "postgres.h"
 
+#include "miscadmin.h"
 #include "nodes/relation.h"
 #include "utils/datum.h"
 #include "catalog/gp_policy.h"
@@ -2836,6 +2837,9 @@ equal(const void *a, const void *b)
 	 */
 	if (nodeTag(a) != nodeTag(b))
 		return false;
+
+	/* Guard against stack overflow due to overly complex expressions */
+	check_stack_depth();
 
 	switch (nodeTag(a))
 	{
