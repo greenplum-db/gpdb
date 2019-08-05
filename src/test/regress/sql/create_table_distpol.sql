@@ -110,3 +110,34 @@ create table distpol_ctas4 as select 1 as col1, i, j from (select i, j from foo)
 
 -- Check the results.
 select localoid::regclass, attrnums from gp_distribution_policy where localoid::regclass::text like 'distpol_ctas%';
+
+-- Check distribution keys for inherited tables with the same columns as in a parent table
+CREATE TABLE points (
+    p     point
+) distributed randomly;
+
+CREATE TABLE a_points (
+    p     point,
+    a     int
+) INHERITS (points) distributed by (a);
+select attrnums from gp_distribution_policy where localoid = 'a_points'::regclass;
+
+CREATE TABLE b_points (
+    b     int,
+    p     point,
+    c     int
+) INHERITS (points) distributed by (b, c);
+select attrnums from gp_distribution_policy where localoid = 'b_points'::regclass;
+
+CREATE TABLE c_points (
+    b     int,
+    p     point,
+    d     int,
+    c     int
+) INHERITS (points, b_points, a_points) distributed by (b, c);
+select attrnums from gp_distribution_policy where localoid = 'c_points'::regclass;
+
+-- Check distribution on non-hashable column in a parent table
+CREATE TABLE c_points (
+    c     int
+) INHERITS (points) distributed by (p);

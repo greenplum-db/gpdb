@@ -1599,26 +1599,7 @@ MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
 				/* Default and other constraints are handled below */
 				newattno[parent_attno - 1] = exist_attno;
 
-				/*
-				 * Update GpPolicy
-				 */
-				if (policy != NULL)
-				{
-					int attr_ofst = 0;
-
-					Assert(policy->nattrs >= 0 && "the number of distribution attributes is not negative");
-
-					/* Iterate over all distribution attribute offsets */
-					for (attr_ofst = 0; attr_ofst < policy->nattrs; attr_ofst++)
-					{
-						/* Check if any distribution attribute has higher offset than the current */
-						if (policy->attrs[attr_ofst] > child_attno)
-						{
-							Assert(policy->attrs[attr_ofst] > 0 && "index should not become negative");
-							policy->attrs[attr_ofst]--;
-						}
-					}
-				}
+				Assert(policy->nattrs >= 0 && "the number of distribution attributes is not negative");
 
 			}
 			else

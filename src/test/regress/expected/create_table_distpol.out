@@ -161,3 +161,52 @@ select localoid::regclass, attrnums from gp_distribution_policy where localoid::
  distpol_ctas4 | {2,3}
 (4 rows)
 
+-- Check distribution keys for inherited tables with the same columns as in a parent table
+CREATE TABLE points (
+    p     point
+) distributed randomly;
+CREATE TABLE a_points (
+    p     point,
+    a     int
+) INHERITS (points) distributed by (a);
+NOTICE:  merging column "p" with inherited definition
+select attrnums from gp_distribution_policy where localoid = 'a_points'::regclass;
+ attrnums 
+----------
+ {2}
+(1 row)
+
+CREATE TABLE b_points (
+    b     int,
+    p     point,
+    c     int
+) INHERITS (points) distributed by (b, c);
+NOTICE:  merging column "p" with inherited definition
+select attrnums from gp_distribution_policy where localoid = 'b_points'::regclass;
+ attrnums 
+----------
+ {2,3}
+(1 row)
+
+CREATE TABLE c_points (
+    b     int,
+    p     point,
+    d     int,
+    c     int
+) INHERITS (points, b_points, a_points) distributed by (b, c);
+NOTICE:  merging multiple inherited definitions of column "p"
+NOTICE:  merging multiple inherited definitions of column "p"
+NOTICE:  merging column "b" with inherited definition
+NOTICE:  merging column "p" with inherited definition
+NOTICE:  merging column "c" with inherited definition
+select attrnums from gp_distribution_policy where localoid = 'c_points'::regclass;
+ attrnums 
+----------
+ {2,3}
+  (1 row)
+
+-- Check distribution on non-hashable column in a parent table
+CREATE TABLE c_points (
+    c     int
+) INHERITS (points) distributed by (p);
+ERROR:  type "point" can't be a part of a distribution key
