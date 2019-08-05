@@ -659,3 +659,11 @@ explain (verbose, costs off)
 select x from int8_tbl, extractq2_append(int8_tbl) f(x);
 
 select x from int8_tbl, extractq2_append(int8_tbl) f(x);
+
+create function extractq2_wapper(t int8_tbl) returns table(ret1 int8) as $$      
+  select (select extractq2(t))                                                  
+$$ language sql immutable;                                                      
+
+explain (verbose, costs off) select x from int8_tbl, extractq2_wapper(int8_tbl) f(x);
+
+select x from int8_tbl, extractq2_wapper(int8_tbl) f(x);

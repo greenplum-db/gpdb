@@ -701,6 +701,8 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	Node	   *result;
 	SubPlan    *splan;
 	ListCell   *lc;
+	Bitmapset  *tmpset;
+	int         paramid;
 
 	/*
 	 * Initialize the SubPlan node.  Note plan_id, plan_name, and cost fields
@@ -722,6 +724,7 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	splan->setParam = NIL;
 	splan->parParam = NIL;
 	splan->args = NIL;
+	splan->extParam = NIL;
 
 	/*
 	 * Make parParam and args lists of param IDs and expressions that current
@@ -746,6 +749,19 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 
 		splan->parParam = lappend_int(splan->parParam, pitem->paramId);
 		splan->args = lappend(splan->args, arg);
+	}
+
+	/*
+	 * For gpdb, we need extParam to evaluate if we can process initplan
+	 * in ExecutorStart.
+	 */
+	if (plan->extParam)
+	{
+		tmpset = bms_copy(plan->extParam);
+		while ((paramid = bms_first_member(tmpset)) >= 0)
+			splan->extParam = lappend_int(splan->extParam, paramid);
+
+		pfree(tmpset);
 	}
 
 	/*
