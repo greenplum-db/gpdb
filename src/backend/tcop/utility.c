@@ -1160,8 +1160,6 @@ ProcessUtilitySlow(Node *parsetree,
 							 */
 							CommandCounterIncrement();
 
-							DefinePartitionedRelation((CreateStmt *) parsetree, relOid);
-
 							if (relKind != RELKIND_COMPOSITE_TYPE)
 							{
 								/*

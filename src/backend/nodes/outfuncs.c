@@ -2557,7 +2557,6 @@ _outCreateStmtInfo(StringInfo str, const CreateStmt *node)
 	WRITE_CHAR_FIELD(relKind);
 	WRITE_CHAR_FIELD(relStorage);
 	/* policy omitted */
-	/* postCreate omitted */
 	WRITE_NODE_FIELD(deferredStmts);
 	WRITE_BOOL_FIELD(is_part_child);
 	WRITE_BOOL_FIELD(is_part_parent);
