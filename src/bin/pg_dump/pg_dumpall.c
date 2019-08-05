@@ -29,6 +29,7 @@
 #include "dumputils.h"
 #include "pg_backup.h"
 #include "fe_utils/connect.h"
+#include "catalog/gp_segment_config.h"
 
 /* version string we expect back from pg_dump */
 #define PGDUMP_VERSIONSTR "pg_dump (PostgreSQL) " PG_VERSION "\n"
@@ -1477,8 +1478,7 @@ dumpTablespaces(PGconn *conn)
 {
 	PGresult   *res;
 	int			i;
-
-	// WALREP_FIXME: filespaces are gone. How do we deal with that here?
+	bool        filespace_to_tablespace = false;
 	
 	/*
 	 * Get all tablespaces execpt built-in ones (named pg_xxx)
@@ -1487,13 +1487,32 @@ dumpTablespaces(PGconn *conn)
 	 * Greenplum, and the dump format should vary depending on if the dump is
 	 * --gp-syntax or --no-gp-syntax.
 	 */
-	if (server_version < 80214)
+	if (server_version <= 80323)
 	{							
-		/* Filespaces were introduced in GP 4.0 (server_version 8.2.14) */
-		return;
+		filespace_to_tablespace = true;
+		res = executeQuery(conn,
+				"SELECT tsi.*, "
+				       "sc.content "
+				"FROM   gp_segment_configuration AS sc "
+				       "join (SELECT ts.oid                                  AS oid, "
+				                    "ts.spcname                              AS spcname, "
+				                    "pg_catalog.Pg_get_userbyid(ts.spcowner) AS spcowner, "
+				                    "fs.fselocation "
+				                    "|| '/gp6/' "
+				                    "|| ts.oid :: text                       AS location, "
+				                    "ts.spcacl                               AS spcacl, "
+				                    "NULL                                    AS spcoptions, "
+				                    "pg_catalog.Shobj_description(ts.oid, 'pg_tablespace'), "
+				                    "fs.fsedbid                              AS dbid "
+				             "FROM   pg_tablespace AS ts "
+				                    "join pg_filespace_entry AS fs "
+				                      "ON ts.spcfsoid = fs.fsefsoid "
+				             "WHERE  ts.spcname !~ '^pg_') AS tsi "
+				         "ON tsi.dbid = sc.dbid "
+				            "AND sc.ROLE = 'p' "
+				"ORDER  BY oid, content ASC;");
 	}
-
-	if (server_version >= 90200)
+	else if (server_version >= 90200)
 		res = executeQuery(conn, "SELECT oid, spcname, "
 						 "pg_catalog.pg_get_userbyid(spcowner) AS spcowner, "
 						   "pg_catalog.pg_tablespace_location(oid), spcacl, "
@@ -1547,6 +1566,36 @@ dumpTablespaces(PGconn *conn)
 
 		appendPQExpBufferStr(buf, " LOCATION ");
 		appendStringLiteralConn(buf, spclocation, conn);
+
+		if (filespace_to_tablespace)
+		{
+			int j;
+			for (j = i + 1; j < PQntuples(res) && atooid(PQgetvalue(res, j, 0)) == spcoid; j++)
+			{
+				if (j == i + 1)
+				{
+					if (!(atoi(PQgetvalue(res, i, 8)) == MASTER_CONTENT_ID))
+					{
+						fprintf(stderr, _("%s: master location is unavailable for tablespace \"%s\"\n"),
+								progname, spcname);
+						PQfinish(conn);
+						exit_nicely(1);
+					}
+					appendPQExpBufferStr(buf, " WITH (");
+				}
+				else
+					appendPQExpBufferStr(buf, ", ");
+
+				appendPQExpBuffer(buf, "content%s=", PQgetvalue(res, j, 8));
+				appendStringLiteralConn(buf, PQgetvalue(res, j, 3), conn);
+			}
+			if (j > i + 1)
+			{
+				appendPQExpBufferStr(buf, ")");
+				i = j - 1;
+			}
+		}
+
 		appendPQExpBufferStr(buf, ";\n");
 
 		if (spcoptions && spcoptions[0] != '\0')
