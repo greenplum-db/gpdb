@@ -122,6 +122,8 @@ name = 'Hannah';</codeblock>
                 a specific partition (child table) of a partitioned table is not supported. Instead,
                 these commands must be executed on the root partitioned table, the table created
                 with the <codeph>CREATE TABLE</codeph> command.</p>
+            <p> For a partitioned table, all the child tables are locked during the
+                    <codeph>DELETE</codeph> operation. </p>
         </section>
         <section id="section7">
             <title>Examples</title>

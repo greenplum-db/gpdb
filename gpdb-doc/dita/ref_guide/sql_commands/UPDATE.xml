@@ -150,6 +150,8 @@
         specific partition (child table) of a partitioned table is not supported. Instead, execute
         these commands on the root partitioned table, the table created with the <codeph>CREATE
           TABLE</codeph> command.</p>
+      <p> For a partitioned table, all the child tables are locked during the
+          <codeph>UPDATE</codeph> operation. </p>
     </section>
     <section id="section7">
       <title>Examples</title>

@@ -85,12 +85,15 @@
         child table of a partitioned table is not supported. These commands must be executed on the
         root partitioned table, the table created with the <codeph>CREATE TABLE</codeph>
         command.</p>
+      <p> For a partitioned table, all the child tables are locked during the
+          <codeph>INSERT</codeph> operation. </p>
       <p>For append-optimized tables, Greenplum Database supports a maximum of 127 concurrent
           <codeph>INSERT</codeph> transactions into a single append-optimized table. </p>
       <p>For writable S3 external tables, the <codeph>INSERT</codeph> operation uploads to one or
         more files in the configured S3 bucket, as described in <xref
           href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr"/>. Pressing
-          <codeph>Ctrl-c</codeph> cancels the <codeph>INSERT</codeph> and stops uploading to S3. </p>
+          <codeph>Ctrl-c</codeph> cancels the <codeph>INSERT</codeph> and stops uploading to S3.
+      </p>
     </section>
     <section id="section7">
       <title>Examples</title>
