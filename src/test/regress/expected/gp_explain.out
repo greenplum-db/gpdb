@@ -59,6 +59,44 @@ WHERE et like '%Memory: %';
 (1 row)
 
 reset explain_memory_verbosity;
+EXPLAIN ANALYZE SELECT id FROM 
+( SELECT id 
+	FROM explaintest
+	WHERE id > (
+		SELECT avg(id)
+		FROM explaintest
+	)
+) as foo
+ORDER BY id
+LIMIT 1;
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=6.37..6.39 rows=1 width=4) (actual time=1.532..1.536 rows=1 loops=1)
+   InitPlan 1 (returns $0)  (slice3)
+     ->  Aggregate  (cost=3.19..3.20 rows=1 width=32) (actual time=1.498..1.498 rows=1 loops=1)
+           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.13..3.18 rows=1 width=32) (actual time=1.175..1.444 rows=3 loops=1)
+                 ->  Aggregate  (cost=3.13..3.14 rows=1 width=32) (actual time=0.036..0.036 rows=1 loops=1)
+                       ->  Seq Scan on explaintest explaintest_1  (cost=0.00..3.10 rows=4 width=4) (actual time=0.004..0.004 rows=5 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.17..3.19 rows=1 width=4) (actual time=1.530..1.530 rows=1 loops=1)
+         Merge Key: explaintest.id
+         ->  Limit  (cost=3.17..3.17 rows=1 width=4) (actual time=0.826..0.840 rows=1 loops=1)
+               ->  Sort  (cost=3.17..3.17 rows=2 width=4) (actual time=0.826..0.826 rows=1 loops=1)
+                     Sort Key: explaintest.id
+                     Sort Method:  top-N heapsort  Memory: 51kB
+                     ->  Seq Scan on explaintest  (cost=0.00..3.15 rows=2 width=4) (actual time=0.024..0.027 rows=3 loops=1)
+                           Filter: ((id)::numeric > $0)
+ Planning time: 1.221 ms
+   (slice0)    Executor memory: 156K bytes.
+ * (slice1)    Executor memory: 124K bytes avg x 3 workers, 124K bytes max (seg0).  Work_mem: 65K bytes max, 1K bytes wanted.
+ _ (slice2)    Workers: Workers: 3 not dispatched;.  
+ Executor memory: 75K bytes avg x 3 workers, 75K bytes max (seg0).
+   (slice3)    Executor memory: 147K bytes.
+ Memory used:  128000kB
+ Memory wanted:  801kB
+ Optimizer: Postgres query optimizer
+ Execution time: 4.772 ms
+(24 rows)
+
 -- Verify that the column references are OK. This tests for an old ORCA bug,
 -- where the Filter clause in the IndexScan of this query was incorrectly
 -- printed as something like:
