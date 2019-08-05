@@ -175,8 +175,8 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
         these commands on the root partitioned table, the table created with the <codeph>CREATE
           TABLE</codeph> command.</p>
       <p>For a partitioned table, all the child tables are locked during the <codeph>UPDATE</codeph>
-        operation when the Global Deadlock Detector is not enabled (the default). When the Global
-        Deadlock Detector is enabled, only some of the leaf child tables are locked. For information
+        operation when the Global Deadlock Detector is not enabled (the default). Only some of the
+        leaf child tables are locked when the Global Deadlock Detector is enabled. For information
         about the Global Deadlock Detector, see <xref href="../../admin_guide/dml.xml#topic_gdd"
         />.</p>
     </section>

@@ -111,30 +111,25 @@ INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
         </plentry>
       </parml>
     </section>
-    <section id="section6">
-      <title>Notes</title>
-      <p>To insert data into a partitioned table, you specify the root partitioned table, the table
-        created with the <codeph>CREATE TABLE</codeph> command. You also can specify a leaf child
-        table of the partitioned table in an <codeph>INSERT</codeph> command. An error is returned
-        if the data is not valid for the specified leaf child table. Specifying a child table that
-        is not a leaf child table in the <codeph>INSERT</codeph> command is not supported. Execution
-        of other DML commands such as <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> on any
-        child table of a partitioned table is not supported. These commands must be executed on the
-        root partitioned table, the table created with the <codeph>CREATE TABLE</codeph>
-        command.</p>
-      <p>For a partitioned table, all the child tables are locked during the <codeph>INSERT</codeph>
-        operation when the Global Deadlock Detector is not enabled (the default). When the Global
-        Deadlock Detector is enabled, only some of the leaf child tables are locked. For information
-        about the Global Deadlock Detector, see <xref href="../../admin_guide/dml.xml#topic_gdd"
-        />.</p>
-      <p>For append-optimized tables, Greenplum Database supports a maximum of 127 concurrent
-          <codeph>INSERT</codeph> transactions into a single append-optimized table. </p>
-      <p>For writable S3 external tables, the <codeph>INSERT</codeph> operation uploads to one or
-        more files in the configured S3 bucket, as described in <xref
-          href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr"/>. Pressing
-          <codeph>Ctrl-c</codeph> cancels the <codeph>INSERT</codeph> and stops uploading to S3.
-      </p>
-    </section>
+    <section id="section6"><title>Notes</title><p>To insert data into a partitioned table, you
+        specify the root partitioned table, the table created with the <codeph>CREATE TABLE</codeph>
+        command. You also can specify a leaf child table of the partitioned table in an
+          <codeph>INSERT</codeph> command. An error is returned if the data is not valid for the
+        specified leaf child table. Specifying a child table that is not a leaf child table in the
+          <codeph>INSERT</codeph> command is not supported. Execution of other DML commands such as
+          <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> on any child table of a partitioned
+        table is not supported. These commands must be executed on the root partitioned table, the
+        table created with the <codeph>CREATE TABLE</codeph> command.</p>For a partitioned table,
+      all the child tables are locked during the <codeph>INSERT</codeph> operation when the Global
+      Deadlock Detector is not enabled (the default). Only some of the leaf child tables are locked
+      when the Global Deadlock Detector is enabled. For information about the Global Deadlock
+      Detector, see <xref href="../../admin_guide/dml.xml#topic_gdd"/>.<p>For append-optimized
+        tables, Greenplum Database supports a maximum of 127 concurrent <codeph>INSERT</codeph>
+        transactions into a single append-optimized table. </p><p>For writable S3 external tables,
+        the <codeph>INSERT</codeph> operation uploads to one or more files in the configured S3
+        bucket, as described in <xref href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr"
+        />. Pressing <codeph>Ctrl-c</codeph> cancels the <codeph>INSERT</codeph> and stops uploading
+        to S3. </p></section>
     <section id="section7">
       <title>Examples</title>
       <p>Insert a single row into table <codeph>films</codeph>: </p>
