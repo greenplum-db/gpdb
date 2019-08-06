@@ -475,6 +475,7 @@ extern bool optimizer_expand_fulljoin;
 extern bool optimizer_enable_hashagg;
 extern bool optimizer_enable_groupagg;
 extern bool optimizer_enable_mergejoin;
+extern bool optimizer_prune_unused_columns;
 
 /* Optimizer plan enumeration related GUCs */
 extern bool optimizer_enumerate_plans;

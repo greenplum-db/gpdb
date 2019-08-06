@@ -347,6 +347,7 @@ bool		optimizer_enable_hashagg;
 bool		optimizer_enable_groupagg;
 bool		optimizer_expand_fulljoin;
 bool		optimizer_enable_mergejoin;
+bool		optimizer_prune_unused_columns;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -2959,6 +2960,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_enable_eageragg,
 		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_prune_unused_columns", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Prune unused table columns during query optimization."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_prune_unused_columns,
+		true,
 		NULL, NULL, NULL
 	},
 

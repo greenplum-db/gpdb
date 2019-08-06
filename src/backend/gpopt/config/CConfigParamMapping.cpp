@@ -395,6 +395,12 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] =
 		&optimizer_penalize_skew,
 		true, // m_negate_param
 		GPOS_WSZ_LIT("Penalize a hash join with a skewed redistribute as a child.")
+		},
+		{
+		EopttraceTranslateUnusedColrefs,
+		&optimizer_prune_unused_columns,
+		true, // m_negate_param
+		GPOS_WSZ_LIT("Prune unused columns from the query.")
 		}
 	
 };
