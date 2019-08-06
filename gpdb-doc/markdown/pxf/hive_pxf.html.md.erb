@@ -183,7 +183,7 @@ Use the following syntax to create a Greenplum Database external table that refe
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION ('pxf://<hive-db-name>.<hive-table-name>
-    ?PROFILE=Hive|HiveText|HiveRC|HiveORC|HiveVectorizedORC[&SERVER=<server_name>][&DELIMITER=<delim>'])
+    ?PROFILE=Hive|HiveText|HiveRC|HiveORC|HiveVectorizedORC[&SERVER=<server_name>]'])
 FORMAT 'CUSTOM|TEXT' (FORMATTER='pxfwritable_import' | delimiter='<delim>')
 ```
 
@@ -195,16 +195,13 @@ Hive connector-specific keywords and values used in the [CREATE EXTERNAL TABLE](
 | \<hive&#8209;table&#8209;name\>    | The name of the Hive table. |
 | PROFILE    | The `PROFILE` keyword must specify one of the values `Hive`, `HiveText`, `HiveRC`, `HiveORC`, or `HiveVectorizedORC`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
-| DELIMITER    | The custom options `DELIMITER` clause is required for both the `HiveText` and `HiveRC` profiles and identifies the field delimiter used in the Hive data set.  \<delim\> must be a single ascii character or specified in hexadecimal representation. |
 | FORMAT (`Hive`, `HiveORC`, and `HiveVectorizedORC` profiles)   | The `FORMAT` clause must specify `'CUSTOM'`. The `CUSTOM` format requires the built-in `pxfwritable_import` `formatter`.   |
-| FORMAT (`HiveText` and `HiveRC` profiles) | The `FORMAT` clause must specify `TEXT`. The `delimiter` must be specified a second time in the '\<delim\>' formatting option. |
+| FORMAT (`HiveText` and `HiveRC` profiles) | The `FORMAT` clause must specify `TEXT`. Specify the single ascii character field delimiter in the `delimiter='<delim>'` formatting option. |
 
 
 ## <a id="hive_text"></a>Accessing TextFile-Format Hive Tables
 
 You can use the `Hive` and `HiveText` profiles to access Hive table data stored in TextFile format.
-
-**Note**: When you use the `HiveText` profile, you **must** specify a delimiter option in both the `LOCATION` and `FORMAT` clauses.
 
 ### <a id="hive_hive_example" class="no-quick-link"></a>Example: Using the Hive Profile
 
@@ -241,13 +238,11 @@ Use the PXF `HiveText` profile to create a readable Greenplum Database external 
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE salesinfo_hivetextprofile(location text, month text, num_orders int, total_sales float8)
-                 LOCATION ('pxf://default.sales_info?PROFILE=HiveText&DELIMITER=\x2c')
+                 LOCATION ('pxf://default.sales_info?PROFILE=HiveText')
                FORMAT 'TEXT' (delimiter=E',');
     ```
 
-    Notice that:
-    - The `LOCATION` subclause `DELIMITER` value is specified in hexadecimal format. The `\x` prefix instructs PXF to interpret the following characters as hexadecimal. `2c` is the hex value for the comma character.
-    - The `FORMAT` subclause `delimiter` value is specified as the single ascii comma character `','`. `E` escapes the character.
+    Notice that the `FORMAT` subclause `delimiter` value is specified as the single ascii comma character `','`. `E` escapes the character.
 
 2. Query the external table:
 
@@ -268,7 +263,6 @@ Use the PXF `HiveText` profile to create a readable Greenplum Database external 
 
 The RCFile Hive table format is used for row columnar formatted data. The PXF `HiveRC` profile provides access to RCFile data.
 
-**Note**: When you use the `HiveRC` profile, you **must** specify a delimiter option in both the `LOCATION` and `FORMAT` clauses.
 
 ### <a id="hive_hiverc_example" class="no-quick-link"></a>Example: Using the HiveRC Profile
 
@@ -301,11 +295,11 @@ Use the `HiveRC` profile to query RCFile-formatted data in a Hive table.
     hive> SELECT * FROM sales_info_rcfile;
     ```
 
-4. Use the PXF `HiveRC` profile to create a readable Greenplum Database external table that references the Hive `sales_info_rcfile` table that you created in the previous steps. You *must* specify a delimiter option in both the `LOCATION` and `FORMAT` clauses.:
+4. Use the PXF `HiveRC` profile to create a readable Greenplum Database external table that references the Hive `sales_info_rcfile` table that you created in the previous steps. For example:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE salesinfo_hivercprofile(location text, month text, num_orders int, total_sales float8)
-                 LOCATION ('pxf://default.sales_info_rcfile?PROFILE=HiveRC&DELIMITER=\x2c')
+                 LOCATION ('pxf://default.sales_info_rcfile?PROFILE=HiveRC')
                FORMAT 'TEXT' (delimiter=E',');
     ```
 
