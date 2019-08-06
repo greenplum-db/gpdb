@@ -240,7 +240,7 @@ static bool
 DynamicScan_InitNextPartition(ScanState *scanState, PartitionInitMethod *partitionInitMethod, PartitionEndMethod *partitionEndMethod, PartitionReScanMethod *partitionReScanMethod)
 {
 	Assert(isDynamicScan((Scan *)scanState->ps.plan));
-	AssertImply(scanState->scan_state != SCAN_INIT, NULL != scanState->ss_currentRelation);
+	AssertImply(scanState->scan_state != SCAN_INIT && scanState->scan_state != SCAN_RESCAN, NULL != scanState->ss_currentRelation);
 
 	Scan *scan = (Scan *)scanState->ps.plan;
 	DynamicTableScanInfo *partitionInfo = scanState->ps.state->dynamicTableScanInfo;
