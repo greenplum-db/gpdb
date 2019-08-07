@@ -176,7 +176,7 @@ static int	CopyReadAttributesCSV(CopyState cstate);
 static Datum CopyReadBinaryAttribute(CopyState cstate,
 						int column_no, FmgrInfo *flinfo,
 						Oid typioparam, int32 typmod,
-						bool *isnull, bool skip_parsing);
+						bool *isnull);
 static void CopyAttributeOutText(CopyState cstate, char *string);
 static void CopyAttributeOutCSV(CopyState cstate, char *string,
 								bool use_quote, bool single_attr);
@@ -188,9 +188,8 @@ static void SendCopyEnd(CopyState cstate);
 static void CopySendData(CopyState cstate, const void *databuf, int datasize);
 static void CopySendString(CopyState cstate, const char *str);
 static void CopySendChar(CopyState cstate, char c);
-static int  CopyGetData(CopyState cstate, void *databuf,
-						int datasize);
-
+static int CopyGetData(CopyState cstate, void *databuf,
+			int minread, int maxread);
 static void CopySendInt32(CopyState cstate, int32 val);
 static bool CopyGetInt32(CopyState cstate, int32 *val);
 static void CopySendInt16(CopyState cstate, int16 val);
@@ -685,14 +684,14 @@ CopyToDispatchFlush(CopyState cstate)
  * into the data buffer.
  */
 static int
-CopyGetData(CopyState cstate, void *databuf, int datasize)
+CopyGetData(CopyState cstate, void *databuf, int minread, int maxread)
 {
 	size_t		bytesread = 0;
 
 	switch (cstate->copy_dest)
 	{
 		case COPY_FILE:
-			bytesread = fread(databuf, 1, datasize, cstate->copy_file);
+			bytesread = fread(databuf, 1, maxread, cstate->copy_file);
 			if (feof(cstate->copy_file))
 				cstate->fe_eof = true;
 			if (ferror(cstate->copy_file))
@@ -721,18 +720,25 @@ CopyGetData(CopyState cstate, void *databuf, int datasize)
 			}
 			break;
 		case COPY_OLD_FE:
-			if (pq_getbytes((char *) databuf, datasize))
+
+			/*
+			 * We cannot read more than minread bytes (which in practice is 1)
+			 * because old protocol doesn't have any clear way of separating
+			 * the COPY stream from following data.  This is slow, but not any
+			 * slower than the code path was originally, and we don't care
+			 * much anymore about the performance of old protocol.
+			 */
+			if (pq_getbytes((char *) databuf, minread))
 			{
 				/* Only a \. terminator is legal EOF in old protocol */
 				ereport(ERROR,
 						(errcode(ERRCODE_CONNECTION_FAILURE),
 						 errmsg("unexpected EOF on client connection with an open transaction")));
 			}
-			bytesread += datasize;		/* update the count of bytes that were
-										 * read so far */
+			bytesread = minread;
 			break;
 		case COPY_NEW_FE:
-			while (datasize > 0 && !cstate->fe_eof)
+			while (maxread > 0 && bytesread < minread && !cstate->fe_eof)
 			{
 				int			avail;
 
@@ -787,17 +793,16 @@ CopyGetData(CopyState cstate, void *databuf, int datasize)
 					}
 				}
 				avail = cstate->fe_msgbuf->len - cstate->fe_msgbuf->cursor;
-				if (avail > datasize)
-					avail = datasize;
+				if (avail > maxread)
+					avail = maxread;
 				pq_copymsgbytes(cstate->fe_msgbuf, databuf, avail);
 				databuf = (void *) ((char *) databuf + avail);
-				bytesread += avail;		/* update the count of bytes that were
-										 * read so far */
-				datasize -= avail;
+				maxread -= avail;
+				bytesread += avail;
 			}
 			break;
 		case COPY_CALLBACK:
-			bytesread = cstate->data_source_cb(databuf, datasize, cstate->data_source_cb_extra);
+			bytesread = cstate->data_source_cb(databuf, maxread, cstate->data_source_cb_extra);
 			break;
 
 	}
@@ -832,7 +837,7 @@ CopyGetInt32(CopyState cstate, int32 *val)
 {
 	uint32		buf;
 
-	if (CopyGetData(cstate, &buf, sizeof(buf)) != sizeof(buf))
+	if (CopyGetData(cstate, &buf, sizeof(buf), sizeof(buf)) != sizeof(buf))
 	{
 		*val = 0;				/* suppress compiler warning */
 		return false;
@@ -861,7 +866,7 @@ CopyGetInt16(CopyState cstate, int16 *val)
 {
 	uint16		buf;
 
-	if (CopyGetData(cstate, &buf, sizeof(buf)) != sizeof(buf))
+	if (CopyGetData(cstate, &buf, sizeof(buf), sizeof(buf)) != sizeof(buf))
 	{
 		*val = 0;				/* suppress compiler warning */
 		return false;
@@ -898,7 +903,7 @@ CopyLoadRawBuf(CopyState cstate)
 		nbytes = 0;				/* no data need be saved */
 
 	inbytes = CopyGetData(cstate, cstate->raw_buf + nbytes,
-						  RAW_BUF_SIZE - nbytes);
+						  RAW_BUF_SIZE - nbytes, RAW_BUF_SIZE - nbytes);
 	nbytes += inbytes;
 	cstate->raw_buf[nbytes] = '\0';
 	cstate->raw_buf_index = 0;
@@ -1470,7 +1475,8 @@ ProcessCopyOptions(CopyState cstate,
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("option \"%s\" not recognized", defel->defname)));
+					 errmsg("option \"%s\" not recognized",
+							defel->defname)));
 	}
 
 	bool	delim_off = false;
@@ -1517,7 +1523,7 @@ ProcessCopyOptions(CopyState cstate,
 	if (strlen(cstate->delim) != 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("COPY delimiter must be a single one-byte character")));
+			  errmsg("COPY delimiter must be a single one-byte character")));
 
 	/* Disallow end-of-line characters */
 	if (strchr(cstate->delim, '\r') != NULL ||
@@ -1547,7 +1553,7 @@ ProcessCopyOptions(CopyState cstate,
 			   cstate->delim[0]) != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("delimiter cannot be \"%s\"", cstate->delim)));
+				 errmsg("COPY delimiter cannot be \"%s\"", cstate->delim)));
 
 	/* Check header */
 	/*
@@ -1563,17 +1569,17 @@ ProcessCopyOptions(CopyState cstate,
 	if (!cstate->csv_mode && cstate->quote != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("quote available only in CSV mode")));
+				 errmsg("COPY quote available only in CSV mode")));
 
 	if (cstate->csv_mode && strlen(cstate->quote) != 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("quote must be a single one-byte character")));
+				 errmsg("COPY quote must be a single one-byte character")));
 
 	if (cstate->csv_mode && cstate->delim[0] == cstate->quote[0])
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("delimiter and quote must be different")));
+				 errmsg("COPY delimiter and quote must be different")));
 
 	/* Check escape */
 	if (cstate->csv_mode && cstate->escape != NULL && strlen(cstate->escape) != 1)
@@ -1600,7 +1606,7 @@ ProcessCopyOptions(CopyState cstate,
 	if (!cstate->csv_mode && (cstate->force_quote || cstate->force_quote_all))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("force quote available only in CSV mode")));
+				 errmsg("COPY force quote available only in CSV mode")));
 	if ((cstate->force_quote != NIL || cstate->force_quote_all) && is_from)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1610,7 +1616,7 @@ ProcessCopyOptions(CopyState cstate,
 	if (!cstate->csv_mode && cstate->force_notnull != NIL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("force not null available only in CSV mode")));
+				 errmsg("COPY force not null available only in CSV mode")));
 	if (cstate->force_notnull != NIL && !is_from)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1631,7 +1637,7 @@ ProcessCopyOptions(CopyState cstate,
 	if (strchr(cstate->null_print, cstate->delim[0]) != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("COPY delimiter must not appear in the NULL specification")));
+		errmsg("COPY delimiter must not appear in the NULL specification")));
 
 	/* Don't allow the CSV quote char to appear in the null string. */
 	if (cstate->csv_mode &&
@@ -1670,7 +1676,7 @@ ProcessCopyOptions(CopyState cstate,
 		strchr(cstate->delim, '\n') != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("delimiter cannot be newline or carriage return")));
+				 errmsg("COPY delimiter cannot be newline or carriage return")));
 
 	if (strchr(cstate->null_print, '\r') != NULL ||
 		strchr(cstate->null_print, '\n') != NULL)
@@ -1681,7 +1687,7 @@ ProcessCopyOptions(CopyState cstate,
 	if (!cstate->csv_mode && strchr(cstate->delim, '\\') != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("delimiter cannot be backslash")));
+				 errmsg("COPY delimiter cannot be backslash")));
 
 	if (strchr(cstate->null_print, cstate->delim[0]) != NULL && !delim_off)
 		ereport(ERROR,
@@ -2522,7 +2528,7 @@ BeginCopyTo(Relation rel,
 		}
 		else
 		{
-			mode_t oumask; /* Pre-existing umask value */
+			mode_t		oumask; /* Pre-existing umask value */
 			struct stat st;
 
 			/*
@@ -4752,13 +4758,13 @@ BeginCopyFrom(Relation rel,
 		char		readSig[sigsize];
 		copy_from_dispatch_header header_frame;
 
-		if (CopyGetData(cstate, &readSig, sigsize) != sigsize ||
+		if (CopyGetData(cstate, &readSig, sigsize, sigsize) != sigsize ||
 			memcmp(readSig, QDtoQESignature, sigsize) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
 					errmsg("QD->QE COPY communication signature not recognized")));
 
-		if (CopyGetData(cstate, &header_frame, sizeof(header_frame)) != sizeof(header_frame))
+		if (CopyGetData(cstate, &header_frame, sizeof(header_frame), sizeof(header_frame)) != sizeof(header_frame))
 			ereport(ERROR,
 					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 					errmsg("invalid QD->QD COPY communication header")));
@@ -4777,7 +4783,7 @@ BeginCopyFrom(Relation rel,
 		int32		tmp;
 
 		/* Signature */
-		if (CopyGetData(cstate, readSig, 11) != 11 ||
+		if (CopyGetData(cstate, readSig, 11, 11) != 11 ||
 			memcmp(readSig, BinarySignature, 11) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
@@ -4802,7 +4808,7 @@ BeginCopyFrom(Relation rel,
 		/* Skip extension header, if present */
 		while (tmp-- > 0)
 		{
-			if (CopyGetData(cstate, readSig, 1) != 1)
+			if (CopyGetData(cstate, readSig, 1, 1) != 1)
 				ereport(ERROR,
 						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 						 errmsg("invalid COPY file header (wrong length)")));
@@ -5216,7 +5222,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 			char		dummy;
 
 			if (cstate->copy_dest != COPY_OLD_FE &&
-				CopyGetData(cstate, &dummy, 1) > 0)
+				CopyGetData(cstate, &dummy, 1, 1) > 0)
 				ereport(ERROR,
 						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 						 errmsg("received copy data after EOF marker")));
@@ -5240,8 +5246,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 													&cstate->oid_in_function,
 													  cstate->oid_typioparam,
 														 -1,
-														 &isnull,
-														 false));
+														 &isnull));
 			if (isnull || loaded_oid == InvalidOid)
 				ereport(ERROR,
 						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
@@ -5264,8 +5269,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 												&in_functions[m],
 												typioparams[m],
 												attr[m]->atttypmod,
-												&nulls[m],
-												false);
+												&nulls[m]);
 			cstate->cur_attname = NULL;
 		}
 	}
@@ -5338,7 +5342,7 @@ NextCopyFromExecute(CopyState cstate, ExprContext *econtext,
 
 retry:
 	/* sneak peek at the first Oid field to see if it's a row or an error */
-	r = CopyGetData(cstate, &header, sizeof(Oid));
+	r = CopyGetData(cstate, &header, sizeof(Oid), sizeof(Oid));
 	if (r == 0)
 		return NULL;
 	if (r != sizeof(Oid))
@@ -5353,7 +5357,7 @@ retry:
 	}
 
 	frame.relid = header;
-	r = CopyGetData(cstate, ((char *) &frame) + sizeof(Oid), sizeof(frame) - sizeof(Oid));
+	r = CopyGetData(cstate, ((char *) &frame) + sizeof(Oid), sizeof(frame) - sizeof(Oid), sizeof(frame) - sizeof(Oid));
 	if (r != sizeof(frame) - sizeof(Oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
@@ -5426,7 +5430,7 @@ retry:
 		int32		len;
 		Datum		value;
 
-		if (CopyGetData(cstate, &attnum, sizeof(attnum)) != sizeof(attnum))
+		if (CopyGetData(cstate, &attnum, sizeof(attnum), sizeof(attnum)) != sizeof(attnum))
 			ereport(ERROR,
 					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 					 errmsg("unexpected EOF in COPY data")));
@@ -5438,7 +5442,7 @@ retry:
 
 		if (attr[attnum - 1]->attbyval)
 		{
-			if (CopyGetData(cstate, &value, sizeof(Datum)) != sizeof(Datum))
+			if (CopyGetData(cstate, &value, sizeof(Datum), sizeof(Datum)) != sizeof(Datum))
 				ereport(ERROR,
 						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 						 errmsg("unexpected EOF in COPY data")));
@@ -5452,7 +5456,7 @@ retry:
 				len = attr[attnum - 1]->attlen;
 
 				p = palloc(len);
-				if (CopyGetData(cstate, p, len) != len)
+				if (CopyGetData(cstate, p, len, len) != len)
 					ereport(ERROR,
 							(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 							 errmsg("unexpected EOF in COPY data")));
@@ -5460,7 +5464,7 @@ retry:
 			else if (attr[attnum - 1]->attlen == -1)
 			{
 				/* For simplicity, varlen's are always transmitted in "long" format */
-				if (CopyGetData(cstate, &len, sizeof(len)) != sizeof(len))
+				if (CopyGetData(cstate, &len, sizeof(len), sizeof(len)) != sizeof(len))
 					ereport(ERROR,
 							(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 							 errmsg("unexpected EOF in COPY data")));
@@ -5468,7 +5472,7 @@ retry:
 					elog(ERROR, "invalid varlen length received from QD: %d", len);
 				p = palloc(len);
 				SET_VARSIZE(p, len);
-				if (CopyGetData(cstate, p + VARHDRSZ, len - VARHDRSZ) != len - VARHDRSZ)
+				if (CopyGetData(cstate, p + VARHDRSZ, len - VARHDRSZ, len - VARHDRSZ) != len - VARHDRSZ)
 					ereport(ERROR,
 							(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 							 errmsg("unexpected EOF in COPY data")));
@@ -5480,12 +5484,12 @@ retry:
 				 * prefix and no terminator, so we have to NULL-terminate in
 				 * memory after reading them in.
 				 */
-				if (CopyGetData(cstate, &len, sizeof(len)) != sizeof(len))
+				if (CopyGetData(cstate, &len, sizeof(len), sizeof(len)) != sizeof(len))
 					ereport(ERROR,
 							(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 							 errmsg("unexpected EOF in COPY data")));
 				p = palloc(len + 1);
-				if (CopyGetData(cstate, p, len) != len)
+				if (CopyGetData(cstate, p, len, len) != len)
 					ereport(ERROR,
 							(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 							 errmsg("unexpected EOF in COPY data")));
@@ -5531,7 +5535,7 @@ HandleQDErrorFrame(CopyState cstate)
 
 	oldcontext = MemoryContextSwitchTo(cdbsreh->badrowcontext);
 
-	r = CopyGetData(cstate, ((char *) &errframe) + sizeof(Oid), sizeof(errframe) - sizeof(Oid));
+	r = CopyGetData(cstate, ((char *) &errframe) + sizeof(Oid), sizeof(errframe) - sizeof(Oid), sizeof(errframe) - sizeof(Oid));
 	if (r != sizeof(errframe) - sizeof(Oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
@@ -5540,14 +5544,14 @@ HandleQDErrorFrame(CopyState cstate)
 	errormsg = palloc(errframe.errmsg_len + 1);
 	line = palloc(errframe.line_len + 1);
 
-	r = CopyGetData(cstate, errormsg, errframe.errmsg_len);
+	r = CopyGetData(cstate, errormsg, errframe.errmsg_len, errframe.errmsg_len);
 	if (r != errframe.errmsg_len)
 		ereport(ERROR,
 				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 				 errmsg("unexpected EOF in COPY data")));
 	errormsg[errframe.errmsg_len] = '\0';
 
-	r = CopyGetData(cstate, line, errframe.line_len);
+	r = CopyGetData(cstate, line, errframe.line_len, errframe.line_len);
 	if (r != errframe.line_len)
 		ereport(ERROR,
 				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
@@ -6704,17 +6708,16 @@ endfield:
 }
 
 /*
- * Read a binary attribute.
- * skip_parsing is a hack for CopyFromDispatch (so we don't parse unneeded fields)
+ * Read a binary attribute
  */
 static Datum
 CopyReadBinaryAttribute(CopyState cstate,
 						int column_no, FmgrInfo *flinfo,
 						Oid typioparam, int32 typmod,
-						bool *isnull, bool skip_parsing)
+						bool *isnull)
 {
 	int32		fld_size;
-	Datum		result = 0;
+	Datum		result;
 
 	if (!CopyGetInt32(cstate, &fld_size))
 		ereport(ERROR,
@@ -6735,7 +6738,7 @@ CopyReadBinaryAttribute(CopyState cstate,
 
 	enlargeStringInfo(&cstate->attribute_buf, fld_size);
 	if (CopyGetData(cstate, cstate->attribute_buf.data,
-					fld_size) != fld_size)
+					fld_size, fld_size) != fld_size)
 		ereport(ERROR,
 				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 				 errmsg("unexpected EOF in COPY data")));
@@ -6743,18 +6746,15 @@ CopyReadBinaryAttribute(CopyState cstate,
 	cstate->attribute_buf.len = fld_size;
 	cstate->attribute_buf.data[fld_size] = '\0';
 
-	if (!skip_parsing)
-	{
-		/* Call the column type's binary input converter */
-		result = ReceiveFunctionCall(flinfo, &cstate->attribute_buf,
-									 typioparam, typmod);
+	/* Call the column type's binary input converter */
+	result = ReceiveFunctionCall(flinfo, &cstate->attribute_buf,
+								 typioparam, typmod);
 
-		/* Trouble if it didn't eat the whole buffer */
-		if (cstate->attribute_buf.cursor != cstate->attribute_buf.len)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
-					 errmsg("incorrect binary data format")));
-	}
+	/* Trouble if it didn't eat the whole buffer */
+	if (cstate->attribute_buf.cursor != cstate->attribute_buf.len)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
+				 errmsg("incorrect binary data format")));
 
 	*isnull = false;
 	return result;
@@ -7216,8 +7216,8 @@ CreateCopyDestReceiver(void)
 	self->pub.rDestroy = copy_dest_destroy;
 	self->pub.mydest = DestCopyOut;
 
-	self->cstate = NULL;		/* need to be set later */
 	self->queryDesc = NULL;		/* need to be set later */
+	self->cstate = NULL;		/* will be set later */
 	self->processed = 0;
 
 	return (DestReceiver *) self;

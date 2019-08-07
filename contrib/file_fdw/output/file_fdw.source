@@ -35,34 +35,42 @@ CREATE USER MAPPING FOR no_priv_user SERVER file_server;
 -- validator tests
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'xml');  -- ERROR
 ERROR:  COPY format "xml" not recognized
+CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', header 'true');      -- ERROR
+ERROR:  filename is required for file_fdw foreign tables
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', quote ':');          -- ERROR
-ERROR:  quote available only in CSV mode
+ERROR:  COPY quote available only in CSV mode
+CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', escape ':');         -- ERROR
+ERROR:  filename is required for file_fdw foreign tables
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', header 'true');    -- ERROR
 ERROR:  cannot specify HEADER in BINARY mode
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', quote ':');        -- ERROR
-ERROR:  quote available only in CSV mode
+ERROR:  COPY quote available only in CSV mode
+CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', escape ':');       -- ERROR
+ERROR:  filename is required for file_fdw foreign tables
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter 'a');      -- ERROR
-ERROR:  delimiter cannot be "a"
+ERROR:  COPY delimiter cannot be "a"
+CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', escape '-');         -- ERROR
+ERROR:  filename is required for file_fdw foreign tables
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', quote '-', null '=-=');   -- ERROR
 ERROR:  CSV quote character must not appear in the NULL specification
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '-', null '=-=');    -- ERROR
 ERROR:  COPY delimiter must not appear in the NULL specification
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '-', quote '-');    -- ERROR
-ERROR:  delimiter and quote must be different
+ERROR:  COPY delimiter and quote must be different
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '---');     -- ERROR
 ERROR:  COPY delimiter must be a single one-byte character
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', quote '---');         -- ERROR
-ERROR:  quote must be a single one-byte character
+ERROR:  COPY quote must be a single one-byte character
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', escape '---');        -- ERROR
 ERROR:  escape in CSV format must be a single character
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '\');       -- ERROR
-ERROR:  delimiter cannot be "\"
+ERROR:  COPY delimiter cannot be "\"
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '.');       -- ERROR
-ERROR:  delimiter cannot be "."
+ERROR:  COPY delimiter cannot be "."
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '1');       -- ERROR
-ERROR:  delimiter cannot be "1"
+ERROR:  COPY delimiter cannot be "1"
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter 'a');       -- ERROR
-ERROR:  delimiter cannot be "a"
+ERROR:  COPY delimiter cannot be "a"
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '
 ');       -- ERROR
 ERROR:  COPY delimiter cannot be newline or carriage return
@@ -98,7 +106,7 @@ CREATE FOREIGN TABLE text_csv (
 ) SERVER file_server
 OPTIONS (format 'text', filename '@abs_srcdir@/data/text.csv', null 'NULL');
 SELECT * FROM text_csv; -- ERROR
-ERROR:  force not null available only in CSV mode
+ERROR:  COPY force not null available only in CSV mode
 ALTER FOREIGN TABLE text_csv OPTIONS (SET format 'csv');
 \pset null _null_
 SELECT * FROM text_csv;
@@ -175,7 +183,6 @@ EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_csv;
    Output: a, b
    Foreign File: @abs_srcdir@/data/agg.csv
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
 
 \t off
 PREPARE st(int) AS SELECT * FROM agg_csv WHERE a = $1;
@@ -322,7 +329,6 @@ EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_text WHERE a > 0;
    Filter: (agg_text.a > 0)
    Foreign File: @abs_srcdir@/data/agg.data
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
 
 \t off
 -- privilege tests for object
