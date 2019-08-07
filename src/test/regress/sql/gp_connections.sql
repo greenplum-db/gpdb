@@ -7,7 +7,7 @@ drop user if exists user_disallowed_via_local;
 create user user_disallowed_via_local with login;
 
 -- cleanup previous settings if any
-\! sed -i '/user_disallowed_via_local/d' $MASTER_DATA_DIRECTORY/pg_hba.conf;
+\! sed -i'' -e '/user_disallowed_via_local/d;' $MASTER_DATA_DIRECTORY/pg_hba.conf;
 -- allow it to login via the [tcp] protocol
 \! echo 'host all user_disallowed_via_local samenet trust' | tee -a $MASTER_DATA_DIRECTORY/pg_hba.conf;
 -- disallow it to login via the [local] protocol
@@ -29,7 +29,7 @@ create temp table t1_of_user_disallowed_via_local(c1 int);
 select * from t1_of_user_disallowed_via_local, pg_sleep(0);
 
 -- cleanup settings if any
-\! sed -i '/user_disallowed_via_local/d' $MASTER_DATA_DIRECTORY/pg_hba.conf;
+\! sed -i'' -e '/user_disallowed_via_local/d;' $MASTER_DATA_DIRECTORY/pg_hba.conf;
 
 --
 -- Segment connection tests
