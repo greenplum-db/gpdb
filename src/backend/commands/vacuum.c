@@ -2779,29 +2779,6 @@ vacuum_appendonly_indexes(Relation aoRelation, int options)
 	return nindexes;
 }
 
-
-/* GPDB_91_MERGE_FIXME: 'amindexnulls' is gone. Do we need this function anymore? */
-#if 0
-/*
- * Is an index partial (ie, could it contain fewer tuples than the heap?)
- */
-static bool
-vac_is_partial_index(Relation indrel)
-{
-	/*
-	 * If the index's AM doesn't support nulls, it's partial for our purposes
-	 */
-	if (!indrel->rd_am->amindexnulls)
-		return true;
-
-	/* Otherwise, look to see if there's a partial-index predicate */
-	if (!heap_attisnull(indrel->rd_indextuple, Anum_pg_index_indpred))
-		return true;
-
-	return false;
-}
-#endif
-
 /*
  *	scan_index() -- scan one index relation to update pg_class statistics.
  *
@@ -2851,26 +2828,6 @@ scan_index(Relation indrel, double num_tuples, bool check_stats, int elevel)
 			  "%s.",
 			  stats->pages_deleted, stats->pages_free,
 			  pg_rusage_show(&ru0))));
-
-	/* GPDB_91_MERGE_FIXME: vac_is_partial_index() doesn't work. Do we need this sanity check? */
-#if 0 	
-	/*
-	 * Check for tuple count mismatch.	If the index is partial, then it's OK
-	 * for it to have fewer tuples than the heap; else we got trouble.
-	 */
-	if (check_stats &&
-		!stats->estimated_count &&
-		stats->num_index_tuples != num_tuples)
-	{
-		if (stats->num_index_tuples > num_tuples ||
-			!vac_is_partial_index(indrel))
-			ereport(WARNING,
-					(errmsg("index \"%s\" contains %.0f row versions, but table contains %.0f row versions",
-							RelationGetRelationName(indrel),
-							stats->num_index_tuples, num_tuples),
-					 errhint("Rebuild the index with REINDEX.")));
-	}
-#endif
 
 	pfree(stats);
 }
