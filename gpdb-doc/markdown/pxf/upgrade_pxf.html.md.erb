@@ -84,7 +84,7 @@ After you upgrade to the new version of Greenplum Database, perform the followin
 
     3. If you plan to use Hive partition filtering with integral types, you must set the `hive.metastore.integral.jdo.pushdown` Hive property in your Hadoop cluster's `hive-site.xml` and in your PXF user configuration `$PXF_CONF/servers/default/hive-site.xml` file. See [Updating Hadoop Configuration](client_instcfg.html#client-cfg-update).
 
-5. **If you are upgrading from Greenplum Database version 5.21 or earlier**: PXF no longer supports providing a `DELIMITER=<delim>` option in the `LOCATION` URI when you create an external table that specifies the `HiveText` or `HiveRC` profiles. If you have previously created an external table(s) specifying a `DELIMITER` in the URI, you must drop the table, and recreate it omitting the `DELIMITER`.
+5. **If you are upgrading from Greenplum Database version 5.21.1 or earlier**: The PXF Hive connector no longer supports providing a `DELIMITER=<delim>` option in the `LOCATION` URI when you create an external table that specifies the `HiveText` or `HiveRC` profiles. If you have previously created an external table(s) specifying a `DELIMITER` in the `LOCATION` URI, you must drop the table, and recreate it omitting the `DELIMITER` from the `LOCATION`. You are still required to provide a non-default delimiter in the external table formatting options.
 
 5. Synchronize the PXF configuration from the master host to the standby master and each Greenplum Database segment host. For example:
 
