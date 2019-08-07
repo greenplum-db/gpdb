@@ -28,6 +28,7 @@
 #include "storage/shmem.h"
 #include "storage/sinval.h"
 #include "tcop/tcopprot.h"
+#include "utils/faultinjector.h"
 
 
 /*
@@ -71,7 +72,6 @@ bool		set_latch_on_sigusr1;
 
 static ProcSignalSlot *ProcSignalSlots = NULL;
 static volatile ProcSignalSlot *MyProcSignalSlot = NULL;
-static volatile bool InSIGUSR1Handler = false;
 
 static bool CheckProcSignal(ProcSignalReason reason);
 static void CleanupProcSignalState(int status, Datum arg);
@@ -267,7 +267,9 @@ CheckProcSignal(ProcSignalReason reason)
 bool
 AmIInSIGUSR1Handler(void)
 {
-	return InSIGUSR1Handler;
+	sigset_t oldset;
+	pthread_sigmask(SIG_BLOCK, NULL, &oldset);
+	return sigismember(&oldset, SIGUSR1);
 }
 
 /*
@@ -292,27 +294,15 @@ QueryFinishHandler(void)
 void
 procsignal_sigusr1_handler(SIGNAL_ARGS)
 {
+	SIMPLE_FAULT_INJECTOR("procsignal_sigusr1_handler_start");
+
 	int			save_errno = errno;
 
-	PG_TRY();
-	{
-		InSIGUSR1Handler = true;
+	if (CheckProcSignal(PROCSIG_CATCHUP_INTERRUPT))
+		HandleCatchupInterrupt();
 
-		if (CheckProcSignal(PROCSIG_CATCHUP_INTERRUPT))
-			HandleCatchupInterrupt();
-
-		if (CheckProcSignal(PROCSIG_QUERY_FINISH))
-			QueryFinishHandler();
-
-		latch_sigusr1_handler();
-		InSIGUSR1Handler = false;
-	}
-	PG_CATCH();
-	{
-		InSIGUSR1Handler = false;
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
+	if (CheckProcSignal(PROCSIG_QUERY_FINISH))
+		QueryFinishHandler();
 
 	if (CheckProcSignal(PROCSIG_WALSND_INIT_STOPPING))
 		HandleWalSndInitStopping();
