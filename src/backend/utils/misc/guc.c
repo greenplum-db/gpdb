@@ -2829,7 +2829,7 @@ static struct config_string ConfigureNamesString[] =
 		{"temp_tablespaces", PGC_USERSET, CLIENT_CONN_STATEMENT,
 			gettext_noop("Sets the tablespace(s) to use for temporary tables and sort files."),
 			NULL,
-			GUC_LIST_INPUT | GUC_LIST_QUOTE
+			GUC_LIST_INPUT | GUC_LIST_QUOTE | GUC_GPDB_ADDOPT
 		},
 		&temp_tablespaces,
 		"",
