@@ -90,6 +90,8 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	 */
 	if (AmIInSIGUSR1Handler())
 	{
+		elogif(debug_walrepl_syncrep, LOG,
+				"canceling wait for synchronous replication as we are in SIGUSR1 handler");
 		return;
 	}
 
