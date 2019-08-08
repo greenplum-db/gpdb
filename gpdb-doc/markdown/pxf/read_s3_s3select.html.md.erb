@@ -27,7 +27,7 @@ The `S3_SELECT` external table custom option governs PXF's use of S3 Select when
 | ON    | PXF always uses S3 Select. |
 | AUTO    | PXF uses S3 Select when it will benefit access or performance. |
 
-By default, PXF does not use S3 Select (`S3_SELECT=OFF`). You can enable PXF to always use S3 Select, or to use S3 Select only when PXF determines that it would be beneficial for performance. For example, when `S3_SELECT=AUTO`, PXF automatically uses S3 Select when a query on the external table utilizes column projection or predicate pushdown, or when the referenced CSV file has a header row.
+By default, PXF does not use S3 Select (`S3_SELECT=OFF`). You can enable PXF to always use S3 Select, or to use S3 Select only when PXF determines that it could be beneficial for performance. For example, when `S3_SELECT=AUTO`, PXF automatically uses S3 Select when a query on the external table utilizes column projection or predicate pushdown, or when the referenced CSV file has a header row.
 
 
 ## <a id="s3_select_parquet"></a>Reading Parquet Data with S3 Select
