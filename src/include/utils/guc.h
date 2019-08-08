@@ -220,8 +220,9 @@ typedef enum
 #define GUC_DISALLOW_IN_AUTO_FILE	0x00010000	/* can't set in PG_AUTOCONF_FILENAME */
 
 /* GPDB speific */
-#define GUC_GPDB_ADDOPT        0x00020000  /* Send by cdbgang */
-#define GUC_DISALLOW_USER_SET  0x00040000 /* Do not allow this GUC to be set by the user */
+#define GUC_GPDB_NEED_SYNC     0x00020000  /* guc value is synced between master and primary */
+#define GUC_GPDB_NO_SYNC       0x00040000  /* guc value is not synced between master and primary */
+#define GUC_DISALLOW_USER_SET  0x00080000 /* Do not allow this GUC to be set by the user */
 
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;
@@ -767,5 +768,6 @@ extern const char *gpvars_show_gp_resqueue_memory_policy(void);
 extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource source);
 extern bool gpvars_check_gp_enable_gpperfmon(bool *newval, void **extra, GucSource source);
 extern bool gpvars_check_gp_gpperfmon_send_interval(int *newval, void **extra, GucSource source);
+extern int guc_name_compare(const char *namea, const char *nameb);
 
 #endif   /* GUC_H */

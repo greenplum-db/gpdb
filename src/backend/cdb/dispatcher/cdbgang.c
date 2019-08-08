@@ -252,7 +252,7 @@ buildGangDefinition(List *segments, SegmentType segmentType)
 static void
 addOneOption(StringInfo string, struct config_generic *guc)
 {
-	Assert(guc && (guc->flags & GUC_GPDB_ADDOPT));
+	Assert(guc && (guc->flags & GUC_GPDB_NEED_SYNC));
 	switch (guc->vartype)
 	{
 		case PGC_BOOL:
@@ -349,7 +349,7 @@ makeOptions(void)
 	{
 		struct config_generic *guc = gucs[i];
 
-		if ((guc->flags & GUC_GPDB_ADDOPT) &&
+		if ((guc->flags & GUC_GPDB_NEED_SYNC) &&
 			(guc->context == PGC_USERSET ||
 			 guc->context == PGC_BACKEND ||
 			 IsAuthenticatedUserSuperUser()))

@@ -321,4 +321,6 @@ extern struct config_real ConfigureNamesReal_gp[];
 extern struct config_string ConfigureNamesString_gp[];
 extern struct config_enum ConfigureNamesEnum_gp[];
 
+extern void gpdb_assign_sync_flag(struct config_generic **guc_variables, int size, bool predefine);
+
 #endif   /* GUC_TABLES_H */
