@@ -33,6 +33,7 @@
 
 /* version string we expect back from pg_dump */
 #define PGDUMP_VERSIONSTR "pg_dump (PostgreSQL) " PG_VERSION "\n"
+#define TABLESPACE_MAP "tablespace_map"
 
 
 static void help(void);
@@ -1476,10 +1477,10 @@ dropTablespaces(PGconn *conn)
 static void
 dumpTablespaces(PGconn *conn)
 {
-	PGresult   *res;
+	PGresult   *res = NULL;
 	int			i;
 	bool        filespace_to_tablespace = false;
-	
+	FILE		*tablespace_map_fp = fopen(TABLESPACE_MAP, "w");
 	/*
 	 * Get all tablespaces execpt built-in ones (named pg_xxx)
 	 *
@@ -1569,31 +1570,24 @@ dumpTablespaces(PGconn *conn)
 
 		if (filespace_to_tablespace)
 		{
-			int j;
-			for (j = i + 1; j < PQntuples(res) && atooid(PQgetvalue(res, j, 0)) == spcoid; j++)
-			{
-				if (j == i + 1)
-				{
-					if (!(atoi(PQgetvalue(res, i, 8)) == MASTER_CONTENT_ID))
-					{
-						fprintf(stderr, _("%s: master location is unavailable for tablespace \"%s\"\n"),
-								progname, spcname);
-						PQfinish(conn);
-						exit_nicely(1);
-					}
-					appendPQExpBufferStr(buf, " WITH (");
-				}
-				else
-					appendPQExpBufferStr(buf, ", ");
+			int j = i;
 
-				appendPQExpBuffer(buf, "content%s=", PQgetvalue(res, j, 8));
-				appendStringLiteralConn(buf, PQgetvalue(res, j, 3), conn);
-			}
-			if (j > i + 1)
+			if (atoi(PQgetvalue(res, i, 8)) != MASTER_CONTENT_ID)
 			{
-				appendPQExpBufferStr(buf, ")");
-				i = j - 1;
+				fprintf(stderr, _("%s: master location is unavailable for tablespace \"%s\"\n"),
+						progname, spcname);
+				PQfinish(conn);
+				exit_nicely(1);
 			}
+			for (; j < PQntuples(res) && atooid(PQgetvalue(res, j, 0)) == spcoid; j++)
+			{
+				char *segment_num			= PQgetvalue(res, j, 8);
+				char *segment_spc_location	= PQgetvalue(res, j, 3);
+
+				fprintf(tablespace_map_fp, "%s %u %s\n", segment_num, spcoid, segment_spc_location);
+			}
+			if (j > i)
+				i = j - 1;
 		}
 
 		appendPQExpBufferStr(buf, ";\n");
@@ -1632,6 +1626,7 @@ dumpTablespaces(PGconn *conn)
 		destroyPQExpBuffer(buf);
 	}
 
+	fclose(tablespace_map_fp);
 	PQclear(res);
 	fprintf(OPF, "\n\n");
 }
