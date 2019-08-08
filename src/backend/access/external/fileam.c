@@ -900,6 +900,7 @@ externalgettup_custom(FileScanDesc scan)
 	MemoryContext oldctxt = CurrentMemoryContext;
 
 	Assert(formatter);
+	Assert(pstate->raw_buf_len >= 0);
 
 	/* while didn't finish processing the entire file */
 	/* raw_buf_len was set to 0 in BeginCopyFrom() or external_rescan() */
@@ -922,7 +923,7 @@ externalgettup_custom(FileScanDesc scan)
 		}
 
 		/* while there is still data in our buffer */
-		while (pstate->raw_buf_len != 0)
+		while (pstate->raw_buf_len > 0)
 		{
 			bool		error_caught = false;
 
