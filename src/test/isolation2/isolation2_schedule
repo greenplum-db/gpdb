@@ -1,6 +1,5 @@
 test: ao_partition_lock
 test: dml_on_root_locks_all_parts
-test: sigusr1_jmp_die_no_syncrep_wait
 
 test: select_dropped_table
 # test update hash col under utility mode

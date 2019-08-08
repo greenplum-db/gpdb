@@ -28,7 +28,6 @@
 #include "storage/shmem.h"
 #include "storage/sinval.h"
 #include "tcop/tcopprot.h"
-#include "utils/faultinjector.h"
 
 
 /*
@@ -268,7 +267,7 @@ bool
 AmIInSIGUSR1Handler(void)
 {
 	sigset_t oldset;
-	pthread_sigmask(SIG_BLOCK, NULL, &oldset);
+	sigprocmask(SIG_BLOCK, NULL, &oldset);
 	return sigismember(&oldset, SIGUSR1);
 }
 
@@ -294,8 +293,6 @@ QueryFinishHandler(void)
 void
 procsignal_sigusr1_handler(SIGNAL_ARGS)
 {
-	SIMPLE_FAULT_INJECTOR("procsignal_sigusr1_handler_start");
-
 	int			save_errno = errno;
 
 	if (CheckProcSignal(PROCSIG_CATCHUP_INTERRUPT))

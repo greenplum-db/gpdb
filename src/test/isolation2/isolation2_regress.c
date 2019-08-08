@@ -9,7 +9,6 @@
 #include "storage/bufmgr.h"
 #include "utils/numeric.h"
 #include "utils/snapmgr.h"
-#include <signal.h>
 
 PG_MODULE_MAGIC;
 
@@ -94,13 +93,3 @@ setAOFormatVersion(PG_FUNCTION_ARGS)
 
 	PG_RETURN_BOOL(true);
 }
-
-PG_FUNCTION_INFO_V1(send_sigusr1);
-Datum
-send_sigusr1(PG_FUNCTION_ARGS)
-{
-	pid_t pid = PG_GETARG_INT32(0);
-	kill(pid, SIGUSR1);
-	PG_RETURN_BOOL(true);
-}
-
