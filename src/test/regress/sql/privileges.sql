@@ -21,6 +21,7 @@ DROP ROLE IF EXISTS regressuser3;
 DROP ROLE IF EXISTS regressuser4;
 DROP ROLE IF EXISTS regressuser5;
 DROP ROLE IF EXISTS regressuser6;
+DROP ROLE IF EXISTS non_superuser_schema;
 
 -- start_ignore
 SELECT lo_unlink(oid) FROM pg_largeobject_metadata WHERE oid >= 1000 AND oid < 3000 ORDER BY oid;
@@ -1063,6 +1064,8 @@ DROP OWNED BY regressuser1;
 -- regression test: superuser create a schema and authorize it to a non-superuser
 CREATE ROLE "non_superuser_schema";
 CREATE SCHEMA test_non_superuser_schema AUTHORIZATION "non_superuser_schema";
+DROP SCHEMA test_non_superuser_schema;
+DROP USER non_superuser_schema;
 
 DROP USER regressuser1;
 DROP USER regressuser2;
