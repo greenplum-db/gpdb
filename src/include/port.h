@@ -465,6 +465,11 @@ extern int	pg_codepage_to_encoding(UINT cp);
 extern char *inet_net_ntop(int af, const void *src, int bits,
 			  char *dst, size_t size);
 
+/* port/pg_strong_random.c */
+#ifdef HAVE_STRONG_RANDOM
+extern bool pg_strong_random(void *buf, size_t len);
+#endif
+
 /* port/pgcheckdir.c */
 extern int	pg_check_dir(const char *dir);
 

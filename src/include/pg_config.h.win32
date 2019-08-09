@@ -419,6 +419,9 @@
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
 
+/* Define to use have a strong random number source */
+#define HAVE_STRONG_RANDOM 1
+
 /* Define to 1 if you have the `strtoll' function. */
 #ifdef HAVE_LONG_LONG_INT_64
 #define HAVE_STRTOLL 1
@@ -692,6 +695,9 @@
 /* Define to 1 to build with Bonjour support. (--with-bonjour) */
 /* #undef USE_BONJOUR */
 
+/* Define to use /dev/urandom for random number generation */
+/* #undef USE_DEV_URANDOM */
+
 /* Define to 1 if "static inline" works without unwanted warnings from
    compilations where static inline functions are defined but not called. */
 #define PG_USE_INLINE 1
@@ -705,6 +711,12 @@
 
 /* Define to select named POSIX semaphores. */
 /* #undef USE_NAMED_POSIX_SEMAPHORES */
+
+/* Define to build with OpenSSL support. (--with-openssl) */
+/* #undef USE_OPENSSL */
+
+/* Define to use OpenSSL for random number generation */
+/* #undef USE_OPENSSL_RANDOM */
 
 /* Define to 1 to build with PAM support. (--with-pam) */
 /* #undef USE_PAM */
@@ -725,9 +737,6 @@
 #define USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
 #endif
 
-/* Define to build with (Open)SSL support. (--with-openssl) */
-/* #undef USE_SSL */
-
 /* Define to select SysV-style semaphores. */
 /* #undef USE_SYSV_SEMAPHORES */
 
@@ -736,6 +745,9 @@
 
 /* Define to select unnamed POSIX semaphores. */
 /* #undef USE_UNNAMED_POSIX_SEMAPHORES */
+
+/* Define to use native Windows API for random number generation */
+#define USE_WIN32_RANDOM 1
 
 /* Define to select Win32-style semaphores. */
 #define USE_WIN32_SEMAPHORES 1
