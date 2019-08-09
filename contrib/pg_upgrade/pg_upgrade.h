@@ -5,6 +5,8 @@
  *	Portions Copyright (c) 2016-Present, Pivotal Software Inc
  *	contrib/pg_upgrade/pg_upgrade.h
  */
+#ifndef PG_UPGRADE_H
+#define PG_UPGRADE_H
 
 #include <unistd.h>
 #include <assert.h>
@@ -407,6 +409,7 @@ typedef struct
 	const char *tablespace_suffix;		/* directory specification */
 
 	char	   *global_reserved_oids; /* OID preassign calls for shared objects */
+	bool        use_utility_mode;
 } ClusterInfo;
 
 
@@ -605,7 +608,6 @@ extern void appendShellString(PQExpBuffer buf, const char *str);
 extern void appendConnStrVal(PQExpBuffer buf, const char *str);
 extern void appendPsqlMetaConnect(PQExpBuffer buf, const char *dbname);
 int			get_user_info(char **user_name_p);
-void		check_ok(void);
 void
 report_status(eLogType type, const char *fmt,...)
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
@@ -620,9 +622,14 @@ void
 prep_status(const char *fmt,...)
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 void		check_ok(void);
+void        check_failed(void);
 const char *getErrorText(void);
 unsigned int str2uint(const char *str);
 void		pg_putenv(const char *var, const char *val);
+extern void
+report_failure(const char *restrict fmt,...)
+__attribute__((format(printf, 1, 2)));
+extern void init_cluster(ClusterInfo *cluster);
 
 
 /* version.c */
@@ -690,12 +697,10 @@ void new_gpdb_invalidate_bitmap_indexes(void);
 Oid *get_numeric_types(PGconn *conn);
 void old_GPDB5_check_for_unsupported_distribution_key_data_types(void);
 
-/* check_gp.c */
-
-void check_greenplum(void);
-
 /* reporting.c */
 
 void report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...)
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 3, 4)));
 void close_progress(void);
+
+#endif
