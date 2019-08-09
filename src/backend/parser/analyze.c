@@ -3806,6 +3806,13 @@ checkCanOptSelectLockingClause(SelectStmt *stmt)
 	if (!gp_enable_global_deadlock_detector)
 		return false;
 
+	/*
+	 * TODO: if future ORCA can emit LockRows plannode,
+	 * we should remove such restriction here.
+	 */
+	if (optimizer)
+		return false;
+
 	if (stmt->op != SETOP_NONE)
 		return false;
 
