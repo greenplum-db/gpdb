@@ -469,7 +469,6 @@
 		"tcp_keepalives_idle",
 		"tcp_keepalives_interval",
 		"temp_file_limit",
-		"temp_tablespaces",
 		"test_AppendOnlyHash_eviction_vs_just_marking_not_inuse",
 		"test_print_direct_dispatch_info",
 		"timezone_abbreviations",

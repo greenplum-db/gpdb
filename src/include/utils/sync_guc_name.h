@@ -105,4 +105,5 @@
 		"TimeZone",
 		"verify_gpfdists_cert",
 		"vmem_process_interrupt",
-		"work_mem"
+		"work_mem",
+		"temp_tablespaces",
