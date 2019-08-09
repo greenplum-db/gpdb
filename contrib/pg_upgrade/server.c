@@ -79,8 +79,11 @@ get_db_conn(ClusterInfo *cluster, const char *db_name)
 		appendConnStrVal(&conn_opts, cluster->sockdir);
 	}
 
-	appendPQExpBuffer(&conn_opts, " options=");
-	appendConnStrVal(&conn_opts, "-c gp_session_role=utility");
+	
+	if (cluster->use_utility_mode) {
+		appendPQExpBuffer(&conn_opts, " options=");
+		appendConnStrVal(&conn_opts, "-c gp_session_role=utility");
+	}
 
 	conn = PQconnectdb(conn_opts.data);
 	termPQExpBuffer(&conn_opts);

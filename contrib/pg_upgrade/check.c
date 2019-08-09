@@ -12,6 +12,8 @@
 #include "mb/pg_wchar.h"
 #include "pg_upgrade.h"
 
+#include "gp/check_greenplum.h"
+
 
 static void set_locale_and_encoding(ClusterInfo *cluster);
 static void check_new_cluster_is_empty(void);
@@ -72,7 +74,6 @@ output_check_banner(bool live_check)
 		pg_log(PG_REPORT, "-----------------------------\n");
 	}
 }
-
 
 void
 check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)

@@ -27,6 +27,7 @@ win32ver.rc
 *.exe
 lib*dll.defautom4te.cache
 **/test/*.t
+**/test/**/*.t
 **/tags
 *.pyc
 **/vagrant-local.yml

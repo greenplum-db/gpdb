@@ -1,48 +1,12 @@
 /*
- *	check_gp.c
+ * contrib/pg_upgrade/gp/checks.h
  *
- *	Greenplum specific server checks and output routines
- *
- *	Any compatibility checks which are version dependent (testing for issues in
- *	specific versions of Greenplum) should be placed in their respective
- *	version_old_gpdb{MAJORVERSION}.c file.  The checks in this file supplement
- *	the checks present in check.c, which is the upstream file for performing
- *	checks against a PostgreSQL cluster.
- *
- *	Copyright (c) 2010, PostgreSQL Global Development Group
- *	Copyright (c) 2017-Present Pivotal Software, Inc
- *	contrib/pg_upgrade/check_gp.c
+ * Definitions of Greenplum-specific check functions
  */
 
 #include "pg_upgrade.h"
 
-static void check_external_partition(void);
-static void check_covering_aoindex(void);
-static void check_partition_indexes(void);
-static void check_orphaned_toastrels(void);
-static void check_online_expansion(void);
-static void check_gphdfs_external_tables(void);
-static void check_gphdfs_user_roles(void);
-
-/*
- *	check_greenplum
- *
- *	Rather than exporting all checks, we export a single API function which in
- *	turn is responsible for running Greenplum checks. This function should be
- *	executed after all PostgreSQL checks. The order of the checks should not
- *	matter.
- */
-void
-check_greenplum(void)
-{
-	check_online_expansion();
-	check_external_partition();
-	check_covering_aoindex();
-	check_partition_indexes();
-	check_orphaned_toastrels();
-	check_gphdfs_external_tables();
-	check_gphdfs_user_roles();
-}
+#include "checks.h"
 
 /*
  *	check_online_expansion
@@ -50,8 +14,8 @@ check_greenplum(void)
  *	Check for online expansion status and refuse the upgrade if online
  *	expansion is in progress.
  */
-static void
-check_online_expansion(void)
+bool
+check_online_expansion(ClusterInfo *cluster)
 {
 	bool		expansion = false;
 	int			dbnum;
@@ -59,27 +23,27 @@ check_online_expansion(void)
 	/*
 	 * Only need to check cluster expansion status in gpdb6 or later.
 	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) < 804)
-		return;
+	if (GET_MAJOR_VERSION(cluster->major_version) < 804)
+		return true;
 
 	/*
-	 * We only need to check the cluster expansion status on master.
-	 * On the other hand the status can not be detected correctly on segments.
+	 * We only need to check the cluster expansion status on master. On the
+	 * other hand the status can not be detected correctly on segments.
 	 */
 	if (user_opts.segment_mode == SEGMENT)
-		return;
+		return true;
 
 	prep_status("Checking for online expansion status");
 
 	/* Check if the cluster is in expansion status */
-	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		int			ntups;
-		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
 		PGconn	   *conn;
 
-		conn = connectToServer(&old_cluster, active_db->db_name);
+		conn = connectToServer(cluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
 								"SELECT true AS expansion "
 								"FROM pg_catalog.gp_distribution_policy d "
@@ -103,13 +67,13 @@ check_online_expansion(void)
 
 	if (expansion)
 	{
-		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
-			   "| Your installation is in progress of online expansion,\n"
-			   "| must complete that job before the upgrade.\n\n");
+		report_failure(
+						 "| Your installation is in progress of online expansion,\n"
+						 "| must complete that job before the upgrade.\n\n");
+		return false;
 	}
-	else
-		check_ok();
+
+	return true;
 }
 
 /*
@@ -126,8 +90,8 @@ check_online_expansion(void)
  *	Check for the existence of external partitions and refuse the upgrade if
  *	found.
  */
-static void
-check_external_partition(void)
+bool
+check_external_partition(ClusterInfo *cluster)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -137,26 +101,27 @@ check_external_partition(void)
 	prep_status("Checking for external tables used in partitioning");
 
 	snprintf(output_path, sizeof(output_path), "external_partitions.txt");
+
 	/*
 	 * We need to query the inheritance catalog rather than the partitioning
 	 * catalogs since they are not available on the segments.
 	 */
 
-	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		int			ntups;
 		int			rowno;
-		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
 		PGconn	   *conn;
 
-		conn = connectToServer(&old_cluster, active_db->db_name);
+		conn = connectToServer(cluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
-			 "SELECT cc.relname, c.relname AS partname, c.relnamespace "
-			 "FROM   pg_inherits i "
-			 "       JOIN pg_class c ON (i.inhrelid = c.oid AND c.relstorage = '%c') "
-			 "       JOIN pg_class cc ON (i.inhparent = cc.oid);",
-			 RELSTORAGE_EXTERNAL);
+								"SELECT cc.relname, c.relname AS partname, c.relnamespace "
+								"FROM   pg_inherits i "
+								"       JOIN pg_class c ON (i.inhrelid = c.oid AND c.relstorage = '%c') "
+								"       JOIN pg_class cc ON (i.inhparent = cc.oid);",
+								RELSTORAGE_EXTERNAL);
 
 		ntups = PQntuples(res);
 
@@ -182,16 +147,15 @@ check_external_partition(void)
 	if (found)
 	{
 		fclose(script);
-		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
-			   "| Your installation contains partitioned tables with external\n"
-			   "| tables as partitions.  These partitions need to be removed\n"
-			   "| from the partition hierarchy before the upgrade.  A list of\n"
-			   "| external partitions to remove is in the file:\n"
-			   "| \t%s\n\n", output_path);
+		report_failure("| Your installation contains partitioned tables with external\n"
+						 "| tables as partitions.  These partitions need to be removed\n"
+						 "| from the partition hierarchy before the upgrade.  A list of\n"
+						 "| external partitions to remove is in the file:\n"
+						 "| \t%s\n\n", output_path);
+		return false;
 	}
-	else
-		check_ok();
+
+	return true;
 }
 
 /*
@@ -233,37 +197,37 @@ check_external_partition(void)
  *	creates the current state, but for the time being we disallow upgrades on
  *	cluster which exhibits this.
  */
-static void
-check_covering_aoindex(void)
+bool
+check_covering_aoindex(ClusterInfo *cluster)
 {
-	char			output_path[MAXPGPATH];
-	FILE		   *script = NULL;
-	bool			found = false;
-	int				dbnum;
+	char		output_path[MAXPGPATH];
+	FILE	   *script = NULL;
+	bool		found = false;
+	int			dbnum;
 
 	prep_status("Checking for non-covering indexes on partitioned AO tables");
 
 	snprintf(output_path, sizeof(output_path), "mismatched_aopartition_indexes.txt");
 
-	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		PGconn	   *conn;
 		int			ntups;
 		int			rowno;
-		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
 
-		conn = connectToServer(&old_cluster, active_db->db_name);
+		conn = connectToServer(cluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
-			 "SELECT DISTINCT ao.relid, inh.inhrelid "
-			 "FROM   pg_catalog.pg_appendonly ao "
-			 "       JOIN pg_catalog.pg_inherits inh "
-			 "         ON (inh.inhparent = ao.relid) "
-			 "       JOIN pg_catalog.pg_appendonly aop "
-			 "         ON (inh.inhrelid = aop.relid AND aop.blkdirrelid = 0) "
-			 "       JOIN pg_catalog.pg_index i "
-			 "         ON (i.indrelid = ao.relid) "
-			 "WHERE  ao.blkdirrelid <> 0;");
+		                        "SELECT DISTINCT ao.relid, inh.inhrelid "
+		                        "FROM   pg_catalog.pg_appendonly ao "
+		                        "       JOIN pg_catalog.pg_inherits inh "
+		                        "         ON (inh.inhparent = ao.relid) "
+		                        "       JOIN pg_catalog.pg_appendonly aop "
+		                        "         ON (inh.inhrelid = aop.relid AND aop.blkdirrelid = 0) "
+		                        "       JOIN pg_catalog.pg_index i "
+		                        "         ON (i.indrelid = ao.relid) "
+		                        "WHERE  ao.blkdirrelid <> 0;");
 
 		ntups = PQntuples(res);
 
@@ -273,13 +237,13 @@ check_covering_aoindex(void)
 
 			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
 				pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
-					   output_path);
+				       output_path);
 
 			for (rowno = 0; rowno < ntups; rowno++)
 			{
 				fprintf(script, "Mismatched index on partition %s in relation %s\n",
-						PQgetvalue(res, rowno, PQfnumber(res, "inhrelid")),
-						PQgetvalue(res, rowno, PQfnumber(res, "relid")));
+				        PQgetvalue(res, rowno, PQfnumber(res, "inhrelid")),
+				        PQgetvalue(res, rowno, PQfnumber(res, "relid")));
 			}
 		}
 
@@ -290,40 +254,40 @@ check_covering_aoindex(void)
 	if (found)
 	{
 		fclose(script);
-		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
-			   "| Your installation contains partitioned append-only tables\n"
-			   "| with an index defined on the partition parent which isn't\n"
-			   "| present on all partition members.  These indexes must be\n"
-			   "| dropped before the upgrade.  A list of relations, and the\n"
-			   "| partitions in question is in the file:\n"
-			   "| \t%s\n\n", output_path);
+		report_failure(
+			"| Your installation contains partitioned append-only tables\n"
+			"| with an index defined on the partition parent which isn't\n"
+			"| present on all partition members.  These indexes must be\n"
+			"| dropped before the upgrade.  A list of relations, and the\n"
+			"| partitions in question is in the file:\n"
+			"| \t%s\n\n", output_path);
+		return false;
 
 	}
-	else
-		check_ok();
+
+	return true;
 }
 
-static void
-check_orphaned_toastrels(void)
+bool
+check_orphaned_toastrels(ClusterInfo *cluster)
 {
-	bool			found = false;
-	int				dbnum;
-	char			output_path[MAXPGPATH];
-	FILE		   *script = NULL;
+	bool		found = false;
+	int			dbnum;
+	char		output_path[MAXPGPATH];
+	FILE	   *script = NULL;
 
 	prep_status("Checking for orphaned TOAST relations");
 
 	snprintf(output_path, sizeof(output_path), "partitioned_tables.txt");
 
-	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		PGconn	   *conn;
 		int			ntups;
-		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
 
-		conn = connectToServer(&old_cluster, active_db->db_name);
+		conn = connectToServer(cluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
 								"WITH orphan_toast AS ( "
 								"    SELECT c.oid AS reloid, "
@@ -354,16 +318,15 @@ check_orphaned_toastrels(void)
 	if (found)
 	{
 		fclose(script);
-		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
-			   "| Your installation contains orphaned toast tables which\n"
-			   "| must be dropped before upgrade.\n"
-			   "| A list of the problem databases is in the file:\n"
-			   "| \t%s\n\n", output_path);
+		report_failure(
+						 "| Your installation contains orphaned toast tables which\n"
+						 "| must be dropped before upgrade.\n"
+						 "| A list of the problem databases is in the file:\n"
+						 "| \t%s\n\n", output_path);
+		return false;
 	}
-	else
-		check_ok();
 
+	return true;
 }
 
 /*
@@ -375,19 +338,19 @@ check_orphaned_toastrels(void)
  *	invalidate the indexes forcing a REINDEX, there is little to be gained by
  *	handling them for the end-user.
  */
-static void
-check_partition_indexes(void)
+bool
+check_partition_indexes(ClusterInfo *cluster)
 {
-	int				dbnum;
-	FILE		   *script = NULL;
-	bool			found = false;
-	char			output_path[MAXPGPATH];
+	int			dbnum;
+	FILE	   *script = NULL;
+	bool		found = false;
+	char		output_path[MAXPGPATH];
 
 	prep_status("Checking for indexes on partitioned tables");
 
 	snprintf(output_path, sizeof(output_path), "partitioned_tables_indexes.txt");
 
-	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -396,8 +359,8 @@ check_partition_indexes(void)
 		int			i_nspname;
 		int			i_relname;
 		int			i_indexes;
-		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
 
 		res = executeQueryOrDie(conn,
 								"WITH partitions AS ("
@@ -449,16 +412,16 @@ check_partition_indexes(void)
 	if (found)
 	{
 		fclose(script);
-		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
-			   "| Your installation contains partitioned tables with\n"
-			   "| indexes defined on them.  Indexes on partition parents,\n"
-			   "| as well as children, must be dropped before upgrade.\n"
-			   "| A list of the problem tables is in the file:\n"
-			   "| \t%s\n\n", output_path);
+		report_failure(
+						 "| Your installation contains partitioned tables with\n"
+						 "| indexes defined on them.  Indexes on partition parents,\n"
+						 "| as well as children, must be dropped before upgrade.\n"
+						 "| A list of the problem tables is in the file:\n"
+						 "| \t%s\n\n", output_path);
+		return false;
 	}
-	else
-		check_ok();
+
+	return true;
 }
 
 /*
@@ -468,8 +431,8 @@ check_partition_indexes(void)
  * We error if any gphdfs external tables remain and let the users know that,
  * any remaining gphdfs external tables have to be removed.
  */
-static void
-check_gphdfs_external_tables(void)
+bool
+check_gphdfs_external_tables(ClusterInfo *cluster)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -477,31 +440,31 @@ check_gphdfs_external_tables(void)
 	int			dbnum;
 
 	/* GPDB only supported gphdfs in this version range */
-	if (!(old_cluster.major_version >= 80215 && old_cluster.major_version < 80400))
-		return;
+	if (!(cluster->major_version >= 80215 && cluster->major_version < 80400))
+		return true;
 
 	prep_status("Checking for gphdfs external tables");
 
 	snprintf(output_path, sizeof(output_path), "gphdfs_external_tables.txt");
 
 
-	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		int			ntups;
 		int			rowno;
-		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
 		PGconn	   *conn;
 
-		conn = connectToServer(&old_cluster, active_db->db_name);
+		conn = connectToServer(cluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
-			 "SELECT d.objid::regclass as tablename "
-			 "FROM pg_catalog.pg_depend d "
-			 "       JOIN pg_catalog.pg_exttable x ON ( d.objid = x.reloid ) "
-			 "       JOIN pg_catalog.pg_extprotocol p ON ( p.oid = d.refobjid ) "
-			 "       JOIN pg_catalog.pg_class c ON ( c.oid = d.objid ) "
-			 "       WHERE d.refclassid = 'pg_extprotocol'::regclass "
-			 "       AND p.ptcname = 'gphdfs';");
+								"SELECT d.objid::regclass as tablename "
+								"FROM pg_catalog.pg_depend d "
+								"       JOIN pg_catalog.pg_exttable x ON ( d.objid = x.reloid ) "
+								"       JOIN pg_catalog.pg_extprotocol p ON ( p.oid = d.refobjid ) "
+								"       JOIN pg_catalog.pg_class c ON ( c.oid = d.objid ) "
+								"       WHERE d.refclassid = 'pg_extprotocol'::regclass "
+								"       AND p.ptcname = 'gphdfs';");
 
 		ntups = PQntuples(res);
 
@@ -527,15 +490,15 @@ check_gphdfs_external_tables(void)
 	if (found)
 	{
 		fclose(script);
-		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
-			   "| Your installation contains gphdfs external tables.  These \n"
-			   "| tables need to be dropped before upgrade.  A list of\n"
-			   "| external gphdfs tables to remove is provided in the file:\n"
-			   "| \t%s\n\n", output_path);
+		report_failure(
+						 "| Your installation contains gphdfs external tables.  These \n"
+						 "| tables need to be dropped before upgrade.  A list of\n"
+						 "| external gphdfs tables to remove is provided in the file:\n"
+						 "| \t%s\n\n", output_path);
+		return false;
 	}
-	else
-		check_ok();
+
+	return true;
 }
 
 /*
@@ -544,8 +507,8 @@ check_gphdfs_external_tables(void)
  * Check if there are any remaining users with gphdfs roles.
  * We error if this is the case and let the users know how to proceed.
  */
-static void
-check_gphdfs_user_roles(void)
+bool
+check_gphdfs_user_roles(ClusterInfo *cluster)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -557,14 +520,14 @@ check_gphdfs_user_roles(void)
 	PGconn	   *conn;
 
 	/* GPDB only supported gphdfs in this version range */
-	if (!(old_cluster.major_version >= 80215 && old_cluster.major_version < 80400))
-		return;
+	if (!(cluster->major_version >= 80215 && cluster->major_version < 80400))
+		return true;
 
 	prep_status("Checking for users assigned the gphdfs role");
 
 	snprintf(output_path, sizeof(output_path), "gphdfs_user_roles.txt");
 
-	conn = connectToServer(&old_cluster, "template1");
+	conn = connectToServer(cluster, "template1");
 	res = executeQueryOrDie(conn,
 							"SELECT rolname as role, "
 							"       rolcreaterexthdfs as hdfs_read, "
@@ -578,15 +541,15 @@ check_gphdfs_user_roles(void)
 	{
 		if ((script = fopen(output_path, "w")) == NULL)
 			pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
-					output_path);
+				   output_path);
 
 		i_hdfs_read = PQfnumber(res, "hdfs_read");
 		i_hdfs_write = PQfnumber(res, "hdfs_write");
 
 		for (rowno = 0; rowno < ntups; rowno++)
 		{
-			bool hasReadRole = (PQgetvalue(res, rowno, i_hdfs_read)[0] == 't');
-			bool hasWriteRole =(PQgetvalue(res, rowno, i_hdfs_write)[0] == 't');
+			bool		hasReadRole = (PQgetvalue(res, rowno, i_hdfs_read)[0] == 't');
+			bool		hasWriteRole = (PQgetvalue(res, rowno, i_hdfs_write)[0] == 't');
 
 			fprintf(script, "role \"%s\" has the gphdfs privileges:",
 					PQgetvalue(res, rowno, PQfnumber(res, "role")));
@@ -604,14 +567,72 @@ check_gphdfs_user_roles(void)
 	if (ntups > 0)
 	{
 		fclose(script);
-		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
-			   "| Your installation contains roles that have gphdfs privileges.\n"
-			   "| These privileges need to be revoked before upgrade.  A list\n"
-			   "| of roles and their corresponding gphdfs privileges that\n"
-			   "| must be revoked is provided in the file:\n"
-			   "| \t%s\n\n", output_path);
+		report_failure("| Your installation contains roles that have gphdfs privileges.\n"
+						 "| These privileges need to be revoked before upgrade.  A list\n"
+						 "| of roles and their corresponding gphdfs privileges that\n"
+						 "| must be revoked is provided in the file:\n"
+						 "| \t%s\n\n", output_path);
+		return false;
 	}
-	else
-		check_ok();
+
+	return true;
+}
+
+#include "string_utils.h"
+
+/*
+ * Check no non-default extensions exist
+ */
+bool
+check_nondefault_extensions(ClusterInfo *cluster)
+{
+	const char *const DEFAULT_EXTENSIONS[] = {"plpgsql"};
+	const char *const SEPARATOR = "\n";
+	int			dbnum;
+	char	   *report = palloc0(1);
+	char *extensions_list = array_to_string(DEFAULT_EXTENSIONS,
+		sizeof(DEFAULT_EXTENSIONS) / sizeof(*DEFAULT_EXTENSIONS));
+
+	prep_status("Checking for non-default extensions.\n");
+
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn;
+		int			i;
+
+		conn = connectToServer(cluster, active_db->db_name);
+		res = executeQueryOrDie(conn, "SELECT extname FROM pg_extension WHERE extname NOT IN (%s);", extensions_list);
+		for (i = 0; i < PQntuples(res); i++)
+		{
+			char	   *extension_name = PQgetvalue(res, i, 0);
+
+			report = repalloc(report,
+			                  strlen(report) + strlen(extension_name) + strlen(SEPARATOR) + 1);
+			sprintf(
+				&(report[strlen(report)]),
+				"%s%s",
+				extension_name, SEPARATOR
+			);
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (strlen(report))
+	{
+		report_failure(
+			"All non-default extensions must be dropped before the upgrade.\n"
+			"Non-default extensions found:\n%s",
+			report
+		);
+		return false;
+	}
+
+	pfree(extensions_list);
+	pfree(report);
+	
+	return true;
 }

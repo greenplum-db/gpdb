@@ -36,6 +36,21 @@ report_status(eLogType type, const char *fmt,...)
 }
 
 
+void
+report_failure(const char *restrict fmt,...)
+{
+	report_status(PG_REPORT, "fatal\n");
+
+	va_list		args;
+
+	va_start(args, fmt);
+	vprintf(_(fmt), args);
+	va_end(args);
+
+	fflush(stdout);
+}
+
+
 /* force blank output for progress display */
 void
 end_progress_output(void)
@@ -174,6 +189,13 @@ check_ok(void)
 	/* all seems well */
 	report_status(PG_REPORT, "ok");
 	fflush(stdout);
+}
+
+
+void
+check_failed(void)
+{
+	pg_log(PG_FATAL, "One or more checks failed. See output above.\n");
 }
 
 
