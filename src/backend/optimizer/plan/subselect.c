@@ -702,6 +702,7 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	SubPlan    *splan;
 	ListCell   *lc;
 	Bitmapset  *tmpset;
+	Bitmapset  *plan_param_set;
 	int         paramid;
 
 	/*
@@ -726,6 +727,7 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	splan->args = NIL;
 	splan->extParam = NIL;
 
+	plan_param_set  = NULL;
 	/*
 	 * Make parParam and args lists of param IDs and expressions that current
 	 * query level will pass to this child plan.
@@ -749,6 +751,7 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 
 		splan->parParam = lappend_int(splan->parParam, pitem->paramId);
 		splan->args = lappend(splan->args, arg);
+		plan_param_set = bms_add_member(plan_param_set, pitem->paramId);
 	}
 
 	/*
@@ -757,7 +760,8 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	 */
 	if (plan->extParam)
 	{
-		tmpset = bms_copy(plan->extParam);
+		tmpset = bms_difference(plan->extParam, plan_param_set);
+
 		while ((paramid = bms_first_member(tmpset)) >= 0)
 			splan->extParam = lappend_int(splan->extParam, paramid);
 
