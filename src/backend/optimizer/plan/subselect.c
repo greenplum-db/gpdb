@@ -701,6 +701,9 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	Node	   *result;
 	SubPlan    *splan;
 	ListCell   *lc;
+	Bitmapset  *tmpset;
+	Bitmapset  *plan_param_set;
+	int         paramid;
 
 	/*
 	 * Initialize the SubPlan node.  Note plan_id, plan_name, and cost fields
@@ -722,7 +725,9 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	splan->setParam = NIL;
 	splan->parParam = NIL;
 	splan->args = NIL;
+	splan->extParam = NIL;
 
+	plan_param_set  = NULL;
 	/*
 	 * Make parParam and args lists of param IDs and expressions that current
 	 * query level will pass to this child plan.
@@ -746,6 +751,21 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 
 		splan->parParam = lappend_int(splan->parParam, pitem->paramId);
 		splan->args = lappend(splan->args, arg);
+		plan_param_set = bms_add_member(plan_param_set, pitem->paramId);
+	}
+
+	/*
+	 * For gpdb, we need extParam to evaluate if we can process initplan
+	 * in ExecutorStart.
+	 */
+	if (plan->extParam)
+	{
+		tmpset = bms_difference(plan->extParam, plan_param_set);
+
+		while ((paramid = bms_first_member(tmpset)) >= 0)
+			splan->extParam = lappend_int(splan->extParam, paramid);
+
+		pfree(tmpset);
 	}
 
 	/*
