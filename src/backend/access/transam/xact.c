@@ -1291,6 +1291,7 @@ RecordTransactionCommit(void)
 	bool		RelcacheInitFileInval = false;
 	bool		wrote_xlog;
 	bool		isDtxPrepared = 0;
+	bool		isOnePhaseQE = (Gp_role == GP_ROLE_EXECUTE && MyTmGxact->isOnePhaseCommit);
 	TMGXACT_LOG gxact_log;
 	XLogRecPtr	recptr = InvalidXLogRecPtr;
 	DistributedTransactionTimeStamp distribTimeStamp = 0;
@@ -1307,7 +1308,7 @@ RecordTransactionCommit(void)
 		xid = GetTopTransactionIdIfAny();
 	markXidCommitted = TransactionIdIsValid(xid);
 
-	if (Gp_role == GP_ROLE_EXECUTE && MyTmGxact->isOnePhaseCommit)
+	if (isOnePhaseQE)
 		dtxCrackOpenGid(MyTmGxact->gid, &distribTimeStamp, &distribXid);
 
 	/* Get data needed for commit record */
@@ -1420,7 +1421,7 @@ RecordTransactionCommit(void)
 		 */
 		if (nrels > 0 || ndeldbs > 0 || nmsgs > 0 || RelcacheInitFileInval ||
 			forceSyncCommit || XLogLogicalInfoActive() || isDtxPrepared ||
-			OidIsValid(pending_tablespace_for_deletion))
+			OidIsValid(pending_tablespace_for_deletion) || isOnePhaseQE)
 		{
 			XLogRecData rdata[6];
 			int			lastrdata = 0;
@@ -1592,7 +1593,7 @@ RecordTransactionCommit(void)
 												getDtxStartTime(),
 												getDistributedTransactionId(),
 												/* isRedo */ false);
-			else if (Gp_role == GP_ROLE_EXECUTE && MyTmGxact->isOnePhaseCommit)
+			else if (isOnePhaseQE)
 				DistributedLog_SetCommittedTree(xid, nchildren, children,
 												distribTimeStamp, distribXid,
 												/* isRedo */ false);
