@@ -2,14 +2,14 @@
 title: Installing Java for PXF
 ---
 
-PXF is a Java service. It requires a Java 1.8 installation on each Greenplum Database host.
+PXF is a Java service. It requires a Java 8 or Java 11 installation on each Greenplum Database host.
 
 *If an appropriate version of Java is already installed on each Greenplum Database host, you need not perform the procedure in this topic.*
 
 
 ## <a id="prereq"></a>Prerequisites
 
-Ensure that you have access to, or superuser permissions to install, Java version 1.8 on each Greenplum Database host.
+Ensure that you have access to, or superuser permissions to install, Java 8 or Java 11 on each Greenplum Database host.
 
 ## <a id="proc"></a>Procedure
 
@@ -32,17 +32,20 @@ Perform the following procedure to install Java on the master, standby master, a
 
 3. Install Java on the master, standby master, and on each Greenplum Database segment host, and then set up the Java environment on each host.
 
-    1. Install the Java package. For example, to install Java version 1.8:
+    1. Install the Java package. For example, to install Java version 8:
 
         ``` shell
         gpadmin@gpmaster$ sudo yum -y install java-1.8.0-openjdk-1.8.0*
         gpadmin@gpmaster$ gpssh -e -v -f gphostfile sudo yum -y install java-1.8.0-openjdk-1.8.0*
         ```
 
-    2. Identify the Java base install directory. Update the `gpadmin` user's `.bashrc` file on each host to include this `$JAVA_HOME` setting if it is not already present. For example:
+    2. Identify the Java base install directory. Update the `gpadmin` user's `.bashrc` file on each host to include this `$JAVA_HOME` setting if it is not already present. For example, if you installed Java 8:
 
         ``` shell
         gpadmin@gpmaster$ echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.x86_64/jre' >> /home/gpadmin/.bashrc
         gpadmin@gpmaster$ gpssh -e -v -f gphostfile "echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.x86_64/jre' >> /home/gpadmin/.bashrc"
         ```
 
+        If you installed Java 11, `JAVA_HOME` may be `/usr/lib/jvm/java-11-openjdk-11.0.4.11-0.el7_6.x86_64`.
+
+**Note**: If the superuser selected the newly-installed Java alternative as the system default, `JAVA_HOME=/usr/lib/jvm/jre`.
