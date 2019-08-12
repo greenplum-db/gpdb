@@ -2787,7 +2787,7 @@ initial_cost_hashjoin(PlannerInfo *root, JoinCostWorkspace *workspace,
 	ExecChooseHashTableSize(inner_path_rows,
 							inner_path->parent->width,
 							true,		/* useskew */
-							global_work_mem(root),
+							global_work_mem(root) / 1024L,
 							&numbuckets,
 							&numbatches,
 							&num_skew_mcvs);
@@ -4692,7 +4692,7 @@ Cost incremental_hashjoin_cost(double rows, int inner_width, int outer_width, Li
 	ExecChooseHashTableSize(rows,
 							inner_width,
 							true /* useSkew */,
-							global_work_mem(root),
+							global_work_mem(root) / 1024L,
 							&numbuckets,
 							&numbatches,
 							&num_skew_mcvs);
