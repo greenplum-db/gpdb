@@ -998,52 +998,6 @@ LockAcquireExtended(const LOCKTAG *locktag,
 	lock = proclock->tag.myLock;
 	locallock->lock = lock;
 
-	/*
-	 * We shouldn't already hold the desired lock; else locallock table is
-	 * broken.
-	 */
-	if (Gp_role != GP_ROLE_UTILITY)
-	{
-		if (proclock->holdMask & LOCKBIT_ON(lockmode))
-		{
-			elog(LOG, "lock %s on object %u/%u/%u is already held",
-				 lock_mode_names[lockmode],
-				 lock->tag.locktag_field1, lock->tag.locktag_field2,
-				 lock->tag.locktag_field3);
-			if (MyProc == lockHolderProcPtr)
-			{
-				elog(LOG, "writer found lock %s on object %u/%u/%u that it didn't know it held",
-						 lock_mode_names[lockmode],
-						 lock->tag.locktag_field1, lock->tag.locktag_field2,
-						 lock->tag.locktag_field3);
-				GrantLock(lock, proclock, lockmode);
-				GrantLockLocal(locallock, owner);
-			}
-			else
-			{
-				if (MyProc != lockHolderProcPtr)
-				{
-					elog(LOG, "reader found lock %s on object %u/%u/%u which is already held by writer",
-						 lock_mode_names[lockmode],
-						 lock->tag.locktag_field1, lock->tag.locktag_field2,
-						 lock->tag.locktag_field3);
-				}
-				lock->nRequested--;
-				lock->requested[lockmode]--;
-			}
-			LWLockRelease(partitionLock);
-			return LOCKACQUIRE_ALREADY_HELD;
-		}
-		
-	}
-	else if (proclock->holdMask & LOCKBIT_ON(lockmode))
-	{
-		ereport(ERROR, (errmsg("lock %s on object %u/%u/%u is already held",
-			 lockMethodTable->lockModeNames[lockmode],
-			 lock->tag.locktag_field1, lock->tag.locktag_field2,
-			 lock->tag.locktag_field3)));
-	}
-
 	if (MyProc == lockHolderProcPtr)
 	{
 		/*
@@ -1411,6 +1365,15 @@ SetupLockInTable(LockMethod lockMethodTable, PGPROC *proc,
 	lock->requested[lockmode]++;
 	Assert((lock->nRequested > 0) && (lock->requested[lockmode] > 0));
 
+	/*
+	 * We shouldn't already hold the desired lock; else locallock table is
+	 * broken.
+	 */
+	if (proclock->holdMask & LOCKBIT_ON(lockmode))
+		elog(ERROR, "lock %s on object %u/%u/%u is already held",
+				lockMethodTable->lockModeNames[lockmode],
+				lock->tag.locktag_field1, lock->tag.locktag_field2,
+				lock->tag.locktag_field3);
 	return proclock;
 }
 
