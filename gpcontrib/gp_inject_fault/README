@@ -1,0 +1,126 @@
+Fault Injection Framework
+=========================
+
+Fault is defined as a point of interest in the source code with an
+associated action to be taken when that point is hit during execution.
+Fault points are defined using SIMPLE_FAULT_INJECTOR() macro.  A fault
+point is identifed by a name.  This module provides an interface to
+inject a predefined fault point into a running Greenplum cluster by
+associating an action with the fault point.  Action can be error,
+panic, sleep, skip, infinite_loop, etc.
+
+Basic examples
+--------------
+
+   select gp_inject_fault('checkpoint', 'error', dbid) from
+   gp_segment_configuration where content=1 and role='p';
+
+The above command causes the next checkpoint to fail with elog(ERROR)
+on the segment that is acting as primary and has contentid = 1.  The
+'checkpoint' fault is defined in CreateCheckPoint() function in
+xlog.c.  Note that the fault is set to trigger only once by default.
+Subsequent checkpoints will not be affected by the above fault.
+
+   select gp_inject_fault('checkpoint', 'status', dbid) from
+   gp_segment_configuration where content=1 and role='p';
+
+The above command checks the status of the fault.  It reports the
+number of times the fault has been hit during execution and whether it
+has completed.
+
+   select gp_wait_until_triggered_fault('checkpoint', 1, dbid) from
+   gp_segment_configuration where content=1 and role='p';
+
+The above command blocks until the checkpoint fault is triggered
+exactly once.
+
+   select gp_inject_fault('checkpoint', 'reset', dbid) from
+   gp_segment_configuration where content=1 and role='p';
+
+The above command removes the fault, such that no action will be taken
+when the fault point is reached during execution.  A fault can be set
+to trigger more than once.  For example:
+
+   select gp_inject_fault_infinite('checkpoint', 'error', dbid) from
+   gp_segment_configuration where content=1 and role='p';
+
+This command causes checkpoints to fail until the fault is removed on
+the segment 1 primary.
+
+More detailed interface
+-----------------------
+
+A more detailed version of the fault injector interface accepts
+several more paramters.  For example:
+
+   select gp_inject_fault('heap_insert', 'error',
+   	  '' /* DDL */, '' /* database name */,
+	  'my_table' /* table name */,
+	  1 /* start occurrence */, 10 /* end occurrence */,
+	  0 /* */, dbid) from
+   gp_segment_configuration where content=1 and role='p';
+
+The above command sets heap_insert fault such that the inserting
+transaction will abort wiht elog(ERROR) when the code reaches the
+fault point, only if the relation being inserted to has the name
+'my_table'.  Moreover, after the fault has been hit 10 times, it will
+stop triggering.  The 11th transaction to insert into my_table will
+continue the insert as if no fault was injected.
+
+Fault actions
+-------------
+
+Fault action is specified as the type parameter in gp_inject_fault()
+interface.  The following types are supported.
+
+error
+   elog(ERROR)
+
+fatal
+   elog(FATAL)
+
+panic
+   elog(PANIC)
+
+sleep
+   sleep for specified amount of time
+
+infinite_loop
+   block until the query is canceled or terminated
+
+suspend
+   block until the fault is removed
+
+resume
+   resume backend processes that are blocked due to a suspend fault
+
+skip
+   do nothing (used to implement custom logic that is not supported by
+   predefined actions)
+
+reset
+   remove a previously injected fault
+
+segv
+   crash the backend process due to SIGSEGV
+
+interrupt
+   simulate cancel interrupt arrival, such that the next
+   interrupt processing cycle will cancel the query
+
+finish_pending
+   similar to interrupt, sets the QueryFinishPending global flag
+   
+status
+   return a text datum with details of how many times a fault has been
+   triggered, the state it is currently in.  Fault states are as follows:
+
+      "set" injected but the fault point has not been reached during
+      execution yet.
+
+      "tiggered" the fault point has been reached at least once during
+      execution.
+
+      "completed" the action associated with the fault point will no
+      longer be taken because the fault point has been reached maximum
+      number of times during execution.
