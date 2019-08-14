@@ -40,6 +40,10 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+#ifdef OPENSSL_FIPS
+#include <openssl/fips.h>
+#endif
+
 #include "utils/memutils.h"
 #include "utils/resowner.h"
 
@@ -197,6 +201,16 @@ compat_find_digest(const char *name, PX_MD **res)
 #else
 #define compat_find_digest(name, res)  (PXE_NO_HASH)
 #endif
+
+/*
+ * Fips mode
+ */
+static bool fips = false;
+
+#define NOT_FIPS_CERTIFIED \
+	if (fips) \
+		ereport(ERROR, \
+				(errmsg("requested functionality not allowed in FIPS mode")));
 
 /*
  * Hashes
@@ -928,7 +942,7 @@ ossl_aes_cbc_decrypt(PX_Cipher *c, const uint8 *data, unsigned dlen,
  * aliases
  */
 
-static PX_Alias ossl_aliases[] = {
+static PX_Alias ossl_aliases_all[] = {
 	{"bf", "bf-cbc"},
 	{"blowfish", "bf-cbc"},
 	{"blowfish-cbc", "bf-cbc"},
@@ -945,6 +959,8 @@ static PX_Alias ossl_aliases[] = {
 	{"rijndael-ecb", "aes-ecb"},
 	{NULL}
 };
+
+static PX_Alias *ossl_aliases = ossl_aliases_all;
 
 static const struct ossl_cipher ossl_bf_cbc = {
 	bf_init, bf_cbc_encrypt, bf_cbc_decrypt,
@@ -1010,7 +1026,7 @@ struct ossl_cipher_lookup
 	const struct ossl_cipher *ciph;
 };
 
-static const struct ossl_cipher_lookup ossl_cipher_types[] = {
+static const struct ossl_cipher_lookup ossl_cipher_types_all[] = {
 	{"bf-cbc", &ossl_bf_cbc},
 	{"bf-ecb", &ossl_bf_ecb},
 	{"bf-cfb", &ossl_bf_cfb},
@@ -1025,6 +1041,8 @@ static const struct ossl_cipher_lookup ossl_cipher_types[] = {
 	{NULL}
 };
 
+static const struct ossl_cipher_lookup *ossl_cipher_types = ossl_cipher_types_all;
+
 /* PUBLIC functions */
 
 int
@@ -1033,6 +1051,8 @@ px_find_cipher(const char *name, PX_Cipher **res)
 	const struct ossl_cipher_lookup *i;
 	PX_Cipher  *c = NULL;
 	ossldata   *od;
+
+	NOT_FIPS_CERTIFIED
 
 	name = px_resolve_alias(ossl_aliases, name);
 	for (i = ossl_cipher_types; i->name; i++)
@@ -1103,4 +1123,112 @@ px_add_entropy(const uint8 *data, unsigned count)
 	 */
 	RAND_add(data, count, 0);
 	return 0;
+}
+
+void
+px_disable_fipsmode(void)
+{
+#ifndef OPENSSL_FIPS
+	/*
+	 * If this build doesn't support FIPS mode at all, we shouldn't be able
+	 * to reach this point, so Assert that and return to handle production
+	 * builds gracefully.
+	 */
+	Assert(!fips);
+#else
+	ossl_aliases = ossl_aliases_all;
+	ossl_cipher_types = ossl_cipher_types_all;
+	fips = false;
+
+	if (!FIPS_mode_set)
+		return;
+
+	FIPS_mode_set(0);
+#endif
+
+	return;
+}
+
+void
+px_enable_fipsmode(bool strict)
+{
+#ifndef OPENSSL_FIPS
+	ereport(ERROR,
+			(errmsg("FIPS enabled OpenSSL is required for strict FIPS mode"),
+			 errhint("Recompile OpenSSL with the FIPS module, or install a FIPS enabled OpenSSL distribution.")));
+#else
+
+	/*
+	 * While AES and 3DES are allowed ciphers under FIPS-140 level 2, pgcrypto
+	 * is calling the lowlevel API for these which is disallowed under FIPS.
+	 * However, rather than returning NULL as is done when calling the high
+	 * level functions, the lowlevel API throws a SIGABORT so we need to avoid
+	 * calling this altogether.
+	 */
+	ossl_aliases = NULL;
+	ossl_cipher_types = NULL;
+
+	/* Make sure that we are linked against a FIPS enabled OpenSSL */
+	if (!FIPS_mode_set)
+	{
+		ereport(ERROR,
+				(errmsg("FIPS enabled OpenSSL is required for strict FIPS mode"),
+				 errhint("Recompile OpenSSL with the FIPS module, or install a FIPS enabled OpenSSL distribution.")));
+	}
+
+	/*
+	 * In strict mode, we also require that the underlying operating system
+	 * has been set in FIPS mode.
+	 */
+	if (strict)
+	{
+#ifndef __linux__
+		/*
+		 * Strict FIPS mode is only available on Linux, and require the kernel
+		 * crypto.fips_enabled sysctl to be set.
+		 */
+		ereport(ERROR,
+				(errmsg("strict FIPS mode not supported on this platform")));
+#else
+		FILE	   *proc;
+		char		buf;
+
+		/*
+		 * Since the _sysctl interface isn't specifying an enum for sys/crypto
+		 * we have to read the value by looking at the correspondig procfs
+		 * entry. fread'ing from procfs is generally not recommended due to
+		 * the risk of race conditions, but since this value can be expected
+		 * to be stable across a runtime the risk should be quite minimal.
+		 */
+		proc = fopen("/proc/sys/crypto/fips_enabled", "r");
+		fread(&buf, sizeof(char), 1, proc);
+		fclose(proc);
+
+		if (buf != '1')
+			ereport(ERROR,
+					(errmsg("strict FIPS mode require kernel support"),
+					 errhint("Turn on FIPS mode in the kernel by enabling crypto.fips_enabled via sysctl.")));
+#endif
+	}
+
+	/*
+	 * A non-zero return value means that FIPS mode was enabled, but the
+	 * full range of possible non-zero return values is not documented so
+	 * rather than checking for success we check for failure.
+	 */
+	if (FIPS_mode_set(1) == 0)
+	{
+		char		errbuf[128];
+
+		ERR_load_crypto_strings();
+		ERR_error_string_n(ERR_get_error(), errbuf, sizeof(errbuf));
+		ERR_free_strings();
+
+		ereport(ERROR,
+				(errmsg("unable to enable FIPS mode: %lx, %s",
+						ERR_get_error(), errbuf)));
+	}
+
+	fips = true;
+#endif
 }

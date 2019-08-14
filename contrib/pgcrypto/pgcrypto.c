@@ -35,13 +35,86 @@
 
 #include "parser/scansup.h"
 #include "utils/builtins.h"
+#include "utils/guc.h"
 #include "utils/uuid.h"
 
 #include "px.h"
 #include "px-crypt.h"
 #include "pgcrypto.h"
+#include "pgp.h"
 
 PG_MODULE_MAGIC;
+
+static void pgcrypto_fips_assign(int newval, void *extra);
+
+/*
+ * pgcrypto.fips was a boolean GUC in Greenplum 4.3, so we need to support all
+ * the common ways to turn a boolean on/off to preserve backwards
+ * compatibility.
+ */
+typedef enum FipsOptions
+{
+	FIPS_DISABLED = 0,
+	FIPS_ENABLED,
+	FIPS_STRICT
+} FipsOptions;
+
+int pgcrypto_fips = FIPS_DISABLED;
+
+static const struct config_enum_entry fips_options[] = {
+	{"off", FIPS_DISABLED, false},
+	{"false", FIPS_DISABLED, false},
+	{"0", FIPS_DISABLED, false},
+	{"on", FIPS_ENABLED, false},
+	{"true", FIPS_ENABLED, false},
+	{"1", FIPS_ENABLED, false},
+	{"strict", FIPS_STRICT, false},
+	{NULL, 0, false}
+};
+
+#define NOT_FIPS_CERTIFIED \
+	if (pgcrypto_fips >= FIPS_ENABLED) \
+		ereport(ERROR, \
+				(errmsg("requested functionality not allowed in FIPS mode")));
+
+void _PG_init(void);
+
+void
+_PG_init(void)
+{
+	DefineCustomEnumVariable("pgcrypto.fips",
+							 "Enable FIPS mode in pgcrypto",
+							 NULL,
+							 &pgcrypto_fips,
+							 FIPS_DISABLED,
+							 fips_options,
+							 PGC_SUSET,
+							 0,
+							 NULL,
+							 pgcrypto_fips_assign,
+							 NULL);
+}
+
+static void
+pgcrypto_fips_assign(int newval, void *extra)
+{
+	if (newval == FIPS_DISABLED)
+	{
+		px_disable_fipsmode();
+		pgp_disable_fipsmode();
+	}
+	else
+	{
+		/*
+		 * If enabling px fips mode would work, when pgp fips mode wouldn't
+		 * then we would risk ending up in an inconsistent state. For now,
+		 * there are no such failure cases in pgp_enable_fipsmode so we're
+		 * keeping it simple.
+		 */
+		px_enable_fipsmode(newval == FIPS_STRICT ? true : false);
+		pgp_enable_fipsmode(newval == FIPS_STRICT ? true : false);
+	}
+}
 
 /* private stuff */
 
@@ -137,6 +210,8 @@ pg_gen_salt(PG_FUNCTION_ARGS)
 	int			len;
 	char		buf[PX_MAX_SALT_LEN + 1];
 
+	NOT_FIPS_CERTIFIED
+
 	text_to_cstring_buffer(arg0, buf, sizeof(buf));
 	len = px_gen_salt(buf, buf, 0);
 	if (len < 0)
@@ -159,6 +234,8 @@ pg_gen_salt_rounds(PG_FUNCTION_ARGS)
 	int			rounds = PG_GETARG_INT32(1);
 	int			len;
 	char		buf[PX_MAX_SALT_LEN + 1];
+
+	NOT_FIPS_CERTIFIED
 
 	text_to_cstring_buffer(arg0, buf, sizeof(buf));
 	len = px_gen_salt(buf, buf, rounds);
@@ -185,6 +262,8 @@ pg_crypt(PG_FUNCTION_ARGS)
 			   *cres,
 			   *resbuf;
 	text	   *res;
+
+	NOT_FIPS_CERTIFIED
 
 	buf0 = text_to_cstring(arg0);
 	buf1 = text_to_cstring(arg1);

@@ -202,6 +202,9 @@ void		px_set_debug_handler(void (*handler) (const char *));
 
 void		px_memset(void *ptr, int c, size_t len);
 
+void		px_enable_fipsmode(bool strict);
+void		px_disable_fipsmode(void);
+
 #ifdef PX_DEBUG
 void
 px_debug(const char *fmt,...)

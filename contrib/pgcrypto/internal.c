@@ -677,3 +677,17 @@ px_add_entropy(const uint8 *data, unsigned count)
 	fortuna_add_entropy(data, count);
 	return 0;
 }
+
+void
+px_disable_fipsmode(void)
+{
+	ereport(ERROR,
+			(errmsg("pgcrypto FIPS mode is only supported in OpenSSL enabled builds")));
+}
+
+void
+px_enable_fipsmode(bool strict)
+{
+	ereport(ERROR,
+			(errmsg("pgcrypto FIPS mode is only supported in OpenSSL enabled builds")));
+}
