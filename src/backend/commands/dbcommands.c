@@ -84,16 +84,26 @@ typedef struct
 	Oid			dest_dboid;		/* DB we are trying to create */
 } createdb_failure_params;
 
+/*
+ * GPDB: A different cleanup mechanism is used. Refer comment in movedb().
+ */
+#if 0
 typedef struct
 {
 	Oid			dest_dboid;		/* DB we are trying to move */
 	Oid			dest_tsoid;		/* tablespace we are trying to move to */
 } movedb_failure_params;
+#endif
 
 /* non-export function prototypes */
 static void createdb_failure_callback(int code, Datum arg);
 static void movedb(const char *dbname, const char *tblspcname);
+/*
+ * GPDB: A different cleanup mechanism is used. Refer comment in movedb().
+ */
+#if 0
 static void movedb_failure_callback(int code, Datum arg);
+#endif
 static bool get_db_info(const char *name, LOCKMODE lockmode,
 			Oid *dbIdP, Oid *ownerIdP,
 			int *encodingP, bool *dbIsTemplateP, bool *dbAllowConnP,
@@ -1149,8 +1159,9 @@ movedb(const char *dbname, const char *tblspcname)
 	char	   *dst_dbpath;
 	DIR		   *dstdir;
 	struct dirent *xlde;
+#if 0
 	movedb_failure_params fparms;
-
+#endif
 	/*
 	 * Look up the target database's OID, and get exclusive lock on it. We
 	 * need this to ensure that no new backend starts up in the database while
@@ -1303,7 +1314,13 @@ movedb(const char *dbname, const char *tblspcname)
 			elog(ERROR, "could not remove directory \"%s\": %m",
 				 dst_dbpath);
 	}
-
+	/*
+	 * GPDB: The failure callback mechanism below that is used upstream is
+	 * insufficient in guaranteeing cleanup throughout a two-phase commit/abort.
+	 * Instead, GPDB uses the pendingDbDeletes mechanism to clean the dboid dir
+	 * under the target tablespace.
+	 */
+#if 0
 	/*
 	 * Use an ENSURE block to make sure we remove the debris if the copy fails
 	 * (eg, due to out-of-disk-space).  This is not a 100% solution, because
@@ -1314,7 +1331,9 @@ movedb(const char *dbname, const char *tblspcname)
 	fparms.dest_tsoid = dst_tblspcoid;
 	PG_ENSURE_ERROR_CLEANUP(movedb_failure_callback,
 							PointerGetDatum(&fparms));
+#endif
 	{
+		ScheduleDbDirDelete(db_id, dst_tblspcoid, false);
 		/*
 		 * Copy files from the old tablespace to the new one
 		 */
@@ -1339,8 +1358,6 @@ movedb(const char *dbname, const char *tblspcname)
 
 			(void) XLogInsert(RM_DBASE_ID, XLOG_DBASE_CREATE, rdata);
 		}
-
-		ScheduleDbDirDelete(db_id, dst_tblspcoid, false);
 
 		/*
 		 * Update the database's pg_database tuple
@@ -1398,9 +1415,10 @@ movedb(const char *dbname, const char *tblspcname)
 		 */
 		heap_close(pgdbrel, NoLock);
 	}
+#if 0
 	PG_END_ENSURE_ERROR_CLEANUP(movedb_failure_callback,
 								PointerGetDatum(&fparms));
-
+#endif
 	/*
 	 * GPDB: GPDB uses two phase commit and pending deletes, hence cannot locally
 	 * commit here. The rest of the logic related to the non-catalog changes from
@@ -1444,6 +1462,10 @@ movedb(const char *dbname, const char *tblspcname)
 	SIMPLE_FAULT_INJECTOR("inside_move_db_transaction");
 }
 
+/*
+ * GPDB: A different cleanup mechanism is used. Refer comment in movedb().
+ */
+#if 0
 /* Error cleanup callback for movedb */
 static void
 movedb_failure_callback(int code, Datum arg)
@@ -1456,7 +1478,7 @@ movedb_failure_callback(int code, Datum arg)
 
 	(void) rmtree(dstpath, true);
 }
-
+#endif
 
 /*
  * ALTER DATABASE name ...
