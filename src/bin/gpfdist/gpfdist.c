@@ -55,6 +55,7 @@
 #endif
 
 #include <pg_config.h>
+#include <pg_config_manual.h>
 #include "gpfdist_helper.h"
 #ifdef USE_SSL
 #include <openssl/ssl.h>
