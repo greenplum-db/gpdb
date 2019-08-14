@@ -116,8 +116,8 @@ static void setSchemaName(char *context_schema, char **stmt_schema_name);
 
 static List *getLikeDistributionPolicy(InhRelation *e);
 static bool co_explicitly_disabled(List *opts);
-static InheritColumn *getColumnByName(List * list, char *columnName);
-static List *mergeColumnByName(List * list, InheritColumn * column);
+static InheritColumn *getColumnByName(List *list, char *columnName);
+static List *mergeColumnByName(List *list, char *columnName, Oid typeOid);
 static void transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 					   List *distributedBy, GpPolicy **policyp,
 					   List *likeDistributedBy,
@@ -1354,34 +1354,34 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 
 
 static InheritColumn *
-getColumnByName(List * list, char *columnName)
+getColumnByName(List *list, char *columnName)
 {
 	ListCell   *inhColumn;
-	InheritColumn *res = NULL;
 
 	foreach(inhColumn, list)
 	{
 		InheritColumn *col = (InheritColumn *) lfirst(inhColumn);
 
 		if (strcmp(col->columnName, columnName) == 0)
-		{
-			res = col;
-			break;
-		}
+			return col;
 	}
 
-	return res;
+	return NULL;
 }
 
 
 static List *
-mergeColumnByName(List * list, InheritColumn * column)
+mergeColumnByName(List *list, char *columnName, Oid typeOid)
 {
-	if (getColumnByName(list, column->columnName) != NULL)
+	if (getColumnByName(list, columnName) != NULL)
 		return list;
 
-	column->position = list == NIL ? 1 : list->length + 1;
-	return lappend(list, column);
+	InheritColumn *col = (InheritColumn *)palloc(sizeof(InheritColumn));
+	col->columnName = columnName;
+	col->typeOid = typeOid;
+	col->position = list == NIL ? 1 : list->length + 1;
+
+	return lappend(list, col);
 }
 
 
@@ -1764,15 +1764,13 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 					for (count = 0; count < rel->rd_att->natts; count++)
 					{
 						Form_pg_attribute inhattr = rel->rd_att->attrs[count];
-						char	   *inhname = NameStr(inhattr->attname);
-						InheritColumn *col = (InheritColumn *) palloc(sizeof(InheritColumn));
 
 						if (inhattr->attisdropped)
 							continue;
 
-						col->columnName = inhname;
-						col->typeOid = inhattr->atttypid;
-						orderedColumns = mergeColumnByName(orderedColumns, col);
+						orderedColumns = mergeColumnByName(orderedColumns,
+											NameStr(inhattr->attname),
+											inhattr->atttypid);
 					}
 					heap_close(rel, NoLock);
 				}
@@ -1780,21 +1778,16 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 
 			/*
 			 * Add non-present columns from inheriting (child) table to a
-			 * column list with unique columns from interited (parent) tables.
+			 * column list with unique columns from inherited (parent) tables.
 			 */
 			ListCell   *columns;
 
 			foreach(columns, cxt->columns)
 			{
 				ColumnDef  *column = (ColumnDef *) lfirst(columns);
-				ListCell   *inhColumn;
-				int32		typmod;
-				Oid			typeOid = typenameTypeId(NULL, column->typeName, &typmod);
-				InheritColumn *col = (InheritColumn *) palloc(sizeof(InheritColumn));
+				Oid			typeOid = typenameTypeId(NULL, column->typeName, NULL);
 
-				col->columnName = column->colname;
-				col->typeOid = typeOid;
-				orderedColumns = mergeColumnByName(orderedColumns, col);
+				orderedColumns = mergeColumnByName(orderedColumns, column->colname, typeOid);
 			}
 
 			/*
