@@ -83,6 +83,7 @@ typedef struct
 	List	   *grants;			/* GRANT items */
 } CreateSchemaStmtContext;
 
+
 static void transformColumnDefinition(ParseState *pstate,
 						  CreateStmtContext *cxt,
 						  ColumnDef *column);
@@ -1839,11 +1840,11 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 				}
 
 				/*
-				 * In the ALTER TABLE case, don't complain about index keys
-				 * not created in the command; they may well exist already.
-				 * DefineIndex will complain about them if not, and will also
-				 * take care of marking them NOT NULL.
-				 */
+				* In the ALTER TABLE case, don't complain about index keys
+				* not created in the command; they may well exist already.
+				* DefineIndex will complain about them if not, and will also
+				* take care of marking them NOT NULL.
+				*/
 				if (!found && !cxt->isalter)
 					ereport(ERROR,
 							(errcode(ERRCODE_UNDEFINED_COLUMN),
@@ -1857,6 +1858,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 
 
 	*policyp = policy;
+
 
 	if (cxt && cxt->pkey)		/* Primary key	specified.	Make sure
 								 * distribution columns match */
