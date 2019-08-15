@@ -2460,8 +2460,7 @@ initUnackQueueRing(UnackQueueRing *uqr)
 {
 	int i = 0;
 
-	uqr->currentTime = getCurrentTime();
-	uqr->currentTime = uqr->currentTime - (uqr->currentTime % TIMER_SPAN);
+	uqr->currentTime = 0;
 	uqr->idx = 0;
 	uqr->numOutStanding = 0;
 	uqr->numSharedOutStanding = 0;
@@ -4937,6 +4936,8 @@ checkExpiration(ChunkTransportState *transportStates, ChunkTransportStateEntry *
 	/* check for expiration */
 	int count = 0;
 	int retransmits = 0;
+
+	Assert(unack_queue_ring.currentTime != 0);
 	while (now >= (unack_queue_ring.currentTime + TIMER_SPAN) && count++ < UNACK_QUEUE_RING_SLOTS_NUM)
 	{
 		/* expired, need to resend them */
@@ -5711,9 +5712,14 @@ getCurrentTime(void)
 static void
 putIntoUnackQueueRing(UnackQueueRing *uqr, ICBuffer *buf, uint64 expTime, uint64 now)
 {
-	uint64 diff = now + expTime - uqr->currentTime;
+	uint64 diff = 0;
 	int idx = 0;
 
+	/* The first packet, currentTime is not initialized */
+	if (uqr->currentTime == 0)
+		uqr->currentTime = now - (now % TIMER_SPAN);
+
+	diff = now + expTime - uqr->currentTime;
 	if (diff >= UNACK_QUEUE_RING_LENGTH)
 	{
 	#ifdef AMS_VERBOSE_LOGGING
