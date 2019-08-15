@@ -416,7 +416,8 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
           having a single group comprising all the selected rows.) The set of rows fed to each
           aggregate function can be further filtered by attaching a <codeph>FILTER</codeph> clause
           to the aggregate function call. When a <codeph>FILTER</codeph> clause is present, only
-          those rows matching it are included in the input to that aggregate function.</p><p>When
+          those rows matching it are included in the input to that aggregate function. See <xref
+            href="../../admin_guide/query/topics/defining-queries.xml#topic11"/>.</p><p>When
             <codeph>GROUP BY</codeph> is present, or any aggregate functions are present, it is not
           valid for the <codeph>SELECT</codeph> list expressions to refer to ungrouped columns
           except within aggregate functions or when the ungrouped column is functionally dependent
@@ -426,7 +427,7 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
           Keep in mind that all aggregate functions are evaluated before evaluating any "scalar"
           expressions in the <codeph>HAVING</codeph> clause or <codeph>SELECT</codeph> list. This
           means that, for example, a <codeph>CASE</codeph> expression cannot be used to skip
-          evaluation of an aggregate function; see<xref
+          evaluation of an aggregate function; see <xref
             href="../../admin_guide/query/topics/defining-queries.xml#topic25"/>. </p><p>Greenplum
           Database has the following additional OLAP grouping extensions (often referred to as
             <i>supergroups</i>):</p><parml>
