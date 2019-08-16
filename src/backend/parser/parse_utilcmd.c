@@ -1798,13 +1798,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 				char	   *key = strVal(lfirst(keys));
 				InheritColumn *col = getColumnByName(orderedColumns, key);
 
-				/*
-				* In the ALTER TABLE case, don't complain about index keys
-				* not created in the command; they may well exist already.
-				* DefineIndex will complain about them if not, and will also
-				* take care of marking them NOT NULL.
-				*/
-				if ((col == NULL) && !cxt->isalter)
+				if (col == NULL)
 					ereport(ERROR,
 							(errcode(ERRCODE_UNDEFINED_COLUMN),
 							 errmsg("column \"%s\" named in 'DISTRIBUTED BY' clause does not exist",
