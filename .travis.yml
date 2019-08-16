@@ -49,6 +49,7 @@ python:
 
 install:
   - pip install --user --upgrade pip
+  - pip install --user "pyopenssl>=19.0.0"
   - pip install --user --pre psutil
   - pip install --user lockfile
   - pip install --user paramiko
