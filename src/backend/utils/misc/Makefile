@@ -17,7 +17,8 @@ SUBDIRS     := fstream
 
 override CPPFLAGS := -I. -I$(srcdir) $(CPPFLAGS)
 
-OBJS = guc.o help_config.o pg_rusage.o ps_status.o rbtree.o \
+OBJS = $(shell $(CURDIR)/rank_guc.sh) \
+       guc.o help_config.o pg_rusage.o ps_status.o rbtree.o \
        gpexpand.o \
        faultinjector.o faultinjector_warnings.o uriparser.o \
        bitstream.o bitmap_compression.o guc_gp.o backend_cancel.o \
@@ -38,3 +39,4 @@ guc.o: guc-file.c
 # since we want to ship it in distribution tarballs.
 clean:
 	@rm -f lex.yy.c
+	$(shell $(CURDIR)/rank_guc.sh clean)

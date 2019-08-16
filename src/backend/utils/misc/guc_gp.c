@@ -4738,15 +4738,11 @@ static int guc_array_compare(const void *a, const void *b)
 void gpdb_assign_sync_flag(struct config_generic **guc_variables, int size, bool predefine)
 {
 	static bool init = false;
-	/* ordering guc_name_array alphabets */
+	/* guc_name_array has been sorted in compiling stage */
 	if (!init) {
 		sync_guc_num = sizeof(sync_guc_names_array) / sizeof(char *);
-		qsort((void *) sync_guc_names_array, sync_guc_num,
-		      sizeof(char *), guc_array_compare);
 
 		unsync_guc_num = sizeof(unsync_guc_names_array) / sizeof(char *);
-		qsort((void *) unsync_guc_names_array, unsync_guc_num,
-		      sizeof(char *), guc_array_compare);
 
 		init = true;
 	}

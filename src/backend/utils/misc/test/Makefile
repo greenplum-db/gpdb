@@ -2,7 +2,7 @@ subdir=src/backend/utils/misc
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS = ps_status bitstream bitmap_compression faultinjector_warnings pg_mkdir_p
+TARGETS = ps_status bitstream bitmap_compression faultinjector_warnings pg_mkdir_p guc_rank guc_name_coverage
 
 faultinjector_warnings.t: ../faultinjector_warnings.o faultinjector_warnings_test.o
 

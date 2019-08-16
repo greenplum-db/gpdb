@@ -717,7 +717,7 @@ const char *const config_type_names[] =
 
 /******** option records follow ********/
 
-static struct config_bool ConfigureNamesBool[] =
+struct config_bool ConfigureNamesBool[] =
 {
 	{
 		{"enable_seqscan", PGC_USERSET, QUERY_TUNING_METHOD,
@@ -1572,7 +1572,7 @@ static struct config_bool ConfigureNamesBool[] =
 };
 
 
-static struct config_int ConfigureNamesInt[] =
+struct config_int ConfigureNamesInt[] =
 {
 	{
 		{"archive_timeout", PGC_SIGHUP, WAL_ARCHIVING,
@@ -2603,7 +2603,7 @@ static struct config_int ConfigureNamesInt[] =
 };
 
 
-static struct config_real ConfigureNamesReal[] =
+struct config_real ConfigureNamesReal[] =
 {
 	{
 		{"seq_page_cost", PGC_USERSET, QUERY_TUNING_COST,
@@ -2747,7 +2747,7 @@ static struct config_real ConfigureNamesReal[] =
 };
 
 
-static struct config_string ConfigureNamesString[] =
+struct config_string ConfigureNamesString[] =
 {
 	{
 		{"archive_command", PGC_SIGHUP, WAL_ARCHIVING,
@@ -3321,7 +3321,7 @@ static struct config_string ConfigureNamesString[] =
 };
 
 
-static struct config_enum ConfigureNamesEnum[] =
+struct config_enum ConfigureNamesEnum[] =
 {
 	{
 		{"backslash_quote", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
