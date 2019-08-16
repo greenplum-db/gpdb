@@ -2392,16 +2392,6 @@ static struct config_int ConfigureNamesInt[] =
 		BLCKSZ, BLCKSZ, BLCKSZ,
 		NULL, NULL, NULL
 	},
-	{
-		/* see max_connections */
-		{"autovacuum_max_workers", PGC_POSTMASTER, AUTOVACUUM,
-			gettext_noop("Sets the maximum number of simultaneously running autovacuum worker processes."),
-			NULL
-		},
-		&autovacuum_max_workers,
-		3, 1, MAX_BACKENDS,
-		check_autovacuum_max_workers, NULL, NULL
-	},
 
 	{
 		{"segment_size", PGC_INTERNAL, PRESET_OPTIONS,
@@ -3201,17 +3191,6 @@ static struct config_string ConfigureNamesString[] =
 	},
 
 	{
-		{"external_pid_file", PGC_POSTMASTER, FILE_LOCATIONS,
-			gettext_noop("Writes the postmaster PID to the specified file."),
-			NULL,
-			GUC_SUPERUSER_ONLY
-		},
-		&external_pid_file,
-		NULL,
-		check_canonical_path, NULL, NULL
-	},
-
-	{
 		{"ssl_cert_file", PGC_POSTMASTER, CONN_AUTH_SECURITY,
 			gettext_noop("Location of the SSL server certificate file."),
 			NULL
@@ -3417,16 +3396,6 @@ static struct config_enum ConfigureNamesEnum[] =
 		&IntervalStyle,
 		INTSTYLE_POSTGRES, intervalstyle_options,
 		NULL, NULL, NULL
-	},
-
-	{
-		{"IntervalStyle", PGC_USERSET, CLIENT_CONN_LOCALE,
-			gettext_noop("Sets the display format for interval values."),
-			NULL,
-			GUC_REPORT
-		},
-		&IntervalStyle,
-		INTSTYLE_POSTGRES, intervalstyle_options, NULL, NULL
 	},
 
 	{
