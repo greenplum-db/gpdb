@@ -23,5 +23,6 @@ echo "/* " >> $UNSYNC_HEADER_PATH
 echo " * This is auto generate header file, new guc name should populate in unsync_guc_name.conf file" >> $UNSYNC_HEADER_PATH
 echo " */" >> $UNSYNC_HEADER_PATH
 
+export LC_ALL=C
 awk '{ print tolower($1) }' $SYNC_META_HEADER_PATH | sed 's/#.*$//g' | sed '/^$/d' | sort >> $SYNC_HEADER_PATH
 awk '{ print tolower($1) }' $UNSYNC_META_HEADER_PATH | sed 's/#.*$//g' | sed '/^$/d' | sort >> $UNSYNC_HEADER_PATH
