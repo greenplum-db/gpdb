@@ -270,14 +270,7 @@ where <varname>action</varname> is one of:
                                                   <codeph>ADD PRIMARY KEY</codeph> or <codeph>ADD
                                                   UNIQUE</codeph> command. In particular, dropping
                                                 the constraint will make the index disappear
-                                                too.</p><note> Adding a constraint using an existing
-                                                index can be helpful in situations where a new
-                                                constraint needs to be added without blocking table
-                                                updates for a long time. To do that, create the
-                                                index using <codeph>CREATE INDEX
-                                                  CONCURRENTLY</codeph>, and then install it as an
-                                                official constraint using this syntax. See the
-                                                example below.</note>
+                                                too.</p>
                                 </li>
                                 <li id="ay137038"><b>DROP CONSTRAINT [IF EXISTS]</b> — Drops the
                                         specified constraint on a table. If <codeph>IF
@@ -1074,12 +1067,6 @@ INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
                                 identify which <codeph>region</codeph> partition to exchange. Both
                                 clauses are required to identify the specific partition to
                                 exchange.</p>
-                        <p> To recreate a primary key constraint, without blocking updates while the
-                                index is rebuilt: </p>
-                        <codeblock>CREATE UNIQUE INDEX CONCURRENTLY dist_id_temp_idx ON distributors (dist_id);
-ALTER TABLE distributors DROP CONSTRAINT distributors_pkey,
-ADD CONSTRAINT distributors_pkey PRIMARY KEY USING INDEX dist_id_temp_idx;
-                        </codeblock>
                 </section>
                 <section id="section7">
                         <title>Compatibility</title>
