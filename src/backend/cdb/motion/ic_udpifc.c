@@ -394,13 +394,6 @@ struct ICGlobalControlInfo
 	/* The background thread handle. */
 	pthread_t	threadHandle;
 
-	/* Flag showing whether the thread is created. */
-	bool		threadCreated;
-
-	/* The lock protecting eno field. */
-	pthread_mutex_t errorLock;
-	int			eno;
-
 	/* Keep the udp socket buffer size used. */
 	uint32		socketSendBufferSize;
 	uint32		socketRecvBufferSize;
@@ -424,6 +417,12 @@ struct ICGlobalControlInfo
 
 	/* Am I a sender? */
 	bool		isSender;
+
+	/* Flag showing whether the thread is created. */
+	bool		threadCreated;
+
+	/* Error number. Actually int but we do not have pg_atomic_int32. */
+	pg_atomic_uint32 eno;
 
 	/*
 	 * Global connection htab for both sending connections and receiving
@@ -1099,18 +1098,18 @@ setMainThreadWaiting(ThreadWaitingState *state, int motNodeId, int route, int ic
 static void
 checkRxThreadError()
 {
-	pthread_mutex_lock(&ic_control_info.errorLock);
-	if (ic_control_info.eno != 0)
+	int eno;
+
+	eno = pg_atomic_read_u32(&ic_control_info.eno);
+	if (eno != 0)
 	{
-		errno = ic_control_info.eno;
-		pthread_mutex_unlock(&ic_control_info.errorLock);
+		errno = eno;
 
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 errmsg("interconnect encountered an error"),
 				 errdetail("%s: %m", "in receive background thread")));
 	}
-	pthread_mutex_unlock(&ic_control_info.errorLock);
 }
 
 /*
@@ -1123,16 +1122,13 @@ checkRxThreadError()
 static void
 setRxThreadError(int eno)
 {
-	pthread_mutex_lock(&ic_control_info.errorLock);
+	uint32 expected = 0;
 
 	/* always let main thread know the error that occurred first. */
-	if (ic_control_info.eno == 0)
+	if (pg_atomic_compare_exchange_u32(&ic_control_info.eno, &expected, (uint32) eno))
 	{
-		ic_control_info.eno = eno;
-		write_log("Interconnect error: in background thread, set ic_control_info.eno to %d, rx_buffer_pool.count %d, rx_buffer_pool.maxCount %d", eno, rx_buffer_pool.count, rx_buffer_pool.maxCount);
+		write_log("Interconnect error: in background thread, set ic_control_info.eno to %d, rx_buffer_pool.count %d, rx_buffer_pool.maxCount %d", expected, rx_buffer_pool.count, rx_buffer_pool.maxCount);
 	}
-
-	pthread_mutex_unlock(&ic_control_info.errorLock);
 }
 
 /*
@@ -1143,9 +1139,7 @@ setRxThreadError(int eno)
 static void
 resetRxThreadError()
 {
-	pthread_mutex_lock(&ic_control_info.errorLock);
-	ic_control_info.eno = 0;
-	pthread_mutex_unlock(&ic_control_info.errorLock);
+	pg_atomic_write_u32(&ic_control_info.eno, 0);
 }
 
 
@@ -1356,7 +1350,7 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 #endif
 
 	/* Initialize global ic control data. */
-	ic_control_info.eno = 0;
+	pg_atomic_init_u32(&ic_control_info.eno, 0);
 	ic_control_info.isSender = false;
 	ic_control_info.socketSendBufferSize = 2 * 1024 * 1024;
 	ic_control_info.socketRecvBufferSize = 2 * 1024 * 1024;
@@ -1365,7 +1359,6 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 													   ALLOCSET_DEFAULT_MINSIZE,
 													   ALLOCSET_DEFAULT_INITSIZE,
 													   ALLOCSET_DEFAULT_MAXSIZE);
-	initMutex(&ic_control_info.errorLock);
 	initMutex(&ic_control_info.lock);
 	InitLatch(&ic_control_info.latch);
 	ic_control_info.shutdown = 0;
@@ -1448,7 +1441,6 @@ CleanupMotionUDPIFC(void)
 	 * We should not hold any lock when we reach here even when we report
 	 * FATAL errors. Just in case, We still release the locks here.
 	 */
-	pthread_mutex_unlock(&ic_control_info.errorLock);
 	pthread_mutex_unlock(&ic_control_info.lock);
 
 	uint32		expected = 0;
@@ -3587,12 +3579,10 @@ TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
 	{
 		TeardownUDPIFCInterconnect_Internal(transportStates, forceEOS);
 
-		Assert(pthread_mutex_unlock(&ic_control_info.errorLock) != 0);
 		Assert(pthread_mutex_unlock(&ic_control_info.lock) != 0);
 	}
 	PG_CATCH();
 	{
-		pthread_mutex_unlock(&ic_control_info.errorLock);
 		pthread_mutex_unlock(&ic_control_info.lock);
 		PG_RE_THROW();
 	}
@@ -3859,12 +3849,10 @@ RecvTupleChunkFromAnyUDPIFC(ChunkTransportState *transportStates,
 		icItem = RecvTupleChunkFromAnyUDPIFC_Internal(transportStates, motNodeID, srcRoute);
 
 		/* error if mutex still held (debug build only) */
-		Assert(pthread_mutex_unlock(&ic_control_info.errorLock) != 0);
 		Assert(pthread_mutex_unlock(&ic_control_info.lock) != 0);
 	}
 	PG_CATCH();
 	{
-		pthread_mutex_unlock(&ic_control_info.errorLock);
 		pthread_mutex_unlock(&ic_control_info.lock);
 
 		PG_RE_THROW();
@@ -3965,12 +3953,10 @@ RecvTupleChunkFromUDPIFC(ChunkTransportState *transportStates,
 		icItem = RecvTupleChunkFromUDPIFC_Internal(transportStates, motNodeID, srcRoute);
 
 		/* error if mutex still held (debug build only) */
-		Assert(pthread_mutex_unlock(&ic_control_info.errorLock) != 0);
 		Assert(pthread_mutex_unlock(&ic_control_info.lock) != 0);
 	}
 	PG_CATCH();
 	{
-		pthread_mutex_unlock(&ic_control_info.errorLock);
 		pthread_mutex_unlock(&ic_control_info.lock);
 
 		PG_RE_THROW();
@@ -6754,7 +6740,6 @@ WaitInterconnectQuitUDPIFC(void)
 	/*
 	 * Just in case ic thread is waiting on the locks.
 	 */
-	pthread_mutex_unlock(&ic_control_info.errorLock);
 	pthread_mutex_unlock(&ic_control_info.lock);
 
 	pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) &ic_control_info.shutdown, &expected, 1);
