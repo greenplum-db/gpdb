@@ -43,7 +43,23 @@ EOF
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>$self->{guid}</ProjectGuid>
+<<<<<<< HEAD
     <WindowsTargetPlatformVersion>$sdkversion</WindowsTargetPlatformVersion>
+=======
+EOF
+	# Check whether WindowsSDKVersion env variable is present.
+	# Add WindowsTargetPlatformVersion node if so.
+	my $sdkVersion = $ENV{'WindowsSDKVersion'};
+	if (defined($sdkVersion))
+	{
+		# remove trailing backslash if necessary.
+		$sdkVersion =~ s/\\$//;
+		print $f <<EOF
+    <WindowsTargetPlatformVersion>$sdkVersion</WindowsTargetPlatformVersion>
+EOF
+	}
+	print $f <<EOF;
+>>>>>>> 246893dce8ebea90ef083ab801da4d1f474e01ad
   </PropertyGroup>
   <Import Project="\$(VCTargetsPath)\\Microsoft.Cpp.Default.props" />
 EOF
@@ -510,6 +526,31 @@ sub new
 	$self->{vcver}           = '15.00';
 	$self->{PlatformToolset} = 'v141';
 	$self->{ToolsVersion}    = '15.0';
+
+	return $self;
+}
+
+package VC2019Project;
+
+#
+# Package that encapsulates a Visual C++ 2019 project file
+#
+
+use strict;
+use warnings;
+use base qw(VC2012Project);
+
+no warnings qw(redefine);    ## no critic
+
+sub new
+{
+	my $classname = shift;
+	my $self      = $classname->SUPER::_new(@_);
+	bless($self, $classname);
+
+	$self->{vcver}           = '16.00';
+	$self->{PlatformToolset} = 'v142';
+	$self->{ToolsVersion}    = '16.0';
 
 	return $self;
 }
