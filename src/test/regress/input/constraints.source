@@ -215,7 +215,7 @@ DELETE FROM INSERT_TBL;
 
 ALTER SEQUENCE INSERT_SEQ RESTART WITH 4;
 
-CREATE TABLE tmp (xd INT, yd TEXT, zd INT) distributed by (xd);
+CREATE TABLE tmp (xd INT, yd TEXT, zd INT);
 
 INSERT INTO tmp VALUES (null, 'Y', null);
 INSERT INTO tmp VALUES (5, '!check failed', null);
@@ -276,7 +276,7 @@ SELECT * FROM COPY_TBL;
 -- Primary keys
 --
 
-CREATE TABLE PRIMARY_TBL (i int PRIMARY KEY, t text) DISTRIBUTED BY (i);
+CREATE TABLE PRIMARY_TBL (i int PRIMARY KEY, t text);
 
 INSERT INTO PRIMARY_TBL VALUES (1, 'one');
 INSERT INTO PRIMARY_TBL VALUES (2, 'two');
@@ -290,7 +290,7 @@ SELECT '' AS four, * FROM PRIMARY_TBL;
 DROP TABLE PRIMARY_TBL;
 
 CREATE TABLE PRIMARY_TBL (i int, t text,
-	PRIMARY KEY(i,t)) DISTRIBUTED BY (i);
+	PRIMARY KEY(i,t));
 
 INSERT INTO PRIMARY_TBL VALUES (1, 'one');
 INSERT INTO PRIMARY_TBL VALUES (2, 'two');
@@ -307,7 +307,7 @@ DROP TABLE PRIMARY_TBL;
 -- Unique keys
 --
 
-CREATE TABLE UNIQUE_TBL (i int UNIQUE, t text) DISTRIBUTED BY (i);
+CREATE TABLE UNIQUE_TBL (i int UNIQUE, t text);
 
 INSERT INTO UNIQUE_TBL VALUES (1, 'one');
 INSERT INTO UNIQUE_TBL VALUES (2, 'two');
@@ -322,7 +322,7 @@ SELECT '' AS five, * FROM UNIQUE_TBL;
 DROP TABLE UNIQUE_TBL;
 
 CREATE TABLE UNIQUE_TBL (i int, t text,
-	UNIQUE(i,t)) DISTRIBUTED BY (i);
+	UNIQUE(i,t));
 
 INSERT INTO UNIQUE_TBL VALUES (1, 'one');
 INSERT INTO UNIQUE_TBL VALUES (2, 'two');
@@ -525,32 +525,3 @@ ALTER TABLE deferred_excl ADD EXCLUDE (f1 WITH =);
 DROP TABLE deferred_excl;
 -- end_ignore
 
---
--- Test foreign key constraints
---
-BEGIN;
--- Test with two heap tables
-CREATE TABLE fkc_primary_table1(a int PRIMARY KEY, b text) DISTRIBUTED BY (a);
-CREATE TABLE fkc_foreign_table1(a int REFERENCES fkc_primary_table1 ON DELETE RESTRICT ON UPDATE RESTRICT, b text) DISTRIBUTED BY (a);
--- the following should succeed
-INSERT INTO fkc_primary_table1 VALUES (1, 'bar');
-INSERT INTO fkc_primary_table1 VALUES (2, 'bar');
-INSERT INTO fkc_foreign_table1 VALUES (1, 'bar');
-INSERT INTO fkc_foreign_table1 VALUES (2, 'bar');
-UPDATE fkc_foreign_table1 SET b = 'foo';
-DELETE FROM fkc_primary_table1 WHERE a = 1;
-COMMIT;
-
-BEGIN;
--- Test with an ao table and heap table
-CREATE TABLE fkc_primary_table2(a int PRIMARY KEY, b text) DISTRIBUTED BY (a);
-CREATE TABLE fkc_foreign_table2(a int REFERENCES fkc_primary_table2 ON DELETE RESTRICT ON UPDATE RESTRICT,
-                                b text) WITH (APPENDONLY=TRUE) DISTRIBUTED BY (a);
--- the following should succeed
-INSERT INTO fkc_primary_table2 VALUES (1, 'bar');
-INSERT INTO fkc_primary_table2 VALUES (2, 'bar');
-INSERT INTO fkc_foreign_table2 VALUES (1, 'bar');
-INSERT INTO fkc_foreign_table2 VALUES (2, 'bar');
-UPDATE fkc_foreign_table2 SET b = 'foo';
-DELETE FROM fkc_primary_table2 WHERE a = 1;
-COMMIT;
