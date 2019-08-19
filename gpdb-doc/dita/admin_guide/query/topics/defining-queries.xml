@@ -282,8 +282,6 @@ FROM generate_series(1,10) AS s(i);
                             to the query level at which the aggregate appears. See <xref
                                 format="dita" href="#topic15" type="topic"/> and <xref
                                 href="../topics/functions-operators.xml#topic29/in204913"/>.</li>
-                        <li id="in200915">Greenplum Database does not support
-                                <codeph>DISTINCT</codeph> with multiple input expressions.</li>
                         <li id="in2009151">Greenplum Database does not support specifying an
                             aggregate function as an argument to another aggregate function.</li>
                         <li id="in2009152">Greenplum Database does not support specifying a window
@@ -351,6 +349,9 @@ FROM generate_series(1,10) AS s(i);
                     clause. The <codeph>OVER</codeph> clause specifies the window frame—the rows to
                     be processed by the window function. This syntactically distinguishes the
                     function from a regular or aggregate function.</p>
+                <p>In a window aggregate function that is used in a window expression, Greenplum
+                    Database does not support a <codeph>DISTINCT</codeph> clause with multiple input
+                    expressions.</p>
                 <p>A window specification has the following characteristics:</p>
                 <ul>
                     <li id="in166168">The <codeph>PARTITION BY</codeph> clause defines the window
