@@ -265,7 +265,9 @@ main()
 #endif
 
     /* Get initial value for system clock. */
+#ifdef _OPENMP
 #pragma omp parallel for
+#endif
     for (j=0; j<STREAM_ARRAY_SIZE; j++) {
 	    a[j] = 1.0;
 	    b[j] = 2.0;
@@ -284,7 +286,9 @@ main()
     }
 
     t = mysecond();
+#ifdef _OPENMP
 #pragma omp parallel for
+#endif
     for (j = 0; j < STREAM_ARRAY_SIZE; j++)
 		a[j] = 2.0E0 * a[j];
     t = 1.0E6 * (mysecond() - t);
@@ -311,7 +315,9 @@ main()
 #ifdef TUNED
         tuned_STREAM_Copy();
 #else
+#ifdef _OPENMP
 #pragma omp parallel for
+#endif
 	for (j=0; j<STREAM_ARRAY_SIZE; j++)
 	    c[j] = a[j];
 #endif
@@ -321,7 +327,9 @@ main()
 #ifdef TUNED
         tuned_STREAM_Scale(scalar);
 #else
+#ifdef _OPENMP
 #pragma omp parallel for
+#endif
 	for (j=0; j<STREAM_ARRAY_SIZE; j++)
 	    b[j] = scalar*c[j];
 #endif
@@ -331,7 +339,9 @@ main()
 #ifdef TUNED
         tuned_STREAM_Add();
 #else
+#ifdef _OPENMP
 #pragma omp parallel for
+#endif
 	for (j=0; j<STREAM_ARRAY_SIZE; j++)
 	    c[j] = a[j]+b[j];
 #endif
@@ -341,7 +351,9 @@ main()
 #ifdef TUNED
         tuned_STREAM_Triad(scalar);
 #else
+#ifdef _OPENMP
 #pragma omp parallel for
+#endif
 	for (j=0; j<STREAM_ARRAY_SIZE; j++)
 	    a[j] = b[j]+scalar*c[j];
 #endif
