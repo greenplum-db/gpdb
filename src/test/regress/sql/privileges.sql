@@ -15,6 +15,7 @@ DROP ROLE IF EXISTS regressuser2;
 DROP ROLE IF EXISTS regressuser3;
 DROP ROLE IF EXISTS regressuser4;
 DROP ROLE IF EXISTS regressuser5;
+DROP ROLE IF EXISTS non_superuser_schema;
 
 RESET client_min_messages;
 
@@ -423,6 +424,8 @@ REVOKE USAGE ON LANGUAGE sql FROM regressuser1;
 -- regression test: superuser create a schema and authorize it to a non-superuser
 CREATE ROLE "non_superuser_schema";
 CREATE SCHEMA test_non_superuser_schema AUTHORIZATION "non_superuser_schema";
+DROP SCHEMA test_non_superuser_schema;
+DROP USER non_superuser_schema;
 
 DROP USER regressuser1;
 DROP USER regressuser2;
