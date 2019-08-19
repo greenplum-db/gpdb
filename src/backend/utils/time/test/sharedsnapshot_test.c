@@ -89,6 +89,8 @@ test_write_read_shared_snapshot_for_cursor(void **state)
 
 	SnapshotData snapshot;
 	snapshot.xip = palloc(XCNT * sizeof(TransactionId));
+#define SUBXCNT 1
+	snapshot.subxip = palloc(SUBXCNT * sizeof(TransactionId));
 
 	/* read snapshot from the same file */
 	readSharedLocalSnapshot_forCursor(&snapshot, DTX_CONTEXT_QE_READER);
