@@ -2263,7 +2263,14 @@ exec_bind_message(StringInfo input_message)
 	else
 		portal = CreatePortal(portal_name, false, false);
 
-	portal->is_extended_query = true;
+	/*
+	 * GPDB specific: upstream does not have such field for the
+	 * struct Portal. In Greenplum, this field is used for cursor.
+	 * For `exec_bind_message` we should not consider it as cursor.
+	 * More details please refer the gpdb-dev mailing list:
+	 * https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/ugsZca1qLXU
+	 */
+	portal->is_extended_query = false;
 
 	/*
 	 * Prepare to copy stuff into the portal's memory context.  We do all this

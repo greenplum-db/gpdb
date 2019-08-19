@@ -1,5 +1,6 @@
 regression.diffs
 regression.out
+extended_protocol_test
 */dummy.sql
 */dummy.out
 
