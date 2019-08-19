@@ -119,27 +119,19 @@
       <body>
         <p>To upgrade MADlib, run the <codeph>gppkg</codeph> utility with the <codeph>-u</codeph>
           option. This command upgrades an installed MADlib package to MADlib
-          1.16.1.<codeblock>$ gppkg -u madlib-1.16.1-gp5-rhel7-x86_64.gppkg</codeblock></p>
+          1.16+1.<codeblock>$ gppkg -u madlib-1.16+1-gp5-rhel7-x86_64.gppkg</codeblock></p>
       </body>
     </topic>
     <topic id="topic_bql_bgd_3w">
       <title>Upgrading MADlib Functions</title>
       <body>
-        <p>After you upgrade the MADlib package, you run the <codeph>madpack upgrade</codeph>
-          command to upgrade the MADlib functions in Greenplum Database. </p>
-        <note>The upgrade to MADlib 1.13 has a minor issue with some leftover <codeph>knn</codeph>
-          functions. <p>Before running the <codeph>madpack</codeph> command to upgrade to MADlib
-            1.13, run these <codeph>psql</codeph> commands as the <codeph>gpadmin</codeph> user to
-            drop the leftover functions from the databases where MADlib is
-              installed.</p><codeblock>psql <varname>db_name</varname> -c "DROP FUNCTION IF EXISTS <varname>schema</varname>.knn(VARCHAR);"
-psql <varname>db_name</varname> -c "DROP FUNCTION IF EXISTS <varname>schema</varname>.knn();"</codeblock><p><varname>db_name</varname>
-            is the name of the database. <varname>schema</varname> is the name of the MADlib
-            schema.</p><p>See the <xref
-              href="https://cwiki.apache.org/confluence/display/MADLIB/Installation+Guide#InstallationGuide-01/11/18-UpgradingMADlibto1.13"
-              format="html" scope="external">MADlib Installation Guide</xref>.</p></note>
-        <p>The <codeph>madpack upgrade</codeph> command upgrades the MADlib functions in the
-          database schema. This example command upgrades the MADlib functions in the schema
-            <codeph>madlib</codeph> of the Greenplum Database <codeph>test</codeph>. </p>
+        <p><note>Only use <codeph>madpack upgrade</codeph> if you upgraded a major or minor MADlib
+            package version, for example 1.15 to 1.16. You do not need to update the functions
+            within a patch version upgrade, for example 1.16+1 to 1.16+2.</note>After you upgrade
+          the MADlib package, you run the <codeph>madpack upgrade</codeph> command to upgrade the
+          MADlib functions in a database schema. </p>
+        <p>This example command upgrades the MADlib functions in the schema <codeph>madlib</codeph>
+          of the Greenplum Database <codeph>test</codeph>. </p>
         <codeblock>madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb upgrade</codeblock>
       </body>
     </topic>
