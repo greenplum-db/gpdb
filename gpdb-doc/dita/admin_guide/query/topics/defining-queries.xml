@@ -344,12 +344,13 @@ FROM generate_series(1,10) AS s(i);
                 </p>
                 <p>If <codeph>FILTER</codeph> is specified, then only the input rows for which the
                         <varname>filter_clause</varname> evaluates to true are fed to the window
-                    function; other rows are discarded. Only window functions that are aggregates
-                    accept a <codeph>FILTER</codeph> clause.</p>
-                <p>In a window expression, the expression must contain an
-                        <codeph>OVER</codeph> clause. The <codeph>OVER</codeph> clause specifies the
-                    window frame—the rows to be processed by the window function. This syntactically
-                    distinguishes the function from a regular or aggregate function.</p>
+                    function; other rows are discarded. In a window expression, a
+                        <codeph>FILTER</codeph> clause can be used only with a
+                        <varname>window_function</varname> that is an aggregate function.</p>
+                <p>In a window expression, the expression must contain an <codeph>OVER</codeph>
+                    clause. The <codeph>OVER</codeph> clause specifies the window frame—the rows to
+                    be processed by the window function. This syntactically distinguishes the
+                    function from a regular or aggregate function.</p>
                 <p>A window specification has the following characteristics:</p>
                 <ul>
                     <li id="in166168">The <codeph>PARTITION BY</codeph> clause defines the window
