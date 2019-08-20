@@ -560,6 +560,28 @@ identify_system_timezone(void)
 }
 
 /*
+ * Given a timezone name, determine whether it should be preferred over other
+ * names which are equally good matches. The output is arbitrary but we will
+ * use 0 for "neutral" default preference.
+ *
+ * Ideally we'd prefer the zone.tab/zone1970.tab names, since in general those
+ * are the ones offered to the user to select from. But for the moment, to
+ * minimize changes in behaviour, simply prefer UTC over alternative spellings
+ * such as UCT that otherwise cause confusion. The existing "shortest first"
+ * rule would prefer "UTC" over "Etc/UTC" so keep that the same way (while
+ * still preferring Etc/UTC over Etc/UCT).
+ */
+static int
+zone_name_pref(const char *zonename)
+{
+	if (strcmp(zonename, "UTC") == 0)
+		return 50;
+	if (strcmp(zonename, "Etc/UTC") == 0)
+		return 40;
+	return 0;
+}
+
+/*
  * Recursively scan the timezone database looking for the best match to
  * the system timezone behavior.
  *
@@ -638,9 +660,13 @@ scan_available_timezones(char *tzdir, char *tzdirsub, struct tztry * tt,
 			else if (score == *bestscore)
 			{
 				/* Consider how to break a tie */
-				if (strlen(tzdirsub) < strlen(bestzonename) ||
-					(strlen(tzdirsub) == strlen(bestzonename) &&
-					 strcmp(tzdirsub, bestzonename) < 0))
+				int		namepref = (zone_name_pref(tzdirsub) -
+									zone_name_pref(bestzonename));
+				if (namepref > 0 ||
+					(namepref == 0 &&
+					 (strlen(tzdirsub) < strlen(bestzonename) ||
+					  (strlen(tzdirsub) == strlen(bestzonename) &&
+					   strcmp(tzdirsub, bestzonename) < 0))))
 					strlcpy(bestzonename, tzdirsub, TZ_STRLEN_MAX + 1);
 			}
 		}
