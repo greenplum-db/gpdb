@@ -145,7 +145,7 @@ generate-pulse-installer-header(){
 		more << EOF
 		
 		********************************************************************************
-		You must read and accept the Pivotal Database license agreement
+		You must read and accept the Pivotal End User license agreement
 		before installing
 		********************************************************************************
 		
@@ -165,7 +165,7 @@ generate-pulse-installer-header(){
 		    cat << EOF
 		
 		********************************************************************************
-		Do you accept the Pivotal Database license agreement? [yes|no]
+		Do you accept the Pivotal End User license agreement? [yes|no]
 		********************************************************************************
 		
 		EOF
@@ -178,7 +178,7 @@ generate-pulse-installer-header(){
 		                cat << EOF
 		
 		********************************************************************************
-		You must accept the license agreement in order to install Greenplum Database
+		You must accept the license agreement in order to install Pivotal Greenplum
 		********************************************************************************
 		                             
 		                   **************************************** 
@@ -197,7 +197,7 @@ generate-pulse-installer-header(){
 		    cat <<-EOF
 				
 				********************************************************************************
-				Provide the installation path for Greenplum Database or press ENTER to 
+				Provide the installation path for Pivotal Greenplum or press ENTER to
 				accept the default installation path: ${DEFAULT_INSTALL_PATH}
 				********************************************************************************
 				
@@ -225,7 +225,7 @@ generate-pulse-installer-header(){
 			        cat <<-EOF
 						
 						********************************************************************************
-						Install Greenplum Database into <\${installPath}>? [yes|no]
+						Install Pivotal Greenplum into <\${installPath}>? [yes|no]
 						********************************************************************************
 						
 					EOF
@@ -287,7 +287,7 @@ generate-pulse-installer-header(){
 		                    continue=1
 		                    ;;
 		                [nN] | [nN][oO])
-		                    echo "Exiting Greenplum Database installation."
+		                    echo "Exiting Pivotal Greenplum installation."
 		                    exit 1
 		                    ;;
 		            esac
@@ -328,7 +328,7 @@ generate-pulse-installer-header(){
 		    cat <<-EOF
 				********************************************************************************
 				********************************************************************************
-				                          Error in extracting Greenplum Database
+				                          Error in extracting Pivotal Greenplum
 				                               Installation failed
 				********************************************************************************
 				********************************************************************************
@@ -354,7 +354,7 @@ generate-pulse-installer-header(){
 	    cat <<-EOF
 			********************************************************************************
 			Installation complete.
-			Greenplum Database is installed in \${installPath}
+			Pivotal Greenplum is installed in \${installPath}
 	
 			Pivotal Greenplum documentation is available
 			for download at http://gpdb.docs.pivotal.io
