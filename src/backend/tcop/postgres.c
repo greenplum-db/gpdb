@@ -3923,39 +3923,6 @@ ProcessInterrupts(const char* filename, int lineno)
 }
 
 /*
- * Set up the thread signal mask, we don't want to run our signal handlers
- * in our threads (gang-create, dispatch or interconnect threads)
- */
-void
-gp_set_thread_sigmasks(void)
-{
-#ifndef WIN32
-	sigset_t sigs;
-
-	if (pthread_equal(main_tid, pthread_self()))
-	{
-		elog(LOG, "thread_mask called from main thread!");
-		return;
-	}
-
-	sigemptyset(&sigs);
-
-	/* make our thread ignore these signals (which should allow that
-	 * they be delivered to the main thread) */
-	sigaddset(&sigs, SIGHUP);
-	sigaddset(&sigs, SIGINT);
-	sigaddset(&sigs, SIGTERM);
-	sigaddset(&sigs, SIGALRM);
-	sigaddset(&sigs, SIGUSR1);
-	sigaddset(&sigs, SIGUSR2);
-
-	pthread_sigmask(SIG_BLOCK, &sigs, NULL);
-#endif
-
-	return;
-}
-
-/*
  * IA64-specific code to fetch the AR.BSP register for stack depth checks.
  *
  * We currently support gcc, icc, and HP-UX inline assembly here.
