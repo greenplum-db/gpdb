@@ -330,10 +330,21 @@ InitScanStateInternal(ScanState *scanState, Plan *plan, EState *estate,
 	 * we wait until the first partition, and initialize the expression state
 	 * at that time. Also, for dynamic table scan, we do not need to open the
 	 * parent partition relation.
+	 *
+	 * However, we must still initialize the qual and targetlist for dynamic
+	 * scans to find subplans.
+	 *
+	 * NB: InitScanStateRelationDetails sets the qual and targetlist, so we only
+	 * set it for the other cases.
 	 */
 	if (initCurrentRelation)
 	{
 		InitScanStateRelationDetails(scanState, plan, estate);
+	}
+	else
+	{
+		planState->qual = (List *)ExecInitExpr((Expr *)plan->qual, planState);
+		planState->targetlist = (List *)ExecInitExpr((Expr *)plan->targetlist, planState);
 	}
 
 	/* Initialize result tuple type. */
