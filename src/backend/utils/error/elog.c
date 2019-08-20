@@ -65,19 +65,10 @@
 #include <syslog.h>
 #endif
 
-/*
- * OpenSolaris has this header, but Solaris 10 doesn't.
- * Linux and OSX 10.5 have it.
- */
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <execinfo.h>
-#endif
-
 #include "access/transam.h"
 #include "access/xact.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
-#include "libpq/pqsignal.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "postmaster/postmaster.h"
@@ -89,15 +80,18 @@
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 
+/* GPDB specific headers from this line */
 #include "cdb/cdbvars.h"  /* GpIdentity.segindex */
-#include "cdb/cdbtm.h"
-#include "utils/ps_status.h"    /* get_ps_display_username() */
-#include "cdb/cdbselect.h"
-#include "pgtime.h"
-
+#include "libpq/pqsignal.h"
 #include "utils/builtins.h"  /* gp_elog() */
 
-#include "miscadmin.h"
+/*
+ * OpenSolaris has this header, but Solaris 10 doesn't.
+ * Linux and OSX 10.5 have it.
+ */
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <execinfo.h>
+#endif
 
 /*
  * dlfcn.h on OSX only has dladdr visible if _DARWIN_C_SOURCE is defined.
@@ -112,18 +106,6 @@
  * to get back to our bool type.
  */
 #undef bool
-
-
-#undef _
-#define _(x) err_gettext(x)
-
-static const char *err_gettext(const char *str)
-/* This extension allows gcc to check the format string for consistency with
-   the supplied arguments. */
-__attribute__((format_arg(1)));
-
-#undef _
-#define _(x) err_gettext(x)
 
 #undef _
 #define _(x) err_gettext(x)
@@ -187,30 +169,6 @@ static void write_eventlog(int level, const char *line, int len);
 /* We provide a small stack of ErrorData records for re-entrant cases */
 #define ERRORDATA_STACK_SIZE  10
 
-#define CMD_BUFFER_SIZE  1024
-#define SYMBOL_SIZE      512
-#define ADDRESS_SIZE     20
-#define STACK_DEPTH_MAX  100
-
-/*
- * Assembly code, gets the values of the frame pointer.
- * It only works for x86 processors.
- */
-#if defined(__i386)
-#define ASMFP asm volatile ("movl %%ebp, %0" : "=g" (ulp));
-#define GET_PTR_FROM_VALUE(value) ((uint32)value)
-#define GET_FRAME_POINTER(x) do { uint64 ulp; ASMFP; x = ulp; } while (0)
-#elif defined(__x86_64__)
-#define ASMFP asm volatile ("movq %%rbp, %0" : "=g" (ulp));
-#define GET_PTR_FROM_VALUE(value) (value)
-#define GET_FRAME_POINTER(x) do { uint64 ulp; ASMFP; x = ulp; } while (0)
-#else
-#define ASMFP
-#define GET_PTR_FROM_VALUE(value) (value)
-#define GET_FRAME_POINTER(x)
-#endif
-
-
 static ErrorData errordata[ERRORDATA_STACK_SIZE];
 
 static int	errordata_stack_depth = -1; /* index of topmost active frame */
@@ -237,7 +195,6 @@ static char formatted_log_time[FORMATTED_TS_LEN];
 	} while (0)
 
 
-static void cdb_tidy_message(ErrorData *edata);
 static const char *process_log_prefix_padding(const char *p, int *padding);
 static void log_line_prefix(StringInfo buf, ErrorData *edata);
 static void send_message_to_server_log(ErrorData *edata);
@@ -250,24 +207,13 @@ static void append_with_tabs(StringInfo buf, const char *str);
 static bool is_log_level_output(int elevel, int log_min_level);
 static void write_pipe_chunks(char *data, int len, int dest);
 static void write_csvlog(ErrorData *edata);
-static void elog_debug_linger(ErrorData *edata);
-
-
-/* verify string is correctly encoded, and escape it if invalid  */
-static void verify_and_replace_mbstr(char **str, int len)
-{
-	Assert(pg_verifymbstr(*str, len, true));
-
-	if (!pg_verifymbstr(*str, len, true))
-	{
-		pfree(*str);
-		*str = pstrdup("Message skipped due to incorrect encoding.");
-	}
-}
-
 static void setup_formatted_log_time(void);
 static void setup_formatted_start_time(void);
 
+/* GPDB specific forward declarations */
+static void elog_debug_linger(ErrorData *edata);
+static void cdb_tidy_message(ErrorData *edata);
+static void verify_and_replace_mbstr(char **str, int len);
 
 /*
  * in_error_recursion_trouble --- are we at risk of infinite error recursion?
@@ -300,32 +246,6 @@ err_gettext(const char *str)
 	return str;
 #endif
 }
-
-
-/*
- * elog_internalerror -- report an internal error
- *
- * GPDB only
- *
- * Does not return; exits via longjmp to PG_CATCH error handler.
- */
-void
-elog_internalerror(const char *filename, int lineno, const char *funcname)
-{
-	/*
-	 * TODO  Why isn't this a FATAL error?
-	 *
-	 * Also, why aren't we allowing for a specific err message to be passed in?
-	 */
-    if (errstart(ERROR, filename, lineno, funcname,TEXTDOMAIN))
-    {
-        errfinish(errcode(ERRCODE_INTERNAL_ERROR),
-                  errmsg("Unexpected internal error"));
-    }
-    /* not reached */
-    abort();
-}                               /* elog_internalerror */
-
 
 /*
  * errstart --- begin an error-reporting cycle
@@ -554,6 +474,7 @@ errstart(int elevel, const char *filename, int lineno,
 	/* errno is saved here so that error parameter eval can't change it */
 	edata->saved_errno = errno;
 
+/* GPDB */
 #ifndef WIN32
 	edata->stacktracesize = backtrace(edata->stacktracearray, 30);
 #else
@@ -783,61 +704,9 @@ errfinish(int dummy __attribute__((unused)),...)
 	 */
 	CHECK_FOR_INTERRUPTS();
 
+	/* WHY??? */
 	errno = saved_errno;                /*CDB*/
 }
-
-/*
- * Finish constructing an error like errfinish(), but instead of throwing it,
- * return it to the caller as a palloc'd ErrorData object.
- */
-ErrorData *
-errfinish_and_return(int dummy __attribute__((unused)),...)
-{
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-	ErrorData  *edata_copy;
-	ErrorContextCallback *econtext;
-	int			saved_errno;            /*CDB*/
-
-	recursion_depth++;
-	CHECK_STACK_DEPTH();
-	saved_errno = edata->saved_errno;   /*CDB*/
-
-	/*
-	 * Call any context callback functions.  Errors occurring in callback
-	 * functions will be treated as recursive errors --- this ensures we will
-	 * avoid infinite recursion (see errstart).
-	 */
-	for (econtext = error_context_stack;
-		 econtext != NULL;
-		 econtext = econtext->previous)
-		(*econtext->callback) (econtext->arg);
-
-	edata_copy = CopyErrorData();
-
-	/* Now free up subsidiary data attached to stack entry, and release it */
-	if (edata->message)
-		pfree(edata->message);
-	if (edata->detail)
-		pfree(edata->detail);
-	if (edata->detail_log)
-		pfree(edata->detail_log);
-	if (edata->hint)
-		pfree(edata->hint);
-	if (edata->context)
-		pfree(edata->context);
-	if (edata->internalquery)
-		pfree(edata->internalquery);
-
-	errordata_stack_depth--;
-
-	/* Exit error-handling context */
-	recursion_depth--;
-
-	errno = saved_errno;                /*CDB*/
-
-	return edata_copy;
-}
-
 
 /*
  * errcode --- add SQLSTATE error code to the current error
@@ -971,34 +840,6 @@ errcode_for_socket_access(void)
 	}
 
 	return 0;					/* return value does not matter */
-}
-
-/*
- * Convert compact error code (ERRCODE_xxx) to 5-char SQLSTATE string,
- * and put it into a 6-char buffer provided by caller.
- */
-char *
-errcode_to_sqlstate(int errcode, char outbuf[6])
-{
-	int	i;
-
-	for (i = 0; i < 5; ++i)
-	{
-		outbuf[i] = PGUNSIXBIT(errcode);
-		errcode >>= 6;
-	}
-	outbuf[5] = '\0';
-	return &outbuf[5];
-}
-
-/*
- * Convert SQLSTATE string to compact error code (ERRCODE_xxx).
- */
-int
-sqlstate_to_errcode(const char *sqlstate)
-{
-	return MAKE_SQLSTATE(sqlstate[0], sqlstate[1], sqlstate[2],
-						 sqlstate[3], sqlstate[4]);
 }
 
 /*
@@ -1449,19 +1290,6 @@ errposition(int cursorpos)
 }
 
 /*
- * errprintstack -- force print out stack trace
- */
-int
-errprintstack(bool printstack)
-{
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-
-	edata->printstack = printstack;
-
-	return 0;					/* return value does not matter */
-}
-
-/*
  * internalerrposition --- add internal cursor position to the current error
  */
 int
@@ -1607,25 +1435,6 @@ getinternalerrposition(void)
 	CHECK_STACK_DEPTH();
 
 	return edata->internalpos;
-}
-
-/*
- * CDB: errFatalReturn -- set flag indicating errfinish() should return
- * to the caller instead of calling proc_exit() after reporting a FATAL
- * error.  Allows termination by re-raising a signal in order to obtain
- * a core dump.
- */
-int
-errFatalReturn(bool fatalReturn)
-{
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-
-	/* we don't bother incrementing recursion_depth */
-	CHECK_STACK_DEPTH();
-
-	edata->fatal_return = fatalReturn;
-
-	return 0;					/* return value does not matter */
 }
 
 
@@ -2084,145 +1893,6 @@ pg_re_throw(void)
 						 __FILE__, __LINE__);
 }
 
-
-/*
- * CDB: elog_demote
- *
- * A PG_CATCH() handler can call this to downgrade the error that it is
- * currently handling to a level lower than ERROR.  The caller should
- * then do PG_RE_THROW() to proceed to the next error handler.
- *
- * Clients using libpq cannot receive normal output together with an error.
- * The libpq frontend discards any results already buffered when a command
- * completes with an error notification of level ERROR or higher.
- *
- * elog_demote() can be used to reduce the error level reported to the client
- * so that libpq won't suppress normal output, while the backend still frees
- * resources, aborts the transaction, etc, as usual.
- *
- * Returns true if successful, false if the request is disallowed.
- */
-bool
-elog_demote(int downgrade_to_elevel)
-{
-	ErrorData  *edata;
-
-	if (errordata_stack_depth < 0 ||
-		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1)
-		return false;
-
-	edata = &errordata[errordata_stack_depth];
-
-	if (downgrade_to_elevel >= ERROR ||
-		recursion_depth != 0 ||
-		edata->elevel > ERROR ||
-		edata->elevel < downgrade_to_elevel)
-		return false;
-
-	edata->elevel = downgrade_to_elevel;
-	return true;
-}							   /* elog_demote */
-
-
-/*
- * CDB: elog_dismiss
- *
- * A PG_CATCH() handler can call this to downgrade the error that it is
- * currently handling to a level lower than ERROR, report it to the log
- * and/or client as appropriate, and purge it from the error system.
- *
- * This shouldn't be attempted unless the caller is certain that the
- * error does not need the services of upper level error handlers to
- * release resources, abort the transaction, etc.
- *
- * Returns true if successful, in which case the error has been expunged
- * and the caller should not do PG_RE_THROW(), but should instead fall or
- * jump out of the PG_CATCH() handler and resume normal execution.
- *
- * Returns false if unsuccessful; then the caller should carry on as
- * PG_CATCH() handlers ordinarily do, and exit via PG_RE_THROW().
- */
-bool
-elog_dismiss(int downgrade_to_elevel)
-{
-	ErrorContextCallback   *saveCallbackStack = error_context_stack;
-	ErrorData			   *edata;
-	bool					shouldEmit = false;
-
-	if (errordata_stack_depth < 0 ||
-		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1)
-		return false;
-
-	edata = &errordata[errordata_stack_depth];
-
-	if (downgrade_to_elevel >= ERROR ||
-		recursion_depth != 0 ||
-		edata->elevel > ERROR)
-		return false;
-
-	/*
-	 * Context callbacks, if any, were already invoked when this error
-	 * first passed through errfinish.  Hide them so they won't be
-	 * called redundantly.
-	 */
-	error_context_stack = NULL;
-
-	/* Use errstart to decide where to send the error report. */
-	shouldEmit = errstart(downgrade_to_elevel, NULL, 0, NULL, TEXTDOMAIN);
-
-	/* Send error report to log and/or client. */
-	if (shouldEmit)
-	{
-		ErrorData  *newedata = &errordata[errordata_stack_depth];
-
-		/* errstart has stacked a new ErrorData entry. */
-		Assert(newedata == edata + 1);
-
-		/* It tells us where to send the error report for the new elevel. */
-		edata->elevel = newedata->elevel;
-		edata->output_to_client = newedata->output_to_client;
-		edata->output_to_server = newedata->output_to_server;
-
-		/* Pop temp ErrorData entry. Nothing was palloc'ed; no need to pfree. */
-		errordata_stack_depth--;
-	}
-
-	/* Nobody wants the error report. */
-	else
-	{
-		edata->elevel = downgrade_to_elevel;
-		edata->output_to_client = false;
-		edata->output_to_server = false;
-	}
-
-	/*
-	 * Sneak the caller's error through errfinish again (it has been through
-	 * once already) to emit the error report (if requested) and clean up.
-	 */
-	errfinish(0);
-
-	/* Restore the context callback stack. */
-	error_context_stack = saveCallbackStack;
-
-	/* Error not pending anymore, so caller should not do PG_RE_THROW(). */
-	return true;				/* success */
-}							   /* elog_dismiss */
-
-
-/*
- * CDB: elog_geterrcode
- * Return the SQLSTATE code for the error currently being handled, or 0.
- *
- * This is only intended for use in error handlers.
- */
-int
-elog_geterrcode(void)
-{
-	return (errordata_stack_depth < 0)
-				? 0
-				: errordata[errordata_stack_depth].sqlerrcode;
-} /* elog_geterrcode */
-
 int
 elog_getelevel(void)
 {
@@ -2611,136 +2281,6 @@ write_eventlog(int level, const char *line, int len)
 				 NULL);
 }
 #endif   /* WIN32 */
-
-
-/*
- * CDB: Tidy up the error message
- */
-
-static void
-cdb_strip_trailing_whitespace(char **buf)
-{
-	if (*buf)
-	{
-		char   *bp = *buf;
-		char   *ep = bp + strlen(bp);
-
-		while (bp < ep &&
-			   ep[-1] <= ' ' &&
-			   ep[-1] > '\0')
-			*--ep = '\0';
-
-		if (bp == ep)
-		{
-			pfree(*buf);
-			*buf = NULL;
-		}
-	}
-}							   /* cdb_strip_trailing_whitespace */
-
-void
-cdb_tidy_message(ErrorData *edata)
-{
-	char	   *bp;
-	char	   *cp;
-	char	   *ep;
-	char	   *tp;
-	int			m, n;
-
-	cdb_strip_trailing_whitespace(&edata->hint);
-	cdb_strip_trailing_whitespace(&edata->detail);
-	cdb_strip_trailing_whitespace(&edata->detail_log);
-	cdb_strip_trailing_whitespace(&edata->message);
-
-	/* Look at main error message. */
-	if (edata->message)
-	{
-		bp = edata->message;
-		while (*bp <= ' ' &&
-			   *bp > '\0')
-			bp++;
-		ep = bp + strlen(bp);
-	}
-	else
-		ep = bp = "";
-
-	/*
-	 * If more than one line, move lines after the first to errdetail.
-	 * Make an exception for LOG messages because statement logging would
-	 * be uglified.  Skip DEBUG messages too, 'cause users don't see 'em.
-	 */
-	if (edata->elevel > LOG &&
-		0 != (cp = strchr(bp, '\n')))
-	{
-		char   *dp = cp;
-
-		/* If just one extra line, strip its leading '\n' and whitespace. */
-		if (!strchr(dp+1, '\n'))
-		{
-			while (*dp <= ' ' &&
-				   *dp > '\0')
-				dp++;
-		}
-
-		/* Insert in front of detail message. */
-		if (!edata->detail)
-			edata->detail = pstrdup(dp);
-		else
-		{
-			m = ep - dp;
-			n = strlen(edata->detail) + 1;
-			tp = palloc(m + 1 + n);
-			memcpy(tp, dp, m);
-			tp[m] = '\n';
-			memcpy(tp + m + 1, edata->detail, n);
-
-			pfree(edata->detail);
-			edata->detail = tp;
-		}
-
-		/* Drop from main message. */
-		ep = cp;
-		while (bp < ep &&
-			   ep[-1] <= ' ' &&
-			   ep[-1] > '\0')
-			ep--;
-		*ep = '\0';
-	}
-
-	/*
-	 * If internal error, append the filename and line number.
-	 * (Skip if error came from QE, because QE already added the info.)
-	 */
-	if (!edata->omit_location &&
-		edata->sqlerrcode == ERRCODE_INTERNAL_ERROR &&
-		edata->filename)
-	{
-		char		buf[60];
-		const char *bfn;
-
-		/* With some compilers __FILE__ is absolute path.  Strip directory. */
-		bfn = edata->filename + strlen(edata->filename);
-		while (edata->filename < bfn &&
-			   bfn[-1] != '/' &&
-			   bfn[-1] != '\\')
-			bfn--;
-
-		/* Format the error location. */
-		n = snprintf(buf, sizeof(buf)-1, " (%s:%d)", bfn, edata->lineno);
-
-		/* Append to main error message. */
-		m = ep - bp;
-		tp = palloc(m + n + 1);
-		memcpy(tp, bp, m);
-		memcpy(tp+m, buf, n);
-		tp[m+n] = '\0';
-
-		if (edata->message)
-			pfree(edata->message);
-		edata->message = tp;
-	}
-}							   /* cdb_tidy_message */
-
 
 static void
 write_console(const char *line, int len)
@@ -3657,11 +3197,17 @@ append_string_to_pipe_chunk(PipeProtoChunk *buffer, const char* input)
  * If buffer is NULL, the stack is written to the syslogger file if amsyslogger is true.
  * Otherwise, write to stderr.
  */
+#define CMD_BUFFER_SIZE  1024
+#define SYMBOL_SIZE      512
+#define ADDRESS_SIZE     20
+#define STACK_DEPTH_MAX  100
+
 static void
 append_stacktrace(PipeProtoChunk *buffer, StringInfo append, void *const *stackarray,
 				  int stacksize, bool amsyslogger)
 {
 #if !defined(WIN32) && !defined(_AIX)
+
 	int stack_no;
 	char symbol[SYMBOL_SIZE]; /* a reasonable size for a symbol */
 	Dl_info dli;
@@ -5241,10 +4787,11 @@ trace_recovery(int trace_level)
 	return trace_level;
 }
 
+/* GPDB Specific functions from here on */
 /*
  * elog_debug_linger
  */
-void
+static void
 elog_debug_linger(ErrorData *edata)
 {
 	int			seconds_to_linger = gp_debug_linger;
@@ -5294,94 +4841,171 @@ elog_debug_linger(ErrorData *edata)
 }							   /* elog_debug_linger */
 
 /*
- * gp_elog
- *
- * This externally callable function allows a user or application to insert records into the log.
- * Only superusers are allowed to call this function due to the potential for abuse.
- *
- * The function takes two arguments, the first is the message to insert into the log (type text).
- * The second is optional, type bool, that specifies if we should send an alert after inserting
- * the message into the log.
- *
- *
+ * CDB: Tidy up the error message
  */
-Datum
-gp_elog(PG_FUNCTION_ARGS)
+static void
+cdb_strip_trailing_whitespace(char **buf)
 {
-	ErrorData	edata;
-	char	   *errormsg;
-	const char *save_debug_query;
+	if (*buf)
+	{
+		char   *bp = *buf;
+		char   *ep = bp + strlen(bp);
 
-	/* Validate input arguments */
-	if (PG_NARGS() != 1 && PG_NARGS() != 2)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("gp_elog(): called with %hd arguments",
-						PG_NARGS())));
-	if (PG_ARGISNULL(0))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("gp_elog(): called with null arguments")));
+		while (bp < ep &&
+			   ep[-1] <= ' ' &&
+			   ep[-1] > '\0')
+			*--ep = '\0';
 
-	if (PG_NARGS() == 2 && PG_ARGISNULL(1))
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("gp_elog(): called with null arguments")));
+		if (bp == ep)
+		{
+			pfree(*buf);
+			*buf = NULL;
+		}
+	}
+}							   /* cdb_strip_trailing_whitespace */
 
-	/* Must be super user */
-	if (!superuser())
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("permission denied"),
-				 errhint("gp_elog(): requires superuser privileges.")));
+static void
+cdb_tidy_message(ErrorData *edata)
+{
+	char	   *bp;
+	char	   *cp;
+	char	   *ep;
+	char	   *tp;
+	int			m, n;
 
-	errormsg = text_to_cstring(PG_GETARG_TEXT_PP(0));
-	/* text_to_cstring is guaranteed to not return a NULL, so we don't need to check */
+	cdb_strip_trailing_whitespace(&edata->hint);
+	cdb_strip_trailing_whitespace(&edata->detail);
+	cdb_strip_trailing_whitespace(&edata->detail_log);
+	cdb_strip_trailing_whitespace(&edata->message);
 
-	memset(&edata, 0, sizeof(edata));
-	edata.elevel = LOG;
-	edata.output_to_server = true;
-	edata.output_to_client = false;
-	edata.show_funcname = false;
-	edata.omit_location = true;
-	edata.hide_stmt = true;
-	edata.internalquery = "";
-	edata.message = (char *)errormsg;						/* edata.message really should be const char * */
-	edata.sqlerrcode = MAKE_SQLSTATE('X','X', '1','0','0'); /* use a special SQLSTATE to make it easy to search the log */
+	/* Look at main error message. */
+	if (edata->message)
+	{
+		bp = edata->message;
+		while (*bp <= ' ' &&
+			   *bp > '\0')
+			bp++;
+		ep = bp + strlen(bp);
+	}
+	else
+		ep = bp = "";
 
-	/* We don't need to log the SQL statement as part of this, it's just noise */
-	save_debug_query = debug_query_string;
-	debug_query_string = "";
+	/*
+	 * If more than one line, move lines after the first to errdetail.
+	 * Make an exception for LOG messages because statement logging would
+	 * be uglified.  Skip DEBUG messages too, 'cause users don't see 'em.
+	 */
+	if (edata->elevel > LOG &&
+		0 != (cp = strchr(bp, '\n')))
+	{
+		char   *dp = cp;
 
-	send_message_to_server_log(&edata);
+		/* If just one extra line, strip its leading '\n' and whitespace. */
+		if (!strchr(dp+1, '\n'))
+		{
+			while (*dp <= ' ' &&
+				   *dp > '\0')
+				dp++;
+		}
 
-	debug_query_string = save_debug_query;
+		/* Insert in front of detail message. */
+		if (!edata->detail)
+			edata->detail = pstrdup(dp);
+		else
+		{
+			m = ep - dp;
+			n = strlen(edata->detail) + 1;
+			tp = palloc(m + 1 + n);
+			memcpy(tp, dp, m);
+			tp[m] = '\n';
+			memcpy(tp + m + 1, edata->detail, n);
 
-	pfree(errormsg);
+			pfree(edata->detail);
+			edata->detail = tp;
+		}
 
-	PG_RETURN_VOID();
+		/* Drop from main message. */
+		ep = cp;
+		while (bp < ep &&
+			   ep[-1] <= ' ' &&
+			   ep[-1] > '\0')
+			ep--;
+		*ep = '\0';
+	}
+
+	/*
+	 * If internal error, append the filename and line number.
+	 * (Skip if error came from QE, because QE already added the info.)
+	 */
+	if (!edata->omit_location &&
+		edata->sqlerrcode == ERRCODE_INTERNAL_ERROR &&
+		edata->filename)
+	{
+		char		buf[60];
+		const char *bfn;
+
+		/* With some compilers __FILE__ is absolute path.  Strip directory. */
+		bfn = edata->filename + strlen(edata->filename);
+		while (edata->filename < bfn &&
+			   bfn[-1] != '/' &&
+			   bfn[-1] != '\\')
+			bfn--;
+
+		/* Format the error location. */
+		n = snprintf(buf, sizeof(buf)-1, " (%s:%d)", bfn, edata->lineno);
+
+		/* Append to main error message. */
+		m = ep - bp;
+		tp = palloc(m + n + 1);
+		memcpy(tp, bp, m);
+		memcpy(tp+m, buf, n);
+		tp[m+n] = '\0';
+
+		if (edata->message)
+			pfree(edata->message);
+		edata->message = tp;
+	}
+}							   /* cdb_tidy_message */
+
+/* verify string is correctly encoded, and escape it if invalid  */
+static void
+verify_and_replace_mbstr(char **str, int len)
+{
+	Assert(pg_verifymbstr(*str, len, true));
+
+	if (!pg_verifymbstr(*str, len, true))
+	{
+		pfree(*str);
+		*str = pstrdup("Message skipped due to incorrect encoding.");
+	}
 }
 
-void
-debug_backtrace(void)
-{
-#ifndef WIN32
-	int 		stacktracesize;
-	void	   *stacktracearray[30];
-
-	stacktracesize = backtrace(stacktracearray, 30);
-
-	append_stacktrace(NULL /*PipeProtoChunk*/, NULL /*StringInfo*/, stacktracearray, stacktracesize,
-					 false/*amsyslogger*/);
+/*
+ * Assembly code, gets the values of the frame pointer.
+ * It only works for x86 processors.
+ */
+#if defined(__i386)
+#define ASMFP asm volatile ("movl %%ebp, %0" : "=g" (ulp));
+#define GET_PTR_FROM_VALUE(value) ((uint32)value)
+#define GET_FRAME_POINTER(x) do { uint64 ulp; ASMFP; x = ulp; } while (0)
+#elif defined(__x86_64__)
+#define ASMFP asm volatile ("movq %%rbp, %0" : "=g" (ulp));
+#define GET_PTR_FROM_VALUE(value) (value)
+#define GET_FRAME_POINTER(x) do { uint64 ulp; ASMFP; x = ulp; } while (0)
+#else
+#define ASMFP
+#define GET_PTR_FROM_VALUE(value) (value)
+#define GET_FRAME_POINTER(x)
 #endif
 
-}
+#define WRITE_PIPE_CHUNK_TIMEOUT 1000
 
 /*
  * Unwind stack up to a given depth and store frame addresses to passed array;
  * return stack depth;
  */
-uint32 gp_backtrace(void **stackAddresses, uint32 maxStackDepth)
+uint32
+gp_backtrace(void **stackAddresses, uint32 maxStackDepth)
 {
 #if defined(__i386) || defined(__x86_64__)
 
@@ -5429,7 +5053,12 @@ uint32 gp_backtrace(void **stackAddresses, uint32 maxStackDepth)
 	}
 	else
 	{
+#if !defined(_WIN32) && !defined(_WIN64)
 		depth  = backtrace(stackAddresses, maxStackDepth);
+#else
+		/* backtrace() is not supported in this platform */
+		return 0;
+#endif	/* WIN32 */
 	}
 
 	Assert(depth > 0);
@@ -5437,15 +5066,42 @@ uint32 gp_backtrace(void **stackAddresses, uint32 maxStackDepth)
 	return depth;
 
 #else
+
+#if !defined(_WIN32) && !defined(_WIN64)
 	return backtrace(stackAddresses, maxStackDepth);
+#else
+	return 0
+#endif	/* WIN32 */
+
 #endif
 }
 
+/*
+ * GPDB:
+ * 		append_stacktrace() wrapper for supported platforms
+ */
+void
+debug_backtrace(void)
+{
+#ifndef WIN32
+	int 		stacktracesize;
+	void	   *stacktracearray[30];
+
+	stacktracesize = backtrace(stacktracearray, 30);
+
+	append_stacktrace(NULL /*PipeProtoChunk*/, NULL /*StringInfo*/, stacktracearray, stacktracesize,
+					 false/*amsyslogger*/);
+#endif
+
+}
 
 /*
- * Build stack trace
+ * GPDB:
+ * 		Build stack trace
+ * uses static append_stacktrace()
  */
-char *gp_stacktrace(void **stackAddresses, uint32 stackDepth)
+char *
+gp_stacktrace(void **stackAddresses, uint32 stackDepth)
 {
 	StringInfoData append;
 	initStringInfo(&append);
@@ -5467,33 +5123,232 @@ char *gp_stacktrace(void **stackAddresses, uint32 stackDepth)
 }
 
 /*
- * SignalName
- *   Convert a SEGV/BUS/ILL to name.
+ * GPDB:
+ *
+ * Finish constructing an error like errfinish(), but instead of throwing it,
+ * return it to the caller as a palloc'd ErrorData object.
+ *
+ * uses static errordata
  */
-const char *
-SegvBusIllName(int signal)
+ErrorData *
+errfinish_and_return(int dummy __attribute__((unused)),...)
 {
-	Assert(signal == SIGILL ||
-		   signal == SIGSEGV ||
-		   signal == SIGBUS);
-	
-	switch (signal)
+	ErrorData  *edata = &errordata[errordata_stack_depth];
+	ErrorData  *edata_copy;
+	ErrorContextCallback *econtext;
+	int			saved_errno;            /*CDB*/
+
+	recursion_depth++;
+	CHECK_STACK_DEPTH();
+	saved_errno = edata->saved_errno;   /*CDB*/
+
+	/*
+	 * Call any context callback functions.  Errors occurring in callback
+	 * functions will be treated as recursive errors --- this ensures we will
+	 * avoid infinite recursion (see errstart).
+	 */
+	for (econtext = error_context_stack;
+		 econtext != NULL;
+		 econtext = econtext->previous)
+		(*econtext->callback) (econtext->arg);
+
+	edata_copy = CopyErrorData();
+
+	/* Now free up subsidiary data attached to stack entry, and release it */
+	if (edata->message)
+		pfree(edata->message);
+	if (edata->detail)
+		pfree(edata->detail);
+	if (edata->detail_log)
+		pfree(edata->detail_log);
+	if (edata->hint)
+		pfree(edata->hint);
+	if (edata->context)
+		pfree(edata->context);
+	if (edata->internalquery)
+		pfree(edata->internalquery);
+
+	errordata_stack_depth--;
+
+	/* Exit error-handling context */
+	recursion_depth--;
+
+	errno = saved_errno;                /*CDB*/
+
+	return edata_copy;
+}
+
+/*
+ * GPDB:
+ *
+ * errprintstack -- force print out stack trace
+ *
+ * uses static errordata
+ */
+int
+errprintstack(bool printstack)
+{
+	ErrorData  *edata = &errordata[errordata_stack_depth];
+
+	edata->printstack = printstack;
+
+	return 0;					/* return value does not matter */
+}
+
+/*
+ * CDB: elog_demote
+ *
+ * A PG_CATCH() handler can call this to downgrade the error that it is
+ * currently handling to a level lower than ERROR.  The caller should
+ * then do PG_RE_THROW() to proceed to the next error handler.
+ *
+ * Clients using libpq cannot receive normal output together with an error.
+ * The libpq frontend discards any results already buffered when a command
+ * completes with an error notification of level ERROR or higher.
+ *
+ * elog_demote() can be used to reduce the error level reported to the client
+ * so that libpq won't suppress normal output, while the backend still frees
+ * resources, aborts the transaction, etc, as usual.
+ *
+ * Returns true if successful, false if the request is disallowed.
+ */
+bool
+elog_demote(int downgrade_to_elevel)
+{
+	ErrorData  *edata;
+
+	if (errordata_stack_depth < 0 ||
+		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1)
+		return false;
+
+	edata = &errordata[errordata_stack_depth];
+
+	if (downgrade_to_elevel >= ERROR ||
+		recursion_depth != 0 ||
+		edata->elevel > ERROR ||
+		edata->elevel < downgrade_to_elevel)
+		return false;
+
+	edata->elevel = downgrade_to_elevel;
+	return true;
+}							   /* elog_demote */
+
+/*
+ * CDB: elog_dismiss
+ *
+ * A PG_CATCH() handler can call this to downgrade the error that it is
+ * currently handling to a level lower than ERROR, report it to the log
+ * and/or client as appropriate, and purge it from the error system.
+ *
+ * This shouldn't be attempted unless the caller is certain that the
+ * error does not need the services of upper level error handlers to
+ * release resources, abort the transaction, etc.
+ *
+ * Returns true if successful, in which case the error has been expunged
+ * and the caller should not do PG_RE_THROW(), but should instead fall or
+ * jump out of the PG_CATCH() handler and resume normal execution.
+ *
+ * Returns false if unsuccessful; then the caller should carry on as
+ * PG_CATCH() handlers ordinarily do, and exit via PG_RE_THROW().
+ */
+bool
+elog_dismiss(int downgrade_to_elevel)
+{
+	ErrorContextCallback   *saveCallbackStack = error_context_stack;
+	ErrorData			   *edata;
+	bool					shouldEmit = false;
+
+	if (errordata_stack_depth < 0 ||
+		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1)
+		return false;
+
+	edata = &errordata[errordata_stack_depth];
+
+	if (downgrade_to_elevel >= ERROR ||
+		recursion_depth != 0 ||
+		edata->elevel > ERROR)
+		return false;
+
+	/*
+	 * Context callbacks, if any, were already invoked when this error
+	 * first passed through errfinish.  Hide them so they won't be
+	 * called redundantly.
+	 */
+	error_context_stack = NULL;
+
+	/* Use errstart to decide where to send the error report. */
+	shouldEmit = errstart(downgrade_to_elevel, NULL, 0, NULL, TEXTDOMAIN);
+
+	/* Send error report to log and/or client. */
+	if (shouldEmit)
 	{
-#ifdef SIGILL
-		case SIGILL:
-			return "SIGILL";
-#endif
-#ifdef SIGSEGV
-		case SIGSEGV:
-			return "SIGSEGV";
-#endif
-#ifdef SIGBUS
-		case SIGBUS:
-			return "SIGBUS";
-#endif
+		ErrorData  *newedata = &errordata[errordata_stack_depth];
+
+		/* errstart has stacked a new ErrorData entry. */
+		Assert(newedata == edata + 1);
+
+		/* It tells us where to send the error report for the new elevel. */
+		edata->elevel = newedata->elevel;
+		edata->output_to_client = newedata->output_to_client;
+		edata->output_to_server = newedata->output_to_server;
+
+		/* Pop temp ErrorData entry. Nothing was palloc'ed; no need to pfree. */
+		errordata_stack_depth--;
 	}
 
-	return NULL;
+	/* Nobody wants the error report. */
+	else
+	{
+		edata->elevel = downgrade_to_elevel;
+		edata->output_to_client = false;
+		edata->output_to_server = false;
+	}
+
+	/*
+	 * Sneak the caller's error through errfinish again (it has been through
+	 * once already) to emit the error report (if requested) and clean up.
+	 */
+	errfinish(0);
+
+	/* Restore the context callback stack. */
+	error_context_stack = saveCallbackStack;
+
+	/* Error not pending anymore, so caller should not do PG_RE_THROW(). */
+	return true;				/* success */
+}							   /* elog_dismiss */
+
+
+/*
+ * CDB: elog_geterrcode
+ * Return the SQLSTATE code for the error currently being handled, or 0.
+ *
+ * This is only intended for use in error handlers.
+ */
+int
+elog_geterrcode(void)
+{
+	return (errordata_stack_depth < 0)
+				? 0
+				: errordata[errordata_stack_depth].sqlerrcode;
+} /* elog_geterrcode */
+
+/*
+ * CDB: errFatalReturn -- set flag indicating errfinish() should return
+ * to the caller instead of calling proc_exit() after reporting a FATAL
+ * error.  Allows termination by re-raising a signal in order to obtain
+ * a core dump.
+ */
+int
+errFatalReturn(bool fatalReturn)
+{
+	ErrorData  *edata = &errordata[errordata_stack_depth];
+
+	/* we don't bother incrementing recursion_depth */
+	CHECK_STACK_DEPTH();
+
+	edata->fatal_return = fatalReturn;
+
+	return 0;					/* return value does not matter */
 }
 
 /*
@@ -5576,4 +5431,153 @@ StandardHandlerForSigillSigsegvSigbus_OnMainThread(char *processName, SIGNAL_ARG
 
 	/* re-raise the signal to OS */
 	raise(postgres_signal_arg);
+}
+
+/*
+ * SignalName
+ *   Convert a SEGV/BUS/ILL to name.
+ */
+const char *
+SegvBusIllName(int signal)
+{
+	Assert(signal == SIGILL ||
+		   signal == SIGSEGV ||
+		   signal == SIGBUS);
+	
+	switch (signal)
+	{
+#ifdef SIGILL
+		case SIGILL:
+			return "SIGILL";
+#endif
+#ifdef SIGSEGV
+		case SIGSEGV:
+			return "SIGSEGV";
+#endif
+#ifdef SIGBUS
+		case SIGBUS:
+			return "SIGBUS";
+#endif
+	}
+
+	return NULL;
+}
+
+/*
+ * elog_internalerror -- report an internal error
+ *
+ * Does not return; exits via longjmp to PG_CATCH error handler.
+ */
+void
+elog_internalerror(const char *filename, int lineno, const char *funcname)
+{
+	/*
+	 * TODO  Why isn't this a FATAL error?
+	 *
+	 * Also, why aren't we allowing for a specific err message to be passed in?
+	 */
+    if (errstart(ERROR, filename, lineno, funcname,TEXTDOMAIN))
+    {
+        errfinish(errcode(ERRCODE_INTERNAL_ERROR),
+                  errmsg("Unexpected internal error"));
+    }
+    /* not reached */
+    abort();
+}                               /* elog_internalerror */
+
+/*
+ * Convert compact error code (ERRCODE_xxx) to 5-char SQLSTATE string,
+ * and put it into a 6-char buffer provided by caller.
+ */
+char *
+errcode_to_sqlstate(int errcode, char outbuf[6])
+{
+	int	i;
+
+	for (i = 0; i < 5; ++i)
+	{
+		outbuf[i] = PGUNSIXBIT(errcode);
+		errcode >>= 6;
+	}
+	outbuf[5] = '\0';
+	return &outbuf[5];
+}
+
+/*
+ * Convert SQLSTATE string to compact error code (ERRCODE_xxx).
+ */
+int
+sqlstate_to_errcode(const char *sqlstate)
+{
+	return MAKE_SQLSTATE(sqlstate[0], sqlstate[1], sqlstate[2],
+						 sqlstate[3], sqlstate[4]);
+}
+
+/*
+ * gp_elog
+ *
+ * This externally callable function allows a user or application to insert records into the log.
+ * Only superusers are allowed to call this function due to the potential for abuse.
+ *
+ * The function takes two arguments, the first is the message to insert into the log (type text).
+ * The second is optional, type bool, that specifies if we should send an alert after inserting
+ * the message into the log.
+ *
+ *
+ */
+Datum
+gp_elog(PG_FUNCTION_ARGS)
+{
+	ErrorData	edata;
+	char	   *errormsg;
+	const char *save_debug_query;
+
+	/* Validate input arguments */
+	if (PG_NARGS() != 1 && PG_NARGS() != 2)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("gp_elog(): called with %hd arguments",
+						PG_NARGS())));
+	if (PG_ARGISNULL(0))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("gp_elog(): called with null arguments")));
+
+	if (PG_NARGS() == 2 && PG_ARGISNULL(1))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("gp_elog(): called with null arguments")));
+
+	/* Must be super user */
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("permission denied"),
+				 errhint("gp_elog(): requires superuser privileges.")));
+
+	errormsg = text_to_cstring(PG_GETARG_TEXT_PP(0));
+	/* text_to_cstring is guaranteed to not return a NULL, so we don't need to check */
+
+	memset(&edata, 0, sizeof(edata));
+	edata.elevel = LOG;
+	edata.output_to_server = true;
+	edata.output_to_client = false;
+	edata.show_funcname = false;
+	edata.omit_location = true;
+	edata.hide_stmt = true;
+	edata.internalquery = "";
+	edata.message = (char *)errormsg;						/* edata.message really should be const char * */
+	edata.sqlerrcode = MAKE_SQLSTATE('X','X', '1','0','0'); /* use a special SQLSTATE to make it easy to search the log */
+
+	/* We don't need to log the SQL statement as part of this, it's just noise */
+	save_debug_query = debug_query_string;
+	debug_query_string = "";
+
+	send_message_to_server_log(&edata);
+
+	debug_query_string = save_debug_query;
+
+	pfree(errormsg);
+
+	PG_RETURN_VOID();
 }
