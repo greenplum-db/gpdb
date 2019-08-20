@@ -15,8 +15,7 @@ OBJS += aotable.o gpdb4_heap_convert.o version_gp.o \
         file_gp.o reporting.o aomd_filehandler.o cluster.o
 
 # Source files specific to Greenplum from gp directory
-OBJS += gp/checks.o gp/check_greenplum.o gp/check_greenplum_internal.o \
-	gp/string_utils.o
+OBJS += gp/checks.o gp/check_greenplum.o gp/check_greenplum_internal.o
 
 PG_CPPFLAGS  = -DFRONTEND -DDLSUFFIX=\"$(DLSUFFIX)\" -I$(srcdir) -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)

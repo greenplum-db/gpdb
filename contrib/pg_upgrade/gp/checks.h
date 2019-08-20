@@ -17,6 +17,5 @@ extern bool check_orphaned_toastrels(ClusterInfo *cluster);
 extern bool check_online_expansion(ClusterInfo *cluster);
 extern bool check_gphdfs_external_tables(ClusterInfo *cluster);
 extern bool check_gphdfs_user_roles(ClusterInfo *cluster);
-extern bool check_nondefault_extensions(ClusterInfo *cluster);
 
 #endif //GPDB_CHECKS_H

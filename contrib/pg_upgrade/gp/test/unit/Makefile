@@ -11,7 +11,9 @@ include $(top_srcdir)/src/Makefile.mock
 include $(top_srcdir)/src/Makefile.global
 
 
-test_flags = -I $(pg_upgrade_directory) -I $(libpq_srcdir)
+test_flags = -I $(pg_upgrade_directory) -I $(libpq_srcdir) \
+	-fsanitize=undefined \
+	-fsanitize=address
 
 
 check_greenplum_test.t: $(CMOCKERY_OBJS) check_greenplum_test.c

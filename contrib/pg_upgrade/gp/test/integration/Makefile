@@ -5,7 +5,7 @@ pg_upgrade_directory=../../..
 gp_checks_directory=../..
 
 
-TARGETS = check_covering_aoindex_test check_non_default_extensions_test
+TARGETS = check_covering_aoindex_test
 PG_LIBS = $(libpq_pgport)
 
 
@@ -17,8 +17,7 @@ test_flags = -I $(pg_upgrade_directory) \
 	-I$(libpq_srcdir) -g -O0
 
 
-code_under_test = $(gp_checks_directory)/checks.o \
- 	$(gp_checks_directory)/string_utils.o
+code_under_test = $(gp_checks_directory)/checks.o
 
 
 pg_upgrade_dependencies = $(pg_upgrade_directory)/server.o \
@@ -51,14 +50,5 @@ check_covering_aoindex_test.t: make_dependencies $(integration_test_dependencies
 		$(pg_upgrade_dependencies) \
 		$(integration_test_dependencies) \
 		./check_covering_aoindex_test.c \
-		$(PG_LIBS) \
-		-o $@
-
-check_non_default_extensions_test.t: make_dependencies $(integration_test_dependencies) check_non_default_extensions_test.c 
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(test_flags) \
-		$(code_under_test) \
-		$(pg_upgrade_dependencies) \
-		$(integration_test_dependencies) \
-		./check_non_default_extensions_test.c \
 		$(PG_LIBS) \
 		-o $@

@@ -21,8 +21,7 @@ void check_greenplum(void)
 		check_partition_indexes,
 		check_orphaned_toastrels,
 		check_gphdfs_external_tables,
-		check_gphdfs_user_roles,
-		check_nondefault_extensions
+		check_gphdfs_user_roles
 	};
 
 	size_t length = sizeof(list) / sizeof(list[0]);

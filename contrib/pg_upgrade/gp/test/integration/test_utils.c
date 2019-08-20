@@ -36,15 +36,14 @@ ClusterInfo *
 make_cluster()
 {
 	ClusterInfo *cluster = palloc0(sizeof(ClusterInfo));
+	DbInfoArr *info = palloc0(sizeof(ClusterInfo));
 
-	DbInfoArr info;
-	cluster->dbarr = info;
+	cluster->dbarr = *info;
 	cluster->dbarr.dbs = NULL;
 	cluster->dbarr.ndbs = 0;
 
 	return cluster;
 }
-
 
 PGconn *
 getTestConnection(ClusterInfo *cluster)
