@@ -141,7 +141,7 @@ def dumpStats(cur, inclHLL):
 
 
 def parseCmdLine():
-    p = OptionParser(usage='Usage: %prog [options] <database>', version=gpsd_version, conflict_handler="resolve")
+    p = OptionParser(usage='Usage: %prog [options] <database>', version=gpsd_version, conflict_handler="resolve", epilog="WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file. Please review output file to ensure it is within corporate policy to transport the output file.")
     p.add_option('-?', '--help', action='help', help='Show this help message and exit')
     p.add_option('-h', '--host', action='store',
                  dest='host', help='Specify a remote host')
@@ -233,6 +233,10 @@ def main():
             with closing(connection.cursor()) as cursor:
                 dumpTupleCount(cursor)
                 dumpStats(cursor, inclHLL)
+        # Upon success, leave a warning message about data collected
+        sys.stderr.writelines(['WARNING: This tool collects statistics about your data, including most common values, '
+                               'which requires some data elements to be included in the output file.\n',
+                               'Please review output file to ensure it is within corporate policy to transport the output file.\n'])
     except pgdb.DatabaseError, err:  # catch *all* exceptions
         sys.stderr.write('Error while dumping statistics:\n')
         sys.stderr.write(err.message)
