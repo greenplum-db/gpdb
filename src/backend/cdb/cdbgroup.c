@@ -21,6 +21,7 @@
 #include "postgres.h"
 
 #include <limits.h>
+#include <math.h>
 
 #include "catalog/pg_collation.h"
 #include "catalog/pg_constraint.h"
@@ -60,6 +61,7 @@
 #include "utils/tqual.h"
 #include "utils/typcache.h"
 #include "catalog/pg_aggregate.h"
+#include "catalog/pg_statistic.h"
 
 #include "cdb/cdbllize.h"
 #include "cdb/cdbpath.h"
@@ -417,7 +419,10 @@ static Cost incremental_motion_cost(double sendrows, double recvrows);
 
 static bool contain_aggfilters(Node *node);
 static bool areAllExpressionsHashable(List *exprs);
-
+static double groupNumberPerSegment(double groupNum, double numPerGroup, double segmentNum);
+static double getSkewRatio(PlannerInfo *root, MppGroupContext *ctx, double rows, int segmentCount);
+static double getSkewRatioOneGroup(PlannerInfo *root, MppGroupContext *ctx, double rows,
+								   int segmentCount, int groupColumnIndex);
 /*---------------------------------------------
  * WITHIN stuff
  *---------------------------------------------*/
@@ -481,6 +486,7 @@ cdb_grouping_planner(PlannerInfo *root,
 	bool		has_groups = root->parse->groupClause != NIL;
 	bool		has_aggs = agg_costs->numAggs > 0;
 	bool		has_ordered_aggs = agg_costs->numPureOrderedAggs > 0;
+	double 		skew_ratio = 1.0;
 	ListCell   *lc;
 
 	unsigned char consider_agg = AGG_NONE;
@@ -885,12 +891,17 @@ cdb_grouping_planner(PlannerInfo *root,
 		}
 	}
 
+	skew_ratio = getSkewRatio(
+			root, &ctx,
+			plan_1p.input_path->parent ? plan_1p.input_path->parent->rows: plan_1p.input_path->rows,
+			planner_segment_count(NULL));
 
 	plan_info = NULL;			/* Most cost-effective, feasible plan. */
 
 	if (consider_agg & AGG_1PHASE)
 	{
 		cost_1phase_aggregation(root, &ctx, &plan_1p);
+		plan_1p.plan_cost *= skew_ratio;
 		if (plan_info == NULL || plan_info->plan_cost > plan_1p.plan_cost)
 			plan_info = &plan_1p;
 	}
@@ -1096,7 +1107,7 @@ make_one_stage_agg_plan(PlannerInfo *root,
 										groupColIdx,
 										groupOperators,
 										NIL, /* groupingSets */
-										numGroups,
+										numGroups / planner_segment_count(NULL),
 										result_plan);
 		/* Hashed aggregation produces randomly-ordered results */
 		current_pathkeys = NIL;
@@ -1143,7 +1154,7 @@ make_one_stage_agg_plan(PlannerInfo *root,
 										groupColIdx,
 										groupOperators,
 										NIL, /* groupingSets */
-										numGroups,
+										numGroups / planner_segment_count(NULL),
 										result_plan);
 	}
 	else if (root->hasHavingQual)
@@ -1375,7 +1386,9 @@ make_two_stage_agg_plan(PlannerInfo *root,
 									groupColIdx,
 									groupOperators,
 									NIL, /* groupingSets */
-									numGroups,
+									groupNumberPerSegment(numGroups,
+														  result_plan->plan_rows,
+														  planner_segment_count(NULL)),
 									result_plan);
 
 	/* May lose useful locus and sort. Unlikely, but could do better. */
@@ -1959,7 +1972,9 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 									inputGroupColIdx,
 									inputGroupOperators,
 									NIL, /* groupingSets */
-									numGroups,
+									groupNumberPerSegment(numGroups,
+														  result_plan->plan_rows,
+														  planner_segment_count(NULL)),
 									result_plan);
 
 	dqaduphazard = (aggstrategy == AGG_HASHED && stream_bottom_agg);
@@ -4295,7 +4310,7 @@ add_second_stage_agg(PlannerInfo *root,
 								 prelimGroupColIdx,
 								 prelimGroupOperators,
 								 NIL, /* groupingSets */
-								 lNumGroups,
+								 lNumGroups / planner_segment_count(NULL),
 								 result_plan);
 
 	/*
@@ -4565,7 +4580,7 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 					 AGG_HASHED, false,
 					 ctx->numGroupCols,
 					 NIL, /* groupingSets */
-					 numGroups,
+					 numGroups / planner_segment_count(NULL),
 					 ctx->agg_costs);
 	}
 	else
@@ -4589,7 +4604,7 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 						 AGG_SORTED, false,
 						 ctx->numGroupCols,
 						 NIL, /* groupingSets */
-						 numGroups,
+						 numGroups / planner_segment_count(NULL),
 						 ctx->agg_costs);
 		}
 
@@ -4621,7 +4636,6 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 	info->join_strategy = DqaJoinNone;
 	info->use_sharing = false;
 
-	info->plan_cost *= gp_coefficient_1phase_agg;
 	return info->plan_cost;
 }
 
@@ -4641,7 +4655,6 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 	(*(ctx->p_dNumGroups) > LONG_MAX) ? LONG_MAX :
 	(long) *(ctx->p_dNumGroups);
 	double		input_rows;
-	double		streaming_fudge = 1.3;
 
 	cost_common_agg(root, ctx, info, &input_dummy);
 	input_rows = input_dummy.plan_rows;
@@ -4677,13 +4690,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 					 AGG_HASHED, root->config->gp_hashagg_streambottom,
 					 ctx->numGroupCols,
 					 NIL, /* groupingSets */
-					 numGroups,
+					 groupNumberPerSegment(numGroups, input_rows, planner_segment_count(NULL)),
 					 ctx->agg_costs);
-
-		if (gp_hashagg_streambottom)
-		{
-			input_dummy.plan_rows *= streaming_fudge;
-		}
 	}
 	else
 	{
@@ -4712,7 +4720,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 						 AGG_SORTED, false,
 						 ctx->numGroupCols,
 						 NIL, /* groupingSets */
-						 numGroups,
+						 groupNumberPerSegment(numGroups, input_rows, planner_segment_count(NULL)),
 						 ctx->agg_costs);
 		}
 
@@ -4774,7 +4782,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 					 AGG_HASHED, false,
 					 ctx->numGroupCols,
 					 NIL, /* groupingSets */
-					 numGroups,
+					 numGroups / planner_segment_count(NULL),
 					 ctx->agg_costs);
 	}
 	else
@@ -4799,7 +4807,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 						 AGG_SORTED, false,
 						 ctx->numGroupCols,
 						 NIL, /* groupingSets */
-						 numGroups,
+						 numGroups / planner_segment_count(NULL),
 						 ctx->agg_costs);
 		}
 	}
@@ -5137,10 +5145,14 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 	long		numGroups = (group_rows < 0) ? 0 :
 	(group_rows > LONG_MAX) ? LONG_MAX :
 	(long) group_rows;
+	double group_num_persegment_1phase;
 
 	bool can_hash_group_key = true;
 	bool can_hash_dqa_arg = true;
 	bool		use_hashed_preliminary = false;
+
+	group_num_persegment_1phase = groupNumberPerSegment(darg_rows, input_rows,
+														planner_segment_count(NULL));
 
 	Cost		sort_input = incremental_sort_cost(input_rows, input_width,
 												   ctx->numGroupCols + 1);
@@ -5148,18 +5160,31 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 												   ctx->numGroupCols);
 	Cost		sort_groups = incremental_sort_cost(group_rows, input_width,
 													ctx->numGroupCols);
-	Cost		gagg_input = incremental_agg_cost(input_rows, input_width,
-												  AGG_SORTED, ctx->numGroupCols + 1,
-												  numGroups, ctx->agg_costs);
-	Cost		gagg_dargs = incremental_agg_cost(darg_rows, input_width,
-												  AGG_SORTED, ctx->numGroupCols,
-												  numGroups, ctx->agg_costs);
-	Cost		hagg_input = incremental_agg_cost(input_rows, input_width,
-												  AGG_HASHED, ctx->numGroupCols + 1,
-												  numGroups, ctx->agg_costs);
-	Cost		hagg_dargs = incremental_agg_cost(darg_rows, input_width,
-												  AGG_HASHED, ctx->numGroupCols,
-												  numGroups, ctx->agg_costs);
+
+	Cost		gagg_1phase = incremental_agg_cost(input_rows, input_width,
+												   AGG_SORTED, ctx->numGroupCols + 1,
+												   group_num_persegment_1phase, ctx->agg_costs);
+	Cost		gagg_2phase = incremental_agg_cost(input_rows, input_width,
+												   AGG_SORTED, ctx->numGroupCols + 1,
+												   darg_rows / planner_segment_count(NULL),
+												   ctx->agg_costs);
+	Cost		gagg_3phase = incremental_agg_cost(darg_rows, input_width,
+												   AGG_SORTED, ctx->numGroupCols,
+												   numGroups / planner_segment_count(NULL),
+												   ctx->agg_costs);
+
+	Cost		hagg_1phase = incremental_agg_cost(input_rows, input_width,
+												   AGG_HASHED, ctx->numGroupCols + 1,
+												   group_num_persegment_1phase, ctx->agg_costs);
+	Cost		hagg_2phase = incremental_agg_cost(input_rows, input_width,
+												   AGG_HASHED, ctx->numGroupCols + 1,
+												   darg_rows / planner_segment_count(NULL),
+												   ctx->agg_costs);
+	Cost		hagg_3phase = incremental_agg_cost(darg_rows, input_width,
+												   AGG_HASHED, ctx->numGroupCols,
+												   numGroups / planner_segment_count(NULL),
+												   ctx->agg_costs);
+
 	Cost		cost_base;
 	Cost		cost_sorted;
 	Cost		cost_cheapest;
@@ -5194,11 +5219,11 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 		&& can_hash_dqa_arg;
 	if (use_hashed_preliminary)
 	{
-		cost_base = hagg_input;
+		cost_base = hagg_1phase;
 	}
 	else
 	{
-		cost_base = sort_input + gagg_input;
+		cost_base = sort_input + gagg_1phase;
 	}
 
 	/* Collocating motion */
@@ -5213,9 +5238,9 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 													  1, ctx->agg_costs);
 
 		type_sorted = type_cheapest = DQACOPLAN_PGS;
-		cost_sorted = cost_cheapest = sort_input + gagg_input + pagg_dargs;
+		cost_sorted = cost_cheapest = sort_input + gagg_2phase + pagg_dargs;
 
-		trial = hagg_input + pagg_dargs;
+		trial = hagg_2phase + pagg_dargs;
 		if (trial < cost_cheapest)
 		{
 			cost_cheapest = trial;
@@ -5225,11 +5250,11 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 	else						/* vector agg */
 	{
 		type_sorted = type_cheapest = DQACOPLAN_GGS;
-		cost_sorted = cost_cheapest = sort_input + gagg_input + gagg_dargs;
+		cost_sorted = cost_cheapest = sort_input + gagg_2phase + gagg_3phase;
 
 		if (can_hash_dqa_arg)
 		{
-			trial = hagg_input + sort_dargs + gagg_input;
+			trial = hagg_2phase + sort_dargs + gagg_3phase;
 
 			if (trial < cost_cheapest)
 			{
@@ -5246,7 +5271,7 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 
 		if (can_hash_group_key && can_hash_dqa_arg)
 		{
-			trial = hagg_input + hagg_dargs;
+			trial = hagg_2phase + hagg_3phase;
 
 			if (trial < cost_cheapest)
 			{
@@ -5477,4 +5502,113 @@ areAllExpressionsHashable(List *exprs)
 			return false;
 	}
 	return true;
+}
+
+/*
+ * groupNumberPerSegment
+ *
+ *   - groupNum   : the number of groups globally
+ *   - rows       : the number of tuples globally
+ *   - segmentNum : the number of all segments in the cluster
+ *
+ * Estimate how many groups are on each segment, when the group keys do not contain
+ * distribution keys. Understand such condition, we can consider data is roughly
+ * random-distributed among all segments. The accurate formula to compute the
+ * expectation is (1-((segmentNum-1)/segmentNum)^(rows/groupNum))*groupNum.
+ *
+ * The above formula can be deduced using indicate-variable method. Let's focus on
+ * one specific segment, say seg0, and let Xi be a random variable:
+ *   - Xi = 1, seg0 contains tuple from group i
+ *   - Xi = 0, seg0 does not contain tuple from group i
+ * E(X1+X2+...+X_groupNum) is just what we want to compute. Thus the formula
+ * is easy to prove.
+ */
+static double
+groupNumberPerSegment(double groupNum, double rows, double segmentNum)
+{
+	double numPerGroup = rows / groupNum;
+	double group_num;
+	group_num = (1-pow((segmentNum-1)/segmentNum, numPerGroup))*groupNum;
+	return group_num;
+}
+
+/*
+ * getSkewRatio
+ *
+ * Calculate the skewness ratio by statistical information. If the information on
+ * STATISTIC_KIND_MCV kind exists in 'pg_statistic', skew_ratio =  (top_group_tuple_num
+ * * rows - tuple_num_per_group) / tuple_num_per_segment + 1. If not skew_ratio =
+ * gp_coefficient_1phase_agg.
+ */
+static double
+getSkewRatio(PlannerInfo *root, MppGroupContext *ctx, double rows, int segmentCount)
+{
+	int i;
+	double minSkewRation = gp_coefficient_1phase_agg;
+
+	for (i = 0; i < ctx->numGroupCols; i++)
+	{
+		double r = getSkewRatioOneGroup(root, ctx, rows, segmentCount, ctx->groupColIdx[i]);
+		if (r < minSkewRation)
+			minSkewRation = r;
+	}
+	return minSkewRation;
+}
+
+static double
+getSkewRatioOneGroup(PlannerInfo *root, MppGroupContext *ctx, double rows, int segmentCount, int groupColumnIndex)
+{
+	Oid				skewTable = InvalidOid;
+	AttrNumber		skewColumn = InvalidAttrNumber;
+	bool			skewInherit = false;
+	TargetEntry	   *tle;
+	HeapTupleData  *statsTuple;
+	AttStatsSlot	sslot;
+	double skew_ratio = 1.0;
+
+	if (rows < segmentCount*10)
+		return gp_coefficient_1phase_agg;
+
+	tle = get_tle_by_resno(ctx->sub_tlist, groupColumnIndex);
+	if (IsA(tle->expr, Var))
+	{
+		Var		   *var = (Var *) tle->expr;
+		RangeTblEntry *rte;
+		rte = root->simple_rte_array[var->varno];
+		if (rte->rtekind == RTE_RELATION)
+		{
+			skewTable = rte->relid;
+			skewColumn = var->varattno;
+			skewInherit = rte->inh;
+		}
+	}
+
+	if (!OidIsValid(skewTable))
+		return gp_coefficient_1phase_agg;
+
+	statsTuple = SearchSysCache3(STATRELATTINH,
+								 ObjectIdGetDatum(skewTable),
+								 Int16GetDatum(skewColumn),
+								 BoolGetDatum(skewInherit));
+
+	if (!HeapTupleIsValid(statsTuple))
+		return gp_coefficient_1phase_agg;
+
+	if (get_attstatsslot(&sslot, statsTuple,
+						 STATISTIC_KIND_MCV, InvalidOid,
+						 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS))
+	{
+		double top_group_tuple_num = 0.0;
+		double tuple_num_per_group = rows / *ctx->p_dNumGroups;
+		double tuple_num_per_segment = rows / segmentCount;
+		Assert(sslot.nvalues > 0);
+		top_group_tuple_num = sslot.numbers[0];
+		skew_ratio = (top_group_tuple_num * rows - tuple_num_per_group) / tuple_num_per_segment;
+		skew_ratio += 1;
+		free_attstatsslot(&sslot);
+	}
+
+	ReleaseSysCache(statsTuple);
+
+	return skew_ratio;
 }

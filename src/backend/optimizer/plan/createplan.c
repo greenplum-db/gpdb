@@ -6000,7 +6000,7 @@ add_agg_cost(PlannerInfo *root, Plan *plan,
 		entrywidth = agg_hash_entrywidth(aggcosts->numAggs,
 								   sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + plan->plan_width,
 										 0 /* FIXME: was transspace */);
-		if (!calcHashAggTableSizes(global_work_mem(root),
+		if (!calcHashAggTableSizes((double) planner_work_mem * 1024L,
 								   numGroups,
 								   entrywidth,
 								   true,
@@ -6028,15 +6028,7 @@ add_agg_cost(PlannerInfo *root, Plan *plan,
 
 	plan->startup_cost = agg_path.startup_cost;
 	plan->total_cost = agg_path.total_cost;
-
-	/*
-	 * We will produce a single output tuple if not grouping, and a tuple per
-	 * group otherwise.
-	 */
-	if (aggstrategy == AGG_PLAIN)
-		plan->plan_rows = groupingSets ? list_length(groupingSets) : 1;
-	else
-		plan->plan_rows = numGroups;
+	plan->plan_rows = agg_path.rows;
 
 	/*
 	 * We also need to account for the cost of evaluation of the qual (ie, the
