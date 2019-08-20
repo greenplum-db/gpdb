@@ -97,4 +97,10 @@ select * from v_sourcetable2;
 (10 rows)
 
 drop view v_sourcetable2;
+-- Greenplum divides the query if it mixes window functions with aggregate
+-- functions or grouping, test it here because creating view has a check
+-- related to the collation assigning process which is affected by the
+-- dividing.
+CREATE TEMP TABLE gp_create_view_t1 (f1 smallint, f2 text) DISTRIBUTED RANDOMLY;
+CREATE TEMP VIEW window_and_agg_v1 AS SELECT count(*) OVER (PARTITION BY f1), max(f2) FROM gp_create_view_t1 GROUP BY f1;
 reset optimizer;
