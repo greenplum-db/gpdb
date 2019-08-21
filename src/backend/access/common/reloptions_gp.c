@@ -930,16 +930,24 @@ validate_and_adjust_options(StdRdOptions *result,
 		/* Check upper bound of compresslevel for each compression type */
 
 		if (result->compresstype[0] &&
-			(pg_strcasecmp(result->compresstype, "zlib") == 0) &&
-			(result->compresslevel > 9))
+			(pg_strcasecmp(result->compresstype, "zlib") == 0))
 		{
-			if (validate)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range for zlib (should be in the range 1 to 9)",
-								result->compresslevel)));
+#ifndef HAVE_LIBZ
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("zlib compression is not supported by this build"),
+					 errhint("Compile without --without-zlib to use zlib compression.")));
+#endif
+			if (result->compresslevel > 9)
+			{
+				if (validate)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							 errmsg("compresslevel=%d is out of range for zlib (should be in the range 1 to 9)",
+									result->compresslevel)));
 
-			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
+				result->compresslevel = setDefaultCompressionLevel(result->compresstype);
+			}
 		}
 
 		if (result->compresstype[0] &&
@@ -1169,13 +1177,21 @@ validateAppendOnlyRelOptions(bool ao,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("compresstype cannot be used with compresslevel 0")));
 
-		if (comptype && (pg_strcasecmp(comptype, "zlib") == 0) &&
-			(complevel < 0 || complevel > 9))
+		if (comptype && (pg_strcasecmp(comptype, "zlib") == 0))
 		{
+#ifndef HAVE_LIBZ
 			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("compresslevel=%d is out of range (should be between 0 and 9)",
-							complevel)));
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("zlib compression is not supported by this build"),
+					 errhint("Compile without --without-zlib to use zlib compression.")));
+#endif
+			if (complevel < 0 || complevel > 9)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("compresslevel=%d is out of range (should be between 0 and 9)",
+								complevel)));
+			}
 		}
 
 		if (comptype && (pg_strcasecmp(comptype, "zstd") == 0))
