@@ -183,21 +183,7 @@ class UDPICFullTestCases(UDPICTestCases):
     def __init__(self, methodName):
         super(UDPICFullTestCases, self).__init__(methodName)
 
-        # these cases not run with 4.2.x 
-        cmdsql = 'SELECT version();'
-        ret = PSQL.run_sql_command(cmdsql)
-        #if ret.find('Greenplum Database 4.2 build') >= 0:
-        #    self.is_version_skip = 1
-
     def test_icudp_full(self):
-        if (self.is_version_skip):
-            self.skipTest('Test does not apply to the deployed GPDB version.')
-        try:
-            out = self.checkGUC(self.gp_udpic_fault_inject_percent)
-            self.assertTrue(len(out) > 4 and int(out[3].strip()) >= 0 )
-        except:
-            self.skipTest("GUC " + self.gp_udpic_fault_inject_percent + " not defined")
-
         start_time = time.strftime('%I:%M:%S',time.localtime(time.time()))
         tinctest.logger.debug('start time:%s ' % start_time)
 
