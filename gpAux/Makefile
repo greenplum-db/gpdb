@@ -515,10 +515,6 @@ endif
 	mkdir -p $(CLIENTSINSTLOC)
 	cp -f client/scripts/greenplum_$@_path$(SCRIPT) $(CLIENTSINSTLOC)/
 
-	# ---- copy license files ----
-	cp ${BLD_TOP}/../LICENSE $(CLIENTSINSTLOC)
-	cp ${BLD_TOP}/../NOTICE $(CLIENTSINSTLOC)
-
 	# ---- updating the version in required packages ----
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTSINSTLOC)
 endif
