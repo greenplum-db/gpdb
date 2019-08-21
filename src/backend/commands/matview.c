@@ -420,7 +420,6 @@ transientrel_init(QueryDesc *queryDesc)
 	Oid			tableSpace;
 	Oid			OIDNewHeap;
 	bool		concurrent;
-	char		relpersistence;
 	LOCKMODE	lockmode;
 	RefreshClause *refreshClause;
 
