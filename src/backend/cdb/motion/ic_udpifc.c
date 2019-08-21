@@ -1339,6 +1339,53 @@ initMutex(pthread_mutex_t *mutex)
 }
 
 /*
+ * Set up the udp interconnect pthread signal mask, we don't want to run our signal handlers
+ */
+static void
+ic_set_pthread_sigmasks(sigset_t *old_sigs)
+{
+#ifndef WIN32
+	sigset_t sigs;
+	int		 err;
+
+	sigemptyset(&sigs);
+
+	/* make our thread ignore these signals (which should allow that
+	 * they be delivered to the main thread) */
+	sigaddset(&sigs, SIGHUP);
+	sigaddset(&sigs, SIGINT);
+	sigaddset(&sigs, SIGTERM);
+	sigaddset(&sigs, SIGALRM);
+	sigaddset(&sigs, SIGUSR1);
+	sigaddset(&sigs, SIGUSR2);
+
+	err = pthread_sigmask(SIG_BLOCK, &sigs, old_sigs);
+	if (err != 0)
+		elog(ERROR, "Failed to get pthread signal masks with return value: %d", err);
+#else
+	(void) old_sigs;
+#endif
+
+	return;
+}
+
+static void
+ic_reset_pthread_sigmasks(sigset_t *sigs)
+{
+#ifndef WIN32
+	int err;
+
+	err = pthread_sigmask(SIG_SETMASK, sigs, NULL);
+	if (err != 0)
+		elog(ERROR, "Failed to reset pthread signal masks with return value: %d", err);
+#else
+	(void) sigs;
+#endif
+
+	return;
+}
+
+/*
  * InitMotionUDPIFC
  * 		Initialize UDP specific comms, and create rx-thread.
  */
@@ -1350,7 +1397,8 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 
 	/* attributes of the thread we're creating */
 	pthread_attr_t t_atts;
-	MemoryContext old;
+	sigset_t	   pthread_sigs;
+	MemoryContext  old;
 
 #ifdef USE_ASSERT_CHECKING
 	set_test_mode();
@@ -1420,7 +1468,9 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	pthread_attr_init(&t_atts);
 
 	pthread_attr_setstacksize(&t_atts, Max(PTHREAD_STACK_MIN, (128 * 1024)));
+	ic_set_pthread_sigmasks(&pthread_sigs);
 	pthread_err = pthread_create(&ic_control_info.threadHandle, &t_atts, rxThreadFunc, NULL);
+	ic_reset_pthread_sigmasks(&pthread_sigs);
 
 	pthread_attr_destroy(&t_atts);
 	if (pthread_err != 0)
@@ -6144,8 +6194,6 @@ rxThreadFunc(void *arg)
 	icpkthdr   *pkt = NULL;
 	bool		skip_poll = false;
 	uint32		expected = 1;
-
-	gp_set_thread_sigmasks();
 
 	for (;;)
 	{
