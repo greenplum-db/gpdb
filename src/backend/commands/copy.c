@@ -4792,7 +4792,7 @@ NextCopyFrom(CopyState cstate, ExprContext *econtext,
 		for (;;)
 		{
 			bool		got_error = false;
-			bool		result;
+			bool		result = false;
 
 			PG_TRY();
 			{
