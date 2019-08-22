@@ -86,21 +86,29 @@ matrix:
 ## ----------------------------------------------------------------------
 
 python:
-  - "2.7"
+    - "2.7"
+
+before_install:
+    - eval "${OVERRIDE_CC}"
+    - eval "${OVERRIDE_CXX}"
 
 ## ----------------------------------------------------------------------
 ## Install supporting Python modules
 ## ----------------------------------------------------------------------
 
 install:
-  - pip install --user --upgrade pip
-  - pip install --user --pre psutil
-  - pip install --user lockfile
-  - pip install --user setuptools
+    - pip install --user --upgrade pip
+    - pip install --user --pre psutil
+    - pip install --user lockfile
+    - pip install --user setuptools
 
 ## ----------------------------------------------------------------------
 ## Perform build:
 ## ----------------------------------------------------------------------
+
+before_script:
+    - ssh-keygen -t "rsa" -f ~/.ssh/id_rsa -N ""
+    - cp ~/.ssh/{id_rsa.pub,authorized_keys}
 
 script:
   - |
@@ -110,6 +118,7 @@ script:
             --prefix=${TRAVIS_BUILD_DIR}/gpsql \
             --enable-cassert \
             --enable-debug \
+            --enable-debug-extensions \
             --with-perl \
             --with-python \
             --disable-orca \
@@ -123,6 +132,9 @@ script:
         make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check
+        make -C gpAux/gpdemo cluster
+        source gpAux/gpdemo/gpdemo-env.sh
+        make -C src/test/regress installcheck-small
       fi
   - |
       set -eo pipefail
@@ -142,6 +154,9 @@ script:
         make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -s unittest-check
+        make -C gpAux/gpdemo cluster
+        source gpAux/gpdemo/gpdemo-env.sh
+        make -C src/test/regress installcheck-small
       fi
   - |
       set -eo pipefail
