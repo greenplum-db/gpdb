@@ -7315,8 +7315,8 @@
       </table>
     </body>
   </topic>
-  <topic id=" optimizer_penalize_skewed_hashjoin">
-    <title>optimizer_penalize_skewed_hashjoin</title>
+  <topic id=" optimizer_penalize_skew">
+    <title>optimizer_penalize_skew</title>
     <body>
       <p dir="ltr">When GPORCA is enabled (the default), this parameter allows GPORCA to penalize
         the local cost of a HashJoin with a skewed Redistribute Motion as child to favor a Broadcast
