@@ -1537,8 +1537,8 @@ Optional Features:
   --disable-strong-random do not use a strong random number source
   --disable-gpfdist       do not use gpfdist
   --disable-pxf           do not build pxf
-  --enable-debug-extensions
-                          include debug extensions in gpcontrib
+  --disable-debug-extensions
+                          exclude debug extensions in gpcontrib
   --enable-orafce         build with Oracle compatibility functions
   --enable-gpperfmon      build with gpperfmon
   --enable-debug          build with debugging symbols (-g)
@@ -3600,7 +3600,7 @@ if test "${enable_debug_extensions+set}" = set; then :
   esac
 
 else
-  enable_debug_extensions=no
+  enable_debug_extensions=yes
 
 fi
 

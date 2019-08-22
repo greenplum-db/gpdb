@@ -221,8 +221,8 @@ AC_SUBST(enable_pxf)
 #
 # include debug extensions in gpcontrib
 #
-PGAC_ARG_BOOL(enable, debug-extensions, no,
-              [include debug extensions in gpcontrib])
+PGAC_ARG_BOOL(enable, debug-extensions, yes,
+              [exclude debug extensions in gpcontrib])
 AC_SUBST(enable_debug_extensions)
 
 #
