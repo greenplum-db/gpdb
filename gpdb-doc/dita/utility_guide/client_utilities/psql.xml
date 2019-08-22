@@ -997,7 +997,7 @@ lo_import 152801</codeblock>
                   <codeph>unaligned</codeph>, <codeph>aligned</codeph>, <codeph>html</codeph>,
                   <codeph>latex</codeph> (uses <codeph>tabular</codeph>),
                   <codeph>latex-longtable</codeph>, <codeph>troff-ms</codeph>, or
-                  <codeph>wrapped</codeph>. Unique abbreviations, including one letter, are allowed.
+                  <codeph>wrapped</codeph>. Unique abbreviations are allowed.
                       <p><b><codeph>unaligned</codeph></b> format writes all columns of a row on one
                   line, separated by the currently active field separator. This is useful for
                   creating output that might be intended to be read in by other programs (for
