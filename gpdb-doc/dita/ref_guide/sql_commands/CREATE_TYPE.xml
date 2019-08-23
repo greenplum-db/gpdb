@@ -43,8 +43,8 @@ schema. Otherwise it is created in the current schema. The type name
 must be distinct from the name of any existing type or domain in the
 same schema. The type name must also be distinct from the name of any
 existing table in the same schema.</p>
-            <p>There are five forms of CREATE TYPE, as shown in the syntax synopsis above. They
-                respectively create a <i>composite type</i>, an <i>enum type</i>, a <i>range
+            <p>There are five forms of <codeph>CREATE TYPE</codeph>, as shown in the syntax synopsis
+                above. They respectively create a <i>composite type</i>, an <i>enum type</i>, a <i>range
                     type</i>, a <i>base type</i>, or a <i>shell type</i>. The first four of these
                 are discussed in turn below. A shell type is simply a placeholder for a type to be
                 defined later; it is created by issuing <codeph>CREATE TYPE</codeph> with no
@@ -60,12 +60,15 @@ existing table in the same schema.</p>
                     for example, as the argument or return type of a function.</p><p>To be able to
                     create a composite type, you must have <codeph>USAGE</codeph> privilege on all
                     attribute types.</p></sectiondiv>
-<sectiondiv id="enum"><b>Enumerated Types</b>
-<p>The second form of <codeph>CREATE TYPE</codeph> creates an enumerated (<codeph>ENUM</codeph>) type, as described in 
-<xref href="https://www.postgresql.org/docs/8.3/datatype-enum.html" format="html" scope="external">Enumerated Types</xref> in the 
-PostgreSQL documentation. Enum types take a list of one or more quoted labels, each of which must be less than 
-<codeph>NAMEDATALEN</codeph> bytes long (64 in a standard build).</p>
-</sectiondiv>
+            <sectiondiv id="enum"><b>Enumerated Types</b>
+                <p>The second form of <codeph>CREATE TYPE</codeph> creates an enumerated
+                        (<codeph>ENUM</codeph>) type, as described in <xref href="https://www.postgresql.org/docs/8.3/datatype-enum.html" format="html" scope="external">Enumerated Types</xref> in the PostgreSQL documentation.
+                        <codeph>ENUM</codeph> types take a list of quoted labels, each of which must
+                    be less than <codeph>NAMEDATALEN</codeph> bytes long (64 in a standard
+                    build).</p><p>It is possible to create an enumerated type with zero labels, but
+                    such a type cannot be used to hold values before at least one label is added
+                    using <xref href="ALTER_TYPE.xml"/>.</p>
+            </sectiondiv>
             <sectiondiv><b>Range Types</b><p>The third form of <codeph>CREATE TYPE</codeph> creates a
                     new range type, as described in <xref href="../datatype-range.xml#rangetypes"
                     />.</p><p>The range type's <varname>subtype</varname> can be any type with an
