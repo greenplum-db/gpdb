@@ -1,11 +1,18 @@
-resgroup_memory_statistic.sql
-resgroup_memory_limit.sql
+# ignores only for this directory
+/ao_upgrade.sql
+/fts_manual_probe.sql
+/gp_collation.sql
+/pg_basebackup.sql
+/pg_basebackup_with_tablespaces.sql
+/pt_io_in_progress_deadlock.sql
+
+# ignores including sub-directories
 disable_resgroup.sql
 enable_resgroup.sql
 enable_resgroup_validate.sql
-resgroup_cpu_rate_limit.sql
 resgroup_alter_memory.sql
-pt_io_in_progress_deadlock.sql
 resgroup_bypass.sql
+resgroup_cpu_rate_limit.sql
 resgroup_cpuset.sql
-gp_collation.sql
+resgroup_memory_limit.sql
+resgroup_memory_statistic.sql
