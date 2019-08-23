@@ -11344,3 +11344,53 @@ SELECT *, a IN ( SELECT b + 1 FROM non_part1) FROM ds_part, non_part2 WHERE ds_p
 (1 row)
 
 RESET optimizer_enforce_subplans;
+-- implied predicate must be generated for the type cast(ident) scalar array cmp const array
+CREATE TABLE varchar_sc_array_cmp(a varchar);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO varchar_sc_array_cmp VALUES ('a'), ('b'), ('c'), ('d');
+EXPLAIN SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and t1.a in ('b', 'c');
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=3.07..6.17 rows=4 width=4)
+   ->  Hash Join  (cost=3.07..6.17 rows=2 width=4)
+         Hash Cond: ((t1.a)::text = (t2.a)::text)
+         ->  Seq Scan on varchar_sc_array_cmp t1  (cost=0.00..3.05 rows=1 width=2)
+               Filter: ((a)::text = ANY ('{b,c}'::text[]))
+         ->  Hash  (cost=3.05..3.05 rows=1 width=2)
+               ->  Seq Scan on varchar_sc_array_cmp t2  (cost=0.00..3.05 rows=1 width=2)
+                     Filter: ((a)::text = ANY ('{b,c}'::text[]))
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and t1.a in ('b', 'c');
+ a | a 
+---+---
+ c | c
+ b | b
+(2 rows)
+
+SET optimizer_array_constraints=on;
+EXPLAIN SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and (t1.a in ('b', 'c') OR t1.a = 'a');
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3.09..6.18 rows=4 width=4)
+   ->  Hash Join  (cost=3.09..6.18 rows=2 width=4)
+         Hash Cond: ((t2.a)::text = (t1.a)::text)
+         ->  Seq Scan on varchar_sc_array_cmp t2  (cost=0.00..3.04 rows=2 width=2)
+         ->  Hash  (cost=3.06..3.06 rows=1 width=2)
+               ->  Seq Scan on varchar_sc_array_cmp t1  (cost=0.00..3.06 rows=1 width=2)
+                     Filter: (((a)::text = ANY ('{b,c}'::text[])) OR ((a)::text = 'a'::text))
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and (t1.a in ('b', 'c') OR t1.a = 'a');
+ a | a 
+---+---
+ b | b
+ a | a
+ c | c
+(3 rows)
+
+DROP TABLE varchar_sc_array_cmp;
+--
