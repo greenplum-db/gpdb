@@ -93,16 +93,15 @@
         return value. If there is no final function then the ending state value is returned
         as-is.</p>
       <note>If you write a user-defined aggregate in C, and you declare the state value
-          (<varname>stype</varname>) as type <codeph>internal</codeph>, there is risk of an
-        out-of-memory error occurring if the amount of memory used for state values is too large.
-        Greenplum takes special care with <codeph>internal</codeph> state values to account for
-        memory usage, but if an <codeph>internal</codeph> state value is not accounted, and the
-        query acquires too much memory for state values, an out-of-memory error could occur. To
-        prevent this, be sure to use <codeph>mpool_alloc(<varname>mpool</varname>,
-            <varname>size</varname>)</codeph> to allocate memory for non-temporary state values,
-        that is, state values that have a lifespan for the entire aggregation. The argument
-            <codeph><varname>mpool</varname></codeph> of the <codeph>mpool_alloc()</codeph> function
-        is <codeph>aggstate->hhashtable->group_buf</codeph>. For an example, see the implementation
+          (<varname>stype</varname>) as type <codeph>internal</codeph>, there is a risk of an
+        out-of-memory error occurring. If <codeph>internal</codeph> state values are not properly
+        managed and a query acquires too much memory for state values, an out-of-memory error could
+        occur. To prevent this, use <codeph>mpool_alloc(<varname>mpool</varname>,
+            <varname>size</varname>)</codeph> to have Greenplum manage and allocate memory for
+        non-temporary state values, that is, state values that have a lifespan for the entire
+        aggregation. The argument <codeph><varname>mpool</varname></codeph> of the
+          <codeph>mpool_alloc()</codeph> function is
+          <codeph>aggstate->hhashtable->group_buf</codeph>. For an example, see the implementation
         of the numeric data type aggregates in <codeph>src/backend/utils/adt/numeric.c</codeph> in
         the Greenplum Database open source code.</note>
       <p>You can specify <codeph><varname>combinefunc</varname></codeph> as a method for optimizing
