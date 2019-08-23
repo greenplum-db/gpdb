@@ -30,7 +30,6 @@
 		"bytea_output",
 		"check_function_bodies",
 		"checkpoint_completion_target",
-		"checkpoint_segments",
 		"checkpoint_timeout",
 		"checkpoint_warning",
 		"client_encoding",

@@ -52,7 +52,6 @@ EXIT_STATUS=0
 PORT_TXT="#port"
 LOG_STATEMENT_TXT="#log_statement ="
 LISTEN_ADR_TXT="listen_addresses"
-CHKPOINT_SEG_TXT="checkpoint_segments"
 CONTENT_ID_TXT="gp_contentid"
 DBID_TXT="gp_dbid"
 TMP_PG_HBA=/tmp/pg_hba_conf_master.$$

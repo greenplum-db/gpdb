@@ -236,7 +236,7 @@ bigcheck: all tablespace-setup
 ## Clean up
 ##
 
-clean distclean maintainer-clean: clean-lib
+clean maintainer-clean: clean-lib
 # things built by `all' target
 	rm -f $(OBJS) refint$(DLSUFFIX) autoinc$(DLSUFFIX)
 	rm -f pg_regress_main.o pg_regress.o pg_regress$(X)
@@ -248,3 +248,6 @@ clean distclean maintainer-clean: clean-lib
 	rm -f $(output_files) $(input_files)
 	rm -rf ./testtablespace ./testtablespace_*
 	rm -rf $(pg_regress_clean_files)
+
+distclean: clean
+	rm -f GPTest.pm
