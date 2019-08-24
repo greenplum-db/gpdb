@@ -1386,12 +1386,9 @@ ntuplestore_create_spill_files(NTupleStore *nts)
 
 	oldcxt = MemoryContextSwitchTo(nts->mcxt);
 
-	nts->pfile = BufFileCreateNamedTemp("data",
-										false /* interXact */,
-										nts->work_set);
-	nts->plobfile = BufFileCreateNamedTemp("lob",
-										   false /* interXact */,
-										   nts->work_set);
+	nts->pfile = BufFileCreateTempInSet(nts->work_set, false /* interXact */);
+
+	nts->plobfile = BufFileCreateTempInSet(nts->work_set, false /* interXact */);
 
 	MemoryContextSwitchTo(oldcxt);
 
