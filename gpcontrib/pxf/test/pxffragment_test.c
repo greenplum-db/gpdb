@@ -359,8 +359,6 @@ test_call_rest(void **state)
 
 	expect_value(print_http_headers, headers, client_context->http_headers);
 	will_be_called(print_http_headers);
-	(client_context->http_headers);
-
 
 	StringInfoData expected_url;
 
