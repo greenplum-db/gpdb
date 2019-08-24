@@ -34,7 +34,8 @@
  *
  *     # wait for them to finish and check for the error
  *     wait
- *     grep 'could not create directory' $testdir/*.log
+ *     cd $testdir
+ *     grep 'could not create directory' *.log
  *
  * The fail rate is not 100% but should be large enough to happen in 5 tries.
  *
