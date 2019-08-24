@@ -179,7 +179,7 @@ test_gpbridge_read_one_fragment_less_than_buffer(void **state)
 	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
 
 	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-	context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
+	context->gphd_uri->fragments = list_make1((FragmentData *) palloc0(sizeof(FragmentData)));
 	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
 
 	context->churl_handle = handle;
@@ -218,7 +218,7 @@ test_gpbridge_read_one_fragment_buffer(void **state)
 	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
 
 	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-	context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
+	context->gphd_uri->fragments = list_make1((FragmentData *) palloc0(sizeof(FragmentData)));
 	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
 
 	context->churl_handle = handle;
@@ -424,7 +424,7 @@ test_gpbridge_read_last_fragment_finished(void **state)
 	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
 
 	context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-	context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
+	context->gphd_uri->fragments =  list_make1((FragmentData *) palloc0(sizeof(FragmentData)));
 	CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
 
 	context->churl_handle = handle;
