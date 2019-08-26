@@ -47,6 +47,7 @@ static void dumpRoles(PGconn *conn);
 static void dumpRoleMembership(PGconn *conn);
 static void dropTablespaces(PGconn *conn);
 static void dumpTablespaces(PGconn *conn);
+static int dumpTablespaceToMap(int spc_row_num, PGresult *res, FILE *tablespace_map_fp);
 static void dropDBs(PGconn *conn);
 static void dumpCreateDB(PGconn *conn);
 static void dumpDatabaseConfig(PGconn *conn, const char *dbname);
@@ -1480,7 +1481,7 @@ dumpTablespaces(PGconn *conn)
 	PGresult   *res = NULL;
 	int			i;
 	bool        filespace_to_tablespace = false;
-	FILE		*tablespace_map_fp = fopen(TABLESPACE_MAP, "w");
+	FILE		*tablespace_map_fp = NULL;
 	/*
 	 * Get all tablespaces execpt built-in ones (named pg_xxx)
 	 *
@@ -1489,32 +1490,47 @@ dumpTablespaces(PGconn *conn)
 	 * --gp-syntax or --no-gp-syntax.
 	 */
 	if (server_version <= 80323)
-	{							
+	{
 		filespace_to_tablespace = true;
+		/*
+		 * Filespaces imply that there will be multiple rows in the result set
+		 * that will represent a single tablespace. This is due to the fact that
+		 * a filespace spans over multiple "locations". Each row for a single
+		 * tablespace records segment specific information, which would include
+		 * the segment specific location. Although filespaces can have different
+		 * values for location for the primary and mirror of a primary-mirror
+		 * pair, GP6+ onwards, we restrict primary-mirror pairs to have the same
+		 * value for location. This is why we filter the result set with role =
+		 * primary. We also sort the result set such that each tablespace is
+		 * represented by contiguous rows.
+		 */
 		res = executeQuery(conn,
 				"SELECT tsi.*, "
 				       "sc.content "
 				"FROM   gp_segment_configuration AS sc "
 				       "join (SELECT ts.oid                                  AS oid, "
 				                    "ts.spcname                              AS spcname, "
-				                    "pg_catalog.Pg_get_userbyid(ts.spcowner) AS spcowner, "
-				                    "fs.fselocation "
-				                    "|| '/gp6/' "
+				                    "pg_catalog.pg_get_userbyid(ts.spcowner) AS spcowner, "
+				                    "fse.fselocation "
+				                    "|| '/GP6/' "
 				                    "|| ts.oid :: text                       AS location, "
 				                    "ts.spcacl                               AS spcacl, "
 				                    "NULL                                    AS spcoptions, "
-				                    "pg_catalog.Shobj_description(ts.oid, 'pg_tablespace'), "
-				                    "fs.fsedbid                              AS dbid "
+				                    "pg_catalog.shobj_description(ts.oid, 'pg_tablespace'), "
+				                    "fse.fsedbid                              AS dbid "
 				             "FROM   pg_tablespace AS ts "
-				                    "join pg_filespace_entry AS fs "
-				                      "ON ts.spcfsoid = fs.fsefsoid "
+				                    "join pg_filespace_entry AS fse "
+				                      "ON ts.spcfsoid = fse.fsefsoid "
 				             "WHERE  ts.spcname !~ '^pg_') AS tsi "
 				         "ON tsi.dbid = sc.dbid "
 				            "AND sc.ROLE = 'p' "
 				"ORDER  BY oid, content ASC;");
+
+		tablespace_map_fp = fopen(TABLESPACE_MAP, "w");
 	}
 	else if (server_version >= 90200)
 		res = executeQuery(conn, "SELECT oid, spcname, "
+
 						 "pg_catalog.pg_get_userbyid(spcowner) AS spcowner, "
 						   "pg_catalog.pg_tablespace_location(oid), spcacl, "
 						   "array_to_string(spcoptions, ', '),"
@@ -1557,10 +1573,10 @@ dumpTablespaces(PGconn *conn)
 		char	   *spcacl = PQgetvalue(res, i, 4);
 		char	   *spcoptions = PQgetvalue(res, i, 5);
 		char	   *spccomment = PQgetvalue(res, i, 6);
-		char	   *fspcname;
+		char	   *formatted_spcname;
 
 		/* needed for buildACLCommands() */
-		fspcname = pg_strdup(fmtId(spcname));
+		formatted_spcname = pg_strdup(fmtId(spcname));
 
 		appendPQExpBuffer(buf, "CREATE TABLESPACE %s", spcname);
 		appendPQExpBuffer(buf, " OWNER %s", fmtId(spcowner));
@@ -1570,8 +1586,6 @@ dumpTablespaces(PGconn *conn)
 
 		if (filespace_to_tablespace)
 		{
-			int j = i;
-
 			if (atoi(PQgetvalue(res, i, 8)) != MASTER_CONTENT_ID)
 			{
 				fprintf(stderr, _("%s: master location is unavailable for tablespace \"%s\"\n"),
@@ -1579,25 +1593,17 @@ dumpTablespaces(PGconn *conn)
 				PQfinish(conn);
 				exit_nicely(1);
 			}
-			for (; j < PQntuples(res) && atooid(PQgetvalue(res, j, 0)) == spcoid; j++)
-			{
-				char *segment_num			= PQgetvalue(res, j, 8);
-				char *segment_spc_location	= PQgetvalue(res, j, 3);
 
-				fprintf(tablespace_map_fp, "%s %u %s\n", segment_num, spcoid, segment_spc_location);
-			}
-			if (j > i)
-				i = j - 1;
+			i = dumpTablespaceToMap(i, res, tablespace_map_fp);
 		}
-
 		appendPQExpBufferStr(buf, ";\n");
 
 		if (spcoptions && spcoptions[0] != '\0')
 			appendPQExpBuffer(buf, "ALTER TABLESPACE %s SET (%s);\n",
-							  fspcname, spcoptions);
+							  formatted_spcname, spcoptions);
 
 		if (!skip_acls &&
-			!buildACLCommands(fspcname, NULL, NULL, "TABLESPACE",
+			!buildACLCommands(formatted_spcname, NULL, NULL, "TABLESPACE",
 							  spcacl, spcowner,
 							  "", server_version, buf))
 		{
@@ -1610,7 +1616,7 @@ dumpTablespaces(PGconn *conn)
 		/* Set comments */
 		if (spccomment && strlen(spccomment))
 		{
-			appendPQExpBuffer(buf, "COMMENT ON TABLESPACE %s IS ", fspcname);
+			appendPQExpBuffer(buf, "COMMENT ON TABLESPACE %s IS ", formatted_spcname);
 			appendStringLiteralConn(buf, spccomment, conn);
 			appendPQExpBufferStr(buf, ";\n");
 		}
@@ -1622,13 +1628,46 @@ dumpTablespaces(PGconn *conn)
 
 		fprintf(OPF, "%s", buf->data);
 
-		free(fspcname);
+		free(formatted_spcname);
 		destroyPQExpBuffer(buf);
 	}
 
-	fclose(tablespace_map_fp);
+	if(tablespace_map_fp)
+		fclose(tablespace_map_fp);
 	PQclear(res);
 	fprintf(OPF, "\n\n");
+}
+
+/*
+ * Dump tablespace to the tablespace map file.
+ *
+ * spc_row_num: Index into the result set that represents the current unique
+ * tablespace.
+ *
+ * res: Multiple contiguous rows of the supplied result set should represent
+ * each tablespace.
+ *
+ * tablespace_map_fp: The tablespace map file should be passed in open and is
+ * not closed inside this function.
+ *
+ * Returns: The index of the last row representing this tablespace.
+ */
+
+static int
+dumpTablespaceToMap(int spc_row_num, PGresult *res, FILE *tablespace_map_fp)
+{
+	Oid			spcoid = atooid(PQgetvalue(res, spc_row_num, 0));
+	int			next_spc_row_num = spc_row_num;
+
+	for (; next_spc_row_num < PQntuples(res) && atooid(PQgetvalue(res, next_spc_row_num, 0)) == spcoid; next_spc_row_num++)
+	{
+		char *segment_num			= PQgetvalue(res, next_spc_row_num, 8);
+		char *segment_spc_location	= PQgetvalue(res, next_spc_row_num, 3);
+
+		fprintf(tablespace_map_fp, "%s %u %s\n", segment_num, spcoid, segment_spc_location);
+	}
+
+	return next_spc_row_num - 1;
 }
 
 
