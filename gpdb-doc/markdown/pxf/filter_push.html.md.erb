@@ -44,9 +44,9 @@ PXF filter pushdown can be used with these data types (connector-specific):
 - `INT2`, `INT4`, `INT8`
 - `CHAR`, `TEXT`
 - `FLOAT`
-- `NUMERIC` (not the S3 connector using S3 Select)
+- `NUMERIC` (not available with the S3 connector when using S3 Select)
 - `BOOL`
-- `DATE`, `TIMESTAMP` (JDBC connector and S3 connector using S3 Select only)
+- `DATE`, `TIMESTAMP` (available only with the JDBC connector and the S3 connector when using S3 Select)
 
 You can use PXF filter pushdown with these operators:
 
