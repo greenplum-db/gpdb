@@ -616,7 +616,7 @@ gp_interconnect_type=udpifc
 
 # - Worker Process Creation -
 
-gp_segment_connect_timeout = 600s
+#gp_segment_connect_timeout = 600s
 
 # - Resource limits -
 gp_vmem_protect_limit = 8192  #Virtual memory limit (in MB).
