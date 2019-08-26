@@ -1133,6 +1133,12 @@ If you want to review or change any of your installation settings, click Back. C
                 <File Id="gpload.py" Name="gpload.py" Source="$(var.SRCDIR)\bin\gpload.py" />
                 <File Id="gpload.bat" Name="gpload.bat" Source="$(var.SRCDIR)\bin\gpload.bat" />
               </Component>
+              <Directory Id="GPPYlib" Name="gppylib">
+                <Component Id="GPPYlib" DiskId="1" Guid="C246C9E7-7251-44CE-A638-7F5C984F158D">
+                  <File Id="__init__.py.gppylib" Name="__init__.py" Source="$(var.SRCDIR)\bin\gppylib\__init__.py" />
+                  <File Id="gpversion.py" Name="gpversion.py" Source="$(var.SRCDIR)\bin\gppylib\gpversion.py" />
+                </Component>
+              </Directory>
             </Directory>
             <Directory Id="TOPLEVELlib" Name="lib">
               <Directory Id="PYTHONlib" Name="python">
@@ -1176,6 +1182,7 @@ If you want to review or change any of your installation settings, click Back. C
       <ComponentRef Id="TOPLEVELTextFiles" />
       <Feature Id="psql" Level="1" Title="Greenplum DB client command line tools" Description="Greenplum DB client command line tools" AllowAdvertise="no" Display="expand">
         <ComponentRef Id="TOPLEVELbin" />
+        <ComponentRef Id="GPPYlib" />
         <ComponentRef Id="PYGRESQLlib" />
         <ComponentRef Id="YAMLlib" />
       </Feature>
