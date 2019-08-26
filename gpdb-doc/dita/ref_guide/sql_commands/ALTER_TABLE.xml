@@ -66,6 +66,10 @@ where <varname>action</varname> is one of:
   NOT OF
   OWNER TO <varname>new_owner</varname>
   SET TABLESPACE <varname>new_tablespace</varname></codeblock>
+                        <p>where <varname>table_constraint_using_index</varname> is:</p>
+                        <pre>  [ CONSTRAINT <varname>constraint_name</varname> ]
+  { UNIQUE | PRIMARY KEY } USING INDEX <varname>index_name</varname>
+  [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]</pre>
                         <p>where <varname>partition_action</varname> is one of:</p>
                         <codeblock>  ALTER DEFAULT PARTITION
   DROP DEFAULT PARTITION [IF EXISTS]
@@ -253,25 +257,27 @@ where <varname>action</varname> is one of:
                                         a b-tree index with default sort ordering. These
                                         restrictions ensure that the index is equivalent to one that
                                         would be built by a regular <codeph>ADD PRIMARY KEY</codeph>
-                                        or <codeph>ADD UNIQUE</codeph> command. <p>If
-                                                  <codeph>PRIMARY KEY</codeph> is specified, and the
-                                                index's columns are not already marked <codeph>NOT
-                                                  NULL</codeph>, then this command will attempt to
-                                                do <codeph>ALTER COLUMN SET NOT NULL</codeph>
-                                                against each such column. That requires a full table
-                                                scan to verify the column(s) contain no nulls. In
-                                                all other cases, this is a fast operation. </p><p>If
-                                                a constraint name is provided then the index will be
-                                                renamed to match the constraint name. Otherwise the
-                                                constraint will be named the same as the
-                                                index.</p><p>After this command is executed, the
-                                                index is "owned" by the constraint, in the same way
-                                                as if the index had been built by a regular
-                                                  <codeph>ADD PRIMARY KEY</codeph> or <codeph>ADD
-                                                  UNIQUE</codeph> command. In particular, dropping
-                                                the constraint will make the index disappear
-                                                too.</p>
-                                </li>
+                                        or <codeph>ADD UNIQUE</codeph> command. <p>Adding a
+                                                  <codeph>PRIMARY KEY</codeph> or
+                                                  <codeph>UNIQUE</codeph> constraint to a table
+                                                based on an existing unique index is not supported
+                                                on a partitioned table.</p><p>If <codeph>PRIMARY
+                                                  KEY</codeph> is specified, and the index's columns
+                                                are not already marked <codeph>NOT NULL</codeph>,
+                                                then this command will attempt to do <codeph>ALTER
+                                                  COLUMN SET NOT NULL</codeph> against each such
+                                                column. That requires a full table scan to verify
+                                                the column(s) contain no nulls. In all other cases,
+                                                this is a fast operation. </p><p>If a constraint
+                                                name is provided then the index will be renamed to
+                                                match the constraint name. Otherwise the constraint
+                                                will be named the same as the index.</p><p>After
+                                                this command is executed, the index is "owned" by
+                                                the constraint, in the same way as if the index had
+                                                been built by a regular <codeph>ADD PRIMARY
+                                                  KEY</codeph> or <codeph>ADD UNIQUE</codeph>
+                                                command. In particular, dropping the constraint will
+                                                make the index disappear too.</p></li>
                                 <li id="ay137038"><b>DROP CONSTRAINT [IF EXISTS]</b> — Drops the
                                         specified constraint on a table. If <codeph>IF
                                                 EXISTS</codeph> is specified and the constraint does
