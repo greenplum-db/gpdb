@@ -114,6 +114,13 @@ CREATE SERVER pxf_fdw_test_server
     FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw;
 
 --
+-- Server creation succeeds if config option is provided
+--
+CREATE SERVER pxf_fdw_test_server_with_config
+    FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( config '/foo/bar' );
+
+--
 -- Server alteration fails if protocol option is added
 --
 ALTER SERVER pxf_fdw_test_server
@@ -202,4 +209,22 @@ ALTER SERVER pxf_fdw_test_server
 --
 ALTER SERVER pxf_fdw_test_server
     OPTIONS ( ADD log_errors 'true' );
+
+--
+-- Server alteration succeeds if config option is added
+--
+ALTER SERVER pxf_fdw_test_server
+    OPTIONS ( ADD config '/foo/bar' );
+
+--
+-- Server alteration succeeds if config option is modified
+--
+ALTER SERVER pxf_fdw_test_server
+    OPTIONS ( SET config '/foo/bar' );
+
+--
+-- Server alteration succeeds if config option is dropped
+--
+ALTER SERVER pxf_fdw_test_server
+    OPTIONS ( DROP config );
 

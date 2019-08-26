@@ -115,6 +115,13 @@ CREATE USER MAPPING FOR pxf_fdw_user
     OPTIONS ( mpp_execute 'any' );
 
 --
+-- User mapping creation fails if config option is provided
+--
+CREATE USER MAPPING FOR pxf_fdw_user
+    SERVER pxf_fdw_test_server
+    OPTIONS ( config '/foo/bar' );
+
+--
 -- User mapping creation succeeds if protocol option is not provided
 --
 CREATE USER MAPPING FOR pxf_fdw_user
@@ -231,4 +238,11 @@ ALTER USER MAPPING FOR pxf_fdw_user
 ALTER USER MAPPING FOR pxf_fdw_user
     SERVER pxf_fdw_test_server
     OPTIONS ( ADD mpp_execute 'any' );
+
+--
+-- User mapping alteration fails if config option is added
+--
+ALTER USER MAPPING FOR pxf_fdw_user
+    SERVER pxf_fdw_test_server
+    OPTIONS ( ADD config '/foo/bar' );
 

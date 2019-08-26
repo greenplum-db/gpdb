@@ -23,6 +23,13 @@ CREATE FOREIGN TABLE pxf_fdw_test_table (id int, name text)
     OPTIONS ( resource '' );
 
 --
+-- Table creation fails if config option is provided
+--
+CREATE FOREIGN TABLE pxf_fdw_test_table ()
+    SERVER pxf_fdw_test_server
+    OPTIONS ( config '/foo/bar' );
+
+--
 -- Table creation succeeds if delimiter is provided with a single one-byte char
 --
 CREATE FOREIGN TABLE pxf_fdw_test_table_with_delim (id int, name text)
@@ -330,3 +337,9 @@ ALTER FOREIGN TABLE pxf_fdw_test_table
 --
 ALTER FOREIGN TABLE pxf_fdw_test_table_log_errors
     OPTIONS ( SET log_errors 'no' );
+
+--
+-- Table alteration fails if config option is provided
+--
+ALTER FOREIGN TABLE pxf_fdw_test_table
+    OPTIONS ( ADD config '/foo/bar' );

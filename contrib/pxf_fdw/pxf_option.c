@@ -25,16 +25,17 @@
 #define FDW_OPTION_REJECT_LIMIT_ROWS "rows"
 #define FDW_OPTION_REJECT_LIMIT_PERCENT "percent"
 
-#define FDW_OPTION_PROTOCOL "protocol"
-#define FDW_OPTION_RESOURCE "resource"
+#define FDW_OPTION_CONFIG "config"
 #define FDW_OPTION_FORMAT "format"
 #define FDW_OPTION_LOG_ERRORS "log_errors"
-#define FDW_OPTION_REJECT_LIMIT_TYPE "reject_limit_type"
-#define FDW_OPTION_REJECT_LIMIT "reject_limit"
-#define FDW_OPTION_PXF_PORT "pxf_port"
-#define FDW_OPTION_PXF_HOST "pxf_host"
-#define FDW_OPTION_PXF_PROTOCOL "pxf_protocol"
 #define FDW_OPTION_MPP_EXECUTE "mpp_execute"
+#define FDW_OPTION_PROTOCOL "protocol"
+#define FDW_OPTION_PXF_HOST "pxf_host"
+#define FDW_OPTION_PXF_PORT "pxf_port"
+#define FDW_OPTION_PXF_PROTOCOL "pxf_protocol"
+#define FDW_OPTION_REJECT_LIMIT "reject_limit"
+#define FDW_OPTION_REJECT_LIMIT_TYPE "reject_limit_type"
+#define FDW_OPTION_RESOURCE "resource"
 
 #define FDW_COPY_OPTION_HEADER "header"
 #define FDW_COPY_OPTION_DELIMITER "delimiter"
@@ -60,6 +61,7 @@ static const struct PxfFdwOption valid_options[] = {
 	{FDW_OPTION_PROTOCOL, ForeignDataWrapperRelationId},
 	{FDW_OPTION_RESOURCE, ForeignTableRelationId},
 	{FDW_OPTION_FORMAT, ForeignTableRelationId},
+	{FDW_OPTION_CONFIG, ForeignServerRelationId},
 
 	/* Error handling */
 	{FDW_OPTION_REJECT_LIMIT, ForeignTableRelationId},

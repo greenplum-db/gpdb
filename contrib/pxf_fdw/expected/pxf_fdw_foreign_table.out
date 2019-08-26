@@ -22,6 +22,13 @@ CREATE FOREIGN TABLE pxf_fdw_test_table (id int, name text)
     OPTIONS ( resource '' );
 ERROR:  the resource option must be defined at the foreign table level
 --
+-- Table creation fails if config option is provided
+--
+CREATE FOREIGN TABLE pxf_fdw_test_table ()
+    SERVER pxf_fdw_test_server
+    OPTIONS ( config '/foo/bar' );
+ERROR:  the config option can only be defined at the pg_foreign_server level
+--
 -- Table creation succeeds if delimiter is provided with a single one-byte char
 --
 CREATE FOREIGN TABLE pxf_fdw_test_table_with_delim (id int, name text)
@@ -302,3 +309,9 @@ ERROR:  the log_errors option cannot be set without reject_limit
 ALTER FOREIGN TABLE pxf_fdw_test_table_log_errors
     OPTIONS ( SET log_errors 'no' );
 ERROR:  log_errors requires a Boolean value
+--
+-- Table alteration fails if config option is provided
+--
+ALTER FOREIGN TABLE pxf_fdw_test_table
+    OPTIONS ( ADD config '/foo/bar' );
+ERROR:  the config option can only be defined at the pg_foreign_server level

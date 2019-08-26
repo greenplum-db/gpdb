@@ -139,6 +139,14 @@ CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( protocol 'pxf_fdw_test', log_errors 'true' );
 
 --
+-- Foreign-data wrapper creation fails if config option is provided
+--
+CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    HANDLER pxf_fdw_handler
+    VALIDATOR pxf_fdw_validator
+    OPTIONS ( protocol 'pxf_fdw_test', config '/foo/bar' );
+
+--
 -- Foreign-data wrapper succeeds when protocol is provided
 --
 CREATE FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
@@ -242,3 +250,8 @@ ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
 ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
     OPTIONS ( ADD log_errors 'true' );
 
+--
+-- Foreign-data wrapper alteration fails if config option is added
+--
+ALTER FOREIGN DATA WRAPPER pxf_fdw_test_pxf_fdw
+    OPTIONS ( ADD config '/foo/bar' );
