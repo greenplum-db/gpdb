@@ -101,6 +101,17 @@ PARA_EXIT () {
 	fi
 }
 
+ADD_PG_HBA_ENTRIES() {
+    local ADDR
+    local CIDR_ADDR
+
+    for ADDR in "$@"; do
+        # MPP-15889
+        CIDR_ADDR=$(GET_CIDRADDR $ADDR)
+        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $CIDR_ADDR      trust >> ${GP_DIR}/$PG_HBA"
+    done
+}
+
 PROCESS_QE () {
 
     LOG_MSG "[INFO][$INST_COUNT]:-Start Function $FUNCNAME"
@@ -196,46 +207,44 @@ PROCESS_QE () {
             PARA_EXIT $? "Update $PG_HBA for master standby address ${CIDR_STANDBY_IP}"
             done
         fi
-        fi
 
         # Add all local IPV4 addresses
         SEGMENT_IPV4_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v \"127.0.0\" | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
-        for ADDR in "${SEGMENT_IPV4_LOCAL_ADDRESS_ALL[@]}"
-        do
-        # MPP-15889
-        CIDR_ADDR=$(GET_CIDRADDR $ADDR)
-            $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $CIDR_ADDR      trust >> ${GP_DIR}/$PG_HBA"
-        done
+        ADD_PG_HBA_ENTRIES "${SEGMENT_IPV4_LOCAL_ADDRESS_ALL[@]}"
+
+        if [ ${MIRROR_HOST:+x} = x ]; then
+        # Add all mirror segments local IPV4 addresses
+        MIRROR_SEGMENT_IPV4_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $MIRROR_HOST "$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v \"127.0.0\" | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
+        ADD_PG_HBA_ENTRIES "${MIRROR_SEGMENT_IPV4_LOCAL_ADDRESS_ALL[@]}"
+        fi
 
         # Add all local IPV6 addresses
         SEGMENT_IPV6_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
-        for ADDR in "${SEGMENT_IPV6_LOCAL_ADDRESS_ALL[@]}"
-        do
-        # MPP-15889
-        CIDR_ADDR=$(GET_CIDRADDR $ADDR)
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $CIDR_ADDR      trust >> ${GP_DIR}/$PG_HBA"
-        done
-    else
-        # clean up localhost CIDR in pg_hba.conf if exists
-        if [ -f ${GP_DIR}/$PG_HBA ]; then
-            $GREP "^#" ${GP_DIR}/$PG_HBA > $TMP_PG_HBA
-            $MV $TMP_PG_HBA ${GP_DIR}/$PG_HBA
+        ADD_PG_HBA_ENTRIES "${SEGMENT_IPV6_LOCAL_ADDRESS_ALL[@]}"
+
+        if [ ${MIRROR_HOST:+x} = x ]; then
+         # Add all mirror segments local IPV6 addresses
+        MIRROR_SEGMENT_IPV6_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $MIRROR_HOST "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
+        ADD_PG_HBA_ENTRIES "${MIRROR_SEGMENT_IPV6_LOCAL_ADDRESS_ALL[@]}"
         fi
 
-        # add localhost
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          all         localhost      trust >> ${GP_DIR}/$PG_HBA"
-
+        fi
+    else
         if [ x"" = x"$COPY_FROM_PRIMARY_HOSTADDRESS" ]; then
+            # add localhost
+            $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          all         localhost      trust >> ${GP_DIR}/$PG_HBA"
             $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${MASTER_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
+            if [ ${MIRROR_HOST:+x}  = x ]; then
+              $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $MIRROR_HOST      trust >> ${GP_DIR}/$PG_HBA"
+            fi
             PARA_EXIT $? "Update $PG_HBA for master IP address ${MASTER_HOSTNAME}"
             if [ x"" != x"$STANDBY_HOSTNAME" ];then
                 LOG_MSG "[INFO][$INST_COUNT]:-Processing Standby master IP address for segment instances"
                 $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host	all	all	${STANDBY_HOSTNAME}	trust >> ${GP_DIR}/$PG_HBA"
                 PARA_EXIT $? "Update $PG_HBA for master standby address ${STANDBY_HOSTNAME}"
             fi
+            $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $GP_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
         fi
-
-        $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $GP_HOSTADDRESS      trust >> ${GP_DIR}/$PG_HBA"
     fi
 
     LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"
@@ -296,7 +305,10 @@ case $TYPE in
                 $ECHO "[FATAL]:-mismatch between content id and primary content id" 
 		        exit 2
             fi
+        else
+          MIRROR_HOST=$1
         fi
+        shift
 		INST_COUNT=$1;shift		#Unique number for this parallel script, starts at 0
 		BACKOUT_FILE=/tmp/gpsegcreate.sh_backout.$$
 		LOG_FILE=$1;shift		#Central logging file

@@ -1288,6 +1288,10 @@ def impl(context, filename):
                     raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
                 hostname = tokens[3]
                 if hostname.__contains__("/"):
+                    # Exempt localhost. They are part of the stock config and harmless
+                    net = hostname.split("/")[0]
+                    if net == "127.0.0.1" or net == "::1":
+                        continue
                     raise Exception("'%s' is not valid FQDN" % hostname)
 
 
