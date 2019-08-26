@@ -312,8 +312,13 @@ SELECT gp_inject_fault('fts_probe', 'reset', dbid) FROM gp_segment_configuration
 -- should be 0), we set the 16th bit of the Offsert to be 1, so we
 -- do not forget to remove the flag when we use it, otherwise we will
 -- get an wrong value.
-CREATE TABLE bm_test_reindex(c1 int ) WITH (appendonly=true);
-CREATE INDEX bm_test_reindex_idx ON bm_test_reindex USING bitmap(c1);
-INSERT INTO bm_test_reindex SELECT 1 FROM generate_series(1, 32769)i;
+CREATE TABLE bm_test_reindex(c1 int, c2 int) WITH (appendonly=true);
+CREATE INDEX bm_test_reindex_idx ON bm_test_reindex USING bitmap(c2);
+INSERT INTO bm_test_reindex SELECT 1,i FROM generate_series(1, 65537)i;
 REINDEX INDEX bm_test_reindex_idx;
-DROP TABLE bm_test_reindex;
+SET enable_bitmapscan to on;
+SET enable_seqscan to off;
+SELECT * from bm_test_reindex where c2 = 32767;
+SELECT * from bm_test_reindex where c2 = 32768;
+SELECT * from bm_test_reindex where c2 = 32769;
+SELECT * from bm_test_reindex where c2 = 65536;

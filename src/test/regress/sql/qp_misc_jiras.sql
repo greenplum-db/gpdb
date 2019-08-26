@@ -2330,16 +2330,16 @@ select  * from qp_misc_jiras.test_heap where ctid='(0,1)' and gp_segment_id >= 0
 --
 create table qp_misc_jiras.test_ao (i int, j int) with (appendonly=true);
 insert into qp_misc_jiras.test_ao values (0, 0);
-explain select  * from qp_misc_jiras.test_ao where ctid='(33554432,1)' and gp_segment_id >= 0;
-select  * from qp_misc_jiras.test_ao where ctid='(33554432,1)' and gp_segment_id >= 0;
+explain select  * from qp_misc_jiras.test_ao where ctid='(33554432,2)' and gp_segment_id >= 0;
+select  * from qp_misc_jiras.test_ao where ctid='(33554432,2)' and gp_segment_id >= 0;
 
 --
 -- CO table. TidScan should not be used.
 --
 create table qp_misc_jiras.test_co (i int, j int) with (appendonly=true, orientation=column);
 insert into qp_misc_jiras.test_co values (0, 0);
-explain select  * from qp_misc_jiras.test_co where ctid='(33554432,1)' and gp_segment_id >= 0;
-select  * from qp_misc_jiras.test_co where ctid='(33554432,1)' and gp_segment_id >= 0;
+explain select  * from qp_misc_jiras.test_co where ctid='(33554432,2)' and gp_segment_id >= 0;
+select  * from qp_misc_jiras.test_co where ctid='(33554432,2)' and gp_segment_id >= 0;
 
 -- This is to verify MPP-10856: test gp_enable_explain_allstat
 set gp_enable_explain_allstat=on;

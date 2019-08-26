@@ -6,6 +6,9 @@ copy ..\..\..\..\..\LICENSE %GPDB_INSTALL_PATH%
 copy ..\..\..\scripts\greenplum_clients_path.bat %GPDB_INSTALL_PATH%
 mkdir %GPDB_INSTALL_PATH%\lib\python\yaml
 copy ..\..\..\..\..\gpMgmt\bin\gpload.py %GPDB_INSTALL_PATH%\bin
+mkdir %GPDB_INSTALL_PATH%\bin\gppylib
+type nul > %GPDB_INSTALL_PATH%\bin\gppylib\__init__.py
+copy ..\..\..\..\..\gpMgmt\bin\gppylib\gpversion.py %GPDB_INSTALL_PATH%\bin\gppylib\
 perl -pi.bak -e "s,\$Revision\$,%VERSION%," %GPDB_INSTALL_PATH%\bin\gpload.py
 copy ..\..\..\..\..\gpMgmt\bin\gpload.bat %GPDB_INSTALL_PATH%\bin
 copy ..\..\..\..\..\gpMgmt\bin\ext\yaml\* %GPDB_INSTALL_PATH%\lib\python\yaml

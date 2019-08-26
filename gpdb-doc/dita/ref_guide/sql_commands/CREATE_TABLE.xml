@@ -727,13 +727,10 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           with regards to columns that are the <i>distribution key</i> in a Greenplum table. For a
           unique constraint to be enforced in Greenplum Database, the table must be hash-distributed
           (not <codeph>DISTRIBUTED RANDOMLY</codeph>), and the constraint columns must be the same
-          as (or a superset of) the table's distribution key columns. Also, the distribution key
-          must be a left-subset of the constraint columns with the columns in the correct order. For
-          example, if the primary key is (a,b,c), the distribution key can be only one of the
-          following: (a), (a,b), or (a,b,c).<p>Replicated tables (<codeph>DISTRIBUTED
-              REPLICATED</codeph>) can have both <codeph>PRIMARY KEY</codeph> and
-              <codeph>UNIQUE</codeph>column constraints.</p><p>A primary key constraint is simply a
-            combination of a unique constraint and a not-null constraint.</p><p>Greenplum Database
+          as (or a superset of) the table's distribution key columns. <p>Replicated tables
+              (<codeph>DISTRIBUTED REPLICATED</codeph>) can have both <codeph>PRIMARY KEY</codeph>
+            and <codeph>UNIQUE</codeph>column constraints.</p><p>A primary key constraint is simply
+            a combination of a unique constraint and a not-null constraint.</p><p>Greenplum Database
             automatically creates a <codeph>UNIQUE</codeph> index for each <codeph>UNIQUE</codeph>
             or <codeph>PRIMARY KEY</codeph> constraint to enforce uniqueness. Thus, it is not
             necessary to create an index explicitly for primary key columns. <codeph>UNIQUE</codeph>

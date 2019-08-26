@@ -69,8 +69,8 @@
             <li id="py214844">Install the software extension package by running the
                 <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
               system:<codeblock>$ gppkg -i plr-2.3.1-gp5-rhel6_x86_64.gppkg</codeblock></li>
-            <li id="py215420">Restart the database.<codeblock>$ gpstop -r</codeblock></li>
             <li id="py215434">Source the file <codeph>$GPHOME/greenplum_path.sh</codeph>.</li>
+            <li id="py215420">Restart the database.<codeblock>$ gpstop -r</codeblock></li>
           </ol>
           <p>The extension and the R environment is installed in this directory:</p>
           <codeblock>$GPHOME/ext/R-3.3.3/</codeblock>

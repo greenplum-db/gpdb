@@ -1092,7 +1092,7 @@ INSERT INTO syscoltest VALUES(1);
 SELECT ctid FROM syscoltest;
      ctid     
 --------------
- (33554432,1)
+ (33554432,2)
 (1 row)
 
 DROP TABLE syscoltest;

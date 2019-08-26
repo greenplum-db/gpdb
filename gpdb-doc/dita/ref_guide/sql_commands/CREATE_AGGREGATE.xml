@@ -57,12 +57,14 @@
     [ , MFINALFUNC_EXTRA ]
     [ , MINITCOND = <varname>minitial_condition</varname> ]
     [ , SORTOP = <varname>sort_operator</varname> ]
-  )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE AGGREGATE</codeph> defines a new
-        aggregate function. Some basic and commonly-used aggregate functions such as
-          <codeph>count</codeph>, <codeph>min</codeph>, <codeph>max</codeph>, <codeph>sum</codeph>,
-          <codeph>avg</codeph> and so on are already provided in Greenplum Database. If one defines
-        new types or needs an aggregate function not already provided, then <codeph>CREATE
-          AGGREGATE</codeph> can be used to provide the desired features.</p>
+  )</codeblock></section><section id="section3">
+      <title>Description</title>
+      <p><codeph>CREATE AGGREGATE</codeph> defines a new aggregate function. Some basic and
+        commonly-used aggregate functions such as <codeph>count</codeph>, <codeph>min</codeph>,
+          <codeph>max</codeph>, <codeph>sum</codeph>, <codeph>avg</codeph> and so on are already
+        provided in Greenplum Database. If you define new types or need an aggregate function not
+        already provided, you can use <codeph>CREATE AGGREGATE</codeph> to provide the desired
+        features.</p>
       <p>If a schema name is given (for example, <codeph>CREATE AGGREGATE myschema.myagg
           ...</codeph>) then the aggregate function is created in the specified schema. Otherwise it
         is created in the current schema. </p>
@@ -72,7 +74,6 @@
         name and input data types of every ordinary function in the same schema. This behavior is
         identical to overloading of ordinary function names. See <codeph><xref
             href="CREATE_FUNCTION.xml#topic1"/></codeph>.</p>
-
       <p>A simple aggregate function is made from one, two, or three ordinary functions (which must
         be <codeph>IMMUTABLE</codeph> functions): </p>
       <ul id="ul_d5c_5yl_dhb">
@@ -80,8 +81,7 @@
         <li>an optional final calculation function <varname>ffunc</varname></li>
         <li>an optional combine function <varname>combinefunc</varname></li>
       </ul>
-   
-	<p>These functions are used as
+       <p>These functions are used as
         follows:</p><codeblock><varname>sfunc</varname>( internal-state, next-data-values ) ---&gt; next-internal-state
 <varname>ffunc</varname>( internal-state ) ---&gt; aggregate-value
 <varname>combinefunc</varname>( internal-state, internal-state ) ---&gt; next-internal-state</codeblock>
@@ -91,7 +91,20 @@
         state value and the new argument values to calculate a new internal state value. After all
         the rows have been processed, the final function is invoked once to calculate the aggregate
         return value. If there is no final function then the ending state value is returned
-        as-is.</p><p>You can specify <codeph><varname>combinefunc</varname></codeph> as a method for optimizing
+        as-is.</p>
+      <note>If you write a user-defined aggregate in C, and you declare the state value
+          (<varname>stype</varname>) as type <codeph>internal</codeph>, there is a risk of an
+        out-of-memory error occurring. If <codeph>internal</codeph> state values are not properly
+        managed and a query acquires too much memory for state values, an out-of-memory error could
+        occur. To prevent this, use <codeph>mpool_alloc(<varname>mpool</varname>,
+            <varname>size</varname>)</codeph> to have Greenplum manage and allocate memory for
+        non-temporary state values, that is, state values that have a lifespan for the entire
+        aggregation. The argument <codeph><varname>mpool</varname></codeph> of the
+          <codeph>mpool_alloc()</codeph> function is
+          <codeph>aggstate->hhashtable->group_buf</codeph>. For an example, see the implementation
+        of the numeric data type aggregates in <codeph>src/backend/utils/adt/numeric.c</codeph> in
+        the Greenplum Database open source code.</note>
+      <p>You can specify <codeph><varname>combinefunc</varname></codeph> as a method for optimizing
         aggregate execution. By specifying <codeph><varname>combinefunc</varname></codeph>, the
         aggregate can be executed in parallel on segments first and then on the master. When a
         two-level execution is performed, <codeph><varname>sfunc</varname></codeph> is executed on
@@ -154,7 +167,7 @@
             <codeph><varname>minvfunc</varname></codeph>, these functions work like the
         corresponding simple-aggregate functions without <codeph><varname>m</varname></codeph>; they
         define a separate implementation of the aggregate that includes an inverse transition
-        function. </p>   
+        function. </p>
       <p>The syntax with <codeph>ORDER BY</codeph> in the parameter list creates a special type of
         aggregate called an <i>ordered-set aggregate</i>; or if <codeph>HYPOTHETICAL</codeph> is
         specified, then a <i>hypothetical-set aggregate</i> is created. These aggregates operate

@@ -352,6 +352,8 @@
             </p>
             <p><xref href="guc-list.xml#optimizer_parallel_union" type="section"
                 >optimizer_parallel_union</xref></p>
+            <p><xref href="guc-list.xml#optimizer_penalize_skew" type="section"
+                >optimizer_penalize_skew</xref></p>
             <p><xref href="guc-list.xml#optimizer_print_missing_stats" type="section"
                 >optimizer_print_missing_stats</xref>
             </p>

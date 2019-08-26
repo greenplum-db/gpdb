@@ -235,9 +235,9 @@
              DISTRIBUTED RANDOMLY;
 </codeph></codeblock>
           </p>
-          <note type="important">A Primary Key is always the Distribution Key for a table. If no
-            Primary Key exists, but a Unique Key exists, this is the Distribution Key for the
-            table.</note>
+          <note type="important">If a primary key exists, it is the default distribution key for the
+            table. If no primary key exists, but a unique key exists, this is the default
+            distribution key for the table.</note>
         </body>
       </topic>
       <topic id="topic36" xml:lang="en">

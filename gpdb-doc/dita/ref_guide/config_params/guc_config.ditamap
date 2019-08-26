@@ -232,6 +232,7 @@
             <topicref href="guc-list.xml#optimizer_minidump"/>
             <topicref href="guc-list.xml#optimizer_nestloop_factor"/>
             <topicref href="guc-list.xml#optimizer_parallel_union"/>
+            <topicref href="guc-list.xml#optimizer_penalize_skew"/>
             <topicref href="guc-list.xml#optimizer_print_missing_stats"/>
             <topicref href="guc-list.xml#optimizer_print_optimization_stats"/>
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
