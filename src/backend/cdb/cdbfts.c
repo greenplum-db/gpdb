@@ -34,7 +34,6 @@
 #include "executor/spi.h"
 
 #include "postmaster/fts.h"
-#include "utils/faultinjection.h"
 
 #include "utils/fmgroids.h"
 #include "catalog/pg_authid.h"
