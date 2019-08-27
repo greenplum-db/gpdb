@@ -1536,9 +1536,10 @@
     </body>
   </topic>
   <topic id="topic56">
-    <title>Greenplum Database Extension Parameters</title>
+    <title>Greenplum PL/Java Parameters</title>
     <body>
-      <p>The parameters in this topic control the configuration of Greenplum Database extensions. </p>
+      <p>The parameters in this topic control the configuration of Greenplum Database PL/Java
+        language. </p>
       <simpletable frame="none" id="simpletable_n1h_tzl_zp">
         <strow>
           <stentry>
@@ -1562,6 +1563,8 @@
     <topic id="topic_t3n_qml_rz">
       <title>XML Data Parameters</title>
       <body>
+        <p>The parameters in this topic control the configuration of Greenplum Database XML data
+          type. </p>
         <simpletable frame="none" id="simpletable_yyd_tml_rz">
           <strow>
             <stentry>
