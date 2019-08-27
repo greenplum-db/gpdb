@@ -6502,8 +6502,6 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 				 * Constraints might reference the tableoid column, so
 				 * initialize t_tableOid before evaluating them.
 				 */
-				// GPDB_94_MERGE_FIXME: tableoid removed. should we put it back? It's used
-				// in a lot more places in 9.4
 #if 0
 				tuple->t_tableOid = RelationGetRelid(oldrel);
 #endif

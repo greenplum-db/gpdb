@@ -407,7 +407,11 @@ ExecInsert(TupleTableSlot *parentslot,
 
 #if 0
 		/* FDW might have changed tuple */
-		tuple = ExecMaterializeSlot(slot); //GPDB_94_STABLE_MERGE_FIXME: Why GPDB removes this?
+		/*
+		 * GPDB: Greenplum does not allow triggers/contraints to reference
+		 * system columns which makes the t_tableOid initialization reduntant.
+		 */
+		tuple = ExecMaterializeSlot(slot);
 
 		/*
 		 * AFTER ROW Triggers or RETURNING expressions might reference the
@@ -425,6 +429,10 @@ ExecInsert(TupleTableSlot *parentslot,
 		 * t_tableOid before evaluating them.
 		 */
 #if 0
+		/*
+		 * GPDB: Greenplum does not allow triggers/contraints to reference
+		 * system columns which makes the t_tableOid initialization reduntant.
+		 */
 		tuple->t_tableOid = RelationGetRelid(resultRelationDesc);
 #endif
 
@@ -688,11 +696,11 @@ ExecDelete(ItemPointer tupleid,
 		if (slot->PRIVATE_tts_flags & TTS_ISEMPTY)
 			ExecStoreAllNullTuple(slot);
 
-		/*
-		 * GPDB_94_MERGE_FIXME: gpdb does not use tableoid. Do we need to bring
-		 * the related code back?
-		 */
 #if 0
+		/*
+		 * GPDB: Greenplum does not allow triggers/contraints to reference
+		 * system columns which makes the t_tableOid initialization reduntant.
+		 */
 		tuple = ExecMaterializeSlot(slot);
 		tuple->t_tableOid = RelationGetRelid(resultRelationDesc);
 #endif
@@ -1301,7 +1309,11 @@ ExecUpdate(ItemPointer tupleid,
 
 #if 0
 		/* FDW might have changed tuple */
-		tuple = ExecMaterializeSlot(slot); //GPDB_94_STABLE_MERGE_FIXME: Why GPDB removes this?
+		/*
+		 * GPDB: Greenplum does not allow triggers/contraints to reference
+		 * system columns which makes the t_tableOid initialization reduntant.
+		 */
+		tuple = ExecMaterializeSlot(slot);
 
 		/*
 		 * AFTER ROW Triggers or RETURNING expressions might reference the
@@ -1319,6 +1331,10 @@ ExecUpdate(ItemPointer tupleid,
 		 * t_tableOid before evaluating them.
 		 */
 #if 0
+		/*
+		 * GPDB: Greenplum does not allow triggers/contraints to reference
+		 * system columns which makes the t_tableOid initialization reduntant.
+		 */
 		tuple->t_tableOid = RelationGetRelid(resultRelationDesc);
 #endif
 
