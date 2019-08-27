@@ -25,8 +25,10 @@
       <li><codeph>optimizer_cte_inlining_bound</codeph> controls the amount of inlining performed
         for common table expression (CTE) queries (queries that contain a <codeph>WHERE</codeph>
         clause).</li>
-      <li><codeph>optimizer_force_multistage_agg</codeph> forces GPORCA to choose a 3 stage
-        aggregate plan for a scalar distinct qualified aggregate. </li>
+      <li><codeph>optimizer_force_multistage_agg</codeph> forces GPORCA to choose a multi-stage
+        aggregate plan for a scalar distinct qualified aggregate. When the value is
+          <codeph>off</codeph> (the default), GPORCA  chooses between a one-stage and two-stage
+        aggregate plan based on cost.</li>
       <li><codeph>optimizer_force_three_stage_scalar_dqa</codeph> forces GPORCA to choose a plan
         with multistage aggregates when such a plan alternative is generated. </li>
       <li><codeph>optimizer_join_order</codeph> sets the query optimization level for join ordering

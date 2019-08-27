@@ -6945,10 +6945,10 @@
   <topic id="optimizer_force_multistage_agg">
     <title>optimizer_force_multistage_agg</title>
     <body>
-      <p>For the default settings, GPORCA is enabled and this parameter is <codeph>true</codeph>,
-        GPORCA chooses a 3 stage aggregate plan for scalar distinct qualified aggregate when such a
-        plan alternative is generated. When the value is <codeph>false</codeph>, GPORCA makes a cost
-        based choice rather than a heuristic choice.</p>
+      <p>For the default settings, GPORCA is enabled and this parameter is <codeph>false</codeph>,
+        GPORCA makes a cost-based choice between a one- or two-stage aggregate plan for a scalar
+        distinct qualified aggregate. When <codeph>true</codeph>, GPORCA chooses a multi-stage
+        aggregate plan when such a plan alternative is generated.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query. </p>
       <table id="table_kmz_vnr_tz">
