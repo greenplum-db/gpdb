@@ -42,6 +42,7 @@
 #include "executor/spi.h"
 #include "port/atomics.h"
 #include "parser/parse_expr.h"
+#include "postmaster/bgwriter.h"
 #include "storage/bufmgr.h"
 #include "storage/buf_internals.h"
 #include "libpq/auth.h"
@@ -2163,7 +2164,16 @@ insert_noop_xlog_record(PG_FUNCTION_ARGS)
 	rdata.buffer = InvalidBuffer;
 	rdata.next = NULL;
 
-	XLogFlush(XLogInsert(RM_XLOG_ID, XLOG_NOOP, &rdata));
+	elog(LOG, "before noop xlog record inserted");
+
+	XLogRecPtr position = XLogInsert(RM_XLOG_ID, XLOG_NOOP, &rdata);
+	XLogFlush(position);
+
+	elog(LOG, "after noop xlog record flushed: %X/%X",
+		(uint32) (position >> 32),
+		(uint32) position);
+
+	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 
 	PG_RETURN_VOID();
 }

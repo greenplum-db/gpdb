@@ -10114,6 +10114,10 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 	}
 	else if (info == XLOG_NOOP)
 	{
+		elog(LOG, "replaying noop xlog record at position: %X/%X",
+			(uint32) (lsn >> 32),
+			(uint32) lsn);
+
 		SIMPLE_FAULT_INJECTOR("after_xlog_redo_noop");
 		/* nothing to do here */
 	}
