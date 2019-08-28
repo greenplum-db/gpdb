@@ -41,7 +41,8 @@ test_set_curl_option(void **state)
 {
 	/* set up context with a curl_handle */
 	churl_context *context = palloc0(sizeof(churl_context));
-	context->curl_handle = palloc0(sizeof(CURL));
+	/* mock a curl_easy_init call which returns a calloced CURL handle */
+	context->curl_handle = palloc0(1);
 
 	/* set mock behavior for curl_easy_setopt */
 	curl_easy_setopt_test_helper(context->curl_handle, CURLOPT_URL);
@@ -58,8 +59,14 @@ test_set_curl_option(void **state)
 static CURL *
 test_churl_init()
 {
-	/* set mock behavior for curl handle initialization */
-	CURL	   *mock_curl_handle = palloc0(sizeof(CURL));
+	/*
+	 * Set mock behavior for curl handle initialization. curl_easy_init will
+	 * return a calloced CURL handle, but since the CURL struct is opaque we
+	 * cannot allocate a sizeof(CURL) chunk here. Since these tests never use
+	 * the mocked handle for anything but non-NULL checks, settle for
+	 * allocating a small buffer.
+	 */
+	CURL	   *mock_curl_handle = palloc0(1);
 	will_return(curl_easy_init, mock_curl_handle);
 
 	/* set mock behavior for all the curl_easy_setopt calls */
@@ -95,8 +102,13 @@ test_churl_init_upload(void **state)
 	curl_slist_append_test_helper(mock_curl_slist, "Transfer-Encoding: chunked");
 	curl_slist_append_test_helper(mock_curl_slist, "Expect: 100-continue");
 
-	/* setup_multi_handle mock setup */
-	CURLM	   *mock_multi_handle = palloc0(sizeof(CURLM));
+	/*
+	 * setup_multi_handle mock setup. curl_multi_init will return a calloced
+	 * CURLM handle, but since the CURL struct is opaque we cannot allocate a
+	 * sizeof(CURLM) chunk here. Since these tests never use the mocked handle
+	 * for anything but non-NULL checks, settle for allocating a small buffer.
+	 */
+	CURLM	   *mock_multi_handle = palloc0(1);
 	will_return(curl_multi_init, mock_multi_handle);
 
 	expect_value(curl_multi_add_handle, multi_handle, mock_multi_handle);
@@ -132,8 +144,13 @@ test_churl_init_download(void **state)
 	CHURL_HEADERS headers = palloc0(sizeof(CHURL_HEADERS));
 	CURL	   *mock_curl_handle = test_churl_init();
 
-	/* setup_multi_handle mock setup */
-	CURLM	   *mock_multi_handle = palloc0(sizeof(CURLM));
+	/*
+	 * setup_multi_handle mock setup. curl_multi_init will return a calloced
+	 * CURLM handle, but since the CURL struct is opaque we cannot allocate a
+	 * sizeof(CURLM) chunk here. Since these tests never use the mocked handle
+	 * for anything but non-NULL checks, settle for allocating a small buffer.
+	 */
+	CURLM	   *mock_multi_handle = palloc0(1);
 	will_return(curl_multi_init, mock_multi_handle);
 
 	expect_value(curl_multi_add_handle, multi_handle, mock_multi_handle);
@@ -177,7 +194,8 @@ test_churl_read(void **state)
 	/* context setup */
 	CHURL_HANDLE handle = palloc0(sizeof(CHURL_HANDLE));
 	churl_context *context = (churl_context *) handle;
-	CURLM	   *mock_multi_handle = palloc0(sizeof(CURLM));
+	/* mock curl_multi_init */
+	CURLM	   *mock_multi_handle = palloc0(1);
 
 	/* buffer to read into */
 	int			READ_LEN = 32;
