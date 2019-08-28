@@ -1,4 +1,6 @@
 #include "test_utils.h"
+#include "../../../pg_upgrade.h"
+#include "../../cluster.h"
 
 #define GREENPLUM_5_VERSION_NUMBER 80300
 
@@ -21,6 +23,7 @@ executeQuery(PGconn *connection, const char *query,...)
 {
 	static char command[8192];
 	va_list		args;
+	ExecStatusType status;
 
 	/*
 	 * Interpolate variable length arguments into query
@@ -29,7 +32,13 @@ executeQuery(PGconn *connection, const char *query,...)
 	vsnprintf(command, sizeof(command), query, args);
 	va_end(args);
 
-	PQexec(connection, command);
+	PGresult *result = PQexec(connection, command);
+
+	status = PQresultStatus(result);
+
+	if ((status != PGRES_TUPLES_OK) && (status != PGRES_COMMAND_OK))
+		printf("query failed: %s, %s\n", query, PQerrorMessage(connection));
+
 }
 
 ClusterInfo *
@@ -41,6 +50,8 @@ make_cluster()
 	cluster->dbarr = *info;
 	cluster->dbarr.dbs = NULL;
 	cluster->dbarr.ndbs = 0;
+
+	init_cluster_for_greenplum_checks(cluster);
 
 	return cluster;
 }
@@ -90,7 +101,7 @@ get_database_name()
 
 void setup_os_info()
 {
-	os_info.user = "";
+	os_info.user = getenv("USER");
 }
 
 void

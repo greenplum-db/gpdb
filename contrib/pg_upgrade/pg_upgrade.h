@@ -383,6 +383,11 @@ typedef enum
 typedef long pgpid_t;
 
 
+struct UserDefinedIndexes {
+	int number_of_user_defined_indexes;
+};
+
+
 /*
  * cluster
  *
@@ -409,7 +414,10 @@ typedef struct
 	const char *tablespace_suffix;		/* directory specification */
 
 	char	   *global_reserved_oids; /* OID preassign calls for shared objects */
+
 	bool        use_utility_mode;
+
+	struct UserDefinedIndexes (*query_for_indexes)(void *);
 } ClusterInfo;
 
 

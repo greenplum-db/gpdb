@@ -10,6 +10,7 @@
 #include "checks.h"
 #include "check_greenplum_internal.h"
 #include "check_greenplum.h"
+#include "cluster.h"
 
 
 void check_greenplum(void)
@@ -26,6 +27,10 @@ void check_greenplum(void)
 
 	size_t length = sizeof(list) / sizeof(list[0]);
 
-	perform_greenplum_checks(list, length, &old_cluster);
+	ClusterInfo *cluster = &old_cluster;
+
+	init_cluster_for_greenplum_checks(cluster);
+
+	perform_greenplum_checks(list, length, cluster);
 }
 

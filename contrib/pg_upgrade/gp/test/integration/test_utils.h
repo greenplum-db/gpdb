@@ -8,6 +8,8 @@
 #include "pg_upgrade.h"
 #include "libpq-fe.h"
 
+extern void
+executeQuery(PGconn *conn, const char *fmt,...);
 
 extern ClusterInfo *
 make_cluster();
