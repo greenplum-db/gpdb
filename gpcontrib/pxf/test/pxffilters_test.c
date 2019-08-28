@@ -508,7 +508,7 @@ build_null_expression_item(int attnum, Oid attrtype, NullTestType nullType)
 {
 	ExpressionItem *expressionItem = (ExpressionItem*) palloc0(sizeof(ExpressionItem));
 	Var *vararg = build_var(attrtype, attnum);
-	OpExpr *operationExpression = build_null_expr(vararg, nullType);
+	NullTest *operationExpression = build_null_expr((Expr *) vararg, nullType);
 
 	expressionItem->node = (Node *) operationExpression;
 	expressionItem->processed = false;
@@ -652,7 +652,7 @@ static void
 test__opexpr_to_pxffilter__attributeIsNull(void **state)
 {
 	Var *arg_var = build_var(INT2OID, 1);
-	NullTest *expr = build_null_expr(arg_var, IS_NULL);
+	NullTest *expr = build_null_expr((Expr *) arg_var, IS_NULL);
 
 	pfree(expr->arg);
 	pfree(expr);
