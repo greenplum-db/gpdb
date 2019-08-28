@@ -1,3 +1,5 @@
+include: helpers/server_helpers.sql;
+CREATE
 
 -- t0r is the reference table to provide the data distribution info.
 DROP TABLE IF EXISTS t0p;
@@ -60,30 +62,38 @@ SELECT segid(2,10) is not null;
  t        
 (1 row)
 
--- start_ignore
-! gpconfig -c gp_global_deadlock_detector_period -v 10;
-20180313:15:24:17:085127 gpconfig:zlv:gpadmin-[INFO]:-completed successfully with parameters '-c gp_global_deadlock_detector_period -v 10'
+-- table to just store the master's data directory path on segment.
+CREATE TABLE datadir(a int, dir text);
+CREATE
+INSERT INTO datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
+INSERT 1
 
-! gpstop -u;
-20180313:15:24:17:085283 gpstop:zlv:gpadmin-[INFO]:-Starting gpstop with args: -u
-20180313:15:24:17:085283 gpstop:zlv:gpadmin-[INFO]:-Gathering information and validating the environment...
-20180313:15:24:17:085283 gpstop:zlv:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20180313:15:24:17:085283 gpstop:zlv:gpadmin-[INFO]:-Obtaining Segment details from master...
-20180313:15:24:17:085283 gpstop:zlv:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.3836.g671368b build dev-oss'
-20180313:15:24:17:085283 gpstop:zlv:gpadmin-[INFO]:-Signalling all postmaster processes to reload
-. 
+ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
+ALTER
+ALTER SYSTEM SET gp_global_deadlock_detector_period TO 5;
+ALTER
 
--- end_ignore
-
--- the new setting need some time to be loaded
-SELECT pg_sleep(2);
- pg_sleep 
-----------
-          
+-- Use utility session on seg 0 to restart master. This way avoids the
+-- situation where session issuing the restart doesn't disappear
+-- itself.
+1U:SELECT pg_ctl(dir, 'restart') from datadir;
+ pg_ctl                                                                                               
+------------------------------------------------------------------------------------------------------
+ waiting for server to shut down done
+server stopped
+waiting for server to start done
+server started
+ 
 (1 row)
-
-SHOW gp_global_deadlock_detector_period;
+-- Start new session on master to make sure it has fully completed
+-- recovery and up and running again.
+1: SHOW gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ on                                 
+(1 row)
+1: SHOW gp_global_deadlock_detector_period;
  gp_global_deadlock_detector_period 
 ------------------------------------
- 10s                                
+ 5s                                 
 (1 row)

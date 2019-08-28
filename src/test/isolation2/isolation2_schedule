@@ -33,8 +33,8 @@ test: gdd/planner_insert_while_vacuum_drop
 test: gdd/update-deadlock-root-leaf-concurrent-op
 test: gdd/dml_locks_only_targeted_table_in_query
 
-# this resets the gp_global_deadlock_detector_period guc hence should be last
-test: gdd/prepare-for-local
+# this resets the gp_global_deadlock_detector_period guc hence should
+# be last in the group.
 test: gdd/local-deadlock-03
 # gdd end
 test: gdd/end
