@@ -57,3 +57,17 @@ SELECT relation::regclass, mode, granted FROM pg_locks WHERE gp_segment_id=-1 AN
 SELECT GRANTED FROM pg_locks WHERE relation = 'part_tbl_1_prt_1'::regclass::oid AND mode='RowExclusiveLock' AND gp_segment_id=-1 AND locktype='relation';
 1: COMMIT;
 DROP TABLE part_tbl;
+
+-- Above scenarios do not affect non-partitioned tables, as there is no
+-- root/child partitions so we should not take ExclusiveLock.
+CREATE TABLE a_table_in_pgclass(a int);
+1: BEGIN;
+1: SET allow_system_table_mods=DML;
+1: UPDATE pg_class SET relpages = 42 WHERE oid='a_table_in_pgclass'::regclass::oid;
+
+-- If we had taken a lock on pg_class then subsequent CREATE TABLE statements
+-- would block until lock is released. Check to ensure we do not block.
+CREATE TABLE another_table_in_pgclass(a int);
+1: COMMIT;
+DROP TABLE a_table_in_pgclass;
+DROP TABLE another_table_in_pgclass;

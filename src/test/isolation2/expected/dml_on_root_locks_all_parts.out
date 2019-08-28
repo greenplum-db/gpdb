@@ -90,3 +90,25 @@ t
 COMMIT
 DROP TABLE part_tbl;
 DROP
+
+-- Above scenarios do not affect non-partitioned tables, as there is no
+-- root/child partitions so we should not take ExclusiveLock.
+CREATE TABLE a_table_in_pgclass(a int);
+CREATE
+1: BEGIN;
+BEGIN
+1: SET allow_system_table_mods=DML;
+SET
+1: UPDATE pg_class SET relpages = 42 WHERE oid='a_table_in_pgclass'::regclass::oid;
+UPDATE 1
+
+-- If we had taken a lock on pg_class then subsequent CREATE TABLE statements
+-- would block until lock is released. Check to ensure we do not block.
+CREATE TABLE another_table_in_pgclass(a int);
+CREATE
+1: COMMIT;
+COMMIT
+DROP TABLE a_table_in_pgclass;
+DROP
+DROP TABLE another_table_in_pgclass;
+DROP

@@ -1540,7 +1540,8 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 		 * root table info in resultRelations. Similarly, INSERT plans
 		 * produced by planner only has the root table info as well.
 		 */
-		if (!is_child_partition && (operation == CMD_UPDATE || operation == CMD_DELETE || operation == CMD_INSERT))
+		if ((operation == CMD_UPDATE || operation == CMD_DELETE || operation == CMD_INSERT) &&
+			rel_is_partitioned(relid) && !is_child_partition)
 		{
 			// On QD, the lockmode is RowExclusiveLock
 			Assert(lockmode == RowExclusiveLock);
