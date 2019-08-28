@@ -4,7 +4,8 @@
 <topic id="topic1" xml:lang="en">
   <title>Expanding a Greenplum System</title>
   <shortdesc>To scale up performance and storage capacity, expand your Greenplum Database system by
-    adding hosts to the system.</shortdesc>
+    adding hosts to the system. In general, adding nodes to a Greenplum cluster achieves a linear scaling 
+    of performance and storage capacity. </shortdesc>
   <body>
     <p>Data warehouses typically grow over time as additional data is gathered and the retention
       periods increase for existing data. At times, it is necessary to increase database capacity to
