@@ -74,7 +74,7 @@ elog_mock(int passed_elevel, const char *fmt, ...)
 
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 
-	appendStringInfo(&outputBuffer, buf);
+	appendStringInfoString(&outputBuffer, buf);
 
 	elevel = passed_elevel;
 
@@ -98,7 +98,7 @@ write_stderr_mock(const char *fmt, ...)
 
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 
-	appendStringInfo(&outputBuffer, buf);
+	appendStringInfoString(&outputBuffer, buf);
 
 	va_end(ap);
 }
@@ -110,7 +110,7 @@ write_stderr_mock(const char *fmt, ...)
 int
 fwrite_mock(const char *data, Size size, Size count, FILE *file)
 {
-	appendStringInfo(&outputBuffer, data);
+	appendStringInfoString(&outputBuffer, data);
 
 	return count;
 }

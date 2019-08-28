@@ -328,7 +328,7 @@ test_add_tuple_desc_httpheader(void **state)
 	attrs_ptr[0] = &attrs[0];
 	char		data0[10] = "name0";
 
-	snprintf(NameStr(attrs[0].attname), sizeof(data0), data0);
+	snprintf(NameStr(attrs[0].attname), sizeof(data0), "%s", data0);
 	char		typename0[12] = "NUMERICOID";
 
 	attrs[0].atttypid = NUMERICOID;
@@ -355,7 +355,7 @@ test_add_tuple_desc_httpheader(void **state)
 	attrs_ptr[1] = &attrs[1];
 	char		data1[10] = "name1";
 
-	snprintf(NameStr(attrs[1].attname), sizeof(data1), data1);
+	snprintf(NameStr(attrs[1].attname), sizeof(data1), "%s", data1);
 	char		typename1[12] = "CHAROID";
 
 	attrs[1].atttypid = CHAROID;
@@ -378,7 +378,7 @@ test_add_tuple_desc_httpheader(void **state)
 	attrs_ptr[2] = &attrs[2];
 	char		data2[10] = "name2";
 
-	snprintf(NameStr(attrs[2].attname), sizeof(data2), data2);
+	snprintf(NameStr(attrs[2].attname), sizeof(data2), "%s", data2);
 	char		typename2[12] = "TIMEOID";
 
 	attrs[2].atttypid = TIMEOID;
@@ -401,7 +401,7 @@ test_add_tuple_desc_httpheader(void **state)
 	attrs_ptr[3] = &attrs[3];
 	char		data3[10] = "name3";
 
-	snprintf(NameStr(attrs[3].attname), sizeof(data3), data3);
+	snprintf(NameStr(attrs[3].attname), sizeof(data3), "%s", data3);
 	char		typename3[12] = "INTERVALOID";
 
 	attrs[3].atttypid = INTERVALOID;
