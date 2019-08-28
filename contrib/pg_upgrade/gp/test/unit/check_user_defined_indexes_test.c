@@ -38,10 +38,16 @@ setup_no_rows_to_return(void)
 static ClusterInfo *make_cluster()
 {
 	ClusterInfo *cluster;
-
 	cluster = malloc(sizeof(ClusterInfo));
-	cluster->query_for_indexes = query_for_indexes;
 	return cluster;
+}
+
+static Queries * make_queries()
+{
+	Queries *queries;
+	queries = malloc(sizeof(Queries));
+	queries->query_for_indexes = query_for_indexes;
+	return queries;
 }
 
 
@@ -52,10 +58,11 @@ static void
 test_it_returns_false_when_there_are_no_indexes_to_be_found(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup_rows_to_return();
 
-	bool result = user_defined_indexes_check(cluster);
+	bool result = check_user_defined_indexes(cluster, queries);
 
 	assert_false(result);
 }
@@ -65,10 +72,11 @@ static void
 test_it_returns_true(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup_no_rows_to_return();
 
-	bool result = user_defined_indexes_check(cluster);
+	bool result = check_user_defined_indexes(cluster, queries);
 
 	assert_true(result);
 }

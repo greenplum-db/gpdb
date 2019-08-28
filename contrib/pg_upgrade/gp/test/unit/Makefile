@@ -5,7 +5,7 @@ subdir=$(pg_upgrade_directory)/gp/test/unit
 
 
 TARGETS = check_greenplum_test \
-	user_defined_index_check_test
+	check_user_defined_indexes_test
 
 
 include $(top_srcdir)/src/Makefile.mock
@@ -38,9 +38,9 @@ check_greenplum_test.t: check_greenplum_test.c make_dependencies $(unit_test_dep
 		$< \
 		-o $@
 
-user_defined_index_check_test.t: user_defined_index_check_test.c make_dependencies $(unit_test_dependencies) 
+check_user_defined_indexes_test.t: check_user_defined_indexes_test.c make_dependencies $(unit_test_dependencies) 
 	$(compile_test) \
-		$(pg_upgrade_directory)/gp/user_defined_indexes_check.o \
+		$(pg_upgrade_directory)/gp/check_user_defined_indexes.o \
 		$(unit_test_dependencies) \
 		$< \
 		-o $@

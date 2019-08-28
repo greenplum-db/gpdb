@@ -5,6 +5,7 @@
  * Utility functions to conduct integration tests
  */
 
+#include "../../queries.h"
 #include "pg_upgrade.h"
 #include "libpq-fe.h"
 
@@ -13,6 +14,9 @@ executeQuery(PGconn *conn, const char *fmt,...);
 
 extern ClusterInfo *
 make_cluster();
+
+extern Queries *
+make_queries();
 
 extern PGconn *
 getTestConnection(ClusterInfo *clusterInfo);

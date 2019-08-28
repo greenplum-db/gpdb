@@ -1,6 +1,5 @@
 #include "test_utils.h"
 #include "../../../pg_upgrade.h"
-#include "../../cluster.h"
 
 #define GREENPLUM_5_VERSION_NUMBER 80300
 
@@ -51,9 +50,15 @@ make_cluster()
 	cluster->dbarr.dbs = NULL;
 	cluster->dbarr.ndbs = 0;
 
-	init_cluster_for_greenplum_checks(cluster);
-
 	return cluster;
+}
+
+Queries *
+make_queries()
+{
+	Queries *queries = palloc0(sizeof(Queries));
+	init_queries_for_greenplum_checks(queries);
+	return queries;
 }
 
 PGconn *

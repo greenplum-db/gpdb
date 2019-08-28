@@ -31,13 +31,13 @@ void check_failed(void)
  * Fake checks
  */
 
-static bool failing_check(ClusterInfo *cluster)
+static bool failing_check(ClusterInfo *cluster, Queries *queries)
 {
 	return false;
 }
 
 
-static bool passing_check(ClusterInfo *cluster)
+static bool passing_check(ClusterInfo *cluster, Queries *queries)
 {
 	usedClusterInfoAddress = cluster;
 	number_of_check_functions_called++;
@@ -69,13 +69,14 @@ test_check_greenplum_runs_all_given_checks(void **state)
 	setup();
 
 	ClusterInfo clusterInfo;
+	struct QueryFunctions queryFunctions;
 
 	check_function my_list[] = {
 		passing_check,
 		passing_check
 	};
 
-	perform_greenplum_checks(my_list, 2, &clusterInfo);
+	perform_greenplum_checks(my_list, 2, &clusterInfo, &queryFunctions);
 
 	assert_int_equal(number_of_check_functions_called, 2);
 	assert_int_equal(number_of_failing_checks_reported, 0);
@@ -88,13 +89,14 @@ test_check_greenplum_calls_check_ok_for_success(void **state)
 	setup();
 
 	ClusterInfo clusterInfo;
+	struct QueryFunctions queryFunctions;
 
 	check_function my_list[] = {
 		passing_check,
 		passing_check
 	};
 
-	perform_greenplum_checks(my_list, 2, &clusterInfo);
+	perform_greenplum_checks(my_list, 2, &clusterInfo, &queryFunctions);
 
 	assert_int_equal(number_of_check_oks_reported, 2);
 	assert_int_equal(number_of_failing_checks_reported, 0);
@@ -107,13 +109,14 @@ test_check_greenplum_calls_gp_report_failure_on_failure(void **state)
 	setup();
 	
 	ClusterInfo clusterInfo;
+	struct QueryFunctions queryFunctions;
 
 	check_function my_list[] = {
 		passing_check,
 		failing_check
 	};
 
-	perform_greenplum_checks(my_list, 2, &clusterInfo);
+	perform_greenplum_checks(my_list, 2, &clusterInfo, &queryFunctions);
 
 	assert_int_equal(number_of_failing_checks_reported, 1);
 	assert_int_equal(number_of_check_functions_called, 1);
@@ -126,12 +129,13 @@ test_check_greenplum_uses_given_cluster_to_check(void **state)
 	setup();
 
 	ClusterInfo clusterInfo;
+	struct QueryFunctions queryFunctions;
 
 	check_function my_list[] = {
 		passing_check
 	};
 
-	perform_greenplum_checks(my_list, 1, &clusterInfo);
+	perform_greenplum_checks(my_list, 1, &clusterInfo, &queryFunctions);
 
 	assert_int_equal(&clusterInfo, usedClusterInfoAddress);
 }

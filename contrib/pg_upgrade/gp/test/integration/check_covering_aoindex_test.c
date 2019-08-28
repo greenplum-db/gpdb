@@ -26,6 +26,7 @@ static void
 test_partition_table_with_index_after_exchange_should_fail(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup(cluster);
 
@@ -40,7 +41,7 @@ test_partition_table_with_index_after_exchange_should_fail(void **state)
 
 	enable_utility_mode(cluster);
 
-	bool result = check_covering_aoindex(cluster);
+	bool result = check_covering_aoindex(cluster, queries);
 
 	assert_false(result);
 
@@ -53,6 +54,7 @@ static void
 test_partition_table_without_index_after_exchange_should_succeed(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup(cluster);
 
@@ -66,7 +68,7 @@ test_partition_table_without_index_after_exchange_should_succeed(void **state)
 
 	enable_utility_mode(cluster);
 
-	bool result = check_covering_aoindex(cluster);
+	bool result = check_covering_aoindex(cluster, queries);
 
 	assert_true(result);
 
@@ -79,6 +81,7 @@ static void
 test_partition_co_table_with_index_after_exchange_should_fail(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup(cluster);
 
@@ -93,7 +96,7 @@ test_partition_co_table_with_index_after_exchange_should_fail(void **state)
 
 	enable_utility_mode(cluster);
 
-	bool result = check_covering_aoindex(cluster);
+	bool result = check_covering_aoindex(cluster, queries);
 
 	assert_false(result);
 
@@ -106,6 +109,7 @@ static void
 test_partition_co_table_without_index_after_exchange_should_succeed(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup(cluster);
 
@@ -119,7 +123,7 @@ test_partition_co_table_without_index_after_exchange_should_succeed(void **state
 
 	enable_utility_mode(cluster);
 
-	bool result = check_covering_aoindex(cluster);
+	bool result = check_covering_aoindex(cluster, queries);
 
 	assert_true(result);
 
@@ -132,6 +136,7 @@ static void
 test_partition_table_without_index_should_succeed(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup(cluster);
 
@@ -143,7 +148,7 @@ test_partition_table_without_index_should_succeed(void **state)
 
 	enable_utility_mode(cluster);
 
-	bool result = check_covering_aoindex(cluster);
+	bool result = check_covering_aoindex(cluster, queries);
 
 	assert_true(result);
 
@@ -156,6 +161,7 @@ static void
 test_partition_heap_table_with_index_after_exchange_should_succeed(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup(cluster);
 
@@ -170,7 +176,7 @@ test_partition_heap_table_with_index_after_exchange_should_succeed(void **state)
 
 	enable_utility_mode(cluster);
 
-	bool result = check_covering_aoindex(cluster);
+	bool result = check_covering_aoindex(cluster, queries);
 
 	assert_true(result);
 

@@ -5,7 +5,6 @@
 #include "cmockery.h"
 
 
-#include "../../cluster.h"
 #include "test_utils.h"
 
 
@@ -21,6 +20,7 @@ teardown(ClusterInfo *cluster)
 static void test_cluster_can_query_for_user_defined_indexes(void **state) 
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup_cluster(cluster);
 	setup_os_info();
@@ -38,7 +38,7 @@ static void test_cluster_can_query_for_user_defined_indexes(void **state)
 
 	get_db_and_rel_infos(cluster);
 
-	struct UserDefinedIndexes indexes = cluster->query_for_indexes(cluster);
+	struct UserDefinedIndexes indexes = queries->query_for_indexes(cluster);
 	assert_int_equal(indexes.number_of_user_defined_indexes, 1);
 
 	teardown(cluster);

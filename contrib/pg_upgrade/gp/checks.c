@@ -15,7 +15,7 @@
  *	expansion is in progress.
  */
 bool
-check_online_expansion(ClusterInfo *cluster)
+check_online_expansion(ClusterInfo *cluster, Queries *queries)
 {
 	bool		expansion = false;
 	int			dbnum;
@@ -91,7 +91,7 @@ check_online_expansion(ClusterInfo *cluster)
  *	found.
  */
 bool
-check_external_partition(ClusterInfo *cluster)
+check_external_partition(ClusterInfo *cluster, Queries *queries)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -198,7 +198,7 @@ check_external_partition(ClusterInfo *cluster)
  *	cluster which exhibits this.
  */
 bool
-check_covering_aoindex(ClusterInfo *cluster)
+check_covering_aoindex(ClusterInfo *cluster, Queries *queries)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -269,7 +269,7 @@ check_covering_aoindex(ClusterInfo *cluster)
 }
 
 bool
-check_orphaned_toastrels(ClusterInfo *cluster)
+check_orphaned_toastrels(ClusterInfo *cluster, Queries *queries)
 {
 	bool		found = false;
 	int			dbnum;
@@ -339,7 +339,7 @@ check_orphaned_toastrels(ClusterInfo *cluster)
  *	handling them for the end-user.
  */
 bool
-check_partition_indexes(ClusterInfo *cluster)
+check_partition_indexes(ClusterInfo *cluster, Queries *queries)
 {
 	int			dbnum;
 	FILE	   *script = NULL;
@@ -432,7 +432,7 @@ check_partition_indexes(ClusterInfo *cluster)
  * any remaining gphdfs external tables have to be removed.
  */
 bool
-check_gphdfs_external_tables(ClusterInfo *cluster)
+check_gphdfs_external_tables(ClusterInfo *cluster, Queries *queries)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -508,7 +508,7 @@ check_gphdfs_external_tables(ClusterInfo *cluster)
  * We error if this is the case and let the users know how to proceed.
  */
 bool
-check_gphdfs_user_roles(ClusterInfo *cluster)
+check_gphdfs_user_roles(ClusterInfo *cluster, Queries *queries)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;

@@ -21,6 +21,7 @@ static void
 test_a_user_defined_index_should_fail_checks(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup(cluster);
 
@@ -33,7 +34,7 @@ test_a_user_defined_index_should_fail_checks(void **state)
 
 	enable_utility_mode(cluster);
 
-	bool result = user_defined_indexes_check(cluster);
+	bool result = check_user_defined_indexes(cluster, queries);
 
 	executeQuery(connection, "drop schema greenplum_pg_upgrade_integration_test cascade;");
 
@@ -44,6 +45,7 @@ static void
 test_a_cluster_without_user_defined_indexes_should_pass_checks(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
+	Queries *queries = make_queries();
 
 	setup(cluster);
 
@@ -54,7 +56,7 @@ test_a_cluster_without_user_defined_indexes_should_pass_checks(void **state)
 	executeQuery(connection, "create table t (a integer) distributed by (a);");
 	enable_utility_mode(cluster);
 
-	bool result = user_defined_indexes_check(cluster);
+	bool result = check_user_defined_indexes(cluster, queries);
 
 	executeQuery(connection, "drop schema greenplum_pg_upgrade_integration_test cascade;");
 
