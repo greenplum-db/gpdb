@@ -35,11 +35,3 @@ GPHDUri_verify_core_options_exist(GPHDUri *uri, List *coreoptions)
     check_expected(coreoptions);
     mock();
 }
-
-void
-GPHDUri_verify_cluster_exists(GPHDUri *uri, char* cluster)
-{
-    check_expected(uri);
-    check_expected(cluster);
-    mock();
-}

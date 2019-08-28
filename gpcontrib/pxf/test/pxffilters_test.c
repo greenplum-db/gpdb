@@ -131,57 +131,6 @@ test__supported_operator_type_op_expr(void **state)
 		assert_true(supported_operator_type_op_expr(pxf_supported_opr_op_expr[i].dbop, filter));
 		assert_true(pxf_supported_opr_op_expr[i].pxfop == filter->op);
 	}
-
-}
-
-static void
-test__supported_operator_type_scalar_array_op_expr(void **state)
-{
-	Oid operator_oids[15][2] = {
-			{Int2EqualOperator, PXFOP_IN},
-			{Int4EqualOperator, PXFOP_IN},
-			{Int8EqualOperator, PXFOP_IN},
-			{TextEqualOperator, PXFOP_IN},
-			{Int24EqualOperator, PXFOP_IN},
-			{Int42EqualOperator, PXFOP_IN},
-			{Int84EqualOperator, PXFOP_IN},
-			{Int48EqualOperator, PXFOP_IN},
-			{Int28EqualOperator, PXFOP_IN},
-			{Int82EqualOperator, PXFOP_IN},
-			{DateEqualOperator, PXFOP_IN},
-			{Float8EqualOperator, PXFOP_IN},
-			{1120 , PXFOP_IN},
-			{BPCharEqualOperator, PXFOP_IN},
-			{BooleanEqualOperator, PXFOP_IN},
-	};
-
-	PxfFilterDesc *filter = (PxfFilterDesc*) palloc0(sizeof(PxfFilterDesc));
-
-	int array_size = sizeof(operator_oids) / sizeof(operator_oids[0]);
-	bool result = false;
-	int i = 0;
-
-	/* supported types */
-	for (; i < array_size-1; ++i)
-	{
-		result = supported_operator_type_scalar_array_op_expr(operator_oids[i][0], filter, true);
-		assert_true(result);
-		assert_true(operator_oids[i][1] == filter->op);
-	}
-
-	/* unsupported type */
-	result = supported_operator_type_op_expr(InvalidOid, filter);
-	assert_false(result);
-
-	/* go over pxf_supported_opr_scalar_array_op_expr array */
-	int nargs = sizeof(pxf_supported_opr_scalar_array_op_expr) / sizeof(dbop_pxfop_array_map);
-	assert_int_equal(nargs, 15);
-	for (i = 0; i < nargs; ++i)
-	{
-		assert_true(supported_operator_type_scalar_array_op_expr(pxf_supported_opr_op_expr[i].dbop, filter, pxf_supported_opr_scalar_array_op_expr[i].useOr));
-		assert_true(pxf_supported_opr_scalar_array_op_expr[i].pxfop == filter->op);
-	}
-
 }
 
 /*
