@@ -86,7 +86,6 @@ ClusterInfo old_cluster,
 			new_cluster;
 OSInfo		os_info;
 
-
 int
 main(int argc, char **argv)
 {
@@ -94,9 +93,6 @@ main(int argc, char **argv)
 	char	   *analyze_script_file_name = NULL;
 	char	   *deletion_script_file_name = NULL;
 	bool		live_check = false;
-
-	init_cluster(&old_cluster);
-	init_cluster(&new_cluster);
 
 	/* Ensure that all files created by pg_upgrade are non-world-readable */
 	umask(S_IRWXG | S_IRWXO);

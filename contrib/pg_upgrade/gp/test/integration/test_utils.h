@@ -5,9 +5,12 @@
  * Utility functions to conduct integration tests
  */
 
+#include "../../query_for_user_defined_indexes.h"
 #include "pg_upgrade.h"
 #include "libpq-fe.h"
 
+extern void
+executeQuery(PGconn *conn, const char *fmt,...);
 
 extern ClusterInfo *
 make_cluster();
@@ -16,7 +19,7 @@ extern PGconn *
 getTestConnection(ClusterInfo *clusterInfo);
 
 extern PGconn *
-getTestConnectionToDatabase(ClusterInfo *clusterInfo, const char *);
+getTestConnectionToDatabase(ClusterInfo *clusterInfo, char *const database_name);
 
 extern void
 setup_cluster(ClusterInfo *cluster);
@@ -32,4 +35,4 @@ enable_utility_mode(ClusterInfo *clusterInfo);
 extern void
 disable_utility_mode(ClusterInfo *clusterInfo);
 
-#endif //GPDB_TEST_UTILS_H
+#endif /* GPDB_TEST_UTILS_H */

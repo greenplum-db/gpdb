@@ -1,3 +1,12 @@
+/*
+ *
+ *  check_greenplum.h
+ *
+ *	Copyright (c) 2019-Present Pivotal Software, Inc
+ *
+ */
+
+
 #ifndef GPDB_CHECK_GREENPLUM_H
 #define GPDB_CHECK_GREENPLUM_H
 
@@ -10,11 +19,11 @@
 
 
 /*
- * Conduct all greenplum checks, defined in GP_CHECKS_LIST
+ * Conduct all greenplum checks
  *
  * This function should be executed after all PostgreSQL checks. The order of the checks should not matter.
  */
 extern void check_greenplum(void);
 
 
-#endif //GPDB_CHECK_GREENPLUM_H
+#endif /* GPDB_CHECK_GREENPLUM_H */

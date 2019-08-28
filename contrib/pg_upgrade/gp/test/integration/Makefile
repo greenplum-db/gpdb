@@ -5,7 +5,11 @@ pg_upgrade_directory=../../..
 gp_checks_directory=../..
 
 
-TARGETS = check_covering_aoindex_test
+TARGETS = check_covering_aoindex_test \
+	check_user_defined_indexes_test \
+	queries_test
+
+
 PG_LIBS = $(libpq_pgport)
 
 
@@ -17,7 +21,9 @@ test_flags = -I $(pg_upgrade_directory) \
 	-I$(libpq_srcdir) -g -O0
 
 
-code_under_test = $(gp_checks_directory)/checks.o
+code_under_test = $(gp_checks_directory)/checks.o \
+	$(gp_checks_directory)/check_user_defined_indexes.o \
+	$(gp_checks_directory)/query_for_user_defined_indexes.o
 
 
 pg_upgrade_dependencies = $(pg_upgrade_directory)/server.o \
@@ -44,11 +50,22 @@ make_dependencies: FORCE
 	make -C $(pg_upgrade_directory) all
 FORCE:
 
-check_covering_aoindex_test.t: make_dependencies $(integration_test_dependencies) check_covering_aoindex_test.c 
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(test_flags) \
-		$(code_under_test) \
-		$(pg_upgrade_dependencies) \
-		$(integration_test_dependencies) \
-		./check_covering_aoindex_test.c \
-		$(PG_LIBS) \
-		-o $@
+
+compile_test = $(CC) $(CFLAGS) $(CPPFLAGS) $(test_flags)
+
+compile_integration_test = $(compile_test) \
+	$(code_under_test) \
+	$(pg_upgrade_dependencies) \
+	$(integration_test_dependencies) \
+	$< \
+	$(PG_LIBS) \
+	-o $@
+
+check_covering_aoindex_test.t: check_covering_aoindex_test.c make_dependencies $(integration_test_dependencies) 
+	$(compile_integration_test)
+
+check_user_defined_indexes_test.t: check_user_defined_indexes_test.c make_dependencies $(integration_test_dependencies)
+	$(compile_integration_test)
+
+queries_test.t: query_for_user_defined_indexes_test.c make_dependencies $(integration_test_dependencies)
+	$(compile_integration_test)

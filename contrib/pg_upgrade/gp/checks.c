@@ -1,7 +1,19 @@
 /*
- * contrib/pg_upgrade/gp/checks.h
+ *  check_gp.c
  *
- * Definitions of Greenplum-specific check functions
+ *  Definitions of Greenplum-specific check functions
+ *
+ *	Any compatibility checks which are version dependent (testing for issues in
+ *	specific versions of Greenplum) should be placed in their respective
+ *	version_old_gpdb{MAJORVERSION}.c file.  The checks in this file supplement
+ *	the checks present in check.c, which is the upstream file for performing
+ *	checks against a PostgreSQL cluster.
+ *
+ *	Copyright (c) 2010, PostgreSQL Global Development Group
+ *	Copyright (c) 2017-Present Pivotal Software, Inc
+ *
+ *	Renamed contrib/pg_upgrade/check_gp.c -> contrib/pg_upgrade/gp/checks.c
+ *
  */
 
 #include "pg_upgrade.h"
@@ -15,7 +27,7 @@
  *	expansion is in progress.
  */
 bool
-check_online_expansion(ClusterInfo *cluster)
+check_online_expansion(ClusterInfo *oldCluster)
 {
 	bool		expansion = false;
 	int			dbnum;
@@ -23,7 +35,7 @@ check_online_expansion(ClusterInfo *cluster)
 	/*
 	 * Only need to check cluster expansion status in gpdb6 or later.
 	 */
-	if (GET_MAJOR_VERSION(cluster->major_version) < 804)
+	if (GET_MAJOR_VERSION(oldCluster->major_version) < 804)
 		return true;
 
 	/*
@@ -36,14 +48,14 @@ check_online_expansion(ClusterInfo *cluster)
 	prep_status("Checking for online expansion status");
 
 	/* Check if the cluster is in expansion status */
-	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < oldCluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		int			ntups;
-		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &oldCluster->dbarr.dbs[dbnum];
 		PGconn	   *conn;
 
-		conn = connectToServer(cluster, active_db->db_name);
+		conn = connectToServer(oldCluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
 								"SELECT true AS expansion "
 								"FROM pg_catalog.gp_distribution_policy d "
@@ -91,7 +103,7 @@ check_online_expansion(ClusterInfo *cluster)
  *	found.
  */
 bool
-check_external_partition(ClusterInfo *cluster)
+check_external_partition(ClusterInfo *oldCluster)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -107,15 +119,15 @@ check_external_partition(ClusterInfo *cluster)
 	 * catalogs since they are not available on the segments.
 	 */
 
-	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < oldCluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		int			ntups;
 		int			rowno;
-		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &oldCluster->dbarr.dbs[dbnum];
 		PGconn	   *conn;
 
-		conn = connectToServer(cluster, active_db->db_name);
+		conn = connectToServer(oldCluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
 								"SELECT cc.relname, c.relname AS partname, c.relnamespace "
 								"FROM   pg_inherits i "
@@ -198,7 +210,7 @@ check_external_partition(ClusterInfo *cluster)
  *	cluster which exhibits this.
  */
 bool
-check_covering_aoindex(ClusterInfo *cluster)
+check_covering_aoindex(ClusterInfo *oldCluster)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -209,15 +221,15 @@ check_covering_aoindex(ClusterInfo *cluster)
 
 	snprintf(output_path, sizeof(output_path), "mismatched_aopartition_indexes.txt");
 
-	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < oldCluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		PGconn	   *conn;
 		int			ntups;
 		int			rowno;
-		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &oldCluster->dbarr.dbs[dbnum];
 
-		conn = connectToServer(cluster, active_db->db_name);
+		conn = connectToServer(oldCluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
 		                        "SELECT DISTINCT ao.relid, inh.inhrelid "
 		                        "FROM   pg_catalog.pg_appendonly ao "
@@ -269,7 +281,7 @@ check_covering_aoindex(ClusterInfo *cluster)
 }
 
 bool
-check_orphaned_toastrels(ClusterInfo *cluster)
+check_orphaned_toastrels(ClusterInfo *oldCluster)
 {
 	bool		found = false;
 	int			dbnum;
@@ -280,14 +292,14 @@ check_orphaned_toastrels(ClusterInfo *cluster)
 
 	snprintf(output_path, sizeof(output_path), "partitioned_tables.txt");
 
-	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < oldCluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		PGconn	   *conn;
 		int			ntups;
-		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &oldCluster->dbarr.dbs[dbnum];
 
-		conn = connectToServer(cluster, active_db->db_name);
+		conn = connectToServer(oldCluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
 								"WITH orphan_toast AS ( "
 								"    SELECT c.oid AS reloid, "
@@ -339,7 +351,7 @@ check_orphaned_toastrels(ClusterInfo *cluster)
  *	handling them for the end-user.
  */
 bool
-check_partition_indexes(ClusterInfo *cluster)
+check_partition_indexes(ClusterInfo *oldCluster)
 {
 	int			dbnum;
 	FILE	   *script = NULL;
@@ -350,7 +362,7 @@ check_partition_indexes(ClusterInfo *cluster)
 
 	snprintf(output_path, sizeof(output_path), "partitioned_tables_indexes.txt");
 
-	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < oldCluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		bool		db_used = false;
@@ -359,8 +371,8 @@ check_partition_indexes(ClusterInfo *cluster)
 		int			i_nspname;
 		int			i_relname;
 		int			i_indexes;
-		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
+		DbInfo	   *active_db = &oldCluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(oldCluster, active_db->db_name);
 
 		res = executeQueryOrDie(conn,
 								"WITH partitions AS ("
@@ -432,7 +444,7 @@ check_partition_indexes(ClusterInfo *cluster)
  * any remaining gphdfs external tables have to be removed.
  */
 bool
-check_gphdfs_external_tables(ClusterInfo *cluster)
+check_gphdfs_external_tables(ClusterInfo *oldCluster)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -440,7 +452,7 @@ check_gphdfs_external_tables(ClusterInfo *cluster)
 	int			dbnum;
 
 	/* GPDB only supported gphdfs in this version range */
-	if (!(cluster->major_version >= 80215 && cluster->major_version < 80400))
+	if (!(oldCluster->major_version >= 80215 && oldCluster->major_version < 80400))
 		return true;
 
 	prep_status("Checking for gphdfs external tables");
@@ -448,15 +460,15 @@ check_gphdfs_external_tables(ClusterInfo *cluster)
 	snprintf(output_path, sizeof(output_path), "gphdfs_external_tables.txt");
 
 
-	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	for (dbnum = 0; dbnum < oldCluster->dbarr.ndbs; dbnum++)
 	{
 		PGresult   *res;
 		int			ntups;
 		int			rowno;
-		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		DbInfo	   *active_db = &oldCluster->dbarr.dbs[dbnum];
 		PGconn	   *conn;
 
-		conn = connectToServer(cluster, active_db->db_name);
+		conn = connectToServer(oldCluster, active_db->db_name);
 		res = executeQueryOrDie(conn,
 								"SELECT d.objid::regclass as tablename "
 								"FROM pg_catalog.pg_depend d "
@@ -508,7 +520,7 @@ check_gphdfs_external_tables(ClusterInfo *cluster)
  * We error if this is the case and let the users know how to proceed.
  */
 bool
-check_gphdfs_user_roles(ClusterInfo *cluster)
+check_gphdfs_user_roles(ClusterInfo *oldCluster)
 {
 	char		output_path[MAXPGPATH];
 	FILE	   *script = NULL;
@@ -520,14 +532,14 @@ check_gphdfs_user_roles(ClusterInfo *cluster)
 	PGconn	   *conn;
 
 	/* GPDB only supported gphdfs in this version range */
-	if (!(cluster->major_version >= 80215 && cluster->major_version < 80400))
+	if (!(oldCluster->major_version >= 80215 && oldCluster->major_version < 80400))
 		return true;
 
 	prep_status("Checking for users assigned the gphdfs role");
 
 	snprintf(output_path, sizeof(output_path), "gphdfs_user_roles.txt");
 
-	conn = connectToServer(cluster, "template1");
+	conn = connectToServer(oldCluster, "template1");
 	res = executeQueryOrDie(conn,
 							"SELECT rolname as role, "
 							"       rolcreaterexthdfs as hdfs_read, "

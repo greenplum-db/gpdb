@@ -409,7 +409,6 @@ typedef struct
 	const char *tablespace_suffix;		/* directory specification */
 
 	char	   *global_reserved_oids; /* OID preassign calls for shared objects */
-	bool        use_utility_mode;
 } ClusterInfo;
 
 
@@ -629,7 +628,6 @@ void		pg_putenv(const char *var, const char *val);
 extern void
 report_failure(const char *restrict fmt,...)
 __attribute__((format(printf, 1, 2)));
-extern void init_cluster(ClusterInfo *cluster);
 
 
 /* version.c */

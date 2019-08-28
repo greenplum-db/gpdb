@@ -1,3 +1,11 @@
+/*
+ *
+ *  checks.h
+ *
+ *	Copyright (c) 2019-Present Pivotal Software, Inc
+ *
+ */
+
 #ifndef GPDB_CHECKS_H
 #define GPDB_CHECKS_H
 
@@ -17,5 +25,6 @@ extern bool check_orphaned_toastrels(ClusterInfo *cluster);
 extern bool check_online_expansion(ClusterInfo *cluster);
 extern bool check_gphdfs_external_tables(ClusterInfo *cluster);
 extern bool check_gphdfs_user_roles(ClusterInfo *cluster);
+extern bool check_user_defined_indexes(ClusterInfo *cluster);
 
-#endif //GPDB_CHECKS_H
+#endif /* GPDB_CHECKS_H */

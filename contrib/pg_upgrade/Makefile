@@ -12,10 +12,12 @@ OBJS = check.o controldata.o dump.o exec.o file.o function.o info.o \
 
 # Source files specific to Greenplum
 OBJS += aotable.o gpdb4_heap_convert.o version_gp.o \
-        file_gp.o reporting.o aomd_filehandler.o cluster.o
+        file_gp.o reporting.o aomd_filehandler.o
 
 # Source files specific to Greenplum from gp directory
-OBJS += gp/checks.o gp/check_greenplum.o gp/check_greenplum_internal.o
+OBJS += gp/checks.o gp/check_greenplum.o gp/check_greenplum_internal.o \
+	gp/check_user_defined_indexes.o \
+	gp/query_for_user_defined_indexes.o
 
 PG_CPPFLAGS  = -DFRONTEND -DDLSUFFIX=\"$(DLSUFFIX)\" -I$(srcdir) -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)
@@ -41,16 +43,14 @@ aomd_filehandler.c: % : $(top_srcdir)/src/backend/access/appendonly/%
 	rm -f $@ && $(LN_S) $< .
 	
 
-.PHONY: check_test check_gp_unit_test
-check_test:
-	make -C ./test check
-
+.PHONY: check_gp_unit_test
+	
 check_gp_unit_test:
 	make -C ./gp/test/unit check
 
-unittest-check: check_test check_gp_unit_test
+unittest-check: check_gp_unit_test
 
-check: check_test check_gp_unit_test test_gpdb.sh all
+check: test_gpdb.sh all
 	bash $< -C -r -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
 
 installcheck: test_gpdb.sh all

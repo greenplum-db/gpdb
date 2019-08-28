@@ -1,3 +1,11 @@
+/*
+ *
+ *  check_greenplum_test.c
+ *
+ *	Copyright (c) 2019-Present Pivotal Software, Inc
+ *
+ */
+
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
