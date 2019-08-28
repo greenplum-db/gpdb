@@ -28,12 +28,14 @@ test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-de
 ignore: gdd/non-lock-107
 # keep this in a separate group
 test: gdd/avoid-qd-deadlock
-test: gdd/prepare-for-local
-test: gdd/local-deadlock-03
 test: gdd/delete-deadlock-root-leaf-concurrent-op
 test: gdd/planner_insert_while_vacuum_drop
 test: gdd/update-deadlock-root-leaf-concurrent-op
 test: gdd/dml_locks_only_targeted_table_in_query
+
+# this resets the gp_global_deadlock_detector_period guc hence should be last
+test: gdd/prepare-for-local
+test: gdd/local-deadlock-03
 # gdd end
 test: gdd/end
 
