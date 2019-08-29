@@ -7,8 +7,10 @@
 #include "stdbool.h"
 #include "stdlib.h"
 
-static int set_value = 0;
+#include "utilities/gpdb5-cluster.h"
+#include "utilities/gpdb6-cluster.h"
 
+static int set_value = 0;
 
 static void
 setup(void **state)
@@ -74,6 +76,8 @@ upgradeMaster()
 static void
 upgradeContentId0()
 {
+	system("rsync -a --delete ./gpdb6-data-copy/qddir/demoDataDir-1/ ./gpdb6-data-copy/dbfast1/demoDataDir0");
+
 	system(""
 		"./gpdb6/bin/pg_upgrade "
 			"--old-bindir=./gpdb5/bin "
@@ -86,6 +90,8 @@ upgradeContentId0()
 static void
 upgradeContentId1()
 {
+	system("rsync -a --delete ./gpdb6-data-copy/qddir/demoDataDir-1/ ./gpdb6-data-copy/dbfast2/demoDataDir1");
+
 	system(""
 		"./gpdb6/bin/pg_upgrade "
 			"--old-bindir=./gpdb5/bin "
@@ -98,6 +104,8 @@ upgradeContentId1()
 static void
 upgradeContentId2()
 {
+	system("rsync -a --delete ./gpdb6-data-copy/qddir/demoDataDir-1/ ./gpdb6-data-copy/dbfast3/demoDataDir2");
+
 	system(""
 		"./gpdb6/bin/pg_upgrade "
 			"--old-bindir=./gpdb5/bin "
@@ -165,50 +173,6 @@ extract_user_rows(PGresult *result, User *rows[])
 		user->name = PQgetvalue(result, i, PQfnumber(result, "name"));
 		rows[i] = user;
 	}
-}
-
-static void 
-startGpdbFiveCluster(void)
-{
-	system(""
-		"source ./gpdb5/greenplum_path.sh; "
-			"PGPORT=50000; "
-			"MASTER_DATA_DIRECTORY=./gpdb5-data-copy/qddir/demoDataDir-1; "
-			"gpstart -a"
-			);
-}
-
-static void 
-startGpdbSixCluster(void)
-{
-	system(""
-		"source ./gpdb6/greenplum_path.sh; "
-			"PGPORT=60000; "
-			"MASTER_DATA_DIRECTORY=./gpdb6-data-copy/qddir/demoDataDir-1; "
-			"gpstart -a"
-			);
-}
-
-static void
-stopGpdbFiveCluster(void)
-{
-	system(""
-		"source ./gpdb5/greenplum_path.sh; \n"
-	       "PGPORT=50000; \n"
-	       "MASTER_DATA_DIRECTORY=./gpdb5-data-copy/qddir/demoDataDir-1; \n"
-	       "gpstop -a"
-	);
-}
-
-static void
-stopGpdbSixCluster(void)
-{
-	system(""
-		"source ./gpdb6/greenplum_path.sh; \n"
-	       "PGPORT=60000; \n"
-	       "MASTER_DATA_DIRECTORY=./gpdb6-data-copy/qddir/demoDataDir-1; \n"
-	       "gpstop -a"
-	);
 }
 
 static void

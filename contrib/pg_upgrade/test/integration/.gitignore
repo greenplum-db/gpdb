@@ -11,3 +11,6 @@
 /*.sql
 /*.txt
 /*.sh
+
+/scripts/gpdb5-cluster
+/scripts/gpdb6-cluster
