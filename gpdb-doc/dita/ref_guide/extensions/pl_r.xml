@@ -54,8 +54,9 @@
             /></codeph> utility to run bash shell commands on multiple remote hosts.</note>
         <ol id="ol_ypp_qnn_w3b">
           <li>To install R, run these <codeph>apt</codeph> commands on all host
-            systems.<codeblock>$ sudo apt update
-$ sudo apt install r-base</codeblock></li>
+              systems.<codeblock>$ sudo apt update &amp;&amp; sudo apt install r-base</codeblock><p>Installing
+                <codeph>r-base</codeph> also installs dependent packages including
+                <codeph>r-base-core</codeph>.</p></li>
           <li>To configure Greenplum Database to use R, add the <codeph>R_HOME</codeph> environment
             variable to <codeph>$GPHOME/greenplum_path.sh</codeph> on all hosts. This example
             command returns the R home directory.
@@ -96,7 +97,7 @@ $ gpstop -r</codeblock></li>
             <li>Copy the PL/R package to the Greenplum Database master host. </li>
             <li id="py214844">Install the software extension package by running the
                 <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
-              system:<codeblock>$ gppkg -i plr-3.0.1-gp6-rhel7_x86_64.gppkg</codeblock></li>
+              system:<codeblock>$ gppkg -i plr-3.0.3-gp6-rhel7_x86_64.gppkg</codeblock></li>
             <li id="py215434">Source the file <codeph>$GPHOME/greenplum_path.sh</codeph>.</li>
             <li id="py215420">Restart Greenplum Database.<codeblock>$ gpstop -r</codeblock></li>
           </ol>
@@ -149,15 +150,16 @@ $ gpstop -r</codeblock></li>
         <body>
           <p>If no databases have PL/R as a registered language, uninstall the Greenplum PL/R
             extension with the <codeph>gppkg</codeph> utility. This example uninstalls PL/R package
-            version 3.0.1.</p>
-          <codeblock>$ gppkg -r plr-3.0.1</codeblock>
+            version 3.0.3.</p>
+          <codeblock>$ gppkg -r plr-3.0.3</codeblock>
           <p>On RHEL and CentOS systems, uninstalling the extension uninstalls the R software that
             was installed with the extension.</p>
           <p>You can run the <codeph>gppkg</codeph> utility with the options <codeph>-q
               --all</codeph> to list the installed extensions and their versions.</p>
           <p>For Ubuntu systems, remove the <codeph>R_HOME</codeph> environment variable from
               <codeph>greenplum_path.sh</codeph> on all Greenplum Database host systems.</p>
-          <p>Restart the database.</p>
+          <p>Source the file <codeph>$GPHOME/greenplum_path.sh</codeph> and restart the
+            database.</p>
           <codeblock>$ gpstop -r</codeblock>
         </body>
       </topic>
@@ -190,9 +192,9 @@ $$
   return(x)
 $$
 LANGUAGE 'plr';</codeblock>
-          <p>The following <codeph>CREATE TABLE</codeph> command uses the <codeph>r_norm</codeph>
-            function to populate the table. The <codeph>r_norm</codeph> function creates an array of
-            10 numbers.</p>
+          <p>The following <codeph>CREATE TABLE</codeph> command uses the <codeph>r_norm()</codeph>
+            function to populate the table. The <codeph>r_norm()</codeph> function creates an array
+            of 10 numbers.</p>
           <codeblock>CREATE TABLE test_norm_var
   AS SELECT id, r_norm(10,0,1) as x
   FROM (SELECT generate_series(1,30:: bigint) AS ID) foo
@@ -389,7 +391,7 @@ LANGUAGE 'plr';</codeblock><p>This
           tables and views that is similar to the R <cmdname>data.frame</cmdname>. PivotalR also
           supports using the machine learning package <xref href="https://madlib.apache.org/"
             format="html" scope="external">MADlib</xref> directly from R.</p>
-        <p>Links to some topics useful topics in the <xref
+        <p>The following links highlight key topics from the <xref
             href="https://www.joeconway.com/doc/doc.html" format="html" scope="external">R
             documentation</xref>.<ul id="ul_z4z_gh4_w3b">
             <li>R Functions and Arguments - <xref
