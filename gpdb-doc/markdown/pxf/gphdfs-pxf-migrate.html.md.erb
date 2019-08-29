@@ -63,7 +63,7 @@ As you prepare for migrating from `gphdfs` to PXF:
 
 4. Identify the Java version installed in your Greenplum Database cluster, and install a supported version of Java if required.
 
-    PXF supports Java versions 8 and 11, `gphdfs` supports Java version 7 (XX and higher?). If your Greenplum Database cluster hosts are running Java 7, upgrade to Java version 8 or 11 as described in [Installing Java for PXF](install_java.html).
+    PXF supports Java versions 8 and 11, `gphdfs` supports Java version 7 and later. If your Greenplum Database cluster hosts are running Java 7, upgrade to Java version 8 or 11 as described in [Installing Java for PXF](install_java.html).
 
 5. Initialize PXF as described in [Initializing PXF](init_pxf.html).
 
@@ -142,11 +142,11 @@ If the HDFS file is a Parquet-format file, map these additional parquet options 
 
 | Description | gphdfs LOCATION Option | pxf LOCATION Option |
 |----------+-------------+-----------------|
-| Parquet schema  | schema | XXX | 
+| Parquet schema  | schema | SCHEMA | 
 | Page size | pagesize | PAGE_SIZE | 
 | Row group size | rowgroupsize | ROWGROUP_SIZE | 
 | Parquet version | parquetversion *or* pqversion | PARQUET_VERSION | 
-| Enable a dictionary | dictionaryenable  | XXX | 
+| Enable a dictionary | dictionaryenable  | The dictionary is always enabled when writing Parquet data with PXF | 
 | Dictionary page size | dictionarypagesize  | DICTIONARY_PAGE_SIZE | 
 
 
