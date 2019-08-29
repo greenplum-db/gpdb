@@ -65,11 +65,7 @@
 #include <syslog.h>
 #endif
 
-/*
- * OpenSolaris has this header, but Solaris 10 doesn't.
- * Linux and OSX 10.5 have it.
- */
-#if !defined(_WIN32) && !defined(_WIN64)
+#ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
 #endif
 
@@ -555,7 +551,7 @@ errstart(int elevel, const char *filename, int lineno,
 	/* errno is saved here so that error parameter eval can't change it */
 	edata->saved_errno = errno;
 
-#ifndef WIN32
+#ifdef HAVE_BACKTRACE_SYMBOLS
 	edata->stacktracesize = backtrace(edata->stacktracearray, 30);
 #else
 	edata->stacktracesize = 0;
@@ -4399,7 +4395,7 @@ send_message_to_server_log(ErrorData *edata)
 		(edata->elevel == PANIC || !edata->omit_location) &&
 		edata->stacktracesize > 0)
 	{
-#ifndef WIN32
+#ifdef HAVE_BACKTRACE_SYMBOLS
 		char	  **strings;
 		size_t		i;
 
@@ -5415,7 +5411,7 @@ gp_elog(PG_FUNCTION_ARGS)
 void
 debug_backtrace(void)
 {
-#ifndef WIN32
+#ifdef HAVE_BACKTRACE_SYMBOLS
 	int 		stacktracesize;
 	void	   *stacktracearray[30];
 
@@ -5433,6 +5429,10 @@ debug_backtrace(void)
  */
 uint32 gp_backtrace(void **stackAddresses, uint32 maxStackDepth)
 {
+#ifndef HAVE_BACKTRACE_SYMBOLS
+	return 0;
+#endif
+
 #if defined(__i386) || defined(__x86_64__)
 
 	/*
@@ -5500,11 +5500,11 @@ char *gp_stacktrace(void **stackAddresses, uint32 stackDepth)
 	StringInfoData append;
 	initStringInfo(&append);
 
-#ifdef WIN32
-	appendStringInfoString(&append, "stack trace is not available for this platform");
-#else
+#ifdef HAVE_BACKTRACE_SYMBOLS
 	append_stacktrace(NULL /*PipeProtoChunk*/, &append, stackAddresses, stackDepth,
 					 false/*amsyslogger*/);
+#else
+	appendStringInfoString(&append, "stack trace is not available for this platform");
 #endif
 
 	/* we may fail to retrieve stack on opt build */
