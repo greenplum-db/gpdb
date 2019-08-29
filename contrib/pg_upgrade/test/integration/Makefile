@@ -16,18 +16,19 @@ test_flags = -I $(pg_upgrade_directory) \
 	-g -O0
 
 
-compile_test = $(CC) $(CFLAGS) $(CPPFLAGS) $(test_flags) 
+compile = $(CC) $(CFLAGS) $(CPPFLAGS) 
+compile_test = $(compile) $(test_flags) 
 
 
 integration_test_dependencies = $(libpq_pgport) 
 
 
 scripts/gpdb5-cluster: scripts/gpdb5-cluster.c utilities/gpdb5-cluster.o
-	$(CC) $(CFLAGS) $(CPPFLAGS) $^ -o scripts/gpdb5-cluster 
+	$(compile) $^ -o scripts/gpdb5-cluster 
 
 
 scripts/gpdb6-cluster: scripts/gpdb6-cluster.c utilities/gpdb6-cluster.o
-	$(CC) $(CFLAGS) $(CPPFLAGS) $^ -o scripts/gpdb6-cluster 
+	$(compile) $^ -o scripts/gpdb6-cluster 
 
 
 utilities/gpdb5-cluster.o: ./utilities/gpdb5-cluster.c
