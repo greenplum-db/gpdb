@@ -20,6 +20,7 @@ void test_init_cluster_sets_cluster_to_utility_mode(void **state)
 	assert_true(cluster.use_utility_mode);
 }
 
+
 int
 main(int argc, char *argv[])
 {
