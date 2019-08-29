@@ -1,0 +1,13 @@
+/gpdb5
+/gpdb5-data
+/gpdb5-data-copy
+/gpdb6
+/gpdb6-data
+/gpdb6-data-copy
+/*.t
+/*.log
+/*.dSYM
+/*.custom
+/*.sql
+/*.txt
+/*.sh
