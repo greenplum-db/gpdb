@@ -7,7 +7,7 @@ You may be using the `gphdfs` external table protocol in a Greenplum Database ve
 To migrate your `gphdfs` external tables to use the `pxf` external table protocol, you must:
 
 1. [Prepare](#prepare) for the migration.
-2. Identify common configuration properties and [configure and start PXF](#id_cfg_props).
+2. Map configuration properties and [configure and start PXF] (#id_cfg_prop).
 3. [Create](#create_pxf_ext_table) a new `pxf` external table to replace each `gphdfs` external table.
 4. [Verify](#verify_pxf) access to Hadoop files with the `pxf` external tables.
 5. [Remove](#remove_gphdfs_ext_table) the `gphdfs` external tables.
@@ -70,18 +70,24 @@ As you prepare for migrating from `gphdfs` to PXF:
     You must initialize PXF before you can access Hadoop.
 
 
-## <a id="id_cfg_props"></a>Configuring and Starting PXF
+## <a id="id_cfg_prop"></a>Configuring and Starting PXF
 
-PXF and `gphdfs` use the following configuration properties:
+PXF does not use the following `gphdfs` configuration options:
+
+| gphdfs Configuration Option | Description |  pxf Consideration |
+|----------+---------------+------------|
+| HADOOP_HOME | Environment variable that identifies the Hadoop installation directory | Not applicable; PXF is bundled with the required dependent Hadoop libraries and JARs | 
+| CLASSPATH | Environment variable that identifies the locations of Hadoop JAR and configuration files | Not applicable, PXF automatically includes the Hadoop libraries, JARs, and configuration files that it bundles in the `CLASSPATH`. PXF also automatically includes user-registered dependencies found in the `$PXF_CONF/lib` directory in the `CLASSPATH`. | 
+| gp_hadoop_target_version | Server configuration parameter that identifies the Hadoop distribution | Not applicable, PXF works out-of-the-box with the different Hadoop distros | 
+| gp_hadoop_home | Server configuration parameter that identifies the Hadoop installation directory | Not applicable, PXF works out-of-the-box with the different Hadoop distros | 
+
+
+Configuration properties required by PXF, and the `gphdfs` equivalent, if applicable, include:
 
 | Configuration Item | Description | gphdfs Config | pxf Config |
 |----------+-------------+---------------+------------|
 | JAVA_HOME | Environment variable that identifies the Java installation directory | Set `JAVA_HOME` on each segment host | Set `JAVA_HOME` on each segment host | 
-| HADOOP_HOME | Environment variable that identifies the Hadoop installation directory | Set `HADOOP_HOME` on each segment host | Not applicable; PXF is bundled with the required Hadoop libraries and JARs | 
-| CLASSPATH | Environment variable that identifies the locations of Hadoop JAR and configuration files | Set in `hadoop_env.sh` | Not applicable; PXF automatically includes the bundled Hadoop libraries, JARs, and configuration in the `CLASSPATH` | 
 | JVM option settings | Options with which to start the JVM | Set options in the `GP_JAVA_OPT` environment variable in `hadoop_env.sh` | Set options in the `PXF_JVM_OPTS` environment variable in `$PXF_CONF/conf/pxf-env.sh` | 
-| gp_hadoop_target_version | Server configuration parameter that identifies the Hadoop distribution | Set to `cdh`, `hadoop`, `hdp`, `mpr` | Not applicable; PXF works out-of-the-box with the different Hadoop distros | 
-| gp_hadoop_home | Server configuration parameter that identifies the Hadoop installation directory | Set to the abolute path to the Hadoop client install directory | Not applicable; PXF works out-of-the-box with the different Hadoop distros | 
 | PXF Server | PXF server configuration for Hadoop | Not applicable | Configure a PXF server for Hadoop | 
 | Privileges | The Greenplum Database privileges required to create external tables in the given protocol | Grant `SELECT` and `INSERT` privileges on the `gphdfs` protocol to appropriate users | Grant `SELECT` and `INSERT` privileges on the `pxf` protocol to appropriate users | 
 
