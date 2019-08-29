@@ -3617,7 +3617,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_UNIT_S
 		},
 		&gp_segment_connect_timeout,
-		600, 0, INT_MAX,
+		180, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 

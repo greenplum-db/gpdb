@@ -4545,7 +4545,7 @@
           <tbody>
             <row>
               <entry colname="col1">Any valid time expression (number and unit)</entry>
-              <entry colname="col2">10min</entry>
+              <entry colname="col2">3min</entry>
               <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>

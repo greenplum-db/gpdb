@@ -225,7 +225,7 @@
           </plentry>
           <plentry>
             <pt>gp_segment_connect_timeout</pt>
-            <pd>The maximum time (in seconds) allowed for a mirror to respond. Default: 600 (10
+            <pd>The maximum time (in seconds) allowed for a mirror to respond. Default: 180 (3
               minutes)</pd>
           </plentry>
         </parml></p>
