@@ -59,6 +59,8 @@ You provide the profile name when you specify the `pxf` protocol on a `CREATE EX
 
 ## <a id="sample_ddl"></a>Sample CREATE EXTERNAL TABLE Commands
 
+<div class="note">When you create an external table that references a file or directory in an object store, you must specify a `SERVER` in the `LOCATION` URI.</div>
+
 The following command creates an external table that references a text file on S3. It specifies the profile named `s3:text` and the server configuration named `s3srvcfg`:
 
 <pre>

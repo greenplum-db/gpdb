@@ -55,7 +55,7 @@ Use the following syntax to create a Greenplum Database external table that refe
 ``` sql
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-  LOCATION ('pxf://<path-to-file>?PROFILE=s3:parquet[&SERVER=<server_name>]&S3_SELECT=ON|AUTO[&<other-custom-option>=<value>[...]]')
+  LOCATION ('pxf://<path-to-file>?PROFILE=s3:parquet&SERVER=<server_name>&S3_SELECT=ON|AUTO[&<other-custom-option>=<value>[...]]')
 FORMAT 'CSV';
 ```
 
@@ -113,7 +113,7 @@ Use the following syntax to create a Greenplum Database external table that refe
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION ('pxf://<path-to-file>
-    ?PROFILE=s3:text[&SERVER=<server_name>]&S3_SELECT=ON|AUTO[&FILE_HEADER=IGNORE|USE][&COMPRESSION_CODEC=gzip|bzip2][&<other-custom-option>=<value>[...]]')
+    ?PROFILE=s3:text&SERVER=<server_name>&S3_SELECT=ON|AUTO[&FILE_HEADER=IGNORE|USE][&COMPRESSION_CODEC=gzip|bzip2][&<other-custom-option>=<value>[...]]')
 FORMAT 'CSV' [(delimiter '<delim_char>')];
 ```
 

@@ -46,7 +46,7 @@ The following syntax creates a Greenplum Database readable external table that r
 ``` sql
 CREATE EXTERNAL TABLE <table_name> 
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<path-to-file>?PROFILE=<objstore>:text[&SERVER=<server_name>][&<custom-option>=<value>[...]]')
+LOCATION ('pxf://<path-to-file>?PROFILE=<objstore>:text&SERVER=<server_name>[&<custom-option>=<value>[...]]')
 FORMAT '[TEXT|CSV]' (delimiter[=|<space>][E]'<delim_value>');
 ```
 
@@ -56,7 +56,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 |-------|-------------------------------------|
 | \<path&#8209;to&#8209;file\>    | The absolute path to the directory or file in the S3 object store. |
 | PROFILE=\<objstore\>:text    | The `PROFILE` keyword must identify the specific object store. For example, `s3:text`. |
-| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
+| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. |
 | FORMAT | Use `FORMAT` `'TEXT'` when \<path-to-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  when \<path-to-file\> references comma-separated value data.  |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
 
@@ -153,7 +153,7 @@ Use the `<objstore>:text:multi` profile to read plain text data with delimited s
 ``` sql
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<path-to-file>?PROFILE=<objstore>:text:multi[&SERVER=<server_name>][&<custom-option>=<value>[...]]')
+LOCATION ('pxf://<path-to-file>?PROFILE=<objstore>:text:multi&SERVER=<server_name>[&<custom-option>=<value>[...]]')
 FORMAT '[TEXT|CSV]' (delimiter[=|<space>][E]'<delim_value>');
 ```
 
@@ -163,7 +163,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 |-------|-------------------------------------|
 | \<path&#8209;to&#8209;file\>    | The absolute path to the directory or file in the S3 data store. |
 | PROFILE=\<objstore\>:text:multi    | The `PROFILE` keyword must identify the specific object store. For example, `s3:text:multi`. |
-| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
+| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. |
 | FORMAT | Use `FORMAT` `'TEXT'` when \<path-to-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'` when \<path-to-file\> references comma-separated value data.  |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
 
@@ -252,7 +252,7 @@ Use the following syntax to create a Greenplum Database writable external table 
 CREATE WRITABLE EXTERNAL TABLE <table_name> 
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION ('pxf://<path-to-dir>
-    ?PROFILE=<objstore>:text[&SERVER=<server_name>][&<custom-option>=<value>[...]]')
+    ?PROFILE=<objstore>:text&SERVER=<server_name>[&<custom-option>=<value>[...]]')
 FORMAT '[TEXT|CSV]' (delimiter[=|<space>][E]'<delim_value>');
 [DISTRIBUTED BY (<column_name> [, ... ] ) | DISTRIBUTED RANDOMLY];
 ```
@@ -263,7 +263,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 |-------|-------------------------------------|
 | \<path&#8209;to&#8209;dir\>    | The absolute path to the directory in the S3 data store. |
 | PROFILE=\<objstore\>:text    | The `PROFILE` keyword must identify the specific object store. For example, `s3:text`. |
-| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
+| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. |
 | \<custom&#8209;option\>=\<value\>  | \<custom-option\>s are described below.|
 | FORMAT | Use `FORMAT` `'TEXT'` to write plain, delimited text to \<path-to-dir\>.<br> Use `FORMAT` `'CSV'` to write comma-separated value text to \<path-to-dir\>. |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
