@@ -1,11 +1,15 @@
-1:drop view if exists mpp25160 cascade;
-DROP
-1:create view mpp25160 as select * from pg_class;
+-- Helper function
+CREATE or REPLACE FUNCTION lock_wait_until_ungranted() RETURNS bool AS $$ declare retries int; /* in func */ begin /* in func */ retries := 1200; /* in func */ loop /* in func */ if (select not granted from pg_locks where granted='f' and relation='concurrent_drop_view'::regclass) then /* in func */ return true; /* in func */ end if; /* in func */ if retries <= 0 then /* in func */ return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ retries := retries - 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
-1:select viewname from pg_views where viewname = 'mpp25160';
- viewname 
-----------
- mpp25160 
+
+1:drop view if exists concurrent_drop_view cascade;
+DROP
+1:create view concurrent_drop_view as select * from pg_class;
+CREATE
+1:select viewname from pg_views where viewname = 'concurrent_drop_view';
+ viewname             
+----------------------
+ concurrent_drop_view 
 (1 row)
 
 -- One transaction drops the view, and before it commits, another
@@ -18,13 +22,18 @@ CREATE
 -- not nice.)
 1:begin;
 BEGIN
-1:drop view mpp25160;
+1:drop view concurrent_drop_view;
 DROP
-2&:select viewname, definition from pg_views where viewname = 'mpp25160';  <waiting ...>
+2&:select viewname, definition from pg_views where viewname = 'concurrent_drop_view';  <waiting ...>
+3:select lock_wait_until_ungranted();
+ lock_wait_until_ungranted 
+---------------------------
+ t                         
+(1 row)
 1:commit;
 COMMIT
 2<:  <... completed>
- viewname | definition 
-----------+------------
- mpp25160 |            
+ viewname             | definition 
+----------------------+------------
+ concurrent_drop_view |            
 (1 row)
