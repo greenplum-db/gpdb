@@ -2,7 +2,7 @@
 title: Migrating gphdfs External Tables to PXF
 ---
 
-You may be using the `gphdfs` external table protocol in a Greenplum Database version 5.x cluster to access data stored in Hadoop. Greenplum Database version 6.0 removes support for the `gphdfs` protocol. To maintain access to Hadoop data in Greenplum 6.0, you must migrate your `gphdfs` external tables to use the Greenplum Platform Extension Framework (PXF). This involves setting up PXF and creating new external tables that use the `pxf` external table protocol.
+You may be using the `gphdfs` external table protocol in a Greenplum Database version 5.x cluster to access data stored in Hadoop. Greenplum Database version 6 removes support for the `gphdfs` protocol. To maintain access to Hadoop data in Greenplum 6, you must migrate your `gphdfs` external tables to use the Greenplum Platform Extension Framework (PXF). This involves setting up PXF and creating new external tables that use the `pxf` external table protocol.
 
 To migrate your `gphdfs` external tables to use the `pxf` external table protocol, you must:
 
@@ -78,8 +78,8 @@ PXF does not use the following `gphdfs` configuration options:
 |----------+---------------+------------|
 | HADOOP_HOME | Environment variable that identifies the Hadoop installation directory | Not applicable; PXF is bundled with the required dependent Hadoop libraries and JARs | 
 | CLASSPATH | Environment variable that identifies the locations of Hadoop JAR and configuration files | Not applicable, PXF automatically includes the Hadoop libraries, JARs, and configuration files that it bundles in the `CLASSPATH`. PXF also automatically includes user-registered dependencies found in the `$PXF_CONF/lib` directory in the `CLASSPATH`. | 
-| gp_hadoop_target_version | Server configuration parameter that identifies the Hadoop distribution | Not applicable, PXF works out-of-the-box with the different Hadoop distros | 
-| gp_hadoop_home | Server configuration parameter that identifies the Hadoop installation directory | Not applicable, PXF works out-of-the-box with the different Hadoop distros | 
+| gp_hadoop_target_version | Server configuration parameter that identifies the Hadoop distribution | Not applicable, PXF works out-of-the-box with the different Hadoop distributions | 
+| gp_hadoop_home | Server configuration parameter that identifies the Hadoop installation directory | Not applicable, PXF works out-of-the-box with the different Hadoop distributions | 
 
 
 Configuration properties required by PXF, and the `gphdfs` equivalent, if applicable, include:
@@ -204,7 +204,7 @@ Ensure that you can read from, or write to, each `pxf` external table that you h
 
 ## <a id="remove_gphdfs_ext_table"></a>Removing the gphdfs External Tables
 
-You must remove all `gphdfs` external tables before you can successfuly migrate a Greenplum Database 5.x database to Greenplum 6.0.
+You must remove all `gphdfs` external tables before you can successfuly migrate a Greenplum Database 5.x database to Greenplum 6.
 
 Drop an external table as follows:
 
