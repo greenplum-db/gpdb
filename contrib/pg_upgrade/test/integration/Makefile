@@ -23,6 +23,9 @@ compile_test = $(compile) $(test_flags)
 integration_test_dependencies = $(libpq_pgport) 
 
 
+#
+# Scripts
+#
 scripts/gpdb5-cluster: scripts/gpdb5-cluster.c utilities/gpdb5-cluster.o
 	$(compile) $^ -o scripts/gpdb5-cluster 
 
@@ -31,6 +34,9 @@ scripts/gpdb6-cluster: scripts/gpdb6-cluster.c utilities/gpdb6-cluster.o
 	$(compile) $^ -o scripts/gpdb6-cluster 
 
 
+#
+# Libraries
+#
 utilities/gpdb5-cluster.o: ./utilities/gpdb5-cluster.c
 	$(compile_test) -c $< -o utilities/gpdb5-cluster.o
 
@@ -39,6 +45,9 @@ utilities/gpdb6-cluster.o: ./utilities/gpdb6-cluster.c
 	$(compile_test) -c $< -o utilities/gpdb6-cluster.o
 
 
+#
+# Tests
+#
 test_dependencies = utilities/gpdb5-cluster.o \
 	utilities/gpdb6-cluster.o \
 	$(CMOCKERY_OBJS)
@@ -51,6 +60,9 @@ greenplum_five_to_greenplum_six_upgrade_test.t: greenplum_five_to_greenplum_six_
 		-o $@
 
 
+#
+# Build all
+#
 all: scripts/gpdb5-cluster scripts/gpdb6-cluster greenplum_five_to_greenplum_six_upgrade_test.t
 
 

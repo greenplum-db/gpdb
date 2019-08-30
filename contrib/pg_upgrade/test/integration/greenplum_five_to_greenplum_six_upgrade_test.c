@@ -18,11 +18,8 @@ setup(void **state)
 	printf("\nMaking a copy of gpdb5 data directories.\n");
 	system("rsync -a --delete ./gpdb5-data/ ./gpdb5-data-copy");
 	
-	
 	printf("\nMaking a copy of gpdb6 data directories.\n");
 	system("rsync -a --delete ./gpdb6-data/ ./gpdb6-data-copy");
-	
-	system("unset PGPORT");
 }
 
 static void
@@ -80,6 +77,7 @@ upgradeContentId0()
 
 	system(""
 		"./gpdb6/bin/pg_upgrade "
+			"--mode=segment "
 			"--old-bindir=./gpdb5/bin "
 			"--new-bindir=./gpdb6/bin "
 			"--old-datadir=./gpdb5-data-copy/dbfast1/demoDataDir0 "
@@ -94,6 +92,7 @@ upgradeContentId1()
 
 	system(""
 		"./gpdb6/bin/pg_upgrade "
+			"--mode=segment "
 			"--old-bindir=./gpdb5/bin "
 			"--new-bindir=./gpdb6/bin "
 			"--old-datadir=./gpdb5-data-copy/dbfast2/demoDataDir1 "
@@ -108,6 +107,7 @@ upgradeContentId2()
 
 	system(""
 		"./gpdb6/bin/pg_upgrade "
+			"--mode=segment "
 			"--old-bindir=./gpdb5/bin "
 			"--new-bindir=./gpdb6/bin "
 			"--old-datadir=./gpdb5-data-copy/dbfast3/demoDataDir2 "
