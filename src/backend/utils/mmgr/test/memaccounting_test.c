@@ -928,9 +928,6 @@ test__MemoryAccounting_CombinedAccountArrayToExplain__Validate(void **state)
 
 	MemoryAccounting_CombinedAccountArrayToExplain(serializedBytes.data, totalSerialized, es);
 
-	size_t newTopBalance = topAccount->allocated - topAccount->freed;
-	size_t newTopPeak = topAccount->peak;
-
 	assert_true(strcmp(es->str->data, buf) == 0);
 
     pfree(serializedBytes.data);

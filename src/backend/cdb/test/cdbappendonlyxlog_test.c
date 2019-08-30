@@ -32,7 +32,6 @@ ao_invalid_segment_file_test(uint8 xl_info)
 	xl_ao_target xlaotarget;
 	xl_ao_insert xlaoinsert;
 	xl_ao_truncate xlaotruncate;
-	char *buffer = NULL;
 
 	/* create mock transaction log */
 	relfilenode.spcNode = DEFAULTTABLESPACE_OID;
