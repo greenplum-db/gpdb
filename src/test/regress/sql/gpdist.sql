@@ -521,3 +521,45 @@ create table xidtab (x xid) distributed by (x);
 insert into xidtab select g::text::xid from generate_series(1,5) g;
 select * from xidtab a, xidtab b, xidtab c where a.x=b.x and b.x = c.x;
 select * from xidtab group by x;
+
+--
+-- Use a non-Var entry as the hashExpr and relabel it. In this case the
+-- hashExpr could not refer to the RelabelType entry in the target list.
+-- Test we handled it.
+--
+CREATE TEMPORARY TABLE a (c1 numeric(38,10), c2 character varying(16)) DISTRIBUTED BY (c1);
+CREATE TEMPORARY TABLE b (c3 character varying(16), c4 numeric(22,0)) DISTRIBUTED BY (c3);
+SELECT
+   CASE
+      WHEN
+         a.c2 IS NULL
+      THEN
+         '-1'::text
+      ELSE
+         btrim(a.c2::text)
+   END
+   ::character varying AS foo, 'Undefined'::character varying AS bar
+FROM
+   a
+   LEFT JOIN
+      b
+      ON b.c3::text =
+      CASE
+         WHEN
+            a.c2 IS NULL
+         THEN
+            '-1'::text
+         ELSE
+            btrim(a.c2::text)
+      END
+GROUP BY
+   CASE
+      WHEN
+         a.c2 IS NULL
+      THEN
+         '-1'::text
+      ELSE
+         btrim(a.c2::text)
+   END
+   ::character varying, 'Undefined'::character varying
+;

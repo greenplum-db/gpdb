@@ -596,12 +596,17 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
     {
         indexed_tlist  *plan_itlist = build_tlist_index(plan->targetlist);
 
-		plan->flow->hashExprs =
-			(List *) fix_upper_expr(root,
+		/* skip the fixup because non-Var could not be matched. */
+		if (!plan_itlist->has_non_vars)
+		{
+			plan->flow->hashExprs =
+				(List *) fix_upper_expr(root,
 									(Node *) plan->flow->hashExprs,
 									plan_itlist,
 									OUTER_VAR,
 									rtoffset);
+		}
+
         pfree(plan_itlist);
     }
 
