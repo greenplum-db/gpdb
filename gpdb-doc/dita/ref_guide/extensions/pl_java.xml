@@ -174,9 +174,9 @@
       <p>PL/Java requires a Java runtime environment on each Greenplum Database host. Ensure that
         the same Java environment is at the same location on all hosts: masters and segments. The
         command <codeph>java -version</codeph> displays the Java version.</p>
-      <p>You can install Java on the host systems. The commands that you use to install Java depend
-        on the host system operating system and Java version. This list describes how to install
-        OpenJDK 8 or 11 (Java 8 JDK or Java 11 JDK) on RHEL/CentOS or Ubuntu.<ul id="ul_cld_gdp_w3b">
+      <p>The commands that you use to install Java depend on the host system operating system and
+        Java version. This list describes how to install OpenJDK 8 or 11 (Java 8 JDK or Java 11 JDK)
+        on RHEL/CentOS or Ubuntu.<ul id="ul_cld_gdp_w3b">
           <li>RHEL 7/CentOS 7 - This <codeph>yum</codeph> command installs OpenJDK 8 or
               11.<codeblock>$ sudo yum install java-&lt;<varname>version</varname>>-openjdk-devel</codeblock><p>For
               OpenJDK 8 the <varname>version</varname> is <codeph>1.8.0</codeph>, for OpenJDK 11 the
@@ -192,8 +192,9 @@
                     <li>This example <codeph>tar</codeph> command installs the OpenJDK 11 in
                         <codeph>/usr/lib/jvm</codeph>.<codeblock>$ sudo tar xzf openjdk-11.0.2_linux-x64_bin.tar.gz --directory /usr/lib/jvm</codeblock></li>
                     <li>Run these two commands to add OpenJDK 11 to the
-                        <codeph>update-alternatives</codeph> command that maintains symbolic links
-                      that determines the default version of
+                        <codeph>update-alternatives</codeph> command. The
+                        <codeph>update-alternatives</codeph>command maintains symbolic links that
+                      determine the default version of operating system
                         commands.<codeblock>$ sudo sh -c 'for bin in /usr/lib/jvm/jdk-11.0.2/bin/*; do update-alternatives --install /usr/bin/$(basename $bin) $(basename $bin) $bin 100; done'
 $ sudo sh -c 'for bin in /usr/lib/jvm/jdk-11.0.2/bin/*; do update-alternatives --set $(basename $bin) $bin; done'</codeblock><p>The
                         second command returns some <codeph>failed to read link</codeph> errors that
