@@ -84,7 +84,8 @@
         <p>To generate a ticket using a keytab (as described in <xref href="#topic_win_keytab" format="dita"/>):
           <codeblock>kinit -k -t &lt;keytab_filepath> [&lt;principal>]</codeblock></p></li>
       <li>Set up the Greenplum clients environment:
-        <codeblock>"c:\Program Files\Greenplum\greenplum-clients\greenplum_clients_path.bat"</codeblock></li>
+        <codeblock>set PGGSSLIB=gssapi
+"c:\Program Files\Greenplum\greenplum-clients\greenplum_clients_path.bat"</codeblock></li>
       </ol>
     </body>
   </topic>
