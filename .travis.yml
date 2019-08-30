@@ -1,108 +1,168 @@
-## ======================================================================
-##   ____ ____  ____  ____     ____                         
-##  / ___|  _ \|  _ \| __ )   / ___|_   _ _ __  _ __  _   _ 
-## | |  _| |_) | | | |  _ \  | |  _| | | | '_ \| '_ \| | | |
-## | |_| |  __/| |_| | |_) | | |_| | |_| | | | | | | | |_| |
-##  \____|_|   |____/|____/   \____|\__,_|_| |_|_| |_|\__, |
-##                                                    |___/ 
 ## ----------------------------------------------------------------------
-## Travis CI build script for GPDB Open Source Project.
-## 
-## Reference:
-##   o Travis CI Docs: http://docs.travis-ci.com
+## Travis CI build script for Greenplum Database Open Source Project.
 ## ----------------------------------------------------------------------
-##
-## This project builds the core Greenplum Database Open Source
-## project.
-##
-## ======================================================================
-
-os:
-  - linux
 
 language: c
 sudo: false
 
-cache: ccache
 git:
   submodules: false
 
 addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    packages:
-    - libevent-dev
-    - libperl-dev
-    - g++-6
-    - python-dev
-    - python-yaml
-    - libapr1-dev
+    apt:
+        config:
+            retries: true
+        sources: &common_sources
+            - ubuntu-toolchain-r-test
+        packages: &common_packages
+            - gcc-8
+            - libxml2
+            - libxml2-dev
+            - libevent-dev
+            - libperl-dev
+            - g++-8
+            - python-dev
+            - python-yaml
+            - libapr1-dev
+            - libzstd1
+            - libzstd1-dev
+
+matrix:
+    include:
+        # OS and Compiler variations
+        # ----------------------------------------------------------------
+        #
+        # Ubuntu Bionic, gcc 8
+        - os: linux
+          dist: bionic
+          compiler: gcc
+          env:
+              - T=debug C=""
+              - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+          addons:
+              apt:
+                  sources:
+                      - *common_sources
+                  packages:
+                      - *common_packages
+        # Ubuntu Xenial, clang 7
+        - os: linux
+          dist: xenial
+          compiler: clang
+          env:
+              - T=debug C=""
+              - OVERRIDE_CC="CC=clang-7" OVERRIDE_CXX="CXX=clang++-7"
+          addons:
+              apt:
+                  sources:
+                      - *common_sources
+                      - llvm-toolchain-xenial-7
+                  packages:
+                      - *common_packages
+                      - clang-7
+        # macOS, XCode11
+        - os: osx
+          compiler: clang
+          osx_image: xcode11
+          env: T=macos
 
 ## ----------------------------------------------------------------------
 ## Build tools
 ## ----------------------------------------------------------------------
 
-compiler:
-  - gcc-6
-
 python:
-  - "2.7"
+    - "2.7"
+
+before_install:
+    - eval "${OVERRIDE_CC}"
+    - eval "${OVERRIDE_CXX}"
 
 ## ----------------------------------------------------------------------
 ## Install supporting Python modules
 ## ----------------------------------------------------------------------
 
 install:
-  - pip install --user --upgrade pip
-  - pip install --user --pre psutil
-  - pip install --user lockfile
-  - pip install --user setuptools
-
-env:
-  - CC=gcc-6
-    CXX=g++-6
+    - pip install --user --upgrade pip
+    - pip install --user --pre psutil
+    - pip install --user lockfile
+    - pip install --user setuptools
 
 ## ----------------------------------------------------------------------
 ## Perform build:
 ## ----------------------------------------------------------------------
 
+before_script:
+    - ssh-keygen -t "rsa" -f ~/.ssh/id_rsa -N ""
+    - cp ~/.ssh/{id_rsa.pub,authorized_keys}
+
 script:
-  - cd ${TRAVIS_BUILD_DIR}
   - |
-    ./configure \
-        --with-openssl \
-        --with-ldap \
-        --with-libcurl \
-        --prefix=${TRAVIS_BUILD_DIR}/gpsql \
-        --disable-orca \
-        --disable-gpcloud \
-        --enable-pxf \
-        --enable-mapreduce \
-        --with-perl \
-        --enable-orafce \
-        --without-zstd
+      set -eo pipefail
+      if [ "$T" = "debug" ]; then
+        ./configure \
+            --prefix=${TRAVIS_BUILD_DIR}/gpsql \
+            --enable-cassert \
+            --enable-debug \
+            --enable-debug-extensions \
+            --with-perl \
+            --with-python \
+            --disable-orca \
+            --with-openssl \
+            --with-ldap \
+            --with-libcurl \
+            --with-libxml \
+            --enable-mapreduce \
+            --enable-orafce \
+            $C
+        make -s install
+        source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+        make -s unittest-check
+        make -C gpAux/gpdemo cluster
+        source gpAux/gpdemo/gpdemo-env.sh
+        make -C src/test/regress installcheck-small
+      fi
+  - |
+      set -eo pipefail
+      if [ "$T" = "production" ]; then
+        ./configure \
+            --prefix=${TRAVIS_BUILD_DIR}/gpsql \
+            --with-perl \
+            --with-python \
+            --disable-orca \
+            --with-openssl \
+            --with-ldap \
+            --with-libcurl \
+            --with-libxml \
+            --enable-mapreduce \
+            --enable-orafce \
+            $C
+        make -s install
+        source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+        make -s unittest-check
+        make -C gpAux/gpdemo cluster
+        source gpAux/gpdemo/gpdemo-env.sh
+        make -C src/test/regress installcheck-small
+      fi
+  - |
+      set -eo pipefail
+      if [ "$T" = "macos" ]; then
+        ./configure \
+            --prefix=${TRAVIS_BUILD_DIR}/gpsql \
+            --with-perl \
+            --with-python \
+            --disable-orca \
+            --enable-orafce \
+            --disable-gpfdist \
+            --disable-pxf \
+            --disable-gpcloud \
+            --without-zstd \
+            $C
+        make -s install
+        source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+        make -s unittest-check
+      fi
 
-  - make
-  - make install
+after_script:
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
-  - make unittest-check
   - postgres --version
-  - initdb --version
-  - createdb --version
-  - psql --version
   - gpssh --version
-  - gpmapreduce --version
-  - gpfdist --version
-
-## ----------------------------------------------------------------------
-## Notification
-## ----------------------------------------------------------------------
-notifications:
-  email:
-    recipients:
-      - releng@pivotal.io
-    on_success: change
-    on_failure: always
-
-after_script: ccache -s
