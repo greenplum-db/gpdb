@@ -149,9 +149,9 @@ explain analyze select * from customer;
          Rows out:  Avg 75000.0 rows x 2 workers.  Max 75001 rows (seg0) 
          with 0.056 ms to first row, 26 ms to end, start offset by 7.332 ms.
  Slice statistics:
-   (slice0)    Executor memory: 186K bytes.
-   (slice1)    Executor memory: 130K bytes avg x 2 workers, 
-               130K bytes max (seg0).
+   (slice0)    Executor memory: 186kB.
+   (slice1)    Executor memory: 130kB avg x 2 workers, 
+               130kB max (seg0).
  Total runtime: 413.401 ms
 (8 rows)
 

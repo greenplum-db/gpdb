@@ -32,7 +32,7 @@ Query Text: SELECT relname FROM pg_class WHERE relname='pg_class';
 Seq Scan on pg_class  (cost=0.00..12.46 rows=1 width=64) (actual rows=1 loops=1)
   Filter: (relname = 'pg_class'::name)
   Rows Removed by Filter: 438
-  (slice0)    Executor memory: 32K bytes.
+  (slice0)    Executor memory: 32kB.
 Memory used:  128000kB
  relname  
 ----------
@@ -51,9 +51,9 @@ Aggregate  (cost=10000035148.67..10000035148.68 rows=1 width=8) (actual rows=1 l
                     ->  Materialize  (cost=0.00..68.06 rows=1001 width=0) (actual rows=1001 loops=340)
                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..53.05 rows=1001 width=0) (actual rows=1001 loops=1)
                                 ->  Seq Scan on t2  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
-  (slice0)    Executor memory: 131K bytes.
-  (slice1)    Executor memory: 53K bytes avg x 3 workers, 58K bytes max (seg1).
-  (slice2)    Executor memory: 216K bytes avg x 3 workers, 216K bytes max (seg0).
+  (slice0)    Executor memory: 131kB.
+  (slice1)    Executor memory: 53kB avg x 3 workers, 58kB max (seg1).
+  (slice2)    Executor memory: 216kB avg x 3 workers, 216kB max (seg0).
 Memory used:  128000kB
   count  
 ---------
@@ -94,9 +94,9 @@ Aggregate  (cost=10000035148.67..10000035148.68 rows=1 width=8) (actual rows=1 l
                                 Output: t2.b
                                 ->  Seq Scan on auto_explain_test.t2  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
                                       Output: t2.b
-  (slice0)    Executor memory: 131K bytes.
-  (slice1)    Executor memory: 43K bytes avg x 3 workers, 43K bytes max (seg0).
-  (slice2)    Executor memory: 216K bytes avg x 3 workers, 216K bytes max (seg0).
+  (slice0)    Executor memory: 131kB.
+  (slice1)    Executor memory: 43kB avg x 3 workers, 43kB max (seg0).
+  (slice2)    Executor memory: 216kB avg x 3 workers, 216kB max (seg0).
 Memory used:  128000kB
   count  
 ---------

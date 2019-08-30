@@ -46,11 +46,11 @@ explain analyze select count(*) from test_gang_reuse_t1 a
                                  Hash Key: c.c2
                                  ->  Seq Scan on test_gang_reuse_t1 c  (cost=0.00..961.00 rows=28700 width=4) (never executed)
  Planning time: 3.415 ms
-   (slice0)    Executor memory: 127K bytes.
-   (slice1)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
-   (slice2)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
-   (slice3)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
-   (slice4)    Executor memory: 2128K bytes avg x 3 workers, 2128K bytes max (seg0).
+   (slice0)    Executor memory: 127kB.
+   (slice1)    Executor memory: 60kB avg x 3 workers, 60kB max (seg0).
+   (slice2)    Executor memory: 60kB avg x 3 workers, 60kB max (seg0).
+   (slice3)    Executor memory: 60kB avg x 3 workers, 60kB max (seg0).
+   (slice4)    Executor memory: 2128kB avg x 3 workers, 2128kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Execution time: 19.418 ms
@@ -75,10 +75,10 @@ explain analyze select count(*) from test_gang_reuse_t1 a
                                  Hash Key: b.c2
                                  ->  Seq Scan on test_gang_reuse_t1 b  (cost=0.00..961.00 rows=28700 width=4) (never executed)
  Planning time: 1.300 ms
-   (slice0)    Executor memory: 127K bytes.
-   (slice1)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
-   (slice2)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
-   (slice3)    Executor memory: 4176K bytes avg x 3 workers, 4176K bytes max (seg0).
+   (slice0)    Executor memory: 127kB.
+   (slice1)    Executor memory: 44kB avg x 3 workers, 44kB max (seg0).
+   (slice2)    Executor memory: 44kB avg x 3 workers, 44kB max (seg0).
+   (slice3)    Executor memory: 4176kB avg x 3 workers, 4176kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Execution time: 8.568 ms
@@ -110,11 +110,11 @@ explain analyze select count(*) from test_gang_reuse_t1 a
                                  Hash Key: c.c2
                                  ->  Seq Scan on test_gang_reuse_t1 c  (cost=0.00..961.00 rows=28700 width=4) (never executed)
  Planning time: 1.931 ms
-   (slice0)    Executor memory: 127K bytes.
-   (slice1)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
-   (slice2)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
-   (slice3)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
-   (slice4)    Executor memory: 2128K bytes avg x 3 workers, 2128K bytes max (seg0).
+   (slice0)    Executor memory: 127kB.
+   (slice1)    Executor memory: 44kB avg x 3 workers, 44kB max (seg0).
+   (slice2)    Executor memory: 44kB avg x 3 workers, 44kB max (seg0).
+   (slice3)    Executor memory: 44kB avg x 3 workers, 44kB max (seg0).
+   (slice4)    Executor memory: 2128kB avg x 3 workers, 2128kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Execution time: 5.753 ms
@@ -139,10 +139,10 @@ explain analyze select count(*) from test_gang_reuse_t1 a
                                  Hash Key: b.c2
                                  ->  Seq Scan on test_gang_reuse_t1 b  (cost=0.00..961.00 rows=28700 width=4) (never executed)
  Planning time: 1.231 ms
-   (slice0)    Executor memory: 127K bytes.
-   (slice1)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
-   (slice2)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
-   (slice3)    Executor memory: 4176K bytes avg x 3 workers, 4176K bytes max (seg0).
+   (slice0)    Executor memory: 127kB.
+   (slice1)    Executor memory: 44kB avg x 3 workers, 44kB max (seg0).
+   (slice2)    Executor memory: 44kB avg x 3 workers, 44kB max (seg0).
+   (slice3)    Executor memory: 4176kB avg x 3 workers, 4176kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Execution time: 6.223 ms

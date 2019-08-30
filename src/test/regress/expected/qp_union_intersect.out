@@ -1804,9 +1804,9 @@ order by 1,2;
                ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..28.00 rows=500 width=4) (actual time=0.034..0.319 rows=250 loops=2)
                      ->  Seq Scan on mergeappend_test r_1  (cost=0.00..8.00 rows=167 width=4) (actual time=0.008..0.041 rows=150 loops=2)
  Planning time: 0.793 ms
-   (slice0)    Executor memory: 380K bytes.  Work_mem: 33K bytes max.
-   (slice1)    Executor memory: 121K bytes avg x 3 workers, 140K bytes max (seg0).  Work_mem: 49K bytes max.
-   (slice2)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+   (slice0)    Executor memory: 380kB.  Work_mem: 33kB max.
+   (slice1)    Executor memory: 121kB avg x 3 workers, 140kB max (seg0).  Work_mem: 49kB max.
+   (slice2)    Executor memory: 42kB avg x 3 workers, 42kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Execution time: 2.496 ms

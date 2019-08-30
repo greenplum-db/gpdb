@@ -826,9 +826,9 @@ explain analyze select * from t, pt where tid = ptid;
                ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31) (actual time=0.046..0.073 rows=4 loops=2)
                      Index Cond: ptid = $0
                      Partitions scanned:  Avg 6.0 (out of 6) x 3 workers of 2 scans.  Max 6 parts (seg0).
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 60K bytes avg x 3 workers, 62K bytes max (seg0).
-   (slice2)    Executor memory: 155K bytes avg x 3 workers, 155K bytes max (seg0).
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 60kB avg x 3 workers, 62kB max (seg0).
+   (slice2)    Executor memory: 155kB avg x 3 workers, 155kB max (seg0).
    (slice3)    
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21

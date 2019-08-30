@@ -1379,7 +1379,7 @@ cdbexplain_formatMemory(char *outbuf, int bufsize, double bytes)
 #ifdef USE_ASSERT_CHECKING
 	int			nchars_written =
 #endif							/* USE_ASSERT_CHECKING */
-	snprintf(outbuf, bufsize, "%.0fK bytes", kb(bytes));
+	snprintf(outbuf, bufsize, "%.0fkB", kb(bytes));
 
 	Assert(nchars_written < bufsize &&
 		   "CDBEXPLAIN:  size of char buffer is smaller than the required number of chars");
@@ -2332,13 +2332,11 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
     if (total_memory_across_slices > 0)
     {
         if (es->format == EXPLAIN_FORMAT_TEXT)
-        {
-            appendStringInfo(es->str, "Total memory used across slices: %.0fK bytes \n", total_memory_across_slices);
-        }
+			appendStringInfo(es->str, "Total memory used across slices: %.0fkB\n",
+							 total_memory_across_slices);
         else
-        {
-            ExplainPropertyInteger("Total memory used across slices", total_memory_across_slices, es);
-        }
+			ExplainPropertyInteger("Total memory used across slices",
+								   total_memory_across_slices, es);
     }
 }
 

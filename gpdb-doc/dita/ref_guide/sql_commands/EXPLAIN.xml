@@ -73,8 +73,8 @@ EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
           operation. If <codeph>work_mem</codeph> was not sufficient to perform the operation in
           memory, the plan will show how much data was spilled to disk and how many passes over the
           data were required for the lowest performing segment. For
-          example:<codeblock>Work_mem used: 64K bytes avg, 64K bytes max (seg0).
-Work_mem wanted: 90K bytes avg, 90K bytes max (seg0) to abate workfile 
+          example:<codeblock>Work_mem used: 64kB avg, 64kB max (seg0).
+Work_mem wanted: 90kB avg, 90kB max (seg0) to abate workfile 
 I/O affecting 2 workers.
 [seg0] pass 0: 488 groups made from 488 rows; 263 rows written to 
 workfile

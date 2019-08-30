@@ -53,9 +53,9 @@ explain analyze select d, count(*) from smallt group by d;
                      Group Key: smallt.d
                      (seg1)   Hash chain length 1.1 avg, 2 max, using 9 of 32 buckets; total 0 expansions.
                      ->  Seq Scan on smallt  (cost=0.00..4.00 rows=34 width=4) (actual time=0.020..0.055 rows=50 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 166K bytes avg x 3 workers, 166K bytes max (seg0).
-   (slice2)    Executor memory: 138K bytes avg x 3 workers, 138K bytes max (seg0).
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 166kB avg x 3 workers, 166kB max (seg0).
+   (slice2)    Executor memory: 138kB avg x 3 workers, 138kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 2.162 ms
@@ -80,8 +80,8 @@ explain analyze select count(*) from (select i, t, d, count(*) from bigt group b
                            (seg0)   44568 groups total in 32 batches; 1 overflows; 44568 spill groups.
                            (seg0)   Hash chain length 3.3 avg, 14 max, using 23361 of 24576 buckets; total 1 expansions.
                            ->  Seq Scan on bigt  (cost=0.00..11615.78 rows=334160 width=18) (actual time=0.042..59.788 rows=333490 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)  * Executor memory: 3004K bytes avg x 3 workers, 3004K bytes max (seg0).  Work_mem: 2361K bytes max, 4738K bytes wanted.
+   (slice0)    Executor memory: 386kB.
+   (slice1)  * Executor memory: 3004kB avg x 3 workers, 3004kB max (seg0).  Work_mem: 2361kB max, 4738kB wanted.
  Memory used:  2560kB
  Memory wanted:  5237kB
  Optimizer: Postgres query optimizer
@@ -104,8 +104,8 @@ explain analyze select count(distinct d) from smallt;
  Aggregate  (cost=8.25..8.26 rows=1 width=8) (actual time=0.782..0.783 rows=1 loops=1)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8.00 rows=100 width=4) (actual time=0.338..0.651 rows=100 loops=1)
          ->  Seq Scan on smallt  (cost=0.00..4.00 rows=34 width=4) (actual time=0.012..0.033 rows=50 loops=1)
-   (slice0)    Executor memory: 322K bytes.  Work_mem: 33K bytes max.
-   (slice1)    Executor memory: 46K bytes avg x 3 workers, 46K bytes max (seg0).
+   (slice0)    Executor memory: 322kB.  Work_mem: 33kB max.
+   (slice1)    Executor memory: 46kB avg x 3 workers, 46kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 1.348 ms
@@ -124,8 +124,8 @@ explain analyze select count(distinct d) from bigt;
  Aggregate  (cost=54221.10..54221.11 rows=1 width=8) (actual time=4936.204..4936.205 rows=1 loops=1)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..51714.90 rows=1002478 width=4) (actual time=1.474..1249.805 rows=1000000 loops=1)
          ->  Seq Scan on bigt  (cost=0.00..11615.78 rows=334160 width=4) (actual time=0.037..141.126 rows=333490 loops=1)
-   (slice0)  * Executor memory: 2966K bytes.  Work_mem: 2649K bytes max, 23514K bytes wanted.
-   (slice1)    Executor memory: 70K bytes avg x 3 workers, 70K bytes max (seg0).
+   (slice0)  * Executor memory: 2966kB.  Work_mem: 2649kB max, 23514kB wanted.
+   (slice1)    Executor memory: 70kB avg x 3 workers, 70kB max (seg0).
  Memory used:  2560kB
  Memory wanted:  23713kB
  Optimizer: Postgres query optimizer
@@ -195,10 +195,10 @@ where t1.d = t2.d;
                                  Group Key: public.smallt.d
                                  (seg1)   Hash chain length 1.1 avg, 2 max, using 9 of 32 buckets; total 0 expansions.
                                  ->  Seq Scan on smallt smallt_1  (cost=0.00..4.00 rows=34 width=8) (actual time=0.017..0.043 rows=50 loops=1)
-   (slice0)    Executor memory: 514K bytes.
-   (slice1)    Executor memory: 166K bytes avg x 3 workers, 166K bytes max (seg0).
-   (slice2)    Executor memory: 166K bytes avg x 3 workers, 166K bytes max (seg0).
-   (slice3)    Executor memory: 218K bytes avg x 3 workers, 218K bytes max (seg0).
+   (slice0)    Executor memory: 514kB.
+   (slice1)    Executor memory: 166kB avg x 3 workers, 166kB max (seg0).
+   (slice2)    Executor memory: 166kB avg x 3 workers, 166kB max (seg0).
+   (slice3)    Executor memory: 218kB avg x 3 workers, 218kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 3.272 ms
@@ -246,8 +246,8 @@ where t1.i = t2.i;
                      Group Key: public.smallt.i
                      (seg1)   Hash chain length 1.0 avg, 1 max, using 5 of 32 buckets; total 0 expansions.
                      ->  Seq Scan on smallt smallt_1  (cost=0.00..4.00 rows=34 width=4) (actual time=0.012..0.030 rows=50 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 278K bytes avg x 3 workers, 278K bytes max (seg0).
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 278kB avg x 3 workers, 278kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 1.614 ms
@@ -280,9 +280,9 @@ explain analyze select d, count(*) from smallt group by d limit 5;
                                  Group Key: smallt.d
                                  (seg1)   Hash chain length 1.1 avg, 2 max, using 9 of 32 buckets; total 0 expansions.
                                  ->  Seq Scan on smallt  (cost=0.00..4.00 rows=34 width=4) (actual time=0.018..0.044 rows=50 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 166K bytes avg x 3 workers, 166K bytes max (seg0).
-   (slice2)    Executor memory: 170K bytes avg x 3 workers, 170K bytes max (seg0).
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 166kB avg x 3 workers, 166kB max (seg0).
+   (slice2)    Executor memory: 170kB avg x 3 workers, 170kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 3.057 ms
@@ -1304,8 +1304,8 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i;
          ->  Seq Scan on smallt t1  (cost=0.00..4.00 rows=34 width=15) (actual time=0.010..0.023 rows=50 loops=1)
          ->  Hash  (cost=4.00..4.00 rows=34 width=4) (actual time=0.054..0.054 rows=50 loops=1)
                ->  Seq Scan on smallt t2  (cost=0.00..4.00 rows=34 width=4) (actual time=0.008..0.029 rows=50 loops=1)
-   (slice0)    Executor memory: 322K bytes.
-   (slice1)    Executor memory: 4202K bytes avg x 3 workers, 4206K bytes max (seg0).  Work_mem: 2K bytes max.
+   (slice0)    Executor memory: 322kB.
+   (slice1)    Executor memory: 4202kB avg x 3 workers, 4206kB max (seg0).  Work_mem: 2kB max.
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 7.932 ms
@@ -1616,8 +1616,8 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i an
                Sort Method:  quicksort  Memory: 33kB
                ->  Seq Scan on smallt t2  (cost=0.00..4.25 rows=7 width=4) (actual time=0.007..0.018 rows=20 loops=1)
                      Filter: i < 2
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 120K bytes avg x 3 workers, 142K bytes max (seg0).  Work_mem: 33K bytes max.
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 120kB avg x 3 workers, 142kB max (seg0).  Work_mem: 33kB max.
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 1.433 ms
@@ -1745,9 +1745,9 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.d = t2.d an
                Sort Key: t2.d
                Sort Method:  quicksort  Memory: 99kB
                ->  Seq Scan on smallt t2  (cost=0.00..4.00 rows=34 width=4) (actual time=0.012..0.033 rows=50 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 60K bytes avg x 3 workers, 62K bytes max (seg0).
-   (slice2)    Executor memory: 158K bytes avg x 3 workers, 158K bytes max (seg0).  Work_mem: 33K bytes max.
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 60kB avg x 3 workers, 62kB max (seg0).
+   (slice2)    Executor memory: 158kB avg x 3 workers, 158kB max (seg0).  Work_mem: 33kB max.
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 2.362 ms
@@ -1811,8 +1811,8 @@ and smallt.d = '2011-01-04'::date;
          ->  Materialize  (cost=0.00..990.53 rows=2 width=4) (actual time=0.019..0.021 rows=4 loops=5)
                ->  Index Scan using smallt2_d_idx on smallt2  (cost=0.00..990.51 rows=2 width=4) (actual time=0.007..0.011 rows=4 loops=1)
                      Index Cond: d = '01-04-2011'::date
-   (slice0)    Executor memory: 437K bytes.
-   (slice1)    Executor memory: 128K bytes avg x 3 workers, 149K bytes max (seg1).
+   (slice0)    Executor memory: 437kB.
+   (slice1)    Executor memory: 128kB avg x 3 workers, 149kB max (seg1).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 1.672 ms
@@ -1831,7 +1831,7 @@ explain analyze select *, exists(select 1 from pg_class where oid = c.oid) as du
      ->  Materialize  (cost=0.29..15397.73 rows=14872 width=4) (actual time=3.828..4.157 rows=3030 loops=2)
            ->  Index Only Scan using pg_class_oid_index on pg_class pg_class_1  (cost=0.29..15323.36 rows=14872 width=4) (actual time=0.024..3.218 rows=3030 loops=2)
                  Heap Fetches: 13752
- * (slice0)    Executor memory: 1118K bytes.  Work_mem: 96K bytes max, 64K bytes wanted.
+ * (slice0)    Executor memory: 1118kB.  Work_mem: 96kB max, 64kB wanted.
  Memory used:  128000kB
  Memory wanted:  364kB
  Optimizer: Postgres query optimizer
@@ -1886,8 +1886,8 @@ and smallt.d = '2011-01-04'::date;
                      Recheck Cond: d = '01-04-2011'::date
                      ->  Bitmap Index Scan on smallt2_d_idx  (cost=0.00..800.38 rows=2 width=0) (actual time=0.006..0.006 rows=1 loops=1)
                            Index Cond: d = '01-04-2011'::date
-   (slice0)    Executor memory: 437K bytes.
-   (slice1)    Executor memory: 480K bytes avg x 3 workers, 678K bytes max (seg1).  Work_mem: 9K bytes max.
+   (slice0)    Executor memory: 437kB.
+   (slice1)    Executor memory: 480kB avg x 3 workers, 678kB max (seg1).  Work_mem: 9kB max.
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 1.456 ms

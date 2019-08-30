@@ -1104,9 +1104,9 @@ explain analyze select * from t, pt where tid = ptid;
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.08 rows=2 width=19) (actual time=0.013..1.782 rows=1 loops=2)
                            ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=19) (actual time=0.028..0.031 rows=0 loops=2)
-   (slice0)    Executor memory: 540K bytes.
-   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
-   (slice2)    Executor memory: 4406K bytes avg x 3 workers, 4406K bytes max (seg0).  Work_mem: 1K bytes max.
+   (slice0)    Executor memory: 540kB.
+   (slice1)    Executor memory: 66kB avg x 3 workers, 66kB max (seg0).
+   (slice2)    Executor memory: 4406kB avg x 3 workers, 4406kB max (seg0).  Work_mem: 1kB max.
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 15.697 ms

@@ -120,10 +120,10 @@ EXPLAIN ANALYZE SELECT count(*) FROM a a1, a a2, a a3;
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..5.50 rows=50 width=0) (actual time=1.877..2.315 rows=25 loops=2)
                                  ->  Seq Scan on a a3  (cost=0.00..3.50 rows=17 width=0) (actual time=0.023..0.029 rows=10 loops=2)
  Planning time: 1.016 ms
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 63K bytes avg x 3 workers, 66K bytes max (seg1).
-   (slice2)    Executor memory: 62K bytes avg x 3 workers, 62K bytes max (seg0).
-   (slice3)    Executor memory: 158K bytes avg x 3 workers, 158K bytes max (seg0).
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 63kB avg x 3 workers, 66kB max (seg1).
+   (slice2)    Executor memory: 62kB avg x 3 workers, 62kB max (seg0).
+   (slice3)    Executor memory: 158kB avg x 3 workers, 158kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Execution time: 73.541 ms

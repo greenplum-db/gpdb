@@ -16,8 +16,8 @@ use IO::File;
 # The final statistics look like this:
 #
 #  Slice statistics:
-#    (slice0)    Executor memory: 472K bytes.
-#    (slice1)    Executor memory: 464K bytes avg x 2 workers, 464K bytes max (seg0).
+#    (slice0)    Executor memory: 472kB.
+#    (slice1)    Executor memory: 464kB avg x 2 workers, 464kB max (seg0).
 #  Settings:
 #
 #  Total runtime: 52347.493 ms
@@ -419,15 +419,15 @@ sub analyze_node
             # NOTE: the final statistics look something like this:
 
             # Slice statistics:
-            #   (slice0)    Executor memory: 472K bytes.
-            #   (slice1)    Executor memory: 464K bytes avg x 2 workers, 464K bytes max (seg0).
+            #   (slice0)    Executor memory: 472kB.
+            #   (slice1)    Executor memory: 464kB avg x 2 workers, 464kB max (seg0).
             # Settings:
             # Total runtime: 52347.493 ms
 
             # (we've actually added some vertical bars so it might look
             # like this):
             # || Slice statistics:
-            # ||   (slice0)    Executor memory: 472K bytes.
+            # ||   (slice0)    Executor memory: 472kB.
 
             # NB: the "Settings" entry is optional, so
             # add Settings if they are missing

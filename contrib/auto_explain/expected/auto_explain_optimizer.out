@@ -33,7 +33,7 @@ Query Text: SELECT relname FROM pg_class WHERE relname='pg_class';
 Seq Scan on pg_class  (cost=0.00..12.46 rows=1 width=64) (actual rows=1 loops=1)
   Filter: (relname = 'pg_class'::name)
   Rows Removed by Filter: 438
-  (slice0)    Executor memory: 32K bytes.
+  (slice0)    Executor memory: 32kB.
 Memory used:  128000kB
  relname  
 ----------
@@ -52,9 +52,9 @@ Aggregate  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=1 loops=1)
                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=1001 width=1) (actual rows=1001 loops=1)
                           ->  Seq Scan on t1  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1)
                     ->  Seq Scan on t2  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1002)
-  (slice0)    Executor memory: 67K bytes.
-  (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
-  (slice2)    Executor memory: 119K bytes avg x 3 workers, 119K bytes max (seg0).
+  (slice0)    Executor memory: 67kB.
+  (slice1)    Executor memory: 42kB avg x 3 workers, 42kB max (seg0).
+  (slice2)    Executor memory: 119kB avg x 3 workers, 119kB max (seg0).
 Memory used:  128000kB
   count  
 ---------
@@ -92,9 +92,9 @@ Aggregate  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=1 loops=1)
                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.02 rows=1001 width=1) (actual rows=1001 loops=1)
                           ->  Seq Scan on auto_explain_test.t1  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1)
                     ->  Seq Scan on auto_explain_test.t2  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1002)
-  (slice0)    Executor memory: 67K bytes.
-  (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
-  (slice2)    Executor memory: 119K bytes avg x 3 workers, 119K bytes max (seg0).
+  (slice0)    Executor memory: 67kB.
+  (slice1)    Executor memory: 42kB avg x 3 workers, 42kB max (seg0).
+  (slice2)    Executor memory: 119kB avg x 3 workers, 119kB max (seg0).
 Memory used:  128000kB
   count  
 ---------

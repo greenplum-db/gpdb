@@ -1,12 +1,12 @@
 -- start_matchsubs
 -- m/\(actual time=\d+\.\d+..\d+\.\d+ rows=\d+ loops=\d+\)/
 -- s/\(actual time=\d+\.\d+..\d+\.\d+ rows=\d+ loops=\d+\)/(actual time=##.###..##.### rows=# loops=#)/
--- m/\(slice\d+\)    Executor memory: (\d+)\w bytes\./
--- s/Executor memory: (\d+)\w bytes\./Executor memory: (#####)K bytes./
--- m/\(slice\d+\)    Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./
--- s/Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./Executor memory: ####K bytes avg x #### workers, ####K bytes max (seg#)./
--- m/Work_mem: \d+\w bytes max\./
--- s/Work_mem: \d+\w bytes max\. */Work_mem: ###K bytes max./
+-- m/\(slice\d+\)    Executor memory: (\d+)kB\./
+-- s/Executor memory: (\d+)\wkB\./Executor memory: (#####)kB./
+-- m/\(slice\d+\)    Executor memory: (\d+)kB avg x \d+ workers, \d+kB max \(seg\d+\)\./
+-- s/Executor memory: (\d+)kB avg x \d+ workers, \d+kB max \(seg\d+\)\./Executor memory: ####kB avg x #### workers, ####kB max (seg#)./
+-- m/Work_mem: \d+kB max\./
+-- s/Work_mem: \d+kB max\. */Work_mem: ###kB max./
 -- m/Execution time: \d+\.\d+ ms/
 -- s/Execution time: \d+\.\d+ ms/Execution time: ##.### ms/
 -- m/Planning time: \d+\.\d+ ms/
@@ -67,10 +67,10 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
          ->  Index Scan using box_locations_pkey on box_locations  (cost=0.00..12.00 rows=1 width=12) (never executed)
                Index Cond: (id = boxes.location_id)
  Planning time: 14.784 ms
-   (slice0)    Executor memory: 192K bytes.
-   (slice1)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
-   (slice2)    Executor memory: 96K bytes avg x 3 workers, 96K bytes max (seg0).
-   (slice3)    Executor memory: 96K bytes avg x 3 workers, 96K bytes max (seg0).
+   (slice0)    Executor memory: 192kB.
+   (slice1)    Executor memory: 60kB avg x 3 workers, 60kB max (seg0).
+   (slice2)    Executor memory: 96kB avg x 3 workers, 96kB max (seg0).
+   (slice3)    Executor memory: 96kB avg x 3 workers, 96kB max (seg0).
    (slice4)    
    (slice5)    
  Memory used:  128000kB

@@ -1195,8 +1195,8 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
                      ->  Seq Scan on mpp8031_1_prt_2 b_1  (cost=0.00..811.00 rows=23700 width=4) (never executed)
                      ->  Seq Scan on mpp8031_1_prt_3 b_2  (cost=0.00..811.00 rows=23700 width=4) (never executed)
                      ->  Seq Scan on mpp8031_1_prt_4 b_3  (cost=0.00..811.00 rows=23700 width=4) (never executed)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 142K bytes avg x 3 workers, 142K bytes max (seg0).
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 142kB avg x 3 workers, 142kB max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 4.237 ms

@@ -1,12 +1,12 @@
 -- start_matchsubs
 -- m/\(actual time=\d+\.\d+..\d+\.\d+ rows=\d+ loops=\d+\)/
 -- s/\(actual time=\d+\.\d+..\d+\.\d+ rows=\d+ loops=\d+\)/(actual time=##.###..##.### rows=# loops=#)/
--- m/\(slice\d+\)    Executor memory: (\d+)\w bytes\./
--- s/Executor memory: (\d+)\w bytes\./Executor memory: (#####)K bytes./
--- m/\(slice\d+\)    Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./
--- s/Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./Executor memory: ####K bytes avg x #### workers, ####K bytes max (seg#)./
--- m/Work_mem: \d+\w bytes max\./
--- s/Work_mem: \d+\w bytes max\. */Work_mem: ###K bytes max./
+-- m/\(slice\d+\)    Executor memory: (\d+)kB\./
+-- s/Executor memory: (\d+)\wkB\./Executor memory: (#####)kB./
+-- m/\(slice\d+\)    Executor memory: (\d+)kB avg x \d+ workers, \d+kB max \(seg\d+\)\./
+-- s/Executor memory: (\d+)kB avg x \d+ workers, \d+kB max \(seg\d+\)\./Executor memory: ####kB avg x #### workers, ####kB max (seg#)./
+-- m/Work_mem: \d+kB max\./
+-- s/Work_mem: \d+kB max\. */Work_mem: ###kB max./
 -- m/Execution time: \d+\.\d+ ms/
 -- s/Execution time: \d+\.\d+ ms/Execution time: ##.### ms/
 -- m/Planning time: \d+\.\d+ ms/

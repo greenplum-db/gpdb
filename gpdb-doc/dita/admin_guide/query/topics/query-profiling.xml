@@ -141,8 +141,8 @@ Gather Motion 2:1 (slice1) (cost=0.00..20.88 rows=1 width=13)
           used by the operation. If the <codeph>work_mem</codeph> was insufficient to perform the
           operation in memory, the plan shows the amount of data spilled to disk for the
           lowest-performing segment. For example:<p>
-            <codeblock>Work_mem used: 64K bytes avg, 64K bytes max (seg0).
-Work_mem wanted: 90K bytes avg, 90K byes max (seg0) to lessen 
+            <codeblock>Work_mem used: 64kB avg, 64kB max (seg0).
+Work_mem wanted: 90kB avg, 90K byes max (seg0) to lessen 
 workfile I/O affecting 2 workers.
 </codeblock>
           </p></li>
@@ -169,12 +169,12 @@ Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
                  Filter: name = 'Joelle'::text
  Slice statistics:
 
-      (slice0) Executor memory: 135K bytes.
+      (slice0) Executor memory: 135kB.
 
-    (slice1) Executor memory: 151K bytes avg x 2 workers, 151K bytes max (seg0).
+    (slice1) Executor memory: 151kB avg x 2 workers, 151kB max (seg0).
 
 <b>Statement statistics:</b>
- <b>Memory used: 128000K bytes</b>
+ <b>Memory used: 128000kB</b>
  <b>Total runtime: 22.548 ms</b>
 </codeblock>
         <p>Read the plan from the bottom to the top. The total elapsed time to run this query was
@@ -285,9 +285,9 @@ Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
           memory to improve performance for a query. If possible, run an <codeph>EXPLAIN
             ANALYZE</codeph> for the query to show which plan operations spilled to disk, how much
           work memory they used, and how much memory was required to avoid spilling to disk. For
-              example:<p><codeph>Work_mem used: 23430K bytes avg, 23430K bytes max (seg0). Work_mem
-              wanted: 33649K bytes avg, 33649K bytes max (seg0) to lessen workfile I/O affecting 2
-              workers.</codeph></p><p>The "bytes wanted" message from <codeph>EXPLAIN
+              example:<p><codeph>Work_mem used: 23430kB avg, 23430kB max (seg0). Work_mem
+              wanted: 33649kB avg, 33649kB max (seg0) to lessen workfile I/O affecting 2
+              workers.</codeph></p><p>The "kB wanted" message from <codeph>EXPLAIN
               ANALYZE</codeph> is based on the amount of data written to work files and is not
             exact. The minimum <codeph>work_mem</codeph> needed can differ from the suggested
             value.</p></li>

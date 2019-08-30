@@ -1196,8 +1196,8 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
                            Partitions selected: 4 (out of 4)
                      ->  Dynamic Seq Scan on mpp8031 mpp8031_1 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.957 rows=0 loops=1)
                            Partitions scanned:  Avg 4.0 (out of 4) x 3 workers.  Max 4 parts (seg0).
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 4234K bytes avg x 3 workers, 4234K bytes max (seg0).
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 4234kB avg x 3 workers, 4234kB max (seg0).
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 5.260 ms

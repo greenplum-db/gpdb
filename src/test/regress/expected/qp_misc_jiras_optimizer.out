@@ -4460,10 +4460,10 @@ explain analyze select reltablespace  from pg_class where oid = (select reltoast
      ->  Index Scan using pg_class_relname_nsp_index on pg_class pg_class_1  (cost=0.00..200.27 rows=1 width=4)
            Index Cond: relname = 'tbl_8205'::name
  Slice statistics:
-   (slice0)    Executor memory: 113K bytes.
-   (slice1)    Executor memory: 113K bytes.
+   (slice0)    Executor memory: 113kB.
+   (slice1)    Executor memory: 113kB.
  Statement statistics:
-   Memory used: 1000K bytes
+   Memory used: 1000kB
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
  Optimizer status: Postgres query optimizer
  Total runtime: 0.085 ms
@@ -5150,8 +5150,8 @@ explain analyze select count(*) from qp_misc_jiras.test_heap;
          ->  Seq Scan on test_heap  (cost=0.00..431.00 rows=1 width=1) (actual time=0.022..2.438 rows=33462 loops=1)
                allstat: seg_firststart_total_ntuples/seg0_0.235 ms_2.438 ms_33462/seg1_0.235 ms_2.363 ms_33329/seg2_0.225 ms_2.381 ms_33210//end
  Planning time: 2.804 ms
-   (slice0)    Executor memory: 567K bytes.
-   (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
+   (slice0)    Executor memory: 567kB.
+   (slice1)    Executor memory: 50kB avg x 3 workers, 50kB max (seg0).
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 16.835 ms
@@ -5274,8 +5274,8 @@ explain analyze select * from qp_misc_jiras.r,qp_misc_jiras.s where r.a=s.b;
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.26 rows=1000 width=16)
    ->  Hash Join  (cost=0.00..862.20 rows=334 width=16)
          Hash Cond: r.a = s.b
-         Executor memory:  11K bytes avg, 11K bytes max (seg1).
-         Work_mem used:  11K bytes avg, 11K bytes max (seg1). Workfile: (0 spilling, 0 reused)
+         Executor memory:  11kB avg, 11kB max (seg1).
+         Work_mem used:  11kB avg, 11kB max (seg1). Workfile: (0 spilling, 0 reused)
          (seg1)   Hash chain length 1.0 avg, 1 max, using 342 of 8388619 buckets.
          allstat: seg_firststart_total_ntuples/seg0_0.559 ms_86 ms_321/seg1_0.527 ms_86 ms_342/seg2_0.576 ms_86 ms_337//end
          ->  Seq Scan on r  (cost=0.00..431.01 rows=334 width=8)
@@ -5289,11 +5289,11 @@ explain analyze select * from qp_misc_jiras.r,qp_misc_jiras.s where r.a=s.b;
                      ->  Seq Scan on s  (cost=0.00..431.01 rows=334 width=8)
                            allstat: seg_firststart_total_ntuples/seg0_2.222 ms_2.232 ms_321/seg1_2.265 ms_2.069 ms_342/seg2_2.286 ms_1.974 ms_337//end
  Slice statistics:
-   (slice0)    Executor memory: 267K bytes.
-   (slice1)    Executor memory: 193K bytes avg x 3 workers, 193K bytes max (seg0).
-   (slice2)    Executor memory: 131378K bytes avg x 3 workers, 131399K bytes max (seg1).  Work_mem: 11K bytes max.
+   (slice0)    Executor memory: 267kB.
+   (slice1)    Executor memory: 193kB avg x 3 workers, 193kB max (seg0).
+   (slice2)    Executor memory: 131378kB avg x 3 workers, 131399kB max (seg1).  Work_mem: 11kB max.
  Statement statistics:
-   Memory used: 1945600K bytes
+   Memory used: 1945600kB
  Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
  Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
  Total runtime: 87.064 ms

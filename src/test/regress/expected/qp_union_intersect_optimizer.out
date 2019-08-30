@@ -1826,10 +1826,10 @@ order by 1,2;
                                  ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=500 width=4) (actual time=0.140..0.645 rows=250 loops=2)
                                        ->  Seq Scan on mergeappend_test mergeappend_test_1  (cost=0.00..431.00 rows=167 width=4) (actual time=0.006..0.042 rows=150 loops=2)
  Planning time: 21.621 ms
-   (slice0)    Executor memory: 384K bytes.
-   (slice1)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
-   (slice2)    Executor memory: 215K bytes (entry db).
-   (slice3)    Executor memory: 229K bytes avg x 3 workers, 244K bytes max (seg0).  Work_mem: 49K bytes max.
+   (slice0)    Executor memory: 384kB.
+   (slice1)    Executor memory: 60kB avg x 3 workers, 60kB max (seg0).
+   (slice2)    Executor memory: 215kB (entry db).
+   (slice3)    Executor memory: 229kB avg x 3 workers, 244kB max (seg0).  Work_mem: 49kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.18.0
  Execution time: 3.142 ms

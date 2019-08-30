@@ -2015,12 +2015,12 @@ explain analyze SELECT * FROM multiset_5( TABLE( SELECT count(*)::integer, 'hell
                            ->  Aggregate  (cost=2.13..2.14 rows=1 width=8)
                                  ->  Seq Scan on example_r  (cost=0.00..2.10 rows=5 width=0)
  Slice statistics:
-   (slice0)    Executor memory: 258K bytes.
-   (slice1)    Executor memory: 210K bytes avg x 2 workers, 210K bytes max (seg0).
-   (slice2)    Executor memory: 274K bytes (seg0).
-   (slice3)    Executor memory: 254K bytes avg x 2 workers, 266K bytes max (seg1).
+   (slice0)    Executor memory: 258kB.
+   (slice1)    Executor memory: 210kB avg x 2 workers, 210kB max (seg0).
+   (slice2)    Executor memory: 274kB (seg0).
+   (slice3)    Executor memory: 254kB avg x 2 workers, 266kB max (seg1).
  Statement statistics:
-   Memory used: 128000K bytes
+   Memory used: 128000kB
  Settings:  gp_segments_for_planner=8
  Total runtime: 5.296 ms
 (23 rows)

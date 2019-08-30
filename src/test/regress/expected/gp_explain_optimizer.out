@@ -37,8 +37,8 @@ EXPLAIN ANALYZE SELECT * FROM explaintest;
 --------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=10 width=4) (actual time=0.365..0.380 rows=10 loops=1)
    ->  Seq Scan on explaintest  (cost=0.00..431.00 rows=4 width=4) (actual time=0.019..0.021 rows=5 loops=1)
-   (slice0)    Executor memory: 290K bytes.
-   (slice1)    Executor memory: 135K bytes avg x 3 workers, 135K bytes max (seg0).
+   (slice0)    Executor memory: 290kB.
+   (slice1)    Executor memory: 135kB avg x 3 workers, 135kB max (seg0).
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
  Total runtime: 0.710 ms
@@ -86,10 +86,10 @@ LIMIT 1;
                                                    ->  Seq Scan on explaintest explaintest_1  (cost=0.00..431.00 rows=4 width=4) (actual time=0.047..0.048 rows=5 loops=1)
                            ->  Seq Scan on explaintest  (cost=0.00..431.00 rows=4 width=4) (actual time=0.003..0.017 rows=3 loops=2)
  Planning time: 63.227 ms
-   (slice0)    Executor memory: 156K bytes.
-   (slice1)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
-   (slice2)    Executor memory: 167K bytes (entry db).
- * (slice3)    Executor memory: 124K bytes avg x 3 workers, 124K bytes max (seg0).  Work_mem: 65K bytes max, 1K bytes wanted.
+   (slice0)    Executor memory: 156kB.
+   (slice1)    Executor memory: 60kB avg x 3 workers, 60kB max (seg0).
+   (slice2)    Executor memory: 167kB (entry db).
+ * (slice3)    Executor memory: 124kB avg x 3 workers, 124kB max (seg0).  Work_mem: 65kB max, 1kB wanted.
  Memory used:  256000kB
  Memory wanted:  1001kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.61.0
@@ -354,8 +354,8 @@ explain analyze SELECT * FROM explaintest;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=10 width=4) (actual time=0.298..0.302 rows=5 loops=2)
    ->  Seq Scan on explaintest  (cost=0.00..431.00 rows=4 width=4) (actual time=0.013..0.015 rows=2 loops=2)
          allstat: seg_firststart_total_ntuples/seg0_0.938 ms_0.027 ms_3/seg1_0.880 ms_0.029 ms_5/seg2_0.866 ms_0.029 ms_2//end
-   (slice0)    Executor memory: 290K bytes.
-   (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
+   (slice0)    Executor memory: 290kB.
+   (slice1)    Executor memory: 50kB avg x 3 workers, 50kB max (seg0).
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.2.0
  Total runtime: 1.577 ms

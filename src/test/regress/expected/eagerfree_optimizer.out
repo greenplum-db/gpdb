@@ -53,9 +53,9 @@ explain analyze select d, count(*) from smallt group by d;
                      Hash Key: d
                      ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.002..0.004 rows=50 loops=1)
  Planning time: 17.216 ms
-   (slice0)    Executor memory: 63K bytes.
-   (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
-   (slice2)    Executor memory: 64K bytes avg x 3 workers, 64K bytes max (seg0).  Work_mem: 33K bytes max.
+   (slice0)    Executor memory: 63kB.
+   (slice1)    Executor memory: 42kB avg x 3 workers, 42kB max (seg0).
+   (slice2)    Executor memory: 64kB avg x 3 workers, 64kB max (seg0).  Work_mem: 33kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 2.061 ms
@@ -79,8 +79,8 @@ explain analyze select count(*) from (select i, t, d, count(*) from bigt group b
                      (seg0)   44435 groups total in 32 batches; 1 overflows; 44435 spill groups.
                      (seg0)   Hash chain length 2.8 avg, 10 max, using 30315 of 32768 buckets; total 9 expansions.
                      ->  Seq Scan on bigt  (cost=0.00..439.81 rows=333580 width=18) (actual time=0.026..49.692 rows=333530 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)  * Executor memory: 3180K bytes avg x 3 workers, 3180K bytes max (seg0).  Work_mem: 2461K bytes max, 4866K bytes wanted.
+   (slice0)    Executor memory: 386kB.
+   (slice1)  * Executor memory: 3180kB avg x 3 workers, 3180kB max (seg0).  Work_mem: 2461kB max, 4866kB wanted.
  Memory used:  2560kB
  Memory wanted:  5265kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
@@ -107,9 +107,9 @@ explain analyze select count(distinct d) from smallt;
                      Hash Key: d
                      ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.002..0.006 rows=50 loops=1)
  Planning time: 19.307 ms
-   (slice0)    Executor memory: 59K bytes.
-   (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
-   (slice2)    Executor memory: 64K bytes avg x 3 workers, 64K bytes max (seg0).  Work_mem: 33K bytes max.
+   (slice0)    Executor memory: 59kB.
+   (slice1)    Executor memory: 42kB avg x 3 workers, 42kB max (seg0).
+   (slice2)    Executor memory: 64kB avg x 3 workers, 64kB max (seg0).  Work_mem: 33kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 1.904 ms
@@ -132,9 +132,9 @@ explain analyze select count(distinct d) from bigt;
                      Hash Key: d
                      ->  Seq Scan on bigt  (cost=0.00..439.80 rows=333334 width=4) (actual time=0.013..46.779 rows=334620 loops=1)
  Planning time: 27.350 ms
-   (slice0)    Executor memory: 59K bytes.
-   (slice1)    Executor memory: 68K bytes avg x 3 workers, 68K bytes max (seg0).
- * (slice2)    Executor memory: 2768K bytes avg x 3 workers, 2768K bytes max (seg0).  Work_mem: 2617K bytes max, 7876K bytes wanted.
+   (slice0)    Executor memory: 59kB.
+   (slice1)    Executor memory: 68kB avg x 3 workers, 68kB max (seg0).
+ * (slice2)    Executor memory: 2768kB avg x 3 workers, 2768kB max (seg0).  Work_mem: 2617kB max, 7876kB wanted.
  Memory used:  2560kB
  Memory wanted:  8275kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
@@ -204,10 +204,10 @@ where t1.d = t2.d;
                            Hash Key: smallt_1.d
                            ->  Seq Scan on smallt smallt_1  (cost=0.00..431.00 rows=34 width=8) (actual time=0.003..0.018 rows=50 loops=1)
  Planning time: 64.498 ms
-   (slice0)    Executor memory: 127K bytes.
-   (slice1)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
-   (slice2)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
-   (slice3)    Executor memory: 1192K bytes avg x 3 workers, 1192K bytes max (seg0).  Work_mem: 33K bytes max.
+   (slice0)    Executor memory: 127kB.
+   (slice1)    Executor memory: 44kB avg x 3 workers, 44kB max (seg0).
+   (slice2)    Executor memory: 44kB avg x 3 workers, 44kB max (seg0).
+   (slice3)    Executor memory: 1192kB avg x 3 workers, 1192kB max (seg0).  Work_mem: 33kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 2.226 ms
@@ -261,8 +261,8 @@ where t1.i = t2.i;
                            Sort Key: smallt_1.i
                            Sort Method:  quicksort  Memory: 99kB
                            ->  Seq Scan on smallt smallt_1  (cost=0.00..431.00 rows=34 width=4) (actual time=0.012..0.022 rows=20 loops=2)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 1238K bytes avg x 3 workers, 1238K bytes max (seg0).  Work_mem: 33K bytes max.
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 1238kB avg x 3 workers, 1238kB max (seg0).  Work_mem: 33kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 2.471 ms
@@ -296,9 +296,9 @@ explain analyze select d, count(*) from smallt group by d limit 5;
                                  Hash Key: d
                                  ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.003..0.006 rows=50 loops=1)
  Planning time: 16.802 ms
-   (slice0)    Executor memory: 59K bytes.
-   (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
-   (slice2)    Executor memory: 64K bytes avg x 3 workers, 64K bytes max (seg0).  Work_mem: 33K bytes max.
+   (slice0)    Executor memory: 59kB. 
+   (slice1)    Executor memory: 42kB avg x 3 workers, 42kB max (seg0).
+   (slice2)    Executor memory: 64kB avg x 3 workers, 64kB max (seg0).  Work_mem: 33kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 2.024 ms
@@ -1321,8 +1321,8 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i;
          ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=15) (actual time=0.002..0.008 rows=20 loops=2)
          ->  Hash  (cost=431.00..431.00 rows=34 width=4) (actual time=0.034..0.034 rows=20 loops=2)
                ->  Seq Scan on smallt smallt_1  (cost=0.00..431.00 rows=34 width=4) (actual time=0.019..0.023 rows=20 loops=2)
-   (slice0)    Executor memory: 322K bytes.
-   (slice1)    Executor memory: 4198K bytes avg x 3 workers, 4206K bytes max (seg0).  Work_mem: 1K bytes max.
+   (slice0)    Executor memory: 322kB.
+   (slice1)    Executor memory: 4198kB avg x 3 workers, 4206kB max (seg0).  Work_mem: 1kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 4.129 ms
@@ -1632,8 +1632,8 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i an
          ->  Hash  (cost=431.00..431.00 rows=7 width=4) (actual time=0.049..0.049 rows=5 loops=2)
                ->  Seq Scan on smallt smallt_1  (cost=0.00..431.00 rows=7 width=4) (actual time=0.037..0.044 rows=5 loops=2)
                      Filter: i < 2
-   (slice0)    Executor memory: 322K bytes.
-   (slice1)    Executor memory: 4182K bytes avg x 3 workers, 4182K bytes max (seg0).  Work_mem: 1K bytes max.
+   (slice0)    Executor memory: 322kB.
+   (slice1)    Executor memory: 4182kB avg x 3 workers, 4182kB max (seg0).  Work_mem: 1kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 3.631 ms
@@ -1761,10 +1761,10 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.d = t2.d an
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.032..0.153 rows=28 loops=2)
                      Hash Key: smallt_1.d
                      ->  Seq Scan on smallt smallt_1  (cost=0.00..431.00 rows=34 width=4) (actual time=0.022..0.036 rows=20 loops=2)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
-   (slice2)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
-   (slice3)    Executor memory: 4186K bytes avg x 3 workers, 4186K bytes max (seg0).  Work_mem: 2K bytes max.
+   (slice0)    Executor memory: 386kB.
+   (slice1)    Executor memory: 66kB avg x 3 workers, 66kB max (seg0).
+   (slice2)    Executor memory: 66kB avg x 3 workers, 66kB max (seg0).
+   (slice3)    Executor memory: 4186kB avg x 3 workers, 4186kB max (seg0).  Work_mem: 2kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 5.688 ms
@@ -1829,8 +1829,8 @@ and smallt.d = '2011-01-04'::date;
          ->  Hash  (cost=8.00..8.00 rows=2 width=4) (actual time=0.034..0.034 rows=4 loops=1)
                ->  Index Scan using smallt2_d_idx on smallt2  (cost=0.00..8.00 rows=2 width=4) (actual time=0.023..0.027 rows=4 loops=1)
                      Index Cond: d = '01-04-2011'::date
-   (slice0)    Executor memory: 450K bytes.
-   (slice1)    Executor memory: 4234K bytes avg x 3 workers, 4234K bytes max (seg0).  Work_mem: 1K bytes max.
+   (slice0)    Executor memory: 450kB.
+   (slice1)    Executor memory: 4234kB avg x 3 workers, 4234kB max (seg0).  Work_mem: 1kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 3.325 ms
@@ -1849,7 +1849,7 @@ explain analyze select *, exists(select 1 from pg_class where oid = c.oid) as du
      ->  Materialize  (cost=0.15..1027.89 rows=1387 width=4) (actual time=0.327..0.345 rows=222 loops=2)
            ->  Index Only Scan using pg_class_oid_index on pg_class pg_class_1  (cost=0.15..1020.96 rows=1387 width=4) (actual time=0.036..0.258 rows=222 loops=2)
                  Heap Fetches: 1252
-   (slice0)    Executor memory: 382K bytes.
+   (slice0)    Executor memory: 382kB.
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 1.681 ms
@@ -1900,8 +1900,8 @@ and smallt.d = '2011-01-04'::date;
          ->  Hash  (cost=8.00..8.00 rows=2 width=4) (actual time=0.031..0.031 rows=4 loops=1)
                ->  Index Scan using smallt2_d_idx on smallt2  (cost=0.00..8.00 rows=2 width=4) (actual time=0.020..0.024 rows=4 loops=1)
                      Index Cond: d = '01-04-2011'::date
-   (slice0)    Executor memory: 450K bytes.
-   (slice1)    Executor memory: 4234K bytes avg x 3 workers, 4234K bytes max (seg0).  Work_mem: 1K bytes max.
+   (slice0)    Executor memory: 450kB.
+   (slice1)    Executor memory: 4234kB avg x 3 workers, 4234kB max (seg0).  Work_mem: 1kB max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 5.131 ms

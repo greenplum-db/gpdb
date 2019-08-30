@@ -1718,13 +1718,11 @@ ExecHashTableExplainBatches(HashJoinTable   hashtable,
     /* Inner bytes read from workfile */
     if (irdbytes.vcnt > 0)
     {
-        appendStringInfo(buf,
-                         "  Read %.0fK bytes from inner workfile",
+        appendStringInfo(buf, "  Read %.0fkB from inner workfile",
                          ceil(irdbytes.vsum / 1024));
         if (irdbytes.vcnt > 1)
             appendStringInfo(buf,
-                             ": %.0fK avg x %d nonempty batches"
-                             ", %.0fK max",
+                             ": %.0fkB avg x %d nonempty batches, %.0fkB max",
                              ceil(cdbexplain_agg_avg(&irdbytes)/1024),
                              irdbytes.vcnt,
                              ceil(irdbytes.vmax / 1024));
@@ -1734,13 +1732,11 @@ ExecHashTableExplainBatches(HashJoinTable   hashtable,
     /* Inner rel bytes spilled to workfile */
     if (iwrbytes.vcnt > 0)
     {
-        appendStringInfo(buf,
-                         "  Wrote %.0fK bytes to inner workfile",
+        appendStringInfo(buf, "  Wrote %.0fkB to inner workfile",
                          ceil(iwrbytes.vsum / 1024));
         if (iwrbytes.vcnt > 1)
             appendStringInfo(buf,
-                             ": %.0fK avg x %d overflowing batches"
-                             ", %.0fK max",
+                             ": %.0fkB avg x %d overflowing batches, %.0fkB max",
                              ceil(cdbexplain_agg_avg(&iwrbytes)/1024),
                              iwrbytes.vcnt,
                              ceil(iwrbytes.vmax / 1024));
@@ -1750,13 +1746,11 @@ ExecHashTableExplainBatches(HashJoinTable   hashtable,
     /* Outer bytes read from workfile */
     if (ordbytes.vcnt > 0)
     {
-        appendStringInfo(buf,
-                         "  Read %.0fK bytes from outer workfile",
+        appendStringInfo(buf, "  Read %.0fkB from outer workfile",
                          ceil(ordbytes.vsum / 1024));
         if (ordbytes.vcnt > 1)
             appendStringInfo(buf,
-                             ": %.0fK avg x %d nonempty batches"
-                             ", %.0fK max",
+                             ": %.0fkB avg x %d nonempty batches, %.0fkB max",
                              ceil(cdbexplain_agg_avg(&ordbytes)/1024),
                              ordbytes.vcnt,
                              ceil(ordbytes.vmax / 1024));
@@ -1766,13 +1760,11 @@ ExecHashTableExplainBatches(HashJoinTable   hashtable,
     /* Outer rel bytes spilled to workfile */
     if (owrbytes.vcnt > 0)
     {
-        appendStringInfo(buf,
-                         "  Wrote %.0fK bytes to outer workfile",
+        appendStringInfo(buf, "  Wrote %.0fkB to outer workfile",
                          ceil(owrbytes.vsum / 1024));
         if (owrbytes.vcnt > 1)
             appendStringInfo(buf,
-                             ": %.0fK avg x %d overflowing batches"
-                             ", %.0fK max",
+                             ": %.0fkB avg x %d overflowing batches, %.0fkB max",
                              ceil(cdbexplain_agg_avg(&owrbytes)/1024),
                              owrbytes.vcnt,
                              ceil(owrbytes.vmax / 1024));

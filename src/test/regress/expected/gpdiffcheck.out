@@ -158,12 +158,12 @@ explain analyze select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c
                            ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=1.01..1.07 rows=1 width=32) (actual time=1.524..2.512 rows=3 loops=1)
                                  ->  Aggregate  (cost=1.01..1.02 rows=1 width=32) (actual time=0.212..0.212 rows=1 loops=1)
                                        ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2) (actual time=0.108..0.113 rows=4 loops=1)
-   (slice0)    Executor memory: 518K bytes.
-   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
-   (slice2)    Executor memory: 126K bytes avg x 3 workers, 126K bytes max (seg0).
-   (slice3)    Executor memory: 86K bytes avg x 3 workers, 86K bytes max (seg0).
-   (slice4)    Executor memory: 66K bytes (seg2).
-   (slice5)    Executor memory: 1103K bytes avg x 3 workers, 1114K bytes max (seg2).  Work_mem: 1K bytes max.
+   (slice0)    Executor memory: 518kB.
+   (slice1)    Executor memory: 66kB avg x 3 workers, 66kB max (seg0).
+   (slice2)    Executor memory: 126kB avg x 3 workers, 126kB max (seg0).
+   (slice3)    Executor memory: 86kB avg x 3 workers, 86kB max (seg0).
+   (slice4)    Executor memory: 66kB (seg2).
+   (slice5)    Executor memory: 1103kB avg x 3 workers, 1114kB max (seg2).  Work_mem: 1kB max.
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 4571.552 ms
@@ -281,12 +281,12 @@ explain analyze select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c
                            ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=1.01..1.43 rows=1 width=32) (actual time=0.017..0.023 rows=3 loops=1)
                                  ->  Aggregate  (cost=1.01..1.02 rows=1 width=32) (actual time=0.093..0.093 rows=1 loops=1)
                                        ->  Seq Scan on gpd1  (cost=0.00..1.01 rows=1 width=2) (actual time=0.055..0.061 rows=4 loops=1)
-   (slice0)    Executor memory: 518K bytes.
-   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
-   (slice2)    Executor memory: 126K bytes avg x 3 workers, 126K bytes max (seg0).
-   (slice3)    Executor memory: 86K bytes avg x 3 workers, 86K bytes max (seg0).
-   (slice4)    Executor memory: 65K bytes (seg2).
-   (slice5)    Executor memory: 1103K bytes avg x 3 workers, 1114K bytes max (seg2).  Work_mem: 1K bytes max.
+   (slice0)    Executor memory: 518kB.
+   (slice1)    Executor memory: 66kB avg x 3 workers, 66kB max (seg0).
+   (slice2)    Executor memory: 126kB avg x 3 workers, 126kB max (seg0).
+   (slice3)    Executor memory: 86kB avg x 3 workers, 86kB max (seg0).
+   (slice4)    Executor memory: 65kB (seg2).
+   (slice5)    Executor memory: 1103kB avg x 3 workers, 1114kB max (seg2).  Work_mem: 1kB max.
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Total runtime: 1507.339 ms
