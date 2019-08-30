@@ -55,3 +55,7 @@ SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Sh
 -- Casablanca time has changed in new timezone db lets verify it
 set timezone = 'Africa/Casablanca';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Casablanca;
+-- Hong Kong's 1941-06-15 spring-forward transition was corrected to be at
+-- 03:00, not 03:30 in 2019b time zone database update
+set timezone='Asia/Hong_Kong';
+SELECT timestamptz '1941-06-15 03:10:00+08';
