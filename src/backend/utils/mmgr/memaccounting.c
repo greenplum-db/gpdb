@@ -26,7 +26,6 @@
 #include "utils/vmem_tracker.h"
 #include "utils/memaccounting_private.h"
 #include "utils/gp_alloc.h"
-#include "utils/ext_alloc.h"
 
 #define MEMORY_REPORT_FILE_NAME_LENGTH 255
 #define SHORT_LIVING_MEMORY_ACCOUNT_ARRAY_INIT_LEN 64
@@ -72,8 +71,6 @@ MemoryAccountIdType liveAccountStartId = MEMORY_OWNER_TYPE_START_SHORT_LIVING;
  * a new short-living account.
  */
 MemoryAccountIdType nextAccountId = MEMORY_OWNER_TYPE_START_SHORT_LIVING;
-
-MemoryAccountIdType mainOptimizerAccount = MEMORY_OWNER_TYPE_Undefined;
 
 /*
  * The memory account for the primary executor account. This will be assigned to the
@@ -543,29 +540,6 @@ MemoryAccounting_SaveToLog()
 	}
 }
 
-/*
- * Get string output of the current Optimizer Memory account. This is used only in
- */
-void
-MemoryAccounting_ExplainAppendCurrentOptimizerAccountInfo(StringInfoData *str)
-{
-
-	MemoryAccountIdType shortLivingCount = shortLivingMemoryAccountArray->accountCount;
-
-	for (MemoryAccountIdType shortLivingArrayIdx = 0; shortLivingArrayIdx < shortLivingCount; ++shortLivingArrayIdx)
-	{
-		MemoryAccount *shortLivingAccount = shortLivingMemoryAccountArray->allAccounts[shortLivingArrayIdx];
-		if (shortLivingAccount->ownerType == MEMORY_OWNER_TYPE_Optimizer)
-		{
-			appendStringInfo(str, "\n  ORCA Memory used: peak %.0fK bytes  allocated %.0fK bytes  freed %.0fK bytes ",
-							 ceil((double) shortLivingAccount->peak / 1024L),
-							 ceil((double) shortLivingAccount->allocated / 1024L),
-							 ceil((double) shortLivingAccount->freed / 1024L));
-			break;
-		}
-	}
-}
-
 /*****************************************************************************
  *	  PRIVATE ROUTINES FOR MEMORY ACCOUNTING								 *
  *****************************************************************************/
@@ -684,22 +658,6 @@ InitializeMemoryAccount(MemoryAccount *newAccount, long maxLimit, MemoryOwnerTyp
 
 	newAccount->allocated = 0;
 
-	/*
-	 * Every call to ORCA to optimize a query maps to a new short living memory
-	 * account. However, the nature of Orca's memory usage is that it holds data
-	 * in a cache. Thus, GetOptimizerOutstandingMemoryBalance() returns the
-	 * current amount of memory that Orca has not yet freed according to the
-	 * Memory Accounting framework. Each new Orca memory account will start off
-	 * its 'allocated' amount from the outstanding amount. This approach ensures
-	 * that when Orca does release memory it allocated during an earlier
-	 * generation that the accounting math does not lead to an underflow but
-	 * properly accounts for the outstanding amount.
-	 */
-	if (ownerType == MEMORY_OWNER_TYPE_Optimizer)
-	{
-		elog(DEBUG2, "Rolling over previous outstanding Optimizer allocated memory %lu", GetOptimizerOutstandingMemoryBalance());
-		newAccount->allocated = GetOptimizerOutstandingMemoryBalance();
-	}
 	newAccount->freed = 0;
 	newAccount->peak = 0;
 	newAccount->parentId = parentAccountId;
@@ -1055,8 +1013,6 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "Planner";
 	case MEMORY_OWNER_TYPE_PlannerHook:
 		return "PlannerHook";
-	case MEMORY_OWNER_TYPE_Optimizer:
-		return "Optimizer";
 	case MEMORY_OWNER_TYPE_Dispatcher:
 		return "Dispatcher";
 	case MEMORY_OWNER_TYPE_Serializer:
@@ -1401,7 +1357,6 @@ AdvanceMemoryAccountingGeneration()
 	 */
 	mainExecutorAccount = MEMORY_OWNER_TYPE_Undefined;
 	mainNestedExecutorAccount = MEMORY_OWNER_TYPE_Undefined;
-	mainOptimizerAccount = MEMORY_OWNER_TYPE_Undefined;
 
 	Assert(RolloverMemoryAccount->peak >= MemoryAccountingPeakBalance);
 }
@@ -1479,28 +1434,6 @@ MemoryAccounting_GetOrCreateNestedExecutorAccount()
 		END_MEMORY_ACCOUNT();
 	}
 	return mainNestedExecutorAccount;
-}
-
-/*
- * GetOrCreateOptimizerAccount
- *    Returns the MemoryAccountId for the 'Optimizer' account. Creates the
- *    mainOptimizerAccount if it does not already exist.
- *
- *    ORCA has a metadata cache that persists between calls to create a plan.
- *    This memory is tracked in the memory accounting system using a global
- *    OptimizerOutstandingMemoryBalance. Any time we create an Optimizer
- *    account we initialize the memory to the
- *    OptimizerOutstandingMemoryBalance, if we create more than one optimizer
- *    account, this memory will be double accounted for. Therefore, restrict
- *    the memory accounting system to only creating one Optimizer account.
- */
-MemoryAccountIdType
-MemoryAccounting_GetOrCreateOptimizerAccount()
-{
-	if (mainOptimizerAccount == MEMORY_OWNER_TYPE_Undefined)
-		mainOptimizerAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer);
-
-	return mainOptimizerAccount;
 }
 
 MemoryAccountIdType
