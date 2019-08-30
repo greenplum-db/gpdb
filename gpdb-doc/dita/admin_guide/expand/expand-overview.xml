@@ -4,7 +4,8 @@
 <topic id="topic3" xml:lang="en">
   <title>System Expansion Overview</title>
   <shortdesc>You can perform a Greenplum Database expansion to add segment instances and segment
-    hosts with minimal downtime.</shortdesc>
+    hosts with minimal downtime. In general, adding nodes to a Greenplum cluster achieves a linear scaling 
+    of performance and storage capacity. </shortdesc>
   <body>
     <p>Data warehouses typically grow over time, often at a continuous pace, as additional data is
       gathered and the retention period increases for existing data. At times, it is necessary to
