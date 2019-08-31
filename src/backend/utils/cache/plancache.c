@@ -57,6 +57,7 @@
 #include "utils/memutils.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
+#include "cdb/cdbvars.h"
 
 
 static List *cached_plans_list = NIL;
@@ -606,9 +607,23 @@ RevalidateCachedPlanWithParams(CachedPlanSource *plansource, bool useResOwner,
 
 				/* can we give a better error message? */
 				if (plansource->fixed_result)
+				{
+					printTupleDescs(resultDesc);
+					printTupleDescs(plansource->resultDesc);
+					if (boundParams)
+					{
+						elog(WARNING, "RevalidateCachedPlanWithParams: bound param is set");
+					}
+					if (gp_debug_linger)
+					{
+						elog(WARNING, "RevalidateCachedPlanWithParams: backend is going to sleep for %d seconds", gp_debug_linger);
+						debug_linger(gp_debug_linger, "halting in RevalidateCachedPlanWithParams");
+					}
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("cached plan must not change result type")));
+				}
+
 				oldcxt = MemoryContextSwitchTo(plansource->context);
 				if (resultDesc)
 					resultDesc = CreateTupleDescCopy(resultDesc);

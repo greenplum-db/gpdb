@@ -429,6 +429,71 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2, bool strict)
 	return true;
 }
 
+void
+printTupleDescs(TupleDesc tupdesc)
+{
+	int			i,
+			n;
+
+	if (tupdesc == NULL)
+	{
+		elog(WARNING, "TupleDesc is NULL");
+		return;
+	}
+
+	StringInfoData buf;
+	initStringInfo(&buf);
+
+	appendStringInfo(&buf, "tupdesc->natts: %d, ", tupdesc->natts);
+	appendStringInfo(&buf, "tupdesc->tdtypeid: %u, ", tupdesc->tdtypeid);
+	appendStringInfo(&buf, "tupdesc->tdhasoid: %d, ", tupdesc->tdhasoid);
+
+	for (i = 0; i < tupdesc->natts; i++)
+	{
+		Form_pg_attribute attr = tupdesc->attrs[i];
+
+		appendStringInfo(&buf, "attr->attrelid: %u, ", attr->attrelid);
+		appendStringInfo(&buf, "attr->attname: %s, ", NameStr(attr->attname));
+		appendStringInfo(&buf, "attr->atttypid: %u, ", attr->atttypid);
+		appendStringInfo(&buf, "attr->attstattarget: %d, ", attr->attstattarget);
+		appendStringInfo(&buf, "attr->attlen: %d, ", attr->attlen);
+		appendStringInfo(&buf, "attr->attndims: %d, ", attr->attndims);
+		appendStringInfo(&buf, "attr->atttypmod: %d, ", attr->atttypmod);
+		appendStringInfo(&buf, "attr->attbyval: %d, ", attr->attbyval);
+		appendStringInfo(&buf, "attr->attstorage: %c, ", attr->attstorage);
+		appendStringInfo(&buf, "attr->attalign: %c, ", attr->attalign);
+		appendStringInfo(&buf, "attr->attnotnull: %d, ", attr->attnotnull);
+		appendStringInfo(&buf, "attr->atthasdef: %d, ", attr->atthasdef);
+		appendStringInfo(&buf, "attr->attisdropped: %d, ", attr->attisdropped);
+		appendStringInfo(&buf, "attr->attislocal: %d, ", attr->attislocal);
+		appendStringInfo(&buf, "attr->attinhcount: %d, ", attr->attinhcount);
+	}
+
+	if (tupdesc->constr != NULL)
+	{
+		TupleConstr *constr = tupdesc->constr;
+		appendStringInfo(&buf, "constr->has_not_null: %d, ", constr->has_not_null);
+		appendStringInfo(&buf, "constr->num_defval: %d, ", constr->num_defval);
+		n = constr->num_defval;
+		for (i = 0; i < n; i++)
+		{
+			AttrDefault *defval = constr->defval + i;
+			appendStringInfo(&buf, "defval->adnum: %d, ", defval->adnum);
+			appendStringInfo(&buf, "defval->adbin: %s, ", defval->adbin);
+		}
+		n = constr->num_check;
+		appendStringInfo(&buf, "constr->num_check: %d, ", constr->num_check);
+		for (i = 0; i < n; i++)
+		{
+			ConstrCheck *check = constr->check + i;
+			appendStringInfo(&buf, "check->ccname: %s, ", check->ccname);
+			appendStringInfo(&buf, "check->ccbin: %s, ", check->ccbin);
+		}
+	}
+
+	elog(WARNING, "TupleDesc %s ", buf.data);
+	pfree(buf.data);
+}
 /*
  * TupleDescInitEntry
  *		This function initializes a single attribute structure in

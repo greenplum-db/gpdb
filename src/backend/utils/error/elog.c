@@ -4296,10 +4296,9 @@ is_log_level_output(int elevel, int log_min_level)
  * elog_debug_linger
  */
 void
-elog_debug_linger(ErrorData *edata)
-{
-	int			seconds_to_linger = gp_debug_linger;
-	int			seconds_lingered = 0;
+elog_debug_linger(ErrorData *edata) {
+	int seconds_to_linger = gp_debug_linger;
+	int seconds_lingered = 0;
 
 	/* Don't linger again in the event of another error. */
 	gp_debug_linger = 0;
@@ -4320,6 +4319,14 @@ elog_debug_linger(ErrorData *edata)
 	/* Terminate the client connection. */
 	pq_comm_close_fatal();
 
+	debug_linger(seconds_to_linger, "error exit in");
+}
+
+void
+debug_linger(int seconds_to_linger, char *ps_msg)
+{
+	int			seconds_lingered = 0;
+
 	while (seconds_lingered < seconds_to_linger)
 	{
 		int			seconds_left = seconds_to_linger - seconds_lingered;
@@ -4332,7 +4339,8 @@ elog_debug_linger(ErrorData *edata)
 
 		/* Update 'ps' display. */
 		snprintf(buf, sizeof(buf)-1,
-				 "error exit in %dm %ds",
+				 "%s %dm %ds",
+				 ps_msg,
 				 minutes_left,
 				 seconds_left - minutes_left * 60);
 		set_ps_display(buf, true);

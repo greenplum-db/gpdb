@@ -121,6 +121,7 @@ extern void DecrTupleDescRefCount(TupleDesc tupdesc);
 	} while (0)
 
 extern bool equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2, bool strict);
+extern void printTupleDescs(TupleDesc tupdesc);
 
 extern void TupleDescInitEntry(TupleDesc desc,
 				   AttrNumber attributeNumber,

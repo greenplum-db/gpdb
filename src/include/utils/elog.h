@@ -221,6 +221,7 @@ extern int	errcode_for_socket_access(void);
 
 extern int sqlstate_to_errcode(const char *sqlstate);
 extern char *errcode_to_sqlstate(int errcode, char outbuf[6]);
+extern void debug_linger(int seconds_to_linger, char *ps_msg);
 
 extern int
 errmsg(const char *fmt,...)
