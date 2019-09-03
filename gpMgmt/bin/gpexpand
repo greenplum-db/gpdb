@@ -318,7 +318,7 @@ SELECT
     'Estimated Expansion Rate' AS Name,
     (SUM(source_bytes) / (1 + extract(epoch FROM (max(expansion_finished) - min(expansion_started)))) / 1024 / 1024)::text || ' MB/s' AS Value
 FROM gpexpand.status_detail
-WHERE status = '%s'
+WHERE status = '%s' AND source_bytes != 0 
 AND
 expansion_started > (SELECT updated FROM gpexpand.status WHERE status = '%s' ORDER BY updated DESC LIMIT 1)
 
@@ -329,7 +329,7 @@ SELECT
 CAST((SUM(source_bytes) / (
 SELECT 1 + SUM(source_bytes) / (1 + (extract(epoch FROM (max(expansion_finished) - min(expansion_started)))))
 FROM gpexpand.status_detail
-WHERE status = '%s'
+WHERE status = '%s' AND source_bytes != 0 
 AND
 expansion_started > (SELECT updated FROM gpexpand.status WHERE status = '%s' ORDER BY
 updated DESC LIMIT 1)))::text || ' seconds' as interval)::text AS Value
