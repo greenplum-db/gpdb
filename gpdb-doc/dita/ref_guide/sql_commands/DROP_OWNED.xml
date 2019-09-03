@@ -3,7 +3,7 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="db20941">DROP OWNED</title><body><p id="sql_command_desc">Removes database objects owned by a database role.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP OWNED BY <varname>name</varname> [, ...] [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP OWNED</codeph> drops all the objects in the current database
 that are owned by one of the specified roles. Any privileges granted
-to the given roles on objects in the current database will also be revoked.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name of a role whose objects will be dropped, and whose privileges
+to the given roles on objects in the current database or on shared objects (databases, tablespaces) will also be revoked.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name of a role whose objects will be dropped, and whose privileges
 will be revoked.</pd></plentry><plentry><pt>CASCADE</pt><pd>Automatically drop objects that depend on the affected objects.</pd></plentry><plentry><pt>RESTRICT</pt><pd>Refuse to drop the objects owned by a role if any other database
 objects depend on one of the affected objects. This is the default.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>DROP OWNED</codeph> is often used to prepare for the removal
 of one or more roles. Because <codeph>DROP OWNED</codeph> only affects

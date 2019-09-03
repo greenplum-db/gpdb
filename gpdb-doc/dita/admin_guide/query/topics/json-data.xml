@@ -51,7 +51,7 @@
         are specialized needs, such as legacy assumptions about ordering of object keys.</p>
       <section>
         <title>About Unicode Characters in JSON Data</title>
-        <p>The <xref href="http://rfc7159.net/rfc7159" format="html" scope="external">RFC
+        <p>The <xref href="https://tools.ietf.org/html/rfc7159" format="html" scope="external">RFC
             7159</xref> document permits JSON strings to contain Unicode escape sequences denoted by
               <codeph>\u<varname>XXXX</varname></codeph>. However, Greenplum Database allows only
           one character set encoding per database. It is not possible for the <codeph>json</codeph>

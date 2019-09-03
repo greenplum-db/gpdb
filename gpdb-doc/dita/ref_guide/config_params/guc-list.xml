@@ -900,6 +900,7 @@
           </tbody>
         </tgroup>
       </table>
+      <p><codeph>INFO</codeph> level messages are always sent to the client.</p>
     </body>
   </topic>
   <topic id="cpu_index_tuple_cost">

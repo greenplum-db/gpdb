@@ -670,7 +670,7 @@ January 8 04:05:06 1999 PST
       <li>A full time zone name, for example <codeph>America/New_York</codeph>. The recognized time
        zone names are listed in the <codeph>pg_timezone_names</codeph> view. Greenplum uses the
        widely-used IANA time zone data for this purpose, so the same time zone names are also
-       recognized by much other software. </li>
+       recognized by other software. </li>
       <li>A time zone abbreviation, for example <codeph>PST</codeph>. Such a specification merely
        defines a particular offset from UTC, in contrast to full time zone names which can imply a
        set of daylight savings transition-date rules as well. The recognized abbreviations are

@@ -11,8 +11,10 @@
     <p otherprops="oss-only">Use of this data type requires the installation to have been built with
         <codeph>configure --with-libxml</codeph>. </p>
     <p>The <codeph>xml</codeph> type can store well-formed "documents", as defined by the XML
-      standard, as well as "content" fragments, which are defined by the production
-        <codeph>XMLDecl?</codeph> content in the XML standard. Roughly, this means that content
+      standard, as well as "content" fragments, which are defined by reference to the more
+      permissive <xref href="https://www.w3.org/TR/2010/REC-xpath-datamodel-20101214/#DocumentNode"
+        format="html" scope="external">document node</xref> of the XQuery and XPath model.
+      Roughly, this means that content
       fragments can have more than one top-level element or character node. The expression
           <codeph><varname>xmlvalue</varname> IS DOCUMENT</codeph> can be used to evaluate whether a
       particular <codeph>xml</codeph> value is a full document or only a content fragment.</p>
@@ -57,12 +59,6 @@ XMLPARSE (CONTENT 'abc&lt;foo>bar&lt;/foo>&lt;bar>foo&lt;/bar>')</codeblock></p>
       <p>or simply like Greenplum
         Database:<codeblock>SET XML OPTION TO { DOCUMENT | CONTENT };</codeblock></p>
       <p>The default is CONTENT, so all forms of XML data are allowed.</p>
-      <note>
-        <p>With the default XML option setting, you cannot directly cast character strings to type
-            <codeph>xml</codeph> if they contain a document type declaration, because the definition
-          of XML content fragment does not accept them. If you need to do that, either use
-            <codeph>XMLPARSE</codeph> or change the <codeph>XML</codeph> option.</p>
-      </note>
     </body>
   </topic>
   <topic id="topic_eyt_3tw_mq">

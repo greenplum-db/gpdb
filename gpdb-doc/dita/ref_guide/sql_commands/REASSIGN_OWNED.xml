@@ -42,8 +42,9 @@
         alternative that simply drops all of the database objects owned by one or more roles.
           <codeph>DROP OWNED</codeph> requires privileges only on the source role(s).</p>
       <p>The <codeph>REASSIGN OWNED</codeph> command does not affect any privileges granted to the
-        old roles for objects that are not owned by them. Use <codeph>DROP OWNED</codeph> to revoke
-        those privileges.</p>
+        <varname>old_role</varname>s on objects that are not owned by them. Likewise, it does
+        not affect default privileges created with <codeph>ALTER DEFAULT PRIVILEGES</codeph>.
+        Use <codeph>DROP OWNED</codeph> to revoke such privileges.</p>
     </section>
     <section id="section6">
       <title>Examples</title>
