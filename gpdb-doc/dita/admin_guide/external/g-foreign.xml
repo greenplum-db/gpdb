@@ -10,13 +10,11 @@
     <p>You can access foreign data with help from a <i>foreign-data wrapper</i>.
       A foreign-data wrapper is a library that communicates with a remote
       data source. This library hides the source-specific connection and data
-      access details. Foreign-data wrappers provided in the Greenplum Database
-      distribution, including <codeph>file_fdw</codeph> and
-      <codeph>postgres_fdw</codeph>, have been modified to take advantage
-      of Greenplum's parallel processing.</p>
+      access details.</p>
     <note>Most PostgreSQL foreign-data wrappers should work with Greenplum
-      Database. However, any foreign-data wrapper that is not provided in the
-      Greenplum distribution likely connects only through the master.</note>
+      Database. However, PostgreSQL foreign-data wrappers connect only through 
+      the Greenplum Database master and do not access the Greenplum Database 
+      segment instances directly.</note>
     <p>If none of the existing foreign-data wrappers suit your needs, you can
       write your own as described in <xref href="g-devel-fdw.xml#topic1"/>.</p>
     <p>To access foreign data, you create a <i>foreign server</i> object,
