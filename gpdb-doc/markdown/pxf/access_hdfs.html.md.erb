@@ -53,7 +53,10 @@ Before working with Hadoop data using PXF, ensure that:
 
 
 ## <a id="hdfs_cmdline"></a>HDFS Shell Command Primer
-Hadoop includes command-line tools that interact directly with your HDFS file system. These tools support typical file system operations including copying and listing files, changing file permissions, and so forth.
+Examples in the PXF Hadoop topics access files on HDFS. You can choose to access files that already exist in your HDFS cluster. Or, you can follow the steps in the examples to create new files.
+
+A Hadoop installation includes command-line tools that interact directly with your HDFS file system. These tools support typical file system operations that include copying and listing files, changing file permissions, and so forth. You run these tools on a system with a Hadoop client installation. By default, Greenplum Database hosts do not
+include a Hadoop client installation.
 
 The HDFS file system command syntax is `hdfs dfs <options> [<file>]`. Invoked with no options, `hdfs dfs` lists the file system options supported by the tool.
 
