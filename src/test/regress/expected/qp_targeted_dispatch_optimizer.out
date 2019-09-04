@@ -511,7 +511,7 @@ INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select count(*) from mpp7638 where a =1;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  count 
 -------
      5
@@ -521,7 +521,7 @@ explain select count(*) from mpp7638 where a =1;
                                                     QUERY PLAN                                                     
 -------------------------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=1)
          ->  Result  (cost=0.00..431.00 rows=1 width=1)
                ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
                      ->  Partition Selector for mpp7638 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
@@ -616,7 +616,7 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (1 row)
 
 select count(*) from range_table where id=1;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  count 
 -------
      1
@@ -797,7 +797,7 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 (1 row)
 
 select max(a0) from table_a where a0=1;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  max 
 -----
    1
