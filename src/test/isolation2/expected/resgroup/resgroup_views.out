@@ -10,7 +10,7 @@ select rsgname , groupid , num_running , num_queueing , num_queued , num_execute
  default_group | 6437    | 0           | 0            | 0          | 0            | 0.00         | 0              | 0                     
 (1 row)
 
-select rsgname , groupid , cpu , memory_used , memory_shared_used from gp_toolkit.gp_resgroup_status_per_host s join gp_segment_configuration c on s.hostname=c.hostname and c.content=-1 where rsgname='default_group';
+select rsgname , groupid , cpu , memory_used , memory_shared_used from gp_toolkit.gp_resgroup_status_per_host s join gp_segment_configuration c on s.hostname=c.hostname and c.content=-1 and role='p' where rsgname='default_group';
  rsgname       | groupid | cpu  | memory_used | memory_shared_used 
 ---------------+---------+------+-------------+--------------------
  default_group | 6437    | 0.00 | 0           | 0                  
