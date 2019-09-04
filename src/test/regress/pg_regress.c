@@ -140,6 +140,9 @@ static bool detectCgroupMountPoint(char *cgdir, int len);
 static bool should_exclude_test(char *test);
 static int run_diff(const char *cmd, const char *filename);
 
+static char *content_zero_hostname = NULL;
+static char *get_host_name(int16 contentid, char role);
+
 /*
  * allow core files if possible.
  */
@@ -492,6 +495,8 @@ typedef struct replacements
 	char *bindir;
 	char *orientation;
 	char *cgroup_mnt_point;
+	char *content_zero_hostname;
+	const char *username;
 } replacements;
 
 /* Internal helper function to detect cgroup mount point at runtime.*/
@@ -542,6 +547,8 @@ convert_line(char *line, replacements *repls)
 	replace_string(line, "@libdir@", repls->dlpath);
 	replace_string(line, "@DLSUFFIX@", repls->dlsuffix);
 	replace_string(line, "@bindir@", repls->bindir);
+	replace_string(line, "@hostname@", repls->content_zero_hostname);
+	replace_string(line, "@gpcurusername@", (char *) repls->username);
 	if (repls->orientation)
 	{
 		replace_string(line, "@orientation@", repls->orientation);
@@ -662,13 +669,14 @@ generate_uao_sourcefiles(char *src_dir, char *dest_dir, char *suffix, replacemen
 			 * Remember if there are any more tokens that we didn't recognize.
 			 * They need to be handled by the gpstringsubs.pl script
 			 */
-			if (!has_tokens && strchr(line, '@') != NULL)
+			if (!has_tokens && strstr(line, "@gp") != NULL)
 				has_tokens = true;
 		}
 
 		fclose(infile);
 		fclose(outfile_row);
 		fclose(outfile_col);
+
 		if (has_tokens)
 		{
 			char		cmd[MAXPGPATH * 3];
@@ -711,6 +719,7 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 	char	  **name;
 	char	  **names;
 	int			count = 0;
+	char *errstr;
 
 	snprintf(indir, MAXPGPATH, "%s/%s", inputdir, source_subdir);
 
@@ -771,6 +780,8 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 	repls.dlsuffix = DLSUFFIX;
 	repls.bindir = bindir;
 	repls.cgroup_mnt_point = cgroup_mnt_point;
+	repls.content_zero_hostname = content_zero_hostname;
+	repls.username = get_user_name(&errstr);
 
 	/* finally loop on each file and do the replacement */
 	for (name = names; *name; name++)
@@ -847,7 +858,7 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 			 * Remember if there are any more tokens that we didn't recognize.
 			 * They need to be handled by the gpstringsubs.pl script
 			 */
-			if (!has_tokens && strchr(line, '@') != NULL)
+			if (!has_tokens && strstr(line, "@gp") != NULL)
 				has_tokens = true;
 		}
 		fclose(infile);
@@ -887,6 +898,8 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 static void
 convert_sourcefiles(void)
 {
+	content_zero_hostname = get_host_name(0, 'p');
+
 	convert_sourcefiles_in("input", outputdir, "sql", "sql");
 	convert_sourcefiles_in("output", outputdir, "expected", "out");
 
@@ -3187,4 +3200,55 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		exit(1);
 
 	return 0;
+}
+
+static char *
+get_host_name(int16 contentid, char role)
+{
+	char psql_cmd[MAXPGPATH];
+	FILE       *fp;
+	char line[1024];
+	int len;
+	char *hostname = NULL;
+
+	len = snprintf(psql_cmd, sizeof(psql_cmd),
+			"\"%s%spsql\" -X -t -c \"select hostname from gp_segment_configuration where role=\'%c\' and content = %d;\" -d \"postgres\"",
+				   bindir ? bindir : "",
+				   bindir ? "/" : "",
+				   role,
+				   contentid);
+
+	if (len >= sizeof(psql_cmd))
+		exit_nicely(2);
+
+	/* Execute the command with pipe and read the standard output. */
+	if ((fp = popen(psql_cmd, "r")) == NULL)
+	{
+		fprintf(stderr, "%s: cannot launch shell command\n", progname);
+		exit_nicely(2);
+	}
+
+	if (fgets(line, sizeof(line), fp) == NULL)
+	{
+		fprintf(stderr, "%s: cannot read the result\n", progname);
+		(void) pclose(fp);
+		exit_nicely(2);
+	}
+
+	if (pclose(fp) < 0)
+	{
+		fprintf(stderr, "%s: cannot close shell command\n", progname);
+		exit_nicely(2);
+	}
+
+	hostname = psprintf("%s", trim_white_space(line));
+
+	if (hostname == NULL)
+	{
+		fprintf(stderr, _("%s: failed to determine hostname for content 0 primary\n"),
+				progname);
+		exit_nicely(2);
+	}
+
+	return hostname;
 }

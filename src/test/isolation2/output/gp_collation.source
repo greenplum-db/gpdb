@@ -47,7 +47,7 @@ select gp_segment_id, collname from pg_collation where collname='collation_from_
  gp_segment_id | collname 
 ---------------+----------
 (0 rows)
-create collation "collation_from_disk" (locale="@syslocale@");
+create collation "collation_from_disk" (locale="@gp_syslocale@");
 CREATE
 select gp_segment_id, collname from pg_collation where collname='collation_from_disk';
  gp_segment_id | collname            
@@ -162,7 +162,7 @@ select gp_segment_id, collname from gp_dist_random('pg_collation') where oid=(se
 ---------------+----------
 (0 rows)
 --  The fault injector should simulate a collation being missing on this segment
-create collation "locale_missing_on_one_segment" (locale="@syslocale@");
+create collation "locale_missing_on_one_segment" (locale="@gp_syslocale@");
 ERROR:  fault triggered, fault name:'collate_locale_os_lookup' fault type:'error'  (seg0 127.0.1.1:25432 pid=23851)
 -- Confirm 'collation_create_fails' is missing from all segments.
 select gp_segment_id, collname from pg_collation where collname='locale_missing_on_one_segment';
@@ -190,7 +190,7 @@ select gp_segment_id, collname from pg_collation where collname='locale_missing_
  gp_segment_id | collname 
 ---------------+----------
 (0 rows)
-create collation "locale_missing_on_one_segment" (locale="@syslocale@");
+create collation "locale_missing_on_one_segment" (locale="@gp_syslocale@");
 CREATE
 -- Confirm is on all segments.
 select gp_segment_id, collname from pg_collation where collname='locale_missing_on_one_segment';
