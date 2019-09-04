@@ -6,6 +6,10 @@ test: resgroup/resgroup_syntax
 test: resgroup/resgroup_transaction
 test: resgroup/resgroup_name_convention
 
+# fault injection tests
+test: resgroup/resgroup_assign_slot_fail
+test: resgroup/resgroup_unassign_entrydb
+
 # functions
 test: resgroup/resgroup_concurrency
 test: resgroup/resgroup_bypass
@@ -40,8 +44,5 @@ test: resgroup/resgroup_operator_memory
 
 # dump info
 test: resgroup/resgroup_dumpinfo
-
-# fault injection tests
-test: resgroup/resgroup_assign_slot_fail
 
 test: resgroup/disable_resgroup

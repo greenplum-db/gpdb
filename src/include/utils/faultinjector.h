@@ -235,6 +235,8 @@ typedef enum FaultInjectorIdentifier_e {
 	FreeGangInitPlan,
 
 	ResGroupAssignedOnMaster,
+	Unassign_Resgroup_Start_Entrydb,
+	Unassign_Resgroup_End_QD,
 
 	BeforeReadCommand,
 

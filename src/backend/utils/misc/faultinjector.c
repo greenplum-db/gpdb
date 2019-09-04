@@ -351,6 +351,10 @@ FaultInjectorIdentifierEnumToString[] = {
 	/* inject fault to skip when test cleanupGang */
 	_("resgroup_assigned_on_master"),
 		/* inject fault to report ERROR just after resource group is assigned on master */
+	_("unassign_resgroup_start_entrydb"),
+		/* inject fault to suspend in the beginning of UnassignResGroup() for the entrydb QE */
+	_("unassign_resgroup_end_qd"),
+		/* inject fault to suspend in the end of UnassignResGroup() for QD */
 	_("before_read_command"),
 		/* inject fault before reading command */
 	_("copy_from_high_processed"),
