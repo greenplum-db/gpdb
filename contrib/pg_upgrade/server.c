@@ -9,16 +9,7 @@
 
 #include "postgres_fe.h"
 
-/*
- * GPDB_94_MERGE_FIXME: include introduced in 928bca1a30d7e05cc3857a99e27a
- * which shipped as 9.4.17.  Remove the local define and use the definition
- * in the included header once we've merged with the 9.4 minor releases.
- */
-#define ALWAYS_SECURE_SEARCH_PATH_SQL \
-    "SELECT pg_catalog.set_config('search_path', '', false)"
-#if 0
 #include "fe_utils/connect.h"
-#endif
 #include "pg_upgrade.h"
 
 
