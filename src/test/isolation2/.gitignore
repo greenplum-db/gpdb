@@ -4,6 +4,7 @@ regression.out
 */dummy.out
 
 # Local binaries and symbolic links
+/extended_protocol_test
 /pg_isolation2_regress
 /atmsort.pm
 /explain.pm

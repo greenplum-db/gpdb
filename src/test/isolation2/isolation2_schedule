@@ -26,6 +26,7 @@ test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-de
 # until we can improve below flaky case please keep it disabled
 ignore: gdd/non-lock-107
 # keep this in a separate group
+test: gdd/extended_protocol_test
 test: gdd/avoid-qd-deadlock
 test: gdd/delete-deadlock-root-leaf-concurrent-op
 test: gdd/planner_insert_while_vacuum_drop
