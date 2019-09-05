@@ -20,6 +20,7 @@
 #include "nodes/primnodes.h"
 #include "utils/datum.h"
 #include "utils/date.h"
+#include "utils/uuid.h"
 
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
 #include "gpopt/translate/CTranslatorQueryToDXL.h"
@@ -2462,7 +2463,11 @@ CTranslatorScalarToDXL::ExtractLintValueFromDatum
 		}
 		else
 		{
-			if (mdid->Equals(&CMDIdGPDB::m_mdid_bpchar))
+			if (mdid->Equals(&CMDIdGPDB::m_mdid_uuid))
+			{
+				hash = gpdb::UUIDHash((Datum) bytes);
+			}
+			else if (mdid->Equals(&CMDIdGPDB::m_mdid_bpchar))
 			{
 				hash = gpdb::HashBpChar((Datum) bytes);
 			}

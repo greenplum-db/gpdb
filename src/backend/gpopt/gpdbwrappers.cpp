@@ -3267,4 +3267,15 @@ gpdb::HashText(Datum d)
 	GP_WRAP_END;
 }
 
+uint32
+gpdb::UUIDHash(Datum d)
+{
+	GP_WRAP_START;
+	{
+		return DatumGetUInt32(DirectFunctionCall1(uuid_hash, d));
+	}
+	GP_WRAP_END;
+}
+
+
 // EOF
