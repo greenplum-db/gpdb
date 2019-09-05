@@ -1,0 +1,82 @@
+---
+title: Migrating PXF from Greenplum 5
+---
+
+If you are using PXF in your Greenplum Database 5 installation, Pivotal recommends that you upgrade Greenplum Database to version 5.21.2 or later before you migrate PXF to Greenplum Database 6. If you migrate from an earlier version of Greenplum 5, you will be required to perform additional migration steps in your Greenplum 6 installation.
+
+The PXF Greenplum Database 5 to 6 migration procedure has two parts. You perform one PXF procedure in your Greenplum Database 5 installation, then install, configure, and migrate data to Greenplum 6, and then perform another PXF procedure in your Greenplum Database 6.0 installation:
+
+-   [Step 1: PXF Greenplum Database 5 Pre-Migration Actions](#pxf5pre)
+-   Install Greenplum Database 6
+-   Migrate Data from Greenplum Database 5 to Greenplum Database 6
+-   [Step 2: Migrate PXF to Greenplum Database 6](#pxfmig)
+
+
+## <a id="prerequisites"></a>Prerequisites
+
+Before migrating PXF from Greenplum 5 to Greenplum 6, ensure that you can:
+
+- Identify the version number of your Greenplum 5 installation.
+- Identify the file system location of the PXF `$PXF_CONF` directory in your Greenplum 5 installation.
+
+
+## <a id="pxf5pre"></a>Step 1: PXF Greenplum Database 5 Pre-Migration Actions
+
+Perform this procedure in your Greenplum Database 5 installation:
+
+1. Log in to the Greenplum Database master node. For example:
+
+    ``` shell
+    $ ssh gpadmin@<gp5master>
+    ```
+
+2. Identify and save the Greenplum Database version number of your 5 installation. For example:
+
+    ``` shell
+    gpadmin@gp5master$ psql -d postgres
+    ```
+
+    ``` sql
+    SELECT version();
+
+               version 
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ PostgreSQL 8.3.23 (Greenplum Database 5.21.2 build commit:610b6d777436fe4a281a371cae85ac40f01f4f5e) on x86_64-pc-linux-gnu, compiled by GCC gcc (GCC) 6.2.0, 64-bit compiled on Aug  7 2019 20:38:47
+(1 row)
+    ```
+
+3. Stop PXF on each segment host as described in [Stopping PXF](cfginitstart_pxf.html#stop_pxf).
+
+4. If you plan to install Greenplum Database 6 on a new set of hosts, be sure to retain or save a copy of the `$PXF_CONF` directory in your Greenplum 5 installation.
+
+5. Install and configure Greenplum Database 6, migrate Greenplum 5 table definitions and data to your Greenplum 6 installation, and then continue your PXF migration with [Step 2: Migrating PXF to Greenplum 6](#pxfmig).
+
+
+## <a id="pxfmig"></a>Step 2: Migrating PXF to Greenplum 6
+
+After you install and configure Greenplum Database 6 and migrate table definitions and data from the Greenplum 5 installation, perform the following procedure to configure and start the new PXF software:
+
+1. Log in to the Greenplum Database 6 master node. For example:
+
+    ``` shell
+    $ ssh gpadmin@<gp6master>
+    ```
+
+2. If you installed Greenplum Database 6 on a new set of hosts, copy the `$PXF_CONF` directory from your Greenplum 5 installation to the master node. Consider copying the directory to the same file system location at which it resided in the 5 cluster. For example, if `PXF_CONF=/usr/local/greenplum-pxf`:
+
+    ``` shell
+    gpadmin@gp6master$ scp -r gpadmin@<gp5master>:/usr/local/greenplum-pxf /usr/local/
+    ```
+
+3. Initialize PXF on each segment host as described in [Initializing PXF](init_pxf.html), specifying the `PXF_CONF` directory that you copied in the step above.
+
+4. **If you are migrating from Greenplum Database version 5.21.1 or earlier**, perform the version-applicable steps identified in the Greenplum Database 5.21 [Upgrading PXF](https://gpdb.docs.pivotal.io/5210/pxf/upgrade_pxf.html#pxfup) documentation in your Greenplum Database 6 installation. **Start with step 4 in the procedure**. (Note that this procedure identifies the actions required to upgrade PXF between Greenplum Database 5.x releases. Some of these steps may be required to configure a Greenplum version-6-compatible PXF.)
+
+5. Synchronize the PXF configuration from the Greenplum Database 6 master host to the standby master and each segment host in the cluster. For example:
+
+    ``` shell
+    gpadmin@gp6master$ $GPHOME/pxf/bin/pxf cluster sync
+    ```
+ 
+6. Start PXF on each Greenplum Database 6 segment host as described in [Starting PXF](cfginitstart_pxf.html#start_pxf).
+
