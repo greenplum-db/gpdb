@@ -648,6 +648,8 @@ namespace gpdb {
 
 	uint32 HashText(Datum d);
 
+	uint32 UUIDHash(Datum d);
+
 } //namespace gpdb
 
 #define ForEach(cell, l)	\

@@ -20,6 +20,7 @@
 #include "utils/datum.h"
 #include "utils/date.h"
 #include "utils/numeric.h"
+#include "utils/uuid.h"
 #include "catalog/pg_proc.h"
 
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
@@ -2478,7 +2479,11 @@ CTranslatorScalarToDXL::ExtractLintValueFromDatum
 		}
 		else
 		{
-			if (mdid->Equals(&CMDIdGPDB::m_mdid_bpchar))
+			if (mdid->Equals(&CMDIdGPDB::m_mdid_uuid))
+			{
+				hash = gpdb::UUIDHash((Datum) bytes);
+			}
+			else if (mdid->Equals(&CMDIdGPDB::m_mdid_bpchar))
 			{
 				hash = gpdb::HashBpChar((Datum) bytes);
 			}
