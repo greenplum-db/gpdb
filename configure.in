@@ -1130,6 +1130,10 @@ if test "$with_libcurl" = "no" && test "$enable_gpcloud" = "yes"; then
   AC_MSG_ERROR([libcurl is required by gpcloud])
 fi
 
+if test "$with_libxml" = "no" && test "$enable_gpcloud" = "yes"; then
+  AC_MSG_ERROR([libxml is required by gpcloud])
+fi
+
 #
 # libapr. Used for gpfdist and gpperfmon
 #

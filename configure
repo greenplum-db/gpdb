@@ -8243,6 +8243,10 @@ if test "$with_libcurl" = "no" && test "$enable_gpcloud" = "yes"; then
   as_fn_error $? "libcurl is required by gpcloud" "$LINENO" 5
 fi
 
+if test "$with_libxml" = "no" && test "$enable_gpcloud" = "yes"; then
+  as_fn_error $? "libxml is required by gpcloud" "$LINENO" 5
+fi
+
 #
 # libapr. Used for gpfdist and gpperfmon
 #
