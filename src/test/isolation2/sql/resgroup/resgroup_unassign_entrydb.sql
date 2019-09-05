@@ -42,7 +42,7 @@ SELECT gp_inject_fault('unassign_resgroup_start_entrydb', 'reset', 1);
 
 -- Verify the system is ok with entrydb.
 2: SET ROLE role_test;
-2: SELECT * from gp_dist_random('gp_id'), pg_sleep(0.1);
+2: SELECT * from gp_dist_random('gp_id'), pg_sleep(0.1) LIMIT 1;
 2q:
 
 -- Clean up
