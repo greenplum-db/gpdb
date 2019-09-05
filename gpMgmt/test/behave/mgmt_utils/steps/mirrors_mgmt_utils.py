@@ -4,6 +4,8 @@ from behave import given, when, then
 from test.behave_utils.utils import *
 
 from mgmt_utils import *
+from gppylib.util import ssh_utils
+from gppylib.commands.unix import *
 
 # This file contains steps for gpaddmirrors and gpmovemirrors tests
 
@@ -70,9 +72,9 @@ def add_three_mirrors(context):
     cmd.run(validateAfter=True)
 
 
-def add_mirrors(context):
+def add_mirrors(context, options):
     context.mirror_config = _generate_input_config()
-    cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % context.mirror_config)
+    cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s %s' % (context.mirror_config, options))
     cmd.run(validateAfter=True)
 
 
@@ -91,6 +93,35 @@ def _get_mirror_count():
         count_row = dbconn.execSQL(conn, sql).fetchone()
         return count_row[0]
 
+@given('the file "{filename}" on host "{host}" contains "{search_items_list}"')
+def impl(context, search_items_list, host, filename):
+    session = ssh_utils.Session();
+    session.login(hostList=[host], userName=getUserName())
+    output = session.executeCommand('cat %s' % (filename))
+    pghba_contents= list(output)[0]
+    for search_item in search_items_list.split(','):
+        search_item = search_item.strip()
+        found = False
+        for entry in pghba_contents:
+            contents = entry.strip()
+            # for example: host all all hostname    trust
+            if contents.startswith("host") and contents.endswith("trust"):
+                tokens = contents.split()
+                if tokens.__len__() != 5:
+                    raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
+                hostname = tokens[3].strip()
+                net = hostname.split("/")[0]
+                # ignore local host entries
+                if net == "127.0.0.1" or net == "::1":
+                    continue
+                elif search_item == "/" and hostname.__contains__("/"):
+                    found = True
+                    break
+                elif search_item == hostname:
+                    found = True
+                    break
+        if not found:
+            raise Exception("entry for expected item %s not existing in pg_hba.conf '%s'" % (search_item, pghba_contents))
 
 @then('verify the database has mirrors')
 def impl(context):
@@ -98,11 +129,11 @@ def impl(context):
         raise Exception('No mirrors found')
 
 
-@given('gpaddmirrors adds mirrors')
-@when('gpaddmirrors adds mirrors')
-@then('gpaddmirrors adds mirrors')
-def impl(context):
-    add_mirrors(context)
+@given('gpaddmirrors adds mirrors with options "{options}"')
+@when('gpaddmirrors adds mirrors with options "{options}"')
+@then('gpaddmirrors adds mirrors with options "{options}"')
+def impl(context, options):
+    add_mirrors(context, options)
 
 
 @given('gpaddmirrors adds mirrors with temporary data dir')

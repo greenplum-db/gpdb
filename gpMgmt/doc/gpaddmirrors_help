@@ -175,6 +175,11 @@ OPTIONS
  or equal to the number of segment instances per host).
 
 
+--hba-hostnames
+
+ Optional. use hostnames instead of CIDR in pg_hba.conf
+
+
 -v
 
  Sets logging output to verbose.
