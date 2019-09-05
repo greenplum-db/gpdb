@@ -32,7 +32,7 @@ select pg_import_system_collations( (select oid from pg_namespace where nspname 
 -- Create a collation from an on-disk locale
 --
 select gp_segment_id, collname from pg_collation where collname='collation_from_disk';
-create collation "collation_from_disk" (locale="@syslocale@");
+create collation "collation_from_disk" (locale="@gp_syslocale@");
 select gp_segment_id, collname from pg_collation where collname='collation_from_disk';
 select gp_segment_id, collname from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='collation_from_disk');
 select count(distinct oid) from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='collation_from_disk');
@@ -84,7 +84,7 @@ SELECT gp_inject_fault('collate_locale_os_lookup', 'error', dbid)
 
 select gp_segment_id, collname from gp_dist_random('pg_collation') where oid=(select oid from pg_collation where collname='locale_missing_on_one_segment');
 --  The fault injector should simulate a collation being missing on this segment
-create collation "locale_missing_on_one_segment" (locale="@syslocale@");
+create collation "locale_missing_on_one_segment" (locale="@gp_syslocale@");
 -- Confirm 'collation_create_fails' is missing from all segments.
 select gp_segment_id, collname from pg_collation where collname='locale_missing_on_one_segment';
 select gp_segment_id, collname from gp_dist_random('pg_collation') where collname='locale_missing_on_one_segment';
@@ -99,7 +99,7 @@ SELECT gp_inject_fault('collate_locale_os_lookup', 'reset', dbid)
 -- will throw an error.
 --
 select gp_segment_id, collname from pg_collation where collname='locale_missing_on_one_segment';
-create collation "locale_missing_on_one_segment" (locale="@syslocale@");
+create collation "locale_missing_on_one_segment" (locale="@gp_syslocale@");
 -- Confirm is on all segments.
 select gp_segment_id, collname from pg_collation where collname='locale_missing_on_one_segment';
 select gp_segment_id, collname from gp_dist_random('pg_collation') where collname='locale_missing_on_one_segment';
