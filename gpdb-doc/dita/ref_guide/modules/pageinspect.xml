@@ -34,8 +34,8 @@
           function reads data only from the segment instance where the function is executed. For
           example, the <codeph>get_raw_page()</codeph> function returns a <codeph>block number out
             of range</codeph> error when you try to read data from a user-defined table on the
-          Greenplum Database master because there is no data in the table on the master. The
-          function will read data from a system catalog table on the master.</note>
+          Greenplum Database master because there is no data in the table on the master segment. The
+          function will read data from a system catalog table on the master segment.</note>
       </body>
     </topic>
   </topic>
