@@ -70,9 +70,9 @@ def add_three_mirrors(context):
     cmd.run(validateAfter=True)
 
 
-def add_mirrors(context):
+def add_mirrors(context, options):
     context.mirror_config = _generate_input_config()
-    cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % context.mirror_config)
+    cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s %s' % (context.mirror_config, options))
     cmd.run(validateAfter=True)
 
 
@@ -91,6 +91,53 @@ def _get_mirror_count():
         count_row = dbconn.execSQL(conn, sql).fetchone()
         return count_row[0]
 
+# take the item in search_item_list, search pg_hba if it contains atleast one entry
+# for the item
+@given('pg_hba file "{filename}" on host "{host}" contains entries for "{search_items}"')
+def impl(context, search_items, host, filename):
+    cmd_str = "ssh %s cat %s" % (host, filename)
+    cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+    cmd.run(validateAfter=False)
+    search_item_list = [search_item.strip() for search_item in search_items.split(',')]
+    pghba_contents= cmd.get_stdout().strip().split('\n')
+    for search_item in search_item_list:
+        found = False
+        for entry in pghba_contents:
+            contents = entry.strip()
+            # for example: host all all hostname    trust
+            if contents.startswith("host") and contents.endswith("trust"):
+                tokens = contents.split()
+                if len(tokens) != 5:
+                    raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
+                hostname = tokens[3].strip()
+                if search_item == hostname:
+                    found = True
+                    break
+        if not found:
+            raise Exception("entry for expected item %s not existing in pg_hba.conf '%s'" % (search_item, pghba_contents))
+
+# ensure pg_hba contains only cidr addresses, exclude mandatory entries for replication samenet if existing
+@given('pg_hba file "{filename}" on host "{host}" contains only cidr addresses')
+def impl(context, host, filename):
+    cmd_str = "ssh %s cat %s" % (host, filename)
+    cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+    cmd.run(validateAfter=False)
+    pghba_contents= cmd.get_stdout().strip().split('\n')
+    for entry in pghba_contents:
+        contents = entry.strip()
+        # for example: host all all hostname    trust
+        if contents.startswith("host") and contents.endswith("trust"):
+            tokens = contents.split()
+            if len(tokens) != 5:
+                raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
+            hostname = tokens[3].strip()
+            # ignore replication entries
+            if hostname == "samenet":
+                continue
+            if "/" in hostname:
+                continue
+            else:
+                raise Exception("not a valid cidr '%s' address" % hostname)
 
 @then('verify the database has mirrors')
 def impl(context):
@@ -98,11 +145,12 @@ def impl(context):
         raise Exception('No mirrors found')
 
 
+@given('gpaddmirrors adds mirrors with options "{options}"')
 @given('gpaddmirrors adds mirrors')
 @when('gpaddmirrors adds mirrors')
 @then('gpaddmirrors adds mirrors')
-def impl(context):
-    add_mirrors(context)
+def impl(context, options=" "):
+    add_mirrors(context, options)
 
 
 @given('gpaddmirrors adds mirrors with temporary data dir')

@@ -501,11 +501,23 @@ class GpAddMirrorsProgram:
 
     def config_primaries_for_replication(self, gpArray):
         logger.info("Starting to modify pg_hba.conf on primary segments to allow replication connections")
-        replicationStr = ". {0}/greenplum_path.sh; echo 'host  replication {1} samenet trust' >> {2}/pg_hba.conf; pg_ctl -D {2} reload"
+        replicationStr = ". {0}/greenplum_path.sh; echo 'host  replication {1} samenet trust {2}' >> {3}/pg_hba.conf; pg_ctl -D {3} reload"
 
         try:
             for segmentPair in gpArray.getSegmentList():
-                cmdStr = replicationStr.format(os.environ["GPHOME"], unix.getUserName(), segmentPair.primaryDB.datadir)
+                allow_pair_hba_line_entries = []
+                if self.__options.hba_hostnames:
+                    mirror_hostname, _, _ = socket.gethostbyaddr(segmentPair.mirrorDB.getSegmentHostName())
+                    hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), mirror_hostname)
+                    allow_pair_hba_line_entries.append(hba_line_entry)
+                else:
+                    mirror_ips = unix.InterfaceAddrs.remote('get mirror ips', segmentPair.mirrorDB.getSegmentHostName())
+                    for ip in mirror_ips:
+                        cidr_suffix = '/128' if ':' in ip else '/32'
+                        cidr = ip + cidr_suffix
+                        hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), cidr)
+                        allow_pair_hba_line_entries.append(hba_line_entry)
+                cmdStr = replicationStr.format(os.environ["GPHOME"], unix.getUserName(), " ".join(allow_pair_hba_line_entries), segmentPair.primaryDB.datadir)
                 logger.debug(cmdStr)
                 cmd = Command(name="append to pg_hba.conf", cmdStr=cmdStr, ctxt=base.REMOTE, remoteHost=segmentPair.primaryDB.hostname)
                 cmd.run(validateAfter=True)
@@ -621,6 +633,9 @@ class GpAddMirrorsProgram:
                          dest="parallelDegree",
                          metavar="<parallelDegree>",
                          help="Max # of workers to use for building recovery segments.  [default: %default]")
+
+        addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
+                          help='use hostnames instead of CIDR in pg_hba.conf')
 
         parser.set_defaults()
         return parser

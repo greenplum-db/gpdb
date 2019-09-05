@@ -18,15 +18,55 @@ Feature: Tests for gpaddmirrors
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 
     @concourse_cluster
-    Scenario: gprecoverseg works correctly on a newly added mirror
+    Scenario: gprecoverseg works correctly on a newly added mirror with HBA_HOSTNAMES=0
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
+        And with HBA_HOSTNAMES "0" a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
+        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains only cidr addresses
         And gpaddmirrors adds mirrors
+        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains only cidr addresses
+        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "samenet"
         Then verify the database has mirrors
         And the information of a "mirror" segment on a remote host is saved
         When user kills a "mirror" process with the saved information
         When the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+        Given a preferred primary has failed
+        When the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+        When primary and mirror switch to non-preferred roles
+        When the user runs "gprecoverseg -a -r"
+        Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+        And the user runs "gpstop -aqM fast"
+
+    @concourse_cluster
+    Scenario: gprecoverseg works correctly on a newly added mirror with HBA_HOSTNAMES=1
+        Given a working directory of the test as '/tmp/gpaddmirrors'
+        And the database is not running
+        And with HBA_HOSTNAMES "1" a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
+        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "mdw, sdw1"
+        And gpaddmirrors adds mirrors with options "--hba-hostnames"
+        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "mdw, sdw1, sdw2, samenet"
+        Then verify the database has mirrors
+        And the information of a "mirror" segment on a remote host is saved
+        When user kills a "mirror" process with the saved information
+        When the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+        Given a preferred primary has failed
+        When the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+        When primary and mirror switch to non-preferred roles
+        When the user runs "gprecoverseg -a -r"
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
