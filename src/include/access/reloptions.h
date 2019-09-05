@@ -34,7 +34,11 @@
  * If compression is turned on without specifying compresstype, this
  * is the default.
  */
+#ifdef HAVE_LIBZ
 #define AO_DEFAULT_COMPRESSTYPE   "zlib"
+#else
+#define AO_DEFAULT_COMPRESSTYPE   "none"
+#endif
 #define AO_DEFAULT_CHECKSUM       true
 #define AO_DEFAULT_COLUMNSTORE    false
 
