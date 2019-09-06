@@ -53,7 +53,7 @@ When you configure PXF for secure HDFS using an AD Kerberos KDC server, you will
     powershell#>ktpass -out pxf.service.keytab -princ gpadmin@EXAMPLE.COM -mapUser ServiceGreenplumPROD1 -pass ******* -crypto all -ptype KRB5_NT_PRINCIPAL
     ```
 
-    With Active Directory, the principal and key is shared by all Greenplum Database segment hosts. 
+    With Active Directory, the principal and the keytab file are shared by all Greenplum Database segment hosts. 
 	
 8. Copy the `pxf.service.keytab` file to the Greenplum master host.
 
