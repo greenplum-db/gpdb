@@ -42,8 +42,8 @@ When you configure PXF for secure HDFS using an AD Kerberos KDC server, you will
 1. Start **Active Directory Users and Computers**.
 2. Expand the forest domain and the top-level UNIX organizational unit that describe your Greenplum user domain.
 3. Select **Service Accounts**, right-click, then select **New->User**.
-4. Type a name, eg. `ServiceGreenplumPROD1`, and change the login name to `gpadmin`.
-5. Type and confirm the Active Directory service account password. Select the **User cannot change password** and **Password never expires** check boxes, then click **Next**.
+4. Type a name, eg. `ServiceGreenplumPROD1`, and change the login name to `gpadmin`. Note that the login name should be compliance with POSIX standard and match to hadoop.proxyuser.<name>.hosts/groups in hadoop core-site.xml and PXF_PRINCIPAL in PXF_CONF/conf/pxf-env.sh.
+5. Type and confirm the Active Directory service account password. Select the **User cannot change password** and **Password never expires** check boxes, then click **Next**. For security reason, if you can't have **Password never expires** checked, you will need to generate new keytab file (step 7) every time you change the password of service account. 
 6. Click **Finish** to complete the creation of the new user principal. 
 7. Open Powershell or a command prompt and run the `ktpass` command to generate the keytab file. For example:
 
@@ -51,7 +51,7 @@ When you configure PXF for secure HDFS using an AD Kerberos KDC server, you will
     powershell#>ktpass -out pxf.service.keytab -princ gpadmin@EXAMPLE.COM -mapUser ServiceGreenplumPROD1 -pass ******* -crypto all -ptype KRB5_NT_PRINCIPAL
     ```
 
-    With Active Directory, the principal and key is shared by all Greenplum Database segment hosts.
+    With Active Directory, the principal and key is shared by all Greenplum Database segment hosts. 
 	
 8. Copy the `pxf.service.keytab` file to the Greenplum master host.
 
@@ -63,13 +63,6 @@ When you configure PXF for secure HDFS using an AD Kerberos KDC server, you will
     $ ssh gpadmin@<gpmaster>
     ```
     
-2. Locate the keytab file, copy the file to the `$PXF_CONF` user configuration directory, and set required permissions. For example:
-	
-    ``` shell
-    gpadmin@gpmaster$ mv pxf.service.keytab $PXF_CONF/keytabs
-    gpadmin@gpmaster$ chmod 400 $PXF_CONF/keytabs/pxf.service.keytab
-    ```
-	
 2. Open the `$PXF_CONF/conf/pxf-env.sh` file in an editor. Update the `PXF_KEYTAB` and `PXF_PRINCIPAL` settings, if required, specifying the location of the keytab file and the Kerberos principal. Replace `EXAMPLE.COM` with your Kerberos realm.
 
     ``` shell
@@ -77,9 +70,9 @@ When you configure PXF for secure HDFS using an AD Kerberos KDC server, you will
     export PXF_PRINCIPAL="gpadmin@EXAMPLE.COM"
     ```
     
-3. Save the file and exit the editor.
+4. Save the file and exit the editor.
 
-4. Synchronize the PXF configuration to your Greenplum Database cluster and restart PXF. For example:
+5. Synchronize the PXF configuration to your Greenplum Database cluster and restart PXF. For example:
 
     ``` shell
     gpadmin@master$ $GPHOME/pxf/bin/pxf cluster sync
@@ -87,6 +80,13 @@ When you configure PXF for secure HDFS using an AD Kerberos KDC server, you will
     gpadmin@master$ $GPHOME/pxf/bin/pxf cluster start
     ```
 
+6. The step 5 will not sync the keytabs content in PXF_CONF. You will need to distribute the keytab file to PXF_CONF/keytabs/. Locate the keytab file, copy the file to the `$PXF_CONF` user configuration directory, and set required permissions. For example:
+	
+    ``` shell
+    gpadmin@gpmaster$ gpscp -f hostfile_all pxf.service.keytab =:$PXF_CONF/keytabs/
+    gpadmin@gpmaster$ gpssh -f hostfile_all chmod 400 $PXF_CONF/keytabs/pxf.service.keytab
+    ```
+	
 
 ### <a id="proc_mit"></a>Configuring PXF with an MIT Kerberos KDC Server
 
