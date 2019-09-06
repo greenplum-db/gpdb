@@ -2,18 +2,20 @@
 title: Migrating gphdfs External Tables to PXF
 ---
 
-You may be using the `gphdfs` external table protocol in a Greenplum Database version 5.x cluster to access data stored in Hadoop. Greenplum Database version 6 removes support for the `gphdfs` protocol. To maintain access to Hadoop data in Greenplum 6, you must migrate your `gphdfs` external tables to use the Greenplum Platform Extension Framework (PXF). This involves setting up PXF and creating new external tables that use the `pxf` external table protocol.
+You may be using the `gphdfs` external table protocol in a Greenplum Database version 4 or 5 cluster to access data stored in Hadoop. Greenplum Database version 6 removes support for the `gphdfs` protocol. To maintain access to Hadoop data in Greenplum 6, you must migrate your `gphdfs` external tables to use the Greenplum Platform Extension Framework (PXF). This involves setting up PXF and creating new external tables that use the `pxf` external table protocol.
 
-To migrate your `gphdfs` external tables to use the `pxf` external table protocol, you must:
+To migrate your `gphdfs` external tables to use the `pxf` external table protocol, you:
 
 1. [Prepare](#prepare) for the migration.
-2. Map configuration properties and [configure and start PXF] (#id_cfg_prop).
+2. Map configuration properties and [initialize, configure, and start PXF] (#id_cfg_prop).
 3. [Create](#create_pxf_ext_table) a new `pxf` external table to replace each `gphdfs` external table.
 4. [Verify](#verify_pxf) access to Hadoop files with the `pxf` external tables.
 5. [Remove](#remove_gphdfs_ext_table) the `gphdfs` external tables.
 6. [Revoke](#revoke_privs) privileges to the `gphdfs` protocol.
 
-<div class="note">You perform the migration in your Greenplum Database version 5.x cluster.</div>
+<div class="note">If you are migrating <code>gphdfs</code> from a Greenplum Database 5 installation, you perform the migration in the order above in your Greenplum 5 cluster before you migrate data to Greenplum 6.</div>
+
+<div class="note">If you are migrating <code>gphdfs</code> from a Greenplum Database 4 installation, you perform actions related to the migration in both the Greenplum 4 and Greenplum 6 installations. See <a href="#mig4">Migrating gphdfs from Greenplum 4</a>.</div>
 
 
 ## <a id="limits"></a>Limitations
@@ -27,9 +29,7 @@ Keep the following in mind as you plan for the migration:
 
 As you prepare for migrating from `gphdfs` to PXF:
 
-1. Ensure that you are running Greenplum Database version 5.XX or newer. If you are running an older version of Greenplum, you must upgrade to at least version 5.XX.
-
-2. Determine which `gphdfs` tables you want to migrate.
+1. Determine which `gphdfs` tables you want to migrate.
 
     You can run the following query to list the `gphdfs` external tables in a database:
 
@@ -43,7 +43,7 @@ As you prepare for migrating from `gphdfs` to PXF:
      WHERE d.refclassid = 'pg_extprotocol'::regclass AND p.ptcname = 'gphdfs';
      ```
 
-3. For each table that you choose to migrate, identify the format of the external data and the column definitions. Also identify the options with which the `gphdfs` table was created. You can use the `\dt+` SQL meta-command to obtain this information. For example:
+2. For each table that you choose to migrate, identify the format of the external data and the column definitions. Also identify the options with which the `gphdfs` table was created. You can use the `\dt+` SQL meta-command to obtain this information. For example:
 
     ``` sql
     \d+ public.gphdfs_writable_parquet
@@ -61,16 +61,10 @@ As you prepare for migrating from `gphdfs` to PXF:
     Execute on: all segments
     ```
 
-4. Identify the Java version installed in your Greenplum Database cluster, and install a supported version of Java if required.
-
-    PXF supports Java versions 8 and 11, `gphdfs` supports Java version 7 and later. If your Greenplum Database cluster hosts are running Java 7, upgrade to Java version 8 or 11 as described in [Installing Java for PXF](install_java.html).
-
-5. Initialize PXF as described in [Initializing PXF](init_pxf.html).
-
-    You must initialize PXF before you can access Hadoop.
+3. Save the information that you gathered above.
 
 
-## <a id="id_cfg_prop"></a>Configuring and Starting PXF
+## <a id="id_cfg_prop"></a>Initializing, Configuring, and Starting PXF
 
 PXF does not use the following `gphdfs` configuration options:
 
@@ -93,9 +87,19 @@ Configuration properties required by PXF, and the `gphdfs` equivalent, if applic
 
 After you determine the equivalent PXF configuration properties, you will:
 
-1. [Configure the PXF Hadoop Connectors](client_instcfg.html). This procedure creates a PXF server configuration that provides PXF the information that it requires to access Hadoop.
+1. Identify the Java version installed in your Greenplum Database cluster, and install a supported version of Java if required.
 
-2. Start PXF in your Greenplum Database cluster as described in [Starting PXF](cfginitstart_pxf.html#start_pxf).
+    PXF supports Java version 8, `gphdfs` supports Java version 7 and later. If your Greenplum Database cluster hosts are running Java 7, upgrade to Java version 8 as described in [Installing Java for PXF](install_java.html).
+
+2. Initialize PXF as described in [Initializing PXF](init_pxf.html).
+
+    You must initialize PXF before you can access Hadoop.
+
+3. [Configure the PXF Hadoop Connectors](client_instcfg.html). This procedure creates a PXF server configuration that provides PXF the information that it requires to access Hadoop.
+
+4. Start PXF in your Greenplum Database cluster as described in [Starting PXF](cfginitstart_pxf.html#start_pxf).
+
+5. Register the PXF extension and [grant users access to PXF](using_pxf.html).
 
 
 ## <a id="create_pxf_ext_table"></a>Creating a PXF External Table
@@ -103,7 +107,7 @@ After you determine the equivalent PXF configuration properties, you will:
 `gphdfs` and `pxf` are both external table protocols. Creating an external table using these protocols is similar. You specify the external table name and its column definitions. You also specify `LOCATION` and `FORMAT` clauses. `gphdfs` and `pxf` use information in these clauses to determine the location and type of the external data.
 
 
-### <a id="map_location"></a>Mapping the LOCATION Clause
+### <a id="map_location" class="no-quick-link"></a>Mapping the LOCATION Clause
 
 The `LOCATION` clause of an external table identifies the external table protocol, location of the external data, and protocol- and operation-specific custom options.
 
@@ -156,7 +160,7 @@ If the HDFS file is a Parquet-format file, map these additional parquet options 
 | Dictionary page size | dictionarypagesize  | DICTIONARY_PAGE_SIZE | 
 
 
-### <a id="map_format"></a>Mapping the FORMAT Options
+### <a id="map_format" class="no-quick-link"></a>Mapping the FORMAT Options
 
 The `gphdfs` protocol uses the `FORMAT` clause to determine the format of the external data. For Avro- and Parquet-format data, the PXF `FORMAT` clause must identify the name of a custom formatter.
 
@@ -169,7 +173,7 @@ The `gphdfs` protocol uses the `FORMAT` clause to determine the format of the ex
 For text data, the `FORMAT` clause may identify a delimiter or other formatting option as described on the [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command reference page.
 
 
-### <a id="text_example"></a>Example gphdfs to pxf External Table Mapping for an HDFS Text File
+### <a id="text_example" class="no-quick-link"></a>Example gphdfs to pxf External Table Mapping for an HDFS Text File
 
 Example `gphdfs` `CREATE EXTERNAL TABLE` command to read a text file on HDFS:
 
@@ -204,7 +208,7 @@ Ensure that you can read from, or write to, each `pxf` external table that you h
 
 ## <a id="remove_gphdfs_ext_table"></a>Removing the gphdfs External Tables
 
-You must remove all `gphdfs` external tables before you can successfuly migrate a Greenplum Database 5.x database to Greenplum 6.
+You must remove all `gphdfs` external tables before you can successfuly migrate a Greenplum Database 4 or 5 database to Greenplum 6.
 
 Drop an external table as follows:
 
@@ -222,3 +226,19 @@ Revoke the privilege as follows:
 ALTER ROLE <role_name> NOCREATEEXTTABLE(protocol='gphdfs',type='readable');
 ALTER ROLE <role_name> NOCREATEEXTTABLE(protocol='gphdfs',type='writable');
 ```
+
+## <a id="mig4"></a>Migrating gphdfs External tables from Greenplum 4
+
+If you are migrating `gphdfs` external tables from a Greenplum 4 cluster, you perform the following actions in your Greenplum 4 installation:
+
+1. [Prepare](#prepare) for the migration.
+2. [Remove](#remove_gphdfs_ext_table) the `gphdfs` external tables.
+3. [Revoke](#revoke_privs) privileges to the `gphdfs` protocol.
+
+
+After the Greenplum 6 installation is configured and the table definitions and data are migrated, you configure PXF and recreate the external tables in the Greenplum 6 installation:
+
+1. Map configuration properties and [initialize, configure, and start PXF] (#id_cfg_prop).
+2. [Create](#create_pxf_ext_table) a new `pxf` external table to replace each `gphdfs` external table.
+3. [Verify](#verify_pxf) access to Hadoop files with the `pxf` external tables.
+
