@@ -2614,7 +2614,7 @@ class gpload:
             # delimited and un-delimited format (e.g. where c1 < 7 and "c1" > 2)
             # Better lexing and parsing needs to be done here to fix all cases.
             #
-            update_condition = ' ' + update_condition + ' '
+            update_condition = ' (' + update_condition + ') '
             for name, type, mapto, seq in self.into_columns:
                 regexp = '(?<=[^\w])%s(?=[^\w])' % name
                 self.log(self.DEBUG, 'update_condition re: ' + regexp)
