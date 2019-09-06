@@ -3,7 +3,7 @@
  * ts_type.h
  *	  Definitions for the tsvector and tsquery types
  *
- * Copyright (c) 1998-2014, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2015, PostgreSQL Global Development Group
  *
  * src/include/tsearch/ts_type.h
  *
@@ -14,7 +14,6 @@
 
 #include "fmgr.h"
 #include "utils/memutils.h"
-#include "utils/pg_crc.h"
 
 
 /*
@@ -64,8 +63,15 @@ typedef uint16 WordEntryPos;
 typedef struct
 {
 	uint16		npos;
-	WordEntryPos pos[1];		/* variable length */
+	WordEntryPos pos[FLEXIBLE_ARRAY_MEMBER];
 } WordEntryPosVector;
+
+/* WordEntryPosVector with exactly 1 entry */
+typedef struct
+{
+	uint16		npos;
+	WordEntryPos pos[1];
+} WordEntryPosVector1;
 
 
 #define WEP_GETWEIGHT(x)	( (x) >> 14 )
@@ -83,7 +89,7 @@ typedef struct
 {
 	int32		vl_len_;		/* varlena header (do not touch directly!) */
 	int32		size;
-	WordEntry	entries[1];		/* variable length */
+	WordEntry	entries[FLEXIBLE_ARRAY_MEMBER];
 	/* lexemes follow the entries[] array */
 } TSVectorData;
 
@@ -234,7 +240,7 @@ typedef struct
 {
 	int32		vl_len_;		/* varlena header (do not touch directly!) */
 	int32		size;			/* number of QueryItems */
-	char		data[1];		/* data starts here */
+	char		data[FLEXIBLE_ARRAY_MEMBER];	/* data starts here */
 } TSQueryData;
 
 typedef TSQueryData *TSQuery;

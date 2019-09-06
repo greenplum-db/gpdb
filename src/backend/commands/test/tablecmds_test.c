@@ -8,8 +8,10 @@
 /*
  * Check that two segno lists have the same values.
  */
-static int check_segno_list(const List* value, const List* check_value)
+static int check_segno_list(const LargestIntegralType arg1, const LargestIntegralType arg2)
 {
+	const List *value = (const List *)arg1; 
+	const List *check_value = (const List *)arg2;
 	List *compare;
 
 	if (list_length(value) != list_length(check_value))
@@ -23,7 +25,7 @@ static int check_segno_list(const List* value, const List* check_value)
  * Ensure that the column having the smallest on-disk segfile is
  * chosen for headerscan during ALTER TABLE ADD COLUMN operation.
  */
-void
+static void
 test__column_to_scan(void **state)
 {
 	List *drop_segno_list = NIL;

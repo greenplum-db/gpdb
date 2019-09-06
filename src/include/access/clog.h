@@ -3,7 +3,7 @@
  *
  * PostgreSQL transaction-commit-log manager
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/clog.h
@@ -11,7 +11,8 @@
 #ifndef CLOG_H
 #define CLOG_H
 
-#include "access/xlog.h"
+#include "access/xlogreader.h"
+#include "lib/stringinfo.h"
 
 /*
  * Possible transaction statuses --- note that all-zeroes is the initial
@@ -51,7 +52,8 @@ extern bool CLOGTransactionIsOld(TransactionId xid);
 #define CLOG_ZEROPAGE		0x00
 #define CLOG_TRUNCATE		0x10
 
-extern void clog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void clog_desc(StringInfo buf, XLogRecord *record);
+extern void clog_redo(XLogReaderState *record);
+extern void clog_desc(StringInfo buf, XLogReaderState *record);
+extern const char *clog_identify(uint8 info);
 
 #endif   /* CLOG_H */

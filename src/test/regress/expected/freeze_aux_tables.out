@@ -368,13 +368,13 @@ select segid = -1 as is_master, relname, classify_age(age) from aux_rel_ages('te
 group by segid = -1, relname, classify_age(age);
  is_master |      relname       | classify_age 
 -----------+--------------------+--------------
- t         | pg_aocsseg_<oid>   | very young
- f         | pg_toast_<oid>     | very young
- f         | pg_aoblkdir_<oid>  | very young
- t         | pg_toast_<oid>     | very young
  t         | pg_aovisimap_<oid> | very young
- f         | pg_aocsseg_<oid>   | very young
  t         | pg_aoblkdir_<oid>  | very young
- f         | pg_aovisimap_<oid> | very young
+ f         | pg_aoblkdir_<oid>  | zero
+ f         | pg_aocsseg_<oid>   | zero
+ t         | pg_toast_<oid>     | very young
+ f         | pg_toast_<oid>     | zero
+ f         | pg_aovisimap_<oid> | zero
+ t         | pg_aocsseg_<oid>   | very young
 (8 rows)
 

@@ -132,8 +132,20 @@ pullUpExpr_mutator(Node *node, void *context)
 			foreach(cell, ctx->targetlist)
 			{
 				tlistexpr = (Expr *) lfirst(cell);
-				if (equal(tlistexpr, var))
-					break;
+
+				/*
+				 * We don't use equal(), because we want to ignore typmod.
+				 * A projection sometimes loses typmod, and that's OK.
+				 */
+				if (IsA(tlistexpr, Var))
+				{
+					Var		   *tlistvar = (Var *) tlistexpr;
+
+					if (var->varno == tlistvar->varno &&
+						var->varattno == tlistvar->varattno &&
+						var->varlevelsup == tlistvar->varlevelsup)
+						break;
+				}
 				targetattno++;
 			}
 			if (!cell)
@@ -152,8 +164,7 @@ pullUpExpr_mutator(Node *node, void *context)
 		}
 
 		/* Make sure we haven't inadvertently changed the data type. */
-		Assert(exprType(newnode) == exprType(node) &&
-			   exprTypmod(newnode) == exprTypmod(node));
+		Assert(exprType(newnode) == exprType(node));
 
 		return newnode;
 	}
@@ -176,8 +187,7 @@ pullUpExpr_mutator(Node *node, void *context)
 												   tle->expr, true);
 
 		/* Make sure we haven't inadvertently changed the data type. */
-		Assert(exprType(newnode) == exprType(node) &&
-			   exprTypmod(newnode) == exprTypmod(node));
+		Assert(exprType(newnode) == exprType(node));
 
 		return newnode;
 	}

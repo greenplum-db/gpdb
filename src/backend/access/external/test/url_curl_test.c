@@ -5,7 +5,7 @@
 
 #include "../url_curl.c"
 
-void
+static void
 test__make_url(void **state)
 {
 	const char	   *url1 = "http://[:0]/foo/bar";

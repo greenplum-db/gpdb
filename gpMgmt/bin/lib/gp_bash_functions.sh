@@ -37,16 +37,6 @@ GP_UNIQUE_COMMAND=gpstart
 findCmdInPath() {
 		cmdtofind=$1
 
-		if [ $cmdtofind = 'awk' ] && [ `uname` = SunOS ]; then
-			if [ -f "/usr/xpg4/bin/awk" ]; then
-				CMD=/usr/xpg4/bin/awk
-				echo $CMD
-				return
-			else
-				echo $cmdtofind
-				return "Problem in gp_bash_functions, command '/usr/xpg4/bin/awk' not found. You will need to edit the script named gp_bash_functions.sh to properly locate the needed commands for your platform."
-			fi
-		fi
 		for pathel in ${CMDPATH[@]}
 				do
 				CMD=$pathel/$cmdtofind
@@ -78,13 +68,9 @@ findMppPath() {
 AWK=`findCmdInPath awk`
 BASENAME=`findCmdInPath basename`
 CAT=`findCmdInPath cat`
-CKSUM=`findCmdInPath cksum`
 CUT=`findCmdInPath cut`
 DATE=`findCmdInPath date`
-DD=`findCmdInPath dd`
 DIRNAME=`findCmdInPath dirname`
-DF=`findCmdInPath df`
-DU=`findCmdInPath du`
 ECHO=`findCmdInPath echo`
 FIND=`findCmdInPath find`
 GREP=`findCmdInPath grep`
@@ -98,8 +84,6 @@ MV=`findCmdInPath mv`
 MKDIR=`findCmdInPath mkdir`
 NETSTAT=`findCmdInPath netstat`
 PING=`findCmdInPath ping`
-PS=`findCmdInPath ps`
-PYTHON=${GPHOME}/ext/python/bin/python
 RM=`findCmdInPath rm`
 SCP=`findCmdInPath scp`
 SED=`findCmdInPath sed`
@@ -111,8 +95,6 @@ TEE=`findCmdInPath tee`
 TOUCH=`findCmdInPath touch`
 TR=`findCmdInPath tr`
 WC=`findCmdInPath wc`
-WHICH=`findCmdInPath which`
-ZCAT=`findCmdInPath zcat`
 #***************#******************************************************************************
 # Script Specific Variables
 #******************************************************************************
@@ -153,18 +135,8 @@ GPDOCDIR=${GPHOME}/docs/cli_help/
 #******************************************************************************
 INITDB=$PSQLBIN/initdb
 PG_CTL=$PSQLBIN/pg_ctl
-PG_DUMP=$PSQLBIN/pg_dump
-PG_DUMPALL=$PSQLBIN/pg_dumpall
-PG_RESTORE=$PSQLBIN/pg_restore
 PSQL=$PSQLBIN/psql
 
-
-GPLISTDATABASEQTY="SELECT d.datname as \"Name\",
-       r.rolname as \"Owner\",
-       pg_catalog.pg_encoding_to_char(d.encoding) as \"Encoding\"
-FROM pg_catalog.pg_database d
-  JOIN pg_catalog.pg_authid r ON d.datdba = r.oid
-ORDER BY 1;"
 #******************************************************************************
 # Greenplum OS Settings
 #******************************************************************************
@@ -181,11 +153,7 @@ PG_HBA=pg_hba.conf
 if [ x"$TRUSTED_SHELL" = x"" ]; then TRUSTED_SHELL="$SSH"; fi
 if [ x"$TRUSTED_COPY" = x"" ]; then TRUSTED_COPY="$SCP"; fi
 PG_CONF_ADD_FILE=$WORKDIR/postgresql_conf_gp_additions
-SCHEMA_FILE=cdb_schema.sql
 DEFAULTDB=template1
-
-GP_PG_VIEW="(SELECT dbid, role = 'p' as isprimary, content, status = 'u' as valid,
-		preferred_role = 'p' as definedprimary FROM gp_segment_configuration)"
 
 DEFAULT_CHK_PT_SEG=8
 DEFAULT_QD_MAX_CONNECT=250
@@ -434,12 +402,6 @@ SED_PG_CONF () {
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-CHK_EXTERNAL () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	EXTERNAL=`$EXPORT_LIB_PATH;$PSQL -A -t -q -p  $MASTER_PORT -d "$QD_DBNAME" -c"select 1 from pg_exttable where reloid in (select oid from pg_class where relname='$TABLENAME' and relnamespace in (select oid from pg_namespace where nspname='$SCHEMA_NAME'));"|$WC -l`
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
 POSTGRES_PORT_CHK () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	GET_PG_PID_ACTIVE $1 $2
@@ -525,12 +487,10 @@ CREATE_SPREAD_MIRROR_ARRAY () {
 		QE_M_NAME=`$ECHO ${QE_PRIMARY_ARRAY[$PRIM_SEG_INDEX]}|$AWK -F"~" '{print $1}'`
 		GP_M_DIR=${MIRROR_DATA_DIRECTORY[$SEGS_PROCESSED%$NUM_DATADIR]}
 		P_PORT=`$ECHO $QE_LINE|$AWK -F"~" '{print $2}'`
-		P_REPL_PORT=`$ECHO $QE_LINE|$AWK -F"~" '{print $6}'`
 		((GP_M_PORT=$P_PORT+$MIRROR_OFFSET))
-		((M_REPL_PORT=$P_REPL_PORT+$MIRROR_REPLICATION_PORT_OFFSET))
 		M_CONTENT=`$ECHO $QE_LINE|$AWK -F"~" '{print $5}'`
 		M_SEG=`$ECHO $QE_LINE|$AWK -F"~" '{print $3}'|$AWK -F"/" '{print $NF}'`
-		QE_MIRROR_ARRAY=(${QE_MIRROR_ARRAY[@]} ${QE_M_NAME}~${GP_M_PORT}~${GP_M_DIR}/${M_SEG}~${DBID_COUNT}~${M_CONTENT}~${M_REPL_PORT})
+		QE_MIRROR_ARRAY=(${QE_MIRROR_ARRAY[@]} ${QE_M_NAME}~${GP_M_PORT}~${GP_M_DIR}/${M_SEG}~${DBID_COUNT}~${M_CONTENT})
 		POSTGRES_PORT_CHK $GP_M_PORT $QE_M_NAME
 		((DBID_COUNT=$DBID_COUNT+1))
 		((SEGS_PROCESSED=$SEGS_PROCESSED+1))
@@ -590,11 +550,9 @@ CREATE_GROUP_MIRROR_ARRAY () {
 
 		M_CONTENT=`$ECHO $QE_LINE|$AWK -F"~" '{print $5}'`
 		P_PORT=`$ECHO $QE_LINE|$AWK -F"~" '{print $2}'`
-		P_REPL_PORT=`$ECHO $QE_LINE|$AWK -F"~" '{print $6}'`
 		GP_M_PORT=$(($P_PORT+$MIRROR_OFFSET))
-		M_REPL_PORT=$(($P_REPL_PORT+$MIRROR_REPLICATION_PORT_OFFSET))
 
-		QE_MIRROR_ARRAY=(${QE_MIRROR_ARRAY[@]} ${QE_M_NAME}~${GP_M_PORT}~${GP_M_DIR}~${DBID_COUNT}~${M_CONTENT}~${M_REPL_PORT})
+		QE_MIRROR_ARRAY=(${QE_MIRROR_ARRAY[@]} ${QE_M_NAME}~${GP_M_PORT}~${GP_M_DIR}~${DBID_COUNT}~${M_CONTENT})
 		POSTGRES_PORT_CHK $GP_M_PORT $QE_M_NAME
 
 		DBID_COUNT=$(($DBID_COUNT+1))
@@ -616,44 +574,6 @@ GET_REPLY () {
 		LOG_MSG "[WARN]:-User abort requested, Script Exits!" 1
 		exit 1
 	fi
-}
-
-CHK_MULTI_HOME () {
-	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	GET_QE_DETAILS
-	MULTI_ARRAY=()
-	J=0
-	if [ x"" == x"$1" ];then
-		#Select two hosts to test as we do not want to do the whole array
-		LOG_MSG "[INFO]:-Obtaining GPDB array type, [Brief], please wait..." 1
-		while [ $J -lt 2 ]
-		do
-			QE_HOST=`$ECHO ${QE_ARRAY[$J]}|$AWK -F"|" '{print $1}'`
-			REMOTE_HOSTNAME=`$TRUSTED_SHELL $QE_HOST "$HOSTNAME"`
-			MULTI_ARRAY=(${MULTI_ARRAY[@]} ${QE_HOST}:$REMOTE_HOSTNAME)
-			((J=$J+1))
-		done
-	else
-		LOG_MSG "[INFO]:-Obtaining GPDB array type, [Full], please wait..." 1
-		for QE_LINE in ${QE_ARRAY[@]}
-		do
-			QE_HOST=`$ECHO $QE_LINE|$AWK -F"|" '{print $1}'`
-			REMOTE_HOSTNAME=`$TRUSTED_SHELL $QE_HOST "$HOSTNAME"`
-			MULTI_ARRAY=(${MULTI_ARRAY[@]} ${QE_HOST}:$REMOTE_HOSTNAME)
-		done
-	fi
-	SEG_HOST_COUNT=`$ECHO ${MULTI_ARRAY[@]}|$TR ' ' '\n'|$AWK -F"~" '{print $1}'|$SORT -u|wc -l`
-	REMOTE_HOST_COUNT=`$ECHO ${MULTI_ARRAY[@]}|$TR ' ' '\n'|$AWK -F"~" '{print $2}'|$SORT -u|wc -l`
-	if [ $SEG_HOST_COUNT -eq $REMOTE_HOST_COUNT ];then
-		LOG_MSG "[INFO]:-Non multi-home configuration"
-		MULTI_HOME=0
-		MULTI_TXT="Standard"
-	else
-		LOG_MSG "[INFO]:-Multi-home configuration"
-		MULTI_HOME=1
-		MULTI_TXT="Multi-home"
-	fi
-	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
 CHK_FILE () {
@@ -905,50 +825,6 @@ log_location = $GP_DIR/gpperfmon/logs
 _EOF_
 }
 
-CHK_DB_RUNNING () {
-		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-		if [ $# -eq 1 ];then
-			CHK_DISPATCH_ACCESS=1
-		else
-			CHK_DISPATCH_ACCESS=0
-		fi
-		if [ ! -d $MASTER_DATA_DIRECTORY ]; then
-				ERROR_EXIT "[FATAL]:-No Master $MASTER_DATA_DIRECTORY directory" 2
-		fi
-		if [ ! -f $MASTER_DATA_DIRECTORY/$PG_PID ]; then
-			LOG_MSG "[FATAL]:-No $MASTER_DATA_DIRECTORY/$PG_PID file" 1
-			ERROR_EXIT "[FATAL]:-Run gpstart to start the Greenplum database." 2
-		fi
-		GET_MASTER_PORT $MASTER_DATA_DIRECTORY
-		export $EXPORT_LIB_PATH;env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"SELECT d.datname as \"Name\",
-       r.rolname as \"Owner\",
-       pg_catalog.pg_encoding_to_char(d.encoding) as \"Encoding\"
-FROM pg_catalog.pg_database d
-  JOIN pg_catalog.pg_authid r ON d.datdba = r.oid
-ORDER BY 1;" >> $LOG_FILE 2>&1
-		if [ $? -ne 0 ];then
-			LOG_MSG "[FATAL]:-Have a postmaster.pid file for master instance on port $MASTER_PORT" 1
-			LOG_MSG "[FATAL]:-However, error reported on test psql access to master instance" 1
-			LOG_MSG "[INFO]:-Check ps output for a postmaster process on the above port" 1
-			LOG_MSG "[INFO]:-Check the master postgres logfile for errors and also the utility log file" 1
-			ERROR_EXIT "[FATAL]:-Unable to continue" 2
-		fi
-		if [ $CHK_DISPATCH_ACCESS -eq 1 ];then
-			#Check if in admin mode
-			export $EXPORT_LIB_PATH;$PSQL -p $MASTER_PORT -d "$DEFAULTDB" -A -t -c"\l" >> $LOG_FILE 2>&1
-			if [ $? -ne 0 ];then
-				LOG_MSG "[WARN]:-Can access the Master instance in admin mode, but dispatch access failed" 1
-				LOG_MSG "[INFO]:-This could mean that the Master instance is in admin mode only" 1
-				LOG_MSG "[INFO]:-Run gpstop -m to shutdown Master instance from admin mode, and restart" 1
-				LOG_MSG "[INFO]:-the Greenplum database using gpstart" 1
-				EXIT_STATUS=1
-			else
-				EXIT_STATUS=0
-			fi
-		fi
-		LOG_MSG "[INFO]:-End Function $FUNCNAME"
-}
-
 GET_PG_PID_ACTIVE () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		# Expects port number and hostname for remote checking
@@ -1092,33 +968,40 @@ PING_HOST () {
 	TARGET_HOST=$1;shift
 	PING_EXIT=$1
 	if [ x"" == x"$PING_EXIT" ];then PING_EXIT=0;fi
+	OUTPUT=""
 	case $OS_TYPE in
 		darwin )
-			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1
+			OUTPUT=$($PING $PING_TIME $TARGET_HOST 2>&1 || $PING6 $PING_TIME $TARGET_HOST 2>&1)
                         ;;
 		linux )
-			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1 || $PING6 $TARGET_HOST $PING_TIME > /dev/null 2>&1
+			OUTPUT=$($PING $TARGET_HOST $PING_TIME 2>&1 || $PING6 $TARGET_HOST $PING_TIME 2>&1)
                         ;;
 		openbsd )
-			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1
+			OUTPUT=$($PING $PING_TIME $TARGET_HOST 2>&1 || $PING6 $PING_TIME $TARGET_HOST 2>&1)
                         ;;
 		* )
-			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1
+			OUTPUT=$($PING $TARGET_HOST $PING_TIME 2>&1)
 	esac
 	RETVAL=$?
 	case $RETVAL in
 		0) LOG_MSG "[INFO]:-$TARGET_HOST contact established"
                    ;;
 		1) if [ $PING_EXIT -eq 0 ];then
-			ERROR_EXIT "[FATAL]:-Unable to contact $TARGET_HOST" 2
+			ERROR_EXIT "[FATAL]:-Unable to contact $TARGET_HOST: $OUTPUT" 2
 		   else
-		        LOG_MSG "[WARN]:-Unable to contact $TARGET_HOST" 1
+			LOG_MSG "[WARN]:-Unable to contact $TARGET_HOST: $OUTPUT" 1
 		   fi
                    ;;
 		2) if [ $PING_EXIT -eq 0 ];then
-		 	ERROR_EXIT "[FATAL]:-Unknown host $TARGET_HOST" 2
+			ERROR_EXIT "[FATAL]:-Unknown host $TARGET_HOST: $OUTPUT" 2
 		   else
-			LOG_MSG "[WARN]:-Unknown host $TARGET_HOST" 1
+			LOG_MSG "[WARN]:-Unknown host $TARGET_HOST: $OUTPUT" 1
+		   fi
+                   ;;
+		*) if [ $PING_EXIT -eq 0 ];then
+			ERROR_EXIT "[FATAL]:-Cannot ping host $TARGET_HOST: $OUTPUT" 2
+		   else
+			LOG_MSG "[WARN]:-Cannot ping host $TARGET_HOST: $OUTPUT" 1
 		   fi
                    ;;
 	esac
@@ -1299,22 +1182,6 @@ LOG_FILE=$DEFLOGDIR/${PROG_NAME}_${CUR_DATE}.log
 #Set up OS type for scripts to change command lines
 OS_TYPE=`uname -s|tr '[A-Z]' '[a-z]'`
 case $OS_TYPE in
-	sunos ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a4"
-		IPV6_ADDR_LIST_CMD="$IFCONFIG -a6"
-		PS_TXT="-ef"
-		LIB_TYPE="LD_LIBRARY_PATH"
-		ZCAT=gzcat
-		# MPP-15890
-		PG_METHOD=ident
-		HOST_ARCH_TYPE="uname -i"
-		NOLINE_ECHO=/usr/bin/echo
-		DEFAULT_LOCALE_SETTING=en_US.UTF-8
-		MAIL=/bin/mailx
-		PING_TIME="1"
-		DF=`findCmdInPath df`
-		# Multi-byte tr needed on Solaris to handle [:upper:], [:lower:], etc.
-		MBTR=/usr/xpg4/bin/tr
-		DU_TXT="-s" ;;
 	linux ) IPV4_ADDR_LIST_CMD="`findCmdInPath ip` -4 address show"
 		IPV6_ADDR_LIST_CMD="`findCmdInPath ip` -6 address show"
 		PS_TXT="ax"
@@ -1325,23 +1192,19 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
-		DF="`findCmdInPath df` -P"
-		ID=`whoami`
-		DU_TXT="-c" ;;
+		;;
 	darwin ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
 		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
 		PS_TXT="ax"
 		LIB_TYPE="DYLD_LIBRARY_PATH"
 		# Darwin zcat wants to append ".Z" to the end of the file name; use "gunzip -c" instead
-		ZCAT="`findCmdInPath gunzip` -c"
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
 		NOLINE_ECHO=$ECHO
 		DEFAULT_LOCALE_SETTING=en_US.utf-8
-        	PING6=`findCmdInPath ping6`
+		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
-		DF="`findCmdInPath df` -P"
-		DU_TXT="-c" ;;
+		;;
 	freebsd ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
 		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
 		LIB_TYPE="LD_LIBRARY_PATH"
@@ -1350,8 +1213,7 @@ case $OS_TYPE in
 		NOLINE_ECHO="$ECHO -e"
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
-		DF="`findCmdInPath df` -P"
-		DU_TXT="-c" ;;
+		;;
 	openbsd ) IPV4_ADDR_LIST_CMD="ifconfig -a inet"
 		IPV6_ADDR_LIST_CMD="ifconfig -a inet6"
 		LIB_TYPE="LD_LIBRARY_PATH"
@@ -1361,7 +1223,7 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.UTF-8
 		PING_TIME="-c 1"
 		DF="df -P"
-		DU_TXT="-c" ;;
+		;;
 	* ) echo unknown ;;
 esac
 

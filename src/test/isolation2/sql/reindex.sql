@@ -1,5 +1,4 @@
 -- Dropping table while reindex database should not fail reindex
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE DATABASE reindexdb1 TEMPLATE template1;
 -- halt reindex after scanning the pg_class and getting the relids
 SELECT gp_inject_fault_infinite('reindex_db', 'suspend', 1);

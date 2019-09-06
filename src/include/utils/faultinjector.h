@@ -17,15 +17,11 @@
 
 #define INFINITE_END_OCCURRENCE -1
 
-/*
- *
- */
-typedef enum FaultInjectorIdentifier_e {
-#define FI_IDENT(id, str) id,
-#include "utils/faultinjector_lists.h"
-#undef FI_IDENT
-	FaultInjectorIdMax
-} FaultInjectorIdentifier_e;
+#define Natts_fault_message_response 1
+#define Anum_fault_message_response_status 0
+
+/* Fault name that matches all faults */
+#define FaultInjectorNameAll "all"
 
 typedef enum FaultInjectorType_e {
 #define FI_TYPE(id, str) id,
@@ -62,8 +58,6 @@ typedef struct FaultInjectorEntry_s {
 	
 	char						faultName[FAULT_NAME_MAX_LENGTH];
 
-	FaultInjectorIdentifier_e	faultInjectorIdentifier;
-	
 	FaultInjectorType_e		faultInjectorType;
 	
 	int						extraArg;
@@ -85,49 +79,35 @@ typedef struct FaultInjectorEntry_s {
 	
 } FaultInjectorEntry_s;
 
-
-extern FaultInjectorType_e	FaultInjectorTypeStringToEnum(
-									char*		faultTypeString);
-
-extern	FaultInjectorIdentifier_e FaultInjectorIdentifierStringToEnum(
-									char*			faultName);
-
-extern DDLStatement_e FaultInjectorDDLStringToEnum(
-									char*	ddlString);
+extern void InjectFaultInit(void);
 
 extern Size FaultInjector_ShmemSize(void);
 
 extern void FaultInjector_ShmemInit(void);
 
-extern FaultInjectorType_e FaultInjector_InjectFaultNameIfSet(
+extern FaultInjectorType_e FaultInjector_InjectFaultIfSet(
 							   const char*				 faultName,
 							   DDLStatement_e			 ddlStatement,
 							   const char*				 databaseName,
 							   const char*				 tableName);
 
-extern FaultInjectorType_e FaultInjector_InjectFaultIfSet(
-							   FaultInjectorIdentifier_e identifier,
-							   DDLStatement_e			 ddlStatement,
-							   const char*				 databaseName,
-							   const char*				 tableName);
+extern char *InjectFault(
+	char *faultName, char *type, char *ddlStatement, char *databaseName,
+	char *tableName, int startOccurrence, int endOccurrence, int extraArg);
 
-extern int FaultInjector_SetFaultInjection(
-							FaultInjectorEntry_s	*entry);
+extern void HandleFaultMessage(const char* msg);
 
-
-extern bool FaultInjector_IsFaultInjected(
-							char* faultName);
-
+typedef void (*fault_injection_warning_function)(FaultInjectorEntry_s faultEntry);
+void register_fault_injection_warning(fault_injection_warning_function warning);
 
 #ifdef FAULT_INJECTOR
-#define SIMPLE_FAULT_INJECTOR(FaultIdentifier) \
-	FaultInjector_InjectFaultIfSet(FaultIdentifier, DDLNotSpecified, "", "")
-#define SIMPLE_FAULT_NAME_INJECTOR(FaultName) \
-	FaultInjector_InjectFaultNameIfSet(FaultName, DDLNotSpecified, "", "")
+extern bool am_faulthandler;
+#define IsFaultHandler am_faulthandler
+#define SIMPLE_FAULT_INJECTOR(FaultName) \
+	FaultInjector_InjectFaultIfSet(FaultName, DDLNotSpecified, "", "")
 #else
-#define SIMPLE_FAULT_INJECTOR(FaultIdentifier)
-#define SIMPLE_FAULT_NAME_INJECTOR(FaultName)
+#define IsFaultHandler false
+#define SIMPLE_FAULT_INJECTOR(FaultName)
 #endif
 
 #endif	/* FAULTINJECTOR_H */
-

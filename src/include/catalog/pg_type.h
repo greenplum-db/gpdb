@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_type.h
@@ -375,6 +375,10 @@ DATA(insert OID = 194 ( pg_node_tree	PGNSP PGUID -1 f b S f t \054 0 0 0 pg_node
 DESCR("string representing an internal node tree");
 #define PGNODETREEOID	194
 
+DATA(insert OID = 32 ( pg_ddl_command	PGNSP PGUID SIZEOF_POINTER t p P f t \054 0 0 0 pg_ddl_command_in pg_ddl_command_out pg_ddl_command_recv pg_ddl_command_send - - - ALIGNOF_POINTER p f 0 -1 0 0 _null_ _null_ _null_ ));
+DESCR("internal type for passing CollectedCommand");
+#define PGDDLCOMMANDOID 32
+
 DATA(insert OID = 199 ( _json	   PGNSP PGUID -1 f b A f t \054 0 114 0 array_in array_out array_recv array_send - - array_typanalyze i x f 0 -1 0 0 _null_ _null_ _null_ ));
 
 DATA(insert OID = 7198 (	complex	   PGNSP PGUID 16 f b N f t \054 0 0	7199 complex_in complex_out complex_recv complex_send - - - d p f 0 -1 0 0 _null_ _null_ _null_ ));
@@ -584,12 +588,22 @@ DATA(insert OID = 2206 ( regtype	   PGNSP PGUID	4 t b N f t \054 0	 0 2211 regty
 DESCR("registered type");
 #define REGTYPEOID		2206
 
+DATA(insert OID = 4096 ( regrole	   PGNSP PGUID	4 t b N f t \054 0	 0 4097 regrolein regroleout regrolerecv regrolesend - - - i p f 0 -1 0 0 _null_ _null_ _null_ ));
+DESCR("registered role");
+#define REGROLEOID		4096
+
+DATA(insert OID = 4089 ( regnamespace  PGNSP PGUID	4 t b N f t \054 0	 0 4090 regnamespacein regnamespaceout regnamespacerecv regnamespacesend - - - i p f 0 -1 0 0 _null_ _null_ _null_ ));
+DESCR("registered namespace");
+#define REGNAMESPACEOID		4089
+
 DATA(insert OID = 2207 ( _regprocedure PGNSP PGUID -1 f b A f t \054 0 2202 0 array_in array_out array_recv array_send - - array_typanalyze i x f 0 -1 0 0 _null_ _null_ _null_ ));
 DATA(insert OID = 2208 ( _regoper	   PGNSP PGUID -1 f b A f t \054 0 2203 0 array_in array_out array_recv array_send - - array_typanalyze i x f 0 -1 0 0 _null_ _null_ _null_ ));
 DATA(insert OID = 2209 ( _regoperator  PGNSP PGUID -1 f b A f t \054 0 2204 0 array_in array_out array_recv array_send - - array_typanalyze i x f 0 -1 0 0 _null_ _null_ _null_ ));
 DATA(insert OID = 2210 ( _regclass	   PGNSP PGUID -1 f b A f t \054 0 2205 0 array_in array_out array_recv array_send - - array_typanalyze i x f 0 -1 0 0 _null_ _null_ _null_ ));
 DATA(insert OID = 2211 ( _regtype	   PGNSP PGUID -1 f b A f t \054 0 2206 0 array_in array_out array_recv array_send - - array_typanalyze i x f 0 -1 0 0 _null_ _null_ _null_ ));
 #define REGTYPEARRAYOID 2211
+DATA(insert OID = 4097 ( _regrole	   PGNSP PGUID -1 f b A f t \054 0 4096 0 array_in array_out array_recv array_send - - array_typanalyze i x f 0 -1 0 0 _null_ _null_ _null_ ));
+DATA(insert OID = 4090 ( _regnamespace PGNSP PGUID -1 f b A f t \054 0 4089 0 array_in array_out array_recv array_send - - array_typanalyze i x f 0 -1 0 0 _null_ _null_ _null_ ));
 
 /* uuid */
 DATA(insert OID = 2950 ( uuid			PGNSP PGUID 16 f b U f t \054 0 0 2951 uuid_in uuid_out uuid_recv uuid_send - - - c p f 0 -1 0 0 _null_ _null_ _null_ ));
@@ -708,9 +722,9 @@ DESCR("Represents a generic TABLE value expression");
 #define ANYTABLEOID     7053
 
 /* hyperloglog */
-DATA(insert OID = 7157 ( hyperloglog_estimator		PGNSP PGUID -1 f b X f t \054 0    0 7165 hyperloglog_in hyperloglog_out - - - - - i x f 0 -1 0 0 _null_ _null_ _null_ ));
-DESCR("hyperloglog_estimator’s internal bytea representation for hyperloglog counter");
-DATA(insert OID = 7165 ( _hyperloglog_estimator		PGNSP PGUID -1 f b A f t \054 0	7157 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 0 _null_ _null_ _null_ ));
+DATA(insert OID = 7157 ( gp_hyperloglog_estimator		PGNSP PGUID -1 f b X f t \054 0    0 7165 gp_hyperloglog_in gp_hyperloglog_out - - - - - i x f 0 -1 0 0 _null_ _null_ _null_ ));
+DESCR("gp_hyperloglog_estimator’s internal bytea representation for hyperloglog counter");
+DATA(insert OID = 7165 ( _gp_hyperloglog_estimator		PGNSP PGUID -1 f b A f t \054 0	7157 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 0 _null_ _null_ _null_ ));
 
 /*
  * macros

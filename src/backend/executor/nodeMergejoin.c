@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -259,20 +259,28 @@ MJExamineQuals(List *mergeclauses,
 			elog(ERROR, "cannot merge using non-equality operator %u",
 				 qual->opno);
 
+		/*
+		 * sortsupport routine must know if abbreviation optimization is
+		 * applicable in principle.  It is never applicable for merge joins
+		 * because there is no convenient opportunity to convert to
+		 * alternative representation.
+		 */
+		clause->ssup.abbreviate = false;
+
 		/* And get the matching support or comparison function */
+		Assert(clause->ssup.comparator == NULL);
 		sortfunc = get_opfamily_proc(opfamily,
 									 op_lefttype,
 									 op_righttype,
 									 BTSORTSUPPORT_PROC);
 		if (OidIsValid(sortfunc))
 		{
-			/* The sort support function should provide a comparator */
+			/* The sort support function can provide a comparator */
 			OidFunctionCall1(sortfunc, PointerGetDatum(&clause->ssup));
-			Assert(clause->ssup.comparator != NULL);
 		}
-		else
+		if (clause->ssup.comparator == NULL)
 		{
-			/* opfamily doesn't provide sort support, get comparison func */
+			/* support not available, get comparison func */
 			sortfunc = get_opfamily_proc(opfamily,
 										 op_lefttype,
 										 op_righttype,
@@ -679,6 +687,14 @@ ExecMergeJoin_guts(MergeJoinState *node)
 
 		node->prefetch_inner = false;
 	}
+
+	/*
+	 * Prefetch JoinQual to prevent motion hazard.
+	 *
+	 * See ExecPrefetchJoinQual() for details.
+	 */
+	if (node->prefetch_joinqual && ExecPrefetchJoinQual(&node->js))
+		node->prefetch_joinqual = false;
 
 	/*
 	 * ok, everything is setup.. let's go to work
@@ -1564,6 +1580,7 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	mergestate->mj_ConstFalseJoin = false;
 
 	mergestate->prefetch_inner = node->join.prefetch_inner;
+	mergestate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
 	/* Prepare inner operators for rewind after the prefetch */
 	rewindflag = mergestate->prefetch_inner ? EXEC_FLAG_REWIND : 0;
 

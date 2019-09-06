@@ -3,7 +3,7 @@
  * unaccent.c
  *	  Text search unaccent dictionary
  *
- * Copyright (c) 2009-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2009-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/unaccent/unaccent.c
@@ -26,9 +26,16 @@
 PG_MODULE_MAGIC;
 
 /*
- * Unaccent dictionary uses a trie to find a character to replace. Each node of
- * the trie is an array of 256 TrieChar structs (n-th element of array
- * corresponds to byte)
+ * An unaccent dictionary uses a trie to find a string to replace.  Each node
+ * of the trie is an array of 256 TrieChar structs; the N-th element of the
+ * array corresponds to next byte value N.  That element can contain both a
+ * replacement string (to be used if the source string ends with this byte)
+ * and a link to another trie node (to be followed if there are more bytes).
+ *
+ * Note that the trie search logic pays no attention to multibyte character
+ * boundaries.  This is OK as long as both the data entered into the trie and
+ * the data we're trying to look up are validly encoded; no partial-character
+ * matches will occur.
  */
 typedef struct TrieChar
 {
@@ -39,34 +46,40 @@ typedef struct TrieChar
 
 /*
  * placeChar - put str into trie's structure, byte by byte.
+ *
+ * If node is NULL, we need to make a new node, which will be returned;
+ * otherwise the return value is the same as node.
  */
 static TrieChar *
-placeChar(TrieChar *node, unsigned char *str, int lenstr, char *replaceTo, int replacelen)
+placeChar(TrieChar *node, const unsigned char *str, int lenstr,
+		  const char *replaceTo, int replacelen)
 {
 	TrieChar   *curnode;
 
 	if (!node)
-	{
-		node = palloc(sizeof(TrieChar) * 256);
-		memset(node, 0, sizeof(TrieChar) * 256);
-	}
+		node = (TrieChar *) palloc0(sizeof(TrieChar) * 256);
+
+	Assert(lenstr > 0);			/* else str[0] doesn't exist */
 
 	curnode = node + *str;
 
-	if (lenstr == 1)
+	if (lenstr <= 1)
 	{
 		if (curnode->replaceTo)
-			elog(WARNING, "duplicate TO argument, use first one");
+			ereport(WARNING,
+					(errcode(ERRCODE_CONFIG_FILE_ERROR),
+				errmsg("duplicate source strings, first one will be used")));
 		else
 		{
 			curnode->replacelen = replacelen;
-			curnode->replaceTo = palloc(replacelen);
+			curnode->replaceTo = (char *) palloc(replacelen);
 			memcpy(curnode->replaceTo, replaceTo, replacelen);
 		}
 	}
 	else
 	{
-		curnode->nextChar = placeChar(curnode->nextChar, str + 1, lenstr - 1, replaceTo, replacelen);
+		curnode->nextChar = placeChar(curnode->nextChar, str + 1, lenstr - 1,
+									  replaceTo, replacelen);
 	}
 
 	return node;
@@ -107,11 +120,21 @@ initTrie(char *filename)
 
 			while ((line = tsearch_readline(&trst)) != NULL)
 			{
-				/*
-				 * The format of each line must be "src trg" where src and trg
-				 * are sequences of one or more non-whitespace characters,
-				 * separated by whitespace.  Whitespace at start or end of
-				 * line is ignored.
+				/*----------
+				 * The format of each line must be "src" or "src trg", where
+				 * src and trg are sequences of one or more non-whitespace
+				 * characters, separated by whitespace.  Whitespace at start
+				 * or end of line is ignored.  If trg is omitted, an empty
+				 * string is used as the replacement.
+				 *
+				 * We use a simple state machine, with states
+				 *	0	initial (before src)
+				 *	1	in src
+				 *	2	in whitespace after src
+				 *	3	in trg
+				 *	4	in whitespace after trg
+				 *	-1	syntax error detected
+				 *----------
 				 */
 				int			state;
 				char	   *ptr;
@@ -163,10 +186,21 @@ initTrie(char *filename)
 					}
 				}
 
-				if (state >= 3)
+				if (state == 1 || state == 2)
+				{
+					/* trg was omitted, so use "" */
+					trg = "";
+					trglen = 0;
+				}
+
+				if (state > 0)
 					rootTrie = placeChar(rootTrie,
 										 (unsigned char *) src, srclen,
 										 trg, trglen);
+				else if (state < 0)
+					ereport(WARNING,
+							(errcode(ERRCODE_CONFIG_FILE_ERROR),
+							 errmsg("invalid syntax: more than two strings in unaccent rule")));
 
 				pfree(line);
 			}
@@ -199,23 +233,35 @@ initTrie(char *filename)
 }
 
 /*
- * findReplaceTo - find multibyte character in trie
+ * findReplaceTo - find longest possible match in trie
+ *
+ * On success, returns pointer to ending subnode, plus length of matched
+ * source string in *p_matchlen.  On failure, returns NULL.
  */
 static TrieChar *
-findReplaceTo(TrieChar *node, unsigned char *src, int srclen)
+findReplaceTo(TrieChar *node, const unsigned char *src, int srclen,
+			  int *p_matchlen)
 {
-	while (node)
-	{
-		node = node + *src;
-		if (srclen == 1)
-			return node;
+	TrieChar   *result = NULL;
+	int			matchlen = 0;
 
-		src++;
-		srclen--;
+	*p_matchlen = 0;			/* prevent uninitialized-variable warnings */
+
+	while (node && matchlen < srclen)
+	{
+		node = node + src[matchlen];
+		matchlen++;
+
+		if (node->replaceTo)
+		{
+			result = node;
+			*p_matchlen = matchlen;
+		}
+
 		node = node->nextChar;
 	}
 
-	return NULL;
+	return result;
 }
 
 PG_FUNCTION_INFO_V1(unaccent_init);
@@ -280,7 +326,8 @@ unaccent_lexize(PG_FUNCTION_ARGS)
 
 		charlen = pg_mblen(srcchar);
 
-		node = findReplaceTo(rootTrie, (unsigned char *) srcchar, charlen);
+		node = findReplaceTo(rootTrie, (unsigned char *) srcchar, len,
+							 &matchlen);
 		if (node && node->replaceTo)
 		{
 			if (buf.data == NULL)
@@ -296,7 +343,8 @@ unaccent_lexize(PG_FUNCTION_ARGS)
 		else if (buf.data != NULL)
 			appendBinaryStringInfo(&buf, srcchar, charlen);
 
-		srcchar += charlen;
+		srcchar += matchlen;
+		len -= matchlen;
 	}
 
 	/* return a result only if we made at least one substitution */

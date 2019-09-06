@@ -1,9 +1,6 @@
 --
 -- Tests the spill files disk space accounting mechanism
 --
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 -- check segspace before test
 reset statement_mem;
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
@@ -32,17 +29,15 @@ ANALYZE segspace_test_hj_skew;
 ------------ Interrupting SELECT query that spills -------------------
 -- enable the fault injector
 select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 set statement_mem=2048;
@@ -52,10 +47,10 @@ SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE 
 ERROR:  canceling MPP operation  (seg0 slice2 127.0.0.1:25432 pid=26876)
 rollback;
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                         gp_inject_fault                                                                                                          
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 -- check used segspace after test
@@ -92,17 +87,15 @@ set statement_mem=2048;
 set gp_autostats_mode = none;
 -- enable the fault injector
 select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 begin;
@@ -111,10 +104,10 @@ SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE 
 ERROR:  canceling MPP operation  (seg0 127.0.0.1:25432 pid=26876)
 rollback;
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                         gp_inject_fault                                                                                                          
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 -- check used segspace after test
@@ -147,17 +140,15 @@ set statement_mem=2048;
 set gp_autostats_mode = none;
 -- enable the fault injector
 select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 begin;
@@ -168,10 +159,10 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 ERROR:  canceling MPP operation  (seg0 127.0.0.1:25432 pid=26876)
 rollback;
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                         gp_inject_fault                                                                                                          
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 -- check used segspace after test
@@ -216,17 +207,15 @@ set gp_enable_mk_sort=on;
 set gp_cte_sharing=on;
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('workfile_write_failure', 'error', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 -- LEAK in UPDATE: update with sisc xslice sort
@@ -238,10 +227,10 @@ update foo set j=m.cc1 from (
   where t1.i1 = t2.i2 ) as m;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 slice3 127.0.0.1:25432 pid=3175)
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                         gp_inject_fault                                                                                                          
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
@@ -287,17 +276,15 @@ insert into foo select i, i % 1000 from
 set statement_mem=1024; -- 1mb for 3 segment to get leak.
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('workfile_write_failure', 'error', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 -- LEAK in DELETE with APPEND ONLY tables
@@ -307,10 +294,10 @@ delete from testsisc using (
 ) src  where testsisc.i1 = src.i;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 127.0.0.1:25432 pid=3143)
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                         gp_inject_fault                                                                                                          
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
@@ -347,17 +334,15 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('workfile_write_failure', 'error', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 -- expect to see leak if we hit error
@@ -371,10 +356,10 @@ select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used
 (1 row)
 
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                         gp_inject_fault                                                                                                          
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 -- Run the test without fault injection
@@ -403,17 +388,15 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 -- expect to see leak if we hit error
 -- enable the fault injector
 select gp_inject_fault('workfile_write_failure', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('workfile_write_failure', 'error', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 update foo set d = i1 from (with ctesisc as (select * from testsisc order by i2)
@@ -422,10 +405,10 @@ select * from
 where x.a = ctesisc.i1) y;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 slice1 127.0.0.1:25432 pid=3175)
 select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
-NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                         gp_inject_fault                                                                                                          
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 -- check counter leak

@@ -147,3 +147,8 @@ select rolconfig from pg_roles where rolname = 'guctestrole';
 (1 row)
 
 reset role;
+-- Test ALTER USER ALL
+BEGIN;
+ALTER USER ALL SET application_name TO 'alter_user_all_test';
+ALTER USER ALL RESET ALL;
+ROLLBACK;

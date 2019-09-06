@@ -200,7 +200,7 @@ select count_operator('select count(*) from multi_stage_test group by b;','Group
 
 --CLEANUP
 reset optimizer_segments;
-set optimizer_force_multistage_agg = off;
+reset optimizer_force_multistage_agg;
 --
 -- Testing not picking HashAgg for aggregates without combine functions
 --
@@ -269,7 +269,7 @@ select max(b) over (partition by a) from foo order by 1;
  ccc
 (3 rows)
 
-select count_operator('select max(b) over (partition by a) from foo order by 1;', 'PQO');
+select count_operator('select max(b) over (partition by a) from foo order by 1;', 'Pivotal Optimizer (GPORCA)');
  count_operator 
 ----------------
               1
@@ -1585,7 +1585,7 @@ explain select string_agg(a, '') from mpp14125 group by b;
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.01 rows=34 width=55)
                            Hash Key: b
                            ->  Seq Scan on mpp14125  (cost=0.00..431.00 rows=34 width=55)
- Optimizer: PQO version 2.55.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.55.0
 (10 rows)
 
 -- end MPP-14125
@@ -1599,7 +1599,7 @@ EXPLAIN SELECT count(unnest(foo)) FROM tbl_agg_srf;
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1.07 rows=1 width=8)
          ->  Aggregate  (cost=1.02..1.03 rows=1 width=8)
                ->  Seq Scan on tbl_agg_srf  (cost=0.00..1.01 rows=1 width=33)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 SELECT count(unnest(foo)) FROM tbl_agg_srf;

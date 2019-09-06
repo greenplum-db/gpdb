@@ -3,7 +3,7 @@
  * version.c
  *	 Returns the PostgreSQL version string
  *
- * Copyright (c) 1998-2014, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *
@@ -18,7 +18,7 @@
 
 
 Datum
-pgsql_version(PG_FUNCTION_ARGS __attribute__((unused)) )
+pgsql_version(PG_FUNCTION_ARGS pg_attribute_unused() )
 {
 	char version[512];
 

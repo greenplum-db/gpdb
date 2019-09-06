@@ -20,7 +20,7 @@ LDLIBS = $(LDFLAGS) $(LIBS) -levent $(apu_link_ld_libs) $(apr_link_ld_libs)
 GPSMON_LIBS=
 GPMMON_LIBS=-L$(LIBPQ_DIR) -lpq -lm
 
-ifeq "$(findstring osx,$(BLD_ARCH))" "osx"
+ifeq ($(PORTNAME), darwin)
 GPSMON_LIBS=-framework CoreServices -framework IOKit
 SIGTEST_LIBS=-framework CoreServices -framework IOKit
 endif

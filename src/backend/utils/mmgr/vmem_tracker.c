@@ -21,7 +21,6 @@
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "port/atomics.h"
-#include "utils/faultinjection.h"
 #include "utils/guc.h"
 #include "utils/vmem_tracker.h"
 #include "utils/resource_manager.h"
@@ -667,40 +666,6 @@ void
 VmemTracker_ResetWaiver(void)
 {
 	waivedChunks = 0;
-}
-
-/*
- * Returns a bunch of different vmem usage stats such as max vmem usage,
- * current vmem usage, available vmem etc.
- *
- * Parameters:
- * 		reason: The type of stat to return.
- * 		arg: Currently unused, but may be used as input parameter when
- * 			 this method is used as "setter"
- */
-int64
-VmemTracker_Fault(int32 reason, int64 arg)
-{
-	switch(reason)
-	{
-	case GP_FAULT_USER_MP_CONFIG:
-		return (int64) gp_vmem_protect_limit;
-	case GP_FAULT_USER_MP_ALLOC:
-		return (int64) (BYTES_TO_MB(VmemTracker_GetReservedVmemBytes()));
-	case GP_FAULT_USER_MP_HIGHWM:
-		return VmemTracker_GetMaxReservedVmemMB();
-	case GP_FAULT_SEG_AVAILABLE:
-		return VmemTracker_GetAvailableVmemMB();
-	case GP_FAULT_SEG_SET_VMEMMAX:
-		Assert(!"Not yet implemented");
-		return -1;
-	case GP_FAULT_SEG_GET_VMEMMAX:
-		return VmemTracker_GetAvailableVmemMB();
-	default:
-		elog(ERROR, "GP MP Fault Invalid fault code");
-	}
-
-	return -1;
 }
 
 bool

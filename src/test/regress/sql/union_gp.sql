@@ -82,6 +82,28 @@ union
 (SELECT 'test2' as branch, id FROM test2);
 
 --
+-- Test pulling up distribution key expression, when the different branches
+-- of a UNION ALL have different typmods.
+--
+create table pullup_distkey_test(
+    a character varying,
+    b character varying(30)
+) distributed by (b);
+
+insert into pullup_distkey_test values ('foo', 'bar');
+
+with base as
+(
+  select a, b from pullup_distkey_test
+  union all
+  select 'xx' as a, 'bar' as b
+)
+select a from base
+union all
+select a from base where a = 'foo';
+
+
+--
 -- Setup
 --
 
@@ -540,6 +562,25 @@ UNION
 (SELECT a FROM t2_setop EXCEPT SELECT a FROM t1_setop ORDER BY a)
 ORDER BY a;
 
+create table t1_ncols(a int, b int, c text, d date) distributed by (a);
+create table t2_ncols(a smallint, b bigint, c varchar(20), d date) distributed by (c, b)
+ partition by range (a) (start (0) end (8) every (4));
+create view v1_ncols(id, a, b, c, d) as select 1,* from t1_ncols union all select 2,* from t2_ncols;
+
+insert into t1_ncols values (1, 11, 'one', '2001-01-01');
+
+insert into t2_ncols values (2, 22, 'two', '2002-02-02');
+insert into t2_ncols values (4, 44, 'four','2004-04-04');
+
+select b from t1_ncols union all select a from t2_ncols;
+select a+100, b, d from t1_ncols union select b, a+200, d from t2_ncols order by 1;
+select c, a from v1_ncols;
+
+with cte1(aa, b, c, d) as (select a*100, b, c, d from t1_ncols union select * from t2_ncols)
+select x.aa/100 aaa, x.c, y.c from cte1 x join cte1 y on x.aa=y.aa;
+
+select from t2_ncols union select * from t2_ncols;
+
 --
 -- Clean up
 --
@@ -547,3 +588,6 @@ ORDER BY a;
 DROP TABLE IF EXISTS T_a1 CASCADE;
 DROP TABLE IF EXISTS T_b2 CASCADE;
 DROP TABLE IF EXISTS T_random CASCADE;
+DROP VIEW IF EXISTS v1_ncols CASCADE;
+DROP TABLE IF EXISTS t1_ncols CASCADE;
+DROP TABLE IF EXISTS t2_ncols CASCADE;

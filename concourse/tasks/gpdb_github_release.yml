@@ -1,0 +1,18 @@
+---
+
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: bash
+    tag: latest
+
+inputs:
+- name: gpdb_src
+
+outputs:
+- name: release_artifacts
+
+run:
+  path: gpdb_src/concourse/scripts/gpdb_github_release.bash

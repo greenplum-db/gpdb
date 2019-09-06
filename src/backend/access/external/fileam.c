@@ -88,7 +88,6 @@ static int	external_getdata_callback(void *outbuf, int datasize, void *extra);
 static int	external_getdata(URL_FILE *extfile, CopyState pstate, void *outbuf, int maxread);
 static void external_senddata(URL_FILE *extfile, CopyState pstate);
 static void external_scan_error_callback(void *arg);
-static List *parseCopyFormatString(Relation rel, char *fmtstr, char fmttype);
 static void parseCustomFormatString(char *fmtstr, char **formatter_name, List **formatter_params);
 static Oid lookupCustomFormatter(char *formatter_name, bool iswritable);
 static void justifyDatabuf(StringInfo buf);
@@ -98,7 +97,6 @@ static char *get_eol_delimiter(List *params);
 static void external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape,
 				 char *quote, int eol_type, bool header, uint32 scancounter, List *params);
 
-static List *appendCopyEncodingOption(List *copyFmtOpts, int encoding);
 
 /* ----------------------------------------------------------------
 *				   external_ interface functions
@@ -159,12 +157,6 @@ external_beginscan(Relation relation, uint32 scancounter,
 	scan->fs_scancounter = scancounter;
 	scan->fs_noop = false;
 	scan->fs_file = NULL;
-	/*
-	 * GPDB_91_MERGE_FIXME: scan->raw_buf_done is used for custom external
-	 * table only now. Maybe we could refactor externalgettup_custom() to
-	 * remove it.
-	 */
-	scan->raw_buf_done = true; /* true so we will read data in first run */
 	scan->fs_formatter = NULL;
 	scan->fs_constraintExprs = NULL;
 	if (relation->rd_att->constr != NULL && relation->rd_att->constr->num_check > 0)
@@ -346,7 +338,6 @@ external_rescan(FileScanDesc scan)
 	scan->fs_pstate->fe_eof = false;
 	scan->fs_pstate->cur_lineno = 0;
 	scan->fs_pstate->cur_attname = NULL;
-	scan->raw_buf_done = true; /* true so we will read data in first run */
 	scan->fs_pstate->raw_buf_len = 0;
 }
 
@@ -612,8 +603,6 @@ external_insert_init(Relation rel)
 	extInsertDesc->ext_tupDesc = RelationGetDescr(rel);
 	extInsertDesc->ext_values = (Datum *) palloc(extInsertDesc->ext_tupDesc->natts * sizeof(Datum));
 	extInsertDesc->ext_nulls = (bool *) palloc(extInsertDesc->ext_tupDesc->natts * sizeof(bool));
-
-	/* GPDB_91_MERGE_FIXME: call BeginCopyFrom  (Or BeginCopyTo?) here */
 
 	/*
 	 * Writing to an external table is like COPY TO: we get tuples from the executor,
@@ -888,19 +877,6 @@ externalgettup_defined(FileScanDesc scan)
 		return NULL;
 	}
 
-	if (pstate->cdbsreh)
-	{
-		/*
-		 * If NextCopyFrom failed, the processed row count will have already
-		 * been updated, but we need to update it in a successful case.
-		 *
-		 * GPDB_91_MERGE_FIXME: this is almost certainly not the right place for
-		 * this, but row counts are currently scattered all over the place.
-		 * Consolidate.
-		 */
-		pstate->cdbsreh->processed++;
-	}
-
 	MemoryContextSwitchTo(oldcontext);
 
 	/* convert to heap tuple */
@@ -924,19 +900,21 @@ externalgettup_custom(FileScanDesc scan)
 	MemoryContext oldctxt = CurrentMemoryContext;
 
 	Assert(formatter);
+	Assert(pstate->raw_buf_len >= 0);
 
 	/* while didn't finish processing the entire file */
-	while (!(scan->raw_buf_done && pstate->fe_eof))
+	/* raw_buf_len was set to 0 in BeginCopyFrom() or external_rescan() */
+	while (pstate->raw_buf_len != 0 || !pstate->fe_eof)
 	{
 		/* need to fill our buffer with data? */
-		if (scan->raw_buf_done)
+		if (pstate->raw_buf_len == 0)
 		{
 			int			bytesread = external_getdata(scan->fs_file, pstate, pstate->raw_buf, RAW_BUF_SIZE);
 
 			if (bytesread > 0)
 			{
 				appendBinaryStringInfo(&formatter->fmt_databuf, pstate->raw_buf, bytesread);
-				scan->raw_buf_done = false;
+				pstate->raw_buf_len = bytesread;
 			}
 
 			/* HEADER not yet supported ... */
@@ -945,7 +923,7 @@ externalgettup_custom(FileScanDesc scan)
 		}
 
 		/* while there is still data in our buffer */
-		while (!scan->raw_buf_done)
+		while (pstate->raw_buf_len > 0)
 		{
 			bool		error_caught = false;
 
@@ -1034,7 +1012,7 @@ externalgettup_custom(FileScanDesc scan)
 						 * Callee consumed all data in the buffer. Prepare
 						 * to read more data into it.
 						 */
-						scan->raw_buf_done = true;
+						pstate->raw_buf_len = 0;
 						justifyDatabuf(&formatter->fmt_databuf);
 						continue;
 
@@ -1061,8 +1039,6 @@ externalgettup_custom(FileScanDesc scan)
 				 errmsg("unexpected end of file")));
 	}
 
-
-
 	/*
 	 * if we got here we finished reading all the data.
 	 */
@@ -1082,7 +1058,7 @@ externalgettup_custom(FileScanDesc scan)
 */
 static HeapTuple
 externalgettup(FileScanDesc scan,
-               ScanDirection dir __attribute__((unused)))
+               ScanDirection dir pg_attribute_unused())
 {
 	bool		custom = (scan->fs_custom_formatter_func != NULL);
 	HeapTuple	tup = NULL;
@@ -1473,7 +1449,7 @@ external_scan_error_callback(void *arg)
 
 		errcontext("External table %s, line %s of %s, column %s",
 				   cstate->cur_relname,
-				   linenumber_atoi(buffer, cstate->cur_lineno),
+				   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 				   scan->fs_uri,
 				   cstate->cur_attname);
 	}
@@ -1489,7 +1465,7 @@ external_scan_error_callback(void *arg)
 
 			errcontext("External table %s, line %s of %s: \"%s\"",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno),
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 					   scan->fs_uri, line_buf);
 			pfree(line_buf);
 		}
@@ -1510,7 +1486,7 @@ external_scan_error_callback(void *arg)
 			if (cstate->cur_lineno > 0)
 				errcontext("External table %s, line %s of file %s",
 						   cstate->cur_relname,
-						   linenumber_atoi(buffer, cstate->cur_lineno),
+						   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 						   scan->fs_uri);
 			else
 				errcontext("External table %s, file %s",
@@ -1600,12 +1576,12 @@ justifyDatabuf(StringInfo buf)
 }
 
 char *
-linenumber_atoi(char buffer[20], int64 linenumber)
+linenumber_atoi(char *buffer, size_t bufsz, int64 linenumber)
 {
 	if (linenumber < 0)
-		return "N/A";
-
-	snprintf(buffer, 20, INT64_FORMAT, linenumber);
+		snprintf(buffer, bufsz, "%s", "N/A");
+	else
+		snprintf(buffer, bufsz, INT64_FORMAT, linenumber);
 
 	return buffer;
 }
@@ -1896,7 +1872,7 @@ strtokx2(const char *s,
 	return start;
 }
 
-static List *
+List *
 parseCopyFormatString(Relation rel, char *fmtstr, char fmttype)
 {
 	char	   *token;
@@ -2234,13 +2210,13 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 		CdbComponentDatabaseInfo *qdinfo = 
 				cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
 
-		pg_ltoa(qdinfo->port, result);
+		pg_ltoa(qdinfo->config->port, result);
 		extvar->GP_MASTER_PORT = result;
 
-		if (qdinfo->hostip != NULL)
-			extvar->GP_MASTER_HOST = pstrdup(qdinfo->hostip);
+		if (qdinfo->config->hostip != NULL)
+			extvar->GP_MASTER_HOST = pstrdup(qdinfo->config->hostip);
 		else
-			extvar->GP_MASTER_HOST = pstrdup(qdinfo->hostname);
+			extvar->GP_MASTER_HOST = pstrdup(qdinfo->config->hostname);
 	}
 
 	if (MyProcPort)
@@ -2251,7 +2227,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	extvar->GP_DATABASE = get_database_name(MyDatabaseId);
 	extvar->GP_SEG_PG_CONF = ConfigFileName;	/* location of the segments
 												 * pg_conf file  */
-	extvar->GP_SEG_DATADIR = data_directory;	/* location of the segments
+	extvar->GP_SEG_DATADIR = DataDir;	/* location of the segments
 												 * datadirectory */
 	sprintf(extvar->GP_DATE, "%04d%02d%02d",
 			1900 + tm->tm_year, 1 + tm->tm_mon, tm->tm_mday);
@@ -2314,7 +2290,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	sprintf(extvar->GP_LINE_DELIM_LENGTH, "%d", line_delim_len);
 }
 
-static List *
+List *
 appendCopyEncodingOption(List *copyFmtOpts, int encoding)
 {
 	return lappend(copyFmtOpts, makeDefElem("encoding", (Node *)makeString((char *)pg_encoding_to_char(encoding))));

@@ -38,7 +38,7 @@ dirty_buffers(PG_FUNCTION_ARGS)
 		dirty_tags = NIL;
 		for (i = 0; i < NBuffers; i++)
 		{
-			volatile BufferDesc *bufHdr = &BufferDescriptors[i];
+			volatile BufferDesc *bufHdr = GetBufferDescriptor(i);
 			LockBufHdr(bufHdr);
 			if (bufHdr->flags & (BM_DIRTY | BM_JUST_DIRTIED))
 			{

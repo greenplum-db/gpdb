@@ -8,7 +8,8 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpconfig</b> <b>-c</b> <varname>param_name</varname> <b>-v</b> <varname>value</varname> [<b>-m</b> <varname>master_value</varname> | <b>--masteronly</b>]
-       | <b>-r</b> <varname>param_name</varname> [<b>--masteronly</b> | <b>-l</b>
+       | <b>-r</b> <varname>param_name</varname> [<b>--masteronly</b>]
+       | <b>-l</b>
        [<b>--skipvalidation</b>] [<b>--verbose</b>] [<b>--debug</b>]
 
 <b>gpconfig</b> <b>-s</b> <varname>param_name</varname> [<b>--file</b> | <b>--file-compare</b>] [<b>--verbose</b>] [<b>--debug</b>]
@@ -77,12 +78,9 @@
           <pd>The value to use for the configuration parameter you specified with the
               <codeph>-c</codeph> option. By default, this value is applied to all segments, their
             mirrors, the master, and the standby master.</pd>
-          <pd>Parameter values that are not simple identifiers or numbers must be enclosed in single
-            quotes (<codeph>'</codeph>). For example, values that contain spaces or special
-            characters must be enclosed in single quotes. To embed a single quote in a parameter
-            value, enter either two single quotes or backslash and quote (<codeph>\'</codeph>).</pd>
-          <pd>The utility encloses the value in single quotes when adding the setting to the
+          <pd>The utility correctly quotes the value when adding the setting to the
               <codeph>postgresql.conf</codeph> files.</pd>
+          <pd>To set the value to an empty string, enter empty single quotes (<codeph>''</codeph>). </pd>
         </plentry>
         <plentry>
           <pt>-m | --mastervalue <varname>master_value</varname></pt>

@@ -30,10 +30,14 @@ include $(top_builddir)/src/Makefile.global
 override CPPFLAGS := -I$(top_builddir)/src/port -DFRONTEND $(CPPFLAGS)
 LIBS += $(PTHREAD_LIBS)
 
-OBJS = $(LIBOBJS) $(PG_CRC32C_OBJS) chklocale.o dirmod.o erand48.o fls.o inet_net_ntop.o \
-	noblock.o path.o pgcheckdir.o pg_crc.o pgmkdirp.o pgsleep.o \
+OBJS = $(LIBOBJS) $(PG_CRC32C_OBJS) chklocale.o erand48.o inet_net_ntop.o \
+	noblock.o path.o pgcheckdir.o pgmkdirp.o pgsleep.o \
 	pgstrcasecmp.o pqsignal.o \
 	qsort.o qsort_arg.o quotes.o sprompt.o tar.o thread.o
+
+ifeq ($(enable_strong_random), yes)
+OBJS += pg_strong_random.o
+endif
 
 # foo_srv.o and foo.o are both built from foo.c, but only foo.o has -DFRONTEND
 OBJS_SRV = $(OBJS:%.o=%_srv.o)

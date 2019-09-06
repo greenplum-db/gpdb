@@ -73,13 +73,6 @@
  * SetLatch *after* that. SetLatch is designed to return quickly if the
  * latch is already set.
  *
- * Presently, when using a shared latch for interprocess signalling, the
- * flag variable(s) set by senders and inspected by the wait loop must
- * be protected by spinlocks or LWLocks, else it is possible to miss events
- * on machines with weak memory ordering (such as PPC).  This restriction
- * will be lifted in future by inserting suitable memory barriers into
- * SetLatch and ResetLatch.
- *
  * On some platforms, signals will not interrupt the latch wait primitive
  * by themselves.  Therefore, it is critical that any signal handler that
  * is meant to terminate a WaitLatch wait calls SetLatch.
@@ -91,7 +84,7 @@
  * use of any generic handler.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/latch.h
@@ -108,7 +101,7 @@
  * the public functions. It is defined here to allow embedding Latches as
  * part of bigger structs.
  */
-typedef struct
+typedef struct Latch
 {
 	sig_atomic_t is_set;
 	bool		is_shared;

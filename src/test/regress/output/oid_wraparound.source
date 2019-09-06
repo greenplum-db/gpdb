@@ -83,10 +83,11 @@ SELECT gp_set_next_oid_segments(16384);
  
 (3 rows)
 
--- GPDB_94_MERGE_FIXME: output will be 16389 instead of 16388
--- see postgres commit: 5b3ed6b7880b88a355bf809dad83cbe7cbc49316
 -- We expect the QE to increment once to 16385 and the QD should
--- fast-forward to 16388
+-- fast-forward to 16388. The QD could possibly fast-forward to 16389
+-- if the pg_type heap page was not pruned for dead pg_type entry for
+-- oid_wraparound_table relation which will result in Oid 16386
+-- collision.
 SELECT gp_get_next_oid_master();
  gp_get_next_oid_master 
 ------------------------
@@ -102,10 +103,10 @@ SELECT gp_get_next_oid_segments();
 (3 rows)
 
 CREATE TABLE oid_wraparound_table_other AS SELECT 1 AS a;
-SELECT gp_get_next_oid_master();
- gp_get_next_oid_master 
-------------------------
-                  16389
+SELECT gp_get_next_oid_master() in (16388, 18389);
+ ?column? 
+----------
+ t
 (1 row)
 
 SELECT gp_get_next_oid_segments();

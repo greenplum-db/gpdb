@@ -81,7 +81,7 @@ makeCdbHash(int numsegs, int natts, Oid *hashfuncs)
 
 	Assert(numsegs > 0);		/* verify number of segments is legal. */
 
-	if (numsegs == __GP_POLICY_EVIL_NUMSEGMENTS)
+	if (numsegs == GP_POLICY_INVALID_NUMSEGMENTS())
 	{
 		Assert(!"what's the proper value of numsegments?");
 	}

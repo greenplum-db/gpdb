@@ -25,21 +25,15 @@
 #include <signal.h>
 
 #include "postmaster/perfmon_segmentinfo.h"
-#include "postmaster/fork_process.h"
-#include "postmaster/postmaster.h"
+#include "postmaster/bgworker.h"
 
 #include "storage/ipc.h"
 #include "storage/proc.h"
-#include "storage/backendid.h"
 #include "storage/pmsignal.h"			/* PostmasterIsAlive */
 
 #include "utils/metrics_utils.h"
-#include "utils/resowner.h"
-#include "utils/ps_status.h"
 
 #include "gpmon/gpmon.h"
-#include "miscadmin.h"
-#include "libpq/pqsignal.h"
 #include "tcop/tcopprot.h"
 #include "cdb/cdbvars.h"
 #include "utils/vmem_tracker.h"
@@ -47,11 +41,6 @@
 /* Sender-related routines */
 static void SegmentInfoSender(void);
 static void SegmentInfoSenderLoop(void);
-NON_EXEC_STATIC void SegmentInfoSenderMain(int argc, char *argv[]);
-static void SegmentInfoRequestShutdown(SIGNAL_ARGS);
-
-static volatile bool senderShutdownRequested = false;
-static volatile bool isSenderProcess = false;
 
 /* Static gpmon_seginfo_t item, (re)used for sending UDP packets. */
 static gpmon_packet_t seginfopkt;
@@ -73,132 +62,35 @@ cluster_state_collect_hook_type cluster_state_collect_hook = NULL;
 query_info_collect_hook_type query_info_collect_hook = NULL;
 
 /**
- * Main entry point for segment info process. This forks off a sender process
- * and calls SegmentInfoSenderMain(), which does all the setup.
- *
- * This code is heavily based on pgarch.c, q.v.
- */
-int
-perfmon_segmentinfo_start(void)
-{
-	pid_t		segmentInfoId = -1;
-
-	switch ((segmentInfoId = fork_process()))
-	{
-		case -1:
-			ereport(LOG,
-				(errmsg("could not fork stats sender process: %m")));
-		return 0;
-
-		case 0:
-			/* in postmaster child ... */
-			/* Close the postmaster's sockets */
-			ClosePostmasterPorts(false);
-
-			SegmentInfoSenderMain(0, NULL);
-			break;
-		default:
-			return (int)segmentInfoId;
-	}
-
-	/* shouldn't get here */
-	Assert(false);
-	return 0;
-}
-
-
-/**
  * This method is called after fork of the stats sender process. It sets up signal
  * handlers and does initialization that is required by a postgres backend.
  */
-NON_EXEC_STATIC void SegmentInfoSenderMain(int argc, char *argv[])
+void SegmentInfoSenderMain(Datum main_arg)
 {
-	sigjmp_buf	local_sigjmp_buf;
+	/* We're now ready to receive signals */
+	BackgroundWorkerUnblockSignals();
 
-	IsUnderPostmaster = true;
-	isSenderProcess = true;
+	/* Init gpmon connection */
+	gpmon_init();
 
-	/* Stay away from PMChildSlot */
-	MyPMChildSlot = -1;
-
-	/* reset MyProcPid */
-	MyProcPid = getpid();
-
-	/* Lose the postmaster's on-exit routines */
-	on_exit_reset();
-
-	/* Identify myself via ps */
-	init_ps_display("stats sender process", "", "", "");
-
-	SetProcessingMode(InitProcessing);
-
-	/* Set up signal handlers, see equivalent code in tcop/postgres.c. */
-	pqsignal(SIGHUP, SIG_IGN);
-	pqsignal(SIGINT, SIG_IGN);
-	pqsignal(SIGALRM, SIG_IGN);
-	pqsignal(SIGPIPE, SIG_IGN);
-	pqsignal(SIGUSR1, SIG_IGN);
-
-	pqsignal(SIGTERM, die);
-	pqsignal(SIGQUIT, die);
-	pqsignal(SIGUSR2, SegmentInfoRequestShutdown);
-
-	pqsignal(SIGFPE, FloatExceptionHandler);
-	pqsignal(SIGCHLD, SIG_DFL);
-
-	/* Copied from bgwriter */
-	CurrentResourceOwner = ResourceOwnerCreate(NULL, "Segment info sender process");
-
-	/* Early initialization */
-	BaseInit();
-
-	/* See InitPostgres()... */
-	InitProcess();
-
-	SetProcessingMode(NormalProcessing);
-
-	/*
-	 * If an exception is encountered, processing resumes here.
-	 *
-	 * See notes in postgres.c about the design of this coding.
-	 */
-	if (sigsetjmp(local_sigjmp_buf, 1) != 0)
-	{
-		/* Prevents interrupts while cleaning up */
-		HOLD_INTERRUPTS();
-
-		/* Report the error to the server log */
-		EmitErrorReport();
-
-		/*
-		 * We can now go away.	Note that because we'll call InitProcess, a
-		 * callback will be registered to do ProcKill, which will clean up
-		 * necessary state.
-		 */
-		proc_exit(0);
-	}
-
-	/* We can now handle ereport(ERROR) */
-	PG_exception_stack = &local_sigjmp_buf;
-
-	PG_SETMASK(&UnBlockSig);
-
-	MyBackendId = InvalidBackendId;
-
-	if (gp_enable_gpperfmon)
-	{
-		/* Init gpmon connection */
-		gpmon_init();
-
-		/* Create and initialize gpmon_pkt */
-		InitSegmentInfoGpmonPkt(&seginfopkt);
-	}
+	/* Create and initialize gpmon_pkt */
+	InitSegmentInfoGpmonPkt(&seginfopkt);
 
 	/* main loop */
 	SegmentInfoSenderLoop();
 
 	/* One iteration done, go away */
 	proc_exit(0);
+}
+
+bool
+SegmentInfoSenderStartRule(Datum main_arg)
+{
+	if (!gp_enable_gpperfmon)
+		return false;
+
+	/* FIXME: even for the utility mode? */
+	return true;
 }
 
 /**
@@ -214,17 +106,6 @@ SegmentInfoSenderLoop(void)
 
 	for (counter = 0;; counter += SEGMENT_INFO_LOOP_SLEEP_MS)
 	{
-		CHECK_FOR_INTERRUPTS();
-
-		if (senderShutdownRequested)
-		{
-			break;
-		}
-
-		/* no need to live on if postmaster has died */
-		if (!PostmasterIsAlive())
-			exit(1);
-
 		if (cluster_state_collect_hook)
 			cluster_state_collect_hook();
 
@@ -246,15 +127,6 @@ SegmentInfoSenderLoop(void)
 	} /* end server loop */
 
 	return;
-}
-
-/**
- * Note the request to shut down.
- */
-static void
-SegmentInfoRequestShutdown(SIGNAL_ARGS)
-{
-	senderShutdownRequested = true;
 }
 
 /**

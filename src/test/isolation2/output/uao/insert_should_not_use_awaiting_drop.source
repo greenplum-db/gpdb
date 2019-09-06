@@ -6,13 +6,11 @@
 -- m/relid \d+/
 -- s/relid \d+/relid /
 -- end_matchsubs
-create extension if not exists gp_inject_fault;
-CREATE
 
 select gp_inject_fault('all', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 -- Given an append only table that is ready to be compacted
@@ -35,7 +33,7 @@ select gp_toolkit.__gp_remove_ao_entry_from_cache('test_table_@orientation@'::re
 select gp_inject_fault('before_creating_an_ao_hash_entry', 'suspend', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 -- And an insert transaction is blocked before assigning a segment
@@ -45,20 +43,20 @@ select gp_inject_fault('before_creating_an_ao_hash_entry', 'suspend', 1);
 select gp_wait_until_triggered_fault('before_creating_an_ao_hash_entry', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 
 select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 2&: VACUUM test_table_@orientation@;  <waiting ...>
 
 select gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_phase', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 
 -- Then vacuum should have completed compaction leaving segment file 1
@@ -96,7 +94,7 @@ select gp_toolkit.__gp_remove_ao_entry_from_cache('test_table_@orientation@'::re
 select gp_inject_fault('before_creating_an_ao_hash_entry', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 1<:  <... completed>
 INSERT 1
@@ -115,7 +113,7 @@ select segno, state from gp_toolkit.__gp_get_ao_entry_from_cache('test_table_@or
 select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 2<:  <... completed>
 VACUUM

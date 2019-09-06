@@ -2,7 +2,7 @@
  *
  *	  GBK <--> UTF8
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -21,9 +21,6 @@ PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(gbk_to_utf8);
 PG_FUNCTION_INFO_V1(utf8_to_gbk);
-
-extern Datum gbk_to_utf8(PG_FUNCTION_ARGS);
-extern Datum utf8_to_gbk(PG_FUNCTION_ARGS);
 
 /* ----------
  * conv_proc(
@@ -44,8 +41,11 @@ gbk_to_utf8(PG_FUNCTION_ARGS)
 
 	CHECK_ENCODING_CONVERSION_ARGS(PG_GBK, PG_UTF8);
 
-	LocalToUtf(src, dest, LUmapGBK, NULL,
-			   sizeof(LUmapGBK) / sizeof(pg_local_to_utf), 0, PG_GBK, len);
+	LocalToUtf(src, len, dest,
+			   LUmapGBK, lengthof(LUmapGBK),
+			   NULL, 0,
+			   NULL,
+			   PG_GBK);
 
 	PG_RETURN_VOID();
 }
@@ -59,8 +59,11 @@ utf8_to_gbk(PG_FUNCTION_ARGS)
 
 	CHECK_ENCODING_CONVERSION_ARGS(PG_UTF8, PG_GBK);
 
-	UtfToLocal(src, dest, ULmapGBK, NULL,
-			   sizeof(ULmapGBK) / sizeof(pg_utf_to_local), 0, PG_GBK, len);
+	UtfToLocal(src, len, dest,
+			   ULmapGBK, lengthof(ULmapGBK),
+			   NULL, 0,
+			   NULL,
+			   PG_GBK);
 
 	PG_RETURN_VOID();
 }

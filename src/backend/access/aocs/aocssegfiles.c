@@ -93,6 +93,8 @@ InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp)
 	Relation	segrel;
 	int16		formatVersion;
 
+	ValidateAppendonlySegmentDataBeforeStorage(segno);
+
 	/* New segments are always created in the latest format */
 	formatVersion = AORelationVersion_GetLatest();
 

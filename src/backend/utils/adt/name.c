@@ -9,7 +9,7 @@
  * always use NAMEDATALEN as the symbolic constant!   - jolly 8/21/95
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -192,7 +192,7 @@ namecpy(Name n1, Name n2)
 {
 	if (!n1 || !n2)
 		return -1;
-	strncpy(NameStr(*n1), NameStr(*n2), NAMEDATALEN);
+	StrNCpy(NameStr(*n1), NameStr(*n2), NAMEDATALEN);
 	return 0;
 }
 
@@ -263,13 +263,13 @@ namestrcmp(Name name, const char *str)
 Datum
 current_user(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_DATUM(DirectFunctionCall1(namein, CStringGetDatum(GetUserNameFromId(GetUserId()))));
+	PG_RETURN_DATUM(DirectFunctionCall1(namein, CStringGetDatum(GetUserNameFromId(GetUserId(), false))));
 }
 
 Datum
 session_user(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_DATUM(DirectFunctionCall1(namein, CStringGetDatum(GetUserNameFromId(GetSessionUserId()))));
+	PG_RETURN_DATUM(DirectFunctionCall1(namein, CStringGetDatum(GetUserNameFromId(GetSessionUserId(), false))));
 }
 
 

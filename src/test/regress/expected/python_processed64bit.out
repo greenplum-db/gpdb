@@ -1,6 +1,3 @@
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 --start_ignore
 CREATE LANGUAGE plpythonu;
 --end_ignore
@@ -39,16 +36,12 @@ SELECT COUNT(*) AS count
 SELECT gp_inject_fault('executor_run_high_processed', 'skip', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
-NOTICE:  Success:
-NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=121194)
-NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=121196)
-NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=121195)
  gp_inject_fault 
 -----------------
- t
- t
- t
- t
+ Success:
+ Success:
+ Success:
+ Success:
 (4 rows)
 
 -- and insert another 30k rows, this time overflowing the 2^32 counter
@@ -62,16 +55,12 @@ SELECT public.test_bigint_python();
 SELECT gp_inject_fault('executor_run_high_processed', 'reset', dbid)
   FROM pg_catalog.gp_segment_configuration
  WHERE role = 'p';
-NOTICE:  Success:
-NOTICE:  Success:  (seg0 192.168.0.65:25432 pid=121194)
-NOTICE:  Success:  (seg1 192.168.0.65:25433 pid=121196)
-NOTICE:  Success:  (seg2 192.168.0.65:25434 pid=121195)
  gp_inject_fault 
 -----------------
- t
- t
- t
- t
+ Success:
+ Success:
+ Success:
+ Success:
 (4 rows)
 
 SELECT COUNT(*) AS count

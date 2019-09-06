@@ -5,7 +5,7 @@
  *
  * This should be included _AFTER_ postgres.h and system include files
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1995, Regents of the University of California
  *
  * src/pl/plperl/plperl.h
@@ -30,9 +30,7 @@
  * Supply a value of PERL_UNUSED_DECL that will satisfy gcc - the one
  * perl itself supplies doesn't seem to.
  */
-#if defined(__GNUC__)
-#define PERL_UNUSED_DECL __attribute__ ((unused))
-#endif
+#define PERL_UNUSED_DECL pg_attribute_unused()
 
 /*
  * Sometimes perl carefully scribbles on our *printf macros.

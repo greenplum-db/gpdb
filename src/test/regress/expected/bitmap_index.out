@@ -614,7 +614,7 @@ explain select * from unlogged_test where c1 = 100;
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..200.45 rows=1 width=4)
    ->  Index Scan using unlogged_test_idx on unlogged_test  (cost=0.00..200.45 rows=1 width=4)
          Index Cond: c1 = 100
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 select * from unlogged_test where c1 = 100;
@@ -627,7 +627,16 @@ drop table unlogged_test;
 --
 -- Test crash recovery
 --
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+--
+-- disable fault-tolerance service (FTS) probing to ensure
+-- the mirror does not accidentally get promoted
+--
+SELECT gp_inject_fault_infinite('fts_probe', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+(1 row)
+
 CREATE TABLE bm_test_insert(a int) DISTRIBUTED BY (a);
 CREATE INDEX bm_a_idx ON bm_test_insert USING bitmap(a);
 CREATE TABLE bm_test_update(a int, b int) DISTRIBUTED BY (a);
@@ -637,28 +646,22 @@ INSERT INTO bm_test_update SELECT i,i FROM generate_series (1, 10000) i;
 CHECKPOINT;
 -- skip all further checkpoint
 SELECT gp_inject_fault_infinite('checkpoint', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
-NOTICE:  Success:  (seg0 172.17.0.10:25435 pid=355751)
-NOTICE:  Success:  (seg1 172.17.0.10:25433 pid=355752)
-NOTICE:  Success:  (seg2 172.17.0.10:25434 pid=355753)
  gp_inject_fault_infinite 
 --------------------------
- t
- t
- t
+ Success:
+ Success:
+ Success:
 (3 rows)
 
 INSERT INTO bm_test_insert SELECT generate_series (1, 10000);
 UPDATE bm_test_update SET b=b+1;
 -- trigger recovery on primaries 
 SELECT gp_inject_fault_infinite('finish_prepared_after_record_commit_prepared', 'panic', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
-NOTICE:  Success:  (seg0 172.17.0.10:25435 pid=355751)
-NOTICE:  Success:  (seg1 172.17.0.10:25433 pid=355752)
-NOTICE:  Success:  (seg2 172.17.0.10:25434 pid=355753)
  gp_inject_fault_infinite 
 --------------------------
- t
- t
- t
+ Success:
+ Success:
+ Success:
 (3 rows)
 
 SET client_min_messages='ERROR';
@@ -667,25 +670,19 @@ RESET client_min_messages;
 -- reconnect to the database after restart
 \c
 SELECT gp_inject_fault('checkpoint', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
-NOTICE:  Success:  (seg1 172.17.0.10:25433 pid=355829)
-NOTICE:  Success:  (seg2 172.17.0.10:25434 pid=355830)
-NOTICE:  Success:  (seg0 172.17.0.10:25435 pid=355828)
  gp_inject_fault 
 -----------------
- t
- t
- t
+ Success:
+ Success:
+ Success:
 (3 rows)
 
 SELECT gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
-NOTICE:  Success:  (seg1 172.17.0.10:25433 pid=355829)
-NOTICE:  Success:  (seg2 172.17.0.10:25434 pid=355830)
-NOTICE:  Success:  (seg0 172.17.0.10:25435 pid=355828)
  gp_inject_fault 
 -----------------
- t
- t
- t
+ Success:
+ Success:
+ Success:
 (3 rows)
 
 SET enable_seqscan=off;
@@ -704,3 +701,50 @@ SELECT * FROM bm_test_update WHERE b=1;
 DROP TABLE trigger_recovery_on_primaries;
 DROP TABLE bm_test_insert;
 DROP TABLE bm_test_update;
+--
+-- re-enable fault-tolerance service (FTS) probing after recovery completed.
+--
+SELECT gp_inject_fault('fts_probe', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+-- If the table is AO table, it need generate some fake tuple pointer,
+-- this pointer is a little different from the heap tables pointer,
+-- If the Offset in pointer is 0(If the row number is 32768, the Offset
+-- should be 0), we set the 16th bit of the Offsert to be 1, so we
+-- do not forget to remove the flag when we use it, otherwise we will
+-- get an wrong value.
+CREATE TABLE bm_test_reindex(c1 int, c2 int) WITH (appendonly=true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX bm_test_reindex_idx ON bm_test_reindex USING bitmap(c2);
+INSERT INTO bm_test_reindex SELECT 1,i FROM generate_series(1, 65537)i;
+REINDEX INDEX bm_test_reindex_idx;
+SET enable_bitmapscan to on;
+SET enable_seqscan to off;
+SELECT * from bm_test_reindex where c2 = 32767;
+ c1 |  c2   
+----+-------
+  1 | 32767
+(1 row)
+
+SELECT * from bm_test_reindex where c2 = 32768;
+ c1 |  c2   
+----+-------
+  1 | 32768
+(1 row)
+
+SELECT * from bm_test_reindex where c2 = 32769;
+ c1 |  c2   
+----+-------
+  1 | 32769
+(1 row)
+
+SELECT * from bm_test_reindex where c2 = 65536;
+ c1 |  c2   
+----+-------
+  1 | 65536
+(1 row)
+

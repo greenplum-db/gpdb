@@ -323,6 +323,5 @@ extern void *datumstreamread_get_upgrade_space(DatumStreamRead *datumStream,
  * before calling datumstreamread_block_content.
  */
 extern void datumstreamread_block_content(DatumStreamRead * acc);
-extern bool init_datumstream_checksum(char *compName, bool checksum);
 
 #endif   /* DATUMSTREAM_H */

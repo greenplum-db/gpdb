@@ -3,7 +3,7 @@
  * rowtypes.c
  *	  I/O and comparison functions for generic composite types.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -44,7 +44,7 @@ typedef struct RecordIOData
 	Oid			record_type;
 	int32		record_typmod;
 	int			ncolumns;
-	ColumnIOData columns[1];	/* VARIABLE LENGTH ARRAY */
+	ColumnIOData columns[FLEXIBLE_ARRAY_MEMBER];
 } RecordIOData;
 
 /*
@@ -62,7 +62,7 @@ typedef struct RecordCompareData
 	int32		record1_typmod;
 	Oid			record2_type;
 	int32		record2_typmod;
-	ColumnCompareData columns[1];		/* VARIABLE LENGTH ARRAY */
+	ColumnCompareData columns[FLEXIBLE_ARRAY_MEMBER];
 } RecordCompareData;
 
 
@@ -120,8 +120,8 @@ record_in(PG_FUNCTION_ARGS)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-							   sizeof(RecordIOData) - sizeof(ColumnIOData)
-							   + ncolumns * sizeof(ColumnIOData));
+							   offsetof(RecordIOData, columns) +
+							   ncolumns * sizeof(ColumnIOData));
 		my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
 		my_extra->record_type = InvalidOid;
 		my_extra->record_typmod = 0;
@@ -131,8 +131,8 @@ record_in(PG_FUNCTION_ARGS)
 		my_extra->record_typmod != tupTypmod)
 	{
 		MemSet(my_extra, 0,
-			   sizeof(RecordIOData) - sizeof(ColumnIOData)
-			   + ncolumns * sizeof(ColumnIOData));
+			   offsetof(RecordIOData, columns) +
+			   ncolumns * sizeof(ColumnIOData));
 		my_extra->record_type = tupType;
 		my_extra->record_typmod = tupTypmod;
 		my_extra->ncolumns = ncolumns;
@@ -353,8 +353,8 @@ record_out(PG_FUNCTION_ARGS)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-							   sizeof(RecordIOData) - sizeof(ColumnIOData)
-							   + ncolumns * sizeof(ColumnIOData));
+							   offsetof(RecordIOData, columns) +
+							   ncolumns * sizeof(ColumnIOData));
 		my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
 		my_extra->record_type = InvalidOid;
 		my_extra->record_typmod = 0;
@@ -364,8 +364,8 @@ record_out(PG_FUNCTION_ARGS)
 		my_extra->record_typmod != tupTypmod)
 	{
 		MemSet(my_extra, 0,
-			   sizeof(RecordIOData) - sizeof(ColumnIOData)
-			   + ncolumns * sizeof(ColumnIOData));
+			   offsetof(RecordIOData, columns) +
+			   ncolumns * sizeof(ColumnIOData));
 		my_extra->record_type = tupType;
 		my_extra->record_typmod = tupTypmod;
 		my_extra->ncolumns = ncolumns;
@@ -508,8 +508,8 @@ record_recv(PG_FUNCTION_ARGS)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-							   sizeof(RecordIOData) - sizeof(ColumnIOData)
-							   + ncolumns * sizeof(ColumnIOData));
+							   offsetof(RecordIOData, columns) +
+							   ncolumns * sizeof(ColumnIOData));
 		my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
 		my_extra->record_type = InvalidOid;
 		my_extra->record_typmod = 0;
@@ -519,8 +519,8 @@ record_recv(PG_FUNCTION_ARGS)
 		my_extra->record_typmod != tupTypmod)
 	{
 		MemSet(my_extra, 0,
-			   sizeof(RecordIOData) - sizeof(ColumnIOData)
-			   + ncolumns * sizeof(ColumnIOData));
+			   offsetof(RecordIOData, columns) +
+			   ncolumns * sizeof(ColumnIOData));
 		my_extra->record_type = tupType;
 		my_extra->record_typmod = tupTypmod;
 		my_extra->ncolumns = ncolumns;
@@ -697,8 +697,8 @@ record_send(PG_FUNCTION_ARGS)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-							   sizeof(RecordIOData) - sizeof(ColumnIOData)
-							   + ncolumns * sizeof(ColumnIOData));
+							   offsetof(RecordIOData, columns) +
+							   ncolumns * sizeof(ColumnIOData));
 		my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
 		my_extra->record_type = InvalidOid;
 		my_extra->record_typmod = 0;
@@ -708,8 +708,8 @@ record_send(PG_FUNCTION_ARGS)
 		my_extra->record_typmod != tupTypmod)
 	{
 		MemSet(my_extra, 0,
-			   sizeof(RecordIOData) - sizeof(ColumnIOData)
-			   + ncolumns * sizeof(ColumnIOData));
+			   offsetof(RecordIOData, columns) +
+			   ncolumns * sizeof(ColumnIOData));
 		my_extra->record_type = tupType;
 		my_extra->record_typmod = tupTypmod;
 		my_extra->ncolumns = ncolumns;
@@ -849,8 +849,8 @@ record_cmp(FunctionCallInfo fcinfo)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-						sizeof(RecordCompareData) - sizeof(ColumnCompareData)
-							   + ncols * sizeof(ColumnCompareData));
+							   offsetof(RecordCompareData, columns) +
+							   ncols * sizeof(ColumnCompareData));
 		my_extra = (RecordCompareData *) fcinfo->flinfo->fn_extra;
 		my_extra->ncolumns = ncols;
 		my_extra->record1_type = InvalidOid;
@@ -1085,8 +1085,8 @@ record_eq(PG_FUNCTION_ARGS)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-						sizeof(RecordCompareData) - sizeof(ColumnCompareData)
-							   + ncols * sizeof(ColumnCompareData));
+							   offsetof(RecordCompareData, columns) +
+							   ncols * sizeof(ColumnCompareData));
 		my_extra = (RecordCompareData *) fcinfo->flinfo->fn_extra;
 		my_extra->ncolumns = ncols;
 		my_extra->record1_type = InvalidOid;
@@ -1348,8 +1348,8 @@ record_image_cmp(FunctionCallInfo fcinfo)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-						sizeof(RecordCompareData) - sizeof(ColumnCompareData)
-							   + ncols * sizeof(ColumnCompareData));
+							   offsetof(RecordCompareData, columns) +
+							   ncols * sizeof(ColumnCompareData));
 		my_extra = (RecordCompareData *) fcinfo->flinfo->fn_extra;
 		my_extra->ncolumns = ncols;
 		my_extra->record1_type = InvalidOid;
@@ -1629,8 +1629,8 @@ record_image_eq(PG_FUNCTION_ARGS)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-						sizeof(RecordCompareData) - sizeof(ColumnCompareData)
-							   + ncols * sizeof(ColumnCompareData));
+							   offsetof(RecordCompareData, columns) +
+							   ncols * sizeof(ColumnCompareData));
 		my_extra = (RecordCompareData *) fcinfo->flinfo->fn_extra;
 		my_extra->ncolumns = ncols;
 		my_extra->record1_type = InvalidOid;

@@ -23,7 +23,7 @@ using namespace gpdxl;
 
 CContextQueryToDXL::CContextQueryToDXL
 	(
-	IMemoryPool *mp
+	CMemoryPool *mp
 	)
   :
   m_mp(mp),

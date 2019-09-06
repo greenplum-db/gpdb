@@ -1,0 +1,13 @@
+Pkgname: sample
+Architecture: #arch
+OS: #os
+Version: #gppkgver
+GPDBVersion: #gpver
+Description: Sample GPDB package
+PostInstall:
+# On master node only
+- Master:  "echo 'This is a sample message shown after successful installation';"
+# On segment nodes only
+- Segment:  "echo 'This is a sample message shown after successful installation';"
+# On all nodes
+- All:  "echo 'This is a sample message shown after successful installation';"

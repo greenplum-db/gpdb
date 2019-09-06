@@ -56,23 +56,18 @@ static void GPHDUri_free_fragments(GPHDUri *uri);
 GPHDUri *
 parseGPHDUri(const char *uri_str)
 {
-	return parseGPHDUriHostPort(uri_str, PxfDefaultHost, PxfDefaultPort);
+	return parseGPHDUriHostPort(uri_str, get_pxf_host(), get_pxf_port());
 }
 
 GPHDUri *
 parseGPHDUriHostPort(const char *uri_str, const char *host, const int port)
 {
 	GPHDUri    *uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-
 	uri->host = pstrdup(host);
-	StringInfoData portstr;
-
-	initStringInfo(&portstr);
-	appendStringInfo(&portstr, "%d", port);
-	uri->port = portstr.data;
+	uri->port = psprintf("%d", port);
 	uri->uri = pstrdup(uri_str);
-	char	   *cursor = uri->uri;
 
+	char	   *cursor = uri->uri;
 	GPHDUri_parse_protocol(uri, &cursor);
 	GPHDUri_parse_data(uri, &cursor);
 	GPHDUri_parse_options(uri, &cursor);

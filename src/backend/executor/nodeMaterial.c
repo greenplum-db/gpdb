@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -551,6 +551,8 @@ ExecChildRescan(MaterialState *node)
 void
 ExecReScanMaterial(MaterialState *node)
 {
+	PlanState  *outerPlan = outerPlanState(node);
+
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 
 	if (node->eflags != 0)
@@ -582,12 +584,12 @@ ExecReScanMaterial(MaterialState *node)
 		 * Otherwise we can just rewind and rescan the stored output. The
 		 * state of the subnode does not change.
 		 */
-		if (node->ss.ps.lefttree->chgParam != NULL ||
+		if (outerPlan->chgParam != NULL ||
 			(node->eflags & EXEC_FLAG_REWIND) == 0)
 		{
 			DestroyTupleStore(node);
-			if (node->ss.ps.lefttree->chgParam == NULL)
-				ExecReScan(node->ss.ps.lefttree);
+			if (outerPlan->chgParam == NULL)
+				ExecReScan(outerPlan);
 		}
 		else
 		{

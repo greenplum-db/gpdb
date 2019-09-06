@@ -1,8 +1,4 @@
-
-################################################################################ 
-# Makefile  Makefile for Python Modules and other utilities
-# Copyright Greenplum 2006-2011
-################################################################################
+# gpMgmt/bin/Makefile
 
 default: install
 
@@ -10,6 +6,36 @@ top_builddir=../..
 ifneq "$(wildcard $(top_builddir)/src/Makefile.global)" ""
 include $(top_builddir)/src/Makefile.global
 endif
+
+SUBDIRS= stream gpcheckcat_modules gpconfig_modules gpssh_modules gppylib lib
+
+$(recurse)
+
+PROGRAMS= analyzedb gpactivatestandby gpaddmirrors gpcheckcat gpcheckperf \
+	gpcheckresgroupimpl gpconfig gpdeletesystem gpexpand gpinitstandby \
+	gpinitsystem gpload gpload.py gplogfilter gpmovemirrors \
+	gppkg gprecoverseg gpreload gpscp gpsd gpssh gpssh-exkeys gpstart \
+	gpstate gpstop gpsys1 minirepro
+
+installdirs:
+	$(MKDIR_P) '$(DESTDIR)$(bindir)/lib'
+
+installprograms: installdirs
+	for file in $(PROGRAMS); do \
+		$(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)/'$$file ; \
+		$(PERL) $(top_builddir)/putversion '$(DESTDIR)$(bindir)/'$$file ; \
+	done
+	# Symlink gpcheckcat from bin to bin/lib to maintain backward compatibility
+	if [ ! -L $(DESTDIR)$(bindir)/lib/gpcheckcat  ]; then \
+		$(LN_S) $(DESTDIR)$(bindir)/gpcheckcat $(DESTDIR)$(bindir)/lib/gpcheckcat; \
+	fi
+	$(INSTALL_DATA) gpload.bat '$(DESTDIR)$(bindir)/gpload.bat'
+
+uninstall:
+	for file in $(PROGRAMS); do \
+		rm -f '$(DESTDIR)$(bindir)/'$$file ; \
+	done
+	rm -f '$(DESTDIR)$(bindir)/gpload.bat'
 
 #
 # SOURCE DIRECTORIES
@@ -32,23 +58,14 @@ core: pygresql subprocess32
 	python gpconfig_modules/parse_guc_metadata.py $(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-install: core lockfile paramiko ecdsa pycrypto stream psutil
+install: installdirs installprograms core lockfile psutil
 else
-install: core stream
+install: installdirs installprograms core
 endif
 
 #
 # Python Libraries
 #
-
-#
-#  STREAM which is used by gpcheckperf for memory bandwidth testing.
-#
-STREAM_DIR=$(SRC)/src/stream
-stream:
-	@echo "--- stream"
-	cd $(STREAM_DIR) && NO_M64=TRUE $(CC) stream.c -o stream
-	cp $(STREAM_DIR)/stream $(SERVER_SRC)/lib/stream
 
 #
 # PyGreSQL
@@ -58,10 +75,12 @@ PYGRESQL_DIR=PyGreSQL-$(PYGRESQL_VERSION)
 
 pygresql:
 	@echo "--- PyGreSQL"
+	if [ ! -f $(DESTDIR)$(prefix)/greenplum_path.sh ]; then \
+		unset LIBPATH; \
+		./generate-greenplum-path.sh $(prefix) > $(DESTDIR)$(prefix)/greenplum_path.sh ; \
+	fi
 	. $(prefix)/greenplum_path.sh && unset PYTHONHOME && \
-	if [ `uname -s` = 'HP-UX' ]; then \
-	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" LDFLAGS="-L../../../../gpAux/ext/hpux_ia64/python-2.5.6/lib" python setup.py build; \
-	elif [ "$(BLD_ARCH)" = 'aix7_ppc_64' ]; then \
+	if [ "$(BLD_ARCH)" = 'aix7_ppc_64' ]; then \
 	    unset PYTHONPATH && cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" python_64 setup.py build; \
 	elif [ `uname -s` = 'OpenBSD' ]; then \
 	    cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC=cc python setup.py build; \
@@ -79,28 +98,6 @@ pygresql:
 	  cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.linux*/* $(PYLIB_DIR)/pygresql; \
 	fi
 	touch $(PYLIB_DIR)/__init__.py
-
-#
-# PARAMIKO
-#
-PARAMIKO_VERSION=1.18.4
-PARAMIKO_DIR=paramiko-$(PARAMIKO_VERSION)
-paramiko:
-	@echo "--- paramiko"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PARAMIKO_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/build/lib*/paramiko $(PYLIB_DIR)/
-
-#
-# ecdsa
-#
-ECDSA_VERSION=0.13
-ECDSA_DIR=ecdsa-$(ECDSA_VERSION)
-ecdsa:
-	@echo "--- ecdsa"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(ECDSA_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(ECDSA_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(ECDSA_DIR)/build/lib*/ecdsa $(PYLIB_DIR)/
 
 #
 # LOCKFILE
@@ -129,33 +126,6 @@ subprocess32:
 	  fi
 
 #
-# PYCRYPTO
-#
-PYCRYPTO_VERSION=2.0.1
-PYCRYPTO_DIR=pycrypto-$(PYCRYPTO_VERSION)
-
-pycrypto:
-	@echo "--- pycrypto"
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 )" ""
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYCRYPTO_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)/ && CC="$(CC)" python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)/build/lib.*/Crypto $(PYLIB_DIR)
-endif
-
-#
-# PSI
-PSI_DIR=PSI-$(PSI_VERSION)
-
- psi:
-	@echo "--- psi"
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 )" ""
-	cd $(PYLIB_SRC)/ && $(TAR) xzf $(PSI_DIR).tar.gz
-	cd $(PYLIB_SRC)/$(PSI_DIR)/ && CC="$(CC)" python setup.py build
-	cp -r $(PYLIB_SRC)/$(PSI_DIR)/build/lib.*/psi $(PYLIB_DIR)
-endif
-
-
-#
 # PSUTIL
 #
 PSUTIL_VERSION=4.0.0
@@ -182,11 +152,9 @@ LOGILAB_COMMON_DIR=logilab-common-$(LOGILAB_COMMON_VERSION)
 PYLINT_PYTHONPATH=$(PYLIB_DIR):$(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/
 MOCK_VERSION=1.0.1
 MOCK_DIR=mock-$(MOCK_VERSION)
-BEHAVE_VERSION=1.2.4
 SETUP_TOOLS_VERSION=36.6.0
 PARSE_VERSION=1.8.2
 ARG_PARSE_VERSION=1.2.1
-BEHAVE_DIR=behave-$(BEHAVE_VERSION)
 SETUP_TOOLS_DIR=setuptools-$(SETUP_TOOLS_VERSION)
 PARSE_DIR=parse-$(PARSE_VERSION)
 ARG_PARSE_DIR=argparse-$(ARG_PARSE_VERSION)
@@ -194,7 +162,6 @@ PYTHONSRC_INSTALL=$(PYLIB_SRC_EXT)/install
 PYTHON_VERSION=$(shell python -c "import sys; print ('%s.%s' % (sys.version_info[0:2]))")
 PYTHONSRC_INSTALL_SITE=$(PYLIB_SRC_EXT)/install/lib/python$(PYTHON_VERSION)/site-packages
 PYTHONSRC_INSTALL_PYTHON_PATH=$(PYTHONPATH):$(PYTHONSRC_INSTALL_SITE)
-BEHAVE_BIN=$(PYTHONSRC_INSTALL)/bin/behave
 # TODO: mock-1.0.1-py2.6.egg package should be updated.
 MOCK_BIN=$(PYTHONSRC_INSTALL)/lib/python$(PYTHON_VERSION)/site-packages/mock-1.0.1-py2.6.egg
 UBUNTU_PLATFORM=$(shell if lsb_release -a 2>/dev/null | grep -q 'Ubuntu' ; then echo "Ubuntu"; fi)
@@ -222,27 +189,6 @@ $(MOCK_BIN):
 	   cd $(PYLIB_SRC_EXT)/$(MOCK_DIR)/ && \
 	   PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL) ; \
 	 fi;
-
-#
-# BEHAVE 
-#
-
-$(BEHAVE_BIN):
-	@echo "--- build $(BEHAVE_BIN)"
-	@mkdir -p $(PYTHONSRC_INSTALL_SITE)
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(BEHAVE_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(SETUP_TOOLS_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PARSE_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(ARG_PARSE_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/$(SETUP_TOOLS_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
-	@cd $(PYLIB_SRC_EXT)/$(PARSE_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
-	@cd $(PYLIB_SRC_EXT)/$(ARG_PARSE_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
-	# We're forcing a change in the requirements since we're in python
-	# 2.7.12. There's a new syntax in the python requirements for
-	# parse_type 0.4.2 which breaks if you're under 2.7.13
-	@cd $(PYLIB_SRC_EXT)/$(BEHAVE_DIR)/ && sed -i 's/parse_type>=0.3.4/parse_type==0.4.1/' setup.py \
-		&& PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
-	@echo "--- behave done"
 
 PYTHON_FILES=`grep -l --exclude=Makefile --exclude=gplogfilter "/bin/env python" *`\
 			 `grep -l "/bin/env python" $(SRC)/../sbin/*`\
@@ -272,27 +218,22 @@ unitdevel:
 	PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SRC)/ext:$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
 	    python -m unittest discover --verbose -s $(SRC)/gppylib -p "test_unit*.py"
 
-solarisTest:
-	@if [ `uname -s` = 'SunOS' ]; then \
-		echo "SOLARIS" ; \
-	fi
-
 .PHONY: installcheck
 installcheck:
 	$(MAKE) -C gpload_test $@
 
 clean distclean:
 	rm -rf $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)
-	rm -rf $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)
-	rm -rf $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(PYLINT_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
 	rm -rf $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/$(PYGRESQL_DIR)/build
 	rm -rf $(PYLIB_SRC)/subprocess32/build
-	rm -rf $(STREAM_DIR)/stream lib/stream
-	rm -rf *.pyc lib/*.pyc
-	rm -f gpcheckcatc gpexpandc
+	rm -rf *.pyc
+	rm -f analyzedbc gpactivatestandbyc gpaddmirrorsc gpcheckcatc \
+		  gpcheckperfc gpcheckresgroupimplc gpchecksubnetcfgc gpconfigc \
+		  gpdeletesystemc gpexpandc gpinitstandbyc gplogfilterc gpmovemirrorsc \
+		  gppkgc gprecoversegc gpreloadc gpscpc gpsdc gpssh-exkeysc gpsshc \
+		  gpstartc gpstatec gpstopc gpsys1c minireproc
 	rm -f gpconfig_modules/gucs_disallowed_in_file.txt
-	rm -f gppylib/data/$(GP_MAJORVERSION).json

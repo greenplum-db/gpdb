@@ -66,7 +66,7 @@
     <p>Partitioning of big collections and the proper use of GiST and GIN indexes allows the
       implementation of very fast searches with online update. Partitioning can be done at the
       database level using table inheritance, or by distributing documents over servers and
-      collecting search results using <xref href="../../utility_guide/dblink.xml#topic_lv4_czp_fz"
+      collecting search results using <xref href="../../ref_guide/modules/dblink.xml#topic_lv4_czp_fz"
       />. The latter is possible because ranking functions use only local information.</p>
   </body>
 </topic>

@@ -3,7 +3,7 @@
  * hio.c
  *	  POSTGRES heap access method input/output code.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -33,14 +33,19 @@
  * Note - caller must hold BUFFER_LOCK_EXCLUSIVE on the buffer.
  */
 void
-RelationPutHeapTuple(Relation relation __attribute__((unused)),
+RelationPutHeapTuple(Relation relation pg_attribute_unused(),
 					 Buffer buffer,
-					 HeapTuple tuple)
+					 HeapTuple tuple,
+					 bool token)
 {
 	Page		pageHeader;
 	OffsetNumber offnum;
-	ItemId		itemId;
-	Item		item;
+
+	/*
+	 * A tuple that's being inserted speculatively should already have its
+	 * token set.
+	 */
+	Assert(!token || HeapTupleHeaderIsSpeculative(tuple->t_data));
 
 	/* Add the tuple to the page */
 	pageHeader = BufferGetPage(buffer);
@@ -54,10 +59,18 @@ RelationPutHeapTuple(Relation relation __attribute__((unused)),
 	/* Update tuple->t_self to the actual position where it was stored */
 	ItemPointerSet(&(tuple->t_self), BufferGetBlockNumber(buffer), offnum);
 
-	/* Insert the correct position into CTID of the stored tuple, too */
-	itemId = PageGetItemId(pageHeader, offnum);
-	item = PageGetItem(pageHeader, itemId);
-	((HeapTupleHeader) item)->t_ctid = tuple->t_self;
+	/*
+	 * Insert the correct position into CTID of the stored tuple, too (unless
+	 * this is a speculative insertion, in which case the token is held in
+	 * CTID field instead)
+	 */
+	if (!token)
+	{
+		ItemId		itemId = PageGetItemId(pageHeader, offnum);
+		Item		item = PageGetItem(pageHeader, itemId);
+
+		((HeapTupleHeader) item)->t_ctid = tuple->t_self;
+	}
 }
 
 /*

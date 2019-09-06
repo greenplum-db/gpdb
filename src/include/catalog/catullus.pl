@@ -891,7 +891,8 @@ sub printfndef
 		($tup->{proallargtypes} ? '"' . $tup->{proallargtypes} . '"'  : "_null_")  . " " .
 		($tup->{proargmodes} ? '"' . $tup->{proargmodes} . '"' : "_null_") . " " .
 		($tup->{proargnames} ? '"' . $tup->{proargnames} . '"' : "_null_") . " " .
-		($tup->{proargdefault} ? $tup->{proargdefaults} : "_null_") . " " .
+		($tup->{proargdefaults} ? $tup->{proargdefaults} : "_null_") . " " .
+		($tup->{protrftypes} ? '"' . $tup->{protrftypes} . '"'  : "_null_")  . " " .
 		(exists($fndef->{with}->{prosrc}) ? $fndef->{with}->{prosrc} :
 		 ($tup->{prosrc} ? $tup->{prosrc} : "_null_" )) . " " .
 		($tup->{probin} ? $tup->{probin} : "_null_") . " " .

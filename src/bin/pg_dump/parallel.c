@@ -4,7 +4,7 @@
  *
  *	Parallel support for pg_dump and pg_restore
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -65,6 +65,7 @@
 
 #include "pg_backup_utils.h"
 #include "parallel.h"
+#include "pg_backup_utils.h"
 
 #ifndef WIN32
 #include <sys/types.h>
@@ -174,9 +175,10 @@ static void WaitForTerminatingWorkers(ParallelState *pstate);
 static void setup_cancel_handler(void);
 static void set_cancel_pstate(ParallelState *pstate);
 static void set_cancel_slot_archive(ParallelSlot *slot, ArchiveHandle *AH);
-static void RunWorker(ArchiveHandle *AH, ParallelSlot *slot, RestoreOptions *ropt);
+static void RunWorker(ArchiveHandle *AH, ParallelSlot *slot);
 static bool HasEveryWorkerTerminated(ParallelState *pstate);
 static void lockTableForWorker(ArchiveHandle *AH, TocEntry *te);
+
 static void WaitForCommands(ArchiveHandle *AH, int pipefd[2]);
 static char *getMessageFromMaster(int pipefd[2]);
 static void sendMessageToMaster(int pipefd[2], const char *str);
@@ -803,7 +805,7 @@ set_cancel_slot_archive(ParallelSlot *slot, ArchiveHandle *AH)
  * upon return.
  */
 static void
-RunWorker(ArchiveHandle *AH, ParallelSlot *slot, RestoreOptions *ropt)
+RunWorker(ArchiveHandle *AH, ParallelSlot *slot)
 {
 	int			pipefd[2];
 
@@ -828,7 +830,7 @@ RunWorker(ArchiveHandle *AH, ParallelSlot *slot, RestoreOptions *ropt)
 	/*
 	 * Call the setup worker function that's defined in the ArchiveHandle.
 	 */
-	(AH->SetupWorkerPtr) ((Archive *) AH, ropt);
+	(AH->SetupWorkerPtr) ((Archive *) AH);
 
 	/*
 	 * Execute commands until done.
@@ -852,13 +854,12 @@ init_spawned_worker_win32(WorkerInfo *wi)
 {
 	ArchiveHandle *AH = wi->AH;
 	ParallelSlot *slot = wi->slot;
-	RestoreOptions *ropt = wi->ropt;
 
 	/* Don't need WorkerInfo anymore */
 	free(wi);
 
 	/* Run the worker ... */
-	RunWorker(AH, slot, ropt);
+	RunWorker(AH, slot);
 
 	/* Exit the thread */
 	_endthreadex(0);
@@ -872,7 +873,7 @@ init_spawned_worker_win32(WorkerInfo *wi)
  * workers are created with fork().
  */
 ParallelState *
-ParallelBackupStart(ArchiveHandle *AH, RestoreOptions *ropt)
+ParallelBackupStart(ArchiveHandle *AH)
 {
 	ParallelState *pstate;
 	int			i;
@@ -953,7 +954,6 @@ ParallelBackupStart(ArchiveHandle *AH, RestoreOptions *ropt)
 
 		wi->AH = AH;
 		wi->slot = slot;
-		wi->ropt = ropt;
 
 		handle = _beginthreadex(NULL, 0, (void *) &init_spawned_worker_win32,
 								wi, 0, &(slot->threadId));
@@ -987,7 +987,7 @@ ParallelBackupStart(ArchiveHandle *AH, RestoreOptions *ropt)
 			}
 
 			/* Run the worker ... */
-			RunWorker(AH, slot, ropt);
+			RunWorker(AH, slot);
 
 			/* We can just exit(0) when done */
 			exit(0);

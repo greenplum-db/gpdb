@@ -1,5 +1,3 @@
-1:CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
 1:CREATE TABLE crash_test_table(c1 int);
 CREATE
 
@@ -19,62 +17,64 @@ CREATE
 1:select gp_inject_fault_infinite('dtm_broadcast_commit_prepared', 'suspend', 1);
  gp_inject_fault_infinite 
 --------------------------
- t                        
+ Success:                 
 (1 row)
-2&:insert into crash_test_table values (1);  <waiting ...>
+2&:insert into crash_test_table values (1), (11), (111), (1111);  <waiting ...>
 3&:create table crash_test_ddl(c1 int);  <waiting ...>
 
 -- wait session 2 and session 3 hit inject point
 1:select gp_wait_until_triggered_fault('dtm_broadcast_commit_prepared', 2, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 1:CHECKPOINT;
 CHECKPOINT
 
 -- transaction of session 4 inserted 'COMMIT' record after checkpoint
-4&:insert into crash_test_table values (2);  <waiting ...>
+4&:insert into crash_test_table values (2), (22), (222), (2222);  <waiting ...>
 
 -- wait session 4 hit inject point
 1:select gp_wait_until_triggered_fault('dtm_broadcast_commit_prepared', 3, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 
 -- transaction of session 5 didn't insert 'COMMIT' record
 1:select gp_inject_fault_infinite('transaction_abort_after_distributed_prepared', 'suspend', 1);
  gp_inject_fault_infinite 
 --------------------------
- t                        
+ Success:                 
 (1 row)
-5&:INSERT INTO crash_test_table VALUES (3);  <waiting ...>
+5&:INSERT INTO crash_test_table VALUES (3), (33), (333), (3333);  <waiting ...>
 
 -- wait session 5 hit inject point
 1:select gp_wait_until_triggered_fault('transaction_abort_after_distributed_prepared', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 
 -- check injector status
 1:select gp_inject_fault('dtm_broadcast_commit_prepared', 'status', 1);
- gp_inject_fault 
------------------
- t               
+ gp_inject_fault                                                                                                                                                                                                                        
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'dtm_broadcast_commit_prepared' fault type:'suspend' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'3' 
+ 
 (1 row)
 1:select gp_inject_fault('transaction_abort_after_distributed_prepared', 'status', 1);
- gp_inject_fault 
------------------
- t               
+ gp_inject_fault                                                                                                                                                                                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'transaction_abort_after_distributed_prepared' fault type:'suspend' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1' 
+ 
 (1 row)
 
 -- trigger crash
 1:select gp_inject_fault('before_read_command', 'panic', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 1:select 1;
 PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
@@ -104,11 +104,17 @@ server closed the connection unexpectedly
 -- Strangely, the test framework does not sort this output.
 -- So to make things correct, we add `order by` here.
 6:select * from crash_test_table order by 1;
- c1 
-----
- 1  
- 2  
-(2 rows)
+ c1   
+------
+ 1    
+ 2    
+ 11   
+ 22   
+ 111  
+ 222  
+ 1111 
+ 2222 
+(8 rows)
 6:select * from crash_test_ddl order by 1;
  c1 
 ----

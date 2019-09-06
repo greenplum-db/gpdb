@@ -43,10 +43,10 @@ struct StringInfoData;                  /* #include "lib/stringinfo.h" */
  */
 typedef struct TuplesortPos TuplesortPos;
 struct Tuplesortstate;
-
+struct ScanState;
 
 extern struct Tuplesortstate *tuplesort_begin_heap_file_readerwriter(
-		ScanState * ss,
+		struct ScanState * ss,
 		const char* rwfile_prefix, bool isWriter,
 		TupleDesc tupDesc, 
 		int nkeys, AttrNumber *attNums,

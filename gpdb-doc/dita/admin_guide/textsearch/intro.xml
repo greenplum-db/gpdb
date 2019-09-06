@@ -21,8 +21,8 @@
         the query. </p>
       <p>Greenplum Database provides a data type <codeph>tsvector</codeph> to store preprocessed
         documents, and a data type <codeph>tsquery</codeph> to store processed queries (<xref
-          href="../../ref_guide/data_types.xml#topic1/text-search-types"/>). There are many
-        functions and operators available for these data types (<xref
+          href="../../ref_guide/datatype-textsearch.xml"/>). There are many functions and operators
+        available for these data types (<xref
           href="../../ref_guide/function-summary.xml#topic_vpj_ss1_lfb"/>), the most important of
         which is the match operator <codeph>@@</codeph>, which we introduce in <xref
           href="#intro/basic-text-matching" format="dita"/>. Full text searches can be accelerated

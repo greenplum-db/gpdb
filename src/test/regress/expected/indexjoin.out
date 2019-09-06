@@ -47,7 +47,7 @@ ORDER BY 1 asc ;
                                  ->  Hash  (cost=26.27..26.27 rows=676 width=20)
                                        ->  Seq Scan on my_tq_agg_small tq  (cost=0.00..26.27 rows=676 width=20)
  Settings:  optimizer=off; optimizer_nestloop_factor=1
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (19 rows)
 
   

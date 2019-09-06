@@ -7,7 +7,7 @@
  * accessed via the extended FE/BE query protocol.
  *
  *
- * Copyright (c) 2002-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/commands/prepare.c
@@ -403,10 +403,9 @@ EvaluateParams(PreparedStatement *pstmt, List *params,
 	/* Prepare the expressions for execution */
 	exprstates = (List *) ExecPrepareExpr((Expr *) params, estate);
 
-	/* sizeof(ParamListInfoData) includes the first array element */
 	paramLI = (ParamListInfo)
-		palloc(sizeof(ParamListInfoData) +
-			   (num_params - 1) * sizeof(ParamExternData));
+		palloc(offsetof(ParamListInfoData, params) +
+			   num_params * sizeof(ParamExternData));
 	/* we have static list of params, so no hooks needed */
 	paramLI->paramFetch = NULL;
 	paramLI->paramFetchArg = NULL;

@@ -66,11 +66,13 @@
               for syntactic correctness (a <codeph>\u</codeph> followed by four hex digits). </li>
             <li>The Greenplum Database input function for the <codeph>jsonb</codeph> data type is
               more strict. It does not allow Unicode escapes for non-ASCII characters (those above
-                <codeph>U+007F</codeph>) unless the database encoding is UTF8. It also requires that
-              any use of Unicode surrogate pairs to designate characters outside the Unicode Basic
-              Multilingual Plane be correct. Valid Unicode escapes, except for<codeph>
-                \u0000</codeph>, are then converted to the equivalent ASCII or UTF8 character for
-              storage; this includes folding surrogate pairs into a single character.</li>
+                <codeph>U+007F</codeph>) unless the database encoding is UTF8. It also rejects
+                <codeph>\u0000</codeph>, which cannot be represented in the Greenplum Database
+                <codeph>text</codeph> type, and it requires that any use of Unicode surrogate pairs
+              to designate characters outside the Unicode Basic Multilingual Plane be correct. Valid
+              Unicode escapes, except for <codeph>\u0000</codeph>, are converted to the equivalent
+              ASCII or UTF8 character for storage; this includes folding surrogate pairs into a
+              single character.</li>
           </ul>
         </p>
         <note>Many of the JSON processing functions described in <xref href="#topic_gn4_x3w_mq"
@@ -134,10 +136,10 @@
         </table>
         <p>There are some minor constraints on what constitutes valid <codeph>jsonb</codeph> data
           that do not apply to the <codeph>json</codeph> data type, nor to JSON in the abstract,
-          corresponding to limits on what can be represented by the underlying data type.
-          Specifically, when converting data to the <codeph>jsonb</codeph> data type, numbers that
-          are outside the range of the Greenplum Database <codeph>numeric</codeph> data type are
-          rejected, while the <codeph>json</codeph> data type does not reject such numbers. </p>
+          corresponding to limits on what can be represented by the underlying data type. Notably,
+          when converting data to the <codeph>jsonb</codeph> data type, numbers that are outside the
+          range of the Greenplum Database <codeph>numeric</codeph> data type are rejected, while the
+            <codeph>json</codeph> data type does not reject such numbers. </p>
         <p>Such implementation-defined restrictions are permitted by RFC 7159. However, in practice
           such problems might occur in other implementations, as it is common to represent the JSON
             <codeph>number</codeph> primitive type as IEEE 754 double precision floating point
@@ -239,7 +241,7 @@ SELECT '[1, 2, 3]'::jsonb @> '[1, 2, 2]'::jsonb;
 
 -- The object with a single pair on the right side is contained
 -- within the object on the left side:
-SELECT '{"product": "Greenplum", "version": "6.0.0", "jsonb":true}'::jsonb @> '{"version":"6.0.0"}'::jsonb;
+SELECT '{"product": "Greenplum", "version": "7.0.0", "jsonb":true}'::jsonb @> '{"version":"7.0.0"}'::jsonb;
 
 -- The array on the right side is <b>not</b> considered contained within the
 -- array on the left, even though a similar array is nested within it:
@@ -848,7 +850,7 @@ Array with n elements > array with n - 1 elements</pre>
           as <codeph>to_json</codeph> except for offering a pretty-printing option. The behavior
           described for <codeph>to_json</codeph> likewise applies to each individual value converted
           by the other JSON creation functions.</note>
-        <note>The <xref href="../../../utility_guide/hstore.xml#topic_vcn_jkq_1bb">hstore
+        <note>The <xref href="../../../ref_guide/modules/hstore.xml">hstore
             module</xref> contains functions that cast from <codeph>hstore</codeph> to
             <codeph>json</codeph>, so that <codeph>hstore</codeph> values converted via the JSON
           creation functions will be represented as JSON objects, not as primitive string

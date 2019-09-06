@@ -1,6 +1,7 @@
+# Note: these tests require the rpm binary to be installed
 @gppkg
 Feature: gppkg tests
-    @gppkg_setup
+
     Scenario: gppkg environment does not have any gppkg
         Given the database is running
         And database "gptest" exists
@@ -43,14 +44,23 @@ Feature: gppkg tests
         And gppkg should print "Skipping update of gppkg based on user input" to stdout
         And gppkg should print "Do you still want to continue ?" to stdout
 
-    @gppkg_query
     Scenario: gppkg --query --all when nothing is installed should report nothing installed
         Given the database is running
         When the user runs "gppkg --query --all"
         Then gppkg should return a return code of 0
         And gppkg should print "Starting gppkg with args: --query --all" to stdout
 
-    @gppkg_install_remove
+    Scenario: gppkg --remove should report failure when the package is not installed
+        Given the database is running
+        When the user runs "gppkg --remove sample"
+        Then gppkg should return a return code of 2
+        And gppkg should print "Package sample has not been installed" to stdout
+
+########################### @concourse_cluster tests ###########################
+# The @concourse_cluster tag denotes the scenario that requires a remote cluster
+
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gppkg --install should report success because the package is not yet installed
         Given the database is running
         When the user runs "gppkg --install test/behave/mgmt_utils/steps/data/sample.gppkg"
@@ -59,14 +69,16 @@ Feature: gppkg tests
         And gppkg should print "Completed local installation of sample" to stdout
         And "sample" gppkg files exist on all hosts
 
-    @gppkg_install_remove
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gppkg --install should report failure because the package is already installed
         Given the database is running
         When the user runs "gppkg --install test/behave/mgmt_utils/steps/data/sample.gppkg"
         Then gppkg should return a return code of 2
         And gppkg should print "sample.gppkg is already installed." to stdout
 
-    @gppkg_install_remove
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gppkg --remove should report success when the package is already installed
         Given the database is running
         When the user runs "gppkg --remove sample"
@@ -76,14 +88,8 @@ Feature: gppkg tests
         And gppkg should print "sample.gppkg successfully uninstalled" to stdout
         And "sample" gppkg files do not exist on any hosts
 
-    @gppkg_install_remove
-    Scenario: gppkg --remove should report failure when the package is not installed
-        Given the database is running
-        When the user runs "gppkg --remove sample"
-        Then gppkg should return a return code of 2
-        And gppkg should print "Package sample has not been installed" to stdout
-
-    @gppkg_query_list
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gppkg --query should report installed packages
         Given the database is running
         # to be idempotent, potentially reinstalling if the above test just ran,
@@ -94,7 +100,8 @@ Feature: gppkg tests
         And gppkg should print "Starting gppkg with args: --query --all" to stdout
         And gppkg should print "sample" to stdout
 
-    @gppkg_multinode_clean
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gppkg --clean (which should be named "sync") should install to the segment host that lacks a gppkg found elsewhere
         Given the database is running
         When the user runs "gppkg --install test/behave/mgmt_utils/steps/data/sample.gppkg"
@@ -104,7 +111,8 @@ Feature: gppkg tests
         And gppkg should print "The following packages will be installed on .*: sample.gppkg" to stdout
         And "sample" gppkg files exist on all hosts
 
-    @gppkg_multinode_clean
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gppkg --clean (which should be named "sync") should remove on all segment hosts when gppkg does not exist in master
         Given the database is running
         When the user runs "gppkg --install test/behave/mgmt_utils/steps/data/sample.gppkg"
@@ -114,10 +122,12 @@ Feature: gppkg tests
         And gppkg should print "The following packages will be uninstalled on .*: sample.gppkg" to stdout
         And "sample" gppkg files do not exist on any hosts
 
-    @gppkg_multinode_migrate
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gppkg --migrate copies all packages from master to all segment hosts
         Given the database is running
         And the user runs "gppkg -r sample"
+        And a gphome copy is created at /tmp/gppkg_migrate on all hosts
         When a user runs "MASTER_DATA_DIRECTORY=$MASTER_DATA_DIRECTORY gppkg -r sample" with gphome "/tmp/gppkg_migrate"
         And "sample" gppkg files do not exist on any hosts
         When a user runs "MASTER_DATA_DIRECTORY=$MASTER_DATA_DIRECTORY gppkg --install $(pwd)/test/behave/mgmt_utils/steps/data/sample.gppkg" with gphome "/tmp/gppkg_migrate"

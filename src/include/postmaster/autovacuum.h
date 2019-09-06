@@ -4,7 +4,7 @@
  *	  header file for integrated autovacuum daemon
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/postmaster/autovacuum.h
@@ -46,7 +46,6 @@ extern bool IsAutoVacuumWorkerProcess(void);
 /* Functions to start autovacuum process, called from postmaster */
 extern void autovac_init(void);
 extern int	autovac_start(void);  // OLD interface
-extern void autovac_stopped(void);  // OLD interface
 extern int	StartAutoVacLauncher(void);
 extern int	StartAutoVacWorker(void);
 
@@ -57,8 +56,8 @@ extern void AutoVacWorkerFailed(void);
 extern void AutoVacuumUpdateDelay(void);
 
 #ifdef EXEC_BACKEND
-extern void AutoVacLauncherMain(int argc, char *argv[]) __attribute__((noreturn));
-extern void AutoVacWorkerMain(int argc, char *argv[]) __attribute__((noreturn));
+extern void AutoVacLauncherMain(int argc, char *argv[]) pg_attribute_noreturn();
+extern void AutoVacWorkerMain(int argc, char *argv[]) pg_attribute_noreturn();
 extern void AutovacuumWorkerIAm(void);
 extern void AutovacuumLauncherIAm(void);
 #endif

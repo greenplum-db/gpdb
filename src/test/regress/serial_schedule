@@ -50,6 +50,7 @@ test: oidjoins
 test: type_sanity
 test: opr_sanity
 test: insert
+test: insert_conflict
 test: create_function_1
 test: create_type
 test: create_table
@@ -71,6 +72,7 @@ test: typed_table
 test: vacuum
 test: drop_if_exists
 test: updatable_views
+test: rolenames
 test: sanity_check
 test: errors
 test: select
@@ -84,6 +86,7 @@ test: union
 test: case
 test: join
 test: aggregates
+test: groupingsets
 ignore: transactions
 ignore: random
 test: random
@@ -95,6 +98,10 @@ test: update
 test: delete
 test: namespace
 ignore: prepared_xacts
+test: brin
+test: gin
+test: gist
+test: spgist
 test: privileges
 test: security_label
 test: collate
@@ -102,12 +109,13 @@ test: collate
 #test: matview
 test: lock
 test: replica_identity
+test: rowsecurity
+test: object_address
 test: alter_generic
 test: misc
 test: psql
 test: async
 test: rules
-test: event_trigger
 test: select_views
 test: portals_p2
 test: foreign_key
@@ -150,4 +158,7 @@ test: returning
 ignore: largeobject
 test: with
 test: xml
+test: event_trigger
 test: stats
+test: tablesample
+test: createdb

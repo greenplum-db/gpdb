@@ -4,7 +4,7 @@
  *	  PlaceHolderVar and PlaceHolderInfo manipulation routines
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -383,10 +383,10 @@ add_placeholders_to_base_rels(PlannerInfo *root)
 	{
 		PlaceHolderInfo *phinfo = (PlaceHolderInfo *) lfirst(lc);
 		Relids		eval_at = phinfo->ph_eval_at;
+		int			varno;
 
-		if (bms_membership(eval_at) == BMS_SINGLETON)
+		if (bms_get_singleton_member(eval_at, &varno))
 		{
-			int			varno = bms_singleton_member(eval_at);
 			RelOptInfo *rel = find_base_rel(root, varno);
 
 			/* add it to reltargetlist if needed above the rel scan level */

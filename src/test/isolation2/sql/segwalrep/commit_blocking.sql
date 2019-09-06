@@ -13,7 +13,6 @@ create table segwalrep_commit_blocking (a int) distributed by (a);
 insert into segwalrep_commit_blocking values (5);
 
 -- skip FTS probes always
-create extension if not exists gp_inject_fault;
 select gp_inject_fault('fts_probe', 'reset', 1);
 select gp_inject_fault_infinite('fts_probe', 'skip', 1);
 -- force scan to trigger the fault
@@ -40,7 +39,7 @@ select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- this should block since mirror is not up and sync replication is on
 3: begin;
-3: insert into segwalrep_commit_blocking values (5);
+3: insert into segwalrep_commit_blocking values (4);
 3&: commit;
 
 -- this should not block due to direct dispatch to primary with active synced mirror

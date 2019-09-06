@@ -1664,25 +1664,6 @@ select * from json_to_recordset('[{"a":1,"b":"foo","d":false},{"a":2,"b":"bar","
  2 | bar | t
 (2 rows)
 
--- checking proisstrict settings
-select '[{"a":1}]'::json->0->'b';
- ?column? 
-----------
- 
-(1 row)
-
-select '[{"a":1}]'::json->1;
- ?column? 
-----------
- 
-(1 row)
-
-select '[{"a":1}]'::json->1->'a';
- ?column? 
-----------
- 
-(1 row)
-
 select * from json_to_recordset('[{"a":1,"b":{"d":"foo"},"c":true},{"a":2,"c":false,"b":{"d":"bar"}}]')
     as x(a int, b json, c boolean);
  a |      b      | c 
@@ -1705,5 +1686,74 @@ from json_to_recordset('[{"a":1, "b":{"c":16, "d":2}, "x":8}]'::json)
  a |        b        | c | x | c_is_null 
 ---+-----------------+---+---+-----------
  1 | {"c":16, "d":2} |   | 8 | t
+(1 row)
+
+-- json_strip_nulls
+select json_strip_nulls(null);
+ json_strip_nulls 
+------------------
+ 
+(1 row)
+
+select json_strip_nulls('1');
+ json_strip_nulls 
+------------------
+ 1
+(1 row)
+
+select json_strip_nulls('"a string"');
+ json_strip_nulls 
+------------------
+ "a string"
+(1 row)
+
+select json_strip_nulls('null');
+ json_strip_nulls 
+------------------
+ null
+(1 row)
+
+select json_strip_nulls('[1,2,null,3,4]');
+ json_strip_nulls 
+------------------
+ [1,2,null,3,4]
+(1 row)
+
+select json_strip_nulls('{"a":1,"b":null,"c":[2,null,3],"d":{"e":4,"f":null}}');
+          json_strip_nulls          
+------------------------------------
+ {"a":1,"c":[2,null,3],"d":{"e":4}}
+(1 row)
+
+select json_strip_nulls('[1,{"a":1,"b":null,"c":2},3]');
+  json_strip_nulls   
+---------------------
+ [1,{"a":1,"c":2},3]
+(1 row)
+
+-- an empty object is not null and should not be stripped
+select json_strip_nulls('{"a": {"b": null, "c": null}, "d": {} }');
+ json_strip_nulls 
+------------------
+ {"a":{},"d":{}}
+(1 row)
+
+-- checking proisstrict settings
+select '[{"a":1}]'::json->0->'b';
+ ?column? 
+----------
+ 
+(1 row)
+
+select '[{"a":1}]'::json->1;
+ ?column? 
+----------
+ 
+(1 row)
+
+select '[{"a":1}]'::json->1->'a';
+ ?column? 
+----------
+ 
 (1 row)
 

@@ -1,6 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
-
 DROP TABLE IF EXISTS tsudf;
 DROP
 
@@ -16,12 +13,12 @@ INSERT 10
 SELECT gp_inject_fault('upgrade_row_lock', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 SELECT gp_inject_fault('upgrade_row_lock', 'sleep', '', '', '', 1, -1, 10, 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 3&: SELECT * FROM func1(1);  <waiting ...>
@@ -42,5 +39,5 @@ SELECT gp_inject_fault('upgrade_row_lock', 'sleep', '', '', '', 1, -1, 10, 1);
 SELECT gp_inject_fault('upgrade_row_lock', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)

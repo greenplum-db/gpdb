@@ -20,7 +20,7 @@
  * step 2 ...
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/pg_resetxlog/pg_resetxlog.c
@@ -49,12 +49,16 @@
 #include "access/transam.h"
 #include "access/tuptoaster.h"
 #include "access/multixact.h"
+#include "access/xlog.h"
 #include "access/xlog_internal.h"
 #include "catalog/catversion.h"
 #include "catalog/pg_control.h"
 #include "common/fe_memutils.h"
+#include "common/restricted_token.h"
 #include "storage/large_object.h"
 #include "pg_getopt.h"
+#include "replication/logical.h"
+#include "replication/origin.h"
 
 
 static ControlFileData ControlFile;		/* pg_control values */
@@ -63,6 +67,8 @@ static bool guessed = false;	/* T if we had to guess at any values */
 static const char *progname;
 static uint32 set_xid_epoch = (uint32) -1;
 static TransactionId set_xid = 0;
+static TransactionId set_oldest_commit_ts = 0;
+static TransactionId set_newest_commit_ts = 0;
 static Oid	set_oid = 0;
 static Oid	set_relfilenode = 0;
 static MultiXactId set_mxid = 0;
@@ -85,7 +91,6 @@ static void KillExistingArchiveStatus(void);
 static void WriteEmptyXLOG(void);
 static void usage(void);
 static bool AcceptWarning(void);
-static void	get_restricted_token(const char *progname);
 
 #ifdef WIN32
 static int	CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, const char *progname);
@@ -116,7 +121,7 @@ main(int argc, char *argv[])
 	MultiXactId set_oldestmxid = 0;
 	char	   *endptr;
 	char	   *endptr2;
-	char	   *DataDir;
+	char	   *DataDir = NULL;
 	int			fd;
 
 	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_resetxlog"));
@@ -143,10 +148,14 @@ main(int argc, char *argv[])
 	}
 
 
-	while ((c = getopt_long(argc, argv, "fl:m:no:r:O:x:e:k:", long_options, NULL)) != -1)
+	while ((c = getopt_long(argc, argv, "c:D:e:fl:m:no:r:O:x:k:", long_options, NULL)) != -1)
 	{
 		switch (c)
 		{
+			case 'D':
+				DataDir = optarg;
+				break;
+
 			case 'f':
 				force = true;
 				break;
@@ -159,7 +168,9 @@ main(int argc, char *argv[])
 				set_xid_epoch = strtoul(optarg, &endptr, 0);
 				if (endptr == optarg || *endptr != '\0')
 				{
-					fprintf(stderr, _("%s: invalid argument for option -e\n"), progname);
+					/*------
+					  translator: the second %s is a command line argument (-e, etc) */
+					fprintf(stderr, _("%s: invalid argument for option %s\n"), progname, "-e");
 					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 					exit(1);
 				}
@@ -174,7 +185,7 @@ main(int argc, char *argv[])
 				set_xid = strtoul(optarg, &endptr, 0);
 				if (endptr == optarg || *endptr != '\0')
 				{
-					fprintf(stderr, _("%s: invalid argument for option -x\n"), progname);
+					fprintf(stderr, _("%s: invalid argument for option %s\n"), progname, "-x");
 					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 					exit(1);
 				}
@@ -185,11 +196,42 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case 'c':
+				set_oldest_commit_ts = strtoul(optarg, &endptr, 0);
+				if (endptr == optarg || *endptr != ',')
+				{
+					fprintf(stderr, _("%s: invalid argument for option %s\n"), progname, "-c");
+					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
+					exit(1);
+				}
+				set_newest_commit_ts = strtoul(endptr + 1, &endptr2, 0);
+				if (endptr2 == endptr + 1 || *endptr2 != '\0')
+				{
+					fprintf(stderr, _("%s: invalid argument for option %s\n"), progname, "-c");
+					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
+					exit(1);
+				}
+
+				if (set_oldest_commit_ts < 2 &&
+					set_oldest_commit_ts != 0)
+				{
+					fprintf(stderr, _("%s: transaction ID (-c) must be either 0 or greater than or equal to 2\n"), progname);
+					exit(1);
+				}
+
+				if (set_newest_commit_ts < 2 &&
+					set_newest_commit_ts != 0)
+				{
+					fprintf(stderr, _("%s: transaction ID (-c) must be either 0 or greater than or equal to 2\n"), progname);
+					exit(1);
+				}
+				break;
+
 			case 'o':
 				set_oid = strtoul(optarg, &endptr, 0);
 				if (endptr == optarg || *endptr != '\0')
 				{
-					fprintf(stderr, _("%s: invalid argument for option -o\n"), progname);
+					fprintf(stderr, _("%s: invalid argument for option %s\n"), progname, "-o");
 					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 					exit(1);
 				}
@@ -219,7 +261,7 @@ main(int argc, char *argv[])
 				set_mxid = strtoul(optarg, &endptr, 0);
 				if (endptr == optarg || *endptr != ',')
 				{
-					fprintf(stderr, _("%s: invalid argument for option -m\n"), progname);
+					fprintf(stderr, _("%s: invalid argument for option %s\n"), progname, "-m");
 					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 					exit(1);
 				}
@@ -227,7 +269,7 @@ main(int argc, char *argv[])
 				set_oldestmxid = strtoul(endptr + 1, &endptr2, 0);
 				if (endptr2 == endptr + 1 || *endptr2 != '\0')
 				{
-					fprintf(stderr, _("%s: invalid argument for option -m\n"), progname);
+					fprintf(stderr, _("%s: invalid argument for option %s\n"), progname, "-m");
 					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 					exit(1);
 				}
@@ -253,7 +295,7 @@ main(int argc, char *argv[])
 				set_mxoff = strtoul(optarg, &endptr, 0);
 				if (endptr == optarg || *endptr != '\0')
 				{
-					fprintf(stderr, _("%s: invalid argument for option -O\n"), progname);
+					fprintf(stderr, _("%s: invalid argument for option %s\n"), progname, "-O");
 					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 					exit(1);
 				}
@@ -267,7 +309,7 @@ main(int argc, char *argv[])
 			case 'l':
 				if (strspn(optarg, "01234567890ABCDEFabcdef") != 24)
 				{
-					fprintf(stderr, _("%s: invalid argument for option -l\n"), progname);
+					fprintf(stderr, _("%s: invalid argument for option %s\n"), progname, "-l");
 					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 					exit(1);
 				}
@@ -322,7 +364,20 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (optind == argc)
+	if (DataDir == NULL && optind < argc)
+		DataDir = argv[optind++];
+
+	/* Complain if any arguments remain */
+	if (optind < argc)
+	{
+		fprintf(stderr, _("%s: too many command-line arguments (first is \"%s\")\n"),
+				progname, argv[optind]);
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
+				progname);
+		exit(1);
+	}
+
+	if (DataDir == NULL)
 	{
 		fprintf(stderr, _("%s: no data directory specified\n"), progname);
 		fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
@@ -355,7 +410,6 @@ main(int argc, char *argv[])
 	}
 
 	get_restricted_token(progname);
-	DataDir = argv[optind];
 
 	if (chdir(DataDir) < 0)
 	{
@@ -429,6 +483,11 @@ main(int argc, char *argv[])
 			ControlFile.checkPointCopy.oldestXid += FirstNormalTransactionId;
 		ControlFile.checkPointCopy.oldestXidDB = InvalidOid;
 	}
+
+	if (set_oldest_commit_ts != 0)
+		ControlFile.checkPointCopy.oldestCommitTs = set_oldest_commit_ts;
+	if (set_newest_commit_ts != 0)
+		ControlFile.checkPointCopy.newestCommitTs = set_newest_commit_ts;
 
 	if (set_oid != 0)
 		ControlFile.checkPointCopy.nextOid = set_oid;
@@ -626,7 +685,7 @@ ReadControlFile(void)
 	int			fd;
 	int			len;
 	char	   *buffer;
-	pg_crc32	crc;
+	pg_crc32c	crc;
 
 	if ((fd = open(XLOG_CONTROL_FILE, O_RDONLY | PG_BINARY, 0)) < 0)
 	{
@@ -662,7 +721,9 @@ ReadControlFile(void)
 	{
 		/* Check the CRC. */
 		INIT_CRC32C(crc);
-		COMP_CRC32C(crc, buffer, offsetof(ControlFileData, crc));
+		COMP_CRC32C(crc,
+					buffer,
+					offsetof(ControlFileData, crc));
 		FIN_CRC32C(crc);
 
 		if (EQ_CRC32C(crc, ((ControlFileData *) buffer)->crc))
@@ -742,6 +803,7 @@ GuessControlValues(void)
 
 	ControlFile.wal_level = WAL_LEVEL_MINIMAL;
 	ControlFile.wal_log_hints = false;
+	ControlFile.track_commit_timestamp = false;
 	ControlFile.MaxConnections = 100;
 	ControlFile.max_worker_processes = 8;
 	ControlFile.max_prepared_xacts = 0;
@@ -827,6 +889,10 @@ PrintControlValues(bool guessed)
 		   ControlFile.checkPointCopy.oldestMulti);
 	printf(_("Latest checkpoint's oldestMulti's DB: %u\n"),
 		   ControlFile.checkPointCopy.oldestMultiDB);
+	printf(_("Latest checkpoint's oldest CommitTs:  %u\n"),
+		   ControlFile.checkPointCopy.oldestCommitTs);
+	printf(_("Latest checkpoint's newest CommitTs:  %u\n"),
+		   ControlFile.checkPointCopy.newestCommitTs);
 	printf(_("Maximum data alignment:               %u\n"),
 		   ControlFile.maxAlign);
 	/* we don't print floatFormat since can't say much useful about it */
@@ -935,6 +1001,17 @@ PrintNewControlValues()
 		printf(_("Database system identifier:           %s\n"),
 			   sysident_str);
 	}
+
+	if (set_oldest_commit_ts != 0)
+	{
+		printf(_("oldestCommitTs:                       %u\n"),
+			   ControlFile.checkPointCopy.oldestCommitTs);
+	}
+	if (set_newest_commit_ts != 0)
+	{
+		printf(_("newestCommitTs:                       %u\n"),
+			   ControlFile.checkPointCopy.newestCommitTs);
+	}
 }
 
 
@@ -972,6 +1049,7 @@ RewriteControlFile(void)
 	 */
 	ControlFile.wal_level = WAL_LEVEL_MINIMAL;
 	ControlFile.wal_log_hints = false;
+	ControlFile.track_commit_timestamp = false;
 	ControlFile.MaxConnections = 100;
 	ControlFile.max_worker_processes = 8;
 	ControlFile.max_prepared_xacts = 0;
@@ -982,7 +1060,9 @@ RewriteControlFile(void)
 
 	/* Contents are protected with a CRC */
 	INIT_CRC32C(ControlFile.crc);
-	COMP_CRC32C(ControlFile.crc, &ControlFile, offsetof(ControlFileData, crc));
+	COMP_CRC32C(ControlFile.crc,
+				(char *) &ControlFile,
+				offsetof(ControlFileData, crc));
 	FIN_CRC32C(ControlFile.crc);
 
 	/*
@@ -1075,14 +1155,18 @@ FindEndOfXLOG(void)
 
 	while (errno = 0, (xlde = readdir(xldir)) != NULL)
 	{
-		if (strlen(xlde->d_name) == 24 &&
-			strspn(xlde->d_name, "0123456789ABCDEF") == 24)
+		if (IsXLogFileName(xlde->d_name))
 		{
 			unsigned int tli,
 						log,
 						seg;
 			XLogSegNo	segno;
 
+			/*
+			 * Note: We don't use XLogFromFileName here, because we want to
+			 * use the segment size from the control file, not the size the
+			 * pg_resetxlog binary was compiled with
+			 */
 			sscanf(xlde->d_name, "%08X%08X%08X", &tli, &log, &seg);
 			segno = ((uint64) log) * segs_per_xlogid + seg;
 
@@ -1233,10 +1317,11 @@ WriteEmptyXLOG(void)
 	XLogPageHeader page;
 	XLogLongPageHeader longpage;
 	XLogRecord *record;
-	pg_crc32	crc;
+	pg_crc32c	crc;
 	char		path[MAXPGPATH];
 	int			fd;
 	int			nbytes;
+	char	   *recptr;
 
 	memset(buffer.data, 0, XLOG_BLCKSZ);
 
@@ -1252,18 +1337,22 @@ WriteEmptyXLOG(void)
 	longpage->xlp_xlog_blcksz = XLOG_BLCKSZ;
 
 	/* Insert the initial checkpoint record */
-	record = (XLogRecord *) ((char *) page + SizeOfXLogLongPHD);
+	recptr = (char *) page + SizeOfXLogLongPHD;
+	record = (XLogRecord *) recptr;
 	record->xl_prev = 0;
 	record->xl_xid = InvalidTransactionId;
-	record->xl_tot_len = SizeOfXLogRecord + sizeof(CheckPoint);
-	record->xl_len = sizeof(CheckPoint);
+	record->xl_tot_len = SizeOfXLogRecord + SizeOfXLogRecordDataHeaderShort + sizeof(CheckPoint);
 	record->xl_info = XLOG_CHECKPOINT_SHUTDOWN;
 	record->xl_rmid = RM_XLOG_ID;
-	memcpy(XLogRecGetData(record), &ControlFile.checkPointCopy,
+
+	recptr += SizeOfXLogRecord;
+	*(recptr++) = (char) XLR_BLOCK_ID_DATA_SHORT;
+	*(recptr++) = sizeof(CheckPoint);
+	memcpy(recptr, &ControlFile.checkPointCopy,
 		   sizeof(CheckPoint));
 
 	INIT_CRC32C(crc);
-	COMP_CRC32C(crc, &ControlFile.checkPointCopy, sizeof(CheckPoint));
+	COMP_CRC32C(crc, ((char *) record) + SizeOfXLogRecord, record->xl_tot_len - SizeOfXLogRecord);
 	COMP_CRC32C(crc, (char *) record, offsetof(XLogRecord, xl_crc));
 	FIN_CRC32C(crc);
 	record->xl_crc = crc;
@@ -1427,59 +1516,13 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo, const char 
 #endif
 
 static void
-get_restricted_token(const char *progname)
-{
-#ifdef WIN32
-
-	/*
-	* Before we execute another program, make sure that we are running with a
-	* restricted token. If not, re-execute ourselves with one.
-	*/
-
-	if ((restrict_env = getenv("PG_RESTRICT_EXEC")) == NULL
-		|| strcmp(restrict_env, "1") != 0)
-	{
-		PROCESS_INFORMATION pi;
-		char	   *cmdline;
-
-		ZeroMemory(&pi, sizeof(pi));
-
-		cmdline = pg_strdup(GetCommandLine());
-
-		putenv("PG_RESTRICT_EXEC=1");
-
-		if (!CreateRestrictedProcess(cmdline, &pi, progname))
-		{
-			fprintf(stderr, _("%s: could not re-execute with restricted token: error code %lu\n"), progname, GetLastError());
-		}
-		else
-		{
-			/*
-			* Successfully re-execed. Now wait for child process to capture
-			* exitcode.
-			*/
-			DWORD		x;
-
-			CloseHandle(pi.hThread);
-			WaitForSingleObject(pi.hProcess, INFINITE);
-
-			if (!GetExitCodeProcess(pi.hProcess, &x))
-			{
-				fprintf(stderr, _("%s: could not get exit code from subprocess: error code %lu\n"), progname, GetLastError());
-				exit(1);
-			}
-			exit(x);
-		}
-	}
-#endif
-}
-
-static void
 usage(void)
 {
 	printf(_("%s resets the PostgreSQL transaction log.\n\n"), progname);
-	printf(_("Usage:\n  %s [OPTION]... DATADIR\n\n"), progname);
+	printf(_("Usage:\n  %s [OPTION]... {[-D] DATADIR}\n\n"), progname);
 	printf(_("Options:\n"));
+	printf(_("  -c XID,XID       set oldest and newest transactions bearing commit timestamp\n"));
+	printf(_("                   (zero in either value means no change)\n"));
 	printf(_("  -e XIDEPOCH      set next transaction ID epoch\n"));
 	printf(_("  -f               force update to be done\n"));
 	printf(_("  -k data_checksum_version     set data_checksum_version\n"));

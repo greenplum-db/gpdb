@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2001-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2001-2015, PostgreSQL Global Development Group
  *
  * src/include/executor/instrument.h
  *
@@ -46,7 +46,7 @@ typedef enum InstrumentOption
 	INSTRUMENT_BUFFERS = 1 << 1,	/* needs buffer usage (not implemented yet) */
 	INSTRUMENT_ROWS = 1 << 2,	/* needs row count */
 	INSTRUMENT_CDB = 0x40000000,	/* needs cdb statistics */
-	INSTRUMENT_ALL = 0x7FFFFFFF
+	INSTRUMENT_ALL = PG_INT32_MAX
 } InstrumentOption;
 
 typedef struct Instrumentation

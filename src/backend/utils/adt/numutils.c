@@ -3,7 +3,7 @@
  * numutils.c
  *	  utility functions for I/O of built-in numeric types.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -34,7 +34,7 @@
  * overflow.
  */
 int32
-pg_atoi(char *s, int size, int c)
+pg_atoi(const char *s, int size, int c)
 {
 	long		l;
 	char	   *badp;
@@ -190,7 +190,7 @@ pg_lltoa(int64 value, char *a)
 	 * Avoid problems with the most negative integer not being representable
 	 * as a positive integer.
 	 */
-	if (value == (-INT64CONST(0x7FFFFFFFFFFFFFFF) - 1))
+	if (value == PG_INT64_MIN)
 	{
 		memcpy(a, "-9223372036854775808", 21);
 		return;

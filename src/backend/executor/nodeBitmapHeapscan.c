@@ -20,7 +20,7 @@
  *
  * This can also be used in "Dynamic" mode.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions Copyright (c) 2008-2009, Greenplum Inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
@@ -671,7 +671,7 @@ BitmapAppendOnlyNext(BitmapHeapScanState *node)
 	for (;;)
 	{
 		TBMIterateResult *tbmres = node->tbmres;
-		bool		need_recheck;
+		bool		need_recheck = false;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -744,7 +744,11 @@ BitmapAppendOnlyNext(BitmapHeapScanState *node)
 		 */
 		if (node->baos_lossy)
 		{
-			psuedoHeapOffset = node->baos_cindex;	// We are iterating through all items.
+			/*
+			 * +1 to convert index to offset, since TID offsets are not zero
+			 * based.
+			 */
+			psuedoHeapOffset = node->baos_cindex + 1;	// We are iterating through all items.
 		}
 		else
 		{
@@ -869,6 +873,8 @@ ExecBitmapHeapScan(BitmapHeapScanState *node)
 void
 ExecReScanBitmapHeapScan(BitmapHeapScanState *node)
 {
+	PlanState  *outerPlan = outerPlanState(node);
+
 	/* rescan to release any page pin */
 	if (node->bhs_currentScanDesc_heap)
 		heap_rescan(node->bhs_currentScanDesc_heap, NULL);
@@ -881,8 +887,8 @@ ExecReScanBitmapHeapScan(BitmapHeapScanState *node)
 	 * if chgParam of subnode is not null then plan will be re-scanned by
 	 * first ExecProcNode.
 	 */
-	if (node->ss.ps.lefttree->chgParam == NULL)
-		ExecReScan(node->ss.ps.lefttree);
+	if (outerPlan->chgParam == NULL)
+		ExecReScan(outerPlan);
 }
 
 /* ----------------------------------------------------------------

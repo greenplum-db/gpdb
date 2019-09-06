@@ -122,79 +122,79 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     External tables are comprised of flat files that reside outside of the database. 
     Creating an external table allows you to access these flat files as though they 
     were a regular database table. External table data can be queried directly (and in parallel) 
-	using SQL commands. You can, for example, select, join, or sort external table data. 
-	You can also create views and synonyms for external tables. However external tables 
-	are read-only. DML operations (<command>UPDATE</command>, <command>INSERT</command>, <command>DELETE</command>, or <command>TRUNCATE</command>) are not allowed, 
-	and you cannot create indexes on external tables.
+    using SQL commands. You can, for example, select, join, or sort external table data. 
+    You can also create views and synonyms for external tables. However external tables 
+    are read-only. DML operations (<command>UPDATE</command>, <command>INSERT</command>, <command>DELETE</command>, or <command>TRUNCATE</command>) are not allowed, 
+    and you cannot create indexes on external tables.
   </para>
   
   <para>
     An external table definition can be thought of as a view that allows running any 
-	SQL query against external data without requiring that data to first be loaded 
-	into the database. External tables provide an easy way to perform basic extraction, 
-	transformation, and loading (ETL) tasks that are common in data warehousing. 
-	External table files are read in parallel by the Greenplum Database segment instances, 
-	so they also provide a means for fast data loading. External tables should not be used 
-	for frequently queried tables.
+    SQL query against external data without requiring that data to first be loaded 
+    into the database. External tables provide an easy way to perform basic extraction, 
+    transformation, and loading (ETL) tasks that are common in data warehousing. 
+    External table files are read in parallel by the Greenplum Database segment instances, 
+    so they also provide a means for fast data loading. External tables should not be used 
+    for frequently queried tables.
   </para>
   
   <para>
-	You may specify multiple external data sources or URIs (uniform resource identifiers) 
-	with the <literal>LOCATION</literal> clause — up to the number of primary segment instances 
-	in your Greenplum Database array. Each URI points to an external data file or other data 
-	source. These URIs do not need to exist prior to defining an external table (<command>CREATE EXTERNAL TABLE</command> 
-	does not validate the URIs specified). However you will get an error if they cannot be found 
-	when querying the external table.
+    You may specify multiple external data sources or URIs (uniform resource identifiers) 
+    with the <literal>LOCATION</literal> clause — up to the number of primary segment instances 
+    in your Greenplum Database array. Each URI points to an external data file or other data 
+    source. These URIs do not need to exist prior to defining an external table (<command>CREATE EXTERNAL TABLE</command> 
+    does not validate the URIs specified). However you will get an error if they cannot be found 
+    when querying the external table.
   </para>
   
   <para>
     There are three protocols that you can use to access the external table data sources. 
-	You may use one of the following protocols per <command>CREATE EXTERNAL TABLE</command> statement 
-	(cannot mix protocols): 
+    You may use one of the following protocols per <command>CREATE EXTERNAL TABLE</command> statement 
+    (cannot mix protocols): 
   </para>
   
   <para>
-	gpfdist — If using the <literal>gpfdist://</literal> protocol, you must have the 
-	Greenplum file distribution program (<literal>gpfdist</literal>) running on the host where the external 
-	data files reside. This program points to a given directory on the file host and 
-	serves external data files to all Greenplum Database segments in parallel. 
-	All primary segments access the external file(s) in parallel regardless of how 
-	many URIs you specify when defining the external table. <literal>gpfdist</literal> 
-	is located in <literal>$GPHOME/bin<literal> on your Greenplum Database master host. 
+    gpfdist — If using the <literal>gpfdist://</literal> protocol, you must have the 
+    Greenplum file distribution program (<literal>gpfdist</literal>) running on the host where the external 
+    data files reside. This program points to a given directory on the file host and 
+    serves external data files to all Greenplum Database segments in parallel. 
+    All primary segments access the external file(s) in parallel regardless of how 
+    many URIs you specify when defining the external table. <literal>gpfdist</literal> 
+    is located in <literal>$GPHOME/bin<literal> on your Greenplum Database master host. 
   </para>
   
   <para>
     file — If using the <literal>file://</literal> protocol the external data file(s) 
-	must reside on a segment host in a location accessible by the Greenplum super user 
-	(gpadmin). The number of URIs specified corresponds to the number of segment 
-	instances that will work in parallel to access the external table. So for 
-	example, if you have a Greenplum Database system with 8 primary segments and 
-	you specify 2 external files, only 2 of the 8 segments will access the external 
-	table in parallel at query time. The number of external files per segment host 
-	cannot exceed the number of primary segment instances on that host. For example, 
-	if your array has 4 primary segment instances per segment host, you may place 
-	4 external files on each segment host. Also, the host name used in the URI 
-	must match the segment host name as registered in the 
-	<literal>gp_segment_configuration</literal> system catalog table.
+    must reside on a segment host in a location accessible by the Greenplum super user 
+    (gpadmin). The number of URIs specified corresponds to the number of segment 
+    instances that will work in parallel to access the external table. So for 
+    example, if you have a Greenplum Database system with 8 primary segments and 
+    you specify 2 external files, only 2 of the 8 segments will access the external 
+    table in parallel at query time. The number of external files per segment host 
+    cannot exceed the number of primary segment instances on that host. For example, 
+    if your array has 4 primary segment instances per segment host, you may place 
+    4 external files on each segment host. Also, the host name used in the URI 
+    must match the segment host name as registered in the 
+    <literal>gp_segment_configuration</literal> system catalog table.
   </para>
   
   <para>
     http — If using the <literal>http://</literal> protocol the external data file(s) 
-	must reside on a web server that is accessible by the Greenplum segment hosts. 
-	The number of URIs specified corresponds to the number of segment instances 
-	that will work in parallel to access the external table. So for example, 
-	if you have a Greenplum Database system with 8 primary segments and you specify 2 
-	external files, only 2 of the 8 segments will access the external table in 
-	parallel at query time.
-	</para>
-	
+    must reside on a web server that is accessible by the Greenplum segment hosts. 
+    The number of URIs specified corresponds to the number of segment instances 
+    that will work in parallel to access the external table. So for example, 
+    if you have a Greenplum Database system with 8 primary segments and you specify 2 
+    external files, only 2 of the 8 segments will access the external table in 
+    parallel at query time.
+    </para>
+    
   <para>
     The <literal>FORMAT</literal> clause is used to describe how the external 
-	table files are formatted. The files can be in either plain text (TEXT) 
-	or comma separated values (CSV) format. If the data in the file does not 
-	use the default column delimiter, escape character, null string and so on, 
-	you must specify the additional formatting options so that the data in 
-	the external file is read correctly by Greenplum Database.
+    table files are formatted. The files can be in either plain text (TEXT) 
+    or comma separated values (CSV) format. If the data in the file does not 
+    use the default column delimiter, escape character, null string and so on, 
+    you must specify the additional formatting options so that the data in 
+    the external file is read correctly by Greenplum Database.
 </para>
 
 </refsect1>
@@ -218,8 +218,8 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     <listitem>
      <para>
       The name of a column to create in the external table. 
-	  Unlike regular tables, external tables do not have column 
-	  constraints or default values, so do not specify those.
+      Unlike regular tables, external tables do not have column 
+      constraints or default values, so do not specify those.
      </para>
     </listitem>
    </varlistentry>
@@ -238,8 +238,8 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     <listitem>
      <para>
       Specifies the URI of the external data source(s) to be used to populate the external table. 
-	  If the host name is omitted, localhost is assumed. If port is omitted for http and gpfdist protocols, 
-	  port 8080 is assumed.
+      If the host name is omitted, localhost is assumed. If port is omitted for http and gpfdist protocols, 
+      port 8080 is assumed.
      </para>
     </listitem>
    </varlistentry>
@@ -249,7 +249,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     <listitem>
      <para>
       Specifies the format of the external file(s) - either plain text 
-	  (<literal>TEXT</literal>) or comma separated values (<literal>CSV</literal>) format.
+      (<literal>TEXT</literal>) or comma separated values (<literal>CSV</literal>) format.
      </para>
     </listitem>
    </varlistentry>
@@ -259,8 +259,8 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     <listitem>
      <para>
       Specifies a single character that separates columns within 
-	  each row (line) of the external file. The default 
-	  is a tab character in TEXT mode, a comma in CSV mode.
+      each row (line) of the external file. The default 
+      is a tab character in TEXT mode, a comma in CSV mode.
      </para>
     </listitem>
    </varlistentry>
@@ -270,12 +270,12 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     <listitem>
      <para>
       Specifies the string that represents a null value. 
-	  The default is \N (backslash-N) in TEXT mode, and an 
-	  empty value with no quotations in CSV mode. You might 
-	  prefer an empty string even in TEXT mode for cases where 
-	  you do not want to distinguish nulls from empty strings. 
-	  When using external tables, any data item that matches this 
-	  string will be considered a null value. 
+      The default is \N (backslash-N) in TEXT mode, and an 
+      empty value with no quotations in CSV mode. You might 
+      prefer an empty string even in TEXT mode for cases where 
+      you do not want to distinguish nulls from empty strings. 
+      When using external tables, any data item that matches this 
+      string will be considered a null value. 
      </para>
     </listitem>
    </varlistentry>
@@ -285,15 +285,15 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     <listitem>
      <para>
       Specifies the single character that is used for C escape sequences 
-	  (such as \n,\t,\100, and so on) and for escaping data characters 
-	  that might otherwise be taken as row or column delimiters. Make 
-	  sure to choose an escape character that is not used anywhere in 
-	  your actual column data. The default escape character is a 
-	  \ (backslash), however it is possible to specify any other 
-	  character to represent an escape. It is also possible to 
-	  disable escaping by specifying the value <literal>OFF</literal> as the escape value. 
-	  This is very useful for data such as web log data that has many 
-	  embedded backslashes that are not intended to be escapes. 
+      (such as \n,\t,\100, and so on) and for escaping data characters 
+      that might otherwise be taken as row or column delimiters. Make 
+      sure to choose an escape character that is not used anywhere in 
+      your actual column data. The default escape character is a 
+      \ (backslash), however it is possible to specify any other 
+      character to represent an escape. It is also possible to 
+      disable escaping by specifying the value <literal>OFF</literal> as the escape value. 
+      This is very useful for data such as web log data that has many 
+      embedded backslashes that are not intended to be escapes. 
      </para>
     </listitem>
    </varlistentry>
@@ -303,13 +303,13 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     <listitem>
      <para>
       For CSV formatted files, specifies that the first line in the 
-	  external file(s) is a header row (contains the names of 
-	  the table columns) and should not be included as data for the 
-	  external table. If using multiple external files, all files must 
-	  have a header row. If using the <literal>gpfdist://</literal> protocol, 
-	  do not use the <literal>HEADER</literal> clause. Instead, 
-	  specify the header (<literal>-h</literal>) option when 
-	  starting the <literal>gpfdist</literal> utility.
+      external file(s) is a header row (contains the names of 
+      the table columns) and should not be included as data for the 
+      external table. If using multiple external files, all files must 
+      have a header row. If using the <literal>gpfdist://</literal> protocol, 
+      do not use the <literal>HEADER</literal> clause. Instead, 
+      specify the header (<literal>-h</literal>) option when 
+      starting the <literal>gpfdist</literal> utility.
      </para>
     </listitem>
    </varlistentry>
@@ -328,9 +328,9 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     <listitem>
      <para>
       In CSV mode, processes each specified column as though 
-	  it were quoted and hence not a NULL value. For the default 
-	  null string in CSV mode (nothing between two delimiters), 
-	  this causes missing values to be evaluated as zero-length strings.
+      it were quoted and hence not a NULL value. For the default 
+      null string in CSV mode (nothing between two delimiters), 
+      this causes missing values to be evaluated as zero-length strings.
      </para>
     </listitem>
    </varlistentry>
@@ -343,23 +343,23 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
 
    <para>
      There is a system view named <literal>pg_max_external_files</literal> that you can use 
-	 to determine how many external table files are permitted per external table. 
-	 This view lists the available file slots per segment host (if using the <literal>file://</literal> protocol). 
-	 For example: <literal>SELECT * FROM pg_max_external_files;</literal>
+     to determine how many external table files are permitted per external table. 
+     This view lists the available file slots per segment host (if using the <literal>file://</literal> protocol). 
+     For example: <literal>SELECT * FROM pg_max_external_files;</literal>
   </para>
   <para>
       During dump/restore operations, only external table definitions will be backed up 
-	  and restored. The data files will not be included. You can use <command>CREATE TABLE AS</command>, 
-	  <command>SELECT INTO</command>, or <command>INSERT...SELECT</command> to load external table 
-	  data files into another (non-external) database table, and the data will be 
-	  loaded in parallel according to the external table definition. 
+      and restored. The data files will not be included. You can use <command>CREATE TABLE AS</command>, 
+      <command>SELECT INTO</command>, or <command>INSERT...SELECT</command> to load external table 
+      data files into another (non-external) database table, and the data will be 
+      loaded in parallel according to the external table definition. 
   </para>
   <para>
-	  If an external table file has a data error, any operation that reads from the 
-	  external table will fail. Similar to <command>COPY</command>, loading from 
-	  external tables is an all or nothing operation.
+      If an external table file has a data error, any operation that reads from the 
+      external table will fail. Similar to <command>COPY</command>, loading from 
+      external tables is an all or nothing operation.
   </para>
-	 
+     
 </refsect1>
 
 
@@ -381,9 +381,9 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
 
  <para>
     Create an external table named <structname>ext_customer</> using 
-	the <literal>gpfdist</> protocol and a text formatted file 
-	named <structname>customers.txt</> with a pipe (|) as the 
-	column delimiter and an empty space as null:
+    the <literal>gpfdist</> protocol and a text formatted file 
+    named <structname>customers.txt</> with a pipe (|) as the 
+    column delimiter and an empty space as null:
    <programlisting>
      CREATE EXTERNAL TABLE ext_customer (id int, name text, sponsor text) 
      LOCATION ( 'gpfdist://*.txt' ) 

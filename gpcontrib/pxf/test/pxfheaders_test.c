@@ -23,6 +23,7 @@
 #include "cmockery.h"
 
 #include "postgres.h"
+#include "nodes/makefuncs.h"
 #include "utils/memutils.h"
 
 /* Define UNIT_TESTING so that the extension can skip declaring PG_MODULE_MAGIC */
@@ -43,12 +44,12 @@ static struct extvar_t mock_extvar;
 /* helper functions */
 static void expect_headers_append(CHURL_HEADERS headers_handle, const char *header_key, const char *header_value);
 
-void setup_gphd_uri();
-void setup_input_data();
-void setup_external_vars();
-void expect_external_vars();
+static void setup_gphd_uri(void);
+static void setup_input_data(void);
+static void setup_external_vars(void);
+static void expect_external_vars(void);
 
-void
+static void
 common_setup(void **state)
 {
 	setup_gphd_uri();
@@ -59,7 +60,7 @@ common_setup(void **state)
 /*
  * Common resource cleanup
  */
-void
+static void
 common_teardown(void **state)
 {
 	if (input_data->rel != NULL)
@@ -69,7 +70,7 @@ common_teardown(void **state)
 	pfree(gphd_uri);
 }
 
-void
+static void
 setup_gphd_uri()
 {
 	gphd_uri = palloc0(sizeof(GPHDUri));
@@ -79,7 +80,7 @@ setup_gphd_uri()
 	gphd_uri->uri = "'cos it's absolutely free";
 }
 
-void
+static void
 setup_input_data()
 {
 	Relation      rel      = (Relation) palloc0(sizeof(RelationData));
@@ -92,7 +93,7 @@ setup_input_data()
 	input_data->rel       = rel;
 }
 
-void
+static void
 setup_external_vars()
 {
 	mock_extvar.GP_USER = "pxfuser";
@@ -101,7 +102,8 @@ setup_external_vars()
 	snprintf(mock_extvar.GP_XID, sizeof(mock_extvar.GP_XID), "20");
 }
 
-void expect_external_vars()
+static void
+expect_external_vars()
 {
 	expect_any(external_set_env_vars, extvar);
 	expect_string(external_set_env_vars, uri, gphd_uri->uri);
@@ -114,7 +116,7 @@ void expect_external_vars()
 	will_be_called(external_set_env_vars);
 }
 
-void
+static void
 test_build_http_headers(void **state)
 {
 	char		alignment[3];
@@ -130,10 +132,20 @@ test_build_http_headers(void **state)
 	option_data2->key   = "key2";
 	option_data2->value = "value2";
 
+	List *copyOpts = NIL;
+	copyOpts = lappend(copyOpts, makeDefElem("format", (Node *)makeString("csv")));
+	copyOpts = lappend(copyOpts, makeDefElem("delimiter", (Node *)makeString("|")));
+	copyOpts = lappend(copyOpts, makeDefElem("null", (Node *)makeString("")));
+	copyOpts = lappend(copyOpts, makeDefElem("escape", (Node *)makeString("\"")));
+	copyOpts = lappend(copyOpts, makeDefElem("quote", (Node *)makeString("\"")));
+	copyOpts = lappend(copyOpts, makeDefElem("encoding", (Node *)makeString("UTF8")));
+
 	gphd_uri->options = list_make2(option_data1, option_data2);
 
 	tuple.natts = 0;
 	ext_tbl.fmtcode = 'c';
+	ext_tbl.fmtopts = "delimiter '|' null '' escape '\"' quote '\"'";
+	ext_tbl.encoding = 6;
 	input_data->rel->rd_id = 56;
 	input_data->rel->rd_att = &tuple;
 
@@ -141,7 +153,34 @@ test_build_http_headers(void **state)
 
 	expect_value(GetExtTableEntry, relid, input_data->rel->rd_id);
 	will_return(GetExtTableEntry, &ext_tbl);
+	expect_value(parseCopyFormatString, rel, input_data->rel);
+	expect_value(parseCopyFormatString, fmtstr, ext_tbl.fmtopts);
+	expect_value(parseCopyFormatString, fmttype, ext_tbl.fmtcode);
+	will_return(parseCopyFormatString, copyOpts);
+	expect_value(appendCopyEncodingOption, copyFmtOpts, copyOpts);
+	expect_value(appendCopyEncodingOption, encoding, ext_tbl.encoding);
+	will_return(appendCopyEncodingOption, copyOpts);
+
+	expect_string(normalize_key_name, key, "format");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-FORMAT"));
+	expect_string(normalize_key_name, key, "delimiter");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-DELIMITER"));
+	expect_string(normalize_key_name, key, "null");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-NULL"));
+	expect_string(normalize_key_name, key, "escape");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-ESCAPE"));
+	expect_string(normalize_key_name, key, "quote");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-QUOTE"));
+	expect_string(normalize_key_name, key, "encoding");
+	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-ENCODING"));
+
 	expect_headers_append(input_data->headers, "X-GP-FORMAT", TextFormatName);
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-FORMAT", "csv");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-DELIMITER", "|");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-NULL", "");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-ESCAPE", "\"");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-QUOTE", "\"");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-ENCODING", "UTF8");
 	expect_headers_append(input_data->headers, "X-GP-ATTRS", "0");
 
 	expect_headers_append(input_data->headers, "X-GP-USER", "pxfuser");
@@ -170,7 +209,7 @@ test_build_http_headers(void **state)
 	/* no asserts as the function just calls to set headers */
 }
 
-void
+static void
 test_build_http_headers_no_user_error(void **state)
 {
 	pfree(input_data->rel);
@@ -198,7 +237,7 @@ test_build_http_headers_no_user_error(void **state)
 	PG_END_TRY();
 }
 
-void
+static void
 test_build_http_headers_empty_user_error(void **state)
 {
 	pfree(input_data->rel);
@@ -232,7 +271,8 @@ test_build_http_headers_empty_user_error(void **state)
  * Make sure we are not sending any projection information at all,
  * to avoid incorrect results.
  */
-void test__build_http_header__where_is_not_supported(void **state)
+static void
+test__build_http_header__where_is_not_supported(void **state)
 {
 	char		alignment[3];
 	pg_ltoa(sizeof(char *), alignment);
@@ -258,14 +298,14 @@ void test__build_http_header__where_is_not_supported(void **state)
 	expect_headers_append(input_data->headers, "X-GP-URL-PORT", gphd_uri->port);
 	expect_headers_append(input_data->headers, "X-GP-DATA-DIR", gphd_uri->data);
 	expect_headers_append(input_data->headers, "X-GP-URI", gphd_uri->uri);
-	expect_headers_append(input_data->headers, "X-GP-HAS-FILTER", "1");
+	expect_headers_append(input_data->headers, "X-GP-HAS-FILTER", "0");
 
 	build_http_headers(input_data);
 
 	pfree(input_data->proj_info);
 }
 
-void
+static void
 test_add_tuple_desc_httpheader(void **state)
 {
 	/* setup mock data and expectations */
@@ -288,7 +328,7 @@ test_add_tuple_desc_httpheader(void **state)
 	attrs_ptr[0] = &attrs[0];
 	char		data0[10] = "name0";
 
-	snprintf(NameStr(attrs[0].attname), sizeof(data0), data0);
+	snprintf(NameStr(attrs[0].attname), sizeof(data0), "%s", data0);
 	char		typename0[12] = "NUMERICOID";
 
 	attrs[0].atttypid = NUMERICOID;
@@ -315,7 +355,7 @@ test_add_tuple_desc_httpheader(void **state)
 	attrs_ptr[1] = &attrs[1];
 	char		data1[10] = "name1";
 
-	snprintf(NameStr(attrs[1].attname), sizeof(data1), data1);
+	snprintf(NameStr(attrs[1].attname), sizeof(data1), "%s", data1);
 	char		typename1[12] = "CHAROID";
 
 	attrs[1].atttypid = CHAROID;
@@ -338,7 +378,7 @@ test_add_tuple_desc_httpheader(void **state)
 	attrs_ptr[2] = &attrs[2];
 	char		data2[10] = "name2";
 
-	snprintf(NameStr(attrs[2].attname), sizeof(data2), data2);
+	snprintf(NameStr(attrs[2].attname), sizeof(data2), "%s", data2);
 	char		typename2[12] = "TIMEOID";
 
 	attrs[2].atttypid = TIMEOID;
@@ -361,7 +401,7 @@ test_add_tuple_desc_httpheader(void **state)
 	attrs_ptr[3] = &attrs[3];
 	char		data3[10] = "name3";
 
-	snprintf(NameStr(attrs[3].attname), sizeof(data3), data3);
+	snprintf(NameStr(attrs[3].attname), sizeof(data3), "%s", data3);
 	char		typename3[12] = "INTERVALOID";
 
 	attrs[3].atttypid = INTERVALOID;
@@ -390,7 +430,7 @@ test_add_tuple_desc_httpheader(void **state)
 	pfree(headers);
 }
 
-void
+static void
 test_get_format_name(void **state)
 {
 	char	   *formatName = get_format_name('t');

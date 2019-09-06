@@ -511,13 +511,13 @@ select * from percv;
 (11 rows)
 
 select pg_get_viewdef('percv');
-                                                         pg_get_viewdef                                                          
----------------------------------------------------------------------------------------------------------------------------------
-  SELECT percentile_cont((0.4)::double precision) WITHIN GROUP (ORDER BY ((perct.a / 10))::double precision) AS percentile_cont,+
-     MEDIAN(perct.a) AS "median",                                                                                               +
-     percentile_disc((0.51)::double precision) WITHIN GROUP (ORDER BY perct.a DESC) AS percentile_disc                          +
-    FROM perct                                                                                                                  +
-   GROUP BY perct.b                                                                                                             +
+                                                          pg_get_viewdef                                                           
+-----------------------------------------------------------------------------------------------------------------------------------
+  SELECT percentile_cont((0.4)::double precision) WITHIN GROUP (ORDER BY (((perct.a / 10))::double precision)) AS percentile_cont,+
+     MEDIAN(perct.a) AS "median",                                                                                                 +
+     percentile_disc((0.51)::double precision) WITHIN GROUP (ORDER BY perct.a DESC) AS percentile_disc                            +
+    FROM perct                                                                                                                    +
+   GROUP BY perct.b                                                                                                               +
    ORDER BY perct.b;
 (1 row)
 

@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  * pg_regress.h --- regression test driver
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/test/regress/pg_regress.h
@@ -45,12 +45,6 @@ extern char *prehook;
 extern char *launcher;
 extern bool optimizer_enabled;
 extern bool resgroup_enabled;
-
-/*
- * This should not be global but every module should be able to read command
- * line parameters.
- */
-extern char *psqldir;
 
 extern const char *basic_diff_opts;
 extern const char *pretty_diff_opts;

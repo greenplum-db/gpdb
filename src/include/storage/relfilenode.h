@@ -4,7 +4,7 @@
  *	  Physical access information for relations.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/relfilenode.h
@@ -105,15 +105,17 @@ inline static bool RelFileNode_IsEmpty(
 }
 
 /*
- * Augmenting a relfilenode with a storeage type provides a way to make optimal
+ * Augmenting a relfilenode with a storage type provides a way to make optimal
  * decisions in smgr and md layer. This is purposefully kept out of RelFileNode
  * for performance concerns where RelFileNode used in a hotpath for BufferTag
- * hashing.
+ * hashing. The isTempRelation flag is necessary to support file-system removal 
+ * of temporary relations on a two-phase commit/abort.
  */
-typedef struct RelFileNodeWithStorageType
+typedef struct RelFileNodePendingDelete
 {
 	RelFileNode node;
+	bool isTempRelation;
 	char relstorage;
-} RelFileNodeWithStorageType;
+} RelFileNodePendingDelete;
 
 #endif   /* RELFILENODE_H */

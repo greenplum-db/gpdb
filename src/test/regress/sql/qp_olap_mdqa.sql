@@ -199,6 +199,8 @@ SELECT CASE WHEN sale.cn < 10 THEN 1 ELSE 2 END as newalias1,CASE WHEN sale.pn <
 FROM sale
 GROUP BY CUBE((sale.dt,newalias2,sale.prc),(sale.vn)),sale.cn,sale.pn;
 
+-- NOTE: this query suffers from the issue discussed at:
+-- https://www.postgresql.org/message-id/flat/7dbdcf5c-b5a6-ef89-4958-da212fe10176%40iki.fi
 SELECT CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias1,
                CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias4,
                GROUPING(sale.qty,sale.cn,sale.qty)

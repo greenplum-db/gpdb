@@ -433,3 +433,16 @@ reset enable_indexscan;
 -- (e.g. column_compression).
 set client_min_messages='WARNING';
 drop schema aocs_addcol cascade;
+
+-- Test case: alter column on a table after reorganize
+-- For an AOCS table with columns using rle_type compression, the
+-- implementation of 'reorganize' at 62d66c063fd did not set compression type
+-- for dropped columns. This led to an error 'Bad datum stream Dense block
+-- version'.
+create table aocs_with_compress(a smallint, b smallint, c smallint) with (appendonly=true, orientation=column, compresstype=rle_type);
+insert into aocs_with_compress values (1, 1, 1), (2, 2, 2);
+alter table aocs_with_compress drop column b;
+alter table aocs_with_compress set with (reorganize=true);
+-- The following operation must not fail
+alter table aocs_with_compress alter column c type integer;
+

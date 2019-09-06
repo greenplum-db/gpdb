@@ -33,6 +33,7 @@
 CATALOG(pg_exttable,6040) BKI_WITHOUT_OIDS
 {
 	Oid		reloid;				/* refers to this relation's oid in pg_class  */
+#ifdef CATALOG_VARLEN
 	text	urilocation[1];		/* array of URI strings */
 	text	execlocation[1];	/* array of ON locations */
 	char	fmttype;			/* 't' (text) or 'c' (csv) */
@@ -44,6 +45,7 @@ CATALOG(pg_exttable,6040) BKI_WITHOUT_OIDS
 	bool	logerrors;			/* 't' to log errors into file */
 	int32	encoding;			/* character encoding of this external table */
 	bool	writable;			/* 't' if writable, 'f' if readable */
+#endif
 } FormData_pg_exttable;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

@@ -131,17 +131,15 @@ PL/pgSQL function checkpoint_and_wait_for_replication_replay(integer) line 27 at
  t
 (1 row)
 
-create extension if not exists gp_inject_fault;
 -- Prevent FTS from probing segments as we don't want a change in
 -- cluster configuration to be triggered after the mirror is stoped
 -- temporarily in the test.  Request a scan so that the skip fault is
 -- triggered immediately, rather that waiting until the next probe
 -- interval.
 select gp_inject_fault_infinite('fts_probe', 'skip', 1);
-NOTICE:  Success:
  gp_inject_fault_infinite 
 --------------------------
- t
+ Success:
 (1 row)
 
 select gp_request_fts_probe_scan();
@@ -151,10 +149,9 @@ select gp_request_fts_probe_scan();
 (1 row)
 
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
-NOTICE:  Success:
  gp_wait_until_triggered_fault 
 -------------------------------
- t
+ Success:
 (1 row)
 
 -- stop a mirror
@@ -210,6 +207,8 @@ select move_xlog('/tmp/missing_xlog', (select datadir || '/pg_xlog' from gp_segm
  
 (1 row)
 
+-- force the WAL segment to switch over from after previous pg_switch_xlog().
+create temp table dummy2 (id int4) distributed randomly;
 -- the error should go away
 select wait_for_replication_error('none', 0, 500);
  wait_for_replication_error 
@@ -225,10 +224,9 @@ select sync_error from gp_stat_replication where gp_segment_id = 0;
 
 -- Resume FTS probes and perform a probe scan.
 select gp_inject_fault('fts_probe', 'reset', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_request_fts_probe_scan();
@@ -248,7 +246,7 @@ select count(*) = 2 as mirror_up from gp_segment_configuration
 -- make sure leave the test only after mirror is in sync to avoid
 -- affecting other tests. Thumb rule: leave cluster in same state as
 -- test started.
-select wait_for_mirror_sync((select dbid::smallint from gp_segment_configuration c where c.role='p' and c.content=0));
+select wait_for_mirror_sync(0::smallint);
  wait_for_mirror_sync 
 ----------------------
  

@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic1">
+  <title id="im177965">Writing a Foreign Data Wrapper</title>
+  <body>
+    <p>This chapter outlines how to write a new foreign-data wrapper.</p>
+    <p>All operations on a foreign table are handled through its foreign-data
+      wrapper (FDW), a library that consists of a set of functions that the core
+      Greenplum Database server calls. The foreign-data wrapper is responsible
+      for fetching data from the remote data store and returning it to the
+      Greenplum Database executor. If updating foreign-data is supported, the
+      wrapper must handle that, too.</p>
+    <p>The foreign-data wrappers included in the Greenplum Database open source
+      github repository are good references when trying to write your own.
+      You may want to examine the
+      <codeph><xref href="https://github.com/greenplum-db/gpdb/tree/master/contrib/file_fdw" scope="external">file_fdw</xref></codeph>
+      and <codeph><xref href="https://github.com/greenplum-db/gpdb/tree/master/contrib/postgres_fdw" scope="external">postgres_fdw</xref></codeph>
+      modules in the <codeph>contrib/</codeph> directory. The
+       <codeph><xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1"/></codeph>
+      reference page also provides some useful details.</p>
+    <note>The SQL standard specifies an interface for writing foreign-data
+      wrappers. Greenplum Database does not implement that API, however,
+      because the effort to accommodate it into Greenplum would be large, and
+      the standard API hasn't yet gained wide adoption.</note>
+    <p>This topic includes the following sections:</p>
+    <ul>
+      <li><xref href="#reqs" type="topic" format="dita"/></li>
+      <li><xref href="#limits" type="topic" format="dita"/></li>
+      <li><xref href="#includes" type="topic" format="dita"/></li>
+      <li><xref href="#topic2" type="topic" format="dita"/></li>
+      <li><xref href="#topic3" type="topic" format="dita"/></li>
+      <li><xref href="#helper" type="topic" format="dita"/></li>
+      <li><xref href="#topic5" type="topic" format="dita"/></li>
+      <li><xref href="#pkg" type="topic" format="dita"/></li>
+      <li><xref href="#deployconsider" type="topic" format="dita"/></li>
+    </ul>
+  </body>
+  <topic id="reqs">
+    <title>Requirements</title>
+    <body>
+      <p>When you develop with the Greenplum Database foreign-data wrapper API:</p>
+      <ul>
+        <li>You must develop your code on a system with the same hardware and
+          software architecture as that of your Greenplum Database hosts.</li>
+        <li>Your code must be written in a compiled language such as C, using
+          the version-1 interface. For details on C language calling conventions
+          and dynamic loading, refer to
+          <xref href="https://www.postgresql.org/docs/9.4/xfunc-c.html" scope="external" format="html">C Language Functions</xref>
+          in the PostgreSQL documentation.</li>
+        <li>Symbol names in your object files must not conflict with each other
+          nor with symbols defined in the Greenplum Database server. You must
+          rename your functions or variables if you get error messages to this
+          effect.</li>
+        <li>Review the foreign table introduction described in
+          <xref href="g-foreign.xml#topic1" type="topic" format="dita"/>.</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="limits">
+    <title>Known Issues and Limitations</title>
+    <body>
+     <p>The Greenplum Database 6 foreign-data wrapper implementation has
+       the following known issues and limitations:</p>
+     <ul>
+       <li>The Greenplum Database 6 distribution does not install any
+         foreign data wrappers.</li>
+       <li>Greenplum Database uses the <codeph>mpp_execute</codeph> option value
+         for foreign table scans only. Greenplum does not honor the
+         <codeph>mpp_execute</codeph> setting when you write to, or update, a
+         foreign table; all write operations are initiated through the master.</li>
+     </ul>
+    </body>
+  </topic>
+  <topic id="includes">
+    <title>Header Files</title>
+    <body>
+      <p>The Greenplum Database header files that you may use when you develop
+        a foreign-data wrapper are located in the
+        <codeph>greenplum-db/src/include/</codeph> directory (when developing
+        against the Greenplum Database open source github repository), or
+        installed in the <codeph>$GPHOME/include/postgresql/server/</codeph> directory (when developing against a Greenplum installation):</p>
+      <ul>
+        <li>foreign/fdwapi.h - FDW API structures and callback function signatures</li>
+        <li>foreign/foreign.h - foreign-data wrapper helper structs and functions</li>
+        <li>catalog/pg_foreign_table.h - foreign table definition</li>
+        <li>catalog/pg_foreign_server.h - foreign server definition</li>
+      </ul>
+      <p>Your FDW code may also be dependent on header files and libraries
+        required to access the remote data store.</p>
+    </body>
+  </topic>
+  <topic id="topic2">
+    <title>Foreign Data Wrapper Functions</title>
+    <body>
+      <p>The developer of a foreign-data wrapper must implement an SQL-invokable
+        <i>handler</i> function, and optionally an SQL-invokable <i>validator</i>
+        function. Both functions must be written in a compiled language such as
+        C, using the version-1 interface.</p>
+      <p>The <i>handler</i> function simply returns a struct of function
+        pointers to callback functions that will be called by the Greenplum
+        Database planner, executor, and various maintenance commands. The
+        <i>handler</i> function must be registered with Greenplum Database as
+        taking no arguments and returning the special pseudo-type
+        <codeph>fdw_handler</codeph>.  For example:</p>
+      <codeblock>CREATE FUNCTION NEW_fdw_handler()
+  RETURNS fdw_handler
+  AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT;</codeblock>
+      <p>Most of the effort in writing a foreign-data wrapper is in implementing
+        the callback functions. The FDW API callback functions, plain C functions
+        that are not visible or callable at the SQL level, are described in
+        <xref href="#topic3" type="topic" format="dita"/>.</p>
+      <p>The <i>validator</i> function is responsible for validating options
+        provided in <codeph>CREATE</codeph> and <codeph>ALTER</codeph> commands
+        for its foreign-data wrapper, as well as foreign servers, user mappings,
+        and foreign tables using the wrapper. The <i>validator</i> function must
+        be registered as taking two arguments, a text array containing the
+        options to be validated, and an OID representing the type of object with
+        which the options are associated. For example:</p>
+      <codeblock>CREATE FUNCTION NEW_fdw_validator( text[], oid )
+  RETURNS void
+  AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT;</codeblock>
+       <p>The OID argument reflects the type of the system catalog that the
+         object would be stored in, one of
+        <codeph>ForeignDataWrapperRelationId</codeph>,
+        <codeph>ForeignServerRelationId</codeph>,
+        <codeph>UserMappingRelationId</codeph>, or
+        <codeph>ForeignTableRelationId</codeph>. If no <i>validator</i> function
+        is supplied by a foreign data wrapper, Greenplum Database does not check
+        option validity at object creation time or object alteration time.</p>
+    </body>
+  </topic>
+  <topic id="topic3">
+    <title>Foreign Data Wrapper Callback Functions</title>
+    <body>
+      <p>The foreign-data wrapper API defines callback functions that Greenplum
+        Database invokes when scanning and updating foreign tables. The API also
+        includes callbacks for performing explain and analyze operations on a
+        foreign table.</p>
+      <p>The <i>handler</i> function of a foreign-data wrapper returns a
+        <codeph>palloc</codeph>'d <codeph>FdwRoutine</codeph> struct containing
+        pointers to callback functions described below. The
+        <codeph>FdwRoutine</codeph> struct is located in the
+        <codeph>foreign/fdwapi.h</codeph> header file, and is defined as follows:</p>
+       <codeblock>/*
+ * FdwRoutine is the struct returned by a foreign-data wrapper's handler
+ * function.  It provides pointers to the callback functions needed by the
+ * planner and executor.
+ *
+ * More function pointers are likely to be added in the future.  Therefore
+ * it's recommended that the handler initialize the struct with
+ * makeNode(FdwRoutine) so that all fields are set to NULL.  This will
+ * ensure that no fields are accidentally left undefined.
+ */
+typedef struct FdwRoutine
+{
+	NodeTag		type;
+
+	/* Functions for scanning foreign tables */
+	GetForeignRelSize_function GetForeignRelSize;
+	GetForeignPaths_function GetForeignPaths;
+	GetForeignPlan_function GetForeignPlan;
+	BeginForeignScan_function BeginForeignScan;
+	IterateForeignScan_function IterateForeignScan;
+	ReScanForeignScan_function ReScanForeignScan;
+	EndForeignScan_function EndForeignScan;
+
+	/*
+	 * Remaining functions are optional.  Set the pointer to NULL for any that
+	 * are not provided.
+	 */
+
+	/* Functions for updating foreign tables */
+	AddForeignUpdateTargets_function AddForeignUpdateTargets;
+	PlanForeignModify_function PlanForeignModify;
+	BeginForeignModify_function BeginForeignModify;
+	ExecForeignInsert_function ExecForeignInsert;
+	ExecForeignUpdate_function ExecForeignUpdate;
+	ExecForeignDelete_function ExecForeignDelete;
+	EndForeignModify_function EndForeignModify;
+	IsForeignRelUpdatable_function IsForeignRelUpdatable;
+
+	/* Support functions for EXPLAIN */
+	ExplainForeignScan_function ExplainForeignScan;
+	ExplainForeignModify_function ExplainForeignModify;
+
+	/* Support functions for ANALYZE */
+	AnalyzeForeignTable_function AnalyzeForeignTable;
+} FdwRoutine;
+</codeblock>
+      <p>You must implement the scan-related functions in your foreign-data
+        wrapper; implementing the other callback functions is optional.</p>
+      <p>Scan-related callback functions include:</p>
+      <table id="in201681">
+        <tgroup cols="2">
+          <colspec colname="col1" colnum="1" colwidth="90*"/>
+          <colspec colname="col2" colnum="2" colwidth="163*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Callback Signature</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1"><codeblock>void
+GetForeignRelSize (PlannerInfo *root,
+                   RelOptInfo *baserel,
+                   Oid foreigntableid)</codeblock></entry>
+              <entry colname="col2">Obtain relation size estimates for a foreign table.
+                Called at the beginning of planning for a query on a foreign table.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>void
+GetForeignPaths (PlannerInfo *root,
+                 RelOptInfo *baserel,
+                 Oid foreigntableid)</codeblock></entry>
+              <entry colname="col2">Create possible access paths for a scan on a
+                foreign table. Called during query planning. <note>A Greenplum
+                Database-compatible FDW must call
+                <codeph>create_foreignscan_path()</codeph> in its
+                <codeph>GetForeignPaths()</codeph> callback function.</note></entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>ForeignScan *
+GetForeignPlan (PlannerInfo *root,
+                RelOptInfo *baserel,
+                Oid foreigntableid,
+                ForeignPath *best_path,
+                List *tlist,
+                List *scan_clauses)</codeblock></entry>
+              <entry colname="col2">Create a <codeph>ForeignScan</codeph> plan node from
+                the selected foreign access path. Called at the end of query planning.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>void
+BeginForeignScan (ForeignScanState *node,
+                  int eflags)</codeblock></entry>
+              <entry colname="col2">Begin executing a foreign scan. Called during
+               executor startup.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>TupleTableSlot *
+IterateForeignScan (ForeignScanState *node)</codeblock></entry>
+              <entry colname="col2">Fetch one row from the foreign source, returning it
+                in a tuple table slot; return NULL if no more rows are available.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>void
+ReScanForeignScan (ForeignScanState *node)</codeblock></entry>
+              <entry colname="col2">Restart the scan from the beginning.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>void
+EndForeignScan (ForeignScanState *node)</codeblock></entry>
+              <entry colname="col2">End the scan and release resources.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <p>Refer to
+        <xref href="https://www.postgresql.org/docs/9.4/fdw-callbacks.html" scope="external" format="html">Foreign Data Wrapper Callback Routines</xref>
+        in the PostgreSQL documentation for detailed information about the inputs
+        and outputs of the FDW callback functions.</p>
+    </body>
+  </topic>
+  <topic id="helper">
+    <title>Foreign Data Wrapper Helper Functions</title>
+    <body>
+      <p>The FDW API exports several helper functions from the Greenplum
+        Database core server so that authors of foreign-data wrappers have easy
+        access to attributes of FDW-related objects, such as options provided
+        when the user creates or alters the foreign-data wrapper, server, or
+        foreign table. To use these helper functions, you must include
+        <codeph>foreign.h</codeph> header file in your source file:</p>
+      <codeblock>#include "foreign/foreign.h"</codeblock>
+      <p>The FDW API includes the helper functions listed in the table below.
+        Refer to
+        <xref href="https://www.postgresql.org/docs/9.4/fdw-helpers.html" scope="external" format="html">Foreign Data Wrapper Helper Functions</xref>
+        in the PostgreSQL documentation for more information about these functions.</p>
+      <table id="fdw_helper">
+        <tgroup cols="2">
+          <colspec colname="col1" colnum="1" colwidth="90*"/>
+          <colspec colname="col2" colnum="2" colwidth="163*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Helper Signature</entry>
+              <entry colname="col2">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1"><codeblock>ForeignDataWrapper *
+GetForeignDataWrapper(Oid fdwid);</codeblock></entry>
+              <entry colname="col2">Returns the <codeph>ForeignDataWrapper</codeph>
+                object for the foreign-data wrapper with the given OID.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>ForeignDataWrapper *
+GetForeignDataWrapperByName(const char *name, bool missing_ok);</codeblock></entry>
+              <entry colname="col2">Returns the <codeph>ForeignDataWrapper</codeph>
+                object for the foreign-data wrapper with the given name.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>ForeignServer *
+GetForeignServer(Oid serverid);</codeblock></entry>
+              <entry colname="col2">Returns the <codeph>ForeignServer</codeph>
+                object for the foreign server with the given OID.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>ForeignServer *
+GetForeignServerByName(const char *name, bool missing_ok);</codeblock></entry>
+              <entry colname="col2">Returns the <codeph>ForeignServer</codeph>
+                object for the foreign server with the given name.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>UserMapping *
+GetUserMapping(Oid userid, Oid serverid);</codeblock></entry>
+              <entry colname="col2">Returns the <codeph>UserMapping</codeph>
+                object for the user mapping of the given role on the given
+                server.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>ForeignTable *
+GetForeignTable(Oid relid);</codeblock></entry>
+              <entry colname="col2">Returns the <codeph>ForeignTable</codeph>
+                object for the foreign table with the given OID.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeblock>List *
+GetForeignColumnOptions(Oid relid, AttrNumber attnum);</codeblock></entry>
+              <entry colname="col2">Returns the per-column FDW options for the
+                column with the given foreign table OID and attribute number.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="topic5">
+    <title>Greenplum Database Considerations</title>
+    <body>
+      <p>A Greenplum Database user can specify the <codeph>mpp_execute</codeph>
+        option when they create or alter a foreign table, foreign server, or
+        foreign data wrapper. A Greenplum Database-compatible foreign-data
+        wrapper examines the <codeph>mpp_execute</codeph> option value on a scan
+        and uses it to determine where to request data - from the
+        <codeph>master</codeph> (the default), <codeph>any</codeph> (master or
+        any one segment), or <codeph>all</codeph> segments.</p>
+      <note>Write/update operations using a foreign data wrapper are always
+        executed on the Greenplum Database master, regardless of the
+        <codeph>mpp_execute</codeph> setting.</note>
+      <p>The following scan code snippet probes the <codeph>mpp_execute</codeph>
+        value associated with a foreign table:</p>
+        <codeblock>ForeignTable *table = GetForeignTable(foreigntableid);
+if (table->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+{
+    ...
+}
+else if (table->exec_location == FTEXECLOCATION_ANY)
+{
+    ...
+}
+else if (table->exec_location == FTEXECLOCATION_MASTER)
+{
+    ...
+} </codeblock>
+      <p>If the foreign table was not created with an <codeph>mpp_execute</codeph>
+        option setting, the <codeph>mpp_execute</codeph> setting of the foreign
+        server, and then the foreign data wrapper, is probed and used. If none
+        of the foreign-data-related objects has an <codeph>mpp_execute</codeph>
+        setting, the default setting is <codeph>master</codeph>.</p>
+      <p>If a foreign-data wrapper supports <codeph>mpp_execute 'all'</codeph>,
+        it will implement a policy that matches Greenplum segments to data. So
+        as not to duplicate data retrieved from the remote, the FDW on each
+        segment must be able to establish which portion of the data is their
+        responsibility. An FDW may use the segment identifier and the number of
+        segments to help make this determination. The following code snippet
+        demonstrates how a foreign-data wrapper may retrieve the segment number
+        and total number of segments:</p>
+      <codeblock>int segmentNumber = GpIdentity.segindex;
+int totalNumberOfSegments = getgpsegmentCount();</codeblock>
+    </body>
+  </topic>
+  <topic id="pkg">
+    <title>Building a Foreign Data Wrapper Extension with PGXS</title>
+    <body>
+      <p>You compile the foreign-data wrapper functions that you write with the
+        FDW API into one or more shared libraries that the Greenplum Database
+        server loads on demand.</p>
+      <p>You can use the PostgreSQL build extension infrastructure (PGXS) to
+        build the source code for your foreign-data wrapper against a Greenplum
+        Database installation. This framework automates common build rules for
+        simple modules. If you have a more complicated use case, you will need
+        to write your own build system.</p>
+      <p>To use the PGXS infrastructure to generate a shared library for your
+        FDW, create a simple <codeph>Makefile</codeph> that sets PGXS-specific
+        variables.</p>
+      <note>Refer to <xref href="https://www.postgresql.org/docs/9.4/extend-pgxs.html" format="html" scope="external">Extension Building Infrastructure</xref>
+         in the PostgreSQL documentation for information about the
+         <codeph>Makefile</codeph> variables supported by PGXS.</note>
+      <p>For example, the following <codeph>Makefile</codeph> generates a shared
+        library in the current working directory named <codeph>base_fdw.so</codeph>
+        from two C source files, base_fdw_1.c and base_fdw_2.c:</p>
+      <codeblock>MODULE_big = base_fdw
+OBJS = base_fdw_1.o base_fdw_2.o
+
+PG_CONFIG = pg_config
+PGXS := $(shell $(PG_CONFIG) --pgxs)
+
+PG_CPPFLAGS = -I$(shell $(PG_CONFIG) --includedir)
+SHLIB_LINK = -L$(shell $(PG_CONFIG) --libdir)
+include $(PGXS)
+</codeblock>
+      <p>A description of the directives used in this <codeph>Makefile</codeph> follows:</p>
+      <ul>
+        <li><codeph>MODULE_big</codeph> - identifes the base name of the shared
+          library generated by the <codeph>Makefile</codeph></li>
+        <li><codeph>PG_CPPFLAGS</codeph> - adds the Greenplum Database installation
+          <codeph>include/</codeph> directory to the compiler header file search path</li>
+        <li><codeph>SHLIB_LINK</codeph> adds the Greenplum Database installation          library directory (<codeph>$GPHOME/lib/</codeph>) to the linker search
+          path</li>
+        <li>The <codeph>PG_CONFIG</codeph> and <codeph>PGXS</codeph> variable
+          settings and the <codeph>include</codeph> statement are required and
+          typically reside in the last three lines of the <codeph>Makefile</codeph>.</li>
+      </ul>
+      <p>To package the foreign-data wrapper as a Greenplum Database extension,
+        you create script (<codeph><varname>newfdw--version</varname>.sql</codeph>)
+        and control (<codeph><varname>newfdw</varname>.control</codeph>) files
+        that register the FDW <i>handler</i> and <i>validator</i> functions,
+        create the foreign data wrapper, and identify the characteristics of the
+        FDW shared library file.</p>
+      <note><xref href="https://www.postgresql.org/docs/9.4/extend-extensions.html" format="html" scope="external">Packaging Related Objects into an Extension</xref>
+        in the PostgreSQL documentation describes how to package an extension.</note>
+      <p>Example foreign-data wrapper extension script file named
+        <codeph>base_fdw--1.0.sql</codeph>:</p>
+      <codeblock>CREATE FUNCTION base_fdw_handler()
+  RETURNS fdw_handler
+  AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT;
+
+CREATE FUNCTION base_fdw_validator(text[], oid)
+  RETURNS void
+  AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT;
+
+CREATE FOREIGN DATA WRAPPER base_fdw
+  HANDLER base_fdw_handler
+  VALIDATOR base_fdw_validator;</codeblock>
+      <p>Example FDW control file named <codeph>base_fdw.control</codeph>:</p><codeblock># base_fdw FDW extension
+comment = 'base foreign-data wrapper implementation; does not do much'
+default_version = '1.0'
+module_pathname = '$libdir/base_fdw'
+relocatable = true</codeblock>
+      <p>When you add the following directives to the <codeph>Makefile</codeph>,
+        you identify the FDW extension control file base name
+        (<codeph>EXTENSION</codeph>) and SQL script (<codeph>DATA</codeph>):</p>
+        <codeblock>EXTENSION = base_fdw
+DATA = base_fdw--1.0.sql</codeblock>
+      <p>Running <codeph>make install</codeph> with these directives in the
+        <codeph>Makefile</codeph> copies the shared library and FDW SQL and
+        control files into the specified or default locations in your Greenplum
+        Database installation (<codeph>$GPHOME</codeph>).</p>
+    </body>
+  </topic>
+  <topic id="deployconsider">
+    <title>Deployment Considerations</title>
+    <body>
+      <p>You must package the FDW shared library and extension files in a form
+        suitable for deployment in a Greenplum Database cluster. When you 
+        construct and deploy the package, take into consideration the following:</p>
+      <ul>
+        <li>The FDW shared library must be installed to the same file system
+          location on the master host and on every segment host in the
+          Greenplum Database cluster. You specify this location in the
+          <codeph>.control</codeph> file. This location is typically the
+          <codeph>$GPHOME/lib/postgresql/</codeph> directory.</li>
+        <li>The FDW <codeph>.sql</codeph> and <codeph>.control</codeph> files
+          must be installed to the 
+          <codeph>$GPHOME/share/postgresql/extension/</codeph> directory
+          on the master host and on every segment host in the Greenplum
+          Database cluster.</li>
+        <li>The <codeph>gpadmin</codeph> user must have permission to traverse
+          the complete file system path to the FDW shared library file and
+          extension files.</li>
+      </ul>
+    </body>
+  </topic>
+</topic>

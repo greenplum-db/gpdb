@@ -11,6 +11,8 @@ include $(top_builddir)/src/Makefile.global
 $(call recurse,all install,src config)
 
 all:
+	$(MAKE) -C contrib/auto_explain all
+	$(MAKE) -C contrib/citext all
 	$(MAKE) -C contrib/file_fdw all
 	$(MAKE) -C contrib/formatter all
 	$(MAKE) -C contrib/formatter_fixedwidth all
@@ -19,14 +21,14 @@ all:
 	$(MAKE) -C contrib/dblink all
 	$(MAKE) -C contrib/indexscan all
 	$(MAKE) -C contrib/pageinspect all  # needed by src/test/isolation
-	$(MAKE) -C contrib/pg_upgrade_support all
-	$(MAKE) -C contrib/pg_upgrade all
-	$(MAKE) -C contrib/pg_xlogdump all
 	$(MAKE) -C contrib/hstore all
 	$(MAKE) -C contrib/pgcrypto all
+ifeq ($(with_openssl), yes)
+	$(MAKE) -C contrib/sslinfo all
+endif
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
-	$(MAKE) -C gpAux/platform all
+	$(MAKE) -C gpMgmt all
 	$(MAKE) -C gpcontrib all
 	+@echo "All of Greenplum Database successfully made. Ready to install."
 
@@ -44,7 +46,9 @@ html man:
 	$(MAKE) -C doc $@
 
 install:
-	#$(MAKE) -C contrib/file_fdw $@ # GPDB_91_MERGE_FIXME: disable installation until it's officially supported.
+	$(MAKE) -C contrib/auto_explain $@
+	$(MAKE) -C contrib/citext $@
+	$(MAKE) -C contrib/file_fdw $@
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
@@ -52,15 +56,14 @@ install:
 	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C contrib/pageinspect $@  # needed by src/test/isolation
-	$(MAKE) -C contrib/pg_upgrade_support $@
-	$(MAKE) -C contrib/pg_upgrade $@
-	$(MAKE) -C contrib/pg_xlogdump $@
 	$(MAKE) -C contrib/hstore $@
 	$(MAKE) -C contrib/pgcrypto $@
+ifeq ($(with_openssl), yes)
+	$(MAKE) -C contrib/sslinfo $@
+endif
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
-	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C gpcontrib $@
 	+@echo "Greenplum Database installation complete."
 
@@ -82,6 +85,7 @@ $(call recurse,distprep,doc src config contrib gpcontrib)
 # it's not built by default
 $(call recurse,clean,doc contrib gpcontrib src config)
 clean:
+	rm -rf tmp_install/
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 # leap over gpAux/Makefile into subdirectories to avoid circular dependency.
@@ -89,7 +93,6 @@ clean:
 # calling top-level configure and this Makefile
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
-	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C gpMgmt $@
 
 # Important: distclean `src' last, otherwise Makefile.global
@@ -98,15 +101,15 @@ distclean maintainer-clean:
 #	$(MAKE) -C doc $@
 	$(MAKE) -C gpAux/extensions $@
 	$(MAKE) -C gpAux/gpperfmon $@
-	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C contrib $@
 	$(MAKE) -C gpcontrib $@
 	$(MAKE) -C config $@
 	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C src $@
-	rm -f config.cache config.log config.status GNUmakefile
+	rm -rf tmp_install/
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
+	rm -f config.cache config.log config.status GNUmakefile
 
 installcheck-resgroup:
 	$(MAKE) -C src/test/isolation2 $@
@@ -134,20 +137,18 @@ $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib src/bin g
 # which probably indicates that we're relying on undefined behavior... we should
 # probably pull anything order-dependent out of recurse() and back into the
 # recipe body).
-# GPDB_94_MERGE_FIXME: We should stop listing each contrib module here separately.
-$(call recurse,installcheck-world, \
-			   src/test/ \
-			   src/pl \
-			   src/interfaces/gppc \
-			   contrib/formatter_fixedwidth \
-			   contrib/extprotocol \
-			   contrib/dblink \
-			   contrib/indexscan \
-			   contrib/hstore \
-			   contrib/pgcrypto \
-			   gpcontrib \
-			   src/bin/ \
-			   gpMgmt/bin,installcheck)
+ICW_TARGETS  = src/test src/pl src/interfaces/gppc
+ICW_TARGETS += contrib/auto_explain contrib/citext
+ICW_TARGETS += contrib/file_fdw contrib/formatter_fixedwidth
+ICW_TARGETS += contrib/extprotocol contrib/dblink
+ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto
+# sslinfo depends on openssl
+ifeq ($(with_openssl), yes)
+ICW_TARGETS += contrib/sslinfo
+endif
+ICW_TARGETS += gpcontrib src/bin gpMgmt/bin
+
+$(call recurse,installcheck-world, $(ICW_TARGETS),installcheck)
 
 # GPDB: Postgres disables the SSL tests during ICW because of the TCP port that
 # it opens to other users on the same machine during testing. GPDB makes no such
@@ -161,7 +162,7 @@ installcheck-world: installcheck-gpcheckcat
 installcheck-gpcheckcat:
 	gpcheckcat -A
 $(call recurse,installcheck-world,gpcontrib/gp_replica_check,installcheck)
-$(call recurse,installcheck-world,contrib/pg_upgrade,check)
+$(call recurse,installcheck-world,src/bin/pg_upgrade,check)
 
 # Run mock tests, that don't require a running server. Arguably these should
 # be part of [install]check-world, but we treat them more like part of

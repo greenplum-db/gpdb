@@ -12,7 +12,7 @@ else
     CGROUP_BASEDIR=/sys/fs/cgroup
 fi
 
-if [ "$TEST_OS" = centos7 -o "$TEST_OS" = sles12 ]; then
+if [ "$TEST_OS" = centos7 ]; then
     CGROUP_AUTO_MOUNTED=1
 fi
 

@@ -68,8 +68,10 @@ CATALOG(pg_resourcetype,6059) BKI_SHARED_RELATION
 	bool		resrequired;		/* if required, user must specify during CREATE */
 	bool		reshasdefault;		/* create a default entry for optional type */
 	bool		reshasdisable;		/* whether the type can be removed or shut off */
+#ifdef CATALOG_VARLEN
 	text		resdefaultsetting;	/* default resource setting  */
 	text		resdisabledsetting;	/* value that turns it off  */
+#endif
 } FormData_pg_resourcetype;
 
 /* no foreign keys */

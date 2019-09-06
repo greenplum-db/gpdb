@@ -4,7 +4,7 @@
  *	  POSTGRES definitions for external and compressed storage
  *	  of variable size attributes.
  *
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  *
  * src/include/access/tuptoaster.h
  *
@@ -96,7 +96,7 @@
 
 #define TOAST_MAX_CHUNK_SIZE	\
 	(EXTERN_TUPLE_MAX_SIZE -							\
-	 MAXALIGN(offsetof(HeapTupleHeaderData, t_bits)) -	\
+	 MAXALIGN(SizeofHeapTupleHeader) -					\
 	 sizeof(Oid) -										\
 	 sizeof(int32) -									\
 	 VARHDRSZ)

@@ -486,8 +486,26 @@ select numrange(1.0, 2.0) + numrange(1.5, 3.0);
  [1.0,3.0)
 (1 row)
 
-select numrange(1.0, 2.0) + numrange(2.5, 3.0);
+select numrange(1.0, 2.0) + numrange(2.5, 3.0); -- should fail
 ERROR:  result of range union would not be contiguous
+select range_merge(numrange(1.0, 2.0), numrange(2.0, 3.0));
+ range_merge 
+-------------
+ [1.0,3.0)
+(1 row)
+
+select range_merge(numrange(1.0, 2.0), numrange(1.5, 3.0));
+ range_merge 
+-------------
+ [1.0,3.0)
+(1 row)
+
+select range_merge(numrange(1.0, 2.0), numrange(2.5, 3.0)); -- shouldn't fail
+ range_merge 
+-------------
+ [1.0,3.0)
+(1 row)
+
 select numrange(1.0, 2.0) * numrange(2.0, 3.0);
  ?column? 
 ----------
@@ -1077,6 +1095,28 @@ select count(*) from test_range_spgist where ir -|- int4range(100,500);
 -------
      5
 (1 row)
+
+-- test index-only scans
+explain (costs off)
+select ir from test_range_spgist where ir -|- int4range(10,20) order by ir;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: ir
+   ->  Sort
+         Sort Key: ir
+         ->  Index Only Scan using test_range_spgist_idx on test_range_spgist
+               Index Cond: (ir -|- '[10,20)'::int4range)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select ir from test_range_spgist where ir -|- int4range(10,20) order by ir;
+     ir     
+------------
+ [20,30)
+ [20,30)
+ [20,10020)
+(3 rows)
 
 RESET enable_seqscan;
 RESET enable_indexscan;

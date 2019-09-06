@@ -13,9 +13,5 @@ run:
   path: gpdb_src/concourse/scripts/scan_with_coverity.bash
 params:
   OUTPUT_ARTIFACT_DIR: gpdb_coverity_artifacts
-  IVYREPO_HOST:
-  IVYREPO_PASSWD:
-  IVYREPO_REALM:
-  IVYREPO_USER:
   COVERITY_TOKEN:
   COVERITY_EMAIL:

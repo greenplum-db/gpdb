@@ -4,8 +4,8 @@
 <topic id="topic1">
   <title>gpperfmon_install</title>
   <body>
-    <p>Installs the <codeph>gpperfmon</codeph> database, which is used by Greenplum Command Center,
-      and optionally enables the data collection agents.</p>
+    <p>Installs the <codeph>gpperfmon</codeph> database and optionally enables the data collection
+      agents.</p>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpperfmon_install --port <varname>gpdb_port</varname> </b>
@@ -16,6 +16,17 @@
     </section>
     <section id="section3">
       <title>Description</title>
+      <note otherprops="pivotal">Do not run the <codeph>gpperfmon_install</codeph> utility if you
+        plan to use Pivotal Greenplum Command Center to manage your Greenplum Database system.
+        Command Center no longer uses the history tables that <codeph>gpperfmon_install</codeph>
+        creates. Enabling the gpperfmon data collection agents (<codeph>gpmmon</codeph> and
+          <codeph>gpsmon</codeph>) adds unnecessary load to the system. Instead, run the Command
+        Center installer. The installer creates the <codeph>gpperfmon</codeph> database with the
+          <codeph>gpmetrics</codeph> schema Command Center needs and enables the Command Center
+        agent (<codeph>ccagent</codeph>) to collect real-time system metrics and query information
+        from the Greenplum Database metrics collector module. See the <xref
+          href="https://gpcc.docs.pivotal.io/latest/welcome.html" format="html" scope="external"
+          >Greenplum Command Center</xref> documentation for more information. </note>
       <p>The <codeph>gpperfmon_install</codeph> utility automates the steps required to enable the
         data collection agents. You must be the Greenplum Database system user
           (<codeph>gpadmin</codeph>) to run this utility. The <codeph>--port</codeph> option is
@@ -82,10 +93,11 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
           it):<codeblock>*:5432:gpperfmon:gpmon:<varname>gpmon_password</varname></codeblock> If
           your password file is not located in the default location (<codeph>~/.pgpass</codeph>),
           use the <codeph>--pgpass</codeph> option to specify the file location.</li>
-        <li id="ou140687">Sets the server configuration parameters for Greenplum Command Center. The
-          following parameters must be enabled for the data collection agents to begin collecting
-          data. The utility sets the following parameters in the Greenplum Database
-            <codeph>postgresql.conf</codeph> configuration files:<ul id="ul_wrp_dtx_wr">
+        <li id="ou140687">Sets the server configuration parameters for the
+            <codeph>gpperfmon</codeph> database. The following parameters must be enabled for the
+          data collection agents to begin collecting data. The utility sets the following parameters
+          in the Greenplum Database <codeph>postgresql.conf</codeph> configuration files:<ul
+            id="ul_wrp_dtx_wr">
             <li><codeph>gp_enable_gpperfmon=on</codeph> (in all <codeph>postgresql.conf</codeph>
               files)</li>
             <li><codeph>gpperfmon_port=8888</codeph> (in all <codeph>postgresql.conf</codeph> files) </li>
@@ -107,8 +119,8 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
           <pd>In addition to creating the <codeph>gpperfmon</codeph> database, performs the
             additional steps required to enable the data collection agents. When
               <codeph>--enable</codeph> is specified the utility will also create and configure the
-              <codeph>gpmon</codeph> superuser account and set the Command Center server
-            configuration parameters in the <codeph>postgresql.conf</codeph> files.</pd>
+              <codeph>gpmon</codeph> superuser account and set the gpperfmon server configuration
+            parameters in the <codeph>postgresql.conf</codeph> files.</pd>
         </plentry>
         <plentry>
           <pt>--password <varname>gpmon_password</varname></pt>
@@ -162,9 +174,8 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
                 <codeph>queries_history</codeph> table. For queries with shorter run times, no
               historical data is collected. Defaults to 20 seconds.</p>
             <p>If you know that you want to collect data for all queries, you can set this parameter
-              to a low value. Setting the minimum query run time to zero, however, collects data
-              even for the numerous queries run by Greenplum Command Center, creating a large amount
-              of data that may not be useful.</p>
+              to a low value. Setting the minimum query run time to zero, however, collects data for
+              even trivial queries and can create a large amount of data that may not be useful.</p>
           </stentry>
         </strow>
         <strow>
@@ -212,33 +223,23 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
           <stentry>smdw_aliases</stentry>
           <stentry>This parameter allows you to specify additional host names for the standby
             master. For example, if the standby master has two NICs, you can
-              enter:<codeblock>smdw_aliases=smdw-1,smdw-2</codeblock><p>This optional fault
-              tolerance parameter is useful if the Greenplum Command Center loses connectivity with
-              the standby master. Instead of continuously retrying to connect to host smdw, it will
-              try to connect to the NIC-based aliases of <codeph>smdw-1</codeph> and/or
-                <codeph>smdw-2</codeph>. This ensures that the Command Center Console can
-              continuously poll and monitor the standby master.</p></stentry>
+            enter:<codeblock>smdw_aliases=smdw-1,smdw-2</codeblock></stentry>
         </strow>
       </simpletable>
     </section>
     <section>
       <title>Notes</title>
-      <p>The <codeph>gpperfmon</codeph> database and Greenplum Command Center require the
-          <codeph>gpmon</codeph> role. After the <codeph>gpperfmon</codeph> database and
-          <codeph>gpmon</codeph> role have been created, you can change the password for the
-          <codeph>gpmon</codeph> role and update the information that Greenplum Command Center uses
-        to connect to the <codeph>gpperfmon</codeph> database: </p>
+      <p>The <codeph>gpperfmon</codeph> database requires the <codeph>gpmon</codeph> role. After the
+          <codeph>gpperfmon</codeph> database and <codeph>gpmon</codeph> role have been created, you
+        can change the password for the <codeph>gpmon</codeph> role: </p>
       <ol id="ol_wss_knp_wr">
         <li>Log in to Greenplum Database as a superuser and change the <codeph>gpmon</codeph>
           password with the <codeph>ALTER ROLE</codeph>
           command.<codeblock># ALTER ROLE gpmon WITH PASSWORD '<varname>new_password</varname>' ;</codeblock></li>
-        <li>Update the password in <codeph>.pgpass</codeph> file that is used by Greenplum Command
-          Center. The default file location is the <codeph>gpadmin</codeph> home directory
-            (<codeph>~/.pgpass</codeph>). The <codeph>.pgpass</codeph> file contains a line with the
-            <codeph>gpmon</codeph>
+        <li>Update the password in the <codeph>.pgpass</codeph> file. The default file location is
+          the <codeph>gpadmin</codeph> home directory (<codeph>~/.pgpass</codeph>). The
+            <codeph>.pgpass</codeph> file contains a line with the <codeph>gpmon</codeph>
           password.<codeblock>*:5432:gpperfmon:gpmon:<varname>new_password</varname></codeblock></li>
-        <li>Restart the Greenplum Command Center with the Command Center <codeph>gpcmdr</codeph>
-          utility. <codeblock>$ gpcmdr --restart</codeblock></li>
       </ol>
       <p>The gpperfmon monitoring system requires some initialization after startup. Monitoring
         information appears after a few minutes have passed, and not immediately after installation

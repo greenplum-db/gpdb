@@ -9,9 +9,8 @@ DROP VIEW IF EXISTS many_ops;
 DROP ROLE r1_opmem_test;
 DROP RESOURCE GROUP rg1_opmem_test;
 DROP RESOURCE GROUP rg2_opmem_test;
---end_ignore
-
 CREATE LANGUAGE plpythonu;
+--end_ignore
 
 -- a helper function to run query via SPI
 CREATE OR REPLACE FUNCTION f1_opmem_test() RETURNS void AS $$
@@ -24,27 +23,31 @@ $$ LANGUAGE plpythonu;
 -- we have to keep the columns provided by them in the target list, instead of
 -- composing a long SELECT c1,c2,... list we use SELECT * here, but we should
 -- not output the groupid as it changes each time.
+--
+-- hashagg may not work with a small operator memory, so we use UNION ALL
+-- instead of UNION to prevent putting a hashagg on top of the append node,
+-- and we use a always-false WHERE condition to prevent too much output.
 CREATE OR REPLACE VIEW many_ops AS
-      SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
+          SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
+UNION ALL SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=0
 ;
 
 -- we must ensure spill to be small enough but still > 0.
@@ -62,12 +65,6 @@ GRANT ALL ON many_ops TO r1_opmem_test;
 -- memory reserved, however in resource group mode we assign at least 100KB to
 -- each operator, no matter it is memory intensive or not.  As long as there is
 -- enough shared memory the query should be executed successfully.
---
--- some operators like HashAgg require more memory to run, the memory quota is
--- also dynamically increased to meet their minimal requirements.
---
--- note: when there is no enough operator memory there should be a warning,
--- however warnings are not displayed in isolation2 tests.
 
 --
 -- positive: there is enough global shared memory

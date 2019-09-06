@@ -74,15 +74,15 @@
             exceeds the <codeph>MAX_COST</codeph> value set for the resource queue, the query is
             rejected as too expensive.</pd>
           <pd>
-            <note>GPORCA and the legacy Greenplum Database query optimizer utilize different
+            <note>GPORCA and the Postgres Planner utilize different
               query costing models and may compute different costs for the same query.
               The Greenplum Database resource queue resource management scheme neither
-              differentiates nor aligns costs between GPORCA and the legacy optimizer; it
+              differentiates nor aligns costs between GPORCA and the Postgres Planner; it
               uses the literal cost value returned from the optimizer to throttle
               queries.<p> When resource queue-based resource management is active, use the
               <codeph>MEMORY_LIMIT</codeph> and <codeph>ACTIVE_STATEMENTS</codeph> limits for
               resource queues rather than configuring cost-based limits. Even when using GPORCA,
-              Greenplum Database may fall back to using the legacy query optimizer for certain
+              Greenplum Database may fall back to using the Postgres Planner for certain
               queries, so using cost-based limits can lead to unexpected results.</p></note>
           </pd>
         </plentry>
@@ -394,8 +394,7 @@
                 value for this parameter should be sufficient for typical database operations. </li>
               <li id="iz174445"><codeph>gp_resqueue_priority_cpucores_per_segment</codeph> -
                 Specifies the number of CPU cores allocated per segment instance. The default value
-                is 4 for the master and segments. For Greenplum Data Computing Appliance Version 2,
-                the default value is 4 for segments and 25 for the master. <p>Each host checks its
+                is 4 for the master and segments. <p>Each host checks its
                   own <codeph>postgresql.conf</codeph> file for the value of this parameter. This
                   parameter also affects the master node, where it should be set to a value
                   reflecting the higher ratio of CPU cores. For example, on a cluster that has 10
@@ -737,7 +736,7 @@ MEMORY_LIMIT='2000MB');
         pg_stat_activity 
    WHERE pg_roles.rolresqueue=pg_locks.objid 
    AND pg_locks.objid=gp_toolkit.gp_resqueue_status.queueid
-   AND pg_stat_activity.procpid=pg_locks.pid
+   AND pg_stat_activity.pid=pg_locks.pid
    AND pg_stat_activity.usename=pg_roles.rolname;
 </codeblock>
         </p>

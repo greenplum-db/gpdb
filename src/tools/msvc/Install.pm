@@ -91,7 +91,6 @@ sub Install
 	}
 
 	CopySolutionOutput($conf, $target);
-	lcopy($target . '/lib/libpq.dll', $target . '/bin/libpq.dll');
 	my $sample_files = [];
 	my @top_dir      = ("src");
 	@top_dir = ("src\\bin", "src\\interfaces") if ($insttype eq "client");
@@ -106,14 +105,21 @@ sub Install
 	CopyFiles(
 		'Import libraries',
 		$target . '/lib/',
-		"$conf\\",
-		"postgres\\postgres.lib",
-		"libpq\\libpq.lib",
-		"libecpg\\libecpg.lib",
-		"libpgcommon\\libpgcommon.lib",
-		"libpgport\\libpgport.lib",
-		"libpgtypes\\libpgtypes.lib",
-		"libecpg_compat\\libecpg_compat.lib");
+		"$conf\\", "libpq\\libpq.lib", "libpgcommon\\libpgcommon.lib",
+		"libpgport\\libpgport.lib");
+
+	if ($insttype ne "client")
+	{
+		CopyFiles(
+			'Import libraries',
+			$target . '/lib/',
+			"$conf\\",
+			"postgres\\postgres.lib",
+			"libecpg\\libecpg.lib",
+			"libpgtypes\\libpgtypes.lib",
+			"libecpg_compat\\libecpg_compat.lib");
+	}
+
 	CopyContribFiles($config, $target);
 	CopyIncludeFiles($target);
 
@@ -236,8 +242,14 @@ sub CopySolutionOutput
 	while ($sln =~ $rem)
 	{
 		my $pf = $1;
-		my $dir;
-		my $ext;
+
+		# Hash-of-arrays listing where to install things.  For each
+		# subdirectory there's a hash key, and the value is an array
+		# of file extensions to install in that subdirectory.  Example:
+		# { 'bin' => [ 'dll', 'lib' ],
+		#   'lib' => [ 'lib' ] }
+		my %install_list;
+		my $is_sharedlib = 0;
 
 		$sln =~ s/$rem//;
 
@@ -247,22 +259,45 @@ sub CopySolutionOutput
 
 		my $proj = read_file("$pf.$vcproj")
 		  || croak "Could not open $pf.$vcproj\n";
+
+		# Check if this project uses a shared library by looking if
+		# SO_MAJOR_VERSION is defined in its Makefile, whose path
+		# can be found using the resource file of this project.
+		if ((      $vcproj eq 'vcxproj'
+				&& $proj =~ qr{ResourceCompile\s*Include="([^"]+)"})
+			|| (   $vcproj eq 'vcproj'
+				&& $proj =~ qr{File\s*RelativePath="([^\"]+)\.rc"}))
+		{
+			my $projpath = dirname($1);
+			my $mfname =
+			  -e "$projpath/GNUmakefile"
+			  ? "$projpath/GNUmakefile"
+			  : "$projpath/Makefile";
+			my $mf = read_file($mfname) || croak "Could not open $mfname\n";
+
+			$is_sharedlib = 1 if ($mf =~ /^SO_MAJOR_VERSION\s*=\s*(.*)$/mg);
+		}
+
 		if ($vcproj eq 'vcproj' && $proj =~ qr{ConfigurationType="([^"]+)"})
 		{
 			if ($1 == 1)
 			{
-				$dir = "bin";
-				$ext = "exe";
+				push(@{ $install_list{'bin'} }, "exe");
 			}
 			elsif ($1 == 2)
 			{
-				$dir = "lib";
-				$ext = "dll";
+				push(@{ $install_list{'lib'} }, "dll");
+				if ($is_sharedlib)
+				{
+					push(@{ $install_list{'bin'} }, "dll");
+					push(@{ $install_list{'lib'} }, "lib");
+				}
 			}
 			else
 			{
 
-# Static lib, such as libpgport, only used internally during build, don't install
+				# Static libraries, such as libpgport, only used internally
+				# during build, don't install.
 				next;
 			}
 		}
@@ -271,18 +306,22 @@ sub CopySolutionOutput
 		{
 			if ($1 eq 'Application')
 			{
-				$dir = "bin";
-				$ext = "exe";
+				push(@{ $install_list{'bin'} }, "exe");
 			}
 			elsif ($1 eq 'DynamicLibrary')
 			{
-				$dir = "lib";
-				$ext = "dll";
+				push(@{ $install_list{'lib'} }, "dll");
+				if ($is_sharedlib)
+				{
+					push(@{ $install_list{'bin'} }, "dll");
+					push(@{ $install_list{'lib'} }, "lib");
+				}
 			}
 			else    # 'StaticLibrary'
 			{
 
-# Static lib, such as libpgport, only used internally during build, don't install
+				# Static lib, such as libpgport, only used internally
+				# during build, don't install.
 				next;
 			}
 		}
@@ -290,8 +329,16 @@ sub CopySolutionOutput
 		{
 			croak "Could not parse $pf.$vcproj\n";
 		}
-		lcopy("$conf\\$pf\\$pf.$ext", "$target\\$dir\\$pf.$ext")
-		  || croak "Could not copy $pf.$ext\n";
+
+		# Install each element
+		foreach my $dir (keys %install_list)
+		{
+			foreach my $ext (@{ $install_list{$dir} })
+			{
+				lcopy("$conf\\$pf\\$pf.$ext", "$target\\$dir\\$pf.$ext")
+				  || croak "Could not copy $pf.$ext\n";
+			}
+		}
 		lcopy("$conf\\$pf\\$pf.pdb", "$target\\symbols\\$pf.pdb")
 		  || croak "Could not copy $pf.pdb\n";
 		print ".";
@@ -307,7 +354,7 @@ sub GenerateConversionScript
 
 	print "Generating conversion proc script...";
 	my $mf = read_file('src/backend/utils/mb/conversion_procs/Makefile');
-	$mf =~ s{\\\s*[\r\n]+}{}mg;
+	$mf =~ s{\\\r?\n}{}g;
 	$mf =~ /^CONVERSIONS\s*=\s*(.*)$/m
 	  || die "Could not find CONVERSIONS line in conversions Makefile\n";
 	my @pieces = split /\s+/, $1;
@@ -341,7 +388,7 @@ sub GenerateTimezoneFiles
 	my $target = shift;
 	my $conf   = shift;
 	my $mf     = read_file("src/timezone/Makefile");
-	$mf =~ s{\\\s*[\r\n]+}{}mg;
+	$mf =~ s{\\\r?\n}{}g;
 
 	$mf =~ /^TZDATAFILES\s*:?=\s*(.*)$/m
 	  || die "Could not find TZDATAFILES line in timezone makefile\n";
@@ -375,7 +422,7 @@ sub GenerateTsearchFiles
 	my $F;
 	my $tmpl = read_file('src/backend/snowball/snowball.sql.in');
 	my $mf   = read_file('src/backend/snowball/Makefile');
-	$mf =~ s{\\\s*[\r\n]+}{}mg;
+	$mf =~ s{\\\r?\n}{}g;
 	$mf =~ /^LANGUAGES\s*=\s*(.*)$/m
 	  || die "Could not find LANGUAGES line in snowball Makefile\n";
 	my @pieces = split /\s+/, $1;
@@ -414,98 +461,112 @@ sub CopyContribFiles
 	my $target = shift;
 
 	print "Copying contrib data files...";
-	my $D;
-	opendir($D, 'contrib') || croak "Could not opendir on contrib!\n";
-	while (my $d = readdir($D))
+	foreach my $subdir ('contrib', 'src/test/modules')
 	{
-		next if ($d =~ /^\./);
-		next unless (-f "contrib/$d/Makefile");
-		next
-		  if ($insttype eq "client" && !grep { $_ eq $d } @client_contribs);
-
-		# these configuration-based exclusions must match vcregress.pl
-		next if ($d eq "uuid-ossp" && !defined($config->{uuid}));
-		next if ($d eq "sslinfo"   && !defined($config->{openssl}));
-		next if ($d eq "xml2"      && !defined($config->{xml}));
-		next if ($d eq "sepgsql");
-
-		my $mf = read_file("contrib/$d/Makefile");
-		$mf =~ s{\\s*[\r\n]+}{}mg;
-
-		# Note: we currently don't support setting MODULEDIR in the makefile
-		my $moduledir = 'contrib';
-
-		my $flist = '';
-		if ($mf =~ /^EXTENSION\s*=\s*(.*)$/m) { $flist .= $1 }
-		if ($flist ne '')
+		my $D;
+		opendir($D, $subdir) || croak "Could not opendir on $subdir!\n";
+		while (my $d = readdir($D))
 		{
-			$moduledir = 'extension';
-			$flist = ParseAndCleanRule($flist, $mf);
 
-			foreach my $f (split /\s+/, $flist)
-			{
-				lcopy(
-					'contrib/' . $d . '/' . $f . '.control',
-					$target . '/share/extension/' . $f . '.control'
-				) || croak("Could not copy file $f.control in contrib $d");
-				print '.';
-			}
-		}
+			# These configuration-based exclusions must match vcregress.pl
+			next if ($d eq "uuid-ossp"       && !defined($config->{uuid}));
+			next if ($d eq "sslinfo"         && !defined($config->{openssl}));
+			next if ($d eq "xml2"            && !defined($config->{xml}));
+			next if ($d eq "hstore_plperl"   && !defined($config->{perl}));
+			next if ($d eq "hstore_plpython" && !defined($config->{python}));
+			next if ($d eq "ltree_plpython"  && !defined($config->{python}));
+			next if ($d eq "sepgsql");
 
-		$flist = '';
-		if ($mf =~ /^DATA_built\s*=\s*(.*)$/m) { $flist .= $1 }
-		if ($mf =~ /^DATA\s*=\s*(.*)$/m)       { $flist .= " $1" }
-		$flist =~ s/^\s*//;  # Remove leading spaces if we had only DATA_built
-
-		if ($flist ne '')
-		{
-			$flist = ParseAndCleanRule($flist, $mf);
-
-			foreach my $f (split /\s+/, $flist)
-			{
-				lcopy('contrib/' . $d . '/' . $f,
-					$target . '/share/' . $moduledir . '/' . basename($f))
-				  || croak("Could not copy file $f in contrib $d");
-				print '.';
-			}
-		}
-
-		$flist = '';
-		if ($mf =~ /^DATA_TSEARCH\s*=\s*(.*)$/m) { $flist .= $1 }
-		if ($flist ne '')
-		{
-			$flist = ParseAndCleanRule($flist, $mf);
-
-			foreach my $f (split /\s+/, $flist)
-			{
-				lcopy('contrib/' . $d . '/' . $f,
-					$target . '/share/tsearch_data/' . basename($f))
-				  || croak("Could not copy file $f in contrib $d");
-				print '.';
-			}
-		}
-
-		$flist = '';
-		if ($mf =~ /^DOCS\s*=\s*(.*)$/mg) { $flist .= $1 }
-		if ($flist ne '')
-		{
-			$flist = ParseAndCleanRule($flist, $mf);
-
-			# Special case for contrib/spi
-			$flist =
-"autoinc.example insert_username.example moddatetime.example refint.example timetravel.example"
-			  if ($d eq 'spi');
-			foreach my $f (split /\s+/, $flist)
-			{
-				lcopy('contrib/' . $d . '/' . $f,
-					$target . '/doc/' . $moduledir . '/' . $f)
-				  || croak("Could not copy file $f in contrib $d");
-				print '.';
-			}
+			CopySubdirFiles($subdir, $d, $config, $target);
 		}
 	}
-	closedir($D);
 	print "\n";
+}
+
+sub CopySubdirFiles
+{
+	my $subdir = shift;
+	my $module = shift;
+	my $config = shift;
+	my $target = shift;
+
+	return if ($module =~ /^\./);
+	return unless (-f "$subdir/$module/Makefile");
+	return
+	  if ($insttype eq "client" && !grep { $_ eq $module } @client_contribs);
+
+	my $mf = read_file("$subdir/$module/Makefile");
+	$mf =~ s{\\\r?\n}{}g;
+
+	# Note: we currently don't support setting MODULEDIR in the makefile
+	my $moduledir = 'contrib';
+
+	my $flist = '';
+	if ($mf =~ /^EXTENSION\s*=\s*(.*)$/m) { $flist .= $1 }
+	if ($flist ne '')
+	{
+		$moduledir = 'extension';
+		$flist = ParseAndCleanRule($flist, $mf);
+
+		foreach my $f (split /\s+/, $flist)
+		{
+			lcopy("$subdir/$module/$f.control",
+				"$target/share/extension/$f.control")
+			  || croak("Could not copy file $f.control in contrib $module");
+			print '.';
+		}
+	}
+
+	$flist = '';
+	if ($mf =~ /^DATA_built\s*=\s*(.*)$/m) { $flist .= $1 }
+	if ($mf =~ /^DATA\s*=\s*(.*)$/m)       { $flist .= " $1" }
+	$flist =~ s/^\s*//;    # Remove leading spaces if we had only DATA_built
+
+	if ($flist ne '')
+	{
+		$flist = ParseAndCleanRule($flist, $mf);
+
+		foreach my $f (split /\s+/, $flist)
+		{
+			lcopy("$subdir/$module/$f",
+				"$target/share/$moduledir/" . basename($f))
+			  || croak("Could not copy file $f in contrib $module");
+			print '.';
+		}
+	}
+
+	$flist = '';
+	if ($mf =~ /^DATA_TSEARCH\s*=\s*(.*)$/m) { $flist .= $1 }
+	if ($flist ne '')
+	{
+		$flist = ParseAndCleanRule($flist, $mf);
+
+		foreach my $f (split /\s+/, $flist)
+		{
+			lcopy("$subdir/$module/$f",
+				"$target/share/tsearch_data/" . basename($f))
+			  || croak("Could not copy file $f in $subdir $module");
+			print '.';
+		}
+	}
+
+	$flist = '';
+	if ($mf =~ /^DOCS\s*=\s*(.*)$/mg) { $flist .= $1 }
+	if ($flist ne '')
+	{
+		$flist = ParseAndCleanRule($flist, $mf);
+
+		# Special case for contrib/spi
+		$flist =
+"autoinc.example insert_username.example moddatetime.example refint.example timetravel.example"
+		  if ($module eq 'spi');
+		foreach my $f (split /\s+/, $flist)
+		{
+			lcopy("$subdir/$module/$f", "$target/doc/$moduledir/$f")
+			  || croak("Could not copy file $f in contrib $module");
+			print '.';
+		}
+	}
 }
 
 sub ParseAndCleanRule
@@ -565,6 +626,8 @@ sub CopyIncludeFiles
 	lcopy('src/include/libpq/pqcomm.h', $target . '/include/internal/libpq/')
 	  || croak 'Could not copy pqcomm.h';
 
+	if ($insttype ne "client")
+	{
 	CopyFiles(
 		'Server headers',
 		$target . '/include/server/',
@@ -604,7 +667,7 @@ sub CopyIncludeFiles
 	closedir($D);
 
 	my $mf = read_file('src/interfaces/ecpg/include/Makefile');
-	$mf =~ s{\\s*[\r\n]+}{}mg;
+	$mf =~ s{\\\r?\n}{}g;
 	$mf =~ /^ecpg_headers\s*=\s*(.*)$/m
 	  || croak "Could not find ecpg_headers line\n";
 	CopyFiles(
@@ -620,6 +683,7 @@ sub CopyIncludeFiles
 		$target . '/include/informix/esql/',
 		'src/interfaces/ecpg/include/',
 		split /\s+/, $1);
+	}
 }
 
 sub GenerateNLSFiles

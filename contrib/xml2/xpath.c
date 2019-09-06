@@ -23,7 +23,6 @@
 #include <libxml/xmlerror.h>
 #include <libxml/parserInternals.h>
 
-
 PG_MODULE_MAGIC;
 
 /* exported for use by xslt_proc.c */
@@ -328,7 +327,7 @@ xpath_string(PG_FUNCTION_ARGS)
 	/* We could try casting to string using the libxml function? */
 
 	xpath = (xmlChar *) palloc(pathsize + 9);
-	strncpy((char *) xpath, "string(", 7);
+	memcpy((char *) xpath, "string(", 7);
 	memcpy((char *) (xpath + 7), VARDATA(xpathsupp), pathsize);
 	xpath[pathsize + 7] = ')';
 	xpath[pathsize + 8] = '\0';

@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -141,6 +141,14 @@ ExecNestLoop_guts(NestLoopState *node)
 		node->prefetch_inner = false;
 		node->reset_inner = false;
 	}
+
+	/*
+	 * Prefetch JoinQual to prevent motion hazard.
+	 *
+	 * See ExecPrefetchJoinQual() for details.
+	 */
+	if (node->prefetch_joinqual && ExecPrefetchJoinQual(&node->js))
+		node->prefetch_joinqual = false;
 
 	/*
 	 * Ok, everything is setup for the join so now loop until we return a
@@ -382,6 +390,7 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	nlstate->shared_outer = node->shared_outer;
 
 	nlstate->prefetch_inner = node->join.prefetch_inner;
+	nlstate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
 	
 	/*CDB-OLAP*/
 	nlstate->reset_inner = false;

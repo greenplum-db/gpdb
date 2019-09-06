@@ -120,8 +120,8 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		lovHeap = heap_open(heapid, AccessExclusiveLock);
 		lovIndex = index_open(idxid, AccessExclusiveLock);
 
-		RelationSetNewRelfilenode(lovHeap, RecentXmin, GetOldestMultiXactId());
-		RelationSetNewRelfilenode(lovIndex, InvalidTransactionId, InvalidMultiXactId);
+		RelationSetNewRelfilenode(lovHeap, lovHeap->rd_rel->relpersistence, RecentXmin, GetOldestMultiXactId());
+		RelationSetNewRelfilenode(lovIndex, lovIndex->rd_rel->relpersistence, InvalidTransactionId, InvalidMultiXactId);
 
 		/*
 		 * After creating the new relfilenode for a btee index, this is not
@@ -174,7 +174,6 @@ _bitmap_create_lov_heapandindex(Relation rel,
 								 InvalidOid,
 								 rel->rd_rel->relowner,
 								 tupDesc, NIL,
-								 /* relam */ InvalidOid,
 								 RELKIND_RELATION,
 								 rel->rd_rel->relpersistence,
 								 RELSTORAGE_HEAP,
@@ -184,6 +183,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 								 ONCOMMIT_NOOP, NULL /* GP Policy */,
 								 (Datum)0, false, true,
 								 true, /* is_internal */
+								 NULL, /* typeaddress */
 								 /* valid_opts */ true,
 								 /* is_part_child */ false,
 								 /* is_part_parent */ false);
@@ -239,6 +239,8 @@ _bitmap_create_lov_heapandindex(Relation rel,
 
 	idxid = index_create(lov_heap_rel, lovIndexName, InvalidOid,
 						 InvalidOid,
+						 InvalidOid,
+						 InvalidOid,
 						 indexInfo,
 						 indexColNames,
 						 BTREE_AM_OID,
@@ -253,6 +255,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 						 /* skip_build */ false,
 						 /* concurrent */ false,
 						 /* is_internal */ true,
+						 /* if_not_exists */ true,
 						 NULL);
 	*lovIndexOid = idxid;
 
@@ -298,7 +301,7 @@ _bitmap_create_lov_heapTupleDesc(Relation rel)
  */
 
 void
-_bitmap_open_lov_heapandindex(Relation rel __attribute__((unused)), BMMetaPage metapage,
+_bitmap_open_lov_heapandindex(Relation rel pg_attribute_unused(), BMMetaPage metapage,
 							  Relation *lovHeapP, Relation *lovIndexP,
 							  LOCKMODE lockMode)
 {
@@ -311,7 +314,7 @@ _bitmap_open_lov_heapandindex(Relation rel __attribute__((unused)), BMMetaPage m
  */
 void
 _bitmap_insert_lov(Relation lovHeap, Relation lovIndex, Datum *datum,
-				   bool *nulls, bool use_wal __attribute__((unused)))
+				   bool *nulls, bool use_wal pg_attribute_unused())
 {
 	TupleDesc	tupDesc;
 	HeapTuple	tuple;
@@ -366,7 +369,7 @@ _bitmap_close_lov_heapandindex(Relation lovHeap, Relation lovIndex,
  */
 bool
 _bitmap_findvalue(Relation lovHeap, Relation lovIndex,
-				  ScanKey scanKey __attribute__((unused)), IndexScanDesc scanDesc,
+				  ScanKey scanKey pg_attribute_unused(), IndexScanDesc scanDesc,
 				  BlockNumber *lovBlock, bool *blockNull,
 				  OffsetNumber *lovOffset, bool *offsetNull)
 {

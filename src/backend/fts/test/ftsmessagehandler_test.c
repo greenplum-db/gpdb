@@ -62,10 +62,10 @@ expectSendFtsResponse(const char *expectedMessageType, const FtsResponse *expect
 	expect_value(EndCommand, dest, DestRemote);
 	will_be_called(EndCommand);
 
-	will_be_called(pq_flush);
+	will_be_called(socket_flush);
 }
 
-void
+static void
 test_HandleFtsWalRepProbePrimary(void **state)
 {
 	FtsResponse mockresponse;
@@ -88,7 +88,7 @@ test_HandleFtsWalRepProbePrimary(void **state)
 	HandleFtsWalRepProbe();
 }
 
-void
+static void
 test_HandleFtsWalRepSyncRepOff(void **state)
 {
 	FtsResponse mockresponse;
@@ -111,7 +111,7 @@ test_HandleFtsWalRepSyncRepOff(void **state)
 	HandleFtsWalRepSyncRepOff();
 }
 
-void
+static void
 test_HandleFtsWalRepProbeMirror(void **state)
 {
 	FtsResponse mockresponse;
@@ -130,8 +130,9 @@ test_HandleFtsWalRepProbeMirror(void **state)
 }
 
 static void
-set_replication_slot(ReplicationSlotCtlData *repCtl)
+set_replication_slot(void *ptr)
 {
+	ReplicationSlotCtlData *repCtl = (ReplicationSlotCtlData *) ptr;
 	MyReplicationSlot = &repCtl->replication_slots[0];
 	/*
 	 * any number except 1 to avoid calling ReplicationSlotReserveWal and
@@ -140,7 +141,7 @@ set_replication_slot(ReplicationSlotCtlData *repCtl)
 	MyReplicationSlot->data.restart_lsn = 8948;
 }
 
-void
+static void
 test_HandleFtsWalRepPromoteMirror(void **state)
 {
 	ReplicationSlotCtlData repCtl;
@@ -163,7 +164,7 @@ test_HandleFtsWalRepPromoteMirror(void **state)
 	expect_value(LWLockAcquire, mode, LW_SHARED);
 	will_return(LWLockAcquire, true);
 
-	expect_value(LWLockRelease, l, ReplicationSlotControlLock);
+	expect_value(LWLockRelease, lock, ReplicationSlotControlLock);
 	will_be_called(LWLockRelease);
 
 	expect_value(ReplicationSlotCreate, name, INTERNAL_WAL_REPLICATION_SLOT_NAME);
@@ -178,7 +179,7 @@ test_HandleFtsWalRepPromoteMirror(void **state)
 	HandleFtsWalRepPromote();
 }
 
-void
+static void
 test_HandleFtsWalRepPromotePrimary(void **state)
 {
 	am_mirror = false;

@@ -1,0 +1,10 @@
+select count(*) from partsupp;
+ count 
+-------
+ 26    
+(1 row)
+select pg_sleep(20);
+ pg_sleep 
+----------
+          
+(1 row)

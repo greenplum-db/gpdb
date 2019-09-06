@@ -2,12 +2,6 @@
 # and Makefile.thirdparty
 default: all
 
-BLD_TOP=..
-
-GPAUX_DIR=$(BLD_TOP)/gpAux/
-
-ext_dir=$(BLD_TOP)/gpAux/ext
-
 top_builddir = ..
 include $(top_builddir)/src/Makefile.global
 
@@ -16,11 +10,21 @@ include $(top_builddir)/src/Makefile.global
 #
 # targets built via top_builddir/GNUmakefile
 #
-recurse_targets = gp_sparse_vector \
-               gp_debug_numsegments \
+recurse_targets = ""
+
+ifeq "$(enable_debug_extensions)" "yes"
+	recurse_targets = gp_sparse_vector \
                gp_distribution_policy \
                gp_internal_tools \
-               gp_inject_fault
+               gp_debug_numsegments \
+               gp_inject_fault \
+               gp_replica_check
+else
+	recurse_targets = gp_sparse_vector \
+               gp_distribution_policy \
+               gp_internal_tools
+endif
+
 ifeq "$(with_zstd)" "yes"
 	recurse_targets += zstd
 endif
@@ -94,10 +98,6 @@ endif
 ifeq "$(with_quicklz)" "yes"
 	$(MAKE) -C quicklz installcheck
 endif
-
-	if [ -d "$(ext_dir)" ]; then \
-		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C installcheck USE_PGXS=1 ; \
-	fi
 
 unittest-check:
 	@if [ "$(enable_pxf)" = "yes" ]; then \

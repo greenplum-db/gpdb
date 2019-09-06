@@ -472,6 +472,33 @@ network_ne(PG_FUNCTION_ARGS)
 }
 
 /*
+ * MIN/MAX support functions.
+ */
+Datum
+network_smaller(PG_FUNCTION_ARGS)
+{
+	inet	   *a1 = PG_GETARG_INET_PP(0);
+	inet	   *a2 = PG_GETARG_INET_PP(1);
+
+	if (network_cmp_internal(a1, a2) < 0)
+		PG_RETURN_INET_P(a1);
+	else
+		PG_RETURN_INET_P(a2);
+}
+
+Datum
+network_larger(PG_FUNCTION_ARGS)
+{
+	inet	   *a1 = PG_GETARG_INET_PP(0);
+	inet	   *a2 = PG_GETARG_INET_PP(1);
+
+	if (network_cmp_internal(a1, a2) > 0)
+		PG_RETURN_INET_P(a1);
+	else
+		PG_RETURN_INET_P(a2);
+}
+
+/*
  * Support function for hash indexes on inet/cidr.
  */
 Datum
@@ -858,6 +885,58 @@ network_hostmask(PG_FUNCTION_ARGS)
 	SET_INET_VARSIZE(dst);
 
 	PG_RETURN_INET_P(dst);
+}
+
+/*
+ * Returns true if the addresses are from the same family, or false.  Used to
+ * check that we can create a network which contains both of the networks.
+ */
+Datum
+inet_same_family(PG_FUNCTION_ARGS)
+{
+	inet	   *a1 = PG_GETARG_INET_PP(0);
+	inet	   *a2 = PG_GETARG_INET_PP(1);
+
+	PG_RETURN_BOOL(ip_family(a1) == ip_family(a2));
+}
+
+/*
+ * Returns the smallest CIDR which contains both of the inputs.
+ */
+Datum
+inet_merge(PG_FUNCTION_ARGS)
+{
+	inet	   *a1 = PG_GETARG_INET_PP(0),
+			   *a2 = PG_GETARG_INET_PP(1),
+			   *result;
+	int			commonbits;
+
+	if (ip_family(a1) != ip_family(a2))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("cannot merge addresses from different families")));
+
+	commonbits = bitncommon(ip_addr(a1), ip_addr(a2),
+							Min(ip_bits(a1), ip_bits(a2)));
+
+	/* Make sure any unused bits are zeroed. */
+	result = (inet *) palloc0(sizeof(inet));
+
+	ip_family(result) = ip_family(a1);
+	ip_bits(result) = commonbits;
+
+	/* Clone appropriate bytes of the address. */
+	if (commonbits > 0)
+		memcpy(ip_addr(result), ip_addr(a1), (commonbits + 7) / 8);
+
+	/* Clean any unwanted bits in the last partial byte. */
+	if (commonbits % 8 != 0)
+		ip_addr(result)[commonbits / 8] &= ~(0xFF >> (commonbits % 8));
+
+	/* Set varlena header correctly. */
+	SET_INET_VARSIZE(result);
+
+	PG_RETURN_INET_P(result);
 }
 
 /*

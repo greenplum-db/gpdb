@@ -40,7 +40,7 @@
  *
  * Note - Currently only 1 walsender is supported for GPDB
  *
- * Portions Copyright (c) 2010-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2010-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/replication/walsender.c
@@ -56,6 +56,7 @@
 #include "access/transam.h"
 #include "access/xact.h"
 #include "access/xlog_internal.h"
+#include "access/xlogutils.h"
 
 #include "catalog/pg_type.h"
 #include "commands/dbcommands.h"
@@ -123,6 +124,7 @@ int			wal_sender_timeout = 60 * 1000;		/* maximum time to send one
 // value, and maybe it's a suitable one, but it should probably be just a
 // constant like '64' or something.
 int			repl_catchup_within_range = ((uint32) 0xffffffff) / XLogSegSize;
+bool		log_replication_commands = false;
 
 /*
  * State for WalSndWakeupRequest
@@ -211,7 +213,7 @@ typedef void (*WalSndSendDataCallback) (void);
 static void WalSndLoop(WalSndSendDataCallback send_data);
 static void InitWalSenderSlot(void);
 static void WalSndKill(int code, Datum arg);
-static void WalSndShutdown(void) __attribute__((noreturn));
+static void WalSndShutdown(void) pg_attribute_noreturn();
 static void XLogSendPhysical(void);
 static void XLogSendLogical(void);
 static void WalSndDone(WalSndSendDataCallback send_data);
@@ -252,7 +254,7 @@ InitWalSender(void)
 	/* Set up resource owner */
 	CurrentResourceOwner = ResourceOwnerCreate(NULL, "walsender top-level resource owner");
 
-	SIMPLE_FAULT_INJECTOR(InitializeWalSender);
+	SIMPLE_FAULT_INJECTOR("initialize_wal_sender");
 
 	/*
 	 * Let postmaster know that we're a WAL sender. Once we've declared us as
@@ -619,7 +621,7 @@ StartReplication(StartReplicationCmd *cmd)
 			 * to find the requested WAL segment in pg_xlog.
 			 *
 			 * XXX: we could be more strict here and only allow a startpoint
-			 * that's older than the switchpoint, if it it's still in the same
+			 * that's older than the switchpoint, if it's still in the same
 			 * WAL segment.
 			 */
 			if (!XLogRecPtrIsInvalid(switchpoint) &&
@@ -787,6 +789,12 @@ logical_read_xlog_page(XLogReaderState *state, XLogRecPtr targetPagePtr, int req
 	XLogRecPtr	flushptr;
 	int			count;
 
+	XLogReadDetermineTimeline(state, targetPagePtr, reqLen);
+	sendTimeLineIsHistoric = (state->currTLI != ThisTimeLineID);
+	sendTimeLine = state->currTLI;
+	sendTimeLineValidUpto = state->currTLIValidUntil;
+	sendTimeLineNextTLI = state->nextTLI;
+
 	/* make sure we have enough WAL available */
 	flushptr = WalSndWaitForWal(targetPagePtr + reqLen);
 
@@ -829,6 +837,7 @@ CreateReplicationSlot(CreateReplicationSlotCmd *cmd)
 	else
 	{
 		CheckLogicalDecodingRequirements();
+
 		/*
 		 * Initially create the slot as ephemeral - that allows us to nicely
 		 * handle errors during initialization because it'll get dropped if
@@ -1004,10 +1013,6 @@ StartLogicalReplication(StartReplicationCmd *cmd)
 	pq_endmessage(&buf);
 	pq_flush();
 
-	/* setup state for XLogReadPage */
-	sendTimeLineIsHistoric = false;
-	sendTimeLine = ThisTimeLineID;
-
 	/*
 	 * Initialize position to the last ack'ed one, then the xlog records begin
 	 * to be shipped from that position.
@@ -1150,11 +1155,8 @@ WalSndWriteData(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xid,
 			WL_SOCKET_WRITEABLE | WL_SOCKET_READABLE | WL_TIMEOUT;
 
 		/* Sleep until something happens or we time out */
-		ImmediateInterruptOK = true;
-		CHECK_FOR_INTERRUPTS();
-		WaitLatchOrSocket(&MyWalSnd->latch, wakeEvents,
+		WaitLatchOrSocket(MyLatch, wakeEvents,
 						  MyProcPort->sock, sleeptime);
-		ImmediateInterruptOK = false;
 
 		/*
 		 * Emergency bailout if postmaster has died.  This is to avoid the
@@ -1162,6 +1164,11 @@ WalSndWriteData(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xid,
 		 */
 		if (!PostmasterIsAlive())
 			exit(1);
+
+		/* Clear any already-pending wakeups */
+		ResetLatch(MyLatch);
+
+		CHECK_FOR_INTERRUPTS();
 
 		/* Process any requests or signals received recently */
 		if (ConfigReloadPending)
@@ -1177,7 +1184,7 @@ WalSndWriteData(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xid,
 	}
 
 	/* reactivate latch so WalSndLoop knows to continue */
-	SetLatch(&MyWalSnd->latch);
+	SetLatch(MyLatch);
 }
 
 /*
@@ -1220,6 +1227,11 @@ WalSndWaitForWal(XLogRecPtr loc)
 		if (!PostmasterIsAlive())
 			exit(1);
 
+		/* Clear any already-pending wakeups */
+		ResetLatch(MyLatch);
+
+		CHECK_FOR_INTERRUPTS();
+
 		/* Process any requests or signals received recently */
 		if (ConfigReloadPending)
 		{
@@ -1230,9 +1242,6 @@ WalSndWaitForWal(XLogRecPtr loc)
 
 		/* Check for input from the client */
 		ProcessRepliesIfAny();
-
-		/* Clear any already-pending wakeups */
-		ResetLatch(&MyWalSnd->latch);
 
 		/*
 		 * If we're shutting down, trigger pending WAL to be written out,
@@ -1315,15 +1324,12 @@ WalSndWaitForWal(XLogRecPtr loc)
 		if (pq_is_send_pending())
 			wakeEvents |= WL_SOCKET_WRITEABLE;
 
-		ImmediateInterruptOK = true;
-		CHECK_FOR_INTERRUPTS();
-		WaitLatchOrSocket(&MyWalSnd->latch, wakeEvents,
+		WaitLatchOrSocket(MyLatch, wakeEvents,
 						  MyProcPort->sock, sleeptime);
-		ImmediateInterruptOK = false;
 	}
 
 	/* reactivate latch so WalSndLoop knows to continue */
-	SetLatch(&MyWalSnd->latch);
+	SetLatch(MyLatch);
 	return RecentFlushPtr;
 }
 
@@ -1355,12 +1361,18 @@ exec_replication_command(const char *cmd_string)
 				(errmsg("cannot execute new commands while WAL sender is in stopping mode")));
 
 	/*
+	 * Log replication command if log_replication_commands is enabled. Even
+	 * when it's disabled, log the command with DEBUG1 level for backward
+	 * compatibility.
+	 */
+	ereport(log_replication_commands ? LOG : DEBUG1,
+			(errmsg("received replication command: %s", cmd_string)));
+
+	/*
 	 * CREATE_REPLICATION_SLOT ... LOGICAL exports a snapshot until the next
 	 * command arrives. Clean up the old stuff if there's anything.
 	 */
 	SnapBuildClearExportedSnapshot();
-
-	elog(DEBUG1, "received replication command: %s", cmd_string);
 
 	CHECK_FOR_INTERRUPTS();
 
@@ -1895,7 +1907,7 @@ WalSndLoop(WalSndSendDataCallback send_data)
 	 */
 	for (;;)
 	{
-		SIMPLE_FAULT_INJECTOR(WalSenderLoop);
+		SIMPLE_FAULT_INJECTOR("wal_sender_loop");
 
 		/*
 		 * Emergency bailout if postmaster has died.  This is to avoid the
@@ -1903,6 +1915,11 @@ WalSndLoop(WalSndSendDataCallback send_data)
 		 */
 		if (!PostmasterIsAlive())
 			exit(1);
+
+		/* Clear any already-pending wakeups */
+		ResetLatch(MyLatch);
+
+		CHECK_FOR_INTERRUPTS();
 
 		/* Process any requests or signals received recently */
 		if (ConfigReloadPending)
@@ -1912,13 +1929,8 @@ WalSndLoop(WalSndSendDataCallback send_data)
 			SyncRepInitConfig();
 		}
 
-		CHECK_FOR_INTERRUPTS();
-
 		/* Check for input from the client */
 		ProcessRepliesIfAny();
-
-		/* Clear any already-pending wakeups */
-		ResetLatch(&MyWalSnd->latch);
 
 		/*
 		 * If we have received CopyDone from the client, sent CopyDone
@@ -1952,6 +1964,8 @@ WalSndLoop(WalSndSendDataCallback send_data)
 		/* Try to flush pending output to the client */
 		if (pq_flush_if_writable() != 0)
 			WalSndShutdown();
+
+		SIMPLE_FAULT_INJECTOR("wal_sender_after_caughtup_within_range");
 
 		/* If nothing remains to be sent right now ... */
 		if (WalSndCaughtUp && !pq_is_send_pending())
@@ -2015,11 +2029,8 @@ WalSndLoop(WalSndSendDataCallback send_data)
 				wakeEvents |= WL_SOCKET_WRITEABLE;
 
 			/* Sleep until something happens or we time out */
-			ImmediateInterruptOK = true;
-			CHECK_FOR_INTERRUPTS();
-			WaitLatchOrSocket(&MyWalSnd->latch, wakeEvents,
+			WaitLatchOrSocket(MyLatch, wakeEvents,
 							  MyProcPort->sock, sleeptime);
-			ImmediateInterruptOK = false;
 		}
 	}
 	return;
@@ -2066,12 +2077,11 @@ InitWalSenderSlot(void)
 			walsnd->apply = InvalidXLogRecPtr;
 			walsnd->state = WALSNDSTATE_STARTUP;
 			/* Will be decided in hand-shake */
-			walsnd->synchronous = false;
 			walsnd->xlogCleanUpTo = InvalidXLogRecPtr;
 			walsnd->caughtup_within_range = false;
+			walsnd->latch = &MyProc->procLatch;
 			SpinLockRelease(&walsnd->mutex);
 			/* don't need the lock anymore */
-			OwnLatch((Latch *) &walsnd->latch);
 			MyWalSnd = (WalSnd *) walsnd;
 			walsnd->is_for_gp_walreceiver =
 				(strcmp(application_name, GP_WALRECEIVER_APPNAME) == 0);
@@ -2115,18 +2125,15 @@ WalSndKill(int code, Datum arg)
 
 			SpinLockAcquire(&MyWalSnd->mutex);
 
-			MyWalSnd->synchronous = false;
-
 			/* xlog can get freed without the WAL sender worry */
 			MyWalSnd->xlogCleanUpTo = InvalidXLogRecPtr;
 
 			/* Mark WalSnd struct no longer in use. */
 			MyWalSnd->replica_disconnected_at = (pg_time_t) time(NULL);
 			MyWalSnd->pid = 0;
+			walsnd->latch = NULL;
 
 			SpinLockRelease(&MyWalSnd->mutex);
-
-			DisownLatch(&MyWalSnd->latch);
 		}
 		LWLockRelease(SyncRepLock);
 		/* WalSnd struct isn't mine anymore */
@@ -2134,15 +2141,11 @@ WalSndKill(int code, Datum arg)
 		return;
 	}
 
-	/*
-	 * Clear MyWalSnd first; then disown the latch.  This is so that signal
-	 * handlers won't try to touch the latch after it's no longer ours.
-	 */
 	MyWalSnd = NULL;
 
-	DisownLatch(&walsnd->latch);
-
 	SpinLockAcquire(&walsnd->mutex);
+	/* clear latch while holding the spinlock, so it can safely be read */
+	walsnd->latch = NULL;
 	/* Mark WalSnd struct as no longer being in use. */
 	walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
 	walsnd->pid = 0;
@@ -2613,7 +2616,7 @@ XLogSendLogical(void)
 		/* XXX: Note that logical decoding cannot be used while in recovery */
 		XLogRecPtr	flushPtr = GetFlushRecPtr();
 
-		LogicalDecodingProcessRecord(logical_decoding_ctx, record);
+		LogicalDecodingProcessRecord(logical_decoding_ctx, logical_decoding_ctx->reader);
 
 		sentPtr = logical_decoding_ctx->reader->EndRecPtr;
 
@@ -2772,8 +2775,7 @@ HandleWalSndInitStopping(void)
 	else
 	{
 		got_STOPPING = true;
-		if (MyWalSnd)
-			SetLatch(&MyWalSnd->latch);
+		SetLatch(MyLatch);
 	}
 }
 
@@ -2788,8 +2790,7 @@ WalSndLastCycleHandler(SIGNAL_ARGS)
 	int			save_errno = errno;
 
 	got_SIGUSR2 = true;
-	if (MyWalSnd)
-		SetLatch(&MyWalSnd->latch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }
@@ -2871,7 +2872,6 @@ WalSndShmemInit(void)
 			WalSnd	   *walsnd = &WalSndCtl->walsnds[i];
 
 			SpinLockInit(&walsnd->mutex);
-			InitSharedLatch(&walsnd->latch);
 			walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
 		}
 	}
@@ -2889,7 +2889,21 @@ WalSndWakeup(void)
 	int			i;
 
 	for (i = 0; i < max_wal_senders; i++)
-		SetLatch(&WalSndCtl->walsnds[i].latch);
+	{
+		Latch	   *latch;
+		WalSnd	   *walsnd = &WalSndCtl->walsnds[i];
+
+		/*
+		 * Get latch pointer with spinlock held, for the unlikely case that
+		 * pointer reads aren't atomic (as they're 8 bytes).
+		 */
+		SpinLockAcquire(&walsnd->mutex);
+		latch = walsnd->latch;
+		SpinLockRelease(&walsnd->mutex);
+
+		if (latch != NULL)
+			SetLatch(latch);
+	}
 }
 
 /*
@@ -3171,9 +3185,7 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
 	Tuplestorestate *tupstore;
 	MemoryContext per_query_ctx;
 	MemoryContext oldcontext;
-	int		   *sync_priority;
-	int			priority = 0;
-	int			sync_standby = -1;
+	WalSnd	   *sync_standby;
 	int			i;
 
 	/* check to see if caller supports us returning a tuplestore */
@@ -3202,40 +3214,10 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
 	MemoryContextSwitchTo(oldcontext);
 
 	/*
-	 * Get the priorities of sync standbys all in one go, to minimise lock
-	 * acquisitions and to allow us to evaluate who is the current sync
-	 * standby. This code must match the code in SyncRepReleaseWaiters().
+	 * Get the currently active synchronous standby.
 	 */
-	sync_priority = palloc(sizeof(int) * max_wal_senders);
 	LWLockAcquire(SyncRepLock, LW_SHARED);
-	for (i = 0; i < max_wal_senders; i++)
-	{
-		/* use volatile pointer to prevent code rearrangement */
-		volatile WalSnd *walsnd = &WalSndCtl->walsnds[i];
-
-		if (walsnd->pid != 0)
-		{
-			/*
-			 * Treat a standby such as a pg_basebackup background process
-			 * which always returns an invalid flush location, as an
-			 * asynchronous standby. WAL sender must be streaming or
-			 * stopping.
-			 */
-			sync_priority[i] = XLogRecPtrIsInvalid(walsnd->flush) ?
-				0 : walsnd->sync_standby_priority;
-
-			if ((walsnd->state == WALSNDSTATE_STREAMING ||
-				 walsnd->state == WALSNDSTATE_STOPPING) &&
-				walsnd->sync_standby_priority > 0 &&
-				(priority == 0 ||
-				 priority > walsnd->sync_standby_priority) &&
-				!XLogRecPtrIsInvalid(walsnd->flush))
-			{
-				priority = walsnd->sync_standby_priority;
-				sync_standby = i;
-			}
-		}
-	}
+	sync_standby = SyncRepGetSynchronousStandby();
 	LWLockRelease(SyncRepLock);
 
 	for (i = 0; i < max_wal_senders; i++)
@@ -3246,6 +3228,7 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
 		XLogRecPtr	write;
 		XLogRecPtr	flush;
 		XLogRecPtr	apply;
+		int			priority;
 		WalSndState state;
 		Datum		values[PG_STAT_GET_WAL_SENDERS_COLS];
 		bool		nulls[PG_STAT_GET_WAL_SENDERS_COLS];
@@ -3259,6 +3242,7 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
 		write = walsnd->write;
 		flush = walsnd->flush;
 		apply = walsnd->apply;
+		priority = walsnd->sync_standby_priority;
 		SpinLockRelease(&walsnd->mutex);
 
 		memset(nulls, 0, sizeof(nulls));
@@ -3289,15 +3273,22 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
 				nulls[5] = true;
 			values[5] = LSNGetDatum(apply);
 
-			values[6] = Int32GetDatum(sync_priority[i]);
+			/*
+			 * Treat a standby such as a pg_basebackup background process
+			 * which always returns an invalid flush location, as an
+			 * asynchronous standby.
+			 */
+			priority = XLogRecPtrIsInvalid(walsnd->flush) ? 0 : priority;
+
+			values[6] = Int32GetDatum(priority);
 
 			/*
 			 * More easily understood version of standby state. This is purely
 			 * informational, not different from priority.
 			 */
-			if (sync_priority[i] == 0)
+			if (priority == 0)
 				values[7] = CStringGetTextDatum("async");
-			else if (i == sync_standby)
+			else if (walsnd == sync_standby)
 				values[7] = CStringGetTextDatum("sync");
 			else
 				values[7] = CStringGetTextDatum("potential");
@@ -3305,7 +3296,6 @@ pg_stat_get_wal_senders(PG_FUNCTION_ARGS)
 
 		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 	}
-	pfree(sync_priority);
 
 	/* clean up and return the tuplestore */
 	tuplestore_donestoring(tupstore);

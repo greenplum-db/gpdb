@@ -87,13 +87,11 @@ SELECT citext_cmp('B'::citext, 'a'::citext) > 0 AS true;
 -- Do some tests using a table and index.
 
 CREATE TEMP TABLE try (
-   a text,
-   name citext,
-   UNIQUE (a, name)
-) DISTRIBUTED BY (a);
+   name citext PRIMARY KEY
+);
 
-INSERT INTO try (a, name)
-VALUES ('a', 'a'), ('a','ab'), ('â','â'), ('aba','aba'), ('b','b'), ('ba','ba'), ('bab','bab'), ('AZ','AZ');
+INSERT INTO try (name)
+VALUES ('a'), ('ab'), ('â'), ('aba'), ('b'), ('ba'), ('bab'), ('AZ');
 
 SELECT name, 'a' = name AS eq_a   FROM try WHERE name <> 'â';
 SELECT name, 'a' = name AS t      FROM try where name = 'a';
@@ -102,9 +100,9 @@ SELECT name, 'A' = name AS t      FROM try where name = 'A';
 SELECT name, 'A' = name AS t      FROM try where name = 'A';
 
 -- expected failures on duplicate key
-INSERT INTO try (a,name) VALUES ('a','a');
-INSERT INTO try (a,name) VALUES ('a','A');
-INSERT INTO try (a,name) VALUES ('a','aB');
+INSERT INTO try (name) VALUES ('a');
+INSERT INTO try (name) VALUES ('A');
+INSERT INTO try (name) VALUES ('aB');
 
 -- Make sure that citext_smaller() and citext_larger() work properly.
 SELECT citext_smaller( 'ab'::citext, 'ac'::citext ) = 'ab' AS t;
@@ -602,7 +600,9 @@ SELECT regexp_matches('foobarbequebaz'::citext, '(BAR)(BEQUE)', '') = ARRAY[ 'ba
 SELECT regexp_matches('foobarbequebaz', '(BAR)(BEQUE)'::citext, '') = ARRAY[ 'bar', 'beque' ] AS t;
 SELECT regexp_matches('foobarbequebaz'::citext, '(BAR)(BEQUE)'::citext, ''::citext) = ARRAY[ 'bar', 'beque' ] AS t;
 -- c forces case-sensitive
-SELECT regexp_matches('foobarbequebaz'::citext, '(BAR)(BEQUE)'::citext, 'c'::citext) = ARRAY[ 'bar', 'beque' ] AS "null";
+SELECT regexp_matches('foobarbequebaz'::citext, '(BAR)(BEQUE)'::citext, 'c'::citext) = ARRAY[ 'bar', 'beque' ] AS "no rows";
+-- g allows multiple output rows
+SELECT regexp_matches('foobarbequebazmorebarbequetoo'::citext, '(BAR)(BEQUE)'::citext, 'g'::citext) AS "two rows";
 
 SELECT regexp_replace('Thomas'::citext, '.[mN]a.',         'M') = 'ThM' AS t;
 SELECT regexp_replace('Thomas'::citext, '.[MN]A.',         'M') = 'ThM' AS t;
@@ -713,6 +713,7 @@ SELECT COUNT(*) = 19::bigint AS t FROM try;
 SELECT like_escape( name, '' ) = like_escape( name::text, '' ) AS t FROM srt;
 SELECT like_escape( name::text, ''::citext ) = like_escape( name::text, '' ) AS t FROM srt;
 
+-- start_ignore
 -- Ensure correct behavior for citext with materialized views.
 CREATE TABLE citext_table (
   id serial primary key,
@@ -735,3 +736,4 @@ SELECT *
   WHERE t.id IS NULL OR m.id IS NULL;
 REFRESH MATERIALIZED VIEW CONCURRENTLY citext_matview;
 SELECT * FROM citext_matview ORDER BY id;
+-- end_ignore

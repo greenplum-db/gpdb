@@ -54,6 +54,7 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 	int		i = 0;
 	int		size = 0;
 	bool	retry = false;
+	int		totalSegs = 0;
 
 	/*
 	 * true means connection status is confirmed, either established or in
@@ -72,6 +73,8 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 	/* allocate and initialize a gang structure */
 	newGangDefinition = buildGangDefinition(segments, segmentType);
 	CurrentGangCreating = newGangDefinition;
+	totalSegs = getgpsegmentCount();
+	Assert(totalSegs > 0);
 
 create_gang_retry:
 	Assert(newGangDefinition != NULL);
@@ -120,7 +123,8 @@ create_gang_retry:
 			ret = build_gpqeid_param(gpqeid, sizeof(gpqeid),
 									 segdbDesc->isWriter,
 									 segdbDesc->identifier,
-									 segdbDesc->segment_database_info->hostSegs);
+									 segdbDesc->segment_database_info->hostSegs,
+									 totalSegs * 2);
 
 			if (!ret)
 				ereport(ERROR,
@@ -229,7 +233,7 @@ create_gang_retry:
 			if (nfds == 0)
 				break;
 
-			SIMPLE_FAULT_INJECTOR(CreateGangInProgress);
+			SIMPLE_FAULT_INJECTOR("create_gang_in_progress");
 
 			CHECK_FOR_INTERRUPTS();
 
@@ -305,7 +309,7 @@ create_gang_retry:
 	}
 	PG_END_TRY();
 
-	SIMPLE_FAULT_INJECTOR(GangCreated);
+	SIMPLE_FAULT_INJECTOR("gang_created");
 
 	if (retry)
 	{

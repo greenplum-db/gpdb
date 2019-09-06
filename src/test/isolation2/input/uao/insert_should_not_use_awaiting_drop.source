@@ -6,7 +6,6 @@
 -- m/relid \d+/
 -- s/relid \d+/relid /
 -- end_matchsubs
-create extension if not exists gp_inject_fault;
 
 select gp_inject_fault('all', 'reset', 1);
 

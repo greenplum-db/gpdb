@@ -179,10 +179,6 @@ int			Gp_interconnect_transmit_timeout = 3600;
 int			Gp_interconnect_min_retries_before_timeout = 100;
 int			Gp_interconnect_debug_retry_interval = 10;
 
-int			Gp_interconnect_hash_multiplier = 2;	/* sets the size of the
-													 * hash table used by the
-													 * UDP-IC */
-
 int			interconnect_setup_timeout = 7200;
 
 int			Gp_interconnect_type = INTERCONNECT_TYPE_UDPIFC;
@@ -240,7 +236,6 @@ int			gp_hashagg_groups_per_bucket = 5;
 int			gp_motion_slice_noop = 0;
 
 /* Greenplum Database Experimental Feature GUCs */
-int			gp_distinct_grouping_sets_threshold = 32;
 bool		gp_enable_explain_allstat = FALSE;
 bool		gp_enable_motion_deadlock_sanity = FALSE;	/* planning time sanity
 														 * check */
@@ -606,42 +601,6 @@ int gp_log_fts;
 int gp_log_interconnect;
 
 /*
- * gp_enable_gpperfmon and gp_gpperfmon_send_interval are GUCs that we'd like
- * to have propagate from master to segments but we don't want non-super users
- * to be able to set it.  Unfortunately, as long as we use libpq to connect to
- * the segments its hard to create a clean way of doing this.
- *
- * Here we check and enforce that if the value is being set on the master its being
- * done as superuser and not a regular user.
- *
- */
-bool
-gpvars_check_gp_enable_gpperfmon(bool *newval, void **extra, GucSource source)
-{
-	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster && GetCurrentRoleId() != InvalidOid && !superuser())
-	{
-		GUC_check_errcode(ERRCODE_INSUFFICIENT_PRIVILEGE);
-		GUC_check_errmsg("must be superuser to set gp_enable_gpperfmon");
-		return false;
-	}
-
-	return true;
-}
-
-bool
-gpvars_check_gp_gpperfmon_send_interval(int *newval, void **extra, GucSource source)
-{
-	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster && GetCurrentRoleId() != InvalidOid && !superuser())
-	{
-		GUC_check_errcode(ERRCODE_INSUFFICIENT_PRIVILEGE);
-		GUC_check_errmsg("must be superuser to set gp_gpperfmon_send_interval");
-		return false;
-	}
-
-	return true;
-}
-
-/*
  * gpvars_check_gp_resource_manager_policy
  * gpvars_assign_gp_resource_manager_policy
  * gpvars_show_gp_resource_manager_policy
@@ -731,6 +690,15 @@ increment_command_count()
 	 * they are always synced here.
 	 */
 	MyProc->queryCommandId = gp_command_count;
+}
+
+int
+get_dbid_string_length()
+{
+	char *dbid_string = psprintf("%d", GpIdentity.dbid);
+	int length = strlen(dbid_string);
+	pfree(dbid_string);
+	return length;
 }
 
 Datum mpp_execution_segment(PG_FUNCTION_ARGS);

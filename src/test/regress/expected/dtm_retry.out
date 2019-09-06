@@ -11,13 +11,11 @@ set dtx_phase2_retry_count = 11;
 --
 -- COMMIT_PREPARED
 --
-create extension if not exists gp_inject_fault;
 select gp_inject_fault('finish_prepared_start_of_function', 'error', '', '', '', 1, 10, 0, dbid)
 from gp_segment_configuration where role = 'p' and status = 'u' and content = 1;
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 begin;
@@ -47,17 +45,16 @@ WARNING:  the distributed transaction 'Commit Prepared' broadcast failed to one 
 NOTICE:  Releasing segworker group to retry broadcast.
 -- Reset all faults.
 select gp_inject_fault_infinite('all', 'reset', dbid) from gp_segment_configuration;
-NOTICE:  Success:
  gp_inject_fault_infinite 
 --------------------------
- t
- t
- t
- t
- t
- t
- t
- t
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
 (8 rows)
 
 -- Verify that the table got created properly on all segments.
@@ -69,10 +66,9 @@ insert into dtm_retry_table select * from generate_series(1,12);
 -- abort_some_prepared broadcast in 2nd phase.
 select gp_inject_fault('start_prepare', 'error', dbid)
 from gp_segment_configuration where role = 'p' and status = 'u' and content = 0;
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 -- Let content 1 primary, which had successfully prepared the
@@ -80,10 +76,9 @@ NOTICE:  Success:
 -- abort_some_prepared request.
 select gp_inject_fault('finish_prepared_start_of_function', 'error', '', '', '', 1, 10, 0, dbid)
 from gp_segment_configuration where role = 'p' and status = 'u' and content = 1;
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 begin;
@@ -112,17 +107,16 @@ select count(*) = 12 from dtm_retry_table;
 
 -- Reset all faults.
 select gp_inject_fault_infinite('all', 'reset', dbid) from gp_segment_configuration;
-NOTICE:  Success:
  gp_inject_fault_infinite 
 --------------------------
- t
- t
- t
- t
- t
- t
- t
- t
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
 (8 rows)
 
 --
@@ -132,19 +126,17 @@ NOTICE:  Success:
 -- abort_prepared broadcast in 2nd phase.
 select gp_inject_fault('dtm_broadcast_prepare', 'error', dbid)
 from gp_segment_configuration where role = 'p' and content = -1;
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 -- Let content 0 primary error out 10 times during second phase.
 select gp_inject_fault('finish_prepared_start_of_function', 'error', '', '', '', 1, 10, 0, dbid)
 from gp_segment_configuration where role = 'p' and status = 'u' and content = 0;
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 begin;
@@ -173,16 +165,15 @@ select count(*) = 12 from dtm_retry_table;
 
 -- Reset all faults.
 select gp_inject_fault_infinite('all', 'reset', dbid) from gp_segment_configuration;
-NOTICE:  Success:
  gp_inject_fault_infinite 
 --------------------------
- t
- t
- t
- t
- t
- t
- t
- t
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
 (8 rows)
 

@@ -4,7 +4,7 @@
  *	  creator functions for primitive nodes. The functions here are for
  *	  the most frequently created nodes.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -582,6 +582,21 @@ makeFuncCall(List *name, List *args, int location)
 	n->agg_distinct = false;
 	n->func_variadic = false;
 	n->over = NULL;
+	n->location = location;
+	return n;
+}
+
+/*
+ * makeGroupingSet
+ *
+ */
+GroupingSet *
+makeGroupingSet(GroupingSetKind kind, List *content, int location)
+{
+	GroupingSet	   *n = makeNode(GroupingSet);
+
+	n->kind = kind;
+	n->content = content;
 	n->location = location;
 	return n;
 }

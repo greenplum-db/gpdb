@@ -5,7 +5,7 @@
  *	  wherein you authenticate a user by seeing what IP address the system
  *	  says he comes from and choosing authentication method based on it).
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -885,15 +885,13 @@ parse_hba_line(List *line, int line_num, char *raw_line)
 			return NULL;
 #endif
 		}
-#ifdef USE_SSL
 		else if (token->string[4] == 'n')		/* "hostnossl" */
 		{
 			parsedline->conntype = ctHostNoSSL;
 		}
-#endif
 		else
 		{
-			/* "host", or "hostnossl" and SSL support not built in */
+			/* "host" */
 			parsedline->conntype = ctHost;
 		}
 	}							/* record type */
@@ -1266,6 +1264,19 @@ parse_hba_line(List *line, int line_num, char *raw_line)
 		return NULL;
 	}
 
+	/*
+	 * For GSS and SSPI, set the default value of include_realm to true.
+	 * Having include_realm set to false is dangerous in multi-realm
+	 * situations and is generally considered bad practice.  We keep the
+	 * capability around for backwards compatibility, but we might want to
+	 * remove it at some point in the future.  Users who still need to strip
+	 * the realm off would be better served by using an appropriate regex in a
+	 * pg_ident.conf mapping.
+	 */
+	if (parsedline->auth_method == uaGSS ||
+		parsedline->auth_method == uaSSPI)
+		parsedline->include_realm = true;
+
 	/* Parse remaining arguments */
 	while ((field = lnext(field)) != NULL)
 	{
@@ -1417,7 +1428,7 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int line_num)
 				ereport(LOG,
 						(errcode(ERRCODE_CONFIG_FILE_ERROR),
 						 errmsg("client certificates can only be checked if a root certificate store is available"),
-						 errhint("Make sure the configuration parameter \"ssl_ca_file\" is set."),
+						 errhint("Make sure the configuration parameter \"%s\" is set.", "ssl_ca_file"),
 						 errcontext("line %d of configuration file \"%s\"",
 									line_num, HbaFileName)));
 				return false;
@@ -1663,8 +1674,7 @@ check_hba(hbaPort *port)
 				continue;
 
 			/* Check SSL state */
-#ifdef USE_SSL
-			if (port->ssl)
+			if (port->ssl_in_use)
 			{
 				/* Connection is SSL, match both "host" and "hostssl" */
 				if (hba->conntype == ctHostNoSSL)
@@ -1676,11 +1686,6 @@ check_hba(hbaPort *port)
 				if (hba->conntype == ctHostSSL)
 					continue;
 			}
-#else
-			/* No SSL support, so reject "hostssl" lines */
-			if (hba->conntype == ctHostSSL)
-				continue;
-#endif
 
 			/* Check IP address */
 			switch (hba->ip_cmp_method)
@@ -1983,6 +1988,8 @@ check_ident_usermap(IdentLine *identLine, const char *usermap_name,
 
 		if ((ofs = strstr(identLine->pg_role, "\\1")) != NULL)
 		{
+			int			offset;
+
 			/* substitution of the first argument requested */
 			if (matches[1].rm_so < 0)
 			{
@@ -1999,8 +2006,9 @@ check_ident_usermap(IdentLine *identLine, const char *usermap_name,
 			 * plus null terminator
 			 */
 			regexp_pgrole = palloc0(strlen(identLine->pg_role) - 2 + (matches[1].rm_eo - matches[1].rm_so) + 1);
-			strncpy(regexp_pgrole, identLine->pg_role, (ofs - identLine->pg_role));
-			memcpy(regexp_pgrole + strlen(regexp_pgrole),
+			offset = ofs - identLine->pg_role;
+			memcpy(regexp_pgrole, identLine->pg_role, offset);
+			memcpy(regexp_pgrole + offset,
 				   ident_user + matches[1].rm_so,
 				   matches[1].rm_eo - matches[1].rm_so);
 			strcat(regexp_pgrole, ofs + 2);

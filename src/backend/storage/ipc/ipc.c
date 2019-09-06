@@ -8,7 +8,7 @@
  * exit-time cleanup for either a postmaster or a backend.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -177,8 +177,6 @@ proc_exit_prepare(int code)
 	InterruptPending = false;
 	ProcDiePending = false;
 	QueryCancelPending = false;
-	/* And let's just make *sure* we're not interrupted ... */
-	ImmediateInterruptOK = false;
 	InterruptHoldoffCount = 1;
 	CritSectionCount = 0;
 

@@ -3,9 +3,6 @@
 --
 -- We just use gp_inject_fault as an example of an extension here. We don't
 -- inject any faults.
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 \dx gp_inject*
                            List of installed extensions
       Name       | Version | Schema |                 Description                  
@@ -17,9 +14,9 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
                        Objects in extension "gp_inject_fault"
                                  Object Description                                 
 ------------------------------------------------------------------------------------
- function gp_inject_fault_infinite(text,text,integer)
  function gp_inject_fault(text,text,integer)
  function gp_inject_fault(text,text,text,text,text,integer,integer,integer,integer)
+ function gp_inject_fault_infinite(text,text,integer)
  function gp_wait_until_triggered_fault(text,integer,integer)
 (4 rows)
 
@@ -68,18 +65,18 @@ DROP ROLE test_psql_du_e2;
 -- pg_catalog.pg_roles.rolcreatewextgpfd
 CREATE ROLE test_psql_du_e3 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'gpfdist');
 \du test_psql_du_e3
-                                List of roles
-    Role name    |                   Attributes                   | Member of 
------------------+------------------------------------------------+-----------
- test_psql_du_e3 | Superuser, Wri Ext gpfdist Table, Cannot login | {}
+                                      List of roles
+    Role name    |                         Attributes                         | Member of 
+-----------------+------------------------------------------------------------+-----------
+ test_psql_du_e3 | Superuser, Wri Ext gpfdist Table, Cannot login, Bypass RLS | {}
 
 DROP ROLE test_psql_du_e3;
 CREATE ROLE test_psql_du_e4 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'gpfdists');
 \du test_psql_du_e4
-                                List of roles
-    Role name    |                   Attributes                   | Member of 
------------------+------------------------------------------------+-----------
- test_psql_du_e4 | Superuser, Wri Ext gpfdist Table, Cannot login | {}
+                                      List of roles
+    Role name    |                         Attributes                         | Member of 
+-----------------+------------------------------------------------------------+-----------
+ test_psql_du_e4 | Superuser, Wri Ext gpfdist Table, Cannot login, Bypass RLS | {}
 
 DROP ROLE test_psql_du_e4;
 -- pg_catalog.pg_roles.rolcreaterexthttp
@@ -220,6 +217,28 @@ ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
  test_psql_schema | dE_external_table | table         | test_psql_de_role
  test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role
 (2 rows)
+
+-- \dd should list objects having comments
+\dd
+         Object descriptions
+ Schema | Name | Object | Description 
+--------+------+--------+-------------
+(0 rows)
+
+create rule dd_notify as on update to d_heap do also notify d_heap;
+comment on rule dd_notify on d_heap is 'this is a rule';
+alter table d_heap add constraint dd_ichk check (i>20);
+comment on constraint dd_ichk on d_heap is 'this is a constraint';
+create operator family dd_opfamily using btree;
+comment on operator family dd_opfamily using btree is 'this is an operator family';
+\dd
+                              Object descriptions
+      Schema      |    Name     |      Object      |        Description         
+------------------+-------------+------------------+----------------------------
+ test_psql_schema | dd_ichk     | table constraint | this is a constraint
+ test_psql_schema | dd_notify   | rule             | this is a rule
+ test_psql_schema | dd_opfamily | operator family  | this is an operator family
+(3 rows)
 
 -- Clean up
 DROP OWNED BY test_psql_de_role;

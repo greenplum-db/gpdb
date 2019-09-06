@@ -4,7 +4,7 @@
  *	  prototypes for functions in backend/catalog/catalog.c
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/catalog.h
@@ -25,8 +25,7 @@
 
 #define OIDCHARS		10		/* max chars printed by %u */
 /*
- * In PostgreSQL, this is called just TABLESPACE_VERSION_DIRECTORY. But in 
- * GPDB, you should use tablespace_version_directory() function instead.
+ * In PostgreSQL, this is called just TABLESPACE_VERSION_DIRECTORY..
  * This constant has been renamed so that we catch and know to modify all
  * upstream uses of TABLESPACE_VERSION_DIRECTORY.
  */

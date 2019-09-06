@@ -32,11 +32,10 @@
       metrics. </p>
     <p otherprops="pivotal">Pivotal provides an optional system monitoring and management tool,
       Greenplum Command Center, which administrators can install and enable with Greenplum Database.
-      Greenplum Command Center, which depends upon the <codeph>gpperfmon</codeph> database, provides
-      a web-based user interface for viewing the system metrics and allows administrators to perform
-      additional system management tasks. For more information about Greenplum Command Center, see
-      the <xref href="https://gpcc.docs.pivotal.io" format="html" scope="external">Greenplum Command
-        Center documentation</xref>.</p>
+      Greenplum Command Center provides a web-based user interface for viewing system metrics and
+      allows administrators to perform additional system management tasks. For more information
+      about Greenplum Command Center, see the <xref href="https://gpcc.docs.pivotal.io"
+        format="html" scope="external">Greenplum Command Center documentation</xref>.</p>
     <fig id="kf145043" otherprops="pivotal">
       <title>Greenplum Command Center Architecture</title>
       <image href="../graphics/cc_arch_gpdb.png" placement="break" width="299px" height="304px"

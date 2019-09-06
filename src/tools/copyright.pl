@@ -2,9 +2,11 @@
 #################################################################
 # copyright.pl -- update copyright notices throughout the source tree, idempotently.
 #
-# Copyright (c) 2011-2014, PostgreSQL Global Development Group
+# Copyright (c) 2011-2015, PostgreSQL Global Development Group
 #
 # src/tools/copyright.pl
+#
+# FYI, Tie adds a trailing newline on the last line if missing.
 #################################################################
 
 use strict;
@@ -61,7 +63,7 @@ sub wanted
 	untie @lines;
 }
 
-print
-"Manually update doc/src/sgml/legal.sgml and src/interfaces/libpq/libpq.rc.in too.\n";
-print
-"Also update ./COPYRIGHT and doc/src/sgml/legal.sgml in all back branches.\n";
+print "Manually update:\n";
+print "  ./src/interfaces/libpq/libpq.rc.in in head\n";
+print "  ./doc/src/sgml/legal.sgml in head and back branches\n";
+print "  ./COPYRIGHT in back branches\n";

@@ -57,18 +57,25 @@ set_limits() {
   su gpadmin -c 'ulimit -a'
 }
 
+create_gpadmin_if_not_existing() {
+  gpadmin_exists=`id gpadmin > /dev/null 2>&1;echo $?`
+  if [ "0" -eq "$gpadmin_exists" ]; then
+      echo "gpadmin user already exists, skipping creating again."
+  else
+      eval "$*"
+  fi
+}
+
 setup_gpadmin_user() {
   groupadd supergroup
   case "$TEST_OS" in
-    sles)
-      groupadd gpadmin
-      /usr/sbin/useradd -G gpadmin,supergroup,tty gpadmin
-      ;;
     centos)
-      /usr/sbin/useradd -G supergroup,tty gpadmin
+      user_add_cmd="/usr/sbin/useradd -G supergroup,tty gpadmin"
+      create_gpadmin_if_not_existing ${user_add_cmd}
       ;;
     ubuntu)
-      /usr/sbin/useradd -G supergroup,tty gpadmin -s /bin/bash
+      user_add_cmd="/usr/sbin/useradd -G supergroup,tty gpadmin -s /bin/bash"
+      create_gpadmin_if_not_existing ${user_add_cmd}
       ;;
     *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
   esac
@@ -112,11 +119,7 @@ determine_os() {
     echo "centos"
     return
   fi
-  if [ -f /etc/os-release ] && grep -q '^NAME=.*SLES' /etc/os-release ; then
-    echo "sles"
-    return
-  fi
-  if lsb_release -a | grep -q 'Ubuntu' ; then
+  if grep -q ID=ubuntu /etc/os-release ; then
     echo "ubuntu"
     return
   fi

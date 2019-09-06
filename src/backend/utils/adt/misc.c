@@ -3,7 +3,7 @@
  * misc.c
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -37,7 +37,9 @@
 #include "storage/procarray.h"
 #include "utils/backend_cancel.h"
 #include "utils/lsyscache.h"
+#include "utils/ruleutils.h"
 #include "tcop/tcopprot.h"
+#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/timestamp.h"
 
@@ -82,7 +84,9 @@ current_query(PG_FUNCTION_ARGS)
  * role as the backend being signaled. For "dangerous" signals, an explicit
  * check for superuser needs to be done prior to calling this function.
  *
- * Returns 0 on success, 1 on general failure, and 2 on permission error.
+ * Returns 0 on success, 1 on general failure, 2 on normal permission error
+ * and 3 if the caller needs to be a superuser.
+ *
  * In the event of a general failure (return code 1), a warning message will
  * be emitted. For permission errors, doing that is the responsibility of
  * the caller.
@@ -90,6 +94,7 @@ current_query(PG_FUNCTION_ARGS)
 #define SIGNAL_BACKEND_SUCCESS 0
 #define SIGNAL_BACKEND_ERROR 1
 #define SIGNAL_BACKEND_NOPERMISSION 2
+#define SIGNAL_BACKEND_NOSUPERUSER 3
 static int
 pg_signal_backend(int pid, int sig, char *msg)
 {
@@ -114,7 +119,12 @@ pg_signal_backend(int pid, int sig, char *msg)
 		return SIGNAL_BACKEND_ERROR;
 	}
 
-	if (!(superuser() || proc->roleId == GetUserId()))
+	/* Only allow superusers to signal superuser-owned backends. */
+	if (superuser_arg(proc->roleId) && !superuser())
+		return SIGNAL_BACKEND_NOSUPERUSER;
+
+	/* Users can signal backends they have role membership in. */
+	if (!has_privs_of_role(GetUserId(), proc->roleId))
 		return SIGNAL_BACKEND_NOPERMISSION;
 
 	/* If the user supplied a message to the signalled backend */
@@ -154,8 +164,10 @@ pg_signal_backend(int pid, int sig, char *msg)
 }
 
 /*
- * Signal to cancel a backend process.  This is allowed if you are superuser or
- * have the same role as the process being canceled.
+ * Signal to cancel a backend process.  This is allowed if you are a member of
+ * the role whose process is being canceled.
+ *
+ * Note that only superusers can signal superuser-owned processes.
  */
 Datum
 pg_cancel_backend(PG_FUNCTION_ARGS)
@@ -178,17 +190,24 @@ pg_cancel_backend_msg(PG_FUNCTION_ARGS)
 
 	int			r = pg_signal_backend(pid, SIGINT, msg);
 
+	if (r == SIGNAL_BACKEND_NOSUPERUSER)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("must be a superuser to cancel superuser query"))));
+
 	if (r == SIGNAL_BACKEND_NOPERMISSION)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("must be superuser or have the same role to cancel queries running in other server processes"))));
+				 (errmsg("must be a member of the role whose query is being cancelled"))));
 
 	PG_RETURN_BOOL(r == SIGNAL_BACKEND_SUCCESS);
 }
 
 /*
- * Signal to terminate a backend process.  This is allowed if you are superuser
- * or have the same role as the process being terminated.
+ * Signal to terminate a backend process.  This is allowed if you are a member
+ * of the role whose process is being terminated.
+ *
+ * Note that only superusers can signal superuser-owned processes.
  */
 Datum
 pg_terminate_backend(PG_FUNCTION_ARGS)
@@ -212,10 +231,15 @@ pg_terminate_backend_msg(PG_FUNCTION_ARGS)
 
 	r = pg_signal_backend(pid, SIGTERM, msg);
 
+	if (r == SIGNAL_BACKEND_NOSUPERUSER)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+			(errmsg("must be a superuser to terminate superuser process"))));
+
 	if (r == SIGNAL_BACKEND_NOPERMISSION)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("must be superuser or have the same role to terminate other server processes"))));
+				 (errmsg("must be a member of the role whose process is being terminated"))));
 
 	PG_RETURN_BOOL(r == SIGNAL_BACKEND_SUCCESS);
 }
@@ -301,7 +325,7 @@ pg_tablespace_databases(PG_FUNCTION_ARGS)
 				fctx->location = psprintf("base");
 			else
 				fctx->location = psprintf("pg_tblspc/%u/%s", tablespaceOid,
-										  tablespace_version_directory());
+										  GP_TABLESPACE_VERSION_DIRECTORY);
 
 			fctx->dirdesc = AllocateDir(fctx->location);
 
@@ -397,13 +421,22 @@ pg_tablespace_location(PG_FUNCTION_ARGS)
 	rllen = readlink(sourcepath, targetpath, sizeof(targetpath));
 	if (rllen < 0)
 		ereport(ERROR,
-				(errmsg("could not read symbolic link \"%s\": %m",
+				(errcode_for_file_access(),
+				 errmsg("could not read symbolic link \"%s\": %m",
 						sourcepath)));
-	else if (rllen >= sizeof(targetpath))
+	if (rllen >= sizeof(targetpath))
 		ereport(ERROR,
-				(errmsg("symbolic link \"%s\" target is too long",
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+				 errmsg("symbolic link \"%s\" target is too long",
 						sourcepath)));
 	targetpath[rllen] = '\0';
+	
+	get_parent_directory(targetpath);
+	if (strcmp(targetpath, "") == 0)
+		ereport(ERROR,
+				(errmsg("path to tablespace is not a valid path: \"%s\"",
+					sourcepath)));
+
 
 	PG_RETURN_TEXT_P(cstring_to_text(targetpath));
 #else
@@ -459,10 +492,10 @@ pg_sleep(PG_FUNCTION_ARGS)
 		else
 			break;
 
-		(void) WaitLatch(&MyProc->procLatch,
+		(void) WaitLatch(MyLatch,
 						 WL_LATCH_SET | WL_TIMEOUT,
 						 delay_ms);
-		ResetLatch(&MyProc->procLatch);
+		ResetLatch(MyLatch);
 	}
 
 	PG_RETURN_VOID();

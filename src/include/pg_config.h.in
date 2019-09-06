@@ -75,9 +75,6 @@
    reference if 'false' (always true in GPDB) */
 #undef FLOAT8PASSBYVAL
 
-/* Define to 1 if getpwuid_r() takes a 5th argument. */
-#undef GETPWUID_R_5ARG
-
 /* Define to 1 if gettimeofday() takes only 1 argument. */
 #undef GETTIMEOFDAY_1ARG
 
@@ -103,11 +100,14 @@
 /* Define to 1 if you have the `ASN1_STRING_get0_data' function. */
 #undef HAVE_ASN1_STRING_GET0_DATA
 
-/* Define to 1 if you want to use atomics. */
+/* Define to 1 if you want to use atomics if available. */
 #undef HAVE_ATOMICS
 
 /* Define to 1 if you have the <atomic.h> header file. */
 #undef HAVE_ATOMIC_H
+
+/* Define to 1 if you have the `backtrace_symbols' function. */
+#undef HAVE_BACKTRACE_SYMBOLS
 
 /* Define to 1 if you have the `BIO_meth_new' function. */
 #undef HAVE_BIO_METH_NEW
@@ -132,10 +132,6 @@
 
 /* define if the compiler supports basic C++11 syntax */
 #undef HAVE_CXX11
-
-/* Define to 1 if you have the declaration of `CURLOPT_MAIL_FROM', and to 0 if
-   you don't. */
-#undef HAVE_DECL_CURLOPT_MAIL_FROM
 
 /* Define to 1 if you have the declaration of `fdatasync', and to 0 if you
    don't. */
@@ -490,9 +486,6 @@
 /* Define to 1 if the PS_STRINGS thing exists. */
 #undef HAVE_PS_STRINGS
 
-/* Define if you have POSIX threads libraries and header files. */
-#undef HAVE_PTHREAD
-
 /* Define to 1 if you have the `pthread_is_threaded_np' function. */
 #undef HAVE_PTHREAD_IS_THREADED_NP
 
@@ -589,6 +582,9 @@
 
 /* Define to 1 if you have the `strlcpy' function. */
 #undef HAVE_STRLCPY
+
+/* Define to use have a strong random number source */
+#undef HAVE_STRONG_RANDOM
 
 /* Define to 1 if you have the `strtoll' function. */
 #undef HAVE_STRTOLL
@@ -780,6 +776,9 @@
 /* Define to 1 if you have the <yaml.h> header file. */
 #undef HAVE_YAML_H
 
+/* Define to 1 if your compiler understands __builtin_bswap32. */
+#undef HAVE__BUILTIN_BSWAP32
+
 /* Define to 1 if your compiler understands __builtin_constant_p. */
 #undef HAVE__BUILTIN_CONSTANT_P
 
@@ -807,8 +806,8 @@
 /* Define to 1 if you have the `__strtoull' function. */
 #undef HAVE___STRTOULL
 
-/* Define to the appropriate snprintf format for 64-bit ints. */
-#undef INT64_FORMAT
+/* Define to the appropriate snprintf length modifier for 64-bit ints. */
+#undef INT64_MODIFIER
 
 /* Define to 1 if `locale_t' requires <xlocale.h>. */
 #undef LOCALE_T_IN_XLOCALE
@@ -870,10 +869,6 @@
    process. */
 #undef PROFILE_PID_DIR
 
-/* Define to the necessary symbol if this constant uses a non-standard name on
-   your system. */
-#undef PTHREAD_CREATE_JOINABLE
-
 /* RELSEG_SIZE is the maximum number of blocks allowed in one disk file. Thus,
    the maximum size of a single file is RELSEG_SIZE * BLCKSZ; relations bigger
    than that are divided into multiple files. RELSEG_SIZE * BLCKSZ must be
@@ -908,9 +903,6 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
-/* Define to the appropriate snprintf format for unsigned 64-bit ints. */
-#undef UINT64_FORMAT
-
 /* Define to 1 to build with assertion checks. (--enable-cassert) */
 #undef USE_ASSERT_CHECKING
 
@@ -922,6 +914,9 @@
 
 /* Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore) */
 #undef USE_DEBUG_NTUPLESTORE
+
+/* Define to use /dev/urandom for random number generation */
+#undef USE_DEV_URANDOM
 
 /* Define to 1 if you want float4 values to be passed by value. (Always
    defined in GPDB) */
@@ -954,6 +949,12 @@
 /* Define to select named POSIX semaphores. */
 #undef USE_NAMED_POSIX_SEMAPHORES
 
+/* Define to build with OpenSSL support. (--with-openssl) */
+#undef USE_OPENSSL
+
+/* Define to use OpenSSL for random number generation */
+#undef USE_OPENSSL_RANDOM
+
 /* Define to 1 to build with Greenplum ORCA optimizer. (--enable-orca) */
 #undef USE_ORCA
 
@@ -972,20 +973,17 @@
 /* Define to 1 to use Intel SSSE 4.2 CRC instructions with a runtime check. */
 #undef USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
 
-/* Define to build with (Open)SSL support. (--with-openssl) */
-#undef USE_SSL
-
 /* Define to select SysV-style semaphores. */
 #undef USE_SYSV_SEMAPHORES
 
 /* Define to select SysV-style shared memory. */
 #undef USE_SYSV_SHARED_MEMORY
 
-/* Define to 1 to build with testing utilities. (--enable-testutils) */
-#undef USE_TEST_UTILS
-
 /* Define to select unnamed POSIX semaphores. */
 #undef USE_UNNAMED_POSIX_SEMAPHORES
+
+/* Define to use native Windows API for random number generation */
+#undef USE_WIN32_RANDOM
 
 /* Define to select Win32-style semaphores. */
 #undef USE_WIN32_SEMAPHORES

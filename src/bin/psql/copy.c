@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  *
  * src/bin/psql/copy.c
  */
@@ -572,8 +572,8 @@ bool
 handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 {
 	bool		OK;
-	const char *prompt;
 	char		buf[COPYBUFSIZ];
+	bool		showprompt;
 
 	/*
 	 * Establish longjmp destination for exiting from wait-for-input. (This is
@@ -595,21 +595,23 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 	/* Prompt if interactive input */
 	if (isatty(fileno(copystream)))
 	{
+		showprompt = true;
 		if (!pset.quiet)
 			puts(_("Enter data to be copied followed by a newline.\n"
 				   "End with a backslash and a period on a line by itself, or an EOF signal."));
-		prompt = get_prompt(PROMPT_COPY);
 	}
 	else
-		prompt = NULL;
+		showprompt = false;
 
 	OK = true;
 
 	if (isbinary)
 	{
 		/* interactive input probably silly, but give one prompt anyway */
-		if (prompt)
+		if (showprompt)
 		{
+			const char *prompt = get_prompt(PROMPT_COPY);
+
 			fputs(prompt, stdout);
 			fflush(stdout);
 		}
@@ -644,8 +646,10 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 			bool		firstload;
 			bool		linedone;
 
-			if (prompt)
+			if (showprompt)
 			{
+				const char *prompt = get_prompt(PROMPT_COPY);
+
 				fputs(prompt, stdout);
 				fflush(stdout);
 			}
@@ -705,7 +709,10 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 			}
 
 			if (copystream == pset.cur_cmd_source)
+			{
 				pset.lineno++;
+				pset.stmt_lineno++;
+			}
 		}
 	}
 

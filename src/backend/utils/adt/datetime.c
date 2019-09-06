@@ -3,7 +3,7 @@
  * datetime.c
  *	  Support functions for date/time types.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -4188,7 +4188,7 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, bool print_tz, int tz, const char
 			day = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday);
 			tm->tm_wday = j2day(day);
 
-			strncpy(str, days[tm->tm_wday], 3);
+			memcpy(str, days[tm->tm_wday], 3);
 			strcpy(str + 3, " ");
 
 			if (DateOrder == DATEORDER_DMY)

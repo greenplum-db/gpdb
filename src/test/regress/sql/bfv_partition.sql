@@ -98,24 +98,12 @@ SELECT * FROM TIMESTAMP_MONTH_listp WHERE f2 = '2000-01-03';
 SELECT * FROM TIMESTAMP_MONTH_listp WHERE f2 = TO_TIMESTAMP('2000-01-03', 'YYYY-MM-DD');
 SELECT * FROM TIMESTAMP_MONTH_listp WHERE f2 = TO_DATE('2000-01-03', 'YYYY-MM-DD');
 
--- CLEANUP
--- start_ignore
-DROP TABLE TIMESTAMP_MONTH_listp;
-DROP TABLE TIMESTAMP_MONTH_rangep_STARTEXCL;
-DROP TABLE TIMESTAMP_MONTH_rangep_STARTINCL;
--- end_ignore
-
 
 --
 -- Data Engineer can see partition key in psql
 --
 
 -- SETUP
--- start_ignore
-DROP TABLE IF EXISTS T26002_T1;
-DROP TABLE IF EXISTS T26002_T2;
-
-
 CREATE TABLE T26002_T1 (empid int, departmentid int, year int, region varchar(20))
 DISTRIBUTED BY (empid)
   PARTITION BY RANGE (year)
@@ -127,7 +115,6 @@ DISTRIBUTED BY (empid)
        DEFAULT SUBPARTITION other_regions)
 ( START (2012) END (2015) EVERY (3),
   DEFAULT PARTITION outlying_years);
--- end_ignore
 
 -- TEST
 -- expected to see the partition key
@@ -152,23 +139,13 @@ DISTRIBUTED BY (empid);
 
 \d+ T26002_T2;
 
--- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS T26002_T1;
-DROP TABLE IF EXISTS T26002_T2;
--- end_ignore
-
 
 --
--- Testing whether test gives wrong results with partition tables when sub-partitions are distributed differently than the parent partition.
+-- Test whether test gives wrong results with partition tables when
+-- sub-partitions are distributed differently than the parent partition.
 --
 
 -- SETUP
--- start_ignore
-drop table if exists pt;
-drop table if exists t;
--- end_ignore
-
 create table pt(a int, b int, c int) distributed by (a) partition by range(b) (start(0) end(10) every (2));
 alter table pt_1_prt_1 set distributed randomly;
 
@@ -190,21 +167,12 @@ select a, count(*) from pt group by a;
 select b, count(*) from pt group by b;
 select a, count(*) from pt where a<2 group by a;
 
--- CLEANUP
-drop index pt_c;
-drop table if exists pt;
-drop table if exists t;
-
 
 --
 -- Partition table with appendonly leaf, full join
 --
 
 -- SETUP
--- start_ignore
-DROP TABLE IF EXISTS foo;
-DROP TABLE IF EXISTS bar;
-
 CREATE TABLE foo (a int);
 
 CREATE TABLE bar (b int, c int)
@@ -218,27 +186,19 @@ PARTITION BY RANGE (b)
   START (1) END (10) ,
   START (10) END (20)
 ); 
--- end_ignore
 INSERT INTO foo VALUES (1);
 INSERT INTO bar VALUES (2,3);
 
 SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
 
 -- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS foo;
-DROP TABLE IF EXISTS bar;
--- end_ignore
+DROP TABLE IF EXISTS foo, bar;
 
 --
 -- Partition table with appendonly set at middlevel partition, full join
 --
 
 -- SETUP
--- start_ignore
-DROP TABLE IF EXISTS foo;
-DROP TABLE IF EXISTS bar;
-
 CREATE TABLE foo (a int);
 
 CREATE TABLE bar (b int, c int)
@@ -252,27 +212,19 @@ PARTITION BY RANGE (b)
   START (1) END (10) WITH (appendonly=true),
   START (10) END (20)
 ); 
--- end_ignore
 INSERT INTO foo VALUES (1);
 INSERT INTO bar VALUES (2,3);
 
 SELECT * FROM foo FULL JOIN bar ON foo.a = bar.b;
 
 -- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS foo;
-DROP TABLE IF EXISTS bar;
--- end_ignore
+DROP TABLE IF EXISTS foo, bar;
 
 --
 -- Partition table with appendonly set at root partition, full join
 --
 
 -- SETUP
--- start_ignore
-DROP TABLE IF EXISTS foo;
-DROP TABLE IF EXISTS bar;
-
 CREATE TABLE foo (a int);
 
 CREATE TABLE bar (b int, c int) WITH (appendonly=true)
@@ -286,7 +238,6 @@ PARTITION BY RANGE (b)
   START (1) END (10),
   START (10) END (20)
 ); 
--- end_ignore
 INSERT INTO foo VALUES (1);
 INSERT INTO bar VALUES (2,3);
 
@@ -384,7 +335,7 @@ create table mpp3058 (a char(1), b date, d char(3))
 partition by range (b)                                                                                            
  (              
  partition aa start (date '2008-01-01') end (date '2009-01-01') 
- every (interval '10 days'));
+ every (interval '50 days'));
 drop table mpp3058;
 
 create table mpp3058 (a char(1), b date, d char(3))   
@@ -433,9 +384,9 @@ drop table mpp3058;
 create table mpp3058 (a char(1), b date, d char(3))   
 distributed by (a)        
 partition by range (b)      
- (                  
-           partition aa start ('2008-01-01') end ('2008-04-01') every(interval '1 day')   
-     );
+(
+     partition aa start ('2008-01-01') end ('2008-02-01') every(interval '1 day')
+  );
 drop table mpp3058;
 
 -- Expected Error
@@ -532,14 +483,6 @@ alter table mpp3588 split partition for(1) at (1,2) into (partition f6a, partiti
 alter table mpp3588 split partition for(1) at (1,2) into (partition f7a, partition f7b);
 
 drop table mpp3588;
---  MPP-3692, MPP-3679
-create table mpp3679 (a text, b text) partition by list (a) (partition foo values ('foo'), partition bar values ('bar'), default partition baz); 
-insert into mpp3679 values ('foo', 'blah');
-insert into mpp3679 values ('bar', 'blah');
-insert into mpp3679 values ('baz', 'blah');
-
-alter table mpp3679 split default partition at ('baz') into (partition bing, default partition);
-drop table mpp3679;
 -- MPP-3691, MPP-3681
 create table mpp3681 (id int, date date, amt decimal(10,2)) distributed by (id) partition by range(date) (start (date '2008-01-01') inclusive end ('2008-04-01') exclusive every (interval '1 month')); 
 
@@ -566,7 +509,7 @@ c_ts timestamp,
 name varchar(36),
 PRIMARY KEY (c_id,ss_id,c_ts)) partition by range (c_ts)
 (
-  start (date '2007-01-01')
+  start (date '2007-07-01')
   end (date '2008-01-01') every (interval '1 month'),
   default partition default_part
 
@@ -584,7 +527,7 @@ insert into mpp3597 values (NULL);
 select * from mpp3597_1_prt_default_part where i=NULL; -- No NULL values
 
 drop table mpp3597;
-create table mpp3594 (i date) partition by range(i) (start('2008-01-01') end('2009-01-01') every(interval '1 month'), default partition default_part);
+create table mpp3594 (i date) partition by range(i) (start('2008-07-01') end('2009-01-01') every(interval '1 month'), default partition default_part);
 alter table mpp3594 split default partition start ('2009-01-01') end ('2009-02-01') into (partition aa, partition nodate);
 drop table mpp3594;
 CREATE TABLE mpp3512 (id int, rank int, year int, gender char(1), count int)
@@ -628,7 +571,7 @@ CREATE TABLE mpp3816 (
         string4         name,
 	startDate       date		
 ) partition by range (startDate)
-( start ('2007-01-01') end ('2008-01-01') every (interval '1 month'), default partition default_part );
+( start ('2007-06-01') end ('2008-01-01') every (interval '1 month'), default partition default_part );
 
 alter table mpp3816 add column AAA int;
 alter table mpp3816 add column BBB int;
@@ -726,7 +669,7 @@ CREATE TABLE mpp3641a (
         stringu2        name,
         string4         name
 ) partition by range (unique1)
-( partition aa start (0) end (1000) every (100), default partition default_part );
+( partition aa start (0) end (500) every (100), default partition default_part );
 
 CREATE TABLE mpp3641b (
         unique1         int4,
@@ -746,8 +689,8 @@ CREATE TABLE mpp3641b (
         stringu2        name,
         string4         name
 ) partition by range (unique1)
-subpartition by range (unique2) subpartition template ( start (0) end (1000) every (100) )
-( start (0) end (1000) every (100));
+subpartition by range (unique2) subpartition template ( start (0) end (500) every (100) )
+( start (0) end (500) every (100));
 alter table mpp3641b add default partition default_part;
 
 CREATE INDEX mpp3641a_unique1 ON mpp3641a USING btree(unique1 int4_ops);
@@ -1478,7 +1421,7 @@ select * from pg_stats where tablename like 'mpp5427%';
 drop table mpp5427;
 
 -- MPP-5524
-create table mpp5524 (a int, b int, c int, d int) partition by range(d) (start(1) end(20) every(1));
+create table mpp5524 (a int, b int, c int, d int) partition by range(d) (start(1) end(20) every(5));
 -- Not allowed
 alter table mpp5524 alter partition for(rank(1)) set distributed by (b);
 -- Not allowed
@@ -1607,16 +1550,17 @@ alter table mpp6612 alter column unique2 type char(10);
 -- Show the dsecription
 -- \d mpp6612*
 
-
 drop table mpp6612;
+
+-- Test that DEC is accepted as partition name.
 create table mpp4048 (aaa int, bbb date)
 partition by range (bbb)
 subpartition by range (bbb)
 subpartition by range (bbb)
 (
-partition y2008 start (date '2008-01-01') end (date '2009-01-01')
+partition y2008 start (date '2008-01-01') end (date '2008-12-05')
 (
-  subpartition dec start (date '2008-12-01') end (date '2009-01-01') (start (date '2008-12-01') end (date '2009-01-01') every (interval '1 day'))
+  subpartition dec start (date '2008-12-01') end (date '2008-12-05') (start (date '2008-12-01') end (date '2008-12-05') every (interval '1 day'))
 ));
 
 drop table mpp4048;
@@ -1663,22 +1607,18 @@ select c1, dt, count(*) from mpp6724 group by 1,2 having count(*) > 1;
 drop table mpp6724;
 
 -- Test for partition cleanup
-
--- start_ignore
-drop schema partition_999 cascade;
 create schema partition_999;
 
 set search_path=bfv_partition,partition_999;
--- end_ignore
 
 create table partition_cleanup1 (a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
 partition by range (a)
-( partition aa start (1) end (10) every (1) );
+( partition aa start (1) end (5) every (1) );
 
 CREATE TABLE partition_999.partition_cleanup2(a int, b int, c int, d int, e int, f int, g int, h int, i int, j int, k int, l int, m int, n int, o int, p int, q int, r int, s int, t int, u int, v int, w int, x int, y int, z int)
 partition by range (a)
-subpartition by range (b) subpartition template ( start (1) end (10) every (1))
-( partition aa start (1) end (10) every (1) );
+subpartition by range (b) subpartition template ( start (1) end (5) every (1))
+( partition aa start (1) end (5) every (1) );
 
 drop table partition_cleanup1;
 drop schema partition_999 cascade;

@@ -22,7 +22,9 @@ OBJS += pg_exttable.o pg_extprotocol.o \
        aoseg.o aoblkdir.o gp_fastsequence.o gp_segment_config.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
        pg_appendonly.o \
-       oid_dispatch.o aocatalog.o
+       oid_dispatch.o aocatalog.o storage_tablespace.o storage_database.o \
+       storage_tablespace_twophase.o storage_tablespace_xact.o
+
 
 BKIFILES = postgres.bki postgres.description postgres.shdescription
 
@@ -48,8 +50,6 @@ POSTGRES_BKI_SRCS = $(addprefix $(top_srcdir)/src/include/catalog/,\
 	pg_ts_config.h pg_ts_config_map.h pg_ts_dict.h \
 	pg_ts_parser.h pg_ts_template.h pg_extension.h \
 	pg_foreign_data_wrapper.h pg_foreign_server.h pg_user_mapping.h \
-	pg_foreign_table.h \
-	pg_default_acl.h pg_seclabel.h pg_shseclabel.h pg_collation.h pg_range.h \
 	pg_resqueue.h pg_resqueuecapability.h pg_resourcetype.h \
 	pg_resgroup.h pg_resgroupcapability.h \
 	gp_configuration_history.h gp_id.h gp_policy.h gp_version.h \
@@ -64,7 +64,9 @@ POSTGRES_BKI_SRCS = $(addprefix $(top_srcdir)/src/include/catalog/,\
 	pg_partition_encoding.h \
 	pg_type_encoding.h \
 	pg_stat_last_operation.h pg_stat_last_shoperation.h \
-	toasting.h indexing.h \
+	pg_foreign_table.h pg_policy.h pg_replication_origin.h \
+	pg_tablesample_method.h pg_default_acl.h pg_seclabel.h pg_shseclabel.h \
+	pg_collation.h pg_range.h pg_transform.h toasting.h indexing.h \
     )
 
 POSTGRES_BKI_SRCS := pg_proc_combined.h $(POSTGRES_BKI_SRCS)
@@ -91,6 +93,8 @@ schemapg.h: postgres.bki
 # process it.
 pg_proc_combined.h: $(top_srcdir)/src/include/catalog/pg_proc.h $(top_srcdir)/src/include/catalog/pg_proc_gp.h
 	cat $^ > $@
+
+catalog_json: $(CATALOG_JSON)
 
 $(CATALOG_JSON): process_foreign_keys.pl $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h
 	cat $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h | $(PERL) process_foreign_keys.pl > $@

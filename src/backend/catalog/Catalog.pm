@@ -4,7 +4,7 @@
 #    Perl module that extracts info from catalog headers into Perl
 #    data structures
 #
-# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/backend/catalog/Catalog.pm
@@ -48,6 +48,7 @@ sub Catalogs
 	my %RENAME_ATTTYPE = (
 		'int16'         => 'int2',
 		'int32'         => 'int4',
+		'int64'         => 'int8',
 		'Oid'           => 'oid',
 		'NameData'      => 'name',
 		'TransactionId' => 'xid');
@@ -179,8 +180,7 @@ sub Catalogs
 
 				foreach my $column ( @{ $catalog{columns} } )
 				{
-					my ($attname, $atttype) = %$column;
-
+					my $attname = $column->{name};
 					if ($attname eq $colname)
 					{
 						$found = 1;
@@ -208,7 +208,8 @@ sub Catalogs
 				}
 				else
 				{
-					my ($atttype, $attname) = split /\s+/, $_;
+					my %row;
+					my ($atttype, $attname, $attopt) = split /\s+/, $_;
 					die "parse error ($input_file)" unless $attname;
 					if (exists $RENAME_ATTTYPE{$atttype})
 					{
@@ -219,7 +220,27 @@ sub Catalogs
 						$attname = $1;
 						$atttype .= '[]';            # variable-length only
 					}
-					push @{ $catalog{columns} }, { $attname => $atttype };
+
+					$row{'type'} = $atttype;
+					$row{'name'} = $attname;
+
+					if (defined $attopt)
+					{
+						if ($attopt eq 'BKI_FORCE_NULL')
+						{
+							$row{'forcenull'} = 1;
+						}
+						elsif ($attopt eq 'BKI_FORCE_NOT_NULL')
+						{
+							$row{'forcenotnull'} = 1;
+						}
+						else
+						{
+							die
+"unknown column option $attopt on column $attname";
+						}
+					}
+					push @{ $catalog{columns} }, \%row;
 				}
 			}
 		}
@@ -262,7 +283,7 @@ sub ProcessDataLine
 	my $i = 1;
 	foreach my $column ( @{ $catalog->{columns} } )
 	{
-		my ($attname, $atttype) = %$column;
+		my $attname = $column->{name};
 		$colnums{$attname} = $i;
 
 		$i = $i + 1;

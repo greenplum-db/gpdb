@@ -195,7 +195,7 @@ dmetaphone_alt(PG_FUNCTION_ARGS)
  * in a case like this.
  */
 
-#define META_FREE(x)			/* pfree((x)) */
+#define META_FREE(x) ((void)true)		/* pfree((x)) */
 #else							/* not defined DMETAPHONE_MAIN */
 
 /* use the standard malloc library when not running in PostgreSQL */
@@ -247,7 +247,7 @@ NewMetaString(char *init_str)
 	META_MALLOC(s->str, s->bufsize, char);
 	assert(s->str != NULL);
 
-	strncpy(s->str, init_str, s->length + 1);
+	memcpy(s->str, init_str, s->length + 1);
 	s->free_string_on_destroy = 1;
 
 	return s;

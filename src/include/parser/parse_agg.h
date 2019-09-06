@@ -3,7 +3,7 @@
  * parse_agg.h
  *	  handle aggregates and window functions in parser
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/parser/parse_agg.h
@@ -18,10 +18,16 @@
 extern void transformAggregateCall(ParseState *pstate, Aggref *agg,
 					   List *args, List *aggorder,
 					   bool agg_distinct);
+
+extern Node *transformGroupingFunc(ParseState *pstate, GroupingFunc *g);
+extern Node *transformGroupId(ParseState *pstate, GroupId *g);
+
 extern void transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc,
 						WindowDef *windef);
 
 extern void parseCheckAggregates(ParseState *pstate, Query *qry);
+
+extern List *expand_grouping_sets(List *groupingSets, int limit);
 
 extern int	get_aggregate_argtypes(Aggref *aggref, Oid *inputTypes);
 
@@ -52,7 +58,5 @@ extern void build_aggregate_serialfn_expr(Oid serialfn_oid,
 
 extern void build_aggregate_deserialfn_expr(Oid deserialfn_oid,
 								Expr **deserialfnexpr);
-
-extern bool checkExprHasGroupExtFuncs(Node *node);
 
 #endif   /* PARSE_AGG_H */

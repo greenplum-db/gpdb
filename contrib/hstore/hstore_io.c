@@ -748,7 +748,7 @@ typedef struct RecordIOData
 	Oid			record_type;
 	int32		record_typmod;
 	int			ncolumns;
-	ColumnIOData columns[1];	/* VARIABLE LENGTH ARRAY */
+	ColumnIOData columns[FLEXIBLE_ARRAY_MEMBER];
 } RecordIOData;
 
 PG_FUNCTION_INFO_V1(hstore_from_record);
@@ -806,8 +806,8 @@ hstore_from_record(PG_FUNCTION_ARGS)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-							   sizeof(RecordIOData) - sizeof(ColumnIOData)
-							   + ncolumns * sizeof(ColumnIOData));
+							   offsetof(RecordIOData, columns) +
+							   ncolumns * sizeof(ColumnIOData));
 		my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
 		my_extra->record_type = InvalidOid;
 		my_extra->record_typmod = 0;
@@ -817,8 +817,8 @@ hstore_from_record(PG_FUNCTION_ARGS)
 		my_extra->record_typmod != tupTypmod)
 	{
 		MemSet(my_extra, 0,
-			   sizeof(RecordIOData) - sizeof(ColumnIOData)
-			   + ncolumns * sizeof(ColumnIOData));
+			   offsetof(RecordIOData, columns) +
+			   ncolumns * sizeof(ColumnIOData));
 		my_extra->record_type = tupType;
 		my_extra->record_typmod = tupTypmod;
 		my_extra->ncolumns = ncolumns;
@@ -991,8 +991,8 @@ hstore_populate_record(PG_FUNCTION_ARGS)
 	{
 		fcinfo->flinfo->fn_extra =
 			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-							   sizeof(RecordIOData) - sizeof(ColumnIOData)
-							   + ncolumns * sizeof(ColumnIOData));
+							   offsetof(RecordIOData, columns) +
+							   ncolumns * sizeof(ColumnIOData));
 		my_extra = (RecordIOData *) fcinfo->flinfo->fn_extra;
 		my_extra->record_type = InvalidOid;
 		my_extra->record_typmod = 0;
@@ -1002,8 +1002,8 @@ hstore_populate_record(PG_FUNCTION_ARGS)
 		my_extra->record_typmod != tupTypmod)
 	{
 		MemSet(my_extra, 0,
-			   sizeof(RecordIOData) - sizeof(ColumnIOData)
-			   + ncolumns * sizeof(ColumnIOData));
+			   offsetof(RecordIOData, columns) +
+			   ncolumns * sizeof(ColumnIOData));
 		my_extra->record_type = tupType;
 		my_extra->record_typmod = tupTypmod;
 		my_extra->ncolumns = ncolumns;

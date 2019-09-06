@@ -1,0 +1,86 @@
+-- Ensures that deadlock between an INSERT with planner and
+-- appendonly VACUUM drop phase can be detected.
+-- ORCA during translation of INSERT statement tries to get AccessShareLock on
+-- leaf partition but Vacuum already has AccessExclusiveLock on the leaf
+-- partition so it keeps waiting and the deadlock is not observed.
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(8 rows)
+
+-- Helper function
+CREATE or REPLACE FUNCTION wait_until_acquired_lock_on_rel (rel_name text, lmode text, segment_id integer) RETURNS /*in func*/ bool AS $$ /*in func*/ declare /*in func*/ result bool; /*in func*/ begin /*in func*/ result := false; /*in func*/ -- Wait until lock is acquired /*in func*/ while result IS NOT true loop /*in func*/ select l.granted INTO result /*in func*/ from pg_locks l /*in func*/ where l.relation::regclass = rel_name::regclass /*in func*/ and l.mode=lmode /*in func*/ and l.gp_segment_id=segment_id; /*in func*/ perform pg_sleep(0.1); /*in func*/ end loop; /*in func*/ return result; /*in func*/ end; /*in func*/ $$ language plpgsql;
+CREATE
+
+-- Given an append only table with partitions that is ready to be compacted
+CREATE TABLE ao_part_tbl (a int, b int) with (appendonly=true, orientation=row) DISTRIBUTED BY (a) PARTITION BY RANGE (b) (START (1) END (2) EVERY (1));
+CREATE
+
+INSERT INTO ao_part_tbl VALUES (1, 1);
+INSERT 1
+DELETE FROM ao_part_tbl;
+DELETE 1
+
+-- Check gdd is enabled
+show gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ on                                 
+(1 row)
+
+-- VACUUM drop phase is blocked before it opens the child relation on the primary
+SELECT gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- VACUUM takes AccessExclusiveLock on the leaf partition on QD
+1&: VACUUM ao_part_tbl;  <waiting ...>
+SELECT gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_phase', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- And INSERT is blocked until it acquires the RowExclusiveLock on the child relation
+2: set optimizer to off;
+SET
+-- INSERT takes RowExclusiveLock on the leaf partition on QE
+2&: INSERT INTO ao_part_tbl VALUES (1, 1);  <waiting ...>
+SELECT wait_until_acquired_lock_on_rel('ao_part_tbl_1_prt_1', 'RowExclusiveLock', content) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ wait_until_acquired_lock_on_rel 
+---------------------------------
+ t                               
+(1 row)
+
+-- Reset the fault on VACUUM.
+SELECT gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- VACUUM waits for AccessExclusiveLock on the leaf table on QE
+1<:  <... completed>
+VACUUM
+-- INSERT watis for AccessShareLock on the leaf table on QD, hence deadlock
+2<:  <... completed>
+ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"
+
+-- since gdd is on, Session 2 will be cancelled.
+
+1:ROLLBACK;
+ROLLBACK
+2:ROLLBACK;
+ROLLBACK
+DROP TABLE IF EXISTS ao_part_tbl;
+DROP

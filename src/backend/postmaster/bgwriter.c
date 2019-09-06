@@ -24,7 +24,7 @@
  * should be killed by SIGQUIT and then a recovery cycle started.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -36,7 +36,6 @@
 
 #include <signal.h>
 #include <sys/time.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "access/xlog.h"
@@ -113,17 +112,6 @@ BackgroundWriterMain(void)
 	sigjmp_buf	local_sigjmp_buf;
 	MemoryContext bgwriter_context;
 	bool		prev_hibernate;
-
-	/*
-	 * If possible, make this process a group leader, so that the postmaster
-	 * can signal any child processes too.  (bgwriter probably never has any
-	 * child processes, but for consistency we make all postmaster child
-	 * processes do this.)
-	 */
-#ifdef HAVE_SETSID
-	if (setsid() < 0)
-		elog(FATAL, "setsid() failed: %m");
-#endif
 
 	/*
 	 * Properly accept or ignore signals the postmaster might send us.
@@ -261,11 +249,11 @@ BackgroundWriterMain(void)
 		int			rc;
 
 #ifdef USE_ASSERT_CHECKING
-		SIMPLE_FAULT_INJECTOR(FaultInBackgroundWriterMain);
+		SIMPLE_FAULT_INJECTOR("fault_in_background_writer_main");
 #endif
 
 		/* Clear any already-pending wakeups */
-		ResetLatch(&MyProc->procLatch);
+		ResetLatch(MyLatch);
 
 		if (got_SIGHUP)
 		{
@@ -314,7 +302,7 @@ BackgroundWriterMain(void)
 		 * overall timeout handling but just assume we're going to get called
 		 * often enough even if hibernation mode is active. It's not that
 		 * important that log_snap_interval_ms is met strictly. To make sure
-		 * we're not waking the disk up unneccesarily on an idle system we
+		 * we're not waking the disk up unnecessarily on an idle system we
 		 * check whether there has been any WAL inserted since the last time
 		 * we've logged a running xacts.
 		 *
@@ -353,7 +341,7 @@ BackgroundWriterMain(void)
 		 * down with latch events that are likely to happen frequently during
 		 * normal operation.
 		 */
-		rc = WaitLatch(&MyProc->procLatch,
+		rc = WaitLatch(MyLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
 					   BgWriterDelay /* ms */ );
 
@@ -378,13 +366,13 @@ BackgroundWriterMain(void)
 		if (rc == WL_TIMEOUT && can_hibernate && prev_hibernate)
 		{
 			/* Ask for notification at next buffer allocation */
-			StrategyNotifyBgWriter(&MyProc->procLatch);
+			StrategyNotifyBgWriter(MyProc->pgprocno);
 			/* Sleep ... */
-			rc = WaitLatch(&MyProc->procLatch,
+			rc = WaitLatch(MyLatch,
 						   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
 						   BgWriterDelay * HIBERNATE_FACTOR);
 			/* Reset the notification request in case we timed out */
-			StrategyNotifyBgWriter(NULL);
+			StrategyNotifyBgWriter(-1);
 		}
 
 		/*
@@ -437,8 +425,7 @@ BgSigHupHandler(SIGNAL_ARGS)
 	int			save_errno = errno;
 
 	got_SIGHUP = true;
-	if (MyProc)
-		SetLatch(&MyProc->procLatch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }
@@ -450,8 +437,7 @@ ReqShutdownHandler(SIGNAL_ARGS)
 	int			save_errno = errno;
 
 	shutdown_requested = true;
-	if (MyProc)
-		SetLatch(&MyProc->procLatch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }

@@ -30,7 +30,7 @@
  * destroyed at the end of each transaction.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -44,7 +44,7 @@
 #include "miscadmin.h"
 #include "access/htup_details.h"
 #include "access/xact.h"
-#include "cdb/cdbvars.h"
+#include "storage/shmem.h"
 #include "utils/combocid.h"
 #include "utils/hsearch.h"
 #include "utils/memutils.h"
@@ -53,6 +53,7 @@
 
 #include "access/twophase.h"  /* max_prepared_xacts */
 
+#include "cdb/cdbvars.h"
 #include "storage/buffile.h"
 #include "storage/proc.h"
 
@@ -162,9 +163,8 @@ HeapTupleHeaderGetCmax(HeapTupleHeader tup)
 	/*
 	 * MPP-8317: cursors can't always *tell* that this is the current transaction.
 	 */
-	Assert(QEDtxContextInfo.cursorContext ||
-		   CritSectionCount > 0 ||
-		   TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetUpdateXid(tup)));
+	Assert(QEDtxContextInfo.cursorContext || CritSectionCount > 0 ||
+	  TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetUpdateXid(tup)));
 
 	if (tup->t_infomask & HEAP_COMBOCID)
 		return GetRealCmax(HeapTupleHeaderGetXmin(tup), cid);
@@ -274,13 +274,12 @@ GetComboCommandId(TransactionId xmin, CommandId cmin, CommandId cmax)
 		memset(&hash_ctl, 0, sizeof(hash_ctl));
 		hash_ctl.keysize = sizeof(ComboCidKeyData);
 		hash_ctl.entrysize = sizeof(ComboCidEntryData);
-		hash_ctl.hash = tag_hash;
 		hash_ctl.hcxt = TopTransactionContext;
 
 		comboHash = hash_create("Combo CIDs",
 								CCID_HASH_SIZE,
 								&hash_ctl,
-								HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+								HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 	}
 
 	/*
@@ -444,6 +443,79 @@ GetRealCmax(TransactionId xmin, CommandId combocid)
 
 	Assert(combocid < usedComboCids);
 	return comboCids[combocid].cmax;
+}
+
+/*
+ * Estimate the amount of space required to serialize the current ComboCID
+ * state.
+ */
+Size
+EstimateComboCIDStateSpace(void)
+{
+	Size		size;
+
+	/* Add space required for saving usedComboCids */
+	size = sizeof(int);
+
+	/* Add space required for saving the combocids key */
+	size = add_size(size, mul_size(sizeof(ComboCidKeyData), usedComboCids));
+
+	return size;
+}
+
+/*
+ * Serialize the ComboCID state into the memory, beginning at start_address.
+ * maxsize should be at least as large as the value returned by
+ * EstimateComboCIDStateSpace.
+ */
+void
+SerializeComboCIDState(Size maxsize, char *start_address)
+{
+	char	   *endptr;
+
+	/* First, we store the number of currently-existing ComboCIDs. */
+	*(int *) start_address = usedComboCids;
+
+	/* If maxsize is too small, throw an error. */
+	endptr = start_address + sizeof(int) +
+		(sizeof(ComboCidKeyData) * usedComboCids);
+	if (endptr < start_address || endptr > start_address + maxsize)
+		elog(ERROR, "not enough space to serialize ComboCID state");
+
+	/* Now, copy the actual cmin/cmax pairs. */
+	memcpy(start_address + sizeof(int), comboCids,
+		   (sizeof(ComboCidKeyData) * usedComboCids));
+}
+
+/*
+ * Read the ComboCID state at the specified address and initialize this
+ * backend with the same ComboCIDs.  This is only valid in a backend that
+ * currently has no ComboCIDs (and only makes sense if the transaction state
+ * is serialized and restored as well).
+ */
+void
+RestoreComboCIDState(char *comboCIDstate)
+{
+	int			num_elements;
+	ComboCidKeyData *keydata;
+	int			i;
+	CommandId	cid;
+
+	Assert(!comboCids && !comboHash);
+
+	/* First, we retrieve the number of ComboCIDs that were serialized. */
+	num_elements = *(int *) comboCIDstate;
+	keydata = (ComboCidKeyData *) (comboCIDstate + sizeof(int));
+
+	/* Use GetComboCommandId to restore each ComboCID. */
+	for (i = 0; i < num_elements; i++)
+	{
+		cid = GetComboCommandId(keydata[i].xmin, keydata[i].cmin, keydata[i].cmax);
+
+		/* Verify that we got the expected answer. */
+		if (cid != i)
+			elog(ERROR, "unexpected command ID while restoring combo CIDs");
+	}
 }
 
 #define ComboCidMapName(path, gp_session_id, pid) \

@@ -1,0 +1,33 @@
+---
+title: About Accessing the S3 Object Store
+---
+
+PXF is installed with a connector to the S3 object store. PXF supports the following additional runtime features with this connector:
+
+- Overriding the S3 credentials specified in the server configuration by providing them in the `CREATE EXTERNAL TABLE` command DDL.
+- Using the Amazon S3 Select service to read certain CSV and Parquet data from S3.
+
+## <a id="s3_override"></a>Overriding the S3 Server Configuration with DDL
+
+If you are accessing an S3-compatible object store, you can override the credentials in an S3 server configuration by directly specifying the S3 access ID and secret key via these custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+
+| Custom Option  | Value Description |
+|-------|-------------------------------------|
+| accesskey    | The AWS account access key ID. |
+| secretkey    | The secret key associated with the AWS access key ID. |
+
+For example:
+<pre>CREATE EXTERNAL TABLE pxf_ext_tbl(name text, orders int)
+  LOCATION ('pxf://S3_BUCKET/dir/file.txt?PROFILE=s3:text&SERVER=s3srvcfg<b>&accesskey=YOURKEY&secretkey=YOURSECRET</b>')
+FORMAT 'TEXT' (delimiter=E',');</pre>
+
+<div class="note warning">Credentials that you provide in this manner are visible as part of the external table definition. Do not use this method of passing credentials in a production environment.</div>
+
+PXF does not support overriding Azure, Google Cloud Storage, and Minio server credentials in this manner at this time.
+
+Refer to [Configuration Property Precedence](cfg_server.html#override) for detailed information about the precedence rules that PXF uses to obtain configuration property settings for a Greenplum Database user.
+
+
+## <a id="s3_select"></a>Using the Amazon S3 Select Service
+
+Refer to [Reading CSV and Parquet Data from S3 Using S3 Select](read_s3_s3select.html) for specific information on how PXF can use the Amazon S3 Select service to read CSV and Parquet files stored on S3.

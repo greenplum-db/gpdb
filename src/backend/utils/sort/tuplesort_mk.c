@@ -1184,12 +1184,17 @@ tuplesort_putheaptuple_mk(Tuplesortstate_mk *state, HeapTuple tup)
  * Note that the input tuple is always copied; the caller need not save it.
  */
 void
-tuplesort_putindextuple_mk(Tuplesortstate_mk *state, IndexTuple tuple)
+tuplesort_putindextuplevalues_mk(Tuplesortstate_mk *state, Relation rel,
+								 ItemPointer self, Datum *values, bool *isnull)
 {
 	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
 	MKEntry		e;
+	IndexTuple tuple;
 
 	mke_blank(&e);
+
+	tuple = index_form_tuple(RelationGetDescr(rel), values, isnull);
+	tuple->t_tid = *self;
 
 	COPYTUP(state, &e, (void *) tuple);
 	puttuple_common(state, &e);
@@ -2030,7 +2035,7 @@ mergeruns(Tuplesortstate_mk *state)
 	 */
 	HOLD_INTERRUPTS();
 	FaultInjector_InjectFaultIfSet(
-								   ExecSortMKSortMergeRuns,
+								   "execsort_mksort_mergeruns",
 								   DDLNotSpecified,
 								   "", //databaseName
 								   "");

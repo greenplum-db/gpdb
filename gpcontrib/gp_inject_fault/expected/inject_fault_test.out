@@ -4,59 +4,53 @@ CREATE EXTENSION gp_inject_fault;
 begin;
 -- inject fault of type sleep on all primaries
 select gp_inject_fault('finish_prepared_after_record_commit_prepared',
-       'sleep', '', '', '', 1, 2, dbid) from gp_segment_configuration
+       'sleep', '', '', '', 1, 2, 0, dbid) from gp_segment_configuration
        where role = 'p' and content > -1;
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
- t
- t
+ Success:
+ Success:
+ Success:
 (3 rows)
 
 -- check fault status
 select gp_inject_fault('finish_prepared_after_record_commit_prepared',
-       'status', '', '', '', 1, 2, dbid) from gp_segment_configuration
+       'status', '', '', '', 1, 2, 0, dbid) from gp_segment_configuration
        where role = 'p' and content > -1;
-NOTICE:  Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'2' fault injection state:'set'  num times hit:'0'
-NOTICE:  Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'2' fault injection state:'set'  num times hit:'0'
-NOTICE:  Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'2' fault injection state:'set'  num times hit:'0'
- gp_inject_fault 
------------------
- t
- t
- t
+                                                                                                               gp_inject_fault                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'2' extra arg:'0' fault injection state:'set'  num times hit:'0' +
+ 
+ Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'2' extra arg:'0' fault injection state:'set'  num times hit:'0' +
+ 
+ Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'2' extra arg:'0' fault injection state:'set'  num times hit:'0' +
+ 
 (3 rows)
 
 -- commit transaction should trigger the fault
 end;
 -- fault status should indicate it's triggered
 select gp_inject_fault('finish_prepared_after_record_commit_prepared',
-       'status', '', '', '', 1, 2, dbid) from gp_segment_configuration
+       'status', '', '', '', 1, 2, 0, dbid) from gp_segment_configuration
        where role = 'p' and content > -1;
-NOTICE:  Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'2' fault injection state:'completed'  num times hit:'1'
-NOTICE:  Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'2' fault injection state:'completed'  num times hit:'1'
-NOTICE:  Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'2' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
- t
- t
+                                                                                                               gp_inject_fault                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'2' extra arg:'0' fault injection state:'set'  num times hit:'0' +
+ 
+ Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'2' extra arg:'0' fault injection state:'set'  num times hit:'0' +
+ 
+ Success: fault name:'finish_prepared_after_record_commit_prepared' fault type:'sleep' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'2' extra arg:'0' fault injection state:'set'  num times hit:'0' +
+ 
 (3 rows)
 
 -- reset the fault on all primaries
 select gp_inject_fault('finish_prepared_after_record_commit_prepared',
-       'reset', '', '', '', 1, 2, dbid) from gp_segment_configuration
+       'reset', '', '', '', 1, 2, 0, dbid) from gp_segment_configuration
        where role = 'p' and content > -1;
-NOTICE:  Success:
-NOTICE:  Success:
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
- t
- t
+ Success:
+ Success:
+ Success:
 (3 rows)
 

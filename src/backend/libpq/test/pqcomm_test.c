@@ -32,7 +32,7 @@ static int test_accept_socket;
  *    - secure_write returns TEST_NUM_BYTES (send successful)
  *    - errno is not changed
  */
-void
+static void
 test__internal_flush_successfulSend(void **state)
 {
 	int			result;
@@ -53,7 +53,7 @@ test__internal_flush_successfulSend(void **state)
 /*
  * Simulate side effects of secure_write. Sets the errno variable to val
  */
-void
+static void
 _set_errno(void *val)
 {
 	errno = *((int *) val);
@@ -64,7 +64,7 @@ _set_errno(void *val)
  *    - secure_write returns 0 (send failed)
  *    - errno is set to EINTR
  */
-void
+static void
 test__internal_flush_failedSendEINTR(void **state)
 {
 	int			result;
@@ -103,7 +103,7 @@ test__internal_flush_failedSendEINTR(void **state)
  *    - secure_write returns 0 (send failed)
  *    - errno is set to EPIPE
  */
-void
+static void
 test__internal_flush_failedSendEPIPE(void **state)
 {
 	int			result;
@@ -149,7 +149,7 @@ pqcomm_accept_mock(int accept_sock, struct sockaddr *restrict address,
  * Test for StreamConnection that verifies that the socket has the SO_SNDTIMEO
  * timeout set for it when the connection is through a TCP/IP socket (AF_INET)
  */
-void
+static void
 test__StreamConnection_set_SNDTIMEO_AF_INET(void **state)
 {
 	Port *port = (Port *) calloc(1, sizeof(Port));
@@ -163,7 +163,7 @@ test__StreamConnection_set_SNDTIMEO_AF_INET(void **state)
 	assert_int_equal(result, STATUS_OK);
 
 	struct timeval timeout;
-	int timeout_len = sizeof(timeout);
+	socklen_t timeout_len = sizeof(timeout);
 	result = getsockopt(port->sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, &timeout_len);
 	/* Check that getsockopt ran successfully */
 	assert_int_equal(result, 0);
@@ -177,7 +177,7 @@ test__StreamConnection_set_SNDTIMEO_AF_INET(void **state)
  * Test for StreamConnection that verifies that the socket has the SO_SNDTIMEO
  * timeout set for it when the connection is through a UNIX socket (AF_UNIX)
  */
-void
+static void
 test__StreamConnection_set_SNDTIMEO_AF_UNIX(void **state)
 {
 	Port *port = (Port *) calloc(1, sizeof(Port));
@@ -191,7 +191,7 @@ test__StreamConnection_set_SNDTIMEO_AF_UNIX(void **state)
 	assert_int_equal(result, STATUS_OK);
 
 	struct timeval timeout;
-	int timeout_len = sizeof(timeout);
+	socklen_t timeout_len = sizeof(timeout);
 	result = getsockopt(port->sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, &timeout_len);
 
 	/* Check that getsockopt ran successfully */
@@ -206,7 +206,7 @@ test__StreamConnection_set_SNDTIMEO_AF_UNIX(void **state)
  * Test for StreamConnection that verifies that we don't set the socket
  * SO_SNDTIMEO timeout on segments
  */
-void
+static void
 test__StreamConnection_set_SNDTIMEO_segment(void **state)
 {
 	Port *port = (Port *) calloc(1, sizeof(Port));
@@ -221,7 +221,7 @@ test__StreamConnection_set_SNDTIMEO_segment(void **state)
 	assert_int_equal(result, STATUS_OK);
 
 	struct timeval timeout;
-	int timeout_len = sizeof(timeout);
+	socklen_t timeout_len = sizeof(timeout);
 	result = getsockopt(port->sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, &timeout_len);
 
 	/* Check that getsockopt ran successfully */

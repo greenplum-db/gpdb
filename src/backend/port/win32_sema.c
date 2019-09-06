@@ -3,7 +3,7 @@
  * win32_sema.c
  *	  Microsoft Windows Win32 Semaphores Emulation
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/port/win32_sema.c
@@ -116,10 +116,10 @@ PGSemaphoreReset(PGSemaphore sema)
  * Serve the interrupt if interruptOK is true.
  */
 void
-PGSemaphoreLock(PGSemaphore sema, bool interruptOK)
+PGSemaphoreLock(PGSemaphore sema)
 {
-	DWORD		ret;
 	HANDLE		wh[2];
+	bool		done = false;
 
 	/*
 	 * Note: pgwin32_signal_event should be first to ensure that it will be
@@ -135,34 +135,43 @@ PGSemaphoreLock(PGSemaphore sema, bool interruptOK)
 	 * no hidden magic about whether the syscall will internally service a
 	 * signal --- we do that ourselves.
 	 */
-	do
+	while (!done)
 	{
-		ImmediateInterruptOK = interruptOK;
+		DWORD		rc;
+
 		CHECK_FOR_INTERRUPTS();
 
-		ret = WaitForMultipleObjectsEx(2, wh, FALSE, INFINITE, TRUE);
-
-		if (ret == WAIT_OBJECT_0)
+		rc = WaitForMultipleObjectsEx(2, wh, FALSE, INFINITE, TRUE);
+		switch (rc)
 		{
-			/* Signal event is set - we have a signal to deliver */
-			pgwin32_dispatch_queued_signals();
-			errno = EINTR;
-		}
-		else if (ret == WAIT_OBJECT_0 + 1)
-		{
-			/* We got it! */
-			errno = 0;
-		}
-		else
-			/* Otherwise we are in trouble */
-			errno = EIDRM;
+			case WAIT_OBJECT_0:
+				/* Signal event is set - we have a signal to deliver */
+				pgwin32_dispatch_queued_signals();
+				break;
+			case WAIT_OBJECT_0 + 1:
+				/* We got it! */
+				done = true;
+				break;
+			case WAIT_IO_COMPLETION:
 
-		ImmediateInterruptOK = false;
-	} while (errno == EINTR);
-
-	if (errno != 0)
-		ereport(FATAL,
-		(errmsg("could not lock semaphore: error code %lu", GetLastError())));
+				/*
+				 * The system interrupted the wait to execute an I/O
+				 * completion routine or asynchronous procedure call in this
+				 * thread.  PostgreSQL does not provoke either of these, but
+				 * atypical loaded DLLs or even other processes might do so.
+				 * Now, resume waiting.
+				 */
+				break;
+			case WAIT_FAILED:
+				ereport(FATAL,
+						(errmsg("could not lock semaphore: error code %lu",
+								GetLastError())));
+				break;
+			default:
+				elog(FATAL, "unexpected return code from WaitForMultipleObjectsEx(): %lu", rc);
+				break;
+		}
+	}
 }
 
 /*

@@ -16,7 +16,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -105,9 +105,9 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 		if (rc->rti != rc->prti)
 			continue;
 
-		if (rc->markType != ROW_MARK_COPY)
+		if (rc->allMarkTypes & ~(1 << ROW_MARK_COPY))
 		{
-			/* It's a regular table, so fetch its TID */
+			/* Need to fetch TID */
 			var = makeVar(rc->rti,
 						  SelfItemPointerAttributeNumber,
 						  TIDOID,
@@ -120,32 +120,32 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 								  pstrdup(resname),
 								  true);
 			tlist = lappend(tlist, tle);
-
-			/* if parent of inheritance tree, need the tableoid too */
-			if (rc->isParent)
-			{
-				var = makeVar(rc->rti,
-							  TableOidAttributeNumber,
-							  OIDOID,
-							  -1,
-							  InvalidOid,
-							  0);
-				snprintf(resname, sizeof(resname), "tableoid%u", rc->rowmarkId);
-				tle = makeTargetEntry((Expr *) var,
-									  list_length(tlist) + 1,
-									  pstrdup(resname),
-									  true);
-				tlist = lappend(tlist, tle);
-			}
 		}
-		else
+		if (rc->allMarkTypes & (1 << ROW_MARK_COPY))
 		{
-			/* Not a table, so we need the whole row as a junk var */
+			/* Need the whole row as a junk var */
 			var = makeWholeRowVar(rt_fetch(rc->rti, range_table),
 								  rc->rti,
 								  0,
 								  false);
 			snprintf(resname, sizeof(resname), "wholerow%u", rc->rowmarkId);
+			tle = makeTargetEntry((Expr *) var,
+								  list_length(tlist) + 1,
+								  pstrdup(resname),
+								  true);
+			tlist = lappend(tlist, tle);
+		}
+
+		/* If parent of inheritance tree, always fetch the tableoid too. */
+		if (rc->isParent)
+		{
+			var = makeVar(rc->rti,
+						  TableOidAttributeNumber,
+						  OIDOID,
+						  -1,
+						  InvalidOid,
+						  0);
+			snprintf(resname, sizeof(resname), "tableoid%u", rc->rowmarkId);
 			tle = makeTargetEntry((Expr *) var,
 								  list_length(tlist) + 1,
 								  pstrdup(resname),
@@ -193,6 +193,19 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 
 	return tlist;
 }
+
+/*
+ * preprocess_onconflict_targetlist
+ *	  Process ON CONFLICT SET targetlist.
+ *
+ *	  Returns the new targetlist.
+ */
+List *
+preprocess_onconflict_targetlist(PlannerInfo *root, List *tlist, int result_relation, List *range_table)
+{
+	return expand_targetlist(root, tlist, CMD_UPDATE, result_relation, range_table);
+}
+
 
 /*****************************************************************************
  *
@@ -405,15 +418,11 @@ expand_targetlist(PlannerInfo *root, List *tlist, int command_type,
 			}
 		}
 
-		if (key_col_updated || root->parse->needReshuffle)
+		if (key_col_updated)
 		{
 			/*
 			 * Yes, this is a split update.
 			 * Updating a hash column is a split update, of course.
-			 * We should note that current reshuffle implementation
-			 * is based on split-update, so if the query is a reshuffle
-			 * query, it is also a split-update even if we are reshuffling
-			 * a random distributed table.
 			 *
 			 * For each column that was changed, add the original column value
 			 * to the target list, if it's not there already.

@@ -8,7 +8,7 @@
         <p>Exchanges SSH public keys between hosts.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpssh-exkeys</b> <b>-f</b> <varname>hostfile_exkeys</varname> | <b>- h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...]
+            <codeblock><b>gpssh-exkeys</b> <b>-f</b> <varname>hostfile_exkeys</varname> | <b>-h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...]
 
 <b>gpssh-exkeys</b> <b>-e</b> <varname>hostfile_exkeys</varname> <b>-x</b> <varname>hostfile_gpexpand</varname>
 
@@ -21,38 +21,53 @@
             <p>The <codeph>gpssh-exkeys</codeph> utility exchanges SSH keys between the specified
                 host names (or host addresses). This allows SSH connections between Greenplum hosts
                 and network interfaces without a password prompt. The utility is used to initially
-                prepare a Greenplum Database system for password-free SSH access, and also to add
-                additional ssh keys when expanding a Greenplum Database system. </p>
-            <p>To specify the hosts involved in an initial SSH key exchange, use the
-                    <codeph>-f</codeph> option to specify a file containing a list of host names
-                (recommended), or use the <codeph>-h</codeph> option to name single host names on
-                the command-line. At least one host name (<codeph>-h</codeph>) or a host file is
+                prepare a Greenplum Database system for passwordless SSH access, and also to prepare
+                additional hosts for passwordless SSH access when expanding a Greenplum Database 
+                system.</p>
+            <p>Keys are exchanged as the currently logged in user. You run the utility on the master
+                host as the <codeph>gpadmin</codeph> user (the user designated to own your Greenplum
+                Database installation). Greenplum Database management utilities require that the
+                    <codeph>gpadmin</codeph> user be created on all hosts in the Greenplum Database
+                system, and the utilities must be able to connect as that user to all hosts without
+                a password prompt.</p>
+            <p>You can also use <codeph>gpssh-exkeys</codeph> to enable passwordless SSH for
+                additional users, <codeph>root</codeph>, for example.</p>
+            <p>The <codeph>gpssh-exkeys</codeph> utility has the following prerequisites:<ul
+                    id="ul_fgv_hjd_vhb">
+                    <li>The user must have an account on the master, standby, and every segment host
+                        in the Greenplum Database cluster.</li>
+                    <li>The user must have an <codeph>id_rsa</codeph> SSH key pair installed on the
+                        master host.</li>
+                    <li>The user must be able to connect with SSH from the master host to every
+                        other host machine without entering a password. (This is called "1-<i>n</i>
+                        passwordless SSH.") </li>
+                </ul></p>
+            <p>You can enable 1-<i>n</i> passwordless SSH using the <codeph>ssh-copy-id</codeph>
+                command to add the user's public key to each host's <codeph>authorized_keys</codeph>
+                file.  The <codeph>gpssh-exkeys</codeph> utility enables "<i>n</i>-<i>n</i>
+                passwordless SSH," which allows the user to connect with SSH from any host to any
+                other host in the cluster without a password.</p>
+            <p>To specify the hosts involved in an SSH key exchange, use the <codeph>-f</codeph>
+                option to specify a file containing a list of host names (recommended), or use the
+                    <codeph>-h</codeph> option to name single host names on the command-line. At
+                least one host name (<codeph>-h</codeph>) or a host file (<codeph>-f</codeph>) is
                 required. Note that the local host is included in the key exchange by default.</p>
             <p>To specify new expansion hosts to be added to an existing Greenplum Database system,
                 use the <codeph>-e</codeph> and <codeph>-x</codeph> options. The <codeph>-e</codeph>
-                option specifies a file containing a list of existing hosts in the system that
-                already have SSH keys. The <codeph>-x</codeph> option specifies a file containing a
-                list of new hosts that need to participate in the SSH key exchange. </p>
-            <p>Keys are exchanged as the currently logged in user. You should perform
-                the key exchange process twice: once as <codeph>root</codeph> and once as the
-                    <codeph>gpadmin</codeph> user (the user designated to own your Greenplum
-                Database installation). The Greenplum Database management utilities require that the
-                same non-root user be created on all hosts in the Greenplum Database system, and the
-                utilities must be able to connect as that user to all hosts without a password
-                prompt.</p>
+                option specifies a file containing a list of existing hosts in the system that have
+                already exchanged SSH keys. The <codeph>-x</codeph> option specifies a file
+                containing a list of new hosts that need to participate in the SSH key exchange. </p>
             <p>The <codeph>gpssh-exkeys</codeph> utility performs key exchange using the following
                 steps:</p>
             <ul>
-                <li id="jw140375">Creates an RSA identification key pair for the current user if one
-                    does not already exist. The public key of this pair is added to the
-                        <codeph>authorized_keys</codeph> file of the current user.</li>
-                <li id="jw140376">Updates the <codeph>known_hosts</codeph> file of the current user
-                    with the host key of each host specified using the <codeph>-h</codeph>,
-                        <codeph>-f</codeph>, <codeph>-e</codeph>, and <codeph>-x</codeph>
-                    options.</li>
+                <li id="jw140375">Adds the user's public key to the user's own
+                        <codeph>authorized_keys</codeph> file on the current host.</li>
+                <li>Updates the <codeph>known_hosts</codeph> file of the current user with the host
+                    key of each host specified using the <codeph>-h</codeph>, <codeph>-f</codeph>,
+                        <codeph>-e</codeph>, and <codeph>-x</codeph> options.</li>
                 <li id="jw140377">Connects to each host using <codeph>ssh</codeph> and obtains the
-                        <codeph>authorized_keys</codeph>, <codeph>known_hosts</codeph>, and
-                        <codeph>id_rsa.pub</codeph> files to set up password-free access.</li>
+                    user's <codeph>authorized_keys</codeph>, <codeph>known_hosts</codeph>, and
+                        <codeph>id_rsa.pub</codeph> files. </li>
                 <li id="jw140378">Adds keys from the <codeph>id_rsa.pub</codeph> files obtained from
                     each host to the <codeph>authorized_keys</codeph> file of the current user.</li>
                 <li id="jw140379">Updates the <codeph>authorized_keys</codeph>,
@@ -68,9 +83,9 @@
                     <pd>When doing a system expansion, this is the name and location of a file
                         containing all configured host names and host addresses (interface names)
                         for each host in your <varname>current</varname> Greenplum system (master,
-                        standby master and segments), one name per line without blank lines or extra
-                        spaces. Hosts specified in this file cannot be specified in the host file
-                        used with <codeph>-x</codeph>. </pd>
+                        standby master, and segments), one name per line without blank lines or
+                        extra spaces. Hosts specified in this file cannot be specified in the host
+                        file used with <codeph>-x</codeph>. </pd>
                 </plentry>
                 <plentry>
                     <pt>-f <varname>hostfile_exkeys</varname></pt>

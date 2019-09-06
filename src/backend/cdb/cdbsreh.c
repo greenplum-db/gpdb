@@ -279,7 +279,7 @@ ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected)
 }
 
 static void
-sendnumrows_internal(int numrejected, int64 numcompleted)
+sendnumrows_internal(int64 numrejected, int64 numcompleted)
 {
 	StringInfoData buf;
 
@@ -287,16 +287,7 @@ sendnumrows_internal(int numrejected, int64 numcompleted)
 		elog(FATAL, "SendNumRows: called outside of execute context.");
 
 	pq_beginmessage(&buf, 'j'); /* 'j' is the msg code for rejected records */
-	/*
-	 * GPDB_91_MERGE_FIXME: If there are more than INT_MAX rejected rows,
-	 * this will overflow. That is possible at least if you specify the
-	 * segment reject limit as a percentage.
-	 *
-	 * If you fix this, note that there are more fields and variables that
-	 * need to be changed from int to int64. But had to put this FIXME
-	 * somewhere..
-	 */
-	pq_sendint(&buf, numrejected, 4);
+	pq_sendint64(&buf, numrejected);
 	if (numcompleted > 0)		/* optional send completed num for COPY FROM
 								 * ON SEGMENT */
 		pq_sendint64(&buf, numcompleted);
@@ -310,7 +301,7 @@ sendnumrows_internal(int numrejected, int64 numcompleted)
  * of rows that were rejected in this last data load in SREH mode.
  */
 void
-SendNumRowsRejected(int numrejected)
+SendNumRowsRejected(int64 numrejected)
 {
 	sendnumrows_internal(numrejected, 0);
 }
@@ -322,7 +313,7 @@ SendNumRowsRejected(int numrejected)
  * of rows that were rejected and completed in this last data load
  */
 void
-SendNumRows(int numrejected, int64 numcompleted)
+SendNumRows(int64 numrejected, int64 numcompleted)
 {
 	sendnumrows_internal(numrejected, numcompleted);
 }
@@ -525,7 +516,7 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 	HeapTuple	tuple;
 	char		filename[MAXPGPATH];
 	FILE	   *fp;
-	pg_crc32	crc;
+	pg_crc32c	crc;
 	int			ret;
 
 	Assert(OidIsValid(cdbsreh->relid));
@@ -562,7 +553,7 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 	 */
 	if (fwrite(&tuple->t_len, 1, sizeof(tuple->t_len), fp) != sizeof(tuple->t_len))
 		elog(ERROR, "could not write tuple length: %m");
-	if (fwrite(&crc, 1, sizeof(pg_crc32), fp) != sizeof(pg_crc32))
+	if (fwrite(&crc, 1, sizeof(pg_crc32c), fp) != sizeof(pg_crc32c))
 		elog(ERROR, "could not write checksum: %m");
 	if (fwrite(tuple->t_data, 1, tuple->t_len, fp) != tuple->t_len)
 		elog(ERROR, "could not write tuple data: %m");
@@ -578,7 +569,7 @@ ErrorLogWrite(CdbSreh *cdbsreh)
  * This returns NULL whenever we see unexpected read or EOF.
  */
 static HeapTuple
-ErrorLogRead(FILE *fp, pg_crc32 *crc)
+ErrorLogRead(FILE *fp, pg_crc32c *crc)
 {
 	uint32		t_len;
 	HeapTuple	tuple = NULL;
@@ -599,7 +590,7 @@ ErrorLogRead(FILE *fp, pg_crc32 *crc)
 		ItemPointerSetInvalid(&tuple->t_self);
 		tuple->t_data = (HeapTupleHeader) ((char *) tuple + HEAPTUPLESIZE);
 
-		if (fread(crc, 1, sizeof(pg_crc32), fp) != sizeof(pg_crc32))
+		if (fread(crc, 1, sizeof(pg_crc32c), fp) != sizeof(pg_crc32c))
 		{
 			tuple = NULL;
 			break;
@@ -709,7 +700,7 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 	 */
 	if (context->fp)
 	{
-		pg_crc32	crc,
+		pg_crc32c	crc,
 					written_crc;
 
 		tuple = ErrorLogRead(context->fp, &written_crc);

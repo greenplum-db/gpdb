@@ -359,7 +359,12 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 		results->resultArray = NULL;
 	}
 
-	/* Recycle or destroy gang accordingly */
+	/*
+	 * Recycle or destroy gang accordingly.
+	 *
+	 * We must recycle them in the reverse order of AllocateGang() to restore
+	 * the original order of the idle gangs.
+	 */
 	foreach(lc, ds->allocatedGangs)
 	{
 		Gang *gp = lfirst(lc);

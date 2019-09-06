@@ -1,0 +1,28 @@
+create tablespace some_temp_tablespace location '@testtablespace@_temp_tablespace';
+create tablespace some_default_tablespace location '@testtablespace@_default_tablespace';
+
+-- Given I've set up GUCS for how to use tablespaces
+set temp_tablespaces to some_temp_tablespace;
+set default_tablespace to 'some_default_tablespace';
+
+-- When I create a temporary table
+create temporary table some_table_in_temp_tablespace (a int);
+-- Then the temp_tablespaces settings should be used
+select count(1) from pg_class inner join pg_tablespace ON pg_class.reltablespace = pg_tablespace.oid where spcname = 'some_temp_tablespace' AND relname = 'some_table_in_temp_tablespace';
+
+-- And the temp_tablespaces should be used on the segments too
+select count(1) from gp_dist_random('pg_class') segment_pg_class inner join pg_tablespace on pg_tablespace.oid = segment_pg_class.reltablespace where relname = 'some_table_in_temp_tablespace' and spcname = 'some_temp_tablespace';
+
+-- When I create a non-temporary table, the default_tablespace should be chosen
+create table some_non_temp_table (a int);
+select count(1) from pg_class inner join pg_tablespace ON pg_class.reltablespace = pg_tablespace.oid where spcname = 'some_default_tablespace' AND relname = 'some_non_temp_table';
+
+-- And the default_tablespace should be used on the segments too
+select count(1) from gp_dist_random('pg_class') segment_pg_class inner join pg_tablespace on pg_tablespace.oid = segment_pg_class.reltablespace where relname = 'some_non_temp_table' and spcname = 'some_default_tablespace';
+
+drop table some_table_in_temp_tablespace;
+drop table some_non_temp_table;
+drop tablespace some_temp_tablespace;
+drop tablespace some_default_tablespace;
+reset default_tablespace;
+reset temp_tablespaces;

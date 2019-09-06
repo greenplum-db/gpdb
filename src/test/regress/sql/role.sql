@@ -99,7 +99,6 @@ DROP GROUP market;
 DROP USER jona11;
 DROP USER jona12;
 
-
 -- Test that a non-superuser cannot use ALTER USER RESET ALL to reset
 -- superuser-only GUCs. (A bug that was fixed in PostgreSQL commit
 -- e429448f33.)
@@ -123,3 +122,9 @@ set role guctestrole;
 alter user guctestrole reset all;
 select rolconfig from pg_roles where rolname = 'guctestrole';
 reset role;
+
+-- Test ALTER USER ALL
+BEGIN;
+ALTER USER ALL SET application_name TO 'alter_user_all_test';
+ALTER USER ALL RESET ALL;
+ROLLBACK;

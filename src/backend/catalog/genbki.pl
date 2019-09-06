@@ -7,7 +7,7 @@
 #    header files.  The .bki files are used to initialize the postgres
 #    template database.
 #
-# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/backend/catalog/genbki.pl
@@ -117,14 +117,33 @@ foreach my $catname (@{ $catalogs->{names} })
 
 	my %bki_attr;
 	my @attnames;
+	my $first = 1;
+
+	print BKI " (\n";
 	foreach my $column (@{ $catalog->{columns} })
 	{
-		my ($attname, $atttype) = %$column;
-		$bki_attr{$attname} = $atttype;
+		my $attname = $column->{name};
+		my $atttype = $column->{type};
+		$bki_attr{$attname} = $column;
 		push @attnames, $attname;
+
+		if (!$first)
+		{
+			print BKI " ,\n";
+		}
+		$first = 0;
+
+		print BKI " $attname = $atttype";
+
+		if (defined $column->{forcenotnull})
+		{
+			print BKI " FORCE NOT NULL";
+		}
+		elsif (defined $column->{forcenull})
+		{
+			print BKI " FORCE NULL";
+		}
 	}
-	print BKI " (\n";
-	print BKI join " ,\n", map(" $_ = $bki_attr{$_}", @attnames);
 	print BKI "\n )\n";
 
    # open it, unless bootstrap case (create bootstrap does this automatically)
@@ -209,7 +228,7 @@ foreach my $catname (@{ $catalogs->{names} })
 				# Store schemapg entries for later.
 				$row =
 				  emit_schemapg_row($row,
-					grep { $bki_attr{$_} eq 'bool' } @attnames);
+					grep { $bki_attr{$_}{type} eq 'bool' } @attnames);
 				push @{ $schemapg_entries{$table_name} }, '{ '
 				  . join(
 					', ',             grep { defined $_ }
@@ -222,14 +241,14 @@ foreach my $catname (@{ $catalogs->{names} })
 			{
 				$attnum = 0;
 				my @SYS_ATTRS = (
-					{ ctid     => 'tid' },
-					{ oid      => 'oid' },
-					{ xmin     => 'xid' },
-					{ cmin     => 'cid' },
-					{ xmax     => 'xid' },
-					{ cmax     => 'cid' },
-					{ tableoid => 'oid' },
-					{ gp_segment_id => 'int4' });
+					{ name => 'ctid',     type => 'tid' },
+					{ name => 'oid',      type => 'oid' },
+					{ name => 'xmin',     type => 'xid' },
+					{ name => 'cmin',     type => 'cid' },
+					{ name => 'xmax',     type => 'xid' },
+					{ name => 'cmax',     type => 'cid' },
+					{ name => 'tableoid', type => 'oid' },
+					{ name => 'gp_segment_id', type => 'int4' });
 				foreach my $attr (@SYS_ATTRS)
 				{
 					$attnum--;
@@ -275,7 +294,7 @@ print SCHEMAPG <<EOM;
  * schemapg.h
  *    Schema_pg_xxx macros for use by relcache.c
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * NOTES
@@ -326,7 +345,8 @@ exit 0;
 sub emit_pgattr_row
 {
 	my ($table_name, $attr, $priornotnull) = @_;
-	my ($attname, $atttype) = %$attr;
+	my $attname = $attr->{name};
+	my $atttype = $attr->{type};
 	my %row;
 
 	$row{attrelid} = $catalogs->{$table_name}->{relation_oid};
@@ -354,11 +374,21 @@ sub emit_pgattr_row
 			$row{attndims} = $type->{typcategory} eq 'A' ? '1' : '0';
 			$row{attcollation} = $type->{typcollation};
 
-			# attnotnull must be set true if the type is fixed-width and
-			# prior columns are too --- compare DefineAttr in bootstrap.c.
-			# oidvector and int2vector are also treated as not-nullable.
-			if ($priornotnull)
+			if (defined $attr->{forcenotnull})
 			{
+				$row{attnotnull} = 't';
+			}
+			elsif (defined $attr->{forcenull})
+			{
+				$row{attnotnull} = 'f';
+			}
+			elsif ($priornotnull)
+			{
+
+				# attnotnull will automatically be set if the type is
+				# fixed-width and prior columns are all NOT NULL ---
+				# compare DefineAttr in bootstrap.c. oidvector and
+				# int2vector are also treated as not-nullable.
 				$row{attnotnull} =
 				    $type->{typname} eq 'oidvector'   ? 't'
 				  : $type->{typname} eq 'int2vector'  ? 't'

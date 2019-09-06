@@ -3,7 +3,7 @@
  * twophase.c
  *		Two-phase commit support functions.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -50,11 +50,15 @@
 #include "access/transam.h"
 #include "access/twophase.h"
 #include "access/twophase_rmgr.h"
+#include "access/twophase_storage_tablespace.h"
 #include "access/xact.h"
 #include "access/xlog.h"
+#include "access/xloginsert.h"
 #include "access/xlogutils.h"
 #include "catalog/pg_type.h"
 #include "catalog/storage.h"
+#include "catalog/storage_tablespace.h"
+#include "catalog/storage_database.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "pg_trace.h"
@@ -110,7 +114,6 @@ int			max_prepared_xacts = 0;
  * typedef struct GlobalTransactionData *GlobalTransaction appears in
  * twophase.h
  */
-#define GIDSIZE 200
 
 typedef struct GlobalTransactionData
 {
@@ -121,7 +124,7 @@ typedef struct GlobalTransactionData
 	XLogRecPtr  prepare_begin_lsn;  /* XLOG begging offset of prepare record */
 	XLogRecPtr	prepare_lsn;	/* XLOG offset of prepare record */
 	Oid			owner;			/* ID of user that executed the xact */
-	BackendId	locking_backend; /* backend currently working on the xact */
+	BackendId	locking_backend;	/* backend currently working on the xact */
 	bool		valid;			/* TRUE if PGPROC entry is in proc array */
 	char		gid[GIDSIZE];	/* The GID assigned to the prepared xact */
 }	GlobalTransactionData;
@@ -138,12 +141,9 @@ typedef struct TwoPhaseStateData
 	/* Number of valid prepXacts entries. */
 	int			numPrepXacts;
 
-	/*
-	 * There are max_prepared_xacts items in this array, but C wants a
-	 * fixed-size array.
-	 */
-	GlobalTransaction prepXacts[1];		/* VARIABLE LENGTH ARRAY */
-} TwoPhaseStateData;			/* VARIABLE LENGTH STRUCT */
+	/* There are max_prepared_xacts items in this array */
+	GlobalTransaction prepXacts[FLEXIBLE_ARRAY_MEMBER];
+} TwoPhaseStateData;
 
 static TwoPhaseStateData *TwoPhaseState;
 
@@ -170,7 +170,9 @@ static void RecordTransactionCommitPrepared(TransactionId xid,
 								int nchildren,
 								TransactionId *children,
 								int nrels,
-								RelFileNodeWithStorageType *rels,
+								RelFileNodePendingDelete *rels,
+								int ndeldbs,
+								DbDirNode *deldbs,
 								int ninvalmsgs,
 								SharedInvalidationMessage *invalmsgs,
 								bool initfileinval);
@@ -178,10 +180,15 @@ static void RecordTransactionAbortPrepared(TransactionId xid,
 							   int nchildren,
 							   TransactionId *children,
 							   int nrels,
-							   RelFileNodeWithStorageType *rels);
+							   RelFileNodePendingDelete *rels,
+							   int ndeldbs,
+							   DbDirNode *deldbs);
 static void ProcessRecords(char *bufptr, TransactionId xid,
 			   const TwoPhaseCallback callbacks[]);
 static void RemoveGXact(GlobalTransaction gxact);
+
+static void finish_prepared_transaction_tablespace_storage(bool isCommit);
+
 
 /*
  * Generic initialisation of hash table.
@@ -352,24 +359,24 @@ AtAbort_Twophase(void)
 		return;
 
 	/*
-	 * What to do with the locked global transaction entry?  If we were in
-	 * the process of preparing the transaction, but haven't written the WAL
+	 * What to do with the locked global transaction entry?  If we were in the
+	 * process of preparing the transaction, but haven't written the WAL
 	 * record and state file yet, the transaction must not be considered as
 	 * prepared.  Likewise, if we are in the process of finishing an
-	 * already-prepared transaction, and fail after having already written
-	 * the 2nd phase commit or rollback record to the WAL, the transaction
-	 * should not be considered as prepared anymore.  In those cases, just
-	 * remove the entry from shared memory.
+	 * already-prepared transaction, and fail after having already written the
+	 * 2nd phase commit or rollback record to the WAL, the transaction should
+	 * not be considered as prepared anymore.  In those cases, just remove the
+	 * entry from shared memory.
 	 *
-	 * Otherwise, the entry must be left in place so that the transaction
-	 * can be finished later, so just unlock it.
+	 * Otherwise, the entry must be left in place so that the transaction can
+	 * be finished later, so just unlock it.
 	 *
 	 * If we abort during prepare, after having written the WAL record, we
-	 * might not have transfered all locks and other state to the prepared
+	 * might not have transferred all locks and other state to the prepared
 	 * transaction yet.  Likewise, if we abort during commit or rollback,
-	 * after having written the WAL record, we might not have released
-	 * all the resources held by the transaction yet.  In those cases, the
-	 * in-memory state can be wrong, but it's too late to back out.
+	 * after having written the WAL record, we might not have released all the
+	 * resources held by the transaction yet.  In those cases, the in-memory
+	 * state can be wrong, but it's too late to back out.
 	 */
 	if (!MyLockedGxact->valid)
 	{
@@ -387,7 +394,7 @@ AtAbort_Twophase(void)
 }
 
 /*
- * This is called after we have finished transfering state to the prepared
+ * This is called after we have finished transferring state to the prepared
  * PGXACT entry.
  */
 void
@@ -494,7 +501,6 @@ MarkAsPreparing(TransactionId xid,
 	proc->roleId = owner;
 	proc->lwWaiting = false;
 	proc->lwWaitMode = 0;
-	proc->lwWaitLink = NULL;
 	proc->waitLock = NULL;
 	proc->waitProcLock = NULL;
 	proc->serializableIsoLevel = false;
@@ -521,8 +527,8 @@ MarkAsPreparing(TransactionId xid,
 	TwoPhaseState->prepXacts[TwoPhaseState->numPrepXacts++] = gxact;
 
 	/*
-	 * Remember that we have this GlobalTransaction entry locked for us.
-	 * If we abort after this, we must release it.
+	 * Remember that we have this GlobalTransaction entry locked for us. If we
+	 * abort after this, we must release it.
 	 */
 	MyLockedGxact = gxact;
 
@@ -621,8 +627,8 @@ LockGXact(const char *gid, Oid user, bool raiseErrorIfNotFound)
 		if (gxact->locking_backend != InvalidBackendId)
 			ereport(ERROR,
 					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-					 errmsg("prepared transaction with identifier \"%s\" is busy",
-							gid)));
+				errmsg("prepared transaction with identifier \"%s\" is busy",
+					   gid)));
 
 		if (user != gxact->owner && !superuser_arg(user))
 		{
@@ -934,37 +940,23 @@ TwoPhaseGetDummyProc(TransactionId xid)
  *
  *	1. TwoPhaseFileHeader
  *	2. TransactionId[] (subtransactions)
- *	3. RelFileNodeWithStorageType[] (files to be deleted at commit)
- *	4. RelFileNodeWithStorageType[] (files to be deleted at abort)
- *	5. SharedInvalidationMessage[] (inval messages to be sent at commit)
- *	6. TwoPhaseRecordOnDisk
- *	7. ...
- *	8. TwoPhaseRecordOnDisk (end sentinel, rmid == TWOPHASE_RM_END_ID)
- *	9. CRC32
+ *	3. RelFileNodePendingDelete[] (relation files to be deleted at commit)
+ *	4. RelFileNodePendingDelete[] (relation files to be deleted at abort)
+ *	5. DbDirNode[] (database oid directories to be deleted at commit)
+ *	6. DbDirNode[] (database oid directories to be deleted at abort)
+ *	7. SharedInvalidationMessage[] (inval messages to be sent at commit)
+ *	8. TwoPhaseRecordOnDisk
+ *	9. ...
+ *	10. TwoPhaseRecordOnDisk (end sentinel, rmid == TWOPHASE_RM_END_ID)
+ *	11. CRC32
  *
- * Each segment except the final CRC32 is MAXALIGN'd.
+ * Each segment except the final checksum is MAXALIGN'd.
  */
 
 /*
  * Header for a 2PC state file
  */
 #define TWOPHASE_MAGIC	0x57F94532		/* format identifier */
-
-typedef struct TwoPhaseFileHeader
-{
-	uint32		magic;			/* format identifier */
-	uint32		total_len;		/* actual file length */
-	TransactionId xid;			/* original transaction XID */
-	Oid			database;		/* OID of database it was in */
-	TimestampTz prepared_at;	/* time of preparation */
-	Oid			owner;			/* user running the transaction */
-	int32		nsubxacts;		/* number of following subxact XIDs */
-	int32		ncommitrels;	/* number of delete-on-commit rels */
-	int32		nabortrels;		/* number of delete-on-abort rels */
-	int32		ninvalmsgs;		/* number of cache invalidation messages */
-	bool		initfileinval;	/* does relcache init file need invalidation? */
-	char		gid[GIDSIZE];	/* GID for transaction */
-} TwoPhaseFileHeader;
 
 /*
  * Header for each record in a state file
@@ -981,14 +973,21 @@ typedef struct TwoPhaseRecordOnDisk
 
 /*
  * During prepare, the state file is assembled in memory before writing it
- * to WAL and the actual state file.  We use a chain of XLogRecData blocks
- * so that we will be able to pass the state file contents directly to
- * XLogInsert.
+ * to WAL and the actual state file.  We use a chain of StateFileChunk blocks
+ * for that.
  */
+typedef struct StateFileChunk
+{
+	char	   *data;
+	uint32		len;
+	struct StateFileChunk *next;
+} StateFileChunk;
+
 static struct xllist
 {
-	XLogRecData *head;			/* first data block in the chain */
-	XLogRecData *tail;			/* last block in chain */
+	StateFileChunk *head;		/* first data block in the chain */
+	StateFileChunk *tail;		/* last block in chain */
+	uint32		num_chunks;
 	uint32		bytes_free;		/* free bytes left in tail block */
 	uint32		total_len;		/* total data bytes in chain */
 }	records;
@@ -1009,11 +1008,11 @@ save_state_data(const void *data, uint32 len)
 
 	if (padlen > records.bytes_free)
 	{
-		records.tail->next = palloc0(sizeof(XLogRecData));
+		records.tail->next = palloc0(sizeof(StateFileChunk));
 		records.tail = records.tail->next;
-		records.tail->buffer = InvalidBuffer;
 		records.tail->len = 0;
 		records.tail->next = NULL;
+		records.num_chunks++;
 
 		records.bytes_free = Max(padlen, 512);
 		records.tail->data = palloc(records.bytes_free);
@@ -1038,13 +1037,14 @@ StartPrepare(GlobalTransaction gxact)
 	TransactionId xid = pgxact->xid;
 	TwoPhaseFileHeader hdr;
 	TransactionId *children;
-	RelFileNodeWithStorageType *commitrels;
-	RelFileNodeWithStorageType *abortrels;
+	RelFileNodePendingDelete *commitrels;
+	RelFileNodePendingDelete *abortrels;
+	DbDirNode *commitdbs;
+	DbDirNode *abortdbs;
 	SharedInvalidationMessage *invalmsgs;
 
 	/* Initialize linked list */
-	records.head = palloc0(sizeof(XLogRecData));
-	records.head->buffer = InvalidBuffer;
+	records.head = palloc0(sizeof(StateFileChunk));
 	records.head->len = 0;
 	records.head->next = NULL;
 
@@ -1052,6 +1052,7 @@ StartPrepare(GlobalTransaction gxact)
 	records.head->data = palloc(records.bytes_free);
 
 	records.tail = records.head;
+	records.num_chunks = 1;
 
 	records.total_len = 0;
 
@@ -1062,9 +1063,13 @@ StartPrepare(GlobalTransaction gxact)
 	hdr.database = proc->databaseId;
 	hdr.prepared_at = gxact->prepared_at;
 	hdr.owner = gxact->owner;
+	hdr.tablespace_oid_to_delete_on_abort = GetPendingTablespaceForDeletionForAbort();
+	hdr.tablespace_oid_to_delete_on_commit = GetPendingTablespaceForDeletionForCommit();
 	hdr.nsubxacts = xactGetCommittedChildren(&children);
 	hdr.ncommitrels = smgrGetPendingDeletes(true, &commitrels);
 	hdr.nabortrels = smgrGetPendingDeletes(false, &abortrels);
+	hdr.ncommitdbs = GetPendingDbDeletes(true, &commitdbs);
+	hdr.nabortdbs = GetPendingDbDeletes(false, &abortdbs);
 	hdr.ninvalmsgs = xactGetCommittedInvalidationMessages(&invalmsgs,
 														  &hdr.initfileinval);
 	StrNCpy(hdr.gid, gxact->gid, GIDSIZE);
@@ -1083,13 +1088,23 @@ StartPrepare(GlobalTransaction gxact)
 	}
 	if (hdr.ncommitrels > 0)
 	{
-		save_state_data(commitrels, hdr.ncommitrels * sizeof(RelFileNodeWithStorageType));
+		save_state_data(commitrels, hdr.ncommitrels * sizeof(RelFileNodePendingDelete));
 		pfree(commitrels);
 	}
 	if (hdr.nabortrels > 0)
 	{
-		save_state_data(abortrels, hdr.nabortrels * sizeof(RelFileNodeWithStorageType));
+		save_state_data(abortrels, hdr.nabortrels * sizeof(RelFileNodePendingDelete));
 		pfree(abortrels);
+	}
+	if (hdr.ncommitdbs > 0)
+	{
+		save_state_data(commitdbs, hdr.ncommitdbs * sizeof(DbDirNode));
+		pfree(commitdbs);
+	}
+	if (hdr.nabortdbs > 0)
+	{
+		save_state_data(abortdbs, hdr.nabortdbs * sizeof(DbDirNode));
+		pfree(abortdbs);
 	}
 	if (hdr.ninvalmsgs > 0)
 	{
@@ -1111,6 +1126,7 @@ EndPrepare(GlobalTransaction gxact)
 	TransactionId xid = pgxact->xid;
 	TwoPhaseFileHeader *hdr;
 	char		path[MAXPGPATH];
+	StateFileChunk *record;
 
 	/* Add the end sentinel to the list of 2PC records */
 	RegisterTwoPhaseRecord(TWOPHASE_RM_END_ID, 0,
@@ -1119,7 +1135,7 @@ EndPrepare(GlobalTransaction gxact)
 	/* Go back and fill in total_len in the file header record */
 	hdr = (TwoPhaseFileHeader *) records.head->data;
 	Assert(hdr->magic == TWOPHASE_MAGIC);
-	hdr->total_len = records.total_len + sizeof(pg_crc32);
+	hdr->total_len = records.total_len + sizeof(pg_crc32c);
 
 	/*
 	 * If the file size exceeds MaxAllocSize, we won't be able to read it in
@@ -1135,6 +1151,8 @@ EndPrepare(GlobalTransaction gxact)
 	 */
 	TwoPhaseFilePath(path, xid);
 
+	SIMPLE_FAULT_INJECTOR("before_xlog_xact_prepare");
+
 	/*
 	 * We have to set inCommit here, too; otherwise a checkpoint starting
 	 * immediately after the WAL record is inserted could complete without
@@ -1147,21 +1165,22 @@ EndPrepare(GlobalTransaction gxact)
 	 *
 	 * NOTE: Critical section and CheckpointStartLock were moved up.
 	 */
+	XLogEnsureRecordSpace(0, records.num_chunks);
+
 	START_CRIT_SECTION();
 
 	MyPgXact->delayChkpt = true;
 
-	gxact->prepare_lsn       = XLogInsert(RM_XACT_ID, XLOG_XACT_PREPARE, records.head);
+	XLogBeginInsert();
+	for (record = records.head; record != NULL; record = record->next)
+		XLogRegisterData(record->data, record->len);
+	gxact->prepare_lsn = XLogInsert(RM_XACT_ID, XLOG_XACT_PREPARE);
 	gxact->prepare_begin_lsn = XLogLastInsertBeginLoc();
 
 	/* Add the prepared record to our global list */
 	add_recover_post_checkpoint_prepared_transactions_map_entry(xid, &gxact->prepare_begin_lsn);
 
 	XLogFlush(gxact->prepare_lsn);
-
-	/*
-	 * Now we may update the CLOG, if we wrote COMMIT record above
-	 */
 
 	/*
 	 * Mark the prepared transaction as valid.  As soon as xact.c marks
@@ -1186,6 +1205,8 @@ EndPrepare(GlobalTransaction gxact)
 
 	END_CRIT_SECTION();
 
+	SIMPLE_FAULT_INJECTOR("after_xlog_xact_prepare_flushed");
+
 	/*
 	 * Now we can mark ourselves as out of the commit critical section: a
 	 * checkpoint starting after this will certainly see the gxact as a
@@ -1193,7 +1214,7 @@ EndPrepare(GlobalTransaction gxact)
 	 */
 	MyPgXact->delayChkpt = false;
 
-	SIMPLE_FAULT_INJECTOR(EndPreparedTwoPhase);
+	SIMPLE_FAULT_INJECTOR("end_prepare_two_phase");
 
 	/*
 	 * Wait for synchronous replication, if required.
@@ -1205,8 +1226,8 @@ EndPrepare(GlobalTransaction gxact)
 	SyncRepWaitForLSN(gxact->prepare_lsn);
 
 	records.tail = records.head = NULL;
-} /* end EndPrepare */
-
+	records.num_chunks = 0;
+}
 
 /*
  * Register a 2PC record to be written to state file.
@@ -1262,82 +1283,27 @@ StandbyTransactionIdIsPrepared(TransactionId xid)
 }
 
 
-typedef struct XLogPageReadPrivate
-{
-	int			readFile;
-	XLogSegNo	readSegNo;
-} XLogPageReadPrivate;
+static void
+repopulate_tablespace_storage(Oid tablespace_to_delete_on_commit,
+								Oid tablespace_to_delete_on_abort) {
 
-/*
- * This is simpler than XLogPageRead: no retry logic is needed, as the WAL should be
- * present in pg_xlog.
- */
-static int
-twophase_XLogPageRead(XLogReaderState *xlogreader, XLogRecPtr targetPagePtr, int reqLen,
-					  XLogRecPtr targetRecPtr, char *readBuf, TimeLineID *readTLI)
-{
-	XLogPageReadPrivate *private =
-	(XLogPageReadPrivate *) xlogreader->private_data;
-	uint32		targetPageOff;
-	XLogSegNo targetSegNo PG_USED_FOR_ASSERTS_ONLY;
-	char		path[MAXPGPATH];
-
-	XLByteToSeg(targetPagePtr, targetSegNo);
-	targetPageOff = targetPagePtr % XLogSegSize;
-
-	/*
-	 * See if we need to switch to a new segment because the requested record
-	 * is not in the currently open one.
-	 */
-	if (private->readFile >= 0 && !XLByteInSeg(targetPagePtr, private->readSegNo))
-	{
-		elogif(debug_xlog_record_read, LOG,
-			   "twophase xlog page read -- Requested record %X/%X does not exist in"
-			   "current read xlog file (readsegno " UINT64_FORMAT ")",
-			   (uint32) (targetRecPtr >> 32), (uint32) targetRecPtr,
-			   private->readSegNo);
-
-		close(private->readFile);
-		private->readFile = -1;
-	}
-
-	XLByteToSeg(targetPagePtr, private->readSegNo);
-
-	elogif(debug_xlog_record_read, LOG,
-		   "twophase xlog page read -- Requested record %X/%X has "
-		   "targetsegno " UINT64_FORMAT ", targetpageoff %u",
-		   (uint32) (targetRecPtr >> 32), (uint32) targetRecPtr,
-		   private->readSegNo, targetPageOff);
-
-	if (private->readFile == -1)
-	{
-		// GPDB_93_MERGE_FIXME: Is ThisTimeLineID correct here? Do we need to
-		// fetch prepare records for past timelines, after promotion?
-
-		XLogFilePath(path, ThisTimeLineID, private->readSegNo);
-
-		private->readFile = BasicOpenFile(path, O_RDONLY | PG_BINARY, 0);
-		if (private->readFile < 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not open file \"%s\": %m", path)));
-	}
-
-	/* Read the requested page */
-	if (lseek(private->readFile, (off_t) targetPageOff, SEEK_SET) < 0)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not seek in log segment %s to offset %u: %m",
-						path, targetPageOff)));
-
-	if (read(private->readFile, readBuf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not read from log segment %s, offset %u: %m",
-						path, targetPageOff)));
-
-	return reqLen;
+	ScheduleTablespaceDirectoryDeletionForCommit(tablespace_to_delete_on_commit);
+	ScheduleTablespaceDirectoryDeletionForAbort(tablespace_to_delete_on_abort);
 }
+
+
+static void
+finish_prepared_transaction_tablespace_storage(bool isCommit) {
+	if (isCommit)
+	{
+		AtTwoPhaseCommit_TablespaceStorage();
+	}
+	else
+	{
+		AtTwoPhaseAbort_TablespaceStorage();
+	}
+}
+
 
 /*
  * FinishPreparedTransaction: execute COMMIT PREPARED or ROLLBACK PREPARED
@@ -1354,19 +1320,22 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	TwoPhaseFileHeader *hdr;
 	TransactionId latestXid;
 	TransactionId *children;
-	RelFileNodeWithStorageType *commitrels;
-	RelFileNodeWithStorageType *abortrels;
-	RelFileNodeWithStorageType *delrels;
+	RelFileNodePendingDelete *commitrels;
+	RelFileNodePendingDelete *abortrels;
+	DbDirNode *commitdbs;
+	DbDirNode *abortdbs;
+	RelFileNodePendingDelete *delrels;
 	int			ndelrels;
+	DbDirNode *deldbs;
+	int			ndeldbs;
 	SharedInvalidationMessage *invalmsgs;
 
 	XLogReaderState *xlogreader;
-	struct XLogPageReadPrivate private;
 	char	   *errormsg;
     XLogRecPtr   tfXLogRecPtr;
     XLogRecord  *tfRecord  = NULL;
 
-	SIMPLE_FAULT_INJECTOR(FinishPreparedStartOfFunction);
+	SIMPLE_FAULT_INJECTOR("finish_prepared_start_of_function");
 
 	/*
 	 * Validate the GID, and lock the GXACT to ensure that two backends do not
@@ -1407,18 +1376,12 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 
     /* get the two phase information from the xlog */
 	/*
-	 * GPDB_93_MERGE_FIXME: GPDB used to do XLogCloseReadRecord() and then read,
-	 * do we need to perform something similar with new interface.
-	 *
 	 * GPDB_93_MERGE_FIXME: It's a bit inefficient to allocate a new XLogReader
 	 * object for every call. We could avoid opening+closing every WAL segment,
 	 * if we kept the XLogReader object around. Or reused xlog.c's openLogFile
 	 * file descriptor here.
 	 */
-
-	private.readFile = -1;
-	private.readSegNo = 0;
-	xlogreader = XLogReaderAllocate(&twophase_XLogPageRead, &private);
+	xlogreader = XLogReaderAllocate(&read_local_xlog_page, NULL);
 
 	tfRecord = XLogReadRecord(xlogreader, tfXLogRecPtr, &errormsg);
 	if (tfRecord == NULL)
@@ -1437,7 +1400,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 				 errdetail("%s", errormsg)));
 	}
 
-	buf = XLogRecGetData(tfRecord);
+	buf = XLogRecGetData(xlogreader);
 
 	/*
 	 * Disassemble the header area
@@ -1447,10 +1410,14 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	bufptr = buf + MAXALIGN(sizeof(TwoPhaseFileHeader));
 	children = (TransactionId *) bufptr;
 	bufptr += MAXALIGN(hdr->nsubxacts * sizeof(TransactionId));
-	commitrels = (RelFileNodeWithStorageType *) bufptr;
-	bufptr += MAXALIGN(hdr->ncommitrels * sizeof(RelFileNodeWithStorageType));
-	abortrels = (RelFileNodeWithStorageType *) bufptr;
-	bufptr += MAXALIGN(hdr->nabortrels * sizeof(RelFileNodeWithStorageType));
+	commitrels = (RelFileNodePendingDelete *) bufptr;
+	bufptr += MAXALIGN(hdr->ncommitrels * sizeof(RelFileNodePendingDelete));
+	abortrels = (RelFileNodePendingDelete *) bufptr;
+	bufptr += MAXALIGN(hdr->nabortrels * sizeof(RelFileNodePendingDelete));
+	commitdbs = (DbDirNode *) bufptr;
+	bufptr += MAXALIGN(hdr->ncommitdbs * sizeof(DbDirNode));
+	abortdbs = (DbDirNode *) bufptr;
+	bufptr += MAXALIGN(hdr->nabortdbs * sizeof(DbDirNode));
 	invalmsgs = (SharedInvalidationMessage *) bufptr;
 	bufptr += MAXALIGN(hdr->ninvalmsgs * sizeof(SharedInvalidationMessage));
 
@@ -1459,6 +1426,10 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 
 	/* Prevent cancel/die interrupt while cleaning up */
 	HOLD_INTERRUPTS();
+
+	repopulate_tablespace_storage(
+		hdr->tablespace_oid_to_delete_on_commit,
+		hdr->tablespace_oid_to_delete_on_abort);
 
 	/*
 	 * The order of operations here is critical: make the XLOG entry for
@@ -1473,19 +1444,21 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 										gid,
 										hdr->nsubxacts, children,
 										hdr->ncommitrels, commitrels,
+										hdr->ncommitdbs, commitdbs,
 										hdr->ninvalmsgs, invalmsgs,
 										hdr->initfileinval);
 	else
 		RecordTransactionAbortPrepared(xid,
 									   hdr->nsubxacts, children,
-									   hdr->nabortrels, abortrels);
+									   hdr->nabortrels, abortrels,
+									   hdr->nabortdbs, abortdbs);
 
 	ProcArrayRemove(proc, latestXid);
 
 	/*
 	 * In case we fail while running the callbacks, mark the gxact invalid so
-	 * no one else will try to commit/rollback, and so it will be recycled
-	 * if we fail after this point.  It is still locked by our backend so it
+	 * no one else will try to commit/rollback, and so it will be recycled if
+	 * we fail after this point.  It is still locked by our backend so it
 	 * won't go away yet.
 	 *
 	 * (We assume it's safe to do this without taking TwoPhaseStateLock.)
@@ -1503,15 +1476,24 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	{
 		delrels = commitrels;
 		ndelrels = hdr->ncommitrels;
+		deldbs = commitdbs;
+		ndeldbs = hdr->ncommitdbs;
 	}
 	else
 	{
 		delrels = abortrels;
 		ndelrels = hdr->nabortrels;
+		deldbs = abortdbs;
+		ndeldbs = hdr->nabortdbs;
 	}
 
 	/* Make sure files supposed to be dropped are dropped */
 	DropRelationFiles(delrels, ndelrels, false);
+
+	/* Make sure database folders to be dropped are dropped */
+	DropDatabaseDirectories(deldbs, ndeldbs, false);
+
+	finish_prepared_transaction_tablespace_storage(isCommit);
 
 	/*
 	 * Handle cache invalidation messages.
@@ -1544,11 +1526,9 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	RemoveGXact(gxact);
 	MyLockedGxact = NULL;
 
-	SIMPLE_FAULT_INJECTOR(FinishPreparedAfterRecordCommitPrepared);
+	SIMPLE_FAULT_INJECTOR("finish_prepared_after_record_commit_prepared");
 
 	XLogReaderFree(xlogreader);
-	if (private.readFile != -1)
-		close(private.readFile);
 
 	RESUME_INTERRUPTS();
 
@@ -1675,7 +1655,6 @@ PrescanPreparedTransactions(TransactionId **xids_p, int *nxids_p)
 	int			nxids = 0;
 	int			allocsize = 0;
 	XLogReaderState *xlogreader;
-	struct XLogPageReadPrivate private;
 	char	   *errormsg;
 
 	if (crashRecoverPostCheckpointPreparedTransactions_map_ht != NULL)
@@ -1688,9 +1667,7 @@ PrescanPreparedTransactions(TransactionId **xids_p, int *nxids_p)
 			tfXLogRecPtr = entry->xlogrecptr;
 	}
 
-	private.readFile = -1;
-	private.readSegNo = 0;
-	xlogreader = XLogReaderAllocate(&twophase_XLogPageRead, &private);
+	xlogreader = XLogReaderAllocate(&read_local_xlog_page, NULL);
 
 	while (tfXLogRecPtr != InvalidXLogRecPtr)
 	{
@@ -1698,7 +1675,7 @@ PrescanPreparedTransactions(TransactionId **xids_p, int *nxids_p)
 		TransactionId xid;
 
 		tfRecord = XLogReadRecord(xlogreader, tfXLogRecPtr, &errormsg);
-		hdr = (TwoPhaseFileHeader *) XLogRecGetData(tfRecord);
+		hdr = (TwoPhaseFileHeader *) XLogRecGetData(xlogreader);
 		xid = hdr->xid;
 
 		if (tfRecord == NULL)
@@ -1787,8 +1764,6 @@ PrescanPreparedTransactions(TransactionId **xids_p, int *nxids_p)
 	}
 
 	XLogReaderFree(xlogreader);
-	if (private.readFile != -1)
-		close(private.readFile);
 
 	if (xids_p)
 	{
@@ -1857,12 +1832,9 @@ RecoverPreparedTransactions(void)
 	HASH_SEQ_STATUS hsStatus;
 	bool		overwriteOK = false;
 	XLogReaderState *xlogreader;
-	struct XLogPageReadPrivate private;
 	char	   *errormsg;
 
-	private.readFile = -1;
-	private.readSegNo = 0;
-	xlogreader = XLogReaderAllocate(&twophase_XLogPageRead, &private);
+	xlogreader = XLogReaderAllocate(&read_local_xlog_page, NULL);
 
 	if (crashRecoverPostCheckpointPreparedTransactions_map_ht != NULL)
 	{
@@ -1895,7 +1867,7 @@ RecoverPreparedTransactions(void)
 					 errdetail("%s", errormsg)));
 		}
 
-		buf = XLogRecGetData(tfRecord);
+		buf = XLogRecGetData(xlogreader);
 
 		/* Deconstruct header */
 		hdr = (TwoPhaseFileHeader *) buf;
@@ -1907,8 +1879,10 @@ RecoverPreparedTransactions(void)
 		bufptr = buf + MAXALIGN(sizeof(TwoPhaseFileHeader));
 		subxids = (TransactionId *) bufptr;
 		bufptr += MAXALIGN(hdr->nsubxacts * sizeof(TransactionId));
-		bufptr += MAXALIGN(hdr->ncommitrels * sizeof(RelFileNodeWithStorageType));
-		bufptr += MAXALIGN(hdr->nabortrels * sizeof(RelFileNodeWithStorageType));
+		bufptr += MAXALIGN(hdr->ncommitrels * sizeof(RelFileNodePendingDelete));
+		bufptr += MAXALIGN(hdr->nabortrels * sizeof(RelFileNodePendingDelete));
+		bufptr += MAXALIGN(hdr->ncommitdbs * sizeof(DbDirNode));
+		bufptr += MAXALIGN(hdr->nabortdbs * sizeof(DbDirNode));
 		bufptr += MAXALIGN(hdr->ninvalmsgs * sizeof(SharedInvalidationMessage));
 
 		/*
@@ -1974,8 +1948,6 @@ RecoverPreparedTransactions(void)
 	}  /* end while (xlogrecptr = (XLogRecPtr *)hash_seq_search(&hsStatus)) */
 
 	XLogReaderFree(xlogreader);
-	if (private.readFile != -1)
-		close(private.readFile);
 }
 
 /*
@@ -1993,14 +1965,13 @@ RecordTransactionCommitPrepared(TransactionId xid,
 								int nchildren,
 								TransactionId *children,
 								int nrels,
-							    RelFileNodeWithStorageType *rels,
+							    RelFileNodePendingDelete *rels,
+								int ndeldbs,
+								DbDirNode *deldbs,
 								int ninvalmsgs,
 								SharedInvalidationMessage *invalmsgs,
 								bool initfileinval)
 {
-	XLogRecData rdata[4];
-	int			lastrdata = 0;
-	xl_xact_commit_prepared xlrec;
 	XLogRecPtr	recptr;
 
 	DistributedTransactionTimeStamp distribTimeStamp;
@@ -2017,53 +1988,17 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	 */
 	dtxCrackOpenGid(gid, &distribTimeStamp, &distribXid);
 
+	SIMPLE_FAULT_INJECTOR("before_xlog_xact_commit_prepared");
+
 	/* Emit the XLOG commit record */
-	xlrec.xid = xid;
-	xlrec.distribTimeStamp = distribTimeStamp;
-	xlrec.distribXid = distribXid;
-
-	xlrec.crec.dbId = MyDatabaseId;
-	xlrec.crec.tsId = MyDatabaseTableSpace;
-	xlrec.crec.xact_time = GetCurrentTimestamp();
-	xlrec.crec.nrels = nrels;
-	xlrec.crec.nsubxacts = nchildren;
-	xlrec.crec.nmsgs = ninvalmsgs;
-
-	rdata[0].data = (char *) (&xlrec);
-	rdata[0].len = MinSizeOfXactCommitPrepared;
-	rdata[0].buffer = InvalidBuffer;
-	/* dump rels to delete */
-	if (nrels > 0)
-	{
-		rdata[0].next = &(rdata[1]);
-		rdata[1].data = (char *) rels;
-		rdata[1].len = nrels * sizeof(RelFileNodeWithStorageType);
-		rdata[1].buffer = InvalidBuffer;
-		lastrdata = 1;
-	}
-	/* dump committed child Xids */
-	if (nchildren > 0)
-	{
-		rdata[lastrdata].next = &(rdata[2]);
-		rdata[2].data = (char *) children;
-		rdata[2].len = nchildren * sizeof(TransactionId);
-		rdata[2].buffer = InvalidBuffer;
-		lastrdata = 2;
-	}
-	/* dump cache invalidation messages */
-	if (ninvalmsgs > 0)
-	{
-		rdata[lastrdata].next = &(rdata[3]);
-		rdata[3].data = (char *) invalmsgs;
-		rdata[3].len = ninvalmsgs * sizeof(SharedInvalidationMessage);
-		rdata[3].buffer = InvalidBuffer;
-		lastrdata = 3;
-	}
-	rdata[lastrdata].next = NULL;
-
-	SIMPLE_FAULT_INJECTOR(TwoPhaseTransactionCommitPrepared);
-
-	recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_COMMIT_PREPARED, rdata);
+	recptr = XactLogCommitRecord(GetCurrentTimestamp(),
+								 GetPendingTablespaceForDeletionForCommit(),
+								 nchildren, children, nrels, rels,
+								 ninvalmsgs, invalmsgs,
+								 ndeldbs, deldbs,
+								 initfileinval, false,
+								 xid,
+								 NULL/* commit prepared */);
 
 	/*
 	 * We don't currently try to sleep before flush here ... nor is there any
@@ -2113,12 +2048,11 @@ RecordTransactionAbortPrepared(TransactionId xid,
 							   int nchildren,
 							   TransactionId *children,
 							   int nrels,
-							   RelFileNodeWithStorageType *rels)
+							   RelFileNodePendingDelete *rels,
+							   int ndeldbs,
+							   DbDirNode *deldbs)
 {
-	XLogRecData rdata[3];
-	int			lastrdata = 0;
-	xl_xact_abort_prepared xlrec;
-	XLogRecPtr      recptr;
+	XLogRecPtr	recptr;
 
 	/*
 	 * Catch the scenario where we aborted partway through
@@ -2130,37 +2064,15 @@ RecordTransactionAbortPrepared(TransactionId xid,
 
 	START_CRIT_SECTION();
 
+	SIMPLE_FAULT_INJECTOR("twophase_transaction_abort_prepared");
+
 	/* Emit the XLOG abort record */
-	xlrec.xid = xid;
-	xlrec.arec.xact_time = GetCurrentTimestamp();
-	xlrec.arec.nrels = nrels;
-	xlrec.arec.nsubxacts = nchildren;
-	rdata[0].data = (char *) (&xlrec);
-	rdata[0].len = MinSizeOfXactAbortPrepared;
-	rdata[0].buffer = InvalidBuffer;
-	/* dump rels to delete */
-	if (nrels > 0)
-	{
-		rdata[0].next = &(rdata[1]);
-		rdata[1].data = (char *) rels;
-		rdata[1].len = nrels * sizeof(RelFileNodeWithStorageType);
-		rdata[1].buffer = InvalidBuffer;
-		lastrdata = 1;
-	}
-	/* dump committed child Xids */
-	if (nchildren > 0)
-	{
-		rdata[lastrdata].next = &(rdata[2]);
-		rdata[2].data = (char *) children;
-		rdata[2].len = nchildren * sizeof(TransactionId);
-		rdata[2].buffer = InvalidBuffer;
-		lastrdata = 2;
-	}
-	rdata[lastrdata].next = NULL;
-
-	SIMPLE_FAULT_INJECTOR(TwoPhaseTransactionAbortPrepared);
-
-	recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_ABORT_PREPARED, rdata);
+	recptr = XactLogAbortRecord(GetCurrentTimestamp(),
+								GetPendingTablespaceForDeletionForAbort(),
+								nchildren, children,
+								nrels, rels,
+								ndeldbs, deldbs,
+								xid);
 
 	/* Always flush, since we're about to remove the 2PC state file */
 	XLogFlush(recptr);
@@ -2280,9 +2192,8 @@ TwoPhaseAddPreparedTransaction(prepared_transaction_agg_state **ptas,
  * is empty.
  */
 XLogRecPtr *
-getTwoPhaseOldestPreparedTransactionXLogRecPtr(XLogRecData *rdata)
+getTwoPhaseOldestPreparedTransactionXLogRecPtr(prepared_transaction_agg_state *ptas)
 {
-	prepared_transaction_agg_state *ptas = (prepared_transaction_agg_state *)rdata->data;
 	int			map_count = ptas->count;
 	prpt_map   *m = ptas->maps;
 	XLogRecPtr *oldest = NULL;

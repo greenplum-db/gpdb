@@ -3,7 +3,7 @@
  * mem.h
  *	  portability definitions for various memory operations
  *
- * Copyright (c) 2001-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2001-2015, PostgreSQL Global Development Group
  *
  * src/include/portability/mem.h
  *
@@ -28,6 +28,14 @@
 /* BSD-derived systems have MAP_HASSEMAPHORE, but it's not present (or needed) on Linux. */
 #ifndef MAP_HASSEMAPHORE
 #define MAP_HASSEMAPHORE		0
+#endif
+
+/*
+ * BSD-derived systems use the MAP_NOSYNC flag to prevent dirty mmap(2)
+ * pages from being gratuitously flushed to disk.
+ */
+#ifndef MAP_NOSYNC
+#define MAP_NOSYNC			0
 #endif
 
 #define PG_MMAP_FLAGS			(MAP_SHARED|MAP_ANONYMOUS|MAP_HASSEMAPHORE)

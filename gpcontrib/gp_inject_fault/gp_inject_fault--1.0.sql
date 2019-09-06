@@ -13,7 +13,7 @@ CREATE FUNCTION gp_inject_fault(
   end_occurrence int4,
   extra_arg int4,
   db_id int4)
-RETURNS boolean
+RETURNS text
 AS 'MODULE_PATHNAME'
 LANGUAGE C VOLATILE STRICT NO SQL;
 
@@ -23,7 +23,7 @@ CREATE FUNCTION gp_inject_fault(
   faultname text,
   type text,
   db_id int4)
-RETURNS boolean
+RETURNS text
 AS $$ select gp_inject_fault($1, $2, '', '', '', 1, 1, 0, $3) $$
 LANGUAGE SQL;
 
@@ -32,7 +32,7 @@ CREATE FUNCTION gp_inject_fault_infinite(
   faultname text,
   type text,
   db_id int4)
-RETURNS boolean
+RETURNS text
 AS $$ select gp_inject_fault($1, $2, '', '', '', 1, -1, 0, $3) $$
 LANGUAGE SQL;
 
@@ -43,6 +43,6 @@ CREATE FUNCTION gp_wait_until_triggered_fault(
   faultname text,
   numtimestriggered int4,
   db_id int4)
-RETURNS boolean
+RETURNS text
 AS $$ select gp_inject_fault($1, 'wait_until_triggered', '', '', '', 1, 1, $2, $3) $$
 LANGUAGE SQL;

@@ -3,7 +3,7 @@
  * slotfuncs.c
  *	   Support functions for replication slots
  *
- * Copyright (c) 2012-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2012-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/replication/slotfuncs.c
@@ -32,6 +32,13 @@ check_permissions(void)
 				 (errmsg("must be superuser or replication role to use replication slots"))));
 }
 
+static void
+warn_slot_only_created_on_segment(const char *name) {
+	ereport(WARNING,
+			(errmsg("replication slot \"%s\" created only on this segment", name),
+			 errhint("Creating replication slots on a single segment is not advised.  Replication slots are automatically created by management tools.")));
+}
+
 /*
  * SQL function for creating a new physical (streaming replication)
  * replication slot.
@@ -55,6 +62,8 @@ pg_create_physical_replication_slot(PG_FUNCTION_ARGS)
 	check_permissions();
 
 	CheckSlotRequirements();
+
+	warn_slot_only_created_on_segment(NameStr(*name));
 
 	/* acquire replication slot, this will check for conflicting names */
 	ReplicationSlotCreate(NameStr(*name), false, RS_PERSISTENT);
@@ -116,9 +125,9 @@ pg_create_logical_replication_slot(PG_FUNCTION_ARGS)
 	CheckLogicalDecodingRequirements();
 
 	/*
-	 * Acquire a logical decoding slot, this will check for conflicting
-	 * names. Initially create it as ephemeral - that allows us to nicely
-	 * handle errors during initialization because it'll get dropped if this
+	 * Acquire a logical decoding slot, this will check for conflicting names.
+	 * Initially create it as ephemeral - that allows us to nicely handle
+	 * errors during initialization because it'll get dropped if this
 	 * transaction fails. We'll make it persistent at the end.
 	 */
 	ReplicationSlotCreate(NameStr(*name), true, RS_EPHEMERAL);
@@ -175,7 +184,7 @@ pg_drop_replication_slot(PG_FUNCTION_ARGS)
 Datum
 pg_get_replication_slots(PG_FUNCTION_ARGS)
 {
-#define PG_GET_REPLICATION_SLOTS_COLS 8
+#define PG_GET_REPLICATION_SLOTS_COLS 9
 	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
 	TupleDesc	tupdesc;
 	Tuplestorestate *tupstore;
@@ -223,7 +232,7 @@ pg_get_replication_slots(PG_FUNCTION_ARGS)
 		TransactionId xmin;
 		TransactionId catalog_xmin;
 		XLogRecPtr	restart_lsn;
-		bool		active;
+		pid_t		active_pid;
 		Oid			database;
 		NameData	slot_name;
 		NameData	plugin;
@@ -244,7 +253,7 @@ pg_get_replication_slots(PG_FUNCTION_ARGS)
 			namecpy(&slot_name, &slot->data.name);
 			namecpy(&plugin, &slot->data.plugin);
 
-			active = slot->active;
+			active_pid = slot->active_pid;
 		}
 		SpinLockRelease(&slot->mutex);
 
@@ -268,7 +277,12 @@ pg_get_replication_slots(PG_FUNCTION_ARGS)
 		else
 			values[i++] = database;
 
-		values[i++] = BoolGetDatum(active);
+		values[i++] = BoolGetDatum(active_pid != 0);
+
+		if (active_pid != 0)
+			values[i++] = Int32GetDatum(active_pid);
+		else
+			nulls[i++] = true;
 
 		if (xmin != InvalidTransactionId)
 			values[i++] = TransactionIdGetDatum(xmin);

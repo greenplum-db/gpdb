@@ -6,7 +6,7 @@
  * NOTE: for historical reasons, this does not correspond to pqcomm.c.
  * pqcomm.c's routines are declared in libpq.h.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/libpq/pqcomm.h
@@ -104,6 +104,10 @@ typedef struct
 #define PG_PROTOCOL_MAJOR(v)	(((v) >> 16) & 0xfff)
 #define PG_PROTOCOL_MINOR(v)	((v) & 0x0000ffff)
 #define PG_PROTOCOL(m,n)	(((m) << 16) | (n))
+
+/* GPDB specific */
+#define GPDB_INTERNAL_PROTOCOL(m, n)    PG_PROTOCOL((m) | 0x7000, (n))
+#define IS_GPDB_INTERNAL_PROTOCOL(v)    (((v) >> 28) == 7)
 
 /* The earliest and latest frontend/backend protocol version supported. */
 
@@ -218,5 +222,6 @@ typedef struct CancelRequestPacket
 
 #define GPCONN_TYPE "gpconntype"
 #define GPCONN_TYPE_FTS "fts"
+#define GPCONN_TYPE_FAULT "fault"
 
 #endif   /* PQCOMM_H */

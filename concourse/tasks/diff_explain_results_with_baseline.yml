@@ -1,0 +1,15 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/qp-gpdbdev
+inputs:
+  - name: gpdb_main_src
+  - name: explain_output
+  - name: explain_output_baseline
+outputs:
+  - name: diffs
+params:
+  prefix:
+run:
+  path: gpdb_main_src/concourse/scripts/diff_explain_results_with_baseline.bash

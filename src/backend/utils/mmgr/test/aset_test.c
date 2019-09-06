@@ -14,6 +14,7 @@ extern MemoryAccount* AlienExecutorMemoryAccount;
 extern MemoryAccountIdType liveAccountStartId;
 extern MemoryAccountIdType nextAccountId;
 
+#undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 /*
@@ -21,7 +22,7 @@ extern MemoryAccountIdType nextAccountId;
  * function by re-throwing the exception, essentially falling
  * back to the next available PG_CATCH();
  */
-void
+static void
 _ExceptionalCondition()
 {
      PG_RE_THROW();
@@ -31,7 +32,8 @@ _ExceptionalCondition()
  * This method sets up MemoryContext tree as well as
  * the basic MemoryAccount data structures.
  */
-void SetupMemoryDataStructures(void **state)
+static void
+SetupMemoryDataStructures(void **state)
 {
 	MemoryContextInit();
 }
@@ -40,7 +42,7 @@ void SetupMemoryDataStructures(void **state)
  * This method cleans up MemoryContext tree and
  * the MemoryAccount data structures.
  */
-void
+static void
 TeardownMemoryDataStructures(void **state)
 {
 	/*
@@ -88,13 +90,13 @@ TeardownMemoryDataStructures(void **state)
  * and any shared header allocation (SharedChunkHeadersMemoryAccount
  * balance increase)
  */
-void
+static void
 test__MemoryAccounting_Allocate__ChargesOnlyActiveAccount(void **state)
 {
 	MemoryAccountIdType newActiveAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 
 	/* Make sure we have a new active account other than Rollover */
-	MemoryAccountIdType oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccountId);
+	MemoryAccounting_SwitchAccount(newActiveAccountId);
 
 	assert_true(ActiveMemoryAccountId == newActiveAccountId);
 
@@ -125,7 +127,7 @@ test__MemoryAccounting_Allocate__ChargesOnlyActiveAccount(void **state)
  * Tests whether we adjust the outstanding balance during new
  * allocation
  */
-void
+static void
 test__MemoryAccounting_Allocate__AdjustsOutstanding(void **state)
 {
 	uint64 prevOutstanding = MemoryAccountingOutstandingBalance;
@@ -143,7 +145,7 @@ test__MemoryAccounting_Allocate__AdjustsOutstanding(void **state)
 }
 
 /* Tests whether we adjust the peak balance during new allocation */
-void
+static void
 test__MemoryAccounting_Allocate__AdjustsPeak(void **state)
 {
 	uint64 prevPeak = MemoryAccountingPeakBalance;
@@ -168,7 +170,7 @@ test__MemoryAccounting_Allocate__AdjustsPeak(void **state)
  * Tests whether we free old generation memory from rollover account,
  * irrespective of their owner account
  */
-void
+static void
 test__MemoryAccounting_Free__FreesOldGenFromRollover(void **state)
 {
 	assert_true(ActiveMemoryAccountId == MEMORY_OWNER_TYPE_Top);
@@ -199,7 +201,7 @@ test__MemoryAccounting_Free__FreesOldGenFromRollover(void **state)
 }
 
 /* Tests whether we adjust outstanding balance during freeing of memory */
-void
+static void
 test__MemoryAccounting_Free__AdjustsOutstanding(void **state)
 {
 	uint64 oldOutstandingBalance = MemoryAccountingOutstandingBalance;
@@ -217,7 +219,7 @@ test__MemoryAccounting_Free__AdjustsOutstanding(void **state)
 }
 
 /* Tests whether the peak balance is unchanged during free operation */
-void
+static void
 test__MemoryAccounting_Free__KeepsPeakUnchanged(void **state)
 {
 	uint64 prevPeak = MemoryAccountingPeakBalance;
@@ -242,7 +244,7 @@ test__MemoryAccounting_Free__KeepsPeakUnchanged(void **state)
 }
 
 /* Tests whether the header sharing is working */
-void
+static void
 test__AllocAllocInfo__SharesHeader(void **state)
 {
 	void *testAlloc1 = palloc(NEW_ALLOC_SIZE);
@@ -266,13 +268,13 @@ test__AllocAllocInfo__SharesHeader(void **state)
  * Tests whether we charge shared chunk header account during an allocation
  * when header sharing is not possible
  */
-void
+static void
 test__AllocAllocInfo__ChargesSharedChunkHeadersMemoryAccount(void **state)
 {
 	MemoryAccountIdType newActiveAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 
 	/* Make sure we have a new active account to force a new shared header allocation */
-	MemoryAccountIdType oldActiveAccountId = MemoryAccounting_SwitchAccount(newActiveAccountId);
+	MemoryAccounting_SwitchAccount(newActiveAccountId);
 
 	uint64 prevSharedBalance = SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed;
 
@@ -290,14 +292,14 @@ test__AllocAllocInfo__ChargesSharedChunkHeadersMemoryAccount(void **state)
 }
 
 /* Tests whether we use null account header if there is ActiveMemoryAccountId is invalid */
-void
+static void
 test__AllocAllocInfo__UsesNullAccountHeader(void **state)
 {
-	MemoryContext *newContext = AllocSetContextCreate(ErrorContext,
-			   "TestContext",
-			   ALLOCSET_DEFAULT_MINSIZE,
-			   ALLOCSET_DEFAULT_INITSIZE,
-			   ALLOCSET_DEFAULT_MAXSIZE);
+	MemoryContext newContext = AllocSetContextCreate(ErrorContext,
+													 "TestContext",
+													 ALLOCSET_DEFAULT_MINSIZE,
+													 ALLOCSET_DEFAULT_INITSIZE,
+													 ALLOCSET_DEFAULT_MAXSIZE);
 
 	AllocSet newSet = (AllocSet)newContext;
 	assert_true(newSet->sharedHeaderList == NULL);
@@ -329,7 +331,7 @@ test__AllocAllocInfo__UsesNullAccountHeader(void **state)
  * Tests whether header sharing works even if the desired header
  * is not at the head of sharedHeaderList
  */
-void
+static void
 test__AllocAllocInfo__LooksAheadInSharedHeaderList(void **state)
 {
 	AllocSet set = (AllocSet)CurrentMemoryContext;
@@ -410,7 +412,7 @@ test__AllocAllocInfo__LooksAheadInSharedHeaderList(void **state)
 }
 
 /* Tests whether we ignore sharedHeader if it is not from the current generation */
-void
+static void
 test__AllocAllocInfo__IgnoresOldGenSharedHeaders(void **state)
 {
 	void *testAlloc1 = palloc(NEW_ALLOC_SIZE);
@@ -438,7 +440,7 @@ test__AllocAllocInfo__IgnoresOldGenSharedHeaders(void **state)
  * Tests whether we correctly allocate a new shared header and insert it
  * into the sharedHeaderList
  */
-void
+static void
 test__AllocAllocInfo__InsertsIntoSharedHeaderList(void **state)
 {
 	AllocSet set = (AllocSet)CurrentMemoryContext;
@@ -507,7 +509,7 @@ test__AllocAllocInfo__InsertsIntoSharedHeaderList(void **state)
 }
 
 /* Tests whether SharedChunkHeadersMemoryAccount ignores the overhead of null Account header */
-void
+static void
 test__AllocFreeInfo__SharedChunkHeadersMemoryAccountIgnoresNullHeader(void **state)
 {
 	/* This has two parts:
@@ -518,18 +520,18 @@ test__AllocFreeInfo__SharedChunkHeadersMemoryAccountIgnoresNullHeader(void **sta
 	 * that SharedChunkHeadersMemoryAccount balance does not get changed
 	 */
 
-	MemoryContext *newContext = AllocSetContextCreate(ErrorContext,
-			   "TestContext",
-			   ALLOCSET_DEFAULT_MINSIZE,
-			   ALLOCSET_DEFAULT_INITSIZE,
-			   ALLOCSET_DEFAULT_MAXSIZE);
+	MemoryContext newContext = AllocSetContextCreate(ErrorContext,
+													 "TestContext",
+													 ALLOCSET_DEFAULT_MINSIZE,
+													 ALLOCSET_DEFAULT_INITSIZE,
+													 ALLOCSET_DEFAULT_MAXSIZE);
 
 	AllocSet newSet = (AllocSet)newContext;
 	assert_true(newSet->sharedHeaderList == NULL);
 	assert_true(newSet->nullAccountHeader == NULL);
 
 	MemoryAccountIdType oldActive = ActiveMemoryAccountId;
-	MemoryAccountIdType oldShared = SharedChunkHeadersMemoryAccount;
+	MemoryAccount *oldShared = SharedChunkHeadersMemoryAccount;
 
 	/* Turning off memory monitoring */
 	ActiveMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
@@ -549,7 +551,7 @@ test__AllocFreeInfo__SharedChunkHeadersMemoryAccountIgnoresNullHeader(void **sta
 			 * ActiveMemoryAccountId is invalid, but SharedChunkHeadersMemoryAccount is
 			 * *not* null. This should trigger an assertion
 			 */
-			void *testAlloc = MemoryContextAlloc(newContext, NEW_ALLOC_SIZE);
+			MemoryContextAlloc(newContext, NEW_ALLOC_SIZE);
 
 			assert_true(false);
 		}
@@ -600,14 +602,14 @@ test__AllocFreeInfo__SharedChunkHeadersMemoryAccountIgnoresNullHeader(void **sta
 }
 
 /* Tests whether null Account header never gets freed */
-void
+static void
 test__AllocFreeInfo__ReusesNullHeader(void **state)
 {
-	MemoryContext *newContext = AllocSetContextCreate(ErrorContext,
-			   "TestContext",
-			   ALLOCSET_DEFAULT_MINSIZE,
-			   ALLOCSET_DEFAULT_INITSIZE,
-			   ALLOCSET_DEFAULT_MAXSIZE);
+	MemoryContext newContext = AllocSetContextCreate(ErrorContext,
+													 "TestContext",
+													 ALLOCSET_DEFAULT_MINSIZE,
+													 ALLOCSET_DEFAULT_INITSIZE,
+													 ALLOCSET_DEFAULT_MAXSIZE);
 
 	AllocSet newSet = (AllocSet)newContext;
 	assert_true(newSet->sharedHeaderList == NULL);
@@ -649,13 +651,13 @@ test__AllocFreeInfo__ReusesNullHeader(void **state)
 }
 
 /* Tests whether we are promptly freeing shared header that is no longer shared */
-void
+static void
 test__AllocFreeInfo__FreesObsoleteHeader(void **state)
 {
 	MemoryAccountIdType newActiveAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 
 	/* Make sure we have a new active account to force a new shared header allocation */
-	MemoryAccountIdType oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccount);
+	MemoryAccounting_SwitchAccount(newActiveAccount);
 
 	uint64 prevSharedBalance = SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed;
 
@@ -689,7 +691,7 @@ test__AllocFreeInfo__FreesObsoleteHeader(void **state)
 }
 
 /* Tests whether a free operation decreases balance of only the owning account */
-void
+static void
 test__AllocFreeInfo__FreesOnlyOwnerAccount(void **state)
 {
 	MemoryAccountIdType newAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
@@ -732,7 +734,7 @@ test__AllocFreeInfo__FreesOnlyOwnerAccount(void **state)
 }
 
 /* Tests whether a large allocation allocates dedicated block */
-void
+static void
 test__AllocSetAllocImpl__LargeAllocInNewBlock(void **state)
 {
 	int chunkSize = ALLOC_CHUNK_LIMIT + 1;
@@ -756,7 +758,7 @@ test__AllocSetAllocImpl__LargeAllocInNewBlock(void **state)
 }
 
 /* Tests whether a large allocation updates memory accounting outstanding balance */
-void
+static void
 test__AllocSetAllocImpl__LargeAllocInOutstandingBalance(void **state)
 {
 	uint64 prevOutstanding = MemoryAccountingOutstandingBalance;
@@ -774,13 +776,13 @@ test__AllocSetAllocImpl__LargeAllocInOutstandingBalance(void **state)
 }
 
 /* Tests whether a large allocation updates balance of the active memory account */
-void
+static void
 test__AllocSetAllocImpl__LargeAllocInActiveMemoryAccount(void **state)
 {
 	MemoryAccountIdType newActiveAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 
 	/* Make sure we have a new active account other than Rollover */
-	MemoryAccountIdType oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccountId);
+	MemoryAccounting_SwitchAccount(newActiveAccountId);
 
 	uint64 prevOutstanding = MemoryAccountingOutstandingBalance;
 
@@ -815,7 +817,7 @@ test__AllocSetAllocImpl__LargeAllocInActiveMemoryAccount(void **state)
  * Tests whether reallocating a small chunk into a large allocation
  * updates memory accounting outstanding balance
  */
-void
+static void
 test__AllocSetRealloc__AdjustsOutstandingBalance(void **state)
 {
 	/* This chunk should record newAccount as the owner */

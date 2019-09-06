@@ -19,7 +19,7 @@
  * memory context given to inv_open (for LargeObjectDesc structs).
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -562,11 +562,13 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 	bool		neednextpage;
 	bytea	   *datafield;
 	bool		pfreeit;
-	struct
+	union
 	{
 		bytea		hdr;
-		char		data[LOBLKSIZE];	/* make struct big enough */
-		int32		align_it;	/* ensure struct is aligned well enough */
+		/* this is to make the union big enough for a LO data chunk: */
+		char		data[LOBLKSIZE + VARHDRSZ];
+		/* ensure union is aligned well enough: */
+		int32		align_it;
 	}			workbuf;
 	char	   *workb = VARDATA(&workbuf.hdr);
 	HeapTuple	newtup;
@@ -748,11 +750,13 @@ inv_truncate(LargeObjectDesc *obj_desc, int64 len)
 	SysScanDesc sd;
 	HeapTuple	oldtuple;
 	Form_pg_largeobject olddata;
-	struct
+	union
 	{
 		bytea		hdr;
-		char		data[LOBLKSIZE];	/* make struct big enough */
-		int32		align_it;	/* ensure struct is aligned well enough */
+		/* this is to make the union big enough for a LO data chunk: */
+		char		data[LOBLKSIZE + VARHDRSZ];
+		/* ensure union is aligned well enough: */
+		int32		align_it;
 	}			workbuf;
 	char	   *workb = VARDATA(&workbuf.hdr);
 	HeapTuple	newtup;

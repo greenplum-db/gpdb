@@ -3,7 +3,7 @@
  * connection.c
  *		  Connection management functions for postgres_fdw
  *
- * Portions Copyright (c) 2012-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  contrib/postgres_fdw/connection.c
@@ -122,12 +122,11 @@ GetConnection(ForeignServer *server, UserMapping *user,
 		MemSet(&ctl, 0, sizeof(ctl));
 		ctl.keysize = sizeof(ConnCacheKey);
 		ctl.entrysize = sizeof(ConnCacheEntry);
-		ctl.hash = tag_hash;
 		/* allocate ConnectionHash in the cache context */
 		ctl.hcxt = CacheMemoryContext;
 		ConnectionHash = hash_create("postgres_fdw connections", 8,
 									 &ctl,
-								   HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+									 HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 
 		/*
 		 * Register some callback functions that manage connection cleanup.
@@ -704,6 +703,7 @@ pgfdw_xact_callback(XactEvent event, void *arg)
 
 			switch (event)
 			{
+				case XACT_EVENT_PARALLEL_PRE_COMMIT:
 				case XACT_EVENT_PRE_COMMIT:
 
 					/*
@@ -755,11 +755,13 @@ pgfdw_xact_callback(XactEvent event, void *arg)
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("cannot prepare a transaction that modified remote tables")));
 					break;
+				case XACT_EVENT_PARALLEL_COMMIT:
 				case XACT_EVENT_COMMIT:
 				case XACT_EVENT_PREPARE:
 					/* Pre-commit should have closed the open transaction */
 					elog(ERROR, "missed cleaning up connection during pre-commit");
 					break;
+				case XACT_EVENT_PARALLEL_ABORT:
 				case XACT_EVENT_ABORT:
 
 					/*

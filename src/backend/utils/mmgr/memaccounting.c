@@ -1144,6 +1144,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_BitmapOr";
 	case MEMORY_OWNER_TYPE_Exec_SeqScan:
 		return "X_SeqScan";
+	case MEMORY_OWNER_TYPE_Exec_SampleScan:
+		return "X_SampleScan";
 	case MEMORY_OWNER_TYPE_Exec_DynamicSeqScan:
 		return "X_DynamicSeqScan";
 	case MEMORY_OWNER_TYPE_Exec_ExternalScan:
@@ -1218,8 +1220,6 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_RecursiveUnion";
 	case MEMORY_OWNER_TYPE_Exec_CteScan:
 		return "X_CteScan";
-	case MEMORY_OWNER_TYPE_Exec_Reshuffle:
-		return "X_Reshuffle";
 	case MEMORY_OWNER_TYPE_Exec_WorkTableScan:
 		return "X_WorkTableScan";
 	case MEMORY_OWNER_TYPE_Exec_ForeignScan:

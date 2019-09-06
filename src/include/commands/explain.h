@@ -3,7 +3,7 @@
  * explain.h
  *	  prototypes for explain.c
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * src/include/commands/explain.h
@@ -73,7 +73,7 @@ extern PGDLLIMPORT explain_get_index_name_hook_type explain_get_index_name_hook;
 extern void ExplainQuery(ExplainStmt *stmt, const char *queryString,
 			 ParamListInfo params, DestReceiver *dest);
 
-extern void ExplainInitState(ExplainState *es);
+extern ExplainState *NewExplainState(void);
 
 extern TupleDesc ExplainResultDesc(ExplainStmt *stmt);
 
@@ -96,6 +96,8 @@ extern void ExplainSeparatePlans(ExplainState *es);
 
 extern void ExplainPropertyList(const char *qlabel, List *data,
 					ExplainState *es);
+extern void ExplainPropertyListNested(const char *qlabel, List *data,
+						  ExplainState *es);
 extern void ExplainPropertyText(const char *qlabel, const char *value,
 					ExplainState *es);
 extern void ExplainPropertyInteger(const char *qlabel, int value,

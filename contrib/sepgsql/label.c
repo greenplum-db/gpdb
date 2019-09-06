@@ -4,7 +4,7 @@
  *
  * Routines to support SELinux labels (security context)
  *
- * Copyright (c) 2010-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2010-2015, PostgreSQL Global Development Group
  *
  * -------------------------------------------------------------------------
  */
@@ -540,7 +540,10 @@ sepgsql_object_relabel(const ObjectAddress *object, const char *seclabel)
 			break;
 
 		default:
-			elog(ERROR, "unsupported object type: %u", object->classId);
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("sepgsql provider does not support labels on %s",
+							getObjectTypeDescription(object))));
 			break;
 	}
 }

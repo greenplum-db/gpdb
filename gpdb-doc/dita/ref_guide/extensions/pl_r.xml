@@ -2,13 +2,14 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="py212122">Greenplum PL/R Language Extension</title>
+  <title id="py212122">PL/R Language</title>
   <body>
     <p>This chapter contains the following information:</p>
     <ul>
       <li id="py213657">
         <xref href="#topic2" type="topic" format="dita"/>
       </li>
+      <li><xref href="#topic_irz_m3l_v3b" format="dita"/></li>
       <li id="py219391" otherprops="pivotal">
         <xref href="#topic3" type="topic" format="dita"/>
       </li>
@@ -41,6 +42,35 @@
       <p>For information about supported PL/R versions, see the <cite>Greenplum Database Release
           Notes</cite>. </p>
     </body>
+    <topic id="topic_irz_m3l_v3b">
+      <title>Installing R</title>
+      <body>
+        <p>For RHEL and CentOS, installing the PL/R package installs R in
+              <codeph>$GPHOME/ext/R-&lt;<varname>version</varname>></codeph> and updates
+            <codeph>$GPHOME/greenplum_path.sh</codeph> for Greenplum Database to use R.</p>
+        <p>To use PL/R on Ubuntu host systems, you must install and configure R on all Greenplum
+          Database host systems before installing PL/R.</p>
+        <note>You can use the <codeph><xref href="../../utility_guide/admin_utilities/gpssh.xml"
+            /></codeph> utility to run bash shell commands on multiple remote hosts.</note>
+        <ol id="ol_ypp_qnn_w3b">
+          <li>To install R, run these <codeph>apt</codeph> commands on all host
+              systems.<codeblock>$ sudo apt update &amp;&amp; sudo apt install r-base</codeblock><p>Installing
+                <codeph>r-base</codeph> also installs dependent packages including
+                <codeph>r-base-core</codeph>.</p></li>
+          <li>To configure Greenplum Database to use R, add the <codeph>R_HOME</codeph> environment
+            variable to <codeph>$GPHOME/greenplum_path.sh</codeph> on all hosts. This example
+            command returns the R home directory.
+              <codeblock>$ R RHOME
+/usr/lib/R</codeblock><p>Using the previous R home directory as
+              an example, add this line to the file on all
+            hosts.</p><codeblock>export R_HOME=/usr/lib/R</codeblock></li>
+          <li>Source <codeph>$GPHOME/greenplum_path.sh</codeph> and restart Greenplum Database. For
+            example, run these commands on the Greenplum Database master
+            host.<codeblock>$ source $GPHOME/greenplum_path.sh
+$ gpstop -r</codeblock></li>
+        </ol>
+      </body>
+    </topic>
     <topic id="topic3" xml:lang="en" otherprops="pivotal">
       <title id="py217167">Installing PL/R</title>
       <body>
@@ -48,11 +78,10 @@
           from <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
             scope="external">Pivotal Network</xref> and install it with the Greenplum Package
           Manager (<codeph>gppkg</codeph>). </p>
-        <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
-          dependencies, on all hosts across a cluster. It also automatically installs extensions on
-          new hosts in the case of system expansion and segment recovery.</p>
-        <p>For information about <codeph>gppkg</codeph>, see the <cite>Greenplum Database Utility
-            Guide</cite>.</p>
+        <p>The <xref href="../../utility_guide/admin_utilities/gppkg.xml"/> utility installs
+          Greenplum Database extensions, along with any dependencies, on all hosts across a cluster.
+          It also automatically installs extensions on new hosts in the case of system expansion and
+          segment recovery.</p>
       </body>
       <topic id="topic4" xml:lang="en">
         <title>Installing the Extension Package</title>
@@ -68,22 +97,24 @@
             <li>Copy the PL/R package to the Greenplum Database master host. </li>
             <li id="py214844">Install the software extension package by running the
                 <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
-              system:<codeblock>$ gppkg -i plr-2.3.1-gp5-rhel6-x86_64.gppkg</codeblock></li>
-            <li id="py215420">Restart the database.<codeblock>$ gpstop -r</codeblock></li>
+              system:<codeblock>$ gppkg -i plr-3.0.3-gp6-rhel7_x86_64.gppkg</codeblock></li>
             <li id="py215434">Source the file <codeph>$GPHOME/greenplum_path.sh</codeph>.</li>
+            <li id="py215420">Restart Greenplum Database.<codeblock>$ gpstop -r</codeblock></li>
           </ol>
-          <p>The extension and the R environment is installed in this directory:</p>
-          <codeblock>$GPHOME/ext/R-3.3.3/</codeblock>
-          <note type="note">The version of some shared libraries installed with the operating system
-            might not be compatible with the Greenplum Database PL/R extension. <p>If a shared
-              library is not compatible, edit the file <codeph>$GPHOME/greenplum_path.sh</codeph> in
-              all Greenplum Database master and segment hosts and set environment variable
-                <codeph>LD_LIBRARY_PATH </codeph>to specify the location that is installed with the
-              PL/R extension.
-            </p><codeblock>export <i>LD_LIBRARY_PATH= 
-   $GPHOME/ext/R-3.3.3/lib:$LD_LIBRARY_PATH</i></codeblock></note>
         </body>
       </topic>
+    </topic>
+    <topic id="topic5" xml:lang="en">
+      <title>Enabling PL/R Language Support</title>
+      <body>
+        <p>For each database that requires its use, register the PL/R language with the SQL command
+            <codeph>CREATE EXTENSION</codeph>. Because PL/R is an untrusted language, only
+          superusers can register PL/R with a database. For example, run this command as the
+            <codeph>gpadmin</codeph> user to register the language with the database named
+            <codeph>testdb</codeph>:</p>
+        <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plr;'</codeblock>
+        <p>PL/R is registered as an untrusted language.</p>
+      </body>
     </topic>
     <topic id="topic6" xml:lang="en" otherprops="pivotal">
       <title id="py213692">Uninstalling PL/R</title>
@@ -95,6 +126,7 @@
           <li id="py216956">
             <xref href="#topic8" type="topic" format="dita"/>
           </li>
+          <li><xref href="#topic_ifv_tsf_w3b" format="dita"/></li>
         </ul>
         <p>When you remove PL/R language support from a database, the PL/R routines that you created
           in the database will no longer work. </p>
@@ -103,12 +135,14 @@
         <title id="py216910">Remove PL/R Support for a Database</title>
         <body>
           <p>For a database that no longer requires the PL/R language, remove support for PL/R with
-            the SQL command <codeph>DROP LANGUAGE</codeph> or the Greenplum Database
-              <codeph>droplang</codeph> utility. Because PL/R is an untrusted language, only
-            superusers can remove support for the PL/R language from a database. For example,
-            running this command as the gpadmin user removes support for PL/R from the database
-            named <i>testdb</i>:</p>
-          <codeblock>$ droplang plr -d testdb</codeblock>
+            the SQL command <codeph>DROP EXTENSION</codeph>. Because PL/R is an untrusted language,
+            only superusers can remove support for the PL/R language from a database. For example,
+            run this command as the <codeph>gpadmin</codeph> user to remove support for PL/R from
+            the database named <codeph>testdb</codeph>:</p>
+          <codeblock>$ psql -d testdb -c 'DROP EXTENSION plr;'</codeblock>
+          <p> The default command fails if any existing objects (such as functions) depend on the
+            language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent
+            objects, including functions that you created with PL/R. </p>
         </body>
       </topic>
       <topic id="topic8" xml:lang="en">
@@ -116,26 +150,30 @@
         <body>
           <p>If no databases have PL/R as a registered language, uninstall the Greenplum PL/R
             extension with the <codeph>gppkg</codeph> utility. This example uninstalls PL/R package
-            version 2.3.1</p>
-          <codeblock>$ gppkg -r plr-2.3.1</codeblock>
+            version 3.0.3.</p>
+          <codeblock>$ gppkg -r plr-3.0.3</codeblock>
+          <p>On RHEL and CentOS systems, uninstalling the extension uninstalls the R software that
+            was installed with the extension.</p>
           <p>You can run the <codeph>gppkg</codeph> utility with the options <codeph>-q
               --all</codeph> to list the installed extensions and their versions.</p>
-          <p>Restart the database.</p>
+          <p>For Ubuntu systems, remove the <codeph>R_HOME</codeph> environment variable from
+              <codeph>greenplum_path.sh</codeph> on all Greenplum Database host systems.</p>
+          <p>Source the file <codeph>$GPHOME/greenplum_path.sh</codeph> and restart the
+            database.</p>
           <codeblock>$ gpstop -r</codeblock>
         </body>
       </topic>
-    </topic>
-    <topic id="topic5" xml:lang="en">
-      <title>Enabling PL/R Language Support</title>
-      <body>
-        <p>For each database that requires its use, register the PL/R language with the SQL command
-            <codeph>CREATE LANGUAGE</codeph> or the utility <codeph>createlang</codeph>. Because
-          PL/R is an untrusted language, only superusers can register PL/R with a database. For
-          example, running this command as the <codeph>gpadmin</codeph> system user registers the
-          language with the database named <i>testdb</i>:</p>
-        <codeblock>$ createlang plr -d testdb</codeblock>
-        <p>PL/R is registered as an untrusted language.</p>
-      </body>
+      <topic id="topic_ifv_tsf_w3b">
+        <title>Uninstall R (Ubuntu)</title>
+        <body>
+          <p>For Ubuntu systems, remove R from all Greenplum Database host systems. These commands
+            remove R from an Ubuntu
+            system.<codeblock>$ sudo apt remove r-base
+$ sudo apt remove r-base-core</codeblock></p>
+          <p>Removing <codeph>r-base</codeph> does not uninstall the R executable. Removing
+              <codeph>r-base-core</codeph> uninstalls the R executable.</p>
+        </body>
+      </topic>
     </topic>
     <topic id="topic9" xml:lang="en">
       <title id="py214084">Examples</title>
@@ -154,8 +192,9 @@ $$
   return(x)
 $$
 LANGUAGE 'plr';</codeblock>
-          <p>The following CREATE TABLE command uses the r_norm function to populate the table. The
-            r_norm function creates an array of 10 numbers.</p>
+          <p>The following <codeph>CREATE TABLE</codeph> command uses the <codeph>r_norm()</codeph>
+            function to populate the table. The <codeph>r_norm()</codeph> function creates an array
+            of 10 numbers.</p>
           <codeblock>CREATE TABLE test_norm_var
   AS SELECT id, r_norm(10,0,1) as x
   FROM (SELECT generate_series(1,30:: bigint) AS ID) foo
@@ -252,7 +291,8 @@ CREATE TABLE wj_model_results_roi AS SELECT *
           <li id="py219006">From the command line, use the <codeph>wget</codeph> utility to download
             the <codeph>tar.gz</codeph> files for the arm package to the Greenplum Database master
             host:<codeblock>wget https://cran.r-project.org/src/contrib/Archive/arm/arm_1.5-03.tar.gz</codeblock><codeblock>wget https://cran.r-project.org/src/contrib/Archive/Matrix/Matrix_0.9996875-1.tar.gz</codeblock></li>
-          <li id="py219012">Use the <codeph>gpscp</codeph> utility and the
+          <li id="py219012">Use the <codeph><xref
+                href="../../utility_guide/admin_utilities/gpscp.xml"/></codeph> utility and the
               <codeph>hosts_all</codeph> file to copy the <codeph>tar.gz</codeph> files to the same
             directory on all nodes of the Greenplum Database cluster. The <codeph>hosts_all</codeph>
             file contains a list of all the Greenplum Database segment hosts. You might require root
@@ -290,8 +330,9 @@ LANGUAGE 'plr';</codeblock><p>This
       <body>
         <p>You can use the R command line to display information about the installed libraries and
           functions on the Greenplum Database host. You can also add and remove libraries from the R
-          installation. To start the R command line on the host, log into the host as the gadmin
-          user and run the script R from the directory <codeph>$GPHOME/ext/R-3.3.3/bin</codeph>.</p>
+          installation. To start the R command line on the host, log into the host as the
+            <codeph>gadmin</codeph> user and run the script R from the directory
+            <codeph>$GPHOME/ext/R-3.3.3/bin</codeph>.</p>
         <p>This R function lists the available R packages from the R command line:</p>
         <codeblock>&gt; library()</codeblock>
         <p>Display the documentation for a particular R package</p>
@@ -350,41 +391,20 @@ LANGUAGE 'plr';</codeblock><p>This
           tables and views that is similar to the R <cmdname>data.frame</cmdname>. PivotalR also
           supports using the machine learning package <xref href="https://madlib.apache.org/"
             format="html" scope="external">MADlib</xref> directly from R.</p>
-        <p>R documentation is installed with the Greenplum R package:</p>
-        <p>
-          <codeph>$GPHOME/ext/R-3.3.3/doc</codeph>
-        </p>
-      </body>
-      <topic id="topic16" xml:lang="en">
-        <title>R Functions and Arguments</title>
-        <body>
-          <ul id="ul_yky_5l2_4p">
-            <li id="py214453">See <xref href="https://www.joeconway.com/doc/plr-funcs.html"
-                scope="external" format="html"
-              >https://www.joeconway.com/doc/plr-funcs.html</xref></li>
-          </ul>
-        </body>
-      </topic>
-      <topic id="topic17" xml:lang="en">
-        <title>Passing Data Values in R</title>
-        <body>
-          <ul id="ul_fly_5l2_4p">
-            <li id="py214456">See <xref href="https://www.joeconway.com/doc/plr-data.html"
+        <p>The following links highlight key topics from the <xref
+            href="https://www.joeconway.com/doc/doc.html" format="html" scope="external">R
+            documentation</xref>.<ul id="ul_z4z_gh4_w3b">
+            <li>R Functions and Arguments - <xref
+                href="https://www.joeconway.com/doc/plr-funcs.html" scope="external" format="html"
+                >https://www.joeconway.com/doc/plr-funcs.html</xref></li>
+            <li>Passing Data Values in R - <xref href="https://www.joeconway.com/doc/plr-data.html"
                 scope="external" format="html"
               >https://www.joeconway.com/doc/plr-data.html</xref></li>
-          </ul>
-        </body>
-      </topic>
-      <topic id="topic18" xml:lang="en">
-        <title>Aggregate Functions in R</title>
-        <body>
-          <ul id="ul_jly_5l2_4p">
-            <li id="py214459">See <xref
+            <li>Aggregate Functions in R - <xref
                 href="https://www.joeconway.com/doc/plr-aggregate-funcs.html" scope="external"
                 format="html">https://www.joeconway.com/doc/plr-aggregate-funcs.html</xref></li>
-          </ul>
-        </body>
-      </topic>
+          </ul></p>
+      </body>
     </topic>
   </topic>
 </topic>

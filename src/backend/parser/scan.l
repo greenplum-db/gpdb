@@ -21,7 +21,7 @@
  * Postgres 9.2, this check is made automatically by the Makefile.)
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -332,9 +332,15 @@ ident_cont		[A-Za-z\200-\377_0-9\$]
 
 identifier		{ident_start}{ident_cont}*
 
+/* Assorted special-case operators and operator-like tokens */
 typecast		"::"
 dot_dot			\.\.
 colon_equals	":="
+equals_greater	"=>"
+less_equals		"<="
+greater_equals	">="
+less_greater	"<>"
+not_equals		"!="
 
 /*
  * "self" is the set of chars that should be returned as single-character
@@ -506,7 +512,7 @@ other			.
 					yyextra->warn_on_first_escape = true;
 					yyextra->saw_non_ascii = false;
 					SET_YYLLOC();
-					if (standard_conforming_strings)
+					if (yyextra->standard_conforming_strings)
 						BEGIN(xq);
 					else
 						BEGIN(xe);
@@ -521,7 +527,7 @@ other			.
 				}
 {xusstart}		{
 					SET_YYLLOC();
-					if (!standard_conforming_strings)
+					if (!yyextra->standard_conforming_strings)
 						ereport(ERROR,
 								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 								 errmsg("unsafe use of string constant with Unicode escapes"),
@@ -623,8 +629,8 @@ other			.
 <xe>{xeescape}  {
 					if (yytext[1] == '\'')
 					{
-						if (backslash_quote == BACKSLASH_QUOTE_OFF ||
-							(backslash_quote == BACKSLASH_QUOTE_SAFE_ENCODING &&
+						if (yyextra->backslash_quote == BACKSLASH_QUOTE_OFF ||
+							(yyextra->backslash_quote == BACKSLASH_QUOTE_SAFE_ENCODING &&
 							 PG_ENCODING_IS_CLIENT_ONLY(pg_get_client_encoding())))
 							ereport(ERROR,
 									(errcode(ERRCODE_NONSTANDARD_USE_OF_ESCAPE_CHARACTER),
@@ -809,6 +815,33 @@ other			.
 					return COLON_EQUALS;
 				}
 
+{equals_greater}	{
+					SET_YYLLOC();
+					return EQUALS_GREATER;
+				}
+
+{less_equals}	{
+					SET_YYLLOC();
+					return LESS_EQUALS;
+				}
+
+{greater_equals} {
+					SET_YYLLOC();
+					return GREATER_EQUALS;
+				}
+
+{less_greater}	{
+					/* We accept both "<>" and "!=" as meaning NOT_EQUALS */
+					SET_YYLLOC();
+					return NOT_EQUALS;
+				}
+
+{not_equals}	{
+					/* We accept both "<>" and "!=" as meaning NOT_EQUALS */
+					SET_YYLLOC();
+					return NOT_EQUALS;
+				}
+
 {self}			{
 					SET_YYLLOC();
 					return yytext[0];
@@ -899,11 +932,7 @@ other			.
 					if (nchars >= NAMEDATALEN)
 						yyerror("operator too long");
 
-					/* Convert "!=" operator to "<>" for compatibility */
-					if (strcmp(yytext, "!=") == 0)
-						yylval->str = pstrdup("<>");
-					else
-						yylval->str = pstrdup(yytext);
+					yylval->str = pstrdup(yytext);
 					return Op;
 				}
 
@@ -1087,6 +1116,10 @@ scanner_init(const char *str,
 
 	yyext->keywords = keywords;
 	yyext->num_keywords = num_keywords;
+
+	yyext->backslash_quote = backslash_quote;
+	yyext->escape_string_warning = escape_string_warning;
+	yyext->standard_conforming_strings = standard_conforming_strings;
 
 	/*
 	 * Make a scan buffer with special termination needed by flex.
@@ -1455,7 +1488,7 @@ check_string_escape_warning(unsigned char ychar, core_yyscan_t yyscanner)
 {
 	if (ychar == '\'')
 	{
-		if (yyextra->warn_on_first_escape && escape_string_warning)
+		if (yyextra->warn_on_first_escape && yyextra->escape_string_warning)
 			ereport(WARNING,
 					(errcode(ERRCODE_NONSTANDARD_USE_OF_ESCAPE_CHARACTER),
 					 errmsg("nonstandard use of \\' in a string literal"),
@@ -1465,7 +1498,7 @@ check_string_escape_warning(unsigned char ychar, core_yyscan_t yyscanner)
 	}
 	else if (ychar == '\\')
 	{
-		if (yyextra->warn_on_first_escape && escape_string_warning)
+		if (yyextra->warn_on_first_escape && yyextra->escape_string_warning)
 			ereport(WARNING,
 					(errcode(ERRCODE_NONSTANDARD_USE_OF_ESCAPE_CHARACTER),
 					 errmsg("nonstandard use of \\\\ in a string literal"),
@@ -1480,7 +1513,7 @@ check_string_escape_warning(unsigned char ychar, core_yyscan_t yyscanner)
 static void
 check_escape_warning(core_yyscan_t yyscanner)
 {
-	if (yyextra->warn_on_first_escape && escape_string_warning)
+	if (yyextra->warn_on_first_escape && yyextra->escape_string_warning)
 		ereport(WARNING,
 				(errcode(ERRCODE_NONSTANDARD_USE_OF_ESCAPE_CHARACTER),
 				 errmsg("nonstandard use of escape in a string literal"),

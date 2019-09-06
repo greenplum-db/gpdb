@@ -552,3 +552,43 @@ begin;
 reindex table pg_class;
 commit;
 \c regression
+
+--
+-- Check that committing a subtransaction releases the lock on the
+-- subtransaction's XID.
+--
+-- It's not too bad if it doesn't, because if anyone wants to wait for the
+-- subtransaction and sees that it's been committed already, they will wait
+-- for the top transaction XID instead. So even though the lock on the sub-XID
+-- is released at RELEASE SAVEPOINT, logically it's held until the end of
+-- the top transaction anyway. But releasing the lock early saves space in
+-- the lock table. (We had a silly bug once upon a time in GPDB where we failed
+-- to release the lock.)
+--
+BEGIN;
+CREATE TEMPORARY TABLE foo (i integer);
+DO $$
+declare
+  i int;
+begin
+  for i in 1..100 loop
+    begin
+      insert into foo values (i);
+    exception
+      when others then raise 'got error';
+    end;
+  end loop;
+end;
+$$;
+SELECT CASE WHEN count(*) < 50 THEN 'not many XID locks'
+            ELSE 'lots of XID locks: ' || count(*) END
+FROM pg_locks WHERE locktype='transactionid';
+ROLLBACK;
+
+-- Test that exported snapshots are cleared upon abort.  In Greenplum,
+-- exported snapshots are cleared earlier than PostgreSQL during
+-- abort.
+begin;
+select count(1) = 1 from pg_catalog.pg_export_snapshot();
+select pg_cancel_backend(pg_backend_pid());
+rollback;

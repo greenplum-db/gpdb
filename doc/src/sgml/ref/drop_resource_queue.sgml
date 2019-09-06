@@ -105,7 +105,7 @@ ALTER ROLE RESOURCE QUEUE none;
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-alterrole" endterm="sql-alterrole-title"></member>
+   <member><xref linkend="sql-alterrole" endterm="sql-alterrole"></member>
    <member><xref linkend="sql-createresourcequeue" endterm="sql-createresourcequeue-title"></member>
   <member><xref linkend="sql-alterresourcequeue" endterm="sql-alterresourcequeue-title"></member>
   </simplelist>

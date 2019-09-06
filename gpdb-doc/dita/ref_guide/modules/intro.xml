@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_khf_ltc_vbb">
+  <title>Additional Supplied Modules</title>
+  <body>
+     <p>This section describes additional modules available in the Greenplum Database
+      installation. These modules may be PostgreSQL- or Greenplum-sourced.</p>
+     <p otherprops="oss-only"><codeph>contrib</codeph> modules are typically
+       packaged as extensions. You register a module in a database using the
+       <codeph><xref href="../sql_commands/CREATE_EXTENSION.xml#topic1">CREATE EXTENSION</xref></codeph>
+       command. You remove a module from a database with <codeph><xref href="../sql_commands/DROP_EXTENSION.xml#topic1">DROP EXTENSION</xref></codeph>.</p>
+     <p>The following Greenplum Database and PostgreSQL <codeph>contrib</codeph>
+        modules are installed; refer to the linked module documentation for usage
+        instructions.</p>
+     <ul>
+      <li><codeph><xref href="auto-explain.xml#topic_fstrm"/></codeph> Provides a means for logging
+        execution plans of slow statements automatically.</li>
+       <li><codeph><xref href="citext.xml" format="dita"
+              >citext</xref></codeph> - Provides a case-insensitive, multibyte-aware text
+          data type.</li>
+       <li><codeph><xref href="dblink.xml" format="dita"
+              >dblink</xref></codeph> - Provides connections to other Greenplum databases.</li>
+      <li><codeph><xref href="diskquota.xml#topic_gzw_2wz_13b"/></codeph> - Allows administrators to
+        set disk usage quotas for Greenplum Database roles and schemas.</li>
+       <li><codeph><xref href="fuzzystrmatch.xml"
+             format="dita">fuzzystrmatch</xref></codeph> - Determines similarities and differences
+         between strings.</li>
+       <li><codeph><xref href="gp_sparse_vector.xml" scope="peer"
+             format="dita">gp_sparse_vector</xref></codeph> - Implements
+         a Greenplum Database data type that uses compressed storage of zeros to make
+         vector computations on floating point numbers faster.</li>
+       <li><codeph><xref href="hstore.xml" scope="peer" format="dita"
+             >hstore</xref></codeph> - Provides a data type for storing sets of key/value pairs
+         within a single PostgreSQL value.</li>
+       <li><codeph><xref href="orafce_ref.xml" format="dita"
+             >orafce</xref></codeph> - Provides Greenplum Database-specific Oracle
+          SQL compatibility functions.</li>
+       <li><codeph><xref href="pageinspect.xml" format="dita"
+             >pageinspect</xref></codeph> - Provides functions for low level inspection
+         of the contents of database pages; available to superusers only.</li>
+       <li><codeph><xref href="pgcrypto.xml" format="dita"
+             >pgcrypto</xref></codeph> - Provides cryptographic functions for Greenplum
+         Database.</li>
+      <li><codeph><xref href="sslinfo.xml" format="dita">sslinfo</xref></codeph> - Provides
+        information about the SSL certificate that the current client provided when connecting to
+        Greenplum.</li>
+     </ul>
+   </body>
+</topic>

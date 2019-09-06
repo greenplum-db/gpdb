@@ -3,7 +3,7 @@
  * timestamp.c
  *	  Functions for the built-in SQL types "timestamp" and "interval".
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -28,6 +28,7 @@
 #include "funcapi.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/scansup.h"
 #include "utils/array.h"
@@ -2372,7 +2373,7 @@ tm2timestamp(struct pg_tm * tm, fsec_t fsec, int *tzp, Timestamp *result)
 
 
 /* interval2tm()
- * Convert a interval data type to a tm structure.
+ * Convert an interval data type to a tm structure.
  */
 int
 interval2tm(Interval span, struct pg_tm * tm, fsec_t *fsec)
@@ -3595,8 +3596,16 @@ interval_justify_days(PG_FUNCTION_ARGS)
 	PG_RETURN_INTERVAL_P(result);
 }
 
-/*
+/* 
  * timestamp_pl_interval()
+ * Add an interval to a timestamp data type.
+ * Note that interval has provisions for qualitative year/month and day
+ *	units, so try to do the right thing with them.
+ * To add a month, increment the month, and use the same day of month.
+ * Then, if the next month has fewer days, set the day of month
+ *	to the last day of month.
+ * To add a day, increment the mday, and use the same time of day.
+ * Lastly, add in the "quantitative time".
  */
 Datum
 timestamp_pl_interval(PG_FUNCTION_ARGS)
@@ -3630,6 +3639,13 @@ timestamp_mi_interval(PG_FUNCTION_ARGS)
 
 /*
  * timestamptz_pl_interval()
+ * Add an interval to a timestamp with time zone data type.
+ * Note that interval has provisions for qualitative year/month
+ *	units, so try to do the right thing with them.
+ * To add a month, increment the month, and use the same day of month.
+ * Then, if the next month has fewer days, set the day of month
+ *	to the last day of month.
+ * Lastly, add in the "quantitative time".
  */
 Datum
 timestamptz_pl_interval(PG_FUNCTION_ARGS)
@@ -5673,6 +5689,87 @@ interval_part(PG_FUNCTION_ARGS)
 }
 
 
+/* timestamp_zone_transform()
+ * If the zone argument of a timestamp_zone() or timestamptz_zone() call is a
+ * plan-time constant denoting a zone equivalent to UTC, the call will always
+ * return its second argument unchanged.  Simplify the expression tree
+ * accordingly.  Civil time zones almost never qualify, because jurisdictions
+ * that follow UTC today have not done so continuously.
+ */
+Datum
+timestamp_zone_transform(PG_FUNCTION_ARGS)
+{
+	Node	   *func_node = (Node *) PG_GETARG_POINTER(0);
+	FuncExpr   *expr = (FuncExpr *) func_node;
+	Node	   *ret = NULL;
+	Node	   *zone_node;
+
+	Assert(IsA(expr, FuncExpr));
+	Assert(list_length(expr->args) == 2);
+
+	zone_node = (Node *) linitial(expr->args);
+
+	if (IsA(zone_node, Const) &&!((Const *) zone_node)->constisnull)
+	{
+		text	   *zone = DatumGetTextPP(((Const *) zone_node)->constvalue);
+		char		tzname[TZ_STRLEN_MAX + 1];
+		char	   *lowzone;
+		int			type,
+					abbrev_offset;
+		pg_tz	   *tzp;
+		bool		noop = false;
+
+		/*
+		 * If the timezone is forever UTC+0, the FuncExpr function call is a
+		 * no-op for all possible timestamps.  This passage mirrors code in
+		 * timestamp_zone().
+		 */
+		text_to_cstring_buffer(zone, tzname, sizeof(tzname));
+		lowzone = downcase_truncate_identifier(tzname,
+											   strlen(tzname),
+											   false);
+		type = DecodeTimezoneAbbrev(0, lowzone, &abbrev_offset, &tzp);
+		if (type == TZ || type == DTZ)
+			noop = (abbrev_offset == 0);
+		else if (type == DYNTZ)
+		{
+			/*
+			 * An abbreviation of a single-offset timezone ought not to be
+			 * configured as a DYNTZ, so don't bother checking.
+			 */
+		}
+		else
+		{
+			long		tzname_offset;
+
+			tzp = pg_tzset(tzname);
+			if (tzp && pg_get_timezone_offset(tzp, &tzname_offset))
+				noop = (tzname_offset == 0);
+		}
+
+		if (noop)
+		{
+			Node	   *timestamp = (Node *) lsecond(expr->args);
+
+			/* Strip any existing RelabelType node(s) */
+			while (timestamp && IsA(timestamp, RelabelType))
+				timestamp = (Node *) ((RelabelType *) timestamp)->arg;
+
+			/*
+			 * Replace the FuncExpr with its timestamp argument, relabeled as
+			 * though the function call had computed it.
+			 */
+			ret = (Node *) makeRelabelType((Expr *) timestamp,
+										   exprType(func_node),
+										   exprTypmod(func_node),
+										   exprCollation(func_node),
+										   COERCE_EXPLICIT_CAST);
+		}
+	}
+
+	PG_RETURN_POINTER(ret);
+}
+
 /*	timestamp_zone()
  *	Encode timestamp type with specified time zone.
  *	This function is just timestamp2timestamptz() except instead of
@@ -5760,6 +5857,52 @@ timestamp_zone(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_TIMESTAMPTZ(result);
+}
+
+/* timestamp_izone_transform()
+ * If we deduce at plan time that a particular timestamp_izone() or
+ * timestamptz_izone() call can only compute tz=0, the call will always return
+ * its second argument unchanged.  Simplify the expression tree accordingly.
+ */
+Datum
+timestamp_izone_transform(PG_FUNCTION_ARGS)
+{
+	Node	   *func_node = (Node *) PG_GETARG_POINTER(0);
+	FuncExpr   *expr = (FuncExpr *) func_node;
+	Node	   *ret = NULL;
+	Node	   *zone_node;
+
+	Assert(IsA(expr, FuncExpr));
+	Assert(list_length(expr->args) == 2);
+
+	zone_node = (Node *) linitial(expr->args);
+
+	if (IsA(zone_node, Const) &&!((Const *) zone_node)->constisnull)
+	{
+		Interval   *zone;
+
+		zone = DatumGetIntervalP(((Const *) zone_node)->constvalue);
+		if (zone->month == 0 && zone->day == 0 && zone->time == 0)
+		{
+			Node	   *timestamp = (Node *) lsecond(expr->args);
+
+			/* Strip any existing RelabelType node(s) */
+			while (timestamp && IsA(timestamp, RelabelType))
+				timestamp = (Node *) ((RelabelType *) timestamp)->arg;
+
+			/*
+			 * Replace the FuncExpr with its timestamp argument, relabeled as
+			 * though the function call had computed it.
+			 */
+			ret = (Node *) makeRelabelType((Expr *) timestamp,
+										   exprType(func_node),
+										   exprTypmod(func_node),
+										   exprCollation(func_node),
+										   COERCE_EXPLICIT_CAST);
+		}
+	}
+
+	PG_RETURN_POINTER(ret);
 }
 
 /* timestamp_izone()

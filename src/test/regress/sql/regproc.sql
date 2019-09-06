@@ -4,6 +4,7 @@
 
 /* If objects exist, return oids */
 
+CREATE ROLE regtestrole;
 -- without schemaname
 
 -- GPDB: Use <#> instead of ||/ in the test, because ||/ is not unique in GPDB
@@ -14,6 +15,8 @@ SELECT regproc('now');
 SELECT regprocedure('abs(numeric)');
 SELECT regclass('pg_class');
 SELECT regtype('int4');
+SELECT regrole('regtestrole');
+SELECT regnamespace('pg_catalog');
 
 SELECT to_regoper('<#>');
 SELECT to_regoperator('+(int4,int4)');
@@ -21,6 +24,8 @@ SELECT to_regproc('now');
 SELECT to_regprocedure('abs(numeric)');
 SELECT to_regclass('pg_class');
 SELECT to_regtype('int4');
+SELECT to_regrole('regtestrole');
+SELECT to_regnamespace('pg_catalog');
 
 -- with schemaname
 
@@ -39,6 +44,8 @@ SELECT to_regtype('pg_catalog.int4');
 
 /* If objects don't exist, raise errors. */
 
+DROP ROLE regtestrole;
+
 -- without schemaname
 
 SELECT regoper('||//');
@@ -47,6 +54,8 @@ SELECT regproc('know');
 SELECT regprocedure('absinthe(numeric)');
 SELECT regclass('pg_classes');
 SELECT regtype('int3');
+SELECT regrole('regtestrole');
+SELECT regnamespace('nonexistent');
 
 -- with schemaname
 
@@ -67,6 +76,8 @@ SELECT to_regproc('know');
 SELECT to_regprocedure('absinthe(numeric)');
 SELECT to_regclass('pg_classes');
 SELECT to_regtype('int3');
+SELECT to_regrole('regtestrole');
+SELECT to_regnamespace('nonexistent');
 
 -- with schemaname
 

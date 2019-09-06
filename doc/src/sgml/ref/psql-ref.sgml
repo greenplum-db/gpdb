@@ -73,6 +73,18 @@ PostgreSQL documentation
     </varlistentry>
 
     <varlistentry>
+      <term><option>-b</></term>
+      <term><option>--echo-errors</></term>
+      <listitem>
+      <para>
+      Print failed SQL commands to standard error output. This is
+      equivalent to setting the variable <varname>ECHO</varname> to
+      <literal>errors</literal>.
+      </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
       <term><option>-c <replaceable class="parameter">command</replaceable></></term>
       <term><option>--command=<replaceable class="parameter">command</replaceable></></term>
       <listitem>
@@ -550,11 +562,17 @@ EOF
 
     <varlistentry>
       <term><option>-?</></term>
-      <term><option>--help</></term>
+      <term><option>--help[=<replaceable class="parameter">topic</>]</option></term>
       <listitem>
       <para>
-      Show help about <application>psql</application> command line
-      arguments, and exit.
+      Show help about <application>psql</application> and exit. The optional
+      <replaceable class="parameter">topic</> parameter (defaulting
+      to <literal>options</literal>) selects which part of psql is
+      explained: <literal>commands</> describes <application>psql</>'s
+      backslash commands; <literal>options</> describes the commandline
+      switches that can be passed to <application>psql</>;
+      and <literal>variables</> shows help about about psql configuration
+      variables.
       </para>
       </listitem>
     </varlistentry>
@@ -1052,8 +1070,9 @@ testdb=&gt;
         Lists tablespaces. If <replaceable
         class="parameter">pattern</replaceable>
         is specified, only tablespaces whose names match the pattern are shown.
-        If <literal>+</literal> is appended to the command name, each object
-        is listed with its associated permissions.
+        If <literal>+</literal> is appended to the command name, each tablespace
+        is listed with its associated options, on-disk size, permissions and
+        description.
         </para>
         </listitem>
       </varlistentry>
@@ -2037,12 +2056,12 @@ lo_import 152801
           the number the more borders and lines the tables will have,
           but this depends on the particular format. In
           <acronym>HTML</acronym> format, this will translate directly
-          into the <literal>border=...</literal> attribute; in the
-          other formats only values 0 (no border), 1 (internal dividing lines),
-          and 2 (table frame) make sense.
+          into the <literal>border=...</literal> attribute; in
           <literal>latex</literal> and <literal>latex-longtable</literal>
-          also support a <literal>border</literal> value of 3 which adds
-          a dividing line between each row.
+          formats, a value of 3 will add a dividing line between each row; in
+          the other formats only values 0 (no border), 1 (internal dividing
+          lines), and 2 (table frame) make sense and values above 2 will be
+          treated the same as <literal>border = 2</literal>.
           </para>
           </listitem>
           </varlistentry>
@@ -2131,7 +2150,7 @@ lo_import 152801
           <para>
           Sets the output format to one of <literal>unaligned</literal>,
           <literal>aligned</literal>, <literal>wrapped</literal>,
-          <literal>html</literal>,
+          <literal>html</literal>, <literal>asciidoc</literal>,
           <literal>latex</literal> (uses <literal>tabular</literal>),
           <literal>latex-longtable</literal>, or
           <literal>troff-ms</literal>.
@@ -2160,7 +2179,7 @@ lo_import 152801
           </para>
 
           <para>
-          The <literal>html</>, <literal>latex</>,
+          The <literal>html</>, <literal>asciidoc</>, <literal>latex</>,
           <literal>latex-longtable</literal>, and <literal>troff-ms</>
           formats put out tables that are intended to
           be included in documents using the respective mark-up
@@ -2277,6 +2296,18 @@ lo_import 152801
           </varlistentry>
 
           <varlistentry>
+          <term><literal>pager_min_lines</literal></term>
+          <listitem>
+          <para>
+          If <literal>pager_min_lines</> is set to a number greater than the
+          page height, the pager program will not be called unless there are
+          at least this many lines of output to show. The default setting
+          is 0.
+          </para>
+          </listitem>
+          </varlistentry>
+
+          <varlistentry>
           <term><literal>recordsep</literal></term>
           <listitem>
           <para>
@@ -2344,6 +2375,36 @@ lo_import 152801
           Regular output includes extra information such
           as column headers, titles, and various footers. In tuples-only
           mode, only actual table data is shown.
+          </para>
+          </listitem>
+          </varlistentry>
+
+          <varlistentry>
+          <term><literal>unicode_border_style</literal></term>
+          <listitem>
+          <para>
+          Sets the border drawing style for the unicode linestyle to one
+          of <literal>single</literal> or <literal>double</literal>.
+          </para>
+          </listitem>
+          </varlistentry>
+
+          <varlistentry>
+          <term><literal>unicode_column_style</literal></term>
+          <listitem>
+          <para>
+          Sets the column drawing style for the unicode linestyle to one
+          of <literal>single</literal> or <literal>double</literal>.
+          </para>
+          </listitem>
+          </varlistentry>
+
+          <varlistentry>
+          <term><literal>unicode_header_style</literal></term>
+          <listitem>
+          <para>
+          Sets the header drawing style for the unicode linestyle to one
+          of <literal>single</literal> or <literal>double</literal>.
           </para>
           </listitem>
           </varlistentry>
@@ -2622,10 +2683,17 @@ testdb=&gt; <userinput>\setenv LESS -imx4F</userinput>
 
 
       <varlistentry>
-        <term><literal>\?</literal></term>
+        <term><literal>\? [ <replaceable class="parameter">topic</> ]</literal></term>
         <listitem>
         <para>
-        Shows help information about the backslash commands.
+        Shows help information. The optional
+        <replaceable class="parameter">topic</> parameter
+        (defaulting to <literal>commands</>) selects which part of psql is
+        explained: <literal>commands</> describes <application>psql</>'s
+        backslash commands; <literal>options</> describes the commandline
+        switches that can be passed to <application>psql</>;
+        and <literal>variables</> shows help about about psql configuration
+        variables.
         </para>
         </listitem>
       </varlistentry>
@@ -2875,7 +2943,11 @@ bar
         <literal>queries</literal>,
         <application>psql</application> prints each query to standard output
         as it is sent to the server. The switch for this is
-        <option>-e</option>.
+        <option>-e</option>. If set to <literal>errors</literal>, then only
+        failed queries are displayed on standard error output. The switch
+        for this is <option>-b</option>. If unset, or if set to
+        <literal>none</literal> (or any other value than those above) then
+        no queries are displayed.
         </para>
         </listitem>
       </varlistentry>
@@ -2941,8 +3013,9 @@ bar
          list. If set to a value of <literal>ignoredups</literal>, lines
          matching the previous history line are not entered. A value of
          <literal>ignoreboth</literal> combines the two options. If
-         unset, or if set to any other value than those above, all lines
-         read in interactive mode are saved on the history list.
+         unset, or if set to <literal>none</literal> (or any other value
+         than those above), all lines read in interactive mode are
+         saved on the history list.
         </para>
         <note>
         <para>
@@ -3363,6 +3436,15 @@ testdb=&gt; <userinput>INSERT INTO my_table VALUES (:'content');</userinput>
         when the transaction state is indeterminate (for example, because
         there is no connection).
         </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>%l</literal></term>
+        <listitem>
+         <para>
+          The line number inside the current statement, starting from <literal>1</>.
+         </para>
         </listitem>
       </varlistentry>
 

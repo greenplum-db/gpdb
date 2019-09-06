@@ -1981,7 +1981,7 @@ select x from int8_tbl, extractq2(int8_tbl) f(x);
          ->  Function Scan on f
                Output: f.x
                Function Call: int8_tbl.q2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 select x from int8_tbl, extractq2(int8_tbl) f(x);
@@ -1995,7 +1995,7 @@ select x from int8_tbl, extractq2(int8_tbl) f(x);
 (5 rows)
 
 create function extractq2_2(t int8_tbl) returns table(ret1 int8) as $$
-  select extractq2(t)
+  select extractq2(t) offset 0
 $$ language sql immutable;
 explain (verbose, costs off)
 select x from int8_tbl, extractq2_2(int8_tbl) f(x);
@@ -2011,10 +2011,35 @@ select x from int8_tbl, extractq2_2(int8_tbl) f(x);
          Output: ((int8_tbl.*).q2)
          ->  Result
                Output: (int8_tbl.*).q2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 select x from int8_tbl, extractq2_2(int8_tbl) f(x);
+         x         
+-------------------
+               123
+  4567890123456789
+ -4567890123456789
+               456
+  4567890123456789
+(5 rows)
+
+-- without the "offset 0", this function gets optimized quite differently
+create function extractq2_2_opt(t int8_tbl) returns table(ret1 int8) as $$
+  select extractq2(t)
+$$ language sql immutable;
+explain (verbose, costs off)
+select x from int8_tbl, extractq2_2_opt(int8_tbl) f(x);
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: int8_tbl.q2
+   ->  Seq Scan on public.int8_tbl
+         Output: int8_tbl.q2
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select x from int8_tbl, extractq2_2_opt(int8_tbl) f(x);
          x         
 -------------------
                123
@@ -2046,7 +2071,7 @@ select x from int8_tbl, extractq2_append(int8_tbl) f(x);
                      Output: (int8_tbl.*).q2
                ->  Result
                      Output: (int8_tbl.*).q2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 select x from int8_tbl, extractq2_append(int8_tbl) f(x);
@@ -2063,4 +2088,30 @@ select x from int8_tbl, extractq2_append(int8_tbl) f(x);
   4567890123456789
   4567890123456789
 (10 rows)
+
+create function extractq2_wapper(t int8_tbl) returns table(ret1 int8) as $$      
+  select (select extractq2(t))                                                  
+$$ language sql immutable;                                                      
+explain (verbose, costs off) select x from int8_tbl, extractq2_wapper(int8_tbl) f(x);
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: ((SubPlan 1))
+   ->  Seq Scan on public.int8_tbl
+         Output: (SubPlan 1)
+         SubPlan 1  (slice1; segments: 1)
+           ->  Result
+                 Output: (int8_tbl.*).q2
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select x from int8_tbl, extractq2_wapper(int8_tbl) f(x);
+         x         
+-------------------
+               123
+  4567890123456789
+ -4567890123456789
+               456
+  4567890123456789
+(5 rows)
 

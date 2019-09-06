@@ -3,7 +3,7 @@
  * compress_io.h
  *	 Interface to compress_io.c routines
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -15,7 +15,6 @@
 #ifndef __COMPRESS_IO__
 #define __COMPRESS_IO__
 
-#include "postgres_fe.h"
 #include "pg_backup_archiver.h"
 
 /* Initial buffer sizes used in zlib compression. */

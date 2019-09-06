@@ -2,7 +2,7 @@
  * slot.h
  *	   Replication slot management.
  *
- * Copyright (c) 2012-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2012-2015, PostgreSQL Global Development Group
  *
  *-------------------------------------------------------------------------
  */
@@ -84,8 +84,8 @@ typedef struct ReplicationSlot
 	/* is this slot defined */
 	bool		in_use;
 
-	/* is somebody streaming out changes for this slot */
-	bool		active;
+	/* Who is streaming out changes for this slot? 0 in unused slots. */
+	pid_t		active_pid;
 
 	/* any outstanding modifications? */
 	bool		just_dirtied;
@@ -135,6 +135,10 @@ typedef struct ReplicationSlot
  */
 typedef struct ReplicationSlotCtlData
 {
+	/*
+	 * This array should be declared [FLEXIBLE_ARRAY_MEMBER], but for some
+	 * reason you can't do that in an otherwise-empty struct.
+	 */
 	ReplicationSlot replication_slots[1];
 } ReplicationSlotCtlData;
 

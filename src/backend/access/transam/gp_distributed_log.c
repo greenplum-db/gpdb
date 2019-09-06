@@ -17,6 +17,7 @@
 #include "access/distributedlog.h"
 #include "access/transam.h"
 #include "cdb/cdbvars.h"                /* GpIdentity.segindex */
+#include "cdb/cdbtm.h"
 
 Datum		gp_distributed_log(PG_FUNCTION_ARGS);
 
@@ -119,11 +120,7 @@ gp_distributed_log(PG_FUNCTION_ARGS)
 			values[1] = Int16GetDatum((int16)GpIdentity.dbid);
 			values[2] = TransactionIdGetDatum(distribXid);
 
-			sprintf(distribId, "%u-%.10u",
-					distribTimeStamp, distribXid);
-		
-			Assert(strlen(distribId) < TMGIDSIZE);
-
+			dtxFormGID(distribId, distribTimeStamp, distribXid);
 			values[3] = CStringGetTextDatum(distribId);
 
 			/*

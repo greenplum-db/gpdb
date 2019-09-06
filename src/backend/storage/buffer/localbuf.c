@@ -4,7 +4,7 @@
  *	  local buffer manager. Fast buffer manager for temporary tables,
  *	  which never need to be WAL-logged or checkpointed, etc.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  *
@@ -129,7 +129,7 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum,
 	if (hresult)
 	{
 		b = hresult->id;
-		bufHdr = &LocalBufferDescriptors[b];
+		bufHdr = GetLocalBufferDescriptor(b);
 		Assert(BUFFERTAGS_EQUAL(bufHdr->tag, newTag));
 #ifdef LBDEBUG
 		fprintf(stderr, "LB ALLOC (%u,%d,%d) %d\n",
@@ -172,7 +172,7 @@ LocalBufferAlloc(SMgrRelation smgr, ForkNumber forkNum, BlockNumber blockNum,
 		if (++nextFreeLocalBuf >= NLocBuffer)
 			nextFreeLocalBuf = 0;
 
-		bufHdr = &LocalBufferDescriptors[b];
+		bufHdr = GetLocalBufferDescriptor(b);
 
 		if (LocalRefCount[b] == 0)
 		{
@@ -287,7 +287,7 @@ MarkLocalBufferDirty(Buffer buffer)
 
 	Assert(LocalRefCount[bufid] > 0);
 
-	bufHdr = &LocalBufferDescriptors[bufid];
+	bufHdr = GetLocalBufferDescriptor(bufid);
 
 	if (!(bufHdr->flags & BM_DIRTY))
 		pgBufferUsage.local_blks_dirtied++;
@@ -320,7 +320,7 @@ DropRelFileNodeLocalBuffers(RelFileNode rnode, ForkNumber forkNum,
 	Assert(false);
 	for (i = 0; i < NLocBuffer; i++)
 	{
-		BufferDesc *bufHdr = &LocalBufferDescriptors[i];
+		BufferDesc *bufHdr = GetLocalBufferDescriptor(i);
 		LocalBufferLookupEnt *hresult;
 
 		if ((bufHdr->flags & BM_TAG_VALID) &&
@@ -362,7 +362,7 @@ DropRelFileNodeAllLocalBuffers(RelFileNode rnode)
 
 	for (i = 0; i < NLocBuffer; i++)
 	{
-		BufferDesc *bufHdr = &LocalBufferDescriptors[i];
+		BufferDesc *bufHdr = GetLocalBufferDescriptor(i);
 		LocalBufferLookupEnt *hresult;
 
 		if ((bufHdr->flags & BM_TAG_VALID) &&
@@ -415,7 +415,7 @@ InitLocalBuffers(void)
 	/* initialize fields that need to start off nonzero */
 	for (i = 0; i < nbufs; i++)
 	{
-		BufferDesc *buf = &LocalBufferDescriptors[i];
+		BufferDesc *buf = GetLocalBufferDescriptor(i);
 
 		/*
 		 * negative to indicate local buffer. This is tricky: shared buffers
@@ -430,12 +430,11 @@ InitLocalBuffers(void)
 	MemSet(&info, 0, sizeof(info));
 	info.keysize = sizeof(BufferTag);
 	info.entrysize = sizeof(LocalBufferLookupEnt);
-	info.hash = tag_hash;
 
 	LocalBufHash = hash_create("Local Buffer Lookup Table",
 							   nbufs,
 							   &info,
-							   HASH_ELEM | HASH_FUNCTION);
+							   HASH_ELEM | HASH_BLOBS);
 
 	if (!LocalBufHash)
 		elog(ERROR, "could not initialize local buffer hash table");
@@ -506,15 +505,15 @@ GetLocalBufferStorage(void)
 }
 
 /*
- * AtEOXact_LocalBuffers - clean up at end of transaction.
+ * CheckForLocalBufferLeaks - ensure this backend holds no local buffer pins
  *
- * This is just like AtEOXact_Buffers, but for local buffers.
+ * This is just like CheckBufferLeaks(), but for local buffers.
  */
-void
-AtEOXact_LocalBuffers(bool isCommit)
+static void
+CheckForLocalBufferLeaks(void)
 {
 #ifdef USE_ASSERT_CHECKING
-	if (assert_enabled && LocalRefCount)
+	if (LocalRefCount)
 	{
 		int			RefCountErrors = 0;
 		int			i;
@@ -535,33 +534,28 @@ AtEOXact_LocalBuffers(bool isCommit)
 }
 
 /*
+ * AtEOXact_LocalBuffers - clean up at end of transaction.
+ *
+ * This is just like AtEOXact_Buffers, but for local buffers.
+ */
+void
+AtEOXact_LocalBuffers(bool isCommit)
+{
+	CheckForLocalBufferLeaks();
+}
+
+/*
  * AtProcExit_LocalBuffers - ensure we have dropped pins during backend exit.
  *
- * This is just like AtProcExit_Buffers, but for local buffers.  We shouldn't
- * be holding any remaining pins; if we are, and assertions aren't enabled,
- * we'll fail later in DropRelFileNodeBuffers while trying to drop the temp
- * rels.
+ * This is just like AtProcExit_Buffers, but for local buffers.
  */
 void
 AtProcExit_LocalBuffers(void)
 {
-#ifdef USE_ASSERT_CHECKING
-	if (assert_enabled && LocalRefCount)
-	{
-		int			RefCountErrors = 0;
-		int			i;
-
-		for (i = 0; i < NLocBuffer; i++)
-		{
-			if (LocalRefCount[i] != 0)
-			{
-				Buffer		b = -i - 1;
-
-				PrintBufferLeakWarning(b);
-				RefCountErrors++;
-			}
-		}
-		Assert(RefCountErrors == 0);
-	}
-#endif
+	/*
+	 * We shouldn't be holding any remaining pins; if we are, and assertions
+	 * aren't enabled, we'll fail later in DropRelFileNodeBuffers while trying
+	 * to drop the temp rels.
+	 */
+	CheckForLocalBufferLeaks();
 }

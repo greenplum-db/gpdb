@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_trigger.h
@@ -57,7 +57,7 @@ CATALOG(pg_trigger,2620)
 	int2vector	tgattr;			/* column numbers, if trigger is on columns */
 
 #ifdef CATALOG_VARLEN
-	bytea		tgargs;			/* first\000second\000tgnargs\000 */
+	bytea tgargs BKI_FORCE_NOT_NULL;	/* first\000second\000tgnargs\000 */
 	pg_node_tree tgqual;		/* WHEN expression, or NULL if none */
 #endif
 } FormData_pg_trigger;

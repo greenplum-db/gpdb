@@ -5068,6 +5068,8 @@ ERROR:  window functions are not allowed in DEFAULT expressions
 alter table wintest_for_window_seq alter column i type float using count(*) over (order by
 i)::float;
 ERROR:  window functions are not allowed in transform expressions
+LINE 1: ...st_for_window_seq alter column i type float using count(*) o...
+                                                             ^
 -- select
 select * from wintest_for_window_seq where count(*) over (order by i) > 0;
 ERROR:  window functions are not allowed in WHERE

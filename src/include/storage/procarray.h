@@ -4,7 +4,7 @@
  *	  POSTGRES process array definitions.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/procarray.h
@@ -19,6 +19,7 @@
 #include "utils/snapshot.h"
 
 #include "cdb/cdbpublic.h"
+#include "cdb/cdbtm.h"
 
 struct DtxContextInfo;         /* cdb/cdbdtxcontextinfo.h */
 struct SnapshotData;           /* utils/tqual.h */
@@ -27,10 +28,9 @@ extern Size ProcArrayShmemSize(void);
 extern void CreateSharedProcArray(void);
 extern void ProcArrayAdd(PGPROC *proc);
 extern void ProcArrayRemove(PGPROC *proc, TransactionId latestXid);
-extern bool ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit);
+extern void ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool lockHeld);
 extern void ProcArrayEndGxact(void);
-extern void ProcArrayClearTransaction(PGPROC *proc, bool commit);
-extern void ClearTransactionFromPgProc_UnderLock(PGPROC *proc, bool commit);
+extern void ProcArrayClearTransaction(PGPROC *proc);
 
 extern void ProcArrayInitRecovery(TransactionId initializedUptoXID);
 extern void ProcArrayApplyRecoveryInfo(RunningTransactions running);
@@ -47,10 +47,11 @@ extern void ExpireOldKnownAssignedTransactionIds(TransactionId xid);
 extern int	GetMaxSnapshotXidCount(void);
 extern int	GetMaxSnapshotSubxidCount(void);
 
-extern Snapshot GetSnapshotData(Snapshot snapshot);
+extern Snapshot GetSnapshotData(Snapshot snapshot, DtxContext distributedTransactionContext);
 
 extern bool ProcArrayInstallImportedXmin(TransactionId xmin,
 							 TransactionId sourcexid);
+extern bool ProcArrayInstallRestoredXmin(TransactionId xmin, PGPROC *proc);
 
 extern RunningTransactions GetRunningTransactionData(void);
 
@@ -89,7 +90,7 @@ extern void XidCacheRemoveRunningXids(TransactionId xid,
 extern PGPROC *FindProcByGpSessionId(long gp_session_id);
 extern void UpdateSerializableCommandId(CommandId curcid);
 
-extern void updateSharedLocalSnapshot(struct DtxContextInfo *dtxContextInfo, struct SnapshotData *snapshot, char* debugCaller);
+extern void updateSharedLocalSnapshot(struct DtxContextInfo *dtxContextInfo, DtxContext distributedTransactionContext, struct SnapshotData *snapshot, char* debugCaller);
 
 extern void GetSlotTableDebugInfo(void **snapshotArray, int *maxSlots);
 

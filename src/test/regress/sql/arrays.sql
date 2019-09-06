@@ -190,6 +190,42 @@ SELECT array_cat(ARRAY[1,2], ARRAY[3,4]) AS "{1,2,3,4}";
 SELECT array_cat(ARRAY[1,2], ARRAY[[3,4],[5,6]]) AS "{{1,2},{3,4},{5,6}}";
 SELECT array_cat(ARRAY[[3,4],[5,6]], ARRAY[1,2]) AS "{{3,4},{5,6},{1,2}}";
 
+SELECT array_position(ARRAY[1,2,3,4,5], 4);
+SELECT array_position(ARRAY[5,3,4,2,1], 4);
+SELECT array_position(ARRAY[[1,2],[3,4]], 3);
+SELECT array_position(ARRAY['sun','mon','tue','wed','thu','fri','sat'], 'mon');
+SELECT array_position(ARRAY['sun','mon','tue','wed','thu','fri','sat'], 'sat');
+SELECT array_position(ARRAY['sun','mon','tue','wed','thu','fri','sat'], NULL);
+SELECT array_position(ARRAY['sun','mon','tue','wed','thu',NULL,'fri','sat'], NULL);
+SELECT array_position(ARRAY['sun','mon','tue','wed','thu',NULL,'fri','sat'], 'sat');
+
+SELECT array_positions(NULL, 10);
+SELECT array_positions(NULL, NULL::int);
+SELECT array_positions(ARRAY[1,2,3,4,5,6,1,2,3,4,5,6], 4);
+SELECT array_positions(ARRAY[[1,2],[3,4]], 4);
+SELECT array_positions(ARRAY[1,2,3,4,5,6,1,2,3,4,5,6], NULL);
+SELECT array_positions(ARRAY[1,2,3,NULL,5,6,1,2,3,NULL,5,6], NULL);
+SELECT array_length(array_positions(ARRAY(SELECT 'AAAAAAAAAAAAAAAAAAAAAAAAA'::text || i % 10
+                                          FROM generate_series(1,100) g(i)),
+                                  'AAAAAAAAAAAAAAAAAAAAAAAAA5'), 1);
+
+DO $$
+DECLARE
+  o int;
+  a int[] := ARRAY[1,2,3,2,3,1,2];
+BEGIN
+  o := array_position(a, 2);
+  WHILE o IS NOT NULL
+  LOOP
+    RAISE NOTICE '%', o;
+    o := array_position(a, 2, o + 1);
+  END LOOP;
+END
+$$ LANGUAGE plpgsql;
+
+SELECT array_position('[2:4]={1,2,3}'::int[], 1);
+SELECT array_positions('[2:4]={1,2,3}'::int[], 1);
+
 -- operators
 SELECT a FROM arrtest WHERE b = ARRAY[[[113,142],[1,147]]];
 SELECT NOT ARRAY[1.1,1.2,1.3] = ARRAY[1.1,1.2,1.3] AS "FALSE";
@@ -445,6 +481,23 @@ select array_agg(ten order by ten) from (select ten from tenk1 where unique1 < 1
 select array_agg(nullif(ten, 4) order by ten) from (select ten from tenk1 where unique1 < 15 order by unique1) ss;
 select array_agg(unique1 order by unique1) from tenk1 where unique1 < -15;
 
+-- array_agg(anyarray)
+select array_agg(ar)
+  from (values ('{1,2}'::int[]), ('{3,4}'::int[])) v(ar);
+select array_agg(distinct ar order by ar desc)
+  from (select array[i / 2] from generate_series(1,10) a(i)) b(ar);
+select array_agg(ar)
+  from (select array_agg(array[i, i+1, i-1])
+        from generate_series(1,2) a(i)) b(ar);
+select array_agg(array[i+1.2, i+1.3, i+1.4]) from generate_series(1,3) g(i);
+select array_agg(array['Hello', i::text]) from generate_series(9,11) g(i);
+select array_agg(array[i, nullif(i, 3), i+1]) from generate_series(1,4) g(i);
+-- errors
+select array_agg('{}'::int[]) from generate_series(1,2);
+select array_agg(null::int[]) from generate_series(1,2);
+select array_agg(ar)
+  from (values ('{1,2}'::int[]), ('{3}'::int[])) v(ar);
+
 select unnest(array[1,2,3]);
 select * from unnest(array[1,2,3]);
 select unnest(array[1,2,3,4.5]::float8[]);
@@ -464,6 +517,10 @@ select array_replace(array[1,2,NULL,4,NULL],NULL,5);
 select array_replace(array['A','B','DD','B'],'B','CC');
 select array_replace(array[1,NULL,3],NULL,NULL);
 select array_replace(array['AB',NULL,'CDE'],NULL,'12');
+
+-- array(select array-value ...)
+select array(select array[i,i/2] from generate_series(1,5) i);
+select array(select array['Hello', i::text] from generate_series(9,11) i);
 
 -- Insert/update on a column that is array of composite
 
@@ -490,6 +547,66 @@ select length(md5((f1[1]).c2)) from dest;
 drop table dest;
 drop type textandtext;
 
+-- Tests for polymorphic-array form of width_bucket()
+-- this exercises the varwidth and float8 code paths
+SELECT
+    op,
+    width_bucket(op::numeric, ARRAY[1, 3, 5, 10.0]::numeric[]) AS wb_n1,
+    width_bucket(op::numeric, ARRAY[0, 5.5, 9.99]::numeric[]) AS wb_n2,
+    width_bucket(op::numeric, ARRAY[-6, -5, 2.0]::numeric[]) AS wb_n3,
+    width_bucket(op::float8, ARRAY[1, 3, 5, 10.0]::float8[]) AS wb_f1,
+    width_bucket(op::float8, ARRAY[0, 5.5, 9.99]::float8[]) AS wb_f2,
+    width_bucket(op::float8, ARRAY[-6, -5, 2.0]::float8[]) AS wb_f3
+FROM (VALUES
+  (-5.2),
+  (-0.0000000001),
+  (0.000000000001),
+  (1),
+  (1.99999999999999),
+  (2),
+  (2.00000000000001),
+  (3),
+  (4),
+  (4.5),
+  (5),
+  (5.5),
+  (6),
+  (7),
+  (8),
+  (9),
+  (9.99999999999999),
+  (10),
+  (10.0000000000001)
+) v(op);
+
+-- ensure float8 path handles NaN properly
+SELECT
+    op,
+    width_bucket(op, ARRAY[1, 3, 9, 'NaN', 'NaN']::float8[]) AS wb
+FROM (VALUES
+  (-5.2::float8),
+  (4::float8),
+  (77::float8),
+  ('NaN'::float8)
+) v(op);
+
+-- these exercise the generic fixed-width code path
+SELECT
+    op,
+    width_bucket(op, ARRAY[1, 3, 5, 10]) AS wb_1
+FROM generate_series(0,11) as op;
+
+SELECT width_bucket(now(),
+                    array['yesterday', 'today', 'tomorrow']::timestamptz[]);
+
+-- corner cases
+SELECT width_bucket(5, ARRAY[3]);
+SELECT width_bucket(5, '{}');
+
+-- error cases
+SELECT width_bucket('5'::text, ARRAY[3, 4]::integer[]);
+SELECT width_bucket(5, ARRAY[3, 4, NULL]);
+SELECT width_bucket(5, ARRAY[ARRAY[1, 2], ARRAY[3, 4]]);
 
 -- Suppress NOTICE messages when users/groups don't exist
 SET client_min_messages TO 'error';

@@ -203,8 +203,7 @@ cdbdisp_appendMessageNonThread(CdbDispatchResult *dispatchResult,
 							   int errcode,
 							   const char *fmt,
 							   ...)
-/* This extension allows gcc to check the format string */
-__attribute__((format(printf, 3, 4)));
+pg_attribute_printf(3, 4);
 
 
 /*

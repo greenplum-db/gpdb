@@ -5,14 +5,9 @@
 -- testtablespace #is_transformed_to# @testtablespace@
 -- DLSUFFIX       #is_transformed_to# @DLSUFFIX@
 -- hostname       #is_transformed_to# @hostname@
--- syslocale      #is_transformed_to# @syslocale@
--- gpwhich_gpfdist #is_transformed_to# @gpwhich_gpfdist@
--- gpwhich_curl    #is_transformed_to# @gpwhich_curl@
--- gpwhich_gunzip  #is_transformed_to# @gpwhich_gunzip@
+-- gp_syslocale      #is_transformed_to# @gp_syslocale@
 -- gpwhich_gpmapreduce  #is_transformed_to# @gpwhich_gpmapreduce@
--- gpwhich_get_ereport.pl  #is_transformed_to# @gpwhich_get_ereport.pl@
 -- gpcurusername #is_transformed_to# @gpcurusername@
--- gp_glob_connect  #is_transformed_to# @gp_glob_connect@
 --
 -- 
 -- end

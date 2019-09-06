@@ -202,18 +202,21 @@
                     and returns a single value, such as the sum or average of the set of values. The
                     syntax of an aggregate expression is one of the following:</p>
                 <ul>
-                    <li id="in144858"><codeph><i>aggregate_name</i>(<i>expression</i> [ , ... ]
-                            )</codeph> — operates across all input rows for which the expected
-                        result value is non-null. <codeph>ALL</codeph> is the default.</li>
-                    <li id="in144859"><codeph><i>aggregate_name</i>(ALL <i>expression</i> [ , ... ]
-                            )</codeph> — operates identically to the first form because
+                    <li id="in144858"><codeph><i>aggregate_name</i>(<i>expression</i> [ , ... ] ) [
+                            FILTER ( WHERE <varname>filter_clause</varname> ) ]</codeph> — operates
+                        across all input rows for which the expected result value is non-null.
                             <codeph>ALL</codeph> is the default.</li>
+                    <li id="in144859"><codeph><i>aggregate_name</i>(ALL <i>expression</i> [ , ... ]
+                            ) [ FILTER ( WHERE <varname>filter_clause</varname> ) ]</codeph> —
+                        operates identically to the first form because <codeph>ALL</codeph> is the
+                        default.</li>
                     <li id="in144860"><codeph><i>aggregate_name</i>(DISTINCT <i>expression</i> [ ,
-                            ... ] )</codeph> — operates across all distinct non-null values of input
-                        rows.</li>
-                    <li id="in144861"><codeph><i>aggregate_name</i>(*)</codeph> — operates on all
-                        rows with values both null and non-null. Generally, this form is most useful
-                        for the <codeph>count(*)</codeph> aggregate function.</li>
+                            ... ] ) [ FILTER ( WHERE <varname>filter_clause</varname> ) ]</codeph> —
+                        operates across all distinct non-null values of input rows.</li>
+                    <li id="in144861"><codeph><i>aggregate_name</i>(*) [ FILTER ( WHERE
+                                <varname>filter_clause</varname> ) ]</codeph> — operates on all rows
+                        with values both null and non-null. Generally, this form is most useful for
+                        the <codeph>count(*)</codeph> aggregate function.</li>
                 </ul>
                 <p>Where <i>aggregate_name</i> is a previously defined aggregate (possibly
                     schema-qualified) and <i>expression</i> is any value expression that does not
@@ -223,6 +226,17 @@
                         <codeph>f1</codeph> is <ph>non-null, and </ph><codeph>count(distinct
                         f1)</codeph> yields the number of distinct non-null values of
                         <codeph>f1</codeph>.</p>
+                <p>If <codeph>FILTER</codeph> is specified, then only the input rows for which the
+                        <varname>filter_clause</varname> evaluates to true are fed to the aggregate
+                    function; other rows are discarded. For example:</p>
+                <codeblock>SELECT
+    count(*) AS unfiltered,
+    count(*) FILTER (WHERE i &lt; 5) AS filtered
+FROM generate_series(1,10) AS s(i);
+ unfiltered | filtered
+------------+----------
+         10 |        4
+(1 row)</codeblock>
                 <p>For predefined aggregate functions, see <xref
                         href="../topics/functions-operators.xml#topic29"/>. You can also add custom
                     aggregate functions.</p>
@@ -245,25 +259,29 @@
                     <p>The following are current limitations of the aggregate expressions:</p>
                     <ul>
                         <li id="in199103">Greenplum Database does not support the following
-                            keywords: ALL, DISTINCT, FILTER and OVER. See <xref
+                            keywords: <codeph>ALL</codeph>, <codeph>DISTINCT</codeph>, and
+                                <codeph>OVER</codeph>. See <xref
                                 href="../topics/functions-operators.xml#topic31/in2073121"/> for
                             more details. </li>
                         <li id="in199105">An aggregate expression can appear only in the result list
-                            or HAVING clause of a SELECT command. It is forbidden in other clauses,
-                            such as WHERE, because those clauses are logically evaluated before the
-                            results of aggregates form. This restriction applies to the query level
-                            to which the aggregate belongs.</li>
+                            or <codeph>HAVING</codeph> clause of a <codeph>SELECT</codeph> command.
+                            It is forbidden in other clauses, such as <codeph>WHERE</codeph>,
+                            because those clauses are logically evaluated before the results of
+                            aggregates form. This restriction applies to the query level to which
+                            the aggregate belongs.</li>
                         <li id="in200910">When an aggregate expression appears in a subquery, the
                             aggregate is normally evaluated over the rows of the subquery. If the
-                            aggregate's arguments contain only outer-level variables, the aggregate
-                            belongs to the nearest such outer level and evaluates over the rows of
-                            that query. The aggregate expression as a whole is then an outer
-                            reference for the subquery in which it appears, and the aggregate
-                            expression acts as a constant over any one evaluation of that subquery.
-                            See <xref format="dita" href="#topic15" type="topic"/> and <xref
+                            aggregate's arguments (and <varname>filter_clause</varname> if any)
+                            contain only outer-level variables, the aggregate belongs to the nearest
+                            such outer level and evaluates over the rows of that query. The
+                            aggregate expression as a whole is then an outer reference for the
+                            subquery in which it appears, and the aggregate expression acts as a
+                            constant over any one evaluation of that subquery. The restriction about
+                            appearing only in the result list or
+                                <codeph><codeph>HAVING</codeph></codeph> clause applies with respect
+                            to the query level at which the aggregate appears. See <xref
+                                format="dita" href="#topic15" type="topic"/> and <xref
                                 href="../topics/functions-operators.xml#topic29/in204913"/>.</li>
-                        <li id="in200915">Greenplum Database does not support DISTINCT with multiple
-                            input expressions.</li>
                         <li id="in2009151">Greenplum Database does not support specifying an
                             aggregate function as an argument to another aggregate function.</li>
                         <li id="in2009152">Greenplum Database does not support specifying a window
@@ -280,21 +298,22 @@
                     example, with window expressions, users can calculate moving averages or sums
                     over various intervals, reset aggregations and ranks as selected column values
                     change, and express complex ratios in simple terms.</p>
-                <p>A window expression represents the application of a <i>window function</i>
-                    to a <i>window frame</i>, which is defined with an <codeph>OVER()</codeph>
+                <p>A window expression represents the application of a <i>window function</i> to a
+                        <i>window frame</i>, which is defined with an <codeph>OVER()</codeph>
                     clause. This is comparable to the type of calculation that can be done with an
                     aggregate function and a <codeph>GROUP BY</codeph> clause. Unlike aggregate
                     functions, which return a single result value for each group of rows, window
-                    functions return a result value for every row, but that value is calculated
-                    with respect to the set of rows in the window frame to which the row belongs.
-                    The <codeph>OVER()</codeph> clause allows dividing the rows into <i>partitions</i> and
-                    then further restricting the window frame by specifying which rows preceding or
-                    following the current row within its partition to include in the calculation.</p>
+                    functions return a result value for every row, but that value is calculated with
+                    respect to the set of rows in the window frame to which the row belongs. The
+                        <codeph>OVER()</codeph> clause allows dividing the rows into
+                        <i>partitions</i> and then further restricting the window frame by
+                    specifying which rows preceding or following the current row within its
+                    partition to include in the calculation.</p>
                 <p>Greenplum Database does not support specifying a window function as an argument
                     to another window function.</p>
                 <p>The syntax of a window expression is:</p>
                 <p>
-                    <codeblock><i>window_function</i> ( [<i>expression</i> [, ...]] ) OVER ( <i>window_specification</i> )</codeblock>
+                    <codeblock><i>window_function</i> ( [<i>expression</i> [, ...]] ) [ FILTER ( WHERE <varname>filter_clause</varname> ) ] OVER ( <i>window_specification</i> )</codeblock>
                 </p>
                 <p>Where <i><codeph>window_function</codeph></i> is one of the functions listed in
                         <xref href="../topics/functions-operators.xml#topic30/in164369"/> or a
@@ -321,10 +340,18 @@
                     <codeblock>SELECT count(*) OVER(PARTITION BY customer_id), * FROM sales;
 </codeblock>
                 </p>
-                <p>In a window expression, a window function call must be followed immediately by an
-                        <codeph>OVER</codeph> clause. The <codeph>OVER</codeph> clause specifies the
-                    window frame—the rows to be processed by the window function. This syntactically
-                    distinguishes the function from a regular or aggregate function.</p>
+                <p>If <codeph>FILTER</codeph> is specified, then only the input rows for which the
+                        <varname>filter_clause</varname> evaluates to true are fed to the window
+                    function; other rows are discarded. In a window expression, a
+                        <codeph>FILTER</codeph> clause can be used only with a
+                        <varname>window_function</varname> that is an aggregate function.</p>
+                <p>In a window expression, the expression must contain an <codeph>OVER</codeph>
+                    clause. The <codeph>OVER</codeph> clause specifies the window frame—the rows to
+                    be processed by the window function. This syntactically distinguishes the
+                    function from a regular or aggregate function.</p>
+                <p>In a window aggregate function that is used in a window expression, Greenplum
+                    Database does not support a <codeph>DISTINCT</codeph> clause with multiple input
+                    expressions.</p>
                 <p>A window specification has the following characteristics:</p>
                 <ul>
                     <li id="in166168">The <codeph>PARTITION BY</codeph> clause defines the window
@@ -348,20 +375,20 @@
                     generally true: <codeph>x::time &lt; x::time + '2
                     hour'::interval</codeph></note>
                 <ul id="ul_im5_14q_2gb">
-                    <li id="in167503">The <codeph>ROWS</codeph> or <codeph>RANGE</codeph> clause 
-                        defines a window frame
-                        for aggregate (non-ranking) window functions. A window frame defines a set
-                        of rows within a window partition. When a window frame is defined, the
-                        window function computes on the contents of this moving frame rather than
-                        the fixed contents of the entire window partition. Window frames are
-                        row-based (<codeph>ROWS</codeph>) or value-based
-                        (<codeph>RANGE</codeph>).</li>
+                    <li id="in167503">The <codeph>ROWS</codeph> or <codeph>RANGE</codeph> clause
+                        defines a window frame for aggregate (non-ranking) window functions. A
+                        window frame defines a set of rows within a window partition. When a window
+                        frame is defined, the window function computes on the contents of this
+                        moving frame rather than the fixed contents of the entire window partition.
+                        Window frames are row-based (<codeph>ROWS</codeph>) or value-based
+                            (<codeph>RANGE</codeph>).</li>
                 </ul>
             </body>
             <topic id="topic_qck_12r_2gb">
                 <title>Window Examples</title>
                 <body>
-                    <p>The following examples demonstrate using window functions with partitions and window frames.</p>
+                    <p>The following examples demonstrate using window functions with partitions and
+                        window frames.</p>
                     <section>
                         <title>Example 1 – Aggregate Window Function Over a Partition</title>
                         <p>The <codeph>PARTITION BY</codeph> list in the <codeph>OVER</codeph>

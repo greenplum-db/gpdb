@@ -4,10 +4,10 @@
 <topic id="topic1"><title id="bb137420">ALTER TYPE</title><body><p id="sql_command_desc">Changes the definition of a data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">
 ALTER TYPE <varname>name</varname> <varname>action</varname> [, ... ]
 ALTER TYPE <varname>name</varname> OWNER TO <varname>new_owner</varname>
-ALTER TYPE <varname>name</varname> RENAME ATTRIBUTE <varname>attribute_name</varname> TO <varname>new_attribute_name</varname>
-ALTER TYPE <varname>name</varname> RENAME TO <varname>new_name</varname> [ CASCADE | RESTRICT ]
+ALTER TYPE <varname>name</varname> RENAME ATTRIBUTE <varname>attribute_name</varname> TO <varname>new_attribute_name</varname> [ CASCADE | RESTRICT ]
+ALTER TYPE <varname>name</varname> RENAME TO <varname>new_name</varname>
 ALTER TYPE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
-ALTER TYPE <varname>name</varname> ADD VALUE <varname>new_enum_value</varname> [ { BEFORE | AFTER } <varname>existing_enum_value</varname> ]
+ALTER TYPE <varname>name</varname> ADD VALUE [ IF NOT EXISTS ] <varname>new_enum_value</varname> [ { BEFORE | AFTER } <varname>existing_enum_value</varname> ]
 ALTER TYPE <varname>name</varname> SET DEFAULT ENCODING ( <varname>storage_directive</varname> )
 
 where <varname>action</varname> is one of:
@@ -40,10 +40,14 @@ where <varname>action</varname> is one of:
         <li>
           <b><codeph>SET SCHEMA</codeph></b> — Moves the type into another schema. </li>
         <li>
-          <b><codeph>ADD VALUE [ BEFORE | AFTER ]</codeph></b> — Adds a new value to an
-          enum type. If the new value's place in the enum's ordering is not specified using
-            <codeph>BEFORE</codeph> or <codeph>AFTER</codeph>, then the new item is placed at the
-          end of the list of values. </li>
+          <b><codeph>ADD VALUE [ IF NOT EXISTS ] [ BEFORE | AFTER ]</codeph></b> — Adds a new value
+          to an enum type. The new value's place in the enum's ordering can be specified as being
+            <codeph>BEFORE</codeph> or <codeph>AFTER</codeph> one of the existing values. Otherwise,
+          the new item is added at the end of the list of values. <p>If <codeph>IF NOT
+              EXISTS</codeph> is specified, it is not an error if the type already contains the new
+            value; a notice is issued but no other action is taken. Otherwise, an error will occur
+            if the new value is already present.</p>
+        </li>
         <li>
           <b><codeph>CASCADE</codeph></b> — Automatically propagate the operation to typed tables of
           the type being altered, and their descendants. </li>
@@ -57,13 +61,13 @@ where <varname>action</varname> is one of:
         several attributes in a single command. </p>
       <p>You can change the name, the owner, and the schema of a type. You can also add or update
         storage options for a scalar type.<note>Greenplum Database does not support adding storage
-          options for row or composite types.</note></p><p>You must own the type to use
-          <codeph>ALTER TYPE</codeph>. To change the schema of a type, you must also have
-          <codeph>CREATE</codeph> privilege on the new schema. To alter the owner, you must also be
-        a direct or indirect member of the new owning role, and that role must have
+          options for row or composite types.</note></p><p>You must own the type to use <codeph>ALTER TYPE</codeph>. To change the schema of a type, you
+        must also have <codeph>CREATE</codeph> privilege on the new schema. To alter the owner, you
+        must also be a direct or indirect member of the new owning role, and that role must have
           <codeph>CREATE</codeph> privilege on the type's schema. (These restrictions enforce that
         altering the owner does not do anything that could be done by dropping and recreating the
-        type. However, a superuser can alter ownership of any type.)</p>
+        type. However, a superuser can alter ownership of any type.) To add an attribute or alter an attribute type, you must also
+        have <codeph>USAGE</codeph> privilege on the data type.</p>
       <p><codeph>ALTER TYPE ... ADD VALUE</codeph> (the form that adds a new value to an enum type)
         cannot be executed inside a transaction block.</p>
       <p> Comparisons involving an added enum value will sometimes be slower than comparisons

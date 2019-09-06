@@ -22,6 +22,11 @@
     <note type="note">On data files generated on a Microsoft Windows operating system, run the
         <codeph>dos2unix</codeph> system command to remove any Windows-only characters before
       loading into Greenplum Database.</note>
+    <note>If you <i>change</i> the <codeph>ENCODING</codeph> value in an existing
+        <codeph>gpload</codeph> control file, you must manually drop any external tables that were
+      creating using the previous <codeph>ENCODING</codeph> configuration. <codeph>gpload</codeph>
+      does not drop and recreate external tables to use the new <codeph>ENCODING</codeph> if
+        <codeph>REUSE_TABLES</codeph> is set to <codeph>true</codeph>.</note>
   </body>
   <topic id="topic103" xml:lang="en">
     <title>Changing the Client-Side Character Encoding</title>

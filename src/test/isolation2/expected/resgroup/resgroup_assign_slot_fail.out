@@ -1,7 +1,5 @@
 -- If the function AssignResGroupOnMaster() fails after getting a slot,
 -- test the slot will be unassigned correctly.
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
 
 DROP ROLE IF EXISTS role_test;
 DROP
@@ -24,12 +22,12 @@ SET
 SELECT gp_inject_fault('resgroup_assigned_on_master', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 SELECT gp_inject_fault('resgroup_assigned_on_master', 'error', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 -- end_ignore
 2: BEGIN;

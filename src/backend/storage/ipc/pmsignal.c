@@ -4,7 +4,7 @@
  *	  routines for signaling the postmaster from its child processes
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -66,7 +66,7 @@ struct PMSignalData
 	/* per-child-process flags */
 	int			num_child_flags;	/* # of entries in PMChildFlags[] */
 	int			next_child_flag;	/* next slot to try to assign */
-	sig_atomic_t PMChildFlags[1];		/* VARIABLE LENGTH ARRAY */
+	sig_atomic_t PMChildFlags[FLEXIBLE_ARRAY_MEMBER];
 };
 
 NON_EXEC_STATIC volatile PMSignalData *PMSignalState = NULL;

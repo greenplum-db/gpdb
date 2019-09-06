@@ -2,7 +2,7 @@
  * decode.h
  *	   PostgreSQL WAL to logical transformation
  *
- * Portions Copyright (c) 2012-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-2015, PostgreSQL Global Development Group
  *
  *-------------------------------------------------------------------------
  */
@@ -10,10 +10,11 @@
 #define DECODE_H
 
 #include "access/xlogreader.h"
+#include "access/xlogrecord.h"
 #include "replication/reorderbuffer.h"
 #include "replication/logical.h"
 
 void LogicalDecodingProcessRecord(LogicalDecodingContext *ctx,
-							 XLogRecord *record);
+							 XLogReaderState *record);
 
 #endif

@@ -125,7 +125,7 @@ _bitmap_relbuf(Buffer buf)
  * _bitmap_init_lovpage -- initialize a new LOV page.
  */
 void
-_bitmap_init_lovpage(Relation rel __attribute__((unused)), Buffer buf)
+_bitmap_init_lovpage(Relation rel pg_attribute_unused(), Buffer buf)
 {
 	Page			page;
 
@@ -451,7 +451,7 @@ _bitmap_init(Relation indexrel, bool use_wal, bool for_empty)
  */
 
 static uint32
-build_hash_key(const void *key, Size keysize __attribute__((unused)))
+build_hash_key(const void *key, Size keysize pg_attribute_unused())
 {
     Assert(key);
 
@@ -486,7 +486,7 @@ build_hash_key(const void *key, Size keysize __attribute__((unused)))
  * in that context.
  */
 static int
-build_match_key(const void *key1, const void *key2, Size keysize __attribute__((unused)))
+build_match_key(const void *key1, const void *key2, Size keysize pg_attribute_unused())
 {
     Assert(key1);
     Assert(key2);

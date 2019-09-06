@@ -5,7 +5,7 @@
  *
  * Note: this file must be includable in both frontend and backend contexts.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/datatype/timestamp.h
@@ -119,8 +119,8 @@ typedef struct
  * DT_NOBEGIN represents timestamp -infinity; DT_NOEND represents +infinity
  */
 #ifdef HAVE_INT64_TIMESTAMP
-#define DT_NOBEGIN		(-INT64CONST(0x7fffffffffffffff) - 1)
-#define DT_NOEND		(INT64CONST(0x7fffffffffffffff))
+#define DT_NOBEGIN		PG_INT64_MIN
+#define DT_NOEND		PG_INT64_MAX
 #else							/* !HAVE_INT64_TIMESTAMP */
 #ifdef HUGE_VAL
 #define DT_NOBEGIN		(-HUGE_VAL)

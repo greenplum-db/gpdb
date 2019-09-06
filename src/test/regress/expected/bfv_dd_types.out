@@ -58,68 +58,52 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 INSERT INTO direct_test_type_int2 VALUES (1);
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 INSERT INTO direct_test_type_int4 VALUES (1);
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 INSERT INTO direct_test_type_int8 VALUES (1);
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_real values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_smallint values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_boolean2 values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_double values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_date values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_numeric values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_bit values('1');
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_bpchar values('abs');
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_bytea values('greenplum');
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_cidr values('68.44.55.111');
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_inet values('68.44.55.111');
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_macaddr values('12:34:56:78:90:ab');
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into direct_test_type_varbit values('0101010');
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- @author antovl
 -- @created 2014-11-07 12:00:00 
 -- @modified 2014-11-07 12:00:00

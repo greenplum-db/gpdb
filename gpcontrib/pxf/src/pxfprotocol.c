@@ -182,7 +182,6 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
 
 	context->gphd_uri = uri;
 	initStringInfo(&context->uri);
-	initStringInfo(&context->write_file_name);
 	context->relation  = relation;
 	context->filterstr = filterstr;
 	context->proj_info = proj_info;
@@ -200,7 +199,6 @@ cleanup_context(gphadoop_context *context)
 	{
 		gpbridge_cleanup(context);
 		pfree(context->uri.data);
-		pfree(context->write_file_name.data);
 		pfree(context);
 	}
 }

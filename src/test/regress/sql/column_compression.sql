@@ -139,6 +139,7 @@ drop table ccddl_co, ccddl;
 -----------------------------------------------------------------------
 
 -- only support CO tables
+create table ccddl (i int encoding (compresstype=RLE_TYPE));
 create table ccddl (i int encoding (compresstype=zlib));
 create table ccddl (i int encoding (compresstype=zlib))
 	with (appendonly = true);
@@ -556,6 +557,10 @@ execute ccddlcheck;
 
 drop table ccddl;
 
+create table ccddl (i int42) with(appendonly = true, orientation=column);
+execute ccddlcheck;
+drop table ccddl;
+
 -- Shouldn't apply type default encoding in these cases
 create table ccddl (i int42);
 execute ccddlcheck;
@@ -567,6 +572,23 @@ drop table ccddl;
 
 create table ccddl (i int42) with (appendonly = true, orientation=column,
 compresstype=none);
+alter type int42 set default encoding (compresstype=RLE_TYPE);
+alter table ccddl add column j int42 default '1'::int42;
+execute ccddlcheck;
+
+drop table ccddl;
+
+create table ccddl (i int42) with(appendonly = true, orientation=row);
+alter type int42 set default encoding (compresstype=RLE_TYPE);
+alter table ccddl add column j int42 default '1'::int42;
+-- No results are returned from the attribute encoding check, as compression with rle is not supported for row tables
+execute ccddlcheck;
+drop table ccddl;
+
+create table ccddl (i int42) with(appendonly = true);
+alter type int42 set default encoding (compresstype=RLE_TYPE);
+alter table ccddl add column j int42 default '1'::int42;
+-- No results are returned from the attribute encoding check, as compression with rle is not supported for heap tables
 execute ccddlcheck;
 drop table ccddl;
 

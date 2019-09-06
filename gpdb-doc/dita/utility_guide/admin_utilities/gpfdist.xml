@@ -23,6 +23,10 @@
         to all Greenplum Database segments in parallel. It is used by writable external tables to
         accept output streams from Greenplum Database segments in parallel and write them out to a
         file.</p>
+      <note><codeph>gpfdist</codeph> and <codeph>gpload</codeph> are compatible only with the
+        Greenplum Database major version in which they are shipped. For example, a
+          <codeph>gpfdist</codeph> utility that is installed with Greenplum Database 4.x cannot be
+        used with Greenplum Database 5.x or 6.x.</note>
       <p>In order for <codeph>gpfdist</codeph> to be used by an external table, the
           <codeph>LOCATION</codeph> clause of the external table definition must specify the
         external table data using the <codeph>gpfdist://</codeph> protocol (see the Greenplum

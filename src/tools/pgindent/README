@@ -22,6 +22,9 @@ This can format all PostgreSQL *.c and *.h files, but excludes *.y, and
 
 	wget -O src/tools/pgindent/typedefs.list https://buildfarm.postgresql.org/cgi-bin/typedefs.pl
 
+   (see http://www.pgbuildfarm.org/cgi-bin/typedefs.pl?show_list for a full list of typedefs,
+    also http://adpgtech.blogspot.com/2015/05/running-pgindent-on-non-core-code-or.html)
+
 6) Run pgindent:
 
 	src/tools/pgindent/pgindent
@@ -54,7 +57,7 @@ This can format all PostgreSQL *.c and *.h files, but excludes *.y, and
 	pg_ctl start
 	make installcheck-world
 
-10) Remove Perl backup files after testing
+10) Remove Perl backup files after testing (*.bak)
 
 ---------------------------------------------------------------------------
 
@@ -81,8 +84,8 @@ see:
 Notes about excluded files
 --------------------------
 
-src/include/storage/s_lock.h is excluded because it contains assembly code
-that pgindent tends to mess up.
+src/include/storage/s_lock.h and src/include/port/atomics/ are excluded
+because they contain assembly code that pgindent tends to mess up.
 
 src/include/snowball/libstemmer/ and src/backend/snowball/libstemmer/
 are excluded because those files are imported from an external project,

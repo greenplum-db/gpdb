@@ -5,8 +5,14 @@
 CREATE EXTENSION postgres_fdw;
 
 CREATE SERVER testserver1 FOREIGN DATA WRAPPER postgres_fdw;
-CREATE SERVER loopback FOREIGN DATA WRAPPER postgres_fdw
-  OPTIONS (dbname 'contrib_regression');
+DO $d$
+    BEGIN
+        EXECUTE $$CREATE SERVER loopback FOREIGN DATA WRAPPER postgres_fdw
+            OPTIONS (dbname '$$||current_database()||$$',
+                     port '$$||current_setting('port')||$$'
+            )$$;
+    END;
+$d$;
 
 CREATE USER MAPPING FOR public SERVER testserver1
 	OPTIONS (user 'value', password 'value');
@@ -305,6 +311,20 @@ EXPLAIN (VERBOSE, COSTS false)
 SELECT ctid, * FROM ft1 t1 LIMIT 1;
 SELECT ctid, * FROM ft1 t1 LIMIT 1;
 
+-- System columns, except ctid, should not be sent to remote
+EXPLAIN (VERBOSE, COSTS false)
+SELECT * FROM ft1 t1 WHERE t1.tableoid = 'pg_class'::regclass LIMIT 1;
+SELECT * FROM ft1 t1 WHERE t1.tableoid = 'ft1'::regclass LIMIT 1;
+EXPLAIN (VERBOSE, COSTS false)
+SELECT tableoid::regclass, * FROM ft1 t1 LIMIT 1;
+SELECT tableoid::regclass, * FROM ft1 t1 LIMIT 1;
+EXPLAIN (VERBOSE, COSTS false)
+SELECT * FROM ft1 t1 WHERE t1.ctid = '(0,2)';
+SELECT * FROM ft1 t1 WHERE t1.ctid = '(0,2)';
+EXPLAIN (VERBOSE, COSTS false)
+SELECT ctid, * FROM ft1 t1 LIMIT 1;
+SELECT ctid, * FROM ft1 t1 LIMIT 1;
+
 -- ===================================================================
 -- used in pl/pgsql function
 -- ===================================================================
@@ -418,6 +438,9 @@ UPDATE ft2 SET c2 = c2 + 600 WHERE c1 % 10 = 8 AND c1 < 1200 RETURNING *;
 ALTER TABLE "S 1"."T 1" ADD CONSTRAINT c2positive CHECK (c2 >= 0);
 
 INSERT INTO ft1(c1, c2) VALUES(11, 12);  -- duplicate key
+INSERT INTO ft1(c1, c2) VALUES(11, 12) ON CONFLICT DO NOTHING; -- works
+INSERT INTO ft1(c1, c2) VALUES(11, 12) ON CONFLICT (c1, c2) DO NOTHING; -- unsupported
+INSERT INTO ft1(c1, c2) VALUES(11, 12) ON CONFLICT (c1, c2) DO UPDATE SET c3 = 'ffg'; -- unsupported
 INSERT INTO ft1(c1, c2) VALUES(1111, -2);  -- c2positive
 UPDATE ft1 SET c2 = -c2 WHERE c1 = 1;  -- c2positive
 
@@ -450,6 +473,36 @@ select c2, count(*) from "S 1"."T 1" where c2 < 500 group by 1 order by 1;
 commit;
 select c2, count(*) from ft2 where c2 < 500 group by 1 order by 1;
 select c2, count(*) from "S 1"."T 1" where c2 < 500 group by 1 order by 1;
+
+-- ===================================================================
+-- test check constraints
+-- ===================================================================
+
+-- Consistent check constraints provide consistent results
+ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c2positive CHECK (c2 >= 0);
+EXPLAIN (VERBOSE, COSTS false) SELECT count(*) FROM ft1 WHERE c2 < 0;
+SELECT count(*) FROM ft1 WHERE c2 < 0;
+SET constraint_exclusion = 'on';
+EXPLAIN (VERBOSE, COSTS false) SELECT count(*) FROM ft1 WHERE c2 < 0;
+SELECT count(*) FROM ft1 WHERE c2 < 0;
+RESET constraint_exclusion;
+-- check constraint is enforced on the remote side, not locally
+INSERT INTO ft1(c1, c2) VALUES(1111, -2);  -- c2positive
+UPDATE ft1 SET c2 = -c2 WHERE c1 = 1;  -- c2positive
+ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c2positive;
+
+-- But inconsistent check constraints provide inconsistent results
+ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c2negative CHECK (c2 < 0);
+EXPLAIN (VERBOSE, COSTS false) SELECT count(*) FROM ft1 WHERE c2 >= 0;
+SELECT count(*) FROM ft1 WHERE c2 >= 0;
+SET constraint_exclusion = 'on';
+EXPLAIN (VERBOSE, COSTS false) SELECT count(*) FROM ft1 WHERE c2 >= 0;
+SELECT count(*) FROM ft1 WHERE c2 >= 0;
+RESET constraint_exclusion;
+-- local check constraint is not actually enforced
+INSERT INTO ft1(c1, c2) VALUES(1111, 2);
+UPDATE ft1 SET c2 = c2 + 1 WHERE c1 = 1;
+ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c2negative;
 
 -- ===================================================================
 -- test serial columns (ie, sequence-based defaults)
@@ -680,3 +733,170 @@ UPDATE rem1 SET f2 = 'testo';
 
 -- Test returning a system attribute
 INSERT INTO rem1(f2) VALUES ('test') RETURNING ctid;
+
+-- ===================================================================
+-- test inheritance features
+-- ===================================================================
+
+CREATE TABLE a (aa TEXT);
+CREATE TABLE loct (aa TEXT, bb TEXT);
+CREATE FOREIGN TABLE b (bb TEXT) INHERITS (a)
+  SERVER loopback OPTIONS (table_name 'loct');
+
+INSERT INTO a(aa) VALUES('aaa');
+INSERT INTO a(aa) VALUES('aaaa');
+INSERT INTO a(aa) VALUES('aaaaa');
+
+INSERT INTO b(aa) VALUES('bbb');
+INSERT INTO b(aa) VALUES('bbbb');
+INSERT INTO b(aa) VALUES('bbbbb');
+
+SELECT tableoid::regclass, * FROM a;
+SELECT tableoid::regclass, * FROM b;
+SELECT tableoid::regclass, * FROM ONLY a;
+
+UPDATE a SET aa = 'zzzzzz' WHERE aa LIKE 'aaaa%';
+
+SELECT tableoid::regclass, * FROM a;
+SELECT tableoid::regclass, * FROM b;
+SELECT tableoid::regclass, * FROM ONLY a;
+
+UPDATE b SET aa = 'new';
+
+SELECT tableoid::regclass, * FROM a;
+SELECT tableoid::regclass, * FROM b;
+SELECT tableoid::regclass, * FROM ONLY a;
+
+UPDATE a SET aa = 'newtoo';
+
+SELECT tableoid::regclass, * FROM a;
+SELECT tableoid::regclass, * FROM b;
+SELECT tableoid::regclass, * FROM ONLY a;
+
+DELETE FROM a;
+
+SELECT tableoid::regclass, * FROM a;
+SELECT tableoid::regclass, * FROM b;
+SELECT tableoid::regclass, * FROM ONLY a;
+
+DROP TABLE a CASCADE;
+DROP TABLE loct;
+
+-- Check SELECT FOR UPDATE/SHARE with an inherited source table
+create table loct1 (f1 int, f2 int, f3 int);
+create table loct2 (f1 int, f2 int, f3 int);
+
+create table foo (f1 int, f2 int);
+create foreign table foo2 (f3 int) inherits (foo)
+  server loopback options (table_name 'loct1');
+create table bar (f1 int, f2 int);
+create foreign table bar2 (f3 int) inherits (bar)
+  server loopback options (table_name 'loct2');
+
+insert into foo values(1,1);
+insert into foo values(3,3);
+insert into foo2 values(2,2,2);
+insert into foo2 values(4,4,4);
+insert into bar values(1,11);
+insert into bar values(2,22);
+insert into bar values(6,66);
+insert into bar2 values(3,33,33);
+insert into bar2 values(4,44,44);
+insert into bar2 values(7,77,77);
+
+explain (verbose, costs off)
+select * from bar where f1 in (select f1 from foo) for update;
+select * from bar where f1 in (select f1 from foo) for update;
+
+explain (verbose, costs off)
+select * from bar where f1 in (select f1 from foo) for share;
+select * from bar where f1 in (select f1 from foo) for share;
+
+-- Check UPDATE with inherited target and an inherited source table
+explain (verbose, costs off)
+update bar set f2 = f2 + 100 where f1 in (select f1 from foo);
+update bar set f2 = f2 + 100 where f1 in (select f1 from foo);
+
+select tableoid::regclass, * from bar order by 1,2;
+
+-- Check UPDATE with inherited target and an appendrel subquery
+explain (verbose, costs off)
+update bar set f2 = f2 + 100
+from
+  ( select f1 from foo union all select f1+3 from foo ) ss
+where bar.f1 = ss.f1;
+update bar set f2 = f2 + 100
+from
+  ( select f1 from foo union all select f1+3 from foo ) ss
+where bar.f1 = ss.f1;
+
+select tableoid::regclass, * from bar order by 1,2;
+
+-- Test that WHERE CURRENT OF is not supported
+begin;
+declare c cursor for select * from bar where f1 = 7;
+fetch from c;
+update bar set f2 = null where current of c;
+rollback;
+
+drop table foo cascade;
+drop table bar cascade;
+drop table loct1;
+drop table loct2;
+
+-- ===================================================================
+-- test IMPORT FOREIGN SCHEMA
+-- ===================================================================
+
+CREATE SCHEMA import_source;
+CREATE TABLE import_source.t1 (c1 int, c2 varchar NOT NULL);
+CREATE TABLE import_source.t2 (c1 int default 42, c2 varchar NULL, c3 text collate "POSIX");
+CREATE TYPE typ1 AS (m1 int, m2 varchar);
+CREATE TABLE import_source.t3 (c1 timestamptz default now(), c2 typ1);
+CREATE TABLE import_source."x 4" (c1 float8, "C 2" text, c3 varchar(42));
+CREATE TABLE import_source."x 5" (c1 float8);
+ALTER TABLE import_source."x 5" DROP COLUMN c1;
+
+CREATE SCHEMA import_dest1;
+IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest1;
+\det+ import_dest1
+\d import_dest1.*
+
+-- Options
+CREATE SCHEMA import_dest2;
+IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest2
+  OPTIONS (import_default 'true');
+\det+ import_dest2
+\d import_dest2.*
+CREATE SCHEMA import_dest3;
+IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest3
+  OPTIONS (import_collate 'false', import_not_null 'false');
+\det+ import_dest3
+\d import_dest3.*
+
+-- Check LIMIT TO and EXCEPT
+CREATE SCHEMA import_dest4;
+IMPORT FOREIGN SCHEMA import_source LIMIT TO (t1, nonesuch)
+  FROM SERVER loopback INTO import_dest4;
+\det+ import_dest4
+IMPORT FOREIGN SCHEMA import_source EXCEPT (t1, "x 4", nonesuch)
+  FROM SERVER loopback INTO import_dest4;
+\det+ import_dest4
+
+-- Assorted error cases
+IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest4;
+IMPORT FOREIGN SCHEMA nonesuch FROM SERVER loopback INTO import_dest4;
+IMPORT FOREIGN SCHEMA nonesuch FROM SERVER loopback INTO notthere;
+IMPORT FOREIGN SCHEMA nonesuch FROM SERVER nowhere INTO notthere;
+
+-- Check case of a type present only on the remote server.
+-- We can fake this by dropping the type locally in our transaction.
+CREATE TYPE "Colors" AS ENUM ('red', 'green', 'blue');
+CREATE TABLE import_source.t5 (c1 int, c2 text collate "C", "Col" "Colors");
+
+CREATE SCHEMA import_dest5;
+BEGIN;
+DROP TYPE "Colors" CASCADE;
+IMPORT FOREIGN SCHEMA import_source LIMIT TO (t5)
+  FROM SERVER loopback INTO import_dest5;  -- ERROR
+ROLLBACK;

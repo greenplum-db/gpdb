@@ -114,7 +114,6 @@ typedef struct
  *
  *  SSL Params
  *	extssl_protocol  CURL_SSLVERSION_TLSv1 				
- *  extssl_cipher 	 TLS_RSA_WITH_AES_128_CBC_SHA
  *  extssl_verifycert 	1
  *  extssl_verifyhost 	2
  *  extssl_no_verifycert 	0
@@ -128,7 +127,6 @@ typedef struct
  */
 
 const static int extssl_protocol  = CURL_SSLVERSION_TLSv1;
-const char* extssl_cipher = "AES128-SHA";
 const static int extssl_verifycert = 1;
 const static int extssl_verifyhost = 2;
 const static int extssl_no_verifycert = 0;
@@ -571,10 +569,22 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 		CURLcode e = curl_easy_perform(file->curl->handle);
 		if (CURLE_OK != e)
 		{
-			elog(WARNING, "%s error (%d - %s)", file->curl_url, e, curl_easy_strerror(e));
 			if (CURLE_OPERATION_TIMEDOUT == e)
 			{
 				timeout_count++;
+				elog(LOG, "curl operation timeout, timeout_count = %d", timeout_count);
+				if (timeout_count >= 2)
+				{
+					ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					errmsg("error when writing data to gpfdist %s, quit after %d timeout_count",
+							file->curl_url, timeout_count)));
+				}
+				continue;
+			}
+			else
+			{
+				elog(WARNING, "%s error (%d - %s)", file->curl_url, e, curl_easy_strerror(e));
 			}
 		}
 		else
@@ -588,6 +598,7 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 					return;
 
 				case FDIST_TIMEOUT:
+					elog(LOG, "%s timeout from gpfdist", file->curl_url);
 					break;
 
 				default:
@@ -601,7 +612,7 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 			response_string = NULL;
 		}
 
-		if (wait_time > MAX_TRY_WAIT_TIME || timeout_count >= 2)
+		if (wait_time > MAX_TRY_WAIT_TIME)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
@@ -1274,11 +1285,11 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_VERIFYHOST,
 				(long)(verify_gpfdists_cert ? extssl_verifyhost : extssl_no_verifyhost));
 
-		/* set ciphersuite */
-		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_CIPHER_LIST, extssl_cipher);
-
 		/* set protocol */
 		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLVERSION, extssl_protocol);
+
+		/* disable session ID cache */
+		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSL_SESSIONID_CACHE, 0);
 
 		/* set debug */
 		if (CURLE_OK != (e = curl_easy_setopt(file->curl->handle, CURLOPT_VERBOSE, (long)extssl_libcurldebug)))

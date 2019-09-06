@@ -156,6 +156,13 @@
 		<codeblock conref="sql_commands/ALTER_ROLE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_ROLE.xml"/> for more
 			information.</p>
+		<section id="section_ssp_1hy_xgb">
+			<title>ALTER RULE</title>
+		</section>
+		<p conref="sql_commands/ALTER_RULE.xml#topic1/sql_command_desc"/>
+	    <codeblock conref="sql_commands/ALTER_RULE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_RULE.xml"/> for more 
+			information.</p>
 		<section id="ae1903537">
 			<title>ALTER SCHEMA</title>
 		</section>
@@ -598,14 +605,14 @@
 		<codeblock conref="sql_commands/DROP_CAST.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_CAST.xml"/> for more
 			information.</p>
-		<section id="ae1904827">
+		<section>
 			<title>DROP COLLATION</title>
 		</section>
 		<p conref="sql_commands/DROP_COLLATION.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_COLLATION.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_COLLATION.xml"/> for more
 			information.</p>
-		<section id="ae1904827">
+		<section id="section_s4r_fgy_xgb">
 			<title>DROP CONVERSION</title>
 		</section>
 		<p conref="sql_commands/DROP_CONVERSION.xml#topic1/sql_command_desc"/>
@@ -972,6 +979,12 @@
 		<p conref="sql_commands/SET.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/SET.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/SET.xml"/> for more information.</p>
+		<section id="az1905373">
+			<title>SET CONSTRAINTS</title>
+		</section>
+		<p conref="sql_commands/SET_CONSTRAINTS.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/SET_CONSTRAINTS.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/SET_CONSTRAINTS.xml"/> for more information.</p>
 		<section id="ae1905373">
 			<title>SET ROLE</title>
 		</section>

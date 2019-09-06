@@ -6,7 +6,7 @@
  *	   including abstime, reltime, date, and time.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/datetime.h
@@ -219,7 +219,7 @@ typedef struct TimeZoneAbbrevTable
 {
 	Size		tblsize;		/* size in bytes of TimeZoneAbbrevTable */
 	int			numabbrevs;		/* number of entries in abbrevs[] array */
-	datetkn		abbrevs[1];		/* VARIABLE LENGTH ARRAY */
+	datetkn		abbrevs[FLEXIBLE_ARRAY_MEMBER];
 	/* DynamicZoneAbbrev(s) may follow the abbrevs[] array */
 } TimeZoneAbbrevTable;
 
@@ -227,7 +227,7 @@ typedef struct TimeZoneAbbrevTable
 typedef struct DynamicZoneAbbrev
 {
 	pg_tz	   *tz;				/* NULL if not yet looked up */
-	char		zone[1];		/* zone name (var length, NUL-terminated) */
+	char		zone[FLEXIBLE_ARRAY_MEMBER];	/* NUL-terminated zone name */
 } DynamicZoneAbbrev;
 
 
@@ -271,6 +271,13 @@ extern const char *const months[];		/* months (3-char abbreviations) */
 extern const char *const days[];	/* days (full names) */
 extern const int day_tab[2][13];
 
+/*
+ * These are the rules for the Gregorian calendar, which was adopted in 1582.
+ * However, we use this calculation for all prior years as well because the
+ * SQL standard specifies use of the Gregorian calendar.  This prevents the
+ * date 1500-02-29 from being stored, even though it is valid in the Julian
+ * calendar.
+ */
 #define isleap(y) (((y) % 4) == 0 && (((y) % 100) != 0 || ((y) % 400) == 0))
 
 
@@ -308,7 +315,7 @@ extern int DecodeISO8601Interval(char *str,
 					  int *dtype, struct pg_tm * tm, fsec_t *fsec);
 
 extern void DateTimeParseError(int dterr, const char *str,
-				   const char *datatype) __attribute__((noreturn));
+				   const char *datatype) pg_attribute_noreturn();
 
 extern int	DetermineTimeZoneOffset(struct pg_tm * tm, pg_tz *tzp);
 extern int	DetermineTimeZoneAbbrevOffset(struct pg_tm * tm, const char *abbr, pg_tz *tzp);

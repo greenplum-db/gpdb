@@ -3,7 +3,7 @@
  * pg_conversion.c
  *	  routines to support manipulation of the pg_conversion relation
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -37,7 +37,7 @@
  *
  * Add a new tuple to pg_conversion.
  */
-Oid
+ObjectAddress
 ConversionCreate(const char *conname, Oid connamespace,
 				 Oid conowner,
 				 int32 conforencoding, int32 contoencoding,
@@ -50,7 +50,6 @@ ConversionCreate(const char *conname, Oid connamespace,
 	bool		nulls[Natts_pg_conversion];
 	Datum		values[Natts_pg_conversion];
 	NameData	cname;
-	Oid			oid;
 	ObjectAddress myself,
 				referenced;
 
@@ -106,8 +105,7 @@ ConversionCreate(const char *conname, Oid connamespace,
 	tup = heap_form_tuple(tupDesc, values, nulls);
 
 	/* insert a new tuple */
-	oid = simple_heap_insert(rel, tup);
-	Assert(OidIsValid(oid));
+	simple_heap_insert(rel, tup);
 
 	/* update the index if any */
 	CatalogUpdateIndexes(rel, tup);
@@ -141,7 +139,7 @@ ConversionCreate(const char *conname, Oid connamespace,
 	heap_freetuple(tup);
 	heap_close(rel, RowExclusiveLock);
 
-	return oid;
+	return myself;
 }
 
 /*

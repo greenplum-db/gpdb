@@ -2,7 +2,7 @@
  * bgworker.c
  *		POSTGRES pluggable background workers implementation
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/postmaster/bgworker.c
@@ -13,7 +13,6 @@
 #include "postgres.h"
 
 #include <unistd.h>
-#include <time.h>
 
 #include "miscadmin.h"
 #include "libpq/pqsignal.h"
@@ -33,6 +32,8 @@
 #include "utils/ascii.h"
 #include "utils/ps_status.h"
 #include "utils/timeout.h"
+
+extern bool isAuxiliaryBgWorker(BackgroundWorker *worker);
 
 /*
  * The postmaster's list of registered background workers, in private memory.
@@ -131,7 +132,7 @@ BackgroundWorkerShmemInit(void)
 		/*
 		 * Copy contents of worker list into shared memory.  Record the shared
 		 * memory slot assigned to each worker.  This ensures a 1-to-1
-		 * correspondence betwen the postmaster's private list and the array
+		 * correspondence between the postmaster's private list and the array
 		 * in shared memory.
 		 */
 		slist_foreach(siter, &BackgroundWorkerList)
@@ -255,15 +256,15 @@ BackgroundWorkerStateChange(void)
 		}
 
 		/*
-		 * If the worker is marked for termination, we don't need to add it
-		 * to the registered workers list; we can just free the slot.
-		 * However, if bgw_notify_pid is set, the process that registered the
-		 * worker may need to know that we've processed the terminate request,
-		 * so be sure to signal it.
+		 * If the worker is marked for termination, we don't need to add it to
+		 * the registered workers list; we can just free the slot. However, if
+		 * bgw_notify_pid is set, the process that registered the worker may
+		 * need to know that we've processed the terminate request, so be sure
+		 * to signal it.
 		 */
 		if (slot->terminate)
 		{
-			int	notify_pid;
+			int			notify_pid;
 
 			/*
 			 * We need a memory barrier here to make sure that the load of
@@ -342,7 +343,7 @@ BackgroundWorkerStateChange(void)
 		rw->rw_terminate = false;
 
 		/* Log it! */
-		ereport(LOG,
+		ereport(DEBUG1,
 				(errmsg("registering background worker \"%s\"",
 						rw->rw_worker.bgw_name)));
 
@@ -371,7 +372,7 @@ ForgetBackgroundWorker(slist_mutable_iter *cur)
 	slot = &BackgroundWorkerData->slot[rw->rw_shmem_slot];
 	slot->in_use = false;
 
-	ereport(LOG,
+	ereport(DEBUG1,
 			(errmsg("unregistering background worker \"%s\"",
 					rw->rw_worker.bgw_name)));
 
@@ -427,7 +428,7 @@ BackgroundWorkerStopNotifications(pid_t pid)
 void
 ResetBackgroundWorkerCrashTimes(void)
 {
-	slist_mutable_iter	iter;
+	slist_mutable_iter iter;
 
 	slist_foreach_modify(iter, &BackgroundWorkerList)
 	{
@@ -436,8 +437,8 @@ ResetBackgroundWorkerCrashTimes(void)
 		rw = slist_container(RegisteredBgWorker, rw_lnode, iter.cur);
 
 		/*
-		 * For workers that should not be restarted, we don't want to lose
-		 * the information that they have crashed; otherwise, they would be
+		 * For workers that should not be restarted, we don't want to lose the
+		 * information that they have crashed; otherwise, they would be
 		 * restarted, which is wrong.
 		 */
 		if (rw->rw_worker.bgw_restart_time != BGW_NEVER_RESTART)
@@ -491,6 +492,23 @@ SanityCheckBackgroundWorker(BackgroundWorker *worker, int elevel)
 			ereport(elevel,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("background worker \"%s\": cannot request database access if starting at postmaster start",
+							worker->bgw_name)));
+			return false;
+		}
+
+		/*
+		 * it's unsafe to allow custom workers to accessing database if distributed
+		 * transactions are not recovered yet.
+		 *
+		 * Built-in auxiliary workers like FTS, GDD are fine because we know what
+		 * they do and they can work even dtx are not recovered.
+		 */
+		if (worker->bgw_start_time == BgWorkerStart_DtxRecovering &&
+			!isAuxiliaryBgWorker(worker))
+		{
+			ereport(elevel,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("background worker \"%s\": cannot request database access if starting at distributed transactions recovering",
 							worker->bgw_name)));
 			return false;
 		}
@@ -579,15 +597,7 @@ StartBackgroundWorker(void)
 	if (worker == NULL)
 		elog(FATAL, "unable to find bgworker entry");
 
-	/* we are a postmaster subprocess now */
-	IsUnderPostmaster = true;
 	IsBackgroundWorker = true;
-
-	/* reset MyProcPid */
-	MyProcPid = getpid();
-
-	/* record Start Time for logging */
-	MyStartTime = time(NULL);
 
 	/* Identify myself via ps */
 	snprintf(buf, MAXPGPATH, "bgworker: %s", worker->bgw_name);
@@ -611,15 +621,6 @@ StartBackgroundWorker(void)
 	/* Apply PostAuthDelay */
 	if (PostAuthDelay > 0)
 		pg_usleep(PostAuthDelay * 1000000L);
-
-	/*
-	 * If possible, make this process a group leader, so that the postmaster
-	 * can signal any child processes too.
-	 */
-#ifdef HAVE_SETSID
-	if (setsid() < 0)
-		elog(FATAL, "setsid() failed: %m");
-#endif
 
 	/*
 	 * Set up signal handlers.
@@ -689,7 +690,8 @@ StartBackgroundWorker(void)
 		/*
 		 * Early initialization.  Some of this could be useful even for
 		 * background workers that aren't using shared memory, but they can
-		 * call the individual startup routines for those subsystems if needed.
+		 * call the individual startup routines for those subsystems if
+		 * needed.
 		 */
 		BaseInit();
 
@@ -747,13 +749,16 @@ void
 RegisterBackgroundWorker(BackgroundWorker *worker)
 {
 	RegisteredBgWorker *rw;
+	bool auxworker = false;
 	static int	numworkers = 0;
 
 	if (!IsUnderPostmaster)
-		ereport(LOG,
+		ereport(DEBUG1,
 		 (errmsg("registering background worker \"%s\"", worker->bgw_name)));
 
-	if (!process_shared_preload_libraries_in_progress)
+	auxworker = isAuxiliaryBgWorker(worker);
+
+	if (!process_shared_preload_libraries_in_progress && !auxworker)
 	{
 		if (!IsUnderPostmaster)
 			ereport(LOG,
@@ -781,7 +786,7 @@ RegisterBackgroundWorker(BackgroundWorker *worker)
 	 * towards the MAX_BACKENDS limit elsewhere.  For now, it doesn't seem
 	 * important to relax this restriction.
 	 */
-	if (++numworkers > max_worker_processes)
+	if (!auxworker && ++numworkers > max_worker_processes - MaxPMAuxProc)
 	{
 		ereport(LOG,
 				(errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED),
@@ -989,7 +994,7 @@ WaitForBackgroundWorkerStartup(BackgroundWorkerHandle *handle, pid_t *pidp)
 			if (status != BGWH_NOT_YET_STARTED)
 				break;
 
-			rc = WaitLatch(&MyProc->procLatch,
+			rc = WaitLatch(MyLatch,
 						   WL_LATCH_SET | WL_POSTMASTER_DEATH, 0);
 
 			if (rc & WL_POSTMASTER_DEATH)
@@ -997,6 +1002,56 @@ WaitForBackgroundWorkerStartup(BackgroundWorkerHandle *handle, pid_t *pidp)
 				status = BGWH_POSTMASTER_DIED;
 				break;
 			}
+
+			ResetLatch(MyLatch);
+		}
+	}
+	PG_CATCH();
+	{
+		set_latch_on_sigusr1 = save_set_latch_on_sigusr1;
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	set_latch_on_sigusr1 = save_set_latch_on_sigusr1;
+	return status;
+}
+
+/*
+ * Wait for a background worker to stop.
+ *
+ * If the worker hasn't yet started, or is running, we wait for it to stop
+ * and then return BGWH_STOPPED.  However, if the postmaster has died, we give
+ * up and return BGWH_POSTMASTER_DIED, because it's the postmaster that
+ * notifies us when a worker's state changes.
+ */
+BgwHandleStatus
+WaitForBackgroundWorkerShutdown(BackgroundWorkerHandle *handle)
+{
+	BgwHandleStatus status;
+	int			rc;
+	bool		save_set_latch_on_sigusr1;
+
+	save_set_latch_on_sigusr1 = set_latch_on_sigusr1;
+	set_latch_on_sigusr1 = true;
+
+	PG_TRY();
+	{
+		for (;;)
+		{
+			pid_t		pid;
+
+			CHECK_FOR_INTERRUPTS();
+
+			status = GetBackgroundWorkerPid(handle, &pid);
+			if (status == BGWH_STOPPED)
+				return status;
+
+			rc = WaitLatch(&MyProc->procLatch,
+						   WL_LATCH_SET | WL_POSTMASTER_DEATH, 0);
+
+			if (rc & WL_POSTMASTER_DEATH)
+				return BGWH_POSTMASTER_DIED;
 
 			ResetLatch(&MyProc->procLatch);
 		}

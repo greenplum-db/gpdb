@@ -8,7 +8,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -31,6 +31,16 @@
 #include "utils/faultinjector.h"
 #include "utils/hsearch.h"
 #include "utils/inval.h"
+
+/*
+ * Hook for plugins to collect statistics from storage functions
+ * For example, disk quota extension will use these hooks to
+ * detect active tables.
+ */
+file_create_hook_type file_create_hook = NULL;
+file_extend_hook_type file_extend_hook = NULL;
+file_truncate_hook_type file_truncate_hook = NULL;
+file_unlink_hook_type file_unlink_hook = NULL;
 
 /*
  * Each backend has a hashtable that stores all extant SMgrRelation objects.
@@ -94,9 +104,8 @@ smgropen(RelFileNode rnode, BackendId backend)
 		MemSet(&ctl, 0, sizeof(ctl));
 		ctl.keysize = sizeof(RelFileNodeBackend);
 		ctl.entrysize = sizeof(SMgrRelationData);
-		ctl.hash = tag_hash;
 		SMgrRelationHash = hash_create("smgr relation table", 400,
-									   &ctl, HASH_ELEM | HASH_FUNCTION);
+									   &ctl, HASH_ELEM | HASH_BLOBS);
 		first_unowned_reln = NULL;
 	}
 
@@ -343,6 +352,9 @@ smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 							isRedo);
 
 	mdcreate(reln, forknum, isRedo);
+
+	if (file_create_hook)
+		(*file_create_hook)(reln->smgr_rnode);
 }
 
 /*
@@ -357,6 +369,8 @@ void
 smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo)
 {
 	mdcreate_ao(rnode, segmentFileNum, isRedo);
+	if (file_create_hook)
+		(*file_create_hook)(rnode);
 }
 
 /*
@@ -502,6 +516,10 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo, char *relstorages)
 			mdunlink(rnodes[i], forknum, isRedo, relstorages[i]);
 	}
 
+	if (file_unlink_hook)
+		for (i = 0; i < nrels; i++)
+			(*file_unlink_hook)(rnodes[i]);
+
 	pfree(rnodes);
 }
 
@@ -520,6 +538,8 @@ smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		   char *buffer, bool skipFsync)
 {
 	mdextend(reln, forknum, blocknum, buffer, skipFsync);
+	if (file_extend_hook)
+		(*file_extend_hook)(reln->smgr_rnode);
 }
 
 /*
@@ -609,6 +629,9 @@ smgrtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks)
 	 * Do the truncation.
 	 */
 	mdtruncate(reln, forknum, nblocks);
+
+	if (file_truncate_hook)
+		(*file_truncate_hook)(reln->smgr_rnode);
 }
 
 /*

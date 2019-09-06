@@ -269,7 +269,6 @@ rm -f ${CLUSTER_CONFIG_POSTGRES_ADDONS}
 cat >> $CLUSTER_CONFIG <<-EOF
 	# Set this to anything you like
 	ARRAY_NAME="Demo $HOSTNAME Cluster"
-	CLUSTER_NAME="Demo $HOSTNAME Cluster"
 	
 	# This file must exist in the same directory that you execute gpinitsystem in
 	MACHINE_LIST_FILE=`pwd`/hostfile
@@ -280,9 +279,6 @@ cat >> $CLUSTER_CONFIG <<-EOF
 	# This is the port at which to contact the resulting Greenplum database, e.g.
 	#   psql -p \$PORT_BASE -d template1
 	PORT_BASE=${DEMO_PORT_BASE}
-	
-	# Prefix for script created database
-	DATABASE_PREFIX=demoDatabase
 	
 	# Array of data locations for each hosts Segment Instances, the number of directories in this array will
 	# set the number of segment instances per host
@@ -296,14 +292,8 @@ cat >> $CLUSTER_CONFIG <<-EOF
 	
 	MASTER_PORT=${MASTER_DEMO_PORT}
 	
-	# Hosts to allow to connect to the QD (and Segment Instances)
-	# By default, allow everyone to connect (0.0.0.0/0)
-	IP_ALLOW=0.0.0.0/0
-	
 	# Shell to use to execute commands on all hosts
 	TRUSTED_SHELL="`pwd`/lalshell"
-	
-	CHECK_POINT_SEGMENTS=8
 	
 	ENCODING=UNICODE
 EOF
@@ -323,32 +313,18 @@ if [ "${WITH_MIRRORS}" == "true" ]; then
 		declare -a MIRROR_DATA_DIRECTORY=(${MIRROR_DIRS_LIST})
 
 		MIRROR_PORT_BASE=`expr $DEMO_PORT_BASE + $NUM_PRIMARY_MIRROR_PAIRS`
-
-		REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 2 \* $NUM_PRIMARY_MIRROR_PAIRS`
-		MIRROR_REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 3 \* $NUM_PRIMARY_MIRROR_PAIRS`
 	EOF
 fi
 
 
 STANDBY_INIT_OPTS=""
 if [ "${WITH_STANDBY}" == "true" ]; then
-	STANDBY_INIT_OPTS="-s ${LOCALHOST} -P ${STANDBY_DEMO_PORT} -F ${STANDBYDIR}"
+	STANDBY_INIT_OPTS="-s ${LOCALHOST} -P ${STANDBY_DEMO_PORT} -S ${STANDBYDIR}"
 fi
 
 if [ ! -z "${EXTRA_CONFIG}" ]; then
   echo ${EXTRA_CONFIG} >> $CLUSTER_CONFIG
 fi
-
-cat >> $CLUSTER_CONFIG <<-EOF
-
-	# Path for Greenplum mgmt utils and Greenplum binaries
-	PATH=$GPHOME/bin:$PATH
-	LD_LIBRARY_PATH=$GPHOME/lib:$LD_LIBRARY_PATH
-	export PATH
-	export LD_LIBRARY_PATH
-	export MASTER_DATA_DIRECTORY
-	export TRUSTED_SHELL
-EOF
 
 if [ -z "${DEFAULT_QD_MAX_CONNECT}" ]; then
    DEFAULT_QD_MAX_CONNECT=25

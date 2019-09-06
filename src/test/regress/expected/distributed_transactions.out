@@ -364,10 +364,7 @@ DROP TABLE
 \! ./twophase_pqexecparams dbname=regression
 WARNING:  the distributed transaction 'Commit Prepared' broadcast failed to one or more segments for gid DUMMY
 NOTICE:  Releasing segworker group to retry broadcast.
-tuple 0: got
- i = (4 bytes) 1
- t = (11 bytes) 'joe's place'
-
+result: INSERT 0 2
 --
 -- Subtransactions with partition table DDLs.
 --
@@ -809,3 +806,52 @@ reindex table pg_class;
 ERROR:  REINDEX of a catalog table cannot run inside a transaction block
 commit;
 \c regression
+--
+-- Check that committing a subtransaction releases the lock on the
+-- subtransaction's XID.
+--
+-- It's not too bad if it doesn't, because if anyone wants to wait for the
+-- subtransaction and sees that it's been committed already, they will wait
+-- for the top transaction XID instead. So even though the lock on the sub-XID
+-- is released at RELEASE SAVEPOINT, logically it's held until the end of
+-- the top transaction anyway. But releasing the lock early saves space in
+-- the lock table. (We had a silly bug once upon a time in GPDB where we failed
+-- to release the lock.)
+--
+BEGIN;
+CREATE TEMPORARY TABLE foo (i integer);
+DO $$
+declare
+  i int;
+begin
+  for i in 1..100 loop
+    begin
+      insert into foo values (i);
+    exception
+      when others then raise 'got error';
+    end;
+  end loop;
+end;
+$$;
+SELECT CASE WHEN count(*) < 50 THEN 'not many XID locks'
+            ELSE 'lots of XID locks: ' || count(*) END
+FROM pg_locks WHERE locktype='transactionid';
+        case        
+--------------------
+ not many XID locks
+(1 row)
+
+ROLLBACK;
+-- Test that exported snapshots are cleared upon abort.  In Greenplum,
+-- exported snapshots are cleared earlier than PostgreSQL during
+-- abort.
+begin;
+select count(1) = 1 from pg_catalog.pg_export_snapshot();
+ ?column? 
+----------
+ t
+(1 row)
+
+select pg_cancel_backend(pg_backend_pid());
+ERROR:  canceling statement due to user request
+rollback;

@@ -2,7 +2,7 @@
  *
  *	  EUC_CN <--> UTF8
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -21,9 +21,6 @@ PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(euc_cn_to_utf8);
 PG_FUNCTION_INFO_V1(utf8_to_euc_cn);
-
-extern Datum euc_cn_to_utf8(PG_FUNCTION_ARGS);
-extern Datum utf8_to_euc_cn(PG_FUNCTION_ARGS);
 
 /* ----------
  * conv_proc(
@@ -44,8 +41,11 @@ euc_cn_to_utf8(PG_FUNCTION_ARGS)
 
 	CHECK_ENCODING_CONVERSION_ARGS(PG_EUC_CN, PG_UTF8);
 
-	LocalToUtf(src, dest, LUmapEUC_CN, NULL,
-		   sizeof(LUmapEUC_CN) / sizeof(pg_local_to_utf), 0, PG_EUC_CN, len);
+	LocalToUtf(src, len, dest,
+			   LUmapEUC_CN, lengthof(LUmapEUC_CN),
+			   NULL, 0,
+			   NULL,
+			   PG_EUC_CN);
 
 	PG_RETURN_VOID();
 }
@@ -59,8 +59,11 @@ utf8_to_euc_cn(PG_FUNCTION_ARGS)
 
 	CHECK_ENCODING_CONVERSION_ARGS(PG_UTF8, PG_EUC_CN);
 
-	UtfToLocal(src, dest, ULmapEUC_CN, NULL,
-		   sizeof(ULmapEUC_CN) / sizeof(pg_utf_to_local), 0, PG_EUC_CN, len);
+	UtfToLocal(src, len, dest,
+			   ULmapEUC_CN, lengthof(ULmapEUC_CN),
+			   NULL, 0,
+			   NULL,
+			   PG_EUC_CN);
 
 	PG_RETURN_VOID();
 }

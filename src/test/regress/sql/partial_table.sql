@@ -10,6 +10,7 @@ create extension if not exists gp_debug_numsegments;
 drop schema if exists test_partial_table;
 create schema test_partial_table;
 set search_path=test_partial_table,public;
+set allow_system_table_mods=true;
 
 --
 -- prepare kinds of tables
@@ -42,6 +43,12 @@ analyze r2;
 --
 -- regression tests
 --
+
+-- Test numsegments properity cannot be larger than the size of cluster
+create table size_sanity_check(c1 int, c2 int);
+update gp_distribution_policy set numsegments = 10 where localoid = 'size_sanity_check'::regclass;
+select * from size_sanity_check;
+update gp_distribution_policy set numsegments = 3 where localoid = 'size_sanity_check'::regclass;
 
 -- a temp table is created during reorganization, its numsegments should be
 -- the same with original table, otherwise some data will be lost after the
@@ -585,6 +592,34 @@ rollback;
 -- to perform distributed commit on the other segments.
 --
 insert into r1 (c4) values (pg_relation_size('r2'));
+
+--
+-- copy to a partial replicated table from file should work
+--
+select gp_debug_set_create_table_default_numsegments(2);
+create table partial_rpt_from (c1 int, c2 int) distributed replicated;
+select gp_debug_reset_create_table_default_numsegments();
+copy partial_rpt_from (c1, c2) from stdin with delimiter ',';
+1,2
+\.
+select * from gp_dist_random('partial_rpt_from');
+
+--
+-- copy from a partial replicated table to file should work
+--
+select gp_debug_set_create_table_default_numsegments(2);
+create table partial_rpt_to (c1 int, c2 int) distributed replicated;
+select gp_debug_reset_create_table_default_numsegments();
+insert into partial_rpt_to values (1,1);
+copy partial_rpt_to to stdout;
+-- change a replica to provide data
+\c
+set search_path=test_partial_table,public;
+copy partial_rpt_to to stdout;
+-- change to another replica to provide data
+\c
+set search_path=test_partial_table,public;
+copy partial_rpt_to to stdout;
 
 -- start_ignore
 -- We need to do a cluster expansion which will check if there are partial

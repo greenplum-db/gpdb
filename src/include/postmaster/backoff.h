@@ -19,17 +19,15 @@ extern int gp_resqueue_priority_grouping_timeout;
 extern double gp_resqueue_priority_cpucores_per_segment;
 extern char* gp_resqueue_priority_default_value;
 
-extern void BackoffBackendEntryInit(int sessionid, int commandcount, int weight);
+extern void BackoffBackendEntryInit(int sessionid, int commandcount, Oid queueId);
 extern void BackoffBackendEntryExit(void);
 extern void BackoffStateInit(void);
 extern Datum gp_adjust_priority_int(PG_FUNCTION_ARGS);
 extern Datum gp_adjust_priority_value(PG_FUNCTION_ARGS);
 extern Datum gp_list_backend_priorities(PG_FUNCTION_ARGS);
 
-extern int backoff_start(void);
+extern void BackoffSweeperMain(Datum main_arg);
+extern bool BackoffSweeperStartRule(Datum main_arg);
 
-extern int BackoffSuperuserStatementWeight(void);
-extern int ResourceQueueGetPriorityWeight(Oid queueId);
-extern int BackoffDefaultWeight(void);
 
 #endif /* BACKOFF_H_ */

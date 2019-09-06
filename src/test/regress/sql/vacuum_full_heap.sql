@@ -9,7 +9,10 @@ select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_
 select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 1;
 
 -- show pages are truncated
+-- GPDB-specific: VACUUM FULL on heap gives proper relpages and reltuples
+select relname, relpages, reltuples, gp_segment_id from gp_dist_random('pg_class') where oid = 'vfheap'::regclass;
 vacuum full vfheap;
+select relname, relpages, reltuples, gp_segment_id from gp_dist_random('pg_class') where oid = 'vfheap'::regclass;
 select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_id = 1;
 select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 1;
 
@@ -57,15 +60,8 @@ select pg_relation_size((select reltoastrelid from pg_class where oid = 'vfheapt
 
 select max(b), min(length(array_to_string(c, ','))) from vfheaptoast;
 
-select relpages, reltuples from gp_dist_random('pg_class')
-  where oid = (select reltoastrelid from pg_class where oid = 'vfheaptoast'::regclass) and gp_segment_id = 1;
-
 delete from vfheaptoast;
 vacuum full vfheaptoast;
 
 select pg_relation_size((select reltoastrelid from pg_class where oid = 'vfheaptoast'::regclass)) from gp_dist_random('gp_id') where gp_segment_id = 1;
-
--- check relpages and reltuples (VACUUM FULL clears them)
-select relpages, reltuples from gp_dist_random('pg_class')
-  where oid = (select reltoastrelid from pg_class where oid = 'vfheaptoast'::regclass) and gp_segment_id = 1;
 

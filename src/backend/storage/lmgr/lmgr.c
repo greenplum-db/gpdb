@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -30,6 +30,25 @@
 #include "catalog/namespace.h"
 #include "cdb/cdbvars.h"
 #include "utils/lsyscache.h"        /* CDB: get_rel_namespace() */
+#include "utils/guc.h"
+
+
+/*
+ * Per-backend counter for generating speculative insertion tokens.
+ *
+ * This may wrap around, but that's OK as it's only used for the short
+ * duration between inserting a tuple and checking that there are no (unique)
+ * constraint violations.  It's theoretically possible that a backend sees a
+ * tuple that was speculatively inserted by another backend, but before it has
+ * started waiting on the token, the other backend completes its insertion,
+ * and then then performs 2^32 unrelated insertions.  And after all that, the
+ * first backend finally calls SpeculativeInsertionLockAcquire(), with the
+ * intention of waiting for the first insertion to complete, but ends up
+ * waiting for the latest unrelated insertion instead.  Even then, nothing
+ * particularly bad happens: in the worst case they deadlock, causing one of
+ * the transactions to abort.
+ */
+static uint32 speculativeInsertionToken = 0;
 
 
 /*
@@ -548,13 +567,6 @@ XactLockTableInsert(TransactionId xid)
 
 	SET_LOCKTAG_TRANSACTION(tag, xid);
 
-	if (LockAcquire(&tag, ExclusiveLock, false, true) == LOCKACQUIRE_NOT_AVAIL)
-	{
-		elog(LOG,"XactLockTableInsert lock for xid = %u is not available!", xid);
-		
-		return;
-	}
-
 	(void) LockAcquire(&tag, ExclusiveLock, false, false);
 }
 
@@ -691,6 +703,73 @@ ConditionalXactLockTableWait(TransactionId xid)
 	}
 
 	return true;
+}
+
+/*
+ *		SpeculativeInsertionLockAcquire
+ *
+ * Insert a lock showing that the given transaction ID is inserting a tuple,
+ * but hasn't yet decided whether it's going to keep it.  The lock can then be
+ * used to wait for the decision to go ahead with the insertion, or aborting
+ * it.
+ *
+ * The token is used to distinguish multiple insertions by the same
+ * transaction.  It is returned to caller.
+ */
+uint32
+SpeculativeInsertionLockAcquire(TransactionId xid)
+{
+	LOCKTAG		tag;
+
+	speculativeInsertionToken++;
+
+	/*
+	 * Check for wrap-around. Zero means no token is held, so don't use that.
+	 */
+	if (speculativeInsertionToken == 0)
+		speculativeInsertionToken = 1;
+
+	SET_LOCKTAG_SPECULATIVE_INSERTION(tag, xid, speculativeInsertionToken);
+
+	(void) LockAcquire(&tag, ExclusiveLock, false, false);
+
+	return speculativeInsertionToken;
+}
+
+/*
+ *		SpeculativeInsertionLockRelease
+ *
+ * Delete the lock showing that the given transaction is speculatively
+ * inserting a tuple.
+ */
+void
+SpeculativeInsertionLockRelease(TransactionId xid)
+{
+	LOCKTAG		tag;
+
+	SET_LOCKTAG_SPECULATIVE_INSERTION(tag, xid, speculativeInsertionToken);
+
+	LockRelease(&tag, ExclusiveLock, false);
+}
+
+/*
+ *		SpeculativeInsertionWait
+ *
+ * Wait for the specified transaction to finish or abort the insertion of a
+ * tuple.
+ */
+void
+SpeculativeInsertionWait(TransactionId xid, uint32 token)
+{
+	LOCKTAG		tag;
+
+	SET_LOCKTAG_SPECULATIVE_INSERTION(tag, xid, token);
+
+	Assert(TransactionIdIsValid(xid));
+	Assert(token != 0);
+
+	(void) LockAcquire(&tag, ShareLock, false, false);
+	LockRelease(&tag, ShareLock, false);
 }
 
 /*
@@ -998,6 +1077,12 @@ DescribeLockTag(StringInfo buf, const LOCKTAG *tag)
 							 tag->locktag_field1,
 							 tag->locktag_field2);
 			break;
+		case LOCKTAG_SPECULATIVE_TOKEN:
+			appendStringInfo(buf,
+							 _("speculative token %u of transaction %u"),
+							 tag->locktag_field2,
+							 tag->locktag_field1);
+			break;
 		case LOCKTAG_OBJECT:
 			appendStringInfo(buf,
 							 _("object %u of class %u of database %u"),
@@ -1075,19 +1160,28 @@ LockTagIsTemp(const LOCKTAG *tag)
 }
 
 /*
- * Because of the current disign of AO table's visibility map,
+ * If gp_enable_global_deadlock_detector is set off, we always
+ * have to upgrade lock level to avoid global deadlock, and then
+ * because of the current disign of AO table's visibility map,
  * we have to keep upgrading locks for AO table.
  */
 bool
-CondUpgradeRelLock(Oid relid)
+CondUpgradeRelLock(Oid relid, bool noWait)
 {
 	Relation rel;
 	bool upgrade = false;
 
-	rel = try_relation_open(relid, NoLock, true);
+	if (!gp_enable_global_deadlock_detector)
+		return true;
+
+	/*
+	 * try_relation_open will throw error if
+	 * the relation is invaliad
+	 */
+	rel = try_relation_open(relid, NoLock, noWait);
 
 	if (!rel)
-		elog(ERROR, "Relation open failed!");
+		return false;
 	else if (RelationIsAppendOptimized(rel))
 		upgrade = true;
 	else

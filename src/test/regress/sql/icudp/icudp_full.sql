@@ -299,21 +299,6 @@ SELECT ROUND(foo.rval * foo.rval)::INT % 30 AS rval2, COUNT(*) AS count, SUM(len
   GROUP BY rval2
   ORDER BY rval2;
 
--- connection hash table rehash
-SET gp_interconnect_hash_multiplier = 64;
-SELECT ROUND(foo.rval * foo.rval)::INT % 30 AS rval2, COUNT(*) AS count, SUM(length(foo.tval)) AS sum_len_tval
-  FROM (SELECT 5001 AS jkey, rval, tval FROM small_table ORDER BY dkey LIMIT 3000) foo
-    JOIN small_table USING(jkey)
-  GROUP BY rval2
-  ORDER BY rval2;
-
-SET gp_interconnect_hash_multiplier = 2;
-SELECT ROUND(foo.rval * foo.rval)::INT % 30 AS rval2, COUNT(*) AS count, SUM(length(foo.tval)) AS sum_len_tval
-  FROM (SELECT 5001 AS jkey, rval, tval FROM small_table ORDER BY dkey LIMIT 3000) foo
-    JOIN small_table USING(jkey)
-  GROUP BY rval2
-  ORDER BY rval2;
-
 -- Inject query cancel interrupt faults
 SET gp_udpic_fault_inject_percent = 15;
 SET gp_udpic_fault_inject_bitmap = 4096; -- Query cancel

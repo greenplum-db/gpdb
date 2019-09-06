@@ -3,7 +3,7 @@
  * genam.c
  *	  general index access method routines
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -29,6 +29,8 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
+#include "utils/rls.h"
+#include "utils/ruleutils.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
@@ -183,8 +185,11 @@ BuildIndexValueDescription(Relation indexRelation,
 	 * Check permissions- if the user does not have access to view all of the
 	 * key columns then return NULL to avoid leaking data.
 	 *
-	 * First we need to check table-level SELECT access and then, if
-	 * there is no access there, check column-level permissions.
+	 * First check if RLS is enabled for the relation.  If so, return NULL to
+	 * avoid leaking data.
+	 *
+	 * Next we need to check table-level SELECT access and then, if there is
+	 * no access there, check column-level permissions.
 	 */
 
 	/*
@@ -198,23 +203,30 @@ BuildIndexValueDescription(Relation indexRelation,
 	indrelid = idxrec->indrelid;
 	Assert(indexrelid == idxrec->indexrelid);
 
+	/* RLS check- if RLS is enabled then we don't return anything. */
+	if (check_enable_rls(indrelid, GetUserId(), true) == RLS_ENABLED)
+	{
+		ReleaseSysCache(ht_idx);
+		return NULL;
+	}
+
 	/* Table-level SELECT is enough, if the user has it */
 	aclresult = pg_class_aclcheck(indrelid, GetUserId(), ACL_SELECT);
 	if (aclresult != ACLCHECK_OK)
 	{
 		/*
-		 * No table-level access, so step through the columns in the
-		 * index and make sure the user has SELECT rights on all of them.
+		 * No table-level access, so step through the columns in the index and
+		 * make sure the user has SELECT rights on all of them.
 		 */
 		for (keyno = 0; keyno < idxrec->indnatts; keyno++)
 		{
 			AttrNumber	attnum = idxrec->indkey.values[keyno];
 
 			/*
-			 * Note that if attnum == InvalidAttrNumber, then this is an
-			 * index based on an expression and we return no detail rather
-			 * than try to figure out what column(s) the expression includes
-			 * and if the user has SELECT rights on them.
+			 * Note that if attnum == InvalidAttrNumber, then this is an index
+			 * based on an expression and we return no detail rather than try
+			 * to figure out what column(s) the expression includes and if the
+			 * user has SELECT rights on them.
 			 */
 			if (attnum == InvalidAttrNumber ||
 				pg_attribute_aclcheck(indrelid, attnum, GetUserId(),

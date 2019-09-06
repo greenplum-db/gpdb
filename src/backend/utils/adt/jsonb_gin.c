@@ -3,7 +3,7 @@
  * jsonb_gin.c
  *	 GIN support functions for jsonb
  *
- * Copyright (c) 2014, PostgreSQL Global Development Group
+ * Copyright (c) 2014-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -15,7 +15,7 @@
 
 #include "access/gin.h"
 #include "access/hash.h"
-#include "access/skey.h"
+#include "access/stratnum.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_type.h"
 #include "utils/builtins.h"

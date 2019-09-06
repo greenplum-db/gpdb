@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_opfamily.h
@@ -161,6 +161,32 @@ DATA(insert OID = 4034 (	405		jsonb_ops		PGNSP PGUID ));
 DATA(insert OID = 4035 (	783		jsonb_ops		PGNSP PGUID ));
 DATA(insert OID = 4036 (	2742	jsonb_ops		PGNSP PGUID ));
 DATA(insert OID = 4037 (	2742	jsonb_path_ops	PGNSP PGUID ));
+
+DATA(insert OID = 4054 (	3580	integer_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4055 (	3580	numeric_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4056 (	3580	text_minmax_ops			PGNSP PGUID ));
+DATA(insert OID = 4058 (	3580	timetz_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4059 (	3580	datetime_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4062 (	3580	char_minmax_ops			PGNSP PGUID ));
+DATA(insert OID = 4064 (	3580	bytea_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4065 (	3580	name_minmax_ops			PGNSP PGUID ));
+DATA(insert OID = 4068 (	3580	oid_minmax_ops			PGNSP PGUID ));
+DATA(insert OID = 4069 (	3580	tid_minmax_ops			PGNSP PGUID ));
+DATA(insert OID = 4070 (	3580	float_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4072 (	3580	abstime_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4073 (	3580	reltime_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4074 (	3580	macaddr_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4075 (	3580	network_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4102 (	3580	network_inclusion_ops	PGNSP PGUID ));
+DATA(insert OID = 4076 (	3580	bpchar_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4077 (	3580	time_minmax_ops			PGNSP PGUID ));
+DATA(insert OID = 4078 (	3580	interval_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4079 (	3580	bit_minmax_ops			PGNSP PGUID ));
+DATA(insert OID = 4080 (	3580	varbit_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4081 (	3580	uuid_minmax_ops			PGNSP PGUID ));
+DATA(insert OID = 4103 (	3580	range_inclusion_ops		PGNSP PGUID ));
+DATA(insert OID = 4082 (	3580	pg_lsn_minmax_ops		PGNSP PGUID ));
+DATA(insert OID = 4104 (	3580	box_inclusion_ops		PGNSP PGUID ));
 
 /* Complex Number type */
 DATA(insert OID = 6221 (	403		complex_ops		PGNSP PGUID ));

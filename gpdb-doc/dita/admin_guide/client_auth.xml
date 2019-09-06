@@ -20,7 +20,7 @@
     <body>
       <p>Client access and authentication is controlled by the standard PostgreSQL host-based
         authentication file, <filepath>pg_hba.conf</filepath>. For detailed information about this
-        file, see <xref href="https://www.postgresql.org/docs/9.1/auth-pg-hba-conf.html"
+        file, see <xref href="https://www.postgresql.org/docs/9.4/auth-pg-hba-conf.html"
           scope="external" format="html">The pg_hba.conf File</xref> in the PostgreSQL
         documentation. </p>
       <p>In Greenplum Database, the <filepath>pg_hba.conf</filepath> file of the master instance
@@ -143,9 +143,9 @@
               <entry colname="col1">authentication-method</entry>
               <entry colname="col2">Specifies the authentication method to use when connecting.
                 Greenplum supports the <xref
-                  href="https://www.postgresql.org/docs/9.0/auth-methods.html"
+                  href="https://www.postgresql.org/docs/9.4/auth-methods.html"
                   scope="external" format="html">authentication methods</xref> supported by
-                PostgreSQL 9.0.</entry>
+                PostgreSQL 9.4.</entry>
             </row>
           </tbody>
         </tgroup>

@@ -6,12 +6,12 @@
  * NOTE: this file is intended to contain declarations useful for
  * manipulating the XLOG files directly, but it is not supposed to be
  * needed by rmgr routines (redo support for individual record types).
- * So the XLogRecord typedef and associated stuff appear in xlog.h.
+ * So the XLogRecord typedef and associated stuff appear in xlogrecord.h.
  *
  * Note: This file must be includable in both frontend and backend contexts,
  * to allow stand-alone tools like pg_receivexlog to deal with WAL files.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/xlog_internal.h
@@ -20,6 +20,7 @@
 #define XLOG_INTERNAL_H
 
 #include "access/xlogdefs.h"
+#include "access/xlogreader.h"
 #include "datatype/timestamp.h"
 #include "lib/stringinfo.h"
 #include "pgtime.h"
@@ -28,34 +29,9 @@
 
 
 /*
- * Header info for a backup block appended to an XLOG record.
- *
- * As a trivial form of data compression, the XLOG code is aware that
- * PG data pages usually contain an unused "hole" in the middle, which
- * contains only zero bytes.  If hole_length > 0 then we have removed
- * such a "hole" from the stored data (and it's not counted in the
- * XLOG record's CRC, either).  Hence, the amount of block data actually
- * present following the BkpBlock struct is BLCKSZ - hole_length bytes.
- *
- * Note that we don't attempt to align either the BkpBlock struct or the
- * block's data.  So, the struct must be copied to aligned local storage
- * before use.
- */
-typedef struct BkpBlock
-{
-	RelFileNode node;			/* relation containing block */
-	ForkNumber	fork;			/* fork within the relation */
-	BlockNumber block;			/* block number */
-	uint16		hole_offset;	/* number of bytes before "hole" */
-	uint16		hole_length;	/* number of bytes in "hole" */
-
-	/* ACTUAL BLOCK DATA FOLLOWS AT END OF STRUCT */
-} BkpBlock;
-
-/*
  * Each page of XLOG file has a header like this:
  */
-#define XLOG_PAGE_MAGIC 0xD07E	/* can be used as WAL version indicator */
+#define XLOG_PAGE_MAGIC 0xD085	/* can be used as WAL version indicator */
 
 typedef struct XLogPageHeaderData
 {
@@ -166,6 +142,19 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId), \
 			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId))
 
+#define IsXLogFileName(fname) \
+	(strlen(fname) == 24 && strspn(fname, "0123456789ABCDEF") == 24)
+
+/*
+ * XLOG segment with .partial suffix.  Used by pg_receivexlog and at end of
+ * archive recovery, when we want to archive a WAL segment but it might not
+ * be complete yet.
+ */
+#define IsPartialXLogFileName(fname)	\
+	(strlen(fname) == 24 + strlen(".partial") &&	\
+	 strspn(fname, "0123456789ABCDEF") == 24 &&		\
+	 strcmp((fname) + 24, ".partial") == 0)
+
 #define XLogFromFileName(fname, tli, logSegNo)	\
 	do {												\
 		uint32 log;										\
@@ -182,6 +171,11 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 #define TLHistoryFileName(fname, tli)	\
 	snprintf(fname, MAXFNAMELEN, "%08X.history", tli)
 
+#define IsTLHistoryFileName(fname)	\
+	(strlen(fname) == 8 + strlen(".history") &&		\
+	 strspn(fname, "0123456789ABCDEF") == 8 &&		\
+	 strcmp((fname) + 8, ".history") == 0)
+
 #define TLHistoryFilePath(path, tli)	\
 	snprintf(path, MAXPGPATH, XLOGDIR "/%08X.history", tli)
 
@@ -192,6 +186,11 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X.%08X.backup", tli, \
 			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId),		  \
 			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId), offset)
+
+#define IsBackupHistoryFileName(fname) \
+	(strlen(fname) > 24 && \
+	 strspn(fname, "0123456789ABCDEF") == 24 && \
+	 strcmp((fname) + strlen(fname) - strlen(".backup"), ".backup") == 0)
 
 #define BackupHistoryFilePath(path, tli, logSegNo, offset)	\
 	snprintf(path, MAXPGPATH, XLOGDIR "/%08X%08X%08X.%08X.backup", tli, \
@@ -210,6 +209,7 @@ typedef struct xl_parameter_change
 	int			max_locks_per_xact;
 	int			wal_level;
 	bool		wal_log_hints;
+	bool		track_commit_timestamp;
 } xl_parameter_change;
 
 /* logs restore point */
@@ -235,10 +235,25 @@ typedef struct CheckpointExtendedRecord
 } CheckpointExtendedRecord;
 
 /*
- * XLogRecord is defined in xlog.h, but we avoid #including that to keep
- * this file includable in stand-alone programs.
+ * The functions in xloginsert.c construct a chain of XLogRecData structs
+ * to represent the final WAL record.
  */
-struct XLogRecord;
+typedef struct XLogRecData
+{
+	struct XLogRecData *next;	/* next struct in chain, or NULL */
+	char	   *data;			/* start of rmgr data to include */
+	uint32		len;			/* length of rmgr data to include */
+} XLogRecData;
+
+/*
+ * Recovery target action.
+ */
+typedef enum
+{
+	RECOVERY_TARGET_ACTION_PAUSE,
+	RECOVERY_TARGET_ACTION_PROMOTE,
+	RECOVERY_TARGET_ACTION_SHUTDOWN,
+} RecoveryTargetAction;
 
 /*
  * Method table for resource managers.
@@ -246,13 +261,19 @@ struct XLogRecord;
  * This struct must be kept in sync with the PG_RMGR definition in
  * rmgr.c.
  *
+ * rm_identify must return a name for the record based on xl_info (without
+ * reference to the rmid). For example, XLOG_BTREE_VACUUM would be named
+ * "VACUUM". rm_desc can then be called to obtain additional detail for the
+ * record, if available (e.g. the last block).
+ *
  * RmgrTable[] is indexed by RmgrId values (see rmgrlist.h).
  */
 typedef struct RmgrData
 {
 	const char *rm_name;
-	void		(*rm_redo) (XLogRecPtr beginLoc, XLogRecPtr lsn, struct XLogRecord *rptr);
-	void		(*rm_desc) (StringInfo buf, struct XLogRecord *record);
+	void		(*rm_redo) (XLogReaderState *record);
+	void		(*rm_desc) (StringInfo buf, XLogReaderState *record);
+	const char *(*rm_identify) (uint8 info);
 	void		(*rm_startup) (void);
 	void		(*rm_cleanup) (void);
 
@@ -297,6 +318,7 @@ extern void XLogArchiveForceDone(const char *xlog);
 extern bool XLogArchiveCheckDone(const char *xlog);
 extern bool XLogArchiveIsBusy(const char *xlog);
 extern bool XLogArchiveIsReady(const char *xlog);
+extern bool XLogArchiveIsReadyOrDone(const char *xlog);
 extern void XLogArchiveCleanup(const char *xlog);
 
 #endif   /* XLOG_INTERNAL_H */

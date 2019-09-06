@@ -41,28 +41,25 @@ select d, count(*) from smallt group by d;
 (20 rows)
 
 explain analyze select d, count(*) from smallt group by d;
-                                                                 QUERY PLAN                                                                 
---------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.01 rows=20 width=12) (actual time=2.560..2.577 rows=20 loops=1)
-   ->  HashAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=2.007..2.039 rows=11 loops=1)
+                                                                    QUERY PLAN                                                                    
+--------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.01 rows=20 width=12) (actual time=1.785..1.787 rows=20 loops=1)
+   ->  GroupAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=1.513..1.522 rows=7 loops=1)
          Group Key: d
-         (seg1)   Hash chain length 1.4 avg, 3 max, using 8 of 32 buckets; total 0 expansions.
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.01 rows=7 width=12) (actual time=1.963..1.976 rows=11 loops=1)
-               Hash Key: d
-               ->  Result  (cost=0.00..431.01 rows=7 width=12) (actual time=0.081..0.108 rows=8 loops=1)
-                     ->  GroupAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=0.080..0.105 rows=8 loops=1)
-                           Group Key: d
-                           ->  Sort  (cost=0.00..431.00 rows=34 width=4) (actual time=0.073..0.080 rows=40 loops=1)
-                                 Sort Key: d
-                                 Sort Method:  quicksort  Memory: 99kB
-                                 ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.018..0.033 rows=40 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 110K bytes avg x 3 workers, 110K bytes max (seg0).  Work_mem: 33K bytes max.
-   (slice2)    Executor memory: 138K bytes avg x 3 workers, 138K bytes max (seg0).
+         ->  Sort  (cost=0.00..431.01 rows=34 width=4) (actual time=1.510..1.513 rows=35 loops=1)
+               Sort Key: d
+               Sort Method:  quicksort  Memory: 99kB
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.342..1.481 rows=35 loops=1)
+                     Hash Key: d
+                     ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.002..0.004 rows=50 loops=1)
+ Planning time: 17.216 ms
+   (slice0)    Executor memory: 63K bytes.
+   (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+   (slice2)    Executor memory: 64K bytes avg x 3 workers, 64K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
- Total runtime: 3.718 ms
-(19 rows)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+ Execution time: 2.061 ms
+(16 rows)
 
 set statement_mem=2560;
 select count(*) from (select i, t, d, count(*) from bigt group by i, t, d) tmp;
@@ -86,7 +83,7 @@ explain analyze select count(*) from (select i, t, d, count(*) from bigt group b
    (slice1)  * Executor memory: 3180K bytes avg x 3 workers, 3180K bytes max (seg0).  Work_mem: 2461K bytes max, 4866K bytes wanted.
  Memory used:  2560kB
  Memory wanted:  5265kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 363.922 ms
 (14 rows)
 
@@ -101,30 +98,22 @@ select count(distinct d) from smallt;
 (1 row)
 
 explain analyze select count(distinct d) from smallt;
-                                                                      QUERY PLAN                                                                       
--------------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..431.01 rows=1 width=8) (actual time=2.016..2.016 rows=1 loops=1)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.01 rows=20 width=4) (actual time=1.988..2.001 rows=20 loops=1)
-         ->  GroupAggregate  (cost=0.00..431.01 rows=7 width=4) (actual time=1.551..1.561 rows=11 loops=1)
-               Group Key: d
-               ->  Sort  (cost=0.00..431.01 rows=7 width=4) (actual time=1.547..1.554 rows=11 loops=1)
-                     Sort Key: d
-                     Sort Method:  quicksort  Memory: 99kB
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.01 rows=7 width=4) (actual time=0.543..1.519 rows=11 loops=1)
-                           Hash Key: d
-                           ->  GroupAggregate  (cost=0.00..431.01 rows=7 width=4) (actual time=0.076..0.092 rows=8 loops=1)
-                                 Group Key: d
-                                 ->  Sort  (cost=0.00..431.00 rows=34 width=4) (actual time=0.072..0.079 rows=40 loops=1)
-                                       Sort Key: d
-                                       Sort Method:  quicksort  Memory: 99kB
-                                       ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.021..0.032 rows=40 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 110K bytes avg x 3 workers, 110K bytes max (seg0).  Work_mem: 33K bytes max.
-   (slice2)    Executor memory: 82K bytes avg x 3 workers, 82K bytes max (seg0).  Work_mem: 33K bytes max.
+                                                                    QUERY PLAN                                                                    
+--------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=1.637..1.637 rows=1 loops=1)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8) (actual time=1.631..1.633 rows=3 loops=1)
+         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=1.408..1.408 rows=1 loops=1)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=1.396..1.402 rows=35 loops=1)
+                     Hash Key: d
+                     ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.002..0.006 rows=50 loops=1)
+ Planning time: 19.307 ms
+   (slice0)    Executor memory: 59K bytes.
+   (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+   (slice2)    Executor memory: 64K bytes avg x 3 workers, 64K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
- Total runtime: 3.325 ms
-(21 rows)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+ Execution time: 1.904 ms
+(13 rows)
 
 set statement_mem=2560;
 select count(distinct d) from bigt;
@@ -136,24 +125,21 @@ select count(distinct d) from bigt;
 explain analyze select count(distinct d) from bigt;
                                                                          QUERY PLAN                                                                         
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..485.83 rows=1 width=8) (actual time=396.987..396.987 rows=1 loops=1)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.81 rows=49168 width=4) (actual time=352.946..386.854 rows=50000 loops=1)
-         ->  HashAggregate  (cost=0.00..485.08 rows=16390 width=4) (actual time=354.021..357.076 rows=16675 loops=1)
-               Group Key: d
-               (seg1)   Hash chain length 4.1 avg, 13 max, using 4021 of 4096 buckets; total 7 expansions.
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..483.07 rows=16390 width=4) (actual time=283.881..341.500 rows=27950 loops=1)
+ Aggregate  (cost=0.00..446.60 rows=1 width=8) (actual time=394.139..394.139 rows=1 loops=1)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..446.60 rows=1 width=8) (actual time=388.126..394.130 rows=3 loops=1)
+         ->  Aggregate  (cost=0.00..446.60 rows=1 width=8) (actual time=393.902..393.903 rows=1 loops=1)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..446.45 rows=333334 width=4) (actual time=0.670..118.334 rows=334920 loops=1)
                      Hash Key: d
-                     ->  HashAggregate  (cost=0.00..482.86 rows=16390 width=4) (actual time=280.096..286.016 rows=28117 loops=1)
-                           Group Key: d
-                           (seg2)   Hash chain length 3.5 avg, 14 max, using 7925 of 8192 buckets; total 8 expansions.
-                           ->  Seq Scan on bigt  (cost=0.00..439.81 rows=333580 width=4) (actual time=0.024..168.014 rows=333530 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 1171K bytes avg x 3 workers, 1171K bytes max (seg0).
-   (slice2)    Executor memory: 1006K bytes avg x 3 workers, 1006K bytes max (seg0).
+                     ->  Seq Scan on bigt  (cost=0.00..439.80 rows=333334 width=4) (actual time=0.013..46.779 rows=334620 loops=1)
+ Planning time: 27.350 ms
+   (slice0)    Executor memory: 59K bytes.
+   (slice1)    Executor memory: 68K bytes avg x 3 workers, 68K bytes max (seg0).
+ * (slice2)    Executor memory: 2768K bytes avg x 3 workers, 2768K bytes max (seg0).  Work_mem: 2617K bytes max, 7876K bytes wanted.
  Memory used:  2560kB
- Optimizer: PQO version 2.67.0
- Total runtime: 397.691 ms
-(17 rows)
+ Memory wanted:  8275kB
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+ Execution time: 394.389 ms
+(14 rows)
 
 set statement_mem=128000;
 set gp_enable_agg_distinct=on;
@@ -194,47 +180,38 @@ where t1.d = t2.d;
 explain analyze select t1.*, t2.* from
 (select d, count(*) from smallt group by d) as t1, (select d, sum(i) from smallt group by d) as t2
 where t1.d = t2.d;
-                                                                      QUERY PLAN                                                                       
--------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.02 rows=20 width=24) (actual time=1.980..2.521 rows=10 loops=2)
-   ->  Hash Join  (cost=0.00..862.02 rows=7 width=24) (actual time=1.317..1.752 rows=6 loops=2)
-         Hash Cond: smallt.d = smallt_1.d
-         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 11 of 131072 buckets.
+                                                                              QUERY PLAN                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.02 rows=20 width=24) (actual time=1.873..1.922 rows=20 loops=1)
+   ->  Hash Join  (cost=0.00..862.02 rows=7 width=24) (actual time=1.498..1.631 rows=7 loops=1)
+         Hash Cond: (smallt.d = smallt_1.d)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 7 of 131072 buckets.Hash chain length 1.2 avg, 2 max, using 6 of 32 buckets; total 0 expansions.
  
-         ->  HashAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=0.028..0.035 rows=6 loops=2)
+         ->  GroupAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=0.032..0.038 rows=7 loops=1)
                Group Key: smallt.d
-               Extra Text: (seg1)   Hash chain length 1.4 avg, 3 max, using 8 of 32 buckets; total 0 expansions.
- 
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.01 rows=7 width=12) (actual time=0.005..0.009 rows=6 loops=2)
-                     Hash Key: smallt.d
-                     ->  Result  (cost=0.00..431.01 rows=7 width=12) (actual time=0.086..0.106 rows=4 loops=2)
-                           ->  GroupAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=0.084..0.103 rows=4 loops=2)
-                                 Group Key: smallt.d
-                                 ->  Sort  (cost=0.00..431.00 rows=34 width=4) (actual time=0.080..0.088 rows=20 loops=2)
-                                       Sort Key: smallt.d
-                                       Sort Method:  quicksort  Memory: 99kB
-                                       ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.023..0.032 rows=20 loops=2)
-         ->  Hash  (cost=431.01..431.01 rows=7 width=12) (actual time=1.099..1.099 rows=6 loops=2)
-               ->  HashAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=1.076..1.091 rows=6 loops=2)
+               ->  Sort  (cost=0.00..431.01 rows=34 width=4) (actual time=0.029..0.032 rows=35 loops=1)
+                     Sort Key: smallt.d
+                     Sort Method:  quicksort  Memory: 99kB
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.004..0.011 rows=35 loops=1)
+                           Hash Key: smallt.d
+                           ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.003..0.018 rows=50 loops=1)
+         ->  Hash  (cost=431.01..431.01 rows=7 width=12) (actual time=1.402..1.402 rows=7 loops=1)
+               ->  HashAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=1.388..1.398 rows=7 loops=1)
                      Group Key: smallt_1.d
-                     Extra Text: (seg1)   Hash chain length 1.4 avg, 3 max, using 8 of 32 buckets; total 0 expansions.
+                     Extra Text: (seg1)   Hash chain length 1.2 avg, 2 max, using 6 of 32 buckets; total 0 expansions.
  
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.01 rows=7 width=12) (actual time=1.042..1.047 rows=6 loops=2)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=34 width=8) (actual time=0.245..1.337 rows=35 loops=1)
                            Hash Key: smallt_1.d
-                           ->  Result  (cost=0.00..431.01 rows=7 width=12) (actual time=0.109..0.139 rows=4 loops=2)
-                                 ->  HashAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=0.107..0.137 rows=4 loops=2)
-                                       Group Key: smallt_1.d
-                                       Extra Text: (seg0)   Hash chain length 1.3 avg, 3 max, using 6 of 32 buckets; total 0 expansions.
- 
-                                       ->  Seq Scan on smallt smallt_1  (cost=0.00..431.00 rows=34 width=8) (actual time=0.034..0.042 rows=20 loops=2)
-   (slice0)    Executor memory: 514K bytes.
-   (slice1)    Executor memory: 110K bytes avg x 3 workers, 110K bytes max (seg0).  Work_mem: 33K bytes max.
-   (slice2)    Executor memory: 166K bytes avg x 3 workers, 166K bytes max (seg0).
-   (slice3)    Executor memory: 1226K bytes avg x 3 workers, 1226K bytes max (seg0).  Work_mem: 1K bytes max.
+                           ->  Seq Scan on smallt smallt_1  (cost=0.00..431.00 rows=34 width=8) (actual time=0.003..0.018 rows=50 loops=1)
+ Planning time: 64.498 ms
+   (slice0)    Executor memory: 127K bytes.
+   (slice1)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
+   (slice2)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
+   (slice3)    Executor memory: 1192K bytes avg x 3 workers, 1192K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
- Total runtime: 7.014 ms
-(38 rows)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+ Execution time: 2.226 ms
+(29 rows)
 
 set enable_nestloop=off;
 set enable_hashjoin=on;
@@ -287,7 +264,7 @@ where t1.i = t2.i;
    (slice0)    Executor memory: 386K bytes.
    (slice1)    Executor memory: 1238K bytes avg x 3 workers, 1238K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 2.471 ms
 (23 rows)
 
@@ -305,29 +282,27 @@ select d, count(*) from smallt group by d limit 5; --ignore
 (5 rows)
 
 explain analyze select d, count(*) from smallt group by d limit 5;
-                                                                       QUERY PLAN                                                                       
---------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..431.01 rows=2 width=12) (actual time=2.452..2.455 rows=5 loops=1)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.01 rows=5 width=12) (actual time=2.449..2.450 rows=5 loops=1)
-         ->  Limit  (cost=0.00..431.01 rows=2 width=12) (actual time=2.021..2.025 rows=5 loops=1)
-               ->  HashAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=2.021..2.024 rows=5 loops=1)
+                                                                          QUERY PLAN                                                                          
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..431.01 rows=2 width=12) (actual time=1.700..1.702 rows=5 loops=1)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.01 rows=5 width=12) (actual time=1.698..1.700 rows=5 loops=1)
+         ->  Limit  (cost=0.00..431.01 rows=2 width=12) (actual time=1.456..1.464 rows=5 loops=1)
+               ->  GroupAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=1.455..1.460 rows=5 loops=1)
                      Group Key: d
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.01 rows=7 width=12) (actual time=1.063..1.985 rows=11 loops=1)
-                           Hash Key: d
-                           ->  Result  (cost=0.00..431.01 rows=7 width=12) (actual time=0.422..0.448 rows=8 loops=1)
-                                 ->  GroupAggregate  (cost=0.00..431.01 rows=7 width=12) (actual time=0.421..0.445 rows=8 loops=1)
-                                       Group Key: d
-                                       ->  Sort  (cost=0.00..431.00 rows=34 width=4) (actual time=0.415..0.421 rows=40 loops=1)
-                                             Sort Key: d
-                                             Sort Method:  quicksort  Memory: 131kB
-                                             ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.015..0.028 rows=40 loops=1)
-   (slice0)    Executor memory: 386K bytes.
-   (slice1)    Executor memory: 130K bytes avg x 3 workers, 130K bytes max (seg0).  Work_mem: 65K bytes max.
-   (slice2)    Executor memory: 170K bytes avg x 3 workers, 170K bytes max (seg0).
+                     ->  Sort  (cost=0.00..431.01 rows=34 width=4) (actual time=1.449..1.453 rows=26 loops=1)
+                           Sort Key: d
+                           Sort Method:  quicksort  Memory: 99kB
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.413..1.428 rows=35 loops=1)
+                                 Hash Key: d
+                                 ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.003..0.006 rows=50 loops=1)
+ Planning time: 16.802 ms
+   (slice0)    Executor memory: 59K bytes.
+   (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+   (slice2)    Executor memory: 64K bytes avg x 3 workers, 64K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
- Total runtime: 4.148 ms
-(20 rows)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+ Execution time: 2.024 ms
+(18 rows)
 
 -- HashJoin
 select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i order by 1,2,3;
@@ -1349,7 +1324,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i;
    (slice0)    Executor memory: 322K bytes.
    (slice1)    Executor memory: 4198K bytes avg x 3 workers, 4206K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 4.129 ms
 (13 rows)
 
@@ -1430,7 +1405,7 @@ where i < (select count(*) from smallt where smallt.i = smallt2.i);
                                  ->  Sort  (cost=0.00..431.00 rows=34 width=4)
                                        Sort Key: smallt.i
                                        ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4)
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
 (14 rows)
 
 -- Sort in MergeJoin
@@ -1660,7 +1635,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i an
    (slice0)    Executor memory: 322K bytes.
    (slice1)    Executor memory: 4182K bytes avg x 3 workers, 4182K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 3.631 ms
 (15 rows)
 
@@ -1791,7 +1766,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.d = t2.d an
    (slice2)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
    (slice3)    Executor memory: 4186K bytes avg x 3 workers, 4186K bytes max (seg0).  Work_mem: 2K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 5.688 ms
 (20 rows)
 
@@ -1857,7 +1832,7 @@ and smallt.d = '2011-01-04'::date;
    (slice0)    Executor memory: 450K bytes.
    (slice1)    Executor memory: 4234K bytes avg x 3 workers, 4234K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 3.325 ms
 (14 rows)
 
@@ -1876,7 +1851,7 @@ explain analyze select *, exists(select 1 from pg_class where oid = c.oid) as du
                  Heap Fetches: 1252
    (slice0)    Executor memory: 382K bytes.
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 1.681 ms
 (13 rows)
 
@@ -1928,7 +1903,7 @@ and smallt.d = '2011-01-04'::date;
    (slice0)    Executor memory: 450K bytes.
    (slice1)    Executor memory: 4234K bytes avg x 3 workers, 4234K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 2.67.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.67.0
  Total runtime: 5.131 ms
 (14 rows)
 

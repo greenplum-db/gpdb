@@ -2,7 +2,7 @@
 #
 # Makefile for src/backend/utils/mb/Unicode
 #
-# Copyright (c) 2001-2014, PostgreSQL Global Development Group
+# Copyright (c) 2001-2015, PostgreSQL Global Development Group
 #
 # src/backend/utils/mb/Unicode/Makefile
 #
@@ -87,14 +87,14 @@ euc_tw_to_utf8.map utf8_to_euc_tw.map : CNS11643.TXT
 sjis_to_utf8.map utf8_to_sjis.map : CP932.TXT
 	$(PERL) $(srcdir)/UCS_to_SJIS.pl
 
-gb18030_to_utf8.map  utf8_to_gb18030.map : ISO10646-GB18030.TXT
+gb18030_to_utf8.map  utf8_to_gb18030.map : gb-18030-2000.xml
 	$(PERL) $(srcdir)/UCS_to_GB18030.pl
 
 big5_to_utf8.map  utf8_to_big5.map : BIG5.TXT CP950.TXT
 	$(PERL) $(srcdir)/UCS_to_BIG5.pl
 
-clean:
-	rm -f $(MAPS)
-
 distclean: clean
 	rm -f $(TEXTS)
+
+maintainer-clean: distclean
+	rm -f $(MAPS)

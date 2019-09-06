@@ -243,7 +243,8 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	 */
 	extract_query_dependencies((Node *) pqueryCopy,
 							   &relationOids,
-							   &invalItems);
+							   &invalItems,
+							   &pqueryCopy->hasRowSecurity);
 	glob->relationOids = list_concat(glob->relationOids, relationOids);
 	glob->invalItems = list_concat(glob->invalItems, invalItems);
 

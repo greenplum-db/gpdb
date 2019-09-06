@@ -5,7 +5,7 @@
 
 #include "../xlog.c"
 
-void
+static void
 test_KeepLogSeg(void **state)
 {
 	XLogRecPtr recptr;

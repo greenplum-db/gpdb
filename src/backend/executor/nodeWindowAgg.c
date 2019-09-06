@@ -23,7 +23,7 @@
  * aggregate function over all rows in the current row's window frame.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -1980,8 +1980,7 @@ ExecWindowAgg(WindowAggState *winstate)
 	 * output tuple (because there is a function-returning-set in the
 	 * projection expressions).  If so, try to project another one.
 	 */
-#if 0
-	if (winstate->ss.ps.ps_TupFromTlist)
+	if (winstate->ps_TupFromTlist)
 	{
 		TupleTableSlot *result;
 		ExprDoneCond isDone;
@@ -1990,9 +1989,8 @@ ExecWindowAgg(WindowAggState *winstate)
 		if (isDone == ExprMultipleResult)
 			return result;
 		/* Done with that source tuple... */
-		winstate->ss.ps.ps_TupFromTlist = false;
+		winstate->ps_TupFromTlist = false;
 	}
-#endif
 
 restart:
 	if (winstate->buffer == NULL)
@@ -2107,10 +2105,8 @@ restart:
 		goto restart;
 	}
 
-#if 0
-	winstate->ss.ps.ps_TupFromTlist =
+	winstate->ps_TupFromTlist =
 		(isDone == ExprMultipleResult);
-#endif
 
 	return result;
 }
@@ -2226,9 +2222,7 @@ ExecInitWindowAgg(WindowAgg *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&winstate->ss.ps);
 	ExecAssignProjectionInfo(&winstate->ss.ps, NULL);
 
-#if 0
-	winstate->ss.ps.ps_TupFromTlist = false;
-#endif
+	winstate->ps_TupFromTlist = false;
 
 	/* Set up data for comparing tuples */
 	if (node->partNumCols > 0)
@@ -2605,13 +2599,12 @@ ExecEndWindowAgg(WindowAggState *node)
 void
 ExecReScanWindowAgg(WindowAggState *node)
 {
+	PlanState  *outerPlan = outerPlanState(node);
 	ExprContext *econtext = node->ss.ps.ps_ExprContext;
 
 	node->all_done = false;
 
-#if 0
-	node->ss.ps.ps_TupFromTlist = false;
-#endif
+	node->ps_TupFromTlist = false;
 	node->all_first = true;
 
 	/* release tuplestore et al */
@@ -2632,8 +2625,8 @@ ExecReScanWindowAgg(WindowAggState *node)
 	 * if chgParam of subnode is not null then plan will be re-scanned by
 	 * first ExecProcNode.
 	 */
-	if (node->ss.ps.lefttree->chgParam == NULL)
-		ExecReScan(node->ss.ps.lefttree);
+	if (outerPlan->chgParam == NULL)
+		ExecReScan(outerPlan);
 }
 
 void

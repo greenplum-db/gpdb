@@ -24,12 +24,12 @@
           <codeph>gpperfmon</codeph> database in the <cite>Greenplum Database Reference
         Guide</cite>.</p>
       <p otherprops="pivotal">Pivotal Greenplum Command Center, an optional web-based interface,
-        graphically displays the metrics collected in the <codeph>gpperfmon</codeph> database and
-        provides additional system management tools. Download the Greenplum Command Center package
-        from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html">Pivotal
-          Network</xref> and view the documentation at the <xref href="http://gpcc.docs.pivotal.io"
-          scope="external" format="html">Greenplum Command Center Documentation</xref> web site.
-      </p>
+        provides cluster status information, graphical administrative tools, real-time query
+        monitoring, and historical cluster and query data. Download the Greenplum Command Center
+        package from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
+          format="html">Pivotal Network</xref> and view the documentation at the <xref
+          href="http://gpcc.docs.pivotal.io" scope="external" format="html">Greenplum Command Center
+          Documentation</xref> web site. </p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -248,12 +248,12 @@ Distributed by: (sale_id)
           </p>
           <p>A table is considered to have a balanced distribution if all segments have roughly the
             same number of rows.</p>
-        <note>
-          <p>If you run this query on a replicated table it fails because Greenplum Database does
-            not permit user queries to reference the <codeph>gp_segment_id</codeph> system column in
-            replicated tables. Because every segment has all of the tables' rows, replicated tables
-            are evenly distributed by definition.</p>
-        </note>
+        <note>If you run this query on a replicated table, it fails because Greenplum Database does
+          not permit user queries to reference the system column <codeph>gp_segment_id</codeph> (or
+          the system columns <codeph>ctid</codeph>, <codeph>cmin</codeph>, <codeph>cmax</codeph>,
+            <codeph>xmin</codeph>, and <codeph>xmax</codeph>) in replicated tables. Because every
+          segment has all of the tables' rows, replicated tables are evenly distributed by
+          definition.</note>
         </body>
       </topic>
       <topic id="topic23" xml:lang="en">
@@ -555,7 +555,7 @@ Distributed by: (sale_id)
     <title id="kj166926">Viewing the Database Server Log Files</title>
     <body>
       <p>Every database instance in Greenplum Database (master and segments) runs a PostgreSQL
-        database server with its own server log file. Daily log files are created in the
+        database server with its own server log file. Log files are created in the
           <codeph>pg_log</codeph> directory of the master and each segment data directory.</p>
     </body>
     <topic id="topic29" xml:lang="en">

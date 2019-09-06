@@ -3,7 +3,7 @@
  * win32setlocale.c
  *		Wrapper to work around bugs in Windows setlocale() implementation
  *
- * Copyright (c) 2011-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2011-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/port/win32setlocale.c
@@ -40,9 +40,9 @@ struct locale_map
 {
 	/*
 	 * String in locale name to replace. Can be a single string (end is NULL),
-	 * or separate start and end strings. If two strings are given, the
-	 * locale name must contain both of them, and everything between them
-	 * is replaced. This is used for a poor-man's regexp search, allowing
+	 * or separate start and end strings. If two strings are given, the locale
+	 * name must contain both of them, and everything between them is
+	 * replaced. This is used for a poor-man's regexp search, allowing
 	 * replacement of "start.*end".
 	 */
 	const char *locale_name_start;

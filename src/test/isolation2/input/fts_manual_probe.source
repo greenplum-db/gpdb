@@ -1,0 +1,141 @@
+-- See src/backend/fts/README for background information
+--
+-- This tests two scenarios:
+-- 1) Piggyback Test
+-- Ensure multiple probe requests come in before the start of a new ftsLoop, 
+-- then all those requests share the same result.
+--
+-- 2) Fresh Result Test
+-- Ensure fresh results when a probe request occurs during an in progress 
+-- ftsLoop.
+--
+-- It is useful to remember that the FtsLoop and each FtsNotifyProbe are 
+-- individual processes. Careful use of fault injectors are needed to have 
+-- complete and consistent control over the flow of the two independent 
+-- processes - the ftsLoop and FtsNotifyProber's.
+--
+-- fts_probe_stats is only queried when the ftsLoop
+-- is stopped at a known location to ensure a consistent view of the stats.
+--
+-- NOTE: you must add '--load-extension=gp_inject_fault' to the commandline
+--   for a manual test.
+
+include: helpers/server_helpers.sql;
+
+select gp_inject_fault('all', 'reset', 1) from master();
+
+create temp table fts_probe_results(seq serial, seq_name varchar(20),
+                                    current_started int, expected_start_delta int,
+                                    current_done int, expected_done_delta int);
+
+-- create extension only on master since the fts process is only on master
+create or replace function fts_probe_stats() returns table (
+    start_count int,
+    done_count int,
+    status_version int2
+  )
+  as '/@abs_builddir@/../regress/regress.so', 'gp_fts_probe_stats' language c execute on master reads sql data;
+
+create or replace view get_raw_stats as
+select
+  seq,
+  seq_name,
+  current_started,
+  expected_start_delta,
+  current_started - min(current_started) over () as actual_start_delta, -- actual_start_delta = current_started - initial_started
+  current_done,
+  expected_done_delta,
+  current_done - min(current_done) over () as actual_done_delta -- actual_done_delta = current_done - initial_done
+from fts_probe_results order by seq;
+
+create or replace view get_stats as
+select seq, seq_name,
+       expected_start_delta, actual_start_delta,
+       expected_done_delta, actual_done_delta
+from get_raw_stats order by seq desc limit 1;
+
+drop function if exists insert_expected_stats(int, int);
+create or replace function insert_expected_stats(seq_name varchar(20), expected_start_delta int, expected_done_delta int) returns void as $$
+  INSERT INTO fts_probe_results (seq_name, current_started, expected_start_delta, current_done, expected_done_delta) /* inside a function */
+  SELECT seq_name, /* inside a function */
+         start_count AS current_started, /* inside a function */
+         expected_start_delta, /* inside a function */
+         done_count AS current_done, /* inside a function */
+         expected_done_delta /* inside a function */
+  FROM fts_probe_stats(); /* inside a function */
+$$ language sql volatile;
+
+-- ensure the internal regular probes do not affect our test
+!\retcode gpconfig -c gp_fts_probe_interval -v 3600;
+!\retcode gpstop -u;
+
+-- ensure there is no in progress ftsLoop after reloading the gp_fts_probe_interval
+select gp_request_fts_probe_scan();
+select insert_expected_stats('initial', 0, 0);
+select * from get_stats;
+
+-- piggyback test: start multiple probes
+select gp_inject_fault_infinite('ftsNotify_before', 'suspend', 1) from master();
+select gp_inject_fault_infinite('ftsLoop_after_latch', 'suspend', 1) from master();
+select gp_inject_fault_infinite('ftsLoop_before_probe', 'suspend', 1) from master();
+
+1&: select gp_request_fts_probe_scan();
+2&: select gp_request_fts_probe_scan();
+3&: select gp_request_fts_probe_scan();
+
+-- piggyback: ensure the probe requests are at a known starting location
+select gp_wait_until_triggered_fault('ftsNotify_before', 3, 1) from master();
+
+-- piggyback: ensure the ftsLoop is triggered only once
+select gp_wait_until_triggered_fault('ftsLoop_after_latch', 1, 1) from master();
+select gp_inject_fault('ftsLoop_after_latch', 'resume', 1) from master();
+
+-- piggyback: ensure the ftsLoop is at a known starting location
+select gp_wait_until_triggered_fault('ftsLoop_before_probe', 1, 1) from master();
+select insert_expected_stats('top_of_ftsLoop', 0, 0);
+select * from get_stats;
+select gp_inject_fault('ftsNotify_before', 'resume', 1) from master();
+
+-- piggyback: trap the probe requests inside the ftsLoop
+select gp_inject_fault_infinite('ftsLoop_after_probe', 'suspend', 1) from master();
+select gp_inject_fault('ftsLoop_before_probe', 'resume', 1) from master();
+select gp_wait_until_triggered_fault('ftsLoop_after_probe', 1, 1) from master();
+
+select insert_expected_stats('bottom_of_ftsLoop', 1, 0);
+select * from get_stats;
+
+-- fresh result test: issue a new probe request during the in progress piggyback ftsLoop
+select gp_inject_fault('ftsLoop_before_probe', 'reset', 1) from master();
+select gp_inject_fault_infinite('ftsLoop_before_probe', 'suspend', 1) from master();
+4&: select gp_request_fts_probe_scan();
+
+-- piggyback: resume the suspended piggyback ftsLoop
+select gp_inject_fault('ftsLoop_after_probe', 'resume', 1) from master();
+
+1<:
+2<:
+3<:
+
+-- fresh result: ensure the next ftsLoop iteration is at a known starting location
+select gp_wait_until_triggered_fault('ftsLoop_before_probe', 1, 1) from master();
+
+-- piggyback: query the probe stats before the start of the 'fresh result' ftsLoop
+select insert_expected_stats('piggyback_result', 1, 1);
+select * from get_stats;
+
+-- fresh result: resume the suspended ftsLoop
+select gp_inject_fault('ftsLoop_before_probe', 'resume', 1) from master();
+
+4<:
+
+select insert_expected_stats('fresh_result', 2, 2);
+select * from get_stats;
+
+-- show all raw stats for debugging
+-- start_ignore
+select * from get_raw_stats;
+-- end_ignore
+
+-- reset the internal regular probe interval
+!\retcode gpconfig -r gp_fts_probe_interval;
+!\retcode gpstop -u;

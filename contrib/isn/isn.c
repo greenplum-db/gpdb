@@ -4,7 +4,7 @@
  *	  PostgreSQL type definitions for ISNs (ISBN, ISMN, ISSN, EAN13, UPC)
  *
  * Author:	German Mendez Bravo (Kronuz)
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/isn/isn.c
@@ -518,7 +518,7 @@ str2ean(const char *num)
 }
 
 /*
- * ean2string --- Try to convert an ean13 number to an hyphenated string.
+ * ean2string --- Try to convert an ean13 number to a hyphenated string.
  *				  Assumes there's enough space in result to hold
  *				  the string (maximum MAXEAN13LEN+1 bytes)
  *				  This doesn't verify for a valid check digit.
@@ -832,18 +832,18 @@ string2ean(const char *str, bool errorOK, ean13 *result,
 				goto eanwrongtype;
 			break;
 		case ISMN:
-			strncpy(buf, "9790", 4);	/* this isn't for sure yet, for now
+			memcpy(buf, "9790", 4);		/* this isn't for sure yet, for now
 										 * ISMN it's only 9790 */
 			valid = (valid && ((rcheck = checkdig(buf, 13)) == check || magic));
 			break;
 		case ISBN:
-			strncpy(buf, "978", 3);
+			memcpy(buf, "978", 3);
 			valid = (valid && ((rcheck = weight_checkdig(buf + 3, 10)) == check || magic));
 			break;
 		case ISSN:
-			strncpy(buf + 10, "00", 2); /* append 00 as the normal issue
+			memcpy(buf + 10, "00", 2);	/* append 00 as the normal issue
 										 * publication code */
-			strncpy(buf, "977", 3);
+			memcpy(buf, "977", 3);
 			valid = (valid && ((rcheck = weight_checkdig(buf + 3, 8)) == check || magic));
 			break;
 		case UPC:

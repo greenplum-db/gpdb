@@ -113,24 +113,6 @@ gpadmin --stdin'</codeblock></li>
       </section>
     </body>
   </topic>
-  <topic id="topic19" xml:lang="en">
-    <title id="no159124">Verifying OS Settings</title>
-    <body>
-      <p>Use the <codeph><xref href="../../utility_guide/admin_utilities/gpcheck.xml"
-          >gpcheck</xref></codeph> utility to verify all new hosts in your array have the correct OS
-        settings to run Greenplum Database software. </p>
-      <section id="no159174">
-        <title>To run gpcheck</title>
-        <ol>
-          <li id="no173509">Log in on the master host as the user who will run your Greenplum
-            Database system (for example,
-            <codeph>gpadmin</codeph>).<codeblock>$ su - gpadmin</codeblock></li>
-          <li id="no173521">Run the <codeph>gpcheck</codeph> utility using your host file for new
-            hosts. For example:<codeblock>$ gpcheck -f <i>new_hosts_file</i></codeblock></li>
-        </ol>
-      </section>
-    </body>
-  </topic>
   <topic id="topic20" xml:lang="en">
     <title id="no159219">Validating Disk I/O and Memory Bandwidth</title>
     <body>

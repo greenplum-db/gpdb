@@ -16,7 +16,7 @@
             /></li>
           <li><xref href="backup-main.xml#backup-main"/></li>
           <li><xref href="../expand/expand-main.xml"/></li>
-          <li><xref href="gpcopy-migrate.xml"/></li>
+          <li otherprops="pivotal"><xref href="gpcopy-migrate.xml"/></li>
           <li><xref href="../ddl/ddl.xml#topic1"/></li>
           <li><xref href="maintain.xml#topic1"/></li>
         </ul></p>

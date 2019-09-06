@@ -2,7 +2,7 @@
  *
  * PostgreSQL locale utilities
  *
- * Portions Copyright (c) 2002-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2002-2015, PostgreSQL Global Development Group
  *
  * src/backend/utils/adt/pg_locale.c
  *
@@ -768,7 +768,7 @@ cache_single_time(char **dst, const char *format, const struct tm * tm)
 	/*
 	 * MAX_L10N_DATA is sufficient buffer space for every known locale, and
 	 * POSIX defines no strftime() errors.  (Buffer space exhaustion is not an
-	 * error.)  An implementation might report errors (e.g. ENOMEM) by
+	 * error.)	An implementation might report errors (e.g. ENOMEM) by
 	 * returning 0 (or, less plausibly, a negative value) and setting errno.
 	 * Report errno just in case the implementation did that, but clear it in
 	 * advance of the call so we don't emit a stale, unrelated errno.
@@ -1025,9 +1025,8 @@ lookup_collation_cache(Oid collation, bool set_flags)
 		memset(&ctl, 0, sizeof(ctl));
 		ctl.keysize = sizeof(Oid);
 		ctl.entrysize = sizeof(collation_cache_entry);
-		ctl.hash = oid_hash;
 		collation_cache = hash_create("Collation cache", 100, &ctl,
-									  HASH_ELEM | HASH_FUNCTION);
+									  HASH_ELEM | HASH_BLOBS);
 	}
 
 	cache_entry = hash_search(collation_cache, &collation, HASH_ENTER, &found);
@@ -1226,7 +1225,7 @@ pg_newlocale_from_collation(Oid collid)
 	cache_entry = lookup_collation_cache(collid, false);
 
 #ifdef FAULT_INJECTOR
-	SIMPLE_FAULT_INJECTOR(CollateLocaleOsLookup);
+	SIMPLE_FAULT_INJECTOR("collate_locale_os_lookup");
 #endif
 
 	if (cache_entry->locale == 0)

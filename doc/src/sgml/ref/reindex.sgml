@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-REINDEX { INDEX | TABLE | DATABASE | SYSTEM } <replaceable class="PARAMETER">name</replaceable> [ FORCE ]
+REINDEX [ ( { VERBOSE } [, ...] ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } <replaceable class="PARAMETER">name</replaceable>
 </synopsis>
  </refsynopsisdiv>
 
@@ -101,6 +101,19 @@ REINDEX { INDEX | TABLE | DATABASE | SYSTEM } <replaceable class="PARAMETER">nam
    </varlistentry>
 
    <varlistentry>
+    <term><literal>SCHEMA</literal></term>
+    <listitem>
+     <para>
+      Recreate all indexes of the specified schema.  If a table of this
+      schema has a secondary <quote>TOAST</> table, that is reindexed as
+      well. Indexes on shared system catalogs are also processed.
+      This form of <command>REINDEX</command> cannot be executed inside a
+      transaction block.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><literal>DATABASE</literal></term>
     <listitem>
      <para>
@@ -139,10 +152,10 @@ REINDEX { INDEX | TABLE | DATABASE | SYSTEM } <replaceable class="PARAMETER">nam
    </varlistentry>
 
    <varlistentry>
-    <term><literal>FORCE</literal></term>
+    <term><literal>VERBOSE</literal></term>
     <listitem>
      <para>
-      This is an obsolete option; it is ignored if specified.
+      Prints a progress report as each index is reindexed.
      </para>
     </listitem>
    </varlistentry>

@@ -14,7 +14,7 @@
       <title>Description</title>
       <p><codeph>CREATE TABLESPACE</codeph> registers and configures a new tablespace for your
         Greenplum Database system. The tablespace name must be distinct from the name of any
-        existing tablespace in the system. A tablespace is a Greemplum Database system object (a
+        existing tablespace in the system. A tablespace is a Greenplum Database system object (a
         global object), you can use a tablespace from any database if you have appropriate
         privileges.</p>
       <p>A tablespace allows superusers to define an alternative host file system location where the
@@ -47,7 +47,10 @@
           <pd>The absolute path to the directory (host system file location) that will be the root
             directory for the tablespace. When registering a tablepace, the directory should be
             empty and must be owned by the Greenplum Database system user. The directory must be
-            specified by an absolute path name.</pd>
+            specified by an absolute path name of no more than 100 characters. (The location is used
+            to create a symlink target in the <filepath>pg_tblspc</filepath> directory, and symlink
+            targets are truncated to 100 characters when sending to <codeph>tar</codeph> from
+            utilities such as <codeph>pg_basebackup</codeph>.)</pd>
           <pd>For each segment instance, you can specify a different directory for the tablespace in
             the <codeph>WITH</codeph> clause.</pd>
         </plentry>
@@ -61,7 +64,8 @@
           <pd>If a segment instance is not listed in the <codeph>WITH</codeph> clause, Greenplum
             Database uses the directory specified in the <codeph>LOCATION</codeph> clause.</pd>
           <pd>When registering a tablepace, the directories should be empty and must be owned by the
-            Greenplum Database system user.</pd>
+            Greenplum Database system user. Each directory must be specified by an absolute path
+            name of no more than 100 characters.</pd>
         </plentry>
       </parml>
     </section>

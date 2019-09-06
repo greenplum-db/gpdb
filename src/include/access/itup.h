@@ -4,7 +4,7 @@
  *	  POSTGRES index tuple definitions.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/itup.h
@@ -133,6 +133,7 @@ typedef IndexAttributeBitMapData *IndexAttributeBitMap;
  * IndexTupleData struct.  We arrive at the divisor because each tuple
  * must be maxaligned, and it must have an associated item pointer.
  */
+#define MinIndexTupleSize MAXALIGN(sizeof(IndexTupleData) + 1)
 #define MaxIndexTuplesPerPage	\
 	((int) ((BLCKSZ - SizeOfPageHeaderData) / \
 			(MAXALIGN(sizeof(IndexTupleData) + 1) + sizeof(ItemIdData))))

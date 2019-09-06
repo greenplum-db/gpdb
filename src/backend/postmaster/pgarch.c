@@ -14,7 +14,7 @@
  *
  *	Initial author: Simon Riggs		simon@2ndquadrant.com
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -78,11 +78,6 @@ static volatile sig_atomic_t got_SIGTERM = false;
 static volatile sig_atomic_t wakened = false;
 static volatile sig_atomic_t ready_to_stop = false;
 
-/*
- * Latch used by signal handlers to wake up the sleep in the main loop.
- */
-static Latch mainloop_latch;
-
 /* ----------
  * Local function forward declarations
  * ----------
@@ -91,7 +86,7 @@ static Latch mainloop_latch;
 static pid_t pgarch_forkexec(void);
 #endif
 
-NON_EXEC_STATIC void PgArchiverMain(int argc, char *argv[]) __attribute__((noreturn));
+NON_EXEC_STATIC void PgArchiverMain(int argc, char *argv[]) pg_attribute_noreturn();
 static void pgarch_exit(SIGNAL_ARGS);
 static void ArchSigHupHandler(SIGNAL_ARGS);
 static void ArchSigTermHandler(SIGNAL_ARGS);
@@ -157,11 +152,10 @@ pgarch_start(void)
 #ifndef EXEC_BACKEND
 		case 0:
 			/* in postmaster child ... */
+			InitPostmasterChild();
+
 			/* Close the postmaster's sockets */
 			ClosePostmasterPorts(false);
-
-			/* Lose the postmaster's on-exit routines */
-			on_exit_reset();
 
 			/* Drop our connection to postmaster's shared memory, as well */
 			dsm_detach_all();
@@ -221,25 +215,6 @@ pgarch_forkexec(void)
 NON_EXEC_STATIC void
 PgArchiverMain(int argc, char *argv[])
 {
-	IsUnderPostmaster = true;	/* we are a postmaster subprocess now */
-
-	MyProcPid = getpid();		/* reset MyProcPid */
-
-	MyStartTime = time(NULL);	/* record Start Time for logging */
-
-	/*
-	 * If possible, make this process a group leader, so that the postmaster
-	 * can signal any child processes too.
-	 */
-#ifdef HAVE_SETSID
-	if (setsid() < 0)
-		elog(FATAL, "setsid() failed: %m");
-#endif
-
-	InitializeLatchSupport();	/* needed for latch waits */
-
-	InitLatch(&mainloop_latch); /* initialize latch used in main loop */
-
 	/*
 	 * Ignore all signals usually bound to some action in the postmaster,
 	 * except for SIGHUP, SIGTERM, SIGUSR1, SIGUSR2, and SIGQUIT.
@@ -285,7 +260,7 @@ ArchSigHupHandler(SIGNAL_ARGS)
 
 	/* set flag to re-read config file at next convenient time */
 	got_SIGHUP = true;
-	SetLatch(&mainloop_latch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }
@@ -303,7 +278,7 @@ ArchSigTermHandler(SIGNAL_ARGS)
 	 * archive commands.
 	 */
 	got_SIGTERM = true;
-	SetLatch(&mainloop_latch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }
@@ -316,7 +291,7 @@ pgarch_waken(SIGNAL_ARGS)
 
 	/* set flag that there is work to be done */
 	wakened = true;
-	SetLatch(&mainloop_latch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }
@@ -329,7 +304,7 @@ pgarch_waken_stop(SIGNAL_ARGS)
 
 	/* set flag to do a final cycle and shut down afterwards */
 	ready_to_stop = true;
-	SetLatch(&mainloop_latch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }
@@ -360,7 +335,7 @@ pgarch_MainLoop(void)
 	 */
 	do
 	{
-		ResetLatch(&mainloop_latch);
+		ResetLatch(MyLatch);
 
 		/* When we get SIGUSR2, we do one more archive cycle, then exit */
 		time_to_stop = ready_to_stop;
@@ -413,7 +388,7 @@ pgarch_MainLoop(void)
 			{
 				int			rc;
 
-				rc = WaitLatch(&mainloop_latch,
+				rc = WaitLatch(MyLatch,
 							 WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
 							   timeout * 1000L);
 				if (rc & WL_TIMEOUT)

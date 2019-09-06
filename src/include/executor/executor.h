@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/executor.h
@@ -112,10 +112,12 @@ extern PGDLLIMPORT ExecutorCheckPerms_hook_type ExecutorCheckPerms_hook;
 /*
  * prototypes from functions in execAmi.c
  */
+struct Path;					/* avoid including relation.h here */
+
 extern void ExecReScan(PlanState *node);
 extern void ExecMarkPos(PlanState *node);
 extern void ExecRestrPos(PlanState *node);
-extern bool ExecSupportsMarkRestore(NodeTag plantype);
+extern bool ExecSupportsMarkRestore(struct Path *pathnode);
 extern bool ExecSupportsBackwardScan(Plan *node);
 extern bool ExecMaterializesOutput(NodeTag plantype);
 
@@ -254,15 +256,17 @@ extern ResultRelInfo *ExecGetTriggerResultRel(EState *estate, Oid relid);
 extern bool ExecContextForcesOids(PlanState *planstate, bool *hasoids);
 extern void ExecConstraints(ResultRelInfo *resultRelInfo,
 				TupleTableSlot *slot, EState *estate);
-extern void ExecWithCheckOptions(ResultRelInfo *resultRelInfo,
+extern void ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
 					 TupleTableSlot *slot, EState *estate);
-extern ExecRowMark *ExecFindRowMark(EState *estate, Index rti);
+extern LockTupleMode ExecUpdateLockMode(EState *estate, ResultRelInfo *relinfo);
+extern ExecRowMark *ExecFindRowMark(EState *estate, Index rti, bool missing_ok);
 extern ExecAuxRowMark *ExecBuildAuxRowMark(ExecRowMark *erm, List *targetlist);
 extern TupleTableSlot *EvalPlanQual(EState *estate, EPQState *epqstate,
 			 Relation relation, Index rti, int lockmode,
 			 ItemPointer tid, TransactionId priorXmax);
 extern HeapTuple EvalPlanQualFetch(EState *estate, Relation relation,
-				  int lockmode, bool noWait, ItemPointer tid, TransactionId priorXmax);
+				  int lockmode, LockWaitPolicy wait_policy, ItemPointer tid,
+				  TransactionId priorXmax);
 extern void EvalPlanQualInit(EPQState *epqstate, EState *estate,
 				 Plan *subplan, List *auxrowmarks, int epqParam);
 extern void EvalPlanQualSetPlan(EPQState *epqstate,
@@ -353,6 +357,7 @@ typedef bool (*ExecScanRecheckMtd) (ScanState *node, TupleTableSlot *slot);
 extern TupleTableSlot *ExecScan(ScanState *node, ExecScanAccessMtd accessMtd,
 		 ExecScanRecheckMtd recheckMtd);
 extern void ExecAssignScanProjectionInfo(ScanState *node);
+extern void ExecAssignScanProjectionInfoWithVarno(ScanState *node, Index varno);
 extern void ExecScanReScan(ScanState *node);
 
 /*
@@ -447,18 +452,6 @@ extern bool ExecRelationIsTargetRelation(EState *estate, Index scanrelid);
 extern Relation ExecOpenScanRelation(EState *estate, Index scanrelid, int eflags);
 extern Relation ExecOpenScanExternalRelation(EState *estate, Index scanrelid);
 extern void ExecCloseScanRelation(Relation scanrel);
-extern void ExecCloseScanAppendOnlyRelation(Relation scanrel);
-
-extern void ExecOpenIndices(ResultRelInfo *resultRelInfo);
-extern void ExecCloseIndices(ResultRelInfo *resultRelInfo);
-extern List *ExecInsertIndexTuples(TupleTableSlot *slot, ItemPointer tupleid,
-					  EState *estate);
-extern bool check_exclusion_constraint(Relation heap, Relation index,
-						   IndexInfo *indexInfo,
-						   ItemPointer tupleid,
-						   Datum *values, bool *isnull,
-						   EState *estate,
-						   bool newIndex, bool errorOK);
 
 extern void RegisterExprContextCallback(ExprContext *econtext,
 							ExprContextCallbackFunction function,
@@ -467,8 +460,28 @@ extern void UnregisterExprContextCallback(ExprContext *econtext,
 							  ExprContextCallbackFunction function,
 							  Datum arg);
 
+/*
+ * prototypes from functions in execIndexing.c
+ */
+extern void ExecOpenIndices(ResultRelInfo *resultRelInfo, bool speculative);
+extern void ExecCloseIndices(ResultRelInfo *resultRelInfo);
+extern List *ExecInsertIndexTuples(TupleTableSlot *slot, ItemPointer tupleid,
+					  EState *estate, bool noDupErr, bool *specConflict,
+					  List *arbiterIndexes);
+extern bool ExecCheckIndexConstraints(TupleTableSlot *slot, EState *estate,
+						  ItemPointer conflictTid, List *arbiterIndexes);
+extern void check_exclusion_constraint(Relation heap, Relation index,
+						   IndexInfo *indexInfo,
+						   ItemPointer tupleid,
+						   Datum *values, bool *isnull,
+						   EState *estate, bool newIndex);
+
+
 /* Share input utilities defined in execUtils.c */
 extern ShareNodeEntry * ExecGetShareNodeEntry(EState *estate, int shareid, bool fCreate);
+
+extern bool ExecPrefetchJoinQual(JoinState *node);
+extern bool ShouldPrefetchJoinQual(EState *estate, Join *join);
 
 /* ResultRelInfo and Append Only segment assignment */
 void ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo, List *mapping);
@@ -479,14 +492,6 @@ extern GpExecIdentity getGpExecIdentity(QueryDesc *queryDesc,
 										  EState	   *estate);
 extern void mppExecutorFinishup(QueryDesc *queryDesc);
 extern void mppExecutorCleanup(QueryDesc *queryDesc);
-
-
-/* prototypes defined in nodeAgg.c for rollup-aware Agg/Group nodes. */
-extern int64 tuple_grouping(TupleTableSlot *outerslot, int numGroupCols,
-							int input_grouping, bool input_has_grouping,
-							int grpingIdx);
-extern uint64 get_grouping_groupid(TupleTableSlot *slot,
-								   int grping_idx);
 
 extern ResultRelInfo *targetid_get_partition(Oid targetid, EState *estate, bool openIndices);
 extern ResultRelInfo *slot_get_partition(TupleTableSlot *slot, EState *estate);

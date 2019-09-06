@@ -1,21 +1,20 @@
 import base64
+import errno
 import imp
 import os
 import pickle
+import shutil
 import sys
 import tempfile
 
-from StringIO import StringIO
-
-import errno
-from pygresql.pg import DatabaseError
-
-from gparray import Segment, GpArray, SegmentPair
-import shutil
-from mock import *
-from gp_unittest import *
-from gphostcache import GpHost
+from gppylib.gparray import Segment, GpArray, SegmentPair
+from gppylib.gphostcache import GpHost
 from gpconfig_modules.parse_guc_metadata import ParseGuc
+
+from gp_unittest import *
+from mock import *
+from pygresql.pg import DatabaseError
+from StringIO import StringIO
 
 db_singleton_side_effect_list = []
 
@@ -32,8 +31,8 @@ def singleton_side_effect(unused1, unused2):
 class GpConfig(GpTestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
-        self.postgressql_conf = self.temp_dir + "/postgresql.conf"
-        with open(self.postgressql_conf, "w") as postgresql:
+        postgresql_conf = self.temp_dir + "/postgresql.conf"
+        with open(postgresql_conf, "w") as postgresql:
             postgresql.close()
 
         # because gpconfig does not have a .py extension,
@@ -44,6 +43,7 @@ class GpConfig(GpTestCase):
         gpconfig_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpconfig")
         self.subject = imp.load_source('gpconfig', gpconfig_file)
         self.subject.LOGGER = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
+        self.subject.check_gpexpand = lambda : (True, "")
 
         self.conn = Mock()
         self.cursor = FakeCursor()
@@ -65,15 +65,18 @@ class GpConfig(GpTestCase):
         self.host_cache.get_hosts.return_value = [self.host]
         self.host_cache.ping_hosts.return_value = []
 
-        self.master_read_config = Mock()
-        self.master_read_config.get_guc_value.return_value = "foo"
-        self.master_read_config.get_seg_content_id.return_value = -1
-        self.segment_read_config = Mock()
-        self.segment_read_config.get_guc_value.return_value = "foo"
-        self.segment_read_config.get_seg_content_id.return_value = 0
+        self.master_file = Mock(name='master')
+        self.master_file.get_value.return_value = 'foo'
+        self.master_file.segInfo.getSegmentContentId.return_value = -1
+        self.master_file.segInfo.getSegmentDbId.return_value = 0
+
+        self.seg0_file = Mock(name='seg0')
+        self.seg0_file.get_value.return_value = 'foo'
+        self.seg0_file.segInfo.getSegmentContentId.return_value = 0
+        self.seg0_file.segInfo.getSegmentDbId.return_value = 1
 
         self.pool = Mock()
-        self.pool.getCompletedItems.return_value = [self.master_read_config, self.segment_read_config]
+        self.pool.getCompletedItems.return_value = [self.master_file, self.seg0_file]
 
         self.apply_patches([
             patch('os.environ', new=self.os_env),
@@ -82,10 +85,13 @@ class GpConfig(GpTestCase):
             patch('gpconfig.dbconn.execSQLForSingleton', side_effect=singleton_side_effect),
             patch('gpconfig.GpHostCache', return_value=self.host_cache),
             patch('gpconfig.GpArray.initFromCatalog', return_value=self.gparray),
-            patch('gpconfig.GpReadConfig', return_value=self.master_read_config),
             patch('gpconfig.WorkerPool', return_value=self.pool)
         ])
         sys.argv = ["gpconfig"]  # reset to relatively empty args list
+
+        # GUC object for testing string quoting
+        self.guc = Mock()
+        self.guc.vartype = "string"
 
         shared_dir = os.path.join(self.temp_dir, ParseGuc.DESTINATION_DIR)
         _mkdir_p(shared_dir, 0755)
@@ -123,6 +129,8 @@ class GpConfig(GpTestCase):
     @patch('sys.stdout', new_callable=StringIO)
     def test_option_show_with_port_will_succeed(self, mock_stdout):
         sys.argv = ["gpconfig", "--show", "port"]
+
+        # mocked database values
         # select * from gp_toolkit.gp_param_setting('port');                                                                                                                     ;
         # paramsegment | paramname | paramvalue
         # --------------+-----------+------------
@@ -171,7 +179,7 @@ class GpConfig(GpTestCase):
 
         self.subject.do_main()
 
-        self.pool.addCommand.assert_called_once_with(self.master_read_config)
+        self.pool.addCommand.assert_called_once()
         self.pool.join.assert_called_once_with()
         self.pool.check_results.assert_called_once_with()
         self.pool.haltWork.assert_called_once_with()
@@ -180,25 +188,53 @@ class GpConfig(GpTestCase):
         self.assertIn("Master  value: foo\nSegment value: foo", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
-    def test_option_f_will_report_absence_of_setting(self, mock_stdout):
+    def test_option_f_will_report_absence_of_setting_on_master(self, mock_stdout):
         sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
-        self.master_read_config.get_guc_value.return_value = "-"
-        self.segment_read_config.get_guc_value.return_value = "seg_value"
+        self.master_file.get_value.return_value = None
+        self.seg0_file.get_value.return_value = "seg_value"
 
         self.subject.do_main()
 
         self.assertEqual(self.subject.LOGGER.error.call_count, 0)
-        self.assertIn("Master  value: -\nSegment value: seg_value", mock_stdout.getvalue())
+        self.assertIn("No value is set on master\nSegment value: seg_value", mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_option_f_will_report_absence_of_setting_on_segment(self, mock_stdout):
+        sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
+        self.master_file.get_value.return_value = "master_value"
+        self.seg0_file.get_value.return_value = None
+
+        self.subject.do_main()
+
+        self.assertEqual(self.subject.LOGGER.error.call_count, 0)
+        self.assertIn("Master  value: master_value\nNo value is set on segments", mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_option_f_will_report_absence_of_setting_on_both(self, mock_stdout):
+        sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
+        self.master_file.get_value.return_value = None
+        self.seg0_file.get_value.return_value = None
+
+        self.subject.do_main()
+
+        self.assertEqual(self.subject.LOGGER.error.call_count, 0)
+        self.assertIn("No value is set on master\nNo value is set on segments", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_option_f_will_report_difference_segments_out_of_sync(self, mock_stdout):
         sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
-        self.master_read_config.get_guc_value.return_value = 'foo'
-        self.segment_read_config.get_guc_value.return_value = 'bar'
-        another_segment_read_config = Mock()
-        another_segment_read_config.get_guc_value.return_value = "baz"
-        another_segment_read_config.get_seg_content_id.return_value = 1
-        self.pool.getCompletedItems.return_value.append(another_segment_read_config)
+
+        self.master_file.get_value.return_value = 'foo'
+        self.seg0_file.get_value.return_value = 'bar'
+
+        seg_1 = Mock(name='seg1')
+        seg_1.segInfo.getSegmentContentId.return_value = 1
+        seg_1.segInfo.getSegmentDbId.return_value = 2
+        seg_1.get_value.return_value = 'baz'
+
+        # mocked values in the files
+        self.pool.getCompletedItems.return_value.append(seg_1)
+
         self.host_cache.get_hosts.return_value.extend([self.host, self.host])
 
         self.subject.do_main()
@@ -209,10 +245,37 @@ class GpConfig(GpTestCase):
         self.assertIn("bar", mock_stdout.getvalue())
         self.assertIn("[name: my_property_name] [value: baz]", mock_stdout.getvalue())
 
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_option_f_will_report_difference_segments_out_of_sync_when_unset(self, mock_stdout):
+        sys.argv = ["gpconfig", "--show", "my_property_name", "--file"]
+
+        self.master_file.get_value.return_value = 'foo'
+        self.seg0_file.get_value.return_value = 'bar'
+
+        seg_1 = Mock(name='seg1')
+        seg_1.segInfo.getSegmentContentId.return_value = 1
+        seg_1.segInfo.getSegmentDbId.return_value = 2
+        seg_1.get_value.return_value = None
+
+        # mocked values in the files
+        self.pool.getCompletedItems.return_value.append(seg_1)
+
+        self.host_cache.get_hosts.return_value.extend([self.host, self.host])
+
+        self.subject.do_main()
+
+        self.assertEqual(self.pool.addCommand.call_count, 3)
+        self.assertEqual(self.subject.LOGGER.error.call_count, 0)
+        self.assertIn("WARNING: GUCS ARE OUT OF SYNC", mock_stdout.getvalue())
+        self.assertIn("bar", mock_stdout.getvalue())
+        self.assertIn("[name: my_property_name] [not set in file]", mock_stdout.getvalue())
+
     def test_option_change_value_master_separate_succeed(self):
         db_singleton_side_effect_list.append("some happy result")
         entry = 'my_property_name'
         sys.argv = ["gpconfig", "-c", entry, "-v", "100", "-m", "20"]
+
+        # mocked database values
         # 'SELECT name, setting, unit, short_desc, context, vartype, min_val, max_val FROM pg_settings'
         self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
                                              'context', 'vartype', 'min_val', 'max_val']])
@@ -234,6 +297,8 @@ class GpConfig(GpTestCase):
         db_singleton_side_effect_list.append("some happy result")
         entry = 'my_property_name'
         sys.argv = ["gpconfig", "-c", entry, "-v", "100", "--masteronly"]
+
+        # mocked database values
         # 'SELECT name, setting, unit, short_desc, context, vartype, min_val, max_val FROM pg_settings'
         self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
                                              'context', 'vartype', 'min_val', 'max_val']])
@@ -284,17 +349,16 @@ class GpConfig(GpTestCase):
     @patch('sys.stdout', new_callable=StringIO)
     def test_option_file_compare_returns_same_value(self, mock_stdout):
         sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
-        self.master_read_config.get_guc_value.return_value = 'foo'
-        self.master_read_config.get_seg_content_id.return_value = -1
 
-        self.segment_read_config.get_guc_value.return_value = 'foo'
-        self.segment_read_config.get_seg_content_id.return_value = 0
+        seg_1 = Mock(name='seg1')
+        seg_1.segInfo.getSegmentContentId.return_value = 1
+        seg_1.segInfo.getSegmentDbId.return_value = 2
+        seg_1.get_value.return_value = 'foo'
 
-        another_segment_read_config = Mock()
-        another_segment_read_config.get_guc_value.return_value = "foo"
-        another_segment_read_config.get_seg_content_id.return_value = 1
-        self.pool.getCompletedItems.return_value.append(another_segment_read_config)
+        # mocked values in the files
+        self.pool.getCompletedItems.return_value.append(seg_1)
 
+        # mocked database values
         self.cursor.set_result_for_testing([[-1, 'my_property_name', 'foo'],
                                             [0, 'my_property_name', 'foo'],
                                             [1, 'my_property_name', 'foo']])
@@ -306,22 +370,44 @@ class GpConfig(GpTestCase):
         self.assertIn("Values on all segments are consistent", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
+    def test_option_file_compare_works_with_unset_values(self, mock_stdout):
+        sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
+
+        self.master_file.get_value.return_value = None
+        self.seg0_file.get_value.return_value = None
+
+        seg_1 = Mock(name='seg1')
+        seg_1.segInfo.getSegmentContentId.return_value = 1
+        seg_1.segInfo.getSegmentDbId.return_value = 2
+        seg_1.get_value.return_value = None
+
+        # mocked values in the files
+        self.pool.getCompletedItems.return_value.append(seg_1)
+
+        # mocked database values
+        self.cursor.set_result_for_testing([[-1, 'my_property_name', 'foo'],
+                                            [0, 'my_property_name', 'foo'],
+                                            [1, 'my_property_name', 'foo']])
+
+        self.subject.do_main()
+
+        self.assertIn("Master  value: foo | not set in file", mock_stdout.getvalue())
+        self.assertIn("Segment value: foo | not set in file", mock_stdout.getvalue())
+        self.assertIn("Values on all segments are consistent", mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=StringIO)
     def test_option_file_compare_returns_different_value(self, mock_stdout):
         sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
-        self.master_read_config.get_guc_value.return_value = 'foo'
-        self.master_read_config.get_seg_content_id.return_value = -1
-        self.master_read_config.get_seg_dbid.return_value = 0
 
-        self.segment_read_config.get_guc_value.return_value = 'foo'
-        self.segment_read_config.get_seg_content_id.return_value = 0
-        self.segment_read_config.get_seg_dbid.return_value = 1
+        seg_1 = Mock(name='seg1')
+        seg_1.segInfo.getSegmentContentId.return_value = 1
+        seg_1.segInfo.getSegmentDbId.return_value = 2
+        seg_1.get_value.return_value = 'bar'
 
-        another_segment_read_config = Mock()
-        another_segment_read_config.get_guc_value.return_value = "bar"
-        another_segment_read_config.get_seg_content_id.return_value = 1
-        another_segment_read_config.get_seg_dbid.return_value = 2
-        self.pool.getCompletedItems.return_value.append(another_segment_read_config)
+        # mocked values in the files
+        self.pool.getCompletedItems.return_value.append(seg_1)
 
+        # mocked database values
         self.cursor.set_result_for_testing([[-1, 'my_property_name', 'foo'],
                                             [0, 'my_property_name', 'foo'],
                                             [1, 'my_property_name', 'foo']])
@@ -337,22 +423,46 @@ class GpConfig(GpTestCase):
                       mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=StringIO)
+    def test_option_file_compare_with_unset_values_on_some_segments(self, mock_stdout):
+        sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
+
+        seg2_file = Mock(name='seg2')
+        seg2_file.segInfo.getSegmentContentId.return_value = 1
+        seg2_file.segInfo.getSegmentDbId.return_value = 2
+        seg2_file.get_value.return_value = None
+
+        # mocked values in the files
+        self.pool.getCompletedItems.return_value.append(seg2_file)
+
+        # mocked database values
+        self.cursor.set_result_for_testing([[-1, 'my_property_name', 'foo'],
+                                            [0, 'my_property_name', 'foo'],
+                                            [1, 'my_property_name', 'foo']])
+
+        self.subject.do_main()
+
+        self.assertIn("WARNING: GUCS ARE OUT OF SYNC: ", mock_stdout.getvalue())
+        self.assertIn("[context: -1] [dbid: 0] [name: my_property_name] [value: foo | file: foo]",
+                      mock_stdout.getvalue())
+        self.assertIn("[context: 0] [dbid: 1] [name: my_property_name] [value: foo | file: foo]",
+                      mock_stdout.getvalue())
+        self.assertIn("[context: 1] [dbid: 2] [name: my_property_name] [value: foo | not set in file]",
+                      mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=StringIO)
     def test_option_file_compare_with_standby_master_with_different_file_value_will_report_failure(self, mock_stdout):
         sys.argv = ["gpconfig", "-s", "my_property_name", "--file-compare"]
-        self.cursor.set_result_for_testing([[-1, 'my_property_name', 'foo']])
-        self.master_read_config.get_guc_value.return_value = 'foo'
-        self.master_read_config.get_seg_content_id.return_value = -1
-        self.master_read_config.get_seg_dbid.return_value = 0
-        # standby mirror with bad file value
-        self.segment_read_config.get_guc_value.return_value = 'foo'
-        self.segment_read_config.get_seg_content_id.return_value = 0
-        self.segment_read_config.get_seg_dbid.return_value = 1
 
-        standby_segment_read_config = Mock()
-        standby_segment_read_config.get_guc_value.return_value = "bar"
-        standby_segment_read_config.get_seg_content_id.return_value = -1
-        standby_segment_read_config.get_seg_dbid.return_value = 2
-        self.pool.getCompletedItems.return_value.append(standby_segment_read_config)
+        standby_master = Mock(name='standby_master')
+        standby_master.segInfo.getSegmentContentId.return_value = -1
+        standby_master.segInfo.getSegmentDbId.return_value = 2
+        standby_master.get_value.return_value = 'bar'
+
+        # mocked values in the files
+        self.pool.getCompletedItems.return_value.append(standby_master)
+
+        # mocked database values
+        self.cursor.set_result_for_testing([[-1, 'my_property_name', 'foo']])
 
         self.subject.do_main()
 
@@ -376,10 +486,48 @@ class GpConfig(GpTestCase):
             pass
         self.assertEqual(len(self.subject.read_only_gucs), 2)
 
+    def test_quote_string_not_already_quoted(self):
+        value = "teststring"
+        expected = "'teststring'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_quoted_with_double_quotes(self):
+        value = "\"teststring\""
+        expected = "'\"teststring\"'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_with_internal_single_quote(self):
+        value = "test'string"
+        expected = "'test''string'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_with_internal_backslash(self):
+        value = "test\\string"
+        expected = "'test\\\\string'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_with_single_quote_and_backslash(self):
+        value = "test\\'string"
+        expected = "'test\\\\''string'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
+    def test_quote_string_with_newline(self):
+        value = "test\nstring"
+        expected = "'test\\nstring'"
+        result = self.subject.quote_string(self.guc, value)
+        self.assertEqual(result, expected)
+
     def setup_for_testing_quoting_string_values(self, vartype, value, additional_args=None):
         sys.argv = ["gpconfig", "--change", "my_property_name", "--value", value]
         if additional_args:
             sys.argv.extend(additional_args)
+
+        # mocked database values
         self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
                                              'context', vartype, 'min_val', 'max_val']])
 
@@ -403,11 +551,11 @@ class GpConfig(GpTestCase):
         self.validation_for_testing_quoting_string_values(expected_value="'baz'")
 
     def test_change_of_master_value_with_quotes_succeeds(self):
-        already_quoted_master_value = "'baz'"
+        already_quoted_master_value = "'ba'z'"
         vartype = 'string'
-        self.setup_for_testing_quoting_string_values(vartype=vartype, value='baz', additional_args=['--mastervalue', already_quoted_master_value])
+        self.setup_for_testing_quoting_string_values(vartype=vartype, value=already_quoted_master_value, additional_args=['--mastervalue', already_quoted_master_value])
         self.subject.do_main()
-        self.validation_for_testing_quoting_string_values(expected_value="'baz'")
+        self.validation_for_testing_quoting_string_values(expected_value="'''ba''z'''")
 
     def test_change_of_master_only_quotes_succeeds(self):
         unquoted_master_value = "baz"
@@ -428,6 +576,8 @@ class GpConfig(GpTestCase):
         db_singleton_side_effect_list.append("some happy result")
         entry = 'my_property_name'
         sys.argv = ["gpconfig", "-c", entry, "-v", "100", "--masteronly"]
+
+        # mocked database values
         # 'SELECT name, setting, unit, short_desc, context, vartype, min_val, max_val FROM pg_settings'
         self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
                                              'context', 'vartype', 'min_val', 'max_val']])
@@ -446,6 +596,8 @@ class GpConfig(GpTestCase):
 
     def test_gpconfig_logs_successful_guc_change(self):
         sys.argv = ["gpconfig", "-c", 'my_property_name', "-v", "100", "--masteronly"]
+
+        # mocked database values
         self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
                                              'context', 'vartype', 'min_val', 'max_val']])
 
@@ -455,9 +607,11 @@ class GpConfig(GpTestCase):
 
     def test_gpconfig_logs_unsuccessful_guc_change(self):
         sys.argv = ["gpconfig", "-c", 'my_property_name', "-v", "100", "--masteronly"]
+
+        # mocked database values
         self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
                                              'context', 'vartype', 'min_val', 'max_val']])
-        self.segment_read_config.was_successful.return_value = False
+        self.seg0_file.was_successful.return_value = False
         self.subject.do_main()
 
         self.subject.LOGGER.error.assert_called_with("finished with errors, parameter string '-c my_property_name -v 100 --masteronly'")

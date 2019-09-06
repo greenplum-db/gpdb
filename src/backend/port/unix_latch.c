@@ -22,7 +22,7 @@
  * process, SIGUSR1 is sent and the signal handler in the waiting process
  * writes the byte to the pipe on behalf of the signaling process.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -51,6 +51,7 @@
 #include "miscadmin.h"
 #include "portability/instr_time.h"
 #include "postmaster/postmaster.h"
+#include "storage/barrier.h"
 #include "storage/latch.h"
 #include "storage/pmsignal.h"
 #include "storage/shmem.h"
@@ -201,9 +202,9 @@ WaitLatch(volatile Latch *latch, int wakeEvents, long timeout)
  * Like WaitLatch, but with an extra socket argument for WL_SOCKET_*
  * conditions.
  *
- * When waiting on a socket, WL_SOCKET_READABLE *must* be included in
- * 'wakeEvents'; WL_SOCKET_WRITEABLE is optional.  The reason for this is
- * that EOF and error conditions are reported only via WL_SOCKET_READABLE.
+ * When waiting on a socket, EOF and error conditions are reported by
+ * returning the socket as readable/writable or both, depending on
+ * WL_SOCKET_READABLE/WL_SOCKET_WRITEABLE being specified.
  */
 int
 WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
@@ -231,8 +232,6 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 		wakeEvents &= ~(WL_SOCKET_READABLE | WL_SOCKET_WRITEABLE);
 
 	Assert(wakeEvents != 0);	/* must have at least one wake event */
-	/* Cannot specify WL_SOCKET_WRITEABLE without WL_SOCKET_READABLE */
-	Assert((wakeEvents & (WL_SOCKET_READABLE | WL_SOCKET_WRITEABLE)) != WL_SOCKET_WRITEABLE);
 
 	if ((wakeEvents & WL_LATCH_SET) && latch->owner_pid != MyProcPid)
 		elog(ERROR, "cannot wait on a latch owned by another process");
@@ -297,7 +296,16 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 			break;
 		}
 
-		/* Must wait ... we use poll(2) if available, otherwise select(2) */
+		/*
+		 * Must wait ... we use poll(2) if available, otherwise select(2).
+		 *
+		 * On at least older linux kernels select(), in violation of POSIX,
+		 * doesn't reliably return a socket as writable if closed - but we
+		 * rely on that. So far all the known cases of this problem are on
+		 * platforms that also provide a poll() implementation without that
+		 * bug.  If we find one where that's not the case, we'll need to add a
+		 * workaround.
+		 */
 #ifdef HAVE_POLL
 		nfds = 0;
 		if (wakeEvents & (WL_SOCKET_READABLE | WL_SOCKET_WRITEABLE))
@@ -355,7 +363,7 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 		{
 			/* at least one event occurred, so check revents values */
 			if ((wakeEvents & WL_SOCKET_READABLE) &&
-				(pfds[0].revents & (POLLIN | POLLHUP | POLLERR | POLLNVAL)))
+				(pfds[0].revents & POLLIN))
 			{
 				/* data available in socket, or EOF/error condition */
 				result |= WL_SOCKET_READABLE;
@@ -363,7 +371,16 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 			if ((wakeEvents & WL_SOCKET_WRITEABLE) &&
 				(pfds[0].revents & POLLOUT))
 			{
+				/* socket is writable */
 				result |= WL_SOCKET_WRITEABLE;
+			}
+			if (pfds[0].revents & (POLLHUP | POLLERR | POLLNVAL))
+			{
+				/* EOF/error condition */
+				if (wakeEvents & WL_SOCKET_READABLE)
+					result |= WL_SOCKET_READABLE;
+				if (wakeEvents & WL_SOCKET_WRITEABLE)
+					result |= WL_SOCKET_WRITEABLE;
 			}
 
 			/*
@@ -448,6 +465,7 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 			}
 			if ((wakeEvents & WL_SOCKET_WRITEABLE) && FD_ISSET(sock, &output_mask))
 			{
+				/* socket is writable, or EOF */
 				result |= WL_SOCKET_WRITEABLE;
 			}
 			if ((wakeEvents & WL_POSTMASTER_DEATH) &&
@@ -513,12 +531,11 @@ SetLatch(volatile Latch *latch)
 	pid_t		owner_pid;
 
 	/*
-	 * XXX there really ought to be a memory barrier operation right here, to
-	 * ensure that any flag variables we might have changed get flushed to
-	 * main memory before we check/set is_set.  Without that, we have to
-	 * require that callers provide their own synchronization for machines
-	 * with weak memory ordering (see latch.h).
+	 * The memory barrier has be to be placed here to ensure that any flag
+	 * variables possibly changed by this process have been flushed to main
+	 * memory, before we check/set is_set.
 	 */
+	pg_memory_barrier();
 
 	/* Quick exit if already set */
 	if (latch->is_set)
@@ -587,14 +604,12 @@ ResetLatch(volatile Latch *latch)
 	latch->is_set = false;
 
 	/*
-	 * XXX there really ought to be a memory barrier operation right here, to
-	 * ensure that the write to is_set gets flushed to main memory before we
+	 * Ensure that the write to is_set gets flushed to main memory before we
 	 * examine any flag variables.  Otherwise a concurrent SetLatch might
 	 * falsely conclude that it needn't signal us, even though we have missed
 	 * seeing some flag updates that SetLatch was supposed to inform us of.
-	 * For the moment, callers must supply their own synchronization of flag
-	 * variables (see latch.h).
 	 */
+	pg_memory_barrier();
 
 	elogif(debug_latch, LOG, "latch reset -- Latch is now reset for process (pid %u).", latch->owner_pid);
 }

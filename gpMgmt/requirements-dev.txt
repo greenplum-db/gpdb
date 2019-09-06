@@ -1,0 +1,2 @@
+behave~=1.2.6
+coverage~=4.5

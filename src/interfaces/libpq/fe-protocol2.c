@@ -3,7 +3,7 @@
  * fe-protocol2.c
  *	  functions that are specific to frontend/backend protocol version 2
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -1627,6 +1627,7 @@ pqBuildStartupPacket2(PGconn *conn, int *packetlen,
 
 	startpacket->protoVersion = htonl(conn->pversion);
 
+	/* strncpy is safe here: postmaster will handle full fields correctly */
 	strncpy(startpacket->user, conn->pguser, SM_USER);
 	strncpy(startpacket->database, conn->dbName, SM_DATABASE);
 	strncpy(startpacket->tty, conn->pgtty, SM_TTY);

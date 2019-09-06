@@ -3,7 +3,7 @@
 <topic id="topic1">
   <title id="af20941">DROP COLLATION</title>
   <body>
-    <p>Removes a previously defined collation. </p>
+    <p id="sql_command_desc">Removes a previously defined collation. </p>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">DROP COLLATION [ IF EXISTS ] <varname>name</varname> [ CASCADE | RESTRICT ]</codeblock>

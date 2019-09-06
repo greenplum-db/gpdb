@@ -2,16 +2,16 @@
 # Makefile for isolation tests
 #
 
+PGFILEDESC = "pg_isolation_regress/isolationtester - multi-client test driver"
+PGAPPICON = win32
+
 subdir = src/test/isolation
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
-# where to find psql for testing an existing installation
-PSQLDIR = $(bindir)
-
 override CPPFLAGS := -I$(srcdir) -I$(libpq_srcdir) -I$(srcdir)/../regress $(CPPFLAGS)
 
-OBJS =  specparse.o isolationtester.o
+OBJS =  specparse.o isolationtester.o $(WIN32RES)
 
 all: isolationtester$(X) pg_isolation_regress$(X)
 
@@ -36,7 +36,7 @@ submake-regress:
 pg_regress.o: | submake-regress
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/pg_regress.o .
 
-pg_isolation_regress$(X): isolation_main.o pg_regress.o
+pg_isolation_regress$(X): isolation_main.o pg_regress.o $(WIN32RES)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
 
 isolationtester$(X): $(OBJS) | submake-libpq submake-libpgport
@@ -63,17 +63,17 @@ install-tests:
 	$(MAKE) -C $(top_builddir)/contrib/pageinspect install
 
 installcheck: all gpdiff.pl gpstringsubs.pl install-tests
-	./pg_isolation_regress --psqldir='$(PSQLDIR)' $(EXTRA_REGRESS_OPTS) --inputdir=$(srcdir) --init-file=$(srcdir)/init_file --load-extension=pageinspect --schedule=$(srcdir)/isolation_schedule
+	./pg_isolation_regress --bindir='$(bindir)' $(EXTRA_REGRESS_OPTS) --inputdir=$(srcdir) --init-file=$(srcdir)/init_file --load-extension=pageinspect --schedule=$(srcdir)/isolation_schedule
 
 check: all
-	./pg_isolation_regress --temp-install=./tmp_check --inputdir=$(srcdir) --top-builddir=$(top_builddir) $(EXTRA_REGRESS_OPTS) --schedule=$(srcdir)/isolation_schedule
+	$(with_temp_install) ./pg_isolation_regress --temp-instance=./tmp_check --inputdir=$(srcdir) --bindir= $(EXTRA_REGRESS_OPTS) --schedule=$(srcdir)/isolation_schedule
 
 # Versions of the check tests that include the prepared_transactions test
 # It only makes sense to run these if set up to use prepared transactions,
 # via TEMP_CONFIG for the check case, or via the postgresql.conf for the
 # installcheck case.
-installcheck-prepared-txns: all
-	./pg_isolation_regress --psqldir='$(PSQLDIR)' $(EXTRA_REGRESS_OPTS) --inputdir=$(srcdir) --schedule=$(srcdir)/isolation_schedule prepared-transactions
+installcheck-prepared-txns: all temp-install
+	./pg_isolation_regress --bindir='$(bindir)' $(EXTRA_REGRESS_OPTS) --inputdir=$(srcdir) --schedule=$(srcdir)/isolation_schedule prepared-transactions
 
-check-prepared-txns: all
-	./pg_isolation_regress --temp-install=./tmp_check $(EXTRA_REGRESS_OPTS) --inputdir=$(srcdir) --top-builddir=$(top_builddir) --schedule=$(srcdir)/isolation_schedule prepared-transactions
+check-prepared-txns: all temp-install
+	./pg_isolation_regress --temp-instance=./tmp_check $(EXTRA_REGRESS_OPTS) --inputdir=$(srcdir) --schedule=$(srcdir)/isolation_schedule prepared-transactions

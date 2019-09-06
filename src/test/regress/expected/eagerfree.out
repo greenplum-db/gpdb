@@ -57,7 +57,7 @@ explain analyze select d, count(*) from smallt group by d;
    (slice1)    Executor memory: 166K bytes avg x 3 workers, 166K bytes max (seg0).
    (slice2)    Executor memory: 138K bytes avg x 3 workers, 138K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 2.162 ms
 (16 rows)
 
@@ -84,7 +84,7 @@ explain analyze select count(*) from (select i, t, d, count(*) from bigt group b
    (slice1)  * Executor memory: 3004K bytes avg x 3 workers, 3004K bytes max (seg0).  Work_mem: 2361K bytes max, 4738K bytes wanted.
  Memory used:  2560kB
  Memory wanted:  5237kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 492.921 ms
 (15 rows)
 
@@ -107,7 +107,7 @@ explain analyze select count(distinct d) from smallt;
    (slice0)    Executor memory: 322K bytes.  Work_mem: 33K bytes max.
    (slice1)    Executor memory: 46K bytes avg x 3 workers, 46K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 1.348 ms
 (8 rows)
 
@@ -128,7 +128,7 @@ explain analyze select count(distinct d) from bigt;
    (slice1)    Executor memory: 70K bytes avg x 3 workers, 70K bytes max (seg0).
  Memory used:  2560kB
  Memory wanted:  23713kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 4936.653 ms
 (9 rows)
 
@@ -200,7 +200,7 @@ where t1.d = t2.d;
    (slice2)    Executor memory: 166K bytes avg x 3 workers, 166K bytes max (seg0).
    (slice3)    Executor memory: 218K bytes avg x 3 workers, 218K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 3.272 ms
 (29 rows)
 
@@ -249,7 +249,7 @@ where t1.i = t2.i;
    (slice0)    Executor memory: 386K bytes.
    (slice1)    Executor memory: 278K bytes avg x 3 workers, 278K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 1.614 ms
 (17 rows)
 
@@ -284,7 +284,7 @@ explain analyze select d, count(*) from smallt group by d limit 5;
    (slice1)    Executor memory: 166K bytes avg x 3 workers, 166K bytes max (seg0).
    (slice2)    Executor memory: 170K bytes avg x 3 workers, 170K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 3.057 ms
 (17 rows)
 
@@ -1307,7 +1307,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i;
    (slice0)    Executor memory: 322K bytes.
    (slice1)    Executor memory: 4202K bytes avg x 3 workers, 4206K bytes max (seg0).  Work_mem: 2K bytes max.
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 7.932 ms
 (12 rows)
 
@@ -1386,7 +1386,7 @@ where i < (select count(*) from smallt where smallt.i = smallt2.i);
                            Filter: smallt.i < count(*)
                            Group Key: smallt.i
                            ->  Seq Scan on smallt  (cost=0.00..4.00 rows=34 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 -- Sort in MergeJoin
@@ -1619,7 +1619,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i an
    (slice0)    Executor memory: 386K bytes.
    (slice1)    Executor memory: 120K bytes avg x 3 workers, 142K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 1.433 ms
 (18 rows)
 
@@ -1749,7 +1749,7 @@ explain analyze select t1.* from smallt as t1, smallt as t2 where t1.d = t2.d an
    (slice1)    Executor memory: 60K bytes avg x 3 workers, 62K bytes max (seg0).
    (slice2)    Executor memory: 158K bytes avg x 3 workers, 158K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 2.362 ms
 (19 rows)
 
@@ -1814,7 +1814,7 @@ and smallt.d = '2011-01-04'::date;
    (slice0)    Executor memory: 437K bytes.
    (slice1)    Executor memory: 128K bytes avg x 3 workers, 149K bytes max (seg1).
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 1.672 ms
 (13 rows)
 
@@ -1834,7 +1834,7 @@ explain analyze select *, exists(select 1 from pg_class where oid = c.oid) as du
  * (slice0)    Executor memory: 1118K bytes.  Work_mem: 96K bytes max, 64K bytes wanted.
  Memory used:  128000kB
  Memory wanted:  364kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 21.231 ms
 (14 rows)
 
@@ -1889,7 +1889,7 @@ and smallt.d = '2011-01-04'::date;
    (slice0)    Executor memory: 437K bytes.
    (slice1)    Executor memory: 480K bytes avg x 3 workers, 678K bytes max (seg1).  Work_mem: 9K bytes max.
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 1.456 ms
 (17 rows)
 

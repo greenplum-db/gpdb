@@ -6,10 +6,14 @@ CREATE TABLE update_test (
     b   INT,
     c   TEXT
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'e' as the Greenplum Database data distribution key for this table.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO update_test(a,b,c) VALUES (5, 10, 'foo');
-INSERT INTO update_test(b,a) VALUES (15, 10);
+CREATE TABLE upsert_test (
+    a   INT PRIMARY KEY,
+    b   TEXT
+);
+INSERT INTO update_test VALUES (5, 10, 'foo');
+INSERT INTO update_test(b, a) VALUES (15, 10);
 SELECT a,b,c FROM update_test ORDER BY a,b,c;
  a  | b  |  c  
 ----+----+-----
@@ -64,31 +68,80 @@ HINT:  You will need to rewrite or cast the expression.
 --
 -- Test multiple-set-clause syntax
 --
+INSERT INTO update_test SELECT a,b+1,c FROM update_test;
+SELECT * FROM update_test;
+  a  | b  |  c  
+-----+----+-----
+ 100 | 20 | foo
+ 100 | 20 | 
+ 100 | 21 | foo
+ 100 | 21 | 
+(4 rows)
+
 UPDATE update_test SET (c,b,a) = ('bugle', b+11, DEFAULT) WHERE c = 'foo';
 SELECT a,b,c FROM update_test ORDER BY a,b,c;
   a  | b  |   c   
 -----+----+-------
   10 | 31 | bugle
+  10 | 32 | bugle
  100 | 20 | 
-(2 rows)
+ 100 | 21 | 
+(4 rows)
 
 UPDATE update_test SET (c,b) = ('car', a+b), a = a + 1 WHERE a = 10;
 SELECT a,b,c FROM update_test ORDER BY a,b,c;
   a  | b  |  c  
 -----+----+-----
   11 | 41 | car
+  11 | 42 | car
  100 | 20 | 
-(2 rows)
+ 100 | 21 | 
+(4 rows)
 
 -- fail, multi assignment to same column:
 UPDATE update_test SET (c,b) = ('car', a+b), b = a + 1 WHERE a = 10;
 ERROR:  multiple assignments to same column "b"
--- XXX this should work, but doesn't yet:
-UPDATE update_test SET (a,b) = (select a,b FROM update_test where c = 'foo')
-  WHERE a = 10;
-ERROR:  syntax error at or near "select"
-LINE 1: UPDATE update_test SET (a,b) = (select a,b FROM update_test ...
-                                        ^
+-- uncorrelated sub-select:
+UPDATE update_test
+  SET (b,a) = (select a,b from update_test where b = 41 and c = 'car')
+  WHERE a = 100 AND b = 20;
+SELECT * FROM update_test;
+  a  | b  |  c  
+-----+----+-----
+  41 | 11 | 
+ 100 | 21 | 
+  11 | 41 | car
+  11 | 42 | car
+(4 rows)
+
+-- correlated sub-select:
+UPDATE update_test o
+  SET (b,a) = (select a+1,b from update_test i
+               where i.a=o.a and i.b=o.b and i.c is not distinct from o.c);
+SELECT * FROM update_test;
+ a  |  b  |  c  
+----+-----+-----
+ 41 |  12 | car
+ 42 |  12 | car
+ 11 |  42 | 
+ 21 | 101 | 
+(4 rows)
+
+-- fail, multiple rows supplied:
+UPDATE update_test SET (b,a) = (select a+1,b from update_test);
+ERROR:  more than one row returned by a subquery used as an expression
+-- set to null if no rows supplied:
+UPDATE update_test SET (b,a) = (select a+1,b from update_test where a = 1000)
+  WHERE a = 11;
+SELECT * FROM update_test;
+ a  |  b  |  c  
+----+-----+-----
+ 41 |  12 | car
+ 42 |  12 | car
+    |     | 
+ 21 | 101 | 
+(4 rows)
+
 -- if an alias for the target table is specified, don't allow references
 -- to the original table name
 UPDATE update_test AS t SET b = update_test.b + 10 WHERE t.a = 10;
@@ -99,13 +152,45 @@ HINT:  Perhaps you meant to reference the table alias "t".
 -- Make sure that we can update to a TOASTed value.
 UPDATE update_test SET c = repeat('x', 10000) WHERE c = 'car';
 SELECT a, b, char_length(c) FROM update_test;
-  a  | b  | char_length 
------+----+-------------
- 100 | 20 |            
-  11 | 41 |       10000
-(2 rows)
+ a  |  b  | char_length 
+----+-----+-------------
+ 21 | 101 |            
+    |     |            
+ 41 |  12 |       10000
+ 42 |  12 |       10000
+(4 rows)
+
+-- Test ON CONFLICT DO UPDATE
+INSERT INTO upsert_test VALUES(1, 'Boo');
+-- uncorrelated  sub-select:
+WITH aaa AS (SELECT 1 AS a, 'Foo' AS b) INSERT INTO upsert_test
+  VALUES (1, 'Bar') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT b, a FROM aaa) RETURNING *;
+ a |  b  
+---+-----
+ 1 | Foo
+(1 row)
+
+-- correlated sub-select:
+INSERT INTO upsert_test VALUES (1, 'Baz') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT b || ', Correlated', a from upsert_test i WHERE i.a = upsert_test.a)
+  RETURNING *;
+ a |        b        
+---+-----------------
+ 1 | Foo, Correlated
+(1 row)
+
+-- correlated sub-select (EXCLUDED.* alias):
+INSERT INTO upsert_test VALUES (1, 'Bat') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT b || ', Excluded', a from upsert_test i WHERE i.a = excluded.a)
+  RETURNING *;
+ a |             b             
+---+---------------------------
+ 1 | Foo, Correlated, Excluded
+(1 row)
 
 DROP TABLE update_test;
+DROP TABLE upsert_test;
 --
 -- text types. We should support the following updates.
 --
@@ -341,13 +426,12 @@ EXPLAIN (COSTS OFF ) UPDATE tab3 SET C1 = C1 + 1, C5 = C5+1;
  Update
    ->  Result
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               Hash Key: ((tab3.c1 + 1)), tab3.c2, tab3.c3
-               ->  Result
-                     ->  Split
-                           ->  Result
-                                 ->  Seq Scan on tab3
- Optimizer: PQO version 2.74.0
-(9 rows)
+               Hash Key: tab3.c1, tab3.c2, tab3.c3
+               ->  Split
+                     ->  Result
+                           ->  Seq Scan on tab3
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
+(8 rows)
 
 -- clean up
 drop table tab3;

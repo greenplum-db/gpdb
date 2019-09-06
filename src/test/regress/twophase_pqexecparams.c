@@ -25,59 +25,13 @@ exit_nicely(PGconn *conn)
 	exit(1);
 }
 
-
-
-/*
- * This function prints a query result that is a fetch from the test table.
- */
-static void
-show_results(PGresult *res)
-{
-	int			i,
-				j;
-	int			i_fnum,
-				t_fnum;
-
-
-	/* Use PQfnumber to avoid assumptions about field order in result */
-	i_fnum = PQfnumber(res, "i");
-	t_fnum = PQfnumber(res, "t");
-
-	for (i = 0; i < PQntuples(res); i++)
-	{
-		char	   *iptr;
-		char	   *tptr;
-		int			ival;
-
-		/* Get the field values (we ignore possibility they are null!) */
-		iptr = PQgetvalue(res, i, i_fnum);
-		tptr = PQgetvalue(res, i, t_fnum);
-
-		/*
-		 * The binary representation of INT4 is in network byte order, which
-		 * we'd better coerce to the local byte order.
-		 */
-		ival = ntohl(*((uint32_t *) iptr));
-
-
-		printf("tuple %d: got\n", i);
-		printf(" i = (%d bytes) %d\n",
-			   PQgetlength(res, i, i_fnum), ival);
-		printf(" t = (%d bytes) '%s'\n",
-			   PQgetlength(res, i, t_fnum), tptr);
-		printf("\n");
-	}
-}
-
-
-
 int
 main(int argc, char **argv)
 {
 	const char *conninfo;
 	PGconn	   *conn;
 	PGresult   *res;
-	const char *paramValues[1];
+	const char *paramValues[2];
 
 	/*
 	 * If the user supplies a parameter on the command line, use it as the
@@ -115,30 +69,31 @@ main(int argc, char **argv)
 	PQexec(conn, "SET debug_dtm_action_segment = 0");
 	PQexec(conn, "SET debug_dtm_action = \"fail_begin_command\"");
 
-	paramValues[0] = "joe's place";
+	paramValues[0] = "1";
+	paramValues[1] = "2";
 
-	/* Upone receving the SELECT below, the segment will error out due to the
+	/* Upone receving the INSERT below, the segment will error out due to the
 	 * fault-injector GUCs set earlier.  However, the master will retry and we
 	 * should get a message saying that retry succeeded.
 	 */
 
 	res = PQexecParams(conn,
-					   "SELECT * FROM test1 WHERE t = $1",
-					   1,		/* one param */
+					   "INSERT INTO test1(i) VALUES($1), ($2)",
+					   2,		/* one param */
 					   NULL,	/* let the backend deduce param type */
 					   paramValues,
 					   NULL,	/* don't need param lengths since text */
 					   NULL,	/* default to all text params */
 					   1);		/* ask for binary results */
 
-	if (PQresultStatus(res) != PGRES_TUPLES_OK)
+	if (PQresultStatus(res) != PGRES_COMMAND_OK)
 	{
-		fprintf(stderr, "SELECT failed: %s", PQerrorMessage(conn));
+		fprintf(stderr, "INSERT failed: %s", PQerrorMessage(conn));
 		PQclear(res);
 		exit_nicely(conn);
 	}
 
-	show_results(res);
+	printf("result: %s\n", PQcmdStatus(res));
 
 	PQclear(res);
 

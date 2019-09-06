@@ -60,17 +60,6 @@
               this record. This value has the fixed type <codeph>text</codeph>, and will be
               converted to a different data type depending upon the limit referenced. </entry>
           </row>
-          <row>
-            <entry colname="col1">
-              <codeph>proposed</codeph>
-            </entry>
-            <entry colname="col2">opaque type</entry>
-            <entry colname="col3"/>
-            <entry colname="col4">If you altered a resource limit and the limit cannot be
-               updated immediately, the proposed value for the limit referenced in this
-               record. Otherwise, <codeph>proposed</codeph> reflects the currently set
-               <codeph>value</codeph>.</entry>
-          </row>
         </tbody>
       </tgroup>
     </table>

@@ -8,6 +8,7 @@
 #include "optimizer/planmain.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/ruleutils.h"
 
 extern Datum gp_build_logical_index_info(PG_FUNCTION_ARGS);
 extern Datum gp_get_physical_index_relid(PG_FUNCTION_ARGS);

@@ -9,7 +9,7 @@
 
 #include "../appendonly_visimap_entry.c"
 
-void
+static void
 test__AppendOnlyVisimapEntry_GetFirstRowNum(void **state)
 {
 	int64 result, expected;
@@ -31,7 +31,7 @@ test__AppendOnlyVisimapEntry_GetFirstRowNum(void **state)
 	assert_true(result == expected);
 }
 
-void
+static void
 test__AppendOnlyVisimapEntry_CoversTuple(void **state)
 {
 	bool result;

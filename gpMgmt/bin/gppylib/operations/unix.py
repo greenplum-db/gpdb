@@ -183,8 +183,8 @@ class CleanSharedMem(Operation):
                 result = item.get_results()
 
                 # This code is usually called after a GPDB segment has
-                # been terminated.  In that case, it is posssible that
-                # the shared memeory has already been freed by the
+                # been terminated.  In that case, it is possible that
+                # the shared memory has already been freed by the
                 # time we are called to clean up.  Due to this race
                 # condition, it is possible to get an `ipcrm: invalid
                 # id1` error from ipcrm.  We, therefore, ignore it.

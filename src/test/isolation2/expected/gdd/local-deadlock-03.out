@@ -1,3 +1,22 @@
+
+-- gdd can also detect local deadlocks, however it might break at
+-- different node with the local deadlock detector.  To make the local
+-- deadlock testcases stable we reset the gdd period to 2min so should
+-- not be triggered during the local deadlock tests.
+ALTER SYSTEM RESET gp_global_deadlock_detector_period;
+ALTER
+SELECT pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
+-- start new session, which should always have newly reflected value
+1: SHOW gp_global_deadlock_detector_period;
+ gp_global_deadlock_detector_period 
+------------------------------------
+ 2min                               
+(1 row)
+
 DROP TABLE IF EXISTS t03;
 DROP
 CREATE TABLE t03 (id int, val int);

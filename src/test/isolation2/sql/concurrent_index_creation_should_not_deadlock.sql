@@ -1,5 +1,3 @@
-CREATE extension if NOT EXISTS gp_inject_fault;
-
 -- Create an append only table, popluated with data
 CREATE TABLE index_deadlocking_test_table (value int) WITH (appendonly=true);
 

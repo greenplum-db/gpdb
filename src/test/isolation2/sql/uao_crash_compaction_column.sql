@@ -14,7 +14,7 @@ declare
 	result bool; /* in func */
 begin /* in func */
 	i := 0; /* in func */
-	-- Wait until all mirrors has replayed up to flush location
+	-- Wait until the mirror (content 0) has replayed up to flush location
 	loop /* in func */
 		SELECT flush_location = replay_location INTO result from gp_stat_replication where gp_segment_id = 0; /* in func */
 		if result then /* in func */
@@ -30,7 +30,6 @@ begin /* in func */
 end; /* in func */
 $$ language plpgsql;
 
-3:CREATE extension if NOT EXISTS gp_inject_fault;
 3:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 --
 -- Test to validate crash at different points in AO/CO vacuum.

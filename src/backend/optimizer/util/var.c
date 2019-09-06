@@ -9,7 +9,7 @@
  * contains variables.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
@@ -746,6 +746,55 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
 				break;
 		}
 	}
+	else if (IsA(node, GroupingFunc))
+	{
+		if (((GroupingFunc *) node)->agglevelsup != 0)
+			elog(ERROR, "Upper-level GROUPING found where not expected");
+		switch (context->aggbehavior)
+		{
+			case PVC_REJECT_AGGREGATES:
+				elog(ERROR, "GROUPING found where not expected");
+				break;
+			case PVC_INCLUDE_AGGREGATES:
+				context->varlist = lappend(context->varlist, node);
+				/* we do NOT descend into the contained expression */
+				return false;
+			case PVC_RECURSE_AGGREGATES:
+
+				/*
+				 * we do NOT descend into the contained expression, even if
+				 * the caller asked for it, because we never actually evaluate
+				 * it - the result is driven entirely off the associated GROUP
+				 * BY clause, so we never need to extract the actual Vars
+				 * here.
+				 */
+				return false;
+		}
+	}
+	else if (IsA(node, GroupId))
+	{
+		if (((GroupId *) node)->agglevelsup != 0)
+			elog(ERROR, "Upper-level GROUP_ID found where not expected");
+		switch (context->aggbehavior)
+		{
+			case PVC_REJECT_AGGREGATES:
+				elog(ERROR, "GROUP_ID found where not expected");
+				break;
+			case PVC_INCLUDE_AGGREGATES:
+				context->varlist = lappend(context->varlist, node);
+				/* we do NOT descend into the contained expression */
+				return false;
+			case PVC_RECURSE_AGGREGATES:
+				/*
+				 * we do NOT descend into the contained expression,
+				 * even if the caller asked for it, because we never
+				 * actually evaluate it - the result is driven entirely
+				 * off the associated GROUP BY clause, so we never need
+				 * to extract the actual Vars here.
+				 */
+				return false;
+		}
+	}
 	else if (IsA(node, PlaceHolderVar))
 	{
 		if (((PlaceHolderVar *) node)->phlevelsup != 0)
@@ -955,11 +1004,10 @@ static Relids
 alias_relid_set(PlannerInfo *root, Relids relids)
 {
 	Relids		result = NULL;
-	Relids		tmprelids;
 	int			rtindex;
 
-	tmprelids = bms_copy(relids);
-	while ((rtindex = bms_first_member(tmprelids)) >= 0)
+	rtindex = -1;
+	while ((rtindex = bms_next_member(relids, rtindex)) >= 0)
 	{
 		RangeTblEntry *rte = rt_fetch(rtindex, root->parse->rtable);
 
@@ -968,6 +1016,5 @@ alias_relid_set(PlannerInfo *root, Relids relids)
 		else
 			result = bms_add_member(result, rtindex);
 	}
-	bms_free(tmprelids);
 	return result;
 }

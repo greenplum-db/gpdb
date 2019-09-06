@@ -94,10 +94,16 @@ create table exchange_tab
   content text
 );
 
+-- These indexes must exist on the table before we can exchange, because
+-- they exist as a partitioned index on part_table1
+create index like_rp_i1 on exchange_tab(part_key);
+create index like_parent_partial_ind1 on exchange_tab(part_key)
+where part_key >=1 and part_key < 10;
+
 create index e1 on exchange_tab(lower(content));
 
--- exchanging with part2 - part2's indexes are gone
--- the 1 index on exchange_tab is retained
+-- exchanging with part2
+-- the 3 indexs on exchange_tab is retained
 alter table part_table1 exchange partition for ('11') with table exchange_tab;
 
 -- output of the function shows the index on expression on just the exchanged part.

@@ -3,7 +3,6 @@
 default: all
 
 BLD_TOP=..
-include $(BLD_TOP)/Makefile.windows
 
 ext_dir=../ext
 

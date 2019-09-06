@@ -4,9 +4,6 @@
  * Parameter combination tests
  * Improve code coverage tests
  */
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 CREATE SCHEMA ic_udp_test;
 SET search_path = ic_udp_test;
 -- Prepare some tables
@@ -465,17 +462,15 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 begin;
 declare ic_test_cursor_c1 cursor for select * from ic_test_1;
 select gp_inject_fault('interconnect_stop_ack_is_lost', 'reset', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('interconnect_stop_ack_is_lost', 'skip', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 commit;
@@ -488,20 +483,18 @@ drop table ic_test_1;
 CREATE TABLE a (i INT, j INT) DISTRIBUTED BY (i);
 INSERT INTO a (SELECT i, i * i FROM generate_series(1, 10) as i);
 SELECT gp_inject_fault('interconnect_setup_palloc', 'error', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 SELECT * FROM a;
 ERROR:  fault triggered, fault name:'interconnect_setup_palloc' fault type:'error'
 DROP TABLE a;
 SELECT gp_inject_fault('interconnect_setup_palloc', 'reset', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 -- Use WITH RECURSIVE to construct a one-time filter result node that executed

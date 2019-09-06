@@ -134,11 +134,6 @@ typedef struct
 } FtsSegmentPairState;
 
 /*
- * FTS process interface
- */
-extern int ftsprobe_start(void);
-
-/*
  * Interface for checking if FTS is active
  */
 extern bool FtsIsActive(void);
@@ -149,4 +144,10 @@ extern bool FtsIsActive(void);
 extern void HandleFtsMessage(const char* query_string);
 extern void probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 									bool IsSegmentAlive, bool IsInSync);
+
+extern bool FtsProbeStartRule(Datum main_arg);
+extern void FtsProbeMain (Datum main_arg);
+extern void FtsProbeShmemInit(void);
+extern pid_t FtsProbePID(void);
+
 #endif   /* FTS_H */

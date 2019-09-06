@@ -65,12 +65,12 @@ detailed configuration file using the -i option. This is useful if
 you want your mirror segments on a completely different set of hosts 
 than your primary segments. The format of the mirror configuration file is:
 
-mirror<content>=<content>:<address>:<port>:<datadir>
+<content>|<address>|<port>|<datadir>
 
 For example:
 
-mirror0=0:sdw1-1:60000:61000:62000:/gpdata/mir1/gp0
-mirror1=1:sdw1-1:60001:61001:62001:/gpdata/mir2/gp1
+0|sdw1-1|60000|/gpdata/mirror1/gp0
+1|sdw1-1|60001|/gpdata/mirror2/gp1
 
 The gp_segment_configuration system catalog tables can help you determine
 your current primary segment configuration so that you can plan your
@@ -123,7 +123,7 @@ OPTIONS
  follows (as per attributes in the gp_segment_configuration catalog
  table):
 
-   mirror<content>=<content>:<address>:<port>:<datadir>
+   <content>|<address>|<port>|<datadir>
 
 
 -l <logfile_directory>
@@ -157,14 +157,11 @@ OPTIONS
 -p <port_offset>
 
  Optional. This number is used to calculate the database ports 
- and replication ports used for mirror segments. The default offset 
- is 1000. Mirror port assignments are calculated as follows: 
+ used for mirror segments. The default offset is 1000. Mirror
+ port assignments are calculated as follows:
 	primary port + offset = mirror database port
-	primary port + (2 * offset) = mirror replication port
-	primary port + (3 * offset) = primary replication port
  For example, if a primary segment has port 50001, then its mirror 
- will use a database port of 51001, a mirror replication port of 
- 52001, and a primary replication port of 53001 by default.
+ will use a database port of 51001 by default.
 
 
 -s
@@ -199,8 +196,8 @@ EXAMPLES
 
 Add mirroring to an existing Greenplum Database system using 
 the same set of hosts as your primary data. Calculate the mirror 
-database and replication ports by adding 100 to the current 
-primary segment port numbers:
+database ports by adding 100 to the current primary segment port
+numbers:
 
   $ gpaddmirrors -p 100
 
@@ -212,10 +209,10 @@ $ gpaddmirrors -i mirror_config_file
 
 Where the mirror_config_file looks something like this:
 
-mirror0=0:sdw1-1:52001:53001:54001:/gpdata/mir1/gp0
-mirror1=1:sdw1-2:52002:53002:54002:/gpdata/mir2/gp1
-mirror2=2:sdw2-1:52001:53001:54001:/gpdata/mir1/gp2
-mirror3=3:sdw2-2:52002:53002:54002:/gpdata/mir2/gp3
+0|sdw1-1|52001|53001|54001|/gpdata/mir1/gp0
+1|sdw1-2|52002|53002|54002|/gpdata/mir2/gp1
+2|sdw2-1|52001|53001|54001|/gpdata/mir1/gp2
+3|sdw2-2|52002|53002|54002|/gpdata/mir2/gp3
 
 
 Output a sample mirror configuration file to use with gpaddmirrors -i:

@@ -13,7 +13,7 @@
  *
  * Author: Andreas Pflug <pgadmin@pse-consulting.de>
  *
- * Copyright (c) 2004-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2004-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -54,8 +54,6 @@
 
 /* The maximum bytes for error message */
 #define ERROR_MESSAGE_MAX_SIZE 200
-
-extern bool Gp_entry_postmaster;
 
 /*
  * We read() into a temp buffer twice as big as a chunk, so that any fragment
@@ -106,7 +104,6 @@ static const char *alert_file_pattern = "gpdb-alert-%Y-%m-%d_%H%M%S.csv";
 static char *alert_last_file_name = NULL;
 static bool alert_log_level_opened = false;
 static bool write_to_alert_log = false;
-static Latch sysLoggerLatch;
 
 /*
  * Buffers for saving partial messages from different backends.
@@ -137,6 +134,13 @@ static HANDLE threadHandle = 0;
 static CRITICAL_SECTION sysloggerSection;
 #endif
 
+/* GPDB: wrapper function to silence unused result warning */
+static inline void
+ignore_returned_result(long long int result)
+{
+	(void) result;
+}
+
 static bool chunk_is_postgres_chunk(PipeProtoHeader *hdr)
 {
     return hdr->zero == 0 && hdr->pid != 0 && hdr->thid != 0 &&
@@ -161,7 +165,7 @@ static volatile sig_atomic_t alert_rotation_requested = false;
 static pid_t syslogger_forkexec(void);
 static void syslogger_parseArgs(int argc, char *argv[]);
 #endif
-NON_EXEC_STATIC void SysLoggerMain(int argc, char *argv[]) __attribute__((noreturn));
+NON_EXEC_STATIC void SysLoggerMain(int argc, char *argv[]) pg_attribute_noreturn();
 #if 0
 static void process_pipe_input(char *logbuffer, int *bytes_in_logbuffer);
 static void flush_pipe_input(char *logbuffer, int *bytes_in_logbuffer);
@@ -172,7 +176,7 @@ static FILE *logfile_open(const char *filename, const char *mode,
 #ifdef WIN32
 static unsigned int __stdcall pipeThread(void *arg);
 #endif
-static void logfile_rotate(bool time_based_rotation, bool size_based_rotation, const char *suffix,
+static bool logfile_rotate(bool time_based_rotation, bool size_based_rotation, const char *suffix,
 						   const char *log_directory, const char *log_filename,
                            FILE **fh, char **last_log_file_name);
 static char *logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directory, const char *log_file_pattern);
@@ -265,11 +269,6 @@ SysLoggerMain(int argc, char *argv[])
 	int			currentLogRotationAge;
 	pg_time_t	now;
 
-	IsUnderPostmaster = true;	/* we are a postmaster subprocess now */
-
-	MyProcPid = getpid();		/* reset MyProcPid */
-
-	MyStartTime = time(NULL);	/* set our start time in case we call elog */
 	now = MyStartTime;
 
 #ifdef EXEC_BACKEND
@@ -278,7 +277,7 @@ SysLoggerMain(int argc, char *argv[])
 
 	am_syslogger = true;
 
-	if (Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH)
+	if (IsUnderMasterDispatchMode())
 		init_ps_display("master logger process", "", "", "");
 	else
 		init_ps_display("logger process", "", "", "");
@@ -339,22 +338,6 @@ SysLoggerMain(int argc, char *argv[])
 		CloseHandle(syslogPipe[1]);
 	syslogPipe[1] = 0;
 #endif
-
-	/*
-	 * If possible, make this process a group leader, so that the postmaster
-	 * can signal any child processes too.  (syslogger probably never has any
-	 * child processes, but for consistency we make all postmaster child
-	 * processes do this.)
-	 */
-#ifdef HAVE_SETSID
-	if (setsid() < 0)
-		elog(FATAL, "setsid() failed: %m");
-#endif
-
-	InitializeLatchSupport();	/* needed for latch waits */
-
-	/* Initialize private latch for use by signal handlers */
-	InitLatch(&sysLoggerLatch);
 
 	/*
 	 * Properly accept or ignore signals the postmaster might send us
@@ -431,8 +414,10 @@ SysLoggerMain(int argc, char *argv[])
 		int			rc;
 #endif
 
+		bool		all_rotations_occurred = false;
+
 		/* Clear any already-pending wakeups */
-		ResetLatch(&sysLoggerLatch);
+		ResetLatch(MyLatch);
 
 		/*
 		 * Process any requests or signals received recently.
@@ -497,8 +482,7 @@ SysLoggerMain(int argc, char *argv[])
 		if (Log_RotationAge > 0 && !rotation_disabled)
 		{
 			/* Do a logfile rotation if it's time */
-			pg_time_t	now = (pg_time_t) time(NULL);
-
+			now = (pg_time_t) time(NULL);
 			if (now >= next_rotation_time)
 			{
 				rotation_requested = time_based_rotation = true;
@@ -535,6 +519,9 @@ SysLoggerMain(int argc, char *argv[])
 			}
 		}
 
+		all_rotations_occurred = rotation_requested ||
+								 (alert_log_level_opened && alert_rotation_requested);
+
 		if (rotation_requested)
 		{
 			/*
@@ -545,20 +532,35 @@ SysLoggerMain(int argc, char *argv[])
 				size_rotation_for = LOG_DESTINATION_STDERR | LOG_DESTINATION_CSVLOG;
 
 			rotation_requested = false;
-			logfile_rotate(time_based_rotation, (size_rotation_for & LOG_DESTINATION_STDERR) != 0,
-						   NULL, Log_directory, Log_filename,
-						   &syslogFile, &last_file_name);
-			logfile_rotate(time_based_rotation, (size_rotation_for & LOG_DESTINATION_CSVLOG) != 0,
-						   ".csv", Log_directory, Log_filename,
-						   &csvlogFile, &last_csv_file_name);
+
+			all_rotations_occurred &=
+				logfile_rotate(time_based_rotation, (size_rotation_for & LOG_DESTINATION_STDERR) != 0,
+							   NULL, Log_directory, Log_filename,
+							   &syslogFile, &last_file_name);
+			all_rotations_occurred &=
+				logfile_rotate(time_based_rotation, (size_rotation_for & LOG_DESTINATION_CSVLOG) != 0,
+							   ".csv", Log_directory, Log_filename,
+							   &csvlogFile, &last_csv_file_name);
 		}
 
 		if (alert_log_level_opened && alert_rotation_requested)
 		{
 			alert_rotation_requested = false;
-			logfile_rotate(time_based_rotation, size_rotation_for_alert,
-						   NULL, gp_perf_mon_directory, alert_file_pattern,
-						   &alertLogFile, &alert_last_file_name);
+			all_rotations_occurred &=
+				logfile_rotate(time_based_rotation, size_rotation_for_alert,
+							   NULL, gp_perf_mon_directory, alert_file_pattern,
+							   &alertLogFile, &alert_last_file_name);
+		}
+
+		/*
+		 * GPDB: only update our rotation timestamp if every log file above was
+		 * able to rotate. In upstream, this would have been done as part of
+		 * logfile_rotate() itself -- Postgres calls that function once, whereas
+		 * we call it (up to) three times.
+		 */
+		if (all_rotations_occurred)
+		{
+			set_next_rotation_time();
 		}
 
 		/*
@@ -567,6 +569,9 @@ SysLoggerMain(int argc, char *argv[])
 		 * above is still close enough.  Note we can't make this calculation
 		 * until after calling logfile_rotate(), since it will advance
 		 * next_rotation_time.
+		 *
+		 * GPDB: logfile_rotate() doesn't advance next_rotation_time; we do that
+		 * explicitly above, once all rotations have been successful.
 		 *
 		 * Also note that we need to beware of overflow in calculation of the
 		 * timeout: with large settings of Log_RotationAge, next_rotation_time
@@ -598,7 +603,7 @@ SysLoggerMain(int argc, char *argv[])
 		 * Sleep until there's something to do
 		 */
 #ifndef WIN32
-		rc = WaitLatchOrSocket(&sysLoggerLatch,
+		rc = WaitLatchOrSocket(MyLatch,
 							   WL_LATCH_SET | WL_SOCKET_READABLE | cur_flags,
 							   syslogPipe[0],
 							   cur_timeout);
@@ -766,7 +771,7 @@ SysLoggerMain(int argc, char *argv[])
 		 */
 		LeaveCriticalSection(&sysloggerSection);
 
-		(void) WaitLatch(&sysLoggerLatch,
+		(void) WaitLatch(MyLatch,
 						 WL_LATCH_SET | cur_flags,
 						 cur_timeout);
 
@@ -797,8 +802,7 @@ SysLoggerMain(int argc, char *argv[])
 static void
 open_alert_log_file()
 {
-    if (Gp_entry_postmaster &&
-        Gp_role == GP_ROLE_DISPATCH &&
+	if (IsUnderMasterDispatchMode() &&
         gpperfmon_log_alert_level != GPPERFMON_LOG_ALERT_LEVEL_NONE)
     {
         alert_log_level_opened = true;
@@ -929,11 +933,10 @@ SysLogger_Start(void)
 #ifndef EXEC_BACKEND
 		case 0:
 			/* in postmaster child ... */
+			InitPostmasterChild();
+
 			/* Close the postmaster's sockets */
 			ClosePostmasterPorts(true);
-
-			/* Lose the postmaster's on-exit routines */
-			on_exit_reset();
 
 			/* Drop our connection to postmaster's shared memory, as well */
 			dsm_detach_all();
@@ -1203,7 +1206,7 @@ syslogger_append_timestamp(pg_time_t stamp_time, bool amsyslogger, bool append_c
 		if (amsyslogger)
 			write_syslogger_file_binary(strbuf, strlen(strbuf), LOG_DESTINATION_STDERR);
 		else
-			write(fileno(stderr), strbuf, strlen(strbuf));
+			ignore_returned_result(write(fileno(stderr), strbuf, strlen(strbuf)));
     }
 
     if (append_comma)
@@ -1211,7 +1214,7 @@ syslogger_append_timestamp(pg_time_t stamp_time, bool amsyslogger, bool append_c
 		if (amsyslogger)
 			write_syslogger_file_binary(",", 1, LOG_DESTINATION_STDERR);
 		else
-			write(fileno(stderr), ",", 1);
+			ignore_returned_result(write(fileno(stderr), ",", 1));
 	}
 }
 
@@ -1257,8 +1260,8 @@ syslogger_append_current_timestamp(bool amsyslogger)
 	}
 	else
 	{
-		write(fileno(stderr), strbuf, strlen(strbuf));
-		write(fileno(stderr), ",", 1);
+		ignore_returned_result(write(fileno(stderr), strbuf, strlen(strbuf)));
+		ignore_returned_result(write(fileno(stderr), ",", 1));
 	}
 }
 
@@ -1282,13 +1285,13 @@ int syslogger_write_str(const char *data, int len, bool amsyslogger, bool csv)
 			if (amsyslogger)
 				write_syslogger_file_binary("\"", 1, LOG_DESTINATION_STDERR);
 			else
-				write(fileno(stderr), "\"", 1);
+				ignore_returned_result(write(fileno(stderr), "\"", 1));
 		}
 		
 		if (amsyslogger)
 			write_syslogger_file_binary(data+cnt, 1, LOG_DESTINATION_STDERR);
 		else
-			write(fileno(stderr), data+cnt, 1);
+			ignore_returned_result(write(fileno(stderr), data+cnt, 1));
 
         cnt+=1;
     }
@@ -1388,14 +1391,14 @@ syslogger_write_int32(bool test0, const char *prefix, int32 i, bool amsyslogger,
 		if (amsyslogger)
 			write_syslogger_file_binary(buf, len, LOG_DESTINATION_STDERR);
 		else
-			write(fileno(stderr), buf, len);
+			ignore_returned_result(write(fileno(stderr), buf, len));
     }
     if (append_comma)
 	{
 		if (amsyslogger)
 			write_syslogger_file_binary(",", 1, LOG_DESTINATION_STDERR);
 		else
-			write(fileno(stderr), ",", 1);
+			ignore_returned_result(write(fileno(stderr), ",", 1));
 	}
 }
 
@@ -1442,7 +1445,7 @@ fillinErrorDataFromSegvChunk(GpErrorData *errorData, PipeProtoChunk *chunk)
 	Assert(signalName != NULL);
 	snprintf(errorData->error_message, ERROR_MESSAGE_MAX_SIZE,
 			 "Unexpected internal error: %s received signal %s",
-			 (Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH) ? "Master process" : "Segment process",
+			 IsUnderMasterDispatchMode() ? "Master process" : "Segment process",
 			 signalName);
 	
 	errorData->error_detail = NULL;
@@ -1977,29 +1980,6 @@ static void syslogger_handle_chunk(PipeProtoChunk *chunk)
     PipeProtoChunk *first = NULL; 
     PipeProtoChunk *prev = NULL; 
 
-#ifdef USE_TEST_UTILS
-    if (chunk->hdr.log_format == 'X')
-    {
-        if (chunk->hdr.log_line_number == 1)
-        {
-            proc_exit(1);
-        }
-        else if (chunk->hdr.log_line_number == 2)
-        {
-            proc_exit(2);
-        }
-        else if (chunk->hdr.log_line_number == 11)
-        {
-            *(int *) 0 = 1234;
-        }
-        else
-        {
-            abort();
-        }
-        return;
-    }
-#endif
-
     Assert(chunk->hdr.log_format == 'c' || chunk->hdr.log_format == 't'); 
           
     /* I am the last, so chain no one */
@@ -2089,14 +2069,14 @@ process_pipe_input(char *logbuffer, int *bytes_in_logbuffer)
 	int			dest = LOG_DESTINATION_STDERR;
 
 	/* While we have enough for a header, process data... */
-	while (count >= (int) sizeof(PipeProtoHeader))
+	while (count >= (int) (offsetof(PipeProtoHeader, data) +1))
 	{
 		PipeProtoHeader p;
 		int			chunklen;
 
 		/* Do we have a valid header? */
-		memcpy(&p, cursor, sizeof(PipeProtoHeader));
-		if (p.zero == 0 && 
+		memcpy(&p, cursor, offsetof(PipeProtoHeader, data));
+		if (p.nuls[0] == '\0' && p.nuls[1] == '\0' &&
 			p.len > 0 && p.len <= PIPE_MAX_PAYLOAD &&
 			p.pid != 0 &&
 			p.thid != 0 &&
@@ -2295,7 +2275,7 @@ pipeThread(void *arg)
 		{
 			if (ftell(syslogFile) >= Log_RotationSize * 1024L ||
 				(csvlogFile != NULL && ftell(csvlogFile) >= Log_RotationSize * 1024L))
-				SetLatch(&sysLoggerLatch);
+				SetLatch(MyLatch);
 		}
 		LeaveCriticalSection(&sysloggerSection);
 	}
@@ -2307,7 +2287,7 @@ pipeThread(void *arg)
 	flush_pipe_input(logbuffer, &bytes_in_logbuffer);
 
 	/* set the latch to waken the main thread, which will quit */
-	SetLatch(&sysLoggerLatch);
+	SetLatch(MyLatch);
 
 	LeaveCriticalSection(&sysloggerSection);
 	_endthread();
@@ -2362,7 +2342,6 @@ logfile_open(const char *filename, const char *mode, bool allow_errors)
 /*
  * perform logfile rotation.
  *
- *
  * In GPDB, this has been modified significantly from the upstream version:
  *
  * - In PostgreSQL, one call to logfile_rotate performs rotation for both the
@@ -2370,11 +2349,12 @@ logfile_open(const char *filename, const char *mode, bool allow_errors)
  *   and also for the GPDB specific 'alert' log
  * - In PostgreSQL, this resets 'rotation_requested' flag. In GPDB, the caller
  *   has to do it.
- *
- *
- *
+ * - In PostgreSQL, this calls set_next_rotation_time(). In GPDB, the caller
+ *   has to do it once all calls to this function return true (i.e. after all
+ *   rotations have been successfully completed for the current timestamp), to
+ *   avoid having the filename timestamp advance multiple times per rotation.
  */
-static void
+static bool
 logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 			   const char *suffix,
                const char *log_directory, 
@@ -2434,7 +2414,7 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 
 			if (filename)
 				pfree(filename);
-			return;
+			return false;
 		}
 
 		if (*fh_p)
@@ -2518,7 +2498,7 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 	if (filename)
 		pfree(filename);
 
-	set_next_rotation_time();
+	return true;
 }
 
 
@@ -2633,7 +2613,7 @@ sigHupHandler(SIGNAL_ARGS)
 	int			save_errno = errno;
 
 	got_SIGHUP = true;
-	SetLatch(&sysLoggerLatch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }
@@ -2645,7 +2625,7 @@ sigUsr1Handler(SIGNAL_ARGS)
 	int			save_errno = errno;
 
 	rotation_requested = true;
-	SetLatch(&sysLoggerLatch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }

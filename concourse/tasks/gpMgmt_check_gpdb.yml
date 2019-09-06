@@ -5,6 +5,7 @@ inputs:
   - name: gpdb_src
   - name: bin_gpdb
 outputs:
+  - name: coverage
 params:
   TEST_OS: ""
 run:

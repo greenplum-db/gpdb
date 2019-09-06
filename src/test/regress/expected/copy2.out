@@ -395,3 +395,16 @@ DROP FUNCTION truncate_in_subxact();
 DROP TABLE x, y;
 DROP FUNCTION fn_x_before();
 DROP FUNCTION fn_x_after();
+CREATE TABLE check_copy_with_oids (a int) WITH OIDS;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
+COPY check_copy_with_oids FROM stdin WITH (oids);
+SELECT oid, * from check_copy_with_oids;
+  oid  | a 
+-------+---
+ 12346 | 2
+ 12347 | 3
+ 12345 | 1
+(3 rows)
+
+DROP TABLE check_copy_with_oids;

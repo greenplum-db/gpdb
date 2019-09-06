@@ -1,0 +1,211 @@
+--
+-- GPFDISTS test cases
+--
+-- start_ignore
+-- end_ignore
+-- --------------------------------------
+-- 'gpfdists' protocol
+-- --------------------------------------
+CREATE EXTERNAL WEB TABLE gpfdist_ssl_start (x text)
+execute E'((source @abs_srcdir@/ssh_remote_env.sh; @abs_srcdir@/start_gpfdist_remote/start_gpfdist_with_ssl.bash); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+CREATE EXTERNAL WEB TABLE gpfdist_ssl_not_matching_start (x text)
+execute E'((source @abs_srcdir@/ssh_remote_env.sh; @abs_srcdir@/start_gpfdist_remote/start_gpfdist_ssl_not_matching.bash); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+CREATE EXTERNAL WEB TABLE gpfdist_ssl_stop (x text)
+execute E'((source @abs_srcdir@/ssh_remote_env.sh;@abs_srcdir@/start_gpfdist_remote/stop_gpfdist.bash); echo "stopping...")'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+-- start_ignore
+select * from gpfdist_ssl_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from gpfdist_ssl_start;
+      x      
+-------------
+ starting...
+(1 row)
+
+-- end_ignore
+-- Helper to remove the output file
+DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
+NOTICE:  table "clean_out_file" does not exist, skipping
+CREATE EXTERNAL WEB TABLE clean_out_file (x text)
+EXECUTE E'(rm -f @abs_srcdir@/data/gpfdist_ssl/tbl2.tbl)'
+on SEGMENT 0
+FORMAT 'text';
+-- Execute query to clean out the output file
+SELECT * FROM clean_out_file;
+ x 
+---
+(0 rows)
+
+-- gpfdist_ssl case 1
+DROP TABLE IF EXISTS tbl_on_heap;
+NOTICE:  table "tbl_on_heap" does not exist, skipping
+CREATE TABLE tbl_on_heap (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO tbl_on_heap VALUES
+('aaa','twoa','shpits','2011-06-01 12:30:30',23,732,834567,45.67,789.123,7.12345,123.456789),
+('bbb','twob','shpits','2011-06-01 12:30:30',23,732,834567,45.67,789.123,7.12345,123.456789),
+('ccc','twoc','shpits','2011-06-01 12:30:30',23,732,834567,45.67,789.123,7.12345,123.456789 );
+DROP EXTERNAL TABLE IF EXISTS tbl;
+NOTICE:  table "tbl" does not exist, skipping
+CREATE WRITABLE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+INSERT INTO tbl SELECT * FROM tbl_on_heap;
+SELECT * FROM tbl_on_heap ORDER BY s1;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(3 rows)
+
+-- gpfdist_ssl case 2
+DROP TABLE IF EXISTS tbl_on_heap2;
+NOTICE:  table "tbl_on_heap2" does not exist, skipping
+CREATE TABLE tbl_on_heap2 (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+DROP EXTERNAL TABLE IF EXISTS tbl2;
+NOTICE:  table "tbl2" does not exist, skipping
+CREATE EXTERNAL TABLE tbl2 (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+INSERT INTO tbl_on_heap2 SELECT * FROM tbl2;
+SELECT * FROM tbl_on_heap2 ORDER BY s1;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(3 rows)
+
+-- gpfdist_ssl case 3
+-- on same ETL server
+DROP TABLE IF EXISTS tbl_on_heap;
+CREATE TABLE tbl_on_heap (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+DROP EXTERNAL TABLE IF EXISTS tbl;
+CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl','gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl2.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+INSERT INTO tbl_on_heap SELECT * FROM tbl;
+SELECT * FROM tbl_on_heap ORDER BY s1;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(13 rows)
+
+-- gpfdist_ssl case 4
+DROP TABLE IF EXISTS tbl_on_heap;
+CREATE TABLE tbl_on_heap (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+DROP EXTERNAL TABLE IF EXISTS tbl;
+CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdist://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+INSERT INTO tbl_on_heap SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for gpfdist://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl. effective url: http://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl. error code = 104 (Connection reset by peer)  (seg1 slice1 172.17.0.2:25433 pid=59561)
+SELECT * FROM tbl_on_heap ORDER BY s1;
+ s1 | s2 | s3 | dt | n1 | n2 | n3 | n4 | n5 | n6 | n7 
+----+----+----+----+----+----+----+----+----+----+----
+(0 rows)
+
+-- gpfdist_ssl case 5
+DROP TABLE IF EXISTS tbl_on_heap;
+CREATE TABLE tbl_on_heap (
+            s1 text, s2 text, s3 text, dt timestamp,
+            n1 smallint, n2 integer, n3 bigint, n4 decimal,
+            n5 numeric, n6 real, n7 double precision);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 's1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+DROP EXTERNAL TABLE IF EXISTS tbl;
+CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl','gpfdist://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+ERROR:  URI protocols must be the same for all data sources
+HINT:  Available protocols are 'http', 'file', 'gpfdist' and 'gpfdists'
+DROP TABLE IF EXISTS tbl_on_heap;
+-- start_ignore
+select * from gpfdist_ssl_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from gpfdist_ssl_not_matching_start;
+      x      
+-------------
+ starting...
+(1 row)
+
+-- end_ignore
+-- gpfdist_ssl case 6
+DROP EXTERNAL TABLE IF EXISTS tbl;
+NOTICE:  table "tbl" does not exist, skipping
+CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
+LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
+FORMAT 'TEXT' (DELIMITER '|' );
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl. effective url: https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl.  (seg0 slice1 172.17.0.2:25432 pid=59537)
+DETAIL:  SSL certificate problem: self signed certificate
+SET verify_gpfdists_cert=off; 
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+select * from gpfdist_ssl_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+-- end_ignore

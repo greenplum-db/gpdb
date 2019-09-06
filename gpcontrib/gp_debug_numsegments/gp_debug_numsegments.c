@@ -71,14 +71,13 @@ gp_debug_set_create_table_default_numsegments(PG_FUNCTION_ARGS)
 
 	if (str == NULL)
 	{
-		if (numsegments < GP_POLICY_MINIMAL_NUMSEGMENTS ||
-			numsegments > GP_POLICY_ALL_NUMSEGMENTS)
+		if (numsegments < 1 || numsegments > getgpsegmentCount())
 			ereport(ERROR,
 					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
 					 errmsg("invalid integer value for default numsegments: %d",
 							numsegments),
 					 errhint("Valid range: [1, %d (gp_num_contents_in_cluster)]",
-							 GP_POLICY_ALL_NUMSEGMENTS)));
+							 getgpsegmentCount())));
 
 		gp_create_table_default_numsegments = numsegments;
 	}

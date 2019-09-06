@@ -3,7 +3,7 @@
  * indexam.c
  *	  general index access method routines
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -709,11 +709,14 @@ index_vacuum_cleanup(IndexVacuumInfo *info,
 }
 
 /* ----------------
- *		index_can_return - does index support index-only scans?
+ *		index_can_return
+ *
+ *		Does the index access method support index-only scans for the given
+ *		column?
  * ----------------
  */
 bool
-index_can_return(Relation indexRelation)
+index_can_return(Relation indexRelation, int attno)
 {
 	FmgrInfo   *procedure;
 
@@ -725,8 +728,9 @@ index_can_return(Relation indexRelation)
 
 	GET_REL_PROCEDURE(amcanreturn);
 
-	return DatumGetBool(FunctionCall1(procedure,
-									  PointerGetDatum(indexRelation)));
+	return DatumGetBool(FunctionCall2(procedure,
+									  PointerGetDatum(indexRelation),
+									  Int32GetDatum(attno)));
 }
 
 /* ----------------

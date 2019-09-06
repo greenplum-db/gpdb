@@ -202,18 +202,6 @@ static void SIGHUP_handler(int sig)
 	ax.reload = 1;
 }
 
-static void SIGTERM_handler(int sig)
-{
-	ax.exit = 1;
-}
-
-static void SIGQUIT_handler(int sig)
-{
-	/* Quick exit here */
-	sigprocmask(SIG_SETMASK, &blocksig, NULL);
-	exit(0);
-}
-
 static void SIGUSR2_handler(int sig)
 {
 	ax.exit = 1;
@@ -1467,9 +1455,7 @@ int main(int argc, const char* const argv[])
 	sigfillset(&blocksig);
 
 	/* Set up signal handlers */
-	if ((signal(SIGQUIT, SIGQUIT_handler) == SIG_ERR) ||
-		(signal(SIGTERM, SIGTERM_handler) == SIG_ERR) ||
-		(signal(SIGHUP, SIGHUP_handler) == SIG_ERR) ||
+	if ((signal(SIGHUP, SIGHUP_handler) == SIG_ERR) ||
 		(signal(SIGUSR2, SIGUSR2_handler) == SIG_ERR))
 	{
 		interuptable_sleep(30); // sleep to prevent loop of forking process and failing

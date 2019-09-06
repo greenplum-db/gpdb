@@ -31,11 +31,15 @@
                 once (the master and all of the segment instances). The <codeph>gpstop</codeph>
                 utility handles the shutdown of the individual instances. Each instance is shutdown
                 in parallel. </p>
-            <p>By default, you are not allowed to shut down Greenplum Database if there are any
-                client connections to the database. Use the <codeph>-M fast</codeph> option to roll
-                back all in progress transactions and terminate any connections before shutting
-                down. If there are any transactions in progress, the default behavior is to wait for
-                them to commit before shutting down.</p>
+            <p>The default shutdown mode (<codeph>-M smart</codeph>) waits for current client
+                connections to finish before completing the shutdown. If any connections remain open
+                after the timeout period, or if you interrupt with CTRL-C, <codeph>gpstop</codeph>
+                lists the open connections and prompts whether to continue waiting for connections
+                to finish, or to perform a fast or immediate shutdown. The default timeout period is
+                120 seconds and can be changed with the <codeph>-t
+                        <varname>timeout_seconds</varname></codeph> option.</p>
+            <p>Specify the <codeph>-M fast</codeph> shutdown mode to roll back all in-progress
+                transactions and terminate any connections before shutting down. </p>
             <p>With the <codeph>-u</codeph> option, the utility uploads changes made to the master
                     <codeph>pg_hba.conf</codeph> file or to <i>runtime</i> configuration parameters
                 in the master <codeph>postgresql.conf</codeph> file without interruption of service.
@@ -97,15 +101,19 @@
                 </plentry>
                 <plentry>
                     <pt>-M immediate</pt>
-                    <pd>Immediate shut down. Any transactions in progress are aborted. </pd>
+                    <pd>Immediate shut down. Any transactions in progress are aborted.</pd>
                     <pd>This mode kills all <codeph>postgres</codeph> processes without allowing the
                         database server to complete transaction processing or clean up any temporary
                         or in-process work files.</pd>
                 </plentry>
                 <plentry>
                     <pt>-M smart</pt>
-                    <pd>Smart shut down. If there are active connections, this command fails with a
-                        warning. This is the default shutdown mode.</pd>
+                    <pd>Smart shut down. This is the default shutdown mode. <codeph>gpstop</codeph>
+                        waits for active user connections to disconnect and then proceeds with the
+                        shutdown. If any user connections remain open after the timeout period (or
+                        if you interrupt by pressing CTRL-C) <codeph>gpstop</codeph> lists the open
+                        user connections and prompts whether to continue waiting for connections to
+                        finish, or to perform a fast or immediate shutdown.</pd>
                 </plentry>
                 <plentry>
                     <pt>-q</pt>
@@ -126,7 +134,7 @@
                         option is useful in situations where <codeph>gpstop</codeph> is executed and
                         there are very large transactions that need to rollback. These large
                         transactions can take over a minute to rollback and surpass the default
-                        timeout period of 600 seconds.</pd>
+                        timeout period of 120 seconds.</pd>
                 </plentry>
                 <plentry>
                     <pt>-u</pt>

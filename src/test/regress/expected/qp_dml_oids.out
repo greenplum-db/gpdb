@@ -87,7 +87,7 @@ SELECT COUNT(*) FROM dml_heap_check_r;
 (1 row)
 
 INSERT INTO dml_heap_check_r VALUES(110,NULL,'rn',0);
-ERROR:  new row for relation "dml_heap_check_r" violates check constraint "rcheck_b"  (seg1 172.17.0.2:25433 pid=262371)
+ERROR:  new row for relation "dml_heap_check_r" violates check constraint "dml_heap_check_r_a_check"  (seg1 172.17.0.2:25433 pid=262371)
 DETAIL:  Failing row contains (110, null, rn, 0).
 SELECT SUM(a),SUM(b) FROM dml_heap_check_r;
  sum | sum 

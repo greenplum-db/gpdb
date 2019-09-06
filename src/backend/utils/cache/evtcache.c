@@ -3,7 +3,7 @@
  * evtcache.c
  *	  Special-purpose cache for event trigger data.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -123,10 +123,9 @@ BuildEventTriggerCache(void)
 	MemSet(&ctl, 0, sizeof(ctl));
 	ctl.keysize = sizeof(EventTriggerEvent);
 	ctl.entrysize = sizeof(EventTriggerCacheEntry);
-	ctl.hash = tag_hash;
 	ctl.hcxt = EventTriggerCacheContext;
 	cache = hash_create("Event Trigger Cache", 32, &ctl,
-						HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+						HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 
 	/*
 	 * Prepare to scan pg_event_trigger in name order.
@@ -169,6 +168,8 @@ BuildEventTriggerCache(void)
 			event = EVT_DDLCommandEnd;
 		else if (strcmp(evtevent, "sql_drop") == 0)
 			event = EVT_SQLDrop;
+		else if (strcmp(evtevent, "table_rewrite") == 0)
+			event = EVT_TableRewrite;
 		else
 			continue;
 

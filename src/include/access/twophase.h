@@ -4,7 +4,7 @@
  *	  Two-phase-commit related declarations.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/twophase.h
@@ -54,6 +54,36 @@ typedef struct prepared_transaction_agg_state
  */
 typedef struct GlobalTransactionData *GlobalTransaction;
 
+/* GPDB-specific: GIDSIZE is defined in twophase.c in Postgres */
+
+#define GIDSIZE 200
+
+/* GPDB-specific: TwoPhaseFileHeader is defined in twophase.c in Postgres */
+/*
+ * Header for a 2PC state file
+ */
+typedef struct TwoPhaseFileHeader
+{
+	uint32		magic;			/* format identifier */
+	uint32		total_len;		/* actual file length */
+	TransactionId xid;			/* original transaction XID */
+	Oid			database;		/* OID of database it was in */
+	TimestampTz prepared_at;	/* time of preparation */
+	Oid			owner;			/* user running the transaction */
+	int32		nsubxacts;		/* number of following subxact XIDs */
+	int32		ncommitrels;	/* number of delete-on-commit rels */
+	int32		nabortrels;		/* number of delete-on-abort rels */
+	int32		ncommitdbs;		/* number of delete-on-commit dbs */
+	int32		nabortdbs;		/* number of delete-on-abort dbs */
+	int32		ninvalmsgs;		/* number of cache invalidation messages */
+	bool		initfileinval;	/* does relcache init file need invalidation? */
+	Oid			tablespace_oid_to_delete_on_abort;
+	Oid			tablespace_oid_to_delete_on_commit;
+	char		gid[GIDSIZE];	/* GID for transaction */
+} TwoPhaseFileHeader;
+
+/* GPDB-specific end */
+
 /* GUC variable */
 extern PGDLLIMPORT int max_prepared_xacts;
 
@@ -94,7 +124,7 @@ extern void TwoPhaseAddPreparedTransactionInit(
 					      , int                             *maxCount);
 
 struct XLogRecData;
-extern XLogRecPtr *getTwoPhaseOldestPreparedTransactionXLogRecPtr(struct XLogRecData *rdata);
+extern XLogRecPtr *getTwoPhaseOldestPreparedTransactionXLogRecPtr(prepared_transaction_agg_state *ptas);
 
 extern void TwoPhaseAddPreparedTransaction(
                  prepared_transaction_agg_state **ptas

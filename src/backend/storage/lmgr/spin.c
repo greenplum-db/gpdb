@@ -11,7 +11,7 @@
  * is too slow to be very useful :-(
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -30,7 +30,9 @@
 #include "storage/spin.h"
 
 
+#ifndef HAVE_SPINLOCKS
 PGSemaphore SpinlockSemaArray;
+#endif
 
 /*
  * Report the amount of shared memory needed to store semaphores for spinlock
@@ -65,7 +67,7 @@ SpinlockSemas(void)
 int
 SpinlockSemas(void)
 {
-	return NUM_SPINLOCK_SEMAPHORES;
+	return NUM_SPINLOCK_SEMAPHORES + NUM_ATOMICS_SEMAPHORES;
 }
 
 /*
@@ -75,8 +77,9 @@ extern void
 SpinlockSemaInit(PGSemaphore spinsemas)
 {
 	int			i;
+	int			nsemas = SpinlockSemas();
 
-	for (i = 0; i < NUM_SPINLOCK_SEMAPHORES; ++i)
+	for (i = 0; i < nsemas; ++i)
 		PGSemaphoreCreate(&spinsemas[i]);
 	SpinlockSemaArray = spinsemas;
 }
@@ -86,7 +89,7 @@ SpinlockSemaInit(PGSemaphore spinsemas)
  */
 
 void
-s_init_lock_sema(volatile slock_t *lock)
+s_init_lock_sema(volatile slock_t *lock, bool nested)
 {
 	static int	counter = 0;
 

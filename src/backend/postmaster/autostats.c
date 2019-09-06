@@ -68,10 +68,11 @@ autostats_issue_analyze(Oid relationOid)
 	analyzeStmt = makeNode(VacuumStmt);
 	/* Set up command parameters */
 	analyzeStmt->options = VACOPT_ANALYZE;
-	analyzeStmt->freeze_min_age = -1;
 	analyzeStmt->relation = relation;	/* not used since we pass relids list */
 	analyzeStmt->va_cols = NIL;
-	vacuum(analyzeStmt, InvalidOid, false, NULL, false, false);
+
+	ExecVacuum(analyzeStmt, false);
+
 	pfree(analyzeStmt);
 }
 

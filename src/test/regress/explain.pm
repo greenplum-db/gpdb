@@ -1273,6 +1273,12 @@ sub prune_heavily
     return
         unless (exists($node->{short}));
 
+    # example: (slice1; gang3; segments: 3)
+    if ($node->{short} =~ m/.*\(slice\d+; gang(\d+);.*\).*/)
+    {
+        $node->{gangid} = int($1);
+    }
+
     # example: (slice1; segments: 3)
     if ($node->{short} =~ m/.*\(.*segment.*:\s+(\d+).*\).*/)
     {

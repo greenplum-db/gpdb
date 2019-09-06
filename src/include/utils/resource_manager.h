@@ -18,6 +18,25 @@
 #include "utils/resscheduler.h"
 #include "utils/resgroup.h"
 
+#define IsResQueueEnabled() \
+	(ResourceScheduler && \
+	 Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_QUEUE)
+
+/*
+ * Caution: resource group may be enabled but not activated.
+ */
+#define IsResGroupEnabled() \
+	(ResourceScheduler && \
+	 Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP)
+
+/*
+ * Resource group do not govern the auxiliary processes and special backends
+ * like ftsprobe, filerep process, so we need to check if resource group is
+ * actually activated
+ */
+#define IsResGroupActivated() \
+	(ResGroupActivated)
+
 typedef enum
 {
 	RESOURCE_MANAGER_POLICY_QUEUE,
@@ -29,11 +48,7 @@ typedef enum
  */
 extern bool	ResourceScheduler;
 extern ResourceManagerPolicy Gp_resource_manager_policy;
-
-extern bool IsResQueueEnabled(void);
-extern bool IsResGroupEnabled(void);
-
-extern bool IsResGroupActivated(void);
+extern bool ResGroupActivated;
 
 extern void ResManagerShmemInit(void);
 extern void InitResManager(void);

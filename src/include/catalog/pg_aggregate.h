@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_aggregate.h
@@ -20,6 +20,7 @@
 #define PG_AGGREGATE_H
 
 #include "catalog/genbki.h"
+#include "catalog/objectaddress.h"
 #include "nodes/pg_list.h"
 
 /* ----------------------------------------------------------------
@@ -192,6 +193,7 @@ DATA(insert ( 2050	n 0 array_larger	-				array_larger		-	-	-				-				-				f f 10
 DATA(insert ( 2244	n 0 bpchar_larger	-				bpchar_larger		-	-	-				-				-				f f 1060	1042	0	0		0	_null_ _null_ ));
 DATA(insert ( 2797	n 0 tidlarger		-				tidlarger			-	-	-				-				-				f f 2800	27		0	0		0	_null_ _null_ ));
 DATA(insert ( 3526	n 0 enum_larger		-				enum_larger			-	-	-				-				-				f f 3519	3500	0	0		0	_null_ _null_ ));
+DATA(insert ( 3564	n 0 network_larger	-				network_larger		-	-	-				-				-				f f 1205	869		0	0		0	_null_ _null_ ));
 
 /* min */
 DATA(insert ( 2131	n 0 int8smaller		-				int8smaller			-	-	-				-				-				f f 412		20		0	0		0	_null_ _null_ ));
@@ -214,6 +216,7 @@ DATA(insert ( 2051	n 0 array_smaller	-				array_smaller		-	-	-				-				-				f f 
 DATA(insert ( 2245	n 0 bpchar_smaller	-				bpchar_smaller		-	-	-				-				-				f f 1058	1042	0	0		0	_null_ _null_ ));
 DATA(insert ( 2798	n 0 tidsmaller		-				tidsmaller			-	-	-				-				-				f f 2799	27		0	0		0	_null_ _null_ ));
 DATA(insert ( 3527	n 0 enum_smaller	-				enum_smaller		-	-	-				-				-				f f 3518	3500	0	0		0	_null_ _null_ ));
+DATA(insert ( 3565	n 0 network_smaller -				network_smaller		-	-	-				-				-				f f 1203	869		0	0		0	_null_ _null_ ));
 
 /* count */
 DATA(insert ( 2147	n 0 int8inc_any		-				int8pl	-	-	int8inc_any		int8dec_any		-				f f 0		20		0	20		0	"0" "0" ));
@@ -296,25 +299,27 @@ DATA(insert ( 2241	n 0 int8or		-				int8or	-	-	-				-				-				f f 0	20		0	0		0	_
 DATA(insert ( 2242	n 0 bitand		-				bitand	-	-	-				-				-				f f 0	1560	0	0		0	_null_ _null_ ));
 DATA(insert ( 2243	n 0 bitor		-				bitor	-	-	-				-				-				f f 0	1560	0	0		0	_null_ _null_ ));
 
-/* MPP Aggregate -- array_sum -- special for prospective customer. */
-DATA(insert ( 6013	n 0 array_add	-				array_add	-	-			-	-	-	f f 0	1007 0	0	0	"{}" _null_ ));
-
-/* sum(array[]) */
-DATA(insert ( 6216  n 0 int2_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
-DATA(insert ( 6217  n 0 int4_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
-DATA(insert ( 6218  n 0 int8_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
-DATA(insert ( 6219  n 0 float8_matrix_accum		-	float8_matrix_accum	-	-	-	-	-	f f 0	1022 0	0	0	_null_ _null_ ));
-
-/* pivot_sum(...) */
-DATA(insert ( 6226  n 0 int4_pivot_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1007 0	0	0	_null_ _null_ ));
-DATA(insert ( 6228  n 0 int8_pivot_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
-DATA(insert ( 6230  n 0 float8_pivot_accum		-	float8_matrix_accum	-	-	-	-	-	f f 0	1022 0	0	0	_null_ _null_ ));
-
 /* xml */
 DATA(insert ( 2901  n 0 xmlconcat2				-	-					-	-	-	-	-	f f 0	142	0	0	0	_null_ _null_ ));
 
 /* array */
-DATA(insert ( 2335	n 0 array_agg_transfn		array_agg_finalfn	-	-	-	-	-	-	t f 0	2281 0	0	0	_null_ _null_ ));
+DATA(insert ( 2335	n 0 array_agg_transfn	array_agg_finalfn	-	-	-	-	-	-	t f 0	2281 0	0	0	_null_ _null_ ));
+DATA(insert ( 4053	n 0 array_agg_array_transfn array_agg_array_finalfn -	-	-	-	-	-	t f 0	2281 0	0	0	_null_ _null_ ));
+
+/* text */
+DATA(insert ( 3538	n 0 string_agg_transfn				string_agg_finalfn						-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
+
+/* bytea */
+DATA(insert ( 3545	n 0 bytea_string_agg_transfn		bytea_string_agg_finalfn				-	-	-	-		-		-		f f	0	2281	0	0		0	_null_ _null_ ));
+
+
+/* json */
+DATA(insert ( 3175	n 0 json_agg_transfn				json_agg_finalfn						-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
+DATA(insert ( 3197	n 0 json_object_agg_transfn 		json_object_agg_finalfn 				-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
+
+/* jsonb */
+DATA(insert ( 3267	n 0 jsonb_agg_transfn				jsonb_agg_finalfn						-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
+DATA(insert ( 3270	n 0 jsonb_object_agg_transfn 		jsonb_object_agg_finalfn				-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
 
 /* ordered-set and hypothetical-set aggregates */
 DATA(insert ( 3972	o 1 ordered_set_transition			percentile_disc_final					-	-	-	-		-		-		t f 0	2281	0	0		0	_null_ _null_ ));
@@ -329,6 +334,20 @@ DATA(insert ( 3988	h 1 ordered_set_transition_multi	percent_rank_final						-	-	
 DATA(insert ( 3990	h 1 ordered_set_transition_multi	cume_dist_final							-	-	-	-		-		-		t f 0	2281	0	0		0	_null_ _null_ ));
 DATA(insert ( 3992	h 1 ordered_set_transition_multi	dense_rank_final						-	-	-	-		-		-		t f 0	2281	0	0		0	_null_ _null_ ));
 
+/* MPP Aggregate -- array_sum -- special for prospective customer. */
+DATA(insert ( 5067	n 0 array_add	-				array_add	-	-			-	-	-	f f 0	1007 0	0	0	"{}" _null_ ));
+
+/* sum(array[]) */
+DATA(insert ( 6216  n 0 int2_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
+DATA(insert ( 6217  n 0 int4_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
+DATA(insert ( 6218  n 0 int8_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
+DATA(insert ( 6219  n 0 float8_matrix_accum		-	float8_matrix_accum	-	-	-	-	-	f f 0	1022 0	0	0	_null_ _null_ ));
+
+/* pivot_sum(...) */
+DATA(insert ( 6226  n 0 int4_pivot_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1007 0	0	0	_null_ _null_ ));
+DATA(insert ( 6228  n 0 int8_pivot_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
+DATA(insert ( 6230  n 0 float8_pivot_accum		-	float8_matrix_accum	-	-	-	-	-	f f 0	1022 0	0	0	_null_ _null_ ));
+
 /* GPDB: additional variants of percentile_cont, for timestamps */
 DATA(insert ( 6119	o 1 ordered_set_transition			percentile_cont_timestamp_final			-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
 DATA(insert ( 6121	o 1 ordered_set_transition			percentile_cont_timestamp_multi_final	-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
@@ -341,23 +360,13 @@ DATA(insert ( 6128	o 1 ordered_set_transition			percentile_cont_interval_final		
 DATA(insert ( 6129	o 1 ordered_set_transition			percentile_cont_timestamp_final			-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
 DATA(insert ( 6130	o 1 ordered_set_transition			percentile_cont_timestamptz_final		-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
 
-/* text */
-DATA(insert ( 3538	n 0 string_agg_transfn				string_agg_finalfn						-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
-
-/* bytea */
-DATA(insert ( 3545	n 0 bytea_string_agg_transfn		bytea_string_agg_finalfn				-	-	-	-		-		-		f f	0	2281	0	0		0	_null_ _null_ ));
-
 /* hyperloglog */
-DATA(insert ( 7164	n 0 hyperloglog_add_item_agg_default hyperloglog_comp		hyperloglog_merge	-	-	-		-		-		f f 0	7157	0	0		0	_null_ _null_ ));
-
-/* json */
-DATA(insert ( 3175	n 0 json_agg_transfn				json_agg_finalfn						-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
-DATA(insert ( 3197	n 0 json_object_agg_transfn json_object_agg_finalfn -	-	-	-				-				-				f f 0	2281	0	0		0	_null_ _null_ ));
+DATA(insert ( 7164	n 0 gp_hyperloglog_add_item_agg_default gp_hyperloglog_comp		gp_hyperloglog_merge	-	-	-		-		-		f f 0	7157	0	0		0	_null_ _null_ ));
 
 /*
  * prototypes for functions in pg_aggregate.c
  */
-extern Oid AggregateCreate(const char *aggName,
+extern ObjectAddress AggregateCreate(const char *aggName,
 				Oid aggNamespace,
 				char aggKind,
 				int numArgs,

@@ -1,16 +1,43 @@
-# NOTE: this behave suite depends on the cluster under test having at least 2 distinct hosts. See @multinode tags
-
 @gprecoverseg
 Feature: gprecoverseg tests
-    @multinode
-    Scenario: gprecoverseg behave test requires a cluster with at least 2 hosts
+
+    Scenario: incremental recovery works with tablespaces
         Given the database is running
-        Given database "gptest" exists
-        And the information of a "mirror" segment on a remote host is saved
+          And a tablespace is created with data
+          And user stops all primary processes
+          And user can start transactions
+         When the user runs "gprecoverseg -a"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+
+        Given another tablespace is created with data
+         When the user runs "gprecoverseg -ra"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+          And the other tablespace is valid
+
+    Scenario: full recovery works with tablespaces
+        Given the database is running
+          And a tablespace is created with data
+          And user stops all primary processes
+          And user can start transactions
+         When the user runs "gprecoverseg -a -F"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+
+        Given another tablespace is created with data
+         When the user runs "gprecoverseg -ra"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+          And the other tablespace is valid
 
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
-        And user kills a primary postmaster process
+        And user stops all primary processes
         And user can start transactions
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
@@ -21,29 +48,31 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
-    Scenario: When gprecoverseg full recovery is executed and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
+    Scenario: gprecoverseg displays pg_basebackup progress to the user
         Given the database is running
         And all the segments are running
         And the segments are synchronized
-        And the "primary" segment information is saved
-        When the postmaster.pid file on "primary" segment is saved
-        And user kills a primary postmaster process
+        And user stops all mirror processes
         When user can start transactions
-        And the background pid is killed on "primary" segment
-        And we run a sample background script to generate a pid on "primary" segment
-        And we generate the postmaster.pid file with the background pid on "primary" segment
-        And the user runs "gprecoverseg -F -a"
+        And the user runs "gprecoverseg -F -a -s"
         Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-        And gprecoverseg should print "Skipping to stop segment.* on host.* since it is not a postgres process" to stdout
+        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for each mirror
+        And gpAdminLogs directory has no "pg_basebackup*" files
         And all the segments are running
         And the segments are synchronized
-        When the user runs "gprecoverseg -ra"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+
+    Scenario: gprecoverseg does not display pg_basebackup progress to the user when --no-progress option is specified
+        Given the database is running
+        And all the segments are running
         And the segments are synchronized
-        And the backup pid file is deleted on "primary" segment
-        And the background pid is killed on "primary" segment
+        And user stops all mirror processes
+        When user can start transactions
+        And the user runs "gprecoverseg -F -a --no-progress"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should not print "pg_basebackup: base backup completed" to stdout
+        And gpAdminLogs directory has no "pg_basebackup*" files
+        And all the segments are running
+        And the segments are synchronized
 
     Scenario: When gprecoverseg incremental recovery uses pg_rewind to recover and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
         Given the database is running
@@ -51,7 +80,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the "primary" segment information is saved
         When the postmaster.pid file on "primary" segment is saved
-        And user kills a primary postmaster process
+        And user stops all primary processes
         When user can start transactions
         And the background pid is killed on "primary" segment
         And we run a sample background script to generate a pid on "primary" segment
@@ -75,7 +104,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the "primary" segment information is saved
         When the postmaster.pid file on "primary" segment is saved
-        And user kills a primary postmaster process
+        And user stops all primary processes
         When user can start transactions
         And we generate the postmaster.pid file with a non running pid on the same "primary" segment
         And the user runs "gprecoverseg -a"
@@ -90,7 +119,60 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the backup pid file is deleted on "primary" segment
 
-    @multinode
+    Scenario: pg_isready functions on recovered segments
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+         When user stops all primary processes
+          And user can start transactions
+
+         When the user runs "gprecoverseg -a"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+
+         When the user runs "gprecoverseg -ar"
+         Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+          And pg_isready reports all primaries are accepting connections
+
+
+########################### @concourse_cluster tests ###########################
+# The @concourse_cluster tag denotes the scenario that requires a remote cluster
+
+    @concourse_cluster
+    Scenario: gprecoverseg behave test requires a cluster with at least 2 hosts
+        Given the database is running
+        Given database "gptest" exists
+        And the information of a "mirror" segment on a remote host is saved
+
+    @concourse_cluster
+    Scenario: When gprecoverseg full recovery is executed and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And the "primary" segment information is saved
+        When the postmaster.pid file on "primary" segment is saved
+        And user stops all primary processes
+        When user can start transactions
+        And the background pid is killed on "primary" segment
+        And we run a sample background script to generate a pid on "primary" segment
+        And we generate the postmaster.pid file with the background pid on "primary" segment
+        And the user runs "gprecoverseg -F -a"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+        And gprecoverseg should print "Skipping to stop segment.* on host.* since it is not a postgres process" to stdout
+        And all the segments are running
+        And the segments are synchronized
+        When the user runs "gprecoverseg -ra"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+        And the segments are synchronized
+        And the backup pid file is deleted on "primary" segment
+        And the background pid is killed on "primary" segment
+
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gprecoverseg full recovery testing
         Given the database is running
         And all the segments are running
@@ -105,7 +187,8 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    @multinode
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gprecoverseg with -i and -o option
         Given the database is running
         And all the segments are running
@@ -123,7 +206,8 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
-    @multinode
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gprecoverseg should not throw exception for empty input file
         Given the database is running
         And all the segments are running
@@ -140,8 +224,8 @@ Feature: gprecoverseg tests
         Then all the segments are running
         And the segments are synchronized
 
-    @multinode
-    @gprecoverseg_checksums
+    @skip_fixme_ubuntu18.04
+    @concourse_cluster
     Scenario: gprecoverseg should use the same setting for data_checksums for a full recovery
         Given the database is running
         And results of the sql "show data_checksums" db "template1" are stored in the context
@@ -163,3 +247,39 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         # validate the the new segment has the correct setting by getting admin connection to that segment
         Then the saved primary segment reports the same value for sql "show data_checksums" db "template1" as was saved
+
+    @concourse_cluster
+    Scenario: incremental recovery works with tablespaces on a multi-host environment
+        Given the database is running
+          And a tablespace is created with data
+          And user stops all primary processes
+          And user can start transactions
+         When the user runs "gprecoverseg -a"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+
+        Given another tablespace is created with data
+         When the user runs "gprecoverseg -ra"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+          And the other tablespace is valid
+
+    @concourse_cluster
+    Scenario: full recovery works with tablespaces on a multi-host environment
+        Given the database is running
+          And a tablespace is created with data
+          And user stops all primary processes
+          And user can start transactions
+         When the user runs "gprecoverseg -a -F"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+
+        Given another tablespace is created with data
+         When the user runs "gprecoverseg -ra"
+         Then gprecoverseg should return a return code of 0
+          And the segments are synchronized
+          And the tablespace is valid
+          And the other tablespace is valid

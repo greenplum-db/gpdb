@@ -109,6 +109,8 @@ ExecUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 				HeapTuple trigtuple /*old*/, TriggerEvent eventFlags)
 {
 	TriggerData triggerData;
+	Bitmapset	*insertedCols;
+	Bitmapset	*updatedCols;
 	Bitmapset	*modifiedCols;
 
 	HeapTuple	oldtuple;
@@ -116,7 +118,9 @@ ExecUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 
 	InitTriggerData(&triggerData, eventFlags, relinfo->ri_RelationDesc);
 
-	modifiedCols = GetModifiedColumns(relinfo, estate);
+	insertedCols = GetInsertedColumns(relinfo, estate);
+	updatedCols = GetUpdatedColumns(relinfo, estate);
+	modifiedCols = bms_union(insertedCols, updatedCols);
 	/* Executes all update triggers one by one. The resulting tuple from a
 	* trigger is given to the following one */
 	for (int i = 0; i < trigdesc->numtriggers; i++)

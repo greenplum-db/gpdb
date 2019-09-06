@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  *
  * src/bin/psql/common.h
  */
@@ -12,14 +12,13 @@
 #include <setjmp.h>
 #include "libpq-fe.h"
 
+#include "print.h"
+
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
 extern bool setQFout(const char *fname);
 
-extern void
-psql_error(const char *fmt,...)
-/* This lets gcc check the format string for consistency. */
-__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
+extern void psql_error(const char *fmt,...) pg_attribute_printf(1, 2);
 
 extern void NoticeProcessor(void *arg, const char *message);
 
@@ -36,7 +35,8 @@ extern void setup_cancel_handler(void);
 extern void SetCancelConn(void);
 extern void ResetCancelConn(void);
 
-extern PGresult *PSQLexec(const char *query, bool start_xact);
+extern PGresult *PSQLexec(const char *query);
+extern int	PSQLexecWatch(const char *query, const printQueryOpt *opt);
 
 extern bool SendQuery(const char *query);
 

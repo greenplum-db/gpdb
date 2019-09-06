@@ -8343,3 +8343,26 @@ FROM
      2
 (1 row)
 
+-- check SRF in WindowAgg's targetlist can be handled correctly
+explain (costs off)
+select unnest(array[a,a]), rank() over (order by a) from generate_series(2,3) a;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Result
+   ->  WindowAgg
+         Order By: generate_series
+         ->  Sort
+               Sort Key: generate_series
+               ->  Function Scan on generate_series
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.30.0
+(7 rows)
+
+select unnest(array[a,a]), rank() over (order by a) from generate_series(2,3) a;
+ unnest | rank 
+--------+------
+      2 |    1
+      2 |    1
+      3 |    2
+      3 |    2
+(4 rows)
+

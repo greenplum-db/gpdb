@@ -82,7 +82,7 @@ libpqConnect(const char *connstr)
 	pg_free(str);
 
 	/*
-	 * Also check that full_page_writes is enabled.  We can get torn pages if
+	 * Also check that full_page_writes is enabled. We can get torn pages if
 	 * a page is modified while we read it with pg_read_binary_file(), and we
 	 * rely on full page images to fix them.
 	 */
@@ -176,7 +176,6 @@ libpqProcessFileList(void)
 	 * directory, they won't be copied correctly.
 	 */
 	sql =
-		"SET gp_recursive_cte_prototype TO ON;\n"
 		"WITH RECURSIVE files (path, filename, size, isdir) AS (\n"
 		"  SELECT '' AS path, filename, size, isdir FROM\n"
 		"  (SELECT pg_ls_dir('.', true, false) AS filename) AS fn,\n"

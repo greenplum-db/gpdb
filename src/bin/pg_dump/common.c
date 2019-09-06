@@ -4,7 +4,7 @@
  *	Catalog routines used by pg_dump; long ago these were shared
  *	by another dump tool, but not anymore.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -13,8 +13,11 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres_fe.h"
+
 #include "pg_backup_archiver.h"
 #include "pg_backup_utils.h"
+#include "pg_dump.h"
 
 #include <ctype.h>
 
@@ -66,7 +69,7 @@ static int	numextmembers;
 
 static void flagInhTables(TableInfo *tbinfo, int numTables,
 			  InhInfo *inhinfo, int numInherits);
-static void flagInhAttrs(TableInfo *tblinfo, int numTables);
+static void flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables);
 static DumpableObject **buildIndexArray(void *objArray, int numObjs,
 				Size objSize);
 static int	DOCatalogIdCompare(const void *p1, const void *p2);
@@ -81,7 +84,7 @@ static int	strInArray(const char *pattern, char **arr, int arr_size);
  *	  Collect information about all potentially dumpable objects
  */
 TableInfo *
-getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
+getSchemaData(Archive *fout, int *numTablesPtr)
 {
 	TableInfo  *tblinfo;
 	TypeInfo   *typinfo;
@@ -96,6 +99,7 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 	int			numRules;
 	int			numProcLangs;
 	int			numCasts;
+	int			numTransforms;
 	int			numOpclasses;
 	int			numOpfamilies;
 	int			numConversions;
@@ -111,7 +115,7 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 	/* GPDB specific variables */
 	int			numExtProtocols;
 
-	if (binary_upgrade)
+	if (fout->dopt->binary_upgrade)
 	{
 		BinaryUpgradeInfo *binfo;
 
@@ -242,6 +246,10 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 	getCasts(fout, &numCasts);
 
 	if (g_verbose)
+		write_msg(NULL, "reading transforms\n");
+	getTransforms(fout, &numTransforms);
+
+	if (g_verbose)
 		write_msg(NULL, "reading table inheritance information\n");
 	inhinfo = getInherits(fout, &numInherits);
 
@@ -265,7 +273,7 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 
 	if (g_verbose)
 		write_msg(NULL, "flagging inherited columns in subtables\n");
-	flagInhAttrs(tblinfo, numTables);
+	flagInhAttrs(fout->dopt, tblinfo, numTables);
 
 	if (g_verbose)
 		write_msg(NULL, "reading indexes\n");
@@ -282,6 +290,10 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 	if (g_verbose)
 		write_msg(NULL, "reading rewrite rules\n");
 	getRules(fout, &numRules);
+
+	if (g_verbose)
+		write_msg(NULL, "reading policies\n");
+	getPolicies(fout, tblinfo, numTables);
 
 	*numTablesPtr = numTables;
 	return tblinfo;
@@ -344,7 +356,7 @@ flagInhTables(TableInfo *tblinfo, int numTables,
  * modifies tblinfo
  */
 static void
-flagInhAttrs(TableInfo *tblinfo, int numTables)
+flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables)
 {
 	int			i,
 				j,
@@ -423,7 +435,7 @@ flagInhAttrs(TableInfo *tblinfo, int numTables)
 				attrDef->adef_expr = strdup("NULL");
 
 				/* Will column be dumped explicitly? */
-				if (shouldPrintColumn(tbinfo, j))
+				if (shouldPrintColumn(dopt, tbinfo, j))
 				{
 					attrDef->separate = false;
 					/* No dependency needed: NULL cannot have dependencies */

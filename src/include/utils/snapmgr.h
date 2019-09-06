@@ -3,7 +3,7 @@
  * snapmgr.h
  *	  POSTGRES snapshot manager
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/snapmgr.h
@@ -16,6 +16,7 @@
 #include "fmgr.h"
 #include "utils/resowner.h"
 #include "utils/snapshot.h"
+#include "cdb/cdbtm.h"
 
 
 extern bool FirstSnapshotSet;
@@ -30,7 +31,7 @@ extern Snapshot GetLatestSnapshot(void);
 extern void SnapshotSetCommandId(CommandId curcid);
 
 extern Snapshot GetCatalogSnapshot(Oid relid);
-extern Snapshot GetNonHistoricCatalogSnapshot(Oid relid);
+extern Snapshot GetNonHistoricCatalogSnapshot(Oid relid, DtxContext distributedTransactionContext);
 extern void InvalidateCatalogSnapshot(void);
 extern void InvalidateCatalogSnapshotConditionally(void);
 
@@ -67,5 +68,10 @@ extern struct HTAB *HistoricSnapshotGetTupleCids(void);
 extern void SetupHistoricSnapshot(Snapshot snapshot_now, struct HTAB *tuplecids);
 extern void TeardownHistoricSnapshot(bool is_error);
 extern bool HistoricSnapshotActive(void);
+
+extern Size EstimateSnapshotSpace(Snapshot snapshot);
+extern void SerializeSnapshot(Snapshot snapshot, char *start_address);
+extern Snapshot RestoreSnapshot(char *start_address);
+extern void RestoreTransactionSnapshot(Snapshot snapshot, void *master_pgproc);
 
 #endif   /* SNAPMGR_H */

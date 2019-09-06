@@ -23,7 +23,7 @@
  * for aborts (whether sync or async), since the post-crash assumption would
  * be that such transactions failed anyway.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/backend/access/transam/clog.c
@@ -35,6 +35,9 @@
 #include "access/clog.h"
 #include "access/slru.h"
 #include "access/transam.h"
+#include "access/xlog.h"
+#include "access/xloginsert.h"
+#include "access/xlogutils.h"
 #include "miscadmin.h"
 #include "pg_trace.h"
 
@@ -812,13 +815,9 @@ CLOGPagePrecedes(int page1, int page2)
 static void
 WriteZeroPageXlogRec(int pageno)
 {
-	XLogRecData rdata;
-
-	rdata.data = (char *) (&pageno);
-	rdata.len = sizeof(int);
-	rdata.buffer = InvalidBuffer;
-	rdata.next = NULL;
-	(void) XLogInsert(RM_CLOG_ID, CLOG_ZEROPAGE, &rdata);
+	XLogBeginInsert();
+	XLogRegisterData((char *) (&pageno), sizeof(int));
+	(void) XLogInsert(RM_CLOG_ID, CLOG_ZEROPAGE);
 }
 
 /*
@@ -830,14 +829,11 @@ WriteZeroPageXlogRec(int pageno)
 static void
 WriteTruncateXlogRec(int pageno)
 {
-	XLogRecData rdata;
 	XLogRecPtr	recptr;
 
-	rdata.data = (char *) (&pageno);
-	rdata.len = sizeof(int);
-	rdata.buffer = InvalidBuffer;
-	rdata.next = NULL;
-	recptr = XLogInsert(RM_CLOG_ID, CLOG_TRUNCATE, &rdata);
+	XLogBeginInsert();
+	XLogRegisterData((char *) (&pageno), sizeof(int));
+	recptr = XLogInsert(RM_CLOG_ID, CLOG_TRUNCATE);
 	XLogFlush(recptr);
 }
 
@@ -845,12 +841,12 @@ WriteTruncateXlogRec(int pageno)
  * CLOG resource manager's routines
  */
 void
-clog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
+clog_redo(XLogReaderState *record)
 {
-	uint8		info = record->xl_info & ~XLR_INFO_MASK;
+	uint8		info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
 
 	/* Backup blocks are not used in clog records */
-	Assert(!(record->xl_info & XLR_BKP_BLOCK_MASK));
+	Assert(!XLogRecHasAnyBlockRefs(record));
 
 	if (info == CLOG_ZEROPAGE)
 	{

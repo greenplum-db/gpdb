@@ -3,7 +3,7 @@
  * parse_cte.c
  *	  handle CTEs (common table expressions) in parser
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -114,14 +114,14 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 	Assert(pstate->p_future_ctes == NIL);
 
 	/*
-	 * WITH RECURSIVE is disabled if gp_recursive_cte_prototype is not set
+	 * WITH RECURSIVE is disabled if gp_recursive_cte is not set
 	 * to allow recursive CTEs.
 	 */
-	if (withClause->recursive && !gp_recursive_cte_prototype)
+	if (withClause->recursive && !gp_recursive_cte)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("RECURSIVE clauses in WITH queries are currently disabled"),
-				 errhint("In order to use recursive CTEs, \"gp_recursive_cte_prototype\" must be turned on.")));
+				 errhint("In order to use recursive CTEs, \"gp_recursive_cte\" must be turned on.")));
 
 	/*
 	 * For either type of WITH, there must not be duplicate CTE names in the
@@ -1076,7 +1076,7 @@ checkWindowFuncInRecursiveTerm(SelectStmt *stmt, CteState *cstate)
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("Window Functions in a recursive query is not implemented"),
+							 errmsg("window functions in a recursive query is not implemented"),
 							 parser_errposition(cstate->pstate,
 												exprLocation((Node *) fc))));
 				}

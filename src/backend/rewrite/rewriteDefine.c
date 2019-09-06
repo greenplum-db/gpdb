@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -193,7 +193,7 @@ InsertRule(char *rulname,
  * DefineRule
  *		Execute a CREATE RULE command.
  */
-Oid
+ObjectAddress
 DefineRule(RuleStmt *stmt, const char *queryString)
 {
 	List	   *actions;
@@ -227,7 +227,7 @@ DefineRule(RuleStmt *stmt, const char *queryString)
  * This is essentially the same as DefineRule() except that the rule's
  * action and qual have already been passed through parse analysis.
  */
-Oid
+ObjectAddress
 DefineQueryRewrite(char *rulename,
 				   Oid event_relid,
 				   Node *event_qual,
@@ -241,6 +241,7 @@ DefineQueryRewrite(char *rulename,
 	Query	   *query;
 	bool		RelisBecomingView = false;
 	Oid			ruleId = InvalidOid;
+	ObjectAddress address;
 
 	/*
 	 * If we are installing an ON SELECT rule, we had better grab
@@ -616,10 +617,12 @@ DefineQueryRewrite(char *rulename,
 		heap_close(relationRelation, RowExclusiveLock);
 	}
 
+	ObjectAddressSet(address, RewriteRelationId, ruleId);
+
 	/* Close rel, but keep lock till commit... */
 	heap_close(event_relation, NoLock);
 
-	return ruleId;
+	return address;
 }
 
 /*
@@ -921,7 +924,7 @@ RangeVarCallbackForRenameRule(const RangeVar *rv, Oid relid, Oid oldrelid,
 /*
  * Rename an existing rewrite rule.
  */
-Oid
+ObjectAddress
 RenameRewriteRule(RangeVar *relation, const char *oldName,
 				  const char *newName)
 {
@@ -931,6 +934,7 @@ RenameRewriteRule(RangeVar *relation, const char *oldName,
 	HeapTuple	ruletup;
 	Form_pg_rewrite ruleform;
 	Oid			ruleOid;
+	ObjectAddress address;
 
 	/*
 	 * Look up name, check permissions, and acquire lock (which we will NOT
@@ -993,10 +997,12 @@ RenameRewriteRule(RangeVar *relation, const char *oldName,
 	 */
 	CacheInvalidateRelcache(targetrel);
 
+	ObjectAddressSet(address, RewriteRelationId, ruleOid);
+
 	/*
 	 * Close rel, but keep exclusive lock!
 	 */
 	relation_close(targetrel, NoLock);
 
-	return ruleOid;
+	return address;
 }

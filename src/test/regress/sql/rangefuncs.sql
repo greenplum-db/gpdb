@@ -641,13 +641,24 @@ select x from int8_tbl, extractq2(int8_tbl) f(x);
 select x from int8_tbl, extractq2(int8_tbl) f(x);
 
 create function extractq2_2(t int8_tbl) returns table(ret1 int8) as $$
-  select extractq2(t)
+  select extractq2(t) offset 0
 $$ language sql immutable;
 
 explain (verbose, costs off)
 select x from int8_tbl, extractq2_2(int8_tbl) f(x);
 
 select x from int8_tbl, extractq2_2(int8_tbl) f(x);
+
+-- without the "offset 0", this function gets optimized quite differently
+
+create function extractq2_2_opt(t int8_tbl) returns table(ret1 int8) as $$
+  select extractq2(t)
+$$ language sql immutable;
+
+explain (verbose, costs off)
+select x from int8_tbl, extractq2_2_opt(int8_tbl) f(x);
+
+select x from int8_tbl, extractq2_2_opt(int8_tbl) f(x);
 
 -- gpdb: test append node in subquery_motionHazard_walker(). Without that
 -- change the select query below will panic.
@@ -659,3 +670,11 @@ explain (verbose, costs off)
 select x from int8_tbl, extractq2_append(int8_tbl) f(x);
 
 select x from int8_tbl, extractq2_append(int8_tbl) f(x);
+
+create function extractq2_wapper(t int8_tbl) returns table(ret1 int8) as $$      
+  select (select extractq2(t))                                                  
+$$ language sql immutable;                                                      
+
+explain (verbose, costs off) select x from int8_tbl, extractq2_wapper(int8_tbl) f(x);
+
+select x from int8_tbl, extractq2_wapper(int8_tbl) f(x);

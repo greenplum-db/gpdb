@@ -12,7 +12,7 @@
  *	  This information is needed by routines manipulating tuples
  *	  (getattribute, formtuple, etc.).
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -70,14 +70,7 @@
  *		- ExecSeqScan() calls ExecStoreTuple() to take the result
  *		  tuple from ExecProject() and place it into the result tuple slot.
  *
- *		- ExecutePlan() calls ExecSelect(), which passes the result slot
- *		  to printtup(), which uses slot_getallattrs() to extract the
- *		  individual Datums for printing.
- *
- *		At ExecutorEnd()
- *		----------------
- *		- EndPlan() calls ExecResetTupleTable() to clean up any remaining
- *		  tuples left over from executing the query.
+ *		- ExecutePlan() calls the output function.
  *
  *		The important thing to watch in the executor code is how pointers
  *		to the slots containing tuples are passed instead of the tuples
@@ -99,6 +92,7 @@
 #include "parser/parsetree.h"               /* rt_fetch() */
 #include "storage/bufmgr.h"
 #include "utils/builtins.h"
+#include "utils/expandeddatum.h"
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 
@@ -775,6 +769,9 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot)
  *		for being stored on disk.  The original data may or may not be
  *		virtual, but in any case we need a private copy for heap_insert
  *		to scribble on.
+ *
+ *		Greenplum: this function is quite different from upstream because
+ *		the TupleTableSlot, HeapTuple and Memory/Minimal tuple differ.
  * --------------------------------
  */
 HeapTuple
@@ -782,6 +779,7 @@ ExecMaterializeSlot(TupleTableSlot *slot)
 {
 	uint32		tuplen;
 	HeapTuple	htup;
+	void	   *htup_buf;
 
 	/*
 	 * sanity checks
@@ -790,23 +788,54 @@ ExecMaterializeSlot(TupleTableSlot *slot)
 
 	/*
 	 * If we have a regular physical tuple, and it's locally palloc'd, we have
-	 * nothing to do.
+	 * nothing to do, else make a copy.
+	 *
+	 * Don't transform the heaptuple if possible, transforming heaptuples to
+	 * other types will lose the system columns and waste computing resources.
 	 */
-	if (slot->PRIVATE_tts_heaptuple &&
-		(TupShouldFree(slot) || slot->PRIVATE_tts_heaptuple == slot->PRIVATE_tts_htup_buf))
-		return slot->PRIVATE_tts_heaptuple;
+	if (slot->PRIVATE_tts_heaptuple)
+	{
+		if (TupShouldFree(slot) || slot->PRIVATE_tts_heaptuple == slot->PRIVATE_tts_htup_buf)
+		{
+			return slot->PRIVATE_tts_heaptuple;
+		}
+		else
+		{
+			htup_buf = slot->PRIVATE_tts_htup_buf;
+			tuplen = HEAPTUPLESIZE + slot->PRIVATE_tts_heaptuple->t_len;
+
+			slot->PRIVATE_tts_htup_buf = (HeapTuple) MemoryContextAlloc(slot->tts_mcxt, tuplen);
+
+			htup = heaptuple_copy_to(slot->PRIVATE_tts_heaptuple, slot->PRIVATE_tts_htup_buf, &tuplen);
+			Assert(htup);
+
+			if (htup_buf)
+				pfree(htup_buf);
+
+			slot->PRIVATE_tts_heaptuple = htup;
+			slot->PRIVATE_tts_nvalid = 0;
+			return htup;
+		}
+	}
 
 	/*
 	 * Otherwise, copy or build a physical tuple, and store it into the slot.
+	 */
+
+	/*
+	 * Transform any tuple to a virtual tuple, system columns would be lost
+	 * here since virtual tuples have no system columns.
 	 */
 	slot_getallattrs(slot);
 
 	Assert(slot->PRIVATE_tts_nvalid == slot->tts_tupleDescriptor->natts);
 
+	/* Form a heaptuple from the virtual tuple */
 	tuplen = slot->PRIVATE_tts_htup_buf_len;
 	htup = heaptuple_form_to(slot->tts_tupleDescriptor, slot_get_values(slot), slot_get_isnull(slot),
 			slot->PRIVATE_tts_htup_buf, &tuplen);
 
+	/* The buf space is not large enough */
 	if (!htup)
 	{
 		/* enlarge the buffer and retry */
@@ -957,6 +986,51 @@ void ExecModifyMemTuple(TupleTableSlot *slot, Datum *values, bool *isnull, bool 
 
 	/* don't forget to reset PRIVATE_tts_nvalid, because we modified the memtuple */
 	slot->PRIVATE_tts_nvalid = 0;
+}
+
+/* --------------------------------
+ *		ExecMakeSlotContentsReadOnly
+ *			Mark any R/W expanded datums in the slot as read-only.
+ *
+ * This is needed when a slot that might contain R/W datum references is to be
+ * used as input for general expression evaluation.  Since the expression(s)
+ * might contain more than one Var referencing the same R/W datum, we could
+ * get wrong answers if functions acting on those Vars thought they could
+ * modify the expanded value in-place.
+ *
+ * For notational reasons, we return the same slot passed in.
+ * --------------------------------
+ */
+TupleTableSlot *
+ExecMakeSlotContentsReadOnly(TupleTableSlot *slot)
+{
+	/*
+	 * sanity checks
+	 */
+	Assert(!TupIsNull(slot));
+	Assert(slot->tts_tupleDescriptor != NULL);
+
+	/*
+	 * If the slot contains a physical tuple, it can't contain any expanded
+	 * datums, because we flatten those when making a physical tuple.  This
+	 * might change later; but for now, we need do nothing unless the slot is
+	 * virtual.
+	 */
+	if (slot->PRIVATE_tts_heaptuple == NULL && slot->PRIVATE_tts_memtuple == NULL)
+	{
+		Form_pg_attribute *att = slot->tts_tupleDescriptor->attrs;
+		int			attnum;
+
+		for (attnum = 0; attnum < slot->PRIVATE_tts_nvalid; attnum++)
+		{
+			slot->PRIVATE_tts_values[attnum] =
+				MakeExpandedObjectReadOnly(slot->PRIVATE_tts_values[attnum],
+										   slot->PRIVATE_tts_isnull[attnum],
+										   att[attnum]->attlen);
+		}
+	}
+
+	return slot;
 }
 
 
@@ -1521,7 +1595,15 @@ slot_getsysattr(TupleTableSlot *slot, int attnum, Datum *result, bool *isnull)
                 switch(attnum)
                 {
                         case SelfItemPointerAttributeNumber:
-							Assert(ItemPointerIsValid(&(htup->t_self)));
+							/*
+							 * GPDB_95_MERGE_FIXME: Assert below doesn't hold
+							 * when querying with "FOR UPDATE" row-level locks
+							 * on a table whose inheritance hierarcy includes a
+							 * foreign table. Seen in contrib/file_fdw test.
+							 *
+							 * Assert(ItemPointerIsValid(&(htup->t_self)));
+							 */
+							Assert(PointerIsValid(&(htup->t_self)));
 							
 							*result = PointerGetDatum(&(htup->t_self));
 							break;

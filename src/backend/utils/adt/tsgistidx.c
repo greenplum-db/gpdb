@@ -3,7 +3,7 @@
  * tsgistidx.c
  *	  GiST support functions for tsvector_ops
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -17,6 +17,7 @@
 #include "access/gist.h"
 #include "access/tuptoaster.h"
 #include "tsearch/ts_utils.h"
+#include "utils/pg_crc.h"
 
 
 #define SIGLENINT  31			/* >121 => key will toast, so it will not work
@@ -50,7 +51,7 @@ typedef struct
 {
 	int32		vl_len_;		/* varlena header (do not touch directly!) */
 	int32		flag;
-	char		data[1];
+	char		data[FLEXIBLE_ARRAY_MEMBER];
 } SignTSVector;
 
 #define ARRKEY		0x01
@@ -306,7 +307,7 @@ checkcondition_arr(void *checkval, QueryOperand *val)
 	/* Loop invariant: StopLow <= val < StopHigh */
 
 	/*
-	 * we are not able to find a a prefix by hash value
+	 * we are not able to find a prefix by hash value
 	 */
 	if (val->prefix)
 		return true;
@@ -329,7 +330,7 @@ static bool
 checkcondition_bit(void *checkval, QueryOperand *val)
 {
 	/*
-	 * we are not able to find a a prefix in signature tree
+	 * we are not able to find a prefix in signature tree
 	 */
 	if (val->prefix)
 		return true;

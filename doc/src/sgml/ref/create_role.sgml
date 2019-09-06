@@ -36,6 +36,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
     | REPLICATION | NOREPLICATION
+    | BYPASSRLS | NOBYPASSRLS
     | CONNECTION LIMIT <replaceable class="PARAMETER">connlimit</replaceable>
     | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<replaceable class="PARAMETER">password</replaceable>'
     | VALID UNTIL '<replaceable class="PARAMETER">timestamp</replaceable>'
@@ -197,6 +198,25 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
      </varlistentry>
 
      <varlistentry>
+      <term><literal>BYPASSRLS</literal></term>
+      <term><literal>NOBYPASSRLS</literal></term>
+      <listitem>
+       <para>
+        These clauses determine whether a role is allowed to bypass row-security
+        policies.  A role having the <literal>BYPASSRLS</literal> attribute will
+        be allowed to bypass row-security policies by setting
+        <literal>row_security</literal> to
+        <literal>OFF</literal>. <literal>NOBYPASSRLS</literal> is the default.
+        Note that pg_dump will set <literal>row_security</literal> to
+        <literal>OFF</literal> by default, to ensure all contents of a table are
+        dumped out.  If the user running pg_dump does not have appropriate
+        permissions, an error will be returned.  The superuser and owner of the
+        table being dumped are considered to always have the right to bypass RLS.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><literal>CONNECTION LIMIT</literal> <replaceable class="parameter">connlimit</replaceable></term>
       <listitem>
        <para>
@@ -339,7 +359,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
         You can assign the <literal>default_group</literal> resource group to any role.
        </para>
        <para>
-	See <xref linkend="sql-createresourcegroup" 
+        See <xref linkend="sql-createresourcegroup" 
         endterm="sql-createresourcegroup-title"> for more information.
        </para>
       </listitem>
@@ -350,7 +370,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
       <listitem>
        <para>
         The <literal>RESOURCE QUEUE</literal> that this role is in.
-		See <xref linkend="sql-createresourcequeue" 
+        See <xref linkend="sql-createresourcequeue" 
         endterm="sql-createresourcequeue-title"> for more information.
        </para>
       </listitem>

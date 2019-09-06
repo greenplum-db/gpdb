@@ -48,6 +48,7 @@
 #include "parser/parse_relation.h"
 #include "parser/parse_target.h"
 #include "parser/parse_utilcmd.h"
+#include "storage/lmgr.h"
 #include "tcop/utility.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -56,6 +57,7 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/ruleutils.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 
@@ -67,6 +69,7 @@
 typedef struct
 {
 	char	   *key;
+	bool        indexed_cons;
 	List	   *table_cons;
 	List	   *part_cons;
 	List	   *cand_cons;
@@ -88,10 +91,19 @@ static void record_constraints(Relation pgcon, MemoryContext context,
 				   HTAB *hash_tbl, Relation rel,
 				   PartExchangeRole xrole);
 
+static void exchange_constraint_names(Relation part,
+									   Relation cand,
+									   NameData part_name,
+									   NameData cand_name);
+
+static void rename_constraint(Relation rel,
+							   char *old_name,
+							   char *new_name);
+
 static char *constraint_names(List *cons);
 
-static void
-			constraint_diffs(List *cons_a, List *cons_b, bool match_names, List **missing, List **extra);
+static void constraint_diffs(List *cons_a, List *cons_b, bool match_inheritance,
+							  List **missing, List **extra);
 
 static void add_template_encoding_clauses(Oid relid, Oid paroid, List *stenc);
 
@@ -194,7 +206,7 @@ static bool
 			relation_has_supers(Oid relid);
 
 static NewConstraint *constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
-						bool validate, bool is_split, Relation pgcon);
+						bool validate, Relation pgcon);
 
 static char *ChooseConstraintNameForPartitionCreate(const char *rname,
 									   const char *cname,
@@ -565,6 +577,91 @@ rel_is_child_partition(Oid relid)
 }
 
 /*
+ * Is relid an interior node of a partitioning hierarchy?
+ *
+ * To determine if it is an interior node or not, we need to find the depth of
+ * our partition and check if there is at least one more level below us.
+ *
+ * Call only on entry database.
+ */
+bool
+rel_is_interior_partition(Oid relid)
+{
+	HeapTuple	tuple;
+	Oid			paroid = InvalidOid;
+	bool		is_interior = false;
+	int			mylevel = 0;
+	Relation	partrulerel;
+	Relation	partrel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	Oid			partitioned_rel = InvalidOid;	/* OID of the root table of
+												 * the partition set */
+
+	/*
+	 * Find the pg_partition_rule entry to see if this is a child at all and,
+	 * if so, to locate the OID for the pg_partition entry.
+	 *
+	 * SELECT paroid FROM pg_partition_rule WHERE parchildrelid = :1
+	 */
+	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	sscan = systable_beginscan(partrulerel, PartitionRuleParchildrelidIndexId, true,
+							   NULL, 1, &scankey);
+	tuple = systable_getnext(sscan);
+
+	if (tuple)
+		paroid = ((Form_pg_partition_rule) GETSTRUCT(tuple))->paroid;
+	else
+		paroid = InvalidOid;
+
+	systable_endscan(sscan);
+	heap_close(partrulerel, AccessShareLock);
+
+	if (!OidIsValid(paroid))
+		return false;
+
+	tuple = SearchSysCache1(PARTOID, ObjectIdGetDatum(paroid));
+
+	Insist(HeapTupleIsValid(tuple));
+
+	mylevel = ((Form_pg_partition) GETSTRUCT(tuple))->parlevel;
+	partitioned_rel = ((Form_pg_partition) GETSTRUCT(tuple))->parrelid;
+	ReleaseSysCache(tuple);
+
+	/* SELECT * FROM pg_partition WHERE parrelid = :1 */
+	partrel = heap_open(PartitionRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey, Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(partitioned_rel));
+	sscan = systable_beginscan(partrel, PartitionParrelidIndexId, true,
+							   NULL, 1, &scankey);
+
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
+	{
+		/* not interested in templates */
+		if (((Form_pg_partition) GETSTRUCT(tuple))->paristemplate == false)
+		{
+			int			depth = ((Form_pg_partition) GETSTRUCT(tuple))->parlevel;
+			if (depth > mylevel)
+			{
+				is_interior = true;
+				break;
+			}
+		}
+	}
+
+	systable_endscan(sscan);
+	heap_close(partrel, AccessShareLock);
+
+	return is_interior;
+}
+
+/*
  * Is relid a leaf node of a partitioning hierarchy? If no, it does not follow
  * that it is the root.
  *
@@ -747,7 +844,6 @@ record_constraints(Relation pgcon,
 				   PartExchangeRole xrole)
 {
 	HeapTuple	tuple;
-	Relation	conRel;
 	Oid			conid;
 	char	   *condef;
 	ConstraintEntry *entry;
@@ -755,13 +851,13 @@ record_constraints(Relation pgcon,
 	MemoryContext oldcontext;
 	ScanKeyData scankey;
 	SysScanDesc sscan;
+	Form_pg_constraint con;
 
-	conRel = heap_open(ConstraintRelationId, AccessShareLock);
 
 	ScanKeyInit(&scankey, Anum_pg_constraint_conrelid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(RelationGetRelid(rel)));
-	sscan = systable_beginscan(conRel, ConstraintRelidIndexId, true,
+	sscan = systable_beginscan(pgcon, ConstraintRelidIndexId, true,
 							   NULL, 1, &scankey);
 
 	/* For each constraint on rel: */
@@ -784,10 +880,31 @@ record_constraints(Relation pgcon,
 		if (!found)
 		{
 			entry->key = condef;
+			entry->indexed_cons = false;
 			entry->table_cons = NIL;
 			entry->part_cons = NIL;
 			entry->cand_cons = NIL;
 		}
+
+		con = (Form_pg_constraint) GETSTRUCT(tuple);
+
+		switch (con->contype)
+		{
+			case CONSTRAINT_PRIMARY:
+			case CONSTRAINT_UNIQUE:
+				entry->indexed_cons = true;
+				break;
+			/*
+			 * Other types of constraints should not need special treatment
+			 */
+			case CONSTRAINT_CHECK:
+			case CONSTRAINT_FOREIGN:
+			case CONSTRAINT_TRIGGER:
+				break;
+			default:
+				Assert(false);
+		}
+
 		tuple = heap_copytuple(tuple);
 		switch (xrole)
 		{
@@ -810,7 +927,6 @@ record_constraints(Relation pgcon,
 		MemoryContextSwitchTo(oldcontext);
 	}
 	systable_endscan(sscan);
-	heap_close(conRel, AccessShareLock);
 }
 
 /* Subroutine of ATPExecPartExchange used to swap constraints on existing
@@ -846,7 +962,9 @@ cdb_exchange_part_constraints(Relation table,
 
 	List	   *excess_constraints = NIL;
 	List	   *missing_constraints = NIL;
+	List	   *missing_inherited_constraints = NIL;
 	List	   *missing_part_constraints = NIL;
+	List	   *indexed_constraints = NIL;
 	List	   *validation_list = NIL;
 	int			delta_checks = 0;
 
@@ -904,7 +1022,66 @@ cdb_exchange_part_constraints(Relation table,
 	hash_seq_init(&hash_seq, hash_tbl);
 	while ((entry = hash_seq_search(&hash_seq)))
 	{
-		if (list_length(entry->table_cons) > 0)
+		if (entry->indexed_cons)
+		{
+			/*
+			 * INDEX BACKED CONSTRAINTS
+			 *
+			 * Index backed constraints may inherit from a parent partition,
+			 * so they need to have the pg_inherits and pg_depend relationships
+			 * swapped.
+			 *
+			 * Unlike other constraints, because they are backed by indexes,
+			 * they must have a unique name, so the constraint name on the partition must be
+			 * swapped with the constraint name on the new table.
+			 */
+			List	   *missing = NIL;
+			List	   *extra = NIL;
+
+			if (list_length(entry->table_cons) > 0)
+			{
+				/*
+				 * Find any constraints that are missing from the partition that
+				 * exist on the parent. The missing constraints will need to be
+				 * added to the partition before we will allow a partition
+				 * exchange.
+				 */
+				constraint_diffs(entry->table_cons, entry->part_cons, true, &missing, &extra);
+				missing_inherited_constraints = list_concat(missing_inherited_constraints, missing);
+				excess_constraints = list_concat(excess_constraints, extra);
+			}
+
+			missing = NIL;
+			extra = NIL;
+
+			/*
+			 * Compare indexes between the existing and the incoming partition.
+			 */
+			constraint_diffs(entry->part_cons, entry->cand_cons, false, &missing, &extra);
+			missing_constraints = list_concat(missing_constraints, missing);
+			excess_constraints = list_concat(excess_constraints, extra);
+
+			ListCell *lc;
+
+			/*
+			 * Pop off any constraints that were added to either missing
+			 * or extra. What remains are the matching constraint pairs
+			 * for name exchange.
+			 */
+			foreach(lc, missing)
+			{
+				list_delete_ptr(entry->table_cons, lfirst(lc));
+			}
+
+			foreach(lc, extra)
+			{
+				list_delete_ptr(entry->cand_cons, lfirst(lc));
+			}
+
+			if (list_length(entry->part_cons) > 0 && list_length(entry->cand_cons) > 0)
+				indexed_constraints = lappend(indexed_constraints, entry);
+		}
+		else if (list_length(entry->table_cons) > 0)
 		{
 			/*
 			 * REGULAR CONSTRAINT
@@ -947,7 +1124,7 @@ cdb_exchange_part_constraints(Relation table,
 			 * candidate (missing) and occurrences that must be dropped from
 			 * the candidate (extra).
 			 */
-			constraint_diffs(entry->table_cons, entry->cand_cons, true, &missing, &extra);
+			constraint_diffs(entry->table_cons, entry->cand_cons, false, &missing, &extra);
 			missing_constraints = list_concat(missing_constraints, missing);
 			excess_constraints = list_concat(excess_constraints, extra);
 		}
@@ -1090,6 +1267,22 @@ cdb_exchange_part_constraints(Relation table,
 				 errhint("Drop the invalid constraints and retry.")));
 	}
 
+	if (missing_inherited_constraints)
+	{
+		/*
+		 * If the parent table has an extra constraint that is not
+		 * inherited by the existing partition, then don't allow the echange
+		 * to occur until that has been corrected.
+		 */
+		ereport(ERROR,
+				(errcode(ERRCODE_INTEGRITY_CONSTRAINT_VIOLATION),
+					errmsg("Inherited constraints(s) found on \"%s\" that do not exist on \"%s\": %s",
+						RelationGetRelationName(table),
+						RelationGetRelationName(part),
+						constraint_names(missing_inherited_constraints)),
+					errhint("Attach missing constraints and retry.")));
+	}
+
 	if (missing_part_constraints)
 	{
 		ListCell   *lc;
@@ -1107,11 +1300,11 @@ cdb_exchange_part_constraints(Relation table,
 			Form_pg_constraint mcon = (Form_pg_constraint) GETSTRUCT(missing_part_constraint);
 
 			if (mcon->contype != CONSTRAINT_CHECK)
-				elog(ERROR, "Invalid partition constration, not CHECK type");
+				elog(ERROR, "Invalid partition constraint, not CHECK type");
 
 			map_part_attrs(part, cand, &map, TRUE);
 			nc = constraint_apply_mapped(missing_part_constraint, map, cand,
-										 validate, is_split, pgcon);
+										 validate, pgcon);
 			if (nc)
 				validation_list = lappend(validation_list, nc);
 
@@ -1136,7 +1329,7 @@ cdb_exchange_part_constraints(Relation table,
 			Form_pg_constraint mcon = (Form_pg_constraint) GETSTRUCT(tuple);
 
 			nc = constraint_apply_mapped(tuple, map, cand,
-										 validate, is_split, pgcon);
+										 validate, pgcon);
 			if (nc)
 				validation_list = lappend(validation_list, nc);
 
@@ -1144,6 +1337,31 @@ cdb_exchange_part_constraints(Relation table,
 				delta_checks++;
 		}
 	}
+
+	if (indexed_constraints)
+	{
+		ListCell   *lcentry;
+
+		foreach(lcentry, indexed_constraints)
+		{
+			ListCell   *lcpart;
+			ListCell   *lccand;
+
+			entry = (ConstraintEntry *) lfirst(lcentry);
+
+			forboth(lcpart, entry->part_cons, lccand, entry->cand_cons)
+			{
+				HeapTuple	parttuple = (HeapTuple) lfirst(lcpart);
+				Form_pg_constraint part_constraint = (Form_pg_constraint) GETSTRUCT(parttuple);
+
+				HeapTuple	candtuple = (HeapTuple) lfirst(lccand);
+				Form_pg_constraint cand_constraint = (Form_pg_constraint) GETSTRUCT(candtuple);
+
+				exchange_constraint_names(part, cand, part_constraint->conname, cand_constraint->conname);
+			}
+		}
+	}
+
 
 	if (delta_checks)
 	{
@@ -1157,6 +1375,42 @@ cdb_exchange_part_constraints(Relation table,
 	return validation_list;
 }
 
+static void
+exchange_constraint_names(Relation part, Relation cand, NameData part_name, NameData cand_name)
+{
+	char		temp_name[NAMEDATALEN];
+
+	elog(DEBUG1, "Exchanging names for %s and %s", NameStr(part_name),
+		NameStr(cand_name));
+
+	snprintf(temp_name, NAMEDATALEN, "pg_temp_exchange_%u_%i", RelationGetRelid(part), MyBackendId);
+
+	/*
+	 * Since index names are unique within a namespace, assign a constraint a
+	 * temporary name to help with the exchange.
+	 */
+	rename_constraint(part, NameStr(part_name), temp_name);
+	rename_constraint(cand, NameStr(cand_name), NameStr(part_name));
+	rename_constraint(part, temp_name, NameStr(cand_name));
+}
+
+static void
+rename_constraint(Relation rel, char *old_name, char *new_name)
+{
+	RenameStmt renamestmt;
+
+	renamestmt.renameType = OBJECT_TABCONSTRAINT;
+	renamestmt.relationType = OBJECT_TABLE;
+	renamestmt.relation = makeRangeVar(get_namespace_name(rel->rd_rel->relnamespace),
+									   RelationGetRelationName(rel), -1);
+	renamestmt.subname = old_name;
+	renamestmt.newname = new_name;
+	renamestmt.behavior = DROP_RESTRICT;
+
+	RenameConstraint(&renamestmt);
+
+	CommandCounterIncrement();
+}
 /*
  * Return a string of comma-delimited names of the constraints in the
  * argument list of pg_constraint tuples.  This is primarily for use
@@ -1207,7 +1461,7 @@ constraint_names(List *cons)
  * the other list.
  */
 static void
-constraint_diffs(List *cons_a, List *cons_b, bool match_names, List **missing, List **extra)
+constraint_diffs(List *cons_a, List *cons_b, bool match_inheritance, List **missing, List **extra)
 {
 	ListCell   *cell_a,
 			   *cell_b;
@@ -1245,38 +1499,42 @@ constraint_diffs(List *cons_a, List *cons_b, bool match_names, List **missing, L
 	for (pos_b = 0; pos_b < len_b; pos_b++)
 		match_b[pos_b] = -1;
 
-	pos_b = 0;
-	foreach(cell_b, cons_b)
+	if(match_inheritance)
 	{
-		HeapTuple	tuple_b = (HeapTuple) lfirst(cell_b);
-		Form_pg_constraint b = (Form_pg_constraint) GETSTRUCT(tuple_b);
-
-
-		pos_a = 0;
-		foreach(cell_a, cons_a)
+		pos_b = 0;
+		foreach(cell_b, cons_b)
 		{
-			HeapTuple	tuple_a = lfirst(cell_a);
-			Form_pg_constraint a = (Form_pg_constraint) GETSTRUCT(tuple_a);
+			HeapTuple tuple_b = (HeapTuple) lfirst(cell_b);
+			Form_pg_constraint b = (Form_pg_constraint) GETSTRUCT(tuple_b);
+			pos_a = 0;
 
-			if (strncmp(NameStr(a->conname), NameStr(b->conname), NAMEDATALEN) == 0)
+			foreach(cell_a, cons_a)
 			{
-				/* No duplicate names on either list. */
-				Assert(match_a[pos_a] == -1 && match_b[pos_b] == -1);
+				HeapTuple tuple_a = lfirst(cell_a);
+				Form_pg_constraint a = (Form_pg_constraint) GETSTRUCT(tuple_a);
 
-				match_b[pos_b] = pos_a;
-				match_a[pos_a] = pos_b;
-				break;
+				List *inheritors = find_inheritance_children(a->conindid, NoLock);
+
+				if (list_member_oid(inheritors, b->conindid))
+				{
+					/* No duplicate inheritors on either list. */
+					Assert(match_a[pos_a] == -1 && match_b[pos_b] == -1);
+
+					match_b[pos_b] = pos_a;
+					match_a[pos_a] = pos_b;
+					break;
+				}
+				pos_a++;
 			}
-			pos_a++;
+			pos_b++;
 		}
-		pos_b++;
 	}
 
 	*missing = NIL;
 	*extra = NIL;
 
 	n = len_a - len_b;
-	if (n > 0 || match_names)
+	if (n > 0 || match_inheritance)
 	{
 		pos_a = 0;
 		foreach(cell_a, cons_a)
@@ -1285,13 +1543,13 @@ constraint_diffs(List *cons_a, List *cons_b, bool match_names, List **missing, L
 				*missing = lappend(*missing, lfirst(cell_a));
 			pos_a++;
 			n--;
-			if (n <= 0 && !match_names)
+			if (n <= 0 && !match_inheritance)
 				break;
 		}
 	}
 
 	n = len_b - len_a;
-	if (n > 0 || match_names)
+	if (n > 0 || match_inheritance)
 	{
 		pos_b = 0;
 		foreach(cell_b, cons_b)
@@ -1300,7 +1558,7 @@ constraint_diffs(List *cons_a, List *cons_b, bool match_names, List **missing, L
 				*extra = lappend(*extra, lfirst(cell_b));
 			pos_b++;
 			n--;
-			if (n <= 0 && !match_names)
+			if (n <= 0 && !match_inheritance)
 				break;
 		}
 	}
@@ -4899,6 +5157,9 @@ get_part_rule(Relation rel,
 	char		relnamBuf[(NAMEDATALEN * 2)];
 	char	   *relname;
 
+	if (!pid)
+		return NULL;
+
 	snprintf(relnamBuf, sizeof(relnamBuf), "relation \"%s\"",
 			 RelationGetRelationName(rel));
 
@@ -4912,9 +5173,6 @@ get_part_rule(Relation rel,
 							  pid,
 							  bExistError, bMustExist,
 							  pSearch, pNode, relname, NULL);
-
-	if (!pid)
-		return NULL;
 
 	if (pid->idtype == AT_AP_IDRule)
 	{
@@ -4932,20 +5190,8 @@ get_part_rule(Relation rel,
 
 		pid2 = (AlterPartitionId *) lfirst(lc);
 
-		prule2 = get_part_rule1(rel,
-								pid2,
-								bExistError, bMustExist,
-								pSearch, pNode, pstrdup(prule2->relname), &pNode2);
-
-		pNode = pNode2;
-
-		if (!pNode)
-		{
-			if (prule2 && prule2->topRule && prule2->topRule->children)
-				pNode = prule2->topRule->children;
-		}
-
-		return prule2;
+		return get_part_rule1(rel, pid2, bExistError, bMustExist, pSearch,
+							  pNode, pstrdup(prule2->relname), &pNode2);
 	}
 
 	if (pid->idtype == AT_AP_IDList)
@@ -6529,7 +6775,6 @@ atpxPartAddList(Relation rel,
 	ct->distributedBy = NULL;
 	ct->partitionBy = (Node *) pBy;
 	ct->relKind = RELKIND_RELATION;
-	ct->postCreate = NULL;
 
 	ct->is_add_part = true;		/* subroutines need to know this */
 	ct->ownerid = ownerid;
@@ -7702,7 +7947,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
  */
 static NewConstraint *
 constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
-						bool validate, bool is_split, Relation pgcon)
+						bool validate, Relation pgcon)
 {
 	Datum		val;
 	bool		isnull;
@@ -7866,11 +8111,7 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 				char	   *what = (con->contype == CONSTRAINT_PRIMARY) ? "PRIMARY KEY" : "UNIQUE";
 				char	   *who = NameStr(con->conname);
 
-				if (is_split)
-				{
-					;			/* nothing */
-				}
-				else if (validate)
+				if (validate)
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),

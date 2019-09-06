@@ -73,6 +73,16 @@
           </row>
           <row>
             <entry colname="col1">
+              <codeph>external_writable</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Identifies whether or not the table is an external
+              writable table. (External writable tables require a different syntax
+              to expand).</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>status</codeph>
             </entry>
             <entry colname="col2">text</entry>
@@ -82,32 +92,24 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>last updated</codeph>
+              <codeph>expansion_started</codeph>
             </entry>
-            <entry colname="col2">timestamp with time zone</entry>
-            <entry colname="col3"/>
-            <entry colname="col4">Timestamp of the last change in status for this table.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>expansion started</codeph>
-            </entry>
-            <entry colname="col2">timestamp with time zone</entry>
+            <entry colname="col2">timestamp without time zone</entry>
             <entry colname="col3"/>
             <entry colname="col4">Timestamp for the start of the expansion of this table. This field
               is only populated after a table is successfully expanded.</entry>
           </row>
           <row>
             <entry colname="col1">
-              <codeph>expansion finished</codeph>
+              <codeph>expansion_finished</codeph>
             </entry>
-            <entry colname="col2">timestamp with time zone</entry>
+            <entry colname="col2">timestamp without time zone</entry>
             <entry colname="col3"/>
             <entry colname="col4">Timestamp for the completion of expansion of this table.</entry>
           </row>
           <row>
             <entry colname="col1">
-              <codeph>source bytes</codeph>
+              <codeph>source_bytes</codeph>
             </entry>
             <entry colname="col2"/>
             <entry colname="col3"/>

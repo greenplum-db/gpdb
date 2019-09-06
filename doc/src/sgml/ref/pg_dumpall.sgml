@@ -121,16 +121,6 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-i</></term>
-      <term><option>--ignore-version</></term>
-      <listitem>
-       <para>
-        A deprecated option that is now ignored.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
       <term><option>-o</></term>
       <term><option>--oids</></term>
       <listitem>
@@ -180,6 +170,11 @@ PostgreSQL documentation
        <para>
         Dump <literal>resource groups</literal> and <literal>role</literal>
         to <literal>resource groups</literal> associations.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>--lock-wait-timeout=<replaceable class="parameter">timeout</replaceable></option></term>
       <listitem>
        <para>
@@ -491,8 +486,8 @@ PostgreSQL documentation
       <term><option>--database=<replaceable>dbname</replaceable></option></term>
       <listitem>
        <para>
-         Specifies the name of the database to connect to to dump global
-         objects and discover what other databases should be dumped. If
+         Specifies the name of the database to connect to for dumping global
+         objects and discovering what other databases should be dumped. If
          not specified, the <literal>postgres</literal> database will be used,
          and if that does not exist, <literal>template1</literal> will be used.
        </para>

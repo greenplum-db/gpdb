@@ -510,8 +510,8 @@ CONTEXT:  COPY copy_regression_newline, line 1: "1|1
 "
 -- negative: invalid newline
 COPY copy_regression_newline from stdin with delimiter '|' newline 'blah';
-ERROR:  invalid value for NEWLINE (blah)
-HINT:  valid options are: 'LF', 'CRLF', 'CR'
+ERROR:  invalid value for NEWLINE "blah"
+HINT:  Valid options are: 'LF', 'CRLF' and 'CR'.
 -- negative: newline not yet supported for COPY TO
 COPY copy_regression_newline to stdout with delimiter '|' newline 'blah';
 ERROR:  newline currently available for data loading only, not unloading
@@ -725,6 +725,19 @@ LINE 1: COPY segment_reject_limit_from to PROGRAM STDOUT;
                                                   ^
 -- 'COPY (SELECT ...) TO' has supported 'ON SEGMENT'
 COPY (SELECT * FROM segment_reject_limit_from) TO '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT;
+-- 'COPY (SELECT ...) TO' on utility mode
+CREATE EXTERNAL WEB TABLE copy_cmd_utility(a text, b int)
+  EXECUTE E'PGOPTIONS="-c gp_session_role=utility" \\
+    psql -p $GP_MASTER_PORT $GP_DATABASE $GP_USER -c \\
+      "COPY (SELECT * FROM pg_class) TO \'/dev/null\'"'
+  ON MASTER FORMAT 'text' (DELIMITER ' ');
+SELECT a FROM copy_cmd_utility;
+  a   
+------
+ COPY
+(1 row)
+
+DROP EXTERNAL WEB TABLE copy_cmd_utility;
 -- SREH is not supported by COPY TO.
 COPY segment_reject_limit_from to STDOUT log errors segment reject limit 3 rows;
 ERROR:  COPY single row error handling only available using COPY FROM
@@ -1425,19 +1438,16 @@ COMMIT;
 -- Test that issuing a cancel requests during COPY aborts the processing before
 -- the entire contents has been copied out. The hardcoded rowcount 57190 is the
 -- number of rows in the lineitem table.
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'reset', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'interrupt', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 COPY lineitem TO '/tmp/aborted.data';
@@ -1452,10 +1462,9 @@ SELECT count(*) < 57190 FROM lineitem_aborted;
 (1 row)
 
 SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'reset', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 -- Test external partition

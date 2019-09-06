@@ -101,7 +101,7 @@ explain select * from t, pt where tid = ptid;
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=19)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 select * from t, pt where tid = ptid;
@@ -157,7 +157,7 @@ explain select * from t, pt where tid + 1 = ptid;
                      Filter: t.tid + 1
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=19)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 select * from t, pt where tid + 1 = ptid;
@@ -214,7 +214,7 @@ explain select * from t, pt where tid = ptid and t1 = 'hello' || tid;
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.07 rows=1 width=19)
                            ->  Seq Scan on t  (cost=0.00..2.04 rows=1 width=19)
                                  Filter: t1 = ('hello'::text || tid::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (29 rows)
 
 select * from t, pt where tid = ptid and t1 = 'hello' || tid;
@@ -270,7 +270,7 @@ explain select * from t, pt where t1 = pt1 and ptid = tid;
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=19)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 select * from t, pt where t1 = pt1 and ptid = tid;
@@ -314,7 +314,7 @@ explain select * from pt where ptid in (select tid from t where t1 = 'hello' || 
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.07 rows=1 width=4)
                            ->  Seq Scan on t  (cost=0.00..2.04 rows=1 width=4)
                                  Filter: (t1 = ('hello'::text || (tid)::text))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (29 rows)
 
 select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
@@ -374,7 +374,7 @@ explain select * from pt where exists (select 1 from t where tid = ptid and t1 =
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.07 rows=1 width=4)
                            ->  Seq Scan on t  (cost=0.00..2.04 rows=1 width=4)
                                  Filter: (t1 = ('hello'::text || (tid)::text))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (29 rows)
 
 select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
@@ -435,7 +435,7 @@ explain select count(*) from t, pt where tid = ptid;
                                  Filter: t.tid
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.08 rows=2 width=4)
                                        ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (30 rows)
 
 select count(*) from t, pt where tid = ptid;
@@ -482,7 +482,7 @@ explain select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
                                  Filter: t.tid
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.08 rows=2 width=19)
                                        ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=19)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (33 rows)
 
 select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
@@ -570,7 +570,7 @@ explain select * from t, pt where tid = ptid
                            Filter: t_1.tid + 2
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.08 rows=2 width=19)
                                  ->  Seq Scan on t t_1  (cost=0.00..2.02 rows=1 width=19)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (55 rows)
 
 select * from t, pt where tid = ptid
@@ -683,7 +683,7 @@ explain select count(*) from
                                              Filter: t_1.tid + 2
                                              ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.08 rows=2 width=19)
                                                    ->  Seq Scan on t t_1  (cost=0.00..2.02 rows=1 width=19)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (58 rows)
 
 select count(*) from
@@ -732,7 +732,7 @@ explain select * from t, pt where tid = ptid;
                      Filter: t.tid
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.08 rows=2 width=19)
                            ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=19)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 select * from t, pt where tid = ptid;
@@ -788,7 +788,7 @@ explain select * from t, pt where tid = ptid and pt1 = 'hello0';
                            Index Cond: (pt1 = 'hello0'::text)
                      ->  Index Scan using pt_1_prt_6_pt1_idx on pt_1_prt_6  (cost=0.14..200.15 rows=1 width=31)
                            Index Cond: (pt1 = 'hello0'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (20 rows)
 
 select * from t, pt where tid = ptid and pt1 = 'hello0';
@@ -820,7 +820,7 @@ explain select * from t, pt where tid = ptid;
                      ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4  (cost=0.14..706.21 rows=3 width=31)
                      ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5  (cost=0.14..706.21 rows=3 width=31)
                      ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6  (cost=0.14..706.21 rows=3 width=31)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 select * from t, pt where tid = ptid;
@@ -869,7 +869,7 @@ explain select * from t, pt where t1 = pt1;
          ->  Hash  (cost=2.08..2.08 rows=2 width=19)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.08 rows=2 width=19)
                      ->  Seq Scan on t  (cost=0.00..2.02 rows=1 width=19)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 select * from t, pt where t1 = pt1;
@@ -895,7 +895,7 @@ explain select * from t, pt where tid < ptid;
                      ->  Seq Scan on pt_1_prt_4  (cost=0.00..3.09 rows=3 width=31)
                      ->  Seq Scan on pt_1_prt_5  (cost=0.00..3.09 rows=3 width=31)
                      ->  Seq Scan on pt_1_prt_6  (cost=0.00..3.09 rows=3 width=31)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 select * from t, pt where tid < ptid;
@@ -1025,7 +1025,7 @@ explain select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
                                        ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.06 rows=1 width=19)
                                              Hash Key: t1.t2
                                              ->  Seq Scan on t1  (cost=0.00..2.02 rows=1 width=19)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (36 rows)
 
 select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
@@ -1108,7 +1108,7 @@ explain analyze select * from t, pt where tid = ptid;
    (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
    (slice2)    Executor memory: 4406K bytes avg x 3 workers, 4406K bytes max (seg0).  Work_mem: 1K bytes max.
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Total runtime: 15.697 ms
 (35 rows)
 
@@ -1147,7 +1147,7 @@ explain select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' ord
                            ->  Seq Scan on pt1_1_prt_4  (cost=0.00..3.09 rows=3 width=31)
                            ->  Seq Scan on pt1_1_prt_5  (cost=0.00..3.09 rows=3 width=31)
                            ->  Seq Scan on pt1_1_prt_6  (cost=0.00..3.09 rows=3 width=31)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (29 rows)
 
 select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt1.dist;
@@ -1194,7 +1194,7 @@ explain select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hell
                                  ->  Seq Scan on pt1_1_prt_4  (cost=0.00..3.09 rows=3 width=4)
                                  ->  Seq Scan on pt1_1_prt_5  (cost=0.00..3.09 rows=3 width=4)
                                  ->  Seq Scan on pt1_1_prt_6  (cost=0.00..3.09 rows=3 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (28 rows)
 
 select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
@@ -1243,7 +1243,7 @@ explain select * from t, pt where a = b;
                            ->  Seq Scan on pt_1_prt_3  (cost=0.00..1.01 rows=1 width=8)
                            ->  Seq Scan on pt_1_prt_4  (cost=0.00..1.01 rows=1 width=8)
                            ->  Seq Scan on pt_1_prt_5  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 select * from t, pt where a = b;
@@ -1308,7 +1308,7 @@ explain select * from t, pt where a = b;
                ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.02 rows=1 width=4)
                      Filter: t.a
                      ->  Seq Scan on t  (cost=0.00..1.02 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (24 rows)
 
 select * from t, pt where a = b;
@@ -1395,7 +1395,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code
                ->  Hash  (cost=1.04..1.04 rows=1 width=18)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                            ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (23 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
@@ -1505,7 +1505,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code
                            Filter: dim1.code, dim1.pid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                                  ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (49 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
@@ -1592,7 +1592,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fac
                ->  Hash  (cost=1.04..1.04 rows=1 width=18)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                            ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (23 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
@@ -1752,7 +1752,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fac
                            Filter: dim1.pid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                                  ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (49 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
@@ -1885,7 +1885,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.co
                ->  Hash  (cost=1.04..1.04 rows=1 width=18)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                            ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
@@ -1975,7 +1975,7 @@ explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.co
                            Filter: dim1.pid
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=18)
                                  ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (29 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
@@ -2072,7 +2072,7 @@ explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact
                                              ->  Hash  (cost=1.04..1.04 rows=1 width=4)
                                                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=4)
                                                          ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (33 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
@@ -2144,7 +2144,7 @@ explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact
                                                          Filter: dim1.pid
                                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.04 rows=1 width=4)
                                                                ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=4)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (59 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
@@ -2209,7 +2209,7 @@ explain select * from dim inner join malp on (dim.i = malp.i);
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                            Hash Key: dim.i
                            ->  Seq Scan on dim  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (20 rows)
 
 set gp_dynamic_partition_pruning = off;
@@ -2283,7 +2283,7 @@ explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
          ->  Hash  (cost=3.20..3.20 rows=4 width=6)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.20 rows=4 width=6)
                      ->  Seq Scan on b  (cost=0.00..3.05 rows=2 width=6)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
@@ -2328,7 +2328,7 @@ explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
          ->  Hash  (cost=3.20..3.20 rows=4 width=6)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.20 rows=4 width=6)
                      ->  Seq Scan on b  (cost=0.00..3.05 rows=2 width=6)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (29 rows)
 
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
@@ -2397,7 +2397,7 @@ explain select * from (select count(*) over (order by a rows between 1 preceding
                                              ->  Sort  (cost=1.02..1.02 rows=1 width=8)
                                                    Sort Key: jpat_1.a
                                                    ->  Seq Scan on jpat jpat_1  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (32 rows)
 
 select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);

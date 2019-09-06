@@ -29,7 +29,7 @@
  * subroutine is responsible for looking back to the original string and
  * replacing FF's with the corresponding original bytes.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -129,8 +129,6 @@ static int	backtick_start_offset;
 #define LEXRES_BACKSLASH	2	/* backslash command start */
 #define LEXRES_OK			3	/* OK completion of backslash argument */
 
-
-int	yylex(void);
 
 static void evaluate_backtick(void);
 static void push_new_buffer(const char *newstr, const char *varname);
@@ -374,9 +372,15 @@ ident_cont		[A-Za-z\200-\377_0-9\$]
 
 identifier		{ident_start}{ident_cont}*
 
+/* Assorted special-case operators and operator-like tokens */
 typecast		"::"
 dot_dot			\.\.
 colon_equals	":="
+equals_greater	"=>"
+less_equals		"<="
+greater_equals	">="
+less_greater	"<>"
+not_equals		"!="
 
 /*
  * "self" is the set of chars that should be returned as single-character
@@ -685,6 +689,26 @@ other			.
 				}
 
 {colon_equals}	{
+					ECHO;
+				}
+
+{equals_greater} {
+					ECHO;
+				}
+
+{less_equals}	{
+					ECHO;
+				}
+
+{greater_equals} {
+					ECHO;
+				}
+
+{less_greater}	{
+					ECHO;
+				}
+
+{not_equals}	{
 					ECHO;
 				}
 

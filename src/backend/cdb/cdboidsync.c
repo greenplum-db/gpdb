@@ -93,7 +93,7 @@ get_max_oid_from_segDBs(void)
 }
 
 Datum
-pg_highest_oid(PG_FUNCTION_ARGS __attribute__((unused)))
+pg_highest_oid(PG_FUNCTION_ARGS pg_attribute_unused())
 {
 	Oid			result;
 	Oid			max_from_segdbs;

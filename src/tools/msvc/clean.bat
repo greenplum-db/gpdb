@@ -19,6 +19,20 @@ if exist pgsql.suo del /q /a:H pgsql.suo
 del /s /q src\bin\win32ver.rc 2> NUL
 del /s /q src\interfaces\win32ver.rc 2> NUL
 if exist src\backend\win32ver.rc del /q src\backend\win32ver.rc
+if exist src\backend\replication\libpqwalreceiver\win32ver.rc del /q src\backend\replication\libpqwalreceiver\win32ver.rc
+if exist src\backend\snowball\win32ver.rc del /q src\backend\snowball\win32ver.rc
+if exist src\interfaces\ecpg\test\win32ver.rc del /q src\interfaces\ecpg\test\win32ver.rc
+if exist src\pl\plperl\win32ver.rc del /q src\pl\plperl\win32ver.rc
+if exist src\pl\plpgsql\src\win32ver.rc del /q src\pl\plpgsql\src\win32ver.rc
+if exist src\pl\plpython\win32ver.rc del /q src\pl\plpython\win32ver.rc
+if exist src\pl\tcl\win32ver.rc del /q src\pl\tcl\win32ver.rc
+if exist src\test\isolation\win32ver.rc del /q src\test\isolation\win32ver.rc
+if exist src\test\regress\win32ver.rc del /q src\test\regress\win32ver.rc
+if exist src\timezone\win32ver.rc del /q src\timezone\win32ver.rc
+
+for /d %%f in (src\interfaces\ecpg\*) do if exist %%f\win32ver.rc del /q %%f\win32ver.rc
+for /d %%f in (contrib\*) do if exist %%f\win32ver.rc del /q %%f\win32ver.rc
+for /d %%f in (src\backend\utils\mb\conversion_procs\*) do if exist %%f\win32ver.rc del /q %%f\win32ver.rc
 
 REM Delete files created with GenerateFiles() in Solution.pm
 if exist src\include\pg_config.h del /q src\include\pg_config.h
@@ -85,11 +99,6 @@ if exist src\bin\scripts\tmp_check rd /s /q src\bin\scripts\tmp_check
 REM Clean up datafiles built with contrib
 REM cd contrib
 REM for /r %%f in (*.sql) do if exist %%f.in del %%f
-
-REM clean up files copied into contrib\pg_xlogdump
-if exist contrib\pg_xlogdump\xlogreader.c del /q contrib\pg_xlogdump\xlogreader.c
-for %%f in (contrib\pg_xlogdump\*desc.c) do if not %%f==contrib\pg_xlogdump\rmgrdesc.c del /q %%f
-
 
 cd %D%
 

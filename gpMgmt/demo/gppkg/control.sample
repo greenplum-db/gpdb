@@ -1,8 +1,0 @@
-Package: sample
-Version: #version
-Section: base
-Priority: optional
-Architecture: #arch
-Maintainer: 
-Description: sample
-  This is a sample control file to build deb packge in gppkg for Greenplum Database.

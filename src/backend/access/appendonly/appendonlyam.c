@@ -173,7 +173,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 	Relation	reln = scan->aos_rd;
 	int			segno = -1;
 	int64		eof = 0;
-	int			formatversion = -1;
+	int			formatversion = -2; /* some invalid value */
 	bool		finished_all_files = true;	/* assume */
 	int32		fileSegNo;
 
@@ -1298,7 +1298,7 @@ getNextBlock(AppendOnlyScanDesc scan)
  */
 static bool
 appendonlygettup(AppendOnlyScanDesc scan,
-				 ScanDirection dir __attribute__((unused)),
+				 ScanDirection dir pg_attribute_unused(),
 				 int nkeys,
 				 ScanKey key,
 				 TupleTableSlot *slot)
@@ -2479,7 +2479,7 @@ appendonly_delete(AppendOnlyDeleteDesc aoDeleteDesc,
 
 #ifdef FAULT_INJECTOR
 	FaultInjector_InjectFaultIfSet(
-								   AppendOnlyDelete,
+								   "appendonly_delete",
 								   DDLNotSpecified,
 								   "", //databaseName
 								   RelationGetRelationName(aoDeleteDesc->aod_rel));
@@ -2550,7 +2550,7 @@ appendonly_update(AppendOnlyUpdateDesc aoUpdateDesc,
 
 #ifdef FAULT_INJECTOR
 	FaultInjector_InjectFaultIfSet(
-								   AppendOnlyUpdate,
+								   "appendonly_update",
 								   DDLNotSpecified,
 								   "", //databaseName
 								   RelationGetRelationName(aoUpdateDesc->aoInsertDesc->aoi_rel));
@@ -2821,7 +2821,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 
 #ifdef FAULT_INJECTOR
 	FaultInjector_InjectFaultIfSet(
-								   AppendOnlyInsert,
+								   "appendonly_insert",
 								   DDLNotSpecified,
 								   "", //databaseName
 								   RelationGetRelationName(aoInsertDesc->aoi_rel));

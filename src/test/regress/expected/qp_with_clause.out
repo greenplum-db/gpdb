@@ -9543,7 +9543,7 @@ View definition:
             country
           WHERE country.code = countrylanguage.countrycode AND foo.region = country.region AND foo."REGION_POP" <> 0
           GROUP BY foo.region, foo."REGION_POP", foo."REGION_GNP"
-          ORDER BY sum(country.surfacearea) / foo."REGION_POP"::numeric DESC
+          ORDER BY (sum(country.surfacearea) / foo."REGION_POP"::numeric) DESC
         ), allcountrystats AS (
          SELECT country.code,
             country.name,

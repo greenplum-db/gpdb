@@ -2,7 +2,7 @@
  *
  * UUID generation functions using the BSD, E2FS or OSSP UUID library
  *
- * Copyright (c) 2007-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2015, PostgreSQL Global Development Group
  *
  * Portions Copyright (c) 2009 Andrew Gierth
  *
@@ -112,9 +112,7 @@ do { \
 
 #endif   /* !HAVE_UUID_OSSP */
 
-
 PG_MODULE_MAGIC;
-
 
 PG_FUNCTION_INFO_V1(uuid_nil);
 PG_FUNCTION_INFO_V1(uuid_ns_dns);

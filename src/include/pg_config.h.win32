@@ -40,11 +40,10 @@
 /* This file is generated from MingW ./configure, and with the following
  * changes to be valid for Visual C++ (and compatible):
  *
- * HAVE_CBRT, HAVE_FUNCNAME_FUNC, HAVE_FUNCNAME_FUNCTION, HAVE_GETOPT,
- * HAVE_GETOPT_H, HAVE_GETOPT_LONG, HAVE_LOCALE_T, HAVE_RINT, HAVE_STRINGS_H,
- * HAVE_STRTOLL, HAVE_STRTOULL, HAVE_STRUCT_OPTION, ENABLE_THREAD_SAFETY,
- * PG_USE_INLINE, inline, USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
- *
+ * HAVE_CBRT, HAVE_FUNCNAME_FUNC, HAVE_GETOPT, HAVE_GETOPT_H, HAVE_INTTYPES_H,
+ * HAVE_GETOPT_LONG, HAVE_LOCALE_T, HAVE_RINT, HAVE_STRINGS_H, HAVE_STRTOLL,
+ * HAVE_STRTOULL, HAVE_STRUCT_OPTION, ENABLE_THREAD_SAFETY, PG_USE_INLINE,
+ * inline, USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
  */
 
 /* Define to the type of arg 1 of 'accept' */
@@ -101,9 +100,6 @@
 /* Define to 1 to build client libraries as thread-safe code.
    (--enable-thread-safety) */
 #define ENABLE_THREAD_SAFETY 1
-
-/* Define to 1 if getpwuid_r() takes a 5th argument. */
-/* #undef GETPWUID_R_5ARG */
 
 /* Define to 1 if gettimeofday() takes only 1 argument. */
 /* #undef GETTIMEOFDAY_1ARG */
@@ -329,9 +325,6 @@
 /* Define to 1 if the PS_STRINGS thing exists. */
 /* #undef HAVE_PS_STRINGS */
 
-/* Define if you have POSIX threads libraries and header files. */
-/* #undef HAVE_PTHREAD */
-
 /* Define to 1 if you have the <pwd.h> header file. */
 #define HAVE_PWD_H 1
 
@@ -418,6 +411,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
+
+/* Define to use have a strong random number source */
+#define HAVE_STRONG_RANDOM 1
 
 /* Define to 1 if you have the `strtoll' function. */
 #ifdef HAVE_LONG_LONG_INT_64
@@ -582,11 +578,8 @@
 /* Define to 1 if you have the <winldap.h> header file. */
 /* #undef HAVE_WINLDAP_H */
 
-/* Define to 1 if you have __cpuid. */
-#define HAVE__CPUID 1
-
-/* Define to 1 if you have __get_cpuid. */
-#undef HAVE__GET_CPUID
+/* Define to 1 if your compiler understands __builtin_bswap32. */
+/* #undef HAVE__BUILTIN_BSWAP32 */
 
 /* Define to 1 if your compiler understands __builtin_constant_p. */
 /* #undef HAVE__BUILTIN_CONSTANT_P */
@@ -597,14 +590,20 @@
 /* Define to 1 if your compiler understands __builtin_unreachable. */
 /* #undef HAVE__BUILTIN_UNREACHABLE */
 
+/* Define to 1 if you have __cpuid. */
+#define HAVE__CPUID 1
+
+/* Define to 1 if you have __get_cpuid. */
+#undef HAVE__GET_CPUID
+
 /* Define to 1 if your compiler understands _Static_assert. */
 /* #undef HAVE__STATIC_ASSERT */
 
 /* Define to 1 if your compiler understands __VA_ARGS__ in macros. */
 #define HAVE__VA_ARGS 1
 
-/* Define to the appropriate snprintf format for 64-bit ints, if any. */
-#define INT64_FORMAT "%lld"
+/* Define to the appropriate snprintf length modifier for 64-bit ints. */
+#define INT64_MODIFIER "ll"
 
 /* Define to 1 if `locale_t' requires <xlocale.h>. */
 /* #undef LOCALE_T_IN_XLOCALE */
@@ -625,36 +624,32 @@
 #define PACKAGE_NAME "Greenplum Database"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Greenplum Database 6.0.0-alpha"
+#define PACKAGE_STRING "Greenplum Database 7.0.0-alpha"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "9.4.20"
-
-/* Define to the name of a signed 64-bit integer type. */
-#define PG_INT64_TYPE long long int
+#define PACKAGE_VERSION "9.5alpha1"
 
 /* Define to the name of a signed 128-bit integer type. */
 #undef PG_INT128_TYPE
 
+/* Define to the name of a signed 64-bit integer type. */
+#define PG_INT64_TYPE long long int
+
 /* PostgreSQL version as a string */
-#define PG_VERSION "9.4.20"
+#define PG_VERSION "9.5alpha1"
 
 /* PostgreSQL version as a number */
-#define PG_VERSION_NUM 90420
+#define PG_VERSION_NUM 90500
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "greenplum"
 
 /* Define to the name of the default PostgreSQL service principal in Kerberos.
    (--with-krb-srvnam=NAME) */
-#define PG_KRB_SRVNAM "greenplum"
+#define PG_KRB_SRVNAM "postgres"
 
 /* A string containing the version number, platform, and C compiler */
 #define PG_VERSION_STR "Uninitialized version string (win32)"
-
-/* Define to the necessary symbol if this constant uses a non-standard name on
-   your system. */
-/* #undef PTHREAD_CREATE_JOINABLE */
 
 /* The size of `long', as computed by sizeof. */
 #define SIZEOF_LONG 4
@@ -682,15 +677,14 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 /* #undef TM_IN_SYS_TIME */
 
-/* Define to the appropriate snprintf format for unsigned 64-bit ints, if any.
-   */
-#define UINT64_FORMAT "%llu"
-
 /* Define to 1 to build with assertion checks. (--enable-cassert) */
 /* #undef USE_ASSERT_CHECKING */
 
 /* Define to 1 to build with Bonjour support. (--with-bonjour) */
 /* #undef USE_BONJOUR */
+
+/* Define to use /dev/urandom for random number generation */
+/* #undef USE_DEV_URANDOM */
 
 /* Define to 1 if "static inline" works without unwanted warnings from
    compilations where static inline functions are defined but not called. */
@@ -706,6 +700,12 @@
 /* Define to select named POSIX semaphores. */
 /* #undef USE_NAMED_POSIX_SEMAPHORES */
 
+/* Define to build with OpenSSL support. (--with-openssl) */
+/* #undef USE_OPENSSL */
+
+/* Define to use OpenSSL for random number generation */
+/* #undef USE_OPENSSL_RANDOM */
+
 /* Define to 1 to build with PAM support. (--with-pam) */
 /* #undef USE_PAM */
 
@@ -715,7 +715,7 @@
 /* Define to 1 to use Intel SSE 4.2 CRC instructions with a runtime check. */
 #if (_MSC_VER < 1500)
 #define USE_SLICING_BY_8_CRC32C 1
-#end
+#endif
 
 /* Define to 1 use Intel SSE 4.2 CRC instructions. */
 /* #undef USE_SSE42_CRC32C */
@@ -725,9 +725,6 @@
 #define USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
 #endif
 
-/* Define to build with (Open)SSL support. (--with-openssl) */
-/* #undef USE_SSL */
-
 /* Define to select SysV-style semaphores. */
 /* #undef USE_SYSV_SEMAPHORES */
 
@@ -736,6 +733,9 @@
 
 /* Define to select unnamed POSIX semaphores. */
 /* #undef USE_UNNAMED_POSIX_SEMAPHORES */
+
+/* Define to use native Windows API for random number generation */
+#define USE_WIN32_RANDOM 1
 
 /* Define to select Win32-style semaphores. */
 #define USE_WIN32_SEMAPHORES 1

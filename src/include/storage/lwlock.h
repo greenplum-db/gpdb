@@ -4,7 +4,7 @@
  *	  Lightweight lock manager
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/lwlock.h
@@ -14,7 +14,9 @@
 #ifndef LWLOCK_H
 #define LWLOCK_H
 
+#include "lib/ilist.h"
 #include "storage/s_lock.h"
+#include "port/atomics.h"
 
 struct PGPROC;
 
@@ -46,13 +48,16 @@ typedef struct LWLockTranche
 typedef struct LWLock
 {
 	slock_t		mutex;			/* Protects LWLock and queue of PGPROCs */
-	bool		releaseOK;		/* T if ok to release waiters */
-	char		exclusive;		/* # of exclusive holders (0 or 1) */
-	int			shared;			/* # of shared holders (0..MaxBackends) */
-	int			tranche;		/* tranche ID */
-	struct PGPROC *head;		/* head of list of waiting PGPROCs */
-	struct PGPROC *tail;		/* tail of list of waiting PGPROCs */
-	/* tail is undefined when head is NULL */
+	uint16		tranche;		/* tranche ID */
+
+	pg_atomic_uint32 state;		/* state of exlusive/nonexclusive lockers */
+#ifdef LOCK_DEBUG
+	pg_atomic_uint32 nwaiters;	/* number of waiters */
+#endif
+	dlist_head	waiters;		/* list of waiting PGPROCs */
+#ifdef LOCK_DEBUG
+	struct PGPROC *owner;		/* last exlusive owner of the lock */
+#endif
 } LWLock;
 
 /*
@@ -67,11 +72,11 @@ typedef struct LWLock
  * (Of course, we have to also ensure that the array start address is suitably
  * aligned.)
  *
- * Even on a 32-bit platform, an lwlock will be more than 16 bytes, because
- * it contains 2 integers and 2 pointers, plus other stuff.  It should fit
- * into 32 bytes, though, unless slock_t is really big.  On a 64-bit platform,
- * it should fit into 32 bytes unless slock_t is larger than 4 bytes.  We
- * allow for that just in case.
+ * On a 32-bit platforms a LWLock will these days fit into 16 bytes, but since
+ * that didn't use to be the case and cramming more lwlocks into a cacheline
+ * might be detrimental performancewise we still use 32 byte alignment
+ * there. So, both on 32 and 64 bit platforms, it should fit into 32 bytes
+ * unless slock_t is really big.  We allow for that just in case.
  */
 #define LWLOCK_PADDED_SIZE	(sizeof(LWLock) <= 32 ? 32 : 64)
 
@@ -89,7 +94,7 @@ extern PGDLLIMPORT LWLockPadded *MainLWLockArray;
  * if you remove a lock, consider leaving a gap in the numbering sequence for
  * the benefit of DTrace and other external debugging scripts.
  */
-#define BufFreelistLock				(&MainLWLockArray[0].lock)
+/* 0 is available; was formerly BufFreelistLock */
 #define ShmemIndexLock				(&MainLWLockArray[1].lock)
 #define OidGenLock					(&MainLWLockArray[2].lock)
 #define XidGenLock					(&MainLWLockArray[3].lock)
@@ -127,7 +132,11 @@ extern PGDLLIMPORT LWLockPadded *MainLWLockArray;
 #define AutoFileLock				(&MainLWLockArray[35].lock)
 #define ReplicationSlotAllocationLock	(&MainLWLockArray[36].lock)
 #define ReplicationSlotControlLock		(&MainLWLockArray[37].lock)
-#define PG_NUM_INDIVIDUAL_LWLOCKS		38
+#define CommitTsControlLock			(&MainLWLockArray[38].lock)
+#define CommitTsLock				(&MainLWLockArray[39].lock)
+#define ReplicationOriginLock		(&MainLWLockArray[40].lock)
+
+#define PG_NUM_INDIVIDUAL_LWLOCKS		41
 
 /* Additional individual locks in GPDB */
 #define SharedSnapshotLock			(&MainLWLockArray[PG_NUM_INDIVIDUAL_LWLOCKS + 1].lock)
@@ -139,7 +148,8 @@ extern PGDLLIMPORT LWLockPadded *MainLWLockArray;
 #define SessionStateLock			(&MainLWLockArray[PG_NUM_INDIVIDUAL_LWLOCKS + 7].lock)
 #define RelfilenodeGenLock			(&MainLWLockArray[PG_NUM_INDIVIDUAL_LWLOCKS + 8].lock)
 #define WorkFileManagerLock			(&MainLWLockArray[PG_NUM_INDIVIDUAL_LWLOCKS + 9].lock)
-#define GP_NUM_INDIVIDUAL_LWLOCKS		9
+#define DistributedLogTruncateLock	(&MainLWLockArray[PG_NUM_INDIVIDUAL_LWLOCKS + 10].lock)
+#define GP_NUM_INDIVIDUAL_LWLOCKS		10
 
 /*
  * It would probably be better to allocate separate LWLock tranches
@@ -167,7 +177,7 @@ extern PGDLLIMPORT LWLockPadded *MainLWLockArray;
  */
 
 /* Number of partitions of the shared buffer mapping hashtable */
-#define NUM_BUFFER_PARTITIONS  16
+#define NUM_BUFFER_PARTITIONS  128
 
 /* Number of partitions the shared lock tables are divided into */
 #define LOG2_NUM_LOCK_PARTITIONS  4
@@ -214,20 +224,13 @@ extern void LWLockReleaseAll(void);
 extern bool LWLockHeldByMe(LWLock *lock);
 extern bool LWLockHeldExclusiveByMe(LWLock *lock);
 
-#ifdef USE_TEST_UTILS_X86
-// GPDB_94_MERGE_FIXME: do these still work? Are they still needed?
-extern uint32 LWLocksHeld(void);
-extern LWLock *LWLockHeldLatest(void);
-extern void *LWLockHeldLatestCaller(void);
-extern const char *LWLocksHeldStackTraces(void);
-#endif /* USE_TEST_UTILS_X86 */
-
 extern bool LWLockAcquireWithVar(LWLock *lock, uint64 *valptr, uint64 val);
 extern bool LWLockWaitForVar(LWLock *lock, uint64 *valptr, uint64 oldval, uint64 *newval);
 extern void LWLockUpdateVar(LWLock *lock, uint64 *valptr, uint64 value);
 
 extern Size LWLockShmemSize(void);
 extern void CreateLWLocks(void);
+extern void InitLWLockAccess(void);
 
 /*
  * The traditional method for obtaining an lwlock for use by an extension is
@@ -252,8 +255,8 @@ extern LWLock *LWLockAssign(void);
  * registration in the main shared memory segment wouldn't work for that case.
  */
 extern int	LWLockNewTrancheId(void);
-extern void LWLockRegisterTranche(int, LWLockTranche *);
-extern void LWLockInitialize(LWLock *, int tranche_id);
+extern void LWLockRegisterTranche(int tranche_id, LWLockTranche *tranche);
+extern void LWLockInitialize(LWLock *lock, int tranche_id);
 
 /*
  * Prior to PostgreSQL 9.4, we used an enum type called LWLockId to refer

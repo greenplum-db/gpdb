@@ -4,7 +4,7 @@
   <title>GPORCA Limitations</title>
   <abstract>
     <shortdesc>There are limitations in Greenplum Database when using the default GPORCA optimizer.
-      GPORCA and the legacy query optimizer currently coexist in Greenplum Database because GPORCA
+      GPORCA and the Postgres Planner currently coexist in Greenplum Database because GPORCA
       does not support all Greenplum Database features. </shortdesc>
   </abstract>
   <body>
@@ -16,7 +16,10 @@
   <topic id="topic_kgn_vxl_vp">
     <title>Unsupported SQL Query Features</title>
     <body>
-      <p>These are unsupported features when GPORCA is enabled (the default): <ul id="ul_ndm_gyl_vp">
+      <p>Certain query features are not supported with the default GPORCA optimizer. When an
+        unsupported query is executed, Greenplum logs this notice along with the query
+        text:<codeblock>Feature not supported by the Pivotal Query Optimizer: UTILITY command</codeblock></p>
+      <p>These features are unsupported when GPORCA is enabled (the default): <ul id="ul_ndm_gyl_vp">
           <li>Indexed expressions (an index defined as expression based on one or more columns of
             the table)</li>
           <li>GIN indexing method. GPORCA supports only B-tree, bitmap, and GiST indexes. GPORCA
@@ -48,6 +51,9 @@
             the characters are not compatible with the host system locale.</li>
           <li><codeph>SELECT</codeph>, <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph> commands
             where a table name is qualified by the <codeph>ONLY</codeph> keyword.</li>
+          <li>Per-column collation. GPORCA supports collation only when all columns in the query use
+            the same collation. If columns in the query use different collations, then Greenplum
+            uses the Postgres Planner.</li>
         </ul></p>
     </body>
   </topic>
@@ -60,7 +66,7 @@
             overhead due to GPORCA enhancements for determining an optimal query execution
             plan.</li>
           <li><cmdname>ANALYZE</cmdname> - For GPORCA, the <cmdname>ANALYZE</cmdname> command
-            generates root partition statistics for partitioned tables. For the legacy optimizer,
+            generates root partition statistics for partitioned tables. For the Postgres Planner,
             these statistics are not generated.</li>
           <li>DML operations - For GPORCA, DML enhancements including the support of updates on
             partition and distribution keys might require additional overhead. </li>

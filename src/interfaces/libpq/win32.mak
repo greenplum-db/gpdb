@@ -2,7 +2,7 @@
 
 # Will build a static library libpq(d).lib
 #        and a dynamic library libpq(d).dll with import library libpq(d)dll.lib
-# USE_SSL=1 will compile with OpenSSL
+# USE_OPENSSL=1 will compile with OpenSSL
 # USE_KFW=1 will compile with kfw(kerberos for Windows)
 # DEBUG=1 compiles with debugging symbols
 # ENABLE_THREAD_SAFETY=1 compiles with threading enabled
@@ -124,6 +124,9 @@ CLEAN :
 	-@erase "$(OUTDIR)\$(OUTFILENAME).dll.manifest"
 	-@erase "$(OUTDIR)\*.idb"
 	-@erase pg_config_paths.h"
+!IFDEF USE_OPENSSL
+	-@erase "$(INTDIR)\fe-secure-openssl.obj"
+!ENDIF
 
 
 LIB32=link.exe -lib
@@ -164,6 +167,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\win32error.obj" \
 	"$(INTDIR)\win32setlocale.obj" \
 	"$(INTDIR)\pthread-win32.obj"
+!IFDEF USE_OPENSSL
+	LIB32_OBJS=$(LIB32_OBJS) "$(INTDIR)\fe-secure-openssl.obj"
+!ENDIF
 
 
 config: ..\..\include\pg_config.h ..\..\include\pg_config_ext.h pg_config_paths.h  ..\..\include\pg_config_os.h
@@ -189,8 +195,8 @@ CPP_PROJ=/nologo /W3 /EHsc $(OPT) /I "..\..\include" /I "..\..\include\port\win3
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c  \
  /D "_CRT_SECURE_NO_DEPRECATE" $(ADD_DEFINES)
 
-!IFDEF USE_SSL
-CPP_PROJ=$(CPP_PROJ) /D USE_SSL
+!IFDEF USE_OPENSSL
+CPP_PROJ=$(CPP_PROJ) /D USE_OPENSSL
 SSL_LIBS=ssleay32.lib libeay32.lib gdi32.lib
 !ENDIF
 
@@ -208,7 +214,7 @@ CPP_SBRS=.
 RSC_PROJ=/l 0x409 /fo"$(INTDIR)\libpq.res"
 
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib advapi32.lib shell32.lib wsock32.lib ws2_32.lib secur32.lib $(SSL_LIBS)  $(KFW_LIB) $(ADD_SECLIB) \
+LINK32_FLAGS=kernel32.lib user32.lib advapi32.lib shell32.lib ws2_32.lib secur32.lib $(SSL_LIBS)  $(KFW_LIB) $(ADD_SECLIB) \
  /nologo /subsystem:windows /dll $(LOPT) /incremental:no \
  /pdb:"$(OUTDIR)\libpqdll.pdb" /machine:$(CPU) \
  /out:"$(OUTDIR)\$(OUTFILENAME).dll"\

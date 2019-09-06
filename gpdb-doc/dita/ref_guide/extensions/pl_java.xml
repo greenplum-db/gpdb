@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="pv161085">Greenplum PL/Java Language Extension</title>
+  <title id="pv161085">PL/Java Language</title>
   <body>
     <p>This section contains an overview of the Greenplum Database PL/Java language.</p>
     <ul>
@@ -12,13 +12,14 @@
       <li id="pv161261">
         <xref href="#topic10" type="topic" format="dita"/>
       </li>
+      <li><xref href="#topic_qx1_xcp_w3b" format="dita"/></li>
       <li id="pv161280" otherprops="pivotal">
         <xref href="#topic4" type="topic" format="dita"/>
       </li>
       <li otherprops="pivotal">
-        <xref href="#topic7" format="dita"/></li>
-      <li otherprops="pivotal">
         <xref href="#topic6" format="dita"/></li>
+      <li otherprops="pivotal">
+        <xref href="#topic7" format="dita"/></li>
       <li id="pv161254">
         <xref href="#topic13" type="topic" format="dita"/>
       </li>
@@ -57,7 +58,7 @@
       <p>Greenplum Database PL/Java package is based on the open source PL/Java 1.5.0. Greenplum
         Database PL/Java provides the following features.</p>
       <ul>
-        <li id="pv161029">Ability to execute PL/Java functions with Java 1.7 or higher.</li>
+        <li id="pv161029">Ability to execute PL/Java functions with Java 8 or Java 11.</li>
         <li>Ability to specify Java runtime.</li>
         <li id="pv161030">Standardized utilities (modeled after the SQL 2003 proposal) to install
           and maintain Java code in the database.</li>
@@ -167,6 +168,56 @@
       </body>
     </topic>
   </topic>
+  <topic id="topic_qx1_xcp_w3b">
+    <title>Installing Java</title>
+    <body>
+      <p>PL/Java requires a Java runtime environment on each Greenplum Database host. Ensure that
+        the same Java environment is at the same location on all hosts: masters and segments. The
+        command <codeph>java -version</codeph> displays the Java version.</p>
+      <p>The commands that you use to install Java depend on the host system operating system and
+        Java version. This list describes how to install OpenJDK 8 or 11 (Java 8 JDK or Java 11 JDK)
+        on RHEL/CentOS or Ubuntu.<ul id="ul_cld_gdp_w3b">
+          <li>RHEL 7/CentOS 7 - This <codeph>yum</codeph> command installs OpenJDK 8 or
+              11.<codeblock>$ sudo yum install java-&lt;<varname>version</varname>>-openjdk-devel</codeblock><p>For
+              OpenJDK 8 the <varname>version</varname> is <codeph>1.8.0</codeph>, for OpenJDK 11 the
+                <varname>version</varname> is <codeph>11</codeph>.</p></li>
+          <li>RHEL 6/CentOS 6<ul id="ul_wqf_4p4_w3b">
+              <li>Java 8 - This <codeph>yum</codeph> command installs OpenJDK
+                8.<codeblock>$ sudo yum install java-1.8.0-openjdk-devel</codeblock></li>
+              <li> Java 11 - Download the OpenJDK 11 tar file from <xref
+                  href="http://jdk.java.net/archive/" format="html" scope="external"
+                  >http://jdk.java.net/archive/</xref> and install and configure the operating
+                system to use Java 11. <p>
+                  <ol id="ol_k2l_ys5_w3b">
+                    <li>This example <codeph>tar</codeph> command installs the OpenJDK 11 in
+                        <codeph>/usr/lib/jvm</codeph>.<codeblock>$ sudo tar xzf openjdk-11.0.2_linux-x64_bin.tar.gz --directory /usr/lib/jvm</codeblock></li>
+                    <li>Run these two commands to add OpenJDK 11 to the
+                        <codeph>update-alternatives</codeph> command. The
+                        <codeph>update-alternatives</codeph>command maintains symbolic links that
+                      determine the default version of operating system
+                        commands.<codeblock>$ sudo sh -c 'for bin in /usr/lib/jvm/jdk-11.0.2/bin/*; do update-alternatives --install /usr/bin/$(basename $bin) $(basename $bin) $bin 100; done'
+$ sudo sh -c 'for bin in /usr/lib/jvm/jdk-11.0.2/bin/*; do update-alternatives --set $(basename $bin) $bin; done'</codeblock><p>The
+                        second command returns some <codeph>failed to read link</codeph> errors that
+                        can be ignored.</p></li>
+                  </ol>
+                </p></li>
+            </ul></li>
+          <li>Ubuntu - These <codeph>apt</codeph> commands install OpenJDK 8 or
+              11.<codeblock>$ sudo apt update
+$ sudo apt install openjdk-&lt;<varname>version</varname>>-jdk</codeblock><p>For
+              OpenJDK 8 the <varname>version</varname> is <codeph>8</codeph>, for OpenJDK 11 the
+                <varname>version</varname> is <codeph>11</codeph>.</p></li>
+        </ul></p>
+      <p>After installing OpenJDK on a RHEL or CentOS system, run this
+          <codeph>update-alternatives</codeph> command to change the default Java. Enter the number
+        that represents the OpenJDK version to use as the
+        default.<codeblock>$ sudo update-alternatives --config java </codeblock></p>
+      <p>The <codeph>update-alternatives</codeph> command is not required on Ubuntu systems.</p>
+      <note>When configuring host systems, you can use the <codeph><xref
+            href="../../utility_guide/admin_utilities/gpssh.xml"/></codeph> utility to run bash
+        shell commands on multiple remote hosts.</note>
+    </body>
+  </topic>
   <topic id="topic4" xml:lang="en" otherprops="pivotal">
     <title id="pv158223">Installing PL/Java</title>
     <body>
@@ -175,14 +226,10 @@
           href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
           class="- topic/xref ">Pivotal Network</xref> and then install it with the Greenplum
         Package Manager (<codeph>gppkg</codeph>). </p>
-      <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
-        dependencies, on all hosts across a cluster. It also automatically installs extensions on
-        new hosts in the case of system expansion and segment recovery.</p>
-      <p>For information about <codeph>gppkg,</codeph>see the <cite>Greenplum Database Utility
-          Guide</cite>.</p>
-      <note type="important">PL/Java requires a Java environment on each Greenplum Database host.
-        Ensure that the same Java environment is at the same location on all hosts: masters and
-        segments.</note>
+      <p>The <xref href="../../utility_guide/admin_utilities/gppkg.xml"/> utility installs Greenplum
+        Database extensions, along with any dependencies, on all hosts across a cluster. It also
+        automatically installs extensions on new hosts in the case of system expansion and segment
+        recovery.</p>
       <p>To install and use PL/Java:</p>
       <ol>
         <li>Specify the Java version used by PL/Java. Set the environment variables
@@ -207,14 +254,13 @@
             <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are
           set.</p>
         <ol>
-          <li id="pv158485">Download the PL/Java extension package from the Greenplum Database page
-            on <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
-              format="html" class="- topic/xref ">Pivotal Network</xref> then copy it to the master
-            host. </li>
+          <li id="pv158485">Download the PL/Java extension package from <xref
+              href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
+              class="- topic/xref ">Pivotal Network</xref> then copy it to the master host. </li>
           <li id="pv160918">Install the software extension package by running the
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on
             a Linux
-            system:<codeblock>$ gppkg -i pljava-1.4.3-gp5-rhel<varname>osversion</varname>-x86_64.gppkg</codeblock></li>
+            system:<codeblock>$ gppkg -i pljava-1.4.3-gp5-rhel<varname>osversion</varname>_x86_64.gppkg</codeblock></li>
           <li>Ensure that the environment variables <codeph>JAVA_HOME</codeph> and
               <codeph>LD_LIBRARY_PATH</codeph> are set properly in
               <codeph>$GPHOME/greenplum_path.sh</codeph> on all Greenplum Database hosts.<ul
@@ -222,70 +268,23 @@
               <li>Set the <codeph>JAVA_HOME</codeph> variable to the directory where your Java
                 Runtime is installed. For example, for Oracle JRE this directory would be
                   <codeph>/usr/java/latest</codeph>. For OpenJDK, the directory is
-                  <codeph>/usr/lib/jvm</codeph>. This example changes the environment variable
-                to use
-                <codeph>/usr/lib/jvm</codeph>.<codeblock>JAVA_HOME=/usr/lib/jvm</codeblock></li>
-              <li>Set the <codeph>LD_LIBRARY_PATH</codeph> to include the directory with the Java server
-                runtime libraries. PL/Java depends on <codeph>libjvm.so</codeph> and the shared
-                object should be in your <codeph>LD_LIBRARY_PATH</codeph>. By default,
-                  <codeph>libjvm.so</codeph> is available in
-                  <codeph>$JAVA_HOME/jre/lib/amd64/server</codeph>. This example adds the directory to
-                the environment
-                variable.<codeblock>LD_LIBRARY_PATH=$GPHOME/lib:$GPHOME/ext/python/lib:<b>$JAVA_HOME/jre/lib/amd64/server</b>:$LD_LIBRARY_PATH</codeblock></li>
-            </ul>This example <codeph>gpscp</codeph> command copies the file to all hosts specified
-            in the file
-            <codeph>gphosts_file</codeph>.<codeblock>$ gpscp -f gphosts_file $GPHOME/greenplum_path.sh 
+                  <codeph>/usr/lib/jvm</codeph>. This example changes the environment variable to
+                use
+                <codeph>/usr/lib/jvm</codeph>.<codeblock>export JAVA_HOME=/usr/lib/jvm</codeblock></li>
+              <li>Set the <codeph>LD_LIBRARY_PATH</codeph> to include the directory with the Java
+                server runtime libraries. PL/Java depends on <codeph>libjvm.so</codeph> and the
+                shared object should be in your <codeph>LD_LIBRARY_PATH</codeph>. By default,
+                  <codeph>libjvm.so</codeph> is available in <codeph>$JAVA_HOME/lib/server</codeph>
+                with JDK 11, or in <codeph>$JAVA_HOME/jre/lib/amd64/server</codeph> with JDK 8. This
+                example adds the JDK 11 directory to the environment
+                variable.<codeblock>export LD_LIBRARY_PATH=$GPHOME/lib:$GPHOME/ext/python/lib:<b>$JAVA_HOME/lib/server</b>:$LD_LIBRARY_PATH</codeblock></li>
+            </ul>This example <codeph><xref href="../../utility_guide/admin_utilities/gpscp.xml"
+              /></codeph> command copies the file to all hosts specified in the file
+              <codeph>gphosts_file</codeph>.<codeblock>$ gpscp -f gphosts_file $GPHOME/greenplum_path.sh 
 =:$GPHOME/greenplum_path.sh</codeblock></li>
           <li dir="ltr">Reload
             <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
           <li id="pv162228">Restart Greenplum Database.<codeblock>$ gpstop -r</codeblock></li>
-        </ol>
-      </body>
-    </topic>
-  </topic>
-  <topic id="topic7" xml:lang="en" otherprops="pivotal">
-    <title>Uninstalling PL/Java</title>
-    <body>
-      <ul id="ul_zsz_fs5_b1b">
-        <li id="pv165655">
-          <xref href="#topic8" type="topic" format="dita"/>
-        </li>
-        <li id="pv165686">
-          <xref href="#topic9" type="topic" format="dita"/>
-        </li>
-      </ul>
-    </body>
-    <topic id="topic8" xml:lang="en">
-      <title id="pv165472">Remove PL/Java Support for a Database</title>
-      <body>
-        <p>For a database that no long requires the PL/Java language, remove support for PL/Java.
-          Run the <codeph>uninstall.sql</codeph> file as the gpadmin user. For example, this command
-          disables the PL/Java language in the specified database. </p>
-        <codeblock>$ psql -d mydatabase
-  -f $GPHOME/share/postgresql/pljava/uninstall.sql</codeblock>
-      </body>
-    </topic>
-    <topic id="topic9" xml:lang="en">
-      <title id="pv165506">Uninstall the Java JAR files and Software Package</title>
-      <body>
-        <p>If no databases have PL/Java as a registered language, remove the Java JAR files and
-          uninstall the Greenplum PL/Java extension with the <codeph>gppkg</codeph> utility. </p>
-        <ol id="ol_atz_fs5_b1b">
-          <li id="pv165538">Remove the <codeph>pljava_classpath</codeph> server configuration
-            parameter from the <codeph>postgresql.conf</codeph> file on all Greenplum Database
-            hosts. For example:<codeblock>$ gpconfig -r pljava_classpath</codeblock></li>
-          <li id="pv165539">Remove the JAR files from the directories where they were installed on
-            all Greenplum Database hosts. For information about JAR file installation directories,
-            see <xref href="#topic6" format="dita"/>.</li>
-          <li id="pv160641">Use the Greenplum <codeph>gppkg</codeph> utility with the
-              <codeph>-r</codeph> option to uninstall the PL/Java extension. This example uninstalls
-            the PL/Java extension on a Linux
-              system:<codeblock>$ gppkg -r pljava-1.4.3</codeblock><p>You can run the
-                <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
-              the installed extensions and their versions.</p></li>
-          <li dir="ltr">Reload
-            <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
-          <li id="pv158621">Restart the database.<codeblock>$ gpstop -r </codeblock></li>
         </ol>
       </body>
     </topic>
@@ -296,13 +295,11 @@
       <p>Perform the following steps as the Greenplum Database administrator
           <codeph>gpadmin</codeph>.</p>
       <ol id="ol_dpn_qr5_b1b">
-        <li id="pv162268">Enable PL/Java by running the SQL script
-            <codeph>$GPHOME/share/postgresql/pljava/install.sql</codeph> in the databases that will
-          use PL/Java. For example, this example enables PL/Java on the database
-            <codeph>mytestdb</codeph>:<codeblock>$ psql -d mytestdb \
-  -f $GPHOME/share/postgresql/pljava/install.sql</codeblock><p>The
-            script <codeph>install.sql</codeph> registers both the trusted and untrusted PL/Java
-            language.</p></li>
+        <li id="pv162268">Enable PL/Java in a database by executing the <codeph>CREATE
+            EXTENSION</codeph> command to register the language. For example, this command enables
+          PL/Java in the <codeph>testdb</codeph> database:<codeblock>$ psql -d testdb -c 'CREATE EXTENSION pljava;'</codeblock>
+          <note>The PL/Java <codeph>install.sql</codeph> script, used in previous releases to
+            register the language, is deprecated.</note></li>
         <li id="pv160325">Copy your Java archives (JAR files) to the same directory on all Greenplum
           Database hosts. This example uses the Greenplum Database <codeph>gpscp</codeph> utility to
           copy the file <codeph>myclasses.jar</codeph> to the directory
@@ -331,6 +328,56 @@
           <codeblock>$ psql -f $GPHOME/share/postgresql/pljava/examples.sql</codeblock></li>
       </ol>
     </body>
+  </topic>
+  <topic id="topic7" xml:lang="en" otherprops="pivotal">
+    <title>Uninstalling PL/Java</title>
+    <body>
+      <ul id="ul_zsz_fs5_b1b">
+        <li id="pv165655"><xref href="#topic8" type="topic" format="dita"/>
+        </li>
+        <li id="pv165686"><xref href="#topic9" type="topic" format="dita"/>
+        </li>
+      </ul>
+    </body>
+    <topic id="topic8" xml:lang="en">
+      <title id="pv165472">Remove PL/Java Support for a Database</title>
+      <body>
+        <p>Use the <codeph>DROP EXTENSION</codeph> command to remove support for PL/Java from a
+          database. For example, this command disables the PL/Java language in the
+            <codeph>testdb</codeph> database: </p>
+        <codeblock>$ psql -d testdb -c 'DROP EXTENSION pljava;'</codeblock>
+        <p> The default command fails if any existing objects (such as functions) depend on the
+          language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent objects,
+          including functions that you created with PL/Java. </p>
+        <note>The PL/Java <codeph>uninstall.sql</codeph> script, used in previous releases to remove
+          the language registration, is deprecated.</note>
+      </body>
+    </topic>
+    <topic id="topic9" xml:lang="en">
+      <title id="pv165506">Uninstall the Java JAR files and Software Package</title>
+      <body>
+        <p>If no databases have PL/Java as a registered language, remove the Java JAR files and
+          uninstall the Greenplum PL/Java extension with the <codeph>gppkg</codeph> utility. </p>
+        <ol id="ol_atz_fs5_b1b">
+          <li id="pv165538">Remove the <codeph>pljava_classpath</codeph> server configuration
+            parameter from the <codeph>postgresql.conf</codeph> file on all Greenplum Database
+            hosts. For example:<codeblock>$ gpconfig -r pljava_classpath</codeblock></li>
+          <li id="pv165539">Remove the JAR files from the directories where they were installed on
+            all Greenplum Database hosts. For information about JAR file installation directories,
+            see <xref href="#topic6" format="dita"/>.</li>
+          <li id="pv160641">Use the Greenplum <codeph>gppkg</codeph> utility with the
+              <codeph>-r</codeph> option to uninstall the PL/Java extension. This example uninstalls
+            the PL/Java extension on a Linux
+              system:<codeblock>$ gppkg -r pljava-1.4.3</codeblock><p>You can run the
+                <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
+              the installed extensions and their versions.</p></li>
+          <li>Remove any updates you made to <codeph>greenplum_path.sh</codeph> for PL/Java.</li>
+          <li dir="ltr">Reload <codeph>greenplum_path.sh</codeph> and restart the
+            database<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh
+$ gpstop -r </codeblock></li>
+        </ol>
+      </body>
+    </topic>
   </topic>
   <topic id="topic13" xml:lang="en">
     <title id="pv158066">Writing PL/Java functions</title>

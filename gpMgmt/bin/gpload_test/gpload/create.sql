@@ -88,27 +88,3 @@ CREATE TABLE errortable (
     rawdata text,
     rawbytes bytea
 ) distributed randomly;
-
-create database build;
-\c build
-
-DROP TABLE IF EXISTS lineitem;
-CREATE TABLE lineitem (
-                L_ORDERKEY INT8 UNIQUE,
-                L_PARTKEY INTEGER,
-                L_SUPPKEY INTEGER,
-                L_LINENUMBER integer,
-                L_QUANTITY decimal,
-                L_EXTENDEDPRICE decimal,
-                L_DISCOUNT decimal,
-                L_TAX decimal,
-                L_RETURNFLAG CHAR(1),
-                L_LINESTATUS CHAR(1),
-                L_SHIPDATE date,
-                L_COMMITDATE date,
-                L_RECEIPTDATE date,
-                L_SHIPINSTRUCT CHAR(25),
-                L_SHIPMODE CHAR(10),
-                L_COMMENT VARCHAR(44)
-                ) 
-distributed by (L_ORDERKEY);

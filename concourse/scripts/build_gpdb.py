@@ -1,5 +1,6 @@
 #!/usr/bin/python2
 
+import glob
 import optparse
 import os
 import shutil
@@ -11,6 +12,8 @@ from builds.GpBuild import GpBuild
 
 INSTALL_DIR = "/usr/local/gpdb"
 DEPENDENCY_INSTALL_DIR = "/usr/local"
+SCRIPT_LOC=os.path.dirname(os.path.realpath(__file__))
+GPDB_SRC_DIR="{0}/../../".format(SCRIPT_LOC)
 
 
 def copy_installed(output_dir):
@@ -30,11 +33,22 @@ def print_compiler_version():
 
 
 def create_gpadmin_user():
-    status = subprocess.call("gpdb_src/concourse/scripts/setup_gpadmin_user.bash")
+    status = subprocess.call("{0}/concourse/scripts/setup_gpadmin_user.bash".format(GPDB_SRC_DIR))
     os.chmod('/bin/ping', os.stat('/bin/ping').st_mode | stat.S_ISUID)
     if status:
         return status
 
+def extract_explain_test_suite():
+    tarfiles = glob.glob('explain_test_suite/*.tar.gz')
+    if len(tarfiles) != 1:
+        print("Expected to find 1 tar file.")
+        return 1
+    status = subprocess.call(["tar", "xvf", tarfiles[0]])
+    return status
+
+def tar_explain_output():
+    status = subprocess.call(["tar", "czvf", "icg_output/explain_ouput.tar.gz", "out/"])
+    return status
 
 def copy_output():
     for dirpath, dirs, diff_files in os.walk('gpdb_src/'):
@@ -47,7 +61,6 @@ def copy_output():
                 print fin.read()
     shutil.copyfile("gpdb_src/src/test/regress/regression.diffs", "icg_output/regression.diffs")
     shutil.copyfile("gpdb_src/src/test/regress/regression.out", "icg_output/regression.out")
-
 
 def install_dependencies(ci_common, dependencies, install_dir):
     for dependency in dependencies:
@@ -73,9 +86,10 @@ def main():
     parser.add_option("--gcc-env-file", dest="gcc_env_file", help="GCC env file to be sourced")
     parser.add_option("--orca-in-gpdb-install-location", dest="orca_in_gpdb_install_location", action="store_true",
                       help="Install ORCA header and library files in GPDB install directory")
-    parser.add_option("--action", choices=['build', 'test'], dest="action", default='build',
+    parser.add_option("--action", choices=['build', 'test', 'test_explain_suite'], dest="action", default='build',
                       help="Build GPDB or Run Install Check")
     parser.add_option("--gpdb_name", dest="gpdb_name")
+    parser.add_option("--dbexists", dest="dbexists", action="store_true", default=False, help="create demo cluster or not")
     (options, args) = parser.parse_args()
 
     gpBuild = GpBuild(options.mode)
@@ -86,7 +100,7 @@ def main():
     gpBuild.set_gcc_env_file(options.gcc_env_file)
 
     install_dir = INSTALL_DIR if options.orca_in_gpdb_install_location else DEPENDENCY_INSTALL_DIR
-    if options.action == 'test':
+    if options.action.startswith('test'):
         # if required, install orca and xerces library & header
         # in the install directory of gpdb to avoid packaging from multiple directories
         status = gpBuild.install_dependency(options.gpdb_name, INSTALL_DIR)
@@ -134,6 +148,17 @@ def main():
         if status:
             copy_output()
         return status
+
+    elif options.action == 'test_explain_suite':
+        status = create_gpadmin_user()
+        fail_on_error(status)
+        status = extract_explain_test_suite()
+        fail_on_error(status)
+        status = gpBuild.run_explain_test_suite(options.dbexists)
+        fail_on_error(status)
+        status = tar_explain_output()
+        fail_on_error(status)
+        return 0
 
     return 0
 

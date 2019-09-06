@@ -4,7 +4,7 @@
  *	  POSTGRES disk item pointer definitions.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/itemptr.h
@@ -39,9 +39,10 @@ typedef struct ItemPointerData
 	BlockIdData ip_blkid;
 	OffsetNumber ip_posid;
 }
-
-#ifdef __arm__
-__attribute__((packed))			/* Appropriate whack upside the head for ARM */
+/* If compiler understands packed and aligned pragmas, use those */
+#if defined(pg_attribute_packed) && defined(pg_attribute_aligned)
+pg_attribute_packed()
+pg_attribute_aligned(2)
 #endif
 ItemPointerData;
 

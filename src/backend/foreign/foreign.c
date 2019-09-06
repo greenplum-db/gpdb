@@ -3,7 +3,7 @@
  * foreign.c
  *		  support for foreign-data wrappers, servers and user mappings.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  src/backend/foreign/foreign.c
@@ -362,27 +362,39 @@ GetFdwRoutine(Oid fdwhandler)
 
 
 /*
- * GetFdwRoutineByRelId - look up the handler of the foreign-data wrapper
- * for the given foreign table, and retrieve its FdwRoutine struct.
+ * GetForeignServerIdByRelId - look up the foreign server
+ * for the given foreign table, and return its OID.
  */
-FdwRoutine *
-GetFdwRoutineByRelId(Oid relid)
+Oid
+GetForeignServerIdByRelId(Oid relid)
 {
 	HeapTuple	tp;
-	Form_pg_foreign_data_wrapper fdwform;
-	Form_pg_foreign_server serverform;
 	Form_pg_foreign_table tableform;
 	Oid			serverid;
-	Oid			fdwid;
-	Oid			fdwhandler;
 
-	/* Get server OID for the foreign table. */
 	tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(relid));
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for foreign table %u", relid);
 	tableform = (Form_pg_foreign_table) GETSTRUCT(tp);
 	serverid = tableform->ftserver;
 	ReleaseSysCache(tp);
+
+	return serverid;
+}
+
+
+/*
+ * GetFdwRoutineByServerId - look up the handler of the foreign-data wrapper
+ * for the given foreign server, and retrieve its FdwRoutine struct.
+ */
+FdwRoutine *
+GetFdwRoutineByServerId(Oid serverid)
+{
+	HeapTuple	tp;
+	Form_pg_foreign_data_wrapper fdwform;
+	Form_pg_foreign_server serverform;
+	Oid			fdwid;
+	Oid			fdwhandler;
 
 	/* Get foreign-data wrapper OID for the server. */
 	tp = SearchSysCache1(FOREIGNSERVEROID, ObjectIdGetDatum(serverid));
@@ -410,6 +422,23 @@ GetFdwRoutineByRelId(Oid relid)
 
 	/* And finally, call the handler function. */
 	return GetFdwRoutine(fdwhandler);
+}
+
+
+/*
+ * GetFdwRoutineByRelId - look up the handler of the foreign-data wrapper
+ * for the given foreign table, and retrieve its FdwRoutine struct.
+ */
+FdwRoutine *
+GetFdwRoutineByRelId(Oid relid)
+{
+	Oid			serverid;
+
+	/* Get server OID for the foreign table. */
+	serverid = GetForeignServerIdByRelId(relid);
+
+	/* Now retrieve server's FdwRoutine struct. */
+	return GetFdwRoutineByServerId(serverid);
 }
 
 /*
@@ -454,6 +483,47 @@ GetFdwRoutineForRelation(Relation relation, bool makecopy)
 
 	/* Only a short-lived reference is needed, so just hand back cached copy */
 	return relation->rd_fdwroutine;
+}
+
+
+/*
+ * IsImportableForeignTable - filter table names for IMPORT FOREIGN SCHEMA
+ *
+ * Returns TRUE if given table name should be imported according to the
+ * statement's import filter options.
+ */
+bool
+IsImportableForeignTable(const char *tablename,
+						 ImportForeignSchemaStmt *stmt)
+{
+	ListCell   *lc;
+
+	switch (stmt->list_type)
+	{
+		case FDW_IMPORT_SCHEMA_ALL:
+			return true;
+
+		case FDW_IMPORT_SCHEMA_LIMIT_TO:
+			foreach(lc, stmt->table_list)
+			{
+				RangeVar   *rv = (RangeVar *) lfirst(lc);
+
+				if (strcmp(tablename, rv->relname) == 0)
+					return true;
+			}
+			return false;
+
+		case FDW_IMPORT_SCHEMA_EXCEPT:
+			foreach(lc, stmt->table_list)
+			{
+				RangeVar   *rv = (RangeVar *) lfirst(lc);
+
+				if (strcmp(tablename, rv->relname) == 0)
+					return false;
+			}
+			return true;
+	}
+	return false;				/* shouldn't get here */
 }
 
 
@@ -662,7 +732,7 @@ get_foreign_data_wrapper_oid(const char *fdwname, bool missing_ok)
 
 
 /*
- * get_foreign_server_oid - given a FDW name, look up the OID
+ * get_foreign_server_oid - given a server name, look up the OID
  *
  * If missing_ok is false, throw an error if name not found.  If true, just
  * return InvalidOid.

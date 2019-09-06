@@ -2,7 +2,7 @@
  * Portions Copyright (c) 1987, 1993, 1994
  * The Regents of the University of California.  All rights reserved.
  *
- * Portions Copyright (c) 2003-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2003-2015, PostgreSQL Global Development Group
  *
  * src/include/getopt_long.h
  */
@@ -23,6 +23,7 @@ struct option
 
 #define no_argument 0
 #define required_argument 1
+#define optional_argument 2
 #endif
 
 #ifndef HAVE_GETOPT_LONG

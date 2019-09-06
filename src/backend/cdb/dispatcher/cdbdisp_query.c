@@ -246,15 +246,11 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 {
 	CdbDispatcherState *ds;
 	DispatchCommandQueryParms *pQueryParms;
+	Gang *primaryGang;
 	char	   *queryText;
 	int		queryTextLength;
 	ListCell   *le;
 	ErrorData *qeError = NULL;
-
-	dtmPreCommand("CdbDispatchSetCommand", strCommand, NULL,
-				  false /* no two-phase commit needed for SET */,
-				  false, /* no snapshot needed for SET */
-				  false /* inCursor */ );
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "CdbDispatchSetCommand for command = '%s'",
@@ -266,7 +262,7 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 	queryText = buildGpQueryString(pQueryParms, &queryTextLength);
 
-	AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbcomponent_getCdbComponentsList());
+	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbcomponent_getCdbComponentsList());
 
 	/* put all idle segment to a gang so QD can send SET command to them */
 	AllocateGang(ds, GANGTYPE_PRIMARY_READER, formIdleSegmentIdList());
@@ -280,6 +276,7 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 		cdbdisp_dispatchToGang(ds, rg, -1);
 	}
+	addToGxactTwophaseSegments(primaryGang);
 
 	/*
 	 * No need for two-phase commit, so no need to call
@@ -339,11 +336,9 @@ CdbDispatchCommandToSegments(const char *strCommand,
 {
 	DispatchCommandQueryParms *pQueryParms;
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
-	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
 
-	dtmPreCommand("CdbDispatchCommand", strCommand,
-				  NULL, needTwoPhase, withSnapshot,
-				  false /* inCursor */ );
+	if (needTwoPhase)
+		setupTwoPhaseTransaction();
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchCommand: %s (needTwoPhase = %s)",
@@ -379,12 +374,9 @@ CdbDispatchUtilityStatement(struct Node *stmt,
 {
 	DispatchCommandQueryParms *pQueryParms;
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
-	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
 
-	dtmPreCommand("CdbDispatchUtilityStatement",
-				  debug_query_string ? debug_query_string : "(none)",
-				  NULL, needTwoPhase, withSnapshot,
-				  false /* inCursor */ );
+	if (needTwoPhase)
+		setupTwoPhaseTransaction();
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchUtilityStatement: %s (needTwoPhase = %s)",
@@ -429,7 +421,7 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
 
-	if ((flags & DF_NEED_TWO_PHASE) != 0)
+	if ((flags & DF_NEED_TWO_PHASE) != 0 || isDtxExplicitBegin())
 		addToGxactTwophaseSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);
@@ -1149,13 +1141,13 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 			if (InterruptPending)
 				break;
 		}
-		SIMPLE_FAULT_INJECTOR(BeforeOneSliceDispatched);
+		SIMPLE_FAULT_INJECTOR("before_one_slice_dispatched");
 
 		cdbdisp_dispatchToGang(ds, primaryGang, si);
-		if (planRequiresTxn)
+		if (planRequiresTxn || isDtxExplicitBegin())
 			addToGxactTwophaseSegments(primaryGang);
 
-		SIMPLE_FAULT_INJECTOR(AfterOneSliceDispatched);
+		SIMPLE_FAULT_INJECTOR("after_one_slice_dispatched");
 	}
 
 	pfree(sliceVector);
@@ -1410,12 +1402,9 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	Gang *primaryGang;
 	ErrorData *error = NULL;
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
-	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
 
-	dtmPreCommand("CdbDispatchCopyStart",
-				  debug_query_string ? debug_query_string : "(none)",
-				  NULL, needTwoPhase, withSnapshot,
-				  false /* inCursor */ );
+	if (needTwoPhase)
+		setupTwoPhaseTransaction();
 
 	elogif((Debug_print_full_dtm || log_min_messages <= DEBUG5), LOG,
 		   "CdbDispatchCopyStart: %s (needTwoPhase = %s)",
@@ -1433,15 +1422,14 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	/*
 	 * Allocate a primary QE for every available segDB in the system.
 	 */
-	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER,
-										cdbcomponent_getCdbComponentsList());
+	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbCopy->seglist);
 	Assert(primaryGang);
 
 	cdbdisp_makeDispatchResults(ds, 1, flags & DF_CANCEL_ON_ERROR);
 	cdbdisp_makeDispatchParams (ds, 1, queryText, queryTextLength);
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1);
-	if ((flags & DF_NEED_TWO_PHASE) != 0)
+	if ((flags & DF_NEED_TWO_PHASE) != 0 || isDtxExplicitBegin())
 		addToGxactTwophaseSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);
@@ -1486,7 +1474,7 @@ formIdleSegmentIdList(void)
 	List					*segments = NIL;
 	int						i, j;
 
-	cdbs = cdbcomponent_getCdbComponents(true);
+	cdbs = cdbcomponent_getCdbComponents();
 
 	if (cdbs->segment_db_info != NULL)
 	{
@@ -1494,7 +1482,7 @@ formIdleSegmentIdList(void)
 		{
 			CdbComponentDatabaseInfo *cdi = &cdbs->segment_db_info[i];
 			for (j = 0; j < cdi->numIdleQEs; j++)
-				segments = lappend_int(segments, cdi->segindex);
+				segments = lappend_int(segments, cdi->config->segindex);
 		}
 	}
 

@@ -2,7 +2,7 @@
  * gin_private.h
  *	  header file for postgres inverted index access method implementation.
  *
- *	Copyright (c) 2006-2014, PostgreSQL Global Development Group
+ *	Copyright (c) 2006-2015, PostgreSQL Global Development Group
  *
  *	src/include/access/gin_private.h
  *--------------------------------------------------------------------------
@@ -15,7 +15,7 @@
 #include "access/itup.h"
 #include "fmgr.h"
 #include "storage/bufmgr.h"
-#include "utils/rbtree.h"
+#include "lib/rbtree.h"
 
 
 /*
@@ -24,10 +24,10 @@
  * Note: GIN does not include a page ID word as do the other index types.
  * This is OK because the opaque data is only 8 bytes and so can be reliably
  * distinguished by size.  Revisit this if the size ever increases.
- * Further note: as of 9.2, SP-GiST also uses 8-byte special space.  This is
- * still OK, as long as GIN isn't using all of the high-order bits in its
- * flags word, because that way the flags word cannot match the page ID used
- * by SP-GiST.
+ * Further note: as of 9.2, SP-GiST also uses 8-byte special space, as does
+ * BRIN as of 9.5.  This is still OK, as long as GIN isn't using all of the
+ * high-order bits in its flags word, because that way the flags word cannot
+ * match the page IDs used by SP-GiST and BRIN.
  */
 typedef struct GinPageOpaqueData
 {
@@ -322,12 +322,18 @@ typedef struct GinOptions
 {
 	int32		vl_len_;		/* varlena header (do not touch directly!) */
 	bool		useFastUpdate;	/* use fast updates? */
+	int			pendingListCleanupSize; /* maximum size of pending list */
 } GinOptions;
 
 #define GIN_DEFAULT_USE_FASTUPDATE	true
 #define GinGetUseFastUpdate(relation) \
 	((relation)->rd_options ? \
 	 ((GinOptions *) (relation)->rd_options)->useFastUpdate : GIN_DEFAULT_USE_FASTUPDATE)
+#define GinGetPendingListCleanupSize(relation) \
+	((relation)->rd_options && \
+	 ((GinOptions *) (relation)->rd_options)->pendingListCleanupSize != -1 ? \
+	 ((GinOptions *) (relation)->rd_options)->pendingListCleanupSize : \
+	 gin_pending_list_limit)
 
 
 /* Macros for buffer lock/unlock operations */
@@ -383,7 +389,7 @@ typedef struct
 {
 	ItemPointerData first;		/* first item in this posting list (unpacked) */
 	uint16		nbytes;			/* number of bytes that follow */
-	unsigned char bytes[1];		/* varbyte encoded items (variable length) */
+	unsigned char bytes[FLEXIBLE_ARRAY_MEMBER]; /* varbyte encoded items */
 } GinPostingList;
 
 #define SizeOfGinPostingList(plist) (offsetof(GinPostingList, bytes) + SHORTALIGN((plist)->nbytes) )
@@ -398,32 +404,32 @@ typedef struct
 
 typedef struct ginxlogCreatePostingTree
 {
-	RelFileNode node;
-	BlockNumber blkno;
 	uint32		size;
 	/* A compressed posting list follows */
 } ginxlogCreatePostingTree;
 
-#define XLOG_GIN_INSERT  0x20
-
 /*
  * The format of the insertion record varies depending on the page type.
  * ginxlogInsert is the common part between all variants.
+ *
+ * Backup Blk 0: target page
+ * Backup Blk 1: left child, if this insertion finishes an incomplete split
  */
+
+#define XLOG_GIN_INSERT  0x20
+
 typedef struct
 {
-	RelFileNode node;
-	BlockNumber blkno;
-	uint16		flags;			/* GIN_SPLIT_ISLEAF and/or GIN_SPLIT_ISDATA */
+	uint16		flags;			/* GIN_INSERT_ISLEAF and/or GIN_INSERT_ISDATA */
 
 	/*
 	 * FOLLOWS:
 	 *
 	 * 1. if not leaf page, block numbers of the left and right child pages
-	 * whose split this insertion finishes. As BlockIdData[2] (beware of
-	 * adding fields before this that would make them not 16-bit aligned)
+	 * whose split this insertion finishes, as BlockIdData[2] (beware of
+	 * adding fields in this struct that would make them not 16-bit aligned)
 	 *
-	 * 2. an ginxlogInsertEntry or ginxlogRecompressDataLeaf struct, depending
+	 * 2. a ginxlogInsertEntry or ginxlogRecompressDataLeaf struct, depending
 	 * on tree type.
 	 *
 	 * NB: the below structs are only 16-bit aligned when appended to a
@@ -478,75 +484,39 @@ typedef struct
 	PostingItem newitem;
 } ginxlogInsertDataInternal;
 
-
+/*
+ * Backup Blk 0: new left page (= original page, if not root split)
+ * Backup Blk 1: new right page
+ * Backup Blk 2: original page / new root page, if root split
+ * Backup Blk 3: left child, if this insertion completes an earlier split
+ */
 #define XLOG_GIN_SPLIT	0x30
 
 typedef struct ginxlogSplit
 {
 	RelFileNode node;
-	BlockNumber lblkno;
-	BlockNumber rblkno;
 	BlockNumber rrlink;			/* right link, or root's blocknumber if root
 								 * split */
 	BlockNumber leftChildBlkno; /* valid on a non-leaf split */
 	BlockNumber rightChildBlkno;
-	uint16		flags;
-
-	/* follows: one of the following structs */
+	uint16		flags;			/* see below */
 } ginxlogSplit;
 
 /*
  * Flags used in ginxlogInsert and ginxlogSplit records
  */
 #define GIN_INSERT_ISDATA	0x01	/* for both insert and split records */
-#define GIN_INSERT_ISLEAF	0x02	/* .. */
+#define GIN_INSERT_ISLEAF	0x02	/* ditto */
 #define GIN_SPLIT_ROOT		0x04	/* only for split records */
-
-typedef struct
-{
-	OffsetNumber separator;
-	OffsetNumber nitem;
-
-	/* FOLLOWS: IndexTuples */
-} ginxlogSplitEntry;
-
-typedef struct
-{
-	uint16		lsize;
-	uint16		rsize;
-	ItemPointerData lrightbound;	/* new right bound of left page */
-	ItemPointerData rrightbound;	/* new right bound of right page */
-
-	/* FOLLOWS: new compressed posting lists of left and right page */
-	char		newdata[1];
-} ginxlogSplitDataLeaf;
-
-typedef struct
-{
-	OffsetNumber separator;
-	OffsetNumber nitem;
-	ItemPointerData rightbound;
-
-	/* FOLLOWS: array of PostingItems */
-} ginxlogSplitDataInternal;
 
 /*
  * Vacuum simply WAL-logs the whole page, when anything is modified. This
- * functionally identical heap_newpage records, but is kept separate for
+ * is functionally identical to heap_newpage records, but is kept separate for
  * debugging purposes. (When inspecting the WAL stream, it's easier to see
  * what's going on when GIN vacuum records are marked as such, not as heap
  * records.) This is currently only used for entry tree leaf pages.
  */
 #define XLOG_GIN_VACUUM_PAGE	0x40
-
-typedef struct ginxlogVacuumPage
-{
-	RelFileNode node;
-	BlockNumber blkno;
-	uint16		hole_offset;	/* number of bytes before "hole" */
-	uint16		hole_length;	/* number of bytes in "hole" */
-	/* entire page contents (minus the hole) follow at end of record */
-} ginxlogVacuumPage;
 
 /*
  * Vacuuming posting tree leaf page is WAL-logged like recompression caused
@@ -556,26 +526,28 @@ typedef struct ginxlogVacuumPage
 
 typedef struct ginxlogVacuumDataLeafPage
 {
-	RelFileNode node;
-	BlockNumber blkno;
-
 	ginxlogRecompressDataLeaf data;
 } ginxlogVacuumDataLeafPage;
 
+/*
+ * Backup Blk 0: deleted page
+ * Backup Blk 1: parent
+ * Backup Blk 2: left sibling
+ */
 #define XLOG_GIN_DELETE_PAGE	0x50
 
 typedef struct ginxlogDeletePage
 {
-	RelFileNode node;
-	BlockNumber blkno;
-	BlockNumber parentBlkno;
 	OffsetNumber parentOffset;
-	BlockNumber leftBlkno;
 	BlockNumber rightLink;
 } ginxlogDeletePage;
 
 #define XLOG_GIN_UPDATE_META_PAGE 0x60
 
+/*
+ * Backup Blk 0: metapage
+ * Backup Blk 1: tail page
+ */
 typedef struct ginxlogUpdateMeta
 {
 	RelFileNode node;
@@ -592,22 +564,29 @@ typedef struct ginxlogUpdateMeta
 
 typedef struct ginxlogInsertListPage
 {
-	RelFileNode node;
-	BlockNumber blkno;
 	BlockNumber rightlink;
 	int32		ntuples;
 	/* array of inserted tuples follows */
 } ginxlogInsertListPage;
 
+/*
+ * Backup Blk 0: metapage
+ * Backup Blk 1 to (ndeleted + 1): deleted pages
+ */
+
 #define XLOG_GIN_DELETE_LISTPAGE  0x80
 
-#define GIN_NDELETE_AT_ONCE 16
+/*
+ * The WAL record for deleting list pages must contain a block reference to
+ * all the deleted pages, so the number of pages that can be deleted in one
+ * record is limited by XLR_MAX_BLOCK_ID. (block_id 0 is used for the
+ * metapage.)
+ */
+#define GIN_NDELETE_AT_ONCE Min(16, XLR_MAX_BLOCK_ID - 1)
 typedef struct ginxlogDeleteListPages
 {
-	RelFileNode node;
 	GinMetaPageData metadata;
 	int32		ndeleted;
-	BlockNumber toDelete[GIN_NDELETE_AT_ONCE];
 } ginxlogDeleteListPages;
 
 
@@ -674,8 +653,8 @@ typedef struct GinBtreeData
 
 	/* insert methods */
 	OffsetNumber (*findChildPtr) (GinBtree, Page, BlockNumber, OffsetNumber);
-	GinPlaceToPageRC (*beginPlaceToPage) (GinBtree, Buffer, GinBtreeStack *, void *, BlockNumber, void **, Page *, Page *, XLogRecData *);
-	void		(*execPlaceToPage) (GinBtree, Buffer, GinBtreeStack *, void *, BlockNumber, void *, XLogRecData *);
+	GinPlaceToPageRC (*beginPlaceToPage) (GinBtree, Buffer, GinBtreeStack *, void *, BlockNumber, void **, Page *, Page *);
+	void		(*execPlaceToPage) (GinBtree, Buffer, GinBtreeStack *, void *, BlockNumber, void *);
 	void	   *(*prepareDownlink) (GinBtree, Buffer);
 	void		(*fillRoot) (GinBtree, Page, BlockNumber, Page, BlockNumber, Page);
 
@@ -879,6 +858,8 @@ typedef struct GinScanOpaqueData
 	GinScanEntry *entries;		/* one per index search condition */
 	uint32		totalentries;
 	uint32		allocentries;	/* allocated length of entries[] */
+
+	MemoryContext keyCtx;		/* used to hold key and entry data */
 
 	bool		isVoidRes;		/* true if query is unsatisfiable */
 } GinScanOpaqueData;

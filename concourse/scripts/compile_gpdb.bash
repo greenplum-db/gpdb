@@ -16,30 +16,50 @@ function expand_glob_ensure_exists() {
   echo "${glob[0]}"
 }
 
-function prep_env_for_centos() {
-  case "${TARGET_OS_VERSION}" in
-    6|7) BLD_ARCH=rhel${TARGET_OS_VERSION}_x86_64 ;;
-    *) echo "TARGET_OS_VERSION not set or recognized for Centos/RHEL" ; exit 1 ;;
+function prep_env() {
+  case "${TARGET_OS}" in
+  centos)
+    case "${TARGET_OS_VERSION}" in
+    6 | 7) BLD_ARCH=rhel${TARGET_OS_VERSION}_x86_64 ;;
+    *)
+      echo "TARGET_OS_VERSION not set or recognized for Centos/RHEL"
+      exit 1
+      ;;
+    esac
+    ;;
+  ubuntu)
+    case "${TARGET_OS_VERSION}" in
+    18.04) BLD_ARCH=ubuntu18.04_x86_64 ;;
+    *)
+      echo "TARGET_OS_VERSION not set or recognized for Ubuntu"
+      exit 1
+      ;;
+    esac
+    ;;
   esac
 }
 
 function install_deps_for_centos() {
-  # quicklz is proprietary code that we cannot put in our public Docker images.
   rpm -i libquicklz-installer/libquicklz-*.rpm
   rpm -i libquicklz-devel-installer/libquicklz-*.rpm
   # install libsigar from tar.gz
   tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
 }
 
-function link_tools_for_centos() {
-  tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
-  ln -sf $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
+function install_deps_for_ubuntu() {
+  dpkg --install libquicklz-installer/libquicklz-*.deb
 }
 
-function prep_env_for_sles() {
-  export JAVA_HOME=$(expand_glob_ensure_exists /usr/java/jdk1.7*)
-  export PATH=${JAVA_HOME}/bin:${PATH}
-  source /opt/gcc_env.sh
+function install_deps() {
+  case "${TARGET_OS}" in
+    centos) install_deps_for_centos;;
+    ubuntu) install_deps_for_ubuntu;;
+  esac
+}
+
+function link_python() {
+  tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
+  ln -sf $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
 }
 
 function generate_build_number() {
@@ -50,10 +70,6 @@ function generate_build_number() {
       echo "commit:`git rev-parse HEAD`" > BUILD_NUMBER
     fi
   popd
-}
-
-function link_tools_for_sles() {
-  ln -sf "$(expand_glob_ensure_exists $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/*/python-2.7.12 )" /opt
 }
 
 function build_gpdb() {
@@ -67,12 +83,6 @@ function build_gpdb() {
     else
       make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 -s dist
     fi
-  popd
-}
-
-function build_gppkg() {
-  pushd ${GPDB_SRC_PATH}/gpAux
-    make gppkg BLD_TARGETS="gppkg" INSTLOC="${GREENPLUM_INSTALL_DIR}" GPPKGINSTLOC="${GPDB_ARTIFACTS_DIR}" RELENGTOOLS=/opt/releng/tools
   popd
 }
 
@@ -103,29 +113,46 @@ function unittest_check_gpdb() {
 }
 
 function include_zstd() {
+  local libdir
+  case "${TARGET_OS}" in
+    centos) libdir=/usr/lib64 ;;
+    ubuntu) libdir=/usr/lib ;;
+    *) return ;;
+  esac
   pushd ${GREENPLUM_INSTALL_DIR}
-    if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig/.
-      cp /usr/lib64/libzstd.so* lib/.
-      cp /usr/include/zstd*.h include/.
-    fi
+    cp ${libdir}/pkgconfig/libzstd.pc lib/pkgconfig
+    cp -d ${libdir}/libzstd.so* lib
+    cp /usr/include/zstd*.h include
   popd
 }
 
 function include_quicklz() {
+  local libdir
+  case "${TARGET_OS}" in
+    centos) libdir=/usr/lib64 ;;
+    ubuntu) libdir=/usr/local/lib ;;
+    *) return ;;
+  esac
   pushd ${GREENPLUM_INSTALL_DIR}
-    if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/libquicklz.so* lib/.
-    fi
+    cp -d ${libdir}/libquicklz.so* lib
   popd
 }
 
 function include_libstdcxx() {
-  pushd /opt/gcc-6*/lib64
-    if [ "${TARGET_OS}" == "centos" ] ; then
-      cp libstdc++.so.* ${GREENPLUM_INSTALL_DIR}/lib/.
-    fi
-  popd
+  if [ "${TARGET_OS}" == "centos" ] ; then
+    pushd /opt/gcc-6*/lib64
+      for libfile in libstdc++.so.*; do
+        case $libfile in
+          *.py)
+            ;; # we don't vendor libstdc++.so.*-gdb.py
+          *)
+            cp -d "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
+            ;; # vendor everything else
+        esac
+      done
+    popd
+  fi
+
 }
 
 function export_gpdb() {
@@ -144,9 +171,6 @@ function export_gpdb_extensions() {
       chmod 755 greenplum-*zip*
       cp greenplum-*zip* "${GPDB_ARTIFACTS_DIR}/"
     fi
-    if ls "$GPDB_ARTIFACTS_DIR"/*.gppkg 1>/dev/null 2>&1; then
-      chmod 755 "$GPDB_ARTIFACTS_DIR"/*.gppkg
-    fi
   popd
 }
 
@@ -162,32 +186,53 @@ function export_gpdb_clients() {
   TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_CL_FILENAME}"
   pushd ${GREENPLUM_CL_INSTALL_DIR}
     source ./greenplum_clients_path.sh
-    python -m compileall -q -x test .
     chmod -R 755 .
     tar -czf "${TARBALL}" ./*
   popd
 }
 
+function fetch_orca_src {
+  local orca_tag="${1}"
+
+  mkdir orca_src
+  wget --quiet --output-document=- "https://github.com/greenplum-db/gporca/archive/${orca_tag}.tar.gz" \
+    | tar xzf - --strip-components=1 --directory=orca_src
+}
+
+function build_xerces()
+{
+    OUTPUT_DIR="gpdb_src/gpAux/ext/${BLD_ARCH}"
+    mkdir -p xerces_patch/concourse
+    cp -r orca_src/concourse/xerces-c xerces_patch/concourse
+    cp -r orca_src/patches/ xerces_patch
+    /usr/bin/python xerces_patch/concourse/xerces-c/build_xerces.py --output_dir=${OUTPUT_DIR}
+    rm -rf build
+}
+
+function build_and_test_orca()
+{
+    OUTPUT_DIR="gpdb_src/gpAux/ext/${BLD_ARCH}"
+    orca_src/concourse/build_and_test.py --build_type=RelWithDebInfo --output_dir=${OUTPUT_DIR}
+}
+
 function _main() {
-  # Copy input ext dir; assuming ext doesnt exist
-  mv gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
+  mkdir gpdb_src/gpAux/ext
 
   case "${TARGET_OS}" in
-    centos)
-      prep_env_for_centos
-      install_deps_for_centos
-      link_tools_for_centos
-      ;;
-    sles)
-      prep_env_for_sles
-      link_tools_for_sles
+    centos|ubuntu)
+      prep_env
+      fetch_orca_src "${ORCA_TAG}"
+      build_xerces
+      build_and_test_orca
+      install_deps
+      link_python
       ;;
     win32)
         export BLD_ARCH=win32
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --disable-pxf"
         ;;
     *)
-        echo "only centos, sles and win32 are supported TARGET_OS'es"
+        echo "only centos, ubuntu, and win32 are supported TARGET_OS'es"
         false
         ;;
   esac
@@ -203,20 +248,11 @@ function _main() {
     BLD_TARGET_OPTION=("")
   fi
 
-  # Copy gpaddon_src into gpAux/addon directory and set the ADDON_DIR
-  # environment variable, so that quicklz support is available in enterprise
-  # builds.
-  export ADDON_DIR=addon
   export CONFIGURE_FLAGS=${CONFIGURE_FLAGS}
-  # We cannot symlink the addon directory here because `make -C` resolves the
-  # symlink and `cd`s to the actual directory. Currently the Makefile in the
-  # addon directory assumes that it is located in a particular location under
-  # the source tree and hence needs to be copied over.
-  rsync -au gpaddon_src/ ${GPDB_SRC_PATH}/gpAux/${ADDON_DIR}
 
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   git_info
-  build_gppkg
+
   if [ "${TARGET_OS}" != "win32" ] ; then
       # Don't unit test when cross compiling. Tests don't build because they
       # require `./configure --with-zlib`.

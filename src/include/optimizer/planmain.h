@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/planmain.h
@@ -47,7 +47,6 @@ typedef struct GroupContext
 	List *tlist;
 	bool use_hashed_grouping;
 	double tuple_fraction;
-	CanonicalGroupingSets *canonical_grpsets;
 	uint64 grouping;
 
 	/*
@@ -97,26 +96,6 @@ extern Plan *make_distinctaggs_for_rollup(PlannerInfo *root, bool is_agg,
 										  List **p_current_pathkeys,
 										  Plan *lefttree);
 
-/*
- * prototype for plan/plangroupext.c
- */
-extern Plan *plan_grouping_extension(PlannerInfo *root,
-									 Path *path,
-									 double tuple_fraction,
-									 bool use_hashed_grouping,
-									 List **p_tlist, List *sub_tlist,
-									 bool twostage,
-									 List *qual,
-									 int *p_numGroupCols,
-									 AttrNumber **p_grpColIdx,
-									 Oid **p_grpOperators,
-									 AggClauseCosts *agg_costs,
-									 CanonicalGroupingSets *canonical_grpsets,
-									 double *p_dNumGroups,
-									 bool *querynode_changed,
-									 List **p_current_pathkeys,
-									 Plan *lefttree);
-extern void free_canonical_groupingsets(CanonicalGroupingSets *canonical_grpsets);
 extern Plan *add_repeat_node(Plan *result_plan, int repeat_count, uint64 grouping);
 extern bool contain_group_id(Node *node);
 
@@ -128,7 +107,8 @@ extern Plan *create_plan_recurse(PlannerInfo *root, Path *best_path);
 extern SubqueryScan *make_subqueryscan(List *qptlist, List *qpqual,
 				  Index scanrelid, Plan *subplan);
 extern ForeignScan *make_foreignscan(List *qptlist, List *qpqual,
-				 Index scanrelid, List *fdw_exprs, List *fdw_private);
+				 Index scanrelid, List *fdw_exprs, List *fdw_private,
+				 List *fdw_scan_tlist);
 extern Append *make_append(List *appendplans, List *tlist);
 extern RecursiveUnion *make_recursive_union(List *tlist,
 					 Plan *lefttree, Plan *righttree, int wtParam,
@@ -138,7 +118,7 @@ extern Sort *make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree,
 extern Sort *make_sort_from_sortclauses(PlannerInfo *root, List *sortcls,
 						   Plan *lefttree);
 extern Sort *make_sort_from_groupcols(PlannerInfo *root, List *groupcls,
-									  AttrNumber *grpColIdx, bool appendGrouping,
+									  AttrNumber *grpColIdx,
 									  Plan *lefttree);
 extern List *reconstruct_group_clause(List *orig_groupClause, List *tlist,
 						 AttrNumber *grpColIdx, int numcols);
@@ -147,19 +127,14 @@ extern Motion *make_motion(PlannerInfo *root, Plan *lefttree,
 			int numSortCols, AttrNumber *sortColIdx,
 			Oid *sortOperators, Oid *collations, bool *nullsFirst,
 			bool useExecutorVarFormat);
-extern Sort *make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
-		  AttrNumber *sortColIdx, Oid *sortOperators,
-		  Oid *collations, bool *nullsFirst,
-		  double limit_tuples);
 
 extern Agg *make_agg(PlannerInfo *root, List *tlist, List *qual,
-		 AggStrategy aggstrategy, const AggClauseCosts *aggcosts,
-		 bool streaming,
-		 int numGroupCols, AttrNumber *grpColIdx, Oid *grpOperators,
-		 long numGroups, int numNullCols,
-		 uint64 inputGrouping, uint64 grouping,
-		 int rollupGSTimes,
-		 Plan *lefttree);
+					 AggStrategy aggstrategy, const AggClauseCosts *aggcosts,
+					 bool streaming,
+					 int numGroupCols, AttrNumber *grpColIdx, Oid *grpOperators,
+					 List *groupingSets,
+					 long numGroups,
+					 Plan *lefttree);
 extern HashJoin *make_hashjoin(List *tlist,
 			  List *joinclauses, List *otherclauses,
 			  List *hashclauses, List *hashqualclauses,
@@ -209,10 +184,11 @@ extern Repeat *make_repeat(List *tlist,
 						   Plan *subplan);
 extern ModifyTable *make_modifytable(PlannerInfo *root,
 				 CmdType operation, bool canSetTag,
+				 Index nominalRelation,
 				 List *resultRelations, List *subplans,
 				 List *withCheckOptionLists, List *returningLists,
 				 List *is_split_updates,
-				 List *rowMarks, int epqParam);
+				 List *rowMarks, OnConflictExpr *onconflict, int epqParam);
 extern bool is_projection_capable_plan(Plan *plan);
 extern Plan *add_sort_cost(PlannerInfo *root, Plan *input, 
 						   double limit_tuples);
@@ -221,6 +197,7 @@ extern Plan *add_agg_cost(PlannerInfo *root, Plan *plan,
 		 AggStrategy aggstrategy, 
 		 bool streaming, 
 		 int numGroupCols,
+		 List *groupingSets,
 		 long numGroups,
 		 const AggClauseCosts *aggcosts);
 extern Plan *plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist);      /*CDB*/
@@ -266,6 +243,8 @@ extern bool has_redistributable_clause(RestrictInfo *restrictinfo);
  * prototypes for plan/analyzejoins.c
  */
 extern List *remove_useless_joins(PlannerInfo *root, List *joinlist);
+extern bool query_supports_distinctness(Query *query);
+extern bool query_is_distinct_for(Query *query, List *colnos, List *opids);
 
 /*
  * prototypes for plan/setrefs.c
@@ -277,10 +256,9 @@ extern void set_sa_opfuncid(ScalarArrayOpExpr *opexpr);
 extern void record_plan_function_dependency(PlannerInfo *root, Oid funcid);
 extern void extract_query_dependencies(Node *query,
 						   List **relationOids,
-						   List **invalItems);
+						   List **invalItems,
+						   bool *hasRowSecurity);
 extern void cdb_extract_plan_dependencies(PlannerInfo *root, Plan *plan);
-
-extern int num_distcols_in_grouplist(List *gc);
 
 extern void add_proc_oids_for_dump(Oid funcid);
 

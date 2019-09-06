@@ -322,7 +322,7 @@ explain select * from srf_testtab, test_srf();
          ->  Seq Scan on srf_testtab  (cost=0.00..431.00 rows=1 width=6)
          ->  Function Scan on test_srf  (cost=0.00..0.01 rows=334 width=8)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.45.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.45.0
 (7 rows)
 
 explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
@@ -336,7 +336,7 @@ explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
          ->  Hash  (cost=431.00..431.00 rows=1 width=6)
                ->  Seq Scan on srf_testtab  (cost=0.00..431.00 rows=1 width=6)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.45.0
+ Optimizer status: Pivotal Optimizer (GPORCA) version 2.45.0
 (9 rows)
 
 -- Test ALTER FUNCTION, and that \df displays the EXECUTE ON correctly

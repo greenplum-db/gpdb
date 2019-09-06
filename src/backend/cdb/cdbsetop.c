@@ -350,8 +350,6 @@ make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 									   -1.0,
 									   false /* useExecutorVarFormat */ );
 
-		/* FIXME: numsegments */
-
 		motion = make_sorted_union_motion(root,
 										  subplan,
 										  sort->numCols,
@@ -366,8 +364,6 @@ make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 	}
 	else
 	{
-		/* FIXME: numsegments */
-
 		motion = make_union_motion(subplan, false, subplan->flow->numsegments);
 	}
 
@@ -410,15 +406,12 @@ make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan)
 
 	if (hashexprs)
 	{
-		/*
-		 * FIXME: ALL as numsegments is correct,
-		 *        but can we decide a better value?
-		 */
+		/* Distribute to ALL to maximize parallelism */
 		return make_hashed_motion(subplan,
 								  hashexprs,
 								  hashopfamilies,
 								  false /* useExecutorVarFormat */,
-								  GP_POLICY_ALL_NUMSEGMENTS);
+								  getgpsegmentCount());
 	}
 	else
 	{
@@ -443,8 +436,6 @@ Motion *
 make_motion_hash(PlannerInfo *root, Plan *subplan, List *hashExprs, List *hashOpfamilies)
 {
 	Assert(subplan->flow != NULL);
-
-	/* FIXME: numsegments */
 
 	return make_hashed_motion(subplan,
 							  hashExprs,
@@ -480,8 +471,6 @@ make_motion_hash_exprs(PlannerInfo *root, Plan *subplan, List *hashExprs)
 		hashOpfamilies = lappend_oid(hashOpfamilies, opfamily);
 	}
 
-	/* FIXME: numsegments */
-
 	return make_hashed_motion(subplan,
 							  hashExprs,
 							  hashOpfamilies,
@@ -499,7 +488,7 @@ mark_append_locus(Plan *plan, GpSetOpType optype)
 	/*
 	 * FIXME: for append we forcely collect data on all segments
 	 */
-	int			numsegments = GP_POLICY_ALL_NUMSEGMENTS;
+	int			numsegments = getgpsegmentCount();
 
 	switch (optype)
 	{
@@ -605,7 +594,7 @@ void
 mark_plan_entry(Plan *plan)
 {
 	Assert(is_plan_node((Node *) plan) && plan->flow == NULL);
-	plan->flow = makeFlow(FLOW_SINGLETON, GP_POLICY_ENTRY_NUMSEGMENTS);
+	plan->flow = makeFlow(FLOW_SINGLETON, getgpsegmentCount());
 	plan->flow->segindex = -1;
 	plan->flow->locustype = CdbLocusType_Entry;
 }

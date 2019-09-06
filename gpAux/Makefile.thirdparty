@@ -15,28 +15,14 @@ ifeq "$(BLD_THIRDPARTY_DIR)" ""
 
 # calculate BLD_TOP in absolute path form
 BLD_TOP_ABSOLUTE:=$(shell cd $(BLD_TOP) && pwd)
-ifeq ($(BLD_ARCH),aix7_ppc_64)
-ADDON_DIR=../../gpaddon_src
-endif
 BLD_THIRDPARTY:=$(BLD_TOP_ABSOLUTE)/ext
 ifeq "$(BLD_ARCH)" ""
 BLD_ARCH:=$(shell $(BLD_TOP)/releng/set_bld_arch.sh)
 endif
 
-aix5_ppc_64_BLD_BITS=64
-aix5_ppc_32_BLD_BITS=32
 aix7_ppc_64_BLD_BITS=64
 rhel6_x86_64_BLD_BITS=64
 rhel7_x86_64_BLD_BITS=64
-sol10_sparc_BLD_BITS=64
-sol10_sparc_64_BLD_BITS=64
-sol10_sparc_32_BLD_BITS=32
-sol10_x86_64_BLD_BITS=64
-sol10_x86_32_BLD_BITS=32
-suse10_x86_64_BLD_BITS=64
-suse11_x86_64_BLD_BITS=64
-win64_BLD_BITS=64
-win32_BLD_BITS=32
 BLD_BITS=$($(BLD_ARCH)_BLD_BITS)
 
 # ----------------------------------------------------------------------
@@ -87,10 +73,6 @@ BLD_THIRDPARTY_LIB_DIR=$(BLD_THIRDPARTY)/$(BLD_ARCH)/lib
 # a distri- bution fileset.
 # ----------------------------------------------------------------------
 
-ifeq "$(findstring osx,$(BLD_ARCH))" "osx"
-BLD_MAC_PREFIX=DY
-endif
-
 ifeq "$(findstring $(BLD_THIRDPARTY_LIB_DIR),$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE)))" ""
 tmpLD_LIBRARY_PATH=$(BLD_THIRDPARTY_LIB_DIR):$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE))
 export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE):=$(tmpLD_LIBRARY_PATH)
@@ -127,9 +109,6 @@ BLD_ZLIB-1.2.3_INCDIR=$(BLD_ZLIB_HOME)/include
 .PHONY: thirdparty-dist thirdparty-dist-base thirdparty-dist-exceptions
 
 BLD_DYLIB_NAME=so
-ifeq "$(findstring osx,$(BLD_ARCH))" "osx"
-BLD_DYLIB_NAME=dylib
-endif
 ifeq "$(findstring aix,$(BLD_ARCH))" "aix"
 BLD_DYLIB_NAME=a
 endif

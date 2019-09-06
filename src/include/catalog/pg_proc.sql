@@ -5,7 +5,7 @@
 -- README.add_catalog_function for instructions on how to run it.
 
 -- MPP -- array_add -- special for prospective customer 
- CREATE FUNCTION array_add(_int4, _int4) RETURNS _int4 LANGUAGE internal IMMUTABLE STRICT AS 'array_int4_add' WITH (OID=6012, DESCRIPTION="itemwise add two integer arrays");
+ CREATE FUNCTION array_add(_int4, _int4) RETURNS _int4 LANGUAGE internal IMMUTABLE STRICT AS 'array_int4_add' WITH (OID=5066, DESCRIPTION="itemwise add two integer arrays");
 
  CREATE FUNCTION interval_interval_div("interval", "interval") RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'interval_interval_div' WITH (OID=6115);
 
@@ -70,7 +70,7 @@
 
  CREATE FUNCTION pg_resgroup_get_status(IN groupid oid, OUT groupid oid, OUT num_running int4, OUT num_queueing int4, OUT num_queued int4, OUT num_executed int4, OUT total_queue_duration interval, OUT cpu_usage json, OUT memory_usage json) RETURNS SETOF pg_catalog.record LANGUAGE internal VOLATILE AS 'pg_resgroup_get_status' WITH (OID=6066, DESCRIPTION="statistics: information about resource groups");
 
- CREATE FUNCTION pg_dist_wait_status(OUT segid int4, OUT waiter_dxid xid, OUT holder_dxid xid, OUT holdTillEndXact bool) RETURNS SETOF pg_catalog.record LANGUAGE internal VOLATILE AS 'pg_dist_wait_status' WITH (OID=6036, DESCRIPTION="waiting relation information");
+ CREATE FUNCTION gp_dist_wait_status(OUT segid int4, OUT waiter_dxid xid, OUT holder_dxid xid, OUT holdTillEndXact bool, OUT waiter_lpid int4, OUT holder_lpid int4, OUT waiter_lockmode text, OUT waiter_locktype text, OUT waiter_sessionid int4, OUT holder_sessionid int4) RETURNS SETOF pg_catalog.record LANGUAGE internal VOLATILE AS 'gp_dist_wait_status' WITH (OID=6036, DESCRIPTION="waiting relation information");
 
  CREATE FUNCTION pg_resqueue_status() RETURNS SETOF record LANGUAGE internal VOLATILE STRICT AS 'pg_resqueue_status' WITH (OID=6030, DESCRIPTION="Return resource queue information");
 
@@ -93,7 +93,7 @@
 -- Aggregates (moved here from pg_aggregate for 7.3) 
 
 -- MPP Aggregate -- array_sum -- special for prospective customer. 
- CREATE FUNCTION array_sum(_int4) RETURNS _int4 LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=6013, proisagg="t", DESCRIPTION = "array sum aggregate");
+ CREATE FUNCTION array_sum(_int4) RETURNS _int4 LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=5067, proisagg="t", DESCRIPTION = "array sum aggregate");
 
 -- Greenplum Analytic functions
  CREATE FUNCTION int2_matrix_accum(_int8, _int2) RETURNS _int8 LANGUAGE internal IMMUTABLE AS 'matrix_add' WITH (OID=6212, DESCRIPTION="perform matrix addition on two conformable matrices");
@@ -128,7 +128,7 @@
 -- 3241-324? reserved for unpivot, see pivot.c 
 
 -- Greenplum MPP exposed internally-defined functions. 
- CREATE FUNCTION gp_pgdatabase() RETURNS SETOF record LANGUAGE internal VOLATILE AS 'gp_pgdatabase__' WITH (OID=6007, DESCRIPTION="view mpp pgdatabase state");
+ CREATE FUNCTION gp_pgdatabase() RETURNS SETOF record LANGUAGE internal VOLATILE AS 'gp_pgdatabase__' WITH (OID=5065, DESCRIPTION="view mpp pgdatabase state");
 
  CREATE FUNCTION gp_execution_segment() RETURNS SETOF int4 LANGUAGE internal VOLATILE AS 'mpp_execution_segment' WITH (OID=6022, DESCRIPTION="segment executing function");
 -- #define MPP_EXECUTION_SEGMENT_OID 6022
@@ -187,9 +187,6 @@
 
 -- raises deprecation error
  CREATE FUNCTION gp_deprecated() RETURNS void LANGUAGE internal IMMUTABLE AS 'gp_deprecated' WITH (OID=9997, DESCRIPTION="raises function deprecation error");
-
--- Fault injection
- CREATE FUNCTION gp_fault_inject(int4, int8) RETURNS int8 LANGUAGE internal VOLATILE STRICT AS 'gp_fault_inject' WITH (OID=9999, DESCRIPTION="Greenplum fault testing only");
 
 -- Analyze related
  CREATE FUNCTION gp_acquire_sample_rows(oid, int4, bool) RETURNS SETOF record LANGUAGE internal VOLATILE STRICT EXECUTE ON ALL SEGMENTS AS 'gp_acquire_sample_rows' WITH (OID=6038, DESCRIPTION="Collect a random sample of rows from table" );
@@ -263,7 +260,7 @@
 
  CREATE FUNCTION gp_rle_type_decompress(internal, int4, internal, int4, internal, internal) RETURNS void LANGUAGE internal IMMUTABLE AS 'rle_type_decompress' WITH(OID=9917, DESCRIPTION="Type specific RLE decompressor");
 
- CREATE FUNCTION gp_rle_type_validator(internal) RETURNS void LANGUAGE internal IMMUTABLE AS 'rle_type_validator' WITH(OID=9923, DESCRIPTION="Type speific RLE compression validator");
+ CREATE FUNCTION gp_rle_type_validator(internal) RETURNS void LANGUAGE internal IMMUTABLE AS 'rle_type_validator' WITH(OID=9923, DESCRIPTION="Type specific RLE compression validator");
 
  CREATE FUNCTION gp_dummy_compression_constructor(internal, internal, bool) RETURNS internal LANGUAGE internal VOLATILE AS 'dummy_compression_constructor' WITH (OID=7064, DESCRIPTION="Dummy compression destructor");
 
@@ -359,13 +356,13 @@
  
  CREATE FUNCTION exp(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_exp' WITH (OID=6572, DESCRIPTION="natural exponential (e^x)");
  
- CREATE FUNCTION ln(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_ln' WITH (OID=3573, DESCRIPTION="natural logarithm");
+ CREATE FUNCTION ln(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_ln' WITH (OID=5031, DESCRIPTION="natural logarithm");
  
- CREATE FUNCTION log(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_log10' WITH (OID=3574, DESCRIPTION="base 10 logarithm");
+ CREATE FUNCTION log(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_log10' WITH (OID=5032, DESCRIPTION="base 10 logarithm");
  
- CREATE FUNCTION log(complex, complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_log' WITH (OID=3575, DESCRIPTION="logarithm base arg1 of arg2");
+ CREATE FUNCTION log(complex, complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_log' WITH (OID=5033, DESCRIPTION="logarithm base arg1 of arg2");
  
- CREATE FUNCTION acos(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_acos' WITH (OID=3576, DESCRIPTION="acos");
+ CREATE FUNCTION acos(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_acos' WITH (OID=5053, DESCRIPTION="acos");
  
  CREATE FUNCTION asin(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_asin' WITH (OID=3577, DESCRIPTION="asin");
  
@@ -373,29 +370,29 @@
  
  CREATE FUNCTION cos(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_cos' WITH (OID=3579, DESCRIPTION="cos");
  
- CREATE FUNCTION cot(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_cot' WITH (OID=3580, DESCRIPTION="cot");
+ CREATE FUNCTION cot(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_cot' WITH (OID=5052, DESCRIPTION="cot");
  
- CREATE FUNCTION sin(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_sin' WITH (OID=3581, DESCRIPTION="sin");
+ CREATE FUNCTION sin(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_sin' WITH (OID=5054, DESCRIPTION="sin");
  
- CREATE FUNCTION tan(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_tan' WITH (OID=3582, DESCRIPTION="tan");
+ CREATE FUNCTION tan(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_tan' WITH (OID=5055, DESCRIPTION="tan");
  
- CREATE FUNCTION dotproduct(_complex, _complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_dot_product' WITH (OID=3583, DESCRIPTION="dot product");
+ CREATE FUNCTION dotproduct(_complex, _complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_dot_product' WITH (OID=5056, DESCRIPTION="dot product");
  
- CREATE FUNCTION float82complex(float8) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'float82complex' WITH (OID=3584, DESCRIPTION="(internal) type cast from float8 to complex");
+ CREATE FUNCTION float82complex(float8) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'float82complex' WITH (OID=5057, DESCRIPTION="(internal) type cast from float8 to complex");
  
- CREATE FUNCTION float42complex(float4) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'float42complex' WITH (OID=3585, DESCRIPTION="(internal) type cast from float4 to complex");
+ CREATE FUNCTION float42complex(float4) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'float42complex' WITH (OID=5058, DESCRIPTION="(internal) type cast from float4 to complex");
  
- CREATE FUNCTION int82complex(int8) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'int82complex' WITH (OID=3586, DESCRIPTION="(internal) type cast from int8 to complex");
+ CREATE FUNCTION int82complex(int8) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'int82complex' WITH (OID=5059, DESCRIPTION="(internal) type cast from int8 to complex");
  
- CREATE FUNCTION int42complex(int4) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'int42complex' WITH (OID=3587, DESCRIPTION="(internal) type cast from int4 to complex");
+ CREATE FUNCTION int42complex(int4) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'int42complex' WITH (OID=5060, DESCRIPTION="(internal) type cast from int4 to complex");
  
- CREATE FUNCTION int22complex(int2) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'int22complex' WITH (OID=3588, DESCRIPTION="(internal) type cast from int2 to complex");
+ CREATE FUNCTION int22complex(int2) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'int22complex' WITH (OID=5061, DESCRIPTION="(internal) type cast from int2 to complex");
  
- CREATE FUNCTION power(complex, complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_pow' WITH (OID=3589, DESCRIPTION="exponentiation (x^y)");
+ CREATE FUNCTION power(complex, complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_pow' WITH (OID=5062, DESCRIPTION="exponentiation (x^y)");
  
- CREATE FUNCTION sqrt(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_sqrt' WITH (OID=3590, DESCRIPTION="squre root");
+ CREATE FUNCTION sqrt(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_sqrt' WITH (OID=5063, DESCRIPTION="squre root");
  
- CREATE FUNCTION cbrt(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_cbrt' WITH (OID=3591, DESCRIPTION="cube root"); 
+ CREATE FUNCTION cbrt(complex) RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'complex_cbrt' WITH (OID=5064, DESCRIPTION="cube root"); 
  
  CREATE FUNCTION numeric2point("numeric") RETURNS complex LANGUAGE internal IMMUTABLE STRICT AS 'numeric2complex' WITH (OID=7597, DESCRIPTION="(internal) type cast from numeric to complex");
  
@@ -407,19 +404,19 @@
 
  CREATE FUNCTION complex_gte(complex, complex) RETURNS bool  LANGUAGE internal IMMUTABLE STRICT AS 'complex_gte' WITH (OID=7596);
 
-CREATE FUNCTION hyperloglog_in(value cstring) RETURNS hyperloglog_estimator  LANGUAGE internal IMMUTABLE STRICT AS 'hyperloglog_in' WITH (OID=7158, DESCRIPTION="Decode a bytea into hyperloglog_counter");
+CREATE FUNCTION gp_hyperloglog_in(value cstring) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_in' WITH (OID=7158, DESCRIPTION="Decode a bytea into gp_hyperloglog counter");
 
-CREATE FUNCTION hyperloglog_out(counter hyperloglog_estimator) RETURNS cstring  LANGUAGE internal IMMUTABLE STRICT AS 'hyperloglog_out' WITH (OID=7159, DESCRIPTION="Encode an hyperloglog_counter into a bytea");
+CREATE FUNCTION gp_hyperloglog_out(counter gp_hyperloglog_estimator) RETURNS cstring  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_out' WITH (OID=7159, DESCRIPTION="Encode a gp_hyperloglog counter into a bytea");
 
-CREATE FUNCTION hyperloglog_comp(counter hyperloglog_estimator) RETURNS hyperloglog_estimator  LANGUAGE internal IMMUTABLE STRICT AS 'hyperloglog_comp' WITH (OID=7160, DESCRIPTION="Compress an hyperloglog counter");
+CREATE FUNCTION gp_hyperloglog_comp(counter gp_hyperloglog_estimator) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_comp' WITH (OID=7160, DESCRIPTION="Compress a gp_hyperloglog counter");
 
-CREATE FUNCTION hyperloglog_merge(estimator1 hyperloglog_estimator, estimator2 hyperloglog_estimator) RETURNS hyperloglog_estimator  LANGUAGE internal IMMUTABLE AS 'hyperloglog_merge' WITH (OID=7161, DESCRIPTION="Merge two hyperloglog counters into one");
+CREATE FUNCTION gp_hyperloglog_merge(estimator1 gp_hyperloglog_estimator, estimator2 gp_hyperloglog_estimator) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE AS 'gp_hyperloglog_merge' WITH (OID=7161, DESCRIPTION="Merge two gp_hyperloglog counters into one");
 
-CREATE FUNCTION hyperloglog_get_estimate(counter hyperloglog_estimator) RETURNS float8  LANGUAGE internal IMMUTABLE STRICT AS 'hyperloglog_get_estimate' WITH (OID=7162, DESCRIPTION="Estimates the number of distinct values stored in an hyperloglog counter");
+CREATE FUNCTION gp_hyperloglog_get_estimate(counter gp_hyperloglog_estimator) RETURNS float8  LANGUAGE internal IMMUTABLE STRICT AS 'gp_hyperloglog_get_estimate' WITH (OID=7162, DESCRIPTION="Estimates the number of distinct values stored in a gp_hyperloglog counter");
 
-CREATE FUNCTION hyperloglog_add_item_agg_default(counter hyperloglog_estimator, item anyelement) RETURNS hyperloglog_estimator  LANGUAGE internal IMMUTABLE AS 'hyperloglog_add_item_agg_default' WITH (OID=7163, DESCRIPTION="Includes a data value into a hyperloglog counter");
+CREATE FUNCTION gp_hyperloglog_add_item_agg_default(counter gp_hyperloglog_estimator, item anyelement) RETURNS gp_hyperloglog_estimator  LANGUAGE internal IMMUTABLE AS 'gp_hyperloglog_add_item_agg_default' WITH (OID=7163, DESCRIPTION="Includes a data value into a gp_hyperloglog counter");
 
-CREATE FUNCTION hyperloglog_accum(anyelement) RETURNS hyperloglog_estimator LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=7164, proisagg="t", DESCRIPTION="Adds every data value to a hyperloglog counter and returns the counter");
+CREATE FUNCTION gp_hyperloglog_accum(anyelement) RETURNS gp_hyperloglog_estimator LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=7164, proisagg="t", DESCRIPTION="Adds every data value to a gp_hyperloglog counter and returns the counter");
 
 CREATE FUNCTION pg_get_table_distributedby(oid) RETURNS text LANGUAGE internal STABLE STRICT AS 'pg_get_table_distributedby' WITH (OID=6232, DESCRIPTION="deparse DISTRIBUTED BY clause for a given relation");
 

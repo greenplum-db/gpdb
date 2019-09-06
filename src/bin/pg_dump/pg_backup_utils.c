@@ -4,7 +4,7 @@
  *	Utility routines shared by pg_dump and pg_restore
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/pg_dump/pg_backup_utils.c
@@ -13,8 +13,8 @@
  */
 #include "postgres_fe.h"
 
-#include "pg_backup_utils.h"
 #include "parallel.h"
+#include "pg_backup_utils.h"
 
 /* Globals exported by this file */
 const char *progname = NULL;

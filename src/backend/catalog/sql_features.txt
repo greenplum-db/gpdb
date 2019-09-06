@@ -229,7 +229,7 @@ F311	Schema definition statement	02	CREATE TABLE for persistent base tables	YES
 F311	Schema definition statement	03	CREATE VIEW	YES	
 F311	Schema definition statement	04	CREATE VIEW: WITH CHECK OPTION	YES	
 F311	Schema definition statement	05	GRANT statement	YES	
-F312	MERGE statement			NO	
+F312	MERGE statement			NO	Consider INSERT ... ON CONFLICT DO UPDATE
 F313	Enhanced MERGE statement			NO	
 F314	MERGE statement with DELETE branch			NO	
 F321	User authorization			YES	
@@ -467,9 +467,9 @@ T331	Basic roles			YES
 T332	Extended roles			NO	mostly supported
 T341	Overloading of SQL-invoked functions and procedures			YES	
 T351	Bracketed SQL comments (/*...*/ comments)			YES	
-T431	Extended grouping capabilities			NO	
-T432	Nested and concatenated GROUPING SETS			NO	
-T433	Multiargument GROUPING function			NO	
+T431	Extended grouping capabilities			YES	
+T432	Nested and concatenated GROUPING SETS			YES	
+T433	Multiargument GROUPING function			YES	
 T434	GROUP BY DISTINCT			NO	
 T441	ABS and MOD functions			YES	
 T461	Symmetric BETWEEN predicate			YES	
@@ -492,7 +492,7 @@ T591	UNIQUE constraints of possibly null columns			YES
 T601	Local cursor references			NO	
 T611	Elementary OLAP operations			YES	
 T612	Advanced OLAP operations			NO	some forms supported
-T613	Sampling			NO	
+T613	Sampling			YES	
 T614	NTILE function			YES	
 T615	LEAD and LAG functions			YES	
 T616	Null treatment option for LEAD and LAG functions			NO	
@@ -565,21 +565,20 @@ X051	Advanced table mapping: nulls absent			YES
 X052	Advanced table mapping: null as nil			YES	
 X053	Advanced table mapping: table as forest			YES	
 X054	Advanced table mapping: table as element			YES	
-X055	Advanced table mapping: target namespace			YES	
+X055	Advanced table mapping: with target namespace			YES	
 X056	Advanced table mapping: data mapping			YES	
 X057	Advanced table mapping: metadata mapping			YES	
 X058	Advanced table mapping: base64 encoding of binary strings			YES	
 X059	Advanced table mapping: hex encoding of binary strings			YES	
-X060	XMLParse: Character string input and CONTENT option			YES	
-X061	XMLParse: Character string input and DOCUMENT option			YES	
-X062	XMLParse: explicit WHITESPACE option			YES	
+X060	XMLParse: character string input and CONTENT option			YES	
+X061	XMLParse: character string input and DOCUMENT option			YES	
 X065	XMLParse: BLOB input and CONTENT option			NO	
 X066	XMLParse: BLOB input and DOCUMENT option			NO	
 X068	XMLSerialize: BOM			NO	
 X069	XMLSerialize: INDENT			NO	
-X070	XMLSerialize: Character string serialization and CONTENT option			YES	
-X071	XMLSerialize: Character string serialization and DOCUMENT option			YES	
-X072	XMLSerialize: Character string serialization			YES	
+X070	XMLSerialize: character string serialization and CONTENT option			YES	
+X071	XMLSerialize: character string serialization and DOCUMENT option			YES	
+X072	XMLSerialize: character string serialization			YES	
 X073	XMLSerialize: BLOB serialization and CONTENT option			NO	
 X074	XMLSerialize: BLOB serialization and DOCUMENT option			NO	
 X075	XMLSerialize: BLOB serialization			NO	

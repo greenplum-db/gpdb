@@ -1,0 +1,85 @@
+platform: linux
+inputs:
+ - name: gpdb_src
+ - name: ccp_src
+ - name: cluster_env_files
+outputs:
+ - name: coverage
+run:
+  path: bash
+  args:
+  - -c
+  - |
+    set -ex
+
+    ccp_src/scripts/setup_ssh_to_cluster.sh
+
+    # TODO: ask CCP maintainers for a feature to do this for us
+    scp cluster_env_files/hostfile_all mdw:/tmp
+
+    # Install patchelf. We need to SSH as root, hence the use of
+    # cluster_env_files.
+    ssh -t ccp-$(cat cluster_env_files/terraform/name)-0 "sudo bash -c '
+        source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
+        install_python_hacks
+    '"
+
+    # setting sysctl settings
+    while read LINE; do
+        host=$(echo $LINE | awk '{ print $3 }')
+        ssh -n $host "sudo bash -c '
+            # minimal settings
+            sysctl -w kernel.shmall=\`expr \$(getconf _PHYS_PAGES) / 2\`
+            sysctl -w kernel.shmmax=\`expr \$(/sbin/sysctl -n kernel.shmall) \* \$(getconf PAGE_SIZE)\`
+            sysctl -w kernel.shmmni=4096
+            sysctl -w vm.overcommit_memory=2
+            sysctl -w vm.overcommit_ratio=95
+
+            # the recommended port range overlaps with many testing ports, such
+            # as 15432, 25432, 20000, etc., until we have adjusted all of them
+            # to ports below 10000 we would skip this setting.
+            #sysctl -w net.ipv4.ip_local_port_range=\"10000 65535\"
+
+            # additional settings
+            sysctl -w kernel.sem=\"500 2048000 200 40960\"
+            sysctl -w kernel.sysrq=1
+            sysctl -w kernel.core_uses_pid=1
+            sysctl -w kernel.msgmnb=65536
+            sysctl -w kernel.msgmax=65536
+            sysctl -w kernel.msgmni=2048
+            sysctl -w net.ipv4.tcp_syncookies=1
+            sysctl -w net.ipv4.conf.default.accept_source_route=0
+            sysctl -w net.ipv4.tcp_max_syn_backlog=4096
+            sysctl -w net.ipv4.conf.all.arp_filter=1
+            sysctl -w net.core.netdev_max_backlog=10000
+            sysctl -w net.core.rmem_max=2097152
+            sysctl -w net.core.wmem_max=2097152
+            sysctl -w vm.swappiness=10
+            sysctl -w vm.zone_reclaim_mode=0
+            sysctl -w vm.dirty_expire_centisecs=500
+            sysctl -w vm.dirty_writeback_centisecs=100
+            sysctl -w vm.dirty_background_ratio=0
+            sysctl -w vm.dirty_ratio=0
+            sysctl -w vm.dirty_background_bytes=1610612736
+            sysctl -w vm.dirty_bytes=4294967296
+        '"
+    done <cluster_env_files/etc_hostfile
+
+    ssh -t mdw "
+        source /home/gpadmin/gpdb_src/concourse/scripts/common.bash
+        install_python_requirements_on_multi_host /home/gpadmin/gpdb_src/gpMgmt/requirements-dev.txt
+
+        # Enable coverage.py on all hosts. (This modifies greenplum_path.sh and must
+        # come before the source below.)
+        setup_coverage /home/gpadmin/gpdb_src
+
+        $CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\"
+    "
+
+    # collect coverage
+    while read -r host; do
+        scp -r "$host:/tmp/coverage/*" ./coverage/
+    done < cluster_env_files/hostfile_all
+
+    source ./gpdb_src/concourse/scripts/common.bash
+    tar_coverage "${TEST_NAME}_ccp"

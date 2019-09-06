@@ -10,7 +10,7 @@
       <codeblock id="sql_command_synopsis">CREATE RESOURCE GROUP <varname>name</varname> WITH (<varname>group_attribute</varname>=<varname>value</varname> [, ... ])</codeblock>
       <p>where <varname>group_attribute</varname> is:</p>
       <codeblock>CPU_RATE_LIMIT=<varname>integer</varname> | CPUSET=<varname>tuple</varname>
-MEMORY_LIMIT=<varname>integer</varname>
+[ MEMORY_LIMIT=<varname>integer</varname> ]
 [ CONCURRENCY=<varname>integer</varname> ]
 [ MEMORY_SHARED_QUOTA=<varname>integer</varname> ]
 [ MEMORY_SPILL_RATIO=<varname>integer</varname> ]
@@ -63,15 +63,28 @@ MEMORY_LIMIT=<varname>integer</varname>
         </plentry>
         <plentry>
           <pt>MEMORY_LIMIT <varname>integer</varname></pt>
-          <pd>Required. The total percentage of Greenplum Database memory resources to allocate to this resource group. The minimum memory percentage you can specify for a resource group is 1. The maximum is 100. The sum of the <codeph>MEMORY_LIMIT</codeph> values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.</pd>
+          <pd>The total percentage of Greenplum Database memory resources to reserve for this
+            resource group. The minimum memory percentage you can specify for a resource
+            group is 0. The maximum is 100. The default value is 0.</pd>
+          <pd>When you specify a <codeph>MEMORY_LIMIT</codeph> of 0, Greenplum Database
+            reserves no memory for the resource group, but uses global shared memory to
+            fulfill all memory requests in the group. If <codeph>MEMORY_LIMIT</codeph> is 0,
+           <codeph>MEMORY_SPILL_RATIO</codeph> must also be 0.</pd>
+          <pd>The sum of the <codeph>MEMORY_LIMIT</codeph> values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.</pd>
         </plentry>
         <plentry>
           <pt>MEMORY_SHARED_QUOTA <varname>integer</varname></pt>
-          <pd>The quota of shared memory in the resource group. Resource groups with a <codeph>MEMORY_SHARED_QUOTA</codeph> threshold set aside a percentage of memory allotted to the resource group to share across transactions. This shared memory is allocated on a first-come, first-served basis as available. A transaction may use none, some, or all of this memory. The minimum memory shared quota percentage you can specify for a resource group is 0. The maximum is 100. The default <codeph>MEMORY_SHARED_QUOTA</codeph> value is 20.</pd>
+          <pd>The quota of shared memory in the resource group. Resource groups with a <codeph>MEMORY_SHARED_QUOTA</codeph> threshold set aside a percentage of memory allotted to the resource group to share across transactions. This shared memory is allocated on a first-come, first-served basis as available. A transaction may use none, some, or all of this memory. The minimum memory shared quota percentage you can specify for a resource group is 0. The maximum is 100. The default <codeph>MEMORY_SHARED_QUOTA</codeph> value is 80.</pd>
         </plentry>
         <plentry>
           <pt>MEMORY_SPILL_RATIO <varname>integer</varname></pt>
-          <pd>The memory usage threshold for memory-intensive operators in a transaction. When this threshold is reached, a transaction spills to disk. The minimum memory spill ratio percentage you can specify for a resource group is 0. The maximum is 100. The default <codeph>MEMORY_SPILL_RATIO</codeph> value is 20.</pd>
+          <pd>The memory usage threshold for memory-intensive operators in a transaction.
+            When this threshold is reached, a transaction spills to disk. You can specify
+            an integer percentage value  from 0 to 100 inclusive. The default
+            <codeph>MEMORY_SPILL_RATIO</codeph> value is 0. When <codeph>MEMORY_SPILL_RATIO</codeph>
+            is 0, Greenplum Database uses the
+            <xref href="../config_params/guc-list.xml#statement_mem" format="dita"><codeph>statement_mem</codeph></xref>
+            server configuration parameter value to control initial query operator memory.</pd>
         </plentry>
         <plentry>
           <pt>MEMORY_AUDITOR {vmtracker | cgroup}</pt>

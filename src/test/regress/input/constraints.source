@@ -92,7 +92,7 @@ CREATE SEQUENCE INSERT_SEQ;
 CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'),
 	y TEXT DEFAULT '-NULL-',
 	z INT DEFAULT -1 * (nextval('insert_seq')-1),
-	CONSTRAINT INSERT_CON CHECK (x >= 3 AND y <> 'check failed' AND x < 8),
+	CONSTRAINT INSERT_TBL_CON CHECK (x >= 3 AND y <> 'check failed' AND x < 8),
 	CHECK (x + z = 0)) DISTRIBUTED BY(y);
 
 INSERT INTO INSERT_TBL(x,z) VALUES (2, -2);
@@ -215,7 +215,7 @@ DELETE FROM INSERT_TBL;
 
 ALTER SEQUENCE INSERT_SEQ RESTART WITH 4;
 
-CREATE TABLE tmp (xd INT, yd TEXT, zd INT) distributed by (xd);
+CREATE TABLE tmp (xd INT, yd TEXT, zd INT);
 
 INSERT INTO tmp VALUES (null, 'Y', null);
 INSERT INTO tmp VALUES (5, '!check failed', null);
@@ -276,7 +276,7 @@ SELECT * FROM COPY_TBL;
 -- Primary keys
 --
 
-CREATE TABLE PRIMARY_TBL (i int PRIMARY KEY, t text) DISTRIBUTED BY (i);
+CREATE TABLE PRIMARY_TBL (i int PRIMARY KEY, t text);
 
 INSERT INTO PRIMARY_TBL VALUES (1, 'one');
 INSERT INTO PRIMARY_TBL VALUES (2, 'two');
@@ -290,7 +290,7 @@ SELECT '' AS four, * FROM PRIMARY_TBL;
 DROP TABLE PRIMARY_TBL;
 
 CREATE TABLE PRIMARY_TBL (i int, t text,
-	PRIMARY KEY(i,t)) DISTRIBUTED BY (i);
+	PRIMARY KEY(i,t));
 
 INSERT INTO PRIMARY_TBL VALUES (1, 'one');
 INSERT INTO PRIMARY_TBL VALUES (2, 'two');
@@ -307,7 +307,7 @@ DROP TABLE PRIMARY_TBL;
 -- Unique keys
 --
 
-CREATE TABLE UNIQUE_TBL (i int UNIQUE, t text) DISTRIBUTED BY (i);
+CREATE TABLE UNIQUE_TBL (i int UNIQUE, t text);
 
 INSERT INTO UNIQUE_TBL VALUES (1, 'one');
 INSERT INTO UNIQUE_TBL VALUES (2, 'two');
@@ -317,12 +317,17 @@ INSERT INTO UNIQUE_TBL VALUES (5, 'one');
 INSERT INTO UNIQUE_TBL (t) VALUES ('six');
 INSERT INTO UNIQUE_TBL (t) VALUES ('seven');
 
+INSERT INTO UNIQUE_TBL VALUES (5, 'five-upsert-insert') ON CONFLICT (i) DO UPDATE SET t = 'five-upsert-update';
+INSERT INTO UNIQUE_TBL VALUES (6, 'six-upsert-insert') ON CONFLICT (i) DO UPDATE SET t = 'six-upsert-update';
+-- should fail
+INSERT INTO UNIQUE_TBL VALUES (1, 'a'), (2, 'b'), (2, 'b') ON CONFLICT (i) DO UPDATE SET t = 'fails';
+
 SELECT '' AS five, * FROM UNIQUE_TBL;
 
 DROP TABLE UNIQUE_TBL;
 
 CREATE TABLE UNIQUE_TBL (i int, t text,
-	UNIQUE(i,t)) DISTRIBUTED BY (i);
+	UNIQUE(i,t));
 
 INSERT INTO UNIQUE_TBL VALUES (1, 'one');
 INSERT INTO UNIQUE_TBL VALUES (2, 'two');
@@ -473,6 +478,12 @@ INSERT INTO circles VALUES('<(0,0), 5>', '<(0,0), 4>');
 INSERT INTO circles VALUES('<(10,10), 10>', '<(0,0), 5>');
 -- fail, overlaps
 INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>');
+-- succeed, because violation is ignored
+INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
+  ON CONFLICT ON CONSTRAINT circles_c1_c2_excl DO NOTHING;
+-- fail, because DO UPDATE variant requires unique index
+INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
+  ON CONFLICT ON CONSTRAINT circles_c1_c2_excl DO UPDATE SET c2 = EXCLUDED.c2;
 -- succeed because c1 doesn't overlap
 INSERT INTO circles VALUES('<(20,20), 1>', '<(0,0), 5>');
 -- succeed because c2 doesn't overlap
@@ -498,6 +509,7 @@ CREATE TABLE deferred_excl (
 INSERT INTO deferred_excl VALUES(1);
 INSERT INTO deferred_excl VALUES(2);
 INSERT INTO deferred_excl VALUES(1); -- fail
+INSERT INTO deferred_excl VALUES(1) ON CONFLICT ON CONSTRAINT deferred_excl_con DO NOTHING; -- fail
 BEGIN;
 INSERT INTO deferred_excl VALUES(2); -- no fail here
 COMMIT; -- should fail here
@@ -525,32 +537,23 @@ ALTER TABLE deferred_excl ADD EXCLUDE (f1 WITH =);
 DROP TABLE deferred_excl;
 -- end_ignore
 
---
--- Test foreign key constraints
---
-BEGIN;
--- Test with two heap tables
-CREATE TABLE fkc_primary_table1(a int PRIMARY KEY, b text) DISTRIBUTED BY (a);
-CREATE TABLE fkc_foreign_table1(a int REFERENCES fkc_primary_table1 ON DELETE RESTRICT ON UPDATE RESTRICT, b text) DISTRIBUTED BY (a);
--- the following should succeed
-INSERT INTO fkc_primary_table1 VALUES (1, 'bar');
-INSERT INTO fkc_primary_table1 VALUES (2, 'bar');
-INSERT INTO fkc_foreign_table1 VALUES (1, 'bar');
-INSERT INTO fkc_foreign_table1 VALUES (2, 'bar');
-UPDATE fkc_foreign_table1 SET b = 'foo';
-DELETE FROM fkc_primary_table1 WHERE a = 1;
-COMMIT;
+-- Comments
+CREATE TABLE constraint_comments_tbl (a int CONSTRAINT the_constraint CHECK (a > 0));
+CREATE DOMAIN constraint_comments_dom AS int CONSTRAINT the_constraint CHECK (value > 0);
 
-BEGIN;
--- Test with an ao table and heap table
-CREATE TABLE fkc_primary_table2(a int PRIMARY KEY, b text) DISTRIBUTED BY (a);
-CREATE TABLE fkc_foreign_table2(a int REFERENCES fkc_primary_table2 ON DELETE RESTRICT ON UPDATE RESTRICT,
-                                b text) WITH (APPENDONLY=TRUE) DISTRIBUTED BY (a);
--- the following should succeed
-INSERT INTO fkc_primary_table2 VALUES (1, 'bar');
-INSERT INTO fkc_primary_table2 VALUES (2, 'bar');
-INSERT INTO fkc_foreign_table2 VALUES (1, 'bar');
-INSERT INTO fkc_foreign_table2 VALUES (2, 'bar');
-UPDATE fkc_foreign_table2 SET b = 'foo';
-DELETE FROM fkc_primary_table2 WHERE a = 1;
-COMMIT;
+COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS 'yes, the comment';
+COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS 'yes, another comment';
+
+-- no such constraint
+COMMENT ON CONSTRAINT no_constraint ON constraint_comments_tbl IS 'yes, the comment';
+COMMENT ON CONSTRAINT no_constraint ON DOMAIN constraint_comments_dom IS 'yes, another comment';
+
+-- no such table/domain
+COMMENT ON CONSTRAINT the_constraint ON no_comments_tbl IS 'bad comment';
+COMMENT ON CONSTRAINT the_constraint ON DOMAIN no_comments_dom IS 'another bad comment';
+
+COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS NULL;
+COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS NULL;
+
+DROP TABLE constraint_comments_tbl;
+DROP DOMAIN constraint_comments_dom;

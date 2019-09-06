@@ -4,7 +4,7 @@
  *	  implementation for PostgreSQL generic linked list package
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -831,6 +831,32 @@ list_intersection(const List *list1, const List *list2)
 	{
 		if (list_member(list2, lfirst(cell)))
 			result = lappend(result, lfirst(cell));
+	}
+
+	check_list_invariants(result);
+	return result;
+}
+
+/*
+ * As list_intersection but operates on lists of integers.
+ */
+List *
+list_intersection_int(const List *list1, const List *list2)
+{
+	List	   *result;
+	const ListCell *cell;
+
+	if (list1 == NIL || list2 == NIL)
+		return NIL;
+
+	Assert(IsIntegerList(list1));
+	Assert(IsIntegerList(list2));
+
+	result = NIL;
+	foreach(cell, list1)
+	{
+		if (list_member_int(list2, lfirst_int(cell)))
+			result = lappend_int(result, lfirst_int(cell));
 	}
 
 	check_list_invariants(result);

@@ -3,7 +3,7 @@
  * tsquery_gist.c
  *	  GiST index support for tsquery
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -14,7 +14,7 @@
 
 #include "postgres.h"
 
-#include "access/skey.h"
+#include "access/stratnum.h"
 #include "access/gist.h"
 #include "tsearch/ts_utils.h"
 

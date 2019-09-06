@@ -106,7 +106,6 @@ static Node *apply_motion_mutator(Node *node, ApplyMotionState *context);
 static bool replace_shareinput_targetlists_walker(Node *node, PlannerInfo *root, bool fPop);
 
 static bool fixup_subplan_walker(Node *node, SubPlanWalkerContext *context);
-static AttrNumber find_segid_column(List *tlist, Index relid);
 
 /*
  * Is target list of a Result node all-constant?
@@ -356,7 +355,7 @@ get_partitioned_policy_from_flow(Plan *plan)
 	 */
 	return createHashPartitionedPolicy(policykeys,
 									   policyopclasses,
-									   GP_POLICY_DEFAULT_NUMSEGMENTS);
+									   GP_POLICY_DEFAULT_NUMSEGMENTS());
 }
 
 
@@ -385,7 +384,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	ApplyMotionState state;
 	bool		needToAssignDirectDispatchContentIds = false;
 	bool		bringResultToDispatcher = false;
-	int			numsegments = GP_POLICY_ALL_NUMSEGMENTS;
+	int			numsegments = getgpsegmentCount();
 
 	/* Initialize mutator context. */
 
@@ -432,7 +431,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 				}
 				else if (gp_create_table_random_default_distribution)
 				{
-					targetPolicy = createRandomPartitionedPolicy(GP_POLICY_DEFAULT_NUMSEGMENTS);
+					targetPolicy = createRandomPartitionedPolicy(GP_POLICY_DEFAULT_NUMSEGMENTS());
 					ereport(NOTICE,
 							(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
 							 errmsg("using default RANDOM distribution since no distribution was specified"),
@@ -474,7 +473,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 						}
 						targetPolicy = createHashPartitionedPolicy(policykeys,
 																   policyopclasses,
-																   GP_POLICY_DEFAULT_NUMSEGMENTS);
+																   GP_POLICY_DEFAULT_NUMSEGMENTS());
 					}
 
 					/* If we deduced the policy from the query, give a NOTICE */
@@ -859,7 +858,7 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 			 * add an ExplicitRedistribute motion node only if child plan
 			 * nodes have a motion node
 			 */
-			if (context->containMotionNodes || IsA(plan, Reshuffle))
+			if (context->containMotionNodes)
 			{
 				/*
 				 * motion node in child nodes: add a ExplicitRedistribute
@@ -977,7 +976,7 @@ add_slice_to_motion(Motion *motion,
 	int			i;
 
 	Assert(numsegments > 0);
-	if (numsegments == __GP_POLICY_EVIL_NUMSEGMENTS)
+	if (numsegments == GP_POLICY_INVALID_NUMSEGMENTS())
 	{
 		Assert(!"what's the proper value of numsegments?");
 	}
@@ -1257,6 +1256,9 @@ find_junk_tle(List *targetList, const char *junkAttrName)
 		if (!tle->resjunk)
 			continue;
 
+		if (!tle->resname)
+			continue;
+
 		if (strcmp(tle->resname, junkAttrName) == 0)
 			return tle;
 	}
@@ -1309,7 +1311,6 @@ copy_junk_attributes(List *src, List **dest, AttrNumber startAttrIdx)
 {
 	ListCell	*currAppendCell;
 	ListCell	*lct;
-	Var			*var;
 	TargetEntry	*newTargetEntry;
 
 	/* There should be at least ctid exist */
@@ -1319,16 +1320,34 @@ copy_junk_attributes(List *src, List **dest, AttrNumber startAttrIdx)
 
 	for_each_cell(lct, currAppendCell)
 	{
-		Assert(IsA(lfirst(lct), TargetEntry) && IsA(((TargetEntry *) lfirst(lct))->expr, Var));
+		Assert(IsA(lfirst(lct), TargetEntry));
 
-		var = copyObject(((TargetEntry *) lfirst(lct))->expr);
-		var->varno = OUTER_VAR;
-		var->varattno = ((TargetEntry *) lfirst(lct))->resno;
+		if(IsA(((TargetEntry *) lfirst(lct))->expr, Var))
+		{
+			Var			*var;
+			var = copyObject(((TargetEntry *) lfirst(lct))->expr);
+			var->varno = OUTER_VAR;
+			var->varattno = ((TargetEntry *) lfirst(lct))->resno;
 
-		newTargetEntry = makeTargetEntry((Expr *) var, startAttrIdx + 1, ((TargetEntry *) lfirst(lct))->resname,
-										 true);
-		*dest = lappend(*dest, newTargetEntry);
-		++startAttrIdx;
+			newTargetEntry = makeTargetEntry((Expr *) var,
+											 startAttrIdx + 1,
+											 ((TargetEntry *) lfirst(lct))->resname,
+											 true);
+			*dest = lappend(*dest, newTargetEntry);
+			++startAttrIdx;
+		}
+		else
+		{
+			Expr *ex;
+			ex            = copyObject(((TargetEntry *) lfirst(lct))->expr);
+			newTargetEntry = makeTargetEntry((Expr *) ex,
+											 startAttrIdx + 1,
+											 ((TargetEntry *) lfirst(lct))->resname,
+											 true);
+			*dest = lappend(*dest, newTargetEntry);
+			++startAttrIdx;
+		}
+
 	}
 }
 
@@ -1426,7 +1445,7 @@ process_targetlist_for_splitupdate(Relation resultRel, List *targetlist,
 }
 
 /*
- * In legacy planner, we add a SplitUpdate node at top so that updating on distribution
+ * In Postgres planner, we add a SplitUpdate node at top so that updating on distribution
  * columns could be handled. The SplitUpdate will split each update into delete + insert.
  *
  * There are several important points should be highlighted:
@@ -1441,10 +1460,7 @@ process_targetlist_for_splitupdate(Relation resultRel, List *targetlist,
  * Second, current GPDB executor don't support statement-level update triggers and will
  * skip row-level update triggers because a split-update is actually consist of a delete
  * and insert. So, if the result relation has update triggers, we should reject and error
- * out because it's not functional.  There is an exception for 'ALTER TABLE SET WITH
- * (RESHUFFLE)', RESHUFFLE also use split update node internal to rebalance/expand table,
- * from the view of user, ALTER TABLE should not hit any kind of triggers, so we don't
- * need to error out in this case.
+ * out because it's not functional.
  *
  * Third, to support deletion, and hash delete operation to correct segment,
  * we need to get attributes of OLD tuple. The old attributes must therefore
@@ -1471,7 +1487,7 @@ process_targetlist_for_splitupdate(Relation resultRel, List *targetlist,
  * 'result_relation' is the RTI of the UPDATE target relation.
  */
 SplitUpdate *
-make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntry *rte, bool checkTrigger)
+make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntry *rte)
 {
 	AttrNumber		ctidColIdx = 0;
 	List			*deleteColIdx = NIL;
@@ -1490,8 +1506,7 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	/* Suppose we already hold locks before caller */
 	resultRelation = relation_open(rte->relid, NoLock);
 
-	if (checkTrigger)
-		failIfUpdateTriggers(resultRelation);
+	failIfUpdateTriggers(resultRelation);
 
 	resultDesc = RelationGetDescr(resultRelation);
 
@@ -1559,94 +1574,6 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	mt->oid_col_idxes = lappend_int(mt->oid_col_idxes, oidColIdx);
 
 	return splitupdate;
-}
-
-Reshuffle *
-make_reshuffle(PlannerInfo *root,
-			   Plan *subplan,
-			   RangeTblEntry *rte,
-			   Index resultRelationsIdx)
-{
-	int 		 i;
-	Reshuffle 	*reshufflePlan = makeNode(Reshuffle);
-	Relation 	rel = relation_open(rte->relid, NoLock);
-	GpPolicy 	*policy = rel->rd_cdbpolicy;
-
-	reshufflePlan->plan.targetlist = list_copy(subplan->targetlist);
-	reshufflePlan->plan.lefttree = subplan;
-
-	reshufflePlan->plan.startup_cost = subplan->startup_cost;
-	reshufflePlan->plan.total_cost = subplan->total_cost;
-	reshufflePlan->plan.plan_rows = subplan->plan_rows;
-	reshufflePlan->plan.plan_width = subplan->plan_width;
-	reshufflePlan->oldSegs = policy->numsegments;
-	reshufflePlan->tupleSegIdx =
-		find_segid_column(reshufflePlan->plan.targetlist,
-						  resultRelationsIdx);
-
-	reshufflePlan->numPolicyAttrs = policy->nattrs;
-
-	reshufflePlan->policyAttrs = palloc(policy->nattrs * sizeof(AttrNumber));
-	reshufflePlan->policyHashFuncs = palloc(policy->nattrs * sizeof(Oid));
-
-	for(i = 0; i < policy->nattrs; i++)
-	{
-		AttrNumber	attnum = policy->attrs[i];
-		Oid			opfamily = get_opclass_family(policy->opclasses[i]);
-		TargetEntry *tle = list_nth(subplan->targetlist, attnum - 1);
-		Oid			typeoid = exprType((Node *) tle->expr);
-		Oid			hashFunc;
-
-		hashFunc = cdb_hashproc_in_opfamily(opfamily, typeoid);
-
-		reshufflePlan->policyAttrs[i] = policy->attrs[i];
-		reshufflePlan->policyHashFuncs[i] = hashFunc;
-	}
-
-	reshufflePlan->ptype = policy->ptype;
-
-	mark_plan_strewn((Plan *) reshufflePlan, subplan->flow->numsegments);
-
-	heap_close(rel, NoLock);
-
-	return reshufflePlan;
-}
-
-
-/*
- * Find the index of the segid column of the requested relation (relid) in the
- * target list
- */
-static AttrNumber
-find_segid_column(List *tlist, Index relid)
-{
-	if (NIL == tlist)
-	{
-		return -1;
-	}
-
-	ListCell   *lcte = NULL;
-
-	foreach(lcte, tlist)
-	{
-		TargetEntry *te = (TargetEntry *) lfirst(lcte);
-
-		Var		   *var = (Var *) te->expr;
-
-		if (!IsA(var, Var))
-		{
-			continue;
-		}
-
-		if ((var->varno == relid && var->varattno == GpSegmentIdAttributeNumber) ||
-			(var->varnoold == relid && var->varoattno == GpSegmentIdAttributeNumber))
-		{
-			return te->resno;
-		}
-	}
-
-	/* no segid column found */
-	return -1;
 }
 
 /* ----------------------------------------------------------------------- *

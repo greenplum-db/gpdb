@@ -2,7 +2,7 @@
  *
  *	  JOHAB <--> UTF8
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -21,9 +21,6 @@ PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(johab_to_utf8);
 PG_FUNCTION_INFO_V1(utf8_to_johab);
-
-extern Datum johab_to_utf8(PG_FUNCTION_ARGS);
-extern Datum utf8_to_johab(PG_FUNCTION_ARGS);
 
 /* ----------
  * conv_proc(
@@ -44,8 +41,11 @@ johab_to_utf8(PG_FUNCTION_ARGS)
 
 	CHECK_ENCODING_CONVERSION_ARGS(PG_JOHAB, PG_UTF8);
 
-	LocalToUtf(src, dest, LUmapJOHAB, NULL,
-			 sizeof(LUmapJOHAB) / sizeof(pg_local_to_utf), 0, PG_JOHAB, len);
+	LocalToUtf(src, len, dest,
+			   LUmapJOHAB, lengthof(LUmapJOHAB),
+			   NULL, 0,
+			   NULL,
+			   PG_JOHAB);
 
 	PG_RETURN_VOID();
 }
@@ -59,8 +59,11 @@ utf8_to_johab(PG_FUNCTION_ARGS)
 
 	CHECK_ENCODING_CONVERSION_ARGS(PG_UTF8, PG_JOHAB);
 
-	UtfToLocal(src, dest, ULmapJOHAB, NULL,
-			 sizeof(ULmapJOHAB) / sizeof(pg_utf_to_local), 0, PG_JOHAB, len);
+	UtfToLocal(src, len, dest,
+			   ULmapJOHAB, lengthof(ULmapJOHAB),
+			   NULL, 0,
+			   NULL,
+			   PG_JOHAB);
 
 	PG_RETURN_VOID();
 }

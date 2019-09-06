@@ -3,7 +3,7 @@
  * rangetypes_gist.c
  *	  GiST support for range types.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -15,7 +15,7 @@
 #include "postgres.h"
 
 #include "access/gist.h"
-#include "access/skey.h"
+#include "access/stratnum.h"
 #include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/rangetypes.h"
@@ -216,7 +216,7 @@ range_gist_union(PG_FUNCTION_ARGS)
 	PG_RETURN_RANGE(result_range);
 }
 
-/* compress, decompress are no-ops */
+/* compress, decompress, fetch are no-ops */
 Datum
 range_gist_compress(PG_FUNCTION_ARGS)
 {
@@ -227,6 +227,14 @@ range_gist_compress(PG_FUNCTION_ARGS)
 
 Datum
 range_gist_decompress(PG_FUNCTION_ARGS)
+{
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
+
+	PG_RETURN_POINTER(entry);
+}
+
+Datum
+range_gist_fetch(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
 

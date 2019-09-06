@@ -24,9 +24,9 @@
 #include "port/atomics.h"
 #include "storage/buffile.h"
 #include "utils/builtins.h"
+#include "utils/guc.h"
 #include "utils/logtape.h"
 #include "utils/memutils.h"
-
 
 #define TEST_NAME_LENGTH 50
 #define TEST_HT_NUM_ELEMENTS 8192
@@ -49,6 +49,7 @@ static bool execworkfile_create_one_MB_file(void);
 static bool workfile_fill_sharedcache(void);
 static bool workfile_create_and_set_cleanup(void);
 static bool workfile_create_and_individual_cleanup(void);
+static bool workfile_made_in_temp_tablespace(void);
 
 static bool atomic_test(void);
 
@@ -81,6 +82,7 @@ static test_def test_defns[] = {
 		{"workfile_fill_sharedcache", workfile_fill_sharedcache},
 		{"workfile_create_and_set_cleanup", workfile_create_and_set_cleanup},
 		{"workfile_create_and_individual_cleanup", workfile_create_and_individual_cleanup},
+		{"workfile_made_in_temp_tablespace", workfile_made_in_temp_tablespace},
 		{NULL, NULL}, /* This has to be the last element of the array */
 };
 
@@ -810,6 +812,49 @@ workfile_create_and_set_cleanup(void)
 	return unit_test_summary();
 }
 
+static bool
+workfile_made_in_temp_tablespace(void)
+{
+	bool success = true;
+
+	unit_test_reset();
+
+	/*
+	 * Set temp_tablespaces at a session level to simulate what a user does
+	 */
+	SetConfigOption("temp_tablespaces", "ts1", PGC_INTERNAL, PGC_S_SESSION);
+
+	workfile_set *work_set = workfile_mgr_create_set("workfile_test", NULL);
+
+	/*
+	 * BufFileCreateTempInSet calls PrepareTempTablespaces
+	 * which parses the temp_tablespaces value and BufFileCreateTempInSet
+	 * uses that value as the location for workfile created
+	 */
+	BufFile *bufFile = BufFileCreateTempInSet(work_set, false);
+
+	if (bufFile == NULL)
+		success = false;
+
+	const char *bufFilePath = BufFileGetFilename(bufFile);
+
+	char *expectedPathPrefix = "pg_tblspc/";
+
+	/*
+	 * Expect workfile to be created in the temp tablespace specified above,
+	 * which will have the prefix, "pg_tblspc". By default,
+	 * workfiles are created in data directory having prefix, "base"
+	 */
+	if(0 != strncmp(bufFilePath, expectedPathPrefix, strlen(expectedPathPrefix)))
+		success = false;
+
+	BufFileClose(bufFile);
+	workfile_mgr_close_set(work_set);
+
+	unit_test_result(success);
+
+	return unit_test_summary();
+}
 
 /*
  * Unit test that creates very many workfiles, and then closes them one by one

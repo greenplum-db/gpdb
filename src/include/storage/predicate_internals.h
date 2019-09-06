@@ -4,7 +4,7 @@
  *	  POSTGRES internal predicate locking definitions.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/predicate_internals.h
@@ -33,7 +33,7 @@ typedef uint64 SerCommitSeqNo;
  *	  at that point.  It's earlier than all normal sequence numbers,
  *	  and is only used by recovered prepared transactions
  */
-#define InvalidSerCommitSeqNo		((SerCommitSeqNo) UINT64CONST(0xFFFFFFFFFFFFFFFF))
+#define InvalidSerCommitSeqNo		((SerCommitSeqNo) PG_UINT64_MAX)
 #define RecoverySerCommitSeqNo		((SerCommitSeqNo) 1)
 #define FirstNormalSerCommitSeqNo	((SerCommitSeqNo) 2)
 

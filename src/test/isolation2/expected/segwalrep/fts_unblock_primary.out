@@ -45,17 +45,15 @@ insert into fts_unblock_primary values (4);
 INSERT 1
 
 -- skip FTS probes always
-create extension if not exists gp_inject_fault;
-CREATE
 select gp_inject_fault('fts_probe', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 select gp_inject_fault_infinite('fts_probe', 'skip', 1);
  gp_inject_fault_infinite 
 --------------------------
- t                        
+ Success:                 
 (1 row)
 -- force scan to trigger the fault
 select gp_request_fts_probe_scan();
@@ -67,7 +65,7 @@ select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 
 -- stop a mirror
@@ -82,7 +80,7 @@ server stopped
 -- this should block since mirror is not up and sync replication is on
 2: begin;
 BEGIN
-2: insert into fts_unblock_primary values (4);
+2: insert into fts_unblock_primary values (5);
 INSERT 1
 2&: commit;  <waiting ...>
 
@@ -94,7 +92,7 @@ INSERT 1
 select gp_inject_fault('fts_probe', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 -- trigger fts probe and check to see primary marked n/u and mirror still n/u as
@@ -155,7 +153,7 @@ COMMIT
 select gp_inject_fault_infinite('initialize_wal_sender', 'suspend', dbid) from gp_segment_configuration where role='p' and content=2;
  gp_inject_fault_infinite 
 --------------------------
- t                        
+ Success:                 
 (1 row)
 
 -- bring the mirror back up and see primary s/u and mirror s/u
@@ -168,7 +166,7 @@ select gp_inject_fault_infinite('initialize_wal_sender', 'suspend', dbid) from g
 select gp_wait_until_triggered_fault('initialize_wal_sender', 1, dbid) from gp_segment_configuration where role='p' and content=2;
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 -- make sure the walsender on primary is in startup
 select state from gp_stat_replication where gp_segment_id=2;
@@ -193,7 +191,7 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 select gp_inject_fault('initialize_wal_sender', 'reset', dbid) from gp_segment_configuration where role='p' and content=2;
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 select wait_for_streaming(2::smallint);
  wait_for_streaming 

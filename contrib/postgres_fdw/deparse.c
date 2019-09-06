@@ -24,7 +24,7 @@
  * with collations that match the remote table's columns, which we can
  * consider to be user error.
  *
- * Portions Copyright (c) 2012-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  contrib/postgres_fdw/deparse.c
@@ -51,6 +51,7 @@
 #include "parser/parsetree.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 
@@ -121,7 +122,6 @@ static void deparseReturningList(StringInfo buf, PlannerInfo *root,
 static void deparseColumnRef(StringInfo buf, int varno, int varattno,
 				 PlannerInfo *root);
 static void deparseRelation(StringInfo buf, Relation rel);
-static void deparseStringLiteral(StringInfo buf, const char *val);
 static void deparseExpr(Expr *expr, deparse_expr_cxt *context);
 static void deparseVar(Var *node, deparse_expr_cxt *context);
 static void deparseConst(Const *node, deparse_expr_cxt *context);
@@ -879,8 +879,8 @@ appendWhereClause(StringInfo buf,
 void
 deparseInsertSql(StringInfo buf, PlannerInfo *root,
 				 Index rtindex, Relation rel,
-				 List *targetAttrs, List *returningList,
-				 List **retrieved_attrs)
+				 List *targetAttrs, bool doNothing,
+				 List *returningList, List **retrieved_attrs)
 {
 	AttrNumber	pindex;
 	bool		first;
@@ -923,6 +923,9 @@ deparseInsertSql(StringInfo buf, PlannerInfo *root,
 	}
 	else
 		appendStringInfoString(buf, " DEFAULT VALUES");
+
+	if (doNothing)
+		appendStringInfoString(buf, " ON CONFLICT DO NOTHING");
 
 	deparseReturningList(buf, root, rtindex, rel,
 					   rel->trigdesc && rel->trigdesc->trig_insert_after_row,
@@ -1201,7 +1204,7 @@ deparseRelation(StringInfo buf, Relation rel)
 /*
  * Append a SQL string literal representing "val" to buf.
  */
-static void
+void
 deparseStringLiteral(StringInfo buf, const char *val)
 {
 	const char *valptr;
@@ -1757,9 +1760,6 @@ deparseRelabelType(RelabelType *node, deparse_expr_cxt *context)
 
 /*
  * Deparse a BoolExpr node.
- *
- * Note: by the time we get here, AND and OR expressions have been flattened
- * into N-argument form, so we'd better be prepared to deal with that.
  */
 static void
 deparseBoolExpr(BoolExpr *node, deparse_expr_cxt *context)

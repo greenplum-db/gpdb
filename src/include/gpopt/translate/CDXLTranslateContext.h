@@ -57,7 +57,7 @@ namespace gpdxl
 	{
 
 		private:
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// private copy ctor
 			CDXLTranslateContext(const CDXLTranslateContext&);
@@ -80,9 +80,9 @@ namespace gpdxl
 
 		public:
 			// ctor/dtor
-			CDXLTranslateContext(IMemoryPool *mp, BOOL is_child_agg_node);
+			CDXLTranslateContext(CMemoryPool *mp, BOOL is_child_agg_node);
 
-			CDXLTranslateContext(IMemoryPool *mp, BOOL is_child_agg_node, ULongToColParamMap *original);
+			CDXLTranslateContext(CMemoryPool *mp, BOOL is_child_agg_node, ULongToColParamMap *original);
 
 			~CDXLTranslateContext();
 

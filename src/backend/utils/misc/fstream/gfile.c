@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/file.h>   /* for flock */
+#include <unistd.h>
 
 #ifdef WIN32
 #include <io.h>

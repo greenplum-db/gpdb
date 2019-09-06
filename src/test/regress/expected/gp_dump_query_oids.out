@@ -62,7 +62,7 @@ LINE 1: SELECT * FROM nonexistent_table
                       ^
 QUERY:  SELECT * FROM nonexistent_table
 SELECT gp_dump_query_oids('SELECT with syntax error');
-ERROR:  syntax error at or near "with syntax"
+ERROR:  syntax error at or near "with"
 LINE 1: SELECT with syntax error
                ^
 QUERY:  SELECT with syntax error

@@ -8,7 +8,7 @@
  * be a measurable performance gain from doing this, but that might change
  * in the future as we add more options.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -81,10 +81,9 @@ InitializeTableSpaceCache(void)
 	MemSet(&ctl, 0, sizeof(ctl));
 	ctl.keysize = sizeof(Oid);
 	ctl.entrysize = sizeof(TableSpaceCacheEntry);
-	ctl.hash = oid_hash;
 	TableSpaceCacheHash =
 		hash_create("TableSpace cache", 16, &ctl,
-					HASH_ELEM | HASH_FUNCTION);
+					HASH_ELEM | HASH_BLOBS);
 
 	/* Make sure we've initialized CacheMemoryContext. */
 	if (!CacheMemoryContext)

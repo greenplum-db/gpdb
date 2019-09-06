@@ -34,7 +34,8 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                 the table's columns, and/or columns of other tables mentioned in
                     <codeph>USING</codeph>, can be computed. The syntax of the
                     <codeph>RETURNING</codeph> list is identical to that of the output list of
-                    <codeph>SELECT</codeph>.</p>
+                    <codeph>SELECT</codeph>.<note>The <codeph>RETURNING</codeph> clause is not
+                    supported when deleting from append-optimized tables.</note></p>
             <p>You must have the <codeph>DELETE</codeph> privilege on the table to delete from it. </p>
             <note>As the default, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on
                 tables for <codeph>DELETE</codeph> operations on heap tables. When the Global
@@ -46,8 +47,13 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                 <p>On successful completion, a <codeph>DELETE</codeph> command returns a command tag
                     of the form</p>
                 <codeblock>DELETE <varname>count</varname></codeblock>
-                <p>The count is the number of rows deleted. If count is 0, no rows matched the
-                    condition (this is not considered an error). </p>
+                <p>The <varname>count</varname> is the number of rows deleted. If <varname>count</varname> is 0, no
+                    rows were deleted by the query (this is not considered an error).</p><p>If the
+                        <codeph>DELETE</codeph> command contains a <codeph>RETURNING</codeph>
+                    clause, the result will be similar to that of a <codeph>SELECT</codeph>
+                    statement containing the columns and values defined in the
+                        <codeph>RETURNING</codeph> list, computed over the row(s) deleted by the
+                    command.</p>
             </sectiondiv>
         </section>
         <section id="section5">
@@ -57,11 +63,16 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                     <pt><varname>with_query</varname></pt>
                     <pd>The <codeph>WITH</codeph> clause allows you to specify one or more
                         subqueries that can be referenced by name in the <codeph>DELETE</codeph>
-                        query. See <xref
+                        query. </pd>
+                    <pd>For a <codeph>DELETE</codeph> command that includes a <codeph>WITH</codeph>
+                        clause, the clause can only contain <codeph>SELECT</codeph> statements, the
+                            <codeph>WITH</codeph> clause cannot contain a data-modifying command
+                            (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
+                            <codeph>DELETE</codeph>). </pd>
+                    <pd>See <xref
                             href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/>
-                        and <xref href="SELECT.xml#topic1"/> for details. </pd>
+                        and <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
                 </plentry>
-                
                 <plentry>
                     <pt>ONLY</pt>
                     <pd>If specified, delete rows from the named table only. When not specified, any
@@ -157,6 +168,11 @@ name = 'Hannah';</codeblock>
                 a specific partition (child table) of a partitioned table is not supported. Instead,
                 these commands must be executed on the root partitioned table, the table created
                 with the <codeph>CREATE TABLE</codeph> command.</p>
+            <p>For a partitioned table, all the child tables are locked during the
+                    <codeph>DELETE</codeph> operation when the Global Deadlock Detector is not
+                enabled (the default). Only some of the leaf child tables are locked when the Global
+                Deadlock Detector is enabled. For information about the Global Deadlock Detector,
+                see <xref href="../../admin_guide/dml.xml#topic_gdd"/>.</p>
         </section>
         <section id="section7">
             <title>Examples</title>

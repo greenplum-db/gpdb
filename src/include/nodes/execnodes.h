@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/execnodes.h
@@ -19,12 +19,14 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "executor/instrument.h"
+#include "lib/pairingheap.h"
 #include "nodes/params.h"
+#include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
 #include "utils/reltrigger.h"
 #include "utils/sortsupport.h"
 #include "utils/tuplestore.h"
-#include "nodes/parsenodes.h"
+//#include "utils/tuplesort.h"
 
 #include "gpmon/gpmon.h"                /* gpmon_packet_t */
 
@@ -59,6 +61,9 @@ struct SliceTable;
  *		ExclusionOps		Per-column exclusion operators, or NULL if none
  *		ExclusionProcs		Underlying function OIDs for ExclusionOps
  *		ExclusionStrats		Opclass strategy numbers for ExclusionOps
+ *		UniqueOps			Theses are like Exclusion*, but for unique indexes
+ *		UniqueProcs
+ *		UniqueStrats
  *		Unique				is it a unique index?
  *		ReadyForInserts		is it valid for inserts?
  *		Concurrent			are we doing a concurrent index build?
@@ -80,10 +85,14 @@ typedef struct IndexInfo
 	Oid		   *ii_ExclusionOps;	/* array with one entry per column */
 	Oid		   *ii_ExclusionProcs;		/* array with one entry per column */
 	uint16	   *ii_ExclusionStrats;		/* array with one entry per column */
+	Oid		   *ii_UniqueOps;	/* array with one entry per column */
+	Oid		   *ii_UniqueProcs; /* array with one entry per column */
+	uint16	   *ii_UniqueStrats;	/* array with one entry per column */
 	bool		ii_Unique;
 	bool		ii_ReadyForInserts;
 	bool		ii_Concurrent;
 	bool		ii_BrokenHotChain;
+	Oid			ii_Am;
 } IndexInfo;
 
 /* ----------------
@@ -161,11 +170,6 @@ typedef struct ExprContext
 
 	/* Functions to call back when ExprContext is shut down or rescanned */
 	ExprContext_CB *ecxt_callbacks;
-
-	/* Representing the final grouping and group_id for a tuple
-	 * in a grouping extension query. */
-	uint64      grouping;
-	uint32      group_id;
 } ExprContext;
 
 /*
@@ -329,11 +333,13 @@ typedef void *RelationDeleteDesc;
  *		TrigInstrument			optional runtime measurements for triggers
  *		FdwRoutine				FDW callback functions, if foreign table
  *		FdwState				available to save private state of FDW
- *		WithCheckOptions		list of WithCheckOption's for views
+ *		WithCheckOptions		list of WithCheckOption's to be checked
  *		WithCheckOptionExprs	list of WithCheckOption expr states
  *		ConstraintExprs			array of constraint-checking expr states
  *		junkFilter				for removing junk attributes from tuples
  *		projectReturning		for computing a RETURNING list
+ *		onConflictSetProj		for computing ON CONFLICT DO UPDATE SET
+ *		onConflictSetWhere		list of ON CONFLICT DO UPDATE exprs (qual)
  *		tupdesc_match			???
  *		mt_bind					???
  *		aoInsertDesc			context for appendonly relation buffered INSERT.
@@ -365,7 +371,10 @@ typedef struct ResultRelInfo
 	List	   *ri_WithCheckOptionExprs;
 	List	  **ri_ConstraintExprs;
 	JunkFilter *ri_junkFilter;
+	AttrNumber  ri_segid_attno; /* gpdb: attribute number of "gp_segment_id" */
 	ProjectionInfo *ri_projectReturning;
+	ProjectionInfo *ri_onConflictSetProj;
+	List	   *ri_onConflictSetWhere;
 	int			tupdesc_match;
 	struct MemTupleBinding *mt_bind;
 
@@ -668,31 +677,37 @@ extern struct MotionState *getMotionState(struct PlanState *ps, int sliceIndex);
 extern int LocallyExecutingSliceIndex(EState *estate);
 extern int PrimaryWriterSliceIndex(EState *estate);
 extern int RootSliceIndex(EState *estate);
-#ifdef USE_ASSERT_CHECKING
-extern void SliceLeafMotionStateAreValid(struct MotionState *ms);
-#endif
 
 /*
  * ExecRowMark -
  *	   runtime representation of FOR [KEY] UPDATE/SHARE clauses
  *
- * When doing UPDATE, DELETE, or SELECT FOR [KEY] UPDATE/SHARE, we should have an
+ * When doing UPDATE, DELETE, or SELECT FOR [KEY] UPDATE/SHARE, we will have an
  * ExecRowMark for each non-target relation in the query (except inheritance
- * parent RTEs, which can be ignored at runtime).  See PlanRowMark for details
- * about most of the fields.  In addition to fields directly derived from
- * PlanRowMark, we store curCtid, which is used by the WHERE CURRENT OF code.
+ * parent RTEs, which can be ignored at runtime).  Virtual relations such as
+ * subqueries-in-FROM will have an ExecRowMark with relation == NULL.  See
+ * PlanRowMark for details about most of the fields.  In addition to fields
+ * directly derived from PlanRowMark, we store an activity flag (to denote
+ * inactive children of inheritance trees), curCtid, which is used by the
+ * WHERE CURRENT OF code, and ermExtra, which is available for use by the plan
+ * node that sources the relation (e.g., for a foreign table the FDW can use
+ * ermExtra to hold information).
  *
  * EState->es_rowMarks is a list of these structs.
  */
 typedef struct ExecRowMark
 {
 	Relation	relation;		/* opened and suitably locked relation */
+	Oid			relid;			/* its OID (or InvalidOid, if subquery) */
 	Index		rti;			/* its range table index */
 	Index		prti;			/* parent range table index, if child */
 	Index		rowmarkId;		/* unique identifier for resjunk columns */
 	RowMarkType markType;		/* see enum in nodes/plannodes.h */
-	bool		noWait;			/* NOWAIT option */
+	LockClauseStrength strength;	/* LockingClause's strength, or LCS_NONE */
+	LockWaitPolicy waitPolicy;	/* NOWAIT and SKIP LOCKED */
+	bool		ermActive;		/* is this mark relevant for current tuple? */
 	ItemPointerData curCtid;	/* ctid of currently locked tuple, if any */
+	void	   *ermExtra;		/* available for use by relation source node */
 } ExecRowMark;
 
 /*
@@ -868,17 +883,32 @@ typedef struct AggrefExprState
 	int			aggno;			/* ID number for agg within its plan node */
 } AggrefExprState;
 
-/*
- * ----------------
+/* ----------------
  *		GroupingFuncExprState node
+ *
+ * The list of column numbers refers to the input tuples of the Agg node to
+ * which the GroupingFunc belongs, and may contain 0 for references to columns
+ * that are only present in grouping sets processed by different Agg nodes (and
+ * which are therefore always considered "grouping" here).
  * ----------------
  */
 typedef struct GroupingFuncExprState
 {
-	ExprState  xprstate;
-	List          *args;
-	int        ngrpcols;   /* number of unique grouping attributes */
+	ExprState	xprstate;
+	struct AggState *aggstate;
+	List	   *clauses;		/* integer list of column numbers */
 } GroupingFuncExprState;
+
+/* ----------------
+ *		GroupIdExprState node
+ *
+ * ----------------
+ */
+typedef struct GroupIdExprState
+{
+	ExprState	xprstate;
+	struct AggState *aggstate;
+} GroupIdExprState;
 
 /* ----------------
  *		WindowFuncExprState node
@@ -1106,6 +1136,7 @@ typedef struct SubPlanState
 {
 	ExprState	xprstate;
 	struct PlanState *planstate;	/* subselect plan's state tree */
+	struct PlanState *parent;	/* parent plan node's state tree */
 	ExprState  *testexpr;		/* state of combining expression */
 	List	   *args;			/* states of argument expression(s) */
 	struct MemTupleData *curTuple; /* copy of most recent tuple from subplan */
@@ -1318,21 +1349,10 @@ typedef struct CoerceToDomainState
 {
 	ExprState	xprstate;
 	ExprState  *arg;			/* input expression */
-	/* Cached list of constraints that need to be checked */
-	List	   *constraints;	/* list of DomainConstraintState nodes */
+	/* Cached set of constraints that need to be checked */
+	/* use struct pointer to avoid including typcache.h here */
+	struct DomainConstraintRef *constraint_ref;
 } CoerceToDomainState;
-
-/* ----------------
- *		ReshuffleExprState node
- * ----------------
- */
-typedef struct ReshuffleExprState
-{
-	ExprState	xprstate;
-	ExprState  *arg;
-	List	   *hashKeys;		/* ExprState nodes */
-	struct CdbHash *cdbhash;	/* hash api object */
-} ReshuffleExprState;
 
 /*
  * DomainConstraintState - one item to check during CoerceToDomain
@@ -1528,6 +1548,14 @@ typedef struct ModifyTableState
 	List	  **mt_arowmarks;	/* per-subplan ExecAuxRowMark lists */
 	EPQState	mt_epqstate;	/* for evaluating EvalPlanQual rechecks */
 	bool		fireBSTriggers; /* do we need to fire stmt triggers? */
+	OnConflictAction mt_onconflict;		/* ON CONFLICT type */
+	List	   *mt_arbiterindexes;		/* unique index OIDs to arbitrate
+										 * taking alt path */
+	TupleTableSlot *mt_existing;	/* slot to store existing target tuple in */
+	List	   *mt_excludedtlist;		/* the excluded pseudo relation's
+										 * tlist  */
+	TupleTableSlot *mt_conflproj;		/* CONFLICT ... SET ... projection
+										 * target */
 	AttrNumber		*mt_action_col_idxes;
 	AttrNumber		*mt_ctid_col_idxes;
 	AttrNumber		*mt_oid_col_idxes;
@@ -1699,6 +1727,19 @@ typedef struct SeqScanState
 } SeqScanState;
 
 /*
+ * SampleScan
+ */
+typedef struct SampleScanState
+{
+	ScanState	ss;
+	struct HeapScanDescData *ss_currentScanDesc_heap;
+	struct AppendOnlyScanDescData *ss_currentScanDesc_ao;
+	struct AOCSScanDescData *ss_currentScanDesc_aocs;
+
+	struct TableSampleDesc *tsdesc;
+} SampleScanState;
+
+/*
  * These structs store information about index quals that don't have simple
  * constant right-hand sides.  See comments for ExecIndexBuildScanKeys()
  * for discussion.
@@ -1724,6 +1765,7 @@ typedef struct
  *	 IndexScanState information
  *
  *		indexqualorig	   execution state for indexqualorig expressions
+ *		indexorderbyorig   execution state for indexorderbyorig expressions
  *		ScanKeys		   Skey structures for index quals
  *		NumScanKeys		   number of ScanKeys
  *		OrderByKeys		   Skey structures for index ordering operators
@@ -1734,12 +1776,21 @@ typedef struct
  *		RuntimeContext	   expr context for evaling runtime Skeys
  *		RelationDesc	   index relation descriptor
  *		ScanDesc		   index scan descriptor
+ *
+ *		ReorderQueue	   tuples that need reordering due to re-check
+ *		ReachedEnd		   have we fetched all tuples from index already?
+ *		OrderByValues	   values of ORDER BY exprs of last fetched tuple
+ *		OrderByNulls	   null flags for OrderByValues
+ *		SortSupport		   for reordering ORDER BY exprs
+ *		OrderByTypByVals   is the datatype of order by expression pass-by-value?
+ *		OrderByTypLens	   typlens of the datatypes of order by expressions
  * ----------------
  */
 typedef struct IndexScanState
 {
 	ScanState	ss;				/* its first field is NodeTag */
 	List	   *indexqualorig;
+	List	   *indexorderbyorig;
 	ScanKey		iss_ScanKeys;
 	int			iss_NumScanKeys;
 	ScanKey		iss_OrderByKeys;
@@ -1751,11 +1802,21 @@ typedef struct IndexScanState
 	Relation	iss_RelationDesc;
 	IndexScanDesc iss_ScanDesc;
 
+	/* These are needed for re-checking ORDER BY expr ordering */
+	pairingheap *iss_ReorderQueue;
+	bool		iss_ReachedEnd;
+	Datum	   *iss_OrderByValues;
+	bool	   *iss_OrderByNulls;
+	SortSupport iss_SortSupport;
+	bool	   *iss_OrderByTypByVals;
+	int16	   *iss_OrderByTypLens;
+
 	/*
 	 * tableOid is the oid of the partition or relation on which our current
 	 * index relation is defined.
 	 */
 	Oid			tableOid;
+
 } IndexScanState;
 
 /*
@@ -2003,7 +2064,6 @@ typedef struct TidScanState
 	bool		tss_isCurrentOf;
 	int			tss_NumTids;
 	int			tss_TidPtr;
-	int			tss_MarkTidPtr;
 	ItemPointerData *tss_TidList;
 	HeapTupleData tss_htup;
 } TidScanState;
@@ -2054,10 +2114,11 @@ typedef struct FunctionScanState
 	int			nfuncs;
 	struct FunctionScanPerFuncState *funcstates;		/* array of length
 														 * nfuncs */
+	MemoryContext argcontext;
+
 	bool		cdb_want_ctid;
 	ItemPointerData cdb_fake_ctid;
 	ItemPointerData cdb_mark_ctid;
-	MemoryContext argcontext;
 
 	bool		delayEagerFree;		/* is is safe to free memory used by this node,
 									 * when this node has outputted its last row? */
@@ -2095,7 +2156,6 @@ typedef struct TableFunctionState
  *		exprlists			array of expression lists being evaluated
  *		array_len			size of array
  *		curr_idx			current array index (0-based)
- *		marked_idx			marked position (for mark/restore)
  *
  *	Note: ss.ps.ps_ExprContext is used to evaluate any qual or projection
  *	expressions attached to the node.  We create a second ExprContext,
@@ -2111,7 +2171,6 @@ typedef struct ValuesScanState
 	List	  **exprlists;
 	int			array_len;
 	int			curr_idx;
-	int			marked_idx;
 	bool		cdb_want_ctid;	/* true => ctid is referenced in targetlist */
 } ValuesScanState;
 
@@ -2242,6 +2301,50 @@ typedef struct DynamicSeqScanState
 
 } DynamicSeqScanState;
 
+/* ----------------
+ *	 CustomScanState information
+ *
+ *		CustomScan nodes are used to execute custom code within executor.
+ *
+ * Core code must avoid assuming that the CustomScanState is only as large as
+ * the structure declared here; providers are allowed to make it the first
+ * element in a larger structure, and typically would need to do so.  The
+ * struct is actually allocated by the CreateCustomScanState method associated
+ * with the plan node.  Any additional fields can be initialized there, or in
+ * the BeginCustomScan method.
+ * ----------------
+ */
+struct ExplainState;			/* avoid including explain.h here */
+struct CustomScanState;
+
+typedef struct CustomExecMethods
+{
+	const char *CustomName;
+
+	/* Executor methods: mark/restore are optional, the rest are required */
+	void		(*BeginCustomScan) (struct CustomScanState *node,
+												EState *estate,
+												int eflags);
+	TupleTableSlot *(*ExecCustomScan) (struct CustomScanState *node);
+	void		(*EndCustomScan) (struct CustomScanState *node);
+	void		(*ReScanCustomScan) (struct CustomScanState *node);
+	void		(*MarkPosCustomScan) (struct CustomScanState *node);
+	void		(*RestrPosCustomScan) (struct CustomScanState *node);
+
+	/* Optional: print additional information in EXPLAIN */
+	void		(*ExplainCustomScan) (struct CustomScanState *node,
+												  List *ancestors,
+												  struct ExplainState *es);
+} CustomExecMethods;
+
+typedef struct CustomScanState
+{
+	ScanState	ss;
+	uint32		flags;			/* mask of CUSTOMPATH_* flags, see relation.h */
+	List	   *custom_ps;		/* list of child PlanState nodes, if any */
+	const CustomExecMethods *methods;
+} CustomScanState;
+
 /* ----------------------------------------------------------------
  *				 Join State Information
  * ----------------------------------------------------------------
@@ -2275,6 +2378,7 @@ typedef struct NestLoopState
 	bool		nl_MatchedOuter;
 	bool		shared_outer;
 	bool		prefetch_inner;
+	bool		prefetch_joinqual;
 	bool		reset_inner; /*CDB-OLAP*/
 	bool		require_inner_reset; /*CDB-OLAP*/
 
@@ -2330,6 +2434,7 @@ typedef struct MergeJoinState
 	ExprContext *mj_OuterEContext;
 	ExprContext *mj_InnerEContext;
 	bool		prefetch_inner; /* MPP-3300 */
+	bool		prefetch_joinqual;
 } MergeJoinState;
 
 /* ----------------
@@ -2387,6 +2492,7 @@ typedef struct HashJoinState
 	bool		hj_OuterNotEmpty;
 	bool		hj_InnerEmpty;  /* set to true if inner side is empty */
 	bool		prefetch_inner;
+	bool		prefetch_joinqual;
 	bool		hj_nonequijoin;
 
 	/* set if the operator created workfiles */
@@ -2501,9 +2607,35 @@ typedef struct SortState
  *	expressions and run the aggregate transition functions.
  * -------------------------
  */
+
+/*
+ * AggStatePerPhaseData - per-grouping-set-phase state
+ *
+ * Grouping sets are divided into "phases", where a single phase can be
+ * processed in one pass over the input. If there is more than one phase, then
+ * at the end of input from the current phase, state is reset and another pass
+ * taken over the data which has been re-sorted in the mean time.
+ *
+ * Accordingly, each phase specifies a list of grouping sets and group clause
+ * information, plus each phase after the first also has a sort order.
+ */
+typedef struct AggStatePerPhaseData
+{
+	int			numsets;		/* number of grouping sets (or 0) */
+	int		   *gset_lengths;	/* lengths of grouping sets */
+	Bitmapset **grouped_cols;	/* column groupings for rollup */
+	FmgrInfo   *eqfunctions;	/* per-grouping-field equality fns */
+	Agg		   *aggnode;		/* Agg node for phase data */
+	Sort	   *sortnode;		/* Sort node for input ordering for phase */
+
+	int		   *group_id;		/* on per gset */
+}	AggStatePerPhaseData;
+
+
 /* these structs are private in nodeAgg.c: */
 typedef struct AggStatePerAggData *AggStatePerAgg;
 typedef struct AggStatePerGroupData *AggStatePerGroup;
+typedef struct AggStatePerPhaseData *AggStatePerPhase;
 
 typedef enum HashAggStatus
 {
@@ -2519,17 +2651,27 @@ typedef struct AggState
 	ScanState	ss;				/* its first field is NodeTag */
 	List	   *aggs;			/* all Aggref nodes in targetlist & quals */
 	int			numaggs;		/* length of list (could be zero!) */
-	FmgrInfo   *eqfunctions;	/* per-grouping-field equality fns */
+	AggStatePerPhase phase;		/* pointer to current phase data */
+	int			numphases;		/* number of phases */
+	int			current_phase;	/* current phase number */
 	FmgrInfo   *hashfunctions;	/* per-grouping-field hash fns */
 	AggStatePerAgg peragg;		/* per-Aggref information */
-	MemoryContext aggcontext;	/* memory context for long-lived data */
+	ExprContext **aggcontexts;	/* econtexts for long-lived data (per GS) */
 	ExprContext *tmpcontext;	/* econtext for input expressions */
 	AggStatePerAgg curperagg;	/* identifies currently active aggregate */
+	bool		input_done;		/* indicates end of input */
 	bool		agg_done;		/* indicates completion of Agg scan */
-	bool        has_partial_agg;/* indicate if a partial aggregate result
-								 * has been calculated in the previous call.
-								 */
-
+	int			projected_set;	/* The last projected grouping set */
+	int			current_set;	/* The current grouping set being evaluated */
+	Bitmapset  *grouped_cols;	/* grouped cols in current projection */
+	int			group_id;		/* GROUP_ID in current projection */
+	List	   *all_grouped_cols; /* list of all grouped cols in DESC order */
+	/* These fields are for grouping set phase data */
+	int			maxsets;		/* The max number of sets in any phase */
+	AggStatePerPhase phases;	/* array of all phases */
+	struct switcheroo_Tuplesortstate *sort_in;	/* sorted input to phases > 0 */
+	struct switcheroo_Tuplesortstate *sort_out;	/* input is copied here for next phase */
+	TupleTableSlot *sort_slot;	/* slot for sort results */
 	/* these fields are used in AGG_PLAIN and AGG_SORTED modes: */
 	AggStatePerGroup pergroup;	/* per-Aggref-per-group working state */
 	struct MemTupleData *grp_firstTuple; /* copy of first tuple of current group */
@@ -2654,6 +2796,15 @@ typedef struct WindowAggState
 	TupleTableSlot *agg_row_slot;
 	TupleTableSlot *temp_slot_1;
 	TupleTableSlot *temp_slot_2;
+
+	/*
+	 * Most executor nodes in GPDB don't support SRFs in target lists, the
+	 * planner tries to insulate them from SRFs by adding Result nodes. But
+	 * WindowAgg needs to handle them, because a Result can't evaluate
+	 * WindowFunc, which an WindowAgg's target list usually has.
+	 * This is the same logic as for AggState.
+	 */
+	bool		ps_TupFromTlist;
 } WindowAggState;
 
 /* ----------------
@@ -2730,6 +2881,8 @@ typedef struct LockRowsState
 	PlanState	ps;				/* its first field is NodeTag */
 	List	   *lr_arowMarks;	/* List of ExecAuxRowMarks */
 	EPQState	lr_epqstate;	/* for evaluating EvalPlanQual rechecks */
+	HeapTuple  *lr_curtuples;	/* locked tuples (one entry per RT entry) */
+	int			lr_ntables;		/* length of lr_curtuples[] array */
 } LockRowsState;
 
 /* ----------------
@@ -2784,6 +2937,7 @@ typedef struct DMLState
 	PlanState	ps;
 	JunkFilter *junkfilter;			/* filter that removes junk and dropped attributes */
 	TupleTableSlot *cleanedUpSlot;	/* holds 'final' tuple which matches the target relation schema */
+	AttrNumber	segid_attno;		/* attribute number of "gp_segment_id" */
 } DMLState;
 
 /*
@@ -2906,23 +3060,5 @@ typedef struct PartitionSelectorState
 	TupleTableSlot *partTabSlot;
 	ProjectionInfo *partTabProj;
 } PartitionSelectorState;
-
-/*
- * ExecNode for ReshuffleState.
- * This operator contains a Plannode in PlanState.
- * It is used by the Reshuffle operator, which is used
- * to reshuffle table data.
- */
-typedef struct ReshuffleState
-{
-	PlanState ps;
-	List	   *destList;
-	int			newTargetIdx;
-
-	struct CdbHash *cdbhash;	/* hash api object for computing new segment */
-	struct CdbHash *oldcdbhash;	/* hash api object for computing old segment */
-
-	TupleTableSlot *savedSlot;
-} ReshuffleState;
 
 #endif   /* EXECNODES_H */

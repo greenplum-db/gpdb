@@ -1,6 +1,14 @@
+test: lockmodes
+
+test: ao_partition_lock
+test: dml_on_root_locks_all_parts
+
 test: select_dropped_table
 # test update hash col under utility mode
 test: update_hash_col_utilitymode
+
+# test delete/update when there are tuples with wrong distribution on segments.
+test: modifytable_with_bad_distribution
 
 # Tests for crash recovery
 test: uao_crash_compaction_column
@@ -13,19 +21,29 @@ test: unlogged_appendonly_tables
 test: udf_exception_blocks_panic_scenarios
 
 # Tests on global deadlock detector
-test: select_for_update
 test: gdd/prepare
 test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/non-lock-105
 # until we can improve below flaky case please keep it disabled
 ignore: gdd/non-lock-107
 # keep this in a separate group
 test: gdd/avoid-qd-deadlock
-test: gdd/prepare-for-local
+test: gdd/delete-deadlock-root-leaf-concurrent-op
+test: gdd/planner_insert_while_vacuum_drop
+test: gdd/update-deadlock-root-leaf-concurrent-op
+test: gdd/dml_locks_only_targeted_table_in_query
+
+# this resets the gp_global_deadlock_detector_period guc hence should
+# be last in the group.
 test: gdd/local-deadlock-03
 # gdd end
 test: gdd/end
 
-test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
+# The following test injects a fault at a generic location
+# (StartTransaction).  The fault can be easily triggered by a
+# concurrent test, so run the test by itself.
+test: deadlock_under_entry_db_singleton
+
+test: pg_terminate_backend starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue misc vacuum_drop_phase_ao
 
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation
@@ -60,7 +78,7 @@ test: uao/cursor_withhold2_row
 test: uao/delete_while_vacuum_row
 test: uao/insert_policy_row
 test: uao/insert_while_vacuum_row
-test: uao/max_concurrency_row
+test: uao/max_concurrency_row segwalrep/master_xlog_switch
 test: uao/max_concurrency2_row
 test: uao/modcount_row
 test: uao/modcount_vacuum_row
@@ -149,8 +167,12 @@ test: segwalrep/fts_unblock_primary
 test: segwalrep/mirror_promotion
 test: segwalrep/cancel_commit_pending_replication
 test: segwalrep/twophase_tolerance_with_mirror_promotion
+test: segwalrep/failover_with_many_records
+test: segwalrep/dtm_recovery_on_standby
+test: segwalrep/commit_blocking_on_standby
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
+test: fts_manual_probe
 
 # Reindex tests
 test: reindex/abort_reindex
@@ -167,7 +189,7 @@ test: reindex/serializable_reindex_with_drop_column_ao_part reindex/serializable
 test: reindex/serializable_reindex_with_drop_column_part_heap
 test: reindex/serializable_reindex_with_drop_index_ao reindex/serializable_reindex_with_drop_index_heap
 test: reindex/repeatable_read_reindex_with_insert_heap
-test: reindex/repeatable_read_reindex_with_insert_part_heap reindex/vacuum_anal_while_reindex_ao_btree
+test: reindex/repeatable_read_reindex_with_insert_part_heap reindex/vacuum_analyze_while_reindex_ao_btree
 test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_btree reindex/vacuum_while_reindex_heap_btree_toast
 
 # Cancel test
@@ -180,3 +202,17 @@ test: concurrent_update_epq
 
 # Tests for getting numsegments in utility mode
 test: upgrade_numsegments
+# Memory accounting tests
+
+# OOM tests start
+test: create_memory_accounting_tables 
+test: setup_memory_accounting
+test: oom_mixed_1 oom_mixed_2 oom_simple
+test: restore_memory_accounting_default
+# Sleep and OOM tests end
+
+# Too many exec accounts test start
+test: setup_too_many_exec_accounts
+test: oom_too_many_accounts
+test: restore_memory_accounting_default
+#Too many exec account tests end

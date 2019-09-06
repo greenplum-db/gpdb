@@ -2,7 +2,7 @@
 #
 # Makefile for the postgres backend
 #
-# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/backend/Makefile
@@ -16,8 +16,6 @@ PGFILEDESC = "PostgreSQL Server"
 subdir = src/backend
 top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
-
-BLD_TOP = $(top_builddir)/gpAux
 
 SUBDIRS = access bootstrap catalog parser commands executor foreign \
 	fts lib libpq main nodes optimizer port postmaster regex \

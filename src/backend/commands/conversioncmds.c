@@ -3,7 +3,7 @@
  * conversioncmds.c
  *	  conversion creation command support code
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -38,7 +38,7 @@
 /*
  * CREATE CONVERSION
  */
-Oid
+ObjectAddress
 CreateConversionCommand(CreateConversionStmt *stmt)
 {
 	Oid			namespaceId;
@@ -115,8 +115,8 @@ CreateConversionCommand(CreateConversionStmt *stmt)
 	 * All seem ok, go ahead (possible failure would be a duplicate conversion
 	 * name)
 	 */
-	Oid			convOid;
-	convOid = ConversionCreate(conversion_name, namespaceId, GetUserId(),
+	ObjectAddress objAddr;
+	objAddr = ConversionCreate(conversion_name, namespaceId, GetUserId(),
 							   from_encoding, to_encoding, funcoid, stmt->def);
 					 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -129,5 +129,5 @@ CreateConversionCommand(CreateConversionStmt *stmt)
 									NULL);
 	}
 
-	return convOid;
+	return objAddr;
 }

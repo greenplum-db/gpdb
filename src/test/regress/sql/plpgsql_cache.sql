@@ -688,3 +688,106 @@ select cache_test(t) from cache_tab;
 
 drop function get_dummy_string(text);
 drop function cache_test(text);
+drop table cache_tab;
+
+
+--
+-- Test that a query is re-planned every time, if the plan can use partition
+-- elimination.
+--
+-- Starting with PostgreSQL 9.2 (merged into GPDB in GPDB version 6), we create
+-- a "specific" plan for a query, on the first five calls. The specific plan
+-- makes use of the exact parameter values supplied, and can use e.g. partition
+-- elimination and constant-folding using the parameter values. On the fifth
+-- call, the planner also generates a "generic" plan, which doesn't do those
+-- things and which would be correct with any parameter values. If the generic
+-- plan seems as cheap as the specific plans, then switch to using the generic
+-- plan. The generic plan is cached and used on all subsequent invocations.
+--
+-- That's a crude heuristic, but it's better than the old behavior, where we
+-- always used generic plans. The heuristic should at least catch the common
+-- cases when partition elimination is helpful, and that's what we test here.
+--
+-- The point of this test is to test that we *don't* switch to using a generic
+-- plan, when the specialized plans are better. The test function includes
+-- a query that benefits from partition elimination, based on the function's
+-- parameter. We execute it several times, and verify that we don't switch to
+-- a generic plan that doesn't do partition elimination.
+
+-- Create a partitioned test table with a few partitions, and one row in each
+-- partition. Use a dummy distribution key, so that all the data resides on a
+-- single segment; that makes the output order of the NOTICEs printed in the
+-- test function deterministic.
+create table cache_tab
+(
+  c1 int,
+  c2 int,
+  distkey int
+) distributed by (distkey) partition by range(c1) (start (1) end(11) every(1));
+
+insert into cache_tab select g, g, 0 from generate_series(1, 10) g;
+
+-- A helper function that prints the parameter as a NOTICE. Claim a very
+-- small cost, to encourage the planner to evaluate this function first,
+-- before other quals. We use these NOTICEs to detect which rows, and hence
+-- which partitions, were scanned.
+--
+-- We use a temporary sequence to distinguish between two calls with the same
+-- value in the expected output; gpdiff masks out duplicated NOTICEs, the
+-- sequence makes them different.
+create sequence notice_value_seq;
+create or replace function pg_temp.notice_value(t text) returns bool as
+$$
+begin
+  raise notice 'notice_value called %: %', nextval('notice_value_seq'), t;
+  return true;
+end;
+$$ language plpgsql VOLATILE cost 0.0001;
+
+-- The test function.
+create or replace function pg_temp.cache_test(param integer) returns integer as
+$$
+declare
+  result integer;
+  cur refcursor;
+begin
+  -- We want to detect whether partition elimination was used. We do that by using
+  -- the notice_value() function in the qual. If partition elimination is used, we
+  -- should only see NOTICEs for values in the target partition. This is a bit fragile,
+  -- it relies on the fact that the planner chooses to evalues the notice_value(c2) qual
+  -- before the other quals. To make sure that that happens, run a "control" test first,
+  -- which cannot use partition elimination. This should print 10 NOTICEs, one for each
+  -- row.
+  alter sequence notice_value_seq restart;
+  raise notice 'control';
+  open cur for select c1 from cache_tab where pg_temp.notice_value('control') and c2 = param;
+  fetch cur into result;
+  close cur;
+  raise notice 'control returned: %', result;
+
+  -- And now the actual test, which should use partition elimination, and print only
+  -- one NOTICE, for the only row in the matching partition.
+  raise notice 'test';
+  open cur for select c1 from cache_tab where pg_temp.notice_value('test ' || c2) and c1 = param;
+  fetch cur into result;
+  close cur;
+
+  return result;
+end;
+$$ language plpgsql;
+
+-- Repeat the test a several times, to see if we switch to generic plans.
+-- We should not, because the specialized plans can do partition elimination
+-- and are therefore much cheaper.
+select pg_temp.cache_test(1);
+select pg_temp.cache_test(2);
+select pg_temp.cache_test(3);
+select pg_temp.cache_test(4);
+select pg_temp.cache_test(5);
+select pg_temp.cache_test(6);
+select pg_temp.cache_test(7);
+select pg_temp.cache_test(8);
+select pg_temp.cache_test(9);
+select pg_temp.cache_test(10);
+
+drop table cache_tab;

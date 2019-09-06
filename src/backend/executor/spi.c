@@ -3,7 +3,7 @@
  * spi.c
  *				Server Programming Interface
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -23,6 +23,7 @@
 #include "commands/trigger.h"
 #include "executor/executor.h"
 #include "executor/spi_priv.h"
+#include "miscadmin.h"
 #include "tcop/pquery.h"
 #include "tcop/utility.h"
 #include "utils/builtins.h"
@@ -1072,6 +1073,27 @@ SPI_pfree(void *pointer)
 	pfree(pointer);
 }
 
+Datum
+SPI_datumTransfer(Datum value, bool typByVal, int typLen)
+{
+	MemoryContext oldcxt = NULL;
+	Datum		result;
+
+	if (_SPI_curid + 1 == _SPI_connected)		/* connected */
+	{
+		if (_SPI_current != &(_SPI_stack[_SPI_curid + 1]))
+			elog(ERROR, "SPI stack corrupted");
+		oldcxt = MemoryContextSwitchTo(_SPI_current->savedcxt);
+	}
+
+	result = datumTransfer(value, typByVal, typLen);
+
+	if (oldcxt)
+		MemoryContextSwitchTo(oldcxt);
+
+	return result;
+}
+
 void
 SPI_freetuple(HeapTuple tuple)
 {
@@ -1256,6 +1278,7 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 	CachedPlan *cplan;
 	List	   *stmt_list;
 	char	   *query_string;
+	ListCell   *lc;
 	Snapshot	snapshot;
 	MemoryContext oldcontext;
 	Portal		portal;
@@ -1328,6 +1351,14 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 	cplan = GetCachedPlan(plansource, paramLI, false, NULL);
 	stmt_list = cplan->stmt_list;
 
+	/* GPDB: Mark all queries as SPI inner queries for extension usage */
+	foreach(lc, stmt_list)
+	{
+		Node *stmt = (Node *) lfirst(lc);
+		if (IsA(stmt, PlannedStmt))
+			((PlannedStmt*)stmt)->metricsQueryType = SPI_INNER_QUERY;
+	}
+
 	/* Pop the error context stack */
 	error_context_stack = spierrcontext.previous;
 
@@ -1395,13 +1426,14 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 	}
 
 	/*
-	 * If told to be read-only, we'd better check for read-only queries. This
-	 * can't be done earlier because we need to look at the finished, planned
-	 * queries.  (In particular, we don't want to do it between GetCachedPlan
-	 * and PortalDefineQuery, because throwing an error between those steps
-	 * would result in leaking our plancache refcount.)
+	 * If told to be read-only, or in parallel mode, verify that this query is
+	 * in fact read-only.  This can't be done earlier because we need to look
+	 * at the finished, planned queries.  (In particular, we don't want to do
+	 * it between GetCachedPlan and PortalDefineQuery, because throwing an
+	 * error between those steps would result in leaking our plancache
+	 * refcount.)
 	 */
-	if (read_only)
+	if (read_only || IsInParallelMode())
 	{
 		ListCell   *lc;
 
@@ -1410,11 +1442,16 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 			Node	   *pstmt = (Node *) lfirst(lc);
 
 			if (!CommandIsReadOnly(pstmt))
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				/* translator: %s is a SQL statement name */
+			{
+				if (read_only)
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					/* translator: %s is a SQL statement name */
 					   errmsg("%s is not allowed in a non-volatile function",
 							  CreateCommandTag(pstmt))));
+				else
+					PreventCommandIfParallelMode(CreateCommandTag(pstmt));
+			}
 		}
 	}
 
@@ -2213,7 +2250,10 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 
 			if (IsA(stmt, PlannedStmt))
 			{
-				canSetTag = ((PlannedStmt *) stmt)->canSetTag;
+				PlannedStmt* pstmt = (PlannedStmt *) stmt;
+				canSetTag = pstmt->canSetTag;
+				/* GPDB: Mark all queries as SPI inner query for extension usage */
+				((PlannedStmt*)pstmt)->metricsQueryType = SPI_INNER_QUERY;
 			}
 			else
 			{
@@ -2243,6 +2283,9 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 				/* translator: %s is a SQL statement name */
 					   errmsg("%s is not allowed in a non-volatile function",
 							  CreateCommandTag(stmt))));
+
+			if (IsInParallelMode() && !CommandIsReadOnly(stmt))
+				PreventCommandIfParallelMode(CreateCommandTag(stmt));
 
 			/*
 			 * If not read-only mode, advance the command counter before each
@@ -2438,9 +2481,8 @@ _SPI_convert_params(int nargs, Oid *argtypes,
 	{
 		int			i;
 
-		/* sizeof(ParamListInfoData) includes the first array element */
-		paramLI = (ParamListInfo) palloc(sizeof(ParamListInfoData) +
-									  (nargs - 1) * sizeof(ParamExternData));
+		paramLI = (ParamListInfo) palloc(offsetof(ParamListInfoData, params) +
+										 nargs * sizeof(ParamExternData));
 		/* we have static list of params, so no hooks needed */
 		paramLI->paramFetch = NULL;
 		paramLI->paramFetchArg = NULL;
@@ -2640,7 +2682,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 			/*
 			 * only check number tuples if the SPI 64 bit test is NOT running
 			 */
-			if (!FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
+			if (!FaultInjector_InjectFaultIfSet("executor_run_high_processed",
 										   DDLNotSpecified,
 										   "" /* databaseName */,
 										   "" /* tableName */))

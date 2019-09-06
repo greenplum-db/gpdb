@@ -3,7 +3,7 @@
  * int8.c
  *	  Internal 64-bit integer operations
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -78,7 +78,7 @@ scanint8(const char *str, bool errorOK, int64 *result)
 		 */
 		if (strncmp(ptr, "9223372036854775808", 19) == 0)
 		{
-			tmp = -INT64CONST(0x7fffffffffffffff) - 1;
+			tmp = PG_INT64_MIN;
 			ptr += 19;
 			goto gotdigits;
 		}

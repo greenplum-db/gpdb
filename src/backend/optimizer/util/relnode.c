@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -135,6 +135,7 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptKind reloptkind)
 	rel->extEntry = NULL;
 	rel->subroot = NULL;
 	rel->subplan_params = NIL;
+	rel->serverid = InvalidOid;
 	rel->fdwroutine = NULL;
 	rel->fdw_private = NULL;
 	rel->baserestrictinfo = NIL;
@@ -426,6 +427,7 @@ build_join_rel(PlannerInfo *root,
 	joinrel->subplan = NULL;
 	joinrel->subroot = NULL;
 	joinrel->subplan_params = NIL;
+	joinrel->serverid = InvalidOid;
 	joinrel->fdwroutine = NULL;
 	joinrel->fdw_private = NULL;
 	joinrel->baserestrictinfo = NIL;
@@ -437,6 +439,17 @@ build_join_rel(PlannerInfo *root,
 	/* CDB: Join between single-row inputs produces a single-row joinrel. */
 	if (outer_rel->onerow && inner_rel->onerow)
 		joinrel->onerow = true;
+
+	/*
+	 * Set up foreign-join fields if outer and inner relation are foreign
+	 * tables (or joins) belonging to the same server.
+	 */
+	if (OidIsValid(outer_rel->serverid) &&
+		inner_rel->serverid == outer_rel->serverid)
+	{
+		joinrel->serverid = outer_rel->serverid;
+		joinrel->fdwroutine = outer_rel->fdwroutine;
+	}
 
 	/*
 	 * Create a new tlist containing just the vars that need to be output from

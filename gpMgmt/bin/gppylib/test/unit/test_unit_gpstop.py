@@ -1,6 +1,7 @@
 import imp
 import logging
 import os
+import signal
 import sys
 import time
 import unittest
@@ -446,6 +447,114 @@ class GpStopPrintProgressTestCase(unittest.TestCase):
             call('50.00% of jobs completed'),
             call('100.00% of jobs completed'),
         ])
+
+
+@patch('gppylib.db.dbconn.connect')
+@patch('subprocess.call')
+class GpStopSmartModeTestCase(unittest.TestCase):
+    def setUp(self):
+        gpstop.logger = Mock(logging.Logger)
+        self.gpstop = gpstop.GpStop('smart')
+
+        # _SigIntHandler requires an ignored SIGINT to start with.
+        self.orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    def tearDown(self):
+        # Restore the original SIGINT handler even on test failure.
+        signal.signal(signal.SIGINT, self.orig_handler)
+
+    def _setup_subprocess(self, subprocess_call):
+        self.stop_retval = 0
+        self.status_callback = lambda: gpstop.PG_CTL_STATUS_STOPPED
+
+        def _call(args, **kwargs):
+            if args[0] != 'pg_ctl':
+                self.fail('Expected only pg_ctl calls to be made during subprocess.call().')
+
+            if args[1] == 'stop':
+                return self.stop_retval
+            elif args[1] == 'status':
+                return self.status_callback()
+
+            self.fail('Unimplemented pg_ctl command: {}'.format(args))
+
+        subprocess_call.side_effect = _call
+
+    def test_stop_master_smart_issues_pg_ctl_stop(self, subprocess_call, dbconn_connect):
+        self._setup_subprocess(subprocess_call)
+
+        self.gpstop.master_datadir = 'datadir'
+        self.gpstop._stop_master_smart()
+        subprocess_call.assert_any_call(['pg_ctl', 'stop', '-W', '-m', 'smart', '-D', 'datadir'])
+
+    def test_stop_master_smart_raises_exception_if_stop_fails(self, subprocess_call, dbconn_connect):
+        self._setup_subprocess(subprocess_call)
+        self.stop_retval = 1
+
+        with self.assertRaises(Exception):
+            self.gpstop._stop_master_smart()
+
+    def test_stop_master_smart_calls_pg_ctl_status_until_server_stops(self, subprocess_call, dbconn_connect):
+        self._setup_subprocess(subprocess_call)
+        self.gpstop.conn = dbconn_connect
+
+        self.i = 0
+        def _status():
+            """
+            This implementation of pg_ctl status will only show that the server
+            has been stopped after the second call.
+            """
+            self.i += 1
+            if self.i < 3:
+                return gpstop.PG_CTL_STATUS_RUNNING
+            return gpstop.PG_CTL_STATUS_STOPPED
+        self.status_callback = _status
+
+        self.gpstop._stop_master_smart()
+        self.assertEqual(self.i, 3, "expected _stop_master_smart to return after the third call to pg_ctl status")
+
+    def test_stop_master_smart_raises_exception_if_status_fails(self, subprocess_call, dbconn_connect):
+        self._setup_subprocess(subprocess_call)
+        self.status_callback = lambda: 1 # indicate general failure
+
+        with self.assertRaises(Exception):
+            self.gpstop._stop_master_smart()
+
+    def test_SigIntHandler_must_have_SIGINT_ignored_on_entry(self, subprocess_call, dbconn_connect):
+        handler = lambda num, frame: None
+        orig_handler = signal.signal(signal.SIGINT, handler)
+
+        try:
+            with self.assertRaises(Exception):
+                with gpstop.GpStop._SigIntHandler() as handler:
+                    pass
+
+            self.assertEqual(handler, signal.getsignal(signal.SIGINT))
+
+        finally:
+            # Restore the original signal handler even on test failure.
+            signal.signal(signal.SIGINT, orig_handler)
+
+    def test_SigIntHandler_catches_SIGINT_when_enabled(self, subprocess_call, dbconn_connect):
+        with gpstop.GpStop._SigIntHandler() as handler:
+            self.assertFalse(handler.interrupted)
+            handler.enable()
+            os.kill(os.getpid(), signal.SIGINT)
+            self.assertTrue(handler.interrupted)
+
+        # Ensure the context manager puts its previous handler back.
+        self.assertEqual(signal.SIG_IGN, signal.getsignal(signal.SIGINT))
+
+    def test_SigIntHandler_ignores_SIGINT_when_disabled(self, subprocess_call, dbconn_connect):
+        with gpstop.GpStop._SigIntHandler() as handler:
+            self.assertFalse(handler.interrupted)
+            handler.disable()
+            os.kill(os.getpid(), signal.SIGINT)
+            self.assertFalse(handler.interrupted)
+
+        # Ensure the context manager puts its previous handler back.
+        self.assertEqual(signal.SIG_IGN, signal.getsignal(signal.SIGINT))
+
 
 if __name__ == '__main__':
     run_tests()

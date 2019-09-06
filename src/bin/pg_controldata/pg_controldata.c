@@ -26,6 +26,7 @@
 #include "access/xlog.h"
 #include "access/xlog_internal.h"
 #include "catalog/pg_control.h"
+#include "pg_getopt.h"
 
 
 static void
@@ -33,7 +34,7 @@ usage(const char *progname)
 {
 	printf(_("%s displays control information of a PostgreSQL database cluster.\n\n"), progname);
 	printf(_("Usage:\n"));
-	printf(_("  %s [OPTION] [DATADIR]\n"), progname);
+	printf(_("  %s [OPTION] [[-D] DATADIR]\n"), progname);
 	printf(_("\nOptions:\n"));
 	printf(_("  -V, --version  output version information, then exit\n"));
 	printf(_("  -?, --help     show this help, then exit\n"));
@@ -91,7 +92,7 @@ main(int argc, char *argv[])
 	ControlFileData ControlFile;
 	int			fd;
 	char		ControlFilePath[MAXPGPATH];
-	char	   *DataDir;
+	char	   *DataDir = NULL;
 	pg_crc32c	crc;
 	time_t		time_tmp;
 	char		pgctime_str[128];
@@ -101,6 +102,7 @@ main(int argc, char *argv[])
 	const char *progname;
 	XLogSegNo	segno;
 	char		xlogfilename[MAXFNAMELEN];
+	int			c;
 
 	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_controldata"));
 
@@ -126,10 +128,38 @@ main(int argc, char *argv[])
 
 	}
 
-	if (argc > 1)
-		DataDir = argv[1];
-	else
-		DataDir = getenv("PGDATA");
+	while ((c = getopt(argc, argv, "D:")) != -1)
+	{
+		switch (c)
+		{
+			case 'D':
+				DataDir = optarg;
+				break;
+
+			default:
+				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
+				exit(1);
+		}
+	}
+
+	if (DataDir == NULL)
+	{
+		if (optind < argc)
+			DataDir = argv[optind++];
+		else
+			DataDir = getenv("PGDATA");
+	}
+
+	/* Complain if any arguments remain */
+	if (optind < argc)
+	{
+		fprintf(stderr, _("%s: too many command-line arguments (first is \"%s\")\n"),
+				progname, argv[optind]);
+		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
+				progname);
+		exit(1);
+	}
+
 	if (DataDir == NULL)
 	{
 		fprintf(stderr, _("%s: no data directory specified\n"), progname);
@@ -156,7 +186,9 @@ main(int argc, char *argv[])
 
 	/* Check the CRC. */
 	INIT_CRC32C(crc);
-	COMP_CRC32C(crc, &ControlFile, offsetof(ControlFileData, crc));
+	COMP_CRC32C(crc,
+				(char *) &ControlFile,
+				offsetof(ControlFileData, crc));
 	FIN_CRC32C(crc);
 
 	if (!EQ_CRC32C(crc, ControlFile.crc))
@@ -247,6 +279,8 @@ main(int argc, char *argv[])
 		   ControlFile.checkPointCopy.oldestMulti);
 	printf(_("Latest checkpoint's oldestMulti's DB: %u\n"),
 		   ControlFile.checkPointCopy.oldestMultiDB);
+	printf(_("Latest checkpoint's oldestCommitTs:   %u\n"),
+		   ControlFile.checkPointCopy.oldestCommitTs);
 	printf(_("Time of latest checkpoint:            %s\n"),
 		   ckpttime_str);
 	printf(_("Fake LSN counter for unlogged rels:   %X/%X\n"),
@@ -277,6 +311,8 @@ main(int argc, char *argv[])
 		   ControlFile.max_prepared_xacts);
 	printf(_("Current max_locks_per_xact setting:   %d\n"),
 		   ControlFile.max_locks_per_xact);
+	printf(_("Current track_commit_timestamp setting: %s\n"),
+		   ControlFile.track_commit_timestamp ? _("on") : _("off"));
 	printf(_("Maximum data alignment:               %u\n"),
 		   ControlFile.maxAlign);
 	/* we don't print floatFormat since can't say much useful about it */

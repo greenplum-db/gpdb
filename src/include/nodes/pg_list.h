@@ -27,7 +27,7 @@
  * always be so; try to be careful to maintain the distinction.)
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/pg_list.h
@@ -129,11 +129,6 @@ list_length(const List *l)
 #define lfourth_int(l)			lfirst_int(lnext(lnext(lnext(list_head(l)))))
 #define lfourth_oid(l)			lfirst_oid(lnext(lnext(lnext(list_head(l)))))
 #define lfourth_node(type,l)	castNode(type, lfourth(l))
-
-#define lfifth(l)				lfirst(lnext(lnext(lnext(lnext(list_head(l))))))
-#define lfifth_int(l)			lfirst_int(lnext(lnext(lnext(lnext(list_head(l))))))
-#define lfifth_oid(l)			lfirst_oid(lnext(lnext(lnext(lnext(list_head(l))))))
-#define lcfifth(l)				lnext(lnext(lnext(lnext(list_head(l)))))
 
 #define llast(l)				lfirst(list_tail(l))
 #define llast_int(l)			lfirst_int(list_tail(l))
@@ -240,8 +235,9 @@ extern List *list_union_int(const List *list1, const List *list2);
 extern List *list_union_oid(const List *list1, const List *list2);
 
 extern List *list_intersection(const List *list1, const List *list2);
+extern List *list_intersection_int(const List *list1, const List *list2);
 
-/* currently, there's no need for list_intersection_int etc */
+/* currently, there's no need for list_intersection_ptr etc */
 
 extern List *list_difference(const List *list1, const List *list2);
 extern List *list_difference_ptr(const List *list1, const List *list2);

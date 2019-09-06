@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_authid.h
@@ -51,14 +51,17 @@ CATALOG(pg_authid,1260) BKI_SHARED_RELATION BKI_ROWTYPE_OID(2842) BKI_SCHEMA_MAC
 	bool		rolinherit;		/* inherit privileges from other roles? */
 	bool		rolcreaterole;	/* allowed to create more roles? */
 	bool		rolcreatedb;	/* allowed to create databases? */
-	bool		rolcatupdate;	/* allowed to alter catalogs manually? */
 	bool		rolcanlogin;	/* allowed to log in as session user? */
 	bool		rolreplication; /* role used for streaming replication */
+	bool		rolbypassrls;	/* allowed to bypass row level security? */
 	int32		rolconnlimit;	/* max connections allowed (-1=no limit) */
 
 	/* remaining fields may be null; use heap_getattr to read them! */
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	text		rolpassword;	/* password, if any */
 	timestamptz rolvaliduntil;	/* password expiration time, if any */
+#endif
+
 	/* GP added fields */
 	Oid			rolresqueue;	/* ID of resource queue for this role */
 	bool		rolcreaterextgpfd;	/* allowed to create readable gpfdist tbl?  */
@@ -92,9 +95,9 @@ typedef FormData_pg_authid *Form_pg_authid;
 #define Anum_pg_authid_rolinherit			3
 #define Anum_pg_authid_rolcreaterole		4
 #define Anum_pg_authid_rolcreatedb			5
-#define Anum_pg_authid_rolcatupdate			6
-#define Anum_pg_authid_rolcanlogin			7
-#define Anum_pg_authid_rolreplication		8
+#define Anum_pg_authid_rolcanlogin			6
+#define Anum_pg_authid_rolreplication		7
+#define Anum_pg_authid_rolbypassrls			8
 #define Anum_pg_authid_rolconnlimit			9
 #define Anum_pg_authid_rolpassword			10
 #define Anum_pg_authid_rolvaliduntil		11

@@ -30,8 +30,8 @@
 
 
 /* I/O function caching */
-static void PLy_input_datum_func2(PLyDatumToOb *arg, Oid typeOid, HeapTuple typeTup);
-static void PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup);
+static void PLy_input_datum_func2(PLyDatumToOb *arg, Oid typeOid, HeapTuple typeTup, Oid langid, List *trftypes);
+static void PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup, Oid langid, List *trftypes);
 
 /* conversion from Datums to Python objects */
 static PyObject *PLyBool_FromBool(PLyDatumToOb *arg, Datum d);
@@ -44,6 +44,7 @@ static PyObject *PLyLong_FromInt64(PLyDatumToOb *arg, Datum d);
 static PyObject *PLyLong_FromOid(PLyDatumToOb *arg, Datum d);
 static PyObject *PLyBytes_FromBytea(PLyDatumToOb *arg, Datum d);
 static PyObject *PLyString_FromDatum(PLyDatumToOb *arg, Datum d);
+static PyObject *PLyObject_FromTransform(PLyDatumToOb *arg, Datum d);
 static PyObject *PLyList_FromArray(PLyDatumToOb *arg, Datum d);
 static PyObject *PLyList_FromArray_recurse(PLyDatumToOb *elm, int *dims, int ndim, int dim,
 						  char **dataptr_p, bits8 **bitmap_p, int *bitmask_p);
@@ -53,6 +54,7 @@ static Datum PLyObject_ToBool(PLyObToDatum *arg, int32 typmod, PyObject *plrv, b
 static Datum PLyObject_ToBytea(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray);
 static Datum PLyObject_ToComposite(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray);
 static Datum PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray);
+static Datum PLyObject_ToTransform(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray);
 static Datum PLySequence_ToArray(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray);
 static void PLySequence_ToArray_recurse(PLyObToDatum *elm, PyObject *list,
 							int *dims, int ndim, int dim,
@@ -108,27 +110,28 @@ PLy_typeinfo_dealloc(PLyTypeInfo *arg)
  * PostgreSQL, and vice versa.
  */
 void
-PLy_input_datum_func(PLyTypeInfo *arg, Oid typeOid, HeapTuple typeTup)
+PLy_input_datum_func(PLyTypeInfo *arg, Oid typeOid, HeapTuple typeTup, Oid langid, List *trftypes)
 {
 	if (arg->is_rowtype > 0)
 		elog(ERROR, "PLyTypeInfo struct is initialized for Tuple");
 	arg->is_rowtype = 0;
-	PLy_input_datum_func2(&(arg->in.d), typeOid, typeTup);
+	PLy_input_datum_func2(&(arg->in.d), typeOid, typeTup, langid, trftypes);
 }
 
 void
-PLy_output_datum_func(PLyTypeInfo *arg, HeapTuple typeTup)
+PLy_output_datum_func(PLyTypeInfo *arg, HeapTuple typeTup, Oid langid, List *trftypes)
 {
 	if (arg->is_rowtype > 0)
 		elog(ERROR, "PLyTypeInfo struct is initialized for a Tuple");
 	arg->is_rowtype = 0;
-	PLy_output_datum_func2(&(arg->out.d), typeTup);
+	PLy_output_datum_func2(&(arg->out.d), typeTup, langid, trftypes);
 }
 
 void
 PLy_input_tuple_funcs(PLyTypeInfo *arg, TupleDesc desc)
 {
 	int			i;
+	PLyExecutionContext *exec_ctx = PLy_current_execution_context();
 
 	if (arg->is_rowtype == 0)
 		elog(ERROR, "PLyTypeInfo struct is initialized for a Datum");
@@ -187,7 +190,9 @@ PLy_input_tuple_funcs(PLyTypeInfo *arg, TupleDesc desc)
 
 		PLy_input_datum_func2(&(arg->in.r.atts[i]),
 							  desc->attrs[i]->atttypid,
-							  typeTup);
+							  typeTup,
+							  exec_ctx->curr_proc->langid,
+							  exec_ctx->curr_proc->trftypes);
 
 		ReleaseSysCache(typeTup);
 	}
@@ -197,6 +202,7 @@ void
 PLy_output_tuple_funcs(PLyTypeInfo *arg, TupleDesc desc)
 {
 	int			i;
+	PLyExecutionContext *exec_ctx = PLy_current_execution_context();
 
 	if (arg->is_rowtype == 0)
 		elog(ERROR, "PLyTypeInfo struct is initialized for a Datum");
@@ -249,7 +255,9 @@ PLy_output_tuple_funcs(PLyTypeInfo *arg, TupleDesc desc)
 			elog(ERROR, "cache lookup failed for type %u",
 				 desc->attrs[i]->atttypid);
 
-		PLy_output_datum_func2(&(arg->out.r.atts[i]), typeTup);
+		PLy_output_datum_func2(&(arg->out.r.atts[i]), typeTup,
+							   exec_ctx->curr_proc->langid,
+							   exec_ctx->curr_proc->trftypes);
 
 		ReleaseSysCache(typeTup);
 	}
@@ -368,10 +376,12 @@ PLyObject_ToCompositeDatum(PLyTypeInfo *info, TupleDesc desc, PyObject *plrv, bo
 }
 
 static void
-PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup)
+PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup, Oid langid, List *trftypes)
 {
 	Form_pg_type typeStruct = (Form_pg_type) GETSTRUCT(typeTup);
 	Oid			element_type;
+	Oid			base_type;
+	Oid			funcid;
 
 	perm_fmgr_info(typeStruct->typinput, &arg->typfunc);
 	arg->typoid = HeapTupleGetOid(typeTup);
@@ -380,29 +390,35 @@ PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup)
 	arg->typbyval = typeStruct->typbyval;
 
 	element_type = get_base_element_type(arg->typoid);
+	base_type = getBaseType(element_type ? element_type : arg->typoid);
 
 	/*
 	 * Select a conversion function to convert Python objects to PostgreSQL
-	 * datums.  Most data types can go through the generic function.
+	 * datums.
 	 */
-	switch (getBaseType(element_type ? element_type : arg->typoid))
-	{
-		case BOOLOID:
-			arg->func = PLyObject_ToBool;
-			break;
-		case BYTEAOID:
-			arg->func = PLyObject_ToBytea;
-			break;
-		default:
-			arg->func = PLyObject_ToDatum;
-			break;
-	}
 
-	/* Composite types need their own input routine, though */
-	if (typeStruct->typtype == TYPTYPE_COMPOSITE)
+	if ((funcid = get_transform_tosql(base_type, langid, trftypes)))
+	{
+		arg->func = PLyObject_ToTransform;
+		perm_fmgr_info(funcid, &arg->typtransform);
+	}
+	else if (typeStruct->typtype == TYPTYPE_COMPOSITE)
 	{
 		arg->func = PLyObject_ToComposite;
 	}
+	else
+		switch (base_type)
+		{
+			case BOOLOID:
+				arg->func = PLyObject_ToBool;
+				break;
+			case BYTEAOID:
+				arg->func = PLyObject_ToBytea;
+				break;
+			default:
+				arg->func = PLyObject_ToDatum;
+				break;
+		}
 
 	if (element_type)
 	{
@@ -414,6 +430,7 @@ PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup)
 
 		arg->elm = PLy_malloc0(sizeof(*arg->elm));
 		arg->elm->func = arg->func;
+		arg->elm->typtransform = arg->typtransform;
 		arg->func = PLySequence_ToArray;
 
 		arg->elm->typoid = element_type;
@@ -426,12 +443,12 @@ PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup)
 }
 
 static void
-PLy_input_datum_func2(PLyDatumToOb *arg, Oid typeOid, HeapTuple typeTup)
+PLy_input_datum_func2(PLyDatumToOb *arg, Oid typeOid, HeapTuple typeTup, Oid langid, List *trftypes)
 {
 	Form_pg_type typeStruct = (Form_pg_type) GETSTRUCT(typeTup);
-
-	/* It's safe to handle domains of array types as its base array type. */
-	Oid			element_type = get_base_element_type(typeOid);
+	Oid			element_type;
+	Oid			base_type;
+	Oid			funcid;
 
 	/* Get the type's conversion information */
 	perm_fmgr_info(typeStruct->typoutput, &arg->typfunc);
@@ -443,39 +460,49 @@ PLy_input_datum_func2(PLyDatumToOb *arg, Oid typeOid, HeapTuple typeTup)
 	arg->typalign = typeStruct->typalign;
 
 	/* Determine which kind of Python object we will convert to */
-	switch (getBaseType(element_type ? element_type : typeOid))
+
+	element_type = get_base_element_type(typeOid);
+	base_type = getBaseType(element_type ? element_type : typeOid);
+
+	if ((funcid = get_transform_fromsql(base_type, langid, trftypes)))
 	{
-		case BOOLOID:
-			arg->func = PLyBool_FromBool;
-			break;
-		case FLOAT4OID:
-			arg->func = PLyFloat_FromFloat4;
-			break;
-		case FLOAT8OID:
-			arg->func = PLyFloat_FromFloat8;
-			break;
-		case NUMERICOID:
-			arg->func = PLyDecimal_FromNumeric;
-			break;
-		case INT2OID:
-			arg->func = PLyInt_FromInt16;
-			break;
-		case INT4OID:
-			arg->func = PLyInt_FromInt32;
-			break;
-		case INT8OID:
-			arg->func = PLyLong_FromInt64;
-			break;
-		case OIDOID:
-			arg->func = PLyLong_FromOid;
-			break;
-		case BYTEAOID:
-			arg->func = PLyBytes_FromBytea;
-			break;
-		default:
-			arg->func = PLyString_FromDatum;
-			break;
+		arg->func = PLyObject_FromTransform;
+		perm_fmgr_info(funcid, &arg->typtransform);
 	}
+	else
+		switch (base_type)
+		{
+			case BOOLOID:
+				arg->func = PLyBool_FromBool;
+				break;
+			case FLOAT4OID:
+				arg->func = PLyFloat_FromFloat4;
+				break;
+			case FLOAT8OID:
+				arg->func = PLyFloat_FromFloat8;
+				break;
+			case NUMERICOID:
+				arg->func = PLyDecimal_FromNumeric;
+				break;
+			case INT2OID:
+				arg->func = PLyInt_FromInt16;
+				break;
+			case INT4OID:
+				arg->func = PLyInt_FromInt32;
+				break;
+			case INT8OID:
+				arg->func = PLyLong_FromInt64;
+				break;
+			case OIDOID:
+				arg->func = PLyLong_FromOid;
+				break;
+			case BYTEAOID:
+				arg->func = PLyBytes_FromBytea;
+				break;
+			default:
+				arg->func = PLyString_FromDatum;
+				break;
+		}
 
 	if (element_type)
 	{
@@ -484,6 +511,7 @@ PLy_input_datum_func2(PLyDatumToOb *arg, Oid typeOid, HeapTuple typeTup)
 
 		arg->elm = PLy_malloc0(sizeof(*arg->elm));
 		arg->elm->func = arg->func;
+		arg->elm->typtransform = arg->typtransform;
 		arg->func = PLyList_FromArray;
 		arg->elm->typoid = element_type;
 		arg->elm->typmod = -1;
@@ -600,6 +628,12 @@ PLyString_FromDatum(PLyDatumToOb *arg, Datum d)
 
 	pfree(x);
 	return r;
+}
+
+static PyObject *
+PLyObject_FromTransform(PLyDatumToOb *arg, Datum d)
+{
+	return (PyObject *) DatumGetPointer(FunctionCall1(&arg->typtransform, d));
 }
 
 static PyObject *
@@ -860,6 +894,8 @@ PLyObject_ToComposite(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inar
 	 */
 	rv = PLyObject_ToCompositeDatum(&info, desc, plrv, false);
 
+	ReleaseTupleDesc(desc);
+
 	PLy_typeinfo_dealloc(&info);
 
 	return rv;
@@ -867,8 +903,7 @@ PLyObject_ToComposite(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inar
 
 
 /*
- * Generic conversion function: Convert PyObject to cstring and
- * cstring into PostgreSQL type.
+ * Convert Python object to C string in server encoding.
  */
 static Datum
 PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
@@ -929,6 +964,13 @@ PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 
 	return rv;
 }
+
+static Datum
+PLyObject_ToTransform(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
+{
+	return FunctionCall1(&arg->typtransform, PointerGetDatum(plrv));
+}
+
 
 static Datum
 PLySequence_ToArray(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
@@ -1097,6 +1139,8 @@ PLyString_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *string, bool 
 	HeapTuple	typeTup;
 	PLyTypeInfo locinfo;
 
+	PLyExecutionContext *exec_ctx = PLy_current_execution_context();
+
 	/* Create a dummy PLyTypeInfo */
 	MemSet(&locinfo, 0, sizeof(PLyTypeInfo));
 	PLy_typeinfo_init(&locinfo);
@@ -1105,10 +1149,11 @@ PLyString_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *string, bool 
 	if (!HeapTupleIsValid(typeTup))
 		elog(ERROR, "cache lookup failed for type %u", desc->tdtypeid);
 
-	PLy_output_datum_func2(&locinfo.out.d, typeTup);
+	PLy_output_datum_func2(&locinfo.out.d, typeTup,
+						   exec_ctx->curr_proc->langid,
+						   exec_ctx->curr_proc->trftypes);
 
 	ReleaseSysCache(typeTup);
-	ReleaseTupleDesc(desc);
 
 	result = PLyObject_ToDatum(&locinfo.out.d, desc->tdtypmod, string, inarray);
 
@@ -1121,6 +1166,7 @@ PLyString_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *string, bool 
 static Datum
 PLyMapping_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *mapping)
 {
+	Datum		result;
 	HeapTuple	tuple;
 	Datum	   *values;
 	bool	   *nulls;
@@ -1183,17 +1229,20 @@ PLyMapping_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *mapping)
 	}
 
 	tuple = heap_form_tuple(desc, values, nulls);
-	ReleaseTupleDesc(desc);
+	result = heap_copy_tuple_as_datum(tuple, desc);
+	heap_freetuple(tuple);
+
 	pfree(values);
 	pfree(nulls);
 
-	return HeapTupleGetDatum(tuple);
+	return result;
 }
 
 
 static Datum
 PLySequence_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *sequence)
 {
+	Datum		result;
 	HeapTuple	tuple;
 	Datum	   *values;
 	bool	   *nulls;
@@ -1269,17 +1318,20 @@ PLySequence_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *sequence)
 	}
 
 	tuple = heap_form_tuple(desc, values, nulls);
-	ReleaseTupleDesc(desc);
+	result = heap_copy_tuple_as_datum(tuple, desc);
+	heap_freetuple(tuple);
+
 	pfree(values);
 	pfree(nulls);
 
-	return HeapTupleGetDatum(tuple);
+	return result;
 }
 
 
 static Datum
 PLyGenericObject_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *object, bool inarray)
 {
+	Datum		result;
 	HeapTuple	tuple;
 	Datum	   *values;
 	bool	   *nulls;
@@ -1354,11 +1406,13 @@ PLyGenericObject_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *object
 	}
 
 	tuple = heap_form_tuple(desc, values, nulls);
-	ReleaseTupleDesc(desc);
+	result = heap_copy_tuple_as_datum(tuple, desc);
+	heap_freetuple(tuple);
+
 	pfree(values);
 	pfree(nulls);
 
-	return HeapTupleGetDatum(tuple);
+	return result;
 }
 
 /*

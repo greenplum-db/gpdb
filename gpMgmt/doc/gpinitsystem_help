@@ -13,13 +13,15 @@ gpinitsystem -c <gpinitsystem_config>
             [-B <parallel_processes>] 
             [-p <postgresql_conf_param_file>]
             [-s <standby_master_host>
-                [-P <standby_master_port>] [-F <standby_master_datadir>]]
-            [--max_connections=<number>] [--shared_buffers=<size>]
-            [--locale=<locale>] [--lc-collate=<locale>] 
+                [-P <standby_master_port>] [ {-S | --standby-datadir} <standby_master_datadir>]
+            [-m number | --max_connections=<number>] [--shared_buffers=<size>]
+            [-n locale | --locale=<locale>] [--lc-collate=<locale>]
             [--lc-ctype=<locale>] [--lc-messages=<locale>] 
             [--lc-monetary=<locale>] [--lc-numeric=<locale>] 
-            [--lc-time=<locale>] [--su_password=<password>] 
-            [-S] [-a] [-q] [-l <logfile_directory>] [-D]
+            [--lc-time=<locale>] [-e password | --su_password=<password>]
+            [--mirror-mode={group|spread}] [-a] [-q] [-l <logfile_directory>] [-D]
+            [-I input_configuration_file]
+            [-O output_configuration_file]
 
 gpinitsystem -v
 
@@ -97,6 +99,15 @@ OPTIONS
  you can specify the host file using the MACHINE_LIST_FILE parameter 
  in the gpinitsystem_config file.
 
+-I <input_configuration_file>
+ Optional.  The full path and filename of an input configuration file,
+ which defines the Greenplum Database members and segments using the
+ QD_PRIMARY_ARRAY and PRIMARY_ARRAY parameters. The input configuration
+ file is typically created by using gpinitsystem with the -O
+ output_configuration_file option. You must provide either the -c
+ cluster_configuration_file option or the -I input_configuration_file
+ option to gpinitsystem.
+
 
 --locale=<locale> | -n <locale>  
 
@@ -167,6 +178,15 @@ OPTIONS
  The default is 25.
 
 
+-O output_configuration_file
+ Optional. When used with the -O option, gpinitsystem does not create a new
+ Greenplum Database cluster but instead writes the supplied cluster
+ configuration information to the specified output_configuration_file. This file
+ defines Greenplum Database members and segments using the QD_PRIMARY_ARRAY,
+ PRIMARY_ARRAY, and MIRROR_ARRAY parameters, and can be later used with -I
+ input_configuration_file to initialize a new cluster.
+
+
 -p <postgresql_conf_param_file>
 
  Optional. The name of a file that contains postgresql.conf parameter 
@@ -203,7 +223,7 @@ OPTIONS
  is the same as the primary master.
 
 
--F <standby_master_datadir>
+--segment-datadir=<standby_master_datadir> | -S <standby_master_datadir>
 
  Optional and effective only when specified with -s.  Specifies the
  data directory of the standby.
@@ -221,14 +241,13 @@ OPTIONS
  change default passwords immediately after installation.
 
 
--S
+--mirror-mode={group|spread}
 
- If mirroring parameters are specified, spreads the mirror segments 
- across the available hosts. The default is to group the set of mirror 
- segments together on an alternate host from their primary segment set. 
- Mirror spreading will place each mirror on a different host within the 
- Greenplum Database array. Spreading is only allowed if there is a 
- sufficient number of hosts in the array (number of hosts is greater 
+ Uses the specified mirroring mode. The default is to group the set of mirror
+ segments together on an alternate host from their primary segment set.
+ Specifying spread will place each mirror on a different host within the
+ Greenplum Database array. Spreading is only allowed if there is a
+ sufficient number of hosts in the array (number of hosts is greater
  than the number of segment instances).
 
 
@@ -332,14 +351,6 @@ TRUSTED_SHELL
  use gpssh-exkeys to do this).
 
 
-CHECK_POINT_SEGMENTS
-
- Required. Maximum distance between automatic write ahead log (WAL) 
- checkpoints, in log file segments (each segment is normally 16 megabytes). 
- This will set the checkpoint_segments parameter in the postgresql.conf 
- file for each segment instance in the Greenplum Database system.
-
-
 ENCODING
 
  Required. The character set encoding to use. This character set must 
@@ -363,27 +374,6 @@ MIRROR_PORT_BASE
  for each additional mirror segment on that host. Valid values 
  range from 1 through 65535 and cannot conflict with the ports 
  calculated by PORT_BASE.
-
-
-REPLICATION_PORT_BASE
-
- Optional. This specifies the base number by which the port numbers 
- for the primary file replication process are calculated. The 
- first replication port on a host is set as REPLICATION_PORT_BASE, 
- and then incremented by one for each additional primary segment 
- on that host. Valid values range from 1 through 65535 and cannot 
- conflict with the ports calculated by PORT_BASE or MIRROR_PORT_BASE.
-
-
-MIRROR_REPLICATION_PORT_BASE
-
- Optional. This specifies the base number by which the port numbers 
- for the mirror file replication process are calculated. The first 
- mirror replication port on a host is set as MIRROR_REPLICATION_PORT_BASE, 
- and then incremented by one for each additional mirror segment on 
- that host. Valid values range from 1 through 65535 and cannot conflict 
- with the ports calculated by PORT_BASE, MIRROR_PORT_BASE, 
- or REPLICATION_PORT_BASE.
 
 
 MIRROR_DATA_DIRECTORY
@@ -422,4 +412,4 @@ Initialize a Greenplum Database array with an optional standby master host:
 SEE ALSO
 *****************************************************
 
-gpseginstall, gpssh-exkeys
+gpssh-exkeys

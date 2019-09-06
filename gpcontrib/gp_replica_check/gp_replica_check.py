@@ -34,7 +34,6 @@ import subprocess
 import threading
 import Queue
 import pipes  # for shell-quoting, pipes.quote()
-import time
 
 class ReplicaCheck(threading.Thread):
     def __init__(self, segrow, datname, relation_types):
@@ -74,15 +73,24 @@ Mirror Data Directory Location: %s' % (self.host, self.port, self.datname,
 
 def create_restartpoint_on_ckpt_record_replay(set):
     if set:
-        cmd = "gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation; gpstop -u"
+        cmd = "gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation && gpstop -u"
     else:
-        cmd = "gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation; gpstop -u"
+        cmd = "gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation && gpstop -u"
     print cmd
     try:
         res = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
         print res
     except subprocess.CalledProcessError, e:
         print 'returncode: (%s), cmd: (%s), output: (%s)' % (e.returncode, e.cmd, e.output)
+        if set:
+            print '''guc setting with gpconfig & then updating with "gpstop -u" failed.
+Probably there are some nodes could not be brought up and thus we
+can not run the test. That is probably because previous tests cause
+the instability of the cluster (indicate a bug usually) or because more time
+is needed for the cluster to be ready due to heavy load (consider increasing
+timeout configurations for this case). In any case we just fail and skip
+the test. Please check the server logs to find why.'''
+        sys.exit(2)
 
 def install_extension(databases):
     get_datname_sql = ''' SELECT datname FROM pg_database WHERE datname != 'template0' '''

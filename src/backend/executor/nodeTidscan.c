@@ -3,7 +3,7 @@
  * nodeTidscan.c
  *	  Routines to support direct tid scans of relations
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -19,8 +19,6 @@
  *		ExecInitTidScan		creates and initializes state info.
  *		ExecReScanTidScan	rescans the tid relation.
  *		ExecEndTidScan		releases all storage.
- *		ExecTidMarkPos		marks scan position.
- *		ExecTidRestrPos		restores scan position.
  */
 #include "postgres.h"
 
@@ -442,34 +440,6 @@ ExecEndTidScan(TidScanState *node)
 	ExecCloseScanRelation(node->ss.ss_currentRelation);
 
 	EndPlanStateGpmonPkt(&node->ss.ps);
-}
-
-/* ----------------------------------------------------------------
- *		ExecTidMarkPos
- *
- *		Marks scan position by marking the current tid.
- *		Returns nothing.
- * ----------------------------------------------------------------
- */
-void
-ExecTidMarkPos(TidScanState *node)
-{
-	node->tss_MarkTidPtr = node->tss_TidPtr;
-}
-
-/* ----------------------------------------------------------------
- *		ExecTidRestrPos
- *
- *		Restores scan position by restoring the current tid.
- *		Returns nothing.
- *
- *		XXX Assumes previously marked scan position belongs to current tid
- * ----------------------------------------------------------------
- */
-void
-ExecTidRestrPos(TidScanState *node)
-{
-	node->tss_TidPtr = node->tss_MarkTidPtr;
 }
 
 /* ----------------------------------------------------------------

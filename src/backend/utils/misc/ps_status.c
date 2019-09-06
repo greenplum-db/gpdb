@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  * various details abducted from various places
  *--------------------------------------------------------------------
  */
@@ -31,11 +31,12 @@
 #include "libpq/libpq.h"
 #include "miscadmin.h"
 #include "utils/ps_status.h"
+#include "utils/guc.h"
 
 #include "cdb/cdbvars.h"        /* Gp_role, GpIdentity.segindex, currentSliceId */
 
 extern char **environ;
-extern int PostPortNumber;
+extern int PostPortNumber; /* GPDB: Helps identify child processes */
 bool		update_process_title = true;
 
 
@@ -312,9 +313,18 @@ init_ps_display(const char *username, const char *dbname,
 #define PROGRAM_NAME_PREFIX "postgres: "
 #endif
 
-	snprintf(ps_buffer, ps_buffer_size,
-			 PROGRAM_NAME_PREFIX "%5d, %s %s %s ",
-			 PostPortNumber, username, dbname, host_info);
+	if (*cluster_name == '\0')
+	{
+		snprintf(ps_buffer, ps_buffer_size,
+				 PROGRAM_NAME_PREFIX "%5d, %s %s %s ",
+				 PostPortNumber, username, dbname, host_info);
+	}
+	else
+	{
+		snprintf(ps_buffer, ps_buffer_size,
+				 PROGRAM_NAME_PREFIX "%5d, %s: %s %s %s ",
+				 PostPortNumber, cluster_name, username, dbname, host_info);
+	}
 
 	ps_buffer_cur_len = ps_buffer_fixed_size = strlen(ps_buffer);
 	real_act_prefix_size = ps_buffer_fixed_size;

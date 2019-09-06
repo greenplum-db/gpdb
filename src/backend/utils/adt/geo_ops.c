@@ -3,7 +3,7 @@
  * geo_ops.c
  *	  2D geometric operations
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -74,6 +74,7 @@ static double dist_ps_internal(Point *pt, LSEG *lseg);
 static Point *line_interpt_internal(LINE *l1, LINE *l2);
 static bool lseg_inside_poly(Point *a, Point *b, POLYGON *poly, int start);
 static Point *lseg_interpt_internal(LSEG *l1, LSEG *l2);
+static double dist_ppoly_internal(Point *pt, POLYGON *poly);
 
 
 /*
@@ -1392,7 +1393,7 @@ path_in(PG_FUNCTION_ARGS)
 	}
 
 	base_size = sizeof(path->p[0]) * npts;
-	size = offsetof(PATH, p[0]) + base_size;
+	size = offsetof(PATH, p) +base_size;
 
 	/* Check for integer overflow */
 	if (base_size / npts != sizeof(path->p[0]) || size <= base_size)
@@ -1445,12 +1446,12 @@ path_recv(PG_FUNCTION_ARGS)
 
 	closed = pq_getmsgbyte(buf);
 	npts = pq_getmsgint(buf, sizeof(int32));
-	if (npts <= 0 || npts >= (int32) ((INT_MAX - offsetof(PATH, p[0])) / sizeof(Point)))
+	if (npts <= 0 || npts >= (int32) ((INT_MAX - offsetof(PATH, p)) / sizeof(Point)))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
 			 errmsg("invalid number of points in external \"path\" value")));
 
-	size = offsetof(PATH, p[0]) +sizeof(path->p[0]) * npts;
+	size = offsetof(PATH, p) +sizeof(path->p[0]) * npts;
 	path = (PATH *) palloc(size);
 
 	SET_VARSIZE(path, size);
@@ -2021,10 +2022,6 @@ lseg_in(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
 				 errmsg("invalid input syntax for type lseg: \"%s\"", str)));
 
-#ifdef NOT_USED
-	lseg->m = point_sl(&lseg->p[0], &lseg->p[1]);
-#endif
-
 	PG_RETURN_LSEG_P(lseg);
 }
 
@@ -2052,10 +2049,6 @@ lseg_recv(PG_FUNCTION_ARGS)
 	lseg->p[0].y = pq_getmsgfloat8(buf);
 	lseg->p[1].x = pq_getmsgfloat8(buf);
 	lseg->p[1].y = pq_getmsgfloat8(buf);
-
-#ifdef NOT_USED
-	lseg->m = point_sl(&lseg->p[0], &lseg->p[1]);
-#endif
 
 	PG_RETURN_LSEG_P(lseg);
 }
@@ -2093,10 +2086,6 @@ lseg_construct(PG_FUNCTION_ARGS)
 	result->p[1].x = pt2->x;
 	result->p[1].y = pt2->y;
 
-#ifdef NOT_USED
-	result->m = point_sl(pt1, pt2);
-#endif
-
 	PG_RETURN_LSEG_P(result);
 }
 
@@ -2108,10 +2097,6 @@ statlseg_construct(LSEG *lseg, Point *pt1, Point *pt2)
 	lseg->p[0].y = pt1->y;
 	lseg->p[1].x = pt2->x;
 	lseg->p[1].y = pt2->y;
-
-#ifdef NOT_USED
-	lseg->m = point_sl(pt1, pt2);
-#endif
 }
 
 Datum
@@ -2162,9 +2147,6 @@ lseg_parallel(PG_FUNCTION_ARGS)
 	LSEG	   *l1 = PG_GETARG_LSEG_P(0);
 	LSEG	   *l2 = PG_GETARG_LSEG_P(1);
 
-#ifdef NOT_USED
-	PG_RETURN_BOOL(FPeq(l1->m, l2->m));
-#endif
 	PG_RETURN_BOOL(FPeq(point_sl(&l1->p[0], &l1->p[1]),
 						point_sl(&l2->p[0], &l2->p[1])));
 }
@@ -2418,6 +2400,9 @@ lseg_interpt(PG_FUNCTION_ARGS)
  *				Minimum distance from one object to another.
  *-------------------------------------------------------------------*/
 
+/*
+ * Distance from a point to a line
+ */
 Datum
 dist_pl(PG_FUNCTION_ARGS)
 {
@@ -2434,6 +2419,9 @@ dist_pl_internal(Point *pt, LINE *line)
 				HYPOT(line->A, line->B));
 }
 
+/*
+ * Distance from a point to a lseg
+ */
 Datum
 dist_ps(PG_FUNCTION_ARGS)
 {
@@ -2497,7 +2485,7 @@ dist_ps_internal(Point *pt, LSEG *lseg)
 }
 
 /*
- ** Distance from a point to a path
+ * Distance from a point to a path
  */
 Datum
 dist_ppath(PG_FUNCTION_ARGS)
@@ -2553,6 +2541,9 @@ dist_ppath(PG_FUNCTION_ARGS)
 	PG_RETURN_FLOAT8(result);
 }
 
+/*
+ * Distance from a point to a box
+ */
 Datum
 dist_pb(PG_FUNCTION_ARGS)
 {
@@ -2569,7 +2560,9 @@ dist_pb(PG_FUNCTION_ARGS)
 	PG_RETURN_FLOAT8(result);
 }
 
-
+/*
+ * Distance from a lseg to a line
+ */
 Datum
 dist_sl(PG_FUNCTION_ARGS)
 {
@@ -2592,7 +2585,9 @@ dist_sl(PG_FUNCTION_ARGS)
 	PG_RETURN_FLOAT8(result);
 }
 
-
+/*
+ * Distance from a lseg to a box
+ */
 Datum
 dist_sb(PG_FUNCTION_ARGS)
 {
@@ -2611,7 +2606,9 @@ dist_sb(PG_FUNCTION_ARGS)
 	PG_RETURN_DATUM(result);
 }
 
-
+/*
+ * Distance from a line to a box
+ */
 Datum
 dist_lb(PG_FUNCTION_ARGS)
 {
@@ -2628,23 +2625,67 @@ dist_lb(PG_FUNCTION_ARGS)
 	PG_RETURN_NULL();
 }
 
-
+/*
+ * Distance from a circle to a polygon
+ */
 Datum
 dist_cpoly(PG_FUNCTION_ARGS)
 {
 	CIRCLE	   *circle = PG_GETARG_CIRCLE_P(0);
 	POLYGON    *poly = PG_GETARG_POLYGON_P(1);
 	float8		result;
+
+	/* calculate distance to center, and subtract radius */
+	result = dist_ppoly_internal(&circle->center, poly);
+
+	result -= circle->radius;
+	if (result < 0)
+		result = 0;
+
+	PG_RETURN_FLOAT8(result);
+}
+
+/*
+ * Distance from a point to a polygon
+ */
+Datum
+dist_ppoly(PG_FUNCTION_ARGS)
+{
+	Point	   *point = PG_GETARG_POINT_P(0);
+	POLYGON    *poly = PG_GETARG_POLYGON_P(1);
+	float8		result;
+
+	result = dist_ppoly_internal(point, poly);
+
+	PG_RETURN_FLOAT8(result);
+}
+
+Datum
+dist_polyp(PG_FUNCTION_ARGS)
+{
+	POLYGON    *poly = PG_GETARG_POLYGON_P(0);
+	Point	   *point = PG_GETARG_POINT_P(1);
+	float8		result;
+
+	result = dist_ppoly_internal(point, poly);
+
+	PG_RETURN_FLOAT8(result);
+}
+
+static double
+dist_ppoly_internal(Point *pt, POLYGON *poly)
+{
+	float8		result;
 	float8		d;
 	int			i;
 	LSEG		seg;
 
-	if (point_inside(&(circle->center), poly->npts, poly->p) != 0)
+	if (point_inside(pt, poly->npts, poly->p) != 0)
 	{
 #ifdef GEODEBUG
-		printf("dist_cpoly- center inside of polygon\n");
+		printf("dist_ppoly_internal- point inside of polygon\n");
 #endif
-		PG_RETURN_FLOAT8(0.0);
+		return 0.0;
 	}
 
 	/* initialize distance with segment between first and last points */
@@ -2652,9 +2693,9 @@ dist_cpoly(PG_FUNCTION_ARGS)
 	seg.p[0].y = poly->p[0].y;
 	seg.p[1].x = poly->p[poly->npts - 1].x;
 	seg.p[1].y = poly->p[poly->npts - 1].y;
-	result = dist_ps_internal(&circle->center, &seg);
+	result = dist_ps_internal(pt, &seg);
 #ifdef GEODEBUG
-	printf("dist_cpoly- segment 0/n distance is %f\n", result);
+	printf("dist_ppoly_internal- segment 0/n distance is %f\n", result);
 #endif
 
 	/* check distances for other segments */
@@ -2664,19 +2705,15 @@ dist_cpoly(PG_FUNCTION_ARGS)
 		seg.p[0].y = poly->p[i].y;
 		seg.p[1].x = poly->p[i + 1].x;
 		seg.p[1].y = poly->p[i + 1].y;
-		d = dist_ps_internal(&circle->center, &seg);
+		d = dist_ps_internal(pt, &seg);
 #ifdef GEODEBUG
-		printf("dist_cpoly- segment %d distance is %f\n", (i + 1), d);
+		printf("dist_ppoly_internal- segment %d distance is %f\n", (i + 1), d);
 #endif
 		if (d < result)
 			result = d;
 	}
 
-	result -= circle->radius;
-	if (result < 0)
-		result = 0;
-
-	PG_RETURN_FLOAT8(result);
+	return result;
 }
 
 
@@ -3462,7 +3499,7 @@ poly_in(PG_FUNCTION_ARGS)
 			  errmsg("invalid input syntax for type polygon: \"%s\"", str)));
 
 	base_size = sizeof(poly->p[0]) * npts;
-	size = offsetof(POLYGON, p[0]) + base_size;
+	size = offsetof(POLYGON, p) +base_size;
 
 	/* Check for integer overflow */
 	if (base_size / npts != sizeof(poly->p[0]) || size <= base_size)
@@ -3516,12 +3553,12 @@ poly_recv(PG_FUNCTION_ARGS)
 	int			size;
 
 	npts = pq_getmsgint(buf, sizeof(int32));
-	if (npts <= 0 || npts >= (int32) ((INT_MAX - offsetof(POLYGON, p[0])) / sizeof(Point)))
+	if (npts <= 0 || npts >= (int32) ((INT_MAX - offsetof(POLYGON, p)) / sizeof(Point)))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
 		  errmsg("invalid number of points in external \"polygon\" value")));
 
-	size = offsetof(POLYGON, p[0]) +sizeof(poly->p[0]) * npts;
+	size = offsetof(POLYGON, p) +sizeof(poly->p[0]) * npts;
 	poly = (POLYGON *) palloc0(size);	/* zero any holes */
 
 	SET_VARSIZE(poly, size);
@@ -4215,6 +4252,45 @@ box_div(PG_FUNCTION_ARGS)
 	PG_RETURN_BOX_P(result);
 }
 
+/*
+ * Convert point to empty box
+ */
+Datum
+point_box(PG_FUNCTION_ARGS)
+{
+	Point	   *pt = PG_GETARG_POINT_P(0);
+	BOX		   *box;
+
+	box = (BOX *) palloc(sizeof(BOX));
+
+	box->high.x = pt->x;
+	box->low.x = pt->x;
+	box->high.y = pt->y;
+	box->low.y = pt->y;
+
+	PG_RETURN_BOX_P(box);
+}
+
+/*
+ * Smallest bounding box that includes both of the given boxes
+ */
+Datum
+boxes_bound_box(PG_FUNCTION_ARGS)
+{
+	BOX		   *box1 = PG_GETARG_BOX_P(0),
+			   *box2 = PG_GETARG_BOX_P(1),
+			   *container;
+
+	container = (BOX *) palloc(sizeof(BOX));
+
+	container->high.x = Max(box1->high.x, box2->high.x);
+	container->low.x = Min(box1->low.x, box2->low.x);
+	container->high.y = Max(box1->high.y, box2->high.y);
+	container->low.y = Min(box1->low.y, box2->low.y);
+
+	PG_RETURN_BOX_P(container);
+}
+
 
 /***********************************************************************
  **
@@ -4239,7 +4315,7 @@ path_add(PG_FUNCTION_ARGS)
 		PG_RETURN_NULL();
 
 	base_size = sizeof(p1->p[0]) * (p1->npts + p2->npts);
-	size = offsetof(PATH, p[0]) +base_size;
+	size = offsetof(PATH, p) +base_size;
 
 	/* Check for integer overflow */
 	if (base_size / sizeof(p1->p[0]) != (p1->npts + p2->npts) ||
@@ -4381,7 +4457,7 @@ path_poly(PG_FUNCTION_ARGS)
 	 * Never overflows: the old size fit in MaxAllocSize, and the new size is
 	 * just a small constant larger.
 	 */
-	size = offsetof(POLYGON, p[0]) +sizeof(poly->p[0]) * path->npts;
+	size = offsetof(POLYGON, p) +sizeof(poly->p[0]) * path->npts;
 	poly = (POLYGON *) palloc(size);
 
 	SET_VARSIZE(poly, size);
@@ -4456,7 +4532,7 @@ box_poly(PG_FUNCTION_ARGS)
 	int			size;
 
 	/* map four corners of the box to a polygon */
-	size = offsetof(POLYGON, p[0]) +sizeof(poly->p[0]) * 4;
+	size = offsetof(POLYGON, p) +sizeof(poly->p[0]) * 4;
 	poly = (POLYGON *) palloc(size);
 
 	SET_VARSIZE(poly, size);
@@ -4490,7 +4566,7 @@ poly_path(PG_FUNCTION_ARGS)
 	 * Never overflows: the old size fit in MaxAllocSize, and the new size is
 	 * smaller by a small constant.
 	 */
-	size = offsetof(PATH, p[0]) +sizeof(path->p[0]) * poly->npts;
+	size = offsetof(PATH, p) +sizeof(path->p[0]) * poly->npts;
 	path = (PATH *) palloc(size);
 
 	SET_VARSIZE(path, size);
@@ -5061,6 +5137,21 @@ dist_pc(PG_FUNCTION_ARGS)
 	PG_RETURN_FLOAT8(result);
 }
 
+/*
+ * Distance from a circle to a point
+ */
+Datum
+dist_cpoint(PG_FUNCTION_ARGS)
+{
+	CIRCLE	   *circle = PG_GETARG_CIRCLE_P(0);
+	Point	   *point = PG_GETARG_POINT_P(1);
+	float8		result;
+
+	result = point_dt(point, &circle->center) - circle->radius;
+	if (result < 0)
+		result = 0;
+	PG_RETURN_FLOAT8(result);
+}
 
 /*		circle_center	-		returns the center point of the circle.
  */
@@ -5169,7 +5260,7 @@ circle_poly(PG_FUNCTION_ARGS)
 				 errmsg("must request at least 2 points")));
 
 	base_size = sizeof(poly->p[0]) * npts;
-	size = offsetof(POLYGON, p[0]) +base_size;
+	size = offsetof(POLYGON, p) +base_size;
 
 	/* Check for integer overflow */
 	if (base_size / npts != sizeof(poly->p[0]) || size <= base_size)

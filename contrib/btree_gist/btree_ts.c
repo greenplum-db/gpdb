@@ -19,6 +19,7 @@ typedef struct
 */
 PG_FUNCTION_INFO_V1(gbt_ts_compress);
 PG_FUNCTION_INFO_V1(gbt_tstz_compress);
+PG_FUNCTION_INFO_V1(gbt_ts_fetch);
 PG_FUNCTION_INFO_V1(gbt_ts_union);
 PG_FUNCTION_INFO_V1(gbt_ts_picksplit);
 PG_FUNCTION_INFO_V1(gbt_ts_consistent);
@@ -153,7 +154,7 @@ ts_dist(PG_FUNCTION_ARGS)
 		p->day = INT_MAX;
 		p->month = INT_MAX;
 #ifdef HAVE_INT64_TIMESTAMP
-		p->time = INT64CONST(0x7FFFFFFFFFFFFFFF);
+		p->time = PG_INT64_MAX;
 #else
 		p->time = DBL_MAX;
 #endif
@@ -181,7 +182,7 @@ tstz_dist(PG_FUNCTION_ARGS)
 		p->day = INT_MAX;
 		p->month = INT_MAX;
 #ifdef HAVE_INT64_TIMESTAMP
-		p->time = INT64CONST(0x7FFFFFFFFFFFFFFF);
+		p->time = PG_INT64_MAX;
 #else
 		p->time = DBL_MAX;
 #endif
@@ -212,9 +213,8 @@ Datum
 gbt_ts_compress(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
-	GISTENTRY  *retval = NULL;
 
-	PG_RETURN_POINTER(gbt_num_compress(retval, entry, &tinfo));
+	PG_RETURN_POINTER(gbt_num_compress(entry, &tinfo));
 }
 
 
@@ -244,6 +244,13 @@ gbt_tstz_compress(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(retval);
 }
 
+Datum
+gbt_ts_fetch(PG_FUNCTION_ARGS)
+{
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
+
+	PG_RETURN_POINTER(gbt_num_fetch(entry, &tinfo));
+}
 
 Datum
 gbt_ts_consistent(PG_FUNCTION_ARGS)

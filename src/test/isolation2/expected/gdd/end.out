@@ -1,5 +1,32 @@
-0: show gp_enable_global_deadlock_detector;
+include: helpers/server_helpers.sql;
+CREATE
+
+ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
+ALTER
+ALTER SYSTEM RESET gp_global_deadlock_detector_period;
+ALTER
+
+-- Use utility session on seg 0 to restart master. This way avoids the
+-- situation where session issuing the restart doesn't disappear
+-- itself.
+1U:SELECT pg_ctl(dir, 'restart') from datadir;
+ pg_ctl                                                                                               
+------------------------------------------------------------------------------------------------------
+ waiting for server to shut down done
+server stopped
+waiting for server to start done
+server started
+ 
+(1 row)
+-- Start new session on master to make sure it has fully completed
+-- recovery and up and running again.
+1: SHOW gp_enable_global_deadlock_detector;
  gp_enable_global_deadlock_detector 
 ------------------------------------
  off                                
+(1 row)
+1: SHOW gp_global_deadlock_detector_period;
+ gp_global_deadlock_detector_period 
+------------------------------------
+ 2min                               
 (1 row)

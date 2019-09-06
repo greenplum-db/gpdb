@@ -31,17 +31,15 @@ insert into segwalrep_commit_blocking values (5);
 INSERT 1
 
 -- skip FTS probes always
-create extension if not exists gp_inject_fault;
-CREATE
 select gp_inject_fault('fts_probe', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 select gp_inject_fault_infinite('fts_probe', 'skip', 1);
  gp_inject_fault_infinite 
 --------------------------
- t                        
+ Success:                 
 (1 row)
 -- force scan to trigger the fault
 select gp_request_fts_probe_scan();
@@ -53,7 +51,7 @@ select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 
 -- stop a mirror and show commit on dbid 2 will block
@@ -97,7 +95,7 @@ server closed the connection unexpectedly
 -- this should block since mirror is not up and sync replication is on
 3: begin;
 BEGIN
-3: insert into segwalrep_commit_blocking values (5);
+3: insert into segwalrep_commit_blocking values (4);
 INSERT 1
 3&: commit;  <waiting ...>
 
@@ -121,7 +119,7 @@ COMMIT
 select gp_inject_fault('fts_probe', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 -- everything should be back to normal
@@ -135,7 +133,7 @@ INSERT 10
  3  
  4  
  4  
- 5  
+ 4  
  5  
  5  
  6  

@@ -17,23 +17,20 @@
  * is kept in the type cache.
  *
  * Once created, a type cache entry lives as long as the backend does, so
- * there is no need for a call to release a cache entry.  (For present uses,
- * it would be okay to flush type cache entries at the ends of transactions,
- * if we needed to reclaim space.)
+ * there is no need for a call to release a cache entry.  If the type is
+ * dropped, the cache entry simply becomes wasted storage.  This is not
+ * expected to happen often, and assuming that typcache entries are good
+ * permanently allows caching pointers to them in long-lived places.
  *
- * There is presently no provision for clearing out a cache entry if the
- * stored data becomes obsolete.  (The code will work if a type acquires
- * opclasses it didn't have before while a backend runs --- but not if the
- * definition of an existing opclass is altered.)  However, the relcache
- * doesn't cope with opclasses changing under it, either, so this seems
- * a low-priority problem.
- *
- * We do support clearing the tuple descriptor and operator/function parts
- * of a rowtype's cache entry, since those may need to change as a consequence
- * of ALTER TABLE.
+ * We have some provisions for updating cache entries if the stored data
+ * becomes obsolete.  Information dependent on opclasses is cleared if we
+ * detect updates to pg_opclass.  We also support clearing the tuple
+ * descriptor and operator/function parts of a rowtype's cache entry,
+ * since those may need to change as a consequence of ALTER TABLE.
+ * Domain constraint changes are also tracked properly.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -50,16 +47,20 @@
 #include "access/htup_details.h"
 #include "access/nbtree.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_constraint.h"
 #include "catalog/pg_enum.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_range.h"
 #include "catalog/pg_type.h"
 #include "commands/defrem.h"
+#include "executor/executor.h"
+#include "optimizer/planner.h"
 #include "utils/builtins.h"
 #include "utils/catcache.h"
 #include "utils/fmgroids.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
+#include "utils/memutils.h"
 #include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
@@ -70,14 +71,37 @@
 /* The main type cache hashtable searched by lookup_type_cache */
 static HTAB *TypeCacheHash = NULL;
 
+/* List of type cache entries for domain types */
+static TypeCacheEntry *firstDomainTypeEntry = NULL;
+
 /* Private flag bits in the TypeCacheEntry.flags field */
-#define TCFLAGS_CHECKED_ELEM_PROPERTIES		0x0001
-#define TCFLAGS_HAVE_ELEM_EQUALITY			0x0002
-#define TCFLAGS_HAVE_ELEM_COMPARE			0x0004
-#define TCFLAGS_HAVE_ELEM_HASHING			0x0008
-#define TCFLAGS_CHECKED_FIELD_PROPERTIES	0x0010
-#define TCFLAGS_HAVE_FIELD_EQUALITY			0x0020
-#define TCFLAGS_HAVE_FIELD_COMPARE			0x0040
+#define TCFLAGS_CHECKED_BTREE_OPCLASS		0x0001
+#define TCFLAGS_CHECKED_HASH_OPCLASS		0x0002
+#define TCFLAGS_CHECKED_EQ_OPR				0x0004
+#define TCFLAGS_CHECKED_LT_OPR				0x0008
+#define TCFLAGS_CHECKED_GT_OPR				0x0010
+#define TCFLAGS_CHECKED_CMP_PROC			0x0020
+#define TCFLAGS_CHECKED_HASH_PROC			0x0040
+#define TCFLAGS_CHECKED_ELEM_PROPERTIES		0x0080
+#define TCFLAGS_HAVE_ELEM_EQUALITY			0x0100
+#define TCFLAGS_HAVE_ELEM_COMPARE			0x0200
+#define TCFLAGS_HAVE_ELEM_HASHING			0x0400
+#define TCFLAGS_CHECKED_FIELD_PROPERTIES	0x0800
+#define TCFLAGS_HAVE_FIELD_EQUALITY			0x1000
+#define TCFLAGS_HAVE_FIELD_COMPARE			0x2000
+#define TCFLAGS_CHECKED_DOMAIN_CONSTRAINTS	0x4000
+
+/*
+ * Data stored about a domain type's constraints.  Note that we do not create
+ * this struct for the common case of a constraint-less domain; we just set
+ * domainData to NULL to indicate that.
+ */
+struct DomainConstraintCache
+{
+	List	   *constraints;	/* list of DomainConstraintState nodes */
+	MemoryContext dccContext;	/* memory context holding all associated data */
+	long		dccRefCount;	/* number of references to this struct */
+};
 
 /* Private information to support comparisons of enum values */
 typedef struct
@@ -91,7 +115,7 @@ typedef struct TypeCacheEnumData
 	Oid			bitmap_base;	/* OID corresponding to bit 0 of bitmapset */
 	Bitmapset  *sorted_values;	/* Set of OIDs known to be in order */
 	int			num_values;		/* total number of values in enum */
-	EnumItem	enum_values[1]; /* VARIABLE LENGTH ARRAY */
+	EnumItem	enum_values[FLEXIBLE_ARRAY_MEMBER];
 } TypeCacheEnumData;
 
 /*
@@ -127,6 +151,10 @@ static void TypeCacheRelCallback(Datum arg, Oid relid);
 
 static void load_typcache_tupdesc(TypeCacheEntry *typentry);
 static void load_rangetype_info(TypeCacheEntry *typentry);
+static void load_domaintype_info(TypeCacheEntry *typentry);
+static int	dcs_cmp(const void *a, const void *b);
+static void decr_dcc_refcount(DomainConstraintCache *dcc);
+static void dccref_deletion_callback(void *arg);
 static bool array_element_has_equality(TypeCacheEntry *typentry);
 static bool array_element_has_compare(TypeCacheEntry *typentry);
 static bool array_element_has_hashing(TypeCacheEntry *typentry);
@@ -137,6 +165,8 @@ static void cache_record_field_properties(TypeCacheEntry *typentry);
 static bool range_element_has_hashing(TypeCacheEntry *typentry);
 static void cache_range_element_properties(TypeCacheEntry *typentry);
 static void TypeCacheRelCallback(Datum arg, Oid relid);
+static void TypeCacheOpcCallback(Datum arg, int cacheid, uint32 hashvalue);
+static void TypeCacheConstrCallback(Datum arg, int cacheid, uint32 hashvalue);
 static void load_enum_cache_data(TypeCacheEntry *tcache);
 static EnumItem *find_enumitem(TypeCacheEnumData *enumdata, Oid arg);
 static int	enum_oid_cmp(const void *left, const void *right);
@@ -167,12 +197,14 @@ lookup_type_cache(Oid type_id, int flags)
 		MemSet(&ctl, 0, sizeof(ctl));
 		ctl.keysize = sizeof(Oid);
 		ctl.entrysize = sizeof(TypeCacheEntry);
-		ctl.hash = oid_hash;
 		TypeCacheHash = hash_create("Type information cache", 64,
-									&ctl, HASH_ELEM | HASH_FUNCTION);
+									&ctl, HASH_ELEM | HASH_BLOBS);
 
-		/* Also set up a callback for relcache SI invalidations */
+		/* Also set up callbacks for SI invalidations */
 		CacheRegisterRelcacheCallback(TypeCacheRelCallback, (Datum) 0);
+		CacheRegisterSyscacheCallback(CLAOID, TypeCacheOpcCallback, (Datum) 0);
+		CacheRegisterSyscacheCallback(CONSTROID, TypeCacheConstrCallback, (Datum) 0);
+		CacheRegisterSyscacheCallback(TYPEOID, TypeCacheConstrCallback, (Datum) 0);
 
 		/* Also make sure CacheMemoryContext exists */
 		if (!CacheMemoryContext)
@@ -218,17 +250,25 @@ lookup_type_cache(Oid type_id, int flags)
 		typentry->typtype = typtup->typtype;
 		typentry->typrelid = typtup->typrelid;
 
+		/* If it's a domain, immediately thread it into the domain cache list */
+		if (typentry->typtype == TYPTYPE_DOMAIN)
+		{
+			typentry->nextDomain = firstDomainTypeEntry;
+			firstDomainTypeEntry = typentry;
+		}
+
 		ReleaseSysCache(tp);
 	}
 
 	/*
-	 * If we haven't already found the opclasses, try to do so
+	 * Look up opclasses if we haven't already and any dependent info is
+	 * requested.
 	 */
 	if ((flags & (TYPECACHE_EQ_OPR | TYPECACHE_LT_OPR | TYPECACHE_GT_OPR |
 				  TYPECACHE_CMP_PROC |
 				  TYPECACHE_EQ_OPR_FINFO | TYPECACHE_CMP_PROC_FINFO |
 				  TYPECACHE_BTREE_OPFAMILY)) &&
-		typentry->btree_opf == InvalidOid)
+		!(typentry->flags & TCFLAGS_CHECKED_BTREE_OPCLASS))
 	{
 		Oid			opclass;
 
@@ -238,38 +278,36 @@ lookup_type_cache(Oid type_id, int flags)
 			typentry->btree_opf = get_opclass_family(opclass);
 			typentry->btree_opintype = get_opclass_input_type(opclass);
 		}
-		/* If no btree opclass, we force lookup of the hash opclass */
-		if (typentry->btree_opf == InvalidOid)
-		{
-			if (typentry->hash_opf == InvalidOid)
-			{
-				opclass = GetDefaultOpClass(type_id, HASH_AM_OID);
-				if (OidIsValid(opclass))
-				{
-					typentry->hash_opf = get_opclass_family(opclass);
-					typentry->hash_opintype = get_opclass_input_type(opclass);
-				}
-			}
-		}
 		else
 		{
-			/*
-			 * In case we find a btree opclass where previously we only found
-			 * a hash opclass, reset eq_opr and derived information so that we
-			 * can fetch the btree equality operator instead of the hash
-			 * equality operator.  (They're probably the same operator, but we
-			 * don't assume that here.)
-			 */
-			typentry->eq_opr = InvalidOid;
-			typentry->eq_opr_finfo.fn_oid = InvalidOid;
-			typentry->hash_proc = InvalidOid;
-			typentry->hash_proc_finfo.fn_oid = InvalidOid;
+			typentry->btree_opf = typentry->btree_opintype = InvalidOid;
 		}
+
+		/*
+		 * Reset information derived from btree opclass.  Note in particular
+		 * that we'll redetermine the eq_opr even if we previously found one;
+		 * this matters in case a btree opclass has been added to a type that
+		 * previously had only a hash opclass.
+		 */
+		typentry->flags &= ~(TCFLAGS_CHECKED_EQ_OPR |
+							 TCFLAGS_CHECKED_LT_OPR |
+							 TCFLAGS_CHECKED_GT_OPR |
+							 TCFLAGS_CHECKED_CMP_PROC);
+		typentry->flags |= TCFLAGS_CHECKED_BTREE_OPCLASS;
 	}
+
+	/*
+	 * If we need to look up equality operator, and there's no btree opclass,
+	 * force lookup of hash opclass.
+	 */
+	if ((flags & (TYPECACHE_EQ_OPR | TYPECACHE_EQ_OPR_FINFO)) &&
+		!(typentry->flags & TCFLAGS_CHECKED_EQ_OPR) &&
+		typentry->btree_opf == InvalidOid)
+		flags |= TYPECACHE_HASH_OPFAMILY;
 
 	if ((flags & (TYPECACHE_HASH_PROC | TYPECACHE_HASH_PROC_FINFO |
 				  TYPECACHE_HASH_OPFAMILY)) &&
-		typentry->hash_opf == InvalidOid)
+		!(typentry->flags & TCFLAGS_CHECKED_HASH_OPCLASS))
 	{
 		Oid			opclass;
 
@@ -279,11 +317,25 @@ lookup_type_cache(Oid type_id, int flags)
 			typentry->hash_opf = get_opclass_family(opclass);
 			typentry->hash_opintype = get_opclass_input_type(opclass);
 		}
+		else
+		{
+			typentry->hash_opf = typentry->hash_opintype = InvalidOid;
+		}
+
+		/*
+		 * Reset information derived from hash opclass.  We do *not* reset the
+		 * eq_opr; if we already found one from the btree opclass, that
+		 * decision is still good.
+		 */
+		typentry->flags &= ~(TCFLAGS_CHECKED_HASH_PROC);
+		typentry->flags |= TCFLAGS_CHECKED_HASH_OPCLASS;
 	}
 
-	/* Look for requested operators and functions */
+	/*
+	 * Look for requested operators and functions, if we haven't already.
+	 */
 	if ((flags & (TYPECACHE_EQ_OPR | TYPECACHE_EQ_OPR_FINFO)) &&
-		typentry->eq_opr == InvalidOid)
+		!(typentry->flags & TCFLAGS_CHECKED_EQ_OPR))
 	{
 		Oid			eq_opr = InvalidOid;
 
@@ -312,6 +364,10 @@ lookup_type_cache(Oid type_id, int flags)
 				 !record_fields_have_equality(typentry))
 			eq_opr = InvalidOid;
 
+		/* Force update of eq_opr_finfo only if we're changing state */
+		if (typentry->eq_opr != eq_opr)
+			typentry->eq_opr_finfo.fn_oid = InvalidOid;
+
 		typentry->eq_opr = eq_opr;
 
 		/*
@@ -319,10 +375,11 @@ lookup_type_cache(Oid type_id, int flags)
 		 * equality operator.  This is so we can ensure that the hash function
 		 * matches the operator.
 		 */
-		typentry->hash_proc = InvalidOid;
-		typentry->hash_proc_finfo.fn_oid = InvalidOid;
+		typentry->flags &= ~(TCFLAGS_CHECKED_HASH_PROC);
+		typentry->flags |= TCFLAGS_CHECKED_EQ_OPR;
 	}
-	if ((flags & TYPECACHE_LT_OPR) && typentry->lt_opr == InvalidOid)
+	if ((flags & TYPECACHE_LT_OPR) &&
+		!(typentry->flags & TCFLAGS_CHECKED_LT_OPR))
 	{
 		Oid			lt_opr = InvalidOid;
 
@@ -341,8 +398,10 @@ lookup_type_cache(Oid type_id, int flags)
 			lt_opr = InvalidOid;
 
 		typentry->lt_opr = lt_opr;
+		typentry->flags |= TCFLAGS_CHECKED_LT_OPR;
 	}
-	if ((flags & TYPECACHE_GT_OPR) && typentry->gt_opr == InvalidOid)
+	if ((flags & TYPECACHE_GT_OPR) &&
+		!(typentry->flags & TCFLAGS_CHECKED_GT_OPR))
 	{
 		Oid			gt_opr = InvalidOid;
 
@@ -361,9 +420,10 @@ lookup_type_cache(Oid type_id, int flags)
 			gt_opr = InvalidOid;
 
 		typentry->gt_opr = gt_opr;
+		typentry->flags |= TCFLAGS_CHECKED_GT_OPR;
 	}
 	if ((flags & (TYPECACHE_CMP_PROC | TYPECACHE_CMP_PROC_FINFO)) &&
-		typentry->cmp_proc == InvalidOid)
+		!(typentry->flags & TCFLAGS_CHECKED_CMP_PROC))
 	{
 		Oid			cmp_proc = InvalidOid;
 
@@ -381,10 +441,15 @@ lookup_type_cache(Oid type_id, int flags)
 				 !record_fields_have_compare(typentry))
 			cmp_proc = InvalidOid;
 
+		/* Force update of cmp_proc_finfo only if we're changing state */
+		if (typentry->cmp_proc != cmp_proc)
+			typentry->cmp_proc_finfo.fn_oid = InvalidOid;
+
 		typentry->cmp_proc = cmp_proc;
+		typentry->flags |= TCFLAGS_CHECKED_CMP_PROC;
 	}
 	if ((flags & (TYPECACHE_HASH_PROC | TYPECACHE_HASH_PROC_FINFO)) &&
-		typentry->hash_proc == InvalidOid)
+		!(typentry->flags & TCFLAGS_CHECKED_HASH_PROC))
 	{
 		Oid			hash_proc = InvalidOid;
 
@@ -419,7 +484,12 @@ lookup_type_cache(Oid type_id, int flags)
 			!range_element_has_hashing(typentry))
 			hash_proc = InvalidOid;
 
+		/* Force update of hash_proc_finfo only if we're changing state */
+		if (typentry->hash_proc != hash_proc)
+			typentry->hash_proc_finfo.fn_oid = InvalidOid;
+
 		typentry->hash_proc = hash_proc;
+		typentry->flags |= TCFLAGS_CHECKED_HASH_PROC;
 	}
 
 	/*
@@ -428,6 +498,11 @@ lookup_type_cache(Oid type_id, int flags)
 	 * Note: we tell fmgr the finfo structures live in CacheMemoryContext,
 	 * which is not quite right (they're really in the hash table's private
 	 * memory context) but this will do for our purposes.
+	 *
+	 * Note: the code above avoids invalidating the finfo structs unless the
+	 * referenced operator/function OID actually changes.  This is to prevent
+	 * unnecessary leakage of any subsidiary data attached to an finfo, since
+	 * that would cause session-lifespan memory leaks.
 	 */
 	if ((flags & TYPECACHE_EQ_OPR_FINFO) &&
 		typentry->eq_opr_finfo.fn_oid == InvalidOid &&
@@ -473,6 +548,16 @@ lookup_type_cache(Oid type_id, int flags)
 		typentry->typtype == TYPTYPE_RANGE)
 	{
 		load_rangetype_info(typentry);
+	}
+
+	/*
+	 * If requested, get information about a domain type
+	 */
+	if ((flags & TYPECACHE_DOMAIN_INFO) &&
+		(typentry->flags & TCFLAGS_CHECKED_DOMAIN_CONSTRAINTS) == 0 &&
+		typentry->typtype == TYPTYPE_DOMAIN)
+	{
+		load_domaintype_info(typentry);
 	}
 
 	return typentry;
@@ -560,6 +645,373 @@ load_rangetype_info(TypeCacheEntry *typentry)
 
 	/* Lastly, set up link to the element type --- this marks data valid */
 	typentry->rngelemtype = lookup_type_cache(subtypeOid, 0);
+}
+
+
+/*
+ * load_domaintype_info --- helper routine to set up domain constraint info
+ *
+ * Note: we assume we're called in a relatively short-lived context, so it's
+ * okay to leak data into the current context while scanning pg_constraint.
+ * We build the new DomainConstraintCache data in a context underneath
+ * CurrentMemoryContext, and reparent it under CacheMemoryContext when
+ * complete.
+ */
+static void
+load_domaintype_info(TypeCacheEntry *typentry)
+{
+	Oid			typeOid = typentry->type_id;
+	DomainConstraintCache *dcc;
+	bool		notNull = false;
+	DomainConstraintState **ccons;
+	int			cconslen;
+	Relation	conRel;
+	MemoryContext oldcxt;
+
+	/*
+	 * If we're here, any existing constraint info is stale, so release it.
+	 * For safety, be sure to null the link before trying to delete the data.
+	 */
+	if (typentry->domainData)
+	{
+		dcc = typentry->domainData;
+		typentry->domainData = NULL;
+		decr_dcc_refcount(dcc);
+	}
+
+	/*
+	 * We try to optimize the common case of no domain constraints, so don't
+	 * create the dcc object and context until we find a constraint.  Likewise
+	 * for the temp sorting array.
+	 */
+	dcc = NULL;
+	ccons = NULL;
+	cconslen = 0;
+
+	/*
+	 * Scan pg_constraint for relevant constraints.  We want to find
+	 * constraints for not just this domain, but any ancestor domains, so the
+	 * outer loop crawls up the domain stack.
+	 */
+	conRel = heap_open(ConstraintRelationId, AccessShareLock);
+
+	for (;;)
+	{
+		HeapTuple	tup;
+		HeapTuple	conTup;
+		Form_pg_type typTup;
+		int			nccons = 0;
+		ScanKeyData key[1];
+		SysScanDesc scan;
+
+		tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typeOid));
+		if (!HeapTupleIsValid(tup))
+			elog(ERROR, "cache lookup failed for type %u", typeOid);
+		typTup = (Form_pg_type) GETSTRUCT(tup);
+
+		if (typTup->typtype != TYPTYPE_DOMAIN)
+		{
+			/* Not a domain, so done */
+			ReleaseSysCache(tup);
+			break;
+		}
+
+		/* Test for NOT NULL Constraint */
+		if (typTup->typnotnull)
+			notNull = true;
+
+		/* Look for CHECK Constraints on this domain */
+		ScanKeyInit(&key[0],
+					Anum_pg_constraint_contypid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(typeOid));
+
+		scan = systable_beginscan(conRel, ConstraintTypidIndexId, true,
+								  NULL, 1, key);
+
+		while (HeapTupleIsValid(conTup = systable_getnext(scan)))
+		{
+			Form_pg_constraint c = (Form_pg_constraint) GETSTRUCT(conTup);
+			Datum		val;
+			bool		isNull;
+			char	   *constring;
+			Expr	   *check_expr;
+			DomainConstraintState *r;
+
+			/* Ignore non-CHECK constraints (presently, shouldn't be any) */
+			if (c->contype != CONSTRAINT_CHECK)
+				continue;
+
+			/* Not expecting conbin to be NULL, but we'll test for it anyway */
+			val = fastgetattr(conTup, Anum_pg_constraint_conbin,
+							  conRel->rd_att, &isNull);
+			if (isNull)
+				elog(ERROR, "domain \"%s\" constraint \"%s\" has NULL conbin",
+					 NameStr(typTup->typname), NameStr(c->conname));
+
+			/* Convert conbin to C string in caller context */
+			constring = TextDatumGetCString(val);
+
+			/* Create the DomainConstraintCache object and context if needed */
+			if (dcc == NULL)
+			{
+				MemoryContext cxt;
+
+				cxt = AllocSetContextCreate(CurrentMemoryContext,
+											"Domain constraints",
+											ALLOCSET_SMALL_INITSIZE,
+											ALLOCSET_SMALL_MINSIZE,
+											ALLOCSET_SMALL_MAXSIZE);
+				dcc = (DomainConstraintCache *)
+					MemoryContextAlloc(cxt, sizeof(DomainConstraintCache));
+				dcc->constraints = NIL;
+				dcc->dccContext = cxt;
+				dcc->dccRefCount = 0;
+			}
+
+			/* Create node trees in DomainConstraintCache's context */
+			oldcxt = MemoryContextSwitchTo(dcc->dccContext);
+
+			check_expr = (Expr *) stringToNode(constring);
+
+			/* ExecInitExpr assumes we've planned the expression */
+			check_expr = expression_planner(check_expr);
+
+			r = makeNode(DomainConstraintState);
+			r->constrainttype = DOM_CONSTRAINT_CHECK;
+			r->name = pstrdup(NameStr(c->conname));
+			r->check_expr = ExecInitExpr(check_expr, NULL);
+
+			MemoryContextSwitchTo(oldcxt);
+
+			/* Accumulate constraints in an array, for sorting below */
+			if (ccons == NULL)
+			{
+				cconslen = 8;
+				ccons = (DomainConstraintState **)
+					palloc(cconslen * sizeof(DomainConstraintState *));
+			}
+			else if (nccons >= cconslen)
+			{
+				cconslen *= 2;
+				ccons = (DomainConstraintState **)
+					repalloc(ccons, cconslen * sizeof(DomainConstraintState *));
+			}
+			ccons[nccons++] = r;
+		}
+
+		systable_endscan(scan);
+
+		if (nccons > 0)
+		{
+			/*
+			 * Sort the items for this domain, so that CHECKs are applied in a
+			 * deterministic order.
+			 */
+			if (nccons > 1)
+				qsort(ccons, nccons, sizeof(DomainConstraintState *), dcs_cmp);
+
+			/*
+			 * Now attach them to the overall list.  Use lcons() here because
+			 * constraints of parent domains should be applied earlier.
+			 */
+			oldcxt = MemoryContextSwitchTo(dcc->dccContext);
+			while (nccons > 0)
+				dcc->constraints = lcons(ccons[--nccons], dcc->constraints);
+			MemoryContextSwitchTo(oldcxt);
+		}
+
+		/* loop to next domain in stack */
+		typeOid = typTup->typbasetype;
+		ReleaseSysCache(tup);
+	}
+
+	heap_close(conRel, AccessShareLock);
+
+	/*
+	 * Only need to add one NOT NULL check regardless of how many domains in
+	 * the stack request it.
+	 */
+	if (notNull)
+	{
+		DomainConstraintState *r;
+
+		/* Create the DomainConstraintCache object and context if needed */
+		if (dcc == NULL)
+		{
+			MemoryContext cxt;
+
+			cxt = AllocSetContextCreate(CurrentMemoryContext,
+										"Domain constraints",
+										ALLOCSET_SMALL_INITSIZE,
+										ALLOCSET_SMALL_MINSIZE,
+										ALLOCSET_SMALL_MAXSIZE);
+			dcc = (DomainConstraintCache *)
+				MemoryContextAlloc(cxt, sizeof(DomainConstraintCache));
+			dcc->constraints = NIL;
+			dcc->dccContext = cxt;
+			dcc->dccRefCount = 0;
+		}
+
+		/* Create node trees in DomainConstraintCache's context */
+		oldcxt = MemoryContextSwitchTo(dcc->dccContext);
+
+		r = makeNode(DomainConstraintState);
+
+		r->constrainttype = DOM_CONSTRAINT_NOTNULL;
+		r->name = pstrdup("NOT NULL");
+		r->check_expr = NULL;
+
+		/* lcons to apply the nullness check FIRST */
+		dcc->constraints = lcons(r, dcc->constraints);
+
+		MemoryContextSwitchTo(oldcxt);
+	}
+
+	/*
+	 * If we made a constraint object, move it into CacheMemoryContext and
+	 * attach it to the typcache entry.
+	 */
+	if (dcc)
+	{
+		MemoryContextSetParent(dcc->dccContext, CacheMemoryContext);
+		typentry->domainData = dcc;
+		dcc->dccRefCount++;		/* count the typcache's reference */
+	}
+
+	/* Either way, the typcache entry's domain data is now valid. */
+	typentry->flags |= TCFLAGS_CHECKED_DOMAIN_CONSTRAINTS;
+}
+
+/*
+ * qsort comparator to sort DomainConstraintState pointers by name
+ */
+static int
+dcs_cmp(const void *a, const void *b)
+{
+	const DomainConstraintState *const * ca = (const DomainConstraintState *const *) a;
+	const DomainConstraintState *const * cb = (const DomainConstraintState *const *) b;
+
+	return strcmp((*ca)->name, (*cb)->name);
+}
+
+/*
+ * decr_dcc_refcount --- decrement a DomainConstraintCache's refcount,
+ * and free it if no references remain
+ */
+static void
+decr_dcc_refcount(DomainConstraintCache *dcc)
+{
+	Assert(dcc->dccRefCount > 0);
+	if (--(dcc->dccRefCount) <= 0)
+		MemoryContextDelete(dcc->dccContext);
+}
+
+/*
+ * Context reset/delete callback for a DomainConstraintRef
+ */
+static void
+dccref_deletion_callback(void *arg)
+{
+	DomainConstraintRef *ref = (DomainConstraintRef *) arg;
+	DomainConstraintCache *dcc = ref->dcc;
+
+	/* Paranoia --- be sure link is nulled before trying to release */
+	if (dcc)
+	{
+		ref->constraints = NIL;
+		ref->dcc = NULL;
+		decr_dcc_refcount(dcc);
+	}
+}
+
+/*
+ * InitDomainConstraintRef --- initialize a DomainConstraintRef struct
+ *
+ * Caller must tell us the MemoryContext in which the DomainConstraintRef
+ * lives.  The ref will be cleaned up when that context is reset/deleted.
+ */
+void
+InitDomainConstraintRef(Oid type_id, DomainConstraintRef *ref,
+						MemoryContext refctx)
+{
+	/* Look up the typcache entry --- we assume it survives indefinitely */
+	ref->tcache = lookup_type_cache(type_id, TYPECACHE_DOMAIN_INFO);
+	/* For safety, establish the callback before acquiring a refcount */
+	ref->dcc = NULL;
+	ref->callback.func = dccref_deletion_callback;
+	ref->callback.arg = (void *) ref;
+	MemoryContextRegisterResetCallback(refctx, &ref->callback);
+	/* Acquire refcount if there are constraints, and set up exported list */
+	if (ref->tcache->domainData)
+	{
+		ref->dcc = ref->tcache->domainData;
+		ref->dcc->dccRefCount++;
+		ref->constraints = ref->dcc->constraints;
+	}
+	else
+		ref->constraints = NIL;
+}
+
+/*
+ * UpdateDomainConstraintRef --- recheck validity of domain constraint info
+ *
+ * If the domain's constraint set changed, ref->constraints is updated to
+ * point at a new list of cached constraints.
+ *
+ * In the normal case where nothing happened to the domain, this is cheap
+ * enough that it's reasonable (and expected) to check before *each* use
+ * of the constraint info.
+ */
+void
+UpdateDomainConstraintRef(DomainConstraintRef *ref)
+{
+	TypeCacheEntry *typentry = ref->tcache;
+
+	/* Make sure typcache entry's data is up to date */
+	if ((typentry->flags & TCFLAGS_CHECKED_DOMAIN_CONSTRAINTS) == 0 &&
+		typentry->typtype == TYPTYPE_DOMAIN)
+		load_domaintype_info(typentry);
+
+	/* Transfer to ref object if there's new info, adjusting refcounts */
+	if (ref->dcc != typentry->domainData)
+	{
+		/* Paranoia --- be sure link is nulled before trying to release */
+		DomainConstraintCache *dcc = ref->dcc;
+
+		if (dcc)
+		{
+			ref->constraints = NIL;
+			ref->dcc = NULL;
+			decr_dcc_refcount(dcc);
+		}
+		dcc = typentry->domainData;
+		if (dcc)
+		{
+			ref->dcc = dcc;
+			dcc->dccRefCount++;
+			ref->constraints = dcc->constraints;
+		}
+	}
+}
+
+/*
+ * DomainHasConstraints --- utility routine to check if a domain has constraints
+ *
+ * This is defined to return false, not fail, if type is not a domain.
+ */
+bool
+DomainHasConstraints(Oid type_id)
+{
+	TypeCacheEntry *typentry;
+
+	/*
+	 * Note: a side effect is to cause the typcache's domain data to become
+	 * valid.  This is fine since we'll likely need it soon if there is any.
+	 */
+	typentry = lookup_type_cache(type_id, TYPECACHE_DOMAIN_INFO);
+
+	return (typentry->domainData != NULL);
 }
 
 
@@ -858,9 +1310,8 @@ assign_record_type_typmod(TupleDesc tupDesc)
 		MemSet(&ctl, 0, sizeof(ctl));
 		ctl.keysize = REC_HASH_KEYS * sizeof(Oid);
 		ctl.entrysize = sizeof(RecordCacheEntry);
-		ctl.hash = tag_hash;
 		RecordCacheHash = hash_create("Record information cache", 64,
-									  &ctl, HASH_ELEM | HASH_FUNCTION);
+									  &ctl, HASH_ELEM | HASH_BLOBS);
 
 		/* Also make sure CacheMemoryContext exists */
 		if (!CacheMemoryContext)
@@ -982,16 +1433,73 @@ TypeCacheRelCallback(Datum arg, Oid relid)
 			typentry->tupDesc = NULL;
 		}
 
-		/* Reset equality/comparison/hashing information */
-		typentry->eq_opr = InvalidOid;
-		typentry->lt_opr = InvalidOid;
-		typentry->gt_opr = InvalidOid;
-		typentry->cmp_proc = InvalidOid;
-		typentry->hash_proc = InvalidOid;
-		typentry->eq_opr_finfo.fn_oid = InvalidOid;
-		typentry->cmp_proc_finfo.fn_oid = InvalidOid;
-		typentry->hash_proc_finfo.fn_oid = InvalidOid;
+		/* Reset equality/comparison/hashing validity information */
 		typentry->flags = 0;
+	}
+}
+
+/*
+ * TypeCacheOpcCallback
+ *		Syscache inval callback function
+ *
+ * This is called when a syscache invalidation event occurs for any pg_opclass
+ * row.  In principle we could probably just invalidate data dependent on the
+ * particular opclass, but since updates on pg_opclass are rare in production
+ * it doesn't seem worth a lot of complication: we just mark all cached data
+ * invalid.
+ *
+ * Note that we don't bother watching for updates on pg_amop or pg_amproc.
+ * This should be safe because ALTER OPERATOR FAMILY ADD/DROP OPERATOR/FUNCTION
+ * is not allowed to be used to add/drop the primary operators and functions
+ * of an opclass, only cross-type members of a family; and the latter sorts
+ * of members are not going to get cached here.
+ */
+static void
+TypeCacheOpcCallback(Datum arg, int cacheid, uint32 hashvalue)
+{
+	HASH_SEQ_STATUS status;
+	TypeCacheEntry *typentry;
+
+	/* TypeCacheHash must exist, else this callback wouldn't be registered */
+	hash_seq_init(&status, TypeCacheHash);
+	while ((typentry = (TypeCacheEntry *) hash_seq_search(&status)) != NULL)
+	{
+		/* Reset equality/comparison/hashing validity information */
+		typentry->flags = 0;
+	}
+}
+
+/*
+ * TypeCacheConstrCallback
+ *		Syscache inval callback function
+ *
+ * This is called when a syscache invalidation event occurs for any
+ * pg_constraint or pg_type row.  We flush information about domain
+ * constraints when this happens.
+ *
+ * It's slightly annoying that we can't tell whether the inval event was for a
+ * domain constraint/type record or not; there's usually more update traffic
+ * for table constraints/types than domain constraints, so we'll do a lot of
+ * useless flushes.  Still, this is better than the old no-caching-at-all
+ * approach to domain constraints.
+ */
+static void
+TypeCacheConstrCallback(Datum arg, int cacheid, uint32 hashvalue)
+{
+	TypeCacheEntry *typentry;
+
+	/*
+	 * Because this is called very frequently, and typically very few of the
+	 * typcache entries are for domains, we don't use hash_seq_search here.
+	 * Instead we thread all the domain-type entries together so that we can
+	 * visit them cheaply.
+	 */
+	for (typentry = firstDomainTypeEntry;
+		 typentry != NULL;
+		 typentry = typentry->nextDomain)
+	{
+		/* Reset domain constraint validity information */
+		typentry->flags &= ~TCFLAGS_CHECKED_DOMAIN_CONSTRAINTS;
 	}
 }
 

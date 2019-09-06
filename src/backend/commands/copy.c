@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -28,6 +28,7 @@
 #include "access/htup_details.h"
 #include "access/sysattr.h"
 #include "access/xact.h"
+#include "access/xlog.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_type.h"
 #include "commands/copy.h"
@@ -41,6 +42,7 @@
 #include "optimizer/clauses.h"
 #include "optimizer/planner.h"
 #include "parser/parse_relation.h"
+#include "nodes/makefuncs.h"
 #include "rewrite/rewriteHandler.h"
 #include "storage/fd.h"
 #include "tcop/tcopprot.h"
@@ -50,6 +52,7 @@
 #include "utils/memutils.h"
 #include "utils/portal.h"
 #include "utils/rel.h"
+#include "utils/rls.h"
 #include "utils/snapmgr.h"
 
 #include "access/appendonlywriter.h"
@@ -147,12 +150,12 @@ static const char BinarySignature[11] = "PGCOPY\n\377\r\n\0";
 
 /* non-export function prototypes */
 static CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
-						   const char *queryString, List *attnamelist, List *options,
-						   TupleDesc tupDesc);
+		  const char *queryString, const Oid queryRelId, List *attnamelist,
+		  List *options, TupleDesc tupDesc);
 static void EndCopy(CopyState cstate);
 static CopyState BeginCopyTo(Relation rel, Node *query, const char *queryString,
-							 const char *filename, bool is_program, List *attnamelist,
-							 List *options, bool skip_ext_partition);
+			const Oid queryRelId, const char *filename, bool is_program,
+			List *attnamelist, List *options, bool skip_ext_partition);
 static void EndCopyTo(CopyState cstate, uint64 *processed);
 static uint64 DoCopyTo(CopyState cstate);
 static uint64 CopyToDispatch(CopyState cstate);
@@ -218,7 +221,6 @@ static void HandleQDErrorFrame(CopyState cstate);
 
 static void CopyInitDataParser(CopyState cstate);
 static void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable);
-static void CopyEolStrToType(CopyState cstate);
 
 static GpDistributionData *InitDistributionData(CopyState cstate, EState *estate);
 static void FreeDistributionData(GpDistributionData *distData);
@@ -931,10 +933,9 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 	bool		pipe = (stmt->filename == NULL || Gp_role == GP_ROLE_EXECUTE);
 	Relation	rel;
 	Oid			relid;
+	Node	   *query = NULL;
 	List	   *range_table = NIL;
 	List	   *attnamelist = stmt->attlist;
-	AclMode		required_access = (is_from ? ACL_INSERT : ACL_SELECT);
-	TupleDesc	tupDesc;
 	List	   *options;
 
 	glob_cstate = NULL;
@@ -976,9 +977,11 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 
 	if (stmt->relation)
 	{
-		RangeTblEntry  *rte;
-		List		   *attnums;
-		ListCell	   *cur;
+		TupleDesc	tupDesc;
+		AclMode		required_access = (is_from ? ACL_INSERT : ACL_SELECT);
+		List	   *attnums;
+		ListCell   *cur;
+		RangeTblEntry *rte;
 
 		Assert(!stmt->query);
 
@@ -1003,16 +1006,75 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 			FirstLowInvalidHeapAttributeNumber;
 
 			if (is_from)
-				rte->modifiedCols = bms_add_member(rte->modifiedCols, attno);
+				rte->insertedCols = bms_add_member(rte->insertedCols, attno);
 			else
 				rte->selectedCols = bms_add_member(rte->selectedCols, attno);
 		}
 		ExecCheckRTPerms(range_table, true);
+
+		/*
+		 * Permission check for row security policies.
+		 *
+		 * check_enable_rls will ereport(ERROR) if the user has requested
+		 * something invalid and will otherwise indicate if we should enable
+		 * RLS (returns RLS_ENABLED) or not for this COPY statement.
+		 *
+		 * If the relation has a row security policy and we are to apply it
+		 * then perform a "query" copy and allow the normal query processing
+		 * to handle the policies.
+		 *
+		 * If RLS is not enabled for this, then just fall through to the
+		 * normal non-filtering relation handling.
+		 */
+		if (check_enable_rls(rte->relid, InvalidOid, false) == RLS_ENABLED)
+		{
+			SelectStmt *select;
+			ColumnRef  *cr;
+			ResTarget  *target;
+			RangeVar   *from;
+
+			if (is_from)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				  errmsg("COPY FROM not supported with row level security."),
+						 errhint("Use direct INSERT statements instead.")));
+
+			/* Build target list */
+			cr = makeNode(ColumnRef);
+
+			if (!stmt->attlist)
+				cr->fields = list_make1(makeNode(A_Star));
+			else
+				cr->fields = stmt->attlist;
+
+			cr->location = 1;
+
+			target = makeNode(ResTarget);
+			target->name = NULL;
+			target->indirection = NIL;
+			target->val = (Node *) cr;
+			target->location = 1;
+
+			/* Build FROM clause */
+			from = stmt->relation;
+
+			/* Build query */
+			select = makeNode(SelectStmt);
+			select->targetList = list_make1(target);
+			select->fromClause = list_make1(from);
+
+			query = (Node *) select;
+
+			/* Close the handle to the relation as it is no longer needed. */
+			heap_close(rel, (is_from ? RowExclusiveLock : AccessShareLock));
+			rel = NULL;
+		}
 	}
 	else
 	{
 		Assert(stmt->query);
 
+		query = stmt->query;
 		relid = InvalidOid;
 		rel = NULL;
 	}
@@ -1026,14 +1088,15 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("COPY single row error handling only available for distributed user tables")));
 
-		/* check read-only transaction */
 		/*
 		 * GPDB_91_MERGE_FIXME: is it possible to get to this point in the code
 		 * with a temporary relation that belongs to another session? If so, the
 		 * following code doesn't function as expected.
 		 */
+		/* check read-only transaction and parallel mode */
 		if (XactReadOnly && !rel->rd_islocaltemp)
 			PreventCommandIfReadOnly("COPY FROM");
+		PreventCommandIfParallelMode("COPY FROM");
 
 		cstate = BeginCopyFrom(rel, stmt->filename, stmt->is_program,
 							   NULL, NULL, stmt->attlist, options,
@@ -1116,7 +1179,7 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 		 */
 		PG_TRY();
 		{
-			cstate = BeginCopyTo(rel, stmt->query, queryString,
+			cstate = BeginCopyTo(rel, query, queryString, relid,
 								 stmt->filename, stmt->is_program,
 								 stmt->attlist, options, stmt->skip_ext_partition);
 
@@ -1688,13 +1751,18 @@ ProcessCopyOptions(CopyState cstate,
 		}
 		else
 		{
-			if(pg_strcasecmp(cstate->eol_str, "lf") != 0 &&
-			   pg_strcasecmp(cstate->eol_str, "cr") != 0 &&
-			   pg_strcasecmp(cstate->eol_str, "crlf") != 0)
+			if (pg_strcasecmp(cstate->eol_str, "lf") == 0)
+				cstate->eol_type = EOL_NL;
+			else if (pg_strcasecmp(cstate->eol_str, "cr") == 0)
+				cstate->eol_type = EOL_CR;
+			else if (pg_strcasecmp(cstate->eol_str, "crlf") == 0)
+				cstate->eol_type = EOL_CRNL;
+			else
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("invalid value for NEWLINE (%s)", cstate->eol_str),
-						errhint("valid options are: 'LF', 'CRLF', 'CR'")));
+						 errmsg("invalid value for NEWLINE \"%s\"",
+								cstate->eol_str),
+						 errhint("Valid options are: 'LF', 'CRLF' and 'CR'.")));
 		}
 	}
 
@@ -1702,10 +1770,6 @@ ProcessCopyOptions(CopyState cstate,
 	{
 		cstate->escape_off = true;
 	}
-
-	/* set end of line type if NEWLINE keyword was specified */
-	if (cstate->eol_str)
-		CopyEolStrToType(cstate);
 }
 
 /*
@@ -1728,6 +1792,7 @@ BeginCopy(bool is_from,
 		  Relation rel,
 		  Node *raw_query,
 		  const char *queryString,
+		  const Oid queryRelId,
 		  List *attnamelist,
 		  List *options,
 		  TupleDesc tupDesc)
@@ -1827,6 +1892,31 @@ BeginCopy(bool is_from,
 
 		/* plan the query */
 		plan = planner(query, 0, NULL);
+
+		/*
+		 * If we were passed in a relid, make sure we got the same one back
+		 * after planning out the query.  It's possible that it changed
+		 * between when we checked the policies on the table and decided to
+		 * use a query and now.
+		 */
+		if (queryRelId != InvalidOid)
+		{
+			Oid			relid = linitial_oid(plan->relationOids);
+
+			/*
+			 * There should only be one relationOid in this case, since we
+			 * will only get here when we have changed the command for the
+			 * user from a "COPY relation TO" to "COPY (SELECT * FROM
+			 * relation) TO", to allow row level security policies to be
+			 * applied.
+			 */
+			Assert(list_length(plan->relationOids) == 1);
+
+			if (relid != queryRelId)
+				ereport(ERROR,
+						(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				errmsg("relation referenced by COPY statement has changed")));
+		}
 
 		/*
 		 * Use a snapshot with an updated command ID to ensure this query sees
@@ -2166,7 +2256,7 @@ BeginCopyToOnSegment(QueryDesc *queryDesc)
 
 	copyIntoClause = queryDesc->plannedstmt->copyIntoClause;
 	tupDesc = queryDesc->tupDesc;
-	cstate = BeginCopy(false, NULL, NULL, NULL, copyIntoClause->attlist,
+	cstate = BeginCopy(false, NULL, NULL, NULL, InvalidOid, copyIntoClause->attlist,
 					   copyIntoClause->options, tupDesc);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
@@ -2310,6 +2400,7 @@ static CopyState
 BeginCopyTo(Relation rel,
 			Node *query,
 			const char *queryString,
+			const Oid queryRelId,
 			const char *filename,
 			bool is_program,
 			List *attnamelist,
@@ -2360,7 +2451,8 @@ BeginCopyTo(Relation rel,
 				 errhint("Try the COPY (SELECT ...) TO variant.")));
 	}
 
-	cstate = BeginCopy(false, rel, query, queryString, attnamelist, options, NULL);
+	cstate = BeginCopy(false, rel, query, queryString, queryRelId, attnamelist,
+					   options, NULL);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
 	cstate->skip_ext_partition = skip_ext_partition;
@@ -2462,7 +2554,9 @@ BeginCopyTo(Relation rel,
 			// Increase buffer size to improve performance  (cmcdevitt)
 			setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
 
-			fstat(fileno(cstate->copy_file), &st);
+			if (fstat(fileno(cstate->copy_file), &st))
+				elog(ERROR, "could not stat file \"%s\": %m", cstate->filename);
+
 			if (S_ISDIR(st.st_mode))
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -2485,7 +2579,7 @@ BeginCopyToForExternalTable(Relation extrel, List *options)
 
 	Assert(RelationIsExternal(extrel));
 
-	cstate = BeginCopy(false, extrel, NULL, NULL, NIL, options, NULL);
+	cstate = BeginCopy(false, extrel, NULL, NULL, InvalidOid, NIL, options, NULL);
 	cstate->dispatch_mode = COPY_DIRECT;
 
 	/*
@@ -2629,7 +2723,7 @@ CopyToDispatch(CopyState cstate)
 	/* We use fe_msgbuf as a per-row buffer regardless of copy_dest */
 	cstate->fe_msgbuf = makeStringInfo();
 
-	cdbCopy = makeCdbCopy(false);
+	cdbCopy = makeCdbCopy(cstate, false);
 
 	/* XXX: lock all partitions */
 
@@ -2912,15 +3006,6 @@ CopyTo(CopyState cstate)
 
 	if (cstate->rel)
 	{
-		/* For replicated table, choose only one segment to scan data */
-		if (Gp_role == GP_ROLE_EXECUTE && !cstate->on_segment &&
-				GpPolicyIsReplicated(cstate->rel->rd_cdbpolicy) &&
-				gp_session_id % getgpsegmentCount() != GpIdentity.segindex)
-		{
-			MemoryContextDelete(cstate->rowcontext);
-			return 0;
-		}
-
 		foreach(lc, target_rels)
 		{
 			Relation rel = lfirst(lc);
@@ -3283,12 +3368,12 @@ CopyFromErrorCallback(void *arg)
 		if (cstate->cur_attname)
 			errcontext("COPY %s, line %s, column %s",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno),
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 					   cstate->cur_attname);
 		else
 			errcontext("COPY %s, line %s",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno));
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno));
 	}
 	else
 	{
@@ -3300,7 +3385,7 @@ CopyFromErrorCallback(void *arg)
 			attval = limit_printout_length(cstate->cur_attval);
 			errcontext("COPY %s, line %s, column %s: \"%s\"",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno),
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 					   cstate->cur_attname, attval);
 			pfree(attval);
 		}
@@ -3309,7 +3394,7 @@ CopyFromErrorCallback(void *arg)
 			/* error is relevant to a particular column, value is NULL */
 			errcontext("COPY %s, line %s, column %s: null input",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno),
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 					   cstate->cur_attname);
 		}
 		else
@@ -3332,7 +3417,7 @@ CopyFromErrorCallback(void *arg)
 				lineval = limit_printout_length(cstate->line_buf.data);
 				errcontext("COPY %s, line %s: \"%s\"",
 						   cstate->cur_relname,
-						   linenumber_atoi(buffer, cstate->cur_lineno),
+						   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 						   lineval);
 				pfree(lineval);
 			}
@@ -3348,7 +3433,7 @@ CopyFromErrorCallback(void *arg)
 				 */
 				errcontext("COPY %s, line %s",
 						   cstate->cur_relname,
-						   linenumber_atoi(buffer, cstate->cur_lineno));
+						   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno));
 			}
 		}
 	}
@@ -3600,7 +3685,7 @@ CopyFrom(CopyState cstate)
 
 	parentResultRelInfo = resultRelInfo;
 
-	ExecOpenIndices(resultRelInfo);
+	ExecOpenIndices(resultRelInfo, false);
 
 	resultRelInfo->ri_resultSlot = MakeSingleTupleTableSlot(resultRelInfo->ri_RelationDesc->rd_att);
 
@@ -3641,7 +3726,7 @@ CopyFrom(CopyState cstate)
 	if ((resultRelInfo->ri_TrigDesc != NULL &&
 		 (resultRelInfo->ri_TrigDesc->trig_insert_before_row ||
 		  resultRelInfo->ri_TrigDesc->trig_insert_instead_row)) ||
-		cstate->volatile_defexprs)
+		cstate->volatile_defexprs || cstate->oids)
 	{
 		useHeapMultiInsert = false;
 	}
@@ -3722,9 +3807,7 @@ CopyFrom(CopyState cstate)
 		 * - dispatch the modified COPY command to all segment databases.
 		 * - prepare cdbhash for hashing on row values.
 		 */
-		cdbCopy = makeCdbCopy(true);
-
-		((volatile CopyState) cstate)->cdbCopy = cdbCopy;
+		cdbCopy = makeCdbCopy(cstate, true);
 
 		/*
 		 * Dispatch the COPY command.
@@ -3879,7 +3962,7 @@ CopyFrom(CopyState cstate)
 				MemSet(partNulls, true, relnatts * sizeof(bool));
 
 				reconstructTupleValues(map, baseValues, baseNulls, (int) num_phys_attrs,
-									   partValues, partNulls, (int) attr_count);
+									   partValues, partNulls, relnatts);
 				ExecStoreVirtualTuple(slot);
 			}
 			else
@@ -3994,8 +4077,6 @@ CopyFrom(CopyState cstate)
 									   slot_get_isnull(slot));
 			skip_tuple = true;
 			processed++;
-			if (cstate->cdbsreh)
-				cstate->cdbsreh->processed++;
 		}
 
 		/* BEFORE ROW INSERT Triggers */
@@ -4111,7 +4192,8 @@ CopyFrom(CopyState cstate)
 
 				if (resultRelInfo->ri_NumIndices > 0)
 					recheckIndexes = ExecInsertIndexTuples(slot, &insertedTid,
-														   estate);
+														 estate, false, NULL,
+														   NIL);
 
 				/* AFTER ROW INSERT Triggers */
 				if (resultRelInfo->ri_TrigDesc &&
@@ -4197,6 +4279,13 @@ CopyFrom(CopyState cstate)
 			ReportSrehResults(cstate->cdbsreh, total_rejected);
 		}
 	}
+
+	/*
+	 * In the old protocol, tell pqcomm that we can process normal protocol
+	 * messages again.
+	 */
+	if (cstate->copy_dest == COPY_OLD_FE)
+		pq_endmsgread();
 
 	/*
 	 * In the old protocol, tell pqcomm that we can process normal protocol
@@ -4360,7 +4449,7 @@ CopyFromInsertBatch(CopyState cstate, EState *estate, CommandId mycid,
 			ExecStoreHeapTuple(bufferedTuples[i], myslot, InvalidBuffer, false);
 			recheckIndexes =
 				ExecInsertIndexTuples(myslot, &(bufferedTuples[i]->t_self),
-									  estate);
+									  estate, false, NULL, NIL);
 			ExecARInsertTriggers(estate, resultRelInfo,
 								 bufferedTuples[i],
 								 recheckIndexes);
@@ -4422,7 +4511,7 @@ BeginCopyFrom(Relation rel,
 	MemoryContext oldcontext;
 	bool		volatile_defexprs;
 
-	cstate = BeginCopy(true, rel, NULL, NULL, attnamelist, options, NULL);
+	cstate = BeginCopy(true, rel, NULL, NULL, InvalidOid, attnamelist, options, NULL);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
 	/*
@@ -4586,7 +4675,9 @@ BeginCopyFrom(Relation rel,
 			// Increase buffer size to improve performance  (cmcdevitt)
 			setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
 
-			fstat(fileno(cstate->copy_file), &st);
+			if (fstat(fileno(cstate->copy_file), &st))
+				elog(ERROR, "could not stat file \"%s\": %m", cstate->filename);
+
 			if (S_ISDIR(st.st_mode))
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -4805,7 +4896,7 @@ NextCopyFrom(CopyState cstate, ExprContext *econtext,
 		for (;;)
 		{
 			bool		got_error = false;
-			bool		result;
+			bool		result = false;
 
 			PG_TRY();
 			{
@@ -4813,11 +4904,14 @@ NextCopyFrom(CopyState cstate, ExprContext *econtext,
 			}
 			PG_CATCH();
 			{
-				HandleCopyError(cstate);
+				HandleCopyError(cstate); /* cdbsreh->processed is updated inside here */
 				got_error = true;
 				MemoryContextSwitchTo(oldcontext);
 			}
 			PG_END_TRY();
+
+			if (result)
+				cstate->cdbsreh->processed++;
 
 			if (!got_error)
 				return result;
@@ -5911,7 +6005,7 @@ CopyReadLineText(CopyState cstate)
 			 * just use the char as a toggle. If they are different, we need
 			 * to ensure that we only take account of an escape inside a
 			 * quoted field and immediately preceding a quote char, and not
-			 * the second in a escape-escape sequence.
+			 * the second in an escape-escape sequence.
 			 */
 			if (in_quote && c == escapec)
 				last_was_esc = !last_was_esc;
@@ -7062,9 +7156,9 @@ truncateEolStr(char *str, EolType eol_type)
  * copy_dest_startup --- executor startup
  */
 static void
-copy_dest_startup(DestReceiver *self __attribute__((unused)), int operation __attribute__((unused)), TupleDesc typeinfo __attribute__((unused)))
+copy_dest_startup(DestReceiver *self pg_attribute_unused(), int operation pg_attribute_unused(), TupleDesc typeinfo pg_attribute_unused())
 {
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (Gp_role != GP_ROLE_EXECUTE)
 		return;
 	DR_copy    *myState = (DR_copy *) self;
 	myState->cstate = BeginCopyToOnSegment(myState->queryDesc);
@@ -7091,9 +7185,9 @@ copy_dest_receive(TupleTableSlot *slot, DestReceiver *self)
  * copy_dest_shutdown --- executor end
  */
 static void
-copy_dest_shutdown(DestReceiver *self __attribute__((unused)))
+copy_dest_shutdown(DestReceiver *self pg_attribute_unused())
 {
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (Gp_role != GP_ROLE_EXECUTE)
 		return;
 	DR_copy    *myState = (DR_copy *) self;
 	EndCopyToOnSegment(myState->cstate);
@@ -7122,7 +7216,8 @@ CreateCopyDestReceiver(void)
 	self->pub.rDestroy = copy_dest_destroy;
 	self->pub.mydest = DestCopyOut;
 
-	self->cstate = NULL;		/* will be set later */
+	self->cstate = NULL;		/* need to be set later */
+	self->queryDesc = NULL;		/* need to be set later */
 	self->processed = 0;
 
 	return (DestReceiver *) self;
@@ -7180,29 +7275,6 @@ setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable)
 		/* no conversion function (both encodings are probably the same) */
 		cstate->enc_conversion_proc = NULL;
 	}
-}
-
-static void
-CopyEolStrToType(CopyState cstate)
-{
-	if (pg_strcasecmp(cstate->eol_str, "lf") == 0)
-	{
-		cstate->eol_type = EOL_NL;
-	}
-	else if (pg_strcasecmp(cstate->eol_str, "cr") == 0)
-	{
-		cstate->eol_type = EOL_CR;
-	}
-	else if (pg_strcasecmp(cstate->eol_str, "crlf") == 0)
-	{
-		cstate->eol_type = EOL_CRNL;
-		
-	}
-	else /* error. must have been validated in CopyValidateControlChars() ! */
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("internal error in CopySetEolType. Trying to set NEWLINE %s", 
-						 cstate->eol_str)));
 }
 
 static GpDistributionData *

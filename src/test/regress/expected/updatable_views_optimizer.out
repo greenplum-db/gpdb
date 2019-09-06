@@ -215,6 +215,67 @@ INSERT INTO rw_view15 VALUES (3, 'ROW 3'); -- should fail
 ERROR:  cannot insert into column "upper" of view "rw_view15"
 DETAIL:  View columns that are not columns of their base relation are not updatable.
 INSERT INTO rw_view15 (a) VALUES (3); -- should be OK
+INSERT INTO rw_view15 (a) VALUES (3) ON CONFLICT DO NOTHING; -- succeeds
+SELECT * FROM rw_view15;
+ a  |    upper    
+----+-------------
+ -2 | ROW -2
+ -1 | ROW -1
+  0 | ROW 0
+  1 | ROW 1
+  2 | ROW 2
+  3 | UNSPECIFIED
+(6 rows)
+
+INSERT INTO rw_view15 (a) VALUES (3) ON CONFLICT (a) DO NOTHING; -- succeeds
+SELECT * FROM rw_view15;
+ a  |    upper    
+----+-------------
+ -2 | ROW -2
+ -1 | ROW -1
+  0 | ROW 0
+  1 | ROW 1
+  2 | ROW 2
+  3 | UNSPECIFIED
+(6 rows)
+
+INSERT INTO rw_view15 (a) VALUES (3) ON CONFLICT (a) DO UPDATE set a = excluded.a; -- succeeds
+SELECT * FROM rw_view15;
+ a  |    upper    
+----+-------------
+ -2 | ROW -2
+ -1 | ROW -1
+  0 | ROW 0
+  1 | ROW 1
+  2 | ROW 2
+  3 | UNSPECIFIED
+(6 rows)
+
+INSERT INTO rw_view15 (a) VALUES (3) ON CONFLICT (a) DO UPDATE set upper = 'blarg'; -- fails
+ERROR:  cannot insert into column "upper" of view "rw_view15"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+SELECT * FROM rw_view15;
+ a  |    upper    
+----+-------------
+ -2 | ROW -2
+ -1 | ROW -1
+  0 | ROW 0
+  1 | ROW 1
+  2 | ROW 2
+  3 | UNSPECIFIED
+(6 rows)
+
+SELECT * FROM rw_view15;
+ a  |    upper    
+----+-------------
+ -2 | ROW -2
+ -1 | ROW -1
+  0 | ROW 0
+  1 | ROW 1
+  2 | ROW 2
+  3 | UNSPECIFIED
+(6 rows)
+
 ALTER VIEW rw_view15 ALTER COLUMN upper SET DEFAULT 'NOT SET';
 INSERT INTO rw_view15 (a) VALUES (4); -- should fail
 ERROR:  cannot insert into column "upper" of view "rw_view15"
@@ -348,14 +409,13 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a=6 WHERE a=5;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: "outer".a
-                     ->  Result
-                           ->  Split
-                                 ->  Result
-                                       ->  Index Scan using base_tbl_pkey on base_tbl
-                                             Index Cond: ((a = 5) AND (a > 0))
- Optimizer: PQO version 2.74.0
-(12 rows)
+                     Hash Key: base_tbl.a
+                     ->  Split
+                           ->  Result
+                                 ->  Index Scan using base_tbl_pkey on base_tbl
+                                       Index Cond: ((a = 5) AND (a > 0))
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
+(11 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view1 WHERE a=5;
                        QUERY PLAN                       
@@ -364,7 +424,7 @@ EXPLAIN (costs off) DELETE FROM rw_view1 WHERE a=5;
    ->  Result
          ->  Index Scan using base_tbl_pkey on base_tbl
                Index Cond: ((a = 5) AND (a > 0))
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (5 rows)
 
 DROP TABLE base_tbl CASCADE;
@@ -429,14 +489,13 @@ EXPLAIN (costs off) UPDATE rw_view2 SET aaa=5 WHERE aaa=4;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: "outer".aaa
-                     ->  Result
-                           ->  Split
-                                 ->  Result
-                                       ->  Index Scan using base_tbl_pkey on base_tbl
-                                             Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
- Optimizer: PQO version 2.74.0
-(12 rows)
+                     Hash Key: base_tbl.a
+                     ->  Split
+                           ->  Result
+                                 ->  Index Scan using base_tbl_pkey on base_tbl
+                                       Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
+(11 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view2 WHERE aaa=4;
                           QUERY PLAN                          
@@ -445,7 +504,7 @@ EXPLAIN (costs off) DELETE FROM rw_view2 WHERE aaa=4;
    ->  Result
          ->  Index Scan using base_tbl_pkey on base_tbl
                Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (5 rows)
 
 DROP TABLE base_tbl CASCADE;
@@ -639,7 +698,7 @@ EXPLAIN (costs off) UPDATE rw_view2 SET a=3 WHERE a=2;
                                  Filter: ((base_tbl_1.a = 2) AND (base_tbl_1.a < 10))
                                  ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
                                        Index Cond: (a > 0)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (13 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view2 WHERE a=2;
@@ -656,7 +715,7 @@ EXPLAIN (costs off) DELETE FROM rw_view2 WHERE a=2;
                            Filter: ((base_tbl_1.a = 2) AND (base_tbl_1.a < 10))
                            ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
                                  Index Cond: (a > 0)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (12 rows)
 
 DROP TABLE base_tbl CASCADE;
@@ -901,7 +960,7 @@ UPDATE rw_view1 v SET bb='Updated row 2' WHERE rw_view1_aa(v)=2
    ->  Update on base_tbl
          ->  Seq Scan on base_tbl
                Filter: (a = 2)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 DROP TABLE base_tbl CASCADE;
@@ -1101,7 +1160,7 @@ EXPLAIN (verbose, costs off) UPDATE rw_view1 SET b = b + 1 RETURNING *;
          Output: base_tbl.a, base_tbl.b
          ->  Seq Scan on public.base_tbl
                Output: base_tbl.a, (base_tbl.b + 1), base_tbl.ctid, base_tbl.gp_segment_id
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (8 rows)
 
@@ -1410,18 +1469,18 @@ SELECT * FROM information_schema.views WHERE table_name = 'rw_view1';
 
 INSERT INTO rw_view1 VALUES(3,4); -- ok
 INSERT INTO rw_view1 VALUES(4,3); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (4, 3).
 INSERT INTO rw_view1 VALUES(5,null); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (5, null).
 UPDATE rw_view1 SET b = 5 WHERE a = 3; -- ok
 UPDATE rw_view1 SET b = -5 WHERE a = 3; -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (3, -5).
 INSERT INTO rw_view1(a) VALUES (9); -- ok
 INSERT INTO rw_view1(a) VALUES (10); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (10, 10).
 SELECT * FROM base_tbl;
  a | b  
@@ -1460,11 +1519,11 @@ SELECT * FROM information_schema.views WHERE table_name = 'rw_view2';
 (1 row)
 
 INSERT INTO rw_view2 VALUES (-5); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (-5).
 INSERT INTO rw_view2 VALUES (5); -- ok
 INSERT INTO rw_view2 VALUES (15); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view2"
 DETAIL:  Failing row contains (15).
 SELECT * FROM base_tbl;
  a 
@@ -1473,10 +1532,10 @@ SELECT * FROM base_tbl;
 (1 row)
 
 UPDATE rw_view2 SET a = a - 10; -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (-5).
 UPDATE rw_view2 SET a = a + 10; -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view2"
 DETAIL:  Failing row contains (15).
 CREATE OR REPLACE VIEW rw_view2 AS SELECT * FROM rw_view1 WHERE a < 10
   WITH LOCAL CHECK OPTION;
@@ -1501,7 +1560,7 @@ SELECT * FROM information_schema.views WHERE table_name = 'rw_view2';
 
 INSERT INTO rw_view2 VALUES (-10); -- ok, but not in view
 INSERT INTO rw_view2 VALUES (20); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view2"
 DETAIL:  Failing row contains (20).
 SELECT * FROM base_tbl;
   a  
@@ -1515,10 +1574,10 @@ ERROR:  invalid value for "check_option" option
 DETAIL:  Valid values are "local" and "cascaded".
 ALTER VIEW rw_view1 SET (check_option=local);
 INSERT INTO rw_view2 VALUES (-20); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (-20).
 INSERT INTO rw_view2 VALUES (30); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view2"
 DETAIL:  Failing row contains (30).
 ALTER VIEW rw_view2 RESET (check_option);
 \d+ rw_view2
@@ -1574,7 +1633,7 @@ INSERT INTO rw_view1 VALUES (1); -- ok
 INSERT INTO rw_view2 VALUES (-2); -- ok, but not in view
 INSERT INTO rw_view2 VALUES (2); -- ok
 INSERT INTO rw_view3 VALUES (-3); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view2"
 DETAIL:  Failing row contains (-3).
 INSERT INTO rw_view3 VALUES (3); -- ok
 DROP TABLE base_tbl CASCADE;
@@ -1590,16 +1649,16 @@ CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a = ANY (b)
   WITH CHECK OPTION;
 INSERT INTO rw_view1 VALUES (1, ARRAY[1,2,3]); -- ok
 INSERT INTO rw_view1 VALUES (10, ARRAY[4,5]); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (10, {4,5}).
 UPDATE rw_view1 SET b[2] = -b[2] WHERE a = 1; -- ok
 UPDATE rw_view1 SET b[1] = -b[1] WHERE a = 1; -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (1, {-1,-2,3}).
 PREPARE ins(int, int[]) AS INSERT INTO rw_view1 VALUES($1, $2);
 EXECUTE ins(2, ARRAY[1,2,3]); -- ok
 EXECUTE ins(10, ARRAY[4,5]); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (10, {4,5}).
 DEALLOCATE PREPARE ins;
 DROP TABLE base_tbl CASCADE;
@@ -1613,17 +1672,13 @@ CREATE VIEW rw_view1 AS
   WHERE EXISTS(SELECT 1 FROM ref_tbl r WHERE r.a = b.a)
   WITH CHECK OPTION;
 INSERT INTO rw_view1 VALUES (5); -- ok
---start_ignore
 INSERT INTO rw_view1 VALUES (15); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (15).
---end_ignore
 UPDATE rw_view1 SET a = a + 5; -- ok
---start_ignore
 UPDATE rw_view1 SET a = a + 5; -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (15).
---end_ignore
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
                    QUERY PLAN                    
 -------------------------------------------------
@@ -1633,11 +1688,13 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
            ->  Result
                  Filter: (r.a = b.a)
                  ->  Materialize
-                       ->  Seq Scan on ref_tbl r
+                       ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                             ->  Seq Scan on ref_tbl r
          SubPlan 2  (slice0; segments: 1)
            ->  Materialize
-                 ->  Seq Scan on ref_tbl r_1
- Optimizer: legacy query optimizer
+                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                       ->  Seq Scan on ref_tbl r_1
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
@@ -1656,11 +1713,13 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
            ->  Result
                  Filter: (r_1.a = b.a)
                  ->  Materialize
-                       ->  Seq Scan on ref_tbl r_1
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                             ->  Seq Scan on ref_tbl r_1
          SubPlan 2  (slice1; segments: 3)
            ->  Materialize
-                 ->  Seq Scan on ref_tbl r_2
- Optimizer: legacy query optimizer
+                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                       ->  Seq Scan on ref_tbl r_2
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 DROP TABLE base_tbl, ref_tbl CASCADE;
@@ -1681,7 +1740,7 @@ CREATE TRIGGER base_tbl_trig BEFORE INSERT OR UPDATE ON base_tbl
 CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a < b WITH CHECK OPTION;
 INSERT INTO rw_view1 VALUES (5,0); -- ok
 INSERT INTO rw_view1 VALUES (15, 20); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (15, 10).
 UPDATE rw_view1 SET a = 20, b = 30; -- should fail
 ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
@@ -1715,7 +1774,7 @@ ERROR:  INSTEAD OF triggers are not supported in Greenplum
 CREATE VIEW rw_view2 AS
   SELECT * FROM rw_view1 WHERE a > 0 WITH LOCAL CHECK OPTION;
 INSERT INTO rw_view2 VALUES (-5); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view2"
 DETAIL:  Failing row contains (-5, null).
 INSERT INTO rw_view2 VALUES (5); -- ok
 INSERT INTO rw_view2 VALUES (50); -- ok, but not in view
@@ -1730,7 +1789,7 @@ SELECT * FROM base_tbl;
 -- Check option won't cascade down to base view with INSTEAD OF triggers
 ALTER VIEW rw_view2 SET (check_option=cascaded);
 INSERT INTO rw_view2 VALUES (100); -- ok, but not in view (doesn't fail rw_view1's check)
-ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (100, null).
 UPDATE rw_view2 SET a = 200 WHERE a = 5; -- ok, but not in view (doesn't fail rw_view1's check)
 SELECT * FROM base_tbl;
@@ -1882,7 +1941,7 @@ EXPLAIN (costs off) SELECT * FROM rw_view1 WHERE snoop(person);
          Filter: snoop(rw_view1.person)
          ->  Seq Scan on base_tbl
                Filter: (visibility = 'public'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 EXPLAIN (costs off) UPDATE rw_view1 SET person=person WHERE snoop(person);
@@ -1964,7 +2023,7 @@ EXPLAIN (costs off) SELECT * FROM rw_view2 WHERE snoop(person);
                Filter: snoop(rw_view1.person)
                ->  Seq Scan on base_tbl
                      Filter: (visibility = 'public'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 EXPLAIN (costs off) UPDATE rw_view2 SET person=person WHERE snoop(person);
@@ -2025,7 +2084,7 @@ EXPLAIN (costs off) DELETE FROM rw_view1 WHERE id = 1 AND snoop(data);
                      Filter: snoop(base_tbl.data)
                      ->  Seq Scan on base_tbl base_tbl_2
                            Filter: ((NOT deleted) AND (id = 1))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 DELETE FROM rw_view1 WHERE id = 1 AND snoop(data);
@@ -2052,7 +2111,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
                                                          ->  Result
                                                                ->  Index Scan using base_tbl_pkey on base_tbl
                                                                      Index Cond: (id = 2)
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
  
  Update
    ->  Result
@@ -2070,7 +2129,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
                                                          ->  Gather Motion 3:1  (slice1; segments: 3)
                                                                ->  Index Scan using base_tbl_pkey on base_tbl
                                                                      Index Cond: (id = 2)
- Optimizer: PQO version 3.11.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.11.0
 (38 rows)
 
 INSERT INTO rw_view1 VALUES (2, 'New row 2');
@@ -2083,7 +2142,7 @@ SELECT * FROM base_tbl;
 
 DROP TABLE base_tbl CASCADE;
 NOTICE:  drop cascades to view rw_view1
--- security barrier view based on inheiritance set
+-- security barrier view based on inheritance set
 CREATE TABLE t1 (a int, b float, c text);
 CREATE INDEX t1_a_idx ON t1(a);
 INSERT INTO t1
@@ -2132,7 +2191,7 @@ UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a = 3;
  Result
    Output: 100, t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id
    One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a = 3;
@@ -2148,9 +2207,13 @@ SELECT * FROM t1 WHERE a=100; -- Nothing should have been changed to 100
 
 EXPLAIN (VERBOSE, COSTS OFF)
 UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
-                                                         QUERY PLAN                                                          
------------------------------------------------------------------------------------------------------------------------------
+                                                                           QUERY PLAN                                                                           
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
  Update on public.t1 t1_4
+   Update on public.t1 t1_4
+   Update on public.t11 t1
+   Update on public.t12 t1
+   Update on public.t111 t1
    ->  Redistribute Motion 3:3  (slice1; segments: 3)
          Output: ((t1.a + 1)), t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id, (DMLAction)
          Hash Key: ((t1.a + 1))
@@ -2159,20 +2222,18 @@ UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
                ->  Subquery Scan on t1
                      Output: (t1.a + 1), t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id
                      Filter: snoop(t1.a)
-                     ->  LockRows
+                     ->  Nested Loop Semi Join
                            Output: t1_5.a, t1_5.ctid, t1_5.gp_segment_id, t1_5.b, t1_5.c, t1_5.ctid, t12.ctid, t12.tableoid
-                           ->  Nested Loop Semi Join
-                                 Output: t1_5.a, t1_5.ctid, t1_5.gp_segment_id, t1_5.b, t1_5.c, t1_5.ctid, t12.ctid, t12.tableoid
-                                 ->  Seq Scan on public.t1 t1_5
-                                       Output: t1_5.a, t1_5.ctid, t1_5.gp_segment_id, t1_5.b, t1_5.c
-                                       Filter: ((t1_5.a > 5) AND (t1_5.a = 8) AND leakproof(t1_5.a))
-                                 ->  Append
-                                       ->  Seq Scan on public.t12
-                                             Output: t12.ctid, t12.tableoid, t12.a
-                                             Filter: ((t12.a > 5) AND (t12.a = 8))
-                                       ->  Seq Scan on public.t111
-                                             Output: t111.ctid, t111.tableoid, t111.a
-                                             Filter: ((t111.a > 5) AND (t111.a = 8))
+                           ->  Seq Scan on public.t1 t1_5
+                                 Output: t1_5.a, t1_5.ctid, t1_5.gp_segment_id, t1_5.b, t1_5.c
+                                 Filter: ((t1_5.a > 5) AND (t1_5.a = 8) AND leakproof(t1_5.a))
+                           ->  Append
+                                 ->  Seq Scan on public.t12
+                                       Output: t12.ctid, t12.tableoid, t12.a
+                                       Filter: ((t12.a > 5) AND (t12.a = 8))
+                                 ->  Seq Scan on public.t111
+                                       Output: t111.ctid, t111.tableoid, t111.a
+                                       Filter: ((t111.a > 5) AND (t111.a = 8))
    ->  Redistribute Motion 3:3  (slice2; segments: 3)
          Output: ((t1_1.a + 1)), t1_1.b, t1_1.c, t1_1.d, t1_1.a, t1_1.ctid, t1_1.gp_segment_id, (DMLAction)
          Hash Key: ((t1_1.a + 1))
@@ -2181,20 +2242,18 @@ UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
                ->  Subquery Scan on t1_1
                      Output: (t1_1.a + 1), t1_1.b, t1_1.c, t1_1.d, t1_1.a, t1_1.ctid, t1_1.gp_segment_id
                      Filter: snoop(t1_1.a)
-                     ->  LockRows
+                     ->  Nested Loop Semi Join
                            Output: t11.a, t11.ctid, t11.gp_segment_id, t11.b, t11.c, t11.d, t11.ctid, t12_1.ctid, t12_1.tableoid
-                           ->  Nested Loop Semi Join
-                                 Output: t11.a, t11.ctid, t11.gp_segment_id, t11.b, t11.c, t11.d, t11.ctid, t12_1.ctid, t12_1.tableoid
-                                 ->  Seq Scan on public.t11
-                                       Output: t11.a, t11.ctid, t11.gp_segment_id, t11.b, t11.c, t11.d
-                                       Filter: ((t11.a > 5) AND (t11.a = 8) AND leakproof(t11.a))
-                                 ->  Append
-                                       ->  Seq Scan on public.t12 t12_1
-                                             Output: t12_1.ctid, t12_1.tableoid, t12_1.a
-                                             Filter: ((t12_1.a > 5) AND (t12_1.a = 8))
-                                       ->  Seq Scan on public.t111 t111_1
-                                             Output: t111_1.ctid, t111_1.tableoid, t111_1.a
-                                             Filter: ((t111_1.a > 5) AND (t111_1.a = 8))
+                           ->  Seq Scan on public.t11
+                                 Output: t11.a, t11.ctid, t11.gp_segment_id, t11.b, t11.c, t11.d
+                                 Filter: ((t11.a > 5) AND (t11.a = 8) AND leakproof(t11.a))
+                           ->  Append
+                                 ->  Seq Scan on public.t12 t12_1
+                                       Output: t12_1.ctid, t12_1.tableoid, t12_1.a
+                                       Filter: ((t12_1.a > 5) AND (t12_1.a = 8))
+                                 ->  Seq Scan on public.t111 t111_1
+                                       Output: t111_1.ctid, t111_1.tableoid, t111_1.a
+                                       Filter: ((t111_1.a > 5) AND (t111_1.a = 8))
    ->  Redistribute Motion 3:3  (slice3; segments: 3)
          Output: ((t1_2.a + 1)), t1_2.b, t1_2.c, t1_2.e, t1_2.a, t1_2.ctid, t1_2.gp_segment_id, (DMLAction)
          Hash Key: ((t1_2.a + 1))
@@ -2203,20 +2262,18 @@ UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
                ->  Subquery Scan on t1_2
                      Output: (t1_2.a + 1), t1_2.b, t1_2.c, t1_2.e, t1_2.a, t1_2.ctid, t1_2.gp_segment_id
                      Filter: snoop(t1_2.a)
-                     ->  LockRows
+                     ->  Nested Loop Semi Join
                            Output: t12_2.a, t12_2.ctid, t12_2.gp_segment_id, t12_2.b, t12_2.c, t12_2.e, t12_2.ctid, t12_3.ctid, t12_3.tableoid
-                           ->  Nested Loop Semi Join
-                                 Output: t12_2.a, t12_2.ctid, t12_2.gp_segment_id, t12_2.b, t12_2.c, t12_2.e, t12_2.ctid, t12_3.ctid, t12_3.tableoid
-                                 ->  Seq Scan on public.t12 t12_2
-                                       Output: t12_2.a, t12_2.ctid, t12_2.gp_segment_id, t12_2.b, t12_2.c, t12_2.e
-                                       Filter: ((t12_2.a > 5) AND (t12_2.a = 8) AND leakproof(t12_2.a))
-                                 ->  Append
-                                       ->  Seq Scan on public.t12 t12_3
-                                             Output: t12_3.ctid, t12_3.tableoid, t12_3.a
-                                             Filter: ((t12_3.a > 5) AND (t12_3.a = 8))
-                                       ->  Seq Scan on public.t111 t111_2
-                                             Output: t111_2.ctid, t111_2.tableoid, t111_2.a
-                                             Filter: ((t111_2.a > 5) AND (t111_2.a = 8))
+                           ->  Seq Scan on public.t12 t12_2
+                                 Output: t12_2.a, t12_2.ctid, t12_2.gp_segment_id, t12_2.b, t12_2.c, t12_2.e
+                                 Filter: ((t12_2.a > 5) AND (t12_2.a = 8) AND leakproof(t12_2.a))
+                           ->  Append
+                                 ->  Seq Scan on public.t12 t12_3
+                                       Output: t12_3.ctid, t12_3.tableoid, t12_3.a
+                                       Filter: ((t12_3.a > 5) AND (t12_3.a = 8))
+                                 ->  Seq Scan on public.t111 t111_2
+                                       Output: t111_2.ctid, t111_2.tableoid, t111_2.a
+                                       Filter: ((t111_2.a > 5) AND (t111_2.a = 8))
    ->  Redistribute Motion 3:3  (slice4; segments: 3)
          Output: ((t1_3.a + 1)), t1_3.b, t1_3.c, t1_3.d, t1_3.e, t1_3.a, t1_3.ctid, t1_3.gp_segment_id, (DMLAction)
          Hash Key: ((t1_3.a + 1))
@@ -2225,22 +2282,20 @@ UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
                ->  Subquery Scan on t1_3
                      Output: (t1_3.a + 1), t1_3.b, t1_3.c, t1_3.d, t1_3.e, t1_3.a, t1_3.ctid, t1_3.gp_segment_id
                      Filter: snoop(t1_3.a)
-                     ->  LockRows
+                     ->  Nested Loop Semi Join
                            Output: t111_3.a, t111_3.ctid, t111_3.gp_segment_id, t111_3.b, t111_3.c, t111_3.d, t111_3.e, t111_3.ctid, t12_4.ctid, t12_4.tableoid
-                           ->  Nested Loop Semi Join
-                                 Output: t111_3.a, t111_3.ctid, t111_3.gp_segment_id, t111_3.b, t111_3.c, t111_3.d, t111_3.e, t111_3.ctid, t12_4.ctid, t12_4.tableoid
-                                 ->  Seq Scan on public.t111 t111_3
-                                       Output: t111_3.a, t111_3.ctid, t111_3.gp_segment_id, t111_3.b, t111_3.c, t111_3.d, t111_3.e
-                                       Filter: ((t111_3.a > 5) AND (t111_3.a = 8) AND leakproof(t111_3.a))
-                                 ->  Append
-                                       ->  Seq Scan on public.t12 t12_4
-                                             Output: t12_4.ctid, t12_4.tableoid, t12_4.a
-                                             Filter: ((t12_4.a > 5) AND (t12_4.a = 8))
-                                       ->  Seq Scan on public.t111 t111_4
-                                             Output: t111_4.ctid, t111_4.tableoid, t111_4.a
-                                             Filter: ((t111_4.a > 5) AND (t111_4.a = 8))
- Optimizer: legacy query optimizer
-(90 rows)
+                           ->  Seq Scan on public.t111 t111_3
+                                 Output: t111_3.a, t111_3.ctid, t111_3.gp_segment_id, t111_3.b, t111_3.c, t111_3.d, t111_3.e
+                                 Filter: ((t111_3.a > 5) AND (t111_3.a = 8) AND leakproof(t111_3.a))
+                           ->  Append
+                                 ->  Seq Scan on public.t12 t12_4
+                                       Output: t12_4.ctid, t12_4.tableoid, t12_4.a
+                                       Filter: ((t12_4.a > 5) AND (t12_4.a = 8))
+                                 ->  Seq Scan on public.t111 t111_4
+                                       Output: t111_4.ctid, t111_4.tableoid, t111_4.a
+                                       Filter: ((t111_4.a > 5) AND (t111_4.a = 8))
+ Optimizer: Postgres query optimizer
+(94 rows)
 
 UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
 NOTICE:  snooped value: 8  (seg0 slice4 127.0.0.1:40000 pid=26920)
@@ -2407,24 +2462,27 @@ CREATE VIEW v1 WITH (security_barrier = true) AS
 CREATE VIEW v2 WITH (security_barrier = true) AS
   SELECT * FROM v1 WHERE EXISTS (SELECT 1 FROM t2 WHERE t2.cc = v1.c)
   WITH CHECK OPTION;
---start_ignore
 INSERT INTO v2 VALUES (2, 'two', 20); -- ok
 INSERT INTO v2 VALUES (-2, 'minus two', 20); -- not allowed
-ERROR:  new row violates WITH CHECK OPTION for view "v1"
+ERROR:  new row violates WITH CHECK OPTION for "v1"
 DETAIL:  Failing row contains (-2, minus two, 20).
 INSERT INTO v2 VALUES (3, 'three', 30); -- not allowed
+ERROR:  new row violates WITH CHECK OPTION for "v2"
+DETAIL:  Failing row contains (3, three, 30).
 UPDATE v2 SET b = 'ONE' WHERE a = 1; -- ok
 UPDATE v2 SET a = -1 WHERE a = 1; -- not allowed
-ERROR:  new row violates WITH CHECK OPTION for view "v1"
+ERROR:  new row violates WITH CHECK OPTION for "v1"
 DETAIL:  Failing row contains (-1, ONE, 10).
 UPDATE v2 SET c = 30 WHERE a = 1; -- not allowed
+ERROR:  new row violates WITH CHECK OPTION for "v2"  (seg1 127.0.0.1:25433 pid=1771)
+DETAIL:  Failing row contains (1, ONE, 30).
 DELETE FROM v2 WHERE a = 2; -- ok
 SELECT * FROM v2;
- a | b | c 
----+---+---
-(0 rows)
+ a |  b  | c  
+---+-----+----
+ 1 | ONE | 10
+(1 row)
 
---end_ignore
 DROP VIEW v2;
 DROP VIEW v1;
 DROP TABLE t2;
@@ -2438,7 +2496,7 @@ CREATE VIEW v1 AS SELECT null::int AS a;
 CREATE OR REPLACE VIEW v1 AS SELECT * FROM t1 WHERE a > 0 WITH CHECK OPTION;
 INSERT INTO v1 VALUES (1, 'ok'); -- ok
 INSERT INTO v1 VALUES (-1, 'invalid'); -- should fail
-ERROR:  new row violates WITH CHECK OPTION for view "v1"
+ERROR:  new row violates WITH CHECK OPTION for "v1"
 DETAIL:  Failing row contains (-1, invalid).
 DROP VIEW v1;
 DROP TABLE t1;

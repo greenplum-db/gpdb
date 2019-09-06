@@ -3,7 +3,7 @@
  * execQual.c
  *	  Routines to evaluate qualification and targetlist expressions
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -75,15 +75,6 @@ static bool isAssignmentIndirectionExpr(ExprState *exprstate);
 static Datum ExecEvalAggref(AggrefExprState *aggref,
 			   ExprContext *econtext,
 			   bool *isNull, ExprDoneCond *isDone);
-static Datum ExecEvalGroupingFunc(GroupingFuncExprState *gstate,
-							  ExprContext *econtext,
-							  bool *isNull, ExprDoneCond *isDone);
-static Datum ExecEvalGrouping(ExprState *gstate,
-						  ExprContext *econtext,
-						  bool *isNull, ExprDoneCond *isDone);
-static Datum ExecEvalGroupId(ExprState *gstate,
-						 ExprContext *econtext,
-						 bool *isNull, ExprDoneCond *isDone);
 static Datum ExecEvalWindowFunc(WindowFuncExprState *wfunc,
 				   ExprContext *econtext,
 				   bool *isNull, ExprDoneCond *isDone);
@@ -197,6 +188,12 @@ static Datum ExecEvalArrayCoerceExpr(ArrayCoerceExprState *astate,
 						bool *isNull, ExprDoneCond *isDone);
 static Datum ExecEvalCurrentOfExpr(ExprState *exprstate, ExprContext *econtext,
 					  bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalGroupingFuncExpr(GroupingFuncExprState *gstate,
+						 ExprContext *econtext,
+						 bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalGroupIdExpr(GroupIdExprState *gstate,
+					ExprContext *econtext,
+					bool *isNull, ExprDoneCond *isDone);
 
 static Datum ExecEvalPartSelectedExpr(PartSelectedExprState *exprstate,
 						ExprContext *econtext,
@@ -293,12 +290,6 @@ static bool ExecIsExprUnsafeToConst(Node *node);
  *
  * NOTE: if we get a NULL result from a subscript expression, we return NULL
  * when it's an array reference, or raise an error when it's an assignment.
- *
- * NOTE: we deliberately refrain from applying DatumGetArrayTypeP() here,
- * even though that might seem natural, because this code needs to support
- * both varlena arrays and fixed-length array types.  DatumGetArrayTypeP()
- * only works for the varlena kind.  The routines we call in arrayfuncs.c
- * have to know the difference (that's what they need refattrlength for).
  *----------
  */
 static Datum
@@ -308,8 +299,7 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 				 ExprDoneCond *isDone)
 {
 	ArrayRef   *arrayRef = (ArrayRef *) astate->xprstate.expr;
-	ArrayType  *array_source;
-	ArrayType  *resultArray;
+	Datum		array_source;
 	bool		isAssignment = (arrayRef->refassgnexpr != NULL);
 	bool		eisnull;
 	ListCell   *l;
@@ -319,11 +309,10 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 				lower;
 	int		   *lIndex;
 
-	array_source = (ArrayType *)
-		DatumGetPointer(ExecEvalExpr(astate->refexpr,
-									 econtext,
-									 isNull,
-									 isDone));
+	array_source = ExecEvalExpr(astate->refexpr,
+								econtext,
+								isNull,
+								isDone);
 
 	/*
 	 * If refexpr yields NULL, and it's a fetch, then result is NULL. In the
@@ -431,23 +420,24 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 			}
 			else if (lIndex == NULL)
 			{
-				econtext->caseValue_datum = array_ref(array_source, i,
-													  upper.indx,
-													  astate->refattrlength,
-													  astate->refelemlength,
-													  astate->refelembyval,
-													  astate->refelemalign,
-												&econtext->caseValue_isNull);
+				econtext->caseValue_datum =
+					array_get_element(array_source, i,
+									  upper.indx,
+									  astate->refattrlength,
+									  astate->refelemlength,
+									  astate->refelembyval,
+									  astate->refelemalign,
+									  &econtext->caseValue_isNull);
 			}
 			else
 			{
-				resultArray = array_get_slice(array_source, i,
-											  upper.indx, lower.indx,
-											  astate->refattrlength,
-											  astate->refelemlength,
-											  astate->refelembyval,
-											  astate->refelemalign);
-				econtext->caseValue_datum = PointerGetDatum(resultArray);
+				econtext->caseValue_datum =
+					array_get_slice(array_source, i,
+									upper.indx, lower.indx,
+									astate->refattrlength,
+									astate->refelemlength,
+									astate->refelembyval,
+									astate->refelemalign);
 				econtext->caseValue_isNull = false;
 			}
 		}
@@ -476,7 +466,7 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 		 */
 		if (astate->refattrlength > 0)	/* fixed-length array? */
 			if (eisnull || *isNull)
-				return PointerGetDatum(array_source);
+				return array_source;
 
 		/*
 		 * For assignment to varlena arrays, we handle a NULL original array
@@ -486,48 +476,45 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 		 */
 		if (*isNull)
 		{
-			array_source = construct_empty_array(arrayRef->refelemtype);
+			array_source = PointerGetDatum(construct_empty_array(arrayRef->refelemtype));
 			*isNull = false;
 		}
 
 		if (lIndex == NULL)
-			resultArray = array_set(array_source, i,
-									upper.indx,
-									sourceData,
-									eisnull,
-									astate->refattrlength,
-									astate->refelemlength,
-									astate->refelembyval,
-									astate->refelemalign);
+			return array_set_element(array_source, i,
+									 upper.indx,
+									 sourceData,
+									 eisnull,
+									 astate->refattrlength,
+									 astate->refelemlength,
+									 astate->refelembyval,
+									 astate->refelemalign);
 		else
-			resultArray = array_set_slice(array_source, i,
-										  upper.indx, lower.indx,
-								   (ArrayType *) DatumGetPointer(sourceData),
-										  eisnull,
-										  astate->refattrlength,
-										  astate->refelemlength,
-										  astate->refelembyval,
-										  astate->refelemalign);
-		return PointerGetDatum(resultArray);
+			return array_set_slice(array_source, i,
+								   upper.indx, lower.indx,
+								   sourceData,
+								   eisnull,
+								   astate->refattrlength,
+								   astate->refelemlength,
+								   astate->refelembyval,
+								   astate->refelemalign);
 	}
 
 	if (lIndex == NULL)
-		return array_ref(array_source, i, upper.indx,
-						 astate->refattrlength,
-						 astate->refelemlength,
-						 astate->refelembyval,
-						 astate->refelemalign,
-						 isNull);
+		return array_get_element(array_source, i,
+								 upper.indx,
+								 astate->refattrlength,
+								 astate->refelemlength,
+								 astate->refelembyval,
+								 astate->refelemalign,
+								 isNull);
 	else
-	{
-		resultArray = array_get_slice(array_source, i,
-									  upper.indx, lower.indx,
-									  astate->refattrlength,
-									  astate->refelemlength,
-									  astate->refelembyval,
-									  astate->refelemalign);
-		return PointerGetDatum(resultArray);
-	}
+		return array_get_slice(array_source, i,
+							   upper.indx, lower.indx,
+							   astate->refattrlength,
+							   astate->refelemlength,
+							   astate->refelembyval,
+							   astate->refelemalign);
 }
 
 /*
@@ -578,77 +565,6 @@ ExecEvalAggref(AggrefExprState *aggref, ExprContext *econtext,
 
 	*isNull = econtext->ecxt_aggnulls[aggref->aggno];
 	return econtext->ecxt_aggvalues[aggref->aggno];
-}
-
-/*----------------------------------------------------------------
- *		ExecEvalGroupingFunc
- *
- *		Returns a Datum whose value is the value of a GROUPING_ID
- *		with respect to the given context.
- */
-static Datum
-ExecEvalGroupingFunc(GroupingFuncExprState *gstate,
-					 ExprContext *econtext,
-					 bool *isNull, ExprDoneCond *isDone)
-{
-	uint64 grpid = 0;
-	ListCell *tmp;
-	int num_args = list_length(gstate->args);
-	int argno = 0;
-
-	if (isDone)
-		*isDone = ExprSingleResult;
-
-	foreach(tmp, gstate->args)
-	{
-		int arg = (int)intVal(lfirst(tmp));
-		int pos_in_grpcols = gstate->ngrpcols - arg - 1;
-		int pos_in_grpingfunc = num_args - argno - 1;
-
-		Assert(pos_in_grpcols >= 0 && pos_in_grpingfunc >= 0);
-
-		if (econtext->grouping & ( ((uint64)1) << pos_in_grpcols))
-			grpid |= ( ((uint64)1) << pos_in_grpingfunc);
-
-		argno++;
-	}
-
-	*isNull = false;
-	return Int64GetDatum(grpid);
-}
-
-/*----------------------------------------------------------------
- *		ExecEvalGrouping
- *
- *		Returns a Datum whose value is the value of a GROUPING
- *		with respect to the given context.
- */
-static Datum
-ExecEvalGrouping(ExprState *gstate, ExprContext *econtext,
-				 bool *isNull, ExprDoneCond *isDone)
-{
-	if (isDone)
-		*isDone = ExprSingleResult;
-
-	*isNull = false;
-	return Int64GetDatum(econtext->grouping);
-}
-
-/*----------------------------------------------------------------
- *		ExecEvalGroupId
- *
- *		Returns a Datum whose value is the value of a GROUP_ID
- *		with respect to the given context.
- */
-static Datum
-ExecEvalGroupId(ExprState *gstate, ExprContext *econtext,
-				bool *isNull, ExprDoneCond *isDone)
-{
-	if (isDone)
-		*isDone = ExprSingleResult;
-
-	*isNull = false;
-	return UInt32GetDatum(econtext->group_id);
 }
 
 /* ----------------------------------------------------------------
@@ -3547,6 +3463,100 @@ ExecEvalCaseTestExpr(ExprState *exprstate,
 	return econtext->caseValue_datum;
 }
 
+static Datum
+ExecEvalGroupingFuncExprForHashJoin(GroupingFuncExprState *gstate,
+						 ExprContext *econtext,
+						 bool *isNull,
+						 ExprDoneCond *isDone)
+{
+	int result = 0;
+
+	if (isDone)
+		*isDone = ExprSingleResult;
+
+	*isNull = false;
+
+	return (Datum) result;
+}
+
+
+/*
+ * ExecEvalGroupingFuncExpr
+ *
+ * Return a bitmask with a bit for each (unevaluated) argument expression
+ * (rightmost arg is least significant bit).
+ *
+ * A bit is set if the corresponding expression is NOT part of the set of
+ * grouping expressions in the current grouping set.
+ */
+
+static Datum
+ExecEvalGroupingFuncExpr(GroupingFuncExprState *gstate,
+						 ExprContext *econtext,
+						 bool *isNull,
+						 ExprDoneCond *isDone)
+{
+	int result = 0;
+	int attnum = 0;
+	Bitmapset *grouped_cols = gstate->aggstate->grouped_cols;
+	ListCell *lc;
+
+	if (isDone)
+		*isDone = ExprSingleResult;
+
+	*isNull = false;
+
+	foreach(lc, (gstate->clauses))
+	{
+		attnum = lfirst_int(lc);
+
+		result = result << 1;
+
+		if (!bms_is_member(attnum, grouped_cols))
+			result = result | 1;
+	}
+
+	return (Datum) result;
+}
+
+static Datum
+ExecEvalGroupIdExprForHashJoin(GroupIdExprState *gstate,
+					ExprContext *econtext,
+					bool *isNull,
+					ExprDoneCond *isDone)
+{
+	int			group_id = 0;
+
+	if (isDone)
+		*isDone = ExprSingleResult;
+
+	*isNull = false;
+
+	return Int32GetDatum(group_id);
+}
+
+
+/*
+ * ExecEvalGroupIdExpr
+ *
+ * Evaluate a GROUP_ID expression. It's been precalculated by ExecInitAgg.
+ */
+static Datum
+ExecEvalGroupIdExpr(GroupIdExprState *gstate,
+					ExprContext *econtext,
+					bool *isNull,
+					ExprDoneCond *isDone)
+{
+	int			group_id = gstate->aggstate->group_id;
+
+	if (isDone)
+		*isDone = ExprSingleResult;
+
+	*isNull = false;
+
+	return Int32GetDatum(group_id);
+}
+
 /* ----------------------------------------------------------------
  *		ExecEvalArray - ARRAY[] expressions
  * ----------------------------------------------------------------
@@ -4501,7 +4511,10 @@ ExecEvalCoerceToDomain(CoerceToDomainState *cstate, ExprContext *econtext,
 	if (isDone && *isDone == ExprEndResult)
 		return result;			/* nothing to check */
 
-	foreach(l, cstate->constraints)
+	/* Make sure we have up-to-date constraints */
+	UpdateDomainConstraintRef(cstate->constraint_ref);
+
+	foreach(l, cstate->constraint_ref->constraints)
 	{
 		DomainConstraintState *con = (DomainConstraintState *) lfirst(l);
 
@@ -5141,7 +5154,6 @@ ExecEvalArrayCoerceExpr(ArrayCoerceExprState *astate,
 {
 	ArrayCoerceExpr *acoerce = (ArrayCoerceExpr *) astate->xprstate.expr;
 	Datum		result;
-	ArrayType  *array;
 	FunctionCallInfoData locfcinfo;
 
 	result = ExecEvalExpr(astate->arg, econtext, isNull, isDone);
@@ -5158,13 +5170,11 @@ ExecEvalArrayCoerceExpr(ArrayCoerceExprState *astate,
 	if (!OidIsValid(acoerce->elemfuncid))
 	{
 		/* Detoast input array if necessary, and copy in any case */
-		array = DatumGetArrayTypePCopy(result);
+		ArrayType  *array = DatumGetArrayTypePCopy(result);
+
 		ARR_ELEMTYPE(array) = astate->resultelemtype;
 		PG_RETURN_ARRAYTYPE_P(array);
 	}
-
-	/* Detoast input array if necessary, but don't make a useless copy */
-	array = DatumGetArrayTypeP(result);
 
 	/* Initialize function cache if first time through */
 	if (astate->elemfunc.fn_oid == InvalidOid)
@@ -5195,15 +5205,14 @@ ExecEvalArrayCoerceExpr(ArrayCoerceExprState *astate,
 	 */
 	InitFunctionCallInfoData(locfcinfo, &(astate->elemfunc), 3,
 							 InvalidOid, NULL, NULL);
-	locfcinfo.arg[0] = PointerGetDatum(array);
+	locfcinfo.arg[0] = result;
 	locfcinfo.arg[1] = Int32GetDatum(acoerce->resulttypmod);
 	locfcinfo.arg[2] = BoolGetDatum(acoerce->isExplicit);
 	locfcinfo.argnull[0] = false;
 	locfcinfo.argnull[1] = false;
 	locfcinfo.argnull[2] = false;
 
-	return array_map(&locfcinfo, ARR_ELEMTYPE(array), astate->resultelemtype,
-					 astate->amstate);
+	return array_map(&locfcinfo, astate->resultelemtype, astate->amstate);
 }
 
 /* ----------------------------------------------------------------
@@ -5257,73 +5266,6 @@ ExecEvalCurrentOfExpr(ExprState *exprstate, ExprContext *econtext,
 
 	return BoolGetDatum(result);
 }
-
-/* ----------------------------------------------------------------
- *		ExecEvalReshuffleExpr
- *
- *		Evaluate an Reshuffle expression node.
- * ----------------------------------------------------------------
- */
-static Datum
-ExecEvalReshuffleExpr(ReshuffleExprState *astate,
-					  ExprContext *econtext,
-					  bool *isNull,
-					  ExprDoneCond *isDone)
-{
-	ReshuffleExpr *sr = (ReshuffleExpr *) astate->xprstate.expr;
-	uint32		newSeg;
-	bool		result;
-
-	Assert(!IS_QUERY_DISPATCHER());
-	Assert(sr->ptype != POLICYTYPE_REPLICATED);
-
-	if(sr->ptype == POLICYTYPE_PARTITIONED)
-	{
-		if (NULL != sr->hashKeys)
-		{
-			/* For hash distributed tables */
-			ListCell   *k;
-			int			i;
-
-			cdbhashinit(astate->cdbhash);
-			i = 0;
-			foreach(k, astate->hashKeys)
-			{
-				ExprState *vstate = (ExprState *) lfirst(k);
-				Datum		val;
-				bool		valnull;
-
-				val = ExecEvalExpr(vstate, econtext, &valnull, isDone);
-
-				cdbhash(astate->cdbhash, i + 1, val, valnull);
-				i++;
-			}
-
-			newSeg = cdbhashreduce(astate->cdbhash);
-			result = (GpIdentity.segindex != newSeg);
-		}
-		else
-		{
-			/*
-			 * For random distributed tables
-			 *
-			 * We generate a random value between[0, newSegs). When this
-			 * value is greater than oldSegs, it indicates that the tuple
-			 * needs to be reshuffled.
-			 */
-			int			newSegs = getgpsegmentCount();
-
-			result = (cdbhashrandomseg(newSegs) >= sr->oldSegs);
-		}
-	}
-	else
-		result = false;
-
-	*isNull = false;
-	return BoolGetDatum(result);
-
-}
-
 
 /*
  * ExecEvalExprSwitchContext
@@ -5479,27 +5421,67 @@ ExecInitExpr(Expr *node, PlanState *parent)
 			break;
 		case T_GroupingFunc:
 			{
-				GroupingFunc *gf = (GroupingFunc *)node;
-				GroupingFuncExprState *gstate = makeNode(GroupingFuncExprState);
+				GroupingFunc *grp_node = (GroupingFunc *) node;
+				GroupingFuncExprState *grp_state = makeNode(GroupingFuncExprState);
+				Agg		   *agg = NULL;
 
-				gstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalGroupingFunc;
-				gstate->args = gf->args;
-				gstate->ngrpcols = gf->ngrpcols;
-				state = (ExprState *) gstate;
-			}
-			break;
-		case T_Grouping:
-			{
-				ExprState *gstate = makeNode(ExprState);
-				gstate->evalfunc = (ExprStateEvalFunc) ExecEvalGrouping;
-				state = (ExprState *) gstate;
+				if (parent && IsA(parent, HashJoinState))
+				{
+					/* 
+					 * GPDB_95_MERGE_FIXME: GPDB may choose a HashJoin to combine multiple
+					 * aggregations in targetlist, however, for queries with multiple
+					 * groups, the HashJoin combination will not be taken. For a single
+					 * group, the GROUPING() function should always return 0
+					 * 
+					 */
+					grp_state->clauses = grp_node->cols;
+					state = (ExprState *) grp_state;
+					state->evalfunc = (ExprStateEvalFunc) ExecEvalGroupingFuncExprForHashJoin;
+				}
+				else if (!parent || !IsA(parent, AggState) || !IsA(parent->plan, Agg))
+					elog(ERROR, "parent of GROUPING is not Agg node");
+				else
+				{
+
+					grp_state->aggstate = (AggState *) parent;
+
+					agg = (Agg *) (parent->plan);
+
+					if (agg->groupingSets)
+						grp_state->clauses = grp_node->cols;
+					else
+						grp_state->clauses = NIL;
+
+					state = (ExprState *) grp_state;
+					state->evalfunc = (ExprStateEvalFunc) ExecEvalGroupingFuncExpr;
+				}
 			}
 			break;
 		case T_GroupId:
 			{
-				ExprState *gstate = makeNode(ExprState);
-				gstate->evalfunc = (ExprStateEvalFunc) ExecEvalGroupId;
-				state = (ExprState *) gstate;
+				GroupIdExprState *grp_state = makeNode(GroupIdExprState);
+
+				if (parent && IsA(parent, HashJoinState))
+				{
+					/* 
+					 * GPDB_95_MERGE_FIXME: GPDB may choose a HashJoin to combine multiple
+					 * aggregations in targetlist, however, for queries with multiple
+					 * groups, the HashJoin combination will not be taken. For a single
+					 * group, the GROUP_ID() function should always return 0
+					 * 
+					 */
+					state = (ExprState *) grp_state;
+					state->evalfunc = (ExprStateEvalFunc) ExecEvalGroupIdExprForHashJoin;
+				}
+				else if (!parent || !IsA(parent, AggState) || !IsA(parent->plan, Agg))
+					elog(ERROR, "parent of GROUP_ID is not Agg node");
+				else
+				{
+					grp_state->aggstate = (AggState *) parent;
+
+					state = (ExprState *) grp_state;
+					state->evalfunc = (ExprStateEvalFunc) ExecEvalGroupIdExpr;
+				}
 			}
 			break;
 		case T_WindowFunc:
@@ -6077,7 +6059,12 @@ ExecInitExpr(Expr *node, PlanState *parent)
 
 				cstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalCoerceToDomain;
 				cstate->arg = ExecInitExpr(ctest->arg, parent);
-				cstate->constraints = GetDomainConstraints(ctest->resulttype);
+				/* We spend an extra palloc to reduce header inclusions */
+				cstate->constraint_ref = (DomainConstraintRef *)
+					palloc(sizeof(DomainConstraintRef));
+				InitDomainConstraintRef(ctest->resulttype,
+										cstate->constraint_ref,
+										CurrentMemoryContext);
 				state = (ExprState *) cstate;
 			}
 			break;
@@ -6184,30 +6171,6 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				state = (ExprState *) exprstate;
 			}
 			break;
-
-        case T_ReshuffleExpr:
-			{
-				ReshuffleExpr *sr = (ReshuffleExpr *) node;
-				ReshuffleExprState *exprstate = makeNode(ReshuffleExprState);
-				Oid		   *hashFuncs;
-				int			i;
-				ListCell   *lc;
-
-				exprstate->hashKeys = (List *) ExecInitExpr((Expr *) sr->hashKeys, parent);
-				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalReshuffleExpr;
-
-				hashFuncs = palloc(list_length(sr->hashFuncs) * sizeof(Oid));
-				i = 0;
-				foreach(lc, sr->hashFuncs)
-				{
-					hashFuncs[i++] = lfirst_oid(lc);
-				}
-
-				exprstate->cdbhash = makeCdbHash(sr->newSegs, list_length(sr->hashKeys), hashFuncs);
-
-				state = (ExprState *) exprstate;
-			}
-		    break;
 
 		default:
 			elog(ERROR, "unrecognized node type: %d",

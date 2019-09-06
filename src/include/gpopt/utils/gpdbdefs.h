@@ -72,9 +72,6 @@ extern
 Query *preprocess_query_optimizer(Query *query, ParamListInfo boundParams);
 
 extern
-List *pg_parse_and_rewrite(const char *query_string, Oid *paramTypes, int iNumParams);
-
-extern
 PlannedStmt *pg_plan_query(Query *pqueryTree, ParamListInfo boundParams);
 
 extern

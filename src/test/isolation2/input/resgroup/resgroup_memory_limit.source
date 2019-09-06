@@ -13,8 +13,7 @@ CREATE OR REPLACE FUNCTION hold_memory_by_percent(float) RETURNS int AS $$
 $$ LANGUAGE sql;
 
 CREATE OR REPLACE VIEW rg_mem_status AS
-	SELECT groupname, memory_limit, proposed_memory_limit,
-		   memory_shared_quota, proposed_memory_shared_quota
+	SELECT groupname, memory_limit, memory_shared_quota
 	FROM gp_toolkit.gp_resgroup_config
 	WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test'
 	ORDER BY groupid;
@@ -503,4 +502,3 @@ DROP ROLE role1_memory_test;
 DROP ROLE role2_memory_test;
 DROP RESOURCE GROUP rg1_memory_test;
 DROP RESOURCE GROUP rg2_memory_test;
-

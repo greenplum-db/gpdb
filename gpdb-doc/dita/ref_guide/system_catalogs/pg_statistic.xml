@@ -28,11 +28,15 @@
       columns in <codeph>pg_statistic</codeph>. Everything else is stored in slots, which are groups
       of associated columns whose content is identified by a code number in one of the slot's
       columns.</p>
-    <p><codeph>pg_statistic</codeph> should not be readable by the public, since even statistical
-      information about a table's contents may be considered sensitive (for example: minimum and
-      maximum values of a salary column). <codeph>pg_stats</codeph> is a publicly readable view on
-        <codeph>pg_statistic</codeph> that only exposes information about those tables that are
-      readable by the current user.</p>
+    <p>Statistical information about a table's contents should be considered sensitive (for example:
+      minimum and maximum values of a salary column). <codeph>pg_stats</codeph> is a publicly
+      readable view on <codeph>pg_statistic</codeph> that only exposes information about those
+      tables that are readable by the current user.</p>
+    <note type="warning">Diagnostic tools such as <codeph>gpsd</codeph> and
+        <codeph>minirepro</codeph> collect sensitive information from <codeph>pg_statistic</codeph>,
+      such as histogram boundaries, in a clear, readable form. Always review the output files of
+      these utilities to ensure that the contents are acceptable for transport outside of the
+      database in your organization.</note>
     <table id="hv156260">
       <title>pg_catalog.pg_statistic</title>
       <tgroup cols="4">

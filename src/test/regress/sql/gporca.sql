@@ -647,6 +647,7 @@ insert into orca.fooh1 select i%4, i%3, i from generate_series(1,20) i;
 insert into orca.fooh2 select i%3, i%2, i from generate_series(1,20) i;
 
 select sum(f1.b) from orca.fooh1 f1 group by f1.a;
+select f1.a + 1 from fooh1 f1 group by f1.a+1 having sum(f1.a+1) + 1 > 20;
 select 1 as one, f1.a from orca.fooh1 f1 group by f1.a having sum(f1.b) > 4;
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 10 > (select f2.a from orca.fooh2 f2 group by f2.a having sum(f1.a) > count(*) order by f2.a limit 1) order by f1.a;
 select 1 from orca.fooh1 f1 group by f1.a having 10 > (select f2.a from orca.fooh2 f2 group by f2.a having sum(f1.a) > count(*) order by f2.a limit 1) order by f1.a;
@@ -665,6 +666,78 @@ select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having f1.a = (select f2.
 select sum(f1.a+1)+1 from orca.fooh1 f1 group by f1.a+1;
 select sum(f1.a+1)+sum(f1.a+1) from orca.fooh1 f1 group by f1.a+1;
 select sum(f1.a+1)+avg(f1.a+1), sum(f1.a), sum(f1.a+1) from orca.fooh1 f1 group by f1.a+1;
+
+--
+-- test algebrization of group by clause with subqueries
+--
+drop table if exists foo, bar, jazz;
+create table foo (a int, b int, c int);
+create table bar (d int, e int, f int);
+create table jazz (g int, h int, j int);
+
+insert into foo values (1, 1, 1), (2, 2, 2), (3, 3, 3);
+insert into bar values (1, 1, 1), (2, 2, 2), (3, 3, 3);
+insert into jazz values (2, 2, 2);
+
+-- subquery with outer reference with aggfunc in target list
+select a, (select sum(e) from bar where foo.b = bar.f), b, count(*) from foo, jazz where foo.c = jazz.g group by b, a, h;
+
+-- complex agg expr in subquery
+select foo.a, (select (foo.a + foo.b) * count(bar.e) from bar), b, count(*) from foo group by foo.a, foo.b, foo.a + foo.b;
+
+-- aggfunc over an outer reference in a subquery
+select (select sum(foo.a + bar.d) from bar) from foo group by a, b;
+
+-- complex expression of aggfunc over an outer reference in a subquery
+select (select sum(foo.a + bar.d) + 1 from bar) from foo group by a, b;
+
+-- aggrefs with multiple agglevelsup
+select (select (select sum(foo.a + bar.d) from jazz) from bar) from foo group by a, b;
+
+-- aggrefs with multiple agglevelsup in an expression
+select (select (select sum(foo.a + bar.d) * 2 from jazz) from bar) from foo group by a, b;
+
+-- nested group by
+select (select max(f) from bar where d = 1 group by a, e) from foo group by a;
+
+-- cte with an aggfunc of outer ref
+select a, count(*), (with cte as (select min(d) dd from bar group by e) select max(a * dd) from cte) from foo group by a;
+
+-- cte with an aggfunc of outer ref in an complex expression
+select a, count(*), (with cte as (select e, min(d) as dd from bar group by e) select max(a) * sum(dd) from cte) from foo group by a;
+
+-- subquery in group by
+select max(a) from foo group by (select e from bar where bar.e = foo.a);
+
+-- nested subquery in group by
+select max(a) from foo group by (select g from jazz where foo.a = (select max(a) from foo where c = 1 group by b));
+
+-- group by inside groupby inside group by ;S
+select max(a) from foo group by (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h);
+
+-- cte subquery in group by
+select max(a) from foo group by b, (with cte as (select min(g) from jazz group by h) select a from cte);
+
+-- group by subquery in order by
+select * from foo order by ((select min(bar.e + 1) * 2 from bar group by foo.a) - foo.a);
+
+-- everything in the kitchen sink
+select max(b), (select foo.a * count(bar.e) from bar), (with cte as (select e, min(d) as dd from bar group by e) select max(a) * sum(dd) from cte), count(*) from foo group by foo.a, (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h), (with cte as (select min(g) from jazz group by h) select a from cte) order by ((select min(bar.e + 1) * 2 from bar group by foo.a) - foo.a);
+
+-- complex expression in group by & targetlist
+select b + (a+1) from foo group by b, a+1;
+
+-- subselects inside aggs
+SELECT  foo.b+1, avg (( SELECT bar.f FROM bar WHERE bar.d = foo.b)) AS t FROM foo GROUP BY foo.b;
+
+SELECT foo.b+1, sum( 1 + (SELECT bar.f FROM bar WHERE bar.d = ANY (SELECT jazz.g FROM jazz WHERE jazz.h = foo.b))) AS t FROM foo GROUP BY foo.b;
+
+select foo.b+1, sum((with cte as (select * from jazz) select 1 from cte where cte.h = foo.b)) as t FROM foo GROUP BY foo.b;
+
+-- ctes inside aggs
+select foo.b+1, sum((with cte as (select * from jazz) select 1 from cte cte1, cte cte2 where cte1.h = foo.b)) as t FROM foo GROUP BY foo.b;
+
+drop table foo, bar, jazz;
 
 create table orca.t77(C952 text) WITH (compresstype=zlib,compresslevel=2,appendonly=true,blocksize=393216,checksum=true);
 insert into orca.t77 select 'text'::text;
@@ -1916,6 +1989,22 @@ set optimizer_enable_streaming_material = off;
 select c1 from t_outer where not c1 =all (select c2 from t_inner);
 reset optimizer_enable_streaming_material;
 
+-- Ensure that ORCA rescans the subquery in case of skip-level correlation with
+-- materialization
+drop table if exists wst0, wst1, wst2;
+
+create table wst0(a0 int, b0 int);
+create table wst1(a1 int, b1 int);
+create table wst2(a2 int, b2 int);
+
+insert into wst0 select i, i from generate_series(1,10) i;
+insert into wst1 select i, i from generate_series(1,10) i;
+insert into wst2 select i, i from generate_series(1,10) i;
+
+-- NB: the rank() is need to force materialization (via Sort) in the subplan
+select count(*) from wst0 where exists (select 1, rank() over (order by wst1.a1) from wst1 where a1 = (select b2 from wst2 where a0=a2+5));
+
+
 --
 -- Test to ensure sane behavior when DML queries are optimized by ORCA by
 -- enforcing a non-master gather motion, controlled by
@@ -2046,6 +2135,64 @@ ANALYZE onetimefilter1;
 ANALYZE onetimefilter2;
 EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
 WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
+
+
+-- full joins with predicates
+DROP TABLE IF EXISTS ffoo, fbar;
+CREATE TABLE ffoo (a, b) AS (VALUES (1, 2), (2, 3), (4, 5), (5, 6), (6, 7)) DISTRIBUTED BY (a);
+CREATE TABLE fbar (c, d) AS (VALUES (1, 42), (2, 43), (4, 45), (5, 46)) DISTRIBUTED BY (c);
+
+SELECT d FROM ffoo FULL OUTER JOIN fbar ON a = c WHERE b BETWEEN 5 and 9;
+
+-- test index left outer joins on bitmap and btree indexes on partitioned tables with and without select clause
+DROP TABLE IF EXISTS touter, tinner;
+CREATE TABLE touter(a int, b int) DISTRIBUTED BY (a);
+CREATE TABLE tinnerbitmap(a int, b int) DISTRIBUTED BY (a) PARTITION BY range(b) (start (0) end (6) every (3));
+CREATE TABLE tinnerbtree(a int, b int) DISTRIBUTED BY (a) PARTITION BY range(b) (start (0) end (6) every (3));
+
+INSERT INTO touter SELECT i, i%6 FROM generate_series(1,10) i;
+INSERT INTO tinnerbitmap select i, i%6 FROM generate_series(1,1000) i;
+INSERT INTO tinnerbtree select i, i%6 FROM generate_series(1,1000) i;
+CREATE INDEX tinnerbitmap_ix ON tinnerbitmap USING bitmap(a);
+CREATE INDEX tinnerbtree_ix ON tinnerbtree USING btree(a);
+
+SELECT * FROM touter LEFT JOIN tinnerbitmap ON touter.a = tinnerbitmap.a;
+SELECT * FROM touter LEFT JOIN tinnerbitmap ON touter.a = tinnerbitmap.a AND tinnerbitmap.b=10;
+
+SELECT * FROM touter LEFT JOIN tinnerbtree ON touter.a = tinnerbtree.a;
+SELECT * FROM touter LEFT JOIN tinnerbtree ON touter.a = tinnerbtree.a AND tinnerbtree.b=10;
+
+-- test subplan in a qual under dynamic scan
+CREATE TABLE ds_part ( a INT, b INT, c INT) PARTITION BY RANGE(c)( START(1) END (10) EVERY (2), DEFAULT PARTITION deflt);
+CREATE TABLE non_part1 (c INT);
+CREATE TABLE non_part2 (e INT, f INT);
+
+INSERT INTO ds_part SELECT i, i, i FROM generate_series (1, 1000)i; 
+INSERT INTO non_part1 SELECT i FROM generate_series(1, 100)i; 
+INSERT INTO non_part2 SELECT i, i FROM generate_series(1, 100)i;
+
+SET optimizer_enforce_subplans TO ON;
+analyze ds_part;
+analyze non_part1;
+analyze non_part2;
+SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
+explain SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
+
+SELECT *, a IN ( SELECT b + 1 FROM non_part1) FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b FROM non_part1);
+CREATE INDEX ds_idx ON ds_part(a);
+analyze ds_part;
+SELECT *, a IN ( SELECT b + 1 FROM non_part1) FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b FROM non_part1);
+
+RESET optimizer_enforce_subplans;
+-- implied predicate must be generated for the type cast(ident) scalar array cmp const array
+CREATE TABLE varchar_sc_array_cmp(a varchar);
+INSERT INTO varchar_sc_array_cmp VALUES ('a'), ('b'), ('c'), ('d');
+EXPLAIN SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and t1.a in ('b', 'c');
+SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and t1.a in ('b', 'c');
+SET optimizer_array_constraints=on;
+EXPLAIN SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and (t1.a in ('b', 'c') OR t1.a = 'a');
+SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and (t1.a in ('b', 'c') OR t1.a = 'a');
+DROP TABLE varchar_sc_array_cmp;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;

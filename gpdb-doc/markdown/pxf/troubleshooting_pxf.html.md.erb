@@ -56,7 +56,7 @@ PXF provides more detailed logging when the `DEBUG` level is enabled. To configu
     #log4j.logger.org.greenplum.pxf=DEBUG
     ```
 
-2. Use the `pxf cluster sync` command to copy the updated `pxf-log4j.properties` file to each segment host. For example:
+2. Use the `pxf cluster sync` command to copy the updated `pxf-log4j.properties` file to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
@@ -122,11 +122,108 @@ dbname=# SET client_min_messages=NOTICE;
 
 ## <a id="pxf-memcfg"></a>Addressing PXF Memory Issues
 
-Because a single PXF agent (JVM) serves multiple segments on a segment host, the PXF heap size can be a limiting runtime factor. This will be more evident under concurrent workloads and/or queries against large files. You may run into situations where a query will hang or fail due to insufficient memory or the Java garbage collector impacting response times. To avert or remedy these situations, first try increasing the Java maximum heap size or decreasing the Tomcat maximum number of threads, depending upon what works best for your system configuration.
+Because a single PXF agent (JVM) serves multiple segments on a segment host, the PXF heap size can be a limiting runtime factor. This will be more evident under concurrent workloads and/or queries against large files. You may run into situations where a query will hang or fail due to insufficient memory or the Java garbage collector impacting response times. To avert or remedy these situations, first try increasing the Java maximum heap size or decreasing the Tomcat maximum number of threads, depending upon what works best for your system configuration. You may also choose to configure PXF to perform specific actions when it detects an out of memory condition.
 
-**Note**: The configuration changes described in this topic require modifying config files on *each* segment node in your Greenplum Database cluster. After you perform the updates, be sure to synchronize the PXF configuration to each segment host in the cluster.
+**Note**: The configuration changes described in this topic require modifying config files on *each* node in your Greenplum Database cluster. After you perform the updates on the master, be sure to synchronize the PXF configuration to the Greenplum Database cluster.
 
-You will need to re-apply these configuration changes after any PXF version upgrades.
+
+### <a id="pxf-cfgoom"></a>Configuring Out of Memory Condition Actions
+
+In an out of memory (OOM) situation, PXF returns the following error in response to a query:
+
+``` pre
+java.lang.OutOfMemoryError: Java heap space
+```
+
+You can configure the PXF JVM to enable/disable the following actions when it detects an OOM condition:
+
+- Auto-kill the PXF server (enabled by default).
+- Dump the Java heap (disabled by default).
+
+#### <a id="pxf-cfgoom-autokill"></a>Auto-Killing the PXF Server
+
+By default, PXF is configured such that when the PXF JVM detects an out of memory condition on a segment host, it automatically runs a script that kills the PXF server running on the host. The `PXF_OOM_KILL` configuration property governs this auto-kill behavior.
+
+When auto-kill is enabled and the PXF JVM detects an OOM condition and kills the PXF server on the segment host:
+
+- PXF logs the following messages to `$PXF_CONF/logs/catalina.out` on the segment host:
+
+    ``` shell
+    =====> <date> PXF Out of memory detected <======
+    =====> <date> PXF shutdown scheduled <======
+    ```
+
+- Any query that you run on a PXF external table will fail with the following error until you restart the PXF server on the segment host:
+
+    ``` shell
+    ... Failed to connect to <host> port 5888: Connection refused
+    ```
+
+**When the PXF server on a segment host is shut down in this manner, you must explicitly restart the PXF server on the host.** See the [pxf](ref/pxf.html) reference page for more information on the `pxf start` command.
+
+Refer to the configuration [procedure](#pxf-cfgoom_proc) below for the instructions to disable/enable this PXF configuration property.
+ 
+#### <a id="pxf-cfgoom-heapdump"></a>Dumping the Java Heap
+
+In an out of memory situation, it may be useful to capture the Java heap dump to help determine what factors contributed to the resource exhaustion. You can use the `PXF_OOM_DUMP_PATH` property to configure PXF to write the heap dump to a file when it detects an OOM condition. By default, PXF does not dump the Java heap on OOM.
+
+If you choose to enable the heap dump on OOM, you must set `PXF_OOM_DUMP_PATH` to the absolute path to a file or directory:
+
+- If you specify a directory, the PXF JVM writes the heap dump to the file `<directory>/java_pid<pid>.hprof`, where `<pid>` identifies the process ID of the PXF server instance. The PXF JVM writes a new file to the directory every time the JVM goes OOM.
+- If you specify a file and the file does not exist, the PXF JVM writes the heap dump to the file when it detects an OOM. If the file already exists, the JVM will not dump the heap.
+
+Ensure that the `gpadmin` user has write access to the dump file or directory.
+
+**Note**: Heap dump files are often rather large. If you enable heap dump on OOM for PXF and specify a directory for `PXF_OOM_DUMP_PATH`, multiple OOMs will generate multiple files in the directory and could potentially consume a large amount of disk space. If you specify a file for `PXF_OOM_DUMP_PATH`, disk usage is constant when the file name does not change. You must rename the dump file or configure a different `PXF_OOM_DUMP_PATH` to generate subsequent heap dumps.
+
+Refer to the configuration [procedure](#pxf-cfgoom_proc) below for the instructions to enable/disable this PXF configuration property.
+
+#### <a id="pxf-cfgoom_proc"></a>Procedure
+
+Auto-kill of the PXF server on OOM is enabled by default. Heap dump generation on OOM is disabled by default. To configure one or both of these properties, perform the following procedure:
+
+1. Log in to your Greenplum Database master node:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    ```
+
+2. Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
+    ```
+
+3. If you want to configure (i.e. turn off, or turn back on) auto-kill of the PXF server on OOM, locate the `PXF_OOM_KILL` property in the `pxf-env.sh` file. If the setting is commented out, uncomment it, and then update the value. For example, to turn off this behavior, set the value to `false`:
+
+    ``` shell
+    export PXF_OOM_KILL=false
+    ```
+
+4. If you want to configure (i.e. turn on, or turn back off) automatic heap dumping when the PXF server hits an OOM condition, locate the `PXF_OOM_DUMP_PATH` setting in the `pxf-env.sh` file.
+
+    1. To turn this behavior on, set the `PXF_OOM_DUMP_PATH` property value to the file system location to which you want the PXF JVM to dump the Java heap. For example, to dump to a file named `/home/gpadmin/pxfoom_segh1`:
+
+        ``` shell
+        export PXF_OOM_DUMP_PATH=/home/pxfoom_segh1
+        ```
+
+    2. To turn off heap dumping after you have turned it on, comment out the `PXF_OOM_DUMP_PATH` property setting:
+
+        ``` shell
+        #export PXF_OOM_DUMP_PATH=/home/pxfoom_segh1
+        ```
+
+5. Save the `pxf-enf.sh` file and exit the editor.
+
+6. Use the `pxf cluster sync` command to copy the updated `pxf-env.sh` file to the Greenplum Database cluster. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
+    ```
+
+7. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
+
 
 ### <a id="pxf-heapcfg"></a>Increasing the JVM Memory for PXF
 
@@ -140,7 +237,7 @@ Perform the following procedure to increase the heap size for the PXF agent runn
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Recall the location of the PXF user configuration directory ($PXF_CONF). Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
+2. Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
 
     ``` shell
     gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
@@ -152,7 +249,9 @@ Perform the following procedure to increase the heap size for the PXF agent runn
     PXF_JVM_OPTS="-Xmx3g -Xms3g"
     ```
 
-4. Use the `pxf cluster sync` command to copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example:
+3. Save the file and exit the editor.
+
+4. Use the `pxf cluster sync` command to copy the updated `pxf-env.sh` file to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
@@ -164,9 +263,13 @@ Perform the following procedure to increase the heap size for the PXF agent runn
 
 If increasing the maximum heap size is not suitable for your Greenplum Database deployment, try decreasing the number of concurrent working threads configured for PXF's underlying Tomcat web application. A decrease in the number of running threads will prevent any PXF node from exhausting its memory, while ensuring that current queries run to completion (albeit a bit slower). Tomcat's default behavior is to queue requests until a thread is free, or the queue is exhausted.
 
-The Tomcat default maximum number of threads is 300. Decrease the maximum number of threads to a value that works optimally for your Greenplum Database deployment. (If you plan to run large workloads on a large number of files in an external Hive data store, specify an even lower value.)
+The default maximum number of Tomcat threads for PXF is 200. The `PXF_MAX_THREADS` configuration property controls this setting.
 
-Perform the following procedure to decrease the maximum number of Tomcat threads for the PXF agent running on each segment host in your Greenplum Database deployment.
+PXF thread capacity is determined by the profile and whether or not the data is compressed. If you plan to run large workloads on a large number of files in an external Hive data store, or you are reading compressed ORC or Parquet data, consider specifying a lower `PXF_MAX_THREADS` value.
+
+**Note**: Keep in mind that an increase in the thread count correlates with an increase in memory consumption when the thread count is exhausted.
+
+Perform the following procedure to set the maximum number of Tomcat threads for the PXF agent running on each segment host in your Greenplum Database deployment.
 
 1. Log in to your Greenplum Database master node:
 
@@ -174,28 +277,28 @@ Perform the following procedure to decrease the maximum number of Tomcat threads
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Edit the `$GPHOME/pxf/pxf-service/conf/server.xml` file. For example:
+2. Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
 
     ``` shell
-    gpadmin@gpmaster$ vi $GPHOME/pxf/pxf-service/conf/server.xml
+    gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
     ```
 
-3. Locate the `Catalina` `Executor` block and update the `maxThreads` setting to the desired value. For example:
-
-    ``` xml
-    <Executor maxThreads="100"
-              minSpareThreads="50"
-              name="tomcatThreadPool"
-              namePrefix="tomcat-http--"/>
-    ```
-
-4. Copy the updated `server.xml` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+3. Locate the `PXF_MAX_THREADS` setting in the `pxf-env.sh` file. Uncomment the setting and update it to the desired value. For example, to set the maximum number of Tomcat threads to 100:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/pxf-service/conf/server.xml =:/usr/local/greenplum-db/pxf/pxf-service/conf/server.xml
+    export PXF_MAX_THREADS=100
+    ```
+
+3. Save the file and exit the editor.
+
+4. Use the `pxf cluster sync` command to copy the updated `pxf-env.sh` file to the Greenplum Database cluster. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
     ```
 
 5. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
+
 
 ## <a id="pxf-timezonecfg"></a>Addressing PXF JDBC Connector Time Zone Errors
 
@@ -217,5 +320,39 @@ export PXF_JVM_OPTS="<current_settings> -Duser.timezone=America/Chicago"
 
 You can use the `PXF_JVM_OPTS` property to set other Java options as well.
 
-As described in previous sections, you must synchronize the updated PXF configuration to each Greenplum Database segment host and restart the PXF server on each host.
+As described in previous sections, you must synchronize the updated PXF configuration to the Greenplum Database cluster and restart the PXF server on each segment host.
+
+## <a id="pxf-fragcache"></a>PXF Fragment Metadata Caching 
+
+A PXF connector *Fragmenter* uses metadata from the external data source to split data into a list of fragments (blocks, files, etc.) that can be read in parallel. PXF caches the fragment metadata on a per-query basis: the first thread to access a fragment's metadata stores the information in a cache, and other threads reuse this cached metadata. Caching of this nature reduces query memory requirements for external data sources with a large number of fragments.
+
+PXF fragment metadata caching is enabled by default. To turn off fragment metadata caching, or to re-enable it after turning it off, perform the following procedure:
+
+1. Log in to your Greenplum Database master node:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    ```
+
+2. Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
+    ```
+
+3. Locate the `PXF_FRAGMENTER_CACHE` setting in the `pxf-env.sh` file. If the setting is commented out, uncomment it, and then update the value. For example, to turn off fragment metadata caching, set the value to `false`:
+
+    ``` shell
+    export PXF_FRAGMENTER_CACHE=false
+    ```
+
+3. Save the file and exit the editor.
+
+4. Use the `pxf cluster sync` command to copy the updated `pxf-env.sh` file to the Greenplum Database cluster. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
+    ```
+
+5. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 

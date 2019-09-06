@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  *
  * src/bin/psql/print.h
  */
@@ -18,6 +18,7 @@ enum printFormat
 	PRINT_ALIGNED,
 	PRINT_WRAPPED,
 	PRINT_HTML,
+	PRINT_ASCIIDOC,
 	PRINT_LATEX,
 	PRINT_LATEX_LONGTABLE,
 	PRINT_TROFF_MS
@@ -68,6 +69,12 @@ typedef struct printTextFormat
 										 * marks when border=0? */
 } printTextFormat;
 
+typedef enum unicode_linestyle
+{
+	UNICODE_LINESTYLE_SINGLE = 0,
+	UNICODE_LINESTYLE_DOUBLE
+} unicode_linestyle;
+
 struct separator
 {
 	char	   *separator;
@@ -83,6 +90,8 @@ typedef struct printTableOpt
 								 * 1=dividing lines, 2=full */
 	unsigned short int pager;	/* use pager for output (if to stdout and
 								 * stdout is a tty) 0=off 1=on 2=always */
+	int			pager_min_lines;/* don't use pager unless there are at least
+								 * this many lines */
 	bool		tuples_only;	/* don't output headers, row counts, etc. */
 	bool		start_table;	/* print start decoration, eg <table> */
 	bool		stop_table;		/* print stop decoration, eg </table> */
@@ -97,6 +106,9 @@ typedef struct printTableOpt
 	int			encoding;		/* character encoding */
 	int			env_columns;	/* $COLUMNS on psql start, 0 is unset */
 	int			columns;		/* target width for wrapped format */
+	unicode_linestyle unicode_border_linestyle;
+	unicode_linestyle unicode_column_linestyle;
+	unicode_linestyle unicode_header_linestyle;
 } printTableOpt;
 
 /*
@@ -155,7 +167,7 @@ extern const printTextFormat pg_asciiformat_old;
 extern const printTextFormat pg_utf8format;
 
 
-extern FILE *PageOutput(int lines, unsigned short int pager);
+extern FILE *PageOutput(int lines, const printTableOpt *topt);
 extern void ClosePager(FILE *pagerpipe);
 
 extern void html_escaped_print(const char *in, FILE *fout);
@@ -178,6 +190,7 @@ extern void printQuery(const PGresult *result, const printQueryOpt *opt,
 
 extern void setDecimalLocale(void);
 extern const printTextFormat *get_line_style(const printTableOpt *opt);
+extern void refresh_utf8format(const printTableOpt *opt);
 
 #ifndef __CYGWIN__
 #define DEFAULT_PAGER "more"

@@ -4,7 +4,7 @@
  * bootscanner.l
  *	  a lexical scanner for the bootstrap parser
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -18,7 +18,6 @@
 #include "access/attnum.h"
 #include "access/htup.h"
 #include "access/itup.h"
-#include "access/skey.h"
 #include "access/tupdesc.h"
 #include "bootstrap/bootstrap.h"
 #include "catalog/pg_am.h"
@@ -130,6 +129,9 @@ insert			{ return(INSERT_TUPLE); }
 "on"			{ return(ON); }
 "using"			{ return(USING); }
 "toast"			{ return(XTOAST); }
+"FORCE"			{ return(XFORCE); }
+"NOT"			{ return(XNOT); }
+"NULL"			{ return(XNULL); }
 
 {arrayid}		{
 					yylval.str = MapArrayTypeName(yytext);

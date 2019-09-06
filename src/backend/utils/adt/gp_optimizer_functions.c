@@ -52,7 +52,7 @@ extern Datum LibraryVersion();
 * Returns the optimizer and gpos library versions.
 */
 Datum
-gp_opt_version(PG_FUNCTION_ARGS __attribute__((unused)))
+gp_opt_version(PG_FUNCTION_ARGS pg_attribute_unused())
 {
 #ifdef USE_ORCA
 	return LibraryVersion();

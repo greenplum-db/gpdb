@@ -4,7 +4,7 @@
  *	  interface routines for the postgres GiST index access method.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -16,7 +16,7 @@
 
 #include "access/genam.h"
 #include "access/gist_private.h"
-#include "access/heapam_xlog.h"
+#include "access/xloginsert.h"
 #include "catalog/index.h"
 #include "catalog/pg_collation.h"
 #include "miscadmin.h"
@@ -394,6 +394,14 @@ gistplacetopage(Relation rel, Size freespace, GISTSTATE *giststate,
 			 */
 			GistPageSetNSN(ptr->page, oldnsn);
 		}
+
+		/*
+		 * gistXLogSplit() needs to WAL log a lot of pages, prepare WAL
+		 * insertion for that. NB: The number of pages and data segments
+		 * specified here must match the calculations in gistXLogSplit()!
+		 */
+		if (RelationNeedsWAL(rel))
+			XLogEnsureRecordSpace(npage, 1 + npage * 2);
 
 		START_CRIT_SECTION();
 
@@ -1397,6 +1405,14 @@ initGISTstate(Relation index)
 		else
 			giststate->distanceFn[i].fn_oid = InvalidOid;
 
+		/* opclasses are not required to provide a Fetch method */
+		if (OidIsValid(index_getprocid(index, i + 1, GIST_FETCH_PROC)))
+			fmgr_info_copy(&(giststate->fetchFn[i]),
+						   index_getprocinfo(index, i + 1, GIST_FETCH_PROC),
+						   scanCxt);
+		else
+			giststate->fetchFn[i].fn_oid = InvalidOid;
+
 		/*
 		 * If the index column has a specified collation, we should honor that
 		 * while doing comparisons.  However, we may have a collatable storage
@@ -1420,7 +1436,7 @@ initGISTstate(Relation index)
 }
 
 void
-freeGISTstate(GISTSTATE *giststate __attribute__((unused)))
+freeGISTstate(GISTSTATE *giststate pg_attribute_unused())
 {
 	/* It's sufficient to delete the scanCxt */
 	MemoryContextDelete(giststate->scanCxt);

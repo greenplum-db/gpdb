@@ -33,7 +33,7 @@ DROP RESOURCE GROUP rg_concurrency_test;
 
 -- test2: test alter concurrency
 -- Create a resource group with concurrency=2. Prepare 2 running transactions and 1 queueing transactions.
--- Alter concurrency 2->3, the queueing transaction will be woken up, the 'value' and 'proposed' of pg_resgroupcapability will be set to 3.
+-- Alter concurrency 2->3, the queueing transaction will be woken up, the 'value' of pg_resgroupcapability will be set to 3.
 DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
@@ -47,10 +47,10 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 14:SET ROLE role_concurrency_test;
 14&:BEGIN;
 SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
-SELECT concurrency,proposed_concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
+SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 3;
 SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
-SELECT concurrency,proposed_concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
+SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 12:END;
 13:END;
 14<:
@@ -78,10 +78,10 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 25:SET ROLE role_concurrency_test;
 25&:BEGIN;
 SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
-SELECT concurrency,proposed_concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
--- Alter concurrency 3->2, the 'proposed' of pg_resgroupcapability will be set to 2.
+SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
+-- Alter concurrency 3->2, the 'value' of pg_resgroupcapability will be set to 2.
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
-SELECT concurrency,proposed_concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
+SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 -- When one transaction is finished, queueing transaction won't be woken up. There're 2 running transactions and 1 queueing transaction.
 24:END;
 SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
@@ -91,9 +91,9 @@ SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_to
 -- Finish another transaction, one queueing transaction will be woken up, there're 2 running transactions and 1 queueing transaction.
 22:END;
 SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
--- Alter concurrency 2->2, the 'value' and 'proposed' of pg_resgroupcapability will be set to 2.
+-- Alter concurrency 2->2, the 'value' of pg_resgroupcapability will be set to 2.
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
-SELECT concurrency,proposed_concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
+SELECT concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 -- Finish another transaction, one queueing transaction will be woken up, there're 2 running transactions and 0 queueing transaction.
 23:END;
 SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';

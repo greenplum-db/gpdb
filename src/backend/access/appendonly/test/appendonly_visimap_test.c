@@ -10,14 +10,13 @@
  * Particularly, the case when the current visimap entry has already
  * been stashed at least once.
  */
-void
+static void
 test__AppendOnlyVisimapDelete_Finish_outoforder(void **state)
 {
 	AppendOnlyVisiMapDeleteKey key;
 	AppendOnlyVisiMapDeleteData val;
 	AppendOnlyVisimapDelete visiMapDelete;
 	AppendOnlyVisimap visiMap;
-	bool		found;
 
 	visiMapDelete.visiMap = &visiMap;
 	visiMap.visimapEntry.segmentFileNum = 2;

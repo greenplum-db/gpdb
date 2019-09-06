@@ -89,7 +89,7 @@ CTranslatorScalarToDXL::CTranslatorScalarToDXL
 //---------------------------------------------------------------------------
 CTranslatorScalarToDXL::CTranslatorScalarToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *mda
 	)
 	:
@@ -139,7 +139,7 @@ CTranslatorScalarToDXL::CreateSubqueryTranslator
 CDXLNode *
 CTranslatorScalarToDXL::TranslateStandaloneExprToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *mda,
 	const CMappingVarColId* var_colid_mapping,
 	const Expr *expr
@@ -642,7 +642,7 @@ CTranslatorScalarToDXL::TranslateConstToDXL
 CDXLDatum *
 CTranslatorScalarToDXL::TranslateConstToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *mda,
 	const Const *constant
 	)
@@ -2092,7 +2092,7 @@ CTranslatorScalarToDXL::CreateExistSubqueryFromSublink
 CDXLDatum *
 CTranslatorScalarToDXL::TranslateDatumToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	const IMDType *md_type,
 	INT type_modifier,
 	BOOL is_null,
@@ -2143,7 +2143,7 @@ CTranslatorScalarToDXL::TranslateDatumToDXL
 CDXLDatum *
 CTranslatorScalarToDXL::TranslateGenericDatumToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	const IMDType *md_type,
 	INT type_modifier,
 	BOOL is_null,
@@ -2188,7 +2188,7 @@ CTranslatorScalarToDXL::TranslateGenericDatumToDXL
 CDXLDatum *
 CTranslatorScalarToDXL::TranslateBoolDatumToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	const IMDType *md_type,
 	BOOL is_null,
 	ULONG , //len,
@@ -2213,7 +2213,7 @@ CTranslatorScalarToDXL::TranslateBoolDatumToDXL
 CDXLDatum *
 CTranslatorScalarToDXL::TranslateOidDatumToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	const IMDType *md_type,
 	BOOL is_null,
 	ULONG , //len,
@@ -2238,7 +2238,7 @@ CTranslatorScalarToDXL::TranslateOidDatumToDXL
 CDXLDatum *
 CTranslatorScalarToDXL::TranslateInt2DatumToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	const IMDType *md_type,
 	BOOL is_null,
 	ULONG , //len,
@@ -2263,7 +2263,7 @@ CTranslatorScalarToDXL::TranslateInt2DatumToDXL
 CDXLDatum *
 CTranslatorScalarToDXL::TranslateInt4DatumToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	const IMDType *md_type,
 	BOOL is_null,
 	ULONG , //len,
@@ -2288,7 +2288,7 @@ CTranslatorScalarToDXL::TranslateInt4DatumToDXL
 CDXLDatum *
 CTranslatorScalarToDXL::TranslateInt8DatumToDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	const IMDType *md_type,
 	BOOL is_null,
 	ULONG , //len,
@@ -2385,7 +2385,7 @@ CTranslatorScalarToDXL::ExtractDoubleValueFromDatum
 BYTE *
 CTranslatorScalarToDXL::ExtractByteArrayFromDatum
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	const IMDType *md_type,
 	BOOL is_null,
 	ULONG len,
@@ -2462,14 +2462,17 @@ CTranslatorScalarToDXL::ExtractLintValueFromDatum
 		}
 		else
 		{
-			hash = gpos::HashValue<BYTE>(bytes);
-			for (ULONG ul = 1; ul < length; ul++)
+			if (mdid->Equals(&CMDIdGPDB::m_mdid_bpchar))
 			{
-				hash = gpos::CombineHashes(hash, gpos::HashValue<BYTE>(&bytes[ul]));
+				hash = gpdb::HashBpChar((Datum) bytes);
+			}
+			else
+			{
+				hash = gpdb::HashText((Datum) bytes);
 			}
 		}
 
-		lint_value = (LINT) (hash / 4);
+		lint_value = (LINT) hash;
 	}
 
 	return lint_value;
@@ -2486,7 +2489,7 @@ CTranslatorScalarToDXL::ExtractLintValueFromDatum
 IDatum *
 CTranslatorScalarToDXL::CreateIDatumFromGpdbDatum
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	const IMDType *md_type,
 	BOOL is_null,
 	Datum gpdb_datum

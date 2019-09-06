@@ -72,8 +72,8 @@ SELECT (t).* FROM (
 ) AS x;
      tid      | segno | row_num 
 --------------+-------+---------
- (33554432,1) |     1 |       1
- (33554432,2) |     1 |       2
+ (33554432,2) |     1 |       1
+ (33554432,3) |     1 |       2
 (2 rows)
 
 SELECT (t).segno, (t).first_row_num, (t).hidden_tupcount >= 1 as hidden_tupcount_nonzero, (t).bitmap like '01%' as bitmap_starts_with_01 FROM (

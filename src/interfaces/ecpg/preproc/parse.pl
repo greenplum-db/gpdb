@@ -3,7 +3,7 @@
 # parser generater for ecpg version 2
 # call with backend parser as stdin
 #
-# Copyright (c) 2007-2014, PostgreSQL Global Development Group
+# Copyright (c) 2007-2015, PostgreSQL Global Development Group
 #
 # Written by Mike Aubury <mike.aubury@aubit.com>
 #            Michael Meskes <meskes@postgresql.org>
@@ -42,16 +42,16 @@ my %replace_token = (
 
 # or in the block
 my %replace_string = (
-	'WITH_CASCADED'    => 'with cascaded',
-	'WITH_LOCAL'    => 'with local',
-	'WITH_CHECK'    => 'with check',
-	'WITH_TIME'    => 'with time',
-	'WITH_ORDINALITY' => 'with ordinality',
-	'NULLS_FIRST'  => 'nulls first',
-	'NULLS_LAST'   => 'nulls last',
-	'TYPECAST'     => '::',
-	'DOT_DOT'      => '..',
-	'COLON_EQUALS' => ':=',);
+	'NOT_LA'         => 'not',
+	'NULLS_LA'       => 'nulls',
+	'WITH_LA'        => 'with',
+	'TYPECAST'       => '::',
+	'DOT_DOT'        => '..',
+	'COLON_EQUALS'   => ':=',
+	'EQUALS_GREATER' => '=>',
+	'LESS_EQUALS'    => '<=',
+	'GREATER_EQUALS' => '>=',
+	'NOT_EQUALS'     => '<>',);
 
 # specific replace_types for specific non-terminals - never include the ':'
 # ECPG-only replace_types are defined in ecpg-replace_types

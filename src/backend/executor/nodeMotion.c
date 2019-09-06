@@ -885,6 +885,7 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 	Slice	   *sendSlice = NULL;
 	Slice	   *recvSlice = NULL;
 	SliceTable *sliceTable = estate->es_sliceTable;
+	PlanState  *outerPlan;
 
 #ifdef CDB_MOTION_DEBUG
 	int			i;
@@ -1017,7 +1018,16 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 	 * initialize tuple type.  no need to initialize projection info because
 	 * this node doesn't do projections.
 	 */
-	ExecAssignResultTypeFromTL(&motionstate->ps);
+	outerPlan = outerPlanState(motionstate);
+	/*
+	 * GPDB_95_MERGE_FIXME: Should we force ORCA to always use the TL for motion nodes
+	 * or modify ORCA to use the TL from the outer node?
+	 */
+	if (outerPlan && ExecGetResultType(outerPlan) && estate->es_plannedstmt->planGen == PLANGEN_PLANNER)
+		ExecAssignResultType(&motionstate->ps, ExecGetResultType(outerPlan));
+	else
+		ExecAssignResultTypeFromTL(&motionstate->ps);
+
 	motionstate->ps.ps_ProjInfo = NULL;
 	tupDesc = ExecGetResultType(&motionstate->ps);
 

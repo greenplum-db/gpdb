@@ -64,21 +64,23 @@ You can re-use a single plug-in class name in multiple profile definitions. For 
 ```
 
 
-## <a id="reg_profile"></a>Registering a New Profile
+## <a id="reg_profile"></a>Registering and Deploying a New Profile
 
 When you register a new profile with PXF, you add the profile definition to the `$PXF_CONF/conf/pxf-profiles.xml` file. Ensure that you add the profile definition between the \<profiles\> and \<\profiles\> (notice the **s**) keywords when you edit the `pxf-profiles.xml` file.
 
 **Note**: In a typical Greenplum Database deployment, the `pxf-profiles.xml` file contains multiple third-party profile definitions.
 
+When you deploy a new profile, from the Greenplum Database master host you:
 
-## <a id="deploy_to_cluster"></a>Deploying to the Greenplum Database Cluster
+- Synchronize the PXF configuration to each Greenplum Database segment host
+- Restart the PXF service on each host
 
-When you deploy a new profile, you copy the updated `pxf-profiles.xml` file to each segment host, and then you must restart the PXF service on each host. Only the Greenplum Database administrative user can register profiles and restart the PXF service.
+Only the Greenplum Database administrative user can register profiles and restart the PXF service.
 
-For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`, these commands deploy the profile across the cluster:
+For example, if you added a new profile to `$PXF_CONF/conf/pxf-profiles.xml`, this command deploys the profile across the cluster:
 
 ``` shell
-gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-profiles.xml =:/etc/pxf/usercfg/conf/pxf-profiles.xml
+gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
 ```
 
 Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](../cfginitstart_pxf.html#restart_pxf).
@@ -143,10 +145,10 @@ Perform the following procedure to define and register a read profile and a writ
 
 5. Save the file and exit the editor.
 
-6. Copy the `pxf-profiles.xml` file to all segment hosts in your Greenplum Database cluster. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`:
+6. Copy the `pxf-profiles.xml` file to all segment hosts in your Greenplum Database cluster by synchronizing the PXF configuration. For example:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-profiles.xml =:/etc/pxf/usercfg/conf/pxf-profiles.xml
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
     ```
 
 7. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](../cfginitstart_pxf.html#restart_pxf).

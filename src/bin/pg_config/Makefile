@@ -2,7 +2,7 @@
 #
 # Makefile for src/bin/pg_config
 #
-# Copyright (c) 1998-2014, PostgreSQL Global Development Group
+# Copyright (c) 1998-2015, PostgreSQL Global Development Group
 #
 # src/bin/pg_config/Makefile
 #
@@ -59,7 +59,7 @@ clean distclean maintainer-clean:
 	rm -f pg_config$(X) $(OBJS)
 	rm -rf tmp_check
 
-check: all
+check:
 	$(prove_check)
 
 installcheck:

@@ -54,17 +54,17 @@ typedef struct CdbSreh
 	char	*errmsg;		/* the error message for this bad data row */
 	char	*rawdata;		/* the bad data row */
 	char	*relname;		/* target relation */
-	int64		linenumber;		/* line number of error in original file */
-	uint64  processed;      /* num logical input rows processed so far */
+	int64	linenumber;		/* line number of error in original file */
+	uint64	processed;      /* num logical input rows processed so far */
 	bool	is_server_enc;	/* was bad row converted to server encoding? */
 
 	/* reject limit state */
 	int		rejectlimit;	/* SEGMENT REJECT LIMIT value */
-	int		rejectcount;	/* how many were rejected so far */
+	int64	rejectcount;	/* how many were rejected so far */
 	bool	is_limit_in_rows; /* ROWS = true, PERCENT = false */
 
 	MemoryContext badrowcontext;	/* per-badrow evaluation context */
-	char	   filename[MAXPGPATH];		/* "uri [filename]" */
+	char	filename[MAXPGPATH];		/* "uri [filename]" */
 
 	bool	log_to_file;		/* or log into file? */
 	Oid		relid;				/* parent relation id */
@@ -77,9 +77,8 @@ extern CdbSreh *makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 extern void destroyCdbSreh(CdbSreh *cdbsreh);
 extern void HandleSingleRowError(CdbSreh *cdbsreh);
 extern void ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected);
-extern void SendNumRows(int numrejected, int64 numcompleted);
-extern void SendNumRowsRejected(int numrejected);
-extern bool IsErrorTable(Relation rel);
+extern void SendNumRows(int64 numrejected, int64 numcompleted);
+extern void SendNumRowsRejected(int64 numrejected);
 extern void ErrorIfRejectLimitReached(CdbSreh *cdbsreh);
 extern bool ExceedSegmentRejectHardLimit(CdbSreh *cdbsreh);
 extern bool IsRejectLimitReached(CdbSreh *cdbsreh);

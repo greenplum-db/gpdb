@@ -199,6 +199,11 @@
           <li>improve query performance by making it unnecessary to broadcast frequently used tables
             to all segments.</li>
         </ul>
+        <note>The hidden system columns (<codeph>ctid</codeph>, <codeph>cmin</codeph>,
+            <codeph>cmax</codeph>, <codeph>xmin</codeph>, <codeph>xmax</codeph>, and
+            <codeph>gp_segment_id</codeph>) cannot be referenced in user queries on replicated
+          tables because they have no single, unambiguous value. Greenplum Database returns a
+            <codeph>column does not exist</codeph> error for the query.</note>
       </body>
       <topic id="topic35" xml:lang="en">
         <title>Declaring Distribution Keys</title>
@@ -230,9 +235,9 @@
              DISTRIBUTED RANDOMLY;
 </codeph></codeblock>
           </p>
-          <note type="important">A Primary Key is always the Distribution Key for a table. If no
-            Primary Key exists, but a Unique Key exists, this is the Distribution Key for the
-            table.</note>
+          <note type="important">If a primary key exists, it is the default distribution key for the
+            table. If no primary key exists, but a unique key exists, this is the default
+            distribution key for the table.</note>
         </body>
       </topic>
       <topic id="topic36" xml:lang="en">
@@ -274,8 +279,8 @@ CREATE OPERATOR CLASS abs_int_hash_ops FOR TYPE int4
   OPERATOR 1 |=|,
   FUNCTION 1 abshashfunc(int);</codeblock></p>
             <p>Also, create less than and greater than operators, and a btree operator class for
-              them. We don't need them for our queries, but the Greenplum Database legacy query
-              planner will not consider co-location of joins without
+              them. We don't need them for our queries, but the Postgres Planner
+              will not consider co-location of joins without
               them.<codeblock>CREATE FUNCTION abslt(int, int) RETURNS BOOL AS
 $$
   begin return abs($1) &lt; abs($2); end;
@@ -330,7 +335,7 @@ INSERT INTO btab VALUES (-1), (0), (1), (2);</codeblock></p>
                -&gt;  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: atab.a
                      -&gt;  Seq Scan on atab
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 </codeblock></p>
           </section>

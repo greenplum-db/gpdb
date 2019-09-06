@@ -8,7 +8,7 @@
  *
  * This code is released under the terms of the PostgreSQL License.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/test/regress/pg_regress_main.c
@@ -128,8 +128,8 @@ psql_start_test(const char *testname,
 					   "$(cat \"%s\" \"%s\")\n"
 					   "EOF",
 					   use_utility_mode ? "env PGOPTIONS='-c gp_session_role=utility'" : "",
-					   psqldir ? psqldir : "",
-					   psqldir ? "/" : "",
+					   bindir ? bindir : "",
+					   bindir ? "/" : "",
 					   dblist->str,
 					   outfile,
 					   prehook[0] ? prehook : "/dev/null",

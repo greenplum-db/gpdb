@@ -10,6 +10,7 @@ include $(top_srcdir)/src/Makefile.mock
 override CPPFLAGS+= -I$(top_srcdir)/src/backend/libpq \
 					-I$(libpq_srcdir) \
 					-I$(top_srcdir)/src/backend/postmaster \
+					-I$(top_srcdir)/src/test/unit/mock/ \
 					-I. -I$(top_builddir)/src/port \
 					-DDLSUFFIX=$(DLSUFFIX) \
 					-I$(top_srcdir)/src/backend/utils/stat

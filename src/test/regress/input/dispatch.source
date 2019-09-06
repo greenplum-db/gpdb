@@ -34,6 +34,32 @@ ALTER DATABASE "funny""db'with\\quotes" SET search_path="funny""schema'with\\quo
 -- reach commit a2385cac13, which was backported to PostgreSQL 9.1.
 DROP DATABASE "funny""db'with\\quotes";
 
+-- set_config() used to have quoting problems as well when dispatching to
+-- segments.
+CREATE TABLE IF NOT EXISTS should_be_visible();
+CREATE OR REPLACE FUNCTION visible_to_segments(tbl oid)
+    RETURNS SETOF boolean
+    EXECUTE ON ALL SEGMENTS
+    LANGUAGE plpgsql AS
+$$
+BEGIN
+    RETURN NEXT pg_catalog.pg_table_is_visible(tbl);
+END
+$$;
+
+-- Spin up any gangs necessary to handle the SELECT DISTINCT so that they
+-- receive the new search_path setting from the set_config() dispatch.
+SELECT DISTINCT visible_to_segments('public.should_be_visible'::regclass);
+
+-- Now change search_path. This setting should not affect the visibility of the
+-- public schema if it's dispatched correctly.
+SELECT set_config('search_path', 'pg_catalog,public', false);
+
+-- Check that our test table is still visible.
+SELECT DISTINCT visible_to_segments('public.should_be_visible'::regclass);
+
+RESET search_path;
+
 -- There used to be a bug in the quoting when the search_path setting was sent
 -- to the segment. It was not easily visible when search_path was set with a
 -- SET command, only when the setting was sent as part of the startup packet.
@@ -244,10 +270,10 @@ select cleanupAllGangs();
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 
+set gp_segment_connect_timeout to 0;
+
 select gp_inject_fault('process_startup_packet', 'resume', 2);
 select gp_inject_fault('process_startup_packet', 'reset', 2);
-
-set gp_segment_connect_timeout to 0;
 
 select gp_inject_fault('process_startup_packet', 'sleep', '', '', '', 1, 1, 2, 2::smallint);
 

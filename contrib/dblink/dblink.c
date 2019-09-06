@@ -9,7 +9,7 @@
  * Shridhar Daithankar <shridhar_daithankar@persistent.co.in>
  *
  * contrib/dblink/dblink.c
- * Copyright (c) 2001-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2001-2015, PostgreSQL Global Development Group
  * ALL RIGHTS RESERVED;
  *
  * Permission to use, copy, modify, and distribute this software and its
@@ -2673,7 +2673,7 @@ dblink_connstr_check(const char *connstr)
 				{
 					if (option->val == NULL || option->val[0] == '\0')
 					{
-						char *username = GetUserNameFromId(GetUserId());
+						char *username = GetUserNameFromId(GetUserId(), false);
 
 						/* 7 is strlen("user= ") + length of '\0' */
 						connstr_modified = palloc0(7 + strlen(username) + strlen(connstr));
@@ -3061,7 +3061,7 @@ applyRemoteGucs(PGconn *conn)
 		/* Apply the option (this will throw error on failure) */
 		(void) set_config_option(gucName, remoteVal,
 								 PGC_USERSET, PGC_S_SESSION,
-								 GUC_ACTION_SAVE, true, 0);
+								 GUC_ACTION_SAVE, true, 0, false);
 	}
 
 	return nestlevel;

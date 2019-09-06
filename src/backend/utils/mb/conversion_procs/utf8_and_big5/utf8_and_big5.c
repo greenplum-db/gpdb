@@ -2,7 +2,7 @@
  *
  *	  BIG5 <--> UTF8
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -21,9 +21,6 @@ PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(big5_to_utf8);
 PG_FUNCTION_INFO_V1(utf8_to_big5);
-
-extern Datum big5_to_utf8(PG_FUNCTION_ARGS);
-extern Datum utf8_to_big5(PG_FUNCTION_ARGS);
 
 /* ----------
  * conv_proc(
@@ -44,8 +41,11 @@ big5_to_utf8(PG_FUNCTION_ARGS)
 
 	CHECK_ENCODING_CONVERSION_ARGS(PG_BIG5, PG_UTF8);
 
-	LocalToUtf(src, dest, LUmapBIG5, NULL,
-			   sizeof(LUmapBIG5) / sizeof(pg_local_to_utf), 0, PG_BIG5, len);
+	LocalToUtf(src, len, dest,
+			   LUmapBIG5, lengthof(LUmapBIG5),
+			   NULL, 0,
+			   NULL,
+			   PG_BIG5);
 
 	PG_RETURN_VOID();
 }
@@ -59,8 +59,11 @@ utf8_to_big5(PG_FUNCTION_ARGS)
 
 	CHECK_ENCODING_CONVERSION_ARGS(PG_UTF8, PG_BIG5);
 
-	UtfToLocal(src, dest, ULmapBIG5, NULL,
-			   sizeof(ULmapBIG5) / sizeof(pg_utf_to_local), 0, PG_BIG5, len);
+	UtfToLocal(src, len, dest,
+			   ULmapBIG5, lengthof(ULmapBIG5),
+			   NULL, 0,
+			   NULL,
+			   PG_BIG5);
 
 	PG_RETURN_VOID();
 }

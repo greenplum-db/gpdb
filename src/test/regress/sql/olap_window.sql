@@ -1629,3 +1629,10 @@ FROM
   GROUP BY name,device_model
   HAVING COUNT(DISTINCT CASE WHEN ppp > 0 THEN device_id ELSE NULL END)>0
 ) b;
+
+-- check SRF in WindowAgg's targetlist can be handled correctly
+
+explain (costs off)
+select unnest(array[a,a]), rank() over (order by a) from generate_series(2,3) a;
+
+select unnest(array[a,a]), rank() over (order by a) from generate_series(2,3) a;

@@ -3,7 +3,7 @@
  * json.c
  *		JSON data type support.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -15,7 +15,6 @@
 
 #include "access/htup_details.h"
 #include "access/transam.h"
-#include "catalog/pg_cast.h"
 #include "catalog/pg_type.h"
 #include "executor/spi.h"
 #include "funcapi.h"
@@ -33,6 +32,9 @@
 #include "utils/jsonapi.h"
 #include "utils/typcache.h"
 #include "utils/syscache.h"
+
+/* String to output for infinite dates and timestamps */
+#define DT_INFINITY "\"infinity\""
 
 /*
  * The context of the parser is maintained by the recursive descent
@@ -1303,10 +1305,14 @@ json_categorize_type(Oid typoid,
 	/* Look through any domain */
 	typoid = getBaseType(typoid);
 
-	/* We'll usually need to return the type output function */
-	getTypeOutputInfo(typoid, outfuncoid, &typisvarlena);
+	*outfuncoid = InvalidOid;
 
-	/* Check for known types */
+	/*
+	 * We need to get the output function for everything except date and
+	 * timestamp types, array and composite types, booleans, and non-builtin
+	 * types where there's a cast to json.
+	 */
+
 	switch (typoid)
 	{
 		case BOOLOID:
@@ -1319,6 +1325,7 @@ json_categorize_type(Oid typoid,
 		case FLOAT4OID:
 		case FLOAT8OID:
 		case NUMERICOID:
+			getTypeOutputInfo(typoid, outfuncoid, &typisvarlena);
 			*tcategory = JSONTYPE_NUMERIC;
 			break;
 
@@ -1336,6 +1343,7 @@ json_categorize_type(Oid typoid,
 
 		case JSONOID:
 		case JSONBOID:
+			getTypeOutputInfo(typoid, outfuncoid, &typisvarlena);
 			*tcategory = JSONTYPE_JSON;
 			break;
 
@@ -1352,23 +1360,27 @@ json_categorize_type(Oid typoid,
 				/* but let's look for a cast to json, if it's not built-in */
 				if (typoid >= FirstNormalObjectId)
 				{
-					HeapTuple	tuple;
+					Oid			castfunc;
+					CoercionPathType ctype;
 
-					tuple = SearchSysCache2(CASTSOURCETARGET,
-											ObjectIdGetDatum(typoid),
-											ObjectIdGetDatum(JSONOID));
-					if (HeapTupleIsValid(tuple))
+					ctype = find_coercion_pathway(JSONOID, typoid,
+												  COERCION_EXPLICIT,
+												  &castfunc);
+					if (ctype == COERCION_PATH_FUNC && OidIsValid(castfunc))
 					{
-						Form_pg_cast castForm = (Form_pg_cast) GETSTRUCT(tuple);
-
-						if (castForm->castmethod == COERCION_METHOD_FUNCTION)
-						{
-							*tcategory = JSONTYPE_CAST;
-							*outfuncoid = castForm->castfunc;
-						}
-
-						ReleaseSysCache(tuple);
+						*tcategory = JSONTYPE_CAST;
+						*outfuncoid = castfunc;
 					}
+					else
+					{
+						/* non builtin type with no cast */
+						getTypeOutputInfo(typoid, outfuncoid, &typisvarlena);
+					}
+				}
+				else
+				{
+					/* any other builtin type */
+					getTypeOutputInfo(typoid, outfuncoid, &typisvarlena);
 				}
 			}
 			break;

@@ -4,7 +4,7 @@
  *	  include file for the bootstrapping code
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/bootstrap/bootstrap.h
@@ -24,19 +24,21 @@
  */
 #define MAXATTR 40
 
+#define BOOTCOL_NULL_AUTO			1
+#define BOOTCOL_NULL_FORCE_NULL		2
+#define BOOTCOL_NULL_FORCE_NOT_NULL 3
+
 extern Relation boot_reldesc;
 extern Form_pg_attribute attrtypes[MAXATTR];
 extern int	numattr;
 
 
-extern void AuxiliaryProcessMain(int argc, char *argv[]) __attribute__((noreturn));
-
-extern void err_out(void);
+extern void AuxiliaryProcessMain(int argc, char *argv[]) pg_attribute_noreturn();
 
 extern void closerel(char *name);
 extern void boot_openrel(char *name);
 
-extern void DefineAttr(char *name, char *type, int attnum);
+extern void DefineAttr(char *name, char *type, int attnum, int nullness);
 extern void InsertOneTuple(Oid objectid);
 extern void InsertOneValue(char *value, int i);
 extern void InsertOneNull(int i);
@@ -58,6 +60,6 @@ extern void boot_get_type_io_data(Oid typid,
 extern int	boot_yyparse(void);
 
 extern int	boot_yylex(void);
-extern void boot_yyerror(const char *str);
+extern void boot_yyerror(const char *str) pg_attribute_noreturn();
 
 #endif   /* BOOTSTRAP_H */

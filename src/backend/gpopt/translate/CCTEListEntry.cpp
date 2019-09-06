@@ -33,7 +33,7 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CCTEListEntry::CCTEListEntry
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULONG query_level,
 	CommonTableExpr *cte,
 	CDXLNode *cte_producer
@@ -65,7 +65,7 @@ CCTEListEntry::CCTEListEntry
 //---------------------------------------------------------------------------
 CCTEListEntry::CCTEListEntry
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULONG query_level,
 	List *cte_list, 
 	CDXLNodeArray *cte_dxl_arr
@@ -156,7 +156,7 @@ CCTEListEntry::GetCTEProducerTargetList
 void
 CCTEListEntry::AddCTEProducer
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CommonTableExpr *cte,
 	const CDXLNode *cte_producer
 	)

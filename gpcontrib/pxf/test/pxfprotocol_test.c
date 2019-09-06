@@ -37,10 +37,10 @@
 #include "mock/pxffragment_mock.c"
 #include "mock/pxffilters_mock.c"
 
-const char *uri_no_profile = "pxf://default/tmp/dummy1?FRAGMENTER=xxx&RESOLVER=yyy&ACCESSOR=zzz";
-const char *uri_param = "pxf://localhost:5888/tmp/dummy1";
+char *uri_no_profile = "pxf://default/tmp/dummy1?FRAGMENTER=xxx&RESOLVER=yyy&ACCESSOR=zzz";
+char *uri_param = "pxf://localhost:5888/tmp/dummy1";
 
-void
+static void
 test_pxfprotocol_validate_urls(void **state)
 {
 	/* setup call info with no call context */
@@ -82,7 +82,7 @@ test_pxfprotocol_validate_urls(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_import_first_call(void **state)
 {
 	/* setup call info with no call context */
@@ -142,7 +142,6 @@ test_pxfprotocol_import_first_call(void **state)
 	/* uri has been initialized */
 	assert_true(context->uri.data != NULL);
 	/* no write file name for import case */
-	assert_int_equal(context->write_file_name.len, 0);
 	assert_true(context->relation != NULL);
 	/* relation pointer is copied */
 	assert_int_equal(context->relation, relation);
@@ -157,7 +156,7 @@ test_pxfprotocol_import_first_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_import_second_call(void **state)
 {
 	/* setup call info with call context */
@@ -194,7 +193,7 @@ test_pxfprotocol_import_second_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_import_last_call(void **state)
 {
 	/* setup call info with a call context and last call indicator */
@@ -208,7 +207,6 @@ test_pxfprotocol_import_last_call(void **state)
 
 	/* init data in context that will be cleaned up */
 	initStringInfo(&call_context->uri);
-	initStringInfo(&call_context->write_file_name);
 
 	/* set mock behavior for bridge cleanup */
 	expect_value(gpbridge_cleanup, context, call_context);
@@ -226,7 +224,7 @@ test_pxfprotocol_import_last_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_export_first_call(void **state)
 {
 	/* setup call info with no call context */
@@ -279,7 +277,6 @@ test_pxfprotocol_export_first_call(void **state)
 	/* uri has been initialized */
 	assert_true(context->uri.data != NULL);
 	/* write file name initialized, but empty, since it is filled by another component */
-	assert_int_equal(context->write_file_name.len, 0);
 	assert_true(context->relation != NULL);
 	/* relation pointer is copied */
 	assert_int_equal(context->relation, relation);
@@ -294,7 +291,7 @@ test_pxfprotocol_export_first_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_export_second_call(void **state)
 {
 	/* setup call info with call context */
@@ -331,7 +328,7 @@ test_pxfprotocol_export_second_call(void **state)
 	pfree(fcinfo);
 }
 
-void
+static void
 test_pxfprotocol_export_last_call(void **state)
 {
 	/* setup call info with a call context and last call indicator */
@@ -345,7 +342,6 @@ test_pxfprotocol_export_last_call(void **state)
 
 	/* init data in context that will be cleaned up */
 	initStringInfo(&call_context->uri);
-	initStringInfo(&call_context->write_file_name);
 
 	/* set mock behavior for bridge cleanup */
 	expect_value(gpbridge_cleanup, context, call_context);
@@ -363,15 +359,15 @@ test_pxfprotocol_export_last_call(void **state)
 	pfree(fcinfo);
 }
 /* test setup and teardown methods */
-void
-before_test(void)
+static void
+before_test(void **state)
 {
 	/* set global variables */
 	GpIdentity.segindex = 0;
 }
 
-void
-after_test(void)
+static void
+after_test(void **state)
 {
 	/*
 	 * no-op, but the teardown seems to be required when the test fails,

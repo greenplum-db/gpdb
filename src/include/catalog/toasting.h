@@ -4,7 +4,7 @@
  *	  This file provides some definitions to support creation of toast tables
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/toasting.h
@@ -65,6 +65,9 @@ DECLARE_TOAST(pg_shdescription, 2846, 2847);
 DECLARE_TOAST(pg_db_role_setting, 2966, 2967);
 #define PgDbRoleSettingToastTable 2966
 #define PgDbRoleSettingToastIndex 2967
+DECLARE_TOAST(pg_shseclabel, 4060, 4061);
+#define PgShseclabelToastTable 4060
+#define PgShseclabelToastIndex 4061
 
 /* relation id: 5036 - gp_segment_configuration 20101122 */
 DECLARE_TOAST(gp_segment_configuration, 6092, 6093);

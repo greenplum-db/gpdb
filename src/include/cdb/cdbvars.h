@@ -383,17 +383,6 @@ extern int	Gp_interconnect_debug_retry_interval;
 extern int 	Gp_udp_bufsize_k;
 
 /*
- * Parameter Gp_interconnect_hash_multiplier
- *
- * The run-time parameter Gp_interconnect_hash_multiplier
- * controls the number of hash buckets used to track 'connections.'
- *
- * This guc is specific to the UDP-interconnect.
- *
- */
-extern int	Gp_interconnect_hash_multiplier;
-
-/*
  * Parameter gp_interconnect_aggressive_retry
  *
  * The run-time parameter gp_interconnect_aggressive_retry controls the
@@ -646,35 +635,6 @@ extern bool gp_eager_one_phase_agg;
  */
 extern bool gp_eager_two_phase_agg;
 
-/*
- * "gp_enable_groupext_distinct_pruning"
- *
- * Should Greenplum bias planner estimates so as to favor the use of
- * grouping in the first phases of 3-phase aggregation to prune values
- * from DISTINCT-qualified aggregate function arguments on a grouping
- * extension query?
- */
-extern bool gp_enable_groupext_distinct_pruning;
-
-/*
- * "gp_enable_groupext_distinct_gather"
- *
- * Should Greenplum bias planner estimates so as to favor the use of
- * gathering motion to gather the data into a single node to compute
- * DISTINCT-qualified aggregates on a grouping extension query?
- */
-extern bool gp_enable_groupext_distinct_gather;
-
-/*
- * "gp_distinct_grouping_sets_threshold"
- *
- * The planner will treat gp_enable_groupext_distinct_pruning as 'off'
- * when the number of grouping sets that have been rewritten based
- * on the multi-phrase aggregation exceeds the threshold value here divided by
- * the number of distinct-qualified aggregates.
- */
-extern int gp_distinct_grouping_sets_threshold;
-
 /* May Greenplum apply Unique operator (and possibly a Sort) in parallel prior
  * to the collocation motion for a Unique operator?  The idea is to reduce
  * the number of rows moving over the interconnect.
@@ -744,7 +704,7 @@ extern bool gp_dynamic_partition_pruning;
 /* Sharing of plan fragments for common table expressions */
 extern bool gp_cte_sharing;
 /* Enable RECURSIVE clauses in common table expressions */
-extern bool gp_recursive_cte_prototype;
+extern bool gp_recursive_cte;
 
 /* Priority for the segworkers relative to the postmaster's priority */
 extern int gp_segworker_relative_priority;
@@ -765,11 +725,6 @@ extern bool 	gp_statistics_pullup_from_child_partition;
 
 /* Extract numdistinct from foreign key relationship */
 extern bool		gp_statistics_use_fkeys;
-
-/* Analyze related gucs */
-extern int 		gp_statistics_blocks_target;
-extern double	gp_statistics_ndistinct_scaling_ratio_threshold;
-extern double	gp_statistics_sampling_threshold;
 
 /* Analyze tools */
 extern int gp_motion_slice_noop;
@@ -865,6 +820,7 @@ typedef struct GpId
  * Global variable declaration for the data for the single row of gp_id table
  */
 extern GpId GpIdentity;
+extern int get_dbid_string_length(void);
 #define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
 #define IS_QUERY_DISPATCHER() (GpIdentity.segindex == MASTER_CONTENT_ID)
 
@@ -876,7 +832,7 @@ extern uint32 Gp_listener_port;
 /*
  * Thread-safe routine to write to the log
  */
-extern void write_log(const char *fmt,...) __attribute__((format(printf, 1, 2)));
+extern void write_log(const char *fmt,...) pg_attribute_printf(1, 2);
 
 
 extern void increment_command_count(void);

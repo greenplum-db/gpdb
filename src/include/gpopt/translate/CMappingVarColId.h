@@ -76,7 +76,7 @@ namespace gpdxl
 	{
 		private:
 			// memory pool
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// hash map structure to store gpdb att -> opt col information
 			typedef CHashMap<CGPDBAttInfo, CGPDBAttOptCol, HashGPDBAttInfo, EqualGPDBAttInfo,
@@ -108,7 +108,7 @@ namespace gpdxl
 
 			// ctor
 			explicit
-			CMappingVarColId(IMemoryPool *);
+			CMappingVarColId(CMemoryPool *);
 
 			// dtor
 			virtual
@@ -159,7 +159,7 @@ namespace gpdxl
 			void Load(ULONG query_level, ULONG RTE_index,	CIdGenerator *id_generator, List *col_names);
 
 			// create a deep copy
-			CMappingVarColId *CopyMapColId(IMemoryPool *mp) const;
+			CMappingVarColId *CopyMapColId(CMemoryPool *mp) const;
 
 			// create a deep copy
 			CMappingVarColId *CopyMapColId(ULONG query_level) const;
@@ -167,7 +167,7 @@ namespace gpdxl
 			// create a copy of the mapping replacing old col ids with new ones
 			CMappingVarColId *CopyRemapColId
 				(
-				IMemoryPool *mp,
+				CMemoryPool *mp,
 				ULongPtrArray *old_colids,
 				ULongPtrArray *new_colids
 				)

@@ -4,7 +4,7 @@
  *	  prototypes for nodeAgg.c
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/nodeAgg.h
@@ -18,6 +18,7 @@
 #include "executor/tuptable.h"
 #include "nodes/execnodes.h"
 #include "nodes/primnodes.h"
+#include "utils/tuplesort.h"
 
 extern AggState *ExecInitAgg(Agg *node, EState *estate, int eflags);
 extern struct TupleTableSlot *ExecAgg(AggState *node);
@@ -160,9 +161,11 @@ typedef struct AggStatePerAggData
 	 * then at completion of the input tuple group, we scan the sorted values,
 	 * eliminate duplicates if needed, and run the transition function on the
 	 * rest.
+	 *
+ 	 * We need a separate tuplesort for each grouping set.
 	 */
 
-	void *sortstate;	/* sort object, if DISTINCT or ORDER BY */
+	Tuplesortstate **sortstates;	/* sort objects, if DISTINCT or ORDER BY */
 
 	/*
 	 * This field is a pre-initialized FunctionCallInfo struct used for
@@ -208,9 +211,11 @@ typedef struct AggStatePerGroupData
 extern void 
 initialize_aggregates(AggState *aggstate,
 					  AggStatePerAgg peragg,
-					  AggStatePerGroup pergroup);
+					  AggStatePerGroup pergroup,
+					  int numReset);
 extern void 
 advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup);
+TupleTableSlot *fetch_input_tuple(AggState *aggstate);
 
 extern Oid resolve_polymorphic_transtype(Oid aggtranstype, Oid aggfnoid,
 										 Oid *inputTypes);
@@ -229,7 +234,5 @@ extern Datum invoke_agg_trans_func(AggState *aggstate,
 extern Datum datumCopyWithMemManager(Datum oldvalue, Datum value, bool typByVal, int typLen,
 									 MemoryManagerContainer *mem_manager);
 extern void ExecSquelchAgg(AggState *aggstate);
-
-extern List *combineAggrefArgs(Aggref *aggref, List **sort_clauses);
 
 #endif   /* NODEAGG_H */

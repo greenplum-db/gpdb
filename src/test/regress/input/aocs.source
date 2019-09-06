@@ -503,8 +503,7 @@ insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'
 insert into aocs_compress_table (id, v) values (1, 'ifyouwantto99knowwhatist8329histhenkeepreadingit;;untilyou]findoutyoureyeshurtandyoustil0ldontknow103kwhatitisdoyouunderstandmeyetandifyoustillwanttoknowthenyoupleasekeepreading');
 insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'), pg_relation_size('aocs_compress_id_index'), pg_relation_size('aocs_compress_v_index'));
 
--- compression ratio should be between 1.2 and 1.3
-select get_ao_compression_ratio('aocs_compress_table') > 1.2 and get_ao_compression_ratio('aocs_compress_table') < 1.3;
+select get_ao_compression_ratio('aocs_compress_table');
 select get_ao_distribution('aocs_compress_table');
 
 truncate table aocs_compress_table; -- after truncate, reclaim space from the table and index
@@ -569,7 +568,6 @@ create table aocs_small_and_dense_content (a int, b int) with
 insert into aocs_small_and_dense_content select i,i from
 generate_series(1,800000)i;
 
-create extension if not exists gp_inject_fault;
 -- Inject fault on one primary segment that will cause compression to
 -- be considered not useful.
 select gp_inject_fault('appendonly_skip_compression', 'skip', '', '',

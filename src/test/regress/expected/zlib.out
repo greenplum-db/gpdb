@@ -2,9 +2,6 @@
 --
 -- The test file is called 'zlib' for historical reasons. GPDB uses Zstandard
 -- rather than zlib for temporary file compression, nowadays.
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 -- If the server is built without libzstd (configure --without-zstd), this
 -- fails with error "workfile compresssion is not supported by this build".
 -- The tests are less interesting in that case, but they should still pass.
@@ -23,26 +20,24 @@ INSERT INTO test_zlib_hashjoin SELECT i,i,i,i,i,i,i,i FROM
 SET statement_mem=5000;
 --Fail after workfile creation and before add it to workfile set
 select gp_inject_fault('workfile_creation_failure', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('workfile_creation_failure', 'error', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 SELECT COUNT(t1.*) FROM test_zlib_hashjoin AS t1, test_zlib_hashjoin AS t2 WHERE t1.i1=t2.i2;
 ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error'  (seg0 slice2 127.0.0.1:25432 pid=2829)
 select gp_inject_fault('workfile_creation_failure', 'status', 2);
-NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                        gp_inject_fault                                                                                                         
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 RESET statement_mem;
@@ -57,34 +52,31 @@ INSERT INTO test_zlib_hagg SELECT i,i,i,i FROM
 SET statement_mem=2000;
 --Fail after workfile creation and before add it to workfile set
 select gp_inject_fault('workfile_creation_failure', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('workfile_creation_failure', 'error', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 SELECT MAX(i1) FROM test_zlib_hagg GROUP BY i2;
 ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error'  (seg0 slice2 127.0.0.1:25432 pid=2829)
 select gp_inject_fault('workfile_creation_failure', 'status', 2);
-NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                        gp_inject_fault                                                                                                         
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 -- Reset faultinjectors
 select gp_inject_fault('workfile_creation_failure', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 create table test_zlib (i int, j text);
@@ -109,17 +101,15 @@ end
 $body$ language plpgsql;
 -- Inject fault before we close workfile in ExecHashJoinNewBatch
 select gp_inject_fault('workfile_creation_failure', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('workfile_creation_failure', 'error', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select FuncA();
@@ -139,19 +129,18 @@ select * from test_zlib_t1;
 (0 rows)
 
 select gp_inject_fault('workfile_creation_failure', 'status', 2);
-NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1'
- gp_inject_fault 
------------------
- t
+                                                                                                        gp_inject_fault                                                                                                         
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'1' extra arg:'0' fault injection state:'completed'  num times hit:'1' +
+ 
 (1 row)
 
 drop function FuncA();
 drop table test_zlib;
 drop table test_zlib_t1;
 select gp_inject_fault('workfile_creation_failure', 'reset', 2);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 

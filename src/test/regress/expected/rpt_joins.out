@@ -2144,7 +2144,7 @@ explain (costs off) select max(c1) from pg_class left join t_5628 on true;
          ->  Materialize
                ->  Gather Motion 1:1  (slice1; segments: 1)
                      ->  Seq Scan on t_5628
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 select max(c1) from pg_class left join t_5628 on true;

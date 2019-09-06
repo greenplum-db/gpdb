@@ -15,7 +15,7 @@
 #define CDBDTXCONTEXTINFO_H
 #include "utils/tqual.h"
 
-#define DtxContextInfo_StaticInit {0,InvalidDistributedTransactionId,TmGid_Init,0,false,false,DistributedSnapshot_StaticInit,0,0}
+#define DtxContextInfo_StaticInit {0,InvalidDistributedTransactionId,0,false,false,DistributedSnapshot_StaticInit,0,0}
 
 typedef struct DtxContextInfo
 {
@@ -23,8 +23,6 @@ typedef struct DtxContextInfo
 	
 	DistributedTransactionId 		distributedXid;
 	
-	char					 		distributedId[TMGIDSIZE];
-
 	CommandId				 		curcid;	/* in my xact, CID < curcid are visible */
 
 	bool							haveDistributedSnapshot;

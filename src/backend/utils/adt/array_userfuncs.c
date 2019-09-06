@@ -3,7 +3,7 @@
  * array_userfuncs.c
  *	  Misc user-visible array support functions
  *
- * Copyright (c) 2003-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/utils/adt/array_userfuncs.c
@@ -12,152 +12,193 @@
  */
 #include "postgres.h"
 
+#include "catalog/pg_type.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
-#include "catalog/pg_type.h"
+#include "utils/typcache.h"
 
 
-/*-----------------------------------------------------------------------------
- * array_push :
- *		push an element onto either end of a one-dimensional array
- *----------------------------------------------------------------------------
+static Datum array_position_common(FunctionCallInfo fcinfo);
+
+
+/*
+ * fetch_array_arg_replace_nulls
+ *
+ * Fetch an array-valued argument in expanded form; if it's null, construct an
+ * empty array value of the proper data type.  Also cache basic element type
+ * information in fn_extra.
+ *
+ * Caution: if the input is a read/write pointer, this returns the input
+ * argument; so callers must be sure that their changes are "safe", that is
+ * they cannot leave the array in a corrupt state.
  */
-Datum
-array_push(PG_FUNCTION_ARGS)
+static ExpandedArrayHeader *
+fetch_array_arg_replace_nulls(FunctionCallInfo fcinfo, int argno)
 {
-	ArrayType  *v;
-	Datum		newelem;
-	bool		isNull;
-	int		   *dimv,
-			   *lb;
-	ArrayType  *result;
-	int			indx;
+	ExpandedArrayHeader *eah;
 	Oid			element_type;
-	int16		typlen;
-	bool		typbyval;
-	char		typalign;
-	Oid			arg0_typeid = get_fn_expr_argtype(fcinfo->flinfo, 0);
-	Oid			arg1_typeid = get_fn_expr_argtype(fcinfo->flinfo, 1);
-	Oid			arg0_elemid;
-	Oid			arg1_elemid;
 	ArrayMetaState *my_extra;
 
-	if (arg0_typeid == InvalidOid || arg1_typeid == InvalidOid)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("could not determine input data types")));
-
-	arg0_elemid = get_element_type(arg0_typeid);
-	arg1_elemid = get_element_type(arg1_typeid);
-
-	if (arg0_elemid != InvalidOid)
+	/* If first time through, create datatype cache struct */
+	my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
+	if (my_extra == NULL)
 	{
-		if (PG_ARGISNULL(0))
-			v = construct_empty_array(arg0_elemid);
-		else
-			v = PG_GETARG_ARRAYTYPE_P(0);
-		isNull = PG_ARGISNULL(1);
-		if (isNull)
-			newelem = (Datum) 0;
-		else
-			newelem = PG_GETARG_DATUM(1);
+		my_extra = (ArrayMetaState *)
+			MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
+							   sizeof(ArrayMetaState));
+		my_extra->element_type = InvalidOid;
+		fcinfo->flinfo->fn_extra = my_extra;
 	}
-	else if (arg1_elemid != InvalidOid)
+
+	/* Now collect the array value */
+	if (!PG_ARGISNULL(argno))
 	{
-		if (PG_ARGISNULL(1))
-			v = construct_empty_array(arg1_elemid);
-		else
-			v = PG_GETARG_ARRAYTYPE_P(1);
-		isNull = PG_ARGISNULL(0);
-		if (isNull)
-			newelem = (Datum) 0;
-		else
-			newelem = PG_GETARG_DATUM(0);
+		eah = PG_GETARG_EXPANDED_ARRAYX(argno, my_extra);
 	}
 	else
 	{
-		/* Shouldn't get here given proper type checking in parser */
-		ereport(ERROR,
-				(errcode(ERRCODE_DATATYPE_MISMATCH),
-				 errmsg("neither input type is an array")));
-		PG_RETURN_NULL();		/* keep compiler quiet */
+		/* We have to look up the array type and element type */
+		Oid			arr_typeid = get_fn_expr_argtype(fcinfo->flinfo, argno);
+
+		if (!OidIsValid(arr_typeid))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("could not determine input data type")));
+		element_type = get_element_type(arr_typeid);
+		if (!OidIsValid(element_type))
+			ereport(ERROR,
+					(errcode(ERRCODE_DATATYPE_MISMATCH),
+					 errmsg("input data type is not an array")));
+
+		eah = construct_empty_expanded_array(element_type,
+											 CurrentMemoryContext,
+											 my_extra);
 	}
 
-	element_type = ARR_ELEMTYPE(v);
+	return eah;
+}
 
-	if (ARR_NDIM(v) == 1)
+/*-----------------------------------------------------------------------------
+ * array_append :
+ *		push an element onto the end of a one-dimensional array
+ *----------------------------------------------------------------------------
+ */
+Datum
+array_append(PG_FUNCTION_ARGS)
+{
+	ExpandedArrayHeader *eah;
+	Datum		newelem;
+	bool		isNull;
+	Datum		result;
+	int		   *dimv,
+			   *lb;
+	int			indx;
+	ArrayMetaState *my_extra;
+
+	eah = fetch_array_arg_replace_nulls(fcinfo, 0);
+	isNull = PG_ARGISNULL(1);
+	if (isNull)
+		newelem = (Datum) 0;
+	else
+		newelem = PG_GETARG_DATUM(1);
+
+	if (eah->ndims == 1)
 	{
-		lb = ARR_LBOUND(v);
-		dimv = ARR_DIMS(v);
+		/* append newelem */
+		int			ub;
 
-		if (arg0_elemid != InvalidOid)
-		{
-			/* append newelem */
-			int			ub = dimv[0] + lb[0] - 1;
+		lb = eah->lbound;
+		dimv = eah->dims;
+		ub = dimv[0] + lb[0] - 1;
+		indx = ub + 1;
 
-			indx = ub + 1;
-			/* overflow? */
-			if (indx < ub)
-				ereport(ERROR,
-						(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
-						 errmsg("integer out of range")));
-		}
-		else
-		{
-			/* prepend newelem */
-			indx = lb[0] - 1;
-			/* overflow? */
-			if (indx > lb[0])
-				ereport(ERROR,
-						(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
-						 errmsg("integer out of range")));
-		}
+		/* overflow? */
+		if (indx < ub)
+			ereport(ERROR,
+					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+					 errmsg("integer out of range")));
 	}
-	else if (ARR_NDIM(v) == 0)
+	else if (eah->ndims == 0)
 		indx = 1;
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_EXCEPTION),
 				 errmsg("argument must be empty or one-dimensional array")));
 
-	/*
-	 * We arrange to look up info about element type only once per series of
-	 * calls, assuming the element type doesn't change underneath us.
-	 */
+	/* Perform element insertion */
 	my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
-	if (my_extra == NULL)
+
+	result = array_set_element(EOHPGetRWDatum(&eah->hdr),
+							   1, &indx, newelem, isNull,
+			   -1, my_extra->typlen, my_extra->typbyval, my_extra->typalign);
+
+	PG_RETURN_DATUM(result);
+}
+
+/*-----------------------------------------------------------------------------
+ * array_prepend :
+ *		push an element onto the front of a one-dimensional array
+ *----------------------------------------------------------------------------
+ */
+Datum
+array_prepend(PG_FUNCTION_ARGS)
+{
+	ExpandedArrayHeader *eah;
+	Datum		newelem;
+	bool		isNull;
+	Datum		result;
+	int		   *lb;
+	int			indx;
+	int			lb0;
+	ArrayMetaState *my_extra;
+
+	isNull = PG_ARGISNULL(0);
+	if (isNull)
+		newelem = (Datum) 0;
+	else
+		newelem = PG_GETARG_DATUM(0);
+	eah = fetch_array_arg_replace_nulls(fcinfo, 1);
+
+	if (eah->ndims == 1)
 	{
-		fcinfo->flinfo->fn_extra = MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
-													  sizeof(ArrayMetaState));
-		my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
-		my_extra->element_type = ~element_type;
+		/* prepend newelem */
+		lb = eah->lbound;
+		indx = lb[0] - 1;
+		lb0 = lb[0];
+
+		/* overflow? */
+		if (indx > lb[0])
+			ereport(ERROR,
+					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+					 errmsg("integer out of range")));
+	}
+	else if (eah->ndims == 0)
+	{
+		indx = 1;
+		lb0 = 1;
+	}
+	else
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("argument must be empty or one-dimensional array")));
+
+	/* Perform element insertion */
+	my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
+
+	result = array_set_element(EOHPGetRWDatum(&eah->hdr),
+							   1, &indx, newelem, isNull,
+			   -1, my_extra->typlen, my_extra->typbyval, my_extra->typalign);
+
+	/* Readjust result's LB to match the input's, as expected for prepend */
+	Assert(result == EOHPGetRWDatum(&eah->hdr));
+	if (eah->ndims == 1)
+	{
+		/* This is ok whether we've deconstructed or not */
+		eah->lbound[0] = lb0;
 	}
 
-	if (my_extra->element_type != element_type)
-	{
-		/* Get info about element type */
-		get_typlenbyvalalign(element_type,
-							 &my_extra->typlen,
-							 &my_extra->typbyval,
-							 &my_extra->typalign);
-		my_extra->element_type = element_type;
-	}
-	typlen = my_extra->typlen;
-	typbyval = my_extra->typbyval;
-	typalign = my_extra->typalign;
-
-	result = array_set(v, 1, &indx, newelem, isNull,
-					   -1, typlen, typbyval, typalign);
-
-	/*
-	 * Readjust result's LB to match the input's.  This does nothing in the
-	 * append case, but it's the simplest way to implement the prepend case.
-	 */
-	if (ARR_NDIM(v) == 1)
-		ARR_LBOUND(result)[0] = ARR_LBOUND(v)[0];
-
-	PG_RETURN_ARRAYTYPE_P(result);
+	PG_RETURN_DATUM(result);
 }
 
 /*-----------------------------------------------------------------------------
@@ -472,7 +513,7 @@ create_singleton_array(FunctionCallInfo fcinfo,
 
 
 /*
- * ARRAY_AGG aggregate function
+ * ARRAY_AGG(anynonarray) aggregate function
  */
 Datum
 array_agg_transfn(PG_FUNCTION_ARGS)
@@ -487,14 +528,25 @@ array_agg_transfn(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("could not determine input data type")));
 
+	/*
+	 * Note: we do not need a run-time check about whether arg1_typeid is a
+	 * valid array element type, because the parser would have verified that
+	 * while resolving the input/result types of this polymorphic aggregate.
+	 */
+
 	if (!AggCheckCallContext(fcinfo, &aggcontext))
 	{
 		/* cannot be called directly because of internal-type argument */
 		elog(ERROR, "array_agg_transfn called in non-aggregate context");
 	}
 
-	state = PG_ARGISNULL(0) ? NULL : (ArrayBuildState *) PG_GETARG_POINTER(0);
+	if (PG_ARGISNULL(0))
+		state = initArrayResult(arg1_typeid, aggcontext, false);
+	else
+		state = (ArrayBuildState *) PG_GETARG_POINTER(0);
+
 	elem = PG_ARGISNULL(1) ? (Datum) 0 : PG_GETARG_DATUM(1);
+
 	state = accumArrayResult(state,
 							 elem,
 							 PG_ARGISNULL(1),
@@ -517,18 +569,13 @@ array_agg_finalfn(PG_FUNCTION_ARGS)
 	int			dims[1];
 	int			lbs[1];
 
-	/*
-	 * Test for null before Asserting we are in right context.  This is to
-	 * avoid possible Assert failure in 8.4beta installations, where it is
-	 * possible for users to create NULL constants of type internal.
-	 */
-	if (PG_ARGISNULL(0))
-		PG_RETURN_NULL();		/* returns null iff no input values */
-
 	/* cannot be called directly because of internal-type argument */
 	Assert(AggCheckCallContext(fcinfo, NULL));
 
-	state = (ArrayBuildState *) PG_GETARG_POINTER(0);
+	state = PG_ARGISNULL(0) ? NULL : (ArrayBuildState *) PG_GETARG_POINTER(0);
+
+	if (state == NULL)
+		PG_RETURN_NULL();		/* returns null iff no input values */
 
 	dims[0] = state->nelems;
 	lbs[0] = 1;
@@ -545,7 +592,6 @@ array_agg_finalfn(PG_FUNCTION_ARGS)
 
 	PG_RETURN_DATUM(result);
 }
-
 
 /* Greenplum Database Additions: */
 
@@ -773,4 +819,374 @@ void accumToArray(int rank, int *rshape, int *rdata, int *ashape, int *adata)
 			j = j * rshape[k] + m[k];
 	}
 	while ( d >= 0 );
+}
+
+/*
+ * ARRAY_AGG(anyarray) aggregate function
+ */
+Datum
+array_agg_array_transfn(PG_FUNCTION_ARGS)
+{
+	Oid			arg1_typeid = get_fn_expr_argtype(fcinfo->flinfo, 1);
+	MemoryContext aggcontext;
+	ArrayBuildStateArr *state;
+
+	if (arg1_typeid == InvalidOid)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("could not determine input data type")));
+
+	/*
+	 * Note: we do not need a run-time check about whether arg1_typeid is a
+	 * valid array type, because the parser would have verified that while
+	 * resolving the input/result types of this polymorphic aggregate.
+	 */
+
+	if (!AggCheckCallContext(fcinfo, &aggcontext))
+	{
+		/* cannot be called directly because of internal-type argument */
+		elog(ERROR, "array_agg_array_transfn called in non-aggregate context");
+	}
+
+
+	if (PG_ARGISNULL(0))
+		state = initArrayResultArr(arg1_typeid, InvalidOid, aggcontext, false);
+	else
+		state = (ArrayBuildStateArr *) PG_GETARG_POINTER(0);
+
+	state = accumArrayResultArr(state,
+								PG_GETARG_DATUM(1),
+								PG_ARGISNULL(1),
+								arg1_typeid,
+								aggcontext);
+
+	/*
+	 * The transition type for array_agg() is declared to be "internal", which
+	 * is a pass-by-value type the same size as a pointer.  So we can safely
+	 * pass the ArrayBuildStateArr pointer through nodeAgg.c's machinations.
+	 */
+	PG_RETURN_POINTER(state);
+}
+
+Datum
+array_agg_array_finalfn(PG_FUNCTION_ARGS)
+{
+	Datum		result;
+	ArrayBuildStateArr *state;
+
+	/* cannot be called directly because of internal-type argument */
+	Assert(AggCheckCallContext(fcinfo, NULL));
+
+	state = PG_ARGISNULL(0) ? NULL : (ArrayBuildStateArr *) PG_GETARG_POINTER(0);
+
+	if (state == NULL)
+		PG_RETURN_NULL();		/* returns null iff no input values */
+
+	/*
+	 * Make the result.  We cannot release the ArrayBuildStateArr because
+	 * sometimes aggregate final functions are re-executed.  Rather, it is
+	 * nodeAgg.c's responsibility to reset the aggcontext when it's safe to do
+	 * so.
+	 */
+	result = makeArrayResultArr(state, CurrentMemoryContext, false);
+
+	PG_RETURN_DATUM(result);
+}
+
+/*-----------------------------------------------------------------------------
+ * array_position, array_position_start :
+ *			return the offset of a value in an array.
+ *
+ * IS NOT DISTINCT FROM semantics are used for comparisons.  Return NULL when
+ * the value is not found.
+ *-----------------------------------------------------------------------------
+ */
+Datum
+array_position(PG_FUNCTION_ARGS)
+{
+	return array_position_common(fcinfo);
+}
+
+Datum
+array_position_start(PG_FUNCTION_ARGS)
+{
+	return array_position_common(fcinfo);
+}
+
+/*
+ * array_position_common
+ *		Common code for array_position and array_position_start
+ *
+ * These are separate wrappers for the sake of opr_sanity regression test.
+ * They are not strict so we have to test for null inputs explicitly.
+ */
+static Datum
+array_position_common(FunctionCallInfo fcinfo)
+{
+	ArrayType  *array;
+	Oid			collation = PG_GET_COLLATION();
+	Oid			element_type;
+	Datum		searched_element,
+				value;
+	bool		isnull;
+	int			position,
+				position_min;
+	bool		found = false;
+	TypeCacheEntry *typentry;
+	ArrayMetaState *my_extra;
+	bool		null_search;
+	ArrayIterator array_iterator;
+
+	if (PG_ARGISNULL(0))
+		PG_RETURN_NULL();
+
+	array = PG_GETARG_ARRAYTYPE_P(0);
+	element_type = ARR_ELEMTYPE(array);
+
+	/*
+	 * We refuse to search for elements in multi-dimensional arrays, since we
+	 * have no good way to report the element's location in the array.
+	 */
+	if (ARR_NDIM(array) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("searching for elements in multidimensional arrays is not supported")));
+
+	if (PG_ARGISNULL(1))
+	{
+		/* fast return when the array doesn't have nulls */
+		if (!array_contains_nulls(array))
+			PG_RETURN_NULL();
+		searched_element = (Datum) 0;
+		null_search = true;
+	}
+	else
+	{
+		searched_element = PG_GETARG_DATUM(1);
+		null_search = false;
+	}
+
+	position = (ARR_LBOUND(array))[0] - 1;
+
+	/* figure out where to start */
+	if (PG_NARGS() == 3)
+	{
+		if (PG_ARGISNULL(2))
+			ereport(ERROR,
+					(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+					 errmsg("initial position should not be NULL")));
+
+		position_min = PG_GETARG_INT32(2);
+	}
+	else
+		position_min = (ARR_LBOUND(array))[0];
+
+	/*
+	 * We arrange to look up type info for array_create_iterator only once per
+	 * series of calls, assuming the element type doesn't change underneath
+	 * us.
+	 */
+	my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
+	if (my_extra == NULL)
+	{
+		fcinfo->flinfo->fn_extra = MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
+													  sizeof(ArrayMetaState));
+		my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
+		my_extra->element_type = ~element_type;
+	}
+
+	if (my_extra->element_type != element_type)
+	{
+		get_typlenbyvalalign(element_type,
+							 &my_extra->typlen,
+							 &my_extra->typbyval,
+							 &my_extra->typalign);
+
+		typentry = lookup_type_cache(element_type, TYPECACHE_EQ_OPR_FINFO);
+
+		if (!OidIsValid(typentry->eq_opr_finfo.fn_oid))
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				errmsg("could not identify an equality operator for type %s",
+					   format_type_be(element_type))));
+
+		my_extra->element_type = element_type;
+		fmgr_info(typentry->eq_opr_finfo.fn_oid, &my_extra->proc);
+	}
+
+	/* Examine each array element until we find a match. */
+	array_iterator = array_create_iterator(array, 0, my_extra);
+	while (array_iterate(array_iterator, &value, &isnull))
+	{
+		position++;
+
+		/* skip initial elements if caller requested so */
+		if (position < position_min)
+			continue;
+
+		/*
+		 * Can't look at the array element's value if it's null; but if we
+		 * search for null, we have a hit and are done.
+		 */
+		if (isnull || null_search)
+		{
+			if (isnull && null_search)
+			{
+				found = true;
+				break;
+			}
+			else
+				continue;
+		}
+
+		/* not nulls, so run the operator */
+		if (DatumGetBool(FunctionCall2Coll(&my_extra->proc, collation,
+										   searched_element, value)))
+		{
+			found = true;
+			break;
+		}
+	}
+
+	array_free_iterator(array_iterator);
+
+	/* Avoid leaking memory when handed toasted input */
+	PG_FREE_IF_COPY(array, 0);
+
+	if (!found)
+		PG_RETURN_NULL();
+
+	PG_RETURN_INT32(position);
+}
+
+/*-----------------------------------------------------------------------------
+ * array_positions :
+ *			return an array of positions of a value in an array.
+ *
+ * IS NOT DISTINCT FROM semantics are used for comparisons.  Returns NULL when
+ * the input array is NULL.  When the value is not found in the array, returns
+ * an empty array.
+ *
+ * This is not strict so we have to test for null inputs explicitly.
+ *-----------------------------------------------------------------------------
+ */
+Datum
+array_positions(PG_FUNCTION_ARGS)
+{
+	ArrayType  *array;
+	Oid			collation = PG_GET_COLLATION();
+	Oid			element_type;
+	Datum		searched_element,
+				value;
+	bool		isnull;
+	int			position;
+	TypeCacheEntry *typentry;
+	ArrayMetaState *my_extra;
+	bool		null_search;
+	ArrayIterator array_iterator;
+	ArrayBuildState *astate = NULL;
+
+	if (PG_ARGISNULL(0))
+		PG_RETURN_NULL();
+
+	array = PG_GETARG_ARRAYTYPE_P(0);
+	element_type = ARR_ELEMTYPE(array);
+
+	position = (ARR_LBOUND(array))[0] - 1;
+
+	/*
+	 * We refuse to search for elements in multi-dimensional arrays, since we
+	 * have no good way to report the element's location in the array.
+	 */
+	if (ARR_NDIM(array) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("searching for elements in multidimensional arrays is not supported")));
+
+	astate = initArrayResult(INT4OID, CurrentMemoryContext, false);
+
+	if (PG_ARGISNULL(1))
+	{
+		/* fast return when the array doesn't have nulls */
+		if (!array_contains_nulls(array))
+			PG_RETURN_DATUM(makeArrayResult(astate, CurrentMemoryContext));
+		searched_element = (Datum) 0;
+		null_search = true;
+	}
+	else
+	{
+		searched_element = PG_GETARG_DATUM(1);
+		null_search = false;
+	}
+
+	/*
+	 * We arrange to look up type info for array_create_iterator only once per
+	 * series of calls, assuming the element type doesn't change underneath
+	 * us.
+	 */
+	my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
+	if (my_extra == NULL)
+	{
+		fcinfo->flinfo->fn_extra = MemoryContextAlloc(fcinfo->flinfo->fn_mcxt,
+													  sizeof(ArrayMetaState));
+		my_extra = (ArrayMetaState *) fcinfo->flinfo->fn_extra;
+		my_extra->element_type = ~element_type;
+	}
+
+	if (my_extra->element_type != element_type)
+	{
+		get_typlenbyvalalign(element_type,
+							 &my_extra->typlen,
+							 &my_extra->typbyval,
+							 &my_extra->typalign);
+
+		typentry = lookup_type_cache(element_type, TYPECACHE_EQ_OPR_FINFO);
+
+		if (!OidIsValid(typentry->eq_opr_finfo.fn_oid))
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				errmsg("could not identify an equality operator for type %s",
+					   format_type_be(element_type))));
+
+		my_extra->element_type = element_type;
+		fmgr_info(typentry->eq_opr_finfo.fn_oid, &my_extra->proc);
+	}
+
+	/*
+	 * Accumulate each array position iff the element matches the given
+	 * element.
+	 */
+	array_iterator = array_create_iterator(array, 0, my_extra);
+	while (array_iterate(array_iterator, &value, &isnull))
+	{
+		position += 1;
+
+		/*
+		 * Can't look at the array element's value if it's null; but if we
+		 * search for null, we have a hit.
+		 */
+		if (isnull || null_search)
+		{
+			if (isnull && null_search)
+				astate =
+					accumArrayResult(astate, Int32GetDatum(position), false,
+									 INT4OID, CurrentMemoryContext);
+
+			continue;
+		}
+
+		/* not nulls, so run the operator */
+		if (DatumGetBool(FunctionCall2Coll(&my_extra->proc, collation,
+										   searched_element, value)))
+			astate =
+				accumArrayResult(astate, Int32GetDatum(position), false,
+								 INT4OID, CurrentMemoryContext);
+	}
+
+	array_free_iterator(array_iterator);
+
+	/* Avoid leaking memory when handed toasted input */
+	PG_FREE_IF_COPY(array, 0);
+
+	PG_RETURN_DATUM(makeArrayResult(astate, CurrentMemoryContext));
 }

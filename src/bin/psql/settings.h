@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  *
  * src/bin/psql/settings.h
  */
@@ -36,6 +36,7 @@ typedef enum
 {
 	PSQL_ECHO_NONE,
 	PSQL_ECHO_QUERIES,
+	PSQL_ECHO_ERRORS,
 	PSQL_ECHO_ALL
 } PSQL_ECHO;
 
@@ -100,6 +101,7 @@ typedef struct _psqlSettings
 	const char *progname;		/* in case you renamed psql */
 	char	   *inputfile;		/* file being currently processed, if any */
 	uint64		lineno;			/* also for error reporting */
+	uint64		stmt_lineno;	/* line number inside the current statement */
 
 	bool		timing;			/* enable timing of all queries */
 

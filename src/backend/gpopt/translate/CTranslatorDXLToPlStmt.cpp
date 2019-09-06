@@ -70,7 +70,7 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CTranslatorDXLToPlStmt::CTranslatorDXLToPlStmt
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	CContextDXLToPlStmt* dxl_to_plstmt_context,
 	ULONG num_of_segments
@@ -400,7 +400,7 @@ CTranslatorDXLToPlStmt::SetInitPlanSliceInformation(SubPlan * subplan)
 void
 CTranslatorDXLToPlStmt::SetParamIds(Plan* plan)
 {
-	List *params_node_list = gpdb::ExtractNodesPlan(plan, T_Param, true);
+	List *params_node_list = gpdb::ExtractNodesPlan(plan, T_Param, true /* descend_into_subqueries */);
 
 	ListCell *lc = NULL;
 
@@ -1361,8 +1361,21 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry
 	func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
 	func_expr->funccollid = gpdb::TypeCollation(func_expr->funcresulttype);
 
+	// Populate RangeTblFunction::funcparams, by walking down the entire
+	// func_expr to capture ids of all the PARAMs
+	ListCell *lc = NULL;
+	List *param_exprs = gpdb::ExtractNodesExpression(
+			(Node *) func_expr, T_Param, false /*descend_into_subqueries */);
+	Bitmapset  *funcparams = NULL;
+	ForEach (lc, param_exprs)
+	{
+		Param *param = (Param*) lfirst(lc);
+		funcparams = gpdb::BmsAddMember(funcparams, param->paramid);
+	}
+
 	RangeTblFunction *rtfunc = MakeNode(RangeTblFunction);
 	rtfunc->funcexpr = (Node *) func_expr;
+	rtfunc->funcparams = funcparams;
 	// GPDB_91_MERGE_FIXME: collation
 	// set rtfunc->funccoltypemods & rtfunc->funccolcollations?
 	rte->functions = ListMake1(rtfunc);
@@ -1690,8 +1703,8 @@ CTranslatorDXLToPlStmt::TranslateDXLMergeJoin
 	// translate merge cond
 	List *merge_conditions_list = NIL;
 
-	const ULONG arity = merge_cond_list_dxlnode->Arity();
-	for (ULONG ul = 0; ul < arity; ul++)
+	const ULONG num_join_conds = merge_cond_list_dxlnode->Arity();
+	for (ULONG ul = 0; ul < num_join_conds; ul++)
 	{
 		CDXLNode *merge_condition_dxlnode = (*merge_cond_list_dxlnode)[ul];
 		List *merge_condition_list = TranslateDXLScCondToQual
@@ -1715,9 +1728,50 @@ CTranslatorDXLToPlStmt::TranslateDXLMergeJoin
 	plan->nMotionNodes = left_plan->nMotionNodes + right_plan->nMotionNodes;
 	SetParamIds(plan);
 
-	// GPDB_91_MERGE_FIXME: collation
-	// Need to set merge_join->mergeCollations, but ORCA does not produce plans with
-	// Merge Joins.
+	merge_join->mergeFamilies = (Oid *) gpdb::GPDBAlloc(sizeof(Oid) * num_join_conds);
+	merge_join->mergeStrategies = (int *) gpdb::GPDBAlloc(sizeof(int) * num_join_conds);
+	merge_join->mergeCollations = (Oid *) gpdb::GPDBAlloc(sizeof(Oid) * num_join_conds);
+	merge_join->mergeNullsFirst = (bool *) gpdb::GPDBAlloc(sizeof(bool) * num_join_conds);
+
+	ListCell *lc;
+	ULONG ul = 0;
+	foreach(lc, merge_join->mergeclauses)
+	{
+		Expr *expr = (Expr *) lfirst(lc);
+
+		if (IsA(expr, OpExpr))
+		{
+			// we are ok - phew
+			OpExpr *opexpr = (OpExpr *) expr;
+			List *mergefamilies = gpdb::GetMergeJoinOpFamilies(opexpr->opno);
+
+			GPOS_ASSERT(NULL != mergefamilies && gpdb::ListLength(mergefamilies) > 0);
+
+			// Pick the first - it's probably what we want
+			merge_join->mergeFamilies[ul] = gpdb::ListNthOid(mergefamilies, 0);
+
+			GPOS_ASSERT(gpdb::ListLength(opexpr->args) == 2);
+			Expr *leftarg = (Expr *) gpdb::ListNth(opexpr->args, 0);
+
+			Expr *rightarg = (Expr *) gpdb::ListNth(opexpr->args, 1);
+			GPOS_ASSERT(gpdb::ExprCollation((Node *) leftarg) ==
+						gpdb::ExprCollation((Node*) rightarg));
+
+			merge_join->mergeCollations[ul] = gpdb::ExprCollation((Node*) leftarg);
+
+			// Make sure that the following properties match
+			// those in CPhysicalFullMergeJoin::PosRequired().
+			merge_join->mergeStrategies[ul] = BTLessStrategyNumber;
+			merge_join->mergeNullsFirst[ul] = false;
+			++ul;
+		}
+		else
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+					   GPOS_WSZ_LIT("Not an op expression in merge clause"));
+			break;
+		}
+	}
 
 	// cleanup
 	translation_context_arr_with_siblings->Release();

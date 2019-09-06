@@ -101,6 +101,11 @@ OPTIONS
   system.
 
 
+-x (expand)
+
+  Optional. Display details of any current gpexpand.
+
+
 -q (no screen output)
 
   Optional. Run in quiet mode. Except for warning messages, command 
@@ -242,6 +247,11 @@ Show information about mirror segment instances:
 Show information about the standby master configuration:
 
    gpstate -f
+
+
+Show details of any current gpexpand:
+
+   gpstate -x
 
 
 Display the Greenplum software version information:

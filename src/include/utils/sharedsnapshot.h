@@ -50,7 +50,7 @@ extern void addSharedSnapshot(char *creatorDescription, int id);
 extern void lookupSharedSnapshot(char *lookerDescription, char *creatorDescription, int id);
 
 extern void dumpSharedLocalSnapshot_forCursor(void);
-extern void readSharedLocalSnapshot_forCursor(Snapshot snapshot);
+extern void readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTransactionContext);
 
 extern void AtEOXact_SharedSnapshot(void);
 

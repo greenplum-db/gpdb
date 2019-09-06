@@ -76,99 +76,12 @@ one table by one table. User could adjust table redistribution order.
 During this phase, table currently under expansion is not accessible. gpexpand
 acquires `Access Exclusive Lock` on redistributing table to prevent concurrent.
 
-There are two methods to redistribute user data: CTAS and Reshuffle. The function
-`tablecmds.c:get_expand_method` automatically determines which method to used
-based on cost, that is the estimated number of tuples to move.
-
-### 2.1 CTAS
-
-CTAS redistributes all data to a new table, swaps old and new table's relfilenode,
-and finally drop old data. CTAS has following characteristics:
+User data are redistributed in a CTAS-like style, id redistributes all data to
+a new table, swaps old and new table's relfilenode, and finally drop old data.
+CTAS has following characteristics:
 
 * CTAS needs no VACCUM to reclaim moved tuples.
 * CTAS rebuilds the index from scratch instead of tuple by tuple.
-
-### 2.2 Reshuffle
-
-Reshuffle only moves tuples which needs to move according to distribution policy
-from old segments to new segments. Different kinds of tables need a bit different
-processing during optimization and execution. Below sections describe more details.
-
-#### Hash distributed Table
-
-Reshuffle of hash distributed table evaluates reshuffle/redistribution expression
-for each tuple, move tuple to right segment and delete it from old segment. Its
-processing is similar to the processing of query updating table's distribution key.
-
-```
-    Update
-        ->Explicit Redistributed Motion
-            ->Reshuffle
-                ->Split
-                    ->SeqScan
-                      Filter: ReshuffleExpr
-```
-
-Above is a sample plan which is similar to the plan of updating a table's
-distribution key. The difference is that:
-
-* A new ReshuffleExpr is added to determine which tuple needs to move.
-ReshuffleExpr computes the target segment id for the tuple based on the cluster
-size. If the new segment id is the same as the old segment id, then tuple
-won't move. Otherwise, tuple is moved to new segment, and deleted on old segment.
-* A new node `Reshuffle` above SplitUpdate to computes each tuple's target segment id
-* Change Redistributed Motion to Explicit Redistributed Motion, using the segment
-id computed by `Reshuffle` Node as the target.
-
-#### Randomly distributed Table
-
-For randomly distributed table, processing is similar as hash distributed table.
-The difference happens in the evaluation of `ReshuffleExpr` and the execution of `Reshuffle`:
-
-* `ReshuffleExpr` returns true in a probability of M/M+N, because we need to move
-M/M+N of a segment's data to new segments.
-* `Reshuffle` node randomly choose a target among new segments segN, segN+1, ..., segN+M-1.
-
-#### Replicated Table
-
-For replicated table, it also uses similar plan as above. The difference is that:
-
-* The top plan node is `Insert` instead of `Update`.
-* `ReshuffleExpr` is not used, because all tuples need to send out
-* `Split` node outputs one delete tuple and one insert tuple. For replicated table,
-Only insert tuple is used.
-* Each insert-tuple might be sent to multiple new segments, the logic is
-  - old segments are seg0, seg1, .. segN-1 (N old segs)
-  - new segments are segN, segN+1, ...segM+N-1 (M new segs, total N+M segs)
-  - the bottom slice of the plan (the scan-reshuffle slice) is only spawned on old segments
-  - the top slice of the plan (the insert-slice) is only spawned on new segments
-  - For each old segment, `seg_k`, it sends tuples to `seg_k+i*N (i>=1)`
-  - For example, if N=3 and M=3, then seg0 sends to seg3, seg1 sends to seg4, seg2 sends to seg5.
-
-The plan for data-redistribute of replicated table is:
-
-```
-    Insert
-        ->Explicit Redistributed Motion
-            ->Reshuffle(new logic)
-                ->Split(only insert tuples)
-                    ->SeqScan
-```
-
-Here is an example:
-
-```
-# seg0, seg1, seg2 are old segments
-# seg3, seg4 are new segments
-# seg0 replicates the table to seg3
-# seg1 replicates the table to seg4
-# seg2 does nothing in this example
-          |----------------------|
-          |                      |
-seg0    seg1    seg2 | seg3     seg4
-  |                     |
-   ---------------------
-```
 
 ## 3. Performance
 

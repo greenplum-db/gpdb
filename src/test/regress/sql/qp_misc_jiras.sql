@@ -805,7 +805,7 @@ lstg_desc_txt text
 WITH (appendonly=true, compresslevel=5) distributed by (lstg_id) PARTITION BY RANGE(cre_time)
 (
 START ('2009-05-26 00:00:00'::timestamp without time zone) 
-END ('2009-06-30 00:00:00'::timestamp without time zone) EVERY ('1 day'::interval) WITH (appendonly=true, compresslevel=5)
+END ('2009-06-05 00:00:00'::timestamp without time zone) EVERY ('1 day'::interval) WITH (appendonly=true, compresslevel=5)
 );
 
 insert into qp_misc_jiras.tbl6419_test values( 123, '2009-06-01', 12, '2009-06-01 01:01:01', 'aaaaaa');
@@ -1892,7 +1892,7 @@ drop table qp_misc_jiras.tbl2976_3;
 create table qp_misc_jiras.tbl8258 (a int, b double precision)
 PARTITION BY RANGE(b)
 (START (1::double precision) END (100::double precision)
-EVERY ((10)::double precision),
+EVERY ((20)::double precision),
 PARTITION p1 START (100::double precision) END (150::double precision));
 
 select pg_get_partition_def('qp_misc_jiras.tbl8258'::regclass, true);
@@ -2330,16 +2330,16 @@ select  * from qp_misc_jiras.test_heap where ctid='(0,1)' and gp_segment_id >= 0
 --
 create table qp_misc_jiras.test_ao (i int, j int) with (appendonly=true);
 insert into qp_misc_jiras.test_ao values (0, 0);
-explain select  * from qp_misc_jiras.test_ao where ctid='(33554432,1)' and gp_segment_id >= 0;
-select  * from qp_misc_jiras.test_ao where ctid='(33554432,1)' and gp_segment_id >= 0;
+explain select  * from qp_misc_jiras.test_ao where ctid='(33554432,2)' and gp_segment_id >= 0;
+select  * from qp_misc_jiras.test_ao where ctid='(33554432,2)' and gp_segment_id >= 0;
 
 --
 -- CO table. TidScan should not be used.
 --
 create table qp_misc_jiras.test_co (i int, j int) with (appendonly=true, orientation=column);
 insert into qp_misc_jiras.test_co values (0, 0);
-explain select  * from qp_misc_jiras.test_co where ctid='(33554432,1)' and gp_segment_id >= 0;
-select  * from qp_misc_jiras.test_co where ctid='(33554432,1)' and gp_segment_id >= 0;
+explain select  * from qp_misc_jiras.test_co where ctid='(33554432,2)' and gp_segment_id >= 0;
+select  * from qp_misc_jiras.test_co where ctid='(33554432,2)' and gp_segment_id >= 0;
 
 -- This is to verify MPP-10856: test gp_enable_explain_allstat
 set gp_enable_explain_allstat=on;

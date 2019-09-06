@@ -6,7 +6,7 @@
  * See also lsyscache.h, which provides convenience routines for
  * common cache-lookup operations.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/syscache.h
@@ -82,11 +82,17 @@ enum SysCacheIdentifier
 	RANGETYPE,
 	RELNAMENSP,
 	RELOID,
+	REPLORIGIDENT,
+	REPLORIGNAME,
 	RESGROUPOID,
 	RESGROUPNAME,
 	RULERELNAME,
 	STATRELATTINH,
+	TABLESAMPLEMETHODNAME,
+	TABLESAMPLEMETHODOID,
 	TABLESPACEOID,
+	TRFOID,
+	TRFTYPELANG,
 	TSCONFIGMAP,
 	TSCONFIGNAMENSP,
 	TSCONFIGOID,
@@ -136,7 +142,6 @@ extern struct catclist *SearchSysCacheList(int cacheId, int nkeys,
 				   Datum key1, Datum key2, Datum key3, Datum key4);
 
 extern void SysCacheInvalidate(int cacheId, uint32 hashValue);
-
 extern bool RelationInvalidatesSnapshotsOnly(Oid relid);
 extern bool RelationHasSysCache(Oid relid);
 extern bool RelationSupportsSysCache(Oid relid);

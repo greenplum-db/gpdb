@@ -55,7 +55,7 @@
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt>mpp_execute { 'master | 'any' | 'all segments' }</pt>
+                    <pt>mpp_execute { 'master' | 'any' | 'all segments' }</pt>
                     <pd>
                         <p>An option that identifies the host from which the foreign data-wrapper
                             requests data: <ul id="ul_zcg_2vd_mgb">
@@ -78,7 +78,7 @@
         </section>
         <section id="section5">
             <title>Notes</title>
-            <p>When using the dblink module (see <codeph><xref href="../../utility_guide/dblink.xml#topic1">dblink</xref></codeph>), you can use the foreign server name as an argument of the <codeph>dblink_connect()</codeph> function to provide the connection parameters. You must have the <codeph>USAGE</codeph> privilege on the foreign server to use it in this manner.</p>
+            <p>When using the dblink module (see <codeph><xref href="../modules/dblink.xml#topic1">dblink</xref></codeph>), you can use the foreign server name as an argument of the <codeph>dblink_connect()</codeph> function to provide the connection parameters. You must have the <codeph>USAGE</codeph> privilege on the foreign server to use it in this manner.</p>
         </section>
         <section id="section6">
             <title>Examples</title>

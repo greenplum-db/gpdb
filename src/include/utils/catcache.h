@@ -10,7 +10,7 @@
  * guarantee that there can only be one matching row for a key combination.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/catcache.h
@@ -147,8 +147,8 @@ typedef struct catclist
 	uint32		hash_value;		/* hash value for lookup keys */
 	HeapTupleData tuple;		/* header for tuple holding keys */
 	int			n_members;		/* number of member tuples */
-	CatCTup    *members[1];		/* members --- VARIABLE LENGTH ARRAY */
-} CatCList;						/* VARIABLE LENGTH STRUCT */
+	CatCTup    *members[FLEXIBLE_ARRAY_MEMBER]; /* members */
+} CatCList;
 
 
 typedef struct catcacheheader

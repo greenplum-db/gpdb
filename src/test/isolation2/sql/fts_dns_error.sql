@@ -1,5 +1,4 @@
 -- Tests FTS can handle DNS error.
-create extension if not exists gp_inject_fault;
 
 -- to make test deterministic and fast
 !\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
@@ -29,7 +28,7 @@ select gp_inject_fault_infinite('get_dns_cached_address', 'reset', 1);
 select count(*) from gp_segment_configuration where status = 'd';
 
 -- fully recover the failed primary as new mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF --no-progress;
 
 -- loop while segments come in sync
 do $$

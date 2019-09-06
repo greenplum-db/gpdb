@@ -29,6 +29,8 @@ The PXF Hive connector reads data stored in a Hive table. This section describes
 
 Before working with Hive table data using PXF, ensure that you have met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_prereq).
 
+*If you plan to use PXF filter pushdown with Hive integral types*, ensure that the configuration parameter `hive.metastore.integral.jdo.pushdown` exists and is set to `true` in the `hive-site.xml` in both your Hadoop cluster **and** `$PXF_CONF/servers/default/hive-site.xml`. Refer to [Updating Hadoop Configuration](client_instcfg.html#client-cfg-update) for more information.
+
 
 ## <a id="hive_fileformats"></a>Hive Data Formats
 
@@ -181,7 +183,7 @@ Use the following syntax to create a Greenplum Database external table that refe
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION ('pxf://<hive-db-name>.<hive-table-name>
-    ?PROFILE=Hive|HiveText|HiveRC|HiveORC|HiveVectorizedORC[&DELIMITER=<delim>'])
+    ?PROFILE=Hive|HiveText|HiveRC|HiveORC|HiveVectorizedORC[&SERVER=<server_name>]'])
 FORMAT 'CUSTOM|TEXT' (FORMATTER='pxfwritable_import' | delimiter='<delim>')
 ```
 
@@ -192,16 +194,14 @@ Hive connector-specific keywords and values used in the [CREATE EXTERNAL TABLE](
 | \<hive&#8209;db&#8209;name\>    | The name of the Hive database. If omitted, defaults to the Hive database named `default`. |
 | \<hive&#8209;table&#8209;name\>    | The name of the Hive table. |
 | PROFILE    | The `PROFILE` keyword must specify one of the values `Hive`, `HiveText`, `HiveRC`, `HiveORC`, or `HiveVectorizedORC`. |
-| DELIMITER    | The custom options `DELIMITER` clause is required for both the `HiveText` and `HiveRC` profiles and identifies the field delimiter used in the Hive data set.  \<delim\> must be a single ascii character or specified in hexadecimal representation. |
+| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | FORMAT (`Hive`, `HiveORC`, and `HiveVectorizedORC` profiles)   | The `FORMAT` clause must specify `'CUSTOM'`. The `CUSTOM` format requires the built-in `pxfwritable_import` `formatter`.   |
-| FORMAT (`HiveText` and `HiveRC` profiles) | The `FORMAT` clause must specify `TEXT`. The `delimiter` must be specified a second time in the '\<delim\>' formatting option. |
+| FORMAT (`HiveText` and `HiveRC` profiles) | The `FORMAT` clause must specify `TEXT`. Specify the single ascii character field delimiter in the `delimiter='<delim>'` formatting option. |
 
 
 ## <a id="hive_text"></a>Accessing TextFile-Format Hive Tables
 
 You can use the `Hive` and `HiveText` profiles to access Hive table data stored in TextFile format.
-
-**Note**: When you use the `HiveText` profile, you **must** specify a delimiter option in both the `LOCATION` and `FORMAT` clauses.
 
 ### <a id="hive_hive_example" class="no-quick-link"></a>Example: Using the Hive Profile
 
@@ -238,13 +238,11 @@ Use the PXF `HiveText` profile to create a readable Greenplum Database external 
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE salesinfo_hivetextprofile(location text, month text, num_orders int, total_sales float8)
-                 LOCATION ('pxf://default.sales_info?PROFILE=HiveText&DELIMITER=\x2c')
+                 LOCATION ('pxf://default.sales_info?PROFILE=HiveText')
                FORMAT 'TEXT' (delimiter=E',');
     ```
 
-    Notice that:
-    - The `LOCATION` subclause `DELIMITER` value is specified in hexadecimal format. The `\x` prefix instructs PXF to interpret the following characters as hexadecimal. `2c` is the hex value for the comma character.
-    - The `FORMAT` subclause `delimiter` value is specified as the single ascii comma character `','`. `E` escapes the character.
+    Notice that the `FORMAT` subclause `delimiter` value is specified as the single ascii comma character `','`. `E` escapes the character.
 
 2. Query the external table:
 
@@ -265,7 +263,6 @@ Use the PXF `HiveText` profile to create a readable Greenplum Database external 
 
 The RCFile Hive table format is used for row columnar formatted data. The PXF `HiveRC` profile provides access to RCFile data.
 
-**Note**: When you use the `HiveRC` profile, you **must** specify a delimiter option in both the `LOCATION` and `FORMAT` clauses.
 
 ### <a id="hive_hiverc_example" class="no-quick-link"></a>Example: Using the HiveRC Profile
 
@@ -298,11 +295,11 @@ Use the `HiveRC` profile to query RCFile-formatted data in a Hive table.
     hive> SELECT * FROM sales_info_rcfile;
     ```
 
-4. Use the PXF `HiveRC` profile to create a readable Greenplum Database external table that references the Hive `sales_info_rcfile` table that you created in the previous steps. You *must* specify a delimiter option in both the `LOCATION` and `FORMAT` clauses.:
+4. Use the PXF `HiveRC` profile to create a readable Greenplum Database external table that references the Hive `sales_info_rcfile` table that you created in the previous steps. For example:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE salesinfo_hivercprofile(location text, month text, num_orders int, total_sales float8)
-                 LOCATION ('pxf://default.sales_info_rcfile?PROFILE=HiveRC&DELIMITER=\x2c')
+                 LOCATION ('pxf://default.sales_info_rcfile?PROFILE=HiveRC')
                FORMAT 'TEXT' (delimiter=E',');
     ```
 
@@ -659,13 +656,20 @@ In the following example, you will create and populate a Hive table stored in OR
 
 ## <a id="partitionfiltering"></a>Partition Filter Pushdown
 
-The PXF Hive connector supports the Hive partitioning feature and directory structure. This enables partition exclusion on selected HDFS files comprising a Hive table. To use the partition filtering feature to reduce network traffic and I/O, run a query on a PXF external table using a `WHERE` clause that refers to a specific partition column in a partitioned Hive table.
+The PXF Hive connector supports Hive partitioning pruning and the Hive partition directory structure. This enables partition exclusion on selected HDFS files comprising a Hive table. To use the partition filtering feature to reduce network traffic and I/O, run a query on a PXF external table using a `WHERE` clause that refers to a specific partition column in a partitioned Hive table.
+
+The PXF Hive Connector partition filtering support for Hive string and integral types is described below:
+
+- The relational operators `=`, `<`, `<=`, `>`, `>=`, and `<>` are supported on string types.
+- The relational operators `=` and `<>` are supported on integral types (To use partition filtering with Hive integral types, you must update the Hive configuration as described in the [Prerequisites](#prereq)).
+- The logical operators `AND` and `OR` are supported when used with the relational operators mentioned above.
+- The `LIKE` string operator is not supported.
 
 To take advantage of PXF partition filtering pushdown, the Hive and PXF partition field names must be the same. Otherwise, PXF ignores partition filtering and the filtering is performed on the Greenplum Database side, impacting performance.
 
-**Note:** The Hive connector filters only on partition columns, not on other table attributes.
+<div class="note">The PXF Hive connector filters only on partition columns, not on other table attributes. Additionally, filter pushdown is supported only for those data types and operators identified above.</div>
 
-PXF filter pushdown is enabled by default. You configure PXF filter pushdown as described in [Configuring Filter Pushdown](using_pxf.html#filter-pushdown).
+PXF filter pushdown is enabled by default. You configure PXF filter pushdown as described in [About Filter Pushdown](filter_push.html).
 
 
 ### <a id="hive_homog_part"></a>Example: Using the Hive Profile to Access Partitioned Homogenous Data

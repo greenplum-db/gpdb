@@ -101,21 +101,9 @@ IdleGangTimeoutHandler(void)
 {
 	if (clientWaitTimeoutInterruptEnabled)
 	{
-		bool		notify_enabled;
-		bool		catchup_enabled;
-
-		/* Must prevent SIGUSR1 and SIGUSR2 interrupt while I am running */
-		notify_enabled = DisableNotifyInterrupt();
-		catchup_enabled = DisableCatchupInterrupt();
-
 		idle_gang_timeout_occurred = 0;
 
 		DisconnectAndDestroyUnusedQEs();
-
-		if (notify_enabled)
-			EnableNotifyInterrupt();
-		if (catchup_enabled)
-			EnableCatchupInterrupt();
 	}
 	else
 		idle_gang_timeout_occurred = 1;

@@ -69,15 +69,6 @@ FROM (SELECT count(*) c, gp_segment_id FROM facts GROUP BY 2) AS a;</codeblock>
               of 0.1 indicates  10% skew, a value of 0.5 indicates 50% skew, and so on. Tables that
               have more than10% skew should have their distribution policies evaluated.</li>
           </ul></p>
-          <section>
-            <title>Considerations for Randomly Distributed Tables</title>
-            <p>When you create a table with random distribution (<codeph>DISTRIBUTED RANDOMLY</codeph>),
-              Greenplum Database distributes the data you insert or copy into the table in a
-              round-robin fashion. Greenplum Database starts a new instance of a round-robin
-              cycle for each insert or copy operation. As such, single tuple inserts into a
-              randomly distributed table are assigned to the first segment and will result
-              in data skew. Greenplum Database more evenly distributes data from bulk inserts.</p>
-          </section>
       <section id="section_unk_dpf_kgb">
         <title>Considerations for Replicated Tables</title>
         <p>When you create a replicated table (with the <codeph>CREATE TABLE</codeph> clause

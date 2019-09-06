@@ -28,6 +28,7 @@ COMMENT ON
   COLLATION <replaceable class="PARAMETER">object_name</replaceable> |
   COLUMN <replaceable class="PARAMETER">relation_name</replaceable>.<replaceable class="PARAMETER">column_name</replaceable> |
   CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable> ON <replaceable class="PARAMETER">table_name</replaceable> |
+  CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable> ON DOMAIN <replaceable class="PARAMETER">domain_name</replaceable> |
   CONVERSION <replaceable class="PARAMETER">object_name</replaceable> |
   DATABASE <replaceable class="PARAMETER">object_name</replaceable> |
   DOMAIN <replaceable class="PARAMETER">object_name</replaceable> |
@@ -55,6 +56,7 @@ COMMENT ON
   TEXT SEARCH DICTIONARY <replaceable class="PARAMETER">object_name</replaceable> |
   TEXT SEARCH PARSER <replaceable class="PARAMETER">object_name</replaceable> |
   TEXT SEARCH TEMPLATE <replaceable class="PARAMETER">object_name</replaceable> |
+  TRANSFORM FOR <replaceable>type_name</replaceable> LANGUAGE <replaceable>lang_name</replaceable> |
   TRIGGER <replaceable class="PARAMETER">trigger_name</replaceable> ON <replaceable class="PARAMETER">table_name</replaceable> |
   TYPE <replaceable class="PARAMETER">object_name</replaceable> |
   VIEW <replaceable class="PARAMETER">object_name</replaceable>
@@ -123,6 +125,18 @@ COMMENT ON
       When commenting on a column,
       <replaceable class="parameter">relation_name</replaceable> must refer
       to a table, view, composite type, or foreign table.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">table_name</replaceable></term>
+    <term><replaceable class="parameter">domain_name</replaceable></term>
+    <listitem>
+     <para>
+      When creating a comment on a constraint on a table or a domain, these
+      parameteres specify the name of the table or domain on which the
+      constraint is defined.
      </para>
     </listitem>
    </varlistentry>
@@ -213,6 +227,26 @@ COMMENT ON
      </listitem>
     </varlistentry>
 
+    <varlistentry>
+     <term><replaceable>type_name</replaceable></term>
+
+     <listitem>
+      <para>
+       The name of the data type of the transform.
+      </para>
+     </listitem>
+    </varlistentry>
+
+    <varlistentry>
+     <term><replaceable>lang_name</replaceable></term>
+
+     <listitem>
+      <para>
+       The name of the language of the transform.
+      </para>
+     </listitem>
+    </varlistentry>
+
    <varlistentry>
     <term><replaceable class="parameter">text</replaceable></term>
     <listitem>
@@ -267,6 +301,7 @@ COMMENT ON COLLATION "fr_CA" IS 'Canadian French';
 COMMENT ON COLUMN my_table.my_column IS 'Employee ID number';
 COMMENT ON CONVERSION my_conv IS 'Conversion to UTF8';
 COMMENT ON CONSTRAINT bar_col_cons ON bar IS 'Constrains column col';
+COMMENT ON CONSTRAINT dom_col_constr ON DOMAIN dom IS 'Constrains col of domain';
 COMMENT ON DATABASE my_database IS 'Development Database';
 COMMENT ON DOMAIN my_domain IS 'Email Address Domain';
 COMMENT ON EXTENSION hstore IS 'implements the hstore data type';
@@ -292,6 +327,7 @@ COMMENT ON TEXT SEARCH CONFIGURATION my_config IS 'Special word filtering';
 COMMENT ON TEXT SEARCH DICTIONARY swedish IS 'Snowball stemmer for Swedish language';
 COMMENT ON TEXT SEARCH PARSER my_parser IS 'Splits text into words';
 COMMENT ON TEXT SEARCH TEMPLATE snowball IS 'Snowball stemmer';
+COMMENT ON TRANSFORM FOR hstore LANGUAGE plpythonu IS 'Transform between hstore and Python dict';
 COMMENT ON TRIGGER my_trigger ON my_table IS 'Used for RI';
 COMMENT ON TYPE complex IS 'Complex number data type';
 COMMENT ON VIEW my_view IS 'View of departmental costs';

@@ -7,7 +7,7 @@
 
 #define UNITTEST_NUM_SEGS 2
 
-struct CdbDispatchResults *
+static struct CdbDispatchResults *
 _init_cdbdisp_makeResult()
 {
 	struct CdbDispatchResults *results =
@@ -22,7 +22,7 @@ _init_cdbdisp_makeResult()
 /*
  * Test cdbdisp_makeResult would return NULL if OOM happens
  */
-void
+static void
 test__cdbdisp_makeResult__oom(void **state)
 {
 	CdbDispatchResult *result = NULL;

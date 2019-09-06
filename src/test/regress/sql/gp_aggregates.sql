@@ -117,7 +117,9 @@ create aggregate mysum_prefunc(int4) (
   stype=bigint,
   prefunc=int8pl_with_notice
 );
+set optimizer_force_multistage_agg = on;
 select mysum_prefunc(a::int4) from aggtest;
+reset optimizer_force_multistage_agg;
 
 
 -- Test an aggregate with 'internal' transition type, and a combine function,
@@ -134,3 +136,23 @@ CREATE AGGREGATE my_numeric_avg(numeric) (
 create temp table numerictesttab as select g::numeric as n from generate_series(1,10) g;
 
 select my_numeric_avg(n) from numerictesttab;
+
+--- Test distinct on UDF which EXECUTE ON ALL SEGMENTS
+CREATE FUNCTION distinct_test() RETURNS SETOF boolean EXECUTE ON ALL SEGMENTS
+    LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY SELECT true;
+END
+$$;
+
+SELECT DISTINCT distinct_test();
+
+DROP FUNCTION distinct_test();
+
+-- Test multi-phase aggregate with subquery scan
+create table multiagg_with_subquery (i int, j int, k int, m int) distributed by (i);
+insert into multiagg_with_subquery select i, i+1, i+2, i+3 from generate_series(1, 10)i;
+explain (costs off)
+select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
+select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
+drop table multiagg_with_subquery;

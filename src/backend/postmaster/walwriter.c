@@ -31,7 +31,7 @@
  * should be killed by SIGQUIT and then a recovery cycle started.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -42,8 +42,6 @@
 #include "postgres.h"
 
 #include <signal.h>
-#include <sys/time.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "access/xlog.h"
@@ -100,17 +98,6 @@ WalWriterMain(void)
 	MemoryContext walwriter_context;
 	int			left_till_hibernate;
 	bool		hibernating;
-
-	/*
-	 * If possible, make this process a group leader, so that the postmaster
-	 * can signal any child processes too.  (walwriter probably never has any
-	 * child processes, but for consistency we make all postmaster child
-	 * processes do this.)
-	 */
-#ifdef HAVE_SETSID
-	if (setsid() < 0)
-		elog(FATAL, "setsid() failed: %m");
-#endif
 
 	/*
 	 * Properly accept or ignore signals the postmaster might send us
@@ -265,7 +252,7 @@ WalWriterMain(void)
 		}
 
 		/* Clear any already-pending wakeups */
-		ResetLatch(&MyProc->procLatch);
+		ResetLatch(MyLatch);
 
 		/*
 		 * Process any requests or signals received recently.
@@ -300,7 +287,7 @@ WalWriterMain(void)
 		else
 			cur_timeout = WalWriterDelay * HIBERNATE_FACTOR;
 
-		rc = WaitLatch(&MyProc->procLatch,
+		rc = WaitLatch(MyLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
 					   cur_timeout);
 
@@ -352,8 +339,7 @@ WalSigHupHandler(SIGNAL_ARGS)
 	int			save_errno = errno;
 
 	got_SIGHUP = true;
-	if (MyProc)
-		SetLatch(&MyProc->procLatch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }
@@ -365,8 +351,7 @@ WalShutdownHandler(SIGNAL_ARGS)
 	int			save_errno = errno;
 
 	shutdown_requested = true;
-	if (MyProc)
-		SetLatch(&MyProc->procLatch);
+	SetLatch(MyLatch);
 
 	errno = save_errno;
 }

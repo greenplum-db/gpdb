@@ -8,8 +8,13 @@ CREATE TABLE update_test (
     c   TEXT
 );
 
-INSERT INTO update_test(a,b,c) VALUES (5, 10, 'foo');
-INSERT INTO update_test(b,a) VALUES (15, 10);
+CREATE TABLE upsert_test (
+    a   INT PRIMARY KEY,
+    b   TEXT
+);
+
+INSERT INTO update_test VALUES (5, 10, 'foo');
+INSERT INTO update_test(b, a) VALUES (15, 10);
 
 SELECT a,b,c FROM update_test ORDER BY a,b,c;
 
@@ -43,6 +48,9 @@ UPDATE update_test SET a = v.* FROM (VALUES(100, 20)) AS v(i, j)
 -- Test multiple-set-clause syntax
 --
 
+INSERT INTO update_test SELECT a,b+1,c FROM update_test;
+SELECT * FROM update_test;
+
 UPDATE update_test SET (c,b,a) = ('bugle', b+11, DEFAULT) WHERE c = 'foo';
 SELECT a,b,c FROM update_test ORDER BY a,b,c;
 UPDATE update_test SET (c,b) = ('car', a+b), a = a + 1 WHERE a = 10;
@@ -50,9 +58,22 @@ SELECT a,b,c FROM update_test ORDER BY a,b,c;
 -- fail, multi assignment to same column:
 UPDATE update_test SET (c,b) = ('car', a+b), b = a + 1 WHERE a = 10;
 
--- XXX this should work, but doesn't yet:
-UPDATE update_test SET (a,b) = (select a,b FROM update_test where c = 'foo')
-  WHERE a = 10;
+-- uncorrelated sub-select:
+UPDATE update_test
+  SET (b,a) = (select a,b from update_test where b = 41 and c = 'car')
+  WHERE a = 100 AND b = 20;
+SELECT * FROM update_test;
+-- correlated sub-select:
+UPDATE update_test o
+  SET (b,a) = (select a+1,b from update_test i
+               where i.a=o.a and i.b=o.b and i.c is not distinct from o.c);
+SELECT * FROM update_test;
+-- fail, multiple rows supplied:
+UPDATE update_test SET (b,a) = (select a+1,b from update_test);
+-- set to null if no rows supplied:
+UPDATE update_test SET (b,a) = (select a+1,b from update_test where a = 1000)
+  WHERE a = 11;
+SELECT * FROM update_test;
 
 -- if an alias for the target table is specified, don't allow references
 -- to the original table name
@@ -62,7 +83,23 @@ UPDATE update_test AS t SET b = update_test.b + 10 WHERE t.a = 10;
 UPDATE update_test SET c = repeat('x', 10000) WHERE c = 'car';
 SELECT a, b, char_length(c) FROM update_test;
 
+-- Test ON CONFLICT DO UPDATE
+INSERT INTO upsert_test VALUES(1, 'Boo');
+-- uncorrelated  sub-select:
+WITH aaa AS (SELECT 1 AS a, 'Foo' AS b) INSERT INTO upsert_test
+  VALUES (1, 'Bar') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT b, a FROM aaa) RETURNING *;
+-- correlated sub-select:
+INSERT INTO upsert_test VALUES (1, 'Baz') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT b || ', Correlated', a from upsert_test i WHERE i.a = upsert_test.a)
+  RETURNING *;
+-- correlated sub-select (EXCLUDED.* alias):
+INSERT INTO upsert_test VALUES (1, 'Bat') ON CONFLICT(a)
+  DO UPDATE SET (b, a) = (SELECT b || ', Excluded', a from upsert_test i WHERE i.a = excluded.a)
+  RETURNING *;
+
 DROP TABLE update_test;
+DROP TABLE upsert_test;
 
 --
 -- text types. We should support the following updates.
@@ -148,5 +185,3 @@ EXPLAIN (COSTS OFF ) UPDATE tab3 SET C1 = C1 + 1, C5 = C5+1;
 -- clean up
 drop table tab3;
 drop table tab5;
-
-

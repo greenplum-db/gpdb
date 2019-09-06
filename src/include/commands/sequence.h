@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/commands/sequence.h
@@ -15,8 +15,10 @@
 #ifndef SEQUENCE_H
 #define SEQUENCE_H
 
-#include "access/xlog.h"
+#include "access/xlogreader.h"
+#include "catalog/objectaddress.h"
 #include "fmgr.h"
+#include "lib/stringinfo.h"
 #include "nodes/parsenodes.h"
 #include "storage/relfilenode.h"
 
@@ -79,14 +81,14 @@ extern Datum lastval(PG_FUNCTION_ARGS);
 
 extern Datum pg_sequence_parameters(PG_FUNCTION_ARGS);
 
-extern Oid	DefineSequence(CreateSeqStmt *stmt);
-extern Oid	AlterSequence(AlterSeqStmt *stmt);
+extern ObjectAddress DefineSequence(CreateSeqStmt *stmt);
+extern ObjectAddress AlterSequence(AlterSeqStmt *stmt);
 extern void ResetSequence(Oid seq_relid);
 extern void ResetSequenceCaches(void);
 
-extern void seq_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *rptr);
-extern void seq_desc(StringInfo buf, XLogRecord *record);
-
+extern void seq_redo(XLogReaderState *rptr);
+extern void seq_desc(StringInfo buf, XLogReaderState *rptr);
+extern const char *seq_identify(uint8 info);
 extern void seq_mask(char *pagedata, BlockNumber blkno);
 
 #endif   /* SEQUENCE_H */

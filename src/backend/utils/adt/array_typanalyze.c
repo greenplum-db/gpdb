@@ -3,7 +3,7 @@
  * array_typanalyze.c
  *	  Functions for gathering statistics from array columns
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -157,7 +157,7 @@ array_typanalyze(PG_FUNCTION_ARGS)
 }
 
 /*
- * compute_array_stats() -- compute statistics for a array column
+ * compute_array_stats() -- compute statistics for an array column
  *
  * This function computes statistics useful for determining selectivity of
  * the array operators <@, &&, and @>.  It is invoked by ANALYZE via the
@@ -290,12 +290,11 @@ compute_array_stats(VacAttrStats *stats, AnalyzeAttrFetchFunc fetchfunc,
 	MemSet(&count_hash_ctl, 0, sizeof(count_hash_ctl));
 	count_hash_ctl.keysize = sizeof(int);
 	count_hash_ctl.entrysize = sizeof(DECountItem);
-	count_hash_ctl.hash = tag_hash;
 	count_hash_ctl.hcxt = CurrentMemoryContext;
 	count_tab = hash_create("Array distinct element count table",
 							64,
 							&count_hash_ctl,
-							HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+							HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 
 	/* Initialize counters. */
 	b_current = 1;

@@ -66,25 +66,10 @@ The tokens are:
 
 =over 8
 
-=item hostname
-
- gpstringsubs finds the hostname for segment 0 
- from the gp_configuration table and replaces all 
- instances of the token @hostname@.
-
-=item gp_glob_connect
-
- a compound psql connect string, equivalent to the "-connect" option
- for this tool.
-
 =item gpwhich_(executable)
 
  Find the full path for the executable and substitute.  For example, 
  @gpwhich_gpfdist@ is replaced with the full path for "gpfdist".
-
-=item gpcurusername
-
- Replace @gpcurusername@ with the username of the user executing the script.
 
 =back
 
@@ -135,68 +120,6 @@ BEGIN {
 
 }
 
-
-# convert a postgresql psql formatted table into an array of hashes
-sub tablelizer
-{
-    my ($ini, $got_line1) = @_;
-
-    # first, split into separate lines, the find all the column headings
-
-    my @lines = split(/\n/, $ini);
-
-    return undef
-        unless (scalar(@lines));
-
-    # if the first line is supplied, then it has the column headers,
-    # so don't try to find them (or the ---+---- separator) in
-    # "lines"
-    my $line1 = $got_line1;
-    $line1 = shift @lines
-        unless (defined($got_line1));
-
-    # look for <space>|<space>
-    my @colheads = split(/\s+\|\s+/, $line1);
-
-    # fixup first, last column head (remove leading,trailing spaces)
-
-    $colheads[0] =~ s/^\s+//;
-    $colheads[0] =~ s/\s+$//;
-    $colheads[-1] =~ s/^\s+//;
-    $colheads[-1] =~ s/\s+$//;
-
-    return undef
-        unless (scalar(@lines));
-    
-    shift @lines # skip dashed separator (unless it was skipped already)
-        unless (defined($got_line1));
-    
-    my @rows;
-
-    for my $lin (@lines)
-    {
-        my @cols = split(/\|/, $lin, scalar(@colheads));
-        last 
-            unless (scalar(@cols) == scalar(@colheads));
-
-        my $rowh = {};
-
-        for my $colhdcnt (0..(scalar(@colheads)-1))
-        {
-            my $rawcol = shift @cols;
-
-            $rawcol =~ s/^\s+//;
-            $rawcol =~ s/\s+$//;
-
-            my $colhd = $colheads[$colhdcnt];
-            $rowh->{($colhdcnt+1)} = $rawcol;
-        }
-        push @rows, $rowh;
-    }
-
-    return \@rows;
-}
-
 if (1)
 {
     exit(-1)
@@ -210,44 +133,10 @@ if (1)
         exit(-1);
     }
 
-
-    my $psql_str = "psql ";
-    
-    $psql_str .= $glob_connect
-        if (defined($glob_connect));
-
-#    $psql_str .= " -c \'\\d $glob_tab \'";
-
-    $psql_str .= " -c \'select content, role, status, hostname from gp_segment_configuration \'";
-
-#    print $psql_str, "\n";
-
-    my $tabdef = `$psql_str`;
-
-#    print $tabdef;
-
-    my $mpp_config_table = tablelizer($tabdef);
-
-#    print Data::Dumper->Dump([$mpp_config_table]);
-
-    my $hostname= "localhost";
-
-    for my $rowh (@{$mpp_config_table})
-    {
-        if (($rowh->{1} == 0) &&     # content (seg 0)
-            ($rowh->{2} =~ m/p/) &&  # role = primary
-            ($rowh->{3} =~ m/u/))    # status = up
-        {
-            $hostname = $rowh->{4};  # hostname
-            last;
-        }
-        
-    }
-
 	# Get the locale that the database was initialized with- it should be safe to
 	# use this locale for any tests that need to import a locale installed on the
 	# system.
-	$psql_str = "psql ";
+	my $psql_str = "psql ";
 
 	$psql_str .= $glob_connect
 		if (defined($glob_connect));
@@ -255,22 +144,16 @@ if (1)
 	$psql_str .= " -t -A -c 'show LC_CTYPE'";
 
 	my $syslocale = `$psql_str`;
-	my $syslocaleexp = '\\@syslocale\\@';
+	my $syslocaleexp = '\\@gp_syslocale\\@';
 
 	chomp $syslocale;
-
-    my $username = getpwuid($>);
-
-    my $hostexp = '\\@hostname\\@';
-	my $unexp = '\\@gpcurusername\\@';
-	my $gpglobconn = '\\@gp_glob_connect\\@';
 
     my $gpwhich_all  = `grep gpwhich_ $filnam`;
 	my $curdir = `pwd`;
 	chomp $curdir;
 
 #    print "$filnam\n";
-    system "perl -i -ple \' s/$hostexp/$hostname/gm; s/$unexp/$username/gm; s/$gpglobconn/$glob_connect/gm; s/$syslocaleexp/$syslocale/gm; \' $filnam\n";
+    system "perl -i -ple \' s/$syslocaleexp/$syslocale/gm; \' $filnam\n";
 
     # replace all "which" expressions with binary
     if (defined($gpwhich_all) && length($gpwhich_all))

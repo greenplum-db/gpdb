@@ -115,8 +115,12 @@ ExecDML(DMLState *node)
 		 * actions depending on the type of plan (constraint enforcement and
 		 * triggers.)
 		 */
-		ExecInsert(node->cleanedUpSlot,
+		/*GPDB_95_MERGE_FIXME: Dose the DML need to support insert on conflict?*/
+		ExecInsert(NULL,
+				   node->cleanedUpSlot,
 				   NULL,
+				   NULL,
+				   ONCONFLICT_NONE,
 				   node->ps.state,
 				   true, /* GPDB_91_MERGE_FIXME: canSetTag, where to get this? */
 				   PLANGEN_OPTIMIZER /* Plan origin */,
@@ -132,6 +136,22 @@ ExecDML(DMLState *node)
 		ItemPointer  tupleid = (ItemPointer) DatumGetPointer(ctid);
 		ItemPointerData tuple_ctid = *tupleid;
 		tupleid = &tuple_ctid;
+
+		/*
+		 * Sanity check the distribution of the tuple to prevent potential
+		 * data corruption in case users manipulate data incorrectly (e.g.
+		 * insert data on incorrect segments through utility mode) or there is
+		 * bug in code, etc.
+		 */
+		if (AttributeNumberIsValid(node->segid_attno))
+		{
+			int32 segid = DatumGetInt32(slot_getattr(slot, node->segid_attno, &isnull));
+			Assert(!isnull);
+
+			if (segid != GpIdentity.segindex)
+				elog(ERROR, "distribution key of the tuple doesn't belong to "
+					 "current segment (actually from seg%d)", segid);
+		}
 
 		/* Correct tuple count by ignoring deletes when splitting tuples. */
 		ExecDelete(tupleid,
@@ -177,6 +197,24 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 
 	Plan *outerPlan  = outerPlan(node);
 	outerPlanState(dmlstate) = ExecInitNode(outerPlan, estate, eflags);
+
+	/*
+	 * ORCA Plan does not seem to set junk attribute for "gp_segment_id", else we
+	 * could call the simple code below.
+	 * resultRelInfo->ri_segid_attno = ExecFindJunkAttributeInTlist(outerPlanState(dmlstate)->plan->targetlist, "gp_segment_id");
+	 */
+	ListCell   *t;
+	dmlstate->segid_attno = InvalidAttrNumber;
+	foreach(t, outerPlanState(dmlstate)->plan->targetlist)
+	{
+		TargetEntry *tle = lfirst(t);
+
+		if (tle->resname && (strcmp(tle->resname, "gp_segment_id") == 0))
+		{
+			dmlstate->segid_attno = tle->resno;
+			break;
+		}
+	}
 
 	ExecAssignResultTypeFromTL(&dmlstate->ps);
 
@@ -236,7 +274,7 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 		if (resultRelInfo->ri_RelationDesc->rd_rel->relhasindex  &&
 			operation != CMD_DELETE)
 		{
-			ExecOpenIndices(resultRelInfo);
+			ExecOpenIndices(resultRelInfo, false);
 		}
 	}
 

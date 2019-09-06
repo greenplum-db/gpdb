@@ -61,7 +61,7 @@ _bitmap_first(IndexScanDesc scan, ScanDirection dir)
  * _bitmap_next() -- return the next tuple that satisfies a given scan.
  */
 bool
-_bitmap_next(IndexScanDesc scan, ScanDirection dir  __attribute__((unused)))
+_bitmap_next(IndexScanDesc scan, ScanDirection dir  pg_attribute_unused())
 {
 	BMScanOpaque	so;
 	BMScanPosition	scanPos;
@@ -133,7 +133,7 @@ _bitmap_firstbatchwords(IndexScanDesc scan,
  */
 bool
 _bitmap_nextbatchwords(IndexScanDesc scan,
-					   ScanDirection dir  __attribute__((unused)))
+					   ScanDirection dir  pg_attribute_unused())
 {
 	BMScanOpaque	so;
 
@@ -369,7 +369,7 @@ read_words(Relation rel, Buffer lovBuffer, OffsetNumber lovOffset,
  * index predicate.
  */
 void
-_bitmap_findbitmaps(IndexScanDesc scan, ScanDirection dir  __attribute__((unused)))
+_bitmap_findbitmaps(IndexScanDesc scan, ScanDirection dir  pg_attribute_unused())
 {
 	BMScanOpaque			so;
 	BMScanPosition			scanPos;

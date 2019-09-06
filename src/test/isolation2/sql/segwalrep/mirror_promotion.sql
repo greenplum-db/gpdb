@@ -11,8 +11,6 @@
 -- between primary and mirror is still alive and hence walreceiver
 -- also exist during promotion.
 
-create extension if not exists gp_inject_fault;
-
 include: helpers/server_helpers.sql;
 
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
@@ -35,7 +33,7 @@ where content = 0;
 0Uq:
 
 -- fully recover the failed primary as new mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF --no-progress;
 
 -- loop while segments come in sync
 do $$
@@ -89,16 +87,15 @@ where content = 0;
 0U: select 1;
 
 -- create tablespace to test if it works with gprecoverseg -F (pg_basebackup)
-!\retcode mkdir /tmp/mirror_promotion_tablespace_loc;
+!\retcode mkdir -p /tmp/mirror_promotion_tablespace_loc;
 create tablespace mirror_promotion_tablespace location '/tmp/mirror_promotion_tablespace_loc';
 create table mirror_promotion_tblspc_heap_table (a int) tablespace mirror_promotion_tablespace;
 
 -- -- now, let's fully recover the mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF  --no-progress;
 
 drop table mirror_promotion_tblspc_heap_table;
 drop tablespace mirror_promotion_tablespace;
-!\retcode rm -rf /tmp/mirror_promotion_tablespace_loc;
 
 -- loop while segments come in sync
 do $$

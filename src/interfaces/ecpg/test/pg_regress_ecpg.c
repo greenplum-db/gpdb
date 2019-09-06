@@ -8,7 +8,7 @@
  *
  * This code is released under the terms of the PostgreSQL License.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/interfaces/ecpg/test/pg_regress_ecpg.c
@@ -60,8 +60,7 @@ ecpg_filter(const char *sourcefile, const char *outfile)
 			if (plen > 1)
 			{
 				n = (char *) malloc(plen);
-				strncpy(n, p + 1, plen - 1);
-				n[plen - 1] = '\0';
+				StrNCpy(n, p + 1, plen);
 				replace_string(linebuf, n, "");
 			}
 		}

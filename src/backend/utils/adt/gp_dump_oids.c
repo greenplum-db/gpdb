@@ -137,8 +137,9 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 			Query	   *q = lfirst(lc);
 			List	   *q_relationOids = NIL;
 			List	   *q_invalidItems = NIL;
+			bool	   hasRowSecurity = false;
 
-			extract_query_dependencies((Node *) q, &q_relationOids, &q_invalidItems);
+			extract_query_dependencies((Node *) q, &q_relationOids, &q_invalidItems, &hasRowSecurity);
 
 			relationOids = list_concat(relationOids, q_relationOids);
 			invalidItems = list_concat(invalidItems, q_invalidItems);

@@ -6,7 +6,6 @@
 -- when calling DistributedLog_AdvanceOldestXmin().
 
 -- Setup
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE TABLE distributed_snapshot_test1 (a int);
 
 1: BEGIN;
@@ -53,3 +52,36 @@ CREATE TABLE distributed_snapshot_test2 (a int);
 2: INSERT INTO distributed_snapshot_test2 VALUES(2);
 -- expected to see just VALUES(1)
 1: SELECT * FROM distributed_snapshot_test2;
+1: COMMIT;
+
+DROP TABLE distributed_snapshot_test2;
+
+-- Scenario3: Test the one-phase commit transactions don't break repeatable read isolation.
+--
+-- Direct dispatch causes the select statements to be dispatched only to one of
+-- the three demo cluster segments. A segment acquires local snapshot only when it
+-- receives the dispatched statement. If one phase commit relied on local
+-- snapshots only, wrong results are possible depending on the order of local
+-- snapshot acquisition by the segments. This scenario validates that distributed
+-- snapshot is used by the segments to evaluate tuple visibility in case of
+-- one-phase commit and correct results are returned.
+--
+-- connection 40 inserts 100, 100 and 300 serially using one-phase commit
+-- protocol. Repeatable read transactions may read (100), (100,100) or
+-- (100,100,300), but not (100, 300).
+CREATE TABLE distributed_snapshot_test3 (a int);
+10: BEGIN ISOLATION LEVEL REPEATABLE READ;
+20: BEGIN ISOLATION LEVEL REPEATABLE READ;
+30: BEGIN ISOLATION LEVEL REPEATABLE READ;
+40: INSERT INTO distributed_snapshot_test3 VALUES(100);
+10: SELECT gp_segment_id, * FROM distributed_snapshot_test3 where a = 100;
+40: INSERT INTO distributed_snapshot_test3 VALUES(100);
+30: SELECT 123 AS "establish snapshot";
+40: INSERT INTO distributed_snapshot_test3 VALUES(300);
+10: SELECT gp_segment_id, * FROM distributed_snapshot_test3;
+20: SELECT gp_segment_id, * FROM distributed_snapshot_test3;
+30: SELECT gp_segment_id, * FROM distributed_snapshot_test3;
+10: COMMIT;
+20: COMMIT;
+30: COMMIT;
+DROP TABLE distributed_snapshot_test3;

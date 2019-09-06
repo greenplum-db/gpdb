@@ -27,6 +27,10 @@ ifneq (,$(findstring src/common,$(subdir)))
 override CPPFLAGS+= -DBUILDING_DLL
 endif
 
+ifneq (,$(findstring src/port,$(subdir)))
+override CPPFLAGS+= -DBUILDING_DLL
+endif
+
 ifneq (,$(findstring timezone,$(subdir)))
 override CPPFLAGS+= -DBUILDING_DLL
 endif
@@ -71,5 +75,5 @@ win32ver.o: win32ver.rc
 	$(WINDRES) -i $< -o $@ --include-dir=$(top_builddir)/src/include --include-dir=$(srcdir)
 
 # Rule for building a shared library from a single .o file
-%.dll: %.o
-	$(CC) $(CFLAGS) -shared -static-libgcc -o $@ $< -Wl,--export-all-symbols $(LDFLAGS) $(LDFLAGS_SL) $(BE_DLLLIBS)
+%.dll: %.o $(WIN32RES)
+	$(CC) $(CFLAGS) -shared -static-libgcc -o $@ $^ -Wl,--export-all-symbols $(LDFLAGS) $(LDFLAGS_SL) $(BE_DLLLIBS)

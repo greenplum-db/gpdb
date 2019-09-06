@@ -31,7 +31,7 @@ declare
   result bool;
 begin
   i := 0;
-  -- Wait until all mirrors has replayed up to flush location
+  -- Wait until the mirror (content 0) has replayed up to flush location
   loop
     SELECT flush_location = replay_location INTO result from gp_stat_replication where gp_segment_id = 0;
     if result then
@@ -74,7 +74,7 @@ SELECT role, preferred_role, mode, status FROM gp_segment_configuration WHERE co
 
 -- post test cleanup
 -- start_ignore
-\! gprecoverseg -aF;
+\! gprecoverseg -aF --no-progress;
 -- end_ignore
 
 -- loop while segments come in sync

@@ -302,6 +302,7 @@ create aggregate mysum_prefunc(int4) (
   stype=bigint,
   prefunc=int8pl_with_notice
 );
+set optimizer_force_multistage_agg = on;
 select mysum_prefunc(a::int4) from aggtest;
 NOTICE:  combinefunc called
 NOTICE:  combinefunc called
@@ -310,6 +311,7 @@ NOTICE:  combinefunc called
            198
 (1 row)
 
+reset optimizer_force_multistage_agg;
 -- Test an aggregate with 'internal' transition type, and a combine function,
 -- but no serial/deserial functions. This is valid, but we have no use for
 -- the combine function in GPDB in that case.
@@ -328,3 +330,85 @@ select my_numeric_avg(n) from numerictesttab;
  5.5000000000000000
 (1 row)
 
+--- Test distinct on UDF which EXECUTE ON ALL SEGMENTS
+CREATE FUNCTION distinct_test() RETURNS SETOF boolean EXECUTE ON ALL SEGMENTS
+    LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY SELECT true;
+END
+$$;
+SELECT DISTINCT distinct_test();
+ distinct_test 
+---------------
+ t
+(1 row)
+
+DROP FUNCTION distinct_test();
+-- Test multi-phase aggregate with subquery scan
+create table multiagg_with_subquery (i int, j int, k int, m int) distributed by (i);
+insert into multiagg_with_subquery select i, i+1, i+2, i+3 from generate_series(1, 10)i;
+explain (costs off)
+select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)
+   ->  Hash Join
+         Hash Cond: (NOT (share0_ref3.j IS DISTINCT FROM share0_ref1.j))
+         ->  Hash Join
+               Hash Cond: (NOT (share0_ref3.j IS DISTINCT FROM share0_ref2.j))
+               ->  HashAggregate
+                     Group Key: share0_ref3.j
+                     ->  HashAggregate
+                           Group Key: share0_ref3.j, share0_ref3.j
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Hash Key: share0_ref3.j
+                                 ->  HashAggregate
+                                       Group Key: share0_ref3.j, share0_ref3.j
+                                       ->  Shared Scan (share slice:id 1:0)
+               ->  Hash
+                     ->  HashAggregate
+                           Group Key: share0_ref2.j
+                           ->  HashAggregate
+                                 Group Key: share0_ref2.j, share0_ref2.k
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Hash Key: share0_ref2.j
+                                       ->  HashAggregate
+                                             Group Key: share0_ref2.j, share0_ref2.k
+                                             ->  Shared Scan (share slice:id 2:0)
+         ->  Hash
+               ->  HashAggregate
+                     Group Key: share0_ref1.j
+                     ->  HashAggregate
+                           Group Key: share0_ref1.j, share0_ref1.m
+                           ->  Redistribute Motion 3:3  (slice4; segments: 3)
+                                 Hash Key: share0_ref1.j
+                                 ->  HashAggregate
+                                       Group Key: share0_ref1.j, share0_ref1.m
+                                       ->  Shared Scan (share slice:id 4:0)
+                                             ->  Materialize
+                                                   ->  HashAggregate
+                                                         Group Key: multiagg_with_subquery.j, multiagg_with_subquery.k, multiagg_with_subquery.m
+                                                         ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                                               Hash Key: multiagg_with_subquery.j, multiagg_with_subquery.k, multiagg_with_subquery.m
+                                                               ->  HashAggregate
+                                                                     Group Key: multiagg_with_subquery.j, multiagg_with_subquery.k, multiagg_with_subquery.m
+                                                                     ->  Seq Scan on multiagg_with_subquery
+ Optimizer: Postgres query optimizer
+(43 rows)
+
+select count(distinct j), count(distinct k), count(distinct m) from (select j,k,m from multiagg_with_subquery group by j,k,m ) sub group by j;
+ count | count | count 
+-------+-------+-------
+     1 |     1 |     1
+     1 |     1 |     1
+     1 |     1 |     1
+     1 |     1 |     1
+     1 |     1 |     1
+     1 |     1 |     1
+     1 |     1 |     1
+     1 |     1 |     1
+     1 |     1 |     1
+     1 |     1 |     1
+(10 rows)
+
+drop table multiagg_with_subquery;

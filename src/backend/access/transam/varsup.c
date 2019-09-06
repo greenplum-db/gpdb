@@ -3,7 +3,7 @@
  * varsup.c
  *	  postgres OID & XID variables support routines
  *
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/access/transam/varsup.c
@@ -14,9 +14,11 @@
 #include "postgres.h"
 
 #include "access/clog.h"
+#include "access/commit_ts.h"
 #include "access/subtrans.h"
 #include "access/transam.h"
 #include "access/xact.h"
+#include "access/xlog.h"
 #include "commands/dbcommands.h"
 #include "miscadmin.h"
 #include "postmaster/autovacuum.h"
@@ -52,6 +54,13 @@ TransactionId
 GetNewTransactionId(bool isSubXact)
 {
 	TransactionId xid;
+
+	/*
+	 * Workers synchronize transaction state at the beginning of each parallel
+	 * operation, so we can't account for new XIDs after that point.
+	 */
+	if (IsInParallelMode())
+		elog(ERROR, "cannot assign TransactionIds during a parallel operation");
 
 	/*
 	 * During bootstrap initialization, we return the special bootstrap
@@ -174,9 +183,10 @@ GetNewTransactionId(bool isSubXact)
 	 * XID before we zero the page.  Fortunately, a page of the commit log
 	 * holds 32K or more transactions, so we don't have to do this very often.
 	 *
-	 * Extend pg_subtrans too.
+	 * Extend pg_subtrans and pg_commit_ts too.
 	 */
 	ExtendCLOG(xid);
+	ExtendCommitTs(xid);
 	ExtendSUBTRANS(xid);
 	DistributedLog_Extend(xid);
 
@@ -290,32 +300,6 @@ ReadNewTransactionId(void)
 	LWLockAcquire(XidGenLock, LW_SHARED);
 	xid = ShmemVariableCache->nextXid;
 	LWLockRelease(XidGenLock);
-
-	return xid;
-}
-
-/*
- * Get the last safe XID, i.e. the oldest XID that might exist in any
- * database of our cluster.
- */
-TransactionId
-GetTransactionIdLimit(void)
-{
-	TransactionId xid;
-
-	LWLockAcquire(XidGenLock, LW_SHARED);
-	xid = ShmemVariableCache->oldestXid;
-	LWLockRelease(XidGenLock);
-
-	if (!TransactionIdIsNormal(xid))
-	{
-		/*
-		 * shouldn't happen, but since this value is used in the computation
-		 * of oldest xmin, which determines which tuples be safely vacuumed
-		 * away, let's be paranoid.
-		 */
-		elog(ERROR, "invalid oldestXid limit: %u", xid);
-	}
 
 	return xid;
 }

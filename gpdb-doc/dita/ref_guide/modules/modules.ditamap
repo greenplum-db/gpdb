@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map title="Additional Supplied Modules">
+  <topicref href="intro.xml" navtitle="Additional Supplied Modules">
+    <topicref href="auto-explain.xml" linking="none"/>
+    <topicref href="citext.xml" linking="none"/>
+    <topicref href="dblink.xml" linking="none"/>
+    <topicref href="diskquota.xml" linking="none"/>
+    <topicref href="fuzzystrmatch.xml" linking="none"/>
+    <topicref href="gp_sparse_vector.xml" linking="none"/>
+    <topicref href="hstore.xml" linking="none"/>
+    <topicref href="orafce_ref.xml" linking="none"/>
+    <topicref href="pageinspect.xml" linking="none"/>
+    <topicref href="pgcrypto.xml" linking="none"/>
+    <topicref href="sslinfo.xml"/>
+  </topicref>
+</map>

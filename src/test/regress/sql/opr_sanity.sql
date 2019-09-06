@@ -2,11 +2,12 @@
 -- OPR_SANITY
 -- Sanity checks for common errors in making operator/procedure system tables:
 -- pg_operator, pg_proc, pg_cast, pg_aggregate, pg_am,
--- pg_amop, pg_amproc, pg_opclass, pg_opfamily.
+-- pg_amop, pg_amproc, pg_opclass, pg_opfamily, pg_index.
 --
--- Every test failures in this file should be closely inspected. The
--- description of the failing test should be read carefully before
--- adjusting the expected output.
+-- Every test failure in this file should be closely inspected.
+-- The description of the failing test should be read carefully before
+-- adjusting the expected output.  In most cases, the queries should
+-- not find *any* matching entries.
 --
 -- NB: we assume the oidjoins test will have caught any dangling links,
 -- that is OID or REGPROC fields that are not zero and do not match some
@@ -29,7 +30,9 @@ SELECT ($1 = $2) OR
  ($2 = 'pg_catalog.any'::pg_catalog.regtype) OR
  ($2 = 'pg_catalog.anyarray'::pg_catalog.regtype AND
   EXISTS(select 1 from pg_catalog.pg_type where
-         oid = $1 and typelem != 0 and typlen = -1))
+         oid = $1 and typelem != 0 and typlen = -1)) OR
+ ($2 = 'pg_catalog.anyrange'::pg_catalog.regtype AND
+  (select typtype from pg_catalog.pg_type where oid = $1) = 'r')
 $$ language sql strict stable READS SQL DATA;
 
 -- This one ignores castcontext, so it considers only physical equivalence
@@ -42,7 +45,9 @@ SELECT ($1 = $2) OR
  ($2 = 'pg_catalog.any'::pg_catalog.regtype) OR
  ($2 = 'pg_catalog.anyarray'::pg_catalog.regtype AND
   EXISTS(select 1 from pg_catalog.pg_type where
-         oid = $1 and typelem != 0 and typlen = -1))
+         oid = $1 and typelem != 0 and typlen = -1)) OR
+ ($2 = 'pg_catalog.anyrange'::pg_catalog.regtype AND
+  (select typtype from pg_catalog.pg_type where oid = $1) = 'r')
 $$ language sql strict stable READS SQL DATA;
 
 -- **************** pg_proc ****************
@@ -121,6 +126,7 @@ WHERE p1.oid < p2.oid AND
      p1.proisagg != p2.proisagg OR
      p1.proiswindow != p2.proiswindow OR
      p1.prosecdef != p2.prosecdef OR
+     p1.proleakproof != p2.proleakproof OR
      p1.proisstrict != p2.proisstrict OR
      p1.proretset != p2.proretset OR
      p1.provolatile != p2.provolatile OR
@@ -522,6 +528,22 @@ WHERE p1.oprnegate = p2.oid AND
      p2.oprresult != 'bool'::regtype OR
      p1.oid != p2.oprnegate OR
      p1.oid = p2.oid);
+
+-- Make a list of the names of operators that are claimed to be commutator
+-- pairs.  This list will grow over time, but before accepting a new entry
+-- make sure you didn't link the wrong operators.
+
+SELECT DISTINCT o1.oprname AS op1, o2.oprname AS op2
+FROM pg_operator o1, pg_operator o2
+WHERE o1.oprcom = o2.oid AND o1.oprname <= o2.oprname
+ORDER BY 1, 2;
+
+-- Likewise for negator pairs.
+
+SELECT DISTINCT o1.oprname AS op1, o2.oprname AS op2
+FROM pg_operator o1, pg_operator o2
+WHERE o1.oprnegate = o2.oid AND o1.oprname <= o2.oprname
+ORDER BY 1, 2;
 
 -- A mergejoinable or hashjoinable operator must be binary, must return
 -- boolean, and must have a commutator (itself, unless it's a cross-type
@@ -1286,12 +1308,14 @@ WHERE NOT (
   -- GIN has six support functions. 1-3 are mandatory, 5 is optional, and
   --   at least one of 4 and 6 must be given.
   -- SP-GiST has five support functions, all mandatory
+  -- BRIN has four mandatory support functions, and a bunch of optionals
   amname = 'btree' AND procnums @> '{1}' OR
   amname = 'bitmap' AND procnums @> '{1}' OR
   amname = 'hash' AND procnums = '{1}' OR
   amname = 'gist' AND procnums @> '{1, 2, 3, 4, 5, 6, 7}' OR
   amname = 'gin' AND (procnums @> '{1, 2, 3}' AND (procnums && '{4, 6}')) OR
-  amname = 'spgist' AND procnums = '{1, 2, 3, 4, 5}'
+  amname = 'spgist' AND procnums = '{1, 2, 3, 4, 5}' OR
+  amname = 'brin' AND procnums @> '{1, 2, 3, 4}'
 );
 
 -- Also, check if there are any pg_opclass entries that don't seem to have
@@ -1311,7 +1335,8 @@ WHERE NOT (
   amname = 'hash' AND procnums = '{1}' OR
   amname = 'gist' AND procnums @> '{1, 2, 3, 4, 5, 6, 7}' OR
   amname = 'gin' AND (procnums @> '{1, 2, 3}' AND (procnums && '{4, 6}')) OR
-  amname = 'spgist' AND procnums = '{1, 2, 3, 4, 5}'
+  amname = 'spgist' AND procnums = '{1, 2, 3, 4, 5}' OR
+  amname = 'brin' AND procnums @> '{1, 2, 3, 4}'
 );
 
 -- Unfortunately, we can't check the amproc link very well because the
@@ -1418,3 +1443,66 @@ FROM
          select oid, 'pg_class' as catalgo, relname as name from pg_class) cats
   ) cat_counts
 WHERE oid_count > 1;
+
+-- **************** pg_index ****************
+
+-- Look for illegal values in pg_index fields.
+
+SELECT p1.indexrelid, p1.indrelid
+FROM pg_index as p1
+WHERE p1.indexrelid = 0 OR p1.indrelid = 0 OR
+      p1.indnatts <= 0 OR p1.indnatts > 32;
+
+-- oidvector and int2vector fields should be of length indnatts.
+
+SELECT p1.indexrelid, p1.indrelid
+FROM pg_index as p1
+WHERE array_lower(indkey, 1) != 0 OR array_upper(indkey, 1) != indnatts-1 OR
+    array_lower(indclass, 1) != 0 OR array_upper(indclass, 1) != indnatts-1 OR
+    array_lower(indcollation, 1) != 0 OR array_upper(indcollation, 1) != indnatts-1 OR
+    array_lower(indoption, 1) != 0 OR array_upper(indoption, 1) != indnatts-1;
+
+-- Check that opclasses and collations match the underlying columns.
+-- (As written, this test ignores expression indexes.)
+
+SELECT indexrelid::regclass, indrelid::regclass, attname, atttypid::regtype, opcname
+FROM (SELECT indexrelid, indrelid, unnest(indkey) as ikey,
+             unnest(indclass) as iclass, unnest(indcollation) as icoll
+      FROM pg_index) ss,
+      pg_attribute a,
+      pg_opclass opc
+WHERE a.attrelid = indrelid AND a.attnum = ikey AND opc.oid = iclass AND
+      (NOT binary_coercible(atttypid, opcintype) OR icoll != attcollation);
+
+-- For system catalogs, be even tighter: nearly all indexes should be
+-- exact type matches not binary-coercible matches.  At this writing
+-- the only exception is an OID index on a regproc column.
+
+SELECT indexrelid::regclass, indrelid::regclass, attname, atttypid::regtype, opcname
+FROM (SELECT indexrelid, indrelid, unnest(indkey) as ikey,
+             unnest(indclass) as iclass, unnest(indcollation) as icoll
+      FROM pg_index
+      WHERE indrelid < 16384) ss,
+      pg_attribute a,
+      pg_opclass opc
+WHERE a.attrelid = indrelid AND a.attnum = ikey AND opc.oid = iclass AND
+      (opcintype != atttypid OR icoll != attcollation)
+ORDER BY 1;
+
+-- Check for system catalogs with collation-sensitive ordering.  This is not
+-- a representational error in pg_index, but simply wrong catalog design.
+-- It's bad because we expect to be able to clone template0 and assign the
+-- copy a different database collation.  It would especially not work for
+-- shared catalogs.  Note that although text columns will show a collation
+-- in indcollation, they're still okay to index with text_pattern_ops,
+-- so allow that case.
+
+SELECT indexrelid::regclass, indrelid::regclass, iclass, icoll
+FROM (SELECT indexrelid, indrelid,
+             unnest(indclass) as iclass, unnest(indcollation) as icoll
+      FROM pg_index
+      WHERE indrelid < 16384) ss
+WHERE icoll != 0 AND iclass !=
+    (SELECT oid FROM pg_opclass
+     WHERE opcname = 'text_pattern_ops' AND opcmethod =
+           (SELECT oid FROM pg_am WHERE amname = 'btree'));

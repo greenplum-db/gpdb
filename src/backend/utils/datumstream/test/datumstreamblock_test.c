@@ -9,12 +9,11 @@
  * Unit test function to test the routines added for
  * Delta Compression
  */
-void 
+static void 
 test__DeltaCompression__Core(void **state) 
 {
 	Delta_Compression_status status = DELTA_COMPRESSION_NOT_APPLIED;
 	DatumStreamTypeInfo typeInfo;
-	Datum d;
 
 	DatumStreamBlockWrite* dsw = malloc(sizeof(DatumStreamBlockWrite));
 	memset(dsw, 0, sizeof(DatumStreamBlockWrite));

@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-  <title id="ad143465">SQL Command Reference</title>
+  <title id="ad143465">SQL Commands</title>
   <body>
     <p>The following SQL commands are available in Greenplum Database:</p>
     <ul otherprops="op-print">
@@ -64,6 +64,9 @@
       </li>
       <li id="ad139898">
         <xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="li_fkx_kfy_xgb">
+        <xref href="./ALTER_RULE.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="ad140296">
         <xref href="./ALTER_SCHEMA.xml#topic1" type="topic" format="dita"/>
@@ -394,6 +397,9 @@
       </li>
       <li id="ad139987">
         <xref href="./SET.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./SET_CONSTRAINTS.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="ad139989">
         <xref href="./SET_ROLE.xml#topic1" type="topic" format="dita"/>

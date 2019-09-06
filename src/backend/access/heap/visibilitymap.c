@@ -3,7 +3,7 @@
  * visibilitymap.c
  *	  bitmap for tracking visibility of heap tuples
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -84,6 +84,7 @@
 
 #include "access/heapam_xlog.h"
 #include "access/visibilitymap.h"
+#include "access/xlog.h"
 #include "miscadmin.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
@@ -380,6 +381,11 @@ visibilitymap_count(Relation rel)
 {
 	BlockNumber result = 0;
 	BlockNumber mapBlock;
+
+	if (RelationIsAppendOptimized(rel))
+		ereport(WARNING, (errmsg("visibilitymap_count called with an unsupported relstorage type: %c",
+						  rel->rd_rel->relstorage),
+						  errhint("Expected to be called with a heap relation")));
 
 	for (mapBlock = 0;; mapBlock++)
 	{

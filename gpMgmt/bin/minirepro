@@ -68,7 +68,8 @@ version = '1.13'
 PATH_PREFIX = '/tmp/'
 PGDUMP_FILE = 'pg_dump_out.sql'
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_catalog', 'information_schema', 'gp_toolkit')"
-pgoptions = '-c gp_session_role=utility'
+# unset search path due to CVE-2018-1058
+pgoptions = '-c gp_session_role=utility -c search_path='
 
 class MRQuery(object):
     def __init__(self):
@@ -103,7 +104,7 @@ def get_server_version(cursor):
         sys.exit(1)
 
 def parse_cmd_line():
-    p = OptionParser(usage='Usage: %prog <database> [options]', version='%prog '+version, conflict_handler="resolve")
+    p = OptionParser(usage='Usage: %prog <database> [options]', version='%prog '+version, conflict_handler="resolve", epilog="WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file. Please review output file to ensure it is within corporate policy to transport the output file.")
     p.add_option('-?', '--help', action='help', help='Show this help message and exit')
     p.add_option('-h', '--host', action='store',
                  dest='host', help='Specify a remote host')
@@ -413,6 +414,10 @@ def main():
     f_out.close()
 
     print "--- MiniRepro completed! ---"
+
+    # upon success, leave a warning message about data collected
+    print 'WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file.'
+    print 'Please review output file to ensure it is within corporate policy to transport the output file.'
 
 if __name__ == "__main__":
         main()

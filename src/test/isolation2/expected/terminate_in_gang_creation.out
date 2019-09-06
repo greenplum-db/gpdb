@@ -17,9 +17,6 @@
 -- #16 createGang
 -- #17 AllocateWriterGang
 
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
-
 DROP TABLE IF EXISTS foo;
 DROP
 CREATE TABLE foo (c1 int, c2 int) DISTRIBUTED BY (c1);
@@ -31,12 +28,12 @@ BEGIN
 SELECT gp_inject_fault('create_gang_in_progress', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 SELECT gp_inject_fault('create_gang_in_progress', 'suspend', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 10&: SELECT * FROM foo a JOIN foo b USING (c2);  <waiting ...>
@@ -44,7 +41,7 @@ SELECT gp_inject_fault('create_gang_in_progress', 'suspend', 1);
 SELECT gp_wait_until_triggered_fault('create_gang_in_progress', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 
 SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query = 'SELECT * FROM foo a JOIN foo b USING (c2);';
@@ -56,7 +53,7 @@ SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query = 'SELECT * F
 SELECT gp_inject_fault('create_gang_in_progress', 'resume', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 10<:  <... completed>

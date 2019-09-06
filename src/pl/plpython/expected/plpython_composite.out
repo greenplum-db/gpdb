@@ -463,7 +463,7 @@ SELECT * FROM changing_test();
  1 | (3,4)
 (2 rows)
 
--- tables of composite types (not yet implemented)
+-- tables of composite types
 CREATE FUNCTION composite_types_table(OUT tab table_record[], OUT typ type_record[] ) RETURNS SETOF record AS $$
 yield {'tab': [['first', 1], ['second', 2]],
       'typ': [{'first': 'third', 'second': 3},
@@ -478,7 +478,6 @@ $$ LANGUAGE plpythonu;
 SELECT * FROM composite_types_table();
 ERROR:  malformed record literal: "first"
 DETAIL:  Missing left parenthesis.
-HINT:  To return a composite type in an array, return the composite type as a Python tuple, e.g. "[('foo')]"
 CONTEXT:  while creating return value
 PL/Python function "composite_types_table"
 -- check what happens if the output record descriptor changes

@@ -12,78 +12,63 @@
                 additional client utilities for administering a distributed Greenplum Database DBMS.
                 Greenplum Database client utilities reside in <codeph>$GPHOME/bin.</codeph></p>
         </section>
-        <p>The following are the Greenplum Database client utilities.</p>
-        <ul>
+        <p>Greenplum Database provides the following client utility programs:</p>
+        <simpletable frame="all" relcolwidth="1.0* 1.0* 1.0*" otherprops="op-help">
+        <strow>
+          <stentry>
+          <ul>
             <li id="ox150043">
-                <p>
-                    <xref href="client_utilities/clusterdb.xml#topic1" type="topic" format="dita"/>
-                </p>
-            </li>
+              <xref href="client_utilities/clusterdb.xml#topic1" type="topic" format="dita"/> </li>
             <li id="ox150034">
-                <p>
-                    <xref href="client_utilities/createdb.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/createdb.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox150038">
-                <p>
-                    <xref href="client_utilities/createlang.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/createlang.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox149578">
-                <p>
-                    <xref href="client_utilities/createuser.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/createuser.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox149582">
-                <p>
-                    <xref href="client_utilities/dropdb.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/dropdb.xml#topic1" type="topic" format="dita"/>
             </li>
+          </ul>
+          </stentry>
+          <stentry>
+            <ul>
             <li id="ox149590">
-                <p>
-                    <xref href="client_utilities/droplang.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/droplang.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox149591">
-                <p>
-                    <xref href="client_utilities/dropuser.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/dropuser.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox149593">
-                <p>
-                    <xref href="client_utilities/pg_config.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/pg_config.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox149594">
-                <p>
-                    <xref href="client_utilities/pg_dump.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/pg_dump.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox149595">
-                <p>
-                    <xref href="client_utilities/pg_dumpall.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/pg_dumpall.xml#topic1" type="topic" format="dita"/>
             </li>
+          </ul>
+          </stentry>
+          <stentry>
+          <ul>
             <li id="ox149638">
-                <p>
-                    <xref href="client_utilities/pg_restore.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/pg_restore.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox149639">
-                <p>
-                    <xref href="client_utilities/psql.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/psql.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox149640">
-                <p>
-                    <xref href="client_utilities/reindexdb.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/reindexdb.xml#topic1" type="topic" format="dita"/>
             </li>
             <li id="ox149641">
-                <p>
-                    <xref href="client_utilities/vacuumdb.xml#topic1" type="topic" format="dita"/>
-                </p>
+              <xref href="client_utilities/vacuumdb.xml#topic1" type="topic" format="dita"/>
             </li>
-        </ul>
+          </ul>
+          </stentry>
+        </strow>
+      </simpletable>
     </body>
 </topic>

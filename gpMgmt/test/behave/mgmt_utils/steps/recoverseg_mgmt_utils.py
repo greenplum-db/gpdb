@@ -66,11 +66,8 @@ def impl(context, seg):
 
     datadir_grep = '[' + datadir[0] + ']' + datadir[1:]
     cmdStr = "ps ux | grep %s | awk '{print $2}' | xargs kill" % datadir_grep
-    cmd = Command(name='get %s pid: %s' % (seg, cmdStr),
-                  cmdStr=cmdStr,
-                  ctxt=REMOTE,
-                  remoteHost=seghost)
-    cmd.run()
+
+    subprocess.check_call(['ssh', seghost, cmdStr])
 
 @then('the saved primary segment reports the same value for sql "{sql_cmd}" db "{dbname}" as was saved')
 def impl(context, sql_cmd, dbname):
@@ -108,3 +105,20 @@ def runCommandOnRemoteSegment(context, cid, sql_cmd):
     host = host.strip()
     psql_cmd = "PGDATABASE=\'template1\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (host, port, sql_cmd)
     Command(name='Running Remote command: %s' % psql_cmd, cmdStr = psql_cmd).run(validateAfter=True)
+
+@then('gprecoverseg should print "{output}" to stdout for each mirror')
+def impl(context, output):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+
+    for segment in segments:
+        if segment.isSegmentMirror():
+            expected = r'\(dbid {}\): {}'.format(segment.dbid, output)
+            check_stdout_msg(context, expected)
+
+@then('pg_isready reports all primaries are accepting connections')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
+    for seg in primary_segs:
+        subprocess.check_call(['pg_isready', '-h', seg.getSegmentHostName(), '-p', str(seg.getSegmentPort())])

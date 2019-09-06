@@ -21,7 +21,7 @@ explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b wh
                Recheck Cond: id = bar.id
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
                      Index Cond: id = bar.id
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (9 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
@@ -45,7 +45,7 @@ explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b wh
                Recheck Cond: id = bar.id
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
                      Index Cond: id = bar.id
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (9 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
@@ -70,7 +70,7 @@ explain select f.id from co_nestloop_idxscan.bar b, co_nestloop_idxscan.foo f wh
                Recheck Cond: id = bar.id
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
                      Index Cond: id = bar.id
- Optimizer: PQO version 2.64.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
 (9 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;

@@ -326,3 +326,35 @@ with yy as (
    where n = iv.p
 )
 select * from x, yy;
+
+-- Check that WITH query is run to completion even if outer query isn't.
+-- This is a test which exists in the upstream 'with' test suite in a section
+-- which is currently under an ignore block. It has been copied here to avoid
+-- merge conflicts since enabling it in the upstream test suite would require
+-- altering the test output (as it depends on earlier tests which are failing
+-- in GPDB currently).
+DELETE FROM y;
+INSERT INTO y SELECT generate_series(1,15) m;
+WITH t AS (
+    UPDATE y SET m = m * 100 RETURNING *
+)
+SELECT m BETWEEN 100 AND 1500 FROM t LIMIT 1;
+
+SELECT * FROM y;
+
+-- Nested RECURSIVE queries with double self-referential joins are planned by
+-- joining two WorkTableScans, which GPDB cannot do yet. Ensure that we error
+-- out with a descriptive message.
+WITH RECURSIVE r1 AS (
+	SELECT 1 AS a
+	UNION ALL
+	(
+		WITH RECURSIVE r2 AS (
+			SELECT 2 AS b
+			UNION ALL
+			SELECT b FROM r1, r2
+		)
+		SELECT b FROM r2
+	)
+)
+SELECT * FROM r1 LIMIT 1;

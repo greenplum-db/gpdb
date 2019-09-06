@@ -38,7 +38,7 @@
  *
  * This code is released under the terms of the PostgreSQL License.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/initdb/initdb.c
@@ -61,6 +61,7 @@
 #endif
 
 #include "catalog/catalog.h"
+#include "common/restricted_token.h"
 #include "common/username.h"
 #include "mb/pg_wchar.h"
 #include "getaddrinfo.h"
@@ -134,7 +135,7 @@ static char *backend_output = DEVNULL;
 
 /**
  * Build the minimal set of files needed for a mirror db.  Note that this could be removed
- *  eventually if we do a smarter copy of files from primary (with postresql.conf updates)
+ *  eventually if we do a smarter copy of files from primary (with postgresql.conf updates)
  */
 static bool forMirrorOnly = false;
 static bool do_sync = true;
@@ -197,13 +198,11 @@ static char *authwarning = NULL;
 static const char *boot_options = "-F";
 static const char *backend_options = "--single -F -O -c gp_session_role=utility -c search_path=pg_catalog -c exit_on_error=true";
 
-#ifdef WIN32
-char	   *restrict_env;
-#endif
 static const char *subdirs[] = {
 	"global",
 	"pg_xlog/archive_status",
 	"pg_clog",
+	"pg_commit_ts",
 	"pg_dynshmem",
 	"pg_notify",
 	"pg_serial",
@@ -235,7 +234,7 @@ static char backend_exec[MAXPGPATH];
 
 static char **add_assignment(char **lines, const char *varname, const char *fmt, ...)
                 /* This extension allows gcc to check the format string */
-                __attribute__((format(printf, 3, 4)));
+                pg_attribute_printf(3, 4);
 static char **replace_token(char **lines,
 			  const char *token, const char *replacement);
 
@@ -290,7 +289,6 @@ static void check_locale_name(int category, const char *locale,
 static bool check_locale_encoding(const char *locale, int encoding);
 static void setlocales(void);
 static void usage(const char *progname);
-void		get_restricted_token(void);
 void		setup_pgdata(void);
 void		setup_bin_paths(const char *argv0);
 void		setup_data_file_paths(void);
@@ -301,12 +299,6 @@ void		create_data_directory(void);
 void		create_xlog_or_symlink(void);
 void		warn_on_mount_point(int error);
 void		initialize_data_directory(void);
-
-
-#ifdef WIN32
-static int	CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo);
-#endif
-
 
 /*
  * macros for running pipes to postgres
@@ -508,9 +500,9 @@ replace_token(char **lines, const char *token, const char *replacement)
 
 		pre = where - lines[i];
 
-		strncpy(newline, lines[i], pre);
+		memcpy(newline, lines[i], pre);
 
-		strcpy(newline + pre, replacement);
+		memcpy(newline + pre, replacement, replen);
 
 		strcpy(newline + pre + replen, lines[i] + pre + toklen);
 
@@ -1411,6 +1403,12 @@ setup_config(void)
 			 dynamic_shared_memory_type);
 	conflines = replace_token(conflines, "#dynamic_shared_memory_type = posix",
 							  repltok);
+
+#ifndef USE_PREFETCH
+	conflines = replace_token(conflines,
+							  "#effective_io_concurrency = 1",
+							  "#effective_io_concurrency = 0");
+#endif
 
 	conflines = add_assignment(conflines, "include", "'%s'",
 							   GP_INTERNAL_AUTO_CONF_FILE_NAME);
@@ -2378,7 +2376,8 @@ vacuum_db(void)
 
 	PG_CMD_OPEN;
 
-	PG_CMD_PUTS("ANALYZE;\nVACUUM FULL;\nVACUUM FREEZE;\n");
+	/* Run analyze before VACUUM so the statistics are frozen. */
+	PG_CMD_PUTS("ANALYZE;\nVACUUM FREEZE;\n");
 
 	PG_CMD_CLOSE;
 
@@ -2394,11 +2393,7 @@ make_template0(void)
 	PG_CMD_DECL;
 	const char **line;
 	static const char *template0_setup[] = {
-		"CREATE DATABASE template0;\n",
-		"UPDATE pg_database SET "
-		"	datistemplate = 't', "
-		"	datallowconn = 'f' "
-		"    WHERE datname = 'template0';\n",
+		"CREATE DATABASE template0 IS_TEMPLATE = true ALLOW_CONNECTIONS = false;\n",
 
 		/*
 		 * We use the OID of template0 to determine lastsysoid
@@ -2902,117 +2897,6 @@ err:
     return 0;                   /* not reached */
 }                               /* parse_long */
 
-
-#ifdef WIN32
-typedef BOOL (WINAPI * __CreateRestrictedToken) (HANDLE, DWORD, DWORD, PSID_AND_ATTRIBUTES, DWORD, PLUID_AND_ATTRIBUTES, DWORD, PSID_AND_ATTRIBUTES, PHANDLE);
-
-/* Windows API define missing from some versions of MingW headers */
-#ifndef  DISABLE_MAX_PRIVILEGE
-#define DISABLE_MAX_PRIVILEGE	0x1
-#endif
-
-/*
- * Create a restricted token and execute the specified process with it.
- *
- * Returns 0 on failure, non-zero on success, same as CreateProcess().
- *
- * On NT4, or any other system not containing the required functions, will
- * NOT execute anything.
- */
-static int
-CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo)
-{
-	BOOL		b;
-	STARTUPINFO si;
-	HANDLE		origToken;
-	HANDLE		restrictedToken;
-	SID_IDENTIFIER_AUTHORITY NtAuthority = {SECURITY_NT_AUTHORITY};
-	SID_AND_ATTRIBUTES dropSids[2];
-	__CreateRestrictedToken _CreateRestrictedToken = NULL;
-	HANDLE		Advapi32Handle;
-
-	ZeroMemory(&si, sizeof(si));
-	si.cb = sizeof(si);
-
-	Advapi32Handle = LoadLibrary("ADVAPI32.DLL");
-	if (Advapi32Handle != NULL)
-	{
-		_CreateRestrictedToken = (__CreateRestrictedToken) GetProcAddress(Advapi32Handle, "CreateRestrictedToken");
-	}
-
-	if (_CreateRestrictedToken == NULL)
-	{
-		fprintf(stderr, _("%s: WARNING: cannot create restricted tokens on this platform\n"), progname);
-		if (Advapi32Handle != NULL)
-			FreeLibrary(Advapi32Handle);
-		return 0;
-	}
-
-	/* Open the current token to use as a base for the restricted one */
-	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &origToken))
-	{
-		fprintf(stderr, _("%s: could not open process token: error code %lu\n"), progname, GetLastError());
-		return 0;
-	}
-
-	/* Allocate list of SIDs to remove */
-	ZeroMemory(&dropSids, sizeof(dropSids));
-	if (!AllocateAndInitializeSid(&NtAuthority, 2,
-		 SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0,
-								  0, &dropSids[0].Sid) ||
-		!AllocateAndInitializeSid(&NtAuthority, 2,
-	SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0,
-								  0, &dropSids[1].Sid))
-	{
-		fprintf(stderr, _("%s: could not allocate SIDs: error code %lu\n"),
-				progname, GetLastError());
-		return 0;
-	}
-
-	b = _CreateRestrictedToken(origToken,
-							   DISABLE_MAX_PRIVILEGE,
-							   sizeof(dropSids) / sizeof(dropSids[0]),
-							   dropSids,
-							   0, NULL,
-							   0, NULL,
-							   &restrictedToken);
-
-	FreeSid(dropSids[1].Sid);
-	FreeSid(dropSids[0].Sid);
-	CloseHandle(origToken);
-	FreeLibrary(Advapi32Handle);
-
-	if (!b)
-	{
-		fprintf(stderr, _("%s: could not create restricted token: error code %lu\n"), progname, GetLastError());
-		return 0;
-	}
-
-#ifndef __CYGWIN__
-	AddUserToTokenDacl(restrictedToken);
-#endif
-
-	if (!CreateProcessAsUser(restrictedToken,
-							 NULL,
-							 cmd,
-							 NULL,
-							 NULL,
-							 TRUE,
-							 CREATE_SUSPENDED,
-							 NULL,
-							 NULL,
-							 &si,
-							 processInfo))
-
-	{
-		fprintf(stderr, _("%s: could not start process for command \"%s\": error code %lu\n"), progname, cmd, GetLastError());
-		return 0;
-	}
-
-	return ResumeThread(processInfo->hThread);
-}
-#endif
-
 /*
  * print help text
  */
@@ -3034,7 +2918,6 @@ usage(const char *progname)
 			 "                            set default locale in the respective category for\n"
 			 "                            new databases (default taken from environment)\n"));
 	printf(_("      --no-locale           equivalent to --locale=C\n"));
-	printf(_("      --is_filerep_mirrored=yes|no whether or not this db directory will be mirrored by file replication\n"));
 	printf(_("      --pwfile=FILE         read password for the new superuser from file\n"));
 	printf(_("  -T, --text-search-config=CFG\n"
 		 "                            default text search configuration\n"));
@@ -3113,53 +2996,6 @@ check_need_password(const char *authmethodlocal, const char *authmethodhost)
 	}
 }
 
-void
-get_restricted_token(void)
-{
-#ifdef WIN32
-
-	/*
-	 * Before we execute another program, make sure that we are running with a
-	 * restricted token. If not, re-execute ourselves with one.
-	 */
-
-	if ((restrict_env = getenv("PG_RESTRICT_EXEC")) == NULL
-		|| strcmp(restrict_env, "1") != 0)
-	{
-		PROCESS_INFORMATION pi;
-		char	   *cmdline;
-
-		ZeroMemory(&pi, sizeof(pi));
-
-		cmdline = pg_strdup(GetCommandLine());
-
-		putenv("PG_RESTRICT_EXEC=1");
-
-		if (!CreateRestrictedProcess(cmdline, &pi))
-		{
-			fprintf(stderr, _("%s: could not re-execute with restricted token: error code %lu\n"), progname, GetLastError());
-		}
-		else
-		{
-			/*
-			 * Successfully re-execed. Now wait for child process to capture
-			 * exitcode.
-			 */
-			DWORD		x;
-
-			CloseHandle(pi.hThread);
-			WaitForSingleObject(pi.hProcess, INFINITE);
-
-			if (!GetExitCodeProcess(pi.hProcess, &x))
-			{
-				fprintf(stderr, _("%s: could not get exit code from subprocess: error code %lu\n"), progname, GetLastError());
-				exit(1);
-			}
-			exit(x);
-		}
-	}
-#endif
-}
 
 void
 setup_pgdata(void)
@@ -4004,7 +3840,7 @@ main(int argc, char *argv[])
 
 	check_need_password(authmethodlocal, authmethodhost);
 
-	get_restricted_token();
+	get_restricted_token(progname);
 
 	setup_pgdata();
 
@@ -4051,11 +3887,7 @@ main(int argc, char *argv[])
 	get_parent_directory(bin_dir);
 
 	printf(_("\nSuccess. You can now start the database server using:\n\n"
-			 "    %s%s%spostgres%s -D %s%s%s\n"
-			 "or\n"
 			 "    %s%s%spg_ctl%s -D %s%s%s -l logfile start\n\n"),
-	   QUOTE_PATH, bin_dir, (strlen(bin_dir) > 0) ? DIR_SEP : "", QUOTE_PATH,
-		   QUOTE_PATH, pgdata_native, QUOTE_PATH,
 	   QUOTE_PATH, bin_dir, (strlen(bin_dir) > 0) ? DIR_SEP : "", QUOTE_PATH,
 		   QUOTE_PATH, pgdata_native, QUOTE_PATH);
 

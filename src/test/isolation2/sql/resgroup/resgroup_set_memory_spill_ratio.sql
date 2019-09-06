@@ -30,7 +30,7 @@ SET MEMORY_SPILL_RATIO TO 70;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
 
--- positive set to session level
+-- positive fallback to statement_mem at session level
 SET MEMORY_SPILL_RATIO TO 0;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;

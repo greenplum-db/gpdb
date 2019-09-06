@@ -47,9 +47,9 @@
 
 --Exchange partition
  -- Create candidate table
- create table heap_can(like pt_heap_tab);  
- create table ao_can(like pt_heap_tab) with (appendonly=true);   
- create table co_can(like pt_heap_tab)  with (appendonly=true,orientation=column);   
+ create table heap_can(like pt_heap_tab including indexes);
+ create table ao_can(like pt_heap_tab including indexes) with (appendonly=true);
+ create table co_can(like pt_heap_tab including indexes)  with (appendonly=true,orientation=column);
 
  -- Exchange
  alter table pt_heap_tab exchange partition for ('abc') with table ao_can ; -- Heap exchanged with  AO
@@ -130,9 +130,9 @@ drop table if exists ao_can cascade;
 drop table if exists co_can cascade;
 --end_ignore
 
- create table heap_can(like pt_ao_tab);  
- create table ao_can(like pt_ao_tab) with (appendonly=true);   
- create table co_can(like pt_ao_tab)  with (appendonly=true,orientation=column);   
+ create table heap_can(like pt_ao_tab including indexes);
+ create table ao_can(like pt_ao_tab including indexes) with (appendonly=true);
+ create table co_can(like pt_ao_tab including indexes)  with (appendonly=true,orientation=column);
 
  -- Exchange
  alter table pt_ao_tab add partition pqr values ('pqr','pqr1','pqr2') WITH (appendonly=true,orientation=column,compresslevel=5);-- CO
@@ -221,9 +221,9 @@ drop table if exists ao_can cascade;
 drop table if exists co_can cascade;
 --end_ignore
 
- create table heap_can(like pt_co_tab);  
- create table ao_can(like pt_co_tab) with (appendonly=true);   
- create table co_can(like pt_co_tab)  with (appendonly=true,orientation=column);   
+ create table heap_can(like pt_co_tab including indexes);
+ create table ao_can(like pt_co_tab including indexes) with (appendonly=true);
+ create table co_can(like pt_co_tab including indexes)  with (appendonly=true,orientation=column);
 
  -- Exchange
  alter table pt_co_tab add partition pqr values ('pqr','pqr1','pqr2') WITH (appendonly=true,compresslevel=5);-- AO
@@ -294,9 +294,9 @@ drop table if exists co_can cascade;
   drop table if exists co_can;
 --end_ignore
 
-  create table heap_can(like pt_heap_tab_rng);  
-  create table ao_can(like pt_heap_tab_rng) with (appendonly=true);   
-  create table co_can(like pt_heap_tab_rng)  with (appendonly=true,orientation=column);   
+  create table heap_can(like pt_heap_tab_rng including indexes);
+  create table ao_can(like pt_heap_tab_rng including indexes) with (appendonly=true);
+  create table co_can(like pt_heap_tab_rng including indexes)  with (appendonly=true,orientation=column);
 
  alter table pt_heap_tab_rng add partition newco start(36) end(40) with (appendonly= true, orientation = column);
  alter table pt_heap_tab_rng add partition newao start(40) end(45) with (appendonly= true);
@@ -363,9 +363,9 @@ drop table if exists heap_can cascade;
 drop table if exists ao_can cascade;
 drop table if exists co_can cascade;
 --end_ignore
-  create table heap_can(like pt_ao_tab_rng);  
-  create table ao_can(like pt_ao_tab_rng) with (appendonly=true);   
-  create table co_can(like pt_ao_tab_rng)  with (appendonly=true,orientation=column);   
+  create table heap_can(like pt_ao_tab_rng including indexes);
+  create table ao_can(like pt_ao_tab_rng including indexes) with (appendonly=true);
+  create table co_can(like pt_ao_tab_rng including indexes)  with (appendonly=true,orientation=column);
 
  alter table pt_ao_tab_rng add partition newco start(36) end(40) with (appendonly= true, orientation = column);
  alter table pt_ao_tab_rng add partition newheap start(40) end(45) with (appendonly= false);
@@ -433,9 +433,9 @@ drop table if exists heap_can cascade;
 drop table if exists ao_can cascade;
 drop table if exists co_can cascade;
 --end_ignore
-  create table heap_can(like pt_co_tab_rng);  
-  create table ao_can(like pt_co_tab_rng) with (appendonly=true);   
-  create table co_can(like pt_co_tab_rng)  with (appendonly=true,orientation=column);   
+  create table heap_can(like pt_co_tab_rng including indexes);
+  create table ao_can(like pt_co_tab_rng including indexes) with (appendonly=true);
+  create table co_can(like pt_co_tab_rng including indexes)  with (appendonly=true,orientation=column);
 
  alter table pt_co_tab_rng add partition newao start(36) end(40) with (appendonly= true);
  alter table pt_co_tab_rng add partition newheap start(40) end(45) with (appendonly= false);

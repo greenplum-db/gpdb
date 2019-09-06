@@ -21,8 +21,12 @@ include: helpers/server_helpers.sql;
 CREATE OR REPLACE FUNCTION wait_till_master_shutsdown()
 RETURNS void AS
 $$
+  DECLARE
+    i int; /* in func */
   BEGIN
-    loop
+    i := 0; /* in func */
+    while i < 120 loop
+      i := i + 1; /* in func */
       PERFORM pg_sleep(.5); /* in func */
     end loop; /* in func */
   END; /* in func */
@@ -40,17 +44,17 @@ $$ LANGUAGE plpgsql;
 -- broadcast failed before recovery. Master used to miss sending the
 -- COMMIT PREPARED across restart and instead abort the transaction
 -- after querying in-doubt prepared transactions from segments.
-1: CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- Inject fault to fail the COMMIT PREPARED always on one segment, till fault is not reset
-1: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'error', 2);
--- create utility session to segment which will be used to reset the fault
-0U: SELECT 1;
+1: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'error', dbid)
+   from gp_segment_configuration where content=0 and role='p';
 -- Start looping in background, till master panics and closes the session
 3&: SELECT wait_till_master_shutsdown();
 -- Start transaction which should hit PANIC as COMMIT PREPARED will fail to one segment
 1: CREATE TABLE commit_phase1_panic(a int, b int);
--- Reset the fault using utility mode connection
-0U: SELECT gp_inject_fault('finish_prepared_start_of_function', 'reset', 2);
+-- Reset the fault in utility mode because normal mode connection will
+-- not be accepted until DTX recovery is finished.
+-1U: SELECT gp_inject_fault('finish_prepared_start_of_function', 'reset', dbid)
+     from gp_segment_configuration where content=0 and role='p';
 -- Join back to know master has completed postmaster reset.
 3<:
 -- Start a session on master which would complete the DTM recovery and hence COMMIT PREPARED
@@ -68,13 +72,15 @@ $$ LANGUAGE plpgsql;
 -- Start looping in background, till master panics and closes the
 -- session
 5&: SELECT wait_till_master_shutsdown();
-6: SELECT gp_inject_fault('dtm_broadcast_commit_prepared', 'fatal', 1);
+6: SELECT gp_inject_fault('dtm_broadcast_commit_prepared', 'fatal', dbid)
+   from gp_segment_configuration where role='p' and content=-1;
 6: CREATE TABLE commit_fatal_fault_test_table(a int, b int);
 5<:
 -- Start a session on master which would complete the DTM recovery and hence COMMIT PREPARED
 7: SELECT count(*) from commit_fatal_fault_test_table;
 7: SELECT * FROM gp_dist_random('pg_prepared_xacts');
-7: SELECT gp_inject_fault('dtm_broadcast_commit_prepared', 'reset', 1);
+7: SELECT gp_inject_fault('dtm_broadcast_commit_prepared', 'reset', dbid)
+   from gp_segment_configuration where role='p' and content=-1;
 
 -- Scenario 3: Inject ERROR after prepare phase has completed to
 -- trigger abort. Then on abort inject FATAL on master before sending
@@ -87,14 +93,18 @@ $$ LANGUAGE plpgsql;
 -- Start looping in background, till master panics and closes the
 -- session
 8&: SELECT wait_till_master_shutsdown();
-9: SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'error', 1);
-9: SELECT gp_inject_fault('dtm_broadcast_abort_prepared', 'fatal', 1);
+9: SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'error', dbid)
+   from gp_segment_configuration where role='p' and content=-1;
+9: SELECT gp_inject_fault('dtm_broadcast_abort_prepared', 'fatal', dbid)
+   from gp_segment_configuration where role='p' and content=-1;
 9: CREATE TABLE abort_fatal_fault_test_table(a int, b int);
 8<:
 10: SELECT count(*) from abort_fatal_fault_test_table;
 10: SELECT * FROM gp_dist_random('pg_prepared_xacts');
-10: SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'reset', 1);
-10: SELECT gp_inject_fault('dtm_broadcast_abort_prepared', 'reset', 1);
+10: SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'reset', dbid)
+    from gp_segment_configuration where role='p' and content=-1;
+10: SELECT gp_inject_fault('dtm_broadcast_abort_prepared', 'reset', dbid)
+    from gp_segment_configuration where role='p' and content=-1;
 
 -- Scenario 4: QE panics after writing prepare xlog record. This
 -- should cause master to broadcast abort and QEs handle the abort in
@@ -109,17 +119,22 @@ $$ LANGUAGE plpgsql;
 11: alter system set dtx_phase2_retry_count to 1500;
 11: select pg_reload_conf();
 -- skip FTS probes always
-11: SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
+11: SELECT gp_inject_fault_infinite('fts_probe', 'skip', dbid)
+    from gp_segment_configuration where role='p' and content=-1;
 11: SELECT gp_request_fts_probe_scan();
-11: select gp_wait_until_triggered_fault('fts_probe', 1, 1);
-11: SELECT gp_inject_fault('end_prepare_two_phase', 'infinite_loop', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+11: select gp_wait_until_triggered_fault('fts_probe', 1, dbid)
+    from gp_segment_configuration where role='p' and content=-1;
+11: SELECT gp_inject_fault('end_prepare_two_phase', 'infinite_loop', dbid)
+    from gp_segment_configuration where role='p' and content=0;
 -- statement to trigger fault after writing prepare record
 12&: DELETE FROM QE_panic_test_table;
-11: SELECT gp_wait_until_triggered_fault('end_prepare_two_phase', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+11: SELECT gp_wait_until_triggered_fault('end_prepare_two_phase', 1, dbid)
+    from gp_segment_configuration where role='p' and content=0;
 11: SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
 12<:
 13: SELECT count(*) from QE_panic_test_table;
 13: SELECT * FROM gp_dist_random('pg_prepared_xacts');
-13: SELECT gp_inject_fault('fts_probe', 'reset', 1);
+13: SELECT gp_inject_fault('fts_probe', 'reset', dbid)
+    from gp_segment_configuration where role='p' and content=-1;
 13: alter system reset dtx_phase2_retry_count;
 13: select pg_reload_conf();

@@ -3,7 +3,7 @@
  * hashovfl.c
  *	  Overflow page management code for the Postgres hash access method
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -578,7 +578,7 @@ _hash_initbitmap(Relation rel, HashMetaPage metap, BlockNumber blkno,
  */
 void
 _hash_squeezebucket(Relation rel,
-					Bucket bucket __attribute__((unused)),
+					Bucket bucket pg_attribute_unused(),
 					BlockNumber bucket_blkno,
 					BufferAccessStrategy bstrategy)
 {

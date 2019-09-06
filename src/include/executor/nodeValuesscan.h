@@ -4,7 +4,7 @@
  *
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/nodeValuesscan.h
@@ -19,8 +19,6 @@
 extern ValuesScanState *ExecInitValuesScan(ValuesScan *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecValuesScan(ValuesScanState *node);
 extern void ExecEndValuesScan(ValuesScanState *node);
-extern void ExecValuesMarkPos(ValuesScanState *node);
-extern void ExecValuesRestrPos(ValuesScanState *node);
 extern void ExecReScanValuesScan(ValuesScanState *node);
 
 #endif   /* NODEVALUESSCAN_H */

@@ -2412,7 +2412,7 @@ from orca.bar1 inner join orca.bar2 on (bar1.x2 = bar2.x2) order by bar1.x1;
                                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.20 rows=1 width=0)
                                          ->  Seq Scan on foo  (cost=0.00..3.20 rows=1 width=0)
  Settings:  optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (23 rows)
 
 select case when bar1.x2 = bar2.x2 then coalesce((select 1 from orca.foo where bar1.x2 = bar2.x2 and bar1.x2 = random() and foo.x2 = bar2.x2),0) else 1 end as col1, bar1.x1
@@ -3492,7 +3492,7 @@ explain  select * from orca.r, orca.s where r.a is not distinct from s.c;
          ->  Materialize  (cost=0.00..4.30 rows=20 width=8)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4.00 rows=20 width=8)
                      ->  Seq Scan on r  (cost=0.00..3.20 rows=7 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 -- explain Hash Join with equality join condition
@@ -3507,7 +3507,7 @@ explain select * from orca.r, orca.s where r.a = s.c;
          ->  Hash  (cost=3.20..3.20 rows=7 width=8)
                ->  Seq Scan on r  (cost=0.00..3.20 rows=7 width=8)
  Settings:  optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 -- sort
@@ -4322,27 +4322,7 @@ select 1 from orca.r group by ();
  ?column? 
 ----------
         1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-        1
-(21 rows)
+(1 row)
 
 select a,1 from orca.r group by rollup(a);
  a  | ?column? 
@@ -8171,7 +8151,7 @@ explain select * from orca.t order by 1,2;
                ->  Seq Scan on t_1_prt_part201206  (cost=0.00..364.00 rows=8800 width=94)
                ->  Seq Scan on t_1_prt_part201207  (cost=0.00..364.00 rows=8800 width=94)
                ->  Seq Scan on t_1_prt_part201208  (cost=0.00..364.00 rows=8800 width=94)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 select tag2, tag1 from orca.t order by 1, 2;;
@@ -8265,7 +8245,7 @@ explain select * from orca.t_date where user_id=9;
                Filter: user_id = 9::numeric
          ->  Seq Scan on t_date_1_prt_part201208  (cost=0.00..1.01 rows=1 width=21)
                Filter: user_id = 9::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 select * from orca.t_date where user_id=9;
@@ -8317,7 +8297,7 @@ explain select * from orca.t_text where user_id=9;
                Filter: user_id = 9::numeric
          ->  Seq Scan on t_text_1_prt_partugly  (cost=0.00..2.06 rows=1 width=21)
                Filter: user_id = 9::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 select * from orca.t_text where user_id=9;
@@ -8376,7 +8356,7 @@ explain select * from orca.t_employee where user_id = 2;
                Filter: user_id = 2::numeric
          ->  Seq Scan on t_employee_1_prt_part2  (cost=0.00..1.04 rows=1 width=47)
                Filter: user_id = 2::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 select * from orca.t_employee where user_id = 2;
@@ -8423,7 +8403,7 @@ explain select * from orca.t_ceeval_ints where user_id=4;
                Filter: user_id = 4::numeric
          ->  Seq Scan on t_ceeval_ints_1_prt_part103  (cost=0.00..1.01 rows=1 width=21)
                Filter: user_id = 4::numeric
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 select * from orca.t_ceeval_ints where user_id=4;
@@ -8492,6 +8472,12 @@ select sum(f1.b) from orca.fooh1 f1 group by f1.a;
    6
    4
 (4 rows)
+
+select f1.a + 1 from fooh1 f1 group by f1.a+1 having sum(f1.a+1) + 1 > 20;
+ ?column? 
+----------
+        4
+(1 row)
 
 select 1 as one, f1.a from orca.fooh1 f1 group by f1.a having sum(f1.b) > 4;
  one | a 
@@ -8616,6 +8602,180 @@ select sum(f1.a+1)+avg(f1.a+1), sum(f1.a), sum(f1.a+1) from orca.fooh1 f1 group 
     12.0000000000000000 |   5 |  10
 (4 rows)
 
+--
+-- test algebrization of group by clause with subqueries
+--
+drop table if exists foo, bar, jazz;
+NOTICE:  table "jazz" does not exist, skipping
+create table foo (a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table bar (d int, e int, f int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'd' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table jazz (g int, h int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'g' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo values (1, 1, 1), (2, 2, 2), (3, 3, 3);
+insert into bar values (1, 1, 1), (2, 2, 2), (3, 3, 3);
+insert into jazz values (2, 2, 2);
+-- subquery with outer reference with aggfunc in target list
+select a, (select sum(e) from bar where foo.b = bar.f), b, count(*) from foo, jazz where foo.c = jazz.g group by b, a, h;
+ a | sum | b | count 
+---+-----+---+-------
+ 2 |   2 | 2 |     1
+(1 row)
+
+-- complex agg expr in subquery
+select foo.a, (select (foo.a + foo.b) * count(bar.e) from bar), b, count(*) from foo group by foo.a, foo.b, foo.a + foo.b;
+ a | ?column? | b | count 
+---+----------+---+-------
+ 2 |       12 | 2 |     1
+ 1 |        6 | 1 |     1
+ 3 |       18 | 3 |     1
+(3 rows)
+
+-- aggfunc over an outer reference in a subquery
+select (select sum(foo.a + bar.d) from bar) from foo group by a, b;
+ sum 
+-----
+   9
+  15
+  12
+(3 rows)
+
+-- complex expression of aggfunc over an outer reference in a subquery
+select (select sum(foo.a + bar.d) + 1 from bar) from foo group by a, b;
+ ?column? 
+----------
+       13
+       10
+       16
+(3 rows)
+
+-- aggrefs with multiple agglevelsup
+select (select (select sum(foo.a + bar.d) from jazz) from bar) from foo group by a, b;
+ERROR:  correlated subquery with skip-level correlations is not supported
+-- aggrefs with multiple agglevelsup in an expression
+select (select (select sum(foo.a + bar.d) * 2 from jazz) from bar) from foo group by a, b;
+ERROR:  correlated subquery with skip-level correlations is not supported
+-- nested group by
+select (select max(f) from bar where d = 1 group by a, e) from foo group by a;
+ max 
+-----
+   1
+   1
+   1
+(3 rows)
+
+-- cte with an aggfunc of outer ref
+select a, count(*), (with cte as (select min(d) dd from bar group by e) select max(a * dd) from cte) from foo group by a;
+ a | count | max 
+---+-------+-----
+ 1 |     1 |   3
+ 2 |     1 |   6
+ 3 |     1 |   9
+(3 rows)
+
+-- cte with an aggfunc of outer ref in an complex expression
+select a, count(*), (with cte as (select e, min(d) as dd from bar group by e) select max(a) * sum(dd) from cte) from foo group by a;
+ a | count | ?column? 
+---+-------+----------
+ 1 |     1 |        6
+ 2 |     1 |       12
+ 3 |     1 |       18
+(3 rows)
+
+-- subquery in group by
+select max(a) from foo group by (select e from bar where bar.e = foo.a);
+ max 
+-----
+   1
+   2
+   3
+(3 rows)
+
+-- nested subquery in group by
+select max(a) from foo group by (select g from jazz where foo.a = (select max(a) from foo where c = 1 group by b));
+ max 
+-----
+   1
+   3
+(2 rows)
+
+-- group by inside groupby inside group by ;S
+select max(a) from foo group by (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h);
+ max 
+-----
+   2
+   3
+(2 rows)
+
+-- cte subquery in group by
+select max(a) from foo group by b, (with cte as (select min(g) from jazz group by h) select a from cte);
+ max 
+-----
+   3
+   2
+   1
+(3 rows)
+
+-- group by subquery in order by
+select * from foo order by ((select min(bar.e + 1) * 2 from bar group by foo.a) - foo.a);
+ a | b | c 
+---+---+---
+ 3 | 3 | 3
+ 2 | 2 | 2
+ 1 | 1 | 1
+(3 rows)
+
+-- everything in the kitchen sink
+select max(b), (select foo.a * count(bar.e) from bar), (with cte as (select e, min(d) as dd from bar group by e) select max(a) * sum(dd) from cte), count(*) from foo group by foo.a, (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h), (with cte as (select min(g) from jazz group by h) select a from cte) order by ((select min(bar.e + 1) * 2 from bar group by foo.a) - foo.a);
+ max | ?column? | ?column? | count 
+-----+----------+----------+-------
+   3 |        9 |       18 |     1
+   2 |        6 |       12 |     1
+   1 |        3 |        6 |     1
+(3 rows)
+
+-- complex expression in group by & targetlist
+select b + (a+1) from foo group by b, a+1;
+ ?column? 
+----------
+        5
+        3
+        7
+(3 rows)
+
+-- subselects inside aggs
+SELECT  foo.b+1, avg (( SELECT bar.f FROM bar WHERE bar.d = foo.b)) AS t FROM foo GROUP BY foo.b;
+ ?column? |           t            
+----------+------------------------
+        3 |     2.0000000000000000
+        4 |     3.0000000000000000
+        2 | 1.00000000000000000000
+(3 rows)
+
+SELECT foo.b+1, sum( 1 + (SELECT bar.f FROM bar WHERE bar.d = ANY (SELECT jazz.g FROM jazz WHERE jazz.h = foo.b))) AS t FROM foo GROUP BY foo.b;
+ERROR:  correlated subquery with skip-level correlations is not supported
+select foo.b+1, sum((with cte as (select * from jazz) select 1 from cte where cte.h = foo.b)) as t FROM foo GROUP BY foo.b;
+ ?column? | t 
+----------+---
+        3 | 1
+        4 |  
+        2 |  
+(3 rows)
+
+-- ctes inside aggs
+select foo.b+1, sum((with cte as (select * from jazz) select 1 from cte cte1, cte cte2 where cte1.h = foo.b)) as t FROM foo GROUP BY foo.b;
+ ?column? | t 
+----------+---
+        3 | 1
+        4 |  
+        2 |  
+(3 rows)
+
+drop table foo, bar, jazz;
 create table orca.t77(C952 text) WITH (compresstype=zlib,compresslevel=2,appendonly=true,blocksize=393216,checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c952' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -9545,7 +9705,7 @@ where c.cid = s.cid and s.date_sk = d.date_sk and
                                        ->  Seq Scan on sales s  (cost=0.00..938.00 rows=28 width=40)
                                              Filter: ((lower(type) = 't1'::text) OR (upper(type) = 'T2'::text))
  Planning time: 2.896 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 reset optimizer_segments;
@@ -9565,7 +9725,7 @@ explain select * from orca.bm_test where i=2 and t='2';
    ->  Seq Scan on bm_test  (cost=0.00..4.50 rows=2 width=6)
          Filter: i = 2 AND t = '2'::text
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 select * from orca.bm_test where i=2 and t='2';
@@ -9627,7 +9787,7 @@ explain select * from orca.bm_dyn_test where i=2 and t='2';
                Filter: i = 2 AND t = '2'::text
          ->  Seq Scan on bm_dyn_test_1_prt_part5  (cost=0.00..1.01 rows=1 width=10)
                Filter: i = 2 AND t = '2'::text
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 select * from orca.bm_dyn_test where i=2 and t='2';
@@ -9687,7 +9847,7 @@ explain select * from orca.bm_dyn_test_onepart where i=2 and t='2';
                Filter: i = 2 AND t = '2'::text
          ->  Seq Scan on bm_dyn_test_onepart_1_prt_part5  (cost=0.00..1.01 rows=1 width=10)
                Filter: i = 2 AND t = '2'::text
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 select * from orca.bm_dyn_test_onepart where i=2 and t='2';
@@ -9882,11 +10042,7 @@ select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where i=
 
 -- Drop and recreate index after we dropped column
 drop index bm.het_bm_i_idx;
-WARNING:  only dropped the index "het_bm_i_idx"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index bm.het_bm_j_idx;
-WARNING:  only dropped the index "het_bm_j_idx"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
 create index het_bm_i_idx on bm.het_bm using bitmap (i);
 NOTICE:  building index for child partition "het_bm_1_prt_part0"
 NOTICE:  building index for child partition "het_bm_1_prt_part1"
@@ -10073,7 +10229,7 @@ ORDER BY 1 asc ;
                                  ->  Hash  (cost=324.00..324.00 rows=7467 width=108)
                                        ->  Seq Scan on my_tt_agg_opt tt  (cost=0.00..324.00 rows=7467 width=108)
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_segments=3
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (22 rows)
 
 reset optimizer_segments;
@@ -10156,7 +10312,7 @@ where ordernum between 10 and 20;
                      ->  Seq Scan on idxscan_inner i  (cost=0.00..2.04 rows=1 width=9)
                            Filter: ordernum >= 10 AND ordernum <= 20
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (11 rows)
 
 select id, comment from idxscan_outer as o join idxscan_inner as i on o.id = i.productid
@@ -10209,7 +10365,7 @@ explain select * from orca.index_test where a = 5;
    ->  Seq Scan on index_test  (cost=0.00..4.25 rows=1 width=20)
          Filter: a = 5
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 -- force_explain
@@ -10220,7 +10376,7 @@ explain select * from orca.index_test where c = 5;
    ->  Seq Scan on index_test  (cost=0.00..4.25 rows=1 width=20)
          Filter: c = 5
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 -- force_explain
@@ -10231,7 +10387,7 @@ explain select * from orca.index_test where a = 5 and c = 5;
    ->  Seq Scan on index_test  (cost=0.00..4.50 rows=1 width=20)
          Filter: a = 5 AND c = 5
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 -- renaming columns
@@ -10323,7 +10479,7 @@ EXPLAIN SELECT * FROM btree_test WHERE a in (1, 47);
    ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = ANY ('{1,47}'::integer[])
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
@@ -10333,7 +10489,7 @@ EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
    ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = ANY ('{2,47}'::integer[])
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
@@ -10343,7 +10499,7 @@ EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
    ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = ANY ('{1,2}'::integer[])
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
@@ -10353,7 +10509,7 @@ EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
    ->  Seq Scan on btree_test  (cost=0.00..4.38 rows=1 width=4)
          Filter: a = ANY ('{1,2,47}'::integer[])
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 -- Test Bitmap index scan with in list
@@ -10366,7 +10522,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1);
    ->  Seq Scan on bitmap_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = 1
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
@@ -10376,7 +10532,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
    ->  Seq Scan on bitmap_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = ANY ('{1,47}'::integer[])
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('2', 47);
@@ -10386,7 +10542,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('2', 47);
    ->  Seq Scan on bitmap_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = ANY ('{2,47}'::integer[])
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
@@ -10396,7 +10552,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
    ->  Seq Scan on bitmap_test  (cost=0.00..4.25 rows=1 width=4)
          Filter: a = ANY ('{1,2}'::integer[])
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2', 47);
@@ -10406,7 +10562,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2', 47);
    ->  Seq Scan on bitmap_test  (cost=0.00..4.38 rows=1 width=4)
          Filter: a = ANY ('{1,2,47}'::integer[])
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 -- Test Logging for unsupported features in ORCA
@@ -10422,40 +10578,21 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 explain select count(*) from foo group by cube(a,b);
-                                                                   QUERY PLAN                                                                   
-------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=10128.79..20306.02 rows=40897 width=28)
-   ->  Append  (cost=10128.79..20306.02 rows=13633 width=28)
-         ->  HashAggregate  (cost=10128.79..10408.61 rows=9328 width=28)
-               Group Key: "rollup".unnamed_attr_2, "rollup".unnamed_attr_1, "rollup"."grouping", "rollup"."group_id"
-               ->  Subquery Scan on "rollup"  (cost=8552.10..10074.98 rows=1435 width=28)
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=8552.10..10031.93 rows=1435 width=28)
-                           Hash Key: rollup_1.unnamed_attr_2, rollup_1.unnamed_attr_1, (Grouping), group_id()
-                           ->  GroupAggregate  (cost=8552.10..9945.83 rows=1435 width=28)
-                                 Group Key: rollup_1."grouping", rollup_1."group_id"
-                                 ->  Subquery Scan on rollup_1  (cost=8552.10..9822.06 rows=2153 width=28)
-                                       ->  GroupAggregate  (cost=8552.10..9757.49 rows=2153 width=28)
-                                             Group Key: rollup_2.unnamed_attr_2, rollup_2."grouping", rollup_2."group_id"
-                                             ->  Subquery Scan on rollup_2  (cost=8552.10..9585.30 rows=2870 width=28)
-                                                   ->  GroupAggregate  (cost=8552.10..9499.20 rows=2870 width=28)
-                                                         Group Key: b, a
-                                                         ->  Sort  (cost=8552.10..8767.35 rows=28700 width=8)
-                                                               Sort Key: b, a
-                                                               ->  Shared Scan (share slice:id 1:0)  (cost=1391.50..1494.60 rows=28700 width=8)
-                                                                     ->  Materialize  (cost=0.00..1391.50 rows=28700 width=8)
-                                                                           ->  Seq Scan on foo  (cost=0.00..961.00 rows=28700 width=8)
-         ->  HashAggregate  (cost=9639.11..9768.26 rows=4305 width=28)
-               Group Key: rollup_3.unnamed_attr_1, rollup_3.unnamed_attr_2, rollup_3."grouping", rollup_3."group_id"
-               ->  Subquery Scan on rollup_3  (cost=8552.10..9585.30 rows=1435 width=28)
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=8552.10..9542.25 rows=1435 width=28)
-                           Hash Key: a, b, (Grouping), group_id()
-                           ->  GroupAggregate  (cost=8552.10..9456.15 rows=1435 width=28)
-                                 Group Key: a
-                                 ->  Sort  (cost=8552.10..8767.35 rows=28700 width=8)
-                                       Sort Key: a, b
-                                       ->  Shared Scan (share slice:id 2:0)  (cost=1391.50..1494.60 rows=28700 width=8)
- Optimizer: legacy query optimizer
-(31 rows)
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=8018.50..16794.97 rows=10611 width=16)
+   Group Key: a, b
+   Group Key: a
+   Group Key: ()
+   Sort Key: b
+     Group Key: b
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=8018.50..8233.75 rows=86100 width=8)
+         Merge Key: a, b
+         ->  Sort  (cost=8018.50..8233.75 rows=28700 width=8)
+               Sort Key: a, b
+               ->  Seq Scan on foo  (cost=0.00..961.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(12 rows)
 
 reset client_min_messages;
 reset log_statement;
@@ -10558,7 +10695,7 @@ explain select * from foo where b in ('1', '2');
    ->  Seq Scan on foo  (cost=0.00..667.50 rows=31 width=42)
          Filter: b::text = ANY ('{1,2}'::text[])
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (5 rows)
 
 set optimizer_enable_ctas = off;
@@ -10598,7 +10735,7 @@ explain (costs off) select count(*), t2.c from input_tab1 t1 left join input_tab
                            ->  Seq Scan on input_tab2 t2
                            ->  Hash
                                  ->  Seq Scan on input_tab1 t1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 select count(*), t2.c from input_tab1 t1 left join input_tab2 t2 on t1.a = t2.c group by t2.c;
@@ -10655,7 +10792,7 @@ FROM   (SELECT *
                                              ->  Seq Scan on tab_2  (cost=0.00..1.01 rows=1 width=7)
                            ->  Subquery Scan on "*SELECT* 2"  (cost=0.00..1.02 rows=1 width=8)
                                  ->  Seq Scan on tab_3  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 SELECT Count(*)
@@ -10722,6 +10859,27 @@ select c1 from t_outer where not c1 =all (select c2 from t_inner);
 (10 rows)
 
 reset optimizer_enable_streaming_material;
+-- Ensure that ORCA rescans the subquery in case of skip-level correlation with
+-- materialization
+drop table if exists wst0, wst1, wst2;
+NOTICE:  table "wst0" does not exist, skipping
+NOTICE:  table "wst1" does not exist, skipping
+NOTICE:  table "wst2" does not exist, skipping
+create table wst0(a0 int, b0 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a0' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table wst1(a1 int, b1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table wst2(a2 int, b2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a2' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into wst0 select i, i from generate_series(1,10) i;
+insert into wst1 select i, i from generate_series(1,10) i;
+insert into wst2 select i, i from generate_series(1,10) i;
+-- NB: the rank() is need to force materialization (via Sort) in the subplan
+select count(*) from wst0 where exists (select 1, rank() over (order by wst1.a1) from wst1 where a1 = (select b2 from wst2 where a0=a2+5));
+ERROR:  correlated subquery with skip-level correlations is not supported
 --
 -- Test to ensure sane behavior when DML queries are optimized by ORCA by
 -- enforcing a non-master gather motion, controlled by
@@ -10874,7 +11032,7 @@ EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 TH
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.10 rows=2 width=4)
                      ->  Seq Scan on csq_cast_param_inner  (cost=0.00..1.02 rows=1 width=4)
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
@@ -10898,7 +11056,7 @@ EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 TH
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.10 rows=2 width=4)
                      ->  Seq Scan on csq_cast_param_inner  (cost=0.00..1.02 rows=1 width=4)
  Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (9 rows)
 
 SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
@@ -10922,7 +11080,7 @@ EXPLAIN SELECT a FROM ggg WHERE a NOT IN (NULL, '');
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=2)
    ->  Seq Scan on ggg  (cost=0.00..1.01 rows=1 width=2)
          Filter: a <> ALL ('{NULL,""}'::bpchar[])
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (4 rows)
 
 EXPLAIN SELECT a FROM ggg WHERE a IN (NULL, 'x');
@@ -10932,7 +11090,7 @@ EXPLAIN SELECT a FROM ggg WHERE a IN (NULL, 'x');
    ->  Seq Scan on ggg  (cost=0.00..1.01 rows=1 width=2)
          Filter: (a = ANY ('{NULL,x}'::bpchar[]))
  Planning time: 0.038 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (5 rows)
 
 -- result node with one time filter and filter
@@ -10991,7 +11149,7 @@ EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilte
                              ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=6.51..6.72 rows=4 width=8)
                                    ->  Shared Scan (share slice:id 3:0)  (cost=6.51..6.72 rows=4 width=8)
  Planning time: 0.276 ms
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (43 rows)
 
 WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
@@ -11009,3 +11167,229 @@ WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onet
         1 |        0 | 10
 (10 rows)
 
+-- full joins with predicates
+DROP TABLE IF EXISTS ffoo, fbar;
+NOTICE:  table "ffoo" does not exist, skipping
+NOTICE:  table "fbar" does not exist, skipping
+CREATE TABLE ffoo (a, b) AS (VALUES (1, 2), (2, 3), (4, 5), (5, 6), (6, 7)) DISTRIBUTED BY (a);
+CREATE TABLE fbar (c, d) AS (VALUES (1, 42), (2, 43), (4, 45), (5, 46)) DISTRIBUTED BY (c);
+SELECT d FROM ffoo FULL OUTER JOIN fbar ON a = c WHERE b BETWEEN 5 and 9;
+ d  
+----
+ 46
+   
+ 45
+(3 rows)
+
+-- test index left outer joins on bitmap and btree indexes on partitioned tables with and without select clause
+DROP TABLE IF EXISTS touter, tinner;
+NOTICE:  table "touter" does not exist, skipping
+NOTICE:  table "tinner" does not exist, skipping
+CREATE TABLE touter(a int, b int) DISTRIBUTED BY (a);
+CREATE TABLE tinnerbitmap(a int, b int) DISTRIBUTED BY (a) PARTITION BY range(b) (start (0) end (6) every (3));
+NOTICE:  CREATE TABLE will create partition "tinnerbitmap_1_prt_1" for table "tinnerbitmap"
+NOTICE:  CREATE TABLE will create partition "tinnerbitmap_1_prt_2" for table "tinnerbitmap"
+CREATE TABLE tinnerbtree(a int, b int) DISTRIBUTED BY (a) PARTITION BY range(b) (start (0) end (6) every (3));
+NOTICE:  CREATE TABLE will create partition "tinnerbtree_1_prt_1" for table "tinnerbtree"
+NOTICE:  CREATE TABLE will create partition "tinnerbtree_1_prt_2" for table "tinnerbtree"
+INSERT INTO touter SELECT i, i%6 FROM generate_series(1,10) i;
+INSERT INTO tinnerbitmap select i, i%6 FROM generate_series(1,1000) i;
+INSERT INTO tinnerbtree select i, i%6 FROM generate_series(1,1000) i;
+CREATE INDEX tinnerbitmap_ix ON tinnerbitmap USING bitmap(a);
+CREATE INDEX tinnerbtree_ix ON tinnerbtree USING btree(a);
+SELECT * FROM touter LEFT JOIN tinnerbitmap ON touter.a = tinnerbitmap.a;
+ a  | b | a  | b 
+----+---+----+---
+  1 | 1 |  1 | 1
+  6 | 0 |  6 | 0
+  5 | 5 |  5 | 5
+  9 | 3 |  9 | 3
+ 10 | 4 | 10 | 4
+  2 | 2 |  2 | 2
+  7 | 1 |  7 | 1
+  8 | 2 |  8 | 2
+  3 | 3 |  3 | 3
+  4 | 4 |  4 | 4
+(10 rows)
+
+SELECT * FROM touter LEFT JOIN tinnerbitmap ON touter.a = tinnerbitmap.a AND tinnerbitmap.b=10;
+ a  | b | a | b 
+----+---+---+---
+  2 | 2 |   |  
+  3 | 3 |   |  
+  4 | 4 |   |  
+  7 | 1 |   |  
+  8 | 2 |   |  
+  1 | 1 |   |  
+  5 | 5 |   |  
+  6 | 0 |   |  
+  9 | 3 |   |  
+ 10 | 4 |   |  
+(10 rows)
+
+SELECT * FROM touter LEFT JOIN tinnerbtree ON touter.a = tinnerbtree.a;
+ a  | b | a  | b 
+----+---+----+---
+  1 | 1 |  1 | 1
+  6 | 0 |  6 | 0
+  5 | 5 |  5 | 5
+  9 | 3 |  9 | 3
+ 10 | 4 | 10 | 4
+  2 | 2 |  2 | 2
+  7 | 1 |  7 | 1
+  8 | 2 |  8 | 2
+  3 | 3 |  3 | 3
+  4 | 4 |  4 | 4
+(10 rows)
+
+SELECT * FROM touter LEFT JOIN tinnerbtree ON touter.a = tinnerbtree.a AND tinnerbtree.b=10;
+ a  | b | a | b 
+----+---+---+---
+  1 | 1 |   |  
+  5 | 5 |   |  
+  6 | 0 |   |  
+  9 | 3 |   |  
+ 10 | 4 |   |  
+  2 | 2 |   |  
+  3 | 3 |   |  
+  4 | 4 |   |  
+  7 | 1 |   |  
+  8 | 2 |   |  
+(10 rows)
+
+-- test subplan in a qual under dynamic scan
+CREATE TABLE ds_part ( a INT, b INT, c INT) PARTITION BY RANGE(c)( START(1) END (10) EVERY (2), DEFAULT PARTITION deflt);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_deflt" for table "ds_part"
+NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_2" for table "ds_part"
+NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_3" for table "ds_part"
+NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_4" for table "ds_part"
+NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_5" for table "ds_part"
+NOTICE:  CREATE TABLE will create partition "ds_part_1_prt_6" for table "ds_part"
+CREATE TABLE non_part1 (c INT);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE non_part2 (e INT, f INT);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'e' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO ds_part SELECT i, i, i FROM generate_series (1, 1000)i; 
+INSERT INTO non_part1 SELECT i FROM generate_series(1, 100)i; 
+INSERT INTO non_part2 SELECT i, i FROM generate_series(1, 100)i;
+SET optimizer_enforce_subplans TO ON;
+analyze ds_part;
+analyze non_part1;
+analyze non_part2;
+SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
+ a | b | c | e | f 
+---+---+---+---+---
+(0 rows)
+
+explain SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=10000000004.33..10000000039.13 rows=7 width=20)
+   ->  Nested Loop Semi Join  (cost=10000000004.33..10000000039.13 rows=3 width=20)
+         ->  Hash Join  (cost=4.33..28.40 rows=2 width=20)
+               Hash Cond: (ds_part_1_prt_deflt.c = non_part2.e)
+               ->  Append  (cost=0.00..24.00 rows=2 width=12)
+                     ->  Result  (cost=0.00..17.87 rows=1 width=12)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_part_1_prt_deflt  (cost=0.00..17.87 rows=1 width=12)
+                                 Filter: (a = (b + 1))
+                     ->  Result  (cost=0.00..2.03 rows=1 width=12)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_part_1_prt_2  (cost=0.00..2.03 rows=1 width=12)
+                                 Filter: (a = (b + 1))
+                     ->  Result  (cost=0.00..1.03 rows=1 width=12)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_part_1_prt_3  (cost=0.00..1.03 rows=1 width=12)
+                                 Filter: (a = (b + 1))
+                     ->  Result  (cost=0.00..1.03 rows=1 width=12)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_part_1_prt_4  (cost=0.00..1.03 rows=1 width=12)
+                                 Filter: (a = (b + 1))
+                     ->  Result  (cost=0.00..1.03 rows=1 width=12)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_part_1_prt_5  (cost=0.00..1.03 rows=1 width=12)
+                                 Filter: (a = (b + 1))
+                     ->  Result  (cost=0.00..1.01 rows=1 width=12)
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_part_1_prt_6  (cost=0.00..1.01 rows=1 width=12)
+                                 Filter: (a = (b + 1))
+               ->  Hash  (cost=4.29..4.29 rows=1 width=8)
+                     ->  Partition Selector for ds_part (dynamic scan id: 1)  (cost=0.00..4.29 rows=1 width=8)
+                           Filter: non_part2.e
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..4.29 rows=1 width=8)
+                                 ->  Seq Scan on non_part2  (cost=0.00..4.25 rows=1 width=8)
+                                       Filter: (f = 10)
+         ->  Materialize  (cost=0.00..9.50 rows=100 width=0)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..8.00 rows=100 width=0)
+                     ->  Seq Scan on non_part1  (cost=0.00..4.00 rows=34 width=0)
+ Optimizer: Postgres query optimizer
+(39 rows)
+
+SELECT *, a IN ( SELECT b + 1 FROM non_part1) FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b FROM non_part1);
+ a  | b  | c  | e  | f  | ?column? 
+----+----+----+----+----+----------
+ 10 | 10 | 10 | 10 | 10 | f
+(1 row)
+
+CREATE INDEX ds_idx ON ds_part(a);
+analyze ds_part;
+SELECT *, a IN ( SELECT b + 1 FROM non_part1) FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b FROM non_part1);
+ a  | b  | c  | e  | f  | ?column? 
+----+----+----+----+----+----------
+ 10 | 10 | 10 | 10 | 10 | f
+(1 row)
+
+RESET optimizer_enforce_subplans;
+-- implied predicate must be generated for the type cast(ident) scalar array cmp const array
+CREATE TABLE varchar_sc_array_cmp(a varchar);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO varchar_sc_array_cmp VALUES ('a'), ('b'), ('c'), ('d');
+EXPLAIN SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and t1.a in ('b', 'c');
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=3.07..6.17 rows=4 width=4)
+   ->  Hash Join  (cost=3.07..6.17 rows=2 width=4)
+         Hash Cond: ((t1.a)::text = (t2.a)::text)
+         ->  Seq Scan on varchar_sc_array_cmp t1  (cost=0.00..3.05 rows=1 width=2)
+               Filter: ((a)::text = ANY ('{b,c}'::text[]))
+         ->  Hash  (cost=3.05..3.05 rows=1 width=2)
+               ->  Seq Scan on varchar_sc_array_cmp t2  (cost=0.00..3.05 rows=1 width=2)
+                     Filter: ((a)::text = ANY ('{b,c}'::text[]))
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and t1.a in ('b', 'c');
+ a | a 
+---+---
+ c | c
+ b | b
+(2 rows)
+
+SET optimizer_array_constraints=on;
+EXPLAIN SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and (t1.a in ('b', 'c') OR t1.a = 'a');
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3.09..6.18 rows=4 width=4)
+   ->  Hash Join  (cost=3.09..6.18 rows=2 width=4)
+         Hash Cond: ((t2.a)::text = (t1.a)::text)
+         ->  Seq Scan on varchar_sc_array_cmp t2  (cost=0.00..3.04 rows=2 width=2)
+         ->  Hash  (cost=3.06..3.06 rows=1 width=2)
+               ->  Seq Scan on varchar_sc_array_cmp t1  (cost=0.00..3.06 rows=1 width=2)
+                     Filter: (((a)::text = ANY ('{b,c}'::text[])) OR ((a)::text = 'a'::text))
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+SELECT * FROM varchar_sc_array_cmp t1, varchar_sc_array_cmp t2 where t1.a = t2.a and (t1.a in ('b', 'c') OR t1.a = 'a');
+ a | a 
+---+---
+ b | b
+ a | a
+ c | c
+(3 rows)
+
+DROP TABLE varchar_sc_array_cmp;

@@ -5,6 +5,8 @@ DATA = gp_inject_fault--1.0.sql
 
 REGRESS = inject_fault_test
 
+PG_CPPFLAGS = -I$(libpq_srcdir)
+
 ifdef USE_PGXS
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)

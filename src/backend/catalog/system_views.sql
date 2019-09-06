@@ -3,7 +3,7 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  * src/backend/catalog/system_views.sql
  */
@@ -15,12 +15,12 @@ CREATE VIEW pg_roles AS
         rolinherit,
         rolcreaterole,
         rolcreatedb,
-        rolcatupdate,
         rolcanlogin,
         rolreplication,
         rolconnlimit,
         '********'::text as rolpassword,
         rolvaliduntil,
+        rolbypassrls,
         setconfig as rolconfig,
 		rolresqueue,
         pg_authid.oid,
@@ -37,8 +37,8 @@ CREATE VIEW pg_shadow AS
         pg_authid.oid AS usesysid,
         rolcreatedb AS usecreatedb,
         rolsuper AS usesuper,
-        rolcatupdate AS usecatupd,
         rolreplication AS userepl,
+        rolbypassrls AS usebypassrls,
         rolpassword AS passwd,
         rolvaliduntil::abstime AS valuntil,
         setconfig AS useconfig
@@ -62,12 +62,41 @@ CREATE VIEW pg_user AS
         usesysid,
         usecreatedb,
         usesuper,
-        usecatupd,
         userepl,
+        usebypassrls,
         '********'::text as passwd,
         valuntil,
         useconfig
     FROM pg_shadow;
+
+CREATE VIEW pg_policies AS
+    SELECT
+        N.nspname AS schemaname,
+        C.relname AS tablename,
+        pol.polname AS policyname,
+        CASE
+            WHEN pol.polroles = '{0}' THEN
+                string_to_array('public', '')
+            ELSE
+                ARRAY
+                (
+                    SELECT rolname
+                    FROM pg_catalog.pg_authid
+                    WHERE oid = ANY (pol.polroles) ORDER BY 1
+                )
+        END AS roles,
+        CASE pol.polcmd
+            WHEN 'r' THEN 'SELECT'
+            WHEN 'a' THEN 'INSERT'
+            WHEN 'w' THEN 'UPDATE'
+            WHEN 'd' THEN 'DELETE'
+            WHEN '*' THEN 'ALL'
+        END AS cmd,
+        pg_catalog.pg_get_expr(pol.polqual, pol.polrelid) AS qual,
+        pg_catalog.pg_get_expr(pol.polwithcheck, pol.polrelid) AS with_check
+    FROM pg_catalog.pg_policy pol
+    JOIN pg_catalog.pg_class C ON (C.oid = pol.polrelid)
+    LEFT JOIN pg_catalog.pg_namespace N ON (N.oid = C.relnamespace);
 
 CREATE VIEW pg_rules AS
     SELECT
@@ -96,7 +125,8 @@ CREATE VIEW pg_tables AS
         T.spcname AS tablespace,
         C.relhasindex AS hasindexes,
         C.relhasrules AS hasrules,
-        C.relhastriggers AS hastriggers
+        C.relhastriggers AS hastriggers,
+        C.relrowsecurity AS rowsecurity
     FROM pg_class C LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
          LEFT JOIN pg_tablespace T ON (T.oid = C.reltablespace)
     WHERE C.relkind = 'r';
@@ -387,6 +417,12 @@ CREATE RULE pg_settings_n AS
     DO INSTEAD NOTHING;
 
 GRANT SELECT, UPDATE ON pg_settings TO PUBLIC;
+
+CREATE VIEW pg_file_settings AS
+   SELECT * FROM pg_show_all_file_settings() AS A;
+
+REVOKE ALL on pg_file_settings FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION pg_show_all_file_settings() FROM PUBLIC;
 
 CREATE VIEW pg_timezone_abbrevs AS
     SELECT * FROM pg_timezone_abbrevs();
@@ -682,6 +718,17 @@ CREATE VIEW gp_stat_replication AS
          ON G.gp_segment_id = R.gp_segment_id
     );
 
+CREATE VIEW pg_stat_ssl AS
+    SELECT
+            S.pid,
+            S.ssl,
+            S.sslversion AS version,
+            S.sslcipher AS cipher,
+            S.sslbits AS bits,
+            S.sslcompression AS compression,
+            S.sslclientdn AS clientdn
+    FROM pg_stat_get_activity(NULL) AS S;
+
 CREATE VIEW pg_replication_slots AS
     SELECT
             L.slot_name,
@@ -690,6 +737,7 @@ CREATE VIEW pg_replication_slots AS
             L.datoid,
             D.datname AS database,
             L.active,
+            L.active_pid,
             L.xmin,
             L.catalog_xmin,
             L.restart_lsn
@@ -823,12 +871,12 @@ create view pg_partitions as
                       partition by pp.oid, cl.relname, pp.parlevel, cl3.relname
                       order by pr1.parisdefault, pr1.parruleord) 
                   end as partitionrank, 
-              pg_get_expr(pr1.parlistvalues, pr1.parchildrelid) as partitionlistvalues, 
-              pg_get_expr(pr1.parrangestart, pr1.parchildrelid) as partitionrangestart, 
+              pg_get_expr(pr1.parlistvalues, pr1.parchildrelid, false, true) as partitionlistvalues, 
+              pg_get_expr(pr1.parrangestart, pr1.parchildrelid, false, true) as partitionrangestart, 
               pr1.parrangestartincl as partitionstartinclusive, 
-              pg_get_expr(pr1.parrangeend, pr1.parchildrelid) as partitionrangeend, 
+              pg_get_expr(pr1.parrangeend, pr1.parchildrelid, false, true) as partitionrangeend, 
               pr1.parrangeendincl as partitionendinclusive, 
-              pg_get_expr(pr1.parrangeevery, pr1.parchildrelid) as partitioneveryclause, 
+              pg_get_expr(pr1.parrangeevery, pr1.parchildrelid, false, true) as partitioneveryclause, 
               min(pr1.parruleord) over(
                   partition by pp.oid, cl.relname, pp.parlevel, cl3.relname
                   order by pr1.parruleord) as partitionnodefault, 
@@ -923,12 +971,12 @@ p.parlevel as partitionlevel,
 pr1.parruleord as partitionposition,
 rank() over (partition by p.oid, cl.relname, p.parlevel 
 			 order by pr1.parruleord) as partitionrank,
-pg_get_expr(pr1.parlistvalues, p.parrelid) as partitionlistvalues,
-pg_get_expr(pr1.parrangestart, p.parrelid) as partitionrangestart,
+pg_get_expr(pr1.parlistvalues, p.parrelid, false, true) as partitionlistvalues,
+pg_get_expr(pr1.parrangestart, p.parrelid, false, true) as partitionrangestart,
 pr1.parrangestartincl as partitionstartinclusive,
-pg_get_expr(pr1.parrangeend, p.parrelid) as partitionrangeend,
+pg_get_expr(pr1.parrangeend, p.parrelid, false, true) as partitionrangeend,
 pr1.parrangeendincl as partitionendinclusive,
-pg_get_expr(pr1.parrangeevery, p.parrelid) as partitioneveryclause,
+pg_get_expr(pr1.parrangeevery, p.parrelid, false, true) as partitioneveryclause,
 
 min(pr1.parruleord) over (partition by p.oid, cl.relname, p.parlevel
 	order by pr1.parruleord) as partitionnodefault,
@@ -1232,6 +1280,13 @@ CREATE VIEW pg_user_mappings AS
 
 REVOKE ALL on pg_user_mapping FROM public;
 
+
+CREATE VIEW pg_replication_origin_status AS
+    SELECT *
+    FROM pg_show_replication_origin_status();
+
+REVOKE ALL ON pg_replication_origin_status FROM public;
+
 --
 -- We have a few function definitions in here, too.
 -- At some point there might be enough to justify breaking them out into
@@ -1370,6 +1425,14 @@ RETURNS interval
 LANGUAGE INTERNAL
 STRICT IMMUTABLE
 AS 'make_interval';
+
+CREATE OR REPLACE FUNCTION
+  jsonb_set(jsonb_in jsonb, path text[] , replacement jsonb,
+            create_if_missing boolean DEFAULT true)
+RETURNS jsonb
+LANGUAGE INTERNAL
+STRICT IMMUTABLE
+AS 'jsonb_set';
 
 -- pg_tablespace_location wrapper functions to see Greenplum cluster-wide tablespace locations
 CREATE FUNCTION gp_tablespace_segment_location (IN tblspc_oid oid, OUT gp_segment_id int, OUT tblspc_loc text)

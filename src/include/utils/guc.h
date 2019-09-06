@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2007-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
  * src/include/utils/guc.h
@@ -35,6 +35,21 @@
  */
 #define PG_AUTOCONF_FILENAME		"postgresql.auto.conf"
 
+/* upper limit for GUC variables measured in kilobytes of memory */
+/* note that various places assume the byte size fits in a "long" variable */
+#if SIZEOF_SIZE_T > 4 && SIZEOF_LONG > 4
+#define MAX_KILOBYTES	INT_MAX
+#else
+#define MAX_KILOBYTES	(INT_MAX / 1024)
+#endif
+
+/*
+ * Automatic configuration file name for ALTER SYSTEM.
+ * This file will be used to store values of configuration parameters
+ * set by ALTER SYSTEM command.
+ */
+#define PG_AUTOCONF_FILENAME		"postgresql.auto.conf"
+
 /*
  * Certain options can only be set at certain times. The rules are
  * like this:
@@ -53,15 +68,17 @@
  * certain point in their main loop. It's safer to wait than to read a
  * file asynchronously.)
  *
- * BACKEND options can only be set at postmaster startup, from the
- * configuration file, or by client request in the connection startup
- * packet (e.g., from libpq's PGOPTIONS variable).  Furthermore, an
- * already-started backend will ignore changes to such an option in the
- * configuration file.  The idea is that these options are fixed for a
- * given backend once it's started, but they can vary across backends.
+ * BACKEND and SU_BACKEND options can only be set at postmaster startup,
+ * from the configuration file, or by client request in the connection
+ * startup packet (e.g., from libpq's PGOPTIONS variable).  SU_BACKEND
+ * options can be set from the startup packet only when the user is a
+ * superuser.  Furthermore, an already-started backend will ignore changes
+ * to such an option in the configuration file.  The idea is that these
+ * options are fixed for a given backend once it's started, but they can
+ * vary across backends.
  *
  * SUSET options can be set at postmaster startup, with the SIGHUP
- * mechanism, or from SQL if you're a superuser.
+ * mechanism, or from the startup packet or SQL if you're a superuser.
  *
  * USERSET options can be set by anyone any time.
  */
@@ -70,6 +87,7 @@ typedef enum
 	PGC_INTERNAL,
 	PGC_POSTMASTER,
 	PGC_SIGHUP,
+	PGC_SU_BACKEND,
 	PGC_BACKEND,
 	PGC_SUSET,
 	PGC_USERSET
@@ -122,29 +140,35 @@ typedef enum
 
 /*
  * Parsing the configuration file(s) will return a list of name-value pairs
- * with source location info.
+ * with source location info.  We also abuse this data structure to carry
+ * error reports about the config files.  An entry reporting an error will
+ * have errmsg != NULL, and might have NULLs for name, value, and/or filename.
  *
- * If "ignore" is true, don't attempt to apply the item (it might be an item
- * we determined to be duplicate, for instance).
+ * If "ignore" is true, don't attempt to apply the item (it might be an error
+ * report, or an item we determined to be duplicate).  "applied" is set true
+ * if we successfully applied, or could have applied, the setting.
  */
 typedef struct ConfigVariable
 {
 	char	   *name;
 	char	   *value;
+	char	   *errmsg;
 	char	   *filename;
 	int			sourceline;
-	struct ConfigVariable *next;
 	bool		ignore;
+	bool		applied;
+	struct ConfigVariable *next;
 } ConfigVariable;
 
-extern bool ParseConfigFile(const char *config_file, const char *calling_file,
-				bool strict, int depth, int elevel,
+extern bool ParseConfigFile(const char *config_file, bool strict,
+				const char *calling_file, int calling_lineno,
+				int depth, int elevel,
 				ConfigVariable **head_p, ConfigVariable **tail_p);
 extern bool ParseConfigFp(FILE *fp, const char *config_file,
 			  int depth, int elevel,
 			  ConfigVariable **head_p, ConfigVariable **tail_p);
 extern bool ParseConfigDirectory(const char *includedir,
-					 const char *calling_file,
+					 const char *calling_file, int calling_lineno,
 					 int depth, int elevel,
 					 ConfigVariable **head_p,
 					 ConfigVariable **tail_p);
@@ -206,22 +230,26 @@ typedef enum
 #define GUC_SUPERUSER_ONLY		0x0100	/* show only to superusers */
 #define GUC_IS_NAME				0x0200	/* limit string to NAMEDATALEN-1 */
 
-#define GUC_UNIT_KB				0x0400	/* value is in kilobytes */
-#define GUC_UNIT_BLOCKS			0x0800	/* value is in blocks */
-#define GUC_UNIT_XBLOCKS		0x0C00	/* value is in xlog blocks */
-#define GUC_UNIT_MEMORY			0x0C00	/* mask for KB, BLOCKS, XBLOCKS */
+#define GUC_UNIT_KB				0x1000	/* value is in kilobytes */
+#define GUC_UNIT_BLOCKS			0x2000	/* value is in blocks */
+#define GUC_UNIT_XBLOCKS		0x3000	/* value is in xlog blocks */
+#define GUC_UNIT_XSEGS			0x4000	/* value is in xlog segments */
+#define GUC_UNIT_MEMORY			0xF000	/* mask for KB, BLOCKS, XBLOCKS */
 
-#define GUC_UNIT_MS				0x1000	/* value is in milliseconds */
-#define GUC_UNIT_S				0x2000	/* value is in seconds */
-#define GUC_UNIT_MIN			0x4000	/* value is in minutes */
-#define GUC_UNIT_TIME			0x7000	/* mask for MS, S, MIN */
+#define GUC_UNIT_MS			   0x10000	/* value is in milliseconds */
+#define GUC_UNIT_S			   0x20000	/* value is in seconds */
+#define GUC_UNIT_MIN		   0x30000	/* value is in minutes */
+#define GUC_UNIT_TIME		   0xF0000	/* mask for MS, S, MIN */
+
+#define GUC_UNIT				(GUC_UNIT_MEMORY | GUC_UNIT_TIME)
 
 #define GUC_NOT_WHILE_SEC_REST	0x8000	/* can't set if security restricted */
 #define GUC_DISALLOW_IN_AUTO_FILE	0x00010000	/* can't set in PG_AUTOCONF_FILENAME */
 
 /* GPDB speific */
-#define GUC_GPDB_ADDOPT        0x00020000  /* Send by cdbgang */
-#define GUC_DISALLOW_USER_SET  0x00040000 /* Do not allow this GUC to be set by the user */
+#define GUC_DISALLOW_USER_SET  0x00200000 /* Do not allow this GUC to be set by the user */
+#define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between master and primary */
+#define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between master and primary */
 
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;
@@ -238,29 +266,23 @@ extern bool	Debug_print_full_dtm;
 extern bool	Debug_print_snapshot_dtm;
 extern bool Debug_disable_distributed_snapshot;
 extern bool Debug_abort_after_distributed_prepared;
-extern bool Debug_abort_after_segment_prepared;
 extern bool Debug_appendonly_print_insert;
 extern bool Debug_appendonly_print_insert_tuple;
 extern bool Debug_appendonly_print_scan;
 extern bool Debug_appendonly_print_scan_tuple;
 extern bool Debug_appendonly_print_delete;
 extern bool Debug_appendonly_print_storage_headers;
-extern bool Debug_appendonly_print_verify_write_block;
 extern bool Debug_appendonly_use_no_toast;
 extern bool Debug_appendonly_print_blockdirectory;
 extern bool Debug_appendonly_print_read_block;
 extern bool Debug_appendonly_print_append_block;
 extern bool Debug_appendonly_print_segfile_choice;
 extern bool test_AppendOnlyHash_eviction_vs_just_marking_not_inuse;
-extern int  Debug_appendonly_bad_header_print_level;
 extern bool Debug_appendonly_print_datumstream;
 extern bool Debug_appendonly_print_visimap;
 extern bool Debug_appendonly_print_compaction;
-extern bool gp_crash_recovery_abort_suppress_fatal;
 extern bool Debug_bitmap_print_insert;
-extern bool Test_appendonly_override;
 extern bool enable_checksum_on_tables;
-extern int  Test_compresslevel_override;
 extern int  gp_max_local_distributed_cache;
 extern bool gp_local_distributed_cache_stats;
 extern bool gp_appendonly_verify_block_checksums;
@@ -287,9 +309,7 @@ extern bool Debug_datumstream_block_write_check_integrity;
 extern bool Debug_datumstream_read_print_varlena_info;
 extern bool Debug_datumstream_write_use_small_initial_buffers;
 extern bool	Debug_database_command_print;
-extern bool gp_startup_integrity_checks;
 extern bool Debug_resource_group;
-extern bool gp_crash_recovery_suppress_ao_eof;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
 extern bool gp_enable_exchange_default_partition;
@@ -313,10 +333,6 @@ extern bool gp_ignore_window_exclude;
 
 extern bool gp_ignore_error_table;
 
-extern bool rle_type_compression_stats;
-
-extern bool	Debug_print_server_processes;
-extern bool Debug_print_control_checkpoints;
 extern bool	Debug_dtm_action_primary;
 
 extern bool gp_log_optimization_time;
@@ -340,6 +356,22 @@ extern int	log_temp_files;
 extern int	temp_file_limit;
 
 extern int	num_temp_buffers;
+
+extern char *cluster_name;
+extern PGDLLIMPORT char *ConfigFileName;
+extern char *HbaFileName;
+extern char *IdentFileName;
+extern char *external_pid_file;
+
+extern char *application_name;
+
+extern int	tcp_keepalives_idle;
+extern int	tcp_keepalives_interval;
+extern int	tcp_keepalives_count;
+
+#ifdef TRACE_SORT
+extern bool trace_sort;
+#endif
 
 extern bool vmem_process_interrupt;
 extern bool execute_pruned_plan;
@@ -373,38 +405,23 @@ typedef enum
 	DEBUG_DTM_ACTION_TARGET_LAST = 2
 }	DebugDtmActionTarget;
 
+extern char *Debug_dtm_action_sql_command_tag;
+extern char *Debug_dtm_action_str;
+extern char *Debug_dtm_action_target_str;
 extern int Debug_dtm_action;
 extern int Debug_dtm_action_target;
 extern int Debug_dtm_action_protocol;
 extern int Debug_dtm_action_segment;
 extern int Debug_dtm_action_nestinglevel;
 
-extern char *data_directory;
-extern PGDLLIMPORT char *ConfigFileName;
-extern char *HbaFileName;
-extern char *IdentFileName;
-extern char *external_pid_file;
-
-extern char *application_name;
-
-extern char *Debug_dtm_action_sql_command_tag;
-extern char *Debug_dtm_action_str;
-extern char *Debug_dtm_action_target_str;
 
 /* Enable check for compatibility of encoding and locale in createdb */
 extern bool gp_encoding_check_locale_compatibility;
 
-extern int	tcp_keepalives_idle;
-extern int	tcp_keepalives_interval;
-extern int	tcp_keepalives_count;
 
 extern int	gp_connection_send_timeout;
 
-extern int  WalSendClientTimeout;
-
 extern bool create_restartpoint_on_ckpt_record_replay;
-
-extern char  *data_directory;
 
 /* ORCA related definitions */
 #define OPTIMIZER_XFORMS_COUNT 400 /* number of transformation rules */
@@ -474,6 +491,7 @@ extern bool optimizer_enable_bitmapscan;
 extern bool optimizer_enable_outerjoin_to_unionall_rewrite;
 extern bool optimizer_enable_ctas;
 extern bool optimizer_enable_partial_index;
+extern bool optimizer_enable_dml;
 extern bool optimizer_enable_dml_triggers;
 extern bool	optimizer_enable_dml_constraints;
 extern bool optimizer_enable_direct_dispatch;
@@ -483,6 +501,11 @@ extern bool optimizer_enable_dynamictablescan;
 extern bool optimizer_enable_indexscan;
 extern bool optimizer_enable_tablescan;
 extern bool optimizer_enable_eageragg;
+extern bool optimizer_expand_fulljoin;
+extern bool optimizer_enable_hashagg;
+extern bool optimizer_enable_groupagg;
+extern bool optimizer_enable_mergejoin;
+extern bool optimizer_prune_unused_columns;
 
 /* Optimizer plan enumeration related GUCs */
 extern bool optimizer_enumerate_plans;
@@ -513,10 +536,12 @@ extern int optimizer_join_order_threshold;
 extern int optimizer_join_order;
 extern int optimizer_join_arity_for_associativity_commutativity;
 extern int optimizer_cte_inlining_bound;
+extern int optimizer_push_group_by_below_setop_threshold;
 extern bool optimizer_force_multistage_agg;
 extern bool optimizer_force_three_stage_scalar_dqa;
 extern bool optimizer_force_expanded_distinct_aggs;
 extern bool optimizer_force_agg_skew_avoidance;
+extern bool optimizer_penalize_skew;
 extern bool optimizer_prune_computed_columns;
 extern bool optimizer_push_requirements_from_consumer_to_producer;
 extern bool optimizer_enforce_subplans;
@@ -551,6 +576,7 @@ extern bool	optimizer_partition_selection_log;
 #define JOIN_ORDER_IN_QUERY                 0
 #define JOIN_ORDER_GREEDY_SEARCH            1
 #define JOIN_ORDER_EXHAUSTIVE_SEARCH        2
+#define JOIN_ORDER_EXHAUSTIVE2_SEARCH       3
 
 /* Time based authentication GUC */
 extern char  *gp_auth_time_override_str;
@@ -682,7 +708,8 @@ extern bool parse_int(const char *value, int *result, int flags,
 extern bool parse_real(const char *value, double *result);
 extern int set_config_option(const char *name, const char *value,
 				  GucContext context, GucSource source,
-				  GucAction action, bool changeVal, int elevel);
+				  GucAction action, bool changeVal, int elevel,
+				  bool is_reload);
 extern void AlterSystemSetConfigFile(AlterSystemStmt *setstmt);
 extern char *GetConfigOptionByName(const char *name, const char **varname);
 extern void GetConfigOptionByNum(int varnum, const char **values, bool *noshow);
@@ -709,8 +736,6 @@ extern List *gp_guc_list_show(GucSource excluding, List *guclist);
 extern struct config_generic *find_option(const char *name,
 				bool create_placeholders, int elevel);
 
-extern bool select_gp_replication_config_files(const char *configdir, const char *progname);
-
 extern void set_gp_replication_config(const char *name, const char *value);
 
 extern bool parse_real(const char *value, double *result);
@@ -719,6 +744,11 @@ extern bool parse_real(const char *value, double *result);
 extern void write_nondefault_variables(GucContext context);
 extern void read_nondefault_variables(void);
 #endif
+
+/* GUC serialization */
+extern Size EstimateGUCStateSpace(void);
+extern void SerializeGUCState(Size maxsize, char *start_address);
+extern void RestoreGUCState(void *gucstate);
 
 /* Support for messages reported from GUC check hooks */
 
@@ -776,8 +806,6 @@ extern const char *gpvars_show_gp_resqueue_memory_policy(void);
 extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource source);
 extern bool gpvars_check_gp_enable_gpperfmon(bool *newval, void **extra, GucSource source);
 extern bool gpvars_check_gp_gpperfmon_send_interval(int *newval, void **extra, GucSource source);
-
-
-extern StdRdOptions *defaultStdRdOptions(char relkind);
+extern int guc_name_compare(const char *namea, const char *nameb);
 
 #endif   /* GUC_H */

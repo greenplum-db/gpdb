@@ -15,8 +15,10 @@ Feature: gpperfmon
     Scenario: install gpperfmon
         Given the environment variable "PGDATABASE" is set to "template1"
         Given the database "gpperfmon" does not exist
-        When the user runs "gpperfmon_install --port 15432 --enable --password foo"
+        When the user installs gpperfmon
         Then gpperfmon_install should return a return code of 0
+        Then gpperfmon_install should not print "foo" to stdout
+        Then gpperfmon_install should print "\*\*\*\*\*\*\*\*" to stdout
         Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
         Then verify that the last line of the file "pg_hba.conf" in the master data directory contains the string "host     all         gpmon         ::1/128    md5"
         And verify that there is a "heap" table "database_history" in "gpperfmon"
@@ -115,7 +117,7 @@ Feature: gpperfmon
     $ behave test/behave/mgmt_utils/gpperfmon.feature --tags @gpperfmon --tags ~@gpperfmon_queries_history_metrics
     """
     @gpperfmon_queries_history_metrics
-    Scenario: gpperfmon records cpu_elapsed, skew_cpu, skew_rows and rows_out
+    Scenario: gpperfmon records cpu_elapsed and rows_out
         Given gpperfmon is configured and running in qamode
         Given the user truncates "queries_history" tables in "gpperfmon"
         Given database "gptest" is dropped and recreated
@@ -134,8 +136,6 @@ Feature: gpperfmon
         select gp_segment_id, count(*),sum(pow(amt,2)) from sales group by gp_segment_id;
         """
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where cpu_elapsed > 1 and query_text like 'select gp_segment_id, count(*)%'" is "true"
-        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_cpu > 0.05 and db = 'gptest'" is "true"
-        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_rows > 0 and db = 'gptest'" is "true"
         Then wait until the results from boolean sql "SELECT rows_out = count(distinct content) from queries_history, gp_segment_configuration where query_text like 'select gp_segment_id, count(*)%' and db = 'gptest' and content != -1 group by rows_out" is "true"
 
     @gpperfmon_partition
@@ -168,10 +168,10 @@ Feature: gpperfmon
         # to make sure that no partition reaping is going to happen, we could add a step like this, but it is implementation specific:
         # wait until the latest gpperfmon log file contains the line "partition_age turned off"
         Then wait until the results from boolean sql "SELECT count(*) = 7 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
-        When the setting "partition_age = 4" is placed in the configuration file "gpperfmon/conf/gpperfmon.conf"
-        Then verify that the last line of the file "gpperfmon/conf/gpperfmon.conf" in the master data directory contains the string "partition_age = 4"
+        When the setting "partition_age = 5" is placed in the configuration file "gpperfmon/conf/gpperfmon.conf"
+        Then verify that the last line of the file "gpperfmon/conf/gpperfmon.conf" in the master data directory contains the string "partition_age = 5"
         When the user runs command "pkill gpmmon"
         Then wait until the process "gpmmon" is up
         And wait until the process "gpsmon" is up
         # Note that the code considers partition_age + 1 as the number of partitions to keep
-        Then wait until the results from boolean sql "SELECT count(*) = 5 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) = 6 FROM pg_namespace n INNER JOIN pg_class cl ON cl.relnamespace = n.oid INNER JOIN pg_partition pp ON pp.parrelid = cl.oid INNER JOIN pg_partition_rule ppr ON ppr.paroid = pp.oid WHERE n.nspname = 'public' AND cl.relname = 'diskspace_history'" is "true"

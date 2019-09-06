@@ -18,8 +18,7 @@ if sys.version_info < (2, 5, 0) or sys.version_info >= (3, 0, 0):
                      % os.path.split(__file__)[-1])
     sys.exit(1)
 
-
-MAIN_VERSION = [5,99,99]    # version number for main
+MAIN_VERSION = [7,99,99]    # version number for main
 
 
 #============================================================
@@ -27,7 +26,7 @@ class GpVersion:
     '''
     The gpversion class is an abstraction of a given Greenplum release 
     version.  It exists in order to facilitate version comparisons,
-    formating, printing, etc.
+    formatting, printing, etc.
     
       x = GpVersion([3,2,0,4]) => Greenplum 3.2.0.4
       x = GpVersion('3.2')     => Greenplum 3.2 dev
@@ -48,8 +47,10 @@ class GpVersion:
                 '4.1',
                 '4.2',
                 '4.3',
-                '5'
-              ]
+                '5',
+                '6',
+                '7'
+    ]
 
     #------------------------------------------------------------
     def __init__(self, version):
@@ -133,7 +134,7 @@ class GpVersion:
                 # <VERSION> consists of:
                 #    2 digits for major version
                 #    optionally another 2 digits for minor version
-                #    optionally a string specifiying a "special build", eg:
+                #    optionally a string specifying a "special build", eg:
                 #        
                 #        we ignore the usual build version and use the special
                 #        vilue for "<BUILD>" instead.
@@ -178,9 +179,9 @@ class GpVersion:
 
 
         # If part of the conversion process above failed, throw an error,
-        except:
-            raise StandardError("Unrecognised Greenplum Version '%s'" % 
-                                str(version))
+        except Exception as e:
+            raise StandardError("Unrecognised Greenplum Version '%s' due to %s" %
+                                (str(version), str(e)))
 
     #------------------------------------------------------------
     def __cmp__(self, other):

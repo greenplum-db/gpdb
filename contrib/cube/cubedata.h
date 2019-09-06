@@ -23,11 +23,10 @@ typedef struct NDBOX
 	unsigned int header;
 
 	/*
-	 * Variable length array. The lower left coordinates for each dimension
-	 * come first, followed by upper right coordinates unless the point flag
-	 * is set.
+	 * The lower left coordinates for each dimension come first, followed by
+	 * upper right coordinates unless the point flag is set.
 	 */
-	double		x[1];
+	double		x[FLEXIBLE_ARRAY_MEMBER];
 } NDBOX;
 
 #define POINT_BIT			0x80000000
@@ -41,9 +40,18 @@ typedef struct NDBOX
 #define LL_COORD(cube, i) ( (cube)->x[i] )
 #define UR_COORD(cube, i) ( IS_POINT(cube) ? (cube)->x[i] : (cube)->x[(i) + DIM(cube)] )
 
-#define POINT_SIZE(_dim) (offsetof(NDBOX, x[0]) + sizeof(double)*(_dim))
-#define CUBE_SIZE(_dim) (offsetof(NDBOX, x[0]) + sizeof(double)*(_dim)*2)
+#define POINT_SIZE(_dim)	(offsetof(NDBOX, x) + sizeof(double)*(_dim))
+#define CUBE_SIZE(_dim)		(offsetof(NDBOX, x) + sizeof(double)*(_dim)*2)
 
-#define DatumGetNDBOX(x)	((NDBOX*)DatumGetPointer(x))
-#define PG_GETARG_NDBOX(x)	DatumGetNDBOX( PG_DETOAST_DATUM(PG_GETARG_DATUM(x)) )
+#define DatumGetNDBOX(x)	((NDBOX *) PG_DETOAST_DATUM(x))
+#define PG_GETARG_NDBOX(x)	DatumGetNDBOX(PG_GETARG_DATUM(x))
 #define PG_RETURN_NDBOX(x)	PG_RETURN_POINTER(x)
+
+/* in cubescan.l */
+extern int	cube_yylex(void);
+extern void cube_yyerror(NDBOX **result, const char *message) pg_attribute_noreturn();
+extern void cube_scanner_init(const char *str);
+extern void cube_scanner_finish(void);
+
+/* in cubeparse.y */
+extern int	cube_yyparse(NDBOX **result);

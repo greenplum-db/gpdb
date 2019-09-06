@@ -5,7 +5,7 @@ PostgreSQL documentation
 
 <refentry id="SQL-ALTERRESOURCEGROUP">
  <refmeta>
-  <refentrytitle id="sql-alterresourcequeue-title">ALTER RESOURCE GROUP</refentrytitle>
+  <refentrytitle id="sql-alterresourcegroup-title">ALTER RESOURCE GROUP</refentrytitle>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 

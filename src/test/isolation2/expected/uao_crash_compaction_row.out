@@ -5,8 +5,6 @@
 -- m/ERROR:.*server closed the connection unexpectedly/
 -- s/ERROR:.*server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/gm
 -- end_matchsubs
-3:CREATE extension if NOT EXISTS gp_inject_fault;
-CREATE
 3:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
  role | preferred_role | content | mode | status 
 ------+----------------+---------+------+--------
@@ -70,25 +68,25 @@ UPDATE 10
 3:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_before_cleanup_phase', 1, -1, 0, 2);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 1&:VACUUM crash_before_cleanup_phase;  <waiting ...>
 3:SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 2);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 
 3:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'suspend', '', '', 'crash_before_segmentfile_drop', 1, -1, 0, 2);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 2&:VACUUM crash_before_segmentfile_drop;  <waiting ...>
 3:SELECT gp_wait_until_triggered_fault('compaction_before_segmentfile_drop', 1, 2);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 
 -- we already waited for suspend faults to trigger and hence we can proceed to
@@ -97,7 +95,7 @@ UPDATE 10
 3:SELECT gp_inject_fault('appendonly_insert', 'panic', '', '', 'crash_vacuum_in_appendonly_insert', 1, -1, 0, 2);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 3:VACUUM crash_vacuum_in_appendonly_insert;
 ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic'  (seg0 127.0.0.1:25432 pid=21369)
@@ -123,17 +121,17 @@ DETAIL:
 1:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', 2);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 1:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', 2);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 1:SELECT gp_inject_fault('appendonly_insert', 'reset', 2);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 -- perform post crash validation checks
@@ -325,13 +323,13 @@ DELETE 3
 2:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'suspend', '', '', 'crash_master_before_cleanup_phase', 1, -1, 0, 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 1&:VACUUM crash_master_before_cleanup_phase;  <waiting ...>
 2:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'panic', '', '', 'crash_master_before_segmentfile_drop', 1, -1, 0, 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 -- wait for suspend faults to trigger and then proceed to run next
@@ -340,7 +338,7 @@ DELETE 3
 SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 2:VACUUM crash_master_before_segmentfile_drop;
 PANIC:  fault triggered, fault name:'compaction_before_segmentfile_drop' fault type:'panic'
@@ -356,12 +354,12 @@ server closed the connection unexpectedly
 4:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 4:SELECT gp_inject_fault('compaction_before_segmentfile_drop', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 -- perform post crash validation checks

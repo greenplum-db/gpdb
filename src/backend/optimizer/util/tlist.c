@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -237,6 +237,27 @@ get_tlist_exprs(List *tlist, bool includeJunk)
 
 
 /*
+ * count_nonjunk_tlist_entries
+ *		What it says ...
+ */
+int
+count_nonjunk_tlist_entries(List *tlist)
+{
+	int			len = 0;
+	ListCell   *l;
+
+	foreach(l, tlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(l);
+
+		if (!tle->resjunk)
+			len++;
+	}
+	return len;
+}
+
+
+/*
  * tlist_same_exprs
  *		Check whether two target lists contain the same expressions
  *
@@ -363,13 +384,7 @@ get_sortgroupref_tle(Index sortref, List *targetList)
 			return tle;
 	}
 
-	/*
-	 * XXX: we probably should catch this earlier, but we have a
-	 * few queries in the regression suite that hit this.
-	 */
-	ereport(ERROR,
-			(errcode(ERRCODE_SYNTAX_ERROR),
-			 errmsg("ORDER/GROUP BY expression not found in targetlist")));
+	elog(ERROR, "ORDER/GROUP BY expression not found in targetlist");
 	return NULL;				/* keep compiler quiet */
 }
 
@@ -434,15 +449,6 @@ get_sortgroupclauses_tles_recurse(List *clauses, List *targetList,
 		{
 			get_sortgroupclauses_tles_recurse((List *) node, targetList,
 											  tles, sortops, eqops);
-		}
-		else if (IsA(node, GroupingClause))
-		{
-			/* GroupingClauses are collected into separate list */
-			get_sortgroupclauses_tles_recurse(((GroupingClause *) node)->groupsets,
-											  targetList,
-											  &sub_grouping_tles,
-											  &sub_grouping_sortops,
-											  &sub_grouping_eqops);
 		}
 		else
 			elog(ERROR, "unrecognized node type in list of sort/group clauses: %d",
@@ -513,113 +519,26 @@ get_sortgrouplist_exprs(List *sgClauses, List *targetList)
 }
 
 /*
- * get_grouplist_colidx
- *		Given a list of GroupClauses, build an array of the referenced
- *		targetlist resnos and their sort operators.  If numCols is not NULL,
- *		it is filled by the length of returned array.  Results are allocated
- *		by palloc.
+ * get_sortgroupref_clause
+ *		Find the SortGroupClause matching the given SortGroupRef index,
+ *		and return it.
  */
-void
-get_grouplist_colidx(List *groupClauses, List *targetList, int *numCols,
-					 AttrNumber **colIdx, Oid **grpOperators)
+SortGroupClause *
+get_sortgroupref_clause(Index sortref, List *clauses)
 {
-	List	   *tles;
-	List	   *sortops;
-	List	   *eqops;
-	ListCell   *lc_tle;
-	ListCell   *lc_eqop;
-	int			i,
-				len;
+	ListCell   *l;
 
-	len = num_distcols_in_grouplist(groupClauses);
-	if (numCols)
-		*numCols = len;
-
-	if (len == 0)
+	foreach(l, clauses)
 	{
-		*colIdx = NULL;
-		*grpOperators = NULL;
-		return;
+		SortGroupClause *cl = (SortGroupClause *) lfirst(l);
+
+		if (cl->tleSortGroupRef == sortref)
+			return cl;
 	}
 
-	get_sortgroupclauses_tles(groupClauses, targetList, &tles, &sortops, &eqops);
-
-	*colIdx = (AttrNumber *) palloc(sizeof(AttrNumber) * len);
-	*grpOperators = (Oid *) palloc(sizeof(Oid) * len);
-
-	i = 0;
-	forboth(lc_tle, tles, lc_eqop, eqops)
-	{
-		TargetEntry	*tle = lfirst(lc_tle);
-		Oid			eqop = lfirst_oid(lc_eqop);
-
-		Assert (i < len);
-
-		(*colIdx)[i] = tle->resno;
-		(*grpOperators)[i] = eqop;
-		if (!OidIsValid((*grpOperators)[i]))		/* shouldn't happen */
-			elog(ERROR, "could not find equality operator for ordering operator %u",
-				 (*grpOperators)[i]);
-		i++;
-	}
+	elog(ERROR, "ORDER/GROUP BY expression not found in list");
+	return NULL;				/* keep compiler quiet */
 }
-
-/*
- * get_grouplist_exprs
- *     Find a list of unique referenced targetlist expressions used in a given
- *     list of GroupClauses or a GroupingClauses.
- *
- * All expressions will appear in the same order as they appear in the
- * given list of GroupClauses or a GroupingClauses.
- *
- * Note that the top-level empty sets will be removed here.
- */
-List *
-get_grouplist_exprs(List *groupClauses, List *targetList)
-{
-	List *result = NIL;
-	ListCell *l;
-
-	foreach (l, groupClauses)
-	{
-		Node *groupClause = lfirst(l);
-
-		if (groupClause == NULL)
-			continue;
-
-		Assert(IsA(groupClause, SortGroupClause) ||
-			   IsA(groupClause, GroupingClause) ||
-			   IsA(groupClause, List));
-
-		if (IsA(groupClause, SortGroupClause))
-		{
-			Node *expr = get_sortgroupclause_expr((SortGroupClause *) groupClause,
-												  targetList);
-
-			if (!list_member(result, expr))
-				result = lappend(result, expr);
-		}
-
-		else if (IsA(groupClause, List))
-			result = list_concat_unique(result,
-								 get_grouplist_exprs((List *)groupClause, targetList));
-
-		else
-			result = list_concat_unique(result,
-								 get_grouplist_exprs(((GroupingClause*)groupClause)->groupsets,
-													 targetList));
-	}
-
-	return result;
-}
-
-
-/*****************************************************************************
- *		Functions to extract data from a list of SortGroupClauses
- *
- * These don't really belong in tlist.c, but they are sort of related to the
- * functions just above, and they don't seem to deserve their own file.
- *****************************************************************************/
 
 /*
  * extract_grouping_ops - make an array of the equality operator OIDs
@@ -684,31 +603,10 @@ grouping_is_sortable(List *groupClause)
 
 	foreach(glitem, groupClause)
 	{
-		Node	   *node = lfirst(glitem);
+		SortGroupClause *groupcl = (SortGroupClause *) lfirst(glitem);
 
-		if (node == NULL)
-			continue;
-
-		if (IsA(node, List))
-		{
-			if (!grouping_is_sortable((List *) node))
-				return false;
-		}
-		else if (IsA(node, GroupingClause))
-		{
-			if (!grouping_is_sortable(((GroupingClause *) node)->groupsets))
-				return false;
-		}
-		else
-		{
-			SortGroupClause *groupcl;
-
-			Assert(IsA(node, SortGroupClause));
-
-			groupcl = (SortGroupClause *) node;
-			if (!OidIsValid(groupcl->sortop))
-				return false;
-		}
+		if (!OidIsValid(groupcl->sortop))
+			return false;
 	}
 	return true;
 }
@@ -725,32 +623,13 @@ grouping_is_hashable(List *groupClause)
 
 	foreach(glitem, groupClause)
 	{
-		Node	   *node = lfirst(glitem);
+		SortGroupClause *groupcl = (SortGroupClause *) lfirst(glitem);
 
-		if (node == NULL)
-			continue;
-
-		if (IsA(node, List))
-		{
-			if (!grouping_is_hashable((List *) node))
-				return false;
-		}
-		else if (IsA(node, GroupingClause))
-		{
-			if (!grouping_is_hashable(((GroupingClause *) node)->groupsets))
-				return false;
-		}
-		else
-		{
-			SortGroupClause *groupcl = (SortGroupClause *) node;
-
-			if (!groupcl->hashable)
-				return false;
-		}
+		if (!groupcl->hashable)
+			return false;
 	}
 	return true;
 }
-
 
 /*
  * Return the largest sortgroupref value in use in the given

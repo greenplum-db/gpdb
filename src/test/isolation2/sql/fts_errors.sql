@@ -3,7 +3,6 @@
 -- Content 1 is used to test the gang interaction in various
 -- sessions when a failover is triggered and mirror is promoted
 -- to primary
-create extension if not exists gp_inject_fault;
 
 -- start_matchsubs
 -- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/
@@ -47,9 +46,13 @@ $$ language plpgsql;
 -- no segment down.
 select count(*) from gp_segment_configuration where status = 'd';
 
+drop table if exists fts_errors_test;
+create table fts_errors_test(a int);
+
 1:BEGIN;
 1:END;
 2:BEGIN;
+2:INSERT INTO fts_errors_test SELECT * FROM generate_series(1,100);
 3:BEGIN;
 3:CREATE TEMP TABLE tmp3 (c1 int, c2 int);
 3:DECLARE c1 CURSOR for select * from tmp3;
@@ -122,7 +125,7 @@ select pg_ctl((select datadir from gp_segment_configuration c
 where c.role='m' and c.content=0), 'stop');
 
 -- fully recover the failed primary as new mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF --no-progress;
 
 -- loop while segments come in sync
 do $$

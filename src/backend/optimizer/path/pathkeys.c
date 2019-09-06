@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -20,7 +20,7 @@
 #include "postgres.h"
 
 #include "access/hash.h"
-#include "access/skey.h"
+#include "access/stratnum.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "nodes/plannodes.h"
@@ -1477,122 +1477,6 @@ make_distribution_exprs_for_groupclause(PlannerInfo *root, List *groupclause, Li
 	*partition_dist_pathkeys = pathkeys;
 	*partition_dist_exprs = exprs;
 	*partition_dist_opfamilies = opfamilies;
-}
-
-/****************************************************************************
- *		PATHKEYS AND GROUPCLAUSES AND GROUPINGCLAUSE
- ***************************************************************************/
-
-/*
- * make_pathkeys_for_groupclause
- *	 Generate a pathkeys list that represents the sort order specified by
- *	 a list of GroupClauses or GroupingClauses.
- *
- * Note: If the same column appears twice anywhere in the grouping clause or
- * withing grouping sets, only one PathKey is generated for it.
- */
-
-typedef struct
-{
-	PlannerInfo *root;
-	bool		canonicalize;
-	List	   *tlist;
-	Bitmapset *used_refs;
-	List	   *result;
-} pathkeys_for_groupclause_context;
-
-static void
-make_pathkeys_for_groupclause_recurse(pathkeys_for_groupclause_context *cxt,
-									  List *groupclause)
-{
-	ListCell   *l;
-
-	foreach(l, groupclause)
-	{
-		Expr	   *sortkey;
-		PathKey    *pathkey;
-		Node	   *node = lfirst(l);
-
-		if (node == NULL)
-			continue;
-
-		if (IsA(node, SortGroupClause))
-		{
-			SortGroupClause *sortcl = (SortGroupClause *) node;
-
-			if (!bms_is_member(sortcl->tleSortGroupRef, cxt->used_refs))
-			{
-				sortkey = (Expr *) get_sortgroupclause_expr(sortcl, cxt->tlist);
-				Assert(OidIsValid(sortcl->sortop));
-				pathkey = make_pathkey_from_sortop(cxt->root,
-												   sortkey,
-												   cxt->root->nullable_baserels,
-												   sortcl->sortop,
-												   sortcl->nulls_first,
-												   sortcl->tleSortGroupRef,
-												   true);
-
-				/*
-				 * The pathkey becomes a one-element sublist. canonicalize_pathkeys() might
-				 * replace it with a longer sublist later.
-				 */
-				if (!cxt->canonicalize || !pathkey_is_redundant(pathkey, cxt->result))
-					cxt->result = lappend(cxt->result, pathkey);
-				cxt->used_refs = bms_add_member(cxt->used_refs, sortcl->tleSortGroupRef);
-			}
-		}
-		else if (IsA(node, List))
-		{
-			make_pathkeys_for_groupclause_recurse(cxt, (List *) node);
-		}
-		else if (IsA(node, GroupingClause))
-		{
-			make_pathkeys_for_groupclause_recurse(cxt,
-												  ((GroupingClause *) node)->groupsets);
-		}
-	}
-}
-
-List *
-make_pathkeys_for_groupclause(PlannerInfo *root,
-							  List *groupclause,
-							  List *tlist)
-{
-	pathkeys_for_groupclause_context cxt;
-
-	cxt.root = root;
-	cxt.tlist = tlist;
-	cxt.used_refs = NULL;
-	cxt.result = NIL;
-	cxt.canonicalize = true;
-
-	make_pathkeys_for_groupclause_recurse(&cxt, groupclause);
-
-	return cxt.result;
-}
-
-/*
- * Like make_pathkeys_for_groupclause, but doesn't remove duplicate pathkeys
- * from the list. This is needed in plangroupext.c, because the logic there
- * gets confused unless there's a one-to-one match between the columns in
- * groupClause and grouping_pathkeys.
- */
-List *
-make_pathkeys_for_groupclause_noncanonical(PlannerInfo *root,
-										   List *groupclause,
-										   List *tlist)
-{
-	pathkeys_for_groupclause_context cxt;
-
-	cxt.root = root;
-	cxt.tlist = tlist;
-	cxt.used_refs = NULL;
-	cxt.result = NIL;
-	cxt.canonicalize = false;
-
-	make_pathkeys_for_groupclause_recurse(&cxt, groupclause);
-
-	return cxt.result;
 }
 
 /****************************************************************************

@@ -2,9 +2,6 @@
 -- 'fts_conn_startup_packet' is used to simulate the primary responding
 -- in-recovery to FTS, primary is not actually going through crash-recovery in
 -- test.
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
 select gp_inject_fault_infinite('fts_conn_startup_packet', 'skip', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
@@ -16,10 +13,10 @@ from gp_segment_configuration where content = 0 and role = 'p';
 -- Allow extra time for mirror promotion to complete recovery to avoid
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries
 -- are not up. Setting these increase the number of retries in gang creation in
--- case segment is in recovery. Approximately we want to wait 30 seconds.
+-- case segment is in recovery. Approximately we want to wait 2 minutes at most.
 -- start_ignore
 \!gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly
-\!gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly
+\!gpconfig -c gp_gang_creation_retry_timer -v 1000 --skipvalidation --masteronly
 \!gpstop -u
 -- end_ignore
 -- Wait a few seconds, to ensure the config changes take effect.
@@ -42,9 +39,31 @@ from gp_segment_configuration where content = 0 and role = 'p';
 select gp_request_fts_probe_scan();
 select gp_request_fts_probe_scan();
 select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
+
 -- The remaining steps are to bring back the cluster to original state.
 -- start_ignore
-\! gprecoverseg -av
+
+-- Wait until content 0 mirror is promoted otherwise, gprecoverseg
+-- that runs after will fail.
+do $$
+declare
+  y int;
+begin
+  for i in 1..120 loop
+    begin
+      select count(*) into y from gp_dist_random('gp_id');
+      raise notice 'got % results, mirror must have been promoted', y;
+      return;
+    exception
+      when others then
+        raise notice 'mirror may not be promoted yet: %', sqlerrm;
+        perform pg_sleep(0.5);
+    end;
+  end loop;
+end;
+$$;
+
+\! gprecoverseg -av --no-progress
 -- end_ignore
 
 -- loop while segments come in sync
@@ -85,7 +104,5 @@ select role, preferred_role, mode, status from gp_segment_configuration where co
 -- end_ignore
 
 -- cleanup steps
-select gp_inject_fault('fts_recovery_in_progress', 'reset', dbid)
-from gp_segment_configuration where content = 0 and role = 'p';
-select gp_inject_fault('fts_conn_startup_packet', 'reset', dbid)
+select gp_inject_fault('all', 'reset', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';

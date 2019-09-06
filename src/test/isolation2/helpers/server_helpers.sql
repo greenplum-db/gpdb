@@ -10,11 +10,13 @@ create or replace language plpythonu;
 create or replace function pg_ctl(datadir text, command text, command_mode text default 'immediate')
 returns text as $$
     import subprocess
-    if command not in ('stop', 'restart'):
+    if command == 'promote':
+        cmd = 'pg_ctl promote -D %s' % datadir
+    elif command in ('stop', 'restart'):
+        cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
+        cmd = cmd + '-w -m %s %s' % (command_mode, command)
+    else:
         return 'Invalid command input'
-
-    cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
-    cmd = cmd + '-w -m %s %s' % (command_mode, command)
 
     return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;
@@ -102,3 +104,6 @@ BEGIN
 END;
 $$ language plpgsql;
 
+create or replace function master() returns setof gp_segment_configuration as $$
+	select * from gp_segment_configuration where role='p' and content=-1;
+$$ language sql;

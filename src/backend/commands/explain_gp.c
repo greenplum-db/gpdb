@@ -772,8 +772,16 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 	/* Transfer worker counts to SliceSummary. */
 	showstatctx->slices[sliceIndex].dispatchSummary = ds;
 
-	/* Signal that we've gathered all the statistics */
-	showstatctx->stats_gathered = true;
+	/* Signal that we've gathered all the statistics
+	 * For some query, which has initplan on top of the plan,
+	 * its `ANALYZE EXPLAIN` invoke `cdbexplain_recvExecStats`
+	 * multi-times in different recursive routine to collect
+	 * metrics on both initplan and plan. Thus, this variable
+	 * should only assign on slice 0 after gather result done
+	 * to promise all slices information have been collected.
+	 */
+	if (sliceIndex == 0)
+		showstatctx->stats_gathered = true;
 
 	/* Clean up. */
 	if (ctx.msgptrs)
@@ -1947,8 +1955,17 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 		{
 			long mem_wanted;
 
-			mem_wanted = (long) PolicyAutoStatementMemForNoSpillKB(stmt,
-							(uint64) showstatctx->workmemwanted_max / 1024L);
+			mem_wanted = (long) PolicyAutoStatementMemForNoSpill(stmt,
+							(uint64) showstatctx->workmemwanted_max);
+
+			/*
+			 * Round up to a kilobyte in case we end up requiring less than
+			 * that.
+			 */
+			if (mem_wanted <= 1024L)
+				mem_wanted = 1L;
+			else
+				mem_wanted = mem_wanted / 1024L;
 
 			if (es->format == EXPLAIN_FORMAT_TEXT)
 				appendStringInfo(es->str, "Memory wanted:  %ldkB\n", mem_wanted);

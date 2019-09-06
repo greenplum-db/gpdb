@@ -52,20 +52,20 @@ sub AddFiles
 
 	while (my $f = shift)
 	{
-		$self->{files}->{ $dir . "\\" . $f } = 1;
+		$self->{files}->{ $dir . "/" . $f } = 1;
 	}
 }
 
 sub ReplaceFile
 {
 	my ($self, $filename, $newname) = @_;
-	my $re = "\\\\$filename\$";
+	my $re = "\\/$filename\$";
 
 	foreach my $file (keys %{ $self->{files} })
 	{
 
 		# Match complete filename
-		if ($filename =~ /\\/)
+		if ($filename =~ m!/!)
 		{
 			if ($file eq $filename)
 			{
@@ -77,7 +77,7 @@ sub ReplaceFile
 		elsif ($file =~ m/($re)/)
 		{
 			delete $self->{files}{$file};
-			$self->{files}{"$newname\\$filename"} = 1;
+			$self->{files}{"$newname/$filename"} = 1;
 			return;
 		}
 	}
@@ -105,7 +105,7 @@ sub RelocateFiles
 		if ($r)
 		{
 			$self->RemoveFile($f);
-			$self->AddFile($targetdir . '\\' . basename($f));
+			$self->AddFile($targetdir . '/' . basename($f));
 		}
 	}
 }
@@ -118,7 +118,7 @@ sub AddReference
 	{
 		push @{ $self->{references} }, $ref;
 		$self->AddLibrary(
-			"__CFGNAME__\\" . $ref->{name} . "\\" . $ref->{name} . ".lib");
+			"__CFGNAME__/" . $ref->{name} . "/" . $ref->{name} . ".lib");
 	}
 }
 
@@ -169,8 +169,8 @@ sub FullExportDLL
 	my ($self, $libname) = @_;
 
 	$self->{builddef} = 1;
-	$self->{def}      = ".\\__CFGNAME__\\$self->{name}\\$self->{name}.def";
-	$self->{implib}   = "__CFGNAME__\\$self->{name}\\$libname";
+	$self->{def}      = "./__CFGNAME__/$self->{name}/$self->{name}.def";
+	$self->{implib}   = "__CFGNAME__/$self->{name}/$libname";
 }
 
 sub UseDef
@@ -183,17 +183,9 @@ sub UseDef
 sub AddDir
 {
 	my ($self, $reldir) = @_;
-	my $MF;
+	my $mf = read_makefile($reldir);
 
-	my $t = $/;
-	undef $/;
-	open($MF, "$reldir\\Makefile")
-	  || open($MF, "$reldir\\GNUMakefile")
-	  || croak "Could not open $reldir\\Makefile\n";
-	my $mf = <$MF>;
-	close($MF);
-
-	$mf =~ s{\\\s*[\r\n]+}{}mg;
+	$mf =~ s{\\\r?\n}{}g;
 	if ($mf =~ m{^(?:SUB)?DIRS[^=]*=\s*(.*)$}mg)
 	{
 		foreach my $subdir (split /\s+/, $1)
@@ -202,9 +194,9 @@ sub AddDir
 			  if $subdir eq "\$(top_builddir)/src/timezone"
 			;    #special case for non-standard include
 			next
-			  if $reldir . "\\" . $subdir eq "src\\backend\\port\\darwin";
+			  if $reldir . "/" . $subdir eq "src/backend/port/darwin";
 
-			$self->AddDir($reldir . "\\" . $subdir);
+			$self->AddDir($reldir . "/" . $subdir);
 		}
 	}
 	while ($mf =~ m{^(?:EXTRA_)?OBJS[^=]*=\s*(.*)$}m)
@@ -251,13 +243,11 @@ sub AddDir
 			if ($f =~ /^\$\(top_builddir\)\/(.*)/)
 			{
 				$f = $1;
-				$f =~ s/\//\\/g;
 				$self->{files}->{$f} = 1;
 			}
 			else
 			{
-				$f =~ s/\//\\/g;
-				$self->{files}->{"$reldir\\$f"} = 1;
+				$self->{files}->{"$reldir/$f"} = 1;
 			}
 		}
 		$mf =~ s{OBJS[^=]*=\s*(.*)$}{}m;
@@ -272,7 +262,6 @@ sub AddDir
 		my $match  = $1;
 		my $top    = $2;
 		my $target = $3;
-		$target =~ s{/}{\\}g;
 		my @pieces = split /\s+/, $match;
 		foreach my $fn (@pieces)
 		{
@@ -282,7 +271,7 @@ sub AddDir
 			}
 			elsif ($top eq "(backend_src)")
 			{
-				eval { $self->ReplaceFile($fn, "src\\backend\\$target") };
+				eval { $self->ReplaceFile($fn, "src/backend/$target") };
 			}
 			else
 			{
@@ -292,7 +281,15 @@ sub AddDir
 		$mf =~ s{$replace_re}{}m;
 	}
 
-	# See if this Makefile contains a description, and should have a RC file
+	$self->AddDirResourceFile($reldir);
+}
+
+# If the directory's Makefile bears a description string, add a resource file.
+sub AddDirResourceFile
+{
+	my ($self, $reldir) = @_;
+	my $mf = read_makefile($reldir);
+
 	if ($mf =~ /^PGFILEDESC\s*=\s*\"([^\"]+)\"/m)
 	{
 		my $desc = $1;
@@ -300,7 +297,6 @@ sub AddDir
 		if ($mf =~ /^PGAPPICON\s*=\s*(.*)$/m) { $ico = $1; }
 		$self->AddResourceFile($reldir, $desc, $ico);
 	}
-	$/ = $t;
 }
 
 sub AddResourceFile
@@ -311,12 +307,12 @@ sub AddResourceFile
 	  localtime(time);
 	my $d = sprintf("%02d%03d", ($year - 100), $yday);
 
-	if (Solution::IsNewer("$dir\\win32ver.rc", 'src\port\win32ver.rc'))
+	if (Solution::IsNewer("$dir/win32ver.rc", 'src/port/win32ver.rc'))
 	{
 		print "Generating win32ver.rc for $dir\n";
-		open(I, 'src\port\win32ver.rc')
+		open(I, 'src/port/win32ver.rc')
 		  || confess "Could not open win32ver.rc";
-		open(O, ">$dir\\win32ver.rc")
+		open(O, ">$dir/win32ver.rc")
 		  || confess "Could not write win32ver.rc";
 		my $icostr = $ico ? "IDI_ICON ICON \"src/port/$ico.ico\"" : "";
 		while (<I>)
@@ -333,7 +329,7 @@ sub AddResourceFile
 	}
 	close(O);
 	close(I);
-	$self->AddFile("$dir\\win32ver.rc");
+	$self->AddFile("$dir/win32ver.rc");
 }
 
 sub DisableLinkerWarnings
@@ -402,6 +398,23 @@ sub read_file
 
 	undef $/;
 	open($F, $filename) || croak "Could not open file $filename\n";
+	my $txt = <$F>;
+	close($F);
+	$/ = $t;
+
+	return $txt;
+}
+
+sub read_makefile
+{
+	my $reldir = shift;
+	my $F;
+	my $t = $/;
+
+	undef $/;
+	open($F, "$reldir/GNUmakefile")
+	  || open($F, "$reldir/Makefile")
+	  || confess "Could not open $reldir/Makefile\n";
 	my $txt = <$F>;
 	close($F);
 	$/ = $t;

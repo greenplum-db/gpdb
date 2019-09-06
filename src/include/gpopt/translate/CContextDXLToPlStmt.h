@@ -95,7 +95,7 @@ namespace gpdxl
 			typedef CHashMap<ULONG, SCTEConsumerInfo, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
 			CleanupDelete<ULONG>, CleanupDelete<SCTEConsumerInfo> > HMUlCTEConsumerInfo;
 
-			IMemoryPool *m_mp;
+			CMemoryPool *m_mp;
 
 			// counter for generating plan ids
 			CIdGenerator *m_plan_id_counter;
@@ -137,7 +137,7 @@ namespace gpdxl
 			// ctor/dtor
 			CContextDXLToPlStmt
 						(
-						IMemoryPool *mp,
+						CMemoryPool *mp,
 						CIdGenerator *plan_id_counter,
 						CIdGenerator *motion_id_counter,
 						CIdGenerator *param_id_counter,

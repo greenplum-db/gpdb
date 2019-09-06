@@ -11,6 +11,6 @@ subdir = src/backend/utils/hyperloglog
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
-OBJS = hyperloglog.o
+OBJS = gp_hyperloglog.o
 
 include $(top_srcdir)/src/backend/common.mk

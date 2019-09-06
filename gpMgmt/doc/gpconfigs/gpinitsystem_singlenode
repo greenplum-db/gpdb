@@ -90,15 +90,6 @@ MASTER_PORT=5432
 TRUSTED_SHELL=ssh
 
 
-# Maximum distance between automatic write ahead log (WAL) 
-# checkpoints, in log file segments (each segment is normally 16 
-# megabytes). This will set the checkpoint_segments parameter 
-# in the postgresql.conf file for each segment instance in the 
-# Greenplum Database system.
-
-CHECK_POINT_SEGMENTS=8
-
-
 # The character set encoding to use. Greenplum supports the 
 # same character sets as PostgreSQL. See 'Character Set Support'
 # in the PostgreSQL documentation for allowed character sets.

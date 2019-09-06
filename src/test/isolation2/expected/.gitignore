@@ -1,12 +1,20 @@
-resgroup_memory_statistic.out
-resgroup_memory_limit.out
+# ignores only for this directory
+/ao_upgrade.out
+/ao_upgrade_optimizer.out
+/fts_manual_probe.out
+/gp_collation.out
+/pg_basebackup.out
+/pg_basebackup_with_tablespaces.out
+/pt_io_in_progress_deadlock.out
+
+# ignores including sub-directories
 disable_resgroup.out
 enable_resgroup.out
 enable_resgroup_validate.out
-resgroup_cpu_rate_limit.out
 resgroup_alter_memory.out
-pt_io_in_progress_deadlock.out
 resgroup_bypass.out
 resgroup_bypass_optimizer.out
+resgroup_cpu_rate_limit.out
 resgroup_cpuset.out
-gp_collation.out
+resgroup_memory_limit.out
+resgroup_memory_statistic.out

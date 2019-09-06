@@ -158,6 +158,7 @@ test_connect_ok("sslmode=verify-ca host=wronghost.test");
 test_connect_fails("sslmode=verify-full host=wronghost.test");
 
 # Test Subject Alternative Names.
+# GPDB_95_MERGE_FIXME: uncomment these tests when commit acd08d764 is merged.
 #switch_server_cert($node, 'server-multiple-alt-names');
 #
 #note "test hostname matching with X.509 Subject Alternative Names";

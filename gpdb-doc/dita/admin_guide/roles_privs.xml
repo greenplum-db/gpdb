@@ -445,12 +445,11 @@
         all the data and passwords move between <codeph>pgcrypto</codeph> and the client application
         in clear-text. For optimal security, consider also using SSL connections between the client
         and the Greenplum master server.</note>
-      <p>To use <codeph>pgcrypto</codeph> functions, run the installation script
-          <codeph>$GPHOME/share/postgresql/contrib/pgcrypto.sql</codeph> in each database where you
-        want the ability to query other
-        databases:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/pgcrypto.sql</codeblock></p>
+      <p>To use <codeph>pgcrypto</codeph> functions, register the <codeph>pgcrypto</codeph>
+        extension in each database in which you want to use the functions. For example:
+        <codeblock>$ psql -d testdb -c "CREATE EXTENSION pgcrypto"</codeblock></p>
       <p>See <xref
-          href="https://www.postgresql.org/docs/8.3/pgcrypto.html"
+          href="https://www.postgresql.org/docs/9.4/pgcrypto.html"
           format="html" scope="external">pgcrypto</xref> in the PostgreSQL documentation for more
         information about individual functions.</p>
     </body>

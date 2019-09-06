@@ -18,9 +18,9 @@
 
 
 void
-DistributedLog_desc(StringInfo buf, XLogRecord *record)
+DistributedLog_desc(StringInfo buf, XLogReaderState *record)
 {
-	uint8		info = record->xl_info & ~XLR_INFO_MASK;
+	uint8		info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
 	char		*rec = XLogRecGetData(record);
 
 	if (info == DISTRIBUTEDLOG_ZEROPAGE)
@@ -39,4 +39,22 @@ DistributedLog_desc(StringInfo buf, XLogRecord *record)
 	}
 	else
 		appendStringInfo(buf, "UNKNOWN");
+}
+
+const char *
+DistributedLog_identify(uint8 info)
+{
+	const char *id = NULL;
+
+	switch (info & ~XLR_INFO_MASK)
+	{
+		case DISTRIBUTEDLOG_ZEROPAGE:
+			id = "DISTRIBUTEDLOG_ZEROPAGE";
+			break;
+		case DISTRIBUTEDLOG_TRUNCATE:
+			id = "DISTRIBUTEDLOG_TRUNCATE";
+			break;
+	}
+
+	return id;
 }

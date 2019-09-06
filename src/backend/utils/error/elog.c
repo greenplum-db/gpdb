@@ -45,7 +45,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -65,11 +65,7 @@
 #include <syslog.h>
 #endif
 
-/*
- * OpenSolaris has this header, but Solaris 10 doesn't.
- * Linux and OSX 10.5 have it.
- */
-#if !defined(_WIN32) && !defined(_WIN64)
+#ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
 #endif
 
@@ -120,7 +116,7 @@
 static const char *err_gettext(const char *str)
 /* This extension allows gcc to check the format string for consistency with
    the supplied arguments. */
-__attribute__((format_arg(1)));
+pg_attribute_format_arg(1);
 
 #undef _
 #define _(x) err_gettext(x)
@@ -128,11 +124,7 @@ __attribute__((format_arg(1)));
 #undef _
 #define _(x) err_gettext(x)
 
-static const char *
-err_gettext(const char *str)
-/* This extension allows gcc to check the format string for consistency with
-   the supplied arguments. */
-__attribute__((format_arg(1)));
+static const char *err_gettext(const char *str) pg_attribute_format_arg(1);
 static void set_errdata_field(MemoryContextData *cxt, char **ptr, const char *str);
 
 /* Global variables */
@@ -252,6 +244,12 @@ static void write_pipe_chunks(char *data, int len, int dest);
 static void write_csvlog(ErrorData *edata);
 static void elog_debug_linger(ErrorData *edata);
 
+/* GPDB: wrapper function to silence unused result warning */
+static inline void
+ignore_returned_result(long long int result)
+{
+	(void) result;
+}
 
 /* verify string is correctly encoded, and escape it if invalid  */
 static void verify_and_replace_mbstr(char **str, int len)
@@ -406,8 +404,9 @@ errstart(int elevel, const char *filename, int lineno,
 					break;
 
 				case DTX_STATE_NONE:
-				case DTX_STATE_ACTIVE_NOT_DISTRIBUTED:
 				case DTX_STATE_ACTIVE_DISTRIBUTED:
+				case DTX_STATE_ONE_PHASE_COMMIT:
+				case DTX_STATE_PERFORMING_ONE_PHASE_COMMIT:
 				case DTX_STATE_INSERTING_FORGET_COMMITTED:
 				case DTX_STATE_INSERTED_FORGET_COMMITTED:
 				case DTX_STATE_NOTIFYING_ABORT_NO_PREPARED:
@@ -499,7 +498,6 @@ errstart(int elevel, const char *filename, int lineno,
 			 */
 			if (recursion_depth > 2 * ERRORDATA_STACK_SIZE)
 			{
-				ImmediateInterruptOK = false;
 				fflush(stdout);
 				fflush(stderr);
 				return false;
@@ -553,7 +551,7 @@ errstart(int elevel, const char *filename, int lineno,
 	/* errno is saved here so that error parameter eval can't change it */
 	edata->saved_errno = errno;
 
-#ifndef WIN32
+#ifdef HAVE_BACKTRACE_SYMBOLS
 	edata->stacktracesize = backtrace(edata->stacktracearray, 30);
 #else
 	edata->stacktracesize = 0;
@@ -577,11 +575,10 @@ errstart(int elevel, const char *filename, int lineno,
  * See elog.h for the error level definitions.
  */
 void
-errfinish(int dummy __attribute__((unused)),...)
+errfinish(int dummy pg_attribute_unused(),...)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
 	int			elevel;
-	bool		save_ImmediateInterruptOK;
 	MemoryContext oldcontext;
 	ErrorContextCallback *econtext;
 	int			saved_errno;            /*CDB*/
@@ -590,18 +587,6 @@ errfinish(int dummy __attribute__((unused)),...)
 	CHECK_STACK_DEPTH();
 	saved_errno = edata->saved_errno;   /*CDB*/
 	elevel = edata->elevel;
-
-	/*
-	 * Ensure we can't get interrupted while performing error reporting.  This
-	 * is needed to prevent recursive entry to functions like syslog(), which
-	 * may not be re-entrant.
-	 *
-	 * Note: other places that save-and-clear ImmediateInterruptOK also do
-	 * HOLD_INTERRUPTS(), but that should not be necessary here since we don't
-	 * call anything that could turn on ImmediateInterruptOK.
-	 */
-	save_ImmediateInterruptOK = ImmediateInterruptOK;
-	ImmediateInterruptOK = false;
 
 	/*
 	 * Do processing in ErrorContext, which we hope has enough reserved space
@@ -638,10 +623,6 @@ errfinish(int dummy __attribute__((unused)),...)
 		 * itself be inside a holdoff section.  If necessary, such a handler
 		 * could save and restore InterruptHoldoffCount for itself, but this
 		 * should make life easier for most.)
-		 *
-		 * Note that we intentionally don't restore ImmediateInterruptOK here,
-		 * even if it was set at entry.  We definitely don't want that on
-		 * while doing error cleanup.
 		 */
 		InterruptHoldoffCount = 0;
 		QueryCancelHoldoffCount = 0;
@@ -770,15 +751,9 @@ errfinish(int dummy __attribute__((unused)),...)
 	}
 
 	/*
-	 * We reach here if elevel <= WARNING.  OK to return to caller, so restore
-	 * caller's setting of ImmediateInterruptOK.
-	 */
-	ImmediateInterruptOK = save_ImmediateInterruptOK;
-
-	/*
-	 * But check for cancel/die interrupt first --- this is so that the user
-	 * can stop a query emitting tons of notice or warning messages, even if
-	 * it's in a loop that otherwise fails to check for interrupts.
+	 * Check for cancel/die interrupt first --- this is so that the user can
+	 * stop a query emitting tons of notice or warning messages, even if it's
+	 * in a loop that otherwise fails to check for interrupts.
 	 */
 	CHECK_FOR_INTERRUPTS();
 
@@ -790,7 +765,7 @@ errfinish(int dummy __attribute__((unused)),...)
  * return it to the caller as a palloc'd ErrorData object.
  */
 ErrorData *
-errfinish_and_return(int dummy __attribute__((unused)),...)
+errfinish_and_return(int dummy pg_attribute_unused(),...)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
 	ErrorData  *edata_copy;
@@ -1409,6 +1384,25 @@ errhidestmt(bool hide_stmt)
 	return 0;					/* return value does not matter */
 }
 
+/*
+ * errhidecontext --- optionally suppress CONTEXT: field of log entry
+ *
+ * This should only be used for verbose debugging messages where the repeated
+ * inclusion of CONTEXT: bloats the log volume too much.
+ */
+int
+errhidecontext(bool hide_ctx)
+{
+	ErrorData  *edata = &errordata[errordata_stack_depth];
+
+	/* we don't bother incrementing recursion_depth */
+	CHECK_STACK_DEPTH();
+
+	edata->hide_ctx = hide_ctx;
+
+	return 0;					/* return value does not matter */
+}
+
 
 /*
  * errfunction --- add reporting function name to the current error
@@ -1957,6 +1951,57 @@ FlushErrorState(void)
 	recursion_depth = 0;
 	/* Delete all data in ErrorContext */
 	MemoryContextResetAndDeleteChildren(ErrorContext);
+}
+
+/*
+ * ThrowErrorData --- report an error described by an ErrorData structure
+ *
+ * This is intended to be used to re-report errors originally thrown by
+ * background worker processes and then propagated (with or without
+ * modification) to the backend responsible for them.
+ */
+void
+ThrowErrorData(ErrorData *edata)
+{
+	ErrorData  *newedata;
+	MemoryContext oldcontext;
+
+	if (!errstart(edata->elevel, edata->filename, edata->lineno,
+				  edata->funcname, NULL))
+		return;
+
+	newedata = &errordata[errordata_stack_depth];
+	oldcontext = MemoryContextSwitchTo(edata->assoc_context);
+
+	/* Copy the supplied fields to the error stack. */
+	if (edata->sqlerrcode > 0)
+		newedata->sqlerrcode = edata->sqlerrcode;
+	if (edata->message)
+		newedata->message = pstrdup(edata->message);
+	if (edata->detail)
+		newedata->detail = pstrdup(edata->detail);
+	if (edata->detail_log)
+		newedata->detail_log = pstrdup(edata->detail_log);
+	if (edata->hint)
+		newedata->hint = pstrdup(edata->hint);
+	if (edata->context)
+		newedata->context = pstrdup(edata->context);
+	if (edata->schema_name)
+		newedata->schema_name = pstrdup(edata->schema_name);
+	if (edata->table_name)
+		newedata->table_name = pstrdup(edata->table_name);
+	if (edata->column_name)
+		newedata->column_name = pstrdup(edata->column_name);
+	if (edata->datatype_name)
+		newedata->datatype_name = pstrdup(edata->datatype_name);
+	if (edata->constraint_name)
+		newedata->constraint_name = pstrdup(edata->constraint_name);
+	if (edata->internalquery)
+		newedata->internalquery = pstrdup(edata->internalquery);
+
+	MemoryContextSwitchTo(oldcontext);
+
+	errfinish(0);
 }
 
 /*
@@ -2532,7 +2577,8 @@ write_eventlog(int level, const char *line, int len)
 
 	if (evtHandle == INVALID_HANDLE_VALUE)
 	{
-		evtHandle = RegisterEventSource(NULL, event_source ? event_source : "PostgreSQL");
+		evtHandle = RegisterEventSource(NULL,
+						 event_source ? event_source : DEFAULT_EVENT_SOURCE);
 		if (evtHandle == NULL)
 		{
 			evtHandle = INVALID_HANDLE_VALUE;
@@ -2828,13 +2874,13 @@ setup_formatted_log_time(void)
 	 * nonempty or CSV mode can be selected.
 	 */
 	pg_strftime(formatted_log_time, FORMATTED_TS_LEN,
-	/* leave room for milliseconds... */
-				"%Y-%m-%d %H:%M:%S     %Z",
+	/* leave room for microseconds... */
+				"%Y-%m-%d %H:%M:%S        %Z",
 				pg_localtime(&stamp_time, log_timezone));
 
 	/* 'paste' microseconds into place... */
 	sprintf(msbuf, ".%06d", (int) (tv.tv_usec));
-	strncpy(formatted_log_time + 19, msbuf, 4);
+	memcpy(formatted_log_time + 19, msbuf, 4);
 }
 
 /*
@@ -3441,7 +3487,8 @@ write_csvlog(ErrorData *edata)
 	appendStringInfoChar(&buf, ',');
 
 	/* errcontext */
-	appendCSVLiteral(&buf, edata->context);
+	if (!edata->hide_ctx)
+		appendCSVLiteral(&buf, edata->context);
 	appendStringInfoChar(&buf, ',');
 
 	/* user query --- only reported if not disabled by the caller */
@@ -3852,7 +3899,7 @@ append_stacktrace(PipeProtoChunk *buffer, StringInfo append, void *const *stacka
 				if (amsyslogger)
 					write_syslogger_file_binary(symbol, symbol_len, LOG_DESTINATION_STDERR);
 				else
-					write(fileno(stderr), symbol, symbol_len);
+					ignore_returned_result(write(fileno(stderr), symbol, symbol_len));
 			}
 		}
 	}
@@ -3875,9 +3922,9 @@ write_syslogger_file_string(const char *str, bool amsyslogger, bool append_comma
 		}
 		else
 		{
-			write(fileno(stderr), "\"", 1);
+			ignore_returned_result(write(fileno(stderr), "\"", 1));
 			syslogger_write_str(str, strlen(str), false, true);
-			write(fileno(stderr), "\"", 1);
+			ignore_returned_result(write(fileno(stderr), "\"", 1));
 		}
 	}
 
@@ -3886,7 +3933,7 @@ write_syslogger_file_string(const char *str, bool amsyslogger, bool append_comma
 		if (amsyslogger)
 			write_syslogger_file_binary(",", 1, LOG_DESTINATION_STDERR);
 		else
-			write(fileno(stderr), ",", 1);
+			ignore_returned_result(write(fileno(stderr), ",", 1));
 	}
 }
 
@@ -4010,7 +4057,7 @@ write_syslogger_in_csv(ErrorData *edata, bool amsyslogger)
 	if (amsyslogger)
 		write_syslogger_file_binary(LOG_EOL, strlen(LOG_EOL), LOG_DESTINATION_STDERR);
 	else
-		write(fileno(stderr), LOG_EOL, strlen(LOG_EOL));
+		ignore_returned_result(write(fileno(stderr), LOG_EOL, strlen(LOG_EOL)));
 }
 
 /*
@@ -4303,7 +4350,7 @@ send_message_to_server_log(ErrorData *edata)
 			append_with_tabs(&buf, edata->internalquery);
 			appendStringInfoChar(&buf, '\n');
 		}
-		if (edata->context)
+		if (edata->context && !edata->hide_ctx)
 		{
 			log_line_prefix(&buf, edata);
 			appendStringInfoString(&buf, _("CONTEXT:  "));
@@ -4348,7 +4395,7 @@ send_message_to_server_log(ErrorData *edata)
 		(edata->elevel == PANIC || !edata->omit_location) &&
 		edata->stacktracesize > 0)
 	{
-#ifndef WIN32
+#ifdef HAVE_BACKTRACE_SYMBOLS
 		char	  **strings;
 		size_t		i;
 
@@ -4532,7 +4579,7 @@ write_pipe_chunks(char *data, int len, int dest)
 				Assert(p.hdr.pid != 0);
 				Assert(p.hdr.thid != 0);
 #endif
-		write(fd, &p, PIPE_CHUNK_SIZE);
+		ignore_returned_result(write(fd, &p, PIPE_CHUNK_SIZE));
 		data += PIPE_MAX_PAYLOAD;
 		len -= PIPE_MAX_PAYLOAD;
 
@@ -4550,7 +4597,7 @@ write_pipe_chunks(char *data, int len, int dest)
 		Assert(PIPE_HEADER_SIZE + len <= PIPE_CHUNK_SIZE);
 #endif
 	memcpy(p.data, data, len);
-	write(fd, &p, PIPE_HEADER_SIZE + len);
+	ignore_returned_result(write(fd, &p, PIPE_HEADER_SIZE + len));
 }
 
 
@@ -5364,7 +5411,7 @@ gp_elog(PG_FUNCTION_ARGS)
 void
 debug_backtrace(void)
 {
-#ifndef WIN32
+#ifdef HAVE_BACKTRACE_SYMBOLS
 	int 		stacktracesize;
 	void	   *stacktracearray[30];
 
@@ -5382,6 +5429,10 @@ debug_backtrace(void)
  */
 uint32 gp_backtrace(void **stackAddresses, uint32 maxStackDepth)
 {
+#ifndef HAVE_BACKTRACE_SYMBOLS
+	return 0;
+#endif
+
 #if defined(__i386) || defined(__x86_64__)
 
 	/*
@@ -5449,11 +5500,11 @@ char *gp_stacktrace(void **stackAddresses, uint32 stackDepth)
 	StringInfoData append;
 	initStringInfo(&append);
 
-#ifdef WIN32
-	appendStringInfoString(&append, "stack trace is not available for this platform");
-#else
+#ifdef HAVE_BACKTRACE_SYMBOLS
 	append_stacktrace(NULL /*PipeProtoChunk*/, &append, stackAddresses, stackDepth,
 					 false/*amsyslogger*/);
+#else
+	appendStringInfoString(&append, "stack trace is not available for this platform");
 #endif
 
 	/* we may fail to retrieve stack on opt build */

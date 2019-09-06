@@ -1,0 +1,199 @@
+--- 
+title: "Greenplum Database Cloud Technical Recommendations"
+date: January 17, 2019
+author: Jon Roberts <pivotalguru@pivotal.io>
+---
+
+## <a id="cd-os"></a>Operating System
+
+The operating system parameters for cloud deployments are the same as on-premise with a few modifications.  Use the [Greenplum Database Installation Guide](../install_guide/install_guide.html) for reference. Additional changes are as follows:
+
+Add the following line to `sysctl.conf`:
+
+```
+net.ipv4.ip_local_reserved_ports=65330
+```
+
+AWS requires loading network drivers and also altering the AMI to use the faster networking capabilities.  More information on this is provided in the AWS documentation.
+
+## <a id="cd-storage"></a>Storage
+
+The disk settings for cloud deployments are the same as on-premise with a few modifications.  Use the [Greenplum Database Installation Guide](../install_guide/install_guide.html) for reference. Additional changes are as follows:
+
+-  Mount options:
+   ```
+   rw,noatime,nobarrier,nodev,inode64,allocsize=16m
+   ```
+-  Use mq-deadline instead of the deadline scheduler for the R5 series instance type in AWS
+-  For clusters requiring software RAID, use level 0 and chunk size of 256
+-  Use a swap disk per VM (32GB size works well)
+
+## <a id="cd-security"></a>Security
+
+It is highly encouraged to disable password authentication to the virtual machines in the cloud and use SSH keys instead.  Using MD5-encrypted passwords for Greenplum Database is also a good practice.
+
+## <a id="aws"></a>Amazon Web Services (AWS)
+
+### <a id="aws-vm-type"></a>Virtual Machine Type
+AWS provides a wide variety of virtual machine types and sizes to address virtually every use case.  Testing in AWS has found that the optimal instance types for Greenplum are "Memory Optimized" and "Storage Optimized".  These provide the ideal balance of Memory, Network, and Storage throughput, and Compute capabilities.
+
+Virtual Machine network and disk throughput limits increase as CPU and memory sizes increase.  This means the larger instance types are recommended for Greenplum so that it can provide 10Gbit or better network performance.  
+
+#### <a id="aws-compute"></a>Compute
+AWS uses Hyperthreading when reporting the number of vCPUs, therefore 2 vCPUs equates to 1 Core.  The processor types are frequently getting faster so using the latest instance type will be not only faster, but usually less expensive.  For example, the R5 series provides faster cores at a lower cost compared to R4.
+
+#### <a id="aws-memory"></a>Memory
+This variable is pretty simple.  Greenplum needs at least 8GB of RAM per segment process to work optimally.  More RAM per segment helps with concurrency and also helps hide disk performance deficiencies.  
+
+#### <a id="aws-network"></a>Network
+AWS provides 25Gbit network performance on the largest instance types.  This alleviates any network bottleneck concerns for large Greenplum clusters in AWS.  Additionally, instance types provide 10Gbit as well as "up to 10Gbit" network performance.  For production workloads, Pivotal requires 10Gbit or better network performance.
+
+Loading network drivers is also required in AWS and depends on the instance type.  Some instance types use an Intel driver while others use an Amazon ENA driver.  Loading the driver requires modifying the machine image (AMI).
+
+
+### <a id="storage"></a>Storage
+
+#### <a id="aws-ebs"></a>EBS
+The AWS default disk type is General Performance (GP2) which is ideal for IOP dependent applications.  It has relatively poor performance for throughput.  The operating system and swap volumes are ideal for GP2.  GP2 uses SSD disks and, relative to other disk types in AWS, is expensive.
+
+Throughput Optimized Disks (ST1) is ideal for throughput and thus, ideal for Greenplum.  These disks are based on HDD rather than SSD and are less expensive than GP2.  Performance of ST1 disks is influenced by the disk size and peaks at 12.5TB.  However, the larger instance types have throughput limits that are larger than what a single ST1 disk can provide.  Therefore, up to 4 ST1 disks are needed to reach the throughput limit of a given virtual machine.
+
+EBS storage is durable so data is not lost when a virtual machine is stopped.  EBS also provides infrastructure snapshot capabilities that can be used to create volume backups.  These snapshots can be copied to different regions to provide a disaster recovery solution.  The Greenplum Cloud utility `gpsnap`, available in the AWS Cloud Marketplace, automates backup, restore, delete, and copy functions using EBS snapshots.
+
+#### <a id="aws-ephemeral"></a>Ephemeral
+
+Ephemeral storage is the last storage option and is available on the Storage Optimized instance types.  These disks are directly attached and have up to 24 2TB disks per virtual machine.  These are the instance types that Redshift uses.
+
+The main problem with Ephemeral storage is the durability.  If you stop a VM with Ephemeral storage, all data is lost.  The second problem is the number of disks.  There are more disks (24) than Greenplum can have segments per host.  Therefore, software RAID is needed to match the number of mounts to the number of segments.  Note that mount options for software RAID can greatly impact performance.
+
+Instance types that have Ephemeral storage also are more expensive than Instance types that do not.  You have to balance the cost of compute plus storage to determine which is the best for a particular use case.
+
+#### <a id="aws-ebs-vs-ephemeral"></a>EBS vs Ephemeral
+
+Performance testing has found that there is virtually no performance difference for Greenplum when comparing EBS vs Ephemeral storage.   Therefore, Pivotal recommends using EBS storage so that the disks are durable and disk snapshots can be used for backup and disaster recovery.
+
+### <a id="aws-recommend"></a>AWS Recommendations
+#### R5 Series
+
+| Instance Type | Storage Type  | Storage Size | Memory | vCPUs | Network Speed | Use                           |
+|---------------|---------------|------------|--------|------|---------------|-------------------------------|
+| r5.xlarge     | EBS           | 6TB          | 32     | 4     | Up to 10GBit  | Dev/Test                      |
+| r5.xlarge     | EBS Encrypted | 6TB          | 32     | 4     | Up to 10GBit  | Dev/Test                      |
+| r5.2xlarge    | EBS           | 12TB         | 64     | 8     | Up to 10GBit  | Dev/Test                      |
+| r5.2xlarge    | EBS Encrypted | 12TB         | 64     | 8     | Up to 10GBit  | Dev/Test                      |
+| r5.4xlarge    | EBS           | 24TB         | 128    | 16    | Up to 10GBit  | Dev/Test                      |
+| r5.4xlarge    | EBS Encrypted | 24TB         | 128    | 16    | Up to 10GBit  | Dev/Test                      |
+| r5.12xlarge   | EBS           | 48TB         | 384    | 48    | 10GBit        | Production                    |
+| r5.12xlarge   | EBS Encrypted | 48TB         | 384    | 48    | 10GBit        | Production                    |
+| r5.24xlarge   | EBS           | 48TB         | 768    | 96    | 25GBit        | Production - High Concurrency |
+| r5.24xlarge   | EBS Encrypted | 48TB         | 768    | 96    | 25GBit        | Production - High Concurrency |
+
+#### R4 Series
+
+| Instance Type | Storage Type  | Storage Size | Memory | vCPUs | Network Speed | Use                           |
+|---------------|---------------|--------------|--------|-------|---------------|-------------------------------|
+| r4.xlarge     | EBS           | 6TB          | 30.5   | 4     | Up to 10GBit  | Dev/Test                      |
+| r4.xlarge     | EBS Encrypted | 6TB          | 30.5   | 4     | Up to 10GBit  | Dev/Test                      |
+| r4.2xlarge    | EBS           | 12TB         | 61     | 8     | Up to 10GBit  | Dev/Test                      |
+| r4.2xlarge    | EBS Encrypted | 12TB         | 61     | 8     | Up to 10GBit  | Dev/Test                      |
+| r4.4xlarge    | EBS           | 24TB         | 122    | 16    | Up to 10GBit  | Dev/Test                      |
+| r4.4xlarge    | EBS Encrypted | 24TB         | 122    | 16    | Up to 10GBit  | Dev Test                      |
+| r4.8xlarge    | EBS           | 48TB         | 244    | 32    | 10GBit        | Production                    |
+| r4.8xlarge    | EBS Encrypted | 48TB         | 244    | 32    | 10GBit        | Production                    |
+| r4.16xlarge   | EBS           | 48TB         | 488    | 64    | 25GBit        | Production - High Concurrency |
+| r4.16xlarge   | EBS Encrypted | 48TB         | 488    | 64    | 25GBit        | Production - High Concurrency |
+
+#### D2 Series
+
+Storage Optimized instances with local HDD ephemeral storage that is optimized for throughput.  Ephemeral storage is lost if the nodes are stopped.  
+
+-  Does not support snapshot backups using the Greenplum Cloud `gpsnap` utility
+-  Data loss when nodes are stopped
+
+| Instance Type | Storage Type | Storage Size | Memory | vCPUs | Network Speed | Use        |
+|---------------|--------------|--------------|--------|-------|---------------|------------|
+| d2.xlarge     | Ephemeral    | 6TB          | 30.5   | 4     | Moderate      | Dev/Test   |
+| d2.2xlarge    | Ephemeral    | 12TB         | 61     | 8     | High          | Dev/Test   |
+| d2.4xlarge    | Ephemeral    | 24TB         | 122    | 16    | High          | Dev/Test   |
+| d2.8xlarge    | Ephemeral    | 48TB         | 244    | 36    | 10GBit        | Production |
+
+## <a id="gcp"></a>Google Compute Platform (GCP)
+
+### <a id="gcp-vm-type"></a>Virtual Machine Type
+The two most common instance types in GCP are "Standard" or "HighMem" instance types. The only difference is the ratio of Memory to Cores.  Each offer 1 to 64 vCPUs per VM.
+#### <a id="gcp-compute"></a>Compute
+Like AWS, GCP uses Hyperthreading, so 2 vCPUs equates to 1 Core.  The CPU clock speed is determined by the region in which you deploy.  
+#### <a id="gcp-memory"></a>Memory
+Instance type n1-standard-8 has 8 vCPUs with 30GB of RAM while n1-highmem-8 also has 8 vCPUs with 52GB of RAM.  There is also a HighCPU instance type that generally isn't ideal for Greenplum.  Like AWS and Azure, the machines with more vCPUs will have more RAM.
+#### <a id="gcp-network"></a>Network
+GCP network speeds are dependent on the instance type but the maximum network performance is possible (10Gbit) with a virtual machine as small as only 8 vCPUs.
+### <a id="gcp-storage"></a>Storage
+Standard (HDD) and SSD disks are available in GCP.  SSD is slightly faster in terms of throughput but comes at a premium.  The size of the disk does not impact performance.
+
+The biggest obstacle to maximizing storage performance is the throughput limit placed on every virtual machine.  Unlike AWS and Azure, the storage throughput limit is relatively low, consistent across all instance types, and only a single disk is needed to reach the VM limit.  
+
+![GCP disk read/write rates](./graphics/gcp-disk-rates.png)
+
+
+### <a id="gcp-recommend"></a>GCP Recommendations
+
+Testing has revealed that _while using the same number of vCPUs_, a cluster using a large instance type like n1-highmem-64 (64 vCPUs) will have lower performance than a cluster using more of the smaller instance types like n1-highmem-8 (8 vCPUs).  In general, use 8x more nodes in GCP than you would in another environment like AWS while using the 8 vCPU instance types.
+
+The HighMem instance type is slightly faster for higher concurrency.  Furthermore, SSD disks are slightly faster also but come at a cost.
+
+| Instance Type | Storage Type | Storage Size | Memory | vCPUs | Network Speed | Use                                    |
+|---------------|--------------|--------------|--------|-------|---------------|----------------------------------------|
+| n1-standard-8 | HDD          | 6TB or 3TB   | 30     | 8     | 10Gbit        | Dev/Test - Production                  |
+| n1-standard-8 | SSD          | 1.4TB        | 30     | 8     | 10Gbit        | Dev/Test - Production                  |
+| n1-highmem-8  | HDD          | 6TB or 3TB   | 52     | 8     | 10Gbit        | Dev/Test - Production                  |
+| n1-highmem-8  | SSD          | 1.4TB        | 52     | 8     | 10Gbit        | Dev/Test - Production High Concurrency |
+
+## <a id="azure"></a>Azure
+
+**Note:** On the Azure platform, in addition to bandwidth, the number of network connections present on a VM at any given moment can affect the VM's network performance. The Azure networking stack maintains the state for each direction of a TCP/UDP connection in a data structures called a _flow_. A typical TCP/UDP connection will have 2 flows created: one for the inbound direction and another for the outbound direction. The number of network flows on Azure is limited to an upper bound.  See [Virtual machine network bandwidth](https://docs.microsoft.com/bs-latn-ba/azure/virtual-network/virtual-machine-network-throughput) in the Azure documentation for more details.  In practice this can present scalability challenges for workloads based on the number of concurrent queries, and on the complexity of those queries.  Always test your workload on Azure to validate that you are within the Azure limits, and be advised that if your workload increases you may hit Azure flow count boundaries at which point your workload may fail.  Pivotal recommends using the UDP interconnect, and not the TCP interconnect, when using Azure.  A connection pooler and resource group settings can also be used to help keep flow counts at a lower level.
+
+### <a id="az-vm-type"></a>Virtual Machine Type
+Each VM type has limits on disk throughput so picking a VM that doesn't have a limit that is too low is essential.  Most of Azure is designed for OLTP or Application workloads, which limits the choices for databases like Greenplum where throughput is more important.  Disk type also plays a part in the throughput cap, so that needs to be considered too.
+### <a id="az-compute"></a>Compute
+Most instance types in Azure have hyperthreading enabled, which means 1 vCPU equates to 2 cores.  However, not all instance types have this feature, so for these others, 1 vCPU equates to 1 core.
+
+The High Performance Compute (HPC) instance types have the fastest cores in Azure.  
+
+### <a id="az-memory"></a>Memory
+In general, the larger the virtual machine type, the more memory the VM will have.  
+
+### <a id="az-network"></a>Network
+The Accelerated Networking option offloads CPU cycles for networking to "FPGA-based SmartNICs".  Virtual machine types either support this or do not, but most do support it.  Testing of Greenplum hasn't shown much difference and this is probably because of Azure's preference for TCP over UDP.  Despite this, UDPIFC interconnect is the ideal protocol to use in Azure.
+
+There is an undocumented process in Azure that periodically runs on the host machines on UDP port 65330.  When a query executes using UDP port 65330 and this undocumented process runs, the query will fail after one hour with an interconnect timeout error.  This is fixed by reserving port 65330 so that Greenplum doesn't use it.
+
+### <a id="az-storage"></a>Storage
+Storage in Azure is either Premium (SSD) or Regular Storage (HDD).  The available sizes are the same and max out at 4TB.  Instance types either do or do not support Premium but, interestingly, the instance types that do support Premium storage, have a _lower_ throughput limit.  For example:
+
+-  Standard_E32s_v3 has a limit of 768 MB/s.
+-  Standard_E32_v3 was tested with `gpcheckperf` to have 1424 write and 1557 read MB/s performance.
+
+To get the maximum throughput from a VM in Azure, you have to use multiple disks.  For larger instance types, you have to use upwards of 32 disks to reach the limit of a VM.  Unfortunately, the memory and CPU constraints on these machines means that you have to run fewer segments than you have disks, so you have to use software RAID to utilize all of these disks.  Performance takes a hit with software RAID, too, so you have to try multiple configurations to optimize.
+
+The size of the disk also impacts performance, but not by much.
+
+Software RAID not only is a little bit slower, but it also requires `umount` to take a snapshot. This greatly lengthens the time it takes to take a snapshot backup.
+
+Disks use the same network as the VMs so you start running into the Azure limits in bigger clusters when using big virtual machines with 32 disks on each one.  The overall throughput drops as you hit this limit and is most noticeable during concurrency testing.
+
+### <a id="az-recommend"></a>Azure Recommendations
+The best instance type to use in Azure is "Standard_H16" which is one of their High Performance Compute instance types.  This instance series is the only one utilizing InfiniBand, but this does not include IP traffic.
+
+
+| Instance Type             | Storage Type | Storage Size      | Memory | vCPUs<sup>3</sup> | Use                   | Notes                    |
+|---------------------------|--------------|-------------------|--------|-------------------|-----------------------|--------------------------|
+| Standard_D14_v2           | HDD          | 8x2TB<sup>2</sup> | 112    | 16                | Dev/Test - Production | Use if HPC not available |
+| Standard_H8<sup>1</sup>   | HDD          | 4x2TB<sup>2</sup> | 56     | 8                 | Dev/Test - Production |                          |
+| Standard_H16<sup>1</sup> | HDD          | 8x2TB<sup>2</sup> | 112    | 16                | Dev/Test - Production | Fastest                  |
+
+<sup>1</sup> Not all regions have HPC instance types.
+
+<sup>2</sup> Use 2 disks in each RAID 0 volume.
+
+<sup>3</sup> Some, but not all, Azure VMs have hyperthreading. If hyperthreading is not enabled, 1 vCPU = 1 Core.
+

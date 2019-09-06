@@ -86,7 +86,7 @@
     <chapter href="admin_guide/managing/backup.ditamap" format="ditamap"/>
     <chapter href="admin_guide/expand/expand.ditamap" navtitle="Expanding a Greenplum System"
       format="ditamap"/>
-    <chapter href="admin_guide/managing/gpcopy-migrate.xml"/>
+    <chapter href="admin_guide/managing/gpcopy-migrate.xml" otherprops="pivotal"/>
     <chapter href="admin_guide/managing/monitor.xml" navtitle="Monitoring a Greenplum System"/>
     <chapter href="admin_guide/managing/maintain.xml" navtitle="Routine System Maintenance Tasks"/>
     <chapter href="admin_guide/monitoring/monitoring.dita"/>

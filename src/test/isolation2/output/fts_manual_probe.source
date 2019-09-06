@@ -1,0 +1,285 @@
+-- See src/backend/fts/README for background information
+--
+-- This tests two scenarios:
+-- 1) Piggyback Test
+-- Ensure multiple probe requests come in before the start of a new ftsLoop,
+-- then all those requests share the same result.
+--
+-- 2) Fresh Result Test
+-- Ensure fresh results when a probe request occurs during an in progress
+-- ftsLoop.
+--
+-- It is useful to remember that the FtsLoop and each FtsNotifyProbe are
+-- individual processes. Careful use of fault injectors are needed to have
+-- complete and consistent control over the flow of the two independent
+-- processes - the ftsLoop and FtsNotifyProber's.
+--
+-- fts_probe_stats is only queried when the ftsLoop
+-- is stopped at a known location to ensure a consistent view of the stats.
+--
+-- NOTE: you must add '--load-extension=gp_inject_fault' to the commandline
+--   for a manual test.
+
+include: helpers/server_helpers.sql;
+CREATE
+
+select gp_inject_fault('all', 'reset', 1) from master();
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+create temp table fts_probe_results(seq serial, seq_name varchar(20), current_started int, expected_start_delta int, current_done int, expected_done_delta int);
+CREATE
+
+-- create extension only on master since the fts process is only on master
+create or replace function fts_probe_stats() returns table ( start_count int, done_count int, status_version int2 ) as '/@abs_builddir@/../regress/regress.so', 'gp_fts_probe_stats' language c execute on master reads sql data;
+CREATE
+
+create or replace view get_raw_stats as select seq, seq_name, current_started, expected_start_delta, current_started - min(current_started) over () as actual_start_delta, -- actual_start_delta = current_started - initial_started current_done, expected_done_delta, current_done - min(current_done) over () as actual_done_delta -- actual_done_delta = current_done - initial_done from fts_probe_results order by seq;
+CREATE
+
+create or replace view get_stats as select seq, seq_name, expected_start_delta, actual_start_delta, expected_done_delta, actual_done_delta from get_raw_stats order by seq desc limit 1;
+CREATE
+
+drop function if exists insert_expected_stats(int, int);
+DROP
+create or replace function insert_expected_stats(seq_name varchar(20), expected_start_delta int, expected_done_delta int) returns void as $$ INSERT INTO fts_probe_results (seq_name, current_started, expected_start_delta, current_done, expected_done_delta) /* inside a function */ SELECT seq_name, /* inside a function */ start_count AS current_started, /* inside a function */ expected_start_delta, /* inside a function */ done_count AS current_done, /* inside a function */ expected_done_delta /* inside a function */ FROM fts_probe_stats(); /* inside a function */ $$ language sql volatile;
+CREATE
+
+-- ensure the internal regular probes do not affect our test
+!\retcode gpconfig -c gp_fts_probe_interval -v 3600;
+-- start_ignore
+20190730:11:15:27:045870 gpconfig:office-5-75:dkrieger-[INFO]:-completed successfully with parameters '-c gp_fts_probe_interval -v 3600'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Starting gpstop with args: -u
+20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Gathering information and validating the environment...
+20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Greenplum Master catalog information
+20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Segment details from master...
+20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.575.g59811832fc build dev'
+20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)
+
+-- ensure there is no in progress ftsLoop after reloading the gp_fts_probe_interval
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+select insert_expected_stats('initial', 0, 0);
+ insert_expected_stats 
+-----------------------
+                       
+(1 row)
+select * from get_stats;
+ seq | seq_name | expected_start_delta | actual_start_delta | expected_done_delta | actual_done_delta 
+-----+----------+----------------------+--------------------+---------------------+-------------------
+ 1   | initial  | 0                    | 0                  | 0                   | 0                 
+(1 row)
+
+-- piggyback test: start multiple probes
+select gp_inject_fault_infinite('ftsNotify_before', 'suspend', 1) from master();
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+select gp_inject_fault_infinite('ftsLoop_after_latch', 'suspend', 1) from master();
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+select gp_inject_fault_infinite('ftsLoop_before_probe', 'suspend', 1) from master();
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+1&: select gp_request_fts_probe_scan();  <waiting ...>
+2&: select gp_request_fts_probe_scan();  <waiting ...>
+3&: select gp_request_fts_probe_scan();  <waiting ...>
+
+-- piggyback: ensure the probe requests are at a known starting location
+select gp_wait_until_triggered_fault('ftsNotify_before', 3, 1) from master();
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- piggyback: ensure the ftsLoop is triggered only once
+select gp_wait_until_triggered_fault('ftsLoop_after_latch', 1, 1) from master();
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select gp_inject_fault('ftsLoop_after_latch', 'resume', 1) from master();
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- piggyback: ensure the ftsLoop is at a known starting location
+select gp_wait_until_triggered_fault('ftsLoop_before_probe', 1, 1) from master();
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select insert_expected_stats('top_of_ftsLoop', 0, 0);
+ insert_expected_stats 
+-----------------------
+                       
+(1 row)
+select * from get_stats;
+ seq | seq_name       | expected_start_delta | actual_start_delta | expected_done_delta | actual_done_delta 
+-----+----------------+----------------------+--------------------+---------------------+-------------------
+ 2   | top_of_ftsLoop | 0                    | 0                  | 0                   | 0                 
+(1 row)
+select gp_inject_fault('ftsNotify_before', 'resume', 1) from master();
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- piggyback: trap the probe requests inside the ftsLoop
+select gp_inject_fault_infinite('ftsLoop_after_probe', 'suspend', 1) from master();
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+select gp_inject_fault('ftsLoop_before_probe', 'resume', 1) from master();
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+select gp_wait_until_triggered_fault('ftsLoop_after_probe', 1, 1) from master();
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+select insert_expected_stats('bottom_of_ftsLoop', 1, 0);
+ insert_expected_stats 
+-----------------------
+                       
+(1 row)
+select * from get_stats;
+ seq | seq_name          | expected_start_delta | actual_start_delta | expected_done_delta | actual_done_delta 
+-----+-------------------+----------------------+--------------------+---------------------+-------------------
+ 3   | bottom_of_ftsLoop | 1                    | 1                  | 0                   | 0                 
+(1 row)
+
+-- fresh result test: issue a new probe request during the in progress piggyback ftsLoop
+select gp_inject_fault('ftsLoop_before_probe', 'reset', 1) from master();
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+select gp_inject_fault_infinite('ftsLoop_before_probe', 'suspend', 1) from master();
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+4&: select gp_request_fts_probe_scan();  <waiting ...>
+
+-- piggyback: resume the suspended piggyback ftsLoop
+select gp_inject_fault('ftsLoop_after_probe', 'resume', 1) from master();
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+2<:  <... completed>
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+3<:  <... completed>
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- fresh result: ensure the next ftsLoop iteration is at a known starting location
+select gp_wait_until_triggered_fault('ftsLoop_before_probe', 1, 1) from master();
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- piggyback: query the probe stats before the start of the 'fresh result' ftsLoop
+select insert_expected_stats('piggyback_result', 1, 1);
+ insert_expected_stats 
+-----------------------
+                       
+(1 row)
+select * from get_stats;
+ seq | seq_name         | expected_start_delta | actual_start_delta | expected_done_delta | actual_done_delta 
+-----+------------------+----------------------+--------------------+---------------------+-------------------
+ 4   | piggyback_result | 1                    | 1                  | 1                   | 1                 
+(1 row)
+
+-- fresh result: resume the suspended ftsLoop
+select gp_inject_fault('ftsLoop_before_probe', 'resume', 1) from master();
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+4<:  <... completed>
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+select insert_expected_stats('fresh_result', 2, 2);
+ insert_expected_stats 
+-----------------------
+                       
+(1 row)
+select * from get_stats;
+ seq | seq_name     | expected_start_delta | actual_start_delta | expected_done_delta | actual_done_delta 
+-----+--------------+----------------------+--------------------+---------------------+-------------------
+ 5   | fresh_result | 2                    | 2                  | 2                   | 2                 
+(1 row)
+
+-- show all raw stats for debugging
+-- start_ignore
+select * from get_raw_stats;
+ seq | seq_name          | current_started | expected_start_delta | actual_start_delta | current_done | expected_done_delta | actual_done_delta 
+-----+-------------------+-----------------+----------------------+--------------------+--------------+---------------------+-------------------
+ 1   | initial           | 58              | 0                    | 0                  | 58           | 0                   | 0                 
+ 2   | top_of_ftsLoop    | 58              | 0                    | 0                  | 58           | 0                   | 0                 
+ 3   | bottom_of_ftsLoop | 59              | 1                    | 1                  | 58           | 0                   | 0                 
+ 4   | piggyback_result  | 59              | 1                    | 1                  | 59           | 1                   | 1                 
+ 5   | fresh_result      | 60              | 2                    | 2                  | 60           | 2                   | 2                 
+(5 rows)
+-- end_ignore
+
+-- reset the internal regular probe interval
+!\retcode gpconfig -r gp_fts_probe_interval;
+-- start_ignore
+20190730:11:15:35:045960 gpconfig:office-5-75:dkrieger-[INFO]:-completed successfully with parameters '-r gp_fts_probe_interval'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Starting gpstop with args: -u
+20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Gathering information and validating the environment...
+20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Greenplum Master catalog information
+20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Segment details from master...
+20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.575.g59811832fc build dev'
+20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)

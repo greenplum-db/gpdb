@@ -19,10 +19,9 @@
 #include "cdb/cdbappendonlyxlog.h"
 
 void
-appendonly_desc(StringInfo buf, XLogRecord *record)
+appendonly_desc(StringInfo buf, XLogReaderState *record)
 {
-	uint8		  xl_info = record->xl_info;
-	uint8		  info = xl_info & ~XLR_INFO_MASK;
+	uint8		  info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
 
 	switch (info)
 	{
@@ -35,7 +34,7 @@ appendonly_desc(StringInfo buf, XLogRecord *record)
 					"insert: rel %u/%u/%u seg/offset:%u/" INT64_FORMAT " len:%lu",
 					xlrec->target.node.spcNode, xlrec->target.node.dbNode,
 					xlrec->target.node.relNode, xlrec->target.segment_filenum,
-					xlrec->target.offset, record->xl_len - SizeOfAOInsert);
+					xlrec->target.offset, XLogRecGetDataLen(record) - SizeOfAOInsert);
 			}
 			break;
 		case XLOG_APPENDONLY_TRUNCATE:
@@ -53,4 +52,22 @@ appendonly_desc(StringInfo buf, XLogRecord *record)
 		default:
 			appendStringInfo(buf, "UNKNOWN");
 	}
+}
+
+const char *
+appendonly_identify(uint8 info)
+{
+	const char *id = NULL;
+
+	switch (info & ~XLR_INFO_MASK)
+	{
+		case XLOG_APPENDONLY_INSERT:
+			id = "APPENDONLY_INSERT";
+			break;
+		case XLOG_APPENDONLY_TRUNCATE:
+			id = "APPENDONLY_TRUNCATE";
+			break;
+	}
+
+	return id;
 }

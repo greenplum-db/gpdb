@@ -36,7 +36,17 @@ python_configdir=`${PYTHON} -c "import distutils.sysconfig; print(' '.join(filte
 AC_MSG_RESULT([$python_configdir])
 
 AC_MSG_CHECKING([Python include directories])
-python_includespec=`${PYTHON} -c "import distutils.sysconfig; print('-I'+distutils.sysconfig.get_python_inc())"`
+python_includespec=`${PYTHON} -c "
+import distutils.sysconfig
+a = '-I' + distutils.sysconfig.get_python_inc(False)
+b = '-I' + distutils.sysconfig.get_python_inc(True)
+if a == b:
+    print(a)
+else:
+    print(a + ' ' + b)"`
+if test "$PORTNAME" = win32 ; then
+    python_includespec=`echo $python_includespec | sed 's,[[\]],/,g'`
+fi
 AC_MSG_RESULT([$python_includespec])
 
 AC_SUBST(python_majorversion)[]dnl

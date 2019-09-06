@@ -1,0 +1,29 @@
+-- Previously, even directly insert into a partition ao
+-- table's child partition, the transaction will lock
+-- all the tables' aoseg table in this partition on
+-- each segment. This test case is to test that extra
+-- lock is not acquired.
+
+create table test_ao_partition_lock ( field_dk integer ,field_part integer) with (appendonly=true) DISTRIBUTED BY (field_dk) PARTITION BY LIST(field_part) ( partition val1 values(1), partition val2 values(2), partition val3 values(3) );
+CREATE
+
+1: begin;
+BEGIN
+1: insert into test_ao_partition_lock_1_prt_val1 values(1,1);
+INSERT 1
+
+2: begin;
+BEGIN
+2: alter table test_ao_partition_lock truncate partition for (2);
+ALTER
+2: end;
+END
+
+1: end;
+END
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+drop table test_ao_partition_lock;
+DROP

@@ -269,7 +269,8 @@ AOCSMoveTuple(TupleTableSlot *slot,
 	/* insert index' tuples if needed */
 	if (resultRelInfo->ri_NumIndices > 0)
 	{
-		ExecInsertIndexTuples(slot, (ItemPointer) &newAoTupleId, estate);
+		ExecInsertIndexTuples(slot, (ItemPointer) &newAoTupleId, estate,
+							  false, NULL, NIL);
 		ResetPerTupleExprContext(estate);
 	}
 
@@ -348,7 +349,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	resultRelInfo->ri_RangeTableIndex = 1;	/* dummy */
 	resultRelInfo->ri_RelationDesc = aorel;
 	resultRelInfo->ri_TrigDesc = NULL;	/* we don't fire triggers */
-	ExecOpenIndices(resultRelInfo);
+	ExecOpenIndices(resultRelInfo, false);
 	estate->es_result_relations = resultRelInfo;
 	estate->es_num_result_relations = 1;
 	estate->es_result_relation_info = resultRelInfo;
@@ -435,7 +436,6 @@ AOCSDrop(Relation aorel,
 	AOCSFileSegInfo **segfile_array;
 	int			i,
 				segno;
-	LockAcquireResult acquireResult;
 	AOCSFileSegInfo *fsinfo;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
@@ -460,23 +460,15 @@ AOCSDrop(Relation aorel,
 		}
 
 		/*
-		 * Try to get the transaction write-lock for the Append-Only segment
-		 * file.
+		 * Get the transaction write-lock for the Append-Only segment file.
 		 *
 		 * NOTE: This is a transaction scope lock that must be held until
 		 * commit / abort.
 		 */
-		acquireResult = LockRelationAppendOnlySegmentFile(
-														  &aorel->rd_node,
-														  segfile_array[i]->segno,
-														  AccessExclusiveLock,
-														   /* dontWait */ true);
-		if (acquireResult == LOCKACQUIRE_NOT_AVAIL)
-		{
-			elog(DEBUG5, "drop skips AOCS segfile %d, "
-				 "relation %s", segfile_array[i]->segno, relname);
-			continue;
-		}
+		LockRelationAppendOnlySegmentFile(&aorel->rd_node,
+										  segfile_array[i]->segno,
+										  AccessExclusiveLock,
+										  /* dontWait */ false);
 
 		/* Re-fetch under the write lock to get latest committed eof. */
 		fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);

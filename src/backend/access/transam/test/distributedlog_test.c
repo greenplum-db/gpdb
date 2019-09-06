@@ -9,7 +9,7 @@
 #include "utils/elog.h"
 
 #undef elog
-#define elog
+#define elog(elevel, ...) {}
 
 /* Actual function body */
 #include "../distributedlog.c"
@@ -28,11 +28,20 @@
  * The worst scenario was for the subtransaction shared memory, which
  * follows distributed log shared memory to be overwritten.
  */
-static MPP_20426(void **state, TransactionId nextXid)
+static void
+MPP_20426(void **state, TransactionId nextXid)
 {
 	char			pages[BLCKSZ * DtxLogStartupNumPage];
 	char			zeros[BLCKSZ];
 	int				bytes;
+
+	/* Setup ShmemVariableCache */
+	VariableCacheData data;
+	ShmemVariableCache = &data;
+	ShmemVariableCache->oldestXid = 3;
+	ShmemVariableCache->latestCompletedXid = 4;
+	DistributedLogShmem dls;
+	DistributedLogShared = &dls;
 
 	/* Setup DistributedLogCtl */
 	DistributedLogCtl->shared = (SlruShared) malloc(sizeof(SlruSharedData));
@@ -50,13 +59,17 @@ static MPP_20426(void **state, TransactionId nextXid)
 	will_return(LWLockAcquire, true);
 
 	/* This test is only for the case xid is not on the boundary. */
+	expect_value(SimpleLruDoesPhysicalPageExist, ctl, DistributedLogCtl);
+	expect_any(SimpleLruDoesPhysicalPageExist, pageno);
+	will_return(SimpleLruDoesPhysicalPageExist, true);
+
 	expect_value(SimpleLruReadPage, ctl, DistributedLogCtl);
 	expect_any(SimpleLruReadPage, pageno);
 	expect_any(SimpleLruReadPage, write_ok);
 	expect_value(SimpleLruReadPage, xid, nextXid);
 	will_return(SimpleLruReadPage, 0);
 
-	expect_value(LWLockRelease, l, DistributedLogControlLock);
+	expect_value(LWLockRelease, lock, DistributedLogControlLock);
 	will_be_called(LWLockRelease);
 
 	/* Run the function. */
@@ -74,7 +87,7 @@ static MPP_20426(void **state, TransactionId nextXid)
 	free(DistributedLogCtl->shared);
 }
 
-void
+static void
 test_DistributedLog_Startup_MPP_20426(void **state)
 {
 	MPP_20426(state, 115064091); /* from observed issue */
@@ -95,7 +108,7 @@ setup(TransactionId nextXid)
 	DistributedLogCtl->shared->page_dirty =
 			(bool *) malloc(sizeof(bool));
 	DistributedLogCtl->shared->page_buffer[0] = &pages[0];
-	memset(pages, 0x7f, sizeof(pages));
+	memset(pages, 0x7f, sizeof(char) * BLCKSZ);
 
 	expect_value(LWLockAcquire, l, DistributedLogControlLock);
 	expect_value(LWLockAcquire, mode, LW_EXCLUSIVE);
@@ -105,17 +118,21 @@ setup(TransactionId nextXid)
 	 * Map every page to buffer 0; we're only testing that the correct calls are
 	 * made to SimpleLruZeroPage().
 	 */
+	expect_value(SimpleLruDoesPhysicalPageExist, ctl, DistributedLogCtl);
+	expect_any(SimpleLruDoesPhysicalPageExist, pageno);
+	will_return(SimpleLruDoesPhysicalPageExist, true);
+
 	expect_value(SimpleLruReadPage, ctl, DistributedLogCtl);
 	expect_any(SimpleLruReadPage, pageno);
 	expect_any(SimpleLruReadPage, write_ok);
 	expect_value(SimpleLruReadPage, xid, nextXid);
 	will_return(SimpleLruReadPage, 0);
 
-	expect_value(LWLockRelease, l, DistributedLogControlLock);
+	expect_value(LWLockRelease, lock, DistributedLogControlLock);
 	will_be_called(LWLockRelease);
 }
 
-void
+static void
 test_BinaryUpgradeZeroesOutDistributedLogFittingOnSinglePage(void **state)
 {
 	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
@@ -139,7 +156,7 @@ test_BinaryUpgradeZeroesOutDistributedLogFittingOnSinglePage(void **state)
 	IsBinaryUpgrade = false;
 }
 
-void
+static void
 test_BinaryUpgradeZeroesOutDistributedLogFittingOnThreePages(void **state)
 {
 	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
@@ -171,7 +188,7 @@ test_BinaryUpgradeZeroesOutDistributedLogFittingOnThreePages(void **state)
 	IsBinaryUpgrade = false;
 }
 
-void
+static void
 test_BinaryUpgradeZeroesOutDistributedLogWithTransactionIdWraparound(void **state)
 {
 	TransactionId oldestActiveXid = MaxTransactionId;
@@ -199,7 +216,7 @@ test_BinaryUpgradeZeroesOutDistributedLogWithTransactionIdWraparound(void **stat
 	IsBinaryUpgrade = false;
 }
 
-void
+static void
 test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnSinglePage(void **state)
 {
 	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
@@ -223,7 +240,7 @@ test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnSinglePage(voi
 	ConvertMasterDataDirToSegment = false;
 }
 
-void
+static void
 test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnThreePages(void **state)
 {
 	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
@@ -255,7 +272,7 @@ test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnThreePages(voi
 	ConvertMasterDataDirToSegment = false;
 }
 
-void
+static void
 test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogWithTransactionIdWraparound(void **state)
 {
 	TransactionId oldestActiveXid = MaxTransactionId;

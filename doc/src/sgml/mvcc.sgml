@@ -143,6 +143,20 @@
        </para>
       </listitem>
      </varlistentry>
+
+     <varlistentry>
+      <term>
+       serialization anomaly
+       <indexterm><primary>serialization anomaly</primary></indexterm>
+      </term>
+     <listitem>
+      <para>
+        The result of successfully committing a group of transactions
+        is inconsistent with all possible orderings of running those
+        transactions one at a time.
+       </para>
+      </listitem>
+     </varlistentry>
     </variablelist>
    </para>
 
@@ -150,13 +164,13 @@
     <indexterm>
      <primary>transaction isolation level</primary>
     </indexterm>
-    The four transaction isolation levels and the corresponding
-    behaviors are described in <xref linkend="mvcc-isolevel-table">.
+    The SQL standard and PostgreSQL-implemented transaction isolation levels
+    are described in <xref linkend="mvcc-isolevel-table">.
    </para>
 
     <table tocentry="1" id="mvcc-isolevel-table">
-     <title>Standard <acronym>SQL</acronym> Transaction Isolation Levels</title>
-     <tgroup cols="4">
+     <title>Transaction Isolation Levels</title>
+     <tgroup cols="5">
       <thead>
        <row>
         <entry>
@@ -171,12 +185,18 @@
         <entry>
          Phantom Read
         </entry>
+        <entry>
+         Serialization Anomaly
+        </entry>
        </row>
       </thead>
       <tbody>
        <row>
         <entry>
          Read uncommitted
+        </entry>
+        <entry>
+         Allowed, but not in PG
         </entry>
         <entry>
          Possible
@@ -202,6 +222,9 @@
         <entry>
          Possible
         </entry>
+        <entry>
+         Possible
+        </entry>
        </row>
 
        <row>
@@ -213,6 +236,9 @@
         </entry>
         <entry>
          Not possible
+        </entry>
+        <entry>
+         Allowed, but not in PG
         </entry>
         <entry>
          Possible
@@ -232,27 +258,30 @@
         <entry>
          Not possible
         </entry>
+        <entry>
+         Not possible
+        </entry>
        </row>
       </tbody>
      </tgroup>
     </table>
 
    <para>
-    In <productname>PostgreSQL</productname>, you can request any of the
-    four standard transaction isolation levels.  But internally, there are
-    only three distinct isolation levels, which correspond to the levels Read
-    Committed, Repeatable Read, and Serializable.  When you select the level Read
-    Uncommitted you really get Read Committed, and phantom reads are not possible
-    in the <productname>PostgreSQL</productname> implementation of Repeatable
-    Read, so the actual
-    isolation level might be stricter than what you select.  This is
-    permitted by the SQL standard: the four isolation levels only
-    define which phenomena must not happen, they do not define which
-    phenomena must happen.  The reason that <productname>PostgreSQL</>
-    only provides three isolation levels is that this is the only
-    sensible way to map the standard isolation levels to the multiversion
-    concurrency control architecture.  The behavior of the available
-    isolation levels is detailed in the following subsections.
+    In <productname>PostgreSQL</productname>, you can request any of
+    the four standard transaction isolation levels, but internally only
+    three distinct isolation levels are implemented, i.e. PostgreSQL's
+    Read Uncommitted mode behaves like Read Committed.  This is because
+    it is the only sensible way to map the standard isolation levels to
+    PostgreSQL's multiversion concurrency control architecture.
+   </para>
+
+   <para>
+    The table also shows that PostgreSQL's Repeatable Read implementation
+    does not allow phantom reads.  Stricter behavior is permitted by the
+    SQL standard: the four isolation levels only define which phenomena
+    must not happen, not which phenomena <emphasis>must</> happen.
+    The behavior of the available isolation levels is detailed in the
+    following subsections.
    </para>
 
    <para>
@@ -326,8 +355,27 @@
    </para>
 
    <para>
-    Because of the above rule, it is possible for an updating command to see an
-    inconsistent snapshot: it can see the effects of concurrent updating
+    <command>INSERT</command> with an <literal>ON CONFLICT DO UPDATE</> clause
+    behaves similarly. In Read Committed mode, each row proposed for insertion
+    will either insert or update. Unless there are unrelated errors, one of
+    those two outcomes is guaranteed.  If a conflict originates in another
+    transaction whose effects are not yet visible to the <command>INSERT
+    </command>, the <command>UPDATE</command> clause will affect that row,
+    even though possibly <emphasis>no</> version of that row is
+    conventionally visible to the command.
+   </para>
+
+   <para>
+    <command>INSERT</command> with an <literal>ON CONFLICT DO
+    NOTHING</> clause may have insertion not proceed for a row due to
+    the outcome of another transaction whose effects are not visible
+    to the <command>INSERT</command> snapshot.  Again, this is only
+    the case in Read Committed mode.
+   </para>
+
+   <para>
+    Because of the above rules, it is possible for an updating command to see
+    an inconsistent snapshot: it can see the effects of concurrent updating
     commands on the same rows it is trying to update, but it
     does not see effects of those commands on other rows in the database.
     This behavior makes Read Committed mode unsuitable for commands that
@@ -422,8 +470,9 @@ COMMIT;
    <para>
     This level is different from Read Committed in that a query in a
     repeatable read transaction sees a snapshot as of the start of the
+    first non-transaction-control statement in the
     <emphasis>transaction</>, not as of the start
-    of the current query within the transaction.  Thus, successive
+    of the current statement within the transaction.  Thus, successive
     <command>SELECT</command> commands within a <emphasis>single</>
     transaction see the same data, i.e., they do not see changes made by
     other transactions that committed after their own transaction started.
@@ -915,8 +964,8 @@ ERROR:  could not serialize access due to read/write dependencies among transact
         </para>
 
         <para>
-         This lock mode is not automatically acquired by any
-         <productname>PostgreSQL</productname> command.
+         Acquired by <command>CREATE TRIGGER</command> and many forms of
+         <command>ALTER TABLE</command> (see <xref linkend="SQL-ALTERTABLE">).
         </para>
        </listitem>
       </varlistentry>
@@ -966,9 +1015,9 @@ ERROR:  could not serialize access due to read/write dependencies among transact
          and <command>REFRESH MATERIALIZED VIEW</command> (without
          <option>CONCURRENTLY</option>)
          commands. Many forms of <command>ALTER TABLE</> also acquire
-         a lock at this level (see <xref linkend="SQL-ALTERTABLE">).
-         This is also the default lock mode for <command>LOCK TABLE</command>
-         statements that do not specify a mode explicitly.
+         a lock at this level. This is also the default lock mode for
+         <command>LOCK TABLE</command> statements that do not specify
+         a mode explicitly.
         </para>
        </listitem>
       </varlistentry>

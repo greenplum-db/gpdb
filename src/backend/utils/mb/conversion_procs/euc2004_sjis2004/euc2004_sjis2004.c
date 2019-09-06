@@ -2,7 +2,7 @@
  *
  *	  EUC_JIS_2004, SHIFT_JIS_2004
  *
- * Copyright (c) 2007-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/utils/mb/conversion_procs/euc2004_sjis2004/euc2004_sjis2004.c
@@ -18,9 +18,6 @@ PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(euc_jis_2004_to_shift_jis_2004);
 PG_FUNCTION_INFO_V1(shift_jis_2004_to_euc_jis_2004);
-
-extern Datum euc_jis_2004_to_shift_jis_2004(PG_FUNCTION_ARGS);
-extern Datum shift_jis_2004_to_euc_jis_2004(PG_FUNCTION_ARGS);
 
 static void euc_jis_20042shift_jis_2004(const unsigned char *euc, unsigned char *p, int len);
 static void shift_jis_20042euc_jis_2004(const unsigned char *sjis, unsigned char *p, int len);

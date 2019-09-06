@@ -20,15 +20,15 @@ m4_pattern_forbid(^PGAC_)dnl to catch undefined macros
 dnl The PACKAGE_VERSION from upstream PostgreSQL is maintained in the
 dnl PG_PACKAGE_VERSION variable, when merging make sure to update this
 dnl variable with the merge conflict from the AC_INIT() statement.
-AC_INIT([Greenplum Database], [6.0.0-alpha.0], [support@greenplum.org])
-[PG_PACKAGE_VERSION=9.4.20]
+AC_INIT([Greenplum Database], [7.0.0-alpha.0], [support@greenplum.org])
+[PG_PACKAGE_VERSION=9.5beta1]
 AC_SUBST(PG_PACKAGE_VERSION)
 
 dnl m4_if(m4_defn([m4_PACKAGE_VERSION]), [2.69], [], [m4_fatal([Autoconf version 2.69 is required.
 dnl Untested combinations of 'autoconf' and PostgreSQL versions are not
 dnl recommended.  You can remove the check from 'configure.in' but it is then
 dnl your responsibility whether the result works or not.])])
-AC_COPYRIGHT([Copyright (c) 1996-2014, PostgreSQL Global Development Group])
+AC_COPYRIGHT([Copyright (c) 1996-2015, PostgreSQL Global Development Group])
 AC_CONFIG_SRCDIR([src/backend/access/common/heaptuple.c])
 AC_CONFIG_AUX_DIR(config)
 AC_PREFIX_DEFAULT(/usr/local/gpdb)
@@ -39,7 +39,6 @@ AC_SUBST(PG_MAJORVERSION)
 AC_DEFINE_UNQUOTED(PG_MAJORVERSION, "$PG_MAJORVERSION", [PostgreSQL major version as a string])
 
 [PG_VERSION="$PG_PACKAGE_VERSION"]
-dnl Greenplum co-opts the --with-extra-version value to append to Only the Greenplum version
 PGAC_ARG_REQ(with, extra-version, [STRING], [append STRING to version], [], [])
 AC_DEFINE_UNQUOTED(PG_VERSION, "$PG_PACKAGE_VERSION", [Postgres version Greenplum Database is based on])
 
@@ -74,7 +73,6 @@ dragonfly*) template=netbsd ;;
    mingw*) template=win32 ;;
   netbsd*) template=netbsd ;;
  openbsd*) template=openbsd ;;
-     osf*) template=osf ;;
      sco*) template=sco ;;
  solaris*) template=solaris ;;
    sysv5*) template=unixware ;;
@@ -199,6 +197,13 @@ PGAC_ARG_BOOL(enable, atomics, yes,
               [do not use atomic operations])
 
 #
+# Random number generation
+#
+PGAC_ARG_BOOL(enable, strong-random, yes,
+              [do not use a strong random number source])
+AC_SUBST(enable_strong_random)
+
+#
 # gpfdist
 #
 PGAC_ARG_BOOL(enable, gpfdist, yes,
@@ -211,6 +216,13 @@ AC_SUBST(enable_gpfdist)
 PGAC_ARG_BOOL(enable, pxf, yes,
              [do not build pxf])
 AC_SUBST(enable_pxf)
+
+#
+# include debug extensions in gpcontrib
+#
+PGAC_ARG_BOOL(enable, debug-extensions, no,
+              [include debug extensions in gpcontrib])
+AC_SUBST(enable_debug_extensions)
 
 #
 # orafce
@@ -791,14 +803,7 @@ PGAC_ARG_BOOL(enable, debugntuplestore, no, [enable debug_ntuplestore (for debug
                          [Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore)])])
 
 #
-# Enable testing utilities
-#
-PGAC_ARG_BOOL(enable, testutils, no, [enable testing utilities],
-              [AC_DEFINE([USE_TEST_UTILS], 1,
-                         [Define to 1 to build with testing utilities. (--enable-testutils)])])
-
-#
-# Enable Greenplum ORCA optimizer
+# Enable GPORCA optimizer
 #
 PGAC_ARG_BOOL(enable, orca, yes, [disable ORCA optimizer],
               [AC_DEFINE([USE_ORCA], 1,
@@ -963,7 +968,7 @@ AC_MSG_RESULT([$with_bonjour])
 #
 AC_MSG_CHECKING([whether to build with OpenSSL support])
 PGAC_ARG_BOOL(with, openssl, no, [build with OpenSSL support],
-              [AC_DEFINE([USE_SSL], 1, [Define to build with (Open)SSL support. (--with-openssl)])])
+              [AC_DEFINE([USE_OPENSSL], 1, [Define to build with OpenSSL support. (--with-openssl)])])
 AC_MSG_RESULT([$with_openssl])
 AC_SUBST(with_openssl)
 
@@ -1121,6 +1126,10 @@ if test "$with_libcurl" = "no" && test "$enable_pxf" = "yes"; then
   AC_MSG_ERROR([libcurl is required by PXF])
 fi
 
+if test "$with_libcurl" = "no" && test "$enable_gpcloud" = "yes"; then
+  AC_MSG_ERROR([libcurl is required by gpcloud])
+fi
+
 #
 # libapr. Used for gpfdist and gpperfmon
 #
@@ -1235,12 +1244,52 @@ if test "$with_perl" = yes; then
   fi
   AC_SUBST(perl_includespec)dnl
   PGAC_CHECK_PERL_EMBED_CCFLAGS
+  if test "$perl_useshrplib" != yes && test "$perl_useshrplib" != true; then
+    AC_MSG_ERROR([cannot build PL/Perl because libperl is not a shared library
+You might have to rebuild your Perl installation.  Refer to the
+documentation for details.  Use --without-perl to disable building
+PL/Perl.])
+  fi
   PGAC_CHECK_PERL_EMBED_LDFLAGS
 fi
 
 if test "$with_python" = yes; then
   PGAC_PATH_PYTHON
   PGAC_CHECK_PYTHON_EMBED_SETUP
+
+  # We need libpython as a shared library.  With Python >=2.5, we
+  # check the Py_ENABLE_SHARED setting.  On Debian, the setting is not
+  # correct before the jessie release (http://bugs.debian.org/695979).
+  # We also want to support older Python versions.  So as a fallback
+  # we see if there is a file that is named like a shared library.
+
+  if test "$python_enable_shared" != 1; then
+    if test "$PORTNAME" = darwin; then
+      # OS X does supply a .dylib even though Py_ENABLE_SHARED does
+      # not get set.  The file detection logic below doesn't succeed
+      # on older OS X versions, so make it explicit.
+      python_enable_shared=1
+    elif test "$PORTNAME" = win32; then
+      # Windows also needs an explicit override.
+      python_enable_shared=1
+    else
+      # We don't know the platform shared library extension here yet,
+      # so we try some candidates.
+      for dlsuffix in .so .sl; do
+        if ls "$python_libdir"/libpython*${dlsuffix}* >/dev/null 2>&1; then
+          python_enable_shared=1
+          break
+        fi
+      done
+    fi
+  fi
+
+  if test "$python_enable_shared" != 1; then
+    AC_MSG_ERROR([cannot build PL/Python because libpython is not a shared library
+You might have to rebuild your Python installation.  Refer to the
+documentation for details.  Use --without-python to disable building
+PL/Python.])
+  fi
 fi
 
 if test "$cross_compiling" = yes && test -z "$with_system_tzdata"; then
@@ -1266,7 +1315,7 @@ fi
 AC_CHECK_LIB(m, main)
 AC_SEARCH_LIBS(setproctitle, util)
 AC_SEARCH_LIBS(dlopen, dl)
-AC_SEARCH_LIBS(socket, [socket wsock32])
+AC_SEARCH_LIBS(socket, [socket ws2_32])
 AC_SEARCH_LIBS(shl_load, dld)
 # We only use libld in port/dynloader/aix.c
 case $host_os in
@@ -1287,6 +1336,8 @@ AC_SEARCH_LIBS(sched_yield, rt)
 AC_SEARCH_LIBS(gethostbyname_r, nsl)
 # Cygwin:
 AC_SEARCH_LIBS(shmget, cygipc)
+# *BSD
+AC_SEARCH_LIBS(backtrace_symbols, execinfo)
 
 if test "$with_readline" = yes; then
   PGAC_CHECK_READLINE
@@ -1327,7 +1378,7 @@ else
 fi
 
 if test "$enable_atomics" = yes; then
-  AC_DEFINE(HAVE_ATOMICS, 1, [Define to 1 if you want to use atomics.])
+  AC_DEFINE(HAVE_ATOMICS, 1, [Define to 1 if you want to use atomics if available.])
 else
   AC_MSG_WARN([
 *** Not using atomic operations will cause poor performance.])
@@ -1416,14 +1467,12 @@ if test "$with_libxml" = yes ; then
 fi
 
 # Check for curl.
-# CURLOPT_MAIL_FROM is introduced in curl 7.20 and only needed for email alerts.
 if test "$with_libcurl" = yes ; then
   AC_CHECK_CURL([7.19.0])
   CFLAGS="$CFLAGS $CURL_CFLAGS"
   LIBS="$LIBS $CURL_LIBS"
   AC_DEFINE([USE_CURL], 1,
           [Define to 1 to build with libcurl support. (--with-libcurl)])
-  AC_CHECK_DECLS([CURLOPT_MAIL_FROM], [], [], [#include <curl/curl.h>])
 fi
 
 # Check for bzip2
@@ -1479,7 +1528,7 @@ fi
 ##
 
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES
-AC_CHECK_HEADERS([atomic.h crypt.h dld.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h ])
+AC_CHECK_HEADERS([atomic.h crypt.h dld.h execinfo.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h])
 
 # On BSD, test for net/if.h will fail unless sys/socket.h
 # is included first.
@@ -1707,7 +1756,7 @@ if test "$enable_mapreduce" = yes; then
   AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([header file <yaml.h> is required for Greenplum Mapreduce])])
 fi
 
-# Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
+# Check for GPORCA and supporting GPORCA OS abstraction layer header files.
 if test "$enable_orca" = yes; then
   PGAC_CHECK_ORCA_HEADERS
   PGAC_CHECK_ORCA_VERSION
@@ -1735,6 +1784,7 @@ PGAC_C_SIGNED
 PGAC_C_FUNCNAME_SUPPORT
 PGAC_C_STATIC_ASSERT
 PGAC_C_TYPES_COMPATIBLE
+PGAC_C_BUILTIN_BSWAP32
 PGAC_C_BUILTIN_CONSTANT_P
 PGAC_C_BUILTIN_UNREACHABLE
 PGAC_C_VA_ARGS
@@ -1828,7 +1878,7 @@ LIBS=`echo "$LIBS" | sed -e 's/-ledit//g' -e 's/-lreadline//g'`
 # net-snmp has the same problem..
 LIBS=`echo "$LIBS" | sed -e 's/-lnetsnmp//g'`
 
-AC_CHECK_FUNCS([cbrt dlopen fdatasync getifaddrs getpeerucred getrlimit mbstowcs_l memmove poll posix_fallocate pstat pthread_is_threaded_np readlink setproctitle setsid shm_open sigprocmask symlink sync_file_range towlower utime utimes wcstombs wcstombs_l])
+AC_CHECK_FUNCS([backtrace_symbols cbrt dlopen fdatasync getifaddrs getpeerucred getrlimit mbstowcs_l memmove poll posix_fallocate pstat pthread_is_threaded_np readlink setproctitle setsid shm_open sigprocmask symlink sync_file_range towlower utime utimes wcstombs wcstombs_l])
 
 AC_REPLACE_FUNCS(fseeko)
 case $host_os in
@@ -1844,10 +1894,11 @@ esac
 # posix_fadvise() is a no-op on Solaris, so don't incur function overhead
 # by calling it, 2009-04-02
 # http://src.opensolaris.org/source/xref/onnv/onnv-gate/usr/src/lib/libc/port/gen/posix_fadvise.c
-if test "$PORTNAME" != "solaris"; then
+dnl must use AS_IF here, else AC_REQUIRES inside AC_CHECK_DECLS malfunctions
+AS_IF([test "$PORTNAME" != "solaris"], [
 AC_CHECK_FUNCS(posix_fadvise)
 AC_CHECK_DECLS(posix_fadvise, [], [], [#include <fcntl.h>])
-fi
+]) # fi
 
 AC_CHECK_DECLS(fdatasync, [], [], [#include <unistd.h>])
 AC_CHECK_DECLS([strlcat, strlcpy])
@@ -1961,10 +2012,9 @@ esac
 
 # System's version of getaddrinfo(), if any, may be used only if we found
 # a definition for struct addrinfo; see notes in src/include/getaddrinfo.h.
-# (Note: the AC_REPLACE_FUNCS probe fails on Windows, where the available
-# versions of getaddrinfo don't follow normal C call protocol.  This is OK
-# because we want to use our own getaddrinfo.c on Windows anyway.)
-if test x"$ac_cv_type_struct_addrinfo" = xyes ; then
+# We use only our own getaddrinfo.c on Windows, but it's time to revisit that.
+if test x"$ac_cv_type_struct_addrinfo" = xyes && \
+   test "$PORTNAME" != "win32"; then
   AC_REPLACE_FUNCS([getaddrinfo])
 else
   AC_LIBOBJ(getaddrinfo)
@@ -2081,17 +2131,6 @@ if test "$with_readline" = yes; then
 fi
 
 
-AC_CACHE_CHECK([for builtin locking functions], pgac_cv_gcc_int_atomics,
-[AC_TRY_LINK([],
-  [int lock = 0;
-   __sync_lock_test_and_set(&lock, 1);
-   __sync_lock_release(&lock);],
-  [pgac_cv_gcc_int_atomics="yes"],
-  [pgac_cv_gcc_int_atomics="no"])])
-if test x"$pgac_cv_gcc_int_atomics" = x"yes"; then
-  AC_DEFINE(HAVE_GCC_INT_ATOMICS, 1, [Define to 1 if you have __sync_lock_test_and_set(int *) and friends.])
-fi
-
 # Lastly, restore full LIBS list and check for readline/libedit symbols
 LIBS="$LIBS_including_readline"
 
@@ -2117,15 +2156,6 @@ ACX_PTHREAD	# set thread flags
 # enables 5-arg getpwuid_r, among other things.
 PTHREAD_CFLAGS="$PTHREAD_CFLAGS -D_REENTRANT -D_THREAD_SAFE -D_POSIX_PTHREAD_SEMANTICS"
 
-
-# At this point, we don't want to muck with the compiler name for threading.
-# Let's see who fails, perhaps AIX.  2004-04-23
-if test "$PTHREAD_CC" != "$CC"; then
-AC_MSG_ERROR([
-PostgreSQL does not support platforms that require a special compiler
-for thread safety;  use --disable-thread-safety to disable thread safety.])
-fi
-
 # Check for *_r functions
 _CFLAGS="$CFLAGS"
 _LIBS="$LIBS"
@@ -2140,7 +2170,6 @@ fi
 AC_CHECK_FUNCS([strerror_r getpwuid_r gethostbyname_r])
 
 # Do test here with the proper thread flags
-PGAC_FUNC_GETPWUID_R_5ARG
 PGAC_FUNC_STRERROR_R_INT
 
 CFLAGS="$_CFLAGS"
@@ -2251,30 +2280,25 @@ AC_DEFINE_UNQUOTED(PG_INT64_TYPE, $pg_int64_type,
 
 if test "$HAVE_LONG_LONG_INT_64" = yes ; then
   if test $pgac_need_repl_snprintf = no; then
-    PGAC_FUNC_SNPRINTF_LONG_LONG_INT_FORMAT
-    if test "$LONG_LONG_INT_FORMAT" = ""; then
+    PGAC_FUNC_SNPRINTF_LONG_LONG_INT_MODIFIER
+    if test "$LONG_LONG_INT_MODIFIER" = ""; then
       # Force usage of our own snprintf, since system snprintf is broken
       pgac_need_repl_snprintf=yes
-      LONG_LONG_INT_FORMAT='%lld'
+      LONG_LONG_INT_MODIFIER='ll'
     fi
   else
     # Here if we previously decided we needed to use our own snprintf
-    LONG_LONG_INT_FORMAT='%lld'
+    LONG_LONG_INT_MODIFIER='ll'
   fi
-  LONG_LONG_UINT_FORMAT=`echo "$LONG_LONG_INT_FORMAT" | sed 's/d$/u/'`
-  INT64_FORMAT="\"$LONG_LONG_INT_FORMAT\""
-  UINT64_FORMAT="\"$LONG_LONG_UINT_FORMAT\""
 else
   # Here if we are not using 'long long int' at all
-  INT64_FORMAT='"%ld"'
-  UINT64_FORMAT='"%lu"'
+  LONG_LONG_INT_MODIFIER='l'
 fi
 
-AC_DEFINE_UNQUOTED(INT64_FORMAT, $INT64_FORMAT,
-                   [Define to the appropriate snprintf format for 64-bit ints.])
+INT64_MODIFIER="\"$LONG_LONG_INT_MODIFIER\""
 
-AC_DEFINE_UNQUOTED(UINT64_FORMAT, $UINT64_FORMAT,
-                   [Define to the appropriate snprintf format for unsigned 64-bit ints.])
+AC_DEFINE_UNQUOTED(INT64_MODIFIER, $INT64_MODIFIER,
+                   [Define to the appropriate snprintf length modifier for 64-bit ints.])
 
 # Also force use of our snprintf if the system's doesn't support the %z flag.
 if test "$pgac_need_repl_snprintf" = no; then
@@ -2356,6 +2380,95 @@ PGAC_HAVE_GCC__ATOMIC_INT32_CAS
 PGAC_HAVE_GCC__ATOMIC_INT64_CAS
 
 
+# Check for x86 cpuid instruction
+AC_CACHE_CHECK([for __get_cpuid], [pgac_cv__get_cpuid],
+[AC_TRY_LINK([#include <cpuid.h>],
+  [unsigned int exx[4] = {0, 0, 0, 0};
+  __get_cpuid(1, &exx[0], &exx[1], &exx[2], &exx[3]);
+  ],
+  [pgac_cv__get_cpuid="yes"],
+  [pgac_cv__get_cpuid="no"])])
+if test x"$pgac_cv__get_cpuid" = x"yes"; then
+  AC_DEFINE(HAVE__GET_CPUID, 1, [Define to 1 if you have __get_cpuid.])
+fi
+
+AC_CACHE_CHECK([for __cpuid], [pgac_cv__cpuid],
+[AC_TRY_LINK([#include <intrin.h>],
+  [unsigned int exx[4] = {0, 0, 0, 0};
+  __get_cpuid(exx[0], 1);
+  ],
+  [pgac_cv__cpuid="yes"],
+  [pgac_cv__cpuid="no"])])
+if test x"$pgac_cv__cpuid" = x"yes"; then
+  AC_DEFINE(HAVE__CPUID, 1, [Define to 1 if you have __cpuid.])
+fi
+
+# Check for Intel SSE 4.2 intrinsics to do CRC calculations.
+#
+# First check if the _mm_crc32_u8 and _mm_crc32_u64 intrinsics can be used
+# with the default compiler flags. If not, check if adding the -msse4.2
+# flag helps. CFLAGS_SSE42 is set to -msse4.2 if that's required.
+PGAC_SSE42_CRC32_INTRINSICS([])
+if test x"$pgac_sse42_crc32_intrinsics" != x"yes"; then
+  PGAC_SSE42_CRC32_INTRINSICS([-msse4.2])
+fi
+AC_SUBST(CFLAGS_SSE42)
+
+# Are we targeting a processor that supports SSE 4.2? gcc, clang and icc all
+# define __SSE4_2__ in that case.
+AC_TRY_COMPILE([], [
+#ifndef __SSE4_2__
+#error __SSE4_2__ not defined
+#endif
+], [SSE4_2_TARGETED=1])
+
+# Select CRC-32C implementation.
+#
+# If we are targeting a processor that has SSE 4.2 instructions, we can use the
+# special CRC instructions for calculating CRC-32C. If we're not targeting such
+# a processor, but we can nevertheless produce code that uses the SSE
+# intrinsics, perhaps with some extra CFLAGS, compile both implementations and
+# select which one to use at runtime, depending on whether SSE 4.2 is supported
+# by the processor we're running on.
+#
+# You can override this logic by setting the appropriate USE_*_CRC32 flag to 1
+# in the template or configure command line.
+if test x"$USE_SSE42_CRC32C" = x"" && test x"$USE_SSE42_CRC32C_WITH_RUNTIME_CHECK" = x"" && test x"$USE_SLICING_BY_8_CRC32C" = x""; then
+  if test x"$pgac_sse42_crc32_intrinsics" = x"yes" && test x"$SSE4_2_TARGETED" = x"1" ; then
+    USE_SSE42_CRC32C=1
+  else
+    # the CPUID instruction is needed for the runtime check.
+    if test x"$pgac_sse42_crc32_intrinsics" = x"yes" && (test x"$pgac_cv__get_cpuid" = x"yes" || test x"$pgac_cv__cpuid" = x"yes"); then
+      USE_SSE42_CRC32C_WITH_RUNTIME_CHECK=1
+    else
+      # fall back to slicing-by-8 algorithm which doesn't require any special
+      # CPU support.
+      USE_SLICING_BY_8_CRC32C=1
+    fi
+  fi
+fi
+
+# Set PG_CRC32C_OBJS appropriately depending on the selected implementation.
+AC_MSG_CHECKING([which CRC-32C implementation to use])
+if test x"$USE_SSE42_CRC32C" = x"1"; then
+  AC_DEFINE(USE_SSE42_CRC32C, 1, [Define to 1 use Intel SSE 4.2 CRC instructions.])
+  PG_CRC32C_OBJS="pg_crc32c_sse42.o"
+  AC_MSG_RESULT(SSE 4.2)
+else
+  if test x"$USE_SSE42_CRC32C_WITH_RUNTIME_CHECK" = x"1"; then
+    AC_DEFINE(USE_SSE42_CRC32C_WITH_RUNTIME_CHECK, 1, [Define to 1 to use Intel SSSE 4.2 CRC instructions with a runtime check.])
+    PG_CRC32C_OBJS="pg_crc32c_sse42.o pg_crc32c_sb8.o pg_crc32c_choose.o"
+    AC_MSG_RESULT(SSE 4.2 with runtime check)
+  else
+    AC_DEFINE(USE_SLICING_BY_8_CRC32C, 1, [Define to 1 to use Intel SSE 4.2 CRC instructions with a runtime check.])
+    PG_CRC32C_OBJS="pg_crc32c_sb8.o"
+    AC_MSG_RESULT(slicing-by-8)
+  fi
+fi
+AC_SUBST(PG_CRC32C_OBJS)
+
+
+# Check that POSIX signals are available if thread safety is enabled.
 if test "$PORTNAME" != "win32"
 then
 PGAC_FUNC_POSIX_SIGNALS
@@ -2414,6 +2527,51 @@ else
   SHMEM_IMPLEMENTATION="src/backend/port/win32_shmem.c"
 fi
 
+# Select random number source
+#
+# You can override this logic by setting the appropriate USE_*RANDOM flag to 1
+# in the template or configure command line.
+
+# If not selected manually, try to select a source automatically.
+if test "$enable_strong_random" = "yes" && test x"$USE_OPENSSL_RANDOM" = x"" && test x"$USE_WIN32_RANDOM" = x"" && test x"$USE_DEV_URANDOM" = x"" ; then
+  if test x"$with_openssl" = x"yes" ; then
+    USE_OPENSSL_RANDOM=1
+  elif test "$PORTNAME" = "win32" ; then
+    USE_WIN32_RANDOM=1
+  else
+    AC_CHECK_FILE([/dev/urandom], [], [])
+
+    if test x"$ac_cv_file__dev_urandom" = x"yes" ; then
+      USE_DEV_URANDOM=1
+    fi
+  fi
+fi
+
+AC_MSG_CHECKING([which random number source to use])
+if test "$enable_strong_random" = yes ; then
+  if test x"$USE_OPENSSL_RANDOM" = x"1" ; then
+    AC_DEFINE(USE_OPENSSL_RANDOM, 1, [Define to use OpenSSL for random number generation])
+    AC_MSG_RESULT([OpenSSL])
+  elif test x"$USE_WIN32_RANDOM" = x"1" ; then
+    AC_DEFINE(USE_WIN32_RANDOM, 1, [Define to use native Windows API for random number generation])
+    AC_MSG_RESULT([Windows native])
+  elif test x"$USE_DEV_URANDOM" = x"1" ; then
+    AC_DEFINE(USE_DEV_URANDOM, 1, [Define to use /dev/urandom for random number generation])
+    AC_MSG_RESULT([/dev/urandom])
+  else
+    AC_MSG_ERROR([
+no source of strong random numbers was found
+PostgreSQL can use OpenSSL or /dev/urandom as a source of random numbers,
+for authentication protocols. You can use --disable-strong-random to use a
+built-in pseudo random number generator, but that may be insecure.])
+  fi
+  AC_DEFINE(HAVE_STRONG_RANDOM, 1, [Define to use have a strong random number source])
+else
+    AC_MSG_RESULT([weak builtin PRNG])
+    AC_MSG_WARN([
+*** Not using a strong random number source may be insecure.])
+fi
+
 # Select latch implementation type.
 if test "$PORTNAME" != "win32"; then
   LATCH_IMPLEMENTATION="src/backend/port/unix_latch.c"
@@ -2436,8 +2594,12 @@ fi
 if test "$with_tcl" = yes; then
     PGAC_PATH_TCLCONFIGSH([$with_tclconfig])
     PGAC_EVAL_TCLCONFIGSH([$TCL_CONFIG_SH],
-                          [TCL_INCLUDE_SPEC,TCL_LIB_FILE,TCL_LIBS,TCL_LIB_SPEC,TCL_SHARED_BUILD])
+                          [TCL_INCLUDE_SPEC,TCL_LIBS,TCL_LIB_SPEC,TCL_SHARED_BUILD])
     AC_SUBST(TCL_SHLIB_LD_LIBS)dnl don't want to double-evaluate that one
+    if test "$TCL_SHARED_BUILD" != 1; then
+      AC_MSG_ERROR([cannot build PL/Tcl because Tcl is not a shared library
+Use --without-tcl to disable building PL/Tcl.])
+    fi
     # now that we have TCL_INCLUDE_SPEC, we can check for <tcl.h>
     ac_save_CPPFLAGS=$CPPFLAGS
     CPPFLAGS="$TCL_INCLUDE_SPEC $CPPFLAGS"
@@ -2485,6 +2647,8 @@ PGAC_PROG_JADE
 PGAC_CHECK_DOCBOOK(4.2)
 PGAC_PATH_DOCBOOK_STYLESHEETS
 PGAC_PATH_COLLATEINDEX
+AC_CHECK_PROGS(DBTOEPUB, dbtoepub)
+AC_CHECK_PROGS(XMLLINT, xmllint)
 AC_CHECK_PROGS(XSLTPROC, xsltproc)
 AC_CHECK_PROGS(OSX, [osx sgml2xml sx])
 
@@ -2579,10 +2743,6 @@ AC_SUBST(BLD_ARCH)
 # Get the Greenplum version string from VERSION
 
 GP_VERSION_LONG=`bash ./getversion`
-
-if test "$with_extra_version" = "" ; then
-  with_extra_version="-oss"
-fi
 
 GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
 

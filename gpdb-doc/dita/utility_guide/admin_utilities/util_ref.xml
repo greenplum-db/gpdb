@@ -14,7 +14,7 @@
         in brackets. For command prompt use, the best practice is to escape any brackets or put them
         inside quotation marks. For example, use either:<codeph>\[2620:0:170:610::11\]</codeph> or
           <codeph>'[2620:0:170:610::11]'</codeph>.</note></p>
-    <p>The following are the Greenplum Database management utilities.</p>
+    <p>Greenplum Database provides the following management utility programs:</p>
     <simpletable id="km162860">
       <strow>
         <stentry>
@@ -30,12 +30,8 @@
           <p>
             <xref href="gpbackup.xml" type="topic" format="dita"/></p>
           <p>
-            <xref href="gpcheck.xml#topic1" type="topic" format="dita"/></p>
-          <p>
             <xref href="gpcheckcat.xml#topic1"/>
           </p>
-          <p>gpchecknet (deprecated)</p>
-          <p>gpcheckos (deprecated)</p>
           <p>
             <xref href="gpcheckperf.xml#topic1" type="topic" format="dita"/>
           </p>
@@ -48,7 +44,6 @@
           <p>
             <xref href="gpdeletesystem.xml#topic1" type="topic" format="dita"/>
           </p>
-          <p> gpdetective (deprecated)</p>
           <p>
             <xref href="gpexpand.xml#topic1" type="topic" format="dita"/>
           </p>
@@ -102,7 +97,6 @@
           <p>
             <xref href="gppkg.xml#topic1" type="topic" format="dita"/>
           </p>
-          <p>gprebuildsystem (deprecated)</p>
           <p>
             <xref href="gprecoverseg.xml#topic1" type="topic" format="dita"/>
           </p>
@@ -111,13 +105,8 @@
           </p>
           <p>
             <xref href="gprestore.xml" type="topic" format="dita"/></p>
-          <p>gpsizecalc (deprecated)</p>
           <p>
             <xref href="gpscp.xml#topic1" type="topic" format="dita"/>
-          </p>
-          <p>gpskew (deprecated)</p>
-          <p>
-            <xref href="gpseginstall.xml#topic1" type="topic" format="dita"/>
           </p>
           <p>
             <xref href="gpssh.xml#topic1" type="topic" format="dita"/>
@@ -200,16 +189,15 @@
             </row>
             <row>
               <entry colname="col1">
-                <codeph id="km164272">gpsyncmaster</codeph>
+                <codeph id="km164272">pg_basebackup</codeph>
               </entry>
-              <entry colname="col2">This is the Greenplum program that starts the
-                  <codeph>gpsyncagent</codeph> process on the standby master host. Administrators do
-                not call this program directly, but do so through the management scripts that
-                initialize and/or activate a standby master for a Greenplum Database system. This
-                process is responsible for keeping the standby master up to date with the primary
-                master via a transaction log replication process.</entry>
+              <entry colname="col2">This program makes a binary copy of a single database instance.
+                Greenplum Database uses it for tasks such as creating a standby master instance, or
+                recovering a mirror segment when a full copy is needed. Do not use this utility to
+                back up Greenplum Database segment instances because it does not produce
+                MPP-consistent backups.</entry>
               <entry colname="col3"><codeph><xref href="gpinitstandby.xml#topic1" type="topic"
-                    format="dita"/></codeph>, <codeph><xref href="gpactivatestandby.xml#topic1"
+                    format="dita"/></codeph>, <codeph><xref href="gprecoverseg.xml#topic1"
                     type="topic" format="dita"/></codeph></entry>
             </row>
             <row>

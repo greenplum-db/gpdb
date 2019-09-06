@@ -3,6 +3,10 @@
 -- specific server features
 --
 
+-- GPDB: Use Postgres's tuplesort instead of our tuplesort_mk to avoid
+-- array sorting diffs.
+set gp_enable_mk_sort=false;
+
 -- \gset
 
 select 10 as test01, 20 as test02, 'Hello' as test03 \gset pref01_
@@ -40,3 +44,264 @@ select 10 as test01, 20 as test02 from generate_series(1,0) \gset
 
 -- show all pset options
 \pset
+
+-- test multi-line headers, wrapping, and newline indicators
+prepare q as select array_to_string(array_agg(repeat('x',2*n)),E'\n') as "ab
+
+c", array_to_string(array_agg(repeat('y',20-2*n)),E'\n') as "a
+bc" from generate_series(1,10) as n(n) group by n>1 ;
+
+\pset linestyle ascii
+
+\pset expanded off
+\pset columns 40
+
+\pset border 0
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 1
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 2
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset expanded on
+\pset columns 20
+
+\pset border 0
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 1
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 2
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset linestyle old-ascii
+
+\pset expanded off
+\pset columns 40
+
+\pset border 0
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 1
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 2
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset expanded on
+\pset columns 20
+
+\pset border 0
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 1
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 2
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+deallocate q;
+
+-- test single-line header and data
+prepare q as select repeat('x',2*n) as "0123456789abcdef", repeat('y',20-2*n) as "0123456789" from generate_series(1,10) as n;
+
+\pset linestyle ascii
+
+\pset expanded off
+\pset columns 40
+
+\pset border 0
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 1
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 2
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset expanded on
+\pset columns 20
+
+\pset border 0
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 1
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 2
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset linestyle old-ascii
+
+\pset expanded off
+\pset columns 40
+
+\pset border 0
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 1
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 2
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset expanded on
+
+\pset border 0
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 1
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+\pset border 2
+\pset format unaligned
+execute q;
+\pset format aligned
+execute q;
+\pset format wrapped
+execute q;
+
+deallocate q;
+
+prepare q as select ' | = | lkjsafi\\/ /oeu rio)(!@&*#)*(!&@*) \ (&' as " | -- | 012345678 9abc def!*@#&!@(*&*~~_+-=\ \", '11' as "0123456789", 11 as int from generate_series(1,10) as n;
+
+\pset format asciidoc
+\pset expanded off
+\pset border 0
+execute q;
+
+\pset border 1
+execute q;
+
+\pset border 2
+execute q;
+
+\pset expanded on
+\pset border 0
+execute q;
+
+\pset border 1
+execute q;
+
+\pset border 2
+execute q;
+
+deallocate q;

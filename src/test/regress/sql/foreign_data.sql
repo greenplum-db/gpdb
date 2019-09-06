@@ -269,9 +269,28 @@ CREATE FOREIGN TABLE ft1 ();                                    -- ERROR
 CREATE FOREIGN TABLE ft1 () SERVER no_server;                   -- ERROR
 CREATE FOREIGN TABLE ft1 () SERVER s0 WITH OIDS;                -- ERROR
 CREATE FOREIGN TABLE ft1 (
-	c1 integer OPTIONS ("param 1" 'val1') NOT NULL,
+	c1 integer OPTIONS ("param 1" 'val1') PRIMARY KEY,
 	c2 text OPTIONS (param2 'val2', param3 'val3'),
 	c3 date
+) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value'); -- ERROR
+CREATE TABLE ref_table (id integer PRIMARY KEY);
+CREATE FOREIGN TABLE ft1 (
+	c1 integer OPTIONS ("param 1" 'val1') REFERENCES ref_table (id),
+	c2 text OPTIONS (param2 'val2', param3 'val3'),
+	c3 date
+) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value'); -- ERROR
+DROP TABLE ref_table;
+CREATE FOREIGN TABLE ft1 (
+	c1 integer OPTIONS ("param 1" 'val1') NOT NULL,
+	c2 text OPTIONS (param2 'val2', param3 'val3'),
+	c3 date,
+	UNIQUE (c3)
+) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value'); -- ERROR
+CREATE FOREIGN TABLE ft1 (
+	c1 integer OPTIONS ("param 1" 'val1') NOT NULL,
+	c2 text OPTIONS (param2 'val2', param3 'val3') CHECK (c2 <> ''),
+	c3 date,
+	CHECK (c3 BETWEEN '1994-01-01'::date AND '1994-01-31'::date)
 ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value');
 COMMENT ON FOREIGN TABLE ft1 IS 'ft1';
 COMMENT ON COLUMN ft1.c1 IS 'ft1.c1';
@@ -309,16 +328,19 @@ ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 OPTIONS (SET p2 'V2', DROP p1);
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET STATISTICS 10000;
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET (n_distinct = 100);
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STATISTICS -1;
+ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STORAGE PLAIN;
 \d+ ft1
 -- can't change the column type if it's used elsewhere
 CREATE TABLE use_ft1_column_type (x ft1);
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET DATA TYPE integer;	-- ERROR
 DROP TABLE use_ft1_column_type;
-ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c9_check CHECK (c9 < 0); -- ERROR
+ALTER FOREIGN TABLE ft1 ADD PRIMARY KEY (c7);                   -- ERROR
+ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c9_check CHECK (c9 < 0) NOT VALID;
+ALTER FOREIGN TABLE ft1 ALTER CONSTRAINT ft1_c9_check DEFERRABLE; -- ERROR
+ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c9_check;
 ALTER FOREIGN TABLE ft1 DROP CONSTRAINT no_const;               -- ERROR
 ALTER FOREIGN TABLE ft1 DROP CONSTRAINT IF EXISTS no_const;
-ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c1_check;
-ALTER FOREIGN TABLE ft1 SET WITH OIDS;                          -- ERROR
+ALTER FOREIGN TABLE ft1 SET WITH OIDS;
 ALTER FOREIGN TABLE ft1 OWNER TO regress_test_role;
 ALTER FOREIGN TABLE ft1 OPTIONS (DROP delimiter, SET quote '~', ADD escape '@');
 ALTER FOREIGN TABLE ft1 DROP COLUMN no_column;                  -- ERROR
@@ -533,6 +555,152 @@ DROP TRIGGER trigtest_after_stmt ON foreign_schema.foreign_table_1;
 DROP TRIGGER trigtest_after_row ON foreign_schema.foreign_table_1;
 
 DROP FUNCTION dummy_trigger();
+
+-- Table inheritance
+CREATE TABLE pt1 (
+	c1 integer NOT NULL,
+	c2 text,
+	c3 date
+);
+CREATE FOREIGN TABLE ft2 () INHERITS (pt1)
+  SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value');
+\d+ pt1
+\d+ ft2
+DROP FOREIGN TABLE ft2;
+\d+ pt1
+CREATE FOREIGN TABLE ft2 (
+	c1 integer NOT NULL,
+	c2 text,
+	c3 date
+) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value');
+\d+ ft2
+ALTER FOREIGN TABLE ft2 INHERIT pt1;
+\d+ pt1
+\d+ ft2
+-- GPDB: Cannot create distributed table from non-distributed foreign table.
+CREATE TABLE ct3() INHERITS(ft2);
+CREATE FOREIGN TABLE ft3 (
+	c1 integer NOT NULL,
+	c2 text,
+	c3 date
+) INHERITS(ft2)
+  SERVER s0;
+\d+ ft2
+-- start_ignore
+-- GPDB: ct3 is not created.
+\d+ ct3
+-- end_ignore
+\d+ ft3
+
+-- add attributes recursively
+ALTER TABLE pt1 ADD COLUMN c4 integer;
+ALTER TABLE pt1 ADD COLUMN c5 integer DEFAULT 0;
+ALTER TABLE pt1 ADD COLUMN c6 integer;
+ALTER TABLE pt1 ADD COLUMN c7 integer NOT NULL;
+ALTER TABLE pt1 ADD COLUMN c8 integer;
+\d+ pt1
+\d+ ft2
+-- start_ignore
+-- GPDB: ct3 is not created.
+\d+ ct3
+-- end_ignore
+\d+ ft3
+
+-- alter attributes recursively
+ALTER TABLE pt1 ALTER COLUMN c4 SET DEFAULT 0;
+ALTER TABLE pt1 ALTER COLUMN c5 DROP DEFAULT;
+ALTER TABLE pt1 ALTER COLUMN c6 SET NOT NULL;
+ALTER TABLE pt1 ALTER COLUMN c7 DROP NOT NULL;
+ALTER TABLE pt1 ALTER COLUMN c8 TYPE char(10) USING '0';        -- ERROR
+ALTER TABLE pt1 ALTER COLUMN c8 TYPE char(10);
+ALTER TABLE pt1 ALTER COLUMN c8 SET DATA TYPE text;
+ALTER TABLE pt1 ALTER COLUMN c1 SET STATISTICS 10000;
+ALTER TABLE pt1 ALTER COLUMN c1 SET (n_distinct = 100);
+ALTER TABLE pt1 ALTER COLUMN c8 SET STATISTICS -1;
+ALTER TABLE pt1 ALTER COLUMN c8 SET STORAGE EXTERNAL;
+\d+ pt1
+\d+ ft2
+
+-- drop attributes recursively
+ALTER TABLE pt1 DROP COLUMN c4;
+ALTER TABLE pt1 DROP COLUMN c5;
+ALTER TABLE pt1 DROP COLUMN c6;
+ALTER TABLE pt1 DROP COLUMN c7;
+ALTER TABLE pt1 DROP COLUMN c8;
+\d+ pt1
+\d+ ft2
+
+-- add constraints recursively
+ALTER TABLE pt1 ADD CONSTRAINT pt1chk1 CHECK (c1 > 0) NO INHERIT;
+ALTER TABLE pt1 ADD CONSTRAINT pt1chk2 CHECK (c2 <> '');
+-- connoinherit should be true for NO INHERIT constraint
+SELECT relname, conname, contype, conislocal, coninhcount, connoinherit
+  FROM pg_class AS pc JOIN pg_constraint AS pgc ON (conrelid = pc.oid)
+  WHERE pc.relname = 'pt1'
+  ORDER BY 1,2;
+-- child does not inherit NO INHERIT constraints
+\d+ pt1
+\d+ ft2
+DROP FOREIGN TABLE ft2; -- ERROR
+DROP FOREIGN TABLE ft2 CASCADE;
+CREATE FOREIGN TABLE ft2 (
+	c1 integer NOT NULL,
+	c2 text,
+	c3 date
+) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value');
+-- child must have parent's INHERIT constraints
+ALTER FOREIGN TABLE ft2 INHERIT pt1;                            -- ERROR
+ALTER FOREIGN TABLE ft2 ADD CONSTRAINT pt1chk2 CHECK (c2 <> '');
+ALTER FOREIGN TABLE ft2 INHERIT pt1;
+-- child does not inherit NO INHERIT constraints
+\d+ pt1
+\d+ ft2
+
+-- drop constraints recursively
+ALTER TABLE pt1 DROP CONSTRAINT pt1chk1 CASCADE;
+ALTER TABLE pt1 DROP CONSTRAINT pt1chk2 CASCADE;
+
+-- NOT VALID case
+SET gp_autostats_mode=NONE; -- GPDB: don't analyze after insert
+INSERT INTO pt1 VALUES (1, 'pt1'::text, '1994-01-01'::date);
+ALTER TABLE pt1 ADD CONSTRAINT pt1chk3 CHECK (c2 <> '') NOT VALID;
+\d+ pt1
+\d+ ft2
+-- VALIDATE CONSTRAINT need do nothing on foreign tables
+ALTER TABLE pt1 VALIDATE CONSTRAINT pt1chk3;
+\d+ pt1
+\d+ ft2
+
+-- OID system column
+ALTER TABLE pt1 SET WITH OIDS;
+\d+ pt1
+\d+ ft2
+ALTER TABLE ft2 SET WITHOUT OIDS;  -- ERROR
+ALTER TABLE pt1 SET WITHOUT OIDS;
+\d+ pt1
+\d+ ft2
+
+-- changes name of an attribute recursively
+ALTER TABLE pt1 RENAME COLUMN c1 TO f1;
+ALTER TABLE pt1 RENAME COLUMN c2 TO f2;
+ALTER TABLE pt1 RENAME COLUMN c3 TO f3;
+-- changes name of a constraint recursively
+ALTER TABLE pt1 RENAME CONSTRAINT pt1chk3 TO f2_check;
+\d+ pt1
+\d+ ft2
+
+-- TRUNCATE doesn't work on foreign tables, either directly or recursively
+TRUNCATE ft2;  -- ERROR
+TRUNCATE pt1;  -- ERROR
+
+DROP TABLE pt1 CASCADE;
+
+-- IMPORT FOREIGN SCHEMA
+IMPORT FOREIGN SCHEMA s1 FROM SERVER s9 INTO public; -- ERROR
+IMPORT FOREIGN SCHEMA s1 LIMIT TO (t1) FROM SERVER s9 INTO public; --ERROR
+IMPORT FOREIGN SCHEMA s1 EXCEPT (t1) FROM SERVER s9 INTO public; -- ERROR
+IMPORT FOREIGN SCHEMA s1 EXCEPT (t1, t2) FROM SERVER s9 INTO public
+OPTIONS (option1 'value1', option2 'value2'); -- ERROR
 
 -- DROP FOREIGN TABLE
 DROP FOREIGN TABLE no_table;                                    -- ERROR

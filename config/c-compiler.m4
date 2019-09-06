@@ -233,6 +233,23 @@ fi])# PGAC_C_TYPES_COMPATIBLE
 
 
 
+# PGAC_C_BUILTIN_BSWAP32
+# -------------------------
+# Check if the C compiler understands __builtin_bswap32(),
+# and define HAVE__BUILTIN_BSWAP32 if so.
+AC_DEFUN([PGAC_C_BUILTIN_BSWAP32],
+[AC_CACHE_CHECK(for __builtin_bswap32, pgac_cv__builtin_bswap32,
+[AC_TRY_COMPILE([static unsigned long int x = __builtin_bswap32(0xaabbccdd);],
+[],
+[pgac_cv__builtin_bswap32=yes],
+[pgac_cv__builtin_bswap32=no])])
+if test x"$pgac_cv__builtin_bswap32" = xyes ; then
+AC_DEFINE(HAVE__BUILTIN_BSWAP32, 1,
+          [Define to 1 if your compiler understands __builtin_bswap32.])
+fi])# PGAC_C_BUILTIN_BSWAP32
+
+
+
 # PGAC_C_BUILTIN_CONSTANT_P
 # -------------------------
 # Check if the C compiler understands __builtin_constant_p(),
@@ -362,43 +379,6 @@ fi
 undefine([Ac_cachevar])dnl
 ])# PGAC_PROG_CC_LDFLAGS_OPT
 
-
-
-# PGAC_SSE42_CRC32_INTRINSICS
-# -----------------------
-# Check if the compiler supports the x86 CRC instructions added in SSE 4.2,
-# using the _mm_crc32_u8 and _mm_crc32_u32 intrinsic functions. (We don't
-# test the 8-byte variant, _mm_crc32_u64, but it is assumed to be present if
-# the other ones are, on x86-64 platforms)
-#
-# An optional compiler flag can be passed as argument (e.g. -msse4.2). If the
-# intrinsics are supported, sets pgac_sse42_crc32_intrinsics, and CFLAGS_SSE42.
-#
-# Copied from upstream.
-#
-AC_DEFUN([PGAC_SSE42_CRC32_INTRINSICS],
-[define([Ac_cachevar], [AS_TR_SH([pgac_cv_sse42_crc32_intrinsics_$1])])dnl
-AC_CACHE_CHECK([for _mm_crc32_u8 and _mm_crc32_u32 with CFLAGS=$1], [Ac_cachevar],
-[pgac_save_CFLAGS=$CFLAGS
-CFLAGS="$pgac_save_CFLAGS $1"
-AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <nmmintrin.h>],
-  [unsigned int crc = 0;
-   crc = _mm_crc32_u8(crc, 0);
-   crc = _mm_crc32_u32(crc, 0);
-   /* return computed value, to prevent the above being optimized away */
-   return crc == 0;])],
-  [Ac_cachevar=yes],
-  [Ac_cachevar=no])
-CFLAGS="$pgac_save_CFLAGS"])
-if test x"$Ac_cachevar" = x"yes"; then
-  CFLAGS_SSE42="$1"
-  pgac_sse42_crc32_intrinsics=yes
-fi
-undefine([Ac_cachevar])dnl
-])# PGAC_SSE42_CRC32_INTRINSICS
-
-
-
 # PGAC_HAVE_GCC__SYNC_CHAR_TAS
 # -------------------------
 # Check if the C compiler understands __sync_lock_test_and_set(char),
@@ -496,3 +476,33 @@ AC_DEFUN([PGAC_HAVE_GCC__ATOMIC_INT64_CAS],
 if test x"$pgac_cv_gcc_atomic_int64_cas" = x"yes"; then
   AC_DEFINE(HAVE_GCC__ATOMIC_INT64_CAS, 1, [Define to 1 if you have __atomic_compare_exchange_n(int64 *, int *, int64).])
 fi])# PGAC_HAVE_GCC__ATOMIC_INT64_CAS
+
+# PGAC_SSE42_CRC32_INTRINSICS
+# -----------------------
+# Check if the compiler supports the x86 CRC instructions added in SSE 4.2,
+# using the _mm_crc32_u8 and _mm_crc32_u32 intrinsic functions. (We don't
+# test the 8-byte variant, _mm_crc32_u64, but it is assumed to be present if
+# the other ones are, on x86-64 platforms)
+#
+# An optional compiler flag can be passed as argument (e.g. -msse4.2). If the
+# intrinsics are supported, sets pgac_sse42_crc32_intrinsics, and CFLAGS_SSE42.
+AC_DEFUN([PGAC_SSE42_CRC32_INTRINSICS],
+[define([Ac_cachevar], [AS_TR_SH([pgac_cv_sse42_crc32_intrinsics_$1])])dnl
+AC_CACHE_CHECK([for _mm_crc32_u8 and _mm_crc32_u32 with CFLAGS=$1], [Ac_cachevar],
+[pgac_save_CFLAGS=$CFLAGS
+CFLAGS="$pgac_save_CFLAGS $1"
+AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <nmmintrin.h>],
+  [unsigned int crc = 0;
+   crc = _mm_crc32_u8(crc, 0);
+   crc = _mm_crc32_u32(crc, 0);
+   /* return computed value, to prevent the above being optimized away */
+   return crc == 0;])],
+  [Ac_cachevar=yes],
+  [Ac_cachevar=no])
+CFLAGS="$pgac_save_CFLAGS"])
+if test x"$Ac_cachevar" = x"yes"; then
+  CFLAGS_SSE42="$1"
+  pgac_sse42_crc32_intrinsics=yes
+fi
+undefine([Ac_cachevar])dnl
+])# PGAC_SSE42_CRC32_INTRINSICS

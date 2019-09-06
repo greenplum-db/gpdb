@@ -3,9 +3,6 @@
 --
 -- We just use gp_inject_fault as an example of an extension here. We don't
 -- inject any faults.
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 
 \dx gp_inject*
 \dx+ gp_inject*
@@ -117,6 +114,16 @@ ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
 -- \dE should display both external and foreign tables
 \dE "dE"*
 \dE
+
+-- \dd should list objects having comments
+\dd
+create rule dd_notify as on update to d_heap do also notify d_heap;
+comment on rule dd_notify on d_heap is 'this is a rule';
+alter table d_heap add constraint dd_ichk check (i>20);
+comment on constraint dd_ichk on d_heap is 'this is a constraint';
+create operator family dd_opfamily using btree;
+comment on operator family dd_opfamily using btree is 'this is an operator family';
+\dd
 
 -- Clean up
 DROP OWNED BY test_psql_de_role;

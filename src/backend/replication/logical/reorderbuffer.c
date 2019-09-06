@@ -4,7 +4,7 @@
  *	  PostgreSQL logical replay/reorder buffer management
  *
  *
- * Copyright (c) 2012-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2012-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -54,6 +54,7 @@
 #include "access/transam.h"
 #include "access/tuptoaster.h"
 #include "access/xact.h"
+#include "access/xlog_internal.h"
 #include "catalog/catalog.h"
 #include "lib/binaryheap.h"
 #include "miscadmin.h"
@@ -142,7 +143,7 @@ typedef struct ReorderBufferDiskChange
  * without hitting disk in OLTP workloads, while starting to spool to disk in
  * other workloads reasonably fast.
  *
- * At some point in the future it probaly makes sense to have a more elaborate
+ * At some point in the future it probably makes sense to have a more elaborate
  * resource management here, but it's not entirely clear what that would look
  * like.
  */
@@ -252,11 +253,10 @@ ReorderBufferAllocate(void)
 
 	hash_ctl.keysize = sizeof(TransactionId);
 	hash_ctl.entrysize = sizeof(ReorderBufferTXNByIdEnt);
-	hash_ctl.hash = tag_hash;
 	hash_ctl.hcxt = buffer->context;
 
 	buffer->by_txn = hash_create("ReorderBufferByXid", 1000, &hash_ctl,
-								 HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+								 HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 
 	buffer->by_txn_last_xid = InvalidTransactionId;
 	buffer->by_txn_last_txn = NULL;
@@ -305,7 +305,7 @@ ReorderBufferFree(ReorderBuffer *rb)
 }
 
 /*
- * Get a unused, possibly preallocated, ReorderBufferTXN.
+ * Get an unused, possibly preallocated, ReorderBufferTXN.
  */
 static ReorderBufferTXN *
 ReorderBufferGetTXN(ReorderBuffer *rb)
@@ -380,7 +380,7 @@ ReorderBufferReturnTXN(ReorderBuffer *rb, ReorderBufferTXN *txn)
 }
 
 /*
- * Get a unused, possibly preallocated, ReorderBufferChange.
+ * Get an unused, possibly preallocated, ReorderBufferChange.
  */
 ReorderBufferChange *
 ReorderBufferGetChange(ReorderBuffer *rb)
@@ -420,6 +420,7 @@ ReorderBufferReturnChange(ReorderBuffer *rb, ReorderBufferChange *change)
 		case REORDER_BUFFER_CHANGE_INSERT:
 		case REORDER_BUFFER_CHANGE_UPDATE:
 		case REORDER_BUFFER_CHANGE_DELETE:
+		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_INSERT:
 			if (change->data.tp.newtuple)
 			{
 				ReorderBufferReturnTupleBuf(rb, change->data.tp.newtuple);
@@ -439,8 +440,9 @@ ReorderBufferReturnChange(ReorderBuffer *rb, ReorderBufferChange *change)
 				change->data.snapshot = NULL;
 			}
 			break;
+			/* no data in addition to the struct itself */
+		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
 		case REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID:
-			break;
 		case REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID:
 			break;
 	}
@@ -470,7 +472,7 @@ ReorderBufferGetTupleBuf(ReorderBuffer *rb, Size tuple_len)
 	ReorderBufferTupleBuf *tuple;
 	Size		alloc_len;
 
-	alloc_len = tuple_len + offsetof(HeapTupleHeaderData, t_bits);
+	alloc_len = tuple_len + SizeofHeapTupleHeader;
 
 	/*
 	 * Most tuples are below MaxHeapTupleSize, so we use a slab allocator for
@@ -1283,7 +1285,6 @@ ReorderBufferBuildTupleCidHash(ReorderBuffer *rb, ReorderBufferTXN *txn)
 
 	hash_ctl.keysize = sizeof(ReorderBufferTupleCidKey);
 	hash_ctl.entrysize = sizeof(ReorderBufferTupleCidEnt);
-	hash_ctl.hash = tag_hash;
 	hash_ctl.hcxt = rb->context;
 
 	/*
@@ -1292,7 +1293,7 @@ ReorderBufferBuildTupleCidHash(ReorderBuffer *rb, ReorderBufferTXN *txn)
 	 */
 	txn->tuplecid_hash =
 		hash_create("ReorderBufferTupleCid", txn->ntuplecids, &hash_ctl,
-					HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+					HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 
 	dlist_foreach(iter, &txn->tuplecids)
 	{
@@ -1362,8 +1363,8 @@ ReorderBufferCopySnap(ReorderBuffer *rb, Snapshot orig_snap,
 	memcpy(snap, orig_snap, sizeof(SnapshotData));
 
 	snap->copied = true;
-	snap->active_count = 0;
-	snap->regd_count = 1;
+	snap->active_count = 1;		/* mark as active so nobody frees it */
+	snap->regd_count = 0;
 	snap->xip = (TransactionId *) (snap + 1);
 
 	memcpy(snap->xip, orig_snap->xip, sizeof(TransactionId) * snap->xcnt);
@@ -1429,7 +1430,8 @@ ReorderBufferFreeSnap(ReorderBuffer *rb, Snapshot snap)
 void
 ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 					XLogRecPtr commit_lsn, XLogRecPtr end_lsn,
-					TimestampTz commit_time)
+					TimestampTz commit_time,
+					RepOriginId origin_id, XLogRecPtr origin_lsn)
 {
 	ReorderBufferTXN *txn;
 	volatile Snapshot snapshot_now;
@@ -1447,6 +1449,8 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 	txn->final_lsn = commit_lsn;
 	txn->end_lsn = end_lsn;
 	txn->commit_time = commit_time;
+	txn->origin_id = origin_id;
+	txn->origin_lsn = origin_lsn;
 
 	/*
 	 * If this transaction has no snapshot, it didn't make any changes to the
@@ -1484,6 +1488,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 	PG_TRY();
 	{
 		ReorderBufferChange *change;
+		ReorderBufferChange *specinsert = NULL;
 
 		if (using_subtxn)
 			BeginInternalSubTransaction("replay");
@@ -1500,6 +1505,18 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 
 			switch (change->action)
 			{
+				case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
+
+					/*
+					 * Confirmation for speculative insertion arrived. Simply
+					 * use as a normal record. It'll be cleaned up at the end
+					 * of INSERT processing.
+					 */
+					Assert(specinsert->data.tp.oldtuple == NULL);
+					change = specinsert;
+					change->action = REORDER_BUFFER_CHANGE_INSERT;
+
+					/* intentionally fall through */
 				case REORDER_BUFFER_CHANGE_INSERT:
 				case REORDER_BUFFER_CHANGE_UPDATE:
 				case REORDER_BUFFER_CHANGE_DELETE:
@@ -1523,7 +1540,7 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 					if (reloid == InvalidOid &&
 						change->data.tp.newtuple == NULL &&
 						change->data.tp.oldtuple == NULL)
-						continue;
+						goto change_done;
 					else if (reloid == InvalidOid)
 						elog(ERROR, "could not map filenode \"%s\" to relation OID",
 							 relpathperm(change->data.tp.relnode,
@@ -1537,57 +1554,94 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 							 relpathperm(change->data.tp.relnode,
 										 MAIN_FORKNUM));
 
-					if (RelationIsLogicallyLogged(relation))
+					if (!RelationIsLogicallyLogged(relation))
+						goto change_done;
+
+					/*
+					 * For now ignore sequence changes entirely. Most of the
+					 * time they don't log changes using records we
+					 * understand, so it doesn't make sense to handle the few
+					 * cases we do.
+					 */
+					if (relation->rd_rel->relkind == RELKIND_SEQUENCE)
+						goto change_done;
+
+					/* user-triggered change */
+					if (!IsToastRelation(relation))
+					{
+						ReorderBufferToastReplace(rb, txn, relation, change);
+						rb->apply_change(rb, txn, relation, change);
+
+						/*
+						 * Only clear reassembled toast chunks if we're sure
+						 * they're not required anymore. The creator of the
+						 * tuple tells us.
+						 */
+						if (change->data.tp.clear_toast_afterwards)
+							ReorderBufferToastReset(rb, txn);
+					}
+					/* we're not interested in toast deletions */
+					else if (change->action == REORDER_BUFFER_CHANGE_INSERT)
 					{
 						/*
-						 * For now ignore sequence changes entirely. Most of
-						 * the time they don't log changes using records we
-						 * understand, so it doesn't make sense to handle the
-						 * few cases we do.
+						 * Need to reassemble the full toasted Datum in
+						 * memory, to ensure the chunks don't get reused till
+						 * we're done remove it from the list of this
+						 * transaction's changes. Otherwise it will get
+						 * freed/reused while restoring spooled data from
+						 * disk.
 						 */
-						if (relation->rd_rel->relkind == RELKIND_SEQUENCE)
-						{
-						}
-						/* user-triggered change */
-						else if (!IsToastRelation(relation))
-						{
-							ReorderBufferToastReplace(rb, txn, relation, change);
-							rb->apply_change(rb, txn, relation, change);
-
-							/*
-							 * Only clear reassembled toast chunks if we're
-							 * sure they're not required anymore. The creator
-							 * of the tuple tells us.
-							 */
-							if (change->data.tp.clear_toast_afterwards)
-								ReorderBufferToastReset(rb, txn);
-						}
-						/* we're not interested in toast deletions */
-						else if (change->action == REORDER_BUFFER_CHANGE_INSERT)
-						{
-							/*
-							 * Need to reassemble the full toasted Datum in
-							 * memory, to ensure the chunks don't get reused
-							 * till we're done remove it from the list of this
-							 * transaction's changes. Otherwise it will get
-							 * freed/reused while restoring spooled data from
-							 * disk.
-							 *
-							 * But skip doing so if there's no
-							 * tuple-data. That happens if a non-mapped system
-							 * catalog with a toast table is rewritten.
-							 */
-							if (change->data.tp.newtuple != NULL)
-							{
-								dlist_delete(&change->node);
-								ReorderBufferToastAppendChunk(rb, txn, relation,
-															  change);
-							}
-						}
-
+						dlist_delete(&change->node);
+						ReorderBufferToastAppendChunk(rb, txn, relation,
+													  change);
 					}
-					RelationClose(relation);
+
+			change_done:
+
+					/*
+					 * Either speculative insertion was confirmed, or it was
+					 * unsuccessful and the record isn't needed anymore.
+					 */
+					if (specinsert != NULL)
+					{
+						ReorderBufferReturnChange(rb, specinsert);
+						specinsert = NULL;
+					}
+
+					if (relation != NULL)
+					{
+						RelationClose(relation);
+						relation = NULL;
+					}
 					break;
+
+				case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_INSERT:
+
+					/*
+					 * Speculative insertions are dealt with by delaying the
+					 * processing of the insert until the confirmation record
+					 * arrives. For that we simply unlink the record from the
+					 * chain, so it does not get freed/reused while restoring
+					 * spooled data from disk.
+					 *
+					 * This is safe in the face of concurrent catalog changes
+					 * because the relevant relation can't be changed between
+					 * speculative insertion and confirmation due to
+					 * CheckTableNotInUse() and locking.
+					 */
+
+					/* clear out a pending (and thus failed) speculation */
+					if (specinsert != NULL)
+					{
+						ReorderBufferReturnChange(rb, specinsert);
+						specinsert = NULL;
+					}
+
+					/* and memorize the pending insertion */
+					dlist_delete(&change->node);
+					specinsert = change;
+					break;
+
 				case REORDER_BUFFER_CHANGE_INTERNAL_SNAPSHOT:
 					/* get rid of the old */
 					TeardownHistoricSnapshot(false);
@@ -1654,6 +1708,17 @@ ReorderBufferCommit(ReorderBuffer *rb, TransactionId xid,
 					elog(ERROR, "tuplecid value in changequeue");
 					break;
 			}
+		}
+
+		/*
+		 * There's a speculative insertion remaining, just clean in up, it
+		 * can't have been successful, otherwise we'd gotten a confirmation
+		 * record.
+		 */
+		if (specinsert)
+		{
+			ReorderBufferReturnChange(rb, specinsert);
+			specinsert = NULL;
 		}
 
 		/* clean up the iterator */
@@ -1834,9 +1899,9 @@ ReorderBufferForget(ReorderBuffer *rb, TransactionId xid, XLogRecPtr lsn)
 	txn->final_lsn = lsn;
 
 	/*
-	 * Proccess cache invalidation messages if there are any. Even if we're
-	 * not interested in the transaction's contents, it could have manipulated
-	 * the catalog and we need to update the caches according to that.
+	 * Process cache invalidation messages if there are any. Even if we're not
+	 * interested in the transaction's contents, it could have manipulated the
+	 * catalog and we need to update the caches according to that.
 	 */
 	if (txn->base_snapshot != NULL && txn->ninvalidations > 0)
 	{
@@ -2210,11 +2275,11 @@ ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 
 	switch (change->action)
 	{
+			/* fall through these, they're all similar enough */
 		case REORDER_BUFFER_CHANGE_INSERT:
-			/* fall through */
 		case REORDER_BUFFER_CHANGE_UPDATE:
-			/* fall through */
 		case REORDER_BUFFER_CHANGE_DELETE:
+		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_INSERT:
 			{
 				char	   *data;
 				ReorderBufferTupleBuf *oldtup,
@@ -2301,9 +2366,8 @@ ReorderBufferSerializeChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 				}
 				break;
 			}
+		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
 		case REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID:
-			/* ReorderBufferChange contains everything important */
-			break;
 		case REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID:
 			/* ReorderBufferChange contains everything important */
 			break;
@@ -2479,17 +2543,17 @@ ReorderBufferRestoreChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 	/* restore individual stuff */
 	switch (change->action)
 	{
+			/* fall through these, they're all similar enough */
 		case REORDER_BUFFER_CHANGE_INSERT:
-			/* fall through */
 		case REORDER_BUFFER_CHANGE_UPDATE:
-			/* fall through */
 		case REORDER_BUFFER_CHANGE_DELETE:
+		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_INSERT:
 			if (change->data.tp.oldtuple)
 			{
 				uint32		tuplelen = ((HeapTuple) data)->t_len;
 
 				change->data.tp.oldtuple =
-					ReorderBufferGetTupleBuf(rb, tuplelen - offsetof(HeapTupleHeaderData, t_bits));
+					ReorderBufferGetTupleBuf(rb, tuplelen - SizeofHeapTupleHeader);
 
 				/* restore ->tuple */
 				memcpy(&change->data.tp.oldtuple->tuple, data,
@@ -2514,7 +2578,7 @@ ReorderBufferRestoreChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 					   sizeof(uint32));
 
 				change->data.tp.newtuple =
-					ReorderBufferGetTupleBuf(rb, tuplelen - offsetof(HeapTupleHeaderData, t_bits));
+					ReorderBufferGetTupleBuf(rb, tuplelen - SizeofHeapTupleHeader);
 
 				/* restore ->tuple */
 				memcpy(&change->data.tp.newtuple->tuple, data,
@@ -2555,6 +2619,7 @@ ReorderBufferRestoreChange(ReorderBuffer *rb, ReorderBufferTXN *txn,
 				break;
 			}
 			/* the base struct contains all the data, easy peasy */
+		case REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM:
 		case REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID:
 		case REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID:
 			break;
@@ -2698,10 +2763,9 @@ ReorderBufferToastInitHash(ReorderBuffer *rb, ReorderBufferTXN *txn)
 	memset(&hash_ctl, 0, sizeof(hash_ctl));
 	hash_ctl.keysize = sizeof(Oid);
 	hash_ctl.entrysize = sizeof(ReorderBufferToastEnt);
-	hash_ctl.hash = tag_hash;
 	hash_ctl.hcxt = rb->context;
 	txn->toast_hash = hash_create("ReorderBufferToastHash", 5, &hash_ctl,
-								  HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+								  HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 }
 
 /*

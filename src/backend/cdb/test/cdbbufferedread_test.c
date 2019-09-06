@@ -7,7 +7,7 @@
 
 #include "utils/memutils.h"
 
-void
+static void
 test__BufferedReadInit__IsConsistent(void **state)
 {
 	BufferedRead *bufferedRead = palloc(sizeof(BufferedRead));
@@ -32,9 +32,9 @@ test__BufferedReadInit__IsConsistent(void **state)
 	assert_int_equal(bufferedRead->memoryLen, memoryLen);
 }
 
-static MemoryContext *exception_cxt;
+static MemoryContext exception_cxt;
 
-void
+static void
 test__BufferedReadUseBeforeBuffer__IsNextReadLenZero(void **state)
 {
     BufferedRead *bufferedRead = palloc(sizeof(BufferedRead));

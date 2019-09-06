@@ -69,6 +69,15 @@ DELETE FROM rw_view14 WHERE a=3; -- should be OK
 -- Partially updatable view
 INSERT INTO rw_view15 VALUES (3, 'ROW 3'); -- should fail
 INSERT INTO rw_view15 (a) VALUES (3); -- should be OK
+INSERT INTO rw_view15 (a) VALUES (3) ON CONFLICT DO NOTHING; -- succeeds
+SELECT * FROM rw_view15;
+INSERT INTO rw_view15 (a) VALUES (3) ON CONFLICT (a) DO NOTHING; -- succeeds
+SELECT * FROM rw_view15;
+INSERT INTO rw_view15 (a) VALUES (3) ON CONFLICT (a) DO UPDATE set a = excluded.a; -- succeeds
+SELECT * FROM rw_view15;
+INSERT INTO rw_view15 (a) VALUES (3) ON CONFLICT (a) DO UPDATE set upper = 'blarg'; -- fails
+SELECT * FROM rw_view15;
+SELECT * FROM rw_view15;
 ALTER VIEW rw_view15 ALTER COLUMN upper SET DEFAULT 'NOT SET';
 INSERT INTO rw_view15 (a) VALUES (4); -- should fail
 UPDATE rw_view15 SET upper='ROW 3' WHERE a=3; -- should fail
@@ -738,14 +747,10 @@ CREATE VIEW rw_view1 AS
   WITH CHECK OPTION;
 
 INSERT INTO rw_view1 VALUES (5); -- ok
---start_ignore
 INSERT INTO rw_view1 VALUES (15); -- should fail
---end_ignore
 
 UPDATE rw_view1 SET a = a + 5; -- ok
---start_ignore
 UPDATE rw_view1 SET a = a + 5; -- should fail
---end_ignore
 
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
@@ -977,7 +982,7 @@ SELECT * FROM base_tbl;
 
 DROP TABLE base_tbl CASCADE;
 
--- security barrier view based on inheiritance set
+-- security barrier view based on inheritance set
 CREATE TABLE t1 (a int, b float, c text);
 CREATE INDEX t1_a_idx ON t1(a);
 INSERT INTO t1
@@ -1114,7 +1119,6 @@ CREATE VIEW v2 WITH (security_barrier = true) AS
   SELECT * FROM v1 WHERE EXISTS (SELECT 1 FROM t2 WHERE t2.cc = v1.c)
   WITH CHECK OPTION;
 
---start_ignore
 INSERT INTO v2 VALUES (2, 'two', 20); -- ok
 INSERT INTO v2 VALUES (-2, 'minus two', 20); -- not allowed
 INSERT INTO v2 VALUES (3, 'three', 30); -- not allowed
@@ -1125,7 +1129,6 @@ UPDATE v2 SET c = 30 WHERE a = 1; -- not allowed
 
 DELETE FROM v2 WHERE a = 2; -- ok
 SELECT * FROM v2;
---end_ignore
 
 DROP VIEW v2;
 DROP VIEW v1;

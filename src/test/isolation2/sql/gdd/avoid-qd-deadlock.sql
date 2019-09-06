@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-
 DROP TABLE IF EXISTS tsudf;
 
 CREATE TABLE tsudf (c int, d int);

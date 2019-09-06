@@ -28,7 +28,7 @@ try:
     from gppylib.commands import unix, gp, pg
     from gppylib.db import dbconn
     from gppylib.gpparseopts import OptParser, OptChecker, OptionGroup, SUPPRESS_HELP
-    from gppylib.gplog import get_default_logger, setup_tool_logging, enable_verbose_logging, get_logger_if_verbose
+    from gppylib.gplog import get_default_logger, setup_tool_logging, enable_verbose_logging
     from gppylib import gparray
     from gppylib.userinput import ask_yesno
 except ImportError, e_:

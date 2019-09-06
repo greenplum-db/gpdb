@@ -13,11 +13,11 @@
             <codeblock>$ gprecoverseg -i <i>recover_config_file</i>
       </codeblock>
             <p>Where the format of the <codeph><i>recover_config_file</i></codeph> file is:</p>
-            <codeblock>&lt;<varname>failed_host</varname>&gt;:&lt;<varname>port</varname>&gt;:&lt;<varname>data_dir</varname>&gt;[ &lt;<varname>recovery_host</varname>&gt;:&lt;<varname>port</varname>&gt;:&lt;<varname>recovery_data_dir</varname>&gt;]
+            <codeblock>&lt;<varname>failed_host</varname>&gt;|&lt;<varname>port</varname>&gt;|&lt;<varname>data_dir</varname>&gt;[ &lt;<varname>recovery_host</varname>&gt;|&lt;<varname>port</varname>&gt;|&lt;<varname>recovery_data_dir</varname>&gt;]
 </codeblock>
             <p>For example, to recover to a different host than the failed host without additional
                   tablespaces configured (besides the default <i>pg_system</i> tablespace):</p>
-            <codeblock>sdw1-1:50001:/data1/mirror/gpseg16 sdw4-1:50001:/data1/recover1/gpseg16
+            <codeblock>sdw1-1|50001|/data1/mirror/gpseg16 sdw4-1|50001|/data1/recover1/gpseg16
 </codeblock>
             <p>For information about creating a segment instance recovery file, see <codeph><xref
                               href="../../../utility_guide/admin_utilities/gprecoverseg.xml"

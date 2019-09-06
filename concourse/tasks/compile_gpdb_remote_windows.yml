@@ -1,0 +1,14 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: gpdb_src
+outputs:
+  - name: gpdb_artifacts
+run:
+  path: gpdb_src/concourse/scripts/compile_gpdb_remote_windows.bash
+params:
+  REMOTE_HOST:
+  REMOTE_PORT:
+  REMOTE_USER:
+  REMOTE_KEY:

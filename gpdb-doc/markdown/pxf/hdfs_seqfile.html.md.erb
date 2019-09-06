@@ -39,7 +39,7 @@ Use the following syntax to create a Greenplum Database external table that refe
 CREATE [WRITABLE] EXTERNAL TABLE <table_name> 
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION ('pxf://<path-to-hdfs-dir>
-    ?PROFILE=hdfs:SequenceFile[&<custom-option>=<value>[...]]')
+    ?PROFILE=hdfs:SequenceFile[&SERVER=<server_name>][&<custom-option>=<value>[...]]')
 FORMAT 'CUSTOM' (<formatting-properties>)
 [DISTRIBUTED BY (<column_name> [, ... ] ) | DISTRIBUTED RANDOMLY];
 ```
@@ -50,6 +50,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 |-------|-------------------------------------|
 | \<path&#8209;to&#8209;hdfs&#8209;dir\>    | The absolute path to the directory in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:SequenceFile`. |
+| SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | \<custom&#8209;option\>  | \<custom-option\>s are described below.|
 | FORMAT | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
@@ -79,7 +80,7 @@ Use the HDFS connector `hdfs:SequenceFile` profile when you want to read or writ
 
 ### <a id="write_seqfile_example" class="no-quick-link"></a>Example: Writing Binary Data to HDFS
 
-In this example, you create a Java class named `PxfExample_CustomWritable` that will serialize/deserialize the fields in the sample schema used in previous examples. You will then use this class to access a writable external table that you create with the `hdfs:SequenceFile` profile. 
+In this example, you create a Java class named `PxfExample_CustomWritable` that will serialize/deserialize the fields in the sample schema used in previous examples. You will then use this class to access a writable external table that you create with the `hdfs:SequenceFile` profile and that uses the default PXF server.
 
 Perform the following procedure to create the Java class and writable table.
 
@@ -214,13 +215,13 @@ public class PxfExample_CustomWritable implements Writable {
     $ ssh gpadmin@<gpmaster>
     ````
 
-5. Copy the `pxfex-customwritable.jar` JAR file to the user runtime library directory, and note the location. For example, if `PXF_CONF=/etc/pxf/usercfg`:
+5. Copy the `pxfex-customwritable.jar` JAR file to the user runtime library directory, and note the location. For example, if `PXF_CONF=/usr/local/greenplum-pxf`:
 
     ``` shell
-    gpadmin@gpmaster$ cp /home/gpadmin/pxfex-customwritable.jar /etc/pxf/usercfg/lib/pxfex-customwritable.jar
+    gpadmin@gpmaster$ cp /home/gpadmin/pxfex-customwritable.jar /usr/local/greenplum-pxf/lib/pxfex-customwritable.jar
     ```
 
-5. Sync the PXF configuration to each Greenplum Database segment host. For example, if `PXF_CONF=/etc/pxf/usercfg`:
+5. Synchronize the PXF configuration to the Greenplum Database cluster. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync

@@ -1779,7 +1779,7 @@ order by 1,2;
                            ->  Aggregate
                                  ->  Gather Motion 3:1  (slice1; segments: 3)
                                        ->  Seq Scan on mergeappend_test mergeappend_test_1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (17 rows)
 
 -- This used to trip an assertion in MotionStateFinderWalker(), when we were
@@ -1831,7 +1831,7 @@ order by 1,2;
    (slice2)    Executor memory: 215K bytes (entry db).
    (slice3)    Executor memory: 229K bytes avg x 3 workers, 244K bytes max (seg0).  Work_mem: 49K bytes max.
  Memory used:  128000kB
- Optimizer: PQO version 3.18.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.18.0
  Execution time: 3.142 ms
 (26 rows)
 

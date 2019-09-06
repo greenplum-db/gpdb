@@ -34,10 +34,16 @@ sub WriteHeader
 EOF
 	$self->WriteConfigurationHeader($f, 'Debug');
 	$self->WriteConfigurationHeader($f, 'Release');
+	my $sdkversion=$ENV{'WindowsSDKVersion'};
+	if ($sdkversion =~ /.*\\$/)
+	{
+		chop $sdkversion;
+	}
 	print $f <<EOF;
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>$self->{guid}</ProjectGuid>
+    <WindowsTargetPlatformVersion>$sdkversion</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="\$(VCTargetsPath)\\Microsoft.Cpp.Default.props" />
 EOF
@@ -122,7 +128,7 @@ EOF
 	foreach my $fileNameWithPath (sort keys %{ $self->{files} })
 	{
 		confess "Bad format filename '$fileNameWithPath'\n"
-		  unless ($fileNameWithPath =~ /^(.*)\\([^\\]+)\.[r]?[cyl]$/);
+		  unless ($fileNameWithPath =~ m!^(.*)/([^/]+)\.(c|cpp|y|l|rc)$!);
 		my $dir      = $1;
 		my $fileName = $2;
 		if ($fileNameWithPath =~ /\.y$/ or $fileNameWithPath =~ /\.l$/)
@@ -138,7 +144,7 @@ EOF
 
 			# File already exists, so fake a new name
 			my $obj = $dir;
-			$obj =~ s/\\/_/g;
+			$obj =~ s!/!_!g;
 
 			print $f <<EOF;
     <ClCompile Include="$fileNameWithPath">

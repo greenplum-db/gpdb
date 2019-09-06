@@ -5,7 +5,7 @@
  *
  * All the actual insertion logic is in spgdoinsert.c.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -17,8 +17,9 @@
 #include "postgres.h"
 
 #include "access/genam.h"
-#include "access/heapam_xlog.h"
 #include "access/spgist_private.h"
+#include "access/xlog.h"
+#include "access/xloginsert.h"
 #include "catalog/index.h"
 #include "miscadmin.h"
 #include "storage/bufmgr.h"
@@ -108,15 +109,18 @@ spgbuild(PG_FUNCTION_ARGS)
 	if (RelationNeedsWAL(index))
 	{
 		XLogRecPtr	recptr;
-		XLogRecData rdata;
 
-		/* WAL data is just the relfilenode */
-		rdata.data = (char *) &(index->rd_node);
-		rdata.len = sizeof(RelFileNode);
-		rdata.buffer = InvalidBuffer;
-		rdata.next = NULL;
+		XLogBeginInsert();
 
-		recptr = XLogInsert(RM_SPGIST_ID, XLOG_SPGIST_CREATE_INDEX, &rdata);
+		/*
+		 * Replay will re-initialize the pages, so don't take full pages
+		 * images.  No other data to log.
+		 */
+		XLogRegisterBuffer(0, metabuffer, REGBUF_WILL_INIT);
+		XLogRegisterBuffer(1, rootbuffer, REGBUF_WILL_INIT | REGBUF_STANDARD);
+		XLogRegisterBuffer(2, nullbuffer, REGBUF_WILL_INIT | REGBUF_STANDARD);
+
+		recptr = XLogInsert(RM_SPGIST_ID, XLOG_SPGIST_CREATE_INDEX);
 
 		PageSetLSN(BufferGetPage(metabuffer), recptr);
 		PageSetLSN(BufferGetPage(rootbuffer), recptr);

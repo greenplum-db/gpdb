@@ -40,12 +40,14 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CMappingVarColId::CMappingVarColId
 	(
-	IMemoryPool *mp
+	CMemoryPool *mp
 	)
 	:
 	m_mp(mp)
 {
-	m_gpdb_att_opt_col_mapping = GPOS_NEW(m_mp) GPDBAttOptColHashMap(m_mp);
+	// This map can have many entries if there are many tables with many columns
+	// in the query, so use a larger hash map to minimize collisions
+	m_gpdb_att_opt_col_mapping = GPOS_NEW(m_mp) GPDBAttOptColHashMap(m_mp, 2047);
 }
 
 //---------------------------------------------------------------------------
@@ -504,7 +506,7 @@ CMappingVarColId::CopyMapColId
 CMappingVarColId *
 CMappingVarColId::CopyMapColId
 	(
-	IMemoryPool *mp
+	CMemoryPool *mp
 	)
 	const
 {
@@ -545,7 +547,7 @@ CMappingVarColId::CopyMapColId
 CMappingVarColId *
 CMappingVarColId::CopyRemapColId
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULongPtrArray *old_colids,
 	ULongPtrArray *new_colids
 	)

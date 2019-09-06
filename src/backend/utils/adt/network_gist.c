@@ -34,7 +34,7 @@
  * twice as fast as for a simpler design in which a single field doubles as
  * the common prefix length and the minimum ip_bits value.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -48,23 +48,23 @@
 #include <sys/socket.h>
 
 #include "access/gist.h"
-#include "access/skey.h"
+#include "access/stratnum.h"
 #include "utils/inet.h"
 
 /*
  * Operator strategy numbers used in the GiST inet_ops opclass
  */
-#define INETSTRAT_OVERLAPS		3
-#define INETSTRAT_EQ			18
-#define INETSTRAT_NE			19
-#define INETSTRAT_LT			20
-#define INETSTRAT_LE			21
-#define INETSTRAT_GT			22
-#define INETSTRAT_GE			23
-#define INETSTRAT_SUB			24
-#define INETSTRAT_SUBEQ			25
-#define INETSTRAT_SUP			26
-#define INETSTRAT_SUPEQ			27
+#define INETSTRAT_OVERLAPS		RTOverlapStrategyNumber
+#define INETSTRAT_EQ			RTEqualStrategyNumber
+#define INETSTRAT_NE			RTNotEqualStrategyNumber
+#define INETSTRAT_LT			RTLessStrategyNumber
+#define INETSTRAT_LE			RTLessEqualStrategyNumber
+#define INETSTRAT_GT			RTGreaterStrategyNumber
+#define INETSTRAT_GE			RTGreaterEqualStrategyNumber
+#define INETSTRAT_SUB			RTSubStrategyNumber
+#define INETSTRAT_SUBEQ			RTSubEqualStrategyNumber
+#define INETSTRAT_SUP			RTSuperStrategyNumber
+#define INETSTRAT_SUPEQ			RTSuperEqualStrategyNumber
 
 
 /*
@@ -585,6 +585,33 @@ inet_gist_decompress(PG_FUNCTION_ARGS)
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
 
 	PG_RETURN_POINTER(entry);
+}
+
+/*
+ * The GiST fetch function
+ *
+ * Reconstruct the original inet datum from a GistInetKey.
+ */
+Datum
+inet_gist_fetch(PG_FUNCTION_ARGS)
+{
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
+	GistInetKey *key = DatumGetInetKeyP(entry->key);
+	GISTENTRY  *retval;
+	inet	   *dst;
+
+	dst = (inet *) palloc0(sizeof(inet));
+
+	ip_family(dst) = gk_ip_family(key);
+	ip_bits(dst) = gk_ip_minbits(key);
+	memcpy(ip_addr(dst), gk_ip_addr(key), ip_addrsize(dst));
+	SET_INET_VARSIZE(dst);
+
+	retval = palloc(sizeof(GISTENTRY));
+	gistentryinit(*retval, InetPGetDatum(dst), entry->rel, entry->page,
+				  entry->offset, FALSE);
+
+	PG_RETURN_POINTER(retval);
 }
 
 /*

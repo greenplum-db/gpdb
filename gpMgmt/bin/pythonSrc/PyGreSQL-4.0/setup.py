@@ -109,10 +109,13 @@ include_dirs = ['include', pg_include_dir,  pg_include_dir_server]
 pg_libdir = pg_config('libdir')
 library_dirs = [pg_libdir]
 
-libraries=['pq']
+libraries = ['pq']
+extra_compile_args = ['-O2']
 
 if sys.platform == "win32":
     include_dirs.append(os.path.join(pg_include_dir_server, 'port/win32'))
+elif sys.platform == 'darwin' and sys.maxsize > 2**32:
+    extra_compile_args.extend(['-arch', 'x86_64'])
 
 setup(
     name="PyGreSQL",
@@ -135,7 +138,7 @@ setup(
         include_dirs = include_dirs,
         library_dirs = library_dirs,
         libraries = libraries,
-        extra_compile_args = ['-O2']
+        extra_compile_args = extra_compile_args
     )],
     classifiers=[
         "Development Status :: 6 - Mature",

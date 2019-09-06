@@ -108,10 +108,16 @@ tarChecksum(char *header)
  * must always have space for 512 characters, which is a requirement of
  * the tar format.
  */
-void
+enum tarError
 tarCreateHeader(char *h, const char *filename, const char *linktarget,
-				pgoff_t size, mode_t mode, uid_t uid, gid_t gid, time_t mtime)
+				size_t size, mode_t mode, uid_t uid, gid_t gid, time_t mtime)
 {
+	if (strlen(filename) > 99)
+		return TAR_NAME_TOO_LONG;
+
+	if (linktarget && strlen(linktarget) > 99)
+		return TAR_SYMLINK_TOO_LONG;
+
 	memset(h, 0, 512);			/* assume tar header size */
 
 	/* Name 100 */
@@ -193,4 +199,6 @@ tarCreateHeader(char *h, const char *filename, const char *linktarget,
 
 	/* Finally, compute and insert the checksum */
 	print_tar_number(&h[148], 8, tarChecksum(h));
+
+	return TAR_OK;
 }

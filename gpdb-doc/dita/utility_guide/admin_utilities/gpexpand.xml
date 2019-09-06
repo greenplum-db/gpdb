@@ -14,7 +14,7 @@
           [<b>-n </b> <varname>parallel_processes</varname>]
         | {<b>-r</b>|<b>--rollback</b>}
         | {<b>-c</b>|<b>--clean</b>}
-        [<b>-D</b> <varname>database_name</varname>] [<b>-v</b>|<b>--verbose</b>] [<b>-s</b>|<b>--silent</b>]
+        [<b>-v</b>|<b>--verbose</b>] [<b>-s</b>|<b>--silent</b>]
         [{<b>-t</b>|<b>--tardir</b>} <varname>directory </varname>]
         [<b>-S</b>|<b>--simple-progress </b>]
 
@@ -37,10 +37,19 @@
         <li id="kt137052">Enough disk space on your segment hosts to temporarily hold a copy of your
           largest table. </li>
         <li>When redistributing data, Greenplum Database must be running in production mode.
-          Greenplum Database cannot be restricted mode or in master mode. The
+          Greenplum Database cannot be running in restricted mode or in master mode. The
             <codeph>gpstart</codeph> options <codeph>-R</codeph> or <codeph>-m</codeph> cannot be
-          specified to start Greenplum Database. </li>
+          specified to start Greenplum Database. </li>      
       </ul>
+      <note>These utilities cannot be run while <codeph>gpexpand</codeph> is performing segment
+        initialization.
+        <ul id="ul_c3w_wdp_lgb">
+          <li><codeph>gpbackup</codeph></li>
+          <li><codeph>gpcheckcat</codeph></li>
+          <li><codeph>gpconfig</codeph></li>
+          <li><codeph>gppkg</codeph></li>
+          <li><codeph>gprestore</codeph></li>
+        </ul></note>
       <p>For information about preparing a system for expansion, see <xref
           href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
           System</xref><ph otherprops="op-print"> in the <cite>Greenplum Database Administrator
@@ -61,12 +70,12 @@
       <p>In addition to initializing the segment instances, the initialization phase performs these
         actions:</p>
       <ul>
-        <li id="kt138259">Creates an expansion schema to store the status of the expansion
-          operation, including detailed status for tables.</li>
+        <li id="kt138259">Creates an expansion schema named <i>gpexpand</i> in the postgres database
+          to store the status of the expansion operation, including detailed status for tables.</li>
       </ul>
-      <p>In the table data redistribution phase, <codeph>gpexapand</codeph> redistributes table data
+      <p>In the table data redistribution phase, <codeph>gpexpand</codeph> redistributes table data
         to rebalance the data across the old and new segment instances.</p>
-      <note>Data redistribution should be performed during low-use hours. Redistribution can divided
+      <note>Data redistribution should be performed during low-use hours. Redistribution can be divided
         into batches over an extended period.</note>
       <p>To begin the redistribution phase, run <codeph>gpexpand</codeph> with either the
           <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options, or with no
@@ -115,13 +124,6 @@
           <pd>Duration of the expansion session from beginning to end.</pd>
         </plentry>
         <plentry>
-          <pt>-D <varname>database_name</varname></pt>
-          <pd>Specifies the database in which to create the expansion schema and tables. If this
-            option is not given, the setting for the environment variable
-              <codeph>PGDATABASE</codeph> is used. The database templates
-              <varname>template1</varname> and <varname>template0</varname> cannot be used.</pd>
-        </plentry>
-        <plentry>
           <pt>-e | --end '<varname>YYYY-MM-DD hh:mm:ss</varname>'</pt>
           <pd>Ending date and time for the expansion session.</pd>
         </plentry>
@@ -145,7 +147,7 @@
           <pd>Specifies the name of the expansion configuration file, which contains one line for
             each segment to be added in the format of:</pd>
           <pd>
-            <varname>hostname:address:port:fselocation:dbid:content:preferred_role:replication_port</varname>
+            <varname>hostname|address|port|datadir|dbid|content|preferred_role</varname>
           </pd>
         </plentry>
         <plentry>
@@ -159,9 +161,7 @@
         </plentry>
         <plentry>
           <pt>-r | --rollback</pt>
-          <pd>Roll back a failed expansion setup operation. If the rollback command fails, attempt
-            again using the <codeph>-D</codeph> option to specify the database that contains the
-            expansion schema for the operation that you want to roll back.</pd>
+          <pd>Roll back a failed expansion setup operation. </pd>
         </plentry>
         <plentry>
           <pt>-s | --silent</pt>
@@ -174,11 +174,11 @@
             utility does not record the relation size information and status information in the
             table <i>gpexpand.status_detail</i>. </pd>
           <pd>Specifying this option can improve performance by reducing the amount of progress
-            information written to the <codeph>gpexpand</codeph> tables.</pd>
+            information written to the <i>gpexpand</i> tables.</pd>
         </plentry>
         <plentry>
           <pt>[-t | --tardir] <varname>directory</varname></pt>
-          <pd>The fully qualified path to a <varname>directory</varname> on segment hosts were the
+          <pd>The fully qualified path to a <varname>directory</varname> on segment hosts where the
               <codeph>gpexpand</codeph> utility copies a temporary tar file. The file contains
             Greenplum Database files that are used to create segment instances. The default
             directory is the user home directory.</pd>
@@ -201,7 +201,7 @@
     <section id="section6">
       <title>Examples</title>
       <p>Run <codeph>gpexpand</codeph> with an input file to initialize new segments and create the
-        expansion schema in the default database:</p>
+        expansion schema in the postgres database:</p>
       <codeblock>$ gpexpand -i input_file</codeblock>
       <p>Run <codeph>gpexpand</codeph> for sixty hours maximum duration to redistribute tables to
         new segments:</p>

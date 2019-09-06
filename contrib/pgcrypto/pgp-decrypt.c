@@ -1064,7 +1064,7 @@ pgp_skip_packet(PullFilter *pkt)
 
 	while (res > 0)
 		res = pullf_read(pkt, 32 * 1024, &tmp);
-	return res < 0 ? res : 0;
+	return res;
 }
 
 /*
@@ -1073,19 +1073,16 @@ pgp_skip_packet(PullFilter *pkt)
 int
 pgp_expect_packet_end(PullFilter *pkt)
 {
-	int			res = 1;
+	int			res;
 	uint8	   *tmp;
 
-	while (res > 0)
+	res = pullf_read(pkt, 32 * 1024, &tmp);
+	if (res > 0)
 	{
-		res = pullf_read(pkt, 32 * 1024, &tmp);
-		if (res > 0)
-		{
-			px_debug("pgp_expect_packet_end: got data");
-			return PXE_PGP_CORRUPT_DATA;
-		}
+		px_debug("pgp_expect_packet_end: got data");
+		return PXE_PGP_CORRUPT_DATA;
 	}
-	return res < 0 ? res : 0;
+	return res;
 }
 
 int

@@ -19,9 +19,11 @@
  <refsynopsisdiv>
 <synopsis>
 CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name</replaceable> ( [
-    <replaceable class="PARAMETER">column_name</replaceable> <replaceable class="PARAMETER">data_type</replaceable> [ OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ] [ COLLATE <replaceable>collation</replaceable> ] [ <replaceable class="PARAMETER">column_constraint</replaceable> [ ... ] ]
+  { <replaceable class="PARAMETER">column_name</replaceable> <replaceable class="PARAMETER">data_type</replaceable> [ OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ] [ COLLATE <replaceable>collation</replaceable> ] [ <replaceable class="PARAMETER">column_constraint</replaceable> [ ... ] ]
+    | <replaceable>table_constraint</replaceable> }
     [, ... ]
 ] )
+[ INHERITS ( <replaceable>parent_table</replaceable> [, ... ] ) ]
   SERVER <replaceable class="parameter">server_name</replaceable>
 [ OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ]
 
@@ -30,7 +32,13 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name
 [ CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable> ]
 { NOT NULL |
   NULL |
+  CHECK ( <replaceable class="PARAMETER">expression</replaceable> ) [ NO INHERIT ] |
   DEFAULT <replaceable>default_expr</replaceable> }
+
+<phrase>and <replaceable class="PARAMETER">table_constraint</replaceable> is:</phrase>
+
+[ CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable> ]
+CHECK ( <replaceable class="PARAMETER">expression</replaceable> ) [ NO INHERIT ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -114,6 +122,44 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name
    </varlistentry>
 
    <varlistentry>
+    <term><literal>COLLATE <replaceable>collation</replaceable></literal></term>
+    <listitem>
+     <para>
+      The <literal>COLLATE</> clause assigns a collation to
+      the column (which must be of a collatable data type).
+      If not specified, the column data type's default collation is used.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>INHERITS ( <replaceable>parent_table</replaceable> [, ... ] )</literal></term>
+    <listitem>
+     <para>
+      The optional <literal>INHERITS</> clause specifies a list of
+      tables from which the new foreign table automatically inherits
+      all columns.  Parent tables can be plain tables or foreign tables.
+      See the similar form of
+      <xref linkend="sql-createtable"> for more details.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable></literal></term>
+    <listitem>
+     <para>
+      An optional name for a column or table constraint.  If the
+      constraint is violated, the constraint name is present in error messages,
+      so constraint names like <literal>col must be positive</> can be used
+      to communicate helpful constraint information to client applications.
+      (Double-quotes are needed to specify constraint names that contain spaces.)
+      If a constraint name is not specified, the system generates a name.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><literal>NOT NULL</></term>
     <listitem>
      <para>
@@ -133,6 +179,33 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name
       This clause is only provided for compatibility with
       non-standard SQL databases.  Its use is discouraged in new
       applications.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>CHECK ( <replaceable class="PARAMETER">expression</replaceable> ) [ NO INHERIT ] </literal></term>
+    <listitem>
+     <para>
+      The <literal>CHECK</> clause specifies an expression producing a
+      Boolean result which each row in the foreign table is expected
+      to satisfy; that is, the expression should produce TRUE or UNKNOWN,
+      never FALSE, for all rows in the foreign table.
+      A check constraint specified as a column constraint should
+      reference that column's value only, while an expression
+      appearing in a table constraint can reference multiple columns.
+     </para>
+
+     <para>
+      Currently, <literal>CHECK</literal> expressions cannot contain
+      subqueries nor refer to variables other than columns of the
+      current row.  The system column <literal>tableoid</literal>
+      may be referenced, but not any other system column.
+     </para>
+
+     <para>
+      A constraint marked with <literal>NO INHERIT</> will not propagate to
+      child tables.
      </para>
     </listitem>
    </varlistentry>
@@ -234,6 +307,40 @@ int totalNumberOfSegments = getgpsegmentCount();
 
  </refsect1>
 
+ <refsect1>
+  <title>Notes</title>
+
+   <para>
+    Constraints on foreign tables (such as <literal>CHECK</>
+    or <literal>NOT NULL</> clauses) are not enforced by the
+    core <productname>PostgreSQL</> system, and most foreign data wrappers
+    do not attempt to enforce them either; that is, the constraint is
+    simply assumed to hold true.  There would be little point in such
+    enforcement since it would only apply to rows inserted or updated via
+    the foreign table, and not to rows modified by other means, such as
+    directly on the remote server.  Instead, a constraint attached to a
+    foreign table should represent a constraint that is being enforced by
+    the remote server.
+   </para>
+
+   <para>
+    Some special-purpose foreign data wrappers might be the only access
+    mechanism for the data they access, and in that case it might be
+    appropriate for the foreign data wrapper itself to perform constraint
+    enforcement.  But you should not assume that a wrapper does that
+    unless its documentation says so.
+   </para>
+
+   <para>
+    Although <productname>PostgreSQL</> does not attempt to enforce
+    constraints on foreign tables, it does assume that they are correct
+    for purposes of query optimization.  If there are rows visible in the
+    foreign table that do not satisfy a declared constraint, queries on
+    the table might produce incorrect answers.  It is the user's
+    responsibility to ensure that the constraint definition matches
+    reality.
+   </para>
+ </refsect1>
 
  <refsect1 id="SQL-CREATEFOREIGNTABLE-examples">
   <title>Examples</title>
@@ -264,8 +371,9 @@ SERVER film_server;
    <acronym>SQL</acronym> standard; however, much as with
    <link linkend="sql-createtable"><command>CREATE TABLE</></link>,
    <literal>NULL</> constraints and zero-column foreign tables are permitted.
-   The ability to specify a default value is also a <productname>PostgreSQL</>
-   extension.
+   The ability to specify column default values is also
+   a <productname>PostgreSQL</> extension.  Table inheritance, in the form
+   defined by <productname>PostgreSQL</productname>, is nonstandard.
   </para>
 
  </refsect1>
@@ -278,6 +386,7 @@ SERVER film_server;
    <member><xref linkend="sql-dropforeigntable"></member>
    <member><xref linkend="sql-createtable"></member>
    <member><xref linkend="sql-createserver"></member>
+   <member><xref linkend="sql-importforeignschema"></member>
   </simplelist>
  </refsect1>
 </refentry>

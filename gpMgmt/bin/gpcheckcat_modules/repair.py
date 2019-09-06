@@ -68,7 +68,7 @@ class Repair:
     def append_content_to_bash_script(self, repair_dir_path, script, catalog_name=None):
         bash_file_path = self._get_bash_filepath(repair_dir_path, catalog_name)
         if not os.path.isfile(bash_file_path):
-            script = '#!/bin/bash\ncd $(dirname $0)\n' + script
+            script = '#!/bin/bash\nset -o errexit\ncd $(dirname $0)\n' + script
 
         with open(bash_file_path, 'a') as bash_file:
             bash_file.write(script)
@@ -128,7 +128,7 @@ class Repair:
         if segment['content'] != -1:
             psql_cmd += 'PGOPTIONS=\'-c gp_session_role=utility\' '
 
-        psql_cmd += 'psql -X -a -h {hostname} -p {port} '.format(hostname=segment['hostname'], port=segment['port'])
+        psql_cmd += 'psql -X -v ON_ERROR_STOP=1 -a -h {hostname} -p {port} '.format(hostname=segment['hostname'], port=segment['port'])
 
         if self._issue_type == 'extra' or self._issue_type == 'missing':
             psql_cmd += '-c '

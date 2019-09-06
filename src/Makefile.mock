@@ -1,7 +1,7 @@
 MOCK_DIR=$(top_builddir)/src/test/unit/mock
 CMOCKERY_DIR=$(top_builddir)/src/test/unit/cmockery
 CMOCKERY_OBJS=$(CMOCKERY_DIR)/cmockery.o
-override CFLAGS+= -w $(PTHREAD_CFLAGS)
+override CFLAGS+=$(PTHREAD_CFLAGS)
 
 override CPPFLAGS+= -I$(CMOCKERY_DIR)
 
@@ -12,6 +12,7 @@ $(MOCK_DIR)/%_mock.c: $(abs_top_srcdir)/src/%.c
 # For some reason, mock.o files are intermediate files sometimes.
 # Mark them as secondary in order not to be deleted automatically.
 .SECONDARY:
+$(MOCK_DIR)/%_mock.o: CFLAGS+= -Wno-unused-function -Wno-unused-variable
 $(MOCK_DIR)/%_mock.o: $(MOCK_DIR)/%_mock.c
 
 all: $(patsubst %,%.t,$(TARGETS))

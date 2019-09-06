@@ -17,7 +17,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/buffile.h
@@ -54,8 +54,6 @@ extern void BufFileFlush(BufFile *file);
 extern int64 BufFileGetSize(BufFile *buffile);
 
 extern const char *BufFileGetFilename(BufFile *buffile);
-extern BufFile *BufFileCreateForOperation(char *operator_name, bool interXact);
-extern BufFile *BufFileCreateInSet(struct workfile_set *work_set, const char *fileSuffix, bool interXact);
 
 extern void BufFileSuspend(BufFile *buffile);
 extern void BufFileResume(BufFile *buffile);

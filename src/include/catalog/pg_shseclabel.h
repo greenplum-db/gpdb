@@ -3,7 +3,7 @@
  * pg_shseclabel.h
  *	  definition of the system "security label" relation (pg_shseclabel)
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * -------------------------------------------------------------------------
@@ -26,8 +26,8 @@ CATALOG(pg_shseclabel,3592) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	Oid			classoid;		/* OID of table containing the shared object */
 
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
-	text		provider;		/* name of label provider */
-	text		label;			/* security label of the object */
+	text provider BKI_FORCE_NOT_NULL;	/* name of label provider */
+	text label	BKI_FORCE_NOT_NULL;		/* security label of the object */
 #endif
 } FormData_pg_shseclabel;
 

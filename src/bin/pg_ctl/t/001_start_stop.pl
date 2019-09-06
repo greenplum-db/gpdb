@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use Config;
 use TestLib;
-use Test::More tests => 16;
+use Test::More tests => 17;
 
 my $tempdir = TestLib::tempdir;
 my $tempdir_short = TestLib::tempdir_short;
@@ -10,6 +10,9 @@ my $tempdir_short = TestLib::tempdir_short;
 program_help_ok('pg_ctl');
 program_version_ok('pg_ctl');
 program_options_handling_ok('pg_ctl');
+
+command_exit_is([ 'pg_ctl', 'start', '-D', "$tempdir/nonexistent" ],
+	1, 'pg_ctl start with nonexistent directory');
 
 command_ok([ 'pg_ctl', 'initdb', '-D', "$tempdir/data" ], 'pg_ctl initdb');
 command_ok(

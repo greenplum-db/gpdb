@@ -1,7 +1,7 @@
 # contrib/test_decoding/Makefile
 
 MODULES = test_decoding
-OBJS = test_decoding.o
+PGFILEDESC = "test_decoding - example of a logical decoding output plugin"
 
 # Note: because we don't tell the Makefile there are any regression tests,
 # we have to clean those result files explicitly
@@ -38,38 +38,36 @@ submake-test_decoding:
 	$(MAKE) -C $(top_builddir)/contrib/test_decoding
 
 REGRESSCHECKS=ddl xact rewrite toast permissions decoding_in_xact \
-	decoding_into_rel binary prepared spill
+	decoding_into_rel binary prepared replorigin spill
 
-regresscheck: all | submake-regress submake-test_decoding
+regresscheck: | submake-regress submake-test_decoding temp-install
 	$(MKDIR_P) regression_output
 	$(pg_regress_check) \
 	    --temp-config $(top_srcdir)/contrib/test_decoding/logical.conf \
-	    --temp-install=./tmp_check \
-	    --extra-install=contrib/test_decoding \
+	    --temp-instance=./tmp_check \
 	    --outputdir=./regression_output \
 	    $(REGRESSCHECKS)
 
-regresscheck-install-force: | submake-regress submake-test_decoding
+regresscheck-install-force: | submake-regress submake-test_decoding temp-install
 	$(pg_regress_installcheck) \
-	    --extra-install=contrib/test_decoding \
 	    $(REGRESSCHECKS)
 
 ISOLATIONCHECKS=mxact delayed_startup ondisk_startup concurrent_ddl_dml \
 	oldest_xmin snapshot_transfer
 
-isolationcheck: all | submake-isolation submake-test_decoding
+isolationcheck: | submake-isolation submake-test_decoding temp-install
 	$(MKDIR_P) isolation_output
 	$(pg_isolation_regress_check) \
 	    --temp-config $(top_srcdir)/contrib/test_decoding/logical.conf \
-	    --extra-install=contrib/test_decoding \
 	    --outputdir=./isolation_output \
 	    $(ISOLATIONCHECKS)
 
-isolationcheck-install-force: all | submake-isolation submake-test_decoding
+isolationcheck-install-force: all | submake-isolation submake-test_decoding temp-install
 	$(pg_isolation_regress_installcheck) \
-	    --extra-install=contrib/test_decoding \
 	    $(ISOLATIONCHECKS)
 
 .PHONY: submake-test_decoding submake-regress check \
 	regresscheck regresscheck-install-force \
 	isolationcheck isolationcheck-install-force
+
+temp-install: EXTRA_INSTALL=contrib/test_decoding

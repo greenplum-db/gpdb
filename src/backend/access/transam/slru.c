@@ -38,7 +38,7 @@
  * by re-setting the page's page_dirty flag.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/backend/access/transam/slru.c
@@ -1312,7 +1312,7 @@ SlruScanDirectory(SlruCtl ctl, SlruScanCallback callback, void *data)
 
 		len = strlen(clde->d_name);
 
-		if ((len == 4 || len == 5) &&
+		if ((len == 4 || len == 5 || len == 6) &&
 			strspn(clde->d_name, "0123456789ABCDEF") == len)
 		{
 			segno = (int) strtol(clde->d_name, NULL, 16);

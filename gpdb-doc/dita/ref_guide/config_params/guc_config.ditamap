@@ -24,9 +24,9 @@
             <topicref href="guc_category-list.xml#topic49"/>
             <topicref href="guc_category-list.xml#topic55"/>
             <topicref href="guc_category-list.xml#topic56"/>
+            <topicref href="guc_category-list.xml#topic_t3n_qml_rz"/>
         </topicref>
         <topicref href="guc-list.xml" linking="none">
-            <topicref href="guc-list.xml#add_missing_from"/>
             <topicref href="guc-list.xml#application_name"/>
             <topicref href="guc-list.xml#array_nulls"/>
             <topicref href="guc-list.xml#authentication_timeout"/>
@@ -74,7 +74,6 @@
             <topicref href="guc-list.xml#extra_float_digits"/>
             <topicref href="guc-list.xml#from_collapse_limit"/>
             <topicref href="guc-list.xml#gp_adjust_selectivity_for_outerjoins"/>
-            <topicref href="guc-list.xml#gp_analyze_relative_error"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction"/>
             <topicref href="guc-list.xml#gp_appendonly_compaction_threshold"/>
             <topicref href="guc-list.xml#gp_autostats_mode"/>
@@ -89,7 +88,6 @@
             <topicref href="guc-list.xml#gp_debug_linger"/>
             <topicref href="guc-list.xml#gp_default_storage_options"/>
             <topicref href="guc-list.xml#gp_dynamic_partition_pruning"/>
-            <topicref href="guc-list.xml#gp_enable_adaptive_nestloop"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct_pruning"/>
             <topicref href="guc-list.xml#gp_enable_direct_dispatch"/>
@@ -106,7 +104,6 @@
             <topicref href="guc-list.xml#gp_enable_segment_copy_checking"/>
             <topicref href="guc-list.xml#gp_enable_sort_distinct"/>
             <topicref href="guc-list.xml#gp_enable_sort_limit"/>
-            <topicref href="guc-list.xml#gp_expand_method"/>
             <topicref href="guc-list.xml#gp_external_enable_exec"/>
             <topicref href="guc-list.xml#gp_external_max_segs"/>
             <topicref href="guc-list.xml#gp_external_enable_filter_pushdown"/>
@@ -123,7 +120,6 @@
             <topicref href="guc-list.xml#gp_instrument_shmem_size"/>
             <topicref href="guc-list.xml#gp_interconnect_debug_retry_interval"/>
             <topicref href="guc-list.xml#gp_interconnect_fc_method"/>
-            <topicref href="guc-list.xml#gp_interconnect_hash_multiplier"/>
             <topicref href="guc-list.xml#gp_interconnect_queue_depth"/>
             <topicref href="guc-list.xml#gp_interconnect_setup_timeout"/>
             <topicref href="guc-list.xml#gp_interconnect_snd_queue_depth"/>
@@ -138,7 +134,7 @@
             <topicref href="guc-list.xml#gp_max_slices"/>
             <topicref href="guc-list.xml#memory_spill_ratio"/>
             <topicref href="guc-list.xml#gp_motion_cost_per_row"/>
-            <topicref href="guc-list.xml#gp_recursive_cte_prototype"/>
+            <topicref href="guc-list.xml#gp_recursive_cte"/>
             <topicref href="guc-list.xml#gp_reject_percent_threshold"/>
             <topicref href="guc-list.xml#gp_reraise_signal"/>
             <topicref href="guc-list.xml#gp_resqueue_memory_policy"/>
@@ -177,7 +173,6 @@
             <topicref href="guc-list.xml#keep_wal_segments"/>
             <topicref href="guc-list.xml#krb_caseins_users"/>
             <topicref href="guc-list.xml#krb_server_keyfile"/>
-            <topicref href="guc-list.xml#krb_srvname"/>
             <topicref href="guc-list.xml#lc_collate"/>
             <topicref href="guc-list.xml#lc_ctype"/>
             <topicref href="guc-list.xml#lc_messages"/>
@@ -186,6 +181,7 @@
             <topicref href="guc-list.xml#lc_time"/>
             <topicref href="guc-list.xml#listen_addresses"/>
             <topicref href="guc-list.xml#local_preload_libraries"/>
+            <topicref href="guc-list.xml#lock_timeout"/>
             <topicref href="guc-list.xml#log_autostats"/>
             <topicref href="guc-list.xml#log_connections"/>
             <topicref href="guc-list.xml#log_disconnections"/>
@@ -237,12 +233,12 @@
             <topicref href="guc-list.xml#optimizer_minidump"/>
             <topicref href="guc-list.xml#optimizer_nestloop_factor"/>
             <topicref href="guc-list.xml#optimizer_parallel_union"/>
+            <topicref href="guc-list.xml#optimizer_penalize_skew"/>
             <topicref href="guc-list.xml#optimizer_print_missing_stats"/>
             <topicref href="guc-list.xml#optimizer_print_optimization_stats"/>
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
             <topicref href="guc-list.xml#password_encryption"/>
             <topicref href="guc-list.xml#password_hash_algorithm"/>
-            <topicref href="guc-list.xml#pgstat_track_activity_query_size"/>
             <topicref href="guc-list.xml#pljava_classpath"/>
             <topicref href="guc-list.xml#pljava_classpath_insecure"/>
             <topicref href="guc-list.xml#pljava_statement_cache_size"/>
@@ -275,10 +271,10 @@
             <topicref href="guc-list.xml#tcp_keepalives_idle"/>
             <topicref href="guc-list.xml#tcp_keepalives_interval"/>
             <topicref href="guc-list.xml#temp_buffers"/>
+            <topicref href="guc-list.xml#topic_k52_fqm_f3b"/>
             <topicref href="guc-list.xml#TimeZone"/>
             <topicref href="guc-list.xml#timezone_abbreviations"/>
-            <topicref href="guc-list.xml#track_activities"/>
-            <topicref href="guc-list.xml#track_counts"/>
+            <topicref href="guc-list.xml#track_activity_query_size"/>
             <topicref href="guc-list.xml#transaction_isolation"/>
             <topicref href="guc-list.xml#transaction_read_only"/>
             <topicref href="guc-list.xml#transform_null_equals"/>

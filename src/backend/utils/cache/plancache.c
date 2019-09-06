@@ -37,7 +37,7 @@
  * be infrequent enough that more-detailed tracking is not worth the effort.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -53,6 +53,7 @@
 #include "catalog/namespace.h"
 #include "executor/executor.h"
 #include "executor/spi.h"
+#include "miscadmin.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/cost.h"
 #include "optimizer/planmain.h"
@@ -65,9 +66,11 @@
 #include "utils/inval.h"
 #include "utils/memutils.h"
 #include "utils/resowner_private.h"
+#include "utils/rls.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
+#include "cdb/cdbutil.h"
 
 /*
  * We must skip "overhead" operations that involve database access when the
@@ -156,6 +159,8 @@ CreateCachedPlan(Node *raw_parse_tree,
 	CachedPlanSource *plansource;
 	MemoryContext source_context;
 	MemoryContext oldcxt;
+	Oid			user_id;
+	int			security_context;
 
 	Assert(query_string != NULL);		/* required as of 8.4 */
 
@@ -177,6 +182,8 @@ CreateCachedPlan(Node *raw_parse_tree,
 	 * Most fields are just left empty for the moment.
 	 */
 	oldcxt = MemoryContextSwitchTo(source_context);
+
+	GetUserIdAndSecContext(&user_id, &security_context);
 
 	plansource = (CachedPlanSource *) palloc0(sizeof(CachedPlanSource));
 	plansource->magic = CACHEDPLANSOURCE_MAGIC;
@@ -207,6 +214,11 @@ CreateCachedPlan(Node *raw_parse_tree,
 	plansource->generic_cost = -1;
 	plansource->total_custom_cost = 0;
 	plansource->num_custom_plans = 0;
+	plansource->hasRowSecurity = false;
+	plansource->rowSecurityDisabled
+		= (security_context & SECURITY_ROW_LEVEL_DISABLED) != 0;
+	plansource->row_security_env = row_security;
+	plansource->planUserId = InvalidOid;
 
 	MemoryContextSwitchTo(oldcxt);
 
@@ -378,7 +390,8 @@ CompleteCachedPlan(CachedPlanSource *plansource,
 		 */
 		extract_query_dependencies((Node *) querytree_list,
 								   &plansource->relationOids,
-								   &plansource->invalItems);
+								   &plansource->invalItems,
+								   &plansource->hasRowSecurity);
 
 		/*
 		 * Also save the current search_path in the query_context.  (This
@@ -576,6 +589,17 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 	}
 
 	/*
+	 * If this is a new cached plan, then set the user id it was planned by
+	 * and under what row security settings; these are needed to determine
+	 * plan invalidation when RLS is involved.
+	 */
+	if (!OidIsValid(plansource->planUserId))
+	{
+		plansource->planUserId = GetUserId();
+		plansource->row_security_env = row_security;
+	}
+
+	/*
 	 * If the query is currently valid, we should have a saved search_path ---
 	 * check to see if that matches the current environment.  If not, we want
 	 * to force replan.
@@ -591,6 +615,23 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 				plansource->gplan->is_valid = false;
 		}
 	}
+
+	/*
+	 * Check if row security is enabled for this query and things have changed
+	 * such that we need to invalidate this plan and rebuild it.  Note that if
+	 * row security was explicitly disabled (eg: this is a FK check plan) then
+	 * we don't invalidate due to RLS.
+	 *
+	 * Otherwise, if the plan has a possible RLS dependency, force a replan if
+	 * either the role under which the plan was planned or the row_security
+	 * setting has been changed.
+	 */
+	if (plansource->is_valid
+		&& !plansource->rowSecurityDisabled
+		&& plansource->hasRowSecurity
+		&& (plansource->planUserId != GetUserId()
+			|| plansource->row_security_env != row_security))
+		plansource->is_valid = false;
 
 	/*
 	 * If the query is currently valid, acquire locks on the referenced
@@ -747,7 +788,8 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 	 */
 	extract_query_dependencies((Node *) qlist,
 							   &plansource->relationOids,
-							   &plansource->invalItems);
+							   &plansource->invalItems,
+							   &plansource->hasRowSecurity);
 
 	/*
 	 * Also save the current search_path in the query_context.  (This should
@@ -1105,6 +1147,39 @@ cached_plan_cost(CachedPlan *plan, bool include_planner)
 			int			nrelations = list_length(plannedstmt->rtable);
 
 			result += 1000.0 * cpu_operator_cost * (nrelations + 1);
+		}
+
+		/*
+		 * For generic plan, no params will be passed to planner, which leads
+		 * to plan can not genenrate direct dispatch plan, even if all the
+		 * params are const values. Unfortunately, direct dispatch cost v.s.
+		 * full gang dispatch cost is not included in plan's total cost. But
+		 * this cost is significantly. For query could leverage direct
+		 * dispatch, dispatching it to full gangs will result in unneccessary
+		 * QEs, but these QEs still need to go through volcano model, do two
+		 * phase commit and write xlog for Prepare etc, which not only
+		 * consuming CPU but also IO to disk. 
+		 *
+		 * So correctly generating direct dispatch plan matters.  As for custom
+		 * plan, it would pass the const params to planner and is able to
+		 * generate direct dispatch plan when possible. As a result, when we
+		 * evaluate the cost of generic plan and custom plan, we should not
+		 * only consider the plan's total cost and re-plan cost, but also
+		 * consider the cost of failed to generate direct dispatch.
+		 *
+		 * Since non direct dispatch introduces additional IO, we use
+		 * seq_page_cost as base unit to measure non direct dispatch cost. The
+		 * number of unneccessary QEs also measures the amount of this cost.
+		 * Considering clusters with 100 segments v.s. 10 segments, the non
+		 * direct dispatch cost of the 100 segments cluster is definitely
+		 * higher than 10 segments cluster.
+		 */
+		if (!plannedstmt->planTree->directDispatch.isDirectDispatch)
+		{
+			int			ndirectDispatchContentIds =
+				list_length(plannedstmt->planTree->directDispatch.contentIds);
+			int			nsegments = getgpsegmentCount();
+			result += 10.0 * seq_page_cost * (nsegments - ndirectDispatchContentIds);
 		}
 	}
 
@@ -1510,25 +1585,38 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 				 * RowExclusiveLock is acquired in PostgreSQL here.  Greenplum
 				 * acquires ExclusiveLock to avoid distributed deadlock due to
 				 * concurrent UPDATE/DELETE on the same table.  This is in
-				 * parity with CdbTryOpenRelation().  Catalog tables are
-				 * replicated across cluster and don't suffer from the
-				 * deadlock.
-				 * Since we have introduced Global Deadlock Detector, only for ao
-				 * table should we upgrade the lock.
+				 * parity with CdbTryOpenRelation(). If it is heap table and
+				 * the GDD is enabled, we could acquire RowExclusiveLock here.
 				 */
-				if (rte->relid > FirstNormalObjectId &&
-					(plannedstmt->commandType == CMD_UPDATE ||
+				if ((plannedstmt->commandType == CMD_UPDATE ||
 					 plannedstmt->commandType == CMD_DELETE) &&
-					CondUpgradeRelLock(rte->relid))
+					CondUpgradeRelLock(rte->relid, false))
 					lockmode = ExclusiveLock;
 				else
 					lockmode = RowExclusiveLock;
 			}
-			else if ((rc = get_plan_rowmark(plannedstmt->rowMarks, rt_index)) != NULL &&
-					 RowMarkRequiresRowShareLock(rc->markType))
-				lockmode = RowShareLock;
 			else
-				lockmode = AccessShareLock;
+			{
+				/*
+				 * Greenplum specific behavior:
+				 * The implementation of select statement with locking clause
+				 * (for update | no key update | share | key share) in postgres
+				 * is to hold RowShareLock on tables during parsing stage, and
+				 * generate a LockRows plan node for executor to lock the tuples.
+				 * It is not easy to lock tuples in Greenplum database, since
+				 * tuples may be fetched through motion nodes.
+				 *
+				 * But when Global Deadlock Detector is enabled, and the select
+				 * statement with locking clause contains only one table, we are
+				 * sure that there are no motions. For such simple cases, we could
+				 * make the behavior just the same as Postgres.
+				 */
+				rc = get_plan_rowmark(plannedstmt->rowMarks, rt_index);
+				if (rc != NULL)
+					lockmode = rc->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
+				else
+					lockmode = AccessShareLock;
+			}
 
 			if (acquire)
 				LockRelationOid(rte->relid, lockmode);
@@ -1599,25 +1687,44 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 				if (rt_index == parsetree->resultRelation)
 				{
 					/*
-					 * RowExclusiveLock is acquired in PostgreSQL here.
-					 * Greenplum acquires ExclusiveLock to avoid distributed
-					 * deadlock due to concurrent UPDATE/DELETE on the same
-					 * table.  This is in parity with CdbTryOpenRelation().
-					 * Catalog tables are replicated across cluster and don't
-					 * suffer from the deadlock.
+					 * RowExclusiveLock is acquired in PostgreSQL here.  Greenplum
+					 * acquires ExclusiveLock to avoid distributed deadlock due to
+					 * concurrent UPDATE/DELETE on the same table.  This is in
+					 * parity with CdbTryOpenRelation(). If it is heap table and
+					 * the GDD is enabled, we could acquire RowExclusiveLock here.
 					 */
-					if (rte->relid > FirstNormalObjectId &&
-						(parsetree->commandType == CMD_UPDATE ||
+					if ((parsetree->commandType == CMD_UPDATE ||
 						 parsetree->commandType == CMD_DELETE) &&
-						CondUpgradeRelLock(rte->relid))
+						CondUpgradeRelLock(rte->relid, false))
 						lockmode = ExclusiveLock;
 					else
 						lockmode = RowExclusiveLock;
 				}
-				else if (get_parse_rowmark(parsetree, rt_index) != NULL)
-					lockmode = RowShareLock;
 				else
-					lockmode = AccessShareLock;
+				{
+					/*
+					 * Greenplum specific behavior:
+					 * The implementation of select statement with locking clause
+					 * (for update | no key update | share | key share) in postgres
+					 * is to hold RowShareLock on tables during parsing stage, and
+					 * generate a LockRows plan node for executor to lock the tuples.
+					 * It is not easy to lock tuples in Greenplum database, since
+					 * tuples may be fetched through motion nodes.
+					 *
+					 * But when Global Deadlock Detector is enabled, and the select
+					 * statement with locking clause contains only one table, we are
+					 * sure that there are no motions. For such simple cases, we could
+					 * make the behavior just the same as Postgres.
+					 */
+					RowMarkClause *rc;
+
+					rc = get_parse_rowmark(parsetree, rt_index);
+					if (rc != NULL)
+						lockmode = parsetree->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
+					else
+						lockmode = AccessShareLock;
+				}
+
 				if (acquire)
 					LockRelationOid(rte->relid, lockmode);
 				else

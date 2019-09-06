@@ -7,7 +7,7 @@
  *	AccessExclusiveLocks and starting snapshots for Hot Standby mode.
  *	Plus conflict recovery processing.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -20,6 +20,7 @@
 #include "access/twophase.h"
 #include "access/xact.h"
 #include "access/xlog.h"
+#include "access/xloginsert.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
@@ -782,12 +783,12 @@ StandbyReleaseOldLocks(int nxids, TransactionId *xids)
  */
 
 void
-standby_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
+standby_redo(XLogReaderState *record)
 {
-	uint8		info = record->xl_info & ~XLR_INFO_MASK;
+	uint8		info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
 
 	/* Backup blocks are not used in standby records */
-	Assert(!(record->xl_info & XLR_BKP_BLOCK_MASK));
+	Assert(!XLogRecHasAnyBlockRefs(record));
 
 	/* Do nothing if we're not in hot standby mode */
 	if (standbyState == STANDBY_DISABLED)
@@ -951,8 +952,6 @@ static XLogRecPtr
 LogCurrentRunningXacts(RunningTransactions CurrRunningXacts)
 {
 	xl_running_xacts xlrec;
-	XLogRecData rdata[2];
-	int			lastrdata = 0;
 	XLogRecPtr	recptr;
 
 	xlrec.xcnt = CurrRunningXacts->xcnt;
@@ -963,23 +962,15 @@ LogCurrentRunningXacts(RunningTransactions CurrRunningXacts)
 	xlrec.latestCompletedXid = CurrRunningXacts->latestCompletedXid;
 
 	/* Header */
-	rdata[0].data = (char *) (&xlrec);
-	rdata[0].len = MinSizeOfXactRunningXacts;
-	rdata[0].buffer = InvalidBuffer;
+	XLogBeginInsert();
+	XLogRegisterData((char *) (&xlrec), MinSizeOfXactRunningXacts);
 
 	/* array of TransactionIds */
 	if (xlrec.xcnt > 0)
-	{
-		rdata[0].next = &(rdata[1]);
-		rdata[1].data = (char *) CurrRunningXacts->xids;
-		rdata[1].len = (xlrec.xcnt + xlrec.subxcnt) * sizeof(TransactionId);
-		rdata[1].buffer = InvalidBuffer;
-		lastrdata = 1;
-	}
+		XLogRegisterData((char *) CurrRunningXacts->xids,
+					   (xlrec.xcnt + xlrec.subxcnt) * sizeof(TransactionId));
 
-	rdata[lastrdata].next = NULL;
-
-	recptr = XLogInsert(RM_STANDBY_ID, XLOG_RUNNING_XACTS, rdata);
+	recptr = XLogInsert(RM_STANDBY_ID, XLOG_RUNNING_XACTS);
 
 	if (CurrRunningXacts->subxid_overflow)
 		elog(trace_recovery(DEBUG2),
@@ -1019,22 +1010,15 @@ LogCurrentRunningXacts(RunningTransactions CurrRunningXacts)
 static void
 LogAccessExclusiveLocks(int nlocks, xl_standby_lock *locks)
 {
-	XLogRecData rdata[2];
 	xl_standby_locks xlrec;
 
 	xlrec.nlocks = nlocks;
 
-	rdata[0].data = (char *) &xlrec;
-	rdata[0].len = offsetof(xl_standby_locks, locks);
-	rdata[0].buffer = InvalidBuffer;
-	rdata[0].next = &rdata[1];
+	XLogBeginInsert();
+	XLogRegisterData((char *) &xlrec, offsetof(xl_standby_locks, locks));
+	XLogRegisterData((char *) locks, nlocks * sizeof(xl_standby_lock));
 
-	rdata[1].data = (char *) locks;
-	rdata[1].len = nlocks * sizeof(xl_standby_lock);
-	rdata[1].buffer = InvalidBuffer;
-	rdata[1].next = NULL;
-
-	(void) XLogInsert(RM_STANDBY_ID, XLOG_STANDBY_LOCK, rdata);
+	(void) XLogInsert(RM_STANDBY_ID, XLOG_STANDBY_LOCK);
 }
 
 /*

@@ -1,0 +1,26 @@
+-- Given that we built with and have zstd compression available
+-- Test basic create table for AO/CO table succeeds for zstd compression
+-- Given a column-oriented table with compresstype zstd
+DROP TABLE IF EXISTS a_aoco_table_with_zstd_compression;
+NOTICE:  table "a_aoco_table_with_zstd_compression" does not exist, skipping
+CREATE TABLE a_aoco_table_with_zstd_compression(col text) WITH (APPENDONLY=true, COMPRESSTYPE=zstd, compresslevel=1, ORIENTATION=column);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- Before I insert data, the size is 0 and compression ratio is unavailable (-1)
+SELECT pg_size_pretty(pg_relation_size('a_aoco_table_with_zstd_compression')),
+       get_ao_compression_ratio('a_aoco_table_with_zstd_compression');
+ pg_size_pretty | get_ao_compression_ratio 
+----------------+--------------------------
+ 0 bytes        |                       -1
+(1 row)
+
+-- After I insert data
+INSERT INTO a_aoco_table_with_zstd_compression values('ksjdhfksdhfksdhfksjhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh');
+-- Then the data will be compressed according to a consistent compression ratio
+select pg_size_pretty(pg_relation_size('a_aoco_table_with_zstd_compression')),
+       get_ao_compression_ratio('a_aoco_table_with_zstd_compression');
+ pg_size_pretty | get_ao_compression_ratio 
+----------------+--------------------------
+ 64 bytes       |                      1.5
+(1 row)
+

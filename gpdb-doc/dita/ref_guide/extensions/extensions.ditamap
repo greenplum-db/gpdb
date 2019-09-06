@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map title="Procedural Languages and Analytics Extensions">
+  <topicref href="intro.xml">
+    <topicref href="pl_container.xml" linking="none"/>
+    <topicref href="pl_java.xml" linking="none"/>
+    <topicref href="pl_perl.xml" linking="none"/>
+    <topicref href="pl_sql.xml" linking="none"/>
+    <topicref href="pl_python.xml" linking="none"/>
+    <topicref href="pl_r.xml" linking="none"/>
+    <topicref href="madlib.xml" linking="none"/>
+    <topicref href="postGIS.xml" linking="none" otherprops="pivotal"/>
+  </topicref>
+</map>

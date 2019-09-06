@@ -11,7 +11,7 @@
  * Transactions on Mathematical Software, Vol. 24, No. 4, December 1998,
  * pages 359-367.
  *
- * Copyright (c) 1998-2014, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/utils/adt/numeric.c
@@ -28,13 +28,20 @@
 
 #include "access/hash.h"
 #include "catalog/pg_type.h"
+#include "funcapi.h"
+#include "lib/hyperloglog.h"
+#include "executor/execHHashagg.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
 #include "nodes/nodeFuncs.h"
+#include "nodes/execnodes.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
+#include "utils/guc.h"
 #include "utils/int8.h"
+#include "utils/memutils.h"
 #include "utils/numeric.h"
+#include "utils/sortsupport.h"
 
 /* ----------
  * Uncomment the following to enable compilation of dump_numeric()
@@ -56,6 +63,12 @@
  * are easy.  Also, it's actually more efficient if NBASE is rather less than
  * sqrt(INT_MAX), so that there is "headroom" for mul_var and div_var_fast to
  * postpone processing carries.
+ *
+ * Values of NBASE other than 10000 are considered of historical interest only
+ * and are no longer supported in any sense; no mechanism exists for the client
+ * to discover the base, so every client supporting binary mode expects the
+ * base-10000 format.  If you plan to change this, also note the numeric
+ * abbreviation code, which assumes NBASE=10000.
  * ----------
  */
 
@@ -103,14 +116,14 @@ typedef int16 NumericDigit;
 struct NumericShort
 {
 	uint16		n_header;		/* Sign + display scale + weight */
-	NumericDigit n_data[1];		/* Digits */
+	NumericDigit n_data[FLEXIBLE_ARRAY_MEMBER]; /* Digits */
 };
 
 struct NumericLong
 {
 	uint16		n_sign_dscale;	/* Sign + display scale */
 	int16		n_weight;		/* Weight of 1st digit	*/
-	NumericDigit n_data[1];		/* Digits */
+	NumericDigit n_data[FLEXIBLE_ARRAY_MEMBER]; /* Digits */
 };
 
 union NumericChoice
@@ -251,6 +264,49 @@ typedef struct NumericVar
 
 #define NUMERIC_LOCAL_HSIZ	\
 			(sizeof(NumericVar) - (sizeof(NumericDigit) * NUMERIC_LOCAL_NDIG))
+
+/* ----------
+ * Data for generate_series
+ * ----------
+ */
+typedef struct
+{
+	NumericVar	current;
+	NumericVar	stop;
+	NumericVar	step;
+} generate_series_numeric_fctx;
+
+
+/* ----------
+ * Sort support.
+ * ----------
+ */
+typedef struct
+{
+	void	   *buf;			/* buffer for short varlenas */
+	int64		input_count;	/* number of non-null values seen */
+	bool		estimating;		/* true if estimating cardinality */
+
+	hyperLogLogState abbr_card; /* cardinality estimator */
+} NumericSortSupport;
+
+/*
+ * We define our own macros for packing and unpacking abbreviated-key
+ * representations for numeric values in order to avoid depending on
+ * USE_FLOAT8_BYVAL.  The type of abbreviation we use is based only on
+ * the size of a datum, not the argument-passing convention for float8.
+ */
+#define NUMERIC_ABBREV_BITS (SIZEOF_DATUM * BITS_PER_BYTE)
+#if SIZEOF_DATUM == 8
+#define NumericAbbrevGetDatum(X) ((Datum) SET_8_BYTES(X))
+#define DatumGetNumericAbbrev(X) ((int64) GET_8_BYTES(X))
+#define NUMERIC_ABBREV_NAN		 NumericAbbrevGetDatum(PG_INT64_MIN)
+#else
+#define NumericAbbrevGetDatum(X) ((Datum) SET_4_BYTES(X))
+#define DatumGetNumericAbbrev(X) ((int32) GET_4_BYTES(X))
+#define NUMERIC_ABBREV_NAN		 NumericAbbrevGetDatum(PG_INT32_MIN)
+#endif
+
 
 /* ----------
  * Some preinitialized constants
@@ -428,6 +484,13 @@ static bool numericvar_to_int128(NumericVar *var, int128 *result);
 static void int128_to_numericvar(int128 val, NumericVar *var);
 #endif
 static double numericvar_to_double_no_overflow(NumericVar *var);
+
+static Datum numeric_abbrev_convert(Datum original_datum, SortSupport ssup);
+static bool numeric_abbrev_abort(int memtupcount, SortSupport ssup);
+static int	numeric_fast_cmp(Datum x, Datum y, SortSupport ssup);
+static int	numeric_cmp_abbrev(Datum x, Datum y, SortSupport ssup);
+
+static Datum numeric_abbrev_convert_var(NumericVar *var, NumericSortSupport *nss);
 
 static int	cmp_var(NumericVar *var1, NumericVar *var2);
 static int	cmp_var_common(const NumericDigit *var1digits, int var1ndigits,
@@ -1288,6 +1351,122 @@ numeric_floor(PG_FUNCTION_ARGS)
 	PG_RETURN_NUMERIC(res);
 }
 
+
+/*
+ * generate_series_numeric() -
+ *
+ *	Generate series of numeric.
+ */
+Datum
+generate_series_numeric(PG_FUNCTION_ARGS)
+{
+	return generate_series_step_numeric(fcinfo);
+}
+
+Datum
+generate_series_step_numeric(PG_FUNCTION_ARGS)
+{
+	generate_series_numeric_fctx *fctx;
+	FuncCallContext *funcctx;
+	MemoryContext oldcontext;
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		Numeric		start_num = PG_GETARG_NUMERIC(0);
+		Numeric		stop_num = PG_GETARG_NUMERIC(1);
+		NumericVar	steploc = const_one;
+
+		/* handle NaN in start and stop values */
+		if (NUMERIC_IS_NAN(start_num))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("start value cannot be NaN")));
+
+		if (NUMERIC_IS_NAN(stop_num))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("stop value cannot be NaN")));
+
+		/* see if we were given an explicit step size */
+		if (PG_NARGS() == 3)
+		{
+			Numeric		step_num = PG_GETARG_NUMERIC(2);
+
+			if (NUMERIC_IS_NAN(step_num))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("step size cannot be NaN")));
+
+			init_var_from_num(step_num, &steploc);
+
+			if (cmp_var(&steploc, &const_zero) == 0)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("step size cannot equal zero")));
+		}
+
+		/* create a function context for cross-call persistence */
+		funcctx = SRF_FIRSTCALL_INIT();
+
+		/*
+		 * Switch to memory context appropriate for multiple function calls.
+		 */
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+
+		/* allocate memory for user context */
+		fctx = (generate_series_numeric_fctx *)
+			palloc(sizeof(generate_series_numeric_fctx));
+
+		/*
+		 * Use fctx to keep state from call to call. Seed current with the
+		 * original start value. We must copy the start_num and stop_num
+		 * values rather than pointing to them, since we may have detoasted
+		 * them in the per-call context.
+		 */
+		init_var(&fctx->current);
+		init_var(&fctx->stop);
+		init_var(&fctx->step);
+
+		set_var_from_num(start_num, &fctx->current);
+		set_var_from_num(stop_num, &fctx->stop);
+		set_var_from_var(&steploc, &fctx->step);
+
+		funcctx->user_fctx = fctx;
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	/* stuff done on every call of the function */
+	funcctx = SRF_PERCALL_SETUP();
+
+	/*
+	 * Get the saved state and use current state as the result of this
+	 * iteration.
+	 */
+	fctx = funcctx->user_fctx;
+
+	if ((fctx->step.sign == NUMERIC_POS &&
+		 cmp_var(&fctx->current, &fctx->stop) <= 0) ||
+		(fctx->step.sign == NUMERIC_NEG &&
+		 cmp_var(&fctx->current, &fctx->stop) >= 0))
+	{
+		Numeric		result = make_result(&fctx->current);
+
+		/* switch to memory context appropriate for iteration calculation */
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+
+		/* increment current in preparation for next iteration */
+		add_var(&fctx->current, &fctx->step, &fctx->current);
+		MemoryContextSwitchTo(oldcontext);
+
+		/* do when there is more left to send */
+		SRF_RETURN_NEXT(funcctx, NumericGetDatum(result));
+	}
+	else
+		/* do when there is no more left */
+		SRF_RETURN_DONE(funcctx);
+}
+
+
 /*
  * Implements the numeric version of the width_bucket() function
  * defined by SQL2003. See also width_bucket_float8().
@@ -1418,9 +1597,428 @@ compute_bucket(Numeric operand, Numeric bound1, Numeric bound2,
  * Note: btree indexes need these routines not to leak memory; therefore,
  * be careful to free working copies of toasted datums.  Most places don't
  * need to be so careful.
+ *
+ * Sort support:
+ *
+ * We implement the sortsupport strategy routine in order to get the benefit of
+ * abbreviation. The ordinary numeric comparison can be quite slow as a result
+ * of palloc/pfree cycles (due to detoasting packed values for alignment);
+ * while this could be worked on itself, the abbreviation strategy gives more
+ * speedup in many common cases.
+ *
+ * Two different representations are used for the abbreviated form, one in
+ * int32 and one in int64, whichever fits into a by-value Datum.  In both cases
+ * the representation is negated relative to the original value, because we use
+ * the largest negative value for NaN, which sorts higher than other values. We
+ * convert the absolute value of the numeric to a 31-bit or 63-bit positive
+ * value, and then negate it if the original number was positive.
+ *
+ * We abort the abbreviation process if the abbreviation cardinality is below
+ * 0.01% of the row count (1 per 10k non-null rows).  The actual break-even
+ * point is somewhat below that, perhaps 1 per 30k (at 1 per 100k there's a
+ * very small penalty), but we don't want to build up too many abbreviated
+ * values before first testing for abort, so we take the slightly pessimistic
+ * number.  We make no attempt to estimate the cardinality of the real values,
+ * since it plays no part in the cost model here (if the abbreviation is equal,
+ * the cost of comparing equal and unequal underlying values is comparable).
+ * We discontinue even checking for abort (saving us the hashing overhead) if
+ * the estimated cardinality gets to 100k; that would be enough to support many
+ * billions of rows while doing no worse than breaking even.
+ *
  * ----------------------------------------------------------------------
  */
 
+/*
+ * Sort support strategy routine.
+ */
+Datum
+numeric_sortsupport(PG_FUNCTION_ARGS)
+{
+	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
+
+	ssup->comparator = numeric_fast_cmp;
+
+	if (ssup->abbreviate)
+	{
+		NumericSortSupport *nss;
+		MemoryContext oldcontext = MemoryContextSwitchTo(ssup->ssup_cxt);
+
+		nss = palloc(sizeof(NumericSortSupport));
+
+		/*
+		 * palloc a buffer for handling unaligned packed values in addition to
+		 * the support struct
+		 */
+		nss->buf = palloc(VARATT_SHORT_MAX + VARHDRSZ + 1);
+
+		nss->input_count = 0;
+		nss->estimating = true;
+		initHyperLogLog(&nss->abbr_card, 10);
+
+		ssup->ssup_extra = nss;
+
+		ssup->abbrev_full_comparator = ssup->comparator;
+		ssup->comparator = numeric_cmp_abbrev;
+		ssup->abbrev_converter = numeric_abbrev_convert;
+		ssup->abbrev_abort = numeric_abbrev_abort;
+
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	PG_RETURN_VOID();
+}
+
+/*
+ * Abbreviate a numeric datum, handling NaNs and detoasting
+ * (must not leak memory!)
+ */
+static Datum
+numeric_abbrev_convert(Datum original_datum, SortSupport ssup)
+{
+	NumericSortSupport *nss = ssup->ssup_extra;
+	void	   *original_varatt = PG_DETOAST_DATUM_PACKED(original_datum);
+	Numeric		value;
+	Datum		result;
+
+	nss->input_count += 1;
+
+	/*
+	 * This is to handle packed datums without needing a palloc/pfree cycle;
+	 * we keep and reuse a buffer large enough to handle any short datum.
+	 */
+	if (VARATT_IS_SHORT(original_varatt))
+	{
+		void	   *buf = nss->buf;
+		Size		sz = VARSIZE_SHORT(original_varatt) - VARHDRSZ_SHORT;
+
+		Assert(sz <= VARATT_SHORT_MAX - VARHDRSZ_SHORT);
+
+		SET_VARSIZE(buf, VARHDRSZ + sz);
+		memcpy(VARDATA(buf), VARDATA_SHORT(original_varatt), sz);
+
+		value = (Numeric) buf;
+	}
+	else
+		value = (Numeric) original_varatt;
+
+	if (NUMERIC_IS_NAN(value))
+	{
+		result = NUMERIC_ABBREV_NAN;
+	}
+	else
+	{
+		NumericVar	var;
+
+		init_var_from_num(value, &var);
+
+		result = numeric_abbrev_convert_var(&var, nss);
+	}
+
+	/* should happen only for external/compressed toasts */
+	if ((Pointer) original_varatt != DatumGetPointer(original_datum))
+		pfree(original_varatt);
+
+	return result;
+}
+
+/*
+ * Consider whether to abort abbreviation.
+ *
+ * We pay no attention to the cardinality of the non-abbreviated data. There is
+ * no reason to do so: unlike text, we have no fast check for equal values, so
+ * we pay the full overhead whenever the abbreviations are equal regardless of
+ * whether the underlying values are also equal.
+ */
+static bool
+numeric_abbrev_abort(int memtupcount, SortSupport ssup)
+{
+	NumericSortSupport *nss = ssup->ssup_extra;
+	double		abbr_card;
+
+	if (memtupcount < 10000 || nss->input_count < 10000 || !nss->estimating)
+		return false;
+
+	abbr_card = estimateHyperLogLog(&nss->abbr_card);
+
+	/*
+	 * If we have >100k distinct values, then even if we were sorting many
+	 * billion rows we'd likely still break even, and the penalty of undoing
+	 * that many rows of abbrevs would probably not be worth it. Stop even
+	 * counting at that point.
+	 */
+	if (abbr_card > 100000.0)
+	{
+#ifdef TRACE_SORT
+		if (trace_sort)
+			elog(LOG,
+				 "numeric_abbrev: estimation ends at cardinality %f"
+				 " after " INT64_FORMAT " values (%d rows)",
+				 abbr_card, nss->input_count, memtupcount);
+#endif
+		nss->estimating = false;
+		return false;
+	}
+
+	/*
+	 * Target minimum cardinality is 1 per ~10k of non-null inputs.  (The
+	 * break even point is somewhere between one per 100k rows, where
+	 * abbreviation has a very slight penalty, and 1 per 10k where it wins by
+	 * a measurable percentage.)  We use the relatively pessimistic 10k
+	 * threshold, and add a 0.5 row fudge factor, because it allows us to
+	 * abort earlier on genuinely pathological data where we've had exactly
+	 * one abbreviated value in the first 10k (non-null) rows.
+	 */
+	if (abbr_card < nss->input_count / 10000.0 + 0.5)
+	{
+#ifdef TRACE_SORT
+		if (trace_sort)
+			elog(LOG,
+				 "numeric_abbrev: aborting abbreviation at cardinality %f"
+			   " below threshold %f after " INT64_FORMAT " values (%d rows)",
+				 abbr_card, nss->input_count / 10000.0 + 0.5,
+				 nss->input_count, memtupcount);
+#endif
+		return true;
+	}
+
+#ifdef TRACE_SORT
+	if (trace_sort)
+		elog(LOG,
+			 "numeric_abbrev: cardinality %f"
+			 " after " INT64_FORMAT " values (%d rows)",
+			 abbr_card, nss->input_count, memtupcount);
+#endif
+
+	return false;
+}
+
+/*
+ * Non-fmgr interface to the comparison routine to allow sortsupport to elide
+ * the fmgr call.  The saving here is small given how slow numeric comparisons
+ * are, but it is a required part of the sort support API when abbreviations
+ * are performed.
+ *
+ * Two palloc/pfree cycles could be saved here by using persistent buffers for
+ * aligning short-varlena inputs, but this has not so far been considered to
+ * be worth the effort.
+ */
+static int
+numeric_fast_cmp(Datum x, Datum y, SortSupport ssup)
+{
+	Numeric		nx = DatumGetNumeric(x);
+	Numeric		ny = DatumGetNumeric(y);
+	int			result;
+
+	result = cmp_numerics(nx, ny);
+
+	if ((Pointer) nx != DatumGetPointer(x))
+		pfree(nx);
+	if ((Pointer) ny != DatumGetPointer(y))
+		pfree(ny);
+
+	return result;
+}
+
+/*
+ * Compare abbreviations of values. (Abbreviations may be equal where the true
+ * values differ, but if the abbreviations differ, they must reflect the
+ * ordering of the true values.)
+ */
+static int
+numeric_cmp_abbrev(Datum x, Datum y, SortSupport ssup)
+{
+	/*
+	 * NOTE WELL: this is intentionally backwards, because the abbreviation is
+	 * negated relative to the original value, to handle NaN.
+	 */
+	if (DatumGetNumericAbbrev(x) < DatumGetNumericAbbrev(y))
+		return 1;
+	if (DatumGetNumericAbbrev(x) > DatumGetNumericAbbrev(y))
+		return -1;
+	return 0;
+}
+
+/*
+ * Abbreviate a NumericVar according to the available bit size.
+ *
+ * The 31-bit value is constructed as:
+ *
+ *	0 + 7bits digit weight + 24 bits digit value
+ *
+ * where the digit weight is in single decimal digits, not digit words, and
+ * stored in excess-44 representation[1]. The 24-bit digit value is the 7 most
+ * significant decimal digits of the value converted to binary. Values whose
+ * weights would fall outside the representable range are rounded off to zero
+ * (which is also used to represent actual zeros) or to 0x7FFFFFFF (which
+ * otherwise cannot occur). Abbreviation therefore fails to gain any advantage
+ * where values are outside the range 10^-44 to 10^83, which is not considered
+ * to be a serious limitation, or when values are of the same magnitude and
+ * equal in the first 7 decimal digits, which is considered to be an
+ * unavoidable limitation given the available bits. (Stealing three more bits
+ * to compare another digit would narrow the range of representable weights by
+ * a factor of 8, which starts to look like a real limiting factor.)
+ *
+ * (The value 44 for the excess is essentially arbitrary)
+ *
+ * The 63-bit value is constructed as:
+ *
+ *	0 + 7bits weight + 4 x 14-bit packed digit words
+ *
+ * The weight in this case is again stored in excess-44, but this time it is
+ * the original weight in digit words (i.e. powers of 10000). The first four
+ * digit words of the value (if present; trailing zeros are assumed as needed)
+ * are packed into 14 bits each to form the rest of the value. Again,
+ * out-of-range values are rounded off to 0 or 0x7FFFFFFFFFFFFFFF. The
+ * representable range in this case is 10^-176 to 10^332, which is considered
+ * to be good enough for all practical purposes, and comparison of 4 words
+ * means that at least 13 decimal digits are compared, which is considered to
+ * be a reasonable compromise between effectiveness and efficiency in computing
+ * the abbreviation.
+ *
+ * (The value 44 for the excess is even more arbitrary here, it was chosen just
+ * to match the value used in the 31-bit case)
+ *
+ * [1] - Excess-k representation means that the value is offset by adding 'k'
+ * and then treated as unsigned, so the smallest representable value is stored
+ * with all bits zero. This allows simple comparisons to work on the composite
+ * value.
+ */
+
+#if NUMERIC_ABBREV_BITS == 64
+
+static Datum
+numeric_abbrev_convert_var(NumericVar *var, NumericSortSupport *nss)
+{
+	int			ndigits = var->ndigits;
+	int			weight = var->weight;
+	int64		result;
+
+	if (ndigits == 0 || weight < -44)
+	{
+		result = 0;
+	}
+	else if (weight > 83)
+	{
+		result = PG_INT64_MAX;
+	}
+	else
+	{
+		result = ((int64) (weight + 44) << 56);
+
+		switch (ndigits)
+		{
+			default:
+				result |= ((int64) var->digits[3]);
+				/* FALLTHROUGH */
+			case 3:
+				result |= ((int64) var->digits[2]) << 14;
+				/* FALLTHROUGH */
+			case 2:
+				result |= ((int64) var->digits[1]) << 28;
+				/* FALLTHROUGH */
+			case 1:
+				result |= ((int64) var->digits[0]) << 42;
+				break;
+		}
+	}
+
+	/* the abbrev is negated relative to the original */
+	if (var->sign == NUMERIC_POS)
+		result = -result;
+
+	if (nss->estimating)
+	{
+		uint32		tmp = ((uint32) result
+						   ^ (uint32) ((uint64) result >> 32));
+
+		addHyperLogLog(&nss->abbr_card, DatumGetUInt32(hash_uint32(tmp)));
+	}
+
+	return NumericAbbrevGetDatum(result);
+}
+
+#endif   /* NUMERIC_ABBREV_BITS == 64 */
+
+#if NUMERIC_ABBREV_BITS == 32
+
+static Datum
+numeric_abbrev_convert_var(NumericVar *var, NumericSortSupport *nss)
+{
+	int			ndigits = var->ndigits;
+	int			weight = var->weight;
+	int32		result;
+
+	if (ndigits == 0 || weight < -11)
+	{
+		result = 0;
+	}
+	else if (weight > 20)
+	{
+		result = PG_INT32_MAX;
+	}
+	else
+	{
+		NumericDigit nxt1 = (ndigits > 1) ? var->digits[1] : 0;
+
+		weight = (weight + 11) * 4;
+
+		result = var->digits[0];
+
+		/*
+		 * "result" now has 1 to 4 nonzero decimal digits. We pack in more
+		 * digits to make 7 in total (largest we can fit in 24 bits)
+		 */
+
+		if (result > 999)
+		{
+			/* already have 4 digits, add 3 more */
+			result = (result * 1000) + (nxt1 / 10);
+			weight += 3;
+		}
+		else if (result > 99)
+		{
+			/* already have 3 digits, add 4 more */
+			result = (result * 10000) + nxt1;
+			weight += 2;
+		}
+		else if (result > 9)
+		{
+			NumericDigit nxt2 = (ndigits > 2) ? var->digits[2] : 0;
+
+			/* already have 2 digits, add 5 more */
+			result = (result * 100000) + (nxt1 * 10) + (nxt2 / 1000);
+			weight += 1;
+		}
+		else
+		{
+			NumericDigit nxt2 = (ndigits > 2) ? var->digits[2] : 0;
+
+			/* already have 1 digit, add 6 more */
+			result = (result * 1000000) + (nxt1 * 100) + (nxt2 / 100);
+		}
+
+		result = result | (weight << 24);
+	}
+
+	/* the abbrev is negated relative to the original */
+	if (var->sign == NUMERIC_POS)
+		result = -result;
+
+	if (nss->estimating)
+	{
+		uint32		tmp = (uint32) result;
+
+		addHyperLogLog(&nss->abbr_card, DatumGetUInt32(hash_uint32(tmp)));
+	}
+
+	return NumericAbbrevGetDatum(result);
+}
+
+#endif   /* NUMERIC_ABBREV_BITS == 32 */
+
+/*
+ * Ordinary (non-sortsupport) comparisons follow.
+ */
 
 Datum
 numeric_cmp(PG_FUNCTION_ARGS)
@@ -2870,19 +3468,45 @@ makeNumericAggState(FunctionCallInfo fcinfo, bool calcSumX2)
 	NumericAggState *state;
 	MemoryContext agg_context;
 	MemoryContext old_context;
+	int agg_type;
 
-	if (!AggCheckCallContext(fcinfo, &agg_context))
+	if (!(agg_type = AggCheckCallContext(fcinfo, &agg_context)))
 		elog(ERROR, "aggregate function called in non-aggregate context");
 
 	old_context = MemoryContextSwitchTo(agg_context);
 
-	state = (NumericAggState *) palloc0(sizeof(NumericAggState));
+	AggState *aggstate = (AggState *)fcinfo->context;
+	if (agg_type == AGG_CONTEXT_AGGREGATE && aggstate->hhashtable)
+	{
+		state = (NumericAggState *) mpool_alloc(aggstate->hhashtable->group_buf, sizeof(NumericAggState));
+		MemSet(state, 0, sizeof(NumericAggState));
+	}
+	else
+	{
+		state = (NumericAggState *) palloc0(sizeof(NumericAggState));
+	}
 	state->calcSumX2 = calcSumX2;
 	state->agg_context = agg_context;
 	quick_init_var(&state->sumX);
 	quick_init_var(&state->sumX2);
 
 	MemoryContextSwitchTo(old_context);
+
+	return state;
+}
+
+/*
+ * Like makeNumericAggState(), but allocate the state in the current memory
+ * context.
+ */
+static NumericAggState *
+makeNumericAggStateCurrentContext(bool calcSumX2)
+{
+	NumericAggState *state;
+
+	state = (NumericAggState *) palloc0(sizeof(NumericAggState));
+	state->calcSumX2 = calcSumX2;
+	state->agg_context = CurrentMemoryContext;
 
 	return state;
 }
@@ -3295,12 +3919,12 @@ numeric_avg_deserialize(PG_FUNCTION_ARGS)
 
 	/*
 	 * Copy the bytea into a StringInfo so that we can "receive" it using the
-	 * standard pq API.
+	 * standard recv-function infrastructure.
 	 */
 	initStringInfo(&buf);
 	appendBinaryStringInfo(&buf, VARDATA(sstate), VARSIZE(sstate) - VARHDRSZ);
 
-	result = makeNumericAggState(fcinfo, false);
+	result = makeNumericAggStateCurrentContext(false);
 
 	/* N */
 	result->N = pq_getmsgint64(&buf);
@@ -3414,12 +4038,12 @@ numeric_deserialize(PG_FUNCTION_ARGS)
 
 	/*
 	 * Copy the bytea into a StringInfo so that we can "receive" it using the
-	 * standard pq API.
+	 * standard recv-function infrastructure.
 	 */
 	initStringInfo(&buf);
 	appendBinaryStringInfo(&buf, VARDATA(sstate), VARSIZE(sstate) - VARHDRSZ);
 
-	result = makeNumericAggState(fcinfo, false);
+	result = makeNumericAggStateCurrentContext(false);
 
 	/* N */
 	result->N = pq_getmsgint64(&buf);
@@ -3512,16 +4136,41 @@ makeInt128AggState(FunctionCallInfo fcinfo, bool calcSumX2)
 	Int128AggState *state;
 	MemoryContext agg_context;
 	MemoryContext old_context;
+	int agg_type;
 
-	if (!AggCheckCallContext(fcinfo, &agg_context))
+	if (!(agg_type = AggCheckCallContext(fcinfo, &agg_context)))
 		elog(ERROR, "aggregate function called in non-aggregate context");
 
 	old_context = MemoryContextSwitchTo(agg_context);
 
-	state = (Int128AggState *) palloc0(sizeof(Int128AggState));
+	AggState *aggstate = (AggState *)fcinfo->context;
+	if (agg_type == AGG_CONTEXT_AGGREGATE && aggstate->hhashtable)
+	{
+		state = (Int128AggState *) mpool_alloc(aggstate->hhashtable->group_buf, sizeof(Int128AggState));
+		MemSet(state, 0, sizeof(Int128AggState));
+	}
+	else
+	{
+		state = (Int128AggState *) palloc0(sizeof(Int128AggState));
+	}
 	state->calcSumX2 = calcSumX2;
 
 	MemoryContextSwitchTo(old_context);
+
+	return state;
+}
+
+/*
+ * Like makeInt128AggState(), but allocate the state in the current memory
+ * context.
+ */
+static Int128AggState *
+makeInt128AggStateCurrentContext(bool calcSumX2)
+{
+	Int128AggState *state;
+
+	state = (Int128AggState *) palloc0(sizeof(Int128AggState));
+	state->calcSumX2 = calcSumX2;
 
 	return state;
 }
@@ -3801,12 +4450,12 @@ numeric_poly_deserialize(PG_FUNCTION_ARGS)
 
 	/*
 	 * Copy the bytea into a StringInfo so that we can "receive" it using the
-	 * standard pq API.
+	 * standard recv-function infrastructure.
 	 */
 	initStringInfo(&buf);
 	appendBinaryStringInfo(&buf, VARDATA(sstate), VARSIZE(sstate) - VARHDRSZ);
 
-	result = makePolyNumAggState(fcinfo, false);
+	result = makePolyNumAggStateCurrentContext(false);
 
 	/* N */
 	result->N = pq_getmsgint64(&buf);
@@ -3939,7 +4588,8 @@ int8_avg_combine(PG_FUNCTION_ARGS)
 
 /*
  * int8_avg_serialize
- *		Serialize PolyNumAggState into bytea using the standard pq API.
+ *		Serialize PolyNumAggState into bytea using the standard
+ *		recv-function infrastructure.
  *
  * int8_avg_deserialize(int8_avg_serialize(state)) must result in a state which
  * matches the original input state.
@@ -4017,12 +4667,12 @@ int8_avg_deserialize(PG_FUNCTION_ARGS)
 
 	/*
 	 * Copy the bytea into a StringInfo so that we can "receive" it using the
-	 * standard pq API.
+	 * standard recv-function infrastructure.
 	 */
 	initStringInfo(&buf);
 	appendBinaryStringInfo(&buf, VARDATA(sstate), VARSIZE(sstate) - VARHDRSZ);
 
-	result = makePolyNumAggState(fcinfo, false);
+	result = makePolyNumAggStateCurrentContext(false);
 
 	/* N */
 	result->N = pq_getmsgint64(&buf);
@@ -5911,10 +6561,10 @@ numericvar_to_int128(NumericVar *var, int128 *result)
 static void
 int128_to_numericvar(int128 val, NumericVar *var)
 {
-	uint128			uval,
-					newuval;
-	NumericDigit   *ptr;
-	int				ndigits;
+	uint128		uval,
+				newuval;
+	NumericDigit *ptr;
+	int			ndigits;
 
 	/* int128 can require at most 39 decimal digits; add one for safety */
 	alloc_var(var, 40 / DEC_DIGITS);

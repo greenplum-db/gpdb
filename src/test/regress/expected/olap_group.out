@@ -2016,7 +2016,9 @@ select cn,vn,sum(qty) from sale group by grouping sets((cn),(vn));
 --end_equiv
 -- GROUPING function -- 
 select grouping(cn,vn,pn) from sale;
-ERROR:  column "sale"."cn" is not in GROUP BY
+ERROR:  arguments to GROUPING must be grouping expressions of the associated query level
+LINE 1: select grouping(cn,vn,pn) from sale;
+                        ^
 select cn,vn,pn,grouping(cn,vn,pn) from sale group by cn,vn,pn;
  cn | vn | pn  | grouping 
 ----+----+-----+----------
@@ -2858,9 +2860,13 @@ select cn,sum(distinct qty) from sale group by grouping sets (cube(prc,cn));
 --end_equiv
 -- Ungrouped attributes in GROUPING function --
 select grouping(cn,vn,pn) from sale group by cn; --error
-ERROR:  column "sale"."vn" is not in GROUP BY
+ERROR:  arguments to GROUPING must be grouping expressions of the associated query level
+LINE 1: select grouping(cn,vn,pn) from sale group by cn;
+                           ^
 select grouping(cn,vn,pn) from sale group by rollup(cn); --error
-ERROR:  column "sale"."vn" is not in GROUP BY
+ERROR:  arguments to GROUPING must be grouping expressions of the associated query level
+LINE 1: select grouping(cn,vn,pn) from sale group by rollup(cn);
+                           ^
 -- Using in View --
 create view cube_view as select cn,vn,grouping(vn,cn) from sale group by cube(cn,vn);
 \d+ cube_view;
@@ -2869,13 +2875,13 @@ create view cube_view as select cn,vn,grouping(vn,cn) from sale group by cube(cn
 ----------+---------+-----------+---------+-------------
  cn       | integer |           | plain   | 
  vn       | integer |           | plain   | 
- grouping | bigint  |           | plain   | 
+ grouping | integer |           | plain   | 
 View definition:
  SELECT sale.cn,
     sale.vn,
-    grouping(sale.vn, sale.cn) AS "grouping"
+    GROUPING(sale.vn, sale.cn) AS "grouping"
    FROM sale
-  GROUP BY CUBE (sale.cn, sale.vn);
+  GROUP BY CUBE(sale.cn, sale.vn);
 
 create view rollup_view as select cn,vn,pn,grouping(cn,vn,pn) from sale group by rollup(cn),vn,pn;
 \d+ rollup_view;
@@ -2885,14 +2891,14 @@ create view rollup_view as select cn,vn,pn,grouping(cn,vn,pn) from sale group by
  cn       | integer |           | plain   | 
  vn       | integer |           | plain   | 
  pn       | integer |           | plain   | 
- grouping | bigint  |           | plain   | 
+ grouping | integer |           | plain   | 
 View definition:
  SELECT sale.cn,
     sale.vn,
     sale.pn,
-    grouping(sale.cn, sale.vn, sale.pn) AS "grouping"
+    GROUPING(sale.cn, sale.vn, sale.pn) AS "grouping"
    FROM sale
-  GROUP BY sale.vn, sale.pn, ROLLUP (sale.cn);
+  GROUP BY ROLLUP(sale.cn), sale.vn, sale.pn;
 
 create view gs_view as select cn,vn,grouping(vn,cn) from sale group by grouping sets ((vn), (cn), (), (cn,vn));
 \d+ gs_view;
@@ -2901,17 +2907,17 @@ create view gs_view as select cn,vn,grouping(vn,cn) from sale group by grouping 
 ----------+---------+-----------+---------+-------------
  cn       | integer |           | plain   | 
  vn       | integer |           | plain   | 
- grouping | bigint  |           | plain   | 
+ grouping | integer |           | plain   | 
 View definition:
  SELECT sale.cn,
     sale.vn,
-    grouping(sale.vn, sale.cn) AS "grouping"
+    GROUPING(sale.vn, sale.cn) AS "grouping"
    FROM sale
-  GROUP BY GROUPING SETS ((sale.vn), (sale.cn), (), ((sale.cn), (sale.vn)));
+  GROUP BY GROUPING SETS ((sale.vn), (sale.cn), (), (sale.cn, sale.vn));
 
 -- GROUP_ID function --
 select pn, sum(qty), group_id() from sale group by rollup(pn);
- pn  | sum  | ?column? 
+ pn  | sum  | group_id 
 -----+------+----------
      | 1144 |        0
  100 | 1101 |        0
@@ -2925,7 +2931,7 @@ select pn, sum(qty), group_id() from sale group by rollup(pn);
 (9 rows)
 
 select pn, sum(qty), group_id() from sale group by rollup(pn),pn;
- pn  | sum  | ?column? 
+ pn  | sum  | group_id 
 -----+------+----------
  100 | 1101 |        0
  100 | 1101 |        1
@@ -3068,7 +3074,7 @@ union all select null, sum(qty), 0 from sale;
 (105 rows)
 
 select pn, sum(qty), group_id() from sale group by rollup(cn,pn), cube(cn,pn);
- pn  | sum  | ?column? 
+ pn  | sum  | group_id 
 -----+------+----------
      |    2 |        0
      |    2 |        1
@@ -3501,7 +3507,7 @@ order by 6; -- order 6
 (20 rows)
 
 select cn, vn, pn, count(dt),group_id(),grouping(cn,vn,pn) from sale group by grouping sets ((cn,vn,pn), (cn), (cn)) order by grouping(cn,vn,pn); -- order 6
- cn | vn | pn  | count | ?column? | grouping 
+ cn | vn | pn  | count | group_id | grouping 
 ----+----+-----+-------+----------+----------
   4 | 40 | 800 |     1 |        0 |        0
   3 | 30 | 600 |     1 |        0 |        0
@@ -3536,7 +3542,7 @@ select a,b from (select 1 as a , 2 as b) r(a,b) group by rollup(a,b);
 
 -- tests for known bugs
 select dt,pn,cn,GROUP_ID(), count(prc) FROM sale GROUP BY ROLLUP((dt)),ROLLUP((cn)),ROLLUP((vn)),ROLLUP((pn),(cn));
-     dt     | pn  | cn | ?column? | count 
+     dt     | pn  | cn | group_id | count 
 ------------+-----+----+----------+-------
             |     |    |        0 |     1
             |     |    |        0 |     1
@@ -3775,9 +3781,9 @@ select dt,pn,cn,GROUP_ID(), count(prc) FROM sale GROUP BY ROLLUP((dt)),ROLLUP((c
 (234 rows)
 
 --start_equiv
-select vn,cn,dt,0,REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY pn,qty,vn,cn,dt
+select vn,cn,dt,0 as group_id,REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY pn,qty,vn,cn,dt
 union all select vn,cn,dt,1,REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY pn,qty,vn,cn,dt;
- vn | cn |     dt     | ?column? | regr_count 
+ vn | cn |     dt     | group_id | regr_count 
 ----+----+------------+----------+------------
  40 |  4 | 06-01-1401 |        0 |          1
  30 |  3 | 06-01-1401 |        0 |          1
@@ -3806,7 +3812,7 @@ union all select vn,cn,dt,1,REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY pn,qt
 (24 rows)
 
 select vn,cn,dt,GROUP_ID(), REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY (pn,qty),(vn),ROLLUP((qty)),cn,dt;
- vn | cn |     dt     | ?column? | regr_count 
+ vn | cn |     dt     | group_id | regr_count 
 ----+----+------------+----------+------------
  40 |  4 | 06-01-1401 |        0 |          1
  30 |  3 | 06-01-1401 |        0 |          1
@@ -3836,7 +3842,7 @@ select vn,cn,dt,GROUP_ID(), REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY (pn,q
 
 --end_equiv
 SELECT cn,pn,GROUPING(cn),GROUP_ID(), SUM(qty) FROM sale GROUP BY ROLLUP((cn,prc)),(cn,prc,dt),(pn,qty,vn) HAVING GROUP_ID() < 0 AND STDDEV_SAMP(pn) = 9.23708093366322 ORDER BY pn,cn desc;
- cn | pn | grouping | ?column? | sum 
+ cn | pn | grouping | group_id | sum 
 ----+----+----------+----------+-----
 (0 rows)
 
@@ -4026,9 +4032,13 @@ select cn,sum(qty) from sale group by grouping sets(cn);
 
 --end_equiv
 select cn,sum(qty),grouping((cn,vn),vn) from sale group by rollup(cn,vn);
-ERROR:  row type can not be used inside a grouping function
+ERROR:  arguments to GROUPING must be grouping expressions of the associated query level
+LINE 1: select cn,sum(qty),grouping((cn,vn),vn) from sale group by r...
+                                    ^
 select sum(qty),grouping(cn+pn) from sale group by cn+vn,vn;
-ERROR:  expression in a grouping function does not appear in GROUP BY
+ERROR:  arguments to GROUPING must be grouping expressions of the associated query level
+LINE 1: select sum(qty),grouping(cn+pn) from sale group by cn+vn,vn;
+                                 ^
 select sum(qty),grouping(cn+vn) from sale group by rollup(cn+vn,vn);
  sum  | grouping 
 ------+----------
@@ -4820,7 +4830,7 @@ SELECT sale.vn,sale.pn,GROUP_ID(),COUNT(floor(sale.vn+sale.cn)) FROM sale
 GROUP BY (),GROUPING SETS(CUBE((sale.qty,sale.qty,sale.qty),(sale.pn,sale.pn),(sale.cn,sale.pn,sale.prc),(sale.cn,sale.vn,sale.vn)),
 CUBE((sale.cn,sale.qty),(sale.vn,sale.prc,sale.qty),(sale.vn),(sale.vn,sale.dt),(sale.pn),(sale.qty,sale.pn)),CUBE((sale.qty,sale.dt))) 
 ORDER BY sale.vn asc,sale.pn desc,sale.vn asc,sale.vn asc; --mvd 1,2->3
- vn | pn  | ?column? | count 
+ vn | pn  | group_id | count 
 ----+-----+----------+-------
  10 |     |        0 |     1
  10 |     |        1 |     1
@@ -5720,7 +5730,7 @@ select cn,group_id(), qty, sale.pn, prc, vn, to_char(coalesce(sum(distinct qty*p
 from sale, product
 where sale.pn=product.pn
 group by grouping sets ((qty, sale.pn, prc, cn,vn), (qty,sale.pn,prc,vn,cn), (sale.qty, prc, cn)); --mvd 1,3,4,5,6->7
- cn | ?column? | qty  | pn  | prc  | vn |   to_char    
+ cn | group_id | qty  | pn  | prc  | vn |   to_char    
 ----+----------+------+-----+------+----+--------------
   1 |        1 |    1 | 100 |    0 | 20 |        .0000
   1 |        0 |    1 | 100 |    0 | 20 |        .0000
@@ -5802,7 +5812,7 @@ from sale, product where sale.pn = product.pn group by rollup(sale.pn); --mvd 1-
 
 SELECT group_id(), sale.pn, sale.qty, sale.cn, sale.prc, STDDEV(sale.prc*sale.cn),MIN(DISTINCT sale.prc*sale.vn) from sale
 GROUP BY ROLLUP((sale.qty,sale.cn),(sale.qty,sale.pn),(sale.vn),(sale.prc)),ROLLUP((sale.dt,sale.pn,sale.qty)); --mvd 2,3,4,5->6
- ?column? | pn  | qty  | cn | prc  |      stddev      |  min  
+ group_id | pn  | qty  | cn | prc  |      stddev      |  min  
 ----------+-----+------+----+------+------------------+-------
         0 | 100 |    1 |  1 |    0 |                  |     0
         0 | 200 |    1 |  1 |    0 |                  |     0
@@ -6073,32 +6083,32 @@ select x,y,count(*), grouping(x), grouping(y),grouping(x,y) from generate_series
  x | y | count | grouping | grouping | grouping 
 ---+---+-------+----------+----------+----------
  1 | 1 |     1 |        0 |        0 |        0
-   | 1 |     1 |        1 |        0 |        2
-   |   |     1 |        1 |        0 |        2
  1 |   |     1 |        0 |        1 |        1
+   |   |     1 |        1 |        1 |        3
+   | 1 |     1 |        1 |        0 |        2
 (4 rows)
 
 select x,y,count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets((x,y),(x),(y),());
  x | y | count | grouping 
 ---+---+-------+----------
  1 | 1 |     1 |        0
-   | 1 |     1 |        2
-   |   |     1 |        2
  1 |   |     1 |        1
+   |   |     1 |        3
+   | 1 |     1 |        2
 (4 rows)
 
 select x,y,count(*), grouping(x,y) from generate_series(1,2) x, generate_series(1,2) y group by cube(x,y);
  x | y | count | grouping 
 ---+---+-------+----------
  1 | 1 |     1 |        0
- 2 | 1 |     1 |        0
-   | 1 |     2 |        2
  1 | 2 |     1 |        0
- 2 | 2 |     1 |        0
-   | 2 |     2 |        2
-   |   |     4 |        2
  1 |   |     2 |        1
+ 2 | 1 |     1 |        0
+ 2 | 2 |     1 |        0
  2 |   |     2 |        1
+   | 1 |     2 |        2
+   | 2 |     2 |        2
+   |   |     4 |        3
 (9 rows)
 
 create table test_gsets (i int, n numeric);
@@ -6108,7 +6118,8 @@ insert into test_gsets values (0, 0), (0, 1), (0,2);
 select i,n,count(*), grouping(i), grouping(n), grouping(i,n) from test_gsets group by grouping sets((), (i,n)) having n is null;
  i | n | count | grouping | grouping | grouping 
 ---+---+-------+----------+----------+----------
-(0 rows)
+   |   |     3 |        1 |        1 |        3
+(1 row)
 
 select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets(x,y) having x is not null;
  x | y | count | grouping 
@@ -6116,3 +6127,30 @@ select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_serie
  1 |   |     1 |        1
 (1 row)
 
+-- GROUPING SETS meets subplan [issue 8342]
+create table foo_gset(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table bar_gset(b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo_gset select i from generate_series(1,10)i;
+insert into bar_gset select i from generate_series(1,10)i;
+select a, (select b from bar_gset where foo_gset.a = bar_gset.b) from foo_gset group by rollup(a) order by 1,2;
+ a  | b  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+    |   
+(11 rows)
+
+drop table foo_gset;
+drop table bar_gset;

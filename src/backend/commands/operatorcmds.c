@@ -4,7 +4,7 @@
  *
  *	  Routines for operator manipulation commands
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -63,7 +63,7 @@
  *
  * 'parameters' is a list of DefElem
  */
-Oid
+ObjectAddress
 DefineOperator(List *names, List *parameters)
 {
 	char	   *oprName;
@@ -301,7 +301,7 @@ DefineOperator(List *names, List *parameters)
 	/*
 	 * now have OperatorCreate do all the work..
 	 */
-	Oid oprOid =
+	ObjectAddress objAddr =
 		OperatorCreate(oprName, /* operator name */
 					   oprNamespace,	/* namespace */
 					   typeId1, /* left type id */
@@ -329,7 +329,7 @@ DefineOperator(List *names, List *parameters)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
-	return oprOid;
+	return objAddr;
 }
 
 /*

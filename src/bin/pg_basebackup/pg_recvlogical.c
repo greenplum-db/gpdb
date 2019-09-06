@@ -3,7 +3,7 @@
  * pg_recvlogical.c - receive data from a logical decoding slot in a streaming
  *					  fashion and write it to a local file.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  src/bin/pg_basebackup/pg_recvlogical.c
@@ -66,7 +66,7 @@ static void disconnect_and_exit(int code);
 static void
 usage(void)
 {
-	printf(_("%s receives PostgreSQL logical change streams.\n\n"),
+	printf(_("%s controls PostgreSQL logical decoding streams.\n\n"),
 		   progname);
 	printf(_("Usage:\n"));
 	printf(_("  %s [OPTION]...\n"), progname);
@@ -619,7 +619,7 @@ main(int argc, char **argv)
 		{"verbose", no_argument, NULL, 'v'},
 		{"version", no_argument, NULL, 'V'},
 		{"help", no_argument, NULL, '?'},
-/* connnection options */
+/* connection options */
 		{"dbname", required_argument, NULL, 'd'},
 		{"host", required_argument, NULL, 'h'},
 		{"port", required_argument, NULL, 'p'},
@@ -686,7 +686,7 @@ main(int argc, char **argv)
 			case 'v':
 				verbose++;
 				break;
-/* connnection options */
+/* connection options */
 			case 'd':
 				dbname = pg_strdup(optarg);
 				break;
@@ -868,7 +868,7 @@ main(int argc, char **argv)
 	if (db_name == NULL)
 	{
 		fprintf(stderr,
-				_("%s: failed to establish database specific replication connection\n"),
+				_("%s: could not establish database-specific replication connection\n"),
 				progname);
 		disconnect_and_exit(1);
 	}

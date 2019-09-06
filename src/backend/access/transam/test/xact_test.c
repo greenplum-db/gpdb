@@ -18,7 +18,7 @@ mock_TransactionIdDidAbortForReader(TransactionId xid)
 
 #include "../xact.c"
 
-void
+static void
 test_TransactionIdIsCurrentTransactionIdInternal(void **state)
 {
 	bool flag = false;
@@ -31,9 +31,8 @@ test_TransactionIdIsCurrentTransactionIdInternal(void **state)
 	TransactionId child_xid2 = 320;
 
 	TransactionState p = CurrentTransactionState;
-	TransactionState s;
+	TransactionState s = NULL;
 	int i;
-	ListCell   *cell;
 	int child_count = 1;
 
 	for (i = 6; i< 500; i++)
@@ -57,6 +56,7 @@ test_TransactionIdIsCurrentTransactionIdInternal(void **state)
 			}
 #endif
 
+			Assert(s != NULL);
 			p = s->parent;
 			CurrentTransactionState = p;
 			pfree(s);
@@ -138,19 +138,20 @@ test_TransactionIdIsCurrentTransactionIdInternal(void **state)
 
 }
 
-void helper_ExpectLWLock()
+static void
+helper_ExpectLWLock()
 {
 	expect_any(LWLockAcquire, l);
 	expect_value(LWLockAcquire, mode, LW_SHARED);
 	will_return(LWLockAcquire, true);
-	expect_any(LWLockRelease, l);
+	expect_any(LWLockRelease, lock);
 	will_be_called(LWLockRelease);
 }
 
-void
+static void
 test_IsCurrentTransactionIdForReader(void **state)
 {
-	PGPROC testProc = {0};
+	PGPROC testProc = {{0}};
 	PGXACT testXAct = {0};
 	LWLock localslotLock;
 

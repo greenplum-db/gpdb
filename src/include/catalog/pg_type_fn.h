@@ -4,7 +4,7 @@
  *	 prototypes for functions in catalog/pg_type.c
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_type_fn.h
@@ -14,14 +14,15 @@
 #ifndef PG_TYPE_FN_H
 #define PG_TYPE_FN_H
 
+#include "catalog/objectaddress.h"
 #include "nodes/nodes.h"
 
 
-extern Oid TypeShellMake(const char *typeName,
+extern ObjectAddress TypeShellMake(const char *typeName,
 			  Oid typeNamespace,
 			  Oid ownerId);
 
-extern Oid TypeCreate(Oid newTypeOid,
+extern ObjectAddress TypeCreate(Oid newTypeOid,
 		   const char *typeName,
 		   Oid typeNamespace,
 		   Oid relationOid,
@@ -52,39 +53,6 @@ extern Oid TypeCreate(Oid newTypeOid,
 		   int32 typNDims,
 		   bool typeNotNull,
 		   Oid typeCollation);
-
-extern Oid TypeCreateWithOptions(Oid newtypeOid,
-		   const char *typeName,
-		   Oid typeNamespace,
-		   Oid relationOid,
-		   char relationKind,
-		   Oid ownerId,
-		   int16 internalSize,
-		   char typeType,
-		   char typeCategory,
-		   bool typePreferred,
-		   char typDelim,
-		   Oid inputProcedure,
-		   Oid outputProcedure,
-		   Oid receiveProcedure,
-		   Oid sendProcedure,
-		   Oid typmodinProcedure,
-		   Oid typmodoutProcedure,
-		   Oid analyzeProcedure,
-		   Oid elementType,
-		   bool isImplicitArray,
-		   Oid arrayType,
-		   Oid baseType,
-		   const char *defaultTypeValue,
-		   char *defaultTypeBin,
-		   bool passedByValue,
-		   char alignment,
-		   char storage,
-		   int32 typeMod,
-		   int32 typNDims,
-		   bool typeNotNull,
-		   Oid typeCollation,
-		   Datum typoptions);
 
 extern void GenerateTypeDependencies(Oid typeNamespace,
 						 Oid typeObjectId,

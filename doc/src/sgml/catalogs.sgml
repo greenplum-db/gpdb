@@ -219,6 +219,11 @@
      </row>
 
      <row>
+      <entry><link linkend="catalog-pg-policy"><structname>pg_policy</structname></link></entry>
+      <entry>row-security policies</entry>
+     </row>
+
+     <row>
       <entry><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link></entry>
       <entry>functions and procedures</entry>
      </row>
@@ -231,6 +236,16 @@
      <row>
       <entry><link linkend="catalog-pg-rewrite"><structname>pg_rewrite</structname></link></entry>
       <entry>query rewrite rules</entry>
+     </row>
+
+     <row>
+      <entry><link linkend="catalog-pg-replication-origin"><structname>pg_replication_origin</structname></link></entry>
+      <entry>registered replication origins</entry>
+     </row>
+
+     <row>
+      <entry><link linkend="catalog-pg-replication-origin-status"><structname>pg_replication_origin_status</structname></link></entry>
+      <entry>information about replication origins, including replication progress</entry>
      </row>
 
      <row>
@@ -264,8 +279,18 @@
      </row>
 
      <row>
+      <entry><link linkend="catalog-pg-tablesample-method"><structname>pg_tablesample_method</structname></link></entry>
+      <entry>table sampling methods</entry>
+     </row>
+
+     <row>
       <entry><link linkend="catalog-pg-tablespace"><structname>pg_tablespace</structname></link></entry>
       <entry>tablespaces within this database cluster</entry>
+     </row>
+
+     <row>
+      <entry><link linkend="catalog-pg-transform"><structname>pg_transform</structname></link></entry>
+      <entry>transforms (data type to procedural language conversions)</entry>
      </row>
 
      <row>
@@ -719,8 +744,8 @@
       <entry><structfield>amcanreturn</structfield></entry>
       <entry><type>regproc</type></entry>
       <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
-      <entry>Function to check whether index supports index-only scans,
-       or zero if none</entry>
+      <entry>Function to check whether an index column supports index-only
+       scans. Can be zero if index-only scans are never supported.</entry>
      </row>
 
      <row>
@@ -1222,8 +1247,7 @@
       <entry><type>bool</type></entry>
       <entry></entry>
       <entry>
-       This represents a not-null constraint.  It is possible to
-       change this column to enable or disable the constraint.
+       This represents a not-null constraint.
       </entry>
      </row>
 
@@ -1412,15 +1436,6 @@
      </row>
 
      <row>
-      <entry><structfield>rolcatupdate</structfield></entry>
-      <entry><type>bool</type></entry>
-      <entry>
-       Role can update system catalogs directly.  (Even a superuser cannot do
-       this unless this column is true)
-      </entry>
-     </row>
-
-     <row>
       <entry><structfield>rolcanlogin</structfield></entry>
       <entry><type>bool</type></entry>
       <entry>
@@ -1437,6 +1452,15 @@
        replication (see <xref linkend="streaming-replication">) and set/unset
        the system backup mode using <function>pg_start_backup</> and
        <function>pg_stop_backup</>
+      </entry>
+     </row>
+
+     <row>
+      <entry><structfield>rolbypassrls</structfield></entry>
+      <entry><type>bool</type></entry>
+      <entry>
+       Role can bypass row level security policies, see
+       <xref linkend="ddl-rowsecurity"> for more information.
       </entry>
      </row>
 
@@ -1940,6 +1964,16 @@
       <entry><type>bool</type></entry>
       <entry></entry>
       <entry>True if table has (or once had) any inheritance children</entry>
+     </row>
+
+     <row>
+      <entry><structfield>relrowsecurity</structfield></entry>
+      <entry><type>bool</type></entry>
+      <entry></entry>
+      <entry>
+       True if table has row level security enabled; see
+       <link linkend="catalog-pg-policy"><structname>pg_policy</structname></link> catalog
+      </entry>
      </row>
 
      <row>
@@ -2993,6 +3027,29 @@
        that's created to enforce a foreign-key constraint is made
        internally dependent on the constraint's
        <structname>pg_constraint</> entry.
+      </para>
+     </listitem>
+    </varlistentry>
+
+    <varlistentry>
+     <term><symbol>DEPENDENCY_INTERNAL_AUTO</symbol> (<literal>I</literal>)</term>
+     <listitem>
+      <para>
+       The dependent object was created as part of creation of the
+       referenced object, and is really just a part of its internal
+       implementation.  A <command>DROP</command> of the dependent object
+       will be disallowed outright (we'll tell the user to issue a
+       <command>DROP</command> against the referenced object, instead).
+       While a regular internal dependency will prevent
+       the dependent object from being dropped while any such dependencies
+       remain, <literal>DEPENDENCY_INTERNAL_AUTO</literal> will allow such
+       a drop as long as the object can be found by following any of such
+       dependencies.
+       Example: an index on a partition is made internal-auto-dependent on
+       both the partition itself as well as on the index on the parent
+       partitioned table; so the partition index is dropped together with
+       either the partition it indexes, or with the parent index it is
+       attached to.
       </para>
      </listitem>
     </varlistentry>
@@ -4697,6 +4754,98 @@
 
  </sect1>
 
+ <sect1 id="catalog-pg-policy">
+  <title><structname>pg_policy</structname></title>
+
+  <indexterm zone="catalog-pg-policy">
+   <primary>pg_policy</primary>
+  </indexterm>
+
+  <para>
+   The catalog <structname>pg_policy</structname> stores row level
+   security policies for tables.  A policy includes the kind of
+   command that it applies to (possibly all commands), the roles that it
+   applies to, the expression to be added as a security-barrier
+   qualification to queries that include the table, and the expression
+   to be added as a <literal>WITH CHECK</> option for queries that attempt to
+   add new records to the table.
+  </para>
+
+  <table>
+
+   <title><structname>pg_policy</structname> Columns</title>
+
+   <tgroup cols="4">
+    <thead>
+     <row>
+      <entry>Name</entry>
+      <entry>Type</entry>
+      <entry>References</entry>
+      <entry>Description</entry>
+     </row>
+    </thead>
+
+    <tbody>
+     <row>
+      <entry><structfield>polname</structfield></entry>
+      <entry><type>name</type></entry>
+      <entry></entry>
+      <entry>The name of the policy</entry>
+     </row>
+
+     <row>
+      <entry><structfield>polrelid</structfield></entry>
+      <entry><type>oid</type></entry>
+      <entry><literal><link linkend="catalog-pg-class"><structname>pg_class</structname></link>.oid</literal></entry>
+      <entry>The table to which the policy applies</entry>
+     </row>
+
+     <row>
+      <entry><structfield>polcmd</structfield></entry>
+      <entry><type>char</type></entry>
+      <entry></entry>
+      <entry>The command type to which the policy is applied:
+       <literal>r</> for <command>SELECT</>,
+       <literal>a</> for <command>INSERT</>,
+       <literal>w</> for <command>UPDATE</>,
+       <literal>d</> for <command>DELETE</>,
+       or <literal>*</> for all</entry>
+     </row>
+
+     <row>
+      <entry><structfield>polroles</structfield></entry>
+      <entry><type>oid[]</type></entry>
+      <entry><literal><link linkend="catalog-pg-authid"><structname>pg_authid</structname></link>.oid</literal></entry>
+      <entry>The roles to which the policy is applied</entry>
+     </row>
+
+     <row>
+      <entry><structfield>polqual</structfield></entry>
+      <entry><type>pg_node_tree</type></entry>
+      <entry></entry>
+      <entry>The expression tree to be added to the security barrier qualifications for queries that use the table</entry>
+     </row>
+
+     <row>
+      <entry><structfield>polwithcheck</structfield></entry>
+      <entry><type>pg_node_tree</type></entry>
+      <entry></entry>
+      <entry>The expression tree to be added to the WITH CHECK qualifications for queries that attempt to add rows to the table</entry>
+     </row>
+
+    </tbody>
+   </tgroup>
+  </table>
+
+  <note>
+   <para>
+    Policies stored in <structname>pg_policy</> are applied only when
+    <structname>pg_class</>.<structfield>relrowsecurity</> is set for
+    their table.
+   </para>
+  </note>
+
+ </sect1>
 
  <sect1 id="catalog-pg-proc">
   <title><structname>pg_proc</structname></title>
@@ -4966,6 +5115,15 @@
      </row>
 
      <row>
+      <entry><structfield>protrftypes</structfield></entry>
+      <entry><type>oid[]</type></entry>
+      <entry></entry>
+      <entry>
+       Data type OIDs for which to apply transforms.
+      </entry>
+     </row>
+
+     <row>
       <entry><structfield>prosrc</structfield></entry>
       <entry><type>text</type></entry>
       <entry></entry>
@@ -5217,6 +5375,119 @@
 
  </sect1>
 
+ <sect1 id="catalog-pg-replication-origin">
+  <title><structname>pg_replication_origin</structname></title>
+
+  <indexterm zone="catalog-pg-replication-origin">
+   <primary>pg_replication_origin</primary>
+  </indexterm>
+
+  <para>
+   The <structname>pg_replication_origin</structname> catalog contains
+   all replication origins created.  For more on replication origins
+   see <xref linkend="replication-origins">.
+  </para>
+
+  <table>
+
+   <title><structname>pg_replication_origin</structname> Columns</title>
+
+   <tgroup cols="4">
+    <thead>
+     <row>
+      <entry>Name</entry>
+      <entry>Type</entry>
+      <entry>References</entry>
+      <entry>Description</entry>
+     </row>
+    </thead>
+
+    <tbody>
+     <row>
+      <entry><structfield>roident</structfield></entry>
+      <entry><type>Oid</type></entry>
+      <entry></entry>
+      <entry>A unique, cluster-wide identifier for the replication
+      origin. Should never leave the system.</entry>
+     </row>
+
+     <row>
+      <entry><structfield>roname</structfield></entry>
+      <entry><type>text</type></entry>
+      <entry></entry>
+      <entry>The external, user defined, name of a replication
+      origin.</entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+ </sect1>
+
+  <sect1 id="catalog-pg-replication-origin-status">
+  <title><structname>pg_replication_origin_status</structname></title>
+
+  <indexterm zone="catalog-pg-replication-origin-status">
+   <primary>pg_replication_origin_status</primary>
+  </indexterm>
+
+  <para>
+   The <structname>pg_replication_origin_status</structname> view
+   contains information about how far replay for a certain origin has
+   progressed.  For more on replication origins
+   see <xref linkend="replication-origins">.
+  </para>
+
+  <table>
+
+   <title><structname>pg_replication_origin_status</structname> Columns</title>
+
+   <tgroup cols="4">
+    <thead>
+     <row>
+      <entry>Name</entry>
+      <entry>Type</entry>
+      <entry>References</entry>
+      <entry>Description</entry>
+     </row>
+    </thead>
+
+    <tbody>
+     <row>
+      <entry><structfield>local_id</structfield></entry>
+      <entry><type>Oid</type></entry>
+      <entry><literal><link linkend="catalog-pg-replication-origin"><structname>pg_replication_origin</structname></link>.roident</literal></entry>
+      <entry>internal node identifier</entry>
+     </row>
+
+     <row>
+      <entry><structfield>external_id</structfield></entry>
+      <entry><type>text</type></entry>
+      <entry><literal><link linkend="catalog-pg-replication-origin"><structname>pg_replication_origin</structname></link>.roname</literal></entry>
+      <entry>external node identifier</entry>
+     </row>
+
+     <row>
+      <entry><structfield>remote_lsn</structfield></entry>
+      <entry><type>pg_lsn</type></entry>
+      <entry></entry>
+      <entry>The origin node's LSN up to which data has been replicated.</entry>
+     </row>
+
+
+     <row>
+      <entry><structfield>local_lsn</structfield></entry>
+      <entry><type>pg_lsn</type></entry>
+      <entry></entry>
+      <entry>This node's LSN that at
+      which <literal>remote_lsn</literal> has been replicated. Used to
+      flush commit records before persisting data to disk when using
+      asynchronous commits.</entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+ </sect1>
+
  <sect1 id="catalog-pg-replication-slots">
   <title><structname>pg_replication_slots</structname></title>
 
@@ -5295,6 +5566,16 @@
      </row>
 
      <row>
+      <entry><structfield>active_pid</structfield></entry>
+      <entry><type>integer</type></entry>
+      <entry></entry>
+      <entry>The process ID of the session using this slot if the slot
+       is currently actively being used. <literal>NULL</literal> if
+       inactive.
+      </entry>
+     </row>
+
+     <row>
       <entry><structfield>xmin</structfield></entry>
       <entry><type>xid</type></entry>
       <entry></entry>
@@ -5327,7 +5608,6 @@
    </tgroup>
   </table>
  </sect1>
-
 
  <sect1 id="catalog-pg-seclabel">
   <title><structname>pg_seclabel</structname></title>
@@ -5875,6 +6155,121 @@
  </sect1>
 
 
+ <sect1 id="catalog-pg-tablesample-method">
+  <title><structname>pg_tabesample_method</structname></title>
+
+  <indexterm zone="catalog-pg-tablesample-method">
+   <primary>pg_am</primary>
+  </indexterm>
+
+  <para>
+   The catalog <structname>pg_tablesample_method</structname> stores
+   information about table sampling methods which can be used in
+   <command>TABLESAMPLE</command> clause of a <command>SELECT</command>
+   statement.
+  </para>
+
+  <table>
+   <title><structname>pg_tablesample_method</> Columns</title>
+
+   <tgroup cols="4">
+    <thead>
+     <row>
+      <entry>Name</entry>
+      <entry>Type</entry>
+      <entry>References</entry>
+      <entry>Description</entry>
+     </row>
+    </thead>
+    <tbody>
+
+     <row>
+      <entry><structfield>oid</structfield></entry>
+      <entry><type>oid</type></entry>
+      <entry></entry>
+      <entry>Row identifier (hidden attribute; must be explicitly selected)</entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsmname</structfield></entry>
+      <entry><type>name</type></entry>
+      <entry></entry>
+      <entry>Name of the sampling method</entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsmseqscan</structfield></entry>
+      <entry><type>bool</type></entry>
+      <entry></entry>
+      <entry>If true, the sampling method scans the whole table sequentially.
+      </entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsmpagemode</structfield></entry>
+      <entry><type>bool</type></entry>
+      <entry></entry>
+      <entry>If true, the sampling method always reads the pages completely.
+      </entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsminit</structfield></entry>
+      <entry><type>regproc</type></entry>
+      <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
+      <entry><quote>Initialize the sampling scan</quote> function</entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsmnextblock</structfield></entry>
+      <entry><type>regproc</type></entry>
+      <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
+      <entry><quote>Get next block number</quote> function</entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsmnexttuple</structfield></entry>
+      <entry><type>regproc</type></entry>
+      <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
+      <entry><quote>Get next tuple offset</quote> function</entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsmexaminetuple</structfield></entry>
+      <entry><type>regproc</type></entry>
+      <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
+      <entry>Function which examines the tuple contents and decides if to
+        return it, or zero if none</entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsmend</structfield></entry>
+      <entry><type>regproc</type></entry>
+      <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
+      <entry><quote>End the sampling scan</quote> function</entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsmreset</structfield></entry>
+      <entry><type>regproc</type></entry>
+      <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
+      <entry><quote>Restart the state of sampling scan</quote> function</entry>
+     </row>
+
+     <row>
+      <entry><structfield>tsmcost</structfield></entry>
+      <entry><type>regproc</type></entry>
+      <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
+      <entry>Costing function</entry>
+     </row>
+
+    </tbody>
+   </tgroup>
+  </table>
+
+ </sect1>
+
+
  <sect1 id="catalog-pg-tablespace">
   <title><structname>pg_tablespace</structname></title>
 
@@ -5948,6 +6343,74 @@
       <entry></entry>
       <entry>
        Tablespace-level options, as <quote>keyword=value</> strings
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+ </sect1>
+
+
+ <sect1 id="catalog-pg-transform">
+  <title><structname>pg_transform</structname></title>
+
+  <indexterm zone="catalog-pg-transform">
+   <primary>pg_transform</primary>
+  </indexterm>
+
+  <para>
+   The catalog <structname>pg_transform</structname> stores information about
+   transforms, which are a mechanism to adapt data types to procedural
+   languages.  See <xref linkend="sql-createtransform"> for more information.
+  </para>
+
+  <table>
+   <title><structname>pg_transform</> Columns</title>
+
+   <tgroup cols="4">
+    <thead>
+     <row>
+      <entry>Name</entry>
+      <entry>Type</entry>
+      <entry>References</entry>
+      <entry>Description</entry>
+     </row>
+    </thead>
+
+    <tbody>
+     <row>
+      <entry><structfield>trftype</structfield></entry>
+      <entry><type>oid</type></entry>
+      <entry><literal><link linkend="catalog-pg-type"><structname>pg_type</structname></link>.oid</literal></entry>
+      <entry>OID of the data type this transform is for</entry>
+     </row>
+
+     <row>
+      <entry><structfield>trflang</structfield></entry>
+      <entry><type>oid</type></entry>
+      <entry><literal><link linkend="catalog-pg-language"><structname>pg_language</structname></link>.oid</literal></entry>
+      <entry>OID of the language this transform is for</entry>
+     </row>
+
+     <row>
+      <entry><structfield>trffromsql</structfield></entry>
+      <entry><type>regproc</type></entry>
+      <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
+      <entry>
+       The OID of the function to use when converting the data type for input
+       to the procedural language (e.g., function parameters).  Zero is stored
+       if this operation is not supported.
+      </entry>
+     </row>
+
+     <row>
+      <entry><structfield>trftosql</structfield></entry>
+      <entry><type>regproc</type></entry>
+      <entry><literal><link linkend="catalog-pg-proc"><structname>pg_proc</structname></link>.oid</literal></entry>
+      <entry>
+       The OID of the function to use when converting output from the
+       procedural language (e.g., return values) to the data type.  Zero is
+       stored if this operation is not supported.
       </entry>
      </row>
     </tbody>
@@ -7185,6 +7648,11 @@
      </row>
 
      <row>
+      <entry><link linkend="view-pg-file-settings"><structname>pg_file_settings</structname></link></entry>
+      <entry>summary of configuration file contents</entry>
+     </row>
+
+     <row>
       <entry><link linkend="view-pg-group"><structname>pg_group</structname></link></entry>
       <entry>groups of database users</entry>
      </row>
@@ -7202,6 +7670,11 @@
      <row>
       <entry><link linkend="view-pg-matviews"><structname>pg_matviews</structname></link></entry>
       <entry>materialized views</entry>
+     </row>
+
+     <row>
+      <entry><link linkend="view-pg-policies"><structname>pg_policies</structname></link></entry>
+      <entry>policies</entry>
      </row>
 
      <row>
@@ -7548,6 +8021,113 @@
   </para>
 
  </sect1>
+
+ <sect1 id="view-pg-file-settings">
+  <title><structname>pg_file_settings</structname></title>
+
+  <indexterm zone="view-pg-file-settings">
+   <primary>pg_file_settings</primary>
+  </indexterm>
+
+  <para>
+   The view <structname>pg_file_settings</structname> provides a summary of
+   the contents of the server's configuration file(s).  A row appears in
+   this view for each <quote>name = value</> entry appearing in the files,
+   with annotations indicating whether the value could be applied
+   successfully.  Additional row(s) may appear for problems not linked to
+   a <quote>name = value</> entry, such as syntax errors in the files.
+  </para>
+
+  <para>
+   This view is helpful for checking whether planned changes in the
+   configuration files will work, or for diagnosing a previous failure.
+   Note that this view reports on the <emphasis>current</> contents of the
+   files, not on what was last applied by the server.  (The
+   <link linkend="view-pg-settings"><structname>pg_settings</structname></link>
+   view is usually sufficient to determine that.)
+  </para>
+
+  <para>
+   The <structname>pg_file_settings</structname> view can be read only by
+   superusers.
+  </para>
+
+  <table>
+   <title><structname>pg_file_settings</> Columns</title>
+
+  <tgroup cols="3">
+   <thead>
+    <row>
+     <entry>Name</entry>
+     <entry>Type</entry>
+     <entry>Description</entry>
+    </row>
+   </thead>
+   <tbody>
+    <row>
+     <entry><structfield>sourcefile</structfield></entry>
+     <entry><structfield>text</structfield></entry>
+     <entry>Full pathname of the configuration file</entry>
+    </row>
+    <row>
+     <entry><structfield>sourceline</structfield></entry>
+     <entry><structfield>integer</structfield></entry>
+     <entry>
+      Line number within the configuration file where the entry appears
+     </entry>
+    </row>
+    <row>
+     <entry><structfield>seqno</structfield></entry>
+     <entry><structfield>integer</structfield></entry>
+     <entry>Order in which the entries are processed (1..<replaceable>n</>)</entry>
+    </row>
+    <row>
+     <entry><structfield>name</structfield></entry>
+     <entry><structfield>text</structfield></entry>
+     <entry>Configuration parameter name</entry>
+    </row>
+    <row>
+     <entry><structfield>setting</structfield></entry>
+     <entry><structfield>text</structfield></entry>
+     <entry>Value to be assigned to the parameter</entry>
+    </row>
+    <row>
+     <entry><structfield>applied</structfield></entry>
+     <entry><structfield>boolean</structfield></entry>
+     <entry>True if the value can be applied successfully</entry>
+    </row>
+    <row>
+     <entry><structfield>error</structfield></entry>
+     <entry><structfield>text</structfield></entry>
+     <entry>If not null, an error message indicating why this entry could
+      not be applied</entry>
+    </row>
+   </tbody>
+  </tgroup>
+  </table>
+
+  <para>
+   If the configuration file contains syntax errors or invalid parameter
+   names, the server will not attempt to apply any settings from it, and
+   therefore all the <structfield>applied</> fields will read as false.
+   In such a case there will be one or more rows with
+   non-null <structfield>error</structfield> fields indicating the
+   problem(s).  Otherwise, individual settings will be applied if possible.
+   If an individual setting cannot be applied (e.g., invalid value, or the
+   setting cannot be changed after server start) it will have an appropriate
+   message in the <structfield>error</structfield> field.  Another way that
+   an entry might have <structfield>applied</> = false is that it is
+   overridden by a later entry for the same parameter name; this case is not
+   considered an error so nothing appears in
+   the <structfield>error</structfield> field.
+  </para>
+
+  <para>
+   See <xref linkend="config-setting"> for more information about the various
+   ways to change run-time parameters.
+  </para>
+
+</sect1>
 
  <sect1 id="view-pg-group">
   <title><structname>pg_group</structname></title>
@@ -8051,6 +8631,81 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
 
  </sect1>
 
+ <sect1 id="view-pg-policies">
+  <title><structname>pg_policies</structname></title>
+
+  <indexterm zone="view-pg-policies">
+   <primary>pg_policies</primary>
+  </indexterm>
+
+  <para>
+   The view <structname>pg_policies</structname> provides access to
+   useful information about each row-level security policy in the database.
+  </para>
+
+  <table>
+   <title><structname>pg_policies</> Columns</title>
+
+   <tgroup cols="4">
+    <thead>
+     <row>
+      <entry>Name</entry>
+      <entry>Type</entry>
+      <entry>References</entry>
+      <entry>Description</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry><structfield>schemaname</structfield></entry>
+      <entry><type>name</type></entry>
+      <entry><literal><link linkend="catalog-pg-namespace"><structname>pg_namespace</structname></link>.nspname</literal></entry>
+      <entry>Name of schema containing table policy is on</entry>
+     </row>
+     <row>
+      <entry><structfield>tablename</structfield></entry>
+      <entry><type>name</type></entry>
+      <entry><literal><link linkend="catalog-pg-class"><structname>pg_class</structname></link>.relname</literal></entry>
+      <entry>Name of table policy is on</entry>
+     </row>
+     <row>
+      <entry><structfield>policyname</structfield></entry>
+      <entry><type>name</type></entry>
+      <entry><literal><link linkend="catalog-pg-policy"><structname>pg_policy</structname></link>.polname</literal></entry>
+      <entry>Name of policy</entry>
+     </row>
+     <row>
+      <entry><structfield>roles</structfield></entry>
+      <entry><type>name[]</type></entry>
+      <entry></entry>
+      <entry>The roles to which this policy applies</entry>
+     </row>
+     <row>
+      <entry><structfield>cmd</structfield></entry>
+      <entry><type>text</type></entry>
+      <entry></entry>
+      <entry>The command type to which the policy is applied</entry>
+     </row>
+     <row>
+      <entry><structfield>qual</structfield></entry>
+      <entry><type>text</type></entry>
+      <entry></entry>
+      <entry>The expression added to the security barrier qualifications for
+      queries that this policy applies to</entry>
+     </row>
+     <row>
+      <entry><structfield>with_check</structfield></entry>
+      <entry><type>text</type></entry>
+      <entry></entry>
+      <entry>The expression added to the WITH CHECK qualifications for
+      queries that attempt to add rows to this table</entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+
+ </sect1>
+
  <sect1 id="view-pg-prepared-statements">
   <title><structname>pg_prepared_statements</structname></title>
 
@@ -8295,16 +8950,6 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
       <entry><type>bool</type></entry>
       <entry></entry>
       <entry>Role can create databases</entry>
-     </row>
-
-     <row>
-      <entry><structfield>rolcatupdate</structfield></entry>
-      <entry><type>bool</type></entry>
-      <entry></entry>
-      <entry>
-       Role can update system catalogs directly.  (Even a superuser cannot do
-       this unless this column is true)
-      </entry>
      </row>
 
      <row>
@@ -8647,6 +9292,14 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
       or when examined by a non-superuser)
       </entry>
      </row>
+     <row>
+      <entry><structfield>pending_restart</structfield></entry>
+      <entry><type>boolean</type></entry>
+      <entry><literal>true</literal> if the value has been changed in the
+      configuration file but needs a restart; or <literal>false</literal>
+      otherwise.
+      </entry>
+     </row>
     </tbody>
    </tgroup>
   </table>
@@ -8658,6 +9311,7 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
 
   <variablelist>
    <varlistentry>
+    <!-- PGC_INTERNAL -->
     <term><literal>internal</literal></term>
     <listitem>
      <para>
@@ -8669,6 +9323,7 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
     </listitem>
    </varlistentry>
    <varlistentry>
+    <!-- PGC_POSTMASTER -->
     <term><literal>postmaster</literal></term>
     <listitem>
      <para>
@@ -8682,6 +9337,7 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
     </listitem>
    </varlistentry>
    <varlistentry>
+    <!-- PGC_SIGHUP -->
     <term><literal>sighup</literal></term>
     <listitem>
      <para>
@@ -8696,16 +9352,17 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
     </listitem>
    </varlistentry>
    <varlistentry>
-    <term><literal>backend</literal></term>
+    <!-- PGC_SU_BACKEND -->
+    <term><literal>superuser-backend</literal></term>
     <listitem>
      <para>
       Changes to these settings can be made in
-      <filename>postgresql.conf</filename> without restarting the server;
-      they can also be set for a particular session in the connection request
+      <filename>postgresql.conf</filename> without restarting the server.
+      They can also be set for a particular session in the connection request
       packet (for example, via <application>libpq</>'s <literal>PGOPTIONS</>
-      environment variable).  However, these settings never change in a
-      session after it is started.  If you change them in
-      <filename>postgresql.conf</filename>, send a
+      environment variable), but only if the connecting user is a superuser.
+      However, these settings never change in a session after it is started.
+      If you change them in <filename>postgresql.conf</filename>, send a
       <systemitem>SIGHUP</systemitem> signal to the postmaster to cause it to
       re-read <filename>postgresql.conf</filename>.  The new values will only
       affect subsequently-launched sessions.
@@ -8713,6 +9370,25 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
     </listitem>
    </varlistentry>
    <varlistentry>
+    <!-- PGC_BACKEND -->
+    <term><literal>backend</literal></term>
+    <listitem>
+     <para>
+      Changes to these settings can be made in
+      <filename>postgresql.conf</filename> without restarting the server.
+      They can also be set for a particular session in the connection request
+      packet (for example, via <application>libpq</>'s <literal>PGOPTIONS</>
+      environment variable); any user can make such a change for his session.
+      However, these settings never change in a session after it is started.
+      If you change them in <filename>postgresql.conf</filename>, send a
+      <systemitem>SIGHUP</systemitem> signal to the postmaster to cause it to
+      re-read <filename>postgresql.conf</filename>.  The new values will only
+      affect subsequently-launched sessions.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <!-- PGC_SUSET -->
     <term><literal>superuser</literal></term>
     <listitem>
      <para>
@@ -8725,6 +9401,7 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
     </listitem>
    </varlistentry>
    <varlistentry>
+    <!-- PGC_USERSET -->
     <term><literal>user</literal></term>
     <listitem>
      <para>
@@ -8826,22 +9503,22 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
      </row>
 
      <row>
-      <entry><structfield>usecatupd</structfield></entry>
-      <entry><type>bool</type></entry>
-      <entry></entry>
-      <entry>
-       User can update system catalogs.  (Even a superuser cannot do
-       this unless this column is true.)
-      </entry>
-     </row>
-
-     <row>
       <entry><structfield>userepl</structfield></entry>
       <entry><type>bool</type></entry>
       <entry></entry>
       <entry>
        User can initiate streaming replication and put the system in and
        out of backup mode.
+      </entry>
+     </row>
+
+     <row>
+      <entry><structfield>usebypassrls</structfield></entry>
+      <entry><type>bool</type></entry>
+      <entry></entry>
+      <entry>
+       User can bypass row level security policies, see
+       <xref linkend="ddl-rowsecurity"> for more information.
       </entry>
      </row>
 
@@ -9133,6 +9810,12 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
       <entry><literal><link linkend="catalog-pg-class"><structname>pg_class</structname></link>.relhastriggers</literal></entry>
       <entry>True if table has (or once had) triggers</entry>
      </row>
+     <row>
+      <entry><structfield>rowsecurity</structfield></entry>
+      <entry><type>boolean</type></entry>
+      <entry><literal><link linkend="catalog-pg-class"><structname>pg_class</structname></link>.relrowsecurity</literal></entry>
+      <entry>True if row security is enabled on the table</entry>
+     </row>
     </tbody>
    </tgroup>
   </table>
@@ -9304,20 +9987,20 @@ SELECT * FROM pg_locks pl LEFT JOIN pg_prepared_xacts ppx
      </row>
 
      <row>
-      <entry><structfield>usecatupd</structfield></entry>
-      <entry><type>bool</type></entry>
-      <entry>
-       User can update system catalogs.  (Even a superuser cannot do
-       this unless this column is true.)
-      </entry>
-     </row>
-
-     <row>
       <entry><structfield>userepl</structfield></entry>
       <entry><type>bool</type></entry>
       <entry>
        User can initiate streaming replication and put the system in and
        out of backup mode.
+      </entry>
+     </row>
+
+     <row>
+      <entry><structfield>usebypassrls</structfield></entry>
+      <entry><type>bool</type></entry>
+      <entry>
+       User can bypass row level security policies, see
+       <xref linkend="ddl-rowsecurity"> for more information.
       </entry>
      </row>
 

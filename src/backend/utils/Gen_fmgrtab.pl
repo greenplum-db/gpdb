@@ -4,7 +4,7 @@
 # Gen_fmgrtab.pl
 #    Perl script that generates fmgroids.h and fmgrtab.c from pg_proc.h
 #
-# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 #
@@ -52,7 +52,7 @@ my @fmgr = ();
 my @attnames;
 foreach my $column (@{ $catalogs->{pg_proc}->{columns} })
 {
-	push @attnames, keys %$column;
+	push @attnames, $column->{name};
 }
 
 my $data = $catalogs->{pg_proc}->{data};
@@ -101,7 +101,7 @@ qq|/*-------------------------------------------------------------------------
  * These macros can be used to avoid a catalog lookup when a specific
  * fmgr-callable function needs to be referenced.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * NOTES
@@ -136,7 +136,7 @@ qq|/*-------------------------------------------------------------------------
  * fmgrtab.c
  *    The function manager's table of internal functions.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * NOTES

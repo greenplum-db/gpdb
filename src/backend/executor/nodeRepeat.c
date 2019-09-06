@@ -44,7 +44,6 @@ ExecRepeat(RepeatState *repeatstate)
 {
 	TupleTableSlot *outerslot;
 	ExprContext *econtext = repeatstate->ps.ps_ExprContext;
-	Repeat *node = (Repeat *)repeatstate->ps.plan;
 		
 	if (repeatstate->repeat_done)
 		return NULL;
@@ -63,9 +62,6 @@ ExecRepeat(RepeatState *repeatstate)
 
 			do
 			{
-				econtext->group_id = repeatstate->repeat_count - 1;
-				econtext->grouping = node->grouping;
-			
 				repeatstate->repeat_count--;
 				/* Check the qual until we find one output tuple. */
 				if (ExecQual(repeatstate->ps.qual, econtext, false))
@@ -111,9 +107,6 @@ ExecRepeat(RepeatState *repeatstate)
 		
 		do
 		{
-			econtext->group_id = repeatstate->repeat_count - 1;
-			econtext->grouping = node->grouping;
-			
 			repeatstate->repeat_count--;
 
 			/* Check the qual until we find one output tuple. */

@@ -154,7 +154,7 @@ gp_expand_protect_catalog_changes(Relation relation)
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("gpexpand in progress, catalog changes are disallowed.")));
 
-	oldVersion = cdbcomponent_getCdbComponents(true)->expand_version;
+	oldVersion = cdbcomponent_getCdbComponents()->expand_version;
 	newVersion = GetGpExpandVersion();
 	if (oldVersion != newVersion)
 		ereport(FATAL,

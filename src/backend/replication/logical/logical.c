@@ -2,7 +2,7 @@
  * logical.c
  *	   PostgreSQL logical decoding coordination
  *
- * Copyright (c) 2012-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2012-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/replication/logical/logical.c
@@ -31,10 +31,12 @@
 #include "miscadmin.h"
 
 #include "access/xact.h"
+#include "access/xlog_internal.h"
 
 #include "replication/decode.h"
 #include "replication/logical.h"
 #include "replication/reorderbuffer.h"
+#include "replication/origin.h"
 #include "replication/snapbuild.h"
 
 #include "storage/proc.h"
@@ -150,7 +152,7 @@ StartupDecodingContext(List *output_plugin_options,
 	 * replication slots.
 	 *
 	 * We can only do so if we're outside of a transaction (i.e. the case when
-	 * streaming changes via walsender), otherwise a already setup
+	 * streaming changes via walsender), otherwise an already setup
 	 * snapshot/xid would end up being ignored. That's not a particularly
 	 * bothersome restriction since the SQL interface can't be used for
 	 * streaming anyway.
@@ -228,7 +230,7 @@ CreateInitDecodingContext(char *plugin,
 
 	/* first some sanity checks that are unlikely to be violated */
 	if (slot == NULL)
-		elog(ERROR, "cannot perform logical decoding without a acquired slot");
+		elog(ERROR, "cannot perform logical decoding without an acquired slot");
 
 	if (plugin == NULL)
 		elog(ERROR, "cannot initialize logical decoding without a specified plugin");
@@ -237,7 +239,7 @@ CreateInitDecodingContext(char *plugin,
 	if (slot->data.database == InvalidOid)
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-				 errmsg("cannot use physical replication slot for logical decoding")));
+		errmsg("cannot use physical replication slot for logical decoding")));
 
 	if (slot->data.database != MyDatabaseId)
 		ereport(ERROR,
@@ -253,9 +255,7 @@ CreateInitDecodingContext(char *plugin,
 
 	/* register output plugin name with slot */
 	SpinLockAcquire(&slot->mutex);
-	strncpy(NameStr(slot->data.plugin), plugin,
-			NAMEDATALEN);
-	NameStr(slot->data.plugin)[NAMEDATALEN - 1] = '\0';
+	StrNCpy(NameStr(slot->data.plugin), plugin, NAMEDATALEN);
 	SpinLockRelease(&slot->mutex);
 
 	ReplicationSlotReserveWal();
@@ -346,7 +346,7 @@ CreateDecodingContext(XLogRecPtr start_lsn,
 
 	/* first some sanity checks that are unlikely to be violated */
 	if (slot == NULL)
-		elog(ERROR, "cannot perform logical decoding without a acquired slot");
+		elog(ERROR, "cannot perform logical decoding without an acquired slot");
 
 	/* make sure the passed slot is suitable, these are user facing errors */
 	if (slot->data.database == InvalidOid)
@@ -405,7 +405,7 @@ CreateDecodingContext(XLogRecPtr start_lsn,
 }
 
 /*
- * Returns true if an consistent initial decoding snapshot has been built.
+ * Returns true if a consistent initial decoding snapshot has been built.
  */
 bool
 DecodingContextReady(LogicalDecodingContext *ctx)
@@ -438,12 +438,12 @@ DecodingContextFindStartpoint(LogicalDecodingContext *ctx)
 		record = XLogReadRecord(ctx->reader, startptr, &err);
 		if (err)
 			elog(ERROR, "%s", err);
-
-		Assert(record);
+		if (!record)
+			elog(ERROR, "no record found");		/* shouldn't happen */
 
 		startptr = InvalidXLogRecPtr;
 
-		LogicalDecodingProcessRecord(ctx, record);
+		LogicalDecodingProcessRecord(ctx, ctx->reader);
 
 		/* only continue till we found a consistent spot */
 		if (DecodingContextReady(ctx))
@@ -688,6 +688,34 @@ change_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 
 	/* Pop the error context stack */
 	error_context_stack = errcallback.previous;
+}
+
+bool
+filter_by_origin_cb_wrapper(LogicalDecodingContext *ctx, RepOriginId origin_id)
+{
+	LogicalErrorCallbackState state;
+	ErrorContextCallback errcallback;
+	bool		ret;
+
+	/* Push callback + info on the error context stack */
+	state.ctx = ctx;
+	state.callback_name = "shutdown";
+	state.report_location = InvalidXLogRecPtr;
+	errcallback.callback = output_plugin_error_callback;
+	errcallback.arg = (void *) &state;
+	errcallback.previous = error_context_stack;
+	error_context_stack = &errcallback;
+
+	/* set output state */
+	ctx->accept_writes = false;
+
+	/* do the actual work: call callback */
+	ret = ctx->callbacks.filter_by_origin_cb(ctx, origin_id);
+
+	/* Pop the error context stack */
+	error_context_stack = errcallback.previous;
+
+	return ret;
 }
 
 /*

@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -23,10 +23,12 @@
 #include "catalog/heap.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_authid.h"
 #include "catalog/objectaccess.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_namespace.h"
 #include "commands/dbcommands.h"
+#include "commands/event_trigger.h"
 #include "commands/schemacmds.h"
 #include "miscadmin.h"
 #include "parser/parse_utilcmd.h"
@@ -37,7 +39,6 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbdisp_query.h"
-#include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 
 
@@ -50,7 +51,6 @@ Oid
 CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 {
 	const char *schemaName = stmt->schemaname;
-	const char *authId = stmt->authid;
 	Oid			namespaceId;
 	OverrideSearchPath *overridePath;
 	List	   *parsetree_list;
@@ -59,6 +59,7 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 	Oid			saved_uid;
 	int			save_sec_context;
 	AclResult	aclresult;
+	ObjectAddress address;
 	bool		shouldDispatch = (Gp_role == GP_ROLE_DISPATCH && 
 								  !IsBootstrapProcessingMode());
 
@@ -74,7 +75,7 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 		Assert(Gp_role == GP_ROLE_EXECUTE);
 
 		Assert(stmt->schemaname == NULL);
-		Assert(stmt->authid == NULL);
+		Assert(stmt->authrole == NULL);
 		Assert(stmt->schemaElts == NIL);
 
 		InitTempTableNamespace();
@@ -86,10 +87,23 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 	/*
 	 * Who is supposed to own the new schema?
 	 */
-	if (authId)
-		owner_uid = get_role_oid(authId, false);
+	if (stmt->authrole)
+		owner_uid = get_rolespec_oid(stmt->authrole, false);
 	else
 		owner_uid = saved_uid;
+
+	/* fill schema name with the user name if not specified */
+	if (!schemaName)
+	{
+		HeapTuple	tuple;
+
+		tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(owner_uid));
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "cache lookup failed for role %u", owner_uid);
+		schemaName =
+			pstrdup(NameStr(((Form_pg_authid) GETSTRUCT(tuple))->rolname));
+		ReleaseSysCache(tuple);
+	}
 
 	/*
 	 * To create a schema, must have schema-create privilege on the current
@@ -132,18 +146,6 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 		return InvalidOid;
 	}
 
-	/*
-	 * If the requested authorization is different from the current user,
-	 * temporarily set the current user so that the object(s) will be created
-	 * with the correct ownership.
-	 *
-	 * (The setting will be restored at the end of this routine, or in case of
-	 * error, transaction abort will clean things up.)
-	 */
-	if (saved_uid != owner_uid)
-		SetUserIdAndSecContext(owner_uid,
-							save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
-
 	/* Create the schema's namespace */
 	if (shouldDispatch || Gp_role != GP_ROLE_EXECUTE)
 	{
@@ -179,6 +181,18 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 		namespaceId = NamespaceCreate(schemaName, owner_uid, false);
 	}
 
+	/*
+	 * If the requested authorization is different from the current user,
+	 * temporarily set the current user so that the object(s) will be created
+	 * with the correct ownership.
+	 *
+	 * (The setting will be restored at the end of this routine, or in case of
+	 * error, transaction abort will clean things up.)
+	 */
+	if (saved_uid != owner_uid)
+		SetUserIdAndSecContext(owner_uid,
+							save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
+
 	/* Advance cmd counter to make the namespace visible */
 	CommandCounterIncrement();
 
@@ -191,6 +205,16 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 	overridePath->schemas = lcons_oid(namespaceId, overridePath->schemas);
 	/* XXX should we clear overridePath->useTemp? */
 	PushOverrideSearchPath(overridePath);
+
+	/*
+	 * Report the new schema to possibly interested event triggers.  Note we
+	 * must do this here and not in ProcessUtilitySlow because otherwise the
+	 * objects created below are reported before the schema, which would be
+	 * wrong.
+	 */
+	ObjectAddressSet(address, NamespaceRelationId, namespaceId);
+	EventTriggerCollectSimpleCommand(address, InvalidObjectAddress,
+									 (Node *) stmt);
 
 	/*
 	 * Examine the list of commands embedded in the CREATE SCHEMA command, and
@@ -258,13 +282,14 @@ RemoveSchemaById(Oid schemaOid)
 /*
  * Rename schema
  */
-Oid
+ObjectAddress
 RenameSchema(const char *oldname, const char *newname)
 {
 	Oid			nspOid;
 	HeapTuple	tup;
 	Relation	rel;
 	AclResult	aclresult;
+	ObjectAddress address;
 
 	rel = heap_open(NamespaceRelationId, RowExclusiveLock);
 
@@ -326,10 +351,12 @@ RenameSchema(const char *oldname, const char *newname)
 
 	InvokeObjectPostAlterHook(NamespaceRelationId, HeapTupleGetOid(tup), 0);
 
+	ObjectAddressSet(address, NamespaceRelationId, nspOid);
+
 	heap_close(rel, NoLock);
 	heap_freetuple(tup);
 
-	return nspOid;
+	return address;
 }
 
 void
@@ -355,12 +382,13 @@ AlterSchemaOwner_oid(Oid oid, Oid newOwnerId)
 /*
  * Change schema owner
  */
-Oid
+ObjectAddress
 AlterSchemaOwner(const char *name, Oid newOwnerId)
 {
 	Oid			nspOid;
 	HeapTuple	tup;
 	Relation	rel;
+	ObjectAddress address;
 
 	rel = heap_open(NamespaceRelationId, RowExclusiveLock);
 
@@ -382,11 +410,13 @@ AlterSchemaOwner(const char *name, Oid newOwnerId)
 
 	AlterSchemaOwner_internal(tup, rel, newOwnerId);
 
+	ObjectAddressSet(address, NamespaceRelationId, nspOid);
+
 	ReleaseSysCache(tup);
 
 	heap_close(rel, RowExclusiveLock);
 
-	return nspOid;
+	return address;
 }
 
 static void

@@ -4,7 +4,7 @@
  *	  routines for managing the buffer pool's replacement strategy.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -15,8 +15,12 @@
  */
 #include "postgres.h"
 
+#include "port/atomics.h"
 #include "storage/buf_internals.h"
 #include "storage/bufmgr.h"
+#include "storage/proc.h"
+
+#define INT_ACCESS_ONCE(var)	((int)(*((volatile int *)&(var))))
 
 
 /*
@@ -24,8 +28,15 @@
  */
 typedef struct
 {
-	/* Clock sweep hand: index of next buffer to consider grabbing */
-	int			nextVictimBuffer;
+	/* Spinlock: protects the values below */
+	slock_t		buffer_strategy_lock;
+
+	/*
+	 * Clock sweep hand: index of next buffer to consider grabbing. Note that
+	 * this isn't a concrete buffer - we only ever increase the value. So, to
+	 * get an actual buffer, it needs to be used modulo NBuffers.
+	 */
+	pg_atomic_uint32 nextVictimBuffer;
 
 	int			firstFreeBuffer;	/* Head of list of unused buffers */
 	int			lastFreeBuffer; /* Tail of list of unused buffers */
@@ -40,12 +51,13 @@ typedef struct
 	 * overflow during a single bgwriter cycle.
 	 */
 	uint32		completePasses; /* Complete cycles of the clock sweep */
-	uint32		numBufferAllocs;	/* Buffers allocated since last reset */
+	pg_atomic_uint32 numBufferAllocs;	/* Buffers allocated since last reset */
 
 	/*
-	 * Notification latch, or NULL if none.  See StrategyNotifyBgWriter.
+	 * Bgworker process to be notified upon activity or -1 if none. See
+	 * StrategyNotifyBgWriter.
 	 */
-	Latch	   *bgwriterLatch;
+	int			bgwprocno;
 } BufferStrategyControl;
 
 /* Pointers to shared state */
@@ -81,7 +93,7 @@ typedef struct BufferAccessStrategyData
 	 * simplicity this is palloc'd together with the fixed fields of the
 	 * struct.
 	 */
-	Buffer		buffers[1];		/* VARIABLE SIZE ARRAY */
+	Buffer		buffers[FLEXIBLE_ARRAY_MEMBER];
 }	BufferAccessStrategyData;
 
 
@@ -90,6 +102,70 @@ static volatile BufferDesc *GetBufferFromRing(BufferAccessStrategy strategy);
 static void AddBufferToRing(BufferAccessStrategy strategy,
 				volatile BufferDesc *buf);
 
+/*
+ * ClockSweepTick - Helper routine for StrategyGetBuffer()
+ *
+ * Move the clock hand one buffer ahead of its current position and return the
+ * id of the buffer now under the hand.
+ */
+static inline uint32
+ClockSweepTick(void)
+{
+	uint32		victim;
+
+	/*
+	 * Atomically move hand ahead one buffer - if there's several processes
+	 * doing this, this can lead to buffers being returned slightly out of
+	 * apparent order.
+	 */
+	victim =
+		pg_atomic_fetch_add_u32(&StrategyControl->nextVictimBuffer, 1);
+
+	if (victim >= NBuffers)
+	{
+		uint32		originalVictim = victim;
+
+		/* always wrap what we look up in BufferDescriptors */
+		victim = victim % NBuffers;
+
+		/*
+		 * If we're the one that just caused a wraparound, force
+		 * completePasses to be incremented while holding the spinlock. We
+		 * need the spinlock so StrategySyncStart() can return a consistent
+		 * value consisting of nextVictimBuffer and completePasses.
+		 */
+		if (victim == 0)
+		{
+			uint32		expected;
+			uint32		wrapped;
+			bool		success = false;
+
+			expected = originalVictim + 1;
+
+			while (!success)
+			{
+				/*
+				 * Acquire the spinlock while increasing completePasses. That
+				 * allows other readers to read nextVictimBuffer and
+				 * completePasses in a consistent manner which is required for
+				 * StrategySyncStart().  In theory delaying the increment
+				 * could lead to an overflow of nextVictimBuffers, but that's
+				 * highly unlikely and wouldn't be particularly harmful.
+				 */
+				SpinLockAcquire(&StrategyControl->buffer_strategy_lock);
+
+				wrapped = expected % NBuffers;
+
+				success = pg_atomic_compare_exchange_u32(&StrategyControl->nextVictimBuffer,
+														 &expected, wrapped);
+				if (success)
+					StrategyControl->completePasses++;
+				SpinLockRelease(&StrategyControl->buffer_strategy_lock);
+			}
+		}
+	}
+	return victim;
+}
 
 /*
  * StrategyGetBuffer
@@ -101,103 +177,126 @@ static void AddBufferToRing(BufferAccessStrategy strategy,
  *	strategy is a BufferAccessStrategy object, or NULL for default strategy.
  *
  *	To ensure that no one else can pin the buffer before we do, we must
- *	return the buffer with the buffer header spinlock still held.  If
- *	*lock_held is set on exit, we have returned with the BufFreelistLock
- *	still held, as well; the caller must release that lock once the spinlock
- *	is dropped.  We do it that way because releasing the BufFreelistLock
- *	might awaken other processes, and it would be bad to do the associated
- *	kernel calls while holding the buffer header spinlock.
+ *	return the buffer with the buffer header spinlock still held.
  */
 volatile BufferDesc *
-StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
+StrategyGetBuffer(BufferAccessStrategy strategy)
 {
 	volatile BufferDesc *buf;
-	Latch	   *bgwriterLatch;
+	int			bgwprocno;
 	int			trycounter;
 
 	/*
 	 * If given a strategy object, see whether it can select a buffer. We
-	 * assume strategy objects don't need the BufFreelistLock.
+	 * assume strategy objects don't need buffer_strategy_lock.
 	 */
 	if (strategy != NULL)
 	{
 		buf = GetBufferFromRing(strategy);
 		if (buf != NULL)
-		{
-			*lock_held = false;
 			return buf;
-		}
 	}
 
-	/* Nope, so lock the freelist */
-	*lock_held = true;
-	LWLockAcquire(BufFreelistLock, LW_EXCLUSIVE);
+	/*
+	 * If asked, we need to waken the bgwriter. Since we don't want to rely on
+	 * a spinlock for this we force a read from shared memory once, and then
+	 * set the latch based on that value. We need to go through that length
+	 * because otherwise bgprocno might be reset while/after we check because
+	 * the compiler might just reread from memory.
+	 *
+	 * This can possibly set the latch of the wrong process if the bgwriter
+	 * dies in the wrong moment. But since PGPROC->procLatch is never
+	 * deallocated the worst consequence of that is that we set the latch of
+	 * some arbitrary process.
+	 */
+	bgwprocno = INT_ACCESS_ONCE(StrategyControl->bgwprocno);
+	if (bgwprocno != -1)
+	{
+		/* reset bgwprocno first, before setting the latch */
+		StrategyControl->bgwprocno = -1;
+
+		/*
+		 * Not acquiring ProcArrayLock here which is slightly icky. It's
+		 * actually fine because procLatch isn't ever freed, so we just can
+		 * potentially set the wrong process' (or no process') latch.
+		 */
+		SetLatch(&ProcGlobal->allProcs[bgwprocno].procLatch);
+	}
 
 	/*
 	 * We count buffer allocation requests so that the bgwriter can estimate
 	 * the rate of buffer consumption.  Note that buffers recycled by a
 	 * strategy object are intentionally not counted here.
 	 */
-	StrategyControl->numBufferAllocs++;
+	pg_atomic_fetch_add_u32(&StrategyControl->numBufferAllocs, 1);
 
 	/*
-	 * If bgwriterLatch is set, we need to waken the bgwriter, but we should
-	 * not do so while holding BufFreelistLock; so release and re-grab.  This
-	 * is annoyingly tedious, but it happens at most once per bgwriter cycle,
-	 * so the performance hit is minimal.
+	 * First check, without acquiring the lock, whether there's buffers in the
+	 * freelist. Since we otherwise don't require the spinlock in every
+	 * StrategyGetBuffer() invocation, it'd be sad to acquire it here -
+	 * uselessly in most cases. That obviously leaves a race where a buffer is
+	 * put on the freelist but we don't see the store yet - but that's pretty
+	 * harmless, it'll just get used during the next buffer acquisition.
+	 *
+	 * If there's buffers on the freelist, acquire the spinlock to pop one
+	 * buffer of the freelist. Then check whether that buffer is usable and
+	 * repeat if not.
+	 *
+	 * Note that the freeNext fields are considered to be protected by the
+	 * buffer_strategy_lock not the individual buffer spinlocks, so it's OK to
+	 * manipulate them without holding the spinlock.
 	 */
-	bgwriterLatch = StrategyControl->bgwriterLatch;
-	if (bgwriterLatch)
+	if (StrategyControl->firstFreeBuffer >= 0)
 	{
-		StrategyControl->bgwriterLatch = NULL;
-		LWLockRelease(BufFreelistLock);
-		SetLatch(bgwriterLatch);
-		LWLockAcquire(BufFreelistLock, LW_EXCLUSIVE);
-	}
-
-	/*
-	 * Try to get a buffer from the freelist.  Note that the freeNext fields
-	 * are considered to be protected by the BufFreelistLock not the
-	 * individual buffer spinlocks, so it's OK to manipulate them without
-	 * holding the spinlock.
-	 */
-	while (StrategyControl->firstFreeBuffer >= 0)
-	{
-		buf = &BufferDescriptors[StrategyControl->firstFreeBuffer];
-		Assert(buf->freeNext != FREENEXT_NOT_IN_LIST);
-
-		/* Unconditionally remove buffer from freelist */
-		StrategyControl->firstFreeBuffer = buf->freeNext;
-		buf->freeNext = FREENEXT_NOT_IN_LIST;
-
-		/*
-		 * If the buffer is pinned or has a nonzero usage_count, we cannot use
-		 * it; discard it and retry.  (This can only happen if VACUUM put a
-		 * valid buffer in the freelist and then someone else used it before
-		 * we got to it.  It's probably impossible altogether as of 8.3, but
-		 * we'd better check anyway.)
-		 */
-		LockBufHdr(buf);
-		if (buf->refcount == 0 && buf->usage_count == 0)
+		while (true)
 		{
-			if (strategy != NULL)
-				AddBufferToRing(strategy, buf);
-			return buf;
+			/* Acquire the spinlock to remove element from the freelist */
+			SpinLockAcquire(&StrategyControl->buffer_strategy_lock);
+
+			if (StrategyControl->firstFreeBuffer < 0)
+			{
+				SpinLockRelease(&StrategyControl->buffer_strategy_lock);
+				break;
+			}
+
+			buf = GetBufferDescriptor(StrategyControl->firstFreeBuffer);
+			Assert(buf->freeNext != FREENEXT_NOT_IN_LIST);
+
+			/* Unconditionally remove buffer from freelist */
+			StrategyControl->firstFreeBuffer = buf->freeNext;
+			buf->freeNext = FREENEXT_NOT_IN_LIST;
+
+			/*
+			 * Release the lock so someone else can access the freelist while
+			 * we check out this buffer.
+			 */
+			SpinLockRelease(&StrategyControl->buffer_strategy_lock);
+
+			/*
+			 * If the buffer is pinned or has a nonzero usage_count, we cannot
+			 * use it; discard it and retry.  (This can only happen if VACUUM
+			 * put a valid buffer in the freelist and then someone else used
+			 * it before we got to it.  It's probably impossible altogether as
+			 * of 8.3, but we'd better check anyway.)
+			 */
+			LockBufHdr(buf);
+			if (buf->refcount == 0 && buf->usage_count == 0)
+			{
+				if (strategy != NULL)
+					AddBufferToRing(strategy, buf);
+				return buf;
+			}
+			UnlockBufHdr(buf);
+
 		}
-		UnlockBufHdr(buf);
 	}
 
 	/* Nothing on the freelist, so run the "clock sweep" algorithm */
 	trycounter = NBuffers;
 	for (;;)
 	{
-		buf = &BufferDescriptors[StrategyControl->nextVictimBuffer];
 
-		if (++StrategyControl->nextVictimBuffer >= NBuffers)
-		{
-			StrategyControl->nextVictimBuffer = 0;
-			StrategyControl->completePasses++;
-		}
+		buf = GetBufferDescriptor(ClockSweepTick());
 
 		/*
 		 * If the buffer is pinned or has a nonzero usage_count, we cannot use
@@ -247,7 +346,7 @@ StrategyGetBuffer(BufferAccessStrategy strategy, bool *lock_held)
 void
 StrategyFreeBuffer(volatile BufferDesc *buf)
 {
-	LWLockAcquire(BufFreelistLock, LW_EXCLUSIVE);
+	SpinLockAcquire(&StrategyControl->buffer_strategy_lock);
 
 	/*
 	 * It is possible that we are told to put something in the freelist that
@@ -261,7 +360,7 @@ StrategyFreeBuffer(volatile BufferDesc *buf)
 		StrategyControl->firstFreeBuffer = buf->buf_id;
 	}
 
-	LWLockRelease(BufFreelistLock);
+	SpinLockRelease(&StrategyControl->buffer_strategy_lock);
 }
 
 /*
@@ -278,18 +377,29 @@ StrategyFreeBuffer(volatile BufferDesc *buf)
 int
 StrategySyncStart(uint32 *complete_passes, uint32 *num_buf_alloc)
 {
+	uint32		nextVictimBuffer;
 	int			result;
 
-	LWLockAcquire(BufFreelistLock, LW_EXCLUSIVE);
-	result = StrategyControl->nextVictimBuffer;
+	SpinLockAcquire(&StrategyControl->buffer_strategy_lock);
+	nextVictimBuffer = pg_atomic_read_u32(&StrategyControl->nextVictimBuffer);
+	result = nextVictimBuffer % NBuffers;
+
 	if (complete_passes)
+	{
 		*complete_passes = StrategyControl->completePasses;
+
+		/*
+		 * Additionally add the number of wraparounds that happened before
+		 * completePasses could be incremented. C.f. ClockSweepTick().
+		 */
+		*complete_passes += nextVictimBuffer / NBuffers;
+	}
+
 	if (num_buf_alloc)
 	{
-		*num_buf_alloc = StrategyControl->numBufferAllocs;
-		StrategyControl->numBufferAllocs = 0;
+		*num_buf_alloc = pg_atomic_exchange_u32(&StrategyControl->numBufferAllocs, 0);
 	}
-	LWLockRelease(BufFreelistLock);
+	SpinLockRelease(&StrategyControl->buffer_strategy_lock);
 	return result;
 }
 
@@ -302,16 +412,16 @@ StrategySyncStart(uint32 *complete_passes, uint32 *num_buf_alloc)
  * from hibernation, and is not meant for anybody else to use.
  */
 void
-StrategyNotifyBgWriter(Latch *bgwriterLatch)
+StrategyNotifyBgWriter(int bgwprocno)
 {
 	/*
-	 * We acquire the BufFreelistLock just to ensure that the store appears
+	 * We acquire buffer_strategy_lock just to ensure that the store appears
 	 * atomic to StrategyGetBuffer.  The bgwriter should call this rather
 	 * infrequently, so there's no performance penalty from being safe.
 	 */
-	LWLockAcquire(BufFreelistLock, LW_EXCLUSIVE);
-	StrategyControl->bgwriterLatch = bgwriterLatch;
-	LWLockRelease(BufFreelistLock);
+	SpinLockAcquire(&StrategyControl->buffer_strategy_lock);
+	StrategyControl->bgwprocno = bgwprocno;
+	SpinLockRelease(&StrategyControl->buffer_strategy_lock);
 }
 
 
@@ -376,6 +486,8 @@ StrategyInitialize(bool init)
 		 */
 		Assert(init);
 
+		SpinLockInit(&StrategyControl->buffer_strategy_lock);
+
 		/*
 		 * Grab the whole linked list of free buffers for our strategy. We
 		 * assume it was previously set up by InitBufferPool().
@@ -384,14 +496,14 @@ StrategyInitialize(bool init)
 		StrategyControl->lastFreeBuffer = NBuffers - 1;
 
 		/* Initialize the clock sweep pointer */
-		StrategyControl->nextVictimBuffer = 0;
+		pg_atomic_init_u32(&StrategyControl->nextVictimBuffer, 0);
 
 		/* Clear statistics */
 		StrategyControl->completePasses = 0;
-		StrategyControl->numBufferAllocs = 0;
+		pg_atomic_init_u32(&StrategyControl->numBufferAllocs, 0);
 
 		/* No pending notification */
-		StrategyControl->bgwriterLatch = NULL;
+		StrategyControl->bgwprocno = -1;
 	}
 	else
 		Assert(!init);
@@ -509,7 +621,7 @@ GetBufferFromRing(BufferAccessStrategy strategy)
 	 * higher usage_count indicates someone else has touched the buffer, so we
 	 * shouldn't re-use it.
 	 */
-	buf = &BufferDescriptors[bufnum - 1];
+	buf = GetBufferDescriptor(bufnum - 1);
 	LockBufHdr(buf);
 	if (buf->refcount == 0 && buf->usage_count <= 1)
 	{

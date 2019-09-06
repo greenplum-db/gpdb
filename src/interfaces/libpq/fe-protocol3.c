@@ -4,7 +4,7 @@
  *	  functions that are specific to frontend/backend protocol version 3
  *
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -84,7 +84,7 @@ pqParseInput3(PGconn *conn)
 	int			msgLength;
 	int			avail;
 #ifndef FRONTEND
-	int			numRejected  = 0;
+	int64		numRejected  = 0;
 	int64		numCompleted = 0;
 #endif
 
@@ -179,6 +179,11 @@ pqParseInput3(PGconn *conn)
 		else if (id == 'k')
 		{
 			if (pqGetInt64(&(conn->mop_high_watermark), conn))
+				return;
+		}
+		else if (id == 'x')
+		{
+			if (pqGetc(&conn->wrote_xlog, conn))
 				return;
 		}
 #endif
@@ -479,13 +484,13 @@ pqParseInput3(PGconn *conn)
 							return;
 					}
 
-					if (pqGetInt(&numRejected, 4, conn))
+					if (pqGetInt64(&numRejected, conn))
 						return;
 
 					conn->result->numRejected += numRejected;
 
 					/* Optionally receive completed number when COPY FROM ON SEGMENT */
-					if (msgLength >= 8 && !pqGetInt64(&numCompleted, conn))
+					if (msgLength >= 12 && !pqGetInt64(&numCompleted, conn))
 					{
 						conn->result->numCompleted += numCompleted;
 					}

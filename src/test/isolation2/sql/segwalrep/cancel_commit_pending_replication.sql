@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-
 select gp_inject_fault('sync_rep_query_cancel', 'reset', 2);
 select gp_inject_fault('wal_sender_loop', 'reset', 2);
 

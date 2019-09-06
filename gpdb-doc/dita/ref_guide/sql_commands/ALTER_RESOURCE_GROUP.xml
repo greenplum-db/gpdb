@@ -67,25 +67,34 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
         </plentry>
         <plentry>
           <pt>MEMORY_LIMIT <varname>integer</varname></pt>
-          <pd>The percentage of memory resources to allocate to
-            this resource group. The minimum memory percentage for a resource group is 1.
-            The maximum is 100. The sum of the
+          <pd>The percentage of Greenplum Database memory resources to reserve for 
+            this resource group. The minimum memory percentage for a resource group is 0.
+            The maximum is 100. The default value is 0.</pd>
+          <pd>When <codeph>MEMORY_LIMIT</codeph> is 0, Greenplum Database reserves no
+            memory for the resource group, but uses global shared memory to fulfill all
+            memory requests in the group. If <codeph>MEMORY_LIMIT</codeph> is 0,
+            <codeph>MEMORY_SPILL_RATIO</codeph> must also be 0.</pd>
+          <pd>The sum of the
             <codeph>MEMORY_LIMIT</codeph>s of all resource groups defined in the
-            Greenplum Database cluster must not exceed 100.</pd>
+            Greenplum Database cluster must not exceed 100. If this sum is less
+            than 100, Greenplum Database allocates any unreserved memory to a resource
+            group global shared memory pool.</pd>
         </plentry>
         <plentry>
           <pt>MEMORY_SHARED_QUOTA <varname>integer</varname></pt>
           <pd>The percentage of memory resources to share among transactions in
             the resource group. The minimum memory shared quota percentage for a
             resource group is 0. The maximum is 100. The default
-            <codeph>MEMORY_SHARED_QUOTA</codeph> value is 20.</pd>
+            <codeph>MEMORY_SHARED_QUOTA</codeph> value is 80.</pd>
         </plentry>
         <plentry>
           <pt>MEMORY_SPILL_RATIO <varname>integer</varname></pt>
-          <pd>The memory usage threshold for memory-intensive operators in a transaction
-            issued in the resource group. The minimum memory spill ratio percentage for a
-            resource group is 0. The maximum is 100. The default
-            <codeph>MEMORY_SPILL_RATIO</codeph> value is 20.</pd>
+          <pd>The memory usage threshold for memory-intensive operators in a transaction.
+            You can specify an integer percentage value from 0 to 100 inclusive. The default
+            <codeph>MEMORY_SPILL_RATIO</codeph> value is 0. When <codeph>MEMORY_SPILL_RATIO</codeph>
+            is 0, Greenplum Database uses the
+            <xref href="../config_params/guc-list.xml#statement_mem" format="dita"><codeph>statement_mem</codeph></xref>
+            server configuration parameter value to control initial query operator memory.</pd>
         </plentry>
       </parml>
     </section>
@@ -104,7 +113,7 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
       <codeblock>ALTER RESOURCE GROUP rgroup2 SET CPU_RATE_LIMIT 45;</codeblock>
       <p>Update the memory limit for a resource group: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup3 SET MEMORY_LIMIT 30;</codeblock>
-      <p>Increase the memory spill ratio for a resource group from the default: </p>
+      <p>Update the memory spill ratio for a resource group: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup4 SET MEMORY_SPILL_RATIO 25;</codeblock>
       <p>Reserve CPU core 1 for a resource group: </p>
       <codeblock>ALTER RESOURCE GROUP rgroup5 SET CPUSET '1';</codeblock>

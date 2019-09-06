@@ -3,7 +3,7 @@
  * rewriteheap.h
  *	  Declarations for heap rewrite support functions
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * src/include/access/rewriteheap.h
@@ -41,7 +41,7 @@ typedef struct LogicalRewriteMappingData
 } LogicalRewriteMappingData;
 
 /* ---
- * The filename consists out of the following, dash separated,
+ * The filename consists of the following, dash separated,
  * components:
  * 1) database oid or InvalidOid for shared relations
  * 2) the oid of the relation

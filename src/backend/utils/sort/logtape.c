@@ -71,7 +71,7 @@
  * care that all calls for a single LogicalTapeSet are made in the same
  * palloc context.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -145,12 +145,9 @@ struct LogicalTapeSet
 	long		nFreeBlocks;	/* # of currently free blocks */
 	long		freeBlocksLen;	/* current allocated length of freeBlocks[] */
 
-	/*
-	 * tapes[] is declared size 1 since C wants a fixed size, but actually it
-	 * is of length nTapes.
-	 */
+	/* The array of logical tapes. */
 	int			nTapes;			/* # of logical tapes in set */
-	LogicalTape tapes[1];		/* must be last in struct! */
+	LogicalTape tapes[FLEXIBLE_ARRAY_MEMBER];	/* has nTapes nentries */
 };
 
 static void ltsWriteBlock(LogicalTapeSet *lts, int64 blocknum, void *buffer);
@@ -197,7 +194,7 @@ LoadLogicalTapeSetState(BufFile *statefile, BufFile *tapefile)
 	LogicalTape *lt;
 	size_t readSize;
 
-	lts = (LogicalTapeSet *) palloc(sizeof(LogicalTapeSet));
+	lts = (LogicalTapeSet *) palloc(offsetof(LogicalTapeSet, tapes) + sizeof(LogicalTape));
 	lts->pfile = tapefile;
 	lts->nTapes = 1;
 	lt = &lts->tapes[0];
@@ -382,12 +379,11 @@ LogicalTapeSetCreate_Internal(int ntapes)
 	int			i;
 
 	/*
-	 * Create top-level struct including per-tape LogicalTape structs. First
-	 * LogicalTape struct is already counted in sizeof(LogicalTapeSet).
+	 * Create top-level struct including per-tape LogicalTape structs.
 	 */
 	Assert(ntapes > 0);
-	lts = (LogicalTapeSet *) palloc(sizeof(LogicalTapeSet) +
-									(ntapes - 1) *sizeof(LogicalTape));
+	lts = (LogicalTapeSet *) palloc(offsetof(LogicalTapeSet, tapes) +
+									ntapes * sizeof(LogicalTape));
 	lts->pfile = NULL; 
 	lts->nFileBlocks = 0L;
 	lts->forgetFreeSpace = false;

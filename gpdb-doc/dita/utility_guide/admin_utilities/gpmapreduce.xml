@@ -25,9 +25,10 @@
       <title>Prerequisites</title>
       <p>The following are required prior to running this program:</p>
       <ul id="ul_v5h_bxq_dp">
-        <li id="kx142094">You must have your MapReduce job defined in a YAML file. For information
-          about the Greenplum MapReduce specification, see the <i>Greenplum Database Reference
-            Guide</i>.</li>
+        <li id="kx142094">You must have your MapReduce job defined in a YAML file. See the <xref
+            type="dita" scope="local" href="../../ref_guide/yaml_spec.xml">Greenplum MapReduce
+            Specification</xref> in the <i>Greenplum Database Reference Guide</i> for more
+          information.</li>
         <li id="kx141300">You must be a Greenplum Database superuser to run MapReduce jobs written
           in untrusted Perl or Python.</li>
         <li id="kx141310">You must be a Greenplum Database superuser to run MapReduce jobs with

@@ -2,7 +2,7 @@
  * pg_db_role_setting.c
  *		Routines to support manipulation of the pg_db_role_setting relation
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -234,7 +234,7 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
 			appendStringInfo(&buffer, "ALTER DATABASE %s ",
 							 quote_identifier(dbname));
 		else
-			elog(ERROR, "ALTER without DATABASE or ROLE"); /* shouldn't happen */
+			appendStringInfo(&buffer, "ALTER ROLE ALL ");
 
 		if (setstmt->kind ==  VAR_RESET_ALL)
 			appendStringInfo(&buffer, "RESET ALL");

@@ -2,14 +2,14 @@
 #
 # Makefile for src/bin/pg_basebackup
 #
-# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/bin/pg_basebackup/Makefile
 #
 #-------------------------------------------------------------------------
 
-PGFILEDESC = "pg_basebackup - takes a streaming base backup of a PostgreSQL instance"
+PGFILEDESC = "pg_basebackup/pg_receivexlog/pg_recvlogical - streaming WAL and backup receivers"
 PGAPPICON=win32
 
 subdir = src/bin/pg_basebackup
@@ -51,7 +51,7 @@ clean distclean maintainer-clean:
 		$(OBJS)
 	rm -rf tmp_check
 
-check: all
+check:
 	$(prove_check)
 
 installcheck:

@@ -495,7 +495,7 @@ EXPLAIN SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
          SubPlan 1
            ->  Result  (cost=0.00..0.01 rows=1 width=0)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (6 rows)
 
 DROP TABLE A;

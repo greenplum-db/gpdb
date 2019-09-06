@@ -79,30 +79,6 @@ AH_VERBATIM(GETTIMEOFDAY_1ARG_,
 ])# PGAC_FUNC_GETTIMEOFDAY_1ARG
 
 
-# PGAC_FUNC_GETPWUID_R_5ARG
-# ---------------------------
-# Check if getpwuid_r() takes a fifth argument (later POSIX standard, not draft version)
-# If so, define GETPWUID_R_5ARG
-AC_DEFUN([PGAC_FUNC_GETPWUID_R_5ARG],
-[AC_CACHE_CHECK(whether getpwuid_r takes a fifth argument,
-pgac_cv_func_getpwuid_r_5arg,
-[AC_TRY_COMPILE([#include <sys/types.h>
-#include <pwd.h>],
-[uid_t uid = 0;
-struct passwd *space = 0;
-char *buf = 0;
-size_t bufsize = 0;
-struct passwd **result = 0;
-getpwuid_r(uid, space, buf, bufsize, result);],
-[pgac_cv_func_getpwuid_r_5arg=yes],
-[pgac_cv_func_getpwuid_r_5arg=no])])
-if test x"$pgac_cv_func_getpwuid_r_5arg" = xyes ; then
-  AC_DEFINE(GETPWUID_R_5ARG, 1,
-            [Define to 1 if getpwuid_r() takes a 5th argument.])
-fi
-])# PGAC_FUNC_GETPWUID_R_5ARG
-
-
 # PGAC_FUNC_STRERROR_R_INT
 # ---------------------------
 # Check if strerror_r() returns int (POSIX) rather than char * (GNU libc).
@@ -221,22 +197,22 @@ HAVE_POSIX_SIGNALS=$pgac_cv_func_posix_signals
 AC_SUBST(HAVE_POSIX_SIGNALS)])# PGAC_FUNC_POSIX_SIGNALS
 
 
-# PGAC_FUNC_SNPRINTF_LONG_LONG_INT_FORMAT
+# PGAC_FUNC_SNPRINTF_LONG_LONG_INT_MODIFIER
 # ---------------------------------------
-# Determine which format snprintf uses for long long int.  We handle
-# %lld, %qd, %I64d.  The result is in shell variable
-# LONG_LONG_INT_FORMAT.
+# Determine which length modifier snprintf uses for long long int.  We
+# handle ll, q, and I64.  The result is in shell variable
+# LONG_LONG_INT_MODIFIER.
 #
 # MinGW uses '%I64d', though gcc throws an warning with -Wall,
 # while '%lld' doesn't generate a warning, but doesn't work.
 #
-AC_DEFUN([PGAC_FUNC_SNPRINTF_LONG_LONG_INT_FORMAT],
-[AC_MSG_CHECKING([snprintf format for long long int])
-AC_CACHE_VAL(pgac_cv_snprintf_long_long_int_format,
-[for pgac_format in '%lld' '%qd' '%I64d'; do
+AC_DEFUN([PGAC_FUNC_SNPRINTF_LONG_LONG_INT_MODIFIER],
+[AC_MSG_CHECKING([snprintf length modifier for long long int])
+AC_CACHE_VAL(pgac_cv_snprintf_long_long_int_modifier,
+[for pgac_modifier in 'll' 'q' 'I64'; do
 AC_TRY_RUN([#include <stdio.h>
 typedef long long int ac_int64;
-#define INT64_FORMAT "$pgac_format"
+#define INT64_FORMAT "%${pgac_modifier}d"
 
 ac_int64 a = 20000001;
 ac_int64 b = 40000005;
@@ -258,19 +234,19 @@ int does_int64_snprintf_work()
 main() {
   exit(! does_int64_snprintf_work());
 }],
-[pgac_cv_snprintf_long_long_int_format=$pgac_format; break],
+[pgac_cv_snprintf_long_long_int_modifier=$pgac_modifier; break],
 [],
-[pgac_cv_snprintf_long_long_int_format=cross; break])
+[pgac_cv_snprintf_long_long_int_modifier=cross; break])
 done])dnl AC_CACHE_VAL
 
-LONG_LONG_INT_FORMAT=''
+LONG_LONG_INT_MODIFIER=''
 
-case $pgac_cv_snprintf_long_long_int_format in
+case $pgac_cv_snprintf_long_long_int_modifier in
   cross) AC_MSG_RESULT([cannot test (not on host machine)]);;
-  ?*)    AC_MSG_RESULT([$pgac_cv_snprintf_long_long_int_format])
-         LONG_LONG_INT_FORMAT=$pgac_cv_snprintf_long_long_int_format;;
+  ?*)    AC_MSG_RESULT([$pgac_cv_snprintf_long_long_int_modifier])
+         LONG_LONG_INT_MODIFIER=$pgac_cv_snprintf_long_long_int_modifier;;
   *)     AC_MSG_RESULT(none);;
-esac])# PGAC_FUNC_SNPRINTF_LONG_LONG_INT_FORMAT
+esac])# PGAC_FUNC_SNPRINTF_LONG_LONG_INT_MODIFIER
 
 
 # PGAC_FUNC_SNPRINTF_ARG_CONTROL
@@ -327,7 +303,8 @@ int main()
    */
   bufz[0] = '\0';  /* in case snprintf fails to emit anything */
   snprintf(bufz, sizeof(bufz), "%zu", ~((size_t) 0));
-  snprintf(buf64, sizeof(buf64), UINT64_FORMAT, (PG_INT64_TYPE) ~((size_t) 0));
+  snprintf(buf64, sizeof(buf64), "%" INT64_MODIFIER "u",
+    (unsigned PG_INT64_TYPE) ~((size_t) 0));
   if (strcmp(bufz, buf64) != 0)
     return 1;
   return 0;

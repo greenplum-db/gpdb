@@ -1164,6 +1164,27 @@ SELECT word FROM words ORDER BY word <-> 'caterpiler' LIMIT 10;
     original one.
 </para>
 
+<caution>
+ <para>
+  In many cases, tasks that could be performed by rules
+  on <command>INSERT</>/<command>UPDATE</>/<command>DELETE</> are better done
+  with triggers.  Triggers are notationally a bit more complicated, but their
+  semantics are much simpler to understand.  Rules tend to have surprising
+  results when the original query contains volatile functions: volatile
+  functions may get executed more times than expected in the process of
+  carrying out the rules.
+ </para>
+
+ <para>
+  Also, there are some cases that are not supported by these types of rules at
+  all, notably including <literal>WITH</> clauses in the original query and
+  multiple-assignment sub-<literal>SELECT</>s in the <literal>SET</> list
+  of <command>UPDATE</> queries.  This is because copying these constructs
+  into a rule query would result in multiple evaluations of the sub-query,
+  contrary to the express intent of the query's author.
+ </para>
+</caution>
+
 <sect2>
 <title>How Update Rules Work</title>
 
@@ -2112,10 +2133,10 @@ SELECT * FROM phone_number WHERE tricky(person, phone);
 </para>
 
 <para>
-    When it is necessary for a view to provide row-level security, the
+    When it is necessary for a view to provide row level security, the
     <literal>security_barrier</literal> attribute should be applied to
     the view.  This prevents maliciously-chosen functions and operators from
-    being invoked on rows until after the view has done its work.  For
+    being passed values from rows until after the view has done its work.  For
     example, if the view shown above had been created like this, it would
     be secure:
 <programlisting>
@@ -2136,9 +2157,12 @@ CREATE VIEW phone_number WITH (security_barrier) AS
     operators.  The query planner can safely allow such functions to be evaluated
     at any point in the query execution process, since invoking them on rows
     invisible to the user will not leak any information about the unseen rows.
-    In contrast, a function that might throw an error depending on the values
-    received as arguments (such as one that throws an error in the event of
-    overflow or division by zero) are not leak-proof, and could provide
+    Further, functions which do not take arguments or which are not passed any
+    arguments from the security barrier view do not have to be marked as
+    <literal>LEAKPROOF</literal> to be pushed down, as they never receive data
+    from the view.  In contrast, a function that might throw an error depending
+    on the values received as arguments (such as one that throws an error in the
+    event of overflow or division by zero) are not leak-proof, and could provide
     significant information about the unseen rows if applied before the security
     view's row filters.
 </para>

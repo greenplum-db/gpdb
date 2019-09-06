@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/memnodes.h
@@ -57,13 +57,14 @@ typedef struct MemoryContextMethods
 typedef struct MemoryContextData
 {
 	NodeTag		type;			/* identifies exact kind of context */
+	/* these two fields are placed here to minimize alignment wastage: */
+	bool		isReset;		/* T = no space alloced since last reset */
+	bool		allowInCritSection;		/* allow palloc in critical section */
 	MemoryContextMethods methods;		/* virtual function table */
 	MemoryContext parent;		/* NULL if no parent (toplevel context) */
 	MemoryContext firstchild;	/* head of linked list of children */
 	MemoryContext nextchild;	/* next child of same parent */
 	char	   *name;			/* context name (just for debugging) */
-	bool		isReset;		/* T = no space alloced since last reset */
-
     /* CDB: Lifetime cumulative stats for this context and all descendants */
     uint64      allBytesAlloc;  /* bytes allocated from lower level mem mgr */
     uint64      allBytesFreed;  /* bytes returned to lower level mem mgr */
@@ -73,6 +74,7 @@ typedef struct MemoryContextData
     const char *callerFile;     /* __FILE__ of most recent caller */
     int         callerLine;     /* __LINE__ of most recent caller */
 #endif
+	MemoryContextCallback *reset_cbs;	/* list of reset/delete callbacks */
 } MemoryContextData;
 
 /* utils/palloc.h contains typedef struct MemoryContextData *MemoryContext */

@@ -4,7 +4,7 @@
  *	  Public header file for SP-GiST access method.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/spgist.h
@@ -15,8 +15,9 @@
 #define SPGIST_H
 
 #include "access/skey.h"
-#include "access/xlog.h"
+#include "access/xlogreader.h"
 #include "fmgr.h"
+#include "lib/stringinfo.h"
 
 
 /* reloption parameters */
@@ -196,8 +197,9 @@ extern Datum spgbulkdelete(PG_FUNCTION_ARGS);
 extern Datum spgvacuumcleanup(PG_FUNCTION_ARGS);
 
 /* spgxlog.c */
-extern void spg_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void spg_desc(StringInfo buf, XLogRecord *record);
+extern void spg_redo(XLogReaderState *record);
+extern void spg_desc(StringInfo buf, XLogReaderState *record);
+extern const char *spg_identify(uint8 info);
 extern void spg_xlog_startup(void);
 extern void spg_xlog_cleanup(void);
 

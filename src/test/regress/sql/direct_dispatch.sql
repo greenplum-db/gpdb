@@ -261,6 +261,37 @@ insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
 drop table ddtesttab;
 drop sequence ddtestseq;
 
+-- Test prepare statement will choose custom plan instead of generic plan when
+-- considering no direct dispatch cost.
+create table test_prepare(i int, j int);
+-- insert case
+prepare p1 as insert into test_prepare values($1, 1);
+execute p1(1);
+execute p1(1);
+execute p1(1);
+execute p1(1);
+execute p1(1);
+-- the first 5 execute will always use custom plan, focus on the 6th one.
+execute p1(1);
+
+-- update case
+prepare p2 as update test_prepare set j =2 where i =$1;
+execute p2(1);
+execute p2(1);
+execute p2(1);
+execute p2(1);
+execute p2(1);
+execute p2(1);
+
+-- select case
+prepare p3 as select * from test_prepare where i =$1;
+execute p3(1);
+execute p3(1);
+execute p3(1);
+execute p3(1);
+execute p3(1);
+execute p3(1);
+drop table test_prepare;
 
 -- cleanup
 set test_print_direct_dispatch_info=off;

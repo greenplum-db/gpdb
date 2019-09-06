@@ -25,6 +25,7 @@
 #include "access/aocssegfiles.h"
 #include "access/aosegfiles.h"
 #include "access/appendonlytid.h"
+#include "access/appendonlywriter.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
@@ -80,6 +81,13 @@ NewFileSegInfo(int segno)
 	return fsinfo;
 }
 
+void
+ValidateAppendonlySegmentDataBeforeStorage(int segno)
+{
+	if (segno >= MAX_AOREL_CONCURRENCY || segno < 0)
+		ereport(ERROR, (errmsg("expected segment number to be between zero and the maximum number of concurrent writers, actually %d", segno)));
+}
+
 /*
  * InsertFileSegInfo
  *
@@ -99,6 +107,8 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	bool	   *nulls;
 	Datum	   *values;
 	int16		formatVersion;
+
+	ValidateAppendonlySegmentDataBeforeStorage(segno);
 
 	/* New segments are always created in the latest format */
 	formatVersion = AORelationVersion_GetLatest();
@@ -262,6 +272,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("got invalid formatversion value: NULL")));
+	AORelationVersion_CheckValid(fsinfo->formatversion);
 
 	/* get the state */
 	fsinfo->state = DatumGetInt16(
@@ -441,9 +452,13 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 
 		/* get the file format version number */
 		formatversion = fastgetattr(tuple, Anum_pg_aoseg_formatversion, pg_aoseg_dsc, &isNull);
-		Assert(!isNull || appendOnlyMetaDataSnapshot == SnapshotAny);
-		if (!isNull)
-			oneseginfo->formatversion = (int64) DatumGetInt16(formatversion);
+		if (isNull)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("got invalid formatversion value: NULL")));
+
+		AORelationVersion_CheckValid(formatversion);
+		oneseginfo->formatversion = DatumGetInt16(formatversion);
 
 		/* get the state */
 		state = fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull);
@@ -453,7 +468,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid state value: NULL")));
 		else
-			oneseginfo->state = (int64) DatumGetInt16(state);
+			oneseginfo->state = DatumGetInt16(state);
 
 		/* get the uncompressed eof */
 		eof_uncompressed = fastgetattr(tuple, Anum_pg_aoseg_eofuncompressed, pg_aoseg_dsc, &isNull);
@@ -1764,16 +1779,10 @@ aorow_compression_ratio_internal(Relation parentrel)
 	 */
 	aosegrel = heap_open(segrelid, AccessShareLock);
 	initStringInfo(&sqlstmt);
-	if (Gp_role == GP_ROLE_DISPATCH)
-		appendStringInfo(&sqlstmt, "select sum(eof), sum(eofuncompressed) "
-						 "from gp_dist_random('%s.%s')",
-						 get_namespace_name(RelationGetNamespace(aosegrel)),
-						 RelationGetRelationName(aosegrel));
-	else
-		appendStringInfo(&sqlstmt, "select eof, eofuncompressed "
-						 "from %s.%s",
-						 get_namespace_name(RelationGetNamespace(aosegrel)),
-						 RelationGetRelationName(aosegrel));
+	appendStringInfo(&sqlstmt, "select sum(eof), sum(eofuncompressed) "
+					 "from gp_dist_random('%s.%s')",
+					 get_namespace_name(RelationGetNamespace(aosegrel)),
+					 RelationGetRelationName(aosegrel));
 
 	heap_close(aosegrel, AccessShareLock);
 

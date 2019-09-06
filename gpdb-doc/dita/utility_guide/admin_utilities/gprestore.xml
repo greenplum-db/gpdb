@@ -350,7 +350,7 @@ $ gprestore --include-schema wikipedia --backup-dir /home/gpadmin/backups/ --tim
       <p>The following <codeph>gprestore</codeph> command specifies the timestamp 20121114064330.
         The incremental backup with the timestamps 20120714095512 and 20120914081205 and the full
         backup must be available to perform a restore.</p>
-      <codeblock>gpdbrestore --timestamp 20121114064330 --redirect-db mystest --create-db</codeblock>
+      <codeblock>gprestore --timestamp 20121114064330 --redirect-db mystest --create-db</codeblock>
     </section>
     <section id="section9">
       <title>See Also</title>

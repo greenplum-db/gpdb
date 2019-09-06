@@ -16,6 +16,7 @@ typedef struct float4key
 ** float4 ops
 */
 PG_FUNCTION_INFO_V1(gbt_float4_compress);
+PG_FUNCTION_INFO_V1(gbt_float4_fetch);
 PG_FUNCTION_INFO_V1(gbt_float4_union);
 PG_FUNCTION_INFO_V1(gbt_float4_picksplit);
 PG_FUNCTION_INFO_V1(gbt_float4_consistent);
@@ -112,11 +113,17 @@ Datum
 gbt_float4_compress(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
-	GISTENTRY  *retval = NULL;
 
-	PG_RETURN_POINTER(gbt_num_compress(retval, entry, &tinfo));
+	PG_RETURN_POINTER(gbt_num_compress(entry, &tinfo));
 }
 
+Datum
+gbt_float4_fetch(PG_FUNCTION_ARGS)
+{
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
+
+	PG_RETURN_POINTER(gbt_num_fetch(entry, &tinfo));
+}
 
 Datum
 gbt_float4_consistent(PG_FUNCTION_ARGS)

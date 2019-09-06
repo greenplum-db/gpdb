@@ -61,7 +61,6 @@ STANDBY_FATAL_RET_CODE=2 # copied from gpinitstandby
 PORT_TXT="#port"
 LOG_STATEMENT_TXT="#log_statement ="
 LISTEN_ADR_TXT="listen_addresses"
-CHKPOINT_SEG_TXT="checkpoint_segments"
 CONTENT_ID_TXT="gp_contentid"
 DBID_TXT="gp_dbid"
 INIT_STANDBY_PROG=$GPINITSTANDBY
@@ -73,7 +72,7 @@ TMP_HOSTNAME_FILE=/tmp/hostname_test_file.$$
 PARALLEL_STATUS_FILE=/tmp/gpinitsystem_parallel_status_file.$$
 GPCREATESEG=$WORKDIR/lib/gpcreateseg.sh
 ULIMIT_WARN=0
-MIRROR_TYPE=0
+MIRROR_TYPE=0 # 0 = group, 1 = spread
 REMOTE_HOST_COUNT=0
 SINGLE_HOST_BATCH_LIMIT=4
 INPUT_CONFIG=""
@@ -135,7 +134,7 @@ USAGE () {
 		$ECHO "          Also see gpinitsystem_INSTRUCTIONS file for greater detail on"
 		$ECHO "          the operation and configuration of this script"
 		$ECHO "      -e, <password>, password to set for Greenplum superuser in database [default $GP_PASSWD]"
-		$ECHO "      -F, standby_datadir [optiona]"
+		$ECHO "      -S, standby_datadir [optional]"
 		$ECHO "      -h, gp_hostlist_file [optional]"
 		$ECHO "          Contains a list of all segment instance hostnames required to participate in"
 		$ECHO "          the new Greenplum instance. Normally set in gp_config_file."
@@ -232,7 +231,7 @@ CHK_PARAMS () {
 		    fi
 		    
 		    # Make sure old CLUSTER_CONFIG settings are not hanging around.
-		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE HEAP_CHECKSUM HBA_HOSTNAMES
+		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY HEAP_CHECKSUM HBA_HOSTNAMES
 
 		    # Make sure it is not a dos file with CTRL M at end of each line
 		    $TR -d '\r' < $CLUSTER_CONFIG > $TMP_FILE
@@ -394,11 +393,6 @@ CHK_PARAMS () {
 		fi
 		if [ ! $TRUSTED_SHELL ]; then
 				ERROR_EXIT "[FATAL]:-TRUSTED_SHELL variable not set" 2
-		fi
-		# CHECK_POINT_SEGMENTS
-		if [ ! $CHECK_POINT_SEGMENTS ]; then
-			LOG_MSG "[WARN]:-CHECK_POINT_SEGMENTS variable not set, will set to default value"  1
-			CHECK_POINT_SEGMENTS=$DEFAULT_CHK_PT_SEG
 		fi
 		# ENCODING
 		if [ ! $ENCODING ]; then
@@ -664,7 +658,7 @@ END_PYTHON_CODE
 	if [ $MIRRORING -eq 1 ] && [ $MIRROR_TYPE -eq 1 ];then
 	# Mirroring is on and spread mirror configuration has been requested, make sure sufficient hosts
 		if [ $NUM_SEP_HOSTS -eq 1 ] || [ $NUM_SEP_HOSTS -le $NUM_DATADIR ];then
-			LOG_MSG "[FATAL]:-Request made for spread mirroring via -S option, but insufficient hosts available" 1
+			LOG_MSG "[FATAL]:-Request made for spread mirroring via --mirror-mode option, but insufficient hosts available" 1
 			LOG_MSG "[INFO]:-Number of separate hosts must be greater than number of segment instances per host" 1
 			ERROR_EXIT "[FATAL]:-Unable to continue" 2
 		else
@@ -672,7 +666,7 @@ END_PYTHON_CODE
 		fi 
 	fi
 	if [ $MIRRORING -eq 0 ] && [ $MIRROR_TYPE -eq 1 ];then
-		LOG_MSG "[WARN]:-Option -S supplied, but no mirrors have been defined, ignoring -S option" 1
+		LOG_MSG "[WARN]:-Option --mirror-mode supplied, but no mirrors have been defined, ignoring --mirror-mode option" 1
 		MIRROR_TYPE=0
 		EXIT_STATUS=1
 	fi
@@ -981,13 +975,8 @@ CREATE_QE_ARRAY () {
 		fi
 		((GP_PORT=$PORT_BASE+$PORT_COUNT))
 		
-		if [ x"" == x"$REPLICATION_PORT_BASE" ];then
-			REPL_PORT=0
-		else
-			((REPL_PORT=$REPLICATION_PORT_BASE+$PORT_COUNT))
-		fi
 		GP_DIR=${DATA_DIRECTORY[$SEG_DIR_VECTOR]}
-		QE_PRIMARY_ARRAY=(${QE_PRIMARY_ARRAY[@]} ${QE_NAME}~${GP_PORT}~${GP_DIR}/${SEG_PREFIX}${CONTENT_COUNT}~${DBID_COUNT}~$CONTENT_COUNT~${REPL_PORT})
+		QE_PRIMARY_ARRAY=(${QE_PRIMARY_ARRAY[@]} ${QE_NAME}~${GP_PORT}~${GP_DIR}/${SEG_PREFIX}${CONTENT_COUNT}~${DBID_COUNT}~$CONTENT_COUNT)
 		POSTGRES_PORT_CHK $GP_PORT $QE_NAME
 		((DBID_COUNT=$DBID_COUNT+1))
 		((CONTENT_COUNT=$CONTENT_COUNT+1))
@@ -997,7 +986,6 @@ CREATE_QE_ARRAY () {
 	if [ $DEBUG_LEVEL -eq 0 ] && [ x"" != x"$VERBOSE" ];then $ECHO;fi
 	if [ $MIRRORING -eq 1 ] ;then
 		((MIRROR_OFFSET=$MIRROR_PORT_BASE-$PORT_BASE))
-		((MIRROR_REPLICATION_PORT_OFFSET=$MIRROR_REPLICATION_PORT_BASE-$REPLICATION_PORT_BASE))
 		if [ $MIRROR_TYPE -eq 1 ];then
 			CREATE_SPREAD_MIRROR_ARRAY
 		else
@@ -1078,7 +1066,6 @@ DISPLAY_CONFIG () {
 		LOG_MSG "[INFO]:-Master buffers             = $MASTER_SHARED_BUFFERS" 1
 		LOG_MSG "[INFO]:-Segment connections        = $QE_MAX_CONNECT" 1
 		LOG_MSG "[INFO]:-Segment buffers            = $QE_SHARED_BUFFERS" 1
-		LOG_MSG "[INFO]:-Checkpoint segments        = $CHECK_POINT_SEGMENTS" 1
 		LOG_MSG "[INFO]:-Encoding                   = $ENCODING" 1
 		LOG_MSG "[INFO]:-Postgres param file        = $PG_ADD" 1
 		LOG_MSG "[INFO]:-Initdb to be used          = $INITDB" 1
@@ -1120,8 +1107,6 @@ DISPLAY_CONFIG () {
         LOG_MSG "[INFO]:-Number segment hosts       = $NUM_QES" 1
         if [ $MIRROR_PORT_BASE ]; then
             LOG_MSG "[INFO]:-Mirror port base           = $MIRROR_PORT_BASE" 1
-            LOG_MSG "[INFO]:-Replicaton port base       = $REPLICATION_PORT_BASE" 1
-            LOG_MSG "[INFO]:-Mirror replicaton port base= $MIRROR_REPLICATION_PORT_BASE" 1
             ((NUM_MIRROR_DIRECTORY=${#MIRROR_DATA_DIRECTORY[@]}))
             LOG_MSG "[INFO]:-Number of mirror segments  = $NUM_MIRROR_DIRECTORY" 1
             LOG_MSG "[INFO]:-Mirroring config           = ON" 1
@@ -1142,11 +1127,7 @@ DISPLAY_CONFIG () {
         LOG_MSG "[INFO]:----------------------------------------" 1
         for I in "${QE_PRIMARY_ARRAY[@]}"
         do
-            if [ $MIRRORING -ne 0 ]; then
-                TXT=`$ECHO $I|$AWK -F"~" '{print $1" \t"$3" \t"$2" \t"$4" \t"$5" \t"$6}'`
-            else
-                TXT=`$ECHO $I|$AWK -F"~" '{print $1" \t"$3" \t"$2" \t"$4" \t"$5}'`
-            fi
+            TXT=`$ECHO $I|$AWK -F"~" '{print $1" \t"$3" \t"$2" \t"$4" \t"$5}'`
             LOG_MSG "[INFO]:-$TXT" 1
         done
         if [ $MIRRORING -ne 0 ]; then
@@ -1155,7 +1136,7 @@ DISPLAY_CONFIG () {
             LOG_MSG "[INFO]:---------------------------------------" 1
             for I in  "${QE_MIRROR_ARRAY[@]}"
             do
-                TXT=`$ECHO $I|$AWK -F"~" '{print $1" \t"$3" \t"$2" \t"$4" \t"$5" \t"$6}'`
+                TXT=`$ECHO $I|$AWK -F"~" '{print $1" \t"$3" \t"$2" \t"$4" \t"$5}'`
                 LOG_MSG "[INFO]:-$TXT" 1
             done
         fi
@@ -1185,7 +1166,6 @@ SET_VAR () {
     GP_DIR=`$ECHO $I|$CUT -d$S -f3`
     GP_DBID=`$ECHO $I|$CUT -d$S -f4`
     GP_CONTENT=`$ECHO $I|$CUT -d$S -f5`
-    GP_REPLICATION_PORT=`$ECHO $I|$CUT -d$S -f6`
 }
 
 CREATE_QD_DB () {
@@ -1265,8 +1245,6 @@ CREATE_QD_DB () {
 		SED_PG_CONF ${GP_DIR}/$PG_CONF "$LOG_STATEMENT_TXT" log_statement=all 0
 		ERROR_CHK $? "set log_statement=all in ${GP_DIR}/$PG_CONF" 1
 		LOG_MSG "[INFO]:-Setting Master instance check point segments"
-		SED_PG_CONF ${GP_DIR}/$PG_CONF "$CHKPOINT_SEG_TXT" "checkpoint_segments=$CHECK_POINT_SEGMENTS" 0
-		ERROR_CHK $? "set checkpoint_segments=$CHECK_POINT_SEGMENTS in ${GP_DIR}/$PG_CONF" 1
 
 		LOG_MSG "[INFO]:-Setting Master instance content id"
 		SED_PG_CONF ${GP_DIR}/$PG_CONF "$CONTENT_ID_TXT" "gp_contentid=-1" 0
@@ -1345,7 +1323,6 @@ UPDATE_GPCONFIG () {
 		U_PORT=$6
 		U_DIR=$7
 		U_ROLE=$8
-		U_REPLICATION_PORT=null
 
 		U_DB=$DEFAULTDB
 		CHK_COUNT=`env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -A -t -c "SELECT count(*) FROM $GP_CONFIG_TBL WHERE content=${U_CONTENT} AND preferred_role='${U_ROLE}';" 2>/dev/null` >> $LOG_FILE 2>&1
@@ -1405,7 +1382,6 @@ CREATE_QES_PRIMARY () {
 			export PARALLEL_STATUS_FILE
 			export TOTAL_SEG
 			export ARRAY_NAME
-			export CHECK_POINT_SEGMENTS
 			export QE_MAX_CONNECT
 			export QE_SHARED_BUFFERS
 			export SEG_PREFIX
@@ -1443,7 +1419,7 @@ REGISTER_MIRRORS () {
 			SET_VAR $I
 			dbid=`env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "${DEFAULTDB}" -A -t -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTADDRESS}', '${GP_HOSTADDRESS}', ${GP_PORT}, '${GP_DIR}');" 2>/dev/null` >> $LOG_FILE 2>&1
 			ERROR_CHK $? "failed to register mirror for contentid=${GP_CONTENT}" 2
-			MIRRORS_UPDATED_DBID=(${MIRRORS_UPDATED_DBID[@]} ${GP_HOSTADDRESS}~${GP_PORT}~${GP_DIR}~${dbid}~${GP_CONTENT}~${GP_REPLICATION_PORT})
+			MIRRORS_UPDATED_DBID=(${MIRRORS_UPDATED_DBID[@]} ${GP_HOSTADDRESS}~${GP_PORT}~${GP_DIR}~${dbid}~${GP_CONTENT})
 		done
 
 		QE_MIRROR_ARRAY=(${MIRRORS_UPDATED_DBID[@]})
@@ -1488,7 +1464,6 @@ CREATE_QES_MIRROR () {
 		export ARRAY_NAME
 		export QE_MAX_CONNECT
 		export QE_SHARED_BUFFERS
-		export CHECK_POINT_SEGMENTS
 		export SEG_PREFIX
 		if [ $DEBUG_LEVEL -eq 0 ] && [ x"" != x"$VERBOSE" ];then $NOLINE_ECHO ".\c";fi
 		FLAG=""
@@ -1544,7 +1519,7 @@ CREATE_STANDBY_QD () {
 			INIT_STANDBY_ARGS+=" -P $STANDBY_PORT"
 		fi
 		if [ x"" != x"$STANDBY_DATADIR" ]; then
-			INIT_STANDBY_ARGS+=" -F $STANDBY_DATADIR"
+			INIT_STANDBY_ARGS+=" -S $STANDBY_DATADIR"
 		fi
 		if [ $HBA_HOSTNAMES -eq 1 ]; then
 		    INIT_STANDBY_ARGS+=" --hba-hostnames"
@@ -1679,14 +1654,8 @@ SCAN_LOG () {
 
 DUMP_OUTPUT_CONFIG () {
     $ECHO "ARRAY_NAME=\"$ARRAY_NAME\"" > $OUTPUT_CONFIG
-    if [ x"" != x"$IP_ALLOW" ] ; then
-	$ECHO "IP_ALLOW=$IP_ALLOW" >> $OUTPUT_CONFIG
-    fi
     if [ x"" != x"$TRUSTED_SHELL" ] ; then
 	$ECHO "TRUSTED_SHELL=$TRUSTED_SHELL" >> $OUTPUT_CONFIG
-    fi
-    if [ x"" != x"$CHECK_POINT_SEGMENTS" ] ; then
-	$ECHO "CHECK_POINT_SEGMENTS=$CHECK_POINT_SEGMENTS" >> $OUTPUT_CONFIG
     fi
     if [ x"" != x"$ENCODING" ] ; then
 	$ECHO "ENCODING=$ENCODING" >> $OUTPUT_CONFIG
@@ -1816,9 +1785,7 @@ CHK_QE_ARRAY_PORT_RANGES () {
     #
 
     MIN_PORT=1000000
-    MIN_REPLICATION_PORT=100000000
     MAX_PORT=0
-    MAX_REPLICATION_PORT=0
     for QE in ${QE_PRIMARY_ARRAY[@]}
     do
         SET_VAR $QE
@@ -1828,22 +1795,13 @@ CHK_QE_ARRAY_PORT_RANGES () {
         if [ $GP_PORT -gt $MAX_PORT ] ; then
             MAX_PORT=$GP_PORT
         fi
-        if [ $GP_REPLICATION_PORT -lt $MIN_REPLICATION_PORT ]; then
-            MIN_REPLICATION_PORT=$GP_REPLICATION_PORT
-        fi
-        if [ $GP_REPLICATION_PORT -gt $MAX_REPLICATION_PORT ]; then
-            MAX_REPLICATION_PORT=$GP_REPLICATION_PORT
-        fi
     done
 
     PORT_BASE=$MIN_PORT
-    REPLICATION_PORT_BASE=$MIN_REPLICATION_PORT
 
     if [ x"" != x"${QE_MIRROR_ARRAY}" ] ; then
         MIN_MIRROR_PORT=100000000
-        MIN_MIRROR_REPLICATION_PORT=100000000
         MAX_MIRROR_PORT=0
-        MAX_MIRROR_REPLICATION_PORT=0
         for QE in ${QE_MIRROR_ARRAY[@]}
         do
             SET_VAR $QE
@@ -1853,17 +1811,10 @@ CHK_QE_ARRAY_PORT_RANGES () {
             if [ $GP_PORT -gt $MAX_MIRROR_PORT ] ; then
                 MAX_MIRROR_PORT=$GP_PORT
             fi
-            if [ $GP_REPLICATION_PORT -lt $MIN_MIRROR_REPLICATION_PORT ]; then
-                MIN_MIRROR_REPLICATION_PORT=$GP_REPLICATION_PORT
-            fi
-            if [ $GP_REPLICATION_PORT -gt $MAX_MIRROR_REPLICATION_PORT ]; then
-                MAX_MIRROR_REPLICATION_PORT=$GP_REPLICATION_PORT
-            fi
         done
     fi
 
     MIRROR_PORT_BASE=$MIN_MIRROR_PORT
-    MIRROR_REPLICATION_PORT_BASE=$MIN_MIRROR_REPLICATION_PORT
 
     #
     # now look for range conflicts
@@ -1876,48 +1827,12 @@ CHK_QE_ARRAY_PORT_RANGES () {
     # Mirror configuration
     if [ $MIRROR_PORT_BASE ]; then
 	
-	if [ x"" = x"$REPLICATION_PORT_BASE" ]; then
-	    ERROR_EXIT "[FATAL]:-REPLICATION_PORT_BASE variable not set" 2
-	fi
-
-	if [ x"" = x"$MIRROR_REPLICATION_PORT_BASE" ]; then
-	    ERROR_EXIT "[FATAL]:-MIRROR_REPLICATION_PORT_BASE variable not set" 2
-	fi
-
 	if CHK_OVERLAP $MASTER_PORT $MASTER_PORT $MIN_MIRROR_PORT $MAX_MIRROR_PORT; then
 	    ERROR_EXIT "[FATAL]:-MASTER_PORT overlaps with MIRROR_PORT_BASE." 2
 	fi
 	
-	if CHK_OVERLAP $MASTER_PORT $MASTER_PORT $MIN_REPLICATION_PORT $MAX_REPLICATION_PORT; then
-	    ERROR_EXIT "[FATAL]:-MASTER_PORT overlaps with REPLICATION_PORT_BASE." 2
-	fi
-	
-	if CHK_OVERLAP $MASTER_PORT $MASTER_PORT $MIN_MIRROR_REPLICATION_PORT $MAX_MIRROR_REPLICATION_PORT; then
-	    ERROR_EXIT "[FATAL]:-MASTER_PORT overlaps with MIRROR_REPLICATION_PORT_BASE." 2
-	fi
-	
 	if CHK_OVERLAP $MIN_PORT $MAX_PORT $MIN_MIRROR_PORT $MAX_MIRROR_PORT; then
 	    ERROR_EXIT "[FATAL]:-PORT_BASE AND MIRROR_PORT_BASE define overlapping ranges." 2
-	fi
-
-	if CHK_OVERLAP $MIN_PORT $MAX_PORT $MIN_REPLICATION_PORT $MAX_REPLICATION_PORT; then
-	    ERROR_EXIT "[FATAL]:-PORT_BASE AND REPLICATION_PORT_BASE define overlapping ranges." 2
-	fi
-	
-	if CHK_OVERLAP $MIN_PORT $MAX_PORT $MIN_MIRROR_REPLICATION_PORT $MAX_MIRROR_REPLICATION_PORT; then
-	    ERROR_EXIT "[FATAL]:-PORT_BASE AND MIRROR_REPLICATION_PORT_BASE define overlapping ranges." 2
-	fi
-	
-	if CHK_OVERLAP $MIN_MIRROR_PORT $MAX_MIRROR_PORT $MIN_REPLICATION_PORT $MAX_REPLICATION_PORT; then
-	    ERROR_EXIT "[FATAL]:-MIRROR_PORT_BASE AND REPLICATION_PORT_BASE define overlapping ranges." 2
-	fi
-	
-	if CHK_OVERLAP $MIN_MIRROR_PORT $MAX_MIRROR_PORT $MIN_MIRROR_REPLICATION_PORT $MAX_MIRROR_REPLICATION_PORT; then
-	    ERROR_EXIT "[FATAL]:-MIRROR_PORT_BASE AND MIRROR_REPLICATION_PORT_BASE define overlapping ranges." 2
-	fi
-	
-	if CHK_OVERLAP $MIN_REPLICATION_PORT $MAX_REPLICATION_PORT $MIN_MIRROR_REPLICATION_PORT $MAX_MIRROR_REPLICATION_PORT; then
-	    ERROR_EXIT "[FATAL]:-REPLICATION_PORT_BASE AND MIRROR_REPLICATION_PORT_BASE define overlapping ranges." 2
 	fi
     fi
 
@@ -1953,11 +1868,22 @@ SET_DCA_CONFIG_SETTINGS () {
 	fi
 }
 
+SET_MIRROR_MODE() {
+	local mode=$1
+	if [ "$mode" == 'group' ]; then
+		MIRROR_TYPE=0
+	elif [ "$mode" == 'spread' ]; then
+		MIRROR_TYPE=1
+	else
+		ERROR_EXIT "[FATAL]:-'$mode' is an invalid mirroring mode.  Valid options are 'group' and 'spread'." 2
+	fi
+}
+
 #******************************************************************************
 # Main Section
 #******************************************************************************
 trap 'ERROR_EXIT "[FATAL]:-Received INT or TERM signal" 2' INT TERM
-while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
+while getopts ":vaqe:c:l:-:p:m:h:n:s:P:S:b:DB:I:O:" opt
 		do
 		case $opt in
 				v ) print_version ;;
@@ -1972,11 +1898,10 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
 				b ) NEW_BUFFERS=$OPTARG ;;
 				s ) STANDBY_HOSTNAME=$OPTARG ;;
 				P ) STANDBY_PORT=$OPTARG ;;
-				F ) STANDBY_DATADIR=$OPTARG ;;
+				S ) STANDBY_DATADIR=$OPTARG ;;
 				n ) REQ_LOCALE_SETTING=$OPTARG ;;
 				D ) DEBUG_LEVEL=1 ;;
 				B ) BATCH_DEFAULT=$OPTARG ;;
-				S ) MIRROR_TYPE=1 ;;
 				I ) INPUT_CONFIG=$OPTARG ;;
 				O ) OUTPUT_CONFIG=$OPTARG ;;
 				- ) # Long options ...
@@ -1993,6 +1918,8 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:F:b:DB:SI:O:" opt
 						"lc-monetary"     ) LCMONETARY=$VAL ;;
 						"lc-numeric"      ) LCNUMERIC=$VAL ;;
 						"lc-time"         ) LCTIME=$VAL ;;
+						"mirror-mode"     ) SET_MIRROR_MODE $VAL ;;
+						"standby-datadir" ) STANDBY_DATADIR=$VAL ;;
 						"help"            ) USAGE "print_doc" ;;
 						"version"         ) print_version ;;
 						* ) LOG_MSG "[ERROR]:-Unknown option --$NAME" 1; USAGE ;;

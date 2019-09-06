@@ -1,9 +1,6 @@
 --
 -- ORCA tests which require gp_fault_injector
 --
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 CREATE SCHEMA gporca_faults;
 SET search_path = gporca_faults, public;
 CREATE TABLE foo (a int, b int);
@@ -12,17 +9,15 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 INSERT INTO foo VALUES (1,1);
 -- test interruption requests to optimization
 select gp_inject_fault('opt_relcache_translator_catalog_access', 'reset', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('opt_relcache_translator_catalog_access', 'interrupt', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select count(*) from foo;
@@ -49,21 +44,19 @@ EXPLAIN SELECT * FROM func1_nosql_vol(5), foo;
          ->  Materialize  (cost=1.01..1.02 rows=1 width=8)
                ->  Seq Scan on foo  (cost=0.00..1.01 rows=1 width=8)
  Settings:  optimizer=off
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (8 rows)
 
 select gp_inject_fault('opt_relcache_translator_catalog_access', 'reset', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('opt_relcache_translator_catalog_access', 'interrupt', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 SELECT * FROM func1_nosql_vol(5), foo;
@@ -74,9 +67,8 @@ SELECT * FROM func1_nosql_vol(5), foo;
 
 -- The fault should *not* be hit above when optimizer = off, to reset it now.
 SELECT gp_inject_fault('opt_relcache_translator_catalog_access', 'reset', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 

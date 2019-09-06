@@ -45,8 +45,16 @@ def run_command(cmd, verbose=False):
 
     if not options.verbose and not cmd.verbose:
         cmdstr = "%s >& /dev/null" % cmdstr
+    # hide password
+    if bool(re.search('CREATE ROLE.*ENCRYPTED PASSWORD',cmdstr)):
+        regex = re.compile('ENCRYPTED\sPASSWORD\s\'(.*)\'')
+        logger.info(regex.sub('ENCRYPTED PASSWORD \'********\'',cmdstr))
+    elif bool(re.search('echo.*:gpperfmon:gpmon:',cmdstr)):
+        regex = re.compile(':gpperfmon:gpmon:(.*)\"')
+        logger.info(regex.sub(':gpperfmon:gpmon:********',cmdstr))
+    else:
+        logger.info(cmdstr)
 
-    logger.info(cmdstr)
     p = Popen(cmdstr, shell=True, executable="/bin/bash")
     sts = os.waitpid(p.pid, 0)[1]
     if sts:

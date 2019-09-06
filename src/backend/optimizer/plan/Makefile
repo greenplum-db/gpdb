@@ -16,7 +16,6 @@ BLD_TOP = $(top_builddir)/..
 
 OBJS = analyzejoins.o createplan.o initsplan.o planagg.o planmain.o planner.o \
 	setrefs.o subselect.o \
-	plangroupext.o \
 	planshare.o \
 	planpartition.o \
 	transform.o

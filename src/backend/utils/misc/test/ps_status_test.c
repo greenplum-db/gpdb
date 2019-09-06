@@ -8,7 +8,7 @@
 /*
  * Check it won't crash in case the ps_buffer overflows.
  */
-void
+static void
 test__set_ps_display(void **state)
 {
 	ps_buffer = (char *) malloc(64 * sizeof(char));
@@ -34,7 +34,7 @@ test__set_ps_display(void **state)
 /*
  * MPP-220077: real_act_prefix_size should not go beyond ps_buffer_size
  */
-void
+static void
 test__set_ps_display__real_act_prefix_size_overflow(void **state)
 {
 	int		len;
@@ -65,7 +65,7 @@ test__set_ps_display__real_act_prefix_size_overflow(void **state)
  * Positive case to validate correctly getting the position and length for
  * activity string.
  */
-void
+static void
 test__set_ps_display__real_act_prefix_size(void **state)
 {
 	int		len;

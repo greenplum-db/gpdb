@@ -3,7 +3,7 @@
  * jsonb.h
  *	  Declarations for jsonb data type support.
  *
- * Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  * src/include/utils/jsonb.h
  *
@@ -194,7 +194,7 @@ typedef struct JsonbContainer
 {
 	uint32		header;			/* number of elements or key/value pairs, and
 								 * flags */
-	JEntry		children[1];	/* variable length */
+	JEntry		children[FLEXIBLE_ARRAY_MEMBER];
 
 	/* the data for each child node follows. */
 } JsonbContainer;
@@ -244,7 +244,7 @@ struct JsonbValue
 	union
 	{
 		Numeric numeric;
-		bool		boolean;
+		bool boolean;
 		struct
 		{
 			int			len;
@@ -350,6 +350,22 @@ extern Datum jsonb_recv(PG_FUNCTION_ARGS);
 extern Datum jsonb_send(PG_FUNCTION_ARGS);
 extern Datum jsonb_typeof(PG_FUNCTION_ARGS);
 
+/* generator routines */
+extern Datum to_jsonb(PG_FUNCTION_ARGS);
+
+extern Datum jsonb_build_object(PG_FUNCTION_ARGS);
+extern Datum jsonb_build_object_noargs(PG_FUNCTION_ARGS);
+extern Datum jsonb_build_array(PG_FUNCTION_ARGS);
+extern Datum jsonb_build_array_noargs(PG_FUNCTION_ARGS);
+extern Datum jsonb_object(PG_FUNCTION_ARGS);
+extern Datum jsonb_object_two_arg(PG_FUNCTION_ARGS);
+
+/* jsonb_agg, json_object_agg functions */
+extern Datum jsonb_agg_transfn(PG_FUNCTION_ARGS);
+extern Datum jsonb_agg_finalfn(PG_FUNCTION_ARGS);
+extern Datum jsonb_object_agg_transfn(PG_FUNCTION_ARGS);
+extern Datum jsonb_object_agg_finalfn(PG_FUNCTION_ARGS);
+
 /* Indexing-related ops */
 extern Datum jsonb_exists(PG_FUNCTION_ARGS);
 extern Datum jsonb_exists_any(PG_FUNCTION_ARGS);
@@ -378,6 +394,20 @@ extern Datum gin_extract_jsonb_query_path(PG_FUNCTION_ARGS);
 extern Datum gin_consistent_jsonb_path(PG_FUNCTION_ARGS);
 extern Datum gin_triconsistent_jsonb_path(PG_FUNCTION_ARGS);
 
+/* pretty printer, returns text */
+extern Datum jsonb_pretty(PG_FUNCTION_ARGS);
+
+/* concatenation */
+extern Datum jsonb_concat(PG_FUNCTION_ARGS);
+
+/* deletion */
+extern Datum jsonb_delete(PG_FUNCTION_ARGS);
+extern Datum jsonb_delete_idx(PG_FUNCTION_ARGS);
+extern Datum jsonb_delete_path(PG_FUNCTION_ARGS);
+
+/* replacement */
+extern Datum jsonb_set(PG_FUNCTION_ARGS);
+
 /* Support functions */
 extern uint32 getJsonbOffset(const JsonbContainer *jc, int index);
 extern uint32 getJsonbLength(const JsonbContainer *jc, int index);
@@ -397,8 +427,11 @@ extern bool JsonbDeepContains(JsonbIterator **val,
 				  JsonbIterator **mContained);
 extern void JsonbHashScalarValue(const JsonbValue *scalarVal, uint32 *hash);
 
-/* jsonb.c support function */
+/* jsonb.c support functions */
 extern char *JsonbToCString(StringInfo out, JsonbContainer *in,
 			   int estimated_len);
+extern char *JsonbToCStringIndent(StringInfo out, JsonbContainer *in,
+					 int estimated_len);
+
 
 #endif   /* __JSONB_H__ */

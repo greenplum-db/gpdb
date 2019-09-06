@@ -4,7 +4,7 @@
  *	  utilities routines for the postgres inverted index access method.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -16,6 +16,7 @@
 
 #include "access/gin_private.h"
 #include "access/reloptions.h"
+#include "access/xloginsert.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_type.h"
 #include "miscadmin.h"
@@ -524,7 +525,9 @@ ginoptions(PG_FUNCTION_ARGS)
 	GinOptions *rdopts;
 	int			numoptions;
 	static const relopt_parse_elt tab[] = {
-		{"fastupdate", RELOPT_TYPE_BOOL, offsetof(GinOptions, useFastUpdate)}
+		{"fastupdate", RELOPT_TYPE_BOOL, offsetof(GinOptions, useFastUpdate)},
+		{"gin_pending_list_limit", RELOPT_TYPE_INT, offsetof(GinOptions,
+													 pendingListCleanupSize)}
 	};
 
 	options = parseRelOptions(reloptions, validate, RELOPT_KIND_GIN,
@@ -602,19 +605,17 @@ ginUpdateStats(Relation index, const GinStatsData *stats)
 	{
 		XLogRecPtr	recptr;
 		ginxlogUpdateMeta data;
-		XLogRecData rdata;
 
 		data.node = index->rd_node;
 		data.ntuples = 0;
 		data.newRightlink = data.prevTail = InvalidBlockNumber;
 		memcpy(&data.metadata, metadata, sizeof(GinMetaPageData));
 
-		rdata.buffer = InvalidBuffer;
-		rdata.data = (char *) &data;
-		rdata.len = sizeof(ginxlogUpdateMeta);
-		rdata.next = NULL;
+		XLogBeginInsert();
+		XLogRegisterData((char *) &data, sizeof(ginxlogUpdateMeta));
+		XLogRegisterBuffer(0, metabuffer, REGBUF_WILL_INIT);
 
-		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_UPDATE_META_PAGE, &rdata);
+		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_UPDATE_META_PAGE);
 		PageSetLSN(metapage, recptr);
 	}
 

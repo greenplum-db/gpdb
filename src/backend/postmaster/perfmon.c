@@ -23,78 +23,18 @@
 
 #include "gpmon/gpmon.h"
 
-/*
- * FUNCTION PROTOTYPES
- */
-#ifdef EXEC_BACKEND
-static pid_t perfmon_forkexec(void);
-#endif /* EXEC_BACKEND */
-NON_EXEC_STATIC void PerfmonMain(int argc, char *argv[]);
-
-/*
- * Main entry point for perfmon process.
- */
-int
-perfmon_start(void)
+bool
+PerfmonStartRule(Datum main_arg)
 {
-	pid_t		PerfmonPID;
+	if (IsUnderMasterDispatchMode() &&
+		gp_enable_gpperfmon)
+		return true;
 
-#ifdef EXEC_BACKEND
-	switch ((PerfmonPID = perfmon_forkexec()))
-#else
-	switch ((PerfmonPID = fork_process()))
-#endif
-	{
-		case -1:
-			ereport(LOG,
-					(errmsg("could not fork perfmon process: %m")));
-			return 0;
-#ifndef EXEC_BACKEND
-		case 0:
-			/* in postmaster child ... */
-			/* Close the postmaster's sockets */
-			ClosePostmasterPorts(false);
-
-			PerfmonMain(0, NULL);
-			break;
-#endif
-		default:
-			return (int)PerfmonPID;
-	}
-
-	/* shouldn't get here */
-	Assert(false);
-
-	return 0;
+	return false;
 }
 
-
-#ifdef EXEC_BACKEND
-/*
- * perfmon_forkexec()
- *
- * Format up the arglist for the perfmon process, then fork and exec.
- */
-static pid_t
-perfmon_forkexec(void)
-{
-	char	   *av[10];
-	int			ac = 0;
-
-	av[ac++] = "postgres";
-	av[ac++] = "--forkperfmon";
-	av[ac++] = NULL;			/* filled in by postmaster_forkexec */
-	av[ac] = NULL;
-
-	Assert(ac < lengthof(av));
-
-	return postmaster_forkexec(ac, av);
-}
-#endif   /* EXEC_BACKEND */
-
-
-NON_EXEC_STATIC void
-PerfmonMain(int argc, char *argv[])
+void
+PerfmonMain(Datum main_arg)
 {
 	char		gpmmon_bin[MAXPGPATH] = {'\0'};
 	char		gpmmon_cfg_file[MAXPGPATH] = {'\0'};
@@ -102,12 +42,6 @@ PerfmonMain(int argc, char *argv[])
 	char		port[6] = {'\0'};
 	int			ac = 0;
 	int			ret = 0;
-
-	/* reset MyProcPid */
-	MyProcPid = getpid();
-
-	/* Lose the postmaster's on-exit routines */
-	on_exit_reset();
 
 	/* Find gpmmon executable */
 	if ((ret = find_other_exec(my_exec_path, "gpmmon",
@@ -118,8 +52,11 @@ PerfmonMain(int argc, char *argv[])
 		proc_exit(0);
 	}
 
-	snprintf(gpmmon_cfg_file, MAXPGPATH, "%s/gpperfmon/conf/gpperfmon.conf",
-				data_directory);
+	/*
+	 * gpperfmon.conf is always in the data directory, so we can reference it
+	 * by simple relative paths.
+	 */
+	snprintf(gpmmon_cfg_file, MAXPGPATH, "./gpperfmon/conf/gpperfmon.conf");
 
 	snprintf(port, 6, "%d", PostPortNumber);
 

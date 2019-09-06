@@ -134,6 +134,15 @@ static ShareInputScan *make_shareinputscan(PlannerInfo *root, Plan *inputplan)
 
 	Assert(IsA(inputplan, Material) || IsA(inputplan, Sort));
 
+	/*
+	 * Currently GPDB doesn't fully support shareinputscan referencing outer
+	 * rels.
+	 */
+	if (!bms_is_empty(inputplan->extParam))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("shareinputscan with outer refs is not supported by GPDB")));
+
 	sisc = makeNode(ShareInputScan);
 	incr_plan_nsharer(inputplan);
 
@@ -212,6 +221,8 @@ prepare_plan_for_sharing(PlannerInfo *root, Plan *common)
 		shared->plan_width = common->plan_width;
 		shared->dispatch = common->dispatch;
 		shared->flow = copyObject(common->flow); 
+		shared->extParam = bms_copy(common->extParam);
+		shared->allParam = bms_copy(common->allParam);
 
 		m->share_id = SHARE_ID_NOT_ASSIGNED;
 		m->share_type = SHARE_MATERIAL;

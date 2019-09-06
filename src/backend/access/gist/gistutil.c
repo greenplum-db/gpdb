@@ -4,7 +4,7 @@
  *	  utilities routines for the postgres GiST index access method.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -294,8 +294,9 @@ gistDeCompressAtt(GISTSTATE *giststate, Relation r, IndexTuple tuple, Page p,
 
 	for (i = 0; i < r->rd_att->natts; i++)
 	{
-		Datum		datum = index_getattr(tuple, i + 1, giststate->tupdesc, &isnull[i]);
+		Datum		datum;
 
+		datum = index_getattr(tuple, i + 1, giststate->tupdesc, &isnull[i]);
 		gistdentryinit(giststate, i, &attdata[i],
 					   datum, r, p, o,
 					   FALSE, isnull[i]);
@@ -558,53 +559,33 @@ gistdentryinit(GISTSTATE *giststate, int nkey, GISTENTRY *e,
 		gistentryinit(*e, (Datum) 0, r, pg, o, l);
 }
 
-
-/*
- * initialize a GiST entry with a compressed version of key
- */
-void
-gistcentryinit(GISTSTATE *giststate, int nkey,
-			   GISTENTRY *e, Datum k, Relation r,
-			   Page pg, OffsetNumber o, bool l, bool isNull)
-{
-	if (!isNull)
-	{
-		GISTENTRY  *cep;
-
-		gistentryinit(*e, k, r, pg, o, l);
-		cep = (GISTENTRY *)
-			DatumGetPointer(FunctionCall1Coll(&giststate->compressFn[nkey],
-										   giststate->supportCollation[nkey],
-											  PointerGetDatum(e)));
-		/* compressFn may just return the given pointer */
-		if (cep != e)
-			gistentryinit(*e, cep->key, cep->rel, cep->page, cep->offset,
-						  cep->leafkey);
-	}
-	else
-		gistentryinit(*e, (Datum) 0, r, pg, o, l);
-}
-
 IndexTuple
 gistFormTuple(GISTSTATE *giststate, Relation r,
-			  Datum attdata[], bool isnull[], bool newValues)
+			  Datum attdata[], bool isnull[], bool isleaf)
 {
-	GISTENTRY	centry[INDEX_MAX_KEYS];
 	Datum		compatt[INDEX_MAX_KEYS];
 	int			i;
 	IndexTuple	res;
 
+	/*
+	 * Call the compress method on each attribute.
+	 */
 	for (i = 0; i < r->rd_att->natts; i++)
 	{
 		if (isnull[i])
 			compatt[i] = (Datum) 0;
 		else
 		{
-			gistcentryinit(giststate, i, &centry[i], attdata[i],
-						   r, NULL, (OffsetNumber) 0,
-						   newValues,
-						   FALSE);
-			compatt[i] = centry[i].key;
+			GISTENTRY	centry;
+			GISTENTRY  *cep;
+
+			gistentryinit(centry, attdata[i], r, NULL, (OffsetNumber) 0,
+						  isleaf);
+			cep = (GISTENTRY *)
+				DatumGetPointer(FunctionCall1Coll(&giststate->compressFn[i],
+											  giststate->supportCollation[i],
+												  PointerGetDatum(&centry)));
+			compatt[i] = cep->key;
 		}
 	}
 
@@ -612,10 +593,71 @@ gistFormTuple(GISTSTATE *giststate, Relation r,
 
 	/*
 	 * The offset number on tuples on internal pages is unused. For historical
-	 * reasons, it is set 0xffff.
+	 * reasons, it is set to 0xffff.
 	 */
 	ItemPointerSetOffsetNumber(&(res->t_tid), 0xffff);
 	return res;
+}
+
+/*
+ * initialize a GiST entry with fetched value in key field
+ */
+static Datum
+gistFetchAtt(GISTSTATE *giststate, int nkey, Datum k, Relation r)
+{
+	GISTENTRY	fentry;
+	GISTENTRY  *fep;
+
+	gistentryinit(fentry, k, r, NULL, (OffsetNumber) 0, false);
+
+	fep = (GISTENTRY *)
+		DatumGetPointer(FunctionCall1Coll(&giststate->fetchFn[nkey],
+										  giststate->supportCollation[nkey],
+										  PointerGetDatum(&fentry)));
+
+	/* fetchFn set 'key', return it to the caller */
+	return fep->key;
+}
+
+/*
+ * Fetch all keys in tuple.
+ * returns new IndexTuple that contains GISTENTRY with fetched data
+ */
+IndexTuple
+gistFetchTuple(GISTSTATE *giststate, Relation r, IndexTuple tuple)
+{
+	MemoryContext oldcxt = MemoryContextSwitchTo(giststate->tempCxt);
+	Datum		fetchatt[INDEX_MAX_KEYS];
+	bool		isnull[INDEX_MAX_KEYS];
+	int			i;
+
+	for (i = 0; i < r->rd_att->natts; i++)
+	{
+		Datum		datum;
+
+		datum = index_getattr(tuple, i + 1, giststate->tupdesc, &isnull[i]);
+
+		if (giststate->fetchFn[i].fn_oid != InvalidOid)
+		{
+			if (!isnull[i])
+				fetchatt[i] = gistFetchAtt(giststate, i, datum, r);
+			else
+				fetchatt[i] = (Datum) 0;
+		}
+		else
+		{
+			/*
+			 * Index-only scans not supported for this column. Since the
+			 * planner chose an index-only scan anyway, it is not interested
+			 * in this column, and we can replace it with a NULL.
+			 */
+			isnull[i] = true;
+			fetchatt[i] = (Datum) 0;
+		}
+	}
+	MemoryContextSwitchTo(oldcxt);
+
+	return index_form_tuple(giststate->fetchTupdesc, fetchatt, isnull);
 }
 
 float

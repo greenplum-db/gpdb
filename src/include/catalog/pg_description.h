@@ -19,7 +19,7 @@
  * for example).
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_description.h
@@ -52,7 +52,7 @@ CATALOG(pg_description,2609) BKI_WITHOUT_OIDS
 	int32		objsubid;		/* column number, or 0 if not used */
 
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
-	text		description;	/* description of object */
+	text description BKI_FORCE_NOT_NULL;		/* description of object */
 #endif
 } FormData_pg_description;
 

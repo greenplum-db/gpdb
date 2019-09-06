@@ -1,0 +1,51 @@
+--
+-- GPDB internal connection tests
+--
+-- create a new user
+drop user if exists user_disallowed_via_local;
+create user user_disallowed_via_local with login;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+-- cleanup previous settings if any
+\! sed -i '/user_disallowed_via_local/d' $MASTER_DATA_DIRECTORY/pg_hba.conf;
+-- allow it to login via the [tcp] protocol
+\! echo 'host all user_disallowed_via_local samenet trust' | tee -a $MASTER_DATA_DIRECTORY/pg_hba.conf;
+host all user_disallowed_via_local samenet trust
+-- disallow it to login via the [local] protocol
+\! echo 'local all user_disallowed_via_local reject' | tee -a $MASTER_DATA_DIRECTORY/pg_hba.conf;
+local all user_disallowed_via_local reject
+-- inform the cluster to reload the settings
+\! gpstop -qu;
+-- the reloading might not happen immediately, wait for a while
+select pg_sleep(2);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+-- login via a network address is allowed
+\c postgres user_disallowed_via_local localhost
+-- now we are the new user
+create temp table t1_of_user_disallowed_via_local(c1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- below query will fork an entry db on master, it will connect via [local],
+-- but as it is an internal connection it should still be allowed
+select * from t1_of_user_disallowed_via_local, pg_sleep(0);
+ c1 | pg_sleep 
+----+----------
+(0 rows)
+
+-- cleanup settings if any
+\! sed -i '/user_disallowed_via_local/d' $MASTER_DATA_DIRECTORY/pg_hba.conf;
+--
+-- Segment connection tests
+--
+-- We should not be able to directly connect to a primary segment.
+SELECT port FROM gp_segment_configuration
+			WHERE content <> -1 AND role = 'p'
+			LIMIT 1
+\gset
+\connect - - - :port
+\connect: FATAL:  connections to primary segments are not allowed
+DETAIL:  This database instance is running as a primary segment in a Greenplum cluster and does not permit direct connections.
+HINT:  To force a connection anyway (dangerous!), use utility mode.

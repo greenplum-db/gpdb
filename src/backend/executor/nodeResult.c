@@ -36,7 +36,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -408,7 +408,7 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 			 * For ORCA generated plan we could distribute to ALL as partially
 			 * distributed tables are not supported by ORCA yet.
 			 */
-			numSegments = GP_POLICY_ALL_NUMSEGMENTS;
+			numSegments = getgpsegmentCount();
 		}
 
 		resstate->hashFilter = makeCdbHash(numSegments, node->numHashFilterCols, node->hashFilterFuncs);

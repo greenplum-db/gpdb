@@ -224,7 +224,7 @@ drop sequence ttdummy_seq;
 
 CREATE TABLE log_table (tstamp timestamp default timeofday()::timestamp);
 
-CREATE TABLE main_table (a int, b int);
+CREATE TABLE main_table (a int unique, b int);
 
 COPY main_table (a,b) FROM stdin;
 5	10
@@ -253,6 +253,12 @@ FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func('after_ins_stmt');
 CREATE TRIGGER after_upd_stmt_trig AFTER UPDATE ON main_table
 EXECUTE PROCEDURE trigger_func('after_upd_stmt');
 
+-- Both insert and update statement level triggers (before and after) should
+-- fire.  Doesn't fire UPDATE before trigger, but only because one isn't
+-- defined.
+INSERT INTO main_table (a, b) VALUES (5, 10) ON CONFLICT (a)
+  DO UPDATE SET b = EXCLUDED.b;
+
 CREATE TRIGGER after_upd_row_trig AFTER UPDATE ON main_table
 FOR EACH ROW EXECUTE PROCEDURE trigger_func('after_upd_row');
 
@@ -261,6 +267,9 @@ INSERT INTO main_table DEFAULT VALUES;
 UPDATE main_table SET a = a + 1 WHERE b < 30;
 -- UPDATE that effects zero rows should still call per-statement trigger
 UPDATE main_table SET a = a + 2 WHERE b > 100;
+
+-- constraint now unneeded
+ALTER TABLE main_table DROP CONSTRAINT main_table_a_key;
 
 -- COPY should fire per-row and per-statement INSERT triggers
 COPY main_table (a, b) FROM stdin;
@@ -1037,3 +1046,215 @@ drop function depth_a_tf();
 drop function depth_b_tf();
 drop function depth_c_tf();
 
+--
+-- Test updates to rows during firing of BEFORE ROW triggers.
+-- As of 9.2, such cases should be rejected (see bug #6123).
+--
+
+create temp table parent (
+    aid int not null primary key,
+    val1 text,
+    val2 text,
+    val3 text,
+    val4 text,
+    bcnt int not null default 0);
+create temp table child (
+    bid int not null primary key,
+    aid int not null,
+    val1 text);
+
+create function parent_upd_func()
+  returns trigger language plpgsql as
+$$
+begin
+  if old.val1 <> new.val1 then
+    new.val2 = new.val1;
+    delete from child where child.aid = new.aid and child.val1 = new.val1;
+  end if;
+  return new;
+end;
+$$;
+create trigger parent_upd_trig before update on parent
+  for each row execute procedure parent_upd_func();
+
+create function parent_del_func()
+  returns trigger language plpgsql as
+$$
+begin
+  delete from child where aid = old.aid;
+  return old;
+end;
+$$;
+create trigger parent_del_trig before delete on parent
+  for each row execute procedure parent_del_func();
+
+create function child_ins_func()
+  returns trigger language plpgsql as
+$$
+begin
+  update parent set bcnt = bcnt + 1 where aid = new.aid;
+  return new;
+end;
+$$;
+create trigger child_ins_trig after insert on child
+  for each row execute procedure child_ins_func();
+
+create function child_del_func()
+  returns trigger language plpgsql as
+$$
+begin
+  update parent set bcnt = bcnt - 1 where aid = old.aid;
+  return old;
+end;
+$$;
+create trigger child_del_trig after delete on child
+  for each row execute procedure child_del_func();
+
+insert into parent values (1, 'a', 'a', 'a', 'a', 0);
+insert into child values (10, 1, 'b');
+select * from parent; select * from child;
+
+update parent set val1 = 'b' where aid = 1; -- should fail
+select * from parent; select * from child;
+
+delete from parent where aid = 1; -- should fail
+select * from parent; select * from child;
+
+-- replace the trigger function with one that restarts the deletion after
+-- having modified a child
+create or replace function parent_del_func()
+  returns trigger language plpgsql as
+$$
+begin
+  delete from child where aid = old.aid;
+  if found then
+    delete from parent where aid = old.aid;
+    return null; -- cancel outer deletion
+  end if;
+  return old;
+end;
+$$;
+
+delete from parent where aid = 1;
+select * from parent; select * from child;
+
+drop table parent, child;
+
+drop function parent_upd_func();
+drop function parent_del_func();
+drop function child_ins_func();
+drop function child_del_func();
+
+-- similar case, but with a self-referencing FK so that parent and child
+-- rows can be affected by a single operation
+
+create temp table self_ref_trigger (
+    id int primary key,
+    parent int references self_ref_trigger,
+    data text,
+    nchildren int not null default 0
+);
+
+create function self_ref_trigger_ins_func()
+  returns trigger language plpgsql as
+$$
+begin
+  if new.parent is not null then
+    update self_ref_trigger set nchildren = nchildren + 1
+      where id = new.parent;
+  end if;
+  return new;
+end;
+$$;
+create trigger self_ref_trigger_ins_trig before insert on self_ref_trigger
+  for each row execute procedure self_ref_trigger_ins_func();
+
+create function self_ref_trigger_del_func()
+  returns trigger language plpgsql as
+$$
+begin
+  if old.parent is not null then
+    update self_ref_trigger set nchildren = nchildren - 1
+      where id = old.parent;
+  end if;
+  return old;
+end;
+$$;
+create trigger self_ref_trigger_del_trig before delete on self_ref_trigger
+  for each row execute procedure self_ref_trigger_del_func();
+
+insert into self_ref_trigger values (1, null, 'root');
+insert into self_ref_trigger values (2, 1, 'root child A');
+insert into self_ref_trigger values (3, 1, 'root child B');
+insert into self_ref_trigger values (4, 2, 'grandchild 1');
+insert into self_ref_trigger values (5, 3, 'grandchild 2');
+
+update self_ref_trigger set data = 'root!' where id = 1;
+
+select * from self_ref_trigger;
+
+delete from self_ref_trigger;
+
+select * from self_ref_trigger;
+
+drop table self_ref_trigger;
+drop function self_ref_trigger_ins_func();
+drop function self_ref_trigger_del_func();
+
+--
+-- Verify behavior of before and after triggers with INSERT...ON CONFLICT
+-- DO UPDATE
+--
+create table upsert (key int4 primary key, color text);
+
+create function upsert_before_func()
+  returns trigger language plpgsql as
+$$
+begin
+  if (TG_OP = 'UPDATE') then
+    raise warning 'before update (old): %', old.*::text;
+    raise warning 'before update (new): %', new.*::text;
+  elsif (TG_OP = 'INSERT') then
+    raise warning 'before insert (new): %', new.*::text;
+    if new.key % 2 = 0 then
+      new.key := new.key + 1;
+      new.color := new.color || ' trig modified';
+      raise warning 'before insert (new, modified): %', new.*::text;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+create trigger upsert_before_trig before insert or update on upsert
+  for each row execute procedure upsert_before_func();
+
+create function upsert_after_func()
+  returns trigger language plpgsql as
+$$
+begin
+  if (TG_OP = 'UPDATE') then
+    raise warning 'after update (old): %', new.*::text;
+    raise warning 'after update (new): %', new.*::text;
+  elsif (TG_OP = 'INSERT') then
+    raise warning 'after insert (new): %', new.*::text;
+  end if;
+  return null;
+end;
+$$;
+create trigger upsert_after_trig after insert or update on upsert
+  for each row execute procedure upsert_after_func();
+
+insert into upsert values(1, 'black') on conflict (key) do update set color = 'updated ' || upsert.color;
+insert into upsert values(2, 'red') on conflict (key) do update set color = 'updated ' || upsert.color;
+insert into upsert values(3, 'orange') on conflict (key) do update set color = 'updated ' || upsert.color;
+insert into upsert values(4, 'green') on conflict (key) do update set color = 'updated ' || upsert.color;
+insert into upsert values(5, 'purple') on conflict (key) do update set color = 'updated ' || upsert.color;
+insert into upsert values(6, 'white') on conflict (key) do update set color = 'updated ' || upsert.color;
+insert into upsert values(7, 'pink') on conflict (key) do update set color = 'updated ' || upsert.color;
+insert into upsert values(8, 'yellow') on conflict (key) do update set color = 'updated ' || upsert.color;
+
+select * from upsert;
+
+drop table upsert;
+drop function upsert_before_func();
+drop function upsert_after_func();

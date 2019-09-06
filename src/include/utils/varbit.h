@@ -5,7 +5,7 @@
  *
  * Code originally contributed by Adriaan Joubert.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/varbit.h
@@ -26,7 +26,8 @@ typedef struct
 {
 	int32		vl_len_;		/* varlena header (do not touch directly!) */
 	int32		bit_len;		/* number of valid bits */
-	bits8		bit_dat[1];		/* bit string, most sig. byte first */
+	bits8		bit_dat[FLEXIBLE_ARRAY_MEMBER]; /* bit string, most sig. byte
+												 * first */
 } VarBit;
 
 /*

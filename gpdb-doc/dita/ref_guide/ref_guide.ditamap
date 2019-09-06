@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
-	<topicref href="../../600/homenav.html" scope="external" navtitle="Greenplum Database® 6.0 Documentation"
+	<topicref href="../../6-0/homenav.html" scope="external" navtitle="Greenplum Database® 6.0 Documentation"
 		format="html" otherprops="oss-only"/>
-	<topicref href="../../600/homenav.html" scope="external" navtitle="Pivotal Greenplum® 6.0 Documentation"
+	<topicref href="../../6-0/homenav.html" scope="external" navtitle="Pivotal Greenplum® 6.0 Documentation"
 		format="html" otherprops="pivotal"/>
-	<topicref href="ref_guide.xml" navtitle="Reference Guide">
+	<topicref href="ref_guide.xml">
 		<topicref href="sql_commands/sql_ref.xml">
 			<topicref href="GPReferenceSQLSummaryLOP.xml"/>
 			<topicref href="sql_commands/ABORT.xml"/>
@@ -152,6 +152,7 @@
 			<topicref href="sql_commands/SELECT.xml"/>
 			<topicref href="sql_commands/SELECT_INTO.xml"/>
 			<topicref href="sql_commands/SET.xml"/>
+			<topicref href="sql_commands/SET_CONSTRAINTS.xml"/>
 			<topicref href="sql_commands/SET_ROLE.xml"/>
 			<topicref href="sql_commands/SET_SESSION_AUTHORIZATION.xml"/>
 			<topicref href="sql_commands/SET_TRANSACTION.xml"/>
@@ -162,9 +163,18 @@
 			<topicref href="sql_commands/VACUUM.xml"/>
 			<topicref href="sql_commands/VALUES.xml"/>
 		</topicref>
-		<topicref href="SQL2008_support.xml"/>
-		<topicref href="env_var_ref.xml" navtitle="Greenplum Environment Variables" id="env_var_ref"/>
-		<topicref href="system_catalogs/catalog_ref.xml#topic1">
+		<topicref href="data_types.xml" id="data_types">
+			<topicref href="datatype-datetime.xml"/>
+			<topicref href="datatype-pseudo.xml"/>
+			<topicref href="datatype-textsearch.xml"/>
+			<topicref href="datatype-range.xml"/>
+		</topicref>
+		<topicref href="function-summary.xml" id="func_summary"/>
+		<topicref href="extensions/extensions.ditamap" format="ditamap"/>
+		<topicref href="modules/modules.ditamap" format="ditamap"/>
+		<topicref href="character_sets.xml" id="character_sets"/>
+		<topicref href="config_params/guc_config.ditamap" id="guc_config" format="ditamap"/>
+		<topicref href="system_catalogs/catalog_ref.xml">
 			<topicref href="system_catalogs/catalog_ref-tables.xml#topic1"/>
 			<topicref href="system_catalogs/catalog_ref-views.xml#topic1"/>
 			<topicref href="system_catalogs/catalog_ref-html.xml#topic1">
@@ -186,6 +196,8 @@
 				<topicref href="system_catalogs/gp_pgdatabase.xml"/>
 				<topicref href="system_catalogs/gp_resgroup_config.xml"/>
 				<topicref href="system_catalogs/gp_resgroup_status.xml"/>
+				<topicref href="system_catalogs/gp_resgroup_status_per_host.xml"/>
+				<topicref href="system_catalogs/gp_resgroup_status_per_segment.xml"/>
 				<topicref href="system_catalogs/gp_resqueue_status.xml"/>
 				<topicref href="system_catalogs/gp_stat_replication.xml"/>
 				<topicref href="system_catalogs/gp_segment_configuration.xml"/>
@@ -267,34 +279,8 @@
 		</topicref>
 		<topicref href="gp_toolkit.ditamap" format="ditamap"/>
 		<topicref href="gpperfmon/gpperfmon.ditamap" format="ditamap"/>
-		<topicref href="data_types.xml" navtitle="Greenplum Database Data Types" id="data_types">
-			<topicref href="datatype-datetime.xml"/>
-			<topicref href="datatype-pseudo.xml"/>
-			<topicref href="datatype-textsearch.xml"/>
-		</topicref>
-		<topicref href="character_sets.xml" navtitle="Character Set Support" id="character_sets"/>
-		<topicref href="config_params/guc_config.ditamap" navtitle="Server Configuration Parameters"
-			id="guc_config" format="ditamap"/>
-		<topicref href="function-summary.xml" id="func_summary"/>
-		<topicref href="yaml_spec.xml" navtitle="Greenplum MapReduce Specification" id="yaml_spec"/>
-		<topicref href="extensions/pl_sql.xml" navtitle="Greenplum PL/pgSQL Extension" id="pl_sql"/>
-		<topicref href="extensions/postGIS.xml" navtitle="Greenplum PostGIS Extension" id="postGIS"
-			otherprops="pivotal"/>
-		<topicref href="extensions/pl_r.xml" navtitle="Greenplum PL/R Language Extension" id="pl_r"/>
-		<topicref href="extensions/pl_python.xml" navtitle="Greenplum PL/Python Language Extension"
-			id="pl_python"/>
-		<topicref href="extensions/pl_container.xml" navtitle="Greenplum PL/Container Extension"
-			id="pl_container"/>
-		<topicref href="extensions/pl_java.xml" navtitle="Greenplum PL/Java Language Extension"
-			id="pl_java"/>
-		<topicref href="extensions/pl_perl.xml" navtitle="Greenplum PL/Perl Language Extension"
-			id="pl_perl"/>
-		<topicref href="extensions/madlib.xml" navtitle="Greenplum MADlib Extension for Analytics"
-			id="madlib"/>
-		<topicref href="extensions/gppc.xml" navtitle="Greenplum Partner Connector API" id="gppc"/>
-		<topicref href="extensions/fuzzystrmatch.xml"
-			navtitle="Greenplum Fuzzy String Match Extension" id="fuzzystrmatch"/>
-		<topicref href="feature_summary.xml" navtitle="Summary of Greenplum Features"
-			id="feature_summary"/>
+		<topicref href="extensions/serverapi.ditamap" format="ditamap"/>
+		<topicref href="misc.ditamap" format="ditamap"/>
+		<topicref href="yaml_spec.xml"/>
 	</topicref>
 </map>

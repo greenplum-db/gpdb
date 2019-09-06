@@ -23,6 +23,7 @@ static bool is_assert_checking =
 	expect_any(ExceptionalCondition,lineNumber); \
     will_be_called_with_sideeffect(ExceptionalCondition, &_ExceptionalCondition, NULL);\
 
+#undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 /*
@@ -48,7 +49,7 @@ static void our_free(void* ptr)
  * function by re-throwing the exception, essentially falling
  * back to the next available PG_CATCH();
  */
-void
+static void
 _ExceptionalCondition()
 {
      PG_RE_THROW();
@@ -57,7 +58,8 @@ _ExceptionalCondition()
 /*
  * This method sets up memprot.
  */
-void MemProtTestSetup(void **state)
+static void
+MemProtTestSetup(void **state)
 {
 	gp_mp_inited = true;
 	memprotOwnerThread = pthread_self();
@@ -66,7 +68,8 @@ void MemProtTestSetup(void **state)
 /*
  * This method resets memprot state.
  */
-void MemProtTestTeardown(void **state)
+static void
+MemProtTestTeardown(void **state)
 {
 	gp_mp_inited = false;
 }
@@ -168,7 +171,7 @@ static void* ReallocateWithCheck(void* ptr, size_t requested_size)
 			EXPECT_EXCEPTION();
 			PG_TRY();
 			{
-				void * new_ptr = gp_realloc(ptr, requested_size);
+				gp_realloc(ptr, requested_size);
 				assert_true(false);
 			}
 			PG_CATCH();
@@ -300,7 +303,7 @@ static void FreeWithCheck(void* ptr, size_t size)
 }
 
 /* Checks if we bypass vmem tracker when mp_init is false */
-void
+static void
 test__gp_malloc_no_vmem_tracker_when_mp_init_false(void **state)
 {
 	gp_mp_inited = false;
@@ -313,7 +316,7 @@ test__gp_malloc_no_vmem_tracker_when_mp_init_false(void **state)
 }
 
 /* Checks if we call vmem tracker when mp_init is true */
-void
+static void
 test__gp_malloc_calls_vmem_tracker_when_mp_init_true(void **state)
 {
 	gp_mp_inited = true;
@@ -331,7 +334,7 @@ test__gp_malloc_calls_vmem_tracker_when_mp_init_true(void **state)
 /*
  * Tests the basic functionality of gp_malloc and gp_free
  */
-void
+static void
 test__gp_malloc_and_free__basic_tests(void **state)
 {
 	size_t sizes[] = {50, 1024, MAX_REQUESTABLE_SIZE - sizeof(VmemHeader) - FOOTER_CHECKSUM_SIZE,
@@ -348,7 +351,7 @@ test__gp_malloc_and_free__basic_tests(void **state)
 /*
  * Tests the basic functionality of gp_realloc
  */
-void
+static void
 test__gp_realloc__basic_tests(void **state)
 {
 	size_t sizes[] = {50, 1024, MAX_REQUESTABLE_SIZE - sizeof(VmemHeader) - FOOTER_CHECKSUM_SIZE};

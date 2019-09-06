@@ -7,7 +7,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  *	  src/include/utils/guc_tables.h
  *
@@ -206,6 +206,7 @@ struct config_generic
  * Caution: the GUC_IS_IN_FILE bit is transient state for ProcessConfigFile.
  * Do not assume that its value represents useful information elsewhere.
  */
+#define GUC_PENDING_RESTART 0x0002
 
 /* upper limit for GUC variables measured in kilobytes of memory */
 /* note that various places assume the byte size fits in a "long" variable */
@@ -320,5 +321,7 @@ extern struct config_int ConfigureNamesInt_gp[];
 extern struct config_real ConfigureNamesReal_gp[];
 extern struct config_string ConfigureNamesString_gp[];
 extern struct config_enum ConfigureNamesEnum_gp[];
+
+extern void gpdb_assign_sync_flag(struct config_generic **guc_variables, int size, bool predefine);
 
 #endif   /* GUC_TABLES_H */

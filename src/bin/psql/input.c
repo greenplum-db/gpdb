@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  *
  * src/bin/psql/input.c
  */
@@ -392,10 +392,10 @@ initializeInput(int flags)
  *
  * max_lines: if >= 0, limit history file to that many entries.
  */
-#ifdef USE_READLINE
 static bool
 saveHistory(char *fname, int max_lines)
 {
+#ifdef USE_READLINE
 	int			errnum;
 
 	/*
@@ -460,10 +460,10 @@ saveHistory(char *fname, int max_lines)
 		psql_error("could not save history to file \"%s\": %s\n",
 				   fname, strerror(errnum));
 	}
-	return false;
-}
 #endif
 
+	return false;
+}
 
 
 /*
@@ -488,7 +488,7 @@ printHistory(const char *fname, unsigned short int pager)
 	if (fname == NULL)
 	{
 		/* use pager, if enabled, when printing to console */
-		output = PageOutput(INT_MAX, pager);
+		output = PageOutput(INT_MAX, pager ? &(pset.popt.topt) : NULL);
 		is_pager = true;
 	}
 	else

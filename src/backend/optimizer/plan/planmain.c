@@ -11,7 +11,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -34,7 +34,6 @@
 #include "cdb/cdbvars.h"
 #include "optimizer/cost.h"
 
-static Bitmapset *distcols_in_groupclause(List *gc, Bitmapset *bms);
 
 /*
  * query_planner
@@ -104,7 +103,7 @@ query_planner(PlannerInfo *root, List *tlist,
 				CdbPathLocus_MakeEntry(&result_path->locus);
 			else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 				CdbPathLocus_MakeStrewn(&result_path->locus,
-										GP_POLICY_ALL_NUMSEGMENTS);
+										getgpsegmentCount());
 		}
 
 		return final_rel;
@@ -273,68 +272,6 @@ query_planner(PlannerInfo *root, List *tlist,
 	return final_rel;
 }
 
-/*
- * distcols_in_groupclause -
- *     Return all distinct tleSortGroupRef values in a GROUP BY clause.
- *
- * If this is a GROUPING_SET, this function is called recursively to
- * find the tleSortGroupRef values for underlying grouping columns.
- */
-static Bitmapset *
-distcols_in_groupclause(List *gc, Bitmapset *bms)
-{
-	ListCell *l;
-
-	foreach(l, gc)
-	{
-		Node *node = lfirst(l);
-
-		if (node == NULL)
-			continue;
-
-		Assert(IsA(node, SortGroupClause) ||
-			   IsA(node, List) ||
-			   IsA(node, GroupingClause));
-
-		if (IsA(node, SortGroupClause))
-		{
-			bms = bms_add_member(bms, ((SortGroupClause *) node)->tleSortGroupRef);
-		}
-
-		else if (IsA(node, List))
-		{
-			bms = distcols_in_groupclause((List *)node, bms);
-		}
-
-		else if (IsA(node, GroupingClause))
-		{
-			List *groupsets = ((GroupingClause *)node)->groupsets;
-			bms = distcols_in_groupclause(groupsets, bms);
-		}
-	}
-
-	return bms;
-}
-
-/*
- * num_distcols_in_grouplist -
- *      Return number of distinct columns/expressions that appeared in
- *      a list of GroupClauses or GroupingClauses.
- */
-int
-num_distcols_in_grouplist(List *gc)
-{
-	Bitmapset *bms = NULL;
-	int num_cols;
-
-	bms = distcols_in_groupclause(gc, bms);
-
-	num_cols = bms_num_members(bms);
-	bms_free(bms);
-
-	return num_cols;
-}
-
 /**
  * Planner configuration related
  */
@@ -345,7 +282,6 @@ num_distcols_in_grouplist(List *gc)
 PlannerConfig *DefaultPlannerConfig(void)
 {
 	PlannerConfig *c1 = (PlannerConfig *) palloc(sizeof(PlannerConfig));
-	c1->cdbpath_segments = planner_segment_count(NULL);
 	c1->enable_sort = enable_sort;
 	c1->enable_hashagg = enable_hashagg;
 	c1->enable_groupagg = enable_groupagg;
@@ -366,8 +302,6 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->gp_eager_dqa_pruning = gp_eager_dqa_pruning;
 	c1->gp_eager_one_phase_agg = gp_eager_one_phase_agg;
 	c1->gp_eager_two_phase_agg = gp_eager_two_phase_agg;
-	c1->gp_enable_groupext_distinct_pruning = gp_enable_groupext_distinct_pruning;
-	c1->gp_enable_groupext_distinct_gather = gp_enable_groupext_distinct_gather;
 	c1->gp_enable_sort_distinct = gp_enable_sort_distinct;
 
 	c1->gp_enable_direct_dispatch = gp_enable_direct_dispatch;

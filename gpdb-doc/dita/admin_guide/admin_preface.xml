@@ -30,9 +30,9 @@
     </ul>
     <p>This guide assumes knowledge of Linux/UNIX system administration and database management
       systems. Familiarity with structured query language (SQL) is helpful.</p>
-    <p>Because Greenplum Database is based on PostgreSQL 8.3.23, this guide assumes some familiarity
+    <p>Because Greenplum Database is based on PostgreSQL 9.4, this guide assumes some familiarity
       with PostgreSQL. References to <xref
-        href="https://www.postgresql.org/docs/8.3/index.html" scope="external" format="html"
+        href="https://www.postgresql.org/docs/9.4/index.html" scope="external" format="html"
           ><ph>PostgreSQL documentation</ph></xref> are provided throughout this guide for features
       that are similar to those in Greenplum Database.</p>
     <p>This guide provides information for system administrators responsible for administering a

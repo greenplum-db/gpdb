@@ -14,6 +14,8 @@
 #ifndef PERFMON_H
 #define PERFMON_H
 
-extern int perfmon_start(void);
+extern bool PerfmonStartRule(Datum main_arg);
+
+extern void PerfmonMain(Datum main_arg);
 
 #endif   /* PERFMON_H */

@@ -21,7 +21,6 @@ typedef struct PlannerConfig
 	bool		enable_hashjoin;
 	bool        gp_enable_hashjoin_size_heuristic;
 	bool        gp_enable_predicate_propagation;
-	int			cdbpath_segments;
 	int			constraint_exclusion;
 
 	bool		gp_enable_minmax_optimization;
@@ -34,8 +33,6 @@ typedef struct PlannerConfig
 	bool		gp_eager_dqa_pruning;
 	bool		gp_eager_one_phase_agg;
 	bool		gp_eager_two_phase_agg;
-	bool        gp_enable_groupext_distinct_pruning;
-	bool        gp_enable_groupext_distinct_gather;
 	bool		gp_enable_sort_distinct;
 
 	bool		gp_enable_direct_dispatch;

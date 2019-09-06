@@ -182,7 +182,7 @@ RunawayCleaner_StartCleanup()
 
 		if (RunawayCleaner_ShouldCancelQuery())
 		{
-			SIMPLE_FAULT_INJECTOR(RunawayCleanup);
+			SIMPLE_FAULT_INJECTOR("runaway_cleanup");
 
 			ereport(ERROR, (errmsg("Canceling query because of high VMEM usage. Used: %dMB, available %dMB, red zone: %dMB",
 					VmemTracker_ConvertVmemChunksToMB(MySessionState->sessionVmem), VmemTracker_GetAvailableVmemMB(),

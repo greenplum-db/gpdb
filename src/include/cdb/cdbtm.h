@@ -31,16 +31,16 @@ typedef enum
 	DTX_STATE_NONE = 0,
 
 	/**
-	 * The distributed transaction is active but distributed coordination
-	 *   is not required (because it is auto-commit on the QEs).
-	 */
-	DTX_STATE_ACTIVE_NOT_DISTRIBUTED,
-
-	/**
 	 * The distributed transaction is active and requires distributed coordination
 	 *   (because it is explicit or an implicit writer transaction)
 	 */
 	DTX_STATE_ACTIVE_DISTRIBUTED,
+
+	/**
+	 * For one-phase optimization commit, we haven't run the commit yet
+	 */
+	DTX_STATE_ONE_PHASE_COMMIT,
+	DTX_STATE_PERFORMING_ONE_PHASE_COMMIT,
 
 	/**
 	 * For two-phase commit, the first phase is about to run
@@ -95,11 +95,13 @@ typedef enum
 	 *   is used when promoting a direct-dispatch transaction to a full-cluster
 	 *   transaction
 	 */
-	DTX_PROTOCOL_COMMAND_STAY_AT_OR_BECOME_IMPLIED_WRITER = 1,
-	DTX_PROTOCOL_COMMAND_ABORT_NO_PREPARED,
+	DTX_PROTOCOL_COMMAND_ABORT_NO_PREPARED = 1,
 	DTX_PROTOCOL_COMMAND_PREPARE,
 	DTX_PROTOCOL_COMMAND_ABORT_SOME_PREPARED,
+	DTX_PROTOCOL_COMMAND_COMMIT_ONEPHASE,
 	DTX_PROTOCOL_COMMAND_COMMIT_PREPARED,
+	/* for explicit transaction that doesn't write any xlog */
+	DTX_PROTOCOL_COMMAND_COMMIT_NOT_PREPARED,
 	DTX_PROTOCOL_COMMAND_ABORT_PREPARED,
 	DTX_PROTOCOL_COMMAND_RETRY_COMMIT_PREPARED,
 	DTX_PROTOCOL_COMMAND_RETRY_ABORT_PREPARED,
@@ -224,6 +226,9 @@ typedef struct TMGXACT
 	
 	bool						explicitBeginRemembered;
 
+	/* Used on QE, indicates the transaction applies one-phase commit protocol */
+	bool						isOnePhaseCommit;
+
 	/*
 	 * This is similar to xmin of PROC, stores lowest dxid on first snapshot
 	 * by process with this as currentGXact.
@@ -258,9 +263,6 @@ typedef struct TMGALLXACTSTATUS
 
 typedef struct TmControlBlock
 {
-	LWLockId					ControlLock;
-
-	bool						recoverred;
 	DistributedTransactionTimeStamp	distribTimeStamp;
 	DistributedTransactionId	seqno;
 	bool						DtmStarted;
@@ -274,6 +276,12 @@ typedef struct TmControlBlock
 
 #define TMCONTROLBLOCK_BYTES(num_gxacts) \
 	(offsetof(TmControlBlock, committed_gxact_array) + sizeof(TMGXACT_LOG) * (num_gxacts))
+
+#define DTM_DEBUG3 (Debug_print_full_dtm ? LOG : DEBUG3)
+#define DTM_DEBUG5 (Debug_print_full_dtm ? LOG : DEBUG5)
+
+extern volatile bool *shmDtmStarted;
+extern int max_tm_gxacts;
 
 extern DtxContext DistributedTransactionContext;
 
@@ -292,11 +300,14 @@ extern DistributedTransactionTimeStamp getDtxStartTime(void);
 extern void dtxCrackOpenGid(const char	*gid,
 							DistributedTransactionTimeStamp	*distribTimeStamp,
 							DistributedTransactionId		*distribXid);
+extern void dtxFormGID(char *gid,
+					   DistributedTransactionTimeStamp tstamp,
+					   DistributedTransactionId gxid);
 extern DistributedTransactionId getDistributedTransactionId(void);
 extern bool getDistributedTransactionIdentifier(char *id);
 
-extern void initGxact(TMGXACT *gxact);
-extern void setCurrentGxact(void);
+extern void initGxact(TMGXACT *gxact, bool resetXid);
+extern void activeCurrentGxact(void);
 extern void	prepareDtxTransaction(void);
 extern bool isPreparedDtxTransaction(void);
 extern void getDtxLogInfo(TMGXACT_LOG *gxact_log);
@@ -312,19 +323,17 @@ extern void redoDtxCheckPoint(TMGXACT_CHECKPOINT *gxact_checkpoint);
 extern void redoDistributedCommitRecord(TMGXACT_LOG *gxact_log);
 extern void redoDistributedForgetCommitRecord(TMGXACT_LOG *gxact_log);
 
-/* @param stmt used because some plans are annotated with dispatch details which the DTM needs. */
-extern void dtmPreCommand(const char *debugCaller, const char *debugDetail, PlannedStmt *stmt,
-							bool needsTwoPhaseCommit, bool dispatchToPrimaries, bool dispatchToMirrors );
+extern void setupTwoPhaseTransaction(void);
 extern bool isCurrentDtxTwoPhase(void);
 extern DtxState getCurrentDtxState(void);
 
 extern void sendDtxExplicitBegin(void);
+extern bool isDtxExplicitBegin(void);
 
 extern bool dispatchDtxCommand(const char *cmd);
 
 extern void tmShmemInit(void);
 extern int	tmShmemSize(void);
-extern void initTM(void);
 
 extern void verify_shared_snapshot_ready(void);
 
@@ -347,11 +356,21 @@ extern void UtilityModeFindOrCreateDtmRedoFile(void);
 extern void UtilityModeCloseDtmRedoFile(void);
 
 extern bool doDispatchSubtransactionInternalCmd(DtxProtocolCommand cmdType);
+extern bool doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
+							 char *gid, DistributedTransactionId gxid,
+							 bool *badGangs, bool raiseError, List *twophaseSegments,
+							 char *serializedDtxContextInfo, int serializedDtxContextInfoLen);
 
 extern void markCurrentGxactWriterGangLost(void);
 
 extern bool currentGxactWriterGangLost(void);
 
 extern void addToGxactTwophaseSegments(struct Gang* gp);
+
+extern DistributedTransactionId generateGID(void);
+extern void ClearTransactionState(TransactionId latestXid);
+
+extern void DtxRecoveryMain(Datum main_arg);
+extern bool DtxRecoveryStartRule(Datum main_arg);
 
 #endif   /* CDBTM_H */

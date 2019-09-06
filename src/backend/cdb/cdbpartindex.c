@@ -587,7 +587,11 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 		 */
 		indRel = index_open(indexoid, NoLock);
 
-		if (GIST_AM_OID == indRel->rd_rel->relam)
+		if (GIN_AM_OID == indRel->rd_rel->relam)
+		{
+			indType = INDTYPE_GIN;
+		}
+		else if (GIST_AM_OID == indRel->rd_rel->relam)
 		{
 			indType = INDTYPE_GIST;
 		}
@@ -1553,7 +1557,11 @@ logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
 	}
 
 	plogicalIndexInfo->indType = INDTYPE_BITMAP;
-	if (GIST_AM_OID == indRel->rd_rel->relam)
+	if (GIN_AM_OID == indRel->rd_rel->relam)
+	{
+		plogicalIndexInfo->indType = INDTYPE_GIN;
+	}
+	else if (GIST_AM_OID == indRel->rd_rel->relam)
 	{
 		plogicalIndexInfo->indType = INDTYPE_GIST;
 	}

@@ -6,7 +6,7 @@
  * Joe Conway <mail@joeconway.com>
  *
  * contrib/fuzzystrmatch/fuzzystrmatch.c
- * Copyright (c) 2001-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2001-2015, PostgreSQL Global Development Group
  * ALL RIGHTS RESERVED;
  *
  * metaphone()
@@ -154,23 +154,6 @@ getcode(char c)
 /* These prevent GH from becoming F */
 #define NOGHTOF(c)	(getcode(c) & 16)	/* BDH */
 
-/* Faster than memcmp(), for this use case. */
-static inline bool
-rest_of_char_same(const char *s1, const char *s2, int len)
-{
-	while (len > 0)
-	{
-		len--;
-		if (s1[len] != s2[len])
-			return false;
-	}
-	return true;
-}
-
-#include "levenshtein.c"
-#define LEVENSHTEIN_LESS_EQUAL
-#include "levenshtein.c"
-
 PG_FUNCTION_INFO_V1(levenshtein_with_costs);
 Datum
 levenshtein_with_costs(PG_FUNCTION_ARGS)
@@ -180,8 +163,20 @@ levenshtein_with_costs(PG_FUNCTION_ARGS)
 	int			ins_c = PG_GETARG_INT32(2);
 	int			del_c = PG_GETARG_INT32(3);
 	int			sub_c = PG_GETARG_INT32(4);
+	const char *s_data;
+	const char *t_data;
+	int			s_bytes,
+				t_bytes;
 
-	PG_RETURN_INT32(levenshtein_internal(src, dst, ins_c, del_c, sub_c));
+	/* Extract a pointer to the actual character data */
+	s_data = VARDATA_ANY(src);
+	t_data = VARDATA_ANY(dst);
+	/* Determine length of each string in bytes and characters */
+	s_bytes = VARSIZE_ANY_EXHDR(src);
+	t_bytes = VARSIZE_ANY_EXHDR(dst);
+
+	PG_RETURN_INT32(varstr_levenshtein(s_data, s_bytes, t_data, t_bytes, ins_c,
+									   del_c, sub_c));
 }
 
 
@@ -191,8 +186,20 @@ levenshtein(PG_FUNCTION_ARGS)
 {
 	text	   *src = PG_GETARG_TEXT_PP(0);
 	text	   *dst = PG_GETARG_TEXT_PP(1);
+	const char *s_data;
+	const char *t_data;
+	int			s_bytes,
+				t_bytes;
 
-	PG_RETURN_INT32(levenshtein_internal(src, dst, 1, 1, 1));
+	/* Extract a pointer to the actual character data */
+	s_data = VARDATA_ANY(src);
+	t_data = VARDATA_ANY(dst);
+	/* Determine length of each string in bytes and characters */
+	s_bytes = VARSIZE_ANY_EXHDR(src);
+	t_bytes = VARSIZE_ANY_EXHDR(dst);
+
+	PG_RETURN_INT32(varstr_levenshtein(s_data, s_bytes, t_data, t_bytes, 1, 1,
+									   1));
 }
 
 
@@ -206,8 +213,21 @@ levenshtein_less_equal_with_costs(PG_FUNCTION_ARGS)
 	int			del_c = PG_GETARG_INT32(3);
 	int			sub_c = PG_GETARG_INT32(4);
 	int			max_d = PG_GETARG_INT32(5);
+	const char *s_data;
+	const char *t_data;
+	int			s_bytes,
+				t_bytes;
 
-	PG_RETURN_INT32(levenshtein_less_equal_internal(src, dst, ins_c, del_c, sub_c, max_d));
+	/* Extract a pointer to the actual character data */
+	s_data = VARDATA_ANY(src);
+	t_data = VARDATA_ANY(dst);
+	/* Determine length of each string in bytes and characters */
+	s_bytes = VARSIZE_ANY_EXHDR(src);
+	t_bytes = VARSIZE_ANY_EXHDR(dst);
+
+	PG_RETURN_INT32(varstr_levenshtein_less_equal(s_data, s_bytes, t_data,
+												  t_bytes, ins_c, del_c,
+												  sub_c, max_d));
 }
 
 
@@ -218,8 +238,20 @@ levenshtein_less_equal(PG_FUNCTION_ARGS)
 	text	   *src = PG_GETARG_TEXT_PP(0);
 	text	   *dst = PG_GETARG_TEXT_PP(1);
 	int			max_d = PG_GETARG_INT32(2);
+	const char *s_data;
+	const char *t_data;
+	int			s_bytes,
+				t_bytes;
 
-	PG_RETURN_INT32(levenshtein_less_equal_internal(src, dst, 1, 1, 1, max_d));
+	/* Extract a pointer to the actual character data */
+	s_data = VARDATA_ANY(src);
+	t_data = VARDATA_ANY(dst);
+	/* Determine length of each string in bytes and characters */
+	s_bytes = VARSIZE_ANY_EXHDR(src);
+	t_bytes = VARSIZE_ANY_EXHDR(dst);
+
+	PG_RETURN_INT32(varstr_levenshtein_less_equal(s_data, s_bytes, t_data,
+												  t_bytes, 1, 1, 1, max_d));
 }
 
 
@@ -247,11 +279,6 @@ metaphone(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("argument exceeds the maximum length of %d bytes",
 						MAX_METAPHONE_STRLEN)));
-
-	if (!(str_i_len > 0))
-		ereport(ERROR,
-				(errcode(ERRCODE_ZERO_LENGTH_CHARACTER_STRING),
-				 errmsg("argument is empty string")));
 
 	reqlen = PG_GETARG_INT32(1);
 	if (reqlen > MAX_METAPHONE_STRLEN)

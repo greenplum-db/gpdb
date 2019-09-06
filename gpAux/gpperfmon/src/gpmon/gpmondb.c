@@ -1657,7 +1657,7 @@ void upgrade_log_alert_table_distributed_key(PGconn* conn)
 	    INNER JOIN pg_attribute b on a.oid=b.attrelid\
 	    INNER JOIN gp_distribution_policy c on a.oid = c.localoid\
 	    INNER JOIN pg_namespace d on a.relnamespace = d.oid\
-	    WHERE a.relkind = 'r' AND b.attnum = any(c.attrnums) AND a.relname = 'log_alert_history'";
+	    WHERE a.relkind = 'r' AND b.attnum = any(c.distkey) AND a.relname = 'log_alert_history'";
 
 	PGresult* result = NULL;
 	const char* errmsg = gpdb_exec_only(conn, &result, qry);

@@ -165,6 +165,7 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 	Snapshot	snapshot = NULL;
 	int			serializedLen;
 	DtxContextInfo *pDtxContextInfo = NULL;
+	DtxContext currentDistributedTransactionContext = DistributedTransactionContext;
 
 	/*
 	 * If 'wantSnapshot' is set, then serialize the ActiveSnapshot. The
@@ -179,7 +180,7 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 		snapshot = GetActiveSnapshot();
 	}
 
-	switch (DistributedTransactionContext)
+	switch (currentDistributedTransactionContext)
 	{
 		case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
 		case DTX_CONTEXT_LOCAL_ONLY:
@@ -191,8 +192,11 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 			if (DistributedTransactionContext ==
 				DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE && snapshot != NULL)
 			{
-				updateSharedLocalSnapshot(&TempQDDtxContextInfo, snapshot,
-										  "qdSerializeDtxContextInfo");
+				updateSharedLocalSnapshot(
+					&TempQDDtxContextInfo,
+					currentDistributedTransactionContext,
+					snapshot,
+					"qdSerializeDtxContextInfo");
 			}
 
 			pDtxContextInfo = &TempQDDtxContextInfo;

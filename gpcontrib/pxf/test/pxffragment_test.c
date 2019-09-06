@@ -24,13 +24,12 @@
 /* helper functions */
 static List *prepare_fragment_list(int fragtotal, int sefgindex, int segtotal, int xid);
 static void test_list(int segindex, int segtotal, int xid, int fragtotal, char *expected[], int expected_total);
-static FragmentData *buildFragment(const char *index, const char *source, const char *userdata, const char *metadata, const char *profile);
+static FragmentData *buildFragment(char *index, char *source, char *userdata, char *metadata, char *profile);
 static bool compareLists(List *list1, List *list2, bool (*compareType) (void *, void *));
 static bool compareString(char *str1, char *str2);
-static bool compareFragment(ListCell *fragment_cell1, ListCell *fragment_cell2);
+static bool compareFragment(void *arg1, void *arg2);
 
-
-void
+static void
 test_filter_fragments_for_segment(void **state)
 {
 	/* --- 1 segment, all fragments should be processed by it */
@@ -241,7 +240,7 @@ prepare_fragment_list(int fragtotal, int segindex, int segtotal, int xid)
 }
 
 static FragmentData *
-buildFragment(const char *index, const char *source, const char *userdata, const char *metadata, const char *profile)
+buildFragment(char *index, char *source, char *userdata, char *metadata, char *profile)
 {
 	FragmentData *fragment = (FragmentData *) palloc0(sizeof(FragmentData));
 
@@ -253,7 +252,7 @@ buildFragment(const char *index, const char *source, const char *userdata, const
 	return fragment;
 }
 
-void
+static void
 test_parse_get_fragments_response(void **state)
 {
 	List	   *expected_data_fragments = NIL;
@@ -269,7 +268,7 @@ test_parse_get_fragments_response(void **state)
 	assert_true(compareLists(data_fragments, expected_data_fragments, compareFragment));
 }
 
-void
+static void
 test_parse_get_fragments_response_bad_index(void **state)
 {
 	List	   *expected_data_fragments = NIL;
@@ -285,7 +284,7 @@ test_parse_get_fragments_response_bad_index(void **state)
 	assert_false(compareLists(data_fragments, expected_data_fragments, compareFragment));
 }
 
-void
+static void
 test_parse_get_fragments_response_bad_metadata(void **state)
 {
 	List	   *expected_data_fragments = NIL;
@@ -300,7 +299,7 @@ test_parse_get_fragments_response_bad_metadata(void **state)
 	assert_false(compareLists(data_fragments, expected_data_fragments, compareFragment));
 }
 
-void
+static void
 test_parse_get_fragments_response_nulluserdata(void **state)
 {
 	List	   *data_fragments = NIL;
@@ -315,7 +314,7 @@ test_parse_get_fragments_response_nulluserdata(void **state)
 	assert_true(compareLists(data_fragments, expected_data_fragments, compareFragment));
 }
 
-void
+static void
 test_parse_get_fragments_response_nullfragment(void **state)
 {
 	List	   *data_fragments = NIL;
@@ -328,7 +327,7 @@ test_parse_get_fragments_response_nullfragment(void **state)
 }
 
 
-void
+static void
 test_parse_get_fragments_response_emptyfragment(void **state)
 {
 	List	   *data_fragments = NIL;
@@ -340,7 +339,7 @@ test_parse_get_fragments_response_emptyfragment(void **state)
 	assert_true(data_fragments == NULL);
 }
 
-void
+static void
 test_call_rest(void **state)
 {
 	GPHDUri    *hadoop_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
@@ -360,8 +359,6 @@ test_call_rest(void **state)
 
 	expect_value(print_http_headers, headers, client_context->http_headers);
 	will_be_called(print_http_headers);
-	(client_context->http_headers);
-
 
 	StringInfoData expected_url;
 
@@ -379,8 +376,6 @@ test_call_rest(void **state)
 	expect_value(churl_read, handle, handle);
 	expect_any(churl_read, buf);
 	expect_any(churl_read, max_size);
-
-	char	   *str = pstrdup("Hello ");
 
 	/* will_assign_memory(churl_read, buf, str, 7); */
 	will_return(churl_read, 7);
@@ -455,10 +450,10 @@ compareString(char *str1, char *str2)
 }
 
 static bool
-compareFragment(ListCell *fragment_cell1, ListCell *fragment_cell2)
+compareFragment(void *arg1, void *arg2)
 {
-	FragmentData *fragment1 = (FragmentData *) lfirst(fragment_cell1);
-	FragmentData *fragment2 = (FragmentData *) lfirst(fragment_cell2);
+	FragmentData *fragment1 = (FragmentData *) lfirst((ListCell *) arg1);
+	FragmentData *fragment2 = (FragmentData *) lfirst((ListCell *) arg2);
 
 	return (compareString(fragment1->index, fragment2->index) &&
 			compareString(fragment1->source_name, fragment2->source_name) &&

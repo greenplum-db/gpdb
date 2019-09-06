@@ -1,8 +1,6 @@
 
 CREATE LANGUAGE plpythonu;
 CREATE
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
 
 CREATE RESOURCE GROUP rg1_cpuset_test WITH (memory_limit = 10, cpuset='0');
 CREATE
@@ -270,7 +268,7 @@ SELECT check_rules();
 SELECT gp_inject_fault('create_resource_group_fail', 'error', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 CREATE RESOURCE GROUP rg1_test_group WITH (memory_limit=10, cpuset='0');
 ERROR:  fault triggered, fault name:'create_resource_group_fail' fault type:'error'
@@ -286,7 +284,7 @@ SELECT check_rules();
 SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 REVOKE ALL ON busy FROM role1_cpuset_test;

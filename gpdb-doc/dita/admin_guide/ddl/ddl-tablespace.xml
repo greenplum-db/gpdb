@@ -12,7 +12,7 @@
     <p>A tablespace requires a host file system location to store its database files. In Greenplum
       Database, the file system location must exist on all hosts including the hosts running the
       master, standby master, each primary segment, and each mirror segment. </p>
-    <p>A tablespace is Greemplum Database system object (a global object), you can use a tablespace
+    <p>A tablespace is Greenplum Database system object (a global object), you can use a tablespace
       from any database if you have appropriate privileges.</p>
   </body>
   <topic id="topic13" xml:lang="en">
@@ -53,6 +53,12 @@
 CREATE TABLE foo(i int);
 </codeblock>
       </p>
+      <p>There is also the <codeph>temp_tablespaces</codeph> configuration parameter, which
+        determines the placement of temporary tables and indexes, as well as temporary files that
+        are used for purposes such as sorting large data sets. This can be a comma-separate list of
+        tablespace names, rather than only one, so that the load associated with temporary objects
+        can be spread over multiple tablespaces. A random member of the list is picked each time a
+        temporary object is to be created.</p>
       <p>The tablespace associated with a database stores that database's system catalogs, temporary
         files created by server processes using that database, and is the default tablespace
         selected for tables and indexes created within the database, if no
@@ -135,15 +141,14 @@ CREATE TABLE foo(i int);
     <body>
       <p>You can move temporary or transaction files to a specific tablespace to improve database
         performance when running queries, creating backups, and to store data more sequentially. </p>
-      <p>Unless otherwise specified, temporary and transaction files are stored together with all
-        user data. The default location of temporary files,
-          &lt;<varname>data_dir</varname>>/&lt;<varname>seg_ID</varname>>/base/pgsql_tmp.</p>
       <p>The Greenplum Database server configuration parameter <codeph>temp_tablespaces</codeph>
-        controls the location for temporary files.</p>
-      <p>This variable specifies tablespaces in which to create temporary objects (temp tables and
-        indexes on temp tables) when a <codeph>CREATE</codeph> command does not explicitly specify a
-        tablespace. Temporary files for purposes such as sorting large data sets are also created in
-        these tablespaces.</p>
+        controls the location for both temporary tables and temporary spill files for hash aggregate
+        and hash join queries. (Temporary files for purposes such as sorting large data sets are
+        stored with general segment data in
+            <codeph>&lt;<varname>data_dir</varname>>/&lt;<varname>seg_ID</varname>>/base/pgsql_tmp</codeph>.)</p>
+      <p><codeph>temp_tablespaces</codeph> specifies tablespaces in which to create temporary
+        objects (temp tables and indexes on temp tables) when a <codeph>CREATE</codeph> command does
+        not explicitly specify a tablespace.</p>
       <p>Also note the following information about temporary or transaction files:</p>
       <ul id="ul_z3v_51j_lfb">
         <li>You can dedicate only one tablespace for temporary or transaction files, although you

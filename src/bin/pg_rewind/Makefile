@@ -26,8 +26,12 @@ OBJS	= pg_rewind.o parsexlog.o xlogreader.o datapagemap.o timeline.o \
 
 EXTRA_CLEAN = xlogreader.c compat.c
 
-REGRESS = basictest extrafiles databases pg_xlog_symlink unclean_shutdown simple_no_rewind_required ao_rewind bitmaptest
-REGRESS_OPTS=--use-existing --launcher=./launcher
+REGRESS = basictest extrafiles databases pg_xlog_symlink unclean_shutdown \
+	simple_no_rewind_required ao_rewind bitmaptest \
+	tablespaces_objects_created_before_promotion \
+	tablespaces_objects_created_after_promotion \
+	tablespaces_objects_removed_after_promotion
+REGRESS_OPTS=--init-file=./regress_init_file --use-existing --launcher=./launcher
 
 all: pg_rewind
 
@@ -38,7 +42,7 @@ xlogreader.c: % : $(top_srcdir)/src/backend/access/transam/%
 	rm -f $@ && $(LN_S) $< .
 
 # compat.c is symlinked from the PostgreSQL sources.
-compat.c: % : $(top_srcdir)/contrib/pg_xlogdump/%
+compat.c: % : $(top_srcdir)/src/bin/pg_xlogdump/%
 	rm -f $@ && $(LN_S) $< .
 
 install: all installdirs

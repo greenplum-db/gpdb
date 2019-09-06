@@ -4,7 +4,7 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * pg_dumpall forces all pg_dump output to be text, since it also outputs
@@ -54,7 +54,7 @@ static void makeAlterConfigCommand(PGconn *conn, const char *arrayitem,
 					   const char *type, const char *name, const char *type2,
 					   const char *name2);
 static void dumpDatabases(PGconn *conn);
-static void dumpTimestamp(char *msg);
+static void dumpTimestamp(const char *msg);
 
 static int	runPgDump(const char *dbname);
 static void buildShSecLabels(PGconn *conn,
@@ -62,7 +62,7 @@ static void buildShSecLabels(PGconn *conn,
 				 const char *objtype, const char *objname,
 				 PQExpBuffer buffer);
 static PGconn *connectDatabase(const char *dbname, const char *connstr, const char *pghost, const char *pgport,
-	  const char *pguser, enum trivalue prompt_password, bool fail_on_error);
+		   const char *pguser, trivalue prompt_password, bool fail_on_error);
 static char *constructConnStr(const char **keywords, const char **values);
 static PGresult *executeQuery(PGconn *conn, const char *query);
 static void executeCommand(PGconn *conn, const char *query);
@@ -106,7 +106,6 @@ main(int argc, char *argv[])
 		{"file", required_argument, NULL, 'f'},
 		{"globals-only", no_argument, NULL, 'g'},
 		{"host", required_argument, NULL, 'h'},
-		{"ignore-version", no_argument, NULL, 'i'},
 		{"dbname", required_argument, NULL, 'd'},
 		{"database", required_argument, NULL, 'l'},
 		{"oids", no_argument, NULL, 'o'},
@@ -156,7 +155,7 @@ main(int argc, char *argv[])
 	char	   *pguser = NULL;
 	char	   *pgdb = NULL;
 	char	   *use_role = NULL;
-	enum trivalue prompt_password = TRI_DEFAULT;
+	trivalue	prompt_password = TRI_DEFAULT;
 	bool		data_only = false;
 	bool		globals_only = false;
 	bool		output_clean = false;
@@ -215,7 +214,7 @@ main(int argc, char *argv[])
 
 	pgdumpopts = createPQExpBuffer();
 
-	while ((c = getopt_long(argc, argv, "acd:f:gh:il:oOp:rsS:tU:vwWx", long_options, &optindex)) != -1)
+	while ((c = getopt_long(argc, argv, "acd:f:gh:l:oOp:rsS:tU:vwWx", long_options, &optindex)) != -1)
 	{
 		switch (c)
 		{
@@ -244,10 +243,6 @@ main(int argc, char *argv[])
 
 			case 'h':
 				pghost = pg_strdup(optarg);
-				break;
-
-			case 'i':
-				/* ignored, deprecated option */
 				break;
 
 			case 'l':
@@ -1085,6 +1080,7 @@ dumpRoles(PGconn *conn)
 				i_rolpassword,
 				i_rolvaliduntil,
 				i_rolreplication,
+				i_rolbypassrls,
 				i_rolcomment,
 				i_rolqueuename = -1,	/* keep compiler quiet */
 				i_rolgroupname = -1,	/* keep compiler quiet */
@@ -1113,12 +1109,25 @@ dumpRoles(PGconn *conn)
 	 */
 
 	/* note: rolconfig is dumped later */
-	if (server_version >= 90100)
+	if (server_version >= 90500)
+		printfPQExpBuffer(buf,
+						  "SELECT oid, rolname, rolsuper, rolinherit, "
+						  "rolcreaterole, rolcreatedb, "
+						  "rolcanlogin, rolconnlimit, rolpassword, "
+						  "rolvaliduntil, rolreplication, rolbypassrls, "
+			 "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment, "
+						  "rolname = current_user AS is_current_user "
+						  " %s %s %s %s"
+						  "FROM pg_authid "
+						  "ORDER BY 2",
+						  resq_col, resgroup_col, extauth_col, hdfs_col);
+	else if (server_version >= 90100)
 		printfPQExpBuffer(buf,
 						  "SELECT oid, rolname, rolsuper, rolinherit, "
 						  "rolcreaterole, rolcreatedb, rolcatupdate, "
 						  "rolcanlogin, rolconnlimit, rolpassword, "
 						  "rolvaliduntil, rolreplication, "
+						  "false as rolbypassrls, "
 			 "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment, "
 						  "rolname = current_user AS is_current_user "
 						  " %s %s %s %s"
@@ -1131,6 +1140,7 @@ dumpRoles(PGconn *conn)
 						  "rolcreaterole, rolcreatedb, rolcatupdate, "
 						  "rolcanlogin, rolconnlimit, rolpassword, "
 						  "rolvaliduntil, false as rolreplication, "
+						  "false as rolbypassrls, "
 			 "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment, "
 						  "rolname = current_user AS is_current_user "
 						  " %s %s %s %s"
@@ -1153,6 +1163,7 @@ dumpRoles(PGconn *conn)
 	i_rolpassword = PQfnumber(res, "rolpassword");
 	i_rolvaliduntil = PQfnumber(res, "rolvaliduntil");
 	i_rolreplication = PQfnumber(res, "rolreplication");
+	i_rolbypassrls = PQfnumber(res, "rolbypassrls");
 	i_rolcomment = PQfnumber(res, "rolcomment");
 	i_is_current_user = PQfnumber(res, "is_current_user");
 
@@ -1191,7 +1202,7 @@ dumpRoles(PGconn *conn)
 		{
 			appendPQExpBufferStr(buf, "\n-- For binary upgrade, must preserve pg_authid.oid\n");
 			appendPQExpBuffer(buf,
-							  "SELECT binary_upgrade.set_next_pg_authid_oid('%u'::pg_catalog.oid, '%s'::text);\n\n",
+							  "SELECT pg_catalog.binary_upgrade_set_next_pg_authid_oid('%u'::pg_catalog.oid, '%s'::text);\n\n",
 							  auth_oid, rolename);
 		}
 
@@ -1237,6 +1248,11 @@ dumpRoles(PGconn *conn)
 			appendPQExpBufferStr(buf, " REPLICATION");
 		else
 			appendPQExpBufferStr(buf, " NOREPLICATION");
+
+		if (strcmp(PQgetvalue(res, i, i_rolbypassrls), "t") == 0)
+			appendPQExpBufferStr(buf, " BYPASSRLS");
+		else
+			appendPQExpBufferStr(buf, " NOBYPASSRLS");
 
 		if (strcmp(PQgetvalue(res, i, i_rolconnlimit), "-1") != 0)
 			appendPQExpBuffer(buf, " CONNECTION LIMIT %s",
@@ -1703,7 +1719,7 @@ dumpCreateDB(PGconn *conn)
 						   "SELECT datname, "
 						   "coalesce(rolname, (select rolname from pg_authid where oid=(select datdba from pg_database where datname='template0'))), "
 						   "pg_encoding_to_char(d.encoding), "
-						   "datcollate, datctype, datfrozenxid, 0 AS datminmxid, "
+					  "datcollate, datctype, datfrozenxid, 0 AS datminmxid, "
 						   "datistemplate, datacl, datconnlimit, "
 						   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
 			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
@@ -1713,7 +1729,7 @@ dumpCreateDB(PGconn *conn)
 						   "SELECT datname, "
 						   "coalesce(rolname, (select rolname from pg_authid where oid=(select datdba from pg_database where datname='template0'))), "
 						   "pg_encoding_to_char(d.encoding), "
-		   "null::text AS datcollate, null::text AS datctype, datfrozenxid, 0 AS datminmxid, "
+						   "null::text AS datcollate, null::text AS datctype, datfrozenxid, 0 AS datminmxid, "
 						   "datistemplate, datacl, datconnlimit, "
 						   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
 			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
@@ -1786,6 +1802,9 @@ dumpCreateDB(PGconn *conn)
 			if (strcmp(dbtablespace, "pg_default") != 0 && !no_tablespaces)
 				appendPQExpBuffer(buf, " TABLESPACE = %s",
 								  fmtId(dbtablespace));
+
+			if (strcmp(dbistemplate, "t") == 0)
+				appendPQExpBuffer(buf, " IS_TEMPLATE = true");
 
 			if (strcmp(dbconnlimit, "-1") != 0)
 				appendPQExpBuffer(buf, " CONNECTION LIMIT = %s",
@@ -2179,7 +2198,7 @@ runPgDump(const char *dbname)
 /*
  * buildShSecLabels
  *
- * Build SECURITY LABEL command(s) for an shared object
+ * Build SECURITY LABEL command(s) for a shared object
  *
  * The caller has to provide object type and identity in two separate formats:
  * catalog_name (e.g., "pg_database") and object OID, as well as
@@ -2216,7 +2235,7 @@ buildShSecLabels(PGconn *conn, const char *catalog_name, Oid objectId,
 static PGconn *
 connectDatabase(const char *dbname, const char *connection_string,
 				const char *pghost, const char *pgport, const char *pguser,
-				enum trivalue prompt_password, bool fail_on_error)
+				trivalue prompt_password, bool fail_on_error)
 {
 	PGconn	   *conn;
 	bool		new_pass;
@@ -2513,24 +2532,12 @@ executeCommand(PGconn *conn, const char *query)
  * dumpTimestamp
  */
 static void
-dumpTimestamp(char *msg)
+dumpTimestamp(const char *msg)
 {
-	char		buf[256];
+	char		buf[64];
 	time_t		now = time(NULL);
 
-	/*
-	 * We don't print the timezone on Win32, because the names are long and
-	 * localized, which means they may contain characters in various random
-	 * encodings; this has been seen to cause encoding errors when reading the
-	 * dump script.
-	 */
-	if (strftime(buf, sizeof(buf),
-#ifndef WIN32
-				 "%Y-%m-%d %H:%M:%S %Z",
-#else
-				 "%Y-%m-%d %H:%M:%S",
-#endif
-				 localtime(&now)) != 0)
+	if (strftime(buf, sizeof(buf), PGDUMP_STRFTIME_FMT, localtime(&now)) != 0)
 		fprintf(OPF, "-- %s %s\n\n", msg, buf);
 }
 

@@ -16,6 +16,7 @@ typedef struct int64key
 ** int64 ops
 */
 PG_FUNCTION_INFO_V1(gbt_int8_compress);
+PG_FUNCTION_INFO_V1(gbt_int8_fetch);
 PG_FUNCTION_INFO_V1(gbt_int8_union);
 PG_FUNCTION_INFO_V1(gbt_int8_picksplit);
 PG_FUNCTION_INFO_V1(gbt_int8_consistent);
@@ -120,11 +121,17 @@ Datum
 gbt_int8_compress(PG_FUNCTION_ARGS)
 {
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
-	GISTENTRY  *retval = NULL;
 
-	PG_RETURN_POINTER(gbt_num_compress(retval, entry, &tinfo));
+	PG_RETURN_POINTER(gbt_num_compress(entry, &tinfo));
 }
 
+Datum
+gbt_int8_fetch(PG_FUNCTION_ARGS)
+{
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
+
+	PG_RETURN_POINTER(gbt_num_fetch(entry, &tinfo));
+}
 
 Datum
 gbt_int8_consistent(PG_FUNCTION_ARGS)

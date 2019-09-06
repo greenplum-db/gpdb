@@ -1,0 +1,164 @@
+
+Fault Tolerance Service (FTS)
+=============================
+
+This document illustrates the mechanism of a GPDB component called
+Fault Tolerance Service (FTS):
+
+ - This sections explains how FTS probe process is started. The FTS
+   probe process is running on the Gp_entry_postmaster (master node)
+   only. It starts as a background worker process managed by the
+   BackgroundWorker structure. (see
+   src/include/postmaster/bgworker.h).  Greenplum sets up a group of
+   GP background processes through an array structure PMAuxProcList. A
+   entry in that struct represents a GP background process.
+
+   Two functions pointers are important members of the
+   BackgroundWorker structure. One points to main entry function of
+   the GP background process. The other points to the the function
+   that determine if the process should be started or not. For FTS,
+   these two functions are FtsProbeMain() and FtsProbeStartRule(),
+   respectively.  This is hard-coded in postmaster.c.
+
+      #define MaxPMAuxProc 6
+      static BackgroundWorker PMAuxProcList[MaxPMAuxProc]
+
+   In Postmaster, we will check the following condition:
+
+      Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH
+
+   The FTS probe process is started when the condition is true.
+
+   In the initialization phase, we register one BackgroundWorker entry
+   for each GP background process into postmaster's private structure
+   BackgroundWorkerList. When we do this, the above condition is
+   checked to decide if FTS should be registered there or not. The
+   reader may want to check load_auxiliary_libraries() for more
+   detail.
+
+   Later, the postmaster tries to start the processes that have been
+   registered in the BackgroundWorkerList, which includes the FTS
+   probe process. If first attempt to start a particular process
+   fails, or a process goes down for some reason and needs to be
+   brought up again, postmaster restarts it in its main loop. Every
+   iteration, it checks the status of these processes and acts
+   accordingly.
+
+2. This sections explains how FTS probes are or can be
+   initiated. Either the probes are trigged at regular defined
+   interval (which can be tuned via GUC) or triggerd on the fly when
+   required by certain internal components or tests or user via FTS
+   probe triggering function.
+
+   The FTS probe process always runs in a infinite loop, does a round
+   of polling at each iteration to get the health status of all
+   segments. At each iteration, it waits on a latch with timeout to
+   block itself for a while. Thus, two types of events might trigger
+   the polling. One is timeout on the latch it is waiting for, and the
+   other one is that someone sets the latch.
+
+   Certain components running on master node may interrupt FTS from
+   its wait to trigger a probe immediately. This is referred to as
+   notifying FTS. Dispatcher is one such component. As an example, it
+   can notify FTS if it encounters an error while creating a gang. The
+   reader may check FtsNotifyProber() to find more cases.
+
+3. On the master node, the FTS probe process gets the configuration
+   from catalog table gp_segment_configuration, which describes the
+   status of each segment and also reflects if any of them has a
+   mirror. For each unique content(or segindex) value, will see a
+   primary segment and may see a mirror segment. The two make a pair
+   and they have the same content(or segindex) value but different
+   dbid.
+
+   FTS probes only the primary segments. Primary segments provide
+   their own status as well as their mirror's status in response. When
+   a primary segment is found to be down, FTS promotes its mirror,
+   only if it was in-sync with the primary. If the mirror is
+   out-of-sync, this is considered "double failure" and FTS does
+   nothing. The cluster is unusable in this case.
+
+   If FTS, upon probing segments, finds any change, it would update
+   segment configuration. Dispatcher would then use the new
+   configuration to create gangs.
+
+   So FTS both read and write the catalog table.
+
+4. On the master node: each round of the polling is done in a chain of
+   calls :
+
+	ftsConnect()
+	ftsPoll()
+	ftsSend()
+	ftsReceive()
+	processRetry()
+	processResponse().
+
+   FTS probe process connects to each primary segment node(or mirror
+   segment when failover occurs) through TCP/IP. It sends requests to
+   segment and waits for the responses. Once a response is received,
+   it updates the catalog table gp_segment_configuration and
+   gp_configuration_history, and also relevant memory structures
+   accordingly.
+
+5. On the segment node: in the main loop of PostgresMain(), the
+   requests from the master FTS probe process
+   received. ProcessStartupPacket() is called first to make sure this
+   dialog is for FTS requests and thus the Postgres process spawn for
+   it would be a FTS handler(am_ftshandler = true).  Then it accepts
+   the request and process the ‘Q’ type message using
+   HandleFtsMessage(). This function deals with three kinds of
+   requests:
+
+        - Probe
+        - Sync
+        - Promote
+
+6. SIGUSR2 is ignored by FTS now, like other background, postmaster
+   use SIGTERM to stop the FTS.
+
+FTS Probe Request
+=================
+Currently there are three ways to trigger an FTS probe - two internal and one
+external:
+1. An internal regular FTS probe that is configurable with gp_fts_probe_interval
+2. An internal FTS probe triggered by the query dispatcher
+3. An external manual FTS probe from gp_request_fts_probe_scan()
+
+The following diagram illustrates the fts loop process. The upper portion of the
+loop represents a current probe in progress, and the lower portion represents a
+completed probe awaiting a trigger including the gp_fts_probe_interval timeout.
+This loop can be probed at anytime for results due to any of the above three
+mechanisms.
+
+
+              poll segments
+          +---------<--------+
+          |                  |  <-----+ request4
+          |     upper        |
+          |                  |
+          |                  ^
+      done|                  |start
+          |                  |
+          v     lower        |
+          |                  |
+          |                  |  <-----+ request1, request2, request3
+          +----------->------+
+                waitLatch
+
+
+Two main scenarios to consider:
+1) Allowing multiple probes both internal and external to reuse the same results
+when appropriate (ie: piggybacking on previous results). This is depicted as
+requests 1, 2, and 3 which should share the same results since they request
+before the start of a new fts loop, and after the results of the previous probe
+- that is in the lower portion.
+
+2) Ensuring fresh results from an external probe. This is depicted as as request
+4 incoming during a current probe in progress. This request should get fresh
+results rather than using the current results (ie: "piggybacking").
+
+
+Our implementation addresses these concerns with a probe start tick and probe
+end tick. We send a signal requesting fts results, then wait for a new loop to
+start, and then wait for that current loop to finish.

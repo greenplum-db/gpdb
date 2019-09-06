@@ -28,7 +28,7 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 CDXLTranslateContext::CDXLTranslateContext
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	BOOL is_child_agg_node
 	)
 	:
@@ -50,7 +50,7 @@ CDXLTranslateContext::CDXLTranslateContext
 //---------------------------------------------------------------------------
 CDXLTranslateContext::CDXLTranslateContext
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	BOOL is_child_agg_node,
 	ULongToColParamMap *original
 	)

@@ -16,4 +16,12 @@ $$
 $$
 LANGUAGE SQL;
 
+-- setup for workfile made in temp tablespace test
+\! mkdir -p '@testtablespace@/workfile_mgr';
+CREATE TABLESPACE ts1 LOCATION '@testtablespace@/workfile_mgr';
+
+SELECT gp_workfile_mgr_test('workfile_made_in_temp_tablespace');
+
+DROP TABLESPACE ts1;
+
 SELECT gp_workfile_mgr_test('fd_tests');

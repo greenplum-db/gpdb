@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 import fileinput
 import os
+import pipes
 import re
 import signal
 import stat
 import time
 import glob
 import shutil
+import subprocess
 import difflib
 
 import yaml
@@ -29,7 +31,7 @@ if master_data_dir is None:
 def execute_sql(dbname, sql):
     result = None
 
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         result = dbconn.execSQL(conn, sql)
         conn.commit()
 
@@ -37,7 +39,7 @@ def execute_sql(dbname, sql):
 
 def execute_sql_singleton(dbname, sql):
     result = None
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         result = dbconn.execSQLForSingleton(conn, sql)
 
     if result is None:
@@ -114,19 +116,29 @@ def run_gpcommand(context, command, cmd_prefix=''):
     context.ret_code = result.rc
     context.stdout_message = result.stdout
     context.error_message = result.stderr
+    context.stdout_position = 0
 
     return (result.rc, result.stderr, result.stdout)
 
 
 def run_gpcommand_async(context, command):
     cmd = Command(name='run %s' % command, cmdStr='$GPHOME/bin/%s' % (command))
-    context.asyncproc = cmd.runNoWait()
+    asyncproc = cmd.runNoWait()
+    if 'asyncproc' not in context:
+        context.asyncproc = asyncproc
 
 
-def check_stdout_msg(context, msg):
+def check_stdout_msg(context, msg, escapeStr = False):
+    if escapeStr:
+        msg = re.escape(msg)
     pat = re.compile(msg)
-    if not pat.search(context.stdout_message):
-        err_str = "Expected stdout string '%s' and found: '%s'" % (msg, context.stdout_message)
+
+    actual = context.stdout_message
+    if isinstance(msg, unicode):
+        actual = actual.decode('utf-8')
+
+    if not pat.search(actual):
+        err_str = "Expected stdout string '%s' and found: '%s'" % (msg, actual)
         raise Exception(err_str)
 
 
@@ -162,7 +174,7 @@ def check_database_is_running(context):
 
     pgport = int(os.environ['PGPORT'])
 
-    running_status = chk_local_db_running(master_data_dir, pgport)
+    running_status = chk_local_db_running(os.environ.get('MASTER_DATA_DIRECTORY'), pgport)
     gpdb_running = running_status[0] and running_status[1] and running_status[2] and running_status[3]
 
     return gpdb_running
@@ -189,15 +201,21 @@ def stop_database(context):
     if context.exception:
         raise context.exception
 
+
 def stop_primary(context, content_id):
     get_psegment_sql = 'select datadir, hostname from gp_segment_configuration where content=%i and role=\'p\';' % content_id
-    with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
         cur = dbconn.execSQL(conn, get_psegment_sql)
         rows = cur.fetchall()
         seg_data_dir = rows[0][0]
         seg_host = rows[0][1]
-    pid = get_pid_for_segment(seg_data_dir, seg_host)
-    kill_process(pid)
+
+    # For demo_cluster tests that run on the CI gives the error 'bash: pg_ctl: command not found'
+    # Thus, need to add pg_ctl to the path when ssh'ing to a demo cluster.
+    subprocess.check_call(['ssh', seg_host,
+                           'source %s/greenplum_path.sh && pg_ctl stop -m fast -D %s' % (
+                               pipes.quote(os.environ.get("GPHOME")), pipes.quote(seg_data_dir))
+                           ])
 
 
 def trigger_fts_probe():
@@ -209,14 +227,14 @@ def run_gprecoverseg():
 
 
 def getRows(dbname, exec_sql):
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         curs = dbconn.execSQL(conn, exec_sql)
         results = curs.fetchall()
     return results
 
 
 def getRow(dbname, exec_sql):
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         curs = dbconn.execSQL(conn, exec_sql)
         result = curs.fetchone()
     return result
@@ -226,7 +244,7 @@ def check_db_exists(dbname, host=None, port=0, user=None):
     LIST_DATABASE_SQL = 'SELECT datname FROM pg_database'
 
     results = []
-    with dbconn.connect(dbconn.DbURL(hostname=host, username=user, port=port, dbname='template1')) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, username=user, port=port, dbname='template1'), unsetSearchPath=False) as conn:
         curs = dbconn.execSQL(conn, LIST_DATABASE_SQL)
         results = curs.fetchall()
 
@@ -241,7 +259,7 @@ def create_database_if_not_exists(context, dbname, host=None, port=0, user=None)
     if not check_db_exists(dbname, host, port, user):
         create_database(context, dbname, host, port, user)
     context.dbname = dbname
-    context.conn = dbconn.connect(dbconn.DbURL(dbname=context.dbname))
+    context.conn = dbconn.connect(dbconn.DbURL(dbname=context.dbname), unsetSearchPath=False)
 
 def create_database(context, dbname=None, host=None, port=0, user=None):
     LOOPS = 10
@@ -276,7 +294,7 @@ def get_segment_hostnames(context, dbname):
 
 
 def check_table_exists(context, dbname, table_name, table_type=None, host=None, port=0, user=None):
-    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname), unsetSearchPath=False) as conn:
         if '.' in table_name:
             schemaname, tablename = table_name.split('.')
             SQL_format = """
@@ -329,14 +347,14 @@ def drop_external_table_if_exists(context, table_name, dbname):
 
 def drop_table_if_exists(context, table_name, dbname, host=None, port=0, user=None):
     SQL = 'drop table if exists %s' % table_name
-    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, SQL)
         conn.commit()
 
 
 def drop_external_table(context, table_name, dbname, host=None, port=0, user=None):
     SQL = 'drop external table %s' % table_name
-    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, SQL)
         conn.commit()
 
@@ -347,7 +365,7 @@ def drop_external_table(context, table_name, dbname, host=None, port=0, user=Non
 
 def drop_table(context, table_name, dbname, host=None, port=0, user=None):
     SQL = 'drop table %s' % table_name
-    with dbconn.connect(dbconn.DbURL(hostname=host, username=user, port=port, dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, username=user, port=port, dbname=dbname), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, SQL)
         conn.commit()
 
@@ -369,7 +387,7 @@ def drop_schema_if_exists(context, schema_name, dbname):
 
 def drop_schema(context, schema_name, dbname):
     SQL = 'drop schema %s cascade' % schema_name
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, SQL)
         conn.commit()
     if check_schema_exists(context, schema_name, dbname):
@@ -427,7 +445,7 @@ def create_external_partition(context, tablename, dbname, port, filename):
 
     drop_table_str = "Drop table %s_ret;" % (tablename)
 
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, create_table_str)
         dbconn.execSQL(conn, create_ext_table_str)
         dbconn.execSQL(conn, alter_table_str)
@@ -466,7 +484,7 @@ def create_partition(context, tablename, storage_type, dbname, compression_type=
 
     create_table_str = create_table_str + ";"
 
-    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, create_table_str)
         conn.commit()
 
@@ -481,7 +499,7 @@ def populate_partition(tablename, start_date, dbname, data_offset, rowcount=1094
     insert_sql_str += "; insert into %s select i+%d, 'restore', i + date '%s' from generate_series(0,%d) as i" % (
     tablename, data_offset, start_date, rowcount)
 
-    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, insert_sql_str)
         conn.commit()
 
@@ -490,7 +508,7 @@ def create_indexes(context, table_name, indexname, dbname):
     btree_index_sql = "create index btree_%s on %s using btree(column1);" % (indexname, table_name)
     bitmap_index_sql = "create index bitmap_%s on %s using bitmap(column3);" % (indexname, table_name)
     index_sql = btree_index_sql + bitmap_index_sql
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, index_sql)
         conn.commit()
     validate_index(context, table_name, dbname)
@@ -506,7 +524,7 @@ def validate_index(context, table_name, dbname):
 def create_schema(context, schema_name, dbname):
     if not check_schema_exists(context, schema_name, dbname):
         schema_sql = "create schema %s" % schema_name
-        with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
             dbconn.execSQL(conn, schema_sql)
             conn.commit()
 
@@ -529,7 +547,7 @@ def create_int_table(context, table_name, table_type='heap', dbname='testdb'):
         raise Exception('Invalid table type specified')
 
     SELECT_TABLE_SQL = 'select count(*) from %s' % table_name
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         dbconn.execSQL(conn, CREATE_TABLE_SQL)
         conn.commit()
 
@@ -587,7 +605,7 @@ def check_row_count(context, tablename, dbname, nrows):
     else:
         dburl = dbconn.DbURL(dbname=dbname)
 
-    with dbconn.connect(dburl) as conn:
+    with dbconn.connect(dburl, unsetSearchPath=False) as conn:
         result = dbconn.execSQLForSingleton(conn, NUM_ROWS_QUERY)
     if result != nrows:
         raise Exception('%d rows in table %s.%s, expected row count = %d' % (result, dbname, tablename, nrows))
@@ -625,36 +643,6 @@ def get_all_hostnames_as_list(context, dbname):
 
     return hosts
 
-
-def get_pid_for_segment(seg_data_dir, seg_host):
-    cmd = Command(name='get list of postmaster processes',
-                  cmdStr='ps -eaf | grep %s' % seg_data_dir,
-                  ctxt=REMOTE,
-                  remoteHost=seg_host)
-    cmd.run(validateAfter=True)
-
-    pid = None
-    results = cmd.get_results().stdout.strip().split('\n')
-    for res in results:
-        if 'grep' not in res:
-            pid = res.split()[1]
-
-    if pid is None:
-        return None
-
-    return int(pid)
-
-
-def kill_process(pid, host=None, sig=signal.SIGTERM):
-    if host is not None:
-        cmd = Command('kill process on a given host',
-                      cmdStr='kill -%d %d' % (sig, pid),
-                      ctxt=REMOTE,
-                      remoteHost=host)
-        cmd.run(validateAfter=True)
-    else:
-        os.kill(pid, sig)
-
 def has_process_eventually_stopped(proc, host=None):
     start_time = current_time = datetime.now()
     is_running = False
@@ -682,10 +670,12 @@ def check_user_permissions(file_name, access_mode):
 def are_segments_running():
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     segments = gparray.getDbList()
+    result = True
     for seg in segments:
         if seg.status != 'u':
-            return False
-    return True
+            print "segment is not up - %s" % seg
+            result = False
+    return result
 
 
 def modify_sql_file(file, hostport):
@@ -709,7 +699,7 @@ def create_dir(host, directory):
 def check_count_for_specific_query(dbname, query, nrows):
     NUM_ROWS_QUERY = '%s' % query
     # We want to bubble up the exception so that if table does not exist, the test fails
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
         result = dbconn.execSQLForSingleton(conn, NUM_ROWS_QUERY)
     if result != nrows:
         raise Exception('%d rows in query: %s. Expected row count = %d' % (result, query, nrows))
@@ -721,7 +711,7 @@ def get_primary_segment_host_port():
     """
     FIRST_PRIMARY_DBID = 2
     get_psegment_sql = 'select hostname, port from gp_segment_configuration where dbid=%i;' % FIRST_PRIMARY_DBID
-    with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
         cur = dbconn.execSQL(conn, get_psegment_sql)
         rows = cur.fetchall()
         primary_seg_host = rows[0][0]
@@ -780,3 +770,28 @@ def replace_special_char_env(str):
 
 def escape_string(string, conn):
     return pg.DB(db=conn).escape_string(string)
+
+
+def wait_for_unblocked_transactions(context, num_retries=150):
+    """
+    Tries once a second to successfully commit a transaction to the database
+    running on PGHOST/PGPORT. Raises an Exception after failing <num_retries>
+    times.
+    """
+    attempt = 0
+    while attempt < num_retries:
+        try:
+            with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+                # Cursor.execute() will issue an implicit BEGIN for us.
+                # Empty block of 'BEGIN' and 'END' won't start a distributed transaction,
+                # execute a DDL query to start a distributed transaction.
+                conn.cursor().execute('CREATE TEMP TABLE temp_test(a int)')
+                conn.cursor().execute('COMMIT')
+                break
+        except Exception as e:
+            attempt += 1
+            pass
+        time.sleep(1)
+
+    if attempt == num_retries:
+        raise Exception('Unable to establish a connection to database !!!')

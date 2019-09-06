@@ -282,21 +282,28 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
       </listitem>
      </varlistentry>
 
-     <varlistentry id="pause-at-recovery-target"
-                   xreflabel="pause_at_recovery_target">
-      <term><varname>pause_at_recovery_target</varname> (<type>boolean</type>)
+     <varlistentry id="recovery-target-action"
+                   xreflabel="recovery_target_action">
+      <term><varname>recovery_target_action</varname> (<type>enum</type>)
       <indexterm>
-        <primary><varname>pause_at_recovery_target</> recovery parameter</primary>
+        <primary><varname>recovery_target_action</> recovery parameter</primary>
       </indexterm>
       </term>
       <listitem>
        <para>
-        Specifies whether recovery should pause when the recovery target
-        is reached. The default is true.
-        This is intended to allow queries to be executed against the
-        database to check if this recovery target is the most desirable
-        point for recovery. The paused state can be resumed by using
-        <function>pg_xlog_replay_resume()</> (see
+        Specifies what action the server should take once the recovery target is
+        reached. The default is <literal>pause</>, which means recovery will
+        be paused. <literal>promote</> means the recovery process will finish
+        and the server will start to accept connections.
+        Finally <literal>shutdown</> will stop the server after reaching the
+        recovery target.
+       </para>
+       <para>
+        The intended use of the <literal>pause</> setting is to allow queries
+        to be executed against the database to check if this recovery target
+        is the most desirable point for recovery.
+        The paused state can be resumed by
+        using <function>pg_xlog_replay_resume()</> (see
         <xref linkend="functions-recovery-control-table">), which then
         causes recovery to end. If this recovery target is not the
         desired stopping point, then shut down the server, change the
@@ -304,13 +311,27 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
         continue recovery.
        </para>
        <para>
-        This setting has no effect if <xref linkend="guc-hot-standby"> is not
-        enabled, or if no recovery target is set.
+        The <literal>shutdown</> setting is useful to have the instance ready
+        at the exact replay point desired.  The instance will still be able to
+        replay more WAL records (and in fact will have to replay WAL records
+        since the last checkpoint next time it is started).
+       </para>
+       <para>
+        Note that because <filename>recovery.conf</> will not be renamed when
+        <varname>recovery_target_action</> is set to <literal>shutdown</>,
+        any subsequent start will end with immediate shutdown unless the
+        configuration is changed or the <filename>recovery.conf</> file is
+        removed manually.
+       </para>
+       <para>
+        This setting has no effect if no recovery target is set.
+        If <xref linkend="guc-hot-standby"> is not enabled, a setting of
+        <literal>pause</> will act the same as <literal>shutdown</>.
        </para>
       </listitem>
      </varlistentry>
 
-     </variablelist>
+    </variablelist>
    </sect1>
 
   <sect1 id="standby-settings">

@@ -175,8 +175,11 @@ GetForeignPlan (PlannerInfo *root,
      access path.  This is called at the end of query planning.
      The parameters are as for <function>GetForeignRelSize</>, plus
      the selected <structname>ForeignPath</> (previously produced by
-     <function>GetForeignPaths</>), the target list to be emitted by the
-     plan node, and the restriction clauses to be enforced by the plan node.
+     <function>GetForeignPaths</> or <function>GetForeignJoinPaths</>),
+     the target list to be emitted by the plan node,
+     and the restriction clauses to be enforced by the plan node.
+     (If the path is for a join rather than a base
+     relation, <literal>foreigntableid</> is <literal>InvalidOid</>.)
     </para>
 
     <para>
@@ -235,20 +238,23 @@ IterateForeignScan (ForeignScanState *node);
     </para>
 
     <para>
-     The rows returned must match the column signature of the foreign table
-     being scanned.  If you choose to optimize away fetching columns that
-     are not needed, you should insert nulls in those column positions.
+     The rows returned must match the <structfield>fdw_scan_tlist</> target
+     list if one was supplied, otherwise they must match the rowtype of the
+     foreign table being scanned.  If you choose to optimize away fetching
+     columns that are not needed, you should insert nulls in those column
+     positions, or else generate a <structfield>fdw_scan_tlist</> list with
+     those columns omitted.
     </para>
 
     <para>
      Note that <productname>PostgreSQL</productname>'s executor doesn't care
-     whether the rows returned violate any <literal>NOT NULL</literal>
-     constraints that were defined on the foreign table columns &mdash; but
-     the planner does care, and may optimize queries incorrectly if
-     <literal>NULL</> values are present in a column declared not to contain
-     them.  If a <literal>NULL</> value is encountered when the user has
-     declared that none should be present, it may be appropriate to raise an
-     error (just as you would need to do in the case of a data type mismatch).
+     whether the rows returned violate any constraints that were defined on
+     the foreign table &mdash; but the planner does care, and may optimize
+     queries incorrectly if there are rows visible in the foreign table that
+     do not satisfy a declared constraint.  If a constraint is violated when
+     the user has declared that the constraint should hold true, it may be
+     appropriate to raise an error (just as you would need to do in the case
+     of a data type mismatch).
     </para>
 
     <para>
@@ -271,6 +277,67 @@ EndForeignScan (ForeignScanState *node);
      End the scan and release resources.  It is normally not important
      to release palloc'd memory, but for example open files and connections
      to remote servers should be cleaned up.
+    </para>
+
+   </sect2>
+
+   <sect2 id="fdw-callbacks-join-scan">
+    <title>FDW Routines For Scanning Foreign Joins</title>
+
+    <para>
+     If an FDW supports performing foreign joins remotely (rather than
+     by fetching both tables' data and doing the join locally), it should
+     provide this callback function:
+    </para>
+
+    <para>
+<programlisting>
+void
+GetForeignJoinPaths (PlannerInfo *root,
+                     RelOptInfo *joinrel,
+                     RelOptInfo *outerrel,
+                     RelOptInfo *innerrel,
+                     JoinType jointype,
+                     JoinPathExtraData *extra);
+</programlisting>
+     Create possible access paths for a join of two (or more) foreign tables
+     that all belong to the same foreign server.  This optional
+     function is called during query planning.  As
+     with <function>GetForeignPaths</>, this function should
+     generate <structname>ForeignPath</> path(s) for the
+     supplied <literal>joinrel</>, and call <function>add_path</> to add these
+     paths to the set of paths considered for the join.  But unlike
+     <function>GetForeignPaths</>, it is not necessary that this function
+     succeed in creating at least one path, since paths involving local
+     joining are always possible.
+    </para>
+
+    <para>
+     Note that this function will be invoked repeatedly for the same join
+     relation, with different combinations of inner and outer relations; it is
+     the responsibility of the FDW to minimize duplicated work.
+    </para>
+
+    <para>
+     If a <structname>ForeignPath</> path is chosen for the join, it will
+     represent the entire join process; paths generated for the component
+     tables and subsidiary joins will not be used.  Subsequent processing of
+     the join path proceeds much as it does for a path scanning a single
+     foreign table.  One difference is that the <structfield>scanrelid</> of
+     the resulting <structname>ForeignScan</> plan node should be set to zero,
+     since there is no single relation that it represents; instead,
+     the <structfield>fs_relids</> field of the <structname>ForeignScan</>
+     node represents the set of relations that were joined.  (The latter field
+     is set up automatically by the core planner code, and need not be filled
+     by the FDW.)  Another difference is that, because the column list for a
+     remote join cannot be found from the system catalogs, the FDW must
+     fill <structfield>fdw_scan_tlist</> with an appropriate list
+     of <structfield>TargetEntry</> nodes, representing the set of columns
+     it will supply at runtime in the tuples it returns.
+    </para>
+
+    <para>
+     See <xref linkend="fdw-planning"> for additional information.
     </para>
 
    </sect2>
@@ -598,6 +665,108 @@ IsForeignRelUpdatable (Relation rel);
 
    </sect2>
 
+   <sect2 id="fdw-callbacks-row-locking">
+    <title>FDW Routines For Row Locking</title>
+
+    <para>
+     If an FDW wishes to support <firstterm>late row locking</> (as described
+     in <xref linkend="fdw-row-locking">), it must provide the following
+     callback functions:
+    </para>
+
+    <para>
+<programlisting>
+RowMarkType
+GetForeignRowMarkType (RangeTblEntry *rte,
+                       LockClauseStrength strength);
+</programlisting>
+
+     Report which row-marking option to use for a foreign table.
+     <literal>rte</> is the <structname>RangeTblEntry</> node for the table
+     and <literal>strength</> describes the lock strength requested by the
+     relevant <literal>FOR UPDATE/SHARE</> clause, if any.  The result must be
+     a member of the <literal>RowMarkType</> enum type.
+    </para>
+
+    <para>
+     This function is called during query planning for each foreign table that
+     appears in an <command>UPDATE</>, <command>DELETE</>, or <command>SELECT
+     FOR UPDATE/SHARE</> query and is not the target of <command>UPDATE</>
+     or <command>DELETE</>.
+    </para>
+
+    <para>
+     If the <function>GetForeignRowMarkType</> pointer is set to
+     <literal>NULL</>, the <literal>ROW_MARK_COPY</> option is always used.
+     (This implies that <function>RefetchForeignRow</> will never be called,
+     so it need not be provided either.)
+    </para>
+
+    <para>
+     See <xref linkend="fdw-row-locking"> for more information.
+    </para>
+
+    <para>
+<programlisting>
+HeapTuple
+RefetchForeignRow (EState *estate,
+                   ExecRowMark *erm,
+                   Datum rowid,
+                   bool *updated);
+</programlisting>
+
+     Re-fetch one tuple from the foreign table, after locking it if required.
+     <literal>estate</> is global execution state for the query.
+     <literal>erm</> is the <structname>ExecRowMark</> struct describing
+     the target foreign table and the row lock type (if any) to acquire.
+     <literal>rowid</> identifies the tuple to be fetched.
+     <literal>updated</> is an output parameter.
+    </para>
+
+    <para>
+     This function should return a palloc'ed copy of the fetched tuple,
+     or <literal>NULL</> if the row lock couldn't be obtained.  The row lock
+     type to acquire is defined by <literal>erm-&gt;markType</>, which is the
+     value previously returned by <function>GetForeignRowMarkType</>.
+     (<literal>ROW_MARK_REFERENCE</> means to just re-fetch the tuple without
+     acquiring any lock, and <literal>ROW_MARK_COPY</> will never be seen by
+     this routine.)
+    </para>
+
+    <para>
+     In addition, <literal>*updated</> should be set to <literal>true</>
+     if what was fetched was an updated version of the tuple rather than
+     the same version previously obtained.  (If the FDW cannot be sure about
+     this, always returning <literal>true</> is recommended.)
+    </para>
+
+    <para>
+     Note that by default, failure to acquire a row lock should result in
+     raising an error; a <literal>NULL</> return is only appropriate if
+     the <literal>SKIP LOCKED</> option is specified
+     by <literal>erm-&gt;waitPolicy</>.
+    </para>
+
+    <para>
+     The <literal>rowid</> is the <structfield>ctid</> value previously read
+     for the row to be re-fetched.  Although the <literal>rowid</> value is
+     passed as a <type>Datum</>, it can currently only be a <type>tid</>.  The
+     function API is chosen in hopes that it may be possible to allow other
+     datatypes for row IDs in future.
+    </para>
+
+    <para>
+     If the <function>RefetchForeignRow</> pointer is set to
+     <literal>NULL</>, attempts to re-fetch rows will fail
+     with an error message.
+    </para>
+
+    <para>
+     See <xref linkend="fdw-row-locking"> for more information.
+    </para>
+
+   </sect2>
+
    <sect2 id="fdw-callbacks-explain">
     <title>FDW Routines for <command>EXPLAIN</></title>
 
@@ -692,6 +861,66 @@ AcquireSampleRowsFunc (Relation relation, int elevel,
      the table into the output parameters <parameter>totalrows</> and
      <parameter>totaldeadrows</>.  (Set <parameter>totaldeadrows</> to zero
      if the FDW does not have any concept of dead rows.)
+    </para>
+
+   </sect2>
+
+   <sect2 id="fdw-callbacks-import">
+    <title>FDW Routines For <command>IMPORT FOREIGN SCHEMA</></title>
+
+    <para>
+<programlisting>
+List *
+ImportForeignSchema (ImportForeignSchemaStmt *stmt, Oid serverOid);
+</programlisting>
+
+     Obtain a list of foreign table creation commands.  This function is
+     called when executing <xref linkend="sql-importforeignschema">, and is
+     passed the parse tree for that statement, as well as the OID of the
+     foreign server to use.  It should return a list of C strings, each of
+     which must contain a <xref linkend="sql-createforeigntable"> command.
+     These strings will be parsed and executed by the core server.
+    </para>
+
+    <para>
+     Within the <structname>ImportForeignSchemaStmt</> struct,
+     <structfield>remote_schema</> is the name of the remote schema from
+     which tables are to be imported.
+     <structfield>list_type</> identifies how to filter table names:
+     <literal>FDW_IMPORT_SCHEMA_ALL</> means that all tables in the remote
+     schema should be imported (in this case <structfield>table_list</> is
+     empty), <literal>FDW_IMPORT_SCHEMA_LIMIT_TO</> means to include only
+     tables listed in <structfield>table_list</>,
+     and <literal>FDW_IMPORT_SCHEMA_EXCEPT</> means to exclude the tables
+     listed in <structfield>table_list</>.
+     <structfield>options</> is a list of options used for the import process.
+     The meanings of the options are up to the FDW.
+     For example, an FDW could use an option to define whether the
+     <literal>NOT NULL</> attributes of columns should be imported.
+     These options need not have anything to do with those supported by the
+     FDW as database object options.
+    </para>
+
+    <para>
+     The FDW may ignore the <structfield>local_schema</> field of
+     the <structname>ImportForeignSchemaStmt</>, because the core server
+     will automatically insert that name into the parsed <command>CREATE
+     FOREIGN TABLE</> commands.
+    </para>
+
+    <para>
+     The FDW does not have to concern itself with implementing the filtering
+     specified by <structfield>list_type</> and <structfield>table_list</>,
+     either, as the core server will automatically skip any returned commands
+     for tables excluded according to those options.  However, it's often
+     useful to avoid the work of creating commands for excluded tables in the
+     first place.  The function <function>IsImportableForeignTable()</> may be
+     useful to test whether a given foreign-table name will pass the filter.
+    </para>
+
+    <para>
+     If the FDW does not support importing table definitions, the
+     <function>ImportForeignSchema</> pointer can be set to <literal>NULL</>.
     </para>
 
    </sect2>
@@ -808,10 +1037,10 @@ GetForeignServerByName(const char *name, bool missing_ok);
 
     <para>
      The FDW callback functions <function>GetForeignRelSize</>,
-     <function>GetForeignPaths</>, <function>GetForeignPlan</>, and
-     <function>PlanForeignModify</> must fit into the workings of the
-     <productname>PostgreSQL</> planner.  Here are some notes about what
-     they must do.
+     <function>GetForeignPaths</>, <function>GetForeignPlan</>,
+     <function>PlanForeignModify</>, and <function>GetForeignJoinPaths</>
+     must fit into the workings of the <productname>PostgreSQL</> planner.
+     Here are some notes about what they must do.
     </para>
 
     <para>
@@ -838,7 +1067,7 @@ GetForeignServerByName(const char *name, bool missing_ok);
      <literal>baserel-&gt;fdw_private</> is a <type>void</> pointer that is
      available for FDW planning functions to store information relevant to
      the particular foreign table.  The core planner does not touch it except
-     to initialize it to NULL when the <literal>baserel</> node is created.
+     to initialize it to NULL when the <literal>RelOptInfo</> node is created.
      It is useful for passing information forward from
      <function>GetForeignRelSize</> to <function>GetForeignPaths</> and/or
      <function>GetForeignPaths</> to <function>GetForeignPlan</>, thereby
@@ -907,6 +1136,23 @@ GetForeignServerByName(const char *name, bool missing_ok);
     </para>
 
     <para>
+     Another <structname>ForeignScan</> field that can be filled by FDWs
+     is <structfield>fdw_scan_tlist</>, which describes the tuples returned by
+     the FDW for this plan node.  For simple foreign table scans this can be
+     set to <literal>NIL</>, implying that the returned tuples have the
+     rowtype declared for the foreign table.  A non-NIL value must be a
+     targetlist (list of <structname>TargetEntry</>s) containing Vars and/or
+     expressions representing the returned columns.  This might be used, for
+     example, to show that the FDW has omitted some columns that it noticed
+     won't be needed for the query.  Also, if the FDW can compute expressions
+     used by the query more cheaply than can be done locally, it could add
+     those expressions to <structfield>fdw_scan_tlist</>.  Note that join
+     plans (created from paths made by <function>GetForeignJoinPaths</>) must
+     always supply <structfield>fdw_scan_tlist</> to describe the set of
+     columns they will return.
+    </para>
+
+    <para>
      The FDW should always construct at least one path that depends only on
      the table's restriction clauses.  In join queries, it might also choose
      to construct path(s) that depend on join clauses, for example
@@ -924,6 +1170,18 @@ GetForeignServerByName(const char *name, bool missing_ok);
     </para>
 
     <para>
+     If an FDW supports remote joins, <function>GetForeignJoinPaths</> should
+     produce <structname>ForeignPath</>s for potential remote joins in much
+     the same way as <function>GetForeignPaths</> works for base tables.
+     Information about the intended join can be passed forward
+     to <function>GetForeignPlan</> in the same ways described above.
+     However, <structfield>baserestrictinfo</> is not relevant for join
+     relations; instead, the relevant join clauses for a particular join are
+     passed to <function>GetForeignJoinPaths</> as a separate parameter
+     (<literal>extra-&gt;restrictlist</>).
+    </para>
+
+    <para>
      When planning an <command>UPDATE</> or <command>DELETE</>,
      <function>PlanForeignModify</> can look up the <structname>RelOptInfo</>
      struct for the foreign table and make use of the
@@ -937,21 +1195,122 @@ GetForeignServerByName(const char *name, bool missing_ok);
     </para>
 
     <para>
-     For an <command>UPDATE</> or <command>DELETE</> against an external data
-     source that supports concurrent updates, it is recommended that the
-     <literal>ForeignScan</> operation lock the rows that it fetches, perhaps
-     via the equivalent of <command>SELECT FOR UPDATE</>.  The FDW may also
-     choose to lock rows at fetch time when the foreign table is referenced
-     in a <command>SELECT FOR UPDATE/SHARE</>; if it does not, the
-     <literal>FOR UPDATE</> or <literal>FOR SHARE</> option is essentially a
-     no-op so far as the foreign table is concerned.  This behavior may yield
-     semantics slightly different from operations on local tables, where row
-     locking is customarily delayed as long as possible: remote rows may get
-     locked even though they subsequently fail locally-applied restriction or
-     join conditions.  However, matching the local semantics exactly would
-     require an additional remote access for every row, and might be
-     impossible anyway depending on what locking semantics the external data
-     source provides.
+     <command>INSERT</> with an <literal>ON CONFLICT</> clause does not
+     support specifying the conflict target, as remote constraints are not
+     locally known. This in turn implies that <literal>ON CONFLICT DO
+     UPDATE</> is not supported, since the specification is mandatory there.
+    </para>
+
+   </sect1>
+
+   <sect1 id="fdw-row-locking">
+    <title>Row Locking in Foreign Data Wrappers</title>
+
+    <para>
+     If an FDW's underlying storage mechanism has a concept of locking
+     individual rows to prevent concurrent updates of those rows, it is
+     usually worthwhile for the FDW to perform row-level locking with as
+     close an approximation as practical to the semantics used in
+     ordinary <productname>PostgreSQL</> tables.  There are multiple
+     considerations involved in this.
+    </para>
+
+    <para>
+     One key decision to be made is whether to perform <firstterm>early
+     locking</> or <firstterm>late locking</>.  In early locking, a row is
+     locked when it is first retrieved from the underlying store, while in
+     late locking, the row is locked only when it is known that it needs to
+     be locked.  (The difference arises because some rows may be discarded by
+     locally-checked restriction or join conditions.)  Early locking is much
+     simpler and avoids extra round trips to a remote store, but it can cause
+     locking of rows that need not have been locked, resulting in reduced
+     concurrency or even unexpected deadlocks.  Also, late locking is only
+     possible if the row to be locked can be uniquely re-identified later.
+     Preferably the row identifier should identify a specific version of the
+     row, as <productname>PostgreSQL</> TIDs do.
+    </para>
+
+    <para>
+     By default, <productname>PostgreSQL</> ignores locking considerations
+     when interfacing to FDWs, but an FDW can perform early locking without
+     any explicit support from the core code.  The API functions described
+     in <xref linkend="fdw-callbacks-row-locking">, which were added
+     in <productname>PostgreSQL</> 9.5, allow an FDW to use late locking if
+     it wishes.
+    </para>
+
+    <para>
+     An additional consideration is that in <literal>READ COMMITTED</>
+     isolation mode, <productname>PostgreSQL</> may need to re-check
+     restriction and join conditions against an updated version of some
+     target tuple.  Rechecking join conditions requires re-obtaining copies
+     of the non-target rows that were previously joined to the target tuple.
+     When working with standard <productname>PostgreSQL</> tables, this is
+     done by including the TIDs of the non-target tables in the column list
+     projected through the join, and then re-fetching non-target rows when
+     required.  This approach keeps the join data set compact, but it
+     requires inexpensive re-fetch capability, as well as a TID that can
+     uniquely identify the row version to be re-fetched.  By default,
+     therefore, the approach used with foreign tables is to include a copy of
+     the entire row fetched from a foreign table in the column list projected
+     through the join.  This puts no special demands on the FDW but can
+     result in reduced performance of merge and hash joins.  An FDW that is
+     capable of meeting the re-fetch requirements can choose to do it the
+     first way.
+    </para>
+
+    <para>
+     For an <command>UPDATE</> or <command>DELETE</> on a foreign table, it
+     is recommended that the <literal>ForeignScan</> operation on the target
+     table perform early locking on the rows that it fetches, perhaps via the
+     equivalent of <command>SELECT FOR UPDATE</>.  An FDW can detect whether
+     a table is an <command>UPDATE</>/<command>DELETE</> target at plan time
+     by comparing its relid to <literal>root-&gt;parse-&gt;resultRelation</>,
+     or at execution time by using <function>ExecRelationIsTargetRelation()</>.
+     An alternative possibility is to perform late locking within the
+     <function>ExecForeignUpdate</> or <function>ExecForeignDelete</>
+     callback, but no special support is provided for this.
+    </para>
+
+    <para>
+     For foreign tables that are specified to be locked by a <command>SELECT
+     FOR UPDATE/SHARE</> command, the <literal>ForeignScan</> operation can
+     again perform early locking by fetching tuples with the equivalent
+     of <command>SELECT FOR UPDATE/SHARE</>.  To perform late locking
+     instead, provide the callback functions defined
+     in <xref linkend="fdw-callbacks-row-locking">.
+     In <function>GetForeignRowMarkType</>, select rowmark option
+     <literal>ROW_MARK_EXCLUSIVE</>, <literal>ROW_MARK_NOKEYEXCLUSIVE</>,
+     <literal>ROW_MARK_SHARE</>, or <literal>ROW_MARK_KEYSHARE</> depending
+     on the requested lock strength.  (The core code will act the same
+     regardless of which of these four options you choose.)
+     Elsewhere, you can detect whether a foreign table was specified to be
+     locked by this type of command by using <function>get_plan_rowmark</> at
+     plan time, or <function>ExecFindRowMark</> at execution time; you must
+     check not only whether a non-null rowmark struct is returned, but that
+     its <structfield>strength</> field is not <literal>LCS_NONE</>.
+    </para>
+
+    <para>
+     Lastly, for foreign tables that are used in an <command>UPDATE</>,
+     <command>DELETE</> or <command>SELECT FOR UPDATE/SHARE</> command but
+     are not specified to be row-locked, you can override the default choice
+     to copy entire rows by having <function>GetForeignRowMarkType</> select
+     option <literal>ROW_MARK_REFERENCE</> when it sees lock strength
+     <literal>LCS_NONE</>.  This will cause <function>RefetchForeignRow</> to
+     be called with that value for <structfield>markType</>; it should then
+     re-fetch the row without acquiring any new lock.  (If you have
+     a <function>GetForeignRowMarkType</> function but don't wish to re-fetch
+     unlocked rows, select option <literal>ROW_MARK_COPY</>
+     for <literal>LCS_NONE</>.)
+    </para>
+
+    <para>
+     See <filename>src/include/nodes/lockoptions.h</>, the comments
+     for <type>RowMarkType</> and <type>PlanRowMark</>
+     in <filename>src/include/nodes/plannodes.h</>, and the comments for
+     <type>ExecRowMark</> in <filename>src/include/nodes/execnodes.h</> for
+     additional information.
     </para>
 
   </sect1>

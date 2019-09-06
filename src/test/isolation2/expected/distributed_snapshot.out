@@ -6,8 +6,6 @@
 -- when calling DistributedLog_AdvanceOldestXmin().
 
 -- Setup
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
 CREATE TABLE distributed_snapshot_test1 (a int);
 CREATE
 
@@ -37,13 +35,13 @@ INSERT 1
 1: SELECT gp_inject_fault('distributedlog_advance_oldest_xmin', 'suspend', '', 'postgres', '', 1, -1, 5, dbid) from gp_segment_configuration where content = 0 and role = 'p';
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 3&:@db_name postgres: SELECT count(*) > 0 from gp_dist_random('gp_id');  <waiting ...>
 1: SELECT gp_wait_until_triggered_fault('distributedlog_advance_oldest_xmin', 1, dbid) from gp_segment_configuration where content = 0 and role = 'p';
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 2: COMMIT;
 COMMIT
@@ -55,7 +53,7 @@ INSERT 1
 1: SELECT gp_inject_fault('distributedlog_advance_oldest_xmin', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 3<:  <... completed>
  ?column? 
@@ -89,3 +87,72 @@ INSERT 1
 ---
  1 
 (1 row)
+1: COMMIT;
+COMMIT
+
+DROP TABLE distributed_snapshot_test2;
+DROP
+
+-- Scenario3: Test the one-phase commit transactions don't break repeatable read isolation.
+--
+-- Direct dispatch causes the select statements to be dispatched only to one of
+-- the three demo cluster segments. A segment acquires local snapshot only when it
+-- receives the dispatched statement. If one phase commit relied on local
+-- snapshots only, wrong results are possible depending on the order of local
+-- snapshot acquisition by the segments. This scenario validates that distributed
+-- snapshot is used by the segments to evaluate tuple visibility in case of
+-- one-phase commit and correct results are returned.
+--
+-- connection 40 inserts 100, 100 and 300 serially using one-phase commit
+-- protocol. Repeatable read transactions may read (100), (100,100) or
+-- (100,100,300), but not (100, 300).
+CREATE TABLE distributed_snapshot_test3 (a int);
+CREATE
+10: BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+20: BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+30: BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+40: INSERT INTO distributed_snapshot_test3 VALUES(100);
+INSERT 1
+10: SELECT gp_segment_id, * FROM distributed_snapshot_test3 where a = 100;
+ gp_segment_id | a   
+---------------+-----
+ 2             | 100 
+(1 row)
+40: INSERT INTO distributed_snapshot_test3 VALUES(100);
+INSERT 1
+30: SELECT 123 AS "establish snapshot";
+ establish snapshot 
+--------------------
+ 123                
+(1 row)
+40: INSERT INTO distributed_snapshot_test3 VALUES(300);
+INSERT 1
+10: SELECT gp_segment_id, * FROM distributed_snapshot_test3;
+ gp_segment_id | a   
+---------------+-----
+ 2             | 100 
+(1 row)
+20: SELECT gp_segment_id, * FROM distributed_snapshot_test3;
+ gp_segment_id | a   
+---------------+-----
+ 1             | 300 
+ 2             | 100 
+ 2             | 100 
+(3 rows)
+30: SELECT gp_segment_id, * FROM distributed_snapshot_test3;
+ gp_segment_id | a   
+---------------+-----
+ 2             | 100 
+ 2             | 100 
+(2 rows)
+10: COMMIT;
+COMMIT
+20: COMMIT;
+COMMIT
+30: COMMIT;
+COMMIT
+DROP TABLE distributed_snapshot_test3;
+DROP

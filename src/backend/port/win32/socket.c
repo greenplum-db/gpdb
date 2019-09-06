@@ -3,7 +3,7 @@
  * socket.c
  *	  Microsoft Windows Win32 Socket Functions
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/port/win32/socket.c
@@ -213,7 +213,7 @@ pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout)
 	 * Just a workaround of unknown locking problem with writing in UDP socket
 	 * under high load: Client's pgsql backend sleeps infinitely in
 	 * WaitForMultipleObjectsEx, pgstat process sleeps in pgwin32_select().
-	 * So, we will wait with small timeout(0.1 sec) and if sockect is still
+	 * So, we will wait with small timeout(0.1 sec) and if socket is still
 	 * blocked, try WSASend (see comments in pgwin32_select) and wait again.
 	 */
 	if ((what & FD_WRITE) && isUDP)
@@ -675,7 +675,8 @@ pgwin32_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, c
 		return 0;
 	}
 
-	if (r == WAIT_OBJECT_0 + numevents)
+	/* Signal-like events. */
+	if (r == WAIT_OBJECT_0 + numevents || r == WAIT_IO_COMPLETION)
 	{
 		pgwin32_dispatch_queued_signals();
 		errno = EINTR;

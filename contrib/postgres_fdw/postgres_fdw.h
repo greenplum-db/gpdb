@@ -3,7 +3,7 @@
  * postgres_fdw.h
  *		  Foreign-data wrapper for remote PostgreSQL servers
  *
- * Portions Copyright (c) 2012-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-2015, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  contrib/postgres_fdw/postgres_fdw.h
@@ -16,7 +16,7 @@
 #include "foreign/foreign.h"
 #include "lib/stringinfo.h"
 #include "nodes/relation.h"
-#include "utils/rel.h"
+#include "utils/relcache.h"
 
 #include "libpq-fe.h"
 
@@ -62,7 +62,7 @@ extern void appendWhereClause(StringInfo buf,
 				  List **params);
 extern void deparseInsertSql(StringInfo buf, PlannerInfo *root,
 				 Index rtindex, Relation rel,
-				 List *targetAttrs, List *returningList,
+				 List *targetAttrs, bool doNothing, List *returningList,
 				 List **retrieved_attrs);
 extern void deparseUpdateSql(StringInfo buf, PlannerInfo *root,
 				 Index rtindex, Relation rel,
@@ -75,5 +75,6 @@ extern void deparseDeleteSql(StringInfo buf, PlannerInfo *root,
 extern void deparseAnalyzeSizeSql(StringInfo buf, Relation rel);
 extern void deparseAnalyzeSql(StringInfo buf, Relation rel,
 				  List **retrieved_attrs);
+extern void deparseStringLiteral(StringInfo buf, const char *val);
 
 #endif   /* POSTGRES_FDW_H */

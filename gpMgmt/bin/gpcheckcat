@@ -29,6 +29,7 @@ try:
     from gppylib.db import dbconn
     from gppylib.gpcatalog import *
     from gppylib.commands.unix import *
+    from gppylib.commands.gp import conflict_with_gpexpand
     from gppylib.system.info import *
     from pygresql.pgdb import DatabaseError
     from pygresql import pg
@@ -36,7 +37,7 @@ try:
     from gpcheckcat_modules.leaked_schema_dropper import LeakedSchemaDropper
     from gpcheckcat_modules.repair import Repair
     from gpcheckcat_modules.foreign_key_check import ForeignKeyCheck
-    from gpcheckcat_modules.orphaned_toast_tables_check import OrphanedToastTablesCheck, OrphanToastTableIssue, OrphanedTable
+    from gpcheckcat_modules.orphaned_toast_tables_check import OrphanedToastTablesCheck
 
 
 except ImportError, e:
@@ -310,16 +311,22 @@ def parseCommandLine():
 def connect(user=None, password=None, host=None, port=None,
             database=None, utilityMode=False):
     '''Connect to DB using parameters in GV'''
-    options = utilityMode and '-c gp_session_role=utility' or None
+    # unset search path due to CVE-2018-1058
+    options = '-c search_path='
+    if utilityMode:
+        options += ' -c gp_session_role=utility'
+
     if not user: user = GV.opt['-U']
     if not password: password = GV.opt['-P']
     if not host: host = GV.opt['-h']
     if not port: port = GV.opt['-p']
     if not database: database = GV.dbname
+
     try:
         logger.debug('connecting to %s:%s %s' % (host, port, database))
         db = pg.connect(host=host, port=port, user=user,
                         passwd=password, dbname=database, opt=options)
+
     except pg.InternalError, ex:
         logger.fatal('could not connect to %s: "%s"' %
                      (database, str(ex).strip()))
@@ -506,9 +513,8 @@ def checkDistribPolicy():
       join  pg_class rel on (pk.conrelid = rel.oid)
       join  pg_namespace n on (rel.relnamespace = n.oid)
       join  gp_distribution_policy d on (rel.oid = d.localoid)
-    where pk.contype in ('p', 'u') and d.policytype = 'p' and
-          (d.distkey = '' or not
-           d.distkey::int2[] operator(pg_catalog.<@) pk.conkey)
+    where pk.contype in ('p', 'u') and d.policytype = 'p'
+      and not d.distkey::int2[] operator(pg_catalog.<@) pk.conkey
     '''
     try:
         curs = db.query(qry)
@@ -630,8 +636,10 @@ def checkPartitionIntegrity():
     select
       parrelid,
       parchildrelid,
-      d1.distkey as parpolicy,
-      d2.distkey as parchildpolicy
+      d1.distkey as parpolicykey,
+      d1.distclass as parpolicyclass,
+      d2.distkey as parchildpolicykey,
+      d2.distclass as parchildpolicyclass
     from
       (
         select distinct
@@ -639,15 +647,16 @@ def checkPartitionIntegrity():
           coalesce(p1.parchildrelid, p2.parchildrelid)::regclass as parchildrelid
         from
           (
-            select parrelid, parchildrelid, g1.attname, g1.index
+            select parrelid, parchildrelid, g1.attname, g1.distclass, g1.index
             from   pg_partition_rule pr
                    join pg_partition p on (pr.paroid = p.oid)
                    join (
-                     select localoid, attname, index
+                     select localoid, attname, distclass, index
                      from (
                        select
                          localoid,
                          unnest(distkey) as offset,
+                         unnest(distclass) as distclass,
                          generate_series(1, array_length(distkey, 1)) as index
                        from
                          gp_distribution_policy
@@ -658,15 +667,16 @@ def checkPartitionIntegrity():
           ) p1
           full outer join
           (
-            select parrelid, parchildrelid, g2.attname, g2.index
+            select parrelid, parchildrelid, g2.attname, g2.distclass, g2.index
             from   pg_partition_rule pr
                    join pg_partition p on (pr.paroid = p.oid)
                    join (
-                     select localoid, attname, index
+                     select localoid, attname, distclass, index
                      from (
                        select
                          localoid,
                          unnest(distkey) as offset,
+                         unnest(distclass) as distclass,
                          generate_series(1, array_length(distkey, 1)) as index
                        from
                          gp_distribution_policy
@@ -678,7 +688,7 @@ def checkPartitionIntegrity():
           on (p1.parrelid = p2.parrelid and
               p1.parchildrelid = p2.parchildrelid and
               p1.index = p2.index)
-        where p1.attname is distinct from p2.attname
+        where p1.attname is distinct from p2.attname or p1.distclass is distinct from p2.distclass
       ) p
     join gp_distribution_policy d1 on (d1.localoid = p.parrelid)
     join gp_distribution_policy d2 on (d2.localoid = p.parchildrelid)
@@ -686,7 +696,15 @@ def checkPartitionIntegrity():
     '''
     try:
         curs = db.query(qry)
-        cols = ('parrelid', 'parchildrelid', 'parpolicy', 'parchildpolicy')
+        cols = ('parrelid', 'parchildrelid', 'parpolicykey', 'parpolicyclass', 'parchildpolicykey', 'parchildpolicyclass')
+        col_names = {
+            'parrelid': 'table',
+            'parchildrelid': 'affected child',
+            'parpolicykey': 'table distribution key',
+            'parpolicyclass': 'table distribution class',
+            'parchildpolicykey': 'child distribution key',
+            'parchildpolicyclass': 'child distribution class',
+        }
 
         err = []
         for row in curs.dictresult():
@@ -702,14 +720,22 @@ def checkPartitionIntegrity():
             if len(err) > 100:
                 logger.error(qry)
 
+            myprint(
+                '[ERROR]: child partition(s) are distributed differently from '
+                'the root partition, and must be manually redistributed, for '
+                'some tables. Check the gpcheckcat log for details.'
+            )
+            logger.error('The following tables must be manually redistributed:')
+
             count = 0
             for e in err:
                 cfg = e[0]
                 col = e[1]
                 row = e[2]
 
-                # generate repair script for this row
-                distributeRandomly(row['parchildrelid'])
+                # TODO: generate a repair script for this row. This is
+                # difficult, since we can't redistribute child partitions
+                # directly.
 
                 # report at most 100 rows, for brevity
                 if count == 100:
@@ -720,11 +746,17 @@ def checkPartitionIntegrity():
 
                 if count == 0:
                     logger.error("--------")
-                    logger.error("  " + " | ".join(map(str, col)))
-                    logger.error("  " + "-+-".join(['-' * len(x) for x in col]))
+                    logger.error("  " + " | ".join(map(col_names.get, col)))
+                    logger.error("  " + "-+-".join(['-' * len(col_names[x]) for x in col]))
 
                 logger.error("  " + " | ".join([str(row[x]) for x in col]))
                 count += 1
+
+            logger.error(
+                'Execute an ALTER TABLE ... SET DISTRIBUTED BY statement, with '
+                'the desired distribution key, on the partition root for each '
+                'affected table.'
+            )
 
     except Exception, e:
         setError(ERROR_NOREPAIR)
@@ -1280,117 +1312,6 @@ where
     contypid = 0 and
     contype = {quoted_contype};""",
 
-    # Query: fix_ill_named_constraint
-    #
-    #     a row represents the data for a fixup of an ill-named constraint
-    #
-    # tableid:  pg_class.oid of the partitioned table as regclass
-    # tableconname:  pg_constraint.conname on the partitioned table
-    # partid:  pg_class.oid of the part table as regclass
-    # partrelid:  pg_class.oid of the part table as int
-    # partconname:  pg_constraint.conname on the part or partitioned table
-
-    'fix_ill_named_constraint':
-        """select
-            tableid,
-            tableconname,
-            partid,
-            partid::int as partrelid,
-            partconname
-        from (
-                select
-                    u.tableid,
-                    u.conname,
-                    u.contype,
-                    u.condef,
-                    p.partid,
-                    p.conid,
-                    coalesce(p.conname)
-                from
-                    (
-                        select
-                            p.tableid,
-                            c.conname,
-                            c.contype,
-                            pg_get_constraintdef(c.oid) as condef
-                        from
-                            (
-                                select
-                                    parrelid::regclass,
-                                    max(parlevel)+1
-                                from
-                                    pg_partition
-                                group by parrelid
-                            ) as p(tableid, tabledepth) ,
-                            pg_constraint c
-                        where
-                            p.tableid = c.conrelid
-                    ) as u(tableid, conname, contype, condef)
-                        join
-                    (
-                        select
-                            x.tableid::regclass as tableid,
-                            c.conrelid::regclass as partid,
-                            c.oid as conid,
-                            c.conname,
-                            c.contype,
-                            pg_get_constraintdef(c.oid) as condef
-                        from
-                            pg_constraint c,
-                            (
-                                select
-                                    tableid,
-                                    tabledepth,
-                                    tableid::regclass partid,
-                                    0 as partdepth,
-                                    0 as partordinal,
-                                    'r'::char as partstatus
-                                from
-                                    (
-                                        select
-                                            parrelid::regclass,
-                                            max(parlevel)+1
-                                        from
-                                            pg_partition
-                                        group by parrelid
-                                    ) as ptable(tableid, tabledepth)
-                                union all
-                                select
-                                    parrelid::regclass as tableid,
-                                    t.tabledepth as tabledepth,
-                                    r.parchildrelid::regclass partid,
-                                    p.parlevel + 1 as partdepth,
-                                    r.parruleord as partordinal,
-                                    case
-                                        when t.tabledepth = p.parlevel + 1 then 'l'::char
-                                        else 'i'::char
-                                    end as partstatus
-                                from
-                                    pg_partition p,
-                                    pg_partition_rule r,
-                                     (
-                                        select
-                                            parrelid::regclass,
-                                            max(parlevel)+1
-                                        from
-                                            pg_partition
-                                        group by parrelid
-                                    ) as t(tableid, tabledepth)
-                                where
-                                    p.oid = r.paroid
-                                    and not p.paristemplate
-                                    and p.parrelid = t.tableid
-                            ) as x(tableid, tabledepth, partid, partdepth, partordinal, partstatus)
-                        where
-                            x.partid = c.conrelid
-                    ) as p(tableid, partid, conid, conname, contype, condef)
-                        on (
-                            u.tableid = p.tableid and
-                            u.contype = p.contype and
-                            u.condef = p.condef
-                            )
-            ) as part_user_constraint(tableid, tableconname, contype, condef, partid, partconid, partconname)
-        where partconname != tableconname""",
 
     # Query based on view: part_sys_actual
     # tableid
@@ -1807,49 +1728,6 @@ def checkPartitionRegularity():
             myprint('[ERROR] executing test: %s' % checkname)
             myprint('  Execution error: ' + str(e))
 
-    checkname = 'inconsistently named constraint in partitioned table'
-
-    if irregular:
-        logger.warn('skipping check %s due to constraint irregularities' % checkname)
-    elif GV.Remove:
-        logger.warn('skipping check %s due to required removals' % checkname)
-    elif GV.DemoteConstraint:
-        logger.warn('skipping check %s due to unenforced constraint removals' % checkname)
-    else:
-        qry = partitionRegularityChecks['fix_ill_named_constraint']
-        err = []
-        try:
-            curs = db.query(qry)
-            for row in curs.dictresult():
-                err.append(row)
-
-            if not err:
-                logger.info('[OK]  %s' % checkname)
-            else:
-                GV.checkStatus = False
-                setError(ERROR_REMOVE)
-                logger.info('[FAIL]  %s' % checkname)
-                logger.error(' %s test has %d issue(s)' % ( checkname, len(err) ) )
-                efmt = '  part table "%s" has constraint named "%s"; should be "%s"'
-                n = 0
-                for e in err:
-                    n = n + 1
-                    if n <= 100:
-                        # part name, wrong constraint name, right constraint name
-                        logger.error(efmt % (e['partid'], e['partconname'], e['tableconname']))
-                    for dbid in GV.cfg:
-                        buildAdjustConname(
-                            dbid, e['tableid'], int(e['partrelid']),
-                            quote_value(e['partconname']),
-                            quote_value(e['tableconname']))
-                if len(err) > 100:
-                    logger.error("...")
-
-        except Exception, e:
-            setError(ERROR_NOREPAIR)
-            myprint('[ERROR] executing test: %s' % checkname)
-            myprint('  Execution error: ' + str(e))
-
     db.close()
 
 
@@ -1921,7 +1799,7 @@ def removeFastSequence(db):
     '''
     MPP-14758: gp_fastsequence does not get cleanup after a failed transaction (AO/CO)
     Note: this is slightly different from the normal foreign key check
-          because it streches the cross reference across segments.
+          because it stretches the cross reference across segments.
           This makes it safe in the event of cross consistency issues with pg_class,
           but may not repair some issues when there are cross consistency problems
     '''
@@ -1945,7 +1823,7 @@ def removeFastSequence(db):
               """
         curs = db.query(qry)
         for row in curs.dictresult():
-            seg = row['dbid']  # dbid of targetted segment
+            seg = row['dbid']  # dbid of targeted segment
             name = 'gp_fastsequence tuple'  # for comment purposes
             table = 'gp_fastsequence'  # table name
             cols = {'objid': row['objid']}  # column name and value
@@ -1960,10 +1838,6 @@ def removeFastSequence(db):
 def removeIndexConstraint(nspname, relname, constraint):
     GV.Constraints.append('ALTER TABLE "%s"."%s" DROP CONSTRAINT "%s" CASCADE;' % \
                           (nspname, relname, constraint))
-
-
-def distributeRandomly(rel):
-    GV.Policies.append('ALTER TABLE %s SET DISTRIBUTED RANDOMLY;' % rel)
 
 
 def buildRemove(seg, name, table, cols, objname):
@@ -3182,7 +3056,7 @@ def runAllChecks():
         if len(GV.ReSync):
             maybeRemove = "# "
 
-        # use the per-dbid loop for removal and for contraint
+        # use the per-dbid loop for removal and for constraint
         # name adjustments
 
         dbids = set(GV.Remove.keys())
@@ -4382,6 +4256,13 @@ def truncate_batch_size(primaries):
         GV.opt['-B'] = primaries
         myprint("Truncated batch size to number of primaries: %d" % primaries)
 
+def check_gpexpand():
+    check_result, msg = conflict_with_gpexpand("gpcheckcat",
+                                               refuse_phase1=True,
+                                               refuse_phase2=False)
+    if not check_result:
+        myprint(msg)
+        sys.exit(1)
 
 def main():
     parseCommandLine()
@@ -4393,6 +4274,9 @@ def main():
     if GV.version < "4.0":
         myprint("Error: only Greenplum database version >= 4.0 are supported\n")
         sys.exit(GV.retcode)
+
+    # gpcheckcat should check gpexpand running status
+    check_gpexpand()
 
     GV.cfg = getGPConfiguration()
     truncate_batch_size(len(GV.cfg.keys()))

@@ -4,7 +4,7 @@
  *
  *	  Routines for aggregate-manipulation commands
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -54,7 +54,7 @@
  * isn't an ordered-set aggregate.
  * "parameters" is a list of DefElem representing the agg's definition clauses.
  */
-Oid
+ObjectAddress
 DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 				const char *queryString)
 {
@@ -89,8 +89,8 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	List	   *parameterDefaults;
 	Oid			variadicArgType;
 	Oid			transTypeId;
-	char		transTypeType;
 	Oid			mtransTypeId = InvalidOid;
+	char		transTypeType;
 	char		mtransTypeType = 0;
 	ListCell   *pl;
 	List	   *orig_args = args;
@@ -416,35 +416,35 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	/*
 	 * Most of the argument-checking is done inside of AggregateCreate
 	 */
-	Oid			aOid;
-	aOid = AggregateCreate(aggName,				/* aggregate name */
-						   aggNamespace,		/* namespace */
-						   aggKind,
-						   numArgs,
-						   numDirectArgs,
-						   parameterTypes,
-						   PointerGetDatum(allParameterTypes),
-						   PointerGetDatum(parameterModes),
-						   PointerGetDatum(parameterNames),
-						   parameterDefaults,
-						   variadicArgType,
-						   transfuncName,		/* step function name */
-						   finalfuncName,		/* final function name */
-						   combinefuncName,		/* combine function name */
-						   serialfuncName,		/* serial function name */
-						   deserialfuncName,	/* deserial function name */
-						   mtransfuncName,		/* fwd trans function name */
-						   minvtransfuncName,	/* inv trans function name */
-						   mfinalfuncName,		/* final function name */
-						   finalfuncExtraArgs,
-						   mfinalfuncExtraArgs,
-						   sortoperatorName,	/* sort operator name */
-						   transTypeId, /* transition data type */
-						   transSpace,	/* transition space */
-						   mtransTypeId,		/* transition data type */
-						   mtransSpace, /* transition space */
-						   initval,		/* initial condition */
-						   minitval);	/* initial condition */
+	ObjectAddress objAddr;
+	objAddr = AggregateCreate(aggName,				/* aggregate name */
+							  aggNamespace,		/* namespace */
+							  aggKind,
+							  numArgs,
+							  numDirectArgs,
+							  parameterTypes,
+							  PointerGetDatum(allParameterTypes),
+							  PointerGetDatum(parameterModes),
+							  PointerGetDatum(parameterNames),
+							  parameterDefaults,
+							  variadicArgType,
+							  transfuncName,		/* step function name */
+							  finalfuncName,		/* final function name */
+							  combinefuncName,		/* combine function name */
+							  serialfuncName,		/* serial function name */
+							  deserialfuncName,	/* deserial function name */
+							  mtransfuncName,		/* fwd trans function name */
+							  minvtransfuncName,	/* inv trans function name */
+							  mfinalfuncName,		/* final function name */
+							  finalfuncExtraArgs,
+							  mfinalfuncExtraArgs,
+							  sortoperatorName,	/* sort operator name */
+							  transTypeId, /* transition data type */
+							  transSpace,	/* transition space */
+							  mtransTypeId,		/* transition data type */
+							  mtransSpace, /* transition space */
+							  initval,		/* initial condition */
+							  minitval);	/* initial condition */
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -462,5 +462,5 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 									NULL);
 	}
 
-	return aOid;
+	return objAddr;
 }

@@ -18,9 +18,9 @@ select * from pg_resgroup
 select avg(reslimittype)
   from pg_resgroupcapability
   where reslimittype <= 1;
- avg 
------
-   1
+          avg           
+------------------------
+ 1.00000000000000000000
 (1 row)
 
 select groupname from gp_toolkit.gp_resgroup_config
@@ -37,7 +37,7 @@ select groupname from gp_toolkit.gp_resgroup_config
 select rsgname from gp_toolkit.gp_resgroup_status
   where rsgname not like 'rg_dump_test%'
   order by groupid;
-    rsgname    
+ rsgname 
 ---------
 (0 rows)
 

@@ -6,7 +6,7 @@
  * loaded as a dynamic module to avoid linking the main server binary with
  * libpq.
  *
- * Portions Copyright (c) 2010-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2010-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -23,6 +23,7 @@
 #include "access/xlog.h"
 #include "miscadmin.h"
 #include "replication/walreceiver.h"
+#include "storage/proc.h"
 #include "utils/builtins.h"
 
 #ifdef HAVE_POLL_H
@@ -63,6 +64,7 @@ static void libpqrcv_disconnect(void);
 /* Prototypes for private functions */
 static bool libpq_select(int timeout_ms);
 static PGresult *libpqrcv_PQexec(const char *query);
+static PGresult *libpqrcv_PQgetResult(PGconn *streamConn);
 
 /*
  * Module load callback
@@ -93,18 +95,28 @@ libpqwalreceiver_PG_init(void)
 static void
 libpqrcv_connect(char *conninfo)
 {
-	char		conninfo_repl[MAXCONNINFO + 75];
+	const char *keys[5];
+	const char *vals[5];
 
 	/*
-	 * Connect using deliberately undocumented parameter: replication. The
+	 * We use the expand_dbname parameter to process the connection string (or
+	 * URI), and pass some extra options. The deliberately undocumented
+	 * parameter "replication=true" makes it a replication connection. The
 	 * database name is ignored by the server in replication mode, but specify
 	 * "replication" for .pgpass lookup.
 	 */
-	snprintf(conninfo_repl, sizeof(conninfo_repl),
-			 "%s dbname=replication replication=true fallback_application_name=walreceiver",
-			 conninfo);
+	keys[0] = "dbname";
+	vals[0] = conninfo;
+	keys[1] = "replication";
+	vals[1] = "true";
+	keys[2] = "dbname";
+	vals[2] = "replication";
+	keys[3] = "fallback_application_name";
+	vals[3] = "walreceiver";
+	keys[4] = NULL;
+	vals[4] = NULL;
 
-	streamConn = PQconnectdb(conninfo_repl);
+	streamConn = PQconnectdbParams(keys, vals, /* expand_dbname = */ true);
 	if (PQstatus(streamConn) != CONNECTION_OK)
 		ereport(ERROR,
 				(errmsg("could not connect to the primary server: %s",
@@ -233,7 +245,7 @@ libpqrcv_endstreaming(TimeLineID *next_tli)
 	 * called after receiving CopyDone from the backend - the walreceiver
 	 * never terminates replication on its own initiative.
 	 */
-	res = PQgetResult(streamConn);
+	res = libpqrcv_PQgetResult(streamConn);
 	if (PQresultStatus(res) == PGRES_TUPLES_OK)
 	{
 		/*
@@ -247,7 +259,7 @@ libpqrcv_endstreaming(TimeLineID *next_tli)
 		PQclear(res);
 
 		/* the result set should be followed by CommandComplete */
-		res = PQgetResult(streamConn);
+		res = libpqrcv_PQgetResult(streamConn);
 	}
 	else
 		*next_tli = 0;
@@ -259,7 +271,7 @@ libpqrcv_endstreaming(TimeLineID *next_tli)
 	PQclear(res);
 
 	/* Verify that there are no more results */
-	res = PQgetResult(streamConn);
+	res = libpqrcv_PQgetResult(streamConn);
 	if (res != NULL)
 		ereport(ERROR,
 				(errmsg("unexpected result after CommandComplete: %s",
@@ -383,12 +395,11 @@ libpq_select(int timeout_ms)
  * The function is modeled on PQexec() in libpq, but only implements
  * those parts that are in use in the walreceiver.
  *
- * Queries are always executed on the connection in streamConn.
+ * May return NULL, rather than an error result, on failure.
  */
 static PGresult *
 libpqrcv_PQexec(const char *query)
 {
-	PGresult   *result = NULL;
 	PGresult   *lastResult = NULL;
 
 	/*
@@ -398,47 +409,26 @@ libpqrcv_PQexec(const char *query)
 	 */
 
 	/*
-	 * Submit a query. Since we don't use non-blocking mode, this also can
-	 * block. But its risk is relatively small, so we ignore that for now.
+	 * Submit the query.  Since we don't use non-blocking mode, this could
+	 * theoretically block.  In practice, since we don't send very long query
+	 * strings, the risk seems negligible.
 	 */
 	if (!PQsendQuery(streamConn, query))
 		return NULL;
 
 	for (;;)
 	{
-		/*
-		 * Receive data until PQgetResult is ready to get the result without
-		 * blocking.
-		 */
-		while (PQisBusy(streamConn))
-		{
-			/*
-			 * We don't need to break down the sleep into smaller increments,
-			 * and check for interrupts after each nap, since we can just
-			 * elog(FATAL) within SIGTERM signal handler if the signal arrives
-			 * in the middle of establishment of replication connection.
-			 */
-			if (!libpq_select(-1))
-				continue;		/* interrupted */
-
-			/* Consume whatever data is available from the socket */
-			if (PQconsumeInput(streamConn) == 0)
-			{
-				/* trouble; drop whatever we had and return NULL */
-				PQclear(lastResult);
-				return NULL;
-			}
-		}
+		/* Wait for, and collect, the next PGresult. */
+		PGresult   *result;
+		result = libpqrcv_PQgetResult(streamConn);
+		if (result == NULL)
+			break;				/* query is complete, or failure */
 
 		/*
 		 * Emulate PQexec()'s behavior of returning the last result when there
 		 * are many.  Since walsender will never generate multiple results, we
 		 * skip the concatenation of error messages.
 		 */
-		result = PQgetResult(streamConn);
-		if (result == NULL)
-			break;				/* query is complete */
-
 		PQclear(lastResult);
 		lastResult = result;
 
@@ -450,6 +440,50 @@ libpqrcv_PQexec(const char *query)
 	}
 
 	return lastResult;
+}
+
+/*
+ * Perform the equivalent of PQgetResult(), but watch for interrupts.
+ */
+static PGresult *
+libpqrcv_PQgetResult(PGconn *streamConn)
+{
+	/*
+	 * Collect data until PQgetResult is ready to get the result without
+	 * blocking.
+	 */
+	while (PQisBusy(streamConn))
+	{
+		int			rc;
+
+		/*
+		 * We don't need to break down the sleep into smaller increments,
+		 * since we'll get interrupted by signals and can handle any
+		 * interrupts here.
+		 */
+		rc = WaitLatchOrSocket(&MyProc->procLatch,
+							   WL_POSTMASTER_DEATH | WL_SOCKET_READABLE |
+							   WL_LATCH_SET,
+							   PQsocket(streamConn),
+							   0);
+
+		/* Interrupted? */
+		if (rc & WL_LATCH_SET)
+		{
+			ResetLatch(&MyProc->procLatch);
+			ProcessWalRcvInterrupts();
+		}
+
+		/* Consume whatever data is available from the socket */
+		if (PQconsumeInput(streamConn) == 0)
+		{
+			/* trouble; return NULL */
+			return NULL;
+		}
+	}
+
+	/* Now we can collect and return the next PGresult */
+	return PQgetResult(streamConn);
 }
 
 /*
@@ -516,7 +550,7 @@ libpqrcv_receive(int timeout, char **buffer)
 	{
 		PGresult   *res;
 
-		res = PQgetResult(streamConn);
+		res = libpqrcv_PQgetResult(streamConn);
 		if (PQresultStatus(res) == PGRES_COMMAND_OK ||
 			PQresultStatus(res) == PGRES_COPY_IN)
 		{

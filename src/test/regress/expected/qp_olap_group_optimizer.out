@@ -3,7 +3,7 @@ SELECT DISTINCT sale.dt,sale.qty,GROUPING(sale.dt,sale.dt),GROUP_ID(), TO_CHAR(C
 FROM sale,customer,product
 WHERE sale.cn=customer.cn AND sale.pn=product.pn
 GROUP BY CUBE((sale.pn,sale.pn),(sale.pn),(sale.vn),(sale.cn,sale.dt,sale.cn),(sale.cn,sale.pn)),ROLLUP((sale.pn),(sale.qty,sale.dt),(sale.pn,sale.cn),(sale.vn,sale.dt),(sale.vn,sale.pn)),(sale.qty),(sale.prc),(sale.dt);
-     dt     | qty  | grouping | ?column? |      to_char      |      to_char      |      to_char      |      to_char      
+     dt     | qty  | grouping | group_id |      to_char      |      to_char      |      to_char      |      to_char      
 ------------+------+----------+----------+-------------------+-------------------+-------------------+-------------------
  01-01-1401 | 1100 |        0 |        0 |       100.0000000 |          .0000000 |      1100.0000000 |       -38.0000000
  01-01-1401 | 1100 |        0 |        1 |       100.0000000 |          .0000000 |      1100.0000000 |       -38.0000000
@@ -1428,7 +1428,7 @@ ERROR:  division by zero  (seg0 slice12 127.0.0.1:25432 pid=85362)
 SELECT DISTINCT sale.vn,sale.dt,sale.prc, TO_CHAR(COALESCE(STDDEV_SAMP(floor(sale.pn+sale.vn)),0),'99999999.9999999') 
 FROM sale,vendor
 WHERE sale.vn=vendor.vn
-GROUP BY GROUPING SETS(CUBE((sale.pn),(sale.dt,sale.qty),(sale.vn,sale.vn,sale.cn),(sale.cn),(sale.pn,sale.vn))),ROLLUP((sale.cn,sale.dt,sale.prc),(sale.pn,sale.pn,sale.cn),(sale.dt,sale.vn,sale.pn),(sale.dt,sale.cn),(sale.dt,sale.prc,sale.pn),(sale.vn,sale.qty)),CUBE((sale.vn,sale.cn),(sale.qty,sale.prc),(sale.qty),(sale.cn,sale.vn),(sale.vn,sale.cn),(sale.qty,sale.cn));
+GROUP BY GROUPING SETS(CUBE((sale.pn),(sale.dt,sale.qty),(sale.vn,sale.vn,sale.cn),(sale.cn),(sale.pn,sale.vn))),ROLLUP((sale.cn,sale.dt,sale.prc),(sale.pn,sale.pn,sale.cn),(sale.dt,sale.vn,sale.pn),(sale.dt,sale.cn),(sale.dt,sale.prc,sale.pn),(sale.vn,sale.qty)),CUBE((sale.vn,sale.cn),(sale.qty,sale.prc),(sale.qty),(sale.cn,sale.vn));
  vn |     dt     | prc  |      to_char      
 ----+------------+------+-------------------
  10 | 03-01-1401 |    0 |          .0000000
@@ -1517,7 +1517,7 @@ SELECT DISTINCT sale.vn,sale.dt,sale.pn,sale.vn,sale.pn,GROUPING(sale.dt),GROUP_
 FROM sale,product,vendor
 WHERE sale.pn=product.pn AND sale.vn=vendor.vn
 GROUP BY CUBE((sale.qty),(sale.qty,sale.qty),(sale.vn),(sale.vn),(sale.cn),(sale.dt)),(sale.qty,sale.dt,sale.vn),(sale.pn),(sale.vn),() HAVING GROUP_ID() = 8;
- vn |     dt     | pn  | vn | pn  | grouping | ?column? |      to_char      |      to_char      
+ vn |     dt     | pn  | vn | pn  | grouping | group_id |      to_char      |      to_char      
 ----+------------+-----+----+-----+----------+----------+-------------------+-------------------
  10 | 03-01-1401 | 200 | 10 | 200 |        0 |        8 |         1.0000000 |          .0000000
  20 | 05-01-1401 | 100 | 20 | 100 |        0 |        8 |         1.0000000 |          .0000000
@@ -1609,7 +1609,7 @@ SELECT DISTINCT sale.cn,sale.qty,sale.vn,sale.qty,GROUPING(sale.cn,sale.qty),GRO
 FROM sale,customer,product
 WHERE sale.cn=customer.cn AND sale.pn=product.pn
 GROUP BY ROLLUP((sale.cn,sale.pn,sale.cn),(sale.cn,sale.qty),(sale.pn),(sale.prc,sale.qty),(sale.dt,sale.cn),(sale.pn)),CUBE((sale.vn),(sale.cn,sale.dt,sale.pn),(sale.pn),(sale.qty,sale.prc)),(sale.qty),(sale.qty),(sale.cn,sale.pn);
- cn | qty  | vn | qty  | grouping | ?column? |      to_char      |      to_char      
+ cn | qty  | vn | qty  | grouping | group_id |      to_char      |      to_char      
 ----+------+----+------+----------+----------+-------------------+-------------------
   1 |    1 | 10 |    1 |        0 |        0 |          .0000000 |        10.0000000
   1 |    1 | 10 |    1 |        0 |        1 |          .0000000 |        10.0000000
@@ -2178,7 +2178,7 @@ SELECT DISTINCT sale.pn,sale.cn,GROUPING(sale.cn),GROUP_ID(), TO_CHAR(COALESCE(C
 FROM sale,product
 WHERE sale.pn=product.pn
 GROUP BY ROLLUP((sale.vn),(sale.vn),(sale.qty)),sale.pn,sale.cn;
- pn  | cn | grouping | ?column? |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      
+ pn  | cn | grouping | group_id |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      
 -----+----+----------+----------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------
  100 |  1 |        0 |        0 |          .0000000 |          .0000000 |        21.0000000 |         1.0000000 |         1.0000000 |          .0000000
  100 |  1 |        0 |        1 |          .0000000 |          .0000000 |        21.0000000 |         1.0000000 |         1.0000000 |          .0000000
@@ -2229,7 +2229,22 @@ SELECT DISTINCT sale.qty,sale.qty,sale.cn,sale.cn,GROUP_ID(), TO_CHAR(COALESCE(C
 FROM sale,product,vendor,customer
 WHERE sale.pn=product.pn AND sale.vn=vendor.vn AND sale.cn=customer.cn
 GROUP BY ROLLUP((sale.vn),(sale.vn,sale.cn)),sale.qty;
-ERROR:  ORDER/GROUP BY expression not found in targetlist
+ qty  | qty  | cn | cn | group_id |      to_char      |      to_char      
+------+------+----+----+----------+-------------------+-------------------
+    1 |    1 |  4 |  4 |        0 |      5000.0000000 |      2500.0000000
+   12 |   12 |    |    |        0 |      3333.3333333 |    320000.0000000
+   12 |   12 |  3 |  3 |        0 |      5000.0000000 |    360000.0000000
+    1 |    1 |  3 |  3 |        0 |          .0000000 |          .0000000
+ 1100 | 1100 |    |    |        0 |          .0000000 |          .0000000
+   12 |   12 |  1 |  1 |        0 |          .0000000 |          .0000000
+    1 |    1 |    |    |        0 |    103333.3333333 |     68888.8888889
+    1 |    1 |  2 |  2 |        0 |          .0000000 |          .0000000
+    1 |    1 |    |    |        0 |          .0000000 |          .0000000
+ 1100 | 1100 |  2 |  2 |        0 |          .0000000 |          .0000000
+    1 |    1 |  1 |  1 |        0 |          .0000000 |          .0000000
+    1 |    1 |    |    |        0 |     61250.0000000 |     53593.7500000
+(12 rows)
+
 -- ###### Queries involving REGR_AVGX() function ###### --
 SELECT DISTINCT sale.pn,sale.qty,GROUPING(sale.qty,sale.qty), TO_CHAR(COALESCE(REGR_AVGX(floor(sale.cn*sale.vn),floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VAR_POP(floor(sale.qty-sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV_POP(floor(sale.prc/sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn+sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VAR_POP(floor(sale.pn)),0),'99999999.9999999') 
 FROM sale,customer
@@ -2287,7 +2302,18 @@ SELECT DISTINCT sale.prc,sale.vn,sale.prc,GROUPING(sale.prc), TO_CHAR(COALESCE(R
 FROM sale,customer,product
 WHERE sale.cn=customer.cn AND sale.pn=product.pn
 GROUP BY ROLLUP((sale.qty,sale.dt,sale.qty)),sale.prc,sale.vn;
-ERROR:  ORDER/GROUP BY expression not found in targetlist
+ prc  | vn | prc  | grouping |      to_char      |      to_char      |      to_char      
+------+----+------+----------+-------------------+-------------------+-------------------
+    0 | 30 |    0 |        0 |         1.0000000 |          .0000000 |          .0000000
+    5 | 30 |    5 |        0 |         3.0000000 |        11.5470054 |         1.1547005
+    0 | 40 |    0 |        0 |         1.0000000 |          .0000000 |          .0000000
+    1 | 40 |    1 |        0 |         2.0000000 |          .0000000 |          .0000000
+    0 | 50 |    0 |        0 |         2.0000000 |        17.6776695 |          .7071068
+    0 | 10 |    0 |        0 |         1.0000000 |          .0000000 |          .0000000
+    0 | 20 |    0 |        0 |         1.0000000 |          .0000000 |          .0000000
+ 2400 | 40 | 2400 |        0 |         1.0000000 |          .0000000 |          .0000000
+(8 rows)
+
 -- ###### Queries involving REGR_INTERCEPT() function ###### --
 SELECT DISTINCT sale.pn, TO_CHAR(COALESCE(REGR_INTERCEPT(floor(sale.pn),floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV_SAMP(floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VAR_SAMP(floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(VAR_POP(floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(floor(sale.cn/sale.cn)),0),'99999999.9999999') 
 FROM sale
@@ -2311,7 +2337,7 @@ SELECT DISTINCT sale.pn,sale.qty,GROUP_ID(), TO_CHAR(COALESCE(REGR_R2(floor(sale
 FROM sale,customer,vendor
 WHERE sale.cn=customer.cn AND sale.vn=vendor.vn
 GROUP BY ROLLUP((sale.qty),(sale.pn,sale.vn,sale.vn),(sale.pn,sale.cn,sale.dt),(sale.pn,sale.vn,sale.qty));
- pn  | qty  | ?column? |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      
+ pn  | qty  | group_id |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      
 -----+------+----------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------
  100 |    1 |        0 |          .0000000 |          .0000000 |         1.0000000 |         1.0000000 |        40.0000000 |          .0000000 |          .0000000 |          .0000000
  100 |    1 |        1 |          .0000000 |          .0000000 |         1.0000000 |         1.0000000 |        40.0000000 |          .0000000 |          .0000000 |          .0000000
@@ -2346,7 +2372,7 @@ SELECT DISTINCT sale.cn,sale.dt,GROUP_ID(), TO_CHAR(COALESCE(REGR_SLOPE(floor(sa
 FROM sale,product,vendor,customer
 WHERE sale.pn=product.pn AND sale.vn=vendor.vn AND sale.cn=customer.cn
 GROUP BY GROUPING SETS((sale.pn,sale.qty),(sale.cn)),ROLLUP((sale.prc,sale.prc)),ROLLUP((sale.pn,sale.pn),(sale.qty,sale.vn),(sale.cn,sale.pn,sale.qty),(sale.pn),(sale.cn,sale.prc),(sale.cn)),sale.dt HAVING GROUP_ID() >= 0;
- cn |     dt     | ?column? |      to_char      |      to_char      |      to_char      
+ cn |     dt     | group_id |      to_char      |      to_char      |      to_char      
 ----+------------+----------+-------------------+-------------------+-------------------
   1 | 03-01-1401 |        0 |          .0000000 |          .0000000 |       200.0000000
   1 | 03-01-1401 |        1 |          .0000000 |          .0000000 |       200.0000000
@@ -2532,7 +2558,7 @@ SELECT DISTINCT sale.cn,sale.qty,sale.cn,sale.qty,GROUPING(sale.qty,sale.cn,sale
 FROM sale,product
 WHERE sale.pn=product.pn
 GROUP BY GROUPING SETS(CUBE((sale.pn),(sale.qty,sale.qty)),(),CUBE((sale.pn),(sale.vn,sale.vn),(sale.vn,sale.prc),(sale.prc),(sale.pn,sale.qty),(sale.pn,sale.qty))),ROLLUP((sale.dt),(sale.vn,sale.vn),(sale.prc,sale.cn),(sale.dt,sale.vn),(sale.dt,sale.vn),(sale.vn,sale.vn));
- cn | qty  | cn | qty  | grouping | ?column? |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      
+ cn | qty  | cn | qty  | grouping | group_id |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      
 ----+------+----+------+----------+----------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------
   1 |    1 |  1 |    1 |        0 |        0 |          .0000000 |          .0000000 |        10.0000000 |          .0000000 |          .0000000 |          .0000000 |        10.0000000 |          .0000000
   1 |    1 |  1 |    1 |        0 |        0 |          .0000000 |          .0000000 |        20.0000000 |          .0000000 |          .0000000 |          .0000000 |        20.0000000 |          .0000000
@@ -5724,7 +5750,7 @@ SELECT DISTINCT sale.cn,sale.cn,sale.qty,sale.dt,sale.qty,sale.cn,GROUPING(sale.
 FROM sale,customer,vendor
 WHERE sale.cn=customer.cn AND sale.vn=vendor.vn
 GROUP BY ROLLUP((sale.qty,sale.dt)),ROLLUP((sale.pn,sale.vn),(sale.qty,sale.cn),(sale.cn),(sale.cn,sale.qty)),(sale.vn,sale.qty);
- cn | cn | qty  |     dt     | qty  | cn | grouping | ?column? |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      
+ cn | cn | qty  |     dt     | qty  | cn | grouping | group_id |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      |      to_char      
 ----+----+------+------------+------+----+----------+----------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------
   1 |  1 |    1 | 03-01-1401 |    1 |  1 |        0 |        0 |          .0000000 |          .0000000 |         1.0000000 |          .0000000 |          .0000000 |          .0000000 |       201.0000000
   1 |  1 |    1 | 03-01-1401 |    1 |  1 |        0 |        1 |          .0000000 |          .0000000 |         1.0000000 |          .0000000 |          .0000000 |          .0000000 |       201.0000000
@@ -6015,28 +6041,29 @@ SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, CASE WHEN (vn = 0) THEN
 SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + 1 AS f, 1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (f > 1);
  cn_r | f  | g 
 ------+----+---
+    1 | 11 | 1
     1 | 21 | 1
     2 | 31 | 1
     3 | 41 | 1
-    1 | 11 |  
-    1 | 11 | 1
-    2 | 31 |  
-    2 | 51 |  
     2 | 51 | 1
-    1 | 21 |  
-    3 | 41 |  
-(10 rows)
+(5 rows)
 
 PREPARE p AS SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + $1 AS f, $1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (g > 1);
 EXECUTE p(2);
  cn_r | f  | g 
 ------+----+---
-    2 | 32 | 2
     1 | 12 | 2
+    1 | 22 | 2
+    2 | 32 | 2
     3 | 42 | 2
     2 | 52 | 2
-    1 | 22 | 2
-(5 rows)
+    1 | 12 |  
+    1 | 22 |  
+    2 | 32 |  
+    3 | 42 |  
+    2 | 52 |  
+    4 |    |  
+(11 rows)
 
 -- ###### Queries involving CUBE with HAVING CLAUSE ###### --
 WITH src AS (SELECT 1 AS a, 1 AS b)

@@ -15,7 +15,7 @@
  * No rounding error is allowed due to scaleFactor. The sum of the child group
  * memory amounts must equal the sum of the parent group (MPP-23130)
  */
-void
+static void
 test__ComputeMemLimitForChildGroups_rounding(void **state)
 {
 	OperatorGroupNode *parentGroup = (OperatorGroupNode *) palloc0(sizeof(OperatorGroupNode));

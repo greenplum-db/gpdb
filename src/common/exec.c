@@ -4,7 +4,7 @@
  *		Functions for finding and validating executable files
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -324,21 +324,13 @@ find_other_exec(const char *argv0, const char *target,
 	if (validate_exec(retpath) != 0)
 		return -1;
 
-	/*
-	 * In PostgreSQL, the version check is always performed. In GPDB, this
-	 * is also used to find scripts that don't necessarily have the same
-	 * version output (in particular, pg_regress uses this to find gpdiff.pl)
-	 */
-	if (versionstr)
-	{
-		snprintf(cmd, sizeof(cmd), "\"%s\" -V", retpath);
+	snprintf(cmd, sizeof(cmd), "\"%s\" -V", retpath);
 
-		if (!pipe_read_line(cmd, line, sizeof(line)))
-			return -1;
+	if (!pipe_read_line(cmd, line, sizeof(line)))
+		return -1;
 
-		if (strcmp(line, versionstr) != 0)
-			return -2;
-	}
+	if (strcmp(line, versionstr) != 0)
+		return -2;
 
 	return 0;
 }

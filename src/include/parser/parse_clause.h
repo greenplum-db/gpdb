@@ -4,7 +4,7 @@
  *	  handle clauses in parser
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/parser/parse_clause.h
@@ -27,6 +27,7 @@ extern Node *transformWhereClause(ParseState *pstate, Node *clause,
 extern Node *transformLimitClause(ParseState *pstate, Node *clause,
 					 ParseExprKind exprKind, const char *constructName);
 extern List *transformGroupClause(ParseState *pstate, List *grouplist,
+					 List **groupingSets,
 					 List **targetlist, List *sortClause,
 					 ParseExprKind exprKind, bool useSQL99);
 extern List *transformSortClause(ParseState *pstate, List *orderlist,
@@ -45,11 +46,13 @@ extern List *transformDistinctOnClause(ParseState *pstate, List *distinctlist,
 						  List **targetlist, List *sortClause);
 extern List *transformScatterClause(ParseState *pstate, List *scatterlist,
 									List **targetlist);
-extern void processExtendedGrouping(ParseState *pstate, Node *havingQual,
-									List *windowClause, List *targetlist);
 extern List *addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 					List *sortlist, List *targetlist, SortBy *sortby,
 					bool resolveUnknown);
+extern void transformOnConflictArbiter(ParseState *pstate,
+						   OnConflictClause *onConflictClause,
+						   List **arbiterExpr, Node **arbiterWhere,
+						   Oid *constraint);
 
 extern List *addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 					List *sortlist, List *targetlist, SortBy *sortby,

@@ -19,9 +19,9 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
             <p><codeph>CREATE LANGUAGE</codeph> registers a new procedural language with a Greenplum
                 database. Subsequently, functions and trigger procedures can be defined in this new
                 language.</p> 
-            <note>Some procedural languages for Greenplum Database have been made into "extensions,"
-                and should therefore be installed with <xref href="CREATE_EXTENSION.xml#topic1"/>,
-                not <codeph>CREATE LANGUAGE</codeph>. Using <codeph>CREATE LANGUAGE</codeph>
+            <note>Procedural languages for Greenplum Database have been made into "extensions," and
+                should therefore be installed with <xref href="CREATE_EXTENSION.xml#topic1"/>, not
+                    <codeph>CREATE LANGUAGE</codeph>. Using <codeph>CREATE LANGUAGE</codeph>
                 directly should be restricted to extension installation scripts. If you have a
                 "bare" language in your database, perhaps as a result of an upgrade, you can convert
                 it to an extension using <codeph>CREATE EXTENSION <varname>langname</varname> FROM
@@ -61,7 +61,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
                 Greenplum Database distribution: PL/pgSQL, PL/Perl, and PL/Python. Language handlers
                 have also been added for PL/Java and PL/R, but those languages are not pre-installed
                 with Greenplum Database. See the topic on <xref
-                    href="https://www.postgresql.org/docs/8.3/xplang.html" scope="external"
+                    href="https://www.postgresql.org/docs/9.4/xplang.html" scope="external"
                     format="html">Procedural Languages</xref> in the PostgreSQL documentation for
                 more information on developing functions using these procedural languages.</p>
             <p>The PL/Perl, PL/Java, and PL/R libraries require the correct versions of Perl, Java,
@@ -103,13 +103,12 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
                     <pt>
                         <varname>name</varname>
                     </pt>
-                    <pd>The name of the new procedural language. The language name is case
-                        insensitive. The name must be unique among the languages in the database.
-                        Built-in support is included for <codeph>plpgsql</codeph>,
-                            <codeph>plperl</codeph>, <codeph>plpythonu</codeph>, and
-                            <codeph>plr</codeph>. The languages <codeph>plpgsql</codeph> (PL/pgSQL)
-                        and <codeph>plpythonu</codeph> (PL/Python) are installed by default in
-                        Greenplum Database.</pd>
+                    <pd>The name of the new procedural language. The name must be unique among the
+                        languages in the database. Built-in support is included for
+                            <codeph>plpgsql</codeph>, <codeph>plperl</codeph>, and
+                            <codeph>plpythonu</codeph>. The languages <codeph>plpgsql</codeph>
+                        (PL/pgSQL) and <codeph>plpythonu</codeph> (PL/Python) are installed by
+                        default in Greenplum Database.</pd>
                 </plentry>
                 <plentry>
                     <pt>HANDLER <varname>call_handler</varname></pt>
@@ -169,9 +168,10 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
         </section>
         <section id="section6">
             <title>Examples</title>
-            <p>The preferred way of creating any of the standard procedural languages:</p>
-            <codeblock>CREATE LANGUAGE plperl;
-CREATE LANGUAGE plr;</codeblock>
+            <p>The preferred way of creating any of the standard procedural languages is to use
+                    <codeph>CREATE EXTENSION</codeph> instead of <codeph>CREATE LANGUAGE</codeph>.
+                For example:</p>
+            <codeblock>CREATE EXTENSION plperl;</codeblock>
             <p>For a language not known in the <codeph>pg_pltemplate</codeph> catalog:</p>
             <codeblock>CREATE FUNCTION plsample_call_handler() RETURNS 
 language_handler
@@ -187,10 +187,13 @@ CREATE LANGUAGE plsample
         <section id="section8">
             <title>See Also</title>
             <p><codeph><xref href="ALTER_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="./DROP_LANGUAGE.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="./GRANT.xml#topic1"
-                        type="topic" format="dita"/></codeph>
+                        <codeph><xref href="CREATE_EXTENSION.xml" type="topic" format="dita"
+                    /></codeph>, <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic"
+                        format="dita"/></codeph>, <codeph><xref href="./DROP_EXTENSION.xml#topic1"
+                        type="topic" format="dita"/></codeph>, <codeph><xref
+                        href="./DROP_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
+                        <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"
+                    /></codeph>
                 <codeph><xref href="DO.xml#topic1"/></codeph></p>
         </section>
     </body>

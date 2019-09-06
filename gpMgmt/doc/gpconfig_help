@@ -12,7 +12,7 @@ gpconfig -c <param_name> -v <value> [-m <master_value> | --masteronly]
        | -l 
    [--skipvalidation] [--verbose] [--debug]
 
-gpconfig -s <param_name> [--flag] [--verbose] [--debug]
+gpconfig -s <param_name> [--file | --file-compare] [--verbose] [--debug]
 
 gpconfig --help
 

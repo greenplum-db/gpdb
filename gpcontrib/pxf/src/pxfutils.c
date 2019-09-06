@@ -65,5 +65,45 @@ concat(int num_args,...)
 char *
 get_authority(void)
 {
-	return psprintf("%s:%d", PxfDefaultHost, PxfDefaultPort);
+	return psprintf("%s:%d", get_pxf_host(), get_pxf_port());
+}
+
+/* Returns the PXF Host defined in the PXF_HOST
+ * environment variable or the default when undefined
+ */
+const char *
+get_pxf_host(void)
+{
+	const char *hStr = getenv(ENV_PXF_HOST);
+	if (hStr)
+		elog(DEBUG3, "read environment variable %s=%s", ENV_PXF_HOST, hStr);
+	else
+		elog(DEBUG3, "environment variable %s was not supplied", ENV_PXF_HOST);
+	return hStr ? hStr : PXF_DEFAULT_HOST;
+}
+
+/* Returns the PXF Port defined in the PXF_PORT
+ * environment variable or the default when undefined
+ */
+const int
+get_pxf_port(void)
+{
+	char *endptr = NULL;
+	char *pStr = getenv(ENV_PXF_PORT);
+	int port = PXF_DEFAULT_PORT;
+
+	if (pStr) {
+		port = (int) strtol(pStr, &endptr, 10);
+
+		if (pStr == endptr)
+			elog(ERROR, "unable to parse PXF port number %s=%s", ENV_PXF_PORT, pStr);
+		else
+			elog(DEBUG3, "read environment variable %s=%s", ENV_PXF_PORT, pStr);
+	}
+	else
+	{
+		elog(DEBUG3, "environment variable %s was not supplied", ENV_PXF_PORT);
+	}
+
+	return port;
 }

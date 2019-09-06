@@ -55,8 +55,8 @@ where nsp.nspname = temp_nspnames.nspname OR nsp.nspname = temp_nspnames.toastns
 -- Check that the temporary table was dropped at disconnect. (It really should be
 -- gone if the whole namespace is gone, but doesn't hurt to check.)
 select * from pg_tables where tablename = 'wmt_toast_issue_temp';
- schemaname | tablename | tableowner | tablespace | hasindexes | hasrules | hastriggers 
-------------+-----------+------------+------------+------------+----------+-------------
+ schemaname | tablename | tableowner | tablespace | hasindexes | hasrules | hastriggers | rowsecurity 
+------------+-----------+------------+------------+------------+----------+-------------+-------------
 (0 rows)
 
 -- Clean up

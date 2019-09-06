@@ -4,7 +4,7 @@
  *	  Private declarations for SP-GiST access method.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/spgist_private.h
@@ -17,7 +17,7 @@
 #include "access/itup.h"
 #include "access/spgist.h"
 #include "nodes/tidbitmap.h"
-#include "storage/relfilenode.h"
+#include "storage/buf.h"
 #include "utils/relcache.h"
 
 
@@ -64,6 +64,8 @@ typedef SpGistPageOpaqueData *SpGistPageOpaque;
  * which otherwise would have a hard time telling pages of different index
  * types apart.  It should be the last 2 bytes on the page.  This is more or
  * less "free" due to alignment considerations.
+ *
+ * See comments above GinPageOpaqueData.
  */
 #define SPGIST_PAGE_ID		0xFF82
 
@@ -350,34 +352,7 @@ typedef SpGistDeadTupleData *SpGistDeadTuple;
 
 /*
  * XLOG stuff
- *
- * ACCEPT_RDATA_* can only use fixed-length rdata arrays, because of lengthof
  */
-
-#define ACCEPT_RDATA_DATA(p, s, i)	\
-	do { \
-		Assert((i) < lengthof(rdata)); \
-		rdata[i].data = (char *) (p); \
-		rdata[i].len = (s); \
-		rdata[i].buffer = InvalidBuffer; \
-		rdata[i].buffer_std = true; \
-		rdata[i].next = NULL; \
-		if ((i) > 0) \
-			rdata[(i) - 1].next = rdata + (i); \
-	} while(0)
-
-#define ACCEPT_RDATA_BUFFER(b, i)  \
-	do { \
-		Assert((i) < lengthof(rdata)); \
-		rdata[i].data = NULL; \
-		rdata[i].len = 0; \
-		rdata[i].buffer = (b); \
-		rdata[i].buffer_std = true; \
-		rdata[i].next = NULL; \
-		if ((i) > 0) \
-			rdata[(i) - 1].next = rdata + (i); \
-	} while(0)
-
 
 /* XLOG record types for SPGiST */
 #define XLOG_SPGIST_CREATE_INDEX	0x00
@@ -407,36 +382,36 @@ typedef struct spgxlogState
 		(d).isBuild = (s)->isBuild; \
 	} while(0)
 
-
+/*
+ * Backup Blk 0: destination page for leaf tuple
+ * Backup Blk 1: parent page (if any)
+ */
 typedef struct spgxlogAddLeaf
 {
-	RelFileNode node;
-
-	BlockNumber blknoLeaf;		/* destination page for leaf tuple */
 	bool		newPage;		/* init dest page? */
 	bool		storesNulls;	/* page is in the nulls tree? */
 	OffsetNumber offnumLeaf;	/* offset where leaf tuple gets placed */
 	OffsetNumber offnumHeadLeaf;	/* offset of head tuple in chain, if any */
 
-	BlockNumber blknoParent;	/* where the parent downlink is, if any */
-	OffsetNumber offnumParent;
+	OffsetNumber offnumParent;	/* where the parent downlink is, if any */
 	uint16		nodeI;
 
 	/* new leaf tuple follows (unaligned!) */
 } spgxlogAddLeaf;
 
+/*
+ * Backup Blk 0: source leaf page
+ * Backup Blk 1: destination leaf page
+ * Backup Blk 2: parent page
+ */
 typedef struct spgxlogMoveLeafs
 {
-	RelFileNode node;
-
-	BlockNumber blknoSrc;		/* source leaf page */
-	BlockNumber blknoDst;		/* destination leaf page */
 	uint16		nMoves;			/* number of tuples moved from source page */
 	bool		newPage;		/* init dest page? */
 	bool		replaceDead;	/* are we replacing a DEAD source tuple? */
 	bool		storesNulls;	/* pages are in the nulls tree? */
 
-	BlockNumber blknoParent;	/* where the parent downlink is */
+	/* where the parent downlink is */
 	OffsetNumber offnumParent;
 	uint16		nodeI;
 
@@ -451,32 +426,49 @@ typedef struct spgxlogMoveLeafs
 	 * Note: if replaceDead is true then there is only one inserted tuple
 	 * number and only one leaf tuple in the data, because we are not copying
 	 * the dead tuple from the source
-	 *
-	 * Buffer references in the rdata array are:
-	 *		Src page
-	 *		Dest page
-	 *		Parent page
 	 *----------
 	 */
-	OffsetNumber offsets[1];
+	OffsetNumber offsets[FLEXIBLE_ARRAY_MEMBER];
 } spgxlogMoveLeafs;
 
 #define SizeOfSpgxlogMoveLeafs	offsetof(spgxlogMoveLeafs, offsets)
 
+/*
+ * Backup Blk 0: original page
+ * Backup Blk 1: where new tuple goes, if not same place
+ * Backup Blk 2: where parent downlink is, if updated and different from
+ *				 the old and new
+ */
 typedef struct spgxlogAddNode
 {
-	RelFileNode node;
+	/*
+	 * Offset of the original inner tuple, in the original page (on backup
+	 * block 0).
+	 */
+	OffsetNumber offnum;
 
-	BlockNumber blkno;			/* block number of original inner tuple */
-	OffsetNumber offnum;		/* offset of original inner tuple */
-
-	BlockNumber blknoParent;	/* where parent downlink is, if updated */
-	OffsetNumber offnumParent;
-	uint16		nodeI;
-
-	BlockNumber blknoNew;		/* where new tuple goes, if not same place */
+	/*
+	 * Offset of the new tuple, on the new page (on backup block 1). Invalid,
+	 * if we overwrote the old tuple in the original page).
+	 */
 	OffsetNumber offnumNew;
 	bool		newPage;		/* init new page? */
+
+	/*----
+	 * Where is the parent downlink? parentBlk indicates which page it's on,
+	 * and offnumParent is the offset within the page. The possible values for
+	 * parentBlk are:
+	 *
+	 * 0: parent == original page
+	 * 1: parent == new page
+	 * 2: parent == different page (blk ref 2)
+	 * -1: parent not updated
+	 *----
+	 */
+	char		parentBlk;
+	OffsetNumber offnumParent;	/* offset within the parent page */
+
+	uint16		nodeI;
 
 	spgxlogState stateSrc;
 
@@ -485,41 +477,51 @@ typedef struct spgxlogAddNode
 	 */
 } spgxlogAddNode;
 
+/*
+ * Backup Blk 0: where the prefix tuple goes
+ * Backup Blk 1: where the postfix tuple goes (if different page)
+ */
 typedef struct spgxlogSplitTuple
 {
-	RelFileNode node;
-
-	BlockNumber blknoPrefix;	/* where the prefix tuple goes */
+	/* where the prefix tuple goes */
 	OffsetNumber offnumPrefix;
 
-	BlockNumber blknoPostfix;	/* where the postfix tuple goes */
+	/* where the postfix tuple goes */
 	OffsetNumber offnumPostfix;
 	bool		newPage;		/* need to init that page? */
+	bool		postfixBlkSame; /* was postfix tuple put on same page as
+								 * prefix? */
 
 	/*
-	 * new prefix inner tuple follows, then new postfix inner tuple
-	 * (both are unaligned!)
+	 * new prefix inner tuple follows, then new postfix inner tuple (both are
+	 * unaligned!)
 	 */
 } spgxlogSplitTuple;
 
+/*
+ * Buffer references in the rdata array are:
+ * Backup Blk 0: Src page (only if not root)
+ * Backup Blk 1: Dest page (if used)
+ * Backup Blk 2: Inner page
+ * Backup Blk 3: Parent page (if any, and different from Inner)
+ */
 typedef struct spgxlogPickSplit
 {
-	RelFileNode node;
+	bool		isRootSplit;
 
-	BlockNumber blknoSrc;		/* original leaf page */
-	BlockNumber blknoDest;		/* other leaf page, if any */
 	uint16		nDelete;		/* n to delete from Src */
 	uint16		nInsert;		/* n to insert on Src and/or Dest */
 	bool		initSrc;		/* re-init the Src page? */
 	bool		initDest;		/* re-init the Dest page? */
 
-	BlockNumber blknoInner;		/* where to put new inner tuple */
+	/* where to put new inner tuple */
 	OffsetNumber offnumInner;
 	bool		initInner;		/* re-init the Inner page? */
 
 	bool		storesNulls;	/* pages are in the nulls tree? */
 
-	BlockNumber blknoParent;	/* where the parent downlink is, if any */
+	/* where the parent downlink is, if any */
+	bool		innerIsParent;	/* is parent the same as inner page? */
 	OffsetNumber offnumParent;
 	uint16		nodeI;
 
@@ -532,24 +534,15 @@ typedef struct spgxlogPickSplit
 	 *		array of page selector bytes for inserted tuples, length nInsert
 	 *		new inner tuple (unaligned!)
 	 *		list of leaf tuples, length nInsert (unaligned!)
-	 *
-	 * Buffer references in the rdata array are:
-	 *		Src page (only if not root and not being init'd)
-	 *		Dest page (if used and not being init'd)
-	 *		Inner page (only if not being init'd)
-	 *		Parent page (if any; could be same as Inner)
 	 *----------
 	 */
-	OffsetNumber	offsets[1];
+	OffsetNumber offsets[FLEXIBLE_ARRAY_MEMBER];
 } spgxlogPickSplit;
 
 #define SizeOfSpgxlogPickSplit offsetof(spgxlogPickSplit, offsets)
 
 typedef struct spgxlogVacuumLeaf
 {
-	RelFileNode node;
-
-	BlockNumber blkno;			/* block number to clean */
 	uint16		nDead;			/* number of tuples to become DEAD */
 	uint16		nPlaceholder;	/* number of tuples to become PLACEHOLDER */
 	uint16		nMove;			/* number of tuples to move */
@@ -567,7 +560,7 @@ typedef struct spgxlogVacuumLeaf
 	 *		tuple numbers to insert in nextOffset links
 	 *----------
 	 */
-	OffsetNumber offsets[1];
+	OffsetNumber offsets[FLEXIBLE_ARRAY_MEMBER];
 } spgxlogVacuumLeaf;
 
 #define SizeOfSpgxlogVacuumLeaf offsetof(spgxlogVacuumLeaf, offsets)
@@ -575,30 +568,24 @@ typedef struct spgxlogVacuumLeaf
 typedef struct spgxlogVacuumRoot
 {
 	/* vacuum a root page when it is also a leaf */
-	RelFileNode node;
-
-	BlockNumber blkno;			/* block number to clean */
 	uint16		nDelete;		/* number of tuples to delete */
 
 	spgxlogState stateSrc;
 
 	/* offsets of tuples to delete follow */
-	OffsetNumber offsets[1];
+	OffsetNumber offsets[FLEXIBLE_ARRAY_MEMBER];
 } spgxlogVacuumRoot;
 
 #define SizeOfSpgxlogVacuumRoot offsetof(spgxlogVacuumRoot, offsets)
 
 typedef struct spgxlogVacuumRedirect
 {
-	RelFileNode node;
-
-	BlockNumber blkno;			/* block number to clean */
 	uint16		nToPlaceholder; /* number of redirects to make placeholders */
 	OffsetNumber firstPlaceholder;		/* first placeholder tuple to remove */
 	TransactionId newestRedirectXid;	/* newest XID of removed redirects */
 
 	/* offsets of redirect tuples to make placeholders follow */
-	OffsetNumber offsets[1];
+	OffsetNumber offsets[FLEXIBLE_ARRAY_MEMBER];
 } spgxlogVacuumRedirect;
 
 #define SizeOfSpgxlogVacuumRedirect offsetof(spgxlogVacuumRedirect, offsets)

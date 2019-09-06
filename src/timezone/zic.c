@@ -125,14 +125,14 @@ struct zone
 
 extern int	link(const char *fromname, const char *toname);
 
-static void memory_exhausted(const char *msg) __attribute__((noreturn));
+static void memory_exhausted(const char *msg) pg_attribute_noreturn();
 static void verror(const char *string, va_list args)
-__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 0)));
+pg_attribute_printf(1, 0);
 static void error(const char *string,...)
-__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
+pg_attribute_printf(1, 2);
 static void warning(const char *string,...)
-__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
-static void usage(FILE *stream, int status) __attribute__((noreturn));
+pg_attribute_printf(1, 2);
+static void usage(FILE *stream, int status) pg_attribute_noreturn();
 static void addtt(zic_t starttime, int type);
 static int	addtype(zic_t, char const *, bool, bool, bool);
 static void leapadd(zic_t, bool, int, int);

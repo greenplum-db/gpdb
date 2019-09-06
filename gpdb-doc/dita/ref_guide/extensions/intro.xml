@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_khf_ltc_vbb">
+  <title>Procedural Languages and Analytics Extensions</title>
+  <body>
+     <p>This section describes the procedural languages and analytics extensions available
+       with Greenplum Database.</p>
+     <p otherprops="oss-only">Procedural languages are typically
+       packaged as extensions. You register a language in a database using the
+       <codeph><xref href="../sql_commands/CREATE_EXTENSION.xml#topic1">CREATE EXTENSION</xref></codeph>
+       command. You remove a language from a database with <codeph><xref href="../sql_commands/DROP_EXTENSION.xml#topic1">DROP EXTENSION</xref></codeph>.</p>
+     <p>The Greenplum Database distribution supports the following procedural
+       languages; refer to the linked language documentation for <ph otherprops="pivotal"> installation
+       and </ph> usage instructions:</p>
+     <ul>
+      <li><xref href="pl_container.xml">PL/Container</xref></li>
+       <li><xref href="pl_java.xml" format="dita">PL/Java</xref></li>
+       <li><xref href="pl_perl.xml" format="dita" >PL/Perl</xref></li>
+       <li><xref href="pl_sql.xml" format="dita">PL/pgSQL</xref></li>
+       <li><xref href="pl_python.xml" format="dita" >PL/Python</xref></li>
+       <li><xref href="pl_r.xml" format="dita">PL/R</xref></li>
+     </ul>
+     <p>You can use the following analytics extensions with Greenplum Database; refer
+       to the linked documentation for installation and usage instructions:</p>
+     <ul>
+       <li><xref href="madlib.xml" format="dita">MADlib</xref></li>
+       <li otherprops="pivotal"><xref href="postGIS.xml" format="dita">PostGIS</xref></li>
+     </ul>
+   </body>
+</topic>

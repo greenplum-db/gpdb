@@ -16,6 +16,8 @@ CREATE TABLE test_schema_1.grant_test(a int) DISTRIBUTED BY (a);
 DROP TABLE test_schema_1.grant_test;
 CREATE TABLE test_schema_2.grant_test(a int) DISTRIBUTED BY (a); -- no permissions on schema
 ERROR:  permission denied for schema test_schema_2
+LINE 1: CREATE TABLE test_schema_2.grant_test(a int) DISTRIBUTED BY ...
+                     ^
 SELECT * FROM test_schema_1.abc; -- no permissions on table
 ERROR:  permission denied for relation abc
 SELECT * FROM test_schema_2.abc; -- no permissions on schema

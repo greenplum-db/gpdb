@@ -434,7 +434,8 @@ void *gp_realloc(void *ptr, int64 new_size)
 	size_t old_size = UserPtr_GetUserPtrSize(ptr);
 	int64 size_diff = (new_size - old_size);
 
-	if(new_size <= old_size || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
+	MemoryAllocationStatus stat = MemoryAllocation_Success;
+	if(new_size <= old_size || MemoryAllocation_Success == (stat =  VmemTracker_ReserveVmem(size_diff)))
 	{
 		ret = realloc_and_store_metadata(ptr, new_size);
 
@@ -466,6 +467,9 @@ void *gp_realloc(void *ptr, int64 new_size)
 		return ret;
 	}
 
+	Assert(MemoryAllocation_Success != stat);
+
+	gp_failed_to_alloc(stat, 0, new_size);
 	return NULL; 
 }
 

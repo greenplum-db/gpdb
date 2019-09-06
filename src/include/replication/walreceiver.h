@@ -3,7 +3,7 @@
  * walreceiver.h
  *	  Exports from replication/walreceiverfuncs.c.
  *
- * Portions Copyright (c) 2010-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2010-2015, PostgreSQL Global Development Group
  *
  * src/include/replication/walreceiver.h
  *
@@ -149,7 +149,8 @@ extern PGDLLIMPORT walrcv_disconnect_type walrcv_disconnect;
 void		libpqwalreceiver_PG_init(void);
 
 /* prototypes for functions in walreceiver.c */
-extern void WalReceiverMain(void) __attribute__((noreturn));
+extern void WalReceiverMain(void) pg_attribute_noreturn();
+extern void ProcessWalRcvInterrupts(void);
 
 /* prototypes for functions in walreceiverfuncs.c */
 extern Size WalRcvShmemSize(void);
@@ -163,6 +164,5 @@ extern XLogRecPtr GetWalRcvWriteRecPtr(XLogRecPtr *latestChunkStart, TimeLineID 
 extern int	GetReplicationApplyDelay(void);
 extern int	GetReplicationTransferLatency(void);
 extern const char *WalRcvGetStateString(WalRcvState state);
-extern XLogRecPtr WaitNextXLogAvailable(XLogRecPtr recptr, bool *finished);
 
 #endif   /* _WALRECEIVER_H */

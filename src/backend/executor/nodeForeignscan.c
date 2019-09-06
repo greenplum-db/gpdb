@@ -3,7 +3,7 @@
  * nodeForeignscan.c
  *	  Routines to support scans of foreign tables
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -102,7 +102,9 @@ ForeignScanState *
 ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 {
 	ForeignScanState *scanstate;
-	Relation	currentRelation;
+	Relation	currentRelation = NULL;
+	Index		scanrelid = node->scan.scanrelid;
+	Index		tlistvarno;
 	FdwRoutine *fdwroutine;
 
 	/* check for unsupported flags */
@@ -141,32 +143,55 @@ ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 	ExecInitScanTupleSlot(estate, &scanstate->ss);
 
 	/*
-	 * open the base relation and acquire appropriate lock on it.
+	 * open the base relation, if any, and acquire an appropriate lock on it;
+	 * also acquire function pointers from the FDW's handler
 	 */
-	currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid, eflags);
-	scanstate->ss.ss_currentRelation = currentRelation;
+	if (scanrelid > 0)
+	{
+		currentRelation = ExecOpenScanRelation(estate, scanrelid, eflags);
+		scanstate->ss.ss_currentRelation = currentRelation;
+		fdwroutine = GetFdwRoutineForRelation(currentRelation, true);
+	}
+	else
+	{
+		/* We can't use the relcache, so get fdwroutine the hard way */
+		fdwroutine = GetFdwRoutineByServerId(node->fs_server);
+	}
 
 	/*
-	 * get the scan type from the relation descriptor.  (XXX at some point we
-	 * might want to let the FDW editorialize on the scan tupdesc.)
+	 * Determine the scan tuple type.  If the FDW provided a targetlist
+	 * describing the scan tuples, use that; else use base relation's rowtype.
 	 */
-	ExecAssignScanType(&scanstate->ss, RelationGetDescr(currentRelation));
+	if (node->fdw_scan_tlist != NIL || currentRelation == NULL)
+	{
+		TupleDesc	scan_tupdesc;
+
+		scan_tupdesc = ExecTypeFromTL(node->fdw_scan_tlist, false);
+		ExecAssignScanType(&scanstate->ss, scan_tupdesc);
+		/* Node's targetlist will contain Vars with varno = INDEX_VAR */
+		tlistvarno = INDEX_VAR;
+	}
+	else
+	{
+		ExecAssignScanType(&scanstate->ss, RelationGetDescr(currentRelation));
+		/* Node's targetlist will contain Vars with varno = scanrelid */
+		tlistvarno = scanrelid;
+	}
 
 	/*
 	 * Initialize result tuple type and projection info.
 	 */
 	ExecAssignResultTypeFromTL(&scanstate->ss.ps);
-	ExecAssignScanProjectionInfo(&scanstate->ss);
+	ExecAssignScanProjectionInfoWithVarno(&scanstate->ss, tlistvarno);
 
 	/*
-	 * Acquire function pointers from the FDW's handler, and init fdw_state.
+	 * Initialize FDW-related state.
 	 */
-	fdwroutine = GetFdwRoutineForRelation(currentRelation, true);
 	scanstate->fdwroutine = fdwroutine;
 	scanstate->fdw_state = NULL;
 
 	/*
-	 * Tell the FDW to initiate the scan.
+	 * Tell the FDW to initialize the scan.
 	 */
 	fdwroutine->BeginForeignScan(scanstate, eflags);
 
@@ -193,7 +218,8 @@ ExecEndForeignScan(ForeignScanState *node)
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 
 	/* close the relation. */
-	ExecCloseScanRelation(node->ss.ss_currentRelation);
+	if (node->ss.ss_currentRelation)
+		ExecCloseScanRelation(node->ss.ss_currentRelation);
 }
 
 /* ----------------------------------------------------------------

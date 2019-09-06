@@ -219,6 +219,8 @@ PLy_exec_function(FunctionCallInfo fcinfo, PLyProcedure *proc)
 
 			rv = PLyObject_ToCompositeDatum(&proc->result, desc, plrv, false);
 			fcinfo->isnull = (rv == (Datum) NULL);
+
+			ReleaseTupleDesc(desc);
 		}
 		else
 		{

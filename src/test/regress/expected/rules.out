@@ -1118,6 +1118,10 @@ SELECT * FROM shoelace_log ORDER BY sl_name;
 	SELECT * FROM shoelace_obsolete WHERE sl_avail = 0;
 insert into shoelace values ('sl9', 0, 'pink', 35.0, 'inch', 0.0);
 insert into shoelace values ('sl10', 1000, 'magenta', 40.0, 'inch', 0.0);
+-- Unsupported (even though a similar updatable view construct is)
+insert into shoelace values ('sl10', 1000, 'magenta', 40.0, 'inch', 0.0)
+  on conflict do nothing;
+ERROR:  INSERT with ON CONFLICT clause cannot be used with table that has INSERT or UPDATE rules
 SELECT * FROM shoelace_obsolete ORDER BY sl_len_cm;
   sl_name   | sl_avail |  sl_color  | sl_len | sl_unit  | sl_len_cm 
 ------------+----------+------------+--------+----------+-----------
@@ -1304,6 +1308,14 @@ pg_cursors| SELECT c.name,
     c.is_scrollable,
     c.creation_time
    FROM pg_cursor() c(name, statement, is_holdable, is_binary, is_scrollable, creation_time);
+pg_file_settings| SELECT a.sourcefile,
+    a.sourceline,
+    a.seqno,
+    a.name,
+    a.setting,
+    a.applied,
+    a.error
+   FROM pg_show_all_file_settings() a(sourcefile, sourceline, seqno, name, setting, applied, error);
 pg_group| SELECT pg_authid.rolname AS groname,
     pg_authid.oid AS grosysid,
     ARRAY( SELECT pg_auth_members.member
@@ -1349,6 +1361,29 @@ pg_matviews| SELECT n.nspname AS schemaname,
      LEFT JOIN pg_namespace n ON ((n.oid = c.relnamespace)))
      LEFT JOIN pg_tablespace t ON ((t.oid = c.reltablespace)))
   WHERE (c.relkind = 'm'::"char");
+pg_policies| SELECT n.nspname AS schemaname,
+    c.relname AS tablename,
+    pol.polname AS policyname,
+        CASE
+            WHEN (pol.polroles = '{0}'::oid[]) THEN (string_to_array('public'::text, ''::text))::name[]
+            ELSE ARRAY( SELECT pg_authid.rolname
+               FROM pg_authid
+              WHERE (pg_authid.oid = ANY (pol.polroles))
+              ORDER BY pg_authid.rolname)
+        END AS roles,
+        CASE pol.polcmd
+            WHEN 'r'::"char" THEN 'SELECT'::text
+            WHEN 'a'::"char" THEN 'INSERT'::text
+            WHEN 'w'::"char" THEN 'UPDATE'::text
+            WHEN 'd'::"char" THEN 'DELETE'::text
+            WHEN '*'::"char" THEN 'ALL'::text
+            ELSE NULL::text
+        END AS cmd,
+    pg_get_expr(pol.polqual, pol.polrelid) AS qual,
+    pg_get_expr(pol.polwithcheck, pol.polrelid) AS with_check
+   FROM ((pg_policy pol
+     JOIN pg_class c ON ((c.oid = pol.polrelid)))
+     LEFT JOIN pg_namespace n ON ((n.oid = c.relnamespace)));
 pg_prepared_statements| SELECT p.name,
     p.statement,
     p.prepare_time,
@@ -1363,28 +1398,34 @@ pg_prepared_xacts| SELECT p.transaction,
    FROM ((pg_prepared_xact() p(transaction, gid, prepared, ownerid, dbid)
      LEFT JOIN pg_authid u ON ((p.ownerid = u.oid)))
      LEFT JOIN pg_database d ON ((p.dbid = d.oid)));
+pg_replication_origin_status| SELECT pg_show_replication_origin_status.local_id,
+    pg_show_replication_origin_status.external_id,
+    pg_show_replication_origin_status.remote_lsn,
+    pg_show_replication_origin_status.local_lsn
+   FROM pg_show_replication_origin_status() pg_show_replication_origin_status(local_id, external_id, remote_lsn, local_lsn);
 pg_replication_slots| SELECT l.slot_name,
     l.plugin,
     l.slot_type,
     l.datoid,
     d.datname AS database,
     l.active,
+    l.active_pid,
     l.xmin,
     l.catalog_xmin,
     l.restart_lsn
-   FROM (pg_get_replication_slots() l(slot_name, plugin, slot_type, datoid, active, xmin, catalog_xmin, restart_lsn)
+   FROM (pg_get_replication_slots() l(slot_name, plugin, slot_type, datoid, active, active_pid, xmin, catalog_xmin, restart_lsn)
      LEFT JOIN pg_database d ON ((l.datoid = d.oid)));
 pg_roles| SELECT pg_authid.rolname,
     pg_authid.rolsuper,
     pg_authid.rolinherit,
     pg_authid.rolcreaterole,
     pg_authid.rolcreatedb,
-    pg_authid.rolcatupdate,
     pg_authid.rolcanlogin,
     pg_authid.rolreplication,
     pg_authid.rolconnlimit,
     '********'::text AS rolpassword,
     pg_authid.rolvaliduntil,
+    pg_authid.rolbypassrls,
     s.setconfig AS rolconfig,
     pg_authid.oid
    FROM (pg_authid
@@ -1573,14 +1614,15 @@ pg_settings| SELECT a.name,
     a.boot_val,
     a.reset_val,
     a.sourcefile,
-    a.sourceline
-   FROM pg_show_all_settings() a(name, setting, unit, category, short_desc, extra_desc, context, vartype, source, min_val, max_val, enumvals, boot_val, reset_val, sourcefile, sourceline);
+    a.sourceline,
+    a.pending_restart
+   FROM pg_show_all_settings() a(name, setting, unit, category, short_desc, extra_desc, context, vartype, source, min_val, max_val, enumvals, boot_val, reset_val, sourcefile, sourceline, pending_restart);
 pg_shadow| SELECT pg_authid.rolname AS usename,
     pg_authid.oid AS usesysid,
     pg_authid.rolcreatedb AS usecreatedb,
     pg_authid.rolsuper AS usesuper,
-    pg_authid.rolcatupdate AS usecatupd,
     pg_authid.rolreplication AS userepl,
+    pg_authid.rolbypassrls AS usebypassrls,
     pg_authid.rolpassword AS passwd,
     (pg_authid.rolvaliduntil)::abstime AS valuntil,
     s.setconfig AS useconfig
@@ -1606,7 +1648,7 @@ pg_stat_activity| SELECT s.datid,
     s.backend_xmin,
     s.query
    FROM pg_database d,
-    pg_stat_get_activity(NULL::integer) s(datid, pid, usesysid, application_name, state, query, waiting, xact_start, query_start, backend_start, state_change, client_addr, client_hostname, client_port, backend_xid, backend_xmin),
+    pg_stat_get_activity(NULL::integer) s(datid, pid, usesysid, application_name, state, query, waiting, xact_start, query_start, backend_start, state_change, client_addr, client_hostname, client_port, backend_xid, backend_xmin, ssl, sslversion, sslcipher, sslbits, sslcompression, sslclientdn),
     pg_authid u
   WHERE ((s.datid = d.oid) AND (s.usesysid = u.oid));
 pg_stat_all_indexes| SELECT c.oid AS relid,
@@ -1712,10 +1754,18 @@ pg_stat_replication| SELECT s.pid,
     w.replay_location,
     w.sync_priority,
     w.sync_state
-   FROM pg_stat_get_activity(NULL::integer) s(datid, pid, usesysid, application_name, state, query, waiting, xact_start, query_start, backend_start, state_change, client_addr, client_hostname, client_port, backend_xid, backend_xmin),
+   FROM pg_stat_get_activity(NULL::integer) s(datid, pid, usesysid, application_name, state, query, waiting, xact_start, query_start, backend_start, state_change, client_addr, client_hostname, client_port, backend_xid, backend_xmin, ssl, sslversion, sslcipher, sslbits, sslcompression, sslclientdn),
     pg_authid u,
     pg_stat_get_wal_senders() w(pid, state, sent_location, write_location, flush_location, replay_location, sync_priority, sync_state)
   WHERE ((s.usesysid = u.oid) AND (s.pid = w.pid));
+pg_stat_ssl| SELECT s.pid,
+    s.ssl,
+    s.sslversion AS version,
+    s.sslcipher AS cipher,
+    s.sslbits AS bits,
+    s.sslcompression AS compression,
+    s.sslclientdn AS clientdn
+   FROM pg_stat_get_activity(NULL::integer) s(datid, pid, usesysid, application_name, state, query, waiting, xact_start, query_start, backend_start, state_change, client_addr, client_hostname, client_port, backend_xid, backend_xmin, ssl, sslversion, sslcipher, sslbits, sslcompression, sslclientdn);
 pg_stat_sys_indexes| SELECT pg_stat_all_indexes.relid,
     pg_stat_all_indexes.indexrelid,
     pg_stat_all_indexes.schemaname,
@@ -2014,7 +2064,8 @@ pg_tables| SELECT n.nspname AS schemaname,
     t.spcname AS tablespace,
     c.relhasindex AS hasindexes,
     c.relhasrules AS hasrules,
-    c.relhastriggers AS hastriggers
+    c.relhastriggers AS hastriggers,
+    c.relrowsecurity AS rowsecurity
    FROM ((pg_class c
      LEFT JOIN pg_namespace n ON ((n.oid = c.relnamespace)))
      LEFT JOIN pg_tablespace t ON ((t.oid = c.reltablespace)))
@@ -2032,8 +2083,8 @@ pg_user| SELECT pg_shadow.usename,
     pg_shadow.usesysid,
     pg_shadow.usecreatedb,
     pg_shadow.usesuper,
-    pg_shadow.usecatupd,
     pg_shadow.userepl,
+    pg_shadow.usebypassrls,
     '********'::text AS passwd,
     pg_shadow.valuntil,
     pg_shadow.useconfig
@@ -2115,7 +2166,7 @@ shoe_ready| SELECT rsh.shoename,
     int4smaller(rsh.sh_avail, rsl.sl_avail) AS total_avail
    FROM shoe rsh,
     shoelace rsl
-  WHERE (((rsl.sl_color = rsh.slcolor) AND (rsl.sl_len_cm >= rsh.slminlen_cm)) AND (rsl.sl_len_cm <= rsh.slmaxlen_cm));
+  WHERE ((rsl.sl_color = rsh.slcolor) AND (rsl.sl_len_cm >= rsh.slminlen_cm) AND (rsl.sl_len_cm <= rsh.slmaxlen_cm));
 shoelace| SELECT s.sl_name,
     s.sl_avail,
     s.sl_color,
@@ -2322,6 +2373,22 @@ DETAIL:  Key (id3a, id3c)=(1, 13) is not present in table "rule_and_refint_t2".
 insert into rule_and_refint_t3 values (1, 13, 11, 'row6');
 ERROR:  insert or update on table "rule_and_refint_t3" violates foreign key constraint "rule_and_refint_t3_id3a_fkey"
 DETAIL:  Key (id3a, id3b)=(1, 13) is not present in table "rule_and_refint_t1".
+-- Ordinary table
+insert into rule_and_refint_t3 values (1, 13, 11, 'row6')
+  on conflict do nothing;
+ERROR:  insert or update on table "rule_and_refint_t3" violates foreign key constraint "rule_and_refint_t3_id3a_fkey"
+DETAIL:  Key (id3a, id3b)=(1, 13) is not present in table "rule_and_refint_t1".
+-- rule not fired, so fk violation
+insert into rule_and_refint_t3 values (1, 13, 11, 'row6')
+  on conflict (id3a, id3b, id3c) do update
+  set id3b = excluded.id3b;
+ERROR:  insert or update on table "rule_and_refint_t3" violates foreign key constraint "rule_and_refint_t3_id3a_fkey"
+DETAIL:  Key (id3a, id3b)=(1, 13) is not present in table "rule_and_refint_t1".
+-- rule fired, so unsupported
+insert into shoelace values ('sl9', 0, 'pink', 35.0, 'inch', 0.0)
+  on conflict (sl_name) do update
+  set sl_avail = excluded.sl_avail;
+ERROR:  INSERT with ON CONFLICT clause cannot be used with table that has INSERT or UPDATE rules
 create rule rule_and_refint_t3_ins as on insert to rule_and_refint_t3
 	where (exists (select 1 from rule_and_refint_t3
 			where (((rule_and_refint_t3.id3a = new.id3a)
@@ -2478,6 +2545,7 @@ select * from only t1_2;
  19
 (10 rows)
 
+reset constraint_exclusion;
 -- test various flavors of pg_get_viewdef()
 select pg_get_viewdef('shoe'::regclass) as unpretty;
                     unpretty                    
@@ -2609,6 +2677,34 @@ Rules:
  NOTIFY rules_src_deletion
 
 --
+-- Ensure a aliased target relation for insert is correctly deparsed.
+--
+create rule r4 as on insert to rules_src do instead insert into rules_log AS trgt SELECT NEW.* RETURNING trgt.f1, trgt.f2;
+create rule r5 as on update to rules_src do instead UPDATE rules_log AS trgt SET tag = 'updated' WHERE trgt.f1 = new.f1;
+\d+ rules_src
+                      Table "public.rules_src"
+ Column |  Type   | Modifiers | Storage | Stats target | Description 
+--------+---------+-----------+---------+--------------+-------------
+ f1     | integer |           | plain   |              | 
+ f2     | integer |           | plain   |              | 
+Rules:
+    r1 AS
+    ON UPDATE TO rules_src DO  INSERT INTO rules_log (f1, f2, tag) VALUES (old.f1,old.f2,'old'::text), (new.f1,new.f2,'new'::text)
+    r2 AS
+    ON UPDATE TO rules_src DO  VALUES (old.f1,old.f2,'old'::text), (new.f1,new.f2,'new'::text)
+    r3 AS
+    ON DELETE TO rules_src DO
+ NOTIFY rules_src_deletion
+    r4 AS
+    ON INSERT TO rules_src DO INSTEAD  INSERT INTO rules_log AS trgt (f1, f2)  SELECT new.f1,
+            new.f2
+  RETURNING trgt.f1,
+    trgt.f2
+    r5 AS
+    ON UPDATE TO rules_src DO INSTEAD  UPDATE rules_log trgt SET tag = 'updated'::text
+  WHERE trgt.f1 = new.f1
+
+--
 -- check alter rename rule
 --
 CREATE TABLE rule_t1 (a INT);
@@ -2727,3 +2823,220 @@ SELECT pg_get_functiondef('func_with_set_params()'::regprocedure);
  
 (1 row)
 
+--
+-- Check DO INSTEAD rules with ON CONFLICT
+--
+CREATE TABLE hats (
+	hat_name    char(10) primary key,
+	hat_color   char(10)      -- hat color
+);
+CREATE TABLE hat_data (
+	hat_name    char(10),
+	hat_color   char(10)      -- hat color
+);
+create unique index hat_data_unique_idx
+  on hat_data (hat_name COLLATE "C" bpchar_pattern_ops);
+-- DO NOTHING with ON CONFLICT
+CREATE RULE hat_nosert AS ON INSERT TO hats
+    DO INSTEAD
+    INSERT INTO hat_data VALUES (
+           NEW.hat_name,
+           NEW.hat_color)
+        ON CONFLICT (hat_name COLLATE "C" bpchar_pattern_ops) WHERE hat_color = 'green'
+        DO NOTHING
+        RETURNING *;
+SELECT definition FROM pg_rules WHERE tablename = 'hats' ORDER BY rulename;
+                                         definition                                          
+---------------------------------------------------------------------------------------------
+ CREATE RULE hat_nosert AS                                                                  +
+     ON INSERT TO hats DO INSTEAD  INSERT INTO hat_data (hat_name, hat_color)               +
+   VALUES (new.hat_name, new.hat_color) ON CONFLICT(hat_name COLLATE "C" bpchar_pattern_ops)+
+   WHERE (hat_data.hat_color = 'green'::bpchar) DO NOTHING                                  +
+   RETURNING hat_data.hat_name,                                                             +
+     hat_data.hat_color;
+(1 row)
+
+-- Works (projects row)
+INSERT INTO hats VALUES ('h7', 'black') RETURNING *;
+  hat_name  | hat_color  
+------------+------------
+ h7         | black     
+(1 row)
+
+-- Works (does nothing)
+INSERT INTO hats VALUES ('h7', 'black') RETURNING *;
+ hat_name | hat_color 
+----------+-----------
+(0 rows)
+
+SELECT tablename, rulename, definition FROM pg_rules
+	WHERE tablename = 'hats';
+ tablename |  rulename  |                                         definition                                          
+-----------+------------+---------------------------------------------------------------------------------------------
+ hats      | hat_nosert | CREATE RULE hat_nosert AS                                                                  +
+           |            |     ON INSERT TO hats DO INSTEAD  INSERT INTO hat_data (hat_name, hat_color)               +
+           |            |   VALUES (new.hat_name, new.hat_color) ON CONFLICT(hat_name COLLATE "C" bpchar_pattern_ops)+
+           |            |   WHERE (hat_data.hat_color = 'green'::bpchar) DO NOTHING                                  +
+           |            |   RETURNING hat_data.hat_name,                                                             +
+           |            |     hat_data.hat_color;
+(1 row)
+
+DROP RULE hat_nosert ON hats;
+-- DO NOTHING without ON CONFLICT
+CREATE RULE hat_nosert_all AS ON INSERT TO hats
+    DO INSTEAD
+    INSERT INTO hat_data VALUES (
+           NEW.hat_name,
+           NEW.hat_color)
+        ON CONFLICT
+        DO NOTHING
+        RETURNING *;
+SELECT definition FROM pg_rules WHERE tablename = 'hats' ORDER BY rulename;
+                                  definition                                  
+------------------------------------------------------------------------------
+ CREATE RULE hat_nosert_all AS                                               +
+     ON INSERT TO hats DO INSTEAD  INSERT INTO hat_data (hat_name, hat_color)+
+   VALUES (new.hat_name, new.hat_color) ON CONFLICT DO NOTHING               +
+   RETURNING hat_data.hat_name,                                              +
+     hat_data.hat_color;
+(1 row)
+
+DROP RULE hat_nosert_all ON hats;
+-- Works (does nothing)
+INSERT INTO hats VALUES ('h7', 'black') RETURNING *;
+  hat_name  | hat_color  
+------------+------------
+ h7         | black     
+(1 row)
+
+-- DO UPDATE with a WHERE clause
+CREATE RULE hat_upsert AS ON INSERT TO hats
+    DO INSTEAD
+    INSERT INTO hat_data VALUES (
+           NEW.hat_name,
+           NEW.hat_color)
+        ON CONFLICT (hat_name)
+        DO UPDATE
+           SET hat_name = hat_data.hat_name, hat_color = excluded.hat_color
+           WHERE excluded.hat_color <>  'forbidden'
+        RETURNING *;
+SELECT definition FROM pg_rules WHERE tablename = 'hats' ORDER BY rulename;
+                                                               definition                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ CREATE RULE hat_upsert AS                                                                                                              +
+     ON INSERT TO hats DO INSTEAD  INSERT INTO hat_data (hat_name, hat_color)                                                           +
+   VALUES (new.hat_name, new.hat_color) ON CONFLICT(hat_name) DO UPDATE SET hat_name = hat_data.hat_name, hat_color = excluded.hat_color+
+   WHERE (excluded.hat_color <> 'forbidden'::bpchar)                                                                                    +
+   RETURNING hat_data.hat_name,                                                                                                         +
+     hat_data.hat_color;
+(1 row)
+
+-- Works (does upsert)
+INSERT INTO hats VALUES ('h8', 'black') RETURNING *;
+  hat_name  | hat_color  
+------------+------------
+ h8         | black     
+(1 row)
+
+SELECT * FROM hat_data WHERE hat_name = 'h8';
+  hat_name  | hat_color  
+------------+------------
+ h8         | black     
+(1 row)
+
+INSERT INTO hats VALUES ('h8', 'white') RETURNING *;
+  hat_name  | hat_color  
+------------+------------
+ h8         | white     
+(1 row)
+
+SELECT * FROM hat_data WHERE hat_name = 'h8';
+  hat_name  | hat_color  
+------------+------------
+ h8         | white     
+(1 row)
+
+INSERT INTO hats VALUES ('h8', 'forbidden') RETURNING *;
+ hat_name | hat_color 
+----------+-----------
+(0 rows)
+
+SELECT * FROM hat_data WHERE hat_name = 'h8';
+  hat_name  | hat_color  
+------------+------------
+ h8         | white     
+(1 row)
+
+SELECT tablename, rulename, definition FROM pg_rules
+	WHERE tablename = 'hats';
+ tablename |  rulename  |                                                               definition                                                                
+-----------+------------+-----------------------------------------------------------------------------------------------------------------------------------------
+ hats      | hat_upsert | CREATE RULE hat_upsert AS                                                                                                              +
+           |            |     ON INSERT TO hats DO INSTEAD  INSERT INTO hat_data (hat_name, hat_color)                                                           +
+           |            |   VALUES (new.hat_name, new.hat_color) ON CONFLICT(hat_name) DO UPDATE SET hat_name = hat_data.hat_name, hat_color = excluded.hat_color+
+           |            |   WHERE (excluded.hat_color <> 'forbidden'::bpchar)                                                                                    +
+           |            |   RETURNING hat_data.hat_name,                                                                                                         +
+           |            |     hat_data.hat_color;
+(1 row)
+
+-- ensure explain works for on insert conflict rules
+explain (costs off) INSERT INTO hats VALUES ('h8', 'forbidden') RETURNING *;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Insert on hat_data
+   Conflict Resolution: UPDATE
+   Conflict Arbiter Indexes: hat_data_unique_idx
+   Conflict Filter: (excluded.hat_color <> 'forbidden'::bpchar)
+   ->  Result
+(5 rows)
+
+-- ensure upserting into a rule, with a CTE (different offsets!) works
+WITH data(hat_name, hat_color) AS (
+    VALUES ('h8', 'green'),
+        ('h9', 'blue'),
+        ('h7', 'forbidden')
+)
+INSERT INTO hats
+    SELECT * FROM data
+RETURNING *;
+  hat_name  | hat_color  
+------------+------------
+ h8         | green     
+ h9         | blue      
+(2 rows)
+
+EXPLAIN (costs off) WITH data(hat_name, hat_color) AS (
+    VALUES ('h8', 'green'),
+        ('h9', 'blue'),
+        ('h7', 'forbidden')
+)
+INSERT INTO hats
+    SELECT * FROM data
+RETURNING *;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Insert on hat_data
+   Conflict Resolution: UPDATE
+   Conflict Arbiter Indexes: hat_data_unique_idx
+   Conflict Filter: (excluded.hat_color <> 'forbidden'::bpchar)
+   CTE data
+     ->  Values Scan on "*VALUES*"
+   ->  CTE Scan on data
+(7 rows)
+
+SELECT * FROM hat_data WHERE hat_name IN ('h8', 'h9', 'h7') ORDER BY hat_name;
+  hat_name  | hat_color  
+------------+------------
+ h7         | black     
+ h8         | green     
+ h9         | blue      
+(3 rows)
+
+DROP RULE hat_upsert ON hats;
+drop table hats;
+drop table hat_data;
+
+-- test rule for select-for-update
+create table t_test_rules_select_for_update (c int) distributed randomly;
+create rule myrule as on insert to t_test_rules_select_for_update
+do instead select * from t_test_rules_select_for_update for update;

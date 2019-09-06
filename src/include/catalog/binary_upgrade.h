@@ -4,7 +4,7 @@
  *	  variables used for binary upgrades
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/binary_upgrade.h
@@ -13,6 +13,11 @@
  */
 #ifndef BINARY_UPGRADE_H
 #define BINARY_UPGRADE_H
+
+#include "catalog/pg_authid.h"
+
+/* pick a OID that will never be used for TOAST tables */
+#define OPTIONALLY_CREATE_TOAST_OID BOOTSTRAP_SUPERUSERID
 
 extern PGDLLIMPORT Oid binary_upgrade_next_pg_type_oid;
 extern PGDLLIMPORT Oid binary_upgrade_next_array_pg_type_oid;

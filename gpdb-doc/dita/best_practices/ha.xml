@@ -130,7 +130,7 @@
         work, so performance can be degraded until the balance is restored by recovering the
         original primary. </p>
       <p>Administrators perform the recovery while Greenplum Database is up and running by running
-        the <codeph>gprecoverseg</codeph> utility.This utility locates the failed segments, verifies
+        the <codeph>gprecoverseg</codeph> utility. This utility locates the failed segments, verifies
         they are valid, and compares the transactional state with the currently active segment to
         determine changes made while the segment was offline. <codeph>gprecoverseg</codeph>
         synchronizes the changed database files with the active segment and brings the segment back
@@ -250,8 +250,8 @@
         case, the failed component must be replaced or recovered to restore full redundancy. Until
         the failed component is recovered, the active component lacks a standby, and the system may
         not be executing optimally. For these reasons, it is important to perform recovery
-        operations promptly. Constant system monitoring and automated fault notifications through
-        SNMP and email ensure that administrators are aware of failures that demand their attention. </p>
+        operations promptly. Constant system monitoring ensures that administrators are aware of
+        failures that demand their attention. </p>
       <p>The Greenplum Database server <codeph>ftsprobe</codeph> subprocess handles fault detection.
           <codeph>ftsprobe</codeph> connects to and scans all segments and database processes at
         intervals that you can configure with the <codeph>gp_fts_probe_interval</codeph>
@@ -316,7 +316,8 @@
         </ul></p>
       <p>You can design a custom mirroring configuration and use the Greenplum <codeph><xref
             href="../utility_guide/admin_utilities/gpaddmirrors.xml">gpaddmirrors</xref></codeph> or
-          <codeph>gpmovemirrors</codeph> utilities to set up the configuration.</p>
+          <xref href="../utility_guide/admin_utilities/gpmovemirrors.xml">gpaddmirrors</xref>
+        utilities to set up the configuration.</p>
       <p><i>Block mirroring</i> is a custom mirror configuration that divides hosts in the cluster
         into equally sized blocks and distributes mirrors evenly to hosts within the block. If a
         primary segment fails, its mirror on another host within the same block becomes the active
@@ -420,21 +421,21 @@
           <li>Create an input file for the <codeph>gpmovemirrors</codeph> utility with an entry for
             each mirror that must be moved.<p>The <codeph>gpmovemirrors</codeph> input file has the
               following
-              format:<codeblock><varname>contentID</varname>:<varname>address</varname>:<varname>port</varname>:<varname>data_dir</varname> <varname>new_address</varname>:<varname>port</varname>:<varname>data_dir</varname></codeblock></p>Where
+              format:<codeblock><varname>contentID</varname>|<varname>address</varname>|<varname>port</varname>|<varname>data_dir</varname> <varname>new_address</varname>|<varname>port</varname>|<varname>data_dir</varname></codeblock></p>Where
               <varname>contentID</varname> is the segment instance content ID,
               <varname>address</varname> is the host name or IP address of the segment host,
               <varname>port</varname> is the communication port, and <codeph>data_dir</codeph> is
             the segment instance data directory.<p>The following example
                 <codeph>gpmovemirrors</codeph> input file specifies three mirror segments to move.
-              <codeblock>1:sdw2:50001:/data2/mirror/gpseg1 sdw3:50001:/data/mirror/gpseg1
-2:sdw2:50001:/data2/mirror/gpseg2 sdw4:50001:/data/mirror/gpseg2
-3:sdw3:50001:/data2/mirror/gpseg3 sdw1:50001:/data/mirror/gpseg3
+              <codeblock>1|sdw2|50001|/data2/mirror/gpseg1 sdw3|50001|/data/mirror/gpseg1
+2|sdw2|50001|/data2/mirror/gpseg2 sdw4|50001|/data/mirror/gpseg2
+3|sdw3|50001|/data2/mirror/gpseg3 sdw1|50001|/data/mirror/gpseg3
 </codeblock></p></li>
           <li>Run <codeph>gpmovemirrors</codeph> with a command like the
             following:<codeblock>gpmovemirrors -i <varname>mirror_config_file</varname></codeblock></li>
         </ol>
         <p>The <codeph>gpmovemirrors</codeph> utility validates the input file, calls
-            <codeph>gp_recoverseg</codeph> to relocate each specified mirror, and removes the
+            <codeph>gprecoverseg</codeph> to relocate each specified mirror, and removes the
           original mirror. It creates a backout configuration file which can be used as input to
             <codeph>gpmovemirrors</codeph> to undo the changes that were made. The backout file has
           the same name as the input file, with the suffix

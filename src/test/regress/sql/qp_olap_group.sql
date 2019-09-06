@@ -24,7 +24,7 @@ GROUP BY CUBE((sale.cn,sale.prc),(sale.vn),(sale.prc),(sale.cn)),CUBE((sale.cn,s
 SELECT DISTINCT sale.vn,sale.dt,sale.prc, TO_CHAR(COALESCE(STDDEV_SAMP(floor(sale.pn+sale.vn)),0),'99999999.9999999') 
 FROM sale,vendor
 WHERE sale.vn=vendor.vn
-GROUP BY GROUPING SETS(CUBE((sale.pn),(sale.dt,sale.qty),(sale.vn,sale.vn,sale.cn),(sale.cn),(sale.pn,sale.vn))),ROLLUP((sale.cn,sale.dt,sale.prc),(sale.pn,sale.pn,sale.cn),(sale.dt,sale.vn,sale.pn),(sale.dt,sale.cn),(sale.dt,sale.prc,sale.pn),(sale.vn,sale.qty)),CUBE((sale.vn,sale.cn),(sale.qty,sale.prc),(sale.qty),(sale.cn,sale.vn),(sale.vn,sale.cn),(sale.qty,sale.cn));
+GROUP BY GROUPING SETS(CUBE((sale.pn),(sale.dt,sale.qty),(sale.vn,sale.vn,sale.cn),(sale.cn),(sale.pn,sale.vn))),ROLLUP((sale.cn,sale.dt,sale.prc),(sale.pn,sale.pn,sale.cn),(sale.dt,sale.vn,sale.pn),(sale.dt,sale.cn),(sale.dt,sale.prc,sale.pn),(sale.vn,sale.qty)),CUBE((sale.vn,sale.cn),(sale.qty,sale.prc),(sale.qty),(sale.cn,sale.vn));
 
 -- ###### Queries involving SUM() function ###### --
 

@@ -9,7 +9,7 @@
  * and implementing search-path-controlled searches.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -26,7 +26,9 @@
 #include "catalog/namespace.h"
 #include "catalog/oid_dispatch.h"
 #include "access/htup_details.h"
+#include "access/parallel.h"
 #include "access/xact.h"
+#include "access/xlog.h"
 #include "catalog/dependency.h"
 #include "catalog/objectaccess.h"
 #include "catalog/pg_authid.h"
@@ -273,9 +275,9 @@ RangeVarGetRelidExtended(const RangeVar *relation, LOCKMODE lockmode,
 	 * with the answer changing under them, or that they already hold some
 	 * appropriate lock, and therefore return the first answer we get without
 	 * checking for invalidation messages.  Also, if the requested lock is
-	 * already held, no LockRelationOid will not AcceptInvalidationMessages,
-	 * so we may fail to notice a change.  We could protect against that case
-	 * by calling AcceptInvalidationMessages() before beginning this loop, but
+	 * already held, LockRelationOid will not AcceptInvalidationMessages, so
+	 * we may fail to notice a change.  We could protect against that case by
+	 * calling AcceptInvalidationMessages() before beginning this loop, but
 	 * that would add a significant amount overhead, so for now we don't.
 	 */
 	for (;;)
@@ -515,7 +517,7 @@ RangeVarGetCreationNamespace(const RangeVar *newRelation)
  * the same name which already exists in that namespace, or to InvalidOid if
  * no such relation exists.
  *
- * If lockmode != NoLock, the specified lock mode is acquire on the existing
+ * If lockmode != NoLock, the specified lock mode is acquired on the existing
  * relation, if any, provided that the current user owns the target relation.
  * However, if lockmode != NoLock and the user does not own the target
  * relation, we throw an ERROR, as we must not try to lock relations the
@@ -642,7 +644,7 @@ RangeVarAdjustRelationPersistence(RangeVar *newRelation, Oid nspid)
 	switch (newRelation->relpersistence)
 	{
 		case RELPERSISTENCE_TEMP:
-			if (!isTempOrToastNamespace(nspid))
+			if (!isTempOrTempToastNamespace(nspid))
 			{
 				if (isAnyTempNamespace(nspid))
 					ereport(ERROR,
@@ -655,7 +657,7 @@ RangeVarAdjustRelationPersistence(RangeVar *newRelation, Oid nspid)
 			}
 			break;
 		case RELPERSISTENCE_PERMANENT:
-			if (isTempOrToastNamespace(nspid))
+			if (isTempOrTempToastNamespace(nspid))
 				newRelation->relpersistence = RELPERSISTENCE_TEMP;
 			else if (isAnyTempNamespace(nspid))
 				ereport(ERROR,
@@ -1129,8 +1131,8 @@ FuncnameGetCandidates(List *names, int nargs, List *argnames,
 		 */
 		effective_nargs = Max(pronargs, nargs);
 		newResult = (FuncCandidateList)
-			palloc(sizeof(struct _FuncCandidateList) - sizeof(Oid)
-				   + effective_nargs * sizeof(Oid));
+			palloc(offsetof(struct _FuncCandidateList, args) +
+				   effective_nargs * sizeof(Oid));
 		newResult->pathpos = pathpos;
 		newResult->oid = HeapTupleGetOid(proctup);
 		newResult->nargs = effective_nargs;
@@ -1651,7 +1653,8 @@ OpernameGetCandidates(List *names, char oprkind, bool missing_schema_ok)
 	 * separate palloc for each operator, but profiling revealed that the
 	 * pallocs used an unreasonably large fraction of parsing time.
 	 */
-#define SPACE_PER_OP MAXALIGN(sizeof(struct _FuncCandidateList) + sizeof(Oid))
+#define SPACE_PER_OP MAXALIGN(offsetof(struct _FuncCandidateList, args) + \
+							  2 * sizeof(Oid))
 
 	if (catlist->n_members > 0)
 		resultSpace = palloc(catlist->n_members * SPACE_PER_OP);
@@ -3003,7 +3006,7 @@ NameListToString(List *names)
 		if (IsA(name, String))
 			appendStringInfoString(&string, strVal(name));
 		else if (IsA(name, A_Star))
-			appendStringInfoString(&string, "*");
+			appendStringInfoChar(&string, '*');
 		else
 			elog(ERROR, "unexpected node type in name list: %d",
 				 (int) nodeTag(name));
@@ -3072,11 +3075,11 @@ isTempToastNamespace(Oid namespaceId)
 }
 
 /*
- * isTempOrToastNamespace - is the given namespace my temporary-table
+ * isTempOrTempToastNamespace - is the given namespace my temporary-table
  *		namespace or my temporary-toast-table namespace?
  */
 bool
-isTempOrToastNamespace(Oid namespaceId)
+isTempOrTempToastNamespace(Oid namespaceId)
 {
 	if (OidIsValid(myTempNamespace) &&
 	 (myTempNamespace == namespaceId || myTempToastNamespace == namespaceId))
@@ -3122,7 +3125,7 @@ bool
 isOtherTempNamespace(Oid namespaceId)
 {
 	/* If it's my own temp namespace, say "false" */
-	if (isTempOrToastNamespace(namespaceId))
+	if (isTempOrTempToastNamespace(namespaceId))
 		return false;
 	/* Else, if it's any temp namespace, say "true" */
 	return isAnyTempNamespace(namespaceId);
@@ -3230,20 +3233,44 @@ CopyOverrideSearchPath(OverrideSearchPath *path)
 bool
 OverrideSearchPathMatchesCurrent(OverrideSearchPath *path)
 {
-	/* Easiest way to do this is GetOverrideSearchPath() and compare */
-	bool		result;
-	OverrideSearchPath *cur;
+	ListCell   *lc,
+			   *lcp;
 
-	cur = GetOverrideSearchPath(CurrentMemoryContext);
-	if (path->addCatalog == cur->addCatalog &&
-		path->addTemp == cur->addTemp &&
-		equal(path->schemas, cur->schemas))
-		result = true;
-	else
-		result = false;
-	list_free(cur->schemas);
-	pfree(cur);
-	return result;
+	recomputeNamespacePath();
+
+	/* We scan down the activeSearchPath to see if it matches the input. */
+	lc = list_head(activeSearchPath);
+
+	/* If path->addTemp, first item should be my temp namespace. */
+	if (path->addTemp)
+	{
+		if (lc && lfirst_oid(lc) == myTempNamespace)
+			lc = lnext(lc);
+		else
+			return false;
+	}
+	/* If path->addCatalog, next item should be pg_catalog. */
+	if (path->addCatalog)
+	{
+		if (lc && lfirst_oid(lc) == PG_CATALOG_NAMESPACE)
+			lc = lnext(lc);
+		else
+			return false;
+	}
+	/* We should now be looking at the activeCreationNamespace. */
+	if (activeCreationNamespace != (lc ? lfirst_oid(lc) : InvalidOid))
+		return false;
+	/* The remainder of activeSearchPath should match path->schemas. */
+	foreach(lcp, path->schemas)
+	{
+		if (lc && lfirst_oid(lc) == lfirst_oid(lcp))
+			lc = lnext(lc);
+		else
+			return false;
+	}
+	if (lc)
+		return false;
+	return true;
 }
 
 /*
@@ -3743,6 +3770,12 @@ InitTempTableNamespace(void)
 				(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
 				 errmsg("cannot create temporary tables during recovery")));
 
+	/* Parallel workers can't create temporary tables, either. */
+	if (IsParallelWorker())
+		ereport(ERROR,
+				(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
+				 errmsg("cannot create temporary tables in parallel mode")));
+
 	snprintf(namespaceName, sizeof(namespaceName), "pg_temp_%d", session_suffix);
 
 	namespaceId = get_namespace_oid(namespaceName, true);
@@ -3920,7 +3953,7 @@ ResetTempNamespace(void)
  * End-of-transaction cleanup for namespaces.
  */
 void
-AtEOXact_Namespace(bool isCommit)
+AtEOXact_Namespace(bool isCommit, bool parallel)
 {
 	/*
 	 * If we abort the transaction in which a temp namespace was selected,
@@ -3930,7 +3963,7 @@ AtEOXact_Namespace(bool isCommit)
 	 * at backend shutdown.  (We only want to register the callback once per
 	 * session, so this is a good place to do it.)
 	 */
-	if (myTempNamespaceSubID != InvalidSubTransactionId)
+	if (myTempNamespaceSubID != InvalidSubTransactionId && !parallel)
 	{
 		if (isCommit)
 			before_shmem_exit(RemoveTempRelationsCallback, 0);

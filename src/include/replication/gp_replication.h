@@ -22,6 +22,6 @@ extern void GetMirrorStatus(FtsResponse *response);
 extern void SetSyncStandbysDefined(void);
 extern void UnsetSyncStandbysDefined(void);
 
-extern Datum gp_replication_error(PG_FUNCTION_ARGS __attribute__((unused)) );
+extern Datum gp_replication_error(PG_FUNCTION_ARGS pg_attribute_unused() );
 
 #endif

@@ -3,7 +3,7 @@
  * standbydesc.c
  *	  rmgr descriptor routines for storage/ipc/standby.c
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -21,7 +21,7 @@ standby_desc_running_xacts(StringInfo buf, xl_running_xacts *xlrec)
 {
 	int			i;
 
-	appendStringInfo(buf, " nextXid %u latestCompletedXid %u oldestRunningXid %u",
+	appendStringInfo(buf, "nextXid %u latestCompletedXid %u oldestRunningXid %u",
 					 xlrec->nextXid,
 					 xlrec->latestCompletedXid,
 					 xlrec->oldestRunningXid);
@@ -37,20 +37,18 @@ standby_desc_running_xacts(StringInfo buf, xl_running_xacts *xlrec)
 }
 
 void
-standby_desc(StringInfo buf, XLogRecord *record)
+standby_desc(StringInfo buf, XLogReaderState *record)
 {
-	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 	char	   *rec = XLogRecGetData(record);
+	uint8		info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
 
 	if (info == XLOG_STANDBY_LOCK)
 	{
 		xl_standby_locks *xlrec = (xl_standby_locks *) rec;
 		int			i;
 
-		appendStringInfoString(buf, "AccessExclusive locks:");
-
 		for (i = 0; i < xlrec->nlocks; i++)
-			appendStringInfo(buf, " xid %u db %u rel %u",
+			appendStringInfo(buf, "xid %u db %u rel %u ",
 							 xlrec->locks[i].xid, xlrec->locks[i].dbOid,
 							 xlrec->locks[i].relOid);
 	}
@@ -58,9 +56,24 @@ standby_desc(StringInfo buf, XLogRecord *record)
 	{
 		xl_running_xacts *xlrec = (xl_running_xacts *) rec;
 
-		appendStringInfoString(buf, "running xacts:");
 		standby_desc_running_xacts(buf, xlrec);
 	}
-	else
-		appendStringInfoString(buf, "UNKNOWN");
+}
+
+const char *
+standby_identify(uint8 info)
+{
+	const char *id = NULL;
+
+	switch (info & ~XLR_INFO_MASK)
+	{
+		case XLOG_STANDBY_LOCK:
+			id = "LOCK";
+			break;
+		case XLOG_RUNNING_XACTS:
+			id = "RUNNING_XACTS";
+			break;
+	}
+
+	return id;
 }

@@ -2,7 +2,7 @@
  *
  *	  LATINn and MULE_INTERNAL
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -23,13 +23,6 @@ PG_FUNCTION_INFO_V1(latin3_to_mic);
 PG_FUNCTION_INFO_V1(mic_to_latin3);
 PG_FUNCTION_INFO_V1(latin4_to_mic);
 PG_FUNCTION_INFO_V1(mic_to_latin4);
-
-extern Datum latin1_to_mic(PG_FUNCTION_ARGS);
-extern Datum mic_to_latin1(PG_FUNCTION_ARGS);
-extern Datum latin3_to_mic(PG_FUNCTION_ARGS);
-extern Datum mic_to_latin3(PG_FUNCTION_ARGS);
-extern Datum latin4_to_mic(PG_FUNCTION_ARGS);
-extern Datum mic_to_latin4(PG_FUNCTION_ARGS);
 
 /* ----------
  * conv_proc(

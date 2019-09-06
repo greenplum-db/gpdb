@@ -3,7 +3,7 @@
  * parse_expr.c
  *	  handle expressions in parser
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -22,6 +22,7 @@
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
+#include "optimizer/tlist.h"
 #include "optimizer/var.h"
 #include "parser/analyze.h"
 #include "parser/parse_agg.h"
@@ -34,6 +35,7 @@
 #include "parser/parse_relation.h"
 #include "parser/parse_target.h"
 #include "parser/parse_type.h"
+#include "parser/parse_agg.h"
 #include "rewrite/rewriteManip.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
@@ -42,21 +44,68 @@
 #include "cdb/cdbhash.h"
 
 
+/* GUC parameters */
+bool		operator_precedence_warning = false;
 bool		Transform_null_equals = false;
+
+/*
+ * Node-type groups for operator precedence warnings
+ * We use zero for everything not otherwise classified
+ */
+#define PREC_GROUP_POSTFIX_IS	1		/* postfix IS tests (NullTest, etc) */
+#define PREC_GROUP_INFIX_IS		2		/* infix IS (IS DISTINCT FROM, etc) */
+#define PREC_GROUP_LESS			3		/* < > */
+#define PREC_GROUP_EQUAL		4		/* = */
+#define PREC_GROUP_LESS_EQUAL	5		/* <= >= <> */
+#define PREC_GROUP_LIKE			6		/* LIKE ILIKE SIMILAR */
+#define PREC_GROUP_BETWEEN		7		/* BETWEEN */
+#define PREC_GROUP_IN			8		/* IN */
+#define PREC_GROUP_NOT_LIKE		9		/* NOT LIKE/ILIKE/SIMILAR */
+#define PREC_GROUP_NOT_BETWEEN	10		/* NOT BETWEEN */
+#define PREC_GROUP_NOT_IN		11		/* NOT IN */
+#define PREC_GROUP_POSTFIX_OP	12		/* generic postfix operators */
+#define PREC_GROUP_INFIX_OP		13		/* generic infix operators */
+#define PREC_GROUP_PREFIX_OP	14		/* generic prefix operators */
+
+/*
+ * Map precedence groupings to old precedence ordering
+ *
+ * Old precedence order:
+ * 1. NOT
+ * 2. =
+ * 3. < >
+ * 4. LIKE ILIKE SIMILAR
+ * 5. BETWEEN
+ * 6. IN
+ * 7. generic postfix Op
+ * 8. generic Op, including <= => <>
+ * 9. generic prefix Op
+ * 10. IS tests (NullTest, BooleanTest, etc)
+ *
+ * NOT BETWEEN etc map to BETWEEN etc when considered as being on the left,
+ * but to NOT when considered as being on the right, because of the buggy
+ * precedence handling of those productions in the old grammar.
+ */
+static const int oldprecedence_l[] = {
+	0, 10, 10, 3, 2, 8, 4, 5, 6, 4, 5, 6, 7, 8, 9
+};
+static const int oldprecedence_r[] = {
+	0, 10, 10, 3, 2, 8, 4, 5, 6, 1, 1, 1, 7, 8, 9
+};
 
 static Node *transformExprRecurse(ParseState *pstate, Node *expr);
 static Node *transformParamRef(ParseState *pstate, ParamRef *pref);
 static Node *transformAExprOp(ParseState *pstate, A_Expr *a);
-static Node *transformAExprAnd(ParseState *pstate, A_Expr *a);
-static Node *transformAExprOr(ParseState *pstate, A_Expr *a);
-static Node *transformAExprNot(ParseState *pstate, A_Expr *a);
 static Node *transformAExprOpAny(ParseState *pstate, A_Expr *a);
 static Node *transformAExprOpAll(ParseState *pstate, A_Expr *a);
 static Node *transformAExprDistinct(ParseState *pstate, A_Expr *a);
 static Node *transformAExprNullIf(ParseState *pstate, A_Expr *a);
 static Node *transformAExprOf(ParseState *pstate, A_Expr *a);
 static Node *transformAExprIn(ParseState *pstate, A_Expr *a);
+static Node *transformAExprBetween(ParseState *pstate, A_Expr *a);
+static Node *transformBoolExpr(ParseState *pstate, BoolExpr *a);
 static Node *transformFuncCall(ParseState *pstate, FuncCall *fn);
+static Node *transformMultiAssignRef(ParseState *pstate, MultiAssignRef *maref);
 static Node *transformCaseExpr(ParseState *pstate, CaseExpr *c);
 static Node *transformSubLink(ParseState *pstate, SubLink *sublink);
 static Node *transformArrayExpr(ParseState *pstate, A_ArrayExpr *a,
@@ -74,7 +123,6 @@ static Node *transformWholeRowRef(ParseState *pstate, RangeTblEntry *rte,
 					 int location);
 static Node *transformIndirection(ParseState *pstate, Node *basenode,
 					 List *indirection);
-static Node *transformGroupingFunc(ParseState *pstate, GroupingFunc *gf);
 static Node *transformTypeCast(ParseState *pstate, TypeCast *tc);
 static Node *transformCollateClause(ParseState *pstate, CollateClause *c);
 static Node *make_row_comparison_op(ParseState *pstate, List *opname,
@@ -83,34 +131,19 @@ static Node *make_row_distinct_op(ParseState *pstate, List *opname,
 					 RowExpr *lrow, RowExpr *rrow, int location);
 static Expr *make_distinct_op(ParseState *pstate, List *opname,
 				 Node *ltree, Node *rtree, int location);
+static int	operator_precedence_group(Node *node, const char **nodename);
+static void emit_precedence_warnings(ParseState *pstate,
+						 int opgroup, const char *opname,
+						 Node *lchild, Node *rchild,
+						 int location);
 static bool isWhenIsNotDistinctFromExpr(Node *warg);
 
 
 /*
  * transformExpr -
  *	  Analyze and transform expressions. Type checking and type casting is
- *	  done here. The optimizer and the executor cannot handle the original
- *	  (raw) expressions collected by the parse tree. Hence the transformation
- *	  here.
- *
- * NOTE: there are various cases in which this routine will get applied to
- * an already-transformed expression.  Some examples:
- *	1. At least one construct (BETWEEN/AND) puts the same nodes
- *	into two branches of the parse tree; hence, some nodes
- *	are transformed twice.
- *	2. Another way it can happen is that coercion of an operator or
- *	function argument to the required type (via coerce_type())
- *	can apply transformExpr to an already-transformed subexpression.
- *	An example here is "SELECT count(*) + 1.0 FROM table".
- *	3. CREATE TABLE t1 (LIKE t2 INCLUDING INDEXES) can pass in
- *	already-transformed index expressions.
- * While it might be possible to eliminate these cases, the path of
- * least resistance so far has been to ensure that transformExpr() does
- * no damage if applied to an already-transformed tree.  This is pretty
- * easy for cases where the transformation replaces one node type with
- * another, such as A_Const => Const; we just do nothing when handed
- * a Const.  More care is needed for node types that are used as both
- * input and output of transformExpr; see SubLink for example.
+ *	  done here.  This processing converts the raw grammar output into
+ *	  expression trees with fully determined semantics.
  */
 Node *
 transformExpr(ParseState *pstate, Node *expr, ParseExprKind exprKind)
@@ -176,48 +209,8 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 			break;
 
 		case T_TypeCast:
-			{
-				TypeCast   *tc = (TypeCast *) expr;
-
-				/*
-				 * If the subject of the typecast is an ARRAY[] construct and
-				 * the target type is an array type, we invoke
-				 * transformArrayExpr() directly so that we can pass down the
-				 * type information.  This avoids some cases where
-				 * transformArrayExpr() might not infer the correct type.
-				 */
-				if (IsA(tc->arg, A_ArrayExpr))
-				{
-					Oid			targetType;
-					Oid			elementType;
-					int32		targetTypmod;
-
-					typenameTypeIdAndMod(pstate, tc->typeName,
-										 &targetType, &targetTypmod);
-
-					/*
-					 * If target is a domain over array, work with the base
-					 * array type here.  transformTypeCast below will cast the
-					 * array type to the domain.  In the usual case that the
-					 * target is not a domain, transformTypeCast is a no-op.
-					 */
-					targetType = getBaseTypeAndTypmod(targetType,
-													  &targetTypmod);
-					elementType = get_element_type(targetType);
-					if (OidIsValid(elementType))
-					{
-						tc = copyObject(tc);
-						tc->arg = transformArrayExpr(pstate,
-													 (A_ArrayExpr *) tc->arg,
-													 targetType,
-													 elementType,
-													 targetTypmod);
-					}
-				}
-
-				result = transformTypeCast(pstate, tc);
-				break;
-			}
+			result = transformTypeCast(pstate, (TypeCast *) expr);
+			break;
 
 		case T_CollateClause:
 			result = transformCollateClause(pstate, (CollateClause *) expr);
@@ -231,15 +224,6 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 				{
 					case AEXPR_OP:
 						result = transformAExprOp(pstate, a);
-						break;
-					case AEXPR_AND:
-						result = transformAExprAnd(pstate, a);
-						break;
-					case AEXPR_OR:
-						result = transformAExprOr(pstate, a);
-						break;
-					case AEXPR_NOT:
-						result = transformAExprNot(pstate, a);
 						break;
 					case AEXPR_OP_ANY:
 						result = transformAExprOpAny(pstate, a);
@@ -259,6 +243,21 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 					case AEXPR_IN:
 						result = transformAExprIn(pstate, a);
 						break;
+					case AEXPR_LIKE:
+					case AEXPR_ILIKE:
+					case AEXPR_SIMILAR:
+						/* we can transform these just like AEXPR_OP */
+						result = transformAExprOp(pstate, a);
+						break;
+					case AEXPR_BETWEEN:
+					case AEXPR_NOT_BETWEEN:
+					case AEXPR_BETWEEN_SYM:
+					case AEXPR_NOT_BETWEEN_SYM:
+						result = transformAExprBetween(pstate, a);
+						break;
+					case AEXPR_PAREN:
+						result = transformExprRecurse(pstate, a->lexpr);
+						break;
 					default:
 						elog(ERROR, "unrecognized A_Expr kind: %d", a->kind);
 						result = NULL;	/* keep compiler quiet */
@@ -267,8 +266,24 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 				break;
 			}
 
+		case T_BoolExpr:
+			result = transformBoolExpr(pstate, (BoolExpr *) expr);
+			break;
+
 		case T_FuncCall:
 			result = transformFuncCall(pstate, (FuncCall *) expr);
+			break;
+
+		case T_MultiAssignRef:
+			result = transformMultiAssignRef(pstate, (MultiAssignRef *) expr);
+			break;
+
+		case T_GroupingFunc:
+			result = transformGroupingFunc(pstate, (GroupingFunc *) expr);
+			break;
+
+		case T_GroupId:
+			result = transformGroupId(pstate, (GroupId *) expr);
 			break;
 
 		case T_NamedArgExpr:
@@ -316,6 +331,11 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 			{
 				NullTest   *n = (NullTest *) expr;
 
+				if (operator_precedence_warning)
+					emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS",
+											 (Node *) n->arg, NULL,
+											 n->location);
+
 				n->arg = (Expr *) transformExprRecurse(pstate, (Node *) n->arg);
 				/* the argument can be any type, so don't coerce it */
 				n->argisrow = type_is_rowtype(exprType((Node *) n->arg));
@@ -330,13 +350,6 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 		case T_CurrentOfExpr:
 			result = transformCurrentOfExpr(pstate, (CurrentOfExpr *) expr);
 			break;
-
-		case T_GroupingFunc:
-			{
-				GroupingFunc *gf = (GroupingFunc *)expr;
-				result = transformGroupingFunc(pstate, gf);
-				break;
-			}
 
 		case T_PartitionBoundSpec:
 			{
@@ -403,96 +416,30 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 			}
 			break;
 
-			case T_ReshuffleExpr:
-			{
-				ReshuffleExpr *sr = (ReshuffleExpr *)expr;
-				Oid			relid;
-				int			i;
-
-				GpPolicy   *policy;
-				Relation	rel;
-				TupleDesc	desc;
-				int			rtidx;
-
-				if(NULL == pstate->p_target_rangetblentry)
-					elog(ERROR, "we only use this expression in the UPDATE");
-
-				rtidx = RTERangeTablePosn(pstate,
-										  pstate->p_target_rangetblentry,
-										  NULL);
-
-				relid = pstate->p_target_rangetblentry->relid;
-
-				policy = GpPolicyFetch(relid);
-
-				/*
-				 * Now we can assume that the relation was locked because
-				 * this expression only used in the Alter table statement.
-				 * ReshuffleExpr is an internal expression which users can
-				 * not use it directly, so NoLock seems good now.
-				 */
-				rel = heap_open(relid, NoLock);
-				desc = rel->rd_att;
-
-				for(i = 0; i < policy->nattrs; i++)
-				{
-					AttrNumber	attrnum = policy->attrs[i];
-					Oid			opclass = policy->opclasses[i];
-					Oid			hashfunc;
-					Var		   *var;
-
-					var = makeVar(rtidx,
-								  attrnum,
-								  desc->attrs[attrnum - 1]->atttypid,
-								  desc->attrs[attrnum - 1]->atttypmod,
-								  0,
-								  0);
-
-					hashfunc = cdb_hashproc_in_opfamily(get_opclass_family(opclass),
-														var->vartype);
-
-					sr->hashKeys = lappend(sr->hashKeys, var);
-					sr->hashFuncs = lappend_oid(sr->hashFuncs, hashfunc);
-				}
-				result = (Node*)sr;
-
-				heap_close(rel, NoLock);
-			}
-			break;
-
-			/*********************************************
-			 * Quietly accept node types that may be presented when we are
-			 * called on an already-transformed tree.
+			/*
+			 * CaseTestExpr and SetToDefault don't require any processing;
+			 * they are only injected into parse trees in fully-formed state.
 			 *
-			 * Do any other node types need to be accepted?  For now we are
-			 * taking a conservative approach, and only accepting node
-			 * types that are demonstrably necessary to accept.
-			 *********************************************/
-		case T_Var:
-		case T_Const:
-		case T_Param:
-		case T_Aggref:
-		case T_ArrayRef:
-		case T_FuncExpr:
-		case T_OpExpr:
-		case T_DistinctExpr:
-		case T_NullIfExpr:
-		case T_ScalarArrayOpExpr:
-		case T_BoolExpr:
-		case T_FieldSelect:
-		case T_FieldStore:
-		case T_RelabelType:
-		case T_CoerceViaIO:
-		case T_ArrayCoerceExpr:
-		case T_ConvertRowtypeExpr:
-		case T_CollateExpr:
+			 * Ordinarily we should not see a Var here, but it is convenient
+			 * for transformJoinUsingClause() to create untransformed operator
+			 * trees containing already-transformed Vars.  The best
+			 * alternative would be to deconstruct and reconstruct column
+			 * references, which seems expensively pointless.  So allow it.
+			 */
 		case T_CaseTestExpr:
-		case T_ArrayExpr:
+		case T_SetToDefault:
+		/*
+		 * AlterPartitionCmd still transform a already-transformed expression
+		 * and re-transform expressions in many places, better to keep T_Const here. 
+		 */
+		case T_Const:
+		/*
+		 * DefineDomain() dispatch a already-transformed statement to the QEs and
+		 * QEs will re-transform the T_CoerceToDomain/T_CoerceToDomainValue again.
+		 */
 		case T_CoerceToDomain:
 		case T_CoerceToDomainValue:
-		case T_SetToDefault:
-		case T_GroupId:
-		case T_Integer:
+		case T_Var:
 			{
 				result = (Node *) expr;
 				break;
@@ -766,7 +713,8 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
 				colname = strVal(field2);
 
 				/* Try to identify as a column of the RTE */
-				node = scanRTEForColumn(pstate, rte, colname, cref->location);
+				node = scanRTEForColumn(pstate, rte, colname, cref->location,
+										0, NULL);
 				if (node == NULL)
 				{
 					/* Try it as a function call on the whole row */
@@ -811,7 +759,8 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
 				colname = strVal(field3);
 
 				/* Try to identify as a column of the RTE */
-				node = scanRTEForColumn(pstate, rte, colname, cref->location);
+				node = scanRTEForColumn(pstate, rte, colname, cref->location,
+										0, NULL);
 				if (node == NULL)
 				{
 					/* Try it as a function call on the whole row */
@@ -869,7 +818,8 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
 				colname = strVal(field4);
 
 				/* Try to identify as a column of the RTE */
-				node = scanRTEForColumn(pstate, rte, colname, cref->location);
+				node = scanRTEForColumn(pstate, rte, colname, cref->location,
+										0, NULL);
 				if (node == NULL)
 				{
 					/* Try it as a function call on the whole row */
@@ -989,6 +939,18 @@ transformAExprOp(ParseState *pstate, A_Expr *a)
 	Node	   *rexpr = a->rexpr;
 	Node	   *result;
 
+	if (operator_precedence_warning)
+	{
+		int			opgroup;
+		const char *opname;
+
+		opgroup = operator_precedence_group((Node *) a, &opname);
+		if (opgroup > 0)
+			emit_precedence_warnings(pstate, opgroup, opname,
+									 lexpr, rexpr,
+									 a->location);
+	}
+
 	/*
 	 * Special-case "foo = NULL" and "NULL = foo" for compatibility with
 	 * standards-broken products (like Microsoft's).  Turn these into IS NULL
@@ -1005,6 +967,7 @@ transformAExprOp(ParseState *pstate, A_Expr *a)
 		NullTest   *n = makeNode(NullTest);
 
 		n->nulltesttype = IS_NULL;
+		n->location = a->location;
 
 		if (exprIsNullConstant(lexpr))
 			n->arg = (Expr *) rexpr;
@@ -1062,50 +1025,19 @@ transformAExprOp(ParseState *pstate, A_Expr *a)
 }
 
 static Node *
-transformAExprAnd(ParseState *pstate, A_Expr *a)
-{
-	Node	   *lexpr = transformExprRecurse(pstate, a->lexpr);
-	Node	   *rexpr = transformExprRecurse(pstate, a->rexpr);
-
-	lexpr = coerce_to_boolean(pstate, lexpr, "AND");
-	rexpr = coerce_to_boolean(pstate, rexpr, "AND");
-
-	return (Node *) makeBoolExpr(AND_EXPR,
-								 list_make2(lexpr, rexpr),
-								 a->location);
-}
-
-static Node *
-transformAExprOr(ParseState *pstate, A_Expr *a)
-{
-	Node	   *lexpr = transformExprRecurse(pstate, a->lexpr);
-	Node	   *rexpr = transformExprRecurse(pstate, a->rexpr);
-
-	lexpr = coerce_to_boolean(pstate, lexpr, "OR");
-	rexpr = coerce_to_boolean(pstate, rexpr, "OR");
-
-	return (Node *) makeBoolExpr(OR_EXPR,
-								 list_make2(lexpr, rexpr),
-								 a->location);
-}
-
-static Node *
-transformAExprNot(ParseState *pstate, A_Expr *a)
-{
-	Node	   *rexpr = transformExprRecurse(pstate, a->rexpr);
-
-	rexpr = coerce_to_boolean(pstate, rexpr, "NOT");
-
-	return (Node *) makeBoolExpr(NOT_EXPR,
-								 list_make1(rexpr),
-								 a->location);
-}
-
-static Node *
 transformAExprOpAny(ParseState *pstate, A_Expr *a)
 {
-	Node	   *lexpr = transformExprRecurse(pstate, a->lexpr);
-	Node	   *rexpr = transformExprRecurse(pstate, a->rexpr);
+	Node	   *lexpr = a->lexpr;
+	Node	   *rexpr = a->rexpr;
+
+	if (operator_precedence_warning)
+		emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_OP,
+								 strVal(llast(a->name)),
+								 lexpr, NULL,
+								 a->location);
+
+	lexpr = transformExprRecurse(pstate, lexpr);
+	rexpr = transformExprRecurse(pstate, rexpr);
 
 	return (Node *) make_scalar_array_op(pstate,
 										 a->name,
@@ -1118,8 +1050,17 @@ transformAExprOpAny(ParseState *pstate, A_Expr *a)
 static Node *
 transformAExprOpAll(ParseState *pstate, A_Expr *a)
 {
-	Node	   *lexpr = transformExprRecurse(pstate, a->lexpr);
-	Node	   *rexpr = transformExprRecurse(pstate, a->rexpr);
+	Node	   *lexpr = a->lexpr;
+	Node	   *rexpr = a->rexpr;
+
+	if (operator_precedence_warning)
+		emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_OP,
+								 strVal(llast(a->name)),
+								 lexpr, NULL,
+								 a->location);
+
+	lexpr = transformExprRecurse(pstate, lexpr);
+	rexpr = transformExprRecurse(pstate, rexpr);
 
 	return (Node *) make_scalar_array_op(pstate,
 										 a->name,
@@ -1132,8 +1073,16 @@ transformAExprOpAll(ParseState *pstate, A_Expr *a)
 static Node *
 transformAExprDistinct(ParseState *pstate, A_Expr *a)
 {
-	Node	   *lexpr = transformExprRecurse(pstate, a->lexpr);
-	Node	   *rexpr = transformExprRecurse(pstate, a->rexpr);
+	Node	   *lexpr = a->lexpr;
+	Node	   *rexpr = a->rexpr;
+
+	if (operator_precedence_warning)
+		emit_precedence_warnings(pstate, PREC_GROUP_INFIX_IS, "IS",
+								 lexpr, rexpr,
+								 a->location);
+
+	lexpr = transformExprRecurse(pstate, lexpr);
+	rexpr = transformExprRecurse(pstate, rexpr);
 
 	if (lexpr && IsA(lexpr, RowExpr) &&
 		rexpr && IsA(rexpr, RowExpr))
@@ -1190,19 +1139,26 @@ transformAExprNullIf(ParseState *pstate, A_Expr *a)
 	return (Node *) result;
 }
 
+/*
+ * Checking an expression for match to a list of type names. Will result
+ * in a boolean constant node.
+ */
 static Node *
 transformAExprOf(ParseState *pstate, A_Expr *a)
 {
-	/*
-	 * Checking an expression for match to a list of type names. Will result
-	 * in a boolean constant node.
-	 */
-	Node	   *lexpr = transformExprRecurse(pstate, a->lexpr);
+	Node	   *lexpr = a->lexpr;
 	Const	   *result;
 	ListCell   *telem;
 	Oid			ltype,
 				rtype;
 	bool		matched = false;
+
+	if (operator_precedence_warning)
+		emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS",
+								 lexpr, NULL,
+								 a->location);
+
+	lexpr = transformExprRecurse(pstate, lexpr);
 
 	ltype = exprType(lexpr);
 	foreach(telem, (List *) a->rexpr)
@@ -1246,6 +1202,13 @@ transformAExprIn(ParseState *pstate, A_Expr *a)
 		useOr = false;
 	else
 		useOr = true;
+
+	if (operator_precedence_warning)
+		emit_precedence_warnings(pstate,
+								 useOr ? PREC_GROUP_IN : PREC_GROUP_NOT_IN,
+								 "IN",
+								 a->lexpr, NULL,
+								 a->location);
 
 	/*
 	 * We try to generate a ScalarArrayOpExpr from IN/NOT IN, but this is only
@@ -1381,6 +1344,153 @@ transformAExprIn(ParseState *pstate, A_Expr *a)
 }
 
 static Node *
+transformAExprBetween(ParseState *pstate, A_Expr *a)
+{
+	Node	   *aexpr;
+	Node	   *bexpr;
+	Node	   *cexpr;
+	Node	   *result;
+	Node	   *sub1;
+	Node	   *sub2;
+	List	   *args;
+
+	/* Deconstruct A_Expr into three subexprs */
+	aexpr = a->lexpr;
+	Assert(IsA(a->rexpr, List));
+	args = (List *) a->rexpr;
+	Assert(list_length(args) == 2);
+	bexpr = (Node *) linitial(args);
+	cexpr = (Node *) lsecond(args);
+
+	if (operator_precedence_warning)
+	{
+		int			opgroup;
+		const char *opname;
+
+		opgroup = operator_precedence_group((Node *) a, &opname);
+		emit_precedence_warnings(pstate, opgroup, opname,
+								 aexpr, cexpr,
+								 a->location);
+		/* We can ignore bexpr thanks to syntactic restrictions */
+		/* Wrap subexpressions to prevent extra warnings */
+		aexpr = (Node *) makeA_Expr(AEXPR_PAREN, NIL, aexpr, NULL, -1);
+		bexpr = (Node *) makeA_Expr(AEXPR_PAREN, NIL, bexpr, NULL, -1);
+		cexpr = (Node *) makeA_Expr(AEXPR_PAREN, NIL, cexpr, NULL, -1);
+	}
+
+	/*
+	 * Build the equivalent comparison expression.  Make copies of
+	 * multiply-referenced subexpressions for safety.  (XXX this is really
+	 * wrong since it results in multiple runtime evaluations of what may be
+	 * volatile expressions ...)
+	 *
+	 * Ideally we would not use hard-wired operators here but instead use
+	 * opclasses.  However, mixed data types and other issues make this
+	 * difficult:
+	 * http://archives.postgresql.org/pgsql-hackers/2008-08/msg01142.php
+	 */
+	switch (a->kind)
+	{
+		case AEXPR_BETWEEN:
+			args = list_make2(makeSimpleA_Expr(AEXPR_OP, ">=",
+											   aexpr, bexpr,
+											   a->location),
+							  makeSimpleA_Expr(AEXPR_OP, "<=",
+											   copyObject(aexpr), cexpr,
+											   a->location));
+			result = (Node *) makeBoolExpr(AND_EXPR, args, a->location);
+			break;
+		case AEXPR_NOT_BETWEEN:
+			args = list_make2(makeSimpleA_Expr(AEXPR_OP, "<",
+											   aexpr, bexpr,
+											   a->location),
+							  makeSimpleA_Expr(AEXPR_OP, ">",
+											   copyObject(aexpr), cexpr,
+											   a->location));
+			result = (Node *) makeBoolExpr(OR_EXPR, args, a->location);
+			break;
+		case AEXPR_BETWEEN_SYM:
+			args = list_make2(makeSimpleA_Expr(AEXPR_OP, ">=",
+											   aexpr, bexpr,
+											   a->location),
+							  makeSimpleA_Expr(AEXPR_OP, "<=",
+											   copyObject(aexpr), cexpr,
+											   a->location));
+			sub1 = (Node *) makeBoolExpr(AND_EXPR, args, a->location);
+			args = list_make2(makeSimpleA_Expr(AEXPR_OP, ">=",
+										copyObject(aexpr), copyObject(cexpr),
+											   a->location),
+							  makeSimpleA_Expr(AEXPR_OP, "<=",
+										copyObject(aexpr), copyObject(bexpr),
+											   a->location));
+			sub2 = (Node *) makeBoolExpr(AND_EXPR, args, a->location);
+			args = list_make2(sub1, sub2);
+			result = (Node *) makeBoolExpr(OR_EXPR, args, a->location);
+			break;
+		case AEXPR_NOT_BETWEEN_SYM:
+			args = list_make2(makeSimpleA_Expr(AEXPR_OP, "<",
+											   aexpr, bexpr,
+											   a->location),
+							  makeSimpleA_Expr(AEXPR_OP, ">",
+											   copyObject(aexpr), cexpr,
+											   a->location));
+			sub1 = (Node *) makeBoolExpr(OR_EXPR, args, a->location);
+			args = list_make2(makeSimpleA_Expr(AEXPR_OP, "<",
+										copyObject(aexpr), copyObject(cexpr),
+											   a->location),
+							  makeSimpleA_Expr(AEXPR_OP, ">",
+										copyObject(aexpr), copyObject(bexpr),
+											   a->location));
+			sub2 = (Node *) makeBoolExpr(OR_EXPR, args, a->location);
+			args = list_make2(sub1, sub2);
+			result = (Node *) makeBoolExpr(AND_EXPR, args, a->location);
+			break;
+		default:
+			elog(ERROR, "unrecognized A_Expr kind: %d", a->kind);
+			result = NULL;		/* keep compiler quiet */
+			break;
+	}
+
+	return transformExprRecurse(pstate, result);
+}
+
+static Node *
+transformBoolExpr(ParseState *pstate, BoolExpr *a)
+{
+	List	   *args = NIL;
+	const char *opname;
+	ListCell   *lc;
+
+	switch (a->boolop)
+	{
+		case AND_EXPR:
+			opname = "AND";
+			break;
+		case OR_EXPR:
+			opname = "OR";
+			break;
+		case NOT_EXPR:
+			opname = "NOT";
+			break;
+		default:
+			elog(ERROR, "unrecognized boolop: %d", (int) a->boolop);
+			opname = NULL;		/* keep compiler quiet */
+			break;
+	}
+
+	foreach(lc, a->args)
+	{
+		Node	   *arg = (Node *) lfirst(lc);
+
+		arg = transformExprRecurse(pstate, arg);
+		arg = coerce_to_boolean(pstate, arg, opname);
+		args = lappend(args, arg);
+	}
+
+	return (Node *) makeBoolExpr(a->boolop, args, a->location);
+}
+
+static Node *
 transformFuncCall(ParseState *pstate, FuncCall *fn)
 {
 	List	   *targs;
@@ -1424,23 +1534,100 @@ transformFuncCall(ParseState *pstate, FuncCall *fn)
 
 /*
  * Check if this is CASE x WHEN IS NOT DISTINCT FROM y:
- * From the raw grammar output, we produce AEXPR_NOT expression
- * 		which has the rhs = AEXPR_DISTINCT expression which has its lhs = NULL
+ *
+ * From the raw grammar output, we produce a boolean NOT expression
+ * which has one A_Expr list element of AEXPR_DISTINCT kind which has
+ * its lexpr = NULL
  */
 static bool
 isWhenIsNotDistinctFromExpr(Node *warg)
 {
-	if (IsA(warg, A_Expr))
+	if (IsA(warg, BoolExpr))
 	{
-		A_Expr *top = (A_Expr *) warg;
-		if (top->kind == AEXPR_NOT && IsA(top->rexpr, A_Expr))
+		BoolExpr *bexpr = (BoolExpr *) warg;
+		Node *arg = linitial(bexpr->args);
+		if (bexpr->boolop == NOT_EXPR && IsA(arg, A_Expr))
 		{
-			A_Expr *expr = (A_Expr *) top->rexpr;
+			A_Expr *expr = (A_Expr *) arg;
 			if (expr->kind == AEXPR_DISTINCT && expr->lexpr == NULL)
 				return true;
 		}
 	}
 	return false;
+}
+
+static Node *
+transformMultiAssignRef(ParseState *pstate, MultiAssignRef *maref)
+{
+	SubLink    *sublink;
+	Query	   *qtree;
+	TargetEntry *tle;
+	Param	   *param;
+
+	/* We should only see this in first-stage processing of UPDATE tlists */
+	Assert(pstate->p_expr_kind == EXPR_KIND_UPDATE_SOURCE);
+
+	/* We only need to transform the source if this is the first column */
+	if (maref->colno == 1)
+	{
+		sublink = (SubLink *) transformExprRecurse(pstate, maref->source);
+		/* Currently, the grammar only allows a SubLink as source */
+		Assert(IsA(sublink, SubLink));
+		Assert(sublink->subLinkType == MULTIEXPR_SUBLINK);
+		qtree = (Query *) sublink->subselect;
+		Assert(IsA(qtree, Query));
+
+		/* Check subquery returns required number of columns */
+		if (count_nonjunk_tlist_entries(qtree->targetList) != maref->ncolumns)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("number of columns does not match number of values"),
+					 parser_errposition(pstate, sublink->location)));
+
+		/*
+		 * Build a resjunk tlist item containing the MULTIEXPR SubLink, and
+		 * add it to pstate->p_multiassign_exprs, whence it will later get
+		 * appended to the completed targetlist.  We needn't worry about
+		 * selecting a resno for it; transformUpdateStmt will do that.
+		 */
+		tle = makeTargetEntry((Expr *) sublink, 0, NULL, true);
+		pstate->p_multiassign_exprs = lappend(pstate->p_multiassign_exprs, tle);
+
+		/*
+		 * Assign a unique-within-this-targetlist ID to the MULTIEXPR SubLink.
+		 * We can just use its position in the p_multiassign_exprs list.
+		 */
+		sublink->subLinkId = list_length(pstate->p_multiassign_exprs);
+	}
+	else
+	{
+		/*
+		 * Second or later column in a multiassignment.  Re-fetch the
+		 * transformed query, which we assume is still the last entry in
+		 * p_multiassign_exprs.
+		 */
+		Assert(pstate->p_multiassign_exprs != NIL);
+		tle = (TargetEntry *) llast(pstate->p_multiassign_exprs);
+		sublink = (SubLink *) tle->expr;
+		Assert(IsA(sublink, SubLink));
+		Assert(sublink->subLinkType == MULTIEXPR_SUBLINK);
+		qtree = (Query *) sublink->subselect;
+		Assert(IsA(qtree, Query));
+	}
+
+	/* Build a Param representing the appropriate subquery output column */
+	tle = (TargetEntry *) list_nth(qtree->targetList, maref->colno - 1);
+	Assert(!tle->resjunk);
+
+	param = makeNode(Param);
+	param->paramkind = PARAM_MULTIEXPR;
+	param->paramid = (sublink->subLinkId << 16) | maref->colno;
+	param->paramtype = exprType((Node *) tle->expr);
+	param->paramtypmod = exprTypmod((Node *) tle->expr);
+	param->paramcollid = exprCollation((Node *) tle->expr);
+	param->location = exprLocation((Node *) tle->expr);
+
+	return (Node *) param;
 }
 
 static Node *
@@ -1454,10 +1641,6 @@ transformCaseExpr(ParseState *pstate, CaseExpr *c)
 	ListCell   *l;
 	Node	   *defresult;
 	Oid			ptype;
-
-	/* If we already transformed this node, do nothing */
-	if (OidIsValid(c->casetype))
-		return (Node *) c;
 
 	newc = makeNode(CaseExpr);
 
@@ -1511,18 +1694,17 @@ transformCaseExpr(ParseState *pstate, CaseExpr *c)
 		{
 			/* 
 			 * CASE placeholder WHEN IS NOT DISTINCT FROM warg:
-			 * 		set: warg->rhs->lhs = placeholder
+			 * 	set the first list element: expr->lexpr = placeholder
 			 */
 			if (isWhenIsNotDistinctFromExpr(warg))
 			{
 				/*
 				 * Make a copy before we change warg.
-				 * In transformation we don't want to change source (CaseExpr* Node).
+				 * In transformation we don't want to change source (BoolExpr* Node).
 				 * Always create new node and do the transformation
 				 */
 				warg = copyObject(warg);
-				A_Expr *top  = (A_Expr *) warg;
-				A_Expr *expr = (A_Expr *) top->rexpr;
+				A_Expr *expr = (A_Expr *) linitial(((BoolExpr *) warg)->args);
 				expr->lexpr = (Node *) placeholder;
 			}
 			else
@@ -1610,10 +1792,6 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 	Node	   *result = (Node *) sublink;
 	Query	   *qtree;
 	const char *err;
-
-	/* If we already transformed this node, do nothing */
-	if (IsA(sublink->subselect, Query))
-		return result;
 
 	/*
 	 * Check to see if the sublink is in an invalid place within the query. We
@@ -1728,31 +1906,26 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 	else if (sublink->subLinkType == EXPR_SUBLINK ||
 			 sublink->subLinkType == ARRAY_SUBLINK)
 	{
-		ListCell   *tlist_item = list_head(qtree->targetList);
-
 		/*
 		 * Make sure the subselect delivers a single column (ignoring resjunk
 		 * targets).
 		 */
-		if (tlist_item == NULL ||
-			((TargetEntry *) lfirst(tlist_item))->resjunk)
+		if (count_nonjunk_tlist_entries(qtree->targetList) != 1)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("subquery must return a column"),
+					 errmsg("subquery must return only one column"),
 					 parser_errposition(pstate, sublink->location)));
-		while ((tlist_item = lnext(tlist_item)) != NULL)
-		{
-			if (!((TargetEntry *) lfirst(tlist_item))->resjunk)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("subquery must return only one column"),
-						 parser_errposition(pstate, sublink->location)));
-		}
 
 		/*
 		 * EXPR and ARRAY need no test expression or combining operator. These
 		 * fields should be null already, but make sure.
 		 */
+		sublink->testexpr = NULL;
+		sublink->operName = NIL;
+	}
+	else if (sublink->subLinkType == MULTIEXPR_SUBLINK)
+	{
+		/* Same as EXPR case, except no restriction on number of columns */
 		sublink->testexpr = NULL;
 		sublink->operName = NIL;
 	}
@@ -1763,6 +1936,25 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 		List	   *left_list;
 		List	   *right_list;
 		ListCell   *l;
+
+		if (operator_precedence_warning)
+		{
+			if (sublink->operName == NIL)
+				emit_precedence_warnings(pstate, PREC_GROUP_IN, "IN",
+										 sublink->testexpr, NULL,
+										 sublink->location);
+			else
+				emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_OP,
+										 strVal(llast(sublink->operName)),
+										 sublink->testexpr, NULL,
+										 sublink->location);
+		}
+
+		/*
+		 * If the source was "x IN (select)", convert to "x = ANY (select)".
+		 */
+		if (sublink->operName == NIL)
+			sublink->operName = list_make1(makeString("="));
 
 		/*
 		 * Transform lefthand expression, and convert to a list
@@ -1995,10 +2187,6 @@ transformRowExpr(ParseState *pstate, RowExpr *r)
 	int			fnum;
 	ListCell   *lc;
 
-	/* If we already transformed this node, do nothing */
-	if (OidIsValid(r->row_typeid))
-		return (Node *) r;
-
 	newr = makeNode(RowExpr);
 
 	/* Transform the field expressions */
@@ -2156,9 +2344,10 @@ transformXmlExpr(ParseState *pstate, XmlExpr *x)
 	ListCell   *lc;
 	int			i;
 
-	/* If we already transformed this node, do nothing */
-	if (OidIsValid(x->type))
-		return (Node *) x;
+	if (operator_precedence_warning && x->op == IS_DOCUMENT)
+		emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS",
+								 (Node *) linitial(x->args), NULL,
+								 x->location);
 
 	newx = makeNode(XmlExpr);
 	newx->op = x->op;
@@ -2332,6 +2521,11 @@ transformBooleanTest(ParseState *pstate, BooleanTest *b)
 {
 	const char *clausename;
 
+	if (operator_precedence_warning)
+		emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS",
+								 (Node *) b->arg, NULL,
+								 b->location);
+
 	switch (b->booltesttype)
 	{
 		case IS_TRUE:
@@ -2463,29 +2657,6 @@ transformWholeRowRef(ParseState *pstate, RangeTblEntry *rte, int location)
 	return (Node *) result;
 }
 
-static Node *
-transformGroupingFunc(ParseState *pstate, GroupingFunc *gf)
-{
-	List *targs = NIL;
-	ListCell *lc;
-	GroupingFunc *new_gf;
-
-	new_gf = makeNode(GroupingFunc);
-
-	/*
-	 * Transform the list of arguments.
-	 */
-	foreach (lc, gf->args)
-		targs = lappend(targs, transformExpr(pstate, (Node *)lfirst(lc),
-											 EXPR_KIND_GROUP_BY));
-
-	new_gf->args = targs;
-
-	new_gf->ngrpcols = gf->ngrpcols;
-
-	return (Node *)new_gf;
-}
-
 /*
  * Handle an explicit CAST construct.
  *
@@ -2496,14 +2667,51 @@ static Node *
 transformTypeCast(ParseState *pstate, TypeCast *tc)
 {
 	Node	   *result;
-	Node	   *expr = transformExprRecurse(pstate, tc->arg);
-	Oid			inputType = exprType(expr);
+	Node	   *expr;
+	Oid			inputType;
 	Oid			targetType;
 	int32		targetTypmod;
 	int			location;
 
 	typenameTypeIdAndMod(pstate, tc->typeName, &targetType, &targetTypmod);
 
+	/*
+	 * If the subject of the typecast is an ARRAY[] construct and the target
+	 * type is an array type, we invoke transformArrayExpr() directly so that
+	 * we can pass down the type information.  This avoids some cases where
+	 * transformArrayExpr() might not infer the correct type.  Otherwise, just
+	 * transform the argument normally.
+	 */
+	if (IsA(tc->arg, A_ArrayExpr))
+	{
+		Oid			targetBaseType;
+		int32		targetBaseTypmod;
+		Oid			elementType;
+
+		/*
+		 * If target is a domain over array, work with the base array type
+		 * here.  Below, we'll cast the array type to the domain.  In the
+		 * usual case that the target is not a domain, the remaining steps
+		 * will be a no-op.
+		 */
+		targetBaseTypmod = targetTypmod;
+		targetBaseType = getBaseTypeAndTypmod(targetType, &targetBaseTypmod);
+		elementType = get_element_type(targetBaseType);
+		if (OidIsValid(elementType))
+		{
+			expr = transformArrayExpr(pstate,
+									  (A_ArrayExpr *) tc->arg,
+									  targetBaseType,
+									  elementType,
+									  targetBaseTypmod);
+		}
+		else
+			expr = transformExprRecurse(pstate, tc->arg);
+	}
+	else
+		expr = transformExprRecurse(pstate, tc->arg);
+
+	inputType = exprType(expr);
 	if (inputType == InvalidOid)
 		return expr;			/* do nothing if NULL input */
 
@@ -2708,10 +2916,6 @@ make_row_comparison_op(ParseState *pstate, List *opname,
 	/*
 	 * For = and <> cases, we just combine the pairwise operators with AND or
 	 * OR respectively.
-	 *
-	 * Note: this is presently the only place where the parser generates
-	 * BoolExpr with more than two arguments.  Should be OK since the rest of
-	 * the system thinks BoolExpr is N-argument anyway.
 	 */
 	if (rctype == ROWCOMPARE_EQ)
 		return (Node *) makeBoolExpr(AND_EXPR, opexprs, location);
@@ -2846,6 +3050,309 @@ make_distinct_op(ParseState *pstate, List *opname, Node *ltree, Node *rtree,
 	NodeSetTag(result, T_DistinctExpr);
 
 	return result;
+}
+
+/*
+ * Identify node's group for operator precedence warnings
+ *
+ * For items in nonzero groups, also return a suitable node name into *nodename
+ *
+ * Note: group zero is used for nodes that are higher or lower precedence
+ * than everything that changed precedence; we need never issue warnings
+ * related to such nodes.
+ */
+static int
+operator_precedence_group(Node *node, const char **nodename)
+{
+	int			group = 0;
+
+	*nodename = NULL;
+	if (node == NULL)
+		return 0;
+
+	if (IsA(node, A_Expr))
+	{
+		A_Expr	   *aexpr = (A_Expr *) node;
+
+		if (aexpr->kind == AEXPR_OP &&
+			aexpr->lexpr != NULL &&
+			aexpr->rexpr != NULL)
+		{
+			/* binary operator */
+			if (list_length(aexpr->name) == 1)
+			{
+				*nodename = strVal(linitial(aexpr->name));
+				/* Ignore if op was always higher priority than IS-tests */
+				if (strcmp(*nodename, "+") == 0 ||
+					strcmp(*nodename, "-") == 0 ||
+					strcmp(*nodename, "*") == 0 ||
+					strcmp(*nodename, "/") == 0 ||
+					strcmp(*nodename, "%") == 0 ||
+					strcmp(*nodename, "^") == 0)
+					group = 0;
+				else if (strcmp(*nodename, "<") == 0 ||
+						 strcmp(*nodename, ">") == 0)
+					group = PREC_GROUP_LESS;
+				else if (strcmp(*nodename, "=") == 0)
+					group = PREC_GROUP_EQUAL;
+				else if (strcmp(*nodename, "<=") == 0 ||
+						 strcmp(*nodename, ">=") == 0 ||
+						 strcmp(*nodename, "<>") == 0)
+					group = PREC_GROUP_LESS_EQUAL;
+				else
+					group = PREC_GROUP_INFIX_OP;
+			}
+			else
+			{
+				/* schema-qualified operator syntax */
+				*nodename = "OPERATOR()";
+				group = PREC_GROUP_INFIX_OP;
+			}
+		}
+		else if (aexpr->kind == AEXPR_OP &&
+				 aexpr->lexpr == NULL &&
+				 aexpr->rexpr != NULL)
+		{
+			/* prefix operator */
+			if (list_length(aexpr->name) == 1)
+			{
+				*nodename = strVal(linitial(aexpr->name));
+				/* Ignore if op was always higher priority than IS-tests */
+				if (strcmp(*nodename, "+") == 0 ||
+					strcmp(*nodename, "-"))
+					group = 0;
+				else
+					group = PREC_GROUP_PREFIX_OP;
+			}
+			else
+			{
+				/* schema-qualified operator syntax */
+				*nodename = "OPERATOR()";
+				group = PREC_GROUP_PREFIX_OP;
+			}
+		}
+		else if (aexpr->kind == AEXPR_OP &&
+				 aexpr->lexpr != NULL &&
+				 aexpr->rexpr == NULL)
+		{
+			/* postfix operator */
+			if (list_length(aexpr->name) == 1)
+			{
+				*nodename = strVal(linitial(aexpr->name));
+				group = PREC_GROUP_POSTFIX_OP;
+			}
+			else
+			{
+				/* schema-qualified operator syntax */
+				*nodename = "OPERATOR()";
+				group = PREC_GROUP_POSTFIX_OP;
+			}
+		}
+		else if (aexpr->kind == AEXPR_OP_ANY ||
+				 aexpr->kind == AEXPR_OP_ALL)
+		{
+			*nodename = strVal(llast(aexpr->name));
+			group = PREC_GROUP_POSTFIX_OP;
+		}
+		else if (aexpr->kind == AEXPR_DISTINCT)
+		{
+			*nodename = "IS";
+			group = PREC_GROUP_INFIX_IS;
+		}
+		else if (aexpr->kind == AEXPR_OF)
+		{
+			*nodename = "IS";
+			group = PREC_GROUP_POSTFIX_IS;
+		}
+		else if (aexpr->kind == AEXPR_IN)
+		{
+			*nodename = "IN";
+			if (strcmp(strVal(linitial(aexpr->name)), "=") == 0)
+				group = PREC_GROUP_IN;
+			else
+				group = PREC_GROUP_NOT_IN;
+		}
+		else if (aexpr->kind == AEXPR_LIKE)
+		{
+			*nodename = "LIKE";
+			if (strcmp(strVal(linitial(aexpr->name)), "~~") == 0)
+				group = PREC_GROUP_LIKE;
+			else
+				group = PREC_GROUP_NOT_LIKE;
+		}
+		else if (aexpr->kind == AEXPR_ILIKE)
+		{
+			*nodename = "ILIKE";
+			if (strcmp(strVal(linitial(aexpr->name)), "~~*") == 0)
+				group = PREC_GROUP_LIKE;
+			else
+				group = PREC_GROUP_NOT_LIKE;
+		}
+		else if (aexpr->kind == AEXPR_SIMILAR)
+		{
+			*nodename = "SIMILAR";
+			if (strcmp(strVal(linitial(aexpr->name)), "~") == 0)
+				group = PREC_GROUP_LIKE;
+			else
+				group = PREC_GROUP_NOT_LIKE;
+		}
+		else if (aexpr->kind == AEXPR_BETWEEN ||
+				 aexpr->kind == AEXPR_BETWEEN_SYM)
+		{
+			Assert(list_length(aexpr->name) == 1);
+			*nodename = strVal(linitial(aexpr->name));
+			group = PREC_GROUP_BETWEEN;
+		}
+		else if (aexpr->kind == AEXPR_NOT_BETWEEN ||
+				 aexpr->kind == AEXPR_NOT_BETWEEN_SYM)
+		{
+			Assert(list_length(aexpr->name) == 1);
+			*nodename = strVal(linitial(aexpr->name));
+			group = PREC_GROUP_NOT_BETWEEN;
+		}
+	}
+	else if (IsA(node, NullTest) ||
+			 IsA(node, BooleanTest))
+	{
+		*nodename = "IS";
+		group = PREC_GROUP_POSTFIX_IS;
+	}
+	else if (IsA(node, XmlExpr))
+	{
+		XmlExpr    *x = (XmlExpr *) node;
+
+		if (x->op == IS_DOCUMENT)
+		{
+			*nodename = "IS";
+			group = PREC_GROUP_POSTFIX_IS;
+		}
+	}
+	else if (IsA(node, SubLink))
+	{
+		SubLink    *s = (SubLink *) node;
+
+		if (s->subLinkType == ANY_SUBLINK ||
+			s->subLinkType == ALL_SUBLINK)
+		{
+			if (s->operName == NIL)
+			{
+				*nodename = "IN";
+				group = PREC_GROUP_IN;
+			}
+			else
+			{
+				*nodename = strVal(llast(s->operName));
+				group = PREC_GROUP_POSTFIX_OP;
+			}
+		}
+	}
+	else if (IsA(node, BoolExpr))
+	{
+		/*
+		 * Must dig into NOTs to see if it's IS NOT DOCUMENT or NOT IN.  This
+		 * opens us to possibly misrecognizing, eg, NOT (x IS DOCUMENT) as a
+		 * problematic construct.  We can tell the difference by checking
+		 * whether the parse locations of the two nodes are identical.
+		 *
+		 * Note that when we are comparing the child node to its own children,
+		 * we will not know that it was a NOT.  Fortunately, that doesn't
+		 * matter for these cases.
+		 */
+		BoolExpr   *b = (BoolExpr *) node;
+
+		if (b->boolop == NOT_EXPR)
+		{
+			Node	   *child = (Node *) linitial(b->args);
+
+			if (IsA(child, XmlExpr))
+			{
+				XmlExpr    *x = (XmlExpr *) child;
+
+				if (x->op == IS_DOCUMENT &&
+					x->location == b->location)
+				{
+					*nodename = "IS";
+					group = PREC_GROUP_POSTFIX_IS;
+				}
+			}
+			else if (IsA(child, SubLink))
+			{
+				SubLink    *s = (SubLink *) child;
+
+				if (s->subLinkType == ANY_SUBLINK && s->operName == NIL &&
+					s->location == b->location)
+				{
+					*nodename = "IN";
+					group = PREC_GROUP_NOT_IN;
+				}
+			}
+		}
+	}
+	return group;
+}
+
+/*
+ * helper routine for delivering 9.4-to-9.5 operator precedence warnings
+ *
+ * opgroup/opname/location represent some parent node
+ * lchild, rchild are its left and right children (either could be NULL)
+ *
+ * This should be called before transforming the child nodes, since if a
+ * precedence-driven parsing change has occurred in a query that used to work,
+ * it's quite possible that we'll get a semantic failure while analyzing the
+ * child expression.  We want to produce the warning before that happens.
+ * In any case, operator_precedence_group() expects untransformed input.
+ */
+static void
+emit_precedence_warnings(ParseState *pstate,
+						 int opgroup, const char *opname,
+						 Node *lchild, Node *rchild,
+						 int location)
+{
+	int			cgroup;
+	const char *copname;
+
+	Assert(opgroup > 0);
+
+	/*
+	 * Complain if left child, which should be same or higher precedence
+	 * according to current rules, used to be lower precedence.
+	 *
+	 * Exception to precedence rules: if left child is IN or NOT IN or a
+	 * postfix operator, the grouping is syntactically forced regardless of
+	 * precedence.
+	 */
+	cgroup = operator_precedence_group(lchild, &copname);
+	if (cgroup > 0)
+	{
+		if (oldprecedence_l[cgroup] < oldprecedence_r[opgroup] &&
+			cgroup != PREC_GROUP_IN &&
+			cgroup != PREC_GROUP_NOT_IN &&
+			cgroup != PREC_GROUP_POSTFIX_OP &&
+			cgroup != PREC_GROUP_POSTFIX_IS)
+			ereport(WARNING,
+					(errmsg("operator precedence change: %s is now lower precedence than %s",
+							opname, copname),
+					 parser_errposition(pstate, location)));
+	}
+
+	/*
+	 * Complain if right child, which should be higher precedence according to
+	 * current rules, used to be same or lower precedence.
+	 *
+	 * Exception to precedence rules: if right child is a prefix operator, the
+	 * grouping is syntactically forced regardless of precedence.
+	 */
+	cgroup = operator_precedence_group(rchild, &copname);
+	if (cgroup > 0)
+	{
+		if (oldprecedence_r[cgroup] <= oldprecedence_l[opgroup] &&
+			cgroup != PREC_GROUP_PREFIX_OP)
+			ereport(WARNING,
+					(errmsg("operator precedence change: %s is now lower precedence than %s",
+							opname, copname),
+					 parser_errposition(pstate, location)));
+	}
 }
 
 /*

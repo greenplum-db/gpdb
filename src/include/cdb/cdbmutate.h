@@ -64,8 +64,7 @@ extern void request_explicit_motion(Plan *plan, Index resultRelationIdx, List *r
 extern void sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 									GpPolicy **targetPolicy, List **hashExprs_p, List **hashOpclasses_p);
 extern SplitUpdate *make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan,
-				 RangeTblEntry *rte, bool checkTrigger);
-extern Reshuffle *make_reshuffle(PlannerInfo *root, Plan *subplan, RangeTblEntry *rte, Index resultRelationsIdx);
+									 RangeTblEntry *rte);
 
 
 #endif   /* CDBMUTATE_H */

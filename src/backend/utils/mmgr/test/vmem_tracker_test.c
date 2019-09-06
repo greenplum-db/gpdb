@@ -14,6 +14,7 @@
 
 #define SEGMENT_VMEM_CHUNKS_TEST_VALUE 100
 
+#undef PG_RE_THROW
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 /*
@@ -21,8 +22,8 @@
  * function by re-throwing the exception, essentially falling
  * back to the next available PG_CATCH();
  */
-void
-_ExceptionalCondition()
+static
+void _ExceptionalCondition()
 {
      PG_RE_THROW();
 }
@@ -44,6 +45,7 @@ static SessionState fakeSessionState;
 static OOMTimeType fakeSegmentOOMTime = 0;
 
 /* Prepares a fake MySessionState pointer for use in the vmem tracker */
+static
 void InitFakeSessionState()
 {
 	MySessionState = &fakeSessionState;
@@ -73,6 +75,7 @@ static void OOMEventSetup()
  * fake session state, segmentVmemChunks etc. for testing
  * vmem tracker.
  */
+static
 void VmemTrackerTestSetup(void **state)
 {
 	InitFakeSessionState();
@@ -112,6 +115,7 @@ void VmemTrackerTestSetup(void **state)
 /*
  * This method cleans up vmem tracker data structures after a test run.
  */
+static
 void VmemTrackerTestTeardown(void **state)
 {
 #ifdef USE_ASSERT_CHECKING
@@ -125,8 +129,8 @@ void VmemTrackerTestTeardown(void **state)
 /*
  * Checks if the vmem tracker can be disabled (no further reservation)
  */
-void
-test__VmemTracker_ReserveVmem__IgnoreWhenUninitialized(void **state)
+static
+void test__VmemTracker_ReserveVmem__IgnoreWhenUninitialized(void **state)
 {
 	vmemTrackerInited = false;
 	int preAllocChunks = trackedVmemChunks;
@@ -137,8 +141,8 @@ test__VmemTracker_ReserveVmem__IgnoreWhenUninitialized(void **state)
 }
 
 /* Checks if the reservation fails for negative size request */
-void
-test__VmemTracker_ReserveVmem__FailForInvalidSize(void **state)
+static
+void test__VmemTracker_ReserveVmem__FailForInvalidSize(void **state)
 {
 #ifdef USE_ASSERT_CHECKING
 	EXPECT_EXCEPTION();
@@ -164,8 +168,8 @@ test__VmemTracker_ReserveVmem__FailForInvalidSize(void **state)
  * 2. Insufficient cache triggers new reservation (i.e., increase cache)
  * 3. Freeing would leave unused cache, that can be reused later
  */
-void
-test__VmemTracker_ReserveVmem__CacheSanity(void **state)
+static
+void test__VmemTracker_ReserveVmem__CacheSanity(void **state)
 {
 	/* GPDB Memory protection is enabled and initialized */
 	gp_mp_inited = true;
@@ -244,8 +248,8 @@ test__VmemTracker_ReserveVmem__CacheSanity(void **state)
  *    session limit, we will hit segment limit first, or vice versa)
  * 4. For equal segment and session limit we will hit the session limit first.
  */
-void
-test__VmemTracker_ReserveVmem__TrackedBytesSanity(void **state)
+static
+void test__VmemTracker_ReserveVmem__TrackedBytesSanity(void **state)
 {
 	/* GPDB Memory protection is enabled and initialized */
 	gp_mp_inited = true;
@@ -309,8 +313,8 @@ test__VmemTracker_ReserveVmem__TrackedBytesSanity(void **state)
  * pre-allocate some memory before attempting to verify rollback of
  * trackedBytes during runaway detector for a particular reservation.
  */
-void
-RedZoneHandler_DetectRunawaySession_TrackedBytesSanity()
+static
+void RedZoneHandler_DetectRunawaySession_TrackedBytesSanity()
 {
 	assert_true(0 != trackedBytes && trackedBytes == preAllocTrackedBytes);
 }
@@ -319,8 +323,8 @@ RedZoneHandler_DetectRunawaySession_TrackedBytesSanity()
  * Checks if we undo tracked bytes before calling red-zone detector and whether
  * we redo tracked bytes once the call returns
  */
-void
-test__VmemTracker_ReserveVmem__TrackedBytesSanityForRedzoneDetection(void **state)
+static
+void test__VmemTracker_ReserveVmem__TrackedBytesSanityForRedzoneDetection(void **state)
 {
 	/* GPDB Memory protection is enabled and initialized */
 	gp_mp_inited = true;
@@ -342,8 +346,8 @@ test__VmemTracker_ReserveVmem__TrackedBytesSanityForRedzoneDetection(void **stat
 }
 
 /* Checks if we call OOM logger before reserving any new VMEM */
-void
-test__VmemTracker_ReserveVmem__OOMLoggingBeforeReservation(void **state)
+static
+void test__VmemTracker_ReserveVmem__OOMLoggingBeforeReservation(void **state)
 {
 	gp_mp_inited = true;
 	OOMTimeType tempOOMtime;
@@ -375,8 +379,8 @@ test__VmemTracker_ReserveVmem__OOMLoggingBeforeReservation(void **state)
  * Checks if we attach segmentVmemLimit properly, without changing the value
  * of the limit, when under postmaster
  */
-void
-test__VmemTracker_ShmemInit__InitSegmentVmemLimitUnderPostmaster(void **state)
+static
+void test__VmemTracker_ShmemInit__InitSegmentVmemLimitUnderPostmaster(void **state)
 {
 	/* Keep the assertions happy */
 	vmemTrackerInited = false;
@@ -407,8 +411,8 @@ test__VmemTracker_ShmemInit__InitSegmentVmemLimitUnderPostmaster(void **state)
 /*
  * Checks if we attach segmentVmemLimit properly and initialize it to 0.
  */
-void
-test__VmemTracker_ShmemInit__InitSegmentVmemLimitInPostmaster(void **state)
+static
+void test__VmemTracker_ShmemInit__InitSegmentVmemLimitInPostmaster(void **state)
 {
 	/* Keep the assertions happy */
 	vmemTrackerInited = false;
@@ -442,8 +446,8 @@ test__VmemTracker_ShmemInit__InitSegmentVmemLimitInPostmaster(void **state)
 }
 
 /* Helper method to set the segment and session vmem limit to desired values */
-static void
-SetVmemLimit(int32 newSegmentVmemLimitMB, int32 newSessionVmemLimitMB)
+static
+void SetVmemLimit(int32 newSegmentVmemLimitMB, int32 newSessionVmemLimitMB)
 {
 	static int32 tempSegmentVmemChunks = 0;
 
@@ -476,8 +480,8 @@ SetVmemLimit(int32 newSegmentVmemLimitMB, int32 newSessionVmemLimitMB)
  * Checks if we correctly calculate segment and session vmem limit.
  * Also checks the chunk size adjustment.
  */
-void
-test__VmemTracker_ShmemInit__QuotaCalculation(void **state)
+static
+void test__VmemTracker_ShmemInit__QuotaCalculation(void **state)
 {
 	SetVmemLimit(0, 1024);
 	assert_true(chunkSizeInBits == BITS_IN_MB);
@@ -529,8 +533,8 @@ test__VmemTracker_ShmemInit__QuotaCalculation(void **state)
 /*
  * Checks if we call *_Init on required sub-modules.
  */
-void
-test__VmemTracker_Init__InitializesOthers(void **state)
+static
+void test__VmemTracker_Init__InitializesOthers(void **state)
 {
 	/* Keep the assertion happy */
 	vmemTrackerInited = false;
@@ -550,8 +554,8 @@ test__VmemTracker_Init__InitializesOthers(void **state)
 /*
  * Checks if we release all vmem during shutdown.
  */
-void
-test__VmemTracker_Shutdown__ReleasesAllVmem(void **state)
+static
+void test__VmemTracker_Shutdown__ReleasesAllVmem(void **state)
 {
 #ifdef USE_ASSERT_CHECKING
 	will_return_count(MemoryProtection_IsOwnerThread, true, 2);
@@ -583,8 +587,8 @@ test__VmemTracker_Shutdown__ReleasesAllVmem(void **state)
  * of the waiver once the vmem usage falls below vmem quota and a new chunk
  * can be reserved from vmem quota.
  */
-void
-test__VmemTracker_RequestWaiver__WaiveEnforcement(void **state)
+static
+void test__VmemTracker_RequestWaiver__WaiveEnforcement(void **state)
 {
 #ifdef USE_ASSERT_CHECKING
 	will_return_count(MemoryProtection_IsOwnerThread, true, 7);

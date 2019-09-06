@@ -43,8 +43,10 @@ typedef struct AppendOnlyStorageWrite
 
 	/*
 	 * The large write length given to the BufferedAppend module.
+	 * The buffer in BufferedAppend will be flushed to disk when
+	 * maxLargeWriteLen is reached.
 	 */
-	int32		largeWriteLen;
+	int32		maxLargeWriteLen;
 
 	/*
 	 * Version number indicating the AO table format version to write in.

@@ -114,7 +114,11 @@ select numrange(1.1, 2.2) < numrange(1.1, 1.2);
 
 select numrange(1.0, 2.0) + numrange(2.0, 3.0);
 select numrange(1.0, 2.0) + numrange(1.5, 3.0);
-select numrange(1.0, 2.0) + numrange(2.5, 3.0);
+select numrange(1.0, 2.0) + numrange(2.5, 3.0); -- should fail
+
+select range_merge(numrange(1.0, 2.0), numrange(2.0, 3.0));
+select range_merge(numrange(1.0, 2.0), numrange(1.5, 3.0));
+select range_merge(numrange(1.0, 2.0), numrange(2.5, 3.0)); -- shouldn't fail
 
 select numrange(1.0, 2.0) * numrange(2.0, 3.0);
 select numrange(1.0, 2.0) * numrange(1.5, 3.0);
@@ -291,6 +295,11 @@ select count(*) from test_range_spgist where ir >> int4range(100,500);
 select count(*) from test_range_spgist where ir &< int4range(100,500);
 select count(*) from test_range_spgist where ir &> int4range(100,500);
 select count(*) from test_range_spgist where ir -|- int4range(100,500);
+
+-- test index-only scans
+explain (costs off)
+select ir from test_range_spgist where ir -|- int4range(10,20) order by ir;
+select ir from test_range_spgist where ir -|- int4range(10,20) order by ir;
 
 RESET enable_seqscan;
 RESET enable_indexscan;

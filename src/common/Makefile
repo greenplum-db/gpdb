@@ -23,9 +23,10 @@ include $(top_builddir)/src/Makefile.global
 override CPPFLAGS := -DFRONTEND $(CPPFLAGS)
 LIBS += $(PTHREAD_LIBS)
 
-OBJS_COMMON = exec.o pgfnames.o psprintf.o relpath.o rmtree.o string.o username.o wait_error.o
+OBJS_COMMON = exec.o pg_lzcompress.o pgfnames.o psprintf.o relpath.o \
+	rmtree.o string.o username.o wait_error.o
 
-OBJS_FRONTEND = $(OBJS_COMMON) fe_memutils.o
+OBJS_FRONTEND = $(OBJS_COMMON) fe_memutils.o restricted_token.o
 
 OBJS_SRV = $(OBJS_COMMON:%.o=%_srv.o)
 

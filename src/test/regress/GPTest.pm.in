@@ -35,7 +35,7 @@ our $VERSION = '##Version: ##';
 sub print_version
 {
 	print basename($0) . ' ' . $VERSION . "\n";
-	exit(1);
+	exit(0);
 }
 
 1;

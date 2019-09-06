@@ -293,7 +293,11 @@ ResCreateQueue(Oid queueid, Cost limits[NUM_RES_LIMIT_TYPES], bool overcommit,
 	 */
 	
 	queue = ResQueueHashNew(queueid);
-	Assert(queue != NULL);
+	if (!queue)
+		ereport(ERROR,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("out of shared memory"),
+				 errhint("You may need to increase max_resource_queues.")));
 	
 	/* Set queue oid and offset in the scheduler array */
 	queue->queueid = queueid;

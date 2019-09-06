@@ -188,7 +188,7 @@ explain update update_pk_test set b = 5;
          ->  Split  (cost=0.00..431.00 rows=1 width=22)
                ->  Result  (cost=0.00..431.00 rows=1 width=22)
                      ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (6 rows)
 
 update update_pk_test set b = 5;
@@ -206,13 +206,12 @@ explain update update_pk_test set a = 5;
          ->  Sort  (cost=0.00..431.00 rows=1 width=22)
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=22)
-                     Hash Key: "outer".a
-                     ->  Result  (cost=0.00..431.00 rows=1 width=22)
-                           ->  Split  (cost=0.00..431.00 rows=1 width=22)
-                                 ->  Result  (cost=0.00..431.00 rows=1 width=22)
-                                       ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
- Optimizer: PQO version 2.74.0
-(11 rows)
+                     Hash Key: update_pk_test.a
+                     ->  Split  (cost=0.00..431.00 rows=1 width=22)
+                           ->  Result  (cost=0.00..431.00 rows=1 width=22)
+                                 ->  Seq Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.39.0
+(10 rows)
 
 update update_pk_test set a = 5;
 select * from update_pk_test order by 1,2;

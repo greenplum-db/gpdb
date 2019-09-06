@@ -34,7 +34,6 @@ apt-get install -y \
   openssl \
   python-dev \
   python-lockfile \
-  python-paramiko \
   python-pip \
   python-psutil \
   python-yaml \

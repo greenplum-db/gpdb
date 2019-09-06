@@ -21,12 +21,10 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres_fe.h"
 
 #include "pg_backup_archiver.h"
 #include "pg_backup_utils.h"
-#include "parallel.h"
-
-#include <unistd.h>				/* for dup */
 
 #include "libpq/libpq-fs.h"
 
@@ -36,7 +34,7 @@ static void _EndData(ArchiveHandle *AH, TocEntry *te);
 static int	_WriteByte(ArchiveHandle *AH, const int i);
 static void _WriteBuf(ArchiveHandle *AH, const void *buf, size_t len);
 static void _CloseArchive(ArchiveHandle *AH);
-static void _PrintTocData(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt);
+static void _PrintTocData(ArchiveHandle *AH, TocEntry *te);
 static void _StartBlobs(ArchiveHandle *AH, TocEntry *te);
 static void _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid);
 static void _EndBlob(ArchiveHandle *AH, TocEntry *te, Oid oid);
@@ -151,7 +149,7 @@ _StartBlob(ArchiveHandle *AH, TocEntry *te, Oid oid)
 		exit_horribly(NULL, "invalid OID for large object\n");
 
 	/* With an old archive we must do drop and create logic here */
-	if (old_blob_style && AH->ropt->dropSchema)
+	if (old_blob_style && AH->public.ropt->dropSchema)
 		DropBlobIfExists(AH, oid);
 
 	if (old_blob_style)
@@ -194,7 +192,7 @@ _EndBlobs(ArchiveHandle *AH, TocEntry *te)
  *------
  */
 static void
-_PrintTocData(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt)
+_PrintTocData(ArchiveHandle *AH, TocEntry *te)
 {
 	if (te->dataDumper)
 	{

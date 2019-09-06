@@ -10,7 +10,7 @@
  * It doesn't matter whether the bits are on spinning rust or some other
  * storage technology.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -123,7 +123,7 @@ typedef struct _MdfdVec
 	struct _MdfdVec *mdfd_chain;	/* next segment, or NULL */
 } MdfdVec;
 
-static MemoryContext MdCxt;		/* context for all md.c allocations */
+static MemoryContext MdCxt;		/* context for all MdfdVec objects */
 
 
 /*
@@ -165,6 +165,7 @@ typedef struct
 
 static HTAB *pendingOpsTable = NULL;
 static List *pendingUnlinks = NIL;
+static MemoryContext pendingOpsCxt;		/* context for the above  */
 
 static CycleCtr mdsync_cycle_ctr = 0;
 static CycleCtr mdckpt_cycle_ctr = 0;
@@ -217,15 +218,30 @@ mdinit(void)
 	{
 		HASHCTL		hash_ctl;
 
+		/*
+		 * XXX: The checkpointer needs to add entries to the pending ops table
+		 * when absorbing fsync requests.  That is done within a critical
+		 * section, which isn't usually allowed, but we make an exception. It
+		 * means that there's a theoretical possibility that you run out of
+		 * memory while absorbing fsync requests, which leads to a PANIC.
+		 * Fortunately the hash table is small so that's unlikely to happen in
+		 * practice.
+		 */
+		pendingOpsCxt = AllocSetContextCreate(MdCxt,
+											  "Pending Ops Context",
+											  ALLOCSET_DEFAULT_MINSIZE,
+											  ALLOCSET_DEFAULT_INITSIZE,
+											  ALLOCSET_DEFAULT_MAXSIZE);
+		MemoryContextAllowInCriticalSection(pendingOpsCxt, true);
+
 		MemSet(&hash_ctl, 0, sizeof(hash_ctl));
 		hash_ctl.keysize = sizeof(RelFileNode);
 		hash_ctl.entrysize = sizeof(PendingOperationEntry);
-		hash_ctl.hash = tag_hash;
-		hash_ctl.hcxt = MdCxt;
+		hash_ctl.hcxt = pendingOpsCxt;
 		pendingOpsTable = hash_create("Pending Ops Table",
 									  100L,
 									  &hash_ctl,
-								   HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+									  HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 		pendingUnlinks = NIL;
 	}
 }
@@ -1150,7 +1166,7 @@ mdsync(void)
 				int			failures;
 
 #ifdef FAULT_INJECTOR
-		if (SIMPLE_FAULT_INJECTOR(FsyncCounter) == FaultInjectorTypeSkip)
+		if (SIMPLE_FAULT_INJECTOR("fsync_counter") == FaultInjectorTypeSkip)
 		{
 			if (MyAuxProcType == CheckpointerProcess)
 				elog(LOG, "checkpoint performing fsync for %d/%d/%d",
@@ -1590,7 +1606,7 @@ RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 	else if (segno == UNLINK_RELATION_REQUEST)
 	{
 		/* Unlink request: put it in the linked list */
-		MemoryContext oldcxt = MemoryContextSwitchTo(MdCxt);
+		MemoryContext oldcxt = MemoryContextSwitchTo(pendingOpsCxt);
 		PendingUnlinkEntry *entry;
 
 		/* PendingUnlinkEntry doesn't store forknum, since it's always MAIN */
@@ -1607,7 +1623,7 @@ RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 	else
 	{
 		/* Normal case: enter a request to fsync this segment */
-		MemoryContext oldcxt = MemoryContextSwitchTo(MdCxt);
+		MemoryContext oldcxt = MemoryContextSwitchTo(pendingOpsCxt);
 		PendingOperationEntry *entry;
 		bool		found;
 
@@ -1702,7 +1718,7 @@ ForgetDatabaseFsyncRequests(Oid dbid)
  * DropRelationFiles -- drop files of all given relations
  */
 void
-DropRelationFiles(RelFileNodeWithStorageType *delrels, int ndelrels, bool isRedo)
+DropRelationFiles(RelFileNodePendingDelete *delrels, int ndelrels, bool isRedo)
 {
 	SMgrRelation *srels;
 	char         *srelstorages;
@@ -1712,7 +1728,10 @@ DropRelationFiles(RelFileNodeWithStorageType *delrels, int ndelrels, bool isRedo
 	srelstorages = palloc(sizeof(char) * ndelrels);
 	for (i = 0; i < ndelrels; i++)
 	{
-		SMgrRelation srel = smgropen(delrels[i].node, InvalidBackendId);
+		/* GPDB: backend can only be TempRelBackendId or InvalidBackendId for a
+		 * given relfile since we don't tie temp relations to their backends. */
+		SMgrRelation srel = smgropen(delrels[i].node,
+			delrels[i].isTempRelation ? TempRelBackendId : InvalidBackendId);
 
 		if (isRedo)
 		{
@@ -1738,7 +1757,6 @@ DropRelationFiles(RelFileNodeWithStorageType *delrels, int ndelrels, bool isRedo
 	pfree(srelstorages);
 	pfree(srels);
 }
-
 
 /*
  *	_fdvec_alloc() -- Make a MdfdVec object.

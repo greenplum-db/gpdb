@@ -1,13 +1,11 @@
 -- Dropping table while reindex database should not fail reindex
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
 CREATE DATABASE reindexdb1 TEMPLATE template1;
 CREATE
 -- halt reindex after scanning the pg_class and getting the relids
 SELECT gp_inject_fault_infinite('reindex_db', 'suspend', 1);
  gp_inject_fault_infinite 
 --------------------------
- t                        
+ Success:                 
 (1 row)
 1:@db_name reindexdb1: CREATE TABLE heap1(a INT, b INT);
 CREATE
@@ -15,14 +13,14 @@ CREATE
 SELECT gp_wait_until_triggered_fault('reindex_db', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 2:@db_name reindexdb1:DROP TABLE heap1;
 DROP
 SELECT gp_inject_fault('reindex_db', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 -- reindex should complete fine
 1<:  <... completed>
@@ -45,13 +43,13 @@ COMMIT
 SELECT gp_inject_fault_infinite('reindex_relation', 'suspend', 1);
  gp_inject_fault_infinite 
 --------------------------
- t                        
+ Success:                 
 (1 row)
 3&: REINDEX TABLE reindex_index1;  <waiting ...>
 SELECT gp_wait_until_triggered_fault('reindex_relation', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
- t                             
+ Success:                      
 (1 row)
 -- create one more index
 CREATE INDEX reindex_index1_idx2 on reindex_index1 (a);
@@ -59,7 +57,7 @@ CREATE
 SELECT gp_inject_fault('reindex_relation', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 3<:  <... completed>
 REINDEX

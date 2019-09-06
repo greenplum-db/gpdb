@@ -4,9 +4,7 @@
   <title>The gpperfmon Database</title>
   <body>
     <p>The <codeph>gpperfmon</codeph> database is a dedicated database where data collection agents
-      on Greenplum segment hosts save query and system statistics. <ph otherprops="pivotal">The
-        optional Greenplum Command Center management tool depends upon the
-          <codeph>gpperfmon</codeph> database for query history.</ph></p>
+      on Greenplum segment hosts save query and system statistics. </p>
     <p>The <codeph>gpperfmon</codeph> database is created using the
         <codeph>gpperfmon_install</codeph> command-line utility. The utility creates the database
       and the <codeph>gpmon</codeph> database role and enables the data collection agents on the
@@ -78,7 +76,7 @@
     </section>
     <section id="section_ok2_wd1_41b">
       <title>Alert Log Processing and Log Rotation</title>
-      <p>When the <codeph>gp_gperfmon_enable</codeph> server configuration parameter is set to true,
+      <p>When the <codeph>gp_enable_gpperfmon</codeph> server configuration parameter is set to true,
         the Greenplum Database syslogger writes alert messages to a <codeph>.csv</codeph> file in
         the <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs</codeph> directory. </p>
       <p>The level of messages written to the log can be set to <codeph>none</codeph>,

@@ -1,0 +1,39 @@
+---
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb6-centos6-build
+
+inputs:
+- name: gpdb_src
+- name: bin_gpdb_centos6
+- name: bin_gpdb_centos7
+- name: bin_gpdb_ubuntu18.04
+- name: bin_gpdb_clients_centos6
+- name: bin_gpdb_clients_centos7
+- name: bin_gpdb_clients_ubuntu18.04
+- name: bin_gpdb_clients_windows
+
+outputs:
+- name: release_candidates
+
+params:
+  RC_BUILD_TYPE_GCS:
+
+run:
+  path: bash
+  args:
+  - -ec
+  - |
+    gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
+    cp -v bin_gpdb_centos6/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-rhel6_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+    cp -v bin_gpdb_centos7/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-rhel7_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+    cp -v bin_gpdb_ubuntu18.04/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-ubuntu18.04_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+    cp -v bin_gpdb_clients_centos6/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-rhel6_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+    cp -v bin_gpdb_clients_centos7/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-rhel7_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+    cp -v bin_gpdb_clients_ubuntu18.04/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-ubuntu18.04_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+    pushd bin_gpdb_clients_windows
+        tar xzvf *.tar.gz
+    popd
+    cp bin_gpdb_clients_windows/greenplum-clients-x86_64.msi release_candidates/clients-rc-${gpdb_semver}-windows_x86_64${RC_BUILD_TYPE_GCS}.msi

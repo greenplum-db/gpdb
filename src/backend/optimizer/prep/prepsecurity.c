@@ -3,7 +3,7 @@
  * prepsecurity.c
  *	  Routines for preprocessing security barrier quals.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -73,8 +73,8 @@ expand_security_quals(PlannerInfo *root, List *tlist)
 	rt_index = 0;
 	foreach(cell, parse->rtable)
 	{
-		bool			targetRelation = false;
-		RangeTblEntry  *rte = (RangeTblEntry *) lfirst(cell);
+		bool		targetRelation = false;
+		RangeTblEntry *rte = (RangeTblEntry *) lfirst(cell);
 
 		rt_index++;
 
@@ -125,7 +125,8 @@ expand_security_quals(PlannerInfo *root, List *tlist)
 			rte->requiredPerms = 0;
 			rte->checkAsUser = InvalidOid;
 			rte->selectedCols = NULL;
-			rte->modifiedCols = NULL;
+			rte->insertedCols = NULL;
+			rte->updatedCols = NULL;
 
 			/*
 			 * For the most part, Vars referencing the original relation
@@ -224,7 +225,8 @@ expand_security_qual(PlannerInfo *root, List *tlist, int rt_index,
 			rte->requiredPerms = 0;
 			rte->checkAsUser = InvalidOid;
 			rte->selectedCols = NULL;
-			rte->modifiedCols = NULL;
+			rte->insertedCols = NULL;
+			rte->updatedCols = NULL;
 
 			/*
 			 * Now deal with any PlanRowMark on this RTE by requesting a lock
@@ -241,39 +243,10 @@ expand_security_qual(PlannerInfo *root, List *tlist, int rt_index,
 			rc = get_plan_rowmark(root->rowMarks, rt_index);
 			if (rc != NULL)
 			{
-				switch (rc->markType)
-				{
-					case ROW_MARK_EXCLUSIVE:
-						applyLockingClause(subquery, 1, LCS_FORUPDATE,
-										   rc->noWait, false);
-						break;
-					case ROW_MARK_NOKEYEXCLUSIVE:
-						applyLockingClause(subquery, 1, LCS_FORNOKEYUPDATE,
-										   rc->noWait, false);
-						break;
-					case ROW_MARK_SHARE:
-						applyLockingClause(subquery, 1, LCS_FORSHARE,
-										   rc->noWait, false);
-						break;
-					case ROW_MARK_KEYSHARE:
-						applyLockingClause(subquery, 1, LCS_FORKEYSHARE,
-										   rc->noWait, false);
-						break;
-					case ROW_MARK_REFERENCE:
-					case ROW_MARK_COPY:
-						/* No locking needed */
-						break;
-
-					/*
-					 * Additional modes in GPDB. These are only created
-					 * later in the planning, so we should not see these.
-					 */
-					case ROW_MARK_TABLE_SHARE:
-						elog(ERROR, "unexpected ROW_MARK_TABLE_SHARE locking mode encountered while expanding security barrier view");
-					case ROW_MARK_TABLE_EXCLUSIVE:
-						elog(ERROR, "unexpected ROW_MARK_TABLE_EXCLUSIVE locking mode encountered while expanding security barrier view");
-				}
-				root->rowMarks = list_delete(root->rowMarks, rc);
+				if (rc->strength != LCS_NONE)
+					applyLockingClause(subquery, 1, rc->strength,
+									   rc->waitPolicy, false);
+				root->rowMarks = list_delete_ptr(root->rowMarks, rc);
 			}
 
 			/*
@@ -284,7 +257,8 @@ expand_security_qual(PlannerInfo *root, List *tlist, int rt_index,
 			 */
 			if (targetRelation)
 				applyLockingClause(subquery, 1, LCS_FORUPDATE,
-								   false, false);
+								   LockWaitBlock, false);
+
 			/*
 			 * Replace any variables in the outer query that refer to the
 			 * original relation RTE with references to columns that we will

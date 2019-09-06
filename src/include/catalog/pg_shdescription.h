@@ -12,7 +12,7 @@
  * across tables.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_shdescription.h
@@ -44,7 +44,7 @@ CATALOG(pg_shdescription,2396) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	Oid			classoid;		/* OID of table containing object */
 
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
-	text		description;	/* description of object */
+	text description BKI_FORCE_NOT_NULL;		/* description of object */
 #endif
 } FormData_pg_shdescription;
 

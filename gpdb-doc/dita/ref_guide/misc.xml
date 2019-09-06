@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_khf_ltc_vbb">
+  <title>SQL Features, Reserved and Key Words, and Compliance</title>
+  <body>
+     <p>This section includes topics that identify SQL features and compliance in Greenplum Database:</p>
+     <ul>
+      <li><xref href="feature_summary.xml"/></li>
+      <li><xref href="sql-keywords.xml"/></li>
+      <li><xref href="SQL2008_support.xml"/></li>
+     </ul>
+   </body>
+</topic>

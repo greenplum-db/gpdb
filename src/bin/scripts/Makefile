@@ -2,7 +2,7 @@
 #
 # Makefile for src/bin/scripts
 #
-# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/bin/scripts/Makefile
@@ -81,7 +81,7 @@ clean distclean maintainer-clean:
 	rm -f dumputils.c print.c mbprint.c kwlookup.c keywords.c
 	rm -rf tmp_check
 
-check: all
+check:
 	$(prove_check)
 
 installcheck:

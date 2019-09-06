@@ -1151,7 +1151,7 @@ dbms_pipe_create_pipe (PG_FUNCTION_ARGS)
 
 				p->uid = GetUserId();
 #ifdef GP_VERSION_NUM
-				user = (GetUserNameFromId(p->uid));
+				user = (GetUserNameFromId(p->uid, false));
 #elif PG_VERSION_NUM >= 90500
 
 				user = (char*)DirectFunctionCall1(namein,

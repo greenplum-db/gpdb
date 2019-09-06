@@ -3,7 +3,7 @@
  * walsender.h
  *	  Exports from replication/walsender.c.
  *
- * Portions Copyright (c) 2010-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2010-2015, PostgreSQL Global Development Group
  *
  * src/include/replication/walsender.h
  *
@@ -27,6 +27,7 @@ extern volatile sig_atomic_t walsender_ready_to_stop;
 /* user-settable parameters */
 extern int	max_wal_senders;
 extern int	wal_sender_timeout;
+extern bool log_replication_commands;
 extern int	repl_catchup_within_range;
 
 extern void InitWalSender(void);

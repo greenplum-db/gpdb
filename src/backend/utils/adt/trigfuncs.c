@@ -4,7 +4,7 @@
  *	  Builtin functions for useful trigger support.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/backend/utils/adt/trigfuncs.c
@@ -84,9 +84,9 @@ suppress_redundant_updates_trigger(PG_FUNCTION_ARGS)
 		 HeapTupleHeaderGetNatts(oldheader)) &&
 		((newheader->t_infomask & ~HEAP_XACT_MASK) ==
 		 (oldheader->t_infomask & ~HEAP_XACT_MASK)) &&
-		memcmp(((char *) newheader) + offsetof(HeapTupleHeaderData, t_bits),
-			   ((char *) oldheader) + offsetof(HeapTupleHeaderData, t_bits),
-			   newtuple->t_len - offsetof(HeapTupleHeaderData, t_bits)) == 0)
+		memcmp(((char *) newheader) + SizeofHeapTupleHeader,
+			   ((char *) oldheader) + SizeofHeapTupleHeader,
+			   newtuple->t_len - SizeofHeapTupleHeader) == 0)
 	{
 		/* ... then suppress the update */
 		rettuple = NULL;

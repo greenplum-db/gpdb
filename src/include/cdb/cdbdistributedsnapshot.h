@@ -40,8 +40,6 @@ typedef struct DistributedSnapshot
 	DistributedTransactionId xmin;	/* XID < xmin are visible to me */
 	DistributedTransactionId xmax;	/* XID >= xmax are invisible to me */
 	int32		count;		/*  # of distributed xids in inProgressXidArray */
-	int32		maxCount;	/* allocated size of inProgressXidArray, or -1
-							 * if it's not malloc'd */
 
 	/* Array of distributed transactions in progress. */
 	DistributedTransactionId        *inProgressXidArray;
@@ -62,7 +60,6 @@ typedef struct DistributedSnapshotWithLocalMapping
 	TransactionId minCachedLocalXid;
 	TransactionId maxCachedLocalXid;
 	int32 currentLocalXidsCount;
-	int32 maxLocalXidsCount;
 	TransactionId *inProgressMappedLocalXids;
 } DistributedSnapshotWithLocalMapping;
 

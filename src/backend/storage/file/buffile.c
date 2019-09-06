@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -63,6 +63,7 @@
 #include <zstd.h>
 #endif
 
+#include "commands/tablespace.h"
 #include "executor/instrument.h"
 #include "storage/fd.h"
 #include "storage/buffile.h"
@@ -128,7 +129,7 @@ struct BufFile
 	 */
 	size_t		uncompressed_bytes;
 
-	/* This holds holds compressed input, during decompression. */
+	/* This holds compressed input, during decompression. */
 	ZSTD_inBuffer compressed_buffer;
 	bool		decompression_finished;
 #endif
@@ -200,7 +201,16 @@ BufFileCreateTempInSet(workfile_set *work_set, bool interXact)
 	char		filePrefix[MAXPGPATH];
 
 	snprintf(filePrefix, MAXPGPATH, "_%s_", work_set->prefix);
-
+	/*
+	 * In upstream, PrepareTempTablespaces() is called by callers of
+	 * BufFileCreateTemp*. Since we were burned once by forgetting to call it
+	 * for hyperhashagg spill files, we moved it into BufFileCreateTempInSet,
+	 * as we didn't see a reason not to.
+	 * We also posed the question upstream
+	 * https://www.postgresql.org/message-id/
+	 * CAAKRu_YwzjuGAmmaw4-8XO=OVFGR1QhY_Pq-t3wjb9ribBJb_Q@mail.gmail.com
+	 */
+	PrepareTempTablespaces();
 	pfile = OpenTemporaryFile(interXact, filePrefix);
 	Assert(pfile >= 0);
 
@@ -210,7 +220,7 @@ BufFileCreateTempInSet(workfile_set *work_set, bool interXact)
 	FileSetIsWorkfile(file->file);
 	RegisterFileWithSet(file->file, work_set);
 
-	SIMPLE_FAULT_INJECTOR(WorkfileCreationFail);
+	SIMPLE_FAULT_INJECTOR("workfile_creation_failure");
 
 	return file;
 }
@@ -536,7 +546,7 @@ BufFileWrite(BufFile *file, const void *ptr, size_t size)
 	size_t		nwritten = 0;
 	size_t		nthistime;
 
-	SIMPLE_FAULT_INJECTOR(WorkfileWriteFail);
+	SIMPLE_FAULT_INJECTOR("workfile_write_failure");
 
 	switch (file->state)
 	{
@@ -937,7 +947,7 @@ BufFilePledgeSequential(BufFile *buffile)
 #define BUFFILE_ZSTD_COMPRESSION_LEVEL 1
 
 /*
- * Temporary buffer used during compresion. It's used only within the
+ * Temporary buffer used during compression. It's used only within the
  * functions, so we can allocate this once and reuse it for all files.
  */
 static char *compression_buffer;

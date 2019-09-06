@@ -7,7 +7,7 @@
     <p>The <codeph>gp_configuration_history</codeph> table contains information about system changes
       related to fault detection and recovery operations. The <codeph>fts_probe</codeph> process
       logs data to this table, as do certain related management utilities such as
-        <codeph>gpcheck</codeph>, <codeph>gprecoverseg</codeph>, and <codeph>gpinitsystem</codeph>.
+        <codeph>gprecoverseg</codeph> and <codeph>gpinitsystem</codeph>.
       For example, when you add a new segment and mirror segment to the system, records for these
       events are logged to <codeph>gp_configuration_history</codeph>.</p>
     <p otherprops="pivotal">The event descriptions stored in this table may be helpful for troubleshooting serious system
@@ -59,8 +59,7 @@
         </tbody>
       </tgroup>
     </table>
-    <p>For information about <codeph>gpcheck</codeph>,
-        <codeph>gprecoverseg</codeph>, and <codeph>gpinitsystem</codeph>, see the Greenplum Database
+    <p>For information about <codeph>gprecoverseg</codeph> and <codeph>gpinitsystem</codeph>, see the Greenplum Database
       Utility Guide.</p>
   </body>
 </topic>

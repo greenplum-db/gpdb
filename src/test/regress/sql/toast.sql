@@ -64,7 +64,6 @@ CREATE TABLE toast_chunk_test (a bytea);
 ALTER TABLE toast_chunk_test ALTER COLUMN a SET STORAGE EXTERNAL;
 
 -- Alter our TOAST_MAX_CHUNK_SIZE and insert a value we know will be toasted.
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 SELECT DISTINCT gp_inject_fault('decrease_toast_max_chunk_size', 'skip', dbid)
 	   FROM pg_catalog.gp_segment_configuration
 	   WHERE role = 'p';

@@ -339,7 +339,7 @@ COptTasks::LogExceptionMessageAndDelete(CHAR* err_buf, ULONG severity_level)
 PlannedStmt *
 COptTasks::ConvertToPlanStmtFromDXL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	const CDXLNode *dxlnode,
 	bool can_set_tag,
@@ -385,7 +385,7 @@ COptTasks::ConvertToPlanStmtFromDXL
 CSearchStageArray *
 COptTasks::LoadSearchStrategy
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	char *path
 	)
 {
@@ -432,7 +432,7 @@ COptTasks::LoadSearchStrategy
 COptimizerConfig *
 COptTasks::CreateOptimizerConfig
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ICostModel *cost_model
 	)
 {
@@ -450,6 +450,7 @@ COptTasks::CreateOptimizerConfig
 	ULONG array_expansion_threshold = (ULONG) optimizer_array_expansion_threshold;
 	ULONG join_order_threshold = (ULONG) optimizer_join_order_threshold;
 	ULONG broadcast_threshold = (ULONG) optimizer_penalize_broadcast_threshold;
+	ULONG push_group_by_below_setop_threshold = (ULONG) optimizer_push_group_by_below_setop_threshold;
 
 	return GPOS_NEW(mp) COptimizerConfig
 						(
@@ -464,8 +465,9 @@ COptTasks::CreateOptimizerConfig
 								array_expansion_threshold,
 								join_order_threshold,
 								broadcast_threshold,
-								false /* don't create Assert nodes for constraints, we'll
+								false, /* don't create Assert nodes for constraints, we'll
 								      * enforce them ourselves in the executor */
+								push_group_by_below_setop_threshold
 								),
 						GPOS_NEW(mp) CWindowOids(OID(F_WINDOW_ROW_NUMBER), OID(F_WINDOW_RANK))
 						);
@@ -606,7 +608,7 @@ COptTasks::SetCostModelParams
 ICostModel *
 COptTasks::GetCostModel
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULONG num_segments
 	)
 {
@@ -647,7 +649,7 @@ COptTasks::OptimizeTask
 	GPOS_ASSERT(NULL == opt_ctxt->m_plan_stmt);
 
 	AUTO_MEM_POOL(amp);
-	IMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp = amp.Pmp();
 
 	// Does the metadatacache need to be reset?
 	//
@@ -822,7 +824,7 @@ COptTasks::OptimizeTask
 void
 COptTasks::PrintMissingStatsWarning
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	IMdIdArray *col_stats,
 	MdidHashSet *rel_stats

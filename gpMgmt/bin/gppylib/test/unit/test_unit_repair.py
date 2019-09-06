@@ -32,10 +32,11 @@ class RepairTestCase(GpTestCase):
                         "some sql2\n"]
 
         bash_contents = ['#!/bin/bash\n',
+                         'set -o errexit\n',
                          'cd $(dirname $0)\n',
                          '\n',
                          'echo "some desc"\n',
-                         'psql -X -a -h somehost -p 15432 -f "somedb_issuetype_timestamp.sql" '
+                         'psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 15432 -f "somedb_issuetype_timestamp.sql" '
                          '"somedb" >> somedb_issuetype_timestamp.out 2>&1\n']
 
         self.verify_repair_dir_contents("somedb_issuetype_timestamp.sql", sql_contents)
@@ -63,16 +64,17 @@ class RepairTestCase(GpTestCase):
         self.assertEqual(repair_dir, self.repair_dir_path)
         bash_contents =[
                     "#!/bin/bash\n",
+                    "set -o errexit\n",
                     "cd $(dirname $0)\n",
                     "\n",
                     "echo \"some desc\"\n",
-                    "PGOPTIONS='-c gp_session_role=utility' psql -X -a -h somehost -p 25432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
+                    "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
                     "\n",
                     "echo \"some desc\"\n",
-                    "PGOPTIONS='-c gp_session_role=utility' psql -X -a -h somehost -p 25433 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
+                    "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
                     "\n",
                     "echo \"some desc\"\n",
-                    "psql -X -a -h somehost -p 15432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n"]
+                    "psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 15432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n"]
 
         self.verify_repair_dir_contents("run_somedb_extra_{}_timestamp.sh".format(catalog_table_name),
                                         bash_contents)
@@ -90,16 +92,17 @@ class RepairTestCase(GpTestCase):
         self.assertEqual(repair_dir, self.repair_dir_path)
         bash_contents =[
             "#!/bin/bash\n",
+            "set -o errexit\n",
             "cd $(dirname $0)\n",
             "\n",
             "echo \"some desc\"\n",
-            "PGOPTIONS='-c gp_session_role=utility' psql -X -a -h somehost -p 25432 -f \"0.somehost.25432.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
+            "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -f \"0.somehost.25432.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
             "\n",
             "echo \"some desc\"\n",
-            "PGOPTIONS='-c gp_session_role=utility' psql -X -a -h somehost -p 25433 -f \"1.somehost.25433.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
+            "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -f \"1.somehost.25433.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
             "\n",
             "echo \"some desc\"\n",
-            "PGOPTIONS='-c gp_session_role=utility' psql -X -a -h somehost -p 25434 -f \"2.somehost.25434.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n"]
+            "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25434 -f \"2.somehost.25434.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n"]
 
         self.verify_repair_dir_contents("runsql_timestamp.sh", bash_contents)
 
@@ -110,6 +113,7 @@ class RepairTestCase(GpTestCase):
         self.subject.append_content_to_bash_script(self.repair_dir_path, script, catalog_table_name)
         bash_contents =[
             "#!/bin/bash\n",
+            "set -o errexit\n",
             "cd $(dirname $0)\n",
             "some script here"]
 
@@ -121,6 +125,7 @@ class RepairTestCase(GpTestCase):
         self.subject.append_content_to_bash_script(self.repair_dir_path, script)
         bash_contents =[
             "#!/bin/bash\n",
+            "set -o errexit\n",
             "cd $(dirname $0)\n",
             "some script here"]
 

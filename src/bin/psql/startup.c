@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2015, PostgreSQL Global Development Group
  *
  * src/bin/psql/startup.c
  */
@@ -26,6 +26,7 @@
 #include "help.h"
 #include "input.h"
 #include "mainloop.h"
+#include "print.h"
 #include "settings.h"
 
 
@@ -77,6 +78,8 @@ static void process_psqlrc_file(char *filename);
 static void showVersion(void);
 static void EstablishVariableSpace(void);
 
+#define NOPAGER		0
+
 /*
  *
  * main
@@ -95,9 +98,9 @@ main(int argc, char *argv[])
 
 	if (argc > 1)
 	{
-		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+		if ((strcmp(argv[1], "-?") == 0) || (argc == 2 && (strcmp(argv[1], "--help") == 0)))
 		{
-			usage();
+			usage(NOPAGER);
 			exit(EXIT_SUCCESS);
 		}
 		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
@@ -126,9 +129,17 @@ main(int argc, char *argv[])
 	pset.popt.topt.format = PRINT_ALIGNED;
 	pset.popt.topt.border = 1;
 	pset.popt.topt.pager = 1;
+	pset.popt.topt.pager_min_lines = 0;
 	pset.popt.topt.start_table = true;
 	pset.popt.topt.stop_table = true;
 	pset.popt.topt.default_footer = true;
+
+	pset.popt.topt.unicode_border_linestyle = UNICODE_LINESTYLE_SINGLE;
+	pset.popt.topt.unicode_column_linestyle = UNICODE_LINESTYLE_SINGLE;
+	pset.popt.topt.unicode_header_linestyle = UNICODE_LINESTYLE_SINGLE;
+
+	refresh_utf8format(&(pset.popt.topt));
+
 	/* We must get COLUMNS here before readline() sets it */
 	pset.popt.topt.env_columns = getenv("COLUMNS") ? atoi(getenv("COLUMNS")) : 0;
 
@@ -354,6 +365,7 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 		{"command", required_argument, NULL, 'c'},
 		{"dbname", required_argument, NULL, 'd'},
 		{"echo-queries", no_argument, NULL, 'e'},
+		{"echo-errors", no_argument, NULL, 'b'},
 		{"echo-hidden", no_argument, NULL, 'E'},
 		{"file", required_argument, NULL, 'f'},
 		{"field-separator", required_argument, NULL, 'F'},
@@ -382,7 +394,7 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 		{"password", no_argument, NULL, 'W'},
 		{"expanded", no_argument, NULL, 'x'},
 		{"no-psqlrc", no_argument, NULL, 'X'},
-		{"help", no_argument, NULL, '?'},
+		{"help", optional_argument, NULL, 1},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -391,7 +403,7 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 
 	memset(options, 0, sizeof *options);
 
-	while ((c = getopt_long(argc, argv, "aAc:d:eEf:F:h:HlL:no:p:P:qR:sStT:U:v:VwWxXz?01",
+	while ((c = getopt_long(argc, argv, "aAbc:d:eEf:F:h:HlL:no:p:P:qR:sStT:U:v:VwWxXz?01",
 							long_options, &optindex)) != -1)
 	{
 		switch (c)
@@ -401,6 +413,9 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 				break;
 			case 'A':
 				pset.popt.topt.format = PRINT_UNALIGNED;
+				break;
+			case 'b':
+				SetVariable(pset.vars, "ECHO", "errors");
 				break;
 			case 'c':
 				options->action_string = pg_strdup(optarg);
@@ -553,20 +568,31 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 				break;
 			case '?':
 				/* Actual help option given */
-				if (strcmp(argv[optind - 1], "--help") == 0 || strcmp(argv[optind - 1], "-?") == 0)
+				if (strcmp(argv[optind - 1], "-?") == 0)
 				{
-					usage();
+					usage(NOPAGER);
 					exit(EXIT_SUCCESS);
 				}
 				/* unknown option reported by getopt */
 				else
+					goto unknown_option;
+				break;
+			case 1:
 				{
-					fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
-							pset.progname);
-					exit(EXIT_FAILURE);
+					if (!optarg || strcmp(optarg, "options") == 0)
+						usage(NOPAGER);
+					else if (optarg && strcmp(optarg, "commands") == 0)
+						slashUsage(NOPAGER);
+					else if (optarg && strcmp(optarg, "variables") == 0)
+						helpVariables(NOPAGER);
+					else
+						goto unknown_option;
+
+					exit(EXIT_SUCCESS);
 				}
 				break;
 			default:
+		unknown_option:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 						pset.progname);
 				exit(EXIT_FAILURE);
@@ -720,6 +746,8 @@ echo_hook(const char *newval)
 		pset.echo = PSQL_ECHO_NONE;
 	else if (pg_strcasecmp(newval, "queries") == 0)
 		pset.echo = PSQL_ECHO_QUERIES;
+	else if (pg_strcasecmp(newval, "errors") == 0)
+		pset.echo = PSQL_ECHO_ERRORS;
 	else if (pg_strcasecmp(newval, "all") == 0)
 		pset.echo = PSQL_ECHO_ALL;
 	else if (pg_strcasecmp(newval, "none") == 0)

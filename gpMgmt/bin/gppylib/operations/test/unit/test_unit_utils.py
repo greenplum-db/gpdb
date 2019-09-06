@@ -4,13 +4,14 @@
 #
 import sys
 
+import mock
+
 from gppylib.commands.base import ExecutionError
 from gppylib.operations.utils import RemoteOperation, ParallelOperation
 from gppylib.operations.test_utils_helper import TestOperation, RaiseOperation, RaiseOperation_Nested, \
     RaiseOperation_Unsafe, RaiseOperation_Unpicklable, RaiseOperation_Safe, MyException, ExceptionWithArgs
 from operations.unix import ListFiles
 from test.unit.gp_unittest import GpTestCase, run_tests
-from mock import patch, MagicMock
 
 class UtilsTestCase(GpTestCase):
     """
@@ -101,17 +102,18 @@ class UtilsTestCase(GpTestCase):
         with self.assertRaises(Exception):
             ParallelOperation([ListFiles("/tmp")], 0).run()
 
-    @patch('gppylib.commands.base.logger.debug')
-    @patch('pickle.loads')
-    @patch('gppylib.operations.utils.Command')
-    @patch('os.path.split', return_value = '/')
+    @mock.patch('gppylib.commands.base.logger.debug')
+    @mock.patch('pickle.loads')
+    @mock.patch('gppylib.operations.utils.Command')
+    @mock.patch('os.path.split', return_value = '/')
     def test_RemoteOperation_logger_debug(self, mock_split, mock_cmd, mock_lods, mock_debug):
-        mock_cmd.run = MagicMock()
+        # We want to lock down the Command's get_results().stdout.
+        cmd_instance = mock_cmd.return_value
+        cmd_instance.get_results.return_value.stdout = 'output'
+
         mockRemoteOperation = RemoteOperation(operation=TestOperation(), host="sdw1", msg_ctx="dbid 2")
         mockRemoteOperation.execute()
-        mock_debug.assert_called()
-        first_call_args, fist_call_kwargs = mock_debug.call_args_list[0]
-        self.assertTrue(first_call_args[0].startswith("Output for dbid 2 on host sdw1:"))
+        mock_debug.assert_has_calls([mock.call("Output for dbid 2 on host sdw1: output")])
 
 if __name__ == '__main__':
     run_tests()

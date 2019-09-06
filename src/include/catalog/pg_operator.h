@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_operator.h
@@ -23,6 +23,7 @@
 #define PG_OPERATOR_H
 
 #include "catalog/genbki.h"
+#include "catalog/objectaddress.h"
 #include "nodes/pg_list.h"
 
 /* ----------------
@@ -1052,7 +1053,13 @@ DATA(insert OID = 1520 (  "<->"   PGNSP PGUID b f f  718	718  701   1520    0 ci
 DESCR("distance between");
 DATA(insert OID = 1521 (  "#"	  PGNSP PGUID l f f  0		604   23	  0    0 poly_npoints - - ));
 DESCR("number of points");
-DATA(insert OID = 1522 (  "<->"   PGNSP PGUID b f f  600	718  701	  0    0 dist_pc - - ));
+DATA(insert OID = 1522 (  "<->"   PGNSP PGUID b f f  600	718  701   3291    0 dist_pc - - ));
+DESCR("distance between");
+DATA(insert OID = 3291 (  "<->"   PGNSP PGUID b f f  718	600  701   1522    0 dist_cpoint - - ));
+DESCR("distance between");
+DATA(insert OID = 3276 (  "<->"   PGNSP PGUID b f f  600	604  701   3289    0 dist_ppoly - - ));
+DESCR("distance between");
+DATA(insert OID = 3289 (  "<->"   PGNSP PGUID b f f  604	600  701   3276    0 dist_polyp - - ));
 DESCR("distance between");
 DATA(insert OID = 1523 (  "<->"   PGNSP PGUID b f f  718	604  701	  0    0 dist_cpoly - - ));
 DESCR("distance between");
@@ -1182,18 +1189,19 @@ DATA(insert OID = 1206 (  ">="	   PGNSP PGUID b f f 869 869	 16 1204 1203 networ
 DESCR("greater than or equal");
 DATA(insert OID = 931  (  "<<"	   PGNSP PGUID b f f 869 869	 16 933		0 network_sub networksel networkjoinsel ));
 DESCR("is subnet");
-#define OID_INET_SUB_OP				  931
+#define OID_INET_SUB_OP			931
 DATA(insert OID = 932  (  "<<="    PGNSP PGUID b f f 869 869	 16 934		0 network_subeq networksel networkjoinsel ));
 DESCR("is subnet or equal");
-#define OID_INET_SUBEQ_OP				932
+#define OID_INET_SUBEQ_OP		932
 DATA(insert OID = 933  (  ">>"	   PGNSP PGUID b f f 869 869	 16 931		0 network_sup networksel networkjoinsel ));
 DESCR("is supernet");
-#define OID_INET_SUP_OP				  933
+#define OID_INET_SUP_OP			933
 DATA(insert OID = 934  (  ">>="    PGNSP PGUID b f f 869 869	 16 932		0 network_supeq networksel networkjoinsel ));
 DESCR("is supernet or equal");
-#define OID_INET_SUPEQ_OP				934
+#define OID_INET_SUPEQ_OP		934
 DATA(insert OID = 3552	(  "&&"    PGNSP PGUID b f f 869 869	 16 3552	0 network_overlap networksel networkjoinsel ));
 DESCR("overlaps (is subnet or supernet)");
+#define OID_INET_OVERLAP_OP		3552
 
 DATA(insert OID = 2634 (  "~"	   PGNSP PGUID l f f	  0 869 869 0 0 inetnot - - ));
 DESCR("bitwise not");
@@ -1854,6 +1862,15 @@ DESCR("exists all");
 DATA(insert OID = 3250 (  "<@"	   PGNSP PGUID b f f 3802 3802 16 3246 0 jsonb_contained contsel contjoinsel ));
 DESCR("is contained by");
 
+DATA(insert OID = 3284 (  "||"	   PGNSP PGUID b f f 3802 3802 3802 0 0 jsonb_concat - - ));
+DESCR("concatenate");
+DATA(insert OID = 3285 (  "-"	   PGNSP PGUID b f f 3802 25 3802 0 0 3302 - - ));
+DESCR("delete object field");
+DATA(insert OID = 3286 (  "-"	   PGNSP PGUID b f f 3802 23 3802 0 0 3303 - - ));
+DESCR("delete array element");
+DATA(insert OID = 3287 (  "#-"	   PGNSP PGUID b f f 3802 1009 3802 0 0 jsonb_delete_path - - ));
+DESCR("delete path");
+
 /* operators for complex data type */
 DATA(insert OID = 6469 (  "="	   PGNSP PGUID b t t 7198 7198 16 6469 6470 complex_eq eqsel eqjoinsel));
 DESCR("equal");
@@ -1897,7 +1914,7 @@ DESCR("modulus");
 /*
  * function prototypes
  */
-extern Oid OperatorCreate(const char *operatorName,
+extern ObjectAddress OperatorCreate(const char *operatorName,
 			   Oid operatorNamespace,
 			   Oid leftTypeId,
 			   Oid rightTypeId,

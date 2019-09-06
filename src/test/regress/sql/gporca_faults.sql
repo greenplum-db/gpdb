@@ -2,10 +2,6 @@
 -- ORCA tests which require gp_fault_injector
 --
 
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
-
 CREATE SCHEMA gporca_faults;
 SET search_path = gporca_faults, public;
 

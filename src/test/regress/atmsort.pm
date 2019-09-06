@@ -36,7 +36,6 @@ my $cpref = '';
 my $dpref = '';
 
 my $glob_ignore_plans;
-my $glob_ignore_whitespace;
 my @glob_init;
 
 my $glob_orderwarn;
@@ -49,7 +48,6 @@ sub atmsort_init
 {
     my %args = (
         # defaults
-        IGNORE_HEADERS  => 0,
         IGNORE_PLANS    => 0,
         INIT_FILES      => [],
         ORDER_WARN      => 0,
@@ -60,22 +58,18 @@ sub atmsort_init
     );
 
     $glob_ignore_plans        = 0;
-    $glob_ignore_whitespace   = 0;
     @glob_init                = ();
 
     $glob_orderwarn           = 0;
     $glob_verbose             = 0;
     $glob_fqo                 = {count => 0};
 
-    my $ignore_headers;
     my $ignore_plans;
     my @init_file;
     my $verbose;
     my $orderwarn;
 
     $glob_ignore_plans        = $args{IGNORE_PLANS};
-
-    $glob_ignore_whitespace   = $ignore_headers; # XXX XXX: for now
 
     @glob_init = @{$args{INIT_FILES}};
 
@@ -930,26 +924,6 @@ sub format_query_output
     {
         my @ggg= @{$outarr};
 
-        if ($glob_ignore_whitespace)
-        {
-           my @ggg2;
-
-           for my $line (@ggg)
-           {
-              # remove all leading, trailing whitespace (changes sorting)
-              # and whitespace around column separators
-              $line =~ s/^(\s+|\s+$)//;
-              $line =~ s/\|\s+/\|/gm;
-              $line =~ s/\s+\|/\|/gm;
-
-              $line .= "\n" # replace linefeed if necessary
-                unless ($line =~ m/\n$/);
-
-              push @ggg2, $line;
-           }
-           @ggg= @ggg2;
-        }
-
         if ($glob_orderwarn)
         {
             # If no ordering cols specified (no directive), and SELECT has
@@ -998,25 +972,6 @@ sub format_query_output
     {
         my @ggg= sort @{$outarr};
 
-        if ($glob_ignore_whitespace)
-        {
-           my @ggg2;
-
-           for my $line (@ggg)
-           {
-              # remove all leading, trailing whitespace (changes sorting)
-              # and whitespace around column separators
-              $line =~ s/^(\s+|\s+$)//;
-              $line =~ s/\|\s+/\|/gm;
-              $line =~ s/\s+\|/\|/gm;
-
-              $line .= "\n" # replace linefeed if necessary
-                unless ($line =~ m/\n$/);
-
-              push @ggg2, $line;
-           }
-           @ggg= sort @ggg2;
-        }
         for my $line (@ggg)
         {
             print $atmsort_outfh $bpref, $prefix, $line;
@@ -1039,6 +994,7 @@ sub atmsort_bigloop
     my $sql_statement = "";
     my @outarr;
 
+    my $lastmsg = -1;
     my $getrows = 0;
     my $getstatement = 0;
     my $has_order = 0;
@@ -1123,6 +1079,17 @@ sub atmsort_bigloop
             }
             print $atmsort_outfh "GP_IGNORE:", $ini;
             next;
+        }
+
+        # if MATCH then SUBSTITUTE
+        # see HERE document for definitions
+        $ini = match_then_subs($ini);
+
+        # if MATCH then IGNORE
+        # see HERE document for definitions
+        if ( match_then_ignore($ini))
+        {
+            next; # ignore matching lines
         }
 
         if ($getrows) # getting rows from SELECT output
@@ -1317,18 +1284,18 @@ sub atmsort_bigloop
             }
 
             # prune notices with segment info if they are duplicates
-            if ($ini =~ m/^\s*(?:NOTICE|ERROR|HINT|DETAIL|WARNING)\:.*\(seg.*pid.*\)/)
+            if ($ini =~ m/^\s*(?:NOTICE|ERROR|HINT|DETAIL|WARNING)\:.*/)
             {
                 $ini =~ s/\s+(?:\W)?(?:\W)?\(seg.*pid.*\)//;
 
                 my $outsize = scalar(@outarr);
 
-                my $lastguy = -1;
+                $lastmsg = -1;
 
               L_checkfor:
                 for my $jj (1..$outsize)
                 {
-                    my $checkstr = $outarr[$lastguy];
+                    my $checkstr = $outarr[$lastmsg];
 
                     #remove trailing spaces for comparison
                     $checkstr =~ s/\s+$//;
@@ -1348,9 +1315,10 @@ sub atmsort_bigloop
                             $ini = "DUP: " . $ini;
                             last L_checkfor;
                         }
+                        $lastmsg = -1;
                         next L_bigwhile;
                     }
-                    $lastguy--;
+                    $lastmsg--;
                 } # end for
 
             } # end if pruning notices
@@ -1470,20 +1438,22 @@ sub atmsort_bigloop
             } # end sort this region
         } # end finding SQL
 
-        # if MATCH then SUBSTITUTE
-        # see HERE document for definitions
-        $ini = match_then_subs($ini);
-
-        # if MATCH then IGNORE
-        # see HERE document for definitions
-        if ( match_then_ignore($ini))
-        {
-            next; # ignore matching lines
-        }
 
 L_push_outarr:
 
         push @outarr, $ini;
+
+        # lastmsg < -1 means we found sequential block of messages like
+        # "NOTICE|ERROR|HINT|DETAIL|WARNING", they might come from different
+        # QEs, the order of output in QD is uncertain, so let's sort them to
+        # aid diff comparison
+        if ($lastmsg < -1)
+        {
+            my @msgblock = @outarr[$lastmsg..-1];
+            @msgblock = sort @msgblock;
+            splice @outarr, $lastmsg, abs $lastmsg, @msgblock;
+            $lastmsg = -1;
+        }
 
     } # end big while
 

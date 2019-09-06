@@ -104,9 +104,11 @@ class GpRecoversegTestCase(GpTestCase):
         options = Options()
         options.masterDataDirectory = self.temp_dir
         options.spareDataDirectoryFile = self.config_file_path
+        options.showProgress = True
+        options.showProgressInplace = True
 
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
@@ -162,7 +164,10 @@ class GpRecoversegTestCase(GpTestCase):
         self.return_one = False
 
         with self.assertRaises(SystemExit):
-            self.subject.run()
+            # XXX Disable live FTS probes. The fact that we have to do this
+            # indicates that these are not really unit tests.
+            with patch.object(self.subject, 'trigger_fts_probe'):
+                self.subject.run()
 
         self.subject.logger.info.assert_any_call('No checksum validation necessary when '
                                                  'there are no segments to recover.')
@@ -176,8 +181,10 @@ class GpRecoversegTestCase(GpTestCase):
         options.masterDataDirectory = self.temp_dir
         options.rebalanceSegments = True
         options.spareDataDirectoryFile = None
+        options.showProgress = True
+        options.showProgressInplace = True
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
@@ -195,8 +202,10 @@ class GpRecoversegTestCase(GpTestCase):
         options.masterDataDirectory = self.temp_dir
         options.rebalanceSegments = True
         options.spareDataDirectoryFile = None
+        options.showProgress = True
+        options.showProgressInplace = True
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
@@ -213,8 +222,10 @@ class GpRecoversegTestCase(GpTestCase):
         options = Options()
         options.masterDataDirectory = self.temp_dir
         options.spareDataDirectoryFile = None
+        options.showProgress = True
+        options.showProgressInplace = True
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
         self.mock_get_mirrors_to_build.side_effect = self._get_test_mirrors
@@ -235,8 +246,10 @@ class GpRecoversegTestCase(GpTestCase):
         options = Options()
         options.masterDataDirectory = self.temp_dir
         options.spareDataDirectoryFile = None
+        options.showProgress = True
+        options.showProgressInplace = True
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
         self.mock_get_mirrors_to_build.side_effect = self._get_test_mirrors
@@ -247,7 +260,10 @@ class GpRecoversegTestCase(GpTestCase):
         self.mock_build_mirrors.return_value = True
 
         with self.assertRaises(SystemExit) as cm:
-            self.subject.run()
+            # XXX Disable live FTS probes. The fact that we have to do this
+            # indicates that these are not really unit tests.
+            with patch.object(self.subject, 'trigger_fts_probe'):
+                self.subject.run()
 
         self.assertEqual(cm.exception.code, 0)
 

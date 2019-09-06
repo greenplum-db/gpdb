@@ -130,7 +130,6 @@ $$ language plpgsql;
 -- checkpoint to ensure clean xlog replication before bring down mirror
 select checkpoint_and_wait_for_replication_replay(500);
 
-create extension if not exists gp_inject_fault;
 -- Prevent FTS from probing segments as we don't want a change in
 -- cluster configuration to be triggered after the mirror is stoped
 -- temporarily in the test.  Request a scan so that the skip fault is
@@ -161,6 +160,9 @@ select sync_error from gp_stat_replication where gp_segment_id = 0;
 -- bring the missing xlog back on segment 0
 select move_xlog('/tmp/missing_xlog', (select datadir || '/pg_xlog' from gp_segment_configuration c where c.role='p' and c.content=0));
 
+-- force the WAL segment to switch over from after previous pg_switch_xlog().
+create temp table dummy2 (id int4) distributed randomly;
+
 -- the error should go away
 select wait_for_replication_error('none', 0, 500);
 select sync_error from gp_stat_replication where gp_segment_id = 0;
@@ -174,5 +176,5 @@ select count(*) = 2 as mirror_up from gp_segment_configuration
 -- make sure leave the test only after mirror is in sync to avoid
 -- affecting other tests. Thumb rule: leave cluster in same state as
 -- test started.
-select wait_for_mirror_sync((select dbid::smallint from gp_segment_configuration c where c.role='p' and c.content=0));
+select wait_for_mirror_sync(0::smallint);
 select role, preferred_role, content, mode, status from gp_segment_configuration;

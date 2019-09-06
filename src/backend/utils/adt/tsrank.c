@@ -3,7 +3,7 @@
  * tsrank.c
  *		rank tsvector by tsquery
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -13,6 +13,7 @@
  */
 #include "postgres.h"
 
+#include <limits.h>
 #include <math.h>
 
 #include "tsearch/ts_utils.h"
@@ -195,16 +196,12 @@ SortAndUniqItems(TSQuery q, int *size)
 	return res;
 }
 
-/* A dummy WordEntryPos array to use when haspos is false */
-static WordEntryPosVector POSNULL = {
-	1,							/* Number of elements that follow */
-	{0}
-};
-
 static float
 calc_rank_and(const float *w, TSVector t, TSQuery q)
 {
 	WordEntryPosVector **pos;
+	WordEntryPosVector1 posnull;
+	WordEntryPosVector *POSNULL;
 	int			i,
 				k,
 				l,
@@ -228,7 +225,12 @@ calc_rank_and(const float *w, TSVector t, TSQuery q)
 		return calc_rank_or(w, t, q);
 	}
 	pos = (WordEntryPosVector **) palloc0(sizeof(WordEntryPosVector *) * q->size);
-	WEP_SETPOS(POSNULL.pos[0], MAXENTRYPOS - 1);
+
+	/* A dummy WordEntryPos array to use when haspos is false */
+	posnull.npos = 1;
+	posnull.pos[0] = 0;
+	WEP_SETPOS(posnull.pos[0], MAXENTRYPOS - 1);
+	POSNULL = (WordEntryPosVector *) &posnull;
 
 	for (i = 0; i < size; i++)
 	{
@@ -241,7 +243,7 @@ calc_rank_and(const float *w, TSVector t, TSQuery q)
 			if (entry->haspos)
 				pos[i] = _POSVECPTR(t, entry);
 			else
-				pos[i] = &POSNULL;
+				pos[i] = POSNULL;
 
 			dimt = pos[i]->npos;
 			post = pos[i]->pos;
@@ -256,7 +258,7 @@ calc_rank_and(const float *w, TSVector t, TSQuery q)
 					for (p = 0; p < lenct; p++)
 					{
 						dist = Abs((int) WEP_GETPOS(post[l]) - (int) WEP_GETPOS(ct[p]));
-						if (dist || (dist == 0 && (pos[i] == &POSNULL || pos[k] == &POSNULL)))
+						if (dist || (dist == 0 && (pos[i] == POSNULL || pos[k] == POSNULL)))
 						{
 							float		curw;
 
@@ -282,6 +284,7 @@ calc_rank_or(const float *w, TSVector t, TSQuery q)
 {
 	WordEntry  *entry,
 			   *firstentry;
+	WordEntryPosVector1 posnull;
 	WordEntryPos *post;
 	int32		dimt,
 				j,
@@ -290,6 +293,10 @@ calc_rank_or(const float *w, TSVector t, TSQuery q)
 	float		res = 0.0;
 	QueryOperand **item;
 	int			size = q->size;
+
+	/* A dummy WordEntryPos array to use when haspos is false */
+	posnull.npos = 1;
+	posnull.pos[0] = 0;
 
 	item = SortAndUniqItems(q, &size);
 
@@ -312,8 +319,8 @@ calc_rank_or(const float *w, TSVector t, TSQuery q)
 			}
 			else
 			{
-				dimt = POSNULL.npos;
-				post = POSNULL.pos;
+				dimt = posnull.npos;
+				post = posnull.pos;
 			}
 
 			resj = 0.0;
@@ -549,7 +556,7 @@ Cover(DocRepresentation *doc, int len, QueryRepresentation *qr, CoverExt *ext)
 
 	memset(qr->operandexist, 0, sizeof(bool) * qr->query->size);
 
-	ext->p = 0x7fffffff;
+	ext->p = INT_MAX;
 	ext->q = 0;
 	ptr = doc + ext->pos;
 

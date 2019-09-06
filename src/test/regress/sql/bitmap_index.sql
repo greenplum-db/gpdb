@@ -266,7 +266,12 @@ drop table unlogged_test;
 --
 -- Test crash recovery
 --
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
+--
+-- disable fault-tolerance service (FTS) probing to ensure
+-- the mirror does not accidentally get promoted
+--
+SELECT gp_inject_fault_infinite('fts_probe', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
 CREATE TABLE bm_test_insert(a int) DISTRIBUTED BY (a);
 CREATE INDEX bm_a_idx ON bm_test_insert USING bitmap(a);
 CREATE TABLE bm_test_update(a int, b int) DISTRIBUTED BY (a);
@@ -294,3 +299,26 @@ SELECT * FROM bm_test_update WHERE b=1;
 DROP TABLE trigger_recovery_on_primaries;
 DROP TABLE bm_test_insert;
 DROP TABLE bm_test_update;
+
+--
+-- re-enable fault-tolerance service (FTS) probing after recovery completed.
+--
+SELECT gp_inject_fault('fts_probe', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = -1;
+
+
+-- If the table is AO table, it need generate some fake tuple pointer,
+-- this pointer is a little different from the heap tables pointer,
+-- If the Offset in pointer is 0(If the row number is 32768, the Offset
+-- should be 0), we set the 16th bit of the Offsert to be 1, so we
+-- do not forget to remove the flag when we use it, otherwise we will
+-- get an wrong value.
+CREATE TABLE bm_test_reindex(c1 int, c2 int) WITH (appendonly=true);
+CREATE INDEX bm_test_reindex_idx ON bm_test_reindex USING bitmap(c2);
+INSERT INTO bm_test_reindex SELECT 1,i FROM generate_series(1, 65537)i;
+REINDEX INDEX bm_test_reindex_idx;
+SET enable_bitmapscan to on;
+SET enable_seqscan to off;
+SELECT * from bm_test_reindex where c2 = 32767;
+SELECT * from bm_test_reindex where c2 = 32768;
+SELECT * from bm_test_reindex where c2 = 32769;
+SELECT * from bm_test_reindex where c2 = 65536;

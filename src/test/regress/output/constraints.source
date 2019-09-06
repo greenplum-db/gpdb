@@ -120,10 +120,10 @@ CREATE SEQUENCE INSERT_SEQ;
 CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'),
 	y TEXT DEFAULT '-NULL-',
 	z INT DEFAULT -1 * (nextval('insert_seq')-1),
-	CONSTRAINT INSERT_CON CHECK (x >= 3 AND y <> 'check failed' AND x < 8),
+	CONSTRAINT INSERT_TBL_CON CHECK (x >= 3 AND y <> 'check failed' AND x < 8),
 	CHECK (x + z = 0)) DISTRIBUTED BY(y);
 INSERT INTO INSERT_TBL(x,z) VALUES (2, -2);
-ERROR:  new row for relation "insert_tbl" violates check constraint "insert_con"
+ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_con"
 DETAIL:  Failing row contains (2, -NULL-, -2).
 SELECT '' AS zero, * FROM INSERT_TBL;
  zero | x | y | z 
@@ -137,7 +137,7 @@ SELECT 'one' AS one, nextval('insert_seq');
 (1 row)
 
 INSERT INTO INSERT_TBL(y) VALUES ('Y');
-ERROR:  new row for relation "insert_tbl" violates check constraint "insert_con"
+ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_con"
 DETAIL:  Failing row contains (2, Y, -2).
 INSERT INTO INSERT_TBL(y) VALUES ('Y');
 INSERT INTO INSERT_TBL(x,z) VALUES (1, -2);
@@ -145,7 +145,7 @@ ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_
 DETAIL:  Failing row contains (1, -NULL-, -2).
 INSERT INTO INSERT_TBL(z,x) VALUES (-7,  7);
 INSERT INTO INSERT_TBL VALUES (5, 'check failed', -5);
-ERROR:  new row for relation "insert_tbl" violates check constraint "insert_con"
+ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_con"
 DETAIL:  Failing row contains (5, check failed, -5).
 INSERT INTO INSERT_TBL VALUES (7, '!check failed', -7);
 INSERT INTO INSERT_TBL(y) VALUES ('-!NULL-');
@@ -176,7 +176,7 @@ INSERT INTO INSERT_TBL(x,y) VALUES (5, '!check failed');
 ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_check"
 DETAIL:  Failing row contains (5, !check failed, -9).
 INSERT INTO INSERT_TBL(y) VALUES ('-!NULL-');
-ERROR:  new row for relation "insert_tbl" violates check constraint "insert_con"
+ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_con"
 DETAIL:  Failing row contains (11, -!NULL-, -11).
 -- GPDB: fix the table contents to match upstream again, so that the subsequent
 -- tests start with the same state as in upstream.
@@ -201,7 +201,7 @@ SELECT 'seven' AS one, nextval('insert_seq');
 (1 row)
 
 INSERT INTO INSERT_TBL(y) VALUES ('Y');
-ERROR:  new row for relation "insert_tbl" violates check constraint "insert_con"
+ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_con"
 DETAIL:  Failing row contains (14, Y, -14).
 SELECT 'eight' AS one, nextval('insert_seq');
   one  | nextval 
@@ -254,7 +254,7 @@ INSERT INTO INSERT_CHILD(x,z,cy) VALUES (6,-7,7);
 ERROR:  new row for relation "insert_child" violates check constraint "insert_tbl_check"
 DETAIL:  Failing row contains (6, -NULL-, -7, 42, 7).
 INSERT INTO INSERT_CHILD(x,y,z,cy) VALUES (6,'check failed',-6,7);
-ERROR:  new row for relation "insert_child" violates check constraint "insert_con"
+ERROR:  new row for relation "insert_child" violates check constraint "insert_tbl_con"
 DETAIL:  Failing row contains (6, check failed, -6, 42, 7).
 SELECT * FROM INSERT_CHILD;
  x |   y    | z  | cx | cy 
@@ -301,7 +301,7 @@ NOTICE:  drop cascades to table atacc2
 --
 DELETE FROM INSERT_TBL;
 ALTER SEQUENCE INSERT_SEQ RESTART WITH 4;
-CREATE TABLE tmp (xd INT, yd TEXT, zd INT) distributed by (xd);
+CREATE TABLE tmp (xd INT, yd TEXT, zd INT);
 INSERT INTO tmp VALUES (null, 'Y', null);
 INSERT INTO tmp VALUES (5, '!check failed', null);
 INSERT INTO tmp VALUES (null, 'try again', null);
@@ -348,7 +348,7 @@ UPDATE INSERT_TBL SET x = NULL WHERE x = 5;
 UPDATE INSERT_TBL SET x = 6 WHERE x = 6;
 UPDATE INSERT_TBL SET x = -z, z = -x;
 UPDATE INSERT_TBL SET x = z, z = x;
-ERROR:  new row for relation "insert_tbl" violates check constraint "insert_con"  (seg0 172.17.0.2:25432 pid=308523)
+ERROR:  new row for relation "insert_tbl" violates check constraint "insert_tbl_con"  (seg0 172.17.0.2:25432 pid=308523)
 DETAIL:  Failing row contains (-4, Y, 4).
 SELECT * FROM INSERT_TBL;
  x |       y       | z  
@@ -389,7 +389,7 @@ SELECT * FROM COPY_TBL;
 --
 -- Primary keys
 --
-CREATE TABLE PRIMARY_TBL (i int PRIMARY KEY, t text) DISTRIBUTED BY (i);
+CREATE TABLE PRIMARY_TBL (i int PRIMARY KEY, t text);
 INSERT INTO PRIMARY_TBL VALUES (1, 'one');
 INSERT INTO PRIMARY_TBL VALUES (2, 'two');
 INSERT INTO PRIMARY_TBL VALUES (1, 'three');
@@ -411,7 +411,7 @@ SELECT '' AS four, * FROM PRIMARY_TBL;
 
 DROP TABLE PRIMARY_TBL;
 CREATE TABLE PRIMARY_TBL (i int, t text,
-	PRIMARY KEY(i,t)) DISTRIBUTED BY (i);
+	PRIMARY KEY(i,t));
 INSERT INTO PRIMARY_TBL VALUES (1, 'one');
 INSERT INTO PRIMARY_TBL VALUES (2, 'two');
 INSERT INTO PRIMARY_TBL VALUES (1, 'three');
@@ -434,7 +434,7 @@ DROP TABLE PRIMARY_TBL;
 --
 -- Unique keys
 --
-CREATE TABLE UNIQUE_TBL (i int UNIQUE, t text) DISTRIBUTED BY (i);
+CREATE TABLE UNIQUE_TBL (i int UNIQUE, t text);
 INSERT INTO UNIQUE_TBL VALUES (1, 'one');
 INSERT INTO UNIQUE_TBL VALUES (2, 'two');
 INSERT INTO UNIQUE_TBL VALUES (1, 'three');
@@ -444,20 +444,27 @@ INSERT INTO UNIQUE_TBL VALUES (4, 'four');
 INSERT INTO UNIQUE_TBL VALUES (5, 'one');
 INSERT INTO UNIQUE_TBL (t) VALUES ('six');
 INSERT INTO UNIQUE_TBL (t) VALUES ('seven');
+INSERT INTO UNIQUE_TBL VALUES (5, 'five-upsert-insert') ON CONFLICT (i) DO UPDATE SET t = 'five-upsert-update';
+INSERT INTO UNIQUE_TBL VALUES (6, 'six-upsert-insert') ON CONFLICT (i) DO UPDATE SET t = 'six-upsert-update';
+-- should fail
+INSERT INTO UNIQUE_TBL VALUES (1, 'a'), (2, 'b'), (2, 'b') ON CONFLICT (i) DO UPDATE SET t = 'fails';
+ERROR:  ON CONFLICT DO UPDATE command cannot affect row a second time
+HINT:  Ensure that no rows proposed for insertion within the same command have duplicate constrained values.
 SELECT '' AS five, * FROM UNIQUE_TBL;
- five | i |   t   
-------+---+-------
+ five | i |         t          
+------+---+--------------------
       | 1 | one
       | 2 | two
       | 4 | four
-      | 5 | one
       |   | six
       |   | seven
-(6 rows)
+      | 5 | five-upsert-update
+      | 6 | six-upsert-insert
+(7 rows)
 
 DROP TABLE UNIQUE_TBL;
 CREATE TABLE UNIQUE_TBL (i int, t text,
-	UNIQUE(i,t)) DISTRIBUTED BY (i);
+	UNIQUE(i,t));
 INSERT INTO UNIQUE_TBL VALUES (1, 'one');
 INSERT INTO UNIQUE_TBL VALUES (2, 'two');
 INSERT INTO UNIQUE_TBL VALUES (1, 'three');
@@ -641,6 +648,13 @@ INSERT INTO circles VALUES('<(10,10), 10>', '<(0,0), 5>');
 INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>');
 ERROR:  conflicting key value violates exclusion constraint "circles_c1_c2_excl"
 DETAIL:  Key (c1, (c2::circle))=(<(20,20),10>, <(0,0),4>) conflicts with existing key (c1, (c2::circle))=(<(10,10),10>, <(0,0),5>).
+-- succeed, because violation is ignored
+INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
+  ON CONFLICT ON CONSTRAINT circles_c1_c2_excl DO NOTHING;
+-- fail, because DO UPDATE variant requires unique index
+INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
+  ON CONFLICT ON CONSTRAINT circles_c1_c2_excl DO UPDATE SET c2 = EXCLUDED.c2;
+ERROR:  ON CONFLICT DO UPDATE not supported with exclusion constraints
 -- succeed because c1 doesn't overlap
 INSERT INTO circles VALUES('<(20,20), 1>', '<(0,0), 5>');
 -- succeed because c2 doesn't overlap
@@ -662,18 +676,20 @@ CREATE TABLE deferred_excl (
 INSERT INTO deferred_excl VALUES(1);
 INSERT INTO deferred_excl VALUES(2);
 INSERT INTO deferred_excl VALUES(1); -- fail
-ERROR:  conflicting key value violates exclusion constraint "deferred_excl_f1_excl"
+ERROR:  conflicting key value violates exclusion constraint "deferred_excl_con"
 DETAIL:  Key (f1)=(1) conflicts with existing key (f1)=(1).
+INSERT INTO deferred_excl VALUES(1) ON CONFLICT ON CONSTRAINT deferred_excl_con DO NOTHING; -- fail
+ERROR:  ON CONFLICT does not support deferred unique constraints/exclusion constraints as arbiters
 BEGIN;
 INSERT INTO deferred_excl VALUES(2); -- no fail here
 COMMIT; -- should fail here
-ERROR:  conflicting key value violates exclusion constraint "deferred_excl_f1_excl"
+ERROR:  conflicting key value violates exclusion constraint "deferred_excl_con"
 DETAIL:  Key (f1)=(2) conflicts with existing key (f1)=(2).
 BEGIN;
 INSERT INTO deferred_excl VALUES(3);
 INSERT INTO deferred_excl VALUES(3); -- no fail here
 COMMIT; -- should fail here
-ERROR:  conflicting key value violates exclusion constraint "deferred_excl_f1_excl"
+ERROR:  conflicting key value violates exclusion constraint "deferred_excl_con"
 DETAIL:  Key (f1)=(3) conflicts with existing key (f1)=(3).
 -- bug #13148: deferred constraint versus HOT update
 BEGIN;
@@ -696,31 +712,22 @@ ERROR:  could not create exclusion constraint "deferred_excl_f1_excl"
 DETAIL:  Key (f1)=(3) conflicts with key (f1)=(3).
 DROP TABLE deferred_excl;
 -- end_ignore
---
--- Test foreign key constraints
---
-BEGIN;
--- Test with two heap tables
-CREATE TABLE fkc_primary_table1(a int PRIMARY KEY, b text) DISTRIBUTED BY (a);
-CREATE TABLE fkc_foreign_table1(a int REFERENCES fkc_primary_table1 ON DELETE RESTRICT ON UPDATE RESTRICT, b text) DISTRIBUTED BY (a);
--- the following should succeed
-INSERT INTO fkc_primary_table1 VALUES (1, 'bar');
-INSERT INTO fkc_primary_table1 VALUES (2, 'bar');
-INSERT INTO fkc_foreign_table1 VALUES (1, 'bar');
-INSERT INTO fkc_foreign_table1 VALUES (2, 'bar');
-UPDATE fkc_foreign_table1 SET b = 'foo';
-DELETE FROM fkc_primary_table1 WHERE a = 1;
-COMMIT;
-BEGIN;
--- Test with an ao table and heap table
-CREATE TABLE fkc_primary_table2(a int PRIMARY KEY, b text) DISTRIBUTED BY (a);
-CREATE TABLE fkc_foreign_table2(a int REFERENCES fkc_primary_table2 ON DELETE RESTRICT ON UPDATE RESTRICT,
-                                b text) WITH (APPENDONLY=TRUE) DISTRIBUTED BY (a);
--- the following should succeed
-INSERT INTO fkc_primary_table2 VALUES (1, 'bar');
-INSERT INTO fkc_primary_table2 VALUES (2, 'bar');
-INSERT INTO fkc_foreign_table2 VALUES (1, 'bar');
-INSERT INTO fkc_foreign_table2 VALUES (2, 'bar');
-UPDATE fkc_foreign_table2 SET b = 'foo';
-DELETE FROM fkc_primary_table2 WHERE a = 1;
-COMMIT;
+-- Comments
+CREATE TABLE constraint_comments_tbl (a int CONSTRAINT the_constraint CHECK (a > 0));
+CREATE DOMAIN constraint_comments_dom AS int CONSTRAINT the_constraint CHECK (value > 0);
+COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS 'yes, the comment';
+COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS 'yes, another comment';
+-- no such constraint
+COMMENT ON CONSTRAINT no_constraint ON constraint_comments_tbl IS 'yes, the comment';
+ERROR:  constraint "no_constraint" for table "constraint_comments_tbl" does not exist
+COMMENT ON CONSTRAINT no_constraint ON DOMAIN constraint_comments_dom IS 'yes, another comment';
+ERROR:  constraint "no_constraint" for domain "constraint_comments_dom" does not exist
+-- no such table/domain
+COMMENT ON CONSTRAINT the_constraint ON no_comments_tbl IS 'bad comment';
+ERROR:  relation "no_comments_tbl" does not exist
+COMMENT ON CONSTRAINT the_constraint ON DOMAIN no_comments_dom IS 'another bad comment';
+ERROR:  type "no_comments_dom" does not exist
+COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS NULL;
+COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS NULL;
+DROP TABLE constraint_comments_tbl;
+DROP DOMAIN constraint_comments_dom;

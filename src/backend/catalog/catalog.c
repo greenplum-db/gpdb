@@ -5,7 +5,7 @@
  *		bits of hard-wired knowledge
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -42,6 +42,7 @@
 #include "catalog/pg_resqueuecapability.h"
 #include "catalog/pg_resgroup.h"
 #include "catalog/pg_db_role_setting.h"
+#include "catalog/pg_replication_origin.h"
 #include "catalog/pg_shdepend.h"
 #include "catalog/pg_shdescription.h"
 #include "catalog/pg_shseclabel.h"
@@ -67,22 +68,6 @@
 #include "cdb/cdbvars.h"
 
 static bool IsAoSegmentClass(Form_pg_class reltuple);
-
-/*
- * Return directory name within tablespace location to use, for this server.
- * This is the GPDB replacement for PostgreSQL's TABLESPACE_VERSION_DIRECTORY
- * constant.
- */
-const char *
-tablespace_version_directory(void)
-{
-	static char path[MAXPGPATH] = "";
-
-	if (!path[0])
-		snprintf(path, MAXPGPATH, "%s_db%d", GP_TABLESPACE_VERSION_DIRECTORY, GpIdentity.dbid);
-
-	return path;
-}
 
 /*
  * Like relpath(), but gets the directory containing the data file
@@ -213,7 +198,7 @@ IsCatalogClass(Oid relid, Form_pg_class reltuple)
 	 * We could instead check whether the relation is pinned in pg_depend, but
 	 * this is noticeably cheaper and doesn't require catalog access.
 	 *
-	 * This test is safe since even a oid wraparound will preserve this
+	 * This test is safe since even an oid wraparound will preserve this
 	 * property (c.f. GetNewObjectId()) and it has the advantage that it works
 	 * correctly even if a user decides to create a relation in the pg_catalog
 	 * namespace.
@@ -369,7 +354,8 @@ IsSharedRelation(Oid relationId)
 		relationId == SharedDependRelationId ||
 		relationId == SharedSecLabelRelationId ||
 		relationId == TableSpaceRelationId ||
-		relationId == DbRoleSettingRelationId)
+		relationId == DbRoleSettingRelationId ||
+		relationId == ReplicationOriginRelationId)
 		return true;
 
 	/* GPDB additions */
@@ -404,7 +390,9 @@ IsSharedRelation(Oid relationId)
 		relationId == SharedSecLabelObjectIndexId ||
 		relationId == TablespaceOidIndexId ||
 		relationId == TablespaceNameIndexId ||
-		relationId == DbRoleSettingDatidRolidIndexId)
+		relationId == DbRoleSettingDatidRolidIndexId ||
+		relationId == ReplicationOriginIdentIndex ||
+		relationId == ReplicationOriginNameIndex)
 		return true;
 
 	/* GPDB added indexes */
@@ -438,7 +426,9 @@ IsSharedRelation(Oid relationId)
 	if (relationId == PgShdescriptionToastTable ||
 		relationId == PgShdescriptionToastIndex ||
 		relationId == PgDbRoleSettingToastTable ||
-		relationId == PgDbRoleSettingToastIndex)
+		relationId == PgDbRoleSettingToastIndex ||
+		relationId == PgShseclabelToastTable ||
+		relationId == PgShseclabelToastIndex)
 		return true;
 
 	/* GPDB added toast tables and their indexes */

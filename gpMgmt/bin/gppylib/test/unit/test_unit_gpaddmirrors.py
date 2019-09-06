@@ -106,10 +106,6 @@ class GpAddMirrorsTest(GpTestCase):
             result = fp.readlines()
 
         self.assertIn("41000", result[0])
-        # GPDB_SEGWALREP_FIXME: we have removed the replication port; what other
-		# fallout is there from that decision?
-        #self.assertIn("42000", result[0])
-        #self.assertIn("43000", result[0])
 
     def test_generated_file_contains_port_offsets(self):
         datadir_config = _write_datadir_config(self.mdd)
@@ -124,10 +120,6 @@ class GpAddMirrorsTest(GpTestCase):
             result = fp.readlines()
 
         self.assertIn("45000", result[0])
-        # GPDB_SEGWALREP_FIXME: we have removed the replication port; what other
-		# fallout is there from that decision?
-        #self.assertIn("50000", result[0])
-        #self.assertIn("55000", result[0])
 
     @patch('gppylib.programs.clsAddMirrors.Command')
     def test_pghbaconf_updated_successfully(self, mock):

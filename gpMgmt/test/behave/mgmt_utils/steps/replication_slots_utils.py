@@ -6,23 +6,17 @@ from test.behave_utils.utils import (
     stop_database,
     run_command,
     stop_primary,
-    trigger_fts_probe,
-    run_gprecoverseg,
     execute_sql,
+    wait_for_unblocked_transactions,
 )
 
 
-from addmirrors_mgmt_utils import (add_three_mirrors)
+from mirrors_mgmt_utils import (add_three_mirrors)
 
 
 def assert_successful_command(context):
     if context.ret_code != 0:
         raise Exception('%s : %s' % (context.error_message, context.stdout_message))
-
-
-def run_recovery_for_segments(context):
-    run_command(context, "gprecoverseg -aFv")
-    assert_successful_command(context)
 
 
 def create_cluster(context, with_mirrors=True):
@@ -56,11 +50,9 @@ def expand(context):
     ensure_temp_directory_is_empty(context, "behave_test_expansion_primary")
     ensure_temp_directory_is_empty(context, "behave_test_expansion_mirror")
 
-    run_command(context, "createdb expansion_database")
-
-    expansion_command = """gpexpand -D expansion_database --input <(echo '
-    localhost:localhost:25438:/tmp/behave_test_expansion_primary:8:3:p
-    localhost:localhost:25439:/tmp/behave_test_expansion_mirror:9:3:m
+    expansion_command = """gpexpand --input <(echo '
+    localhost|localhost|25438|/tmp/behave_test_expansion_primary|8|3|p
+    localhost|localhost|25439|/tmp/behave_test_expansion_mirror|9|3|m
 ')
 """
     # Initialize
@@ -90,6 +82,7 @@ def step_impl(context):
 @when(u'a mirror has crashed')
 def step_impl(context):
     run_command(context, "ps aux | grep dbfast_mirror1 | awk '{print $2}' | xargs kill -9")
+    wait_for_unblocked_transactions(context)
 
 
 @when(u'I create a cluster')
@@ -130,15 +123,12 @@ def step_impl(context):
 @given(u'a preferred primary has failed')
 def step_impl(context):
     stop_primary(context, 0)
+    wait_for_unblocked_transactions(context)
 
 
 @when('primary and mirror switch to non-preferred roles')
 def step_impl(context):
-    trigger_fts_probe()
-    run_gprecoverseg()
-
     ensure_primary_mirror_switched_roles()
-
 
 
 @given("I cluster with no mirrors")
@@ -154,11 +144,6 @@ def step_impl(context):
 @given("I create a cluster")
 def step_impl(context):
     create_cluster(context, with_mirrors=True)
-
-
-@when("I fully recover a mirror")
-def step_impl(context):
-    run_recovery_for_segments(context)
 
 
 @when("I add a segment to the cluster")

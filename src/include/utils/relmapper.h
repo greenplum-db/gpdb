@@ -4,7 +4,7 @@
  *	  Catalog-to-filenode mapping
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/relmapper.h
@@ -14,7 +14,8 @@
 #ifndef RELMAPPER_H
 #define RELMAPPER_H
 
-#include "access/xlog.h"
+#include "access/xlogreader.h"
+#include "lib/stringinfo.h"
 
 /* ----------------
  *		relmap-related XLOG entries
@@ -28,7 +29,7 @@ typedef struct xl_relmap_update
 	Oid			dbid;			/* database ID, or 0 for shared map */
 	Oid			tsid;			/* database's tablespace, or pg_global */
 	int32		nbytes;			/* size of relmap data */
-	char		data[1];		/* VARIABLE LENGTH ARRAY */
+	char		data[FLEXIBLE_ARRAY_MEMBER];
 } xl_relmap_update;
 
 #define MinSizeOfRelmapUpdate offsetof(xl_relmap_update, data)
@@ -58,7 +59,8 @@ extern void RelationMapInitialize(void);
 extern void RelationMapInitializePhase2(void);
 extern void RelationMapInitializePhase3(void);
 
-extern void relmap_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void relmap_desc(StringInfo buf, XLogRecord *record);
+extern void relmap_redo(XLogReaderState *record);
+extern void relmap_desc(StringInfo buf, XLogReaderState *record);
+extern const char *relmap_identify(uint8 info);
 
 #endif   /* RELMAPPER_H */

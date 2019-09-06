@@ -3,7 +3,7 @@
  * pg_enum.c
  *	  routines to support manipulation of the pg_enum relation
  *
- * Copyright (c) 2006-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2006-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -347,6 +347,7 @@ restart:
 		}
 	}
 
+	/* Get a new OID for the new label */
 	if (Gp_role == GP_ROLE_EXECUTE || IsBinaryUpgrade)
 	{
 		/*

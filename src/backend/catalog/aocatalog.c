@@ -136,7 +136,6 @@ CreateAOAuxiliaryTable(
 											     rel->rd_rel->relowner,
 											     tupledesc,
 												 NIL,
-											     /* relam */ InvalidOid,
 											     relkind,
 												 rel->rd_rel->relpersistence,
 											     RELSTORAGE_HEAP,
@@ -150,6 +149,7 @@ CreateAOAuxiliaryTable(
 												 /* use_user_acl */ false,
 											     true,
 												 true,
+												 NULL, /* typeaddress */
 												 /* valid_opts */ false,
 												 /* is_part_child */ false,
 												 is_part_parent);
@@ -172,13 +172,15 @@ CreateAOAuxiliaryTable(
 										 aoauxiliary_idxname,
 										 InvalidOid,
 										 InvalidOid,
+										 InvalidOid,
+										 InvalidOid,
 										 indexInfo,
 										 indexColNames,
 										 BTREE_AM_OID,
 										 rel->rd_rel->reltablespace,
 										 collationObjectId, classObjectId, coloptions, (Datum) 0,
 										 true, false, false, false,
-										 true, false, false, true, NULL);
+										 true, false, false, true, false, NULL);
 
 		/* Unlock target table -- no one can see it */
 		heap_close(aoauxiliary_rel, ShareLock);

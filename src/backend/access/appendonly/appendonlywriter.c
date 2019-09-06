@@ -208,7 +208,7 @@ AORelCreateHashEntry(Oid relid)
 	 */
 	release_lightweight_lock();
 
-	SIMPLE_FAULT_INJECTOR(BeforeCreatingAnAOHashEntry);
+	SIMPLE_FAULT_INJECTOR("before_creating_an_ao_hash_entry");
 
 	/*
 	 * Now get all the segment files information for this relation from the QD
@@ -1517,10 +1517,7 @@ get_awaiting_drop_status_from_segments(Relation parentrel)
 					value = PQgetvalue(pgresult, j, 1);
 					segno = pg_atoi(value, sizeof(int32), 0);
 
-					if (segno < 0)
-						elog(ERROR, "segno %d is negative", segno);
-					if (segno >= MAX_AOREL_CONCURRENCY)
-						elog(ERROR, "segno %d exceeds max AO concurrency", segno);
+					ValidateAppendonlySegmentDataBeforeStorage(segno);
 
 					if (qe_state == AOSEG_STATE_AWAITING_DROP)
 					{

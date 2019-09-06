@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -205,13 +205,12 @@ typedef struct AllocBlockData
  */
 typedef struct AllocChunkData
 {
-	 /*
-	  * SharedChunkHeader stores all the "shared" details
-	  * among multiple chunks, such as memoryAccount to charge,
-	  * generation of memory account, memory context that owns this
-	  * chunk etc. However, in case of a free chunk, this pointer
-	  * actually refers to the next chunk in the free list.
-	  */
+	/*
+	 * SharedChunkHeader stores all the "shared" details among multiple chunks,
+	 * such as memoryAccount to charge, generation of memory account, memory
+	 * context that owns this chunk etc. However, in case of a free chunk, this
+	 * pointer actually refers to the next chunk in the free list.
+	 */
 	struct SharedChunkHeader* sharedHeader;
 
 	Size		size;			/* size of data space allocated in chunk */
@@ -322,7 +321,7 @@ static void dump_allocset_block(FILE *file, AllocBlock block)
 		fprintf(file, "\t\tchunk|%p|%ld", chunk, chunk->size);
 
 #ifdef MEMORY_CONTEXT_CHECKING
-		fprintf(file, "%ld", chunk->requested_size);
+		fprintf(file, "|%ld", chunk->requested_size);
 #endif
 
 		fprintf(file, "\n");
@@ -357,7 +356,7 @@ static void dump_allocset_freelist(FILE *file, AllocSet set)
 			fprintf(file, "\t\tfreelist_%d|%p|%ld", size << i, chunk, chunk->size);
 
 #ifdef MEMORY_CONTEXT_CHECKING
-			fprintf(file, "%ld", chunk->requested_size);
+			fprintf(file, "|%ld", chunk->requested_size);
 #endif
 
 			fprintf(file, "\n");
@@ -826,14 +825,14 @@ AllocSetContextCreate(MemoryContext parent,
 					  Size initBlockSize,
 					  Size maxBlockSize)
 {
-	AllocSet	context;
+	AllocSet	set;
 
 	/* Do the type-independent part of context creation */
-	context = (AllocSet) MemoryContextCreate(T_AllocSetContext,
-											 sizeof(AllocSetContext),
-											 &AllocSetMethods,
-											 parent,
-											 name);
+	set = (AllocSet) MemoryContextCreate(T_AllocSetContext,
+										 sizeof(AllocSetContext),
+										 &AllocSetMethods,
+										 parent,
+										 name);
 
 	/*
 	 * Make sure alloc parameters are reasonable, and save them.
@@ -847,14 +846,14 @@ AllocSetContextCreate(MemoryContext parent,
 	if (maxBlockSize < initBlockSize)
 		maxBlockSize = initBlockSize;
 	Assert(AllocHugeSizeIsValid(maxBlockSize)); /* must be safe to double */
-	context->initBlockSize = initBlockSize;
-	context->maxBlockSize = maxBlockSize;
-	context->nextBlockSize = initBlockSize;
+	set->initBlockSize = initBlockSize;
+	set->maxBlockSize = maxBlockSize;
+	set->nextBlockSize = initBlockSize;
 
-	context->sharedHeaderList = NULL;
+	set->sharedHeaderList = NULL;
 
 #ifdef CDB_PALLOC_TAGS
-	context->allocList = NULL;
+	set->allocList = NULL;
 #endif
 
 	/*
@@ -876,10 +875,10 @@ AllocSetContextCreate(MemoryContext parent,
 	StaticAssertStmt(ALLOC_CHUNK_LIMIT == ALLOCSET_SEPARATE_THRESHOLD,
 					 "ALLOC_CHUNK_LIMIT != ALLOCSET_SEPARATE_THRESHOLD");
 
-	context->allocChunkLimit = ALLOC_CHUNK_LIMIT;
-	while ((Size) (context->allocChunkLimit + ALLOC_CHUNKHDRSZ) >
+	set->allocChunkLimit = ALLOC_CHUNK_LIMIT;
+	while ((Size) (set->allocChunkLimit + ALLOC_CHUNKHDRSZ) >
 		   (Size) ((maxBlockSize - ALLOC_BLOCKHDRSZ) / ALLOC_CHUNK_FRACTION))
-		context->allocChunkLimit >>= 1;
+		set->allocChunkLimit >>= 1;
 
 	/*
 	 * Grab always-allocated space, if requested
@@ -891,21 +890,21 @@ AllocSetContextCreate(MemoryContext parent,
 
 		block = (AllocBlock) gp_malloc(blksize);
 		if (block == NULL)
-            MemoryContextError(ERRCODE_OUT_OF_MEMORY,
-                               &context->header, CDB_MCXT_WHERE(&context->header),
-                               "Out of memory.  Unable to allocate %lu bytes.",
-                               (unsigned long)blksize);
-		block->aset = context;
+			MemoryContextError(ERRCODE_OUT_OF_MEMORY,
+						 &set->header, CDB_MCXT_WHERE(&set->header),
+						 "Out of memory.  Unable to allocate %lu bytes.",
+						 (unsigned long)blksize);
+		block->aset = set;
 		block->freeptr = ((char *) block) + ALLOC_BLOCKHDRSZ;
 		block->prev = NULL;
-		block->next = context->blocks;
+		block->next = set->blocks;
 		if (block->next)
 			block->next->prev = block;
-		context->blocks = block;
+		set->blocks = block;
 		/* Mark block as not to be released at reset time */
-		context->keeper = block;
+		set->keeper = block;
 
-        MemoryContextNoteAlloc(&context->header, blksize);              /*CDB*/
+        MemoryContextNoteAlloc(&set->header, blksize);              /*CDB*/
         /*
          * We are allocating new memory in this block, but we are not accounting
          * for this. The concept of memory accounting is to track the actual
@@ -919,9 +918,9 @@ AllocSetContextCreate(MemoryContext parent,
 								   blksize - ALLOC_BLOCKHDRSZ);
 	}
 
-	context->nullAccountHeader = NULL;
+	set->nullAccountHeader = NULL;
 
-	return (MemoryContext) context;
+	return (MemoryContext) set;
 }
 
 /*
@@ -1169,9 +1168,7 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 		blksize = chunk_size + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ;
 		block = (AllocBlock) gp_malloc(blksize);
 		if (block == NULL)
-			MemoryContextError(ERRCODE_OUT_OF_MEMORY,
-							   &set->header, CDB_MCXT_WHERE(&set->header),
-							   "Out of memory.  Failed on request of size %zu bytes.", size);
+			return NULL;
 		block->aset = set;
 		block->freeptr = UserPtr_GetEndPtr(block);
 
@@ -1372,10 +1369,7 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 		}
 
 		if (block == NULL)
-			MemoryContextError(ERRCODE_OUT_OF_MEMORY,
-							   &set->header, CDB_MCXT_WHERE(&set->header),
-							   "Out of memory.  Failed on request of size %zu bytes.",
-							   size);
+			return NULL;
 
 		block->aset = set;
 		block->freeptr = ((char *) block) + ALLOC_BLOCKHDRSZ;
@@ -1584,9 +1578,10 @@ AllocSetFreeHeader(MemoryContext context, void *pointer)
 }
 /*
  * AllocSetRealloc
- *		Returns new pointer to allocated memory of given size; this memory
- *		is added to the set.  Memory associated with given pointer is copied
- *		into the new memory, and the old memory is freed.
+ *		Returns new pointer to allocated memory of given size or NULL if
+ *		request could not be completed; this memory is added to the set.
+ *		Memory associated with given pointer is copied into the new memory,
+ *		and the old memory is freed.
  *
  * Without MEMORY_CONTEXT_CHECKING, we don't know the old request size.  This
  * makes our Valgrind client requests less-precise, hazarding false negatives.
@@ -1713,10 +1708,7 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 		{
 			/* we need to set chunk info back*/
 			AllocAllocInfo(set, chunk, false);
-			MemoryContextError(ERRCODE_OUT_OF_MEMORY,
-							   &set->header, CDB_MCXT_WHERE(&set->header),
-							   "Out of memory.  Failed on request of size %zu bytes.",
-							   size);
+			return NULL;
 		}
 		block->freeptr = UserPtr_GetEndPtr(block);
 
@@ -1794,6 +1786,10 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 
 		/* allocate new chunk */
 		newPointer = AllocSetAlloc((MemoryContext) set, size);
+
+		/* leave immediately if request was not completed */
+		if (newPointer == NULL)
+			return NULL;
 
 		/*
 		 * AllocSetAlloc() just made the region NOACCESS.  Change it to

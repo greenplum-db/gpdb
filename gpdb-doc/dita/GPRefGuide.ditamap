@@ -208,6 +208,8 @@
 	<chapter href="ref_guide/SQL2008_support.xml"/>
 	<chapter href="ref_guide/env_var_ref.xml" navtitle="Greenplum Environment Variables"
 		id="env_var_ref"/>
+	<chapter href="ref_guide/sql-keywords.xml" navtitle="Reserved Identifiers and SQL Key Words"
+		id="keyword_ref"/>
 	<chapter href="ref_guide/system_catalogs/catalog_ref.xml">
 		<topicref href="ref_guide/system_catalogs/catalog_ref-tables.xml"/>
 		<topicref href="ref_guide/system_catalogs/catalog_ref-views.xml"/>

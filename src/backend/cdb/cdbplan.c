@@ -190,6 +190,9 @@ plan_tree_mutator(Node *node,
 				FLATCOPY(newmt, mt, ModifyTable);
 				PLANMUTATE(newmt, mt);
 				MUTATE(newmt->plans, mt->plans, List *);
+				MUTATE(newmt->onConflictSet, mt->onConflictSet, List *);
+				MUTATE(newmt->onConflictWhere, mt->onConflictWhere , Node *);
+				MUTATE(newmt->withCheckOptionLists, mt->withCheckOptionLists, List *);
 				return (Node *) newmt;
 			}
 			break;
@@ -322,6 +325,17 @@ plan_tree_mutator(Node *node,
 		case T_Scan:
 			/* Abstract: Should see only subclasses. */
 			elog(ERROR, "abstract node type not allowed: T_Scan");
+
+		case T_SampleScan:
+			{
+				SampleScan    *samplescan = (SampleScan *) node;
+				SampleScan    *newsamplescan;
+
+				FLATCOPY(newsamplescan, samplescan, SampleScan);
+				SCANMUTATE(newsamplescan, samplescan);
+				return (Node *) newsamplescan;
+			}
+			break;
 
 		case T_SeqScan:
 			{
@@ -857,17 +871,6 @@ plan_tree_mutator(Node *node,
 				FLATCOPY(newSplitUpdate, splitUpdate, SplitUpdate);
 				PLANMUTATE(newSplitUpdate, splitUpdate);
 				return (Node *) newSplitUpdate;
-			}
-			break;
-
-		case T_Reshuffle:
-			{
-				Reshuffle	*reshuffle = (Reshuffle *) node;
-				Reshuffle	*newReshuffle;
-
-				FLATCOPY(newReshuffle, reshuffle, Reshuffle);
-				PLANMUTATE(newReshuffle, reshuffle);
-				return (Node *) newReshuffle;
 			}
 			break;
 

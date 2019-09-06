@@ -9,7 +9,7 @@
 
 #define MAX_BGW_REQUESTS 5
 
-void
+static void
 init_request_queue(void)
 {
 	size_t size = sizeof(CheckpointerShmemStruct) + sizeof(CheckpointerRequest)*MAX_BGW_REQUESTS;
@@ -26,7 +26,7 @@ init_request_queue(void)
  * Basic enqueue tests, including compaction upon enqueuing into a
  * full queue.
  */
-void
+static void
 test__ForwardFsyncRequest_enqueue(void **state)
 {
 	bool ret;
@@ -37,7 +37,7 @@ test__ForwardFsyncRequest_enqueue(void **state)
 	expect_value(LWLockAcquire, l, CheckpointerCommLock);
 	expect_value(LWLockAcquire, mode, LW_EXCLUSIVE);
 	will_return(LWLockAcquire, true);
-	expect_value(LWLockRelease, l, CheckpointerCommLock);
+	expect_value(LWLockRelease, lock, CheckpointerCommLock);
 	will_be_called(LWLockRelease);
 	/* basic enqueue */
 	ret = ForwardFsyncRequest(dummy, MAIN_FORKNUM, 1);
@@ -49,7 +49,7 @@ test__ForwardFsyncRequest_enqueue(void **state)
 		expect_value(LWLockAcquire, l, CheckpointerCommLock);
 		expect_value(LWLockAcquire, mode, LW_EXCLUSIVE);
 		will_return(LWLockAcquire, true);
-		expect_value(LWLockRelease, l, CheckpointerCommLock);
+		expect_value(LWLockRelease, lock, CheckpointerCommLock);
 		will_be_called(LWLockRelease);
 		ret = ForwardFsyncRequest(dummy, MAIN_FORKNUM, i);
 		assert_true(ret);
@@ -57,7 +57,7 @@ test__ForwardFsyncRequest_enqueue(void **state)
 	expect_value(LWLockAcquire, l, CheckpointerCommLock);
 	expect_value(LWLockAcquire, mode, LW_EXCLUSIVE);
 	will_return(LWLockAcquire, true);
-	expect_value(LWLockRelease, l, CheckpointerCommLock);
+	expect_value(LWLockRelease, lock, CheckpointerCommLock);
 	will_be_called(LWLockRelease);
 #ifdef USE_ASSERT_CHECKING
 	expect_value(LWLockHeldByMe, l, CheckpointerCommLock);

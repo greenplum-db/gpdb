@@ -3,7 +3,7 @@
  * nodeGroup.c
  *	  Routines to handle group nodes (used for queries with GROUP BY clause).
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -280,6 +280,8 @@ ExecEndGroup(GroupState *node)
 void
 ExecReScanGroup(GroupState *node)
 {
+	PlanState  *outerPlan = outerPlanState(node);
+
 	node->grp_done = FALSE;
 	node->ss.ps.ps_TupFromTlist = false;
 	/* must clear first tuple */
@@ -289,7 +291,6 @@ ExecReScanGroup(GroupState *node)
 	 * if chgParam of subnode is not null then plan will be re-scanned by
 	 * first ExecProcNode.
 	 */
-	if (node->ss.ps.lefttree &&
-		node->ss.ps.lefttree->chgParam == NULL)
-		ExecReScan(node->ss.ps.lefttree);
+	if (outerPlan->chgParam == NULL)
+		ExecReScan(outerPlan);
 }

@@ -71,7 +71,7 @@ gp_pgdatabase__(PG_FUNCTION_ARGS)
 		mystatus = (Working_State *) palloc(sizeof(Working_State));
 		funcctx->user_fctx = (void *) mystatus;
 
-		mystatus->cdb_component_dbs = cdbcomponent_getCdbComponents(true);
+		mystatus->cdb_component_dbs = cdbcomponent_getCdbComponents();
 		mystatus->currIdx = 0;
 
 		MemoryContextSwitchTo(oldcontext);
@@ -101,20 +101,20 @@ gp_pgdatabase__(PG_FUNCTION_ARGS)
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, false, sizeof(nulls));
 
-		values[0] = UInt16GetDatum(db->dbid);
+		values[0] = UInt16GetDatum(db->config->dbid);
 		values[1] = BoolGetDatum(SEGMENT_IS_ACTIVE_PRIMARY(db));
-		values[2] = UInt16GetDatum(db->segindex);
+		values[2] = UInt16GetDatum(db->config->segindex);
 
 		values[3] = BoolGetDatum(false);
-		if (db->status == GP_SEGMENT_CONFIGURATION_STATUS_UP)
+		if (db->config->status == GP_SEGMENT_CONFIGURATION_STATUS_UP)
 		{
-			if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ||
-				db->mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC)
+			if (db->config->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ||
+				db->config->mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC)
 			{
 				values[3] = BoolGetDatum(true);
 			}
 		}
-		values[4] = BoolGetDatum(db->preferred_role ==
+		values[4] = BoolGetDatum(db->config->preferred_role ==
 								 GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);

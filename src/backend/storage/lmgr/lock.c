@@ -3,7 +3,7 @@
  * lock.c
  *	  POSTGRES primary lock mechanism
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -35,7 +35,7 @@
 #include "access/transam.h"
 #include "access/twophase.h"
 #include "access/twophase_rmgr.h"
-#include "cdb/cdbvars.h"
+#include "access/xlog.h"
 #include "miscadmin.h"
 #include "pg_trace.h"
 #include "pgstat.h"
@@ -50,6 +50,8 @@
 #include "utils/resscheduler.h"
 #include "utils/resource_manager.h"
 #include "utils/resowner_private.h"
+
+#include "cdb/cdbvars.h"
 
 
 /* This configuration variable is used to set the lock table size */
@@ -405,7 +407,6 @@ void
 InitLocks(void)
 {
 	HASHCTL		info;
-	int			hash_flags;
 	long		init_table_size,
 				max_table_size;
 	bool		found;
@@ -432,15 +433,13 @@ InitLocks(void)
 	MemSet(&info, 0, sizeof(info));
 	info.keysize = sizeof(LOCKTAG);
 	info.entrysize = sizeof(LOCK);
-	info.hash = tag_hash;
 	info.num_partitions = NUM_LOCK_PARTITIONS;
-	hash_flags = (HASH_ELEM | HASH_FUNCTION | HASH_PARTITION);
 
 	LockMethodLockHash = ShmemInitHash("LOCK hash",
 									   init_table_size,
 									   max_table_size,
 									   &info,
-									   hash_flags);
+									HASH_ELEM | HASH_BLOBS | HASH_PARTITION);
 
 	/* Assume an average of 2 holders per lock */
 	max_table_size *= 2;
@@ -454,13 +453,12 @@ InitLocks(void)
 	info.entrysize = sizeof(PROCLOCK);
 	info.hash = proclock_hash;
 	info.num_partitions = NUM_LOCK_PARTITIONS;
-	hash_flags = (HASH_ELEM | HASH_FUNCTION | HASH_PARTITION);
 
 	LockMethodProcLockHash = ShmemInitHash("PROCLOCK hash",
 										   init_table_size,
 										   max_table_size,
 										   &info,
-										   hash_flags);
+								 HASH_ELEM | HASH_FUNCTION | HASH_PARTITION);
 
 	/*
 	 * Allocate fast-path structures.
@@ -485,13 +483,11 @@ InitLocks(void)
 
 	info.keysize = sizeof(LOCALLOCKTAG);
 	info.entrysize = sizeof(LOCALLOCK);
-	info.hash = tag_hash;
-	hash_flags = (HASH_ELEM | HASH_FUNCTION);
 
 	LockMethodLocalHash = hash_create("LOCALLOCK hash",
 									  16,
 									  &info,
-									  hash_flags);
+									  HASH_ELEM | HASH_BLOBS);
 }
 
 
@@ -826,14 +822,6 @@ LockAcquireExtended(const LOCKTAG *locktag,
 			return LOCKACQUIRE_ALREADY_HELD;
 	}
 	
-#ifdef USE_TEST_UTILS_X86
-	if (gp_test_deadlock_hazard && !dontWait)
-	{
-		/* blocking lock request, check if any lightweight lock is already held */
-		LWLockHeldDetect(locktag, lockmode);
-	}
-#endif /* USE_TEST_UTILS_X86 */
-
 	/*
 	 * lockHolder is the gang member that should hold and manage locks for this
 	 * transaction.  In Utility mode, or on the QD, it's allways myself.
@@ -1005,52 +993,6 @@ LockAcquireExtended(const LOCKTAG *locktag,
 	locallock->proclock = proclock;
 	lock = proclock->tag.myLock;
 	locallock->lock = lock;
-
-	/*
-	 * We shouldn't already hold the desired lock; else locallock table is
-	 * broken.
-	 */
-	if (Gp_role != GP_ROLE_UTILITY)
-	{
-		if (proclock->holdMask & LOCKBIT_ON(lockmode))
-		{
-			elog(LOG, "lock %s on object %u/%u/%u is already held",
-				 lock_mode_names[lockmode],
-				 lock->tag.locktag_field1, lock->tag.locktag_field2,
-				 lock->tag.locktag_field3);
-			if (MyProc == lockHolderProcPtr)
-			{
-				elog(LOG, "writer found lock %s on object %u/%u/%u that it didn't know it held",
-						 lock_mode_names[lockmode],
-						 lock->tag.locktag_field1, lock->tag.locktag_field2,
-						 lock->tag.locktag_field3);
-				GrantLock(lock, proclock, lockmode);
-				GrantLockLocal(locallock, owner);
-			}
-			else
-			{
-				if (MyProc != lockHolderProcPtr)
-				{
-					elog(LOG, "reader found lock %s on object %u/%u/%u which is already held by writer",
-						 lock_mode_names[lockmode],
-						 lock->tag.locktag_field1, lock->tag.locktag_field2,
-						 lock->tag.locktag_field3);
-				}
-				lock->nRequested--;
-				lock->requested[lockmode]--;
-			}
-			LWLockRelease(partitionLock);
-			return LOCKACQUIRE_ALREADY_HELD;
-		}
-		
-	}
-	else if (proclock->holdMask & LOCKBIT_ON(lockmode))
-	{
-		ereport(ERROR, (errmsg("lock %s on object %u/%u/%u is already held",
-			 lockMethodTable->lockModeNames[lockmode],
-			 lock->tag.locktag_field1, lock->tag.locktag_field2,
-			 lock->tag.locktag_field3)));
-	}
 
 	if (MyProc == lockHolderProcPtr)
 	{
@@ -1419,6 +1361,15 @@ SetupLockInTable(LockMethod lockMethodTable, PGPROC *proc,
 	lock->requested[lockmode]++;
 	Assert((lock->nRequested > 0) && (lock->requested[lockmode] > 0));
 
+	/*
+	 * We shouldn't already hold the desired lock; else locallock table is
+	 * broken.
+	 */
+	if (proclock->holdMask & LOCKBIT_ON(lockmode))
+		elog(ERROR, "lock %s on object %u/%u/%u is already held",
+				lockMethodTable->lockModeNames[lockmode],
+				lock->tag.locktag_field1, lock->tag.locktag_field2,
+				lock->tag.locktag_field3);
 	return proclock;
 }
 
@@ -4616,4 +4567,22 @@ setFPHoldTillEndXact(Oid relid)
 	LWLockRelease(proc->backendLock);
 
 	return result;
+}
+
+/*
+ * Check whether a waiter's request lockmode conflict with
+ * the holder's hold mask
+ */
+bool
+CheckWaitLockModeConflictHoldMask(LOCKTAG tag, LOCKMODE waitLockMode, LOCKMASK holderMask)
+{
+	int			waiterConflictMask;
+	LOCKMETHODID lockmethodid = (LOCKMETHODID) tag.locktag_lockmethodid;
+
+	Assert(0 < lockmethodid && lockmethodid < lengthof(LockMethods));
+
+	waiterConflictMask = LockMethods[lockmethodid]->conflictTab[waitLockMode];
+	if (holderMask & waiterConflictMask)
+		return true;
+	return false;
 }

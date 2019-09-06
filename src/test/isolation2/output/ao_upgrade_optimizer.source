@@ -158,7 +158,7 @@ EXPLAIN SELECT n FROM ao_upgrade_test WHERE n = (9 !);
          ->  Bitmap Index Scan on ao_bitmap_index  (cost=0.00..1000.36 rows=1 width=0)                 
                Index Cond: n = 362880::numeric                                                         
  Settings:  enable_seqscan=off                                                                         
- Optimizer status: legacy query optimizer                                                              
+ Optimizer status: Postgres query optimizer                                                              
 (7 rows)
 EXPLAIN SELECT n FROM aocs_upgrade_test WHERE n = (9 !);
  QUERY PLAN                                                                                                 
@@ -169,7 +169,7 @@ EXPLAIN SELECT n FROM aocs_upgrade_test WHERE n = (9 !);
          ->  Bitmap Index Scan on aocs_bitmap_index  (cost=0.00..1000.36 rows=1 width=0)                    
                Index Cond: n = 362880::numeric                                                              
  Settings:  enable_seqscan=off                                                                              
- Optimizer status: legacy query optimizer                                                                   
+ Optimizer status: Postgres query optimizer                                                                   
 (7 rows)
 EXPLAIN SELECT n FROM aocs_rle_upgrade_test WHERE n = (9 !);
  QUERY PLAN                                                                                                     
@@ -180,7 +180,7 @@ EXPLAIN SELECT n FROM aocs_rle_upgrade_test WHERE n = (9 !);
          ->  Bitmap Index Scan on aocs_rle_bitmap_index  (cost=0.00..1000.36 rows=1 width=0)                    
                Index Cond: n = 362880::numeric                                                                  
  Settings:  enable_seqscan=off                                                                                  
- Optimizer status: legacy query optimizer                                                                       
+ Optimizer status: Postgres query optimizer                                                                       
 (7 rows)
 
 SELECT n FROM ao_upgrade_test WHERE n = (9 !);

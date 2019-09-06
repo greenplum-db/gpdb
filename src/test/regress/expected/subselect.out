@@ -222,6 +222,56 @@ from int8_tbl group by q1 order by q1;
 (2 rows)
 
 --
+-- Check EXISTS simplification with LIMIT
+--
+explain (costs off)
+select * from int4_tbl o where exists
+  (select 1 from int4_tbl i where i.f1=o.f1 limit null);
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (o.f1 = i.f1)
+         ->  Seq Scan on int4_tbl o
+         ->  Hash
+               ->  Seq Scan on int4_tbl i
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain (costs off)
+select * from int4_tbl o where not exists
+  (select 1 from int4_tbl i where i.f1=o.f1 limit 1);
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Anti Join
+         Hash Cond: (o.f1 = i.f1)
+         ->  Seq Scan on int4_tbl o
+         ->  Hash
+               ->  Seq Scan on int4_tbl i
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain (costs off)
+select * from int4_tbl o where exists
+  (select 1 from int4_tbl i where i.f1=o.f1 limit 0);
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Seq Scan on int4_tbl o
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice2; segments: 3)
+           ->  Limit
+                 ->  Limit
+                       ->  Result
+                             Filter: (i.f1 = o.f1)
+                             ->  Materialize
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                         ->  Seq Scan on int4_tbl i
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+--
 -- Test cases to catch unpleasant interactions between IN-join processing
 -- and subquery pullup.
 --
@@ -598,6 +648,28 @@ from
   int4_tbl i4 on dummy = i4.f1;
 ERROR:  correlated subquery with skip-level correlations is not supported
 --
+-- Test case for subselect within UPDATE of INSERT...ON CONFLICT DO UPDATE
+--
+create temp table upsert(key int4 primary key, val text);
+insert into upsert values(1, 'val') on conflict (key) do update set val = 'not seen';
+insert into upsert values(1, 'val') on conflict (key) do update set val = 'seen with subselect ' || (select f1 from int4_tbl where f1 != 0 order by f1 limit 1)::text;
+select * from upsert;
+ key |               val               
+-----+---------------------------------
+   1 | seen with subselect -2147483647
+(1 row)
+
+with aa as (select 'int4_tbl' u from int4_tbl limit 1)
+insert into upsert values (1, 'x'), (999, 'y')
+on conflict (key) do update set val = (select u from aa)
+returning *;
+ key |   val    
+-----+----------
+   1 | int4_tbl
+ 999 | y
+(2 rows)
+
+--
 -- Test case for cross-type partial matching in hashed subplan (bug #7597)
 --
 create temp table outer_7597 (f1 int4, f2 int4);
@@ -652,7 +724,7 @@ explain (verbose, costs off)
    InitPlan 2 (returns $1)
      ->  Result
            Output: 'regression'::name
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 explain (verbose, costs off)
@@ -667,7 +739,7 @@ explain (verbose, costs off)
          InitPlan 1 (returns $0)
            ->  Result
                  Output: random()
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 explain (verbose, costs off)
@@ -685,7 +757,7 @@ explain (verbose, costs off)
      ->  Result
            Output: 'regression'::name
            One-Time Filter: ("*VALUES*".column1 = "*VALUES*".column1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 explain (verbose, costs off)
@@ -701,7 +773,7 @@ explain (verbose, costs off)
            ->  Result
                  Output: random()
                  One-Time Filter: ("*VALUES*".column1 = "*VALUES*".column1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 --
@@ -781,7 +853,7 @@ select * from int4_tbl where
                                    Output: a.unique1
                                    ->  Seq Scan on public.tenk1 a
                                          Output: a.unique1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (28 rows)
 
@@ -817,7 +889,7 @@ select * from int4_tbl o where (f1, f1) in
                            Output: i.f1, (generate_series(1, 2) / 10)
                            ->  Seq Scan on public.int4_tbl i
                                  Output: i.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 select * from int4_tbl o where (f1, f1) in

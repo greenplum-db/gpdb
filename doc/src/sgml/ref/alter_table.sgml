@@ -63,6 +63,8 @@ where action is one of:
   DROP CONSTRAINT [ IF EXISTS ] constraint_name [RESTRICT | CASCADE]
   DISABLE TRIGGER [trigger_name | ALL | USER]
   ENABLE TRIGGER [trigger_name | ALL | USER]
+  DISABLE ROW LEVEL SECURITY
+  ENABLE ROW LEVEL SECURITY
   CLUSTER ON index_name
   SET WITHOUT CLUSTER
   SET WITH OIDS
@@ -176,16 +178,6 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>IF EXISTS</literal></term>
-    <listitem>
-     <para>
-      Do not throw an error if the table does not exist. A notice is issued
-      in this case.
-     </para>
-    </listitem>
-   </varlistentry>
-
-   <varlistentry>
     <term><literal>SET DATA TYPE</literal></term>
     <listitem>
      <para>
@@ -244,7 +236,8 @@ Where column_reference_storage_directive is:
       <xref linkend="planner-stats">.
      </para>
      <para>
-      SET STATISTICS acquires a <literal>SHARE UPDATE EXCLUSIVE</literal> lock.
+      <literal>SET STATISTICS</literal> acquires a
+      <literal>SHARE UPDATE EXCLUSIVE</literal> lock.
      </para>
     </listitem>
    </varlistentry>
@@ -459,6 +452,9 @@ Where column_reference_storage_directive is:
       mode, and triggers configured as <literal>ENABLE ALWAYS</literal> will
       fire regardless of the current replication mode.
      </para>
+     <para>
+      This command acquires a <literal>SHARE ROW EXCLUSIVE</literal> lock.
+     </para>
     </listitem>
    </varlistentry>
 
@@ -472,6 +468,21 @@ Where column_reference_storage_directive is:
       triggers. This configuration is ignored for <literal>ON SELECT</literal> rules, which
       are always applied in order to keep views working even if the current
       session is in a non-default replication role.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>DISABLE</literal>/<literal>ENABLE ROW LEVEL SECURITY</literal></term>
+    <listitem>
+     <para>
+      These forms control the application of row security policies belonging
+      to the table.  If enabled and no policies exist for the table, then a
+      default-deny policy is applied.  Note that policies can exist for a table
+      even if row level security is disabled - in this case, the policies will
+      NOT be applied and the policies will be ignored.
+      See also
+      <xref linkend="SQL-CREATEPOLICY">.
      </para>
     </listitem>
    </varlistentry>
@@ -531,6 +542,42 @@ Where column_reference_storage_directive is:
       <literal>DROP COLUMN oid RESTRICT</literal>,
       except that it will not complain if there is already no
       <literal>oid</literal> column.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>SET TABLESPACE</literal></term>
+    <listitem>
+     <para>
+      This form changes the table's tablespace to the specified tablespace and
+      moves the data file(s) associated with the table to the new tablespace.
+      Indexes on the table, if any, are not moved; but they can be moved
+      separately with additional <literal>SET TABLESPACE</literal> commands.
+      All tables in the current database in a tablespace can be moved by using
+      the <literal>ALL IN TABLESPACE</literal> form, which will lock all tables
+      to be moved first and then move each one.  This form also supports
+      <literal>OWNED BY</literal>, which will only move tables owned by the
+      roles specified.  If the <literal>NOWAIT</literal> option is specified
+      then the command will fail if it is unable to acquire all of the locks
+      required immediately.  Note that system catalogs are not moved by this
+      command, use <command>ALTER DATABASE</command> or explicit
+      <command>ALTER TABLE</command> invocations instead if desired.  The
+      <literal>information_schema</literal> relations are not considered part
+      of the system catalogs and will be moved.
+      See also
+      <xref linkend="SQL-CREATETABLESPACE">.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>SET { LOGGED | UNLOGGED }</literal></term>
+    <listitem>
+     <para>
+      This form changes the table from unlogged to logged or vice-versa
+      (see <xref linkend="SQL-CREATETABLE-UNLOGGED">).  It cannot be applied
+      to a temporary table.
      </para>
     </listitem>
    </varlistentry>
@@ -648,31 +695,6 @@ Where column_reference_storage_directive is:
     </listitem>
    </varlistentry>
 
-   <varlistentry>
-    <term><literal>SET TABLESPACE</literal></term>
-    <listitem>
-     <para>
-      This form changes the table's tablespace to the specified tablespace and
-      moves the data file(s) associated with the table to the new tablespace.
-      Indexes on the table, if any, are not moved; but they can be moved
-      separately with additional <literal>SET TABLESPACE</literal> commands.
-      All tables in the current database in a tablespace can be moved by using
-      the <literal>ALL IN TABLESPACE</literal> form, which will lock all tables
-      to be moved first and then move each one.  This form also supports
-      <literal>OWNED BY</literal>, which will only move tables owned by the
-      roles specified.  If the <literal>NOWAIT</literal> option is specified
-      then the command will fail if it is unable to acquire all of the locks
-      required immediately.  Note that system catalogs are not moved by this
-      command, use <command>ALTER DATABASE</command> or explicit
-      <command>ALTER TABLE</command> invocations instead if desired.  The
-      <literal>information_schema</literal> relations are not considered part
-      of the system catalogs and will be moved.
-      See also
-      <xref linkend="SQL-CREATETABLESPACE">.
-     </para>
-    </listitem>
-   </varlistentry>
-
    <varlistentry id="SQL-CREATETABLE-REPLICA-IDENTITY">
     <term><literal>REPLICA IDENTITY</literal></term>
     <listitem>
@@ -757,6 +779,16 @@ Where column_reference_storage_directive is:
   <title>Parameters</title>
 
     <variablelist>
+
+     <varlistentry>
+      <term><literal>IF EXISTS</literal></term>
+      <listitem>
+       <para>
+        Do not throw an error if the table does not exist. A notice is issued
+        in this case.
+       </para>
+      </listitem>
+     </varlistentry>
 
      <varlistentry>
       <term><replaceable class="PARAMETER">name</replaceable></term>
@@ -1268,5 +1300,5 @@ ALTER TABLE distributors DROP CONSTRAINT distributors_pkey,
 </refentry>
 
 <!-- Keep this comment at the end of the file
-	 GPDB_92_MERGE_FIXME: Why not follow pg upstram to format for 'alter table' document?
+     GPDB_92_MERGE_FIXME: Why not follow pg upstram to format for 'alter table' document?
 -->

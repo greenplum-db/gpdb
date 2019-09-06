@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/paths.h
@@ -22,6 +22,22 @@
 /*
  * allpaths.c
  */
+
+/* Hook for plugins to get control in set_rel_pathlist() */
+typedef void (*set_rel_pathlist_hook_type) (PlannerInfo *root,
+														RelOptInfo *rel,
+														Index rti,
+														RangeTblEntry *rte);
+extern PGDLLIMPORT set_rel_pathlist_hook_type set_rel_pathlist_hook;
+
+/* Hook for plugins to get control in add_paths_to_joinrel() */
+typedef void (*set_join_pathlist_hook_type) (PlannerInfo *root,
+														 RelOptInfo *joinrel,
+														 RelOptInfo *outerrel,
+														 RelOptInfo *innerrel,
+														 JoinType jointype,
+												   JoinPathExtraData *extra);
+extern PGDLLIMPORT set_join_pathlist_hook_type set_join_pathlist_hook;
 
 /* Hook for plugins to replace standard_join_search() */
 typedef RelOptInfo *(*join_search_hook_type) (PlannerInfo *root,
@@ -203,12 +219,6 @@ cdb_pull_up_eclass(PlannerInfo    *root,
                     List           *newvarlist,
                     Index           newrelid);
 
-extern List *make_pathkeys_for_groupclause(PlannerInfo *root,
-										   List *groupclause,
-										   List *tlist);
-extern List *make_pathkeys_for_groupclause_noncanonical(PlannerInfo *root,
-										   List *groupclause,
-										   List *tlist);
 extern List *make_pathkeys_for_sortclauses(PlannerInfo *root,
 							  List *sortclauses,
 							  List *tlist);

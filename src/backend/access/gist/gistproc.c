@@ -7,7 +7,7 @@
  * This gives R-tree behavior, with Guttman's poly-time split algorithm.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -20,7 +20,7 @@
 #include <math.h>
 
 #include "access/gist.h"
-#include "access/skey.h"
+#include "access/stratnum.h"
 #include "utils/builtins.h"
 #include "utils/geo_decls.h"
 
@@ -202,6 +202,16 @@ gist_box_compress(PG_FUNCTION_ARGS)
  */
 Datum
 gist_box_decompress(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_POINTER(PG_GETARG_POINTER(0));
+}
+
+/*
+ * GiST Fetch method for boxes
+ * do not do anything --- we just return the stored box as is.
+ */
+Datum
+gist_box_fetch(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_POINTER(PG_GETARG_POINTER(0));
 }
@@ -1064,25 +1074,16 @@ gist_poly_compress(PG_FUNCTION_ARGS)
 
 	if (entry->leafkey)
 	{
-		retval = palloc(sizeof(GISTENTRY));
-		if (DatumGetPointer(entry->key) != NULL)
-		{
-			POLYGON    *in = DatumGetPolygonP(entry->key);
-			BOX		   *r;
+		POLYGON    *in = DatumGetPolygonP(entry->key);
+		BOX		   *r;
 
-			r = (BOX *) palloc(sizeof(BOX));
-			memcpy((void *) r, (void *) &(in->boundbox), sizeof(BOX));
-			gistentryinit(*retval, PointerGetDatum(r),
-						  entry->rel, entry->page,
-						  entry->offset, FALSE);
+		r = (BOX *) palloc(sizeof(BOX));
+		memcpy((void *) r, (void *) &(in->boundbox), sizeof(BOX));
 
-		}
-		else
-		{
-			gistentryinit(*retval, (Datum) 0,
-						  entry->rel, entry->page,
-						  entry->offset, FALSE);
-		}
+		retval = (GISTENTRY *) palloc(sizeof(GISTENTRY));
+		gistentryinit(*retval, PointerGetDatum(r),
+					  entry->rel, entry->page,
+					  entry->offset, FALSE);
 	}
 	else
 		retval = entry;
@@ -1138,28 +1139,19 @@ gist_circle_compress(PG_FUNCTION_ARGS)
 
 	if (entry->leafkey)
 	{
-		retval = palloc(sizeof(GISTENTRY));
-		if (DatumGetCircleP(entry->key) != NULL)
-		{
-			CIRCLE	   *in = DatumGetCircleP(entry->key);
-			BOX		   *r;
+		CIRCLE	   *in = DatumGetCircleP(entry->key);
+		BOX		   *r;
 
-			r = (BOX *) palloc(sizeof(BOX));
-			r->high.x = in->center.x + in->radius;
-			r->low.x = in->center.x - in->radius;
-			r->high.y = in->center.y + in->radius;
-			r->low.y = in->center.y - in->radius;
-			gistentryinit(*retval, PointerGetDatum(r),
-						  entry->rel, entry->page,
-						  entry->offset, FALSE);
+		r = (BOX *) palloc(sizeof(BOX));
+		r->high.x = in->center.x + in->radius;
+		r->low.x = in->center.x - in->radius;
+		r->high.y = in->center.y + in->radius;
+		r->low.y = in->center.y - in->radius;
 
-		}
-		else
-		{
-			gistentryinit(*retval, (Datum) 0,
-						  entry->rel, entry->page,
-						  entry->offset, FALSE);
-		}
+		retval = (GISTENTRY *) palloc(sizeof(GISTENTRY));
+		gistentryinit(*retval, PointerGetDatum(r),
+					  entry->rel, entry->page,
+					  entry->offset, FALSE);
 	}
 	else
 		retval = entry;
@@ -1228,6 +1220,33 @@ gist_point_compress(PG_FUNCTION_ARGS)
 
 	PG_RETURN_POINTER(entry);
 }
+
+/*
+ * GiST Fetch method for point
+ *
+ * Get point coordinates from its bounding box coordinates and form new
+ * gistentry.
+ */
+Datum
+gist_point_fetch(PG_FUNCTION_ARGS)
+{
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
+	BOX		   *in = DatumGetBoxP(entry->key);
+	Point	   *r;
+	GISTENTRY  *retval;
+
+	retval = palloc(sizeof(GISTENTRY));
+
+	r = (Point *) palloc(sizeof(Point));
+	r->x = in->high.x;
+	r->y = in->high.y;
+	gistentryinit(*retval, PointerGetDatum(r),
+				  entry->rel, entry->page,
+				  entry->offset, FALSE);
+
+	PG_RETURN_POINTER(retval);
+}
+
 
 #define point_point_distance(p1,p2) \
 	DatumGetFloat8(DirectFunctionCall2(point_distance, \
@@ -1480,6 +1499,43 @@ gist_point_distance(PG_FUNCTION_ARGS)
 			elog(ERROR, "unrecognized strategy number: %d", strategy);
 			distance = 0.0;		/* keep compiler quiet */
 			break;
+	}
+
+	PG_RETURN_FLOAT8(distance);
+}
+
+/*
+ * The inexact GiST distance method for geometric types that store bounding
+ * boxes.
+ *
+ * Compute lossy distance from point to index entries.  The result is inexact
+ * because index entries are bounding boxes, not the exact shapes of the
+ * indexed geometric types.  We use distance from point to MBR of index entry.
+ * This is a lower bound estimate of distance from point to indexed geometric
+ * type.
+ */
+Datum
+gist_bbox_distance(PG_FUNCTION_ARGS)
+{
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
+	StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2);
+	bool	   *recheck = (bool *) PG_GETARG_POINTER(4);
+	double		distance;
+	StrategyNumber strategyGroup = strategy / GeoStrategyNumberOffset;
+
+	/* Bounding box distance is always inexact. */
+	*recheck = true;
+
+	switch (strategyGroup)
+	{
+		case PointStrategyNumberGroup:
+			distance = computeDistance(false,
+									   DatumGetBoxP(entry->key),
+									   PG_GETARG_POINT_P(1));
+			break;
+		default:
+			elog(ERROR, "unknown strategy number: %d", strategy);
+			distance = 0.0;		/* keep compiler quiet */
 	}
 
 	PG_RETURN_FLOAT8(distance);

@@ -93,13 +93,16 @@ typedef enum AORelationVersion
 #define AORelationVersion_IsValid(version) \
 	(version > AORelationVersion_None && version < MaxAORelationVersion)
 
+extern bool Debug_appendonly_print_verify_write_block;
+
 static inline void AORelationVersion_CheckValid(int version)
 {
 	if (!AORelationVersion_IsValid(version))
 	{
-		ereport(ERROR,
-	 		    (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-	 		     errmsg("append-only table version %d is invalid", version)));
+		ereport(Debug_appendonly_print_verify_write_block?PANIC:ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("append-only table version %d is invalid", version),
+				 errprintstack(true)));
 	}
 }
 

@@ -2,7 +2,7 @@
 #
 # Makefile for ecpg library
 #
-# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/interfaces/ecpg/ecpglib/Makefile
@@ -13,9 +13,10 @@ subdir = src/interfaces/ecpg/ecpglib
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
+PGFILEDESC = "ECPG - embedded SQL in C"
 NAME= ecpg
 SO_MAJOR_VERSION= 6
-SO_MINOR_VERSION= 6
+SO_MINOR_VERSION= 7
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
 LIBS := $(filter-out -lresolv -lbz2, $(LIBS))
@@ -36,7 +37,7 @@ LIBS := $(filter-out -lpgport, $(LIBS))
 
 OBJS= execute.o typename.o descriptor.o sqlda.o data.o error.o prepare.o memory.o \
 	connect.o misc.o path.o pgstrcasecmp.o \
-	$(filter snprintf.o strlcpy.o win32setlocale.o isinf.o, $(LIBOBJS))
+	$(filter snprintf.o strlcpy.o win32setlocale.o isinf.o, $(LIBOBJS)) $(WIN32RES)
 
 # thread.c is needed only for non-WIN32 implementation of path.c
 ifneq ($(PORTNAME), win32)

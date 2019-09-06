@@ -7,7 +7,7 @@
  *	  transfer pending entries into the regular index structure.  This
  *	  wins because bulk insertion is much more efficient than retail.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -19,11 +19,14 @@
 #include "postgres.h"
 
 #include "access/gin_private.h"
+#include "access/xloginsert.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
 
+/* GUC parameter */
+int			gin_pending_list_limit = 0;
 
 #define GIN_PAGE_FREESIZE \
 	( BLCKSZ - MAXALIGN(SizeOfPageHeaderData) - MAXALIGN(sizeof(GinPageOpaqueData)) )
@@ -102,26 +105,19 @@ writeListPage(Relation index, Buffer buffer,
 
 	if (RelationNeedsWAL(index))
 	{
-		XLogRecData rdata[2];
 		ginxlogInsertListPage data;
 		XLogRecPtr	recptr;
 
-		data.node = index->rd_node;
-		data.blkno = BufferGetBlockNumber(buffer);
 		data.rightlink = rightlink;
 		data.ntuples = ntuples;
 
-		rdata[0].buffer = InvalidBuffer;
-		rdata[0].data = (char *) &data;
-		rdata[0].len = sizeof(ginxlogInsertListPage);
-		rdata[0].next = rdata + 1;
+		XLogBeginInsert();
+		XLogRegisterData((char *) &data, sizeof(ginxlogInsertListPage));
 
-		rdata[1].buffer = InvalidBuffer;
-		rdata[1].data = workspace.data;
-		rdata[1].len = size;
-		rdata[1].next = NULL;
+		XLogRegisterBuffer(0, buffer, REGBUF_WILL_INIT);
+		XLogRegisterBufData(0, workspace.data, size);
 
-		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_INSERT_LISTPAGE, rdata);
+		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_INSERT_LISTPAGE);
 		PageSetLSN(page, recptr);
 	}
 
@@ -216,24 +212,22 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 	Buffer		metabuffer;
 	Page		metapage;
 	GinMetaPageData *metadata = NULL;
-	XLogRecData rdata[2];
 	Buffer		buffer = InvalidBuffer;
 	Page		page = NULL;
 	ginxlogUpdateMeta data;
 	bool		separateList = false;
 	bool		needCleanup = false;
+	int			cleanupSize;
+	bool		needWal;
 
 	if (collector->ntuples == 0)
 		return;
 
+	needWal = RelationNeedsWAL(index);
+
 	data.node = index->rd_node;
 	data.ntuples = 0;
 	data.newRightlink = data.prevTail = InvalidBlockNumber;
-
-	rdata[0].buffer = InvalidBuffer;
-	rdata[0].data = (char *) &data;
-	rdata[0].len = sizeof(ginxlogUpdateMeta);
-	rdata[0].next = NULL;
 
 	metabuffer = ReadBuffer(index, GIN_METAPAGE_BLKNO);
 	metapage = BufferGetPage(metabuffer);
@@ -274,6 +268,9 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 		memset(&sublist, 0, sizeof(GinMetaPageData));
 		makeSublist(index, collector->tuples, collector->ntuples, &sublist);
 
+		if (needWal)
+			XLogBeginInsert();
+
 		/*
 		 * metapage was unlocked, see above
 		 */
@@ -306,14 +303,6 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 			LockBuffer(buffer, GIN_EXCLUSIVE);
 			page = BufferGetPage(buffer);
 
-			rdata[0].next = rdata + 1;
-
-			rdata[1].buffer = buffer;
-			rdata[1].buffer_std = true;
-			rdata[1].data = NULL;
-			rdata[1].len = 0;
-			rdata[1].next = NULL;
-
 			Assert(GinPageGetOpaque(page)->rightlink == InvalidBlockNumber);
 
 			START_CRIT_SECTION();
@@ -327,6 +316,9 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 
 			metadata->nPendingPages += sublist.nPendingPages;
 			metadata->nPendingHeapTuples += sublist.nPendingHeapTuples;
+
+			if (needWal)
+				XLogRegisterBuffer(1, buffer, REGBUF_STANDARD);
 		}
 	}
 	else
@@ -339,6 +331,7 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 		int			i,
 					tupsize;
 		char	   *ptr;
+		char	   *collectordata;
 
 		buffer = ReadBuffer(index, metadata->tail);
 		LockBuffer(buffer, GIN_EXCLUSIVE);
@@ -347,15 +340,12 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 		off = (PageIsEmpty(page)) ? FirstOffsetNumber :
 			OffsetNumberNext(PageGetMaxOffsetNumber(page));
 
-		rdata[0].next = rdata + 1;
-
-		rdata[1].buffer = buffer;
-		rdata[1].buffer_std = true;
-		ptr = rdata[1].data = (char *) palloc(collector->sumsize);
-		rdata[1].len = collector->sumsize;
-		rdata[1].next = NULL;
+		collectordata = ptr = (char *) palloc(collector->sumsize);
 
 		data.ntuples = collector->ntuples;
+
+		if (needWal)
+			XLogBeginInsert();
 
 		START_CRIT_SECTION();
 
@@ -381,7 +371,12 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 			off++;
 		}
 
-		Assert((ptr - rdata[1].data) <= collector->sumsize);
+		Assert((ptr - collectordata) <= collector->sumsize);
+		if (needWal)
+		{
+			XLogRegisterBuffer(1, buffer, REGBUF_STANDARD);
+			XLogRegisterBufData(1, collectordata, collector->sumsize);
+		}
 
 		metadata->tailFreeSize = PageGetExactFreeSpace(page);
 
@@ -393,13 +388,16 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 	 */
 	MarkBufferDirty(metabuffer);
 
-	if (RelationNeedsWAL(index))
+	if (needWal)
 	{
 		XLogRecPtr	recptr;
 
 		memcpy(&data.metadata, metadata, sizeof(GinMetaPageData));
 
-		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_UPDATE_META_PAGE, rdata);
+		XLogRegisterBuffer(0, metabuffer, REGBUF_WILL_INIT);
+		XLogRegisterData((char *) &data, sizeof(ginxlogUpdateMeta));
+
+		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_UPDATE_META_PAGE);
 		PageSetLSN(metapage, recptr);
 
 		if (buffer != InvalidBuffer)
@@ -416,11 +414,13 @@ ginHeapTupleFastInsert(GinState *ginstate, GinTupleCollector *collector)
 	 * ginInsertCleanup could take significant amount of time, so we prefer to
 	 * call it when it can do all the work in a single collection cycle. In
 	 * non-vacuum mode, it shouldn't require maintenance_work_mem, so fire it
-	 * while pending list is still small enough to fit into work_mem.
+	 * while pending list is still small enough to fit into
+	 * gin_pending_list_limit.
 	 *
 	 * ginInsertCleanup() should not be called inside our CRIT_SECTION.
 	 */
-	if (metadata->nPendingPages * GIN_PAGE_FREESIZE > work_mem * 1024L)
+	cleanupSize = GinGetPendingListCleanupSize(index);
+	if (metadata->nPendingPages * GIN_PAGE_FREESIZE > cleanupSize * 1024L)
 		needCleanup = true;
 
 	UnlockReleaseBuffer(metabuffer);
@@ -515,20 +515,11 @@ shiftList(Relation index, Buffer metabuffer, BlockNumber newHead,
 		int			i;
 		int64		nDeletedHeapTuples = 0;
 		ginxlogDeleteListPages data;
-		XLogRecData rdata[1];
 		Buffer		buffers[GIN_NDELETE_AT_ONCE];
-
-		data.node = index->rd_node;
-
-		rdata[0].buffer = InvalidBuffer;
-		rdata[0].data = (char *) &data;
-		rdata[0].len = sizeof(ginxlogDeleteListPages);
-		rdata[0].next = NULL;
 
 		data.ndeleted = 0;
 		while (data.ndeleted < GIN_NDELETE_AT_ONCE && blknoToDelete != newHead)
 		{
-			data.toDelete[data.ndeleted] = blknoToDelete;
 			buffers[data.ndeleted] = ReadBuffer(index, blknoToDelete);
 			LockBuffer(buffers[data.ndeleted], GIN_EXCLUSIVE);
 			page = BufferGetPage(buffers[data.ndeleted]);
@@ -550,6 +541,14 @@ shiftList(Relation index, Buffer metabuffer, BlockNumber newHead,
 
 		if (stats)
 			stats->pages_deleted += data.ndeleted;
+
+		/*
+		 * This operation touches an unusually large number of pages, so
+		 * prepare the XLogInsert machinery for that before entering the
+		 * critical section.
+		 */
+		if (RelationNeedsWAL(index))
+			XLogEnsureRecordSpace(data.ndeleted, 0);
 
 		START_CRIT_SECTION();
 
@@ -581,9 +580,17 @@ shiftList(Relation index, Buffer metabuffer, BlockNumber newHead,
 		{
 			XLogRecPtr	recptr;
 
+			XLogBeginInsert();
+			XLogRegisterBuffer(0, metabuffer, REGBUF_WILL_INIT);
+			for (i = 0; i < data.ndeleted; i++)
+				XLogRegisterBuffer(i + 1, buffers[i], REGBUF_WILL_INIT);
+
 			memcpy(&data.metadata, metadata, sizeof(GinMetaPageData));
 
-			recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_DELETE_LISTPAGE, rdata);
+			XLogRegisterData((char *) &data,
+							 sizeof(ginxlogDeleteListPages));
+
+			recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_DELETE_LISTPAGE);
 			PageSetLSN(metapage, recptr);
 
 			for (i = 0; i < data.ndeleted; i++)

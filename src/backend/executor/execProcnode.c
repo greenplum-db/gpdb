@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -89,6 +89,7 @@
 #include "executor/nodeDynamicBitmapIndexscan.h"
 #include "executor/nodeBitmapOr.h"
 #include "executor/nodeCtescan.h"
+#include "executor/nodeCustom.h"
 #include "executor/nodeForeignscan.h"
 #include "executor/nodeFunctionscan.h"
 #include "executor/nodeHash.h"
@@ -103,8 +104,8 @@
 #include "executor/nodeModifyTable.h"
 #include "executor/nodeNestloop.h"
 #include "executor/nodeRecursiveunion.h"
-#include "executor/nodeReshuffle.h"
 #include "executor/nodeResult.h"
+#include "executor/nodeSamplescan.h"
 #include "executor/nodeSeqscan.h"
 #include "executor/nodeSetOp.h"
 #include "executor/nodeSort.h"
@@ -429,6 +430,17 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			END_MEMORY_ACCOUNT();
 			break;
 
+		case T_SampleScan:
+			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, SampleScan);
+
+			START_MEMORY_ACCOUNT(curMemoryAccountId);
+			{
+			result = (PlanState *) ExecInitSampleScan((SampleScan *) node,
+													  estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
+
 		case T_IndexScan:
 			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, IndexScan);
 
@@ -592,6 +604,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 														estate, eflags);
 			}
 			END_MEMORY_ACCOUNT();
+			break;
+
+		case T_CustomScan:
+			result = (PlanState *) ExecInitCustomScan((CustomScan *) node,
+													  estate, eflags);
 			break;
 
 			/*
@@ -816,16 +833,6 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			}
 			END_MEMORY_ACCOUNT();
 			break;
-		case T_Reshuffle:
-			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, Reshuffle);
-
-			START_MEMORY_ACCOUNT(curMemoryAccountId);
-			{
-				result = (PlanState *) ExecInitReshuffle((Reshuffle *) node,
-														 estate, eflags);
-			}
-			END_MEMORY_ACCOUNT();
-			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			result = NULL;		/* keep compiler quiet */
@@ -909,6 +916,14 @@ ExecSliceDependencyNode(PlanState *node)
 
 		for (; i < ss->numSubplans; ++i)
 			ExecSliceDependencyNode(ss->subplans[i]);
+	}
+	else if (nodeTag(node) == T_ModifyTableState)
+	{
+		int			i = 0;
+		ModifyTableState *mt = (ModifyTableState *) node;
+
+		for (; i < mt->mt_nplans; ++i)
+			ExecSliceDependencyNode(mt->mt_plans[i]);
 	}
 
 	ExecSliceDependencyNode(outerPlanState(node));
@@ -1004,12 +1019,17 @@ ExecProcNode(PlanState *node)
 			result = ExecSeqScan((SeqScanState *)node);
 			break;
 
+			/*GPDB_95_MERGE_FIXME: Do we need DynamicSampleScan here?*/
 		case T_DynamicSeqScanState:
 			result = ExecDynamicSeqScan((DynamicSeqScanState *) node);
 			break;
 
 		case T_ExternalScanState:
 			result = ExecExternalScan((ExternalScanState *) node);
+			break;
+
+		case T_SampleScanState:
+			result = ExecSampleScan((SampleScanState *) node);
 			break;
 
 		case T_IndexScanState:
@@ -1064,6 +1084,10 @@ ExecProcNode(PlanState *node)
 
 		case T_ForeignScanState:
 			result = ExecForeignScan((ForeignScanState *) node);
+			break;
+
+		case T_CustomScanState:
+			result = ExecCustomScan((CustomScanState *) node);
 			break;
 
 			/*
@@ -1152,10 +1176,6 @@ ExecProcNode(PlanState *node)
 			result = ExecPartitionSelector((PartitionSelectorState *) node);
 			break;
 
-		case T_ReshuffleState:
-			result = ExecReshuffle((ReshuffleState *) node);
-			break;
-
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			result = NULL;
@@ -1204,6 +1224,14 @@ MultiExecProcNode(PlanState *node)
 	START_MEMORY_ACCOUNT(node->memoryAccountId);
 {
 	TRACE_POSTGRESQL_EXECPROCNODE_ENTER(GpIdentity.segindex, currentSliceId, nodeTag(node), node->plan->plan_node_id);
+	
+	if (!node->fHadSentNodeStart)
+	{
+		/* GPDB hook for collecting query info */
+		if (query_info_collect_hook)
+			(*query_info_collect_hook)(METRICS_PLAN_NODE_EXECUTING, node);
+		node->fHadSentNodeStart = true;
+	}
 
 	if (node->chgParam != NULL) /* something changed */
 		ExecReScan(node);		/* let ReScan handle this */
@@ -1362,6 +1390,9 @@ ExecEndNode(PlanState *node)
 		case T_DynamicSeqScanState:
 			ExecEndDynamicSeqScan((DynamicSeqScanState *) node);
 			break;
+		case T_SampleScanState:
+			ExecEndSampleScan((SampleScanState *) node);
+			break;
 
 		case T_IndexScanState:
 			ExecEndIndexScan((IndexScanState *) node);
@@ -1425,6 +1456,10 @@ ExecEndNode(PlanState *node)
 
 		case T_ForeignScanState:
 			ExecEndForeignScan((ForeignScanState *) node);
+			break;
+
+		case T_CustomScanState:
+			ExecEndCustomScan((CustomScanState *) node);
 			break;
 
 			/*
@@ -1513,10 +1548,6 @@ ExecEndNode(PlanState *node)
 			break;
 		case T_PartitionSelectorState:
 			ExecEndPartitionSelector((PartitionSelectorState *) node);
-			break;
-
-		case T_ReshuffleState:
-			ExecEndReshuffle((ReshuffleState *) node);
 			break;
 
 		default:

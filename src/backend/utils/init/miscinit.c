@@ -3,7 +3,7 @@
  * miscinit.c
  *	  miscellaneous initialization support stuff
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -16,9 +16,11 @@
 
 #include <sys/param.h>
 #include <signal.h>
+#include <time.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <grp.h>
@@ -41,10 +43,12 @@
 #include "replication/walsender.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
+#include "storage/latch.h"
 #include "storage/pg_shmem.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/gdd.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
@@ -61,6 +65,7 @@ ProcessingMode Mode = InitProcessing;
 /* List of lock files to be removed at proc exit */
 static List *lock_files = NIL;
 
+static Latch LocalLatchData;
 
 /* ----------------------------------------------------------------
  *		ignoring system indexes support stuff
@@ -168,6 +173,106 @@ static int	SecurityRestrictionContext = 0;
 /* We also remember if a SET ROLE is currently active */
 static bool SetRoleIsActive = false;
 
+/*
+ * Initialize the basic environment for a postmaster child
+ *
+ * Should be called as early as possible after the child's startup.
+ */
+void
+InitPostmasterChild(void)
+{
+	IsUnderPostmaster = true;	/* we are a postmaster subprocess now */
+
+	MyProcPid = getpid();		/* reset MyProcPid */
+
+	MyStartTime = time(NULL);	/* set our start time in case we call elog */
+
+	/*
+	 * make sure stderr is in binary mode before anything can possibly be
+	 * written to it, in case it's actually the syslogger pipe, so the pipe
+	 * chunking protocol isn't disturbed. Non-logpipe data gets translated on
+	 * redirection (e.g. via pg_ctl -l) anyway.
+	 */
+#ifdef WIN32
+	_setmode(fileno(stderr), _O_BINARY);
+#endif
+
+	/* We don't want the postmaster's proc_exit() handlers */
+	on_exit_reset();
+
+	/* Initialize process-local latch support */
+	InitializeLatchSupport();
+	MyLatch = &LocalLatchData;
+	InitLatch(MyLatch);
+
+	/*
+	 * If possible, make this process a group leader, so that the postmaster
+	 * can signal any child processes too. Not all processes will have
+	 * children, but for consistency we , but for consistency we make all
+	 * postmaster child processes do this.
+	 */
+#ifdef HAVE_SETSID
+	if (setsid() < 0)
+		elog(FATAL, "setsid() failed: %m");
+#endif
+}
+
+/*
+ * Initialize the basic environment for a standalone process.
+ *
+ * argv0 has to be suitable to find the program's executable.
+ */
+void
+InitStandaloneProcess(const char *argv0)
+{
+	Assert(!IsPostmasterEnvironment);
+
+	MyProcPid = getpid();		/* reset MyProcPid */
+
+	MyStartTime = time(NULL);	/* set our start time in case we call elog */
+
+	/* Initialize process-local latch support */
+	InitializeLatchSupport();
+	MyLatch = &LocalLatchData;
+	InitLatch(MyLatch);
+
+	/* Compute paths, no postmaster to inherit from */
+	if (my_exec_path[0] == '\0')
+	{
+		if (find_my_exec(argv0, my_exec_path) < 0)
+			elog(FATAL, "%s: could not locate my own executable path",
+				 argv0);
+	}
+
+	if (pkglib_path[0] == '\0')
+		get_pkglib_path(my_exec_path, pkglib_path);
+}
+
+void
+SwitchToSharedLatch(void)
+{
+	Assert(MyLatch == &LocalLatchData);
+	Assert(MyProc != NULL);
+
+	MyLatch = &MyProc->procLatch;
+
+	/*
+	 * Set the shared latch as the local one might have been set. This
+	 * shouldn't normally be necessary as code is supposed to check the
+	 * condition before waiting for the latch, but a bit care can't hurt.
+	 */
+	SetLatch(MyLatch);
+}
+
+void
+SwitchBackToLocalLatch(void)
+{
+	Assert(MyLatch != &LocalLatchData);
+	Assert(MyProc != NULL && MyLatch == &MyProc->procLatch);
+
+	MyLatch = &LocalLatchData;
+	SetLatch(MyLatch);
+}
 
 /*
  * GetUserId - get the current effective user ID.
@@ -238,7 +343,7 @@ IsAuthenticatedUserSuperUser()
 }
 
 /*
- * GetAuthenticatedUserId
+ * GetAuthenticatedUserId - get the authenticated user ID
  */
 Oid
 GetAuthenticatedUserId(void)
@@ -246,6 +351,7 @@ GetAuthenticatedUserId(void)
 	AssertState(OidIsValid(AuthenticatedUserId));
 	return AuthenticatedUserId;
 }
+
 
 /*
  * GetUserIdAndSecContext/SetUserIdAndSecContext - get/set the current user ID
@@ -364,11 +470,10 @@ has_rolreplication(Oid roleid)
  * Initialize user identity during normal backend startup
  */
 void
-InitializeSessionUserId(const char *rolename)
+InitializeSessionUserId(const char *rolename, Oid roleid)
 {
 	HeapTuple	roleTup;
 	Form_pg_authid rform;
-	Oid			roleid;
 
 	/*
 	 * Don't do scans if we're bootstrapping, none of the system catalogs
@@ -379,7 +484,10 @@ InitializeSessionUserId(const char *rolename)
 	/* call only once */
 	AssertState(!OidIsValid(AuthenticatedUserId));
 
-	roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(rolename));
+	if (rolename != NULL)
+		roleTup = SearchSysCache1(AUTHNAME, PointerGetDatum(rolename));
+	else
+		roleTup = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
 	if (!HeapTupleIsValid(roleTup))
 		ereport(FATAL,
 				(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
@@ -470,8 +578,8 @@ InitializeSessionUserIdStandalone(void)
 	 */
 	AssertState(!IsUnderPostmaster || IsAutoVacuumWorkerProcess() || IsBackgroundWorker
 				|| am_startup
-				|| (am_ftshandler && am_mirror)
-				|| am_global_deadlock_detector);
+				|| (IsFaultHandler && am_mirror)
+				|| (am_ftshandler && am_mirror));
 
 	/* call only once */
 	AssertState(!OidIsValid(AuthenticatedUserId));
@@ -586,23 +694,29 @@ SetCurrentRoleId(Oid roleid, bool is_superuser)
 
 
 /*
- * Get user name from user oid
+ * Get user name from user oid, returns NULL for nonexistent roleid if noerr
+ * is true.
  */
 char *
-GetUserNameFromId(Oid roleid)
+GetUserNameFromId(Oid roleid, bool noerr)
 {
 	HeapTuple	tuple;
 	char	   *result;
 
 	tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
 	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("invalid role OID: %u", roleid)));
-
-	result = pstrdup(NameStr(((Form_pg_authid) GETSTRUCT(tuple))->rolname));
-
-	ReleaseSysCache(tuple);
+	{
+		if (!noerr)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("invalid role OID: %u", roleid)));
+		result = NULL;
+	}
+	else
+	{
+		result = pstrdup(NameStr(((Form_pg_authid) GETSTRUCT(tuple))->rolname));
+		ReleaseSysCache(tuple);
+	}
 	return result;
 }
 
@@ -1394,9 +1508,11 @@ void
 process_shared_preload_libraries(void)
 {
 	process_shared_preload_libraries_in_progress = true;
+
 	load_libraries(shared_preload_libraries_string,
 				   "shared_preload_libraries",
 				   false);
+
 	process_shared_preload_libraries_in_progress = false;
 }
 

@@ -3,7 +3,7 @@
  * pg_constraint.c
  *	  routines to support manipulation of the pg_constraint relation
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -43,6 +43,8 @@
  * Subsidiary records (such as triggers or indexes to implement the
  * constraint) are *not* created here.  But we do make dependency links
  * from the constraint to the things it depends on.
+ *
+ * The new constraint's OID is returned.
  */
 Oid
 CreateConstraintEntry(const char *constraintName,
@@ -778,6 +780,64 @@ AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
 }
 
 /*
+ * ConstraintSetParentConstraint
+ *		Set a partition's constraint as child of its parent table's
+ *
+ * This updates the constraint's pg_constraint row to show it as inherited, and
+ * add a dependency to the parent so that it cannot be removed on its own.
+ */
+void
+ConstraintSetParentConstraint(Oid childConstrId, Oid parentConstrId)
+{
+	Relation	constrRel;
+	Form_pg_constraint constrForm;
+	HeapTuple	tuple,
+				newtup;
+	ObjectAddress depender;
+	ObjectAddress referenced;
+
+	constrRel = heap_open(ConstraintRelationId, RowExclusiveLock);
+	tuple = SearchSysCache1(CONSTROID, ObjectIdGetDatum(childConstrId));
+	if (!HeapTupleIsValid(tuple))
+		elog(ERROR, "cache lookup failed for constraint %u", childConstrId);
+	newtup = heap_copytuple(tuple);
+	constrForm = (Form_pg_constraint) GETSTRUCT(newtup);
+	if (OidIsValid(parentConstrId))
+	{
+		/* don't allow setting parent for a constraint that already has one */
+		Assert(constrForm->coninhcount == 0);
+
+		constrForm->conislocal = false;
+		constrForm->coninhcount++;
+
+		simple_heap_update(constrRel, &tuple->t_self, newtup);
+		CatalogUpdateIndexes(constrRel, newtup);
+
+		ObjectAddressSet(referenced, ConstraintRelationId, parentConstrId);
+		ObjectAddressSet(depender, ConstraintRelationId, childConstrId);
+
+		recordDependencyOn(&depender, &referenced, DEPENDENCY_INTERNAL_AUTO);
+	}
+	else
+	{
+		constrForm->coninhcount--;
+		constrForm->conislocal = true;
+
+		/* Make sure there's no further inheritance. */
+		Assert(constrForm->coninhcount == 0);
+
+		deleteDependencyRecordsForClass(ConstraintRelationId, childConstrId,
+										ConstraintRelationId,
+										DEPENDENCY_INTERNAL_AUTO);
+		simple_heap_update(constrRel, &tuple->t_self, newtup);
+		CatalogUpdateIndexes(constrRel, newtup);
+	}
+	
+	ReleaseSysCache(tuple);
+	heap_close(constrRel, RowExclusiveLock);
+}
+
+/*
  * get_constraint_relation_oids
  *		Find the IDs of the relations to which a constraint refers.
  */
@@ -852,6 +912,45 @@ get_relation_constraint_oid(Oid relid, const char *conname, bool missing_ok)
 	heap_close(pg_constraint, AccessShareLock);
 
 	return conOid;
+}
+
+/*
+ * Return the OID of the constraint associated with the given index in the
+ * given relation; or InvalidOid if no such index is catalogued.
+ */
+Oid
+get_relation_idx_constraint_oid(Oid relationId, Oid indexId)
+{
+	Relation	pg_constraint;
+	SysScanDesc scan;
+	ScanKeyData key;
+	HeapTuple	tuple;
+	Oid			constraintId = InvalidOid;
+
+	pg_constraint = heap_open(ConstraintRelationId, AccessShareLock);
+
+	ScanKeyInit(&key,
+				Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber,
+				F_OIDEQ,
+				ObjectIdGetDatum(relationId));
+	scan = systable_beginscan(pg_constraint, ConstraintRelidIndexId,
+							  true, NULL, 1, &key);
+	while ((tuple = systable_getnext(scan)) != NULL)
+	{
+		Form_pg_constraint constrForm;
+
+		constrForm = (Form_pg_constraint) GETSTRUCT(tuple);
+		if (constrForm->conindid == indexId)
+		{
+			constraintId = HeapTupleGetOid(tuple);
+			break;
+		}
+	}
+	systable_endscan(scan);
+
+	heap_close(pg_constraint, AccessShareLock);
+	return constraintId;
 }
 
 /*

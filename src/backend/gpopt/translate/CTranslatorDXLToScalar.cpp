@@ -60,7 +60,7 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CTranslatorDXLToScalar::CTranslatorDXLToScalar
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	ULONG num_segments
 	)
@@ -775,7 +775,9 @@ CTranslatorDXLToScalar::TranslateDXLSubplanTestExprToScalar
 	{
 		// test expression is expected to be a comparison between an outer expression 
 		// and a scalar identifier from subplan child
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,  GPOS_WSZ_LIT("Unexpected subplan test expression"));
+		// ORCA currently only supports PARAMs on the inner side of the form id or cast(id)
+		// The outer side may be any non-param thing.
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,  GPOS_WSZ_LIT("Unsupported subplan test expression"));
 	}
 
 	// extract type of inner column

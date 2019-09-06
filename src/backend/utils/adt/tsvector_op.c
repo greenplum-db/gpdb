@@ -3,7 +3,7 @@
  * tsvector_op.c
  *	  operations over tsvector
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -38,13 +38,13 @@ typedef struct
 
 typedef struct StatEntry
 {
-	uint32		ndoc;			/* zero indicates that we already was here
-								 * while walking throug the tree */
+	uint32		ndoc;			/* zero indicates that we were already here
+								 * while walking through the tree */
 	uint32		nentry;
 	struct StatEntry *left;
 	struct StatEntry *right;
 	uint32		lenlexeme;
-	char		lexeme[1];
+	char		lexeme[FLEXIBLE_ARRAY_MEMBER];
 } StatEntry;
 
 #define STATENTRYHDRSZ	(offsetof(StatEntry, lexeme))

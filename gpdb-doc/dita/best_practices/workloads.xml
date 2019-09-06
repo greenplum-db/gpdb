@@ -129,9 +129,9 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
             database. If additional memory is required it will spill to disk. Set the optimal value
             for <codeph>statement_mem</codeph> as follows:
             <codeblock>(vmprotect * .9) / max_expected_concurrent_queries</codeblock></p><p>The
-            default value of <codeph>statement_mem</codeph> is 125MB. For example, a query running
-            on a Dell EMC DCA V2 system using the default <codeph>statement_mem</codeph> value will use
-            1GB of memory on each segment server (8 segments ⨉ 125MB). Set
+            default value of <codeph>statement_mem</codeph> is 125MB. For example, on a system that 
+            is configured with 8 segments per host, a query uses 1GB of memory on each segment server 
+            (8 segments ⨉ 125MB) with the default <codeph>statement_mem</codeph> setting. Set
               <codeph>statement_mem</codeph> at the session level for specific queries that require
             additional memory to complete. This setting works well to manage query memory on
             clusters with low concurrency. For clusters with high concurrency also use resource

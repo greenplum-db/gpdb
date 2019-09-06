@@ -1,0 +1,50 @@
+#! /bin/bash
+#
+# A helper for syncing a folder to a GCS bucket, since Concourse resources can't
+# do that for you. Objects will be given a compressed Content-Encoding (see
+# the `-Z` option for `gsutil cp`) to save on storage. NOTE: this will need to
+# be changed if we start uploading poorly compressible data.
+#
+# Usage: ./gsutil_rsync SRC DST
+#
+# You need to set the JSON_KEY environment to the contents of the GCP json
+# private key for authentication.
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 SRC DST"
+	exit 1
+fi
+
+required_envvars="JSON_KEY"
+for var in $required_envvars; do
+    if [ -z "${!var:-}" ]; then
+        echo "This script requires ($required_envvars) to be set."
+        exit 1
+    fi
+done
+
+# Save the JSON_KEY to a file, for later use by gsutil.
+keyfile=secret-key.json
+saved_umask=$(umask)
+umask 077
+cat - <<< "$JSON_KEY" > "$keyfile"
+umask "${saved_umask}"
+
+# Generate a Boto configuration file for gsutil.
+cat - > boto.cfg <<EOF
+[Boto]
+https_validate_certificates = True
+[Credentials]
+gs_service_key_file = $(pwd)/$keyfile
+EOF
+export BOTO_CONFIG=$(pwd)/boto.cfg
+
+pip install gsutil
+
+# Trim a trailing slash from the source directory if it has one
+SOURCE_DIRECTORY="${1%/}"
+gsutil -m cp -rZ "$SOURCE_DIRECTORY/*" "$2"

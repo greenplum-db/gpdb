@@ -49,6 +49,17 @@ WHERE et like '%Memory: %';
 
 reset explain_memory_verbosity;
 
+EXPLAIN ANALYZE SELECT id FROM 
+( SELECT id 
+	FROM explaintest
+	WHERE id > (
+		SELECT avg(id)
+		FROM explaintest
+	)
+) as foo
+ORDER BY id
+LIMIT 1;
+
 
 -- Verify that the column references are OK. This tests for an old ORCA bug,
 -- where the Filter clause in the IndexScan of this query was incorrectly
@@ -98,12 +109,12 @@ create table foo (a int) distributed randomly;
 -- "outer", "inner" prefix must also be prefixed to variable name as length of rtable > 1
 SELECT trim(et) et from
 get_explain_output($$ 
-	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b join foo on true join foo as foo2 on true $$) as et
+	select * from (values (1),(2)) as f(a) join (values(1),(2)) b(b) on a = b join foo on true join foo as foo2 on true $$) as et
 WHERE et like '%Join Filter:%' or et like '%Hash Cond:%';
 
 SELECT trim(et) et from
 get_explain_output($$
-	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b$$) as et
+	select * from (values (1),(2)) as f(a) join (values(1),(2)) b(b) on a = b$$) as et
 WHERE et like '%Hash Cond:%';
 
 --
@@ -120,7 +131,7 @@ explain (costs off) select count(*) over (partition by g) from generate_series(1
 -- The default init_file rules contain a line to mask this out in normal
 -- text-format EXPLAIN output, but it doesn't catch these alternative formats.
 -- start_matchignore
--- m/Optimizer.*PQO version .*/
+-- m/Optimizer.*Pivotal Optimizer \(GPORCA\) version .*/
 -- end_matchignore
 
 CREATE EXTERNAL WEB TABLE dummy_ext_tab (x text) EXECUTE 'echo foo' FORMAT 'text';

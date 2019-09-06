@@ -2237,7 +2237,7 @@ where b.f1 = t.thousand and a.f1 = b.f1 and (a.f1+b.f1+999) = t.tenthous;
                            ->  Gather Motion 3:1  (slice3; segments: 3)
                                  ->  Aggregate
                                        ->  Seq Scan on int4_tbl i4b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 select a.f1, b.f1, t.thousand, t.tenthous from
@@ -2268,12 +2268,12 @@ select * from
    ->  Merge Full Join
          Merge Cond: ((j2_tbl.i = j1_tbl.i) AND (j2_tbl.k = j1_tbl.i))
          ->  Sort
-               Sort Key: j2_tbl.i, j2_tbl.k
+               Sort Key: j2_tbl.i DESC, j2_tbl.k
                ->  Seq Scan on j2_tbl
          ->  Sort
-               Sort Key: j1_tbl.i
+               Sort Key: j1_tbl.i DESC
                ->  Seq Scan on j1_tbl
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 select * from
@@ -2333,7 +2333,7 @@ select count(*) from
                      Merge Key: y.unique2
                      ->  Subquery Scan on y
                            ->  Index Scan using tenk1_unique2 on tenk1 y_1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 select count(*) from
@@ -2409,6 +2409,12 @@ select * from t1 left join t2 on (t1.a = t2.a);
  200 | 1000 | 200 | 2001
 (5 rows)
 
+-- Test matching of column name with wrong alias
+select t1.x from t1 join t3 on (t1.a = t3.x);
+ERROR:  column t1.x does not exist
+LINE 1: select t1.x from t1 join t3 on (t1.a = t3.x);
+               ^
+HINT:  Perhaps you meant to reference the column "t3"."x".
 --
 -- regression test for 8.1 merge right join bug
 --
@@ -2506,7 +2512,7 @@ where not exists (
                                              ->  Seq Scan on tt4x t4
                                        ->  Hash
                                              ->  Seq Scan on tt4x t5
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (27 rows)
 
 --
@@ -2643,7 +2649,7 @@ select a.idv, b.idv from tidv a, tidv b where a.idv = b.idv;
          ->  Gather Motion 3:1  (slice2; segments: 3)
                Merge Key: b.idv
                ->  Index Only Scan using tidv_idv_idx on tidv b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 set enable_mergejoin = 0;
@@ -2658,7 +2664,7 @@ select a.idv, b.idv from tidv a, tidv b where a.idv = b.idv;
                ->  Seq Scan on tidv a
          ->  Index Only Scan using tidv_idv_idx on tidv b
                Index Cond: (idv = a.idv)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 rollback;
@@ -2813,20 +2819,20 @@ SELECT qq, unique1
 --------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)
    ->  Hash Join
-         Hash Cond: (c.unique2 = COALESCE((COALESCE(a.q1, 0::bigint)), (COALESCE(b.q2, (-1)::bigint))))
+         Hash Cond: (c.unique2 = COALESCE((COALESCE(a.q1, '0'::bigint)), (COALESCE(b.q2, '-1'::bigint))))
          ->  Seq Scan on tenk1 c
          ->  Hash
                ->  Broadcast Motion 3:3  (slice3; segments: 3)
                      ->  Hash Full Join
-                           Hash Cond: (COALESCE(a.q1, 0::bigint) = COALESCE(b.q2, (-1)::bigint))
+                           Hash Cond: (COALESCE(a.q1, '0'::bigint) = COALESCE(b.q2, '-1'::bigint))
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                 Hash Key: COALESCE(a.q1, 0::bigint)
+                                 Hash Key: COALESCE(a.q1, '0'::bigint)
                                  ->  Seq Scan on int8_tbl a
                            ->  Hash
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                       Hash Key: COALESCE(b.q2, (-1)::bigint)
+                                       Hash Key: COALESCE(b.q2, '-1'::bigint)
                                        ->  Seq Scan on int8_tbl b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (16 rows)
 
 SELECT qq, unique1
@@ -2903,7 +2909,7 @@ where nt3.id = 1 and ss2.b3;
          ->  Hash
                ->  Seq Scan on nt3
                      Filter: (id = 1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 select nt3.id
@@ -2956,7 +2962,7 @@ order by 1,2;
                                          ->  Materialize
                                                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                                      ->  Seq Scan on int8_tbl t3
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (22 rows)
 
 --
@@ -3070,7 +3076,7 @@ where q1 = thousand or q2 = thousand;
                                  ->  Seq Scan on int4_tbl
                ->  Function Scan on q1
          ->  Function Scan on q2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 explain (costs off)
@@ -3094,7 +3100,7 @@ where thousand = (q1 + q2);
          ->  Hash
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Seq Scan on int4_tbl
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 --
@@ -3121,7 +3127,7 @@ where thousand = a.q1 and tenthous = b.q1 and a.q2 = 1 and b.q2 = 2;
                                        Filter: (q2 = 1)
                      ->  Index Scan using tenk1_thous_tenthous on tenk1
                            Index Cond: ((thousand = a.q1) AND (tenthous = b.q1))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 reset enable_nestloop;
@@ -3131,7 +3137,7 @@ reset random_page_cost;
 --
 -- start_ignore
 -- GPDB_94_MERGE_FIXME: PG plan & GP plan are different even we enable nestloop
--- join. Need more time to dig into the differnce. Ignore at this moment.
+-- join. Need more time to dig into the difference. Ignore at this moment.
 explain (costs off)
 select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
   tenk1 t1
@@ -3218,7 +3224,7 @@ select * from tenk1 a join tenk1 b on
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Seq Scan on tenk1 a
                            Filter: ((unique1 = 1) OR (unique2 = 3))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 explain (costs off)
@@ -3235,7 +3241,7 @@ select * from tenk1 a join tenk1 b on
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Seq Scan on tenk1 a
                            Filter: ((unique1 = 1) OR (unique2 = 3))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 explain (costs off)
@@ -3253,7 +3259,7 @@ select * from tenk1 a join tenk1 b on
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Seq Scan on tenk1 a
                            Filter: ((unique1 = 1) OR (unique2 = 3) OR (unique2 = 7))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 --
@@ -3283,7 +3289,7 @@ where t1.unique1 = 1;
          ->  Hash
                ->  Index Scan using tenk1_unique1 on tenk1 t1
                      Index Cond: (unique1 = 1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (18 rows)
 
 explain (costs off)
@@ -3311,7 +3317,7 @@ where t1.unique1 = 1;
          ->  Hash
                ->  Index Scan using tenk1_unique1 on tenk1 t1
                      Index Cond: (unique1 = 1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (19 rows)
 
 explain (costs off)
@@ -3345,7 +3351,7 @@ select count(*) from
                                                          ->  Hash
                                                                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                                                                      ->  Seq Scan on int4_tbl
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (25 rows)
 
 select count(*) from
@@ -3397,7 +3403,7 @@ select b.unique1 from
                                                                            ->  Seq Scan on int4_tbl i1
                ->  Hash
                      ->  Seq Scan on int4_tbl i2
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (32 rows)
 
 select b.unique1 from
@@ -3428,7 +3434,7 @@ order by fault;
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Right Join
          Hash Cond: (tenk1.unique2 = int8_tbl.q2)
-         Filter: ((COALESCE(tenk1.unique1, (-1)) + int8_tbl.q1) = 122)
+         Filter: ((COALESCE(tenk1.unique1, '-1'::integer) + int8_tbl.q1) = 122)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: tenk1.unique2
                ->  Seq Scan on tenk1
@@ -3436,7 +3442,7 @@ order by fault;
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: int8_tbl.q2
                      ->  Seq Scan on int8_tbl
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 select * from
@@ -3466,7 +3472,8 @@ left join unnest(v1ys) as u1(u1y) on u1y = v2y;
          ->  Function Scan on unnest u1
          ->  Hash
                ->  Values Scan on "*VALUES*_1"
-(8 rows)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 select * from
 (values (1, array[10,20]), (2, array[20,30])) as v1(v1x,v1ys)
@@ -3496,7 +3503,7 @@ select q1, unique2, thousand, hundred
                ->  Seq Scan on tenk1 b
          ->  Hash
                ->  Seq Scan on int8_tbl a
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 select q1, unique2, thousand, hundred
@@ -3521,7 +3528,7 @@ select f1, unique2, case when unique2 is null then f1 else 0 end
                ->  Seq Scan on tenk1 b
          ->  Hash
                ->  Seq Scan on int4_tbl a
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 select f1, unique2, case when unique2 is null then f1 else 0 end
@@ -3538,7 +3545,7 @@ select f1, unique2, case when unique2 is null then f1 else 0 end
 explain (costs off)
 select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
   from tenk1 a left join tenk1 b on b.thousand = a.unique1                        left join tenk1 c on c.unique2 = coalesce(b.twothousand, a.twothousand)
-  where a.unique2 = 5530 and coalesce(b.twothousand, a.twothousand) = 44;
+  where a.unique2 < 10 and coalesce(b.twothousand, a.twothousand) = 44;
                                QUERY PLAN                                
 -------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)
@@ -3551,18 +3558,18 @@ select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
                      Hash Key: b.thousand
                      ->  Seq Scan on tenk1 b
                ->  Hash
-                     ->  Index Scan using tenk1_unique2 on tenk1 a
-                           Index Cond: (unique2 = 5530)
+                     ->  Seq Scan on tenk1 a
+                           Filter: (unique2 < 10)
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Index Scan using tenk1_unique2 on tenk1 c
                            Index Cond: (unique2 = 44)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
   from tenk1 a left join tenk1 b on b.thousand = a.unique1                        left join tenk1 c on c.unique2 = coalesce(b.twothousand, a.twothousand)
-  where a.unique2 = 5530 and coalesce(b.twothousand, a.twothousand) = 44;
+  where a.unique2 < 10 and coalesce(b.twothousand, a.twothousand) = 44;
  unique1 | unique1 | unique1 | coalesce 
 ---------+---------+---------+----------
 (0 rows)
@@ -3585,11 +3592,11 @@ left join
 using (join_key);
                             QUERY PLAN                            
 ------------------------------------------------------------------
- Hash Right Join
+ Gather Motion 3:1  (slice3; segments: 3)
    Output: "*VALUES*".column1, i1.f1, (666)
-   Hash Cond: (i1.f1 = "*VALUES*".column1)
-   ->  Gather Motion 3:1  (slice2; segments: 3)
-         Output: i1.f1, (666)
+   ->  Hash Right Join
+         Output: "*VALUES*".column1, i1.f1, (666)
+         Hash Cond: (i1.f1 = "*VALUES*".column1)
          ->  Hash Right Join
                Output: i1.f1, 666
                Hash Cond: (i2.unique2 = i1.f1)
@@ -3602,13 +3609,15 @@ using (join_key);
                      Output: i1.f1
                      ->  Seq Scan on public.int4_tbl i1
                            Output: i1.f1
-   ->  Hash
-         Output: "*VALUES*".column1
-         ->  Values Scan on "*VALUES*"
+         ->  Hash
                Output: "*VALUES*".column1
- Optimizer: legacy query optimizer
- Settings: optimizer=off
-(23 rows)
+               ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                     Output: "*VALUES*".column1
+                     Hash Key: "*VALUES*".column1
+                     ->  Values Scan on "*VALUES*"
+                           Output: "*VALUES*".column1
+ Optimizer: Postgres query optimizer
+(25 rows)
 
 select foo1.join_key as foo1_id, foo3.join_key AS foo3_id, bug_field from
   (values (0),(1)) foo1(join_key)
@@ -3686,7 +3695,7 @@ select t1.* from
                      Output: i4.f1
                      ->  Seq Scan on public.int4_tbl i4
                            Output: i4.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (43 rows)
 
 select t1.* from
@@ -3768,7 +3777,7 @@ select t1.* from
                      Output: i4.f1
                      ->  Seq Scan on public.int4_tbl i4
                            Output: i4.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (51 rows)
 
 select t1.* from
@@ -3850,7 +3859,7 @@ select t1.* from
                      Output: i4.f1
                      ->  Seq Scan on public.int4_tbl i4
                            Output: i4.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (50 rows)
 
 select t1.* from
@@ -3910,7 +3919,7 @@ select * from
                                        ->  Seq Scan on public.text_tbl t1
                                              Output: t1.f1
                                              Filter: (t1.f1 = 'doh!'::text)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (30 rows)
 
 select * from
@@ -4154,7 +4163,7 @@ select * from
                ->  Redistribute Motion 1:3  (slice3; segments: 1)
                      Hash Key: (1)
                      ->  Result
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (17 rows)
 
 select * from
@@ -4184,7 +4193,7 @@ explain (costs off)
          ->  Hash
                ->  Seq Scan on int4_tbl a
                      Filter: (f1 = 0)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 explain (costs off)
@@ -4203,7 +4212,7 @@ explain (costs off)
                      Hash Key: b.unique2
                      ->  Index Scan using tenk1_unique2 on tenk1 b
                            Index Cond: (unique2 = 42)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (13 rows)
 
 --
@@ -4224,8 +4233,8 @@ explain (verbose, costs off)
    Output: a.q2, b.q1
    ->  Merge Left Join
          Output: a.q2, b.q1
-         Merge Cond: (a.q2 = (COALESCE(b.q1, 1::bigint)))
-         Filter: (COALESCE(b.q1, 1::bigint) > 0)
+         Merge Cond: (a.q2 = (COALESCE(b.q1, '1'::bigint)))
+         Filter: (COALESCE(b.q1, '1'::bigint) > 0)
          ->  Sort
                Output: a.q2, a.q1
                Sort Key: a.q2
@@ -4235,16 +4244,16 @@ explain (verbose, costs off)
                      ->  Seq Scan on public.int8_tbl a
                            Output: a.q2, a.q1
          ->  Sort
-               Output: b.q1, (COALESCE(b.q1, 1::bigint))
-               Sort Key: (COALESCE(b.q1, 1::bigint))
+               Output: b.q1, (COALESCE(b.q1, '1'::bigint))
+               Sort Key: (COALESCE(b.q1, '1'::bigint))
                ->  Result
-                     Output: b.q1, COALESCE(b.q1, 1::bigint)
+                     Output: b.q1, COALESCE(b.q1, '1'::bigint)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Output: b.q1
-                           Hash Key: COALESCE(b.q1, 1::bigint)
+                           Hash Key: COALESCE(b.q1, '1'::bigint)
                            ->  Seq Scan on public.int8_tbl b
                                  Output: b.q1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: enable_hashjoin=off, enable_mergejoin=on, enable_nestloop=off
 (26 rows)
 
@@ -4275,16 +4284,18 @@ begin;
 CREATE TEMP TABLE a (id int PRIMARY KEY, b_id int);
 CREATE TEMP TABLE b (id int PRIMARY KEY, c_id int);
 CREATE TEMP TABLE c (id int PRIMARY KEY);
+CREATE TEMP TABLE d (a int, b int);
 INSERT INTO a VALUES (0, 0), (1, NULL);
 INSERT INTO b VALUES (0, 0), (1, NULL);
 INSERT INTO c VALUES (0), (1);
+INSERT INTO d VALUES (1,3), (2,2), (3,1);
 -- all three cases should be optimizable into a simple seqscan
 explain (costs off) SELECT a.* FROM a LEFT JOIN b ON a.b_id = b.id;
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on a
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 explain (costs off) SELECT b.* FROM b LEFT JOIN c ON b.c_id = c.id;
@@ -4292,7 +4303,7 @@ explain (costs off) SELECT b.* FROM b LEFT JOIN c ON b.c_id = c.id;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 explain (costs off)
@@ -4302,7 +4313,7 @@ explain (costs off)
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on a
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 -- check optimization of outer join within another special join
@@ -4318,8 +4329,95 @@ select id from a where id in (
          ->  Seq Scan on a
          ->  Hash
                ->  Seq Scan on b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
+
+-- check that join removal works for a left join when joining a subquery
+-- that is guaranteed to be unique by its GROUP BY clause
+explain (costs off)
+select d.* from d left join (select * from b group by b.id, b.c_id) s
+  on d.a = s.id and d.b = s.c_id;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on d
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+-- similarly, but keying off a DISTINCT clause
+explain (costs off)
+select d.* from d left join (select distinct * from b) s
+  on d.a = s.id and d.b = s.c_id;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on d
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+-- join removal is not possible when the GROUP BY contains a column that is
+-- not in the join condition
+explain (costs off)
+select d.* from d left join (select * from b group by b.id, b.c_id) s
+  on d.a = s.id;
+                       QUERY PLAN                       
+--------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (d.a = s.id)
+         ->  Seq Scan on d
+         ->  Hash
+               ->  Subquery Scan on s
+                     ->  GroupAggregate
+                           Group Key: b.id, b.c_id
+                           ->  Sort
+                                 Sort Key: b.id, b.c_id
+                                 ->  Seq Scan on b
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+-- similarly, but keying off a DISTINCT clause
+explain (costs off)
+select d.* from d left join (select distinct * from b) s
+  on d.a = s.id;
+                       QUERY PLAN                       
+--------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (d.a = s.id)
+         ->  Seq Scan on d
+         ->  Hash
+               ->  Subquery Scan on s
+                     ->  GroupAggregate
+                           Group Key: b.id, b.c_id
+                           ->  Sort
+                                 Sort Key: b.id, b.c_id
+                                 ->  Seq Scan on b
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+-- check join removal works when uniqueness of the join condition is enforced
+-- by a UNION
+explain (costs off)
+select d.* from d left join (select id from a union select id from b) s
+  on d.a = s.id;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on d
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+-- check join removal with a cross-type comparison operator
+explain (costs off)
+select i8.* from int8_tbl i8 left join (select f1 from int4_tbl group by f1) i4
+  on i8.q1 = i4.f1;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on int8_tbl i8
+ Optimizer: Postgres query optimizer
+(3 rows)
 
 rollback;
 create temp table parent (k int primary key, pd int);
@@ -4341,7 +4439,7 @@ explain (costs off)
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on parent p
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 -- this case is not
@@ -4367,7 +4465,7 @@ explain (costs off)
          ->  Seq Scan on parent p
          ->  Hash
                ->  Seq Scan on child c
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- check for a 9.0rc1 bug: join removal breaks pseudoconstant qual handling
@@ -4386,7 +4484,7 @@ select p.* from
 -----------------------------------
  Result
    One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 select p.* from
@@ -4404,7 +4502,7 @@ select p.* from
 -----------------------------------
  Result
    One-Time Filter: false
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 -- bug 5255: this is not optimizable by join removal
@@ -4460,7 +4558,7 @@ select t1.* from
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on uniquetbl t1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (3 rows)
 
 explain (costs off)
@@ -4490,7 +4588,7 @@ where ss.stringu2 !~* ss.case1;
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on text_tbl t0
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 select t0.*
@@ -4529,6 +4627,38 @@ select * from
 (0 rows)
 
 --
+-- Test hints given on incorrect column references are useful
+--
+select t1.uunique1 from
+  tenk1 t1 join tenk2 t2 on t1.two = t2.two; -- error, prefer "t1" suggestipn
+ERROR:  column t1.uunique1 does not exist
+LINE 1: select t1.uunique1 from
+               ^
+HINT:  Perhaps you meant to reference the column "t1"."unique1".
+select t2.uunique1 from
+  tenk1 t1 join tenk2 t2 on t1.two = t2.two; -- error, prefer "t2" suggestion
+ERROR:  column t2.uunique1 does not exist
+LINE 1: select t2.uunique1 from
+               ^
+HINT:  Perhaps you meant to reference the column "t2"."unique1".
+select uunique1 from
+  tenk1 t1 join tenk2 t2 on t1.two = t2.two; -- error, suggest both at once
+ERROR:  column "uunique1" does not exist
+LINE 1: select uunique1 from
+               ^
+HINT:  Perhaps you meant to reference the column "t1"."unique1" or the column "t2"."unique1".
+--
+-- Take care to reference the correct RTE
+--
+select atts.relid::regclass, s.* from pg_stats s join
+    pg_attribute a on s.attname = a.attname and s.tablename =
+    a.attrelid::regclass::text join (select unnest(indkey) attnum,
+    indexrelid from pg_index i) atts on atts.attnum = a.attnum where
+    schemaname != 'pg_catalog';
+ERROR:  column atts.relid does not exist
+LINE 1: select atts.relid::regclass, s.* from pg_stats s join
+               ^
+--
 -- Test LATERAL
 --
 select unique2, x.*
@@ -4549,7 +4679,7 @@ explain (costs off)
          ->  Seq Scan on tenk1 a
          ->  Hash
                ->  Seq Scan on int4_tbl b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 select unique2, x.*
@@ -4570,7 +4700,7 @@ explain (costs off)
          ->  Seq Scan on tenk1
          ->  Hash
                ->  Seq Scan on int4_tbl x
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 explain (costs off)
@@ -4584,7 +4714,7 @@ explain (costs off)
          ->  Seq Scan on tenk1
          ->  Hash
                ->  Seq Scan on int4_tbl x
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 select unique2, x.*
@@ -4609,7 +4739,7 @@ explain (costs off)
          ->  Seq Scan on tenk1
          ->  Hash
                ->  Seq Scan on int4_tbl x
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- check scoping of lateral versus parent references
@@ -4651,7 +4781,7 @@ explain (costs off)
                ->  Nested Loop
                      ->  Seq Scan on tenk1 a
                      ->  Function Scan on generate_series g
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 explain (costs off)
@@ -4664,7 +4794,7 @@ explain (costs off)
                ->  Nested Loop
                      ->  Seq Scan on tenk1 a
                      ->  Function Scan on generate_series g
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- don't need the explicit LATERAL keyword for functions
@@ -4678,7 +4808,7 @@ explain (costs off)
                ->  Nested Loop
                      ->  Seq Scan on tenk1 a
                      ->  Function Scan on generate_series g
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- lateral with UNION ALL subselect
@@ -4697,7 +4827,7 @@ explain (costs off)
                            Filter: (g.g = q1)
                      ->  Seq Scan on int8_tbl b
                            Filter: (g.g = q2)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (10 rows)
 
 select * from generate_series(100,200) g,
@@ -4714,8 +4844,34 @@ select * from generate_series(100,200) g,
 explain (costs off)
   select count(*) from tenk1 a,
     tenk1 b join lateral (values(a.unique1)) ss(x) on b.unique2 = ss.x;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice2; segments: 3)
+         ->  Aggregate
+               ->  Hash Join
+                     Hash Cond: (b.unique2 = a.unique1)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: b.unique2
+                           ->  Seq Scan on tenk1 b
+                     ->  Hash
+                           ->  Seq Scan on tenk1 a
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select count(*) from tenk1 a,
+  tenk1 b join lateral (values(a.unique1)) ss(x) on b.unique2 = ss.x;
+ count 
+-------
+ 10000
+(1 row)
+
+-- lateral with VALUES, no flattening possible
+explain (costs off)
+  select count(*) from tenk1 a,
+    tenk1 b join lateral (values(a.unique1),(-1)) ss(x) on b.unique2 = ss.x;
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice3; segments: 3)
          ->  Aggregate
@@ -4730,11 +4886,11 @@ explain (costs off)
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                  Hash Key: b.unique2
                                  ->  Seq Scan on tenk1 b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 select count(*) from tenk1 a,
-  tenk1 b join lateral (values(a.unique1)) ss(x) on b.unique2 = ss.x;
+  tenk1 b join lateral (values(a.unique1),(-1)) ss(x) on b.unique2 = ss.x;
  count 
 -------
  10000
@@ -4755,11 +4911,11 @@ explain (costs off)
 ------------------------------------------
  Nested Loop
    ->  Seq Scan on int8_tbl a
-   ->  Hash Left Join
-         Hash Cond: (x.q2 = (a.q1))
-         ->  Seq Scan on int8_tbl x
+   ->  Hash Right Join
+         Hash Cond: ((a.q1) = x.q2)
+         ->  Seq Scan on int4_tbl y
          ->  Hash
-               ->  Seq Scan on int4_tbl y
+               ->  Seq Scan on int8_tbl x
 (7 rows)
 
 select * from int8_tbl a,
@@ -4767,62 +4923,62 @@ select * from int8_tbl a,
     on x.q2 = ss.z;
         q1        |        q2         |        q1        |        q2         |        z         
 ------------------+-------------------+------------------+-------------------+------------------
-              123 |               456 |              123 |               456 |                 
-              123 |               456 |              123 |  4567890123456789 |                 
               123 |               456 | 4567890123456789 |               123 |              123
               123 |               456 | 4567890123456789 |               123 |              123
               123 |               456 | 4567890123456789 |               123 |              123
               123 |               456 | 4567890123456789 |               123 |              123
               123 |               456 | 4567890123456789 |               123 |              123
               123 |               456 | 4567890123456789 |  4567890123456789 |                 
+              123 |               456 |              123 |  4567890123456789 |                 
+              123 |               456 |              123 |               456 |                 
               123 |               456 | 4567890123456789 | -4567890123456789 |                 
-              123 |  4567890123456789 |              123 |               456 |                 
-              123 |  4567890123456789 |              123 |  4567890123456789 |                 
               123 |  4567890123456789 | 4567890123456789 |               123 |              123
               123 |  4567890123456789 | 4567890123456789 |               123 |              123
               123 |  4567890123456789 | 4567890123456789 |               123 |              123
               123 |  4567890123456789 | 4567890123456789 |               123 |              123
               123 |  4567890123456789 | 4567890123456789 |               123 |              123
               123 |  4567890123456789 | 4567890123456789 |  4567890123456789 |                 
+              123 |  4567890123456789 |              123 |  4567890123456789 |                 
+              123 |  4567890123456789 |              123 |               456 |                 
               123 |  4567890123456789 | 4567890123456789 | -4567890123456789 |                 
- 4567890123456789 |               123 |              123 |               456 |                 
+ 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |               123 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |               123 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |               123 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |               123 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |               123 |              123 |  4567890123456789 | 4567890123456789
  4567890123456789 |               123 | 4567890123456789 |               123 |                 
- 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 |               123 | 4567890123456789 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |               123 |              123 |               456 |                 
  4567890123456789 |               123 | 4567890123456789 | -4567890123456789 |                 
- 4567890123456789 |  4567890123456789 |              123 |               456 |                 
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |  4567890123456789 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |  4567890123456789 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |  4567890123456789 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |  4567890123456789 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 |  4567890123456789 |              123 |  4567890123456789 | 4567890123456789
  4567890123456789 |  4567890123456789 | 4567890123456789 |               123 |                 
- 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 |              123 |               456 |                 
  4567890123456789 |  4567890123456789 | 4567890123456789 | -4567890123456789 |                 
- 4567890123456789 | -4567890123456789 |              123 |               456 |                 
+ 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 | -4567890123456789 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 | -4567890123456789 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 | -4567890123456789 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 | -4567890123456789 |              123 |  4567890123456789 | 4567890123456789
+ 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
  4567890123456789 | -4567890123456789 |              123 |  4567890123456789 | 4567890123456789
  4567890123456789 | -4567890123456789 | 4567890123456789 |               123 |                 
- 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
- 4567890123456789 | -4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
+ 4567890123456789 | -4567890123456789 |              123 |               456 |                 
  4567890123456789 | -4567890123456789 | 4567890123456789 | -4567890123456789 |                 
 (57 rows)
 
@@ -5069,7 +5225,7 @@ select * from
          ->  Seq Scan on public.int8_tbl b
                Output: b.q1, b.q2, a.q2
                Filter: (a.q2 = b.q1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (14 rows)
 
@@ -5097,18 +5253,18 @@ select * from
                               QUERY PLAN                              
 ----------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
-   Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, 42::bigint))
+   Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, '42'::bigint))
    ->  Nested Loop Left Join
-         Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, 42::bigint))
+         Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, '42'::bigint))
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Output: a.q1, a.q2
                Hash Key: a.q2
                ->  Seq Scan on public.int8_tbl a
                      Output: a.q1, a.q2
          ->  Seq Scan on public.int8_tbl b
-               Output: b.q1, b.q2, COALESCE(a.q2, 42::bigint)
+               Output: b.q1, b.q2, COALESCE(a.q2, '42'::bigint)
                Filter: (a.q2 = b.q1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (14 rows)
 
@@ -5147,7 +5303,7 @@ select * from int4_tbl i left join
                Output: j.f1
                ->  Seq Scan on public.int2_tbl j
                      Output: j.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (13 rows)
 
@@ -5176,7 +5332,7 @@ select * from int4_tbl i left join
          ->  Seq Scan on public.int2_tbl j
                Output: j.f1, COALESCE(i.*)
                Filter: (i.f1 = j.f1)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (11 rows)
 
@@ -5218,7 +5374,7 @@ select * from int4_tbl a,
                            Output: b.f1
                            ->  Seq Scan on public.int4_tbl b
                                  Output: b.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (22 rows)
 
@@ -5290,7 +5446,7 @@ select * from
                                  Output: c.q1
                                  ->  Seq Scan on public.int8_tbl c
                                        Output: c.q1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (23 rows)
 
 select * from
@@ -5354,22 +5510,22 @@ select * from
     cross join
     lateral (select q1, coalesce(ss1.x,q2) as y from int8_tbl d) ss2
   ) on c.q2 = ss2.q1,
-  lateral (select ss2.y) ss3;
-                                                                                  QUERY PLAN                                                                                  
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  lateral (select ss2.y offset 0) ss3;
+                                                                                     QUERY PLAN                                                                                     
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Nested Loop
-   Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint)), d.q1, (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
+   Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, '42'::bigint)), d.q1, (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)))
    ->  Gather Motion 3:1  (slice4; segments: 3)
-         Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+         Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, '42'::bigint)), (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
          ->  Hash Right Join
-               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, '42'::bigint)), (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
                Hash Cond: (d.q1 = c.q2)
                ->  Nested Loop
-                     Output: a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+                     Output: a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, '42'::bigint)), (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
                      ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                           Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint))
+                           Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, '42'::bigint))
                            ->  Hash Left Join
-                                 Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint))
+                                 Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, '42'::bigint))
                                  Hash Cond: (a.q2 = b.q1)
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                        Output: a.q1, a.q2
@@ -5377,11 +5533,11 @@ select * from
                                        ->  Seq Scan on public.int8_tbl a
                                              Output: a.q1, a.q2
                                  ->  Hash
-                                       Output: b.q1, (COALESCE(b.q2, 42::bigint))
+                                       Output: b.q1, (COALESCE(b.q2, '42'::bigint))
                                        ->  Seq Scan on public.int8_tbl b
-                                             Output: b.q1, COALESCE(b.q2, 42::bigint)
+                                             Output: b.q1, COALESCE(b.q2, '42'::bigint)
                      ->  Seq Scan on public.int8_tbl d
-                           Output: d.q1, COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)
+                           Output: d.q1, COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)
                ->  Hash
                      Output: c.q1, c.q2
                      ->  Redistribute Motion 3:3  (slice3; segments: 3)
@@ -5390,10 +5546,10 @@ select * from
                            ->  Seq Scan on public.int8_tbl c
                                  Output: c.q1, c.q2
    ->  Materialize
-         Output: ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
+         Output: ((COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)))
          ->  Result
-               Output: (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
- Optimizer: legacy query optimizer
+               Output: (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (38 rows)
 
@@ -5459,16 +5615,16 @@ select c.*,a.*,ss1.q1,ss2.q1,ss3.* from
                      Output: i.f1
                      ->  Seq Scan on public.int4_tbl i
                            Output: i.f1
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (50 rows)
 
 -- check processing of postponed quals (bug #9041)
 explain (verbose, costs off)
 select * from
-  (select 1 as x) x cross join (select 2 as y) y
+  (select 1 as x offset 0) x cross join (select 2 as y offset 0) y
   left join lateral (
-    select * from (select 3 as z) z where z.z = x.x
+    select * from (select 3 as z offset 0) z where z.z = x.x
   ) zz on zz.z = y.y;
                  QUERY PLAN                 
 --------------------------------------------
@@ -5487,7 +5643,7 @@ select * from
          Output: (3)
          ->  Result
                Output: 3
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (17 rows)
 

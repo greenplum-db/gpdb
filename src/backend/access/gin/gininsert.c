@@ -4,7 +4,7 @@
  *	  insert routines for the postgres inverted index access method.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -15,7 +15,7 @@
 #include "postgres.h"
 
 #include "access/gin_private.h"
-#include "access/heapam_xlog.h"
+#include "access/xloginsert.h"
 #include "catalog/index.h"
 #include "miscadmin.h"
 #include "storage/bufmgr.h"
@@ -267,7 +267,7 @@ ginHeapTupleBulkInsert(GinBuildState *buildstate, OffsetNumber attnum,
 
 static void
 ginBuildCallback(Relation index, ItemPointer tupleId, Datum *values,
-				 bool *isnull, bool tupleIsAlive __attribute__((unused)), void *state)
+				 bool *isnull, bool tupleIsAlive pg_attribute_unused(), void *state)
 {
 	GinBuildState *buildstate = (GinBuildState *) state;
 	MemoryContext oldCtx;
@@ -347,15 +347,13 @@ ginbuild(PG_FUNCTION_ARGS)
 	if (RelationNeedsWAL(index))
 	{
 		XLogRecPtr	recptr;
-		XLogRecData rdata;
 		Page		page;
 
-		rdata.buffer = InvalidBuffer;
-		rdata.data = (char *) &(index->rd_node);
-		rdata.len = sizeof(RelFileNode);
-		rdata.next = NULL;
+		XLogBeginInsert();
+		XLogRegisterBuffer(0, MetaBuffer, REGBUF_WILL_INIT);
+		XLogRegisterBuffer(1, RootBuffer, REGBUF_WILL_INIT);
 
-		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_CREATE_INDEX, &rdata);
+		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_CREATE_INDEX);
 
 		page = BufferGetPage(RootBuffer);
 		PageSetLSN(page, recptr);
@@ -372,8 +370,8 @@ ginbuild(PG_FUNCTION_ARGS)
 	buildstate.buildStats.nEntryPages++;
 
 	/*
-	 * create a temporary memory context that is reset once for each tuple
-	 * inserted into the index
+	 * create a temporary memory context that is used to hold data not yet
+	 * dumped out to the index
 	 */
 	buildstate.tmpCtx = AllocSetContextCreate(CurrentMemoryContext,
 											  "Gin build temporary context",
@@ -381,7 +379,11 @@ ginbuild(PG_FUNCTION_ARGS)
 											  ALLOCSET_DEFAULT_INITSIZE,
 											  ALLOCSET_DEFAULT_MAXSIZE);
 
-	buildstate.funcCtx = AllocSetContextCreate(buildstate.tmpCtx,
+	/*
+	 * create a temporary memory context that is used for calling
+	 * ginExtractEntries(), and can be reset after each tuple
+	 */
+	buildstate.funcCtx = AllocSetContextCreate(CurrentMemoryContext,
 					 "Gin build temporary context for user-defined function",
 											   ALLOCSET_DEFAULT_MINSIZE,
 											   ALLOCSET_DEFAULT_INITSIZE,
@@ -410,6 +412,7 @@ ginbuild(PG_FUNCTION_ARGS)
 	}
 	MemoryContextSwitchTo(oldCtx);
 
+	MemoryContextDelete(buildstate.funcCtx);
 	MemoryContextDelete(buildstate.tmpCtx);
 
 	/*

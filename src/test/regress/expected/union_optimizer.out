@@ -488,7 +488,7 @@ explain (costs off)
                      ->  Seq Scan on t1
          ->  Index Scan using t2_pkey on t2
                Index Cond: (ab = 'ab'::text)
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (9 rows)
 
 explain (costs off)
@@ -504,21 +504,17 @@ explain (costs off)
          Group Key: ((t1.a || t1.b))
          ->  Sort
                Sort Key: ((t1.a || t1.b))
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: ((t1.a || t1.b))
-                     ->  GroupAggregate
-                           Group Key: ((t1.a || t1.b))
-                           ->  Sort
-                                 Sort Key: ((t1.a || t1.b))
-                                 ->  Append
-                                       ->  Result
-                                             Filter: (((t1.a || t1.b)) = 'ab'::text)
-                                             ->  Result
-                                                   ->  Seq Scan on t1
-                                       ->  Index Scan using t2_pkey on t2
-                                             Index Cond: (ab = 'ab'::text)
- Optimizer: PQO version 2.74.0
-(19 rows)
+               ->  Append
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: ((t1.a || t1.b))
+                           ->  Result
+                                 Filter: (((t1.a || t1.b)) = 'ab'::text)
+                                 ->  Result
+                                       ->  Seq Scan on t1
+                     ->  Index Scan using t2_pkey on t2
+                           Index Cond: (ab = 'ab'::text)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
+(15 rows)
 
 --
 -- Test that ORDER BY for UNION ALL can be pushed down to inheritance
@@ -553,7 +549,7 @@ explain (costs off)
                            ->  Seq Scan on t1c
                            ->  Seq Scan on t2
                            ->  Seq Scan on t2c
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
   SELECT * FROM
@@ -597,7 +593,7 @@ select event_id
                ->  Seq Scan on events
                ->  Seq Scan on events_child
                ->  Seq Scan on other_events
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (9 rows)
 
 drop table events_child, events, other_events;
@@ -620,7 +616,7 @@ explain (costs off)
                Filter: (t = 2)
                ->  Result
                      ->  Seq Scan on tenk1
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (10 rows)
 
 -- Test that we push quals into UNION sub-selects only when it's safe
@@ -640,7 +636,7 @@ WHERE x < 4;
    ->  Result
          ->  Result
                One-Time Filter: false
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (9 rows)
 
 SELECT * FROM
@@ -662,12 +658,12 @@ WHERE x < 4
 ORDER BY x;
                             QUERY PLAN                            
 ------------------------------------------------------------------
- GroupAggregate
-   Group Key: t, (generate_series(1, 10))
+ Sort
+   Sort Key: (generate_series(1, 10))
    ->  GroupAggregate
          Group Key: t, (generate_series(1, 10))
          ->  Sort
-               Sort Key: (generate_series(1, 10)), t
+               Sort Key: t, (generate_series(1, 10))
                ->  Append
                      ->  Result
                            Filter: ((generate_series(1, 10)) < 4)
@@ -676,7 +672,7 @@ ORDER BY x;
                      ->  Result
                            ->  Result
                                  One-Time Filter: false
- Optimizer: PQO version 2.74.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (15 rows)
 
 SELECT * FROM
@@ -703,15 +699,15 @@ WHERE x > 3;
  Subquery Scan on ss
    Filter: (ss.x > 3)
    ->  Unique
-         Group Key: "outer".t, ((($0 * 3::double precision))::integer)
+         Group Key: "outer".t, ((($0 * '3'::double precision))::integer)
          ->  Sort
-               Sort Key (Distinct): "outer".t, ((($0 * 3::double precision))::integer)
+               Sort Key (Distinct): "outer".t, ((($0 * '3'::double precision))::integer)
                ->  Append
                      ->  Result
                            InitPlan 1 (returns $0)
                              ->  Result
                      ->  Result
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (12 rows)
 
 SELECT * FROM
@@ -747,7 +743,7 @@ select * from
          ->  Hash
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Seq Scan on int4_tbl
- Optimizer: PQO version 3.1.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
 (10 rows)
 
 select * from

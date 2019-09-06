@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="pt212122">Greenplum PL/pgSQL Procedural Language</title>
+  <title id="pt212122">PL/pgSQL Language</title>
   <body>
     <p>This section contains an overview of the Greenplum Database PL/pgSQL language.</p>
     <ul>
@@ -153,7 +153,7 @@ $$ LANGUAGE plpgsql;</codeblock>
         <p>Greenplum Database will automatically re-plan a saved query plan if there is any schema change to any relation used in the query, or if any user-defined function used in the query is redefined. This makes the re-use of a prepared plan transparent in most cases.</p>
         <p>The SQL commands that you use in a PL/pgSQL function must refer to the same tables and columns on every execution. You cannot use a parameter as the name of a table or a column in an SQL command.</p>
         <p>PL/pgSQL caches a separate query plan for each combination of actual argument types in which you invoke a polymorphic function to ensure that data type differences do not cause unexpected failures.</p>
-        <p>Refer to the PostgreSQL <xref href="https://www.postgresql.org/docs/9.0/plpgsql-implementation.html#PLPGSQL-PLAN-CACHING" scope="external" format="html">Plan Caching</xref> documentation for a detailed discussion of plan caching considerations in the PL/pgSQL language.</p>
+        <p>Refer to the PostgreSQL <xref href="https://www.postgresql.org/docs/9.4/plpgsql-implementation.html#PLPGSQL-PLAN-CACHING" scope="external" format="html">Plan Caching</xref> documentation for a detailed discussion of plan caching considerations in the PL/pgSQL language.</p>
     </body>
   </topic>
   <topic id="topic6" xml:lang="en">

@@ -4,7 +4,7 @@
  * Postgres transaction log manager record pointer and
  * timeline number definitions
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/xlogdefs.h
@@ -43,6 +43,12 @@ typedef uint64 XLogSegNo;
  * sequence that was generated in the previous incarnation.
  */
 typedef uint32 TimeLineID;
+
+/*
+ * Replication origin id - this is located in this file to avoid having to
+ * include origin.h in a bunch of xlog related places.
+ */
+typedef uint16 RepOriginId;
 
 /*
  *	Because O_DIRECT bypasses the kernel buffers, and because we never

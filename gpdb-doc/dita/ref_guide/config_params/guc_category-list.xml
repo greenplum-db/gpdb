@@ -150,9 +150,6 @@
             </stentry>
             <stentry>
               <p>
-                <xref href="guc-list.xml#krb_srvname" type="section">krb_srvname</xref>
-              </p>
-              <p>
                 <xref href="guc-list.xml#password_encryption" type="section"
                   >password_encryption</xref>
               </p>
@@ -355,6 +352,8 @@
             </p>
             <p><xref href="guc-list.xml#optimizer_parallel_union" type="section"
                 >optimizer_parallel_union</xref></p>
+            <p><xref href="guc-list.xml#optimizer_penalize_skew" type="section"
+                >optimizer_penalize_skew</xref></p>
             <p><xref href="guc-list.xml#optimizer_print_missing_stats" type="section"
                 >optimizer_print_missing_stats</xref>
             </p>
@@ -373,10 +372,10 @@
     <abstract>These parameters control aspects of SQL query processing such as query operators and
       operator settings and statistics sampling.</abstract>
     <topic id="topic22" xml:lang="en">
-      <title>Legacy Query Optimizer Operator Control Parameters</title>
+      <title>Postgres Planner Control Parameters</title>
       <body>
-        <p>The following parameters control the types of plan operations the legacy query optimizer
-          can use. Enable or disable plan operations to force the legacy optimizer to choose a
+        <p>The following parameters control the types of plan operations the Postgres Planner
+          can use. Enable or disable plan operations to force the Postgres Planner to choose a
           different plan. This is useful for testing and comparing query performance using different
           plan types.</p>
         <simpletable id="kh158625" frame="none">
@@ -411,10 +410,6 @@
               </p>
               <p>
                 <xref href="guc-list.xml#enable_tidscan" type="section">enable_tidscan</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_enable_adaptive_nestloop" type="section"
-                  >gp_enable_adaptive_nestloop</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_enable_agg_distinct" type="section"
@@ -470,7 +465,7 @@
       </body>
     </topic>
     <topic id="topic23" xml:lang="en">
-      <title>Legacy Query Optimizer Costing Parameters</title>
+      <title>Postgres Planner Costing Parameters</title>
       <body>
         <note type="warning">Do not adjust these query costing parameters. They are tuned to reflect
           Greenplum Database hardware configurations and typical workloads. All of these parameters
@@ -531,10 +526,6 @@
               <p>
                 <xref href="guc-list.xml#default_statistics_target" type="section"
                   >default_statistics_target </xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_analyze_relative_error" type="section"
-                  >gp_analyze_relative_error</xref>
               </p>
             </stentry>
           </strow>
@@ -635,7 +626,7 @@
       </body>
     </topic>
     <topic id="topic28" xml:lang="en">
-      <title>Other Legacy Query Optimizer Configuration Parameters</title>
+      <title>Other Postgres Planner Configuration Parameters</title>
       <body>
         <simpletable id="d1e746" frame="none">
           <strow>
@@ -975,7 +966,7 @@
                 <xref href="guc-list.xml#search_path" type="section">search_path</xref>
               </p><p>
                 <xref href="guc-list.xml#statement_timeout" type="section">statement_timeout</xref>
-              </p><p>
+              </p><p><xref href="guc-list.xml#topic_k52_fqm_f3b"/></p><p>
                 <xref href="guc-list.xml#vacuum_freeze_min_age" type="section"
                   >vacuum_freeze_min_age</xref>
               </p></stentry>
@@ -1072,6 +1063,10 @@
             </p>
           </stentry>
           <stentry>
+            <p>
+              <xref href="guc-list.xml#lock_timeout" type="section"
+                >lock_timeout</xref>
+            </p>
             <p>
               <xref href="guc-list.xml#max_locks_per_transaction" type="section"
                 >max_locks_per_transaction</xref>
@@ -1188,7 +1183,13 @@
                 >gp_vmem_protect_segworker_cache_limit</xref>
             </p>
             <p>
+              <xref href="guc-list.xml#max_statement_mem" type="section">max_statement_mem</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#memory_spill_ratio" type="section">memory_spill_ratio</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#statement_mem" type="section">statement_mem</xref>
             </p>
             <p><xref href="guc-list.xml#vmem_process_interrupt" type="section"
                 >vmem_process_interrupt</xref></p>
@@ -1260,7 +1261,6 @@
             </p>
             <p><xref href="guc-list.xml#gp_enable_segment_copy_checking"
                 >gp_enable_segment_copy_checking</xref></p>
-            <p><xref href="guc-list.xml#gp_expand_method">gp_expand_method</xref></p>
             <p>
               <xref href="guc-list.xml#gp_use_legacy_hashops" type="section"
                 >gp_use_legacy_hashops</xref></p>
@@ -1306,9 +1306,6 @@
         <simpletable frame="none" id="simpletable_bx3_r1v_bdb">
           <strow>
             <stentry>
-              <p>
-                <xref href="guc-list.xml#add_missing_from" type="section">add_missing_from</xref>
-              </p>
               <p>
                 <xref href="guc-list.xml#array_nulls" type="section">array_nulls</xref>
               </p>
@@ -1366,10 +1363,6 @@
               <p>
                 <xref href="guc-list.xml#gp_interconnect_fc_method" type="section"
                   >gp_interconnect_fc_method</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_interconnect_hash_multiplier" type="section"
-                  >gp_interconnect_hash_multiplier</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_interconnect_queue_depth" type="section"
@@ -1543,9 +1536,10 @@
     </body>
   </topic>
   <topic id="topic56">
-    <title>Greenplum Database Extension Parameters</title>
+    <title>Greenplum PL/Java Parameters</title>
     <body>
-      <p>The parameters in this topic control the configuration of Greenplum Database extensions. </p>
+      <p>The parameters in this topic control the configuration of the Greenplum Database PL/Java
+        language. </p>
       <simpletable frame="none" id="simpletable_n1h_tzl_zp">
         <strow>
           <stentry>
@@ -1566,9 +1560,12 @@
         </strow>
       </simpletable>
     </body>
+  </topic>
     <topic id="topic_t3n_qml_rz">
       <title>XML Data Parameters</title>
       <body>
+        <p>The parameters in this topic control the configuration of the Greenplum Database XML data
+          type. </p>
         <simpletable frame="none" id="simpletable_yyd_tml_rz">
           <strow>
             <stentry>
@@ -1583,5 +1580,4 @@
         </simpletable>
       </body>
     </topic>
-  </topic>
 </topic>

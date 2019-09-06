@@ -4,7 +4,7 @@
  *	   This file contains index tuple accessor and mutator routines,
  *	   as well as various tuple utilities.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -28,6 +28,9 @@
 
 /* ----------------
  *		index_form_tuple
+ *
+ *		This shouldn't leak any memory; otherwise, callers such as
+ *		tuplesort_putindextuplevalues() will be very unhappy.
  * ----------------
  */
 IndexTuple

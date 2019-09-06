@@ -3,7 +3,7 @@
  * tsquery_op.c
  *	  Various operations with tsquery
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -249,6 +249,7 @@ cmp_string(const void *a, const void *b)
 {
 	const char *sa = *((const char **) a);
 	const char *sb = *((const char **) b);
+
 	return strcmp(sa, sb);
 }
 
@@ -300,8 +301,8 @@ tsq_mcontains(PG_FUNCTION_ARGS)
 		result = false;
 	else
 	{
-		int i;
-		int j = 0;
+		int			i;
+		int			j = 0;
 
 		for (i = 0; i < ex_nvalues; i++)
 		{

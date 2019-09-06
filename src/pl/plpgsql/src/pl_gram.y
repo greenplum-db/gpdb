@@ -3,7 +3,7 @@
  *
  * pl_gram.y			- Parser for the PL/pgSQL procedural language
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -106,6 +106,7 @@ static	void			 check_labels(const char *start_label,
 static	PLpgSQL_expr	*read_cursor_args(PLpgSQL_var *cursor,
 										  int until, const char *expected);
 static	List			*read_raise_options(void);
+static	void			check_raise_parameters(PLpgSQL_stmt_raise *stmt);
 
 %}
 
@@ -187,11 +188,11 @@ static	List			*read_raise_options(void);
 
 %type <str>		any_identifier opt_block_label opt_label option_value
 
-%type <list>	proc_sect proc_stmts stmt_elsifs stmt_else
+%type <list>	proc_sect stmt_elsifs stmt_else
 %type <loop_body>	loop_body
 %type <stmt>	proc_stmt pl_block
 %type <stmt>	stmt_assign stmt_if stmt_loop stmt_while stmt_exit
-%type <stmt>	stmt_return stmt_raise stmt_execsql
+%type <stmt>	stmt_return stmt_raise stmt_assert stmt_execsql
 %type <stmt>	stmt_dynexecute stmt_for stmt_perform stmt_getdiag
 %type <stmt>	stmt_open stmt_fetch stmt_move stmt_close stmt_null
 %type <stmt>	stmt_case stmt_foreach_a
@@ -225,7 +226,8 @@ static	List			*read_raise_options(void);
  */
 %token <str>	IDENT FCONST SCONST BCONST XCONST Op
 %token <ival>	ICONST PARAM
-%token			TYPECAST DOT_DOT COLON_EQUALS
+%token			TYPECAST DOT_DOT COLON_EQUALS EQUALS_GREATER
+%token			LESS_EQUALS GREATER_EQUALS NOT_EQUALS
 
 /*
  * Other tokens recognized by plpgsql's lexer interface layer (pl_scanner.c).
@@ -245,6 +247,7 @@ static	List			*read_raise_options(void);
 %token <keyword>	K_ALIAS
 %token <keyword>	K_ALL
 %token <keyword>	K_ARRAY
+%token <keyword>	K_ASSERT
 %token <keyword>	K_BACKWARD
 %token <keyword>	K_BEGIN
 %token <keyword>	K_BY
@@ -317,8 +320,8 @@ static	List			*read_raise_options(void);
 %token <keyword>	K_RETURN
 %token <keyword>	K_RETURNED_SQLSTATE
 %token <keyword>	K_REVERSE
-%token <keyword>	K_ROWTYPE
 %token <keyword>	K_ROW_COUNT
+%token <keyword>	K_ROWTYPE
 %token <keyword>	K_SCHEMA
 %token <keyword>	K_SCHEMA_NAME
 %token <keyword>	K_SCROLL
@@ -837,24 +840,14 @@ assign_operator	: '='
 
 proc_sect		:
 					{ $$ = NIL; }
-				| proc_stmts
-					{ $$ = $1; }
-				;
-
-proc_stmts		: proc_stmts proc_stmt
-						{
-							if ($2 == NULL)
-								$$ = $1;
-							else
-								$$ = lappend($1, $2);
-						}
-				| proc_stmt
-						{
-							if ($1 == NULL)
-								$$ = NIL;
-							else
-								$$ = list_make1($1);
-						}
+				| proc_sect proc_stmt
+					{
+						/* don't bother linking null statements into list */
+						if ($2 == NULL)
+							$$ = $1;
+						else
+							$$ = lappend($1, $2);
+					}
 				;
 
 proc_stmt		: pl_block ';'
@@ -878,6 +871,8 @@ proc_stmt		: pl_block ';'
 				| stmt_return
 						{ $$ = $1; }
 				| stmt_raise
+						{ $$ = $1; }
+				| stmt_assert
 						{ $$ = $1; }
 				| stmt_execsql
 						{ $$ = $1; }
@@ -1849,7 +1844,32 @@ stmt_raise		: K_RAISE
 								new->options = read_raise_options();
 						}
 
+						check_raise_parameters(new);
+
 						$$ = (PLpgSQL_stmt *)new;
+					}
+				;
+
+stmt_assert		: K_ASSERT
+					{
+						PLpgSQL_stmt_assert		*new;
+						int	tok;
+
+						new = palloc(sizeof(PLpgSQL_stmt_assert));
+
+						new->cmd_type	= PLPGSQL_STMT_ASSERT;
+						new->lineno		= plpgsql_location_to_lineno(@1);
+
+						new->cond = read_sql_expression2(',', ';',
+														 ", or ;",
+														 &tok);
+
+						if (tok == ',')
+							new->message = read_sql_expression(';', ";");
+						else
+							new->message = NULL;
+
+						$$ = (PLpgSQL_stmt *) new;
 					}
 				;
 
@@ -2321,43 +2341,60 @@ unreserved_keyword	:
 				K_ABSOLUTE
 				| K_ALIAS
 				| K_ARRAY
+				| K_ASSERT
 				| K_BACKWARD
+				| K_CLOSE
+				| K_COLLATE
 				| K_COLUMN
 				| K_COLUMN_NAME
 				| K_CONSTANT
 				| K_CONSTRAINT
 				| K_CONSTRAINT_NAME
+				| K_CONTINUE
 				| K_CURRENT
 				| K_CURSOR
 				| K_DATATYPE
 				| K_DEBUG
+				| K_DEFAULT
 				| K_DETAIL
+				| K_DIAGNOSTICS
 				| K_DUMP
+				| K_ELSIF
 				| K_ERRCODE
 				| K_ERROR
+				| K_EXCEPTION
+				| K_EXIT
+				| K_FETCH
 				| K_FIRST
 				| K_FORWARD
+				| K_GET
 				| K_HINT
 				| K_INFO
+				| K_INSERT
 				| K_IS
 				| K_LAST
 				| K_LOG
 				| K_MESSAGE
 				| K_MESSAGE_TEXT
+				| K_MOVE
 				| K_NEXT
 				| K_NO
 				| K_NOTICE
+				| K_OPEN
 				| K_OPTION
+				| K_PERFORM
 				| K_PG_CONTEXT
 				| K_PG_DATATYPE_NAME
 				| K_PG_EXCEPTION_CONTEXT
 				| K_PG_EXCEPTION_DETAIL
 				| K_PG_EXCEPTION_HINT
-				| K_PRIOR
 				| K_PRINT_STRICT_PARAMS
+				| K_PRIOR
 				| K_QUERY
+				| K_RAISE
 				| K_RELATIVE
 				| K_RESULT_OID
+				| K_RETURN
 				| K_RETURNED_SQLSTATE
 				| K_REVERSE
 				| K_ROW_COUNT
@@ -2588,6 +2625,7 @@ read_sql_construct(int until,
 	expr->query			= pstrdup(ds.data);
 	expr->plan			= NULL;
 	expr->paramnos		= NULL;
+	expr->rwparam		= -1;
 	expr->ns			= plpgsql_ns_top();
 	pfree(ds.data);
 
@@ -2812,6 +2850,7 @@ make_execsql_stmt(int firsttoken, int location)
 	expr->query			= pstrdup(ds.data);
 	expr->plan			= NULL;
 	expr->paramnos		= NULL;
+	expr->rwparam		= -1;
 	expr->ns			= plpgsql_ns_top();
 	pfree(ds.data);
 
@@ -3027,16 +3066,17 @@ make_return_stmt(int location)
 					 errmsg("RETURN cannot have a parameter in function returning void"),
 					 parser_errposition(yylloc)));
 	}
-	else if (plpgsql_curr_compile->fn_retistuple)
+	else
 	{
 		/*
-		 * We want to special-case simple row or record references for
-		 * efficiency.  So peek ahead to see if that's what we have.
+		 * We want to special-case simple variable references for efficiency.
+		 * So peek ahead to see if that's what we have.
 		 */
 		int		tok = yylex();
 
 		if (tok == T_DATUM && plpgsql_peek() == ';' &&
-			(yylval.wdatum.datum->dtype == PLPGSQL_DTYPE_ROW ||
+			(yylval.wdatum.datum->dtype == PLPGSQL_DTYPE_VAR ||
+			 yylval.wdatum.datum->dtype == PLPGSQL_DTYPE_ROW ||
 			 yylval.wdatum.datum->dtype == PLPGSQL_DTYPE_REC))
 		{
 			new->retvarno = yylval.wdatum.datum->dno;
@@ -3046,18 +3086,15 @@ make_return_stmt(int location)
 		}
 		else
 		{
-			/* Not (just) a row/record name, so treat as expression */
+			/*
+			 * Not (just) a variable name, so treat as expression.
+			 *
+			 * Note that a well-formed expression is _required_ here;
+			 * anything else is a compile-time error.
+			 */
 			plpgsql_push_back_token(tok);
 			new->expr = read_sql_expression(';', ";");
 		}
-	}
-	else
-	{
-		/*
-		 * Note that a well-formed expression is _required_ here;
-		 * anything else is a compile-time error.
-		 */
-		new->expr = read_sql_expression(';', ";");
 	}
 
 	return (PLpgSQL_stmt *) new;
@@ -3090,16 +3127,17 @@ make_return_next_stmt(int location)
 					 parser_errposition(yylloc)));
 		new->retvarno = plpgsql_curr_compile->out_param_varno;
 	}
-	else if (plpgsql_curr_compile->fn_retistuple)
+	else
 	{
 		/*
-		 * We want to special-case simple row or record references for
-		 * efficiency.  So peek ahead to see if that's what we have.
+		 * We want to special-case simple variable references for efficiency.
+		 * So peek ahead to see if that's what we have.
 		 */
 		int		tok = yylex();
 
 		if (tok == T_DATUM && plpgsql_peek() == ';' &&
-			(yylval.wdatum.datum->dtype == PLPGSQL_DTYPE_ROW ||
+			(yylval.wdatum.datum->dtype == PLPGSQL_DTYPE_VAR ||
+			 yylval.wdatum.datum->dtype == PLPGSQL_DTYPE_ROW ||
 			 yylval.wdatum.datum->dtype == PLPGSQL_DTYPE_REC))
 		{
 			new->retvarno = yylval.wdatum.datum->dno;
@@ -3109,13 +3147,16 @@ make_return_next_stmt(int location)
 		}
 		else
 		{
-			/* Not (just) a row/record name, so treat as expression */
+			/*
+			 * Not (just) a variable name, so treat as expression.
+			 *
+			 * Note that a well-formed expression is _required_ here;
+			 * anything else is a compile-time error.
+			 */
 			plpgsql_push_back_token(tok);
 			new->expr = read_sql_expression(';', ";");
 		}
 	}
-	else
-		new->expr = read_sql_expression(';', ";");
 
 	return (PLpgSQL_stmt *) new;
 }
@@ -3693,6 +3734,7 @@ read_cursor_args(PLpgSQL_var *cursor, int until, const char *expected)
 	expr->query			= pstrdup(ds.data);
 	expr->plan			= NULL;
 	expr->paramnos		= NULL;
+	expr->rwparam		= -1;
 	expr->ns            = plpgsql_ns_top();
 	pfree(ds.data);
 
@@ -3765,6 +3807,41 @@ read_raise_options(void)
 	}
 
 	return result;
+}
+
+/*
+ * Check that the number of parameter placeholders in the message matches the
+ * number of parameters passed to it, if a message was given.
+ */
+static void
+check_raise_parameters(PLpgSQL_stmt_raise *stmt)
+{
+	char	   *cp;
+	int			expected_nparams = 0;
+
+	if (stmt->message == NULL)
+		return;
+
+	for (cp = stmt->message; *cp; cp++)
+	{
+		if (cp[0] == '%')
+		{
+			/* ignore literal % characters */
+			if (cp[1] == '%')
+				cp++;
+			else
+				expected_nparams++;
+		}
+	}
+
+	if (expected_nparams < list_length(stmt->params))
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				errmsg("too many parameters specified for RAISE")));
+	if (expected_nparams > list_length(stmt->params))
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				errmsg("too few parameters specified for RAISE")));
 }
 
 /*

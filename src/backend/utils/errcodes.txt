@@ -4,7 +4,7 @@
 #
 # Portions Copyright (c) 2005-2008, Greenplum inc.
 # Portions Copyright (c) 2012-Present Pivotal Software, Inc.
-# Copyright (c) 2003-2014, PostgreSQL Global Development Group
+# Copyright (c) 2003-2015, PostgreSQL Global Development Group
 #
 # This list serves as the basis for generating source files containing error
 # codes. It is kept in a common format to make sure all these source files have
@@ -294,6 +294,7 @@ Section: Class 39 - External Routine Invocation Exception
 39004    E    ERRCODE_E_R_I_E_NULL_VALUE_NOT_ALLOWED                         null_value_not_allowed
 39P01    E    ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED                      trigger_protocol_violated
 39P02    E    ERRCODE_E_R_I_E_SRF_PROTOCOL_VIOLATED                          srf_protocol_violated
+39P03    E    ERRCODE_E_R_I_E_EVENT_TRIGGER_PROTOCOL_VIOLATED                event_trigger_protocol_violated
 
 Section: Class 3B - Savepoint Exception
 
@@ -476,6 +477,7 @@ P0000    E    ERRCODE_PLPGSQL_ERROR                                          plp
 P0001    E    ERRCODE_RAISE_EXCEPTION                                        raise_exception
 P0002    E    ERRCODE_NO_DATA_FOUND                                          no_data_found
 P0003    E    ERRCODE_TOO_MANY_ROWS                                          too_many_rows
+P0004    E    ERRCODE_ASSERT_FAILURE                                         assert_failure
 
 Section: Class XX - Internal Error
 

@@ -1141,17 +1141,17 @@ ERROR:  positional argument cannot follow named argument
 LINE 1: select * from dfunc(10, b := 20, 30);
                                          ^
 select * from dfunc(x := 10, b := 20, c := 30);  -- fail, unknown param
-ERROR:  function dfunc(x := integer, b := integer, c := integer) does not exist
+ERROR:  function dfunc(x => integer, b => integer, c => integer) does not exist
 LINE 1: select * from dfunc(x := 10, b := 20, c := 30);
                       ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select * from dfunc(10, 10, a := 20);  -- fail, a overlaps positional parameter
-ERROR:  function dfunc(integer, integer, a := integer) does not exist
+ERROR:  function dfunc(integer, integer, a => integer) does not exist
 LINE 1: select * from dfunc(10, 10, a := 20);
                       ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select * from dfunc(1,c := 2,d := 3); -- fail, no value for b
-ERROR:  function dfunc(integer, c := integer, d := integer) does not exist
+ERROR:  function dfunc(integer, c => integer, d => integer) does not exist
 LINE 1: select * from dfunc(1,c := 2,d := 3);
                       ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
@@ -1192,7 +1192,7 @@ select * from dfunc('Hello World', c := '2009-07-25'::date, b := 20);
 (1 row)
 
 select * from dfunc('Hello World', c := 20, b := '2009-07-25'::date);  -- fail
-ERROR:  function dfunc(unknown, c := integer, b := date) does not exist
+ERROR:  function dfunc(unknown, c => integer, b => date) does not exist
 LINE 1: select * from dfunc('Hello World', c := 20, b := '2009-07-25...
                       ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
@@ -1373,6 +1373,73 @@ select dfunc('a'::text, 'b', flag := true); -- mixed notation
  a
 (1 row)
 
+-- ansi/sql syntax
+select dfunc(a => 1, b => 2);
+ dfunc 
+-------
+     1
+(1 row)
+
+select dfunc(a => 'a'::text, b => 'b');
+ dfunc 
+-------
+ a
+(1 row)
+
+select dfunc(a => 'a'::text, b => 'b', flag => false); -- named notation
+ dfunc 
+-------
+ b
+(1 row)
+
+select dfunc(b => 'b'::text, a => 'a'); -- named notation with default
+ dfunc 
+-------
+ a
+(1 row)
+
+select dfunc(a => 'a'::text, flag => true); -- named notation with default
+ dfunc 
+-------
+ a
+(1 row)
+
+select dfunc(a => 'a'::text, flag => false); -- named notation with default
+ dfunc 
+-------
+ 
+(1 row)
+
+select dfunc(b => 'b'::text, a => 'a', flag => true); -- named notation
+ dfunc 
+-------
+ a
+(1 row)
+
+select dfunc('a'::text, 'b', false); -- full positional notation
+ dfunc 
+-------
+ b
+(1 row)
+
+select dfunc('a'::text, 'b', flag => false); -- mixed notation
+ dfunc 
+-------
+ b
+(1 row)
+
+select dfunc('a'::text, 'b', true); -- full positional notation
+ dfunc 
+-------
+ a
+(1 row)
+
+select dfunc('a'::text, 'b', flag => true); -- mixed notation
+ dfunc 
+-------
+ a
+(1 row)
+
 -- check reverse-listing of named-arg calls
 CREATE VIEW dfview AS
    SELECT q1, q2,
@@ -1400,8 +1467,8 @@ select * from dfview;
 View definition:
  SELECT int8_tbl.q1,
     int8_tbl.q2,
-    dfunc(int8_tbl.q1, int8_tbl.q2, flag := int8_tbl.q1 > int8_tbl.q2) AS c3,
-    dfunc(int8_tbl.q1, flag := int8_tbl.q1 < int8_tbl.q2, b := int8_tbl.q2) AS c4
+    dfunc(int8_tbl.q1, int8_tbl.q2, flag => int8_tbl.q1 > int8_tbl.q2) AS c3,
+    dfunc(int8_tbl.q1, flag => int8_tbl.q1 < int8_tbl.q2, b => int8_tbl.q2) AS c4
    FROM int8_tbl;
 
 drop view dfview;

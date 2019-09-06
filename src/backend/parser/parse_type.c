@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -158,6 +158,9 @@ LookupTypeName(ParseState *pstate, const TypeName *typeName,
 		{
 			/* Look in specific schema only */
 			Oid			namespaceId;
+			ParseCallbackState pcbstate;
+
+			setup_parser_errposition_callback(&pcbstate, pstate, typeName->location);
 
 			namespaceId = LookupExplicitNamespace(schemaname, missing_ok);
 			if (OidIsValid(namespaceId))
@@ -166,6 +169,8 @@ LookupTypeName(ParseState *pstate, const TypeName *typeName,
 										 ObjectIdGetDatum(namespaceId));
 			else
 				typoid = InvalidOid;
+
+			cancel_parser_errposition_callback(&pcbstate);
 		}
 		else
 		{
@@ -707,13 +712,11 @@ pts_error_callback(void *arg)
 /*
  * Given a string that is supposed to be a SQL-compatible type declaration,
  * such as "int4" or "integer" or "character varying(32)", parse
- * the string and convert it to a type OID and type modifier.
- * If missing_ok is true, InvalidOid is returned rather than raising an error
- * when the type name is not found.
+ * the string and return the result as a TypeName.
+ * If the string cannot be parsed as a type, an error is raised.
  */
-void
-parseTypeString(const char *str, Oid *typeid_p, int32 *typmod_p,
-				bool missing_ok)
+TypeName *
+typeStringToTypeName(const char *str)
 {
 	StringInfoData buf;
 	List	   *raw_parsetree_list;
@@ -722,7 +725,6 @@ parseTypeString(const char *str, Oid *typeid_p, int32 *typmod_p,
 	TypeCast   *typecast;
 	TypeName   *typeName;
 	ErrorContextCallback ptserrcontext;
-	Type		tup;
 
 	/* make sure we give useful error for empty input */
 	if (strspn(str, " \t\n\r\f") == strlen(str))
@@ -781,12 +783,39 @@ parseTypeString(const char *str, Oid *typeid_p, int32 *typmod_p,
 		typecast->arg == NULL ||
 		!IsA(typecast->arg, A_Const))
 		goto fail;
+
 	typeName = typecast->typeName;
 	if (typeName == NULL ||
 		!IsA(typeName, TypeName))
 		goto fail;
 	if (typeName->setof)
 		goto fail;
+
+	pfree(buf.data);
+
+	return typeName;
+
+fail:
+	ereport(ERROR,
+			(errcode(ERRCODE_SYNTAX_ERROR),
+			 errmsg("invalid type name \"%s\"", str)));
+	return NULL;				/* keep compiler quiet */
+}
+
+/*
+ * Given a string that is supposed to be a SQL-compatible type declaration,
+ * such as "int4" or "integer" or "character varying(32)", parse
+ * the string and convert it to a type OID and type modifier.
+ * If missing_ok is true, InvalidOid is returned rather than raising an error
+ * when the type name is not found.
+ */
+void
+parseTypeString(const char *str, Oid *typeid_p, int32 *typmod_p, bool missing_ok)
+{
+	TypeName   *typeName;
+	Type		tup;
+
+	typeName = typeStringToTypeName(str);
 
 	tup = LookupTypeName(NULL, typeName, typmod_p, missing_ok);
 	if (tup == NULL)
@@ -810,13 +839,4 @@ parseTypeString(const char *str, Oid *typeid_p, int32 *typmod_p,
 		*typeid_p = HeapTupleGetOid(tup);
 		ReleaseSysCache(tup);
 	}
-
-	pfree(buf.data);
-
-	return;
-
-fail:
-	ereport(ERROR,
-			(errcode(ERRCODE_SYNTAX_ERROR),
-			 errmsg("invalid type name \"%s\"", str)));
 }

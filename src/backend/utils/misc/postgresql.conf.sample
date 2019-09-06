@@ -97,6 +97,7 @@
 #ssl_crl_file = ''			# (change requires restart)
 #password_encryption = on
 #db_user_namespace = off
+#row_security = on
 
 # GSSAPI using Kerberos
 #krb_server_keyfile = ''
@@ -185,6 +186,7 @@ max_prepared_transactions = 250		# can be 0 or more
 					#   fsync_writethrough
 					#   open_sync
 #full_page_writes = on			# recover from partial page writes
+#wal_compression = off			# enable compression of full-page writes
 #wal_log_hints = off			# also do full page writes of non-critical updates
 					# (change requires restart)
 #wal_buffers = -1			# min 32kB, -1 sets based on shared_buffers
@@ -196,14 +198,15 @@ max_prepared_transactions = 250		# can be 0 or more
 
 # - Checkpoints -
 
-#checkpoint_segments = 3		# in logfile segments, min 1, 16MB each
 #checkpoint_timeout = 5min		# range 30s-1h
+#max_wal_size = 1GB
+#min_wal_size = 80MB
 #checkpoint_completion_target = 0.5	# checkpoint target duration, 0.0 - 1.0
 #checkpoint_warning = 30s		# 0 disables
 
 # - Archiving -
 
-#archive_mode = off		# allows archiving to be done
+#archive_mode = off		# enables archiving; off, on, or always
 				# (change requires restart)
 #archive_command = ''		# command to use to archive a logfile segment
 				# placeholders: %p = path of file to archive
@@ -227,6 +230,8 @@ max_prepared_transactions = 250		# can be 0 or more
 #wal_sender_timeout = 60s	# in milliseconds; 0 disables
 
 #max_replication_slots = 0	# max number of replication slots
+				# (change requires restart)
+#track_commit_timestamp = off	# collect timestamp of transaction commit
 				# (change requires restart)
 
 # - Master Server -
@@ -257,6 +262,8 @@ max_prepared_transactions = 250		# can be 0 or more
 #wal_receiver_timeout = 60s		# time that receiver waits for
 					# communication from master
 					# in milliseconds; 0 disables
+#wal_retrieve_retry_interval = 5s	# time to wait before retrying to
+					# retrieve WAL after a failed attempt
 
 
 #------------------------------------------------------------------------------
@@ -400,13 +407,36 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #log_duration = off
 #log_error_verbosity = default		# terse, default, or verbose messages
 #log_hostname = off
-
-#log_statement = 'none'			# none, mod, ddl, all
-#log_temp_files = -1			# Log temporary files equal or larger
-					# than the specified number of kilobytes.
-					# -1 disables;  0 logs all temp files
+#log_line_prefix = ''			# special values:
+					#   %a = application name
+					#   %u = user name
+					#   %d = database name
+					#   %r = remote host and port
+					#   %h = remote host
+					#   %p = process ID
+					#   %t = timestamp without milliseconds
+					#   %m = timestamp with milliseconds
+					#   %i = command tag
+					#   %e = SQL state
+					#   %c = session ID
+					#   %l = session line number
+					#   %s = session start timestamp
+					#   %v = virtual transaction ID
+					#   %x = transaction ID (0 if none)
+					#   %q = stop here in non-session
+					#        processes
+					#   %% = '%'
+					# e.g. '<%u%%%d> '
+#log_lock_waits = off			# log lock waits >= deadlock_timeout
+#log_statement = 'none'			# none, ddl, mod, all
+#log_replication_commands = off
+#log_temp_files = -1			# log temporary files equal or larger
+					# than the specified size in kilobytes;
+					# -1 disables, 0 logs all temp files
 #log_timezone = 'GMT'			# actually, defaults to TZ environment
 					# setting
+#cluster_name = ''			# added to process titles if nonempty
+					# (change requires restart)
 
 #------------------------------------------------------------------------------
 # PL/JAVA
@@ -433,8 +463,6 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 
 #default_statistics_target = 100	# range 1 - 10000 (target # of
 					# histogram bins)
-#gp_analyze_relative_error = 0.25	# range 0.0 - 1.0 (target relative
-					# error fraction)
 					
 # - Query/Index Statistics Collector -
 
@@ -498,14 +526,14 @@ log_autostats=off	# print additional autostats information
 
 # - Statement Behavior -
 
-#search_path = '"$user",public'		# schema names
+#search_path = '"$user", public'	# schema names
 #default_tablespace = ''		# a tablespace name, '' uses the default
 #check_function_bodies = on
 #default_transaction_isolation = 'read committed'
 #default_transaction_read_only = off
 #default_transaction_deferrable = off
 #session_replication_role = 'origin'
-#idle_session_gang_timeout = 18s 	# in milliseconds, 0 is disabled
+#gp_vmem_idle_resource_timeout = 18s 	# in milliseconds, 0 is disabled
 #statement_timeout = 0			# in milliseconds, 0 is disabled
 #lock_timeout = 0			# in milliseconds, 0 is disabled
 #vacuum_freeze_min_age = 50000000
@@ -516,6 +544,7 @@ log_autostats=off	# print additional autostats information
 #xmlbinary = 'base64'
 #xmloption = 'content'
 #gin_fuzzy_search_limit = 0
+#gin_pending_list_limit = 4MB
 
 # - Locale and Formatting -
 
@@ -594,6 +623,7 @@ max_appendonly_tables = 10000 # Maximum number of append only tables that can
 #backslash_quote = safe_encoding	# on, off, or safe_encoding
 #escape_string_warning = on
 #lo_compat_privileges = off
+#operator_precedence_warning = off
 #quote_all_identifiers = off
 #standard_conforming_strings = on
 #synchronize_seqscans = on

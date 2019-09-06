@@ -3,7 +3,7 @@
  * dfmgr.c
  *	  Dynamic function manager code.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -19,6 +19,7 @@
 #include "dynloader.h"
 #include "lib/stringinfo.h"
 #include "miscadmin.h"
+#include "storage/shmem.h"
 #include "utils/dynamic_loader.h"
 #include "utils/hsearch.h"
 
@@ -47,12 +48,7 @@ typedef struct df_files
 	ino_t		inode;			/* Inode number of file */
 #endif
 	void	   *handle;			/* a handle for pg_dl* functions */
-	char		filename[1];	/* Full pathname of file */
-
-	/*
-	 * we allocate the block big enough for actual length of pathname.
-	 * filename[] must be last item in struct!
-	 */
+	char		filename[FLEXIBLE_ARRAY_MEMBER];		/* Full pathname of file */
 } DynamicFileList;
 
 static DynamicFileList *file_list = NULL;
@@ -214,13 +210,13 @@ internal_load_library(const char *libname)
 		 * File not loaded yet.
 		 */
 		file_scanner = (DynamicFileList *)
-			malloc(sizeof(DynamicFileList) + strlen(libname));
+			malloc(offsetof(DynamicFileList, filename) +strlen(libname) + 1);
 		if (file_scanner == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_OUT_OF_MEMORY),
 					 errmsg("out of memory")));
 
-		MemSet(file_scanner, 0, sizeof(DynamicFileList));
+		MemSet(file_scanner, 0, offsetof(DynamicFileList, filename));
 		strcpy(file_scanner->filename, libname);
 		file_scanner->device = stat_buf.st_dev;
 #ifndef WIN32
@@ -746,4 +742,57 @@ find_rendezvous_variable(const char *varName)
 		hentry->varValue = NULL;
 
 	return &hentry->varValue;
+}
+
+/*
+ * Estimate the amount of space needed to serialize the list of libraries
+ * we have loaded.
+ */
+Size
+EstimateLibraryStateSpace(void)
+{
+	DynamicFileList *file_scanner;
+	Size		size = 1;
+
+	for (file_scanner = file_list;
+		 file_scanner != NULL;
+		 file_scanner = file_scanner->next)
+		size = add_size(size, strlen(file_scanner->filename) + 1);
+
+	return size;
+}
+
+/*
+ * Serialize the list of libraries we have loaded to a chunk of memory.
+ */
+void
+SerializeLibraryState(Size maxsize, char *start_address)
+{
+	DynamicFileList *file_scanner;
+
+	for (file_scanner = file_list;
+		 file_scanner != NULL;
+		 file_scanner = file_scanner->next)
+	{
+		Size		len;
+
+		len = strlcpy(start_address, file_scanner->filename, maxsize) + 1;
+		Assert(len < maxsize);
+		maxsize -= len;
+		start_address += len;
+	}
+	start_address[0] = '\0';
+}
+
+/*
+ * Load every library the serializing backend had loaded.
+ */
+void
+RestoreLibraryState(char *start_address)
+{
+	while (*start_address != '\0')
+	{
+		internal_load_library(start_address);
+		start_address += strlen(start_address) + 1;
+	}
 }

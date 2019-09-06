@@ -4,7 +4,7 @@
  *	  Declarations for operations on INET datatypes.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/inet.h
@@ -123,6 +123,7 @@ extern int	bitncommon(const unsigned char *l, const unsigned char *r, int n);
 /*
  * GiST support functions in network_gist.c
  */
+extern Datum inet_gist_fetch(PG_FUNCTION_ARGS);
 extern Datum inet_gist_consistent(PG_FUNCTION_ARGS);
 extern Datum inet_gist_union(PG_FUNCTION_ARGS);
 extern Datum inet_gist_compress(PG_FUNCTION_ARGS);

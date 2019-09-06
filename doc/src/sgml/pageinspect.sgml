@@ -192,6 +192,209 @@ test=# SELECT * FROM bt_page_items('pg_cast_oid_index', 1);
           7 | (0,7)   |      12 | f     | f    | 29 27 00 00
           8 | (0,8)   |      12 | f     | f    | 2a 27 00 00
 </screen>
+      In a B-tree leaf page, <structfield>ctid</> points to a heap tuple.
+      In an internal page, the block number part of <structfield>ctid</>
+      points to another page in the index itself, while the offset part
+      (the second number) is ignored and is usually 1.
+     </para>
+     <para>
+      Note that the first item on any non-rightmost page (any page with
+      a non-zero value in the <structfield>btpo_next</> field) is the
+      page's <quote>high key</quote>, meaning its <structfield>data</>
+      serves as an upper bound on all items appearing on the page, while
+      its <structfield>ctid</> field is meaningless.  Also, on non-leaf
+      pages, the first real data item (the first item that is not a high
+      key) is a <quote>minus infinity</quote> item, with no actual value
+      in its <structfield>data</> field.  Such an item does have a valid
+      downlink in its <structfield>ctid</> field, however.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>
+     <function>brin_page_type(page bytea) returns text</function>
+     <indexterm>
+      <primary>brin_page_type</primary>
+     </indexterm>
+    </term>
+
+    <listitem>
+     <para>
+      <function>brin_page_type</function> returns the page type of the given
+      <acronym>BRIN</acronym> index page, or throws an error if the page is
+      not a valid <acronym>BRIN</acronym> page.  For example:
+<screen>
+test=# SELECT brin_page_type(get_raw_page('brinidx', 0));
+ brin_page_type 
+----------------
+ meta
+</screen>
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>
+     <function>brin_metapage_info(page bytea) returns record</function>
+     <indexterm>
+      <primary>brin_metapage_info</primary>
+     </indexterm>
+    </term>
+
+    <listitem>
+     <para>
+      <function>brin_metapage_info</function> returns assorted information
+      about a <acronym>BRIN</acronym> index metapage.  For example:
+<screen>
+test=# SELECT * FROM brin_metapage_info(get_raw_page('brinidx', 0));
+   magic    | version | pagesperrange | lastrevmappage 
+------------+---------+---------------+----------------
+ 0xA8109CFA |       1 |             4 |              2
+</screen>
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>
+     <function>brin_revmap_data(page bytea) returns setof tid</function>
+     <indexterm>
+      <primary>brin_revmap_data</primary>
+     </indexterm>
+    </term>
+
+    <listitem>
+     <para>
+      <function>brin_revmap_data</function> returns the list of tuple
+      identifiers in a <acronym>BRIN</acronym> index range map page.
+      For example:
+<screen>
+test=# SELECT * FROM brin_revmap_data(get_raw_page('brinidx', 2)) limit 5;
+  pages  
+---------
+ (6,137)
+ (6,138)
+ (6,139)
+ (6,140)
+ (6,141)
+</screen>
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>
+     <function>brin_page_items(page bytea, index oid) returns setof record</function>
+     <indexterm>
+      <primary>brin_page_items</primary>
+     </indexterm>
+    </term>
+
+    <listitem>
+     <para>
+      <function>brin_page_items</function> returns the data stored in the
+      <acronym>BRIN</acronym> data page.  For example:
+<screen>
+test=# SELECT * FROM brin_page_items(get_raw_page('brinidx', 5),
+                                     'brinidx')
+       ORDER BY blknum, attnum LIMIT 6;
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder |    value     
+------------+--------+--------+----------+----------+-------------+--------------
+        137 |      0 |      1 | t        | f        | f           | 
+        137 |      0 |      2 | f        | f        | f           | {1 .. 88}
+        138 |      4 |      1 | t        | f        | f           | 
+        138 |      4 |      2 | f        | f        | f           | {89 .. 176}
+        139 |      8 |      1 | t        | f        | f           | 
+        139 |      8 |      2 | f        | f        | f           | {177 .. 264}
+</screen>
+      The returned columns correspond to the fields in the
+      <structname>BrinMemTuple</> and <structname>BrinValues</> structs.
+      See <filename>src/include/access/brin_tuple.h</> for details.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>
+     <function>gin_metapage_info(page bytea) returns record</function>
+     <indexterm>
+      <primary>gin_metapage_info</primary>
+     </indexterm>
+    </term>
+
+    <listitem>
+     <para>
+      <function>gin_metapage_info</function> returns information about
+      a <acronym>GIN</acronym> index metapage.  For example:
+<screen>
+test=# SELECT * FROM gin_metapage_info(get_raw_page('gin_index', 0));
+-[ RECORD 1 ]----+-----------
+pending_head     | 4294967295
+pending_tail     | 4294967295
+tail_free_size   | 0
+n_pending_pages  | 0
+n_pending_tuples | 0
+n_total_pages    | 7
+n_entry_pages    | 6
+n_data_pages     | 0
+n_entries        | 693
+version          | 2
+</screen>
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>
+     <function>gin_page_opaque_info(page bytea) returns record</function>
+     <indexterm>
+      <primary>gin_page_opaque_info</primary>
+     </indexterm>
+    </term>
+
+    <listitem>
+     <para>
+      <function>gin_page_opaque_info</function> returns information about
+      a <acronym>GIN</acronym> index opaque area, like the page type.
+      For example:
+<screen>
+test=# SELECT * FROM gin_page_opaque_info(get_raw_page('gin_index', 2));
+ rightlink | maxoff |         flags
+-----------+--------+------------------------
+         5 |      0 | {data,leaf,compressed}
+(1 row)
+</screen>
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term>
+     <function>gin_leafpage_items(page bytea) returns setof record</function>
+     <indexterm>
+      <primary>gin_leafpage_items</primary>
+     </indexterm>
+    </term>
+
+    <listitem>
+     <para>
+      <function>gin_leafpage_items</function> returns information about
+      the data stored in a <acronym>GIN</acronym> leaf page.  For example:
+<screen>
+ test=# SELECT first_tid, nbytes, tids[0:5] as some_tids
+        FROM gin_leafpage_items(get_raw_page('gin_test_idx', 2));
+ first_tid | nbytes |                        some_tids
+-----------+--------+----------------------------------------------------------
+ (8,41)    |    244 | {"(8,41)","(8,43)","(8,44)","(8,45)","(8,46)"}
+ (10,45)   |    248 | {"(10,45)","(10,46)","(10,47)","(10,48)","(10,49)"}
+ (12,52)   |    248 | {"(12,52)","(12,53)","(12,54)","(12,55)","(12,56)"}
+ (14,59)   |    320 | {"(14,59)","(14,60)","(14,61)","(14,62)","(14,63)"}
+ (167,16)  |    376 | {"(167,16)","(167,17)","(167,18)","(167,19)","(167,20)"}
+ (170,30)  |    376 | {"(170,30)","(170,31)","(170,32)","(170,33)","(170,34)"}
+ (173,44)  |    197 | {"(173,44)","(173,45)","(173,46)","(173,47)","(173,48)"}
+(7 rows)
+</screen>
      </para>
     </listitem>
    </varlistentry>

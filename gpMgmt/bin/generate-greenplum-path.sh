@@ -44,6 +44,7 @@ cat <<EOF
 #setup PYTHONHOME
 if [ -x \$GPHOME/ext/python/bin/python ]; then
     PYTHONHOME="\$GPHOME/ext/python"
+    export PYTHONHOME
 fi
 EOF
 
@@ -87,7 +88,10 @@ fi
 
 # openssl configuration file path
 cat <<EOF
+if [ -e \$GPHOME/etc/openssl.cnf ]; then
 OPENSSL_CONF=\$GPHOME/etc/openssl.cnf
+export OPENSSL_CONF
+fi
 EOF
 
 cat <<EOF
@@ -97,9 +101,5 @@ EOF
 
 cat <<EOF
 export PYTHONPATH
-export PYTHONHOME
 EOF
 
-cat <<EOF
-export OPENSSL_CONF
-EOF

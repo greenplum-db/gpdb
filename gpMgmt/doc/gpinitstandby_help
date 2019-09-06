@@ -9,7 +9,7 @@ SYNOPSIS
 
 gpinitstandby { -s <standby_hostname> [-P <port>] | -r | -n } 
 
-[-a] [-q] [-D] [-l <logfile_directory>]
+[-a] [-q] [-D] [-S <standby data directory>] [-l <logfile_directory>]
 
 gpinitstandby -? | -v
 
@@ -99,7 +99,16 @@ OPTIONS
  If the Greenplum Database standby master is on the same host as the 
  active master, the ports must be different. If the ports are the same 
  for the active and standby master and the host is the same, the utility 
- returns an error. 
+ returns an error. (See also -S.)
+
+
+-S <standby data directory>
+
+ The data directory to use for a new standby master. The default is the same
+ directory used by the active master.
+
+ If the standby master is on the same host as the active master, a different
+ directory must be provided using this option. (See also -P.)
 
 
 -q

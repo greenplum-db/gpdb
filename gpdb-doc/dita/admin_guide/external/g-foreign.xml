@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic1">
+  <title id="im177965">Accessing External Data with Foreign Tables</title>
+  <body>
+    <p>Greenplum Database implements portions of the SQL/MED specification,
+     allowing you to access data that resides outside of Greenplum using
+     regular SQL queries. Such data is referred to as <i>foreign</i> or
+     external data.</p>
+    <p>You can access foreign data with help from a <i>foreign-data wrapper</i>.
+      A foreign-data wrapper is a library that communicates with a remote
+      data source. This library hides the source-specific connection and data
+      access details.</p>
+    <note>Most PostgreSQL foreign-data wrappers should work with Greenplum
+      Database. However, PostgreSQL foreign-data wrappers connect only through 
+      the Greenplum Database master and do not access the Greenplum Database 
+      segment instances directly.</note>
+    <p>If none of the existing foreign-data wrappers suit your needs, you can
+      write your own as described in <xref href="g-devel-fdw.xml#topic1"/>.</p>
+    <p>To access foreign data, you create a <i>foreign server</i> object,
+      which defines how to connect to a particular remote data source
+      according to the set of options used by its supporting foreign-data
+      wrapper. Then you create one or more <i>foreign tables</i>, which
+      define the structure of the remote data. A foreign table can be used in
+      queries just like a normal table, but a foreign table has no storage in
+      the Greenplum Database server. Whenever a foreign table is accessed,
+      Greenplum Database asks the foreign-data wrapper to fetch data from, or
+      update data in (if supported by the wrapper), the remote source.</p>
+    <note>GPORCA does not support foreign tables, a query on a foreign table
+      always falls back to the Postgres Planner.</note>
+    <p>Accessing remote data may require authenticating to the remote data
+      source. This information can be provided by a <i>user mapping</i>,
+      which can provide additional data such as a user name and password
+      based on the current Greenplum Database role.</p>
+    <p>For additional information, refer to
+       <codeph><xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1"/></codeph>,
+       <codeph><xref href="../../ref_guide/sql_commands/CREATE_SERVER.xml#topic1"/></codeph>,
+       <codeph><xref href="../../ref_guide/sql_commands/CREATE_USER_MAPPING.xml#topic1"/></codeph>,
+        and <codeph><xref href="../../ref_guide/sql_commands/CREATE_FOREIGN_TABLE.xml#topic1"/></codeph>.</p>
+  </body>
+</topic>

@@ -4,7 +4,7 @@
  *	  Definitions for hot standby mode.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/standby.h
@@ -14,7 +14,8 @@
 #ifndef STANDBY_H
 #define STANDBY_H
 
-#include "access/xlog.h"
+#include "access/xlogreader.h"
+#include "lib/stringinfo.h"
 #include "storage/lock.h"
 #include "storage/procsignal.h"
 #include "storage/relfilenode.h"
@@ -59,7 +60,7 @@ extern void StandbyReleaseOldLocks(int nxids, TransactionId *xids);
 typedef struct xl_standby_locks
 {
 	int			nlocks;			/* number of entries in locks array */
-	xl_standby_lock locks[1];	/* VARIABLE LENGTH ARRAY */
+	xl_standby_lock locks[FLEXIBLE_ARRAY_MEMBER];
 } xl_standby_locks;
 
 /*
@@ -74,15 +75,16 @@ typedef struct xl_running_xacts
 	TransactionId oldestRunningXid;		/* *not* oldestXmin */
 	TransactionId latestCompletedXid;	/* so we can set xmax */
 
-	TransactionId xids[1];		/* VARIABLE LENGTH ARRAY */
+	TransactionId xids[FLEXIBLE_ARRAY_MEMBER];
 } xl_running_xacts;
 
 #define MinSizeOfXactRunningXacts offsetof(xl_running_xacts, xids)
 
 
 /* Recovery handlers for the Standby Rmgr (RM_STANDBY_ID) */
-extern void standby_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
-extern void standby_desc(StringInfo buf, XLogRecord *record);
+extern void standby_redo(XLogReaderState *record);
+extern void standby_desc(StringInfo buf, XLogReaderState *record);
+extern const char *standby_identify(uint8 info);
 
 /*
  * Declarations for GetRunningTransactionData(). Similar to Snapshots, but

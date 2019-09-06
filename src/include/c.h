@@ -11,7 +11,7 @@
  *
  * Portions Copyright (c) 2006-2011, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/c.h
@@ -252,11 +252,6 @@ extern "C" {
 #define dummyret	char
 #endif
 
-#ifndef __GNUC__
-#define __attribute__(_arg_)
-#endif
-
-
 /* ----------------------------------------------------------------
  *				Section 2:	bool, true, false, TRUE, FALSE, NULL
  * ----------------------------------------------------------------
@@ -394,23 +389,27 @@ typedef unsigned long long int uint64;
  * stdint.h limits aren't guaranteed to be present and aren't guaranteed to
  * have compatible types with our fixed width types. So just define our own.
  */
-#define PG_INT8_MIN     (-0x7F-1)
-#define PG_INT8_MAX     (0x7F)
-#define PG_UINT8_MAX    (0xFF)
-#define PG_INT16_MIN    (-0x7FFF-1)
-#define PG_INT16_MAX    (0x7FFF)
-#define PG_UINT16_MAX   (0xFFFF)
-#define PG_INT32_MIN    (-0x7FFFFFFF-1)
-#define PG_INT32_MAX    (0x7FFFFFFF)
-#define PG_UINT32_MAX   (0xFFFFFFFF)
-#define PG_INT64_MIN    (-INT64CONST(0x7FFFFFFFFFFFFFFF) - 1)
-#define PG_INT64_MAX    INT64CONST(0x7FFFFFFFFFFFFFFF)
-#define PG_UINT64_MAX   UINT64CONST(0xFFFFFFFFFFFFFFFF)
+#define PG_INT8_MIN		(-0x7F-1)
+#define PG_INT8_MAX		(0x7F)
+#define PG_UINT8_MAX	(0xFF)
+#define PG_INT16_MIN	(-0x7FFF-1)
+#define PG_INT16_MAX	(0x7FFF)
+#define PG_UINT16_MAX	(0xFFFF)
+#define PG_INT32_MIN	(-0x7FFFFFFF-1)
+#define PG_INT32_MAX	(0x7FFFFFFF)
+#define PG_UINT32_MAX	(0xFFFFFFFF)
+#define PG_INT64_MIN	(-INT64CONST(0x7FFFFFFFFFFFFFFF) - 1)
+#define PG_INT64_MAX	INT64CONST(0x7FFFFFFFFFFFFFFF)
+#define PG_UINT64_MAX	UINT64CONST(0xFFFFFFFFFFFFFFFF)
 
 /* Select timestamp representation (float8 or int64) */
 #ifdef USE_INTEGER_DATETIMES
 #define HAVE_INT64_TIMESTAMP
 #endif
+
+/* snprintf format strings to use for 64-bit integers */
+#define INT64_FORMAT "%" INT64_MODIFIER "d"
+#define UINT64_FORMAT "%" INT64_MODIFIER "u"
 
 /*
  * 128-bit signed and unsigned integers
@@ -517,12 +516,6 @@ typedef uint32 DistributedTransactionId;
  */
 #define TMGIDSIZE 22
 
-/*
- * Used 21 spaces + NUL for a blank 22 character TMGIDSIZE GID.
- */
-#define TmGid_Init "                     "
-//                  123456789012345678901
-
 typedef uint32 CommandId;
 
 typedef int32  gpsegmentId;        /* CDB: type of gp_segment_id system col */
@@ -555,7 +548,7 @@ typedef struct
 struct varlena
 {
 	char		vl_len_[4];		/* Do not touch this field directly! */
-	char		vl_dat[1];
+	char		vl_dat[FLEXIBLE_ARRAY_MEMBER];	/* Data content is here */
 };
 
 #define VARHDRSZ		((int32) sizeof(int32))
@@ -588,8 +581,8 @@ typedef struct
 	Oid			elemtype;
 	int			dim1;
 	int			lbound1;
-	int16		values[1];		/* VARIABLE LENGTH ARRAY */
-} int2vector;					/* VARIABLE LENGTH STRUCT */
+	int16		values[FLEXIBLE_ARRAY_MEMBER];
+} int2vector;
 
 typedef struct
 {
@@ -599,8 +592,8 @@ typedef struct
 	Oid			elemtype;
 	int			dim1;
 	int			lbound1;
-	Oid			values[1];		/* VARIABLE LENGTH ARRAY */
-} oidvector;					/* VARIABLE LENGTH STRUCT */
+	Oid			values[FLEXIBLE_ARRAY_MEMBER];
+} oidvector;
 
 /*
  * Representation of a Name: effectively just a C string, but null-padded to
@@ -694,6 +687,7 @@ typedef NameData *Name;
 #define MAXALIGN(LEN)			TYPEALIGN(MAXIMUM_ALIGNOF, (LEN))
 /* MAXALIGN covers only built-in types, not buffers */
 #define BUFFERALIGN(LEN)		TYPEALIGN(ALIGNOF_BUFFER, (LEN))
+#define CACHELINEALIGN(LEN)		TYPEALIGN(PG_CACHE_LINE_SIZE, (LEN))
 
 #define TYPEALIGN_DOWN(ALIGNVAL,LEN)  \
 	(((uintptr_t) (LEN)) & ~((uintptr_t) ((ALIGNVAL) - 1)))
@@ -754,6 +748,12 @@ typedef NameData *Name;
 #define AssertArg(condition) assert(condition)
 #define AssertState(condition) assert(condition)
 #define AssertPointerAlignment(ptr, bndr)	((void)true)
+#define Trap(condition, errorType) \
+	do { \
+		(void) assert(!(condition)); \
+	} while (0)
+#define TrapMacro(condition, errorType) \
+	((bool) (assert(!(condition)), 0))
 
 #else							/* USE_ASSERT_CHECKING && !FRONTEND */
 
@@ -763,7 +763,7 @@ typedef NameData *Name;
  */
 #define Trap(condition, errorType) \
 	do { \
-		if ((assert_enabled) && (condition)) \
+		if (condition) \
 			ExceptionalCondition(CppAsString(condition), (errorType), \
 								 __FILE__, __LINE__); \
 	} while (0)
@@ -776,7 +776,7 @@ typedef NameData *Name;
  *	Isn't CPP fun?
  */
 #define TrapMacro(condition, errorType) \
-	((bool) ((! assert_enabled) || ! (condition) || \
+	((bool) (! (condition) || \
 			 (ExceptionalCondition(CppAsString(condition), (errorType), \
 								   __FILE__, __LINE__), 0)))
 
@@ -806,7 +806,6 @@ typedef NameData *Name;
 		 "UnalignedPointer")
 
 #endif   /* USE_ASSERT_CHECKING && !FRONTEND */
-
 
 /*
  * Macros to support compile-time assertion checks.
@@ -1033,7 +1032,6 @@ typedef NameData *Name;
  * !PG_USE_INLINE.
  */
 
-
 /* declarations which are only visible when not inlining and in the .c file */
 #ifdef PG_USE_INLINE
 #define STATIC_IF_INLINE static inline
@@ -1138,7 +1136,7 @@ typedef union PGAlignedXLogBlock
  * To better support parallel installations of major PostgreSQL
  * versions as well as parallel installations of major library soname
  * versions, we mangle the gettext domain name by appending those
- * version numbers.  The coding rule ought to be that whereever the
+ * version numbers.  The coding rule ought to be that wherever the
  * domain name is mentioned as a literal, it must be wrapped into
  * PG_TEXTDOMAIN().  The macros below do not work on non-literals; but
  * that is somewhat intentional because it avoids having to worry
@@ -1192,10 +1190,7 @@ typedef union PGAlignedXLogBlock
  */
 
 #if !HAVE_DECL_SNPRINTF
-extern int
-snprintf(char *str, size_t count, const char *fmt,...)
-/* This extension allows gcc to check the format string */
-__attribute__((format(printf, 3, 4)));
+extern int	snprintf(char *str, size_t count, const char *fmt,...) pg_attribute_printf(3, 4);
 #endif
 
 #if !HAVE_DECL_VSNPRINTF

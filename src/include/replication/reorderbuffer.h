@@ -2,7 +2,7 @@
  * reorderbuffer.h
  *	  PostgreSQL logical replay/reorder buffer management.
  *
- * Copyright (c) 2012-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2012-2015, PostgreSQL Global Development Group
  *
  * src/include/replication/reorderbuffer.h
  */
@@ -46,6 +46,11 @@ typedef struct ReorderBufferTupleBuf
  * and ComboCids in the same list with the user visible INSERT/UPDATE/DELETE
  * changes. Users of the decoding facilities will never see changes with
  * *_INTERNAL_* actions.
+ *
+ * The INTERNAL_SPEC_INSERT and INTERNAL_SPEC_CONFIRM changes concern
+ * "speculative insertions", and their confirmation respectively.  They're
+ * used by INSERT .. ON CONFLICT .. UPDATE.  Users of logical decoding don't
+ * have to care about these.
  */
 enum ReorderBufferChangeType
 {
@@ -54,7 +59,9 @@ enum ReorderBufferChangeType
 	REORDER_BUFFER_CHANGE_DELETE,
 	REORDER_BUFFER_CHANGE_INTERNAL_SNAPSHOT,
 	REORDER_BUFFER_CHANGE_INTERNAL_COMMAND_ID,
-	REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID
+	REORDER_BUFFER_CHANGE_INTERNAL_TUPLECID,
+	REORDER_BUFFER_CHANGE_INTERNAL_SPEC_INSERT,
+	REORDER_BUFFER_CHANGE_INTERNAL_SPEC_CONFIRM
 };
 
 /*
@@ -71,6 +78,8 @@ typedef struct ReorderBufferChange
 	/* The type of change. */
 	enum ReorderBufferChangeType action;
 
+	RepOriginId origin_id;
+
 	/*
 	 * Context data for the change. Which part of the union is valid depends
 	 * on action.
@@ -84,7 +93,7 @@ typedef struct ReorderBufferChange
 			RelFileNode relnode;
 
 			/* no previously reassembled toast chunks are necessary anymore */
-			bool clear_toast_afterwards;
+			bool		clear_toast_afterwards;
 
 			/* valid for DELETE || UPDATE */
 			ReorderBufferTupleBuf *oldtuple;
@@ -170,6 +179,10 @@ typedef struct ReorderBufferTXN
 	 */
 	XLogRecPtr	restart_decoding_lsn;
 
+	/* origin of the change that caused this transaction */
+	RepOriginId origin_id;
+	XLogRecPtr	origin_lsn;
+
 	/*
 	 * Commit time, only known when we read the actual commit record.
 	 */
@@ -248,8 +261,8 @@ typedef struct ReorderBufferTXN
 	/* ---
 	 * Position in one of three lists:
 	 * * list of subtransactions if we are *known* to be subxact
-	 * * list of toplevel xacts (can be an as-yet unknown subxact)
-	 * * list of preallocated ReorderBufferTXNs (if unused)
+	 * * list of toplevel xacts (can be am as-yet unknown subxact)
+	 * * list of preallocated ReorderBufferTXNs
 	 * ---
 	 */
 	dlist_node	node;
@@ -364,7 +377,7 @@ void		ReorderBufferReturnChange(ReorderBuffer *, ReorderBufferChange *);
 void		ReorderBufferQueueChange(ReorderBuffer *, TransactionId, XLogRecPtr lsn, ReorderBufferChange *);
 void ReorderBufferCommit(ReorderBuffer *, TransactionId,
 					XLogRecPtr commit_lsn, XLogRecPtr end_lsn,
-					TimestampTz commit_time);
+	  TimestampTz commit_time, RepOriginId origin_id, XLogRecPtr origin_lsn);
 void		ReorderBufferAssignChild(ReorderBuffer *, TransactionId, TransactionId, XLogRecPtr commit_lsn);
 void ReorderBufferCommitChild(ReorderBuffer *, TransactionId, TransactionId,
 						 XLogRecPtr commit_lsn, XLogRecPtr end_lsn);

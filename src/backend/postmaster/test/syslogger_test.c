@@ -15,7 +15,7 @@ time(time_t *unused)
 }
 
 
-void
+static void
 test__open_alert_log_file__NonGucOpen(void **state)
 {
     gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_NONE;
@@ -23,16 +23,15 @@ test__open_alert_log_file__NonGucOpen(void **state)
     assert_false(alert_log_level_opened);
 }
 
-void 
+static void 
 test__open_alert_log_file__NonMaster(void **state)
 {
-    Gp_entry_postmaster = false;
     gpperfmon_log_alert_level = GPPERFMON_LOG_ALERT_LEVEL_WARNING;
     open_alert_log_file();
     assert_false(alert_log_level_opened);
 }
 
-void 
+static void 
 test__logfile_getname(void **state)
 {
     char *alert_file_name;

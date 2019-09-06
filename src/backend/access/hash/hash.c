@@ -3,7 +3,7 @@
  * hash.c
  *	  Implementation of Margo Seltzer's Hashing package for postgres.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -136,32 +136,29 @@ hashbuildCallback(Relation index,
 				  ItemPointer tupleId,
 				  Datum *values,
 				  bool *isnull,
-				  bool tupleIsAlive __attribute__((unused)),
+				  bool tupleIsAlive pg_attribute_unused(),
 				  void *state)
 {
 	HashBuildState *buildstate = (HashBuildState *) state;
 	IndexTuple	itup;
 
-	/* form an index tuple and point it at the heap tuple */
-	itup = _hash_form_tuple(index, values, isnull);
-	itup->t_tid = *tupleId;
-
 	/* Hash indexes don't index nulls, see notes in hashinsert */
-	if (IndexTupleHasNulls(itup))
-	{
-		pfree(itup);
+	if (isnull[0])
 		return;
-	}
 
 	/* Either spool the tuple for sorting, or just put it into the index */
 	if (buildstate->spool)
-		_h_spool(itup, buildstate->spool);
+		_h_spool(buildstate->spool, tupleId, values, isnull);
 	else
+	{
+		/* form an index tuple and point it at the heap tuple */
+		itup = _hash_form_tuple(index, values, isnull);
+		itup->t_tid = *tupleId;
 		_hash_doinsert(index, itup);
+		pfree(itup);
+	}
 
 	buildstate->indtuples += 1;
-
-	pfree(itup);
 }
 
 /*
@@ -184,10 +181,6 @@ hashinsert(PG_FUNCTION_ARGS)
 #endif
 	IndexTuple	itup;
 
-	/* generate an index tuple */
-	itup = _hash_form_tuple(rel, values, isnull);
-	itup->t_tid = *ht_ctid;
-
 	/*
 	 * If the single index key is null, we don't insert it into the index.
 	 * Hash tables support scans on '='. Relational algebra says that A = B
@@ -197,11 +190,12 @@ hashinsert(PG_FUNCTION_ARGS)
 	 * NOTNULL scans, but that's an artifact of the strategy map architecture
 	 * chosen in 1986, not of the way nulls are handled here.
 	 */
-	if (IndexTupleHasNulls(itup))
-	{
-		pfree(itup);
+	if (isnull[0])
 		PG_RETURN_BOOL(false);
-	}
+
+	/* generate an index tuple */
+	itup = _hash_form_tuple(rel, values, isnull);
+	itup->t_tid = *ht_ctid;
 
 	_hash_doinsert(rel, itup);
 
@@ -715,7 +709,7 @@ hashvacuumcleanup(PG_FUNCTION_ARGS)
 
 
 void
-hash_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribute__((unused)), XLogRecord *record __attribute__((unused)))
+hash_redo(XLogReaderState *record)
 {
 	elog(PANIC, "hash_redo: unimplemented");
 }

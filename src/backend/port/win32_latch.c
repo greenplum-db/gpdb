@@ -9,7 +9,7 @@
  * The Windows implementation uses Windows events that are inherited by
  * all postmaster child processes.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -27,6 +27,7 @@
 #include "miscadmin.h"
 #include "portability/instr_time.h"
 #include "postmaster/postmaster.h"
+#include "storage/barrier.h"
 #include "storage/latch.h"
 #include "storage/pmsignal.h"
 #include "storage/shmem.h"
@@ -117,8 +118,6 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 		wakeEvents &= ~(WL_SOCKET_READABLE | WL_SOCKET_WRITEABLE);
 
 	Assert(wakeEvents != 0);	/* must have at least one wake event */
-	/* Cannot specify WL_SOCKET_WRITEABLE without WL_SOCKET_READABLE */
-	Assert((wakeEvents & (WL_SOCKET_READABLE | WL_SOCKET_WRITEABLE)) != WL_SOCKET_WRITEABLE);
 
 	if ((wakeEvents & WL_LATCH_SET) && latch->owner_pid != MyProcPid)
 		elog(ERROR, "cannot wait on a latch owned by another process");
@@ -152,10 +151,10 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 	if (wakeEvents & (WL_SOCKET_READABLE | WL_SOCKET_WRITEABLE))
 	{
 		/* Need an event object to represent events on the socket */
-		int			flags = 0;
+		int			flags = FD_CLOSE;	/* always check for errors/EOF */
 
 		if (wakeEvents & WL_SOCKET_READABLE)
-			flags |= (FD_READ | FD_CLOSE);
+			flags |= FD_READ;
 		if (wakeEvents & WL_SOCKET_WRITEABLE)
 			flags |= FD_WRITE;
 
@@ -232,7 +231,7 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 				elog(ERROR, "failed to enumerate network events: error code %u",
 					 WSAGetLastError());
 			if ((wakeEvents & WL_SOCKET_READABLE) &&
-				(resEvents.lNetworkEvents & (FD_READ | FD_CLOSE)))
+				(resEvents.lNetworkEvents & FD_READ))
 			{
 				result |= WL_SOCKET_READABLE;
 			}
@@ -240,6 +239,13 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 				(resEvents.lNetworkEvents & FD_WRITE))
 			{
 				result |= WL_SOCKET_WRITEABLE;
+			}
+			if (resEvents.lNetworkEvents & FD_CLOSE)
+			{
+				if (wakeEvents & WL_SOCKET_READABLE)
+					result |= WL_SOCKET_READABLE;
+				if (wakeEvents & WL_SOCKET_WRITEABLE)
+					result |= WL_SOCKET_WRITEABLE;
 			}
 		}
 		else if ((wakeEvents & WL_POSTMASTER_DEATH) &&
@@ -291,6 +297,13 @@ SetLatch(volatile Latch *latch)
 {
 	HANDLE		handle;
 
+	/*
+	 * The memory barrier has be to be placed here to ensure that any flag
+	 * variables possibly changed by this process have been flushed to main
+	 * memory, before we check/set is_set.
+	 */
+	pg_memory_barrier();
+
 	/* Quick exit if already set */
 	if (latch->is_set)
 		return;
@@ -323,4 +336,12 @@ ResetLatch(volatile Latch *latch)
 	Assert(latch->owner_pid == MyProcPid);
 
 	latch->is_set = false;
+
+	/*
+	 * Ensure that the write to is_set gets flushed to main memory before we
+	 * examine any flag variables.  Otherwise a concurrent SetLatch might
+	 * falsely conclude that it needn't signal us, even though we have missed
+	 * seeing some flag updates that SetLatch was supposed to inform us of.
+	 */
+	pg_memory_barrier();
 }

@@ -15,7 +15,7 @@
  * gistSplitByKey() is the entry point to this file.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -413,7 +413,7 @@ genericPickSplit(GISTSTATE *giststate, GistEntryVector *entryvec, GIST_SPLITVEC 
  */
 static bool
 gistUserPicksplit(Relation r, GistEntryVector *entryvec, int attno, GistSplitVector *v,
-				  IndexTuple *itup, int len __attribute__((unused)), GISTSTATE *giststate)
+				  IndexTuple *itup, int len pg_attribute_unused(), GISTSTATE *giststate)
 {
 	GIST_SPLITVEC *sv = &v->splitVector;
 

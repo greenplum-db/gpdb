@@ -414,11 +414,11 @@ ERROR:  resource group name "none" is reserved
 
 -- keywords are not allowed without quotation marks
 CREATE RESOURCE GROUP with WITH (cpu_rate_limit=10, memory_limit=10);
-ERROR:  syntax error at or near "with WITH"
+ERROR:  syntax error at or near "with"
 LINE 1: CREATE RESOURCE GROUP with WITH (cpu_rate_limit=10, memory_l...
                               ^
 CREATE RESOURCE GROUP WITH WITH (cpu_rate_limit=10, memory_limit=10);
-ERROR:  syntax error at or near "WITH WITH"
+ERROR:  syntax error at or near "WITH"
 LINE 1: CREATE RESOURCE GROUP WITH WITH (cpu_rate_limit=10, memory_l...
                               ^
 CREATE RESOURCE GROUP group WITH (cpu_rate_limit=10, memory_limit=10);

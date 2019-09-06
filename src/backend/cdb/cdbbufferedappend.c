@@ -33,14 +33,14 @@ static void BufferedAppendWrite(
  * large write lengths.
  */
 int32
-BufferedAppendMemoryLen(int32 maxBufferLen,
+BufferedAppendMemoryLen(int32 maxBufferWithCompressionOverrrunLen,
 						int32 maxLargeWriteLen)
 {
-	Assert(maxBufferLen > 0);
-	Assert(maxLargeWriteLen >= maxBufferLen);
+	Assert(maxBufferWithCompressionOverrrunLen > 0);
+	Assert(maxLargeWriteLen >= maxBufferWithCompressionOverrrunLen);
 
 	/* Large write memory areas plus adjacent extra memory for 1 buffer. */
-	return (maxLargeWriteLen + maxBufferLen);
+	return (maxLargeWriteLen + maxBufferWithCompressionOverrrunLen);
 }
 
 /*
@@ -53,15 +53,15 @@ void
 BufferedAppendInit(BufferedAppend *bufferedAppend,
 				   uint8 *memory,
 				   int32 memoryLen,
-				   int32 maxBufferLen,
+				   int32 maxBufferWithCompressionOverrrunLen,
 				   int32 maxLargeWriteLen,
 				   char *relationName)
 {
 	Assert(bufferedAppend != NULL);
 	Assert(memory != NULL);
-	Assert(maxBufferLen > 0);
-	Assert(maxLargeWriteLen >= maxBufferLen);
-	Assert(memoryLen >= BufferedAppendMemoryLen(maxBufferLen, maxLargeWriteLen));
+	Assert(maxBufferWithCompressionOverrrunLen> 0);
+	Assert(maxLargeWriteLen >= maxBufferWithCompressionOverrrunLen);
+	Assert(memoryLen >= BufferedAppendMemoryLen(maxBufferWithCompressionOverrrunLen, maxLargeWriteLen));
 
 	memset(bufferedAppend, 0, sizeof(BufferedAppend));
 
@@ -73,7 +73,7 @@ BufferedAppendInit(BufferedAppend *bufferedAppend,
 	/*
 	 * Large-read memory level members.
 	 */
-	bufferedAppend->maxBufferLen = maxBufferLen;
+	bufferedAppend->maxBufferWithCompressionOverrrunLen = maxBufferWithCompressionOverrrunLen;
 	bufferedAppend->maxLargeWriteLen = maxLargeWriteLen;
 
 	bufferedAppend->memory = memory;
@@ -188,6 +188,9 @@ BufferedAppendWrite(BufferedAppend *bufferedAppend, bool needsWAL)
 
 		bytesleft -= byteswritten;
 		bytestotal += byteswritten;
+
+		if (file_extend_hook)
+			(*file_extend_hook)(bufferedAppend->relFileNode);
 	}
 
 	elogif(Debug_appendonly_print_append_block, LOG,
@@ -254,10 +257,10 @@ BufferedAppendGetBuffer(BufferedAppend *bufferedAppend,
 
 	Assert(bufferedAppend != NULL);
 	Assert(bufferedAppend->file >= 0);
-	if (bufferLen > bufferedAppend->maxBufferLen)
+	if (bufferLen > bufferedAppend->maxBufferWithCompressionOverrrunLen)
 		elog(ERROR,
 			 "bufferLen %d greater than maxBufferLen %d at position " INT64_FORMAT " in table \"%s\" in file \"%s\"",
-			 bufferLen, bufferedAppend->maxBufferLen, bufferedAppend->largeWritePosition,
+			 bufferLen, bufferedAppend->maxBufferWithCompressionOverrrunLen, bufferedAppend->largeWritePosition,
 			 bufferedAppend->relationName,
 			 bufferedAppend->filePathName);
 
@@ -268,7 +271,7 @@ BufferedAppendGetBuffer(BufferedAppend *bufferedAppend,
 	currentLargeWriteLen = bufferedAppend->largeWriteLen;
 	Assert(currentLargeWriteLen + bufferLen <=
 		   bufferedAppend->maxLargeWriteLen +
-		   bufferedAppend->maxBufferLen);
+		   bufferedAppend->maxBufferWithCompressionOverrrunLen);
 
 	bufferedAppend->bufferLen = bufferLen;
 
@@ -301,7 +304,7 @@ BufferedAppendGetMaxBuffer(BufferedAppend *bufferedAppend)
 
 	return BufferedAppendGetBuffer(
 								   bufferedAppend,
-								   bufferedAppend->maxBufferLen);
+								   bufferedAppend->maxBufferWithCompressionOverrrunLen);
 }
 
 void
@@ -336,7 +339,7 @@ BufferedAppendFinishBuffer(BufferedAppend *bufferedAppend,
 
 	newLen = bufferedAppend->largeWriteLen + usedLen;
 	Assert(newLen <= bufferedAppend->maxLargeWriteLen +
-		   bufferedAppend->maxBufferLen);
+		   bufferedAppend->maxBufferWithCompressionOverrrunLen);
 	if (newLen >= bufferedAppend->maxLargeWriteLen)
 	{
 		/*

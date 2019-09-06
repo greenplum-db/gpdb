@@ -2,18 +2,18 @@
 <!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <dita>
   <topic id="topic1" xml:lang="en">
-    <title id="if135496">Greenplum Database Data Types</title>
+    <title id="if135496">Data Types</title>
     <body>
       <p>Greenplum Database has a rich set of native data types available to users. Users may also
         define new data types using the <codeph>CREATE TYPE</codeph> command. This reference shows
         all of the built-in data types. In addition to the types listed here, there are also some
         internally used data types, such as <i>oid</i> (object identifier), but those are not
         documented in this guide. </p>
-      <p>Optional modules in the <filepath>contrib</filepath> directory may also install new data
+      <p>Additional modules that you register may also install new data
         types. The <codeph>hstore</codeph> module, for example, introduces a new data type and
         associated functions for working with key-value pairs. See <xref
-          href="../utility_guide/hstore.xml#topic_vcn_jkq_1bb"/>. The <codeph>citext</codeph> module
-        adds a case-insensitive text data type. See <xref href="../utility_guide/citext.xml"/>.</p>
+          href="modules/hstore.xml"/>. The <codeph>citext</codeph> module
+        adds a case-insensitive text data type. See <xref href="modules/citext.xml"/>.</p>
       <p>The following data types are specified by SQL: <i>bit</i>, <i>bit varying</i>,
           <i>boolean</i>, <i>character varying, varchar</i>, <i>character, char</i>, <i>date</i>,
           <i>double precision</i>, <i>integer</i>, <i>interval</i>, <i>numeric</i>, <i>decimal</i>,
@@ -65,7 +65,7 @@
               <entry colname="col2"/>
               <entry colname="col3"><i>n</i> bits</entry>
               <entry colname="col4"><xref
-                  href="https://www.postgresql.org/docs/8.3/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS"
+                  href="https://www.postgresql.org/docs/9.4/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS"
                   scope="external" format="html">bit string constant</xref></entry>
               <entry colname="col5">fixed-length bit string</entry>
             </row>
@@ -75,7 +75,7 @@
               <entry colname="col2">varbit</entry>
               <entry colname="col3">actual number of bits</entry>
               <entry colname="col4"><xref
-                  href="https://www.postgresql.org/docs/8.3/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS"
+                  href="https://www.postgresql.org/docs/9.4/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS"
                   scope="external" format="html">bit string constant</xref></entry>
               <entry colname="col5">variable-length bit string</entry>
             </row>
@@ -100,7 +100,7 @@
               <entry colname="col2"/>
               <entry colname="col3">1 byte + <i>binary string</i></entry>
               <entry colname="col4">sequence of <xref
-                  href="https://www.postgresql.org/docs/8.3/datatype-binary.html#DATATYPE-BINARY-SQLESC"
+                  href="https://www.postgresql.org/docs/9.4/datatype-binary.html#DATATYPE-BINARY-SQLESC"
                   scope="external" format="html"><ph>octets</ph></xref></entry>
               <entry colname="col5">variable-length binary string</entry>
             </row>
@@ -299,7 +299,7 @@
             <row>
               <entry colname="col1">uuid</entry>
               <entry colname="col2"/>
-              <entry colname="col3">32 bytes</entry>
+              <entry colname="col3">16 bytes</entry>
               <entry colname="col4"/>
               <entry colname="col5">Universally Unique Identifiers according to RFC 4122, ISO/IEC
                 9834-8:2005</entry>

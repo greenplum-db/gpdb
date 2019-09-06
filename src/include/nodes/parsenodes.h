@@ -12,7 +12,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/parsenodes.h
@@ -21,8 +21,8 @@
  */
 #ifndef PARSENODES_H
 #define PARSENODES_H
-
 #include "nodes/bitmapset.h"
+#include "nodes/lockoptions.h"
 #include "nodes/primnodes.h"
 #include "nodes/value.h"
 #include "catalog/gp_policy.h"
@@ -152,6 +152,8 @@ typedef struct Query
 	bool		hasRecursive;	/* WITH RECURSIVE was specified */
 	bool		hasModifyingCTE;	/* has INSERT/UPDATE/DELETE in WITH */
 	bool		hasForUpdate;	/* FOR [KEY] UPDATE/SHARE was specified */
+	bool		hasRowSecurity; /* row security applied? */
+	bool        canOptSelectLockingClause; /* Whether can do some optimization on select with locking clause */
 
 	List	   *cteList;		/* WITH list (of CommonTableExpr's) */
 
@@ -162,23 +164,13 @@ typedef struct Query
 
 	List	   *withCheckOptions;		/* a list of WithCheckOption's */
 
+	OnConflictExpr *onConflict; /* ON CONFLICT DO [NOTHING | UPDATE] */
+
 	List	   *returningList;	/* return-values list (of TargetEntry) */
 
-	/*
-	 * A list of GroupClauses or GroupingClauses.  The order of GroupClauses
-	 * or GroupingClauses are based on input queries. However, in each
-	 * grouping set, all GroupClauses will appear in front of GroupingClauses.
-	 * See the following GROUP BY clause:
-	 *
-	 * GROUP BY ROLLUP(b,c),a, CUBE(e,d)
-	 *
-	 * the result list can be roughly represented as follows.
-	 *
-	 * GroupClause(a) --> GroupingClause( ROLLUP, groupsets (GroupClause(b)
-	 * --> GroupClause(c) ) ) --> GroupingClause( CUBE, groupsets
-	 * (GroupClause(e) --> GroupClause(d) ) )
-	 */
 	List	   *groupClause;	/* a list of SortGroupClause's */
+
+	List	   *groupingSets;	/* a list of GroupingSet's if present */
 
 	Node	   *havingQual;		/* qualifications applied to groups */
 
@@ -212,14 +204,6 @@ typedef struct Query
 	 * would always be dispatched in parallel.
 	 */
 	ParentStmtType	parentStmtType;
-
-	/*
-	 *  Do we need to reshuffle data, we use an UpdateStmt
-	 *  to reshuffle table data, so we should to know if the
-	 *  UpdateStmt is used to reshuffle or to update.
-	 */
-	bool	   needReshuffle;
-
 } Query;
 
 /****************************************************************************
@@ -293,15 +277,20 @@ typedef struct ParamRef
 typedef enum A_Expr_Kind
 {
 	AEXPR_OP,					/* normal operator */
-	AEXPR_AND,					/* booleans - name field is unused */
-	AEXPR_OR,
-	AEXPR_NOT,
 	AEXPR_OP_ANY,				/* scalar op ANY (array) */
 	AEXPR_OP_ALL,				/* scalar op ALL (array) */
 	AEXPR_DISTINCT,				/* IS DISTINCT FROM - name must be "=" */
 	AEXPR_NULLIF,				/* NULLIF - name must be "=" */
 	AEXPR_OF,					/* IS [NOT] OF - name must be "=" or "<>" */
-	AEXPR_IN					/* [NOT] IN - name must be "=" or "<>" */
+	AEXPR_IN,					/* [NOT] IN - name must be "=" or "<>" */
+	AEXPR_LIKE,					/* [NOT] LIKE - name must be "~~" or "!~~" */
+	AEXPR_ILIKE,				/* [NOT] ILIKE - name must be "~~*" or "!~~*" */
+	AEXPR_SIMILAR,				/* [NOT] SIMILAR - name must be "~" or "!~" */
+	AEXPR_BETWEEN,				/* name must be "BETWEEN" */
+	AEXPR_NOT_BETWEEN,			/* name must be "NOT BETWEEN" */
+	AEXPR_BETWEEN_SYM,			/* name must be "BETWEEN SYMMETRIC" */
+	AEXPR_NOT_BETWEEN_SYM,		/* name must be "NOT BETWEEN SYMMETRIC" */
+	AEXPR_PAREN					/* nameless dummy node for parentheses */
 } A_Expr_Kind;
 
 typedef struct A_Expr
@@ -347,6 +336,25 @@ typedef struct CollateClause
 } CollateClause;
 
 /*
+ * RoleSpec - a role name or one of a few special values.
+ */
+typedef enum RoleSpecType
+{
+	ROLESPEC_CSTRING,			/* role name is stored as a C string */
+	ROLESPEC_CURRENT_USER,		/* role spec is CURRENT_USER */
+	ROLESPEC_SESSION_USER,		/* role spec is SESSION_USER */
+	ROLESPEC_PUBLIC				/* role name is "public" */
+} RoleSpecType;
+
+typedef struct RoleSpec
+{
+	NodeTag		type;
+	RoleSpecType roletype;		/* Type of this rolespec */
+	char	   *rolename;		/* filled only for ROLESPEC_CSTRING */
+	int			location;		/* token location, or -1 if unknown */
+} RoleSpec;
+
+/*
  * FuncCall - a function or aggregate invocation
  *
  * agg_order (if not NIL) indicates we saw 'foo(... ORDER BY ...)', or if
@@ -374,6 +382,26 @@ typedef struct FuncCall
 	struct WindowDef *over;		/* OVER clause, if any */
 	int			location;		/* token location, or -1 if unknown */
 } FuncCall;
+
+/*
+ * TableSampleClause - a sampling method information
+ */
+typedef struct TableSampleClause
+{
+	NodeTag		type;
+	Oid			tsmid;
+	bool		tsmseqscan;
+	bool		tsmpagemode;
+	Oid			tsminit;
+	Oid			tsmnextblock;
+	Oid			tsmnexttuple;
+	Oid			tsmexaminetuple;
+	Oid			tsmend;
+	Oid			tsmreset;
+	Oid			tsmcost;
+	Node	   *repeatable;
+	List	   *args;
+} TableSampleClause;
 
 /*
  * A_Star - '*' representing all columns of a table or compound field
@@ -454,6 +482,23 @@ typedef struct ResTarget
 	Node	   *val;			/* the value expression to compute or assign */
 	int			location;		/* token location, or -1 if unknown */
 } ResTarget;
+
+/*
+ * MultiAssignRef - element of a row source expression for UPDATE
+ *
+ * In an UPDATE target list, when we have SET (a,b,c) = row-valued-expression,
+ * we generate separate ResTarget items for each of a,b,c.  Their "val" trees
+ * are MultiAssignRef nodes numbered 1..n, linking to a common copy of the
+ * row-valued-expression (which parse analysis will process only once, when
+ * handling the MultiAssignRef with colno=1).
+ */
+typedef struct MultiAssignRef
+{
+	NodeTag		type;
+	Node	   *source;			/* the row-valued expression */
+	int			colno;			/* column number for this target (1..n) */
+	int			ncolumns;		/* number of targets in the construct */
+} MultiAssignRef;
 
 /*
  * SortBy - for ORDER BY clause
@@ -559,6 +604,22 @@ typedef struct RangeFunction
 } RangeFunction;
 
 /*
+ * RangeTableSample - represents <table> TABLESAMPLE <method> (<params>) REPEATABLE (<num>)
+ *
+ * SQL Standard specifies only one parameter which is percentage. But we allow
+ * custom tablesample methods which may need different input arguments so we
+ * accept list of arguments.
+ */
+typedef struct RangeTableSample
+{
+	NodeTag		type;
+	RangeVar   *relation;
+	char	   *method;			/* sampling method */
+	Node	   *repeatable;
+	List	   *args;			/* arguments for sampling method */
+} RangeTableSample;
+
+/*
  * ColumnDef - column definition (used in various creates)
  *
  * If the column has a default value, we may have the value expression
@@ -614,11 +675,11 @@ typedef enum TableLikeOption
 	CREATE_TABLE_LIKE_INDEXES = 1 << 2,
 	CREATE_TABLE_LIKE_STORAGE = 1 << 3,
 	CREATE_TABLE_LIKE_COMMENTS = 1 << 4,
-	CREATE_TABLE_LIKE_ALL = 0x7FFFFFFF
+	CREATE_TABLE_LIKE_ALL = PG_INT32_MAX
 } TableLikeOption;
 
 /*
- * IndexElem - index parameters (used in CREATE INDEX)
+ * IndexElem - index parameters (used in CREATE INDEX, and in ON CONFLICT)
  *
  * For a plain index attribute, 'name' is the name of the table column to
  * index, and 'expr' is NULL.  For an index expression, 'name' is NULL and
@@ -683,21 +744,12 @@ typedef struct DefElem
  * a location field --- currently, parse analysis insists on unqualified
  * names in LockingClause.)
  */
-typedef enum LockClauseStrength
-{
-	/* order is important -- see applyLockingClause */
-	LCS_FORKEYSHARE,
-	LCS_FORSHARE,
-	LCS_FORNOKEYUPDATE,
-	LCS_FORUPDATE
-} LockClauseStrength;
-
 typedef struct LockingClause
 {
 	NodeTag		type;
 	List	   *lockedRels;		/* FOR [KEY] UPDATE/SHARE relations */
 	LockClauseStrength strength;
-	bool		noWait;			/* NOWAIT option */
+	LockWaitPolicy waitPolicy;	/* NOWAIT and SKIP LOCKED */
 } LockingClause;
 
 /*
@@ -782,11 +834,12 @@ typedef struct XmlSerialize
  *	  For SELECT/INSERT/UPDATE permissions, if the user doesn't have
  *	  table-wide permissions then it is sufficient to have the permissions
  *	  on all columns identified in selectedCols (for SELECT) and/or
- *	  modifiedCols (for INSERT/UPDATE; we can tell which from the query type).
- *	  selectedCols and modifiedCols are bitmapsets, which cannot have negative
- *	  integer members, so we subtract FirstLowInvalidHeapAttributeNumber from
- *	  column numbers before storing them in these fields.  A whole-row Var
- *	  reference is represented by setting the bit for InvalidAttrNumber.
+ *	  insertedCols and/or updatedCols (INSERT with ON CONFLICT DO UPDATE may
+ *	  have all 3).  selectedCols, insertedCols and updatedCols are bitmapsets,
+ *	  which cannot have negative integer members, so we subtract
+ *	  FirstLowInvalidHeapAttributeNumber from column numbers before storing
+ *	  them in these fields.  A whole-row Var reference is represented by
+ *	  setting the bit for InvalidAttrNumber.
  *--------------------
  */
 typedef enum RTEKind
@@ -818,6 +871,7 @@ typedef struct RangeTblEntry
 	 */
 	Oid			relid;			/* OID of the relation */
 	char		relkind;		/* relation kind (see pg_class.relkind) */
+	TableSampleClause *tablesample;		/* sampling method and parameters */
 
 	/*
 	 * Fields valid for a subquery RTE (else NULL):
@@ -895,8 +949,8 @@ typedef struct RangeTblEntry
 	AclMode		requiredPerms;	/* bitmask of required access permissions */
 	Oid			checkAsUser;	/* if valid, check access as this role */
 	Bitmapset  *selectedCols;	/* columns needing SELECT permission */
-	Bitmapset  *modifiedCols;	/* columns needing INSERT/UPDATE permission */
-
+	Bitmapset  *insertedCols;	/* columns needing INSERT permission */
+	Bitmapset  *updatedCols;	/* columns needing UPDATE permission */
 	List	   *securityQuals;	/* any security barrier quals to apply */
 
     List       *pseudocols;     /* CDB: List of CdbRelColumnInfo nodes defining
@@ -945,14 +999,24 @@ typedef struct RangeTblFunction
 /*
  * WithCheckOption -
  *		representation of WITH CHECK OPTION checks to be applied to new tuples
- *		when inserting/updating an auto-updatable view.
+ *		when inserting/updating an auto-updatable view, or RLS WITH CHECK
+ *		policies to be applied when inserting/updating a relation with RLS.
  */
+typedef enum WCOKind
+{
+	WCO_VIEW_CHECK,				/* WCO on an auto-updatable view */
+	WCO_RLS_INSERT_CHECK,		/* RLS INSERT WITH CHECK policy */
+	WCO_RLS_UPDATE_CHECK,		/* RLS UPDATE WITH CHECK policy */
+	WCO_RLS_CONFLICT_CHECK		/* RLS ON CONFLICT DO UPDATE USING policy */
+} WCOKind;
+
 typedef struct WithCheckOption
 {
 	NodeTag		type;
-	char	   *viewname;		/* name of view that specified the WCO */
+	WCOKind		kind;			/* kind of WCO */
+	char	   *relname;		/* name of relation that specified the WCO */
 	Node	   *qual;			/* constraint qual to check */
-	bool		cascaded;		/* true = WITH CASCADED CHECK OPTION */
+	bool		cascaded;		/* true for a cascaded WCO on a view */
 } WithCheckOption;
 
 /*
@@ -1023,49 +1087,71 @@ typedef struct SortGroupClause
 } SortGroupClause;
 
 /*
- * GroupingClause -
- *     representation of grouping extension clauses,
- *     such as ROLLUP, CUBE, and GROUPING SETS.
+ * GroupingSet -
+ *		representation of CUBE, ROLLUP and GROUPING SETS clauses
+ *
+ * In a Query with grouping sets, the groupClause contains a flat list of
+ * SortGroupClause nodes for each distinct expression used.  The actual
+ * structure of the GROUP BY clause is given by the groupingSets tree.
+ *
+ * In the raw parser output, GroupingSet nodes (of all types except SIMPLE
+ * which is not used) are potentially mixed in with the expressions in the
+ * groupClause of the SelectStmt.  (An expression can't contain a GroupingSet,
+ * but a list may mix GroupingSet and expression nodes.)  At this stage, the
+ * content of each node is a list of expressions, some of which may be RowExprs
+ * which represent sublists rather than actual row constructors, and nested
+ * GroupingSet nodes where legal in the grammar.  The structure directly
+ * reflects the query syntax.
+ *
+ * In parse analysis, the transformed expressions are used to build the tlist
+ * and groupClause list (of SortGroupClause nodes), and the groupingSets tree
+ * is eventually reduced to a fixed format:
+ *
+ * EMPTY nodes represent (), and obviously have no content
+ *
+ * SIMPLE nodes represent a list of one or more expressions to be treated as an
+ * atom by the enclosing structure; the content is an integer list of
+ * ressortgroupref values (see SortGroupClause)
+ *
+ * CUBE and ROLLUP nodes contain a list of one or more SIMPLE nodes.
+ *
+ * SETS nodes contain a list of EMPTY, SIMPLE, CUBE or ROLLUP nodes, but after
+ * parse analysis they cannot contain more SETS nodes; enough of the syntactic
+ * transforms of the spec have been applied that we no longer have arbitrarily
+ * deep nesting (though we still preserve the use of cube/rollup).
+ *
+ * Note that if the groupingSets tree contains no SIMPLE nodes (only EMPTY
+ * nodes at the leaves), then the groupClause will be empty, but this is still
+ * an aggregation query (similar to using aggs or HAVING without GROUP BY).
+ *
+ * As an example, the following clause:
+ *
+ * GROUP BY GROUPING SETS ((a,b), CUBE(c,(d,e)))
+ *
+ * looks like this after raw parsing:
+ *
+ * SETS( RowExpr(a,b) , CUBE( c, RowExpr(d,e) ) )
+ *
+ * and parse analysis converts it to:
+ *
+ * SETS( SIMPLE(1,2), CUBE( SIMPLE(3), SIMPLE(4,5) ) )
  */
-typedef struct GroupingClause
+typedef enum
 {
-	NodeTag      type;
-	GroupingType groupType;
-	List         *groupsets;
-} GroupingClause;
+	GROUPING_SET_EMPTY,
+	GROUPING_SET_SIMPLE,
+	GROUPING_SET_ROLLUP,
+	GROUPING_SET_CUBE,
+	GROUPING_SET_SETS
+} GroupingSetKind;
 
-/*
- * GroupingFunc -
- *     representation of a grouping function for grouping extension
- *     clauses.
- *
- * This is used to determine whether a null value for a column in
- * the output tuple is the result of grouping. For example, a table
- *
- *    test (a integer, b integer)
- *
- * has two rows:
- *
- *    (1,1), (null,1)
- *
- * The query "select a,sum(b),grouping(a) from test group by rollup(a)"
- * returns
- *
- *    1   ,    1,    0
- *    null,    1,    0
- *    null,    2,    1
- *
- * The output row "null,1,0" indicates that the 'null' value for 'a' is not
- * from grouping, while the row "null,2,1" indicates that the 'null' value for
- * 'a' is from grouping.
- */
-typedef struct GroupingFunc
+typedef struct GroupingSet
 {
-	NodeTag   type;
-	List     *args;  /* arguments provided in the query. */
-	int       ngrpcols; /* the number of grouping attributes */
-} GroupingFunc;
-
+	NodeTag		type;
+	GroupingSetKind kind;
+	List	   *content;
+	int			location;
+} GroupingSet;
 
 /*
  * WindowClause -
@@ -1112,7 +1198,7 @@ typedef struct RowMarkClause
 	NodeTag		type;
 	Index		rti;			/* range table index of target relation */
 	LockClauseStrength strength;
-	bool		noWait;			/* NOWAIT option */
+	LockWaitPolicy waitPolicy;	/* NOWAIT and SKIP LOCKED */
 	bool		pushedDown;		/* pushed down from higher query level? */
 } RowMarkClause;
 
@@ -1130,6 +1216,37 @@ typedef struct WithClause
 	bool		recursive;		/* true = WITH RECURSIVE */
 	int			location;		/* token location, or -1 if unknown */
 } WithClause;
+
+/*
+ * InferClause -
+ *		ON CONFLICT unique index inference clause
+ *
+ * Note: InferClause does not propagate into the Query representation.
+ */
+typedef struct InferClause
+{
+	NodeTag		type;
+	List	   *indexElems;		/* IndexElems to infer unique index */
+	Node	   *whereClause;	/* qualification (partial-index predicate) */
+	char	   *conname;		/* Constraint name, or NULL if unnamed */
+	int			location;		/* token location, or -1 if unknown */
+} InferClause;
+
+/*
+ * OnConflictClause -
+ *		representation of ON CONFLICT clause
+ *
+ * Note: OnConflictClause does not propagate into the Query representation.
+ */
+typedef struct OnConflictClause
+{
+	NodeTag		type;
+	OnConflictAction action;	/* DO NOTHING or UPDATE? */
+	InferClause *infer;			/* Optional index inference clause */
+	List	   *targetList;		/* the target list (of ResTarget) */
+	Node	   *whereClause;	/* qualifications */
+	int			location;		/* token location, or -1 if unknown */
+} OnConflictClause;
 
 /*
  * CommonTableExpr -
@@ -1181,6 +1298,7 @@ typedef struct InsertStmt
 	RangeVar   *relation;		/* relation to insert into */
 	List	   *cols;			/* optional: names of the target columns */
 	Node	   *selectStmt;		/* the source SELECT/VALUES, or NULL */
+	OnConflictClause *onConflictClause; /* ON CONFLICT clause */
 	List	   *returningList;	/* list of expressions to return */
 	WithClause *withClause;		/* WITH clause */
 } InsertStmt;
@@ -1212,12 +1330,6 @@ typedef struct UpdateStmt
 	List	   *fromClause;		/* optional from clause for more tables */
 	List	   *returningList;	/* list of expressions to return */
 	WithClause *withClause;		/* WITH clause */
-
-	/*
-	 *  Do we need to reshuffle data, we should to know if the
-	 *  UpdateStmt is used to reshuffle or to update.
-	 */
-	bool	    needReshuffle;
 } UpdateStmt;
 
 /* ----------------------
@@ -1364,14 +1476,18 @@ typedef struct SetOperationStmt
 typedef enum ObjectType
 {
 	OBJECT_AGGREGATE,
+	OBJECT_AMOP,
+	OBJECT_AMPROC,
 	OBJECT_ATTRIBUTE,			/* type's attribute, when distinct from column */
 	OBJECT_CAST,
 	OBJECT_COLUMN,
-	OBJECT_CONSTRAINT,
 	OBJECT_COLLATION,
 	OBJECT_CONVERSION,
 	OBJECT_DATABASE,
+	OBJECT_DEFAULT,
+	OBJECT_DEFACL,
 	OBJECT_DOMAIN,
+	OBJECT_DOMCONSTRAINT,
 	OBJECT_EVENT_TRIGGER,
 	OBJECT_EXTENSION,
 	OBJECT_FDW,
@@ -1385,20 +1501,24 @@ typedef enum ObjectType
 	OBJECT_OPCLASS,
 	OBJECT_OPERATOR,
 	OBJECT_OPFAMILY,
+	OBJECT_POLICY,
 	OBJECT_ROLE,
 	OBJECT_RULE,
 	OBJECT_SCHEMA,
 	OBJECT_SEQUENCE,
+	OBJECT_TABCONSTRAINT,
 	OBJECT_TABLE,
 	OBJECT_EXTTABLE,
 	OBJECT_EXTPROTOCOL,
 	OBJECT_TABLESPACE,
+	OBJECT_TRANSFORM,
 	OBJECT_TRIGGER,
 	OBJECT_TSCONFIGURATION,
 	OBJECT_TSDICTIONARY,
 	OBJECT_TSPARSER,
 	OBJECT_TSTEMPLATE,
 	OBJECT_TYPE,
+	OBJECT_USER_MAPPING,
 	OBJECT_VIEW,
 	OBJECT_RESQUEUE,
 	OBJECT_RESGROUP
@@ -1416,7 +1536,7 @@ typedef struct CreateSchemaStmt
 {
 	NodeTag		type;
 	char	   *schemaname;		/* the name of the schema to create */
-	char	   *authid;			/* the owner of the created schema */
+	Node	   *authrole;		/* the owner of the created schema */
 	List	   *schemaElts;		/* schema components (list of parsenodes) */
 	bool		if_not_exists;	/* just do nothing if schema already exists? */
 
@@ -1484,6 +1604,8 @@ typedef enum AlterTableType
 	AT_ChangeOwner,				/* change owner */
 	AT_ClusterOn,				/* CLUSTER ON */
 	AT_DropCluster,				/* SET WITHOUT CLUSTER */
+	AT_SetLogged,				/* SET LOGGED */
+	AT_SetUnLogged,				/* SET UNLOGGED */
 	AT_AddOids,					/* SET WITH OIDS */
 	AT_AddOidsRecurse,			/* internal to commands/tablecmds.c */
 	AT_DropOids,				/* SET WITHOUT OIDS */
@@ -1508,6 +1630,8 @@ typedef enum AlterTableType
 	AT_AddOf,					/* OF <type_name> */
 	AT_DropOf,					/* NOT OF */
 	AT_ReplicaIdentity,			/* REPLICA IDENTITY */
+	AT_EnableRowSecurity,		/* ENABLE ROW SECURITY */
+	AT_DisableRowSecurity,		/* DISABLE ROW SECURITY */
 	AT_GenericOptions,			/* OPTIONS (...) */
 	AT_SetDistributedBy,		/* SET DISTRIBUTED BY */
 	AT_ExpandTable,          /* EXPAND DISTRIBUTED */
@@ -1521,7 +1645,8 @@ typedef enum AlterTableType
 	AT_PartSetTemplate,			/* Set Subpartition Template */
 	AT_PartSplit,				/* Split */
 	AT_PartTruncate,			/* Truncate */
-	AT_PartAddInternal			/* CREATE TABLE time partition addition */
+	AT_PartAddInternal,			/* CREATE TABLE time partition addition */
+	AT_PartAttachIndex			/* ALTER INDEX ATTACH PARTITION (not exposed to user) */
 } AlterTableType;
 
 typedef struct ReplicaIdentityStmt
@@ -1537,8 +1662,9 @@ typedef struct AlterTableCmd	/* one subcommand of an ALTER TABLE */
 	AlterTableType subtype;		/* Type of table alteration to apply */
 	char	   *name;			/* column, constraint, or trigger to act on,
 								 * or new owner or tablespace */
-	Node	   *def;			/* definition of new column, column type,
-								 * index, constraint, or parent table */
+	Node	   *newowner;		/* RoleSpec */
+	Node	   *def;			/* definition of new column, index,
+								 * constraint, or parent table */
 	Node	   *transform;		/* transformation expr for ALTER TYPE */
 	DropBehavior behavior;		/* RESTRICT or CASCADE for DROP cases */
 	bool		part_expanded;	/* expands from another command, for partitioning */
@@ -1569,7 +1695,8 @@ typedef enum AlterPartitionIdType
 	AT_AP_ID_oid,				/* IDentifier by oid (for internal use only) */
 	AT_AP_IDList,				/* List of IDentifier(for internal use only) */
 	AT_AP_IDRule,				/* partition rule (for internal use only) */
-	AT_AP_IDDefault				/* IDentify DEFAULT partition */
+	AT_AP_IDDefault,			/* IDentify DEFAULT partition */
+	AT_AP_IDRangeVar			/* IDentify Partition by RangeVar */
 } AlterPartitionIdType;
 
 typedef struct AlterPartitionId /* Identify a partition by name, val, pos */
@@ -1660,16 +1787,10 @@ typedef struct GrantStmt
 								 * or plain names (as Value strings) */
 	List	   *privileges;		/* list of AccessPriv nodes */
 	/* privileges == NIL denotes ALL PRIVILEGES */
-	List	   *grantees;		/* list of PrivGrantee nodes */
+	List	   *grantees;		/* list of RoleSpec nodes */
 	bool		grant_option;	/* grant or revoke grant option */
 	DropBehavior behavior;		/* drop behavior (for REVOKE) */
 } GrantStmt;
-
-typedef struct PrivGrantee
-{
-	NodeTag		type;
-	char	   *rolname;		/* if NULL then PUBLIC */
-} PrivGrantee;
 
 /*
  * Note: FuncWithArgs carries only the types of the input parameters of the
@@ -1713,7 +1834,7 @@ typedef struct GrantRoleStmt
 	List	   *grantee_roles;	/* list of member roles to add/delete */
 	bool		is_grant;		/* true = GRANT, false = REVOKE */
 	bool		admin_opt;		/* with admin option */
-	char	   *grantor;		/* set grantor to other than current role */
+	Node	   *grantor;		/* set grantor to other than current role */
 	DropBehavior behavior;		/* drop behavior (for REVOKE) */
 } GrantRoleStmt;
 
@@ -1833,7 +1954,6 @@ typedef struct CreateStmt
 	Node       *partitionBy;     /* what columns we partition the data by */
 	char	    relKind;         /* CDB: force relkind to this */
 	char		relStorage;
-	Node       *postCreate;      /* CDB: parse and process after the CREATE */
 	List	   *deferredStmts;	/* CDB: Statements, e.g., partial indexes, that can't be
 								 * analyzed until after CREATE (until the target table
 								 * is created and visible). */
@@ -2114,27 +2234,9 @@ typedef struct PartitionSpec			/* a Partition Specification */
 	int					location;		/* token location, or -1 if unknown */
 } PartitionSpec;
 
-typedef enum ExpandMethod
-{
-	EXPANDMETHOD_NONE = 0,
-	EXPANDMETHOD_CTAS,
-	EXPANDMETHOD_RESHUFFLE
-} ExpandMethod;
-
 typedef struct ExpandStmtSpec
 {
 	NodeTag				type;
-	/* method to move data internal */
-	ExpandMethod		method;
-	/*
-	 * QEs has empty pg_partition and pg_partitions
-	 * so we need to pass necessary partition related
-	 * info to QEs.
-	 */
-	Bitmapset			*ps_none;
-	Bitmapset			*ps_root;
-	Bitmapset			*ps_interior;
-	Bitmapset			*ps_leaf;
 	/* for ctas method */
 	Oid					backendId;
 } ExpandStmtSpec;
@@ -2148,7 +2250,7 @@ typedef struct CreateTableSpaceStmt
 {
 	NodeTag		type;
 	char	   *tablespacename;
-	char	   *owner;
+	Node	   *owner;
 	char	   *location;
 	List	   *options;
 } CreateTableSpaceStmt;
@@ -2263,7 +2365,7 @@ typedef struct AlterForeignServerStmt
 } AlterForeignServerStmt;
 
 /* ----------------------
- *		Create FOREIGN TABLE Statements
+ *		Create FOREIGN TABLE Statement
  * ----------------------
  */
 
@@ -2282,7 +2384,7 @@ typedef struct CreateForeignTableStmt
 typedef struct CreateUserMappingStmt
 {
 	NodeTag		type;
-	char	   *username;		/* username or PUBLIC/CURRENT_USER */
+	Node	   *user;			/* user role */
 	char	   *servername;		/* server name */
 	List	   *options;		/* generic options to server */
 } CreateUserMappingStmt;
@@ -2290,7 +2392,7 @@ typedef struct CreateUserMappingStmt
 typedef struct AlterUserMappingStmt
 {
 	NodeTag		type;
-	char	   *username;		/* username or PUBLIC/CURRENT_USER */
+	Node	   *user;			/* user role */
 	char	   *servername;		/* server name */
 	List	   *options;		/* generic options to server */
 } AlterUserMappingStmt;
@@ -2298,10 +2400,62 @@ typedef struct AlterUserMappingStmt
 typedef struct DropUserMappingStmt
 {
 	NodeTag		type;
-	char	   *username;		/* username or PUBLIC/CURRENT_USER */
+	Node	   *user;			/* user role */
 	char	   *servername;		/* server name */
 	bool		missing_ok;		/* ignore missing mappings */
 } DropUserMappingStmt;
+
+/* ----------------------
+ *		Import Foreign Schema Statement
+ * ----------------------
+ */
+
+typedef enum ImportForeignSchemaType
+{
+	FDW_IMPORT_SCHEMA_ALL,		/* all relations wanted */
+	FDW_IMPORT_SCHEMA_LIMIT_TO, /* include only listed tables in import */
+	FDW_IMPORT_SCHEMA_EXCEPT	/* exclude listed tables from import */
+} ImportForeignSchemaType;
+
+typedef struct ImportForeignSchemaStmt
+{
+	NodeTag		type;
+	char	   *server_name;	/* FDW server name */
+	char	   *remote_schema;	/* remote schema name to query */
+	char	   *local_schema;	/* local schema to create objects in */
+	ImportForeignSchemaType list_type;	/* type of table list */
+	List	   *table_list;		/* List of RangeVar */
+	List	   *options;		/* list of options to pass to FDW */
+} ImportForeignSchemaStmt;
+
+/*----------------------
+ *		Create POLICY Statement
+ *----------------------
+ */
+typedef struct CreatePolicyStmt
+{
+	NodeTag		type;
+	char	   *policy_name;	/* Policy's name */
+	RangeVar   *table;			/* the table name the policy applies to */
+	char	   *cmd;			/* the command name the policy applies to */
+	List	   *roles;			/* the roles associated with the policy */
+	Node	   *qual;			/* the policy's condition */
+	Node	   *with_check;		/* the policy's WITH CHECK condition. */
+} CreatePolicyStmt;
+
+/*----------------------
+ *		Alter POLICY Statement
+ *----------------------
+ */
+typedef struct AlterPolicyStmt
+{
+	NodeTag		type;
+	char	   *policy_name;	/* Policy's name */
+	RangeVar   *table;			/* the table name the policy applies to */
+	List	   *roles;			/* the roles associated with the policy */
+	Node	   *qual;			/* the policy's condition */
+	Node	   *with_check;		/* the policy's WITH CHECK condition. */
+} AlterPolicyStmt;
 
 /* ----------------------
  *		Create TRIGGER Statement
@@ -2445,7 +2599,7 @@ typedef struct CreateRoleStmt
 typedef struct AlterRoleStmt
 {
 	NodeTag		type;
-	char	   *role;			/* role name */
+	Node	   *role;			/* role */
 	List	   *options;		/* List of DefElem nodes */
 	int			action;			/* +1 = add members, -1 = drop members */
 } AlterRoleStmt;
@@ -2453,7 +2607,7 @@ typedef struct AlterRoleStmt
 typedef struct AlterRoleSetStmt
 {
 	NodeTag		type;
-	char	   *role;			/* role name */
+	Node	   *role;			/* role */
 	char	   *database;		/* database name, or NULL */
 	VariableSetStmt *setstmt;	/* SET or RESET subcommand */
 } AlterRoleSetStmt;
@@ -2491,6 +2645,7 @@ typedef struct CreateSeqStmt
 	RangeVar   *sequence;		/* the sequence to create */
 	List	   *options;
 	Oid			ownerId;		/* ID of owner, or InvalidOid for default */
+	bool		if_not_exists;	/* just do nothing if it already exists? */
 } CreateSeqStmt;
 
 typedef struct AlterSeqStmt
@@ -2666,7 +2821,7 @@ typedef struct SecLabelStmt
  * This is used to request the planner to create a plan that's updatable with
  * CURRENT OF. It can be passed to SPI_prepare_cursor.
  */
-#define CURSOR_OPT_UPDATABLE	0x0040	/* updateable with CURRENT OF, if possible */
+#define CURSOR_OPT_UPDATABLE	0x0200	/* updateable with CURRENT OF, if possible */
 
 typedef struct DeclareCursorStmt
 {
@@ -2744,10 +2899,12 @@ typedef struct IndexStmt
 	bool		isconstraint;	/* is it for a pkey/unique constraint? */
 	bool		deferrable;		/* is the constraint DEFERRABLE? */
 	bool		initdeferred;	/* is the constraint INITIALLY DEFERRED? */
+	bool		transformed;	/* true when transformIndexStmt is finished */
 	bool		concurrent;		/* should this be a concurrent index build? */
-	char	   *altconname;		/* constraint name, if desired name differs
-								 * from idxname and isconstraint, else NULL. */
+	bool		if_not_exists;	/* just do nothing if index already exists? */
 	bool		is_split_part;	/* Is this for SPLIT PARTITION command? */
+	Oid			parentIndexId;	/* attach to a parent index if set */
+	Oid			parentConstraintId;		/* attach to a parent constraint if set */
 } IndexStmt;
 
 /* ----------------------
@@ -2859,7 +3016,7 @@ typedef struct AlterOwnerStmt
 	RangeVar   *relation;		/* in case it's a table */
 	List	   *object;			/* in case it's some other object */
 	List	   *objarg;			/* argument types, if applicable */
-	char	   *newowner;		/* the new owner */
+	Node	   *newowner;		/* the new owner */
 } AlterOwnerStmt;
 
 /* ----------------------
@@ -3092,9 +3249,7 @@ typedef struct ClusterStmt
  *
  * Even though these are nominally two statements, it's convenient to use
  * just one node type for both.  Note that at least one of VACOPT_VACUUM
- * and VACOPT_ANALYZE must be set in options.  VACOPT_FREEZE is an internal
- * convenience for the grammar and is not examined at runtime --- the
- * freeze_min_age and freeze_table_age fields are what matter.
+ * and VACOPT_ANALYZE must be set in options.
  * ----------------------
  */
 typedef enum VacuumOption
@@ -3105,8 +3260,9 @@ typedef enum VacuumOption
 	VACOPT_FREEZE = 1 << 3,		/* FREEZE option */
 	VACOPT_FULL = 1 << 4,		/* FULL (non-concurrent) vacuum */
 	VACOPT_NOWAIT = 1 << 5,		/* don't wait to get lock (autovacuum only) */
-	VACOPT_ROOTONLY = 1 << 6,	/* only ANALYZE root partition tables */
-	VACOPT_FULLSCAN = 1 << 7	/* ANALYZE using full table scan */
+	VACOPT_SKIPTOAST = 1 << 6,	/* don't process the TOAST table, if any */
+	VACOPT_ROOTONLY = 1 << 7,	/* only ANALYZE root partition tables */
+	VACOPT_FULLSCAN = 1 << 8	/* ANALYZE using full table scan */
 } VacuumOption;
 
 typedef enum AOVacuumPhase
@@ -3118,23 +3274,14 @@ typedef enum AOVacuumPhase
 	AOVAC_CLEANUP
 } AOVacuumPhase;
 
-typedef struct VacuumStmt
+/*
+ * AOVacuumPhaseConfig is passed around in VacuumStmt to orchestrate vacuuming
+ * an AO table through each AO vacuum phase.
+ */
+typedef struct AOVacuumPhaseConfig
 {
 	NodeTag		type;
-	int			options;		/* OR of VacuumOption flags */
-	int			freeze_min_age; /* min freeze age, or -1 to use default */
-	int			freeze_table_age;		/* age at which to scan whole table */
-	int			multixact_freeze_min_age;		/* min multixact freeze age,
-												 * or -1 to use default */
-	int			multixact_freeze_table_age;		/* multixact age at which to
-												 * scan whole table */
-	RangeVar   *relation;		/* single table to process, or NULL */
-	List	   *va_cols;		/* list of column names, or NIL for all */
 
-	/* Object IDs for relations which expand from partition definitions */
-	List	   *expanded_relids;
-
-	bool skip_twophase;
 	/*
 	 * AO segment file num to compact (integer).
 	 */
@@ -3159,6 +3306,17 @@ typedef struct VacuumStmt
 	bool appendonly_relation_empty;
 
 	AOVacuumPhase appendonly_phase;
+} AOVacuumPhaseConfig;
+
+typedef struct VacuumStmt
+{
+	NodeTag		type;
+	int			options;		/* OR of VacuumOption flags */
+	RangeVar   *relation;		/* single table to process, or NULL */
+	List	   *va_cols;		/* list of column names, or NIL for all */
+
+	bool skip_twophase; /* GPDB */
+	AOVacuumPhaseConfig *ao_vacuum_phase_config; /* GPDB */
 } VacuumStmt;
 
 /* ----------------------
@@ -3196,6 +3354,7 @@ typedef struct CreateTableAsStmt
 	IntoClause *into;			/* destination table */
 	ObjectType	relkind;		/* OBJECT_TABLE or OBJECT_MATVIEW */
 	bool		is_select_into; /* it was written as SELECT INTO */
+	bool		if_not_exists;	/* just do nothing if it already exists? */
 } CreateTableAsStmt;
 
 /* ----------------------
@@ -3265,14 +3424,27 @@ typedef struct ConstraintsSetStmt
  *		REINDEX Statement
  * ----------------------
  */
+
+/* Reindex options */
+#define REINDEXOPT_VERBOSE 1 << 0		/* print progress info */
+
+typedef enum ReindexObjectType
+{
+	REINDEX_OBJECT_INDEX,		/* index */
+	REINDEX_OBJECT_TABLE,		/* table or materialized view */
+	REINDEX_OBJECT_SCHEMA,		/* schema */
+	REINDEX_OBJECT_SYSTEM,		/* system catalogs */
+	REINDEX_OBJECT_DATABASE		/* database */
+} ReindexObjectType;
+
 typedef struct ReindexStmt
 {
 	NodeTag		type;
-	ObjectType	kind;			/* OBJECT_INDEX, OBJECT_TABLE, etc. */
+	ReindexObjectType kind;		/* REINDEX_OBJECT_INDEX, REINDEX_OBJECT_TABLE,
+								 * etc. */
 	RangeVar   *relation;		/* Table or index to reindex */
 	const char *name;			/* name of database to reindex */
-	bool		do_system;		/* include system tables in database case */
-	bool		do_user;		/* include user tables in database case */
+	int			options;		/* Reindex options flags */
 	Oid			relid;			/* oid of TABLE, used by QE */
 } ReindexStmt;
 
@@ -3303,6 +3475,20 @@ typedef struct CreateCastStmt
 	CoercionContext context;
 	bool		inout;
 } CreateCastStmt;
+
+/* ----------------------
+ *	CREATE TRANSFORM Statement
+ * ----------------------
+ */
+typedef struct CreateTransformStmt
+{
+	NodeTag		type;
+	bool		replace;
+	TypeName   *type_name;
+	char	   *lang;
+	FuncWithArgs *fromsql;
+	FuncWithArgs *tosql;
+} CreateTransformStmt;
 
 /* ----------------------
  *		PREPARE Statement
@@ -3358,7 +3544,7 @@ typedef struct ReassignOwnedStmt
 {
 	NodeTag		type;
 	List	   *roles;
-	char	   *newrole;
+	Node	   *newrole;
 } ReassignOwnedStmt;
 
 /*
@@ -3374,9 +3560,19 @@ typedef struct AlterTSDictionaryStmt
 /*
  * TS Configuration stmts: DefineStmt, RenameStmt and DropStmt are default
  */
+typedef enum AlterTSConfigType
+{
+	ALTER_TSCONFIG_ADD_MAPPING,
+	ALTER_TSCONFIG_ALTER_MAPPING_FOR_TOKEN,
+	ALTER_TSCONFIG_REPLACE_DICT,
+	ALTER_TSCONFIG_REPLACE_DICT_FOR_TOKEN,
+	ALTER_TSCONFIG_DROP_MAPPING
+} AlterTSConfigType;
+
 typedef struct AlterTSConfigurationStmt
 {
 	NodeTag		type;
+	AlterTSConfigType kind;		/* ALTER_TSCONFIG_ADD_MAPPING, etc */
 	List	   *cfgname;		/* qualified name (list of Value strings) */
 
 	/*

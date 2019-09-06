@@ -63,7 +63,7 @@ namespace gpdxl
 
 			CMappingColIdVarPlStmt
 				(
-				IMemoryPool *mp,
+				CMemoryPool *mp,
 				const CDXLTranslateContextBaseTable *base_table_context,
 				CDXLTranslationContextArray *child_contexts,
 				CDXLTranslateContext *output_context,

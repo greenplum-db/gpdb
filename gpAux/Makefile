@@ -11,7 +11,7 @@ all : devel
 
 # Targets for building GPDB with various options
 # (development builds)
-.PHONY : devel devel_faultinj
+.PHONY : devel
 
 # (release builds)
 .PHONY : dist dist_prof
@@ -28,9 +28,9 @@ all : devel
 .PHONY : autoconf
 
 # Internal functions which are invoked by other rules within this makefile
-.PHONY : copydocs mgmtcopy copylibs
-.PHONY : greenplum_path RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
-.PHONY : gccVersionCheck clients gppkg
+.PHONY : mgmtcopy copylibs
+.PHONY : RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
+.PHONY : clients
 
 #---------------------------------------------------------------------
 # Make 3rd-party libraries and tools
@@ -40,7 +40,6 @@ all : devel
 BLD_TOP:=$(shell sh -c pwd)
 include Makefile.global
 include Makefile.thirdparty
-include releng/releng.mk
 
 ifneq "$(BLD_BITS)" ""
 export NO_M64=1
@@ -57,14 +56,6 @@ endif
 
 BLD_CXX_LIB_DIR=$($(BLD_ARCH)_CXX_LIB_DIR)
 
-ifeq ($(BLD_ARCH),win32)
-  # help Windows builds find the cross-compiler and a pre-built curl
-  include Makefile.windows
-
-  # Host used for Windows packaging (only accessible from the gpdb5 concourse pipeline)
-  WIX_PACKAGER=build@wix-packaging.gpdb5-pipeline-vpc.pivotal.io
-endif
-
 #---------------------------------------------------------------------
 # Directory paths and file names
 #---------------------------------------------------------------------
@@ -72,28 +63,23 @@ endif
 GPPGDIR=$(shell cd .. && pwd)
 GPMGMT=../gpMgmt
 GPPERFMON=gpperfmon
-PLATFORM=platform
 BUILDDIR=$(GPPGDIR)
 
 RELEASE=devel
 GPDIR=greenplum-db-$(RELEASE)
 PLRDIR=greenplum-plr-$(RELEASE)
 CLIENTSDIR=greenplum-clients-$(RELEASE)
-GPDOCDIR=$(CURDIR)/docs/release
 
 DISTPATH=$(GPROOT)/$(GPDIR)
 CLIENTSDISTPATH=$(GPROOT)/$(CLIENTSDIR)
-GPPKGDISTPATH=$(GPROOT)
 
 ifeq "$(DEVPATH)" ""
 BLD_HOME=$(HOME)
 DEVPATH=$(BLD_HOME)/$(GPDIR)
-GPPKGDEVPATH=$(BLD_HOME)
 CLIENTSDEVPATH=$(BLD_HOME)/$(CLIENTSDIR)
 else
 # DEVPATH has been passed in as by the build scripts
 GPROOT_DEV=$(dir $(DEVPATH))
-GPPKGDEVPATH=$(GPROOT_DEV)
 CLIENTSDEVPATH=$(GPROOT_DEV)$(CLIENTSDIR)
 endif
 
@@ -105,17 +91,7 @@ ISCONFIG=$(GPPGDIR)/GNUmakefile
 ## On these platforms, we do the full build including the server. On other
 ## platforms, we do a client-only build.
 ##
-SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 linux_x86_64 osx106_x86
-
-#---------------------------------------------------------------------
-# GPPKG
-#---------------------------------------------------------------------
-
-##
-## Support gppkg platforms
-##
-
-GPPKG_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 ubuntu1604_amd64
+SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 linux_x86_64
 
 #---------------------------------------------------------------------
 # Compiler options
@@ -145,30 +121,16 @@ DEBUGFLAGS="$(strip $(BLD_CFLAGS) $(CFLAGS_OPT) $(DEBUG_CFLAGS_OPT))"
 DEFPORT=5432
 
 ORCA_CONFIG=--enable-orca
-ifneq "$(findstring $(BLD_ARCH),win32 win64)" ""
-APR_CONFIG=--with-apr-config=$(GPPGDIR)/src/bin/gpfdist/ext/bin/apr-1-config
-OPENSSL=openssl-1.0.2l
-BLD_THIRDPARTY_OPENSSL_INCLUDES=-I$(GPPGDIR)/src/bin/gpfdist/ext/$(OPENSSL)/include
-endif
 
-ifneq "$(findstring $(BLD_ARCH),suse11_x86_64 sles11_x86_64)" ""
-APU_CONFIG=--with-apu-config=$(BLD_THIRDPARTY_BIN_DIR)/apu-1-config
-endif
-
-ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32)" ""
+ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64)" ""
 APR_CONFIG=--with-apr-config=$(BLD_THIRDPARTY_BIN_DIR)/apr-1-config
 endif
 
 aix7_ppc_64_CONFIGFLAGS=--disable-gpcloud --without-readline --without-libcurl --disable-orca --disable-pxf --without-zstd $(APR_CONFIG)
-win32_CONFIGFLAGS=--with-gssapi --without-libcurl --disable-orca --disable-pxf --disable-gpcloud --without-libbz2 $(APR_CONFIG)
-sol10_x86_64_CONFIGFLAGS= --with-libxml $(APR_CONFIG)
 rhel6_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
 rhel7_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
-suse11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce --without-zstd $(APR_CONFIG) $(APU_CONFIG)
-sles11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce --without-zstd $(APR_CONFIG) $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-osx106_x86_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-ubuntu1604_amd64_CONFIGFLAGS=--enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --without-zstd ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APU_CONFIG)
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
@@ -179,76 +141,47 @@ CONFIGFLAGS+= $(CONFIGURE_FLAGS)
 endif
 
 # PL/Python does not compile on Tiger, skipping it on AIX
-ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32)" ""
+ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64)" ""
 PG_LANG=false
 endif
 
 ifneq (false, ${PG_LANG})
-ifeq ($(BLD_ARCH), sles11_x86_64)
-CONFIGFLAGS+= --with-python
-else
-ifneq ($(BLD_ARCH),win32)
-# GPDB_91_MERGE_FIXME: Our MinGW environment doesn't currently include Perl and Python.
 CONFIGFLAGS+= --with-perl --with-python
-endif   # win32
-endif   # sles11_x86_64
 ifdef TCL_CFG
 CONFIGFLAGS+= --with-tcl-config=${TCL_CFG}
 endif
 endif
 
 # Configure in the extra path AIX requires for pthread support
-aix5_ppc_64_PTHREADS_LIB_DIR=/usr/lib/threads
-aix5_ppc_32_PTHREADS_LIB_DIR=/usr/lib/threads
 aix7_ppc_64_PTHREADS_LIB_DIR=/usr/lib/threads
 BLD_PTHREADS_LIB_DIR=$($(BLD_ARCH)_PTHREADS_LIB_DIR)
 
-ifdef ADDON_DIR
-ADDON_CONFIG_INCLUDES=$(BLD_TOP)/$(ADDON_DIR)/src/include
-endif
 # Configure in thirdparty libraries from the ext/ directory
-CONFIG_INCLUDES=$(BLD_THIRDPARTY_INCLUDE_DIR) $(BLD_THIRDPARTY_INCLUDE_DIR)/libxml2 $(ADDON_CONFIG_INCLUDES)
+CONFIG_INCLUDES=$(BLD_THIRDPARTY_INCLUDE_DIR) $(BLD_THIRDPARTY_INCLUDE_DIR)/libxml2
 CONFIG_LIBRARIES=$(strip $(BLD_THIRDPARTY_LIB_DIR) $(BLD_CXX_LIB_DIR) $(BLD_PTHREADS_LIB_DIR))
 CONFIGFLAGS+= --with-includes="$(CONFIG_INCLUDES)" --with-libraries="$(CONFIG_LIBRARIES)"
 
 # Configure in "authlibs"...
 # ...without an ext/ dir copy of curl-config on Tiger or AIX
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32 rhel6_x86_64 rhel7_x86_64)" ""
+ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 rhel6_x86_64 rhel7_x86_64 ubuntu18.04_x86_64)" ""
 BLD_CURL_CONFIG=CURL_CONFIG=$(BLD_THIRDPARTY_BIN_DIR)/curl-config
 endif
 # ...and do not include the authlibs on Windows or AIX
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 win32 win64)" ""
+ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64)" ""
 CONFIGFLAGS+= --with-openssl --with-pam --with-ldap $(BLD_CURL_CONFIG) $(APR_CONFIG)
 endif
 
 # ...but do include some of the authlibs on AIX
-ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_32 aix5_ppc_64)" ""
+ifneq "$(findstring $(BLD_ARCH),aix7_ppc_64)" ""
 CONFIGFLAGS+= --with-openssl --with-pam --without-krb5 --with-ldap $(BLD_CURL_CONFIG)
 endif
 
 # Platform-specific config flags
-aix5_ppc_64_CONFIG_ADDITIONS=LDFLAGS="-Wl,-bbigtoc -L/usr/lib/threads"
-aix5_ppc_32_CONFIG_ADDITIONS=LDFLAGS="-L/usr/lib/threads"
 aix7_ppc_64_CONFIG_ADDITIONS=LDFLAGS="-Wl,-bbigtoc -L/usr/lib/threads"
-hpux_ia64_CONFIG_ADDITIONS=--without-readline --without-ldap
 
-win32_GPFDIST_LDFLAGS += -L/usr/i686-pc-mingw32/sys-root/mingw/lib -L$(GPPGDIR)/src/bin/gpfdist/ext/lib
-win32_GPFDIST_CFLAGS += -I/usr/i686-pc-mingw32/sys-root/mingw/include
-win32_GPFDIST_LIBS=-lgdi32 -lws2_32
-
-win32_LIBS=LIBS="$(win32_GPFDIST_LIBS)"
-win32_LDFLAGS=LDFLAGS="-L/usr/i686-pc-mingw32/sys-root/mingw/lib -L$(BLD_TOP)/ext/win32/kfw-3-2-2/lib $(win32_GPFDIST_LDFLAGS)"
-win32_CONFIG_ADDITIONS=--build=x86_x64-unknown-linux-gnu --host=i686-pc-mingw32 --without-zlib --without-libbz2 --enable-debug CC=/usr/bin/i686-pc-mingw32-gcc $(win32_LIBS) $(win32_LDFLAGS) CPP= CPPFLAGS="-I/usr/i686-pc-mingw32/sys-root/mingw/include -I$(BLD_TOP)/ext/win32/kfw-3-2-2/inc/krb5 -I$(BLD_THIRDPARTY_INCLUDE_DIR) -I$(GPPGDIR)/src/bin/gpfdist/ext/include $(BLD_THIRDPARTY_OPENSSL_INCLUDES)"
-win64_CONFIG_ADDITIONS=--build=x86_x64-unknown-linux-gnu --host=x86_64-pc-mingw64 --without-zlib --without-libbz2 --enable-debug CC=/usr/local/mingw64/bin/x86_64-w64-mingw32-gcc LDFLAGS=-L/usr/local/mingw64/x86_64-w64-mingw32/lib CPP= CPPFLAGS=-I/usr/local/mingw64/x86_64-w64-mingw32/include
 CONFIG_ADDITIONS=$($(BLD_ARCH)_CONFIG_ADDITIONS)
 
-osx105_x86_GPFDIST_LDFLAGS=-Wl,-search_paths_first
-
 CONFIGFLAGS+= $(CONFIG_ADDITIONS)
-
-ifdef ADDON_DIR
-CONFIGFLAGS+=ADDON_DIR=$(ADDON_DIR)
-endif
 
 RECONFIG :
 	rm -f Debug/GNUmakefile
@@ -256,16 +189,12 @@ RECONFIG :
 	rm -f $(GPPGDIR)/GNUmakefile
 
 # avoid AIX's restricted shell
-aix5_ppc_64_CONFIG_SHELL=/usr/bin/bash
-aix5_ppc_32_CONFIG_SHELL=/usr/bin/bash
 aix7_ppc_64_CONFIG_SHELL=/usr/bin/bash
 BLD_CONFIG_SHELL=$($(BLD_ARCH)_CONFIG_SHELL)
 $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p $(GPPGDIR)
-	if [ "$(BLD_ARCH)" = "win32" ]; then \
-		$(MAKE) -C $(GPPGDIR)/src/bin/gpfdist/ext BLD_TOP=$(BLD_TOP); \
-	fi
+	echo "Running ./configure with CONFIGFLAGS=$(CONFIGFLAGS)\n"
 	cd $(GPPGDIR) && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"    \
                      CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL) \
                      ./configure $(CONFIGFLAGS)               \
@@ -275,6 +204,7 @@ $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
 Debug/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p Debug
+	echo "Running ./configure with CONFIGFLAGS=$(CONFIGFLAGS)\n"
 	cd Debug && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"        \
                 CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)     \
                 ./configure $(CONFIGFLAGS)                   \
@@ -284,6 +214,7 @@ Debug/GNUmakefile : $(GPPGDIR)/configure  env.sh
 Release/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p Release
+	echo "Running ./configure with CONFIGFLAGS=$(CONFIGFLAGS)\n"
 	cd Release && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"     \
                   CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)  \
                   ./configure $(CONFIGFLAGS)                \
@@ -312,32 +243,20 @@ BLD_LD_LIBRARY_PATH:=$($(BLD_ARCH)_LD_LIBRARY_PATH):$($(BLD_WHERE_THE_LIBRARY_TH
 export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE)=$(BLD_LD_LIBRARY_PATH)
 
 # how much of GPDB to build by platform (default is "full")
-hpux_ia64_GPDB_BUILDSET=partial
-aix5_ppc_64_GPDB_BUILDSET=partial
-aix5_ppc_32_GPDB_BUILDSET=partial
 aix7_ppc_64_GPDB_BUILDSET=aix_subset
-sol10_x86_64_GPDB_BUILDSET=partial
-sol10_x86_32_GPDB_BUILDSET=partial
-sol10_sparc_32_GPDB_BUILDSET=partial
-win64_GPDB_BUILDSET=partial
-win32_GPDB_BUILDSET=partial
 BLD_GPDB_BUILDSET=$($(BLD_ARCH)_GPDB_BUILDSET)
 
 # set default build steps
 define BUILD_STEPS
 	@rm -rf $(INSTLOC)
 	cd $(BUILDDIR) && $(MAKE) $(PARALLEL_MAKE_OPTS) install
-	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
-	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
-	@$(MAKE) copydocs INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
 	@$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTSINSTLOC=$(CLIENTSINSTLOC)
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTSINSTLOC)
 	@$(MAKE) copylicense INSTLOC=$(INSTLOC) \
                          CLIENTSINSTLOC=$(CLIENTSINSTLOC)
-	@$(MAKE) gppkg INSTLOC=$(INSTLOC) GPPKGINSTLOC=$(GPPKGINSTLOC)
 endef
 
 ifeq "$(BLD_GPDB_BUILDSET)" "aix_subset"
@@ -355,12 +274,7 @@ define BUILD_STEPS
 	cd $(BUILDDIR)/src/bin/gpfdist && $(MAKE) install
 	@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
-	@$(MAKE) copydocs INSTLOC=$(INSTLOC)
-	if [ "$(findstring hpux_ia64,$(BLD_ARCH))" = "hpux_ia64" ]; then \
-	  cd $(GPMGMT)/bin && $(MAKE) pygresql LDFLAGS="" INSTLOC=$(INSTLOC) ; \
-	elif [ "$(findstring win,$(BLD_ARCH))" != "win" ]; then \
-	  cd $(GPMGMT)/bin && $(MAKE) pygresql INSTLOC=$(INSTLOC) ; \
-	fi
+	cd $(GPMGMT)/bin && $(MAKE) pygresql INSTLOC=$(INSTLOC)
 	@$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTSINSTLOC=$(CLIENTSINSTLOC)
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTSINSTLOC)
 endef
@@ -368,10 +282,6 @@ endif
 ifeq "$(BLD_GPDB_BUILDSET)" "partial"
 define BUILD_STEPS
 	rm -rf $(INSTLOC)
-	@if [ "$(findstring win,$(BLD_ARCH))" = "win" ]; then \
-	    echo "Modifying timezone Makefile for crosscompile."; \
-	    perl -pi -e 's,./zic,zic,' ../src/timezone/Makefile; \
-	fi
 	cd $(BUILDDIR)/gpMgmt/ && $(MAKE) generate_greenplum_path_file
 	cd $(BUILDDIR)/src/backend/ && $(MAKE) ../../src/include/parser/gram.h
 	cd $(BUILDDIR)/src/backend/ && $(MAKE) ../../src/include/utils/errcodes.h
@@ -381,11 +291,11 @@ define BUILD_STEPS
 	cd $(BUILDDIR)/src/bin/psql/ && $(MAKE) install
 	cd $(BUILDDIR)/src/bin/pg_config/ && $(MAKE) install
 	cd $(BUILDDIR)/src/bin/pg_dump/ && $(MAKE) pg_dump
-	cp -p $(BUILDDIR)/src/bin/pg_dump/pg_dump$(EXE_EXT) $(INSTLOC)/bin/
+	cp -p $(BUILDDIR)/src/bin/pg_dump/pg_dump $(INSTLOC)/bin/
 	cd $(BUILDDIR)/src/bin/pg_dump/ && $(MAKE) pg_dumpall
-	cp -p $(BUILDDIR)/src/bin/pg_dump/pg_dumpall$(EXE_EXT) $(INSTLOC)/bin/
+	cp -p $(BUILDDIR)/src/bin/pg_dump/pg_dumpall $(INSTLOC)/bin/
 	cd $(BUILDDIR)/src/bin/pg_dump/ && $(MAKE) pg_restore
-	cp -p $(BUILDDIR)/src/bin/pg_dump/pg_restore$(EXE_EXT) $(INSTLOC)/bin/
+	cp -p $(BUILDDIR)/src/bin/pg_dump/pg_restore $(INSTLOC)/bin/
 	cd $(BUILDDIR)/src/interfaces/ecpg/ && $(MAKE) install
 	cd $(BUILDDIR)/src/include/ && $(MAKE) install
 	cd $(BUILDDIR)/src/interfaces/libpq/ && $(MAKE) install
@@ -393,11 +303,7 @@ define BUILD_STEPS
 	cp -p $(GPMGMT)/bin/gpload $(INSTLOC)/bin/gpload
 	cp -p $(GPMGMT)/bin/gpload.py $(INSTLOC)/bin/gpload.py
 	$(MAKE) copylibs INSTLOC=$(INSTLOC)
-	if [ "$(findstring hpux_ia64,$(BLD_ARCH))" = "hpux_ia64" ]; then \
-	  cd $(GPMGMT)/bin && $(MAKE) pygresql LDFLAGS="" INSTLOC=$(INSTLOC) ; \
-	elif [ "$(findstring win,$(BLD_ARCH))" != "win" ]; then \
-	  cd $(GPMGMT)/bin && $(MAKE) pygresql INSTLOC=$(INSTLOC) ; \
-	fi
+	cd $(GPMGMT)/bin && $(MAKE) pygresql INSTLOC=$(INSTLOC)
 	$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTSINSTLOC=$(CLIENTSINSTLOC)
 endef
 endif
@@ -427,20 +333,16 @@ endif
 devel : INSTCFLAGS=$(DEBUGFLAGS)
 devel : INSTLOC=$(DEVPATH)
 devel : CLIENTSINSTLOC=$(CLIENTSDEVPATH)
-devel : GPPKGINSTLOC=$(GPPKGDEVPATH)
 devel : CONFIGFLAGS+= --enable-cassert --enable-debug --enable-depend
 ifdef ENABLE_VPATH_BUILD
 devel : BUILDDIR=Debug
 devel : ISCONFIG=$(BUILDDIR)/GNUmakefile
-devel : gccVersionCheck HOMEDEP Debug/GNUmakefile
+devel : HOMEDEP Debug/GNUmakefile
 else
-devel : gccVersionCheck HOMEDEP $(ISCONFIG)
+devel : HOMEDEP $(ISCONFIG)
 endif
 	$(BUILD_STEPS)
 
-ifneq "$(findstring $(BLD_GPDB_BUILDSET),partial aix_subset)" ""
-	@$(MAKE) qautils-tarball INSTLOC=$(INSTLOC)
-endif
 #---------------------------------------------------------------------
 # Release builds
 #---------------------------------------------------------------------
@@ -448,13 +350,12 @@ endif
 dist : INSTCFLAGS=$(OPTFLAGS)
 dist : INSTLOC=$(DISTPATH)
 dist : CLIENTSINSTLOC=$(CLIENTSDISTPATH)
-dist : GPPKGINSTLOC=$(GPPKGDISTPATH)
 ifdef ENABLE_VPATH_BUILD
 dist : BUILDDIR=Release
 dist : ISCONFIG=$(BUILDDIR)/GNUmakefile
-dist : gccVersionCheck GPROOTDEP RECONFIG Release/GNUmakefile
+dist : GPROOTDEP RECONFIG Release/GNUmakefile
 else
-dist : gccVersionCheck GPROOTDEP RECONFIG $(ISCONFIG)
+dist : GPROOTDEP RECONFIG $(ISCONFIG)
 endif
 	$(BUILD_STEPS)
 
@@ -464,10 +365,10 @@ dist_prof : CLIENTSINSTLOC=$(CLIENTSDISTPATH)
 ifdef ENABLE_VPATH_BUILD
 dist_prof : BUILDDIR=Release
 dist_prof : ISCONFIG=$(BUILDDIR)/GNUmakefile
-dist_prof : gccVersionCheck GPROOTDEP RECONFIG $(ISCONFIG)
+dist_prof : GPROOTDEP RECONFIG $(ISCONFIG)
 else
 dist_prof : ISCONFIG=../GNUmakefile
-dist_prof : gccVersionCheck GPROOTDEP RECONFIG $(ISCONFIG)
+dist_prof : GPROOTDEP RECONFIG $(ISCONFIG)
 endif
 	$(BUILD_STEPS)
 
@@ -475,10 +376,10 @@ dist_faultinj : CLIENTSINSTLOC=$(CLIENTSDISTPATH)
 ifdef ENABLE_VPATH_BUILD
 dist_faultinj : BUILDDIR=Release
 dist_faultinj : ISCONFIG=$(BUILDDIR)/GNUmakefile
-dist_faultinj : gccVersionCheck GPROOTDEP RECONFIG Release/GNUmakefile
+dist_faultinj : GPROOTDEP RECONFIG Release/GNUmakefile
 else
 dist_faultinj : ISCONFIG=../GNUmakefile
-dist_faultinj : gccVersionCheck GPROOTDEP RECONFIG $(ISCONFIG)
+dist_faultinj : GPROOTDEP RECONFIG $(ISCONFIG)
 endif
 	$(BUILD_STEPS)
 
@@ -504,30 +405,22 @@ CLIENTSINSTLOC_LIB_PWARE=$(CLIENTSINSTLOC)/lib/pware
 CLIENTSINSTLOC_DOCS=$(CLIENTSINSTLOC)/docs
 CLIENTSINSTLOC_OPENSOURCE=$(CLIENTSINSTLOC)/thirdparty
 
-
-ifneq "$(findstring win,$(BLD_ARCH))" "win"
 DOC_TYPE=Unix
 SCRIPT=.sh
-else
-DOC_TYPE=Win
-SCRIPT=.bat
-endif
 
-# yes, the doubled gpload lines are correct
-# this gives win32, win64 just gpload.py, as they want, and wrappers on the unix platforms
 define tmpCLIENTS_FILESET_BIN
-	gpfdist$(EXE_EXT)
-	gpload$(PY_EXT)
+	gpfdist
+	gpload
 	gpload.py
-	pg_dump$(EXE_EXT)
-	pg_dumpall$(EXE_EXT)
-	psql$(EXE_EXT)
-	createdb$(EXE_EXT)
-	dropdb$(EXE_EXT)
-	createlang$(EXE_EXT)
-	droplang$(EXE_EXT)
-	createuser$(EXE_EXT)
-	dropuser$(EXE_EXT)
+	pg_dump
+	pg_dumpall
+	psql
+	createdb
+	dropdb
+	createlang
+	droplang
+	createuser
+	dropuser
 endef
 CLIENTS_FILESET_BIN = $(strip $(tmpCLIENTS_FILESET_BIN))
 
@@ -539,30 +432,19 @@ CLIENTS_FILESET_BINEXT = $(strip $(tmpCLIENTS_FILESET_BINEXT))
 
 # define python file subset to ship by platform, as desired
 BLD_PYTHON_FILESET=.
-aix5_ppc_32_PYTHON_FILESET=bin/python* lib/python* include/python*
-aix5_ppc_64_PYTHON_FILESET=bin/python* lib/python* include/python*
 aix7_ppc_64_PYTHON_FILESET=bin/python* lib/*python* lib64/*python* include/python*
 ifneq "$($(BLD_ARCH)_PYTHON_FILESET)" ""
 BLD_PYTHON_FILESET=$($(BLD_ARCH)_PYTHON_FILESET)
 endif
 
-ifneq "$(findstring $(BLD_ARCH),win32 win64)" ""
-BLD_OS=Windows
-else
 BLD_OS:=$(shell uname -s)
-endif
 AIX_CLIENTS_LIBS=libbz2.a libz.a libpq.a liblber*.a libldap*.a libyaml*.a libcrypto.so* libevent*.a
 Darwin_CLIENTS_LIBS=libcrypto.*.dylib libssl.*.dylib libpq.*.dylib* libkrb5.*.dylib libcom_err.*.dylib libldap_r-*.dylib libk5crypto.*.dylib libkrb5support.*.dylib liblber-*.dylib libyaml*.dylib
-HP-UX_CLIENTS_LIBS=libcrypto.so* libssl.so.* libz.so* libpq.so* libapr* libyaml*so*
 Linux_CLIENTS_LIBS=libpq.so*
-SunOS_CLIENTS_LIBS=libcrypto.so* libssl.so.* libgcc_s.so.1 libz.so* libpq.so* libk5crypto.so* libkrb5support.so* liblber*.so* libldap_r-*so* libcom_err.so* libkrb5.so* libyaml*so*
 define tmpCLIENTS_FILESET_LIB
 	$($(BLD_OS)_CLIENTS_LIBS)
 endef
 CLIENTS_FILESET_LIB = $(strip $(tmpCLIENTS_FILESET_LIB))
-
-hpux_ia64_CLIENTS_LIBS_GCC=libgcc_s.so libgcc_s.so.0
-hpux_ia64_CLIENTS_LIBS_GCC_LOC=/opt/hp-gcc/lib/hpux64
 
 aix7_ppc_64_CLIENTS_LIBS_GCC=libgcc_s.a
 aix7_ppc_64_CLIENTS_LIBS_GCC_LOC=/opt/freeware/lib/gcc/powerpc-ibm-aix7.1.0.0/4.8.5/ppc64/
@@ -570,12 +452,8 @@ aix7_ppc_64_CLIENTS_LIBS_GCC_LOC=/opt/freeware/lib/gcc/powerpc-ibm-aix7.1.0.0/4.
 FILESET_LIB_GCC=$($(BLD_ARCH)_CLIENTS_LIBS_GCC)
 FILESET_LIB_GCC_LOC=$($(BLD_ARCH)_CLIENTS_LIBS_GCC_LOC)
 
-aix5_ppc_32_CLIENTS_LIBS_PERZL=libz.a
-aix5_ppc_64_CLIENTS_LIBS_PERZL=libz.so libz.so.1 libz.so.1.2.4 libcrypto.so libcrypto.so.0.9.8 libssl.so libssl.so.0.9.8
 aix7_ppc_64_CLIENTS_LIBS_PERZL=libcrypto.a libssl.a
 
-aix5_ppc_32_CLIENTS_LIBS_PERZL_LOC=/opt/freeware/lib
-aix5_ppc_64_CLIENTS_LIBS_PERZL_LOC=/opt/pware64/lib
 aix7_ppc_64_CLIENTS_LIBS_PERZL_LOC=$(BLD_TOP)/ext/aix7_ppc_64/lib
 
 CLIENTS_FILESET_LIB_PERZL=$($(BLD_ARCH)_CLIENTS_LIBS_PERZL)
@@ -585,15 +463,8 @@ AIX_CLIENTS_LIBS_PWARE=libbz2.a libiconv.a libintl.a libncurses.a libpanel.a lib
 CLIENTS_FILESET_LIB_PWARE=$($(BLD_OS)_CLIENTS_LIBS_PWARE)
 
 ifeq "$(MPP_ARCH)" ""
-sol10_x86_64_MPP_ARCH=SOL-x86_64
-sol10_x86_32_MPP_ARCH=SOL-i386
-sol10_sparc_MPP_ARCH=SOL10-sparc
-sol10_sparc_64_MPP_ARCH=SOL10-sparc_64
-sol10_sparc_32_MPP_ARCH=SOL10-sparc_32
 rhel6_x86_64_MPP_ARCH=RHEL6-x86_64
 rhel7_x86_64_MPP_ARCH=RHEL7-x86_64
-osx106_x86_MPP_ARCH=OSX-i386
-sles11_x86_64_MPP_ARCH=SLES11-x86_64
 ifneq "$($(BLD_ARCH)_MPP_ARCH)" ""
 export MPP_ARCH=$($(BLD_ARCH)_MPP_ARCH)
 else
@@ -608,12 +479,6 @@ endif
 VERSION:=$(shell [ -f ../VERSION ] && perl -pe 's, ,-,g' ../VERSION)
 VERSION_SHORT:=$(shell [ -f ../VERSION ] && perl -pe 's, .*,,g' ../VERSION)
 
-ifeq "$(findstring win,$(BLD_ARCH))" "win"
-ifeq "$(findstring $(MAKECMDGOALS),sync_tools)" ""
-BLD_PACKAGING_PID:=$(shell ssh $(WIX_PACKAGER) 'echo $$$$')
-endif
-endif
-
 clients :
 	if [ ! -z "$(CLIENTSINSTLOC)" ] && [ "$(CLIENTSINSTLOC)" != "/" ]; then rm -rf $(CLIENTSINSTLOC); fi
 ifeq "$(findstring clients,$(BLD_TARGETS))" ""
@@ -625,10 +490,6 @@ else
 	(cd $(INSTLOC)/bin/ && $(TAR) cf - $(CLIENTS_FILESET_BIN)) | (cd $(CLIENTSINSTLOC_BIN)/ && $(TAR) xpf -)$(check_pipe_for_errors)
 	mkdir -p $(CLIENTSINSTLOC_BINEXT)
 	(cd $(GPMGMT)/bin/ext/ && $(TAR) cf - $(CLIENTS_FILESET_BINEXT)) | (cd $(CLIENTSINSTLOC_BINEXT)/ && $(TAR) xpf -)$(check_pipe_for_errors)
-ifeq "$(findstring win,$(BLD_ARCH))" "win"
-	# ---- copy pygresql from ext/win32 ----
-	(cd $(BLD_THIRDPARTY)/win32 && $(TAR) cf - pygresql) | (cd $(CLIENTSINSTLOC_BINEXT)/ && $(TAR) xpf -)$(check_pipe_for_errors)
-endif
 ifneq "$(PYTHONHOME)" ""
 	mkdir -p $(CLIENTSINSTLOC_EXT)/python
 	(cd $(PYTHONHOME) && $(TAR) cf - $(BLD_PYTHON_FILESET)) | (cd $(CLIENTSINSTLOC_EXT)/python/ && $(TAR) xpf -)$(check_pipe_for_errors)
@@ -653,10 +514,6 @@ endif
 	# ---- copy scripts fileset ----
 	mkdir -p $(CLIENTSINSTLOC)
 	cp -f client/scripts/greenplum_$@_path$(SCRIPT) $(CLIENTSINSTLOC)/
-
-	# ---- copy license files ----
-	cp ${BLD_TOP}/../LICENSE $(CLIENTSINSTLOC)
-	cp ${BLD_TOP}/../NOTICE $(CLIENTSINSTLOC)
 
 	# ---- updating the version in required packages ----
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTSINSTLOC)
@@ -687,7 +544,7 @@ PVK_FILESET = \
 
 pvk : INSTCFLAGS=$(OPTFLAGS)
 pvk : INSTLOC=$(DISTPATH)
-pvk : gccVersionCheck version GPROOTDEP
+pvk : version GPROOTDEP
 	cd $(GPMGMT)/bin && $(MAKE) stream
 	mkdir -p $(INSTLOC)/bin/lib
 	@for file in $(PVK_FILESET); do \
@@ -722,10 +579,8 @@ SET_VERSION_SCRIPTS = \
 	bin/gpstop \
 	bin/gpsys1 \
 	bin/lib/gpcheckcat \
-	sbin/gpaddconfig.py \
-	sbin/gpchangeuserpassword \
+	sbin/gpconfig_helper.py \
 	sbin/gpcleansegmentdir.py \
-	sbin/gpfixuserlimts \
 	sbin/gpgetstatususingtransition.py \
 	sbin/gpsegstart.py \
 	sbin/gpsegstop.py \
@@ -750,9 +605,6 @@ set_scripts_version :
 # Internal functions
 #---------------------------------------------------------------------
 
-mkpgbench:
-	@cd $(BUILDDIR)/contrib/pgbench && $(MAKE) install
-
 mkpgbouncer:
 ifeq "$(shell uname -s)" "Darwin"
 	echo "pgbouncer can't build on Mac"
@@ -761,22 +613,6 @@ else
 	@cd extensions/pgbouncer/source && ./configure --with-libevent=$(BLD_TOP)/ext/$(BLD_ARCH) --prefix=$(INSTLOC) --enable-evdns --with-pam
 	$(MAKE) -C extensions/pgbouncer/source install
 endif
-
-copydocs :
-	@if [ ! -d $($INSTLOC)/docs ] ; then mkdir -p $(INSTLOC)/docs; fi
-	@if [ ! -d $(GPDOCDIR) ] ; then \
-	    echo "Error Copying Documentation: $(GPDOCDIR) is not present"; \
-	else  echo "Copying Documentation" ;  \
-	    if [ -d $(INSTLOC)/doc/postgresql/contrib ] ; then \
-	        mkdir -p $(INSTLOC)/docs/contrib ; \
-	        echo "Copying postgresql contrib documentation" ; \
-		cp -r $(INSTLOC)/doc/postgresql/contrib/* $(INSTLOC)/docs/contrib ; \
-	    fi ; \
-	fi
-	@if [ -d $(INSTLOC)/doc ] ; then \
-	    echo "Removing $(INSTLOC)/doc" ; \
-	    rm -rf $(INSTLOC)/doc ; \
-	fi
 
 mgmtcopy :
 	#Copy the management utilities
@@ -788,32 +624,18 @@ mgmtcopy :
 	cp -rp $(GPMGMT)/bin/gppylib $(INSTLOC)/lib/python
 	cp -rp $(GPMGMT)/bin/ext/* $(INSTLOC)/lib/python
 	cp -rp $(GPMGMT)/bin $(INSTLOC)
-ifeq "$(findstring $(BLD_ARCH),$(GPPKG_PLATFORMS))" ""
-	@echo "Removing gppkg from distribution"
-	rm -f $(INSTLOC)/bin/gppkg
-endif
 	cp -rp $(GPMGMT)/sbin/* $(INSTLOC)/sbin/.
-	cp $(GPPGDIR)/src/test/regress/*.pl $(INSTLOC)/bin
-	cp $(GPPGDIR)/src/test/regress/*.pm $(INSTLOC)/bin
 	if [ ! -d ${INSTLOC}/docs ] ; then mkdir ${INSTLOC}/docs ; fi
 	if [ -d $(GPMGMT)/doc ]; then cp -rp $(GPMGMT)/doc $(INSTLOC)/docs/cli_help; fi
-	if [ -d $(GPMGMT)/demo/gpmapreduce ]; then \
-	  mkdir -p $(INSTLOC)/demo; \
-	  $(TAR) -C $(GPMGMT)/demo -czf $(INSTLOC)/demo/gpmapreduce.tar.gz gpmapreduce; \
-	fi
 	if [ -d $(GPMGMT)/demo/gpfdist_transform ]; then \
 	  mkdir -p $(INSTLOC)/demo; \
 	  $(TAR) -C $(GPMGMT)/demo -czf $(INSTLOC)/demo/gpfdist_transform.tar.gz gpfdist_transform; \
 	fi
 	$(MAKE) set_scripts_version INSTLOC=$(INSTLOC)
 	# Remove unwanted files.
-	rm -rf $(INSTLOC)/bin/CVS
-	rm -rf $(INSTLOC)/doc/CVS
 	rm -rf $(INSTLOC)/bin/ext
 	rm -rf $(INSTLOC)/bin/pythonSrc
 	rm -rf $(INSTLOC)/bin/Makefile
-	rm -rf $(INSTLOC)/bin/lib/CVS
-	rm -rf $(INSTLOC)/bin/lib/.p4ignore
 	rm -rf $(INSTLOC)/bin/src
 	rm -rf $(INSTLOC)/bin/gppylib
 	find $(INSTLOC)/lib/python/gppylib -name test -type d | xargs rm -rf
@@ -821,42 +643,6 @@ endif
 libcopy=(cd $(1) && $(TAR) cf - $(2)) | (cd $(3) && $(TAR) xvf -)$(check_pipe_for_errors)
 
 copylibs : thirdparty-dist
-	if [ `uname -s` = 'SunOS' ]; then cp `ldd $(INSTLOC)/bin/psql | grep gcc | head -1 | awk '{print $$3}'` $(INSTLOC)/lib; fi
-	if [ `uname -s` = 'Darwin' ] ; then \
-	    for lib in `otool -L $(INSTLOC)/bin/psql | egrep 'libssl|libcrypto|libcom_err|libkrb5|curl|readline|numa' | awk '{print $$1}'`; do \
-	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
-	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
-	        if [ -f $(BLD_THIRDPARTY_LIB_DIR)/`basename $$lib` ]; then \
-	            echo "cp -p $(BLD_THIRDPARTY_LIB_DIR)/`basename $$lib` $(INSTLOC)/lib/" ; \
-	            cp -p $(BLD_THIRDPARTY_LIB_DIR)/`basename $$lib` $(INSTLOC)/lib/ ; \
-	        else \
-	            echo "cp -p $$lib $(INSTLOC)/lib/" ; \
-	            cp -p $$lib $(INSTLOC)/lib/ ; \
-	        fi ; \
-	    done ; \
-	fi
-	if [ `uname -s` != 'Darwin' -a `uname -s` != 'AIX' ] ; then \
-	    for lib in `ldd $(INSTLOC)/bin/psql | egrep 'readline|numa' | awk '{print $$3}' | sort -u`; do \
-	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
-	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
-	        echo "cp -p $$lib $(INSTLOC)/lib" ; \
-	        cp -p $$lib $(INSTLOC)/lib ; \
-	    done ; \
-	fi
-	if [ `uname -s` = 'AIX' ] ; then \
-	    for lib in `ldd $(INSTLOC)/bin/psql | egrep 'libssl|libcrypto|libcom_err|curl|readline|numa' | awk -F\( '{print $$1}' | sort -u`; do \
-	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
-	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
-	        echo "cp -p $$lib $(INSTLOC)/lib" ; \
-	        cp -p $$lib $(INSTLOC)/lib ; \
-	    done ; \
-	    for lib in `ldd $(INSTLOC)/bin/gpfdist | egrep 'libbz2|libz' | awk -F\( '{print $$1}' | sort -u`; do \
-	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
-	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
-	        echo "cp -p $$lib $(INSTLOC)/lib" ; \
-	        cp -p $$lib $(INSTLOC)/lib ; \
-	    done ; \
-	fi
 	# Create the python directory to flag to build scripts that python has been handled
 	mkdir -p $(INSTLOC)/ext/python
 	@if [ ! -z "$(PYTHONHOME)" ]; then \
@@ -868,31 +654,6 @@ copylibs : thirdparty-dist
 	fi
 	mkdir -p $(INSTLOC)/etc
 	mkdir -p $(INSTLOC)/include
-ifeq "$(findstring $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 aix5_ppc_32 aix5_ppc_64 aix7_ppc_64 win32 win64)" ""
-	# Copy curl header file
-	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/curl $(INSTLOC)/include/
-endif
-ifeq "$(findstring $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 aix5_ppc_32 win32 win64)" ""
-ifneq "$(BLD_ARCH)" "osx104_x86"
-	cp -rp $(BLD_THIRDPARTY_BIN_DIR)/openssl $(INSTLOC)/bin/
-	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/openssl $(INSTLOC)/include/
-	cp -rp $(BLD_THIRDPARTY_DIR)/ssl/openssl.cnf $(INSTLOC)/etc/
-else
-	cp -rp /usr/bin/openssl $(INSTLOC)/bin/
-	cp -rp /usr/include/openssl $(INSTLOC)/include/
-	cp -rp /System/Library/OpenSSL/openssl.cnf $(INSTLOC)/etc/
-endif
-endif
-
-ifeq "$(BLD_ARCH)" "win32"
-	# Copy kfw dlls
-	cp -rp $(BLD_TOP)/ext/win32/kfw-3-2-2/lib/*dll $(INSTLOC)/lib/
-endif
-
-greenplum_path:
-	mkdir -p $(INSTLOC)
-	unset LIBPATH; \
-	  releng/generate-greenplum-path.sh $(INSTLOC) > $(INSTLOC)/greenplum_path.sh
 
 copylicense:
 	for proddir in $(INSTLOC) $(CLIENTSINSTLOC); do \
@@ -925,14 +686,6 @@ HOMEFAIL :
 	@echo
 	@exit 1
 
-##
-## Create qautils tarball.  This file contains the utils required to
-## support cdbfast runs.
-##
-
-qautils-tarball:
-	@$(TAR) -zcf releng/qautils-$(MPP_ARCH).tar.gz -C $(INSTLOC) $(shell cat releng/QAUTILS_FILES.txt)
-
 #---------------------------------------------------------------------
 # Cleanup
 #---------------------------------------------------------------------
@@ -956,133 +709,3 @@ distclean :
 distprep : $(ISCONFIG)
 	@cd $(BUILDDIR) && $(MAKE) distprep
 
-#---------------------------------------------------------------------
-# More internal functions
-#---------------------------------------------------------------------
-
-gccVersionCheck :
-	@echo "Checking GCC version" ; \
-	$(BLD_CC) --version > /dev/null 2>&1 ; \
-	if [ $$? -ne 0 ] ; then \
-	    echo "Error running $(BLD_CC) --version" ; \
-	    $(BLD_CC) --version ; \
-	    exit 1 ; \
-	fi
-	@$(BLD_CC) --version | head -n 1 | cut -d' ' -f3 | egrep '[0-3]\.[0-4]\.[0-1]' > /dev/null 2>&1 ; \
-	if [ $$? -eq 0 ] ; then \
-	    echo "Error: GPDB must be compiled with GCC 3.4.2 or later." ; \
-	    echo "Current GCC version:" ; \
-	    $(BLD_CC) --version ; \
-	    exit 1 ; \
-	fi
-
-## ----------------------------------------------------------------------
-
-ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 sles11_x86_64 suse11_x86_64))
-GPPKG_SOURCES = \
-	$(NULL)
-else
-GPPKG_SOURCES = \
-	../contrib/pgcrypto \
-	extensions/postgis-2.0.3 \
-	extensions/plr \
-	$(NULL)
-	ifneq ($(wildcard ../contrib/pgpool),)
-		GPPKG_SOURCES := ../contrib/pgpool $(GPPKG_SOURCES)
-	endif
-	ifneq ($(wildcard ../contrib/dtm),)
-		GPPKG_SOURCES := ../contrib/dtm $(GPPKG_SOURCES)
-	endif
-	ifneq ($(wildcard ../contrib/pg_arcgis),)
-		GPPKG_SOURCES := ../contrib/pg_arcgis $(GPPKG_SOURCES)
-	endif
-	ifneq ($(wildcard ../contrib/pg_osm),)
-		GPPKG_SOURCES := ../contrib/pg_osm $(GPPKG_SOURCES)
-	endif
-endif
-
-## ----------------------------------------------------------------------
-
-gppkg:
-ifeq "$(findstring gppkg,$(BLD_TARGETS))" ""
-	# ---- build and packaging of gppkgs are currently disabled
-	# ---- set BLD_TARGETS="gppkg" to enable them.
-else
-ifeq "$(findstring $(BLD_ARCH),$(GPPKG_PLATFORMS))" ""
-	@echo ""
-	@echo "The gppkg build and packaging processes are not supported"
-	@echo "on this platform: $(BLD_ARCH)"
-	@echo ""
-else
-	@for source in $(GPPKG_SOURCES); do \
-		echo "";\
-		echo "====================================================================================================";\
-		echo "Starting build of gppkg: $${source}" ; \
-		echo "----------------------------------------------------------------------------------------------------";\
-		$(MAKE) -C $${source}/package INSTLOC=$(INSTLOC) BLD_ARCH=`$(BLD_TOP)/releng/set_bld_arch.sh`; \
-		RET_VAL=$$? ; \
-		if [ $$RET_VAL -ne 0 ] ; then \
-			echo "Error building gppkg: $${source}" ; \
-			exit $$RET_VAL; \
-		fi; \
-		echo "";\
-		echo "====================================================================================================";\
-		echo "Completed build of gppkg: $${source}" ;\
-		echo "____________________________________________________________________________________________________";\
-		cp $${source}/package/*.gppkg $(GPPKGINSTLOC); \
-	done
-endif
-endif
-
-ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 suse11_x86_64))
-GPPKG_ROOT_DIR = \
-	$(NULL)
-else
-GPPKG_ROOT_DIR = \
-	../contrib/pgcrypto \
-	$(NULL)
-endif
-
-installcheck-gppkg:
-	touch installcheck-gppkg.log
-ifeq "$(findstring gppkg,$(BLD_TARGETS))" ""
-    # ---- build and packaging of gppkgs are currently disabled
-    # ---- set BLD_TARGETS="gppkg" to enable them.
-else
-ifeq "$(findstring $(BLD_ARCH),$(GPPKG_PLATFORMS))" ""
-	@echo ""
-	@echo "The gppkg build and packaging processes are not supported"
-	@echo "on this platform: $(BLD_ARCH)"
-	@echo ""
-else
-	@for root_gppkg in $(GPPKG_ROOT_DIR); do \
-		echo "----------------------------------------------------------------------"; \
-		echo "installing gppkg for $${root_gppkg}"; \
-		echo "----------------------------------------------------------------------"; \
-		source $$GPHOME/greenplum_path.sh && $(MAKE) -C $${root_gppkg}/package install BLD_ARCH=`$(BLD_TOP)/releng/set_bld_arch.sh` INSTLOC=$$GPHOME; \
-		RET_VAL=$$? ; \
-		if [ $$RET_VAL -ne 0 ] ; then \
-			echo "Error running install: $${root_gppkg}" ; \
-			exit $$RET_VAL; \
-		fi; \
-	done
-
-	source $$GPHOME/greenplum_path.sh && gpstop -ar
-
-	@for root_gppkg in $(GPPKG_ROOT_DIR); do \
-		echo "----------------------------------------------------------------------"; \
-		echo "running installcheck for $${root_gppkg}"; \
-		echo "----------------------------------------------------------------------"; \
-		installcheck_dir=""; \
-		if [ -d "$${root_gppkg}/source" ]; then \
-			installcheck_dir="source"; \
-		fi; \
-		source $$GPHOME/greenplum_path.sh && $(MAKE) -C $${root_gppkg}/$${installcheck_dir} installcheck >> installcheck-gppkg.log; \
-		RET_VAL=$$? ; \
-		if [ $$RET_VAL -ne 0 ] ; then \
-			echo "Error running installcheck-gppkg : $${root_gppkg}/$${installcheck_dir}" ; \
-			exit $$RET_VAL; \
-		fi; \
-	done
-endif
-endif

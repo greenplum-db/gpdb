@@ -2094,8 +2094,6 @@ begin
 end;
 $$ language plpgsql;
 
-select raise_test1(5);
-
 create function raise_test2(int) returns int as $$
 begin
     raise notice 'This message has too few parameters: %, %, %', $1, $1;
@@ -2103,7 +2101,14 @@ begin
 end;
 $$ language plpgsql;
 
-select raise_test2(10);
+create function raise_test3(int) returns int as $$
+begin
+    raise notice 'This message has no parameters (despite having %% signs in it)!';
+    return $1;
+end;
+$$ language plpgsql;
+
+select raise_test3(1);
 
 -- Test re-RAISE inside a nested exception block.  This case is allowed
 -- by Oracle's PL/SQL but was handled differently by PG before 9.1.
@@ -3274,6 +3279,39 @@ $$ language plpgsql;
 
 select compos();
 
+-- RETURN variable is a different code path ...
+create or replace function compos() returns compostype as $$
+declare x int := 42;
+begin
+  return x;
+end;
+$$ language plpgsql;
+
+select * from compos();
+
+drop function compos();
+
+-- test: invalid use of composite variable in scalar-returning function
+create or replace function compos() returns int as $$
+declare
+  v compostype;
+begin
+  v := (1, 'hello');
+  return v;
+end;
+$$ language plpgsql;
+
+select compos();
+
+-- test: invalid use of composite expression in scalar-returning function
+create or replace function compos() returns int as $$
+begin
+  return (1, 'hello')::compostype;
+end;
+$$ language plpgsql;
+
+select compos();
+
 drop function compos();
 drop type compostype;
 
@@ -3974,6 +4012,17 @@ $$ language plpgsql;
 
 select unreserved_test();
 
+create or replace function unreserved_test() returns int as $$
+declare
+  return int := 42;
+begin
+  return := return + 1;
+  return return;
+end
+$$ language plpgsql;
+
+select unreserved_test();
+
 drop function unreserved_test();
 
 --
@@ -4232,3 +4281,51 @@ select outer_outer_func(20);
 drop function outer_outer_func(int);
 drop function outer_func(int);
 drop function inner_func(int);
+
+--
+-- Test ASSERT
+--
+
+do $$
+begin
+  assert 1=1;  -- should succeed
+end;
+$$;
+
+do $$
+begin
+  assert 1=0;  -- should fail
+end;
+$$;
+
+do $$
+begin
+  assert NULL;  -- should fail
+end;
+$$;
+
+-- check controlling GUC
+set plpgsql.check_asserts = off;
+do $$
+begin
+  assert 1=0;  -- won't be tested
+end;
+$$;
+reset plpgsql.check_asserts;
+
+-- test custom message
+do $$
+declare var text := 'some value';
+begin
+  assert 1=0, format('assertion failed, var = "%s"', var);
+end;
+$$;
+
+-- ensure assertions are not trapped by 'others'
+do $$
+begin
+  assert 1=0, 'unhandled assertion';
+exception when others then
+  null; -- do nothing
+end;
+$$;

@@ -21,6 +21,7 @@
 #include "access/distributedlog.h"
 #include "access/transam.h"
 #include "access/xact.h"
+#include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "lib/stringinfo.h"
 #include "utils/builtins.h"
@@ -246,8 +247,7 @@ GetTupleVisibilityDistribId(TransactionId xid,
 				char	   *distribId;
 
 				distribId = palloc(TMGIDSIZE);
-				sprintf(distribId, "%u-%.10u",
-						distribTimeStamp, distribXid);
+				dtxFormGID(distribId, distribTimeStamp, distribXid);
 				return distribId;
 			}
 			else

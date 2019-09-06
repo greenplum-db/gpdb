@@ -27,6 +27,7 @@
 #include "pxfuriparser.h"
 
 #include "nodes/execnodes.h"
+#include "nodes/nodeFuncs.h"
 #include "utils/rel.h"
 
 /*

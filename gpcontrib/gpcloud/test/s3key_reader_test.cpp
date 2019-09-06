@@ -753,7 +753,9 @@ TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchDataAtSecondRound) {
     params.setChunkSize(64);
 
     EXPECT_CALL(s3Interface, fetchData(0, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3Interface, fetchData(64, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3Interface, fetchData(64, _, _, _))
+	.Times(AtMost(1))
+	.WillOnce(Invoke(MockFetchData(64, 64)));
     EXPECT_CALL(s3Interface, fetchData(128, _, _, _))
         .WillOnce(Throw(S3PartialResponseError(63, 64)));
     EXPECT_CALL(s3Interface, fetchData(192, _, _, _))

@@ -209,7 +209,6 @@ gpinitsystem_for_upgrade() {
         # XXX Disable mirrors for now.
         echo "unset MIRROR_DATA_DIRECTORY" >> gpinitsystem_config_new
         echo "unset MIRROR_PORT_BASE" >> gpinitsystem_config_new
-        echo "unset MIRROR_REPLICATION_PORT_BASE" >> gpinitsystem_config_new
 
         # echo "HEAP_CHECKSUM=off" >> gpinitsystem_config_new
         # echo "standard_conforming_strings = off" >> upgrade_addopts

@@ -55,8 +55,8 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
 -- s/Execution Time: \d+\.\d+/Execution Time: ##.###/
 -- m/Segments: \d+/
 -- s/Segments: \d+/Segments: #/
--- m/PQO version \d+\.\d+\.\d+",?/
--- s/PQO version \d+\.\d+\.\d+",?/PQO version ##.##.##"/
+-- m/Pivotal Optimizer \(GPORCA\) version \d+\.\d+\.\d+",?/
+-- s/Pivotal Optimizer \(GPORCA\) version \d+\.\d+\.\d+",?/Pivotal Optimizer \(GPORCA\) version ##.##.##"/
 -- m/ Memory: \d+/
 -- s/ Memory: \d+/ Memory: ###/
 -- m/Maximum Memory Used: \d+/
@@ -87,8 +87,8 @@ EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id
 -- Check JSON format
 --
 -- start_matchsubs
--- m/PQO version \d+\.\d+\.\d+/
--- s/PQO version \d+\.\d+\.\d+/PQO version ##.##.##/
+-- m/Pivotal Optimizer \(GPORCA\) version \d+\.\d+\.\d+/
+-- s/Pivotal Optimizer \(GPORCA\) version \d+\.\d+\.\d+/Pivotal Optimizer \(GPORCA\) version ##.##.##/
 -- end_matchsubs
 -- explain_processing_off
 EXPLAIN (FORMAT JSON, COSTS OFF) SELECT * FROM generate_series(1, 10);

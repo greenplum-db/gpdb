@@ -17,7 +17,7 @@
  * MPP-18576: RemoveLocalLock should be aware lockOwners can be NULL
  * in case of OOM after populating the hash entry.
  */
-void
+static void
 test__RemoveLocalLock_Null(void **state)
 {
 	HASHCTL		info;

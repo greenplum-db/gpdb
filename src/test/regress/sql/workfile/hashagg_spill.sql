@@ -5,6 +5,9 @@ set search_path to hashagg_spill;
 create language plpythonu;
 -- end_ignore
 
+-- force multistage to increase likelihood of spilling
+set optimizer_force_multistage_agg = on;
+
 -- set workfile is created to true if all segment did it.
 create or replace function hashagg_spill.is_workfile_created(explain_query text)
 returns setof int as
@@ -74,6 +77,14 @@ insert into aggspill select i, i*2, i::text from generate_series(1, 10000) i;
 insert into aggspill select i, i*2, i::text from generate_series(1, 100000) i;
 insert into aggspill select i, i*2, i::text from generate_series(1, 1000000) i;
 
+-- Test the spilling with serial/deserial functions involved
+-- The transition type of numeric is internal, and hence it uses the serial/deserial functions when spilling
+drop table if exists aggspill_numeric_avg;
+create table aggspill_numeric_avg (a int, b int, c numeric) distributed by (a);
+insert into aggspill_numeric_avg (select i, i + 1, i * 1.1111 from generate_series(1, 500000) as i);
+insert into aggspill_numeric_avg (select i, i + 1, i * 1.1111 from generate_series(1, 500000) as i);
+analyze aggspill_numeric_avg;
+
 -- No spill with large statement memory 
 set statement_mem = '125MB';
 select count(*) from (select i, count(*) from aggspill group by i,j having count(*) = 1) g;
@@ -83,6 +94,7 @@ set statement_mem = '10MB';
 select overflows >= 1 from hashagg_spill.num_hashagg_overflows('explain analyze
 select count(*) from (select i, count(*) from aggspill group by i,j having count(*) = 2) g') overflows;
 select count(*) from (select i, count(*) from aggspill group by i,j having count(*) = 2) g;
+select count(*) from (select a, avg(b), avg(c) from aggspill_numeric_avg group by a) g;
 
 -- Reduce the statement memory, nbatches and entrysize even further to cause multiple overflows
 set gp_hashagg_default_nbatches = 4;
@@ -92,5 +104,7 @@ select overflows > 1 from hashagg_spill.num_hashagg_overflows('explain analyze
 select count(*) from (select i, count(*) from aggspill group by i,j,t having count(*) = 3) g') overflows;
 
 select count(*) from (select i, count(*) from aggspill group by i,j,t having count(*) = 3) g;
+select count(*) from (select a, avg(b), avg(c) from aggspill_numeric_avg group by a) g;
 
+reset optimizer_force_multistage_agg;
 drop schema hashagg_spill cascade;

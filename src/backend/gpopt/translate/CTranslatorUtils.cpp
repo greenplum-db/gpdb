@@ -94,7 +94,7 @@ extern bool optimizer_multilevel_partitioning;
 CDXLIndexDescr *
 CTranslatorUtils::GetIndexDescr
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	IMDId *mdid
 	)
@@ -117,7 +117,7 @@ CTranslatorUtils::GetIndexDescr
 CDXLTableDescr *
 CTranslatorUtils::GetTableDescr
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	CIdGenerator *id_generator,
 	const RangeTblEntry *rte,
@@ -208,7 +208,7 @@ CTranslatorUtils::GetTableDescr
 BOOL
 CTranslatorUtils::IsSirvFunc
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	OID func_oid
 	)
@@ -265,7 +265,7 @@ CTranslatorUtils::HasSubquery
 CDXLLogicalTVF *
 CTranslatorUtils::ConvertToCDXLLogicalTVF
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	CIdGenerator *id_generator,
 	const RangeTblEntry *rte
@@ -368,7 +368,7 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF
 IMdIdArray *
 CTranslatorUtils::ResolvePolymorphicTypes
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	IMdIdArray *mdid_array,
 	List *arg_types_list,
 	FuncExpr *funcexpr
@@ -466,7 +466,7 @@ CTranslatorUtils::ContainsPolymorphicTypes
 CDXLColDescrArray *
 CTranslatorUtils::GetColumnDescriptorsFromRecord
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CIdGenerator *id_generator,
 	List *col_names,
 	List *col_types,
@@ -523,7 +523,7 @@ CTranslatorUtils::GetColumnDescriptorsFromRecord
 CDXLColDescrArray *
 CTranslatorUtils::GetColumnDescriptorsFromRecord
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CIdGenerator *id_generator,
 	List *col_names,
 	IMdIdArray *out_arg_types
@@ -577,7 +577,7 @@ CTranslatorUtils::GetColumnDescriptorsFromRecord
 CDXLColDescrArray *
 CTranslatorUtils::GetColumnDescriptorsFromBase
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CIdGenerator *id_generator,
 	IMDId *mdid_return_type,
 	INT type_modifier,
@@ -616,7 +616,7 @@ CTranslatorUtils::GetColumnDescriptorsFromBase
 CDXLColDescrArray *
 CTranslatorUtils::GetColumnDescriptorsFromComposite
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	CIdGenerator *id_generator,
 	const IMDType *type
@@ -663,7 +663,7 @@ CTranslatorUtils::GetColumnDescriptorsFromComposite
 CMDColumnArray *
 CTranslatorUtils::ExpandCompositeType
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	const IMDType *type
 	)
@@ -870,7 +870,7 @@ CTranslatorUtils::GetSystemColName
 CMDIdGPDB *
 CTranslatorUtils::GetSystemColType
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	AttrNumber attno
 	)
 {
@@ -1107,7 +1107,7 @@ CTranslatorUtils::GetSetOpType
 ULongPtrArray *
 CTranslatorUtils::GetGroupingColidArray
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CBitSet *group_by_cols,
 	IntToUlongMap *sort_group_cols_to_colid_map
 	)
@@ -1140,7 +1140,7 @@ CTranslatorUtils::GetGroupingColidArray
 CBitSetArray *
 CTranslatorUtils::GetColumnAttnosForGroupBy
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	List *group_clause_list,
 	ULONG num_cols,
 	UlongToUlongMap *group_col_pos,	// mapping of grouping col positions to SortGroupRef ids
@@ -1162,147 +1162,9 @@ CTranslatorUtils::GetColumnAttnosForGroupBy
 		return col_attnos_arr;
 	}
 
-	if (!IsA(node, GroupingClause))
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Group by clause"));
-	}
+	GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Group by clause"));
 
-	const ULONG num_group_clauses = gpdb::ListLength(group_clause_list);
-	GPOS_ASSERT(0 < num_group_clauses);
-	if (1 < num_group_clauses)
-	{
-		// multiple grouping sets
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Multiple grouping sets specifications"));
-	}
-
-	GroupingClause *grouping_clause = (GroupingClause *) node;
-
-	if (GROUPINGTYPE_ROLLUP == grouping_clause->groupType)
-	{
-		return CreateGroupingSetsForRollup(mp, grouping_clause, num_cols, group_col_pos, group_cols);
-	}
-
-	if (GROUPINGTYPE_CUBE == grouping_clause->groupType)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Cube"));
-	}
-
-	CBitSetArray *col_attnos_arr = GPOS_NEW(mp) CBitSetArray(mp);
-
-	ListCell *grouping_set = NULL;
-	ForEach (grouping_set, grouping_clause->groupsets)
-	{
-		Node *grouping_set_node = (Node *) lfirst(grouping_set);
-
-		CBitSet *bset = NULL;
-		if (IsA(grouping_set_node, SortGroupClause))
-		{
-			// grouping set contains a single grouping column
-			bset = GPOS_NEW(mp) CBitSet(mp, num_cols);
-			ULONG sort_group_ref = ((SortGroupClause *) grouping_set_node)->tleSortGroupRef;
-			bset->ExchangeSet(sort_group_ref);
-			UpdateGrpColMapping(mp, group_col_pos, group_cols, sort_group_ref);
-		}
-		else if (IsA(grouping_set_node, GroupingClause))
-		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Multiple grouping sets specifications"));
-		}
-		else
-		{
-			// grouping set contains a list of columns
-			GPOS_ASSERT(IsA(grouping_set_node, List));
-
-			List *grouping_set_list = (List *) grouping_set_node;
-			bset = CreateAttnoSetForGroupingSet(mp, grouping_set_list, num_cols, group_col_pos, group_cols);
-		}
-		col_attnos_arr->Append(bset);
-	}
-
-	return col_attnos_arr;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::CreateGroupingSetsForRollup
-//
-//	@doc:
-//		Construct a dynamic array of sets of column attnos for a rollup
-//
-//---------------------------------------------------------------------------
-CBitSetArray *
-CTranslatorUtils::CreateGroupingSetsForRollup
-	(
-	IMemoryPool *mp,
-	GroupingClause *grouping_clause,
-	ULONG num_cols,
-	UlongToUlongMap *group_col_pos,	// mapping of grouping col positions to SortGroupRef ids,
-	CBitSet *group_cols			// existing grouping columns
-	)
-{
-	GPOS_ASSERT(NULL != grouping_clause);
-
-	CBitSetArray *grouping_sets = GPOS_NEW(mp) CBitSetArray(mp);
-	ListCell *grouping_set = NULL;
-	ForEach (grouping_set, grouping_clause->groupsets)
-	{
-		Node *node = (Node *) lfirst(grouping_set);
-		CBitSet *bs = GPOS_NEW(mp) CBitSet(mp);
-		if (IsA(node, SortGroupClause))
-		{
-			// simple group clause, create a singleton grouping set
-			SortGroupClause *sort_group_clause = (SortGroupClause *) node;
-			ULONG sort_group_ref = sort_group_clause->tleSortGroupRef;
-			(void) bs->ExchangeSet(sort_group_ref);
-			grouping_sets->Append(bs);
-			UpdateGrpColMapping(mp, group_col_pos, group_cols, sort_group_ref);
-		}
-		else if (IsA(node, List))
-		{
-			// list of group clauses, add all clauses into one grouping set
-			// for example, rollup((a,b),(c,d));
-			List *list = (List *) node;
-			ListCell *group_clause = NULL;
-			ForEach (group_clause, list)
-			{
-				Node *group_clause_node = (Node *) lfirst(group_clause);
-				if (!IsA(group_clause_node, SortGroupClause))
-				{
-					// each list entry must be a group clause
-					// for example, rollup((a,b),(c,(d,e)));
-					GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Nested grouping sets"));
-				}
-
-				SortGroupClause *sort_group_clause = (SortGroupClause *) group_clause_node;
-				ULONG sort_group_ref = sort_group_clause->tleSortGroupRef;
-				(void) bs->ExchangeSet(sort_group_ref);
-				UpdateGrpColMapping(mp, group_col_pos, group_cols, sort_group_ref);
-			}
-			grouping_sets->Append(bs);
-		}
-		else
-		{
-			// unsupported rollup operation
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Nested grouping sets"));
-		}
-	}
-
-	const ULONG num_grouping_sets = grouping_sets->Size();
-	CBitSetArray * col_attnos_arr = GPOS_NEW(mp) CBitSetArray(mp);
-
-	// compute prefixes of grouping sets array
-	for (ULONG ulPrefix = 0; ulPrefix <= num_grouping_sets; ulPrefix++)
-	{
-		CBitSet *bs = GPOS_NEW(mp) CBitSet(mp);
-		for (ULONG idx = 0; idx < ulPrefix; idx++)
-		{
-			CBitSet *current = (*grouping_sets)[idx];
-			bs->Union(current);
-		}
-		col_attnos_arr->Append(bs);
-	}
-	grouping_sets->Release();
-
-	return col_attnos_arr;
+	return NULL;
 }
 
 
@@ -1317,7 +1179,7 @@ CTranslatorUtils::CreateGroupingSetsForRollup
 CBitSet *
 CTranslatorUtils::CreateAttnoSetForGroupingSet
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	List *group_elems,
 	ULONG num_cols,
 	UlongToUlongMap *group_col_pos,	// mapping of grouping col positions to SortGroupRef ids,
@@ -1364,7 +1226,7 @@ CTranslatorUtils::CreateAttnoSetForGroupingSet
 ULongPtrArray *
 CTranslatorUtils::GenerateColIds
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	List *target_list,
 	IMdIdArray *input_mdid_arr,
 	ULongPtrArray *input_colids,
@@ -1537,7 +1399,7 @@ CTranslatorUtils::GetTargetListReturnTypeOid
 CDXLColDescrArray *
 CTranslatorUtils::GetDXLColumnDescrArray
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	List *target_list,
 	ULongPtrArray *colids,
 	BOOL keep_res_junked
@@ -1580,7 +1442,7 @@ CTranslatorUtils::GetDXLColumnDescrArray
 ULongPtrArray *
 CTranslatorUtils::GetPosInTargetList
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	List *target_list,
 	BOOL keep_res_junked
 	)
@@ -1617,7 +1479,7 @@ CTranslatorUtils::GetPosInTargetList
 CDXLColDescr *
 CTranslatorUtils::GetColumnDescrAt
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	TargetEntry *target_entry,
 	ULONG colid,
 	ULONG pos
@@ -1668,7 +1530,7 @@ CTranslatorUtils::GetColumnDescrAt
 CDXLNode *
 CTranslatorUtils::CreateDummyProjectElem
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULONG colid_input,
 	ULONG colid_output,
 	CDXLColDescr *dxl_col_descr
@@ -1708,7 +1570,7 @@ CTranslatorUtils::CreateDummyProjectElem
 ULongPtrArray *
 CTranslatorUtils::GetOutputColIdsArray
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	List *target_list,
 	IntToUlongMap *attno_to_colid_map
 	)
@@ -1890,7 +1752,7 @@ CTranslatorUtils::IsWindowSpec
 CDXLNode *
 CTranslatorUtils::CreateDXLProjElemFromInt8Const
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	INT val
 	)
@@ -2025,28 +1887,6 @@ CTranslatorUtils::IsGroupingColumn
 		{
 			return true;
 		}
-
-		if (IsA(group_clause_node, GroupingClause))
-		{
-			GroupingClause *grouping_clause = (GroupingClause *) group_clause_node;
-
-			ListCell *grouping_set = NULL;
-			ForEach (grouping_set, grouping_clause->groupsets)
-			{
-				Node *grouping_set_node = (Node *) lfirst(grouping_set);
-
-				if (IsA(grouping_set_node, SortGroupClause) &&
-				    IsGroupingColumn(target_entry, ((SortGroupClause *) grouping_set_node)))
-				{
-					return true;
-				}
-
-				if (IsA(grouping_set_node, List) && IsGroupingColumn(target_entry, (List *) grouping_set_node))
-				{
-					return true;
-				}
-			}
-		}
 	}
 
 	return false;
@@ -2179,7 +2019,7 @@ CTranslatorUtils::CreateMultiByteCharStringFromWCString
 UlongToUlongMap *
 CTranslatorUtils::MakeNewToOldColMapping
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	ULongPtrArray *old_colids,
 	ULongPtrArray *new_colids
 	)
@@ -2282,7 +2122,7 @@ CTranslatorUtils::HasProjElem
 CDXLNode *
 CTranslatorUtils::CreateDXLProjElemConstNULL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	CIdGenerator *pidgtorCol,
 	const IMDColumn *md_col
@@ -2308,7 +2148,7 @@ CTranslatorUtils::CreateDXLProjElemConstNULL
 CDXLNode *
 CTranslatorUtils::CreateDXLProjElemConstNULL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	IMDId *mdid,
 	ULONG colid,
@@ -2333,7 +2173,7 @@ CTranslatorUtils::CreateDXLProjElemConstNULL
 CDXLNode *
 CTranslatorUtils::CreateDXLProjElemConstNULL
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	IMDId *mdid,
 	ULONG colid,
@@ -2430,7 +2270,7 @@ CTranslatorUtils::CheckRTEPermissions
 void
 CTranslatorUtils::UpdateGrpColMapping
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	UlongToUlongMap *group_col_pos, 
 	CBitSet *group_cols,
 	ULONG sort_group_ref
@@ -2586,7 +2426,7 @@ CTranslatorUtils::MapSublinkTypeToDXLSubplan
 BOOL
 CTranslatorUtils::RelHasTriggers
 	(
-	IMemoryPool *mp,
+	CMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	const IMDRelation *rel,
 	const EdxlDmlType dml_type_dxl
@@ -2742,20 +2582,6 @@ CTranslatorUtils::GetNumNonSystemColumns
 	}
 
 	return num_non_system_cols;
-}
-
-// Function to check if we should create stats bucket in DXL
-// Returns true if column datatype is not text/char/varchar/bpchar
-BOOL
-CTranslatorUtils::ShouldCreateStatsBucket
-	(
-	OID att_type_oid
-	)
-{
-	if (att_type_oid != TEXTOID && att_type_oid != CHAROID && att_type_oid != VARCHAROID && att_type_oid != BPCHAROID)
-		return true;
-
-	return false;
 }
 
 // EOF

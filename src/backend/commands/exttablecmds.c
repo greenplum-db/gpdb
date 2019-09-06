@@ -68,6 +68,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	SingleRowErrorDesc *singlerowerrorDesc = NULL;
 	DefElem    *dencoding = NULL;
 	ListCell   *option;
+	ObjectAddress objAddr;
 	Oid			reloid = 0;
 	Datum		formatOptStr;
 	Datum		optionsStr;
@@ -172,7 +173,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 					ereport(ERROR,
 							(errcode(ERRCODE_UNDEFINED_OBJECT),
 							 errmsg("role \"%s\" does not exist (in DefineExternalRelation)",
-									GetUserNameFromId(userid))));
+									GetUserNameFromId(userid, false))));
 
 				if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && iswritable)
 				{
@@ -371,8 +372,11 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	 * QEs.
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-		reloid = DefineRelation(createStmt, RELKIND_RELATION, InvalidOid,
-								RELSTORAGE_EXTERNAL, true, true, NULL);
+	{
+		objAddr = DefineRelation(createStmt, RELKIND_RELATION, InvalidOid,
+								 NULL, RELSTORAGE_EXTERNAL, true, true, NULL);
+		reloid = objAddr.objectId;
+	}
 
 	/*
 	 * Now we take care of pg_exttable.

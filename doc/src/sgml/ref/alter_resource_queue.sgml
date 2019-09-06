@@ -185,7 +185,7 @@ where queue_attribute is:
   </para>
 
   <para>
-   Use <xref linkend="SQL-ALTERROLE" endterm="SQL-ALTERROLE-title"> 
+   Use <xref linkend="SQL-ALTERROLE" endterm="SQL-ALTERROLE"> 
    to add or remove users from a resource queue.  
   </para>
 
@@ -252,8 +252,8 @@ ALTER RESOURCE QUEUE myqueue WITHOUT (MAX_COST, MEMORY_LIMIT);
   <title>See Also</title>
 
   <simplelist type="inline">
-   <member><xref linkend="sql-createrole" endterm="sql-createrole-title"></member>
-   <member><xref linkend="sql-alterrole" endterm="sql-alterrole-title"></member>
+   <member><xref linkend="sql-createrole" endterm="sql-createrole"></member>
+   <member><xref linkend="sql-alterrole" endterm="sql-alterrole"></member>
    <member><xref linkend="sql-createresourcequeue" endterm="sql-createresourcequeue-title"></member>
    <member><xref linkend="sql-dropresourcequeue" endterm="sql-dropresourcequeue-title"></member>
      </simplelist>

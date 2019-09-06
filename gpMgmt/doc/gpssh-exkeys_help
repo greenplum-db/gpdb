@@ -163,5 +163,5 @@ hosts sdw4 and sdw5 as part of a system expansion operation:
 SEE ALSO
 *****************************************************
 
-gpssh, gpscp, gpseginstall
+gpssh, gpscp
 

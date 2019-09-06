@@ -45,10 +45,9 @@ warnings.simplefilter('ignore', DeprecationWarning)
 
 sys.path.append(sys.path[0] + '/lib')
 try:
-    import paramiko
-    import getopt, getpass, logging
+    import getopt
     import tempfile, filecmp
-    import array, socket, subprocess
+    import socket, subprocess
     from gppylib.commands import unix
     from gppylib.util import ssh_utils
     from gppylib.gpparseopts import OptParser
@@ -68,7 +67,6 @@ class Global:
     opt['-f'] = False
     opt['-x'] = False  # new hosts for expansion
     opt['-e'] = False  # existing hosts file for expansion
-    passwd = []
     # ssh commands don't respect $HOME; they always use the home
     # directory supplied in /etc/passwd so sshd can find the same
     # directory.
@@ -118,194 +116,74 @@ class Host:
     def host(self):
         return self.m_host
 
-    def remoteID(self):
-        return self.m_remoteID
-
-    def popen_cmd(self):
-        return self.m_popen_cmd;
-
     def isPclosed(self):
         return self.m_popen is None;
 
-    def getAddrs(self):
+    def retrieveSSHFiles(self, tempDir):
         '''
-        Gets the INET and INET6 addresses for this host.
+        Ensure that appropriate structure and permissions for the .ssh
+        directory. If <tempDir> is specified, the authorized_keys,
+        known_hosts, and id_rsa.pub files are obtained from the target
+        host. These files are placed in <tempDir>/<self.m_host>
+
         '''
-        if (self.m_inetAddrs is None) and (self.m_inet6Addrs is None):
-            self.m_inetAddrs = []
-            self.m_inet6Addrs = []
-            try:
-                hostAddrs = socket.getaddrinfo(self.m_host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM, socket.IPPROTO_TCP,
-                                               0)
 
-                if self.m_isLocalhost:
-                    try:
-                        hostAddrs.extend(
-                            socket.getaddrinfo('localhost', 0, socket.AF_UNSPEC, socket.SOCK_STREAM, socket.IPPROTO_TCP,
-                                               0))
-                    except:
-                        pass
+        # Create .ssh directory and ensure content meets permission requirements
+        # for password-less SSH
+        #
+        # note: we touch .ssh/iddummy.pub just before the chmod operations to
+        # ensure the wildcard matches at least one file.
+        cmd = ('mkdir -p .ssh; ' +
+               'chmod 0700 .ssh; ' +
+               'touch .ssh/authorized_keys; ' +
+               'touch .ssh/known_hosts; ' +
+               'touch .ssh/config; ' +
+               'touch .ssh/iddummy.pub; ' +
+               'chmod 0600 .ssh/auth* .ssh/id*; ' +
+               'chmod 0644 .ssh/id*.pub .ssh/config')
+        if GV.opt['-v']: print '[INFO %s]: %s' % (self.m_host, cmd)
 
-                for (family, socktype, proto, canonname, sockaddr) in hostAddrs:
-                    if family == socket.AF_INET:
-                        (addr, port) = sockaddr
-                        self.m_inetAddrs.append(addr)
-                    elif family == socket.AF_INET6:
-                        (addr, port, flowinfo, scopeid) = sockaddr
-                        self.m_inet6Addrs.append(addr)
-            except socket.gaierror:
-                pass
-            self.m_inetAddrs = tuple(self.m_inetAddrs)
-            self.m_inet6Addrs = tuple(self.m_inet6Addrs)
+        args = ['ssh', self.m_host, '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-n',
+                cmd]
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
 
-        return (self.m_inetAddrs, self.m_inet6Addrs)
+        if GV.opt['-v']:
+            print '[INFO %s]: exit status=%s' % (self.m_host, p.returncode)
+            if stdout:
+                print '[INFO] stdout:'
+                for line in stdout.splitlines():
+                    print '    ', line.rstrip()
+            if stderr:
+                print '[INFO] stderr:'
+                for line in stderr.splitlines():
+                    print '    ', line.rstrip()
+            print
 
-    def isSameHost(self, host):
-        '''
-        Compares <host> with this host by published address
-        '''
-        (thisInetAddrs, thisInet6Addrs) = self.getAddrs()
-        (thatInetAddrs, thatInet6Addrs) = host.getAddrs()
-
-        for addr in thisInetAddrs:
-            if addr in thatInetAddrs:
-                return True
-        for addr in thisInet6Addrs:
-            if addr in thatInet6Addrs:
-                return True
-
-        return False
-
-    def tryParamikoConnect(self, client, pwd=None, silence=False):
-        try:
-            client.connect(self.m_host, password=pwd)
-            return True
-        except paramiko.AuthenticationException:
-            if not silence: print >> sys.stderr, '[ERROR %s] bad password' % (self.m_host)
-            return False
-        except paramiko.SSHException, e:
-            if not silence: print >> sys.stderr, '[ERROR %s] %s' % (self.m_host, str(e))
-            return False
-
-    def sendLocalID(self, ID, passwd, tempDir):
-        '''
-        Send local ID to remote over SSH, and append to authorized_key.
-        If <tempDir> is specified, the authorized_keys, known_hosts, and
-        id_rsa.pub files are obtained from the target host.  These files
-        are placed in <tempDir>/<self.m_host>
-        '''
-        p = None
-        cin = cout = cerr = None
-        try:
-            p = paramiko.SSHClient()
-            p.load_system_host_keys()
-            ok = self.tryParamikoConnect(p, silence=True)
-            if not ok:
-                for pwd in passwd:
-                    ok = self.tryParamikoConnect(p, pwd, silence=True)
-                    if ok: break
-            while not ok:
-                print >> sys.stderr, '  ***'
-                pwd = getpass.getpass('  *** Enter password for %s: ' % (self.m_host), sys.stderr)
-                if pwd: ok = self.tryParamikoConnect(p, pwd)
-                if ok: passwd.append(pwd)
-
-            # Create .ssh directory and ensure content meets permission requirements
-            # for password-less SSH
-            #
-            # note: we touch .ssh/iddummy.pub just before the chmod operations to
-            # ensure the wildcard matches at least one file.
-            cmd = ('mkdir -p .ssh; ' +
-                   'chmod 0700 .ssh; ' +
-                   'touch .ssh/authorized_keys; ' +
-                   'touch .ssh/known_hosts; ' +
-                   'touch .ssh/config; ' +
-                   'touch .ssh/iddummy.pub; ' +
-                   'chmod 0600 .ssh/auth* .ssh/id*; ' +
-                   'chmod 0644 .ssh/id*.pub .ssh/config')
+        # If tempDir is specified, obtain a copy of the ssh
+        # files that should be preserved for existing hosts.
+        if tempDir:
+            cmd = 'cd .ssh && tar cf - authorized_keys known_hosts id_rsa.pub'
             if GV.opt['-v']: print '[INFO %s]: %s' % (self.m_host, cmd)
-            (cin, cout, cerr) = p.exec_command(cmd)
-            cin.close();
-            exitStatus = cout.channel.recv_exit_status()
-            if GV.opt['-v']:
-                print '[INFO %s]: exit status=%s' % (self.m_host, exitStatus)
-                if cout.channel.recv_ready():
-                    print '[INFO] stdout:'
-                    for line in cout:
-                        print '    ', line.rstrip()
-                if cout.channel.recv_stderr_ready():
-                    print '[INFO] stderr:'
-                    for line in cerr:
-                        print '    ', line.rstrip()
-                print
-            cout.close();
-            cerr.close()
 
-            # If tempDir is specified, obtain a copy of the ssh
-            # files that should be preserved for existing hosts.
-            if tempDir:
-                cmd = 'cd .ssh && tar cf - authorized_keys known_hosts id_rsa.pub'
-                if GV.opt['-v']: print '[INFO %s]: %s' % (self.m_host, cmd)
-                (cin, cout, cerr) = p.exec_command(cmd)
-                cin.close()
+            args = ['ssh', self.m_host, '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
+                    '-n', cmd]
 
-                # Grab the tar stream from stdout
-                tarfile = open(os.path.join(tempDir, '%s.tar' % self.m_host), 'wb')
-                buf = array.array('B')
-                try:
-                    # The paramiko.SSHClient.exec_command stdout file read()
-                    # method returns a string.  This string must be converted
-                    # back to binary before writing to the local tar file.
-                    while True:
-                        chunk = cout.read(4096)
-                        if not chunk: break
-                        buf.fromstring(chunk)
-                        buf.tofile(tarfile)
-                        del buf[:]
-                finally:
-                    if tarfile:
-                        tarfile.close()
-                exitStatus = cout.channel.recv_exit_status()
-                cout.close()
-                if exitStatus != 0:
-                    print >> sys.stderr, ('[WARNING %s] cannot fetch existing authentication files: tar rc=%s;'
-                                          % (self.m_host, exitStatus))
-                    for line in cerr:
-                        print >> sys.stderr, '    ', line.rstrip()
+            # Grab the tar stream from stdout
+            with open(os.path.join(tempDir, '%s.tar' % self.m_host), 'wb') as tarfile:
+                p = subprocess.Popen(args, stdout=tarfile, stderr=subprocess.PIPE)
+                _, stderr = p.communicate()
+
+            if p.returncode:
+                print >> sys.stderr, ('[WARNING %s] cannot fetch existing authentication files: tar rc=%s;'
+                                      % (self.m_host, p.returncode))
+                for line in stderr.splitlines():
+                    print >> sys.stderr, '    ', line.rstrip()
                     print >> sys.stderr, '    One or more existing authentication files may be replaced on %s' % self.m_host
 
-                cerr.close()
-
-                # The tar file content is expected to be extacted by the caller.  Doing it
-                # here causes Paramiko Transport grief on Linux systems.  (The Event.wait()
-                # used can be interrupted by the SIGCHLD signal popped by destruction of the
-                # process spawned to run the tar command -- Paramiko isn't ready for that to
-                # happen.
-
-            # Append the ID to authorized_keys; this is *temporary* --
-            # authorized_keys is expected to be replaced when the master
-            # .ssh content is shipped to the host.
-            cmd = 'echo \"%s\" >> .ssh/authorized_keys && echo ok ok ok' % ID
-            if GV.opt['-v']: print '[INFO %s]: %s' % (self.m_host, cmd)
-            (cin, cout, cerr) = p.exec_command(cmd)
-            cin.close()
-            line = cout.readline()
-            ok = (line.find('ok ok ok') >= 0)
-            if not ok:
-                print >> sys.stderr, '[ERROR] cannot append local ID to authorized_keys on %s' % self.m_host
-                for line in cerr:
-                    print >> sys.stderr, '    ', line.rstrip()
-                print >> sys.stderr
-            cout.close();
-            cerr.close()
-
-            return ok
-
-        finally:
-            if cin: cin.close()
-            if cout: cout.close()
-            if cerr: cerr.close()
-            if p and p._transport: p.close()
+            # TODO: Paramiko previously prevented us from extracting
+            # the tarfile contents here. Now that we no longer use
+            # Paramiko, that can be revisited.
 
     def popen(self, cmd):
         'Run a command and save popen handle in this Host instance.'
@@ -324,10 +202,6 @@ class Host:
         ok = not self.m_popen.close()
         self.m_popen = None
         return (ok, content)
-
-    def setRemoteID(self, ID):
-        'Save the remote ID'
-        self.m_remoteID = ID
 
 
 def parseCommandLine():
@@ -443,9 +317,13 @@ def testAccess(hostname):
 
 def addRemoteID(tab, line):
     IDKey = line.strip().split()
-    if not (len(IDKey) == 3 and line[0] != '#'): return False
-    tab[IDKey[2]] = line
-    return True
+    keyParts = len(IDKey)
+    if line[0].startswith('#'):
+        return False
+    if (keyParts == 3) or (keyParts == 2):
+        tab[IDKey[keyParts-1]] = line
+        return True
+    return False
 
 
 def readAuthorizedKeys(tab=None, keysFile=None):
@@ -516,9 +394,6 @@ def addHost(hostname, hostlist, localhost=False):
 tempDir = None
 
 try:
-    nullFile = logging.FileHandler('/dev/null')
-    logging.getLogger('paramiko.transport').addHandler(nullFile)
-
     parseCommandLine()
 
     # Assemble a list of names used by the current host.  SSH is sensitive to both name
@@ -651,6 +526,19 @@ try:
     discovered_authorized_keys_file = os.path.join(tempDir, 'authorized_keys')
 
     ######################
+    #  step 0
+    #
+    #    Ensure the local host can password-less ssh into each remote host
+    for remoteHost in GV.allHosts:
+        cmd = ['ssh', remoteHost.host(), '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',  'true']
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode:
+            print >> sys.stderr, '[ERROR]: Failed to ssh to %s. %s' % (remoteHost.host(), stderr)
+            print >> sys.stderr, '[ERROR]: Expected passwordless ssh to host %s' % remoteHost.host()
+            sys.exit(1)
+
+    ######################
     #  step 1
     #
     #    Creates an SSH id_rsa key pair for for the current user if not already available
@@ -732,73 +620,66 @@ try:
     ######################
     #  step 3
     #
-    #    Temporarily append the localID to the authorized_keys file of
-    #    each host to allow password-less SSH.  This is a temporary measure --
-    #    the authorized_keys file on each host is replaced in a later step.
-    #
-    #    This step also obtains a copy of any existing authorized_keys,
+    #    This step obtains a copy of any existing authorized_keys,
     #    known_hosts, and id_rsa.pub files for existing hosts so they
-    #    may be updated rather than replaced (as is done for new hosts).
+    #    may be updated rather than replaced (as is done for new
+    #    hosts).
     #
     #    The id_rsa.pub file from any existing host is collected for
     #    addition to this host's authorized_keys file and subsequent
     #    sharing with all hosts.
     #
     #    The last step for each host is ensuring that password-less access
-    #    from the current user is enabled.  This is done using SSH rather
-    #    than Paramiko to ensure that normal SSH processing is possible.
+    #    from the current user is enabled.
     #
     print;
-    print '[STEP 3 of 5] authorize current user on remote hosts'  # serial
-    errmsg = None
+    print '[STEP 3 of 5] retrieving credentials from remote hosts'  # serial
     newKeys = None
     try:
         for h in GV.allHosts:
             print '  ... send to', h.host()
             isExistingHost = (h in GV.existingHosts)
-            send_local_id = False
             try:
-                send_local_id = h.sendLocalID(localID, GV.passwd, tempDir if isExistingHost else None)
+                h.retrieveSSHFiles(tempDir if isExistingHost else None)
             except socket.error, e:
                 errmsg = '[ERROR %s] %s' % (h.host(), e)
                 print >> sys.stderr, errmsg
-            if not send_local_id:
                 errmsg = '[ERROR %s] skipping key exchange for %s' % (h.host(), h.host())
                 print >> sys.stderr, errmsg
                 errmsg = '[ERROR %s] unable to authorize current user' % h.host()
                 print >> sys.stderr, errmsg
-            else:
-                if isExistingHost:
-                    # Now extract the .ssh files from the tarball into the
-                    # host-specific directory
-                    tarfileName = os.path.join(tempDir, '%s.tar' % h.host())
-                    hostDir = os.path.join(tempDir, h.host())
-                    os.mkdir(hostDir)
-                    cmd = 'cd %s && tar xf %s' % (hostDir, tarfileName)
-                    if GV.opt['-v']: print '[INFO %s]: %s' % (h.host(), cmd)
-                    tarproc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    (tarout, tarerr) = tarproc.communicate()
-                    if tarproc.returncode != 0:
-                        print >> sys.stderr, '[WARNING %s] cannot extract SSH files;' % h.host()
-                        for line in tarerr.splitlines():
-                            print >> sys.stderr, '    ', line
-                        print >> sys.stderr, '    One or more existing authentication files may be replaced on %s' % h.host()
+                sys.exit(1)
 
-                    hostId = os.path.join(hostDir, 'id_rsa.pub')
-                    if os.path.exists(hostId) and not filecmp.cmp(GV.id_rsa_pub_fname, hostId):
-                        if not newKeys:
-                            newKeys = open(discovered_authorized_keys_file, 'w')
-                        print '  ...... appending %s ID to authorized_keys' % h.host()
-                        with open(hostId) as hostPub:
-                            for line in hostPub:
-                                newKeys.write(line)
-                            newKeys.flush()
+            if isExistingHost:
+                # Now extract the .ssh files from the tarball into the
+                # host-specific directory
+                tarfileName = os.path.join(tempDir, '%s.tar' % h.host())
+                hostDir = os.path.join(tempDir, h.host())
+                os.mkdir(hostDir)
+                cmd = 'cd %s && tar xf %s' % (hostDir, tarfileName)
+                if GV.opt['-v']: print '[INFO %s]: %s' % (h.host(), cmd)
+                tarproc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                (tarout, tarerr) = tarproc.communicate()
+                if tarproc.returncode != 0:
+                    print >> sys.stderr, '[WARNING %s] cannot extract SSH files;' % h.host()
+                    for line in tarerr.splitlines():
+                        print >> sys.stderr, '    ', line
+                    print >> sys.stderr, '    One or more existing authentication files may be replaced on %s' % h.host()
 
-                # Ensure the proper password-less access to the remote host.
-                if not testAccess(h.host()):
-                    errmsg = '*'  # message already issued
+                hostId = os.path.join(hostDir, 'id_rsa.pub')
+                if os.path.exists(hostId) and not filecmp.cmp(GV.id_rsa_pub_fname, hostId):
+                    if not newKeys:
+                        newKeys = open(discovered_authorized_keys_file, 'w')
+                    print '  ...... appending %s ID to authorized_keys' % h.host()
+                    with open(hostId) as hostPub:
+                        for line in hostPub:
+                            newKeys.write(line)
+                        newKeys.flush()
 
-            if errmsg: sys.exit(1)
+            # Ensure the proper password-less access to the remote host.
+            if not testAccess(h.host()):
+                sys.exit(1)
+
     finally:
         if newKeys:
             newKeys.close()

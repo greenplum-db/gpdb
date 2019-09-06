@@ -19,7 +19,7 @@ ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varnam
    SET SCHEMA <varname>new_schema</varname></codeblock><p>where
           <varname>action</varname> is one
       of:</p><codeblock>{CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT}
-{IMMUTABLE | STABLE | VOLATILE}
+{IMMUTABLE | STABLE | VOLATILE | [ NOT ] LEAKPROOF}
 {[EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER}
 EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
 COST <varname>execution_cost</varname>
@@ -100,6 +100,11 @@ RESET ALL</codeblock></section>
               FUNCTION</codeph> for more information about this capability.</pd>
         </plentry>
         <plentry>
+          <pt>LEAKPROOF</pt>
+          <pd> Change whether the function is considered leakproof or not. See <xref
+              href="CREATE_FUNCTION.xml#topic1"/> for more information about this capability. </pd>
+        </plentry>
+        <plentry>
           <pt>EXECUTE ON ANY</pt>
           <pt>EXECUTE ON MASTER</pt>
           <pt>EXECUTE ON ALL SEGMENTS</pt>
@@ -134,7 +139,8 @@ RESET ALL</codeblock></section>
               <codeph>RESET</codeph> is used, the function-local setting is removed, and the
             function executes with the value present in its environment. Use <codeph>RESET
               ALL</codeph> to clear all function-local settings. <codeph>SET FROM CURRENT</codeph>
-            applies the session's current value of the parameter when the function is entered.</pd>
+            saves the value of the parameter that is current when <codeph>ALTER FUNCTION</codeph> is
+            executed as the value to be applied when the function is entered.</pd>
         </plentry>
         <plentry>
           <pt>RESTRICT</pt>

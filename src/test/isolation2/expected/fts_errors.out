@@ -3,8 +3,6 @@
 -- Content 1 is used to test the gang interaction in various
 -- sessions when a failover is triggered and mirror is promoted
 -- to primary
-create extension if not exists gp_inject_fault;
-CREATE
 
 -- start_matchsubs
 -- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/
@@ -48,12 +46,19 @@ select count(*) from gp_segment_configuration where status = 'd';
  0     
 (1 row)
 
+drop table if exists fts_errors_test;
+DROP
+create table fts_errors_test(a int);
+CREATE
+
 1:BEGIN;
 BEGIN
 1:END;
 END
 2:BEGIN;
 BEGIN
+2:INSERT INTO fts_errors_test SELECT * FROM generate_series(1,100);
+INSERT 100
 3:BEGIN;
 BEGIN
 3:CREATE TEMP TABLE tmp3 (c1 int, c2 int);
@@ -93,7 +98,7 @@ server stopped
 select gp_inject_fault_infinite('get_dns_cached_address', 'skip', 1);
  gp_inject_fault_infinite 
 --------------------------
- t                        
+ Success:                 
 (1 row)
 
 -- trigger failover
@@ -122,7 +127,7 @@ select gp_request_fts_probe_scan();
 select gp_inject_fault('get_dns_cached_address', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 -- session 1: in no transaction and no temp table created, it's safe to
@@ -190,7 +195,7 @@ server stopped
 (1 row)
 
 -- fully recover the failed primary as new mirror
-!\retcode gprecoverseg -aF;
+!\retcode gprecoverseg -aF --no-progress;
 -- start_ignore
 -- end_ignore
 (exited with code 0)

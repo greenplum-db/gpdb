@@ -1,6 +1,3 @@
--- start_ignore
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
--- end_ignore
 select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';
  in_sync 
@@ -11,45 +8,40 @@ where content = 0 and mode = 's';
 -- Once this fault is hit, FTS process should abort current
 -- transaction and exit.
 select gp_inject_fault_infinite('fts_update_config', 'error', 1);
-NOTICE:  Success:
  gp_inject_fault_infinite 
 --------------------------
- t
+ Success:
 (1 row)
 
 -- FTS probe connection should encounter an error due to this fault,
 -- injected on content 0 primary.
 select gp_inject_fault_infinite('fts_handle_message', 'error', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
-NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=23250)
  gp_inject_fault_infinite 
 --------------------------
- t
+ Success:
 (1 row)
 
 -- Upon failure to probe content 0 primary, FTS will try to update the
 -- configuration.  The update to configuration will hit error due to
 -- the "fts_update_config" fault.
 select gp_wait_until_triggered_fault('fts_update_config', 1, 1);
-NOTICE:  Success:
  gp_wait_until_triggered_fault 
 -------------------------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('fts_handle_message', 'reset', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
-NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=23250)
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 select gp_inject_fault('fts_update_config', 'reset', 1);
-NOTICE:  Success:
  gp_inject_fault 
 -----------------
- t
+ Success:
 (1 row)
 
 -- Postmaster should have restarted FTS by now. Trigger a scan and

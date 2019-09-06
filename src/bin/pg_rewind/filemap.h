@@ -56,6 +56,7 @@ typedef struct file_entry_t
 
 	/* for a symlink */
 	char	   *link_target;
+	bool 		is_gp_tablespace;
 
 	struct file_entry_t *next;
 } file_entry_t;

@@ -5,7 +5,7 @@
  *	  clients and standalone backends are supported here).
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -122,7 +122,7 @@ SetRemoteDestReceiverParams(DestReceiver *self, Portal portal)
 }
 
 static void
-printtup_startup(DestReceiver *self, int operation __attribute__((unused)), TupleDesc typeinfo)
+printtup_startup(DestReceiver *self, int operation pg_attribute_unused(), TupleDesc typeinfo)
 {
 	DR_printtup *myState = (DR_printtup *) self;
 	Portal		portal = myState->portal;
@@ -729,7 +729,7 @@ printatt(unsigned attributeId,
  * ----------------
  */
 void
-debugStartup(DestReceiver *self __attribute__((unused)), int operation __attribute__((unused)), TupleDesc typeinfo)
+debugStartup(DestReceiver *self pg_attribute_unused(), int operation pg_attribute_unused(), TupleDesc typeinfo)
 {
 	int			natts = typeinfo->natts;
 	Form_pg_attribute *attinfo = typeinfo->attrs;
@@ -748,7 +748,7 @@ debugStartup(DestReceiver *self __attribute__((unused)), int operation __attribu
  * ----------------
  */
 void
-debugtup(TupleTableSlot *slot, DestReceiver *self __attribute__((unused)))
+debugtup(TupleTableSlot *slot, DestReceiver *self pg_attribute_unused())
 {
 	TupleDesc	typeinfo = slot->tts_tupleDescriptor;
 	int			natts = typeinfo->natts;

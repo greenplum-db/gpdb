@@ -49,6 +49,14 @@ ExecInitDynamicSeqScan(DynamicSeqScan *node, EState *estate, int eflags)
 
 	state->scan_state = SCAN_INIT;
 
+	/* Initialize child expressions. This is needed to find subplans. */
+	state->ss.ps.qual = (List *)
+		ExecInitExpr((Expr *) node->seqscan.plan.qual,
+					 (PlanState *) state);
+	state->ss.ps.targetlist = (List *)
+		ExecInitExpr((Expr *) node->seqscan.plan.targetlist,
+					 (PlanState *) state);
+
 	/* Initialize result tuple type. */
 	ExecInitResultTupleSlot(estate, &state->ss.ps);
 	ExecAssignResultTypeFromTL(&state->ss.ps);

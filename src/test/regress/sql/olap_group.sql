@@ -437,7 +437,7 @@ select a,b from (select 1 as a , 2 as b) r(a,b) group by rollup(a,b);
 select dt,pn,cn,GROUP_ID(), count(prc) FROM sale GROUP BY ROLLUP((dt)),ROLLUP((cn)),ROLLUP((vn)),ROLLUP((pn),(cn));
 
 --start_equiv
-select vn,cn,dt,0,REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY pn,qty,vn,cn,dt
+select vn,cn,dt,0 as group_id,REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY pn,qty,vn,cn,dt
 union all select vn,cn,dt,1,REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY pn,qty,vn,cn,dt;
 select vn,cn,dt,GROUP_ID(), REGR_COUNT(prc*qty,prc*qty) FROM sale GROUP BY (pn,qty),(vn),ROLLUP((qty)),cn,dt;
 --end_equiv
@@ -636,3 +636,16 @@ insert into test_gsets values (0, 0), (0, 1), (0,2);
 select i,n,count(*), grouping(i), grouping(n), grouping(i,n) from test_gsets group by grouping sets((), (i,n)) having n is null;
 
 select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets(x,y) having x is not null;
+
+
+-- GROUPING SETS meets subplan [issue 8342]
+create table foo_gset(a int);
+create table bar_gset(b int);
+
+insert into foo_gset select i from generate_series(1,10)i;
+insert into bar_gset select i from generate_series(1,10)i;
+
+select a, (select b from bar_gset where foo_gset.a = bar_gset.b) from foo_gset group by rollup(a) order by 1,2;
+
+drop table foo_gset;
+drop table bar_gset;

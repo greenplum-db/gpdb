@@ -11,7 +11,7 @@
  * bms_is_empty() in preference to testing for NULL.)
  *
  *
- * Copyright (c) 2003-2014, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2015, PostgreSQL Global Development Group
  *
  * src/include/nodes/bitmapset.h
  *
@@ -28,13 +28,12 @@
 #define BITS_PER_BITMAPWORD 32
 typedef uint32 bitmapword;		/* must be an unsigned type */
 typedef int32 signedbitmapword; /* must be the matching signed type */
-#define BITS_PER_BITMAPWORD_LOG2    5
 
 typedef struct Bitmapset
 {
 	int			nwords;			/* number of words in array */
-	bitmapword	words[1];		/* really [nwords] */
-} Bitmapset;					/* VARIABLE LENGTH STRUCT */
+	bitmapword	words[FLEXIBLE_ARRAY_MEMBER];	/* really [nwords] */
+} Bitmapset;
 
 
 /* result of bms_subset_compare */
@@ -74,6 +73,7 @@ extern bool bms_is_member(int x, const Bitmapset *a);
 extern bool bms_overlap(const Bitmapset *a, const Bitmapset *b);
 extern bool bms_nonempty_difference(const Bitmapset *a, const Bitmapset *b);
 extern int	bms_singleton_member(const Bitmapset *a);
+extern bool bms_get_singleton_member(const Bitmapset *a, int *member);
 extern int	bms_num_members(const Bitmapset *a);
 
 /* optimized tests when we don't need to know exact membership count: */

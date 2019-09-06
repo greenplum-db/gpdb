@@ -29,8 +29,11 @@ reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo)
  * In GPDB, they're exported.
  */
 extern TupleTableSlot *
-ExecInsert(TupleTableSlot *slot,
+ExecInsert(ModifyTableState *mtstate,
+		   TupleTableSlot *parentslot,
 		   TupleTableSlot *planSlot,
+		   List *arbiterIndexes,
+		   OnConflictAction onconflict,
 		   EState *estate,
 		   bool canSetTag,
 		   PlanGenerator planGen,

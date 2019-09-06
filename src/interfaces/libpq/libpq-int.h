@@ -10,7 +10,7 @@
  *	  only the official API.
  *
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/interfaces/libpq/libpq-int.h
@@ -74,14 +74,14 @@ typedef struct
 #endif
 #endif   /* ENABLE_SSPI */
 
-#ifdef USE_SSL
+#ifdef USE_OPENSSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
 #if (OPENSSL_VERSION_NUMBER >= 0x00907000L) && !defined(OPENSSL_NO_ENGINE)
 #define USE_SSL_ENGINE
 #endif
-#endif   /* USE_SSL */
+#endif   /* USE_OPENSSL */
 
 /*
  * POSTGRES backend dependent Constants.
@@ -157,7 +157,7 @@ typedef struct pgMessageField
 {
 	struct pgMessageField *next;	/* list link */
 	char		code;			/* field code */
-	char		contents[1];	/* field value (VARIABLE LENGTH) */
+	char		contents[FLEXIBLE_ARRAY_MEMBER];		/* value, nul-terminated */
 } PGMessageField;
 
 /* Fields needed for notice handling */
@@ -241,11 +241,11 @@ struct pg_result
     int	   extraslen;
 
 	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
-	int			numRejected;
+	int64		numRejected;
 	/* GPDB: number of rows completed when COPY FROM ON SEGMENT */
 	int64		numCompleted;
 	/* GPDB: number of processed tuples for each AO partition */
-	int			naotupcounts;
+	int			naotupcounts;   /* number of aotupcounts, the count in it is an int64 */
 	PQaoRelTupCount *aotupcounts;
 };
 
@@ -469,12 +469,16 @@ struct pg_conn
 	PGresult   *result;			/* result being constructed */
 	PGresult   *next_result;	/* next result (used in single-row mode) */
 
+	char		wrote_xlog;
+
 	/* Assorted state for SSL, GSS, etc */
 
 #ifdef USE_SSL
 	bool		allow_ssl_try;	/* Allowed to try SSL negotiation */
 	bool		wait_ssl_try;	/* Delay SSL negotiation until after
 								 * attempting normal connection */
+	bool		ssl_in_use;
+#ifdef USE_OPENSSL
 	SSL		   *ssl;			/* SSL status, if have SSL connection */
 	X509	   *peer;			/* X509 cert of server */
 #ifdef USE_SSL_ENGINE
@@ -483,6 +487,7 @@ struct pg_conn
 	void	   *engine;			/* dummy field to keep struct the same if
 								 * OpenSSL version changes */
 #endif
+#endif   /* USE_OPENSSL */
 #endif   /* USE_SSL */
 
 #ifdef ENABLE_GSS
@@ -530,6 +535,24 @@ struct pg_cancel
  */
 extern char *const pgresStatus[];
 
+
+#ifdef USE_SSL
+
+#ifndef WIN32
+#define USER_CERT_FILE		".postgresql/postgresql.crt"
+#define USER_KEY_FILE		".postgresql/postgresql.key"
+#define ROOT_CERT_FILE		".postgresql/root.crt"
+#define ROOT_CRL_FILE		".postgresql/root.crl"
+#else
+/* On Windows, the "home" directory is already PostgreSQL-specific */
+#define USER_CERT_FILE		"postgresql.crt"
+#define USER_KEY_FILE		"postgresql.key"
+#define ROOT_CERT_FILE		"root.crt"
+#define ROOT_CRL_FILE		"root.crl"
+#endif
+
+#endif   /* USE_SSL */
+
 /* ----------------
  * Internal functions of libpq
  * Functions declared here need to be visible across files of libpq,
@@ -572,10 +595,7 @@ extern char *pqResultStrdup(PGresult *res, const char *str);
 extern void pqClearAsyncResult(PGconn *conn);
 extern void pqSaveErrorResult(PGconn *conn);
 extern PGresult *pqPrepareAsyncResult(PGconn *conn);
-extern void
-pqInternalNotice(const PGNoticeHooks *hooks, const char *fmt,...)
-/* This lets gcc check the format string for consistency. */
-__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
+extern void pqInternalNotice(const PGNoticeHooks *hooks, const char *fmt,...) pg_attribute_printf(2, 3);
 extern void pqSaveMessageField(PGresult *res, char code,
 				   const char *value);
 extern void pqSaveParameterStatus(PGconn *conn, const char *name,
@@ -657,6 +677,8 @@ extern PostgresPollingStatusType pqsecure_open_client(PGconn *);
 extern void pqsecure_close(PGconn *);
 extern ssize_t pqsecure_read(PGconn *, void *ptr, size_t len);
 extern ssize_t pqsecure_write(PGconn *, const void *ptr, size_t len);
+extern ssize_t pqsecure_raw_read(PGconn *, void *ptr, size_t len);
+extern ssize_t pqsecure_raw_write(PGconn *, const void *ptr, size_t len);
 
 #if defined(ENABLE_THREAD_SAFETY) && !defined(WIN32)
 extern int	pq_block_sigpipe(sigset_t *osigset, bool *sigpipe_pending);
@@ -665,17 +687,28 @@ extern void pq_reset_sigpipe(sigset_t *osigset, bool sigpipe_pending,
 #endif
 
 /*
+ * The SSL implementatation provides these functions (fe-secure-openssl.c)
+ */
+extern void pgtls_init_library(bool do_ssl, int do_crypto);
+extern int	pgtls_init(PGconn *conn);
+extern PostgresPollingStatusType pgtls_open_client(PGconn *conn);
+extern void pgtls_close(PGconn *conn);
+extern ssize_t pgtls_read(PGconn *conn, void *ptr, size_t len);
+extern bool pgtls_read_pending(PGconn *conn);
+extern ssize_t pgtls_write(PGconn *conn, const void *ptr, size_t len);
+
+/*
  * this is so that we can check if a connection is non-blocking internally
  * without the overhead of a function call
  */
 #define pqIsnonblocking(conn)	((conn)->nonblocking)
 
 #ifdef ENABLE_NLS
-extern char *
-libpq_gettext(const char *msgid)
-__attribute__((format_arg(1)));
+extern char *libpq_gettext(const char *msgid) pg_attribute_format_arg(1);
+extern char *libpq_ngettext(const char *msgid, const char *msgid_plural, unsigned long n) pg_attribute_format_arg(1) pg_attribute_format_arg(2);
 #else
 #define libpq_gettext(x) (x)
+#define libpq_ngettext(s, p, n) ((n) == 1 ? (s) : (p))
 #endif
 
 /*

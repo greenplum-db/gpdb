@@ -14,7 +14,7 @@
  * hard postmaster crash, remaining segments will be removed, if they
  * still exist, at the next postmaster startup.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -225,7 +225,7 @@ dsm_cleanup_using_control_segment(dsm_handle old_control_handle)
 	/*
 	 * Try to attach the segment.  If this fails, it probably just means that
 	 * the operating system has been rebooted and the segment no longer
-	 * exists, or an unrelated proces has used the same shm ID.  So just fall
+	 * exists, or an unrelated process has used the same shm ID.  So just fall
 	 * out quietly.
 	 */
 	if (!dsm_impl_op(DSM_OP_ATTACH, old_control_handle, 0, &impl_private,
@@ -454,9 +454,9 @@ dsm_set_control_handle(dsm_handle h)
  * Create a new dynamic shared memory segment.
  */
 dsm_segment *
-dsm_create(Size size)
+dsm_create(Size size, int flags)
 {
-	dsm_segment *seg = dsm_create_descriptor();
+	dsm_segment *seg;
 	uint32		i;
 	uint32		nitems;
 
@@ -465,6 +465,9 @@ dsm_create(Size size)
 
 	if (!dsm_init_done)
 		dsm_backend_startup();
+
+	/* Create a new segment descriptor. */
+	seg = dsm_create_descriptor();
 
 	/* Loop until we find an unused segment identifier. */
 	for (;;)
@@ -496,9 +499,22 @@ dsm_create(Size size)
 
 	/* Verify that we can support an additional mapping. */
 	if (nitems >= dsm_control->maxitems)
+	{
+		if ((flags & DSM_CREATE_NULL_IF_MAXSEGMENTS) != 0)
+		{
+			LWLockRelease(DynamicSharedMemoryControlLock);
+			dsm_impl_op(DSM_OP_DESTROY, seg->handle, 0, &seg->impl_private,
+						&seg->mapped_address, &seg->mapped_size, WARNING);
+			if (seg->resowner != NULL)
+				ResourceOwnerForgetDSM(seg->resowner, seg);
+			dlist_delete(&seg->node);
+			pfree(seg);
+			return NULL;
+		}
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
 				 errmsg("too many dynamic shared memory segments")));
+	}
 
 	/* Enter the handle into a new array slot. */
 	dsm_control->item[nitems].handle = seg->handle;
@@ -793,6 +809,24 @@ dsm_pin_mapping(dsm_segment *seg)
 		ResourceOwnerForgetDSM(seg->resowner, seg);
 		seg->resowner = NULL;
 	}
+}
+
+/*
+ * Arrange to remove a dynamic shared memory mapping at cleanup time.
+ *
+ * dsm_pin_mapping() can be used to preserve a mapping for the entire
+ * lifetime of a process; this function reverses that decision, making
+ * the segment owned by the current resource owner.  This may be useful
+ * just before performing some operation that will invalidate the segment
+ * for future use by this backend.
+ */
+void
+dsm_unpin_mapping(dsm_segment *seg)
+{
+	Assert(seg->resowner == NULL);
+	ResourceOwnerEnlargeDSMs(CurrentResourceOwner);
+	seg->resowner = CurrentResourceOwner;
+	ResourceOwnerRememberDSM(seg->resowner, seg);
 }
 
 /*

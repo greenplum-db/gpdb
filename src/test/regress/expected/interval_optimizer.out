@@ -261,7 +261,7 @@ SELECT f1 FROM INTERVAL_TBL_OF r1 ORDER BY f1;
    ->  Sort
          Sort Key: f1
          ->  Seq Scan on interval_tbl_of
- Optimizer: PQO version 3.9.0
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (6 rows)
 
 SELECT f1 FROM INTERVAL_TBL_OF r1 ORDER BY f1;
@@ -685,16 +685,6 @@ SELECT interval '12:34.5678' minute to second(2);  -- per SQL spec
  00:12:34.57
 (1 row)
 
-SELECT interval(2) '12:34.5678' minute to second;  -- historical PG
-  interval   
--------------
- 00:12:34.57
-(1 row)
-
-SELECT interval(2) '12:34.5678' minute to second(2);  -- syntax error
-ERROR:  interval precision specified twice
-LINE 1: SELECT interval(2) '12:34.5678' minute to second(2);
-               ^
 SELECT interval '1.234' second;
    interval   
 --------------

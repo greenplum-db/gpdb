@@ -1,0 +1,12 @@
+if gpfdist runs on a remote server, we can run gpdb on a linux
+server, then run the regress test cases in this folder on the linux
+server to test if the gpfdist can work well.
+
+Now we just support gpfdist on a remote windows server.
+make installcheck_win can test gpfdist of windows.
+Need to export REMOTE_HOST, REMOTE_PORT, REMOTE_USER, REMOTE_KEY
+MASTER_DATA_DIRECTORY, PG_PORT before running these test cases.
+
+The scripts of start_gpfdist_remote_win are used to start and stop gpfdist runing on windows.
+If you want to test gpfdist on another os,such as aix, you can create a forlder named
+start_gpfdist_remote_aix and add some scripts to start and stop gpfdist.

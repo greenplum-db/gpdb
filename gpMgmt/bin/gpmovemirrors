@@ -24,8 +24,7 @@ try:
     from pygresql.pgdb import DatabaseError
     from pygresql import pg
     from gppylib import gparray, gplog, pgconf, userinput, utils
-    from gppylib.parseutils import line_reader, parse_gpmovemirrors_line, \
-        canonicalize_address
+    from gppylib.parseutils import line_reader, check_values, canonicalize_address
 
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -48,7 +47,7 @@ EXECNAME = os.path.split(__file__)[-1]
 _help = ["""
 The input file should be a plain text file with the format:
 
-  <old_address>:<port>:<datadir> <new_address:port>:<datadir>
+  <old_address>|<port>|<datadir> <new_address>|<port>|<datadir>
 
 """,
          """
@@ -176,31 +175,15 @@ def lookupGpdb(address, port, dataDirectory):
 
 
 # -------------------------------------------------------------------------
-def lookupFilespaces(gpdb):
-    """ Look up the segment's filespaces, and return map of filespace name : location. """
-
-    retValue = {}
-    gpdbFilespaceDict = gpdb.getSegmentFilespaces()
-
-    for oid in gpdbFilespaceDict:
-        if oid == SYSTEM_FILESPACE:
-            continue
-        name = gpArrayInstance.getFileSpaceName(oid)
-        location = gpdbFilespaceDict[oid]
-        retValue[name] = location
-    return retValue
-
-
-# -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 class Mirror:
     """ This class represents information about a mirror. """
 
-    def __init__(self, address, port, dataDirectory, filespaces):
+    def __init__(self, address, port, dataDirectory, inPlace=False):
         self.address = address
         self.port = port
         self.dataDirectory = dataDirectory
-        self.filespaces = filespaces
+        self.inPlace = inPlace
 
     def __str__(self):
         tempStr = "address = " + str(self.address) + '\n'
@@ -217,47 +200,63 @@ class Configuration:
     def __init__(self):
         self.inputFile = None
         self.fileData = None
-        self.filespaceNames = []
         self.oldMirrorList = []
         self.newMirrorList = []
+
+    def _getParsedRow(self, lineno, line):
+        groups = line.split() # NOT line.split(' ') due to MPP-15675
+        if len(groups) != 2:
+            raise ExceptionNoStackTraceNeeded("expected 2 groups but found %d" % len(groups))
+        oldParts = groups[0].split('|')
+        newParts = groups[1].split('|')
+        if len(oldParts) != 3 or len(newParts) != 3:
+            msg = "expected 3 parts in old and new groups, got %d and %d" % (oldParts, newParts)
+            raise ExceptionNoStackTraceNeeded(msg)
+        oldAddress, oldPort, oldDataDirectory = oldParts
+        newAddress, newPort, newDataDirectory = newParts
+        check_values(lineno, address=oldAddress, port=oldPort, datadir=oldDataDirectory)
+        check_values(lineno, address=newAddress, port=newPort, datadir=newDataDirectory)
+
+        return (oldAddress, oldPort, oldDataDirectory), (newAddress, newPort, newDataDirectory)
 
     def read_input_file(self, inputFile):
         self.inputFile = inputFile
 
         with open(inputFile) as f:
-
             for lineno, line in line_reader(f):
-                rowMap, newFilespaces = parse_gpmovemirrors_line(inputFile, lineno, line)
+                try:
+                    (oldAddress, oldPort, oldDataDirectory), (newAddress, newPort, newDataDirectory) = \
+                        self._getParsedRow(lineno, line)
 
-                oldAddress = rowMap['oldAddress']
-                oldPort = rowMap['oldPort']
-                oldDataDirectory = rowMap['oldDataDirectory']
-                oldGpdb = lookupGpdb(oldAddress, oldPort, oldDataDirectory)
-                if oldGpdb is None or oldGpdb.getSegmentRole() != ROLE_MIRROR:
-                    if oldGpdb is None:
-                        raise Exception(
-                            "Old mirror segment does not exist with given information: address = %s, port = %s, segment data directory = %s"
-                            % (oldAddress, str(oldPort), oldDataDirectory))
-                    else:
-                        raise Exception(
-                            "Old mirror segment is not currently in a mirror role: address = %s, port = %s, segment data directory = %s"
-                            % (oldAddress, str(oldPort), oldDataDirectory))
-                oldFilespaces = lookupFilespaces(oldGpdb)
-                oldMirror = Mirror(address=oldAddress
-                                   , port=oldPort
-                                   , dataDirectory=oldDataDirectory
-                                   , filespaces=oldFilespaces
-                                   )
-                self.oldMirrorList.append(oldMirror)
-                newAddress = rowMap['newAddress']
-                newPort = rowMap['newPort']
-                newDataDirectory = rowMap['newDataDirectory']
-                newMirror = Mirror(address=newAddress
-                                   , port=newPort
-                                   , dataDirectory=newDataDirectory
-                                   , filespaces=newFilespaces
-                                   )
-                self.newMirrorList.append(newMirror)
+                    oldGpdb = lookupGpdb(oldAddress, oldPort, oldDataDirectory)
+                    if oldGpdb is None or oldGpdb.getSegmentRole() != ROLE_MIRROR:
+                        if oldGpdb is None:
+                            raise Exception(
+                                "Old mirror segment does not exist with given information: address = %s, port = %s, segment data directory = %s"
+                                % (oldAddress, str(oldPort), oldDataDirectory))
+                        else:
+                            raise Exception(
+                                "Old mirror segment is not currently in a mirror role: address = %s, port = %s, segment data directory = %s"
+                                % (oldAddress, str(oldPort), oldDataDirectory))
+                    inPlace = (oldAddress == newAddress and oldDataDirectory == newDataDirectory)
+                    if inPlace and oldPort == newPort:
+                        logger.warn("input file %s contained request to move a mirror with identical attributes (%s, %s, %s)"
+                                    % (inputFile, newAddress, str(newPort), newDataDirectory))
+                    oldMirror = Mirror(address=oldAddress
+                                       , port=oldPort
+                                       , dataDirectory=oldDataDirectory
+                                       , inPlace=inPlace
+                                       )
+                    newMirror = Mirror(address=newAddress
+                                       , port=newPort
+                                       , dataDirectory=newDataDirectory
+                                       )
+                    self.oldMirrorList.append(oldMirror)
+                    self.newMirrorList.append(newMirror)
+                except ValueError:
+                    raise ValueError('Missing or invalid value on line %d of file: %s.' % (line, inputFile))
+                except Exception, e:
+                    raise Exception('Invalid input file on line %d of file %s: %s' % (line, inputFile, str(e)))
 
     def write_output_file(self, filename, oldToNew=True):
         """ Write out the configuration in a format appropriate for use with the -i option. """
@@ -273,10 +272,10 @@ class Configuration:
             oldEntry = firstList[i]
             newEntry = secondList[i]
             line = canonicalize_address(oldEntry.address) + \
-                   ":" + str(oldEntry.port) + ":" + oldEntry.dataDirectory
+                   "|" + str(oldEntry.port) + "|" + oldEntry.dataDirectory
             line = line + " "
             line = line + canonicalize_address(newEntry.address) + \
-                   ":" + str(newEntry.port) + ":" + newEntry.dataDirectory
+                   "|" + str(newEntry.port) + "|" + newEntry.dataDirectory
             line = line + '\n'
             fp.write(line)
 
@@ -365,22 +364,16 @@ try:
     cmd.run(validateAfter=True)
 
     """ Delete old mirror directories. """
-    totalDirsToDelete = len(newConfig.oldMirrorList)
+    mirrorsToDelete = [mirror for mirror in newConfig.oldMirrorList if not mirror.inPlace]
+    totalDirsToDelete = len(mirrorsToDelete)
     numberOfWorkers = min(totalDirsToDelete, options.batch_size)
     if numberOfWorkers > 1:
         pool = WorkerPool(numWorkers=numberOfWorkers)
-        for mirror in newConfig.oldMirrorList:
+        for mirror in mirrorsToDelete:
             logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
             cmd = RemoveDirectory("remove old mirror segment directories", mirror.dataDirectory, ctxt=REMOTE,
                                   remoteHost=mirror.address)
             pool.addCommand(cmd)
-            for filespaceName in mirror.filespaces.keys():
-                logger.info(
-                    "About to remove old mirror filespace directory: " + filespaceName + " : " + mirror.filespaces[
-                        filespaceName])
-                cmd = RemoveDirectory("remove old mirror segment directories", mirror.filespaces[filespaceName],
-                                      ctxt=REMOTE, remoteHost=mirror.address)
-                pool.addCommand(cmd)
 
         # Wait for the segments to finish
         try:

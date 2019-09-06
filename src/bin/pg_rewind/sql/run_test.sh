@@ -20,6 +20,8 @@
 #  standby_following_master - runs after standby has been created and started
 #  after_promotion - runs after standby has been promoted, but old master is
 #                    still running
+#  before_master_restart_after_rewind - runs after pg_rewind executes and the
+#                    master has not been restarted
 #  after_rewind    - runs after pg_rewind and after restarting the rewound
 #                    old master
 #
@@ -33,7 +35,6 @@ initdb --data-checksums -N -A trust -D $TEST_MASTER >>$log_path 2>&1
 
 # Custom parameters for master's postgresql.conf
 cat >> $TEST_MASTER/postgresql.conf <<EOF
-checkpoint_segments = 50
 shared_buffers = 1MB
 max_connections = 50
 listen_addresses = '$LISTEN_ADDRESSES'
@@ -45,6 +46,12 @@ cat >> $TEST_MASTER/pg_hba.conf <<EOF
 local replication all trust
 host replication all 127.0.0.1/32 trust
 host replication all ::1/128 trust
+EOF
+
+# We have to specify the master's dbid explicitly because initdb only creates an
+# empty file. gpconfigurenewseg is tasked with populating the master's dbid.
+cat >> $TEST_MASTER/internal.auto.conf <<EOF
+gp_dbid=${MASTER_DBID}
 EOF
 
 #### Now run the test-specific parts to initialize the master before setting
@@ -61,7 +68,8 @@ declare -F before_standby > /dev/null && before_standby
 rm -rf $TEST_STANDBY
 
 # Base backup is taken with xlog files included
-pg_basebackup -D $TEST_STANDBY -p $PORT_MASTER -x --target-gp-dbid 2 >>$log_path 2>&1
+pg_basebackup -D $TEST_STANDBY -p $PORT_MASTER -x --target-gp-dbid $STANDBY_DBID --verbose >>$log_path 2>&1
+
 echo "port = $PORT_STANDBY" >> $TEST_STANDBY/postgresql.conf
 
 cat > $TEST_STANDBY/recovery.conf <<EOF
@@ -153,6 +161,8 @@ primary_conninfo='port=$PORT_STANDBY'
 standby_mode=on
 recovery_target_timeline='latest'
 EOF
+
+declare -F before_master_restart_after_rewind > /dev/null && before_master_restart_after_rewind
 
 # Restart the master to check that rewind went correctly
 pg_ctl -w -D $TEST_MASTER start -o "$MASTER_PG_CTL_OPTIONS" >>$log_path 2>&1

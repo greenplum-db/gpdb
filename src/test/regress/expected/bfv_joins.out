@@ -669,7 +669,7 @@ explain select 1 as mrs_t1 where 1 <= ALL (select x from z);
      ->  Materialize  (cost=0.00..0.01 rows=1 width=4)
            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.00 rows=1 width=4)
                  ->  Seq Scan on z  (cost=0.00..0.00 rows=1 width=4)
- Optimizer status: legacy query optimizer
+ Optimizer status: Postgres query optimizer
 (7 rows)
 
 --
@@ -3091,7 +3091,7 @@ ON (member_group.group_id IN (12,13,14,15) AND member_subgroup.subgroup_name = r
                ->  Redistribute Motion 3:3  (slice4; segments: 3)
                      Hash Key: region.county_name
                      ->  Seq Scan on region
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (23 rows)
 
 -- Test colocated equijoins on coerced distribution keys
@@ -3107,7 +3107,7 @@ EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a=b.a;
          ->  Seq Scan on coercejoin a
          ->  Hash
                ->  Seq Scan on coercejoin b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 -- Negative test, the join should not be colocated since the cast is a coercion
@@ -3126,7 +3126,7 @@ EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a::numeric=
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: (b.a)::numeric
                      ->  Seq Scan on coercejoin b
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (11 rows)
 
 --
@@ -3151,7 +3151,7 @@ explain select * from nlj1, nlj2 where nlj1.a = nlj2.a;
          ->  Seq Scan on nlj1  (cost=0.00..2.02 rows=1 width=8)
          ->  Materialize  (cost=0.00..2.03 rows=1 width=8)
                ->  Seq Scan on nlj2  (cost=0.00..2.02 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 select * from nlj1, nlj2 where nlj1.a = nlj2.a;
@@ -3170,7 +3170,7 @@ explain select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
          ->  Materialize  (cost=0.00..2.13 rows=2 width=8)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.10 rows=2 width=8)
                      ->  Seq Scan on nlj2  (cost=0.00..2.02 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
@@ -3190,7 +3190,7 @@ explain select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is n
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.06 rows=1 width=8)
                      ->  Seq Scan on nlj1  (cost=0.00..2.02 rows=1 width=8)
                            Filter: (NOT (a IS DISTINCT FROM NULL::integer))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
@@ -3210,7 +3210,7 @@ explain select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;
          ->  Materialize  (cost=0.00..2.13 rows=2 width=8)
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.10 rows=2 width=8)
                      ->  Seq Scan on nlj2  (cost=0.00..2.02 rows=1 width=8)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (8 rows)
 
 select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;
@@ -3267,7 +3267,7 @@ set enable_nestloop=on;
 --                                  ->  Seq Scan on a
 --                      ->  Index Only Scan using c_i_j_idx on c
 --                            Index Cond: (j = (a.i + b.i)) [4]
---  Optimizer: legacy query optimizer
+--  Optimizer: Postgres query optimizer
 -- (14 rows)
 --
 -- The crucal parts are:
@@ -3301,7 +3301,7 @@ explain (costs off) select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;
                                  ->  Seq Scan on a
                      ->  Index Only Scan using c_i_j_idx on c
                            Index Cond: (j = (a.i + b.i))
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (14 rows)
 
 select * from a, b, c where b.i = a.i and (a.i + b.i) = c.j;

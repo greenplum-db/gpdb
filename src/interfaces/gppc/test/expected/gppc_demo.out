@@ -1,0 +1,920 @@
+set timezone=UTC;
+-- Data types testing
+DROP FUNCTION IF EXISTS oidcheckfunc(text);
+DROP FUNCTION IF EXISTS boolfunc(bool);
+DROP FUNCTION IF EXISTS charfunc("char");
+DROP FUNCTION IF EXISTS int2mulfunc(int2, int2);
+DROP FUNCTION IF EXISTS int4func1(int);
+DROP FUNCTION IF EXISTS int4func1();
+DROP FUNCTION IF EXISTS int4func1(int, int);
+DROP FUNCTION IF EXISTS int8plusfunc(int8, int8);
+DROP FUNCTION IF EXISTS float4func1(float4);
+DROP FUNCTION IF EXISTS float8func1(float8);
+DROP FUNCTION IF EXISTS textdoublefunc(text);
+DROP FUNCTION IF EXISTS textgenfunc();
+DROP FUNCTION IF EXISTS textcopyfunc(text, bool);
+DROP FUNCTION IF EXISTS varchardoublefunc(varchar);
+DROP FUNCTION IF EXISTS varchargenfunc();
+DROP FUNCTION IF EXISTS varcharcopyfunc(text, bool);
+DROP FUNCTION IF EXISTS bpchardoublefunc(char);
+DROP FUNCTION IF EXISTS bpchargenfunc();
+DROP FUNCTION IF EXISTS bpcharcopyfunc(text, bool);
+DROP FUNCTION IF EXISTS byteafunc1(bytea);
+DROP FUNCTION IF EXISTS byteafunc2(bytea);
+DROP FUNCTION IF EXISTS argisnullfunc(int);
+DROP FUNCTION IF EXISTS gppc_func_text(text,bool);
+DROP FUNCTION IF EXISTS gppc_func_text(text);
+DROP FUNCTION IF EXISTS gppc_func_text();
+DROP FUNCTION IF EXISTS gppc_func_varchar(varchar,bool);
+DROP FUNCTION IF EXISTS gppc_func_varchar(varchar);
+DROP FUNCTION IF EXISTS gppc_func_varchar();
+CREATE OR REPLACE FUNCTION oidcheckfunc(text) RETURNS int4 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION boolfunc(bool) RETURNS bool AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION charfunc("char") RETURNS "char" AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int2mulfunc(int2, int2) RETURNS int2 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int4func1(int) RETURNS int AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int4func1() RETURNS int AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int4func1(int, int) RETURNS int AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int8plusfunc(int8, int8) RETURNS int8 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION float4func1(float4) RETURNS float4 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION float8func1(float8) RETURNS float8 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION textdoublefunc(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION textgenfunc() RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION textcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION varchardoublefunc(varchar) RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION varchargenfunc() RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION varcharcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION bpchardoublefunc(char) RETURNS char AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION bpchargenfunc() RETURNS char AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION bpcharcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION byteafunc1(bytea) RETURNS bytea AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION byteafunc2(bytea) RETURNS bytea AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION argisnullfunc(int) RETURNS bool AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE;
+CREATE OR REPLACE FUNCTION gppc_func_text(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_text(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_text() RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_varchar(varchar, bool) RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_varchar(varchar) RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_varchar() RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+SELECT oidcheckfunc('bool'),
+        oidcheckfunc('char'),
+        oidcheckfunc('int2'),
+        oidcheckfunc('int4'),
+        oidcheckfunc('int8'),
+        oidcheckfunc('float4'),
+        oidcheckfunc('float8'),
+        oidcheckfunc('text'),
+        oidcheckfunc('varchar'),
+        oidcheckfunc('bpchar'),
+        oidcheckfunc('bytea'),
+        oidcheckfunc('numeric'),
+        oidcheckfunc('time'),
+        oidcheckfunc('timetz'),
+        oidcheckfunc('timestamp'),
+        oidcheckfunc('timestamptz');
+ oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc | oidcheckfunc 
+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------
+           16 |           18 |           21 |           23 |           20 |          700 |          701 |           25 |         1043 |         1042 |           17 |         1700 |         1083 |         1266 |         1114 |         1184
+(1 row)
+
+SELECT boolfunc(true and true);
+ boolfunc 
+----------
+ t
+(1 row)
+
+SELECT charfunc('a');
+ charfunc 
+----------
+ a
+(1 row)
+
+SELECT int2mulfunc(2::int2, 3::int2);
+ int2mulfunc 
+-------------
+           6
+(1 row)
+
+SELECT int4func1(10);
+ int4func1 
+-----------
+        10
+(1 row)
+
+SELECT int4func1();
+ int4func1 
+-----------
+         0
+(1 row)
+
+SELECT int4func1(11, 12);
+ int4func1 
+-----------
+        11
+(1 row)
+
+SELECT int8plusfunc(10000000000, 1);
+ int8plusfunc 
+--------------
+  10000000001
+(1 row)
+
+SELECT float4func1(4.2);
+ float4func1 
+-------------
+         5.7
+(1 row)
+
+SELECT float8func1(0.0000001);
+ float8func1 
+-------------
+       5e-08
+(1 row)
+
+SELECT textdoublefunc('bla');
+ textdoublefunc 
+----------------
+ blabla
+(1 row)
+
+SELECT textgenfunc();
+  textgenfunc   
+----------------
+ cstring result
+(1 row)
+
+SELECT textcopyfunc('white', true), textcopyfunc('white', false);
+ textcopyfunc | textcopyfunc 
+--------------+--------------
+ !hite        | white
+(1 row)
+
+SELECT varchardoublefunc('bla');
+ varchardoublefunc 
+-------------------
+ blabla
+(1 row)
+
+SELECT varchargenfunc();
+ varchargenfunc 
+----------------
+ cstring result
+(1 row)
+
+SELECT varcharcopyfunc('white', true), varcharcopyfunc('white', false);
+ varcharcopyfunc | varcharcopyfunc 
+-----------------+-----------------
+ !hite           | white
+(1 row)
+
+SELECT bpchardoublefunc('bla');
+ bpchardoublefunc 
+------------------
+ blabla
+(1 row)
+
+SELECT bpchargenfunc();
+ bpchargenfunc  
+----------------
+ cstring result
+(1 row)
+
+SELECT bpcharcopyfunc('white', true), bpcharcopyfunc('white', false);
+ bpcharcopyfunc | bpcharcopyfunc 
+----------------+----------------
+ !hite          | white
+(1 row)
+
+SELECT argisnullfunc(0), argisnullfunc(NULL);
+ argisnullfunc | argisnullfunc 
+---------------+---------------
+ f             | t
+(1 row)
+
+SELECT gppc_func_text();
+               gppc_func_text               
+--------------------------------------------
+ This gppc_func_text call has no arguments.
+(1 row)
+
+SELECT gppc_func_text('This is the first argument passed to the function.');
+                                             gppc_func_text                                             
+--------------------------------------------------------------------------------------------------------
+ This gppc_func_text call has one or more arguments. This is the first argument passed to the function.
+(1 row)
+
+SELECT gppc_func_text('white', true), gppc_func_text('black', false);
+                      gppc_func_text                       |                    gppc_func_text                    
+-----------------------------------------------------------+------------------------------------------------------
+ This gppc_func_text call has one or more arguments. white | This gppc_func_text call has one or more arguments. 
+(1 row)
+
+SELECT gppc_func_varchar();
+               gppc_func_varchar               
+-----------------------------------------------
+ This gppc_func_varchar call has no arguments.
+(1 row)
+
+SELECT gppc_func_varchar('This function has one argument.');
+                   gppc_func_varchar                    
+--------------------------------------------------------
+ This gppc_func_varchar call has one or more arguments.
+(1 row)
+
+SELECT gppc_func_text('This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.');
+                                                                                                                                                                                                                                                                                                           gppc_func_text                                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ This gppc_func_text call has one or more arguments. This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.
+(1 row)
+
+SELECT gppc_func_varchar('white', true), gppc_func_varchar('black', false);
+                   gppc_func_varchar                    |                   gppc_func_varchar                    
+--------------------------------------------------------+--------------------------------------------------------
+ This gppc_func_varchar call has one or more arguments. | This gppc_func_varchar call has one or more arguments.
+(1 row)
+
+SELECT byteafunc1(E'\\244\\233abc');
+  byteafunc1  
+--------------
+ \xa49b616263
+(1 row)
+
+SELECT byteafunc2(E'\\244\\233abc');
+  byteafunc2  
+--------------
+ \xa59b616263
+(1 row)
+
+-- Numeric type
+DROP FUNCTION IF EXISTS numericfunc1(numeric);
+DROP FUNCTION IF EXISTS numericfunc2(numeric);
+DROP FUNCTION IF EXISTS numericfunc3(float8);
+DROP FUNCTION IF EXISTS numericdef1(int4);
+CREATE OR REPLACE FUNCTION numericfunc1(numeric) RETURNS numeric AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION numericfunc2(numeric) RETURNS float8 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION numericfunc3(float8) RETURNS numeric AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION numericdef1(int4) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+DROP TABLE IF EXISTS numerictable;
+CREATE TABLE numerictable(
+	a numeric(5, 2),
+	b numeric(3),
+	c numeric
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT numericfunc1(1000);
+ numericfunc1 
+--------------
+         2000
+(1 row)
+
+SELECT numericfunc2(1000.00001);
+ numericfunc2 
+--------------
+   1000.00001
+(1 row)
+
+SELECT numericfunc3(1000.00001);
+ numericfunc3 
+--------------
+   1000.00001
+(1 row)
+
+SELECT attname, numericdef1(atttypmod) FROM pg_attribute
+	WHERE attrelid = 'numerictable'::regclass and atttypid = 'numeric'::regtype;
+ attname |  numericdef1  
+---------+---------------
+ a       | NUMERIC(5, 2)
+ b       | NUMERIC(3, 0)
+ c       | NUMERIC()
+(3 rows)
+
+-- Encoding name
+DROP FUNCTION IF EXISTS test_encoding_name(int);
+CREATE OR REPLACE FUNCTION test_encoding_name(int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE;
+SELECT
+       test_encoding_name(0),
+       test_encoding_name(1),
+       test_encoding_name(2),
+       test_encoding_name(3),
+       test_encoding_name(4),
+       test_encoding_name(5),
+       test_encoding_name(6),
+       test_encoding_name(7),
+       test_encoding_name(8),
+       test_encoding_name(9),
+       test_encoding_name(10),
+       test_encoding_name(11),
+       test_encoding_name(12),
+       test_encoding_name(13),
+       test_encoding_name(14),
+       test_encoding_name(15),
+       test_encoding_name(16),
+       test_encoding_name(17),
+       test_encoding_name(18),
+       test_encoding_name(19),
+       test_encoding_name(20),
+       test_encoding_name(21),
+       test_encoding_name(22),
+       test_encoding_name(23),
+       test_encoding_name(24),
+       test_encoding_name(25),
+       test_encoding_name(26),
+       test_encoding_name(27),
+       test_encoding_name(28),
+       test_encoding_name(29),
+       test_encoding_name(30),
+       test_encoding_name(31),
+       test_encoding_name(32),
+       test_encoding_name(33),
+       test_encoding_name(34);
+ test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name | test_encoding_name 
+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------
+ SQL_ASCII          | EUC_JP             | EUC_CN             | EUC_KR             | EUC_TW             | EUC_JIS_2004       | UTF8               | MULE_INTERNAL      | LATIN1             | LATIN2             | LATIN3             | LATIN4             | LATIN5             | LATIN6             | LATIN7             | LATIN8             | LATIN9             | LATIN10            | WIN1256            | WIN1258            | WIN866             | WIN874             | KOI8R              | WIN1251            | WIN1252            | ISO_8859_5         | ISO_8859_6         | ISO_8859_7         | ISO_8859_8         | WIN1250            | WIN1253            | WIN1254            | WIN1255            | WIN1257            | KOI8U
+(1 row)
+
+-- Error function and error callback
+DROP FUNCTION IF EXISTS errfunc1(text);
+DROP FUNCTION IF EXISTS errfunc_varchar(varchar);
+DROP FUNCTION IF EXISTS errfunc_bpchar(char);
+DROP FUNCTION IF EXISTS errorcallbackfunc1(text);
+CREATE OR REPLACE FUNCTION errfunc1(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION errfunc_varchar(varchar) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION errfunc_bpchar(char) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION errorcallbackfunc1(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+SELECT errfunc1('The quick brown fox jumps over the lazy dog');
+NOTICE:  The quick brown fox jumps over the lazy dog
+ errfunc1 
+----------
+ 
+(1 row)
+
+SELECT errfunc_varchar('This is to test INFO message using varchar.');
+INFO:  This is to test INFO message using varchar.
+ errfunc_varchar 
+-----------------
+ 
+(1 row)
+
+SELECT errfunc_bpchar('This is to test WARNING message using bpchar.');
+WARNING:  This is to test WARNING message using bpchar.
+ errfunc_bpchar 
+----------------
+ 
+(1 row)
+
+SELECT errorcallbackfunc1('warning');
+WARNING:  warning emit
+ errorcallbackfunc1 
+--------------------
+ xxxxxxx
+(1 row)
+
+SELECT errorcallbackfunc1('error');
+INFO:  inside callback: error
+ERROR:  error emit
+SELECT errorcallbackfunc1('notice'); 
+INFO:  inside callback message is: notice emit
+NOTICE:  notice emit
+ errorcallbackfunc1 
+--------------------
+ notice
+(1 row)
+
+-- Date and timestamp
+DROP FUNCTION IF EXISTS datefunc1_nochange(date);
+DROP FUNCTION IF EXISTS datefunc1(date);
+DROP FUNCTION IF EXISTS datefunc2(date);
+DROP FUNCTION IF EXISTS datefunc3_year(date);
+DROP FUNCTION IF EXISTS datefunc3_mon(date);
+DROP FUNCTION IF EXISTS datefunc3_mday(date);
+DROP FUNCTION IF EXISTS timefunc1(time);
+DROP FUNCTION IF EXISTS timetzfunc1(timetz);
+DROP FUNCTION IF EXISTS timestampfunc1(timestamp);
+DROP FUNCTION IF EXISTS timestamptzfunc1(timestamptz);
+CREATE OR REPLACE FUNCTION datefunc1_nochange(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc1(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc2(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc3_year(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc3_mon(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc3_mday(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION timefunc1(time) RETURNS time AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION timetzfunc1(timetz) RETURNS timetz AS '$libdir/gppc_test' LANGUAGE c STABLE STRICT;
+CREATE OR REPLACE FUNCTION timestampfunc1(timestamp) RETURNS timestamp AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION timestamptzfunc1(timestamptz) RETURNS timestamptz AS '$libdir/gppc_test' LANGUAGE c STABLE STRICT;
+SELECT datefunc1_nochange('1900-01-01');
+ datefunc1_nochange 
+--------------------
+ 01-01-1900
+(1 row)
+
+SELECT datefunc1('1898-12-31');
+ datefunc1  
+------------
+ 02-01-1900
+(1 row)
+
+SELECT datefunc1('2012-02-29');
+ datefunc1  
+------------
+ 03-30-2013
+(1 row)
+
+SELECT datefunc2('2013-03-01');
+ datefunc2  
+------------
+ 01-31-2012
+(1 row)
+
+SELECT datefunc3_year('1900-01-01');
+ datefunc3_year 
+----------------
+ 01-01-1899
+(1 row)
+
+SELECT datefunc3_year('00-14-37');
+ERROR:  date/time field value out of range: "00-14-37"
+LINE 1: SELECT datefunc3_year('00-14-37');
+                              ^
+HINT:  Perhaps you need a different "datestyle" setting.
+SELECT datefunc3_year('02-11-03');
+ datefunc3_year 
+----------------
+ 02-11-2002
+(1 row)
+
+SELECT datefunc3_mon('2012-01-29');
+ datefunc3_mon 
+---------------
+ 12-29-2011
+(1 row)
+
+SELECT datefunc3_mon('2012-03-29');
+ datefunc3_mon 
+---------------
+ 02-29-2012
+(1 row)
+
+SELECT datefunc3_mon('2011-03-29');
+ datefunc3_mon 
+---------------
+ 03-01-2011
+(1 row)
+
+SELECT datefunc3_mday('2012-03-01');
+ datefunc3_mday 
+----------------
+ 02-29-2012
+(1 row)
+
+SELECT datefunc3_mday('2013-03-01');
+ datefunc3_mday 
+----------------
+ 02-28-2013
+(1 row)
+
+SELECT datefunc3_mday('1900-01-01');
+ datefunc3_mday 
+----------------
+ 12-31-1899
+(1 row)
+
+SELECT timefunc1('15:00:01');
+ timefunc1 
+-----------
+ 16:01:02
+(1 row)
+
+SELECT timetzfunc1('15:00:01 UTC');
+ timetzfunc1 
+-------------
+ 16:01:02+00
+(1 row)
+
+SELECT timestampfunc1('2011-02-24 15:00:01');
+      timestampfunc1      
+--------------------------
+ Sun Mar 25 16:01:02 2012
+(1 row)
+
+SELECT timestamptzfunc1('2011-02-24 15:00:01 UTC');
+       timestamptzfunc1       
+------------------------------
+ Sun Mar 25 16:01:02 2012 UTC
+(1 row)
+
+-- SPI test
+DROP FUNCTION IF EXISTS spifunc1(text, int);
+DROP FUNCTION IF EXISTS spifunc2(text, text);
+DROP FUNCTION IF EXISTS spifunc3(text, int);
+DROP FUNCTION IF EXISTS spifunc4(text, text);
+DROP FUNCTION IF EXISTS spifunc5(text, int, int);
+DROP FUNCTION IF EXISTS spifunc5a(text, int, int);
+DROP FUNCTION IF EXISTS spifunc6(text, int, int);
+CREATE OR REPLACE FUNCTION spifunc1(text, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc2(text, text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc3(text, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc4(text, text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc5(text, int, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc5a(text, int, int) RETURNS int AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc6(text, int, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+SELECT spifunc1($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2);
+ spifunc1 
+----------
+ 20
+(1 row)
+
+SELECT spifunc2($$select i, i * 2 as val from generate_series(1, 10)i order by 1$$, 'val');
+ spifunc2 
+----------
+ 20
+(1 row)
+
+SELECT spifunc3($$select i, 'foo' || i as val from generate_series(1, 10)i order by 1$$, 2);
+ spifunc3 
+----------
+ foo10
+(1 row)
+
+SELECT spifunc4($$select i, 'foo' || i as val from generate_series(1, 10)i order by 1$$, 'val');
+ spifunc4 
+----------
+ foo10
+(1 row)
+
+-- multiple queries in one query string
+SELECT spifunc1($$select i, i * 2 from generate_series(1, 10)i order by 1; select 1+1; select 1+2$$, 1);
+ spifunc1 
+----------
+ 3
+(1 row)
+
+-- access table
+DROP TABLE IF EXISTS spi_test CASCADE;
+CREATE TABLE spi_test (a int, b text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO spi_test (SELECT a, 'foo'||a FROM generate_series(1, 10) a);
+SELECT spifunc1($$select * from spi_test order by a limit 5$$, 2);
+ spifunc1 
+----------
+ foo5
+(1 row)
+
+-- access view
+DROP VIEW IF EXISTS spi_view;
+CREATE VIEW spi_view AS 
+select * from spi_test order by a limit 5;
+SELECT spifunc1($$select * from spi_view$$, 2);
+ spifunc1 
+----------
+ foo5
+(1 row)
+
+-- join table and view
+SELECT spifunc1($$select * from spi_test, spi_view where spi_test.a = spi_view.a order by spi_test.a$$, 2);
+ spifunc1 
+----------
+ foo5
+(1 row)
+
+-- using sub-query
+SELECT spifunc1($$select * from spi_test where spi_test.a in (select a from spi_view) order by spi_test.a$$, 2);
+ spifunc1 
+----------
+ foo5
+(1 row)
+
+-- recursive SPI function call
+SELECT spifunc1($$select (
+	SELECT spifunc1('select * from spi_test, spi_view where spi_test.a = spi_view.a order by spi_test.a', 2)a
+)$$, 1);
+ spifunc1 
+----------
+ foo5
+(1 row)
+
+-- DDL: create table
+SELECT spifunc1($$create table spi_test2 (a int, b text)$$, 1);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table spi_test2 (a int, b text)"
+ spifunc1 
+----------
+ 
+(1 row)
+
+\d spi_test2
+   Table "public.spi_test2"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | 
+ b      | text    | 
+Distributed by: (a)
+
+-- DDL: alter table
+SELECT spifunc1($$alter table spi_test2 add column c int$$, 1);
+ spifunc1 
+----------
+ 
+(1 row)
+
+\d spi_test2
+   Table "public.spi_test2"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ a      | integer | 
+ b      | text    | 
+ c      | integer | 
+Distributed by: (a)
+
+-- DDL: drop table
+SELECT spifunc1($$drop table spi_test2$$, 1);
+ spifunc1 
+----------
+ 
+(1 row)
+
+\dt spi_test2
+           List of relations
+ Schema | Name | Type | Owner | Storage 
+--------+------+------+-------+---------
+(0 rows)
+
+-- When tcount = 0, no limit
+SELECT spifunc5($$SELECT * FROM spi_test ORDER BY 1$$, 1, 0);
+ spifunc5 
+----------
+ 10
+(1 row)
+
+-- When tcount = 5, which is less than total 10 records
+SELECT spifunc5($$SELECT * FROM spi_test ORDER BY 1$$, 1, 5);
+ spifunc5 
+----------
+ 5
+(1 row)
+
+-- When tcount = 20, which is greater than total 10 records
+SELECT spifunc5($$SELECT * FROM spi_test ORDER BY 1$$, 1, 20);
+ spifunc5 
+----------
+ 10
+(1 row)
+
+-- When tcount = -1, returns null
+SELECT spifunc5($$SELECT * FROM spi_test ORDER BY 1$$, 1, -1);
+ spifunc5 
+----------
+ 
+(1 row)
+
+-- insert a record with 400K bytes
+---- insert into spi_test values(31, repeat('test',100000));
+-- SPI GppcSPIGetValue makecopy = true for long text 400K bytes
+---- SELECT spifunc1($$select * from spi_test order by a $$, 2);
+-- SPI GppcSPIGetValue makecopy = false
+SELECT spifunc5a($$SELECT * FROM spi_test ORDER BY 1$$, 2, 10);
+ spifunc5a 
+-----------
+        41
+(1 row)
+
+SELECT spifunc5a($$SELECT * FROM spi_test ORDER BY 1$$, 2, 5);
+ spifunc5a 
+-----------
+        20
+(1 row)
+
+SELECT spifunc5a($$SELECT * FROM spi_test ORDER BY 1$$, 2, 0);
+ spifunc5a 
+-----------
+        41
+(1 row)
+
+-- SPI GppcSPIExec select into table
+DROP TABLE IF EXISTS spi_test3;
+SELECT spifunc6($$select i, 'foo'||i into spi_test3 from generate_series(10,15) i$$,0,0);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "select i, 'foo'||i into spi_test3 from generate_series(10,15) i"
+ spifunc6 
+----------
+ 
+(1 row)
+
+SELECT * FROM spi_test3 ORDER BY 1;
+ i  | ?column? 
+----+----------
+ 10 | foo10
+ 11 | foo11
+ 12 | foo12
+ 13 | foo13
+ 14 | foo14
+ 15 | foo15
+(6 rows)
+
+-- SPI GppcSPIExec CTAS
+DROP TABLE IF EXISTS spi_test4;
+SELECT spifunc6($$create table spi_test4 as select i, 'foo'||i from generate_series(1,10) i$$,0,0);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table spi_test4 as select i, 'foo'||i from generate_series(1,10) i"
+ spifunc6 
+----------
+ 
+(1 row)
+
+SELECT * FROM spi_test4 ORDER BY 1;
+ i  | ?column? 
+----+----------
+  1 | foo1
+  2 | foo2
+  3 | foo3
+  4 | foo4
+  5 | foo5
+  6 | foo6
+  7 | foo7
+  8 | foo8
+  9 | foo9
+ 10 | foo10
+(10 rows)
+
+-- SPI truncate
+SELECT spifunc1($$truncate spi_test$$, 1);
+ spifunc1 
+----------
+ 
+(1 row)
+
+-- After truncate
+SELECT * FROM spi_test order by a;
+ a | b 
+---+---
+(0 rows)
+
+-- DML: insert
+SELECT spifunc6($$insert into spi_test select i, 'foo'||i from generate_series(1, 5) i$$, 0, 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+SELECT spifunc6($$insert into spi_test values (6, 'foo6')$$, 0, 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+SELECT * from spi_test order by a;
+ a |  b   
+---+------
+ 1 | foo1
+ 2 | foo2
+ 3 | foo3
+ 4 | foo4
+ 5 | foo5
+ 6 | foo6
+(6 rows)
+
+-- DML: update
+SELECT spifunc6($$update spi_test set b = 'boo' ||a$$, 0, 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+SELECT * from spi_test order by a;
+ a |  b   
+---+------
+ 1 | boo1
+ 2 | boo2
+ 3 | boo3
+ 4 | boo4
+ 5 | boo5
+ 6 | boo6
+(6 rows)
+
+-- DML: delete
+SELECT spifunc6($$delete from spi_test where a > 5$$, 0, 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+SELECT * from spi_test order by a;
+ a |  b   
+---+------
+ 1 | boo1
+ 2 | boo2
+ 3 | boo3
+ 4 | boo4
+ 5 | boo5
+(5 rows)
+
+-- DML: insert using tcount=3, notice tcount takes no effect
+SELECT spifunc6($$insert into spi_test select i, 'foo'||i from generate_series(6, 10) i$$, 3, 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+SELECT * from spi_test order by a;
+ a  |   b   
+----+-------
+  1 | boo1
+  2 | boo2
+  3 | boo3
+  4 | boo4
+  5 | boo5
+  6 | foo6
+  7 | foo7
+  8 | foo8
+  9 | foo9
+ 10 | foo10
+(10 rows)
+
+-- DML: update using tcount=3, notice tcount takes no effect
+SELECT spifunc6($$update spi_test set b = 'boo' ||a$$, 0, 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+SELECT * from spi_test order by a;
+ a  |   b   
+----+-------
+  1 | boo1
+  2 | boo2
+  3 | boo3
+  4 | boo4
+  5 | boo5
+  6 | boo6
+  7 | boo7
+  8 | boo8
+  9 | boo9
+ 10 | boo10
+(10 rows)
+
+-- DML: delete using tcounti=3, notice tcount takes no effect
+SELECT spifunc6($$delete from spi_test where a > 5$$, 3, 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+SELECT * from spi_test order by a;
+ a |  b   
+---+------
+ 1 | boo1
+ 2 | boo2
+ 3 | boo3
+ 4 | boo4
+ 5 | boo5
+(5 rows)
+
+-- DML: create, alter, and drop index
+SELECT spifunc6($$CREATE INDEX spi_idx1 ON spi_test (a, b)$$, 0, 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+\d spi_idx1
+    Index "public.spi_idx1"
+ Column |  Type   | Definition 
+--------+---------+------------
+ a      | integer | a
+ b      | text    | b
+btree, for table "public.spi_test"
+
+SELECT spifunc6($$ALTER INDEX spi_idx1 RENAME TO spi_idx2$$, 0, 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+\d spi_idx2
+    Index "public.spi_idx2"
+ Column |  Type   | Definition 
+--------+---------+------------
+ a      | integer | a
+ b      | text    | b
+btree, for table "public.spi_test"
+
+SELECT spifunc6($$DROP INDEX spi_idx2$$, 0 , 0);
+ spifunc6 
+----------
+ 
+(1 row)
+
+\d spi_idx2
+-- Negative: connect again when already connected
+SELECT spifunc6($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2, 1);
+ERROR:  connect error: already connected and cannot connect again.
+-- Negative: try to execute without connection
+SELECT spifunc6($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2, 2);
+ERROR:  query execution error: Connection has been closed unexpectedly.
+-- Negative: close connection again when it has been closed already
+SELECT spifunc6($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2, 3);
+ERROR:  connect error: connection has been closed and cannot be closed again.

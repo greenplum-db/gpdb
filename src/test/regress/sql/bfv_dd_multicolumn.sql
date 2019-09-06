@@ -3,6 +3,7 @@
 --
 -- start_ignore
 set optimizer_log=on;
+set optimizer_force_multistage_agg=on;
 -- end_ignore
 
 set test_print_direct_dispatch_info=on; 
@@ -90,3 +91,4 @@ select * from dd_multicol_1 where a>80 and b=1;
 
 select * from dd_multicol_1 where a<=5 and b>0;
 
+reset optimizer_force_multistage_agg;

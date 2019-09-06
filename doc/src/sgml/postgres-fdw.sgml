@@ -49,7 +49,8 @@
    </listitem>
    <listitem>
     <para>
-     Create a foreign table, using <xref linkend="sql-createforeigntable">,
+     Create a foreign table, using <xref linkend="sql-createforeigntable">
+     or <xref linkend="sql-importforeignschema">,
      for each remote table you want to access.  The columns of the foreign
      table must match the referenced remote table.  You can, however, use
      table and/or column names different from the remote table's, if you
@@ -65,6 +66,14 @@
   the remote table using <command>INSERT</>, <command>UPDATE</>, or
   <command>DELETE</>.  (Of course, the remote user you have specified
   in your user mapping must have privileges to do these things.)
+ </para>
+
+ <para>
+  Note that <filename>postgres_fdw</> currently lacks support for
+  <command>INSERT</command> statements with an <literal>ON CONFLICT DO
+  UPDATE</> clause.  However, the <literal>ON CONFLICT DO NOTHING</>
+  clause is supported, provided a unique index inference specification
+  is omitted.
  </para>
 
  <para>
@@ -99,7 +108,7 @@
      <listitem>
       <para>
        <literal>user</literal> and <literal>password</literal> (specify these
-       for a user mapping, instead)
+       in a user mapping, instead)
       </para>
      </listitem>
      <listitem>
@@ -291,6 +300,79 @@
 
    </variablelist>
   </sect3>
+
+  <sect3>
+   <title>Importing Options</title>
+
+   <para>
+    <filename>postgres_fdw</> is able to import foreign table definitions
+    using <xref linkend="sql-importforeignschema">.  This command creates
+    foreign table definitions on the local server that match tables or
+    views present on the remote server.  If the remote tables to be imported
+    have columns of user-defined data types, the local server must have
+    compatible types of the same names.
+   </para>
+
+   <para>
+    Importing behavior can be customized with the following options
+    (given in the <command>IMPORT FOREIGN SCHEMA</> command):
+   </para>
+
+   <variablelist>
+    <varlistentry>
+     <term><literal>import_collate</literal></term>
+     <listitem>
+      <para>
+       This option controls whether column <literal>COLLATE</> options
+       are included in the definitions of foreign tables imported
+       from a foreign server. The default is <literal>true</>.  You might
+       need to turn this off if the remote server has a different set of
+       collation names than the local server does, which is likely to be the
+       case if it's running on a different operating system.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><literal>import_default</literal></term>
+     <listitem>
+      <para>
+       This option controls whether column <literal>DEFAULT</> expressions
+       are included in the definitions of foreign tables imported
+       from a foreign server. The default is <literal>false</>.  If you
+       enable this option, be wary of defaults that might get computed
+       differently on the local server than they would be on the remote
+       server; <function>nextval()</> is a common source of problems.
+       The <command>IMPORT</> will fail altogether if an imported default
+       expression uses a function or operator that does not exist locally.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><literal>import_not_null</literal></term>
+     <listitem>
+      <para>
+       This option controls whether column <literal>NOT NULL</>
+       constraints are included in the definitions of foreign tables imported
+       from a foreign server. The default is <literal>true</>.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+
+   <para>
+    Note that constraints other than <literal>NOT NULL</> will never be
+    imported from the remote tables.  Although <productname>PostgreSQL</>
+    does support <literal>CHECK</> constraints on foreign tables, there is no
+    provision for importing them automatically, because of the risk that a
+    constraint expression could evaluate differently on the local and remote
+    servers.  Any such inconsistency in the behavior of a <literal>CHECK</>
+    constraint could lead to hard-to-detect errors in query optimization.
+    So if you wish to import <literal>CHECK</> constraints, you must do so
+    manually, and you should verify the semantics of each one carefully.
+    For more detail about the treatment of <literal>CHECK</> constraints on
+    foreign tables, see <xref linkend="sql-createforeigntable">.
+   </para>
+  </sect3>
  </sect2>
 
  <sect2>
@@ -457,7 +539,7 @@ CREATE USER MAPPING FOR local_user
 
 <programlisting>
 CREATE FOREIGN TABLE foreign_table (
-        id serial NOT NULL,
+        id integer NOT NULL,
         data text
 )
         SERVER foreign_server
@@ -469,6 +551,8 @@ CREATE FOREIGN TABLE foreign_table (
    Column names must match as well, unless you attach <literal>column_name</>
    options to the individual columns to show how they are named in the remote
    table.
+   In many cases, use of <xref linkend="sql-importforeignschema"> is
+   preferable to constructing foreign table definitions manually.
   </para>
  </sect2>
 

@@ -4,7 +4,7 @@
  *	  Definition of (and support for) access control list data structures.
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/acl.h
@@ -24,6 +24,7 @@
 #ifndef ACL_H
 #define ACL_H
 
+#include "access/htup.h"
 #include "nodes/parsenodes.h"
 #include "utils/array.h"
 #include "utils/snapshot.h"
@@ -229,7 +230,11 @@ extern bool is_member_of_role(Oid member, Oid role);
 extern bool is_member_of_role_nosuper(Oid member, Oid role);
 extern bool is_admin_of_role(Oid member, Oid role);
 extern void check_is_member_of_role(Oid member, Oid role);
-extern Oid	get_role_oid(const char *rolname, bool missing_ok);
+extern Oid	get_role_oid(const char *rolename, bool missing_ok);
+extern Oid	get_role_oid_or_public(const char *rolename);
+extern Oid	get_rolespec_oid(const Node *node, bool missing_ok);
+extern HeapTuple get_rolespec_tuple(const Node *node);
+extern char *get_rolespec_name(const Node *node);
 
 extern void select_best_grantor(Oid roleId, AclMode privileges,
 					const Acl *acl, Oid ownerId,
@@ -338,5 +343,6 @@ extern bool pg_event_trigger_ownercheck(Oid et_oid, Oid roleid);
 extern bool pg_extension_ownercheck(Oid ext_oid, Oid roleid);
 extern bool has_createrole_privilege(Oid roleid);
 extern bool pg_extprotocol_ownercheck(Oid ptc_oid, Oid roleid);
+extern bool has_bypassrls_privilege(Oid roleid);
 
 #endif   /* ACL_H */

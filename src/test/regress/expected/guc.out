@@ -769,3 +769,10 @@ NOTICE:  text search configuration "no_such_config" does not exist
 select func_with_bad_set();
 ERROR:  invalid value for parameter "default_text_search_config": "no_such_config"
 reset check_function_bodies;
+SET "request.header.user-agent" = 'curl/7.29.0';
+SHOW "request.header.user-agent";
+ request.header.user-agent 
+---------------------------
+ curl/7.29.0
+(1 row)
+

@@ -4,7 +4,7 @@
  *	  postgres transaction access method support code
  *
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/transam.h
@@ -106,6 +106,12 @@ typedef struct VariableCacheData
 	Oid			oldestXidDB;	/* database with minimum datfrozenxid */
 
 	/*
+	 * These fields are protected by CommitTsLock
+	 */
+	TransactionId oldestCommitTs;
+	TransactionId newestCommitTs;
+
+	/*
 	 * These fields are protected by ProcArrayLock.
 	 */
 	TransactionId latestCompletedXid;	/* newest XID that has committed or
@@ -138,7 +144,6 @@ extern bool TransactionIdDidCommit(TransactionId transactionId);
 extern bool TransactionIdDidAbort(TransactionId transactionId);
 extern bool TransactionIdDidAbortForReader(TransactionId transactionId);
 extern bool TransactionIdIsKnownCompleted(TransactionId transactionId);
-extern void TransactionIdAbort(TransactionId transactionId);
 extern void TransactionIdCommitTree(TransactionId xid, int nxids, TransactionId *xids);
 extern void TransactionIdAsyncCommitTree(TransactionId xid, int nxids, TransactionId *xids, XLogRecPtr lsn);
 extern void TransactionIdAbortTree(TransactionId xid, int nxids, TransactionId *xids);
@@ -153,7 +158,6 @@ extern XLogRecPtr TransactionIdGetCommitLSN(TransactionId xid);
 /* in transam/varsup.c */
 extern TransactionId GetNewTransactionId(bool isSubXact);
 extern TransactionId ReadNewTransactionId(void);
-extern TransactionId GetTransactionIdLimit(void);
 extern void SetTransactionIdLimit(TransactionId oldest_datfrozenxid,
 					  Oid oldest_datoid);
 extern bool ForceTransactionIdLimitUpdate(void);

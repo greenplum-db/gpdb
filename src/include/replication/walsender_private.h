@@ -3,7 +3,7 @@
  * walsender_private.h
  *	  Private definitions from replication/walsender.c.
  *
- * Portions Copyright (c) 2010-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2010-2015, PostgreSQL Global Development Group
  *
  * src/include/replication/walsender_private.h
  *
@@ -78,10 +78,10 @@ typedef struct WalSnd
 	slock_t		mutex;
 
 	/*
-	 * Latch used by backends to wake up this walsender when it has work to
-	 * do.
+	 * Pointer to the walsender's latch. Used by backends to wake up this
+	 * walsender when it has work to do. NULL if the walsender isn't active.
 	 */
-	Latch		latch;
+	Latch	   *latch;
 
 	/*
 	 * The priority order of the standby managed by this WALSender, as listed
@@ -89,8 +89,6 @@ typedef struct WalSnd
 	 * SyncRepLock.
 	 */
 	int			sync_standby_priority;
-
-	bool		synchronous;
 
 	/*
 	 * Indicates whether the WalSnd represents a connection with a Greenplum
@@ -156,7 +154,7 @@ typedef struct
 	 */
 	WalSndError error;
 
-	WalSnd		walsnds[1];		/* VARIABLE LENGTH ARRAY */
+	WalSnd		walsnds[FLEXIBLE_ARRAY_MEMBER];
 } WalSndCtlData;
 
 extern WalSndCtlData *WalSndCtl;
@@ -170,7 +168,7 @@ extern void WalSndSetState(WalSndState state);
  */
 extern int	replication_yyparse(void);
 extern int	replication_yylex(void);
-extern void replication_yyerror(const char *str);
+extern void replication_yyerror(const char *str) pg_attribute_noreturn();
 extern void replication_scanner_init(const char *query_string);
 extern void replication_scanner_finish(void);
 

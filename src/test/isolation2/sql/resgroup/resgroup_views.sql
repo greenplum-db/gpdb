@@ -21,7 +21,7 @@ select rsgname
      , memory_shared_used
   from gp_toolkit.gp_resgroup_status_per_host s
   join gp_segment_configuration c
-    on s.hostname=c.hostname and c.content=-1
+    on s.hostname=c.hostname and c.content=-1 and role='p'
  where rsgname='default_group';
 
 select rsgname

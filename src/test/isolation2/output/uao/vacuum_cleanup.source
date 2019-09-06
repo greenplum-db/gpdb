@@ -1,9 +1,6 @@
 -- @Description Test that when AO vacuum skips drop phase, the age of
 -- the AO/AOCS table gets reduced correctly.
 
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
-
 -- The age of the table is 1 after the following statement
 2: create table ao_@orientation@_vacuum_cleanup2(a int, b int) with(appendonly=true, orientation=@orientation@);
 CREATE
@@ -76,7 +73,7 @@ DELETE 100
 1: select gp_inject_fault_infinite('vacuum_relation_open_relation_during_drop_phase', 'suspend', 1);
  gp_inject_fault_infinite 
 --------------------------
- t                        
+ Success:                 
 (1 row)
 1&: vacuum ao_@orientation@_vacuum_cleanup3;  <waiting ...>
 
@@ -97,7 +94,7 @@ BEGIN
 2: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 1);
  gp_inject_fault 
 -----------------
- t               
+ Success:        
 (1 row)
 
 1<:  <... completed>

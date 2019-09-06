@@ -43,7 +43,7 @@ EXPLAIN SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT 
                                  ->  Seq Scan on boxes  (cost=0.00..879.00 rows=25967 width=12)
          ->  Hash  (cost=596.00..596.00 rows=16534 width=36)
                ->  Seq Scan on box_locations  (cost=0.00..596.00 rows=16534 width=36)
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
 (15 rows)
 
 -- explain_processing_on
@@ -69,10 +69,10 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
  Planning time: 0.791 ms
    (slice0)    Executor memory: 127K bytes.
    (slice1)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
-   (slice2)    Executor memory: 2128K bytes avg x 3 workers, 2128K bytes max (seg0).
-   (slice3)    Executor memory: 1104K bytes avg x 3 workers, 1104K bytes max (seg0).
+   (slice2)    Executor memory: 2128K bytes avg x 3 workers, 2128K bytes max (seg0).  Work_mem: 2048K bytes max.
+   (slice3)    Executor memory: 1104K bytes avg x 3 workers, 1104K bytes max (seg0).  Work_mem: 1024K bytes max.
  Memory used:  128000kB
- Optimizer: legacy query optimizer
+ Optimizer: Postgres query optimizer
  Execution time: 29.929 ms
 (22 rows)
 
@@ -98,8 +98,8 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
 -- s/Execution Time: \d+\.\d+/Execution Time: ##.###/
 -- m/Segments: \d+/
 -- s/Segments: \d+/Segments: #/
--- m/PQO version \d+\.\d+\.\d+",?/
--- s/PQO version \d+\.\d+\.\d+",?/PQO version ##.##.##"/
+-- m/Pivotal Optimizer \(GPORCA\) version \d+\.\d+\.\d+",?/
+-- s/Pivotal Optimizer \(GPORCA\) version \d+\.\d+\.\d+",?/Pivotal Optimizer \(GPORCA\) version ##.##.##"/
 -- m/ Memory: \d+/
 -- s/ Memory: \d+/ Memory: ###/
 -- m/Maximum Memory Used: \d+/
@@ -232,7 +232,7 @@ QUERY PLAN
                 Plan Rows: 49600
                 Plan Width: 36
   Settings: 
-    Optimizer: "legacy query optimizer"
+    Optimizer: "Postgres query optimizer"
 (1 row)
 --- Check Explain Analyze YAML output that include the slices information
 -- explain_processing_off
@@ -407,16 +407,18 @@ QUERY PLAN
       Executor Memory: 
         Average: 2178096
         Workers: 3
-        Maximum Memory Used: 2178096
+        Maximum Memory Used: 2178104
+      Work Maximum Memory: 2097152
     - Slice: 3
       Executor Memory: 
         Average: 1129520
         Workers: 3
-        Maximum Memory Used: 1129520
+        Maximum Memory Used: 1129528
+      Work Maximum Memory: 1048576
   Statement statistics: 
     Memory used: 128000
   Settings: 
-    Optimizer: "legacy query optimizer"
+    Optimizer: "Postgres query optimizer"
   Execution Time: 8.490
 (1 row)
 -- explain_processing_on
@@ -428,8 +430,8 @@ QUERY PLAN
 -- Check JSON format
 --
 -- start_matchsubs
--- m/PQO version \d+\.\d+\.\d+/
--- s/PQO version \d+\.\d+\.\d+/PQO version ##.##.##/
+-- m/Pivotal Optimizer \(GPORCA\) version \d+\.\d+\.\d+/
+-- s/Pivotal Optimizer \(GPORCA\) version \d+\.\d+\.\d+/Pivotal Optimizer \(GPORCA\) version ##.##.##/
 -- end_matchsubs
 -- explain_processing_off
 EXPLAIN (FORMAT JSON, COSTS OFF) SELECT * FROM generate_series(1, 10);
@@ -442,7 +444,7 @@ QUERY PLAN
       "Alias": "generate_series"
     },
     "Settings": {
-      "Optimizer": "legacy query optimizer"
+      "Optimizer": "Postgres query optimizer"
     }
   }
 ]
@@ -457,7 +459,7 @@ QUERY PLAN
       <Alias>generate_series</Alias>
     </Plan>
     <Settings>
-      <Optimizer>legacy query optimizer</Optimizer>
+      <Optimizer>Postgres query optimizer</Optimizer>
     </Settings>
   </Query>
 </explain>

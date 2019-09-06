@@ -207,7 +207,10 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
           format="dita"/>.<note>Greenplum Database does not support the PostgreSQL <xref
             href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
             scope="external">large object facility</xref> for streaming user data that is stored in
-          large-object structures.</note></p>
+          large-object structures.</note><note otherprops="pivotal">Pivotal does not support using
+            <codeph>WITH OIDS</codeph> or <codeph>oids=TRUE</codeph> to assign an OID system column
+          when creating or altering a table.  This syntax is deprecated and will be removed in a
+          future Greenplum release.</note></p>
       <table id="ik213423">
         <title>SQL Support in Greenplum Database</title>
         <tgroup cols="3">
@@ -310,6 +313,11 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>ALTER SEQUENCE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"/>
+            </row>
+            <row>
+              <entry><codeph>ALTER SYSTEM</codeph></entry>
+              <entry><b>NO</b></entry>
+              <entry/>
             </row>
             <row>
               <entry colname="col1"><codeph>ALTER TABLE</codeph></entry>
@@ -440,7 +448,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>CREATE EXTERNAL TABLE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database parallel ETL feature - not in PostgreSQL
-                8.3.</entry>
+                9.4.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE FUNCTION</codeph></entry>
@@ -505,7 +513,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>CREATE RESOURCE QUEUE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database resource management feature - not in
-                PostgreSQL 8.3.</entry>
+                PostgreSQL 9.4.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE ROLE</codeph></entry>
@@ -650,7 +658,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>DROP EXTERNAL TABLE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database parallel ETL feature - not in PostgreSQL
-                8.3.</entry>
+                9.4.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DROP FUNCTION</codeph></entry>
@@ -702,7 +710,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>DROP RESOURCE QUEUE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database resource management feature - not in
-                PostgreSQL 8.3.</entry>
+                PostgreSQL 9.4.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DROP ROLE</codeph></entry>
@@ -787,6 +795,11 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>INSERT</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"/>
+            </row>
+            <row>
+              <entry><codeph>LATERAL</codeph> Join Type</entry>
+              <entry><b>NO</b></entry>
+              <entry/>
             </row>
             <row>
               <entry colname="col1"><codeph>LISTEN</codeph></entry>
@@ -919,7 +932,9 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>SET TRANSACTION</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"/>
+              <entry colname="col3"><b>Limitations:</b><p><codeph>DEFERRABLE</codeph> clause has no
+                  effect.</p><p><codeph>SET TRANSACTION SNAPSHOT</codeph> command is not
+                  supported.</p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>SHOW</codeph></entry>

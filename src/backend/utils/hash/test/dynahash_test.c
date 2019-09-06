@@ -27,7 +27,7 @@ static bool expand_table_start_fail = false;
  * is not clean, the assumption is HASH_BUCKET is a pointer and we gave
  * hctl->ssize to hash_create.  See alloc_seg in dynahash.
  */
-void *
+static void *
 alloc_for_expand_table_failure(Size size)
 {
 	if (expand_table_start_fail && size == sizeof(void *) * TEST_SEGSIZE)
@@ -41,7 +41,7 @@ alloc_for_expand_table_failure(Size size)
  * issue at the cleanup code.  This test is to make sure such failure of
  * hash expansion won't create an incomplete entry.
  */
-void
+static void
 test__expand_table(void **state)
 {
 	HASHCTL		info;

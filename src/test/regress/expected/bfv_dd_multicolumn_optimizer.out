@@ -3,6 +3,7 @@
 --
 -- start_ignore
 set optimizer_log=on;
+set optimizer_force_multistage_agg=on;
 -- end_ignore
 set test_print_direct_dispatch_info=on; 
 set gp_autostats_mode = 'None';
@@ -272,3 +273,4 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  3 | 1
 (3 rows)
 
+reset optimizer_force_multistage_agg;

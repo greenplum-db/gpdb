@@ -920,7 +920,7 @@ makeFlow(FlowType flotype, int numsegments)
 	Flow	   *flow = makeNode(Flow);
 
 	Assert(numsegments > 0);
-	if (numsegments == __GP_POLICY_EVIL_NUMSEGMENTS)
+	if (numsegments == GP_POLICY_INVALID_NUMSEGMENTS())
 	{
 		Assert(!"what's the proper value of numsegments?");
 	}
@@ -1156,7 +1156,7 @@ adjustPlanFlow(Plan *plan,
 	Assert(flow->flow_before_req_move == NULL);
 
 	Assert(numsegments > 0);
-	if (numsegments == __GP_POLICY_EVIL_NUMSEGMENTS)
+	if (numsegments == GP_POLICY_INVALID_NUMSEGMENTS())
 	{
 		Assert(!"what's the proper value of numsegments?");
 	}
@@ -1439,6 +1439,7 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 		case T_Append:
 		case T_MergeAppend:
 		case T_SeqScan:
+		case T_SampleScan:
 		case T_ExternalScan:
 		case T_IndexScan:
 		case T_BitmapIndexScan:

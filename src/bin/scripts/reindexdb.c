@@ -2,7 +2,7 @@
  *
  * reindexdb
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  *
  * src/bin/scripts/reindexdb.c
  *
@@ -18,16 +18,16 @@ static void reindex_one_database(const char *name, const char *dbname,
 					 const char *type, const char *host,
 					 const char *port, const char *username,
 					 enum trivalue prompt_password, const char *progname,
-					 bool echo);
+					 bool echo, bool verbose);
 static void reindex_all_databases(const char *maintenance_db,
 					  const char *host, const char *port,
 					  const char *username, enum trivalue prompt_password,
 					  const char *progname, bool echo,
-					  bool quiet);
+					  bool quiet, bool verbose);
 static void reindex_system_catalogs(const char *dbname,
 						const char *host, const char *port,
 						const char *username, enum trivalue prompt_password,
-						const char *progname, bool echo);
+						const char *progname, bool echo, bool verbose);
 static void help(const char *progname);
 
 int
@@ -41,11 +41,13 @@ main(int argc, char *argv[])
 		{"password", no_argument, NULL, 'W'},
 		{"echo", no_argument, NULL, 'e'},
 		{"quiet", no_argument, NULL, 'q'},
+		{"schema", required_argument, NULL, 'S'},
 		{"dbname", required_argument, NULL, 'd'},
 		{"all", no_argument, NULL, 'a'},
 		{"system", no_argument, NULL, 's'},
 		{"table", required_argument, NULL, 't'},
 		{"index", required_argument, NULL, 'i'},
+		{"verbose", no_argument, NULL, 'v'},
 		{"maintenance-db", required_argument, NULL, 2},
 		{NULL, 0, NULL, 0}
 	};
@@ -64,8 +66,10 @@ main(int argc, char *argv[])
 	bool		alldb = false;
 	bool		echo = false;
 	bool		quiet = false;
+	bool		verbose = false;
 	SimpleStringList indexes = {NULL, NULL};
 	SimpleStringList tables = {NULL, NULL};
+	SimpleStringList schemas = {NULL, NULL};
 
 	progname = get_progname(argv[0]);
 	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pgscripts"));
@@ -73,7 +77,7 @@ main(int argc, char *argv[])
 	handle_help_version_opts(argc, argv, "reindexdb", help);
 
 	/* process command-line options */
-	while ((c = getopt_long(argc, argv, "h:p:U:wWeqd:ast:i:", long_options, &optindex)) != -1)
+	while ((c = getopt_long(argc, argv, "h:p:U:wWeqS:d:ast:i:v", long_options, &optindex)) != -1)
 	{
 		switch (c)
 		{
@@ -98,6 +102,9 @@ main(int argc, char *argv[])
 			case 'q':
 				quiet = true;
 				break;
+			case 'S':
+				simple_string_list_append(&schemas, optarg);
+				break;
 			case 'd':
 				dbname = pg_strdup(optarg);
 				break;
@@ -112,6 +119,9 @@ main(int argc, char *argv[])
 				break;
 			case 'i':
 				simple_string_list_append(&indexes, optarg);
+				break;
+			case 'v':
+				verbose = true;
 				break;
 			case 2:
 				maintenance_db = pg_strdup(optarg);
@@ -154,6 +164,11 @@ main(int argc, char *argv[])
 			fprintf(stderr, _("%s: cannot reindex all databases and system catalogs at the same time\n"), progname);
 			exit(1);
 		}
+		if (schemas.head != NULL)
+		{
+			fprintf(stderr, _("%s: cannot reindex specific schema(s) in all databases\n"), progname);
+			exit(1);
+		}
 		if (tables.head != NULL)
 		{
 			fprintf(stderr, _("%s: cannot reindex specific table(s) in all databases\n"), progname);
@@ -166,10 +181,15 @@ main(int argc, char *argv[])
 		}
 
 		reindex_all_databases(maintenance_db, host, port, username,
-							  prompt_password, progname, echo, quiet);
+							prompt_password, progname, echo, quiet, verbose);
 	}
 	else if (syscatalog)
 	{
+		if (schemas.head != NULL)
+		{
+			fprintf(stderr, _("%s: cannot reindex specific schema(s) and system catalogs at the same time\n"), progname);
+			exit(1);
+		}
 		if (tables.head != NULL)
 		{
 			fprintf(stderr, _("%s: cannot reindex specific table(s) and system catalogs at the same time\n"), progname);
@@ -192,7 +212,7 @@ main(int argc, char *argv[])
 		}
 
 		reindex_system_catalogs(dbname, host, port, username, prompt_password,
-								progname, echo);
+								progname, echo, verbose);
 	}
 	else
 	{
@@ -206,6 +226,17 @@ main(int argc, char *argv[])
 				dbname = get_user_name_or_exit(progname);
 		}
 
+		if (schemas.head != NULL)
+		{
+			SimpleStringListCell *cell;
+
+			for (cell = schemas.head; cell; cell = cell->next)
+			{
+				reindex_one_database(cell->val, dbname, "SCHEMA", host, port,
+						 username, prompt_password, progname, echo, verbose);
+			}
+		}
+
 		if (indexes.head != NULL)
 		{
 			SimpleStringListCell *cell;
@@ -213,7 +244,7 @@ main(int argc, char *argv[])
 			for (cell = indexes.head; cell; cell = cell->next)
 			{
 				reindex_one_database(cell->val, dbname, "INDEX", host, port,
-								  username, prompt_password, progname, echo);
+						 username, prompt_password, progname, echo, verbose);
 			}
 		}
 		if (tables.head != NULL)
@@ -223,13 +254,17 @@ main(int argc, char *argv[])
 			for (cell = tables.head; cell; cell = cell->next)
 			{
 				reindex_one_database(cell->val, dbname, "TABLE", host, port,
-								  username, prompt_password, progname, echo);
+						 username, prompt_password, progname, echo, verbose);
 			}
 		}
-		/* reindex database only if neither index nor table is specified */
-		if (indexes.head == NULL && tables.head == NULL)
-			reindex_one_database(NULL, dbname, "DATABASE", host, port,
-								 username, prompt_password, progname, echo);
+
+		/*
+		 * reindex database only if neither index nor table nor schema is
+		 * specified
+		 */
+		if (indexes.head == NULL && tables.head == NULL && schemas.head == NULL)
+			reindex_one_database(dbname, dbname, "DATABASE", host, port,
+						 username, prompt_password, progname, echo, verbose);
 	}
 
 	exit(0);
@@ -238,7 +273,8 @@ main(int argc, char *argv[])
 static void
 reindex_one_database(const char *name, const char *dbname, const char *type,
 					 const char *host, const char *port, const char *username,
-			  enum trivalue prompt_password, const char *progname, bool echo)
+			  enum trivalue prompt_password, const char *progname, bool echo,
+					 bool verbose)
 {
 	PQExpBufferData sql;
 
@@ -250,11 +286,17 @@ reindex_one_database(const char *name, const char *dbname, const char *type,
 	initPQExpBuffer(&sql);
 
 	appendPQExpBufferStr(&sql, "REINDEX ");
+
+	if (verbose)
+		appendPQExpBufferStr(&sql, "(VERBOSE) ");
+
 	appendPQExpBufferStr(&sql, type);
 	appendPQExpBufferChar(&sql, ' ');
 	if (strcmp(type, "TABLE") == 0 ||
 		strcmp(type, "INDEX") == 0)
 		appendQualifiedRelation(&sql, name, conn, progname, echo);
+	else if (strcmp(type, "SCHEMA") == 0)
+		appendPQExpBufferStr(&sql, name);
 	else if (strcmp(type, "DATABASE") == 0)
 		appendPQExpBufferStr(&sql, fmtId(PQdb(conn)));
 	appendPQExpBufferChar(&sql, ';');
@@ -266,6 +308,9 @@ reindex_one_database(const char *name, const char *dbname, const char *type,
 					progname, name, PQdb(conn), PQerrorMessage(conn));
 		if (strcmp(type, "INDEX") == 0)
 			fprintf(stderr, _("%s: reindexing of index \"%s\" in database \"%s\" failed: %s"),
+					progname, name, PQdb(conn), PQerrorMessage(conn));
+		if (strcmp(type, "SCHEMA") == 0)
+			fprintf(stderr, _("%s: reindexing of schema \"%s\" in database \"%s\" failed: %s"),
 					progname, name, PQdb(conn), PQerrorMessage(conn));
 		else
 			fprintf(stderr, _("%s: reindexing of database \"%s\" failed: %s"),
@@ -282,7 +327,7 @@ static void
 reindex_all_databases(const char *maintenance_db,
 					  const char *host, const char *port,
 					  const char *username, enum trivalue prompt_password,
-					  const char *progname, bool echo, bool quiet)
+				   const char *progname, bool echo, bool quiet, bool verbose)
 {
 	PGconn	   *conn;
 	PGresult   *result;
@@ -311,7 +356,7 @@ reindex_all_databases(const char *maintenance_db,
 
 		reindex_one_database(NULL, connstr.data, "DATABASE", host,
 							 port, username, prompt_password,
-							 progname, echo);
+							 progname, echo, verbose);
 	}
 	termPQExpBuffer(&connstr);
 
@@ -321,7 +366,7 @@ reindex_all_databases(const char *maintenance_db,
 static void
 reindex_system_catalogs(const char *dbname, const char *host, const char *port,
 						const char *username, enum trivalue prompt_password,
-						const char *progname, bool echo)
+						const char *progname, bool echo, bool verbose)
 {
 	PGconn	   *conn;
 	PQExpBufferData sql;
@@ -331,7 +376,12 @@ reindex_system_catalogs(const char *dbname, const char *host, const char *port,
 
 	initPQExpBuffer(&sql);
 
-	appendPQExpBuffer(&sql, "REINDEX SYSTEM %s;", fmtId(PQdb(conn)));
+	appendPQExpBuffer(&sql, "REINDEX");
+
+	if (verbose)
+		appendPQExpBuffer(&sql, " (VERBOSE)");
+
+	appendPQExpBuffer(&sql, " SYSTEM %s;", fmtId(PQdb(conn)));
 
 	if (!executeMaintenanceCommand(conn, sql.data, echo))
 	{
@@ -357,7 +407,9 @@ help(const char *progname)
 	printf(_("  -i, --index=INDEX         recreate specific index(es) only\n"));
 	printf(_("  -q, --quiet               don't write any messages\n"));
 	printf(_("  -s, --system              reindex system catalogs\n"));
+	printf(_("  -S, --schema=SCHEMA       recreate specific schema(s) only\n"));
 	printf(_("  -t, --table=TABLE         reindex specific table(s) only\n"));
+	printf(_("  -v, --verbose             write a lot of output\n"));
 	printf(_("  -V, --version             output version information, then exit\n"));
 	printf(_("  -?, --help                show this help, then exit\n"));
 	printf(_("\nConnection options:\n"));

@@ -1,12 +1,34 @@
 @gpinitstandby
 Feature: Tests for gpinitstandby feature
 
+    Scenario: gpinitstandby with -n option (manually start standby master)
+        Given the database is running
+        And the standby is not initialized
+        And the user runs gpinitstandby with options " "
+        Then gpinitstandby should return a return code of 0
+        And verify the standby master entries in catalog
+        And the user runs gpinitstandby with options "-n"
+        And gpinitstandby should print "Standy master is already up and running" to stdout
+        When the standby master goes down
+        And the user runs gpinitstandby with options "-n"
+        Then gpinitstandby should return a return code of 0
+        And verify the standby master entries in catalog
+        And gpinitstandby should print "Successfully started standby master" to stdout
+
     Scenario: gpinitstandby fails if given same host and port as master segment
         Given the database is running
         And the standby is not initialized
         When the user initializes a standby on the same host as master with same port
         Then gpinitstandby should return a return code of 2
         And gpinitstandby should print "cannot create standby on the same host and port" to stdout
+
+    Scenario: gpinitstandby fails if given same host and datadir as master segment
+        Given the database is running
+          And the standby is not initialized
+         When the user initializes a standby on the same host as master and the same data directory
+         Then gpinitstandby should return a return code of 2
+          And gpinitstandby should print "master data directory exists" to stdout
+          And gpinitstandby should print "use -S and -P to specify a new data directory and port" to stdout
 
     Scenario: gpinitstandby exclude dirs
         Given the database is running
@@ -18,27 +40,13 @@ Feature: Tests for gpinitstandby feature
         And the file "promote/testfile" exists under master data directory
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
-		And verify the standby master entries in catalog
-		And the file "pg_log/testfile" does not exist under standby master data directory
-		And the file "db_dumps/testfile" does not exist under standby master data directory
-		And the file "gpperfmon/data/testfile" does not exist under standby master data directory
-		And the file "gpperfmon/logs/testfile" does not exist under standby master data directory
-		And the file "promote/testfile" does not exist under standby master data directory
-		## maybe clean up the directories created in the master data directory
-
-	Scenario: gpinitstandby with -n option (manually start standby master)
-        Given the database is running
-        And the standby is not initialized
-        And the user runs gpinitstandby with options " "
-        Then gpinitstandby should return a return code of 0
-		And verify the standby master entries in catalog
-		And the user runs gpinitstandby with options "-n"
-        And gpinitstandby should print "Standy master is already up and running" to stdout
-		When the standby master goes down
-		And the user runs gpinitstandby with options "-n"
-        Then gpinitstandby should return a return code of 0
-		And verify the standby master entries in catalog
-        And gpinitstandby should print "Successfully started standby master" to stdout
+        And verify the standby master entries in catalog
+        And the file "pg_log/testfile" does not exist under standby master data directory
+        And the file "db_dumps/testfile" does not exist under standby master data directory
+        And the file "gpperfmon/data/testfile" does not exist under standby master data directory
+        And the file "gpperfmon/logs/testfile" does not exist under standby master data directory
+        And the file "promote/testfile" does not exist under standby master data directory
+        ## maybe clean up the directories created in the master data directory
 
     Scenario: gpstate -f shows standby master information after running gpinitstandby
         Given the database is running
@@ -72,7 +80,6 @@ Feature: Tests for gpinitstandby feature
         When the user runs pg_controldata against the standby data directory
         Then pg_controldata should print "Data page checksum version:           1" to stdout
 
-    @gpinitstandby_checksum_off
     Scenario: gpinitstandby creates the standby with default data_checksums off
         Given the database is initialized with checksum "off"
         And the standby is not initialized

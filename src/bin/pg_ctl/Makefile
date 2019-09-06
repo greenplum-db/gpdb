@@ -2,7 +2,7 @@
 #
 # Makefile for src/bin/pg_ctl
 #
-# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/bin/pg_ctl/Makefile
@@ -48,7 +48,7 @@ clean distclean maintainer-clean:
 	rm -f pg_ctl$(X) $(OBJS)
 	rm -rf tmp_check
 
-check: all
+check:
 	$(prove_check)
 
 installcheck:

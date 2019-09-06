@@ -3,7 +3,7 @@
  * event_trigger.c
  *	  PostgreSQL EVENT TRIGGER support code.
  *
- * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2015, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -20,17 +20,22 @@
 #include "catalog/objectaccess.h"
 #include "catalog/pg_event_trigger.h"
 #include "catalog/pg_namespace.h"
+#include "catalog/pg_opclass.h"
+#include "catalog/pg_opfamily.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_trigger.h"
+#include "catalog/pg_ts_config.h"
 #include "catalog/pg_type.h"
 #include "commands/dbcommands.h"
 #include "commands/event_trigger.h"
+#include "commands/extension.h"
 #include "commands/trigger.h"
 #include "funcapi.h"
 #include "parser/parse_func.h"
 #include "pgstat.h"
 #include "lib/ilist.h"
 #include "miscadmin.h"
+#include "tcop/deparse_utility.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/evtcache.h"
@@ -42,12 +47,25 @@
 #include "utils/syscache.h"
 #include "tcop/utility.h"
 
-
 typedef struct EventTriggerQueryState
 {
+	/* memory context for this state's objects */
+	MemoryContext cxt;
+
+	/* sql_drop */
 	slist_head	SQLDropList;
 	bool		in_sql_drop;
-	MemoryContext cxt;
+
+	/* table_rewrite */
+	Oid			table_rewrite_oid;		/* InvalidOid, or set for
+										 * table_rewrite event */
+	int			table_rewrite_reason;	/* AT_REWRITE reason */
+
+	/* Support for command collection */
+	bool		commandCollectionInhibited;
+	CollectedCommand *currentCommand;
+	List	   *commandList;	/* list of CollectedCommand; see
+								 * deparse_utility.h */
 	struct EventTriggerQueryState *previous;
 } EventTriggerQueryState;
 
@@ -66,6 +84,7 @@ typedef enum
 	EVENT_TRIGGER_COMMAND_TAG_NOT_RECOGNIZED
 } event_trigger_command_tag_check_result;
 
+/* XXX merge this with ObjectTypeMap? */
 static event_trigger_support_data event_trigger_support[] = {
 	{"AGGREGATE", true},
 	{"CAST", true},
@@ -85,6 +104,7 @@ static event_trigger_support_data event_trigger_support[] = {
 	{"OPERATOR", true},
 	{"OPERATOR CLASS", true},
 	{"OPERATOR FAMILY", true},
+	{"POLICY", true},
 	{"ROLE", false},
 	{"RULE", true},
 	{"SCHEMA", true},
@@ -92,6 +112,7 @@ static event_trigger_support_data event_trigger_support[] = {
 	{"SERVER", true},
 	{"TABLE", true},
 	{"TABLESPACE", false},
+	{"TRANSFORM", true},
 	{"TRIGGER", true},
 	{"TEXT SEARCH CONFIGURATION", true},
 	{"TEXT SEARCH DICTIONARY", true},
@@ -116,6 +137,11 @@ typedef struct SQLDropObject
 	const char *objname;
 	const char *objidentity;
 	const char *objecttype;
+	List	   *addrnames;
+	List	   *addrargs;
+	bool		original;
+	bool		normal;
+	bool		istemp;
 	slist_node	next;
 } SQLDropObject;
 
@@ -123,12 +149,17 @@ static void AlterEventTriggerOwner_internal(Relation rel,
 								HeapTuple tup,
 								Oid newOwnerId);
 static event_trigger_command_tag_check_result check_ddl_tag(const char *tag);
+static event_trigger_command_tag_check_result check_table_rewrite_ddl_tag(
+							const char *tag);
 static void error_duplicate_filter_variable(const char *defname);
 static Datum filter_list_to_array(List *filterlist);
 static Oid insert_event_trigger_tuple(char *trigname, char *eventname,
 						   Oid evtOwner, Oid funcoid, List *tags);
 static void validate_ddl_tags(const char *filtervar, List *taglist);
+static void validate_table_rewrite_tags(const char *filtervar, List *taglist);
 static void EventTriggerInvoke(List *fn_oid_list, EventTriggerData *trigdata);
+static const char *stringify_grantobjtype(GrantObjectType objtype);
+static const char *stringify_adefprivs_objtype(GrantObjectType objtype);
 
 /*
  * Create an event trigger.
@@ -139,6 +170,7 @@ CreateEventTrigger(CreateEventTrigStmt *stmt)
 	HeapTuple	tuple;
 	Oid			funcoid;
 	Oid			funcrettype;
+	Oid			fargtypes[1];	/* dummy */
 	Oid			evtowner = GetUserId();
 	ListCell   *lc;
 	List	   *tags = NULL;
@@ -158,7 +190,8 @@ CreateEventTrigger(CreateEventTrigStmt *stmt)
 	/* Validate event name. */
 	if (strcmp(stmt->eventname, "ddl_command_start") != 0 &&
 		strcmp(stmt->eventname, "ddl_command_end") != 0 &&
-		strcmp(stmt->eventname, "sql_drop") != 0)
+		strcmp(stmt->eventname, "sql_drop") != 0 &&
+		strcmp(stmt->eventname, "table_rewrite") != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("unrecognized event name \"%s\"",
@@ -187,6 +220,9 @@ CreateEventTrigger(CreateEventTrigStmt *stmt)
 		 strcmp(stmt->eventname, "sql_drop") == 0)
 		&& tags != NULL)
 		validate_ddl_tags("tag", tags);
+	else if (strcmp(stmt->eventname, "table_rewrite") == 0
+			 && tags != NULL)
+		validate_table_rewrite_tags("tag", tags);
 
 	/*
 	 * Give user a nice error message if an event trigger of the same name
@@ -200,7 +236,7 @@ CreateEventTrigger(CreateEventTrigStmt *stmt)
 						stmt->trigname)));
 
 	/* Find and validate the trigger function. */
-	funcoid = LookupFuncName(stmt->funcname, 0, NULL, false);
+	funcoid = LookupFuncName(stmt->funcname, 0, fargtypes, false);
 	funcrettype = get_func_rettype(funcoid);
 	if (funcrettype != EVTTRIGGEROID)
 		ereport(ERROR,
@@ -255,7 +291,12 @@ check_ddl_tag(const char *tag)
 		pg_strcasecmp(tag, "REFRESH MATERIALIZED VIEW") == 0 ||
 		pg_strcasecmp(tag, "ALTER DEFAULT PRIVILEGES") == 0 ||
 		pg_strcasecmp(tag, "ALTER LARGE OBJECT") == 0 ||
-		pg_strcasecmp(tag, "DROP OWNED") == 0)
+		pg_strcasecmp(tag, "COMMENT") == 0 ||
+		pg_strcasecmp(tag, "GRANT") == 0 ||
+		pg_strcasecmp(tag, "REVOKE") == 0 ||
+		pg_strcasecmp(tag, "DROP OWNED") == 0 ||
+		pg_strcasecmp(tag, "IMPORT FOREIGN SCHEMA") == 0 ||
+		pg_strcasecmp(tag, "SECURITY LABEL") == 0)
 		return EVENT_TRIGGER_COMMAND_TAG_OK;
 
 	/*
@@ -281,6 +322,39 @@ check_ddl_tag(const char *tag)
 	if (!etsd->supported)
 		return EVENT_TRIGGER_COMMAND_TAG_NOT_SUPPORTED;
 	return EVENT_TRIGGER_COMMAND_TAG_OK;
+}
+
+/*
+ * Validate DDL command tags for event table_rewrite.
+ */
+static void
+validate_table_rewrite_tags(const char *filtervar, List *taglist)
+{
+	ListCell   *lc;
+
+	foreach(lc, taglist)
+	{
+		const char *tag = strVal(lfirst(lc));
+		event_trigger_command_tag_check_result result;
+
+		result = check_table_rewrite_ddl_tag(tag);
+		if (result == EVENT_TRIGGER_COMMAND_TAG_NOT_SUPPORTED)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			/* translator: %s represents an SQL statement name */
+					 errmsg("event triggers are not supported for %s",
+							tag)));
+	}
+}
+
+static event_trigger_command_tag_check_result
+check_table_rewrite_ddl_tag(const char *tag)
+{
+	if (pg_strcasecmp(tag, "ALTER TABLE") == 0 ||
+		pg_strcasecmp(tag, "ALTER TYPE") == 0)
+		return EVENT_TRIGGER_COMMAND_TAG_OK;
+
+	return EVENT_TRIGGER_COMMAND_TAG_NOT_SUPPORTED;
 }
 
 /*
@@ -468,12 +542,13 @@ AlterEventTrigger(AlterEventTrigStmt *stmt)
 /*
  * Change event trigger's owner -- by name
  */
-Oid
+ObjectAddress
 AlterEventTriggerOwner(const char *name, Oid newOwnerId)
 {
 	Oid			evtOid;
 	HeapTuple	tup;
 	Relation	rel;
+	ObjectAddress address;
 
 	rel = heap_open(EventTriggerRelationId, RowExclusiveLock);
 
@@ -488,15 +563,17 @@ AlterEventTriggerOwner(const char *name, Oid newOwnerId)
 
 	AlterEventTriggerOwner_internal(rel, tup, newOwnerId);
 
+	ObjectAddressSet(address, EventTriggerRelationId, evtOid);
+
 	heap_freetuple(tup);
 
 	heap_close(rel, RowExclusiveLock);
 
-	return evtOid;
+	return address;
 }
 
 /*
- * Change extension owner, by OID
+ * Change event trigger owner, by OID
  */
 void
 AlterEventTriggerOwner_oid(Oid trigOid, Oid newOwnerId)
@@ -640,13 +717,22 @@ EventTriggerCommonSetup(Node *parsetree,
 	 * relevant command tag.
 	 */
 #ifdef USE_ASSERT_CHECKING
-	if (assert_enabled)
 	{
 		const char *dbgtag;
 
 		dbgtag = CreateCommandTag(parsetree);
-		if (check_ddl_tag(dbgtag) != EVENT_TRIGGER_COMMAND_TAG_OK)
-			elog(ERROR, "unexpected command tag \"%s\"", dbgtag);
+		if (event == EVT_DDLCommandStart ||
+			event == EVT_DDLCommandEnd ||
+			event == EVT_SQLDrop)
+		{
+			if (check_ddl_tag(dbgtag) != EVENT_TRIGGER_COMMAND_TAG_OK)
+				elog(ERROR, "unexpected command tag \"%s\"", dbgtag);
+		}
+		else if (event == EVT_TableRewrite)
+		{
+			if (check_table_rewrite_ddl_tag(dbgtag) != EVENT_TRIGGER_COMMAND_TAG_OK)
+				elog(ERROR, "unexpected command tag \"%s\"", dbgtag);
+		}
 	}
 #endif
 
@@ -805,7 +891,7 @@ EventTriggerSQLDrop(Node *parsetree)
 	/*
 	 * Nothing to do if run list is empty.  Note this shouldn't happen,
 	 * because if there are no sql_drop events, then objects-to-drop wouldn't
-	 * have been collected in the first place and we would have quitted above.
+	 * have been collected in the first place and we would have quit above.
 	 */
 	if (runlist == NIL)
 		return;
@@ -842,6 +928,80 @@ EventTriggerSQLDrop(Node *parsetree)
 	list_free(runlist);
 }
 
+
+/*
+ * Fire table_rewrite triggers.
+ */
+void
+EventTriggerTableRewrite(Node *parsetree, Oid tableOid, int reason)
+{
+	List	   *runlist;
+	EventTriggerData trigdata;
+
+	elog(DEBUG1, "EventTriggerTableRewrite(%u)", tableOid);
+
+	/*
+	 * Event Triggers are completely disabled in standalone mode.  There are
+	 * (at least) two reasons for this:
+	 *
+	 * 1. A sufficiently broken event trigger might not only render the
+	 * database unusable, but prevent disabling itself to fix the situation.
+	 * In this scenario, restarting in standalone mode provides an escape
+	 * hatch.
+	 *
+	 * 2. BuildEventTriggerCache relies on systable_beginscan_ordered, and
+	 * therefore will malfunction if pg_event_trigger's indexes are damaged.
+	 * To allow recovery from a damaged index, we need some operating mode
+	 * wherein event triggers are disabled.  (Or we could implement
+	 * heapscan-and-sort logic for that case, but having disaster recovery
+	 * scenarios depend on code that's otherwise untested isn't appetizing.)
+	 */
+	if (!IsUnderPostmaster)
+		return;
+
+	runlist = EventTriggerCommonSetup(parsetree,
+									  EVT_TableRewrite,
+									  "table_rewrite",
+									  &trigdata);
+	if (runlist == NIL)
+		return;
+
+	/*
+	 * Make sure pg_event_trigger_table_rewrite_oid only works when running
+	 * these triggers. Use PG_TRY to ensure table_rewrite_oid is reset even
+	 * when one trigger fails. (This is perhaps not necessary, as the
+	 * currentState variable will be removed shortly by our caller, but it
+	 * seems better to play safe.)
+	 */
+	currentEventTriggerState->table_rewrite_oid = tableOid;
+	currentEventTriggerState->table_rewrite_reason = reason;
+
+	/* Run the triggers. */
+	PG_TRY();
+	{
+		EventTriggerInvoke(runlist, &trigdata);
+	}
+	PG_CATCH();
+	{
+		currentEventTriggerState->table_rewrite_oid = InvalidOid;
+		currentEventTriggerState->table_rewrite_reason = 0;
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	currentEventTriggerState->table_rewrite_oid = InvalidOid;
+	currentEventTriggerState->table_rewrite_reason = 0;
+
+	/* Cleanup. */
+	list_free(runlist);
+
+	/*
+	 * Make sure anything the event triggers did will be visible to the main
+	 * command.
+	 */
+	CommandCounterIncrement();
+}
+
 /*
  * Invoke each event trigger in a list of event triggers.
  */
@@ -874,6 +1034,8 @@ EventTriggerInvoke(List *fn_oid_list, EventTriggerData *trigdata)
 		FmgrInfo	flinfo;
 		FunctionCallInfoData fcinfo;
 		PgStat_FunctionCallUsage fcusage;
+
+		elog(DEBUG1, "EventTriggerInvoke %u", fnoid);
 
 		/*
 		 * We want each event trigger to be able to see the results of the
@@ -922,13 +1084,17 @@ EventTriggerSupportsObjectType(ObjectType obtype)
 			/* no support for event triggers on event triggers */
 			return false;
 		case OBJECT_AGGREGATE:
+		case OBJECT_AMOP:
+		case OBJECT_AMPROC:
 		case OBJECT_ATTRIBUTE:
 		case OBJECT_CAST:
 		case OBJECT_COLUMN:
-		case OBJECT_CONSTRAINT:
 		case OBJECT_COLLATION:
 		case OBJECT_CONVERSION:
+		case OBJECT_DEFACL:
+		case OBJECT_DEFAULT:
 		case OBJECT_DOMAIN:
+		case OBJECT_DOMCONSTRAINT:
 		case OBJECT_EXTENSION:
 		case OBJECT_FDW:
 		case OBJECT_FOREIGN_SERVER:
@@ -941,16 +1107,20 @@ EventTriggerSupportsObjectType(ObjectType obtype)
 		case OBJECT_OPCLASS:
 		case OBJECT_OPERATOR:
 		case OBJECT_OPFAMILY:
+		case OBJECT_POLICY:
 		case OBJECT_RULE:
 		case OBJECT_SCHEMA:
 		case OBJECT_SEQUENCE:
+		case OBJECT_TABCONSTRAINT:
 		case OBJECT_TABLE:
+		case OBJECT_TRANSFORM:
 		case OBJECT_TRIGGER:
 		case OBJECT_TSCONFIGURATION:
 		case OBJECT_TSDICTIONARY:
 		case OBJECT_TSPARSER:
 		case OBJECT_TSTEMPLATE:
 		case OBJECT_TYPE:
+		case OBJECT_USER_MAPPING:
 		case OBJECT_VIEW:
 			return true;
 
@@ -999,6 +1169,7 @@ EventTriggerSupportsObjectClass(ObjectClass objclass)
 		case OCLASS_REWRITE:
 		case OCLASS_TRIGGER:
 		case OCLASS_SCHEMA:
+		case OCLASS_TRANSFORM:
 		case OCLASS_TSPARSER:
 		case OCLASS_TSDICT:
 		case OCLASS_TSTEMPLATE:
@@ -1008,6 +1179,7 @@ EventTriggerSupportsObjectClass(ObjectClass objclass)
 		case OCLASS_USER_MAPPING:
 		case OCLASS_DEFACL:
 		case OCLASS_EXTENSION:
+		case OCLASS_POLICY:
 			return true;
 
 		case OCLASS_EXTPROTOCOL:
@@ -1028,6 +1200,35 @@ EventTriggerSupportsObjectClass(ObjectClass objclass)
 	return true;
 }
 
+bool
+EventTriggerSupportsGrantObjectType(GrantObjectType objtype)
+{
+	switch (objtype)
+	{
+		case ACL_OBJECT_DATABASE:
+		case ACL_OBJECT_TABLESPACE:
+			/* no support for global objects */
+			return false;
+
+		case ACL_OBJECT_COLUMN:
+		case ACL_OBJECT_RELATION:
+		case ACL_OBJECT_SEQUENCE:
+		case ACL_OBJECT_DOMAIN:
+		case ACL_OBJECT_FDW:
+		case ACL_OBJECT_FOREIGN_SERVER:
+		case ACL_OBJECT_FUNCTION:
+		case ACL_OBJECT_LANGUAGE:
+		case ACL_OBJECT_LARGEOBJECT:
+		case ACL_OBJECT_NAMESPACE:
+		case ACL_OBJECT_TYPE:
+		case ACL_OBJECT_EXTPROTOCOL:
+			return true;
+		default:
+			Assert(false);
+			return true;
+	}
+}
+
 /*
  * Prepare event trigger state for a new complete query to run, if necessary;
  * returns whether this was done.  If it was, EventTriggerEndCompleteQuery must
@@ -1041,8 +1242,9 @@ EventTriggerBeginCompleteQuery(void)
 	MemoryContext cxt;
 
 	/*
-	 * Currently, sql_drop events are the only reason to have event trigger
-	 * state at all; so if there are none, don't install one.
+	 * Currently, sql_drop, table_rewrite, ddl_command_end events are the only
+	 * reason to have event trigger state at all; so if there are none, don't
+	 * install one.
 	 */
 	if (!trackDroppedObjectsNeeded())
 		return false;
@@ -1056,7 +1258,12 @@ EventTriggerBeginCompleteQuery(void)
 	state->cxt = cxt;
 	slist_init(&(state->SQLDropList));
 	state->in_sql_drop = false;
+	state->table_rewrite_oid = InvalidOid;
 
+	state->commandCollectionInhibited = currentEventTriggerState ?
+		currentEventTriggerState->commandCollectionInhibited : false;
+	state->currentCommand = NULL;
+	state->commandList = NIL;
 	state->previous = currentEventTriggerState;
 	currentEventTriggerState = state;
 
@@ -1095,8 +1302,13 @@ EventTriggerEndCompleteQuery(void)
 bool
 trackDroppedObjectsNeeded(void)
 {
-	/* true if any sql_drop event trigger exists */
-	return list_length(EventCacheLookup(EVT_SQLDrop)) > 0;
+	/*
+	 * true if any sql_drop, table_rewrite, ddl_command_end event trigger
+	 * exists
+	 */
+	return list_length(EventCacheLookup(EVT_SQLDrop)) > 0 ||
+		list_length(EventCacheLookup(EVT_TableRewrite)) > 0 ||
+		list_length(EventCacheLookup(EVT_DDLCommandEnd)) > 0;
 }
 
 /*
@@ -1120,7 +1332,7 @@ trackDroppedObjectsNeeded(void)
  * Register one object as being dropped by the current command.
  */
 void
-EventTriggerSQLDropAddObject(ObjectAddress *object)
+EventTriggerSQLDropAddObject(const ObjectAddress *object, bool original, bool normal)
 {
 	SQLDropObject *obj;
 	MemoryContext oldcxt;
@@ -1130,15 +1342,18 @@ EventTriggerSQLDropAddObject(ObjectAddress *object)
 
 	Assert(EventTriggerSupportsObjectClass(getObjectClass(object)));
 
-	/* don't report temp schemas */
+	/* don't report temp schemas except my own */
 	if (object->classId == NamespaceRelationId &&
-		isAnyTempNamespace(object->objectId))
+		(isAnyTempNamespace(object->objectId) &&
+		 !isTempNamespace(object->objectId)))
 		return;
 
 	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
 
 	obj = palloc0(sizeof(SQLDropObject));
 	obj->address = *object;
+	obj->original = original;
+	obj->normal = normal;
 
 	/*
 	 * Obtain schema names from the object's catalog tuple, if one exists;
@@ -1170,16 +1385,24 @@ EventTriggerSQLDropAddObject(ObjectAddress *object)
 					Oid			namespaceId;
 
 					namespaceId = DatumGetObjectId(datum);
-					/* Don't report objects in temp namespaces */
-					if (isAnyTempNamespace(namespaceId))
+					/* temp objects are only reported if they are my own */
+					if (isTempNamespace(namespaceId))
+					{
+						obj->schemaname = "pg_temp";
+						obj->istemp = true;
+					}
+					else if (isAnyTempNamespace(namespaceId))
 					{
 						pfree(obj);
 						heap_close(catalog, AccessShareLock);
 						MemoryContextSwitchTo(oldcxt);
 						return;
 					}
-
-					obj->schemaname = get_namespace_name(namespaceId);
+					else
+					{
+						obj->schemaname = get_namespace_name(namespaceId);
+						obj->istemp = false;
+					}
 				}
 			}
 
@@ -1199,11 +1422,18 @@ EventTriggerSQLDropAddObject(ObjectAddress *object)
 
 		heap_close(catalog, AccessShareLock);
 	}
+	else
+	{
+		if (object->classId == NamespaceRelationId &&
+			isTempNamespace(object->objectId))
+			obj->istemp = true;
+	}
 
-	/* object identity */
-	obj->objidentity = getObjectIdentity(&obj->address);
+	/* object identity, objname and objargs */
+	obj->objidentity =
+		getObjectIdentityParts(&obj->address, &obj->addrnames, &obj->addrargs);
 
-	/* and object type, too */
+	/* object type */
 	obj->objecttype = getObjectTypeDescription(&obj->address);
 
 	slist_push_head(&(currentEventTriggerState->SQLDropList), &obj->next);
@@ -1233,7 +1463,7 @@ pg_event_trigger_dropped_objects(PG_FUNCTION_ARGS)
 	if (!currentEventTriggerState ||
 		!currentEventTriggerState->in_sql_drop)
 		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				(errcode(ERRCODE_E_R_I_E_EVENT_TRIGGER_PROTOCOL_VIOLATED),
 		 errmsg("%s can only be called in a sql_drop event trigger function",
 				"pg_event_trigger_dropped_objects()")));
 
@@ -1266,8 +1496,8 @@ pg_event_trigger_dropped_objects(PG_FUNCTION_ARGS)
 	{
 		SQLDropObject *obj;
 		int			i = 0;
-		Datum		values[7];
-		bool		nulls[7];
+		Datum		values[12];
+		bool		nulls[12];
 
 		obj = slist_container(SQLDropObject, next, iter.cur);
 
@@ -1282,6 +1512,15 @@ pg_event_trigger_dropped_objects(PG_FUNCTION_ARGS)
 
 		/* objsubid */
 		values[i++] = Int32GetDatum(obj->address.objectSubId);
+
+		/* original */
+		values[i++] = BoolGetDatum(obj->original);
+
+		/* normal */
+		values[i++] = BoolGetDatum(obj->normal);
+
+		/* is_temporary */
+		values[i++] = BoolGetDatum(obj->istemp);
 
 		/* object_type */
 		values[i++] = CStringGetTextDatum(obj->objecttype);
@@ -1304,6 +1543,22 @@ pg_event_trigger_dropped_objects(PG_FUNCTION_ARGS)
 		else
 			nulls[i++] = true;
 
+		/* address_names and address_args */
+		if (obj->addrnames)
+		{
+			values[i++] = PointerGetDatum(strlist_to_textarray(obj->addrnames));
+
+			if (obj->addrargs)
+				values[i++] = PointerGetDatum(strlist_to_textarray(obj->addrargs));
+			else
+				values[i++] = PointerGetDatum(construct_empty_array(TEXTOID));
+		}
+		else
+		{
+			nulls[i++] = true;
+			nulls[i++] = true;
+		}
+
 		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 	}
 
@@ -1311,4 +1566,719 @@ pg_event_trigger_dropped_objects(PG_FUNCTION_ARGS)
 	tuplestore_donestoring(tupstore);
 
 	return (Datum) 0;
+}
+
+/*
+ * pg_event_trigger_table_rewrite_oid
+ *
+ * Make the Oid of the table going to be rewritten available to the user
+ * function run by the Event Trigger.
+ */
+Datum
+pg_event_trigger_table_rewrite_oid(PG_FUNCTION_ARGS)
+{
+	/*
+	 * Protect this function from being called out of context
+	 */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->table_rewrite_oid == InvalidOid)
+		ereport(ERROR,
+				(errcode(ERRCODE_E_R_I_E_EVENT_TRIGGER_PROTOCOL_VIOLATED),
+				 errmsg("%s can only be called in a table_rewrite event trigger function",
+						"pg_event_trigger_table_rewrite_oid()")));
+
+	PG_RETURN_OID(currentEventTriggerState->table_rewrite_oid);
+}
+
+/*
+ * pg_event_trigger_table_rewrite_reason
+ *
+ * Make the rewrite reason available to the user.
+ */
+Datum
+pg_event_trigger_table_rewrite_reason(PG_FUNCTION_ARGS)
+{
+	/*
+	 * Protect this function from being called out of context
+	 */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->table_rewrite_reason == 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_E_R_I_E_EVENT_TRIGGER_PROTOCOL_VIOLATED),
+				 errmsg("%s can only be called in a table_rewrite event trigger function",
+						"pg_event_trigger_table_rewrite_reason()")));
+
+	PG_RETURN_INT32(currentEventTriggerState->table_rewrite_reason);
+}
+
+/*-------------------------------------------------------------------------
+ * Support for DDL command deparsing
+ *
+ * The routines below enable an event trigger function to obtain a list of
+ * DDL commands as they are executed.  There are three main pieces to this
+ * feature:
+ *
+ * 1) Within ProcessUtilitySlow, or some sub-routine thereof, each DDL command
+ * adds a struct CollectedCommand representation of itself to the command list,
+ * using the routines below.
+ *
+ * 2) Some time after that, ddl_command_end fires and the command list is made
+ * available to the event trigger function via pg_event_trigger_ddl_commands();
+ * the complete command details are exposed as a column of type pg_ddl_command.
+ *
+ * 3) An extension can install a function capable of taking a value of type
+ * pg_ddl_command and transform it into some external, user-visible and/or
+ * -modifiable representation.
+ *-------------------------------------------------------------------------
+ */
+
+/*
+ * Inhibit DDL command collection.
+ */
+void
+EventTriggerInhibitCommandCollection(void)
+{
+	if (!currentEventTriggerState)
+		return;
+
+	currentEventTriggerState->commandCollectionInhibited = true;
+}
+
+/*
+ * Re-establish DDL command collection.
+ */
+void
+EventTriggerUndoInhibitCommandCollection(void)
+{
+	if (!currentEventTriggerState)
+		return;
+
+	currentEventTriggerState->commandCollectionInhibited = false;
+}
+
+/*
+ * EventTriggerCollectSimpleCommand
+ *		Save data about a simple DDL command that was just executed
+ *
+ * address identifies the object being operated on.  secondaryObject is an
+ * object address that was related in some way to the executed command; its
+ * meaning is command-specific.
+ *
+ * For instance, for an ALTER obj SET SCHEMA command, objtype is the type of
+ * object being moved, objectId is its OID, and secondaryOid is the OID of the
+ * old schema.  (The destination schema OID can be obtained by catalog lookup
+ * of the object.)
+ */
+void
+EventTriggerCollectSimpleCommand(ObjectAddress address,
+								 ObjectAddress secondaryObject,
+								 Node *parsetree)
+{
+	MemoryContext oldcxt;
+	CollectedCommand *command;
+
+	/* ignore if event trigger context not set, or collection disabled */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
+
+	command = palloc(sizeof(CollectedCommand));
+
+	command->type = SCT_Simple;
+	command->in_extension = creating_extension;
+
+	command->d.simple.address = address;
+	command->d.simple.secondaryObject = secondaryObject;
+	command->parsetree = copyObject(parsetree);
+
+	currentEventTriggerState->commandList = lappend(currentEventTriggerState->commandList,
+													command);
+
+	MemoryContextSwitchTo(oldcxt);
+}
+
+/*
+ * EventTriggerAlterTableStart
+ *		Prepare to receive data on an ALTER TABLE command about to be executed
+ *
+ * Note we don't collect the command immediately; instead we keep it in
+ * currentCommand, and only when we're done processing the subcommands we will
+ * add it to the command list.
+ *
+ * XXX -- this API isn't considering the possibility of an ALTER TABLE command
+ * being called reentrantly by an event trigger function.  Do we need stackable
+ * commands at this level?	Perhaps at least we should detect the condition and
+ * raise an error.
+ */
+void
+EventTriggerAlterTableStart(Node *parsetree)
+{
+	MemoryContext oldcxt;
+	CollectedCommand *command;
+
+	/* ignore if event trigger context not set, or collection disabled */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
+
+	command = palloc(sizeof(CollectedCommand));
+
+	command->type = SCT_AlterTable;
+	command->in_extension = creating_extension;
+
+	command->d.alterTable.classId = RelationRelationId;
+	command->d.alterTable.objectId = InvalidOid;
+	command->d.alterTable.subcmds = NIL;
+	command->parsetree = copyObject(parsetree);
+
+	currentEventTriggerState->currentCommand = command;
+
+	MemoryContextSwitchTo(oldcxt);
+}
+
+/*
+ * Remember the OID of the object being affected by an ALTER TABLE.
+ *
+ * This is needed because in some cases we don't know the OID until later.
+ */
+void
+EventTriggerAlterTableRelid(Oid objectId)
+{
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	currentEventTriggerState->currentCommand->d.alterTable.objectId = objectId;
+}
+
+/*
+ * EventTriggerCollectAlterTableSubcmd
+ *		Save data about a single part of an ALTER TABLE.
+ *
+ * Several different commands go through this path, but apart from ALTER TABLE
+ * itself, they are all concerned with AlterTableCmd nodes that are generated
+ * internally, so that's all that this code needs to handle at the moment.
+ */
+void
+EventTriggerCollectAlterTableSubcmd(Node *subcmd, ObjectAddress address)
+{
+	MemoryContext oldcxt;
+	CollectedATSubcmd *newsub;
+
+	/* ignore if event trigger context not set, or collection disabled */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	Assert(IsA(subcmd, AlterTableCmd));
+	Assert(OidIsValid(currentEventTriggerState->currentCommand->d.alterTable.objectId));
+
+	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
+
+	newsub = palloc(sizeof(CollectedATSubcmd));
+	newsub->address = address;
+	newsub->parsetree = copyObject(subcmd);
+
+	currentEventTriggerState->currentCommand->d.alterTable.subcmds =
+		lappend(currentEventTriggerState->currentCommand->d.alterTable.subcmds, newsub);
+
+	MemoryContextSwitchTo(oldcxt);
+}
+
+/*
+ * EventTriggerAlterTableEnd
+ *		Finish up saving an ALTER TABLE command, and add it to command list.
+ *
+ * FIXME this API isn't considering the possibility that an xact/subxact is
+ * aborted partway through.  Probably it's best to add an
+ * AtEOSubXact_EventTriggers() to fix this.
+ */
+void
+EventTriggerAlterTableEnd(void)
+{
+	/* ignore if event trigger context not set, or collection disabled */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	/* If no subcommands, don't collect */
+	if (list_length(currentEventTriggerState->currentCommand->d.alterTable.subcmds) != 0)
+	{
+		currentEventTriggerState->commandList =
+			lappend(currentEventTriggerState->commandList,
+					currentEventTriggerState->currentCommand);
+	}
+	else
+		pfree(currentEventTriggerState->currentCommand);
+
+	currentEventTriggerState->currentCommand = NULL;
+}
+
+/*
+ * EventTriggerCollectGrant
+ *		Save data about a GRANT/REVOKE command being executed
+ *
+ * This function creates a copy of the InternalGrant, as the original might
+ * not have the right lifetime.
+ */
+void
+EventTriggerCollectGrant(InternalGrant *istmt)
+{
+	MemoryContext oldcxt;
+	CollectedCommand *command;
+	InternalGrant *icopy;
+	ListCell   *cell;
+
+	/* ignore if event trigger context not set, or collection disabled */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
+
+	/*
+	 * This is tedious, but necessary.
+	 */
+	icopy = palloc(sizeof(InternalGrant));
+	memcpy(icopy, istmt, sizeof(InternalGrant));
+	icopy->objects = list_copy(istmt->objects);
+	icopy->grantees = list_copy(istmt->grantees);
+	icopy->col_privs = NIL;
+	foreach(cell, istmt->col_privs)
+		icopy->col_privs = lappend(icopy->col_privs, copyObject(lfirst(cell)));
+
+	/* Now collect it, using the copied InternalGrant */
+	command = palloc(sizeof(CollectedCommand));
+	command->type = SCT_Grant;
+	command->in_extension = creating_extension;
+	command->d.grant.istmt = icopy;
+	command->parsetree = NULL;
+
+	currentEventTriggerState->commandList =
+		lappend(currentEventTriggerState->commandList, command);
+
+	MemoryContextSwitchTo(oldcxt);
+}
+
+/*
+ * EventTriggerCollectAlterOpFam
+ *		Save data about an ALTER OPERATOR FAMILY ADD/DROP command being
+ *		executed
+ */
+void
+EventTriggerCollectAlterOpFam(AlterOpFamilyStmt *stmt, Oid opfamoid,
+							  List *operators, List *procedures)
+{
+	MemoryContext oldcxt;
+	CollectedCommand *command;
+
+	/* ignore if event trigger context not set, or collection disabled */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
+
+	command = palloc(sizeof(CollectedCommand));
+	command->type = SCT_AlterOpFamily;
+	command->in_extension = creating_extension;
+	ObjectAddressSet(command->d.opfam.address,
+					 OperatorFamilyRelationId, opfamoid);
+	command->d.opfam.operators = operators;
+	command->d.opfam.procedures = procedures;
+	command->parsetree = copyObject(stmt);
+
+	currentEventTriggerState->commandList =
+		lappend(currentEventTriggerState->commandList, command);
+
+	MemoryContextSwitchTo(oldcxt);
+}
+
+/*
+ * EventTriggerCollectCreateOpClass
+ *		Save data about a CREATE OPERATOR CLASS command being executed
+ */
+void
+EventTriggerCollectCreateOpClass(CreateOpClassStmt *stmt, Oid opcoid,
+								 List *operators, List *procedures)
+{
+	MemoryContext oldcxt;
+	CollectedCommand *command;
+
+	/* ignore if event trigger context not set, or collection disabled */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
+
+	command = palloc0(sizeof(CollectedCommand));
+	command->type = SCT_CreateOpClass;
+	command->in_extension = creating_extension;
+	ObjectAddressSet(command->d.createopc.address,
+					 OperatorClassRelationId, opcoid);
+	command->d.createopc.operators = operators;
+	command->d.createopc.procedures = procedures;
+	command->parsetree = copyObject(stmt);
+
+	currentEventTriggerState->commandList =
+		lappend(currentEventTriggerState->commandList, command);
+
+	MemoryContextSwitchTo(oldcxt);
+}
+
+/*
+ * EventTriggerCollectAlterTSConfig
+ *		Save data about an ALTER TEXT SEARCH CONFIGURATION command being
+ *		executed
+ */
+void
+EventTriggerCollectAlterTSConfig(AlterTSConfigurationStmt *stmt, Oid cfgId,
+								 Oid *dictIds, int ndicts)
+{
+	MemoryContext oldcxt;
+	CollectedCommand *command;
+
+	/* ignore if event trigger context not set, or collection disabled */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
+
+	command = palloc0(sizeof(CollectedCommand));
+	command->type = SCT_AlterTSConfig;
+	command->in_extension = creating_extension;
+	ObjectAddressSet(command->d.atscfg.address,
+					 TSConfigRelationId, cfgId);
+	command->d.atscfg.dictIds = palloc(sizeof(Oid) * ndicts);
+	memcpy(command->d.atscfg.dictIds, dictIds, sizeof(Oid) * ndicts);
+	command->d.atscfg.ndicts = ndicts;
+	command->parsetree = copyObject(stmt);
+
+	currentEventTriggerState->commandList =
+		lappend(currentEventTriggerState->commandList, command);
+
+	MemoryContextSwitchTo(oldcxt);
+}
+
+/*
+ * EventTriggerCollectAlterDefPrivs
+ *		Save data about an ALTER DEFAULT PRIVILEGES command being
+ *		executed
+ */
+void
+EventTriggerCollectAlterDefPrivs(AlterDefaultPrivilegesStmt *stmt)
+{
+	MemoryContext oldcxt;
+	CollectedCommand *command;
+
+	/* ignore if event trigger context not set, or collection disabled */
+	if (!currentEventTriggerState ||
+		currentEventTriggerState->commandCollectionInhibited)
+		return;
+
+	oldcxt = MemoryContextSwitchTo(currentEventTriggerState->cxt);
+
+	command = palloc0(sizeof(CollectedCommand));
+	command->type = SCT_AlterDefaultPrivileges;
+	command->d.defprivs.objtype = stmt->action->objtype;
+	command->in_extension = creating_extension;
+	command->parsetree = copyObject(stmt);
+
+	currentEventTriggerState->commandList =
+		lappend(currentEventTriggerState->commandList, command);
+	MemoryContextSwitchTo(oldcxt);
+}
+
+/*
+ * In a ddl_command_end event trigger, this function reports the DDL commands
+ * being run.
+ */
+Datum
+pg_event_trigger_ddl_commands(PG_FUNCTION_ARGS)
+{
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	TupleDesc	tupdesc;
+	Tuplestorestate *tupstore;
+	MemoryContext per_query_ctx;
+	MemoryContext oldcontext;
+	ListCell   *lc;
+
+	/*
+	 * Protect this function from being called out of context
+	 */
+	if (!currentEventTriggerState)
+		ereport(ERROR,
+				(errcode(ERRCODE_E_R_I_E_EVENT_TRIGGER_PROTOCOL_VIOLATED),
+				 errmsg("%s can only be called in an event trigger function",
+						"pg_event_trigger_ddl_commands()")));
+
+	/* check to see if caller supports us returning a tuplestore */
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("set-valued function called in context that cannot accept a set")));
+	if (!(rsinfo->allowedModes & SFRM_Materialize))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("materialize mode required, but it is not allowed in this context")));
+
+	/* Build a tuple descriptor for our result type */
+	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+		elog(ERROR, "return type must be a row type");
+
+	/* Build tuplestore to hold the result rows */
+	per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+	oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+	tupstore = tuplestore_begin_heap(true, false, work_mem);
+	rsinfo->returnMode = SFRM_Materialize;
+	rsinfo->setResult = tupstore;
+	rsinfo->setDesc = tupdesc;
+
+	MemoryContextSwitchTo(oldcontext);
+
+	foreach(lc, currentEventTriggerState->commandList)
+	{
+		CollectedCommand *cmd = lfirst(lc);
+		Datum		values[9];
+		bool		nulls[9];
+		ObjectAddress addr;
+		int			i = 0;
+
+		/*
+		 * For IF NOT EXISTS commands that attempt to create an existing
+		 * object, the returned OID is Invalid.  Don't return anything.
+		 *
+		 * One might think that a viable alternative would be to look up the
+		 * Oid of the existing object and run the deparse with that.  But
+		 * since the parse tree might be different from the one that created
+		 * the object in the first place, we might not end up in a consistent
+		 * state anyway.
+		 */
+		if (cmd->type == SCT_Simple &&
+			!OidIsValid(cmd->d.simple.address.objectId))
+			continue;
+
+		MemSet(nulls, 0, sizeof(nulls));
+
+		switch (cmd->type)
+		{
+			case SCT_Simple:
+			case SCT_AlterTable:
+			case SCT_AlterOpFamily:
+			case SCT_CreateOpClass:
+			case SCT_AlterTSConfig:
+				{
+					char	   *identity;
+					char	   *type;
+					char	   *schema = NULL;
+
+					if (cmd->type == SCT_Simple)
+						addr = cmd->d.simple.address;
+					else if (cmd->type == SCT_AlterTable)
+						ObjectAddressSet(addr,
+										 cmd->d.alterTable.classId,
+										 cmd->d.alterTable.objectId);
+					else if (cmd->type == SCT_AlterOpFamily)
+						addr = cmd->d.opfam.address;
+					else if (cmd->type == SCT_CreateOpClass)
+						addr = cmd->d.createopc.address;
+					else if (cmd->type == SCT_AlterTSConfig)
+						addr = cmd->d.atscfg.address;
+
+					type = getObjectTypeDescription(&addr);
+					identity = getObjectIdentity(&addr);
+
+					/*
+					 * Obtain schema name, if any ("pg_temp" if a temp
+					 * object). If the object class is not in the supported
+					 * list here, we assume it's a schema-less object type,
+					 * and thus "schema" remains set to NULL.
+					 */
+					if (is_objectclass_supported(addr.classId))
+					{
+						AttrNumber	nspAttnum;
+
+						nspAttnum = get_object_attnum_namespace(addr.classId);
+						if (nspAttnum != InvalidAttrNumber)
+						{
+							Relation	catalog;
+							HeapTuple	objtup;
+							Oid			schema_oid;
+							bool		isnull;
+
+							catalog = heap_open(addr.classId, AccessShareLock);
+							objtup = get_catalog_object_by_oid(catalog,
+															   addr.objectId);
+							if (!HeapTupleIsValid(objtup))
+								elog(ERROR, "cache lookup failed for object %u/%u",
+									 addr.classId, addr.objectId);
+							schema_oid =
+								heap_getattr(objtup, nspAttnum,
+										 RelationGetDescr(catalog), &isnull);
+							if (isnull)
+								elog(ERROR,
+								 "invalid null namespace in object %u/%u/%d",
+									 addr.classId, addr.objectId, addr.objectSubId);
+							/* XXX not quite get_namespace_name_or_temp */
+							if (isAnyTempNamespace(schema_oid))
+								schema = pstrdup("pg_temp");
+							else
+								schema = get_namespace_name(schema_oid);
+
+							heap_close(catalog, AccessShareLock);
+						}
+					}
+
+					/* classid */
+					values[i++] = ObjectIdGetDatum(addr.classId);
+					/* objid */
+					values[i++] = ObjectIdGetDatum(addr.objectId);
+					/* objsubid */
+					values[i++] = Int32GetDatum(addr.objectSubId);
+					/* command tag */
+					values[i++] = CStringGetTextDatum(CreateCommandTag(cmd->parsetree));
+					/* object_type */
+					values[i++] = CStringGetTextDatum(type);
+					/* schema */
+					if (schema == NULL)
+						nulls[i++] = true;
+					else
+						values[i++] = CStringGetTextDatum(schema);
+					/* identity */
+					values[i++] = CStringGetTextDatum(identity);
+					/* in_extension */
+					values[i++] = BoolGetDatum(cmd->in_extension);
+					/* command */
+					values[i++] = PointerGetDatum(cmd);
+				}
+				break;
+
+			case SCT_AlterDefaultPrivileges:
+				/* classid */
+				nulls[i++] = true;
+				/* objid */
+				nulls[i++] = true;
+				/* objsubid */
+				nulls[i++] = true;
+				/* command tag */
+				values[i++] = CStringGetTextDatum(CreateCommandTag(cmd->parsetree));
+				/* object_type */
+				values[i++] = CStringGetTextDatum(stringify_adefprivs_objtype(
+												   cmd->d.defprivs.objtype));
+				/* schema */
+				nulls[i++] = true;
+				/* identity */
+				nulls[i++] = true;
+				/* in_extension */
+				values[i++] = BoolGetDatum(cmd->in_extension);
+				/* command */
+				values[i++] = PointerGetDatum(cmd);
+				break;
+
+			case SCT_Grant:
+				/* classid */
+				nulls[i++] = true;
+				/* objid */
+				nulls[i++] = true;
+				/* objsubid */
+				nulls[i++] = true;
+				/* command tag */
+				values[i++] = CStringGetTextDatum(cmd->d.grant.istmt->is_grant ?
+												  "GRANT" : "REVOKE");
+				/* object_type */
+				values[i++] = CStringGetTextDatum(stringify_grantobjtype(
+											   cmd->d.grant.istmt->objtype));
+				/* schema */
+				nulls[i++] = true;
+				/* identity */
+				nulls[i++] = true;
+				/* in_extension */
+				values[i++] = BoolGetDatum(cmd->in_extension);
+				/* command */
+				values[i++] = PointerGetDatum(cmd);
+				break;
+		}
+
+		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+	}
+
+	/* clean up and return the tuplestore */
+	tuplestore_donestoring(tupstore);
+
+	PG_RETURN_VOID();
+}
+
+/*
+ * Return the GrantObjectType as a string, as it would appear in GRANT and
+ * REVOKE commands.
+ */
+static const char *
+stringify_grantobjtype(GrantObjectType objtype)
+{
+	switch (objtype)
+	{
+		case ACL_OBJECT_COLUMN:
+			return "COLUMN";
+		case ACL_OBJECT_RELATION:
+			return "TABLE";
+		case ACL_OBJECT_SEQUENCE:
+			return "SEQUENCE";
+		case ACL_OBJECT_DATABASE:
+			return "DATABASE";
+		case ACL_OBJECT_DOMAIN:
+			return "DOMAIN";
+		case ACL_OBJECT_FDW:
+			return "FOREIGN DATA WRAPPER";
+		case ACL_OBJECT_FOREIGN_SERVER:
+			return "FOREIGN SERVER";
+		case ACL_OBJECT_FUNCTION:
+			return "FUNCTION";
+		case ACL_OBJECT_LANGUAGE:
+			return "LANGUAGE";
+		case ACL_OBJECT_LARGEOBJECT:
+			return "LARGE OBJECT";
+		case ACL_OBJECT_NAMESPACE:
+			return "SCHEMA";
+		case ACL_OBJECT_TABLESPACE:
+			return "TABLESPACE";
+		case ACL_OBJECT_TYPE:
+			return "TYPE";
+		default:
+			elog(ERROR, "unrecognized type %d", objtype);
+			return "???";		/* keep compiler quiet */
+	}
+}
+
+/*
+ * Return the GrantObjectType as a string; as above, but use the spelling
+ * in ALTER DEFAULT PRIVILEGES commands instead.
+ */
+static const char *
+stringify_adefprivs_objtype(GrantObjectType objtype)
+{
+	switch (objtype)
+	{
+		case ACL_OBJECT_RELATION:
+			return "TABLES";
+			break;
+		case ACL_OBJECT_FUNCTION:
+			return "FUNCTIONS";
+			break;
+		case ACL_OBJECT_SEQUENCE:
+			return "SEQUENCES";
+			break;
+		case ACL_OBJECT_TYPE:
+			return "TYPES";
+			break;
+		default:
+			elog(ERROR, "unrecognized type %d", objtype);
+			return "???";		/* keep compiler quiet */
+	}
 }

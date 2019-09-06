@@ -159,8 +159,6 @@ PROCESS_QE () {
         PARA_EXIT $RETVAL "Update port number to $GP_PORT"
         SED_PG_CONF ${GP_DIR}/$PG_CONF "$LISTEN_ADR_TXT" listen_addresses=\'*\' 0 $GP_HOSTADDRESS
         PARA_EXIT $RETVAL "Update listen address"
-        SED_PG_CONF ${GP_DIR}/$PG_CONF "$CHKPOINT_SEG_TXT" checkpoint_segments=$CHECK_POINT_SEGMENTS 0 $GP_HOSTADDRESS
-        PARA_EXIT $RETVAL "Update checkpoint segments"
         SED_PG_CONF ${GP_DIR}/$PG_CONF "$CONTENT_ID_TXT" "gp_contentid=${GP_CONTENT}" 0 $GP_HOSTADDRESS
         PARA_EXIT $RETVAL "Update gp_contentid"
         SED_PG_CONF ${GP_DIR}/$PG_INTERNAL_CONF "$DBID_TXT" "gp_dbid=${GP_DBID}" 0 $GP_HOSTADDRESS
