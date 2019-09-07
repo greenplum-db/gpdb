@@ -63,7 +63,10 @@
             </row>
             <row>
               <entry colname="col1">ROW EXCLUSIVE</entry>
-              <entry colname="col2"><codeph>INSERT</codeph>, <codeph>COPY</codeph></entry>
+              <entry colname="col2"><codeph>INSERT</codeph>,
+                    <codeph>COPY</codeph><p><codeph>UPDATE</codeph>, <codeph>DELETE</codeph> on
+                  non-partitioned tables, see <xref href="#topic2/lock_note" format="dita"
+                    >Note</xref>.</p></entry>
               <entry colname="col3">SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
             <row>
@@ -89,9 +92,9 @@
             </row>
             <row>
               <entry colname="col1">EXCLUSIVE</entry>
-              <entry colname="col2"><codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, <codeph>SELECT
-                  FOR UPDATE</codeph>, See <xref href="#topic2/lock_note" format="dita"
-                >Note</xref></entry>
+              <entry colname="col2"><codeph>SELECT FOR UPDATE</codeph><p><codeph>DELETE</codeph>,
+                    <codeph>UPDATE</codeph> on partitioned tables.</p><p>See <xref
+                    href="#topic2/lock_note" format="dita">Note</xref>.</p></entry>
               <entry colname="col3">ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE
                 ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
@@ -107,9 +110,12 @@
           </tbody>
         </tgroup>
       </table>
-      <note id="lock_note">Greenplum Database acquires the more restrictive EXCLUSIVE lock (rather
-        than ROW EXCLUSIVE in PostgreSQL) for <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
-        <codeph>SELECT FOR UPDATE</codeph>.</note>
+      <note id="lock_note">Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock for
+          <codeph>SELECT FOR UPDATE</codeph>. PostgreSQL acquires a less restrictive
+          <systemoutput>ROW EXCLUSIVE</systemoutput> lock.<p>For an <codeph>UPDATE</codeph>and
+            <codeph>DELETE</codeph> command on a partitioned table, Greenplum Database acquires an
+            <codeph>EXCLUSIVE</codeph> lock on the root partition table. On a non-partitioned table,
+          Greenplum Database acquires a <codeph>ROW EXCLUSIVE</codeph> lock.</p></note>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -355,7 +361,8 @@
         <p><codeph>VACUUM FULL</codeph> reclaims all expired row space, but it is an expensive
           operation and can take an unacceptably long time to finish on large, distributed Greenplum
           Database tables. If the free space map overflows, you can recreate the table with a
-            <codeph>CREATE TABLE AS </codeph>statement and drop the old table. Using <codeph>VACUUM FULL</codeph> is discouraged.</p>
+            <codeph>CREATE TABLE AS </codeph>statement and drop the old table. Using <codeph>VACUUM
+            FULL</codeph> is discouraged.</p>
         <p>Size the free space map with the following server configuration parameters:<ul
             id="ul_cj2_xc5_h4">
             <li><codeph>max_fsm_pages</codeph></li>
