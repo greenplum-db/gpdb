@@ -185,7 +185,9 @@ script:
         make -C gpAux/gpdemo cluster
         source gpAux/gpdemo/gpdemo-env.sh
         gpstop -aq
-        export SRCDIR=$PWD
+        unset MASTER_DATA_DIRECTORY
+        unset PGPORT
+        unset GPHOME
         mkdir -p $HOME/gpdb5
         pushd $HOME/gpdb-5.21.4
         make -s install
@@ -193,6 +195,9 @@ script:
         make -C gpAux/gpdemo cluster
         source gpAux/gpdemo/gpdemo-env.sh
         gpstop -aq
+        unset MASTER_DATA_DIRECTORY
+        unset PGPORT
+        unset GPHOME
         popd
         bash ./src/bin/pg_upgrade/test_gpdb.sh -C -s -o $HOME/gpdb-5.21.4/gpAux/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/ -B $HOME/gpdb5/bin -b $TRAVIS_BUILD_DIR/gpsql/bin
       fi
