@@ -17,6 +17,7 @@ The PXF Greenplum Database 5 to 6 migration procedure has two parts. You perform
 Before migrating PXF from Greenplum 5 to Greenplum 6, ensure that you can:
 
 - Identify the version number of your Greenplum 5 installation.
+- Determine if you have `gphdfs` external tables defined in your Greenplum 5 installation.
 - Identify the file system location of the PXF `$PXF_CONF` directory in your Greenplum 5 installation.
 
 
@@ -44,6 +45,8 @@ Perform this procedure in your Greenplum Database 5 installation:
  PostgreSQL 8.3.23 (Greenplum Database 5.21.2 build commit:610b6d777436fe4a281a371cae85ac40f01f4f5e) on x86_64-pc-linux-gnu, compiled by GCC gcc (GCC) 6.2.0, 64-bit compiled on Aug  7 2019 20:38:47
 (1 row)
     ```
+
+3. Greenplum 6 removes the `gphdfs` external table protocol. If you have `gphdfs` external tables defined in your Greenplum 5 installation, you must delete or migrate them to `pxf` as described in the PXF documentation.
 
 3. Stop PXF on each segment host as described in [Stopping PXF](cfginitstart_pxf.html#stop_pxf).
 
