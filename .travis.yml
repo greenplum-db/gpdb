@@ -192,7 +192,9 @@ script:
         pushd $HOME/gpdb-5.21.4
         make -s install
         source $HOME/gpdb5/greenplum_path.sh
-        make -C gpAux/gpdemo cluster
+        make -C gpAux/gpdemo cluster || true
+        cat /home/travis/gpdb-5.21.4/gpAux/gpdemo/datadirs/gpAdminLogs/gpinitsystem_20190909.log
+        exit
         source gpAux/gpdemo/gpdemo-env.sh
         gpstop -aq
         unset MASTER_DATA_DIRECTORY
