@@ -4,6 +4,9 @@
 
 language: c
 sudo: false
+cache:
+  directories:
+    - $HOME/gpdb-5.21.4
 
 git:
   submodules: false
@@ -66,6 +69,23 @@ matrix:
           osx_image: xcode11
           env: T=macos
         #
+        # Upgrade test
+        # ----------------------------------------------------------------
+        # Runs the pg_upgrade test_gpdb.sh script against the cached 5.x
+        # build.
+        - os: linux
+          dist: bionic
+          compiler: gcc
+          env:
+              - T=upgrade C=""
+              - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+          addons:
+              apt:
+                  sources:
+                      - *common_sources
+                  packages:
+                      - *common_packages
+        #
         # Configuration variations
         # ----------------------------------------------------------------
         #
@@ -109,6 +129,18 @@ install:
 before_script:
     - ssh-keygen -t "rsa" -f ~/.ssh/id_rsa -N ""
     - cp ~/.ssh/{id_rsa.pub,authorized_keys}
+    - |
+      if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+        if [ ! -e $HOME/gpdb-5.21.4/GNUmakefile ]; then
+          (cd $HOME && \
+           mkdir -p gpdb5 && \
+           curl -LO https://github.com/greenplum-db/gpdb/archive/5.21.4.tar.gz && \
+           tar -zxf 5.21.4.tar.gz && \
+           cd gpdb-5.21.4 && \
+           CC="gcc-8" CXX="g++-8" ./configure --prefix=$HOME/gpdb5/ --with-perl --with-python --disable-orca --disable-gpcloud && \
+           make -s)
+        fi
+      fi
 
 script:
   - |
@@ -135,6 +167,32 @@ script:
         make -C gpAux/gpdemo cluster
         source gpAux/gpdemo/gpdemo-env.sh
         make -C src/test/regress installcheck-small
+      fi
+  - |
+      set -eo pipefail
+      if [ "$T" = "upgrade" ]; then
+        ./configure \
+            --prefix=${TRAVIS_BUILD_DIR}/gpsql \
+            --with-perl \
+            --with-python \
+            --disable-orca \
+            --disable-gpcloud \
+            --disable-pxf \
+            --with-libcurl \
+            $C
+        make -s install
+        source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+        make -C gpAux/gpdemo cluster
+        gpstop -a
+        export SRCDIR=$PWD
+        mkdir -p $HOME/gpdb5
+        pushd $HOME/gpdb-5.21.4
+        make -s install
+        source $HOME/gpdb5/greenplum_path.sh
+        make -C gpAux/gpdemo cluster
+        gpstop -a
+        popd
+        bash ./src/bin/pg_upgrade/test_gpdb.sh -C -s -o $HOME/gpdb-5.21.4/gpAux/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/ -B $HOME/gpdb5/bin -b $TRAVIS_BUILD_DIR/gpsql/bin
       fi
   - |
       set -eo pipefail
