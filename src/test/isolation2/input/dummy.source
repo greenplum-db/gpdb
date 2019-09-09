@@ -1,2 +1,0 @@
--- This dummy.source file to is support running pg_regress without --ao-dir parameter
--- otherwise, people will get error message like: `no *.source files found`

@@ -119,7 +119,6 @@ static char *user = NULL;
 static _stringlist *extraroles = NULL;
 static _stringlist *extra_install = NULL;
 static char *initfile = NULL;
-static char *aodir = NULL;
 static char *config_auth_datadir = NULL;
 static bool  ignore_plans = false;
 
@@ -835,15 +834,6 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 		bool		has_tokens = false;
 		struct stat fst;
 
-		if (aodir && strncmp(*name, aodir, strlen(aodir)) == 0 &&
-			(strlen(*name) < 8 || strcmp(*name + strlen(*name) - 7, ".source") != 0))
-		{
-			snprintf(srcfile, MAXPGPATH, "%s/%s",  indir, *name);
-			snprintf(destfile, MAXPGPATH, "%s/%s", dest_subdir, *name);
-			count += generate_uao_sourcefiles(srcfile, destfile, suffix, &repls);
-			continue;
-		}
-
 		snprintf(srcfile, MAXPGPATH, "%s/%s",  indir, *name);
 		if (stat(srcfile, &fst) < 0)
 		{
@@ -855,9 +845,17 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 		/* recurse if it's a directory */
 		if (S_ISDIR(fst.st_mode))
 		{
+			char generate_uao_file[MAXPGPATH];
+			snprintf(generate_uao_file, MAXPGPATH, "%s/%s",  srcfile, "GENERATE_ROW_AND_COLUMN_FILES");
+
 			snprintf(srcfile, MAXPGPATH, "%s/%s", source_subdir, *name);
 			snprintf(destfile, MAXPGPATH, "%s/%s", dest_subdir, *name);
-			count += convert_sourcefiles_in(srcfile, dest_dir, destfile, suffix);
+
+			if (access(generate_uao_file, F_OK) != -1)
+				count += generate_uao_sourcefiles(srcfile, destfile, suffix, &repls);
+			else
+				count += convert_sourcefiles_in(srcfile, dest_dir, destfile, suffix);
+
 			continue;
 		}
 
@@ -2759,8 +2757,6 @@ help(void)
 	/* Please put GPDB speicifc options at the end. */
 	printf(_("  --exclude-tests=TEST      command or space delimited tests to exclude from running\n"));
     printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff\n"));
-	printf(_("  --ao-dir=DIR              directory name prefix containing generic\n"));
-	printf(_("                            UAO row and column tests\n"));
 	printf(_("  --ignore-plans            ignore any explain plan diffs\n"));
 	printf(_("  --print-failure-diffs     Print the diff file to standard out after a failure\n"));
 	printf(_("\n"));
@@ -2813,7 +2809,6 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"extra-install", required_argument, NULL, 23},
 		{"config-auth", required_argument, NULL, 24},
 		{"init-file", required_argument, NULL, 25},
-		{"ao-dir", required_argument, NULL, 26},
 		{"exclude-tests", required_argument, NULL, 27},
 		{"ignore-plans", no_argument, NULL, 28},
 		{"prehook", required_argument, NULL, 29},
@@ -2939,18 +2934,15 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
                 initfile = strdup(optarg);
                 break;
             case 26:
-                aodir = strdup(optarg);
-                break;
-            case 27:
                 split_to_stringlist(strdup(optarg), ", ", &exclude_tests);
                 break;
-			case 28:
+			case 27:
 				ignore_plans = true;
 				break;
-			case 29:
+			case 28:
 				prehook = strdup(optarg);
 				break;
-			case 30:
+			case 29:
 				print_failure_diffs_is_enabled = true;
 				break;
 			default:

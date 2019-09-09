@@ -27,14 +27,8 @@ table is determined by the gp_default_storage_options value.
 Optimizer specific answer files may be named the usual way.
 E.g. create_ao_tables.source and create_ao_tables_optimizer.source.
 
-The option "--ao-dir" must be specified on pg_regress command line to
-generate the UAO row and column tests.  E.g. if create_ao_tables.source
-test files are placed under input/uao_ddl/ and output/uao_ddl/, run
-pg_regress as:
-
-    ./pg_regress --ao-dir=uao uao_ddl/create_ao_tables_row \
-    uao_ddl/create_ao_tables_column
-
+Having file GENERATE_ROW_AND_COLUMN_FILES in the directory conveys
+pg_regress to generate the UAO row and column tests.
 
 Testing setup without teardown, allowing DB objects to persist
 --------------------------------------------------------------

@@ -1,7 +1,2 @@
-This directory only contains generated files created by running the
-
-	 ./pg_regress --ao-dir=uao/...
-
-command.
-
+This directory only contains generated files.
 All files in this directory are ignored by .gitignore.
