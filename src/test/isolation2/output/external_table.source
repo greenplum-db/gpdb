@@ -1,0 +1,186 @@
+-- start_ignore
+DROP EXTERNAL TABLE IF EXISTS exttab_cursor_1;
+DROP
+DROP EXTERNAL TABLE IF EXISTS exttab_cursor_2;
+DROP
+-- end_ignore
+
+-- Define a cursor on an external table scan query with segment reject limit reached
+-- does not reach reject limit
+CREATE EXTERNAL TABLE exttab_cursor_1( i int, j text ) LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
+CREATE
+-- reaches reject limit, use the same err table
+CREATE EXTERNAL TABLE exttab_cursor_2( i int, j text ) LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') LOG ERRORS SEGMENT REJECT LIMIT 2;
+CREATE
+-- Test to make sure error logs are populated when cursors are used
+-- The total number of formatting errors reported by the query is dependant on the number of rows parsed on
+-- the segments before COMMIT finishes. So mask the NOTICE by setting the client_min_messages guc to WARNING.
+10: set CLIENT_MIN_MESSAGES=WARNING;
+SET
+10: BEGIN;
+BEGIN
+10: DECLARE exttab_cur1 no scroll cursor FOR SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i UNION ALL SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i UNION ALL SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i;
+DECLARE
+10: COMMIT;
+COMMIT
+10: reset CLIENT_MIN_MESSAGES;
+RESET
+
+-- Fetch on external table scans with segment reject limit reached
+10: SELECT gp_truncate_error_log('exttab_cursor_1');
+ gp_truncate_error_log 
+-----------------------
+ t                     
+(1 row)
+10: SELECT gp_truncate_error_log('exttab_cursor_2');
+ gp_truncate_error_log 
+-----------------------
+ t                     
+(1 row)
+-- DECLARE CURSOR implicitly initiates a FETCH on the segments. If one of
+-- the segments reaches the reject limit and reports the error back to the QD
+-- before the others, the transaction gets aborted. The timing of fetching the
+-- results will  influence the order of the ERROR in the output.
+--
+-- For gp_interconnect_type=tcp:
+-- If the segment errors out before QD call 'SetupInterconnect', QD will report
+-- this error in 'SetupInterconnect', or else, QD will report the error in the
+-- following FETCH command.
+--
+-- To make this test deterministic, we use gp_inject_fault to let QD suspend
+-- before 'SetupInterconnect' to make sure QD calls 'SetupInterconnect' after
+-- segment errors out.
+
+-- Suspend QD when it is setting up interconnect.
+SELECT gp_inject_fault('interconnect_setup_palloc', 'suspend', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Inject fault on QE to determine when it aborts.
+SELECT gp_inject_fault('transaction_abort_failure', 'skip', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Start a transaction with cursor that triggers error on QE
+10: BEGIN;
+BEGIN
+10&: DECLARE exttab_cur1 no scroll cursor FOR SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i UNION ALL SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i UNION ALL SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i;  <waiting ...>
+
+-- Ensure that QE has hit an error
+SELECT gp_wait_until_triggered_fault('transaction_abort_failure', 1, dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+SELECT gp_wait_until_triggered_fault('interconnect_setup_palloc', 1, dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- Resume QD.
+-- Error from QE should be reported after QD resumes
+SELECT gp_inject_fault('interconnect_setup_palloc', 'resume', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Check the result
+10<:  <... completed>
+ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 @hostname@:25432 pid=20500)
+DETAIL:  Last error was: invalid input syntax for integer: "error_1", column i
+CONTEXT:  External table exttab_cursor_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
+10: COMMIT;
+COMMIT
+
+-- Reset injected faults
+SELECT gp_inject_fault('transaction_abort_failure', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+SELECT gp_inject_fault('interconnect_setup_palloc', 'reset', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- This should have errors populated already
+10: SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_2');
+ ?column? 
+----------
+ t        
+(1 row)
+
+-- Fetch on external table scans without reaching segment reject limit
+10: SELECT gp_truncate_error_log('exttab_cursor_1');
+ gp_truncate_error_log 
+-----------------------
+ t                     
+(1 row)
+10: SELECT gp_truncate_error_log('exttab_cursor_2');
+ gp_truncate_error_log 
+-----------------------
+ t                     
+(1 row)
+10: BEGIN;
+BEGIN
+10: DECLARE exttab_cur1 no scroll cursor FOR (SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i ORDER BY e1.i);
+DECLARE
+-- Should not fail
+10: FETCH exttab_cur1;
+ i | j        
+---+----------
+ 1 | 1_number 
+(1 row)
+10: FETCH exttab_cur1;
+ i | j        
+---+----------
+ 2 | 2_number 
+(1 row)
+10: FETCH exttab_cur1;
+ i | j        
+---+----------
+ 4 | 4_number 
+(1 row)
+10: FETCH exttab_cur1;
+ i | j        
+---+----------
+ 6 | 6_number 
+(1 row)
+10: FETCH exttab_cur1;
+ i | j        
+---+----------
+ 7 | 7_number 
+(1 row)
+10: FETCH exttab_cur1;
+ i | j        
+---+----------
+ 8 | 8_number 
+(1 row)
+10: FETCH exttab_cur1;
+ i | j        
+---+----------
+ 9 | 9_number 
+(1 row)
+10: FETCH exttab_cur1;
+ i  | j         
+----+-----------
+ 10 | 10_number 
+(1 row)
+10: FETCH exttab_cur1;
+ i | j 
+---+---
+(0 rows)
+10: FETCH exttab_cur1;
+ i | j 
+---+---
+(0 rows)
+10: COMMIT;
+COMMIT

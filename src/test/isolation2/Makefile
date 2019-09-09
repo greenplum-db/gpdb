@@ -17,7 +17,7 @@ endif
 override CPPFLAGS := -I$(srcdir) -I$(libpq_srcdir) -I$(srcdir)/../regress $(CPPFLAGS)
 override LDLIBS := $(libpq_pgport) $(LDLIBS)
 
-all: test_python pg_isolation2_regress$(X) all-lib
+all: test_python pg_isolation2_regress$(X) all-lib data
 
 test_python:
 	python helpers_test.py
@@ -41,6 +41,9 @@ atmsort.pm:
 explain.pm:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/explain.pm
 
+data:
+	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/data
+
 pg_isolation2_regress$(X): isolation2_main.o pg_regress.o submake-libpq submake-libpgport
 	$(CC) $(CFLAGS) $(filter %.o,$^) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
 
@@ -48,6 +51,7 @@ clean distclean:
 	rm -f pg_isolation2_regress$(X) $(OBJS) isolation2_main.o
 	rm -f pg_regress.o
 	rm -f gpstringsubs.pl gpdiff.pl atmsort.pm explain.pm
+	rm -f data
 	rm -rf $(pg_regress_clean_files)
 
 install: all gpdiff.pl gpstringsubs.pl

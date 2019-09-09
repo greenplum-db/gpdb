@@ -201,7 +201,7 @@ drop table ic_test_1;
 
 /*
  * If message queue of connection is failed to be allocated in
- * SetupUDPIFCInterconnect_Internal() , it should be handled properly
+ * SetupUDPIFCInterconnect_Internal(), it should be handled properly
  * in TeardownUDPIFCInterconnect_Internal().
  */
 CREATE TABLE a (i INT, j INT) DISTRIBUTED BY (i);
@@ -210,6 +210,14 @@ SELECT gp_inject_fault('interconnect_setup_palloc', 'error', 1);
 SELECT * FROM a;
 DROP TABLE a;
 SELECT gp_inject_fault('interconnect_setup_palloc', 'reset', 1);
+
+-- Test sender QE errors out when setup outgoing connection, the receiver QE is waiting,
+-- at this time, QD should be able to process the error and cancel the receiver QE.
+CREATE TABLE test_ic_error(a INT, b int);
+SELECT gp_inject_fault('interconnect_setup_palloc', 'error', 2);
+SELECT * FROM test_ic_error t1, test_ic_error t2 where t1.a=t2.b;
+SELECT gp_inject_fault('interconnect_setup_palloc', 'reset', 2);
+DROP TABLE test_ic_error;
 
 -- Use WITH RECURSIVE to construct a one-time filter result node that executed
 -- on QD, meanwhile, let the result node has a outer node which contain motion.

@@ -73,8 +73,6 @@ DROP EXTERNAL TABLE IF EXISTS exttab_basic_7;
 DROP EXTERNAL TABLE IF EXISTS exttab_constraints_1;
 DROP EXTERNAL TABLE IF EXISTS exttab_cte_1;
 DROP EXTERNAL TABLE IF EXISTS exttab_cte_2;
-DROP EXTERNAL TABLE IF EXISTS exttab_cursor_1;
-DROP EXTERNAL TABLE IF EXISTS exttab_cursor_2;
 DROP EXTERNAL TABLE IF EXISTS exttab_permissions_1;
 DROP EXTERNAL TABLE IF EXISTS exttab_permissions_2;
 DROP EXTERNAL TABLE IF EXISTS exttab_permissions_3;
@@ -511,71 +509,6 @@ with cte1 as
 SELECT e1.i, e2.j FROM exttab_cte_1 e1, exttab_cte_1 e2 WHERE e1.i = e2.i AND e1.i > 5 ORDER BY e1.i
 )
 SELECT  cte1.i , cte1.j FROM cte1 ORDER BY cte1.i;
-
--- Define a cursor on an external table scan query with segment reject limit reached
--- does not reach reject limit
-CREATE EXTERNAL TABLE exttab_cursor_1( i int, j text )
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
-LOG ERRORS SEGMENT REJECT LIMIT 10;
--- reaches reject limit, use the same err table
-CREATE EXTERNAL TABLE exttab_cursor_2( i int, j text )
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
-LOG ERRORS SEGMENT REJECT LIMIT 2;
--- Test to make sure error logs are populated when cursors are used
--- The total number of formatting errors reported by the query is dependant on the number of rows parsed on
--- the segments before COMMIT finishes. So mask the NOTICE by setting the client_min_messages guc to WARNING.
-set CLIENT_MIN_MESSAGES=WARNING;
-BEGIN;
-DECLARE exttab_cur1 no scroll cursor FOR
-SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i
-UNION ALL
-SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i
-UNION ALL
-SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i;
-COMMIT;
-reset CLIENT_MIN_MESSAGES;
-
--- Fetch on external table scans with segment reject limit reached
-SELECT gp_truncate_error_log('exttab_cursor_1');
-SELECT gp_truncate_error_log('exttab_cursor_2');
--- DECLARE CURSOR implicitly initiates a FETCH on the segments. If one of
--- the segments reaches the reject limit and reports the error back to the QD
--- before the others, the transaction gets aborted. The timing of fetching the
--- results will  influence the order of the ERROR in the output.
-BEGIN;
-DECLARE exttab_cur1 no scroll cursor FOR
-SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i
-UNION ALL
-SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i
-UNION ALL
-SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i;
--- Should not fail as we would not have reached segment reject limit yet. This fails currently though
--- because how cursors scan the rows internally is implementation dependant.
--- The test is here to track the issue.
-FETCH exttab_cur1;
-COMMIT;
--- This should have errors populated already
-SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_2');
-
--- Fetch on external table scans without reaching segment reject limit
-SELECT gp_truncate_error_log('exttab_cursor_1');
-SELECT gp_truncate_error_log('exttab_cursor_2');
-BEGIN;
-DECLARE exttab_cur1 no scroll cursor FOR
-(SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i
-ORDER BY e1.i);
--- Should not fail
-FETCH exttab_cur1;
-FETCH exttab_cur1;
-FETCH exttab_cur1;
-FETCH exttab_cur1;
-FETCH exttab_cur1;
-FETCH exttab_cur1;
-FETCH exttab_cur1;
-FETCH exttab_cur1;
-FETCH exttab_cur1;
-FETCH exttab_cur1;
-COMMIT;
 
 -- Check permissions with gp_truncate_error_log and gp_read_error_log
 -- does not reach reject limit

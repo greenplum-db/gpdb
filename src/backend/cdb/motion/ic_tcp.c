@@ -1564,6 +1564,8 @@ SetupTCPInterconnect(EState *estate)
 		ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
 		n = select(highsock + 1, (fd_set *) &rset, (fd_set *) &wset, (fd_set *) &eset, &timeout);
 		ML_CHECK_FOR_INTERRUPTS(interconnect_context->teardownActive);
+		if (Gp_role == GP_ROLE_DISPATCH)
+			checkForCancelFromQD(interconnect_context);
 
 		elapsed_ms = gp_get_elapsed_ms(&startTime);
 
