@@ -121,6 +121,7 @@ install:
     - pip install --user --pre psutil
     - pip install --user lockfile
     - pip install --user setuptools
+    - pip install --user paramiko
 
 ## ----------------------------------------------------------------------
 ## Perform build:
