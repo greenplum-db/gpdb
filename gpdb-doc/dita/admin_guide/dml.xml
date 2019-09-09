@@ -111,11 +111,11 @@
         </tgroup>
       </table>
       <note id="lock_note">Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock for
-          <codeph>SELECT FOR UPDATE</codeph>. PostgreSQL acquires a less restrictive
-          <systemoutput>ROW EXCLUSIVE</systemoutput> lock.<p>For an <codeph>UPDATE</codeph>and
-            <codeph>DELETE</codeph> command on a partitioned table, Greenplum Database acquires an
-            <codeph>EXCLUSIVE</codeph> lock on the root partition table. On a non-partitioned table,
-          Greenplum Database acquires a <codeph>ROW EXCLUSIVE</codeph> lock.</p></note>
+          <codeph>SELECT FOR UPDATE</codeph>. PostgreSQL acquires a less restrictive <codeph>ROW
+          EXCLUSIVE</codeph> lock.<p>For an <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>
+          command on a partitioned table, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph>
+          lock on the root partition table. On a non-partitioned table, Greenplum Database acquires
+          a <codeph>ROW EXCLUSIVE</codeph> lock.</p></note>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
