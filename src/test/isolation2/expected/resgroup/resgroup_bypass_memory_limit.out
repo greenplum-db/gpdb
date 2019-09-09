@@ -1,0 +1,960 @@
+--
+-- set timezone will accumulate the memory usage in session.
+-- here is used to test bypass memory limit is query level instead of session level.
+--
+SET TIMEZONE TO 'Japan';
+SET
+SET TIMEZONE TO 'Portugal';
+SET
+SET TIMEZONE TO 'Canada/Eastern';
+SET
+SET TIMEZONE TO 'Canada/Central';
+SET
+SET TIMEZONE TO 'Canada/Newfoundland';
+SET
+SET TIMEZONE TO 'Canada/Mountain';
+SET
+SET TIMEZONE TO 'Canada/Saskatchewan';
+SET
+SET TIMEZONE TO 'Canada/Yukon';
+SET
+SET TIMEZONE TO 'Canada/Pacific';
+SET
+SET TIMEZONE TO 'Canada/Atlantic';
+SET
+SET TIMEZONE TO 'CET';
+SET
+SET TIMEZONE TO 'ROK';
+SET
+SET TIMEZONE TO 'Arctic/Longyearbyen';
+SET
+SET TIMEZONE TO 'PRC';
+SET
+SET TIMEZONE TO 'GMT-0';
+SET
+SET TIMEZONE TO 'Iran';
+SET
+SET TIMEZONE TO 'GB-Eire';
+SET
+SET TIMEZONE TO 'Jamaica';
+SET
+SET TIMEZONE TO 'Europe/Tiraspol';
+SET
+SET TIMEZONE TO 'Europe/Vaduz';
+SET
+SET TIMEZONE TO 'Europe/Berlin';
+SET
+SET TIMEZONE TO 'Europe/San_Marino';
+SET
+SET TIMEZONE TO 'Europe/Guernsey';
+SET
+SET TIMEZONE TO 'Europe/Ljubljana';
+SET
+SET TIMEZONE TO 'Europe/Simferopol';
+SET
+SET TIMEZONE TO 'Europe/Belgrade';
+SET
+SET TIMEZONE TO 'Europe/Chisinau';
+SET
+SET TIMEZONE TO 'Europe/London';
+SET
+SET TIMEZONE TO 'Europe/Vatican';
+SET
+SET TIMEZONE TO 'Europe/Skopje';
+SET
+SET TIMEZONE TO 'Europe/Saratov';
+SET
+SET TIMEZONE TO 'Europe/Jersey';
+SET
+SET TIMEZONE TO 'Europe/Samara';
+SET
+SET TIMEZONE TO 'Europe/Oslo';
+SET
+SET TIMEZONE TO 'Europe/Helsinki';
+SET
+SET TIMEZONE TO 'Europe/Luxembourg';
+SET
+SET TIMEZONE TO 'Europe/Bucharest';
+SET
+SET TIMEZONE TO 'Europe/Podgorica';
+SET
+SET TIMEZONE TO 'Europe/Madrid';
+SET
+SET TIMEZONE TO 'Europe/Sarajevo';
+SET
+SET TIMEZONE TO 'Europe/Busingen';
+SET
+SET TIMEZONE TO 'Europe/Monaco';
+SET
+SET TIMEZONE TO 'Europe/Belfast';
+SET
+SET TIMEZONE TO 'Europe/Zagreb';
+SET
+SET TIMEZONE TO 'Europe/Warsaw';
+SET
+SET TIMEZONE TO 'Europe/Sofia';
+SET
+SET TIMEZONE TO 'Europe/Tallinn';
+SET
+SET TIMEZONE TO 'Europe/Brussels';
+SET
+SET TIMEZONE TO 'Europe/Isle_of_Man';
+SET
+SET TIMEZONE TO 'Europe/Stockholm';
+SET
+SET TIMEZONE TO 'Europe/Lisbon';
+SET
+SET TIMEZONE TO 'Europe/Istanbul';
+SET
+SET TIMEZONE TO 'Europe/Copenhagen';
+SET
+SET TIMEZONE TO 'Europe/Tirane';
+SET
+SET TIMEZONE TO 'Europe/Dublin';
+SET
+SET TIMEZONE TO 'Europe/Gibraltar';
+SET
+SET TIMEZONE TO 'Europe/Athens';
+SET
+SET TIMEZONE TO 'Europe/Zurich';
+SET
+SET TIMEZONE TO 'Europe/Vilnius';
+SET
+SET TIMEZONE TO 'Europe/Malta';
+SET
+SET TIMEZONE TO 'Europe/Riga';
+SET
+SET TIMEZONE TO 'Europe/Vienna';
+SET
+SET TIMEZONE TO 'Europe/Moscow';
+SET
+SET TIMEZONE TO 'Europe/Ulyanovsk';
+SET
+SET TIMEZONE TO 'Europe/Rome';
+SET
+SET TIMEZONE TO 'Europe/Kirov';
+SET
+SET TIMEZONE TO 'Europe/Uzhgorod';
+SET
+SET TIMEZONE TO 'Europe/Kaliningrad';
+SET
+SET TIMEZONE TO 'Europe/Mariehamn';
+SET
+SET TIMEZONE TO 'Europe/Budapest';
+SET
+SET TIMEZONE TO 'Europe/Astrakhan';
+SET
+SET TIMEZONE TO 'Europe/Volgograd';
+SET
+SET TIMEZONE TO 'Europe/Kiev';
+SET
+SET TIMEZONE TO 'Europe/Paris';
+SET
+SET TIMEZONE TO 'Europe/Andorra';
+SET
+SET TIMEZONE TO 'Europe/Amsterdam';
+SET
+SET TIMEZONE TO 'Europe/Nicosia';
+SET
+SET TIMEZONE TO 'Europe/Bratislava';
+SET
+SET TIMEZONE TO 'Europe/Minsk';
+SET
+SET TIMEZONE TO 'Europe/Prague';
+SET
+SET TIMEZONE TO 'Europe/Zaporozhye';
+SET
+SET TIMEZONE TO 'Egypt';
+SET
+SET TIMEZONE TO 'Zulu';
+SET
+SET TIMEZONE TO 'Etc/GMT+6';
+SET
+SET TIMEZONE TO 'Etc/GMT-8';
+SET
+SET TIMEZONE TO 'Etc/GMT-0';
+SET
+SET TIMEZONE TO 'Etc/GMT+3';
+SET
+SET TIMEZONE TO 'Etc/GMT-12';
+SET
+SET TIMEZONE TO 'Etc/GMT+7';
+SET
+SET TIMEZONE TO 'Etc/GMT-14';
+SET
+SET TIMEZONE TO 'Etc/GMT-10';
+SET
+SET TIMEZONE TO 'Etc/Zulu';
+SET
+SET TIMEZONE TO 'Etc/GMT-4';
+SET
+SET TIMEZONE TO 'Etc/GMT+5';
+SET
+SET TIMEZONE TO 'Etc/GMT';
+SET
+SET TIMEZONE TO 'Etc/GMT-11';
+SET
+SET TIMEZONE TO 'Etc/GMT-5';
+SET
+SET TIMEZONE TO 'Etc/GMT+1';
+SET
+SET TIMEZONE TO 'Etc/GMT+10';
+SET
+SET TIMEZONE TO 'Etc/UCT';
+SET
+SET TIMEZONE TO 'Etc/GMT+11';
+SET
+SET TIMEZONE TO 'Etc/GMT-3';
+SET
+SET TIMEZONE TO 'Etc/Greenwich';
+SET
+SET TIMEZONE TO 'Etc/GMT-13';
+SET
+SET TIMEZONE TO 'Etc/GMT-9';
+SET
+SET TIMEZONE TO 'Etc/GMT-7';
+SET
+SET TIMEZONE TO 'Etc/GMT-6';
+SET
+SET TIMEZONE TO 'Etc/GMT+4';
+SET
+SET TIMEZONE TO 'Etc/GMT+2';
+SET
+SET TIMEZONE TO 'Etc/Universal';
+SET
+SET TIMEZONE TO 'Etc/GMT+9';
+SET
+SET TIMEZONE TO 'Etc/GMT+0';
+SET
+SET TIMEZONE TO 'Etc/GMT-2';
+SET
+SET TIMEZONE TO 'Etc/GMT+12';
+SET
+SET TIMEZONE TO 'Etc/GMT-1';
+SET
+SET TIMEZONE TO 'Etc/UTC';
+SET
+SET TIMEZONE TO 'Etc/GMT+8';
+SET
+SET TIMEZONE TO 'Etc/GMT0';
+SET
+SET TIMEZONE TO 'Australia/Currie';
+SET
+SET TIMEZONE TO 'Australia/Lindeman';
+SET
+SET TIMEZONE TO 'Australia/Melbourne';
+SET
+SET TIMEZONE TO 'Australia/Yancowinna';
+SET
+SET TIMEZONE TO 'Australia/Eucla';
+SET
+SET TIMEZONE TO 'Australia/South';
+SET
+SET TIMEZONE TO 'Australia/Lord_Howe';
+SET
+SET TIMEZONE TO 'Australia/Perth';
+SET
+SET TIMEZONE TO 'Australia/Canberra';
+SET
+SET TIMEZONE TO 'Australia/Hobart';
+SET
+SET TIMEZONE TO 'Australia/North';
+SET
+SET TIMEZONE TO 'Australia/Broken_Hill';
+SET
+SET TIMEZONE TO 'Australia/NSW';
+SET
+SET TIMEZONE TO 'Australia/Victoria';
+SET
+SET TIMEZONE TO 'Australia/Adelaide';
+SET
+SET TIMEZONE TO 'Australia/Queensland';
+SET
+SET TIMEZONE TO 'Australia/Darwin';
+SET
+SET TIMEZONE TO 'Australia/West';
+SET
+SET TIMEZONE TO 'Australia/LHI';
+SET
+SET TIMEZONE TO 'Australia/ACT';
+SET
+SET TIMEZONE TO 'Australia/Sydney';
+SET
+SET TIMEZONE TO 'Australia/Brisbane';
+SET
+SET TIMEZONE TO 'Australia/Tasmania';
+SET
+SET TIMEZONE TO 'W-SU';
+SET
+SET TIMEZONE TO 'Africa/Kigali';
+SET
+SET TIMEZONE TO 'Africa/Dar_es_Salaam';
+SET
+SET TIMEZONE TO 'Africa/Niamey';
+SET
+SET TIMEZONE TO 'Africa/Brazzaville';
+SET
+SET TIMEZONE TO 'Africa/Addis_Ababa';
+SET
+SET TIMEZONE TO 'Africa/Kampala';
+SET
+SET TIMEZONE TO 'Africa/Kinshasa';
+SET
+SET TIMEZONE TO 'Africa/Lagos';
+SET
+SET TIMEZONE TO 'Africa/Accra';
+SET
+SET TIMEZONE TO 'Africa/Bangui';
+SET
+SET TIMEZONE TO 'Africa/Maputo';
+SET
+SET TIMEZONE TO 'Africa/Asmara';
+SET
+SET TIMEZONE TO 'Africa/Juba';
+SET
+SET TIMEZONE TO 'Africa/Tunis';
+SET
+SET TIMEZONE TO 'Africa/Bissau';
+SET
+SET TIMEZONE TO 'Africa/Freetown';
+SET
+SET TIMEZONE TO 'Africa/Tripoli';
+SET
+SET TIMEZONE TO 'Africa/Windhoek';
+SET
+SET TIMEZONE TO 'Africa/Casablanca';
+SET
+SET TIMEZONE TO 'Africa/Mbabane';
+SET
+SET TIMEZONE TO 'Africa/Harare';
+SET
+SET TIMEZONE TO 'Africa/Mogadishu';
+SET
+SET TIMEZONE TO 'Africa/Banjul';
+SET
+SET TIMEZONE TO 'Africa/Djibouti';
+SET
+SET TIMEZONE TO 'Africa/Malabo';
+SET
+SET TIMEZONE TO 'Africa/Nouakchott';
+SET
+SET TIMEZONE TO 'Africa/Lubumbashi';
+SET
+SET TIMEZONE TO 'Africa/Luanda';
+SET
+SET TIMEZONE TO 'Africa/Bamako';
+SET
+SET TIMEZONE TO 'Africa/Nairobi';
+SET
+SET TIMEZONE TO 'Africa/Lusaka';
+SET
+SET TIMEZONE TO 'Africa/Ouagadougou';
+SET
+SET TIMEZONE TO 'Africa/Asmera';
+SET
+SET TIMEZONE TO 'Africa/Douala';
+SET
+SET TIMEZONE TO 'Africa/Dakar';
+SET
+SET TIMEZONE TO 'Africa/Khartoum';
+SET
+SET TIMEZONE TO 'Africa/Libreville';
+SET
+SET TIMEZONE TO 'Africa/Maseru';
+SET
+SET TIMEZONE TO 'Africa/Lome';
+SET
+SET TIMEZONE TO 'Africa/Abidjan';
+SET
+SET TIMEZONE TO 'Africa/Ceuta';
+SET
+SET TIMEZONE TO 'Africa/El_Aaiun';
+SET
+SET TIMEZONE TO 'Africa/Algiers';
+SET
+SET TIMEZONE TO 'Africa/Ndjamena';
+SET
+SET TIMEZONE TO 'Africa/Gaborone';
+SET
+SET TIMEZONE TO 'Africa/Blantyre';
+SET
+SET TIMEZONE TO 'Africa/Sao_Tome';
+SET
+SET TIMEZONE TO 'Africa/Monrovia';
+SET
+SET TIMEZONE TO 'Africa/Johannesburg';
+SET
+SET TIMEZONE TO 'Africa/Timbuktu';
+SET
+SET TIMEZONE TO 'Africa/Cairo';
+SET
+SET TIMEZONE TO 'Africa/Porto-Novo';
+SET
+SET TIMEZONE TO 'Africa/Bujumbura';
+SET
+SET TIMEZONE TO 'Africa/Conakry';
+SET
+SET TIMEZONE TO 'PST8PDT';
+SET
+SET TIMEZONE TO 'Indian/Maldives';
+SET
+SET TIMEZONE TO 'Indian/Mahe';
+SET
+SET TIMEZONE TO 'Indian/Christmas';
+SET
+SET TIMEZONE TO 'Indian/Mauritius';
+SET
+SET TIMEZONE TO 'Indian/Chagos';
+SET
+SET TIMEZONE TO 'Indian/Mayotte';
+SET
+SET TIMEZONE TO 'Indian/Reunion';
+SET
+SET TIMEZONE TO 'Indian/Antananarivo';
+SET
+SET TIMEZONE TO 'Indian/Kerguelen';
+SET
+SET TIMEZONE TO 'Indian/Cocos';
+SET
+SET TIMEZONE TO 'Indian/Comoro';
+SET
+SET TIMEZONE TO 'MET';
+SET
+SET TIMEZONE TO 'ROC';
+SET
+SET TIMEZONE TO 'EET';
+SET
+SET TIMEZONE TO 'GMT';
+SET
+SET TIMEZONE TO 'EST';
+SET
+SET TIMEZONE TO 'Hongkong';
+SET
+SET TIMEZONE TO 'Turkey';
+SET
+SET TIMEZONE TO 'Iceland';
+SET
+SET TIMEZONE TO 'Poland';
+SET
+SET TIMEZONE TO 'GB';
+SET
+SET TIMEZONE TO 'Israel';
+SET
+SET TIMEZONE TO 'UCT';
+SET
+SET TIMEZONE TO 'Navajo';
+SET
+SET TIMEZONE TO 'Greenwich';
+SET
+SET TIMEZONE TO 'Antarctica/Davis';
+SET
+SET TIMEZONE TO 'Antarctica/Casey';
+SET
+SET TIMEZONE TO 'Antarctica/Troll';
+SET
+SET TIMEZONE TO 'Antarctica/DumontDUrville';
+SET
+SET TIMEZONE TO 'Antarctica/South_Pole';
+SET
+SET TIMEZONE TO 'Antarctica/Vostok';
+SET
+SET TIMEZONE TO 'Antarctica/Syowa';
+SET
+SET TIMEZONE TO 'Antarctica/Mawson';
+SET
+SET TIMEZONE TO 'Antarctica/McMurdo';
+SET
+SET TIMEZONE TO 'Antarctica/Palmer';
+SET
+SET TIMEZONE TO 'Antarctica/Macquarie';
+SET
+SET TIMEZONE TO 'Antarctica/Rothera';
+SET
+SET TIMEZONE TO 'CST6CDT';
+SET
+SET TIMEZONE TO 'Libya';
+SET
+SET TIMEZONE TO 'Kwajalein';
+SET
+SET TIMEZONE TO 'Cuba';
+SET
+SET TIMEZONE TO 'Mexico/BajaNorte';
+SET
+SET TIMEZONE TO 'Mexico/General';
+SET
+SET TIMEZONE TO 'Mexico/BajaSur';
+SET
+SET TIMEZONE TO 'WET';
+SET
+SET TIMEZONE TO 'Singapore';
+SET
+SET TIMEZONE TO 'Brazil/DeNoronha';
+SET
+SET TIMEZONE TO 'Brazil/Acre';
+SET
+SET TIMEZONE TO 'Brazil/West';
+SET
+SET TIMEZONE TO 'Brazil/East';
+SET
+SET TIMEZONE TO 'MST7MDT';
+SET
+SET TIMEZONE TO 'US/Aleutian';
+SET
+SET TIMEZONE TO 'US/Samoa';
+SET
+SET TIMEZONE TO 'US/Eastern';
+SET
+SET TIMEZONE TO 'US/Alaska';
+SET
+SET TIMEZONE TO 'US/Indiana-Starke';
+SET
+SET TIMEZONE TO 'US/Michigan';
+SET
+SET TIMEZONE TO 'US/Central';
+SET
+SET TIMEZONE TO 'US/East-Indiana';
+SET
+SET TIMEZONE TO 'US/Mountain';
+SET
+SET TIMEZONE TO 'US/Hawaii';
+SET
+SET TIMEZONE TO 'US/Pacific';
+SET
+SET TIMEZONE TO 'US/Arizona';
+SET
+SET TIMEZONE TO 'Universal';
+SET
+SET TIMEZONE TO 'Asia/Dushanbe';
+SET
+SET TIMEZONE TO 'Asia/Oral';
+SET
+SET TIMEZONE TO 'Asia/Magadan';
+SET
+SET TIMEZONE TO 'Asia/Hong_Kong';
+SET
+SET TIMEZONE TO 'Asia/Aden';
+SET
+SET TIMEZONE TO 'Asia/Tomsk';
+SET
+SET TIMEZONE TO 'Asia/Aqtobe';
+SET
+SET TIMEZONE TO 'Asia/Pontianak';
+SET
+SET TIMEZONE TO 'Asia/Kuching';
+SET
+SET TIMEZONE TO 'Asia/Tbilisi';
+SET
+SET TIMEZONE TO 'Asia/Novosibirsk';
+SET
+SET TIMEZONE TO 'Asia/Chita';
+SET
+SET TIMEZONE TO 'Asia/Hebron';
+SET
+SET TIMEZONE TO 'Asia/Choibalsan';
+SET
+SET TIMEZONE TO 'Asia/Qyzylorda';
+SET
+SET TIMEZONE TO 'Asia/Jakarta';
+SET
+SET TIMEZONE TO 'Asia/Colombo';
+SET
+SET TIMEZONE TO 'Asia/Dili';
+SET
+SET TIMEZONE TO 'Asia/Thimphu';
+SET
+SET TIMEZONE TO 'Asia/Tashkent';
+SET
+SET TIMEZONE TO 'Asia/Ujung_Pandang';
+SET
+SET TIMEZONE TO 'Asia/Ulaanbaatar';
+SET
+SET TIMEZONE TO 'Asia/Jerusalem';
+SET
+SET TIMEZONE TO 'Asia/Pyongyang';
+SET
+SET TIMEZONE TO 'Asia/Vladivostok';
+SET
+SET TIMEZONE TO 'Asia/Samarkand';
+SET
+SET TIMEZONE TO 'Asia/Beirut';
+SET
+SET TIMEZONE TO 'Asia/Shanghai';
+SET
+SET TIMEZONE TO 'Asia/Kabul';
+SET
+SET TIMEZONE TO 'Asia/Bangkok';
+SET
+SET TIMEZONE TO 'Asia/Almaty';
+SET
+SET TIMEZONE TO 'Asia/Kathmandu';
+SET
+SET TIMEZONE TO 'Asia/Ust-Nera';
+SET
+SET TIMEZONE TO 'Asia/Yangon';
+SET
+SET TIMEZONE TO 'Asia/Novokuznetsk';
+SET
+SET TIMEZONE TO 'Asia/Qatar';
+SET
+SET TIMEZONE TO 'Asia/Baghdad';
+SET
+SET TIMEZONE TO 'Asia/Srednekolymsk';
+SET
+SET TIMEZONE TO 'Asia/Hovd';
+SET
+SET TIMEZONE TO 'Asia/Istanbul';
+SET
+SET TIMEZONE TO 'Asia/Omsk';
+SET
+SET TIMEZONE TO 'Asia/Macau';
+SET
+SET TIMEZONE TO 'Asia/Yekaterinburg';
+SET
+SET TIMEZONE TO 'Asia/Vientiane';
+SET
+SET TIMEZONE TO 'Asia/Famagusta';
+SET
+SET TIMEZONE TO 'Asia/Urumqi';
+SET
+SET TIMEZONE TO 'Asia/Kuwait';
+SET
+SET TIMEZONE TO 'Asia/Dhaka';
+SET
+SET TIMEZONE TO 'Asia/Ulan_Bator';
+SET
+SET TIMEZONE TO 'Asia/Dubai';
+SET
+SET TIMEZONE TO 'Asia/Saigon';
+SET
+SET TIMEZONE TO 'Asia/Muscat';
+SET
+SET TIMEZONE TO 'Asia/Tehran';
+SET
+SET TIMEZONE TO 'Asia/Ho_Chi_Minh';
+SET
+SET TIMEZONE TO 'Asia/Aqtau';
+SET
+SET TIMEZONE TO 'Asia/Bishkek';
+SET
+SET TIMEZONE TO 'Asia/Kashgar';
+SET
+SET TIMEZONE TO 'Asia/Gaza';
+SET
+SET TIMEZONE TO 'Asia/Riyadh';
+SET
+SET TIMEZONE TO 'Asia/Ashkhabad';
+SET
+SET TIMEZONE TO 'Asia/Khandyga';
+SET
+SET TIMEZONE TO 'Asia/Anadyr';
+SET
+SET TIMEZONE TO 'Asia/Brunei';
+SET
+SET TIMEZONE TO 'Asia/Phnom_Penh';
+SET
+SET TIMEZONE TO 'Asia/Baku';
+SET
+SET TIMEZONE TO 'Asia/Sakhalin';
+SET
+SET TIMEZONE TO 'Asia/Atyrau';
+SET
+SET TIMEZONE TO 'Asia/Ashgabat';
+SET
+SET TIMEZONE TO 'Asia/Thimbu';
+SET
+SET TIMEZONE TO 'Asia/Damascus';
+SET
+SET TIMEZONE TO 'Asia/Kolkata';
+SET
+SET TIMEZONE TO 'Asia/Jayapura';
+SET
+SET TIMEZONE TO 'Asia/Tokyo';
+SET
+SET TIMEZONE TO 'Asia/Katmandu';
+SET
+SET TIMEZONE TO 'Asia/Bahrain';
+SET
+SET TIMEZONE TO 'Asia/Tel_Aviv';
+SET
+SET TIMEZONE TO 'Asia/Singapore';
+SET
+SET TIMEZONE TO 'Asia/Krasnoyarsk';
+SET
+SET TIMEZONE TO 'Asia/Seoul';
+SET
+SET TIMEZONE TO 'Asia/Barnaul';
+SET
+SET TIMEZONE TO 'Asia/Yakutsk';
+SET
+SET TIMEZONE TO 'Asia/Irkutsk';
+SET
+SET TIMEZONE TO 'Asia/Macao';
+SET
+SET TIMEZONE TO 'Asia/Taipei';
+SET
+SET TIMEZONE TO 'Asia/Kamchatka';
+SET
+SET TIMEZONE TO 'Asia/Yerevan';
+SET
+SET TIMEZONE TO 'Asia/Harbin';
+SET
+SET TIMEZONE TO 'Asia/Manila';
+SET
+SET TIMEZONE TO 'Asia/Qostanay';
+SET
+SET TIMEZONE TO 'Asia/Amman';
+SET
+SET TIMEZONE TO 'Asia/Nicosia';
+SET
+SET TIMEZONE TO 'Asia/Karachi';
+SET
+SET TIMEZONE TO 'Asia/Rangoon';
+SET
+SET TIMEZONE TO 'Asia/Chungking';
+SET
+SET TIMEZONE TO 'Asia/Chongqing';
+SET
+SET TIMEZONE TO 'Asia/Makassar';
+SET
+SET TIMEZONE TO 'Asia/Dacca';
+SET
+SET TIMEZONE TO 'Asia/Kuala_Lumpur';
+SET
+SET TIMEZONE TO 'Asia/Calcutta';
+SET
+SET TIMEZONE TO 'EST5EDT';
+SET
+SET TIMEZONE TO 'GMT+0';
+SET
+SET TIMEZONE TO 'Pacific/Wake';
+SET
+SET TIMEZONE TO 'Pacific/Samoa';
+SET
+SET TIMEZONE TO 'Pacific/Efate';
+SET
+SET TIMEZONE TO 'Pacific/Niue';
+SET
+SET TIMEZONE TO 'Pacific/Pago_Pago';
+SET
+SET TIMEZONE TO 'Pacific/Pitcairn';
+SET
+SET TIMEZONE TO 'Pacific/Saipan';
+SET
+SET TIMEZONE TO 'Pacific/Norfolk';
+SET
+SET TIMEZONE TO 'Pacific/Yap';
+SET
+SET TIMEZONE TO 'Pacific/Enderbury';
+SET
+SET TIMEZONE TO 'Pacific/Port_Moresby';
+SET
+SET TIMEZONE TO 'Pacific/Funafuti';
+SET
+SET TIMEZONE TO 'Pacific/Apia';
+SET
+SET TIMEZONE TO 'Pacific/Rarotonga';
+SET
+SET TIMEZONE TO 'Pacific/Ponape';
+SET
+SET TIMEZONE TO 'Pacific/Wallis';
+SET
+SET TIMEZONE TO 'Pacific/Johnston';
+SET
+SET TIMEZONE TO 'Pacific/Guam';
+SET
+SET TIMEZONE TO 'Pacific/Guadalcanal';
+SET
+SET TIMEZONE TO 'Pacific/Chatham';
+SET
+SET TIMEZONE TO 'Pacific/Truk';
+SET
+SET TIMEZONE TO 'Pacific/Fakaofo';
+SET
+SET TIMEZONE TO 'Pacific/Kosrae';
+SET
+SET TIMEZONE TO 'Pacific/Kiritimati';
+SET
+SET TIMEZONE TO 'Pacific/Gambier';
+SET
+SET TIMEZONE TO 'Pacific/Kwajalein';
+SET
+SET TIMEZONE TO 'Pacific/Midway';
+SET
+SET TIMEZONE TO 'Pacific/Pohnpei';
+SET
+SET TIMEZONE TO 'Pacific/Majuro';
+SET
+SET TIMEZONE TO 'Pacific/Tahiti';
+SET
+SET TIMEZONE TO 'Pacific/Fiji';
+SET
+SET TIMEZONE TO 'Pacific/Tongatapu';
+SET
+SET TIMEZONE TO 'Pacific/Palau';
+SET
+SET TIMEZONE TO 'Pacific/Galapagos';
+SET
+SET TIMEZONE TO 'Pacific/Marquesas';
+SET
+SET TIMEZONE TO 'Pacific/Bougainville';
+SET
+SET TIMEZONE TO 'Pacific/Honolulu';
+SET
+SET TIMEZONE TO 'Pacific/Noumea';
+SET
+SET TIMEZONE TO 'Pacific/Auckland';
+SET
+SET TIMEZONE TO 'Pacific/Chuuk';
+SET
+SET TIMEZONE TO 'Pacific/Nauru';
+SET
+SET TIMEZONE TO 'Pacific/Easter';
+SET
+SET TIMEZONE TO 'Pacific/Tarawa';
+SET
+SET TIMEZONE TO 'America/Detroit';
+SET
+SET TIMEZONE TO 'America/Barbados';
+SET
+SET TIMEZONE TO 'America/North_Dakota/New_Salem';
+SET
+SET TIMEZONE TO 'America/North_Dakota/Center';
+SET
+SET TIMEZONE TO 'America/North_Dakota/Beulah';
+SET
+SET TIMEZONE TO 'America/Thunder_Bay';
+SET
+SET TIMEZONE TO 'America/Panama';
+SET
+SET TIMEZONE TO 'America/Cancun';
+SET
+SET TIMEZONE TO 'America/Santo_Domingo';
+SET
+SET TIMEZONE TO 'America/Matamoros';
+SET
+SET TIMEZONE TO 'America/Port-au-Prince';
+SET
+SET TIMEZONE TO 'America/Atikokan';
+SET
+SET TIMEZONE TO 'America/Knox_IN';
+SET
+SET TIMEZONE TO 'America/Cayenne';
+SET
+SET TIMEZONE TO 'America/Kralendijk';
+SET
+SET TIMEZONE TO 'America/Iqaluit';
+SET
+SET TIMEZONE TO 'America/Paramaribo';
+SET
+SET TIMEZONE TO 'America/Aruba';
+SET
+SET TIMEZONE TO 'America/Vancouver';
+SET
+SET TIMEZONE TO 'America/Noronha';
+SET
+SET TIMEZONE TO 'America/Ojinaga';
+SET
+SET TIMEZONE TO 'America/Atka';
+SET
+SET TIMEZONE TO 'America/St_Johns';
+SET
+SET TIMEZONE TO 'America/Mexico_City';
+SET
+SET TIMEZONE TO 'America/Rosario';
+SET
+SET TIMEZONE TO 'America/Nipigon';
+SET
+SET TIMEZONE TO 'America/Costa_Rica';
+SET
+SET TIMEZONE TO 'America/Regina';
+SET
+SET TIMEZONE TO 'America/La_Paz';
+SET
+SET TIMEZONE TO 'America/Jamaica';
+SET
+SET TIMEZONE TO 'America/Anchorage';
+SET
+SET TIMEZONE TO 'America/St_Kitts';
+SET
+SET TIMEZONE TO 'America/Godthab';
+SET
+SET TIMEZONE TO 'America/Swift_Current';
+SET
+SET TIMEZONE TO 'America/Danmarkshavn';
+SET
+SET TIMEZONE TO 'America/Phoenix';
+SET
+SET TIMEZONE TO 'America/Lower_Princes';
+SET
+SET TIMEZONE TO 'America/Yakutat';
+SET
+SET TIMEZONE TO 'America/Menominee';
+SET
+SET TIMEZONE TO 'America/Bahia';
+SET
+SET TIMEZONE TO 'America/Montserrat';
+SET
+SET TIMEZONE TO 'America/Miquelon';
+SET
+SET TIMEZONE TO 'America/Anguilla';
+SET
+SET TIMEZONE TO 'America/Grand_Turk';
+SET
+SET TIMEZONE TO 'America/Coral_Harbour';
+SET
+SET TIMEZONE TO 'America/Glace_Bay';
+SET
+SET TIMEZONE TO 'America/Boa_Vista';
+SET
+SET TIMEZONE TO 'America/Dominica';
+SET
+SET TIMEZONE TO 'America/Goose_Bay';
+SET
+SET TIMEZONE TO 'America/Caracas';
+SET
+SET TIMEZONE TO 'America/Boise';
+SET
+SET TIMEZONE TO 'America/Cayman';
+SET
+SET TIMEZONE TO 'America/Puerto_Rico';
+SET
+SET TIMEZONE TO 'America/Guyana';
+SET
+SET TIMEZONE TO 'America/Metlakatla';
+SET
+SET TIMEZONE TO 'America/Cuiaba';
+SET
+SET TIMEZONE TO 'America/Virgin';
+SET
+SET TIMEZONE TO 'America/Campo_Grande';
+SET
+SET TIMEZONE TO 'America/Maceio';
+SET
+SET TIMEZONE TO 'America/Scoresbysund';
+SET
+SET TIMEZONE TO 'America/Guadeloupe';
+SET
+SET TIMEZONE TO 'America/Indiana/Vevay';
+SET
+SET TIMEZONE TO 'America/Indiana/Winamac';
+SET
+SET TIMEZONE TO 'America/Indiana/Petersburg';
+SET
+SET TIMEZONE TO 'America/Indiana/Marengo';
+SET
+SET TIMEZONE TO 'America/Indiana/Knox';
+SET
+SET TIMEZONE TO 'America/Indiana/Indianapolis';
+SET
+SET TIMEZONE TO 'America/Indiana/Vincennes';
+SET
+SET TIMEZONE TO 'America/Indiana/Tell_City';
+SET
+SET TIMEZONE TO 'America/Manaus';
+SET
+SET TIMEZONE TO 'America/Resolute';
+SET
+SET TIMEZONE TO 'America/Pangnirtung';
+SET
+SET TIMEZONE TO 'America/Winnipeg';
+SET
