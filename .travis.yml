@@ -183,14 +183,16 @@ script:
         make -s install
         source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
         make -C gpAux/gpdemo cluster
-        gpstop -a
+        source gpAux/gpdemo/gpdemo-env.sh
+        gpstop -aq
         export SRCDIR=$PWD
         mkdir -p $HOME/gpdb5
         pushd $HOME/gpdb-5.21.4
         make -s install
         source $HOME/gpdb5/greenplum_path.sh
         make -C gpAux/gpdemo cluster
-        gpstop -a
+        source gpAux/gpdemo/gpdemo-env.sh
+        gpstop -aq
         popd
         bash ./src/bin/pg_upgrade/test_gpdb.sh -C -s -o $HOME/gpdb-5.21.4/gpAux/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/ -B $HOME/gpdb5/bin -b $TRAVIS_BUILD_DIR/gpsql/bin
       fi
