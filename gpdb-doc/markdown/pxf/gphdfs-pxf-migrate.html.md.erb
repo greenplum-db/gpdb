@@ -12,10 +12,11 @@ To migrate your `gphdfs` external tables to use the `pxf` external table protoco
 4. [Verify](#verify_pxf) access to Hadoop files with the `pxf` external tables.
 5. [Remove](#remove_gphdfs_ext_table) the `gphdfs` external tables.
 6. [Revoke](#revoke_privs) privileges to the `gphdfs` protocol.
+7. Migrate data to Greenplum 6.
 
 <div class="note">If you are migrating <code>gphdfs</code> from a Greenplum Database 5 installation, you perform the migration in the order above in your Greenplum 5 cluster before you migrate data to Greenplum 6.</div>
 
-<div class="note">If you are migrating <code>gphdfs</code> from a Greenplum Database 4 installation, you perform actions related to the migration in both the Greenplum 4 and Greenplum 6 installations. See <a href="#mig4">Migrating gphdfs from Greenplum 4</a>.</div>
+<div class="note">If you are migrating <code>gphdfs</code> from a Greenplum Database 4 installation, you perform the migration in a similar order, but you perform actions in both the Greenplum 4 and the Greenplum 6 installations before you migrate the data. See <a href="#mig4">Migrating gphdfs from Greenplum 4</a>.</div>
 
 
 ## <a id="limits"></a>Limitations
@@ -229,16 +230,20 @@ ALTER ROLE <role_name> NOCREATEEXTTABLE(protocol='gphdfs',type='writable');
 
 ## <a id="mig4"></a>Migrating gphdfs External tables from Greenplum 4
 
-If you are migrating `gphdfs` external tables from a Greenplum 4 cluster, you perform the following actions in your Greenplum 4 installation:
+If you are migrating `gphdfs` external tables from a Greenplum 4 cluster, you perform actions in both the Greenplum 4 and the Greenplum 6 installations:
 
-1. [Prepare](#prepare) for the migration.
-2. [Remove](#remove_gphdfs_ext_table) the `gphdfs` external tables.
-3. [Revoke](#revoke_privs) privileges to the `gphdfs` protocol.
+1. Greenplum 4: [Prepare](#prepare) for the migration.
+2. Greenplum 6:
 
+    1. Install and configure the Greenplum 6 software.
+    2. Map configuration properties and [initialize, configure, and start PXF] (#id_cfg_prop).
+    3. [Create](#create_pxf_ext_table) a new `pxf` external table to replace each `gphdfs` external table.
+    4. [Verify](#verify_pxf) access to Hadoop files with the `pxf` external tables.
 
-After the Greenplum 6 installation is configured and the table definitions and data are migrated, you configure PXF and recreate the external tables in the Greenplum 6 installation:
+3. Greenplum 4:
 
-1. Map configuration properties and [initialize, configure, and start PXF] (#id_cfg_prop).
-2. [Create](#create_pxf_ext_table) a new `pxf` external table to replace each `gphdfs` external table.
-3. [Verify](#verify_pxf) access to Hadoop files with the `pxf` external tables.
+    1. [Remove](#remove_gphdfs_ext_table) the `gphdfs` external tables.
+    2. [Revoke](#revoke_privs) privileges to the `gphdfs` protocol.
+
+4. Migrate Greenplum 4 data to Greenplum 6.
 
