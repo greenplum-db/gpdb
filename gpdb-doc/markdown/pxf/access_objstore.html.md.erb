@@ -43,17 +43,29 @@ The PXF object store connectors provide built-in profiles to support the followi
 - AvroSequenceFile
 - SequenceFile
 
-The PXF connectors to Azure, Google Cloud Storage, Minio, and S3 expose the following profiles to read, and in many cases write, these supported data formats:
+The PXF connectors to Azure expose the following profiles to read, and in many cases write, these supported data formats:
 
-| Data Format | Azure Blob Storage | Azure Data Lake | Google Cloud Storage | S3 or Minio |
-|-----|------|---------|------------|----------------|
-| delimited single line [plain text](objstore_text.html) | wasbs:text | adl:text | gs:text | s3:text |
-| delimited [text with quoted linefeeds](objstore_text.html) | wasbs:text:multi | adl:text:multi | gs:text:multi | s3:text:multi |
-| [Avro](objstore_avro.html) | wasbs:avro | adl:avro | gs:avro | s3:avro |
-| [JSON](objstore_json.html) | wasbs:json | adl:json | gs:json | s3:json |
-| [Parquet](objstore_parquet.html) | wasbs:parquet | adl:parquet | gs:parquet | s3:parquet |
-| AvroSequenceFile | wasbs:AvroSequenceFile | adl:AvroSequenceFile | gs:AvroSequenceFile | s3:AvroSequenceFile |
-| [SequenceFile](objstore_seqfile.html) | wasbs:SequenceFile | adl:SequenceFile | gs:SequenceFile | s3:SequenceFile |
+| Data Format | Azure Blob Storage | Azure Data Lake |
+|-----|------|---------|
+| delimited single line [plain text](objstore_text.html) | wasbs:text | adl:text |
+| delimited [text with quoted linefeeds](objstore_text.html) | wasbs:text:multi | adl:text:multi |
+| [Avro](objstore_avro.html) | wasbs:avro | adl:avro |
+| [JSON](objstore_json.html) | wasbs:json | adl:json |
+| [Parquet](objstore_parquet.html) | wasbs:parquet | adl:parquet |
+| AvroSequenceFile | wasbs:AvroSequenceFile | adl:AvroSequenceFile |
+| [SequenceFile](objstore_seqfile.html) | wasbs:SequenceFile | adl:SequenceFile |
+
+Similarly, the PXF connectors to Google Cloud Storage, Minio, and S3 expose these profiles:
+
+| Data Format | Google Cloud Storage | S3 or Minio |
+|-----|------|---------|
+| delimited single line [plain text](objstore_text.html) | gs:text | s3:text |
+| delimited [text with quoted linefeeds](objstore_text.html) | gs:text:multi | s3:text:multi |
+| [Avro](objstore_avro.html) | gs:avro | s3:avro |
+| [JSON](objstore_json.html) | gs:json | s3:json |
+| [Parquet](objstore_parquet.html) | gs:parquet | s3:parquet |
+| AvroSequenceFile | gs:AvroSequenceFile | s3:AvroSequenceFile |
+| [SequenceFile](objstore_seqfile.html) | gs:SequenceFile | s3:SequenceFile |
 
 You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references a file or directory in the specific object store.
 
