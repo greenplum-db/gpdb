@@ -422,7 +422,7 @@ export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
         <p>After PostGIS support has been removed from all databases in the Greenplum Database
           system, you can remove the PostGIS extension package. For example this
             <codeph>gppkg</codeph> command removes the PostGIS extension package.
-          <codeblock>gppkg -r postgis-ossv2.1.5_pv2.1_gpdb5.0</codeblock></p>
+          <codeblock>gppkg -r postgis-2.1.5+pivotal.2</codeblock></p>
         <p>Restart Greenplum Database after removing the package.</p>
         <codeblock>gpstop -r</codeblock>
         <p dir="ltr">Ensure that these lines for PostGIS Raster support are removed from the
