@@ -46,7 +46,7 @@ Perform this procedure in your Greenplum Database 5 installation:
 (1 row)
     ```
 
-3. Greenplum 6 removes the `gphdfs` external table protocol. If you have `gphdfs` external tables defined in your Greenplum 5 installation, you must delete or migrate them to `pxf` as described in the PXF documentation.
+3. Greenplum 6 removes the `gphdfs` external table protocol. If you have `gphdfs` external tables defined in your Greenplum 5 installation, you must delete or migrate them to `pxf` as described in [Migrating gphdfs External Tables to PXF](gphdfs-pxf-migrate.html).
 
 3. Stop PXF on each segment host as described in [Stopping PXF](cfginitstart_pxf.html#stop_pxf).
 
