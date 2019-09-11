@@ -1,5 +1,7 @@
-void upgradeMaster();
-void upgradeContentId0();
-void upgradeContentId1();
-void upgradeContentId2();
 
+#ifndef PG_UPGRADE_INTEGRATION_TEST_UPGRADE_HELPERS
+#define PG_UPGRADE_INTEGRATION_TEST_UPGRADE_HELPERS
+
+void performUpgrade(void);
+
+#endif /* PG_UPGRADE_INTEGRATION_TEST_UPGRADE_HELPERS */

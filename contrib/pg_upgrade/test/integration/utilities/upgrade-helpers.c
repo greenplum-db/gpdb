@@ -42,6 +42,7 @@ execute_pg_upgrade_for(char *segment_path)
 	sprintf(buffer, ""
 	        "./gpdb6/bin/pg_upgrade "
 	        "--mode=dispatcher "
+	        "--link "
 	        "--old-bindir=./gpdb5/bin "
 	        "--new-bindir=./gpdb6/bin "
 	        "--old-datadir=./gpdb5-data/%s "
@@ -51,18 +52,7 @@ execute_pg_upgrade_for(char *segment_path)
 	system(buffer);
 }
 
-void
-upgradeMaster()
-{
-	char *master_data_directory_path = "qddir/demoDataDir-1";
-
-	execute_pg_upgrade_for(master_data_directory_path);
-
-	copy_configuration_files_from_backup_to_datadirs(
-		master_data_directory_path);
-}
-
-void
+static void
 copy_master_data_directory_into_segment_data_directory(char *segment_path)
 {
 	char buffer[2000];
@@ -78,7 +68,7 @@ copy_master_data_directory_into_segment_data_directory(char *segment_path)
 	system(buffer);
 }
 
-void
+static void
 upgradeSegment(char *segment_path)
 {
 	copy_master_data_directory_into_segment_data_directory(segment_path);
@@ -87,24 +77,43 @@ upgradeSegment(char *segment_path)
 		segment_path);
 }
 
+static void
+upgradeMaster(void)
+{
+	char *master_data_directory_path = "qddir/demoDataDir-1";
 
-void
-upgradeContentId0()
+	execute_pg_upgrade_for(master_data_directory_path);
+
+	copy_configuration_files_from_backup_to_datadirs(
+		master_data_directory_path);
+}
+
+static void
+upgradeContentId0(void)
 {
 	char *segment_path = "dbfast1/demoDataDir0";
 	upgradeSegment(segment_path);
 }
 
-void
-upgradeContentId1()
+static void
+upgradeContentId1(void)
 {
 	char *segment_path = "dbfast2/demoDataDir1";
 	upgradeSegment(segment_path);
 }
 
-void
-upgradeContentId2()
+static void
+upgradeContentId2(void)
 {
 	char *segment_path = "dbfast3/demoDataDir2";
 	upgradeSegment(segment_path);
+}
+
+void
+performUpgrade(void)
+{
+	upgradeMaster();
+	upgradeContentId0();
+	upgradeContentId1();
+	upgradeContentId2();
 }
