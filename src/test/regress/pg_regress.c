@@ -822,6 +822,12 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 	repls.content_zero_hostname = content_zero_hostname;
 	repls.username = get_user_name(&errstr);
 
+	if (repls.username == NULL)
+	{
+		fprintf(stderr, "%s: %s\n", progname, errstr);
+		exit_nicely(2);
+	}
+
 	/* finally loop on each file and do the replacement */
 	for (name = names; *name; name++)
 	{
@@ -3454,7 +3460,7 @@ get_host_name(int16 contentid, char role)
 
 	hostname = psprintf("%s", trim_white_space(line));
 
-	if (hostname == NULL)
+	if (strcmp("", hostname) == 0)
 	{
 		fprintf(stderr, _("%s: failed to determine hostname for content 0 primary\n"),
 				progname);
