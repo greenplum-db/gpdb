@@ -70,9 +70,9 @@ select * from check_env;
                                                                                                                                                                                                                                       x                                                                                                                                                                                                                                      
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  CLICOLOR=1
- DYLD_LIBRARY_PATH=/Users/@gpcurusername@/greenplum-db-devel/lib:/Users/@gpcurusername@/greenplum-db-devel/ext/python/lib:/opt/gcc_infrastructure/lib:/Users/@gpcurusername@/greenplum-perfmon-web-4.0.1.0/lib:/Users/@gpcurusername@/greenplum-db-devel/lib:/Users/@gpcurusername@/greenplum-db-devel/ext/python/lib:
- GPHOME=/Users/@gpcurusername@/greenplum-db-devel
- GPROOT=/Users/@gpcurusername@
+ DYLD_LIBRARY_PATH=/Users/@curusername@/greenplum-db-devel/lib:/Users/@curusername@/greenplum-db-devel/ext/python/lib:/opt/gcc_infrastructure/lib:/Users/@curusername@/greenplum-perfmon-web-4.0.1.0/lib:/Users/@curusername@/greenplum-db-devel/lib:/Users/@curusername@/greenplum-db-devel/ext/python/lib:
+ GPHOME=/Users/@curusername@/greenplum-db-devel
+ GPROOT=/Users/@curusername@
  GP_CID=0
  GP_DATABASE=regression
  GP_DATE=20110816
@@ -83,17 +83,17 @@ select * from check_env;
  GP_QUERY_STRING=select * from check_env;
  GP_SEGMENT_COUNT=2
  GP_SEGMENT_ID=0
- GP_SEG_DATADIR=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0
- GP_SEG_PG_CONF=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0/postgresql.conf
+ GP_SEG_DATADIR=/Users/@curusername@/greenplum-db-data/dbfast1/gpseg0
+ GP_SEG_PG_CONF=/Users/@curusername@/greenplum-db-data/dbfast1/gpseg0/postgresql.conf
  GP_SEG_PORT=50000
  GP_SESSION_ID=438
  GP_SN=1
  GP_TIME=132701
- GP_USER=@gpcurusername@
+ GP_USER=@curusername@
  GP_XID=1313526180-0000006772
- HADOOP_HOME=/Users/@gpcurusername@/WorkDir/hadoop-0.20.1-dev
+ HADOOP_HOME=/Users/@curusername@/WorkDir/hadoop-0.20.1-dev
  HADOOP_VERSION=0.21.0
- HOME=/Users/@gpcurusername@
+ HOME=/Users/@curusername@
  JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Home
  LC_COLLATE=en_US.utf-8
  LC_CTYPE=en_US.utf-8
@@ -101,27 +101,27 @@ select * from check_env;
  LC_MONETARY=C
  LC_NUMERIC=C
  LC_TIME=C
- LOGNAME=@gpcurusername@
- MAIL=/var/mail/@gpcurusername@
- MASTER_DATA_DIRECTORY=//Users/@gpcurusername@/greenplum-master/gpseg-1
- OPENSSL_CONF=/Users/@gpcurusername@/greenplum-db-devel/etc/openssl.cnf
+ LOGNAME=@curusername@
+ MAIL=/var/mail/@curusername@
+ MASTER_DATA_DIRECTORY=//Users/@curusername@/greenplum-master/gpseg-1
+ OPENSSL_CONF=/Users/@curusername@/greenplum-db-devel/etc/openssl.cnf
  P4CONFIG=.p4config
- PATH=/Users/@gpcurusername@/greenplum-db-devel/bin:/Users/@gpcurusername@/greenplum-db-devel/ext/python/bin:/Users/@gpcurusername@/greenplum-db-devel/bin:/Users/@gpcurusername@/greenplum-db-devel/ext/python/bin:/opt/gcc-4.4.2/bin:/Users/@gpcurusername@/Workdir/mybin:/Users/@gpcurusername@/greenplum-perfmon-web-4.0.1.0/bin:/Users/@gpcurusername@/greenplum-db-devel/bin:/Users/@gpcurusername@/greenplum-db-devel/ext/python/bin:/Users/@gpcurusername@/greenplum-db-devel/bin:/Users/@gpcurusername@/greenplum-db-devel/ext/python/bin:/usr/bin:/bin:/usr/sbin:/sbin
- PGDATA=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0
+ PATH=/Users/@curusername@/greenplum-db-devel/bin:/Users/@curusername@/greenplum-db-devel/ext/python/bin:/Users/@curusername@/greenplum-db-devel/bin:/Users/@curusername@/greenplum-db-devel/ext/python/bin:/opt/gcc-4.4.2/bin:/Users/@curusername@/Workdir/mybin:/Users/@curusername@/greenplum-perfmon-web-4.0.1.0/bin:/Users/@curusername@/greenplum-db-devel/bin:/Users/@curusername@/greenplum-db-devel/ext/python/bin:/Users/@curusername@/greenplum-db-devel/bin:/Users/@curusername@/greenplum-db-devel/ext/python/bin:/usr/bin:/bin:/usr/sbin:/sbin
+ PGDATA=/Users/@curusername@/greenplum-db-data/dbfast1/gpseg0
  PGHOST=127.0.0.1
- PGSYSCONFDIR=/Users/@gpcurusername@/greenplum-db-devel/etc/postgresql
- PWD=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0
- PYTHONHOME=/Users/@gpcurusername@/greenplum-db-devel/ext/python
- PYTHONPATH=/Users/@gpcurusername@/greenplum-db-devel/lib/python
+ PGSYSCONFDIR=/Users/@curusername@/greenplum-db-devel/etc/postgresql
+ PWD=/Users/@curusername@/greenplum-db-data/dbfast1/gpseg0
+ PYTHONHOME=/Users/@curusername@/greenplum-db-devel/ext/python
+ PYTHONPATH=/Users/@curusername@/greenplum-db-devel/lib/python
  SHELL=/bin/bash
  SHLVL=4
  SSH_CLIENT=127.0.0.1 50658 22
  SSH_CONNECTION=127.0.0.1 50658 127.0.0.1 22
  TERM=xterm-color
- USER=@gpcurusername@
+ USER=@curusername@
  VERSIONER_PERL_PREFER_32_BIT=yes
  VERSIONER_PERL_VERSION=5.8.9
- ZK_HOME=/Users/@gpcurusername@/WorkDir/zookeeper-3.3.3
+ ZK_HOME=/Users/@curusername@/WorkDir/zookeeper-3.3.3
  _=/usr/bin/env
  __CF_USER_TEXT_ENCODING=0x1F7:0:0
 (55 rows)
@@ -292,7 +292,7 @@ GRANT INSERT ON PROTOCOL demoprot TO extprotu;
 \t on
 -- print with tuples-only mode : suppress diff related to user string length.
 SELECT ptcname, ptcacl FROM PG_EXTPROTOCOL WHERE ptcname = 'demoprot';
- demoprot | {@gpcurusername@=ar/@gpcurusername@,extprotu=ar/@gpcurusername@}
+ demoprot | {@curusername@=ar/@curusername@,extprotu=ar/@curusername@}
 
 \t off
 SET SESSION AUTHORIZATION extprotu;

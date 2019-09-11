@@ -587,7 +587,7 @@ convert_line(char *line, replacements *repls)
 	replace_string(line, "@DLSUFFIX@", repls->dlsuffix);
 	replace_string(line, "@bindir@", repls->bindir);
 	replace_string(line, "@hostname@", repls->content_zero_hostname);
-	replace_string(line, "@gpcurusername@", (char *) repls->username);
+	replace_string(line, "@curusername@", (char *) repls->username);
 	if (repls->orientation)
 	{
 		replace_string(line, "@orientation@", repls->orientation);

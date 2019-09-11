@@ -210,7 +210,7 @@ SELECT spcoptions FROM pg_tablespace WHERE spcname = 'testspace_otherloc';
 CREATE ROLE t_owner;
 ALTER TABLESPACE testspace_otherloc OWNER TO t_owner;
 SELECT rolname from pg_roles WHERE oid in (SELECT spcowner FROM pg_tablespace WHERE spcname = 'testspace_otherloc');
-ALTER TABLESPACE testspace_otherloc OWNER TO @gpcurusername@;
+ALTER TABLESPACE testspace_otherloc OWNER TO @curusername@;
 DROP ROLE t_owner;
 
 -- test RENAME

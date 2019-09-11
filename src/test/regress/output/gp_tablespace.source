@@ -371,7 +371,7 @@ SELECT rolname from pg_roles WHERE oid in (SELECT spcowner FROM pg_tablespace WH
  t_owner
 (1 row)
 
-ALTER TABLESPACE testspace_otherloc OWNER TO @gpcurusername@;
+ALTER TABLESPACE testspace_otherloc OWNER TO @curusername@;
 DROP ROLE t_owner;
 -- test RENAME
 ALTER TABLESPACE testspace_otherloc RENAME TO testspace_otherloc2;
