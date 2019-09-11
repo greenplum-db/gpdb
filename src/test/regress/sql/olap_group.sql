@@ -638,6 +638,10 @@ select i,n,count(*), grouping(i), grouping(n), grouping(i,n) from test_gsets gro
 select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets(x,y) having x is not null;
 
 -- test repeat node
+-- Greenplum uses repeat node in plan to handle the case
+-- that duplicated groups in grouping sets. we have some
+-- bugs causing duplicated repeat node and wrong result.
+-- Fix it and add some tests.
 create table repeat_node_sale
 (
     cn int not null,

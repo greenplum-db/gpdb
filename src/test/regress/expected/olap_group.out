@@ -6117,6 +6117,10 @@ select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_serie
 (1 row)
 
 -- test repeat node
+-- Greenplum uses repeat node in plan to handle the case
+-- that duplicated groups in grouping sets. we have some
+-- bugs causing duplicated repeat node and wrong result.
+-- Fix it and add some tests.
 create table repeat_node_sale
 (
     cn int not null,
