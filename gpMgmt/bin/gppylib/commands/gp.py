@@ -815,6 +815,28 @@ class ModifyConfSetting(Command):
         self.cmdStr = cmdStr
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
 
+class ModifyPgHbaConfSetting(Command):
+    def __init__(self, name, file, ctxt, remoteHost, addresses, is_hba_hostnames):
+        hba_content = ""
+
+        for address in addresses:
+            if is_hba_hostnames:
+                hba_content += "\nhost all {0} {1} trust".format(getUserName(), address)
+            else:
+                ips = InterfaceAddrs.remote('get mirror ips', address)
+                for ip in ips:
+                    cidr_suffix = '/128' if ':' in ip else '/32'
+                    cidr = ip + cidr_suffix
+                    hba_content += "\nhost all {0} {1} trust".format(getUserName(), cidr)
+
+        # You might think you can substitute the primary and mirror addresses
+        # with the new primary and mirror addresses, but what if they were the
+        # same? Then you could end up with only the new primary or new mirror
+        # address.
+        cmdStr = "echo '{0}' >> {1}".format(hba_content, file)
+        self.cmdStr = cmdStr
+        Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
+
 #-----------------------------------------------
 class GpCleanSegmentDirectories(Command):
     """

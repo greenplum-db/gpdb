@@ -15,6 +15,7 @@ import json
 import shutil
 import signal
 import traceback
+from collections import defaultdict
 from time import strftime, sleep
 
 try:
@@ -144,6 +145,8 @@ def parseargs():
                       help='show this help message and exit.')
     parser.add_option('-s', '--silent', action='store_true',
                       help='Do not prompt for confirmation to proceed on warnings')
+    parser.add_option('', '--hba-hostnames', action='store_true', default=False,
+                      help='use hostnames instead of CIDR in pg_hba.conf')
     parser.add_option('--usage', action="briefhelp")
 
     parser.set_defaults(verbose=False, filters=[], slice=(None, None))
@@ -571,7 +574,7 @@ class SegmentTemplate:
 
     def __init__(self, logger, statusLogger, pool,
                  gparray, masterDataDirectory,
-                 dburl, conn, tempDir, batch_size,
+                 dburl, conn, tempDir, batch_size, is_hba_hostnames,
                  segTarDir='.', schemaTarFile='gpexpand_schema.tar'):
         self.logger = logger
         self.statusLogger = statusLogger
@@ -586,6 +589,7 @@ class SegmentTemplate:
         self.maxDbId = self.gparray.get_max_dbid()
         self.segTarDir = segTarDir
         self.segTarFile = os.path.join(segTarDir, self.schema_tar_file)
+        self.isHbaHostnames = is_hba_hostnames
 
         hosts = []
         for seg in self.gparray.getExpansionSegDbList():
@@ -816,6 +820,26 @@ class SegmentTemplate:
                                             verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
                                             ctxt=REMOTE, remoteHost=host)
             self.pool.addCommand(segCfgCmd)
+
+        self.pool.join()
+        self.pool.check_results()
+
+        # Map primary and mirror hostnames to expanded segment's contentid
+        m = defaultdict(lambda: [])
+        for seg in self.gparray.getExpansionSegDbList():
+            m[seg.getSegmentContentId()].append(seg.getSegmentHostName())
+
+        # Now update the primary's hba config with the corresponding primary
+        # and mirror information
+        for seg in self.gparray.getExpansionSegDbList():
+            if seg.isSegmentPrimary():
+                modifyConfCmd = ModifyPgHbaConfSetting(
+                        'Updating %s/pg_hba.conf' % seg.getSegmentHostName(),
+                        os.path.join(seg.getSegmentDataDirectory(), 'pg_hba.conf'),
+                        ctxt=REMOTE, remoteHost=seg.getSegmentHostName(),
+                        addresses=m[seg.getSegmentContentId()],
+                        is_hba_hostnames=self.isHbaHostnames)
+                self.pool.addCommand(modifyConfCmd)
 
         self.pool.join()
         self.pool.check_results()
@@ -1254,7 +1278,8 @@ class gpexpand:
                                            conn=self.conn,
                                            tempDir=self.tempDir,
                                            segTarDir=self.options.tardir,
-                                           batch_size=self.options.batch_size)
+                                           batch_size=self.options.batch_size,
+                                           is_hba_hostnames=self.options.hba_hostnames)
         try:
             self.segTemplate.build_segment_template(newTableSpaceInfo)
             self.segTemplate.build_new_segments()

@@ -11,6 +11,7 @@ gpexpand
       | -i <input_file> [-B <batch_size>] [-V] [-t segment_tar_dir] [-S]
       | {-d <hh:mm:ss> | -e '<YYYY-MM-DD hh:mm:ss>'} 
         [-analyze] [-n <parallel_processes>]
+      | --hba-hostnames
       | --rollback
       | --clean
 [--verbose] [--silent]
@@ -121,6 +122,10 @@ OPTIONS
  interfaces specified. The gpexpand utility handles either case, 
  adding interface numbers to end of the hostname if the original nodes 
  are configured with multiple network interfaces.
+
+
+--hba-hostnames
+ Optional. use hostnames instead of CIDR in pg_hba.conf
 
 
 -i | --input <input_file>
