@@ -1526,7 +1526,8 @@ dumpTablespaces(PGconn *conn)
 				            "AND sc.ROLE = 'p' "
 				"ORDER  BY oid, content ASC;");
 
-		tablespace_map_fp = fopen(TABLESPACE_MAP, "w");
+		if(PQntuples(res) > 0)
+			tablespace_map_fp = fopen(TABLESPACE_MAP, "w");
 	}
 	else if (server_version >= 90200)
 		res = executeQuery(conn, "SELECT oid, spcname, "
@@ -1586,7 +1587,8 @@ dumpTablespaces(PGconn *conn)
 
 		if (filespace_to_tablespace)
 		{
-			if (atoi(PQgetvalue(res, i, 8)) != MASTER_CONTENT_ID)
+			char		*contentid = PQgetvalue(res, i, 8);
+			if (atoi(contentid) != MASTER_CONTENT_ID)
 			{
 				fprintf(stderr, _("%s: master location is unavailable for tablespace \"%s\"\n"),
 						progname, spcname);
