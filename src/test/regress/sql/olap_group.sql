@@ -637,3 +637,40 @@ insert into test_gsets values (0, 0), (0, 1), (0,2);
 select i,n,count(*), grouping(i), grouping(n), grouping(i,n) from test_gsets group by grouping sets((), (i,n)) having n is null;
 
 select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets(x,y) having x is not null;
+
+-- test repeat node
+-- Greenplum uses repeat node in plan to handle the case
+-- that duplicated groups in grouping sets. we have some
+-- bugs causing duplicated repeat node and wrong result.
+-- Fix it and add some tests.
+create table repeat_node_sale
+(
+    cn int not null,
+    vn int not null,
+    pn int not null,
+    dt date not null,
+    qty int not null,
+    prc float not null
+) distributed by (cn,vn,pn);
+
+insert into repeat_node_sale values
+  ( 2, 40, 100, '1401-1-1', 1100, 2400),
+  ( 1, 10, 200, '1401-3-1', 1, 0),
+  ( 3, 40, 200, '1401-4-1', 1, 0),
+  ( 1, 20, 100, '1401-5-1', 1, 0),
+  ( 1, 30, 300, '1401-5-2', 1, 0),
+  ( 1, 50, 400, '1401-6-1', 1, 0),
+  ( 2, 50, 400, '1401-6-1', 1, 0),
+  ( 1, 30, 500, '1401-6-1', 12, 5),
+  ( 3, 30, 500, '1401-6-1', 12, 5),
+  ( 3, 30, 600, '1401-6-1', 12, 5),
+  ( 4, 40, 700, '1401-6-1', 1, 1),
+  ( 4, 40, 800, '1401-6-1', 1, 1);
+
+set gp_eager_one_phase_agg to on;
+
+select cn,vn,sum(qty) from repeat_node_sale group by grouping sets ((cn,vn), cn, cn);
+
+reset gp_eager_one_phase_agg;
+
+drop table repeat_node_sale;

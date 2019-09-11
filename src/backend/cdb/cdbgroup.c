@@ -1592,6 +1592,32 @@ make_two_stage_agg_plan(PlannerInfo *root,
 	/* Marshal implicit results. Return explicit result. */
 	ctx->current_pathkeys = current_pathkeys;
 	ctx->querynode_changed = true;
+
+	/* Add the Repeat node if needed. */
+	if (result_plan != NULL &&
+		ctx->canonical_grpsets != NULL &&
+		ctx->canonical_grpsets->grpset_counts != NULL)
+	{
+		bool		need_repeat_node = false;
+		int			grpset_no;
+		int			repeat_count = 0;
+
+		for (grpset_no = 0; grpset_no < ctx->canonical_grpsets->ngrpsets; grpset_no++)
+		{
+			if (ctx->canonical_grpsets->grpset_counts[grpset_no] > 1)
+			{
+				need_repeat_node = true;
+				break;
+			}
+		}
+		if (ctx->canonical_grpsets->ngrpsets == 1)
+			repeat_count = ctx->canonical_grpsets->grpset_counts[0];
+
+		if (need_repeat_node)
+		{
+			result_plan = add_repeat_node(result_plan, repeat_count, 0);
+		}
+	}
 	return result_plan;
 }
 
