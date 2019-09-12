@@ -893,9 +893,35 @@ objectsInSchemaToOids(GrantObjectType objtype, List *nspnames)
 
 	foreach(cell, nspnames)
 	{
-		char	   *nspname = strVal(lfirst(cell));
+		char	   *nspname = NULL;
 		Oid			namespaceId;
 		List	   *objs;
+
+		if(Gp_role == GP_ROLE_DISPATCH)
+		{
+			nspname = strVal(lfirst(cell));
+		}
+		else
+		{
+			RangeVar   *relvar;
+			Oid         relOid;
+			
+			switch(nodeTag(lfirst(cell)))
+			{
+				case T_RangeVar:
+					relvar = (RangeVar *) lfirst(cell);
+					relOid = RangeVarGetRelid(relvar, NoLock, false);
+					nspname = get_namespace_name(get_rel_namespace(relOid));
+					break;
+				case T_String:
+					nspname = strVal(lfirst(cell));
+					break;
+				default:
+					/*shoud not get here*/
+					elog(ERROR, "unrecognized nodeType: %d",
+						(int)nodeTag(lfirst(cell)));
+			}
+		}
 
 		namespaceId = LookupExplicitNamespace(nspname, false);
 
