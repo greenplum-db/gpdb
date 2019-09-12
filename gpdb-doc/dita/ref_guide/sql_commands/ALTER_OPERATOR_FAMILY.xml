@@ -57,7 +57,7 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
             the function is intended to support, if different from the input data type(s) of the
             function. For B-tree comparison functions it is not necessary to specify <varname>op_type</varname> since the
             function's input data type(s) are always the correct ones to use.  For B-tree sort
-            support functions and all functions in GiST, SP-GiST and GIN operator
+            support functions and all functions in GiST, SP-GiST, and GIN operator
             classes, it is necessary to specify the operand data type(s) the function
             is to be used with.</pd> 
         </plentry>
@@ -93,7 +93,7 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
         family, by strategy or support number and input data type(s). The name of the operator or
         function occupying the slot is not mentioned. Also, for <codeph>DROP FUNCTION</codeph> the
         type(s) to specify are the input data type(s) the function is intended to support; for
-          <codeph>GiST</codeph>, <codeph>SP_GiST</codeph> and <codeph>GIN</codeph> indexes this
+          <codeph>GiST</codeph>, <codeph>SP_GiST</codeph>, and <codeph>GIN</codeph> indexes this
         might have nothing to do with the actual input argument types of the function. </p>
       <p>Because the index machinery does not check access permissions on functions before using
         them, including a function or operator in an operator family is tantamount to granting

@@ -180,7 +180,7 @@ a valid operator class. </p><p>You must be a superuser to create an operator cla
                         is intended to support, if different from the input data type(s) of the
                         function (for B-tree comparison functions and hash functions) or the class's
                         data type (for B-tree sort support functions and all functions in GiST,
-                        SP-GiST and GIN operator classes). These defaults are correct, and so
+                        SP-GiST, and GIN operator classes). These defaults are correct, and so
                             <varname>op_type</varname> need not be specified in
                             <codeph>FUNCTION</codeph> clauses, except for the case of a B-tree sort
                         support function that is meant to support cross-data-type comparisons.</pd>
