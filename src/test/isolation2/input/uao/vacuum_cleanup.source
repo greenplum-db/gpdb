@@ -44,7 +44,7 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 -- Wait till compaction phase is completed and only then start the serializable
 -- transaction to ensure that only drop phase is skipped
-2: select wait_for_trigger_fault((select current_database()), 'vacuum_relation_open_relation_during_drop_phase', 1);
+2: select gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_phase', 1, 1);
 2: begin isolation level serializable;
 2: select 123;
 2: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 1);

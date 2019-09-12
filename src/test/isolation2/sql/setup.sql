@@ -106,20 +106,3 @@ begin /* in func */
   end loop; /* in func */
 end; /* in func */
 $$ language plpgsql;
-
--- start_ignore
-create language plpythonu;
--- end_ignore
-
-CREATE OR REPLACE FUNCTION wait_for_trigger_fault(dbname text, fault text, segno int)
-RETURNS bool as $$
-    import subprocess 
-    import time
-    cmd = 'psql %s -c "select gp_inject_fault(\'%s\', \'status\', %d)"' % (dbname, fault, segno)
-    for i in range(100):
-        cmd_output = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True)
-        if 'triggered' in cmd_output.stdout.read():
-            return True
-        time.sleep(0.5)
-    return False 
-$$ LANGUAGE plpythonu;

@@ -25,11 +25,3 @@ CREATE
 -- Helper function
 CREATE or REPLACE FUNCTION wait_until_waiting_for_required_lock (rel_name text, lmode text, segment_id integer) /*in func*/ RETURNS bool AS $$ declare retries int; /* in func */ begin /* in func */ retries := 1200; /* in func */ loop /* in func */ if (select not granted from pg_locks l where granted='f' and l.relation::regclass = rel_name::regclass and l.mode=lmode and l.gp_segment_id=segment_id) then /* in func */ return true; /* in func */ end if; /* in func */ if retries <= 0 then /* in func */ return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ retries := retries - 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
-
--- start_ignore
-create language plpythonu;
-CREATE
--- end_ignore
-
-CREATE OR REPLACE FUNCTION wait_for_trigger_fault(dbname text, fault text, segno int) RETURNS bool as $$ import subprocess import time cmd = 'psql %s -c "select gp_inject_fault(\'%s\', \'status\', %d)"' % (dbname, fault, segno) for i in range(100): cmd_output = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True) if 'triggered' in cmd_output.stdout.read(): return True time.sleep(0.5) return False $$ LANGUAGE plpythonu;
-CREATE
