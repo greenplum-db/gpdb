@@ -30,7 +30,7 @@
                                 allow the clause <codeph>WHERE upper(col) = 'JIM'</codeph> to use an
                                 index. </p>
                         <p>Greenplum Database provides the index methods B-tree, bitmap, GiST,
-                                and GIN. Users can also define their own index methods, but
+                                SP-GiST, and GIN. Users can also define their own index methods, but
                                 that is fairly complicated. </p>
                         <p>When the <codeph>WHERE</codeph> clause is present, a partial index is
                                 created. A partial index is an index that contains entries for only
@@ -178,8 +178,8 @@
                                         <pd>The name of an index-method-specific storage parameter.
                                                 Each index method has its own set of allowed storage
                                                 parameters.</pd>
-                                        <pd><codeph>FILLFACTOR</codeph> - B-tree, bitmap, and GiST
-                                                index methods all accept this parameter. The
+                                        <pd><codeph>FILLFACTOR</codeph> - B-tree, bitmap, GiST, and
+                                                SP-GiST index methods all accept this parameter. The
                                                   <codeph>FILLFACTOR</codeph> for an index is a
                                                 percentage that determines how full the index method
                                                 will try to pack index pages. For B-trees, leaf

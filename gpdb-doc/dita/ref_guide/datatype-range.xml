@@ -268,7 +268,7 @@ SELECT '[1.234, 5.678]'::floatrange;
                instance, a range type over <codeph>timestamp</codeph> could be defined to have a
                step size of an hour, in which case the canonicalization function would need to round
                off bounds that weren't a multiple of an hour, or perhaps throw an error instead. </p>
-            <p> In addition, any range type that is meant to be used with GiST indexes
+            <p> In addition, any range type that is meant to be used with GiST or SP-GiST indexes
                should define a subtype difference, or <codeph>subtype_diff</codeph>, function. (The
                index will still work without <codeph>subtype_diff</codeph>, but it is likely to be
                considerably less efficient than if a difference function is provided.) The subtype
@@ -301,12 +301,12 @@ SELECT '[11:10, 23:00]'::timerange;
       <topic xml:lang="en-us" id="rangetypes-indexing">
          <title>Indexing</title>
          <body>
-            <p> GiST indexes can be created for table columns of range types. For
+            <p> GiST and SP-GiST indexes can be created for table columns of range types. For
                instance, to create a GiST index:
                <codeblock>
 CREATE INDEX reservation_idx ON reservation USING GIST (during);
 </codeblock>
-               A GiST index can accelerate queries involving these range operators:
+               A GiST or SP-GiST index can accelerate queries involving these range operators:
                   <codeph>=</codeph>, <codeph>&amp;&amp;</codeph>, <codeph>&lt;@</codeph>,
                   <codeph>@&gt;</codeph>, <codeph>&lt;&lt;</codeph>, <codeph>&gt;&gt;</codeph>,
                   <codeph>-|-</codeph>, <codeph>&amp;&lt;</codeph>, and <codeph>&amp;&gt;</codeph>
