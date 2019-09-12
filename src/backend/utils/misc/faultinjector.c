@@ -793,13 +793,13 @@ FaultInjector_SetFaultInjection(
 		case FaultInjectorTypeWaitUntilTriggered:
 		{
 			FaultInjectorEntry_s	*entryLocal;
-			int retry_count = 600; /* 10 minutes */
+			int retry_count = 3000; /* 10 minutes */
 
 			while ((entryLocal = FaultInjector_LookupHashEntry(entry->faultName)) != NULL &&
 				   entryLocal->faultInjectorState != FaultInjectorStateCompleted &&
 				   entryLocal->numTimesTriggered - entryLocal->startOccurrence < entry->extraArg - 1)
 			{
-				pg_usleep(1000000L);  // 1 sec
+				pg_usleep(200000);  /* 0.2 sec */
 				retry_count--;
 				if (!retry_count)
 				{
