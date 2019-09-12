@@ -507,21 +507,20 @@ class GpAddMirrorsProgram:
             for segmentPair in gpArray.getSegmentList():
                 allow_pair_hba_line_entries = []
                 if self.__options.hba_hostnames:
-                    (mirror_hostname, mirror_aliases, mirror_ipaddrs) = socket.gethostbyaddr(segmentPair.mirrorDB.getSegmentHostName())
+                    mirror_hostname, _, _ = socket.gethostbyaddr(segmentPair.mirrorDB.getSegmentHostName())
                     hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), mirror_hostname)
                     allow_pair_hba_line_entries.append(hba_line_entry)
                 else:
                     mirror_ips = unix.InterfaceAddrs.remote('get mirror ips', segmentPair.mirrorDB.getSegmentHostName())
                     for ip in mirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
-                        cidr = "{0}{1}".format(ip, cidr_suffix)
+                        cidr = ip + cidr_suffix
                         hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), cidr)
                         allow_pair_hba_line_entries.append(hba_line_entry)
                 cmdStr = replicationStr.format(os.environ["GPHOME"], unix.getUserName(), " ".join(allow_pair_hba_line_entries), segmentPair.primaryDB.datadir)
                 logger.debug(cmdStr)
                 cmd = Command(name="append to pg_hba.conf", cmdStr=cmdStr, ctxt=base.REMOTE, remoteHost=segmentPair.primaryDB.hostname)
                 cmd.run(validateAfter=True)
-                logger.debug("Results {}".format(cmd.results))
 
         except Exception, e:
             logger.error("Failed while modifying pg_hba.conf on primary segments to allow replication connections: %s" % str(e))

@@ -2109,7 +2109,7 @@ def _create_working_directory(context, working_directory, mode=''):
         os.mkdir(context.working_directory)
 
 
-def _create_cluster(context, master_host, segment_host_list, hba_hostnames_value='0', with_mirrors=False, mirroring_configuration='group'):
+def _create_cluster(context, master_host, segment_host_list, hba_hostnames='0', with_mirrors=False, mirroring_configuration='group'):
     if segment_host_list == "":
         segment_host_list = []
     else:
@@ -2130,8 +2130,7 @@ def _create_cluster(context, master_host, segment_host_list, hba_hostnames_value
     except:
         pass
 
-    testcluster = TestCluster(hosts=[master_host]+segment_host_list, base_dir=context.working_directory,hba_hostnames_value=hba_hostnames_value)
-    print "context.working_directory {}".format(context.working_directory)
+    testcluster = TestCluster(hosts=[master_host]+segment_host_list, base_dir=context.working_directory,hba_hostnames=hba_hostnames)
     testcluster.reset_cluster()
     testcluster.create_cluster(with_mirrors=with_mirrors, mirroring_configuration=mirroring_configuration)
     context.gpexpand_mirrors_enabled = with_mirrors
@@ -2141,9 +2140,9 @@ def _create_cluster(context, master_host, segment_host_list, hba_hostnames_value
 def impl(context, master_host, segment_host_list):
     _create_cluster(context, master_host, segment_host_list, with_mirrors=False)
 
-@given('with HBA_HOSTNAMES "{hba_hostnames_value}" a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
-def impl(context, master_host, segment_host_list, hba_hostnames_value):
-    _create_cluster(context, master_host, segment_host_list, hba_hostnames_value, with_mirrors=False)
+@given('with HBA_HOSTNAMES "{hba_hostnames}" a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
+def impl(context, master_host, segment_host_list, hba_hostnames):
+    _create_cluster(context, master_host, segment_host_list, hba_hostnames, with_mirrors=False)
 
 @given('a cluster is created with mirrors on "{master_host}" and "{segment_host_list}"')
 def impl(context, master_host, segment_host_list):

@@ -4,7 +4,6 @@ from behave import given, when, then
 from test.behave_utils.utils import *
 
 from mgmt_utils import *
-from gppylib.util import ssh_utils
 from gppylib.commands.unix import *
 
 # This file contains steps for gpaddmirrors and gpmovemirrors tests
@@ -93,12 +92,14 @@ def _get_mirror_count():
         count_row = dbconn.execSQL(conn, sql).fetchone()
         return count_row[0]
 
+# take the item in search_item_list, search pg_hba if it contains atleast one entry
+# for the item
 @given('the file "{filename}" on host "{host}" contains "{search_items_list}"')
 def impl(context, search_items_list, host, filename):
-    session = ssh_utils.Session();
-    session.login(hostList=[host], userName=getUserName())
-    output = session.executeCommand('cat %s' % (filename))
-    pghba_contents= list(output)[0]
+    cmd_str = "ssh %s cat %s" % (host, filename)
+    cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+    cmd.run(validateAfter=False)
+    pghba_contents= cmd.get_stdout().strip().split('\n')
     for search_item in search_items_list.split(','):
         search_item = search_item.strip()
         found = False
@@ -107,14 +108,14 @@ def impl(context, search_items_list, host, filename):
             # for example: host all all hostname    trust
             if contents.startswith("host") and contents.endswith("trust"):
                 tokens = contents.split()
-                if tokens.__len__() != 5:
+                if len(tokens) != 5:
                     raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
                 hostname = tokens[3].strip()
                 net = hostname.split("/")[0]
                 # ignore local host entries
                 if net == "127.0.0.1" or net == "::1":
                     continue
-                elif search_item == "/" and hostname.__contains__("/"):
+                elif search_item == "/" and "/" in hostname:
                     found = True
                     break
                 elif search_item == hostname:
@@ -130,9 +131,10 @@ def impl(context):
 
 
 @given('gpaddmirrors adds mirrors with options "{options}"')
-@when('gpaddmirrors adds mirrors with options "{options}"')
-@then('gpaddmirrors adds mirrors with options "{options}"')
-def impl(context, options):
+@given('gpaddmirrors adds mirrors')
+@when('gpaddmirrors adds mirrors')
+@then('gpaddmirrors adds mirrors')
+def impl(context, options=" "):
     add_mirrors(context, options)
 
 

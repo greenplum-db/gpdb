@@ -20,7 +20,7 @@ class GpDeleteSystem(Command):
 
 
 class TestCluster:
-    def __init__(self, hosts = None, base_dir = '/tmp/default_gpinitsystem', hba_hostnames_value='0'):
+    def __init__(self, hosts = None, base_dir = '/tmp/default_gpinitsystem', hba_hostnames='0'):
         """
         hosts: lists of cluster hosts. master host will be assumed to be the first element.
         base_dir: cluster directory
@@ -60,7 +60,7 @@ class TestCluster:
         self.number_of_expansion_hosts = 0
         self.number_of_expansion_segments = 0
         self.number_of_parallel_table_redistributed = 4
-        self.hba_hostnames = hba_hostnames_value
+        self.hba_hostnames = hba_hostnames
 
     def _generate_env_file(self):
         env_file = os.path.join(self.base_dir, 'gpdb-env.sh')
@@ -77,7 +77,7 @@ class TestCluster:
                       '%MASTER_PORT%': self.master_port,
                       '%MASTER_DATA_DIR%': self.master_dir,
                       '%DATA_DIR%': (self.primary_dir + ' ') * self.number_of_segments,
-                      '%HBA_HOSTNAMES_VALUE%': self.hba_hostnames
+                      '%HBA_HOSTNAMES%': self.hba_hostnames
                       }
 
         if self.mirror_enabled:

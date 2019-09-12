@@ -23,7 +23,7 @@ Feature: Tests for gpaddmirrors
         And the database is not running
         And with HBA_HOSTNAMES "0" a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
         And the file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains "/"
-        And gpaddmirrors adds mirrors with options " "
+        And gpaddmirrors adds mirrors
         And the file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains "/, samenet"
         Then verify the database has mirrors
         And the information of a "mirror" segment on a remote host is saved
@@ -76,14 +76,14 @@ Feature: Tests for gpaddmirrors
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
-        And gpaddmirrors adds mirrors with options " "
+        And gpaddmirrors adds mirrors
         Then verify the database has mirrors
         And save the gparray to context
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
-        And gpaddmirrors adds mirrors with options " "
+        And gpaddmirrors adds mirrors
         Then mirror hostlist matches the one saved in context
         And the user runs "gpstop -aqM fast"
 
@@ -102,7 +102,7 @@ Feature: Tests for gpaddmirrors
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1"
-        And gpaddmirrors adds mirrors with options " "
+        And gpaddmirrors adds mirrors
         Then verify the database has mirrors
         And the user runs "gpstop -aqM fast"
 
@@ -120,7 +120,7 @@ Feature: Tests for gpaddmirrors
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
         And a cluster is created with no mirrors on "mdw" and "sdw1"
-        When gpaddmirrors adds mirrors with options " "
+        When gpaddmirrors adds mirrors
         Then verify the database has mirrors
         When an FTS probe is triggered
         And the user runs "gpstop -a"
@@ -156,7 +156,7 @@ Feature: Tests for gpaddmirrors
           And the database is not running
           And a cluster is created with no mirrors on "mdw" and "sdw1"
           And a tablespace is created with data
-         When gpaddmirrors adds mirrors with options " "
+         When gpaddmirrors adds mirrors
          Then verify the database has mirrors
 
          When an FTS probe is triggered
