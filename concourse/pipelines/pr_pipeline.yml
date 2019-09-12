@@ -17,7 +17,7 @@ resources:
   type: pull-request
   source:
     repository: greenplum-db/gpdb
-    base_branch: "master"
+    base_branch: "6X_STABLE"
     access_token: {{gpdb-git-access-token}}
     ignore_paths:
     - gpdb-doc/*
