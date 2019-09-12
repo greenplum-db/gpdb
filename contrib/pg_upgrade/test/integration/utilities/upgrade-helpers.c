@@ -37,7 +37,7 @@ copy_configuration_files_from_backup_to_datadirs(char *segment_path)
 static void 
 execute_pg_upgrade_for(char *segment_path)
 {
-	static char buffer[2000];
+	char buffer[2000];
 
 	sprintf(buffer, ""
 	        "./gpdb6/bin/pg_upgrade "
@@ -48,7 +48,7 @@ execute_pg_upgrade_for(char *segment_path)
 	        "--old-datadir=./gpdb5-data/%s "
 	        "--new-datadir=./gpdb6-data/%s "
 	, segment_path, segment_path);
-	
+
 	system(buffer);
 }
 
