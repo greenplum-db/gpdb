@@ -4,7 +4,6 @@ from behave import given, when, then
 from test.behave_utils.utils import *
 
 from mgmt_utils import *
-from gppylib.commands.unix import *
 
 # This file contains steps for gpaddmirrors and gpmovemirrors tests
 
@@ -94,14 +93,14 @@ def _get_mirror_count():
 
 # take the item in search_item_list, search pg_hba if it contains atleast one entry
 # for the item
-@given('the file "{filename}" on host "{host}" contains "{search_items_list}"')
-def impl(context, search_items_list, host, filename):
+@given('pg_hba file "{filename}" on host "{host}" contains entries for "{search_items}"')
+def impl(context, search_items, host, filename):
     cmd_str = "ssh %s cat %s" % (host, filename)
     cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
     cmd.run(validateAfter=False)
+    search_item_list = [search_item.strip() for search_item in search_items.split(',')]
     pghba_contents= cmd.get_stdout().strip().split('\n')
-    for search_item in search_items_list.split(','):
-        search_item = search_item.strip()
+    for search_item in search_item_list:
         found = False
         for entry in pghba_contents:
             contents = entry.strip()
@@ -111,18 +110,34 @@ def impl(context, search_items_list, host, filename):
                 if len(tokens) != 5:
                     raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
                 hostname = tokens[3].strip()
-                net = hostname.split("/")[0]
-                # ignore local host entries
-                if net == "127.0.0.1" or net == "::1":
-                    continue
-                elif search_item == "/" and "/" in hostname:
-                    found = True
-                    break
-                elif search_item == hostname:
+                if search_item == hostname:
                     found = True
                     break
         if not found:
             raise Exception("entry for expected item %s not existing in pg_hba.conf '%s'" % (search_item, pghba_contents))
+
+# ensure pg_hba contains only cidr addresses, exclude mandatory entries for replication samenet if existing
+@given('pg_hba file "{filename}" on host "{host}" contains only cidr addresses')
+def impl(context, host, filename):
+    cmd_str = "ssh %s cat %s" % (host, filename)
+    cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+    cmd.run(validateAfter=False)
+    pghba_contents= cmd.get_stdout().strip().split('\n')
+    for entry in pghba_contents:
+        contents = entry.strip()
+        # for example: host all all hostname    trust
+        if contents.startswith("host") and contents.endswith("trust"):
+            tokens = contents.split()
+            if len(tokens) != 5:
+                raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
+            hostname = tokens[3].strip()
+            # ignore replication entries
+            if hostname == "samenet":
+                continue
+            if "/" in hostname:
+                continue
+            else:
+                raise Exception("not a valid cidr '%s' address" % hostname)
 
 @then('verify the database has mirrors')
 def impl(context):
