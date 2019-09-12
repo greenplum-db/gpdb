@@ -1,5 +1,5 @@
 [requires]
-orca/v3.75.0@gpdb/stable
+orca/v3.76.0@gpdb/stable
 
 [imports]
 include, * -> build/include

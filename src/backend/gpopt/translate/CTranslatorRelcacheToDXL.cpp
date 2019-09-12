@@ -1115,21 +1115,18 @@ CTranslatorRelcacheToDXL::RetrieveIndex
 		}
 	
 		index_type = IMDIndex::EmdindBtree;
-		IMDRelation::Erelstoragetype rel_storage_type = md_rel->RetrieveRelStorageType();
+		mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
 		if (GIN_AM_OID == index_rel->rd_rel->relam)
 		{
 				index_type = IMDIndex::EmdindGin;
-				mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
 		}
 		else if (GIST_AM_OID == index_rel->rd_rel->relam)
 		{
 			index_type = IMDIndex::EmdindGist;
-			mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
 		}
-		else if (BITMAP_AM_OID == index_rel->rd_rel->relam || IMDRelation::ErelstorageAppendOnlyRows == rel_storage_type || IMDRelation::ErelstorageAppendOnlyCols == rel_storage_type)
+		else if (BITMAP_AM_OID == index_rel->rd_rel->relam)
 		{
 			index_type = IMDIndex::EmdindBitmap;
-			mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
 		}
 
 		// get the index name
@@ -1389,21 +1386,18 @@ CTranslatorRelcacheToDXL::RetrievePartTableIndex
 	GPOS_ASSERT(INDTYPE_BITMAP == index_info->indType || INDTYPE_BTREE == index_info->indType || INDTYPE_GIST == index_info->indType || INDTYPE_GIN == index_info->indType);
 
 	IMDIndex::EmdindexType index_type = IMDIndex::EmdindBtree;
-	IMDId *mdid_item_type = NULL;
+	IMDId *mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
 	if (INDTYPE_BITMAP == index_info->indType)
 	{
 		index_type = IMDIndex::EmdindBitmap;
-		mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
 	}
 	else if (INDTYPE_GIST == index_info->indType)
 	{
 		index_type = IMDIndex::EmdindGist;
-		 mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
 	}
 	else if (INDTYPE_GIN == index_info->indType)
 	{
 		index_type = IMDIndex::EmdindGin;
-		mdid_item_type = GPOS_NEW(mp) CMDIdGPDB(GPDB_ANY);
 	}
 
 	IMdIdArray *pdrgpmdidOpFamilies = RetrieveIndexOpFamilies(mp, mdid_index);
