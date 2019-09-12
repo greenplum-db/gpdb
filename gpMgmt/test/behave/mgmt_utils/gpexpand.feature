@@ -132,6 +132,26 @@ Feature: expand the cluster by adding more segments
         Then verify that the cluster has 4 new segments
 
     @gpexpand_mirrors
+    @gpexpand_segment
+    Scenario: expand a cluster that has mirrors and recover a failed segment
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the user runs gpexpand with a static inputfile for a two-node cluster with mirrors
+        And expanded preferred primary on segment "3" has failed
+        When the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+        When the user runs "gprecoverseg -ra"
+        Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+
+    @gpexpand_mirrors
     @gpexpand_host
     Scenario: expand a cluster that has mirrors with one new hosts
         Given the database is not running
