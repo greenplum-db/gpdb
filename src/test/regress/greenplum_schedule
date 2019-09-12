@@ -27,7 +27,7 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-test: gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp returning_gp resource_queue_with_rule gp_types gp_index
+test: gp_aggregates gp_metadata gp_aggregates_costs variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp returning_gp resource_queue_with_rule gp_types gp_index
 test: spi_processed64bit
 test: python_processed64bit
 test: gp_tablespace_with_faults

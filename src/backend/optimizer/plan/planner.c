@@ -4210,7 +4210,7 @@ choose_hashed_grouping(PlannerInfo *root,
 	 */
 	numGroupCols = num_distcols_in_grouplist(root->parse->groupClause);
 	cost_agg(&hashed_p, root, AGG_HASHED, agg_costs,
-			 numGroupCols, dNumGroups,
+			 numGroupCols, dNumGroups / planner_segment_count(NULL),
 			 cheapest_path->startup_cost, cheapest_path->total_cost,
 			 path_rows, hash_info.workmem_per_entry,
 			 hash_info.nbatches, hash_info.hashentry_width, false);
@@ -4242,7 +4242,7 @@ choose_hashed_grouping(PlannerInfo *root,
 
 	if (parse->hasAggs)
 		cost_agg(&sorted_p, root, AGG_SORTED, agg_costs,
-				 numGroupCols, dNumGroups,
+				 numGroupCols, dNumGroups / planner_segment_count(NULL),
 				 sorted_p.startup_cost, sorted_p.total_cost,
 				 path_rows, 0.0, 0.0, 0.0, false);
 	else
@@ -4376,7 +4376,7 @@ choose_hashed_distinct(PlannerInfo *root,
 	 * make actual Paths for these steps.
 	 */
 	cost_agg(&hashed_p, root, AGG_HASHED, NULL,
-			 numDistinctCols, dNumDistinctRows,
+			 numDistinctCols, dNumDistinctRows / planner_segment_count(NULL),
 			 cheapest_startup_cost, cheapest_total_cost,
 			 path_rows,
 			 hash_info.workmem_per_entry,

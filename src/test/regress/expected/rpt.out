@@ -823,16 +823,16 @@ explain (costs off) select * from t_hashdist cross join (select a, sum(random())
 (9 rows)
 
 explain (costs off) select * from t_hashdist cross join (select random() as k, sum(a) from t_replicate_volatile group by k) x;
-                        QUERY PLAN                        
-----------------------------------------------------------
+                      QUERY PLAN                      
+------------------------------------------------------
  Nested Loop
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Seq Scan on t_hashdist
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  HashAggregate
+               Group Key: random()
+               ->  Seq Scan on t_replicate_volatile
    ->  Materialize
-         ->  Gather Motion 1:1  (slice2; segments: 1)
-               ->  HashAggregate
-                     Group Key: random()
-                     ->  Seq Scan on t_replicate_volatile
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on t_hashdist
  Optimizer: Postgres query optimizer
 (9 rows)
 
