@@ -1529,21 +1529,19 @@ escape_fmtopts_string(const char *src)
 char *
 custom_fmtopts_string(const char *src)
 {
-	int len = src ? strlen(src) : 0;
-	char *result = calloc(1, len * 2 + 2);
-	char *srcdup = src ? strdup(src) : NULL;
-	char *srcdup_start = srcdup;
-	char *find_res = NULL;
-	int last = 0;
+	PQExpBufferData result;
+	char *srcdup;
+	char *to_free;
+	char *find_res;
+	char *srcdup_end;
+	int last;
 
-	if (!srcdup || !result)
-	{
-		if (result)
-			free(result);
-		if (srcdup)
-			free(srcdup);
+	if (!src)
 		return NULL;
-	}
+
+	to_free = srcdup = pg_strdup(src);
+	srcdup_end = srcdup + strlen(srcdup);
+	initPQExpBuffer(&result);
 
 	while (srcdup)
 	{
@@ -1551,14 +1549,15 @@ custom_fmtopts_string(const char *src)
 		find_res = strchr(srcdup, ' ');
 		if (!find_res)
 			break;
-		strncat(result, srcdup, (find_res - srcdup));
+		*find_res = '\0';
+		appendPQExpBufferStr(&result, srcdup);
 		/* skip space */
 		srcdup = find_res + 1;
 		/* remove E if E' */
 		if ((strlen(srcdup) > 2) && (srcdup[0] == 'E') && (srcdup[1] == '\''))
 			srcdup++;
 		/* add " = " */
-		strncat(result, " = ", 3);
+		appendPQExpBuffer(&result, " = ");
 		/* find second word (b) until second '
 		   find \' combinations and ignore them */
 		find_res = strchr(srcdup + 1, '\'');
@@ -1568,23 +1567,25 @@ custom_fmtopts_string(const char *src)
 		}
 		if (!find_res)
 			break;
-		strncat(result, srcdup, (find_res - srcdup + 1));
-		srcdup = find_res + 1;
-		/* skip space and add ',' */
-		if (srcdup && srcdup[0] == ' ')
+		find_res++;
+		*find_res = '\0';
+		appendPQExpBufferStr(&result, srcdup);
+		srcdup = find_res;
+		/* move to the next token if exists and add ',' */
+		if (find_res < srcdup_end - 1)
 		{
-			srcdup++;
-			strncat(result, ",", 1);
+			srcdup = find_res + 1;
+			appendPQExpBuffer(&result, ",");
 		}
 	}
 
 	/* fix string - remove trailing ',' or '=' */
-	last = strlen(result) - 1;
-	if (result[last] == ',' || result[last] == '=')
-		result[last] = '\0';
+	last = strlen(result.data) - 1;
+	if (last >= 0 && (result.data[last] == ',' || result.data[last] == '='))
+		result.data[last] = '\0';
 
-	free(srcdup_start);
-	return result;
+	pg_free(to_free);
+	return result.data;
 }
 
 /*
