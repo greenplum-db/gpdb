@@ -7,6 +7,7 @@
 #include "stdbool.h"
 #include "stdlib.h"
 #include "sys/stat.h"
+#include "string.h"
 
 #include "utilities/gpdb5-cluster.h"
 #include "utilities/gpdb6-cluster.h"
