@@ -94,6 +94,7 @@ def _get_mirror_count():
 # take the item in search_item_list, search pg_hba if it contains atleast one entry
 # for the item
 @given('pg_hba file "{filename}" on host "{host}" contains entries for "{search_items}"')
+@then('pg_hba file "{filename}" on host "{host}" contains entries for "{search_items}"')
 def impl(context, search_items, host, filename):
     cmd_str = "ssh %s cat %s" % (host, filename)
     cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
@@ -118,6 +119,7 @@ def impl(context, search_items, host, filename):
 
 # ensure pg_hba contains only cidr addresses, exclude mandatory entries for replication samenet if existing
 @given('pg_hba file "{filename}" on host "{host}" contains only cidr addresses')
+@then('pg_hba file "{filename}" on host "{host}" contains only cidr addresses')
 def impl(context, host, filename):
     cmd_str = "ssh %s cat %s" % (host, filename)
     cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)

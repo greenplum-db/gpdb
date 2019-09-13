@@ -9,7 +9,7 @@ from gppylib.mainUtils import SimpleMainLock, ExceptionNoStackTraceNeeded
 import os
 import sys
 import signal
-from time import strftime
+import itertools
 
 try:
     from gppylib.commands.unix import *
@@ -78,6 +78,8 @@ def parseargs():
                             The default location is ~/gpAdminLogs.')
     parser.add_option('-C', '--continue', dest='continue_move', action='store_true',
                       help='Continue moving mirrors')
+    parser.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
+                     help='use hostnames instead of CIDR in pg_hba.conf')
     parser.add_option('-h', '-?', '--help', action='help',
                       help='show this help message and exit.')
     parser.add_option('--usage', action="briefhelp")
@@ -172,7 +174,6 @@ def lookupGpdb(address, port, dataDirectory):
                 gpdb.getSegmentDataDirectory()):
             return gpdb
     return None
-
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
@@ -335,21 +336,81 @@ try:
     newConfig = Configuration()
     newConfig.read_input_file(options.input_filename)
 
+    PgHbaEntriesToUpdate = []
     """ Do some sanity checks on the input. """
-    for mirror in newConfig.oldMirrorList:
-        seg = lookupGpdb(mirror.address, mirror.port, mirror.dataDirectory)
+    for oldMirror, newMirror in itertools.izip(newConfig.oldMirrorList, newConfig.newMirrorList):
+        seg = lookupGpdb(oldMirror.address, oldMirror.port, oldMirror.dataDirectory)
         if seg is None:
             raise Exception(
                 "Old mirror segment does not exist with given information: address = %s, port = %s, segment data directory = %s"
-                % (mirror.address, str(mirror.port), mirror.dataDirectory))
+                % (oldMirror.address, str(oldMirror.port), oldMirror.dataDirectory))
         if seg.getSegmentContentId() == MASTER_CONTENT_ID:
             raise Exception(
                 "Cannot move master or master mirror segments: address = %s, port = %s, segment data directory = %s"
-                % (mirror.address, str(mirror.port), mirror.dataDirectory))
+                % (oldMirror.address, str(oldMirror.port), oldMirror.dataDirectory))
         if seg.getSegmentRole() != ROLE_MIRROR:
             raise Exception(
                 "Old mirror segment is not currently in a mirror role: address = %s, port = %s, segment data directory = %s"
-                % (mirror.address, str(mirror.port), mirror.dataDirectory))
+                % (oldMirror.address, str(oldMirror.port), oldMirror.dataDirectory))
+        # exclude any in place mirrors, i.e if the host on which the mirror reside still stays same, in that
+        # case we need not update the entries
+        if not oldMirror.inPlace:
+            for segment in gpArrayInstance.getDbList():
+                # identify the corresponding primary pair of the mirror being moved
+                if segment.getSegmentContentId() == seg.getSegmentContentId() and segment.getSegmentRole() != seg.getSegmentRole():
+                    PgHbaEntriesToUpdate.append((segment.getSegmentDataDirectory(), segment.getSegmentHostName(), newMirror.address))
+
+
+    """ Prepare common execution steps for running commands on segments """
+    mirrorsToDelete = [mirror for mirror in newConfig.oldMirrorList if not mirror.inPlace]
+    totalDirsToDelete = len(mirrorsToDelete)
+    numberOfWorkers = min(totalDirsToDelete, options.batch_size)
+
+    """ Update pg_hba.conf on primary segments with new mirror information """
+
+    if numberOfWorkers > 0:
+        pool = WorkerPool(numWorkers=numberOfWorkers)
+        replicationStr = ". {0}/greenplum_path.sh; echo '{1}' >> {2}/pg_hba.conf; pg_ctl -D {2} reload"
+        try:
+            for entry in PgHbaEntriesToUpdate:
+                allow_pair_hba_line_entries = []
+                primary_datadir = entry[0]
+                primary_hostname = entry[1]
+                newMirror_hostname = entry[2]
+                if options.hba_hostnames:
+                    hostname, _, _ = socket.gethostbyaddr(newMirror_hostname)
+                    hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), hostname)
+                    allow_pair_hba_line_entries.append(hba_line_entry)
+                else:
+                    newMirror_ips = unix.InterfaceAddrs.remote('get mirror ips', newMirror_hostname)
+                    for ip in newMirror_ips:
+                        cidr_suffix = '/128' if ':' in ip else '/32'
+                        cidr = ip + cidr_suffix
+                        hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), cidr)
+                        allow_pair_hba_line_entries.append(hba_line_entry)
+                cmdStr = replicationStr.format(os.environ["GPHOME"], " ".join(allow_pair_hba_line_entries), primary_datadir)
+                logger.info("Updating pg_hba.conf entries on primary %s:%s with new mirror %s information" % (primary_hostname, primary_datadir, newMirror_hostname))
+                cmd = Command(name="append to pg_hba.conf", cmdStr=cmdStr, ctxt=REMOTE, remoteHost=primary_hostname)
+                pool.addCommand(cmd)
+            # Wait for the segments to finish
+            pool.join()
+        except:
+            pool.haltWork()
+            pool.joinWorkers()
+
+        failure = False
+        results = []
+        for cmd in pool.getCompletedItems():
+            r = cmd.get_results()
+        if not cmd.was_successful():
+           logging.error("Unable to update pg_hba conf on primary segment: " + str(r))
+           failure = True
+
+        pool.haltWork()
+        pool.joinWorkers()
+        if failure:
+            logging.error("Unable to update pg_hba.conf on the primary segments")
+            raise Exception("Unable to update pg_hba.conf on the primary segments.")
 
     """ Create a backout file for the user if they choose to go back to the original configuration. """
     backout_filename = options.input_filename + "_backout_" + str(time.strftime("%m%d%y%H%M%S"))
@@ -364,10 +425,7 @@ try:
     cmd.run(validateAfter=True)
 
     """ Delete old mirror directories. """
-    mirrorsToDelete = [mirror for mirror in newConfig.oldMirrorList if not mirror.inPlace]
-    totalDirsToDelete = len(mirrorsToDelete)
-    numberOfWorkers = min(totalDirsToDelete, options.batch_size)
-    if numberOfWorkers > 1:
+    if numberOfWorkers > 0:
         pool = WorkerPool(numWorkers=numberOfWorkers)
         for mirror in mirrorsToDelete:
             logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
