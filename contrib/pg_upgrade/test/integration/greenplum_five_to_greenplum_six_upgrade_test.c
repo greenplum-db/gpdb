@@ -111,8 +111,6 @@ static void
 createHeapTableWithDataInFiveCluster(void)
 {
 	PGconn *connection = connectToFive();
-	executeQuery(connection, "alter role adamberlin NOCREATEEXTTABLE(protocol='gphdfs',type='readable');");
-	executeQuery(connection, "alter role adamberlin NOCREATEEXTTABLE(protocol='gphdfs',type='writable');");
 	executeQuery(connection, "create schema five_to_six_upgrade;");
 	executeQuery(connection, "set search_path to five_to_six_upgrade");
 	executeQuery(connection, "create table users (id integer, name text) distributed by (id);");

@@ -2,7 +2,7 @@
 
 remove_existing_symlink_to_installation() {
   local installation_link_name=$1
-  rm $1
+  rm -f $installation_link_name
 }
 
 #
@@ -15,18 +15,21 @@ create_symlink_to_installation() {
   ln -s $gpdb_installation_path $link_name
 }
 
+remove_gphdfs_permissions() {
+	psql postgres -c "alter role $USER NOCREATEEXTTABLE(protocol='gphdfs',type='readable');"
+	psql postgres -c "alter role $USER NOCREATEEXTTABLE(protocol='gphdfs',type='writable');"
+}
+
 create_demo_cluster() {
   local gpdb_source_path=$1;
   local installation_path=$2;
   local gpdb_version=$3;
-
-  source "./configuration/$gpdb_version-env.sh";
-  source "./$installation_path/greenplum_path.sh";
-
-  make -C "$gpdb_source_path/gpAux/gpdemo";
-
-  # ensure cluster is stopped
-  "./$installation_path/bin/gpstop" -a;
+  
+  source "./configuration/$gpdb_version-env.sh" && \
+    source "./$installation_path/greenplum_path.sh" && \
+    make -C "$gpdb_source_path/gpAux/gpdemo" && \
+    remove_gphdfs_permissions && \
+    "./$installation_path/bin/gpstop" -a;
 }
 
 create_backup_of_data_dirs() {
