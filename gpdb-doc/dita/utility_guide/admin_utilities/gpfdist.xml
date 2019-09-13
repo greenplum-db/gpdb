@@ -43,10 +43,12 @@
           <codeph>INSERT</codeph> into the external table, and writes to an output file.</p>
       <p>For readable external tables, if load files are compressed using <codeph>gzip</codeph> or
           <codeph>bzip2</codeph> (have a <codeph>.gz</codeph> or <codeph>.bz2</codeph> file
-        extension), <codeph>gpfdist</codeph> uncompresses the files automatically before loading
-        provided that <codeph>gunzip</codeph> or <codeph>bunzip2</codeph> is in your path. </p>
-      <note type="note">Currently, readable external tables do not support compression on Windows
-        platforms, and writable external tables do not support compression on any platforms.</note>
+        extension), <codeph>gpfdist</codeph> uncompresses the files before loading. For writable
+        external tables, <codeph>gpfdist</codeph> compresses the data using <codeph>gzip</codeph> if
+        the target file has a <codeph>.gz</codeph> extension. To compress or uncompress data
+          <codeph>gunzip</codeph> or <codeph>bunzip2</codeph> must in your path.</p>
+      <note type="note">Currently, readable and writeable external tables do not support compression
+        on Windows platforms.</note>
       <p>When reading or writing data with the <codeph>gpfdist</codeph> or <codeph>gpfdists</codeph>
         protocol, Greenplum Database includes <codeph>X-GP-PROTO</codeph> in the HTTP request header
         to indicate that the request is from Greenplum Database. The utility rejects HTTP requests
