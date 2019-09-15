@@ -17,10 +17,11 @@
 #include "catalog/pg_user_mapping.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
+#include "nodes/makefuncs.h"
 #include "foreign/foreign.h"
 
-#define FDW_OPTION_FORMAT_TEXT "text"
-#define FDW_OPTION_FORMAT_CSV "csv"
+#define FDW_OPTION_WIRE_FORMAT_TEXT "text"
+#define FDW_OPTION_WIRE_FORMAT_CSV "csv"
 
 #define FDW_OPTION_REJECT_LIMIT_ROWS "rows"
 #define FDW_OPTION_REJECT_LIMIT_PERCENT "percent"
@@ -37,6 +38,7 @@
 #define FDW_OPTION_REJECT_LIMIT_TYPE "reject_limit_type"
 #define FDW_OPTION_RESOURCE "resource"
 
+#define FDW_COPY_OPTION_FORMAT "format"
 #define FDW_COPY_OPTION_HEADER "header"
 #define FDW_COPY_OPTION_DELIMITER "delimiter"
 #define FDW_COPY_OPTION_QUOTE "quote"
@@ -170,12 +172,12 @@ pxf_fdw_validator(PG_FUNCTION_ARGS)
 			 * system, for example Parquet, Avro, Text, CSV.
 			 *
 			 * For COPY, the format can only be text, csv, or binary. pxf_fdw
-			 * leverages the csv format in COPY.
+			 * leverages the csv and text formats in COPY.
 			 */
 			char	   *value = defGetString(def);
 
-			if (pg_strcasecmp(value, FDW_OPTION_FORMAT_TEXT) == 0 ||
-				pg_strcasecmp(value, FDW_OPTION_FORMAT_CSV) == 0)
+			if (pg_strcasecmp(value, FDW_OPTION_WIRE_FORMAT_TEXT) == 0 ||
+				pg_strcasecmp(value, FDW_OPTION_WIRE_FORMAT_CSV) == 0)
 				copy_options = lappend(copy_options, def);
 		}
 		else if (strcmp(def->defname, FDW_OPTION_PXF_PORT) == 0)
@@ -367,6 +369,7 @@ ValidateCopyOptions(List *options_list, Oid catalog)
 PxfOptions *
 PxfGetOptions(Oid foreigntableid)
 {
+	Node *wireFormat;
 	UserMapping *user;
 	ForeignTable *table;
 	ForeignServer *server;
@@ -428,10 +431,6 @@ PxfGetOptions(Oid foreigntableid)
 		else if (strcmp(def->defname, FDW_OPTION_FORMAT) == 0)
 		{
 			opt->format = defGetString(def);
-
-			if (pg_strcasecmp(opt->format, FDW_OPTION_FORMAT_TEXT) == 0 ||
-				pg_strcasecmp(opt->format, FDW_OPTION_FORMAT_CSV) == 0)
-				copy_options = lappend(copy_options, def);
 		}
 		else if (IsCopyOption(def->defname))
 			copy_options = lappend(copy_options, def);
@@ -451,6 +450,20 @@ PxfGetOptions(Oid foreigntableid)
 		}
 	}							/* foreach */
 
+	/* The profile corresponds to protocol[:format] */
+	opt->profile = opt->protocol;
+
+	if (opt->format)
+		opt->profile = psprintf("%s:%s", opt->protocol, opt->format);
+
+	if (opt->format && pg_strcasecmp(opt->format, FDW_OPTION_WIRE_FORMAT_TEXT) == 0)
+		wireFormat = (Node *)makeString(FDW_OPTION_WIRE_FORMAT_TEXT);
+	else
+		/* default wire_format is CSV */
+		wireFormat = (Node *)makeString(FDW_OPTION_WIRE_FORMAT_CSV);
+
+	copy_options = lappend(copy_options, makeDefElem(FDW_COPY_OPTION_FORMAT, wireFormat));
+
 	opt->copy_options = copy_options;
 	opt->options = other_options;
 
@@ -458,12 +471,6 @@ PxfGetOptions(Oid foreigntableid)
 
 	/* Follows precedence rules table > server > wrapper */
 	opt->exec_location = table->exec_location;
-
-	/* The profile corresponds to protocol[:format] */
-	opt->profile = opt->protocol;
-
-	if (opt->format)
-		opt->profile = psprintf("%s:%s", opt->protocol, opt->format);
 
 	/* Set defaults when not provided */
 	if (!opt->pxf_host)

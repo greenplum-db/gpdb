@@ -168,6 +168,13 @@ CREATE FOREIGN TABLE pxf_fdw_test_table_log_errors (id int, name text)
     OPTIONS ( resource '/path/to/resource', reject_limit '4', log_errors 'yes' );
 
 --
+-- Table creation fails if quote is provided (CSV-only option)
+--
+CREATE FOREIGN TABLE pxf_fdw_test_table_csv_only ()
+    SERVER pxf_fdw_test_server
+    OPTIONS ( resource '/foo', quote '9' );
+
+--
 -- Table creation succeeds if resource is provided and reject_limit is provided correctly
 --
 CREATE FOREIGN TABLE pxf_fdw_test_table_reject_limit (id int, name text)
