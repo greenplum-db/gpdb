@@ -16,6 +16,8 @@
 #ifndef MEMACCOUNTING_PRIVATE_H
 #define MEMACCOUNTING_PRIVATE_H
 
+#include <assert.h>
+
 #include "utils/memaccounting.h"
 
 extern MemoryAccountIdType liveAccountStartId;
@@ -94,19 +96,19 @@ MemoryAccounting_ConvertIdToAccount(MemoryAccountIdType id)
 
 	if (id >= liveAccountStartId)
 	{
-		Assert(NULL != shortLivingMemoryAccountArray);
-		Assert(id < liveAccountStartId + shortLivingMemoryAccountArray->accountCount);
+		assert(NULL != shortLivingMemoryAccountArray);
+		assert(id < liveAccountStartId + shortLivingMemoryAccountArray->accountCount);
 		memoryAccount = shortLivingMemoryAccountArray->allAccounts[id - liveAccountStartId];
 	}
 	else if (id <= MEMORY_OWNER_TYPE_END_LONG_LIVING)
 	{
-		Assert(NULL != longLivingMemoryAccountArray);
+		assert(NULL != longLivingMemoryAccountArray);
 		/* 0 is reserved as undefined. So, the array index is 1 behind */
 		memoryAccount = longLivingMemoryAccountArray[id];
 	}
 	else if (id < liveAccountStartId) /* Dead account; so use rollover */
 	{
-		Assert(NULL != longLivingMemoryAccountArray);
+		assert(NULL != longLivingMemoryAccountArray);
 		/*
 		 * For dead accounts we use a single rollover account to account for all
 		 * the long living allocations. Rollover is a long-living account, so it
@@ -116,7 +118,7 @@ MemoryAccounting_ConvertIdToAccount(MemoryAccountIdType id)
 		memoryAccount = longLivingMemoryAccountArray[MEMORY_OWNER_TYPE_Rollover];
 	}
 
-	Assert(IsA(memoryAccount, MemoryAccount));
+	assert(IsA(memoryAccount, MemoryAccount));
 
 	return memoryAccount;
 }
