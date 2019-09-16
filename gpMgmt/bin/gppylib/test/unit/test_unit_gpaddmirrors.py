@@ -122,7 +122,8 @@ class GpAddMirrorsTest(GpTestCase):
         self.assertIn("45000", result[0])
 
     @patch('gppylib.programs.clsAddMirrors.Command')
-    def test_pghbaconf_updated_successfully(self, mock):
+    @patch('gppylib.programs.clsAddMirrors.unix.InterfaceAddrs.remote', return_value=['192.168.2.1', '192.168.1.1'])
+    def test_pghbaconf_updated_successfully(self, mock1, mock2):
         sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
         options, _ = self.parser.parse_args()
         self.subject = GpAddMirrorsProgram(options)
@@ -131,7 +132,8 @@ class GpAddMirrorsTest(GpTestCase):
         self.mock_logger.info.assert_any_call("Successfully modified pg_hba.conf on primary segments to allow replication connections")
 
     @patch('gppylib.programs.clsAddMirrors.Command', side_effect=Exception("boom"))
-    def test_pghbaconf_updated_fails(self, mock):
+    @patch('gppylib.programs.clsAddMirrors.unix.InterfaceAddrs.remote', return_value=['192.168.2.1', '192.168.1.1'])
+    def test_pghbaconf_updated_fails(self, mock1, mock2):
         sys.argv = ['gpaddmirrors', '-i', '/tmp/nonexistent/file']
         options, _ = self.parser.parse_args()
         self.subject = GpAddMirrorsProgram(options)
