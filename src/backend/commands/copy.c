@@ -4517,7 +4517,8 @@ BeginCopyFrom(Relation rel,
 	/*
 	 * Determine the mode
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH && !cstate->on_segment)
+	if (Gp_role == GP_ROLE_DISPATCH && !cstate->on_segment &&
+		cstate->rel && cstate->rel->rd_cdbpolicy)
 		cstate->dispatch_mode = COPY_DISPATCH;
 	else if (Gp_role == GP_ROLE_EXECUTE && !cstate->on_segment)
 		cstate->dispatch_mode = COPY_EXECUTOR;
