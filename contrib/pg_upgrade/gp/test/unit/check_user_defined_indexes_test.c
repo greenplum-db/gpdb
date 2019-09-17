@@ -27,6 +27,7 @@ static int stubbed_number_of_rows = 0;
 static int size_of_test_message = 1000;
 static char failure_messages[3000];
 static UserDefinedIndexes *_stubbedIndexes = NULL;
+static bool cleanup_was_called = false;
 
 UserDefinedIndexes *
 query_for_user_defined_indexes(ClusterInfo *cluster)
@@ -77,7 +78,13 @@ teardown(ClusterInfo *clusterInfo)
 void setup() 
 {
 	strcpy(failure_messages, "");
-	_stubbedIndexes = NULL;
+	setup_no_rows_to_return();
+	cleanup_was_called = false;
+}
+
+void cleanup_query_for_user_defined_indexes(UserDefinedIndexes *indexes)
+{
+	cleanup_was_called = true;
 }
 
 static UserDefinedIndex *
@@ -174,6 +181,20 @@ test_it_notifies_which_user_defined_indexes_were_found_when_failing_the_check(vo
 	teardown(cluster);
 }
 
+static void
+test_it_cleans_up_the_query_when_finished(void **state)
+{
+	setup();
+
+	ClusterInfo *cluster = make_cluster();
+
+	bool result = check_user_defined_indexes(cluster);
+
+	assert_true(cleanup_was_called);
+
+	teardown(cluster);
+}
+
 /*
  * Runner
  */
@@ -185,7 +206,8 @@ main(int argc, char *argv[])
 	const UnitTest tests[] = {
 		unit_test(test_it_returns_true),
 		unit_test(test_it_does_not_pass_the_check_and_returns_false_when_there_are_indexes_found),
-		unit_test(test_it_notifies_which_user_defined_indexes_were_found_when_failing_the_check)
+		unit_test(test_it_notifies_which_user_defined_indexes_were_found_when_failing_the_check),
+		unit_test(test_it_cleans_up_the_query_when_finished)
 	};
 
 	run_tests(tests);

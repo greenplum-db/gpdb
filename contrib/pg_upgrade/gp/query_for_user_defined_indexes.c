@@ -106,3 +106,19 @@ query_for_user_defined_indexes(ClusterInfo *cluster)
 
 	return indexes;
 }
+
+void
+cleanup_query_for_user_defined_indexes(UserDefinedIndexes *indexes)
+{
+	for (int i = 0; i < indexes->number_of_user_defined_indexes; i++)
+	{
+		UserDefinedIndex *userDefinedIndex = indexes->foundIndexes[i];
+		pfree(userDefinedIndex->index_name);
+		pfree(userDefinedIndex->namespace_name);
+		pfree(userDefinedIndex->database_name);
+		pfree(userDefinedIndex);
+	}
+
+	pfree(indexes->foundIndexes);
+	pfree(indexes);
+}

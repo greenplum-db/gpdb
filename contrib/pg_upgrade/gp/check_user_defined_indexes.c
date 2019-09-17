@@ -36,5 +36,7 @@ check_user_defined_indexes(ClusterInfo *oldCluster)
 	if (!passesCheck)
 		report_too_many_indexes(indexes);
 
+	cleanup_query_for_user_defined_indexes(indexes);
+
 	return passesCheck;
 }
