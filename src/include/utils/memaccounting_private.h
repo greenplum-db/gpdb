@@ -94,21 +94,34 @@ MemoryAccounting_ConvertIdToAccount(MemoryAccountIdType id)
 {
 	MemoryAccount *memoryAccount = NULL;
 
+	/*
+	 * Don't Assert() in this function, which eventually invokes
+	 * MemoryAccounting_Allocate() then go back here again and falls into an
+	 * infinite loop.
+	 *
+	 * Just assert() to abort.
+	 */
 	if (id >= liveAccountStartId)
 	{
+#ifdef USE_ASSERT_CHECKING
 		assert(NULL != shortLivingMemoryAccountArray);
 		assert(id < liveAccountStartId + shortLivingMemoryAccountArray->accountCount);
+#endif
 		memoryAccount = shortLivingMemoryAccountArray->allAccounts[id - liveAccountStartId];
 	}
 	else if (id <= MEMORY_OWNER_TYPE_END_LONG_LIVING)
 	{
+#ifdef USE_ASSERT_CHECKING
 		assert(NULL != longLivingMemoryAccountArray);
+#endif
 		/* 0 is reserved as undefined. So, the array index is 1 behind */
 		memoryAccount = longLivingMemoryAccountArray[id];
 	}
 	else if (id < liveAccountStartId) /* Dead account; so use rollover */
 	{
+#ifdef USE_ASSERT_CHECKING
 		assert(NULL != longLivingMemoryAccountArray);
+#endif
 		/*
 		 * For dead accounts we use a single rollover account to account for all
 		 * the long living allocations. Rollover is a long-living account, so it
@@ -118,7 +131,9 @@ MemoryAccounting_ConvertIdToAccount(MemoryAccountIdType id)
 		memoryAccount = longLivingMemoryAccountArray[MEMORY_OWNER_TYPE_Rollover];
 	}
 
+#ifdef USE_ASSERT_CHECKING
 	assert(IsA(memoryAccount, MemoryAccount));
+#endif
 
 	return memoryAccount;
 }
