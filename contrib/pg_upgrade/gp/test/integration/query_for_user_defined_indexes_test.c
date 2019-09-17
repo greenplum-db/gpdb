@@ -67,7 +67,7 @@ test_cluster_returns_zero_user_defined_indexes_when_there_are_none(void **state)
 }
 
 static void
-test_cluster_returns_user_defined_queries_from_all_databases(void **state)
+test_cluster_returns_user_defined_indexes_from_all_databases(void **state)
 {
 	ClusterInfo *cluster = make_cluster();
 
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 	const		UnitTest tests[] = {
 		unit_test(test_cluster_can_query_for_user_defined_indexes),
 		unit_test(test_cluster_returns_zero_user_defined_indexes_when_there_are_none),
-		unit_test(test_cluster_returns_user_defined_queries_from_all_databases)
+		unit_test(test_cluster_returns_user_defined_indexes_from_all_databases)
 	};
 
 	return run_tests(tests);
