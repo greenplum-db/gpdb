@@ -4,13 +4,34 @@
 -- in other databases, make sure to change to the correct database first.
 
 --partition tables with indexes requires dropping for now
---NOTE: 'isolation2test' and 'regression' database must already exist
+--NOTE: 'isolation2test', 'regression', etc database must already exist
 \c isolation2test;
 \i test_gpdb_pre_drop_partition_indices.sql;
 \i test_gpdb_pre_drop_user_defined_indexes.sql;
 
 \c regression;
 \i test_gpdb_pre_drop_partition_indices.sql;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
+
+\c build;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
+
+\c dsp1;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
+
+\c dsp2;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
+
+\c dsp3;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
+
+\c gptest;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
+
+\c reindexdb2;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
+
+\c testanalyze;
 \i test_gpdb_pre_drop_user_defined_indexes.sql;
 
 -- This one's interesting:
