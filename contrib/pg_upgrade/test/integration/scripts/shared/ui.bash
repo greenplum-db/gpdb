@@ -1,23 +1,23 @@
 validate_gpdb_installation_path() {
-  if [ ! -d "$1" ]; then
-    echo "missing argument: installation path"
-    usage "$2"
-    exit 1
-  fi
+	if [ ! -d "$1" ]; then
+		echo "missing argument: installation path"
+		usage "$2"
+		exit 1
+	fi
 }
 
 validate_gpdb_source_path() {
-  if [ ! -d "$1" ]; then
-    echo "missing argument: source path"
-    usage "$2"
-    exit 1
-  fi
+	if [ ! -d "$1" ]; then
+		echo "missing argument: source path"
+		usage "$2"
+		exit 1
+	fi
 }
 
 usage() {
-  local gpdb_version=$1
-  
-  cat <<USAGE
+	local gpdb_version=$1
+
+	cat <<USAGE
 
 usage:
 
@@ -30,5 +30,3 @@ example:
   $HOME/workspace/$gpdb_version;
 USAGE
 }
-
-

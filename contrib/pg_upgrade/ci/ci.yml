@@ -1,0 +1,14 @@
+resources:
+  - name: gpdb
+    type: git
+    source:
+      uri: https://github.com/gpdb/gpdb.git
+      branch: 6X_STABLE
+
+jobs:
+  - name: end-to-end-test
+    plan:
+      - get: gpdb
+        trigger: true
+      - task: run-test
+        file: gpdb/contrib/pg_upgrade/ci/run-test.yml

@@ -111,14 +111,14 @@ static void
 createHeapTableWithDataInFiveCluster(void)
 {
 	PGconn *connection = connectToFive();
-	executeQuery(connection, "alter role adamberlin NOCREATEEXTTABLE(protocol='gphdfs',type='readable');");
-	executeQuery(connection, "alter role adamberlin NOCREATEEXTTABLE(protocol='gphdfs',type='writable');");
 	executeQuery(connection, "create schema five_to_six_upgrade;");
 	executeQuery(connection, "set search_path to five_to_six_upgrade");
 	executeQuery(connection, "create table users (id integer, name text) distributed by (id);");
 	executeQuery(connection, "insert into users values (1, 'Jane')");
 	executeQuery(connection, "insert into users values (2, 'John')");
 	executeQuery(connection, "insert into users values (3, 'Joe')");
+	/* FIXME: why do we need this ?? */
+	executeQuery(connection, "VACUUM FREEZE;");
 	PQfinish(connection);
 }
 
@@ -253,7 +253,7 @@ anAdministratorPerformsAnUpgrade()
 }
 
 static void 
-given((* arrangeFunction)(void))
+given(void (* arrangeFunction)(void))
 {
 	startGpdbFiveCluster();
 	arrangeFunction();
@@ -261,7 +261,7 @@ given((* arrangeFunction)(void))
 }
 
 static void
-then((* assertionFunction)(void))
+then(void (* assertionFunction)(void))
 {
 	startGpdbSixCluster();
 	assertionFunction();
@@ -269,13 +269,13 @@ then((* assertionFunction)(void))
 }
 
 static void
-when((* actFunction)(void))
+when(void (* actFunction)(void))
 {
 	actFunction();
 }
 
 static void 
-and((* assertionFunction)(void))
+and(void (* assertionFunction)(void))
 {
 	/* and has the same behavior as then */
 	then(assertionFunction);

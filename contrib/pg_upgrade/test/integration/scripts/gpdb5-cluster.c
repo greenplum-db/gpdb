@@ -13,7 +13,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	char *const command = argv[1];
+	char	   *const command = argv[1];
 
 	if (strncmp(command, "start", 5) == 0)
 		startGpdbFiveCluster();

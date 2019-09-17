@@ -5,21 +5,20 @@ void
 startGpdbFiveCluster(void)
 {
 	system(""
-	       "source $PWD/gpdb5/greenplum_path.sh; "
-	       "PGPORT=50000; "
-	       "MASTER_DATA_DIRECTORY=$PWD/gpdb5-data/qddir/demoDataDir-1; "
-	       "$PWD/gpdb5/bin/gpstart -a"
-	);
+		   ". $PWD/gpdb5/greenplum_path.sh; "
+		   "export PGPORT=50000; "
+		   "export MASTER_DATA_DIRECTORY=$PWD/gpdb5-data/qddir/demoDataDir-1; "
+		   "$PWD/gpdb5/bin/gpstart -a"
+		);
 }
 
 void
 stopGpdbFiveCluster(void)
 {
 	system(""
-	       "source $PWD/gpdb5/greenplum_path.sh; \n"
-	       "PGPORT=50000; \n"
-	       "MASTER_DATA_DIRECTORY=$PWD/gpdb5-data/qddir/demoDataDir-1; \n"
-	       "$PWD/gpdb5/bin/gpstop -a"
-	);
+		   ". $PWD/gpdb5/greenplum_path.sh; \n"
+		   "export PGPORT=50000; \n"
+		   "export MASTER_DATA_DIRECTORY=$PWD/gpdb5-data/qddir/demoDataDir-1; \n"
+		   "$PWD/gpdb5/bin/gpstop -a"
+		);
 }
-

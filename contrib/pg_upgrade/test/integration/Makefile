@@ -60,8 +60,8 @@ test_dependencies = utilities/gpdb5-cluster.o \
 
 greenplum_five_to_greenplum_six_upgrade_test.t: greenplum_five_to_greenplum_six_upgrade_test.c $(test_dependencies) 
 	$(compile_test) \
-		$(integration_test_dependencies) \
 		$^ \
+		$(integration_test_dependencies) \
 		-o $@
 
 

@@ -10,10 +10,11 @@
 PGconn *
 connectTo(int port)
 {
-	char buffer[1000];
+	char		buffer[1000];
+
 	sprintf(buffer, "dbname=postgres port=%d", port);
-	PGconn *connection = PQconnectdb(buffer);
-	
+	PGconn	   *connection = PQconnectdb(buffer);
+
 	if (PQstatus(connection) != CONNECTION_OK)
 		printf("error: failed to connect to greenplum on port %d\n", port);
 
@@ -25,7 +26,7 @@ executeQuery(PGconn *connection, char *const query)
 {
 	ExecStatusType status;
 
-	PGresult *result = PQexec(connection, query);
+	PGresult   *result = PQexec(connection, query);
 
 	status = PQresultStatus(result);
 

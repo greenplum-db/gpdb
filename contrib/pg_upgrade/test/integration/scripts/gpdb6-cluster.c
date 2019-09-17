@@ -13,14 +13,15 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	char *const command = argv[1];
+	char	   *const command = argv[1];
 
-	if (strncmp("start", command, 5) == 0) {
+	if (strncmp("start", command, 5) == 0)
+	{
 		startGpdbSixCluster();
 	}
 
-	if (strncmp("stop", command, 4) == 0) {
+	if (strncmp("stop", command, 4) == 0)
+	{
 		stopGpdbSixCluster();
 	}
-
 }
