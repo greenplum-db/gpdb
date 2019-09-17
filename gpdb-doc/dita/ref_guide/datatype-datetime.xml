@@ -128,45 +128,40 @@ DAY TO SECOND
 HOUR TO MINUTE
 HOUR TO SECOND
 MINUTE TO SECOND
-</codeblock>
-    Note that if both <varname>fields</varname> and
-    <varname>p</varname> are specified, the
-    <varname>fields</varname> must include <codeph>SECOND</codeph>,
-    since the precision applies only to the seconds.</p>
-
-   <p>The type <codeph>time with time zone</codeph> is defined by the SQL
-    standard, but the definition exhibits properties which lead to
-    questionable usefulness. In most cases, a combination of
-    <codeph>date</codeph>, <codeph>time</codeph>, <codeph>timestamp without time
-    zone</codeph>, and <codeph>timestamp with time zone</codeph> should
-    provide a complete range of date/time functionality required by
-    any application.</p>
-
-   <p>The types <codeph>abstime</codeph>
-    and <codeph>reltime</codeph> are lower precision types which are used internally.
-    You are discouraged from using these types in
-    applications;  these internal types
-    might disappear in a future release.</p>
-
-    </section>
+</codeblock></p>
+    <p>Note that if both <varname>fields</varname> and <varname>p</varname> are specified, the
+      <varname>fields</varname> must include <codeph>SECOND</codeph>, since the precision applies
+     only to the seconds. </p><p>The type <codeph>time with time zone</codeph> is defined by the SQL
+     standard, but the definition exhibits properties which lead to questionable usefulness. In most
+     cases, a combination of <codeph>date</codeph>, <codeph>time</codeph>, <codeph>timestamp without
+      time zone</codeph>, and <codeph>timestamp with time zone</codeph> should provide a complete
+     range of date/time functionality required by any application. </p><p>The types
+      <codeph>abstime</codeph> and <codeph>reltime</codeph> are lower precision types which are used
+     internally. You are discouraged from using these types in applications; these internal types
+     might disappear in a future release. </p><p>Greenplum Database 6 and later releases do not
+     automatically cast text from the deprecated timestamp format <codeph>YYYYMMDDHH24MISS</codeph>.
+     The format could not be parsed unambiguously in previous Greenplum Database releases.
+     </p><p>For example, this command returns an error in Greenplum Database 6. In previous
+     releases, a timestamp is returned.
+     <codeblock># select to_timestamp('20190905140000');</codeblock></p>In Greenplum Database 6,
+    this command returns a timestamp.
+    <codeblock># select to_timestamp('20190905140000','YYYYMMDDHH24MISS');</codeblock></section>
    <section id="datatype-datetime-input">
     <title>Date/Time Input</title>
-
     <p>Date and time input is accepted in almost any reasonable format, including ISO 8601,
      SQL-compatible, traditional POSTGRES, and others. For some formats, ordering of day, month, and
      year in date input is ambiguous and there is support for specifying the expected ordering of
      these fields. Set the <xref href="config_params/guc-list.xml#DateStyle"/> parameter to
       <codeph>MDY</codeph> to select month-day-year interpretation, <codeph>DMY</codeph> to select
-     day-month-year interpretation, or <codeph>YMD</codeph> to select year-month-day interpretation.</p>
-
+     day-month-year interpretation, or <codeph>YMD</codeph> to select year-month-day
+     interpretation.</p>
     <p>Greenplum is more flexible in handling date/time input than the SQL standard requires. See
       <xref href="https://www.postgresql.org/docs/9.4/datetime-appendix.html" format="html"
       scope="external">Appendix B. Date/Time Support</xref> in the PostgreSQL documentation for the
      exact parsing rules of date/time input and for the recognized text fields including months,
      days of the week, and time zones.</p>
-
-    <p>Remember that any date or time literal input needs to be enclosed in single quotes, like
-     text strings. SQL requires the following syntax
+    <p>Remember that any date or time literal input needs to be enclosed in single quotes, like text
+     strings. SQL requires the following syntax
      <codeblock>
 <varname>type</varname> [ (<varname>p</varname>) ] '<varname>value</varname>'
 </codeblock>
