@@ -87,6 +87,9 @@
           <p>
             <xref href="gpmapreduce.xml#topic1" type="topic" format="dita"/>
           </p>
+          <p>
+            <xref href="gpmapreduce-yaml.xml#topic1" type="topic" format="dita"/>
+          </p>
           <!-- hidden until testing is complete -msk
             <p>
             <xref href="gpmovemirrors.xml#topic1"/>
