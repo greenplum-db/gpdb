@@ -24,7 +24,7 @@ BEGIN
         execute 'drop index if exists ' || 
             quote_ident(user_defined_indexes.namespace_name) || 
             '.' || 
-            quote_ident(user_defined_indexes.index_name);
+            quote_ident(user_defined_indexes.index_name) || ' cascade';
     END LOOP;
 END;
 $$ language plpgsql;
