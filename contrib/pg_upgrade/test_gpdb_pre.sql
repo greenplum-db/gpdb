@@ -7,9 +7,11 @@
 --NOTE: 'isolation2test' and 'regression' database must already exist
 \c isolation2test;
 \i test_gpdb_pre_drop_partition_indices.sql;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
 
 \c regression;
 \i test_gpdb_pre_drop_partition_indices.sql;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
 
 -- This one's interesting:
 --    No match found in new cluster for old relation with OID 173472 in database "regression": "public.sales_1_prt_bb_pkey" which is an index on "public.newpart"
@@ -36,3 +38,5 @@ DROP PROTOCOL IF EXISTS demoprot_untrusted2;
 -- we need to drop this view.
 DROP VIEW IF EXISTS nums CASCADE;
 DROP VIEW IF EXISTS sums_1_100 CASCADE;
+
+
