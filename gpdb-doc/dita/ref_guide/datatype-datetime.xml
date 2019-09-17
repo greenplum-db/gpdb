@@ -3,20 +3,16 @@
 <dita>
   <topic id="topic_abq_gfk_qfb">
     <title>Date/Time Types</title>
-    <body><section id="datatype-datetime">
-   
-
+  <body>
    <p>Greenplum supports the full set of SQL date and time types, shown in <xref
       href="#topic_abq_gfk_qfb/datatype-datetime-table" format="dita"/>. The operations available on
      these data types are described in <xref
       href="https://www.postgresql.org/docs/9.4/functions-datetime.html" format="html"
       scope="external">Date/Time Functions and Operators</xref> in the PostgreSQL documentation.
      Dates are counted according to the Gregorian calendar, even in years before that calendar was
-     introduced (see <xref
-      href="https://www.postgresql.org/docs/9.4/datetime-units-history.html" format="html"
-      scope="external">History of Units</xref> in the PostgreSQL documentation for more
+    introduced (see <xref href="https://www.postgresql.org/docs/9.4/datetime-units-history.html"
+     format="html" scope="external">History of Units</xref> in the PostgreSQL documentation for more
      information).</p>
-
     <table id="datatype-datetime-table">
      <title>Date/Time Types</title>
      <tgroup cols="6">
@@ -131,21 +127,22 @@ MINUTE TO SECOND
 </codeblock></p>
     <p>Note that if both <varname>fields</varname> and <varname>p</varname> are specified, the
       <varname>fields</varname> must include <codeph>SECOND</codeph>, since the precision applies
-     only to the seconds. </p><p>The type <codeph>time with time zone</codeph> is defined by the SQL
-     standard, but the definition exhibits properties which lead to questionable usefulness. In most
-     cases, a combination of <codeph>date</codeph>, <codeph>time</codeph>, <codeph>timestamp without
-      time zone</codeph>, and <codeph>timestamp with time zone</codeph> should provide a complete
-     range of date/time functionality required by any application. </p><p>The types
-      <codeph>abstime</codeph> and <codeph>reltime</codeph> are lower precision types which are used
-     internally. You are discouraged from using these types in applications; these internal types
-     might disappear in a future release. </p><p>Greenplum Database 6 and later releases do not
-     automatically cast text from the deprecated timestamp format <codeph>YYYYMMDDHH24MISS</codeph>.
-     The format could not be parsed unambiguously in previous Greenplum Database releases.
-     </p><p>For example, this command returns an error in Greenplum Database 6. In previous
-     releases, a timestamp is returned.
-     <codeblock># select to_timestamp('20190905140000');</codeblock></p>In Greenplum Database 6,
-    this command returns a timestamp.
-    <codeblock># select to_timestamp('20190905140000','YYYYMMDDHH24MISS');</codeblock></section>
+    only to the seconds. </p>
+   <p>The type <codeph>time with time zone</codeph> is defined by the SQL standard, but the
+    definition exhibits properties which lead to questionable usefulness. In most cases, a
+    combination of <codeph>date</codeph>, <codeph>time</codeph>, <codeph>timestamp without time
+     zone</codeph>, and <codeph>timestamp with time zone</codeph> should provide a complete range of
+    date/time functionality required by any application. </p>
+   <p>The types <codeph>abstime</codeph> and <codeph>reltime</codeph> are lower precision types
+    which are used internally. You are discouraged from using these types in applications; these
+    internal types might disappear in a future release. </p>
+   <p>Greenplum Database 6 and later releases do not automatically cast text from the deprecated
+    timestamp format <codeph>YYYYMMDDHH24MISS</codeph>. The format could not be parsed unambiguously
+    in previous Greenplum Database releases. </p>
+   <p>For example, this command returns an error in Greenplum Database 6. In previous releases, a
+    timestamp is returned. <codeblock># select to_timestamp('20190905140000');</codeblock></p>
+   <p>In Greenplum Database 6, this command returns a timestamp.
+    <codeblock># select to_timestamp('20190905140000','YYYYMMDDHH24MISS');</codeblock></p>
    <section id="datatype-datetime-input">
     <title>Date/Time Input</title>
     <p>Date and time input is accepted in almost any reasonable format, including ISO 8601,
