@@ -25,6 +25,7 @@
 #include "access/xlog_internal.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
@@ -99,6 +100,12 @@ extern int listenerBacklog;
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
 List	   *gp_guc_list_for_explain;
 List	   *gp_guc_list_for_no_plan;
+
+/* For synchornized GUC value is cache in HashTable,
+ * dispatch value along with query when some guc changed
+ */
+List       *gp_guc_restore_list = NIL;
+bool        gp_guc_need_restore = false;
 
 char	   *Debug_dtm_action_sql_command_tag;
 
@@ -5146,4 +5153,88 @@ check_gp_workfile_compression(bool *newval, void **extra, GucSource source)
 	}
 #endif
 	return true;
+}
+
+void
+DispatchSyncPGVariable(struct config_generic * gconfig)
+{
+	ListCell   *l;
+	StringInfoData buffer;
+
+	if (Gp_role != GP_ROLE_DISPATCH || IsBootstrapProcessingMode())
+		return;
+
+	initStringInfo( &buffer );
+
+	appendStringInfo(&buffer, "SET ");
+
+	switch (gconfig->vartype)
+	{
+		case PGC_BOOL:
+		{
+			struct config_bool *bguc = (struct config_bool *) gconfig;
+
+			appendStringInfo(&buffer, "%s TO %s", gconfig->name, *(bguc->variable) ? "true" : "false");
+			break;
+		}
+		case PGC_INT:
+		{
+			struct config_int *iguc = (struct config_int *) gconfig;
+
+			appendStringInfo(&buffer, "%s TO %d", gconfig->name, *iguc->variable);
+			break;
+		}
+		case PGC_REAL:
+		{
+			struct config_real *rguc = (struct config_real *) gconfig;
+
+			appendStringInfo(&buffer, " %s TO %f", gconfig->name, *rguc->variable);
+			break;
+		}
+		case PGC_STRING:
+		{
+			struct config_string *sguc = (struct config_string *) gconfig;
+			const char *str = *sguc->variable;
+			int			i;
+
+			appendStringInfo(&buffer, "%s TO ", gconfig->name);
+
+			/*
+			 * All whitespace characters must be escaped. See
+			 * pg_split_opts() in the backend.
+			 */
+			for (i = 0; str[i] != '\0'; i++)
+				appendStringInfoChar(&buffer, str[i]);
+
+			break;
+		}
+		case PGC_ENUM:
+		{
+			struct config_enum *eguc = (struct config_enum *) gconfig;
+			int			value = *eguc->variable;
+			const char *str = config_enum_lookup_by_value(eguc, value);
+			int			i;
+
+			appendStringInfo(&buffer, "%s TO ", gconfig->name);
+
+			/*
+			 * All whitespace characters must be escaped. See
+			 * pg_split_opts() in the backend. (Not sure if an enum value
+			 * can have whitespace, but let's be prepared.)
+			 */
+			for (i = 0; str[i] != '\0'; i++)
+			{
+				if (isspace((unsigned char) str[i]))
+					appendStringInfoChar(&buffer, '\\');
+
+				appendStringInfoChar(&buffer, str[i]);
+			}
+			break;
+		}
+		default:
+			Insist(false);
+
+	}
+
+	CdbDispatchSetCommand(buffer.data, false);
 }

@@ -76,6 +76,7 @@
 #include "tsearch/ts_cache.h"
 #include "utils/builtins.h"
 #include "utils/bytea.h"
+#include "utils/faultinjector.h"
 #include "utils/guc_tables.h"
 #include "utils/memutils.h"
 #include "utils/pg_locale.h"
@@ -5158,6 +5159,19 @@ AtEOXact_GUC(bool isCommit, int nestLevel)
 			/* Report new value if we changed it */
 			if (changed && (gconf->flags & GUC_REPORT))
 				ReportGUCOption(gconf);
+
+			/* if a guc restore in QD, record it and restore QE before next query start */
+			if (Gp_role == GP_ROLE_DISPATCH
+					&& !IsTransactionBlock()
+					&& changed
+					&& !isCommit
+					&& gp_guc_need_restore
+					&& (gconf->flags & GUC_GPDB_NEED_SYNC))
+			{
+				MemoryContext oldcontext = MemoryContextSwitchTo(TopMemoryContext);
+				gp_guc_restore_list = lappend(gp_guc_restore_list, gconf);
+				MemoryContextSwitchTo(oldcontext);
+			}
 		}						/* end of stack-popping loop */
 
 		if (stack != NULL)
@@ -7188,6 +7202,8 @@ ExecSetVariableStmt(VariableSetStmt *stmt, bool isTopLevel)
 			{
 				WarnNoTransactionChain(isTopLevel, "SET LOCAL");
 			}
+
+			SIMPLE_FAULT_INJECTOR("set_variable_fault");
 			(void) set_config_option(stmt->name,
 									 ExtractSetVariableArgs(stmt),
 									 (superuser() ? PGC_SUSET : PGC_USERSET),

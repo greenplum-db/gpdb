@@ -172,3 +172,18 @@ SELECT * FROM reset_test;
 -- table will not be dropped in the segments.
 DISCARD ALL;
 CREATE TEMP TABLE reset_test ( data text ) ON COMMIT PRESERVE ROWS;
+
+-- Test single query guc rollback
+set allow_segment_DML to on;
+
+set datestyle='german';
+select gp_inject_fault('set_variable_fault', 'error', dbid)
+from gp_segment_configuration where content=0 and role='p';
+set datestyle='sql, mdy';
+-- after guc set failed, before next query handle, qd will sync guc
+-- to qe. using `select 1` trigger guc reset.
+select 1;
+select current_setting('datestyle') from gp_dist_random('gp_id');
+
+select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration;
+set allow_segment_DML to off;

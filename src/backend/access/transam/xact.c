@@ -3343,7 +3343,9 @@ AbortTransaction(void)
 
 		AtAbort_TablespaceStorage();
 		AtEOXact_AppendOnly();
+		gp_guc_need_restore = true;
 		AtEOXact_GUC(false, 1);
+		gp_guc_need_restore = false;
 		AtEOXact_SPI(false);
 		AtEOXact_on_commit_actions(false);
 		AtEOXact_Namespace(false);

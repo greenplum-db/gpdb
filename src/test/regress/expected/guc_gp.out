@@ -257,3 +257,45 @@ NOTICE:  command without clusterwide effect
 HINT:  Concider alternatives as DEALLOCATE ALL, or DISCARD TEMP if a clusterwide effect is desired.
 CREATE TEMP TABLE reset_test ( data text ) ON COMMIT PRESERVE ROWS;
 ERROR:  relation "reset_test" already exists  (seg0 127.0.1.1:7002 pid=26153)
+-- Test single query guc rollback
+set allow_segment_DML to on;
+set datestyle='german';
+select gp_inject_fault('set_variable_fault', 'error', dbid)
+from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+set datestyle='sql, mdy';
+ERROR:  fault triggered, fault name:'set_variable_fault' fault type:'error'  (seg0 10.34.58.103:25432 pid=31389)
+-- after guc set failed, before next query handle, qd will sync guc
+-- to qe. using `select 1` trigger guc reset.
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+select current_setting('datestyle') from gp_dist_random('gp_id');
+ current_setting 
+-----------------
+ German, DMY
+ German, DMY
+ German, DMY
+(3 rows)
+
+select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration;
+ gp_inject_fault 
+-----------------
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+ Success:
+(8 rows)
+
+set allow_segment_DML to off;
