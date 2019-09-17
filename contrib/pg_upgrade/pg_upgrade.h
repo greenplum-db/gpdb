@@ -628,6 +628,9 @@ void		pg_putenv(const char *var, const char *val);
 extern void
 report_failure(const char *restrict fmt,...)
 __attribute__((format(printf, 1, 2)));
+extern void
+report_info(const char *restrict fmt,...)
+__attribute__((format(printf, 1, 2)));
 
 
 /* version.c */

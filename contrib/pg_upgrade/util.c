@@ -50,6 +50,17 @@ report_failure(const char *restrict fmt,...)
 	fflush(stdout);
 }
 
+void
+report_info(const char *restrict fmt,...)
+{
+	va_list		args;
+
+	va_start(args, fmt);
+	vprintf(_(fmt), args);
+	va_end(args);
+
+	fflush(stdout);
+}
 
 /* force blank output for progress display */
 void

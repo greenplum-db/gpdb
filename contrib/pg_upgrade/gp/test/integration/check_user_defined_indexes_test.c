@@ -41,7 +41,7 @@ test_a_user_defined_index_should_fail_checks(void **state)
 	executeQuery(connection, "create index t_index on t(a);");
 
 	bool result = check_user_defined_indexes(cluster);
-	
+
 	assert_false(result);
 
 	teardown(connection);

@@ -37,8 +37,9 @@ static void test_cluster_can_query_for_user_defined_indexes(void **state)
 
 	get_db_and_rel_infos(cluster);
 
-	struct UserDefinedIndexes indexes = query_for_user_defined_indexes(cluster);
-	assert_int_equal(indexes.number_of_user_defined_indexes, 1);
+	UserDefinedIndexes *indexes = query_for_user_defined_indexes(cluster);
+	assert_int_equal(indexes->number_of_user_defined_indexes, 1);
+	assert_int_not_equal(indexes->foundIndexes[0], NULL);
 
 	teardown(cluster);
 }
@@ -59,8 +60,8 @@ test_cluster_returns_zero_user_defined_indexes_when_there_are_none(void **state)
 
 	get_db_and_rel_infos(cluster);
 
-	struct UserDefinedIndexes indexes = query_for_user_defined_indexes(cluster);
-	assert_int_equal(indexes.number_of_user_defined_indexes, 0);
+	UserDefinedIndexes *indexes = query_for_user_defined_indexes(cluster);
+	assert_int_equal(indexes->number_of_user_defined_indexes, 0);
 
 	teardown(cluster);
 }
@@ -94,8 +95,8 @@ test_cluster_returns_user_defined_queries_from_all_databases(void **state)
 
 	get_db_and_rel_infos(cluster);
 
-	struct UserDefinedIndexes indexes = query_for_user_defined_indexes(cluster);
-	assert_int_equal(indexes.number_of_user_defined_indexes, 2);
+	UserDefinedIndexes *indexes = query_for_user_defined_indexes(cluster);
+	assert_int_equal(indexes->number_of_user_defined_indexes, 2);
 
 	teardown(cluster);
 }

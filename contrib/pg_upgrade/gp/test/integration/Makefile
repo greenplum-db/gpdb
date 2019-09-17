@@ -7,7 +7,7 @@ gp_checks_directory=../..
 
 TARGETS = check_covering_aoindex_test \
 	check_user_defined_indexes_test \
-	queries_test
+	query_for_user_defined_indexes_test
 
 
 PG_LIBS = $(libpq_pgport)
@@ -18,7 +18,9 @@ include $(top_srcdir)/src/Makefile.global
 
 
 test_flags = -I $(pg_upgrade_directory) \
-	-I$(libpq_srcdir) -g -O0
+	-I$(libpq_srcdir) \
+	-g -O0 \
+	-pedantic-errors
 
 
 code_under_test = $(gp_checks_directory)/checks.o \
@@ -67,5 +69,5 @@ check_covering_aoindex_test.t: check_covering_aoindex_test.c make_dependencies $
 check_user_defined_indexes_test.t: check_user_defined_indexes_test.c make_dependencies $(integration_test_dependencies)
 	$(compile_integration_test)
 
-queries_test.t: query_for_user_defined_indexes_test.c make_dependencies $(integration_test_dependencies)
+query_for_user_defined_indexes_test.t: query_for_user_defined_indexes_test.c make_dependencies $(integration_test_dependencies)
 	$(compile_integration_test)

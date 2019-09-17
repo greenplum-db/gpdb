@@ -11,10 +11,17 @@
 
 #include "pg_upgrade.h"
 
-struct UserDefinedIndexes {
-	int number_of_user_defined_indexes;
-};
+typedef struct UserDefinedIndexData {
+	char *namespace_name;
+	char *index_name;
+	char *database_name;
+} UserDefinedIndex;
 
-struct UserDefinedIndexes query_for_user_defined_indexes(ClusterInfo *cluster);
+typedef struct UserDefinedIndexesData {
+	int number_of_user_defined_indexes;
+	UserDefinedIndex **foundIndexes;
+} UserDefinedIndexes;
+
+UserDefinedIndexes *query_for_user_defined_indexes(ClusterInfo *cluster);
 
 #endif /* GP_PG_UPGRADE_GP_QUERY_FOR_INDEXES */
