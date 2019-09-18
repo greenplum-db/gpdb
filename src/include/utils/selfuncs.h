@@ -195,7 +195,7 @@ extern double estimate_num_groups(PlannerInfo *root, List *groupExprs,
 					double input_rows, List **pgset);
 
 extern Selectivity estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey,
-						 double nbuckets);
+											double nbuckets, Path *path);
 
 extern Datum brincostestimate(PG_FUNCTION_ARGS);
 extern Datum btcostestimate(PG_FUNCTION_ARGS);
@@ -213,5 +213,6 @@ extern Selectivity scalararraysel_containment(PlannerInfo *root,
 						   int varRelid);
 extern Datum arraycontsel(PG_FUNCTION_ARGS);
 extern Datum arraycontjoinsel(PG_FUNCTION_ARGS);
+extern double estimate_num_groups_per_segment(double groupNum, double numPerGroup, double numsegments);
 
 #endif   /* SELFUNCS_H */

@@ -2265,24 +2265,24 @@ analyze b;
 analyze c;
 set gp_dynamic_partition_pruning = off;
 explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=6.78..35.85 rows=5 width=20)
-   ->  Hash Join  (cost=6.78..35.85 rows=2 width=20)
-         Hash Cond: a.t = b.t
-         ->  Hash Join  (cost=3.45..32.39 rows=7 width=14)
-               Hash Cond: a.id = c.id
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=6.89..35.80 rows=5 width=20)
+   ->  Hash Join  (cost=6.89..35.80 rows=2 width=20)
+         Hash Cond: (a.id = c.id)
+         ->  Hash Join  (cost=3.44..32.27 rows=4 width=14)
+               Hash Cond: (a.t = b.t)
                ->  Append  (cost=0.00..24.99 rows=333 width=8)
                      ->  Seq Scan on apart_1_prt_1 a  (cost=0.00..5.00 rows=67 width=7)
                      ->  Seq Scan on apart_1_prt_2 a_1  (cost=0.00..5.00 rows=67 width=8)
                      ->  Seq Scan on apart_1_prt_3 a_2  (cost=0.00..5.00 rows=67 width=8)
                      ->  Seq Scan on apart_1_prt_4 a_3  (cost=0.00..5.00 rows=67 width=8)
                      ->  Seq Scan on apart_1_prt_5 a_4  (cost=0.00..4.99 rows=67 width=8)
-               ->  Hash  (cost=3.20..3.20 rows=7 width=6)
-                     ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
-         ->  Hash  (cost=3.20..3.20 rows=4 width=6)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.20 rows=4 width=6)
-                     ->  Seq Scan on b  (cost=0.00..3.05 rows=2 width=6)
+               ->  Hash  (cost=3.25..3.25 rows=5 width=6)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.25 rows=5 width=6)
+                           ->  Seq Scan on b  (cost=0.00..3.05 rows=2 width=6)
+         ->  Hash  (cost=3.20..3.20 rows=7 width=6)
+               ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
  Optimizer: Postgres query optimizer
 (17 rows)
 
@@ -2298,13 +2298,13 @@ select * from apart as a, b, c where a.t = b.t and a.id = c.id;
 
 set gp_dynamic_partition_pruning = on;
 explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=6.78..35.85 rows=5 width=20)
-   ->  Hash Join  (cost=6.78..35.85 rows=2 width=20)
-         Hash Cond: a.t = b.t
-         ->  Hash Join  (cost=3.45..32.39 rows=7 width=14)
-               Hash Cond: a.id = c.id
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=6.89..35.80 rows=5 width=20)
+   ->  Hash Join  (cost=6.89..35.80 rows=2 width=20)
+         Hash Cond: (a.id = c.id)
+         ->  Hash Join  (cost=3.44..32.27 rows=4 width=14)
+               Hash Cond: (a.t = b.t)
                ->  Append  (cost=0.00..24.99 rows=333 width=8)
                      ->  Result  (cost=0.00..5.00 rows=67 width=7)
                            One-Time Filter: PartSelected
@@ -2321,13 +2321,13 @@ explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
                      ->  Result  (cost=0.00..4.99 rows=67 width=8)
                            One-Time Filter: PartSelected
                            ->  Seq Scan on apart_1_prt_5 a_4  (cost=0.00..4.99 rows=67 width=8)
-               ->  Hash  (cost=3.20..3.20 rows=7 width=6)
-                     ->  Partition Selector for apart (dynamic scan id: 1)  (cost=0.00..3.20 rows=7 width=6)
-                           Filter: c.id
-                           ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
-         ->  Hash  (cost=3.20..3.20 rows=4 width=6)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.20 rows=4 width=6)
-                     ->  Seq Scan on b  (cost=0.00..3.05 rows=2 width=6)
+               ->  Hash  (cost=3.25..3.25 rows=5 width=6)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.25 rows=5 width=6)
+                           ->  Seq Scan on b  (cost=0.00..3.05 rows=2 width=6)
+         ->  Hash  (cost=3.20..3.20 rows=7 width=6)
+               ->  Partition Selector for apart (dynamic scan id: 1)  (cost=0.00..3.20 rows=7 width=6)
+                     Filter: c.id
+                     ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
  Optimizer: Postgres query optimizer
 (29 rows)
 

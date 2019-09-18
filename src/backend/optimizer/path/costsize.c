@@ -3076,8 +3076,9 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 					/* not cached yet */
 					thisbucketsize =
 						estimate_hash_bucketsize(root,
-										   get_rightop(clause),
-												 virtualbuckets);
+												 get_rightop(clause),
+												 virtualbuckets,
+												 inner_path);
 					restrictinfo->right_bucketsize = thisbucketsize;
 				}
 			}
@@ -3092,8 +3093,9 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 					/* not cached yet */
 					thisbucketsize =
 						estimate_hash_bucketsize(root,
-											get_leftop(clause),
-												 virtualbuckets);
+												 get_leftop(clause),
+												 virtualbuckets,
+												 inner_path);
 					restrictinfo->left_bucketsize = thisbucketsize;
 				}
 			}
