@@ -34,6 +34,9 @@
 \c testanalyze;
 \i test_gpdb_pre_drop_user_defined_indexes.sql;
 
+\c pl_regression;
+\i test_gpdb_pre_drop_user_defined_indexes.sql;
+
 -- This one's interesting:
 --    No match found in new cluster for old relation with OID 173472 in database "regression": "public.sales_1_prt_bb_pkey" which is an index on "public.newpart"
 --    No match found in old cluster for new relation with OID 556718 in database "regression": "public.newpart_pkey" which is an index on "public.newpart"
