@@ -5092,7 +5092,6 @@ check_gp_workfile_compression(bool *newval, void **extra, GucSource source)
 void
 DispatchSyncPGVariable(struct config_generic * gconfig)
 {
-	ListCell   *l;
 	StringInfoData buffer;
 
 	if (Gp_role != GP_ROLE_DISPATCH || IsBootstrapProcessingMode())
