@@ -47,7 +47,7 @@
         external tables, <codeph>gpfdist</codeph> compresses the data using <codeph>gzip</codeph> if
         the target file has a <codeph>.gz</codeph> extension.</p>
       <note type="note">Compression is not supported for readable and writeable external tables when
-        the <codeph>gpfidist</codeph> utility runs on Windows platforms.</note>
+        the <codeph>gpfdist</codeph> utility runs on Windows platforms.</note>
       <p>When reading or writing data with the <codeph>gpfdist</codeph> or <codeph>gpfdists</codeph>
         protocol, Greenplum Database includes <codeph>X-GP-PROTO</codeph> in the HTTP request header
         to indicate that the request is from Greenplum Database. The utility rejects HTTP requests
