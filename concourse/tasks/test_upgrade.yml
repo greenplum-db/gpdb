@@ -4,7 +4,7 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: toolsmiths/ccp
+    repository: pivotaldata/ccp
     tag: "7"
 
 inputs:
