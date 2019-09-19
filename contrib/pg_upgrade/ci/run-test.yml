@@ -8,7 +8,8 @@ image_resource:
     tag: 16.04
 
 inputs:
-  - name: gpdb
+  - name: gpdb6
+  - name: gpdb5
 
 run:
-  path: gpdb/contrib/pg_upgrade/ci/run-test.sh
+  path: gpdb6/contrib/pg_upgrade/ci/run-test.sh

@@ -5,9 +5,10 @@ main() {
 	locale-gen en_US.UTF-8
 	service ssh start
 
-	chown -R gpadmin:gpadmin ./gpdb
+	chown -R gpadmin:gpadmin ./gpdb6
+	chown -R gpadmin:gpadmin ./gpdb5
 
-	su -c ./gpdb/contrib/pg_upgrade/ci/run-test-as-gpadmin.sh gpadmin
+	su -c ./gpdb6/contrib/pg_upgrade/ci/run-test-as-gpadmin.sh gpadmin
 }
 
 main "$@"

@@ -1,14 +1,23 @@
 resources:
-  - name: gpdb
+  - name: gpdb6
     type: git
     source:
       uri: https://github.com/greenplum-db/gpdb.git
       branch: 6X_STABLE
 
+  - name: gpdb5
+    type: git
+    source:
+      uri: https://github.com/greenplum-db/gpdb.git
+      branch: 5X_STABLE
+
 jobs:
   - name: end-to-end-test
     plan:
-      - get: gpdb
-        trigger: true
+      - aggregate:
+        - get: gpdb6
+          trigger: true
+        - get: gpdb5
+          trigger: true
       - task: run-test
-        file: gpdb/contrib/pg_upgrade/ci/run-test.yml
+        file: gpdb6/contrib/pg_upgrade/ci/run-test.yml
