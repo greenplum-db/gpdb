@@ -15,7 +15,10 @@ import tarfile
 import tempfile
 import thread
 import json
-from subprocess import Popen, PIPE
+try:
+    from subprocess32 import Popen, PIPE
+except:
+    from subprocess import Popen, PIPE
 import commands
 import signal
 from collections import defaultdict

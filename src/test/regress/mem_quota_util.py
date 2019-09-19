@@ -9,7 +9,11 @@ mkpath = lambda *x: os.path.join(MYD, *x)
 #globals
 SAMPLE_QUERY="(select count(*) from (select o0.o_orderkey from (heap_orders o0 left outer join heap_orders o1 on o0.o_orderkey = o1.o_orderkey left outer join heap_orders o2 on o2.o_orderkey = o1.o_orderkey left outer join heap_orders o3 on o3.o_orderkey = o2.o_orderkey left outer join heap_orders o4 on o4.o_orderkey = o3.o_orderkey) order by o0.o_orderkey) as foo);"
 
-import subprocess, shutil, time, re
+import shutil, time, re
+try:
+    import subprocess32 as subprocess
+except:
+    import subprocess
 from optparse import OptionParser, OptionGroup
 
 try:

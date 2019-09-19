@@ -1,5 +1,8 @@
 from os import path
-import subprocess
+try:
+    import subprocess32 as subprocess
+except:
+    import subprocess
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
 
