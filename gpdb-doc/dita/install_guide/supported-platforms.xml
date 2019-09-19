@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_bqz_4fx_zgb">
+  <title>Platform Requirements</title>
+  <!--this topic contains text for OSS and Pivotal requirements-->
+  <shortdesc>This topic describes the <ph otherprops="pivotal">Pivotal </ph>Greenplum Database 6
+    platform and operating system software requirements.</shortdesc>
+  <body>
+    <note type="important">Pivotal Support does <b>not</b> provide support for open source versions
+      of Greenplum Database. Only Pivotal Greenplum Database is supported by Pivotal Support.</note>
+    <p>
+      <ul id="ul_kt5_ggk_1hb">
+        <li><xref href="#topic13" format="dita"/><ul id="ul_fqv_pgk_1hb">
+            <li><xref href="#topic_i4k_nlx_zgb" format="dita"/></li>
+            <li><xref href="#topic_xbl_mkx_zgb" format="dita"/></li>
+          </ul></li>
+        <li><xref href="#topic_tnl_3mx_zgb" format="dita"/></li>
+        <li><xref href="#topic_pnz_5zd_xs" format="dita"/></li>
+        <li otherprops="pivotal"><xref href="#topic31" format="dita"/><!--Pivotal--><ul
+            id="ul_ngs_rgk_1hb">
+            <li><xref href="#topic32" format="dita"/></li>
+            <li><xref href="#topic_eyc_l2h_zz" format="dita"/></li>
+            <li><xref href="#topic_xpf_25b_hbb" format="dita"/></li>
+            <li><xref href="#topic_ncl_w1d_r1b" format="dita"/></li>
+            <li><xref href="#topic_zkq_j5b_hbb" format="dita"/></li>
+          </ul></li>
+        <li><xref href="#topic36" format="dita"/></li>
+      </ul>
+    </p>
+  </body>
+  <topic id="topic13">
+    <title id="pm403034" class="- topic/title ">Operating Systems</title>
+    <body class="- topic/body ">
+      <p><ph otherprops="pivotal">Pivotal </ph>Greenplum 6 runs on the following operating system
+        platforms:</p>
+      <ul class="- topic/ul " id="ul_atm_psl_fp">
+        <li>Red Hat Enterprise Linux 64-bit 7.x (See the following <xref href="#topic13/7x-issue"
+            format="dita">Note</xref>.)</li>
+        <li id="pm445077" class="- topic/li ">Red Hat Enterprise Linux 64-bit 6.x</li>
+        <li>CentOS 64-bit 7.x</li>
+        <li id="pm405698" class="- topic/li ">CentOS 64-bit 6.x</li>
+        <li>Ubuntu 18.04 LTS</li>
+      </ul>
+      <note type="important">Significant Greenplum Database performance degradation has been
+        observed when enabling resource group-based workload management on RedHat 6.x and CentOS 6.x
+        systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed
+        in CentOS 7.x and Red Hat 7.x systems. <p>If you use RedHat 6 and the performance with
+          resource groups is acceptable for your use case, upgrade your kernel to version 2.6.32-696
+          or higher to benefit from other fixes to the cgroups implementation. </p></note>
+      <note type="note" id="7x-issue">For Greenplum Database that is installed on Red Hat Enterprise
+        Linux 7.x or CentOS 7.x prior to 7.3, an operating system issue might cause Greenplum
+        Database that is running large workloads to hang in the workload. The Greenplum Database
+        issue is caused by Linux kernel bugs. <p>RHEL 7.3 and CentOS 7.3 resolves the
+        issue.</p></note>
+      <p>Greenplum Database supports TLS V2.</p>
+    </body>
+    <topic id="topic_i4k_nlx_zgb">
+      <title>Software Dependencies</title>
+      <body>
+        <p id="packages">Greenplum Database 6 requires the following software packages on
+          RHEL/CentOS 6/7 systems which are installed automatically as dependencies when you install
+          the <ph otherprops="pivotal">Pivotal </ph>Greenplum Database RPM package):<ul
+            id="ul_zpd_mpd_qgb">
+            <li>apr</li>
+            <li>apr-util</li>
+            <li>bash</li>
+            <li>bzip2</li>
+            <li>curl</li>
+            <li>krb5</li>
+            <li>libcurl</li>
+            <li>libedit</li>
+            <li>libevent</li>
+            <li>libxml2</li>
+            <li>libyaml</li>
+            <li>zlib</li>
+            <li>openldap</li>
+            <li>openssh</li>
+            <li>openssl</li>
+            <li>openssl-libs (RHEL7/Centos7)</li>
+            <li>perl</li>
+            <li>rsync</li>
+            <li>R</li>
+            <li>sed (used by <codeph>gpinitsystem</codeph>)</li>
+            <li>tar</li>
+            <li>zip</li>
+          </ul></p>
+        <!--Pivotal-->
+        <p otherprops="pivotal">Greenplum Database 6 client software requires these operating system
+            packages:<ul id="ul_dbv_h3q_qgb">
+            <li>apr</li>
+            <li>apr-util</li>
+            <li>libyaml</li>
+            <li>libevent</li>
+          </ul></p>
+        <p>On Ubuntu systems, Greenplum Database 6 requires the following software packages, which
+          are installed automatically as dependencies when you install Greenplum Database with the
+          Debian package installer:<ul id="ul_pl2_wqy_c3b">
+            <li>libapr1</li>
+            <li>libaprutil1 </li>
+            <li>bash </li>
+            <li>bzip2 </li>
+            <li>krb5-multidev </li>
+            <li>libcurl3-gnutls </li>
+            <li>libcurl4 </li>
+            <li>libedit2 </li>
+            <li>libevent-2.1-6 </li>
+            <li>libxml2 </li>
+            <li>libyaml-0-2 </li>
+            <li>zlib1g </li>
+            <li>libldap-2.4-2 </li>
+            <li>openssh-client </li>
+            <li>openssh-client </li>
+            <li>openssl </li>
+            <li>perl </li>
+            <li>rsync</li>
+            <li>sed </li>
+            <li>tar </li>
+            <li>zip </li>
+            <li>net-tools </li>
+            <li>less </li>
+            <li>iproute2</li>
+          </ul></p>
+        <p>Greenplum Database 6 uses Python 2.7.12, which is included with the product installation
+          (and not installed as a package dependency).</p>
+        <note type="important">SSL <ph otherprops="pivotal">is supported </ph><ph
+            otherprops="oss-only">can be used </ph>only on the Greenplum Database master host
+          system. It cannot be used on the segment host systems.</note>
+        <note type="important">For all Greenplum Database host systems, SELinux must be disabled.
+          You should also disable firewall software, although firewall software can be enabled if it
+          is required for security purposes. See <xref href="prep_os.xml#topic_sqj_lt1_nfb"
+            format="dita"/>.</note>
+      </body>
+    </topic>
+    <topic id="topic_xbl_mkx_zgb">
+      <title>Java</title>
+      <body>
+        <p>Greenplum 6 <ph otherprops="pivotal">supports </ph><ph otherprops="oss-only">can use
+          </ph>these Java versions for PL/Java and PXF:<ul id="ul_dkh_3k5_xr">
+            <li>Open JDK 8 or Open JDK 11, available from <xref href="https://adoptopenjdk.net"
+                format="html" scope="external">AdoptOpenJDK</xref></li>
+            <li>Oracle JDK 8 or Oracle JDK 11</li>
+          </ul></p>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic_tnl_3mx_zgb">
+    <title>Hardware and Network</title>
+    <body>
+      <!--Pivotal-->
+      <p otherprops="pivotal">The following table lists minimum recommended specifications for
+        hardware servers intended to support Greenplum Database on Linux systems in a production
+        environment. All host servers in your Greenplum Database system must have the same hardware
+        and software configuration. Greenplum also provides hardware build guides for its certified
+        hardware platforms. It is recommended that you work with a Greenplum Systems Engineer to
+        review your anticipated environment to ensure an appropriate hardware configuration for
+        Greenplum Database.
+        <note type="warning">Running Pivotal Greenplum Database on hyper-converged infrastructure
+          (HCI) has known issues with performance, scalability, and stability and is not recommended
+          as a scalable solution for Pivotal Greenplum and may not be supported by Pivotal if
+          stability problems appear related to the infrastructure. HCI virtualizes all of the
+          elements of conventional hardware systems and includes, at a minimum, virtualized
+          computing, a virtualised SAN, and virtualized networking.</note></p>
+      <!--OSS only-->
+      <p otherprops="oss-only">The following table lists minimum recommended specifications for
+        hardware servers intended to support Greenplum Database on Linux systems. All host servers
+        in your Greenplum Database system must have the same hardware and software configuration.
+        <note type="warning">Running Greenplum Database on hyper-converged infrastructure (HCI) has
+          known issues with performance, scalability, and stability and is not
+        recommended.</note></p>
+      <table id="ji162790">
+        <title>Minimum Hardware Requirements</title>
+        <tgroup cols="2">
+          <colspec colnum="1" colname="col1" colwidth="120pt"/>
+          <colspec colnum="2" colname="col2" colwidth="255pt"/>
+          <tbody>
+            <row>
+              <entry colname="col1">Minimum CPU</entry>
+              <entry colname="col2">Any x86_64 compatible CPU</entry>
+            </row>
+            <row>
+              <entry colname="col1">Minimum Memory</entry>
+              <entry colname="col2">16 GB RAM per server</entry>
+            </row>
+            <row>
+              <entry colname="col1">Disk Space Requirements</entry>
+              <entry colname="col2">
+                <ul id="ul_us1_b4n_r4">
+                  <li>150MB per host for Greenplum installation</li>
+                  <li>Approximately 300MB per segment instance for meta data</li>
+                  <li>Appropriate free space for data with disks at no more than 70% capacity</li>
+                </ul>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Network Requirements</entry>
+              <entry colname="col2">10 Gigabit Ethernet within the array<p>NIC bonding is
+                  recommended when multiple interfaces are present</p><p>Pivotal Greenplum is
+                  supported using either IPV4 or IPV6 protocols.</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="topic_pnz_5zd_xs">
+    <title>Storage</title>
+    <body>
+      <!--Pivotal-->
+      <p otherprops="pivotal">The only file system supported for running Greenplum Database is the
+        XFS file system. All other file systems are explicitly <i>not</i> supported by Pivotal.</p>
+      <!--OSS only-->
+      <p otherprops="oss-only">You should run Greenplum Database on an XFS file system.</p>
+      <p>Greenplum Database <ph otherprops="pivotal">is supported </ph><ph otherprops="oss-only">can
+          run on </ph>on network or shared storage if the shared storage is presented as a block
+        device to the servers running Greenplum Database and the XFS file system is mounted on the
+        block device. Network file systems are <i>not</i>
+        <ph>supported</ph><ph otherprops="oss-only">recommended</ph>. When using network or shared
+        storage, Greenplum Database mirroring must be used in the same way as with local storage,
+        and no modifications <ph otherprops="pivotal">may</ph><ph otherprops="oss-only">should</ph>
+        be made to the mirroring scheme or the recovery scheme of the segments. </p>
+      <p>Other features of the shared storage such as de-duplication and/or replication <ph
+          otherprops="pivotal">are not directly supported by Pivotal Greenplum Database, but may be
+          used with support of the storage vendor as long as they do not interfere with the expected
+          operation of Greenplum Database at the discretion of Pivotal.</ph><ph
+          otherprops="oss-only">can be used with Greenplum Database as long as they do not interfere
+          with the expected operation of Greenplum Database.</ph></p>
+      <!--Pivotal-->
+      <p otherprops="pivotal">Deployment to virtualized systems is supported only if the storage is
+        presented as block devices and the XFS file system is mounted for the storage of the segment
+        directories.
+        <note type="warning">Running Pivotal Greenplum on hyper-converged infrastructure (HCI) has
+          known issues with performance, scalability, and stability and is not recommended as a
+          scalable solution for Pivotal Greenplum and may not be supported by Pivotal if stability
+          problems appear related to the infrastructure. HCI virtualizes all of the elements of
+          conventional hardware systems and includes, at a minimum, virtualized computing, a
+          virtualised SAN, and virtualized networking.</note></p>
+      <!--OSS only-->
+      <p otherprops="pivotal">Greenplum Database can be deployed to virtualized systems only if the
+        storage is presented as block devices and the XFS file system is mounted for the storage of
+        the segment directories.
+        <note type="warning">Running Greenplum Database on hyper-converged infrastructure (HCI) has
+          known issues with performance, scalability, and stability and is not
+        recommended.</note></p>
+      <p>Greenplum Database <ph>is supported </ph><ph otherprops="oss-only">can run </ph>on Amazon
+        Web Services (AWS) servers using either Amazon instance store (Amazon uses the volume names
+          <codeph>ephemeral[0-20]</codeph>) or Amazon Elastic Block Store (Amazon EBS) storage. If
+        using Amazon EBS storage the storage should be RAID of Amazon EBS volumes and mounted with
+        the XFS file system<ph otherprops="pivotal"> for it to be a supported
+        configuration</ph>.</p>
+      <!--Pivotal-->
+      <section otherprops="pivotal">
+        <title>Data Domain Boost</title>
+        <p>Pivotal Greenplum 6.0.0 supports Data Domain Boost for backup on Red Hat Enterprise
+          Linux. This table lists the versions of Data Domain Boost SDK and DDOS supported by
+          Pivotal Greenplum 6.x.</p>
+        <table id="pm463365" class="- topic/table ">
+          <title class="- topic/title ">Data Domain Boost Compatibility</title>
+          <tgroup cols="3" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" colwidth="119pt" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col2" colwidth="133pt" class="- topic/colspec "/>
+            <colspec colnum="3" colname="col3" colwidth="113pt" class="- topic/colspec "/>
+            <thead class="- topic/thead ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Pivotal Greenplum</entry>
+                <entry colname="col2" class="- topic/entry ">Data Domain Boost </entry>
+                <entry colname="col3" class="- topic/entry ">DDOS</entry>
+              </row>
+            </thead>
+            <tbody class="- topic/tbody ">
+              <row>
+                <entry colname="col1" class="- topic/entry ">6.x</entry>
+                <entry colname="col2" class="- topic/entry ">3.3</entry>
+                <entry colname="col3" class="- topic/entry ">6.1 (all versions)<p>6.0 (all
+                    versions)</p></entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <note>In addition to the DDOS versions listed in the previous table, Pivotal Greenplum
+          supports all minor patch releases (fourth digit releases) later than the certified
+          version.</note>
+        <note>Pivotal Greenplum 6 does not support the ODBC driver for Cognos Analytics V11.
+            <p>Connecting to IBM Cognos software with an ODBC driver is not supported. Greenplum
+            Database supports connecting to IBM Cognos software with the DataDirect JDBC driver for
+            Pivotal Greenplum. This driver is available as a download from <xref
+              href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
+              >Pivotal Network</xref>. </p></note>
+      </section>
+    </body>
+  </topic>
+  <!--Pivotal-->
+  <topic id="topic31" otherprops="pivotal">
+    <title id="pm359737" class="- topic/title ">Tools and Extensions Compatibility</title>
+    <body>
+      <p>
+        <ul id="ul_qft_3pb_hbb">
+          <li><xref href="#topic32" format="dita"/></li>
+          <li><xref href="#topic_eyc_l2h_zz" format="dita"/></li>
+          <li><xref href="#topic_xpf_25b_hbb" format="dita"/></li>
+          <li><xref href="#topic_ncl_w1d_r1b" format="dita"/></li>
+          <li><xref href="#topic_zkq_j5b_hbb" format="dita"/></li>
+        </ul>
+      </p>
+    </body>
+    <topic id="topic32">
+      <title class="- topic/title ">Client Tools</title>
+      <body class="- topic/body ">
+        <p>Greenplum Database 6 releases a Clients tool package on various platforms that can be
+          used to access Greenplum Database from a client system. The Greenplum 6 Clients tool
+          package is supported on the following platforms:</p>
+        <ul id="ul_ft3_5jm_3bb">
+          <li id="pm445741" class="- topic/li ">Red Hat Enterprise Linux x86_64 6.x (RHEL 6)</li>
+          <li id="pm445741a" class="- topic/li ">Red Hat Enterprise Linux x86_64 7.x (RHEL 7)</li>
+          <li>Ubuntu 18.04 LTS</li>
+          <!-- li dir="ltr">AIX 7.2 (64-bit) (Client and Load Tools only)</li>
+          <li id="pm445742" class="- topic/li ">SuSE Linux Enterprise Server x86_64 SLES 11</li> -->
+          <li dir="ltr">Windows 10 (32-bit and 64-bit)</li>
+          <li dir="ltr">Windows 8 (32-bit and 64-bit)</li>
+          <li>Windows Server 2012 (32-bit and 64-bit)</li>
+          <li>Windows Server 2012 R2 (32-bit and 64-bit)</li>
+          <li dir="ltr">Windows Server 2008 R2 (32-bit and 64-bit) </li>
+        </ul>
+        <p>The Greenplum 6 Clients package includes the client and loader programs provided in the
+          Greenplum 5 packages plus the addition of database/role/language commands and the
+          Greenplum-Kafka Integration and Greenplum Stream Server command utilities. Refer to <xref
+            href="../client_tool_guides/intro.xml" format="dita" scope="peer">Greenplum Client and
+            Loader Tools Package</xref> for installation and usage details of the Greenplum 6 Client
+          tools.</p>
+      </body>
+    </topic>
+    <topic id="topic_eyc_l2h_zz">
+      <title>Extensions</title>
+      <body>
+        <table class="- topic/table " id="table_b1q_m2h_zz">
+          <title class="- topic/title ">Pivotal Greenplum 6.0.0 Extensions Compatibility</title>
+          <tgroup cols="2" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" colwidth="297pt" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col3" colwidth="117.58pt" class="- topic/colspec "/>
+            <thead class="- topic/thead ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Pivotal Greenplum Extension</entry>
+                <entry colname="col3" class="- topic/entry ">Versions</entry>
+              </row>
+            </thead>
+            <tbody class="- topic/tbody ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">MADlib machine
+                  learning<sup>1</sup></entry>
+                <entry colname="col3" class="- topic/entry ">MADlib 1.16</entry>
+              </row>
+              <row>
+                <entry>PL/Java</entry>
+                <entry>2.0.1</entry>
+              </row>
+              <row>
+                <entry>PL/R<sup>2</sup></entry>
+                <entry>3.0.3</entry>
+              </row>
+              <row>
+                <entry>Python Data Science Module Package<sup>3</sup></entry>
+                <entry>2.0.2</entry>
+              </row>
+              <row>
+                <entry>R Data Science Library Package<sup>4</sup></entry>
+                <entry>2.0.2</entry>
+              </row>
+              <row>
+                <entry>PL/Container and PL/Container images for Python, R </entry>
+                <entry>2.0.2</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">PostGIS Spatial and Geographic Objects
+                  for Greenplum Database 6.0.x</entry>
+                <entry colname="col3" class="- topic/entry ">2.1.5+pivotal.2-2</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <note>
+          <sup>1</sup>For information about MADlib support and upgrade information, see the <xref
+            href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?"
+            format="html" scope="external">MADlib FAQ</xref>. <p><sup>2</sup>PL/R supports R 3.5.1.
+            On RHEL and CenOS the PL/R package installs R 3.3.3. See <xref
+              href="../ref_guide/extensions/pl_r.xml" format="dita" scope="peer">PL/R
+              Language</xref>.</p><p><sup>3</sup>For information about the Python package, including
+            the modules provided, see the <xref href="../install_guide/install_python_dsmod.xml"
+              format="dita" scope="peer">Python Data Science Module Package</xref>.
+              </p><p><sup>4</sup>For information about the R package, including the libraries
+            provided, see the <xref href="../install_guide/install_r_dslib.xml" format="dita"
+              scope="peer">R Data Science Library Package</xref>. </p></note>
+        <p>For information about the Oracle Compatibility Functions, see <xref
+            href="../ref_guide/modules/orafce_ref.xml" format="dita" scope="peer">Oracle
+            Compatibility Functions</xref>.</p>
+        <p>These Greenplum Database extensions are installed with Pivotal Greenplum Database<ul
+            id="ul_kyz_pbc_hbb">
+            <li>Fuzzy String Match Extension</li>
+            <li>PL/Python Extension</li>
+            <li>pgcrypto Extension</li>
+          </ul></p>
+      </body>
+    </topic>
+    <topic id="topic_xpf_25b_hbb">
+      <title>Data Connectors</title>
+      <body>
+        <p>
+          <ul id="ul_ckf_sfc_hbb">
+            <li>Greenplum Platform Extension Framework (PXF) v5.8.1 - PXF, integrated with Greenplum
+              Database 6, provides access to Hadoop, object store, and SQL external data stores.
+              Refer to <xref scope="peer" href="../admin_guide/external/pxf-overview.xml">Accessing
+                External Data with PXF</xref> in the <cite>Greenplum Database Administrator
+                Guide</cite> for PXF configuration and usage information.</li>
+            <li>Greenplum-Kafka Integration - The Pivotal Greenplum-Kafka Integration provides high
+              speed, parallel data transfer from a Kafka cluster to a Pivotal Greenplum Database
+              cluster for batch and streaming ETL operations. Refer to the <xref
+                href="../greenplum-kafka/intro.html" type="topic" scope="peer" format="html">Pivotal
+                Greenplum-Kafka Integration</xref> Documentation for more information about this
+              feature.</li>
+            <li>Greenplum Stream Server v1.2.6 - The Pivotal Greenplum Stream Server is an ETL tool
+              that provides high speed, parallel data transfer from Informatica, Kafka, and custom
+              client data sources to a Pivotal Greenplum Database cluster. Refer to the <xref
+                href="../greenplum-stream/intro.html" type="topic" scope="peer" format="html">
+                Performing ETL Operations with the Pivotal Greenplum Stream Server</xref>
+              Documentation for more information about this feature.</li>
+            <li>Greenplum Informatica Connector v1.0.5 - The Pivotal Greenplum Informatica Connector
+              supports high speed data transfer from an Informatica PowerCenter cluster to a Pivotal
+              Greenplum Database cluster for batch and streaming ETL operations.</li>
+            <li>Greenplum Spark Connector v1.6.1 - The Pivotal Greenplum Spark Connector supports
+              high speed, parallel data transfer between Greenplum Database and an Apache Spark
+              cluster using Spark’s Scala API.</li>
+            <li>Progress DataDirect JDBC Drivers v5.1.4.000223 - The Progress DataDirect JDBC
+              drivers are compliant with the Type 4 architecture, but provide advanced features that
+              define them as Type 5 drivers.</li>
+            <li>Progress DataDirect ODBC Drivers v7.1.6 (07.16.0301) - The Progress DataDirect ODBC
+              drivers enable third party applications to connect via a common interface to the
+              Pivotal Greenplum Database system.</li>
+            <!--            <li>Gemfire-Greenplum Connector - The Pivotal Gemfire-Greenplum Connector supports the
+              transfer of data between a GemFire region and a Greenplum Database cluster. The
+              Gemfire-Greenplum Connector is available as a separate download from <xref
+                href="https://network.pivotal.io/products/pivotal-gemfire/#/releases/6979"
+                scope="external" format="html">Pivotal Network</xref>. Refer to the <xref
+                href="http://ggc.docs.pivotal.io" format="html" scope="external">Gemfire-Greenplum
+                Connector documentation</xref> for compatibility and usage information.</li>
+-->
+          </ul>
+        </p>
+      </body>
+    </topic>
+    <topic id="topic_ncl_w1d_r1b">
+      <title>GPText</title>
+      <body>
+        <p>Pivotal Greenplum Database 6 is compatible with Pivotal Greenplum Text version 3.3.1 and
+          later. See the <xref href="http://gptext.docs.pivotal.io" format="html" scope="external"
+            >Greenplum Text documentation</xref> for additional compatibility information. </p>
+      </body>
+    </topic>
+    <topic id="topic_zkq_j5b_hbb">
+      <title>Greenplum Command Center</title>
+      <body>
+        <p>Pivotal Greenplum Database 6 is compatible with Pivotal Greenplum Command Center 6.0.0
+          and later. See the <xref href="http://gpcc.docs.pivotal.io" format="html" scope="external"
+            >Greenplum Command Center documentation</xref> for additional compatibility information.
+        </p>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic36">
+    <title id="pm357649">Hadoop Distributions</title>
+    <body>
+      <p> Greenplum Database provides access to HDFS with the Greenplum Platform Extension Framework
+        (PXF).</p>
+      <p>PXF supports Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop
+        distributions.</p>
+      <note>If you plan to access JSON format data stored in a Cloudera Hadoop cluster, PXF requires
+        a Cloudera version 5.8 or later Hadoop distribution.</note>
+    </body>
+  </topic>
+</topic>

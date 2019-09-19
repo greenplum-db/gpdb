@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map>
+    <topicref href="../../6-0/homenav.html" scope="external"
+        navtitle="Pivotal Greenplum® 6.0 Documentation" format="html" otherprops="op-help"/>
+    <topicref href="install_guide.xml" navtitle="Installation Guide">
+        <topicref href="supported-platforms.xml"/>
+        <topicref href="preinstall_concepts.xml">
+            <topicref href="preinstall_concepts.xml#topic2"/>
+            <topicref href="preinstall_concepts.xml#topic4"/>
+            <topicref href="preinstall_concepts.xml#topic9"/>
+            <topicref href="preinstall_concepts.xml#topic13"/>
+            <!-- pivotal only -->
+            <topicref href="preinstall_concepts.xml#topic_e5t_whm_kbb" otherprops="pivotal"/>
+        </topicref>
+        <topicref href="capacity_planning.xml" navtitle="Estimating Storage Capacity">
+            <topicref href="capacity_planning.xml#topic2"
+                navtitle="Calculating Usable Disk
+                Capacity"/>
+            <topicref href="capacity_planning.xml#topic3" navtitle="Calculating User Data Size"/>
+            <topicref href="capacity_planning.xml#topic4"
+                navtitle="Calculating Space Requirements
+                for Metadata and Logs"/>
+        </topicref>
+        <topicref href="prep_os.xml" navtitle="Configuring Your Systems"/>
+        <topicref href="install_gpdb.xml" navtitle="Installing the Greenplum Database Software"/>
+        <topicref href="create_data_dirs.xml"/>
+        <topicref href="validate.xml" navtitle="Validating Your Systems">
+            <topicref href="validate.xml#topic4" navtitle="Validating Network Performance"/>
+            <topicref href="validate.xml#topic5" navtitle="Validating Disk I/O and Memory Bandwidth"
+            />
+        </topicref>
+        <topicref href="init_gpdb.xml" navtitle="Initializing a Greenplum Database System"/>
+        <!-- pivotal only -->
+        <topicref href="data_sci_pkgs.ditamap" format="ditamap" otherprops="pivotal"/>
+        <topicref href="install_modules.xml" navtitle="Installing Additional Supplied Modules"/>
+        <topicref href="localization.xml" navtitle="Configuring Localization Settings"/>
+        <!-- hidden for 6.0 beta releases -->
+        <topicref otherprops="op-hidden" href="upgrading.xml"/>
+        <topicref href="migrate.xml"/>
+        <topicref href="enable_iptables.xml" navtitle="Enabling iptables"/>
+        <topicref href="apx_mgmt_utils.xml" navtitle="Installation Management Utilities"/>
+        <topicref href="env_var_ref.xml" navtitle="Greenplum Environment Variables">
+            <topicref href="env_var_ref.xml#topic2" navtitle="Required Environment Variables"/>
+            <topicref href="env_var_ref.xml#topic7" navtitle="Optional Environment Variables"/>
+        </topicref>
+        <topicref href="ansible-example.xml"/>
+    </topicref>
+</map>

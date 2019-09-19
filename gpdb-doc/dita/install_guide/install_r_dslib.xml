@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="py212122">R Data Science Library Package</title>
+  <body>
+    <p> R packages are modules that contain R functions and data sets. Greenplum Database provides a
+      collection of data science-related R libraries that can be used with the Greenplum Database
+      PL/R language. You can download these libraries in <codeph>.gppkg</codeph> format from <xref
+        href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
+        >Pivotal Network</xref>.</p>
+    <p>This chapter contains the following information:</p>
+    <ul>
+      <li id="py2177">
+        <xref href="#topic2" type="topic" format="dita"/>
+      </li>
+      <li id="py21366577">
+        <xref href="#topic_instpdsl" type="topic" format="dita"/>
+      </li>
+      <li id="py217165">
+        <xref href="#topic_removepdsl" type="topic" format="dita"/>
+      </li>
+    </ul>
+    <p>For information about the Greenplum Database PL/R Language, see <xref scope="peer"
+        type="topic" format="dita" href="../ref_guide/extensions/pl_r.xml#topic1">Greenplum PL/R
+        Language Extension</xref>.</p>
+  </body>
+  <topic xml:lang="en" id="topic2">
+    <title>R Data Science Libraries</title>
+    <body>
+      <p>Libraries provided in the R Data Science package include: <simpletable id="l33">
+          <strow>
+            <stentry>
+              <p>abind</p>
+              <p>adabag</p>
+              <p>arm</p>
+              <p>assertthat</p>
+              <p>backports</p>
+              <p>BH</p>
+              <p>bitops</p>
+              <p>car</p>
+              <p>caret</p>
+              <p>caTools</p>
+              <p>cli</p>
+              <p>clipr</p>
+              <p>coda</p>
+              <p>colorspace</p>
+              <p>compHclust</p>
+              <p>crayon</p>
+              <p>curl</p>
+              <p>data.table</p>
+              <p>DBI</p>
+              <p>Deriv</p>
+              <p>dichromat</p>
+              <p>digest</p>
+              <p>doParallel</p>
+              <p>dplyr</p>
+              <p>e1071</p>
+              <p>fansi</p>
+              <p>fastICA</p>
+              <p>fBasics</p>
+              <p>fGarch</p>
+              <p>flashClust</p>
+              <p>foreach</p>
+              <p>forecast</p>
+              <p>foreign</p>
+              <p>fracdiff</p>
+              <p>gdata</p>
+              <p>generics</p>
+              <p>ggplot2</p>
+              <p>glmnet</p>
+              <p>glue</p>
+              <p>gower</p>
+              <p>gplots</p>
+            </stentry>
+            <stentry>
+              <p>gss</p>
+              <p>gtable</p>
+              <p>gtools</p>
+              <p>hms</p>
+              <p>hybridHclust</p>
+              <p>igraph</p>
+              <p>ipred</p>
+              <p>iterators</p>
+              <p>labeling</p>
+              <p>lattice</p>
+              <p>lava</p>
+              <p>lazyeval</p>
+              <p>lme4</p>
+              <p>lmtest</p>
+              <p>lubridate</p>
+              <p>magrittr</p>
+              <p>MASS</p>
+              <p>Matrix</p>
+              <p>MatrixModels</p>
+              <p>mcmc</p>
+              <p>MCMCpack</p>
+              <p>minqa</p>
+              <p>ModelMetrics</p>
+              <p>MTS</p>
+              <p>munsell</p>
+              <p>mvtnorm</p>
+              <p>neuralnet</p>
+              <p>nloptr</p>
+              <p>nnet</p>
+              <p>numDeriv</p>
+              <p>pbkrtest</p>
+              <p>pillar</p>
+              <p>pkgconfig</p>
+              <p>plogr</p>
+              <p>plyr</p>
+              <p>prodlim</p>
+              <p>purrr</p>
+              <p>quadprog</p>
+              <p>quantmod</p>
+              <p>quantreg</p>
+              <p>R2jags</p>
+            </stentry>
+            <stentry>
+              <p>R2WinBUGS</p>
+              <p>R6</p>
+              <p>randomForest</p>
+              <p>RColorBrewer</p>
+              <p>Rcpp</p>
+              <p>RcppArmadillo</p>
+              <p>RcppEigen</p>
+              <p>RcppRoll</p>
+              <p>readr</p>
+              <p>recipes</p>
+              <p>reshape2</p>
+              <p>rjags</p>
+              <p>rlang</p>
+              <p>RobustRankAggreg</p>
+              <p>ROCR</p>
+              <p>rpart</p>
+              <p>RPostgreSQL</p>
+              <p>sandwich</p>
+              <p>scales</p>
+              <p>SparseM</p>
+              <p>SQUAREM</p>
+              <p>stabledist</p>
+              <p>stringi</p>
+              <p>stringr</p>
+              <p>survival</p>
+              <p>tibble</p>
+              <p>tidyr</p>
+              <p>tidyselect</p>
+              <p>timeDate</p>
+              <p>timeSeries</p>
+              <p>tseries</p>
+              <p>TTR</p>
+              <p>urca</p>
+              <p>utf8</p>
+              <p>vctrs</p>
+              <p>viridisLite</p>
+              <p>withr</p>
+              <p>xts</p>
+              <p>zeallot</p>
+              <p>zoo</p>
+            </stentry>
+          </strow>
+        </simpletable></p>
+    </body>
+  </topic>
+  <topic id="topic_instpdsl" xml:lang="en">
+    <title>Installing the R Data Science Library Package</title>
+    <body>
+      <p>Before you install the R Data Science Library package, make sure that your Greenplum
+        Database is running, you have sourced <codeph>greenplum_path.sh</codeph>, and that the
+          <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> environment variables
+        are set.</p>
+      <ol>
+        <li>Locate the R Data Science library package that you built or downloaded.<p>The file name
+            format of the package is
+              <codeph>DataScienceR-&lt;version&gt;-relhel&lt;N&gt;_x86_64.gppkg</codeph>.</p></li>
+        <li>Copy the package to the Greenplum Database master host.</li>
+        <li>Use the <codeph>gppkg</codeph> command to install the package. For
+              example:<codeblock>$ gppkg -i DataScienceR-&lt;version&gt;-relhel&lt;N&gt;_x86_64.gppkg</codeblock><p><codeph>gppkg</codeph>
+            installs the R Data Science libraries on all nodes in your Greenplum Database cluster.
+            The command also sets the <codeph>R_LIBS_USER</codeph> environment variable and updates
+            the <codeph>PATH</codeph> and <codeph>LD_LIBRARY_PATH</codeph> environment variables in
+            your <codeph>greenplum_path.sh</codeph> file.</p></li>
+        <li>Restart Greenplum Database. You must re-source <codeph>greenplum_path.sh</codeph> before
+          restarting your Greenplum
+          cluster:<codeblock>$ source /usr/local/greenplum-db/greenplum_path.sh
+$ gpstop -r</codeblock></li>
+      </ol>
+      <p>The Greenplum Database R Data Science Modules are installed in the following
+        directory:<codeblock>$GPHOME/ext/DataScienceR/library</codeblock></p>
+      <note><codeph>rjags</codeph> libraries are installed in the
+          <codeph>$GPHOME/ext/DataScienceR/extlib/lib</codeph> directory. If you want to use
+          <codeph>rjags</codeph> and your <codeph>$GPHOME</codeph> is not
+          <codeph>/usr/local/greenplum-db</codeph>, you must perform additional configuration steps
+        to create a symbolic link from <codeph>$GPHOME</codeph> to
+          <codeph>/usr/local/greenplum-db</codeph> on each node in your Greenplum Database cluster.
+        For example:
+        <codeblock>$ gpssh -f all_hosts -e 'ln -s $GPHOME /usr/local/greenplum-db'
+$ gpssh -f all_hosts -e 'chown -h gpadmin /usr/local/greenplum-db'
+</codeblock></note>
+    </body>
+  </topic>
+  <topic id="topic_removepdsl" xml:lang="en">
+    <title>Uninstalling the R Data Science Library Package</title>
+    <body>
+      <p>Use the <codeph>gppkg</codeph> utility to uninstall the R Data Science Library package. You
+        must include the version number in the package name you provide to
+        <codeph>gppkg</codeph>.</p>
+      <p> To determine your R Data Science Library package version number and remove this
+        package:</p>
+      <codeblock>$ gppkg -q --all | grep DataScienceR
+DataScienceR-&lt;version&gt;
+$ gppkg -r DataScienceR-&lt;version&gt;</codeblock>
+      <p>The command removes the R Data Science libraries from your Greenplum Database cluster. It
+        also removes the <codeph>R_LIBS_USER</codeph> environment variable and updates the
+          <codeph>PATH</codeph> and <codeph>LD_LIBRARY_PATH</codeph> environment variables in your
+          <codeph>greenplum_path.sh</codeph> file to their pre-installation values.</p>
+      <p>Re-source <codeph>greenplum_path.sh</codeph> and restart Greenplum Database after you
+        remove the R Data Science Library package:</p>
+      <codeblock>$ . /usr/local/greenplum-db/greenplum_path.sh
+$ gpstop -r </codeblock>
+      <note>When you uninstall the R Data Science Library package from your Greenplum Database
+        cluster, any UDFs that you have created that use R libraries installed with this package
+        will return an error.</note>
+    </body>
+  </topic>
+</topic>

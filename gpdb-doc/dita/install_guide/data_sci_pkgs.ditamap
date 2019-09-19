@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map title="Installing the Data Science Package">
+   <topicref href="data_sci_pkgs.xml" navtitle="Installing the Data Science Packages">
+      <topicref href="install_extensions.xml"/>
+      <topicref href="install_python_dsmod.xml"
+         navtitle="Installing the Python Data Science Modules"/>
+      <topicref href="install_r_dslib.xml" navtitle="Installing the R Data Science Libraries"/>
+      <topicref href="install_pxf.xml"/>
+   </topicref>
+</map>

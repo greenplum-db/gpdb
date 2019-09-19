@@ -25,6 +25,13 @@ sections:
 dita_sections:
 - repository:
     name: dita
+    at_path: install_guide
+  directory: 6-0/install_guide
+  ditamap_location: install_guide.ditamap
+  ditaval_location: ../gpdb-webhelp.ditaval
+
+- repository:
+    name: dita
     at_path: admin_guide
   directory: 6-0/admin_guide
   ditamap_location: admin_guide.ditamap

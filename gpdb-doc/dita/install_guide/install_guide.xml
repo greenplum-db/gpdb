@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_gls_1nf_kp">
+  <title>Installing and Upgrading Greenplum</title>
+  <!--HTML-only page-->
+  <titlealts>
+    <navtitle>Installation Guide</navtitle>
+  </titlealts>
+  <shortdesc>Information about installing, configuring, and upgrading Greenplum Database software
+    and configuring Greenplum Database host machines.</shortdesc>
+</topic>

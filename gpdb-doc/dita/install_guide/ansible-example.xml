@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="Untitled1">
+  <title>Example Ansible Playbook</title>
+  <shortdesc>A sample Ansible playbook to install a Greenplum Database software release onto the
+    hosts that will comprise a Greenplum Database system.</shortdesc>
+  <body>
+    <p>This Ansible playbook shows how tasks described in <xref href="install_gpdb.xml#topic1"/>
+      might be automated using <xref href="https://docs.ansible.com" format="html" scope="external"
+        >Ansible</xref>.</p>
+    <note type="important">This playbook is provided as an <i>example only</i> to illustrate how
+      Greenplum Database cluster configuration and software installation tasks can be automated
+      using provisioning tools such as Ansible, Chef, or Puppet. Pivotal does not provide support
+      for Ansible or for the playbook presented in this example.</note>
+    <p>The example playbook is designed for use with CentOS 7. It creates the
+        <codeph>gpadmin</codeph> user, installs the Greenplum Database software release, sets the
+      owner and group of the installed software to <codeph>gpadmin</codeph>, and sets the Pam
+      security limits for the <codeph>gpadmin</codeph> user. </p>
+    <p>You can revise the script to work with your operating system platform and to perform
+      additional host configuration tasks.</p>
+    <p>Following are steps to use this Ansible playbook.</p>
+    <ol id="ol_umm_h25_yhb">
+      <li>Install Ansible on the control node using your package manager. See the <xref
+          href="https://docs.ansible.com" format="html" scope="external">Ansible documention</xref>
+        for help with installation.</li>
+      <li>Set up passwordless SSH from the control node to all hosts that will be a part of the
+        Greenplum Database cluster. You can use the <codeph>ssh-copy-id</codeph> command to install
+        your public SSH key on each host in the cluster. Alternatively, your provisioning software
+        may provide more convenient ways to securely install public keys on multiple hosts.</li>
+      <li>Create an Ansible inventory by creating a file called <codeph>hosts</codeph> with a list
+        of the hosts that will comprise your Greenplum Database cluster. For
+        example:<codeblock>mdw
+sdw1
+sdw2
+...</codeblock>This file can be edited and used with the
+        Greenplum Database <codeph>gpssh-exkeys</codeph> and <codeph>gpinitsystem</codeph> utilities
+        later on.</li>
+      <li>Copy the playbook code below to a file <codeph>ansible-playbook.yml</codeph> on your
+        Ansible control node.</li>
+      <li>Edit the playbook variables at the top of the playbook, such as the
+          <codeph>gpadmin</codeph> administrative user and password to create, and the version of
+        Greenplum Database you are installing. </li>
+      <li>Run the playbook, passing the package to be installed to the <codeph>package_path</codeph>
+        parameter.<codeblock>ansible-playbook ansible-playbook.yml -i hosts -e package_path=./greenplum-db-6.0.0-rhel7-x86_64.rpm</codeblock></li>
+    </ol>
+    <section>
+      <title>Ansible Playbook - Greenplum Database Installation for CentOS 7</title>
+      <codeblock>
+---
+
+- hosts: all
+  vars:
+    - version: "6.0.0"
+    - greenplum_admin_user: "gpadmin"
+    - greenplum_admin_password: "changeme"
+    # - package_path: passed via the command line with: -e package_path=./greenplum-db-6.0.0-rhel7-x86_64.rpm
+  remote_user: root
+  become: yes
+  become_method: sudo
+  connection: ssh
+  gather_facts: yes
+  tasks:
+    - name: create greenplum admin user
+      user:
+        name: "{{ greenplum_admin_user }}"
+        password: "{{ greenplum_admin_password | password_hash('sha512', 'DvkPtCtNH+UdbePZfm9muQ9pU') }}"
+    - name: copy package to host
+      copy:
+        src: "{{ package_path }}"
+        dest: /tmp
+    - name: install package
+      yum:
+        name: "/tmp/{{ package_path | basename }}"
+        state: present
+    - name: cleanup package file from host
+      file:
+        path: "/tmp/{{ package_path | basename }}"
+        state: absent
+    - name: find install directory
+      find:
+        paths: /usr/local
+        patterns: 'greenplum*'
+        file_type: directory
+      register: installed_dir
+    - name: change install directory ownership
+      file:
+        path: '{{ item.path }}'
+        owner: "{{ greenplum_admin_user }}"
+        group: "{{ greenplum_admin_user }}"
+        recurse: yes
+      with_items: "{{ installed_dir.files }}"
+    - name: update pam_limits
+      pam_limits:
+        domain: "{{ greenplum_admin_user }}"
+        limit_type: '-'
+        limit_item: "{{ item.key }}"
+        value: "{{ item.value }}"
+      with_dict:
+        nofile: 524288
+        nproc: 131072
+    - name: find installed greenplum version
+      shell: . /usr/local/greenplum-db/greenplum_path.sh &amp;&amp; /usr/local/greenplum-db/bin/postgres --gp-version
+      register: postgres_gp_version
+    - name: fail if the correct greenplum version is not installed
+      fail:
+        msg: "Expected greenplum version {{ version }}, but found '{{ postgres_gp_version.stdout }}'"
+      when: "version is not defined or version not in postgres_gp_version.stdout"
+</codeblock>
+    </section>
+    <p>When the playbook has executed successfully, you can proceed with <xref
+        href="create_data_dirs.xml#topic13"/> and <xref href="init_gpdb.xml#topic1"/>.</p>
+  </body>
+</topic>

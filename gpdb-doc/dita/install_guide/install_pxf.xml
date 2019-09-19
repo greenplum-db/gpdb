@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<dita>
+  <topic id="topic12xx" xml:lang="en">
+    <title id="ji162527xx">Greenplum Platform Extension Framework (PXF)</title>
+    <body>
+      <p><i>Optional.</i> If you do not plan to use PXF, no action is necessary.</p>
+      <p>If you plan to use PXF, refer to <xref href="../pxf/instcfg_pxf.html" type="topic"
+          format="html">Configuring PXF</xref> for instructions.</p>
+    </body>
+  </topic>
+</dita>

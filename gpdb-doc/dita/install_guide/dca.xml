@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic_lvl_dsy_4bb">
+  <title>DCA System Installation and Upgrade</title>
+  <body>
+    <p>On supported Dell EMC DCA systems, you can install Pivotal Greenplum 6, or you can upgrade
+      from Pivotal Greenplum 6.x to 6.new.</p>
+    <p>Only Pivotal Greenplum Database is supported on DCA systems. Open source versions of
+      Greenplum Database are not supported. </p>
+    <ul id="ul_ryv_wn2_pbb">
+      <li><xref href="#topic_x2w_ltv_yq" format="dita"/></li>
+      <li><xref href="#topic_usj_2xl_xq" format="dita"/></li>
+    </ul>
+    <note type="important">Upgrading Pivotal Greenplum Database 4 or 5 to Pivotal Greenplum 6 is not
+      supported.</note>
+  </body>
+  <topic id="topic_x2w_ltv_yq">
+    <title class="- topic/title ">Installing the Pivotal Greenplum 6 Software Binaries on DCA
+      Systems</title>
+    <body class="- topic/body ">
+      <note type="important">This section is for installing Pivotal Greenplum 6 only on DCA systems.
+        Also, see the information on the <xref href="https://support.emc.com/" format="html"
+          scope="external">DELL EMC support site</xref> (requires login). </note>
+      <section>
+        <title>Prerequisites</title>
+        <ul id="ul_fjm_nx2_pbb">
+          <li>Ensure your DCA system supports Pivotal Greenplum 6. See <xref
+              href="supported-platforms.xml" format="dita"/>.</li>
+          <li>Ensure that no previous versions of Greenplum Database are installed on your
+              system.<p>Installing Pivotal Greenplum 6 on a DCA system with an existing Greenplum
+              Database installation is not supported. For information about uninstalling Greenplum
+              Database software, see your Dell EMC DCA documentation.</p></li>
+        </ul>
+      </section>
+      <section>
+        <title>Installing Pivotal Greenplum 6</title>
+        <ol class="- topic/ol " id="ol_ctw_ltv_yq">
+          <li class="- topic/li ">Download or copy the Greenplum Database DCA installer file to the
+            Greenplum Database master host.</li>
+          <li class="- topic/li ">As root, run the DCA installer for Greenplum 6 on the Greenplum
+            Database master host and specify the file <codeph>hostfile</codeph> that lists all hosts
+            in the cluster, one host name per line. If necessary, copy <codeph>hostfile</codeph> to
+            the directory containing the installer before running the installer.<p>This example
+              command runs the installer for Greenplum Database
+            6.</p><codeblock># ./greenplum-db-appliance-&lt;version>-RHEL6-x86_64.bin hostfile</codeblock></li>
+        </ol>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic_usj_2xl_xq">
+    <title class="- topic/title ">Upgrading Greenplum 6.x on DCA Systems</title>
+    <body class="- topic/body ">
+      <p>Upgrading Pivotal Greenplum from 6.x to 6.new on a Dell EMC DCA system involves stopping
+        Greenplum Database, updating the Greenplum Database software binaries, and restarting
+        Greenplum Database. </p>
+      <note type="important">This section is only for upgrading Pivotal Greenplum 6 on DCA systems.
+        For information about upgrading on non-DCA systems, see <xref
+          href="upgrading.xml#topic_tbx_szy_kbb"/>.</note>
+      <ol class="- topic/ol " id="ol_fql_2xl_xq">
+        <li class="- topic/li ">Log in to your Greenplum Database master host as the Greenplum
+          administrative user (<codeph>gpadmin</codeph>):<codeblock># su - gpadmin</codeblock></li>
+        <li class="- topic/li ">Download or copy the installer file
+            <codeph>greenplum-db-appliance-&lt;6.new>-RHEL6-x86_64.bin</codeph> to the Greenplum
+          Database master host.</li>
+        <li class="- topic/li ">Perform a smart shutdown of your existing Greenplum Database 6.x
+          system (there can be no active connections to the database). This example uses the
+            <codeph>-a</codeph> option to disable confirmation
+          prompts:<codeblock>$ gpstop -a</codeblock></li>
+        <li class="- topic/li ">As root, run the Greenplum Database DCA installer for 6.new on the
+          Greenplum Database master host and specify the file <codeph>hostfile</codeph> that lists
+          all hosts in the cluster. If necessary, copy <codeph>hostfile</codeph> to the directory
+          containing the installer before running the installer.<p>This example command runs the
+            installer for Greenplum Database 6.new for Red Hat Enterprise Linux
+            6.x.</p><codeblock># ./greenplum-db-appliance-&lt;6.new>-RHEL6-x86_64.bin hostfile</codeblock><p>The
+            file <codeph>hostfile</codeph> is a text file that lists all hosts in the cluster, one
+            host name per line.</p></li>
+        <li>If needed, update the <codeph>greenplum_path.sh</codeph> file for use with your specific
+          installation. These are some examples.<ul id="ul_vs1_3lq_cgb">
+            <li>If Greenplum Database uses LDAP authentication, edit the
+                <codeph>greenplum_path.sh</codeph> file to add the
+              line:<codeblock>export LDAPCONF=/etc/openldap/ldap.conf</codeblock></li>
+            <li>If Greenplum Database uses PL/Java, you might need to set or update the environment
+              variables <codeph>JAVA_HOME</codeph> and <codeph>LD_LIBRARY_PATH</codeph> in
+                <codeph>greenplum_path.sh</codeph>. </li>
+          </ul>
+          <note>When comparing the previous and new <codeph>greenplum_path.sh</codeph> files, be
+            aware that installing some Greenplum Database extensions also updates the
+              <codeph>greenplum_path.sh</codeph> file. The <codeph>greenplum_path.sh</codeph> from
+            the previous release might contain updates that were the result of those
+            extensions.</note></li>
+        <li class="- topic/li ">Install Greenplum Database extension packages. For information about
+          installing a Greenplum Database extension package, see <codeph>gppkg</codeph> in the
+            <cite>Greenplum Database Utility Guide</cite>.<p>Also migrate any additional files that
+            are used by the extensions (such as JAR files, shared object files, and libraries) from
+            the previous version installation directory to the new version installation directory.
+          </p></li>
+        <li class="- topic/li ">After all segment hosts have been upgraded, you can log in as the
+            <codeph>gpadmin</codeph> user and restart your Greenplum Database
+          system:<codeblock># su - gpadmin
+$ gpstart</codeblock></li>
+        <li class="- topic/li ">If you are utilizing Data Domain Boost, you have to re-enter your DD
+          Boost credentials after upgrading to Greenplum Database 6 as follows:<codeblock>gpcrondump --ddboost-host <varname>ddboost_hostname</varname> --ddboost-user <varname>ddboost_user</varname>
+  --ddboost-backupdir <varname>backup_directory</varname></codeblock>
+          <note>If you do not reenter your login credentials after an upgrade, your backup will
+            never start because the Greenplum Database cannot connect to the Data Domain system. You
+            will receive an error advising you to check your login credentials. </note></li>
+      </ol>
+      <p>After upgrading Greenplum Database, ensure features work as expected. For example, you
+        should test that backup and restore perform as expected, and Greenplum Database features
+        such as user-defined functions, and extensions such as MADlib and PostGIS perform as
+        expected.</p>
+    </body>
+  </topic>
+</topic>

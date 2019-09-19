@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<dita>
+  <topic xml:lang="en" id="topic_d45_wcw_pgb">
+    <title>Installing Additional Supplied Modules</title>
+    <shortdesc>The Greenplum Database distribution includes several PostgreSQL- and
+      Greenplum-sourced <codeph>contrib</codeph> modules that you have the option to install. </shortdesc>
+    <body>
+      <p>Each module is typically packaged as a Greenplum Database extension. You must register
+        these modules in each database in which you want to use it. For example, to register the
+          <codeph>dblink</codeph> module in the database named <codeph>testdb</codeph>, use the
+        command:</p>
+      <codeblock>$ psql -d testdb -c 'CREATE EXTENSION dblink;'</codeblock>
+      <p>To remove a module from a database, drop the associated extension. For example, to remove
+        the <codeph>dblink</codeph> module from the <codeph>testdb</codeph> database:</p>
+      <codeblock>$ psql -d testdb -c 'DROP EXTENSION dblink;'</codeblock>
+      <note>When you drop a module extension from a database, any user-defined function that you
+        created in the database that references functions defined in the module will no longer work.
+        If you created any database objects that use data types defined in the module, Greenplum
+        Database will notify you of these dependencies when you attempt to drop the module
+        extension.</note>
+      <p>You can register the following modules in this manner:</p>
+      <simpletable frame="all" relcolwidth="1.0* 1.0* 1.0*" otherprops="op-help">
+        <strow>
+          <stentry>
+            <ul id="ul_tc3_nlx_wp">
+              <li><xref href="../ref_guide/modules/citext.xml" type="topic" scope="peer"
+                  format="dita">citext</xref></li>
+              <li><xref href="../ref_guide/modules/dblink.xml" type="topic" scope="peer"
+                  format="dita">dblink</xref></li>
+              <li><xref href="../ref_guide/modules/fuzzystrmatch.xml" type="topic" scope="peer"
+                  format="dita">fuzzystrmatch</xref></li>
+              <li><xref href="../ref_guide/modules/gp_sparse_vector.xml" type="topic" scope="peer"
+                  format="dita">gp_sparse_vector</xref></li>
+            </ul>
+          </stentry>
+          <stentry>
+            <ul>
+              <li><xref href="../ref_guide/modules/hstore.xml" type="topic" scope="peer"
+                  format="dita">hstore</xref></li>
+              <li otherprops="pivotal"><xref href="../ref_guide/modules/orafce_ref.xml" type="topic"
+                  scope="peer" format="dita">orafce</xref><!--Pivotal only--></li>
+              <li><xref href="../ref_guide/modules/pageinspect.xml" type="topic" scope="peer"
+                  format="dita">pageinspect</xref></li>
+              <li><xref href="../ref_guide/modules/pgcrypto.xml" type="topic" scope="peer"
+                  format="dita">pgcrypto</xref></li>
+              <li><xref href="../ref_guide/modules/sslinfo.xml" type="topic" scope="peer"
+                  format="dita">sslinfo</xref></li>
+            </ul>
+          </stentry>
+        </strow>
+      </simpletable>
+      <p>For additional information about the modules supplied with Greenplum Database, refer to
+          <xref href="../ref_guide/modules/intro.xml" format="dita" scope="peer">Additional Supplied
+          Modules</xref> in the <i>Greenplum Database Reference Guide</i>. </p>
+    </body>
+  </topic>
+</dita>
