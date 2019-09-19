@@ -322,6 +322,7 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(copyIntoClause);
+	WRITE_NODE_FIELD(refreshClause);
 	WRITE_INT_FIELD(metricsQueryType);
 }
 #endif /* COMPILING_BINARY_FUNCS */
@@ -1366,6 +1367,15 @@ _outCopyIntoClause(StringInfo str, const CopyIntoClause *node)
 	WRITE_NODE_FIELD(options);
 	WRITE_NODE_FIELD(ao_segnos);
 
+}
+
+static void
+_outRefreshClause(StringInfo str, const RefreshClause *node)
+{
+	WRITE_NODE_TYPE("REFRESHCLAUSE");
+
+	WRITE_BOOL_FIELD(concurrent);
+	WRITE_NODE_FIELD(relation);
 }
 
 static void
@@ -5050,6 +5060,9 @@ _outNode(StringInfo str, const void *obj)
 				break;
 			case T_CopyIntoClause:
 				_outCopyIntoClause(str, obj);
+				break;
+			case T_RefreshClause:
+				_outRefreshClause(str, obj);
 				break;
 			case T_Var:
 				_outVar(str, obj);

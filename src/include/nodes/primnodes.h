@@ -117,6 +117,15 @@ typedef struct CopyIntoClause
 	List	   *ao_segnos;		/* AO segno map */
 } CopyIntoClause;
 
+typedef struct RefreshClause
+{
+	NodeTag		type;
+
+	bool		concurrent;		/* allow concurrent access? */
+	bool		skipData;
+	RangeVar   *relation;		/* relation to insert into */
+} RefreshClause;
+
 
 /* ----------------------------------------------------------------
  *					node types for executable expressions

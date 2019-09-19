@@ -3263,9 +3263,7 @@ CREATE TABLE table2(col1 SERIAL PRIMARY KEY, col2 TEXT NOT NULL);
 INSERT INTO table2 SELECT generate_series(1,400), 'abc';
 CREATE INDEX ON table2(col2);
 CREATE MATERIALIZED VIEW matview AS SELECT col1 FROM table2;
-ERROR:  materialized view is not supported on greenplum
 CREATE INDEX ON matview(col1);
-ERROR:  relation "matview" does not exist
 CREATE VIEW view AS SELECT col2 FROM table2;
 CREATE TABLE reindex_before AS
 SELECT oid, relname, relfilenode, relkind, reltoastrelid
@@ -3292,6 +3290,8 @@ SELECT  b.relname,
   ORDER BY 1;
        relname        | relkind |           case           
 ----------------------+---------+--------------------------
+ matview              | m       | relfilenode is unchanged
+ matview_col1_idx     | i       | relfilenode has changed
  pg_toast_TABLE       | t       | relfilenode is unchanged
  pg_toast_TABLE_index | i       | relfilenode has changed
  table1               | r       | relfilenode is unchanged
@@ -3302,7 +3302,7 @@ SELECT  b.relname,
  table2_col2_idx      | i       | relfilenode has changed
  table2_pkey          | i       | relfilenode has changed
  view                 | v       | relfilenode is unchanged
-(10 rows)
+(12 rows)
 
 REINDEX SCHEMA schema_to_reindex;
 BEGIN;

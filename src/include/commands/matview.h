@@ -15,6 +15,7 @@
 #define MATVIEW_H
 
 #include "catalog/objectaddress.h"
+#include "executor/execdesc.h"
 #include "nodes/params.h"
 #include "nodes/parsenodes.h"
 #include "tcop/dest.h"
@@ -26,8 +27,11 @@ extern void SetMatViewPopulatedState(Relation relation, bool newstate);
 extern ObjectAddress ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 				   ParamListInfo params, char *completionTag);
 
-extern DestReceiver *CreateTransientRelDestReceiver(Oid oid);
+extern DestReceiver *CreateTransientRelDestReceiver(Oid oid, Oid oldreloid, bool concurrent,
+													char relpersistence);
 
 extern bool MatViewIncrementalMaintenanceIsEnabled(void);
+
+extern void transientrel_init(QueryDesc *queryDesc);
 
 #endif   /* MATVIEW_H */

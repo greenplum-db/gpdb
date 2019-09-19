@@ -235,6 +235,7 @@ typedef enum NodeTag
 	T_OnConflictExpr,
 	T_IntoClause,
 	T_CopyIntoClause,
+	T_RefreshClause,
 	T_Flow,
 	T_GroupId,
 	T_DistributedBy,

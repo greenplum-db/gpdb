@@ -94,6 +94,7 @@ typedef uint32 AclMode;			/* a bitmask of privilege bits */
  * PARENTSTMTTYPE_NONE		query is not included in a utility stmt.
  * PARENTSTMTTYPE_CTAS		query is included in a CreateTableAsStmt.
  * PARENTSTMTTYPE_COPY		query is included in a CopyStmt.
+ * PARENTSTMTTYPE_REFRESH_MATVIEW		query is included in a RefreshMatviewStmt.
  *
  * Previously we added the isCtas field to Query to indicate that
  * the query is included in CreateTableAsStmt. For this type of
@@ -111,6 +112,7 @@ typedef uint8 ParentStmtType;
 #define PARENTSTMTTYPE_NONE	0
 #define PARENTSTMTTYPE_CTAS	1
 #define PARENTSTMTTYPE_COPY	2
+#define PARENTSTMTTYPE_REFRESH_MATVIEW	3
 
 /*
  * Query -

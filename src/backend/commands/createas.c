@@ -176,7 +176,7 @@ create_ctas_internal(List *attrList, IntoClause *into, QueryDesc *queryDesc, boo
 	create->attr_encodings = NULL; /* Handle by AddDefaultRelationAttributeOptions() */
 
 	/* Save them in CreateStmt for dispatching. */
-	create->relKind = RELKIND_RELATION;
+	create->relKind = relkind;
 	create->relStorage = relstorage;
 	create->ownerid = GetUserId();
 
