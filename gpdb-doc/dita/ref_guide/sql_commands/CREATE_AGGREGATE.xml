@@ -3,7 +3,7 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="bm20941">CREATE AGGREGATE</title><body><p id="sql_command_desc">Defines a new aggregate function.</p><section id="section2"
       ><title>Synopsis</title><varname>argname</varname><codeblock id="sql_command_synopsis">CREATE AGGREGATE <varname>name</varname> ( [ <varname>argmode</varname> ] [  ] <varname>arg_data_type</varname> [ , ... ] ) (
-    STATEFUNC = <varname>sfunc</varname>,
+    SFUNC = <varname>statefunc</varname>,
     STYPE = <varname>state_data_type</varname>
     [ , SSPACE = <varname>state_data_size</varname> ]
     [ , FINALFUNC = <varname>ffunc</varname> ]
@@ -24,7 +24,7 @@
   
   CREATE AGGREGATE <varname>name</varname> ( [ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>arg_data_type</varname> [ , ... ] ]
       ORDER BY [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>arg_data_type</varname> [ , ... ] ) (
-    STATEFUNC = <varname>sfunc</varname>,
+    SFUNC = <varname>statefunc</varname>,
     STYPE = <varname>state_data_type</varname>
     [ , SSPACE = <varname>state_data_size</varname> ]
     [ , FINALFUNC = <varname>ffunc</varname> ]
@@ -40,7 +40,7 @@
   
   CREATE AGGREGATE <varname>name</varname> (
     BASETYPE = <varname>base_type</varname>,
-    STATEFUNC = <varname>sfunc</varname>,
+    SFUNC = <varname>statefunc</varname>,
     STYPE = <varname>state_data_type</varname>
     [ , SSPACE = <varname>state_data_size</varname> ]
     [ , FINALFUNC = <varname>ffunc</varname> ]
@@ -107,37 +107,35 @@
       <p>You can specify <codeph><varname>combinefunc</varname></codeph> as a method for optimizing
         aggregate execution. By specifying <codeph><varname>combinefunc</varname></codeph>, the
         aggregate can be executed in parallel on segments first and then on the master. When a
-        two-level execution is performed, the state transition function
-            <codeph><varname>statefunc</varname></codeph> is executed on the segments to generate
-        partial aggregate results, and <codeph><varname>combinefunc</varname></codeph> is executed
-        on the master to aggregate the partial results from segments. If single-level aggregation is
-        performed, all the rows are sent to the master and the state transition function
-            <codeph><varname>statefunc</varname></codeph> is applied to the rows.</p><p>Single-level aggregation and two-level aggregation are equivalent execution strategies. Either
+        two-level execution is performed, the <codeph><varname>statefunc</varname></codeph> is
+        executed on the segments to generate partial aggregate results, and
+            <codeph><varname>combinefunc</varname></codeph> is executed on the master to aggregate
+        the partial results from segments. If single-level aggregation is performed, all the rows
+        are sent to the master and the <codeph><varname>statefunc</varname></codeph> is applied to
+        the rows.</p><p>Single-level aggregation and two-level aggregation are equivalent execution strategies. Either
         type of aggregation can be implemented in a query plan. When you implement the functions
           <codeph>combinefunc</codeph> and <codeph>statefunc</codeph>, you must ensure that the
-        invocation of the state transition function <codeph><varname>statefunc</varname></codeph> on
-        the segment instances followed by <codeph>combinefunc</codeph> on the master produce the
-        same result as single-level aggregation that sends all the rows to the master and then
-        applies only the state transition function <codeph><varname>statefunc</varname></codeph>  to
-        the rows.</p><p>An aggregate function can
+        invocation of the <codeph><varname>statefunc</varname></codeph> on the segment instances
+        followed by <codeph>combinefunc</codeph> on the master produce the same result as
+        single-level aggregation that sends all the rows to the master and then applies only the
+            <codeph><varname>statefunc</varname></codeph>  to the rows.</p><p>An aggregate function can
         provide an optional initial condition, an initial value for the internal state value. This
         is specified and stored in the database as a value of type text, but it must be a valid
         external representation of a constant of the state value data type. If it is not supplied
-        then the state value starts out <codeph>NULL</codeph>. </p><p>If the state transition function <codeph><varname>statefunc</varname></codeph>  is declared
-          <codeph>STRICT</codeph>, then it cannot be called with <codeph>NULL</codeph> inputs. With
-        such a transition function, aggregate execution behaves as follows. Rows with any null input
-        values are ignored (the function is not called and the previous state value is retained). If
-        the initial state value is <codeph>NULL</codeph>, then at the first row with all non-null
-        input values, the first argument value replaces the state value, and the transition function
-        is invoked at subsequent rows with all non-null input values. This is useful for
-        implementing aggregates like <codeph>max</codeph>. Note that this behavior is only available
-        when <varname>state_data_type</varname> is the same as the first
+        then the state value starts out <codeph>NULL</codeph>. </p><p>If  <codeph><varname>statefunc</varname></codeph>  is declared <codeph>STRICT</codeph>, then it
+        cannot be called with <codeph>NULL</codeph> inputs. With such a transition function,
+        aggregate execution behaves as follows. Rows with any null input values are ignored (the
+        function is not called and the previous state value is retained). If the initial state value
+        is <codeph>NULL</codeph>, then at the first row with all non-null input values, the first
+        argument value replaces the state value, and the transition function is invoked at
+        subsequent rows with all non-null input values. This is useful for implementing aggregates
+        like <codeph>max</codeph>. Note that this behavior is only available when
+          <varname>state_data_type</varname> is the same as the first
           <varname>input_data_type</varname>. When these types are different, you must supply a
-        non-null initial condition or use a nonstrict transition function.</p><p>If the state transition function <varname>statefunc</varname> is not declared
-          <codeph>STRICT</codeph>, then it will be called unconditionally at each input row, and
-        must deal with <codeph>NULL</codeph> inputs and <codeph>NULL</codeph> transition values for
-        itself. This allows the aggregate author to have full control over the aggregate's handling
-        of <codeph>NULL</codeph> values.</p><p>If the final function (<codeph><varname>ffunc</varname></codeph>) is declared
+        non-null initial condition or use a nonstrict transition function.</p><p>If  <varname>statefunc</varname> is not declared <codeph>STRICT</codeph>, then it will be called
+        unconditionally at each input row, and must deal with <codeph>NULL</codeph> inputs and
+          <codeph>NULL</codeph> transition values for itself. This allows the aggregate author to
+        have full control over the aggregate's handling of <codeph>NULL</codeph> values.</p><p>If the final function (<codeph><varname>ffunc</varname></codeph>) is declared
           <codeph>STRICT</codeph>, then it will not be called when the ending state value is
           <codeph>NULL</codeph>; instead a <codeph>NULL</codeph> result will be returned
         automatically. (This is the normal behavior of <codeph>STRICT</codeph> functions.) In any
@@ -398,10 +396,10 @@ ordered aggregate, using the syntax:
 <codeph>COMBINEFUNC</codeph>.</p>
 
 </section><section id="section7"><title>Example</title><p>The following simple example creates an aggregate function that computes
-the sum of two columns. </p><p>Before creating the aggregate function, create two functions that are used as the state
-        transition function <codeph><varname>statefunc</varname></codeph>  and
-            <codeph><varname>combinefunc</varname></codeph> functions of the aggregate function. </p><p>This function is specified as the state transition function
-          <codeph><varname>statefunc</varname></codeph> function in the aggregate function.</p><codeblock>CREATE FUNCTION mysfunc_accum(numeric, numeric, numeric) 
+the sum of two columns. </p><p>Before creating the aggregate function, create two functions that are used as the
+            <codeph><varname>statefunc</varname></codeph>  and
+            <codeph><varname>combinefunc</varname></codeph> functions of the aggregate function. </p><p>This function is specified as the <codeph><varname>statefunc</varname></codeph> function in the
+        aggregate function.</p><codeblock>CREATE FUNCTION mysfunc_accum(numeric, numeric, numeric) 
   RETURNS numeric
    AS 'select $1 + $2 + $3'
    LANGUAGE SQL
