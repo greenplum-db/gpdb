@@ -1448,18 +1448,19 @@
   <topic id="default_transaction_deferrable">
     <title>default_transaction_deferrable</title>
     <body>
-      <note>Only read-only, serializable transactions can be deferred. Greenplum Database does not
-        support the <codeph>SERIALIZABLE</codeph> transaction isolation level, so setting
-          <codeph>default_transaction_deferrable</codeph> to on has no effect in Greenplum
-        Database.</note>
-      <p>When running at the serializable isolation level, a deferrable read-only SQL transaction
-        may be delayed before it is allowed to proceed. However, once it begins executing it does
-        not incur any of the overhead required to ensure serializability; so serialization code will
-        have no reason to force it to abort because of concurrent updates, making this option
-        suitable for long-running read-only transactions.</p>
+      <p>When running at the <codeph>SERIALIZABLE</codeph> isolation level, a deferrable read-only
+        SQL transaction may be delayed before it is allowed to proceed. However, once it begins
+        executing it does not incur any of the overhead required to ensure serializability; so
+        serialization code will have no reason to force it to abort because of concurrent updates,
+        making this option suitable for long-running read-only transactions.</p>
       <p>This parameter controls the default deferrable status of each new transaction. It currently
         has no effect on read-write transactions or those operating at isolation levels lower than
-        serializable. The default is off.</p>
+          <codeph>SERIALIZABLE</codeph>. The default is <codeph>off</codeph>.
+        <note>Setting <codeph>default_transaction_deferrable</codeph> to <codeph>on</codeph> has no
+          effect in Greenplum Database. Only read-only, <codeph>SERIALIZABLE</codeph> transactions
+          can be deferred. However, Greenplum Database does not support the
+            <codeph>SERIALIZABLE</codeph> transaction isolation level. See <xref
+            href="../sql_commands/SET_TRANSACTION.xml"/>.</note></p>
       <table id="default_transaction_deferrable">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
