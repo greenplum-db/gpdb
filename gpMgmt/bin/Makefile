@@ -27,7 +27,7 @@ installprograms: installdirs
 	done
 	# Symlink gpcheckcat from bin to bin/lib to maintain backward compatibility
 	if [ ! -L $(DESTDIR)$(bindir)/lib/gpcheckcat  ]; then \
-		$(LN_S) $(DESTDIR)$(bindir)/gpcheckcat $(DESTDIR)$(bindir)/lib/gpcheckcat; \
+		$(LN_S) $(bindir)/gpcheckcat $(DESTDIR)$(bindir)/lib/gpcheckcat; \
 	fi
 	$(INSTALL_DATA) gpload.bat '$(DESTDIR)$(bindir)/gpload.bat'
 
@@ -55,7 +55,7 @@ LIB_DIR=$(SRC)/lib
 PYLIB_DIR=$(SRC)/ext
 
 core: pygresql subprocess32
-	python gpconfig_modules/parse_guc_metadata.py $(prefix)
+	python gpconfig_modules/parse_guc_metadata.py $(DESTDIR)$(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
 install: installdirs installprograms core lockfile psutil
@@ -79,7 +79,7 @@ pygresql:
 		unset LIBPATH; \
 		./generate-greenplum-path.sh $(prefix) > $(DESTDIR)$(prefix)/greenplum_path.sh ; \
 	fi
-	. $(prefix)/greenplum_path.sh && unset PYTHONHOME && \
+	. $(DESTDIR)$(prefix)/greenplum_path.sh && unset PYTHONHOME && \
 	if [ "$(BLD_ARCH)" = 'aix7_ppc_64' ]; then \
 	    unset PYTHONPATH && cd $(PYLIB_SRC)/$(PYGRESQL_DIR) && DESTDIR="$(DESTDIR)" CC="$(CC)" python_64 setup.py build; \
 	elif [ `uname -s` = 'OpenBSD' ]; then \

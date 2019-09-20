@@ -32,7 +32,7 @@ gpcheckcloud:
 install: install-symlink
 
 install-symlink:
-	ln -sf gpcloud.so $(pkglibdir)/gps3ext.so
+	ln -sf gpcloud.so $(DESTDIR)$(pkglibdir)/gps3ext.so
 
 test: format
 	@$(MAKE) -C test test
