@@ -1,4 +1,12 @@
 -----------------
+2015-03-03 3.2.6.1.gp
+-----------------
+* Use vfork instead fork to execute subprocess to avoid potential
+* false-alarmed oom issue in Linux environments which are configured
+* with kernel parameter overcommit_memory as 2 (disabling memory overcommit).
+* Typically, greenplum production environmments configure this usually.
+
+-----------------
 2014-04-23 3.2.6
 -----------------
 

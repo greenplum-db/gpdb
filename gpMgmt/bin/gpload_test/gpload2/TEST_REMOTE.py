@@ -9,7 +9,10 @@ import socket
 import fileinput
 import platform
 import re
-import subprocess
+try:
+    import subprocess32 as subprocess
+except:
+    import subprocess
 from shutil import copyfile
 from pygresql import pg
 

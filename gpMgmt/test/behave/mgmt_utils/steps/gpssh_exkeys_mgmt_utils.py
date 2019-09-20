@@ -2,7 +2,10 @@ from os import path
 import os
 import shutil
 import socket
-import subprocess
+try:
+    import subprocess32 as subprocess
+except:
+    import subprocess
 import sys
 import tempfile
 

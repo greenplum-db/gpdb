@@ -49,7 +49,11 @@ except Exception, e:
     sys.exit(2)
 
 import hashlib
-import datetime,getpass,os,signal,socket,subprocess,threading,time,traceback,re
+import datetime,getpass,os,signal,socket,threading,time,traceback,re
+try:
+    import subprocess32 as subprocess
+except:
+    import subprocess
 import uuid
 
 from gppylib.gpversion import GpVersion

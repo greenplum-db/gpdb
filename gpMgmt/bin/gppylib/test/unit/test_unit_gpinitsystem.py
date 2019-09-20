@@ -2,7 +2,10 @@ import os
 from mock import *
 from gp_unittest import *
 from StringIO import StringIO
-from subprocess import Popen, PIPE
+try:
+    from subprocess32 import Popen, PIPE
+except:
+    from subprocess import Popen, PIPE
 
 class GpInitSystemTest(GpTestCase):
     def setUp(self):
