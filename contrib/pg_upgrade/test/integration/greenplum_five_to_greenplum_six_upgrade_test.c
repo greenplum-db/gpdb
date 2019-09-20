@@ -51,7 +51,7 @@ typedef struct UserData
 }          User;
 
 static bool
-users_match(User *expected_user, User *actual_user)
+users_match(const User *expected_user, const User *actual_user)
 {
 	return (
 		expected_user->id == actual_user->id &&
@@ -59,46 +59,49 @@ users_match(User *expected_user, User *actual_user)
 	);
 }
 
+typedef struct Rows {
+	int size;
+	User rows[10];
+} Rows;
+
 static void
-assert_rows_contain_user(User expected_user, User *rows[], int max)
+assert_rows_contain_user(const Rows *expected_rows, const Rows *rows)
 {
-	int i;
-	User *current_user;
 	bool found = false;
 
-	for (i = 0; rows[i] != NULL && i < max; i++) {
-		current_user = rows[i];
+	for (int j = 0; j < expected_rows->size; ++j)
+	{
+		found = false;
+		const User *expected_user = &expected_rows->rows[j];
 
-		if (users_match(&expected_user, current_user))
-			found = true;
+		for (int i = 0; i < rows->size; ++i)
+		{
+			const User *current_user = &rows->rows[i];
+
+			if (users_match(expected_user, current_user))
+			{
+				found = true;
+				break;
+			}
+		}
+		assert_true(found);
 	}
-
 	assert_true(found);
 }
 
 static void
-assert_number_of_rows(User *rows[], int expected_number, int max)
-{
-	int i;
-
-	for (i = 0; rows[i] != NULL && i < max; i++);
-
-	assert_int_equal(expected_number, i);
-}
-
-static void
-extract_user_rows(PGresult *result, User *rows[])
+extract_user_rows(PGresult *result, Rows *rows)
 {
 	int number_of_rows = PQntuples(result);
 	int i;
 
 	for (i = 0; i < number_of_rows; i++)
 	{
-		User *user = malloc(sizeof(User));
+		User *user = &rows->rows[i];
 		user->id   = atoi(PQgetvalue(result, i, PQfnumber(result, "id")));
 		user->name = PQgetvalue(result, i, PQfnumber(result, "name"));
-		rows[i] = user;
 	}
+	rows->size = number_of_rows;
 }
 
 static void 
@@ -123,15 +126,14 @@ heapTableShouldHaveDataUpgradedToSixCluster()
 	executeQuery(connection, "set search_path to five_to_six_upgrade;");
 	PGresult *result = executeQuery(connection, "select * from users;");
 
-	const int size = 10;
-	User     *rows[size] = {0};
+	Rows rows = {};
 
-	extract_user_rows(result, rows);
+	extract_user_rows(result, &rows);
 
-	assert_number_of_rows(rows, 3, size);
-	assert_rows_contain_user((User) {.id=1, .name="Jane"}, rows, size);
-	assert_rows_contain_user((User) {.id=2, .name="John"}, rows, size);
-	assert_rows_contain_user((User) {.id=3, .name="Joe"}, rows, size);
+	assert_int_equal(3, rows.size);
+
+	const Rows expected_users = {.size = 3, .rows = {{.id=1, .name="Jane"}, {.id=2, .name = "John"}, {.id=3, .name="Joe"}}};
+	assert_rows_contain_user(&expected_users, &rows);
 
 	PQfinish(connection);
 }
