@@ -134,13 +134,13 @@ heapTableShouldHaveDataUpgradedToSixCluster()
 	const int size = 10;
 	User     *rows[size];
 
-	initialize_user_rows(&rows, size);
-	extract_user_rows(result, &rows);
+	initialize_user_rows(rows, size);
+	extract_user_rows(result, rows);
 
-	assert_number_of_rows(&rows, 3, size);
-	assert_rows_contain_user((User) {.id=1, .name="Jane"}, &rows, size);
-	assert_rows_contain_user((User) {.id=2, .name="John"}, &rows, size);
-	assert_rows_contain_user((User) {.id=3, .name="Joe"}, &rows, size);
+	assert_number_of_rows(rows, 3, size);
+	assert_rows_contain_user((User) {.id=1, .name="Jane"}, rows, size);
+	assert_rows_contain_user((User) {.id=2, .name="John"}, rows, size);
+	assert_rows_contain_user((User) {.id=3, .name="Joe"}, rows, size);
 
 	PQfinish(connection);
 }
