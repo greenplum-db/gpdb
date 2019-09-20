@@ -87,14 +87,6 @@ assert_number_of_rows(User *rows[], int expected_number, int max)
 }
 
 static void
-initialize_user_rows(User *rows[], int size)
-{
-	for (int i = 0; i < size; i++) {
-		rows[i] = NULL;
-	}
-}
-
-static void
 extract_user_rows(PGresult *result, User *rows[])
 {
 	int number_of_rows = PQntuples(result);
@@ -132,9 +124,8 @@ heapTableShouldHaveDataUpgradedToSixCluster()
 	PGresult *result = executeQuery(connection, "select * from users;");
 
 	const int size = 10;
-	User     *rows[size];
+	User     *rows[size] = {0};
 
-	initialize_user_rows(rows, size);
 	extract_user_rows(result, rows);
 
 	assert_number_of_rows(rows, 3, size);
