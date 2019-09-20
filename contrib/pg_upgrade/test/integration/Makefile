@@ -14,8 +14,8 @@ OBJS = scripts/gpdb5-cluster.o \
 EXS = scripts/gpdb6-cluster scripts/gpdb5-cluster
 TARGETS = greenplum_five_to_greenplum_six_upgrade_test
 
-include $(top_srcdir)/src/Makefile.mock
 include $(top_srcdir)/src/Makefile.global
+include $(top_srcdir)/src/Makefile.mock
 
 all: scripts/gpdb5-cluster scripts/gpdb6-cluster
 
