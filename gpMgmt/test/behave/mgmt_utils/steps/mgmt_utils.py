@@ -19,7 +19,10 @@ import tempfile
 import thread
 import json
 import csv
-import subprocess
+try:
+    import subprocess32 as subprocess
+except:
+    import subprocess
 import commands
 import signal
 from collections import defaultdict

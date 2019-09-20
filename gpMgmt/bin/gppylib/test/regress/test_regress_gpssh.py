@@ -3,7 +3,10 @@
 import os, signal, time, re
 import unittest
 import psutil
-from subprocess import PIPE
+try:
+    from subprocess32 import PIPE
+except:
+    from subprocess import PIPE
 
 class GpsshTestCase(unittest.TestCase):
 

@@ -1,7 +1,10 @@
 import shutil, filecmp,re
 import os, fcntl, select, getpass, socket
 import stat
-from subprocess import *
+try:
+    from subprocess32 import *
+except:
+    from subprocess import *
 from sys import *
 from xml.dom import minidom
 from xml.dom import Node

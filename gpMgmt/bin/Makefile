@@ -122,6 +122,7 @@ subprocess32:
 	@if [ `uname -s` = 'Linux' ]; then \
 		  cd $(PYLIB_SRC)/subprocess32 && CC="$(CC)" python setup.py build; \
 		  cp -f $(PYLIB_SRC)/subprocess32/build/lib.*/* $(PYLIB_DIR)/;  \
+		  cp -f $(PYLIB_SRC)/subprocess32/ChangeLog $(PYLIB_DIR)/subprocess32-ChangeLog;  \
 	  fi
 
 #
