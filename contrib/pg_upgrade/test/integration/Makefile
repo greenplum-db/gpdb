@@ -3,50 +3,41 @@ top_srcdir=../../../..
 top_builddir=../../../..
 pg_upgrade_directory=../..
 
+OBJS = scripts/gpdb5-cluster.o \
+	utilities/gpdb5-cluster.o \
+	scripts/gpdb6-cluster.o \
+	utilities/gpdb6-cluster.o \
+	utilities/query-helpers.o \
+	utilities/upgrade-helpers.o \
+	greenplum_five_to_greenplum_six_upgrade_test.o
 
+EXS = scripts/gpdb6-cluster scripts/gpdb5-cluster
 TARGETS = greenplum_five_to_greenplum_six_upgrade_test
-
 
 include $(top_srcdir)/src/Makefile.mock
 include $(top_srcdir)/src/Makefile.global
 
+all: scripts/gpdb5-cluster scripts/gpdb6-cluster
 
-test_flags = -I $(pg_upgrade_directory) \
+utilities_CPPFLAGS = -I$(pg_upgrade_directory) \
 	-I$(libpq_srcdir) \
-	-g -O0
-
-
-compile = $(CC) $(CFLAGS) $(CPPFLAGS) 
-compile_test = $(compile) $(test_flags) 
-
-
-integration_test_dependencies = $(libpq_pgport) 
 
 
 #
 # Scripts
 #
-scripts/gpdb5-cluster: scripts/gpdb5-cluster.c utilities/gpdb5-cluster.o
-	$(compile) $^ -o scripts/gpdb5-cluster 
+scripts/gpdb5-cluster: scripts/gpdb5-cluster.o utilities/gpdb5-cluster.o
 
-
-scripts/gpdb6-cluster: scripts/gpdb6-cluster.c utilities/gpdb6-cluster.o
-	$(compile) $^ -o scripts/gpdb6-cluster 
+scripts/gpdb6-cluster: scripts/gpdb6-cluster.o utilities/gpdb6-cluster.o
 
 
 #
 # Libraries
 #
-utilities/gpdb5-cluster.o: ./utilities/gpdb5-cluster.c
-	$(compile_test) -c $< -o $@
-
-
-utilities/gpdb6-cluster.o: ./utilities/gpdb6-cluster.c
-	$(compile_test) -c $< -o $@
-
-
-utilities/query-helpers.o: ./utilities/query-helpers.c
-	$(compile_test) -c $< -o $@
+utilities/gpdb5-cluster.o \
+	utilities/gpdb6-cluster.o \
+	utilities/query-helpers.o \
+	greenplum_five_to_greenplum_six_upgrade_test.o: override CPPFLAGS += $(utilities_CPPFLAGS)
 
 #
 # Tests
@@ -58,16 +49,8 @@ test_dependencies = utilities/gpdb5-cluster.o \
 	$(CMOCKERY_OBJS)
 
 
-greenplum_five_to_greenplum_six_upgrade_test.t: greenplum_five_to_greenplum_six_upgrade_test.c $(test_dependencies) 
-	$(compile_test) \
-		$^ \
-		$(integration_test_dependencies) \
-		-o $@
+greenplum_five_to_greenplum_six_upgrade_test.t: greenplum_five_to_greenplum_six_upgrade_test.o $(test_dependencies)
+	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) -o $@
 
-
-#
-# Build all
-#
-all: scripts/gpdb5-cluster scripts/gpdb6-cluster greenplum_five_to_greenplum_six_upgrade_test.t
-
-
+clean:
+	rm -f $(OBJS) $(EXS)
