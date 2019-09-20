@@ -31,13 +31,13 @@ teardown(void **state)
 }
 
 
-PGconn *
+static PGconn *
 connectToFive()
 {
 	return connectTo(50000);
 }
 
-PGconn *
+static PGconn *
 connectToSix()
 {
 	return connectTo(60000);
