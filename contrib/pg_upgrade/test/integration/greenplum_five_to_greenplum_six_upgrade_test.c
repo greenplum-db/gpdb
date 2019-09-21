@@ -63,10 +63,10 @@ typedef struct Rows
 {
 	int			size;
 	User		rows[10];
-}			Rows;
+} Rows;
 
 static void
-assert_rows_contain_user(const Rows * expected_rows, const Rows * rows)
+assert_rows_contain_users(const Rows *expected_rows, const Rows *rows)
 {
 	bool		found = false;
 
@@ -91,7 +91,7 @@ assert_rows_contain_user(const Rows * expected_rows, const Rows * rows)
 }
 
 static void
-extract_user_rows(PGresult *result, Rows * rows)
+extract_user_rows(PGresult *result, Rows *rows)
 {
 	int			number_of_rows = PQntuples(result);
 
@@ -125,6 +125,31 @@ createHeapTableWithDataInFiveCluster(void)
 }
 
 static void
+createAoTableWithDataInFiveCluster(void)
+{
+	PGconn	   *con1 = connectToFive();
+
+	executeQuery(con1, "CREATE SCHEMA five_to_six_upgrade;");
+	executeQuery(con1, "CREATE TABLE five_to_six_upgrade.ao (id integer, name text) WITH (appendonly=true) DISTRIBUTED BY (id);");
+	executeQuery(con1, "BEGIN;");
+	executeQuery(con1, "INSERT INTO five_to_six_upgrade.ao VALUES (1, 'Jane')");
+	executeQuery(con1, "INSERT INTO five_to_six_upgrade.ao VALUES (2, 'John')");
+
+	PGconn	   *con2 = connectToFive();
+
+	executeQuery(con2, "BEGIN;");
+	executeQuery(con2, "INSERT INTO five_to_six_upgrade.ao VALUES (3, 'Joe')");
+
+	executeQuery(con1, "END;");
+	executeQuery(con2, "END;");
+	/* FIXME: why do we need this ?? */
+	executeQuery(con1, "VACUUM FREEZE;");
+
+	PQfinish(con2);
+	PQfinish(con1);
+}
+
+static void
 heapTableShouldHaveDataUpgradedToSixCluster()
 {
 	PGconn	   *connection = connectToSix();
@@ -138,7 +163,7 @@ heapTableShouldHaveDataUpgradedToSixCluster()
 
 	assert_int_equal(3, rows.size);
 
-	const		Rows expected_users = {
+	const Rows	expected_users = {
 		.size = 3,
 		.rows = {
 			{.id = 1,.name = "Jane"},
@@ -147,8 +172,32 @@ heapTableShouldHaveDataUpgradedToSixCluster()
 		}
 	};
 
-	assert_rows_contain_user(&expected_users, &rows);
+	assert_rows_contain_users(&expected_users, &rows);
 
+	PQfinish(connection);
+}
+
+static void
+aoTableShouldHaveDataUpgradedToSixCluster()
+{
+	PGconn	   *connection = connectToSix();
+	PGresult   *result = executeQuery(connection, "SELECT * FROM five_to_six_upgrade.ao;");
+
+	Rows		rows = {};
+
+	extract_user_rows(result, &rows);
+
+	assert_int_equal(3, rows.size);
+	const Rows	expected_users = {
+		.size = 3,
+		.rows = {
+			{.id = 1,.name = "Jane"},
+			{.id = 2,.name = "John"},
+			{.id = 3,.name = "Joe"}
+		}
+	};
+
+	assert_rows_contain_users(&expected_users, &rows);
 	PQfinish(connection);
 }
 
@@ -301,13 +350,22 @@ test_a_heap_table_with_data_can_be_upgraded(void **state)
 	and(heapTableShouldBeHardLinked);
 }
 
+static void
+test_an_ao_table_with_data_can_be_upgraded(void **state)
+{
+	given(createAoTableWithDataInFiveCluster);
+	when(anAdministratorPerformsAnUpgrade);
+	then(aoTableShouldHaveDataUpgradedToSixCluster);
+}
+
 int
 main(int argc, char *argv[])
 {
 	cmockery_parse_arguments(argc, argv);
 
 	const		UnitTest tests[] = {
-		unit_test_setup_teardown(test_a_heap_table_with_data_can_be_upgraded, setup, teardown)
+		unit_test_setup_teardown(test_an_ao_table_with_data_can_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_heap_table_with_data_can_be_upgraded, setup, teardown),
 	};
 
 	return run_tests(tests);
