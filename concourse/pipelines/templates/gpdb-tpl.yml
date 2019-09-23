@@ -381,81 +381,81 @@ resources:
 - name: libquicklz-centos6
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    versioned_file: centos6/libquicklz-1.5.0-1.el6.x86_64.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/libquicklz-(1\.5\.0-.*)-1.el6.x86_64.rpm
 
 - name: libquicklz-devel-centos6
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    versioned_file: centos6/libquicklz-devel-1.5.0-1.el6.x86_64.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/libquicklz-devel-(1\.5\.0-.*)-1.el6.x86_64.rpm
 
 - name: libsigar-centos6
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    versioned_file: centos6/sigar-rhel6_x86_64-1.6.5.targz
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/sigar-rhel6_x86_64-(1\.6\.5-.*).targz
 
 {% endif %}
 {% if "centos7" in os_types %}
 - name: libquicklz-centos7
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    versioned_file: centos7/libquicklz-1.5.0-1.el7.x86_64.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key)))
+    regexp: gp-internal-artifacts/centos7/libquicklz-(1\.5\.0-.*)-1.el7.x86_64.rpm
 
 - name: libquicklz-devel-centos7
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    versioned_file: centos7/libquicklz-devel-1.5.0-1.el7.x86_64.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos7/libquicklz-devel-(1\.5\.0-.*)-1.el7.x86_64.rpm
 
 - name: libsigar-centos7
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    versioned_file: centos7/sigar-rhel7_x86_64-1.6.5.targz
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos7/sigar-rhel7_x86_64-(1\.6\.5-.*).targz
 
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
 - name: libquicklz-ubuntu18.04
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    versioned_file: ubuntu18.04/libquicklz-dev_1.5.0-1_amd64.deb
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/ubuntu18.04/libquicklz-dev_(1\.5\.0-.*)-1_amd64.deb
 {% endif %}
 {% if "centos6" in os_types %}
 - name: python-centos6
   type: gcs
   source:
-    bucket: gp-internal-artifacts
-    json_key: ((gcs-key))
-    versioned_file: centos6/python-2.7.12.tar.gz
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/python-(2\.7\.12-.*).tar.gz
 
 {% endif %}
 {% if "centos7" in os_types %}
 - name: python-centos7
   type: gcs
   source:
-    bucket: gp-internal-artifacts
-    json_key: ((gcs-key))
-    versioned_file: centos7/python-2.7.12.tar.gz
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos7/python-(2\.7\.12-.*).tar.gz
 
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
 - name: python-ubuntu18.04
   type: gcs
   source:
-    bucket: gp-internal-artifacts
-    json_key: ((gcs-key))
-    versioned_file: ubuntu18.04/python-2.7.12.tar.gz
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/ubuntu18.04/python-(2\.7\.12-.*).tar.gz
 
 {% endif %}
 {% if "centos6" in os_types %}
