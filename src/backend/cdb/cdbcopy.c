@@ -695,6 +695,9 @@ cdbCopyEndAndFetchRejectNum(CdbCopy *c, int64 *total_rows_completed)
 	struct	SegmentDatabaseDescriptor *db_descriptors;
 	int size;
 
+	if (c == NULL)
+		return 0;
+
 	/* clean err message */
 	c->err_msg.len = 0;
 	c->err_msg.data[0] = '\0';
