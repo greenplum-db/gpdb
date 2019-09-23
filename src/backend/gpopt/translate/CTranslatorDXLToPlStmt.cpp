@@ -225,7 +225,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL
 
 	planned_stmt->commandType = m_cmd_type;
 	
-	GPOS_ASSERT(plan->nMotionNodes >= 0);
+	GPOS_ASSERT(planned_stmt->nMotionNodes >= 0);
 	if (0 == planned_stmt->nMotionNodes && !m_is_tgt_tbl_distributed)
 	{
 		// no motion nodes and not a DML on a distributed table
