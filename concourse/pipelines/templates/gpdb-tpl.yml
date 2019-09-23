@@ -204,6 +204,7 @@ groups:
   - icw_gporca_centos6
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
+  - fips_centos7
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
   - gpexpand
@@ -311,6 +312,7 @@ groups:
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
   - compile_gpdb_centos6
+  - fips_centos7
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
   - pg_upgrade
@@ -1274,6 +1276,76 @@ jobs:
         CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
+
+{% if "centos7" in os_types %}
+- name: fips_centos7
+  plan:
+  - in_parallel:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos7]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos7
+      passed: [compile_gpdb_centos7]
+      trigger: true
+    - get: ccp_src
+    - get: ccp-image
+  - put: terraform
+    params:
+      action: create
+      delete_on_failure: true
+      generate_random_name: true
+      terraform_source: ccp_src/google/
+      vars:
+        PLATFORM: centos7
+        boot_disk_image: data-gp-toolsmiths/gpdb-prod-centos-7-fips
+        instance_type: n1-standard-2
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: clusters-google/
+      BUCKET_NAME: {{tf-bucket-name}}
+      CLOUD_PROVIDER: google
+      PLATFORM: centos7
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: test_fips
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: pivotaldata/ccp
+          tag: "7"
+      inputs:
+        - name: ccp_src
+        - name: cluster_env_files
+      run:
+        path: bash
+        args:
+          - -c
+          - |
+            set -e
+
+            ccp_src/scripts/setup_ssh_to_cluster.sh
+            ssh -t mdw <<EOF
+                set -e
+
+                # python regression test for "ERROR:root:code for hash md5 was not found."
+                if ! python -c "import hashlib"; then
+                    echo "Failed to import hashlib on a FIPS enabled environment."
+                    exit 1
+                fi
+                echo "Successfully imported hashlib on a FIPS enabled environment."
+            EOF
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+{% endif %}
+
 - name: gate_icw_end
   plan:
   - in_parallel:
@@ -2128,6 +2200,7 @@ jobs:
         - gpexpand
         - check_centos
         - interconnect
+        - fips_centos7
       - get: bin_gpdb_centos6
         trigger: true
         passed:
