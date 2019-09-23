@@ -36,9 +36,23 @@ CMemoryPoolPallocManager::NewMemoryPool()
 	return GPOS_NEW(GetInternalMemoryPool()) CMemoryPoolPalloc();
 }
 
+void
+CMemoryPoolPallocManager::DeleteImpl(void* ptr, CMemoryPool::EAllocationType eat)
+{
+	CMemoryPoolPalloc::DeleteImpl(ptr, eat);
+}
+
+// get user requested size of allocation
+ULONG
+CMemoryPoolPallocManager::UserSizeOfAlloc(const void* ptr)
+{
+	return CMemoryPoolPalloc::UserSizeOfAlloc(ptr);
+}
+
 GPOS_RESULT
 CMemoryPoolPallocManager::Init()
 {
-	return CMemoryPoolManager::SetupMemoryPoolManager<CMemoryPoolPallocManager, CMemoryPoolPalloc>();
+	return CMemoryPoolManager::SetupGlobalMemoryPoolManager<CMemoryPoolPallocManager, CMemoryPoolPalloc>();
 }
+
 // EOF

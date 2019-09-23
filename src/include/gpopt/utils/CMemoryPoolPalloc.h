@@ -27,27 +27,39 @@ namespace gpos
 
 			MemoryContext m_cxt;
 
+			// When destroying arrays, we need to call the destructor of each element
+			// To do this, we need the size of the allocation, which we then divide by the
+			// the size of the element to get number of elements to iterate through.
+			// This struct is only used for array allocations (GPOS_NEW_ARRAY())
+			struct SArrayAllocHeader
+			{
+				ULONG m_user_size;
+			};
 		public:
 
 			// ctor
 			CMemoryPoolPalloc();
 
 			// allocate memory
-			void *Allocate
+			void *NewImpl
 				(
 				const ULONG bytes,
 				const CHAR *file,
-				const ULONG line
+				const ULONG line,
+				CMemoryPool::EAllocationType eat
 				);
 
 			// free memory
-			void Free(void *ptr);
+			static void DeleteImpl(void *ptr, CMemoryPool::EAllocationType eat);
 
 			// prepare the memory pool to be deleted
 			void TearDown();
 
 			// return total allocated size include management overhead
 			ULLONG TotalAllocatedSize() const;
+
+			// get user requested size of allocation
+			static ULONG UserSizeOfAlloc(const void *ptr);
 
 	};
 }

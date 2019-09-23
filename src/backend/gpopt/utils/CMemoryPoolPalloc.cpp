@@ -31,23 +31,50 @@ CMemoryPoolPalloc::CMemoryPoolPalloc()
 }
 
 void *
-CMemoryPoolPalloc::Allocate
+CMemoryPoolPalloc::NewImpl
 	(
 	const ULONG bytes,
 	const CHAR *,
-	const ULONG
+	const ULONG,
+	CMemoryPool::EAllocationType eat
 	)
 {
-	return gpdb::GPDBMemoryContextAlloc(m_cxt, bytes);
+	// if it's a singleton allocation, allocate requested memory
+	if (CMemoryPool::EatSingleton == eat)
+	{
+		return gpdb::GPDBMemoryContextAlloc(m_cxt, bytes);
+	}
+	// if it's an array allocation, allocate header + requested memory
+	else
+	{
+		ULONG alloc_size = GPOS_MEM_ALIGNED_STRUCT_SIZE(SArrayAllocHeader) + GPOS_MEM_ALIGNED_SIZE(bytes);
+
+		void *ptr = gpdb::GPDBMemoryContextAlloc(m_cxt, alloc_size);
+
+		if (NULL == ptr)
+		{
+			return NULL;
+		}
+
+		SArrayAllocHeader *header = static_cast<SArrayAllocHeader*>(ptr);
+
+		header->m_user_size = bytes;
+		return static_cast<BYTE*>(ptr) + GPOS_MEM_ALIGNED_STRUCT_SIZE(SArrayAllocHeader);
+	}
 }
 
 void
-CMemoryPoolPalloc::Free
-	(
-	void *ptr
-	)
+CMemoryPoolPalloc::DeleteImpl(void *ptr, CMemoryPool::EAllocationType eat)
 {
-	gpdb::GPDBFree(ptr);
+	if (CMemoryPool::EatSingleton == eat)
+	{
+		gpdb::GPDBFree(ptr);
+	}
+	else
+	{
+		void* header = static_cast<BYTE*>(ptr) - GPOS_MEM_ALIGNED_STRUCT_SIZE(SArrayAllocHeader);
+		gpdb::GPDBFree(header);
+	}
 }
 
 // Prepare the memory pool to be deleted
@@ -63,5 +90,16 @@ CMemoryPoolPalloc::TotalAllocatedSize() const
 {
 	return MemoryContextGetCurrentSpace(m_cxt);
 }
+
+// get user requested size of array allocation. Note: this is ONLY called for arrays
+ULONG
+CMemoryPoolPalloc::UserSizeOfAlloc(const void *ptr)
+{
+	GPOS_ASSERT(ptr != NULL);
+	void* void_header = static_cast<BYTE*>(const_cast<void*>(ptr)) - GPOS_MEM_ALIGNED_STRUCT_SIZE(SArrayAllocHeader);
+	const SArrayAllocHeader *header = static_cast<SArrayAllocHeader*>(void_header);
+	return header->m_user_size;
+}
+
 
 // EOF

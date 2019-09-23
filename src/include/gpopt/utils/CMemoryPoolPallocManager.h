@@ -33,7 +33,15 @@ namespace gpos
 			// ctor
 			CMemoryPoolPallocManager(CMemoryPool *internal, EMemoryPoolType memory_pool_type);
 
+			// allocate new memorypool
 			virtual CMemoryPool *NewMemoryPool();
+
+			// free allocation
+			void DeleteImpl(void* ptr, CMemoryPool::EAllocationType eat);
+
+			// get user requested size of allocation
+			ULONG UserSizeOfAlloc(const void* ptr);
+
 
 			static
 			GPOS_RESULT Init();
