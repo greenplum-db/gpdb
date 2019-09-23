@@ -413,7 +413,6 @@ static Cost incremental_motion_cost(double sendrows, double recvrows);
 
 static void analyze_aggrefs(Node *node, MppGroupContext *ctx);
 static bool areAllExpressionsHashable(List *exprs);
-static double groupNumberPerSegment(double groupNum, double numPerGroup, double segmentNum);
 static double getSkewRatio(PlannerInfo *root, MppGroupContext *ctx, double rows, int segmentCount);
 static double getSkewRatioOneGroup(PlannerInfo *root, MppGroupContext *ctx, double rows,
 								   int segmentCount, int groupColumnIndex);
@@ -1443,7 +1442,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 										numGroupCols,
 										groupColIdx,
 										groupOperators,
-										groupNumberPerSegment(numGroups,
+										estimate_num_groups_per_segment(numGroups,
 															  result_plan->plan_rows * planner_segment_count(NULL),
 															  planner_segment_count(NULL)),
 										0,	/* num_nullcols */
@@ -2173,7 +2172,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 									ctx->numGroupCols + 1,
 									inputGroupColIdx,
 									inputGroupOperators,
-									groupNumberPerSegment(numGroups,
+									estimate_num_groups_per_segment(numGroups,
 														  result_plan->plan_rows * planner_segment_count(NULL),
 														  planner_segment_count(NULL)),
 									0, /* num_nullcols */
@@ -5091,7 +5090,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 					 NIL, NIL,	/* Don't know preliminary tlist, qual IS NIL */
 					 AGG_HASHED, root->config->gp_hashagg_streambottom,
 					 ctx->numGroupCols,
-					 groupNumberPerSegment(numGroups, input_rows, planner_segment_count(NULL)),
+					estimate_num_groups_per_segment(numGroups, input_rows, planner_segment_count(NULL)),
 					 ctx->agg_costs);
 	}
 	else
@@ -5119,7 +5118,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 									 * NIL */
 						 AGG_SORTED, false,
 						 ctx->numGroupCols,
-						 groupNumberPerSegment(numGroups, input_rows, planner_segment_count(NULL)),
+						estimate_num_groups_per_segment(numGroups, input_rows, planner_segment_count(NULL)),
 						 ctx->agg_costs);
 		}
 
@@ -5547,7 +5546,7 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 	bool can_hash_dqa_arg = true;
 	bool		use_hashed_preliminary = false;
 
-	group_num_persegment_1phase = groupNumberPerSegment(darg_rows, input_rows * planner_segment_count(NULL),
+	group_num_persegment_1phase = estimate_num_groups_per_segment(darg_rows, input_rows * planner_segment_count(NULL),
 														planner_segment_count(NULL));
 
 	Cost		sort_input = incremental_sort_cost(input_rows, input_width,
@@ -5881,33 +5880,7 @@ areAllExpressionsHashable(List *exprs)
 	return true;
 }
 
-/*
- * groupNumberPerSegment
- *
- *   - groupNum   : the number of groups globally
- *   - rows       : the number of tuples globally
- *   - segmentNum : the number of all segments in the cluster
- *
- * Estimate how many groups are on each segment, when the group keys do not contain
- * distribution keys. Understand such condition, we can consider data is roughly
- * random-distributed among all segments. The accurate formula to compute the
- * expectation is (1-((segmentNum-1)/segmentNum)^(rows/groupNum))*groupNum.
- *
- * The above formula can be deduced using indicate-variable method. Let's focus on
- * one specific segment, say seg0, and let Xi be a random variable:
- *   - Xi = 1, seg0 contains tuple from group i
- *   - Xi = 0, seg0 does not contain tuple from group i
- * E(X1+X2+...+X_groupNum) is just what we want to compute. Thus the formula
- * is easy to prove.
- */
-static double
-groupNumberPerSegment(double groupNum, double rows, double segmentNum)
-{
-	double numPerGroup = rows / groupNum;
-	double group_num;
-	group_num = (1-pow((segmentNum-1)/segmentNum, numPerGroup))*groupNum;
-	return group_num;
-}
+
 
 /*
  * getSkewRatio

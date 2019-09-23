@@ -111,6 +111,7 @@
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_constraint.h"
+#include "cdb/cdbgroup.h" /* cdbpathlocus_collocates_expressions */
 #include "executor/executor.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
@@ -3424,9 +3425,15 @@ estimate_num_groups(PlannerInfo *root, List *groupExprs, double input_rows)
  * discourage use of a hash rather strongly if the inner relation is large,
  * which is what we want.  We do not want to hash unless we know that the
  * inner rel is well-dispersed (or the alternatives seem much worse).
+ *
+ * NB: Greenplum add an extra parameter path for this function, since
+ * Greenplum is MPP database consist of many segments, we have to use
+ * it to correct the estimation. For details, please refer the comments
+ * in the code.
  */
 Selectivity
-estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets)
+estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets,
+						 Path *path)
 {
 	VariableStatData vardata;
 	double		estfract,
@@ -3436,11 +3443,55 @@ estimate_hash_bucketsize(PlannerInfo *root, Node *hashkey, double nbuckets)
 				avgfreq;
 	AttStatsSlot sslot;
 	bool		isdefault;
+	int         numsegments = path->locus.numsegments;
 
 	examine_variable(root, hashkey, 0, &vardata);
 
 	/* Get number of distinct values */
 	ndistinct = get_variable_numdistinct(&vardata, &isdefault);
+
+	/*
+	 * Greenplum specific behavior: the above ndistinct is from
+	 * a global view. When estimating hash_bucketsize, we should
+	 * shift to a local view. For this function, rows is seen from
+	 * a global view, so to make compensation for it, we have to
+	 * multiply numsegments for some cases.
+	 */
+	if (CdbPathLocus_IsReplicated(path->locus) ||
+		CdbPathLocus_IsGeneral(path->locus) ||
+		CdbPathLocus_IsSegmentGeneral(path->locus))
+	{
+		/*
+		 * These types of locus means on each segment
+		 * we have ndistinct groups. Do the compensation by
+		 * multiply numsegments.
+		 */
+		ndistinct *= numsegments;
+	}
+	else
+	{
+		if (cdbpathlocus_collocates_expressions(root, path->locus,
+												list_make1(hashkey), false))
+		{
+			/*
+			 * This is the case the path's distribution is collcated with
+			 * the hash table's hash key, then on each segment, we only
+			 * contains (ndistinct/numsegments) distinct groups. So, no need
+			 * to do the compensation.
+			 */
+		}
+		else
+		{
+			Assert(CdbPathLocus_IsPartitioned(path->locus));
+			/*
+			 * This is the case the path's distribution is not collcated with
+			 * the hash table's hash key, then we use the following formula to
+			 * compute the number of distinct groups on each segment and then
+			 * do the compensation.
+			 */
+			ndistinct = estimate_num_groups_per_segment(ndistinct, path->rows, numsegments) * numsegments;
+		}
+	}
 
 	/* If ndistinct isn't real, punt and return 0.1, per comments above */
 	if (isdefault)
@@ -7825,4 +7876,32 @@ try_fetch_largest_child_stats(PlannerInfo *root, RelOptInfo *parent_rel,
 														child_rel->tuples);
 		}
 	}
+}
+
+/*
+ * estimate_num_groups_per_segment
+ *
+ *   - groupNum   : the number of groups globally
+ *   - rows       : the number of tuples globally
+ *   - numsegments: the number of all segments in the cluster
+ *
+ * Estimate how many groups are on each segment, when the group keys do not contain
+ * distribution keys. Understand such condition, we can consider data is roughly
+ * random-distributed among all segments. The accurate formula to compute the
+ * expectation is (1-((numsegments-1)/numsegments)^(rows/groupNum))*groupNum.
+ *
+ * The above formula can be deduced using indicate-variable method. Let's focus on
+ * one specific segment, say seg0, and let Xi be a random variable:
+ *   - Xi = 1, seg0 contains tuple from group i
+ *   - Xi = 0, seg0 does not contain tuple from group i
+ * E(X1+X2+...+X_groupNum) is just what we want to compute. Thus the formula
+ * is easy to prove.
+ */
+double
+estimate_num_groups_per_segment(double groupNum, double rows, double numsegments)
+{
+	double numPerGroup = rows / groupNum;
+	double group_num;
+	group_num = (1-pow((numsegments-1)/numsegments, numPerGroup))*groupNum;
+	return group_num;
 }
