@@ -1604,6 +1604,13 @@ drop type broken_int4 cascade; -- drops the I/O functions, too.
 NOTICE:  drop cascades to 2 other objects
 DETAIL:  drop cascades to function broken_int4in(cstring)
 drop cascades to function broken_int4out(broken_int4)
+-- Test COPY FROM and TO work for catalog tables in dispatch
+-- connection
+BEGIN;
+COPY gp_configuration_history from stdin with delimiter '|';
+COPY (select dbid from gp_configuration_history where dbid=12345) to stdin;
+12345
+ABORT;
 -- GPDB makes the database name, and many other things, available
 -- as environment variables to the program. Test those.
 --

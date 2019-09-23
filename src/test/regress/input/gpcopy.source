@@ -1331,6 +1331,16 @@ copy broken_type_test to '/tmp/g';
 drop table broken_type_test;
 drop type broken_int4 cascade; -- drops the I/O functions, too.
 
+-- Test COPY FROM and TO work for catalog tables in dispatch
+-- connection
+BEGIN;
+COPY gp_configuration_history from stdin with delimiter '|';
+1900-01-01 00:00:00.000000-07|12345|Just testing COPY
+\.
+
+COPY (select dbid from gp_configuration_history where dbid=12345) to stdin;
+ABORT;
+
 -- GPDB makes the database name, and many other things, available
 -- as environment variables to the program. Test those.
 --
