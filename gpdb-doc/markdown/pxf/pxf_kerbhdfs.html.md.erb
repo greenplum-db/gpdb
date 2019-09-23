@@ -44,8 +44,8 @@ When you configure PXF for secure HDFS using an AD Kerberos KDC server, you will
 1. Start **Active Directory Users and Computers**.
 2. Expand the forest domain and the top-level UNIX organizational unit that describes your Greenplum user domain.
 3. Select **Service Accounts**, right-click, then select **New->User**.
-4. Type a name, eg. `ServiceGreenplumPROD1`, and change the login name to `gpadmin`. Note that the login name should be compliance with POSIX standard and match to hadoop.proxyuser.<name>.hosts/groups in hadoop core-site.xml and PXF_PRINCIPAL in PXF_CONF/conf/pxf-env.sh.
-5. Type and confirm the Active Directory service account password. Select the **User cannot change password** and **Password never expires** check boxes, then click **Next**. For security reason, if you can't have **Password never expires** checked, you will need to generate new keytab file (step 7) every time you change the password of service account. 
+4. Type a name, eg. `ServiceGreenplumPROD1`, and change the login name to `gpadmin`. Note that the login name should be in compliance with POSIX standard and match hadoop.proxyuser.<name>.hosts/groups in the Hadoop `core-site.xml` and `PXF_PRINCIPAL` in `$PXF_CONF/conf/pxf-env.sh`.
+5. Type and confirm the Active Directory service account password. Select the **User cannot change password** and **Password never expires** check boxes, then click **Next**. For security reasons, if you can't have **Password never expires** checked, you will need to generate new keytab file (step 7) every time you change the password of the service account. 
 6. Click **Finish** to complete the creation of the new user principal. 
 7. Open Powershell or a command prompt and run the `ktpass` command to generate the keytab file. For example:
 
