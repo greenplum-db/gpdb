@@ -134,7 +134,7 @@ ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperf
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
-CONFIGFLAGS=$(strip $(BLD_CONFIGFLAGS) --with-pgport=$(DEFPORT) --with-libedit-preferred $(BLD_DEPLOYMENT_SETTING))
+CONFIGFLAGS=$(strip $(BLD_CONFIGFLAGS) --with-pgport=$(DEFPORT) $(BLD_DEPLOYMENT_SETTING))
 
 ifdef CONFIGURE_FLAGS
 CONFIGFLAGS+= $(CONFIGURE_FLAGS)

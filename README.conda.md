@@ -34,7 +34,7 @@ The python-devel is not required here because it is provided by Anaconda.
 ## Download and build GPDB
 	git clone https://github.com/greenplum-db/gpdb.git
 	cd gpdb
-	./configure --prefix=`pwd`/greenplumdb  --with-gssapi --with-pgport=5432 --with-libedit-preferred --with-perl --with-python --with-openssl  --with-libxml --enable-cassert --enable-debug --enable-depend
+	./configure --prefix=`pwd`/greenplumdb  --with-gssapi --with-pgport=5432 --with-perl --with-python --with-openssl  --with-libxml --enable-cassert --enable-debug --enable-depend
 	make install
 
 Make sure "--with-python" parameter exists. Because the default Python is the Anaconda Python, It's done.
