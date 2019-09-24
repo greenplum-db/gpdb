@@ -669,3 +669,106 @@ select t1.relname, ss.x from
 drop table rep_tbl;
 drop table dis_tbl;
 reset enable_seqscan;
+
+-- test outer join for general locus
+-- replicated table's locus is SegmentGeneral
+create table trep_join_gp (c1 int, c2 int) distributed replicated;
+-- hash distributed table's locus is Hash
+create table thash_join_gp (c1 int, c2 int) distributed by (c1);
+-- randomly distributed table's locus is Strewn
+create table trand_join_gp (c1 int, c2 int) distributed randomly;
+-- start_ignore
+create extension if not exists gp_debug_numsegments;
+select gp_debug_set_create_table_default_numsegments(1);
+-- end_ignore
+-- the following replicated table's numsegments is 1
+create table trep1_join_gp (c1 int, c2 int) distributed replicated;
+
+insert into trep_join_gp values (1, 1), (2, 2);
+insert into thash_join_gp values (1, 1), (2, 2);
+insert into trep1_join_gp values (1, 1), (2, 2);
+
+analyze trep_join_gp;
+analyze thash_join_gp;
+analyze trep1_join_gp;
+analyze trand_join_gp;
+
+-- This test is to check that: general left join segmentGeneral --> segmentGeneral
+-- And segmentGeneral join hash does not need motion.
+explain select * from generate_series(1, 5) g left join trep_join_gp on g = trep_join_gp.c1 join thash_join_gp on true;
+select * from generate_series(1, 5) g left join trep_join_gp on g = trep_join_gp.c1 join thash_join_gp on true;
+
+-- The following 4 tests are to check that general left join partition, we could redistribute the
+-- general-locus relation when the filter condition is suitable. If we can redistributed
+-- general-locus relation, we should not gather them to singleQE.
+explain select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c1;
+select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c1;
+
+explain select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c2;
+select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c2;
+
+explain select * from generate_series(1, 5) g left join trand_join_gp on g = trand_join_gp.c1;
+select * from generate_series(1, 5) g left join trand_join_gp on g = trand_join_gp.c1;
+
+explain select * from generate_series(1, 5) g full join trand_join_gp on g = trand_join_gp.c1;
+select * from generate_series(1, 5) g full join trand_join_gp on g = trand_join_gp.c1;
+
+-- The following 3 tests are to check that segmentGeneral left join partition
+-- we could redistribute the segment general-locus relation when the filter condition
+-- is suitable. If we can redistributed general-locus relation, we should not
+-- gather them to singleQE.
+explain select * from trep_join_gp left join thash_join_gp using (c1);
+select * from trep_join_gp left join thash_join_gp using (c1);
+
+explain select * from trep_join_gp left join trand_join_gp using (c1);
+select * from trep_join_gp left join trand_join_gp using (c1);
+
+explain select * from trep1_join_gp join thash_join_gp using (c1);
+select * from trep1_join_gp join thash_join_gp using (c1);
+
+drop table trep_join_gp;
+drop table thash_join_gp;
+drop table trand_join_gp;
+drop table trep1_join_gp;
+
+select gp_debug_set_create_table_default_numsegments(3);
+
+reset optimizer;
+
+-- The following cases are to test planner join size estimation
+-- so we need optimizer to be off.
+-- When a partition table join other table using partition key,
+-- planner should use root table's stat info instead of largest
+-- partition's.
+reset enable_hashjoin;
+reset enable_mergejoin;
+reset enable_nestloop;
+
+create table t_joinsize_1 (c1 int, c2 int)
+distributed by (c1)
+partition by range (c2)
+( start (0) end (5) every (1),
+  default partition extra );
+
+create table t_joinsize_2 (c1 int, c2 int)
+distributed by (c1);
+
+create table t_joinsize_3 (c int) distributed randomly;
+
+insert into t_joinsize_1 select i, i%5 from generate_series(1, 200)i;
+insert into t_joinsize_1 select 1, null from generate_series(1, 1000);
+
+insert into t_joinsize_2 select i,i%5 from generate_series(1, 1000)i;
+insert into t_joinsize_3 select * from generate_series(1, 100);
+
+analyze t_joinsize_1;
+analyze t_joinsize_2;
+analyze t_joinsize_3;
+
+-- the following query should not broadcast the join result of t_joinsize_1, t_joinsize_2.
+explain select * from (t_joinsize_1 join t_joinsize_2 on t_joinsize_1.c2 = t_joinsize_2.c2) join t_joinsize_3 on t_joinsize_3.c = t_joinsize_1.c1;
+
+drop table t_joinsize_1;
+drop table t_joinsize_2;
+drop table t_joinsize_3;
+
