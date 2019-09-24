@@ -448,7 +448,7 @@ CTranslatorQueryToDXL::CheckSupportedCmdType
 		}
 		if (query->parentStmtType == PARENTSTMTTYPE_REFRESH_MATVIEW)
 		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("COPY. Refresh matview is not supported with GPORCA"));
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Refresh matview is not supported with GPORCA"));
 		}
 
 		// supported: regular select or CTAS when it is enabled

@@ -738,28 +738,15 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	SetUserIdAndSecContext(relowner,
 						   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
 
-	resetStringInfo(&querybuf);
-	appendStringInfo(&querybuf,
-					"select pg_catalog.pg_get_table_distributedby('%d')",
-					matviewOid);
-	if (SPI_execute(querybuf.data, false, 1) != SPI_OK_SELECT)
-		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
-
-
-	if (SPI_processed > 0)
-	{
-		TupleDesc	spi_tupdesc = SPI_tuptable->tupdesc;
-		HeapTuple	spi_tuple = SPI_tuptable->vals[0];
-		distributed = SPI_getvalue(spi_tuple, spi_tupdesc, 1);
-	}
-	else
-		distributed = "";
+	/* Get distribute key of matview */
+	distributed =  TextDatumGetCString(DirectFunctionCall1(pg_get_table_distributedby,
+														   ObjectIdGetDatum(matviewOid)));
 
 	/* Start building the query for creating the diff table. */
 	resetStringInfo(&querybuf);
 
 	appendStringInfo(&querybuf,
-					 "CREATE TABLE %s AS "
+					 "CREATE TEMP TABLE %s AS "
 					 "SELECT mv.ctid AS tid, mv.gp_segment_id as sid, newdata.* "
 					 "FROM %s mv FULL JOIN %s newdata ON (",
 					 diffname, matviewname, tempname);
@@ -1031,10 +1018,10 @@ is_usable_unique_index(Relation indexRel)
 bool
 MatViewIncrementalMaintenanceIsEnabled(void)
 {
-	if (Gp_role == GP_ROLE_DISPATCH)
-		return matview_maintenance_depth > 0;
-	else
+	if (Gp_role == GP_ROLE_EXECUTE)
 		return true;
+	else
+		return matview_maintenance_depth > 0;
 }
 
 static void
