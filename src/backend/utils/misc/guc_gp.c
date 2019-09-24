@@ -1676,7 +1676,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&gp_statistics_pullup_from_child_partition,
-		true,
+		false,
 		NULL, NULL, NULL
 	},
 	{

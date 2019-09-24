@@ -199,7 +199,10 @@ static Datum string_to_datum(const char *str, Oid datatype);
 static Const *string_to_const(const char *str, Oid datatype);
 static Const *string_to_bytea_const(const char *str, size_t str_len);
 static List *add_predicate_to_quals(IndexOptInfo *index, List *indexQuals);
-
+static void try_fetch_rel_stats(RangeTblEntry *rte, const char *attname,
+								VariableStatData* vardata);
+static void try_fetch_largest_child_stats(PlannerInfo *root, RelOptInfo *parent_rel,
+										  const char *attname, VariableStatData* vardata);
 
 /*
  *		eqsel			- Selectivity of "=" for any data types.
@@ -4674,41 +4677,31 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 	}
 	else if (rte->inh)
 	{
-		RelOptInfo *rel = root->simple_rel_array[var->varno];
+		RelOptInfo   *rel      = root->simple_rel_array[var->varno];
+		const char *attname  = get_relid_attribute_name(rte->relid, var->varattno);
 
-		/*
-		 * If gp_statistics_pullup_from_child_partition is set, we attempt to pull up statistics from
-		 * the largest child partition in an inherited or a partitioned table.
-		 */
-		if (gp_statistics_pullup_from_child_partition  &&
-			rel->cheapest_total_path != NULL)
+		vardata->statsTuple = NULL;
+
+		if (gp_statistics_pullup_from_child_partition)
 		{
-			RelOptInfo *childrel = largest_child_relation(root, rel->cheapest_total_path, false);
-			vardata->statsTuple = NULL;
-
-			if (childrel)
+			/*
+			 * The GUC gp_statistics_pullup_from_child_partition is
+			 * set false defaultly. If it is true, we always try
+			 * to use largest child's stat.
+			 */
+			try_fetch_largest_child_stats(root, rel, attname, vardata);
+		}
+		else
+		{
+			try_fetch_rel_stats(rte, attname, vardata);
+			if (vardata->statsTuple == NULL)
 			{
-				RangeTblEntry *child_rte = NULL;
-
-				child_rte = root->simple_rte_array[childrel->relid];
-
-				Assert(child_rte != NULL);
-				const char *attname = get_relid_attribute_name(rte->relid, var->varattno);
-				AttrNumber child_attno = get_attnum(child_rte->relid, attname);
-
 				/*
-				 * Get statistics from the child partition.
+				 * If root table does not have such stat info, we
+				 * try to use largest child partition's stat info
+				 * for the whole table.
 				 */
-				vardata->statsTuple = SearchSysCache3(STATRELATTINH,
-													  ObjectIdGetDatum(child_rte->relid),
-													  Int16GetDatum(child_attno),
-													  BoolGetDatum(child_rte->inh));
-
-				if (vardata->statsTuple != NULL)
-				{
-					adjust_partition_table_statistic_for_parent(vardata->statsTuple, childrel->tuples);
-				}
-				vardata->freefunc = ReleaseSysCache;
+				try_fetch_largest_child_stats(root, rel, attname, vardata);
 			}
 		}
 	}
@@ -7793,4 +7786,43 @@ bmcostestimate(PG_FUNCTION_ARGS)
 	*indexCorrelation = costs.indexCorrelation;
 
 	PG_RETURN_VOID();
+}
+
+static void
+try_fetch_rel_stats(RangeTblEntry *rte, const char *attname, VariableStatData* vardata)
+{
+	AttrNumber attno;
+
+	Assert(rte != NULL);
+
+	attno = get_attnum(rte->relid, attname);
+	vardata->statsTuple = SearchSysCache3(STATRELATTINH,
+										  ObjectIdGetDatum(rte->relid),
+										  Int16GetDatum(attno),
+										  BoolGetDatum(rte->inh));
+	vardata->freefunc = ReleaseSysCache;
+}
+
+static void
+try_fetch_largest_child_stats(PlannerInfo *root, RelOptInfo *parent_rel,
+							  const char *attname, VariableStatData* vardata)
+{
+	RelOptInfo *child_rel = NULL;
+
+	if (parent_rel->cheapest_total_path == NULL)
+		return;
+
+	child_rel = largest_child_relation(root, parent_rel->cheapest_total_path, true);
+	if (child_rel)
+	{
+		RangeTblEntry *child_rte = NULL;
+
+		child_rte = root->simple_rte_array[child_rel->relid];
+		try_fetch_rel_stats(child_rte, attname, vardata);
+		if (vardata->statsTuple != NULL)
+		{
+			adjust_partition_table_statistic_for_parent(vardata->statsTuple,
+														child_rel->tuples);
+		}
+	}
 }
