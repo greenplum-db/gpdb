@@ -4,7 +4,7 @@
     <topicref href="../../6-0/homenav.html" scope="external"
         navtitle="Pivotal Greenplum® 6.0 Documentation" format="html" otherprops="op-help"/>
     <topicref href="install_guide.xml" navtitle="Installation Guide">
-        <topicref href="supported-platforms.xml"/>
+        <topicref href="platform-requirements.xml"/>
         <topicref href="preinstall_concepts.xml">
             <topicref href="preinstall_concepts.xml#topic2"/>
             <topicref href="preinstall_concepts.xml#topic4"/>

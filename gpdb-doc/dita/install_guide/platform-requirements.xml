@@ -194,8 +194,8 @@
             <row>
               <entry colname="col1">Network Requirements</entry>
               <entry colname="col2">10 Gigabit Ethernet within the array<p>NIC bonding is
-                  recommended when multiple interfaces are present</p><p>Pivotal Greenplum is
-                  supported using either IPV4 or IPV6 protocols.</p></entry>
+                  recommended when multiple interfaces are present</p><p>Pivotal Greenplum can use
+                  either IPV4 or IPV6 protocols.</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -214,10 +214,11 @@
           run on </ph>on network or shared storage if the shared storage is presented as a block
         device to the servers running Greenplum Database and the XFS file system is mounted on the
         block device. Network file systems are <i>not</i>
-        <ph>supported</ph><ph otherprops="oss-only">recommended</ph>. When using network or shared
-        storage, Greenplum Database mirroring must be used in the same way as with local storage,
-        and no modifications <ph otherprops="pivotal">may</ph><ph otherprops="oss-only">should</ph>
-        be made to the mirroring scheme or the recovery scheme of the segments. </p>
+        <ph otherprops="pivotal">supported</ph><ph otherprops="oss-only">recommended</ph>. When
+        using network or shared storage, Greenplum Database mirroring must be used in the same way
+        as with local storage, and no modifications <ph otherprops="pivotal">may</ph><ph
+          otherprops="oss-only">should</ph> be made to the mirroring scheme or the recovery scheme
+        of the segments. </p>
       <p>Other features of the shared storage such as de-duplication and/or replication <ph
           otherprops="pivotal">are not directly supported by Pivotal Greenplum Database, but may be
           used with support of the storage vendor as long as they do not interfere with the expected
@@ -235,18 +236,18 @@
           conventional hardware systems and includes, at a minimum, virtualized computing, a
           virtualised SAN, and virtualized networking.</note></p>
       <!--OSS only-->
-      <p otherprops="pivotal">Greenplum Database can be deployed to virtualized systems only if the
+      <p otherprops="oss-only">Greenplum Database can be deployed to virtualized systems only if the
         storage is presented as block devices and the XFS file system is mounted for the storage of
         the segment directories.
         <note type="warning">Running Greenplum Database on hyper-converged infrastructure (HCI) has
           known issues with performance, scalability, and stability and is not
         recommended.</note></p>
-      <p>Greenplum Database <ph>is supported </ph><ph otherprops="oss-only">can run </ph>on Amazon
-        Web Services (AWS) servers using either Amazon instance store (Amazon uses the volume names
-          <codeph>ephemeral[0-20]</codeph>) or Amazon Elastic Block Store (Amazon EBS) storage. If
-        using Amazon EBS storage the storage should be RAID of Amazon EBS volumes and mounted with
-        the XFS file system<ph otherprops="pivotal"> for it to be a supported
-        configuration</ph>.</p>
+      <p>Greenplum Database <ph otherprops="pivotal">is supported </ph><ph otherprops="oss-only">can
+          run </ph>on Amazon Web Services (AWS) servers using either Amazon instance store (Amazon
+        uses the volume names <codeph>ephemeral[0-20]</codeph>) or Amazon Elastic Block Store
+        (Amazon EBS) storage. If using Amazon EBS storage the storage should be RAID of Amazon EBS
+        volumes and mounted with the XFS file system<ph otherprops="pivotal"> for it to be a
+          supported configuration</ph>.</p>
       <!--Pivotal-->
       <section otherprops="pivotal">
         <title>Data Domain Boost</title>
@@ -474,7 +475,7 @@
             scope="peer" href="../admin_guide/external/pxf-overview.xml">Accessing External Data
             with PXF</xref> in the <cite>Greenplum Database Administrator Guide</cite> for PXF
           configuration and usage information.</ph></p>
-      <p>PXF supports Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop
+      <p>PXF can use Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop
         distributions. PXF bundles all of the JAR files on which it depends, including the following
         Hadoop libraries:</p>
       <ul id="ul_sh2_141_djb">

@@ -10,7 +10,7 @@
     <p>Perform the following tasks in order:</p>
     <ol>
       <li id="ji162035">Make sure your host systems meet the requirements described in <xref
-          href="supported-platforms.xml"/>.</li>
+          href="platform-requirements.xml"/>.</li>
       <li><xref href="#topic_sqj_lt1_nfb" format="dita">Disable SELinux and firewall
           software.</xref></li>
       <li id="ji162039">
@@ -33,17 +33,21 @@
       with multiple interfaces, but when the interfaces are not bonded, the convention is to append
       a dash (<codeph>-</codeph>) and number to the host name. For example, <codeph>sdw1-1</codeph>
       and <codeph>sdw1-2</codeph> are the two interface names for host <codeph>sdw1</codeph>.</p>
+    <!--Pivotal-->
     <p otherprops="pivotal">For information about running Greenplum Database in the cloud see
         <cite>Cloud Services</cite> in the <xref
         href="https://pivotal.io/pivotal-greenplum/greenplum-partner-marketplace" format="html"
         scope="external">Pivotal Greenplum Partner Marketplace</xref>.</p>
-    <note type="important" otherprops="pivotal"> When data loss is not acceptable for a Pivotal
-      Greenplum Database cluster, master and segment mirroring must be enabled in order for the
-      cluster to be supported by Pivotal. Without mirroring, system and data availability is not
-      guaranteed, Pivotal will make best efforts to restore a cluster in this case. For information
-      about master and segment mirroring, see <xref href="../admin_guide/intro/about_ha.xml"
-        type="topic" format="dita" scope="peer">About Redundancy and Failover</xref> in the
-        <i>Greenplum Database Administrator Guide</i>.</note>
+    <note type="important"> When data loss is not acceptable for a Pivotal Greenplum Database
+      system, Greenplum Database master and segment mirroring must be enabled<ph
+        otherprops="pivotal"> in order for the cluster to be supported by Pivotal</ph>. Without
+      mirroring, <ph otherprops="oss-only">a single segment instance failure stops the
+        cluster.</ph><ph otherprops="pivotal">system and data availability is not guaranteed.
+        Pivotal will make best efforts to restore a cluster in this case.</ph> For information about
+      master and segment mirroring, see <xref href="../admin_guide/intro/about_ha.xml" type="topic"
+        format="dita" scope="peer">About Redundancy and Failover</xref> in the <i>Greenplum Database
+        Administrator Guide</i>.</note>
+    <!--Pivotal-->
     <note type="note" otherprops="pivotal">For information about upgrading Pivotal Greenplum
       Database from a previous version, see the <cite>Greenplum Database Release Notes</cite> for
       the release that you are installing.</note>
