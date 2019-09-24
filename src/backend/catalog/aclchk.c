@@ -469,6 +469,25 @@ ExecuteGrantStmt(GrantStmt *stmt)
 		istmt.objects = objs;
 	}
 
+	/* If we're dispatching, put the objects back in into the parse tree */
+	if (Gp_role == GP_ROLE_DISPATCH && added_objs)
+	{
+		List *n = NIL;
+
+		foreach(cell, istmt.objects)
+		{
+			Oid rid = lfirst_oid(cell);
+			RangeVar *rv;
+			char *nspname = get_namespace_name(get_rel_namespace(rid));
+			char *relname = get_rel_name(rid);
+
+			rv = makeRangeVar(nspname, relname, -1);
+			n = lappend(n, rv);
+		}
+
+		stmt->objects = n;
+	}
+
 	/*
 	 * Convert the RoleSpec list into an Oid list.  Note that at this point we
 	 * insert an ACL_ID_PUBLIC into the list if appropriate, so downstream
