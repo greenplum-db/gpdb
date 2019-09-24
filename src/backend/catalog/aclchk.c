@@ -469,25 +469,6 @@ ExecuteGrantStmt(GrantStmt *stmt)
 		istmt.objects = objs;
 	}
 
-	/* If we're dispatching, put the objects back in into the parse tree */
-	if (Gp_role == GP_ROLE_DISPATCH && added_objs)
-	{
-		List *n = NIL;
-
-		foreach(cell, istmt.objects)
-		{
-			Oid rid = lfirst_oid(cell);
-			RangeVar *rv;
-			char *nspname = get_namespace_name(get_rel_namespace(rid));
-			char *relname = get_rel_name(rid);
-
-			rv = makeRangeVar(nspname, relname, -1);
-			n = lappend(n, rv);
-		}
-
-		stmt->objects = n;
-	}
-
 	/*
 	 * Convert the RoleSpec list into an Oid list.  Note that at this point we
 	 * insert an ACL_ID_PUBLIC into the list if appropriate, so downstream
@@ -893,35 +874,9 @@ objectsInSchemaToOids(GrantObjectType objtype, List *nspnames)
 
 	foreach(cell, nspnames)
 	{
-		char	   *nspname = NULL;
+		char	   *nspname = strVal(lfirst(cell));
 		Oid			namespaceId;
 		List	   *objs;
-
-		if(Gp_role == GP_ROLE_DISPATCH)
-		{
-			nspname = strVal(lfirst(cell));
-		}
-		else
-		{
-			RangeVar   *relvar;
-			Oid         relOid;
-			
-			switch(nodeTag(lfirst(cell)))
-			{
-				case T_RangeVar:
-					relvar = (RangeVar *) lfirst(cell);
-					relOid = RangeVarGetRelid(relvar, NoLock, false);
-					nspname = get_namespace_name(get_rel_namespace(relOid));
-					break;
-				case T_String:
-					nspname = strVal(lfirst(cell));
-					break;
-				default:
-					/*shoud not get here*/
-					elog(ERROR, "unrecognized nodeType: %d",
-						(int)nodeTag(lfirst(cell)));
-			}
-		}
 
 		namespaceId = LookupExplicitNamespace(nspname, false);
 

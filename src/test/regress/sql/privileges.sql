@@ -963,6 +963,8 @@ SELECT d.*     -- check that entries went away
 CREATE SCHEMA testns;
 CREATE TABLE testns.t1 (f1 int);
 CREATE TABLE testns.t2 (f1 int);
+CREATE TABLE testns.t3 (f1 int) PARTITION BY RANGE (f1) (START (2018) END (2020) EVERY (1),DEFAULT PARTITION extra );
+CREATE TABLE testns.t4 (f1 int) inherits (testns.t1);
 
 SELECT has_table_privilege('regressuser1', 'testns.t1', 'SELECT'); -- false
 
