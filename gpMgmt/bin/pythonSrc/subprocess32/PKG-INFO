@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: subprocess32
-Version: 3.2.6
+Version: 3.2.6.1.gp
 Summary: Backport of the subprocess module from Python 3.2/3.3 for use on 2.x.
 Home-page: http://code.google.com/p/python-subprocess32/
 Author: Gregory P. Smith
