@@ -16,18 +16,6 @@
 
 #include "ao_table.h"
 
-static PGconn *
-connectToFive()
-{
-	return connectTo(50000);
-}
-
-static PGconn *
-connectToSix()
-{
-	return connectTo(60000);
-}
-
 typedef struct UserData
 {
 	int			id;

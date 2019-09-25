@@ -18,18 +18,6 @@
 
 #include "heap_table.h"
 
-static PGconn *
-connectToFive()
-{
-	return connectTo(50000);
-}
-
-static PGconn *
-connectToSix()
-{
-	return connectTo(60000);
-}
-
 typedef struct UserData
 {
 	int			id;
@@ -202,8 +190,6 @@ heapTableShouldHaveDataUpgradedToSixCluster()
 	PQfinish(connection);
 }
 
-
-
 static void
 heapTableShouldBeHardLinked(void)
 {
@@ -249,8 +235,6 @@ createHeapTableWithDataInFiveCluster(void)
 	PQfinish(connection);
 }
 
-
-
 void
 test_a_heap_table_with_data_can_be_upgraded(void **state)
 {
@@ -259,4 +243,3 @@ test_a_heap_table_with_data_can_be_upgraded(void **state)
 	then(heapTableShouldHaveDataUpgradedToSixCluster);
 	and(heapTableShouldBeHardLinked);
 }
-

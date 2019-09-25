@@ -35,3 +35,16 @@ executeQuery(PGconn *connection, char *const query)
 
 	return result;
 }
+
+PGconn *
+connectToFive()
+{
+	return connectTo(50000);
+}
+
+PGconn *
+connectToSix()
+{
+	return connectTo(60000);
+}
+
