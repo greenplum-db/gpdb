@@ -394,8 +394,6 @@ ExecuteGrantStmt(GrantStmt *stmt)
 	ListCell   *cell;
 	const char *errormsg;
 	AclMode		all_privileges;
-	List	   *objs = NIL;
-	bool		added_objs = false;
 
 	/*
 	 * Turn the regular GrantStmt into the InternalGrant form.
@@ -425,49 +423,6 @@ ExecuteGrantStmt(GrantStmt *stmt)
 	istmt.grant_option = stmt->grant_option;
 	istmt.behavior = stmt->behavior;
 
-	/* If this is a GRANT/REVOKE on a table, expand partition references */
-	if (istmt.objtype == ACL_OBJECT_RELATION)
-	{
-		foreach(cell, istmt.objects)
-		{
-			Oid relid = lfirst_oid(cell);
-			Relation rel = heap_open(relid, AccessShareLock);
-			bool add_self = true;
-
-			if (Gp_role == GP_ROLE_DISPATCH)
-			{
-				List *a;
-				if (rel_is_partitioned(relid))
-				{
-					PartitionNode *pn = RelationBuildPartitionDesc(rel, false);
-
-					a = all_partition_relids(pn);
-					if (a)
-						added_objs = true;
-
-					objs = list_concat(objs, a);
-				}
-				else if (rel_is_child_partition(relid))
-				{
-					/* get my children */
-					a = find_all_inheritors(relid, NoLock, NULL);
-					if (a)
-						added_objs = true;
-
-					objs = list_concat(objs, a);
-
-					/* find_all_inheritors() adds me, don't do it twice */
-					add_self = false;
-				}
-			}
-
-			heap_close(rel, NoLock);
-
-			if (add_self)
-				objs = lappend_oid(objs, relid);
-		}
-		istmt.objects = objs;
-	}
 
 	/*
 	 * Convert the RoleSpec list into an Oid list.  Note that at this point we
@@ -642,6 +597,30 @@ ExecuteGrantStmt(GrantStmt *stmt)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
+		/*
+		 * GPDB: It is possible that objectNamesToOids has expanded references to
+		 * partitioned relations. It is needed to recostruct the GrantStmt objects
+		 * to include those references. We do it uncoditionally of partitioned
+		 * references now for Object Targets.
+		 */
+		if (stmt->targtype == ACL_TARGET_OBJECT &&
+				stmt->objtype == ACL_OBJECT_RELATION)
+		{
+			List *n = NIL;
+			foreach(cell, istmt.objects)
+			{
+				Oid rid = lfirst_oid(cell);
+				RangeVar *rv;
+				char *nspname = get_namespace_name(get_rel_namespace(rid));
+				char *relname = get_rel_name(rid);
+
+				rv = makeRangeVar(nspname, relname, -1);
+				n = lappend(n, rv);
+			}
+
+			stmt->objects = n;
+		}
+
 		CdbDispatchUtilityStatement((Node *) stmt,
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
@@ -854,6 +833,41 @@ objectNamesToOids(GrantObjectType objtype, List *objnames)
 		default:
 			elog(ERROR, "unrecognized GrantStmt.objtype: %d",
 				 (int) objtype);
+	}
+
+	/*
+	 * GPDB: If we are the DISPATCH node and the object is a partitioned
+	 * relation, then we need to populate the partition references because the
+	 * information is not present in the cataloge tables on the segment nodes.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && objtype == ACL_OBJECT_RELATION)
+	{
+		List *expanded = NIL;
+
+		foreach(cell, objects)
+		{
+			Oid relOid = lfirst_oid(cell);
+			List *partOids;
+
+			if (rel_is_partitioned(relOid))
+			{
+				PartitionNode *pn = RelationBuildPartitionDescByOid(relOid, false);
+				partOids = all_partition_relids(pn);
+
+				expanded = list_concat(expanded, partOids);
+				expanded = lappend_oid(expanded, relOid);
+			}
+			else if (rel_is_child_partition(relOid))
+			{
+				partOids = find_all_inheritors(relOid, NoLock, NULL);
+
+				/* partOids contains relOid so concat is enough */
+				expanded = list_concat(expanded, partOids);
+			}
+		}
+
+		if (expanded != NIL)
+			objects = expanded;
 	}
 
 	return objects;

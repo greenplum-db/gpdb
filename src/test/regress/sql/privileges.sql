@@ -960,6 +960,21 @@ SELECT d.*     -- check that entries went away
 -- Grant on all objects of given type in a schema
 \c -
 
+-- GPDB: Create a helper function to inspect the segment information also
+DROP FUNCTION IF EXISTS has_table_privilege_seg(u text, r text, p text);
+CREATE FUNCTION has_table_privilege_seg(us text, rel text, priv text)
+RETURNS TABLE (
+	segid int,
+	has_table_privilege bool
+) AS $$
+	SELECT
+		gp_execution_segment() AS gegid,
+		p.*
+	FROM
+		has_table_privilege($1, $2, $3) p
+$$ LANGUAGE SQL VOLATILE
+CONTAINS SQL EXECUTE ON ALL SEGMENTS;
+
 CREATE SCHEMA testns;
 CREATE TABLE testns.t1 (f1 int);
 CREATE TABLE testns.t2 (f1 int);
@@ -967,16 +982,27 @@ CREATE TABLE testns.t3 (f1 int) PARTITION BY RANGE (f1) (START (2018) END (2020)
 CREATE TABLE testns.t4 (f1 int) inherits (testns.t1);
 
 SELECT has_table_privilege('regressuser1', 'testns.t1', 'SELECT'); -- false
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t1', 'SELECT'); -- false
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t3', 'SELECT'); -- false
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t3_1_prt_extra', 'SELECT'); -- false
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t4', 'SELECT'); -- false
 
 GRANT ALL ON ALL TABLES IN SCHEMA testns TO regressuser1;
 
 SELECT has_table_privilege('regressuser1', 'testns.t1', 'SELECT'); -- true
 SELECT has_table_privilege('regressuser1', 'testns.t2', 'SELECT'); -- true
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t1', 'SELECT'); -- true
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t3', 'SELECT'); -- true
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t3_1_prt_extra', 'SELECT'); -- true
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t4', 'SELECT'); -- true
 
 REVOKE ALL ON ALL TABLES IN SCHEMA testns FROM regressuser1;
 
 SELECT has_table_privilege('regressuser1', 'testns.t1', 'SELECT'); -- false
 SELECT has_table_privilege('regressuser1', 'testns.t2', 'SELECT'); -- false
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t3', 'SELECT'); -- false
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t3_1_prt_extra', 'SELECT'); -- false
+SELECT * FROM has_table_privilege_seg('regressuser1', 'testns.t4', 'SELECT'); -- false
 
 CREATE FUNCTION testns.testfunc(int) RETURNS int AS 'select 3 * $1;' LANGUAGE sql;
 
