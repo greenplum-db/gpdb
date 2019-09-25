@@ -1,10 +1,11 @@
 #include <stdio.h>
 
+#include "libpq-fe.h"
+
 /*
  * implements:
  */
 #include "query-helpers.h"
-#include "libpq-fe.h"
 
 
 PGconn *
