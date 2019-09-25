@@ -358,6 +358,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 %type <str>		opt_type
 %type <str>		foreign_server_version opt_foreign_server_version
 %type <str>		opt_in_database
+%type <str>		opt_coordinatoronly
 
 %type <list>	OptQueueList
 %type <defelt>	OptQueueElem
@@ -13698,13 +13699,25 @@ using_clause:
  *
  *****************************************************************************/
 
-LockStmt:	LOCK_P opt_table relation_expr_list opt_lock opt_nowait
+LockStmt:	LOCK_P opt_table relation_expr_list opt_lock opt_nowait opt_coordinatoronly
 				{
 					LockStmt *n = makeNode(LockStmt);
 
 					n->relations = $3;
 					n->mode = $4;
 					n->nowait = $5;
+					if ($6 != NULL)
+						n->coordinatoronly = true;
+					else
+						n->coordinatoronly = false;
+					if (n->coordinatoronly && n->mode != AccessShareLock)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("provided lock mode is not supported for %s", $6),
+							 	errhint("Only ACCESS SHARE mode is supported for %s.", $6),
+								parser_errposition(@4)));
+					}
 					$$ = (Node *)n;
 				}
 		;
@@ -13733,6 +13746,10 @@ opt_nowait_or_skip:
 			| /*EMPTY*/						{ $$ = LockWaitBlock; }
 		;
 
+opt_coordinatoronly: MASTER ONLY					{ $$ = pstrdup("MASTER ONLY"); }
+		| COORDINATOR ONLY				{ $$ = pstrdup("COORDINATOR ONLY"); }
+		| /*EMPTY*/					{ $$ = NULL; }
+		;
 
 /*****************************************************************************
  *
