@@ -225,23 +225,15 @@
           operation of Greenplum Database at the discretion of Pivotal.</ph><ph
           otherprops="oss-only">can be used with Greenplum Database as long as they do not interfere
           with the expected operation of Greenplum Database.</ph></p>
-      <!--Pivotal-->
-      <p otherprops="pivotal">Deployment to virtualized systems is supported only if the storage is
-        presented as block devices and the XFS file system is mounted for the storage of the segment
+      <p>Greenplum Database can be deployed to virtualized systems only if the storage is presented
+        as block devices and the XFS file system is mounted for the storage of the segment
         directories.
-        <note type="warning">Running Pivotal Greenplum on hyper-converged infrastructure (HCI) has
-          known issues with performance, scalability, and stability and is not recommended as a
-          scalable solution for Pivotal Greenplum and may not be supported by Pivotal if stability
-          problems appear related to the infrastructure. HCI virtualizes all of the elements of
-          conventional hardware systems and includes, at a minimum, virtualized computing, a
-          virtualised SAN, and virtualized networking.</note></p>
-      <!--OSS only-->
-      <p otherprops="oss-only">Greenplum Database can be deployed to virtualized systems only if the
-        storage is presented as block devices and the XFS file system is mounted for the storage of
-        the segment directories.
         <note type="warning">Running Greenplum Database on hyper-converged infrastructure (HCI) has
-          known issues with performance, scalability, and stability and is not
-        recommended.</note></p>
+          known issues with performance, scalability, and stability and is not recommended<ph> as a
+            scalable solution for Pivotal Greenplum Database and may not be supported by Pivotal if
+            stability problems appear related to the infrastructure. HCI virtualizes all of the
+            elements of conventional hardware systems and includes, at a minimum, virtualized
+            computing, a virtualised SAN, and virtualized networking</ph>.</note></p>
       <p>Greenplum Database <ph otherprops="pivotal">is supported </ph><ph otherprops="oss-only">can
           run </ph>on Amazon Web Services (AWS) servers using either Amazon instance store (Amazon
         uses the volume names <codeph>ephemeral[0-20]</codeph>) or Amazon Elastic Block Store
