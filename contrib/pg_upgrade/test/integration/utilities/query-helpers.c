@@ -1,4 +1,4 @@
-#include "stdio.h"
+#include <stdio.h>
 
 /*
  * implements:
@@ -34,17 +34,5 @@ executeQuery(PGconn *connection, char *const query)
 		printf("query failed: %s, %s\n", query, PQerrorMessage(connection));
 
 	return result;
-}
-
-PGconn *
-connectToFive()
-{
-	return connectTo(50000);
-}
-
-PGconn *
-connectToSix()
-{
-	return connectTo(60000);
 }
 

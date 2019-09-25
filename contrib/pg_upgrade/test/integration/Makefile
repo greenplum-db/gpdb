@@ -11,10 +11,10 @@ OBJS = bdd-library/upgrade-bdd.o \
 	$(scripts_objs) \
 	$(utilities_objs) \
 	$(scenario_objs) \
-	greenplum_five_to_greenplum_six_upgrade_test.o
+	greenplum_five_to_greenplum_six_upgrade_test_suite.o
 
 EXS = scripts/gpdb6-cluster scripts/gpdb5-cluster
-TARGETS = greenplum_five_to_greenplum_six_upgrade_test
+TARGETS = greenplum_five_to_greenplum_six_upgrade_test_suite
 
 include $(top_srcdir)/src/Makefile.global
 include $(top_srcdir)/src/Makefile.mock
@@ -40,7 +40,7 @@ utilities_CPPFLAGS = -I$(pg_upgrade_directory) \
 
 $(utilities_objs) \
 	$(scenario_objs) \
-	greenplum_five_to_greenplum_six_upgrade_test.o: override CPPFLAGS += $(utilities_CPPFLAGS)
+	greenplum_five_to_greenplum_six_upgrade_test_suite.o: override CPPFLAGS += $(utilities_CPPFLAGS)
 
 #
 # Tests
@@ -50,7 +50,7 @@ test_dependencies = bdd-library/upgrade-bdd.o \
 	$(scenario_objs) \
 	$(CMOCKERY_OBJS)
 
-greenplum_five_to_greenplum_six_upgrade_test.t: greenplum_five_to_greenplum_six_upgrade_test.o $(test_dependencies)
+greenplum_five_to_greenplum_six_upgrade_test_suite.t: greenplum_five_to_greenplum_six_upgrade_test_suite.o $(test_dependencies)
 	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) -o $@
 
 clean:

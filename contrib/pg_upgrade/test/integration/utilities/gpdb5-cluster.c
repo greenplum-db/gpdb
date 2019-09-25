@@ -1,5 +1,6 @@
+#include <stdlib.h>
+
 #include "gpdb5-cluster.h"
-#include "stdlib.h"
 
 void
 startGpdbFiveCluster(void)
@@ -22,3 +23,4 @@ stopGpdbFiveCluster(void)
 		   "$PWD/gpdb5/bin/gpstop -a"
 		);
 }
+

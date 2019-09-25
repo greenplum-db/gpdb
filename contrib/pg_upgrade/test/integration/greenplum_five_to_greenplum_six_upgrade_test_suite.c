@@ -1,27 +1,13 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "cmockery.h"
 
 #include "scenarios/heap_table.h"
 #include "scenarios/ao_table.h"
 
-static void
-resetGpdbFiveDataDirectories(void)
-{
-	printf("\nMaking a copy of gpdb5 data directories.\n");
-	system("rsync -a --delete ./gpdb5-data-copy/ ./gpdb5-data");
-}
-
-static void
-resetGpdbSixDataDirectories(void)
-{
-	printf("\nMaking a copy of gpdb6 data directories.\n");
-	system("rsync -a --delete ./gpdb6-data-copy/ ./gpdb6-data");
-}
+#include "utilities/test-helpers.h"
 
 static void
 setup(void **state)

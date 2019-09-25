@@ -14,6 +14,7 @@
 #include "utilities/gpdb6-cluster.h"
 #include "utilities/upgrade-helpers.h"
 #include "utilities/query-helpers.h"
+#include "utilities/test-helpers.h"
 #include "bdd-library/bdd.h"
 
 #include "heap_table.h"
