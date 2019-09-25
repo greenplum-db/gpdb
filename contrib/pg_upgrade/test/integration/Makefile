@@ -24,10 +24,11 @@ all: scripts/gpdb5-cluster scripts/gpdb6-cluster
 #
 # Scripts
 #
+$(scripts_objs): override CPPFLAGS += -I .
+
 scripts/gpdb5-cluster: scripts/gpdb5-cluster.o utilities/gpdb5-cluster.o
 
 scripts/gpdb6-cluster: scripts/gpdb6-cluster.o utilities/gpdb6-cluster.o
-
 
 #
 # Libraries
@@ -36,7 +37,7 @@ bdd-library/upgrade-bdd.o: override CPPFLAGS += -I .
 
 utilities_CPPFLAGS = -I$(pg_upgrade_directory) \
 	-I$(libpq_srcdir) \
-	-I. \
+	-I .
 
 $(utilities_objs) \
 	$(scenario_objs) \

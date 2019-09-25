@@ -6,6 +6,7 @@
 
 #include "scenarios/heap_table.h"
 #include "scenarios/ao_table.h"
+#include "scenarios/aocs_table.h"
 
 #include "utilities/test-helpers.h"
 
@@ -28,6 +29,7 @@ main(int argc, char *argv[])
 
 	const		UnitTest tests[] = {
 		unit_test_setup_teardown(test_an_ao_table_with_data_can_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_an_aocs_table_with_data_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_heap_table_with_data_can_be_upgraded, setup, teardown),
 	};
 

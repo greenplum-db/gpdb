@@ -2,20 +2,18 @@
 #include <stddef.h>
 #include <setjmp.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "cmockery.h"
 #include "libpq-fe.h"
-
-#include "utilities/gpdb5-cluster.h"
-#include "utilities/gpdb6-cluster.h"
 #include "utilities/upgrade-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
+
 #include "bdd-library/bdd.h"
 
-#include "ao_table.h"
+#include "aocs_table.h"
 
 typedef struct UserData
 {
@@ -81,11 +79,41 @@ extract_user_rows(PGresult *result, Rows *rows)
 	rows->size = number_of_rows;
 }
 
+
+static void anAocsTableExistsWithDataInFiveCluster(void)
+{
+	PGconn	   *con1 = connectToFive();
+
+	executeQuery(con1, "CREATE SCHEMA five_to_six_upgrade;");
+	executeQuery(con1, "CREATE TABLE five_to_six_upgrade.aocs_users (id integer, name text) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (id);");
+	executeQuery(con1, "BEGIN;");
+	executeQuery(con1, "INSERT INTO five_to_six_upgrade.aocs_users VALUES (1, 'Jane')");
+	executeQuery(con1, "INSERT INTO five_to_six_upgrade.aocs_users VALUES (2, 'John')");
+
+	PGconn	   *con2 = connectToFive();
+
+	executeQuery(con2, "BEGIN;");
+	executeQuery(con2, "INSERT INTO five_to_six_upgrade.aocs_users VALUES (3, 'Joe')");
+
+	executeQuery(con1, "END;");
+	executeQuery(con2, "END;");
+	/* FIXME: why do we need this ?? */
+	executeQuery(con1, "VACUUM FREEZE;");
+
+	PQfinish(con2);
+	PQfinish(con1);
+}
+
+static void anAdministratorPerformsAnUpgrade(void)
+{
+	performUpgrade();
+}
+
 static void
-aoTableShouldHaveDataUpgradedToSixCluster()
+theAocsTableShouldHaveDataUpgradedToSixCluster(void)
 {
 	PGconn	   *connection = connectToSix();
-	PGresult   *result = executeQuery(connection, "SELECT * FROM five_to_six_upgrade.ao_users;");
+	PGresult   *result = executeQuery(connection, "SELECT * FROM five_to_six_upgrade.aocs_users;");
 
 	Rows		rows = {};
 
@@ -105,41 +133,9 @@ aoTableShouldHaveDataUpgradedToSixCluster()
 	PQfinish(connection);
 }
 
-static void
-createAoTableWithDataInFiveCluster(void)
+void test_an_aocs_table_with_data_can_be_upgraded(void **state)
 {
-	PGconn	   *con1 = connectToFive();
-
-	executeQuery(con1, "CREATE SCHEMA five_to_six_upgrade;");
-	executeQuery(con1, "CREATE TABLE five_to_six_upgrade.ao_users (id integer, name text) WITH (appendonly=true) DISTRIBUTED BY (id);");
-	executeQuery(con1, "BEGIN;");
-	executeQuery(con1, "INSERT INTO five_to_six_upgrade.ao_users VALUES (1, 'Jane')");
-	executeQuery(con1, "INSERT INTO five_to_six_upgrade.ao_users VALUES (2, 'John')");
-
-	PGconn	   *con2 = connectToFive();
-
-	executeQuery(con2, "BEGIN;");
-	executeQuery(con2, "INSERT INTO five_to_six_upgrade.ao_users VALUES (3, 'Joe')");
-
-	executeQuery(con1, "END;");
-	executeQuery(con2, "END;");
-	/* FIXME: why do we need this ?? */
-	executeQuery(con1, "VACUUM FREEZE;");
-
-	PQfinish(con2);
-	PQfinish(con1);
-}
-
-static void
-anAdministratorPerformsAnUpgrade()
-{
-	performUpgrade();
-}
-
-void
-test_an_ao_table_with_data_can_be_upgraded(void **state)
-{
-	given(createAoTableWithDataInFiveCluster);
+	given(anAocsTableExistsWithDataInFiveCluster);
 	when(anAdministratorPerformsAnUpgrade);
-	then(aoTableShouldHaveDataUpgradedToSixCluster);
+	then(theAocsTableShouldHaveDataUpgradedToSixCluster);
 }
