@@ -2081,6 +2081,7 @@ _equalLockStmt(const LockStmt *a, const LockStmt *b)
 	COMPARE_NODE_FIELD(relations);
 	COMPARE_SCALAR_FIELD(mode);
 	COMPARE_SCALAR_FIELD(nowait);
+	COMPARE_SCALAR_FIELD(masteronly);
 
 	return true;
 }
