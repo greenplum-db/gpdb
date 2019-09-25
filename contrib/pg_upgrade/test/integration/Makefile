@@ -10,6 +10,8 @@ OBJS = scripts/gpdb5-cluster.o \
 	utilities/query-helpers.o \
 	utilities/upgrade-helpers.o \
 	bdd-library/upgrade-bdd.o \
+	scenarios/heap_table.o \
+	scenarios/ao_table.o \
 	greenplum_five_to_greenplum_six_upgrade_test.o
 
 EXS = scripts/gpdb6-cluster scripts/gpdb5-cluster
@@ -40,6 +42,8 @@ utilities/gpdb5-cluster.o \
 	utilities/gpdb6-cluster.o \
 	utilities/query-helpers.o \
 	bdd-library/upgrade-bdd.o \
+	scenarios/heap_table.o \
+	scenarios/ao_table.o \
 	greenplum_five_to_greenplum_six_upgrade_test.o: override CPPFLAGS += $(utilities_CPPFLAGS)
 
 #
@@ -50,6 +54,8 @@ test_dependencies = utilities/gpdb5-cluster.o \
 	utilities/query-helpers.o \
 	utilities/upgrade-helpers.o \
 	bdd-library/upgrade-bdd.o \
+	scenarios/ao_table.o \
+	scenarios/heap_table.o \
 	$(CMOCKERY_OBJS)
 
 
