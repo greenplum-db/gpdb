@@ -180,6 +180,7 @@ INSERT INTO fsts_test_part5 VALUES (1,'ann',1,'2001-01-01','F');
 INSERT INTO fsts_test_part5 VALUES (2,'ben',2,'2002-01-01','M');
 INSERT INTO fsts_test_part5 VALUES (3,'leni',3,'2003-01-01','F');
 INSERT INTO fsts_test_part5 VALUES (4,'sam',4,'2003-01-01','M');
+SELECT pg_size_pretty(pg_tablespace_size('regression_ts_b3'));
 
 -- Alter the table set distributed by
 ALTER TABLE fsts_test_part5 SET DISTRIBUTED BY (id, gender, year);

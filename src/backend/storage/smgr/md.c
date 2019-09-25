@@ -586,6 +586,7 @@ mdcreatetablespacedir(
 	char *primaryFilespaceLocation;
 	char *mirrorFilespaceLocation;
 	char tablespacePath[MAXPGPATH];
+	char *location;
 
 	*primaryError = 0;
 	*mirrorDataLossOccurred = false;
@@ -617,6 +618,12 @@ mdcreatetablespacedir(
 
 		if (mkdir(tablespacePath, 0700) < 0)
 			*primaryError = errno;
+
+		location = (char *) palloc(10 + 10 + 1);
+		sprintf(location, "pg_tblspc/%u", tablespaceOid);
+		if (symlink(tablespacePath, location))
+			*primaryError = errno;
+		pfree(location);
 	}
 
 	if (StorageManagerMirrorMode_SendToMirror(mirrorMode) &&
