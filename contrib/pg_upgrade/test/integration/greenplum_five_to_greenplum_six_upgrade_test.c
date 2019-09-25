@@ -14,6 +14,7 @@
 #include "utilities/gpdb6-cluster.h"
 #include "utilities/upgrade-helpers.h"
 #include "utilities/query-helpers.h"
+#include "bdd-library/bdd.h"
 
 static void
 setup(void **state)
@@ -310,35 +311,6 @@ static void
 anAdministratorPerformsAnUpgrade()
 {
 	performUpgrade();
-}
-
-static void
-given(void (*arrangeFunction) (void))
-{
-	startGpdbFiveCluster();
-	arrangeFunction();
-	stopGpdbFiveCluster();
-}
-
-static void
-then(void (*assertionFunction) (void))
-{
-	startGpdbSixCluster();
-	assertionFunction();
-	stopGpdbSixCluster();
-}
-
-static void
-when(void (*actFunction) (void))
-{
-	actFunction();
-}
-
-static void
-and(void (*assertionFunction) (void))
-{
-	/* and has the same behavior as then */
-	then(assertionFunction);
 }
 
 static void

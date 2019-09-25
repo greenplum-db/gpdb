@@ -9,6 +9,7 @@ OBJS = scripts/gpdb5-cluster.o \
 	utilities/gpdb6-cluster.o \
 	utilities/query-helpers.o \
 	utilities/upgrade-helpers.o \
+	bdd-library/upgrade-bdd.o \
 	greenplum_five_to_greenplum_six_upgrade_test.o
 
 EXS = scripts/gpdb6-cluster scripts/gpdb5-cluster
@@ -21,6 +22,7 @@ all: scripts/gpdb5-cluster scripts/gpdb6-cluster
 
 utilities_CPPFLAGS = -I$(pg_upgrade_directory) \
 	-I$(libpq_srcdir) \
+	-I.\
 
 
 #
@@ -37,6 +39,7 @@ scripts/gpdb6-cluster: scripts/gpdb6-cluster.o utilities/gpdb6-cluster.o
 utilities/gpdb5-cluster.o \
 	utilities/gpdb6-cluster.o \
 	utilities/query-helpers.o \
+	bdd-library/upgrade-bdd.o \
 	greenplum_five_to_greenplum_six_upgrade_test.o: override CPPFLAGS += $(utilities_CPPFLAGS)
 
 #
@@ -46,6 +49,7 @@ test_dependencies = utilities/gpdb5-cluster.o \
 	utilities/gpdb6-cluster.o \
 	utilities/query-helpers.o \
 	utilities/upgrade-helpers.o \
+	bdd-library/upgrade-bdd.o \
 	$(CMOCKERY_OBJS)
 
 
