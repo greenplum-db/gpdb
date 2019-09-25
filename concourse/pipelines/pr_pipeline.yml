@@ -26,23 +26,13 @@ resources:
       repository: pivotaldata/centos-gpdb-dev
       tag: '6-gcc6.2-llvm3.7'
 
-  - name: binary_swap_gpdb_centos6
-    type: s3
+  - name: gpaddon_src
+    type: git
     source:
-      access_key_id: {{bucket-access-key-id}}
-      bucket: {{bucket-name}}
-      region_name: {{aws-region}}
-      secret_access_key: {{bucket-secret-access-key}}
-      versioned_file: {{binary_swap_gpdb_centos_versioned_file}}
+      branch: "5X_STABLE"
+      private_key: {{gpaddon-git-key}}
+      uri: {{gpaddon-git-remote}}
 
-  - name: bin_gpdb_centos6
-    type: s3
-    source:
-      access_key_id: {{bucket-access-key-id}}
-      bucket: {{bucket-name}}
-      region_name: {{aws-region}}
-      secret_access_key: {{bucket-secret-access-key}}
-      versioned_file: {{bin_gpdb_centos_versioned_file}}
 
 jobs:
   - name: compile-and-test-pull-request
@@ -51,30 +41,53 @@ jobs:
           - get: gpdb_pr
             version: every
             trigger: true
-          - get: bin_gpdb
-            resource: bin_gpdb_centos6
-            trigger: true
-          - get: binary_swap_gpdb
-            resource: binary_swap_gpdb_centos6
-            trigger: true
           - get: centos-gpdb-dev-6
-            trigger: true
-
-      - aggregate:
-        - put: gpdb_pr
+          - get: gpaddon_src
+      - put: gpdb_pr
+        params:
+          path: gpdb_pr
+          status: pending
+      - task: sync_tools
+        file: gpdb_pr/concourse/tasks/sync_tools.yml
+        image: centos-gpdb-dev-6
+        input_mapping:
+          gpdb_src: gpdb_pr
+        params:
+          IVYREPO_HOST: {{ivyrepo_host}}
+          IVYREPO_REALM: {{ivyrepo_realm}}
+          IVYREPO_USER: {{ivyrepo_user}}
+          IVYREPO_PASSWD: {{ivyrepo_passwd}}
+          TARGET_OS: centos
+          TARGET_OS_VERSION: 6
+          TASK_OS: centos
+          TASK_OS_VERSION: 6
+      - task: compile_gpdb_centos6
+        file: gpdb_pr/concourse/tasks/compile_gpdb.yml
+        image: centos-gpdb-dev-6
+        input_mapping:
+          gpdb_src: gpdb_pr
+        on_failure: &pr_failure
+          put: gpdb_pr
           params:
             path: gpdb_pr
-            status: pending
-        - task: ic_gpdb
-          file: gpdb_pr/concourse/tasks/ic_gpdb_binary_swap.yml
-          image: centos-gpdb-dev-6
-          input_mapping:
-            gpdb_src: gpdb_pr
-          params:
-            MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
-            BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-            TEST_OS: centos
-            CONFIGURE_FLAGS: {{configure_flags}}
+            status: failure
+        params:
+          CONFIGURE_FLAGS: {{configure_flags}}
+          TARGET_OS: centos
+          TARGET_OS_VERSION: 6
+          BLD_TARGETS: "clients loaders"
+      - task: ic_gpdb
+        file: gpdb_pr/concourse/tasks/ic_gpdb.yml
+        on_failure: *pr_failure
+        image: centos-gpdb-dev-6
+        input_mapping:
+          gpdb_src: gpdb_pr
+          bin_gpdb: gpdb_artifacts
+        params:
+          MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+          BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+          TEST_OS: centos
+          CONFIGURE_FLAGS: {{configure_flags}}
 
       - put: report_pr_success
         resource: gpdb_pr
