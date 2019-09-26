@@ -1587,8 +1587,8 @@ Optional Packages:
   --with-openssl          build with OpenSSL support
   --with-selinux          build with SELinux support
   --without-readline      do not use GNU Readline nor BSD Libedit for editing
-  --without-libedit-preferred
-                          do not prefer BSD Libedit over GNU Readline
+  --with-libedit-preferred
+                          prefer BSD Libedit over GNU Readline
   --with-uuid=LIB         build contrib/uuid-ossp using LIB (bsd,e2fs,ossp)
   --with-ossp-uuid        obsolete spelling of --with-uuid=ossp
   --with-libxml           build with XML support
@@ -7801,8 +7801,6 @@ fi
 #
 # Prefer libedit
 #
-# In GPDB we want the default to be yes, because we don't want to link with GPL code.
-#
 
 
 
@@ -7822,7 +7820,7 @@ if test "${with_libedit_preferred+set}" = set; then :
   esac
 
 else
-  with_libedit_preferred=yes
+  with_libedit_preferred=no
 
 fi
 

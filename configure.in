@@ -999,10 +999,8 @@ fi
 #
 # Prefer libedit
 #
-# In GPDB we want the default to be yes, because we don't want to link with GPL code.
-#
-PGAC_ARG_BOOL(with, libedit-preferred, yes,
-              [do not prefer BSD Libedit over GNU Readline])
+PGAC_ARG_BOOL(with, libedit-preferred, no,
+              [prefer BSD Libedit over GNU Readline])
 
 
 #
