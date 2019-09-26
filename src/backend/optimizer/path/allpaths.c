@@ -19,6 +19,7 @@
 
 #include <math.h>
 
+#include "catalog/catalog.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_operator.h"
 #include "foreign/fdwapi.h"
@@ -583,6 +584,142 @@ set_plain_rel_size(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 }
 
 /*
+ * is_rte_system_table
+ *	  Does a range table entry refer to a system table?
+ */
+static bool
+is_rte_system_table(PlannerInfo *root, Index rtindex)
+{
+	RangeTblEntry *rte;
+
+	rte = rt_fetch(rtindex, root->parse->rtable);
+
+	if (rte->rtekind == RTE_RELATION)
+	{
+		Relation rel = try_heap_open(rte->relid, NoLock, true);
+
+		if (!rel)
+			elog(ERROR, "open relation(oid: %u) fail", rte->relid);
+		if (IsSystemRelation(rel))
+		{
+			heap_close(rel, NoLock);
+			return true;
+		}
+		else
+			heap_close(rel, NoLock);
+	}
+
+	return false;
+}
+
+/*
+ * is_param_systemtable
+ *	  Does a Param refer to a system table?
+ */
+static bool
+is_param_systemtable(PlannerInfo *root, Param *param)
+{
+	Index rtindex;
+
+	for (root = root->parent_root; root != NULL; root = root->parent_root)
+	{
+		ListCell *ppl;
+
+		foreach(ppl, root->plan_params)
+		{
+			PlannerParamItem *pitem = (PlannerParamItem *) lfirst(ppl);
+
+			if (pitem->paramId == param->paramid)
+			{
+				if (IsA(pitem->item, Var))
+				{
+					Var *v = (Var *) pitem->item;
+					rtindex = v->varno;
+
+					return is_rte_system_table(root, rtindex);
+				}
+				else if (IsA(pitem->item, PlaceHolderVar))
+				{
+					PlaceHolderVar *phv = (PlaceHolderVar *) pitem->item;
+					rtindex = bms_singleton_member(phv->phrels);
+
+					return is_rte_system_table(root, rtindex);
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+/*
+ * contain_param_system_table_walker
+ *	  Does an expression contain a system table?
+ */
+static bool
+contain_param_system_table_walker(Node *node, void *context)
+{
+	PlannerInfo *root =  (PlannerInfo *) context;
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Param) && is_param_systemtable(root, (Param *) node))
+		return true;
+
+	return expression_tree_walker(node, contain_param_system_table_walker, context);
+}
+
+/*
+ * is_param_systemtable_restrictclauses
+ *	  Does a RestrictInfo list contain a system table?
+ */
+static bool
+is_param_systemtable_restrictclauses(PlannerInfo *root, List *clauses)
+{
+	ListCell   *l;
+
+	foreach(l, clauses)
+	{
+		RestrictInfo *c = (RestrictInfo *) lfirst(l);
+		Node *expr;
+
+		expr = (Node *) c->clause;
+
+		if (contain_param_system_table_walker(expr, root))
+			return true;
+	}
+
+	return false;
+}
+
+/*
+ * plain_allow_indexpath_under_subplan
+ *	  Determine whether create an index path for the RelOptInfo.
+ *    TODO: below might have been too ambitious.
+ */
+static bool
+plain_allow_indexpath_under_subplan(PlannerInfo *root, RelOptInfo *rel)
+{
+
+	if (!root->is_correlated_subplan)
+		return true;
+
+	if (GpPolicyIsPartitioned(rel->cdbpolicy))
+		return false;
+
+	if (GpPolicyIsReplicated(rel->cdbpolicy))
+	{
+		if (is_param_systemtable_restrictclauses(root, rel->baserestrictinfo))
+			return false;
+		if (is_param_systemtable_restrictclauses(root, rel->joininfo))
+			return false;
+	}
+
+	return true;
+}
+
+/*
  * set_plain_rel_pathlist
  *	  Build access paths for a plain relation (no subquery, no inheritance)
  */
@@ -640,9 +777,7 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			return;
 	}
 
-	/* TODO: this might have been too ambitious of a re-ordering */
-	/* If an indexscan is not allowed, don't bother making paths */
-	if(!(root->is_correlated_subplan && GpPolicyIsPartitioned(rel->cdbpolicy)))
+	if (plain_allow_indexpath_under_subplan(root, rel))
 	{
 		/* Consider index and bitmap scans */
 		create_index_paths(root, rel);
