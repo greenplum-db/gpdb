@@ -442,12 +442,13 @@ bool QueryHasDistributedRelation(Query *q)
 
 typedef struct CorrelatedVarWalkerContext
 {
-	int maxLevelsUp;
+	int maxLevelsUpVar;
+	int maxLevelsUpPlaceHolderVar;
 } CorrelatedVarWalkerContext;
 
 /**
  *  Walker finds the deepest correlation nesting i.e. maximum levelsup among all
- *  vars in subquery.
+ *  vars/placeholdervars in subquery.
  */
 static bool
 CorrelatedVarWalker(Node *node, CorrelatedVarWalkerContext *ctx)
@@ -461,9 +462,18 @@ CorrelatedVarWalker(Node *node, CorrelatedVarWalkerContext *ctx)
 	else if (IsA(node, Var))
 	{
 		Var * v = (Var *) node;
-		if (v->varlevelsup > ctx->maxLevelsUp)
+		if (v->varlevelsup > ctx->maxLevelsUpVar)
 		{
-			ctx->maxLevelsUp = v->varlevelsup;
+			ctx->maxLevelsUpVar = v->varlevelsup;
+		}
+		return false;
+	}
+	else if (IsA(node, PlaceHolderVar))
+	{
+		PlaceHolderVar * v = (PlaceHolderVar *) node;
+		if (v->phlevelsup > ctx->maxLevelsUpPlaceHolderVar)
+		{
+			ctx->maxLevelsUpPlaceHolderVar = v->phlevelsup;
 		}
 		return false;
 	}
@@ -483,9 +493,10 @@ IsSubqueryCorrelated(Query *sq)
 {
 	Assert(sq);
 	CorrelatedVarWalkerContext ctx;
-	ctx.maxLevelsUp = 0;
+	ctx.maxLevelsUpVar = 0;
+	ctx.maxLevelsUpPlaceHolderVar = 0;
 	CorrelatedVarWalker((Node *) sq, &ctx);
-	return (ctx.maxLevelsUp > 0);
+	return (ctx.maxLevelsUpVar > 0 || ctx.maxLevelsUpPlaceHolderVar > 0);
 }
 
 /**
@@ -496,9 +507,10 @@ IsSubqueryMultiLevelCorrelated(Query *sq)
 {
 	Assert(sq);
 	CorrelatedVarWalkerContext ctx;
-	ctx.maxLevelsUp = 0;
+	ctx.maxLevelsUpVar = 0;
+	ctx.maxLevelsUpPlaceHolderVar = 0;
 	CorrelatedVarWalker((Node *) sq, &ctx);
-	return (ctx.maxLevelsUp > 1);
+	return (ctx.maxLevelsUpVar > 1 || ctx.maxLevelsUpPlaceHolderVar > 1);
 }
 
 /*

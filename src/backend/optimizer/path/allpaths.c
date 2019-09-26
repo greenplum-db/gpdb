@@ -19,6 +19,7 @@
 
 #include <math.h>
 
+#include "catalog/catalog.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_operator.h"
 #include "foreign/fdwapi.h"
@@ -42,6 +43,7 @@
 #include "rewrite/rewriteManip.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
+#include "utils/syscache.h"
 
 #include "cdb/cdbmutate.h"		/* cdbmutate_warn_ctid_without_segid */
 #include "cdb/cdbpath.h"		/* cdbpath_rows() */
@@ -583,6 +585,154 @@ set_plain_rel_size(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 }
 
 /*
+ * is_table_distributed
+ *	  Is the table distributed?
+ */
+static bool
+is_table_distributed(Oid relid)
+{
+	HeapTuple	gp_policy_tuple;
+
+	gp_policy_tuple = SearchSysCache1(GPPOLICYID, ObjectIdGetDatum(relid));
+	if (HeapTupleIsValid(gp_policy_tuple))
+	{
+		ReleaseSysCache(gp_policy_tuple);
+		return true;
+	}
+
+	return false;
+}
+
+/*
+ * maybe_rte_non_distributed
+ *	  Is a range table entry non-distributed possibly?
+ */
+static bool
+maybe_rte_non_distributed(List *rtable, Index rtindex)
+{
+	RangeTblEntry *rte;
+
+	rte = rt_fetch(rtindex, rtable);
+
+	if (rte->rtekind == RTE_RELATION)
+		return !is_table_distributed(rte->relid);
+
+	/*
+	 * For other rte kind e.g. RTE_SUBQUERY or RTE_FUNCTION, we may
+	 * not be able to know the locus of its path at this moment so
+	 * set it as true.
+	 */
+	return true;
+}
+
+/*
+ * maybe_param_non_distributed
+ *	  Is a Param related to a non-distributed table possibly?
+ */
+static bool
+maybe_param_non_distributed(PlannerInfo *root, Param *param)
+{
+	Index rtindex;
+
+	for (root = root->parent_root; root != NULL; root = root->parent_root)
+	{
+		ListCell *ppl;
+
+		foreach(ppl, root->plan_params)
+		{
+			PlannerParamItem *pitem = (PlannerParamItem *) lfirst(ppl);
+
+			if (pitem->paramId == param->paramid)
+			{
+				if (IsA(pitem->item, Var))
+				{
+					Var *v = (Var *) pitem->item;
+					rtindex = v->varno;
+
+					return maybe_rte_non_distributed(root->parse->rtable, rtindex);
+				}
+				else if (IsA(pitem->item, PlaceHolderVar))
+				{
+					PlaceHolderVar *phv = (PlaceHolderVar *) pitem->item;
+					rtindex = bms_singleton_member(phv->phrels);
+
+					return maybe_rte_non_distributed(root->parse->rtable, rtindex);
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+/*
+ * maybe_contain_non_distributed_param_walker
+ *	  Does a Param contain a non-distributed table possibly?
+ */
+static bool
+maybe_contain_non_distributed_param_walker(Node *node, void *context)
+{
+	PlannerInfo *root =  (PlannerInfo *) context;
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Param) && maybe_param_non_distributed(root, (Param *) node))
+		return true;
+
+	return expression_tree_walker(node, maybe_contain_non_distributed_param_walker, context);
+}
+
+/*
+ * maybe_restrictclauses_include_non_distributed_param
+ *	  Does a RestrictInfo list contain param with non distributed table possibly?
+ */
+static bool
+maybe_restrictclauses_include_non_distributed_param(PlannerInfo *root, List *clauses)
+{
+	ListCell   *l;
+
+	foreach(l, clauses)
+	{
+		RestrictInfo *c = (RestrictInfo *) lfirst(l);
+		Node *expr;
+
+		expr = (Node *) c->clause;
+
+		if (maybe_contain_non_distributed_param_walker(expr, root))
+			return true;
+	}
+
+	return false;
+}
+
+/*
+ * plain_allow_indexpath_under_subplan
+ *	  Determine whether create an index path for the RelOptInfo.
+ *    TODO: below might have been too ambitious.
+ */
+static bool
+plain_allow_indexpath_under_subplan(PlannerInfo *root, RelOptInfo *rel)
+{
+
+	if (!root->is_correlated_subplan)
+		return true;
+
+	if (GpPolicyIsPartitioned(rel->cdbpolicy))
+		return false;
+
+	if (GpPolicyIsReplicated(rel->cdbpolicy))
+	{
+		if (maybe_restrictclauses_include_non_distributed_param(root, rel->baserestrictinfo))
+			return false;
+		if (maybe_restrictclauses_include_non_distributed_param(root, rel->joininfo))
+			return false;
+	}
+
+	return true;
+}
+
+/*
  * set_plain_rel_pathlist
  *	  Build access paths for a plain relation (no subquery, no inheritance)
  */
@@ -640,9 +790,7 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			return;
 	}
 
-	/* TODO: this might have been too ambitious of a re-ordering */
-	/* If an indexscan is not allowed, don't bother making paths */
-	if(!(root->is_correlated_subplan && GpPolicyIsPartitioned(rel->cdbpolicy)))
+	if (plain_allow_indexpath_under_subplan(root, rel))
 	{
 		/* Consider index and bitmap scans */
 		create_index_paths(root, rel);

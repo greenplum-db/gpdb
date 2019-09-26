@@ -33,6 +33,8 @@ insert into hjtest values(3, 4);
 
 select count(*) from hjtest a1, hjtest a2 where a2.i = least (a1.i,4) and a2.j = 4;
 
+drop table hjtest;
+
 --
 -- Test for correct behavior when there is a Merge Join on top of Materialize
 -- on top of a Motion :
@@ -632,3 +634,38 @@ full join ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) tq_
 on (coalesce(t.id1) = tq_all.id1  and t.id2 = tq_all.id2) ;
 
 drop table t_issue_10315;
+
+--
+-- test in subplan, if one side of a qual is a Param refers to system table
+-- and another side refers to a replicate table, we do not create index plan
+-- in the subplan though this is kind of aggressive (Defintely there exists room
+-- for optimization) but let's make sure the correctness of these cases at first.
+-- https://github.com/greenplum-db/gpdb/issues/8648
+--
+set enable_seqscan = 0;
+
+create table rep_tbl (tablename text, explanation text) distributed replicated;
+create table dis_tbl (relname text, tablename text, explanation text);
+insert into rep_tbl values ('pg_class', 'contains all relations');
+create index on rep_tbl (tablename);
+analyze rep_tbl;
+
+--- The Var case
+explain verbose select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from pg_class c where relname = 'pg_class';
+select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from pg_class c where relname = 'pg_class';
+explain verbose select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from (select oid, relname from pg_class offset 0) c where relname = 'pg_class';
+select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from (select oid, relname from pg_class offset 0) c where relname = 'pg_class';
+
+--- The PlaceholderVar case
+explain verbose select t1.relname, ss.x from
+  pg_class t1 left join (select relisshared as x, coalesce(t2.relname, 'dummy') y from pg_class t2) ss
+  on t1.relname = ss.y
+  where 1 = (select 1 from rep_tbl t3 where ss.y = t3.tablename limit 1);
+select t1.relname, ss.x from
+  pg_class t1 left join (select relisshared as x, coalesce(t2.relname, 'dummy') y from pg_class t2) ss
+  on t1.relname = ss.y
+  where 1 = (select 1 from rep_tbl t3 where ss.y = t3.tablename limit 1);
+
+drop table rep_tbl;
+drop table dis_tbl;
+reset enable_seqscan;

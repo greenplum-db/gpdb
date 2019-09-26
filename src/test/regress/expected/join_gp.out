@@ -58,6 +58,7 @@ select count(*) from hjtest a1, hjtest a2 where a2.i = least (a1.i,4) and a2.j =
      1
 (1 row)
 
+drop table hjtest;
 --
 -- Test for correct behavior when there is a Merge Join on top of Materialize
 -- on top of a Motion :
@@ -1291,3 +1292,119 @@ on (coalesce(t.id1) = tq_all.id1  and t.id2 = tq_all.id2) ;
 (14 rows)
 
 drop table t_issue_10315;
+--
+-- test in subplan, if one side of a qual is a Param refers to system table
+-- and another side refers to a replicate table, we do not create index plan
+-- in the subplan though this is kind of aggressive (Defintely there exists room
+-- for optimization) but let's make sure the correctness of these cases at first.
+-- https://github.com/greenplum-db/gpdb/issues/8648
+--
+set enable_seqscan = 0;
+create table rep_tbl (tablename text, explanation text) distributed replicated;
+create table dis_tbl (relname text, tablename text, explanation text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'relname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into rep_tbl values ('pg_class', 'contains all relations');
+create index on rep_tbl (tablename);
+analyze rep_tbl;
+--- The Var case
+explain verbose select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from pg_class c where relname = 'pg_class';
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Index Only Scan using pg_class_relname_nsp_index on pg_catalog.pg_class c  (cost=0.27..10000000101.31 rows=1 width=64)
+   Output: c.relname, (SubPlan 1)
+   Index Cond: (c.relname = 'pg_class'::name)
+   SubPlan 1  (slice0)
+     ->  Result  (cost=10000000000.00..10000000001.02 rows=1 width=23)
+           Output: rep_tbl.explanation
+           Filter: (rep_tbl.tablename = (c.relname)::text)
+           ->  Materialize  (cost=10000000000.00..10000000001.02 rows=1 width=23)
+                 Output: rep_tbl.explanation, rep_tbl.tablename
+                 ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000000.00..10000000001.01 rows=1 width=23)
+                       Output: rep_tbl.explanation, rep_tbl.tablename
+                       ->  Seq Scan on public.rep_tbl  (cost=10000000000.00..10000000001.01 rows=1 width=23)
+                             Output: rep_tbl.explanation, rep_tbl.tablename
+ Optimizer: Postgres query optimizer
+ Settings: enable_seqscan=off, optimizer=off
+(15 rows)
+
+select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from pg_class c where relname = 'pg_class';
+ relname  |      explanation       
+----------+------------------------
+ pg_class | contains all relations
+(1 row)
+
+explain verbose select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from (select oid, relname from pg_class offset 0) c where relname = 'pg_class';
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Subquery Scan on c  (cost=10000000000.00..20000000017.85 rows=1 width=64)
+   Output: c.relname, (SubPlan 1)
+   Filter: (c.relname = 'pg_class'::name)
+   ->  Seq Scan on pg_catalog.pg_class  (cost=10000000000.00..10000000011.37 rows=437 width=68)
+         Output: pg_class.oid, pg_class.relname
+   SubPlan 1  (slice0)
+     ->  Result  (cost=10000000000.00..10000000001.02 rows=1 width=23)
+           Output: rep_tbl.explanation
+           Filter: (rep_tbl.tablename = (c.relname)::text)
+           ->  Materialize  (cost=10000000000.00..10000000001.02 rows=1 width=23)
+                 Output: rep_tbl.explanation, rep_tbl.tablename
+                 ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000000.00..10000000001.01 rows=1 width=23)
+                       Output: rep_tbl.explanation, rep_tbl.tablename
+                       ->  Seq Scan on public.rep_tbl  (cost=10000000000.00..10000000001.01 rows=1 width=23)
+                             Output: rep_tbl.explanation, rep_tbl.tablename
+ Optimizer: Postgres query optimizer
+ Settings: enable_seqscan=off, optimizer=off
+(17 rows)
+
+select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from (select oid, relname from pg_class offset 0) c where relname = 'pg_class';
+ relname  |      explanation       
+----------+------------------------
+ pg_class | contains all relations
+(1 row)
+
+--- The PlaceholderVar case
+explain verbose select t1.relname, ss.x from
+  pg_class t1 left join (select relisshared as x, coalesce(t2.relname, 'dummy') y from pg_class t2) ss
+  on t1.relname = ss.y
+  where 1 = (select 1 from rep_tbl t3 where ss.y = t3.tablename limit 1);
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Hash Left Join  (cost=10000000934.17..30600000005364.92 rows=12 width=65)
+   Output: t1.relname, t2.relisshared
+   Hash Cond: (t1.relname = COALESCE(t2.relname, 'dummy'::name))
+   Filter: (1 = (SubPlan 1))
+   ->  Bitmap Heap Scan on pg_catalog.pg_class t1  (cost=816.34..895.93 rows=3059 width=64)
+         Output: t1.relname
+         ->  Bitmap Index Scan on pg_class_relname_nsp_index  (cost=0.00..815.57 rows=3059 width=0)
+   ->  Hash  (cost=10000000079.59..10000000079.59 rows=1020 width=129)
+         Output: t2.relisshared, t2.relname, (COALESCE(t2.relname, 'dummy'::name))
+         ->  Seq Scan on pg_catalog.pg_class t2  (cost=10000000000.00..10000000079.59 rows=3059 width=129)
+               Output: t2.relisshared, t2.relname, COALESCE(t2.relname, 'dummy'::name)
+   SubPlan 1  (slice0)
+     ->  Limit  (cost=10000000000.00..10000000001.03 rows=1 width=0)
+           Output: "outer".?column?
+           ->  Result  (cost=10000000000.00..10000000001.02 rows=1 width=0)
+                 Output: 1
+                 Filter: (((COALESCE(t2.relname, 'dummy'::name)))::text = t3.tablename)
+                 ->  Materialize  (cost=10000000000.00..10000000001.02 rows=1 width=0)
+                       Output: t3.tablename
+                       ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000000.00..10000000001.01 rows=1 width=0)
+                             Output: t3.tablename
+                             ->  Seq Scan on public.rep_tbl t3  (cost=10000000000.00..10000000001.01 rows=1 width=0)
+                                   Output: t3.tablename
+ Optimizer: Postgres query optimizer
+ Settings: enable_seqscan=off, optimizer=off
+(25 rows)
+
+select t1.relname, ss.x from
+  pg_class t1 left join (select relisshared as x, coalesce(t2.relname, 'dummy') y from pg_class t2) ss
+  on t1.relname = ss.y
+  where 1 = (select 1 from rep_tbl t3 where ss.y = t3.tablename limit 1);
+ relname  | x 
+----------+---
+ pg_class | f
+(1 row)
+
+drop table rep_tbl;
+drop table dis_tbl;
+reset enable_seqscan;
