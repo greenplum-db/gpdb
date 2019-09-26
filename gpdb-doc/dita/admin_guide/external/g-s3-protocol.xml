@@ -18,6 +18,10 @@
       <p>The <codeph>s3</codeph> protocol also supports <xref
             href="https://www.emc.com/en-us/storage/ecs/index.htm" format="html" scope="external"
             >Dell EMC Elastic Cloud Storage</xref> (ECS), an Amazon S3 compatible service. </p>
+      <note>The <codeph>pxf</codeph> protocol can access data in S3 and other object store systems
+         such as Azure, Google Cloud Storage, and Minio. The <codeph>pxf</codeph> protocol can also
+         access data in external Hadoop systems (HDFS, Hive, HBase), and SQL databases. See <xref
+            href="g-pxf-protocol.xml#topic_z5g_l5h_kr1313"/>.</note>
       <p>This topic contains the sections:<ul id="ul_o15_22r_kx">
             <li><xref href="#amazon-emr/s3_prereq" format="dita"/></li>
             <li><xref href="#amazon-emr/section_stk_c2r_kx" format="dita"/></li>
@@ -45,13 +49,12 @@
    '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;</codeblock></li>
                      <li> In each database that will access an S3 bucket, declare the
                            <codeph>s3</codeph> protocol and specify the read and write functions you
-                        created in the previous
-                           step:<codeblock>CREATE PROTOCOL s3 (writefunc = write_to_s3, readfunc = read_from_s3);</codeblock><note>The
-                           protocol name <codeph>s3</codeph> must be the same as the protocol of the
-                           URL specified for the external table you create to access an S3 resource.
-                              <p>The corresponding function is called by every Greenplum Database
-                              segment instance. All segment hosts must have access to the S3
-                              bucket.</p></note></li>
+                        created in the previous step:<codeblock>CREATE PROTOCOL s3 (writefunc = write_to_s3, readfunc = read_from_s3);</codeblock>
+                        <note>The protocol name <codeph>s3</codeph> must be the same as the protocol
+                           of the URL specified for the external table you create to access an S3
+                           resource. <p>The corresponding function is called by every Greenplum
+                              Database segment instance. All segment hosts must have access to the
+                              S3 bucket.</p></note></li>
                   </ol></li>
                <li>On each Greenplum Database segment, create and install the <codeph>s3</codeph>
                   protocol configuration file:<ol id="ol_mnq_rnq_kx">
@@ -280,15 +283,14 @@ server_side_encryption = sse-s3
       <section id="s3_proxy">
          <title>s3 Protocol Proxy Support </title>
          <p>You can specify a URL that is the proxy that S3 uses to connect to a data source. S3
-            supports these protocols: HTTP and HTTPS. You can specify a proxy
-            with the <codeph>s3</codeph> protocol configuration parameter <codeph>proxy</codeph> or
-            an environment variable. If the configuration parameter is set, the environment
-            variables are ignored. </p>
+            supports these protocols: HTTP and HTTPS. You can specify a proxy with the
+               <codeph>s3</codeph> protocol configuration parameter <codeph>proxy</codeph> or an
+            environment variable. If the configuration parameter is set, the environment variables
+            are ignored. </p>
          <p>To specify proxy with an environment variable, you set the environment variable based on
-            the protocol: <codeph>http_proxy</codeph> or <codeph>https_proxy</codeph>.
-               You can specify a different URL for each protocol by
-            setting the appropriate environment variable. S3 supports these environment
-               variables.<ul id="ul_cy3_km2_r1b">
+            the protocol: <codeph>http_proxy</codeph> or <codeph>https_proxy</codeph>. You can
+            specify a different URL for each protocol by setting the appropriate environment
+            variable. S3 supports these environment variables.<ul id="ul_cy3_km2_r1b">
                <li><codeph>all_proxy</codeph> specifies the proxy URL that is used if an environment
                   variable for a specific protocol is not set. </li>
                <li><codeph>no_proxy</codeph> specifies a comma-separated list of hosts names that do
@@ -432,19 +434,17 @@ chunksize = 67108864</codeblock></p>
                <plentry>
                   <pt>proxy</pt>
                   <pd>Specify a URL that is the proxy that S3 uses to connect to a data source. S3
-                     supports these protocols: HTTP and HTTPS. This is the
-                     format for the
+                     supports these protocols: HTTP and HTTPS. This is the format for the
                      parameter.<codeblock>proxy = <varname>protocol</varname>://[<varname>user</varname>:<varname>password</varname>@]<varname>proxyhost</varname>[:<varname>port</varname>]</codeblock></pd>
                   <pd>If this parameter is not set or is an empty string (<codeph>proxy =
                         ""</codeph>), S3 uses the proxy specified by the environment variable
-                        <codeph>http_proxy</codeph> or <codeph>https_proxy</codeph>
-                        (and the environment variables
-                        <codeph>all_proxy</codeph> and <codeph>no_proxy</codeph>). The environment
-                     variable that S3 uses depends on the protocol. For information about the
-                     environment variables, see <xref href="g-s3-protocol.xml#amazon-emr/s3_proxy"
-                        format="dita" scope="peer">s3 Protocol Proxy Support</xref><ph
-                        otherprops="op-print"> in the <cite>Greenplum Database Administrator
-                           Guide</cite></ph>.</pd>
+                        <codeph>http_proxy</codeph> or <codeph>https_proxy</codeph> (and the
+                     environment variables <codeph>all_proxy</codeph> and
+                     <codeph>no_proxy</codeph>). The environment variable that S3 uses depends on
+                     the protocol. For information about the environment variables, see <xref
+                        href="g-s3-protocol.xml#amazon-emr/s3_proxy" format="dita" scope="peer">s3
+                        Protocol Proxy Support</xref><ph otherprops="op-print"> in the
+                           <cite>Greenplum Database Administrator Guide</cite></ph>.</pd>
                   <pd>There can be at most one <codeph>proxy</codeph> parameter in the configuration
                      file. The URL specified by the parameter is the proxy for all supported
                      protocols. </pd>
@@ -475,11 +475,10 @@ chunksize = 67108864</codeblock></p>
                            proper certificate) for encrypted communication over HTTPS.</li>
                      </ul></pd>
                   <pd>Setting the value to <codeph>false</codeph> can be useful in testing and
-                     development environments to allow communication without changing
-                        certificates.<note type="warning">Setting the value to
-                           <codeph>false</codeph> exposes a security risk by ignoring invalid
-                        credentials when establishing communication between a client and a S3 data
-                        store. </note></pd>
+                     development environments to allow communication without changing certificates.
+                     <note type="warning">Setting the value to <codeph>false</codeph> exposes a
+                        security risk by ignoring invalid credentials when establishing
+                        communication between a client and a S3 data store. </note></pd>
                </plentry>
                <plentry>
                   <pt>version</pt>
