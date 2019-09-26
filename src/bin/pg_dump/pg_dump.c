@@ -15047,6 +15047,23 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			appendPQExpBufferChar(q, ')');
 		}
 
+
+		/*
+		 * For materialized views, create the AS clause just like a view. At
+		 * this point, we always mark the view as not populated.
+		 */
+		if (tbinfo->relkind == RELKIND_MATVIEW)
+		{
+			PQExpBuffer result;
+
+			result = createViewAsClause(fout, tbinfo);
+			appendPQExpBuffer(q, " AS\n%s\n  WITH NO DATA\n",
+							  result->data);
+			destroyPQExpBuffer(result);
+		}
+		else
+			appendPQExpBufferStr(q, "\n");
+
 		/* START MPP ADDITION */
 
 		/*
@@ -15165,21 +15182,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		if (ftoptions && ftoptions[0])
 			appendPQExpBuffer(q, "\nOPTIONS (\n    %s\n)", ftoptions);
 
-		/*
-		 * For materialized views, create the AS clause just like a view. At
-		 * this point, we always mark the view as not populated.
-		 */
-		if (tbinfo->relkind == RELKIND_MATVIEW)
-		{
-			PQExpBuffer result;
-
-			result = createViewAsClause(fout, tbinfo);
-			appendPQExpBuffer(q, " AS\n%s\n  WITH NO DATA;\n",
-							  result->data);
-			destroyPQExpBuffer(result);
-		}
-		else
-			appendPQExpBufferStr(q, ";\n");
+		appendPQExpBufferStr(q, ";\n");
 
 		/*
 		 * Exchange external partitions. This is an expensive process, so only
@@ -15411,6 +15414,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 								  qualrelname,
 								  tbinfo->reloftype);
 			}
+			appendPQExpBuffer(q, "RESET allow_system_table_mods;\n");
 		}
 
 		/*
@@ -15424,6 +15428,8 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			(tbinfo->relkind == RELKIND_RELATION ||
 			 tbinfo->relkind == RELKIND_MATVIEW))
 		{
+			appendPQExpBuffer(q, "SET allow_system_table_mods = true;\n");
+
 			appendPQExpBufferStr(q, "\n-- For binary upgrade, set heap's relfrozenxid and relminmxid\n");
 			appendPQExpBuffer(q, "UPDATE pg_catalog.pg_class\n"
 							  "SET relfrozenxid = '%u', relminmxid = '%u'\n"
@@ -15464,12 +15470,16 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		if (dopt->binary_upgrade && tbinfo->relkind == RELKIND_MATVIEW &&
 			tbinfo->relispopulated)
 		{
+			appendPQExpBuffer(q, "SET allow_system_table_mods = true;\n");
+
 			appendPQExpBufferStr(q, "\n-- For binary upgrade, mark materialized view as populated\n");
 			appendPQExpBufferStr(q, "UPDATE pg_catalog.pg_class\n"
 								 "SET relispopulated = 't'\n"
 								 "WHERE oid = ");
 			appendStringLiteralAH(q, qualrelname, fout);
 			appendPQExpBufferStr(q, "::pg_catalog.regclass;\n");
+
+			appendPQExpBuffer(q, "RESET allow_system_table_mods;\n");
 		}
 
 		/*
