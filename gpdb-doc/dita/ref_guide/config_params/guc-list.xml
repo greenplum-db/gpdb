@@ -410,6 +410,8 @@
             <li><xref href="#optimizer_enable_associativity" type="section"
                 >optimizer_enable_associativity</xref>
             </li>
+            <li><xref href="#optimizer_enable_dml" type="section">optimizer_enable_dml</xref>
+            </li>
             <li>
               <xref href="#optimizer_enable_master_only_queries" type="section"
                 >optimizer_enable_master_only_queries</xref>
@@ -6877,10 +6879,10 @@
   <topic id="optimizer_enable_dml">
     <title>optimizer_enable_dml</title>
     <body>
-      <p dir="ltr">When GPORCA is enabled (the default) and this parameter is <codeph>true</codeph>
-        (the default), GPORCA attempts to execute DML commands such as <codeph>INSERT</codeph>,
-          <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph> commands. If GPORCA cannot execute
-        the command, Greenplum Database falls back to the Postgres Planner.</p>
+      <p>When GPORCA is enabled (the default) and this parameter is <codeph>true</codeph> (the
+        default), GPORCA attempts to execute DML commands such as <codeph>INSERT</codeph>,
+          <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph>. If GPORCA cannot execute the
+        command, Greenplum Database falls back to the Postgres Planner.</p>
       <p>When set to <codeph>false</codeph>, Greenplum Database always falls back to the Postgres
         Planner when performing DML commands.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
