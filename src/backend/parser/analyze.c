@@ -3525,7 +3525,7 @@ transformCreateTableAsStmt(ParseState *pstate, CreateTableAsStmt *stmt)
 	/* GPDB: Set parentStmtType to PARENTSTMTTYPE_CTAS as we know this query is for CTAS */
 	((Query*)stmt->query)->parentStmtType = PARENTSTMTTYPE_CTAS;
 
-	if (stmt->into->distributedBy && Gp_role == GP_ROLE_DISPATCH)
+	if (stmt->into->distributedBy && (Gp_role == GP_ROLE_DISPATCH || IsBinaryUpgrade))
 		setQryDistributionPolicy(stmt->into, (Query *)stmt->query);
 
 	return result;
@@ -3907,7 +3907,7 @@ setQryDistributionPolicy(IntoClause *into, Query *qry)
 	ListCell   *lc;
 	DistributedBy *dist;
 
-	Assert(Gp_role == GP_ROLE_DISPATCH);
+	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
 	Assert(into != NULL);
 	Assert(into->distributedBy != NULL);
 
