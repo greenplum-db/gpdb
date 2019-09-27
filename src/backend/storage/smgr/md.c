@@ -586,7 +586,7 @@ mdcreatetablespacedir(
 	char *primaryFilespaceLocation;
 	char *mirrorFilespaceLocation;
 	char tablespacePath[MAXPGPATH];
-	char *location;
+	char tablespaceSymlink[10 + 10 + 1];
 
 	*primaryError = 0;
 	*mirrorDataLossOccurred = false;
@@ -619,11 +619,9 @@ mdcreatetablespacedir(
 		if (mkdir(tablespacePath, 0700) < 0)
 			*primaryError = errno;
 
-		location = (char *) palloc(10 + 10 + 1);
-		sprintf(location, "pg_tblspc/%u", tablespaceOid);
-		if (symlink(tablespacePath, location))
+		sprintf(tablespaceSymlink, "pg_tblspc/%u", tablespaceOid);
+		if (symlink(tablespacePath, tablespaceSymlink))
 			*primaryError = errno;
-		pfree(location);
 	}
 
 	if (StorageManagerMirrorMode_SendToMirror(mirrorMode) &&
@@ -1146,6 +1144,7 @@ mdrmtablespacedir(
 	char *primaryFilespaceLocation;
 	char *mirrorFilespaceLocation;
 	char tablespacePath[MAXPGPATH];
+	char tablespaceSymlink[10 + 10 + 1];
 	bool result;
 
 	*mirrorDataLossOccurred = false;
@@ -1186,7 +1185,8 @@ mdrmtablespacedir(
 			
 		// The rmtree routine unfortunately emits errors, so there is not errno available...  
 		// Just a bool.
-		result = rmtree(tablespacePath, true);
+		sprintf(tablespaceSymlink, "pg_tblspc/%u", tablespaceOid);
+		result = rmtree(tablespacePath, true) && unlink(tablespaceSymlink) == 0;
 	}
 	else
 		result = true;
