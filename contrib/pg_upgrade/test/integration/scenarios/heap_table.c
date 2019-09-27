@@ -80,7 +80,9 @@ extract_user_rows(PGresult *result, Rows *rows)
 		user->id = atoi(PQgetvalue(result, i, i_id));
 		user->name = PQgetvalue(result, i, i_name);
 	}
+
 	rows->size = number_of_rows;
+
 }
 
 static void
