@@ -44,7 +44,7 @@
       <note>When <codeph>gpfdist</codeph> reads data and encounters a data formatting error, the
         error message includes a row number indicating the location of the formatting error.
           <codeph>gpfdist</codeph> attempts to capture the row that contains the error. However,
-          <codeph>gpfidst</codeph> might not capture the exact row for some formatting
+          <codeph>gpfdist</codeph> might not capture the exact row for some formatting
         errors.</note>
       <p>For readable external tables, if load files are compressed using <codeph>gzip</codeph> or
           <codeph>bzip2</codeph> (have a <codeph>.gz</codeph> or <codeph>.bz2</codeph> file

@@ -622,7 +622,7 @@
                                                   location of the formatting error.
                                                   <codeph>gpfdist</codeph> attempts to capture the
                                                   row that contains the error. However,
-                                                  <codeph>gpfidst</codeph> might not capture the
+                                                  <codeph>gpfdist</codeph> might not capture the
                                                   exact row for some formatting errors.</note></pd>
                                             <pd>For more information about handling load errors, see
                                                 "Loading and Unloading Data" in the <cite>Greenplum
