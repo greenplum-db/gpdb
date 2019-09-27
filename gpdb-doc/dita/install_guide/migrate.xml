@@ -137,6 +137,11 @@
           aggregate in a previous Greenplum release that called the built-in
             <codeph>int4_avg_accum()</codeph> function, you will need to revise your aggregate for
           the new signature. </li>
+        <li>The <codeph>string_agg(expression)</codeph> function has been removed from Greenplum 6.
+          The function concatenates text values into a string. You can replace the single argument
+          function with the function <codeph>string_agg(expression, delimiter)</codeph> and specify
+          an empty string as the <codeph>delimiter</codeph>, for example
+            <codeph>string_agg(txt_col1, '').</codeph></li>
         <li><codeph>gpbackup</codeph> saves the distribution policy and distribution key for each
           table in the backup so that data can be restored to the same segment. If a table's
           distribution key in the Greenplum 4.3 or 5 database is incompatible with Greenplum 6,
