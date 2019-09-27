@@ -8,6 +8,9 @@
 #include "scenarios/ao_table.h"
 #include "scenarios/aocs_table.h"
 
+#include "utilities/gpdb5-cluster.h"
+#include "utilities/gpdb6-cluster.h"
+
 #include "utilities/test-helpers.h"
 
 static void
@@ -20,6 +23,8 @@ setup(void **state)
 static void
 teardown(void **state)
 {
+	stopGpdbFiveCluster();
+	stopGpdbSixCluster();
 }
 
 int
