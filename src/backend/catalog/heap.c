@@ -2482,13 +2482,13 @@ heap_drop_with_catalog(Oid relid)
 	/*
 	 * Remove distribution policy, if any.
  	 */
-	if (relkind == RELKIND_RELATION)
+	if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
 		GpPolicyRemove(relid);
 
 	/*
 	 * Attribute encoding
 	 */
-	if (relkind == RELKIND_RELATION)
+	if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
 		RemoveAttributeEncodingsByRelid(relid);
 
 	/* MPP-6929: metadata tracking */

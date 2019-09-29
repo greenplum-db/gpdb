@@ -437,7 +437,7 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 								dest, params, 0);
 
 
-	if (into->skipData)
+	if (into->skipData && !is_matview)
 	{
 		/*
 		 * If WITH NO DATA was specified, do not go through the rewriter,
