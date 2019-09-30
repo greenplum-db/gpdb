@@ -31,31 +31,17 @@ where (select count(*) from echotable as i where i.c2 = o.c2) >= 2;
 (2 rows)
 
 -- Planner test to make sure the initplan is not removed for function scan
--- VACUUM FULL: To generate a deterministic plan for the query below.
-VACUUM FULL pg_database;
-VACUUM FULL pg_authid;
-explain (costs off)
-select sess_id from pg_stat_activity
-where query = (select current_query())
-and usename='xxx' and datname='xxx';
-                        QUERY PLAN                         
------------------------------------------------------------
- Hash Join
-   Hash Cond: (s.usesysid = u.oid)
+explain select * from generate_series(1,2) s1 join pg_class on true where s1=(select pg_backend_pid());
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Nested Loop  (cost=10000000000.01..10000000027.63 rows=456 width=206)
    InitPlan 1 (returns $0)
-     ->  Result
-   ->  Hash Join
-         Hash Cond: (s.datid = d.oid)
-         ->  Function Scan on pg_stat_get_activity s
-               Filter: (query = $0)
-         ->  Hash
-               ->  Seq Scan on pg_database d
-                     Filter: (datname = 'xxx'::name)
-   ->  Hash
-         ->  Seq Scan on pg_authid u
-               Filter: (rolname = 'xxx'::name)
+     ->  Result  (cost=0.00..0.01 rows=1 width=0)
+   ->  Function Scan on generate_series s1  (cost=0.00..12.50 rows=1 width=4)
+         Filter: (s1 = $0)
+   ->  Seq Scan on pg_class  (cost=0.00..10.56 rows=456 width=202)
  Optimizer: Postgres query optimizer
-(15 rows)
+(7 rows)
 
 -- Planner test: constant folding in subplan testexpr  produces no error
 create table subselect_t1 (a int, b int, c int) distributed by (a);
