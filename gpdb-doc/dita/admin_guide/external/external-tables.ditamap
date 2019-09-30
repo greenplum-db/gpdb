@@ -3,6 +3,7 @@
 <map>
   <title>Working with External Data</title>
   <topicref href="g-working-with-file-based-ext-tables.xml" navtitle="Working with External Data">
+    <topicref href="pxf-overview.xml" navtitle="Accessing External Data with PXF"/>
     <topicref href="g-external-tables.xml" navtitle="Working with External Tables">
       <topicref href="g-file-protocol.xml"/>
       <topicref href="g-gpfdist-protocol.xml"/>
@@ -17,7 +18,8 @@
         <topicref href="g-example-2-multiple-gpfdist-instances.xml" type="topic"/>
         <topicref href="g-example-3-multiple-gpfdists-instances.xml" type="topic"/>
         <topicref href="g-example-4-single-gpfdist-instance-with-error-logging.xml" type="topic"/>
-        <topicref href="g-example-5-text-format-on-a-hadoop-distributed-file-server.xml" type="topic"/>
+        <topicref href="g-example-5-text-format-on-a-hadoop-distributed-file-server.xml"
+          type="topic"/>
         <topicref href="g-example-6-multiple-files-in-csv-format-with-header-rows.xml" type="topic"/>
         <topicref href="g-example-7-readable-web-external-table-with-script.xml" type="topic"/>
         <topicref href="g-example-8-writable-external-table-with-gpfdist.xml"/>
@@ -27,7 +29,6 @@
           type="topic"/>
       </topicref>
     </topicref>
-    <topicref href="pxf-overview.xml" navtitle="Accessing External Data with PXF"/>
     <topicref href="g-foreign.xml" navtitle="Accessing External Data with Foreign Tables">
       <topicref href="g-devel-fdw.xml"/>
     </topicref>
