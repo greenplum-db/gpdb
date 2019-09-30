@@ -124,23 +124,54 @@ SELinuxstatus: disabled</codeblock></li>
           settings may cause some Greenplum Database queries to fail because they will run out of
           file descriptors needed to process the query. </li>
       </ul>
-    </body>
-    <topic id="topic4" xml:lang="en">
-      <title id="ji162190">Linux System Settings</title>
-      <body>
-        <ul>
-          <li id="ji162238">Edit the <codeph>/etc/hosts</codeph> file and make sure that it includes
-            the host names and all interface address names for every machine participating in your
-            Greenplum Database system.</li>
-          <li id="ji162191">Set the following parameters in the <codeph>/etc/sysctl.conf</codeph>
-            file and reload with <codeph>sysctl -p</codeph>: <codeblock># kernel.shmall = _PHYS_PAGES / 2 # <b>See <xref href="#topic4/sysctl_conf" format="dita">Note</xref> 1</b>
+    
+    <p>More specifically, you need to edit the following Linux configuration settings:</p>
+    <ul id="ul_t1k_rl3_2jb">
+      <li><xref href="#topic3/linux_hosts_file" format="dita">Hosts</xref> file</li>
+      <li><codeph><xref href="#topic3/sysctl_file" format="dita">sysctl</xref></codeph>
+        parameters</li>
+      <li><xref href="#topic3/system_resources" format="dita">System Resources</xref> limits </li>
+      <li><xref href="#topic3/xfs_mount" format="dita">XFS mount </xref>options</li>
+      <li><xref href="#topic3/disk_io_settings" format="dita">Disk I/O settings</xref>
+        <ul id="ul_fm1_2yc_2jb">
+          <li>Read ahead values</li>
+          <li>Disk I/O scheduler disk access</li>
+        </ul></li>
+      <li><xref href="#topic3/huge_pages" format="dita">Transparent Huge Pages</xref> (THP)</li>
+      <li><xref href="#topic3/ipc_object_removal" format="dita">IPC object removal</xref>
+        settings</li>
+      <li><xref href="#topic3/ssh_max_connections" format="dita">SSH connections</xref>
+        threshold</li>
+      <li>Tty users setting</li>
+    </ul>
+    <section id="linux_hosts_file">
+      <title>Linux Hosts File</title>
+      <p>Edit the <codeph>/etc/hosts</codeph> file and make sure that it includes the host names and
+        all interface address names for every machine participating in your Greenplum Database
+        system.</p>
+    </section>
+    <section id="sysctl_file">
+      <title>Sysctl parameters</title>
+      <p>The <codeph>sysctl.conf</codeph> parameters listed in this topic are for performance in a
+        wide variety of environments. Change these settings according to your specific situation and
+        environment.</p>
+      <p>Please review the following minimal recommended setttings and some additional settings
+          depending on your environment. Set the parameters in the <codeph>/etc/sysctl.conf</codeph>
+          file and reload with <codeph>sysctl -p</codeph>: </p>
+      <codeblock>
+# minimal settings
+
+# kernel.shmall = _PHYS_PAGES / 2 # <b>See <xref href="#topic3/shared_memory_pages" format="dita">Shared Memory Pages</xref></b>
 kernel.shmall = 4000000000
-# kernel.shmmax = kernel.shmall * PAGE_SIZE # <b>See <xref href="#topic4/sysctl_conf" format="dita">Note</xref> 1</b>
+# kernel.shmmax = kernel.shmall * PAGE_SIZE 
 kernel.shmmax = 500000000
 kernel.shmmni = 4096
 vm.overcommit_memory = 2
-vm.overcommit_ratio = 95 # <b>See <xref href="#topic4/sysctl_conf" format="dita">Note</xref> 2</b>
-net.ipv4.ip_local_port_range = 10000 65535 # <b>See <xref href="#topic4/sysctl_conf" format="dita">Note</xref> 3</b>
+vm.overcommit_ratio = 95 # <b>See <xref href="#topic3/segment_host_memory" format="dita">Segment Host Memory</xref></b>
+
+# additional settings
+
+net.ipv4.ip_local_port_range = 10000 65535 # <b>See <xref href="#topic3/port_settings" format="dita">Port Settings</xref></b>
 kernel.sem = 500 2048000 200 40960
 kernel.sysrq = 1
 kernel.core_uses_pid = 1
@@ -158,242 +189,268 @@ vm.swappiness = 10
 vm.zone_reclaim_mode = 0
 vm.dirty_expire_centisecs = 500
 vm.dirty_writeback_centisecs = 100
-vm.dirty_background_ratio = 0 # <b>See <xref href="#topic4/sysctl_conf" format="dita">Note</xref> 5</b>
+vm.dirty_background_ratio = 0 # <b>See <xref href="#topic3/system_memory" format="dita">System Memory</xref></b>
 vm.dirty_ratio = 0
 vm.dirty_background_bytes = 1610612736
 vm.dirty_bytes = 4294967296</codeblock>
-            <note id="sysctl_conf">The listed <codeph>sysctl.conf</codeph> parameters are for
-              performance in a wide variety of environments. However, the settings might require
-              changes in specific situations. These are additional notes about some of the
-                <codeph>sysctl.conf</codeph> parameters.<ol id="ol_hfn_mrs_q3b">
-                <li><codeph>kernel.shmall</codeph> sets the total amount of shared memory pages that
-                  can be used system wide in pages. <codeph>kernel.shmmax</codeph> sets maximum size
-                  of a single shared memory segment in bytes. Set <codeph>kernel.shmall</codeph> and
-                    <codeph>kernel.shmax</codeph> values based on your system's physical memory and
-                  page size. In general, the value for both parameters should be one half of the
-                  system physical memory. You can calculate the parameter values with the operating
-                  system variables <codeph>_PHYS_PAGES</codeph> and
-                    <codeph>PAGE_SIZE</codeph>.<codeblock>kernel.shmall = ( _PHYS_PAGES / 2)
-kernel.shmmax = ( _PHYS_PAGES / 2) * PAGE_SIZE</codeblock><p>You
-                    can run these two commands in a terminal window on your system to calculate the
-                    values for <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph>. The
-                      <codeph>getconf</codeph> command returns the value of an operating system
-                    variable.
-                    <codeblock>$ echo $(expr $(getconf _PHYS_PAGES) / 2) 
-$ echo $(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))</codeblock></p></li>
-                <li>When <codeph>vm.overcommit_memory</codeph> is 2, you specify a value for
-                    <codeph>vm.overcommit_ratio</codeph>. For information about calculating the
-                  value for <codeph>vm.overcommit_ratio</codeph> when using resource queue-based
-                  resource management, see the Greenplum Database server configuration parameter
-                      <codeph><xref
-                      href="../ref_guide/config_params/guc-list.xml#gp_vmem_protect_limit"
-                      scope="peer">gp_vmem_protect_limit</xref></codeph> in the <cite>Greenplum
-                    Database Reference Guide</cite>. If you are using resource group-based resource
-                  management, tune the operating system <codeph>vm.overcommit_ratio</codeph> as
-                  necessary. If your memory utilization is too low, increase the
-                    <codeph>vm.overcommit_ratio</codeph> value; if your memory or swap usage is too
-                  high, decrease the value. </li>
-                <li>To avoid port conflicts between Greenplum Database and other applications when
-                  initializing Greenplum Database, do not specify Greenplum Database ports in the
-                  range specified by the operating system parameter
-                    <codeph>net.ipv4.ip_local_port_range</codeph>. For example, if
-                    <codeph>net.ipv4.ip_local_port_range = 10000 65535</codeph>, you could set the
-                  Greenplum Database base port numbers to these values.
-                    <codeblock>PORT_BASE = 6000
-MIRROR_PORT_BASE = 7000</codeblock><p>For
-                    information about the port ranges that are used by Greenplum Database, see <xref
-                      href="../utility_guide/admin_utilities/gpinitsystem.xml" format="dita"
-                      scope="peer" type="topic">gpinitsystem</xref>.</p></li>
-                <li>Azure deployments require Greenplum Database to not use port 65330. Add the
-                  following line to <filepath>sysctl.conf</filepath>:
-                    <codeblock>net.ipv4.ip_local_reserved_ports=65330 </codeblock><p>For additional
-                    requirements and recommendations for cloud deployments, see <i><xref
-                        href="../cloud/gpdb-cloud-tech-rec.html" format="html" scope="peer"
-                        >Greenplum Database Cloud Technical Recommendations</xref></i>. </p></li>
-                <li>For host systems with more than 64GB of memory, these settings are
-                    recommended:<codeblock>vm.dirty_background_ratio = 0
+      <p id="shared_memory_pages"><b>Shared Memory Pages</b></p>
+      <p><codeph>kernel.shmall</codeph> sets the total amount of shared memory pages that can be
+        used system wide in pages. <codeph>kernel.shmmax</codeph> sets maximum size of a single
+        shared memory segment in bytes.</p>
+      <p>Set <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values based on your
+        system's physical memory and page size. In general, the value for both parameters should be
+        one half of the system physical memory. You can calculate the parameter values with the
+        operating system variables <codeph>_PHYS_PAGES</codeph> and <codeph>PAGE_SIZE</codeph>.</p>
+      <codeblock>kernel.shmall = ( _PHYS_PAGES / 2)
+kernel.shmmax = ( _PHYS_PAGES / 2) * PAGE_SIZE</codeblock>
+      <p>You can run these two commands in a terminal window on your system to calculate the values
+        for <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph>. The
+          <codeph>getconf</codeph> command returns the value of an operating system variable.</p>
+      <codeblock>$ echo $(expr $(getconf _PHYS_PAGES) / 2) 
+$ echo $(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))</codeblock>
+      <p id="segment_host_memory"><b>Segment Host Memory</b></p>
+      <p>The <codeph>vm.overcommit_memory</codeph> is Linux kernel parameter that determines the
+        method the OS uses for determining how much memory can be allocated to processes. For
+        Greenplum database, this parameter should always be set to 2. Then you specify a value for
+          <codeph>vm.overcommit_ratio</codeph>.</p>
+        <p>If you are using resource group-based resource management, tune the operating system
+            <codeph>vm.overcommit_ratio</codeph> as necessary. If your memory utilization is too
+          low, increase the <codeph>vm.overcommit_ratio</codeph> value; if your memory or swap usage
+          is too high, decrease the value.</p>
+      <p>For information about calculating the value for <codeph>vm.overcommit_ratio</codeph> when
+          using resource queue-based resource management, see the Greenplum Database server
+          configuration parameter <codeph><xref
+              href="../ref_guide/config_params/guc-list.xml#gp_vmem_protect_limit" scope="peer"
+              >gp_vmem_protect_limit</xref></codeph> in the <cite>Greenplum Database Reference
+            Guide</cite> and the <xref href="../admin_guide/wlmgmt_intro.html" format="dita"
+            scope="peer">Greenplum Database Memory Overview</xref> in the <cite>Greenplum Database
+            Administrator guide</cite>.</p>
+      <p id="port_settings"><b>Port Settings</b></p>
+      <p>To avoid port conflicts between Greenplum Database and other applications when initializing
+        Greenplum Database, do not specify Greenplum Database ports in the range specified by the
+        operating system parameter <codeph>net.ipv4.ip_local_port_range</codeph>. For example, if
+          <codeph>net.ipv4.ip_local_port_range = 10000 65535</codeph>, you could set the Greenplum
+        Database base port numbers to these values.
+        <codeblock>PORT_BASE = 6000
+MIRROR_PORT_BASE = 7000</codeblock></p>
+      <p>For information about the port ranges that are used by Greenplum Database, see <xref
+          href="../utility_guide/admin_utilities/gpinitsystem.xml" format="dita" scope="peer"
+          type="topic">gpinitsystem</xref>.</p>
+      <p>Azure deployments require Greenplum Database to not use port 65330. Add the following line
+        to <filepath>sysctl.conf</filepath>:
+        <codeblock>net.ipv4.ip_local_reserved_ports=65330 </codeblock></p>
+      <p>For additional requirements and recommendations for cloud deployments, see <i><xref
+            href="../cloud/gpdb-cloud-tech-rec.html" format="html" scope="peer">Greenplum Database
+            Cloud Technical Recommendations</xref></i>. </p>
+      <p id="system_memory"><b>System Memory</b></p>
+      <p>For host systems with more than 64GB of memory, these settings are recommended:
+        <codeblock>vm.dirty_background_ratio = 0
 vm.dirty_ratio = 0
 vm.dirty_background_bytes = 1610612736 # 1.5GB
-vm.dirty_bytes = 4294967296 # 4GB</codeblock><p>For
-                    host systems with 64GB of memory or less, remove
-                      <codeph>vm.dirty_background_bytes</codeph> and <codeph>vm.dirty_bytes</codeph>
-                    and set the two <codeph>ratio</codeph> parameters to these
-                    values:<codeblock>vm.dirty_background_ratio = 3
-vm.dirty_ratio = 10</codeblock></p></li>
-                <li>Increase <codeph>vm.min_free_kbytes</codeph> to ensure
-                    <codeph>PF_MEMALLOC</codeph> requests from network and storage drivers are
-                  easily satisfied. This is especially critical on systems with large amounts of
-                  system memory. The default value is often far too low on these systems. Use this
-                  awk command to set <codeph>vm.min_free_kbytes</codeph> to a recommended 3% of
-                  system physical memory:
-                    <codeblock>awk 'BEGIN {OFMT = "%.0f";} /MemTotal/ {print "vm.min_free_kbytes =", $2 * .03;}'
-               /proc/meminfo >> /etc/sysctl.conf </codeblock><p>Do
-                    not set <codeph>vm.min_free_kbytes</codeph> to higher than 5% of system memory
-                    as doing so might cause out of memory conditions.</p></li>
-              </ol></note></li>
-          <li id="ji162213">Set the following parameters in the
-              <codeph>/etc/security/limits.conf</codeph> file:
-              <codeblock>* soft nofile 524288
+vm.dirty_bytes = 4294967296 # 4GB</codeblock></p>
+      <p>For host systems with 64GB of memory or less, remove
+          <codeph>vm.dirty_background_bytes</codeph> and <codeph>vm.dirty_bytes</codeph> and set the
+        two <codeph>ratio</codeph> parameters to these values:
+        <codeblock>vm.dirty_background_ratio = 3
+vm.dirty_ratio = 10</codeblock></p>
+      <p>Increase <codeph>vm.min_free_kbytes</codeph> to ensure <codeph>PF_MEMALLOC</codeph>
+        requests from network and storage drivers are easily satisfied. This is especially critical
+        on systems with large amounts of system memory. The default value is often far too low on
+        these systems. Use this awk command to set <codeph>vm.min_free_kbytes</codeph> to a
+        recommended 3% of system physical memory:
+        <codeblock>awk 'BEGIN {OFMT = "%.0f";} /MemTotal/ {print "vm.min_free_kbytes =", $2 * .03;}'
+               /proc/meminfo >> /etc/sysctl.conf </codeblock></p>
+      <p>Do not set <codeph>vm.min_free_kbytes</codeph> to higher than 5% of system memory as doing
+        so might cause out of memory conditions.</p>
+    </section>
+    <section id="system_resources">
+      <title>System Resources Limits</title>
+      <p>Set the following parameters in the <codeph>/etc/security/limits.conf</codeph> file:</p>
+      <codeblock>* soft nofile 524288
 * hard nofile 524288
 * soft nproc 131072
-* hard nproc 131072</codeblock><p>For
-              Red Hat Enterprise Linux (RHEL) and CentOS systems, parameter values in the
-                <codeph>/etc/security/limits.d/90-nproc.conf</codeph> file (RHEL/CentOS 6) or
-                <codeph>/etc/security/limits.d/20-nproc.conf</codeph> file (RHEL/CentOS 7) override
-              the values in the <codeph>limits.conf</codeph> file. Ensure that any parameters in the
-              override file are set to the required value. The Linux module
-                <codeph>pam_limits</codeph> sets user limits by reading the values from the
-                <codeph>limits.conf</codeph> file and then from the override file. For information
-              about PAM and user limits, see the documentation on PAM and
-                <codeph>pam_limits</codeph>.</p><p>Execute the <codeph>ulimit -u</codeph> command on
-              each segment host to display the maximum number of processes that are available to
-              each user. Validate that the return value is 131072.</p></li>
-          <li id="ji162219">XFS is the preferred file system on Linux platforms for data storage.
-            The following XFS mount options are
-              recommended:<codeblock>rw,nodev,noatime,nobarrier,inode64</codeblock><p>See the manual
-              page (man) for the <codeph>mount</codeph> command for more information about using
-              that command (<codeph>man mount</codeph> opens the man page).</p><p>The XFS options
-              can also be set in the <codeph>/etc/fstab</codeph> file. This example entry from an
-                <codeph>fstab</codeph> file specifies the XFS
-            options.</p><codeblock>/dev/data /data xfs nodev,noatime,nobarrier,inode64 0 0</codeblock></li>
-          <li>Each disk device file should have a read-ahead (<codeph>blockdev</codeph>) value of
-              16384.<p>To verify the read-ahead value of a disk
-              device:</p><codeblock># /sbin/blockdev --getra <varname>devname</varname></codeblock><p>For
-              example:</p><codeblock># /sbin/blockdev --getra /dev/sdb</codeblock><p>To set blockdev
-              (read-ahead) on a
-              device:</p><codeblock># /sbin/blockdev --setra <varname>bytes</varname> <varname>devname</varname></codeblock><p>For
-              example:</p><codeblock># /sbin/blockdev --setra 16384 /dev/sdb</codeblock><p>See the
-              manual page (man) for the <codeph>blockdev</codeph> command for more information about
-              using that command (<codeph>man blockdev</codeph> opens the man page).</p>
-            <note>The <codeph>blockdev --setra</codeph> command is not persistent, it needs to be
-              run every time the system reboots. How to run the command will vary based on your
-              system, but you must to ensure that the read ahead setting is set every time the
-              system reboots.</note></li>
-          <li id="ji162222">The Linux disk I/O scheduler for disk access supports different
-            policies, such as <codeph>CFQ</codeph>, <codeph>AS</codeph>, and
-              <codeph>deadline</codeph>.<p>The <codeph>deadline</codeph> scheduler option is
-              recommended. To specify a scheduler until the next system reboot, run the
-              following:</p><codeblock># echo <varname>schedulername</varname> &gt; /sys/block/<varname>devname</varname>/queue/scheduler</codeblock><p>For
-              example:</p><codeblock># echo deadline &gt; /sys/block/sbd/queue/scheduler</codeblock>
-            <note>Setting the disk I/O scheduler policy with the <codeph>echo</codeph> command is
-              not persistent, and must be run when the system is rebooted. If you use the
-                <codeph>echo</codeph> command to set the policy, you must ensure the command is run
-              when the system reboots. How to run the command will vary based on your
-              system.</note><p>One method to set the I/O scheduler policy at boot time is with the
-                <codeph>elevator</codeph> kernel parameter. Add the parameter
-                <codeph>elevator=deadline</codeph> to the <cmdname>kernel</cmdname> command in the
-              file <codeph>/boot/grub/grub.conf</codeph>, the GRUB boot loader configuration file.
-              This is an example <cmdname>kernel</cmdname> command from a <codeph>grub.conf</codeph>
-              file on RHEL 6.x or CentOS 6.x. The command is on multiple lines for
-              readability.</p><codeblock>kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
-    <b>elevator=deadline</b> crashkernel=128M@16M  quiet console=tty1
-    console=ttyS1,115200 panic=30 transparent_hugepage=never 
-    initrd /initrd-2.6.18-274.3.1.el5.img</codeblock><p>To
-              specify the I/O scheduler at boot time on systems that use <codeph>grub2</codeph> such
-              as RHEL 7.x or CentOS 7.x, use the system utility <codeph>grubby</codeph>. This
-              command adds the parameter when run as
-              root.<codeblock># grubby --update-kernel=ALL --args="elevator=deadline"</codeblock></p><p>After
-              adding the parameter, reboot the system.</p><p>This <codeph>grubby</codeph> command
-              displays kernel parameter
-              settings.<codeblock># grubby --info=ALL</codeblock></p><p>For more information about
-              the <codeph>grubby</codeph> utility, see your operating system documentation. If the
-                <codeph>grubby</codeph> command does not update the kernels, see the <xref
-                href="#topic4/grubby_note" format="dita">Note</xref> at the end of the
-            section.</p></li>
-          <li>Disable Transparent Huge Pages (THP). RHEL 6.0 or higher enables THP by default. THP
-            degrades Greenplum Database performance. One way to disable THP on RHEL 6.x is by adding
-            the parameter <codeph>transparent_hugepage=never</codeph> to the
-              <cmdname>kernel</cmdname> command in the file <codeph>/boot/grub/grub.conf</codeph>,
-            the GRUB boot loader configuration file. This is an example <cmdname>kernel</cmdname>
-            command from a <codeph>grub.conf</codeph> file. The command is on multiple lines for
-              readability:<codeblock>kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
-    elevator=deadline crashkernel=128M@16M  quiet console=tty1
-    console=ttyS1,115200 panic=30 <b>transparent_hugepage=never</b> 
-    initrd /initrd-2.6.18-274.3.1.el5.img</codeblock><p>On
-              systems that use <codeph>grub2</codeph> such as RHEL 7.x or CentOS 7.x, use the system
-              utility <codeph>grubby</codeph>. This command adds the parameter when run as
-              root.<codeblock># grubby --update-kernel=ALL --args="transparent_hugepage=never"</codeblock></p><p>After
-              adding the parameter, reboot the system.</p><p>For Ubuntu systems, install the
-                <codeph>hugepages</codeph> package and execute this command as
-              root:<codeblock># hugeadm --thp-never</codeblock></p><p>This <cmdname>cat</cmdname>
-              command checks the state of THP. The output indicates that THP is
-              disabled.<codeblock>$ cat /sys/kernel/mm/*transparent_hugepage/enabled
-always [never]</codeblock></p><p>For
-              more information about Transparent Huge Pages or the <codeph>grubby</codeph> utility,
-              see your operating system documentation. If the <codeph>grubby</codeph> command does
-              not update the kernels, see the <xref href="#topic4/grubby_note" format="dita"
-                >Note</xref> at the end of the section.</p></li>
-          <li>Disable IPC object removal for RHEL 7.2 or CentOS 7.2, or Ubuntu. The default
-              <codeph>systemd</codeph> setting <codeph>RemoveIPC=yes</codeph> removes IPC
-            connections when non-system user accounts log out. This causes the Greenplum Database
-            utility <codeph>gpinitsystem</codeph> to fail with semaphore errors. Perform one of the
-            following to avoid this issue.<ul id="ul_l21_t2v_q5">
-              <li>When you add the <codeph>gpadmin</codeph> operating system user account to the
-                master node in <xref href="#topic23" type="topic" format="dita"/>, create the user
-                as a system account. </li>
-              <li> Disable <codeph>RemoveIPC</codeph>. Set this parameter in
-                  <codeph>/etc/systemd/logind.conf</codeph> on the Greenplum Database host systems.
-                  <codeblock>RemoveIPC=no</codeblock><p>The setting takes effect after restarting
-                  the <codeph>systemd-login</codeph> service or rebooting the system. To restart the
-                  service, run this command as the root
-                user.</p><codeblock>service systemd-logind restart</codeblock></li>
-            </ul></li>
-          <li id="maxstartups">
-            <p>Certain Greenplum Database management utilities including <codeph>gpexpand</codeph>,
-                <codeph>gpinitsystem</codeph>, and <codeph>gpaddmirrors</codeph>, use secure shell
-              (SSH) connections between systems to perform their tasks. In large Greenplum Database
-              deployments, cloud deployments, or deployments with a large number of segments per
-              host, these utilities may exceed the hosts' maximum threshold for unauthenticated
-              connections. When this occurs, you receive errors such as:
-                <codeph>ssh_exchange_identification: Connection closed by remote host.</codeph>.</p>
-            <p>To increase this connection threshold for your Greenplum Database system, update the
-              SSH <codeph>MaxStartups</codeph> configuration parameter in one of the
-                <codeph>/etc/ssh/sshd_config</codeph> or <codeph>/etc/sshd_config</codeph> SSH
-              daemon configuration files.</p>
-            <p>If you specify <codeph>MaxStartups</codeph> using a single integer value, you
-              identify the maximum number of concurrent unauthenticated connections. For
-              example:<codeblock>MaxStartups 200</codeblock></p>
-            <p>If you specify <codeph>MaxStartups</codeph> using the
-                "<varname>start:rate:full</varname>" syntax, you enable random early connection drop
-              by the SSH daemon. <varname>start</varname> identifies the maximum number of
-              unathenticated SSH connection attempts allowed. Once <varname>start</varname> number
-              of unauthenticated connection attempts is reached, the SSH daemon refuses
-                <varname>rate</varname> percent of subsequent connection attempts.
-                <varname>full</varname> identifies the maximum number of unauthenticated connection
-              attempts after which all attempts are refused. For
-              example:<codeblock>Max Startups 10:30:200</codeblock></p>
-            <p>Restart the SSH daemon after you update <codeph>MaxStartups</codeph>. For example, on
-              a CentOS 6 system, run the following command as the <codeph>root</codeph>
-              user:<codeblock># service sshd restart</codeblock></p>
-            <p>For detailed information about SSH configuration options, refer to the SSH
-              documentation for your Linux distribution.</p>
-          </li>
-          <!--         <li>On some SUSE Linux Enterprise Server platforms, the Greenplum Database utility
+* hard nproc 131072</codeblock>
+      <p>For Red Hat Enterprise Linux (RHEL) and CentOS systems, parameter values in the
+          <codeph>/etc/security/limits.d/90-nproc.conf</codeph> file (RHEL/CentOS 6) or
+          <codeph>/etc/security/limits.d/20-nproc.conf</codeph> file (RHEL/CentOS 7) override the
+        values in the <codeph>limits.conf</codeph> file. Ensure that any parameters in the override
+        file are set to the required value. The Linux module <codeph>pam_limits</codeph> sets user
+        limits by reading the values from the <codeph>limits.conf</codeph> file and then from the
+        override file. For information about PAM and user limits, see the documentation on PAM and
+          <codeph>pam_limits</codeph>.</p>
+      <p>Execute the <codeph>ulimit -u</codeph> command on each segment host to display the maximum
+        number of processes that are available to each user. Validate that the return value is
+        131072.</p>
+    </section>
+    <section id="xfs_mount">
+      <title>XFS Mount Options</title>
+      <p>XFS is the preferred file system on Linux platforms for data storage. The following XFS
+        mount options are recommended:<codeblock>rw,nodev,noatime,nobarrier,inode64</codeblock></p>
+      <p>See the manual page (man) for the <codeph>mount</codeph> command for more information about
+        using that command (<codeph>man mount</codeph> opens the man page).</p>
+      <p>The XFS options can also be set in the <codeph>/etc/fstab</codeph> file. This example entry
+        from an <codeph>fstab</codeph> file specifies the XFS options.</p>
+      <codeblock>/dev/data /data xfs nodev,noatime,nobarrier,inode64 0 0</codeblock>
+    </section>
+    <section id="disk_io_settings">
+      <title>Disk I/O settings</title>
+      <ul id="ul_oh4_vlk_2jb">
+        <li>
+          <p>Read-ahead Value</p>
+          <p>Each disk device file should have a read-ahead (<codeph>blockdev</codeph>) value of
+            16384.</p>
+          <p>To verify the read-ahead value of a disk device:</p>
+          <codeblock># /sbin/blockdev --getra <varname>devname</varname></codeblock>
+          <p>For example:</p>
+          <codeblock># /sbin/blockdev --getra /dev/sdb</codeblock>
+          <p>To set blockdev (read-ahead) on a device:</p>
+          <codeblock># /sbin/blockdev --setra <varname>bytes</varname> <varname>devname</varname></codeblock>
+          <p>For example:</p>
+          <codeblock># /sbin/blockdev --setra 16384 /dev/sdb</codeblock>
+          <p>See the manual page (man) for the <codeph>blockdev</codeph> command for more
+            information about using that command (<codeph>man blockdev</codeph> opens the man
+            page).</p>
+          <note>The <codeph>blockdev --setra</codeph> command is not persistent, it needs to be run
+            every time the system reboots. How to run the command will vary based on your system,
+            but you must to ensure that the read ahead setting is set every time the system
+            reboots.</note>
+        </li>
+        <li>
+          <p>Linux disk I/O scheduler</p>
+          <p>The Linux disk I/O scheduler for disk access supports different policies, such as
+              <codeph>CFQ</codeph>, <codeph>AS</codeph>, and <codeph>deadline</codeph>.</p>
+          <p>The <codeph>deadline</codeph> scheduler option is recommended. To specify a scheduler
+            until the next system reboot, run the following:</p>
+          <codeblock># echo <varname>schedulername</varname> &gt; /sys/block/<varname>devname</varname>/queue/scheduler</codeblock>
+          <p>For example:</p>
+          <codeblock># echo deadline &gt; /sys/block/sbd/queue/scheduler</codeblock>
+          <note>Setting the disk I/O scheduler policy with the <codeph>echo</codeph> command is not
+            persistent, and must be run when the system is rebooted. If you use the
+              <codeph>echo</codeph> command to set the policy, you must ensure the command is run
+            when the system reboots. How to run the command will vary based on your system.</note>
+          <p>One method to set the I/O scheduler policy at boot time is with the
+              <codeph>elevator</codeph> kernel parameter. Add the parameter
+              <codeph>elevator=deadline</codeph> to the <cmdname>kernel</cmdname> command in the
+            file <codeph>/boot/grub/grub.conf</codeph>, the GRUB boot loader configuration file.
+            This is an example <cmdname>kernel</cmdname> command from a <codeph>grub.conf</codeph>
+            file on RHEL 6.x or CentOS 6.x. The command is on multiple lines for readability.</p>
+          <codeblock>kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
+                 <b>elevator=deadline</b> crashkernel=128M@16M  quiet console=tty1
+                 console=ttyS1,115200 panic=30 transparent_hugepage=never 
+                 initrd /initrd-2.6.18-274.3.1.el5.img</codeblock>
+          <p>To specify the I/O scheduler at boot time on systems that use <codeph>grub2</codeph>
+            such as RHEL 7.x or CentOS 7.x, use the system utility <codeph>grubby</codeph>. This
+            command adds the parameter when run as
+            root.<codeblock># grubby --update-kernel=ALL --args="elevator=deadline"</codeblock></p>
+          <p>After adding the parameter, reboot the system.</p>
+          <p>This <codeph>grubby</codeph> command displays kernel parameter
+            settings.<codeblock># grubby --info=ALL</codeblock></p>
+          <p>For more information about the <codeph>grubby</codeph> utility, see your operating
+            system documentation. If the <codeph>grubby</codeph> command does not update the
+            kernels, see the <xref href="#topic3/grubby_note" format="dita">Note</xref> at the end
+            of the section.</p>
+        </li>
+      </ul>
+    </section>
+    <section id="huge_pages">
+      <title>Transparent Huge Pages (THP)</title>
+      <p>Disable Transparent Huge Pages (THP) as it degrades Greenplum Database performance. RHEL
+        6.0 or higher enables THP by default. One way to disable THP on RHEL 6.x is by adding the
+        parameter <codeph>transparent_hugepage=never</codeph> to the <cmdname>kernel</cmdname>
+        command in the file <codeph>/boot/grub/grub.conf</codeph>, the GRUB boot loader
+        configuration file. This is an example <cmdname>kernel</cmdname> command from a
+          <codeph>grub.conf</codeph> file. The command is on multiple lines for
+        readability:<codeblock>kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
+           elevator=deadline crashkernel=128M@16M  quiet console=tty1
+           console=ttyS1,115200 panic=30 <b>transparent_hugepage=never</b> 
+           initrd /initrd-2.6.18-274.3.1.el5.img</codeblock></p>
+      <p>On systems that use <codeph>grub2</codeph> such as RHEL 7.x or CentOS 7.x, use the system
+        utility <codeph>grubby</codeph>. This command adds the parameter when run as
+        root.<codeblock># grubby --update-kernel=ALL --args="transparent_hugepage=never"</codeblock></p>
+      <p>After adding the parameter, reboot the system.</p>
+      <p>For Ubuntu systems, install the <codeph>hugepages</codeph> package and execute this command
+        as root:<codeblock># hugeadm --thp-never</codeblock></p>
+      <p>This <cmdname>cat</cmdname> command checks the state of THP. The output indicates that THP
+        is
+        disabled.<codeblock>$ cat /sys/kernel/mm/*transparent_hugepage/enabled
+always [never]</codeblock></p>
+      <p>For more information about Transparent Huge Pages or the <codeph>grubby</codeph> utility,
+        see your operating system documentation. If the <codeph>grubby</codeph> command does not
+        update the kernels, see the <xref href="#topic3/grubby_note" format="dita">Note</xref> at
+        the end of the section.</p>
+    </section>
+    <section id="ipc_object_removal">
+      <title>IPC Object</title>
+      <p>Disable IPC object removal for RHEL 7.2 or CentOS 7.2, or Ubuntu. The default
+          <codeph>systemd</codeph> setting <codeph>RemoveIPC=yes</codeph> removes IPC connections
+        when non-system user accounts log out. This causes the Greenplum Database utility
+          <codeph>gpinitsystem</codeph> to fail with semaphore errors. Perform one of the following
+        to avoid this issue.</p>
+      <ul id="ul_l21_t2v_q5">
+        <li>When you add the <codeph>gpadmin</codeph> operating system user account to the master
+          node in <xref href="#topic23" type="topic" format="dita"/>, create the user as a system
+          account. </li>
+        <li> Disable <codeph>RemoveIPC</codeph>. Set this parameter in
+            <codeph>/etc/systemd/logind.conf</codeph> on the Greenplum Database host systems.
+            <codeblock>RemoveIPC=no</codeblock><p>The setting takes effect after restarting the
+              <codeph>systemd-login</codeph> service or rebooting the system. To restart the
+            service, run this command as the root
+          user.</p><codeblock>service systemd-logind restart</codeblock></li>
+      </ul>
+    </section>
+    <section id="ssh_max_connections">
+      <title>SSH connection threshold</title>
+      <p>Certain Greenplum Database management utilities including <codeph>gpexpand</codeph>,
+          <codeph>gpinitsystem</codeph>, and <codeph>gpaddmirrors</codeph>, use secure shell (SSH)
+        connections between systems to perform their tasks. In large Greenplum Database deployments,
+        cloud deployments, or deployments with a large number of segments per host, these utilities
+        may exceed the hosts' maximum threshold for unauthenticated connections. When this occurs,
+        you receive errors such as: <codeph>ssh_exchange_identification: Connection closed by remote
+          host.</codeph>.</p>
+      <p>To increase this connection threshold for your Greenplum Database system, update the SSH
+          <codeph>MaxStartups</codeph> configuration parameter in one of the
+          <codeph>/etc/ssh/sshd_config</codeph> or <codeph>/etc/sshd_config</codeph> SSH daemon
+        configuration files.</p>
+      <p>If you specify <codeph>MaxStartups</codeph> using a single integer value, you identify the
+        maximum number of concurrent unauthenticated connections. For
+        example:<codeblock>MaxStartups 200</codeblock></p>
+      <p>If you specify <codeph>MaxStartups</codeph> using the "<varname>start:rate:full</varname>"
+        syntax, you enable random early connection drop by the SSH daemon. <varname>start</varname>
+        identifies the maximum number of unathenticated SSH connection attempts allowed. Once
+          <varname>start</varname> number of unauthenticated connection attempts is reached, the SSH
+        daemon refuses <varname>rate</varname> percent of subsequent connection attempts.
+          <varname>full</varname> identifies the maximum number of unauthenticated connection
+        attempts after which all attempts are refused. For
+        example:<codeblock>Max Startups 10:30:200</codeblock></p>
+      <p>Restart the SSH daemon after you update <codeph>MaxStartups</codeph>. For example, on a
+        CentOS 6 system, run the following command as the <codeph>root</codeph>
+        user:<codeblock># service sshd restart</codeblock></p>
+      <p>For detailed information about SSH configuration options, refer to the SSH documentation
+        for your Linux distribution.</p>
+      <!--<li>On some SUSE Linux Enterprise Server platforms, the Greenplum Database utility
               <codeph>gpssh</codeph> fails with the error message <codeph>out of pty
               devices</codeph>. A workaround is to add Greenplum Database operating system users,
             for example <codeph>gpadmin</codeph>, to the tty group. On SUSE systems, tty is required
-            to run <codeph>gpssh</codeph></li>
--->
-        </ul>
-        <note id="grubby_note">If the <codeph>grubby</codeph> command does not update the kernels of
-          a RHEL 7.x or CentOS 7.x system, you can manually update all kernels on the system. For
-          example, to add the parameter <codeph>transparent_hugepage=never</codeph> to all kernels
-          on a system.<ol id="ol_bxf_g3x_j1b">
-            <li>Add the parameter to the <codeph>GRUB_CMDLINE_LINUX</codeph> line in the file
-              parameter in
-              <codeph>/etc/default/grub</codeph>.<codeblock>GRUB_TIMEOUT=5
+            to run <codeph>gpssh</codeph></li>-->
+      <note id="grubby_note">If the <codeph>grubby</codeph> command does not update the kernels of a
+        RHEL 7.x or CentOS 7.x system, you can manually update all kernels on the system. For
+        example, to add the parameter <codeph>transparent_hugepage=never</codeph> to all kernels on
+        a system. <ol id="ol_bxf_g3x_j1b">
+          <li>Add the parameter to the <codeph>GRUB_CMDLINE_LINUX</codeph> line in the file
+            parameter in
+            <codeph>/etc/default/grub</codeph>.<codeblock>GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_CMDLINE_LINUX="crashkernel=auto rd.lvm.lv=cl/root rd.lvm.lv=cl/swap rhgb quiet <b>transparent_hugepage=never</b>"
 GRUB_DISABLE_RECOVERY="true"</codeblock></li>
-            <li>As root, run the <codeph>grub2-mkconfig</codeph> command to update the
-              kernels.<codeblock># grub2-mkconfig -o /boot/grub2/grub.cfg</codeblock></li>
-            <li>Reboot the system.</li>
-          </ol></note>
-      </body>
-    </topic>
+          <li>As root, run the <codeph>grub2-mkconfig</codeph> command to update the
+            kernels.<codeblock># grub2-mkconfig -o /boot/grub2/grub.cfg</codeblock></li>
+          <li>Reboot the system.</li>
+        </ol></note>
+    </section>
+    </body>
   </topic>
   <topic xml:lang="en" id="topic_qst_s5t_wy">
     <title id="ji162593">Synchronizing System Clocks </title>
