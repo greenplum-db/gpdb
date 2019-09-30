@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <catalog/catalog.h>
 
 #include "access/heapam.h"
 #include "access/htup_details.h"
@@ -988,6 +989,17 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 		/* Open and lock the relation, using the appropriate lock type. */
 		rel = heap_openrv(stmt->relation,
 						  (is_from ? RowExclusiveLock : AccessShareLock));
+
+		if (is_from)
+		{
+			if (!allowSystemTableMods && IsUnderPostmaster && IsSystemRelation(rel))
+			{
+				ereport(ERROR,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						errmsg("permission denied: \"%s\" is a system catalog",
+							RelationGetRelationName(rel))));
+			}
+		}
 
 		relid = RelationGetRelid(rel);
 
