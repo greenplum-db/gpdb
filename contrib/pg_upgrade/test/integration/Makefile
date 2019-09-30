@@ -51,8 +51,10 @@ test_dependencies = bdd-library/upgrade-bdd.o \
 	$(scenario_objs) \
 	$(CMOCKERY_OBJS)
 
+debugging_flags = -Og -g
+
 greenplum_five_to_greenplum_six_upgrade_test_suite.t: greenplum_five_to_greenplum_six_upgrade_test_suite.o $(test_dependencies)
-	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) $(debugging_flags) $^ $(libpq_pgport) $(LDFLAGS) -o $@
 
 clean:
 	rm -f $(OBJS) $(EXS)

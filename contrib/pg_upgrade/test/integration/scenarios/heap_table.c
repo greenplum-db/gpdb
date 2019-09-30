@@ -19,70 +19,56 @@
 
 #include "heap_table.h"
 
+#include "utilities/row-assertions.h"
+
 typedef struct UserData
 {
 	int			id;
 	char	   *name;
-}			User;
+} User;
 
 static bool
-users_match(const User * expected_user, const User * actual_user)
+users_match(void * expected, void * actual)
 {
-	return
-		expected_user->id == actual_user->id &&
-			strncmp(expected_user->name, actual_user->name, strlen(expected_user->name)) == 0
-		;
-}
+	User *expected_user = (User *) expected; 
+	User *actual_user = (User *) actual;
 
-typedef struct Rows
-{
-	int			size;
-	User		rows[10];
-} Rows;
-
-static void
-assert_rows_contain_users(const Rows *expected_rows, const Rows *rows)
-{
-	bool		found = false;
-
-	for (int j = 0; j < expected_rows->size; ++j)
-	{
-		found = false;
-		const		User *expected_user = &expected_rows->rows[j];
-
-		for (int i = 0; i < rows->size; ++i)
-		{
-			const		User *current_user = &rows->rows[i];
-
-			if (users_match(expected_user, current_user))
-			{
-				found = true;
-				break;
-			}
-		}
-		assert_true(found);
-	}
-	assert_true(found);
+	return expected_user->id == actual_user->id && 
+		strncmp(expected_user->name, actual_user->name, strlen(expected_user->name)) == 0;
 }
 
 static void
-extract_user_rows(PGresult *result, Rows *rows)
+user_match_failed(void *expected) {
+	User *expected_user = (User *) expected;
+
+	printf("==========> expected {.id=%d, .name=%s}\n",
+		expected_user->id,
+		expected_user->name);
+}
+
+static Rows *
+extract_user_rows(PGresult *result)
 {
-	int			number_of_rows = PQntuples(result);
+	int number_of_rows = PQntuples(result);
+
+	Rows *rows = calloc(1, sizeof(Rows)); 
 
 	const int	i_id = PQfnumber(result, "id");
 	const int	i_name = PQfnumber(result, "name");
 
 	for (int i = 0; i < number_of_rows; i++)
 	{
-		User	   *user = &rows->rows[i];
+		User *user = calloc(1, sizeof(User));
 
 		user->id = atoi(PQgetvalue(result, i, i_id));
-		user->name = PQgetvalue(result, i, i_name);
+		user->name = strdup(PQgetvalue(result, i, i_name));
+
+		rows->rows[i] = user;
 	}
 
 	rows->size = number_of_rows;
 
+	return rows;
 }
 
 static void
@@ -173,22 +159,20 @@ heapTableShouldHaveDataUpgradedToSixCluster()
 	executeQuery(connection, "set search_path to five_to_six_upgrade;");
 	PGresult   *result = executeQuery(connection, "select * from users;");
 
-	Rows		rows = {};
+	Rows *rows = extract_user_rows(result);
 
-	extract_user_rows(result, &rows);
+	assert_int_equal(3, rows->size);
 
-	assert_int_equal(3, rows.size);
-
-	const Rows	expected_users = {
+	User jane = {.id = 1,.name = "Jane"};
+	User john = {.id = 2,.name = "John"};
+	User joe = {.id = 3,.name = "Joe"};
+	
+	const Rows expected_users = {
 		.size = 3,
-		.rows = {
-			{.id = 1,.name = "Jane"},
-			{.id = 2,.name = "John"},
-			{.id = 3,.name = "Joe"}
-		}
+		.rows = {&jane, &john, &joe}
 	};
 
-	assert_rows_contain_users(&expected_users, &rows);
+	assert_rows(rows, expected_users);
 
 	PQfinish(connection);
 }
@@ -241,6 +225,9 @@ createHeapTableWithDataInFiveCluster(void)
 void
 test_a_heap_table_with_data_can_be_upgraded(void **state)
 {
+	matcher = users_match;
+	match_failed = user_match_failed;
+
 	given(createHeapTableWithDataInFiveCluster);
 	when(anAdministratorPerformsAnUpgrade);
 	then(heapTableShouldHaveDataUpgradedToSixCluster);

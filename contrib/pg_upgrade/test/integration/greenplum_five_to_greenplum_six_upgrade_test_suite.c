@@ -13,12 +13,16 @@
 #include "utilities/gpdb6-cluster.h"
 
 #include "utilities/test-helpers.h"
+#include "utilities/row-assertions.h"
 
 static void
 setup(void **state)
 {
 	resetGpdbFiveDataDirectories();
 	resetGpdbSixDataDirectories();
+
+	matcher = NULL;
+	match_failed = NULL;
 }
 
 static void
