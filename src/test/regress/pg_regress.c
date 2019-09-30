@@ -2815,10 +2815,10 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"extra-install", required_argument, NULL, 23},
 		{"config-auth", required_argument, NULL, 24},
 		{"init-file", required_argument, NULL, 25},
-		{"exclude-tests", required_argument, NULL, 27},
-		{"ignore-plans", no_argument, NULL, 28},
-		{"prehook", required_argument, NULL, 29},
-		{"print-failure-diffs", no_argument, NULL, 30},
+		{"exclude-tests", required_argument, NULL, 26},
+		{"ignore-plans", no_argument, NULL, 27},
+		{"prehook", required_argument, NULL, 28},
+		{"print-failure-diffs", no_argument, NULL, 29},
 		{NULL, 0, NULL, 0}
 	};
 
