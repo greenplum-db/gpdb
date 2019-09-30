@@ -706,16 +706,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_enable_minmax_optimization", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enables the planner's use of index scans with limit to implement MIN/MAX."),
-			NULL,
-			GUC_NOT_IN_SAMPLE
-		},
-		&gp_enable_minmax_optimization,
-		true, NULL, NULL
-	},
-
-	{
 		{"gp_enable_multiphase_agg", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the planner's use of two- or three-stage parallel aggregation plans."),
 			gettext_noop("Allows partial aggregation before motion.")
