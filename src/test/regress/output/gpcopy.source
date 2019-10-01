@@ -1615,6 +1615,7 @@ RESET allow_system_table_mods;
 -- cannot copy to a catalog table with allow_system_table_mods=off;
 COPY gp_configuration_history from stdin with delimiter '|';
 ERROR:  permission denied: "gp_configuration_history" is a system catalog
+HINT:  Make sure the configuration parameter allow_system_table_mods is set.
 ABORT;
 -- GPDB makes the database name, and many other things, available
 -- as environment variables to the program. Test those.

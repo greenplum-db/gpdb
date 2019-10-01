@@ -990,15 +990,13 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 		rel = heap_openrv(stmt->relation,
 						  (is_from ? RowExclusiveLock : AccessShareLock));
 
-		if (is_from)
+		if (is_from && !allowSystemTableMods && IsUnderPostmaster && IsSystemRelation(rel))
 		{
-			if (!allowSystemTableMods && IsUnderPostmaster && IsSystemRelation(rel))
-			{
-				ereport(ERROR,
-					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						errmsg("permission denied: \"%s\" is a system catalog",
-							RelationGetRelationName(rel))));
-			}
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+							errmsg("permission denied: \"%s\" is a system catalog",
+								RelationGetRelationName(rel)),
+								errhint("Make sure the configuration parameter allow_system_table_mods is set.")));
 		}
 
 		relid = RelationGetRelid(rel);
