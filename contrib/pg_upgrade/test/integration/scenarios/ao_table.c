@@ -123,8 +123,6 @@ createAoTableWithDataInFiveCluster(void)
 
 	executeQuery(con1, "END;");
 	executeQuery(con2, "END;");
-	/* FIXME: why do we need this ?? */
-	executeQuery(con1, "VACUUM FREEZE;");
 
 	PQfinish(con2);
 	PQfinish(con1);

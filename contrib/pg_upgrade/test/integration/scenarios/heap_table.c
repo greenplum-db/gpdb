@@ -231,8 +231,6 @@ createHeapTableWithDataInFiveCluster(void)
 	executeQuery(connection, "insert into users values (1, 'Jane')");
 	executeQuery(connection, "insert into users values (2, 'John')");
 	executeQuery(connection, "insert into users values (3, 'Joe')");
-	/* FIXME: why do we need this ?? */
-	executeQuery(connection, "VACUUM FREEZE;");
 	PQfinish(connection);
 }
 
