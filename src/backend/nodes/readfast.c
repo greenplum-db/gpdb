@@ -2370,7 +2370,6 @@ _readSplitUpdate(void)
 	READ_LOCALS(SplitUpdate);
 
 	READ_INT_FIELD(actionColIdx);
-	READ_INT_FIELD(ctidColIdx);
 	READ_INT_FIELD(tupleoidColIdx);
 	READ_NODE_FIELD(insertColIdx);
 	READ_NODE_FIELD(deleteColIdx);
@@ -2989,7 +2988,6 @@ _readModifyTable(void)
 	READ_INT_FIELD(exclRelRTI);
 	READ_NODE_FIELD(exclRelTlist);
 	READ_NODE_FIELD(action_col_idxes);
-	READ_NODE_FIELD(ctid_col_idxes);
 	READ_NODE_FIELD(oid_col_idxes);
 
 	READ_DONE();

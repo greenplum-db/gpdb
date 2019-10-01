@@ -328,7 +328,6 @@ _copyModifyTable(const ModifyTable *from)
 	COPY_NODE_FIELD(exclRelTlist);
 
 	COPY_NODE_FIELD(action_col_idxes);
-	COPY_NODE_FIELD(ctid_col_idxes);
 	COPY_NODE_FIELD(oid_col_idxes);
 
 	return newnode;
@@ -1402,7 +1401,6 @@ _copySplitUpdate(const SplitUpdate *from)
 	CopyPlanFields((Plan *) from, (Plan *) newnode);
 
 	COPY_SCALAR_FIELD(actionColIdx);
-	COPY_SCALAR_FIELD(ctidColIdx);
 	COPY_SCALAR_FIELD(tupleoidColIdx);
 	COPY_NODE_FIELD(insertColIdx);
 	COPY_NODE_FIELD(deleteColIdx);
