@@ -656,7 +656,7 @@ apply_motion(PlannerInfo *root, Plan *plan)
 	if (needToAssignDirectDispatchContentIds)
 	{
 		/* figure out if we can run on a reduced set of nodes */
-		AssignContentIdsToPlanData(query, result, root);
+		AssignContentIdsToPlanData(root, result);
 	}
 
 	root->glob->nMotionNodes = state.nextMotionID - 1;

@@ -680,7 +680,7 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
  * content the node can run on.
  */
 void
-AssignContentIdsToPlanData(Query *query, Plan *plan, PlannerInfo *root)
+AssignContentIdsToPlanData(PlannerInfo *root, Plan *plan)
 {
 	ContentIdAssignmentData data;
 	DirectDispatchCalculationInfo *ddcr;
