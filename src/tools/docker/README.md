@@ -46,7 +46,6 @@ make -j4
 make install
 
 # Create a single node demo cluster with three segments
-# PGPORT is set to 15432
 source /usr/local/gpdb/greenplum_path.sh
 make create-demo-cluster
 source ./gpAux/gpdemo/gpdemo-env.sh
