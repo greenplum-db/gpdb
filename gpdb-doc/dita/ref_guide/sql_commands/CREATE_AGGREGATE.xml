@@ -6,7 +6,7 @@
   <body>
     <p id="sql_command_desc">Defines a new aggregate function.</p>
     <section id="section2"
-      ><title>Synopsis</title><varname>argname</varname><codeblock id="sql_command_synopsis">CREATE AGGREGATE <varname>name</varname> ( [ <varname>argmode</varname> ] [  ] <varname>arg_data_type</varname> [ , ... ] ) (
+      ><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE AGGREGATE <varname>name</varname> ( [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>arg_data_type</varname> [ , ... ] ) (
     SFUNC = <varname>statefunc</varname>,
     STYPE = <varname>state_data_type</varname>
     [ , SSPACE = <varname>state_data_size</varname> ]
@@ -126,7 +126,8 @@
         single-level aggregation that sends all the rows to the master and then applies only the
             <codeph><varname>statefunc</varname></codeph>  to the rows.</p>
       <p>An aggregate function can provide an optional initial condition, an initial value for the
-        internal state value. This is specified and stored in the database as a value of type text,
+        internal state value. This is specified and stored in the database as a value of type
+        <codeph>text</codeph>,
         but it must be a valid external representation of a constant of the state value data type.
         If it is not supplied then the state value starts out <codeph>NULL</codeph>. </p>
       <p>If  <codeph><varname>statefunc</varname></codeph>  is declared <codeph>STRICT</codeph>,
@@ -138,11 +139,11 @@
         subsequent rows with all non-null input values. This is useful for implementing aggregates
         like <codeph>max</codeph>. Note that this behavior is only available when
           <varname>state_data_type</varname> is the same as the first
-          <varname>input_data_type</varname>. When these types are different, you must supply a
+          <varname>arg_data_type</varname>. When these types are different, you must supply a
         non-null initial condition or use a nonstrict transition function.</p>
       <p>If  <varname>statefunc</varname> is not declared <codeph>STRICT</codeph>, then it will be
         called unconditionally at each input row, and must deal with <codeph>NULL</codeph> inputs
-        and <codeph>NULL</codeph> transition values for itself. This allows the aggregate author to
+        and <codeph>NULL</codeph> state values for itself. This allows the aggregate author to
         have full control over the aggregate's handling of <codeph>NULL</codeph> values.</p>
       <p>If the final function (<codeph><varname>ffunc</varname></codeph>) is declared
           <codeph>STRICT</codeph>, then it will not be called when the ending state value is
@@ -164,7 +165,7 @@
           href="https://www.postgresql.org/docs/9.4/xaggr.html#XAGGR-MOVING-AGGREGATES"
           scope="external" format="html">Moving-Aggregate Mode</xref> in the PostgreSQL
         documentation. This requires specifying the <codeph><varname>msfunc</varname></codeph>,
-            <codeph><varname>minfunc</varname></codeph>, and
+            <codeph><varname>minvfunc</varname></codeph>, and
           <codeph><varname>mstype</varname></codeph> functions, and optionally the
             <codeph><varname>mspace</varname></codeph>,
           <codeph><varname>mfinalfunc</varname></codeph>,
@@ -184,9 +185,10 @@
         direct arguments are required to match, in number and data types, the aggregated argument
         columns. This allows the values of those direct arguments to be added to the collection of
         aggregate-input rows as an additional "hypothetical" row. </p>
-      <p>Single argument aggregate functions, such as min or max, can sometimes be optimized by
+      <p>Single argument aggregate functions, such as <codeph>min</codeph> or
+        <codeph>max</codeph>, can sometimes be optimized by
         looking into an index instead of scanning every input row. If this aggregate can be so
-        optimized, indicate it by specifying a sort operator. The basic requirement is that the
+        optimized, indicate it by specifying a <i>sort operator</i>. The basic requirement is that the
         aggregate must yield the first element in the sort ordering induced by the operator; in
         other words:</p>
       <codeblock>SELECT <varname>agg</varname>(<varname>col</varname>) FROM <varname>tab</varname>; </codeblock>
@@ -200,7 +202,7 @@
         the specified operator is the "less than" or "greater than" strategy member of a B-tree
         index operator class.</p>
       <p> To be able to create an aggregate function, you must have <codeph>USAGE</codeph> privilege
-        on the argument types, the state type, and the return type, as well as
+        on the argument types, the state type(s), and the return type, as well as
           <codeph>EXECUTE</codeph> privilege on the transition and final functions. </p>
     </section>
     <section id="section5">
@@ -253,7 +255,7 @@
         </plentry>
         <plentry>
           <pt><varname>state_data_type</varname></pt>
-          <pd>The data type for the aggregate state value.</pd>
+          <pd>The data type for the aggregate's state value.</pd>
         </plentry>
         <plentry>
           <pt><varname>state_data_size</varname></pt>
@@ -278,6 +280,20 @@
             corresponding to the aggregate's regular (aggregated) arguments. This is mainly useful
             to allow correct resolution of the aggregate result type when a polymorphic aggregate is
             being defined. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>combinefunc</varname></pt>
+          <pd>The name of a combine function. This is a function of two arguments, both of type
+              <varname>state_data_type</varname>. It must return a value of
+              <varname>state_data_type</varname>. A combine function takes two transition state
+            values and returns a new transition state value representing the combined aggregation.
+            In Greenplum Database, if the result of the aggregate function is computed in a
+            segmented fashion, the combine function is invoked on the individual internal states in
+            order to combine them into an ending internal state.</pd>
+          <pd>Note that this function is also called in hash aggregate mode within a segment.
+            Therefore, if you call this aggregate function without a combine function, hash
+            aggregate is never chosen. Since hash aggregate is efficient, consider defining a
+            combine function whenever possible.</pd>
         </plentry>
         <plentry>
           <pt><varname>serialfunc</varname></pt>
@@ -358,20 +374,6 @@
               (<codeph>WITHIN GROUP</codeph>) arguments. The <codeph>HYPOTHETICAL</codeph> flag has
             no effect on run-time behavior, only on parse-time resolution of the data types and
             collations of the aggregate's arguments. </pd>
-        </plentry>
-        <plentry>
-          <pt><varname>combinefunc</varname></pt>
-          <pd>The name of a combine function. This is a function of two arguments, both of type
-              <varname>state_data_type</varname>. It must return a value of
-              <varname>state_data_type</varname>. A combine function takes two transition state
-            values and returns a new transition state value representing the combined aggregation.
-            In Greenplum Database, if the result of the aggregate function is computed in a
-            segmented fashion, the combine function is invoked on the individual internal states in
-            order to combine them into an ending internal state.</pd>
-          <pd>Note that this function is also called in hash aggregate mode within a segment.
-            Therefore, if you call this aggregate function without a combine function, hash
-            aggregate is never chosen. Since hash aggregate is efficient, consider defining a
-            combine function whenever possible.</pd>
         </plentry>
       </parml>
     </section>

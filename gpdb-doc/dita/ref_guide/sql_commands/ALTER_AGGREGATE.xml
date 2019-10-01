@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ag20941">ALTER AGGREGATE</title><body><p id="sql_command_desc">Changes the definition of an aggregate function</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER AGGREGATE <varname>name</varname> ( <varname>type</varname> [ , ... ] ) RENAME TO <varname>new_name</varname>
+<topic id="topic1"><title id="ag20941">ALTER AGGREGATE</title><body><p id="sql_command_desc">Changes the definition of an aggregate function</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER AGGREGATE <varname>name</varname> ( <varname>aggregate_signature</varname> )  RENAME TO <varname>new_name</varname>
 
-ALTER AGGREGATE <varname>name</varname> ( <varname>type</varname> [ , ... ] ) OWNER TO <varname>new_owner</varname>
+ALTER AGGREGATE <varname>name</varname> ( <varname>aggregate_signature</varname> ) OWNER TO <varname>new_owner</varname>
 
-ALTER AGGREGATE <varname>name</varname> ( <varname>type</varname> [ , ... ] ) SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER AGGREGATE</codeph> changes the definition of an aggregate
+ALTER AGGREGATE <varname>name</varname> ( <varname>aggregate_signature</varname> ) SET SCHEMA <varname>new_schema</varname></codeblock>
+<p>where <varname>aggregate_signature</varname> is:</p>
+  <codeblock>* |
+[ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] |
+[ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] ] ORDER BY [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ]</codeblock>
+</section><section id="section3"><title>Description</title><p><codeph>ALTER AGGREGATE</codeph> changes the definition of an aggregate
 function. </p><p>You must own the aggregate function to use <codeph>ALTER AGGREGATE</codeph>.
 To change the schema of an aggregate function, you must also have <codeph>CREATE</codeph>
 privilege on the new schema. To alter the owner, you must also be a direct
@@ -14,9 +19,39 @@ privilege on the aggregate function's schema. (These restrictions enforce
 that altering the owner does not do anything you could not do by dropping
 and recreating the aggregate function. However, a superuser can alter
 ownership of any aggregate function anyway.)</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing aggregate function.
-</pd></plentry><plentry><pt><varname>type</varname></pt><pd>An input data type on which the aggregate function operates. To reference
-a zero-argument aggregate function, write * in place of the list of input
-data types. </pd></plentry><plentry><pt><varname>new_name</varname></pt><pd>The new name of the aggregate function. </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The new owner of the aggregate function. </pd></plentry><plentry><pt><varname>new_schema</varname></pt><pd>The new schema for the aggregate function.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>To rename the aggregate function <codeph>myavg</codeph> for type <codeph>integer</codeph> to
+</pd></plentry>
+  <plentry>
+    <pt><varname>argmode</varname></pt>
+      <pd>The mode of an argument:  <codeph>IN</codeph> or <codeph>VARIADIC</codeph>.
+        If omitted, the default is <codeph>IN</codeph>.</pd>
+  </plentry>
+  <plentry>
+      <pt><varname>argname</varname></pt>
+      <pd>The name of an argument. Note that <codeph>ALTER AGGREGATE</codeph> does not
+        actually pay any attention to argument names, since only the argument data types
+        are needed to determine the aggregate function's identity.</pd>
+    </plentry>
+    <plentry>
+      <pt><varname>argtype</varname></pt>
+      <pd>An input data type on which the aggregate function operates. To reference
+        a zero-argument aggregate function, write <codeph>*</codeph> in place of the
+        list of input data types. To reference an ordered-set aggregate function, write
+        <codeph>ORDER BY</codeph> between the direct and aggregated argument
+        specifications.</pd>
+    </plentry>
+<plentry><pt><varname>new_name</varname></pt><pd>The new name of the aggregate function. </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The new owner of the aggregate function. </pd></plentry><plentry><pt><varname>new_schema</varname></pt><pd>The new schema for the aggregate function.</pd></plentry></parml></section>
+<section id="notes">
+  <title>Notes</title>
+  <p>The recommended syntax for referencing an ordered-set aggregate is to write
+    <codeph>ORDER BY</codeph> between the direct and aggregated argument specifications,
+    in the same style as in
+    <codeph><xref href="./CREATE_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>.
+    However, it will also work to omit <codeph>ORDER BY</codeph> and just run the
+    direct and aggregated argument specifications into a single list. In this
+    abbreviated form, if <codeph>VARIADIC "any"</codeph> was used in both the direct
+    and aggregated argument lists, write <codeph>VARIADIC "any"</codeph> only once.</p>
+</section>
+<section id="section5"><title>Examples</title><p>To rename the aggregate function <codeph>myavg</codeph> for type <codeph>integer</codeph> to
           <codeph>my_average</codeph>:</p><codeblock>ALTER AGGREGATE myavg(integer) RENAME TO my_average;</codeblock><p>To change the owner of the aggregate function <codeph>myavg</codeph> for type
           <codeph>integer</codeph> to <codeph>joe</codeph>:</p><codeblock>ALTER AGGREGATE myavg(integer) OWNER TO joe;</codeblock><p>To move the aggregate function <codeph>myavg</codeph> for type <codeph>integer</codeph> into
         schema <codeph>myschema</codeph>:</p><codeblock>ALTER AGGREGATE myavg(integer) SET SCHEMA myschema;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER AGGREGATE</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
