@@ -19,4 +19,4 @@ params:
   BLD_TARGETS:
   OUTPUT_ARTIFACT_DIR: gpdb_artifacts
   CONFIGURE_FLAGS:
-  ORCA_TAG: v3.73.0
+  ORCA_TAG: v3.74.0
