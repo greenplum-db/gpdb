@@ -19,10 +19,10 @@
 
     <p>Greenplum Database may generate a large number of spill files when:<ul
         id="ul_dl2_1j4_t4">
-        <li><i>Data skew is present in the queried data.</i> To check for data skew, you can
-          refer to <xref href="../../managing/monitor.xml#topic20"
+        <li>Data skew is present in the queried data. To check for data skew,
+          see <xref href="../../managing/monitor.xml#topic20"
           >Checking for Data Distribution Skew</xref>.</li>
-        <li><i>The amount of memory allocated for the query is too low.</i> You control
+        <li>The amount of memory allocated for the query is too low. You control
           the maximum amount of memory that can be used by a query with the Greenplum
           Database server configuration parameters
           <codeph><xref href="../../../ref_guide/config_params/guc-list.xml#max_statement_mem"
@@ -44,10 +44,11 @@
       <li><xref href="../../../ref_guide/config_params/guc_category-list.xml#topic15"
         >Memory Consumption Parameters</xref> identifies the memory-related spill file
         server configuration parameters.</li>
-      <li>For information about resource groups, refer to
-        <xref href="../../workload_mgmt_resgroups.xml#topic1"/>.</li>
-      <li>For information about resource queues, see
-        <xref href="../../workload_mgmt.xml#topic1"/>.</li>
+      <li><xref href="../../workload_mgmt_resgroups.xml#topic1"/> describes memory and
+        spill considerations when resource group-based resource management is
+        active.</li>
+      <li><xref href="../../workload_mgmt.xml#topic1"/> describes memory and spill
+        considerations when resource queue-based resource management is active.</li>
     </ul>
 
   </body>
