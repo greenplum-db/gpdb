@@ -9,8 +9,8 @@
       are available unless the parameter <codeph>stats_command_string</codeph> has been turned off.
       Furthermore, these columns are only visible if the user examining the view is a superuser or
       the same as the user owning the process being reported on.</p>
-    <p>The maximum length of the query text string stored in the column
-        <codeph>current_query</codeph> can be controlled with the server configuration parameter
+    <p>The maximum length of the query text string stored in the column <codeph>query</codeph> can
+      be controlled with the server configuration parameter
         <codeph>track_activity_query_size</codeph>. </p>
     <table id="hq141982">
       <title>pg_catalog.pg_stat_activity</title>
@@ -65,7 +65,7 @@
             <entry>Name of the user logged into this backend</entry>
           </row>
           <row>
-            <entry>application_name</entry>
+            <entry><codeph>application_name</codeph></entry>
             <entry>text</entry>
             <entry/>
             <entry>Name of the application that is connected to this backend</entry>

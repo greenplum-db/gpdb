@@ -730,8 +730,8 @@ MEMORY_LIMIT='2000MB');
         <p>For example, to see process information about all statements currently active or waiting
           in all resource queues, run the following query:</p>
         <p>
-          <codeblock>=# SELECT rolname, rsqname, pid, granted,
-          current_query, datname 
+          <codeblock>=# SELECT rolname, rsqname, pg_locks.pid as pid, granted, state,
+          query, datname 
    FROM pg_roles, gp_toolkit.gp_resqueue_status, pg_locks,
         pg_stat_activity 
    WHERE pg_roles.rolresqueue=pg_locks.objid 
@@ -743,10 +743,10 @@ MEMORY_LIMIT='2000MB');
         <p>If this query returns no results, then that means there are currently no statements in a
           resource queue. A sample of a resource queue with two statements in it looks something
           like this:</p>
-        <codeblock>rolname | rsqname |  pid  | granted |     current_query      | datname 
------------------------------------------------------------------------ 
-  sammy | webuser | 31861 | t       | &lt;IDLE&gt; in transaction  | namesdb
-  daria | webuser | 31905 | f       | SELECT * FROM topten;  | namesdb</codeblock>
+        <codeblock>rolname | rsqname |  pid  | granted | state  |         query          | datname 
+--------+---------+-------+---------+--------+------------------------+--------- 
+  sammy | webuser | 31861 | t       | idle   | SELECT * FROM testtbl; | namesdb
+  daria | webuser | 31905 | f       | active | SELECT * FROM topten;  | namesdb</codeblock>
         <p>Use this output to identify the process id (pid) of the statement you want to clear from
           the resource queue. To clear the statement, you would then open a terminal window (as the
             <codeph>gpadmin</codeph> database superuser or as root) on the master host and cancel
@@ -755,9 +755,7 @@ MEMORY_LIMIT='2000MB');
           <codeblock>=# pg_cancel_backend(31905)
 </codeblock>
         </p>
-        <note type="note">
-          <p>Do not use any operating system <codeph>KILL</codeph> command.</p>
-        </note>
+        <note type="important">Do not use the operating system <codeph>KILL</codeph> command.</note>
       </body>
     </topic>
     <topic id="topic28" xml:lang="en">

@@ -113,7 +113,9 @@
                 <codeph>procpid</codeph> column is renamed to <codeph>pid</codeph>.</li>
             <li>In the <codeph>pg_stat_activity</codeph> system table, the <codeph>procpid</codeph>
               column is renamed to <codeph>pid</codeph>. The <codeph>current_query</codeph> column
-              is removed. </li>
+              is replaced by two columns <codeph>state</codeph>: the state of the backend, and
+                <codeph>query</codeph>: the last run query, or currently running query if
+                <codeph>state</codeph> is <codeph>active</codeph>. </li>
             <li>In the <codeph>gp_distribution_policy</codeph> system table, the
                 <codeph>attrnums</codeph> column is renamed to <codeph>distkey</codeph> and its data
               type is changed to <codeph>int2vector</codeph>. A backend function

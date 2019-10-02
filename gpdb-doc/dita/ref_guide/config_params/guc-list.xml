@@ -8737,9 +8737,8 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
   <topic id="track_activity_query_size">
     <title>track_activity_query_size</title>
     <body>
-      <p>Sets the maximum length limit for the query text stored in <codeph>current_query</codeph>
-        column of the system catalog view <i>pg_stat_activity</i>. The minimum length is 1024
-        characters. </p>
+      <p>Sets the maximum length limit for the query text stored in <codeph>query</codeph> column of
+        the system catalog view <i>pg_stat_activity</i>. The minimum length is 1024 characters. </p>
       <table id="track_activity_query_size_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
