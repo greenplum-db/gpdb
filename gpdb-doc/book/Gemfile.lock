@@ -1,16 +1,16 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (4.2.11)
+    activesupport (4.2.11.1)
       i18n (~> 0.7)
       minitest (~> 5.1)
       thread_safe (~> 0.3, >= 0.3.4)
       tzinfo (~> 1.1)
-    addressable (2.6.0)
-      public_suffix (>= 2.0.2, < 4.0)
+    addressable (2.7.0)
+      public_suffix (>= 2.0.2, < 5.0)
     ansi (1.5.0)
-    backports (3.11.4)
-    bookbindery (10.1.14)
+    backports (3.15.0)
+    bookbindery (10.1.15)
       ansi (~> 1.4)
       css_parser
       elasticsearch
@@ -22,7 +22,7 @@ GEM
       middleman-livereload
       middleman-sprockets
       middleman-syntax (= 2.1.0)
-      nokogiri (= 1.8.5)
+      nokogiri (= 1.10.1)
       puma
       rack-rewrite
       redcarpet (~> 3.2.3)
@@ -47,17 +47,17 @@ GEM
       sass (>= 3.3.0, < 3.5)
     compass-import-once (1.0.5)
       sass (>= 3.2, < 3.5)
-    concurrent-ruby (1.1.4)
+    concurrent-ruby (1.1.5)
     contracts (0.13.0)
-    css_parser (1.6.0)
+    css_parser (1.7.0)
       addressable
-    dotenv (2.6.0)
-    elasticsearch (6.1.0)
-      elasticsearch-api (= 6.1.0)
-      elasticsearch-transport (= 6.1.0)
-    elasticsearch-api (6.1.0)
+    dotenv (2.7.5)
+    elasticsearch (7.3.0)
+      elasticsearch-api (= 7.3.0)
+      elasticsearch-transport (= 7.3.0)
+    elasticsearch-api (7.3.0)
       multi_json
-    elasticsearch-transport (6.1.0)
+    elasticsearch-transport (7.3.0)
       faraday
       multi_json
     em-websocket (0.5.1)
@@ -65,13 +65,13 @@ GEM
       http_parser.rb (~> 0.6.0)
     erubis (2.7.0)
     eventmachine (1.2.7)
-    excon (0.62.0)
+    excon (0.67.0)
     execjs (2.7.0)
-    faraday (0.15.4)
+    faraday (0.16.2)
       multipart-post (>= 1.2, < 3)
     fast_blank (1.0.0)
-    fastimage (2.1.5)
-    ffi (1.10.0)
+    fastimage (2.1.7)
+    ffi (1.11.1)
     fog-aws (0.7.6)
       fog-core (~> 1.27)
       fog-json (~> 1.0)
@@ -91,7 +91,7 @@ GEM
       sass (>= 3.2)
     formatador (0.2.5)
     git (1.2.9.1)
-    haml (5.0.4)
+    haml (5.1.2)
       temple (>= 0.8.0)
       tilt
     hamster (3.0.0)
@@ -152,21 +152,23 @@ GEM
     middleman-syntax (2.1.0)
       middleman-core (>= 3.2)
       rouge (~> 1.0)
-    mini_portile2 (2.3.0)
-    minitest (5.11.3)
+    mini_portile2 (2.4.0)
+    minitest (5.12.2)
     multi_json (1.13.1)
-    multipart-post (2.0.0)
-    nokogiri (1.8.2)
-      mini_portile2 (~> 2.3.0)
+    multipart-post (2.1.1)
+    nio4r (2.5.2)
+    nokogiri (1.10.1)
+      mini_portile2 (~> 2.4.0)
     padrino-helpers (0.13.3.4)
       i18n (~> 0.6, >= 0.6.7)
       padrino-support (= 0.13.3.4)
       tilt (>= 1.4.1, < 3)
     padrino-support (0.13.3.4)
       activesupport (>= 3.1)
-    parallel (1.13.0)
-    public_suffix (3.0.3)
-    puma (3.12.0)
+    parallel (1.17.0)
+    public_suffix (4.0.1)
+    puma (4.2.0)
+      nio4r (~> 2.0)
     rack (1.6.11)
     rack-livereload (0.3.17)
       rack
@@ -182,7 +184,7 @@ GEM
     sprockets (3.7.2)
       concurrent-ruby (~> 1.0)
       rack (> 1, < 3)
-    temple (0.8.0)
+    temple (0.8.2)
     therubyracer (0.12.2)
       libv8 (~> 3.16.14.0)
       ref
@@ -202,4 +204,4 @@ DEPENDENCIES
   libv8 (= 3.16.14.7)
 
 BUNDLED WITH
-   1.16.2
+   1.17.3

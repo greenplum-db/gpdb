@@ -131,9 +131,12 @@ sdw4-2</codeblock></li>
                   <codeph>DATA_DIRECTORY</codeph> parameter is what determines how many segments per
                 host will be created. If your segment hosts have multiple network interfaces, and
                 you used their interface address names in your host file, the number of segments
-                will be evenly spread over the number of available interfaces.</p><p>Here is an
-                example of the <i>required</i> parameters in the
-                  <codeph>gpinitsystem_config</codeph> file:
+                will be evenly spread over the number of available interfaces.</p><p>To specify
+                  <codeph>PORT_BASE</codeph>, please review the port range specified under the
+                  <codeph>net.ipv4.ip_local_port_range</codeph> parameter  in <xref
+                  href="../install_guide/prep_os.html#topic3" format="dita" scope="peer"
+                    ><codeph>/etc/sysctl.conf</codeph></xref> file. </p><p>Here is an example of the
+                  <i>required</i> parameters in the <codeph>gpinitsystem_config</codeph> file:
               </p><codeblock>ARRAY_NAME="Greenplum Data Platform"
 SEG_PREFIX=gpseg
 PORT_BASE=6000 
@@ -145,7 +148,11 @@ TRUSTED SHELL=ssh
 CHECK_POINT_SEGMENTS=8
 ENCODING=UNICODE</codeblock></li>
             <li id="jm143448">(Optional) If you want to deploy mirror segments, uncomment and set
-              the mirroring parameters according to your environment. Here is an example of the
+              the mirroring parameters according to your environment. To specify
+                <codeph>MIRROR_PORT_BASE</codeph>, please review the port range specified under the
+                <codeph>net.ipv4.ip_local_port_range</codeph> parameter  in <xref
+                href="../install_guide/prep_os.html#topic3" format="dita" scope="peer"
+                  ><codeph>/etc/sysctl.conf</codeph></xref> file. Here is an example of the
                 <i>optional</i> mirror parameters in the <codeph>gpinitsystem_config</codeph> file:<codeblock>MIRROR_PORT_BASE=7000
 declare -a MIRROR_DATA_DIRECTORY=(/data1/mirror /data1/mirror /data1/mirror /data2/mirror /data2/mirror /data2/mirror)</codeblock>
               <note>You can initialize your Greenplum system with primary segments only and deploy

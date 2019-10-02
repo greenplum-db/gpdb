@@ -76,7 +76,10 @@ MIRROR_PORT_BASE = 7000</codeblock></p>
       <title>OS Memory Configuration</title>
       <p>The Linux sysctl <codeph>vm.overcommit_memory</codeph> and
           <codeph>vm.overcommit_ratio</codeph> variables affect how the operating system manages
-        memory allocation. These variables should be set as follows: </p>
+        memory allocation.  Please refer to the <xref
+          href="../install_guide/prep_os.html#topic3__segment_host_memory" scope="peer"
+          format="dita"><codeph>/etc/sysctl.conf</codeph> file parameters guidelines</xref> in the
+        Greenplum Datatabase Installation Guide.</p>
       <p><codeph>vm.overcommit_memory</codeph> determines the method the OS uses for determining how
         much memory can be allocated to processes. This should be always set to 2, which is the only
         safe setting for the database. <note>For information on configuration of overcommit memory,
@@ -101,7 +104,10 @@ MIRROR_PORT_BASE = 7000</codeblock></p>
       <title>Shared Memory Settings </title>
       <p>Greenplum Database uses shared memory to communicate between <codeph>postgres</codeph>
         processes that are part of the same <codeph>postgres</codeph> instance. The following shared
-        memory settings should be set in <codeph>sysctl</codeph> and are rarely modified.</p>
+        memory settings should be set in <codeph>sysctl</codeph> and are rarely modified. For
+        further details please refer to the <xref format="dita"
+          href="../install_guide/prep_os.html#topic3" scope="peer">Sysctl parameters</xref> in the
+          <cite>Greenplum Database Installation Guide</cite>.</p>
       <codeblock>kernel.shmmax = 500000000
 kernel.shmmni = 4096
 kernel.shmall = 4000000000</codeblock>

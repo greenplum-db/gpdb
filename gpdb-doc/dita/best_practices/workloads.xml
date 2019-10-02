@@ -80,10 +80,12 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
         <li>Do not configure the OS to use huge pages. </li>
         <li>
           <b>vm.overcommit_memory</b>
-          <p>This is a Linux kernel parameter, set in <codeph>/etc/sysctl.conf</codeph>. It should
-            always be set to 2. It determines the method the OS uses for determining how much memory
-            can be allocated to processes and 2 is the only safe setting for Greenplum Database.
-          </p>
+          <p>This is a Linux kernel parameter, set in <codeph>/etc/sysctl.conf</codeph> and it
+            should always be set to 2. It determines the method the OS uses for determining how much
+            memory can be allocated to processes and 2 is the only safe setting for Greenplum
+            Database. Please review the sysctl parameters in the <xref
+              href="../install_guide/prep_os.html#topic3__sysctl_file" scope="peer" format="dita"
+              >Greenplum Database Installation Guide</xref>.</p>
         </li>
         <li>
           <b>vm.overcommit_ratio</b>
@@ -117,7 +119,7 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
             memory conditions. The <codeph>runaway_detector_activation_percent</codeph> system
             parameter controls the percentage of <codeph>gp_vmem_protect_limit</codeph> memory
             utilized that triggers termination of queries. It is set on by default at 90%. If the
-            percentage of <codeph>gp_vmem_protect_limit memory</codeph> that is utilized for a
+            percentage of <codeph>gp_vmem_protect_limit</codeph> memory that is utilized for a
             segment exceeds the specified value, Greenplum Database terminates queries based on
             memory usage, beginning with the query consuming the largest amount of memory. Queries
             are terminated until the utilized percentage of <codeph> gp_vmem_protect_limit</codeph>
