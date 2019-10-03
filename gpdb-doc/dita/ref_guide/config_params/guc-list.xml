@@ -728,6 +728,9 @@
               <xref href="#password_hash_algorithm"/>
             </li>
             <li>
+              <xref href="#pgcrypto.fips"/>
+            </li>
+            <li>
               <xref href="#pgstat_track_activity_query_size"/>
             </li>
             <li>
@@ -5239,8 +5242,8 @@
         master should reflect the usage of all available CPU cores. </p>
       <p>Incorrect settings can result in CPU under-utilization or query prioritization not working
         as designed. </p>
-      <p>The default values for the Greenplum Data Computing Appliance are 4 for segments and 4
-        for the master.</p>
+      <p>The default values for the Greenplum Data Computing Appliance are 4 for segments and 4 for
+        the master.</p>
       <table id="gp_resqueue_priority_cpucores_per_segment_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7497,8 +7500,8 @@
         host during query processing as a result of setting <codeph><xref href="#statement_mem"
             format="dita"/>
         </codeph>too high.</p>
-      <p>Taking into account the configuration of a single segment host,
-        calculate <codeph>max_statement_mem</codeph> as follows:</p>
+      <p>Taking into account the configuration of a single segment host, calculate
+          <codeph>max_statement_mem</codeph> as follows:</p>
       <p>
         <codeph>(seghost_physical_memory) / (average_number_concurrent_queries)</codeph>
       </p>
@@ -7543,11 +7546,10 @@
         increase the initial memory allocation.</p>
       <p>When you set <codeph>memory_spill_ratio</codeph> at the session level, Greenplum Database
         does not perform semantic validation on the new value until you next perform a query.</p>
-      <p>You can specify an integer percentage value from 0 to 100 inclusive. If you
-        specify a value of 0, Greenplum Database uses the
-            <xref href="#statement_mem" format="dita"><codeph>statement_mem</codeph></xref>
-        server configuration parameter value to control the initial query operator memory
-        amount.</p>
+      <p>You can specify an integer percentage value from 0 to 100 inclusive. If you specify a value
+        of 0, Greenplum Database uses the <xref href="#statement_mem" format="dita"
+            ><codeph>statement_mem</codeph></xref> server configuration parameter value to control
+        the initial query operator memory amount.</p>
       <table id="memory_spill_ratio_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7689,7 +7691,7 @@
           <tbody>
             <row>
               <entry colname="col1">Integer > 0</entry>
-              <entry colname="col2">25</entry>
+              <entry colname="col2">100</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -8480,6 +8482,65 @@
               <entry colname="col1">MD5<p>SHA-256</p></entry>
               <entry colname="col2">MD5</entry>
               <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="pgcrypto.fips">
+    <title>pgcrypto.fips</title>
+    <body>
+      <p>Enables support for a limited set of FIPS encryption functionality (<cite>Federal
+          Information Processing Standard</cite> (FIPS) 140-2). For information about FIPS, see
+          <xref
+          href="https://www.nist.gov/itl/popular-links/federal-information-processing-standards-fips"
+          format="html" scope="external"
+          >https://www.nist.gov/itl/popular-links/federal-information-processing-standards-fips</xref>.
+        The default is <codeph>off</codeph>, encryption is not enabled. </p>
+      <p>When this parameter is enabled, these changes occur:<ul id="ul_qn1_jwh_gjb">
+          <li>FIPS mode is initialized in the OpenSSL library</li>
+          <li>The functions <cmdname>digest()</cmdname> and <cmdname>hmac()</cmdname> allow only the
+            SHA encryption algorithm (MD5 is not allowed)</li>
+          <li>The functions for crypt and gen_salt algorithms are disabled</li>
+          <li>PGP encryption and decryption functions support only AES and 3DES encryption
+            algorithms (other algorithms such as blowfish are not allowed)</li>
+          <li>RAW encryption and decryption functions support only AES and 3DES (other algorithms
+            such as blowfish are not allowed)</li>
+        </ul></p>
+      <p>To enable <codeph>pgcrypto.fips</codeph>:<ol id="ol_hrj_vhq_gjb">
+          <li>Enable the <codeph>pgcrypto</codeph> functions as an extension. See <xref
+              href="../../install_guide/install_pgcrypto.xml" scope="peer">pgcrypto Cryptographic
+              Functions</xref>.</li>
+          <li>Set the <codeph>pgcrypto.fips</codeph> server configuration parameter to
+              <codeph>on</codeph> for each database that uses FIPS encryption. For example, this
+            command sets the parameter to on for the database <codeph>testdb</codeph>. <codeblock># ALTER DATABASE testdb SET pgcrypto.fips TO on;</codeblock>
+            <note type="important">You must use the <codeph>ALTER DATABASE</codeph> command to set
+              the parameter. You cannot use the <codeph>SET</codeph> command that updates the
+              parameter for a session, or use the <codeph>gpconfig</codeph> utility that updates
+                <codeph>postgresql.conf</codeph> files.</note></li>
+          <li>After setting the parameter, reconnect to the database to enable encryption support
+            for a session. This example uses the <codeph>psql</codeph> meta command
+              <codeph>\c</codeph> to connect to the <codeph>testdb</codeph>
+            database.<codeblock># \c testdb</codeblock></li>
+        </ol></p>
+      <table id="table_rn1_jwh_gjb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>Boolean </entry>
+              <entry colname="col2">off</entry>
+              <entry colname="col3">see description.</entry>
             </row>
           </tbody>
         </tgroup>
@@ -9295,29 +9356,29 @@
     <body>
       <p>Allocates segment host memory per query. The amount of memory allocated with this parameter
         cannot exceed <codeph><xref href="#max_statement_mem" format="dita"/></codeph> or the memory
-        limit on the resource queue or resource group through which the query was submitted.
-        If additional memory is required for a query, temporary spill files on disk are used.</p>
+        limit on the resource queue or resource group through which the query was submitted. If
+        additional memory is required for a query, temporary spill files on disk are used.</p>
       <p><i>If you are using resource groups to control resource allocation in your Greenplum
-        Database cluster</i>:</p><ul>
-        <li>Greenplum Database uses <codeph>statement_mem</codeph> to control query memory
-          usage when the resource group <codeph>MEMORY_SPILL_RATIO</codeph> is set to 0.</li>
-        <li>You can use the following calculation to estimate a reasonable <codeph>statement_mem</codeph>
-          value:
+          Database cluster</i>:</p>
+      <ul>
+        <li>Greenplum Database uses <codeph>statement_mem</codeph> to control query memory usage
+          when the resource group <codeph>MEMORY_SPILL_RATIO</codeph> is set to 0.</li>
+        <li>You can use the following calculation to estimate a reasonable
+            <codeph>statement_mem</codeph> value:
           <codeblock>rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments_per_host
 statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
       </ul>
       <p><i>If you are using resource queues to control resource allocation in your Greenplum
-        Database cluster</i>:</p><ul>
-        <li>When <codeph><xref
-            href="#gp_resqueue_memory_policy" format="dita"/> =auto</codeph>,
-          <codeph>statement_mem</codeph> and resource queue memory limits control query memory
-        usage. </li>
+          Database cluster</i>:</p>
+      <ul>
+        <li>When <codeph><xref href="#gp_resqueue_memory_policy" format="dita"/> =auto</codeph>,
+            <codeph>statement_mem</codeph> and resource queue memory limits control query memory
+          usage. </li>
         <li>You can use the following calculation to estimate a reasonable
-          <codeph>statement_mem</codeph> value for a wide variety of situations:
-          <codeblock>( <varname>gp_vmem_protect_limit</varname>GB * .9 ) / <varname>max_expected_concurrent_queries</varname></codeblock>
-          <p>For example, with a <varname>gp_vmem_protect_limit</varname> set to 8192MB (8GB)
-            and assuming a maximum of 40 concurrent queries with a 10% buffer, you would use
-            the following calculation to determine the <codeph>statement_mem</codeph> value:</p>
+            <codeph>statement_mem</codeph> value for a wide variety of situations: <codeblock>( <varname>gp_vmem_protect_limit</varname>GB * .9 ) / <varname>max_expected_concurrent_queries</varname></codeblock>
+          <p>For example, with a <varname>gp_vmem_protect_limit</varname> set to 8192MB (8GB) and
+            assuming a maximum of 40 concurrent queries with a 10% buffer, you would use the
+            following calculation to determine the <codeph>statement_mem</codeph> value:</p>
           <codeblock>(8GB * .9) / 40 = .18GB = 184MB</codeblock></li>
       </ul>
       <p>When changing both <codeph>max_statement_mem</codeph> and <codeph>statement_mem</codeph>,
@@ -10091,9 +10152,9 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
         </ul></p>
       <p>You can set the value to <codeph>false</codeph> to disable authentication when testing the
         communication between the Greenplum Database external table and the <codeph>gpfdist</codeph>
-        utility that is serving the external data.<note type="warning">Disabling SSL certificate
-          authentication exposes a security risk by not validating the <codeph>gpfdists</codeph> SSL
-          certificate. </note></p>
+        utility that is serving the external data.
+        <note type="warning">Disabling SSL certificate authentication exposes a security risk by not
+          validating the <codeph>gpfdists</codeph> SSL certificate. </note></p>
       <p>For information about the <codeph>gpfdists</codeph> protocol, see <xref
           href="../../admin_guide/external/g-gpfdists-protocol.xml">gpfdists:// Protocol</xref>. For
         information about running the <codeph>gpfdist</codeph> utility, see <xref

@@ -1661,6 +1661,9 @@
         <strow>
           <stentry>
             <p>
+              <xref href="guc-list.xml#pgcrypto.fips"/>
+            </p>
+            <p>
               <xref href="guc-list.xml#pljava_classpath"/>
             </p>
             <p><xref href="guc-list.xml#pljava_classpath_insecure"/></p>

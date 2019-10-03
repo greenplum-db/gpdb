@@ -138,6 +138,10 @@
             <topicref href="guc-list.xml#gp_recursive_cte_prototype"/>
             <topicref href="guc-list.xml#gp_reject_percent_threshold"/>
             <topicref href="guc-list.xml#gp_reraise_signal"/>
+            <topicref href="guc-list.xml#gp_resgroup_memory_policy"/>
+            <topicref href="guc-list.xml#gp_resource_group_cpu_limit"/>
+            <topicref href="guc-list.xml#gp_resource_group_memory_limit"/>
+            <topicref href="guc-list.xml#gp_resource_manager"/>
             <topicref href="guc-list.xml#gp_resqueue_memory_policy"/>
             <topicref href="guc-list.xml#gp_resqueue_priority"/>
             <topicref href="guc-list.xml#gp_resqueue_priority_cpucores_per_segment"/>
@@ -244,6 +248,7 @@
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
             <topicref href="guc-list.xml#password_encryption"/>
             <topicref href="guc-list.xml#password_hash_algorithm"/>
+            <topicref href="guc-list.xml#pgcrypto.fips"/>
             <topicref href="guc-list.xml#pgstat_track_activity_query_size"/>
             <topicref href="guc-list.xml#pljava_classpath"/>
             <topicref href="guc-list.xml#pljava_classpath_insecure"/>
