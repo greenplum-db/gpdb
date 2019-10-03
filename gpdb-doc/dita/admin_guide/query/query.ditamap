@@ -21,6 +21,7 @@
         <topicref href="topics/json-data.xml"/>
         <topicref href="topics/xml-data.xml"/>
         <topicref href="../textsearch/textsearch.ditamap" format="ditamap"/>
+        <topicref href="topics/gp-mapreduce.xml"/>
         <topicref href="topics/query-performance.xml"/>
         <topicref href="topics/spill-files.xml"/>
         <topicref href="topics/query-profiling.xml"/>

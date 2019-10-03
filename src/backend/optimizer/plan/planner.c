@@ -246,7 +246,13 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		if (gp_log_optimization_time)
 			INSTR_TIME_SET_CURRENT(starttime);
 
-		result = optimize_query(parse, boundParams);
+		curMemoryAccountId = MemoryAccounting_GetOrCreateOptimizerAccount();
+
+		START_MEMORY_ACCOUNT(curMemoryAccountId);
+		{
+			result = optimize_query(parse, boundParams);
+		}
+		END_MEMORY_ACCOUNT();
 
 		if (gp_log_optimization_time)
 		{

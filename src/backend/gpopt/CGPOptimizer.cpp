@@ -15,19 +15,15 @@
 
 #include "gpopt/CGPOptimizer.h"
 #include "gpopt/utils/COptTasks.h"
-#include "gpopt/utils/CMemoryPoolPalloc.h"
-#include "gpopt/utils/CMemoryPoolPallocManager.h"
 
 // the following headers are needed to reference optimizer library initializers
 #include "naucrates/init.h"
 #include "gpopt/init.h"
 #include "gpos/_api.h"
 #include "gpopt/gpdbwrappers.h"
-#include "gpos/memory/CMemoryPoolManager.h"
 
 #include "naucrates/exception.h"
 #include "utils/guc.h"
-#include "utils/memutils.h"
 
 extern MemoryContext MessageContext;
 
@@ -163,17 +159,19 @@ CGPOptimizer::SerializeDXLPlan
 void
 CGPOptimizer::InitGPOPT ()
 {
-
-	if (optimizer_use_gpdb_allocators)
-	{
-		CMemoryPoolPallocManager::Init();
-	}
-
-	struct gpos_init_params params = {gpdb::IsAbortRequested};
-
-	gpos_init(&params);
-	gpdxl_init();
-	gpopt_init();
+  // Use GPORCA's default allocators
+  void *(*gpos_alloc)(size_t) = NULL;
+  void (*gpos_free)(void *) = NULL;
+  if (optimizer_use_gpdb_allocators)
+  {
+	gpos_alloc = gpdb::OptimizerAlloc;
+	gpos_free = gpdb::OptimizerFree;
+  }
+  struct gpos_init_params params =
+	{gpos_alloc, gpos_free, gpdb::IsAbortRequested};
+  gpos_init(&params);
+  gpdxl_init();
+  gpopt_init();
 }
 
 //---------------------------------------------------------------------------
@@ -187,9 +185,9 @@ CGPOptimizer::InitGPOPT ()
 void
 CGPOptimizer::TerminateGPOPT ()
 {
-	gpopt_terminate();
-	gpdxl_terminate();
-	gpos_terminate();
+  gpopt_terminate();
+  gpdxl_terminate();
+  gpos_terminate();
 }
 
 //---------------------------------------------------------------------------

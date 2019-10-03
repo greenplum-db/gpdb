@@ -495,6 +495,7 @@ create index matest0i on matest0 (b, c);
 create index matest1i on matest1 (b, c);
 
 set enable_nestloop = off;  -- we want a plan with two MergeAppends
+set enable_mergejoin=on;
 
 explain (costs off)
 select t1.* from matest0 t1, matest0 t2
