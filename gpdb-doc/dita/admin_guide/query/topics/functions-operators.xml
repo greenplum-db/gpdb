@@ -783,8 +783,7 @@ SELECT foo();</codeblock>
         <title id="in184703">Advanced Aggregate Functions</title>
         <body>
             <p>The following built-in advanced aggregate functions are Greenplum extensions of the
-                PostgreSQL database. These functions are <i>immutable</i>. Greenplum Database does
-                not support the PostgreSQL ordered-set aggregate functions.
+                PostgreSQL database. These functions are <i>immutable</i>.
                 <note>The Greenplum MADlib Extension for Analytics provides additional advanced
                     functions to perform statistical analysis and machine learning with Greenplum
                     Database data. See <xref href="../../../ref_guide/extensions/madlib.xml#topic1"
