@@ -466,6 +466,9 @@
             <li>
               <xref href="#optimizer_sort_factor" format="dita">optimizer_sort_factor</xref></li>
             <li>
+              <xref href="#optimizer_use_gpdb_allocators" format="dita"
+                >optimizer_use_gpdb_allocators</xref></li>
+            <li>
               <xref href="#password_encryption"/>
             </li>
             <li>
@@ -7497,6 +7500,38 @@
               <entry colname="col1">Decimal > 0</entry>
               <entry colname="col2">1</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_use_gpdb_allocators">
+    <title>optimizer_use_gpdb_allocators</title>
+    <body>
+      <p>When GPORCA is enabled (the default) and this parameter is <codeph>true</codeph> (the
+        default), GPORCA uses Greenplum Database memory management when executing queries. When set
+        to <codeph>false</codeph>, GPORCA uses GPORCA-specific memory management.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
+      <table id="table_xlm_qxh_gjb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>
