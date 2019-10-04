@@ -8508,13 +8508,24 @@
           <li>RAW encryption and decryption functions support only AES and 3DES (other algorithms
             such as blowfish are not allowed)</li>
         </ul></p>
-      <p>To enable <codeph>pgcrypto.fips</codeph>:<ol id="ol_hrj_vhq_gjb">
-          <li>Enable the <codeph>pgcrypto</codeph> functions as an extension. See <xref
-              href="../../install_guide/install_pgcrypto.xml" scope="peer">pgcrypto Cryptographic
-              Functions</xref>.</li>
+      <p><b>To enable <codeph>pgcrypto.fips</codeph></b><ol id="ol_hrj_vhq_gjb">
+          <li>Enable the <codeph>pgcrypto</codeph> functions as an extension if it is not enabled.
+            See <xref href="../../install_guide/install_pgcrypto.xml" scope="peer">pgcrypto
+              Cryptographic Functions</xref>. This example <codeph>psql</codeph> command drops the
+              <codeph>pgcrypto</codeph> extension in the database
+            <codeph>testdb</codeph>.<codeblock>psql -d testdb -c 'CREATE EXTENSION pgcrypto'</codeblock></li>
+          <li>Configure the Greenplum Database server configuration parameter
+              <codeph>shared_preload_libraries</codeph> to load the <codeph>pgrcypto</codeph>
+            library. This example uses the <codeph>gpconfig</codeph> utility to update the parameter
+            in the Greenplum Database <codeph>postgresql.conf</codeph>
+              files.<codeblock>gpconfig -c shared_preload_libraries -v '\$libdir/pgcrypto'</codeblock><p>This
+              command displays the value of
+              <codeph>shared_preload_libraries</codeph>.<codeblock>gpconfig -s shared_preload_libraries</codeblock></p></li>
+          <li>Restart the Greenplum Database system.<codeblock>gpstop -ra </codeblock></li>
           <li>Set the <codeph>pgcrypto.fips</codeph> server configuration parameter to
               <codeph>on</codeph> for each database that uses FIPS encryption. For example, this
-            command sets the parameter to on for the database <codeph>testdb</codeph>. <codeblock># ALTER DATABASE testdb SET pgcrypto.fips TO on;</codeblock>
+            command sets the parameter to <codeph>on</codeph> for the database
+              <codeph>testdb</codeph>. <codeblock>ALTER DATABASE testdb SET pgcrypto.fips TO on;</codeblock>
             <note type="important">You must use the <codeph>ALTER DATABASE</codeph> command to set
               the parameter. You cannot use the <codeph>SET</codeph> command that updates the
               parameter for a session, or use the <codeph>gpconfig</codeph> utility that updates
@@ -8522,8 +8533,26 @@
           <li>After setting the parameter, reconnect to the database to enable encryption support
             for a session. This example uses the <codeph>psql</codeph> meta command
               <codeph>\c</codeph> to connect to the <codeph>testdb</codeph>
-            database.<codeblock># \c testdb</codeblock></li>
+            database.<codeblock>\c testdb</codeblock></li>
         </ol></p>
+      <p><b>To disable <codeph>pgcrypto.fips</codeph></b></p>
+      <ol id="ol_j3s_rxw_gjb">
+        <li>If the database does not use <codeph>pgcrypto</codeph> functions, disable the
+            <codeph>pgcrypto</codeph> extension. See <xref
+            href="../../install_guide/install_pgcrypto.xml" scope="peer">pgcrypto Cryptographic
+            Functions</xref>. This example <codeph>psql</codeph> command drops the
+            <codeph>pgcrypto</codeph> extension in the database
+          <codeph>testdb</codeph>.<codeblock>psql -d testdb -c 'DROP EXTENSION pgcrypto'</codeblock></li>
+        <li>Remove <codeph>\$libdir/pgcrypto</codeph> from the
+            <codeph>shared_preload_libraries</codeph> parameter, and restart Greenplum Database.
+          This <codeph>gpconfig</codeph> command displays the value of the parameter from the
+          Greenplum Database <codeph>postgresql.conf</codeph>
+            files.<codeblock>gpconfig -s shared_preload_libraries</codeblock><p>Use the
+              <codeph>gpconfig</codeph> utility with the <codeph>-c</codeph> and <codeph>-v</codeph>
+            options to change the value of the parameter. Use the <codeph>-r</codeph> option to
+            remove the parameter.</p></li>
+        <li>Restart the Greenplum Database system.<codeblock>gpstop -ra </codeblock></li>
+      </ol>
       <table id="table_rn1_jwh_gjb">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
