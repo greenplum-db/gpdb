@@ -211,7 +211,18 @@ extern "C"
 {
 void InitGPOPT ()
 {
-	return CGPOptimizer::InitGPOPT();
+	GPOS_TRY
+	{
+		return CGPOptimizer::InitGPOPT();
+	}
+	GPOS_CATCH_EX(ex)
+	{
+		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
+		{
+			PG_RE_THROW();
+		}
+	}
+	GPOS_CATCH_END;
 }
 }
 
@@ -227,7 +238,18 @@ extern "C"
 {
 void TerminateGPOPT ()
 {
-	return CGPOptimizer::TerminateGPOPT();
+	GPOS_TRY
+	{
+		return CGPOptimizer::TerminateGPOPT();
+	}
+	GPOS_CATCH_EX(ex)
+	{
+		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
+		{
+			PG_RE_THROW();
+		}
+	}
+	GPOS_CATCH_END;
 }
 }
 
