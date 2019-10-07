@@ -35,7 +35,7 @@
             <li><codeph>kdestroy</codeph> - destroy active Kerberos tickets </li>
             <li><codeph>klist</codeph> - list Kerberos tickets</li>
           </ul>
-      <p>You must set up Kerberos configuration on the Windows client to authenticate with
+      <p>You must configure Kerberos on the Windows client to authenticate with
         Greenplum Database:</p>
       <ol>
         <li>Copy the Kerberos configuration file <codeph>/etc/krb5.conf</codeph> from the
