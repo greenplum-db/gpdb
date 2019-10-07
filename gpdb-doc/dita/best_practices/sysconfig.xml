@@ -39,47 +39,50 @@
         with the following mount options:
         <codeblock>rw,nodev,noatime,nobarrier,inode64</codeblock></p>
     </section>
-    <section id="port_config">
-      <title>Port Configuration</title>
-      <p>Set up <codeph>ip_local_port_range</codeph> so it does not conflict with the Greenplum
-        Database port ranges. For example, setting this range in
+    <section id="port_config"><p>Please review the <xref href="../install_guide/prep_os.html#topic3"
+          format="dita" scope="peer">recommended OS parameter settings</xref> at the <cite>Greenplum
+          Database Installation Guide</cite>.</p><title>Port Configuration</title><p>Set up
+          <codeph>ip_local_port_range</codeph> so it does not conflict with the Greenplum Database
+        port ranges. For example, setting this range in
           <systemoutput>/etc/sysctl.conf</systemoutput>:
-        <codeblock>net.ipv4.ip_local_port_range = 10000  65535</codeblock></p>
-      <p>you could set the Greenplum Database base port numbers to these
+        <codeblock>net.ipv4.ip_local_port_range = 10000  65535</codeblock></p><p>you could set the
+        Greenplum Database base port numbers to these
         values.<codeblock>PORT_BASE = 6000
-MIRROR_PORT_BASE = 7000</codeblock></p>
-    </section>
-    <section id="io_config">
-      <title>I/O Configuration</title>
-      <p>Set the blockdev read-ahead size to 16384 on the devices that contain data directories.
-        This command sets the read-ahead size for <codeph>/dev/sdb</codeph>.</p>
-      <codeblock># /sbin/blockdev --setra 16384 /dev/sdb</codeblock>
-      <p>This command returns the read-ahead size for <codeph>/dev/sdb</codeph>.</p>
-      <codeblock># /sbin/blockdev --getra /dev/sdb
-16384</codeblock>
-      <p>The deadline IO scheduler should be set for all data directory devices. </p>
-      <codeblock> # cat /sys/block/sdb/queue/scheduler
- noop anticipatory [deadline] cfq </codeblock>
-      <p>The maximum number of OS files and processes should be increased in the
+MIRROR_PORT_BASE = 7000</codeblock></p>Please review the
+        <xref href="../install_guide/prep_os.html#topic3" format="dita" scope="peer">recommended OS
+        parameter settings</xref> at the <cite>Greenplum Database Installation
+      Guide</cite>.</section>
+    <section id="io_config"><title>I/O Configuration</title><p>Set the blockdev read-ahead size to
+        16384 on the devices that contain data directories. This command sets the read-ahead size
+        for <codeph>/dev/sdb</codeph>.
+        </p><codeblock># /sbin/blockdev --setra 16384 /dev/sdb</codeblock><p>This command returns
+        the read-ahead size for
+      <codeph>/dev/sdb</codeph>.</p><codeblock># /sbin/blockdev --getra /dev/sdb
+16384</codeblock>Please
+      review the <xref href="../install_guide/prep_os.html#topic3" format="dita" scope="peer"
+        >recommended OS parameter settings</xref> at the <cite>Greenplum Database Installation
+        Guide</cite>.<p>The deadline IO scheduler should be set for all data directory devices.
+        </p><codeblock> # cat /sys/block/sdb/queue/scheduler
+ noop anticipatory [deadline] cfq </codeblock><p>The
+        maximum number of OS files and processes should be increased in the
           <codeph>/etc/security/limits.conf</codeph> file.
         <codeblock>* soft  nofile 524288
 * hard  nofile 524288
 * soft  nproc 131072
-* hard  nproc 131072</codeblock></p>
-      <p>Enable core files output to a known location and make sure <codeph>limits.conf</codeph>
-        allows core files.
+* hard  nproc 131072</codeblock></p><p>Enable
+        core files output to a known location and make sure <codeph>limits.conf</codeph> allows core
+        files.
         <codeblock>kernel.core_pattern = /var/core/core.%h.%t
 # grep core /etc/security/limits.conf  
-* soft  core unlimited</codeblock></p>
-    </section>
+* soft  core unlimited</codeblock></p></section>
     <section id="os_mem_config">
       <title>OS Memory Configuration</title>
       <p>The Linux sysctl <codeph>vm.overcommit_memory</codeph> and
           <codeph>vm.overcommit_ratio</codeph> variables affect how the operating system manages
-        memory allocation.  Please refer to the <xref
+        memory allocation. Please refer to the <xref
           href="../install_guide/prep_os.html#topic3__segment_host_memory" scope="peer"
-          format="dita"><codeph>/etc/sysctl.conf</codeph> file parameters guidelines</xref> in the
-        Greenplum Datatabase Installation Guide.</p>
+          format="dita"><codeph>/etc/sysctl.conf</codeph></xref> file parameters guidelines in the
+          <cite>Greenplum Datatabase Installation Guide</cite>.</p>
       <p><codeph>vm.overcommit_memory</codeph> determines the method the OS uses for determining how
         much memory can be allocated to processes. This should be always set to 2, which is the only
         safe setting for the database. <note>For information on configuration of overcommit memory,

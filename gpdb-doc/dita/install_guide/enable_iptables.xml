@@ -10,7 +10,9 @@
         <codeph>iptables</codeph> is enabled. You should test the performance of your application
       with <codeph>iptables</codeph> enabled to ensure that performance is acceptable.</note>
     <p>For more information about <codeph>iptables</codeph> see the <codeph>iptables</codeph> and
-      firewall documentation for your operating system. </p>
+      firewall documentation for your operating system. See also <xref
+        href="prep_os.xml#topic_sqj_lt1_nfb" type="topic" format="dita">Disabling SELinux and
+        Firewall Software</xref> in the <cite>Configuring Your Systems</cite> topic.</p>
     <section id="ji163124">
       <title>How to Enable iptables</title>
       <ol id="ol_akk_knz_thb">
@@ -31,14 +33,14 @@
           <codeph>iptables</codeph> table is too low and needs to be
           increased.<codeblock>ip_conntrack: table full, dropping packet.</codeblock><p>As root, run
           this command to view the <codeph>iptables</codeph> table
-          value:</p><codeblock># sysctl net.ipv4.netfilter.ip_conntrack_max</codeblock><p>The
-          following is the recommended setting to ensure that the Greenplum Database workload does
-          not overflow the <codeph>iptables</codeph> table. The value might need to be adjusted for
-          your hosts: <codeph>net.ipv4.netfilter.ip_conntrack_max=6553600</codeph></p><p>You can
-          update the <codeph>/etc/sysctl.conf</codeph> file with the value. See also <xref
-            href="prep_os.xml#topic3" type="topic" format="dita"/>.</p><p>To set the value until the next
-          reboot run this command as
-        root.</p><codeblock># sysctl net.ipv4.netfilter.ip_conntrack_max=6553600</codeblock></note>
+          value:</p><codeblock># sysctl net.ipv4.netfilter.ip_conntrack_max</codeblock><p>To ensure
+          that the Greenplum Database workload does not overflow the <codeph>iptables</codeph>
+          table, as root, set it to the following value:
+          </p><codeblock># sysctl net.ipv4.netfilter.ip_conntrack_max=6553600</codeblock><p>The
+          value might need to be adjusted for your hosts. To maintain the value after reboot, you
+          can update the <codeph>/etc/sysctl.conf</codeph> file as discussed in <xref
+            href="prep_os.xml#topic3" format="dita" type="topic">Setting the Greenplum Recommended
+            OS Parameters</xref>. </p></note>
     </section>
   </body>
   <topic id="topic16" xml:lang="en">

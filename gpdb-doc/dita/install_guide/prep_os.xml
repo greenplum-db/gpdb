@@ -149,12 +149,14 @@ SELinuxstatus: disabled</codeblock></li>
         all interface address names for every machine participating in your Greenplum Database
         system.</p>
     </section>
-    <section id="sysctl_file"><title>Sysctl parameters</title><p>The <codeph>sysctl.conf</codeph>
-          parameters listed in this topic are for performance in a wide variety of environments.
-          Change these settings according to your specific situation and setup.</p><p>The parameters
-          are split into minimal and additional settings. Set the parameters in the
-            <codeph>/etc/sysctl.conf</codeph> file and reload with <codeph>sysctl -p</codeph>:
-          </p><codeblock>
+    <section id="sysctl_file">
+        <title>Sysctl parameters</title>
+        <p>The <codeph>sysctl.conf</codeph> parameters listed in this topic are for performance in a
+          wide variety of environments. Change these settings according to your specific situation
+          and setup.</p>
+        <p>The parameters are split into minimal and additional settings. Set the parameters in the
+            <codeph>/etc/sysctl.conf</codeph> file and reload with <codeph>sysctl -p</codeph>: </p>
+        <codeblock>
 # minimal settings
 
 # kernel.shmall = _PHYS_PAGES / 2 # <b>See <xref href="#topic3/shared_memory_pages" format="dita">Shared Memory Pages</xref></b>
@@ -188,86 +190,86 @@ vm.dirty_writeback_centisecs = 100
 vm.dirty_background_ratio = 0 # <b>See <xref href="#topic3/system_memory" format="dita">System Memory</xref></b>
 vm.dirty_ratio = 0
 vm.dirty_background_bytes = 1610612736
-vm.dirty_bytes = 4294967296</codeblock><p
-          id="shared_memory_pages"><b>Shared Memory Pages</b></p><p>Greenplum Database uses shared
-          memory to communicate between <codeph>postgres</codeph> processes that are part of the
-          same <codeph>postgres</codeph> instance. </p><p><codeph>kernel.shmall</codeph> sets the
-          total amount of shared memory pages that can be used system wide in pages.
-            <codeph>kernel.shmmax</codeph> sets maximum size of a single shared memory segment in
-          bytes.</p><p>Set <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values
-          based on your system's physical memory and page size. In general, the value for both
-          parameters should be one half of the system physical memory. </p><p>Use the operating
-          system variables <codeph>_PHYS_PAGES</codeph> and <codeph>PAGE_SIZE</codeph> to set the
-          parameters.</p><codeblock>kernel.shmall = ( _PHYS_PAGES / 2)
-kernel.shmmax = ( _PHYS_PAGES / 2) * PAGE_SIZE</codeblock><p>To
-          calculate the values for <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph>,
-          run the following commands using the <codeph>getconf</codeph> command, which returns the
-          value of an operating system
-          variable.</p><codeblock>$ echo $(expr $(getconf _PHYS_PAGES) / 2) 
-$ echo $(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))</codeblock><p>As
-          best practice, we recommend you set the following values in the
-            <codeph>/etc/sysctl.conf</codeph>
-          file:</p><codeblock>kernel.shmmax = 500000000
+vm.dirty_bytes = 4294967296</codeblock>
+        <p id="shared_memory_pages"><b>Shared Memory Pages</b></p>
+        <p>Greenplum Database uses shared memory to communicate between <codeph>postgres</codeph>
+          processes that are part of the same <codeph>postgres</codeph> instance. </p>
+        <p><codeph>kernel.shmall</codeph> sets the total amount of shared memory pages that can be
+          used system wide in pages. <codeph>kernel.shmmax</codeph> sets maximum size of a single
+          shared memory segment in bytes.</p>
+        <p>Set <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values based on your
+          system's physical memory and page size. In general, the value for both parameters should
+          be one half of the system physical memory. </p>
+        <p>Use the operating system variables <codeph>_PHYS_PAGES</codeph> and
+            <codeph>PAGE_SIZE</codeph> to set the parameters.</p>
+        <codeblock>kernel.shmall = ( _PHYS_PAGES / 2)
+kernel.shmmax = ( _PHYS_PAGES / 2) * PAGE_SIZE</codeblock>
+        <p>To calculate the values for <codeph>kernel.shmall</codeph> and
+            <codeph>kernel.shmax</codeph>, run the following commands using the
+            <codeph>getconf</codeph> command, which returns the value of an operating system
+          variable.</p>
+        <codeblock>$ echo $(expr $(getconf _PHYS_PAGES) / 2) 
+$ echo $(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))</codeblock>
+        <p>As best practice, we recommend you set the following values in the
+            <codeph>/etc/sysctl.conf</codeph> file:</p>
+        <codeblock>kernel.shmmax = 500000000
 kernel.shmmni = 4096
-kernel.shmall = 4000000000</codeblock><p
-          id="segment_host_memory"><b>Segment Host Memory</b></p><p>The
-            <codeph>vm.overcommit_memory</codeph> is Linux kernel parameter used by the OS to
+kernel.shmall = 4000000000</codeblock>
+        <p id="segment_host_memory"><b>Segment Host Memory</b></p>
+        <p>The <codeph>vm.overcommit_memory</codeph> is Linux kernel parameter used by the OS to
           determine how much memory can be allocated to processes. For Greenplum database, this
-          parameter should always be set to 2. </p><p><codeph>vm.overcommit_ratio</codeph> is the
-          percent of RAM that is used for application processes. The default is 50 on Red Hat
-          Enterprise Linux. See <xref
-            href="../best_practices/sysconfig.html#topic_dt3_fkv_r4__segment_mem_config"
-            scope="peer" format="dita">Resource Queue Segment Memory configuration</xref> for a
-          formula to calculate an optimal value. </p><p>If you are using resource group-based
-          resource management, tune the operating system <codeph>vm.overcommit_ratio</codeph> as
-          necessary. If your memory utilization is too low, increase the
-            <codeph>vm.overcommit_ratio</codeph> value; if your memory or swap usage is too high,
-          decrease the value.</p>If you are using resource queue-based resource management, refer to
-        the <xref href="../admin_guide/wlmgmt_intro.html" format="dita" scope="peer">Greenplum
-          Database Memory Overview</xref> in the <cite>Greenplum Database Administrator guide</cite>
-        and also see the Greenplum Database server configuration parameter <codeph><xref
-            href="../ref_guide/config_params/guc-list.xml#gp_vmem_protect_limit" scope="peer"
-            >gp_vmem_protect_limit</xref></codeph> in the <cite>Greenplum Database Reference
-          Guide</cite> and the <cite>Greenplum Database Best Practices Guide</cite>.<p
-          id="port_settings"><b>Port Settings</b></p><p>To avoid port conflicts between Greenplum
-          Database and other applications during Greenplum initiliazation, make a note of the port
-          range specified by the operating system parameter
-            <codeph>net.ipv4.ip_local_port_range</codeph>.  When initializing Greenplum using the
-            <systemoutput>gpinitsystem</systemoutput> cluster configuration file, do not specify
+          parameter should always be set to 2. </p>
+        <p><codeph>vm.overcommit_ratio</codeph> is the percent of RAM that is used for application
+          processes and the remainder is reserved for the operating system. The default is 50 on Red
+          Hat Enterprise Linux. </p>
+        <p>For <codeph>vm.overcommit_ratio</codeph> tuning and calculation recommendations with
+          resource group-based resource management or resource queue-based resource management,
+          refer to <xref href="../admin_guide/wlmgmt_intro.html" scope="peer" format="dita">Options
+            for Configuring Segment Host Memory</xref> in the <cite>Geenplum Database Administrator
+            Guide</cite>. Also please refer to the Greenplum Database server configuration parameter
+              <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_vmem_protect_limit"
+              scope="peer">gp_vmem_protect_limit</xref></codeph> in the <cite>Greenplum Database
+            Reference Guide</cite>. </p>
+        <p id="port_settings"><b>Port Settings</b></p>
+        <p>To avoid port conflicts between Greenplum Database and other applications during
+          Greenplum initiliazation, make a note of the port range specified by the operating system
+          parameter <codeph>net.ipv4.ip_local_port_range</codeph>. When initializing Greenplum using
+          the <systemoutput>gpinitsystem</systemoutput> cluster configuration file, do not specify
           Greenplum Database ports in that range. For example, if
             <codeph>net.ipv4.ip_local_port_range = 10000 65535</codeph>, set the Greenplum Database
-          base port numbers to these values.
-          </p><codeblock>PORT_BASE = 6000
-MIRROR_PORT_BASE = 7000</codeblock><p>For information
-          about the the <systemoutput>gpinitsystem</systemoutput> cluster configuration file, see
-            <xref href="../install_guide/init_gpdb.html#topic4" scope="peer" format="dita"
-            >Initializing a Greenplum Database System</xref>.</p><p>For Azure deployments with
-          Greenplum Database avoid using port 65330; add the following line to
-            <filepath>sysctl.conf</filepath>:
-          <codeblock>net.ipv4.ip_local_reserved_ports=65330 </codeblock></p><p>For additional
-          requirements and recommendations for cloud deployments, see <i><xref
+          base port numbers to these values. </p>
+        <codeblock>PORT_BASE = 6000
+MIRROR_PORT_BASE = 7000</codeblock>
+        <p>For information about the the <systemoutput>gpinitsystem</systemoutput> cluster
+          configuration file, see <xref href="../install_guide/init_gpdb.html#topic4" scope="peer"
+            format="dita">Initializing a Greenplum Database System</xref>.</p>
+        <p>For Azure deployments with Greenplum Database avoid using port 65330; add the following
+          line to <filepath>sysctl.conf</filepath>:
+          <codeblock>net.ipv4.ip_local_reserved_ports=65330 </codeblock></p>
+        <p>For additional requirements and recommendations for cloud deployments, see <i><xref
               href="../cloud/gpdb-cloud-tech-rec.html" format="html" scope="peer">Greenplum Database
-              Cloud Technical Recommendations</xref></i>. </p><p id="system_memory"><b>System
-            Memory</b></p><p>For host systems with more than 64GB of memory, these settings are
-          recommended:
+              Cloud Technical Recommendations</xref></i>. </p>
+        <p id="system_memory"><b>System Memory</b></p>
+        <p>For host systems with more than 64GB of memory, these settings are recommended:
           <codeblock>vm.dirty_background_ratio = 0
 vm.dirty_ratio = 0
 vm.dirty_background_bytes = 1610612736 # 1.5GB
-vm.dirty_bytes = 4294967296 # 4GB</codeblock></p><p>For
-          host systems with 64GB of memory or less, remove
+vm.dirty_bytes = 4294967296 # 4GB</codeblock></p>
+        <p>For host systems with 64GB of memory or less, remove
             <codeph>vm.dirty_background_bytes</codeph> and <codeph>vm.dirty_bytes</codeph> and set
           the two <codeph>ratio</codeph> parameters to these values:
           <codeblock>vm.dirty_background_ratio = 3
-vm.dirty_ratio = 10</codeblock></p><p>Increase
-            <codeph>vm.min_free_kbytes</codeph> to ensure <codeph>PF_MEMALLOC</codeph> requests from
-          network and storage drivers are easily satisfied. This is especially critical on systems
-          with large amounts of system memory. The default value is often far too low on these
-          systems. Use this awk command to set <codeph>vm.min_free_kbytes</codeph> to a recommended
-          3% of system physical memory:
+vm.dirty_ratio = 10</codeblock></p>
+        <p>Increase <codeph>vm.min_free_kbytes</codeph> to ensure <codeph>PF_MEMALLOC</codeph>
+          requests from network and storage drivers are easily satisfied. This is especially
+          critical on systems with large amounts of system memory. The default value is often far
+          too low on these systems. Use this awk command to set <codeph>vm.min_free_kbytes</codeph>
+          to a recommended 3% of system physical memory:
           <codeblock>awk 'BEGIN {OFMT = "%.0f";} /MemTotal/ {print "vm.min_free_kbytes =", $2 * .03;}'
-               /proc/meminfo >> /etc/sysctl.conf </codeblock></p><p>Do
-          not set <codeph>vm.min_free_kbytes</codeph> to higher than 5% of system memory as doing so
-          might cause out of memory conditions.</p></section>
+               /proc/meminfo >> /etc/sysctl.conf </codeblock></p>
+        <p>Do not set <codeph>vm.min_free_kbytes</codeph> to higher than 5% of system memory as
+          doing so might cause out of memory conditions.</p>
+      </section>
     <section id="system_resources">
       <title>System Resources Limits</title>
       <p>Set the following parameters in the <codeph>/etc/security/limits.conf</codeph> file:</p>

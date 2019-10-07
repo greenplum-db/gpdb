@@ -89,17 +89,19 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
         </li>
         <li>
           <b>vm.overcommit_ratio</b>
-          <p>This is a Linux kernel parameter, set in <codeph>/etc/sysctl.conf</codeph>. It is the
-            percentage of RAM that is used for application processes. The remainder is reserved for
-            the operating system. The default on Red Hat is 50. </p><p>Setting
-              <codeph>vm.overcommit_ratio</codeph> too high may result in not enough memory being
-            reserved for the operating system, which can result in segment host failure or database
-            failure. Setting the value too low reduces the amount of concurrency and query
-            complexity that can be run by reducing the amount of memory available to Greenplum
-            Database. When increasing the setting it is important to remember to always reserve some
-            memory for operating system activities. </p><p>See <xref
-              href="sysconfig.xml#topic_dt3_fkv_r4/segment_mem_config"/> for instructions to
-            calculate a value for <codeph>vm.overcommit_ratio</codeph>.</p></li>
+          <p>This is a Linux kernel parameter, set in <xref
+              href="../install_guide/prep_os.html#topic3__sysctl_file" format="dita" scope="peer"
+                ><codeph>/etc/sysctl.conf</codeph></xref>. It is the percentage of RAM that is used
+            for application processes. The remainder is reserved for the operating system. The
+            default on Red Hat is 50. </p><p>Setting <codeph>vm.overcommit_ratio</codeph> too high
+            may result in not enough memory being reserved for the operating system, which can
+            result in segment host failure or database failure. Setting the value too low reduces
+            the amount of concurrency and query complexity that can be run by reducing the amount of
+            memory available to Greenplum Database. When increasing the setting it is important to
+            remember to always reserve some memory for operating system activities. </p><p>See <xref
+              href="../admin_guide/wlmgmt_intro.html" scope="peer" format="dita">Greenplum Database
+              Memory Overview</xref> for instructions to calculate a value for
+              <codeph>vm.overcommit_ratio</codeph>.</p></li>
         <li>
           <b>gp_vmem_protect_limit</b>
           <p>Use <codeph>gp_vmem_protect_limit</codeph> to set the maximum memory that the instance

@@ -59,9 +59,10 @@
               large memory allocation requests.</li>
           </ul></p>
         <p>The physical RAM and OS configuration are usually managed by the platform team and system
-          administrators. <ph>See the <cite>Greenplum Database Installation
-              Guide</cite> for the recommended kernel parameter settings.</ph>
-        </p>
+        administrators. See the <xref href="../install_guide/prep_os.html#topic3" format="dita"
+            scope="peer"><cite>Greenplum Database Installation Guide</cite></xref> for the
+          recommended kernel parameters and how to set the <codeph>/etc/sysctl.conf</codeph> file
+          parameters.</p>
         <p>The amount of memory to reserve for the operating system and other processes is workload
           dependent. The minimum recommendation for operating system memory is 32GB, but if there is
           much concurrency in Greenplum Database, increasing to 64GB of reserved memory may be

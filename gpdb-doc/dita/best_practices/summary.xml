@@ -118,7 +118,9 @@
             <codeph>gp_vmem_protect_limit</codeph>.</li>
         <li> Dynamically update resource queue settings to match daily operations flow.</li>
       </ul>
-      <p>See <xref href="workloads.xml#topic_hhc_z5w_r4"/>.</p>
+      <p>See <xref href="../install_guide/prep_os.html#topic3__sysctl_file" format="dita"
+          scope="peer">Setting the Greenplum Recommended OS Parameters</xref> and  <xref
+          href="workloads.xml#topic_hhc_z5w_r4"/>.</p>
     </section>
     <section>
       <title>Partitioning</title>
