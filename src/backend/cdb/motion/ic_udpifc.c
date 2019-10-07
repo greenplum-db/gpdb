@@ -38,7 +38,6 @@
 #include "port/pg_crc32c.h"
 #include "storage/latch.h"
 #include "storage/pmsignal.h"
-#include "postmaster/postmaster.h"
 #include "utils/builtins.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
@@ -1188,7 +1187,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 #endif
 
 	fun = "getaddrinfo";
-	s = getaddrinfo(BackendListenAddress, service, &hints, &addrs);
+	s = getaddrinfo(NULL, service, &hints, &addrs);
 	if (s != 0)
 		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
 
