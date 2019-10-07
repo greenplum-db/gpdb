@@ -7511,7 +7511,10 @@
     <body>
       <p>When GPORCA is enabled (the default) and this parameter is <codeph>true</codeph> (the
         default), GPORCA uses Greenplum Database memory management when executing queries. When set
-        to <codeph>false</codeph>, GPORCA uses GPORCA-specific memory management.</p>
+        to <codeph>false</codeph>, GPORCA uses GPORCA-specific memory management. Greenplum Database
+        memory management allows for faster optimization, reduced memory usage during optimization,
+        and improves GPORCA support of vmem limits when compared to GPORCA-specific memory
+        management.</p>
       <p>For information about GPORCA, see <xref
           href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
