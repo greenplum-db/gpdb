@@ -7,9 +7,28 @@
     <body>
       <p>Greenplum Database uses the standard PostgreSQL client and server programs and
         provides additional management utilities for administering a distributed
-        Greenplum Database DBMS. Greenplum Database utilities reside in
-        <codeph>$GPHOME/bin.</codeph></p>
-      <p>Greenplum Database provides the following utility programs.</p>
+        Greenplum Database DBMS.</p>
+      <p>Several utilities are installed when you install the Greenplum Database server.
+        These utilities reside in <codeph>$GPHOME/bin</codeph>. <ph otherprops="pivotal">
+        Other utilities must be
+        downloaded from Pivotal Network and installed separately. These include:</ph></p>
+      <ul otherprops="pivotal">
+        <li>The <xref href="http://gpdb.docs.pivotal.io/backup-restore/latest/index.html"
+            scope="external" format="html">Pivotal Greenplum Backup and Restore</xref>
+          utilities.</li>
+        <li>The <xref href="https://gpdb.docs.pivotal.io/gpcopy/latest/index.html" scope="external"
+            format="html">Pivotal Greenplum gpcopy</xref> utility.</li>
+      </ul>
+      <p>Additionally, the Pivotal <xref href="../client_tool_guides/about.xml" otherprops="pivotal"
+            scope="peer">Greenplum Client and Loader Tools</xref> is also a separate
+        download from Pivotal Network, and includes selected utilities from the Greenplum
+        Database server installation that you can install on a client system outside of
+        your Greenplum Database cluster.</p>
+      <p>Greenplum Database provides the following utility programs. Superscripts identify
+        those utilities that require separate downloads, as well as those utilities that
+        are also installed with the Client and Loader Tools Packages. All utilities are
+        installed when you install the Greenplum Database server, unless specifically
+        identified by a superscript.</p>
       <simpletable frame="all" relcolwidth="1.0* 1.0* 1.0*" otherprops="op-help">
         <strow>
           <stentry>
@@ -84,10 +103,13 @@
           </stentry>
         </strow>
       </simpletable>
-      <note>
-        <p><sup>1</sup> The utility program is also installed with the Greenplum Client and
-          Loader Tools Packages for Linux and Windows.</p>
-        <p><sup>2</sup>The utility program is also installed with the Greenplum Client and
+      <note otherprops="pivotal">
+        <p><sup>1</sup>The utility program is also installed with the Greenplum Client and
+          Loader Tools Packages for Linux and Windows. You can obtain these packages from
+          the Greenplum Database <i>Greenplum Clients</i> filegroup on
+          <xref href="https://network.pivotal.io/products/pivotal-gpdb"
+            scope="external" format="html" ><ph>Pivotal Network</ph></xref>.</p>
+        <p><sup id="two">2</sup>The utility program is also installed with the Greenplum Client and
           Loader Tools Package for Linux.</p>
         <p><sup>3</sup> The newest version of the utility program can be obtained from the
           <i>Greenplum Backup and Restore</i> tile on

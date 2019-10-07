@@ -9,7 +9,7 @@
   <topic id="ipv6">
     <title>Referencing IP Addresses</title>
     <body>
-      <p>When you reference IPv6 addresses in <codeph>gpfdist</codeph> URLs, or when you
+      <p>When you reference IPv6 addresses in Greenplum Database utility programs, or when you
         use numeric IP addresses instead of hostnames in any management utility, always
         enclose the IP address in brackets. When specifying an IP address at the command
         line, the best practice is to escape any brackets or enclose them in single
@@ -25,7 +25,7 @@
       <p>Greenplum Database has modified certain PostgreSQL backend server programs to
         handle the parallelism and distribution of a Greenplum Database system. You
         access these programs only through the Greenplum Database management tools and
-        utilities. <i>You do not run these programs directly.</i></p>
+        utilities. <i>Do not run these programs directly.</i></p>
       <p>The following table identifies certain PostgreSQL backend server programs and
         the Greenplum Database utility command to run instead.</p>
       <table id="km164231">
