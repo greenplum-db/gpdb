@@ -459,6 +459,7 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 	int			numeric_rel_num = 0;
 	char		typestr[QUERY_ALLOC];
 	int			i;
+	Oid tablespace_oid;
 
 	/*
 	 * If we are upgrading from Greenplum 4.3.x we need to record which rels
@@ -666,14 +667,35 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 		curr->relfilenode = atooid(PQgetvalue(res, relnum, i_relfilenode));
 		curr->tblsp_alloc = false;
 
+		tablespace_oid = atooid(PQgetvalue(res, relnum, i_reltablespace));
+
 		/* Is the tablespace oid non-zero? */
-		if (atooid(PQgetvalue(res, relnum, i_reltablespace)) != 0)
+		if (tablespace_oid != 0)
 		{
-			/*
-			 * The tablespace location might be "", meaning the cluster
-			 * default location, i.e. pg_default or pg_global.
-			 */
-			tablespace = PQgetvalue(res, relnum, i_spclocation);
+			bool is_old_cluster = old_cluster.major_version == cluster->major_version;
+
+			if (is_old_cluster &&
+				!is_old_tablespaces_file_empty(old_cluster.old_tablespace_file_contents))
+			{
+				char tablespace_path[MAXPGPATH];
+
+				char *tablespace_location = old_tablespace_file_get_tablespace_path_for_oid(
+					old_cluster.old_tablespace_file_contents, tablespace_oid);
+
+				snprintf(tablespace_path, sizeof(tablespace_path), "%s/%u",
+						 tablespace_location, 
+						 tablespace_oid);
+
+				tablespace = tablespace_path;
+				Assert(tablespace != NULL);
+			}
+			else {
+				/*
+				 * The tablespace location might be "", meaning the cluster
+				 * default location, i.e. pg_default or pg_global.
+				 */
+				tablespace = PQgetvalue(res, relnum, i_spclocation);
+			}
 
 			/* Can we reuse the previous string allocation? */
 			if (last_tablespace && strcmp(tablespace, last_tablespace) == 0)

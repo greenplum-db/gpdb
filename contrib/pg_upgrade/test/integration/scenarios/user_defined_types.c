@@ -9,7 +9,7 @@
 #include "utilities/bdd-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
-#include "utilities/upgrade-helpers.h"
+#include "utilities/test-upgrade-helpers.h"
 
 #include "user_defined_types.h"
 

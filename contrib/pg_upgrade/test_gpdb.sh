@@ -172,7 +172,9 @@ upgrade_qd()
 
 	# Run pg_upgrade
 	pushd $1
-	time ${NEW_BINDIR}/pg_upgrade --mode=dispatcher --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS}
+	time ${NEW_BINDIR}/pg_upgrade --mode=dispatcher --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS} \
+		--old-gp-dbid="$4" --new-gp-dbid="$5"
+
 	if (( $? )) ; then
 		echo "ERROR: Failure encountered in upgrading qd node"
 		exit 1
@@ -195,7 +197,9 @@ upgrade_segment()
 
 	# Run pg_upgrade
 	pushd $1
-	time ${NEW_BINDIR}/pg_upgrade --mode=segment --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS}
+	time ${NEW_BINDIR}/pg_upgrade --mode=segment --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS} \
+		--old-gp-dbid="$4" --new-gp-dbid="$5" --old-tablespaces-file="old_tablespaces.txt"
+
 	if (( $? )) ; then
 		echo "ERROR: Failure encountered in upgrading node"
 		exit 1
@@ -466,7 +470,9 @@ main() {
 	local epoch_for_perf_start=`date +%s`
 	
 	# Start by upgrading the master
-	upgrade_qd "${temp_root}/upgrade/qd" "${OLD_DATADIR}/qddir/demoDataDir-1/" "${NEW_DATADIR}/qddir/demoDataDir-1/"
+	local old_master_gp_dbid="1"
+	local new_master_gp_dbid="1"
+	upgrade_qd "${temp_root}/upgrade/qd" "${OLD_DATADIR}/qddir/demoDataDir-1/" "${NEW_DATADIR}/qddir/demoDataDir-1/" "$old_master_gp_dbid" "$new_master_gp_dbid"
 	print_delta_seconds $epoch_for_perf_start 'number_of_seconds_for_upgrade_qd'
 	
 	# If this is a minimal smoketest to ensure that we are handling all objects
@@ -500,12 +506,20 @@ main() {
 		# Upgrade the segment data files without dump/restore of the schema
 	
 		local epoch_for_perf_QEstart=`date +%s`
-		upgrade_segment "${temp_root}/upgrade/dbfast$i" "${OLD_DATADIR}/dbfast$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/"
+		local old_gp_dbid=$k
+		local new_gp_dbid=$k
+
+		upgrade_segment "${temp_root}/upgrade/dbfast$i" "${OLD_DATADIR}/dbfast$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/" \
+			"$old_gp_dbid" "$new_gp_dbid"
+
 		print_delta_seconds $epoch_for_perf_QEstart 'number_of_seconds_for_upgrade_qe'
 	
 		if (( $mirrors )) ; then
 			epoch_for_perf_QEMstart=`date +%s`
-			upgrade_segment "${temp_root}/upgrade/dbfast_mirror$i" "${OLD_DATADIR}/dbfast_mirror$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast_mirror$i/demoDataDir$j/"
+
+			upgrade_segment "${temp_root}/upgrade/dbfast_mirror$i" "${OLD_DATADIR}/dbfast_mirror$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast_mirror$i/demoDataDir$j/" \
+				"$old_gp_dbid" "$new_gp_dbid"
+
 			print_delta_seconds $epoch_for_perf_QEMstart 'number_of_seconds_for_upgrade_qdm'
 		fi
 	done

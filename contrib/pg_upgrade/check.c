@@ -86,6 +86,9 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 
 	get_pg_database_relfilenode(&old_cluster);
 
+	if (!user_opts.check && user_opts.segment_mode == DISPATCHER)
+		generate_old_tablespaces_file(&old_cluster);
+
 	/* Extract a list of databases and tables from the old cluster */
 	get_db_and_rel_infos(&old_cluster);
 

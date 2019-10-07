@@ -11,7 +11,7 @@
 #include "utilities/gpdb6-cluster.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
-#include "utilities/upgrade-helpers.h"
+#include "utilities/test-upgrade-helpers.h"
 
 #include "pl_function.h"
 

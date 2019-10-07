@@ -8,7 +8,7 @@
 
 #include "utilities/gpdb5-cluster.h"
 #include "utilities/gpdb6-cluster.h"
-#include "utilities/upgrade-helpers.h"
+#include "utilities/test-upgrade-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
 

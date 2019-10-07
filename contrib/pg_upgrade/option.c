@@ -26,10 +26,9 @@ static void check_required_directory(char **dirpath,
 						 const char *envVarName, bool useCwd,
 						 const char *cmdLineOption, const char *description);
 #define FIX_DEFAULT_READ_ONLY "-c default_transaction_read_only=false"
-
+#define GP_DBID_NOT_SET -1
 
 UserOpts	user_opts;
-
 
 /*
  * parseCommandLine()
@@ -62,6 +61,9 @@ parseCommandLine(int argc, char *argv[])
 		{"progress", no_argument, NULL, 2},
 		{"add-checksum", no_argument, NULL, 3},
 		{"remove-checksum", no_argument, NULL, 4},
+		{"old-gp-dbid", required_argument, NULL, 5},
+		{"new-gp-dbid", required_argument, NULL, 6},
+		{"old-tablespaces-file", required_argument, NULL, 7},
 
 		{NULL, 0, NULL, 0}
 	};
@@ -73,6 +75,11 @@ parseCommandLine(int argc, char *argv[])
 	time_t		run_time = time(NULL);
 
 	user_opts.transfer_mode = TRANSFER_MODE_COPY;
+	user_opts.old_tablespace_file_path = NULL;
+	
+	old_cluster.gp_dbid = GP_DBID_NOT_SET;
+	new_cluster.gp_dbid = GP_DBID_NOT_SET;
+	old_cluster.old_tablespace_file_contents = NULL;
 
 	os_info.progname = get_progname(argv[0]);
 
@@ -228,6 +235,18 @@ parseCommandLine(int argc, char *argv[])
 			case 4:		/* --remove-checksum */
 				user_opts.checksum_mode = CHECKSUM_REMOVE;
 				break;
+				
+			case 5: /* --old-gp-dbid */
+				old_cluster.gp_dbid = atoi(optarg);
+				break;
+
+			case 6: /* --new-gp-dbid */
+				new_cluster.gp_dbid = atoi(optarg);
+				break;
+
+			case 7: /* --old-tablespaces-file */
+				user_opts.old_tablespace_file_path = pg_strdup(optarg);
+				break;
 
 			default:
 				pg_fatal("Try \"%s --help\" for more information.\n",
@@ -279,6 +298,18 @@ parseCommandLine(int argc, char *argv[])
 	if (user_opts.transfer_mode != TRANSFER_MODE_COPY &&
 		user_opts.checksum_mode != CHECKSUM_NONE)
 		pg_log(PG_FATAL, "Adding and removing checksums only supported in copy mode.\n");
+
+	if (old_cluster.gp_dbid == GP_DBID_NOT_SET)
+		pg_fatal("--old-gp-dbid must be set");
+
+	if (new_cluster.gp_dbid == GP_DBID_NOT_SET)
+		pg_fatal("--new-gp-dbid must be set");
+
+	if (user_opts.old_tablespace_file_path) {
+		populate_old_cluster_with_old_tablespaces(
+			&old_cluster,
+			user_opts.old_tablespace_file_path);
+	}
 }
 
 
@@ -310,6 +341,9 @@ Options:\n\
       --progress                enable progress reporting\n\
       --remove-checksum         remove data checksums when creating new cluster\n\
       --add-checksum            add data checksumming to the new cluster\n\
+      --old-gp-dbid             greenplum database id of the old segment\n\
+      --new-gp-dbid             greenplum database id of the new segment\n\
+      --old-tablespaces-file    file containing the tablespaces from an old gpdb five cluster\n\
   -?, --help                    show this help, then exit\n\
 \n\
 Before running pg_upgrade you must:\n\

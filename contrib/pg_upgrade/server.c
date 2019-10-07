@@ -240,15 +240,23 @@ start_postmaster(ClusterInfo *cluster, bool throw_error)
 		version_opts = "-c synchronous_standby_names='' --xid_warn_limit=10000000";
 	else
 		version_opts = "-c gp_num_contents_in_cluster=1";
-	
-	char *mode_opts = "";
+
+	int gp_dbid; 
+	int gp_content_id;
+
 	if (user_opts.segment_mode == DISPATCHER)
-		mode_opts = "-c gp_dbid=1 -c gp_contentid=-1 ";
+	{
+		gp_dbid = 1;
+		gp_content_id = -1;
+	}
 	else
-		mode_opts = "-c gp_dbid=1 -c gp_contentid=0 ";
+	{
+		gp_dbid = cluster->gp_dbid;
+		gp_content_id = 0;
+	}
 
 	snprintf(cmd, sizeof(cmd),
-		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d -c gp_role=utility %s%s %s%s %s %s\" start",
+		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d -c gp_role=utility %s%s %s%s %s --gp_dbid=%d --gp_contentid=%d \" start",
 		  cluster->bindir, SERVER_LOG_FILE, cluster->pgconfig, cluster->port,
 			 (cluster->controldata.cat_ver >=
 			  BINARY_UPGRADE_SERVER_FLAG_CAT_VER) ? " -b" :
@@ -256,7 +264,7 @@ start_postmaster(ClusterInfo *cluster, bool throw_error)
 			 (cluster == &new_cluster) ?
 	  " -c synchronous_commit=off -c fsync=off -c full_page_writes=off" : "",
 			 cluster->pgopts ? cluster->pgopts : "", socket_string, version_opts, 
-			 mode_opts);
+			 gp_dbid, gp_content_id);
 	/*
 	 * Don't throw an error right away, let connecting throw the error because
 	 * it might supply a reason for the failure.

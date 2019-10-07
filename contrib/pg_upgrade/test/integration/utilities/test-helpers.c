@@ -1,10 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "test-helpers.h"
+#include "gpdb5-cluster.h"
+#include "gpdb6-cluster.h"
+
 #include "query-helpers.h"
-#include "upgrade-helpers.h"
-#include "pqexpbuffer.h"
+#include "test-helpers.h"
 
 void
 resetGpdbFiveDataDirectories(void)
@@ -23,11 +24,11 @@ resetGpdbSixDataDirectories(void)
 PGconn *
 connectToFive()
 {
-	return connectTo(50000);
+	return connectTo(GPDB_FIVE_PORT);
 }
 
 PGconn *
 connectToSix()
 {
-	return connectTo(60000);
+	return connectTo(GPDB_SIX_PORT);
 }

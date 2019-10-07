@@ -12,7 +12,9 @@ OBJS = check.o controldata.o dump.o exec.o file.o function.o info.o \
 
 # Source files specific to Greenplum
 OBJS += aotable.o gpdb4_heap_convert.o version_gp.o \
-        check_gp.o file_gp.o reporting.o aomd_filehandler.o
+        check_gp.o file_gp.o reporting.o aomd_filehandler.o \
+        old_tablespace_file_contents.o old_tablespace_file_parser.o \
+        tablespace_gp.o old_tablespace_file_parser_hooks.o
 
 PG_CPPFLAGS  = -DFRONTEND -DDLSUFFIX=\"$(DLSUFFIX)\" -I$(srcdir) -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)
@@ -22,7 +24,7 @@ EXTRA_CLEAN = analyze_new_cluster.sh delete_old_cluster.sh log/ tmp_check/ \
               pg_upgrade_dump_*.custom pg_upgrade_*.log
 
 EXTRA_CLEAN += clusterConfigPostgresAddonsFile clusterConfigFile gpdemo-env.sh \
-              hostfile regression.diffs aomd_filehandler.c
+              hostfile regression.diffs aomd_filehandler.c old_tablespaces.txt
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

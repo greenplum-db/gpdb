@@ -17,3 +17,4 @@
 
 /scripts/gpdb5-cluster
 /scripts/gpdb6-cluster
+/scripts/pg-upgrade-copy-from-master

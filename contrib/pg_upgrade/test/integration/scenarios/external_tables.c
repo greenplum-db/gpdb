@@ -5,7 +5,7 @@
 
 #include "cmockery.h"
 
-#include "utilities/upgrade-helpers.h"
+#include "utilities/test-upgrade-helpers.h"
 #include "utilities/test-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/bdd-helpers.h"

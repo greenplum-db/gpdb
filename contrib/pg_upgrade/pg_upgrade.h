@@ -15,6 +15,8 @@
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
 
+#include "old_tablespace_file_contents.h"
+
 /* Use port in the private/dynamic port number range */
 #define DEF_PGUPORT			50432
 
@@ -39,6 +41,7 @@
 
 #define GLOBALS_OIDS_DUMP_FILE	"pg_upgrade_dump_globals_oids.sql"
 #define DB_OIDS_DUMP_FILE_MASK	"pg_upgrade_dump_%u_oids.sql"
+#define OLD_TABLESPACES_FILE    "old_tablespaces.txt"
 
 /* needs to be kept in sync with pg_class.h */
 #define RELSTORAGE_EXTERNAL	'x'
@@ -407,6 +410,9 @@ typedef struct
 	const char *tablespace_suffix;		/* directory specification */
 
 	char	   *global_reserved_oids; /* OID preassign calls for shared objects */
+	int gp_dbid; /* greenplum database id of the cluster */
+
+	OldTablespaceFileContents *old_tablespace_file_contents;
 } ClusterInfo;
 
 
@@ -435,6 +441,7 @@ typedef struct
 	bool		progress;
 	segmentMode	segment_mode;
 	checksumMode checksum_mode;
+	char *old_tablespace_file_path;
 
 } UserOpts;
 
@@ -582,6 +589,12 @@ void transfer_all_new_dbs(DbInfoArr *old_db_arr,
 
 void		init_tablespaces(void);
 
+/* tablespace_gp.c */
+void populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster, const char *file_path);
+void generate_old_tablespaces_file(ClusterInfo *oldCluster);
+void populate_gpdb6_cluster_tablespace_suffix(ClusterInfo *cluster);
+
+
 
 /* server.c */
 
@@ -699,3 +712,11 @@ void check_greenplum(void);
 void report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...)
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 3, 4)));
 void close_progress(void);
+
+static inline bool
+is_gpdb6(ClusterInfo *cluster)
+{
+	return GET_MAJOR_VERSION(cluster->major_version) == 904;
+}
+
+

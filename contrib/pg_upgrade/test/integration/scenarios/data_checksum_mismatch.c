@@ -5,7 +5,7 @@
 #include "cmockery.h"
 
 #include "data_checksum_mismatch.h"
-#include "utilities/upgrade-helpers.h"
+#include "utilities/test-upgrade-helpers.h"
 #include "utilities/test-helpers.h"
 #include "bdd-library/bdd.h"
 
