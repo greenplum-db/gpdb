@@ -23,6 +23,9 @@
 #include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_type.h"
+#include "cdb/cdbvars.h"
+#include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "replication/walreceiver.h"
@@ -150,6 +153,8 @@ pg_create_restore_point(PG_FUNCTION_ARGS)
 	text	   *restore_name = PG_GETARG_TEXT_P(0);
 	char	   *restore_name_str;
 	XLogRecPtr	restorepoint;
+	char command[MAXFNAMELEN + 100];
+	CdbPgResults cdb_pgresults = {NULL, 0};
 
 	if (!superuser())
 		ereport(ERROR,
@@ -174,6 +179,16 @@ pg_create_restore_point(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("value too long for restore point (maximum %d characters)", MAXFNAMELEN - 1)));
+
+	/*
+	 * Dispatch creation of restore point to segments
+	 * TODO: Commit blocking has to be introduced here prior the dispatch
+	 */
+	if (IS_QUERY_DISPATCHER())
+	{
+		sprintf(command, "SELECT pg_catalog.pg_create_restore_point('%s')", restore_name_str);
+		CdbDispatchCommand(command, DF_NONE, &cdb_pgresults);
+	}
 
 	restorepoint = XLogRestorePoint(restore_name_str);
 
