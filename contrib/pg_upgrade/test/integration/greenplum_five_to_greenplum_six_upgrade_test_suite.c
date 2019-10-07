@@ -4,6 +4,7 @@
 
 #include "cmockery.h"
 
+#include "scenarios/partitioned_ao_table.h"
 #include "scenarios/partitioned_heap_table.h"
 #include "scenarios/heap_table.h"
 #include "scenarios/subpartitioned_heap_table.h"
@@ -44,6 +45,7 @@ main(int argc, char *argv[])
 		unit_test_setup_teardown(test_a_heap_table_with_data_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_subpartitioned_heap_table_with_data_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partitioned_heap_table_with_data_can_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_partitioned_ao_table_with_data_can_be_upgraded, setup, teardown),
 	};
 
 	return run_tests(tests);
