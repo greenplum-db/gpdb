@@ -193,10 +193,10 @@ vm.dirty_background_bytes = 1610612736
 vm.dirty_bytes = 4294967296</codeblock>
         <p id="shared_memory_pages"><b>Shared Memory Pages</b></p>
         <p>Greenplum Database uses shared memory to communicate between <codeph>postgres</codeph>
-          processes that are part of the same <codeph>postgres</codeph> instance. </p>
-        <p><codeph>kernel.shmall</codeph> sets the total amount of shared memory pages that can be
-          used system wide in pages. <codeph>kernel.shmmax</codeph> sets maximum size of a single
-          shared memory segment in bytes.</p>
+          processes that are part of the same <codeph>postgres</codeph> instance.
+            <codeph>kernel.shmall</codeph> sets the total amount of shared memory pages that can be
+          used system wide in pages. <codeph>kernel.shmmax</codeph> sets the maximum size of a
+          single shared memory segment in bytes.</p>
         <p>Set <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values based on your
           system's physical memory and page size. In general, the value for both parameters should
           be one half of the system physical memory. </p>
@@ -216,7 +216,7 @@ $ echo $(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))</codeblock>
 kernel.shmmni = 4096
 kernel.shmall = 4000000000</codeblock>
         <p id="segment_host_memory"><b>Segment Host Memory</b></p>
-        <p>The <codeph>vm.overcommit_memory</codeph> is Linux kernel parameter used by the OS to
+        <p>The <codeph>vm.overcommit_memory</codeph> Linux kernel parameter  is used by the OS to
           determine how much memory can be allocated to processes. For Greenplum database, this
           parameter should always be set to 2. </p>
         <p><codeph>vm.overcommit_ratio</codeph> is the percent of RAM that is used for application
