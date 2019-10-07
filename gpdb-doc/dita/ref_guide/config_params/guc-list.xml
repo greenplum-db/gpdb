@@ -8491,18 +8491,20 @@
   <topic id="pgcrypto.fips">
     <title>pgcrypto.fips</title>
     <body>
-      <p>Enables support for a limited set of FIPS encryption functionality (<cite>Federal
-          Information Processing Standard</cite> (FIPS) 140-2). For information about FIPS, see
-          <xref
+      <p>Enables Greenplum Database support for a limited set of FIPS encryption functionality
+          (<cite>Federal Information Processing Standard</cite> (FIPS) 140-2). For information about
+        FIPS, see <xref
           href="https://www.nist.gov/itl/popular-links/federal-information-processing-standards-fips"
           format="html" scope="external"
           >https://www.nist.gov/itl/popular-links/federal-information-processing-standards-fips</xref>.
         The default is <codeph>off</codeph>, encryption is not enabled. </p>
+      <p>Before enabling this parameter, ensure that FIPS is enabled on the Greenplum Database
+        system hosts.</p>
       <p>When this parameter is enabled, these changes occur:<ul id="ul_qn1_jwh_gjb">
           <li>FIPS mode is initialized in the OpenSSL library</li>
           <li>The functions <cmdname>digest()</cmdname> and <cmdname>hmac()</cmdname> allow only the
             SHA encryption algorithm (MD5 is not allowed)</li>
-          <li>The functions for crypt and gen_salt algorithms are disabled</li>
+          <li>The functions for the crypt and gen_salt algorithms are disabled</li>
           <li>PGP encryption and decryption functions support only AES and 3DES encryption
             algorithms (other algorithms such as blowfish are not allowed)</li>
           <li>RAW encryption and decryption functions support only AES and 3DES (other algorithms
@@ -8511,7 +8513,7 @@
       <p><b>To enable <codeph>pgcrypto.fips</codeph></b><ol id="ol_hrj_vhq_gjb">
           <li>Enable the <codeph>pgcrypto</codeph> functions as an extension if it is not enabled.
             See <xref href="../../install_guide/install_pgcrypto.xml" scope="peer">pgcrypto
-              Cryptographic Functions</xref>. This example <codeph>psql</codeph> command drops the
+              Cryptographic Functions</xref>. This example <codeph>psql</codeph> command creates the
               <codeph>pgcrypto</codeph> extension in the database
             <codeph>testdb</codeph>.<codeblock>psql -d testdb -c 'CREATE EXTENSION pgcrypto'</codeblock></li>
           <li>Configure the Greenplum Database server configuration parameter
