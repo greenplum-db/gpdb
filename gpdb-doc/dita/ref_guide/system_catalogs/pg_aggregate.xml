@@ -159,7 +159,7 @@
             <entry colname="col3"/>
             <entry colname="col4">The initial value of the transition state. This is a text field
               containing the initial value in its external string representation. If this field is
-              NULL, the transition state value starts out NULL</entry>
+              NULL, the transition state value starts out NULL.</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>aggminitval</codeph></entry>
@@ -168,7 +168,7 @@
             <entry colname="col4">The initial value of the transition state for moving-
               aggregate mode. This is a text field containing the initial value in its
               external string representation. If this field is NULL, the transition state
-              value starts out NULL</entry>
+              value starts out NULL.</entry>
           </row>
         </tbody>
       </tgroup>
