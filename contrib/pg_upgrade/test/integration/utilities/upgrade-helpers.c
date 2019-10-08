@@ -1,5 +1,10 @@
+#include <setjmp.h>
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "cmockery.h"
 
 /*
  * implements:
@@ -141,4 +146,35 @@ performUpgrade(void)
 	upgradeContentId0();
 	upgradeContentId1();
 	upgradeContentId2();
+}
+
+void
+performUpgradeCheckFailsWithError(char *error_message)
+{
+	char		buffer[2000];
+	int			count = 0;
+	char	   *master_data_directory_path = "qddir/demoDataDir-1";
+	FILE	   *output_file;
+	char	   *output;
+
+	sprintf(buffer, ""
+			"./gpdb6/bin/pg_upgrade "
+			"--check "
+			"--old-bindir=./gpdb5/bin "
+			"--new-bindir=./gpdb6/bin "
+			"--old-datadir=./gpdb5-data/%s "
+			"--new-datadir=./gpdb6-data/%s ",
+			master_data_directory_path, master_data_directory_path);
+
+#ifndef WIN32
+	output_file = popen(buffer, "r");
+
+	while ((output = fgets(buffer, sizeof(buffer), output_file)) != NULL)
+		if (strstr(output, error_message))
+			count += 1;
+
+	pclose(output_file);
+#endif
+
+	assert_true(count > 0);
 }
