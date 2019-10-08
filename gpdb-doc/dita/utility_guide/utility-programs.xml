@@ -21,10 +21,9 @@
       </ul>
       <p otherprops="pivotal">Additionally, the Pivotal
         <xref href="../client_tool_guides/about.xml" otherprops="pivotal"
-            scope="peer">Greenplum Client and Loader Tools</xref> is also a separate
-        download from Pivotal Network, and includes selected utilities from the Greenplum
-        Database server installation that you can install on a client system outside of
-        your Greenplum Database cluster.</p>
+            scope="peer">Greenplum Client and Loader Tools</xref> is a separate
+        download from Pivotal Network that includes selected utilities from the Greenplum
+        Database server installation that you can install on a client system.</p>
       <p>Greenplum Database provides the following utility programs.
         <ph otherprops="pivotal">Superscripts identify
         those utilities that require separate downloads, as well as those utilities that
