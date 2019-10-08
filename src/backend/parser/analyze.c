@@ -3525,6 +3525,10 @@ transformCreateTableAsStmt(ParseState *pstate, CreateTableAsStmt *stmt)
 	/* GPDB: Set parentStmtType to PARENTSTMTTYPE_CTAS as we know this query is for CTAS */
 	((Query*)stmt->query)->parentStmtType = PARENTSTMTTYPE_CTAS;
 
+	/*
+	 * In binary upgrade mode, we need to create materialize view in utility mode. So we
+	 * should enable the setQryDistributionPolicy function in binary upgrade mode.
+	 */
 	if (stmt->into->distributedBy && (Gp_role == GP_ROLE_DISPATCH || IsBinaryUpgrade))
 		setQryDistributionPolicy(stmt->into, (Query *)stmt->query);
 
@@ -3907,6 +3911,10 @@ setQryDistributionPolicy(IntoClause *into, Query *qry)
 	ListCell   *lc;
 	DistributedBy *dist;
 
+	/*
+	 * In binary upgrade mode, we need to create materialize view in utility mode. So we
+	 * should enable the setQryDistributionPolicy function in binary upgrade mode.
+	 */
 	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
 	Assert(into != NULL);
 	Assert(into->distributedBy != NULL);
