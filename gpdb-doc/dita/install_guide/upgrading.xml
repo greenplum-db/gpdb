@@ -53,7 +53,7 @@
     <p>If you have configured the Greenplum Platform Extension Framework (PXF) in your previous
       Greenplum Database installation, you must stop the PXF service, and you might need to back up
       PXF configuration files before upgrading to a new version of Greenplum Database. Refer to
-        <xref href="../pxf/upgrade_pxf.html#pxfpre" type="topic" format="html">PXF Pre-Upgrade
+        <xref href="../pxf/upgrade_pxf_6x.html#pxfpre" type="topic" format="html">PXF Pre-Upgrade
         Actions</xref> for instructions.</p>
     <p>If you have not yet configured PXF, no action is necessary.</p>
   </body>
@@ -126,7 +126,7 @@ $ ln -s /usr/local/greenplum-db-&lt;new_version> /usr/local/greenplum-db</codebl
 $ gpstart</codeblock></li>
         <li>If you configured PXF in your previous Greenplum Database installation, you must
           re-initialize the PXF service after you upgrade Greenplum Database. Refer to <xref
-            href="../pxf/upgrade_pxf.html#pxfup" type="topic" format="html">Upgrading PXF</xref> for
+            href="../pxf/upgrade_pxf_6x.html#pxfup" type="topic" format="html">Upgrading PXF</xref> for
           instructions.</li>
       </ol>
       <p>After upgrading Greenplum Database, ensure that all features work as expected. For example,
