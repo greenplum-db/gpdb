@@ -118,7 +118,7 @@
           from the Greenplum Database <i>Greenplum Clients</i> filegroup on
           <xref href="https://network.pivotal.io/products/pivotal-gpdb"
             scope="external" format="html" ><ph>Pivotal Network</ph></xref>.</p>
-        <p><sup>cl</sup> The utility program is also installed with the <i>Greenplum Client
+        <p><sup>lc</sup> The utility program is also installed with the <i>Greenplum Client
           and Loader Tools Package</i> for Linux.</p>
         </note>
     </body>
