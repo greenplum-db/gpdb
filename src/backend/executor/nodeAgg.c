@@ -1898,6 +1898,7 @@ agg_retrieve_hash_table(AggState *aggstate)
 				 * pass through. Be sure that the next case statement
 				 * is HASHAGG_END_OF_PASSES.
 				 */
+				/* fallthrough */
 
 			case HASHAGG_END_OF_PASSES:
 				aggstate->agg_done = true;

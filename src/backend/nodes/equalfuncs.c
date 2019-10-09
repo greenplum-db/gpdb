@@ -3141,6 +3141,7 @@ equal(const void *a, const void *b)
 			break;
 		case T_Flow:
 			retval = _equalFlow(a, b);
+			break;
 		case T_OnConflictExpr:
 			retval = _equalOnConflictExpr(a, b);
 			break;

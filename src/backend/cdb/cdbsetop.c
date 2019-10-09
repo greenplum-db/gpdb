@@ -94,8 +94,10 @@ choose_setop_type(List *planlist)
 
 			case CdbLocusType_Null:
 				elog(ERROR, "unexpected Null locus in set operation branch");
+				break;
 			default:
 				elog(ERROR, "unexpected locus type in set operation branch");
+				break;
 		}
 	}
 

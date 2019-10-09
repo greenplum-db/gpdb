@@ -2865,6 +2865,7 @@ ltrmark:;
 
 			case HeapTupleInvisible:
 				elog(ERROR, "attempted to lock invisible tuple");
+				break;
 
 			default:
 				ReleaseBuffer(buffer);

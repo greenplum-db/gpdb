@@ -3040,6 +3040,7 @@ DCH_from_char(FormatNode *node, char *in, TmFromChar *out)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("\"TZ\"/\"tz\"/\"OF\" format patterns are not supported in to_date")));
+				break;
 			case DCH_A_D:
 			case DCH_B_C:
 			case DCH_a_d:

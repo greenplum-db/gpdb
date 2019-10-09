@@ -5400,6 +5400,7 @@ _outNode(StringInfo str, const void *obj)
 				break;
 			case T_DistributedBy:
 				_outDistributedBy(str, obj);
+				break;
 			case T_ImportForeignSchemaStmt:
 				_outImportForeignSchemaStmt(str, obj);
 				break;
