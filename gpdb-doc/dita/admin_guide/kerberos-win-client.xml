@@ -49,7 +49,8 @@
         variable named <codeph>KRB5_CONFIG</codeph> to the custom location.</li>
       <li>Locate the <codeph>[libdefaults]</codeph> section of the <codeph>krb5.ini</codeph>
         file, and remove the entry identifying the location of the Kerberos credentials
-        cache file, <codeph>default_ccache_name</codeph>.
+        cache file, <codeph>default_ccache_name</codeph>. This step requires administrative
+        privileges on the Windows client system.
       <p>This is an example configuration file with <codeph>default_ccache_name</codeph> removed.
         The <codeph>[logging]</codeph> section is also removed. </p>
       <codeblock>[libdefaults]
