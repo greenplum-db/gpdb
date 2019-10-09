@@ -16,19 +16,10 @@
 <b>gpload</b> <b>--version</b></codeblock>
         </section>
         <section id="section3">
-            <title id="ke141293">Prerequisites</title>
+            <title id="ke141293">Requirements</title>
             <p>The client machine where <codeph>gpload</codeph> is executed must have the
                 following:</p>
             <ul>
-                <li id="ke147914">Python 2.6.2 or later, <codeph>pygresql</codeph> (the Python
-                    interface to PostgreSQL), and <codeph>pyyaml</codeph>. Note that Python and the
-                    required Python libraries are included with the Greenplum Database server
-                    installation, so if you have Greenplum Database installed on the machine where
-                        <codeph>gpload</codeph> is running, you do not need a separate Python
-                    installation.
-                    <note>Greenplum Database Loaders for Windows supports only Python 2.5 (available
-                        from <xref href="https://www.python.org" scope="external" format="html"
-                            >https://www.python.org</xref>).</note></li>
                 <li id="ke147925">The <codeph><xref href="gpfdist.xml#topic1" type="topic"
                             format="dita"/></codeph> parallel file distribution program installed
                     and in your <codeph>$PATH</codeph>. This program is located in
@@ -51,10 +42,13 @@
                 executing an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
                     <codeph>MERGE</codeph> operation to load the source data into the target table
                 in the database.
-                <note><codeph>gpfdist</codeph> and <codeph>gpload</codeph> are compatible only with
-                    the Greenplum Database major version in which they are shipped. For example, a
+                <note><codeph>gpfdist</codeph> is compatible only with
+                    the Greenplum Database major version in which it is shipped. For example, a
                         <codeph>gpfdist</codeph> utility that is installed with Greenplum Database
                     4.x cannot be used with Greenplum Database 5.x or 6.x.</note>
+                <note>The Greenplum Database 5.x <codeph>gpload</codeph> for Linux is
+                  compatible with Greenplum Database 6.x. The Greenplum Database 6.x
+                  <codeph>gpload</codeph> for Windows is compatible with Greenplum 5.x.</note>
                 <note id="gpload-limitation"><codeph>MERGE</codeph> and <codeph>UPDATE</codeph>
                     operations are not supported if the target table column name is a reserved
                     keyword, has capital letters, or includes any character that requires quotes ("
