@@ -44,7 +44,8 @@
         default Kerberos location on the Windows
         system, <codeph>C:\ProgramData\MIT\Kerberos5\krb5.ini</codeph>. This directory may be hidden.
         You may also choose to place the <codeph>/etc/krb5.ini</codeph> file in a custom
-        location.</li>
+        location. If you choose to do this, you must configure and set a system environment
+        variable named <codeph>KRB5_CONFIG</codeph> to the custom location.</li>
       <li>Locate the <codeph>[libdefaults]</codeph> section of the <codeph>krb5.ini</codeph>
         file, and remove the entry identifying the location of the Kerberos credentials
         cache file, <codeph>default_ccache_name</codeph>.
