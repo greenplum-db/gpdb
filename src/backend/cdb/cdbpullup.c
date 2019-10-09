@@ -222,38 +222,6 @@ cdbpullup_expr(Expr *expr, List *targetlist, List *newvarlist, Index newvarno)
 	return newexpr;
 }								/* cdbpullup_expr */
 
-
-/*
- * cdbpullup_exprHasSubplanRef
- *
- * Returns true if the expr's first Var is a reference to an item in the
- * targetlist of the associated Plan node's subplan.  If so, it can be
- * assumed that the Plan node and associated exprs have been processed
- * by set_plan_references(), and its Var nodes are in executor format.
- *
- * Returns false otherwise, which implies no conclusion about whether or
- * not set_plan_references() has been done.
- *
- * Note that a Var node that belongs to a Scan operator and refers to the
- * Scan's source relation or index, doesn't have its varno changed by
- * set_plan_references() to OUTER_VAR/INNER_VAR/0.  Think twice about using this
- * unless you know that the expr comes from an upper Plan node.
- */
-
-/* Find any Var in an expr */
-static bool
-findAnyVar_walker(Node *node, void *ppVar)
-{
-	if (!node)
-		return false;
-	if (IsA(node, Var))
-	{
-		*(Var **) ppVar = (Var *) node;
-		return true;
-	}
-	return expression_tree_walker(node, findAnyVar_walker, ppVar);
-}
-
 /*
  * cdbpullup_findEclassInTargetList
  *
