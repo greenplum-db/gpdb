@@ -43,6 +43,7 @@
         <codeph>krb5.ini</codeph>, and place it in the
         default Kerberos location on the Windows
         system, <codeph>C:\ProgramData\MIT\Kerberos5\krb5.ini</codeph>. This directory may be hidden.
+        This step requires administrative privileges on the Windows client system.
         You may also choose to place the <codeph>/etc/krb5.ini</codeph> file in a custom
         location. If you choose to do this, you must configure and set a system environment
         variable named <codeph>KRB5_CONFIG</codeph> to the custom location.</li>
@@ -120,7 +121,8 @@ Type "help" for help.</codeblock>
     <body>
       <p>You can create and use a Kerberos <codeph>keytab</codeph> file to avoid entering a
         password at the command line or listing a password in a script file when you connect
-        to a Greenplum Database system. You can create a keytab file with the Java JRE keytab
+        to a Greenplum Database system, perhaps when automating a scheduled Greenplum task
+        such as <codeph>gpload</codeph>. You can create a keytab file with the Java JRE keytab
         utility <codeph>ktab</codeph>. If you use AES256-CTS-HMAC-SHA1-96
               encryption, you need to download and install the Java extension <cite>Java
                 Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files for
