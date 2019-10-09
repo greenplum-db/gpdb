@@ -44,6 +44,9 @@
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 
+#include "catalog/oid_dispatch.h"
+#include "cdb/cdbdisp_query.h"
+#include "cdb/cdbvars.h"
 
 static void checkRuleResultList(List *targetList, TupleDesc resultDesc,
 					bool isSelect, bool requireColumnNameMatch);
@@ -199,9 +202,18 @@ DefineRule(RuleStmt *stmt, const char *queryString)
 	List	   *actions;
 	Node	   *whereClause;
 	Oid			relId;
+	Oid			result;
+	RuleStmt   *copyStmt;
 
 	/* Parse analysis. */
-	transformRuleStmt(stmt, queryString, &actions, &whereClause);
+	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		/* ... unless we are in a segment where the analysis is already done */
+		actions = stmt->actions;
+		whereClause = stmt->whereClause;
+	}
+	else
+		transformRuleStmt(stmt, queryString, &actions, &whereClause);
 
 	/*
 	 * Find and lock the relation.  Lock level should match
@@ -210,13 +222,29 @@ DefineRule(RuleStmt *stmt, const char *queryString)
 	relId = RangeVarGetRelid(stmt->relation, AccessExclusiveLock, false);
 
 	/* ... and execute */
-	return DefineQueryRewrite(stmt->rulename,
+	result = DefineQueryRewrite(stmt->rulename,
 							  relId,
 							  whereClause,
 							  stmt->event,
 							  stmt->instead,
 							  stmt->replace,
 							  actions);
+
+	/* ... and dispatch if neccessary */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		copyStmt = copyObject(stmt);
+		copyStmt->actions = actions;
+		copyStmt->whereClause = whereClause;
+		CdbDispatchUtilityStatement((Node *) copyStmt,
+									DF_CANCEL_ON_ERROR |
+									DF_WITH_SNAPSHOT |
+									DF_NEED_TWO_PHASE,
+									GetAssignedOidsForDispatch(),
+									NULL);
+	}
+
+	return result;
 }
 
 

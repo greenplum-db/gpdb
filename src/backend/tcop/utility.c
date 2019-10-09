@@ -1593,15 +1593,6 @@ ProcessUtilitySlow(Node *parsetree,
 
 			case T_RuleStmt:	/* CREATE RULE */
 				DefineRule((RuleStmt *) parsetree, queryString);
-				if (Gp_role == GP_ROLE_DISPATCH)
-				{
-					CdbDispatchUtilityStatement((Node *) parsetree,
-												DF_CANCEL_ON_ERROR|
-												DF_WITH_SNAPSHOT|
-												DF_NEED_TWO_PHASE,
-												GetAssignedOidsForDispatch(),
-												NULL);
-				}
 				break;
 
 			case T_CreateSeqStmt:

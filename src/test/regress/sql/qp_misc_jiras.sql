@@ -2556,6 +2556,14 @@ select test();
 
 
 --
+-- Test that rules with functions can be serialized correctly
+-- This is tested here because the rules tests are not enabled
+--
+create table  qp_misc_jiras.rules (a integer);
+create rule "_RETURN" as on select to qp_misc_jiras.rules do instead
+  select * from generate_series(1,5) x(a);
+
+--
 -- Test gp_enable_relsize_collection's effect on ORCA plan generation
 --
 create table tbl_z(x int) distributed by (x);
