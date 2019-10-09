@@ -32,6 +32,12 @@
           system. If you have not yet configured your MIT Kerberos KDC server, 
           see <xref href="#task_setup_kdc" format="dita"/> for example
           instructions.</li>
+        <!-- li>If you are using an existing Active Directory KDC server, also
+              ensure that you have:<ul id="ul_oq5_tfc_c2b">
+                <li>Installed all Active Directory service roles on your AD KDC
+                  server.</li>
+                <li>Enabled the LDAP service.</li>
+              </ul></li -->
         <li>System time on the Kerberos Key Distribution Center (KDC) server and
           Greenplum Database master is synchronized. (For example, install the
             <codeph>ntp</codeph> package on both servers.) </li>
