@@ -158,7 +158,7 @@ old_GPDB5_check_for_unsupported_distribution_key_data_types(void)
 						 output_path, strerror(errno));
 			if (!db_used)
 			{
-				fprintf(script, "Database: %s\n", active_db->db_name);
+				fprintf(script, "In database: %s\n", active_db->db_name);
 				db_used = true;
 			}
 			fprintf(script, "  %s.%s.%s\n",
