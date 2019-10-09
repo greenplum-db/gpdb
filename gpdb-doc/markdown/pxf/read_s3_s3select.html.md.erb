@@ -91,7 +91,7 @@ The `FILE_HEADER` option takes the following values:
 
 If both the order and the names of the external table columns and the CSV header are the same, you can specify either `FILE_HEADER=IGNORE` or `FILE_HEADER=USE`.
 
-<div class="note">PXF cannot match the CSV data with the external table definition when both the order and the names of the external table columns are different from the CSV header columns. Any query on an external table with these conditions fails. </div>
+<div class="note">PXF cannot match the CSV data with the external table definition when both the order and the names of the external table columns are different from the CSV header columns. Any query on an external table with these conditions fails with the error <code>Some headers in the query are missing from the file</code>. </div>
 
 For example, if the order of the columns in the CSV file header and the external table are the same, add the following to the `CREATE EXTERNAL TABLE` `LOCATION` URI to have PXF ignore the CSV header:
 
