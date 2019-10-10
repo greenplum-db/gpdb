@@ -30,6 +30,11 @@ PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 endif
 
+gccversion=$(shell gcc -dumpversion | cut -d . -f1)
+ifeq ($(shell expr $(gccversion) \>= 7), 1)
+override CPPFLAGS += -Wno-implicit-fallthrough
+endif
+
 ifneq ($(PORTNAME), darwin)
 REGRESS += nlssort
 endif

@@ -21,6 +21,10 @@ OBJS = mapred_test.o
 include $(top_srcdir)/src/Makefile.shlib
 
 override CPPFLAGS += -I$(SRCDIR) -I$(INCDIR) -I$(libpq_srcdir)
+gccversion=$(shell gcc -dumpversion | cut -d . -f1)
+ifeq ($(shell expr $(gccversion) \>= 7), 1)
+override CPPFLAGS += -Wno-implicit-fallthrough
+endif
 
 FILES     = main.o mapred.o parse.o yaml_scan.o yaml_parse.o 
 GENFILES  = yaml_parse.h yaml_parse.c yaml_scan.c yaml_scan.h
