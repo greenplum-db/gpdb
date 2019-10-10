@@ -1,0 +1,63 @@
+#include <stdlib.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+
+#include "cmockery.h"
+
+#include "partitioned_heap_table_with_a_dropped_column.h"
+#include "utilities/upgrade-helpers.h"
+#include "utilities/query-helpers.h"
+#include "utilities/test-helpers.h"
+#include "bdd-library/bdd.h"
+
+static void
+partitionedHeapTableShouldHaveDataUpgradedToSixCluster()
+{
+	PGconn	   *connection = connectToSix();
+	PGresult   *result;
+
+	executeQuery(connection, "SET search_path TO five_to_six_upgrade;");
+
+	result = executeQuery(connection, "SELECT c, d FROM abuela WHERE a=10;");
+
+	assert_int_equal(1, PQntuples(result));
+
+	assert_int_equal(10, atoi(PQgetvalue(result, 0, PQfnumber(result, "c"))));
+	assert_true(10.0 == atof(PQgetvalue(result, 0, PQfnumber(result, "d"))));
+
+	PQfinish(connection);
+	PQclear(result);
+}
+
+static void
+anAdministratorPerformsAnUpgrade()
+{
+	performUpgrade();
+}
+
+static void
+createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster(void)
+{
+	PGconn	   *connection = connectToFive();
+
+	executeQuery(connection, "CREATE SCHEMA five_to_six_upgrade;");
+	executeQuery(connection, "SET search_path TO five_to_six_upgrade");
+	executeQuery(connection,
+			"CREATE TABLE abuela (a int, b int, c int, d numeric) "
+			"  DISTRIBUTED BY (a) "
+			"    PARTITION BY range(c) "
+			"    SUBPARTITION BY range(d) (PARTITION mama START(0) END(42) (SUBPARTITION chica START(0) END(42)));");
+	executeQuery(connection, "ALTER TABLE abuela DROP COLUMN b;");
+	executeQuery(connection, "INSERT INTO abuela SELECT i, i, i FROM generate_series(1, 10)i;");
+	PQfinish(connection);
+}
+
+
+void
+test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded(void ** state)
+{
+	given(createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster);
+	when(anAdministratorPerformsAnUpgrade);
+	then(partitionedHeapTableShouldHaveDataUpgradedToSixCluster);
+}
