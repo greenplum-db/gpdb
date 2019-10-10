@@ -144,6 +144,7 @@ typedef struct PlannedStmt
 	 */
 	IntoClause *intoClause;
 	CopyIntoClause *copyIntoClause;
+	RefreshClause   *refreshClause;		/* relation to insert into */
 
 	/* 
  	 * GPDB: whether a query is a SPI inner query for extension usage 

@@ -1072,12 +1072,19 @@ addRangeTableEntry(ParseState *pstate,
 		if (locking->strength >= LCS_FORNOKEYUPDATE)
 		{
 			Oid relid;
-			
+
 			relid = RangeVarGetRelid(relation, lockmode, false);
-			
+
 			rel = try_heap_open(relid, NoLock, true);
 			if (!rel)
 				elog(ERROR, "open relation(%u) fail", relid);
+
+			if (rel->rd_rel->relkind == RELKIND_MATVIEW)
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+								errmsg("cannot lock rows in materialized view \"%s\"",
+									   RelationGetRelationName(rel))));
+
 			lockmode = IsSystemRelation(rel) ? RowExclusiveLock : ExclusiveLock;
 			heap_close(rel, NoLock);
 		}

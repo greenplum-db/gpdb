@@ -5796,7 +5796,7 @@ ATRewriteTables(List **wqueue, LOCKMODE lockmode)
 
 			/* Create transient table that will receive the modified data */
 			OIDNewHeap = make_new_heap(tab->relid, newTableSpace, false,
-									   lockmode, hasIndexes);
+									   lockmode, hasIndexes, false);
 
 			/*
 			 * Copy the heap data into the new table with the desired

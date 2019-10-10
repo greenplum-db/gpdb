@@ -636,7 +636,8 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	/* Create the transient table that will receive the re-ordered data */
 	OIDNewHeap = make_new_heap(tableOid, tableSpace,false,
 							   AccessExclusiveLock,
-							   true /* createAoBlockDirectory */);
+							   true /* createAoBlockDirectory */,
+							   false);
 
 	/* Copy the heap data into the new table in the desired order */
 	copy_heap_data(OIDNewHeap, tableOid, indexOid, verbose,
@@ -667,7 +668,8 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 Oid
 make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, bool forcetemp,
 			  LOCKMODE lockmode,
-			  bool createAoBlockDirectory)
+			  bool createAoBlockDirectory,
+			  bool makeCdbPolicy)
 {
 	TupleDesc	OldHeapDesc;
 	char		NewHeapName[NAMEDATALEN];
@@ -760,7 +762,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, bool forcetemp,
 										  true,
 										  0,
 										  ONCOMMIT_NOOP,
-                                          NULL,                         /*CDB*/
+										  makeCdbPolicy? OldHeap->rd_cdbpolicy: NULL,/*CDB*/
 										  reloptions,
 										  false,
 										  true,
