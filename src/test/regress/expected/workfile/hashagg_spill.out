@@ -156,6 +156,11 @@ SELECT avg(col2) col2 FROM hashagg_spill GROUP BY col1 HAVING(sum(col1)) < 0;') 
  t
 (1 row)
 
+-- check spilling to a temp tablespace
+CREATE TABLE spill_temptblspace (a numeric) DISTRIBUTED BY (a);
+SET temp_tablespaces=pg_default;
+INSERT INTO spill_temptblspace SELECT avg(col2) col2 FROM hashagg_spill GROUP BY col1 HAVING(sum(col1)) < 0;
+RESET temp_tablespaces;
 RESET statement_mem;
 RESET gp_workfile_compression;
 drop schema hashagg_spill cascade;

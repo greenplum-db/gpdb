@@ -113,6 +113,12 @@ SELECT avg(col2) col2 FROM hashagg_spill GROUP BY col1 HAVING(sum(col1)) < 0;') 
 SET gp_workfile_compression = ON;
 select overflows >= 1 from hashagg_spill.num_hashagg_overflows('explain analyze
 SELECT avg(col2) col2 FROM hashagg_spill GROUP BY col1 HAVING(sum(col1)) < 0;') overflows;
+
+-- check spilling to a temp tablespace
+CREATE TABLE spill_temptblspace (a numeric) DISTRIBUTED BY (a);
+SET temp_tablespaces=pg_default;
+INSERT INTO spill_temptblspace SELECT avg(col2) col2 FROM hashagg_spill GROUP BY col1 HAVING(sum(col1)) < 0;
+RESET temp_tablespaces;
 RESET statement_mem;
 RESET gp_workfile_compression;
 
