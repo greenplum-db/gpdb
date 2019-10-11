@@ -4205,7 +4205,18 @@ handleAckedPacket(MotionConn *ackConn, ICBuffer *buf, uint64 now)
 	 * not received ack for it.
 	 */
 	if (bufIsHead)
+	{
 		ackConn->receivedAckSeq = buf->pkt->seq;
+		/* Update connection's capacity when receiving a disordered or duplicate ack
+		 * so that sender can send a packet when it calls sendBuffers next time, and will
+		 * not stick in SendChunkUDPIFC loop until timeout.
+		 */
+		if (!(buf->pkt->flags & UDPIC_FLAGS_CAPACITY))
+		{
+			ackConn->capacity += buf->pkt->seq - ackConn->consumedSeq;
+			ackConn->consumedSeq = buf->pkt->seq;
+		}
+	}	
 
 	/* The first packet acts like a connect setup packet */
 	if (buf->pkt->seq == 1)
