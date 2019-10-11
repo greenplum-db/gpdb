@@ -1593,6 +1593,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 				show_cumulative_sort_info(str, indent, sort_method_enum_str[idx], DISK_STR_SORT_SPACE_TYPE, &ns->sortSpaceUsed[DISK_SORT_SPACE_TYPE-1][idx]);
 			}
 			/* no break */
+			/* fallthrough */
 		default:
 			if (ns->ntuples.vcnt > 1)
 				appendStringInfo(str,

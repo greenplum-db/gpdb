@@ -792,6 +792,7 @@ FileRepAckPrimary_IsOperationCompleted(
 				xLogEof = entry->xLogEof;
 				mirrorStatus = entry->mirrorStatus;
 				/* no BREAK */
+				/* fallthrough */
 			case FileRepAckStateMirrorInFault:
 				
 				isCompleted = TRUE;

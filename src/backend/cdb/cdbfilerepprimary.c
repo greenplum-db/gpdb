@@ -209,6 +209,7 @@ FileRepPrimary_IsMirroringRequired(
 					}
 				}
 				/* no break */
+				/* fallthrough */
 			case DataStateInSync:
 				/*
 				 * FileRep backend processes have to exit in order to be able to transition

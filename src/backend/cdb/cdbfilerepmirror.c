@@ -832,6 +832,7 @@ FileRepMirror_RunConsumer(void)
 								break;
 							}
 							/* no break */
+							/* fallthrough */
 
 						case FileRepRelationTypeFlatFile:
 						case FileRepRelationTypeBufferPool:
@@ -1853,6 +1854,7 @@ FileRepMirror_RunConsumer(void)
 							break;
 						}
 						/* NO BREAK */
+						/* fallthrough */
 					case FileRepRelationTypeAppendOnly:
 					case FileRepRelationTypeFlatFile:
 						

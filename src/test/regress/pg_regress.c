@@ -2490,9 +2490,11 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			case 'h':
 				help();
 				exit_nicely(0);
+				break;
 			case 'V':
 				puts("pg_regress (PostgreSQL) " PG_VERSION);
 				exit_nicely(0);
+				break;
 			case 1:
 
 				/*

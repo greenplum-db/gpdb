@@ -3976,6 +3976,7 @@ AtEOXact_GUC(bool isCommit, int nestLevel)
 				{
 					case GUC_SAVE:
 						Assert(false);	/* can't get here */
+						break;
 
 					case GUC_SET:
 						/* next level always becomes SET */

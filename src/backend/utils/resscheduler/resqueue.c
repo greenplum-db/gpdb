@@ -1324,6 +1324,7 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 						costThesholdOvercommitted = true;
 					}
 				}
+				break;
 
 			case RES_MEMORY_LIMIT:
 				{

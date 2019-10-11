@@ -583,6 +583,7 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 					break;
 				}
 			}
+			/* fallthrough */
 
 
 			case T_SelectStmt:

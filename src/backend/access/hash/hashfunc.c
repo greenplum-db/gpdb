@@ -344,9 +344,12 @@ uint32        initval)         /* the previous hash, or an arbitrary value */
   switch(length)                     /* all the case statements fall through */
   { 
   case 3 : c+=k[2];
+	   /* fallthrough */
   case 2 : b+=k[1];
+	   /* fallthrough */
   case 1 : a+=k[0];
     final(a,b,c);
+	   /* fallthrough */
   case 0:     /* case 0: nothing left to add */
     break;
   }
@@ -534,16 +537,27 @@ hashlittle( const void *key, size_t length, uint32 initval)
     switch(length)                   /* all the case statements fall through */
     {
     case 12: c+=((uint32)k[11])<<24;
+	   /* fallthrough */
     case 11: c+=((uint32)k[10])<<16;
+	   /* fallthrough */
     case 10: c+=((uint32)k[9])<<8;
+	   /* fallthrough */
     case 9 : c+=k[8];
+	   /* fallthrough */
     case 8 : b+=((uint32)k[7])<<24;
+	   /* fallthrough */
     case 7 : b+=((uint32)k[6])<<16;
+	   /* fallthrough */
     case 6 : b+=((uint32)k[5])<<8;
+	   /* fallthrough */
     case 5 : b+=k[4];
+	   /* fallthrough */
     case 4 : a+=((uint32)k[3])<<24;
+	   /* fallthrough */
     case 3 : a+=((uint32)k[2])<<16;
+	   /* fallthrough */
     case 2 : a+=((uint32)k[1])<<8;
+	   /* fallthrough */
     case 1 : a+=k[0];
              break;
     case 0 : return UInt32GetDatum(c);
@@ -668,17 +682,17 @@ hashbig( const void *key, size_t length, uint32 initval)
     /*-------------------------------- last block: affect all 32 bits of (c) */
     switch(length)                   /* all the case statements fall through */
     {
-    case 12: c+=k[11];
-    case 11: c+=((uint32)k[10])<<8;
-    case 10: c+=((uint32)k[9])<<16;
-    case 9 : c+=((uint32)k[8])<<24;
-    case 8 : b+=k[7];
-    case 7 : b+=((uint32)k[6])<<8;
-    case 6 : b+=((uint32)k[5])<<16;
-    case 5 : b+=((uint32)k[4])<<24;
-    case 4 : a+=k[3];
-    case 3 : a+=((uint32)k[2])<<8;
-    case 2 : a+=((uint32)k[1])<<16;
+    case 12: c+=k[11]; /* fallthrough */
+    case 11: c+=((uint32)k[10])<<8; /* fallthrough */
+    case 10: c+=((uint32)k[9])<<16; /* fallthrough */
+    case 9 : c+=((uint32)k[8])<<24; /* fallthrough */
+    case 8 : b+=k[7]; /* fallthrough */
+    case 7 : b+=((uint32)k[6])<<8; /* fallthrough */
+    case 6 : b+=((uint32)k[5])<<16; /* fallthrough */
+    case 5 : b+=((uint32)k[4])<<24; /* fallthrough */
+    case 4 : a+=k[3]; /* fallthrough */
+    case 3 : a+=((uint32)k[2])<<8; /* fallthrough */
+    case 2 : a+=((uint32)k[1])<<16; /* fallthrough */
     case 1 : a+=((uint32)k[0])<<24;
              break;
     case 0 : return UInt32GetDatum(c);

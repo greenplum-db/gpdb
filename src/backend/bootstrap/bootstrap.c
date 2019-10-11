@@ -447,6 +447,7 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			bootstrap_signals();
 			CheckerModeMain();
 			proc_exit(1);		/* should never return */
+			break;
 
 		case BootstrapProcess:
 			bootstrap_signals();
@@ -454,61 +455,73 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			StartupXLOG();
 			BootstrapModeMain();
 			proc_exit(1);		/* should never return */
+			break;
 
 		case StartupProcess:
 			/* don't set signals, startup process has its own agenda */
 			StartupProcessMain(1);
 			proc_exit(1);		/* should never return */
+			break;
 
 		case StartupPass2Process:
 			/* don't set signals, startup process has its own agenda */
 			StartupProcessMain(2);
 			proc_exit(1);		/* should never return */
+			break;
 
 		case StartupPass3Process:
 			/* don't set signals, startup process has its own agenda */
 			StartupProcessMain(3);
 			proc_exit(1);		/* should never return */
+			break;
 
 		case StartupPass4Process:
 			/* don't set signals, startup process has its own agenda */
 			StartupProcessMain(4);
 			proc_exit(1);		/* should never return */
+			break;
 
 		case BgWriterProcess:
 			/* don't set signals, bgwriter has its own agenda */
 			InitXLOGAccess();
 			BackgroundWriterMain();
 			proc_exit(1);		/* should never return */
+			break;
 
 		case CheckpointerProcess:
 			/* don't set signals, checkpointer is similar to bgwriter and has its own agenda */
 			InitXLOGAccess();
 			CheckpointerMain();
 			proc_exit(1);		/* should never return */
+			break;
 
 		case WalReceiverProcess:
 			/* don't set signals, walreceiver has its own agenda */
 			WalReceiverMain();
 			proc_exit(1);		/* should never return */
+			break;
 
 		case WalWriterProcess:
 			/* don't set signals, walwriter has its own agenda */
 			InitXLOGAccess();
 			WalWriterMain();
 			proc_exit(1);		/* should never return */
+			break;
 
 		case FilerepProcess:
 			FileRep_Main();
 			proc_exit(1); /* should never return */
+			break;
 
 		case FilerepResetPeerProcess:
 			FileRepResetPeer_Main();
 			proc_exit(1); /* should never return */
+			break;
 
 		default:
 			elog(PANIC, "unrecognized process type: %d", MyAuxProcType);
 			proc_exit(1);
+			break;
 	}
 }
 

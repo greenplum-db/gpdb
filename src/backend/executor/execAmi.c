@@ -586,6 +586,7 @@ ExecMayReturnRawTuples(PlanState *node)
 		case T_MotionState:
 			if (node->lefttree == NULL)
 				return false;
+			/* fallthrough */
 		case T_HashState:
 		case T_MaterialState:
 		case T_UniqueState:

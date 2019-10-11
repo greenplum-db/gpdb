@@ -385,6 +385,7 @@ verify_dir_is_empty_or_create(char *dirname)
 					_("%s: directory \"%s\" exists but is not empty\n"),
 					progname, dirname);
 			disconnect_and_exit(1);
+			break;
 		case -1:
 
 			/*

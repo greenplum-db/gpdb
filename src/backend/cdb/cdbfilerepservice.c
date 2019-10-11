@@ -339,6 +339,7 @@ FileRepSubProcess_IsStateTransitionRequested(void)
 				FileRep_InsertConfigLogEntry("failure is detected in segment mirroring during backend shutdown, abort requested");
 			}
 			/* no break */
+			/* fallthrough */
 		default:
 			
 			if (fileRepProcessType != FileRepProcessTypeNotInitialized)

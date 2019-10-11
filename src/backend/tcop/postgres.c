@@ -5455,6 +5455,7 @@ PostgresMain(int argc, char *argv[],
 				 * scenarios.
 				 */
 				proc_exit(0);
+				break;
 
 			case 'd':			/* copy data */
 			case 'c':			/* copy done */

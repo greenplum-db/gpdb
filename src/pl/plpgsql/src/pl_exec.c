@@ -2466,14 +2466,17 @@ exec_prepare_plan(PLpgSQL_execstate *estate,
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("cannot COPY to/from client in PL/pgSQL")));
+				break;
 			case SPI_ERROR_TRANSACTION:
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("cannot begin/end transactions in PL/pgSQL"),
 						 errhint("Use a BEGIN block with an EXCEPTION clause instead.")));
+				break;
 			default:
 				elog(ERROR, "SPI_prepare_cursor failed for \"%s\": %s",
 					 expr->query, SPI_result_code_string(SPI_result));
+				break;
 		}
 	}
 	expr->plan = SPI_saveplan(plan);
@@ -2628,6 +2631,7 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 					 errmsg("cannot COPY to/from client in PL/pgSQL")));
 
 			/* Fixes MPP-3344 */
+			break;
 		case SPI_ERROR_TRANSACTION:
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -2638,6 +2642,7 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 		default:
 			elog(ERROR, "SPI_execute_plan failed executing query \"%s\": %s",
 				 expr->query, SPI_result_code_string(rc));
+			break;
 	}
 
 	/* All variants should save result info for GET DIAGNOSTICS */
@@ -2798,11 +2803,13 @@ exec_stmt_dynexecute(PLpgSQL_execstate *estate,
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("cannot COPY to/from client in PL/pgSQL")));
+			break;
 		case SPI_ERROR_TRANSACTION:
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("cannot begin/end transactions in PL/pgSQL"),
 			errhint("Use a BEGIN block with an EXCEPTION clause instead.")));
+			break;
 
 		default:
 			elog(ERROR, "SPI_execute failed executing query \"%s\": %s",

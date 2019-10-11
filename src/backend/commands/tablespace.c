@@ -1245,6 +1245,7 @@ get_tablespace_oid(const char *tablespacename, bool missing_ok)
 						(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
 						 errmsg("could not serialize access to tablespace %s due to concurrent update",
 								tablespacename)));
+				break;
 
 			default:
 				elog(ERROR, "unrecognized heap_lock_tuple_status: %u", lockTest);

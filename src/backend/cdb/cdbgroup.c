@@ -2205,35 +2205,35 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 	 
 	switch (coplan_type)
 	{
-	case DQACOPLAN_GSH:
-		/* pre-sort required on grouping key */
-		result_plan = (Plan *)
-			make_sort_from_groupcols(root,
-									 root->parse->groupClause,
-									 prelimGroupColIdx,
-									 false,
-									 result_plan);
-		groups_sorted = true;
-		current_pathkeys = root->group_pathkeys;
-		mark_sort_locus(result_plan);
-		/* Fall though. */
-		
-	case DQACOPLAN_GGS:
-		aggstrategy = AGG_SORTED;
-		break;
-		
-	case DQACOPLAN_SHH:
-	case DQACOPLAN_HH:
-		aggstrategy = AGG_HASHED;
-		groups_sorted = false;
-		break;
-		
-	case DQACOPLAN_PGS:
-	case DQACOPLAN_PH:
-		/* plainagg */
-		aggstrategy = AGG_PLAIN;
-		groups_sorted = false;
-		break;
+		case DQACOPLAN_GSH:
+			/* pre-sort required on grouping key */
+			result_plan = (Plan *)
+				make_sort_from_groupcols(root,
+										 root->parse->groupClause,
+										 prelimGroupColIdx,
+										 false,
+										 result_plan);
+			groups_sorted = true;
+			current_pathkeys = root->group_pathkeys;
+			mark_sort_locus(result_plan);
+			/* fallthrough */
+
+		case DQACOPLAN_GGS:
+			aggstrategy = AGG_SORTED;
+			break;
+
+		case DQACOPLAN_SHH:
+		case DQACOPLAN_HH:
+			aggstrategy = AGG_HASHED;
+			groups_sorted = false;
+			break;
+
+		case DQACOPLAN_PGS:
+		case DQACOPLAN_PH:
+			/* plainagg */
+			aggstrategy = AGG_PLAIN;
+			groups_sorted = false;
+			break;
 	}
 
 	/**

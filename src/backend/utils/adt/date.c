@@ -900,6 +900,7 @@ abstime_date(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				   errmsg("cannot convert reserved abstime value to date")));
+			break;
 
 			/*
 			 * pretend to drop through to make compiler think that result will

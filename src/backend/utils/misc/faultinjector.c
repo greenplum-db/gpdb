@@ -1577,6 +1577,7 @@ FaultInjector_IsFaultInjected(
 			
 			retval = TRUE;
 			/* NO break */
+			/* fallthrough */
 		case FaultInjectorStateFailed:
 			
 			isCompleted = TRUE;

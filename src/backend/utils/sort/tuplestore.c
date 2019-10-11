@@ -868,6 +868,7 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 					elog(ERROR, "tuplestore seek failed");
 			state->status = TSS_READFILE;
 			/* FALL THRU into READFILE case */
+			/* fallthrough */
 
 		case TSS_READFILE:
 			*should_free = true;

@@ -1102,6 +1102,7 @@ NUMDesc_prepare(NUMDesc *num, FormatNode *n, char *func)
 		case NUM_D:
 			num->flag |= NUM_F_LDECIMAL;
 			num->need_locale = TRUE;
+			/* fallthrough */
 		case NUM_DEC:
 			if (IS_DECIMAL(num))
 			{
@@ -2796,6 +2797,7 @@ DCH_from_char(FormatNode *node, char *in, TmFromChar *out)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("\"TZ\"/\"tz\" format patterns are not supported in to_date")));
+				break;
 			case DCH_A_D:
 			case DCH_B_C:
 			case DCH_a_d:

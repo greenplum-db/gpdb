@@ -427,6 +427,7 @@ ProcessRepliesIfAny(void)
 						"Received 'X' as first character in reply from standby. "
 						"Standby is closing down the socket, hence exiting.");
 				proc_exit(0);
+				break;
 
 			default:
 				ereport(FATAL,

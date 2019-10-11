@@ -3557,6 +3557,7 @@ main(int argc, char *argv[])
 						  "remove or empty the directory \"%s\".\n"),
 						xlog_dir);
 				exit_nicely();
+				break;
 
 			default:
 				/* Trouble accessing directory */
