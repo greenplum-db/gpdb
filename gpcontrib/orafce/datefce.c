@@ -664,8 +664,8 @@ ora_to_date(PG_FUNCTION_ARGS)
 
 		/* it will return timestamp at GMT */
 		newDate = DirectFunctionCall2(to_timestamp,
-							CStringGetDatum(date_txt),
-							CStringGetDatum(cstring_to_text(nls_date_format)));
+							PointerGetDatum(date_txt),
+							PointerGetDatum(cstring_to_text(nls_date_format)));
 
 		/* convert to local timestamp */
 		result = DatumGetTimestamp(DirectFunctionCall1(timestamptz_timestamp, newDate));
