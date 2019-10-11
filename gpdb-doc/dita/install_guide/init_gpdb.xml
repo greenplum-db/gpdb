@@ -133,7 +133,7 @@ sdw4-2</codeblock></li>
                 you used their interface address names in your host file, the number of segments
                 will be evenly spread over the number of available interfaces.</p><p>To specify
                   <codeph>PORT_BASE</codeph>, please review the port range specified under the
-                  <codeph>net.ipv4.ip_local_port_range</codeph> parameter  in <xref
+                  <codeph>net.ipv4.ip_local_port_range</codeph> parameter in the <xref
                   href="../install_guide/prep_os.html#topic3" format="dita" scope="peer"
                     ><codeph>/etc/sysctl.conf</codeph></xref> file. </p><p>Here is an example of the
                   <i>required</i> parameters in the <codeph>gpinitsystem_config</codeph> file:

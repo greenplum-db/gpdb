@@ -194,9 +194,9 @@ vm.dirty_bytes = 4294967296</codeblock>
         <p id="shared_memory_pages"><b>Shared Memory Pages</b></p>
         <p>Greenplum Database uses shared memory to communicate between <codeph>postgres</codeph>
           processes that are part of the same <codeph>postgres</codeph> instance.
-            <codeph>kernel.shmall</codeph> sets the total amount of shared memory pages that can be
-          used system wide in pages. <codeph>kernel.shmmax</codeph> sets the maximum size of a
-          single shared memory segment in bytes.</p>
+            <codeph>kernel.shmall</codeph> sets the total amount of shared memory, in pages, that
+          can be used system wide. <codeph>kernel.shmmax</codeph> sets the maximum size of a single
+          shared memory segment in bytes.</p>
         <p>Set <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values based on your
           system's physical memory and page size. In general, the value for both parameters should
           be one half of the system physical memory. </p>
@@ -216,8 +216,8 @@ $ echo $(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))</codeblock>
 kernel.shmmni = 4096
 kernel.shmall = 4000000000</codeblock>
         <p id="segment_host_memory"><b>Segment Host Memory</b></p>
-        <p>The <codeph>vm.overcommit_memory</codeph> Linux kernel parameter  is used by the OS to
-          determine how much memory can be allocated to processes. For Greenplum database, this
+        <p>The <codeph>vm.overcommit_memory</codeph> Linux kernel parameter is used by the OS to
+          determine how much memory can be allocated to processes. For Greenplum Database, this
           parameter should always be set to 2. </p>
         <p><codeph>vm.overcommit_ratio</codeph> is the percent of RAM that is used for application
           processes and the remainder is reserved for the operating system. The default is 50 on Red
@@ -232,17 +232,16 @@ kernel.shmall = 4000000000</codeblock>
             Reference Guide</cite>. </p>
         <p id="port_settings"><b>Port Settings</b></p>
         <p>To avoid port conflicts between Greenplum Database and other applications during
-          Greenplum initiliazation, make a note of the port range specified by the operating system
+          Greenplum initialization, make a note of the port range specified by the operating system
           parameter <codeph>net.ipv4.ip_local_port_range</codeph>. When initializing Greenplum using
-          the <systemoutput>gpinitsystem</systemoutput> cluster configuration file, do not specify
-          Greenplum Database ports in that range. For example, if
-            <codeph>net.ipv4.ip_local_port_range = 10000 65535</codeph>, set the Greenplum Database
-          base port numbers to these values. </p>
+          the <codeph>gpinitsystem</codeph> cluster configuration file, do not specify Greenplum
+          Database ports in that range. For example, if <codeph>net.ipv4.ip_local_port_range = 10000
+            65535</codeph>, set the Greenplum Database base port numbers to these values. </p>
         <codeblock>PORT_BASE = 6000
 MIRROR_PORT_BASE = 7000</codeblock>
-        <p>For information about the the <systemoutput>gpinitsystem</systemoutput> cluster
-          configuration file, see <xref href="../install_guide/init_gpdb.html#topic4" scope="peer"
-            format="dita">Initializing a Greenplum Database System</xref>.</p>
+        <p>For information about the the <codeph>gpinitsystem</codeph> cluster configuration file,
+          see <xref href="../install_guide/init_gpdb.html#topic4" scope="peer" format="dita"
+            >Initializing a Greenplum Database System</xref>.</p>
         <p>For Azure deployments with Greenplum Database avoid using port 65330; add the following
           line to <filepath>sysctl.conf</filepath>:
           <codeblock>net.ipv4.ip_local_reserved_ports=65330 </codeblock></p>
@@ -291,7 +290,7 @@ vm.dirty_ratio = 10</codeblock></p>
     </section>
     <section id="xfs_mount">
       <title>XFS Mount Options</title>
-      <p>XFS is the preferred data storage file system on Linux platforms . Use the
+      <p>XFS is the preferred data storage file system on Linux platforms. Use the
             <codeph>mount</codeph> command with the following recommended XFS mount
           options:<codeblock>rw,nodev,noatime,nobarrier,inode64</codeblock></p>
       <p>See the <codeph>mount</codeph> manual page (<codeph>man mount</codeph> opens the man page)
