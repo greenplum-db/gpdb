@@ -1339,6 +1339,8 @@ width_bucket_numeric(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 				(errcode(ERRCODE_INVALID_ARGUMENT_FOR_WIDTH_BUCKET_FUNCTION),
 				 errmsg("lower bound cannot equal upper bound")));
+			/* make compiler happy */
+			break;
 
 			/* bound1 < bound2 */
 		case -1:

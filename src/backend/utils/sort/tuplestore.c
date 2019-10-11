@@ -1014,6 +1014,7 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 							 errmsg("could not seek in tuplestore temporary file: %m")));
 			state->status = TSS_READFILE;
 			/* FALL THRU into READFILE case */
+			/* fallthrough */
 
 		case TSS_READFILE:
 			*should_free = true;
@@ -1054,6 +1055,7 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 			 */
 
 			ereport(ERROR, (errmsg("Backward scanning of tuplestores are not supported at this time")));
+			return NULL;
 #if 0
 			if (BufFileSeek(state->myfile, readptr->file, -(long) sizeof(unsigned int),
 							SEEK_CUR) != 0)

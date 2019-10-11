@@ -270,8 +270,10 @@ expand_security_qual(PlannerInfo *root, List *tlist, int rt_index,
 					 */
 					case ROW_MARK_TABLE_SHARE:
 						elog(ERROR, "unexpected ROW_MARK_TABLE_SHARE locking mode encountered while expanding security barrier view");
+						break;
 					case ROW_MARK_TABLE_EXCLUSIVE:
 						elog(ERROR, "unexpected ROW_MARK_TABLE_EXCLUSIVE locking mode encountered while expanding security barrier view");
+						break;
 				}
 				root->rowMarks = list_delete(root->rowMarks, rc);
 			}

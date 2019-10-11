@@ -834,6 +834,7 @@ processRetry(fts_context *context)
 				if (!(ftsInfo->result.retryRequested &&
 					  SEGMENT_IS_ALIVE(ftsInfo->mirror_cdbinfo)))
 					break;
+				/* else, fallthrough */
 			case FTS_PROBE_FAILED:
 			case FTS_SYNCREP_OFF_FAILED:
 			case FTS_PROMOTE_FAILED:

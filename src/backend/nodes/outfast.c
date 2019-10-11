@@ -1017,6 +1017,7 @@ _outConstraint(StringInfo str, Constraint *node)
 			 */
 			WRITE_BOOL_FIELD(skip_validation);
 			WRITE_BOOL_FIELD(is_no_inherit);
+			/* fallthrough */
 		case CONSTR_DEFAULT:
 			WRITE_NODE_FIELD(raw_expr);
 			WRITE_STRING_FIELD(cooked_expr);

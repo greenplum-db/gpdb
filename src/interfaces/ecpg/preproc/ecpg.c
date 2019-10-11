@@ -192,6 +192,7 @@ main(int argc, char *const argv[])
 				header_mode = true;
 				/* this must include "-c" to make sense */
 				/* so do not place a "break;" here */
+				/* fallthrough */
 			case 'c':
 				auto_create_c = true;
 				break;

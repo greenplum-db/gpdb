@@ -462,6 +462,7 @@ _readConstraint(void)
 			 */
 			READ_BOOL_FIELD(skip_validation);
 			READ_BOOL_FIELD(is_no_inherit);
+			/* fallthrough */
 		case CONSTR_DEFAULT:
 			READ_NODE_FIELD(raw_expr);
 			READ_STRING_FIELD(cooked_expr);

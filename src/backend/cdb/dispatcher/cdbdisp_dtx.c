@@ -212,6 +212,7 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 		case DTX_CONTEXT_QE_FINISH_PREPARED:
 			elog(FATAL, "Unexpected distribute transaction context: '%s'",
 				 DtxContextToString(DistributedTransactionContext));
+			break;
 
 		default:
 			elog(FATAL, "Unrecognized DTX transaction context: %d",

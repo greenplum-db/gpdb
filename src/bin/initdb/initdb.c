@@ -3599,6 +3599,7 @@ create_xlog_or_symlink(void)
 							  "remove or empty the directory \"%s\".\n"),
 							xlog_dir);
 				exit_nicely();
+				break;
 
 			default:
 				/* Trouble accessing directory */

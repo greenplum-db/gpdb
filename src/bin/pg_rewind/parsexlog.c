@@ -945,6 +945,7 @@ extractPageInfo(XLogRecord *record)
 					fprintf(stderr, "unrecognized dbase record type %d\n", info);
 					exit(1);
 			}
+			break;
 
 		case RM_TBLSPC_ID:
 			switch (info)

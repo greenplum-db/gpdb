@@ -169,6 +169,7 @@ plan_tree_mutator(Node *node,
 		case T_Plan:
 			/* Abstract: Should see only subclasses. */
 			elog(ERROR, "abstract node type not allowed: T_Plan");
+			break;
 
 		case T_Result:
 			{
@@ -322,6 +323,7 @@ plan_tree_mutator(Node *node,
 		case T_Scan:
 			/* Abstract: Should see only subclasses. */
 			elog(ERROR, "abstract node type not allowed: T_Scan");
+			break;
 
 		case T_SeqScan:
 			{
@@ -521,6 +523,7 @@ plan_tree_mutator(Node *node,
 		case T_Join:
 			/* Abstract: Should see only subclasses. */
 			elog(ERROR, "abstract node type not allowed: T_Join");
+			break;
 
 		case T_NestLoop:
 			{

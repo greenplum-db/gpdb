@@ -2240,6 +2240,7 @@ performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 				case DTX_CONTEXT_QE_READER:
 					elog(FATAL, "Unexpected segment distribute transaction context: '%s'",
 						 DtxContextToString(DistributedTransactionContext));
+					break;
 
 				default:
 					elog(PANIC, "Unexpected segment distribute transaction context value: %d",
@@ -2280,6 +2281,7 @@ performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 				case DTX_CONTEXT_QE_READER:
 					elog(PANIC, "Unexpected segment distribute transaction context: '%s'",
 						 DtxContextToString(DistributedTransactionContext));
+					break;
 
 				default:
 					elog(PANIC, "Unexpected segment distribute transaction context value: %d",

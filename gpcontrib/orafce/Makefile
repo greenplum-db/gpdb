@@ -30,6 +30,14 @@ PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 endif
 
+# Disable -Wimplicit-fallthrough for this module, since it is hard to change some
+# macros using case clauses. It might be a bug in gcc, so to minimize the workload,
+# we simply disable this compile option.
+# -Wimplicit-fallthrough is appended to CFLAGS, so we append it to CFLAGS as well.
+ifeq ($(shell echo "$(CFLAGS)" | grep -q "implicit-fallthrough" && echo yes), yes)
+override CFLAGS += -Wno-implicit-fallthrough
+endif
+
 ifneq ($(PORTNAME), darwin)
 REGRESS += nlssort
 endif

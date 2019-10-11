@@ -5266,6 +5266,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					   (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						errmsg("cannot modify subpartition template for partitioned table")));
 			}
+			/* FALL THRU */
 		case AT_PartAdd:				/* Add */
 		case AT_PartAddForSplit:		/* Add, as part of a split */
 		case AT_PartDrop:				/* Drop */
@@ -16153,6 +16154,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation *rel,
 		{
 			prepSplit = true; /* if sub-command is split partition then it will require some preprocessing */
 		}
+		/* FALL THRU */
 		case AT_PartAdd:				/* Add */
 		case AT_PartAddForSplit:		/* Add, as part of a split */
 		case AT_PartDrop:				/* Drop */

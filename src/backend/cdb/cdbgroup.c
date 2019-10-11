@@ -2309,7 +2309,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 			groups_sorted = true;
 			current_pathkeys = root->group_pathkeys;
 			mark_sort_locus(result_plan);
-			/* Fall though. */
+			/* fallthrough */
 
 		case DQACOPLAN_GGS:
 			aggstrategy = AGG_SORTED;

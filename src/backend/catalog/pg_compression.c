@@ -365,6 +365,7 @@ zlib_decompress(PG_FUNCTION_ARGS)
 				 * convergence' for data corruption :-).
 				 */
 				elog(ERROR, "zlib encountered data in an unexpected format");
+				break;
 
 			default:
 				/* shouldn't get here */

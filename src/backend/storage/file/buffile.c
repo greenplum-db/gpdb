@@ -419,6 +419,7 @@ BufFileRead(BufFile *file, void *ptr, size_t size)
 		case BFS_SEQUENTIAL_WRITING:
 		case BFS_COMPRESSED_WRITING:
 			elog(ERROR, "cannot read from sequential BufFile before rewinding to start");
+			break;
 
 		case BFS_COMPRESSED_READING:
 			return BufFileLoadCompressedBuffer(file, ptr, size);
@@ -508,6 +509,7 @@ BufFileReadFromBuffer(BufFile *file, size_t size)
 		case BFS_SEQUENTIAL_WRITING:
 		case BFS_COMPRESSED_WRITING:
 			elog(ERROR, "cannot read from sequential BufFile before rewinding to start");
+			return NULL;
 
 		case BFS_COMPRESSED_READING:
 			return NULL;

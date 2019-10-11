@@ -1191,6 +1191,7 @@ ExecAgg(AggState *node)
 					 * pass through. Be sure that the next case statement
 					 * is HASHAGG_END_OF_PASSES.
 					 */
+					/* fallthrough */
 
 				case HASHAGG_END_OF_PASSES:
 					node->agg_done = true;

@@ -6022,10 +6022,12 @@ EndLocalDistribXact(bool isCommit)
 		case DTX_CONTEXT_QE_FINISH_PREPARED:
 			elog(PANIC, "Unexpected distribute transaction context: '%s'",
 				 DtxContextToString(DistributedTransactionContext));
+			break;
 
 		default:
 			elog(PANIC, "Unrecognized DTX transaction context: %d",
 				 (int) DistributedTransactionContext);
+			break;
 	}
 }
 
