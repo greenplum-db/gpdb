@@ -21,9 +21,12 @@ OBJS = mapred_test.o
 include $(top_srcdir)/src/Makefile.shlib
 
 override CPPFLAGS += -I$(SRCDIR) -I$(INCDIR) -I$(libpq_srcdir)
-gccversion=$(shell gcc -dumpversion | cut -d . -f1)
-ifeq ($(shell expr $(gccversion) \>= 7), 1)
-override CPPFLAGS += -Wno-implicit-fallthrough
+
+# Disable -Wimplicit-fallthrough for this module, since it is hard to change some
+# macros using switch-case.
+# -Wimplicit-fallthrough is appended to CFLAGS, so we append it to CFLAGS as well.
+ifeq ($(shell echo "$(CFLAGS)" | grep -q "implicit-fallthrough" && echo yes), yes)
+override CFLAGS += -Wno-implicit-fallthrough
 endif
 
 FILES     = main.o mapred.o parse.o yaml_scan.o yaml_parse.o 
