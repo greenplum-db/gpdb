@@ -1,8 +1,16 @@
 -- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- end_ignore
+
+-- set these values purely to cut down test time, as default fts trigger is
+-- every min and 5 retries
+alter system set gp_fts_probe_interval to 10;
+alter system set gp_fts_probe_retries to 1;
+select pg_reload_conf();
+
 select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';
+
 -- Once this fault is hit, FTS process should abort current
 -- transaction and exit.
 select gp_inject_fault_infinite('fts_update_config', 'error', 1);
@@ -32,3 +40,7 @@ relation = 'gp_configuration_history'::regclass;
 
 select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';
+
+alter system reset gp_fts_probe_interval;
+alter system reset gp_fts_probe_retries;
+select pg_reload_conf();
