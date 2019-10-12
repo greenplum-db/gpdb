@@ -44,6 +44,16 @@ function setup_gpadmin_user() {
     ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TEST_OS"
 }
 
+function install_quicklz() {
+  # quicklz is proprietary code that we cannot put in our public Docker images.
+  if [ -d libquicklz-installer ]; then
+    rpm -i libquicklz-installer/libquicklz-*.rpm
+  fi
+  if [ -d libquicklz-devel-installer ]; then
+    rpm -i libquicklz-devel-installer/libquicklz-*.rpm
+  fi
+}
+
 function _main() {
     if [ -z "${MAKE_TEST_COMMAND}" ]; then
         echo "FATAL: MAKE_TEST_COMMAND is not set"
@@ -64,6 +74,7 @@ function _main() {
       ;;
     esac
 
+    time install_quicklz
     time install_and_configure_gpdb
     time setup_gpadmin_user
     time make_cluster

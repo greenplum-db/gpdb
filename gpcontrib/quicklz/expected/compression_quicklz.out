@@ -43,7 +43,7 @@ SELECT * FROM quicklztest_row ORDER BY id DESC LIMIT 4;
 SELECT get_ao_compression_ratio('quicklztest_row');
  get_ao_compression_ratio 
 --------------------------
-                      1.8
+                     1.83
 (1 row)
 
 -- Test for appendonly column oriented

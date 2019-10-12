@@ -1116,6 +1116,10 @@ jobs:
       resource: binary_swap_gpdb_centos6
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos6-test
+    - get: libquicklz-installer
+      resource: libquicklz-centos6
+    - get: libquicklz-devel-installer
+      resource: libquicklz-devel-centos6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
     image: gpdb6-centos6-test
@@ -1135,6 +1139,10 @@ jobs:
       passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos6-test
+    - get: libquicklz-installer
+      resource: libquicklz-centos6
+    - get: libquicklz-devel-installer
+      resource: libquicklz-devel-centos6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
@@ -1157,6 +1165,10 @@ jobs:
       passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos6-test
+    - get: libquicklz-installer
+      resource: libquicklz-centos6
+    - get: libquicklz-devel-installer
+      resource: libquicklz-devel-centos6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
@@ -1176,6 +1188,10 @@ jobs:
       passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos6-test
+    - get: libquicklz-installer
+      resource: libquicklz-centos6
+    - get: libquicklz-devel-installer
+      resource: libquicklz-devel-centos6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
@@ -1195,6 +1211,10 @@ jobs:
       passed: [compile_gpdb_centos7]
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos7-test
+    - get: libquicklz-installer
+      resource: libquicklz-centos7
+    - get: libquicklz-devel-installer
+      resource: libquicklz-devel-centos7
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
@@ -1213,6 +1233,10 @@ jobs:
       resource: bin_gpdb_centos7
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos7-test
+    - get: libquicklz-installer
+      resource: libquicklz-centos7
+    - get: libquicklz-devel-installer
+      resource: libquicklz-devel-centos7
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
@@ -1320,6 +1344,10 @@ jobs:
       resource: bin_gpdb_centos6
       trigger: [[ test_trigger ]]
     - get: gpdb6-centos6-test
+    - get: libquicklz-installer
+      resource: libquicklz-centos6
+    - get: libquicklz-devel-installer
+      resource: libquicklz-devel-centos6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test

@@ -56,7 +56,7 @@ insert into aoco_table_compressed_type select '123456'::int42 from generate_seri
 select get_ao_compression_ratio('aoco_table_compressed_type') as quicklz_compress_ratio;
  quicklz_compress_ratio 
 ------------------------
-                   17.2
+                  17.17
 (1 row)
 
 -- Given an AO/RO table using the int42 type with quicklz compresstype
