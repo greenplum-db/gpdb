@@ -886,7 +886,18 @@ create_append_plan(PlannerInfo *root, AppendPath *best_path)
 	 * cases where there was no appending construct at all, but we know the
 	 * relation is empty (see set_dummy_rel_pathlist).
 	 */
-	if (best_path->subpaths == NIL)
+
+	/* Build the plan for each child */
+	foreach(subpaths, best_path->subpaths)
+	{
+		Path	   *subpath = (Path *) lfirst(subpaths);
+		Plan       *plan = create_plan_recurse(root, subpath);
+
+		if (!is_dummy_plan(plan))
+			subplans = lappend(subplans, plan);
+	}
+
+	if (subplans == NIL)
 	{
 		/* Generate a Result plan with constant-FALSE gating qual */
 		return (Plan *) make_result(root,
@@ -894,14 +905,6 @@ create_append_plan(PlannerInfo *root, AppendPath *best_path)
 									(Node *) list_make1(makeBoolConst(false,
 																	  false)),
 									NULL);
-	}
-
-	/* Build the plan for each child */
-	foreach(subpaths, best_path->subpaths)
-	{
-		Path	   *subpath = (Path *) lfirst(subpaths);
-
-		subplans = lappend(subplans, create_plan_recurse(root, subpath));
 	}
 
 	/*
