@@ -3867,6 +3867,7 @@ is_dummy_plan_walker(Node *node, bool *context)
 			 * cause big problems elsewhere in the code.
 			 */
 
+		case T_Motion:
 		case T_Hash:
 		case T_Material:
 		case T_Sort:
@@ -3883,6 +3884,20 @@ is_dummy_plan_walker(Node *node, bool *context)
 			 * from a dummy.
 			 */
 			return plan_tree_walker(node, is_dummy_plan_walker, context, true);
+
+		case T_Agg:
+
+			/*
+			 * For Agg plannode, we can use the following rule to deduce dummy:
+			 *   1. without any group-by clause, it is not dummy (e.g. `select count(*) from dummy_table`
+			 *      will output one tuple)
+			 *   2. with group-by clause, we just recur. (e.g. `select a, count(*) from dummy_table group
+			 *      by a` output nothing)
+			 */
+			if (((Agg *) node)->numCols == 0)
+				return false;
+			else
+				return plan_tree_walker(node, is_dummy_plan_walker, context, true);
 
 		default:
 

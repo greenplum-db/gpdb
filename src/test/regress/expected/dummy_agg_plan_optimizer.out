@@ -1,0 +1,46 @@
+create table t_dummy_agg_plan1(c1 int, c2 int) distributed by (c1);
+create table t_dummy_agg_plan2(c1 int, c2 int) distributed by (c1);
+analyze t_dummy_agg_plan1;
+analyze t_dummy_agg_plan2;
+explain
+  select c1, sum(c2) from t_dummy_agg_plan1 where 1 < 0 group by c1
+  union all
+  select c1, sum(c2) from t_dummy_agg_plan2 group by c1;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Append  (cost=0.00..431.00 rows=1 width=12)
+   ->  HashAggregate  (cost=0.00..0.00 rows=0 width=12)
+         Group Key: NULL::integer
+         ->  Result  (cost=0.00..0.00 rows=0 width=8)
+               One-Time Filter: false
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+               Group Key: c1
+               ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                     Sort Key: c1
+                     ->  Seq Scan on t_dummy_agg_plan2  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.77.0
+(12 rows)
+
+explain
+  select count(*), 1 from t_dummy_agg_plan1 where 1 < 0
+  union all
+  select c1, sum(c2) from t_dummy_agg_plan2 group by c1;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Append  (cost=0.00..431.00 rows=1 width=16)
+   ->  Result  (cost=0.00..0.00 rows=0 width=16)
+         ->  Result  (cost=0.00..0.00 rows=0 width=12)
+               ->  Aggregate  (cost=0.00..0.00 rows=0 width=8)
+                     ->  Result  (cost=0.00..0.00 rows=0 width=1)
+                           One-Time Filter: false
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+         ->  Result  (cost=0.00..431.00 rows=1 width=16)
+               ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+                     Group Key: c1
+                     ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                           Sort Key: c1
+                           ->  Seq Scan on t_dummy_agg_plan2  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.77.0
+(14 rows)
+
