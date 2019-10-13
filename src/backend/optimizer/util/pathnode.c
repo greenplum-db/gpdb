@@ -1386,8 +1386,14 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	/* If no subpath, any worker can execute this Append.  Result has 0 rows. */
 	if (!subpaths)
 	{
-		CdbPathLocus_MakeGeneral(&pathnode->locus,
-								 getgpsegmentCount());
+		/*
+		 * This is dummy path. Dummy path emits no tuples. In MPP
+		 * environment, we prefer distributely partitioned locus.
+		 * General locus with no data loses the advantage to be
+		 * general.
+		 */
+		CdbPathLocus_MakeStrewn(&pathnode->locus,
+								getgpsegmentCount());
 		return;
 	}
 

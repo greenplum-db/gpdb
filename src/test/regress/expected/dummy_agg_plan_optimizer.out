@@ -44,3 +44,31 @@ explain
  Optimizer: Pivotal Optimizer (GPORCA) version 3.77.0
 (14 rows)
 
+explain
+  with t(c1, c2, c3) as (
+    select c1, sum(c2), 1 from t_dummy_agg_plan1 group by c1
+    union all
+    select c1, sum(c2), 2 from t_dummy_agg_plan2 group by c1
+  )
+  select * from t where c3 > 1;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+   ->  Result  (cost=0.00..862.00 rows=1 width=16)
+         Filter: ("outer".?column? > 1)
+         ->  Append  (cost=0.00..862.00 rows=1 width=16)
+               ->  Result  (cost=0.00..431.00 rows=1 width=16)
+                     ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+                           Group Key: t_dummy_agg_plan1.c1
+                           ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                                 Sort Key: t_dummy_agg_plan1.c1
+                                 ->  Seq Scan on t_dummy_agg_plan1  (cost=0.00..431.00 rows=1 width=8)
+               ->  Result  (cost=0.00..431.00 rows=1 width=16)
+                     ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+                           Group Key: t_dummy_agg_plan2.c1
+                           ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                                 Sort Key: t_dummy_agg_plan2.c1
+                                 ->  Seq Scan on t_dummy_agg_plan2  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.77.0
+(17 rows)
+
