@@ -72,7 +72,7 @@
                 <plentry>
                     <pt>CREATEROLE</pt>
                     <pt>NOCREATEROLE</pt>
-                    <pd>If <codeph>CREATEDB</codeph> is specified, the role being defined will be
+                    <pd>If <codeph>CREATEROLE</codeph> is specified, the role being defined will be
                         allowed to create new roles, alter other roles, and drop other roles.
                             <codeph>NOCREATEROLE</codeph> (the default) will deny a role the ability
                         to create roles or modify roles other than their own. </pd>
