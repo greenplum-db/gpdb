@@ -3,6 +3,21 @@
 
 #include "test-helpers.h"
 #include "query-helpers.h"
+#include "upgrade-helpers.h"
+#include "pqexpbuffer.h"
+
+void
+initializePgUpgradStatus(void)
+{
+	initPQExpBuffer(&pg_upgrade_output);
+	pg_upgrade_exit_status = 0;
+}
+
+void
+resetPgUpgradeStatus(void)
+{
+	termPQExpBuffer(&pg_upgrade_output);
+}
 
 void
 resetGpdbFiveDataDirectories(void)

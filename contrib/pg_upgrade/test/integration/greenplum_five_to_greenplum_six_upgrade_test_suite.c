@@ -23,6 +23,7 @@
 static void
 setup(void **state)
 {
+	initializePgUpgradStatus();
 	resetGpdbFiveDataDirectories();
 	resetGpdbSixDataDirectories();
 
@@ -33,6 +34,7 @@ setup(void **state)
 static void
 teardown(void **state)
 {
+	resetPgUpgradeStatus();
 	stopGpdbFiveCluster();
 	stopGpdbSixCluster();
 }

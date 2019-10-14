@@ -19,15 +19,34 @@ setDataChecksum(char *binaryDirectory, char *dataDirectory, int checksumValue)
 }
 
 static void
+assert_error_in_log(const char *errMsg)
+{
+	assert_true(strstr(upgradeCheckOutput(), errMsg));
+}
+
+static void
+checkFailsWithError(const char* errMsg)
+{
+	assert_int_not_equal(0, upgradeCheckStatus());
+	assert_error_in_log(errMsg);
+}
+
+static void
 upgradeCheckFailsType1()
 {
-	performUpgradeCheckFailsWithError("old cluster uses data checksums but the new one does not\n");
+	checkFailsWithError("old cluster uses data checksums but the new one does not\n");
 }
 
 static void
 upgradeCheckFailsType2()
 {
-	performUpgradeCheckFailsWithError("old cluster does not use data checksums but the new one does\n");
+	checkFailsWithError("old cluster does not use data checksums but the new one does\n");
+}
+
+static void
+anAdministratorPerformsAnUpgradeCheck()
+{
+	performUpgradeCheck();
 }
 
 static void
@@ -47,8 +66,11 @@ aFiveClusterWithChecksumsAndASixClusterWithoutChecksums()
 void
 test_clusters_with_different_checksum_version_cannot_be_upgraded(void ** state) {
 	given(aFiveClusterWithoutChecksumsAndASixClusterWithChecksums);
+	when(anAdministratorPerformsAnUpgradeCheck);
 	then(upgradeCheckFailsType1);
+
 	given(aFiveClusterWithChecksumsAndASixClusterWithoutChecksums);
+	when(anAdministratorPerformsAnUpgradeCheck);
 	then(upgradeCheckFailsType2);
 }
 

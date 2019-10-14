@@ -11,6 +11,8 @@
  */
 #include "upgrade-helpers.h"
 
+PQExpBufferData pg_upgrade_output;
+int pg_upgrade_exit_status;
 
 static void
 copy_file_from_backup_to_datadir(char *filename, char *segment_path)
@@ -149,7 +151,7 @@ performUpgrade(void)
 }
 
 void
-performUpgradeCheckFailsWithError(char *error_message)
+performUpgradeCheck()
 {
 	char		buffer[2000];
 	int			count = 0;
@@ -170,11 +172,8 @@ performUpgradeCheckFailsWithError(char *error_message)
 	output_file = popen(buffer, "r");
 
 	while ((output = fgets(buffer, sizeof(buffer), output_file)) != NULL)
-		if (strstr(output, error_message))
-			count += 1;
+		appendPQExpBufferStr(&pg_upgrade_output, output);
 
-	pclose(output_file);
+	pg_upgrade_exit_status = WEXITSTATUS(pclose(output_file));
 #endif
-
-	assert_true(count > 0);
 }
