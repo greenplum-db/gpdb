@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!-- install_guide/refs/gpcheck.xml has a conref to this topic. -->
+    <!-- install_guide has a link to this topic. -->
     <title id="is142464">gpcheck</title>
     <body>
         <p>Verifies and validates Greenplum Database platform settings.</p>
@@ -28,10 +28,16 @@
                     <codeph>GPCHECK_ERROR</codeph> displays, one or more validation checks failed.
                 You can use also <codeph>gpcheck</codeph> to gather and view platform settings on
                 hosts without running validation checks.</p>
-            <p>You should run <codeph>gpcheck</codeph> as <codeph>root</codeph>.
-                If you do not run <codeph>gpcheck</codeph> as <codeph>root</codeph>, the utility
-                displays a warning message and will not be able to validate all configuration
-                settings; Only some of these settings will be validated.</p>
+            <p>Some <codeph>gpcheck</codeph> validations require <codeph>root</codeph> privileges.
+                If you run <codeph>gpcheck</codeph> as <codeph>gpadmin</codeph> (without
+                    <codeph>root</codeph> privileges), the utility displays a warning message and
+                will not be able to perform all validations. However, running
+                    <codeph>gpcheck</codeph> as a user with <codeph>root</codeph> privileges and
+                specifying remote hosts might require a password to log into the remote hosts. You
+                can perform all <codeph>gpcheck</codeph> validations on a local host by running
+                    <codeph>gpcheck</codeph> with <codeph>root</codeph> privileges using the
+                    <codeph>--local</codeph> option. See <xref href="#topic1/section5" format="dita"
+                    >Examples</xref>.</p>
         </section>
         <section id="section4">
             <title>Options</title>
@@ -40,9 +46,9 @@
                     <pt>--config <varname>config_file</varname></pt>
                     <pd>The name of a configuration file to use instead of the default file
                             <codeph>$GPHOME/etc/gpcheck.cnf</codeph> (or
-                            <codeph>~/gpconfigs/gpcheck_dca_config</codeph> on the Dell EMC Greenplum
-                        Data Computing Appliance). This file specifies the OS-specific checks to
-                        run.</pd>
+                            <codeph>~/gpconfigs/gpcheck_dca_config</codeph> on the Dell EMC
+                        Greenplum Data Computing Appliance). This file specifies the OS-specific
+                        checks to run.</pd>
                 </plentry>
                 <plentry>
                     <pt>{-f | --file} <varname>hostfile_gpcheck</varname></pt>
@@ -53,7 +59,7 @@
                         connect to the hosts.</pd>
                 </plentry>
                 <plentry>
-                    <pt>{--h | --host} <varname>host_ID</varname></pt>
+                    <pt>{-h | --host} <varname>host_ID</varname></pt>
                     <pd>Checks platform-specific settings on the host in your Greenplum Database
                         system specified by <varname>host_ID</varname>. <codeph>gpcheck</codeph>
                         uses SSH to connect to the host. </pd>
@@ -74,8 +80,8 @@
                 </plentry>
                 <plentry>
                     <pt>--stdout</pt>
-                    <pd>Display collected host information from gpcheck. No checks or validations
-                        are performed.</pd>
+                    <pd>Display collected host information from <codeph>gpcheck</codeph>. No checks
+                        or validations are performed.</pd>
                 </plentry>
                 <plentry>
                     <pt>--zipout</pt>
@@ -112,6 +118,12 @@
             <codeblock># gpcheck --zipin gpcheck_timestamp.tar.gz</codeblock>
             <p>View collected Greenplum Database platform settings:</p>
             <codeblock># gpcheck -f hostfile_gpcheck --stdout</codeblock>
+            <p>Run <codeph>gpcheck</codeph>as a user with <codeph>root</codeph> privileges on a host
+                system to perform all <codeph>gpcheck</codeph> platform validations on the host.
+                This example assumes the user has <codeph>sudo</codeph>
+                access.<codeblock>$ sudo -s
+# source &lt;GPDB_install_dir>/greenplum_path.sh
+# gpcheck --local</codeblock></p>
         </section>
         <section id="section6">
             <title>See Also</title>
