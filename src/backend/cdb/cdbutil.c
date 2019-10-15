@@ -1554,7 +1554,7 @@ dbid_get_dbinfo(int16 dbid)
 	}
 
 	systable_endscan(scan);
-	heap_close(rel, NoLock);
+	heap_close(rel, AccessShareLock);
 
 	return i;
 }
