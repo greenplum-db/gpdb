@@ -94,8 +94,8 @@
       </ul>
       <p>Other considerations:</p>
       <ul id="ul_xv2_phn_2z">
-        <li>Do not configure the operating system to use huge pages. Please review the <xref
-            format="dita" href="../install_guide/prep_os.html#topic3" scope="peer">recommended OS
+        <li>Do not configure the operating system to use huge pages. See the <xref format="dita"
+            href="../install_guide/prep_os.html#topic3" scope="peer">recommended OS
             parameters</xref> in the <cite>Greenplum Installation Guide</cite>.</li>
         <li>When you configure resource group memory, consider memory requirements
            for mirror segments that become primary segments during a failure to ensure

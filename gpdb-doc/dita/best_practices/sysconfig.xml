@@ -39,29 +39,29 @@
         with the following mount options:
         <codeblock>rw,nodev,noatime,nobarrier,inode64</codeblock></p>
     </section>
-    <section id="port_config"><p>Please review the <xref href="../install_guide/prep_os.html#topic3"
-          format="dita" scope="peer">recommended OS parameter settings</xref> at the <cite>Greenplum
-          Database Installation Guide</cite>.</p><title>Port Configuration</title><p>Set up
-          <codeph>ip_local_port_range</codeph> so it does not conflict with the Greenplum Database
-        port ranges. For example, setting this range in
+    <section id="port_config"><p>See the <xref href="../install_guide/prep_os.html#topic3"
+          format="dita" scope="peer">recommended OS parameter settings</xref> in the <cite>Greenplum
+          Database Installation Guide</cite> for further details.</p><title>Port
+        Configuration</title><p>Set up <codeph>ip_local_port_range</codeph> so it does not conflict
+        with the Greenplum Database port ranges. For example, setting this range in
           <systemoutput>/etc/sysctl.conf</systemoutput>:
         <codeblock>net.ipv4.ip_local_port_range = 10000  65535</codeblock></p><p>you could set the
         Greenplum Database base port numbers to these
         values.<codeblock>PORT_BASE = 6000
-MIRROR_PORT_BASE = 7000</codeblock></p>Please review the
-        <xref href="../install_guide/prep_os.html#topic3" format="dita" scope="peer">recommended OS
-        parameter settings</xref> at the <cite>Greenplum Database Installation
-      Guide</cite>.</section>
+MIRROR_PORT_BASE = 7000</codeblock></p>See the <xref
+        href="../install_guide/prep_os.html#topic3" format="dita" scope="peer">recommended OS
+        parameter settings</xref> in the <cite>Greenplum Database Installation Guide</cite> for
+      further details.</section>
     <section id="io_config"><title>I/O Configuration</title><p>Set the blockdev read-ahead size to
         16384 on the devices that contain data directories. This command sets the read-ahead size
         for <codeph>/dev/sdb</codeph>.
         </p><codeblock># /sbin/blockdev --setra 16384 /dev/sdb</codeblock><p>This command returns
         the read-ahead size for
       <codeph>/dev/sdb</codeph>.</p><codeblock># /sbin/blockdev --getra /dev/sdb
-16384</codeblock>Please
-      review the <xref href="../install_guide/prep_os.html#topic3" format="dita" scope="peer"
-        >recommended OS parameter settings</xref> at the <cite>Greenplum Database Installation
-        Guide</cite>.<p>The deadline IO scheduler should be set for all data directory devices.
+16384</codeblock>See
+      the <xref href="../install_guide/prep_os.html#topic3" format="dita" scope="peer">recommended
+        OS parameter settings</xref> in the <cite>Greenplum Database Installation Guide</cite> for
+      further details.<p>The deadline IO scheduler should be set for all data directory devices.
         </p><codeblock> # cat /sys/block/sdb/queue/scheduler
  noop anticipatory [deadline] cfq </codeblock><p>The
         maximum number of OS files and processes should be increased in the
@@ -79,10 +79,10 @@ MIRROR_PORT_BASE = 7000</codeblock></p>Please review the
       <title>OS Memory Configuration</title>
       <p>The Linux sysctl <codeph>vm.overcommit_memory</codeph> and
           <codeph>vm.overcommit_ratio</codeph> variables affect how the operating system manages
-        memory allocation. Please refer to the <xref
+        memory allocation. See the <xref
           href="../install_guide/prep_os.html#topic3__segment_host_memory" scope="peer"
           format="dita"><codeph>/etc/sysctl.conf</codeph></xref> file parameters guidelines in the
-          <cite>Greenplum Datatabase Installation Guide</cite>.</p>
+          <cite>Greenplum Datatabase Installation Guide</cite> for further details.</p>
       <p><codeph>vm.overcommit_memory</codeph> determines the method the OS uses for determining how
         much memory can be allocated to processes. This should be always set to 2, which is the only
         safe setting for the database. <note>For information on configuration of overcommit memory,
@@ -107,10 +107,10 @@ MIRROR_PORT_BASE = 7000</codeblock></p>Please review the
       <title>Shared Memory Settings </title>
       <p>Greenplum Database uses shared memory to communicate between <codeph>postgres</codeph>
         processes that are part of the same <codeph>postgres</codeph> instance. The following shared
-        memory settings should be set in <codeph>sysctl</codeph> and are rarely modified. For
-        further details please refer to the <xref format="dita"
-          href="../install_guide/prep_os.html#topic3" scope="peer">Sysctl parameters</xref> in the
-          <cite>Greenplum Database Installation Guide</cite>.</p>
+        memory settings should be set in <codeph>sysctl</codeph> and are rarely modified. See the
+          <xref format="dita" href="../install_guide/prep_os.html#topic3" scope="peer">Sysctl
+          parameters</xref> in the <cite>Greenplum Database Installation Guide</cite> for further
+        details.</p>
       <codeblock>kernel.shmmax = 500000000
 kernel.shmmni = 4096
 kernel.shmall = 4000000000</codeblock>

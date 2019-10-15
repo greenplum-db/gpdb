@@ -127,10 +127,11 @@ SELinuxstatus: disabled</codeblock></li>
     
     <p>More specifically, you need to edit the following Linux configuration settings:</p>
     <ul id="ul_t1k_rl3_2jb">
-      <li>The <xref href="#topic3/linux_hosts_file" format="dita">Hosts</xref> file</li>
+      <li>The <xref href="#topic3/linux_hosts_file" format="dita"><codeph>hosts</codeph></xref>
+          file</li>
       <li>The <codeph><xref href="#topic3/sysctl_file" format="dita">sysctl.conf</xref></codeph>
           file</li>
-      <li><xref href="#topic3/system_resources" format="dita">System Resources</xref> limits </li>
+      <li><xref href="#topic3/system_resources" format="dita">System resources</xref> limits </li>
       <li><xref href="#topic3/xfs_mount" format="dita">XFS mount </xref>options</li>
       <li><xref href="#topic3/disk_io_settings" format="dita">Disk I/O settings</xref>
         <ul id="ul_fm1_2yc_2jb">
@@ -222,7 +223,7 @@ kernel.shmall = 4000000000</codeblock>
           resource group-based resource management or resource queue-based resource management,
           refer to <xref href="../admin_guide/wlmgmt_intro.html" scope="peer" format="dita">Options
             for Configuring Segment Host Memory</xref> in the <cite>Geenplum Database Administrator
-            Guide</cite>. Also please refer to the Greenplum Database server configuration parameter
+            Guide</cite>. Also refer to the Greenplum Database server configuration parameter
               <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_vmem_protect_limit"
               scope="peer">gp_vmem_protect_limit</xref></codeph> in the <cite>Greenplum Database
             Reference Guide</cite>. </p>
