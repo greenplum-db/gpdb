@@ -117,6 +117,15 @@ typedef struct CopyIntoClause
 	List	   *ao_segnos;		/* AO segno map */
 } CopyIntoClause;
 
+typedef struct RefreshClause
+{
+	NodeTag		type;
+
+	bool		concurrent;		/* allow concurrent access? */
+	bool		skipData;
+	RangeVar   *relation;		/* relation to insert into */
+} RefreshClause;
+
 
 /* ----------------------------------------------------------------
  *					node types for executable expressions
@@ -1536,33 +1545,22 @@ typedef struct Flow
 	NodeTag		type;			/* T_Flow */
 	FlowType	flotype;		/* Type of flow produced by the plan. */
 
-	/* What motion (including none) should be applied to this Plan's output. */
-	Movement	req_move;
-
 	/* Locus type (optimizer flow characterization).
 	 */
 	CdbLocusType	locustype;
 
 	/* If flotype is FLOW_SINGLETON, then this is the segment (-1 for entry)
-	 * on which tuples occur.  If req_move is MOVEMENT_FOCUS, then this is
-	 * the desired segment for the resulting singleton flow.
+	 * on which tuples occur.
 	 */
 	int			segindex;		/* Segment index of singleton flow. */
 	int         numsegments;
 
-	/* If req_move is MOVEMENT_REPARTITION, these express the desired
-     * partitioning for a hash motion.  Else if flotype is FLOW_PARTITIONED,
-     * this is the partitioning key.  Otherwise NIL.
-	 * otherwise, they are NIL. */
+	/*
+	 * If flotype is FLOW_PARTITIONED, these are the partitioning key.
+	 * Otherwise NIL.
+	 */
 	List       *hashExprs;			/* list of hash expressions */
 	List	   *hashOpfamilies;
-
-	/* If req_move is MOVEMENT_EXPLICIT, this contains the index of the segid column
-	 * to use in the motion	 */
-	AttrNumber segidColIdx;
-
-    /* The original Flow ptr is saved here upon setting req_move. */
-    struct Flow    *flow_before_req_move;
 
 } Flow;
 

@@ -1022,17 +1022,36 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 	 * this node doesn't do projections.
 	 */
 	outerPlan = outerPlanState(motionstate);
+
 	/*
-	 * GPDB_95_MERGE_FIXME: Should we force ORCA to always use the TL for motion nodes
-	 * or modify ORCA to use the TL from the outer node?
+	 * The advertised 'tdhasoid' flag in our result tuple desc must match what
+	 * the outer plan produces. Otherwise, the sender will send tuples that
+	 * have OIDs, but the receiver treats the tuples as if they doesn't have
+	 * OIDs, or vice versa. This isn't so important for HeapTuples, which have
+	 * an HAS_OIDS flag on every tuple, but for MemTuples it is critical,
+	 * because it affects the way the they are deformed.
+	 *
+	 * GPDB_95_MERGE_FIXME: Should we force ORCA to always use the TL for
+	 * motion nodes or modify ORCA to use the TL from the outer node?
 	 */
 	if (outerPlan && ExecGetResultType(outerPlan) && estate->es_plannedstmt->planGen == PLANGEN_PLANNER)
-		ExecAssignResultType(&motionstate->ps, ExecGetResultType(outerPlan));
+	{
+		/*
+		 * This is like ExecAssignResultTypeFromTL(), but we copy the tdhasoid
+		 * flag from the subplan.
+		 */
+		bool		hasoid = ExecGetResultType(outerPlan)->tdhasoid;
+
+		tupDesc = ExecTypeFromTL(motionstate->ps.plan->targetlist, hasoid);
+		ExecAssignResultType(&motionstate->ps, tupDesc);
+	}
 	else
+	{
 		ExecAssignResultTypeFromTL(&motionstate->ps);
+		tupDesc = ExecGetResultType(&motionstate->ps);
+	}
 
 	motionstate->ps.ps_ProjInfo = NULL;
-	tupDesc = ExecGetResultType(&motionstate->ps);
 
 	/* Set up motion send data structures */
 	if (motionstate->mstype == MOTIONSTATE_SEND && node->motionType == MOTIONTYPE_HASH)

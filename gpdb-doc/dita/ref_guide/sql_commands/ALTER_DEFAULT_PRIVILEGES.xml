@@ -123,7 +123,7 @@ REVOKE [ GRANT OPTION FOR ]
  <section id="sql-alterdefaultprivileges-notes">
   <title>Notes</title>
 
-  <p> Use <xref href="../../utility_guide/client_utilities/psql.xml" scope="peer" format="dita">psql</xref>'s
+  <p> Use <xref href="../../utility_guide/ref/psql.xml" scope="peer" format="dita">psql</xref>'s
      <codeph>\ddp</codeph> command to obtain information about existing assignments of default
     privileges. The meaning of the privilege values is the same as explained for
      <codeph>\dp</codeph> under <xref href="GRANT.xml"/>. </p>

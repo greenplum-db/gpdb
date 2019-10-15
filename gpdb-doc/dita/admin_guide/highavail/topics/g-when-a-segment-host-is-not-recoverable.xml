@@ -8,7 +8,7 @@
                   segments onto a spare set of hardware resources. If mirroring is enabled, you can
                   recover a segment instance from its mirror onto an alternate host using the
                               <codeph><xref
-                              href="../../../utility_guide/admin_utilities/gprecoverseg.xml"
+                              href="../../../utility_guide/ref/gprecoverseg.xml"
                               >gprecoverseg</xref></codeph> utility. For example:</p>
             <codeblock>$ gprecoverseg -i <i>recover_config_file</i>
       </codeblock>
@@ -20,7 +20,7 @@
             <codeblock>sdw1-1|50001|/data1/mirror/gpseg16 sdw4-1|50001|/data1/recover1/gpseg16
 </codeblock>
             <p>For information about creating a segment instance recovery file, see <codeph><xref
-                              href="../../../utility_guide/admin_utilities/gprecoverseg.xml"
+                              href="../../../utility_guide/ref/gprecoverseg.xml"
                               >gprecoverseg</xref></codeph>.</p>
             <p>The new recovery segment host must be pre-installed with the Greenplum Database
                   software and configured exactly as the existing segment hosts.</p>

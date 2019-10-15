@@ -2,7 +2,9 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_z5g_l5h_kr1313">
   <title>pxf:// Protocol</title>
-  <shortdesc>You can use the Greenplum Platform Extension Framework (PXF) <codeph>pxf://</codeph> protocol to access data residing on external Hadoop systems (HDFS, Hive, HBase), object store systems (Azure, Google Cloud Storage, Minio, S3), and SQL databases.</shortdesc>
+  <shortdesc>You can use the Greenplum Platform Extension Framework (PXF) <codeph>pxf://</codeph>
+    protocol to access data residing in object store systems (Azure, Google Cloud Storage, Minio,
+    S3), external Hadoop systems (HDFS, Hive, HBase), and SQL databases.</shortdesc>
   <body>
     <p>The PXF <codeph>pxf</codeph> protocol is packaged as a Greenplum Database extension. The <codeph>pxf</codeph> protocol supports reading from external data stores. You can also write text, binary, and parquet-format data with the <codeph>pxf</codeph> protocol.</p>
     <p>When you use the <codeph>pxf</codeph> protocol to query an external data store, you specify the directory, file, or table that you want to access. PXF requests the data from the data store and delivers the relevant portions in parallel to each Greenplum Database segment instance serving the query.</p>

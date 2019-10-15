@@ -2221,6 +2221,21 @@ CREATE TABLE tc4 (a int, b int, check(a + b > 1 and a = b));
 INSERT INTO tc4 VALUES(NULL, NULL);
 SELECT * from tc4 where a IS NULL;
 
+-- citext fallback
+CREATE EXTENSION IF NOT EXISTS citext;
+drop table if exists tt, tc;
+create table tc (a int, c citext) distributed by (a);
+create table tt (b int, v varchar) distributed by (v);
+
+insert into tc values (1, 'a'), (1, 'A');
+insert into tt values (1, 'a'), (1, 'A');
+
+insert into tc values (1, 'b'), (1, 'B');
+insert into tt values (1, 'b'), (1, 'B');
+
+-- expected fall back to the planner
+select * from tc, tt where c = v;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

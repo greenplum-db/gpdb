@@ -56,7 +56,13 @@ except:
     import subprocess
 import uuid
 
-from gppylib.gpversion import GpVersion
+try:
+    from gppylib.gpversion import GpVersion
+except ImportError:
+    sys.stderr.write("gpload can't import gpversion, will run in GPDB5 compatibility mode.\n")
+    noGpVersion = True
+else:
+    noGpVersion = False
 
 thePlatform = platform.system()
 if thePlatform in ['Windows', 'Microsoft']:
@@ -1821,10 +1827,11 @@ class gpload:
                            )
             self.log(self.DEBUG, "Successfully connected to database")
 
-            # Get GPDB version
-            curs = self.db.query("SELECT version()")
-            self.gpdb_version = GpVersion(curs.getresult()[0][0])
-            self.log(self.DEBUG, "GPDB version is: %s" % self.gpdb_version)
+            if noGpVersion == False:
+                # Get GPDB version
+                curs = self.db.query("SELECT version()")
+                self.gpdb_version = GpVersion(curs.getresult()[0][0])
+                self.log(self.DEBUG, "GPDB version is: %s" % self.gpdb_version)
 
         except Exception, e:
             errorMessage = str(e)
@@ -2049,7 +2056,7 @@ class gpload:
 
         sql = sqlFormat % (joinStr, conditionStr)
 
-        if self.gpdb_version < "6.0.0":
+        if noGpVersion or self.gpdb_version < "6.0.0":
             if log_errors:
                 sql += " WHERE pgext.fmterrtbl = pgext.reloid "
             else:
@@ -2131,7 +2138,7 @@ class gpload:
 
         sql = sqlFormat % (joinStr, conditionStr)
 
-        if self.gpdb_version < "6.0.0":
+        if noGpVersion or self.gpdb_version < "6.0.0":
             if log_errors:
                 sql += " and pgext.fmterrtbl = pgext.reloid "
             else:
@@ -2662,7 +2669,7 @@ class gpload:
     def get_table_dist_key(self):
         # NOTE: this query should be re-written better. the problem is that it is
         # not possible to perform a cast on a table name with spaces...
-        if self.gpdb_version < "6.0.0":
+        if noGpVersion or self.gpdb_version < "6.0.0":
             sql = "select attname from pg_attribute a, gp_distribution_policy p , pg_class c, pg_namespace n "+\
                 "where a.attrelid = c.oid and " + \
                 "a.attrelid = p.localoid and " + \

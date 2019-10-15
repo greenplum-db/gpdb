@@ -13,7 +13,7 @@
       <title>To check for failed segments</title>
       <ol>
         <li id="ki155584">On the master host, run the <codeph><xref
-              href="../../../utility_guide/admin_utilities/gpstate.xml" type="topic" format="dita"
+              href="../../../utility_guide/ref/gpstate.xml" type="topic" format="dita"
             /></codeph> utility with the <codeph>-e</codeph> option to show segment instances with
           error conditions:<codeblock>$ gpstate -e</codeblock><p>If the utility lists
               <codeph>Segments with Primary and Mirror Roles Switched</codeph>, the segment is not

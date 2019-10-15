@@ -393,7 +393,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
         <note>Before you perform this upgrade procedure, ensure that you have migrated your
           PL/Container 1.1 package from your previous Greenplum Database installation to your new
           Greenplum Database installation. Refer to the <xref
-            href="../../utility_guide/admin_utilities/gppkg.html#topic1" format="dita" scope="peer"
+            href="../../utility_guide/ref/gppkg.html#topic1" format="dita" scope="peer"
             >gppkg</xref> command for package installation and migration information.</note>
         <p>Perform the following procedure to upgrade from PL/Container 1.1 to PL/Container version
           1.2 or later.<ol id="ol_axf_mmq_vcb">

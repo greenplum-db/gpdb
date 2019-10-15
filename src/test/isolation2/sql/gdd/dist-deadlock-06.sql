@@ -2,6 +2,10 @@ DROP TABLE IF EXISTS t06;
 CREATE TABLE t06 (id int, val int);
 INSERT INTO t06 (id, val) SELECT i, i FROM generate_series(1, 100) i;
 
+-- gang creation order is important, reset any guc to force the creation
+10: RESET optimizer;
+20: RESET optimizer;
+
 10: BEGIN;
 20: BEGIN;
 

@@ -959,7 +959,7 @@ gpstart
               href="../ref_guide/system_catalogs/pg_stat_activity.xml" type="topic" format="dita"
             /></codeph> system catalog table:</p>
         <p>
-          <codeblock>=# SELECT current_query, waiting, rsgname, rsgqueueduration 
+          <codeblock>=# SELECT query, waiting, rsgname, rsgqueueduration 
      FROM pg_stat_activity;
 </codeblock>
         </p>
@@ -990,19 +990,19 @@ gpstart
           active or waiting in all resource groups, run the following query. If the query returns no
           results, then there are no running or queued transactions in any resource group.</p>
         <p>
-          <codeblock>=# SELECT rolname, g.rsgname, pid, waiting, current_query, datname 
+          <codeblock>=# SELECT rolname, g.rsgname, pid, waiting, state, query, datname 
      FROM pg_roles, gp_toolkit.gp_resgroup_status g, pg_stat_activity 
      WHERE pg_roles.rolresgroup=g.groupid
         AND pg_stat_activity.usename=pg_roles.rolname;
 </codeblock>
         </p>
         <p>Sample partial query output:</p>
-        <codeblock> rolname | rsgname  | pid     | waiting |     current_query     | datname 
----------+----------+---------+---------+-----------------------+---------
-  sammy  | rg_light |  31861  |    f    | &lt;IDLE&gt; in transaction | testdb
-  billy  | rg_light |  31905  |    t    | SELECT * FROM topten; | testdb</codeblock>
-        <p>Use this output to identify the process id (<codeph>pid</codeph>) of the transaction
-          you want to cancel, and then cancel the process. For example, to cancel the pending query
+        <codeblock> rolname | rsgname  | pid     | waiting | state  |          query           | datname 
+---------+----------+---------+---------+--------+------------------------ -+---------
+  sammy  | rg_light |  31861  |    f    | idle   | SELECT * FROM mytesttbl; | testdb
+  billy  | rg_light |  31905  |    t    | active | SELECT * FROM topten;    | testdb</codeblock>
+        <p>Use this output to identify the process id (<codeph>pid</codeph>) of the transaction you
+          want to cancel, and then cancel the process. For example, to cancel the pending query
           identified in the sample output above:</p>
         <p>
           <codeblock>=# SELECT pg_cancel_backend(31905);</codeblock>
@@ -1041,7 +1041,6 @@ gpstart
                   CPU usage is higher than the configured limit.</li>
               </ul></p></li>
         </ul>
-        <p/>
       </section>
       <section id="topic795" xml:lang="en">
         <title>Memory</title>

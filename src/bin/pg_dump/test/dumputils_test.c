@@ -4,7 +4,7 @@
 #include "cmockery.h"
 
 #include "c.h"
-#include "../dumputils.c"
+#include "../dumputils_gp.c"
 
 
 /*

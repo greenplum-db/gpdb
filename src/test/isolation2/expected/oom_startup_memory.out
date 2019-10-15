@@ -1,0 +1,102 @@
+-- OOM should be raised when there are too many idle processes.
+--
+-- We have below assumptions in the tests:
+-- - number of primary segments: 3;
+-- - the startup memory cost for a postgres process: 8MB ~ 14MB;
+-- - per query limit: 20MB;
+-- - per segment limit: 60MB;
+
+-- start_matchsubs
+--
+-- m/DETAIL:  Per-query VM protect limit reached: current limit is \d+ kB, requested \d+ bytes, available \d+ MB/
+-- s/\d+/XXX/g
+--
+-- m/DETAIL:  VM Protect failed to allocate \d+ bytes, \d+ MB available/
+-- s/\d+/XXX/g
+--
+-- m/(seg\d+ \d+.\d+.\d+.\d+:\d+)/
+-- s/(.*)/(seg<ID> IP:PORT)/
+--
+-- end_matchsubs
+
+--
+-- To reach the per query limit we need at least 3 slices in one query.
+--
+
+1: select * from gp_dist_random('gp_id') t1 join gp_dist_random('gp_id') t2 using(gpname) join gp_dist_random('gp_id') t3 using(gpname) join gp_dist_random('gp_id') t4 using(gpname) ;
+ERROR:  failed to acquire resources on one or more segments
+DETAIL:  FATAL:  Out of memory
+DETAIL:  Per-query VM protect limit reached: current limit is 20480 kB, requested 8388608 bytes, available 0 MB
+ (seg0 192.168.99.100:25432)
+1q: ... <quitting>
+
+--
+-- To reach the per segment limit we need at least 8 concurrent sessions.
+--
+
+-- However the per segment limit is not enforced on QD, so below QD-only
+-- sessions could all run successfully.
+1: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+2: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+3: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+4: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+5: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+6: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+7: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+8: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+
+-- The per segment limit should be reached on one or more QEs in below
+-- sessions, we only care about the last one.
+-- start_ignore
+1: set gp_vmem_idle_resource_timeout to '1h';
+SET
+2: set gp_vmem_idle_resource_timeout to '1h';
+SET
+3: set gp_vmem_idle_resource_timeout to '1h';
+SET
+4: set gp_vmem_idle_resource_timeout to '1h';
+SET
+5: set gp_vmem_idle_resource_timeout to '1h';
+SET
+6: set gp_vmem_idle_resource_timeout to '1h';
+SET
+7: set gp_vmem_idle_resource_timeout to '1h';
+SET
+-- end_ignore
+8: set gp_vmem_idle_resource_timeout to '1h';
+ERROR:  failed to acquire resources on one or more segments
+DETAIL:  FATAL:  Out of memory
+DETAIL:  VM Protect failed to allocate 8388608 bytes, 0 MB available
+ (seg0 192.168.99.100:25432)

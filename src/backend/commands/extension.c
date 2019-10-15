@@ -1263,6 +1263,7 @@ CreateExtension(CreateExtensionStmt *stmt)
 		{
 			case CREATE_EXTENSION_INIT:
 				elog(ERROR, "invalid CREATE EXTENSION state");
+				break;
 
 			case CREATE_EXTENSION_BEGIN:	/* Mark creating_extension flag and add pg_extension catalog tuple */
 				creating_extension = true;

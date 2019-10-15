@@ -2,7 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_khf_ltc_vbb">
   <title>Additional Supplied Programs</title>
-  <shortdesc>This section describes additional programs available in the Greenplum Database
+  <shortdesc>Additional programs available in the Greenplum Database
       installation.</shortdesc>
   <body>
     <p>The following PostgreSQL <codeph>contrib</codeph> server utility programs are

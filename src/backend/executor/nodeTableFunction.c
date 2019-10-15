@@ -477,7 +477,8 @@ void
 ExecReScanTableFunction(TableFunctionState *node)
 {
 	/* TableFunction Planner marks TableFunction nodes as not rescannable */
-	elog(ERROR, "invalid rescan of TableFunctionScan");
+	if (!node->is_firstcall)
+		elog(ERROR, "invalid rescan of TableFunctionScan");
 }
 
 

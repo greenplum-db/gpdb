@@ -50,6 +50,9 @@ static int32 maxVmemChunksTracked = 0;
 /* Number of bytes tracked (i.e., allocated under the tutelage of vmem tracker) */
 static int64 trackedBytes = 0;
 
+static int64 startupBytes = 0;
+static int32 startupChunks = 0;
+
 /* Vmem quota in chunk unit */
 static int32 vmemChunksQuota = 0;
 /*
@@ -200,7 +203,7 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 	Assert(vmemTrackerInited);
 	Assert(NULL != MySessionState);
 
-	Assert(0 < numChunksToReserve);
+	Assert(0 <= numChunksToReserve);
 	int32 total = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
 	Assert(total > (int32) 0);
 
@@ -383,7 +386,7 @@ VmemTracker_ConvertVmemBytesToChunks(int64 bytes)
 int64
 VmemTracker_GetMaxReservedVmemChunks(void)
 {
-	Assert(maxVmemChunksTracked >= trackedVmemChunks);
+	Assert(maxVmemChunksTracked >= trackedVmemChunks - startupChunks);
 	return maxVmemChunksTracked;
 }
 
@@ -393,7 +396,7 @@ VmemTracker_GetMaxReservedVmemChunks(void)
 int64
 VmemTracker_GetMaxReservedVmemMB(void)
 {
-	Assert(maxVmemChunksTracked >= trackedVmemChunks);
+	Assert(maxVmemChunksTracked >= trackedVmemChunks - startupChunks);
 	return CHUNKS_TO_MB(maxVmemChunksTracked);
 }
 
@@ -403,7 +406,7 @@ VmemTracker_GetMaxReservedVmemMB(void)
 int64
 VmemTracker_GetMaxReservedVmemBytes(void)
 {
-	Assert(maxVmemChunksTracked >= trackedVmemChunks);
+	Assert(maxVmemChunksTracked >= trackedVmemChunks - startupChunks);
 	return CHUNKS_TO_BYTES(maxVmemChunksTracked);
 }
 
@@ -519,7 +522,7 @@ VmemTracker_ReserveVmem(int64 newlyRequestedBytes)
 {
 	if (!VmemTrackerIsActivated())
 	{
-		Assert(0 == trackedVmemChunks);
+		Assert(0 == trackedVmemChunks - startupChunks);
 		return MemoryAllocation_Success;
 	}
 
@@ -601,7 +604,7 @@ VmemTracker_ReleaseVmem(int64 toBeFreedRequested)
 	   (IsResGroupEnabled() &&
 		!IsResGroupActivated()))
 	{
-		Assert(0 == trackedVmemChunks);
+		Assert(0 == trackedVmemChunks - startupChunks);
 		return;
 	}
 
@@ -612,10 +615,10 @@ VmemTracker_ReleaseVmem(int64 toBeFreedRequested)
 	 * because a bug somewhere that tries to release vmem for allocations made before the vmem
 	 * system was initialized.
 	 */
-	int64 toBeFreed = Min(trackedBytes, toBeFreedRequested);
+	int64 toBeFreed = Min(trackedBytes - startupBytes, toBeFreedRequested);
 	if (0 == toBeFreed)
 	{
-		Assert(0 == trackedVmemChunks);
+		Assert(0 == trackedVmemChunks - startupChunks);
 		return;
 	}
 
@@ -629,6 +632,72 @@ VmemTracker_ReleaseVmem(int64 toBeFreedRequested)
 
 		VmemTracker_ReleaseVmemChunks(reduction);
 	}
+}
+
+/*
+ * Register the startup memory to vmem tracker.
+ *
+ * The startup memory will always be tracked, but an OOM error will be raised
+ * if the memory usage exceeds the limits.
+ */
+MemoryAllocationStatus
+VmemTracker_RegisterStartupMemory(int64 bytes)
+{
+	int64		chunkSizeInBytes;
+
+	Assert(vmemTrackerInited);
+
+	chunkSizeInBytes = 1L << VmemTracker_GetChunkSizeInBits();
+
+	/* Align to chunks */
+	startupChunks = BYTES_TO_CHUNKS(bytes + chunkSizeInBytes - 1);
+	startupBytes = CHUNKS_TO_BYTES(startupChunks);
+
+	/*
+	 * Step 1, add the startup memory forcefully as these memory were already
+	 * in-use before the call to this function.
+	 *
+	 * Do not add the startup memory to resource group as resource group only
+	 * tracks memory allocated via vmem tracker.
+	 */
+
+	trackedBytes += startupBytes;
+	trackedVmemChunks += startupChunks;
+
+	if (MySessionState)
+		pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &MySessionState->sessionVmem,
+								startupChunks);
+
+	pg_atomic_add_fetch_u32((pg_atomic_uint32 *) segmentVmemChunks,
+							startupChunks);
+
+	/*
+	 * Step 2, check if an OOM error should be raised by allocating 0 chunk.
+	 */
+
+	return VmemTracker_ReserveVmemChunks(0);
+}
+
+/*
+ * Unregister the startup memory from vmem tracker.
+ */
+void
+VmemTracker_UnregisterStartupMemory(void)
+{
+	Assert(vmemTrackerInited);
+
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) segmentVmemChunks,
+							startupChunks);
+
+	if (MySessionState)
+		pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) &MySessionState->sessionVmem,
+								startupChunks);
+
+	trackedBytes -= startupBytes;
+	trackedVmemChunks -= startupChunks;
+
+	startupBytes = 0;
+	startupChunks = 0;
 }
 
 /*

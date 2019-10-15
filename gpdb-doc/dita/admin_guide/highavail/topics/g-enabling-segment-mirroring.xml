@@ -16,11 +16,11 @@
         <li id="ki156981">Allocate the data storage area for mirror data on all segment hosts. The
           data storage area must be different from your primary segments' file system location.</li>
         <li id="ki156983">Use <codeph><xref
-              href="../../../utility_guide/admin_utilities/gpssh-exkeys.xml" type="topic"
+              href="../../../utility_guide/ref/gpssh-exkeys.xml" type="topic"
               format="dita"/></codeph> to ensure that the segment hosts can SSH and SCP to each
           other without a password prompt.</li>
         <li id="ki156993">Run the <codeph><xref
-              href="../../../utility_guide/admin_utilities/gpaddmirrors.xml" type="topic"
+              href="../../../utility_guide/ref/gpaddmirrors.xml" type="topic"
               format="dita"/></codeph> utility to enable mirroring in your Greenplum Database
           system. For example, to add 10000 to your primary segment port numbers to calculate the
           mirror segment port numbers:<codeblock>$ gpaddmirrors -p 10000</codeblock> Where

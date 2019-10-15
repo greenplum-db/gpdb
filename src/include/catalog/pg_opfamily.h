@@ -193,41 +193,6 @@ DATA(insert OID = 6221 (	403		complex_ops		PGNSP PGUID ));
 DATA(insert OID = 6224 (	405		complex_ops		PGNSP PGUID ));
 
 /*
- * on-disk bitmap index opfamilies.
- */
-DATA(insert OID = 7014 (	7013	abstime_ops		PGNSP PGUID ));
-DATA(insert OID = 7015 (	7013	array_ops		PGNSP PGUID ));
-DATA(insert OID = 7016 (	7013	bit_ops			PGNSP PGUID ));
-DATA(insert OID = 7017 (	7013	bool_ops		PGNSP PGUID ));
-DATA(insert OID = 7018 (	7013	bpchar_ops		PGNSP PGUID ));
-DATA(insert OID = 7019 (	7013	bytea_ops		PGNSP PGUID ));
-DATA(insert OID = 7020 (	7013	char_ops		PGNSP PGUID ));
-DATA(insert OID = 7022 (	7013	date_ops		PGNSP PGUID ));
-DATA(insert OID = 7023 (	7013	float4_ops		PGNSP PGUID ));
-DATA(insert OID = 7024 (	7013	float8_ops		PGNSP PGUID ));
-DATA(insert OID = 7025 (	7013	inet_ops		PGNSP PGUID ));
-DATA(insert OID = 7026 (	7013	int2_ops		PGNSP PGUID ));
-DATA(insert OID = 7027 (	7013	int4_ops		PGNSP PGUID ));
-DATA(insert OID = 7028 (	7013	int8_ops		PGNSP PGUID ));
-DATA(insert OID = 7029 (	7013	interval_ops	PGNSP PGUID ));
-DATA(insert OID = 7030 (	7013	macaddr_ops		PGNSP PGUID ));
-DATA(insert OID = 7031 (	7013	name_ops		PGNSP PGUID ));
-DATA(insert OID = 7032 (	7013	numeric_ops		PGNSP PGUID ));
-DATA(insert OID = 7033 (	7013	oid_ops			PGNSP PGUID ));
-DATA(insert OID = 7034 (	7013	oidvector_ops	PGNSP PGUID ));
-DATA(insert OID = 7035 (	7013	text_ops		PGNSP PGUID ));
-DATA(insert OID = 7036 (	7013	time_ops		PGNSP PGUID ));
-DATA(insert OID = 7037 (	7013	timestamptz_ops	PGNSP PGUID ));
-DATA(insert OID = 7038 (	7013	timetz_ops		PGNSP PGUID ));
-DATA(insert OID = 7039 (	7013	varbit_ops		PGNSP PGUID ));
-DATA(insert OID = 7041 (	7013	timestamp_ops	PGNSP PGUID ));
-DATA(insert OID = 7042 (	7013	text_pattern_ops	PGNSP PGUID ));
-DATA(insert OID = 7044 (	7013	bpchar_pattern_ops	PGNSP PGUID ));
-DATA(insert OID = 7046 (	7013	money_ops		PGNSP PGUID ));
-DATA(insert OID = 7047 (	7013	reltime_ops		PGNSP PGUID ));
-DATA(insert OID = 7048 (	7013	tinterval_ops	PGNSP PGUID ));
-
-/*
  * hash support for a few built-in datatypes that are missing it in upstream.
  */
 DATA(insert OID = 7077 (	405		tid_ops		PGNSP PGUID ));

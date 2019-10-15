@@ -9,9 +9,9 @@
       topic assumes you are adding a standby master to an existing system that was initialized
       without one.</p>
     <p>For information about the utilities <codeph><xref
-          href="../../../utility_guide/admin_utilities/gpinitsystem.xml" type="topic" format="dita"
+          href="../../../utility_guide/ref/gpinitsystem.xml" type="topic" format="dita"
         /></codeph> and <codeph><xref
-          href="../../../utility_guide/admin_utilities/gpinitstandby.xml" type="topic" format="dita"
+          href="../../../utility_guide/ref/gpinitstandby.xml" type="topic" format="dita"
         /></codeph>, see the <cite>Greenplum Database Utility Guide</cite>.</p>
     <section id="ki160203">
       <title>To add a standby master to an existing system</title>
@@ -35,7 +35,7 @@
       <p>The standby master status should be passive, and the WAL sender state should be
         streaming.</p>
       <p>For information about the <codeph><xref
-            href="../../../utility_guide/admin_utilities/gpstate.xml" type="topic" format="dita"
+            href="../../../utility_guide/ref/gpstate.xml" type="topic" format="dita"
           /></codeph> utility, see the <cite>Greenplum Database Utility Guide</cite>.</p>
     </section>
   </body>

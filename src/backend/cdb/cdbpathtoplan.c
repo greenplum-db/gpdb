@@ -73,10 +73,11 @@ cdbpathtoplan_create_flow(PlannerInfo *root,
 	}
 	else if (CdbPathLocus_IsStrewn(locus))
 		flow = makeFlow(FLOW_PARTITIONED, locus.numsegments);
+	else if (CdbPathLocus_IsOuterQuery(locus))
+		flow = makeFlow(FLOW_SINGLETON, locus.numsegments);
 	else
 		Insist(0);
 
-	flow->req_move = MOVEMENT_NONE;
 	flow->locustype = locus.locustype;
 	return flow;
 }								/* cdbpathtoplan_create_flow */

@@ -478,6 +478,7 @@ _readConstraint(void)
 			 */
 			READ_BOOL_FIELD(skip_validation);
 			READ_BOOL_FIELD(is_no_inherit);
+			/* fallthrough */
 		case CONSTR_DEFAULT:
 			READ_NODE_FIELD(raw_expr);
 			READ_STRING_FIELD(cooked_expr);
@@ -1133,6 +1134,7 @@ _readCreateStmt_common(CreateStmt *local_node)
 		   local_node->relKind == RELKIND_COMPOSITE_TYPE ||
 		   local_node->relKind == RELKIND_FOREIGN_TABLE ||
 		   local_node->relKind == RELKIND_UNCATALOGED ||
+		   local_node->relKind == RELKIND_MATVIEW ||
 		   IsAppendonlyMetadataRelkind(local_node->relKind));
 	Assert(local_node->oncommit <= ONCOMMIT_DROP);
 }
@@ -1428,16 +1430,6 @@ _readGrantRoleStmt(void)
 	READ_DONE();
 }
 
-static PlannerParamItem *
-_readPlannerParamItem(void)
-{
-	READ_LOCALS(PlannerParamItem);
-	READ_NODE_FIELD(item);
-	READ_INT_FIELD(paramId);
-
-	READ_DONE();
-}
-
 /*
  * _readPlannedStmt
  */
@@ -1481,6 +1473,7 @@ _readPlannedStmt(void)
 	READ_UINT64_FIELD(query_mem);
 	READ_NODE_FIELD(intoClause);
 	READ_NODE_FIELD(copyIntoClause);
+	READ_NODE_FIELD(refreshClause);
 	READ_INT8_FIELD(metricsQueryType);
 	READ_DONE();
 }
@@ -2297,14 +2290,11 @@ _readFlow(void)
 	READ_LOCALS(Flow);
 
 	READ_ENUM_FIELD(flotype, FlowType);
-	READ_ENUM_FIELD(req_move, Movement);
 	READ_ENUM_FIELD(locustype, CdbLocusType);
 	READ_INT_FIELD(segindex);
 	READ_INT_FIELD(numsegments);
 
-	READ_NODE_FIELD(hashExprs);
-	READ_NODE_FIELD(hashOpfamilies);
-	READ_NODE_FIELD(flow_before_req_move);
+	/* hashExprs and hashOpfamilies are omitted */
 
 	READ_DONE();
 }
@@ -2370,7 +2360,6 @@ _readSplitUpdate(void)
 	READ_LOCALS(SplitUpdate);
 
 	READ_INT_FIELD(actionColIdx);
-	READ_INT_FIELD(ctidColIdx);
 	READ_INT_FIELD(tupleoidColIdx);
 	READ_NODE_FIELD(insertColIdx);
 	READ_NODE_FIELD(deleteColIdx);
@@ -2783,34 +2772,6 @@ _readAlterTSDictionaryStmt(void)
 	READ_DONE();
 }
 
-static PlaceHolderVar *
-_readPlaceHolderVar(void)
-{
-	READ_LOCALS(PlaceHolderVar);
-
-	READ_NODE_FIELD(phexpr);
-	READ_BITMAPSET_FIELD(phrels);
-	READ_INT_FIELD(phid);
-	READ_INT_FIELD(phlevelsup);
-
-	READ_DONE();
-}
-
-static PlaceHolderInfo *
-_readPlaceHolderInfo(void)
-{
-	READ_LOCALS(PlaceHolderInfo);
-
-	READ_INT_FIELD(phid);
-	READ_NODE_FIELD(ph_var);
-	READ_BITMAPSET_FIELD(ph_eval_at);
-	READ_BITMAPSET_FIELD(ph_lateral);
-	READ_BITMAPSET_FIELD(ph_needed);
-	READ_INT_FIELD(ph_width);
-
-	READ_DONE();
-}
-
 static CookedConstraint *
 _readCookedConstraint(void)
 {
@@ -2989,7 +2950,6 @@ _readModifyTable(void)
 	READ_INT_FIELD(exclRelRTI);
 	READ_NODE_FIELD(exclRelTlist);
 	READ_NODE_FIELD(action_col_idxes);
-	READ_NODE_FIELD(ctid_col_idxes);
 	READ_NODE_FIELD(oid_col_idxes);
 
 	READ_DONE();
@@ -3166,10 +3126,7 @@ readNodeBinary(void)
 				return_value = _readOidAssignment();
 				break;
 			case T_Plan:
-					return_value = _readPlan();
-					break;
-			case T_PlannerParamItem:
-				return_value = _readPlannerParamItem();
+				return_value = _readPlan();
 				break;
 			case T_Result:
 				return_value = _readResult();
@@ -3329,6 +3286,9 @@ readNodeBinary(void)
 				break;
 			case T_CopyIntoClause:
 				return_value = _readCopyIntoClause();
+				break;
+			case T_RefreshClause:
+				return_value = _readRefreshClause();
 				break;
 			case T_Var:
 				return_value = _readVar();
@@ -3931,12 +3891,6 @@ readNodeBinary(void)
 				break;
 			case T_AlterTSDictionaryStmt:
 				return_value = _readAlterTSDictionaryStmt();
-				break;
-			case T_PlaceHolderVar:
-				return_value = _readPlaceHolderVar();
-				break;
-			case T_PlaceHolderInfo:
-				return_value = _readPlaceHolderInfo();
 				break;
 
 			case T_CookedConstraint:

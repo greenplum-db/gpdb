@@ -945,6 +945,7 @@ get_object_address(ObjectType objtype, List *objname, List *objargs,
 				address.classId = ResGroupRelationId;
 				address.objectId = GetResGroupIdForName(NameListToString(objname));
 				address.objectSubId = 0;
+				break;
 			default:
 				elog(ERROR, "unrecognized objtype: %d", (int) objtype);
 				/* placate compiler, in case it thinks elog might return */
@@ -2021,6 +2022,7 @@ pg_get_object_address(PG_FUNCTION_ARGS)
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						 errmsg("name list length must be at least %d", 3)));
 			/* fall through to check args length */
+			/* fallthrough */
 		case OBJECT_OPERATOR:
 			if (list_length(args) != 2)
 				ereport(ERROR,

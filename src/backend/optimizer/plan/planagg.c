@@ -579,8 +579,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *mminfo)
 	else
 		elog(ERROR, "MIN/MAX subplan has unexpected flowtype: %d", plan->flow->type);
 
-	if (!focusPlan(plan, true, false))
-		elog(ERROR, "could not focus MIN/MAX subplan");
+	plan = focusPlan(plan, true);
 	plan = (Plan *) make_limit(plan,
 							   subparse->limitOffset,
 							   subparse->limitCount,

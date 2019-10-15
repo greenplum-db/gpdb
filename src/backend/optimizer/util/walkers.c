@@ -478,6 +478,8 @@ plan_tree_walker(Node *node,
 				return true;
 			if (walker((Node *) ((ModifyTable *) node)->onConflictWhere, context))
 				return true;
+			if (walker((Node *) ((ModifyTable *) node)->returningLists, context))
+				return true;
 
 			break;
 

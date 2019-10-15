@@ -25,10 +25,10 @@
                     required Python libraries are included with the Greenplum Database server
                     installation, so if you have Greenplum Database installed on the machine where
                         <codeph>gpload</codeph> is running, you do not need a separate Python
-                        installation.<note>Greenplum Database Loaders for Windows supports only
-                        Python 2.5 (available from <xref href="https://www.python.org"
-                            scope="external" format="html"
-                    >https://www.python.org</xref>).</note></li>
+                    installation.
+                    <note>Greenplum Database Loaders for Windows supports only Python 2.5 (available
+                        from <xref href="https://www.python.org" scope="external" format="html"
+                            >https://www.python.org</xref>).</note></li>
                 <li id="ke147925">The <codeph><xref href="gpfdist.xml#topic1" type="topic"
                             format="dita"/></codeph> parallel file distribution program installed
                     and in your <codeph>$PATH</codeph>. This program is located in
@@ -50,14 +50,15 @@
                 creating an external table definition based on the source data defined, and
                 executing an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
                     <codeph>MERGE</codeph> operation to load the source data into the target table
-                in the database.<note><codeph>gpfdist</codeph> and <codeph>gpload</codeph> are
-                    compatible only with the Greenplum Database major version in which they are
-                    shipped. For example, a <codeph>gpfdist</codeph> utility that is installed with
-                    Greenplum Database 4.x cannot be used with Greenplum Database 5.x or
-                    6.x.</note><note id="gpload-limitation"><codeph>MERGE</codeph> and
-                        <codeph>UPDATE</codeph> operations are not supported if the target table
-                    column name is a reserved keyword, has capital letters, or includes any
-                    character that requires quotes (" ") to identify the column.</note></p>
+                in the database.
+                <note><codeph>gpfdist</codeph> and <codeph>gpload</codeph> are compatible only with
+                    the Greenplum Database major version in which they are shipped. For example, a
+                        <codeph>gpfdist</codeph> utility that is installed with Greenplum Database
+                    4.x cannot be used with Greenplum Database 5.x or 6.x.</note>
+                <note id="gpload-limitation"><codeph>MERGE</codeph> and <codeph>UPDATE</codeph>
+                    operations are not supported if the target table column name is a reserved
+                    keyword, has capital letters, or includes any character that requires quotes ("
+                    ") to identify the column.</note></p>
             <p>The operation, including any SQL commands specified in the <codeph>SQL</codeph>
                 collection of the YAML control file (see <xref href="#topic1/section7"
                     type="section" format="dita"/>), are performed as a single transaction to
@@ -551,8 +552,8 @@
                                                 default client encoding. If not specified, the
                                                 default client encoding is used. For information
                                                 about supported character sets, see the
-                                                  <cite>Greenplum Database Reference
-                                                  Guide</cite>.<note>If you <i>change</i> the
+                                                  <cite>Greenplum Database Reference Guide</cite>.
+                                                <note>If you <i>change</i> the
                                                   <codeph>ENCODING</codeph> value in an existing
                                                   <codeph>gpload</codeph> control file, you must
                                                   manually drop any external tables that were
@@ -614,7 +615,15 @@
                                                 information about formatting errors is returned. You
                                                 can delete the formatting errors from the error logs
                                                 with the Greenplum Database function
-                                                  <codeph>gp_truncate_error_log()</codeph>.</pd>
+                                                  <codeph>gp_truncate_error_log()</codeph>.
+                                                <note>When <codeph>gpfdist</codeph> reads data and
+                                                  encounters a data formatting error, the error
+                                                  message includes a row number indicating the
+                                                  location of the formatting error.
+                                                  <codeph>gpfdist</codeph> attempts to capture the
+                                                  row that contains the error. However,
+                                                  <codeph>gpfdist</codeph> might not capture the
+                                                  exact row for some formatting errors.</note></pd>
                                             <pd>For more information about handling load errors, see
                                                 "Loading and Unloading Data" in the <cite>Greenplum
                                                   Database Administrator Guide</cite>. For

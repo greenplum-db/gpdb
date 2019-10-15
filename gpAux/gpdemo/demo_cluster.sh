@@ -26,6 +26,9 @@ STANDBYDIR=$DATADIRS/standby
 # Database Ports
 # ======================================================================
 
+MASTER_DEMO_PORT=${DEMO_PORT_BASE}
+STANDBY_DEMO_PORT=`expr ${DEMO_PORT_BASE} + 1`
+DEMO_PORT_BASE=`expr ${DEMO_PORT_BASE} + 2`
 for (( i=0; i<`expr 2 \* $NUM_PRIMARY_MIRROR_PAIRS`; i++ )); do
   PORT_NUM=`expr $DEMO_PORT_BASE + $i`
   DEMO_SEG_PORTS_LIST="$DEMO_SEG_PORTS_LIST $PORT_NUM"

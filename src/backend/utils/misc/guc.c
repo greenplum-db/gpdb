@@ -5139,6 +5139,7 @@ AtEOXact_GUC(bool isCommit, int nestLevel)
 				{
 					case GUC_SAVE:
 						Assert(false);	/* can't get here */
+						break;
 
 					case GUC_SET:
 						/* next level always becomes SET */
@@ -6034,6 +6035,7 @@ set_config_option(const char *name, const char *value,
 				return 0;
 			}
 			/* FALL THRU to process the same as PGC_BACKEND */
+			/* fall through */
 		case PGC_BACKEND:
 			if (context == PGC_SIGHUP)
 			{

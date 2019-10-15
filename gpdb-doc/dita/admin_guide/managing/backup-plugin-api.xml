@@ -10,8 +10,8 @@
       plugins are supported features.</note>
     <p>The Backup/Restore Storage Plugin API provides a framework that you can use to develop and
       integrate a custom backup storage system with the Greenplum Database <xref
-        href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and
-        <xref href="../../utility_guide/admin_utilities/gprestore.xml"
+        href="../../utility_guide/ref/gpbackup.xml"><codeph>gpbackup</codeph></xref> and
+        <xref href="../../utility_guide/ref/gprestore.xml"
         ><codeph>gprestore</codeph></xref> utilities.</p>
     <p>The Backup/Restore Storage Plugin API defines a set of interfaces that a plugin must support.
       The API also specifies the format and content of a configuration file for a plugin.</p>

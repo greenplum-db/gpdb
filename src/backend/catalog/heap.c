@@ -1418,7 +1418,7 @@ heap_create_with_catalog(const char *relname,
 	 * Was "appendonly" specified in the relopts? If yes, fix our relstorage.
 	 * Also, check for override (debug) GUCs.
 	 */
-	if (relkind == RELKIND_RELATION)
+	if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
 	{
 		stdRdOptions = (StdRdOptions*) heap_reloptions(
 			relkind, reloptions, !valid_opts);
@@ -2482,13 +2482,13 @@ heap_drop_with_catalog(Oid relid)
 	/*
 	 * Remove distribution policy, if any.
  	 */
-	if (relkind == RELKIND_RELATION)
+	if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
 		GpPolicyRemove(relid);
 
 	/*
 	 * Attribute encoding
 	 */
-	if (relkind == RELKIND_RELATION)
+	if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
 		RemoveAttributeEncodingsByRelid(relid);
 
 	/* MPP-6929: metadata tracking */

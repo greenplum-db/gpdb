@@ -6,22 +6,22 @@ create table co_nestloop_idxscan.foo (id bigint, data text) with (appendonly=tru
 distributed by (id);
 create table co_nestloop_idxscan.bar (id bigint) distributed by (id);
 -- Changing the text to be smaller doesn't repro the issue
-insert into co_nestloop_idxscan.foo select 1, repeat('xxxxxxxxxx', 100000);
+insert into co_nestloop_idxscan.foo select i, repeat('xxxxxxxxxx', 100000) from generate_series(1,50) i;
 insert into co_nestloop_idxscan.bar values (1);
 create index foo_id_idx on co_nestloop_idxscan.foo(id);
 -- test with hash join
 explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
                                      QUERY PLAN                                      
 -------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-   ->  Nested Loop  (cost=0.00..862.00 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..499.13 rows=1 width=8)
+   ->  Nested Loop  (cost=0.00..499.13 rows=1 width=8)
          Join Filter: true
          ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
-         ->  Bitmap Heap Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-               Recheck Cond: id = bar.id
+         ->  Bitmap Heap Scan on foo  (cost=0.00..68.13 rows=1 width=8)
+               Recheck Cond: (id = bar.id)
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: id = bar.id
- Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
+                     Index Cond: (id = bar.id)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.72.0
 (9 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
@@ -37,15 +37,15 @@ set enable_nestloop=on;
 explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
                                      QUERY PLAN                                      
 -------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-   ->  Nested Loop  (cost=0.00..862.00 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..499.13 rows=1 width=8)
+   ->  Nested Loop  (cost=0.00..499.13 rows=1 width=8)
          Join Filter: true
          ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
-         ->  Bitmap Heap Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-               Recheck Cond: id = bar.id
+         ->  Bitmap Heap Scan on foo  (cost=0.00..68.13 rows=1 width=8)
+               Recheck Cond: (id = bar.id)
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: id = bar.id
- Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
+                     Index Cond: (id = bar.id)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.72.0
 (9 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
@@ -62,15 +62,15 @@ set enable_seqscan = off;
 explain select f.id from co_nestloop_idxscan.bar b, co_nestloop_idxscan.foo f where f.id = b.id;
                                      QUERY PLAN                                      
 -------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-   ->  Nested Loop  (cost=0.00..862.00 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..499.13 rows=1 width=8)
+   ->  Nested Loop  (cost=0.00..499.13 rows=1 width=8)
          Join Filter: true
          ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
-         ->  Bitmap Heap Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-               Recheck Cond: id = bar.id
+         ->  Bitmap Heap Scan on foo  (cost=0.00..68.13 rows=1 width=8)
+               Recheck Cond: (id = bar.id)
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: id = bar.id
- Optimizer: Pivotal Optimizer (GPORCA) version 2.64.0
+                     Index Cond: (id = bar.id)
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.72.0
 (9 rows)
 
 select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;

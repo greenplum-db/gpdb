@@ -33,6 +33,8 @@ OBJS=	pg_backup_archiver.o pg_backup_db.o pg_backup_custom.o \
 	pg_backup_null.o pg_backup_tar.o pg_backup_directory.o \
 	pg_backup_utils.o parallel.o compress_io.o dumputils.o $(WIN32RES)
 
+OBJS += dumputils_gp.o
+
 KEYWRDOBJS = keywords.o kwlookup.o
 
 kwlookup.c: % : $(top_srcdir)/src/backend/parser/%

@@ -54,7 +54,7 @@
             strongly discouraged, a cluster can be initialized without heap checksum support by
             setting the <codeph>HEAP_CHECKSUM</codeph> parameter to off in the
                <codeph>gpinitsystem</codeph> cluster configuration file. See <codeph><xref
-                  href="../../../utility_guide/admin_utilities/gpinitsystem.xml#topic1"/></codeph>. </p>
+                  href="../../../utility_guide/ref/gpinitsystem.xml#topic1"/></codeph>. </p>
          <p>Once initialized, it is not possible to change heap checksum support for a cluster
             without reinitializing the system and reloading databases.</p>
          <p>You can check the read-only server configuration parameter <codeph><xref
@@ -64,7 +64,7 @@
          <p>When a Greenplum Database cluster starts up, the <codeph>gpstart</codeph> utility checks
             that heap checksums are consistently enabled or disabled on the master and all segments.
             If there are any differences, the cluster fails to start. See <codeph><xref
-                  href="../../../utility_guide/admin_utilities/gpstart.xml#topic1"/></codeph>.</p>
+                  href="../../../utility_guide/ref/gpstart.xml#topic1"/></codeph>.</p>
          <p>In cases where it is necessary to ignore heap checksum verification errors so that data
             can be recovered, setting the <codeph><xref
                   href="../../../ref_guide/config_params/guc-list.xml#ignore_checksum_failure"
@@ -152,7 +152,7 @@
          <p>Making regular backups of the databases is recommended except in cases where the
             database can be easily regenerated from the source data. Backups should be taken to
             protect from operational, software, and hardware errors. </p>
-         <p>Use the <codeph><xref href="../../../utility_guide/admin_utilities/gpbackup.xml"
+         <p>Use the <codeph><xref href="../../../utility_guide/ref/gpbackup.xml"
                /></codeph> utility to backup Greenplum databases. <codeph>gpbackup</codeph> performs
             the backup in parallel across segments, so backup performance scales up as hardware is
             added to the cluster. </p>

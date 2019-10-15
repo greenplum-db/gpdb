@@ -588,23 +588,6 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 	if (plan == NULL)
 		return NULL;
 
-    /*
-     * CDB: If plan has a Flow node, fix up its hashExpr to refer to the
-     * plan's own targetlist.
-     */
-	if (plan->flow && plan->flow->hashExprs)
-    {
-        indexed_tlist  *plan_itlist = build_tlist_index(plan->targetlist);
-
-		plan->flow->hashExprs =
-			(List *) fix_upper_expr(root,
-									(Node *) plan->flow->hashExprs,
-									plan_itlist,
-									OUTER_VAR,
-									rtoffset);
-        pfree(plan_itlist);
-    }
-
 	/*
 	 * Plan-type-specific fixes
 	 */
@@ -757,7 +740,6 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 
 				/* Need to look up the subquery's RelOptInfo, since we need its subroot */
 				rel = find_base_rel(root, tplan->scan.scanrelid);
-				Assert(rel->subplan == subplan);
 
 				/* recursively process the subplan */
 				plan->lefttree = set_plan_references(rel->subroot, subplan);
@@ -1230,18 +1212,6 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 				motion->hashExprs = (List *)
 					fix_upper_expr(root, (Node*) motion->hashExprs, childplan_itlist,  OUTER_VAR, rtoffset);
 
-#ifdef USE_ASSERT_CHECKING
-				/* 1. Assert that the Motion node has same number of hash data types as that of hash expressions*/
-				/* 2. Motion node must have atleast one hash expression */
-				/* 3. If the Motion node is of type hash_motion: ensure that the expression that it is hashed on is a hashable datatype in gpdb*/
-
-				if (MOTIONTYPE_HASH == motion->motionType)
-				{
-					Assert(1 <= list_length(motion->hashExprs) && "Motion node must have atleast one hash expression!");
-				}
-
-#endif			/* USE_ASSERT_CHECKING */
-
 				/* no need to fix targetlist and qual */
 				Assert(plan->qual == NIL);
 				set_dummy_tlist_references(plan, rtoffset);
@@ -1378,6 +1348,7 @@ set_subqueryscan_references(PlannerInfo *root,
 
 		/* Honor the flow of the SubqueryScan, by copying it to the subplan. */
 		result->flow = plan->scan.plan.flow;
+		result->dispatch = plan->scan.plan.dispatch;
 	}
 	else
 	{

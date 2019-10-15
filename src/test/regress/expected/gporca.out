@@ -2388,32 +2388,30 @@ select count(*) from orca.foo x where x.x1 > (select count(*)+1 from orca.bar1 y
 -- result node with one time filter and filter
 explain select case when bar1.x2 = bar2.x2 then coalesce((select 1 from orca.foo where bar1.x2 = bar2.x2 and bar1.x2 = random() and foo.x2 = bar2.x2),0) else 1 end as col1, bar1.x1
 from orca.bar1 inner join orca.bar2 on (bar1.x2 = bar2.x2) order by bar1.x1; 
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice4; segments: 3)  (cost=72.61..72.66 rows=20 width=12)
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=75.54..75.59 rows=20 width=12)
    Merge Key: bar1.x1
-   ->  Sort  (cost=72.61..72.66 rows=7 width=12)
+   ->  Sort  (cost=75.54..75.59 rows=7 width=12)
          Sort Key: bar1.x1
-         ->  Hash Join  (cost=3.85..72.17 rows=7 width=12)
-               Hash Cond: bar2.x2 = bar1.x2
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..3.90 rows=10 width=4)
+         ->  Hash Join  (cost=3.85..75.11 rows=7 width=12)
+               Hash Cond: (bar2.x2 = bar1.x2)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.90 rows=10 width=4)
                      Hash Key: bar2.x2
                      ->  Seq Scan on bar2  (cost=0.00..3.30 rows=10 width=4)
                ->  Hash  (cost=3.60..3.60 rows=7 width=8)
-                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..3.60 rows=7 width=8)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..3.60 rows=7 width=8)
                            Hash Key: bar1.x2
                            ->  Seq Scan on bar1  (cost=0.00..3.20 rows=7 width=8)
                SubPlan 1
-                 ->  Result  (cost=0.00..3.20 rows=1 width=0)
-                       One-Time Filter: $0 = $1
-                       ->  Result  (cost=3.20..3.21 rows=1 width=0)
-                             Filter: foo.x2 = $1 AND $0::double precision = random()
-                             ->  Materialize  (cost=3.20..3.21 rows=1 width=0)
-                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.20 rows=1 width=0)
-                                         ->  Seq Scan on foo  (cost=0.00..3.20 rows=1 width=0)
- Settings:  optimizer=off; optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(23 rows)
+                 ->  Result  (cost=0.00..3.35 rows=10 width=4)
+                       One-Time Filter: (bar1.x2 = bar2.x2)
+                       Filter: ((foo.x2 = bar2.x2) AND ((bar1.x2)::double precision = random()))
+                       ->  Materialize  (cost=0.00..3.35 rows=10 width=4)
+                             ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..3.30 rows=4 width=4)
+                                   ->  Seq Scan on foo  (cost=0.00..3.10 rows=4 width=4)
+ Optimizer: Postgres query optimizer
+(21 rows)
 
 select case when bar1.x2 = bar2.x2 then coalesce((select 1 from orca.foo where bar1.x2 = bar2.x2 and bar1.x2 = random() and foo.x2 = bar2.x2),0) else 1 end as col1, bar1.x1
 from orca.bar1 inner join orca.bar2 on (bar1.x2 = bar2.x2) order by bar1.x1; 
@@ -11105,52 +11103,49 @@ INSERT INTO onetimefilter2 SELECT i, i FROM generate_series(1,10)i;
 ANALYZE onetimefilter1;
 ANALYZE onetimefilter2;
 EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
-                                                               QUERY PLAN                                                               
-----------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice6; segments: 3)  (cost=3.43..12.31 rows=10 width=12)
-   ->  Hash Join  (cost=3.43..12.31 rows=4 width=12)
+                                                            QUERY PLAN                                                            
+----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=3.43..16.31 rows=10 width=12)
+   ->  Hash Join  (cost=3.43..16.31 rows=4 width=12)
          Hash Cond: (f1.b = f2.b)
-         ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..3.30 rows=4 width=8)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.30 rows=4 width=8)
                Hash Key: f1.b
                ->  Seq Scan on onetimefilter1 f1  (cost=0.00..3.10 rows=4 width=8)
          ->  Hash  (cost=3.30..3.30 rows=4 width=4)
-               ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=0.00..3.30 rows=4 width=4)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..3.30 rows=4 width=4)
                      Hash Key: f2.b
                      ->  Seq Scan on onetimefilter2 f2  (cost=0.00..3.10 rows=4 width=4)
          SubPlan 1
            ->  Limit  (cost=0.00..0.04 rows=1 width=0)
-                 ->  Limit  (cost=0.00..0.02 rows=1 width=0)
-                       ->  Result  (cost=0.00..0.20 rows=4 width=0)
-                             One-Time Filter: (f1.b = f2.b)
-                             ->  Result  (cost=6.51..6.77 rows=4 width=8)
-                                   ->  Materialize  (cost=6.51..6.77 rows=4 width=8)
-                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=6.51..6.72 rows=4 width=8)
-                                               ->  Shared Scan (share slice:id 1:0)  (cost=6.51..6.72 rows=4 width=8)
-                                                     ->  Materialize  (cost=3.23..6.51 rows=4 width=8)
-                                                           ->  Hash Join  (cost=3.23..6.46 rows=4 width=8)
-                                                                 Hash Cond: (onetimefilter1.a = onetimefilter2.a)
-                                                                 ->  Seq Scan on onetimefilter1  (cost=0.00..3.10 rows=4 width=8)
-                                                                 ->  Hash  (cost=3.10..3.10 rows=4 width=4)
-                                                                       ->  Seq Scan on onetimefilter2  (cost=0.00..3.10 rows=4 width=4)
+                 ->  Result  (cost=0.00..0.45 rows=10 width=0)
+                       One-Time Filter: (f1.b = f2.b)
+                       ->  Materialize  (cost=0.00..0.45 rows=10 width=0)
+                             ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..0.40 rows=4 width=0)
+                                   ->  Subquery Scan on abc  (cost=0.00..0.20 rows=4 width=0)
+                                         ->  Shared Scan (share slice:id 4:0)  (cost=6.51..6.72 rows=4 width=8)
+                                               ->  Materialize  (cost=3.23..6.51 rows=4 width=8)
+                                                     ->  Hash Join  (cost=3.23..6.46 rows=4 width=8)
+                                                           Hash Cond: (onetimefilter1.a = onetimefilter2.a)
+                                                           ->  Seq Scan on onetimefilter1  (cost=0.00..3.10 rows=4 width=8)
+                                                           ->  Hash  (cost=3.10..3.10 rows=4 width=4)
+                                                                 ->  Seq Scan on onetimefilter2  (cost=0.00..3.10 rows=4 width=4)
          SubPlan 2
-           ->  Result  (cost=0.00..0.28 rows=1 width=0)
+           ->  Result  (cost=0.00..0.45 rows=10 width=0)
                  One-Time Filter: (f1.a = 2)
-                 ->  Subquery Scan on abc  (cost=0.00..0.28 rows=1 width=0)
-                       Filter: ((f1.a)::double precision = random())
-                       ->  Result  (cost=6.51..6.77 rows=4 width=8)
-                             ->  Materialize  (cost=6.51..6.77 rows=4 width=8)
-                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=6.51..6.72 rows=4 width=8)
-                                         ->  Shared Scan (share slice:id 2:0)  (cost=6.51..6.72 rows=4 width=8)
+                 Filter: ((f1.a)::double precision = random())
+                 ->  Materialize  (cost=0.00..0.45 rows=10 width=0)
+                       ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..0.40 rows=4 width=0)
+                             ->  Subquery Scan on abc_1  (cost=0.00..0.20 rows=4 width=0)
+                                   ->  Shared Scan (share slice:id 5:0)  (cost=6.51..6.72 rows=4 width=8)
          SubPlan 3
-           ->  Subquery Scan on abc_1  (cost=0.00..0.22 rows=1 width=4)
-                 Filter: (abc_1.b = f1.b)
-                 ->  Result  (cost=6.51..6.77 rows=4 width=8)
-                       ->  Materialize  (cost=6.51..6.77 rows=4 width=8)
-                             ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=6.51..6.72 rows=4 width=8)
-                                   ->  Shared Scan (share slice:id 3:0)  (cost=6.51..6.72 rows=4 width=8)
- Planning time: 0.276 ms
+           ->  Result  (cost=0.00..0.45 rows=10 width=4)
+                 Filter: (abc_2.b = f1.b)
+                 ->  Materialize  (cost=0.00..0.45 rows=10 width=4)
+                       ->  Broadcast Motion 3:3  (slice6; segments: 3)  (cost=0.00..0.40 rows=4 width=4)
+                             ->  Subquery Scan on abc_2  (cost=0.00..0.20 rows=4 width=4)
+                                   ->  Shared Scan (share slice:id 6:0)  (cost=6.51..6.72 rows=4 width=8)
  Optimizer: Postgres query optimizer
-(43 rows)
+(40 rows)
 
 WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
  ?column? | coalesce | b  
@@ -11453,4 +11448,25 @@ SELECT * from tc4 where a IS NULL;
 ---+---
    |  
 (1 row)
+
+-- citext fallback
+CREATE EXTENSION IF NOT EXISTS citext;
+drop table if exists tt, tc;
+NOTICE:  table "tt" does not exist, skipping
+NOTICE:  table "tc" does not exist, skipping
+create table tc (a int, c citext) distributed by (a);
+create table tt (b int, v varchar) distributed by (v);
+insert into tc values (1, 'a'), (1, 'A');
+insert into tt values (1, 'a'), (1, 'A');
+insert into tc values (1, 'b'), (1, 'B');
+insert into tt values (1, 'b'), (1, 'B');
+-- expected fall back to the planner
+select * from tc, tt where c = v;
+ a | c | b | v 
+---+---+---+---
+ 1 | a | 1 | a
+ 1 | A | 1 | A
+ 1 | B | 1 | B
+ 1 | b | 1 | b
+(4 rows)
 

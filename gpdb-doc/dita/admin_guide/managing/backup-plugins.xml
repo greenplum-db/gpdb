@@ -4,8 +4,8 @@
   <title>Using gpbackup Storage Plugins</title>
   <body>
     <p>You can configure the Greenplum Database <xref
-        href="../../utility_guide/admin_utilities/gpbackup.xml"><codeph>gpbackup</codeph></xref> and
-        <xref href="../../utility_guide/admin_utilities/gprestore.xml"
+        href="../../utility_guide/ref/gpbackup.xml"><codeph>gpbackup</codeph></xref> and
+        <xref href="../../utility_guide/ref/gprestore.xml"
         ><codeph>gprestore</codeph></xref> utilities to use a storage plugin to process backup files
       during a backup or restore operation. For example, during a backup operation, the plugin sends
       the backup files to a remote location. During a restore operation, the plugin retrieves the

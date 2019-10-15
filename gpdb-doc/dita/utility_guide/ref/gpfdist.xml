@@ -41,6 +41,11 @@
           <codeph>SELECT</codeph> from the external table. For writable external tables,
           <codeph>gpfdist</codeph> accepts parallel output streams from the segments when users
           <codeph>INSERT</codeph> into the external table, and writes to an output file.</p>
+      <note>When <codeph>gpfdist</codeph> reads data and encounters a data formatting error, the
+        error message includes a row number indicating the location of the formatting error.
+          <codeph>gpfdist</codeph> attempts to capture the row that contains the error. However,
+          <codeph>gpfdist</codeph> might not capture the exact row for some formatting
+        errors.</note>
       <p>For readable external tables, if load files are compressed using <codeph>gzip</codeph> or
           <codeph>bzip2</codeph> (have a <codeph>.gz</codeph> or <codeph>.bz2</codeph> file
         extension), <codeph>gpfdist</codeph> uncompresses the files before loading. For writable
@@ -205,8 +210,9 @@
             trusted by Greenplum Database.</li>
           <li>The host name contained in the SSL certificate does not match the host name that is
             running <codeph>gpfdist</codeph>.</li>
-        </ul><note type="warning">Disabling SSL certificate authentication exposes a security risk
-          by not validating the <codeph>gpfdists</codeph> SSL certificate. </note></p>
+        </ul>
+        <note type="warning">Disabling SSL certificate authentication exposes a security risk by not
+          validating the <codeph>gpfdists</codeph> SSL certificate. </note></p>
       <p>If the <codeph>gpfdist</codeph> utility hangs with no read or write activity occurring, you
         can generate a core dump the next time a hang occurs to help debug the issue. Set the
         environment variable <codeph>GPFDIST_WATCHDOG_TIMER</codeph> to the number of seconds of no

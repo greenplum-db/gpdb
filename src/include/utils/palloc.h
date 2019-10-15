@@ -220,6 +220,7 @@ extern void InitPerProcessOOMTracking(void);
 extern void GPMemoryProtect_ShmemInit(void);
 extern void GPMemoryProtect_Init(void);
 extern void GPMemoryProtect_Shutdown(void);
+extern void GPMemoryProtect_TrackStartupMemory(void);
 extern void UpdateTimeAtomically(volatile OOMTimeType* time_var);
 
 /*

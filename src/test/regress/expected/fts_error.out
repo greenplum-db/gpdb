@@ -1,3 +1,13 @@
+-- set these values purely to cut down test time, as default fts trigger is
+-- every min and 5 retries
+alter system set gp_fts_probe_interval to 10;
+alter system set gp_fts_probe_retries to 1;
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
 select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';
  in_sync 
@@ -65,6 +75,14 @@ select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';
  in_sync 
 ---------
+ t
+(1 row)
+
+alter system reset gp_fts_probe_interval;
+alter system reset gp_fts_probe_retries;
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
  t
 (1 row)
 

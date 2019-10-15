@@ -39,7 +39,7 @@
 #include "cdb/cdbexplain.h"
 #include "cdb/cdbvars.h"
 
-
+#define BUFFER_INCREMENT_SIZE 1024
 #define HHA_MSG_LVL DEBUG2
 
 
@@ -1548,7 +1548,6 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 	AggStatePerGroup pergroup;
 	int aggno;
 	AggStatePerAgg peragg = aggstate->peragg;
-	int32 aggstateSize = 0;
 	Size datum_size;
 	Datum serializedVal;
 	int16 byteaTranstypeLen = 0;
@@ -1559,27 +1558,33 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 	Assert(file_info != NULL);
 	Assert(file_info->wfile != NULL);
 
-	BufFileWriteOrError(file_info->wfile, (void *) &entry->hashvalue, sizeof(entry->hashvalue));
+	/*
+	 * Store all the data into a buffer then write it at one shot to the file. The
+	 * spill files could be compressed, and we can't go back and update the total size
+	 * once data is written, so better to get all the data and write it.
+	 * aggDataBuffer is a static pointer because we want to initialize it only once
+	 * in TopMemoryContext to avoid the overhead for allocation and freeing for every
+	 * call of this function.
+	 *
+	 * We initially start the buffer with the 1024, and keep incrementing it
+	 * with 1024 whenever the buffer + datum_size exceeds the current buffer size
+	 */
+	static char *aggDataBuffer = NULL;
+	static int aggDataBufferSize = BUFFER_INCREMENT_SIZE;
+	int32 aggDataOffset = 0;
+	if (aggDataBuffer == NULL)
+		aggDataBuffer = MemoryContextAlloc(TopMemoryContext, aggDataBufferSize);
 
 	tuple_agg_size = memtuple_get_size((MemTuple)entry->tuple_and_aggs);
 	pergroup = (AggStatePerGroup) ((char *)entry->tuple_and_aggs + MAXALIGN(tuple_agg_size));
 	tuple_agg_size = MAXALIGN(tuple_agg_size) +
-		aggstate->numaggs * sizeof(AggStatePerGroupData);
-	total_size = MAXALIGN(tuple_agg_size);
+					 aggstate->numaggs * sizeof(AggStatePerGroupData);
 
-	BufFileWriteOrError(file_info->wfile, (char *) &total_size, sizeof(total_size));
-	BufFileWriteOrError(file_info->wfile, entry->tuple_and_aggs, tuple_agg_size);
-	Assert(MAXALIGN(tuple_agg_size) - tuple_agg_size <= MAXIMUM_ALIGNOF);
-	if (MAXALIGN(tuple_agg_size) - tuple_agg_size > 0)
-	{
-		BufFileWriteOrError(file_info->wfile, padding_dummy, MAXALIGN(tuple_agg_size) - tuple_agg_size);
-	}
-
-	/* Write the transition aggstates */
 	for (aggno = 0; aggno < aggstate->numaggs; aggno++)
 	{
 		AggStatePerAgg peraggstate = &peragg[aggno];
 		AggStatePerGroup pergroupstate = &pergroup[aggno];
+		char *datum_value = NULL;
 
 		/* Skip null transValue */
 		if (pergroupstate->transValueIsNull)
@@ -1605,14 +1610,9 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 
 			/* Not necessary to do this if the serialization func has no memory leak */
 			old_ctx = MemoryContextSwitchTo(aggstate->hhashtable->serialization_cxt);
-
 			serializedVal = FunctionCallInvoke(&fcinfo);
-
 			datum_size = datumGetSize(serializedVal, byteaTranstypeByVal, byteaTranstypeLen);
-			BufFileWriteOrError(file_info->wfile,
-								DatumGetPointer(serializedVal), datum_size);
-			pfree(DatumGetPointer(serializedVal));
-
+			datum_value = DatumGetPointer(serializedVal);
 			MemoryContextSwitchTo(old_ctx);
 		}
 		/* If it's a ByRef, write the data to the file */
@@ -1621,8 +1621,7 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 			datum_size = datumGetSize(pergroupstate->transValue,
 									  peraggstate->transtypeByVal,
 									  peraggstate->transtypeLen);
-			BufFileWriteOrError(file_info->wfile,
-								DatumGetPointer(pergroupstate->transValue), datum_size);
+			datum_value = DatumGetPointer(pergroupstate->transValue);
 		}
 		/* Otherwise it's a real ByVal, do nothing */
 		else
@@ -1630,34 +1629,36 @@ writeHashEntry(AggState *aggstate, BatchFileInfo *file_info,
 			continue;
 		}
 
-		Assert(MAXALIGN(datum_size) - datum_size <= MAXIMUM_ALIGNOF);
-		if (MAXALIGN(datum_size) - datum_size > 0)
+		if ((aggDataOffset + MAXALIGN(datum_size)) >= aggDataBufferSize)
 		{
-			BufFileWriteOrError(file_info->wfile,
-								padding_dummy, MAXALIGN(datum_size) - datum_size);
+			aggDataBufferSize += BUFFER_INCREMENT_SIZE;
+			MemoryContext oldAggContext = MemoryContextSwitchTo(TopMemoryContext);
+			aggDataBuffer = repalloc(aggDataBuffer, aggDataBufferSize);
+			MemoryContextSwitchTo(oldAggContext);
 		}
-		aggstateSize += MAXALIGN(datum_size);
+		memcpy((aggDataBuffer + aggDataOffset), datum_value, datum_size);
+
+		aggDataOffset += MAXALIGN(datum_size);
+
+		/* if it had a valid serialization function, then free the value */
+		if  (OidIsValid(peraggstate->serialfn_oid))
+			pfree(datum_value);
 	}
 
-	if (aggstateSize)
+	total_size = MAXALIGN(tuple_agg_size) + aggDataOffset;
+	// write
+	BufFileWriteOrError(file_info->wfile, (void *) &entry->hashvalue, sizeof(entry->hashvalue));
+	BufFileWriteOrError(file_info->wfile, (char *) &total_size, sizeof(total_size));
+	BufFileWriteOrError(file_info->wfile, entry->tuple_and_aggs, tuple_agg_size);
+	Assert(MAXALIGN(tuple_agg_size) - tuple_agg_size <= MAXIMUM_ALIGNOF);
+
+	if (MAXALIGN(tuple_agg_size) - tuple_agg_size > 0)
 	{
-		total_size += aggstateSize;
-
-		/* Rewind to write the correct total_size */
-		if (BufFileSeek(file_info->wfile, 0, -(aggstateSize + MAXALIGN(tuple_agg_size) + sizeof(total_size)), SEEK_CUR) != 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not seek in hash agg temporary file: %m")));
-
-		BufFileWriteOrError(file_info->wfile, (char *) &total_size, sizeof(total_size));
-
-		/* Go back to the last offset */
-		if (BufFileSeek(file_info->wfile, 0, aggstateSize + MAXALIGN(tuple_agg_size), SEEK_CUR) != 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not seek in hash agg temporary file: %m")));
+		BufFileWriteOrError(file_info->wfile, padding_dummy, MAXALIGN(tuple_agg_size) - tuple_agg_size);
 	}
-
+	/* Write the transition aggstates */
+	if (aggDataOffset)
+		BufFileWriteOrError(file_info->wfile, aggDataBuffer, aggDataOffset);
 	return (total_size + sizeof(total_size) + sizeof(entry->hashvalue));
 }
 

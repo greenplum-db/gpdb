@@ -77,23 +77,16 @@ def create_local_demo_cluster(context, extra_config='', with_mirrors='true', wit
     if num_primaries is None:
         num_primaries = os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3)
 
-    standby_port = ''
-    if with_standby == 'true':
-        standby_port=os.getenv('STANDBY_DEMO_PORT', 16432)
-
+    os.environ['PGPORT'] = '15432'
     cmd = """
         cd ../gpAux/gpdemo &&
-        export MASTER_DEMO_PORT={master_port} &&
         export DEMO_PORT_BASE={port_base} &&
-        export STANDBY_DEMO_PORT={standby_port} &&
         export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} &&
         export WITH_STANDBY={with_standby} &&
         export WITH_MIRRORS={with_mirrors} &&
         ./demo_cluster.sh -d && ./demo_cluster.sh -c &&
         {extra_config} ./demo_cluster.sh
-    """.format(master_port=os.getenv('MASTER_PORT', 15432),
-               port_base=os.getenv('PORT_BASE', 25432),
-               standby_port=standby_port,
+    """.format(port_base=os.getenv('PORT_BASE', 15432),
                num_primary_mirror_pairs=num_primaries,
                with_mirrors=with_mirrors,
                with_standby=with_standby,
@@ -230,19 +223,17 @@ def impl(context, checksum_toggle):
     if not is_ok:
         stop_database(context)
 
-        master_port = os.getenv('PGPORT', 15432)
-        port_base = str(int(master_port) + 10000)
+        os.environ['PGPORT'] = '15432'
+        port_base = os.getenv('PORT_BASE', 15432)
 
         cmd = """
         cd ../gpAux/gpdemo; \
-            export MASTER_DEMO_PORT={master_port} && \
             export DEMO_PORT_BASE={port_base} && \
             export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
             export WITH_MIRRORS={with_mirrors} && \
             ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
             env EXTRA_CONFIG="HEAP_CHECKSUM={checksum_toggle}" ./demo_cluster.sh
-        """.format(master_port=master_port,
-                   port_base=port_base,
+        """.format(port_base=port_base,
                    num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
                    with_mirrors='true',
                    checksum_toggle=checksum_toggle)

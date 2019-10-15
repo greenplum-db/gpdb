@@ -10,7 +10,7 @@
       <codeblock id="sql_command_synopsis">COMMENT ON
 { TABLE <varname>object_name</varname> |
   COLUMN <varname>relation_name.column_name</varname> |
-  AGGREGATE <varname>agg_name</varname> (<varname>agg_type</varname> [, ...]) |
+  AGGREGATE <varname>agg_name</varname> (<varname>agg_signature</varname>) |
   CAST (<varname>source_type</varname> AS <varname>target_type</varname>) |
   COLLATION <varname>object_name</varname>
   CONSTRAINT <varname>constraint_name</varname> ON <varname>table_name</varname> |
@@ -38,6 +38,10 @@
   TYPE <varname>object_name</varname> |
   VIEW <varname>object_name</varname> } 
 IS '<varname>text</varname>'</codeblock>
+<p>where <varname>agg_signature</varname> is:</p>
+<codeblock>* |
+[ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] |
+[ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] ] ORDER BY [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -74,12 +78,6 @@ IS '<varname>text</varname>'</codeblock>
               not support triggers.</note></pd>
         </plentry>
         <plentry>
-          <pt><varname>aggregate_type</varname></pt>
-          <pd>An input data type on which the aggregate function operates. To reference a
-            zero-argument aggregate function, write <codeph>*</codeph> in place of the list of input
-            data types. </pd>
-        </plentry>
-        <plentry>
           <pt><varname>source_type</varname></pt>
           <pd>The name of the source data type of the cast. </pd>
         </plentry>
@@ -89,9 +87,9 @@ IS '<varname>text</varname>'</codeblock>
         </plentry>
         <plentry>
           <pt><varname>argmode</varname></pt>
-          <pd>The mode of a function argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
+          <pd>The mode of a function or aggregate argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
               <codeph>INOUT</codeph>, or <codeph>VARIADIC</codeph>. If omitted, the default is
-              <codeph>IN</codeph>. Note that <codeph>COMMENT ON FUNCTION</codeph> does not actually
+              <codeph>IN</codeph>. Note that <codeph>COMMENT</codeph> does not actually
             pay any attention to <codeph>OUT</codeph> arguments, since only the input arguments are
             needed to determine the function's identity. So it is sufficient to list the
               <codeph>IN</codeph>, <codeph>INOUT</codeph>, and <codeph>VARIADIC</codeph> arguments.
@@ -99,13 +97,13 @@ IS '<varname>text</varname>'</codeblock>
         </plentry>
         <plentry>
           <pt><varname>argname</varname></pt>
-          <pd>The name of a function argument. Note that <codeph>COMMENT ON FUNCTION</codeph> does
+          <pd>The name of a function or aggregate argument. Note that <codeph>COMMENT ON FUNCTION</codeph> does
             not actually pay any attention to argument names, since only the argument data types are
             needed to determine the function's identity. </pd>
         </plentry>
         <plentry>
           <pt><varname>argtype</varname></pt>
-          <pd>The data type(s) of the function's arguments (optionally schema-qualified), if any.
+          <pd>The data type of a function or aggregate argument.
           </pd>
         </plentry>
         <plentry>

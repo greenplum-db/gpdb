@@ -1,0 +1,58 @@
+CREATE TABLE t_matview_ao (id int NOT NULL PRIMARY KEY, type text NOT NULL, amt numeric NOT NULL);
+INSERT INTO t_matview_ao VALUES
+  (1, 'x', 2),
+  (2, 'x', 3),
+  (3, 'y', 5),
+  (4, 'y', 7),
+  (5, 'z', 11);
+CREATE MATERIALIZED VIEW m_heap AS SELECT type, sum(amt) AS totamt FROM t_matview_ao GROUP BY type WITH NO DATA distributed by(type);
+CREATE UNIQUE INDEX m_heap_index ON m_heap(type);
+SELECT * from m_heap;
+ERROR:  materialized view "m_heap" has not been populated
+HINT:  Use the REFRESH MATERIALIZED VIEW command.
+REFRESH MATERIALIZED VIEW CONCURRENTLY m_heap;
+ERROR:  CONCURRENTLY cannot be used when the materialized view is not populated
+REFRESH MATERIALIZED VIEW m_heap;
+SELECT * FROM m_heap;
+ type | totamt 
+------+--------
+ z    |     11
+ y    |     12
+ x    |      5
+(3 rows)
+
+REFRESH MATERIALIZED VIEW CONCURRENTLY m_heap;
+SELECT * FROM m_heap;
+ type | totamt 
+------+--------
+ z    |     11
+ y    |     12
+ x    |      5
+(3 rows)
+
+CREATE MATERIALIZED VIEW m_ao with (appendonly=true) AS SELECT type, sum(amt) AS totamt FROM t_matview_ao GROUP BY type WITH NO DATA  distributed by(type);
+SELECT * from m_ao;
+ERROR:  materialized view "m_ao" has not been populated
+HINT:  Use the REFRESH MATERIALIZED VIEW command.
+REFRESH MATERIALIZED VIEW m_ao;
+SELECT * FROM m_ao;
+ type | totamt 
+------+--------
+ y    |     12
+ x    |      5
+ z    |     11
+(3 rows)
+
+CREATE MATERIALIZED VIEW m_aocs with (appendonly=true, orientation=column) AS SELECT type, sum(amt) AS totamt FROM t_matview_ao GROUP BY type WITH NO DATA  distributed by(type);
+SELECT * from m_aocs;
+ERROR:  materialized view "m_aocs" has not been populated
+HINT:  Use the REFRESH MATERIALIZED VIEW command.
+REFRESH MATERIALIZED VIEW m_aocs;
+SELECT * FROM m_aocs;
+ type | totamt 
+------+--------
+ y    |     12
+ x    |      5
+ z    |     11
+(3 rows)
+

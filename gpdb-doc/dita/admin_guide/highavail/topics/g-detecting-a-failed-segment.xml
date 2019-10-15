@@ -9,7 +9,7 @@
       online per portion of data, users may not realize a segment is down. If a transaction is in
       progress when a fault occurs, the in-progress transaction rolls back and restarts
       automatically on the reconfigured set of segments. The <codeph><xref
-          href="../../../utility_guide/admin_utilities/gpstate.xml#topic1" type="topic"
+          href="../../../utility_guide/ref/gpstate.xml#topic1" type="topic"
           format="dita"/></codeph> utility can be used to identify failed segments. The utility
       displays information from the catalog tables including <codeph><xref
           href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml"/></codeph>. </p>
@@ -52,7 +52,7 @@
           <codeph>n</codeph> (not synchronizing) for each segment instance, as well as the status
           <codeph>u</codeph> (up) or <codeph>d</codeph> (down), in the
           <codeph>gp_segment_configuration</codeph> table. </p>
-      <p dir="ltr">The <codeph><xref href="../../../utility_guide/admin_utilities/gprecoverseg.xml"
+      <p dir="ltr">The <codeph><xref href="../../../utility_guide/ref/gprecoverseg.xml"
           /></codeph> utility is used to bring up a mirror that is down. By default,
           <codeph>gprecoverseg</codeph> performs an incremental recovery, placing the mirror into
         synchronizing mode, which starts to replay the recorded changes from the primary onto the

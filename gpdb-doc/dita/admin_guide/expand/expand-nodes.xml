@@ -20,7 +20,7 @@
       <p>New hosts must exchange SSH keys with the existing hosts to enable Greenplum administrative
         utilities to connect to all segments without a password prompt. Perform the key exchange
         process twice with the <codeph><xref
-            href="../../utility_guide/admin_utilities/gpssh-exkeys.xml">gpssh-exkeys</xref></codeph>
+            href="../../utility_guide/ref/gpssh-exkeys.xml">gpssh-exkeys</xref></codeph>
         utility.</p>
       <p>First perform the process as <codeph>root</codeph>, for administration convenience, and
         then as the user <codeph>gpadmin</codeph>, for management utilities. Perform the following
@@ -83,7 +83,7 @@ sdw3-4</codeblock></li>
       <section id="no160595">
         <title>To create the <codeph>gpadmin</codeph> user</title>
         <ol id="ol_amb_xjr_g4">
-          <li id="no160603">Use <codeph><xref href="../../utility_guide/admin_utilities/gpssh.xml"
+          <li id="no160603">Use <codeph><xref href="../../utility_guide/ref/gpssh.xml"
                 >gpssh</xref></codeph> to create the <codeph>gpadmin</codeph> user on all the new
             segment hosts (if it does not exist already). Use the list of new hosts you created for
             the key exchange. For
@@ -116,7 +116,7 @@ gpadmin --stdin'</codeblock></li>
   <topic id="topic20" xml:lang="en">
     <title id="no159219">Validating Disk I/O and Memory Bandwidth</title>
     <body>
-      <p>Use the <codeph><xref href="../../utility_guide/admin_utilities/gpcheckperf.xml"
+      <p>Use the <codeph><xref href="../../utility_guide/ref/gpcheckperf.xml"
             >gpcheckperf</xref></codeph> utility to test disk I/O and memory bandwidth. </p>
       <section id="no159247">
         <title>To run gpcheckperf</title>
@@ -140,15 +140,7 @@ gpadmin --stdin'</codeblock></li>
       <p>Before initializing the system with the new segments, shut down the system with
           <codeph>gpstop</codeph> to prevent user activity from skewing performance test results.
         Then, repeat the performance tests using host files that include <i>all</i> hosts, existing
-        and new:</p>
-      <ul>
-        <li id="no158731">
-          <xref href="#topic19" type="topic" format="dita"/>
-        </li>
-        <li id="no160320">
-          <xref href="#topic20" type="topic" format="dita"/>
-        </li>
-      </ul>
+        and new.</p>
     </body>
   </topic>
 </topic>

@@ -725,6 +725,17 @@ _readCopyIntoClause(void)
 	READ_DONE();
 }
 
+static RefreshClause *
+_readRefreshClause(void)
+{
+	READ_LOCALS(RefreshClause);
+
+	READ_BOOL_FIELD(concurrent);
+	READ_NODE_FIELD(relation);
+
+	READ_DONE();
+}
+
 /*
  * _readVar
  */
@@ -3010,6 +3021,7 @@ _readSliceTable(void)
 {
 	READ_LOCALS(SliceTable);
 
+	READ_BITMAPSET_FIELD(used_subplans);
 	READ_INT_FIELD(nMotions);
 	READ_INT_FIELD(nInitPlans);
 	READ_INT_FIELD(localSlice);
@@ -3125,8 +3137,10 @@ parseNodeString(void)
 		return_value = _readRangeVar();
 	else if (MATCH("INTOCLAUSE", 10))
 		return_value = _readIntoClause();
-	else if (MATCH("COPYINTOCLAUSE", 10))
+	else if (MATCH("COPYINTOCLAUSE", 14))
 		return_value = _readCopyIntoClause();
+	else if (MATCH("REFRESHCLAUSE", 13))
+		return_value = _readRefreshClause();
 	else if (MATCH("VAR", 3))
 		return_value = _readVar();
 	else if (MATCH("CONST", 5))

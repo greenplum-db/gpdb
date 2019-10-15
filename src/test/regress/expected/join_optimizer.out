@@ -4908,17 +4908,22 @@ explain (costs off)
   select * from generate_series(100,200) g,
     lateral (select * from int8_tbl a where g = q1 union all
              select * from int8_tbl b where g = q2) ss;
-                   QUERY PLAN                   
-------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop
-         ->  Function Scan on generate_series g
-         ->  Materialize
-               ->  Append
-                     ->  Seq Scan on int8_tbl a
-                           Filter: (g.g = q1)
-                     ->  Seq Scan on int8_tbl b
-                           Filter: (g.g = q2)
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Nested Loop
+   ->  Function Scan on generate_series g
+   ->  Materialize
+         ->  Append
+               ->  Result
+                     Filter: (g.g = a.q1)
+                     ->  Materialize
+                           ->  Gather Motion 3:1  (slice1; segments: 3)
+                                 ->  Seq Scan on int8_tbl a
+               ->  Result
+                     Filter: (g.g = b.q2)
+                     ->  Materialize
+                           ->  Gather Motion 3:1  (slice2; segments: 3)
+                                 ->  Seq Scan on int8_tbl b
  Optimizer: Postgres query optimizer
 (10 rows)
 
@@ -5444,31 +5449,39 @@ select * from int4_tbl a,
   lateral (
     select * from int4_tbl b left join int8_tbl c on (b.f1 = q1 and a.f1 = q2)
   ) ss;
-                         QUERY PLAN                          
--------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Nested Loop
    Output: a.f1, b.f1, c.q1, c.q2
-   ->  Nested Loop
-         Output: a.f1, b.f1, c.q1, c.q2
-         ->  Broadcast Motion 3:3  (slice1; segments: 3)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: a.f1
+         ->  Seq Scan on public.int4_tbl a
                Output: a.f1
-               ->  Seq Scan on public.int4_tbl a
-                     Output: a.f1
-         ->  Materialize
+   ->  Materialize
+         Output: b.f1, c.q1, c.q2
+         ->  Hash Left Join
                Output: b.f1, c.q1, c.q2
-               ->  Hash Right Join
-                     Output: b.f1, c.q1, c.q2
-                     Hash Cond: (c.q1 = b.f1)
-                     ->  Seq Scan on public.int8_tbl c
-                           Output: c.q1, c.q2
-                           Filter: (a.f1 = c.q2)
-                     ->  Hash
+               Hash Cond: (b.f1 = c.q1)
+               ->  Materialize
+                     Output: b.f1
+                     ->  Gather Motion 3:1  (slice2; segments: 3)
                            Output: b.f1
                            ->  Seq Scan on public.int4_tbl b
                                  Output: b.f1
+               ->  Hash
+                     Output: c.q1, c.q2
+                     ->  Result
+                           Output: c.q1, c.q2
+                           Filter: (a.f1 = c.q2)
+                           ->  Materialize
+                                 Output: c.q1, c.q2
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)
+                                       Output: c.q1, c.q2
+                                       ->  Seq Scan on public.int8_tbl c
+                                             Output: c.q1, c.q2
  Optimizer: Postgres query optimizer
  Settings: optimizer=off
-(22 rows)
+(30 rows)
 
 select * from int4_tbl a,
   lateral (

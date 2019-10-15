@@ -24,6 +24,14 @@ CREATE
 INSERT INTO t03 (id, val) SELECT i, i FROM generate_series(1, 100) i;
 INSERT 100
 
+-- gang creation order is important, reset any guc to force the creation
+10: RESET optimizer;
+RESET
+20: RESET optimizer;
+RESET
+30: RESET optimizer;
+RESET
+
 10: BEGIN;
 BEGIN
 20: BEGIN;
@@ -47,18 +55,19 @@ UPDATE 1
 -- seg 1: con30 ==> con10, xid lock
 30>: UPDATE t03 SET val=val WHERE id=segid(1,2);  <waiting ...>
 
--- con20 will be cancelled by local deadlock detector or gdd
+-- a local deadlock between con10 & con30 is formed on seg1,
+-- con10 will be cancelled by local deadlock detector.
+-- note, we must join c20 before c10, otherwise the test will run into infinite
+-- waiting if the local deadlock detector cancels c30 instead of c10.
 30<:  <... completed>
 UPDATE 1
 30q: ... <quitting>
-
--- no more deadlock
+20<:  <... completed>
+FAILED:  Execution failed
+20q: ... <quitting>
 10<:  <... completed>
 ERROR:  deadlock detected  (seg1 127.0.1.1:25433 pid=29851)
 DETAIL:  Process 29851 waits for ShareLock on transaction 1009; blocked by process 29968.
 Process 29968 waits for ShareLock on transaction 1008; blocked by process 29851.
 HINT:  See server log for query details.
 10q: ... <quitting>
-20<:  <... completed>
-FAILED:  Execution failed
-20q: ... <quitting>

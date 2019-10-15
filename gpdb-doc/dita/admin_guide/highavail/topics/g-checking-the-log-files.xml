@@ -7,11 +7,11 @@
     <p>Log files can provide information to help determine an error's cause. The master and segment
       instances each have their own log file in <codeph>pg_log</codeph> of the data directory. The
       master log file contains the most information and you should always check it first. </p>
-    <p>Use the <codeph><xref href="../../../utility_guide/admin_utilities/gplogfilter.xml"
+    <p>Use the <codeph><xref href="../../../utility_guide/ref/gplogfilter.xml"
           type="topic" format="dita"/></codeph> utility to check the Greenplum Database log files
       for additional information. To check the segment log files, run <codeph>gplogfilter</codeph>
       on the segment hosts using <codeph><xref
-          href="../../../utility_guide/admin_utilities/gpssh.xml" type="topic" format="dita"
+          href="../../../utility_guide/ref/gpssh.xml" type="topic" format="dita"
         /></codeph>.</p>
     <section id="ki170080">
       <title>To check the log files</title>

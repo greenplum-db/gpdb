@@ -247,6 +247,7 @@ lnext:
 
 			case HeapTupleInvisible:
 				elog(ERROR, "attempted to lock invisible tuple");
+				break;
 
 			default:
 				elog(ERROR, "unrecognized heap_lock_tuple status: %u",

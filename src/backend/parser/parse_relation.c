@@ -1256,6 +1256,12 @@ addRangeTableEntry(ParseState *pstate,
 			RelationIsAppendOptimized(rel))
 			pstate->p_canOptSelectLockingClause = false;
 
+		if (rel->rd_rel->relkind == RELKIND_MATVIEW)
+			ereport(ERROR,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+					 errmsg("cannot lock rows in materialized view \"%s\"",
+							RelationGetRelationName(rel))));
+
 		lockmode = pstate->p_canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
 
 		heap_close(rel, NoLock);

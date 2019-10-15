@@ -160,8 +160,8 @@ sub gpdiff_files
     }
 
     # replace temp file name references with actual file names
-    $outi =~ s/\Q$newf1\E/\Q$f1\E/gm;
-    $outi =~ s/\Q$newf2\E/\Q$f2\E/gm;
+    $outi =~ s/\Q$newf1\E/$f1/gm;
+    $outi =~ s/\Q$newf2\E/$f2/gm;
 
     print $outi;
 

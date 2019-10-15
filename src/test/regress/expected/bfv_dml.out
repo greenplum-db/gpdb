@@ -293,3 +293,37 @@ select * from execinsert_test;
 (1 row)
 
 drop table execinsert_test;
+--
+-- Test RETURNING on a table with OIDs.
+--
+-- See https://github.com/greenplum-db/gpdb/issues/8765
+-- This was also coincidentally covered by the upstream tests in
+-- 'rowsecurity', but better to have an explicit test.
+--
+CREATE TABLE tabwithoids (a int, b text) WITH OIDS;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+insert into tabwithoids values (1, 'foo') RETURNING oid > 1000, tabwithoids;
+ ?column? | tabwithoids 
+----------+-------------
+ t        | (1,foo)
+(1 row)
+
+update tabwithoids set b = 'foobar' RETURNING oid > 1000, tabwithoids;
+ ?column? | tabwithoids 
+----------+-------------
+ t        | (1,foobar)
+(1 row)
+
+update tabwithoids set a = a + 1 RETURNING oid > 1000, tabwithoids; -- split update
+ ?column? | tabwithoids 
+----------+-------------
+ t        | (2,foobar)
+(1 row)
+
+delete from tabwithoids RETURNING oid > 1000, tabwithoids;
+ ?column? | tabwithoids 
+----------+-------------
+ t        | (2,foobar)
+(1 row)
+

@@ -130,7 +130,7 @@ CreateDestReceiver(CommandDest dest)
 			return CreateSQLFunctionDestReceiver();
 
 		case DestTransientRel:
-			return CreateTransientRelDestReceiver(InvalidOid);
+			return CreateTransientRelDestReceiver(InvalidOid, InvalidOid, false, 't');
 	}
 
 	/* should never get here */

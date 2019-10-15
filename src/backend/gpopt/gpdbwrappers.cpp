@@ -30,9 +30,9 @@
 
 #include "gpopt/gpdbwrappers.h"
 #include "catalog/pg_collation.h"
-
-#include "utils/ext_alloc.h"
-
+extern "C" {
+	#include "utils/memutils.h"
+}
 #define GP_WRAP_START	\
 	sigjmp_buf local_sigjmp_buf;	\
 	{	\
@@ -3174,35 +3174,6 @@ gpdb::MDCacheNeedsReset
 	return true;
 }
 
-// Functions for ORCA's memory consumption to be tracked by GPDB
-void *
-gpdb::OptimizerAlloc
-		(
-			size_t size
-		)
-{
-	GP_WRAP_START;
-	{
-		return Ext_OptimizerAlloc(size);
-	}
-	GP_WRAP_END;
-
-	return NULL;
-}
-
-void
-gpdb::OptimizerFree
-		(
-			void *ptr
-		)
-{
-	GP_WRAP_START;
-	{
-		Ext_OptimizerFree(ptr);
-	}
-	GP_WRAP_END;
-}
-
 // returns true if a query cancel is requested in GPDB
 bool
 gpdb::IsAbortRequested
@@ -3263,5 +3234,44 @@ gpdb::UUIDHash(Datum d)
 	GP_WRAP_END;
 }
 
+void *
+gpdb::GPDBMemoryContextAlloc
+	(
+	MemoryContext context,
+	Size size
+	)
+{
+	GP_WRAP_START;
+	{
+		return MemoryContextAlloc(context, size);
+	}
+	GP_WRAP_END;
+	return NULL;
+}
+
+void
+gpdb::GPDBMemoryContextDelete(MemoryContext context)
+{
+	GP_WRAP_START;
+	{
+		MemoryContextDelete(context);
+	}
+	GP_WRAP_END;
+}
+
+MemoryContext
+gpdb::GPDBAllocSetContextCreate()
+{
+	GP_WRAP_START;
+	{
+		return AllocSetContextCreate(OptimizerMemoryContext,
+		"GPORCA memory pool",
+		ALLOCSET_DEFAULT_MINSIZE,
+		ALLOCSET_DEFAULT_INITSIZE,
+		ALLOCSET_DEFAULT_MAXSIZE);
+	}
+	GP_WRAP_END;
+	return NULL;
+}
 
 // EOF

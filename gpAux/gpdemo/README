@@ -16,7 +16,7 @@ BEFORE YOU BEGIN
 ******************************************************************
 
 Before running GP demo, you must at least have 700 MB of free disk
-space, and have the TCP ports 15432 and 25432 -  25443 free.
+space, and have the TCP ports defined in gpAux/gpdemo/Makefile free.
 
 * Verify that your $USER environment variable is set. 
 
@@ -48,11 +48,13 @@ RUNNING GP DEMO
 
 	make cluster
 
-5. If setup completes correctly, you will have a virtual Greenplum
-   Database system running on the local host. You can connect to
-   it using the psql client program as follows:
+5. Source gpAux/gpdemo/gpdemo-env.sh
 
-	psql -p 15432 postgres
+6. If setup completes correctly, you will have a virtual Greenplum
+   Database system running on the local host. You can connect to it
+   using the psql client program as follows:
+
+	psql postgres
 
 7. To exit the psql client program:
 
@@ -82,15 +84,12 @@ MODIFYING GP DEMO SETTINGS
 Certain parameters of the demo cluster are adjustable by setting
 environment variables before initializing the cluster:
 
-* Master TCP port:
+* Master and segments TCP port:
 
-	export MASTER_PORT=<new TCP port number>
+	export PORT_BASE=<new TCP port number>
 
-* Base port for segments:
-
-	export PORT_BASE=<new lowest TCP port number>
-
-  The cluster will use the ports following the base port.
+  The cluster will use the PORT_BASE as master port and following
+  ports as segment ports.
 
 * Number of segments:
 

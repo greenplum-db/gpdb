@@ -153,6 +153,7 @@ extern void memtuple_deform(MemTuple mtup, MemTupleBinding *pbind, Datum *datum,
 extern void memtuple_deform_misaligned(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull);
 
 extern Oid MemTupleGetOid(MemTuple mtup, MemTupleBinding *pbind);
+extern Oid MemTupleGetOidDirect(MemTuple mtup);
 extern void MemTupleSetOid(MemTuple mtup, MemTupleBinding *pbind, Oid oid);
 
 static inline bool

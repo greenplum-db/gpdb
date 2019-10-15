@@ -34,6 +34,7 @@
 #include "utils/lsyscache.h"
 
 #include "access/heapam.h"
+#include "cdb/cdbmutate.h"
 #include "nodes/makefuncs.h"
 #include "parser/parsetree.h"
 
@@ -176,8 +177,8 @@ build_base_rel_tlists(PlannerInfo *root, List *final_tlist)
  *	  be true before deconstruct_jointree begins, and false after that.)
  */
 void
-add_vars_to_targetlist(PlannerInfo *root, List *vars,
-					   Relids where_needed, bool create_new_ph)
+add_vars_to_targetlist_x(PlannerInfo *root, List *vars,
+						 Relids where_needed, bool create_new_ph, bool force)
 {
 	ListCell   *temp;
 
@@ -212,7 +213,7 @@ add_vars_to_targetlist(PlannerInfo *root, List *vars,
 			}
 
 			/* System-defined attribute, whole row, or user-defined attribute */
-			if (bms_is_subset(where_needed, rel->relids))
+			if (bms_is_subset(where_needed, rel->relids) && !force)
 				continue;
 			Assert(attno >= rel->min_attr && attno <= rel->max_attr);
 			attno -= rel->min_attr;
@@ -238,6 +239,12 @@ add_vars_to_targetlist(PlannerInfo *root, List *vars,
 		else
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 	}
+}
+void
+add_vars_to_targetlist(PlannerInfo *root, List *vars, Bitmapset *where_needed,
+					   bool create_new_ph)
+{
+	add_vars_to_targetlist_x(root, vars, where_needed, create_new_ph, false);
 }
 
 
@@ -2194,6 +2201,43 @@ check_redundant_nullability_qual(PlannerInfo *root, Node *clause)
 	return false;
 }
 
+static bool
+rel_need_upper(PlannerInfo *root, RelOptInfo *rel)
+{
+	switch (rel->rtekind)
+	{
+		case RTE_RELATION:
+			return GpPolicyIsPartitioned(rel->cdbpolicy) ||
+				GpPolicyIsReplicated(rel->cdbpolicy);
+
+		case RTE_SUBQUERY:
+			/* play it safe */
+			return true;
+
+		case RTE_FUNCTION:
+			/* XXX: depends on EXECUTE ON directive */
+			return false;
+
+		case RTE_VALUES:
+			return false;
+
+		case RTE_TABLEFUNCTION:
+			/* no correlated subqueries are allowed in a tablefunctions. So not sure
+			 * if this can happen */
+			return true;
+
+		case RTE_CTE:
+			/* play it safe */
+			return true;
+
+		case RTE_VOID:
+		case RTE_JOIN:
+		default:
+			/* shouldn't happen */
+			elog(ERROR, "unexpected RTE kind %d", rel->rtekind);
+	}
+}
+
 /*
  * distribute_restrictinfo_to_rels
  *	  Push a completed RestrictInfo into the proper restriction or join
@@ -2210,6 +2254,9 @@ distribute_restrictinfo_to_rels(PlannerInfo *root,
 	Relids		relids = restrictinfo->required_relids;
 	RelOptInfo *rel;
 
+	if (contains_outer_params((Node *) restrictinfo->clause, root))
+		restrictinfo->contain_outer_query_references = true;
+
 	switch (bms_membership(relids))
 	{
 		case BMS_SINGLETON:
@@ -2221,8 +2268,24 @@ distribute_restrictinfo_to_rels(PlannerInfo *root,
 			rel = find_base_rel(root, bms_singleton_member(relids));
 
 			/* Add clause to rel's restriction list */
-			rel->baserestrictinfo = lappend(rel->baserestrictinfo,
-											restrictinfo);
+			if (restrictinfo->contain_outer_query_references &&
+				rel_need_upper(root, rel))
+			{
+				List	   *vars = pull_var_clause((Node *) restrictinfo->clause,
+												   PVC_RECURSE_AGGREGATES,
+												   PVC_RECURSE_PLACEHOLDERS);
+
+				add_vars_to_targetlist_x(root, vars, relids,
+										 false, /* create_new_ph */
+										 true /* force */);
+				list_free(vars);
+
+				rel->upperrestrictinfo = lappend(rel->upperrestrictinfo,
+												 restrictinfo);
+			}
+			else
+				rel->baserestrictinfo = lappend(rel->baserestrictinfo,
+												restrictinfo);
 			break;
 		case BMS_MULTIPLE:
 

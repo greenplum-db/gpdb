@@ -221,6 +221,7 @@
             <topicref href="guc-list.xml#optimizer_control"/>
             <topicref href="guc-list.xml#optimizer_cte_inlining_bound"/>
             <topicref href="guc-list.xml#optimizer_enable_associativity"/>
+            <topicref href="guc-list.xml#optimizer_enable_dml"/>
             <topicref href="guc-list.xml#optimizer_enable_master_only_queries"/>
             <topicref href="guc-list.xml#optimizer_force_agg_skew_avoidance"/>
             <topicref href="guc-list.xml#optimizer_force_multistage_agg"/>
@@ -237,6 +238,7 @@
             <topicref href="guc-list.xml#optimizer_print_missing_stats"/>
             <topicref href="guc-list.xml#optimizer_print_optimization_stats"/>
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
+            <topicref href="guc-list.xml#optimizer_use_gpdb_allocators"/>
             <topicref href="guc-list.xml#password_encryption"/>
             <topicref href="guc-list.xml#password_hash_algorithm"/>
             <topicref href="guc-list.xml#pljava_classpath"/>

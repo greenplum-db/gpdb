@@ -91,13 +91,6 @@ create table aggspill (i int, j int, t text) distributed by (i);
 insert into aggspill select i, i*2, i::text from generate_series(1, 10000) i;
 insert into aggspill select i, i*2, i::text from generate_series(1, 100000) i;
 insert into aggspill select i, i*2, i::text from generate_series(1, 1000000) i;
--- Test the spilling with serial/deserial functions involved
--- The transition type of numeric is internal, and hence it uses the serial/deserial functions when spilling
-drop table if exists aggspill_numeric_avg;
-create table aggspill_numeric_avg (a int, b int, c numeric) distributed by (a);
-insert into aggspill_numeric_avg (select i, i + 1, i * 1.1111 from generate_series(1, 500000) as i);
-insert into aggspill_numeric_avg (select i, i + 1, i * 1.1111 from generate_series(1, 500000) as i);
-analyze aggspill_numeric_avg;
 -- No spill with large statement memory 
 set statement_mem = '125MB';
 select count(*) from (select i, count(*) from aggspill group by i,j having count(*) = 1) g;
@@ -121,12 +114,6 @@ select count(*) from (select i, count(*) from aggspill group by i,j having count
  90000
 (1 row)
 
-select count(*) from (select a, avg(b), avg(c) from aggspill_numeric_avg group by a) g;
- count  
---------
- 500000
-(1 row)
-
 -- Reduce the statement memory, nbatches and entrysize even further to cause multiple overflows
 set gp_hashagg_default_nbatches = 4;
 set statement_mem = '5MB';
@@ -143,13 +130,39 @@ select count(*) from (select i, count(*) from aggspill group by i,j,t having cou
  10000
 (1 row)
 
-select count(*) from (select a, avg(b), avg(c) from aggspill_numeric_avg group by a) g;
- count  
---------
- 500000
+reset optimizer_force_multistage_agg;
+-- Test the spilling of aggstates
+--     with and without serial/deserial functions
+--     with and without workfile compression
+-- The transition type of numeric is internal, and hence it uses the serial/deserial functions when spilling
+-- The transition type value of integer is by Ref, and it does not have any serial/deserial function when spilling
+CREATE TABLE hashagg_spill(col1 numeric, col2 int) DISTRIBUTED BY (col1);
+INSERT INTO hashagg_spill SELECT id, 1 FROM generate_series(1,20000) id;
+ANALYZE hashagg_spill;
+SET statement_mem='1000kB';
+SET gp_workfile_compression = OFF;
+select overflows >= 1 from hashagg_spill.num_hashagg_overflows('explain analyze
+SELECT avg(col2) col2 FROM hashagg_spill GROUP BY col1 HAVING(sum(col1)) < 0;') overflows;
+ ?column? 
+----------
+ t
 (1 row)
 
-reset optimizer_force_multistage_agg;
+SET gp_workfile_compression = ON;
+select overflows >= 1 from hashagg_spill.num_hashagg_overflows('explain analyze
+SELECT avg(col2) col2 FROM hashagg_spill GROUP BY col1 HAVING(sum(col1)) < 0;') overflows;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- check spilling to a temp tablespace
+CREATE TABLE spill_temptblspace (a numeric) DISTRIBUTED BY (a);
+SET temp_tablespaces=pg_default;
+INSERT INTO spill_temptblspace SELECT avg(col2) col2 FROM hashagg_spill GROUP BY col1 HAVING(sum(col1)) < 0;
+RESET temp_tablespaces;
+RESET statement_mem;
+RESET gp_workfile_compression;
 drop schema hashagg_spill cascade;
 NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to function hashagg_spill.is_workfile_created(text)

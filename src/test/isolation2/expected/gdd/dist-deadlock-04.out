@@ -8,6 +8,12 @@ INSERT 100
 DROP TABLE IF EXISTS t04b;
 DROP
 
+-- gang creation order is important, reset any guc to force the creation
+10: RESET optimizer;
+RESET
+20: RESET optimizer;
+RESET
+
 10: BEGIN;
 BEGIN
 20: BEGIN;

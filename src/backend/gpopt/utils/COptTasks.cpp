@@ -93,7 +93,7 @@ using namespace gpdbcost;
 #define GPOPT_ERROR_BUFFER_SIZE 10 * 1024 * 1024
 
 // definition of default AutoMemoryPool
-#define AUTO_MEM_POOL(amp) CAutoMemoryPool amp(CAutoMemoryPool::ElcExc, CMemoryPoolManager::EatTracker, false /* fThreadSafe */)
+#define AUTO_MEM_POOL(amp) CAutoMemoryPool amp(CAutoMemoryPool::ElcExc)
 
 // default id for the source system
 const CSystemId default_sysid(IMDId::EmdidGPDB, GPOS_WSZ_STR_LENGTH("GPDB"));
@@ -259,7 +259,7 @@ COptTasks::Execute
 
 	bool abort_flag = false;
 
-	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone, CMemoryPoolManager::EatTracker, false /* fThreadSafe */);
+	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone);
 
 	gpos_exec_params params;
 	params.func = func;

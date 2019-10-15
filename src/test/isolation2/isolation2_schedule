@@ -45,7 +45,9 @@ test: gdd/end
 # concurrent test, so run the test by itself.
 test: deadlock_under_entry_db_singleton
 
-test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue misc vacuum_drop_phase_ao
+test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue misc
+test: vacuum_drop_phase_ao
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
 
@@ -214,10 +216,15 @@ test: upgrade_numsegments
 
 # OOM tests start
 test: create_memory_accounting_tables 
-test: setup_memory_accounting
-test: oom_mixed_1 oom_mixed_2 oom_simple
-test: restore_memory_accounting_default
+ignore: setup_memory_accounting
+ignore: oom_mixed_1 oom_mixed_2 oom_simple
+ignore: restore_memory_accounting_default
 # Sleep and OOM tests end
+
+# Startup OOM tests start
+test: setup_startup_memory_accounting
+test: oom_startup_memory
+test: restore_memory_accounting_default
 
 # Too many exec accounts test start
 test: setup_too_many_exec_accounts

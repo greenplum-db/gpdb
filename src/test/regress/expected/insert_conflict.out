@@ -59,11 +59,10 @@ explain (costs off) insert into insertconflicttest values(0, 'Crowberry') on con
                  ->  Broadcast Motion 3:3  (slice1; segments: 3)
                        ->  Seq Scan on insertconflicttest ii
    SubPlan 2
-     ->  Materialize
-           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                 ->  Seq Scan on insertconflicttest ii_1
+     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+           ->  Seq Scan on insertconflicttest ii_1
  Optimizer: Postgres query optimizer
-(14 rows)
+(15 rows)
 
 -- Neither collation nor operator class specifications are required --
 -- supplying them merely *limits* matches to indexes with matching opclasses

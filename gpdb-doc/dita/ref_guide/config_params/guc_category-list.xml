@@ -327,6 +327,9 @@
             </p>
             <p><xref href="guc-list.xml#optimizer_enable_associativity" type="section"
                 >optimizer_enable_associativity</xref></p>
+            <p><xref href="guc-list.xml#optimizer_enable_dml" type="section"
+                >optimizer_enable_dml</xref>
+            </p>
             <p><xref href="guc-list.xml#optimizer_enable_master_only_queries" type="section"
                 >optimizer_enable_master_only_queries</xref></p>
             <p><xref href="guc-list.xml#optimizer_force_agg_skew_avoidance" type="section"
@@ -362,6 +365,8 @@
             </p>
             <p><xref href="guc-list.xml#optimizer_sort_factor" format="dita"
                 >optimizer_sort_factor</xref></p>
+            <p><xref href="guc-list.xml#optimizer_use_gpdb_allocators" format="dita"
+                >optimizer_use_gpdb_allocators</xref></p>
           </stentry>
         </strow>
       </simpletable>
@@ -374,10 +379,10 @@
     <topic id="topic22" xml:lang="en">
       <title>Postgres Planner Control Parameters</title>
       <body>
-        <p>The following parameters control the types of plan operations the Postgres Planner
-          can use. Enable or disable plan operations to force the Postgres Planner to choose a
-          different plan. This is useful for testing and comparing query performance using different
-          plan types.</p>
+        <p>The following parameters control the types of plan operations the Postgres Planner can
+          use. Enable or disable plan operations to force the Postgres Planner to choose a different
+          plan. This is useful for testing and comparing query performance using different plan
+          types.</p>
         <simpletable id="kh158625" frame="none">
           <strow>
             <stentry>
@@ -1053,19 +1058,16 @@
     <body>
       <simpletable id="d1e1187" frame="none">
         <strow>
-          <stentry>
-            <p>
+          <stentry><p>
               <xref href="guc-list.xml#deadlock_timeout" type="section">deadlock_timeout</xref>
             </p><xref href="guc-list.xml#gp_enable_global_deadlock_detector" type="section"
               >gp_enable global_deadlock_detector</xref><p>
               <xref href="guc-list.xml#gp_global_deadlock_detector_period" type="section"
                 >gp_global_deadlock_detector_period</xref>
-            </p>
-          </stentry>
+            </p></stentry>
           <stentry>
             <p>
-              <xref href="guc-list.xml#lock_timeout" type="section"
-                >lock_timeout</xref>
+              <xref href="guc-list.xml#lock_timeout" type="section">lock_timeout</xref>
             </p>
             <p>
               <xref href="guc-list.xml#max_locks_per_transaction" type="section"
@@ -1561,23 +1563,23 @@
       </simpletable>
     </body>
   </topic>
-    <topic id="topic_t3n_qml_rz">
-      <title>XML Data Parameters</title>
-      <body>
-        <p>The parameters in this topic control the configuration of the Greenplum Database XML data
-          type. </p>
-        <simpletable frame="none" id="simpletable_yyd_tml_rz">
-          <strow>
-            <stentry>
-              <p>
-                <xref href="guc-list.xml#xmlbinary">xmlbinary</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#xmloption">xmloption</xref>
-              </p>
-            </stentry>
-          </strow>
-        </simpletable>
-      </body>
-    </topic>
+  <topic id="topic_t3n_qml_rz">
+    <title>XML Data Parameters</title>
+    <body>
+      <p>The parameters in this topic control the configuration of the Greenplum Database XML data
+        type. </p>
+      <simpletable frame="none" id="simpletable_yyd_tml_rz">
+        <strow>
+          <stentry>
+            <p>
+              <xref href="guc-list.xml#xmlbinary">xmlbinary</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#xmloption">xmloption</xref>
+            </p>
+          </stentry>
+        </strow>
+      </simpletable>
+    </body>
+  </topic>
 </topic>

@@ -176,7 +176,7 @@ create_ctas_internal(List *attrList, IntoClause *into, QueryDesc *queryDesc, boo
 	create->attr_encodings = NULL; /* Handle by AddDefaultRelationAttributeOptions() */
 
 	/* Save them in CreateStmt for dispatching. */
-	create->relKind = RELKIND_RELATION;
+	create->relKind = relkind;
 	create->relStorage = relstorage;
 	create->ownerid = GetUserId();
 
@@ -437,7 +437,7 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 								dest, params, 0);
 
 
-	if (into->skipData)
+	if (into->skipData && !is_matview)
 	{
 		/*
 		 * If WITH NO DATA was specified, do not go through the rewriter,

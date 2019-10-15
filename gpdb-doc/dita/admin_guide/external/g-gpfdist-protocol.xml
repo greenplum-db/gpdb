@@ -5,7 +5,7 @@
   <shortdesc>The <codeph>gpfdist://</codeph> protocol is used in a URI to reference a running
       <codeph>gpfdist</codeph> instance. </shortdesc>
   <body>
-    <p>The <codeph><xref href="../../utility_guide/admin_utilities/gpfdist.xml"
+    <p>The <codeph><xref href="../../utility_guide/ref/gpfdist.xml"
         >gpfdist</xref></codeph> utility serves external data files from a directory on a file host
       to all Greenplum Database segments in parallel. </p>
     <p><codeph>gpfdist</codeph> is located in the <codeph>$GPHOME/bin</codeph> directory on your

@@ -1178,10 +1178,10 @@ select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt
 explain select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=40.04..40.05 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=39.98..40.03 rows=1 width=8)
-         ->  Aggregate  (cost=39.98..39.99 rows=1 width=8)
-               ->  Hash Join  (cost=19.14..39.84 rows=19 width=0)
+ Aggregate  (cost=39.04..39.05 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=38.98..39.03 rows=1 width=8)
+         ->  Aggregate  (cost=38.98..38.99 rows=1 width=8)
+               ->  Hash Join  (cost=19.14..38.96 rows=3 width=0)
                      Hash Cond: (pt1_1_prt_junk_data.ptid = pt_1_prt_junk_data.ptid)
                      ->  Append  (cost=0.00..19.08 rows=36 width=4)
                            ->  Result  (cost=0.00..3.63 rows=21 width=4)

@@ -48,6 +48,8 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | FORMAT | Use `FORMAT` `'TEXT'` when \<path-to-hdfs-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  when \<path-to-hdfs-file\> references comma-separated value data.  |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
 
+**Note**: PXF does not support CSV files with a header row, nor does it support the `(HEADER)` formatter option in the `CREATE EXTERNAL TABLE` command.
+
 ### <a id="profile_text_query"></a>Example: Reading Text Data on HDFS
 
 Perform the following procedure to create a sample text file, copy the file to HDFS, and use the `hdfs:text` profile and the default PXF server to create two PXF external tables to query the data:

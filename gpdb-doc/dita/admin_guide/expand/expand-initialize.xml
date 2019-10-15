@@ -6,7 +6,7 @@
   <shortdesc>Use the <codeph>gpexpand</codeph> utility to create and initialize the new segment
     instances and create the expansion schema. </shortdesc>
   <body>
-    <p>The first time you run <codeph><xref href="../../utility_guide/admin_utilities/gpexpand.xml"
+    <p>The first time you run <codeph><xref href="../../utility_guide/ref/gpexpand.xml"
           >gpexpand</xref></codeph> with a valid input file it creates and initializes segment
       instances and creates the expansion schema. After these steps are completed, running
         <codeph>gpexpand</codeph> detects if the expansion schema has been created and, if so,

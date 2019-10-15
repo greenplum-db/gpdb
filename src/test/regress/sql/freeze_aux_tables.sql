@@ -43,7 +43,7 @@ begin
   for rec in select gp_segment_id, replace(relname, testrelid::oid::text, '<oid>'), age(relfrozenxid)
     from pg_class
     where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v')
-    and (relname like '%' || testrelid::oid || '%' or oid = testrelid::oid )
+    and (relname like '%\_' || testrelid::oid or oid = testrelid::oid )
     and not relfrozenxid = 0
   loop
     return next rec;
@@ -52,7 +52,7 @@ begin
   for rec in select gp_segment_id, replace(relname, testrelid::oid::text, '<oid>'), age(relfrozenxid)
     from gp_dist_random('pg_class')
     where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v')
-    and (relname like '%' || testrelid::oid || '%' or oid = testrelid::oid )
+    and (relname like '%\_' || testrelid::oid or oid = testrelid::oid )
     and not relfrozenxid = 0
   loop
     return next rec;

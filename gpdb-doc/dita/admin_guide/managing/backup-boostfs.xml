@@ -97,7 +97,7 @@ $ gprestore --backup-dir /boostfs-test/ --timestamp 20171103153156 --create-db</
                <codeph>gpbackup</codeph> backup set to restore. For information about how
                <codeph>gpbackup</codeph> uses timesamps when creating backups, see <xref
                href="backup-gpbackup.xml"/>. For information about the <codeph>-timestamp</codeph>
-            option, see <xref href="../../utility_guide/admin_utilities/gprestore.xml"
+            option, see <xref href="../../utility_guide/ref/gprestore.xml"
                >gprestore</xref>.</p>
       </body>
    </topic>

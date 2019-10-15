@@ -280,44 +280,6 @@ DATA(insert (	3580	box_inclusion_ops		PGNSP PGUID 4104   603 t 603 ));
 /* no brin opclass for the geometric types except box */
 
 /*
- * the operators for the on-disk bitmap index.
- */
-DATA(insert (	7013	abstime_ops			PGNSP PGUID 7014 702 t 0 ));
-DATA(insert (	7013	array_ops			PGNSP PGUID 7015 2277 t 0 ));
-DATA(insert (	7013	bit_ops				PGNSP PGUID 7016 1560 t 0 ));
-DATA(insert (	7013	bool_ops			PGNSP PGUID 7017 16 t 0 ));
-DATA(insert (	7013	bpchar_ops			PGNSP PGUID 7018 1042 t 0 ));
-DATA(insert (	7013	bytea_ops			PGNSP PGUID 7019 17 t 0 ));
-DATA(insert (	7013	char_ops			PGNSP PGUID 7020  18 t 0 ));
-DATA(insert (	7013	cidr_ops			PGNSP PGUID 7025  869 f 0 ));
-DATA(insert (	7013	date_ops			PGNSP PGUID 7022 1082 t 0 ));
-DATA(insert (	7013	float4_ops			PGNSP PGUID 7023 700 t 0 ));
-DATA(insert (	7013	float8_ops			PGNSP PGUID 7024 701 t 0 ));
-DATA(insert (	7013	inet_ops			PGNSP PGUID 7025 869 t 0 ));
-DATA(insert (	7013	int2_ops			PGNSP PGUID 7026  21 t 0 ));
-DATA(insert (	7013	int4_ops        	PGNSP PGUID 7027  23 t 0 ));
-DATA(insert (	7013	int8_ops			PGNSP PGUID 7028  20 t 0 ));
-DATA(insert (	7013	interval_ops		PGNSP PGUID 7029 1186 t 0 ));
-DATA(insert (	7013	macaddr_ops			PGNSP PGUID 7030  829 t 0 ));
-DATA(insert (	7013	name_ops			PGNSP PGUID 7031  19 t 0 ));
-DATA(insert (	7013	numeric_ops			PGNSP PGUID 7032 1700 t 0 ));
-DATA(insert (	7013	oid_ops				PGNSP PGUID 7033  26 t 0 ));
-DATA(insert (	7013	oidvector_ops		PGNSP PGUID 7034  30 t 0 ));
-DATA(insert (	7013	text_ops			PGNSP PGUID 7035  25 t 0 ));
-DATA(insert (	7013	time_ops			PGNSP PGUID 7036 1083 t 0 ));
-DATA(insert (	7013	timestamptz_ops 	PGNSP PGUID 7037 1184 t 0 ));
-DATA(insert (	7013	timetz_ops			PGNSP PGUID 7038 1266 t 0 ));
-DATA(insert (	7013	varbit_ops			PGNSP PGUID 7039 1562 t 0 ));
-DATA(insert (	7013	varchar_ops			PGNSP PGUID 7035  25 f 0 ));
-DATA(insert (	7013	timestamp_ops		PGNSP PGUID 7041 1114 t 0 ));
-DATA(insert (	7013	text_pattern_ops	PGNSP PGUID 7042  25 f 0 ));
-DATA(insert (	7013	varchar_pattern_ops PGNSP PGUID 7042  25 f 0 ));
-DATA(insert (	7013	bpchar_pattern_ops	PGNSP PGUID 7044 1042 f 0 ));
-DATA(insert (	7013	money_ops			PGNSP PGUID 7046 790 t 0 ));
-DATA(insert (	7013	reltime_ops			PGNSP PGUID 7047 703 t 0 ));
-DATA(insert (	7013	tinterval_ops		PGNSP PGUID 7048 704 t 0 ));
-
-/*
  * hash support for a few built-in datatypes that are missing it in upstream.
  */
 DATA(insert (	405		tid_ops	PGNSP PGUID 7077 27 t 0 ));

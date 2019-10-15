@@ -9,18 +9,18 @@ CREATE LANGUAGE plpythonu;
 ! mkdir @cgroup_mnt_point@/cpuset/gpdb;
 -- end_ignore
 
--- we want to simulate a 3-primary cluster with 2GB memory and
--- gp_resource_group_memory_limit=100%, suppose:
+-- we want to simulate a 3-segment (both master and primary) cluster with 2GB
+-- memory and gp_resource_group_memory_limit=100%, suppose:
 --
 -- - total: the total memory on the system;
--- - nseg: the max per-host segment count (including both master and primaries);
+-- - nsegs: the max per-host segment count (including both master and primaries);
 -- - limit: the gp_resource_group_memory_limit used for the simulation;
 --
 -- then we have: total * limit / nsegs = 2GB * 1.0 / 3
 -- so: limit = 2GB * 1.0 / 3 * nsegs / total
 --
 -- with the simulation each primary segment should manage 682MB memory.
-CREATE OR REPLACE FUNCTION adjust_memory_limit(nsegs bigint) RETURNS int AS $$
+DO LANGUAGE plpythonu $$
     import os
     import psutil
 
@@ -29,17 +29,18 @@ CREATE OR REPLACE FUNCTION adjust_memory_limit(nsegs bigint) RETURNS int AS $$
     overcommit = int(open('/proc/sys/vm/overcommit_ratio').readline())
     total = swap + mem * overcommit / 100.
 
+    nsegs = int(plpy.execute('''
+        SELECT count(hostname) as nsegs
+          FROM gp_segment_configuration
+         WHERE preferred_role = 'p'
+         GROUP BY hostname
+         ORDER BY count(hostname) DESC
+         LIMIT 1
+    ''')[0]['nsegs'])
+
     limit = (2 << 30) * 1.0 * nsegs / 3 / total
-    return os.system('gpconfig -c gp_resource_group_memory_limit -v {:f}'.format(limit))
-$$ LANGUAGE plpythonu VOLATILE;
-
-SELECT adjust_memory_limit(count(hostname)) FROM gp_segment_configuration
- WHERE preferred_role = 'p'
- GROUP BY hostname
- ORDER BY count(hostname) DESC
- LIMIT 1;
-
-DROP FUNCTION adjust_memory_limit(bigint);
+    os.system('gpconfig -c gp_resource_group_memory_limit -v {:f}'.format(limit))
+$$;
 
 -- enable resource group and restart cluster.
 -- start_ignore

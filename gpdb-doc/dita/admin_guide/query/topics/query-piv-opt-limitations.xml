@@ -42,8 +42,7 @@
               <li><cmdname>FIELDSELECT</cmdname></li>
             </ul></li>
           <li>Aggregate functions that take set operators as input arguments.</li>
-          <li><cmdname>percentile_*</cmdname> window functions (Greenplum Database does not support
-            ordered-set aggregate functions).</li>
+          <li><cmdname>percentile_*</cmdname> window functions (ordered-set aggregate functions).</li>
           <li>Inverse distribution functions.</li>
           <li>Queries that execute functions that are defined with the <codeph>ON MASTER</codeph> or
               <codeph>ON ALL SEGMENTS</codeph> attribute.</li>

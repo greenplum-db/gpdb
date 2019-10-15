@@ -57,27 +57,6 @@ struct Plan;                    /* #include "nodes/plannodes.h" */
 Expr *
 cdbpullup_expr(Expr *expr, List *targetlist, List *newvarlist, Index newvarno);
 
-
-/*
- * cdbpullup_exprHasSubplanRef
- *
- * Returns true if the expr's first Var is a reference to an item in the
- * targetlist of the associated Plan node's subplan.  If so, it can be
- * assumed that the Plan node and associated exprs have been processed
- * by set_plan_references(), and its Var nodes are in executor format.
- *
- * Returns false otherwise, which implies no conclusion about whether or
- * not set_plan_references() has been done.
- *
- * Note that a Var node that belongs to a Scan operator and refers to the
- * Scan's source relation or index, doesn't have its varno changed by
- * set_plan_references() to OUTER/INNER/0.  Think twice about using this
- * unless you know that the expr comes from an upper Plan node.
- */
-bool
-cdbpullup_exprHasSubplanRef(Expr *expr);
-
-
 extern Expr *cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist);
 
 extern List *cdbpullup_truncatePathKeysForTargetList(List *pathkeys, List *targetlist);
@@ -151,41 +130,5 @@ cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modify
  */
 bool
 cdbpullup_missingVarWalker(Node *node, void *targetlist);
-
-
-/*
- * cdbpullup_targetentry
- *
- * Given a TargetEntry from a subplan's targetlist, this function returns a
- * new TargetEntry that can be used to pull the result value up into the
- * parent plan's projection.
- *
- * Parameters:
- *      subplan_targetentry is an item in the targetlist of the subplan S.
- *      newresno is the attribute number of the new TargetEntry (its
- *          position in P's targetlist).
- *      newvarno should be OUTER; except it should be 0 if P is an Agg or
- *          Group node.  It is ignored if useExecutorVarFormat is false.
- *      useExecutorVarFormat must be true if called after optimization,
- *          when set_plan_references() has been called and Var nodes have
- *          been adjusted to refer to items in the subplan's targetlist.
- *          It must be false before the end of optimization, when Var
- *          nodes are still in parser format, referring to RTE items.
- */
-TargetEntry *
-cdbpullup_targetentry(TargetEntry  *subplan_targetentry,
-                      AttrNumber    newresno,
-                      Index         newvarno,
-                      bool          useExecutorVarFormat);
-
-/*
- * cdbpullup_targetlist
- *
- * Return a targetlist that can be attached to a parent plan yielding
- * the same projection as the given subplan.
- */
-List *
-cdbpullup_targetlist(struct Plan *subplan, bool useExecutorVarFormat);
-
 
 #endif   /* CDBPULLUP_H */

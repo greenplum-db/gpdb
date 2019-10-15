@@ -161,6 +161,13 @@ extern HashPath *create_hashjoin_path(PlannerInfo *root,
                      List *redistribution_clauses,    /*CDB*/
 					 List *hashclauses);
 
+
+extern ProjectionPath *create_projection_path_with_quals(PlannerInfo *root,
+								  RelOptInfo *rel,
+								  Path *subpath,
+								  List *tlist,
+								  List *restrict_clauses);
+
 extern Path *reparameterize_path(PlannerInfo *root, Path *path,
 					Relids required_outer,
 					double loop_count);

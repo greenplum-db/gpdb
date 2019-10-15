@@ -1,0 +1,51 @@
+---
+title: Upgrading PXF in Greenplum 6.x
+---
+
+If you are using PXF in your current Greenplum Database 6.x installation, you must upgrade the PXF service when you upgrade to a newer version of Greenplum Database 6.x.
+
+The PXF upgrade procedure describes how to upgrade PXF in your Greenplum Database installation. This procedure uses *PXF.from* to refer to your currently-installed PXF version and *PXF.to* to refer to the PXF version installed when you upgrade to the new version of Greenplum Database.
+
+The PXF upgrade procedure has two parts. You perform one procedure before, and one procedure after, you upgrade to a new version of Greenplum Database:
+
+-   [Step 1: PXF Pre-Upgrade Actions](#pxfpre)
+-   Upgrade to a new Greenplum Database version
+-   [Step 2: Upgrading PXF](#pxfup)
+
+
+## <a id="pxfpre"></a>Step 1: PXF Pre-Upgrade Actions
+
+Perform this procedure before you upgrade to a new version of Greenplum Database:
+
+1. Log in to the Greenplum Database master node. For example:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    ```
+
+2. Stop PXF on each segment host as described in [Stopping PXF](cfginitstart_pxf.html#stop_pxf).
+
+3. Upgrade to the new version of Greenplum Database and then continue your PXF upgrade with [Step 2: Upgrading PXF](#pxfup).
+
+
+## <a id="pxfup"></a>Step 2: Upgrading PXF
+
+After you upgrade to the new version of Greenplum Database, perform the following procedure to upgrade and configure the *PXF.to* software:
+
+1. Log in to the Greenplum Database master node. For example:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    ```
+
+2. Initialize PXF on each segment host as described in [Initializing PXF](init_pxf.html). You may choose to use your existing `$PXF_CONF` for the initialization.
+
+
+3. Synchronize the PXF configuration from the master host to the standby master and each Greenplum Database segment host. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
+    ```
+ 
+4. Start PXF on each segment host as described in [Starting PXF](cfginitstart_pxf.html#start_pxf).
+

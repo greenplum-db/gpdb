@@ -5,8 +5,8 @@
   <body>
     <p>The S3 storage plugin application lets you use an Amazon Simple Storage Service (Amazon S3)
       location to store and retrieve backups when you run <codeph><xref
-          href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref></codeph> and
-          <codeph><xref href="../../utility_guide/admin_utilities/gprestore.xml"
+          href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref></codeph> and
+          <codeph><xref href="../../utility_guide/ref/gprestore.xml"
         >gprestore</xref></codeph>. Amazon S3 provides secure, durable, highly-scalable object
       storage.</p>
     <p>The S3 storage plugin can also connect to an Amazon S3 compatible service such as <xref

@@ -412,7 +412,8 @@ ChoosePortalStrategy(List *stmts)
 				if (pstmt->commandType == CMD_SELECT &&
 					pstmt->utilityStmt == NULL &&
 					pstmt->intoClause == NULL &&
-					pstmt->copyIntoClause == NULL)
+					pstmt->copyIntoClause == NULL &&
+					pstmt->refreshClause == NULL)
 				{
 					if (pstmt->hasModifyingCTE)
 						return PORTAL_ONE_MOD_WITH;
@@ -538,7 +539,8 @@ FetchStatementTargetList(Node *stmt)
 		if (pstmt->commandType == CMD_SELECT &&
 			pstmt->utilityStmt == NULL &&
 			pstmt->intoClause == NULL &&
-			pstmt->copyIntoClause == NULL)
+			pstmt->copyIntoClause == NULL &&
+			pstmt->refreshClause == NULL)
 			return pstmt->planTree->targetlist;
 		if (pstmt->hasReturning)
 			return pstmt->planTree->targetlist;

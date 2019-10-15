@@ -61,6 +61,8 @@ extern void VmemTracker_Shutdown(void);
 extern void VmemTracker_ResetMaxVmemReserved(void);
 extern MemoryAllocationStatus VmemTracker_ReserveVmem(int64 newly_requested);
 extern void VmemTracker_ReleaseVmem(int64 to_be_freed_requested);
+extern MemoryAllocationStatus VmemTracker_RegisterStartupMemory(int64 bytes);
+extern void VmemTracker_UnregisterStartupMemory(void);
 extern void VmemTracker_RequestWaiver(int64 waiver_bytes);
 extern void VmemTracker_ResetWaiver(void);
 

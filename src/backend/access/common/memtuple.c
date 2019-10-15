@@ -1008,6 +1008,15 @@ Oid MemTupleGetOid(MemTuple mtup, MemTupleBinding *pbind)
 	return ((Oid *) mtup)[1];
 }
 
+/*
+ * Like MemTuleGetOid(), but must only be used if the caller is sure that the
+ * tuple has an OID (or at least it has space for it; it can be invalid).
+ */
+Oid MemTupleGetOidDirect(MemTuple mtup)
+{
+	return ((Oid *) mtup)[1];
+}
+
 void MemTupleSetOid(MemTuple mtup, MemTupleBinding *pbind pg_attribute_unused(), Oid oid)
 {
 	Assert(pbind && mtbind_has_oid(pbind));

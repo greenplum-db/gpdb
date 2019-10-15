@@ -11595,3 +11595,26 @@ SELECT * from tc4 where a IS NULL;
    |  
 (1 row)
 
+-- citext fallback
+CREATE EXTENSION IF NOT EXISTS citext;
+drop table if exists tt, tc;
+NOTICE:  table "tt" does not exist, skipping
+NOTICE:  table "tc" does not exist, skipping
+create table tc (a int, c citext) distributed by (a);
+create table tt (b int, v varchar) distributed by (v);
+insert into tc values (1, 'a'), (1, 'A');
+insert into tt values (1, 'a'), (1, 'A');
+insert into tc values (1, 'b'), (1, 'B');
+insert into tt values (1, 'b'), (1, 'B');
+-- expected fall back to the planner
+select * from tc, tt where c = v;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Operator Citext comparison in join. not supported
+ a | c | b | v 
+---+---+---+---
+ 1 | a | 1 | a
+ 1 | A | 1 | A
+ 1 | B | 1 | B
+ 1 | b | 1 | b
+(4 rows)
+

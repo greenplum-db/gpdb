@@ -108,8 +108,8 @@
       <p>If you try to add an incremental backup to a backup set, the backup operation fails if the
           <codeph>gpbackup</codeph> options are not consistent.</p>
       <p>For information about the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utility
-        options, see <xref href="../../utility_guide/admin_utilities/gpbackup.xml">gpbackup</xref>
-        and <xref href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref><ph
+        options, see <xref href="../../utility_guide/ref/gpbackup.xml">gpbackup</xref>
+        and <xref href="../../utility_guide/ref/gprestore.xml">gprestore</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Utility Guide</cite></ph>.</p>
       <section id="incr_backup_scenario">
         <title>Example Using Incremental Backup Sets</title>

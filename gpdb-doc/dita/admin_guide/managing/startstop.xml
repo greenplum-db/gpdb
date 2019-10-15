@@ -162,19 +162,28 @@
         <li><codeph>pg_terminate_backend( pid int4 )</codeph></li>
         <li><codeph>pg_terminate_backend( pid int4, msg text )</codeph></li>
       </ul></p>
-      <p>If you provide a <codeph>msg</codeph>, Greenplum Database includes the text in the cancel message returned to the client. <codeph>msg</codeph> is limited to 128 bytes; Greenplum Database truncates anything longer.</p>
-      <p>The <codeph>pg_cancel_backend()</codeph> and <codeph>pg_terminate_backend()</codeph> functions return <codeph>true</codeph> if successful, and <codeph>false</codeph> otherwise.</p>
-      <p>To cancel or terminate a backend process, you must first identify the process ID of the backend. You can obtain the process ID from the <codeph>pid</codeph> column of the <codeph>pg_stat_activity</codeph> view. For example, to view the process information associated with all running and queued queries: <codeblock>=# SELECT usename, pid, waiting, current_query, datname
+      <p>If you provide a <codeph>msg</codeph>, Greenplum Database includes the text in the cancel
+        message returned to the client. <codeph>msg</codeph> is limited to 128 bytes; Greenplum
+        Database truncates anything longer.</p>
+      <p>The <codeph>pg_cancel_backend()</codeph> and <codeph>pg_terminate_backend()</codeph>
+        functions return <codeph>true</codeph> if successful, and <codeph>false</codeph>
+        otherwise.</p>
+      <p>To cancel or terminate a backend process, you must first identify the process ID of the
+        backend. You can obtain the process ID from the <codeph>pid</codeph> column of the
+          <codeph>pg_stat_activity</codeph> view. For example, to view the process information
+        associated with all running and queued queries:
+        <codeblock>=# SELECT usename, pid, waiting, state, query, datname
      FROM pg_stat_activity;</codeblock></p>
       <p>Sample partial query output:</p>
-        <codeblock> usename |  pid     | waiting |     current_query     | datname
----------+----------+---------+-----------------------+---------
-  sammy  |   31861  |    f    | &lt;IDLE&gt; in transaction | testdb
-  billy  |   31905  |    t    | SELECT * FROM topten; | testdb</codeblock>
-      <p>Use the output to identify the process id (<codeph>pid</codeph>) of the query
-        or client connection. </p>
-      <p>For example, to cancel the pending query identified in the sample output above
-        and include "Admin canceled long-running query." in the message returned to the client:</p>
+      <codeblock> usename |  pid     | waiting | state  |         query          | datname
+---------+----------+---------+--------+------------------------+---------
+  sammy  |   31861  |    f    | idle   | SELECT * FROM testtbl; | testdb
+  billy  |   31905  |    t    | active | SELECT * FROM topten;  | testdb</codeblock>
+      <p>Use the output to identify the process id (<codeph>pid</codeph>) of the query or client
+        connection. </p>
+      <p>For example, to cancel the waiting query identified in the sample output above and include
+          <codeph>'Admin canceled long-running query.'</codeph> as the message returned to the
+        client:</p>
       <p>
         <codeblock>=# SELECT pg_cancel_backend(31905 ,'Admin canceled long-running query.');
 ERROR:  canceling statement due to user request: "Admin canceled long-running query."</codeblock>

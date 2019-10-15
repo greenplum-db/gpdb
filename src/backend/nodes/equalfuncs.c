@@ -800,7 +800,6 @@ static bool
 _equalFlow(const Flow *a, const Flow *b)
 {
 	COMPARE_SCALAR_FIELD(flotype);
-	COMPARE_SCALAR_FIELD(req_move);
 	COMPARE_SCALAR_FIELD(locustype);
 	COMPARE_SCALAR_FIELD(segindex);
 	COMPARE_SCALAR_FIELD(numsegments);
@@ -3142,6 +3141,7 @@ equal(const void *a, const void *b)
 			break;
 		case T_Flow:
 			retval = _equalFlow(a, b);
+			break;
 		case T_OnConflictExpr:
 			retval = _equalOnConflictExpr(a, b);
 			break;

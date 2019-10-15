@@ -125,6 +125,7 @@ typedef struct SliceTable
 {
 	NodeTag		type;
 
+	Bitmapset  *used_subplans;
 	int			nMotions;		/* The number Motion nodes in the entire plan */
 	int			nInitPlans;		/* The number of initplan slices allocated */
 	int			localSlice;		/* Index of the slice to execute. */

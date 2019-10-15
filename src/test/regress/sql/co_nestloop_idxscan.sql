@@ -9,7 +9,7 @@ distributed by (id);
 create table co_nestloop_idxscan.bar (id bigint) distributed by (id);
 
 -- Changing the text to be smaller doesn't repro the issue
-insert into co_nestloop_idxscan.foo select 1, repeat('xxxxxxxxxx', 100000);
+insert into co_nestloop_idxscan.foo select i, repeat('xxxxxxxxxx', 100000) from generate_series(1,50) i;
 insert into co_nestloop_idxscan.bar values (1);
 
 create index foo_id_idx on co_nestloop_idxscan.foo(id);

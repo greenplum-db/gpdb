@@ -96,10 +96,9 @@ explain (costs off) update base_tbl set a=a+1;
          Hash Key: ((child_a.a + 1))
          ->  Split
                ->  Seq Scan on child_a
-   ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)
-         ->  Seq Scan on child_b
+   ->  Seq Scan on child_b
  Optimizer: Postgres query optimizer
-(12 rows)
+(14 rows)
 
 update base_tbl set a = 5;
 --
@@ -132,29 +131,29 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
    InitPlan 3 (returns $2)  (slice9)
      ->  Aggregate
            InitPlan 2 (returns $1)  (slice8)
-             ->  Gather Motion 3:1  (slice3; segments: 3)
+             ->  Gather Motion 3:1  (slice5; segments: 3)
                    ->  Seq Scan on keo4 keo4_1
                          Filter: ((keo_para_budget_date)::text = $0)
                          InitPlan 1 (returns $0)  (slice7)
                            ->  Aggregate
-                                 ->  Gather Motion 3:1  (slice2; segments: 3)
+                                 ->  Gather Motion 3:1  (slice6; segments: 3)
                                        ->  Aggregate
                                              ->  Seq Scan on keo4
-           ->  Gather Motion 3:1  (slice1; segments: 3)
+           ->  Gather Motion 3:1  (slice4; segments: 3)
                  ->  Aggregate
                        ->  Seq Scan on keo3
                              Filter: ((bky_per)::text = ($1)::text)
-   ->  Explicit Redistribute Motion 3:3  (slice6; segments: 3)
+   ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)
          ->  Hash Join
                Hash Cond: ((b.projects_pk)::text = (a.user_vie_project_code_pk)::text)
                ->  Seq Scan on keo2 b
                ->  Hash
-                     ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
                            ->  Hash Join
                                  Hash Cond: ((keo1.user_vie_project_code_pk)::text = (a.user_vie_project_code_pk)::text)
                                  ->  Seq Scan on keo1
                                  ->  Hash
-                                       ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                              ->  Seq Scan on keo1 a
                                                    Filter: ((user_vie_fiscal_year_period_sk)::text = $2)
  Optimizer: Postgres query optimizer

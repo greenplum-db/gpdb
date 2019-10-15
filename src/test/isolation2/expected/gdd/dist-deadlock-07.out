@@ -11,6 +11,16 @@ INSERT 100
 INSERT INTO t07b (c1, c2) SELECT i, i FROM generate_series(1, 100) i;
 INSERT 100
 
+-- gang creation order is important, reset any guc to force the creation
+10: RESET optimizer;
+RESET
+20: RESET optimizer;
+RESET
+30: RESET optimizer;
+RESET
+40: RESET optimizer;
+RESET
+
 10: BEGIN;
 BEGIN
 20: BEGIN;

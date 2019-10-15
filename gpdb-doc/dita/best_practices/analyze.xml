@@ -14,7 +14,7 @@
         with no arguments updates statistics for all tables in the database. This can be a very
         long-running process and it is not recommended. You should <codeph>ANALYZE</codeph> tables
         selectively when data has changed or use the <codeph><xref
-            href="../utility_guide/admin_utilities/analyzedb.xml">analyzedb</xref></codeph> utility. </p>
+            href="../utility_guide/ref/analyzedb.xml">analyzedb</xref></codeph> utility. </p>
       <p>Running <codeph>ANALYZE</codeph> on a large table can take a long time. If it is not
         feasible to run <codeph>ANALYZE</codeph> on all columns of a very large table, you can
         generate statistics for selected columns only using <codeph>ANALYZE table(column,

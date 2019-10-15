@@ -33,6 +33,7 @@
 
 #include "catalog/pg_proc.h"
 #include "cdb/cdbhash.h"        /* cdb_default_distribution_opfamily_for_type() */
+#include "cdb/cdbmutate.h"
 #include "cdb/cdbpath.h"        /* cdb_create_motion_path() etc */
 #include "cdb/cdbutil.h"		/* getgpsegmentCount() */
 #include "executor/nodeHash.h"
@@ -1366,8 +1367,8 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 					  List *pathkeys)
 {
 	ListCell   *l;
-	bool		fIsNotPartitioned = false;
-	bool		fIsPartitionInEntry = false;
+	CdbLocusType targetlocustype;
+	CdbPathLocus targetlocus;
 	int			numsegments;
 	List	   *subpaths;
 	List	  **subpaths_out;
@@ -1390,144 +1391,206 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 		return;
 	}
 
-	/* By default put Append node on all the segments */
-	numsegments = getgpsegmentCount();
+	/*
+	 * Do a first pass over the children to determine what locus the result
+	 * should have, based on the loci of the children.
+	 *
+	 * We only determine the target locus type here, the number of segments is
+	 * figured out later. We treat also all partitioned types the same for now,
+	 * using Strewn to represent them all, and figure out later if we can mark
+	 * it hashed, or if have to leave it strewn.
+	 */
+	static const struct
+	{
+		CdbLocusType a;
+		CdbLocusType b;
+		CdbLocusType result;
+	} append_locus_compatibility_table[] =
+	{
+		/*
+		 * If any of the children have 'entry' locus, bring all the subpaths
+		 * to the entry db.
+		 */
+		{ CdbLocusType_Entry, CdbLocusType_Entry,          CdbLocusType_Entry },
+		{ CdbLocusType_Entry, CdbLocusType_SingleQE,       CdbLocusType_Entry },
+		{ CdbLocusType_Entry, CdbLocusType_Strewn,         CdbLocusType_Entry },
+		{ CdbLocusType_Entry, CdbLocusType_Replicated,     CdbLocusType_Entry },
+		{ CdbLocusType_Entry, CdbLocusType_SegmentGeneral, CdbLocusType_Entry },
+		{ CdbLocusType_Entry, CdbLocusType_General,        CdbLocusType_Entry },
+
+		/* similarly, if there are single QE children, bring everything to a single QE */
+		{ CdbLocusType_SingleQE, CdbLocusType_SingleQE,       CdbLocusType_SingleQE },
+		{ CdbLocusType_SingleQE, CdbLocusType_Strewn,         CdbLocusType_SingleQE },
+		{ CdbLocusType_SingleQE, CdbLocusType_Replicated,     CdbLocusType_SingleQE },
+		{ CdbLocusType_SingleQE, CdbLocusType_SegmentGeneral, CdbLocusType_SingleQE },
+		{ CdbLocusType_SingleQE, CdbLocusType_General,        CdbLocusType_SingleQE },
+
+		/*
+		 * If everything is partitioned, then the result can be partitioned, too.
+		 * But if it's a mix of partitioned and replicated, then we have to bring
+		 * everything to a single QE. Otherwise, the replicated (or general) children
+		 * will contribute rows on every QE. XXX: it would be nice to force the child
+		 * to be executed on a single QE, but I couldn't figure out how to do that.
+		 * A motion from General to SingleQE is not possible.
+		 */
+		{ CdbLocusType_Strewn, CdbLocusType_Strewn,         CdbLocusType_Strewn },
+		{ CdbLocusType_Strewn, CdbLocusType_Replicated,     CdbLocusType_SingleQE },
+		{ CdbLocusType_Strewn, CdbLocusType_SegmentGeneral, CdbLocusType_SingleQE },
+		{ CdbLocusType_Strewn, CdbLocusType_General,        CdbLocusType_SingleQE },
+
+		{ CdbLocusType_Replicated, CdbLocusType_Replicated, CdbLocusType_Replicated },
+		{ CdbLocusType_Replicated, CdbLocusType_SegmentGeneral, CdbLocusType_Replicated },
+		{ CdbLocusType_Replicated, CdbLocusType_General,        CdbLocusType_Replicated },
+
+		{ CdbLocusType_SegmentGeneral, CdbLocusType_SegmentGeneral, CdbLocusType_SegmentGeneral },
+		{ CdbLocusType_SegmentGeneral, CdbLocusType_General,        CdbLocusType_SegmentGeneral },
+
+		{ CdbLocusType_General, CdbLocusType_General,        CdbLocusType_General },
+	};
+	targetlocustype = CdbLocusType_General;
 	foreach(l, subpaths)
 	{
 		Path	   *subpath = (Path *) lfirst(l);
+		CdbLocusType subtype;
+		int			i;
 
-		/* If any subplan is SingleQE, align Append numsegments with it */
-		if (CdbPathLocus_IsSingleQE(subpath->locus))
+		if (CdbPathLocus_IsPartitioned(subpath->locus))
+			subtype = CdbLocusType_Strewn;
+		else
+			subtype = subpath->locus.locustype;
+
+		if (l == list_head(subpaths))
 		{
-			/* When there are multiple SingleQE, use the common segments */
-			numsegments = Min(numsegments,
-							  CdbPathLocus_NumSegments(subpath->locus));
+			targetlocustype = subtype;
+			continue;
 		}
+		for (i = 0; i < lengthof(append_locus_compatibility_table); i++)
+		{
+			if ((append_locus_compatibility_table[i].a == targetlocustype &&
+				 append_locus_compatibility_table[i].b == subtype) ||
+				(append_locus_compatibility_table[i].a == subtype &&
+				 append_locus_compatibility_table[i].b == targetlocustype))
+			{
+				targetlocustype = append_locus_compatibility_table[i].result;
+				break;
+			}
+		}
+		if (i == lengthof(append_locus_compatibility_table))
+			elog(ERROR, "could not determine target locus for Append");
 	}
 
 	/*
-	 * Do a first pass over the children to determine if there's any child
-	 * which is not partitioned, i.e. is a bottleneck or replicated.
+	 * Now compute the 'numsegments', and the hash keys if it's a partitioned
+	 * type.
 	 */
-	foreach(l, subpaths)
+	if (targetlocustype == CdbLocusType_Entry)
 	{
-		Path	   *subpath = (Path *) lfirst(l);
-
-		/* If one of subplan is segment general, gather others to single QE */
-		if (CdbPathLocus_IsBottleneck(subpath->locus) ||
-			CdbPathLocus_IsSegmentGeneral(subpath->locus) ||
-			CdbPathLocus_IsReplicated(subpath->locus))
+		/* nothing more to do */
+		CdbPathLocus_MakeEntry(&targetlocus);
+	}
+	else if (targetlocustype == CdbLocusType_SingleQE ||
+			 targetlocustype == CdbLocusType_Replicated ||
+			 targetlocustype == CdbLocusType_SegmentGeneral ||
+			 targetlocustype == CdbLocusType_General)
+	{
+		/* By default put Append node on all the segments */
+		numsegments = getgpsegmentCount();
+		foreach(l, subpaths)
 		{
-			fIsNotPartitioned = true;
+			Path	   *subpath = (Path *) lfirst(l);
 
-			/* check whether any partition is on entry db */
-			if (CdbPathLocus_IsEntry(subpath->locus))
+			/*
+			 * Align numsegments to be the common segments among the children.
+			 * Partitioned children will need to be motioned, so ignore them.
+			 */
+			if (!CdbPathLocus_IsPartitioned(subpath->locus))
 			{
-				fIsPartitionInEntry = true;
+				/* When there are multiple SingleQE, use the common segments */
+				numsegments = Min(numsegments,
+								  CdbPathLocus_NumSegments(subpath->locus));
+			}
+		}
+		CdbPathLocus_MakeSimple(&targetlocus, targetlocustype, numsegments);
+	}
+	else if (targetlocustype == CdbLocusType_Strewn)
+	{
+		bool		isfirst = true;
+
+		/* By default put Append node on all the segments */
+		numsegments = getgpsegmentCount();
+		CdbPathLocus_MakeNull(&targetlocus, 0);
+		foreach(l, subpaths)
+		{
+			Path	   *subpath = (Path *) lfirst(l);
+			CdbPathLocus projectedlocus;
+
+			Assert(CdbPathLocus_IsPartitioned(subpath->locus));
+
+			/* Transform subpath locus into the appendrel's space for comparison. */
+			if (subpath->parent == rel ||
+				subpath->parent->reloptkind != RELOPT_OTHER_MEMBER_REL)
+				projectedlocus = subpath->locus;
+			else
+				projectedlocus =
+					cdbpathlocus_pull_above_projection(root,
+													   subpath->locus,
+													   subpath->parent->relids,
+													   subpath->parent->reltargetlist,
+													   rel->reltargetlist,
+													   rel->relid);
+
+			/*
+			 * CDB: If all the scans are distributed alike, set
+			 * the result locus to match.  Otherwise, if all are partitioned,
+			 * set it to strewn.  A mixture of partitioned and non-partitioned
+			 * scans should not occur after above correction;
+			 *
+			 * CDB TODO: When the scans are not all partitioned alike, and the
+			 * result is joined with another rel, consider pushing the join
+			 * below the Append so that child tables that are properly
+			 * distributed can be joined in place.
+			 */
+			if (isfirst)
+			{
+				targetlocus = projectedlocus;
+				isfirst = false;
+			}
+			else if (cdbpathlocus_equal(targetlocus, projectedlocus))
+			{
+				/* compatible */
+			}
+			else
+			{
+				/*
+				 * subpaths have different distributed policy, mark it as random
+				 * distributed and set the numsegments to the maximum of all
+				 * subpaths to not missing any tuples.
+				 */
+				CdbPathLocus_MakeStrewn(&targetlocus,
+										Max(CdbPathLocus_NumSegments(targetlocus),
+											CdbPathLocus_NumSegments(projectedlocus)));
 				break;
 			}
 		}
 	}
+	else
+		elog(ERROR, "unexpected Append target locus type");
 
+	/* Ok, we now know the target locus. Add Motions to any subpaths that need it */
 	new_subpaths = NIL;
 	foreach(l, subpaths)
 	{
 		Path	   *subpath = (Path *) lfirst(l);
-		CdbPathLocus projectedlocus;
 
-		/*
-		 * In case any of the children is not partitioned convert all
-		 * children to have singleQE locus
-		 */
-		if (fIsNotPartitioned)
+		if (CdbPathLocus_IsPartitioned(targetlocus))
 		{
-			/*
-			 * if any partition is on entry db, we should gather all the
-			 * partitions to QD to do the append
-			 */
-			if (fIsPartitionInEntry)
-			{
-				if (!CdbPathLocus_IsEntry(subpath->locus))
-				{
-					CdbPathLocus singleEntry;
-					CdbPathLocus_MakeEntry(&singleEntry);
-
-					subpath = cdbpath_create_motion_path(root, subpath, subpath->pathkeys, false, singleEntry);
-				}
-			}
-			else /* fIsNotPartitioned true, fIsPartitionInEntry false */
-			{
-				if (!CdbPathLocus_IsSingleQE(subpath->locus))
-				{
-					CdbPathLocus    singleQE;
-
-					/* Gather to SingleQE */
-					CdbPathLocus_MakeSingleQE(&singleQE, numsegments);
-
-					subpath = cdbpath_create_motion_path(root, subpath, subpath->pathkeys, false, singleQE);
-				}
-				else
-				{
-					/* Align all SingleQE to the common segments */
-					subpath->locus.numsegments = numsegments;
-				}
-			}
-		}
-
-		/* Transform subpath locus into the appendrel's space for comparison. */
-		if (subpath->parent == rel ||
-			subpath->parent->reloptkind != RELOPT_OTHER_MEMBER_REL)
-			projectedlocus = subpath->locus;
-		else
-			projectedlocus =
-				cdbpathlocus_pull_above_projection(root,
-												   subpath->locus,
-												   subpath->parent->relids,
-												   subpath->parent->reltargetlist,
-												   rel->reltargetlist,
-												   rel->relid);
-
-		/*
-		 * CDB: If all the scans are distributed alike, set
-		 * the result locus to match.  Otherwise, if all are partitioned,
-		 * set it to strewn.  A mixture of partitioned and non-partitioned
-		 * scans should not occur after above correction;
-		 *
-		 * CDB TODO: When the scans are not all partitioned alike, and the
-		 * result is joined with another rel, consider pushing the join
-		 * below the Append so that child tables that are properly
-		 * distributed can be joined in place.
-		 */
-		if (l == list_head(subpaths))
-			pathnode->locus = projectedlocus;
-		else if (cdbpathlocus_equal(pathnode->locus, projectedlocus))
-		{
-			/* compatible */
-		}
-		else if (CdbPathLocus_IsGeneral(pathnode->locus))
-		{
-			/* compatible */
-			pathnode->locus = projectedlocus;
-		}
-		else if (CdbPathLocus_IsGeneral(projectedlocus))
-		{
-			/* compatible */
-		}
-		else if (CdbPathLocus_IsPartitioned(pathnode->locus) &&
-				 CdbPathLocus_IsPartitioned(projectedlocus))
-		{
-			/*
-			 * subpaths have different distributed policy, mark it as random
-			 * distributed and set the numsegments to the maximum of all
-			 * subpaths to not missing any tuples.
-			 */
-			CdbPathLocus_MakeStrewn(&pathnode->locus,
-									Max(CdbPathLocus_NumSegments(pathnode->locus),
-										CdbPathLocus_NumSegments(projectedlocus)));
+			/* we already determined that all the loci are compatible */
+			Assert(CdbPathLocus_IsPartitioned(subpath->locus));
 		}
 		else
-			ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							errmsg_internal("cannot append paths with incompatible distribution")));
+		{
+			subpath = cdbpath_create_motion_path(root, subpath, subpath->pathkeys, false, targetlocus);
+		}
 
 		pathnode->sameslice_relids = bms_union(pathnode->sameslice_relids, subpath->sameslice_relids);
 
@@ -1539,6 +1602,7 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 
 		new_subpaths = lappend(new_subpaths, subpath);
 	}
+	pathnode->locus = targetlocus;
 
 	*subpaths_out = new_subpaths;
 }
@@ -2274,6 +2338,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 	ListCell   *lc;
 	char		exec_location;
 	bool		contain_mutables = false;
+	bool		contain_outer_params = false;
 
 	pathnode->pathtype = T_FunctionScan;
 	pathnode->parent = rel;
@@ -2287,6 +2352,17 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 	 * Otherwise let it be evaluated in the same slice as its parent operator.
 	 */
 	Assert(rte->rtekind == RTE_FUNCTION);
+
+	foreach (lc, rel->baserestrictinfo)
+	{
+		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+
+		if (rinfo->contain_outer_query_references)
+		{
+			contain_outer_params = true;
+			break;
+		}
+	}
 
 	/*
 	 * Decide where to execute the FunctionScan.
@@ -2351,6 +2427,10 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 			 * be executed anywhere.
 			 */
 		}
+
+		if (!contain_outer_params &&
+			contains_outer_params(rtfunc->funcexpr, root))
+			contain_outer_params = true;
 	}
 	switch (exec_location)
 	{
@@ -2362,16 +2442,22 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 			 * non-IMMUTABLE functions on the master. Keep that behavior
 			 * for backwards compatibility.
 			 */
-			if (contain_mutables)
+			if (contain_outer_params)
+				CdbPathLocus_MakeOuterQuery(&pathnode->locus, getgpsegmentCount());
+			else if (contain_mutables)
 				CdbPathLocus_MakeEntry(&pathnode->locus);
 			else
 				CdbPathLocus_MakeGeneral(&pathnode->locus,
 										 getgpsegmentCount());
 			break;
 		case PROEXECLOCATION_MASTER:
+			if (contain_outer_params)
+				elog(ERROR, "cannot execute EXECUTE ON MASTER function in a subquery with arguments from outer query");
 			CdbPathLocus_MakeEntry(&pathnode->locus);
 			break;
 		case PROEXECLOCATION_ALL_SEGMENTS:
+			if (contain_outer_params)
+				elog(ERROR, "cannot execute EXECUTE ON ALL SEGMENTS function in a subquery with arguments from outer query");
 			CdbPathLocus_MakeStrewn(&pathnode->locus,
 									getgpsegmentCount());
 			break;
@@ -2464,10 +2550,12 @@ create_valuesscan_path(PlannerInfo *root, RelOptInfo *rel,
 	if (contain_mutable_functions((Node *)rte->values_lists))
 		CdbPathLocus_MakeEntry(&pathnode->locus);
 	else
+	{
 		/*
 		 * ValuesScan can be on any segment.
 		 */
 		CdbPathLocus_MakeGeneral(&pathnode->locus, getgpsegmentCount());
+	}
 
 	pathnode->motionHazard = false;
 	pathnode->rescannable = true;
@@ -2537,6 +2625,8 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 		CdbPathLocus_MakeGeneral(&result, numsegments);
 	else if (ctelocus == CdbLocusType_SegmentGeneral)
 		CdbPathLocus_MakeSegmentGeneral(&result, numsegments);
+	else if (ctelocus == CdbLocusType_OuterQuery)
+		CdbPathLocus_MakeOuterQuery(&result, numsegments);
 	else
 		CdbPathLocus_MakeStrewn(&result, numsegments);
 
@@ -3134,6 +3224,85 @@ create_hashjoin_path(PlannerInfo *root,
 						  sjinfo, semifactors);
 
 	final_cost_hashjoin(root, pathnode, workspace, sjinfo, semifactors);
+
+	return pathnode;
+}
+
+/*
+ * create_projection_path
+ *	  Creates a pathnode that represents performing a projection.
+ *
+ * 'rel' is the parent relation associated with the result
+ * 'subpath' is the path representing the source of data
+ * 'target' is the PathTarget to be computed
+ */
+ProjectionPath *
+create_projection_path_with_quals(PlannerInfo *root,
+								  RelOptInfo *rel,
+								  Path *subpath,
+								  List *tlist,
+								  List *restrict_clauses)
+{
+	ProjectionPath *pathnode = makeNode(ProjectionPath);
+
+	pathnode->path.pathtype = T_Result;
+	pathnode->path.parent = rel;
+	/* For now, assume we are above any joins, so no parameterization */
+	pathnode->path.param_info = NULL;
+	/* Projection does not change the sort order */
+	pathnode->path.pathkeys = subpath->pathkeys;
+
+	pathnode->subpath = subpath;
+
+	/*
+	 * We might not need a separate Result node.  If the input plan node type
+	 * can project, we can just tell it to project something else.  Or, if it
+	 * can't project but the desired target has the same expression list as
+	 * what the input will produce anyway, we can still give it the desired
+	 * tlist (possibly changing its ressortgroupref labels, but nothing else).
+	 * Note: in the latter case, create_projection_plan has to recheck our
+	 * conclusion; see comments therein.
+	 *
+	 * GPDB: The 'restrict_clauses' is a GPDB addition. If the subpath supports
+	 * Filters, we could push them down too. But currently this is only used on
+	 * top of Material paths, which don't support it, so it doesn't matter.
+	 *
+	 * GPDB_96_MERGE_FIXME: Until 9.6, this isn't used in any situation where
+	 * we wouldn't need a Result. And we don't have is_projection_capable_path()
+	 * yet.
+	 */
+#if 0
+	if (!restrict_clauses &&
+		(is_projection_capable_path(subpath) ||
+		 equal(oldtarget->exprs, target->exprs)))
+	{
+		/* No separate Result node needed */
+		pathnode->dummypp = true;
+
+		/*
+		 * Set cost of plan as subpath's cost, adjusted for tlist replacement.
+		 */
+		pathnode->path.rows = subpath->rows;
+		pathnode->path.startup_cost = subpath->startup_cost +
+			(target->cost.startup - oldtarget->cost.startup);
+		pathnode->path.total_cost = subpath->total_cost +
+			(target->cost.startup - oldtarget->cost.startup) +
+			(target->cost.per_tuple - oldtarget->cost.per_tuple) * subpath->rows;
+	}
+	else
+#endif
+	{
+		/* We really do need the Result node */
+		pathnode->dummypp = false;
+
+		pathnode->path.rows = subpath->rows;
+		pathnode->path.startup_cost = subpath->startup_cost;
+		pathnode->path.total_cost = subpath->total_cost;
+
+		pathnode->cdb_restrict_clauses = restrict_clauses;
+	}
+
+	pathnode->path.locus = subpath->locus;
 
 	return pathnode;
 }

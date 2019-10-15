@@ -37,7 +37,7 @@ test: gp_tablespace
 test: temp_tablespaces
 test: default_tablespace
 
-test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy_encoding gp_create_table gp_create_view window_views replication_slots create_table_like_gp gp_constraints
+test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy_encoding gp_create_table gp_create_view window_views replication_slots create_table_like_gp gp_constraints matview_ao
 # below test(s) inject faults so each of them need to be in a separate group
 test: gpcopy
 
@@ -79,11 +79,8 @@ test: zlib
 test: instr_in_shmem_verify
 
 test: workfile_limits
-# This test will change the gp_workfile_limit_per_segment and will need to restart the DB.
 # It will also use faultinjector - so it needs to be in a group by itself.
-test: segspace_setup
 test: segspace
-test: segspace_cleanup
 
 test: cursor
 
@@ -99,9 +96,7 @@ test: dtm_retry
 
 # The appendonly test cannot be run concurrently with tests that have
 # serializable transactions (may conflict with AO vacuum operations).
-test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish subselect_gp_indexes
-
-test: partial_table
+test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish partial_table subselect_gp_indexes
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.

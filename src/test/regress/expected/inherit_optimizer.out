@@ -1508,30 +1508,31 @@ create table matest1 () inherits(matest0);
 create index matest0i on matest0 (b, c);
 create index matest1i on matest1 (b, c);
 set enable_nestloop = off;  -- we want a plan with two MergeAppends
+set enable_mergejoin=on;
 explain (costs off)
 select t1.* from matest0 t1, matest0 t2
 where t1.b = t2.b and t2.c = t2.d
 order by t1.b limit 10;
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
  Limit
-   ->  Gather Motion 3:1  (slice2; segments: 3)
-         Merge Key: t1.b
-         ->  Limit
-               ->  Sort
+   ->  Merge Join
+         Merge Cond: (t1.b = t2.b)
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: t1.b
+               ->  Merge Append
                      Sort Key: t1.b
-                     ->  Hash Join
-                           Hash Cond: (t1.b = t2.b)
-                           ->  Append
-                                 ->  Seq Scan on matest0 t1
-                                 ->  Seq Scan on matest1 t1_1
-                           ->  Hash
-                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)
-                                       ->  Append
-                                             ->  Seq Scan on matest0 t2
-                                                   Filter: (c = d)
-                                             ->  Seq Scan on matest1 t2_1
-                                                   Filter: (c = d)
+                     ->  Index Scan using matest0i on matest0 t1
+                     ->  Index Scan using matest1i on matest1 t1_1
+         ->  Materialize
+               ->  Gather Motion 3:1  (slice2; segments: 3)
+                     Merge Key: t2.b
+                     ->  Merge Append
+                           Sort Key: t2.b
+                           ->  Index Scan using matest0i on matest0 t2
+                                 Filter: (c = d)
+                           ->  Index Scan using matest1i on matest1 t2_1
+                                 Filter: (c = d)
  Optimizer: Postgres query optimizer
 (19 rows)
 

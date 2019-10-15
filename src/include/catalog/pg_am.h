@@ -151,7 +151,7 @@ DATA(insert OID = 3580 (  brin	   0 15 f f f f t t f t t f f 0 brininsert brinbe
 DESCR("block range index (BRIN) access method");
 #define BRIN_AM_OID 3580
 
-DATA(insert OID = 7013 (  bitmap	5 1 f f f t t t f f f f f 0 bminsert bmbeginscan bmgettuple bmgetbitmap bmrescan bmendscan bmmarkpos bmrestrpos bmbuild bmbuildempty bmbulkdelete bmvacuumcleanup - bmcostestimate bmoptions ));
+DATA(insert OID = 7013 (  bitmap	5 2 f f f t t t f f f f f 0 bminsert bmbeginscan bmgettuple bmgetbitmap bmrescan bmendscan bmmarkpos bmrestrpos bmbuild bmbuildempty bmbulkdelete bmvacuumcleanup - bmcostestimate bmoptions ));
 DESCR("bitmap index access method");
 #define BITMAP_AM_OID 7013
 

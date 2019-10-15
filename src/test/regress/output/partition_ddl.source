@@ -2280,17 +2280,8 @@ END (date '2009-03-01') EXCLUSIVE
 SUBPARTITION asia VALUES ('asia'),
 SUBPARTITION europe VALUES ('europe') );
 ERROR:  subpartition configuration conflicts with subpartition template
-ALTER TABLE mpp3377_sales ADD PARTITION
-START (date '2009-02-01') INCLUSIVE
-END (date '2009-03-01') EXCLUSIVE
-( SUBPARTITION usa VALUES ('usa'),
-SUBPARTITION asia VALUES ('asia'),
-SUBPARTITION europe VALUES ('europe') );
-ERROR:  subpartition configuration conflicts with subpartition template
 -- This is the new way
 ALTER TABLE mpp3377_sales ADD PARTITION START (date '2009-02-01') INCLUSIVE END (date '2009-03-01') EXCLUSIVE;
-ALTER TABLE mpp3377_sales ADD PARTITION START (date '2009-02-01') INCLUSIVE END (date '2009-03-01') EXCLUSIVE;
-ERROR:  new partition overlaps existing partition
 CREATE TABLE mpp3250 (
         unique1         int4,
         unique2         int4,

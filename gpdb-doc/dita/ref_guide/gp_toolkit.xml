@@ -1903,7 +1903,7 @@
             </tbody>
           </tgroup>
         </table>
-        <p>Query output for this view is similar to that of the 
+        <p>Query output for this view is similar to that of the
           <codeph>gp_resgroup_status_per_host</codeph> view, and breaks out the CPU and
           memory (used and available) for each segment instance on each host.</p>
       </body>
@@ -2260,7 +2260,7 @@
         <p>This view contains one row for each operator using disk space for workfiles on a segment
           at the current time. The view is accessible to all users, however non-superusers only to
           see information for the databases that they have permission to access.</p>
-        <table id="ie202617" class="- topic/table ">
+        <table class="- topic/table " id="table_zt5_yl1_gjb">
           <title class="- topic/title ">gp_workfile_entries</title>
           <tgroup cols="4" class="- topic/tgroup ">
             <colspec colnum="1" colname="col1" colwidth="131pt" class="- topic/colspec "/>
@@ -2278,32 +2278,6 @@
             <tbody class="- topic/tbody ">
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">command_cnt</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">integer</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">Command ID of the query.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">content</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">smallint</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The content identifier for a segment
-                  instance.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">current_query</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">text</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">Current query that the process is
-                  running.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
                   <codeph class="+ topic/ph pr-d/codeph ">datname</codeph>
                 </entry>
                 <entry colname="col2" class="- topic/entry ">name</entry>
@@ -2312,24 +2286,7 @@
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">directory</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">text</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">Path to the work file.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">optype</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">text</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The query operator type that created
-                  the work file.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">procpid </codeph>
+                  <codeph class="+ topic/ph pr-d/codeph ">pid </codeph>
                 </entry>
                 <entry colname="col2" class="- topic/entry ">integer</entry>
                 <entry colname="col3" class="- topic/entry "/>
@@ -2346,38 +2303,11 @@
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">size </codeph>
+                  <codeph class="+ topic/ph pr-d/codeph ">command_cnt</codeph>
                 </entry>
-                <entry colname="col2" class="- topic/entry ">bigint</entry>
+                <entry colname="col2" class="- topic/entry ">integer</entry>
                 <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The size of the work file in
-                  bytes.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">numfiles</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">bigint</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The number of files created.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">slice</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">smallint</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The query plan slice. The portion of
-                  the query plan that is being executed.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">state</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">text</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The state of the query that created the
-                  work file.</entry>
+                <entry colname="col4" class="- topic/entry ">Command ID of the query.</entry>
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
@@ -2389,12 +2319,62 @@
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">workmem</codeph>
+                  <codeph class="+ topic/ph pr-d/codeph ">query</codeph>
+                </entry>
+                <entry colname="col2" class="- topic/entry ">text</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">Current query that the process is
+                  running.</entry>
+              </row>
+              <row>
+                <entry colname="col1" class="- topic/entry ">
+                  <codeph>segid</codeph></entry>
+                <entry colname="col2" class="- topic/entry ">integer</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">Segment ID.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">
+                  <codeph class="+ topic/ph pr-d/codeph ">slice</codeph>
                 </entry>
                 <entry colname="col2" class="- topic/entry ">integer</entry>
                 <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The amount of memory allocated to the
-                  operator in KB.</entry>
+                <entry colname="col4" class="- topic/entry ">The query plan slice. The portion of
+                  the query plan that is being executed.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">
+                  <codeph class="+ topic/ph pr-d/codeph ">optype</codeph>
+                </entry>
+                <entry colname="col2" class="- topic/entry ">text</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">The query operator type that created
+                  the work file.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">
+                  <codeph class="+ topic/ph pr-d/codeph ">size</codeph>
+                </entry>
+                <entry colname="col2" class="- topic/entry ">bigint</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">The size of the work file in
+                  bytes.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">
+                  <codeph class="+ topic/ph pr-d/codeph ">numfiles</codeph>
+                </entry>
+                <entry colname="col2" class="- topic/entry ">integer</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">The number of files created.</entry>
+              </row>
+              <row>
+                <entry colname="col1" class="- topic/entry ">
+                  <codeph>prefix</codeph></entry>
+                <entry colname="col2" class="- topic/entry ">text</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">Prefix used when naming a related set
+                  of workfiles.</entry>
               </row>
             </tbody>
           </tgroup>
@@ -2427,32 +2407,6 @@
             <tbody class="- topic/tbody ">
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">command_cnt</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">integer</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">Command ID of the query.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">content</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">smallint</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The content identifier for a segment
-                  instance.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">current_query</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">text</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">Current query that the process is
-                  running.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
                   <codeph class="+ topic/ph pr-d/codeph ">datname</codeph>
                 </entry>
                 <entry colname="col2" class="- topic/entry ">name</entry>
@@ -2461,7 +2415,7 @@
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">procpid </codeph>
+                  <codeph class="+ topic/ph pr-d/codeph ">pid </codeph>
                 </entry>
                 <entry colname="col2" class="- topic/entry ">integer</entry>
                 <entry colname="col3" class="- topic/entry "/>
@@ -2478,9 +2432,41 @@
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
+                  <codeph class="+ topic/ph pr-d/codeph ">command_cnt</codeph>
+                </entry>
+                <entry colname="col2" class="- topic/entry ">integer</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">Command ID of the query.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">
+                  <codeph class="+ topic/ph pr-d/codeph ">usename</codeph>
+                </entry>
+                <entry colname="col2" class="- topic/entry ">name</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">Role name.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">
+                  <codeph class="+ topic/ph pr-d/codeph ">query</codeph>
+                </entry>
+                <entry colname="col2" class="- topic/entry ">text</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">Current query that the process is
+                  running.</entry>
+              </row>
+              <row>
+                <entry colname="col1" class="- topic/entry ">
+                  <codeph>segid</codeph></entry>
+                <entry colname="col2" class="- topic/entry ">integer</entry>
+                <entry colname="col3" class="- topic/entry "/>
+                <entry colname="col4" class="- topic/entry ">Segment ID.</entry>
+              </row>
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">
                   <codeph class="+ topic/ph pr-d/codeph ">size</codeph>
                 </entry>
-                <entry colname="col2" class="- topic/entry ">bigint</entry>
+                <entry colname="col2" class="- topic/entry ">numeric</entry>
                 <entry colname="col3" class="- topic/entry "/>
                 <entry colname="col4" class="- topic/entry ">The size of the work file in
                   bytes.</entry>
@@ -2492,23 +2478,6 @@
                 <entry colname="col2" class="- topic/entry ">bigint</entry>
                 <entry colname="col3" class="- topic/entry "/>
                 <entry colname="col4" class="- topic/entry ">The number of files created.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">state</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">text</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The state of the query that created the
-                  work file.</entry>
-              </row>
-              <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">usename</codeph>
-                </entry>
-                <entry colname="col2" class="- topic/entry ">name</entry>
-                <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">Role name.</entry>
               </row>
             </tbody>
           </tgroup>
@@ -2542,18 +2511,17 @@
             <tbody class="- topic/tbody ">
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
-                  <codeph class="+ topic/ph pr-d/codeph ">content</codeph>
+                  <codeph class="+ topic/ph pr-d/codeph ">segid</codeph>
                 </entry>
                 <entry colname="col2" class="- topic/entry ">smallint</entry>
                 <entry colname="col3" class="- topic/entry "/>
-                <entry colname="col4" class="- topic/entry ">The content identifier for a segment
-                  instance.</entry>
+                <entry colname="col4" class="- topic/entry ">Segment ID.</entry>
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">
                   <codeph class="+ topic/ph pr-d/codeph ">size</codeph>
                 </entry>
-                <entry colname="col2" class="- topic/entry ">bigint</entry>
+                <entry colname="col2" class="- topic/entry ">numeric</entry>
                 <entry colname="col3" class="- topic/entry "/>
                 <entry colname="col4" class="- topic/entry ">The total size of the work files on a
                   segment.</entry>

@@ -55,8 +55,8 @@
                 are placed on different hosts. Each host must have the same number of primary and
                 mirror segments. When you create segment mirrors with the Greenplum Database
                 utilities <codeph><xref
-                        href="../../../utility_guide/admin_utilities/gpinitsystem.xml"/></codeph> or
-                        <codeph><xref href="../../../utility_guide/admin_utilities/gpaddmirrors.xml"
+                        href="../../../utility_guide/ref/gpinitsystem.xml"/></codeph> or
+                        <codeph><xref href="../../../utility_guide/ref/gpaddmirrors.xml"
                     /></codeph> you can specify the segment mirror configuration, group mirroring
                 (the default) or spread mirroring. With <codeph>gpaddmirrors</codeph>, you can
                 create custom mirroring configurations with a <codeph>gpaddmirrors</codeph>

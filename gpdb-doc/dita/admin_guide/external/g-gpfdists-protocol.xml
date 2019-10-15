@@ -5,7 +5,7 @@
   <shortdesc>The <codeph>gpfdists://</codeph> protocol is a secure version of the <codeph>gpfdist://
       protocol</codeph>. </shortdesc>
   <body>
-    <p>To use it, you run the <codeph><xref href="../../utility_guide/admin_utilities/gpfdist.xml"
+    <p>To use it, you run the <codeph><xref href="../../utility_guide/ref/gpfdist.xml"
           >gpfdist</xref></codeph> utility with the <codeph>--ssl</codeph> option. When specified in
       a URI, the <codeph>gpfdists://</codeph> protocol enables encrypted communication and secure
       identification of the file server and the Greenplum Database to protect against attacks such

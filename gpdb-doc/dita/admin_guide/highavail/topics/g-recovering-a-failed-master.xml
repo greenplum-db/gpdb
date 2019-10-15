@@ -6,7 +6,7 @@
   <body>
     <p>If the primary master fails, the Greenplum Database system is not accessible and WAL
       replication stops. Use <codeph><xref
-          href="../../../utility_guide/admin_utilities/gpactivatestandby.xml"
+          href="../../../utility_guide/ref/gpactivatestandby.xml"
           >gpactivatestandby</xref></codeph> to activate the standby master. Upon activation of the
       standby master, Greenplum Database reconstructs the master host state at the time of the last
       successfully committed transaction. </p>

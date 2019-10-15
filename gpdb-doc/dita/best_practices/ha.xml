@@ -218,7 +218,7 @@
             <li dir="ltr">
               <p dir="ltr">Use the <codeph>gpbackup</codeph> command to specify only the schema and
                 tables that you want backed up. See the <xref
-                  href="https://gpdb.docs.pivotal.io/latest/utility_guide/admin_utilities/gpbackup.html"
+                  href="https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html"
                   format="html" scope="external">gpbackup</xref> reference in the <cite>Greenplum
                   Database Utility Reference Guide</cite> for more information.</p>
             </li>
@@ -308,15 +308,15 @@
       <p>The two standard mirroring arrangements are <i>group mirroring</i> and <i>spread
           mirroring</i>:<ul id="ul_uwr_gkv_tt">
           <li><b>Group mirroring</b> — Each host mirrors another host's primary segments. This is
-            the default for <codeph><xref href="../utility_guide/admin_utilities/gpinitsystem.xml"
+            the default for <codeph><xref href="../utility_guide/ref/gpinitsystem.xml"
                 >gpinitsystem</xref></codeph> and <codeph>gpaddmirrors</codeph>.</li>
           <li><b>Spread mirroring</b> — Mirrors are spread across the available hosts. This requires
             that the number of hosts in the cluster is greater than the number of segments per
             host.</li>
         </ul></p>
       <p>You can design a custom mirroring configuration and use the Greenplum <codeph><xref
-            href="../utility_guide/admin_utilities/gpaddmirrors.xml">gpaddmirrors</xref></codeph> or
-          <xref href="../utility_guide/admin_utilities/gpmovemirrors.xml">gpaddmirrors</xref>
+            href="../utility_guide/ref/gpaddmirrors.xml">gpaddmirrors</xref></codeph> or
+          <xref href="../utility_guide/ref/gpmovemirrors.xml">gpaddmirrors</xref>
         utilities to set up the configuration.</p>
       <p><i>Block mirroring</i> is a custom mirror configuration that divides hosts in the cluster
         into equally sized blocks and distributes mirrors evenly to hosts within the block. If a

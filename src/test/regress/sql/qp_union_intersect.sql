@@ -641,6 +641,18 @@ reset optimizer_segments;
 -- @description union_update_test31: Negative Tests  more than one row returned by a sub-query used as an expression
 UPDATE dml_union_r SET b = ( SELECT a FROM dml_union_r EXCEPT ALL SELECT a FROM dml_union_s);
 
+--
+-- Test mixing a set-returning function, which can be evaluated anywhere,
+-- (it has General locus) and a diststributed table, in an Append.
+--
+explain (costs off)
+select a from dml_union_r where a > 95
+union all
+select g from generate_series(1,2) g;
+
+select a from dml_union_r where a > 95
+union all
+select g from generate_series(1,2) g;
 
 --
 -- Test for creation of MergeAppend paths.

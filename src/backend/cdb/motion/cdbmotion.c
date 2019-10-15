@@ -692,7 +692,7 @@ processIncomingChunks(MotionLayerState *mlStates,
 	}
 
 	/* The chunk list we just processed freed-up our rx-buffer space. */
-	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
+	if (numChunks > 0 && Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		MlPutRxBufferIFC(transportStates, motNodeID, srcRoute);
 
 	/* Stats */

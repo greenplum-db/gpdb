@@ -253,7 +253,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
               <varname>trans_name</varname> is the name of the transform in the YAML configuration
             file you specify with the you run the <codeph>gpfdist</codeph> utility. For information
             about specifying a transform, see <xref
-              href="../../utility_guide/admin_utilities/gpfdist.xml#topic1"
+              href="../../utility_guide/ref/gpfdist.xml#topic1"
               ><codeph>gpfdist</codeph></xref> in the <cite>Greenplum Utility Guide</cite>. </pd>
         </plentry>
         <plentry>

@@ -5,6 +5,14 @@ CREATE
 INSERT INTO t103 (id, val) SELECT i, i FROM generate_series(1, 100) i;
 INSERT 100
 
+-- gang creation order is important, reset any guc to force the creation
+10: RESET optimizer;
+RESET
+20: RESET optimizer;
+RESET
+30: RESET optimizer;
+RESET
+
 10: BEGIN;
 BEGIN
 20: BEGIN;

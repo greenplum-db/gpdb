@@ -5808,7 +5808,7 @@ ext_opt_encoding_item:
  *****************************************************************************/
 
 CreateMatViewStmt:
-		CREATE OptNoLog MATERIALIZED VIEW create_mv_target AS SelectStmt opt_with_data
+		CREATE OptNoLog MATERIALIZED VIEW create_mv_target AS SelectStmt opt_with_data OptDistributedBy
 				{
 					CreateTableAsStmt *ctas = makeNode(CreateTableAsStmt);
 					ctas->query = $7;
@@ -5819,6 +5819,8 @@ CreateMatViewStmt:
 					/* cram additional flags into the IntoClause */
 					$5->rel->relpersistence = $2;
 					$5->skipData = !($8);
+					ctas->into->distributedBy = $9;
+
 					$$ = (Node *) ctas;
 				}
 		| CREATE OptNoLog MATERIALIZED VIEW IF_P NOT EXISTS create_mv_target AS SelectStmt opt_with_data
@@ -16172,18 +16174,21 @@ RoleId:		RoleSpec
 									 errmsg("role name \"%s\" is reserved",
 											"public"),
 									 parser_errposition(@1)));
+							break;
 						case ROLESPEC_SESSION_USER:
 							ereport(ERROR,
 									(errcode(ERRCODE_RESERVED_NAME),
 									 errmsg("%s cannot be used as a role name here",
 											"SESSION_USER"),
 									 parser_errposition(@1)));
+							break;
 						case ROLESPEC_CURRENT_USER:
 							ereport(ERROR,
 									(errcode(ERRCODE_RESERVED_NAME),
 									 errmsg("%s cannot be used as a role name here",
 											"CURRENT_USER"),
 									 parser_errposition(@1)));
+							break;
 					}
 				}
 			;

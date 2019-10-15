@@ -13,8 +13,8 @@ SELECT * FROM tv ORDER BY type;
 
 -- create a materialized view with no data, and confirm correct behavior
 EXPLAIN (costs off)
-  CREATE MATERIALIZED VIEW tm AS SELECT type, sum(amt) AS totamt FROM t GROUP BY type WITH NO DATA;
-CREATE MATERIALIZED VIEW tm AS SELECT type, sum(amt) AS totamt FROM t GROUP BY type WITH NO DATA;
+  CREATE MATERIALIZED VIEW tm AS SELECT type, sum(amt) AS totamt FROM t GROUP BY type WITH NO DATA distributed by(type);
+CREATE MATERIALIZED VIEW tm AS SELECT type, sum(amt) AS totamt FROM t GROUP BY type WITH NO DATA distributed by(type);
 SELECT relispopulated FROM pg_class WHERE oid = 'tm'::regclass;
 SELECT * FROM tm;
 REFRESH MATERIALIZED VIEW tm;
@@ -28,9 +28,8 @@ EXPLAIN (costs off)
 CREATE MATERIALIZED VIEW tvm AS SELECT * FROM tv ORDER BY type;
 SELECT * FROM tvm;
 CREATE MATERIALIZED VIEW tmm AS SELECT sum(totamt) AS grandtot FROM tm;
-CREATE MATERIALIZED VIEW tvmm AS SELECT sum(totamt) AS grandtot FROM tvm;
-CREATE UNIQUE INDEX tvmm_expr ON tvmm ((grandtot > 0));
-CREATE UNIQUE INDEX tvmm_pred ON tvmm (grandtot) WHERE grandtot < 0;
+CREATE MATERIALIZED VIEW tvmm AS SELECT sum(totamt) AS grandtot FROM tvm distributed by(grandtot);
+CREATE UNIQUE INDEX tvmm_expr ON tvmm (grandtot);
 CREATE VIEW tvv AS SELECT sum(totamt) AS grandtot FROM tv;
 EXPLAIN (costs off)
   CREATE MATERIALIZED VIEW tvvm AS SELECT * FROM tvv;
@@ -96,7 +95,9 @@ DROP MATERIALIZED VIEW IF EXISTS no_such_mv;
 REFRESH MATERIALIZED VIEW CONCURRENTLY tvmm WITH NO DATA;
 
 -- no tuple locks on materialized views
+-- start_ignore
 SELECT * FROM tvvm FOR SHARE;
+-- end_ignore
 
 -- test join of mv and view
 SELECT type, m.totamt AS mtot, v.totamt AS vtot FROM tm m LEFT JOIN tv v USING (type) ORDER BY type;
@@ -124,7 +125,7 @@ DROP VIEW v_test1 CASCADE;
 
 -- test that duplicate values on unique index prevent refresh
 CREATE TABLE foo(a, b) AS VALUES(1, 10);
-CREATE MATERIALIZED VIEW mv AS SELECT * FROM foo;
+CREATE MATERIALIZED VIEW mv AS SELECT * FROM foo distributed by(a);
 CREATE UNIQUE INDEX ON mv(a);
 INSERT INTO foo SELECT * FROM foo;
 REFRESH MATERIALIZED VIEW mv;
@@ -133,10 +134,8 @@ DROP TABLE foo CASCADE;
 
 -- make sure that all columns covered by unique indexes works
 CREATE TABLE foo(a, b, c) AS VALUES(1, 2, 3);
-CREATE MATERIALIZED VIEW mv AS SELECT * FROM foo;
+CREATE MATERIALIZED VIEW mv AS SELECT * FROM foo distributed by(a);
 CREATE UNIQUE INDEX ON mv (a);
-CREATE UNIQUE INDEX ON mv (b);
-CREATE UNIQUE INDEX on mv (c);
 INSERT INTO foo VALUES(2, 3, 4);
 INSERT INTO foo VALUES(3, 4, 5);
 REFRESH MATERIALIZED VIEW mv;
@@ -155,7 +154,7 @@ INSERT INTO boxes (b) VALUES
   ('(32,32),(31,31)'),
   ('(2.0000004,2.0000004),(1,1)'),
   ('(1.9999996,1.9999996),(1,1)');
-CREATE MATERIALIZED VIEW boxmv AS SELECT * FROM boxes;
+CREATE MATERIALIZED VIEW boxmv AS SELECT * FROM boxes distributed by(id);
 CREATE UNIQUE INDEX boxmv_id ON boxmv (id);
 UPDATE boxes SET b = '(2,2),(1,1)' WHERE id = 2;
 REFRESH MATERIALIZED VIEW CONCURRENTLY boxmv;
@@ -165,7 +164,7 @@ DROP TABLE boxes CASCADE;
 -- make sure that column names are handled correctly
 CREATE TABLE mvtest_v (i int, j int);
 CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj, kk) AS SELECT i, j FROM mvtest_v; -- error
-CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj) AS SELECT i, j FROM mvtest_v; -- ok
+CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj) AS SELECT i, j FROM mvtest_v distributed by(ii); -- ok
 CREATE MATERIALIZED VIEW mvtest_mv_v_2 (ii) AS SELECT i, j FROM mvtest_v; -- ok
 CREATE MATERIALIZED VIEW mvtest_mv_v_3 (ii, jj, kk) AS SELECT i, j FROM mvtest_v WITH NO DATA; -- error
 CREATE MATERIALIZED VIEW mvtest_mv_v_3 (ii, jj) AS SELECT i, j FROM mvtest_v WITH NO DATA; -- ok
@@ -189,8 +188,6 @@ DROP TABLE mvtest_v CASCADE;
 -- make sure that create WITH NO DATA does not plan the query (bug #13907)
 create materialized view mvtest_error as select 1/0 as x;  -- fail
 create materialized view mvtest_error as select 1/0 as x with no data;
-refresh materialized view mvtest_error;  -- fail here
-drop materialized view mvtest_error;
 
 -- make sure that matview rows can be referenced as source rows (bug #9398)
 CREATE TABLE v AS SELECT generate_series(1,10) AS a;
@@ -205,8 +202,8 @@ CREATE ROLE user_dw;
 SET ROLE user_dw;
 CREATE TABLE foo_data AS SELECT i, md5(random()::text)
   FROM generate_series(1, 10) i;
-CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data;
-CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data;
+CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data distributed by(i);
+CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data distributed by(i);
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_foo AS SELECT * FROM foo_data;
 CREATE UNIQUE INDEX ON mv_foo (i);
 RESET ROLE;

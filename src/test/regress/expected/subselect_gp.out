@@ -86,111 +86,63 @@ NOTICE:  CREATE TABLE will create partition "csq_t2_1_prt_4" for table "csq_t2"
 insert into csq_t1 select * from csq_t1_base;
 insert into csq_t2 select * from csq_t2_base;
 explain select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1;
-                                                             QUERY PLAN                                                              
--------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice17; segments: 3)  (cost=810368945.20..810369375.70 rows=172200 width=8)
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2292862681.00..2292863111.50 rows=172200 width=8)
    Merge Key: csq_t1_1_prt_1.x
-   ->  Sort  (cost=810368945.20..810369375.70 rows=57400 width=8)
+   ->  Sort  (cost=2292862681.00..2292863111.50 rows=57400 width=8)
          Sort Key: csq_t1_1_prt_1.x
-         ->  Append  (cost=0.00..810353969.20 rows=57400 width=8)
-               ->  Seq Scan on csq_t1_1_prt_1  (cost=0.00..202588492.30 rows=14350 width=8)
+         ->  Append  (cost=0.00..2292847705.00 rows=57400 width=8)
+               ->  Seq Scan on csq_t1_1_prt_1  (cost=0.00..573211926.25 rows=14350 width=8)
                      Filter: (SubPlan 1)
                      SubPlan 1
-                       ->  Append  (cost=0.00..4705.00 rows=115 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_1.y = csq_t1_1_prt_1.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_1  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_2.y = csq_t1_1_prt_1.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_2  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_3.y = csq_t1_1_prt_1.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_3  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_4.y = csq_t1_1_prt_1.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_4  (cost=0.00..1176.25 rows=29 width=4)
-               ->  Seq Scan on csq_t1_1_prt_2  (cost=0.00..202588492.30 rows=14350 width=8)
+                       ->  Result  (cost=0.00..12454.00 rows=344400 width=8)
+                             Filter: (csq_t2_1_prt_1.y = csq_t1_1_prt_1.y)
+                             ->  Materialize  (cost=0.00..12454.00 rows=344400 width=8)
+                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..10732.00 rows=114800 width=8)
+                                         ->  Append  (cost=0.00..3844.00 rows=114800 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_1  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_2  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_3  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_4  (cost=0.00..961.00 rows=28700 width=8)
+               ->  Seq Scan on csq_t1_1_prt_2  (cost=0.00..573211926.25 rows=14350 width=8)
                      Filter: (SubPlan 1)
                      SubPlan 1
-                       ->  Append  (cost=0.00..4705.00 rows=115 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_1_1.y = csq_t1_1_prt_2.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_1 csq_t2_1_prt_1_1  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_2_1.y = csq_t1_1_prt_2.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice6; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_2 csq_t2_1_prt_2_1  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_3_1.y = csq_t1_1_prt_2.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice7; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_3 csq_t2_1_prt_3_1  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_4_1.y = csq_t1_1_prt_2.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice8; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_4 csq_t2_1_prt_4_1  (cost=0.00..1176.25 rows=29 width=4)
-               ->  Seq Scan on csq_t1_1_prt_3  (cost=0.00..202588492.30 rows=14350 width=8)
+                       ->  Result  (cost=0.00..12454.00 rows=344400 width=8)
+                             Filter: (csq_t2_1_prt_1_1.y = csq_t1_1_prt_2.y)
+                             ->  Materialize  (cost=0.00..12454.00 rows=344400 width=8)
+                                   ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..10732.00 rows=114800 width=8)
+                                         ->  Append  (cost=0.00..3844.00 rows=114800 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_1 csq_t2_1_prt_1_1  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_2 csq_t2_1_prt_2_1  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_3 csq_t2_1_prt_3_1  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_4 csq_t2_1_prt_4_1  (cost=0.00..961.00 rows=28700 width=8)
+               ->  Seq Scan on csq_t1_1_prt_3  (cost=0.00..573211926.25 rows=14350 width=8)
                      Filter: (SubPlan 1)
                      SubPlan 1
-                       ->  Append  (cost=0.00..4705.00 rows=115 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_1_2.y = csq_t1_1_prt_3.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice9; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_1 csq_t2_1_prt_1_2  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_2_2.y = csq_t1_1_prt_3.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice10; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_2 csq_t2_1_prt_2_2  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_3_2.y = csq_t1_1_prt_3.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice11; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_3 csq_t2_1_prt_3_2  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_4_2.y = csq_t1_1_prt_3.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice12; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_4 csq_t2_1_prt_4_2  (cost=0.00..1176.25 rows=29 width=4)
-               ->  Seq Scan on csq_t1_1_prt_4  (cost=0.00..202588492.30 rows=14350 width=8)
+                       ->  Result  (cost=0.00..12454.00 rows=344400 width=8)
+                             Filter: (csq_t2_1_prt_1_2.y = csq_t1_1_prt_3.y)
+                             ->  Materialize  (cost=0.00..12454.00 rows=344400 width=8)
+                                   ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..10732.00 rows=114800 width=8)
+                                         ->  Append  (cost=0.00..3844.00 rows=114800 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_1 csq_t2_1_prt_1_2  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_2 csq_t2_1_prt_2_2  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_3 csq_t2_1_prt_3_2  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_4 csq_t2_1_prt_4_2  (cost=0.00..961.00 rows=28700 width=8)
+               ->  Seq Scan on csq_t1_1_prt_4  (cost=0.00..573211926.25 rows=14350 width=8)
                      Filter: (SubPlan 1)
                      SubPlan 1
-                       ->  Append  (cost=0.00..4705.00 rows=115 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_1_3.y = csq_t1_1_prt_4.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice13; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_1 csq_t2_1_prt_1_3  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_2_3.y = csq_t1_1_prt_4.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice14; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_2 csq_t2_1_prt_2_3  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_3_3.y = csq_t1_1_prt_4.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice15; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_3 csq_t2_1_prt_3_3  (cost=0.00..1176.25 rows=29 width=4)
-                             ->  Result  (cost=0.00..1176.68 rows=29 width=4)
-                                   Filter: csq_t2_1_prt_4_3.y = csq_t1_1_prt_4.y
-                                   ->  Materialize  (cost=0.00..1176.68 rows=29 width=4)
-                                         ->  Broadcast Motion 3:3  (slice16; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
-                                               ->  Seq Scan on csq_t2_1_prt_4 csq_t2_1_prt_4_3  (cost=0.00..1176.25 rows=29 width=4)
+                       ->  Result  (cost=0.00..12454.00 rows=344400 width=8)
+                             Filter: (csq_t2_1_prt_1_3.y = csq_t1_1_prt_4.y)
+                             ->  Materialize  (cost=0.00..12454.00 rows=344400 width=8)
+                                   ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..10732.00 rows=114800 width=8)
+                                         ->  Append  (cost=0.00..3844.00 rows=114800 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_1 csq_t2_1_prt_1_3  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_2 csq_t2_1_prt_2_3  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_3 csq_t2_1_prt_3_3  (cost=0.00..961.00 rows=28700 width=8)
+                                               ->  Seq Scan on csq_t2_1_prt_4 csq_t2_1_prt_4_3  (cost=0.00..961.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
-(102 rows)
+(54 rows)
 
 select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1; -- expected (4,2)
  x | y 
@@ -268,17 +220,16 @@ select * from mrs_t1 where exists (select x from mrs_t1 where x = 1) order by 1;
 (20 rows)
 
 explain select * from mrs_t1 where x in (select x-95 from mrs_t1) or x < 5;
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.30..6.60 rows=13 width=4)
    ->  Seq Scan on mrs_t1  (cost=3.30..6.60 rows=5 width=4)
-         Filter: ((hashed SubPlan 1)) OR x < 5
+         Filter: ((hashed SubPlan 1) OR (x < 5))
          SubPlan 1
-           ->  Materialize  (cost=0.00..3.35 rows=7 width=4)
-                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.25 rows=7 width=4)
-                       ->  Seq Scan on mrs_t1 mrs_t1_1  (cost=0.00..3.25 rows=7 width=4)
+           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.25 rows=7 width=4)
+                 ->  Seq Scan on mrs_t1 mrs_t1_1  (cost=0.00..3.25 rows=7 width=4)
  Optimizer: Postgres query optimizer
-(8 rows)
+(7 rows)
 
 select * from mrs_t1 where x in (select x-95 from mrs_t1) or x < 5 order by 1;
  x 
@@ -433,17 +384,15 @@ select * from csq_d1;
 -- outer plan node is master-only and CSQ has distributed relation
 --
 explain select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- gather motion
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
- Seq Scan on csq_m1  (cost=0.00..2.58 rows=2 width=4)
-   Filter: (NOT ((subplan))) OR x < (-100)
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Seq Scan on csq_m1  (cost=2.02..3.07 rows=2 width=4)
+   Filter: ((NOT (hashed SubPlan 1)) OR (x < '-100'::integer))
    SubPlan 1
-     ->  Materialize  (cost=1.02..1.04 rows=1 width=4)
-           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=2 width=4)
-                 ->  Seq Scan on csq_d1  (cost=0.00..1.02 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(8 rows)
+     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.02 rows=2 width=4)
+           ->  Seq Scan on csq_d1  (cost=0.00..2.02 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
  x 
@@ -455,18 +404,16 @@ select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
 -- outer plan node is master-only and CSQ has distributed relation
 --
 explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- broadcast motion
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..2.07 rows=2 width=4)
-   ->  Seq Scan on csq_d1  (cost=0.00..2.07 rows=1 width=4)
-         Filter: (NOT ((subplan))) OR x < (-100)
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=1.04..3.07 rows=2 width=4)
+   ->  Seq Scan on csq_d1  (cost=1.04..3.07 rows=1 width=4)
+         Filter: ((NOT (hashed SubPlan 1)) OR (x < '-100'::integer))
          SubPlan 1
-           ->  Materialize  (cost=1.03..1.06 rows=3 width=4)
-                 ->  Broadcast Motion 1:3  (slice1)  (cost=0.00..1.03 rows=3 width=4)
-                       ->  Seq Scan on csq_m1  (cost=0.00..1.03 rows=3 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(9 rows)
+           ->  Broadcast Motion 1:3  (slice1)  (cost=0.00..1.03 rows=3 width=4)
+                 ->  Seq Scan on csq_m1  (cost=0.00..1.03 rows=3 width=4)
+ Optimizer: Postgres query optimizer
+(7 rows)
 
 select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- (4)
  x 
@@ -511,12 +458,11 @@ explain SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=4)
    ->  Seq Scan on csq_r  (cost=0.00..1.02 rows=1 width=4)
-         Filter: (subplan)
+         Filter: (SubPlan 1)
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(7 rows)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
  a 
@@ -530,12 +476,11 @@ explain SELECT * FROM csq_r WHERE a not IN (SELECT * FROM csq_f(csq_r.a));
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=4)
    ->  Seq Scan on csq_r  (cost=0.00..1.02 rows=1 width=4)
-         Filter: (subplan)
+         Filter: (SubPlan 1)
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(7 rows)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 SELECT * FROM csq_r WHERE a not IN (SELECT * FROM csq_f(csq_r.a));
  a 
@@ -548,12 +493,11 @@ explain SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=4)
    ->  Seq Scan on csq_r  (cost=0.00..1.02 rows=1 width=4)
-         Filter: (subplan)
+         Filter: (SubPlan 1)
          SubPlan 1
-           ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(7 rows)
+           ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
  a 
@@ -567,12 +511,11 @@ explain SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=4)
    ->  Seq Scan on csq_r  (cost=0.00..1.02 rows=1 width=4)
-         Filter: NOT ((subplan))
+         Filter: (NOT (SubPlan 1))
          SubPlan 1
-           ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(7 rows)
+           ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
  a 
@@ -585,13 +528,12 @@ explain SELECT * FROM csq_r WHERE a > (SELECT csq_f FROM csq_f(csq_r.a) limit 1)
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=4)
    ->  Seq Scan on csq_r  (cost=0.00..1.02 rows=1 width=4)
-         Filter: a > ((subplan))
+         Filter: (a > (SubPlan 1))
          SubPlan 1
            ->  Limit  (cost=0.00..0.01 rows=1 width=4)
                  ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(8 rows)
+ Optimizer: Postgres query optimizer
+(7 rows)
 
 SELECT * FROM csq_r WHERE a > (SELECT csq_f FROM csq_f(csq_r.a) limit 1);
  a 
@@ -604,12 +546,11 @@ explain SELECT * FROM csq_r WHERE a < ANY (SELECT csq_f FROM csq_f(csq_r.a));
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=4)
    ->  Seq Scan on csq_r  (cost=0.00..1.02 rows=1 width=4)
-         Filter: (subplan)
+         Filter: (SubPlan 1)
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(7 rows)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 SELECT * FROM csq_r WHERE a < ANY (SELECT csq_f FROM csq_f(csq_r.a));
  a 
@@ -622,12 +563,11 @@ explain SELECT * FROM csq_r WHERE a <= ALL (SELECT csq_f FROM csq_f(csq_r.a));
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=4)
    ->  Seq Scan on csq_r  (cost=0.00..1.02 rows=1 width=4)
-         Filter: (subplan)
+         Filter: (SubPlan 1)
          SubPlan 1
            ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
- Settings:  optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(7 rows)
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 SELECT * FROM csq_r WHERE a <= ALL (SELECT csq_f FROM csq_f(csq_r.a));
  a 
@@ -637,20 +577,19 @@ SELECT * FROM csq_r WHERE a <= ALL (SELECT csq_f FROM csq_f(csq_r.a));
 
 -- force_explain
 explain SELECT * FROM csq_r WHERE a IN (SELECT csq_f FROM csq_f(csq_r.a),csq_r);
-                                                  QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..10000000001.53 rows=1 width=4)
-   ->  Seq Scan on csq_r  (cost=0.00..10000000001.53 rows=1 width=4)
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..10000000001.54 rows=1 width=4)
+   ->  Seq Scan on csq_r  (cost=0.00..10000000001.54 rows=1 width=4)
          Filter: (SubPlan 1)
          SubPlan 1
-           ->  Nested Loop  (cost=10000000000.00..10000000001.03 rows=2 width=4)
+           ->  Nested Loop  (cost=10000000000.00..10000000001.06 rows=4 width=4)
                  ->  Function Scan on csq_f  (cost=0.00..0.01 rows=1 width=4)
-                 ->  Result  (cost=0.00..1.01 rows=1 width=0)
-                       ->  Materialize  (cost=0.00..1.01 rows=1 width=0)
-                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=0)
-                                   ->  Seq Scan on csq_r csq_r_1  (cost=0.00..1.01 rows=1 width=0)
+                 ->  Materialize  (cost=0.00..1.03 rows=1 width=0)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=0)
+                             ->  Seq Scan on csq_r csq_r_1  (cost=0.00..1.01 rows=1 width=0)
  Optimizer: Postgres query optimizer
-(11 rows)
+(10 rows)
 
 SELECT * FROM csq_r WHERE a IN (SELECT csq_f FROM csq_f(csq_r.a),csq_r);
  a 
@@ -1103,41 +1042,36 @@ where t1.a = foo.a;
 insert into t1 values (1);
 insert into t2 values (1);
 explain select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.53 rows=1 width=0)
    ->  Seq Scan on t1  (cost=0.00..1.53 rows=1 width=0)
          Filter: (SubPlan 1)
          SubPlan 1
            ->  Limit  (cost=0.00..1.03 rows=1 width=4)
-                 ->  Limit  (cost=0.00..1.01 rows=1 width=4)
-                       ->  Result  (cost=0.00..1.01 rows=1 width=4)
-                             One-Time Filter: $0 = 1
-                             ->  Result  (cost=1.01..1.02 rows=1 width=4)
-                                   ->  Materialize  (cost=1.01..1.02 rows=1 width=4)
-                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
-                                               ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=4)
- Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(14 rows)
+                 ->  Result  (cost=0.00..1.03 rows=1 width=4)
+                       One-Time Filter: (t1.a = 1)
+                       ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                   ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(11 rows)
 
 explain select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..2.05 rows=1 width=0)
    ->  Seq Scan on t1  (cost=0.00..2.05 rows=1 width=0)
          Filter: (SubPlan 1)
          SubPlan 1
            ->  Limit  (cost=1.03..1.03 rows=1 width=4)
-                 ->  Result  (cost=0.00..1.01 rows=1 width=4)
-                       One-Time Filter: $0 = 1
-                       ->  Result  (cost=1.01..1.02 rows=1 width=4)
-                             ->  Materialize  (cost=1.01..1.02 rows=1 width=4)
-                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
-                                         ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=4)
- Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
- Optimizer status: Postgres query optimizer
-(13 rows)
+                 ->  Result  (cost=0.00..1.03 rows=1 width=4)
+                       One-Time Filter: (t1.a = 1)
+                       ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                   ->  Seq Scan on t2  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(11 rows)
 
 select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
  ?column? 
@@ -1256,29 +1190,25 @@ CASE
 	ELSE 'Q2'::text END  AS  cc,  1 AS nn
 FROM t_mpp_20470 b;
 explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
-                                                  QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- WindowAgg  (cost=0.00..128099187.30 rows=93400 width=28)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1134.00 rows=93400 width=28)
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ WindowAgg  (cost=0.00..345817436.00 rows=93400 width=28)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1134.00 rows=93400 width=28)
          ->  Result  (cost=0.00..1134.00 rows=31134 width=28)
                ->  Append  (cost=0.00..1134.00 rows=31134 width=28)
                      ->  Seq Scan on t_mpp_20470_ptr1 b  (cost=0.00..567.00 rows=15567 width=28)
                      ->  Seq Scan on t_mpp_20470_ptr2 b_1  (cost=0.00..567.00 rows=15567 width=28)
    SubPlan 1
-     ->  Aggregate  (cost=1371.47..1371.48 rows=1 width=8)
-           ->  Append  (cost=0.00..1367.50 rows=32 width=4)
-                 ->  Result  (cost=0.00..683.98 rows=16 width=4)
-                       Filter: a.col_name::text = b.col_name::text
-                       ->  Materialize  (cost=0.00..683.98 rows=16 width=4)
-                             ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..683.75 rows=47 width=4)
-                                   ->  Seq Scan on t_mpp_20470_ptr1 a  (cost=0.00..683.75 rows=16 width=4)
-                 ->  Result  (cost=0.00..683.98 rows=16 width=4)
-                       Filter: a_1.col_name::text = b.col_name::text
-                       ->  Materialize  (cost=0.00..683.98 rows=16 width=4)
-                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..683.75 rows=47 width=4)
-                                   ->  Seq Scan on t_mpp_20470_ptr2 a_1  (cost=0.00..683.75 rows=16 width=4)
+     ->  Aggregate  (cost=3702.50..3702.51 rows=1 width=8)
+           ->  Result  (cost=0.00..3469.00 rows=93400 width=32)
+                 Filter: ((a.col_name)::text = (b.col_name)::text)
+                 ->  Materialize  (cost=0.00..3469.00 rows=93400 width=32)
+                       ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3002.00 rows=93400 width=32)
+                             ->  Append  (cost=0.00..1134.00 rows=31134 width=32)
+                                   ->  Seq Scan on t_mpp_20470_ptr1 a  (cost=0.00..567.00 rows=15567 width=32)
+                                   ->  Seq Scan on t_mpp_20470_ptr2 a_1  (cost=0.00..567.00 rows=15567 width=32)
  Optimizer: Postgres query optimizer
-(20 rows)
+(16 rows)
 
 drop view v1_mpp_20470;
 drop table t_mpp_20470;
@@ -1413,30 +1343,28 @@ SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz_s WHERE
 -- merge upstream commit 4d042999f9, to suppress the SubPlans from being
 -- printed twice.
 explain SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz_s WHERE bar_s.c = 9) AND foo_s.b = (select bar_s.d::int4);
-                                                           QUERY PLAN                                                            
----------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=4074.50..31651.89 rows=173 width=4)
-   ->  Hash Join  (cost=4074.50..31651.89 rows=58 width=4)
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=4074.50..31199.84 rows=173 width=4)
+   ->  Hash Join  (cost=4074.50..31199.84 rows=58 width=4)
          Hash Cond: (((SubPlan 1)) = foo_s_1_prt_sub_one.b)
-         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.13 rows=1 width=10)
-               ->  Seq Scan on bar_s  (cost=0.00..2.09 rows=1 width=10)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.11 rows=1 width=10)
+               ->  Seq Scan on bar_s  (cost=0.00..2.07 rows=1 width=10)
                      Filter: ((SubPlan 1) = (SubPlan 2))
                      SubPlan 1
-                       ->  Aggregate  (cost=1.05..1.06 rows=1 width=4)
-                             ->  Result  (cost=0.00..1.01 rows=1 width=4)
+                       ->  Aggregate  (cost=1.04..1.05 rows=1 width=4)
+                             ->  Result  (cost=0.00..1.03 rows=1 width=4)
                                    One-Time Filter: (bar_s.c = 9)
-                                   ->  Result  (cost=0.00..1.02 rows=1 width=4)
-                                         ->  Materialize  (cost=0.00..1.02 rows=1 width=4)
-                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
-                                                     ->  Seq Scan on baz_s  (cost=0.00..1.01 rows=1 width=4)
+                                   ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                                         ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                               ->  Seq Scan on baz_s  (cost=0.00..1.01 rows=1 width=4)
                      SubPlan 1
-                       ->  Aggregate  (cost=1.05..1.06 rows=1 width=4)
-                             ->  Result  (cost=0.00..1.01 rows=1 width=4)
+                       ->  Aggregate  (cost=1.04..1.05 rows=1 width=4)
+                             ->  Result  (cost=0.00..1.03 rows=1 width=4)
                                    One-Time Filter: (bar_s.c = 9)
-                                   ->  Result  (cost=0.00..1.02 rows=1 width=4)
-                                         ->  Materialize  (cost=0.00..1.02 rows=1 width=4)
-                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
-                                                     ->  Seq Scan on baz_s  (cost=0.00..1.01 rows=1 width=4)
+                                   ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                                         ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                               ->  Seq Scan on baz_s  (cost=0.00..1.01 rows=1 width=4)
                      SubPlan 2
                        ->  Result  (cost=0.00..0.01 rows=1 width=0)
          ->  Hash  (cost=1922.00..1922.00 rows=57400 width=4)
@@ -1444,7 +1372,7 @@ explain SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz
                      ->  Seq Scan on foo_s_1_prt_sub_one  (cost=0.00..961.00 rows=28700 width=4)
                      ->  Seq Scan on foo_s_1_prt_sub_two  (cost=0.00..961.00 rows=28700 width=4)
  Optimizer: Postgres query optimizer
-(29 rows)
+(27 rows)
 
 SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz_s WHERE bar_s.c = 9) AND foo_s.b = (select bar_s.d::int4);
  c 
@@ -1740,24 +1668,23 @@ EXPLAIN select count(distinct ss.ten) from
 -- we should see 2 subplans in the explain
 --
 EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
-                                                      QUERY PLAN                                                       
------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..212.10 rows=1 width=4)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..212.10 rows=1 width=4)
-         ->  Limit  (cost=0.00..212.08 rows=1 width=4)
-               ->  Seq Scan on tenk2  (cost=0.00..2133536.35 rows=3354 width=4)
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..0.08 rows=1 width=4)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..0.08 rows=1 width=4)
+         ->  Limit  (cost=0.00..0.06 rows=1 width=4)
+               ->  Seq Scan on tenk2  (cost=0.00..625.00 rows=3334 width=4)
                      SubPlan 1
-                       ->  Result  (cost=0.00..212.07 rows=1 width=0)
-                             Filter: tenk1.unique1 = tenk2.unique1
-                             ->  Materialize  (cost=0.00..212.07 rows=1 width=0)
-                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..212.06 rows=1 width=0)
-                                         ->  Seq Scan on tenk1  (cost=0.00..212.06 rows=1 width=0)
+                       ->  Result  (cost=0.00..439.00 rows=10000 width=4)
+                             Filter: (tenk1.unique1 = tenk2.unique1)
+                             ->  Materialize  (cost=0.00..439.00 rows=10000 width=4)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..389.00 rows=3334 width=4)
+                                         ->  Seq Scan on tenk1  (cost=0.00..189.00 rows=3334 width=4)
                      SubPlan 2
-                       ->  Materialize  (cost=0.00..237.08 rows=3335 width=4)
-                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..187.05 rows=3335 width=4)
-                                   ->  Seq Scan on tenk1 tenk1_1  (cost=0.00..187.05 rows=3335 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..189.00 rows=3334 width=4)
+                             ->  Seq Scan on tenk1 tenk1_1  (cost=0.00..189.00 rows=3334 width=4)
  Optimizer: Postgres query optimizer
-(15 rows)
+(14 rows)
 
 SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
  exists 
@@ -1803,8 +1730,8 @@ EXPLAIN SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup
          ->  Hash Join  (cost=1.15..3.24 rows=2 width=12)
                Hash Cond: (dedup_test1.a = dedup_test3_1_prt_1.a)
                ->  Seq Scan on dedup_test1  (cost=0.00..2.04 rows=2 width=8)
-               ->  Hash  (cost=1.14..1.14 rows=1 width=4)
-                     ->  HashAggregate  (cost=1.12..1.14 rows=1 width=4)
+               ->  Hash  (cost=1.16..1.16 rows=1 width=4)
+                     ->  HashAggregate  (cost=1.12..1.16 rows=1 width=4)
                            Group Key: dedup_test3_1_prt_1.a
                            ->  Append  (cost=0.00..1.10 rows=4 width=4)
                                  ->  Seq Scan on dedup_test3_1_prt_1  (cost=0.00..1.10 rows=4 width=4)

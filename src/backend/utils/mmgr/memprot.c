@@ -38,9 +38,12 @@
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"
 #include "utils/gp_alloc.h"
+#include "utils/guc.h"
 
 #define SHMEM_OOM_TIME "last vmem oom time"
 #define MAX_REQUESTABLE_SIZE 0x7fffffff
+
+static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz);
 
 /*
  * Last OOM time of a segment. Maintained in shared memory.
@@ -195,9 +198,72 @@ void GPMemoryProtect_Shutdown()
 		return;
 	}
 
+	VmemTracker_UnregisterStartupMemory();
+
 	gp_mp_inited = false;
 
 	VmemTracker_Shutdown();
+}
+
+/*
+ * Add the per-process startup committed memory to vmem tracker.
+ *
+ * Postgresql suggests setting vm.overcommit_memory to 2, so system level OOM
+ * is triggered by committed memory size.  Each postgres process has several MB
+ * committed memory since it being forked, in practice the size can be 6~16 MB,
+ * depends on build-time and runtime configurations.
+ *
+ * These memory were not tracked by vmem tracker however, as a result an idle
+ * (just gets launched, or just finished execution) QE process has 0 chunks in
+ * track, but it might have 16MB committed memory.  The vmem tracker protect
+ * limit will never be reached no matter how many such processes there are, but
+ * when there are enough such processes the system level OOM will be triggered,
+ * which will lead to unpredictable failures on not only postgres but also all
+ * the other processes on the system.
+ *
+ * To prevent this worst case we add a startup cost to the vmem tracker, so the
+ * vmem tracker OOM will happen instead of the system one, this is less harmful
+ * and easier to handle.  The startup cost, however, is a hard coded value from
+ * practice for now, we may want to make a better estimation at runtime in the
+ * future.  Another thing to improve is that this startup cost should only be
+ * added when vm.overcommit_memory is 2.
+ */
+void
+GPMemoryProtect_TrackStartupMemory(void)
+{
+	MemoryAllocationStatus status;
+	int64		bytes = 0;
+
+	Assert(gp_mp_inited);
+
+	/*
+	 * When compile without ORCA a postgress process will commit 6MB, this
+	 * includes the memory allocated before vmem tracker initialization.
+	 */
+	bytes += 6L << BITS_IN_MB;
+
+#ifdef USE_ORCA
+	/* When compile with ORCA it will commit 6MB more */
+	bytes += 6L << BITS_IN_MB;
+
+	/*
+	 * When optimizer_use_gpdb_allocators is on, at least 2MB of above will be
+	 * tracked by vmem tracker later, so do not recount them.  This GUC is not
+	 * available until gpdb 5.1.0 .
+	 */
+#if GP_VERSION_NUM >= 50100
+	if (optimizer_use_gpdb_allocators)
+		bytes -= 2L << BITS_IN_MB;
+#endif  /* GP_VERSION_NUM */
+#endif  /* USE_ORCA */
+
+	/* Leave some buffer for extensions like metrics_collector */
+	bytes += 2L << BITS_IN_MB;
+
+	/* Register the startup memory */
+	status = VmemTracker_RegisterStartupMemory(bytes);
+	if (status != MemoryAllocation_Success)
+		gp_failed_to_alloc(status, 0, bytes);
 }
 
 /*

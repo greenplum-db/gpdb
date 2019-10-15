@@ -484,7 +484,7 @@ server smdw</codeblock></li>
 server 10.6.220.20</codeblock></li>
           <li id="ji162612">On the master host, use the NTP daemon synchronize the system clocks on
             all Greenplum hosts. For example, using <codeph><xref
-                href="../utility_guide/admin_utilities/gpssh.xml" format="dita" scope="peer"
+                href="../utility_guide/ref/gpssh.xml" format="dita" scope="peer"
                 type="topic"
             >gpssh</xref></codeph>:<codeblock># gpssh -f hostfile_gpssh_allhosts -v -e 'ntpd'</codeblock></li>
         </ol>

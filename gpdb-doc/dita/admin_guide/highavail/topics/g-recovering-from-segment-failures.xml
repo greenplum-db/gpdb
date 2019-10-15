@@ -26,7 +26,7 @@
         <li id="ki155645">Troubleshoot the problem that prevents the master host from connecting to
           the segment host. For example, the host machine may need to be restarted or replaced.</li>
         <li id="ki155646">After the host is online and you can connect to it, run the <codeph><xref
-              href="../../../utility_guide/admin_utilities/gprecoverseg.xml"
+              href="../../../utility_guide/ref/gprecoverseg.xml"
             >gprecoverseg</xref></codeph> utility from the master host to reactivate the failed
           segment instances and start the process of sycnronizing the master and mirror instances.
           For example:<codeblock>$ gprecoverseg</codeblock>
@@ -39,7 +39,7 @@
           the background while the system is online and accepting database requests.</li>
         <li id="ki158504">When the resynchronization process completes, the system state is
             <i>Synchronized</i>. Run the <codeph><xref
-              href="../../../utility_guide/admin_utilities/gpstate.xml" type="topic" format="dita"
+              href="../../../utility_guide/ref/gpstate.xml" type="topic" format="dita"
               >gpstate</xref></codeph> utility to verify the status of the resynchronization
           process:<codeblock>$ gpstate -m</codeblock></li>
       </ol>
@@ -83,7 +83,7 @@
         <li>Troubleshoot the problem that caused the double fault and ensure that the segment hosts
           are operational and are accessible from the master host.</li>
         <li id="ki165670">Restart Greenplum Database. The <codeph><xref
-              href="../../../utility_guide/admin_utilities/gpstop.xml" type="topic" format="dita"
+              href="../../../utility_guide/ref/gpstop.xml" type="topic" format="dita"
               >gpstop</xref></codeph> option <codeph>-r</codeph> stops and restarts the
           system.<codeblock>$ gpstop -r</codeblock></li>
         <li id="ki165671">After the system restarts, run <codeph>gprecoverseg</codeph> to reactivate

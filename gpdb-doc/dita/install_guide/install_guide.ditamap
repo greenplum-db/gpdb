@@ -35,8 +35,7 @@
         <topicref href="data_sci_pkgs.ditamap" format="ditamap" otherprops="pivotal"/>
         <topicref href="install_modules.xml" navtitle="Installing Additional Supplied Modules"/>
         <topicref href="localization.xml" navtitle="Configuring Localization Settings"/>
-        <!-- hidden for 6.0 beta releases -->
-        <topicref otherprops="op-hidden" href="upgrading.xml"/>
+        <topicref href="upgrading.xml"/>
         <topicref href="migrate.xml"/>
         <topicref href="enable_iptables.xml" navtitle="Enabling iptables"/>
         <topicref href="apx_mgmt_utils.xml" navtitle="Installation Management Utilities"/>

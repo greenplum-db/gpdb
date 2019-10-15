@@ -4040,20 +4040,14 @@ CTranslatorDXLToPlStmt::TranslateDXLSplit
 	split->insertColIdx = CTranslatorUtils::ConvertColidToAttnos(insertion_colid_array, &child_context);
 	
 	const TargetEntry *te_action_col = output_context->GetTargetEntry(phy_split_dxlop->ActionColId());
-	const TargetEntry *te_ctid_col = output_context->GetTargetEntry(phy_split_dxlop->GetCtIdColId());
 	const TargetEntry *te_tuple_oid_col = output_context->GetTargetEntry(phy_split_dxlop->GetTupleOid());
 
 	if (NULL  == te_action_col)
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, phy_split_dxlop->ActionColId());
 	}
-	if (NULL  == te_ctid_col)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, phy_split_dxlop->GetCtIdColId());
-	}	 
 	
 	split->actionColIdx = te_action_col->resno;
-	split->ctidColIdx = te_ctid_col->resno;
 	
 	split->tupleoidColIdx = FirstLowInvalidHeapAttributeNumber;
 	if (NULL != te_tuple_oid_col)

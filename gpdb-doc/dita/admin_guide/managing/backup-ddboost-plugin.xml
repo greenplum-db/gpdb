@@ -6,9 +6,9 @@
     <note>The DD Boost storage plugin is available only in the commercial release of Pivotal
       Greenplum Database.</note>
     <p>Dell EMC Data Domain Boost (DD Boost) is Dell EMC software that can be used with the
-          <codeph><xref href="../../utility_guide/admin_utilities/gpbackup.xml"
+          <codeph><xref href="../../utility_guide/ref/gpbackup.xml"
         >gpbackup</xref></codeph> and <codeph><xref
-          href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref></codeph>
+          href="../../utility_guide/ref/gprestore.xml">gprestore</xref></codeph>
       utilities to perform faster backups to the Dell EMC Data Domain storage appliance. You can
       also replicate a backup on a separate, remote Data Domain system for disaster recovery.</p>
     <p>To use the DD Boost storage plugin application, you first create a configuration file to

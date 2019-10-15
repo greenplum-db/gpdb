@@ -29,6 +29,7 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
+#include "executor/executor.h"
 #include "executor/execHHashagg.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
@@ -73,6 +74,7 @@ static Plan *create_merge_append_plan(PlannerInfo *root, MergeAppendPath *best_p
 static Result *create_result_plan(PlannerInfo *root, ResultPath *best_path);
 static Material *create_material_plan(PlannerInfo *root, MaterialPath *best_path);
 static Plan *create_unique_plan(PlannerInfo *root, UniquePath *best_path);
+static Plan *create_projection_plan(PlannerInfo *root, ProjectionPath *best_path);
 static Plan *create_motion_plan(PlannerInfo *root, CdbMotionPath *path);
 static SeqScan *create_seqscan_plan(PlannerInfo *root, Path *best_path,
 					List *tlist, List *scan_clauses);
@@ -337,8 +339,16 @@ create_plan_recurse(PlannerInfo *root, Path *best_path)
 											(MergeAppendPath *) best_path);
 			break;
 		case T_Result:
-			plan = (Plan *) create_result_plan(root,
-											   (ResultPath *) best_path);
+			if (IsA(best_path, ProjectionPath))
+			{
+				plan = create_projection_plan(root,
+											  (ProjectionPath *) best_path);
+			}
+			else
+			{
+				plan = (Plan *) create_result_plan(root,
+												   (ResultPath *) best_path);
+			}
 			break;
 		case T_Material:
 			plan = (Plan *) create_material_plan(root,
@@ -549,15 +559,6 @@ create_scan_plan(PlannerInfo *root, Path *best_path)
 										   : NULL,
 										   plan);
 
-	/**
-	 * If plan has a flow node, ensure all entries of hashExpr
-	 * are in the targetlist.
-	 */
-	if (plan->flow && plan->flow->hashExprs)
-	{
-		plan->targetlist = add_to_flat_tlist_junk(plan->targetlist, plan->flow->hashExprs, true /* resjunk */ );
-	}
-
 	/*
 	 * If there are any pseudoconstant clauses attached to this node, insert a
 	 * gating Result node that evaluates the pseudoconstants as one-time
@@ -698,15 +699,6 @@ disuse_physical_tlist(PlannerInfo *root, Plan *plan, Path *path)
 		case T_ForeignScan:
 		case T_CustomScan:
 			plan->targetlist = build_path_tlist(root, path);
-
-			/**
-			 * If plan has a flow node, ensure all entries of hashExpr
-			 * are in the targetlist.
-			 */
-			if (plan->flow && plan->flow->hashExprs)
-			{
-				plan->targetlist = add_to_flat_tlist_junk(plan->targetlist, plan->flow->hashExprs, true /* resjunk */);
-			}
 			break;
 		default:
 			break;
@@ -736,6 +728,7 @@ static Plan *
 create_gating_plan(PlannerInfo *root, Plan *plan, List *quals)
 {
 	List	   *pseudoconstants;
+	Result	   *result;
 
 	/* Sort into desirable execution order while still in RestrictInfo form */
 	quals = order_qual_clauses(root, quals);
@@ -746,10 +739,13 @@ create_gating_plan(PlannerInfo *root, Plan *plan, List *quals)
 	if (!pseudoconstants)
 		return plan;
 
-	return (Plan *) make_result(root,
-								plan->targetlist,
-								(Node *) pseudoconstants,
-								plan);
+	result = make_result(root,
+						 plan->targetlist,
+						 (Node *) pseudoconstants,
+						 plan);
+	result->plan.flow = pull_up_Flow((Plan *) result, plan);
+
+	return (Plan *) result;
 }
 
 /*
@@ -842,15 +838,6 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 					: NULL,
 					  plan);
 
-	/**
-	 * If plan has a flow node, ensure all entries of hashExpr
-	 * are in the targetlist.
-	 */
-	if (plan->flow && plan->flow->hashExprs)
-	{
-		plan->targetlist = add_to_flat_tlist_junk(plan->targetlist, plan->flow->hashExprs, true /* resjunk */ );
-	}
-
 	/*
 	 * If there are any pseudoconstant clauses attached to this node, insert a
 	 * gating Result node that evaluates the pseudoconstants as one-time
@@ -925,6 +912,11 @@ create_append_plan(PlannerInfo *root, AppendPath *best_path)
 	 */
 
 	plan = make_append(subplans, tlist);
+
+	plan->plan.flow = cdbpathtoplan_create_flow(root,
+												best_path->path.locus,
+												best_path->path.parent->relids,
+												&plan->plan);
 
 	return (Plan *) plan;
 }
@@ -1081,6 +1073,8 @@ create_material_plan(PlannerInfo *root, MaterialPath *best_path)
 
 	copy_path_costsize(root, &plan->plan, (Path *) best_path);
 
+	plan->plan.flow = pull_up_Flow(&plan->plan, subplan);
+
 	return plan;
 }
 
@@ -1229,6 +1223,7 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 								 NIL,
 								 numGroups,
 								 subplan);
+		plan->flow = pull_up_Flow(plan, subplan);
 	}
 	else
 	{
@@ -1284,6 +1279,93 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 	return plan;
 }
 
+
+/*
+ * create_projection_plan
+ *
+ *	  Create a plan tree to do a projection step and (recursively) plans
+ *	  for its subpaths.  We may need a Result node for the projection,
+ *	  but sometimes we can just let the subplan do the work.
+ */
+static Plan *
+create_projection_plan(PlannerInfo *root, ProjectionPath *best_path)
+{
+	Plan	   *plan;
+	Plan	   *subplan;
+	List	   *tlist;
+
+	/* Since we intend to project, we don't need to constrain child tlist */
+	subplan = create_plan_recurse(root, best_path->subpath);
+
+	tlist = build_path_tlist(root, &best_path->path);
+
+	/*
+	 * We might not really need a Result node here, either because the subplan
+	 * can project or because it's returning the right list of expressions
+	 * anyway.  Usually create_projection_path will have detected that and set
+	 * dummypp if we don't need a Result; but its decision can't be final,
+	 * because some createplan.c routines change the tlists of their nodes.
+	 * (An example is that create_merge_append_plan might add resjunk sort
+	 * columns to a MergeAppend.)  So we have to recheck here.  If we do
+	 * arrive at a different answer than create_projection_path did, we'll
+	 * have made slightly wrong cost estimates; but label the plan with the
+	 * cost estimates we actually used, not "corrected" ones.  (XXX this could
+	 * be cleaned up if we moved more of the sortcolumn setup logic into Path
+	 * creation, but that would add expense to creating Paths we might end up
+	 * not using.)
+	 */
+	if (!best_path->cdb_restrict_clauses &&
+		(is_projection_capable_plan(subplan) ||
+		 tlist_same_exprs(tlist, subplan->targetlist)))
+	{
+		/* Don't need a separate Result, just assign tlist to subplan */
+		plan = subplan;
+		plan->targetlist = tlist;
+
+		/* Label plan with the estimated costs we actually used */
+		plan->startup_cost = best_path->path.startup_cost;
+		plan->total_cost = best_path->path.total_cost;
+		plan->plan_rows = best_path->path.rows;
+		plan->plan_width = subplan->plan_width;
+		/* ... but be careful not to munge subplan's parallel-aware flag */
+	}
+	else
+	{
+		List	   *scan_clauses = NIL;
+		List	   *pseudoconstants = NIL;
+
+		if (best_path->cdb_restrict_clauses)
+		{
+			List	   *all_clauses = best_path->cdb_restrict_clauses;
+
+			/* Replace any outer-relation variables with nestloop params */
+			if (best_path->path.param_info)
+			{
+				all_clauses = (List *)
+					replace_nestloop_params(root, (Node *) all_clauses);
+			}
+
+			/* Sort clauses into best execution order */
+			all_clauses = order_qual_clauses(root, all_clauses);
+
+			/* Reduce RestrictInfo list to bare expressions; ignore pseudoconstants */
+			scan_clauses = extract_actual_clauses(all_clauses, false);
+
+			/* but we actually also want the pseudoconstants */
+			pseudoconstants = extract_actual_clauses(all_clauses, true);
+		}
+
+		/* We need a Result node */
+		plan = (Plan *) make_result(root, tlist, (Node *) pseudoconstants, subplan);
+
+		plan->qual = scan_clauses;
+
+		copy_path_costsize(root, plan, (Path *) best_path);
+		plan->flow = pull_up_Flow(plan, subplan);
+	}
+
+	return plan;
+}
 
 /*
  * create_motion_plan
@@ -5276,8 +5358,7 @@ make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
 	copy_plan_costsize(plan, lefttree); /* only care about copying size */
 	plan = add_sort_cost(root, plan, limit_tuples);
 
-	plan->targetlist = cdbpullup_targetlist(lefttree,
-				 cdbpullup_exprHasSubplanRef((Expr *) lefttree->targetlist));
+	plan->targetlist = lefttree->targetlist;
 	plan->qual = NIL;
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
@@ -5791,7 +5872,6 @@ make_sort_from_groupcols(PlannerInfo *root,
  * make_motion -- creates a Motion node.
  * Caller must have built the pHashDefn, pFixedDefn,
  * and pSortDefn structs already.
- * useExecutorVarFormat is true if make_motion is called after setrefs
  * This call only make a motion node, without filling in flow info
  * After calling this function, caller need to call add_slice_to_motion
  * --------------------------------------------------------------------
@@ -5799,8 +5879,7 @@ make_sort_from_groupcols(PlannerInfo *root,
 Motion *
 make_motion(PlannerInfo *root, Plan *lefttree,
 			int numSortCols, AttrNumber *sortColIdx,
-			Oid *sortOperators, Oid *collations, bool *nullsFirst,
-			bool useExecutorVarFormat)
+			Oid *sortOperators, Oid *collations, bool *nullsFirst)
 {
     Motion *node = makeNode(Motion);
     Plan   *plan = &node->plan;
@@ -5813,7 +5892,21 @@ make_motion(PlannerInfo *root, Plan *lefttree,
 	plan->plan_rows = lefttree->plan_rows;
 	plan->plan_width = lefttree->plan_width;
 
-	plan->targetlist = cdbpullup_targetlist(lefttree, useExecutorVarFormat);
+	if (IsA(lefttree, ModifyTable))
+	{
+		ModifyTable *mtplan = (ModifyTable *) lefttree;
+
+		/* See setrefs.c. A ModifyTable doesn't have a valid targetlist */
+		if (mtplan->returningLists)
+			plan->targetlist = linitial(mtplan->returningLists);
+		else
+			plan->targetlist = NIL;
+	}
+	else
+	{
+		plan->targetlist = lefttree->targetlist;
+	}
+
 	plan->qual = NIL;
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
@@ -5868,6 +5961,9 @@ make_material(Plan *lefttree)
 	node->driver_slice = -1;
 	node->nsharer = 0;
 	node->nsharer_xslice = 0;
+
+	if (lefttree->flow)
+		plan->flow = pull_up_Flow(plan, lefttree);
 
 	return node;
 }
@@ -6138,8 +6234,7 @@ make_unique(Plan *lefttree, List *distinctList)
 	 * has a better idea.
 	 */
 
-	plan->targetlist = cdbpullup_targetlist(lefttree,
-				 cdbpullup_exprHasSubplanRef((Expr *) lefttree->targetlist));
+	plan->targetlist = lefttree->targetlist;
 	plan->qual = NIL;
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
@@ -6205,8 +6300,7 @@ make_setop(SetOpCmd cmd, SetOpStrategy strategy, Plan *lefttree,
 	 */
 	plan->total_cost += cpu_operator_cost * lefttree->plan_rows * numCols;
 
-	plan->targetlist = cdbpullup_targetlist(lefttree,
-				 cdbpullup_exprHasSubplanRef((Expr *) lefttree->targetlist));
+	plan->targetlist = lefttree->targetlist;
 	plan->qual = NIL;
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
@@ -6331,8 +6425,7 @@ make_limit(Plan *lefttree, Node *limitOffset, Node *limitCount,
 			plan->plan_rows = 1;
 	}
 
-	plan->targetlist = cdbpullup_targetlist(lefttree,
-				 cdbpullup_exprHasSubplanRef((Expr *) lefttree->targetlist));
+	plan->targetlist = lefttree->targetlist;
 	plan->qual = NIL;
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
@@ -6497,7 +6590,6 @@ make_modifytable(PlannerInfo *root,
 	node->rowMarks = rowMarks;
 	node->epqParam = epqParam;
 	node->action_col_idxes = NIL;
-	node->ctid_col_idxes = NIL;
 	node->oid_col_idxes = NIL;
 
 	adjust_modifytable_flow(root, node, is_split_updates);
@@ -6594,7 +6686,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 				all_subplans_replicated = true;
 	int			numsegments = -1;
 
-	if (node->operation == CMD_INSERT)
+	if (node->operation == CMD_INSERT && Gp_role == GP_ROLE_DISPATCH)
 	{
 		forboth(lcr, node->resultRelations, lcp, node->plans)
 		{
@@ -6638,8 +6730,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 				{
 					hashExprs = getExprListFromTargetList(subplan->targetlist,
 														  targetPolicy->nattrs,
-														  targetPolicy->attrs,
-														  false);
+														  targetPolicy->attrs);
 					hashOpfamilies = NIL;
 					for (int i = 0; i < targetPolicy->nattrs; i++)
 					{
@@ -6648,10 +6739,8 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 					}
 				}
 
-				if (!repartitionPlan(subplan, false, false, hashExprs, hashOpfamilies, numsegments))
-					ereport(ERROR,
-							(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-							 errmsg("cannot parallelize that INSERT yet")));
+				subplan = repartitionPlan(subplan, false, hashExprs, hashOpfamilies, numsegments);
+				lfirst(lcp) = subplan;
 			}
 			else if (targetPolicyType == POLICYTYPE_ENTRY)
 			{
@@ -6668,10 +6757,8 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 					 * Ask for motion to a single QE.  Later, apply_motion
 					 * will override that to bring it to the QD instead.
 					 */
-					if (!focusPlan(subplan, false, false))
-						ereport(ERROR,
-								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-								 errmsg("cannot parallelize that INSERT yet")));
+					subplan = focusPlan(subplan, false);
+					lfirst(lcp) = subplan;
 				}
 			}
 			else if (targetPolicyType == POLICYTYPE_REPLICATED)
@@ -6742,11 +6829,8 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 					continue;
 				}
 
-				if (!broadcastPlan(subplan, false, false, targetPolicy->numsegments))
-					ereport(ERROR,
-							(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-							 errmsg("cannot parallelize that INSERT yet")));
-
+				subplan = broadcastPlan(subplan, false, targetPolicy->numsegments);
+				lfirst(lcp) = subplan;
 			}
 			else
 				elog(ERROR, "unrecognized policy type %u", targetPolicyType);
@@ -6805,28 +6889,35 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 
 					hashExprs = getExprListFromTargetList(new_subplan->targetlist,
 														  targetPolicy->nattrs,
-														  targetPolicy->attrs,
-														  false);
+														  targetPolicy->attrs);
 					hashOpfamilies = NIL;
 					for (i = 0; i < targetPolicy->nattrs; i++)
 					{
 						hashOpfamilies = lappend_oid(hashOpfamilies,
 													 get_opclass_family(targetPolicy->opclasses[i]));
 					}
-					if (!repartitionPlan(new_subplan, false, false,
-										 hashExprs, hashOpfamilies,
-										 targetPolicy->numsegments))
-						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-										errmsg("Cannot parallelize that UPDATE yet")));
-
-					lcp->data.ptr_value = new_subplan;
+					new_subplan = repartitionPlan(new_subplan, false,
+												  hashExprs, hashOpfamilies,
+												  targetPolicy->numsegments);
+					lfirst(lcp) = new_subplan;
 				}
 				else
 				{
 					node->action_col_idxes = lappend_int(node->action_col_idxes, -1);
-					node->ctid_col_idxes = lappend_int(node->ctid_col_idxes, -1);
 					node->oid_col_idxes = lappend_int(node->oid_col_idxes, 0);
-					request_explicit_motion(subplan, rti, root->glob->finalrtable);
+
+					if (!is_dummy_plan(subplan))
+					{
+						/* find segid column in target list */
+						AttrNumber	segidColIdx = ExecFindJunkAttributeInTlist(subplan->targetlist, "gp_segment_id");
+						if (segidColIdx == InvalidAttrNumber)
+							elog(ERROR, "could not find gp_segment_id column in target list");
+
+						subplan = (Plan *) make_explicit_motion(root,
+																subplan,
+																segidColIdx);
+						lfirst(lcp) = subplan;
+					}
 				}
 			}
 			else if (targetPolicyType == POLICYTYPE_ENTRY)
@@ -6843,36 +6934,22 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 					 * distributed: add a GatherMotion on top
 					 */
 
-					/* create a shallow copy of the plan flow */
-					Flow	   *flow = subplan->flow;
-
-					subplan->flow = (Flow *) palloc(sizeof(Flow));
-					*(subplan->flow) = *flow;
-
-					/* save original flow information */
-					subplan->flow->flow_before_req_move = flow;
-
-					/* request a GatherMotion node */
-					subplan->flow->req_move = MOVEMENT_FOCUS;
-					subplan->flow->hashExprs = NIL;
-					subplan->flow->hashOpfamilies = NIL;
-					subplan->flow->segindex = 0;
+					subplan = focusPlan(subplan, false);
+					lfirst(lcp) = subplan; /* XXX: modifying the input is not cool */
 				}
 				else
 				{
 					/*
 					 * Source is, presumably, a dispatcher singleton.
 					 */
-					subplan->flow->req_move = MOVEMENT_NONE;
 				}
+
 				node->action_col_idxes = lappend_int(node->action_col_idxes, -1);
-				node->ctid_col_idxes = lappend_int(node->ctid_col_idxes, -1);
 				node->oid_col_idxes = lappend_int(node->oid_col_idxes, 0);
 			}
 			else if (targetPolicyType == POLICYTYPE_REPLICATED)
 			{
 				node->action_col_idxes = lappend_int(node->action_col_idxes, -1);
-				node->ctid_col_idxes = lappend_int(node->ctid_col_idxes, -1);
 				node->oid_col_idxes = lappend_int(node->oid_col_idxes, 0);
 				all_subplans_entry = false;
 			}
@@ -6880,6 +6957,9 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 				elog(ERROR, "unrecognized policy type %u", targetPolicyType);
 		}
 	}
+
+	if (Gp_role != GP_ROLE_DISPATCH)
+		return;
 
 	Assert(numsegments >= 0);
 
@@ -7049,26 +7129,26 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 				 */
 				subplan = prep;
 				motion = make_sorted_union_motion(root, subplan, numSortCols, sortColIdx, sortOperators, collations,
-												  nullsFirst, false, numsegments);
+												  nullsFirst, numsegments);
 			}
 			else
 			{
 				/* Degenerate ordering... build unordered Union Receive */
-				motion = make_union_motion(subplan, false, numsegments);
+				motion = make_union_motion(subplan, numsegments);
 			}
 		}
 
 		/* Unordered Union Receive */
 		else
-			motion = make_union_motion(subplan, false, numsegments);
+			motion = make_union_motion(subplan, numsegments);
+
+		if (CdbPathLocus_IsOuterQuery(path->path.locus))
+			motion->plan.flow->locustype = CdbLocusType_OuterQuery;
 	}
 
 	/* Send all of the tuples to all of the QEs in gang above... */
 	else if (CdbPathLocus_IsReplicated(path->path.locus))
-		motion = make_broadcast_motion(subplan,
-									   false	/* useExecutorVarFormat */,
-									   numsegments
-			);
+		motion = make_broadcast_motion(subplan, numsegments);
 
 	/* Hashed redistribution to all QEs in gang above... */
 	else if (CdbPathLocus_IsHashed(path->path.locus) ||
@@ -7103,11 +7183,17 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
         motion = make_hashed_motion(subplan,
 									hashExprs,
 									hashOpfamilies,
-                                    false /* useExecutorVarFormat */,
 									numsegments);
     }
-    else
-        Insist(0);
+	else if (CdbPathLocus_IsStrewn(path->path.locus))
+	{
+		motion = make_hashed_motion(subplan,
+									NIL,
+									NIL,
+									numsegments);
+	}
+	else
+		elog(ERROR, "unexpected target locus type %d for Motion node", path->path.locus.locustype);
 
     /*
      * Decorate the subplan with a Flow node telling the plan slicer

@@ -157,12 +157,20 @@ function include_libstdcxx() {
 
 function export_gpdb() {
   TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_BIN_FILENAME}"
+  local server_version
+  server_version="$("${GPDB_SRC_PATH}"/getversion --short)"
+
+  local server_build
+  server_build="${GPDB_ARTIFACTS_DIR}/server-build-${server_version}-${BLD_ARCH}${RC_BUILD_TYPE_GCS}.tar.gz"
+
   pushd ${GREENPLUM_INSTALL_DIR}
     source greenplum_path.sh
     python -m compileall -q -x test .
     chmod -R 755 .
     tar -czf "${TARBALL}" ./*
   popd
+
+  cp "${TARBALL}" "${server_build}"
 }
 
 function export_gpdb_extensions() {

@@ -4,8 +4,8 @@
 <topic id="topic1" xml:lang="en">
   <title id="kh138244">Migrating Data from Greenplum 4.3 or 5</title>
   <shortdesc>You can migrate data from Greenplum Database 4.3 or 5 to Greenplum 6 using the standard
-    backup and restore procedures, <codeph>gpbackup</codeph> and
-    <codeph>gprestore</codeph>.</shortdesc>
+    backup and restore procedures, <codeph>gpbackup</codeph> and <codeph>gprestore</codeph><ph
+      otherprops="pivotal">, or by using <codeph>gpcopy</codeph></ph>.</shortdesc>
   <body>
     <p>
       <note otherprops="oss-only">Open source Greenplum Database is available only for Greenplum
@@ -28,11 +28,12 @@
     <body>
       <ul id="ol_rzd_xfb_z3b">
         <li>Install and initialize a new Greenplum Database 6 cluster using the version 6
-            <codeph>gpinitsystem</codeph> utility.
-          <note><codeph>gprestore</codeph> only supports restoring data to a cluster that has an
-            identical number of hosts and an identical number of segments per host, with each
-            segment having the same <codeph>content_id</codeph> as the segment in the original
-            cluster.</note>
+            <codeph>gpinitsystem</codeph> utility. <note><codeph>gprestore</codeph> only supports
+            restoring data to a cluster that has an identical number of hosts and an identical
+            number of segments per host, with each segment having the same
+              <codeph>content_id</codeph> as the segment in the original cluster. <ph
+              otherprops="pivotal">Use <codeph>gpcopy</codeph> if you need to migrate data to a
+              different-sized Greenplum 6 cluster.</ph></note>
           <note> Set the Greenplum Database 6 timezone to a value that is compatible with your host
             systems. Setting the Greenplum Database timezone prevents Greenplum Database from
             selecting a timezone each time the cluster is restarted. See <xref
@@ -51,7 +52,14 @@
             <codeph>gprestore</codeph>. Keep in mind that the ASCII backup data will require more
           disk space than the original data, which may be stored in compressed binary format.
           Offline backup solutions such as Dell EMC Data Domain can reduce the required disk space
-          on each host.</li>
+          on each host. <p otherprops="pivotal">If you want to migrate your data on the same
+            hardware but do not have enough free disk space on your host systems,
+              <codeph>gpcopy</codeph> provides the <codeph>--truncate-source-after</codeph> option
+            to truncate each source table after copying the table to the destination cluster and
+            validating that the copy succeeded. This reduces the amount of free space needed to
+            migrate clusters that reside on the same hardware. See <xref scope="peer"
+              href="../admin_guide/managing/gpcopy-migrate.xml">Migrating Data with gpcopy</xref>
+            for more information.</p></li>
         <li>Install any external modules used in your Greenplum 4.3 system in the Greenplum 6 system
           before you restore the backup, for example MADlib or PostGIS. If versions of the external
           modules are not compatible, you may need to exclude tables that reference them when
@@ -113,7 +121,9 @@
                 <codeph>procpid</codeph> column is renamed to <codeph>pid</codeph>.</li>
             <li>In the <codeph>pg_stat_activity</codeph> system table, the <codeph>procpid</codeph>
               column is renamed to <codeph>pid</codeph>. The <codeph>current_query</codeph> column
-              is removed. </li>
+              is replaced by two columns <codeph>state</codeph>: the state of the backend, and
+                <codeph>query</codeph>: the last run query, or currently running query if
+                <codeph>state</codeph> is <codeph>active</codeph>. </li>
             <li>In the <codeph>gp_distribution_policy</codeph> system table, the
                 <codeph>attrnums</codeph> column is renamed to <codeph>distkey</codeph> and its data
               type is changed to <codeph>int2vector</codeph>. A backend function
@@ -137,6 +147,11 @@
           aggregate in a previous Greenplum release that called the built-in
             <codeph>int4_avg_accum()</codeph> function, you will need to revise your aggregate for
           the new signature. </li>
+        <li>The <codeph>string_agg(expression)</codeph> function has been removed from Greenplum 6.
+          The function concatenates text values into a string. You can replace the single argument
+          function with the function <codeph>string_agg(expression, delimiter)</codeph> and specify
+          an empty string as the <codeph>delimiter</codeph>, for example
+            <codeph>string_agg(txt_col1, '').</codeph></li>
         <li><codeph>gpbackup</codeph> saves the distribution policy and distribution key for each
           table in the backup so that data can be restored to the same segment. If a table's
           distribution key in the Greenplum 4.3 or 5 database is incompatible with Greenplum 6,
@@ -207,18 +222,23 @@
   <topic id="backup-and-restore">
     <title>Backing Up and Restoring a Database</title>
     <body>
-      <p>Create a <codeph>--metadata-only</codeph> backup from the source Greenplum database and
-        restore it to the Greenplum 6 system to help find any additional problems that are not
-        identified in <xref href="#prep-gpdb4" format="dita"/>. Refer to the <xref
-          href="https://gpdb.docs.pivotal.io/backup-restore/latest/" format="html" scope="external"
-          >Greenplum Backup and Restore documentation</xref> for syntax and examples for the
-          <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities.</p>
+      <p>First use <codeph>gpbackup</codeph> to create a <codeph>--metadata-only</codeph> backup
+        from the source Greenplum database and restore it to the Greenplum 6 system. This helps find
+        any additional problems that are not identified in <xref href="#prep-gpdb4" format="dita"/>.
+        Refer to the <xref href="https://gpdb.docs.pivotal.io/backup-restore/latest/" format="html"
+          scope="external">Greenplum Backup and Restore documentation</xref> for syntax and examples
+        for the <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> utilities.</p>
       <p>Review the <codeph>gprestore</codeph> log file for error messages and correct any remaining
         problems in the source Greenplum database.</p>
       <p>When you are able to restore a metadata backup successfully, create the full backup and
-        then restore it to the Greenplum 6 system. If needed, use the <codeph>gpbackup</codeph> or
-          <codeph>gprestore</codeph> filter options to omit schemas or tables that cannot be
-        restored without error. </p>
+        then restore it to the Greenplum 6 system<ph otherprops="pivotal">, or use
+            <codeph>gpcopy</codeph> to transfer the data</ph>. If needed, use the
+          <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> filter options to omit schemas or
+        tables that cannot be restored without error. </p>
+      <p otherprops="pivotal">If you use <codeph>gpcopy</codeph> to migrate data, initiate the
+          <codeph>gpcopy</codeph> operation from the Greenplum 4.3 or 5 cluster. See <xref
+          scope="peer" href="../admin_guide/managing/gpcopy-migrate.xml">Migrating Data with
+          gpcopy</xref> for more information.</p>
       <note type="important">When you restore a backup taken from a Greenplum Database 4.3 or 5
         system, <codeph>gprestore</codeph> warns that the restore will use legacy hash operators
         when loading the data. This is because Greenplum 6 has new hash algorithms that map

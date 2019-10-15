@@ -18,10 +18,8 @@
 #include "access/hash.h"
 #include "access/xact.h"
 #include "parser/parsetree.h"	/* for rt_fetch() */
-#include "parser/parse_oper.h"	/* for compatible_oper_opid() */
 #include "utils/relcache.h"		/* RelationGetPartitioningKey() */
 #include "optimizer/cost.h"
-#include "optimizer/tlist.h"	/* get_sortgroupclause_tle() */
 #include "optimizer/planmain.h"
 #include "optimizer/predtest.h"
 #include "optimizer/var.h"
@@ -63,10 +61,19 @@
 #include "executor/executor.h"
 
 /*
- * An ApplyMotionState holds state for the recursive apply_motion_mutator().
- * It is externalized here to make it shareable by helper code in other
- * modules, e.g., cdbaggmutate.c.
+ * ApplyMotionState holds state for the recursive apply_motion_mutator().
  */
+typedef struct ApplyMotionSubPlanState
+{
+	int			sliceDepth;
+	Flow	   *parentFlow;
+	Flow	   *outerQueryFlow;
+	bool		is_initplan;
+	bool		useHashTable;
+	bool		processed;
+
+} ApplyMotionSubPlanState;
+
 typedef struct ApplyMotionState
 {
 	plan_tree_base_prefix base; /* Required prefix for
@@ -74,8 +81,13 @@ typedef struct ApplyMotionState
 	int			nextMotionID;
 	int			sliceDepth;
 	bool		containMotionNodes;
-	Bitmapset  *used_initplans;
-	Bitmapset  *used_subplans;
+
+	ApplyMotionSubPlanState *subplans;
+
+	List	   *subplan_workingQueue;
+
+	Flow	   *currentPlanFlow;
+	Flow	   *outer_query_flow;
 } ApplyMotionState;
 
 typedef struct
@@ -87,18 +99,13 @@ typedef struct
 	List	   *cursorPositions;
 } pre_dispatch_function_evaluation_context;
 
-static Node *planner_make_plan_constant(struct PlannerInfo *root, Node *n, bool is_SRI);
-
-static Node *pre_dispatch_function_evaluation_mutator(Node *node,
-										 pre_dispatch_function_evaluation_context *context);
-
 /*
  * Forward Declarations
  */
-static void assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldnode);
-
+static Node *planner_make_plan_constant(struct PlannerInfo *root, Node *n, bool is_SRI);
+static Node *pre_dispatch_function_evaluation_mutator(Node *node,
+										 pre_dispatch_function_evaluation_context *context);
 static Node *apply_motion_mutator(Node *node, ApplyMotionState *context);
-
 static bool replace_shareinput_targetlists_walker(Node *node, PlannerInfo *root, bool fPop);
 
 /*
@@ -260,34 +267,11 @@ get_partitioned_policy_from_flow(Plan *plan)
 		for (n = 1; n <= list_length(plan->targetlist); n++)
 		{
 			TargetEntry *target = get_tle_by_resno(plan->targetlist, n);
-			Var		   *new_var;
 
 			if (target->resjunk)
 				continue;
 
-			/*
-			 * If subplan expr is a Var, copy to preserve its EXPLAIN info.
-			 */
-			if (IsA(target->expr, Var))
-			{
-				new_var = copyObject(target->expr);
-				new_var->varno = OUTER_VAR;
-				new_var->varattno = n;
-			}
-
-			/*
-			 * Make a Var that references the target list entry at this
-			 * offset, using OUTER_VAR as the varno
-			 */
-			else
-				new_var = makeVar(OUTER_VAR,
-								  n,
-								  exprType((Node *) target->expr),
-								  exprTypmod((Node *) target->expr),
-								  exprCollation((Node *) target->expr),
-								  0);
-
-			if (equal(var1, new_var))
+			if (equal(var1, target->expr))
 			{
 				/*
 				 * If it is, use it to partition the result table, to avoid
@@ -319,7 +303,7 @@ get_partitioned_policy_from_flow(Plan *plan)
 				 * with more obscure cases. Deriving the distribution key
 				 * from the query plan is a heuristic, anyway.
 				 */
-				opclass = GetDefaultOpClass(new_var->vartype, HASH_AM_OID);
+				opclass = GetDefaultOpClass(exprType((Node *) target->expr), HASH_AM_OID);
 				if (get_opclass_family(opclass) != opf1)
 					continue;	/* not compatible */
 
@@ -355,12 +339,17 @@ get_partitioned_policy_from_flow(Plan *plan)
 
 /* -------------------------------------------------------------------------
  * Function apply_motion() and apply_motion_mutator() add motion nodes to a
- * top-level Plan tree as directed by the Flow nodes in the plan.
+ * top-level Plan tree so that the final result is distributed correctly
+ * for the kind of query. For example, an INSERT statement's result must
+ * be sent to the correct segments where the data needs to be inserted, and a
+ * SELECT query's result must be brought to the dispatcher, so that it can
+ * be sent to the client.
  *
- * In addition, if the argument Plan produces a partitioned flow, a Motion
- * appropriate to the command is added to the top. For example, to consolidate
- * the tuple streams from a SELECT command into a single tuple stream on the
- * dispatcher.
+ * This also adds Motion nodes on top of plan trees for SubPlans, so that the
+ * subplan results are available at the correct nodes for the outer query.
+ *
+ * If the plan is a candidate for Direct Dispatch, *needToAssignDirectDispatchContentIds
+ * is set to true.
  *
  * The result is a deep copy of the argument Plan tree with added Motion
  * nodes.
@@ -369,29 +358,42 @@ get_partitioned_policy_from_flow(Plan *plan)
  * -------------------------------------------------------------------------
  */
 Plan *
-apply_motion(PlannerInfo *root, Plan *plan)
+apply_motion(PlannerInfo *root, Plan *plan, bool *needToAssignDirectDispatchContentIds)
 {
 	Query	   *query = root->parse;
 	Plan	   *result;
 	int			nInitPlans;
-	int			plan_id;
 	GpPolicy   *targetPolicy = NULL;
 	GpPolicyType targetPolicyType = POLICYTYPE_ENTRY;
 	ApplyMotionState state;
-	bool		needToAssignDirectDispatchContentIds = false;
 	bool		bringResultToDispatcher = false;
 	int			numsegments = getgpsegmentCount();
+	int			nsubplans;
+
+	*needToAssignDirectDispatchContentIds = false;
 
 	/* Initialize mutator context. */
-
 	planner_init_plan_tree_base(&state.base, root); /* error on attempt to
 													 * descend into subplan
 													 * plan */
 	state.nextMotionID = 1;		/* Start at 1 so zero will mean "unassigned". */
 	state.sliceDepth = 0;
 	state.containMotionNodes = false;
-	state.used_initplans = NULL;
-	state.used_subplans = NULL;
+	state.subplan_workingQueue = NIL;
+
+	nsubplans = list_length(root->glob->subplans);
+	state.subplans = (ApplyMotionSubPlanState *) palloc((nsubplans + 1) * sizeof(ApplyMotionSubPlanState));
+
+	for (int i = 1; i <= nsubplans; i++)
+	{
+		ApplyMotionSubPlanState *sstate = &state.subplans[i];
+
+		sstate->sliceDepth = -1;
+		sstate->parentFlow = NULL;
+		sstate->outerQueryFlow = NULL;
+		sstate->is_initplan = false;
+		sstate->processed = false;
+	}
 
 	Assert(is_plan_node((Node *) plan));
 
@@ -547,10 +549,7 @@ apply_motion(PlannerInfo *root, Plan *plan)
 						/* do nothing */
 					}
 
-					if (!broadcastPlan(plan, false, false, numsegments))
-						ereport(ERROR,
-								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-								 errmsg("cannot parallelize that SELECT INTO yet")));
+					plan = broadcastPlan(plan, false, numsegments);
 				}
 				else
 				{
@@ -566,8 +565,7 @@ apply_motion(PlannerInfo *root, Plan *plan)
 
 					hashExprs = getExprListFromTargetList(plan->targetlist,
 														  targetPolicy->nattrs,
-														  targetPolicy->attrs,
-														  true);
+														  targetPolicy->attrs);
 					hashOpfamilies = NIL;
 					for (int i = 0; i < targetPolicy->nattrs; i++)
 					{
@@ -576,12 +574,9 @@ apply_motion(PlannerInfo *root, Plan *plan)
 						hashOpfamilies = lappend_oid(hashOpfamilies, opfamily);
 					}
 
-					if (!repartitionPlan(plan, false, false,
-										 hashExprs, hashOpfamilies,
-										 numsegments))
-						ereport(ERROR,
-								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-								 errmsg("cannot parallelize that SELECT INTO yet")));
+					plan = repartitionPlan(plan, false,
+										   hashExprs, hashOpfamilies,
+										   numsegments);
 				}
 
 				Assert(query->intoPolicy->ptype != POLICYTYPE_ENTRY);
@@ -593,7 +588,7 @@ apply_motion(PlannerInfo *root, Plan *plan)
 					 plan->flow->locustype == CdbLocusType_SegmentGeneral))
 					bringResultToDispatcher = true;
 
-				needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch;
+				*needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch;
 			}
 
 			break;
@@ -607,7 +602,7 @@ apply_motion(PlannerInfo *root, Plan *plan)
 
 		case CMD_UPDATE:
 		case CMD_DELETE:
-			needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch;
+			*needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch;
 			if (query->returningList)
 			{
 				bringResultToDispatcher = true;
@@ -620,6 +615,8 @@ apply_motion(PlannerInfo *root, Plan *plan)
 		default:
 			Insist(0);			/* Never see non-DML in here! */
 	}
+
+	state.outer_query_flow = plan->flow;
 
 	if (bringResultToDispatcher)
 	{
@@ -643,20 +640,91 @@ apply_motion(PlannerInfo *root, Plan *plan)
 		 */
 		if (query->sortClause)
 		{
-			Insist(focusPlan(plan, true, false));
+			plan = focusPlan(plan, true);
 		}
 
 		/* Use UNION RECEIVE.  Does not preserve ordering. */
 		else
-			Insist(focusPlan(plan, false, false));
+			plan = focusPlan(plan, false);
 	}
 
+	/*
+	 * Process the main plan tree.
+	 */
 	result = (Plan *) apply_motion_mutator((Node *) plan, &state);
 
-	if (needToAssignDirectDispatchContentIds)
+	/*
+	 * Process any SubPlans. While we process the SubPlans, we might
+	 * encounter more SubPlans. They will be added to the working queue,
+	 * so keep going until the working queue is empty.
+	 */
+	while (state.subplan_workingQueue)
 	{
-		/* figure out if we can run on a reduced set of nodes */
-		AssignContentIdsToPlanData(query, result, root);
+		int			plan_id = linitial_int(state.subplan_workingQueue);
+		ApplyMotionSubPlanState *sstate = &state.subplans[plan_id];
+		ListCell   *planlist_cell = list_nth_cell(root->glob->subplans, plan_id - 1);
+		Plan	   *subplan = (Plan *) lfirst(planlist_cell);
+
+		state.subplan_workingQueue = list_delete_first(state.subplan_workingQueue);
+
+		if (sstate->is_initplan)
+		{
+			/*
+			 * InitPlans are dispatched separately, before the main plan,
+			 * and the result is brought to the QD.
+			 */
+			Flow	   *topFlow = makeFlow(FLOW_SINGLETON, getgpsegmentCount());
+
+			topFlow->segindex = -1;
+			state.sliceDepth = 0;
+			state.outer_query_flow = topFlow;
+			state.currentPlanFlow = topFlow;
+		}
+		else
+		{
+			state.sliceDepth = sstate->sliceDepth;
+			state.outer_query_flow = sstate->outerQueryFlow;
+			state.currentPlanFlow = sstate->parentFlow;
+		}
+
+		if (sstate->processed)
+			elog(ERROR, "SubPlan %d already processed", plan_id);
+
+		/*
+		 * If the subquery result is not available where the outer query needs it,
+		 * we have to add a Motion node to redistribute it.
+		 */
+		if (subplan->flow->locustype != CdbLocusType_OuterQuery &&
+			subplan->flow->locustype != CdbLocusType_General)
+		{
+			numsegments = state.outer_query_flow->numsegments;
+			switch (state.outer_query_flow->flotype)
+			{
+				case FLOW_SINGLETON:
+					subplan = focusPlan(subplan, false);
+					break;
+				case FLOW_REPLICATED:
+				case FLOW_PARTITIONED:
+					if (subplan->flow->locustype != CdbLocusType_SegmentGeneral)
+						subplan = broadcastPlan(subplan, false, numsegments);
+					break;
+				default:
+					elog(ERROR, "unexpected flow type %d in parent of SubPlan expression",
+						 state.outer_query_flow->flotype);
+			}
+
+			/*
+			 * If we created a Motion, protect it from rescanning. Init Plans
+			 * and hashed SubPlans are never rescanned.
+			 */
+			if (IsA(subplan, Motion) && !sstate->is_initplan &&
+				!sstate->useHashTable)
+				subplan = (Plan *) make_material(subplan);
+		}
+
+		subplan = (Plan *) apply_motion_mutator((Node *) subplan, &state);
+
+		lfirst(planlist_cell) = subplan;
 	}
 
 	root->glob->nMotionNodes = state.nextMotionID - 1;
@@ -668,13 +736,15 @@ apply_motion(PlannerInfo *root, Plan *plan)
 	 */
 	Assert(root->glob->subplan_sliceIds);
 	nInitPlans = 0;
-
-	plan_id = -1;
-	while ((plan_id = bms_next_member(state.used_initplans, plan_id)) >= 0)
+	for (int plan_id = 1; plan_id <= nsubplans; plan_id++)
 	{
-		Assert(plan_id <= list_length(root->glob->subplans));
-		root->glob->subplan_sliceIds[plan_id] = state.nextMotionID++;
-		nInitPlans++;
+		ApplyMotionSubPlanState *sstate = &state.subplans[plan_id];
+
+		if (sstate->is_initplan)
+		{
+			root->glob->subplan_sliceIds[plan_id] = state.nextMotionID++;
+			nInitPlans++;
+		}
 	}
 	root->glob->nInitPlans = nInitPlans;
 
@@ -704,8 +774,7 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 {
 	Node	   *newnode;
 	Plan	   *plan;
-	Flow	   *flow;
-	int			saveSliceDepth;
+	Flow	   *saveCurrentPlanFlow;
 
 #ifdef USE_ASSERT_CHECKING
 	PlannerInfo *root = (PlannerInfo *) context->base.node;
@@ -718,92 +787,98 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 	/* An expression node might have subtrees containing plans to be mutated. */
 	if (!is_plan_node(node))
 	{
+		node = plan_tree_mutator(node, apply_motion_mutator, context, false);
+
 		/*
-		 * The containMotionNodes flag keeps track of whether there are any
-		 * Motion nodes, ignoring any in InitPlans. So if we recurse into an
-		 * InitPlan, save and restore the flag.
-		 *
-		 * There can be multiple SubPlan references for the same initplan;
-		 * only recurse into its Plan tree on first encounter.
-		 *
-		 * XXX: All subsequent encounters better happen in the same slice,
-		 * the Param set by executing the SubPlan isn't valid elsewhere.
-		 * Could we check that somehow?
+		 * If we see a SubPlan, remember the context where we saw it. We memorize
+		 * the parent's node's Flow, so that we know where the SubPlan needs to
+		 * bring the result. There might be multiple references to the same SubPlan,
+		 * if e.g. the result of the SubPlan is passed up the plan for use in later
+		 * joins or for the final target list. Remember the *deepest* slice level
+		 * where we saw it. We cannot pass SubPlan's result down the tree, but we
+		 * can propagate it upwards if we put it to the target list. So it needs
+		 * to be calculated at the bottom level, and propagated up from there.
 		 */
 		if (IsA(node, SubPlan))
 		{
 			SubPlan	   *spexpr = (SubPlan *) node;
+			ApplyMotionSubPlanState *sstate = &context->subplans[spexpr->plan_id];
 
-			if (!bms_is_member(spexpr->plan_id, context->used_subplans))
+			sstate->is_initplan = spexpr->is_initplan;
+			sstate->useHashTable = spexpr->useHashTable;
+
+			if (sstate->processed)
+				elog(ERROR, "found reference to already-processed SubPlan");
+			if (sstate->sliceDepth == -1)
+				context->subplan_workingQueue = lappend_int(context->subplan_workingQueue,
+															spexpr->plan_id);
+
+			if (!spexpr->is_initplan && context->sliceDepth > sstate->sliceDepth)
 			{
-				context->used_subplans = bms_add_member(context->used_subplans, spexpr->plan_id);
-				if (spexpr->is_initplan)
-				{
-					bool		saveContainMotionNodes = context->containMotionNodes;
-					int			saveSliceDepth = context->sliceDepth;
-
-					context->used_initplans = bms_add_member(context->used_initplans, spexpr->plan_id);
-
-					/* reset sliceDepth for each init plan */
-					context->sliceDepth = 0;
-					node = plan_tree_mutator(node, apply_motion_mutator, context, true);
-
-					context->containMotionNodes = saveContainMotionNodes;
-					context->sliceDepth = saveSliceDepth;
-				}
+				sstate->sliceDepth = context->sliceDepth;
+				if (context->currentPlanFlow->locustype == CdbLocusType_OuterQuery)
+					sstate->outerQueryFlow = context->outer_query_flow;
 				else
-					node = plan_tree_mutator(node, apply_motion_mutator, context, true);
+					sstate->outerQueryFlow = context->currentPlanFlow;
+				sstate->parentFlow = context->currentPlanFlow;
 			}
-			return node;
 		}
-		return plan_tree_mutator(node, apply_motion_mutator, context, true);
+		return node;
 	}
 
 	plan = (Plan *) node;
-	flow = plan->flow;
 
-	/* Descending into a subquery or a new slice? */
-	saveSliceDepth = context->sliceDepth;
-	Assert(!IsA(node, Query));
-	if (IsA(node, Motion))
-		context->sliceDepth++;
-	else if (flow && flow->req_move != MOVEMENT_NONE)
-		context->sliceDepth++;
-
-	/*
-	 * Copy this node and mutate its children. Afterward, this node should be
-	 * an exact image of the input node, except that contained nodes requiring
-	 * parallelization will have had it applied.
-	 */
-	newnode = plan_tree_mutator(node, apply_motion_mutator, context, true);
-
-	context->sliceDepth = saveSliceDepth;
-
-	plan = (Plan *) newnode;
-	flow = plan->flow;
-
-	/* Pre-existing Motion nodes must be renumbered. */
-	if (IsA(newnode, Motion) &&flow->req_move != MOVEMENT_NONE)
+	if (IsA(plan, Motion))
 	{
-		plan = ((Motion *) newnode)->plan.lefttree;
-		flow = plan->flow;
-		newnode = (Node *) plan;
-	}
-
-	if (IsA(newnode, Motion))
-	{
-		Motion	   *motion = (Motion *) newnode;
+		Motion	   *motion = (Motion *) plan;
 
 		/* Sanity check */
 		/* Sub plan must have flow */
-		Assert(flow && motion->plan.lefttree->flow);
-		Assert(flow->req_move == MOVEMENT_NONE && !flow->flow_before_req_move);
+		Assert(plan->flow && motion->plan.lefttree->flow);
 
 		/* If top slice marked as singleton, make it a dispatcher singleton. */
 		if (motion->motionType == MOTIONTYPE_GATHER
 			&& context->sliceDepth == 0)
 		{
-			flow->segindex = -1;
+			plan->flow->segindex = -1;
+		}
+
+		saveCurrentPlanFlow = context->currentPlanFlow;
+		if (plan->flow != NULL && plan->flow->flotype != FLOW_UNDEFINED)
+			context->currentPlanFlow = plan->flow;
+		context->sliceDepth++;
+		motion->plan.lefttree = (Plan *) apply_motion_mutator((Node *) motion->plan.lefttree,
+															  context);
+		context->sliceDepth--;
+		context->currentPlanFlow = saveCurrentPlanFlow;
+
+		/*
+		 * If this is a Motion node in a correlated SubPlan, where we bring
+		 * the result to the parent, the Flow was marked with
+		 * CdbLocusType_OuterQuery. Because we didn't know whether the parent
+		 * is distributed, replicated, or a single QD/QE process, when the
+		 * subquery was planned, we fix that up here. Modify the Motion node
+		 * so that it brings the result to the parent.
+		 */
+		if (plan->flow->locustype == CdbLocusType_OuterQuery)
+		{
+			Assert(context->outer_query_flow);
+			Assert(motion->motionType == MOTIONTYPE_GATHER || motion->motionType == MOTIONTYPE_BROADCAST);
+			Assert(!motion->sendSorted);
+
+			if (context->outer_query_flow->flotype == FLOW_SINGLETON)
+			{
+				motion->motionType = MOTIONTYPE_GATHER;
+			}
+			else if (context->outer_query_flow->flotype == FLOW_REPLICATED ||
+					 context->outer_query_flow->flotype == FLOW_PARTITIONED)
+			{
+				motion->motionType = MOTIONTYPE_BROADCAST;
+			}
+			else
+				elog(ERROR, "unexpected Flow type in parent of a SubPlan");
+
+			motion->plan.flow = context->outer_query_flow;
 		}
 
 		/*
@@ -811,162 +886,58 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 		 * is CdbLocusType_SegmentGeneral, omit this motion.
 		 */
 		if (context->sliceDepth > 0 &&
-			flow->flotype == FLOW_SINGLETON &&
-			flow->segindex == 0 &&
+			plan->flow->flotype == FLOW_SINGLETON &&
+			plan->flow->segindex == 0 &&
 			motion->plan.lefttree->flow->locustype == CdbLocusType_SegmentGeneral)
 		{
 			/* omit this motion */
-			newnode = (Node *)motion->plan.lefttree;
-
-			/* Don't need assign a motion node Id */
-			goto done;
+			newnode = (Node *) motion->plan.lefttree;
 		}
-
-		/* Assign unique node number to the new node. */
-		assignMotionID(newnode, context, node);
-
-		goto done;
-	}
-
-	/*
-	 * If no Flow node, we're in a portion of the tree that was finished by
-	 * the planner and already contains any needed Motion nodes.
-	 */
-	if (!flow)
-		goto done;
-
-	Assert(IsA(flow, Flow));
-
-	/* Add motion atop the copied node, if necessary. */
-	switch (flow->req_move)
-	{
-		case MOVEMENT_FOCUS:
-			/* If top slice is a singleton, let it execute on qDisp. */
-			if (flow->segindex >= 0 &&
-				context->sliceDepth == 0)
-				flow->segindex = -1;
-
-			newnode = (Node *) make_union_motion(plan, true, flow->numsegments);
-			break;
-
-		case MOVEMENT_BROADCAST:
-			newnode = (Node *) make_broadcast_motion(plan, true /* useExecutorVarFormat */,
-													 flow->numsegments);
-			break;
-
-		case MOVEMENT_REPARTITION:
-			newnode = (Node *) make_hashed_motion(plan,
-												  flow->hashExprs,
-												  flow->hashOpfamilies,
-												  true	/* useExecutorVarFormat */,
-												  flow->numsegments
-				);
-			break;
-
-		case MOVEMENT_EXPLICIT:
+		else
+		{
+			/* Assign unique node number to the new node. */
+			motion->motionID = context->nextMotionID++;
 
 			/*
-			 * add an ExplicitRedistribute motion node only if child plan
-			 * nodes have a motion node
+			 * Remember if this was a Motion node. This is used at the top of the
+			 * tree, with MOVEMENT_EXPLICIT, to avoid adding an explicit motion, if
+			 * there were no Motion in the subtree. Note that this does not take
+			 * InitPlans containing Motion nodes into account. InitPlans are executed
+			 * as a separate step before the main plan, and hence any Motion nodes in
+			 * them don't need to affect the way the main plan is executed.
 			 */
-			if (context->containMotionNodes)
-			{
-				/*
-				 * motion node in child nodes: add a ExplicitRedistribute
-				 * motion
-				 */
-				newnode = (Node *) make_explicit_motion(plan,
-														flow->segidColIdx,
-														true	/* useExecutorVarFormat */
-					);
-			}
-			else
-			{
-				/*
-				 * no motion nodes in child plan nodes - no need for
-				 * ExplicitRedistribute: restore flow
-				 */
-				flow->req_move = MOVEMENT_NONE;
-				flow->flow_before_req_move = NULL;
-			}
-
-			break;
-
-		case MOVEMENT_NONE:
-			/* Update flow if reassigning singleton top slice to qDisp. */
-			if (flow->flotype == FLOW_SINGLETON &&
-				flow->segindex >= 0 &&
-				context->sliceDepth == 0)
-			{
-				flow->segindex = -1;
-			}
-			break;
-
-		default:
-			Insist(0);
-			break;
-	}
-
-	/*
-	 * After adding Motion node, assign slice id and restore subplan's Flow.
-	 */
-	if (flow->flow_before_req_move)
-	{
-		Assert(flow->req_move != MOVEMENT_NONE &&
-			   IsA(newnode, Motion) &&
-			   plan == ((Motion *) newnode)->plan.lefttree);
-
-		/* Assign unique node number to the new node. */
-		assignMotionID(newnode, context, NULL);
-
-		/* Replace the subplan's modified Flow with the original. */
-		plan->flow = flow->flow_before_req_move;
+			context->containMotionNodes = true;
+			newnode = (Node *) motion;
+		}
 	}
 	else
-		Assert(flow->req_move == MOVEMENT_NONE);
+	{
+		/*
+		 * Copy this node and mutate its children. Afterwards, this node should be
+		 * an exact image of the input node, except that contained nodes requiring
+		 * parallelization will have had it applied.
+		 */
+		saveCurrentPlanFlow = context->currentPlanFlow;
+		if (plan->flow != NULL && plan->flow->flotype != FLOW_UNDEFINED)
+			context->currentPlanFlow = plan->flow;
+		newnode = plan_tree_mutator(node, apply_motion_mutator, context, false);
+		context->currentPlanFlow = saveCurrentPlanFlow;
 
-done:
-
-	/*
-	 * Remember if this was a Motion node. This is used at the top of the
-	 * tree, with MOVEMENT_EXPLICIT, to avoid adding an explicit motion, if
-	 * there were no Motion in the subtree. Note that this does not take
-	 * InitPlans containing Motion nodes into account. InitPlans are executed
-	 * as a separate step before the main plan, and hence any Motion nodes in
-	 * them don't need to affect the way the main plan is executed.
-	 */
-	if (IsA(newnode, Motion))
-		context->containMotionNodes = true;
+		/* Update flow if reassigning singleton top slice to qDisp. */
+		if (plan->flow &&
+			plan->flow->flotype == FLOW_SINGLETON &&
+			plan->flow->segindex >= 0 &&
+			context->sliceDepth == 0)
+		{
+			plan->flow->segindex = -1;
+		}
+	}
 
 	return newnode;
 }								/* apply_motion_mutator */
 
-
-/*
- * Helper code for ApplyMotionState -- Assign motion id to new Motion node.
- */
-static void
-assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldnode)
-{
-	Assert(IsA(newnode, Motion) &&context != NULL);
-	Assert(oldnode == NULL || (IsA(oldnode, Motion) &&oldnode != newnode));
-
-	/* Assign unique node number to the new node. */
-	((Motion *) newnode)->motionID = context->nextMotionID++;
-
-	/* Debugging hint that we have reassigned a previously assigned ID. */
-	if (oldnode != NULL && ((Motion *) oldnode)->motionID != 0)
-	{
-		ereport(DEBUG2, (
-						 errmsg("Motion node renumbered: old=%d new=%d.",
-								((Motion *) oldnode)->motionID,
-								((Motion *) newnode)->motionID)
-						 ));
-	}
-}
-
 Motion *
-make_union_motion(Plan *lefttree, bool useExecutorVarFormat, int numsegments)
+make_union_motion(Plan *lefttree, int numsegments)
 {
 	Motion	   *motion;
 
@@ -974,8 +945,7 @@ make_union_motion(Plan *lefttree, bool useExecutorVarFormat, int numsegments)
 	Assert(numsegments != GP_POLICY_INVALID_NUMSEGMENTS());
 
 	motion = make_motion(NULL, lefttree,
-						 0, NULL, NULL, NULL, NULL, /* no ordering */
-						 useExecutorVarFormat);
+						 0, NULL, NULL, NULL, NULL /* no ordering */);
 
 	motion->motionType = MOTIONTYPE_GATHER;
 	motion->hashExprs = NIL;
@@ -990,7 +960,7 @@ Motion *
 make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols,
 						 AttrNumber *sortColIdx, Oid *sortOperators,
 						 Oid *collations, bool *nullsFirst,
-						 bool useExecutorVarFormat, int numsegments)
+						 int numsegments)
 {
 	Motion	   *motion;
 
@@ -998,8 +968,7 @@ make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols,
 	Assert(numsegments != GP_POLICY_INVALID_NUMSEGMENTS());
 
 	motion = make_motion(root, lefttree,
-						 numSortCols, sortColIdx, sortOperators, collations, nullsFirst,
-						 useExecutorVarFormat);
+						 numSortCols, sortColIdx, sortOperators, collations, nullsFirst);
 	motion->motionType = MOTIONTYPE_GATHER;
 	motion->hashExprs = NIL;
 	motion->hashFuncs = NULL;
@@ -1013,7 +982,6 @@ Motion *
 make_hashed_motion(Plan *lefttree,
 				   List *hashExprs,
 				   List *hashOpfamilies,
-				   bool useExecutorVarFormat,
 				   int numsegments)
 {
 	Motion	   *motion;
@@ -1039,8 +1007,7 @@ make_hashed_motion(Plan *lefttree,
 	}
 
 	motion = make_motion(NULL, lefttree,
-						 0, NULL, NULL, NULL, NULL, /* no ordering */
-						 useExecutorVarFormat);
+						 0, NULL, NULL, NULL, NULL /* no ordering */);
 	motion->motionType = MOTIONTYPE_HASH;
 	motion->hashExprs = hashExprs;
 	motion->hashFuncs = hashFuncs;
@@ -1053,8 +1020,7 @@ make_hashed_motion(Plan *lefttree,
 }
 
 Motion *
-make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat,
-					  int numsegments)
+make_broadcast_motion(Plan *lefttree, int numsegments)
 {
 	Motion	   *motion;
 
@@ -1062,8 +1028,7 @@ make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat,
 	Assert(numsegments != GP_POLICY_INVALID_NUMSEGMENTS());
 
 	motion = make_motion(NULL, lefttree,
-						 0, NULL, NULL, NULL, NULL, /* no ordering */
-						 useExecutorVarFormat);
+						 0, NULL, NULL, NULL, NULL /* no ordering */);
 	motion->motionType = MOTIONTYPE_BROADCAST;
 	motion->hashExprs = NIL;
 	motion->hashFuncs = NULL;
@@ -1073,11 +1038,33 @@ make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat,
 	return motion;
 }
 
-Motion *
-make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVarFormat)
+static bool
+contain_motions_walker(Node *node, void *context)
+{
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Motion))
+		return true;
+	else
+		return plan_tree_walker(node, contain_motions_walker, context, true);
+}
+
+Plan *
+make_explicit_motion(PlannerInfo *root, Plan *lefttree, AttrNumber segidColIdx)
 {
 	Motion	   *motion;
 	int			numsegments;
+	plan_tree_base_prefix base;
+
+	base.node = (Node *) root;
+
+	/*
+	 * add an ExplicitRedistribute motion node only if child plan
+	 * has a motion node
+	 */
+	if (!contain_motions_walker((Node *) lefttree, &base))
+		return lefttree;
 
 	/*
 	 * For explicit motion data come back to the source segments,
@@ -1090,8 +1077,7 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 	Assert(segidColIdx > 0 && segidColIdx <= list_length(lefttree->targetlist));
 
 	motion = make_motion(NULL, lefttree,
-						 0, NULL, NULL, NULL, NULL, /* no ordering */
-						 useExecutorVarFormat);
+						 0, NULL, NULL, NULL, NULL /* no ordering */);
 	motion->motionType = MOTIONTYPE_EXPLICIT;
 	motion->hashExprs = NIL;
 	motion->hashFuncs = NULL;
@@ -1103,7 +1089,7 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 	 */
 	motion->plan.flow->locustype = CdbLocusType_Strewn;
 
-	return motion;
+	return (Plan *) motion;
 }
 
 /* --------------------------------------------------------------------
@@ -1128,8 +1114,7 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 List *
 getExprListFromTargetList(List *tlist,
 						  int numCols,
-						  AttrNumber *colIdx,
-						  bool useExecutorVarFormat)
+						  AttrNumber *colIdx)
 {
 	int			i;
 	List	   *elist = NIL;
@@ -1144,43 +1129,10 @@ getExprListFromTargetList(List *tlist,
 		if (target == NULL)
 			elog(ERROR, "no tlist entry for key %d", n);
 
-		/* After set_plan_references(), make a Var referencing subplan tlist. */
-		if (useExecutorVarFormat)
-			elist = lappend(elist, cdbpullup_make_expr(OUTER_VAR, n, target->expr, false));
-
-		/* Before set_plan_references(), copy the subplan's result expr. */
-		else
-			elist = lappend(elist, copyObject(target->expr));
+		elist = lappend(elist, copyObject(target->expr));
 	}
 
 	return elist;
-}
-
-/*
- * Request an ExplicitRedistribute motion node for a plan node
- */
-void
-request_explicit_motion(Plan *plan, Index resultRelationsIdx, List *rtable)
-{
-	/* request a segid redistribute motion */
-	/* create a shallow copy of the plan flow */
-	Flow	   *flow = plan->flow;
-
-	plan->flow = (Flow *) palloc(sizeof(*(plan->flow)));
-	*(plan->flow) = *flow;
-
-	/* save original flow information */
-	plan->flow->flow_before_req_move = flow;
-
-	/* request a SegIdRedistribute motion node */
-	plan->flow->req_move = MOVEMENT_EXPLICIT;
-
-	/* find segid column in target list */
-	AttrNumber	segidColIdx = ExecFindJunkAttributeInTlist(plan->targetlist, "gp_segment_id");
-	if (segidColIdx == InvalidAttrNumber)
-		elog(ERROR, "could not find gp_segment_id column in target list");
-
-	plan->flow->segidColIdx = segidColIdx;
 }
 
 static void
@@ -1231,25 +1183,6 @@ find_junk_tle(List *targetList, const char *junkAttrName)
 			return tle;
 	}
 	elog(ERROR, "could not find junk tle \"%s\"", junkAttrName);
-}
-
-static AttrNumber
-find_ctid_attribute_check(List *targetList)
-{
-	TargetEntry	*ctid;
-	Var			*var;
-
-	ctid = find_junk_tle(targetList, "ctid");
-	if (!ctid)
-		elog(ERROR, "could not find \"ctid\" column in input to UPDATE");
-	Assert(IsA(ctid->expr, Var));
-
-	var = (Var *) (ctid->expr);
-
-	/* Ctid should follow after normal attributes */
-	Assert(var->vartype == TIDOID);
-
-	return ctid->resno;
 }
 
 static AttrNumber
@@ -1457,7 +1390,6 @@ process_targetlist_for_splitupdate(Relation resultRel, List *targetlist,
 SplitUpdate *
 make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntry *rte)
 {
-	AttrNumber		ctidColIdx = 0;
 	List			*deleteColIdx = NIL;
 	List			*insertColIdx = NIL;
 	int				actionColIdx;
@@ -1487,8 +1419,6 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	process_targetlist_for_splitupdate(resultRelation,
 									   subplan->targetlist,
 									   &splitUpdateTargetList, &insertColIdx, &deleteColIdx);
-	ctidColIdx = find_ctid_attribute_check(subplan->targetlist);
-
 	if (resultRelation->rd_rel->relhasoids)
 		oidColIdx = find_oid_attribute_check(subplan->targetlist);
 
@@ -1505,10 +1435,7 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	splitupdate = makeNode(SplitUpdate);
 	splitupdate->actionColIdx = actionColIdx;
 
-	Assert(ctidColIdx > 0);
-
 	/* populate information generated above into splitupdate node */
-	splitupdate->ctidColIdx = ctidColIdx;
 	splitupdate->tupleoidColIdx = oidColIdx;
 	splitupdate->insertColIdx = insertColIdx;
 	splitupdate->deleteColIdx = deleteColIdx;
@@ -1538,7 +1465,6 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 		mark_plan_entry((Plan *) splitupdate);
 
 	mt->action_col_idxes = lappend_int(mt->action_col_idxes, actionColIdx);
-	mt->ctid_col_idxes = lappend_int(mt->ctid_col_idxes, ctidColIdx);
 	mt->oid_col_idxes = lappend_int(mt->oid_col_idxes, oidColIdx);
 
 	return splitupdate;
@@ -1782,7 +1708,6 @@ shareinput_walker(SHAREINPUT_MUTATOR f, Node *node, PlannerInfo *root)
 			if (root->glob->finalrtable == NULL)
 			{
 				rel = find_base_rel(root, tfscan->scan.scanrelid);
-				Assert(rel->subplan == tfscan->scan.plan.lefttree);
 				subroot = rel->subroot;
 				glob->share.curr_rtable = subroot->parse->rtable;
 			}
@@ -2686,6 +2611,7 @@ param_walker(Node *node, ParamWalkerContext *context)
 {
 	Param	   *param;
 	Scan	   *scan;
+	ListCell   *lc;
 
 	if (node == NULL)
 		return false;
@@ -2694,9 +2620,12 @@ param_walker(Node *node, ParamWalkerContext *context)
 	{
 		case T_Param:
 			param = (Param *) node;
-			if (!bms_is_member(param->paramid, context->paramids))
-				context->paramids = bms_add_member(context->paramids,
-												   param->paramid);
+			if (param->paramkind == PARAM_EXEC)
+			{
+				if (!bms_is_member(param->paramid, context->paramids))
+					context->paramids = bms_add_member(context->paramids,
+													   param->paramid);
+			}
 			return false;
 
 		case T_SubqueryScan:
@@ -2707,6 +2636,25 @@ param_walker(Node *node, ParamWalkerContext *context)
 			if (!bms_is_member(scan->scanrelid, context->scanrelids))
 				context->scanrelids = bms_add_member(context->scanrelids,
 													 scan->scanrelid);
+			break;
+
+		case T_SubPlan:
+			{
+				SubPlan	   *spexpr = (SubPlan *) node;
+
+				if (spexpr->subLinkType == MULTIEXPR_SUBLINK &&
+					spexpr->is_initplan)
+				{
+					foreach (lc, spexpr->setParam)
+					{
+						int			paramid = lfirst_int(lc);
+
+						if (!bms_is_member(paramid, context->paramids))
+							context->paramids = bms_add_member(context->paramids,
+															   paramid);
+					}
+				}
+			}
 			break;
 
 		default:
@@ -3374,8 +3322,7 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 
 	*hashExprs_p = getExprListFromTargetList(plan->targetlist,
 										   (*targetPolicy)->nattrs,
-										   (*targetPolicy)->attrs,
-										   false);
+										   (*targetPolicy)->attrs);
 	*hashOpfamilies_p = NIL;
 	for (int i = 0; i < (*targetPolicy)->nattrs; i++)
 	{
@@ -3457,4 +3404,43 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 			plan->flow->hashOpfamilies = *hashOpfamilies_p;
 		}
 	}
+}
+
+/*
+ * Does the given expression contain Params that are passed down from
+ * outer query?
+ */
+bool
+contains_outer_params(Node *node, void *context)
+{
+	PlannerInfo *root = (PlannerInfo *) context;
+
+	if (node == NULL)
+		return false;
+	if (IsA(node, Param))
+	{
+		Param	   *param = (Param *) node;
+
+		if (param->paramkind == PARAM_EXEC)
+		{
+			/* Does this Param refer to a value that an outer query provides? */
+			PlannerInfo *parent = root->parent_root;
+
+			while (parent)
+			{
+				ListCell   *lc;
+
+				foreach (lc, parent->plan_params)
+				{
+					PlannerParamItem *ppi = (PlannerParamItem *) lfirst(lc);
+
+					if (ppi->paramId == param->paramid)
+						return true;		/* abort the tree traversal and return true */
+				}
+
+				parent = parent->parent_root;
+			}
+		}
+	}
+	return expression_tree_walker(node, contains_outer_params, context);
 }

@@ -68,7 +68,6 @@
             <li>curl</li>
             <li>krb5</li>
             <li>libcurl</li>
-            <li>libedit</li>
             <li>libevent</li>
             <li>libxml2</li>
             <li>libyaml</li>
@@ -78,6 +77,7 @@
             <li>openssl</li>
             <li>openssl-libs (RHEL7/Centos7)</li>
             <li>perl</li>
+            <li>readline</li>
             <li>rsync</li>
             <li>R</li>
             <li>sed (used by <codeph>gpinitsystem</codeph>)</li>
@@ -102,7 +102,6 @@
             <li>krb5-multidev </li>
             <li>libcurl3-gnutls </li>
             <li>libcurl4 </li>
-            <li>libedit2 </li>
             <li>libevent-2.1-6 </li>
             <li>libxml2 </li>
             <li>libyaml-0-2 </li>
@@ -112,6 +111,7 @@
             <li>openssh-client </li>
             <li>openssl </li>
             <li>perl </li>
+            <li>readline</li>
             <li>rsync</li>
             <li>sed </li>
             <li>tar </li>
@@ -272,12 +272,6 @@
         <note>In addition to the DDOS versions listed in the previous table, Pivotal Greenplum
           supports all minor patch releases (fourth digit releases) later than the certified
           version.</note>
-        <note>Pivotal Greenplum 6 does not support the ODBC driver for Cognos Analytics V11.
-            <p>Connecting to IBM Cognos software with an ODBC driver is not supported. Greenplum
-            Database supports connecting to IBM Cognos software with the DataDirect JDBC driver for
-            Pivotal Greenplum. This driver is available as a download from <xref
-              href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-              >Pivotal Network</xref>. </p></note>
       </section>
     </body>
   </topic>
@@ -437,6 +431,12 @@
                 Connector documentation</xref> for compatibility and usage information.</li>
 -->
           </ul>
+          <note otherprops="pivotal">Pivotal Greenplum 6 does not support the ODBC driver for Cognos
+            Analytics V11. <p>Connecting to IBM Cognos software with an ODBC driver is not
+              supported. Greenplum Database supports connecting to IBM Cognos software with the
+              DataDirect JDBC driver for Pivotal Greenplum. This driver is available as a download
+              from <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
+                scope="external">Pivotal Network</xref>. </p></note>
         </p>
       </body>
     </topic>

@@ -23,9 +23,6 @@ ifdef TEMP_CONFIG
 TEMP_CONF += --temp-config=$(TEMP_CONFIG)
 endif
 
-# Greenplum regression tests use $PGPORT
-PGPORT?=15432
-
 # maximum simultaneous connections for parallel tests
 MAXCONNOPT =
 ifdef MAX_CONNECTIONS

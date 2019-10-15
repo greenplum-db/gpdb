@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1">
-    <title id="ox135496">Client Utility Reference</title>
-    <body>
-        <section conref="../cli_ref.xml#topic1/cli-utils-intro"/>
-    </body>
-</topic>

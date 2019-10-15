@@ -39,6 +39,11 @@
  *    unordered.  The set operation is performed on the QE as if it were 
  *    sequential.
  *
+ * PSETOP_SEQUENTIAL_QE
+ *    Similar to SEQUENTIAL_QD/QE, but the output must be made available
+ *    to the outer query's locus. We don't know the outer query's locus yet,
+ *    but we treat it sequential.
+ *
  * PSETOP_GENERAL
  *    The plans input to the Append node are all general loci.  The result
  *    of the Append is, therefore general as well.
@@ -49,6 +54,7 @@ typedef enum GpSetOpType
 	PSETOP_PARALLEL_PARTITIONED,
 	PSETOP_SEQUENTIAL_QD,
 	PSETOP_SEQUENTIAL_QE,
+	PSETOP_SEQUENTIAL_OUTERQUERY,
 	PSETOP_GENERAL
 } GpSetOpType;
 
@@ -97,6 +103,9 @@ void mark_plan_entry(Plan* plan);
 
 extern
 void mark_plan_singleQE(Plan* plan, int numsegments);
+
+extern
+void mark_plan_outerquery(Plan* plan, int numsegments);
 
 extern
 void mark_plan_segment_general(Plan* plan, int numsegments);

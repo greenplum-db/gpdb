@@ -322,6 +322,7 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(copyIntoClause);
+	WRITE_NODE_FIELD(refreshClause);
 	WRITE_INT_FIELD(metricsQueryType);
 }
 #endif /* COMPILING_BINARY_FUNCS */
@@ -474,7 +475,6 @@ _outModifyTable(StringInfo str, const ModifyTable *node)
 	WRITE_INT_FIELD(exclRelRTI);
 	WRITE_NODE_FIELD(exclRelTlist);
 	WRITE_NODE_FIELD(action_col_idxes);
-	WRITE_NODE_FIELD(ctid_col_idxes);
 	WRITE_NODE_FIELD(oid_col_idxes);
 }
 
@@ -1246,7 +1246,6 @@ _outSplitUpdate(StringInfo str, const SplitUpdate *node)
 	WRITE_NODE_TYPE("SplitUpdate");
 
 	WRITE_INT_FIELD(actionColIdx);
-	WRITE_INT_FIELD(ctidColIdx);
 	WRITE_INT_FIELD(tupleoidColIdx);
 	WRITE_NODE_FIELD(insertColIdx);
 	WRITE_NODE_FIELD(deleteColIdx);
@@ -1368,6 +1367,15 @@ _outCopyIntoClause(StringInfo str, const CopyIntoClause *node)
 	WRITE_NODE_FIELD(options);
 	WRITE_NODE_FIELD(ao_segnos);
 
+}
+
+static void
+_outRefreshClause(StringInfo str, const RefreshClause *node)
+{
+	WRITE_NODE_TYPE("REFRESHCLAUSE");
+
+	WRITE_BOOL_FIELD(concurrent);
+	WRITE_NODE_FIELD(relation);
 }
 
 static void
@@ -1988,15 +1996,24 @@ _outFlow(StringInfo str, const Flow *node)
 	WRITE_NODE_TYPE("FLOW");
 
 	WRITE_ENUM_FIELD(flotype, FlowType);
-	WRITE_ENUM_FIELD(req_move, Movement);
 	WRITE_ENUM_FIELD(locustype, CdbLocusType);
 	WRITE_INT_FIELD(segindex);
 	WRITE_INT_FIELD(numsegments);
 
+	/*
+	 * Don't send hashExprs to segments. It's not needed in segments.
+	 * Also, the hash expressions are not processed by set_plan_references(),
+	 * and might therefore still contain PlaceHolderVars, and we're missing
+	 * out/readfast support for them, too.
+	 *
+	 * FIXME: It's a bit ugly that we need the other fields from 'flow'.
+	 * We should clean that up, copying any information that's needed after
+	 * planning elsewhere.
+	 */
+#ifndef COMPILING_BINARY_FUNCS
 	WRITE_NODE_FIELD(hashExprs);
 	WRITE_NODE_FIELD(hashOpfamilies);
-
-	WRITE_NODE_FIELD(flow_before_req_move);
+#endif /* COMPILING_BINARY_FUNCS */
 }
 
 /*****************************************************************************
@@ -2008,6 +2025,7 @@ _outFlow(StringInfo str, const Flow *node)
 /*
  * _outCdbPathLocus
  */
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outCdbPathLocus(StringInfo str, const CdbPathLocus *node)
 {
@@ -2015,6 +2033,7 @@ _outCdbPathLocus(StringInfo str, const CdbPathLocus *node)
 	WRITE_NODE_FIELD(distkey);
 	WRITE_INT_FIELD(numsegments);
 }                               /* _outCdbPathLocus */
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outOnConflictExpr(StringInfo str, const OnConflictExpr *node)
@@ -2036,6 +2055,12 @@ _outOnConflictExpr(StringInfo str, const OnConflictExpr *node)
  *	Stuff from relation.h.
  *
  *****************************************************************************/
+
+/*
+ * None of this stuff is needed after planning, and doesn't need to be
+ * dispatched to QEs.
+ */
+#ifndef COMPILING_BINARY_FUNCS
 
 /*
  * print the basic stuff of all nodes that inherit from Path
@@ -2063,7 +2088,6 @@ _outPathInfo(StringInfo str, const Path *node)
 	WRITE_FLOAT_FIELD(rows, "%.0f");
 	WRITE_FLOAT_FIELD(startup_cost, "%.2f");
 	WRITE_FLOAT_FIELD(total_cost, "%.2f");
-    WRITE_NODE_FIELD(parent);
     _outCdbPathLocus(str, &node->locus);
 	WRITE_NODE_FIELD(pathkeys);
 }
@@ -2161,7 +2185,6 @@ _outForeignPath(StringInfo str, const ForeignPath *node)
 	WRITE_NODE_FIELD(fdw_private);
 }
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
 _outCustomPath(StringInfo str, const CustomPath *node)
 {
@@ -2176,7 +2199,6 @@ _outCustomPath(StringInfo str, const CustomPath *node)
 	if (node->methods->TextOutCustomPath)
 		node->methods->TextOutCustomPath(str, node);
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outAppendPath(StringInfo str, const AppendPath *node)
@@ -2286,6 +2308,17 @@ _outHashPath(StringInfo str, const HashPath *node)
 }
 
 static void
+_outProjectionPath(StringInfo str, const ProjectionPath *node)
+{
+	WRITE_NODE_TYPE("PROJECTIONPATH");
+
+	_outPathInfo(str, (const Path *) node);
+
+	WRITE_NODE_FIELD(subpath);
+	WRITE_BOOL_FIELD(dummypp);
+}
+
+static void
 _outCdbMotionPath(StringInfo str, const CdbMotionPath *node)
 {
     WRITE_NODE_TYPE("MOTIONPATH");
@@ -2295,7 +2328,6 @@ _outCdbMotionPath(StringInfo str, const CdbMotionPath *node)
     WRITE_NODE_FIELD(subpath);
 }
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
 _outPlannerGlobal(StringInfo str, const PlannerGlobal *node)
 {
@@ -2320,7 +2352,6 @@ _outPlannerGlobal(StringInfo str, const PlannerGlobal *node)
 	WRITE_INT_FIELD(share.nextPlanId);
 	WRITE_BOOL_FIELD(hasRowSecurity);
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outPlannerInfo(StringInfo str, const PlannerInfo *node)
@@ -2351,6 +2382,7 @@ _outPlannerInfo(StringInfo str, const PlannerInfo *node)
 	WRITE_NODE_FIELD(placeholder_list);
 	WRITE_NODE_FIELD(query_pathkeys);
 	WRITE_NODE_FIELD(group_pathkeys);
+	WRITE_NODE_FIELD(window_pathkeys);
 	WRITE_NODE_FIELD(distinct_pathkeys);
 	WRITE_NODE_FIELD(sort_pathkeys);
 	WRITE_NODE_FIELD(minmax_aggs);
@@ -2382,17 +2414,19 @@ _outRelOptInfo(StringInfo str, const RelOptInfo *node)
 	WRITE_BOOL_FIELD(consider_startup);
 	WRITE_BOOL_FIELD(consider_param_startup);
 	WRITE_NODE_FIELD(reltargetlist);
-	/* Skip writing Path ptrs to avoid endless recursion */
-	/* WRITE_NODE_FIELD(pathlist);              */
-	/* WRITE_NODE_FIELD(cheapest_startup_path); */
-	/* WRITE_NODE_FIELD(cheapest_total_path);   */
+	WRITE_NODE_FIELD(pathlist);
+	WRITE_NODE_FIELD(ppilist);
+	WRITE_NODE_FIELD(cheapest_startup_path);
+	WRITE_NODE_FIELD(cheapest_total_path);
+	WRITE_NODE_FIELD(cheapest_unique_path);
+	WRITE_NODE_FIELD(cheapest_parameterized_paths);
+	WRITE_BITMAPSET_FIELD(lateral_relids);
 	WRITE_UINT_FIELD(relid);
 	WRITE_OID_FIELD(reltablespace);
 	WRITE_ENUM_FIELD(rtekind, RTEKind);
 	WRITE_INT_FIELD(min_attr);
 	WRITE_INT_FIELD(max_attr);
 	WRITE_NODE_FIELD(lateral_vars);
-	WRITE_BITMAPSET_FIELD(lateral_relids);
 	WRITE_BITMAPSET_FIELD(lateral_referencers);
 	WRITE_NODE_FIELD(indexlist);
 	WRITE_UINT_FIELD(pages);
@@ -2408,7 +2442,6 @@ _outRelOptInfo(StringInfo str, const RelOptInfo *node)
 	WRITE_BOOL_FIELD(has_eclass_joins);
 }
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
 _outIndexOptInfo(StringInfo str, const IndexOptInfo *node)
 {
@@ -2423,7 +2456,6 @@ _outIndexOptInfo(StringInfo str, const IndexOptInfo *node)
 	WRITE_INT_FIELD(ncolumns);
 	/* array fields aren't really worth the trouble to print */
 	WRITE_OID_FIELD(relam);
-	WRITE_OID_FIELD(amcostestimate);
 	/* indexprs is redundant since we print indextlist */
 	WRITE_NODE_FIELD(indpred);
 	WRITE_NODE_FIELD(indextlist);
@@ -2433,9 +2465,7 @@ _outIndexOptInfo(StringInfo str, const IndexOptInfo *node)
 	WRITE_BOOL_FIELD(hypothetical);
 	/* we don't bother with fields copied from the pg_am entry */
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
 _outEquivalenceClass(StringInfo str, const EquivalenceClass *node)
 {
@@ -2460,9 +2490,7 @@ _outEquivalenceClass(StringInfo str, const EquivalenceClass *node)
 	WRITE_BOOL_FIELD(ec_broken);
 	WRITE_UINT_FIELD(ec_sortref);
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
 _outEquivalenceMember(StringInfo str, const EquivalenceMember *node)
 {
@@ -2475,7 +2503,6 @@ _outEquivalenceMember(StringInfo str, const EquivalenceMember *node)
 	WRITE_BOOL_FIELD(em_is_child);
 	WRITE_OID_FIELD(em_datatype);
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outPathKey(StringInfo str, const PathKey *node)
@@ -2488,7 +2515,6 @@ _outPathKey(StringInfo str, const PathKey *node)
 	WRITE_BOOL_FIELD(pk_nulls_first);
 }
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
 _outDistributionKey(StringInfo str, const DistributionKey *node)
 {
@@ -2497,7 +2523,6 @@ _outDistributionKey(StringInfo str, const DistributionKey *node)
 	WRITE_NODE_FIELD(dk_eclasses);
 	WRITE_OID_FIELD(dk_opfamily);
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outParamPathInfo(StringInfo str, const ParamPathInfo *node)
@@ -2520,6 +2545,7 @@ _outRestrictInfo(StringInfo str, const RestrictInfo *node)
 	WRITE_BOOL_FIELD(outerjoin_delayed);
 	WRITE_BOOL_FIELD(can_join);
 	WRITE_BOOL_FIELD(pseudoconstant);
+	WRITE_BOOL_FIELD(contain_outer_query_references);
 	WRITE_BITMAPSET_FIELD(clause_relids);
 	WRITE_BITMAPSET_FIELD(required_relids);
 	WRITE_BITMAPSET_FIELD(outer_relids);
@@ -2625,6 +2651,8 @@ _outPlannerParamItem(StringInfo str, const PlannerParamItem *node)
 	WRITE_NODE_FIELD(item);
 	WRITE_INT_FIELD(paramId);
 }
+
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*****************************************************************************
  *
@@ -4627,6 +4655,8 @@ static void
 _outSliceTable(StringInfo str, const SliceTable *node)
 {
 	WRITE_NODE_TYPE("SLICETABLE");
+
+	WRITE_BITMAPSET_FIELD(used_subplans);
 	WRITE_INT_FIELD(nMotions);
 	WRITE_INT_FIELD(nInitPlans);
 	WRITE_INT_FIELD(localSlice);
@@ -5053,6 +5083,9 @@ _outNode(StringInfo str, const void *obj)
 			case T_CopyIntoClause:
 				_outCopyIntoClause(str, obj);
 				break;
+			case T_RefreshClause:
+				_outRefreshClause(str, obj);
+				break;
 			case T_Var:
 				_outVar(str, obj);
 				break;
@@ -5251,6 +5284,9 @@ _outNode(StringInfo str, const void *obj)
 			case T_HashPath:
 				_outHashPath(str, obj);
 				break;
+			case T_ProjectionPath:
+				_outProjectionPath(str, obj);
+				break;
             case T_CdbMotionPath:
                 _outCdbMotionPath(str, obj);
                 break;
@@ -5373,6 +5409,7 @@ _outNode(StringInfo str, const void *obj)
 				break;
 			case T_DistributedBy:
 				_outDistributedBy(str, obj);
+				break;
 			case T_ImportForeignSchemaStmt:
 				_outImportForeignSchemaStmt(str, obj);
 				break;

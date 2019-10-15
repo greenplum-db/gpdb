@@ -176,13 +176,13 @@ NOTICE:  f_leak => my second manga
 EXPLAIN (COSTS OFF) SELECT * FROM document WHERE f_leak(dtitle);
                                 QUERY PLAN                                
 --------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on document
          Filter: f_leak(document.dtitle)
          ->  Seq Scan on document document_1
                Filter: (dlevel <= $0)
                InitPlan 1 (returns $0)  (slice3)
-                 ->  Gather Motion 1:1  (slice1; segments: 1)
+                 ->  Gather Motion 1:1  (slice2; segments: 1)
                        ->  Seq Scan on uaccount
                              Filter: (pguser = 'rls_regress_user2'::name)
  Optimizer: Postgres query optimizer
@@ -191,17 +191,17 @@ EXPLAIN (COSTS OFF) SELECT * FROM document WHERE f_leak(dtitle);
 EXPLAIN (COSTS OFF) SELECT * FROM document NATURAL JOIN category WHERE f_leak(dtitle);
                                       QUERY PLAN                                      
 --------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+ Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Join
          Hash Cond: (document.cid = category.cid)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: document.cid
                ->  Subquery Scan on document
                      Filter: f_leak(document.dtitle)
                      ->  Seq Scan on document document_1
                            Filter: (dlevel <= $0)
                            InitPlan 1 (returns $0)  (slice4)
-                             ->  Gather Motion 3:1  (slice1; segments: 3)
+                             ->  Gather Motion 3:1  (slice3; segments: 3)
                                    ->  Seq Scan on uaccount
                                          Filter: (pguser = 'rls_regress_user2'::name)
          ->  Hash
@@ -950,33 +950,32 @@ SELECT (SELECT x FROM s1 LIMIT 1) xx, * FROM s2 WHERE y like '%28%';
 (3 rows)
 
 EXPLAIN (COSTS OFF) SELECT (SELECT x FROM s1 LIMIT 1) xx, * FROM s2 WHERE y like '%28%';
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on s2
          Filter: (s2.y ~~ '%28%'::text)
          ->  Seq Scan on s2 s2_1
                Filter: ((x % 2) = 0)
          SubPlan 1
            ->  Limit
-                 ->  Limit
-                       ->  Subquery Scan on s1
-                             ->  Hash Semi Join
-                                   Hash Cond: (s1_1.a = s2_2.x)
-                                   ->  Result
-                                         ->  Materialize
-                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)
-                                                     ->  Seq Scan on s1 s1_1
-                                   ->  Hash
-                                         ->  Subquery Scan on s2_2
-                                               Filter: (s2_2.y ~~ '%af%'::text)
-                                               ->  Result
-                                                     ->  Materialize
-                                                           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                                                 ->  Seq Scan on s2 s2_3
-                                                                       Filter: ((x % 2) = 0)
+                 ->  Subquery Scan on s1
+                       ->  Materialize
+                             ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                   ->  Hash Semi Join
+                                         Hash Cond: (s1_1.a = s2_2.x)
+                                         ->  Seq Scan on s1 s1_1
+                                         ->  Hash
+                                               ->  Redistribute Motion 1:3  (slice3; segments: 1)
+                                                     Hash Key: s2_2.x
+                                                     ->  Subquery Scan on s2_2
+                                                           Filter: (s2_2.y ~~ '%af%'::text)
+                                                           ->  Materialize
+                                                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                                                       ->  Seq Scan on s2 s2_3
+                                                                             Filter: ((x % 2) = 0)
  Optimizer: Postgres query optimizer
-(24 rows)
+(23 rows)
 
 SET SESSION AUTHORIZATION rls_regress_user0;
 ALTER POLICY p2 ON s2 USING (x in (select a from s1 where b like '%d2%'));

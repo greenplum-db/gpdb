@@ -548,6 +548,25 @@ ensure_tablespace_directory_is_empty(const Oid tablespace_oid,
  * Drop a table space
  *
  * Be careful to check that the tablespace is empty.
+ *
+ * The way drop tablespace is handled in Greenplum is slightly
+ * different than upstream Postgres. In Greenplum, due to 2 phase commit,
+ * there is a small window after the dispatch of Drop Tablespace command
+ * to the QE's and before the QE acquires the TablespaceCreateLock lock,
+ * in which a table could be created in the tablespace which is currently
+ * being dropped. In such a case, the tablespace will be dropped from the
+ * catalog but the tablespace directory will not be deleted from disk. In upstream
+ * this window does not exist.
+ * Also, the newly created table will be still pointing to the
+ * dropped tablespace oid. Earlier, while looking up the tablespace oid
+ * using name, a tuple lock on the pg_tablespace entry was taken to prevent
+ * such behavior. However, that behavior is disruptive for several other cases,
+ * for instance while spilling to the temporary tablespace by reader gang.
+ *
+ * With the careful consideration that, the data in the tablespace directory
+ * is not dropped and user can still alter table to point the tablespace
+ * to a new location, a lock is not acquired in get_tablespace_oid. This makes
+ * drop tablespace consistent with upstream (expect 2PC).
  */
 void
 DropTableSpace(DropTableSpaceStmt *stmt)
@@ -677,6 +696,7 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 
 	/* We keep the lock on the row in pg_tablespace until commit */
 	heap_close(rel, NoLock);
+	SIMPLE_FAULT_INJECTOR("AfterTablespaceCreateLockRelease");
 
 	/*
 	 * If we are the QD, dispatch this DROP command to all the QEs
@@ -1794,51 +1814,6 @@ get_tablespace_oid(const char *tablespacename, bool missing_ok)
 		result = HeapTupleGetOid(tuple);
 	else
 		result = InvalidOid;
-
-	/*
-	 * Anything that needs to lookup a tablespace name must need a lock
-	 * on the tablespace for the duration of its transaction, otherwise
-	 * there is nothing preventing it from being dropped.
-	 */
-	if (OidIsValid(result))
-	{
-		Buffer			buffer = InvalidBuffer;
-		HTSU_Result		lockTest;
-		HeapUpdateFailureData hufd;
-
-		/*
-		 * Unfortunately locking of objects other than relations doesn't
-		 * really work, the work around is to lock the tuple in pg_tablespace
-		 * to prevent drops from getting the exclusive lock they need.
-		 */
-		lockTest = heap_lock_tuple(rel, tuple,
-								   GetCurrentCommandId(true),
-								   LockTupleKeyShare, LockWaitBlock,
-								   false,  &buffer, &hufd);
-		ReleaseBuffer(buffer);
-		switch (lockTest)
-		{
-			case HeapTupleMayBeUpdated:
-				break;  /* Got the Lock */
-
-			case HeapTupleSelfUpdated:
-				Assert(false); /* Shouldn't ever occur */
-				/* fallthrough */
-
-			case HeapTupleBeingUpdated:
-				Assert(false);  /* Not possible with LockWaitBlock */
-				/* fallthrough */
-
-			case HeapTupleUpdated:
-				ereport(ERROR,
-						(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
-						 errmsg("could not serialize access to tablespace %s due to concurrent update",
-								tablespacename)));
-
-			default:
-				elog(ERROR, "unrecognized heap_lock_tuple_status: %u", lockTest);
-		}
-	}
 
 	heap_endscan(scandesc);
 	heap_close(rel, AccessShareLock);

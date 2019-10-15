@@ -6,13 +6,13 @@
   <shortdesc>Redistribute tables to balance existing data over the newly expanded cluster. </shortdesc>
   <body>
     <p>After creating an expansion schema, you can redistribute tables across the entire system with
-          <codeph><xref href="../../utility_guide/admin_utilities/gpexpand.xml"
+          <codeph><xref href="../../utility_guide/ref/gpexpand.xml"
         >gpexpand</xref></codeph>. Plan to run this during low-use hours when the utility's CPU
       usage and table locks have minimal impact on operations. Rank tables to redistribute the
       largest or most critical tables first.</p>
     <note>When redistributing data, Greenplum Database must be running in production mode. Greenplum
       Database cannot be in restricted mode or in master mode. The <codeph><xref
-          href="../../utility_guide/admin_utilities/gpstart.xml">gpstart</xref></codeph> options
+          href="../../utility_guide/ref/gpstart.xml">gpstart</xref></codeph> options
         <codeph>-R</codeph> or <codeph>-m</codeph> cannot be specified to start Greenplum
       Database.</note>
     <p>While table redistribution is underway, any new tables or partitions created are distributed

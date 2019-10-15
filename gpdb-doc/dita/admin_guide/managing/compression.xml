@@ -31,14 +31,14 @@
               href="../../ref_guide/config_params/guc-list.xml#gp_workfile_compression"
               format="dita"/></codeph>. </li>
         <li>The Greenplum Database utilities <codeph><xref
-              href="../../utility_guide/admin_utilities/gpbackup.xml" format="dita"/></codeph>,
-              <codeph><xref href="../../utility_guide/admin_utilities/gprestore.xml" format="dita"
+              href="../../utility_guide/ref/gpbackup.xml" format="dita"/></codeph>,
+              <codeph><xref href="../../utility_guide/ref/gprestore.xml" format="dita"
             /></codeph>,<ph otherprops="pivotal">
-            <codeph><xref href="../../utility_guide/admin_utilities/gpcopy.xml" format="dita"
+            <codeph><xref href="../../utility_guide/ref/gpcopy.xml" format="dita"
               /></codeph>,</ph>
-          <codeph><xref href="../../utility_guide/admin_utilities/gpload.xml" format="dita"
+          <codeph><xref href="../../utility_guide/ref/gpload.xml" format="dita"
             /></codeph>, and <codeph><xref
-              href="../../utility_guide/admin_utilities/gplogfilter.xml" format="dita"/></codeph>
+              href="../../utility_guide/ref/gplogfilter.xml" format="dita"/></codeph>
           support compression.</li>
       </ul></p>
     <p>For some compression algorithms (such as zlib) Greenplum Database requires software packages

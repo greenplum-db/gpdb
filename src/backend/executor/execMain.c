@@ -2017,6 +2017,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			switch (relation->rd_rel->relkind)
 			{
 				case RELKIND_RELATION:
+				case RELKIND_MATVIEW:
 					/* OK */
 					break;
 				case RELKIND_SEQUENCE:
@@ -2089,7 +2090,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 * ExecInitSubPlan expects to be able to find these entries.
 	 */
 	Assert(estate->es_subplanstates == NIL);
-	Bitmapset *locallyExecutableSubplans = NULL;
+	Bitmapset *locallyExecutableSubplans;
 	Plan *start_plan_node = plannedstmt->planTree;
 
 	/*
@@ -2112,8 +2113,12 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		/* Compute SubPlans' root plan nodes for SubPlans reachable from this plan root */
 		locallyExecutableSubplans = getLocallyExecutableSubplans(plannedstmt, start_plan_node);
 	}
+	else if (estate->es_sliceTable)
+		locallyExecutableSubplans = estate->es_sliceTable->used_subplans;
+	else
+		locallyExecutableSubplans = NULL;
 
-	int subplan_idx = 0;
+	int			subplan_id = 1;
 	foreach(l, plannedstmt->subplans)
 	{
 		PlanState  *subplanstate = NULL;
@@ -2124,7 +2129,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		 * If alien elimination is not turned on, then all subplans are considered
 		 * reachable.
 		 */
-		if (!estate->eliminateAliens || bms_is_member(subplan_idx, locallyExecutableSubplans))
+		if (queryDesc->ddesc == NULL || bms_is_member(subplan_id, locallyExecutableSubplans))
 		{
 			/*
 			 * A subplan will never need to do BACKWARD scan nor MARK/RESTORE.
@@ -2141,11 +2146,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 		estate->es_subplanstates = lappend(estate->es_subplanstates, subplanstate);
 
-		++subplan_idx;
+		++subplan_id;
 	}
-
-	/* No more use for locallyExecutableSubplans */
-	bms_free(locallyExecutableSubplans);
 
 	/*
 	 * If this is a query that was dispatched from the QE, extract precomputed
@@ -2225,7 +2227,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		queryDesc->dest = CreateCopyDestReceiver();
 		((DR_copy*)queryDesc->dest)->queryDesc = queryDesc;
 	}
-
+	else if (queryDesc->plannedstmt->refreshClause != NULL && Gp_role == GP_ROLE_EXECUTE)
+		transientrel_init(queryDesc);
 	if (DEBUG1 >= log_min_messages)
 			{
 				char		msec_str[32];
@@ -3887,6 +3890,7 @@ EvalPlanQualFetch(EState *estate, Relation relation, int lockmode,
 
 				case HeapTupleInvisible:
 					elog(ERROR, "attempted to lock invisible tuple");
+					break;
 
 				default:
 					ReleaseBuffer(buffer);
@@ -4923,7 +4927,6 @@ typedef struct
 	plan_tree_base_prefix prefix;
 	EState	   *estate;
 	int			currentSliceId;
-	Bitmapset  *processed_subplans;
 } FillSliceTable_cxt;
 
 static void
@@ -5130,9 +5133,9 @@ FillSliceTable_walker(Node *node, void *context)
 		 * different SubPlan references to the same subquery, but let's not
 		 * assume that they can't be.)
 		 */
-		if (!bms_is_member(subplan->plan_id, cxt->processed_subplans))
+		if (!bms_is_member(subplan->plan_id, sliceTable->used_subplans))
 		{
-			cxt->processed_subplans = bms_add_member(cxt->processed_subplans, subplan->plan_id);
+			sliceTable->used_subplans = bms_add_member(sliceTable->used_subplans, subplan->plan_id);
 			recurse_into_plan = true;
 		}
 		else
@@ -5174,9 +5177,8 @@ FillSliceTable(EState *estate, PlannedStmt *stmt)
 	cxt.prefix.node = (Node *) stmt;
 	cxt.estate = estate;
 	cxt.currentSliceId = 0;
-	cxt.processed_subplans = NULL;
 
-	if (stmt->intoClause != NULL || stmt->copyIntoClause != NULL)
+	if (stmt->intoClause != NULL || stmt->copyIntoClause != NULL || stmt->refreshClause)
 	{
 		Slice	   *currentSlice = (Slice *) linitial(sliceTable->slices);
 		int			numsegments;

@@ -23,16 +23,16 @@ def create_cluster(context, with_mirrors=True):
     context.initial_cluster_size = 3
     context.current_cluster_size = context.initial_cluster_size
 
+    os.environ['PGPORT'] = '15432'
+
     cmd = """
     cd ../gpAux/gpdemo; \
-        export MASTER_DEMO_PORT={master_port} && \
         export DEMO_PORT_BASE={port_base} && \
         export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
         export WITH_MIRRORS={with_mirrors} && \A
         ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
         ./demo_cluster.sh
-    """.format(master_port=os.getenv('MASTER_PORT', 15432),
-               port_base=os.getenv('PORT_BASE', 25432),
+    """.format(port_base=os.getenv('PORT_BASE', 15432),
                num_primary_mirror_pairs=os.getenv(
                    'NUM_PRIMARY_MIRROR_PAIRS', context.initial_cluster_size),
                with_mirrors=('true' if with_mirrors else 'false'))

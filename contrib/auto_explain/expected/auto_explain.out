@@ -89,11 +89,8 @@ Aggregate  (cost=10000035148.67..10000035148.68 rows=1 width=8) (actual rows=1 l
                     ->  Seq Scan on auto_explain_test.t1  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
                           Output: t1.a
                     ->  Materialize  (cost=0.00..68.06 rows=1001 width=0) (actual rows=1001 loops=340)
-                          Output: t2.b
                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..53.05 rows=1001 width=0) (actual rows=1001 loops=1)
-                                Output: t2.b
                                 ->  Seq Scan on auto_explain_test.t2  (cost=0.00..13.01 rows=334 width=0) (actual rows=340 loops=1)
-                                      Output: t2.b
   (slice0)    Executor memory: 131K bytes.
   (slice1)    Executor memory: 43K bytes avg x 3 workers, 43K bytes max (seg0).
   (slice2)    Executor memory: 216K bytes avg x 3 workers, 216K bytes max (seg0).

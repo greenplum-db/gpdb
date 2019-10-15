@@ -71,25 +71,33 @@ FORMAT 'CSV';
 
 ## <a id="s3_select_csv"></a>Reading CSV files with S3 Select
 
-PXF supports reading CSV data from S3 as described in [Reading and Writing Text Data in an Object Store](objstore_text.html). If you want PXF to use S3 Select when reading the CSV data, you add the `S3_SELECT` custom option and value to the `CREATE EXTERNAL TABLE` `LOCATION` URI. You may also specify the delimiter and file header and compression custom options.
+PXF supports reading CSV data from S3 as described in [Reading and Writing Text Data in an Object Store](objstore_text.html). If you want PXF to use S3 Select when reading the CSV data, you add the `S3_SELECT` custom option and value to the `CREATE EXTERNAL TABLE` `LOCATION` URI. You may also specify the delimiter formatter option and the file header and compression custom options.
 
 ### <a id="csv_header"></a>Handling the CSV File Header
 
-When you enable PXF to use S3 Select to access a CSV-format file, you use the `FILE_HEADER` custom option in the `LOCATION` URI to identify whether or not the CSV file has a header row, and, if so, how you want PXF to handle the header. The `FILE_HEADER` option takes the following values:
+<div class="note">PXF can read a CSV file with a header row <i>only</i> when the S3 Connector uses the Amazon S3 Select service to access the file on S3. PXF does not support reading a CSV file that includes a header row from any other external data store.</div>
+
+CSV files may include a header line. When you enable PXF to use S3 Select to access a CSV-format file, you use the `FILE_HEADER` custom option in the `LOCATION` URI to identify whether or not the CSV file has a header row and, if so, how you want PXF to handle the header. PXF never returns the header row.
+
+**Note**: You *must* specify `S3_SELECT=ON` or `S3_SELECT=AUTO` when the CSV file has a header row. Do not specify `S3_SELECT=OFF` in this case.
+
+The `FILE_HEADER` option takes the following values:
 
 | FILE_HEADER Value  | Description |
 |-------|-------------------------------------|
 | NONE    | The file has no header row; the default. |
-| IGNORE  | The file has a header row; ignore the header. |
-| USE    | The file has a header row; read the header. |
+| IGNORE  | The file has a header row; ignore the header. Use when the order of the columns in the external table and the CSV file are the same. (When the column order is the same, the column names and the CSV header names may be different.)|
+| USE    | The file has a header row; read the header. Use when the external table column names and the CSV header names are the same, but are in a different order. |
 
-The default `FILE_HEADER` value is `NONE`. You can also instruct PXF to ignore, or read, the file header. For example, to have PXF ignore the header, add the following to the `CREATE EXTERNAL TABLE` `LOCATION` URI:
+If both the order and the names of the external table columns and the CSV header are the same, you can specify either `FILE_HEADER=IGNORE` or `FILE_HEADER=USE`.
+
+<div class="note">PXF cannot match the CSV data with the external table definition when both the order and the names of the external table columns are different from the CSV header columns. Any query on an external table with these conditions fails with the error <code>Some headers in the query are missing from the file</code>. </div>
+
+For example, if the order of the columns in the CSV file header and the external table are the same, add the following to the `CREATE EXTERNAL TABLE` `LOCATION` URI to have PXF ignore the CSV header:
 
 ``` pre
 &FILE_HEADER=IGNORE
 ```
-
-<div class="note">PXF can read a CSV file with a header row <i>only</i> when the S3 Connector uses the Amazon S3 Select service to access the file on S3. PXF does not support reading a CSV file that includes a header row from any other external data store.</div>
 
 ### <a id="csv_compress"></a>Specifying the CSV File Compression Type
 
@@ -117,7 +125,9 @@ LOCATION ('pxf://<path-to-file>
 FORMAT 'CSV' [(delimiter '<delim_char>')];
 ```
 
-For example, use the following command to have PXF always use S3 Select to access a `gzip`-compressed file on S3, where the field delimiter is a pipe ('|') character and you want to read the header row:
+**Note**: Do not use the `(HEADER)` formatter option in the `CREATE EXTERNAL TABLE` command.
+
+For example, use the following command to have PXF always use S3 Select to access a `gzip`-compressed file on S3, where the field delimiter is a pipe ('|') character and the external table and CSV header columns are in the same order.
 
 ``` sql
 CREATE EXTERNAL TABLE gzippedcsv_on_s3 ( LIKE table2 )

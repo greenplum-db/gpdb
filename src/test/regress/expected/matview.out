@@ -18,9 +18,7 @@ SELECT * FROM tv ORDER BY type;
 
 -- create a materialized view with no data, and confirm correct behavior
 EXPLAIN (costs off)
-  CREATE MATERIALIZED VIEW tm AS SELECT type, sum(amt) AS totamt FROM t GROUP BY type WITH NO DATA;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'type' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+  CREATE MATERIALIZED VIEW tm AS SELECT type, sum(amt) AS totamt FROM t GROUP BY type WITH NO DATA distributed by(type);
                       QUERY PLAN                      
 ------------------------------------------------------
  HashAggregate
@@ -33,7 +31,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
  Optimizer: Postgres query optimizer
 (8 rows)
 
-CREATE MATERIALIZED VIEW tm AS SELECT type, sum(amt) AS totamt FROM t GROUP BY type WITH NO DATA;
+CREATE MATERIALIZED VIEW tm AS SELECT type, sum(amt) AS totamt FROM t GROUP BY type WITH NO DATA distributed by(type);
 SELECT relispopulated FROM pg_class WHERE oid = 'tm'::regclass;
  relispopulated 
 ----------------
@@ -88,9 +86,8 @@ SELECT * FROM tvm;
 (3 rows)
 
 CREATE MATERIALIZED VIEW tmm AS SELECT sum(totamt) AS grandtot FROM tm;
-CREATE MATERIALIZED VIEW tvmm AS SELECT sum(totamt) AS grandtot FROM tvm;
-CREATE UNIQUE INDEX tvmm_expr ON tvmm ((grandtot > 0));
-CREATE UNIQUE INDEX tvmm_pred ON tvmm (grandtot) WHERE grandtot < 0;
+CREATE MATERIALIZED VIEW tvmm AS SELECT sum(totamt) AS grandtot FROM tvm distributed by(grandtot);
+CREATE UNIQUE INDEX tvmm_expr ON tvmm (grandtot);
 CREATE VIEW tvv AS SELECT sum(totamt) AS grandtot FROM tv;
 EXPLAIN (costs off)
   CREATE MATERIALIZED VIEW tvvm AS SELECT * FROM tvv;
@@ -177,8 +174,7 @@ ALTER MATERIALIZED VIEW tvm SET SCHEMA mvschema;
 ----------+---------+-----------+---------+--------------+-------------
  grandtot | numeric |           | main    |              | 
 Indexes:
-    "tvmm_expr" UNIQUE, btree ((grandtot > 0::numeric))
-    "tvmm_pred" UNIQUE, btree (grandtot) WHERE grandtot < 0::numeric
+    "tvmm_expr" UNIQUE, btree (grandtot)
 View definition:
  SELECT sum(tvm.totamt) AS grandtot
    FROM mvschema.tvm;
@@ -239,11 +235,12 @@ RESET search_path;
 -- confirm pre- and post-refresh contents of nested materialized views
 EXPLAIN (costs off)
   SELECT * FROM tmm;
-            QUERY PLAN             
------------------------------------
- Seq Scan on tmm
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on tmm
  Optimizer: Postgres query optimizer
-(2 rows)
+(3 rows)
 
 EXPLAIN (costs off)
   SELECT * FROM tvmm;
@@ -283,17 +280,16 @@ SELECT * FROM tvvm;
 
 REFRESH MATERIALIZED VIEW tmm;
 REFRESH MATERIALIZED VIEW CONCURRENTLY tvmm;
-ERROR:  cannot refresh materialized view "public.tvmm" concurrently
-HINT:  Create a unique index with no WHERE clause on one or more columns of the materialized view.
 REFRESH MATERIALIZED VIEW tvmm;
 REFRESH MATERIALIZED VIEW tvvm;
 EXPLAIN (costs off)
   SELECT * FROM tmm;
-            QUERY PLAN             
------------------------------------
- Seq Scan on tmm
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on tmm
  Optimizer: Postgres query optimizer
-(2 rows)
+(3 rows)
 
 EXPLAIN (costs off)
   SELECT * FROM tvmm;
@@ -338,8 +334,10 @@ NOTICE:  materialized view "no_such_mv" does not exist, skipping
 REFRESH MATERIALIZED VIEW CONCURRENTLY tvmm WITH NO DATA;
 ERROR:  CONCURRENTLY and WITH NO DATA options cannot be used together
 -- no tuple locks on materialized views
+-- start_ignore
 SELECT * FROM tvvm FOR SHARE;
 ERROR:  cannot lock rows in materialized view "tvvm"
+-- end_ignore
 -- test join of mv and view
 SELECT type, m.totamt AS mtot, v.totamt AS vtot FROM tm m LEFT JOIN tv v USING (type) ORDER BY type;
  type | mtot | vtot 
@@ -427,7 +425,7 @@ drop cascades to materialized view mv_test2
 drop cascades to materialized view mv_test3
 -- test that duplicate values on unique index prevent refresh
 CREATE TABLE foo(a, b) AS VALUES(1, 10);
-CREATE MATERIALIZED VIEW mv AS SELECT * FROM foo;
+CREATE MATERIALIZED VIEW mv AS SELECT * FROM foo distributed by(a);
 CREATE UNIQUE INDEX ON mv(a);
 INSERT INTO foo SELECT * FROM foo;
 REFRESH MATERIALIZED VIEW mv;
@@ -440,10 +438,8 @@ DROP TABLE foo CASCADE;
 NOTICE:  drop cascades to materialized view mv
 -- make sure that all columns covered by unique indexes works
 CREATE TABLE foo(a, b, c) AS VALUES(1, 2, 3);
-CREATE MATERIALIZED VIEW mv AS SELECT * FROM foo;
+CREATE MATERIALIZED VIEW mv AS SELECT * FROM foo distributed by(a);
 CREATE UNIQUE INDEX ON mv (a);
-CREATE UNIQUE INDEX ON mv (b);
-CREATE UNIQUE INDEX on mv (c);
 INSERT INTO foo VALUES(2, 3, 4);
 INSERT INTO foo VALUES(3, 4, 5);
 REFRESH MATERIALIZED VIEW mv;
@@ -462,7 +458,7 @@ INSERT INTO boxes (b) VALUES
   ('(32,32),(31,31)'),
   ('(2.0000004,2.0000004),(1,1)'),
   ('(1.9999996,1.9999996),(1,1)');
-CREATE MATERIALIZED VIEW boxmv AS SELECT * FROM boxes;
+CREATE MATERIALIZED VIEW boxmv AS SELECT * FROM boxes distributed by(id);
 CREATE UNIQUE INDEX boxmv_id ON boxmv (id);
 UPDATE boxes SET b = '(2,2),(1,1)' WHERE id = 2;
 REFRESH MATERIALIZED VIEW CONCURRENTLY boxmv;
@@ -480,7 +476,7 @@ NOTICE:  drop cascades to materialized view boxmv
 CREATE TABLE mvtest_v (i int, j int);
 CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj, kk) AS SELECT i, j FROM mvtest_v; -- error
 ERROR:  too many column names were specified
-CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj) AS SELECT i, j FROM mvtest_v; -- ok
+CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj) AS SELECT i, j FROM mvtest_v distributed by(ii); -- ok
 CREATE MATERIALIZED VIEW mvtest_mv_v_2 (ii) AS SELECT i, j FROM mvtest_v; -- ok
 CREATE MATERIALIZED VIEW mvtest_mv_v_3 (ii, jj, kk) AS SELECT i, j FROM mvtest_v WITH NO DATA; -- error
 ERROR:  too many column names were specified
@@ -535,9 +531,7 @@ drop cascades to materialized view mvtest_mv_v_4
 create materialized view mvtest_error as select 1/0 as x;  -- fail
 ERROR:  division by zero
 create materialized view mvtest_error as select 1/0 as x with no data;
-refresh materialized view mvtest_error;  -- fail here
 ERROR:  division by zero
-drop materialized view mvtest_error;
 -- make sure that matview rows can be referenced as source rows (bug #9398)
 CREATE TABLE v AS SELECT generate_series(1,10) AS a;
 CREATE MATERIALIZED VIEW mv_v AS SELECT a FROM v WHERE a <= 5;
@@ -569,8 +563,8 @@ CREATE ROLE user_dw;
 SET ROLE user_dw;
 CREATE TABLE foo_data AS SELECT i, md5(random()::text)
   FROM generate_series(1, 10) i;
-CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data;
-CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data;
+CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data distributed by(i);
+CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data distributed by(i);
 ERROR:  relation "mv_foo" already exists
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_foo AS SELECT * FROM foo_data;
 NOTICE:  relation "mv_foo" already exists, skipping
@@ -590,6 +584,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 SELECT mvtest_func();
+PL/pgSQL function mvtest_func() line 3 at SQL statement
+PL/pgSQL function mvtest_func() line 4 at SQL statement
  mvtest_func 
 -------------
  

@@ -100,7 +100,7 @@ auth_file = users.txt
 logfile = pgbouncer.log
 pidfile = pgbouncer.pid
 admin_users = gpadmin</codeblock></p>
-        <p>Refer to the <xref href="../../../utility_guide/admin_utilities/pgbouncer-ini.xml" format="dita"
+        <p>Refer to the <xref href="../../../utility_guide/ref/pgbouncer-ini.xml" format="dita"
               scope="peer">pgbouncer.ini</xref> reference page for the
           PgBouncer configuration file format and the list of configuration properties it supports.</p>
          <p>When a client connects to PgBouncer, the connection pooler looks up the
@@ -173,7 +173,7 @@ auth_type = md5
 auth_file = users.txt
 logfile = pgbouncer.log
 pidfile = pgbouncer.pid
-admin_users = gpadmin</codeblock><p>The file lists databases and their connection details. The file also configures the PgBouncer instance. Refer to the <xref href="../../../utility_guide/admin_utilities/pgbouncer-ini.xml" format="dita"
+admin_users = gpadmin</codeblock><p>The file lists databases and their connection details. The file also configures the PgBouncer instance. Refer to the <xref href="../../../utility_guide/ref/pgbouncer-ini.xml" format="dita"
               scope="peer">pgbouncer.ini</xref> reference page for information about the
               format and content of a PgBouncer configuration file.</p></li>
           <li>Create an authentication file. The filename should be the name you specified for the <codeph>auth_file</codeph> parameter of the <codeph>pgbouncer.ini</codeph> file, <codeph>users.txt</codeph>.
@@ -188,7 +188,7 @@ admin_users = gpadmin</codeblock><p>The file lists databases and their connectio
           <li>Launch
               <codeph>pgbouncer</codeph>:<codeblock>$ $GPHOME/bin/pgbouncer -d pgbouncer.ini</codeblock><p>The
                 <codeph>-d</codeph> option runs PgBouncer as a
-              background (daemon) process. Refer to the <xref href="../../../utility_guide/admin_utilities/pgbouncer.xml" format="dita"
+              background (daemon) process. Refer to the <xref href="../../../utility_guide/ref/pgbouncer.xml" format="dita"
               scope="peer">pgbouncer</xref> reference page for the
               <codeph>pgbouncer</codeph> command syntax and options.</p></li>
           <li>Update your client applications to connect to <codeph>pgbouncer</codeph> instead of
@@ -205,7 +205,7 @@ admin_users = gpadmin</codeblock><p>The file lists databases and their connectio
            number and a virtual database named <codeph>pgbouncer</codeph>.
           The console accepts SQL-like commands that you can use to monitor, reconfigure, and manage PgBouncer.</p>
         <p>For complete documentation of PgBouncer Administration Console
-          commands, refer to the <xref href="../../../utility_guide/admin_utilities/pgbouncer-admin.xml" format="dita"
+          commands, refer to the <xref href="../../../utility_guide/ref/pgbouncer-admin.xml" format="dita"
               scope="peer">PgBouncer Administration Console</xref> command reference.</p>
         <p>Follow these steps to get started with the PgBouncer Administration Console.</p>
         <ol id="ol_jwt_hyn_ts">

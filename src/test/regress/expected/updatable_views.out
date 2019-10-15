@@ -1663,8 +1663,8 @@ UPDATE rw_view1 SET a = a + 5; -- should fail
 ERROR:  new row violates WITH CHECK OPTION for "rw_view1"
 DETAIL:  Failing row contains (15).
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
-                   QUERY PLAN                    
--------------------------------------------------
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
  Insert on base_tbl b
    ->  Result
          SubPlan 1
@@ -1674,15 +1674,14 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
                        ->  Broadcast Motion 3:3  (slice1; segments: 3)
                              ->  Seq Scan on ref_tbl r
          SubPlan 2
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                       ->  Seq Scan on ref_tbl r_1
+           ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                 ->  Seq Scan on ref_tbl r_1
  Optimizer: Postgres query optimizer
-(11 rows)
+(12 rows)
 
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
-                      QUERY PLAN                      
-------------------------------------------------------
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
  Update on base_tbl b
    ->  Redistribute Motion 3:3  (slice1; segments: 3)
          Hash Key: ((b.a + 5))
@@ -1699,11 +1698,10 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
                        ->  Broadcast Motion 3:3  (slice2; segments: 3)
                              ->  Seq Scan on ref_tbl r_1
          SubPlan 2
-           ->  Materialize
-                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                       ->  Seq Scan on ref_tbl r_2
+           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                 ->  Seq Scan on ref_tbl r_2
  Optimizer: Postgres query optimizer
-(20 rows)
+(19 rows)
 
 DROP TABLE base_tbl, ref_tbl CASCADE;
 NOTICE:  drop cascades to view rw_view1

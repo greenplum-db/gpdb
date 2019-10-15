@@ -621,6 +621,12 @@ if test "$GCC" = yes -a "$ICC" = no; then
   PGAC_PROG_CC_CFLAGS_OPT([-Wno-unused-but-set-variable])
   PGAC_PROG_CC_CFLAGS_OPT([-Wno-address])
 
+  gccversion=`$CC -dumpversion | cut -d . -f1`
+  if test "$gccversion" -ge 7 ; then
+    PGAC_PROG_CC_CFLAGS_OPT([-Wimplicit-fallthrough])
+    PGAC_PROG_CC_CFLAGS_OPT([-Werror=implicit-fallthrough])
+  fi
+
   #-Wno-error=enum-compare -Wno-error=address -Wno-error=maybe-uninitialized
 
   # Optimization flags for specific files that benefit from vectorization
@@ -999,10 +1005,8 @@ fi
 #
 # Prefer libedit
 #
-# In GPDB we want the default to be yes, because we don't want to link with GPL code.
-#
-PGAC_ARG_BOOL(with, libedit-preferred, yes,
-              [do not prefer BSD Libedit over GNU Readline])
+PGAC_ARG_BOOL(with, libedit-preferred, no,
+              [prefer BSD Libedit over GNU Readline])
 
 
 #

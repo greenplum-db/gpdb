@@ -71,7 +71,7 @@
         <li>The last step of the software phase is redistributing table data. Using the expansion
           control tables in the <i>gpexpand</i> schema as a guide, tables are redistributed. For
           each table:<ul id="ul_uxt_png_tt">
-            <li>The <codeph><xref href="../../utility_guide/admin_utilities/gpexpand.xml"
+            <li>The <codeph><xref href="../../utility_guide/ref/gpexpand.xml"
                   >gpexand</xref></codeph> utility redistributes the table data, across all of the
               servers, old and new, according to the distribution policy.</li>
             <li>The table's status is updated in the expansion control tables.</li>
@@ -118,7 +118,7 @@
       <li id="no165990">To remove the expansion schema:<codeblock>gpexpand -c</codeblock></li>
     </ol>
     <p>For information about the <codeph><xref
-          href="../../utility_guide/admin_utilities/gpexpand.xml">gpexpand</xref></codeph> utility
+          href="../../utility_guide/ref/gpexpand.xml">gpexpand</xref></codeph> utility
       and the other utilities that are used for system expansion, see the <i>Greenplum Database
         Utility Guide</i>. </p>
   </body>

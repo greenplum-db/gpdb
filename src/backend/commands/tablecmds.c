@@ -5353,6 +5353,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					   (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						errmsg("cannot modify subpartition template for partitioned table")));
 			}
+			/* FALL THRU */
 		case AT_PartAdd:				/* Add */
 		case AT_PartAddForSplit:		/* Add, as part of a split */
 		case AT_PartDrop:				/* Drop */
@@ -5971,7 +5972,7 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 			 * unlogged anyway.
 			 */
 			OIDNewHeap = make_new_heap(tab->relid, NewTableSpace, persistence,
-									   lockmode, hasIndexes);
+									   lockmode, hasIndexes, false);
 
 			/*
 			 * Copy the heap data into the new table with the desired
@@ -16462,6 +16463,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation *rel,
 		{
 			prepSplit = true; /* if sub-command is split partition then it will require some preprocessing */
 		}
+		/* FALL THRU */
 		case AT_PartAdd:				/* Add */
 		case AT_PartAddForSplit:		/* Add, as part of a split */
 		case AT_PartDrop:				/* Drop */

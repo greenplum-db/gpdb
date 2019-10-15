@@ -4146,7 +4146,7 @@ def checkcatReport():
     buildGraph()
     reportedCheck = ['duplicate','missing_extraneous','inconsistent','foreign_key','acl', 'orphaned_toast_tables']
     myprint('')
-    myprint('SUMMARY REPORT')
+    myprint('SUMMARY REPORT: %s' % ('FAILED' if len(GV.failedChecks) else 'PASSED'))
     myprint('===================================================================')
     elapsed = datetime.timedelta(seconds=int(GV.elapsedTime))
     endTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -4155,6 +4155,7 @@ def checkcatReport():
 
     if len(GPObjectGraph) == 0 and len(GV.failedChecks) == 0:
         myprint('Found no catalog issue\n')
+        assert(GV.retcode == SUCCESS)
         return
 
     if len(GPObjectGraph) > 0:

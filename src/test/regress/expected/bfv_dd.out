@@ -919,16 +919,16 @@ INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 (0 rows)
 
 select * from dd_singlecol_1 t1 where a=1 and b in (select count(*) from dd_singlecol_2 t2 where t2.a<=t1.a);
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  a | b 
 ---+---
  1 | 1
 (1 row)
 
 select t1.a, t1.b, (select sum(t2.a+t2.b) from dd_singlecol_2 t2 where t2.b=1) from dd_singlecol_1 t1  where t1.a=1; 
-INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  (slice 2) Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  a | b | sum 
 ---+---+-----
  1 | 1 | 470

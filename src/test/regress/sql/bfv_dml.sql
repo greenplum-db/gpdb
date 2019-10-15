@@ -198,3 +198,18 @@ rollback;
 select * from execinsert_test;
 
 drop table execinsert_test;
+
+
+--
+-- Test RETURNING on a table with OIDs.
+--
+-- See https://github.com/greenplum-db/gpdb/issues/8765
+-- This was also coincidentally covered by the upstream tests in
+-- 'rowsecurity', but better to have an explicit test.
+--
+CREATE TABLE tabwithoids (a int, b text) WITH OIDS;
+
+insert into tabwithoids values (1, 'foo') RETURNING oid > 1000, tabwithoids;
+update tabwithoids set b = 'foobar' RETURNING oid > 1000, tabwithoids;
+update tabwithoids set a = a + 1 RETURNING oid > 1000, tabwithoids; -- split update
+delete from tabwithoids RETURNING oid > 1000, tabwithoids;

@@ -1,6 +1,10 @@
 DROP TABLE IF EXISTS t05;
 CREATE TABLE t05 (id int primary key);
 
+-- gang creation order is important, reset any guc to force the creation
+10: RESET optimizer;
+20: RESET optimizer;
+
 10: BEGIN;
 20: BEGIN;
 
