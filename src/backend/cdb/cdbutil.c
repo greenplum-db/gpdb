@@ -46,6 +46,7 @@
 #include "cdb/cdbconn.h"
 #include "cdb/cdbfts.h"
 #include "storage/ipc.h"
+#include "storage/proc.h"
 #include "postmaster/fts.h"
 #include "catalog/namespace.h"
 #include "utils/gpexpand.h"
@@ -1026,11 +1027,20 @@ cdb_setup(void)
 		Gp_role == GP_ROLE_DISPATCH &&
 		!*shmDtmStarted)
 	{
+		int rc;
+
 		while (true)
 		{
-			pg_usleep(100 * 1000); /* 100ms */
 			if (*shmDtmStarted)
 				break;
+			CHECK_FOR_INTERRUPTS();
+			/* wait for 100ms or postmaster dies */
+			rc = WaitLatch(&MyProc->procLatch,
+				   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH, 100);
+
+			ResetLatch(&MyProc->procLatch);
+			if (rc & WL_POSTMASTER_DEATH)
+				proc_exit(1);
 		}
 	}
 }
