@@ -539,3 +539,18 @@ explain select * from (t_joinsize_1 join t_joinsize_2 on t_joinsize_1.c2 = t_joi
 drop table t_joinsize_1;
 drop table t_joinsize_2;
 drop table t_joinsize_3;
+
+-- test if subquery locus is general, then
+-- we should keep it general
+create table t_randomly_dist_table(c int) distributed randomly;
+
+-- the following plan should not contain redistributed motion (for planner)
+explain
+select * from (
+  select a from generate_series(1, 10)a
+  union all
+  select a from generate_series(1, 10)a
+) t_subquery_general
+join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
+
+drop table t_randomly_dist_table;

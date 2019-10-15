@@ -1997,20 +1997,21 @@ create function extractq2_2(t int8_tbl) returns table(ret1 int8) as $$
 $$ language sql immutable;
 explain (verbose, costs off)
 select x from int8_tbl, extractq2_2(int8_tbl) f(x);
-                   QUERY PLAN                   
-------------------------------------------------
- Nested Loop
+                 QUERY PLAN                  
+---------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
    Output: ((int8_tbl.*).q2)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: int8_tbl.*
+   ->  Nested Loop
+         Output: ((int8_tbl.*).q2)
          ->  Seq Scan on public.int8_tbl
                Output: int8_tbl.*
-   ->  Materialize
-         Output: ((int8_tbl.*).q2)
-         ->  Result
-               Output: (int8_tbl.*).q2
+         ->  Materialize
+               Output: ((int8_tbl.*).q2)
+               ->  Result
+                     Output: (int8_tbl.*).q2
  Optimizer: Postgres query optimizer
-(11 rows)
+ Settings: optimizer=off
+(12 rows)
 
 select x from int8_tbl, extractq2_2(int8_tbl) f(x);
          x         
@@ -2054,23 +2055,24 @@ create function extractq2_append(t int8_tbl) returns table(ret1 int8) as $$
 $$ language sql immutable;
 explain (verbose, costs off)
 select x from int8_tbl, extractq2_append(int8_tbl) f(x);
-                   QUERY PLAN                   
-------------------------------------------------
- Nested Loop
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
    Output: ((int8_tbl.*).q2)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: int8_tbl.*
+   ->  Nested Loop
+         Output: ((int8_tbl.*).q2)
          ->  Seq Scan on public.int8_tbl
                Output: int8_tbl.*
-   ->  Materialize
-         Output: ((int8_tbl.*).q2)
-         ->  Append
-               ->  Result
-                     Output: (int8_tbl.*).q2
-               ->  Result
-                     Output: (int8_tbl.*).q2
+         ->  Materialize
+               Output: ((int8_tbl.*).q2)
+               ->  Append
+                     ->  Result
+                           Output: (int8_tbl.*).q2
+                     ->  Result
+                           Output: (int8_tbl.*).q2
  Optimizer: Postgres query optimizer
-(14 rows)
+ Settings: optimizer=off
+(15 rows)
 
 select x from int8_tbl, extractq2_append(int8_tbl) f(x);
          x         

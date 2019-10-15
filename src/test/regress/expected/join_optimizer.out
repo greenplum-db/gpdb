@@ -5617,12 +5617,12 @@ select * from
     lateral (select q1, coalesce(ss1.x,q2) as y from int8_tbl d) ss2
   ) on c.q2 = ss2.q1,
   lateral (select ss2.y offset 0) ss3;
-                                                                                     QUERY PLAN                                                                                     
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Nested Loop
+                                                                                        QUERY PLAN                                                                                        
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
    Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, '42'::bigint)), d.q1, (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)))
-   ->  Gather Motion 3:1  (slice4; segments: 3)
-         Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, '42'::bigint)), (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
+   ->  Nested Loop
+         Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, '42'::bigint)), d.q1, (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)))
          ->  Hash Right Join
                Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, '42'::bigint)), (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
                Hash Cond: (d.q1 = c.q2)
@@ -5651,13 +5651,12 @@ select * from
                            Hash Key: c.q2
                            ->  Seq Scan on public.int8_tbl c
                                  Output: c.q1, c.q2
-   ->  Materialize
-         Output: ((COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)))
-         ->  Result
-               Output: (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
+         ->  Materialize
+               Output: ((COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)))
+               ->  Result
+                     Output: (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(38 rows)
+(37 rows)
 
 -- case that breaks the old ph_may_need optimization
 explain (verbose, costs off)
@@ -5782,31 +5781,29 @@ select * from
   lateral (select f1 from int4_tbl
            where f1 = any (select unique1 from tenk1
                            where unique2 = v.x offset 0)) ss;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
    Output: "*VALUES*".column1, "*VALUES*".column2, int4_tbl.f1
    ->  Nested Loop
          Output: "*VALUES*".column1, "*VALUES*".column2, int4_tbl.f1
-         Join Filter: (SubPlan 1)
          ->  Values Scan on "*VALUES*"
                Output: "*VALUES*".column1, "*VALUES*".column2
-         ->  Materialize
+         ->  Seq Scan on public.int4_tbl
                Output: int4_tbl.f1
-               ->  Seq Scan on public.int4_tbl
-                     Output: int4_tbl.f1
-         SubPlan 1
-           ->  Result
-                 Output: tenk1.unique1
-                 Filter: (tenk1.unique2 = "*VALUES*".column2)
-                 ->  Materialize
-                       Output: tenk1.unique1, tenk1.unique2
-                       ->  Broadcast Motion 3:3  (slice1; segments: 3)
+               Filter: (SubPlan 1)
+               SubPlan 1
+                 ->  Result
+                       Output: tenk1.unique1
+                       Filter: (tenk1.unique2 = "*VALUES*".column2)
+                       ->  Materialize
                              Output: tenk1.unique1, tenk1.unique2
-                             ->  Seq Scan on public.tenk1
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)
                                    Output: tenk1.unique1, tenk1.unique2
+                                   ->  Seq Scan on public.tenk1
+                                         Output: tenk1.unique1, tenk1.unique2
  Optimizer: Postgres query optimizer
-(22 rows)
+(20 rows)
 
 select * from
   (values (0,9998), (1,1000)) v(id,x),
