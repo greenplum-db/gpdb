@@ -7,19 +7,6 @@
 #include "pqexpbuffer.h"
 
 void
-initializePgUpgradStatus(void)
-{
-	initPQExpBuffer(&pg_upgrade_output);
-	pg_upgrade_exit_status = 0;
-}
-
-void
-resetPgUpgradeStatus(void)
-{
-	termPQExpBuffer(&pg_upgrade_output);
-}
-
-void
 resetGpdbFiveDataDirectories(void)
 {
 	printf("\nMaking a copy of gpdb5 data directories.\n");

@@ -1,0 +1,3 @@
+void test_a_partitioned_heap_table_with_differently_sized_dropped_columns_cannot_be_upgraded(void **state);
+void test_a_partitioned_heap_table_with_differently_aligned_fixed_dropped_columns_cannot_be_upgraded(void **state);
+void test_a_partitioned_heap_table_with_differently_aligned_varlen_dropped_columns_cannot_be_upgraded(void **state);

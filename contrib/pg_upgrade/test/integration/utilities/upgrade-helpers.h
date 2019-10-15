@@ -6,9 +6,11 @@
 #include "pqexpbuffer.h"
 
 void		performUpgrade(void);
-void		performUpgradeCheck();
+void		performUpgradeCheck(void);
+void		initializePgUpgradeStatus(void);
+void		resetPgUpgradeStatus(void);
 
-extern PQExpBufferData pg_upgrade_output;
-extern int pg_upgrade_exit_status;
+char	   *upgradeCheckOutput(void);
+int			upgradeCheckStatus(void);
 
 #endif							/* PG_UPGRADE_INTEGRATION_TEST_UPGRADE_HELPERS */

@@ -15,6 +15,7 @@
  */
 
 #include "pg_upgrade.h"
+#include "check_gp.h"
 
 static void check_external_partition(void);
 static void check_covering_aoindex(void);
@@ -38,6 +39,7 @@ check_greenplum(void)
 	check_online_expansion();
 	check_external_partition();
 	check_covering_aoindex();
+	check_heterogeneous_partition();
 	check_partition_indexes();
 	check_orphaned_toastrels();
 	check_gphdfs_external_tables();
@@ -364,6 +366,125 @@ check_orphaned_toastrels(void)
 	else
 		check_ok();
 
+}
+
+void
+check_heterogeneous_partition(void)
+{
+	int				dbnum;
+	FILE		   *script = NULL;
+	bool			found = false;
+	char			output_path[MAXPGPATH];
+
+	prep_status("Checking for heterogeneous partitioned tables");
+
+	snprintf(output_path, sizeof(output_path), "heterogeneous_partitioned_tables.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
+
+		res = executeQueryOrDie(conn, CHECK_PARTITION_TABLE_MATCHES_COLUMN_COUNT);
+
+		ntups = PQntuples(res);
+
+		if (ntups != 0)
+		{
+			found = true;
+			if ((script = fopen(output_path, "w")) == NULL)
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
+
+			for (rowno = 0; rowno < ntups; rowno++)
+				fprintf(script, "  %s has different number of columns in a child and root partition\n",
+						PQgetvalue(res, rowno, PQfnumber(res, "parrelid")));
+
+			fclose(script);
+		}
+
+		PQclear(res);
+
+		res = executeQueryOrDie(conn, CHECK_PARTITION_TABLE_MATCHES_COLUMN_ATTRIBUTES);
+
+		ntups = PQntuples(res);
+
+		if (ntups != 0)
+		{
+			found = true;
+			if ((script = fopen(output_path, "a")) == NULL)
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
+
+			for (rowno = 0; rowno < ntups; rowno++)
+			{
+				if (strcmp(PQgetvalue(res, rowno, PQfnumber(res, "attname1")), PQgetvalue(res, rowno, PQfnumber(res, "attname2"))) != 0)
+					fprintf(script, "  column %s of parent table %s has different name '%s' from column %s of child table %s name '%s'\n",
+							PQgetvalue(res, rowno, PQfnumber(res, "attnum")),
+							PQgetvalue(res, rowno, PQfnumber(res, "parrelid")),
+							PQgetvalue(res, rowno, PQfnumber(res, "attname1")),
+							PQgetvalue(res, rowno, PQfnumber(res, "attnum")),
+							PQgetvalue(res, rowno, PQfnumber(res, "parchildrelid")),
+							PQgetvalue(res, rowno, PQfnumber(res, "attname2")));
+				else if(strcmp(PQgetvalue(res, rowno, PQfnumber(res, "attisdropped1")), PQgetvalue(res, rowno, PQfnumber(res, "attisdropped2"))) != 0)
+				{
+					const char *droppedness1, *droppedness2;
+					if (strcmp(PQgetvalue(res, rowno, PQfnumber(res, "attisdropped1")), "t") == 0)
+					{
+						droppedness1 = "dropped";
+						droppedness2 = "not dropped";
+					}
+					else
+					{
+						droppedness1 = "not dropped";
+						droppedness2 = "dropped";
+					}
+					fprintf(script, "  column %s of parent table %s is %s, but it is %s in child table %s\n",
+							PQgetvalue(res, rowno, PQfnumber(res, "attname1")),
+							PQgetvalue(res, rowno, PQfnumber(res, "parrelid")),
+							droppedness1,
+							droppedness2,
+							PQgetvalue(res, rowno, PQfnumber(res, "parchildrelid")));
+				}
+				else
+				{
+					fprintf(script, "  column %s of parent table %s has type %s of length %s and alignment '%s', but it is has type %s of length %s and alignment '%s' in child table %s\n",
+							PQgetvalue(res, rowno, PQfnumber(res, "attname1")),
+							PQgetvalue(res, rowno, PQfnumber(res, "parrelid")),
+							PQgetvalue(res, rowno, PQfnumber(res, "atttypid1")),
+							PQgetvalue(res, rowno, PQfnumber(res, "attlen1")),
+							PQgetvalue(res, rowno, PQfnumber(res, "attalign1")),
+							PQgetvalue(res, rowno, PQfnumber(res, "atttypid2")),
+							PQgetvalue(res, rowno, PQfnumber(res, "attlen2")),
+							PQgetvalue(res, rowno, PQfnumber(res, "attalign2")),
+							PQgetvalue(res, rowno, PQfnumber(res, "parchildrelid")));
+				}
+
+			}
+
+			fclose(script);
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+
+	}
+
+	if (found)
+	{
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
+			   "| Your installation contains heterogenous partitioned tables\n"
+			   "| where the root partition does not match one or more child\n"
+			   "| partitions' on disk representation. In order to make the\n"
+			   "| tables homogeneous, CREATE TABLE AS must be performed on\n"
+			   "| the tables so that they can be be dropped before upgrade.\n"
+			   "| A list of the problem tables is in the file:\n" "| \t%s\n\n",
+			   output_path);
+	}
+	else
+		check_ok();
 }
 
 /*

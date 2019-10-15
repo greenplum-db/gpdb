@@ -37,13 +37,13 @@ anAdministratorPerformsAnUpgradeCheck()
 static void
 assert_error_in_log(const char *errMsg)
 {
-	assert_true(strstr(pg_upgrade_output.data, errMsg));
+	assert_true(strstr(upgradeCheckOutput(), errMsg));
 }
 
 static void
 thenCheckFailsWithError(const char* errMsg)
 {
-	assert_int_not_equal(0, pg_upgrade_exit_status);
+	assert_int_not_equal(0, upgradeCheckStatus());
 	assert_error_in_log(errMsg);
 }
 

@@ -151,7 +151,7 @@ performUpgrade(void)
 }
 
 void
-performUpgradeCheck()
+performUpgradeCheck(void)
 {
 	char		buffer[2000];
 	int			count = 0;
@@ -176,4 +176,29 @@ performUpgradeCheck()
 
 	pg_upgrade_exit_status = WEXITSTATUS(pclose(output_file));
 #endif
+}
+
+char *
+upgradeCheckOutput(void)
+{
+	return pg_upgrade_output.data;
+}
+
+int
+upgradeCheckStatus(void)
+{
+	return pg_upgrade_exit_status;
+}
+
+void
+initializePgUpgradeStatus(void)
+{
+	initPQExpBuffer(&pg_upgrade_output);
+	pg_upgrade_exit_status = 0;
+}
+
+void
+resetPgUpgradeStatus(void)
+{
+	termPQExpBuffer(&pg_upgrade_output);
 }

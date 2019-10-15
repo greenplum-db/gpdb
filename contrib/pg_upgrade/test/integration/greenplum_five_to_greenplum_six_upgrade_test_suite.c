@@ -6,6 +6,7 @@
 
 #include "scenarios/partitioned_ao_table.h"
 #include "scenarios/partitioned_heap_table.h"
+#include "scenarios/heterogeneous_partitioned_heap_table.h"
 #include "scenarios/exchange_partitioned_heap_table.h"
 #include "scenarios/partitioned_heap_table_with_a_dropped_column.h"
 #include "scenarios/heap_table.h"
@@ -17,13 +18,14 @@
 #include "utilities/gpdb5-cluster.h"
 #include "utilities/gpdb6-cluster.h"
 
+#include "utilities/upgrade-helpers.h"
 #include "utilities/test-helpers.h"
 #include "utilities/row-assertions.h"
 
 static void
 setup(void **state)
 {
-	initializePgUpgradStatus();
+	initializePgUpgradeStatus();
 	resetGpdbFiveDataDirectories();
 	resetGpdbSixDataDirectories();
 
@@ -57,6 +59,9 @@ main(int argc, char *argv[])
 		unit_test_setup_teardown(test_a_partitioned_aoco_table_with_data_on_multiple_segfiles_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_an_exchange_partitioned_heap_table_cannot_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_partitioned_heap_table_with_differently_sized_dropped_columns_cannot_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_partitioned_heap_table_with_differently_aligned_fixed_dropped_columns_cannot_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_partitioned_heap_table_with_differently_aligned_varlen_dropped_columns_cannot_be_upgraded, setup, teardown),
 	};
 
 	return run_tests(tests);
