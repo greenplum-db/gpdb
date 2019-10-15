@@ -18,10 +18,14 @@
       <p>Account for file system formatting overhead (roughly 10 percent) and the RAID level you are
         using. For example, if using RAID-10, the calculation would be:</p>
       <codeblock>(<varname>raw_capacity</varname> * 0.9) / 2 = <varname>formatted_disk_space</varname></codeblock>
-      <p>For optimal performance, do not completely fill your disks to
-        capacity, but run at 70% or lower. So with this in mind, calculate the usable disk space as
-        follows:</p>
+      <p>For optimal performance, do not completely fill your disks to capacity, but run at 70% or
+        lower. So with this in mind, calculate the usable disk space as follows:</p>
       <codeblock><varname>formatted_disk_space</varname> * 0.7 = <varname>usable_disk_space</varname></codeblock>
+      <p>Using only 70% of your disk space allows Greenplum Database to use the other 30% for
+        temporary files on the same disks. If your host systems have a separate disk system that can
+        be used for temporary files, you can specify a tablespace that Greenplum Database uses for
+        temporary files. Moving the location of the temporary files might improve performance
+        depending on the performance of the disk system.</p>
       <p>Once you have formatted RAID disk arrays and accounted for the maximum recommended capacity
           (<varname>usable_disk_space</varname>), you will need to calculate how much storage is
         actually available for user data (<codeph>U</codeph>). If using Greenplum Database mirrors
@@ -40,12 +44,12 @@
         specifying that they reside on different tablespaces.</p>
       <p>In the <i>Greenplum Database Administrator Guide</i>, see these topics:</p>
       <ul>
-        <li id="jh161458">"Managing Workload and Resources" for information about workload
+        <li id="jh161458"><xref href="../admin_guide/partV.xml"/> for information about workload
           management </li>
-        <li id="jh161469">"Creating and Managing Tablespaces" for information about moving the
-          location of temporary files </li>
-        <li id="jh161162">"Monitoring System State" for information about monitoring Greenplum
-          Database disk space usage</li>
+        <li id="jh161469"><xref href="../admin_guide/ddl/ddl-tablespace.xml"/> for information about
+          moving the location of temporary files </li>
+        <li id="jh161162"><xref href="../admin_guide/managing/monitor.xml#topic3"/> for information
+          about monitoring Greenplum Database disk space usage</li>
       </ul>
     </body>
   </topic>
