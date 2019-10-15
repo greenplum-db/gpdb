@@ -12,7 +12,7 @@
     <p>For more information about <codeph>iptables</codeph> see the <codeph>iptables</codeph> and
       firewall documentation for your operating system. See also <xref
         href="prep_os.xml#topic_sqj_lt1_nfb" type="topic" format="dita">Disabling SELinux and
-        Firewall Software</xref> in the <cite>Configuring Your Systems</cite> topic.</p>
+        Firewall Software</xref>.</p>
     <section id="ji163124">
       <title>How to Enable iptables</title>
       <ol id="ol_akk_knz_thb">

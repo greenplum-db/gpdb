@@ -101,7 +101,7 @@ SELinuxstatus: disabled</codeblock></li>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
-    <title id="ji162171">Setting the Greenplum Recommended OS Parameters</title>
+    <title id="ji162171">Recommended OS Parameters Settings</title>
     <body>
       <p>Greenplum requires that certain Linux operating system (OS) parameters be set on all hosts
         in your Greenplum Database system (masters and segments). </p>
@@ -127,9 +127,9 @@ SELinuxstatus: disabled</codeblock></li>
     
     <p>More specifically, you need to edit the following Linux configuration settings:</p>
     <ul id="ul_t1k_rl3_2jb">
-      <li><xref href="#topic3/linux_hosts_file" format="dita">Hosts</xref> file</li>
-      <li><codeph><xref href="#topic3/sysctl_file" format="dita">sysctl</xref></codeph>
-        parameters</li>
+      <li>The <xref href="#topic3/linux_hosts_file" format="dita">Hosts</xref> file</li>
+      <li>The <codeph><xref href="#topic3/sysctl_file" format="dita">sysctl.conf</xref></codeph>
+          file</li>
       <li><xref href="#topic3/system_resources" format="dita">System Resources</xref> limits </li>
       <li><xref href="#topic3/xfs_mount" format="dita">XFS mount </xref>options</li>
       <li><xref href="#topic3/disk_io_settings" format="dita">Disk I/O settings</xref>
@@ -144,21 +144,19 @@ SELinuxstatus: disabled</codeblock></li>
         threshold</li>
     </ul>
     <section id="linux_hosts_file">
-      <title>Linux Hosts File</title>
+      <title>The <codeph>hosts</codeph> File</title>
       <p>Edit the <codeph>/etc/hosts</codeph> file and make sure that it includes the host names and
         all interface address names for every machine participating in your Greenplum Database
         system.</p>
     </section>
     <section id="sysctl_file">
-        <title>Sysctl parameters</title>
-        <p>The <codeph>sysctl.conf</codeph> parameters listed in this topic are for performance in a
-          wide variety of environments. Change these settings according to your specific situation
-          and setup.</p>
-        <p>The parameters are split into minimal and additional settings. Set the parameters in the
-            <codeph>/etc/sysctl.conf</codeph> file and reload with <codeph>sysctl -p</codeph>: </p>
+        <title>The <codeph>sysctl.conf</codeph> File</title>
+        <p>The <codeph>sysctl.conf</codeph> parameters listed in this topic are for performance,
+          optimization, and consistency in a wide variety of environments. Change these settings
+          according to your specific situation and setup.</p>
+        <p>Set the parameters in the <codeph>/etc/sysctl.conf</codeph> file and reload with
+            <codeph>sysctl -p</codeph>: </p>
         <codeblock>
-# minimal settings
-
 # kernel.shmall = _PHYS_PAGES / 2 # <b>See <xref href="#topic3/shared_memory_pages" format="dita">Shared Memory Pages</xref></b>
 kernel.shmall = 4000000000
 # kernel.shmmax = kernel.shmall * PAGE_SIZE 
@@ -166,8 +164,6 @@ kernel.shmmax = 500000000
 kernel.shmmni = 4096
 vm.overcommit_memory = 2 # <b>See <xref href="#topic3/segment_host_memory" format="dita">Segment Host Memory</xref></b>
 vm.overcommit_ratio = 95 # <b>See <xref href="#topic3/segment_host_memory" format="dita">Segment Host Memory</xref></b>
-
-# additional settings
 
 net.ipv4.ip_local_port_range = 10000 65535 # <b>See <xref href="#topic3/port_settings" format="dita">Port Settings</xref></b>
 kernel.sem = 500 2048000 200 40960
@@ -300,7 +296,7 @@ vm.dirty_ratio = 10</codeblock></p>
       <codeblock>/dev/data /data xfs nodev,noatime,nobarrier,inode64 0 0</codeblock>
     </section>
     <section id="disk_io_settings">
-      <title>Disk I/O settings</title>
+      <title>Disk I/O Settings</title>
       <ul id="ul_oh4_vlk_2jb">
         <li>
           <p>Read-ahead value</p>
@@ -385,7 +381,7 @@ always [never]</codeblock></p>
         the end of the section.</p>
     </section>
     <section id="ipc_object_removal">
-      <title>IPC Object</title>
+      <title>IPC Object Removal</title>
       <p>Disable IPC object removal for RHEL 7.2 or CentOS 7.2, or Ubuntu. The default
           <codeph>systemd</codeph> setting <codeph>RemoveIPC=yes</codeph> removes IPC connections
         when non-system user accounts log out. This causes the Greenplum Database utility
@@ -404,14 +400,14 @@ always [never]</codeblock></p>
       </ul>
     </section>
     <section id="ssh_max_connections">
-      <title>SSH connection threshold</title>
+      <title>SSH Connection Threshold</title>
       <p>Certain Greenplum Database management utilities including <codeph>gpexpand</codeph>,
-          <codeph>gpinitsystem</codeph>, and <codeph>gpaddmirrors</codeph>, use secure shell (SSH)
-        connections between systems to perform their tasks. In large Greenplum Database deployments,
-        cloud deployments, or deployments with a large number of segments per host, these utilities
-        may exceed the hosts' maximum threshold for unauthenticated connections. When this occurs,
-        you receive errors such as: <codeph>ssh_exchange_identification: Connection closed by remote
-          host.</codeph>.</p>
+            <codeph>gpinitsystem</codeph>, and <codeph>gpaddmirrors</codeph>, use secure shell (SSH)
+          connections between systems to perform their tasks. In large Greenplum Database
+          deployments, cloud deployments, or deployments with a large number of segments per host,
+          these utilities may exceed the hosts' maximum threshold for unauthenticated connections.
+          When this occurs, you receive errors such as: <codeph>ssh_exchange_identification:
+            Connection closed by remote host</codeph>.</p>
       <p>To increase this connection threshold for your Greenplum Database system, update the SSH
           <codeph>MaxStartups</codeph> configuration parameter in one of the
           <codeph>/etc/ssh/sshd_config</codeph> or <codeph>/etc/sshd_config</codeph> SSH daemon
