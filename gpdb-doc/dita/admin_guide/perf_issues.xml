@@ -5,17 +5,15 @@
   <title id="jb177957">Common Causes of Performance Issues</title>
   <shortdesc>This section explains the troubleshooting processes for common performance issues and
     potential solutions to these issues. </shortdesc>
-  <body/>
   <topic id="topic2" xml:lang="en">
     <title id="jb150555">Identifying Hardware and Segment Failures</title>
     <body>
-      <p>The performance of Greenplum Database depends on the hardware and IT
-        infrastructure on which it runs. Greenplum Database is comprised of several
-        servers (hosts) acting together as one cohesive system (array); as a first step in
-        diagnosing performance problems, ensure that all Greenplum Database segments
-        are online. Greenplum Database's performance will be as fast as the slowest
-        host in the array. Problems with CPU utilization, memory management, I/O processing, or
-        network load affect performance. Common hardware-related issues are:</p>
+      <p>The performance of Greenplum Database depends on the hardware and IT infrastructure on
+        which it runs. Greenplum Database is comprised of several servers (hosts) acting together as
+        one cohesive system (array); as a first step in diagnosing performance problems, ensure that
+        all Greenplum Database segments are online. Greenplum Database's performance will be as fast
+        as the slowest host in the array. Problems with CPU utilization, memory management, I/O
+        processing, or network load affect performance. Common hardware-related issues are:</p>
       <ul>
         <li id="jb155623"><b>Disk Failure</b> – Although a single disk failure should not
           dramatically affect database performance if you are using RAID, disk resynchronization
