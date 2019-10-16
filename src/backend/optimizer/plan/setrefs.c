@@ -70,6 +70,7 @@ typedef struct
 	PlannerGlobal *glob;
 	indexed_tlist *subplan_itlist;
 	int			rtoffset;
+	bool		flow_expr;
 } fix_upper_expr_context;
 
 typedef struct
@@ -115,6 +116,9 @@ static Var *search_indexed_tlist_for_var(Var *var,
 static Var *search_indexed_tlist_for_non_var(Node *node,
 								 indexed_tlist *itlist,
 								 Index newvarno);
+static Var *search_indexed_tlist_for_non_var_in_flow_expr(Node *node,
+								 indexed_tlist *itlist,
+								 Index newvarno);
 static List *fix_join_expr(PlannerGlobal *glob,
 			  List *clauses,
 			  indexed_tlist *outer_itlist,
@@ -137,6 +141,11 @@ static Node *fix_upper_expr(PlannerGlobal *glob,
 			   Node *node,
 			   indexed_tlist *subplan_itlist,
 			   int rtoffset);
+static Node *fix_upper_flow_expr(PlannerGlobal *glob,
+				Node *node,
+				indexed_tlist *subplan_itlist,
+				int rtoffset);
+
 static Node *fix_upper_expr_mutator(Node *node,
 					   fix_upper_expr_context *context);
 static bool fix_opfuncids_walker(Node *node, void *context);
@@ -433,7 +442,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
         indexed_tlist  *plan_itlist = build_tlist_index(plan->targetlist);
 
         plan->flow->hashExpr =
-		(List *)fix_upper_expr(glob,
+		(List *)fix_upper_flow_expr(glob,
 							   (Node *)plan->flow->hashExpr,
 							   plan_itlist,
 							   rtoffset);
@@ -1886,6 +1895,34 @@ search_indexed_tlist_for_non_var(Node *node,
 }
 
 /*
+ * GPDB: same as search_indexed_tlist_for_non_var, except it ignores
+ * relabel for matching non vars in flow->hashExpr nodes.
+ */
+static Var *
+search_indexed_tlist_for_non_var_in_flow_expr(Node *node,
+								 indexed_tlist *itlist, Index newvarno)
+{
+	TargetEntry *tle;
+
+	tle = tlist_member_ignore_relabel(node, itlist->tlist);
+	if (tle)
+	{
+		/* Found a matching subplan output expression */
+		Var		   *newvar;
+
+		newvar = makeVar(newvarno,
+						 tle->resno,
+						 exprType((Node *) tle->expr),
+						 exprTypmod((Node *) tle->expr),
+						 0);
+		newvar->varnoold = 0;	/* wasn't ever a plain Var */
+		newvar->varoattno = 0;
+		return newvar;
+	}
+	return NULL;				/* no match */
+}
+
+/*
  * fix_join_expr
  *	   Create a new set of targetlist entries or join qual clauses by
  *	   changing the varno/varattno values of variables in the clauses
@@ -2149,6 +2186,22 @@ fix_upper_expr(PlannerGlobal *glob,
 	context.glob = glob;
 	context.subplan_itlist = subplan_itlist;
 	context.rtoffset = rtoffset;
+	context.flow_expr = false;
+	return fix_upper_expr_mutator(node, &context);
+}
+
+static Node *
+fix_upper_flow_expr(PlannerGlobal *glob,
+			   Node *node,
+			   indexed_tlist *subplan_itlist,
+			   int rtoffset)
+{
+	fix_upper_expr_context context;
+
+	context.glob = glob;
+	context.subplan_itlist = subplan_itlist;
+	context.rtoffset = rtoffset;
+	context.flow_expr = true;
 	return fix_upper_expr_mutator(node, &context);
 }
 
@@ -2171,12 +2224,22 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
 			elog(ERROR, "variable not found in subplan target list");
 		return (Node *) newvar;
 	}
+
 	/* Try matching more complex expressions too, if tlist has any */
 	if (context->subplan_itlist->has_non_vars && !IsA(node, GroupId))
 	{
-		newvar = search_indexed_tlist_for_non_var(node,
-												  context->subplan_itlist,
-												  OUTER);
+		if (context->flow_expr)
+		{
+			newvar = search_indexed_tlist_for_non_var_in_flow_expr(node,
+																   context->subplan_itlist,
+																   OUTER);
+		}
+		else
+		{
+			newvar = search_indexed_tlist_for_non_var(node,
+													  context->subplan_itlist,
+													  OUTER);
+		}
 		if (newvar)
 			return (Node *) newvar;
 	}
