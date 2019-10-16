@@ -48,8 +48,8 @@ createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster(void)
 			"  DISTRIBUTED BY (a) "
 			"    PARTITION BY range(c) "
 			"    SUBPARTITION BY range(d) (PARTITION mama START(0) END(42) (SUBPARTITION chica START(0) END(42)));"));
+	PQclear(executeQuery(connection, "INSERT INTO abuela SELECT i, i, i, i FROM generate_series(1, 10)i;"));
 	PQclear(executeQuery(connection, "ALTER TABLE abuela DROP COLUMN b;"));
-	PQclear(executeQuery(connection, "INSERT INTO abuela SELECT i, i, i FROM generate_series(1, 10)i;"));
 	PQfinish(connection);
 }
 
