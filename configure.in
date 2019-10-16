@@ -615,11 +615,8 @@ if test "$GCC" = yes -a "$ICC" = no; then
   PGAC_PROG_CC_CFLAGS_OPT([-Wno-unused-but-set-variable])
   PGAC_PROG_CC_CFLAGS_OPT([-Wno-address])
 
-  gccversion=`$CC -dumpversion | cut -d . -f1`
-  if test "$gccversion" -ge 7 ; then
-    PGAC_PROG_CC_CFLAGS_OPT([-Wimplicit-fallthrough])
-    PGAC_PROG_CC_CFLAGS_OPT([-Werror=implicit-fallthrough])
-  fi
+  PGAC_PROG_CC_CFLAGS_OPT([-Wimplicit-fallthrough])
+  PGAC_PROG_CC_CFLAGS_OPT([-Werror=implicit-fallthrough])
 
   #-Wno-error=enum-compare -Wno-error=address -Wno-error=maybe-uninitialized
 
