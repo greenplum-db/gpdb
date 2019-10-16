@@ -17,7 +17,7 @@ partitionedHeapTableShouldHaveDataUpgradedToSixCluster()
 	PGconn	   *connection = connectToSix();
 	PGresult   *result;
 
-	executeQuery(connection, "SET search_path TO five_to_six_upgrade;");
+	PQclear(executeQuery(connection, "SET search_path TO five_to_six_upgrade;"));
 
 	result = executeQuery(connection, "SELECT c, d FROM abuela WHERE a=10;");
 
@@ -41,15 +41,15 @@ createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster(void)
 {
 	PGconn	   *connection = connectToFive();
 
-	executeQuery(connection, "CREATE SCHEMA five_to_six_upgrade;");
-	executeQuery(connection, "SET search_path TO five_to_six_upgrade");
-	executeQuery(connection,
+	PQclear(executeQuery(connection, "CREATE SCHEMA five_to_six_upgrade;"));
+	PQclear(executeQuery(connection, "SET search_path TO five_to_six_upgrade"));
+	PQclear(executeQuery(connection,
 			"CREATE TABLE abuela (a int, b int, c int, d numeric) "
 			"  DISTRIBUTED BY (a) "
 			"    PARTITION BY range(c) "
-			"    SUBPARTITION BY range(d) (PARTITION mama START(0) END(42) (SUBPARTITION chica START(0) END(42)));");
-	executeQuery(connection, "ALTER TABLE abuela DROP COLUMN b;");
-	executeQuery(connection, "INSERT INTO abuela SELECT i, i, i FROM generate_series(1, 10)i;");
+			"    SUBPARTITION BY range(d) (PARTITION mama START(0) END(42) (SUBPARTITION chica START(0) END(42)));"));
+	PQclear(executeQuery(connection, "ALTER TABLE abuela DROP COLUMN b;"));
+	PQclear(executeQuery(connection, "INSERT INTO abuela SELECT i, i, i FROM generate_series(1, 10)i;"));
 	PQfinish(connection);
 }
 
