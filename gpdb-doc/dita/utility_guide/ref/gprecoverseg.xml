@@ -105,7 +105,16 @@
             <note type="warning">A full recovery deletes the data directory of the down segment
               instance before copying the data from the active (current primary) segment instance.
               Before performing a full recovery, ensure that the segment failure did not cause data
-              corruption and that any host segment disk issues have been fixed.</note></pd>
+              corruption and that any host segment disk issues have been fixed.<p>Also, for a full
+                recovery, the utility does not restore custom files that are stored in the segment
+                instance data directory even if the custom files are also in the active segment
+                instance. You must restore the custom files manually. For example, when using the
+                  <codeph>gpfdists</codeph> protocol to manage external data, client certificate
+                files are required in the segment instance <codeph>$PGDATA/gpfdists</codeph>
+                directory. These files are not restored. For information about configuring
+                  <codeph>gpfdists</codeph>, see <xref
+                  href="../../security-guide/topics/Encryption.xml#gpfdist_connections"
+              />.</p></note></pd>
           <pd>Full recovery can take a long time for large databases, so
               <codeph>gprecoverseg</codeph> displays a running estimate of the completion progress
             of the copy for each segment. Progress for each segment is updated once per second,
