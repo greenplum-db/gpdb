@@ -53,6 +53,7 @@ typedef struct
 	Oid			transientoid;	/* OID of new heap into which to store */
 	Oid			oldreloid;
 	bool		concurrent;
+	bool		skipData;
 	char 		relpersistence;
 	/* These fields are filled by transientrel_startup: */
 	Relation	transientrel;	/* relation to write to */
@@ -299,7 +300,8 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	OIDNewHeap = make_new_heap(matviewOid, tableSpace, relpersistence,
 							   ExclusiveLock, false, true);
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
-	dest = CreateTransientRelDestReceiver(OIDNewHeap, matviewOid, concurrent, relpersistence);
+	dest = CreateTransientRelDestReceiver(OIDNewHeap, matviewOid, concurrent, relpersistence,
+										  stmt->skipData);
 
 	/*
 	 * Now lock down security-restricted operations.
@@ -311,8 +313,7 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 
 	dataQuery->intoPolicy = matviewRel->rd_cdbpolicy;
 	/* Generate the data, if wanted. */
-	if (!stmt->skipData)
-		refresh_matview_datafill(dest, dataQuery, queryString, refreshClause);
+	refresh_matview_datafill(dest, dataQuery, queryString, refreshClause);
 
 	heap_close(matviewRel, NoLock);
 
@@ -408,7 +409,8 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 }
 
 DestReceiver *
-CreateTransientRelDestReceiver(Oid transientoid, Oid oldreloid, bool concurrent, char relpersistence)
+CreateTransientRelDestReceiver(Oid transientoid, Oid oldreloid, bool concurrent,
+							   char relpersistence, bool skipdata)
 {
 	DR_transientrel *self = (DR_transientrel *) palloc0(sizeof(DR_transientrel));
 
@@ -420,6 +422,7 @@ CreateTransientRelDestReceiver(Oid transientoid, Oid oldreloid, bool concurrent,
 	self->transientoid = transientoid;
 	self->oldreloid = oldreloid;
 	self->concurrent = concurrent;
+	self->skipData = skipdata;
 	self->relpersistence = relpersistence;
 
 	return (DestReceiver *) self;
@@ -477,7 +480,7 @@ transientrel_init(QueryDesc *queryDesc)
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 
 	queryDesc->dest = CreateTransientRelDestReceiver(OIDNewHeap, matviewOid, concurrent,
-													 relpersistence);
+													 relpersistence, refreshClause->skipData);
 
 	heap_close(matviewRel, NoLock);
 }
@@ -490,6 +493,10 @@ transientrel_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
 {
 	DR_transientrel *myState = (DR_transientrel *) self;
 	Relation	transientrel;
+
+	if (myState->skipData)
+		return;
+
 
 	transientrel = heap_open(myState->transientoid, NoLock);
 
@@ -519,6 +526,9 @@ static void
 transientrel_receive(TupleTableSlot *slot, DestReceiver *self)
 {
 	DR_transientrel *myState = (DR_transientrel *) self;
+
+	if (myState->skipData)
+		return;
 
 	/*
 	 * get the heap tuple out of the tuple table slot, making sure we have a
@@ -581,6 +591,9 @@ static void
 transientrel_shutdown(DestReceiver *self)
 {
 	DR_transientrel *myState = (DR_transientrel *) self;
+
+	if (myState->skipData)
+		return;
 
 	FreeBulkInsertState(myState->bistate);
 

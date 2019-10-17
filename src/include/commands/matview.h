@@ -28,7 +28,7 @@ extern ObjectAddress ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *qu
 				   ParamListInfo params, char *completionTag);
 
 extern DestReceiver *CreateTransientRelDestReceiver(Oid oid, Oid oldreloid, bool concurrent,
-													char relpersistence);
+													char relpersistence, bool skipdata);
 
 extern bool MatViewIncrementalMaintenanceIsEnabled(void);
 
