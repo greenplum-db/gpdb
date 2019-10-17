@@ -109,10 +109,10 @@
                 recovery, the utility does not restore custom files that are stored in the segment
                 instance data directory even if the custom files are also in the active segment
                 instance. You must restore the custom files manually. For example, when using the
-                  <codeph>gpfdists</codeph> protocol to manage external data, client certificate
-                files are required in the segment instance <codeph>$PGDATA/gpfdists</codeph>
-                directory. These files are not restored. For information about configuring
-                  <codeph>gpfdists</codeph>, see <xref
+                  <codeph>gpfdists</codeph> protocol (<codeph>gpfdist</codeph> with SSL encryption)
+                to manage external data, client certificate files are required in the segment
+                instance <codeph>$PGDATA/gpfdists</codeph> directory. These files are not restored.
+                For information about configuring <codeph>gpfdists</codeph>, see <xref
                   href="../../security-guide/topics/Encryption.xml#gpfdist_connections"
               />.</p></note></pd>
           <pd>Full recovery can take a long time for large databases, so
