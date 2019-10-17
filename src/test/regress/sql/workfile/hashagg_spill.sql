@@ -1,3 +1,9 @@
+-- Ignore "workfile compresssion is not supported by this build" (see
+-- 'zlib' test):
+--
+-- start_matchignore
+-- m/ERROR:  workfile compresssion is not supported by this build/
+-- end_matchignore
 create schema hashagg_spill;
 set search_path to hashagg_spill;
 
