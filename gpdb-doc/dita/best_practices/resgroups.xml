@@ -95,8 +95,8 @@
       <p>Other considerations:</p>
       <ul id="ul_xv2_phn_2z">
         <li>Do not configure the operating system to use huge pages. See the <xref format="dita"
-            href="../install_guide/prep_os.html#topic3" scope="peer">recommended OS
-            parameters</xref> in the <cite>Greenplum Installation Guide</cite>.</li>
+            href="../install_guide/prep_os.xml#topic3/huge_pages" scope="peer">Recommended OS
+            Parameters Settings</xref> in the <cite>Greenplum Installation Guide</cite>.</li>
         <li>When you configure resource group memory, consider memory requirements
            for mirror segments that become primary segments during a failure to ensure
            that database operations can continue when primary segments or segment hosts
