@@ -127,22 +127,18 @@ SELinuxstatus: disabled</codeblock></li>
     
     <p>More specifically, you need to edit the following Linux configuration settings:</p>
     <ul id="ul_t1k_rl3_2jb">
-      <li>The <xref href="#topic3/linux_hosts_file" format="dita"><codeph>hosts</codeph></xref>
-          file</li>
-      <li>The <codeph><xref href="#topic3/sysctl_file" format="dita">sysctl.conf</xref></codeph>
-          file</li>
-      <li><xref href="#topic3/system_resources" format="dita">System resources</xref> limits </li>
-      <li><xref href="#topic3/xfs_mount" format="dita">XFS mount </xref>options</li>
-      <li><xref href="#topic3/disk_io_settings" format="dita">Disk I/O settings</xref>
+      <li><xref href="#topic3/linux_hosts_file" format="dita"></xref></li>
+      <li><xref href="#topic3/sysctl_file" format="dita"></xref></li>
+      <li><xref href="#topic3/system_resources" format="dita"></xref></li>
+      <li><xref href="#topic3/xfs_mount" format="dita"></xref></li>
+      <li><xref href="#topic3/disk_io_settings" format="dita"></xref>
         <ul id="ul_fm1_2yc_2jb">
           <li>Read ahead values</li>
           <li>Disk I/O scheduler disk access</li>
         </ul></li>
-      <li><xref href="#topic3/huge_pages" format="dita">Transparent Huge Pages</xref> (THP)</li>
-      <li><xref href="#topic3/ipc_object_removal" format="dita">IPC object removal</xref>
-        settings</li>
-      <li><xref href="#topic3/ssh_max_connections" format="dita">SSH connections</xref>
-        threshold</li>
+      <li><xref href="#topic3/huge_pages" format="dita"></xref></li>
+      <li><xref href="#topic3/ipc_object_removal" format="dita"></xref></li>
+      <li><xref href="#topic3/ssh_max_connections" format="dita"></xref></li>
     </ul>
     <section id="linux_hosts_file">
       <title>The <codeph>hosts</codeph> File</title>
