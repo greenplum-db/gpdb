@@ -24,6 +24,9 @@ subpartition by range (n_regionkey) subpartition template (start('0') end('1') i
 partition p1 start('0') end('10') WITH (appendonly=true,checksum=true,compresslevel=9), partition p2 start('10') end('25') WITH (checksum=false,appendonly=true,compresslevel=7)
 );
 
+CREATE MATERIALIZED VIEW toolkit_matview AS SELECT * FROM toolkit_heap;
+CREATE MATERIALIZED VIEW toolkit_matview_nodata AS SELECT * FROM toolkit_heap WITH NO DATA;
+
 select count(iaotype),iaotype
 from gp_toolkit.__gp_is_append_only iao
 inner join pg_catalog.pg_class c on iao.iaooid = c.oid

@@ -112,7 +112,8 @@ AS
         SELECT aunoid
         FROM gp_toolkit.__gp_user_namespaces
     )
-    AND pgc.relkind = 'r'
+    AND (pgc.relkind = 'r' OR pgc.relkind = 'm')
+    AND pgc.relispopulated = 't'
     AND pgc.oid = fn.fnoid;
 
 GRANT SELECT ON TABLE gp_toolkit.__gp_user_tables TO public;
