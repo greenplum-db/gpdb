@@ -64,6 +64,16 @@
           before you restore the backup, for example MADlib or PostGIS. If versions of the external
           modules are not compatible, you may need to exclude tables that reference them when
           restoring the Greenplum 4.3 backup to Greenplum 6.</li>
+        <li>The Greenplum 4.3 Oracle Compatibility Functions module is not compatible with Greenplum
+          6. Uninstall the module from Greenplum 4.3 by running the
+            <codeph>uninstall_orafunc.sql</codeph> script before you back up your
+          databases:<codeblock>$ $GPHOME/share/postgresql/contrib/uninstall_orafunc.sql</codeblock>You
+          will also need to drop any dependent database objects that reference compatibility
+          functions.<p>Install the Oracle Compatibility Functions in Greenplum 6 by creating the
+              <codeph>orafce</codeph> module in each database where you require the
+            functions:<codeblock>$ psql -d <varname>dbname</varname> 'CREATE EXTENSION orafce'</codeblock>See
+              <xref href="install_modules.xml#topic_d45_wcw_pgb"/> for information about installing
+              <codeph>orafce</codeph> and other modules.</p></li>
         <li>When restoring language-based user-defined functions, the shared object file must be in
           the location specified in the <codeph>CREATE FUNCTION</codeph> SQL command and must have
           been recompiled on the Greenplum 6 system. This applies to user-defined functions,
@@ -129,9 +139,14 @@
               type is changed to <codeph>int2vector</codeph>. A backend function
                 <codeph>pg_get_table_distributedby()</codeph> was added to get the distribution
               policy for a table as a string.</li>
-            <li>In the <codeph>session_level_memory_consumption</codeph> system view, the
-                <codeph>__gp_localid</codeph> and <codeph>__gp_masterid</codeph> columns are
-              removed.</li>
+            <li>The <codeph>__gp_localid</codeph> and <codeph>__gp_masterid</codeph> columns are
+              removed from the <codeph>session_level_memory_consumption</codeph> system view in
+              Greenplum 6. The underlying external tables and functions are removed from the
+                <codeph>gptoolkit</codeph> schema.</li>
+            <li>The <codeph>CREATE EXTERNAL TABLE</codeph> clause <codeph>INTO
+                  <varname>error_table</varname></codeph> was deprecated in Greenplum 4.3 and is
+              unsupported in Greenplum 5 and 6. Remove this clause from any external table
+              definitions before you create a backup of your Greenplum 4.3 system.</li>
             <li>Filespaces are removed in Greenplum 6. The <codeph>pg_filespace</codeph> and
                 <codeph>pg_filespace_entry</codeph> system tables are removed. Any reference to
                 <codeph>pg_filespace</codeph> or <codeph>pg_filespace_entry</codeph> will fail in
@@ -152,6 +167,9 @@
           function with the function <codeph>string_agg(expression, delimiter)</codeph> and specify
           an empty string as the <codeph>delimiter</codeph>, for example
             <codeph>string_agg(txt_col1, '').</codeph></li>
+        <li>The <codeph>offset</codeph> argument of the <codeph>lag(expr, offset[,
+            default])</codeph> window function has changed from <codeph>int8</codeph> in Greenplum
+          4.3 to <codeph>int4</codeph> in Greenplum 5 and 6.</li>
         <li><codeph>gpbackup</codeph> saves the distribution policy and distribution key for each
           table in the backup so that data can be restored to the same segment. If a table's
           distribution key in the Greenplum 4.3 or 5 database is incompatible with Greenplum 6,
@@ -177,6 +195,11 @@
                 RANDOMLY</codeph>, alter the leaf tables to match the root table distribution policy
               before you back up the source database. </li>
           </ul></li>
+        <li>In Greenplum 4.3, the name provided for a constraint in a <codeph>CREATE TABLE</codeph>
+          command was the name of the index created to enforce the constraint, which could lead to
+          indexes having the same name. In Greenplum 6, duplicate index names are not allowed;
+          restoring from a Greenplum 4.3 backup that has duplicate index names will generate
+          errors.</li>
         <li>Columns of type <codeph>abstime</codeph>, <codeph>reltime</codeph>,
             <codeph>tinterval</codeph>, <codeph>money</codeph>, or <codeph>anyarray</codeph> are not
           supported as distribution keys in Greenplum 6.<p>If you have tables distributed on columns
@@ -185,6 +208,10 @@
               TABLE</codeph> command to set the distribution to <codeph>RANDOM</codeph> before you
             back up the database. After the data is restored, you can set a new distribution
             policy.</p></li>
+        <li>In Greenplum 4.3 and 5, it was possible to <codeph>ALTER</codeph> a table that has a
+          primary key or unique index to be <codeph>DISTRIBUTED RANDOMLY</codeph>. Greenplum 6 does
+          not permit tables <codeph>DISTRIBUTED RANDOMLY</codeph> to have primary keys or unique
+          indexes. Restoring such a table from a Greenplum 4.3 or 5 backup will cause an error.</li>
         <li>Greenplum 6 no longer automatically converts from the deprecated timestamp format
           YYYYMMDDHH24MISS. The format could not be parsed unambiguously in previous Greenplum
           Database releases. You can still specify the YYYYMMDDHH24MISS format in conversion
@@ -197,6 +224,11 @@
           lists the duplicate keys in the <codeph>DISTRIBUTED BY</codeph> clause. Restoring this
           backup will cause a duplicate distribution key error. The <codeph>CREATE TABLE AS</codeph>
           command was fixed in Greenplum 5.10 to disallow duplicate distribution keys.</li>
+        <li>Greenplum 4.3 supports foreign key constraints on columns of different types, for
+          example, <codeph>numeric</codeph> and <codeph>bigint</codeph>, with implicit type
+          conversion. Greenplum 5 and 6 do not support implicit type conversion. Restoring a table
+          with a foreign key on columns with different data types causes an error causes an
+          error.</li>
         <li>Only Boolean operators can use Boolean negators. In Greenplum Database 4.3 and 5 it was
           possible to create a non-Boolean operator that specifies a Boolean negator function. For
           example, this <codeph>CREATE OPERATOR</codeph> command creates an integer
