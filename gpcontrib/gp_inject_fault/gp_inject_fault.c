@@ -159,16 +159,11 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 			elog(ERROR, "invalid response from %s:%d", hostname, port);
 		}
 
-		response = PQgetvalue(res, 0, Anum_fault_message_response_status);
-		if (strncmp(response, "Success:",  strlen("Success:")) != 0)
-		{
-			PQclear(res);
-			PQfinish(conn);
-			elog(ERROR, "%s", response);
-		}
-
+		response = pstrdup(PQgetvalue(res, 0, Anum_fault_message_response_status));
 		PQclear(res);
 		PQfinish(conn);
+		if (strncmp(response, "Success:",  strlen("Success:")) != 0)
+			elog(ERROR, "%s", response);
 	}
 	PG_RETURN_TEXT_P(cstring_to_text(response));
 }
