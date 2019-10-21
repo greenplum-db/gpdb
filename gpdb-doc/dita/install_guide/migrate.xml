@@ -142,11 +142,7 @@
             <li>The <codeph>__gp_localid</codeph> and <codeph>__gp_masterid</codeph> columns are
               removed from the <codeph>session_level_memory_consumption</codeph> system view in
               Greenplum 6. The underlying external tables and functions are removed from the
-                <codeph>gptoolkit</codeph> schema.</li>
-            <li>The <codeph>CREATE EXTERNAL TABLE</codeph> clause <codeph>INTO
-                  <varname>error_table</varname></codeph> was deprecated in Greenplum 4.3 and is
-              unsupported in Greenplum 5 and 6. Remove this clause from any external table
-              definitions before you create a backup of your Greenplum 4.3 system.</li>
+                <codeph>gp_toolkit</codeph> schema.</li>
             <li>Filespaces are removed in Greenplum 6. The <codeph>pg_filespace</codeph> and
                 <codeph>pg_filespace_entry</codeph> system tables are removed. Any reference to
                 <codeph>pg_filespace</codeph> or <codeph>pg_filespace_entry</codeph> will fail in
@@ -155,6 +151,13 @@
               Greenplum 4 catalog tables. For example, restoring a UDF can fail if it references a
               custom data type that is created later in the backup file.</li>
           </ul></li>
+        <li>The  <codeph>INTO <varname>error_table</varname></codeph> clause of the <codeph>CREATE
+            EXTERNAL TABLE</codeph> and <codeph>COPY</codeph> commands was deprecated in Greenplum
+          4.3 and is unsupported in Greenplum 5 and 6. Remove this clause from any external table
+          definitions before you create a backup of your Greenplum 4.3 system. The
+            <codeph>ERROR_TABLE</codeph> parameter of the <codeph>gpload</codeph> utility load
+          control YAML file must also be removed from any <codeph>gpload</codeph> YAML files before
+          you run <codeph>gpload</codeph>. </li>
         <li>The <codeph>int4_avg_accum()</codeph> function signature changed in Greenplum 6 from
             <codeph>int4_avg_accum(bytea, integer)</codeph> to <codeph>int4_avg_accum(bigint[],
             integer)</codeph>. This function is the state transition function (<i>sfunc</i>) called
@@ -227,8 +230,7 @@
         <li>Greenplum 4.3 supports foreign key constraints on columns of different types, for
           example, <codeph>numeric</codeph> and <codeph>bigint</codeph>, with implicit type
           conversion. Greenplum 5 and 6 do not support implicit type conversion. Restoring a table
-          with a foreign key on columns with different data types causes an error causes an
-          error.</li>
+          with a foreign key on columns with different data types causes an error.</li>
         <li>Only Boolean operators can use Boolean negators. In Greenplum Database 4.3 and 5 it was
           possible to create a non-Boolean operator that specifies a Boolean negator function. For
           example, this <codeph>CREATE OPERATOR</codeph> command creates an integer
