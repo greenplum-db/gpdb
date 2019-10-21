@@ -70,6 +70,21 @@ CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=maybe);
 ERROR:  invalid value for option "appendonly"
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, appendoptimized=true);
 ERROR:  parameter "appendonly" specified more than once
+CREATE TABLE tenk_ao15 (like tenk_heap) with (appendoptimized=true) 
+PARTITION BY RANGE(unique2)
+(
+START (0) end (1) WITH (appendoptimized=true),
+START (1) end (2) WITH (appendoptimized=true),
+START (2) end (3) WITH (appendoptimized=true)
+);
+CREATE TABLE tenk_ao16 (like tenk_heap) with (appendoptimized=true)
+PARTITION BY RANGE(unique2)
+(
+START (0) end (1) WITH (appendonly=true, appendoptimized=false),
+START (1) end (2) WITH (appendoptimized=true),
+START (2) end (3) WITH (appendoptimized=true)
+);
+ERROR:  parameter "appendonly" specified more than once
 -- also make sure appendoptimized works in the gp_default_storage_options GUC
 SET gp_default_storage_options = 'appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row,appendoptimized=false';
 ERROR:  parameter "appendonly" specified more than once
@@ -94,16 +109,20 @@ RESET gp_default_storage_options;
 -- check pg_appendonly
 SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a
        WHERE c.relname LIKE 'tenk_ao%' AND c.oid=a.relid AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
-  relname  | blocksize | compresstype | compresslevel | checksum 
------------+-----------+--------------+---------------+----------
- tenk_ao1  |     32768 |              |             0 | t
- tenk_ao13 |     32768 |              |             0 | t
- tenk_ao14 |     32768 |              |             0 | t
- tenk_ao2  |    262144 |              |             0 | t
- tenk_ao3  |   1048576 | zlib         |             6 | t
- tenk_ao4  |     32768 | zlib         |             1 | t
- tenk_ao5  |   1048576 | zlib         |             6 | t
-(7 rows)
+      relname      | blocksize | compresstype | compresslevel | checksum 
+-------------------+-----------+--------------+---------------+----------
+ tenk_ao1          |     32768 |              |             0 | t
+ tenk_ao13         |     32768 |              |             0 | t
+ tenk_ao14         |     32768 |              |             0 | t
+ tenk_ao15         |     32768 |              |             0 | t
+ tenk_ao15_1_prt_1 |     32768 |              |             0 | t
+ tenk_ao15_1_prt_2 |     32768 |              |             0 | t
+ tenk_ao15_1_prt_3 |     32768 |              |             0 | t
+ tenk_ao2          |    262144 |              |             0 | t
+ tenk_ao3          |   1048576 | zlib         |             6 | t
+ tenk_ao4          |     32768 | zlib         |             1 | t
+ tenk_ao5          |   1048576 | zlib         |             6 | t
+(11 rows)
 
 --------------------
 -- fn needed later
@@ -464,16 +483,20 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'un
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a
        WHERE c.relname LIKE 'tenk_ao%' AND c.oid=a.relid AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
-  relname  | blocksize | compresstype | compresslevel | checksum 
------------+-----------+--------------+---------------+----------
- tenk_ao1  |     32768 |              |             0 | t
- tenk_ao13 |     32768 |              |             0 | t
- tenk_ao14 |     32768 |              |             0 | t
- tenk_ao2  |    262144 |              |             0 | t
- tenk_ao3  |   1048576 | zlib         |             6 | t
- tenk_ao4  |     32768 | zlib         |             1 | t
- tenk_ao5  |   1048576 | zlib         |             6 | t
-(7 rows)
+      relname      | blocksize | compresstype | compresslevel | checksum 
+-------------------+-----------+--------------+---------------+----------
+ tenk_ao1          |     32768 |              |             0 | t
+ tenk_ao13         |     32768 |              |             0 | t
+ tenk_ao14         |     32768 |              |             0 | t
+ tenk_ao15         |     32768 |              |             0 | t
+ tenk_ao15_1_prt_1 |     32768 |              |             0 | t
+ tenk_ao15_1_prt_2 |     32768 |              |             0 | t
+ tenk_ao15_1_prt_3 |     32768 |              |             0 | t
+ tenk_ao2          |    262144 |              |             0 | t
+ tenk_ao3          |   1048576 | zlib         |             6 | t
+ tenk_ao4          |     32768 | zlib         |             1 | t
+ tenk_ao5          |   1048576 | zlib         |             6 | t
+(11 rows)
 
 SELECT count(*) FROM tenk_ao1;
  count 

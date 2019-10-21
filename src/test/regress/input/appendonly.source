@@ -49,6 +49,20 @@ CREATE TABLE tenk_ao13 (like tenk_heap) with (appendoptimized=true);
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendonly=true, appendoptimized=false);
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=maybe);
 CREATE TABLE tenk_ao14 (like tenk_heap) with (appendoptimized=true, appendoptimized=true);
+CREATE TABLE tenk_ao15 (like tenk_heap) with (appendoptimized=true) 
+PARTITION BY RANGE(unique2)
+(
+START (0) end (1) WITH (appendoptimized=true),
+START (1) end (2) WITH (appendoptimized=true),
+START (2) end (3) WITH (appendoptimized=true)
+);
+CREATE TABLE tenk_ao16 (like tenk_heap) with (appendoptimized=true)
+PARTITION BY RANGE(unique2)
+(
+START (0) end (1) WITH (appendonly=true, appendoptimized=false),
+START (1) end (2) WITH (appendoptimized=true),
+START (2) end (3) WITH (appendoptimized=true)
+);
 
 -- also make sure appendoptimized works in the gp_default_storage_options GUC
 SET gp_default_storage_options = 'appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row,appendoptimized=false';
