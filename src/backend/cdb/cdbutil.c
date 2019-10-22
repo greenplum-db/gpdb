@@ -1027,10 +1027,9 @@ cdb_setup(void)
 		Gp_role == GP_ROLE_DISPATCH &&
 		!*shmDtmStarted)
 	{
-		int rc;
-
 		while (true)
 		{
+			int rc;
 			if (*shmDtmStarted)
 				break;
 			CHECK_FOR_INTERRUPTS();
