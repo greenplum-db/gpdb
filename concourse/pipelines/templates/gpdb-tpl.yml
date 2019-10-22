@@ -74,7 +74,6 @@ groups:
   - icw_gporca_ubuntu16_oss
   - icw_extensions_gpcloud
   - gate_icw_end
-  - QP_memory-accounting
   - QP_optimizer-functional
   - fips_centos6
 {% endif %}
@@ -205,7 +204,6 @@ groups:
   - icw_gporca_ubuntu16
   - icw_gporca_ubuntu16_oss
   - icw_extensions_gpcloud
-  - QP_memory-accounting
   - QP_optimizer-functional
   - fips_centos6
   - gate_icw_end
@@ -1892,25 +1890,6 @@ jobs:
         gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
         TARGET_OS: centos
 
-- name: QP_memory-accounting
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_icw_start]
-      trigger: [[ test_trigger ]]
-    - get: bin_gpdb
-      passed: [gate_icw_start]
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-  - task: memory-accounting
-    timeout: 3h
-    file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: memory_accounting
-      TEST_OS: "centos"
-      CONFIGURE_FLAGS: {{configure_flags}}
-
 - name: QP_optimizer-functional
   plan:
   - aggregate:
@@ -1998,7 +1977,6 @@ jobs:
       - icw_gporca_ubuntu16
       - icw_gporca_ubuntu16_oss
       - icw_extensions_gpcloud
-      - QP_memory-accounting
       - QP_optimizer-functional
       - fips_centos6
       trigger: true
@@ -2008,7 +1986,6 @@ jobs:
       - icw_gporca_centos6
       - icw_planner_ictcp_centos6
       - icw_extensions_gpcloud
-      - QP_memory-accounting
       - QP_optimizer-functional
       - fips_centos6
     - get: bin_gpdb_centos7
@@ -3886,7 +3863,6 @@ jobs:
                     cs_filerep_end_to_end_suites %}
       - cs_[[ test_name ]]
 {% endfor %}
-      - QP_memory-accounting
       - regression_tests_gphdfs_hadoop_centos
       - regression_tests_gphdfs_mapr_centos
       - DPM_backup-restore_ddboost_part1
