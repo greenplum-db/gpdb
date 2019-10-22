@@ -236,6 +236,22 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 		if (fd == -1)
 			continue;
 
+#ifndef WIN32
+		if (!IS_AF_UNIX(rp->ai_family))
+		{
+			int one = 1;
+			if ((setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+							(char *) &one, sizeof(one))) == -1)
+			{
+				ereport(LOG,
+						(errcode_for_socket_access(),
+						 errmsg("setsockopt(SO_REUSEADDR) failed: %m")));
+				close(fd);
+				continue;
+			}
+		}
+#endif
+
 		/*
 		 * we let the system pick the TCP port here so we don't have to manage
 		 * port resources ourselves.
