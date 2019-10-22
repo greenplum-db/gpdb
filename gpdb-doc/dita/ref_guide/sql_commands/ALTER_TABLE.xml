@@ -405,13 +405,13 @@ where <varname>action</varname> is one of:
                                         not considered part of the system catalogs and will be
                                         moved. See also <codeph>CREATE TABLESPACE</codeph>. If
                                         changing the tablespace of a partitioned table, all child
-                                        table partitions will also be moved to the new tablespace.
-                                </li>
+                                        table partitions will also be moved to the new tablespace. </li>
                                 <li id="ay137292"><b>RENAME</b> — Changes the name of a table (or an
-                                        index, sequence, or view), the name of an individual column
-                                        in a table, or the name of a constraint of the table. There
-                                        is no effect on the stored data. Note that Greenplum
-                                        Database distribution key columns cannot be renamed.</li>
+                                        index, sequence, view, or materialized view), the name of an
+                                        individual column in a table, or the name of a constraint of
+                                        the table. There is no effect on the stored data. Note that
+                                        Greenplum Database distribution key columns cannot be
+                                        renamed.</li>
                                 <li id="ay137307"><b>SET SCHEMA</b> — Moves the table into another
                                         schema. Associated indexes, constraints, and sequences owned
                                         by table columns are moved as well. </li>

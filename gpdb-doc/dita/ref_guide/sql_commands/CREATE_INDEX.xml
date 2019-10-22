@@ -16,9 +16,9 @@
                 <section id="section3">
                         <title>Description</title>
                         <p><codeph>CREATE INDEX</codeph> constructs an index on the specified
-                                column(s) of the specified table. Indexes are primarily used to 
-                                enhance database performance (though inappropriate use can result in
-                                slower performance). </p>
+                                column(s) of the specified table or materialized view. Indexes are
+                                primarily used to enhance database performance (though inappropriate
+                                use can result in slower performance). </p>
                         <p>The key field(s) for the index are specified as column names, or
                                 alternatively as expressions written in parentheses. Multiple fields
                                 can be specified if the index method supports multicolumn

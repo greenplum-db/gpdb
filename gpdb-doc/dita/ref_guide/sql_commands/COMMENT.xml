@@ -23,6 +23,7 @@
   FUNCTION <varname>func_name</varname> ([[<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...]]) |
   INDEX <varname>object_name</varname> |
   LARGE OBJECT <varname>large_object_oid</varname> |
+  MATERIALIZED VIEW <varname>object_name</varname> |
   OPERATOR <varname>operator_name</varname> (<varname>left_type</varname>, <varname>right_type</varname>) |
   OPERATOR CLASS <varname>object_name</varname> USING <varname>index_method</varname> |
   [PROCEDURAL] LANGUAGE <varname>object_name</varname> |
@@ -72,10 +73,10 @@ IS '<varname>text</varname>'</codeblock>
           <pt><varname>trigger_name</varname></pt>
           <pd>The name of the object to be commented. Names of tables, aggregates, collations,
             conversions, domains, foreign tables, functions, indexes, operators, operator classes,
-            operator families, sequences, text search objects, types, and views can be
-            schema-qualified.  When commenting on a column, <varname>relation_name</varname> must
-            refer to a table, view, composite type, or foreign table.<note>Greenplum Database does
-              not support triggers.</note></pd>
+            operator families, sequences, text search objects, types, views, and materialized views
+            can be schema-qualified. When commenting on a column, <varname>relation_name</varname>
+            must refer to a table, view, materialized view, composite type, or foreign table.
+            <note>Greenplum Database does not support triggers.</note></pd>
         </plentry>
         <plentry>
           <pt><varname>source_type</varname></pt>

@@ -70,8 +70,8 @@
 		</section>
 		<p conref="sql_commands/ALTER_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/ALTER_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/ALTER_FOREIGN_DATA_WRAPPER.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_FOREIGN_DATA_WRAPPER.xml"/> for
+			more information.</p>
 		<section id="ae1903381t">
 			<title>ALTER FOREIGN TABLE</title>
 		</section>
@@ -106,6 +106,13 @@
 		<p conref="sql_commands/ALTER_LANGUAGE.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/ALTER_LANGUAGE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_LANGUAGE.xml"/> for more
+			information.</p>
+		<section>
+			<title>ALTER MATERIALIZED VIEW</title>
+		</section>
+		<p conref="sql_commands/ALTER_MATERIALIZED_VIEW.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_MATERIALIZED_VIEW.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_MATERIALIZED_VIEW.xml"/> for more
 			information.</p>
 		<section id="ae1903429">
 			<title>ALTER OPERATOR</title>
@@ -160,8 +167,8 @@
 			<title>ALTER RULE</title>
 		</section>
 		<p conref="sql_commands/ALTER_RULE.xml#topic1/sql_command_desc"/>
-	    <codeblock conref="sql_commands/ALTER_RULE.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/ALTER_RULE.xml"/> for more 
+		<codeblock conref="sql_commands/ALTER_RULE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_RULE.xml"/> for more
 			information.</p>
 		<section id="ae1903537">
 			<title>ALTER SCHEMA</title>
@@ -201,31 +208,31 @@
 		<section>
 			<title>ALTER TEXT SEARCH CONFIGURATION</title>
 		</section>
-	    <p conref="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_desc"/>
-  		<codeblock conref="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_synopsis"/>
-  		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml"/> for more
-  		information.</p>
+		<p conref="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml"/>
+			for more information.</p>
 		<section>
 			<title>ALTER TEXT SEARCH DICTIONARY</title>
 		</section>
 		<p conref="sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml"/> for
+			more information.</p>
 		<section>
 			<title>ALTER TEXT SEARCH PARSER</title>
 		</section>
 		<p conref="sql_commands/ALTER_TEXT_SEARCH_PARSER.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/ALTER_TEXT_SEARCH_PARSER.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_PARSER.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_PARSER.xml"/> for
+			more information.</p>
 		<section>
 			<title>ALTER TEXT SEARCH TEMPLATE</title>
 		</section>
 		<p conref="sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml"/> for
+			more information.</p>
 		<section id="ae1903781">
 			<title>ALTER TYPE</title>
 		</section>
@@ -367,8 +374,8 @@
 		</section>
 		<p conref="sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_FOREIGN_DATA_WRAPPER.xml"/> for
+			more information.</p>
 		<section id="ae1904203t">
 			<title>CREATE FOREIGN TABLE</title>
 		</section>
@@ -404,6 +411,13 @@
 		<codeblock conref="sql_commands/CREATE_LANGUAGE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/CREATE_LANGUAGE.xml"/> for more
 			information.</p>
+		<section>
+			<title>CREATE MATERIALIZED VIEW</title>
+		</section>
+		<p conref="sql_commands/CREATE_MATERIALIZED_VIEW.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_MATERIALIZED_VIEW.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_MATERIALIZED_VIEW.xml"/> for
+			more information.</p>
 		<section id="ae1904295">
 			<title>CREATE OPERATOR</title>
 		</section>
@@ -507,29 +521,29 @@
 		</section>
 		<p conref="sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.xml"/>
+			for more information.</p>
 		<section>
 			<title>CREATE TEXT SEARCH DICTIONARY</title>
 		</section>
 		<p conref="sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.xml"/>
+			for more information.</p>
 		<section>
 			<title>CREATE TEXT SEARCH PARSER</title>
 		</section>
 		<p conref="sql_commands/CREATE_TEXT_SEARCH_PARSER.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/CREATE_TEXT_SEARCH_PARSER.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_PARSER.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_PARSER.xml"/> for
+			more information.</p>
 		<section>
 			<title>CREATE TEXT SEARCH TEMPLATE</title>
 		</section>
 		<p conref="sql_commands/CREATE_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/CREATE_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_TEMPLATE.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_TEMPLATE.xml"/> for
+			more information.</p>
 		<section id="ae1904701">
 			<title>CREATE TYPE</title>
 		</section>
@@ -652,8 +666,8 @@
 		</section>
 		<p conref="sql_commands/DROP_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_FOREIGN_DATA_WRAPPER.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/DROP_FOREIGN_DATA_WRAPPER.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_FOREIGN_DATA_WRAPPER.xml"/> for
+			more information.</p>
 		<section id="ae1904845t">
 			<title>DROP FOREIGN TABLE</title>
 		</section>
@@ -688,6 +702,13 @@
 		<p conref="sql_commands/DROP_LANGUAGE.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_LANGUAGE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_LANGUAGE.xml"/> for more
+			information.</p>
+		<section>
+			<title>DROP MATERIALIZED VIEW</title>
+		</section>
+		<p conref="sql_commands/DROP_MATERIALIZED_VIEW.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_MATERIALIZED_VIEW.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_MATERIALIZED_VIEW.xml"/> for more
 			information.</p>
 		<section id="ae1904881">
 			<title>DROP OPERATOR</title>
@@ -792,15 +813,15 @@
 		</section>
 		<p conref="sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.xml"/>
+			for more information.</p>
 		<section>
 			<title>DROP TEXT SEARCH DICTIONARY</title>
 		</section>
 		<p conref="sql_commands/DROP_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_DICTIONARY.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_DICTIONARY.xml"/> for
+			more information.</p>
 		<section>
 			<title>DROP TEXT SEARCH PARSER</title>
 		</section>
@@ -813,8 +834,8 @@
 		</section>
 		<p conref="sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml"/> for more
-			information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml"/> for
+			more information.</p>
 		<section id="ae1904947">
 			<title>DROP TYPE</title>
 		</section>
@@ -913,6 +934,13 @@
 		<codeblock conref="sql_commands/REASSIGN_OWNED.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/REASSIGN_OWNED.xml"/> for more
 			information.</p>
+		<section>
+			<title>REFRESH MATERIALIZED VIEW</title>
+		</section>
+		<p conref="sql_commands/REFRESH_MATERIALIZED_VIEW.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/REFRESH_MATERIALIZED_VIEW.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/REFRESH_MATERIALIZED_VIEW.xml"/> for
+			more information.</p>
 		<section id="ae1905133">
 			<title>REINDEX</title>
 		</section>
@@ -984,7 +1012,8 @@
 		</section>
 		<p conref="sql_commands/SET_CONSTRAINTS.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/SET_CONSTRAINTS.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/SET_CONSTRAINTS.xml"/> for more information.</p>
+		<p otherprops="op-html">See <xref href="sql_commands/SET_CONSTRAINTS.xml"/> for more
+			information.</p>
 		<section id="ae1905373">
 			<title>SET ROLE</title>
 		</section>
