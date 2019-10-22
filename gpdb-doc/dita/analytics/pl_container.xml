@@ -573,7 +573,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
         element that contains a corresponding <codeph>id</codeph> XML element that specifies the
         Docker container startup information. See <xref href="#topic_sk1_gdq_dw" format="dita"/> for
         information about how PL/Container maps the <varname>ID</varname> to a Docker image. See
-          <xref href="#topic9" format="dita"/> for example UDF definitions.</p>
+          <xref href="#topic_kwg_qfg_mjb" format="dita"/> for example UDF definitions.</p>
       <p>The PL/Container configuration file is read only on the first invocation of a PL/Container
         function in each Greenplum Database session that runs PL/Container functions. You can force
         the configuration file to be re-read by performing a <codeph>SELECT</codeph> command on the
@@ -630,7 +630,7 @@ gp_segment_id | plcontainer_show_local_config
  1          | bc9a0c04019c266f6d8269ffe35769d118bfb96ec634549b2b1bd2401ea20158 | Up 2 minutes | gpadmin | 13628
 (2 rows)</codeblock>
     </body>
-    <topic id="topic9" xml:lang="en">
+    <topic xml:lang="en" id="topic_kwg_qfg_mjb">
       <title id="pz215232">Examples</title>
       <body>
         <p>The values in the <codeph># container</codeph> lines of the examples,
@@ -905,7 +905,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                       <codeph>id</codeph> element in the PL/Container configuration file. Maximum
                     length is 63 Bytes.</pd>
                   <pd>You specify the name in the Greenplum Database UDF on the <codeph>#
-                      container</codeph> line. See <xref href="#topic9" format="dita"/>.</pd>
+                      container</codeph> line. See <xref href="#topic_kwg_qfg_mjb" format="dita"
+                    />.</pd>
                 </plentry>
                 <plentry>
                   <pt>{<b>-s</b> | <b>--setting</b>}

@@ -289,8 +289,8 @@ $$ LANGUAGE plpythonu;</codeblock>
           Guide</cite>.</p>
       </body>
     </topic>
-    <topic id="topic9" xml:lang="en">
-      <title>Using the dictionary GD To Improve PL/Python Performance</title>
+    <topic xml:lang="en" id="topic_hfj_dgg_mjb">
+      <title id="title_zw1_bgg_mjb">Using the dictionary GD To Improve PL/Python Performance</title>
       <body>
         <p>In terms of performance, importing a Python module is an expensive operation and can
           affect performance. If you are importing the same module frequently, you can use Python
