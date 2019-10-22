@@ -484,9 +484,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry><codeph>CREATE MATERIALIZED VIEW</codeph></entry>
-              <entry>NO</entry>
-              <entry>Greenplum Database does not support materialized views (a PostgreSQL
-                extension).</entry>
+              <entry>YES</entry>
+              <entry>Based on PostgreSQL 9.4.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE OPERATOR</codeph></entry>
@@ -843,9 +842,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry><codeph>REFRESH MATERIALIZED VIEW</codeph></entry>
-              <entry>NO</entry>
-              <entry>Greenplum Database does not support materialized views (a PostgreSQL
-                extension).</entry>
+              <entry>YES</entry>
+              <entry>Based on PostgreSQL 9.4.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>REINDEX</codeph></entry>
