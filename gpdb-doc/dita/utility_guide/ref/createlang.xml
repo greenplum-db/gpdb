@@ -17,12 +17,17 @@
     </section>
     <section id="section3">
       <title>Description</title>
+     
+      
       <p>The <codeph>createlang</codeph> utility adds a new procedural language to a database.
           <codeph>createlang</codeph> is a wrapper around the <codeph>SQL</codeph> command
           <codeph><xref
               href="../../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1"/></codeph>.</p>
-      <note><codeph>createlang</codeph> is deprecated and may be removed in a future release. Direct
-        use of the <codeph>CREATE EXTENSION</codeph> command is recommended instead.</note>
+      <note><codeph>createlang</codeph> is deprecated and may be removed in a future release. From
+        Greenplum Database 6.0, using <codeph>createlang</codeph> to add a procedural language
+        package will result in an error. Direct use of the <codeph>CREATE EXTENSION</codeph> command
+        is recommended instead.</note>
+      
       <p>The procedural language packages included in the standard Greenplum Database
         distribution are:</p>
       <ul>

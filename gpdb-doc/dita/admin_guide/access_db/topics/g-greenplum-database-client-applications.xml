@@ -76,6 +76,11 @@
             </tbody>
          </tgroup>
       </table>
+      
+      <note><codeph>createlang</codeph> and <codeph>droplang</codeph> are deprecated and may be removed in a future release. From
+         Greenplum Database 6.0 using <codeph>createlang</codeph> or <codeph>droplang</codeph> to add or remove a procedural language
+         package will result in an error. Use the <codeph>CREATE EXTENSION</codeph> or <codeph>DROP EXTENSION</codeph> commands instead.</note>
+      
       <p>When using these client applications, you must connect to a database through the Greenplum master instance. You will need to know the name of your
          target database, the host name and port number of the master, and what database user name
          to connect as. This information can be provided on the command-line using the options
