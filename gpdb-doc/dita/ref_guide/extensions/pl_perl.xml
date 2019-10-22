@@ -110,6 +110,10 @@
                     command as the <codeph>gpadmin</codeph> user to register the trusted PL/Perl
                     language for the database named <codeph>testdb</codeph>: </p>
                 <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plperl;'</codeblock>
+                
+                <note>Using the <codeph>createlang</codeph> deprecated command to enable Perl, used in previous releases, 
+                    will generate an error.</note>
+                
             </body>
         </topic>
         <topic id="topic62" xml:lang="en">
@@ -124,6 +128,9 @@
                 <p> The default command fails if any existing objects (such as functions) depend on
                     the language. Specify the <codeph>CASCADE</codeph> option to also drop all
                     dependent objects, including functions that you created with PL/Perl. </p>
+                
+                <note>Using the <codeph>droplang</codeph> deprecated command to remove support for
+                    PL/Perl, used in previous releases, will generate an error.</note>
             </body>
         </topic>
     </topic>

@@ -69,6 +69,9 @@
             <codeph>testdb</codeph>:</p>
         <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plpythonu;'</codeblock>
         <p>PL/Python is registered as an untrusted language.</p>
+        
+        <note>Using the <codeph>createlang</codeph> deprecated command to enable PL/Python, used in
+          previous releases, will generate an error.</note> 
       </body>
     </topic>
     <topic id="topic6" xml:lang="en">
@@ -83,6 +86,8 @@
         <p> The default command fails if any existing objects (such as functions) depend on the
           language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent objects,
           including functions that you created with PL/Python. </p>
+        <note>Using the <codeph>droplang</codeph> deprecated command to remove support for
+          PL/Python, used in previous releases, will generate an error.</note>
       </body>
     </topic>
   </topic>
