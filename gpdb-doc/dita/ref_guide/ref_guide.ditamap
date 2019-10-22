@@ -174,7 +174,6 @@
 			<topicref href="datatype-range.xml"/>
 		</topicref>
 		<topicref href="function-summary.xml" id="func_summary"/>
-		<topicref href="extensions/extensions.ditamap" format="ditamap"/>
 		<topicref href="modules/modules.ditamap" format="ditamap"/>
 		<topicref href="character_sets.xml" id="character_sets"/>
 		<topicref href="config_params/guc_config.ditamap" id="guc_config" format="ditamap"/>

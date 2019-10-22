@@ -368,7 +368,8 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
             database.<codeblock>SELECT proname, prosrc FROM pg_proc WHERE prolang = (SELECT oid FROM pg_language WHERE lanname = 'plcontainer');</codeblock><p>For
             information about the catalog tables, <codeph>pg_proc</codeph> and
               <codeph>pg_language</codeph>, see <xref
-              href="../system_catalogs/catalog_ref-tables.xml" format="dita"/>. </p></note>
+              href="../ref_guide/system_catalogs/catalog_ref-tables.xml" format="dita" scope="peer"
+              >System Tables</xref>. </p></note>
         <p>These steps upgrade from PL/Container 1.0 to PL/Container 1.1 or later in a database. The
           steps save the PL/Container 1.0 configuration and restore the configuration for use with
           PL/Container 1.1 or later.<ol id="ol_axf_mmq_vcb">
@@ -968,11 +969,11 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                         for the container. The value is either <codeph>yes</codeph> (enable logging)
                         or <codeph>no</codeph> (disable logging, the default). <p>The Greenplum
                           Database server configuration parameter <codeph><xref
-                              href="../config_params/guc-list.xml#log_min_messages"
-                              >log_min_messages</xref></codeph> controls the log level. The default
-                          log level is <codeph>warning</codeph>. For information about PL/Container
-                          log information, see <xref href="#plc_notes" format="dita"
-                          >Notes</xref>.</p></li>
+                              href="../ref_guide/config_params/guc-list.xml#log_min_messages"
+                              scope="peer">log_min_messages</xref></codeph> controls the log level.
+                          The default log level is <codeph>warning</codeph>. For information about
+                          PL/Container log information, see <xref href="#plc_notes" format="dita"
+                            >Notes</xref>.</p></li>
                     </ul></pd>
                 </plentry>
                 <plentry>
@@ -1324,11 +1325,11 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                           attribute value <codeph>yes</codeph> enables logging. The attribute value
                             <codeph>no</codeph> disables logging (the default). </pd>
                         <pd>The Greenplum Database server configuration parameter <codeph><xref
-                              href="../config_params/guc-list.xml#log_min_messages"
-                              >log_min_messages</xref></codeph> controls the PL/Container log level.
-                          The default log level is <codeph>warning</codeph>. For information about
-                          PL/Container log information, see <xref href="#plc_notes" format="dita"
-                            >Notes</xref>.</pd>
+                              href="../ref_guide/config_params/guc-list.xml#log_min_messages"
+                              scope="peer">log_min_messages</xref></codeph> controls the
+                          PL/Container log level. The default log level is <codeph>warning</codeph>.
+                          For information about PL/Container log information, see <xref
+                            href="#plc_notes" format="dita">Notes</xref>.</pd>
                         <pd>
                           <p>By default, the PL/Container log information is sent to a system
                             service. On Red Hat 7 or CentOS 7 systems, the log information is sent
