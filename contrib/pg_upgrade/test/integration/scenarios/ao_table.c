@@ -13,8 +13,8 @@
 #include "utilities/upgrade-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
-#include "bdd-library/bdd.h"
 
+#include "utilities/bdd-helpers.h"
 #include "ao_table.h"
 
 typedef struct UserData
@@ -137,7 +137,7 @@ anAdministratorPerformsAnUpgrade()
 void
 test_an_ao_table_with_data_can_be_upgraded(void **state)
 {
-	given(createAoTableWithDataInFiveCluster);
+	given(withinGpdbFiveCluster(createAoTableWithDataInFiveCluster));
 	when(anAdministratorPerformsAnUpgrade);
-	then(aoTableShouldHaveDataUpgradedToSixCluster);
+	then(withinGpdbSixCluster(aoTableShouldHaveDataUpgradedToSixCluster));
 }

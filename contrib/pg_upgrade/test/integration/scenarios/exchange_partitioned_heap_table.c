@@ -1,8 +1,10 @@
+#include "utilities/gpdb5-cluster.h"
+#include "utilities/gpdb6-cluster.h"
 #include "utilities/upgrade-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
-#include "bdd-library/bdd.h"
 
+#include "utilities/bdd-helpers.h"
 #include "exchange_partitioned_heap_table.h"
 
 static void
@@ -28,6 +30,6 @@ anAdministratorPerformsAnUpgradeCheck()
 
 void test_an_exchange_partitioned_heap_table_cannot_be_upgraded(void ** state)
 {
-	given(createExchangePartitionedHeapTableInFiveCluster);
+	given(withinGpdbFiveCluster(createExchangePartitionedHeapTableInFiveCluster));
 	when(anAdministratorPerformsAnUpgradeCheck);
 }

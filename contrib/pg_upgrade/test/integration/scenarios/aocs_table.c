@@ -7,12 +7,14 @@
 
 #include "cmockery.h"
 #include "libpq-fe.h"
+
+#include "utilities/gpdb5-cluster.h"
+#include "utilities/gpdb6-cluster.h"
 #include "utilities/upgrade-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
 
-#include "bdd-library/bdd.h"
-
+#include "utilities/bdd-helpers.h"
 #include "aocs_table.h"
 
 typedef struct UserData
@@ -133,7 +135,7 @@ theAocsTableShouldHaveDataUpgradedToSixCluster(void)
 
 void test_an_aocs_table_with_data_can_be_upgraded(void **state)
 {
-	given(anAocsTableExistsWithDataInFiveCluster);
+	given(withinGpdbFiveCluster(anAocsTableExistsWithDataInFiveCluster));
 	when(anAdministratorPerformsAnUpgrade);
-	then(theAocsTableShouldHaveDataUpgradedToSixCluster);
+	then(withinGpdbSixCluster(theAocsTableShouldHaveDataUpgradedToSixCluster));
 }

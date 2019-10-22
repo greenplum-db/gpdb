@@ -8,8 +8,9 @@
 #include "cmockery.h"
 #include "libpq-fe.h"
 
-#include "bdd-library/bdd.h"
-
+#include "utilities/bdd-helpers.h"
+#include "utilities/gpdb5-cluster.h"
+#include "utilities/gpdb6-cluster.h"
 #include "utilities/upgrade-helpers.h"
 #include "utilities/test-helpers.h"
 #include "utilities/query-helpers.h"
@@ -136,7 +137,7 @@ theSubpartitionShouldExistWithDataInTheGpdbSixCluster(void)
 void
 test_a_subpartitioned_heap_table_with_data_can_be_upgraded(void **state)
 {
-	given(aSubpartitionedHeapTableHasDataInAGpdbFiveCluster);
+	given(withinGpdbFiveCluster(aSubpartitionedHeapTableHasDataInAGpdbFiveCluster));
 	when(anAdministratorPerformsAnUpgrade);
-	then(theSubpartitionShouldExistWithDataInTheGpdbSixCluster);
+	then(withinGpdbSixCluster(theSubpartitionShouldExistWithDataInTheGpdbSixCluster));
 }

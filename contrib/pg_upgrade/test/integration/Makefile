@@ -7,7 +7,7 @@ scenario_objs := $(patsubst %.c,%.o,$(wildcard scenarios/*.c))
 utilities_objs := $(patsubst %.c,%.o,$(wildcard utilities/*.c))
 scripts_objs := $(patsubst %.c,%.o,$(wildcard scripts/*.c))
 
-OBJS = bdd-library/upgrade-bdd.o \
+OBJS = bdd-library/bdd.o \
 	$(scripts_objs) \
 	$(utilities_objs) \
 	$(scenario_objs) \
@@ -33,7 +33,7 @@ scripts/gpdb6-cluster: scripts/gpdb6-cluster.o utilities/gpdb6-cluster.o
 #
 # Libraries
 #
-bdd-library/upgrade-bdd.o: override CPPFLAGS += -I .
+bdd-library/bdd.o: override CPPFLAGS += -I .
 
 utilities_CPPFLAGS = -I$(pg_upgrade_directory) \
 	-I$(libpq_srcdir) \
@@ -46,7 +46,7 @@ $(utilities_objs) \
 #
 # Tests
 #
-test_dependencies = bdd-library/upgrade-bdd.o \
+test_dependencies = bdd-library/bdd.o \
 	$(utilities_objs) \
 	$(scenario_objs) \
 	$(CMOCKERY_OBJS)

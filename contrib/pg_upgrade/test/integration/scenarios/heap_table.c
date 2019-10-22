@@ -15,8 +15,7 @@
 #include "utilities/upgrade-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
-#include "bdd-library/bdd.h"
-
+#include "utilities/bdd-helpers.h"
 #include "heap_table.h"
 
 #include "utilities/row-assertions.h"
@@ -226,8 +225,8 @@ test_a_heap_table_with_data_can_be_upgraded(void **state)
 	matcher = users_match;
 	match_failed = user_match_failed;
 
-	given(createHeapTableWithDataInFiveCluster);
+	given(withinGpdbFiveCluster(createHeapTableWithDataInFiveCluster));
 	when(anAdministratorPerformsAnUpgrade);
-	then(heapTableShouldHaveDataUpgradedToSixCluster);
-	and(heapTableShouldBeHardLinked);
+	then(withinGpdbSixCluster(heapTableShouldHaveDataUpgradedToSixCluster));
+	and(withinGpdbSixCluster(heapTableShouldBeHardLinked));
 }

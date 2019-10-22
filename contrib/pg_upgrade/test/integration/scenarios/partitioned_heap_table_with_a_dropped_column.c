@@ -6,10 +6,14 @@
 #include "cmockery.h"
 
 #include "partitioned_heap_table_with_a_dropped_column.h"
+
+#include "utilities/gpdb5-cluster.h"
+#include "utilities/gpdb6-cluster.h"
 #include "utilities/upgrade-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
-#include "bdd-library/bdd.h"
+
+#include "utilities/bdd-helpers.h"
 
 static void
 partitionedHeapTableShouldHaveDataUpgradedToSixCluster()
@@ -57,7 +61,7 @@ createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster(void)
 void
 test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded(void ** state)
 {
-	given(createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster);
+	given(withinGpdbFiveCluster(createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster));
 	when(anAdministratorPerformsAnUpgrade);
-	then(partitionedHeapTableShouldHaveDataUpgradedToSixCluster);
+	then(withinGpdbSixCluster(partitionedHeapTableShouldHaveDataUpgradedToSixCluster));
 }
