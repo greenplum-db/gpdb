@@ -337,7 +337,7 @@ $ sudo apt install openjdk-&lt;<varname>version</varname>>-jdk</codeblock><p>For
       <ul id="ul_zsz_fs5_b1b">
         <li id="pv165655"><xref href="#topic8" type="topic" format="dita"/>
         </li>
-        <li id="pv165686"><xref href="#topic9" type="topic" format="dita"/>
+        <li id="pv165686"><xref href="#topic_tgt_nfg_mjb" format="dita"/>
         </li>
       </ul>
     </body>
@@ -357,7 +357,7 @@ $ sudo apt install openjdk-&lt;<varname>version</varname>>-jdk</codeblock><p>For
           error.</note>
       </body>
     </topic>
-    <topic id="topic9" xml:lang="en">
+    <topic xml:lang="en" id="topic_tgt_nfg_mjb">
       <title id="pv165506">Uninstall the Java JAR files and Software Package</title>
       <body>
         <p>If no databases have PL/Java as a registered language, remove the Java JAR files and

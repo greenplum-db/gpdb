@@ -205,15 +205,16 @@ $$ LANGUAGE plpgsql;</codeblock>
           result placeholders.</p>
       </body>
     </topic>
-    <topic id="topic9" xml:lang="en">
+    <topic xml:lang="en" id="topic_mbj_vfg_mjb">
       <title>Example: Composite Type Based on a Table Row</title>
       <body>
-        <p>A variable of a composite type is called a row variable. The following syntax declares a composite variable based on table row:</p>
+        <p>A variable of a composite type is called a row variable. The following syntax declares a
+          composite variable based on table row:</p>
         <codeblock>name table_name%ROWTYPE;</codeblock>
         <p>Such a row variable can hold a whole row of a <codeph>SELECT</codeph> or
-            <codeph>FOR</codeph> query result, so long as that query's column set matches the declared
-          type of the variable. The individual fields of the row value are accessed using the usual
-          dot notation, for example <codeph>rowvar.column</codeph>.</p>
+            <codeph>FOR</codeph> query result, so long as that query's column set matches the
+          declared type of the variable. The individual fields of the row value are accessed using
+          the usual dot notation, for example <codeph>rowvar.column</codeph>.</p>
         <p>Parameters to a function can be composite types (complete table rows). In that case, the
           corresponding identifier <codeph>$n</codeph> will be a row variable, and fields can be
           selected from it, for <codeph>example $1.user_id</codeph>.</p>
@@ -233,8 +234,8 @@ $$ LANGUAGE plpgsql;</codeblock>
  ('test2', 52.5, 2),
  ('test3', 32.22, 6),
  ('test4', 12.1, 4) ;</codeblock></p>
-        <p>This function uses a column <codeph>%TYPE</codeph> variable and <codeph>%ROWTYPE</codeph> composite variable based on
-            <codeph>table1</codeph>. </p>
+        <p>This function uses a column <codeph>%TYPE</codeph> variable and <codeph>%ROWTYPE</codeph>
+          composite variable based on <codeph>table1</codeph>. </p>
         <codeblock>CREATE OR REPLACE FUNCTION t1_calc( name text) RETURNS integer 
 AS $$ 
 DECLARE
