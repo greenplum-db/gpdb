@@ -33,8 +33,8 @@
         extension, you can write a Greenplum Database user-defined functions in Python that take
         advantage of Python features and modules to quickly build robust database applications. </p>
       <p>You can run PL/Python code blocks as anonymous code blocks. See the <codeph><xref
-            href="../sql_commands/DO.xml#topic1">DO</xref></codeph> command in the <cite>Greenplum
-          Database Reference Guide</cite>.</p>
+            href="../ref_guide/sql_commands/DO.xml#topic1" scope="peer">DO</xref></codeph> command
+        in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>The Greenplum Database PL/Python extension is installed by default with Greenplum Database.
         Greenplum Database installs a version of Python and PL/Python. This is location of the
         Python installation that Greenplum Database uses:</p>
@@ -354,8 +354,8 @@ $</codeblock></p>
         download these libraries in <codeph>.gppkg</codeph> format from <xref
           href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
           >Pivotal Network</xref>. For information about the libraries, see <xref scope="peer"
-          type="topic" format="dita" href="../../install_guide/install_python_dsmod.xml#topic1"
-          >Python Data Science Module Package</xref>.</p>
+          type="topic" format="dita" href="../install_guide/install_python_dsmod.xml#topic1">Python
+          Data Science Module Package</xref>.</p>
       <p>These sections describe installing and testing Python modules:<ul id="ul_ukh_4wr_wt">
           <li><xref href="#topic_yx3_yjq_rt" format="dita"/></li>
           <li><xref href="#topic_g4j_hmt_ycb" format="dita"/></li>

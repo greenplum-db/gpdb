@@ -37,11 +37,10 @@
       <p>The <codeph>PL/pgSQL</codeph> language is registered in all databases by default.</p>
       <p>Greenplum Database also has language handlers for <codeph>PL/Java</codeph> and
           <codeph>PL/R</codeph>, but those languages are not pre-installed with Greenplum Database.
-        See the <xref href="../../ref_guide/extensions/pl_java.xml" scope="peer"
-          format="dita">Greenplum PL/Java Language Extension</xref> and
-          <xref href="../../ref_guide/extensions/pl_r.xml" scope="peer"
-          format="dita">Greenplum PL/R Language Extension</xref> sections in the
-          documentation for more information.</p>
+        See the <xref href="../../analytics/pl_java.xml" scope="peer" format="dita">Greenplum
+          PL/Java Language Extension</xref> and <xref href="../../analytics/pl_r.xml" scope="peer"
+          format="dita">Greenplum PL/R Language Extension</xref> sections in the documentation for
+        more information.</p>
     </section>
     <section id="section4"><title>Options</title><parml>
         <plentry>

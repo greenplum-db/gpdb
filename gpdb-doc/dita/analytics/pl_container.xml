@@ -149,7 +149,7 @@
         <p>With PL/Container 1.2.0 and later, you can use Greenplum Database resource groups to
           manage and limit the total CPU and memory resources of containers in PL/Container
           runtimes. For more information about enabling, configuring, and using Greenplum Database
-          resource groups, refer to <xref href="../../admin_guide/workload_mgmt_resgroups.xml"
+          resource groups, refer to <xref href="../admin_guide/workload_mgmt_resgroups.xml"
             format="dita" scope="peer">Using Resource Groups</xref> in the <cite>Greenplum Database
             Administrator Guide</cite>.</p>
         <note>If you do not explicitly configure resource groups for a PL/Container runtime, its
@@ -168,7 +168,7 @@
      CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
         <p>PL/Container does not use the <codeph>MEMORY_SHARED_QUOTA</codeph> and
             <codeph>MEMORY_SPILL_RATIO</codeph> resource group memory limits. Refer to the
-              <codeph><xref href="../../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml"
+              <codeph><xref href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml"
               format="dita" scope="peer">CREATE RESOURCE GROUP</xref></codeph> reference page for
           detailed information about this SQL command.</p>
         <p>You can create one or more resource groups to manage your running PL/Container instances.
@@ -181,7 +181,7 @@
           <codeph>plpy_run1_rg</codeph>:<codeblock>SELECT groupname, groupid FROM gp_toolkit.gp_resgroup_config
      WHERE groupname='plpy_run1_rg';
 
-  groupname   |  groupid  
+  groupname   |  groupid
 --------------+----------
  plpy_run1_rg |   16391
 (1 row)</codeblock></p>
@@ -224,7 +224,7 @@
             <li>If you have not already configured and enabled resource groups in your Greenplum
               Database deployment, configure cgroups and enable Greenplum Database resource groups
               as described in <xref
-                href="../../admin_guide/workload_mgmt_resgroups.xml#topic71717999" format="dita"
+                href="../admin_guide/workload_mgmt_resgroups.xml#topic71717999" format="dita"
                 scope="peer">Using Resource Groups</xref> in the <cite>Greenplum Database
                 Administrator Guide</cite>.
               <note>If you have previously configured and enabled resource groups in your
@@ -251,7 +251,7 @@ CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
     CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></li>
             <li>Find and note the <codeph>groupid</codeph> associated with each resource group that
               you created. For
-              example:<codeblock>SELECT groupname, groupid FROM gp_toolkit.gp_resgroup_config 
+              example:<codeblock>SELECT groupname, groupid FROM gp_toolkit.gp_resgroup_config
     WHERE groupname IN ('plpy_run1_rg', 'plr_run1_rg');
 
   groupname   |  groupid
@@ -642,7 +642,7 @@ INFO:  plcontainer:     memory_mb = '1024'  (seg0 slice3 192.168.180.45:40000 pi
 INFO:  plcontainer:     use container network = 'no'  (seg0 slice3 192.168.180.45:40000 pid=3304)
 INFO:  plcontainer:     use container logging  = 'yes'  (seg0 slice3 192.168.180.45:40000 pid=3304)
 INFO:  plcontainer:     shared directory from host '/usr/local/greenplum-db/bin/plcontainer_clients' to container '/clientdir'  (seg0 slice3 192.168.180.45:40000 pid=3304)
-INFO:  plcontainer:         access = readonly  (seg0 slice3 192.168.180.45:40000 pid=3304) 
+INFO:  plcontainer:         access = readonly  (seg0 slice3 192.168.180.45:40000 pid=3304)
 gp_segment_id | plcontainer_show_local_config
 ---------------+-------------------------------
              0 | ok
@@ -1398,13 +1398,13 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             start Docker containers and reuse them as needed. After a certain amount of idle time, a
             QE process quits and destroys its Docker containers. You can control the amount of idle
             time with the Greenplum Database server configuration parameter <codeph><xref
-                href="../config_params/guc-list.xml#gp_vmem_idle_resource_timeout"
-                >gp_vmem_idle_resource_timeout</xref></codeph>. Controlling the idle time might help
-            with Docker container reuse and avoid the overhead of creating and starting a Docker
-            container.
-            <note type="warning">Changing <codeph>gp_vmem_idle_resource_timeout</codeph> value,
-              might affect performance due to resource issues. The parameter also controls the
-              freeing of Greenplum Database resources other than Docker containers.</note></li>
+                href="../ref_guide/config_params/guc-list.xml#gp_vmem_idle_resource_timeout"
+                scope="peer">gp_vmem_idle_resource_timeout</xref></codeph>. Controlling the idle
+            time might help with Docker container reuse and avoid the overhead of creating and
+            starting a Docker container. <note type="warning">Changing
+                <codeph>gp_vmem_idle_resource_timeout</codeph> value, might affect performance due
+              to resource issues. The parameter also controls the freeing of Greenplum Database
+              resources other than Docker containers.</note></li>
           <li>If a PL/Container Docker container exceeds the maximum allowed memory, it is
             terminated and an out of memory warning is displayed. On Red Hat 6 or CentOS 6 systems
             that are configured with Docker version 1.7.1, the out of memory warning is also
@@ -1435,10 +1435,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             hosts.</p></li>
           <li>When PL/Container logging is enabled, you can set the log level with the Greenplum
             Database server configuration parameter <codeph><xref
-                href="../config_params/guc-list.xml#log_min_messages"
-              >log_min_messages</xref></codeph>. The default log level is <codeph>warning</codeph>.
-            The parameter controls the PL/Container log level and also controls the Greenplum
-            Database log level.<ul id="ul_knd_jhl_mcb">
+                href="../ref_guide/config_params/guc-list.xml#log_min_messages" scope="peer"
+                >log_min_messages</xref></codeph>. The default log level is
+            <codeph>warning</codeph>. The parameter controls the PL/Container log level and also
+            controls the Greenplum Database log level.<ul id="ul_knd_jhl_mcb">
               <li>PL/Container logging is enabled or disabled for each runtime ID with the
                   <codeph>setting</codeph> attribute <codeph>use_container_logging</codeph>. The
                 default is no logging. </li>
