@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="gp_integrated_analytics">
+  <title>Greenplum Database Integrated Analytics</title>
+  
+  <body>
+   <section>
+     <title>Overview</title>
+     <p>Greenplum offers a powerful combination of a MPP database and data 
+       analytics libraries, like Madlib, the open source machine learning library. 
+       This unique platform offers an ideal environment for exploring among others 
+       Machine Learning, Deep Learning, Graph analytics, and Geospatial analysis.</p>
+     <image href="graphics/gp_integrated_analytics.jpg" placement="break" width="390px" height="310px"/>
+   </section> 
+    
+    
+  </body>
+</topic>
+
 <topic id="topic_khf_ltc_vbb">
   <title>Procedural Languages and Analytics Extensions</title>
   <body>
