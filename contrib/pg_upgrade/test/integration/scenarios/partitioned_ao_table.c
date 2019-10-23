@@ -34,6 +34,20 @@ partitionedAOTableShouldHaveDataUpgradedToSixCluster()
 }
 
 static void
+partitionedAOTableShouldHaveDataOnMultipleSegfilesUpgradedToSixCluster()
+{
+	PGconn	   *connection = connectToSix();
+	PGresult   *result;
+
+	executeQuery(connection, "SET search_path TO five_to_six_upgrade;");
+
+	result = executeQuery(connection, "SELECT * FROM users;");
+	assert_int_equal(5, PQntuples(result));
+
+	PQfinish(connection);
+}
+
+static void
 anAdministratorPerformsAnUpgrade()
 {
 	performUpgrade();
@@ -52,9 +66,54 @@ createPartitionedAOTableWithDataInFiveCluster(void)
 	PQfinish(connection);
 }
 
+static void
+createPartitionedAOTableWithDataOnMultipleSegfilesInFiveCluster(void)
+{
+	PGconn	   *connection1 = connectToFive();
+	PGconn	   *connection2 = connectToFive();
+
+	executeQuery(connection1, "CREATE SCHEMA five_to_six_upgrade;");
+	executeQuery(connection1, "SET search_path TO five_to_six_upgrade");
+	executeQuery(connection1,
+			"CREATE TABLE users (id int, name text) WITH (appendonly=true) DISTRIBUTED BY (id) "
+			"PARTITION BY RANGE (id) "
+			"    SUBPARTITION BY LIST (name) "
+			"        SUBPARTITION TEMPLATE ( "
+			"         SUBPARTITION jane VALUES ('Jane'), "
+			"          SUBPARTITION john VALUES ('John'), "
+			"           DEFAULT SUBPARTITION other_names ) "
+			"(START (1) END (2) EVERY (1), "
+			"    DEFAULT PARTITION other_ids );");
+	executeQuery(connection1, "BEGIN;");
+	executeQuery(connection1, "INSERT INTO users VALUES (1, 'Jane')");
+	executeQuery(connection1, "INSERT INTO users VALUES (2, 'Jane')");
+
+	executeQuery(connection2, "SET search_path TO five_to_six_upgrade");
+	executeQuery(connection2, "BEGIN;");
+	/*
+	 * (1, 'Jane') and (2, 'Jane') are also being inserted on connection1 in a
+	 * transaction so we expect this will create additional segment files.
+	 */
+	executeQuery(connection2, "INSERT INTO users VALUES (1, 'Jane')");
+	executeQuery(connection2, "INSERT INTO users VALUES (2, 'Jane')");
+	executeQuery(connection2, "INSERT INTO users VALUES (4, 'Andy')");
+
+	executeQuery(connection1, "END");
+	executeQuery(connection2, "END");
+	PQfinish(connection1);
+	PQfinish(connection2);
+}
+
 void test_a_partitioned_ao_table_with_data_can_be_upgraded(void **state)
 {
 	given(withinGpdbFiveCluster(createPartitionedAOTableWithDataInFiveCluster));
 	when(anAdministratorPerformsAnUpgrade);
 	then(withinGpdbSixCluster(partitionedAOTableShouldHaveDataUpgradedToSixCluster));
+}
+
+void test_a_partitioned_ao_table_with_data_on_multiple_segfiles_can_be_upgraded(void **state)
+{
+	given(createPartitionedAOTableWithDataOnMultipleSegfilesInFiveCluster);
+	when(anAdministratorPerformsAnUpgrade);
+	then(partitionedAOTableShouldHaveDataOnMultipleSegfilesUpgradedToSixCluster);
 }

@@ -48,6 +48,7 @@ main(int argc, char *argv[])
 		unit_test_setup_teardown(test_a_subpartitioned_heap_table_with_data_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partitioned_heap_table_with_data_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partitioned_ao_table_with_data_can_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_partitioned_ao_table_with_data_on_multiple_segfiles_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_an_exchange_partitioned_heap_table_cannot_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded, setup, teardown),
 	};
