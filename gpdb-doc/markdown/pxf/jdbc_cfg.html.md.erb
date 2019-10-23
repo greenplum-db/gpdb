@@ -350,7 +350,7 @@ Table heading key:
 | `KERBEROS` | `TRUE` | Identity provided in the PXF Kerberos principal, typically `gpadmin` | None |
 | `KERBEROS` | `TRUE` | User name that you provide  | Set `hive.server2.proxy.user` in `jdbc.url`  |
 | `KERBEROS` | `TRUE` | Greenplum user name  | Set `pxf.impersonation.jdbc` = `true` |
-| `KERBEROS` | `FALSE` | Identity provided in the PXF Kerberos principal, typically `gpadmin` |  None |
+| `KERBEROS` | `FALSE` | Identity provided in the `jdbc.url` `principal` parameter, typically `hive` |  None |
 
 **Note**: There are additional configuration steps required when Hive utilizes Kerberos authentication.
 
