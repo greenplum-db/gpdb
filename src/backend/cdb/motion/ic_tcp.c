@@ -236,7 +236,10 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 		if (fd == -1)
 			continue;
 
-#ifndef WIN32
+		/*
+		 * Interconnect setup may fail due to "address in use" error if SO_REUSEADDR
+		 * is not set.  See StreamServerPort for similar logic.
+		 */
 		if (!IS_AF_UNIX(rp->ai_family))
 		{
 			int one = 1;
@@ -250,7 +253,6 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 				continue;
 			}
 		}
-#endif
 
 		/*
 		 * we let the system pick the TCP port here so we don't have to manage
