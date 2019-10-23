@@ -2623,6 +2623,10 @@ DoCopyTo(CopyState cstate)
 	bool		fe_copy = (pipe && whereToSendOutput == DestRemote);
 	uint64		processed;
 
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet("DoCopyToFail", DDLNotSpecified, "", "");
+#endif
+
 	PG_TRY();
 	{
 		if (fe_copy)

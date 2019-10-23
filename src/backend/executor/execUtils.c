@@ -1543,7 +1543,6 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		if (qeError)
 		{
 			estate->dispatcherState = NULL;
-			cdbdisp_destroyDispatcherState(ds);
 			ReThrowError(qeError);
 		}
 

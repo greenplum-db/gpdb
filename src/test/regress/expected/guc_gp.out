@@ -4,6 +4,32 @@ SELECT min_val, max_val FROM pg_settings WHERE name = 'gp_resqueue_priority_cpuc
  0.1     | 512
 (1 row)
 
+-- Test cursor gang should not be reused if SET command happens.
+CREATE OR REPLACE FUNCTION test_set_cursor_func() RETURNS text as $$
+DECLARE
+  result text;
+BEGIN
+  EXECUTE 'select setting from pg_settings where name=''temp_buffers''' INTO result;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+SET temp_buffers = 2000;
+BEGIN;
+  DECLARE set_cusor CURSOR FOR SELECT relname FROM gp_dist_random('pg_class');
+  -- The GUC setting should not be dispatched to the cursor gang.
+  SET temp_buffers = 3000;
+END;
+-- Verify the cursor gang is not reused. If the gang is reused, the
+-- temp_buffers value on that gang should be old one, i.e. 2000 instead of
+-- the new committed 3000.
+SELECT * from (SELECT test_set_cursor_func() FROM gp_dist_random('pg_class') limit 1) t1
+  JOIN (SELECT test_set_cursor_func() FROM gp_dist_random('pg_class') limit 1) t2 ON TRUE;
+ test_set_cursor_func | test_set_cursor_func 
+----------------------+----------------------
+ 3000                 | 3000
+(1 row)
+
+RESET temp_buffers;
 --
 -- Test GUC if cursor is opened
 --

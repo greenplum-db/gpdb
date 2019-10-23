@@ -32,16 +32,7 @@
 
 static int numNonExtendedDispatcherState = 0;
 
-typedef struct dispatcher_handle_t
-{
-	struct CdbDispatcherState *dispatcherState;
-
-	ResourceOwner owner;	/* owner of this handle */
-	struct dispatcher_handle_t *next;
-	struct dispatcher_handle_t *prev;
-} dispatcher_handle_t;
-
-static dispatcher_handle_t *open_dispatcher_handles;
+dispatcher_handle_t *open_dispatcher_handles;
 static void cleanup_dispatcher_handle(dispatcher_handle_t *h);
 
 static dispatcher_handle_t *find_dispatcher_handle(CdbDispatcherState *ds);
@@ -297,8 +288,11 @@ cdbdisp_makeDispatcherState(bool isExtendedQuery)
 	}
 
 	handle = allocate_dispatcher_handle();
-	handle->dispatcherState->destroyGang = false;
+	handle->dispatcherState->forceDestroyGang = false;
 	handle->dispatcherState->isExtendedQuery = isExtendedQuery;
+#ifdef USE_ASSERT_CHECKING
+	handle->dispatcherState->isGangDestroying = false;
+#endif
 	handle->dispatcherState->allocatedGangs = NIL;
 	handle->dispatcherState->largestGangSize = 0;
 
@@ -338,6 +332,11 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 
 	if (!ds)
 		return;
+#ifdef USE_ASSERT_CHECKING
+	/* Disallow reentrance. */
+	Assert (!ds->isGangDestroying);
+	ds->isGangDestroying = true;
+#endif
 
 	if (!ds->isExtendedQuery)
 	{
@@ -369,7 +368,7 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 	{
 		Gang *gp = lfirst(lc);
 
-		RecycleGang(gp, ds->destroyGang);
+		RecycleGang(gp, ds->forceDestroyGang);
 	}
 
 	ds->allocatedGangs = NIL;
@@ -554,28 +553,6 @@ cdbdisp_cleanupDispatcherHandle(const struct ResourceOwnerData *owner)
 		{
 			cleanup_dispatcher_handle(curr);
 		}
-	}
-}
-
-/*
- * Called by CdbDispatchSetCommand(), SET command can not be dispatched
- * to named portal (like CURSOR). On the one hand, it might be in a busy
- * status, on the other hand, SET command should not affect running CURSOR
- * like 'search_path' etc; 
- *
- * Meanwhile when a dispatcher state of named portal is destroyed, its
- * gang should not be recycled because its guc was not set, so need to
- * mark those gangs destroyed when dispatcher state is destroyed.
- */
-void
-cdbdisp_markNamedPortalGangsDestroyed(void)
-{
-	dispatcher_handle_t *head = open_dispatcher_handles;
-	while (head != NULL)
-	{
-		if (!head->dispatcherState->isExtendedQuery)
-			head->dispatcherState->destroyGang = true;
-		head = head->next;
 	}
 }
 

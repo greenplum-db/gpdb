@@ -234,6 +234,25 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 }
 
 /*
+ * SET command can not be dispatched to named portal (like CURSOR). On the one
+ * hand, named portal might be busy and also it should not be affected by
+ * the SET command. Then when a dispatcher state of named portal is destroyed,
+ * its gang should not be recycled because its guc was not set, so need to mark
+ * those gangs as not recyclable.
+ */
+static void
+cdbdisp_markNamedPortalGangsDestroyed(void)
+{
+	dispatcher_handle_t *head = open_dispatcher_handles;
+	while (head != NULL)
+	{
+		if (head->dispatcherState->isExtendedQuery)
+			head->dispatcherState->forceDestroyGang = true;
+		head = head->next;
+	}
+}
+
+/*
  * Special for sending SET commands that change GUC variables, so they go to all
  * gangs, both reader and writer
  *
@@ -289,8 +308,6 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 	cdbdisp_getDispatchResults(ds, &qeError);
 
-	cdbdisp_destroyDispatcherState(ds);
-
 	/*
 	 * For named portal (like CURSOR), SET command will not be
 	 * dispatched. Meanwhile such gang should not be reused because
@@ -299,9 +316,9 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 	cdbdisp_markNamedPortalGangsDestroyed();
 
 	if (qeError)
-	{
 		ReThrowError(qeError);
-	}
+
+	cdbdisp_destroyDispatcherState(ds);
 }
 
 /*
@@ -431,10 +448,7 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	pr = cdbdisp_getDispatchResults(ds, &qeError);
 
 	if (qeError)
-	{
-		cdbdisp_destroyDispatcherState(ds);
 		ReThrowError(qeError);
-	}
 
 	cdbdisp_returnResults(pr, cdb_pgresults);
 
@@ -1174,8 +1188,6 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		 */
 		cdbdisp_getDispatchResults(ds, &qeError);
 
-		cdbdisp_destroyDispatcherState(ds);
-
 		if (qeError)
 			ReThrowError(qeError);
 
@@ -1437,11 +1449,7 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_NONE);
 
 	if (!cdbdisp_getDispatchResults(ds, &error))
-	{
-		Assert(error);
-		cdbdisp_destroyDispatcherState(ds);
 		ReThrowError(error);
-	}
 
 	/*
 	 * Notice: Do not call cdbdisp_finishCommand to destroy dispatcher state,

@@ -843,7 +843,10 @@ cleanupQE(SegmentDatabaseDescriptor *segdbDesc)
 
 	/* Note, we cancel all "still running" queries */
 	if (!cdbconn_discardResults(segdbDesc, 20))
-		elog(FATAL, "cleanup called when a segworker is still busy");
+	{
+		elog(LOG, "cleaning up seg%d while it is still busy", segdbDesc->segindex);
+		return false;
+	}
 
 	/* QE is no longer associated with a slice. */
 	cdbconn_setQEIdentifier(segdbDesc, /* slice index */ -1);	
