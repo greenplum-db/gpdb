@@ -68,7 +68,7 @@ ao_foreach_extent_file(ao_extent_callback callback, void *ctx)
 {
     int segno;
     int colnum;
-    int concurrency[AOTupleId_MaxSegmentFileNum];
+    int concurrency[MAX_AOREL_CONCURRENCY];
     int concurrencySize;
 
     /*
