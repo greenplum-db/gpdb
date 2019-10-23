@@ -111,8 +111,8 @@
                     language for the database named <codeph>testdb</codeph>: </p>
                 <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plperl;'</codeblock>
                 
-                <note>Using the <codeph>createlang</codeph> deprecated command to enable Perl, used in previous releases, 
-                    will generate an error.</note>
+                <note>Using the deprecated <codeph>createlang</codeph> command to enable PL/Perl
+                    generates an error.</note>
                 
             </body>
         </topic>
@@ -129,8 +129,8 @@
                     the language. Specify the <codeph>CASCADE</codeph> option to also drop all
                     dependent objects, including functions that you created with PL/Perl. </p>
                 
-                <note>Using the <codeph>droplang</codeph> deprecated command to remove support for
-                    PL/Perl, used in previous releases, will generate an error.</note>
+                <note>Using the deprecated <codeph>droplang</codeph> command to remove support for
+                    PL/Perl generates an error.</note>
             </body>
         </topic>
     </topic>

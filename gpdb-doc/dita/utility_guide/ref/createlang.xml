@@ -24,9 +24,8 @@
           <codeph><xref
               href="../../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1"/></codeph>.</p>
       <note><codeph>createlang</codeph> is deprecated and may be removed in a future release. From
-        Greenplum Database 6.0, using <codeph>createlang</codeph> to add a procedural language
-        package will result in an error. Direct use of the <codeph>CREATE EXTENSION</codeph> command
-        is recommended instead.</note>
+        Greenplum Database 6.x, using <codeph>createlang</codeph> to add a procedural language
+        package generates an error. Use <codeph>CREATE EXTENSION</codeph> command instead.</note>
       
       <p>The procedural language packages included in the standard Greenplum Database
         distribution are:</p>
