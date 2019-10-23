@@ -135,13 +135,14 @@
                 </plentry>
                 <plentry>
                     <pt>--ignore-warnings</pt>
-                    <pd>Controls the value returned by <codeph>gpinitsystem</codeph>. The utility
-                        returns a 0 if system initialization completes without warnings.</pd>
-                    <pd>With this option, <codeph>gpinitsystem</codeph> also returns a 0 if warnings
-                        occurred during system initialization. If a fatal error occurs,
-                            <codeph>gpinitsystem</codeph> returns a 1.</pd>
-                    <pd>If this option is not specified, <codeph>gpinitsystem</codeph> returns a 1
-                        if initialization completes with warnings, or 2 if a fatal error
+                    <pd>Controls the value returned by <codeph>gpinitsystem</codeph> when warnings
+                        or an error occurs. The utility returns 0 if system initialization completes
+                        without warnings.</pd>
+                    <pd>With this option, <codeph>gpinitsystem</codeph> also returns 0 if warnings
+                        occurred during system initialization, and returns 1 if a fatal error
+                        occurs.</pd>
+                    <pd>If this option is not specified, <codeph>gpinitsystem</codeph> returns 1 if
+                        initialization completes with warnings, and returns 2 if a fatal error
                         occurs.</pd>
                     <pd>If only warnings occur, system initialization completes and the system is
                         operational. <codeph>gpinitsystem</codeph> logs all messages in the log
