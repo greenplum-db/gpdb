@@ -39,10 +39,10 @@
           <codeph>STABLE</codeph>, or <codeph>VOLATILE</codeph> as part of the
           <codeph>LANGUAGE</codeph> clause to classify the type of function, For information about
         the creating functions and function attributes, see the <codeph><xref
-            href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph> command in the
-          <cite>Greenplum Database Reference Guide</cite>.</p>
+            href="../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1" scope="peer">CREATE FUNCTION</xref></codeph>
+        command in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>You can run PL/SQL code blocks as anonymous code blocks. See the <codeph><xref
-            href="../sql_commands/DO.xml#topic1"/></codeph> command in the <cite>Greenplum Database
+            href="../ref_guide/sql_commands/DO.xml#topic1">DO</xref></codeph> command in the <cite>Greenplum Database
           Reference Guide</cite>.</p>
     </body>
     <topic id="topic3" xml:lang="en">
@@ -56,7 +56,7 @@
               <codeph>DELETE...WHERE CURRENT OF</codeph>) are not supported.</li>
         </ul>
         <p>For information about Greenplum Database SQL conformance, see <xref
-            href="../feature_summary.xml#topic1"/> in the <cite>Greenplum Database Reference
+          href="../ref_guide/feature_summary.xml#topic1">Summary of Greenplum Features</xref> in the <cite>Greenplum Database Reference
             Guide</cite>.</p>
       </body>
     </topic>
@@ -147,7 +147,7 @@ $$ LANGUAGE plpgsql;</codeblock>
   <topic id="topic67" xml:lang="en">
     <title id="pt21749299">PL/pgSQL Plan Caching</title>
     <body>
-        <p>A PL/pgSQL function’s volatility classification has implications on how Greenplum Database caches plans that reference the function.  Refer to <xref href="../../admin_guide/query/topics/functions-operators.xml#topic281">Function Volatility and Plan Caching</xref> in the <cite>Greenplum Database Administrator
+        <p>A PL/pgSQL function’s volatility classification has implications on how Greenplum Database caches plans that reference the function.  Refer to <xref href="../admin_guide/query/topics/functions-operators.xml#topic281">Function Volatility and Plan Caching</xref> in the <cite>Greenplum Database Administrator
               Guide</cite> for information on plan caching considerations for Greenplum Database function volatility categories.</p>
         <p>When a PL/pgSQL function executes for the first time in a database session, the PL/pgSQL interpreter parses the function’s SQL expressions and commands. The interpreter creates a prepared execution plan as each expression and SQL command is first executed in the function. The PL/pgSQL interpreter reuses the execution plan for a specific expression and SQL command for the life of the database connection. While this reuse substantially reduces the total amount of time required to parse and generate plans, errors in a specific expression or command cannot be detected until run time when that part of the function is executed.</p>
         <p>Greenplum Database will automatically re-plan a saved query plan if there is any schema change to any relation used in the query, or if any user-defined function used in the query is redefined. This makes the re-use of a prepared plan transparent in most cases.</p>
@@ -347,7 +347,7 @@ SELECT use_default_args(10);
       <body>
         <p>PL/pgSQL supports the polymorphic <i>anyelement</i>, <i>anyarray</i>, <i>anyenum</i>, and
             <i>anynonarray</i> types. Using these types, you can create a single PL/pgSQL function
-          that operates on multiple data types. Refer to <xref href="../data_types.xml#topic1"
+          that operates on multiple data types. Refer to <xref href="../ref_guide/data_types.xml#topic1"
             >Greenplum Database Data Types</xref> for additional information on polymorphic type
           support in Greenplum Database.</p>
         <p>A special parameter named <codeph>$0</codeph> is created when the return type of
@@ -412,10 +412,10 @@ END $$ LANGUAGE plpgsql ;</codeblock></p>
       <p>The PostgreSQL documentation about PL/pgSQL is at <xref
           href="https://www.postgresql.org/docs/9.4/plpgsql.html" scope="external"
           format="html">https://www.postgresql.org/docs/9.4/plpgsql.html</xref></p>
-      <p>Also, see the <codeph><xref href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph>
+      <p>Also, see the <codeph><xref href="../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph>
         command in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>For a summary of built-in Greenplum Database functions, see <xref
-          href="../function-summary.xml#topic1"/> in the <cite>Greenplum Database Reference
+        href="../ref_guide/function-summary.xml#topic1">Summary of Built-in Functions</xref> in the <cite>Greenplum Database Reference
           Guide</cite>. For information about using Greenplum Database functions see "Querying Data"
         in the <cite>Greenplum Database Administrator Guide</cite></p>
       <p>For information about porting Oracle functions, see <xref

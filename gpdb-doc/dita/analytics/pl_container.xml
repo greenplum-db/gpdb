@@ -94,7 +94,7 @@
         <p>In PL/Container version 1.2.0 and later, you can use Greenplum Database resource groups
           to manage and limit the total CPU and memory resources of containers in PL/Container
           runtimes. For more information about enabling, configuring, and using Greenplum Database
-          resource groups, refer to <xref href="../../admin_guide/workload_mgmt_resgroups.xml"
+          resource groups, refer to <xref href="../admin_guide/workload_mgmt_resgroups.xml"
             format="dita" scope="peer">Using Resource Groups</xref> in the <cite>Greenplum Database
             Administrator Guide</cite>.</p>
         <note>If you do not explicitly configure resource groups for a PL/Container runtime, its
@@ -113,7 +113,7 @@
      CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
         <p>PL/Container does not use the <codeph>MEMORY_SHARED_QUOTA</codeph> and
             <codeph>MEMORY_SPILL_RATIO</codeph> resource group memory limits. Refer to the
-              <codeph><xref href="../../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml"
+              <codeph><xref href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml"
               format="dita" scope="peer">CREATE RESOURCE GROUP</xref></codeph> reference page for
           detailed information about this SQL command.</p>
         <p>You can create one or more resource groups to manage your running PL/Container instances.
@@ -169,7 +169,7 @@
             <li>If you have not already configured and enabled resource groups in your Greenplum
               Database deployment, configure cgroups and enable Greenplum Database resource groups
               as described in <xref
-                href="../../admin_guide/workload_mgmt_resgroups.xml#topic71717999" format="dita"
+                href="../admin_guide/workload_mgmt_resgroups.xml#topic71717999" format="dita"
                 scope="peer">Using Resource Groups</xref> in the <cite>Greenplum Database
                 Administrator Guide</cite>.
               <note>If you have previously configured and enabled resource groups in your
@@ -230,14 +230,14 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
         <li>PL/Container for Python - Docker image with Python 2.7.12 installed.<p>The Python Data
             Science Module is also installed. The module contains a set python libraries related to
             data science. <ph otherprops="pivotal">For information about the module, see <xref
-                href="../../install_guide/install_python_dsmod.xml" format="dita" scope="peer"
+                href="../install_guide/install_python_dsmod.xml" format="dita" scope="peer"
                 >Python Data Science Module Package</xref>.</ph></p></li>
       </ul>
       <ul id="ul_fpg_t2v_qbb">
         <li>PL/Container for R - A Docker image with container with R-3.3.3 installed. <p>The R Data
             Science package is also installed. The package contains a set of R libraries related to
             data science. <ph otherprops="pivotal">For information about the module, see <xref
-                href="../../install_guide/install_r_dslib.xml" format="dita" scope="peer">R Data
+                href="../install_guide/install_r_dslib.xml" format="dita" scope="peer">R Data
                 Science Library Package</xref>.</ph></p></li>
       </ul>
       <p>The Docker image tag represents the PL/Container release version (for example, 1.0.0). For
@@ -394,8 +394,8 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
         <note>Before you perform this upgrade procedure, ensure that you have migrated your
           PL/Container 1.1 package from your previous Greenplum Database installation to your new
           Greenplum Database installation. Refer to the <xref
-            href="../../utility_guide/ref/gppkg.html#topic1" format="dita" scope="peer"
-            >gppkg</xref> command for package installation and migration information.</note>
+            href="../utility_guide/ref/gppkg.xml#topic1" format="dita" scope="peer">gppkg</xref>
+          command for package installation and migration information.</note>
         <p>Perform the following procedure to upgrade from PL/Container 1.1 to PL/Container version
           1.2 or later.<ol id="ol_axf_mmq_vcb">
             <li>Save the PL/Container configuration. For example, to save the configuration to a
@@ -1364,13 +1364,13 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             start Docker containers and reuse them as needed. After a certain amount of idle time, a
             QE process quits and destroys its Docker containers. You can control the amount of idle
             time with the Greenplum Database server configuration parameter <codeph><xref
-                href="../config_params/guc-list.xml#gp_vmem_idle_resource_timeout"
-                >gp_vmem_idle_resource_timeout</xref></codeph>. Controlling the idle time might help
-            with Docker container reuse and avoid the overhead of creating and starting a Docker
-            container.
-            <note type="warning">Changing <codeph>gp_vmem_idle_resource_timeout</codeph> value,
-              might affect performance due to resource issues. The parameter also controls the
-              freeing of Greenplum Database resources other than Docker containers.</note></li>
+                href="../ref_guide/config_params/guc-list.xml#gp_vmem_idle_resource_timeout"
+                scope="peer">gp_vmem_idle_resource_timeout</xref></codeph>. Controlling the idle
+            time might help with Docker container reuse and avoid the overhead of creating and
+            starting a Docker container. <note type="warning">Changing
+                <codeph>gp_vmem_idle_resource_timeout</codeph> value, might affect performance due
+              to resource issues. The parameter also controls the freeing of Greenplum Database
+              resources other than Docker containers.</note></li>
           <li>If a PL/Container Docker container exceeds the maximum allowed memory, it is
             terminated and an out of memory warning is displayed. On Red Hat 6 or CentOS 6 systems
             that are configured with Docker version 1.7.1, the out of memory warning is also
@@ -1401,10 +1401,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             hosts.</p></li>
           <li>When PL/Container logging is enabled, you can set the log level with the Greenplum
             Database server configuration parameter <codeph><xref
-                href="../config_params/guc-list.xml#log_min_messages"
-              >log_min_messages</xref></codeph>. The default log level is <codeph>warning</codeph>.
-            The parameter controls the PL/Container log level and also controls the Greenplum
-            Database log level.<ul id="ul_knd_jhl_mcb">
+                href="../ref_guide/config_params/guc-list.xml#log_min_messages" scope="peer"
+                >log_min_messages</xref></codeph>. The default log level is
+            <codeph>warning</codeph>. The parameter controls the PL/Container log level and also
+            controls the Greenplum Database log level.<ul id="ul_knd_jhl_mcb">
               <li>PL/Container logging is enabled or disabled for each runtime ID with the
                   <codeph>setting</codeph> attribute <codeph>use_container_logging</codeph>. The
                 default is no logging. </li>
