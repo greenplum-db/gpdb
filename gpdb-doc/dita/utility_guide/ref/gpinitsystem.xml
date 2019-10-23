@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!--install_guide/refs/gpinitsystem.xml has a conref to this topic. -->
+    <!--install_guide/refs/gpinitsystem.xml has a reference to this topic. -->
     <title id="it20941">gpinitsystem</title>
     <body>
         <p>Initializes a Greenplum Database system using configuration parameters specified in the
@@ -16,6 +16,7 @@
             [<b>-s</b> <varname>standby_master_host</varname>
                 [<b>-P</b> <varname>standby_master_port</varname>]
                 [<b>-S</b> <varname>standby_master_datadir</varname> | <b>--standby_datadir</b>=<varname>standby_master_datadir</varname>]]
+            [<b>--ignore-warnings</b>]
             [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>]
             [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
             [<b>-n <varname>locale</varname> | --locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
@@ -131,6 +132,20 @@
                                 <varname>cluster_configuration_file</varname></codeph> option or the
                             <codeph>-I <varname>input_configuration_file</varname></codeph> option
                         to <codeph>gpinitsystem</codeph>. </pd>
+                </plentry>
+                <plentry>
+                    <pt>--ignore-warnings</pt>
+                    <pd>Controls the value returned by <codeph>gpinitsystem</codeph>. With this
+                        option, <codeph>gpinitsystem</codeph> returns a 0 if warnings occurred
+                        during system initialization. If a fatal error occurs,
+                            <codeph>gpinitsystem</codeph> returns a 1.</pd>
+                    <pd>If this option is not specified, <codeph>gpinitsystem</codeph> returns a 1
+                        if warnings occurred during system initialization. If a fatal error occurs,
+                            <codeph>gpinitsystem</codeph> returns a 2.</pd>
+                    <pd>The utility always returns a 0 if system initialization completes without
+                        warnings. If only warnings occur, system initialization completes and the
+                        system is operational. <codeph>gpinitsystem</codeph> logs all messages in
+                        the log file.</pd>
                 </plentry>
                 <plentry>
                     <pt> -n <varname>locale</varname> | --locale=<varname>locale</varname>
@@ -289,7 +304,8 @@
                 </plentry>
                 <plentry>
                     <pt>-? | --help</pt>
-                    <pd>Show help about <codeph>gpinitsystem</codeph> command line arguments, and exit.</pd>
+                    <pd>Show help about <codeph>gpinitsystem</codeph> command line arguments, and
+                        exit.</pd>
                 </plentry>
             </parml>
         </section>
