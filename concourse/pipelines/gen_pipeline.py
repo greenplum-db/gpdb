@@ -73,7 +73,6 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = (
         'compile_gpdb_clients_windows',
         'concourse_unit_tests',
         'test_gpdb_clients_windows',
-        'icw_gporca_centos6_gpos_memory',
         'walrep_2',
         'madlib_build_gppkg',
         'MADlib_Test_planner_centos6',

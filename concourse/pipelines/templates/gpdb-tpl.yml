@@ -63,7 +63,6 @@ groups:
   ## --------------------------------------------------------------------
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
-  - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
 {% endif %}
@@ -170,7 +169,6 @@ groups:
   jobs:
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
-  - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
   - compile_gpdb_centos6
@@ -1139,25 +1137,6 @@ jobs:
     params:
       file: sqldump/dump.sql.xz
 
-- name: icw_gporca_centos6_gpos_memory
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: [[ test_trigger ]]
-    - get: gpdb6-centos6-test
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: gpdb6-centos6-test
-    params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: optimizer_use_gpdb_allocators=on
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
-
 - name: icw_planner_ictcp_centos6
   plan:
   - aggregate:
@@ -1259,7 +1238,6 @@ jobs:
     - get: bin_gpdb_centos6
       passed:
       - icw_gporca_centos6
-      - icw_gporca_centos6_gpos_memory
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
 {% if "Extensions" in test_sections %}
@@ -1275,7 +1253,6 @@ jobs:
       passed:
 {% if "centos6" in os_types %}
       - icw_gporca_centos6
-      - icw_gporca_centos6_gpos_memory
       - icw_planner_centos6
       - icw_planner_ictcp_centos6
 {% if "Extensions" in test_sections %}
