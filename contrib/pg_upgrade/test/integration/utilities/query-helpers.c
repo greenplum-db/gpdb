@@ -37,3 +37,8 @@ executeQuery(PGconn *connection, char *const query)
 	return result;
 }
 
+void
+executeQueryClearResult(PGconn *connection, char *const query)
+{
+	PQclear(executeQuery(connection, query));
+}
