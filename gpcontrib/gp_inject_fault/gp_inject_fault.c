@@ -1,24 +1,23 @@
 #include "postgres.h"
 
 #include "funcapi.h"
-#include "miscadmin.h"
 
 #include "access/heapam.h"
 #include "access/genam.h"
+#include "access/xlog.h"
 #include "catalog/indexing.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbvars.h"
 #include "libpq/ip.h"
 #include "libpq-fe.h"
-#include "postmaster/postmaster.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
-#include "utils/snapmgr.h"
 
 PG_MODULE_MAGIC;
 
 extern Datum gp_inject_fault(PG_FUNCTION_ARGS);
+Datum insert_noop_xlog_record(PG_FUNCTION_ARGS);
 
 static void
 getHostnameAndPort(int dbid, char **hostname, int *port)
@@ -140,4 +139,25 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 			elog(ERROR, "%s", response);
 	}
 	PG_RETURN_TEXT_P(cstring_to_text(response));
+}
+
+PG_FUNCTION_INFO_V1(insert_noop_xlog_record);
+Datum
+insert_noop_xlog_record(PG_FUNCTION_ARGS)
+{
+	char *no_op_string = "no-op";
+	
+	XLogRecData rdata = {};
+	/* 
+	 * Xlog records of length = 0 are disallowed and cause a panic. Thus,
+	 * supplying a dummy non-zero length
+	 */
+	rdata.data = no_op_string;
+	rdata.len = strlen(no_op_string);
+	rdata.buffer = InvalidBuffer;
+	rdata.next = NULL;
+
+	XLogFlush(XLogInsert(RM_XLOG_ID, XLOG_NOOP, &rdata));
+
+	PG_RETURN_VOID();
 }

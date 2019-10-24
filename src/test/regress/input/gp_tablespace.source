@@ -40,29 +40,6 @@ CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
 	AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
     LANGUAGE C;
 
-CREATE OR REPLACE FUNCTION insert_noop_xlog_record_master() RETURNS VOID AS
-'@abs_builddir@/regress.so', 'insert_noop_xlog_record'
-    LANGUAGE C EXECUTE ON MASTER;
-
-CREATE OR REPLACE FUNCTION insert_noop_xlog_record_all_segments() RETURNS SETOF VOID AS
-'@abs_builddir@/regress.so', 'insert_noop_xlog_record'
-    LANGUAGE C EXECUTE ON ALL SEGMENTS;
-
-CREATE OR REPLACE FUNCTION insert_noop_xlog_record() RETURNS VOID AS $$
-BEGIN
-    PERFORM insert_noop_xlog_record_master();
-    PERFORM insert_noop_xlog_record_all_segments();
-END;
-$$LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION force_mirrors_to_catch_up() RETURNS VOID AS $$
-BEGIN
-    PERFORM gp_inject_fault('after_xlog_redo_noop', 'sleep', dbid) FROM gp_segment_configuration WHERE role='m';
-    PERFORM insert_noop_xlog_record();
-    PERFORM gp_wait_until_triggered_fault('after_xlog_redo_noop', 1, dbid) FROM gp_segment_configuration WHERE role='m';
-    PERFORM gp_inject_fault('after_xlog_redo_noop', 'reset', dbid) FROM gp_segment_configuration WHERE role='m';
-END;
-$$ LANGUAGE plpgsql;
 
 -- create tablespaces we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
