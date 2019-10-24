@@ -6,9 +6,8 @@
   <body>
    <section>
      <title>Overview</title>
-     <p>Greenplum offers a powerful combination of a MPP database and data 
-       analytics libraries, like Madlib, the open source machine learning library. 
-       This unique platform offers an ideal environment for exploring among others 
+     <p>Greenplum offers a unique combination of a powerful MPP (Massive Parallel Processing) database and advanced data 
+       analytics capabilities. This architecture provides an ideal environment for exploring among others 
        Machine Learning, Deep Learning, Graph analytics, and Geospatial analysis.</p>
      <image href="graphics/gp_integrated_analytics.jpg" placement="break" width="390px" height="310px"/>
    </section> 
