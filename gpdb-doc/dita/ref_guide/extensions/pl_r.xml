@@ -145,7 +145,7 @@ $ gpstop -r</codeblock></li>
           <p> The default command fails if any existing objects (such as functions) depend on the
             language. Specify the <codeph>CASCADE</codeph> option to also drop all dependent
             objects, including functions that you created with PL/R. </p>
-          <note>Using the deprecate <codeph>droplang</codeph> command to remove support for PL/R
+          <note>Using the deprecated <codeph>droplang</codeph> command to remove support for PL/R
             generates an error.</note>
         </body>
       </topic>
@@ -189,7 +189,7 @@ $ sudo apt remove r-base-core</codeblock></p>
         <body>
           <p>This function generates an array of numbers with a normal distribution using the R
             function <codeph>rnorm()</codeph>. </p>
-          <codeblock>CREATE OR REPLACE FUNCTION r_norm(n integer, mean float8, 
+          <codeblock>CREATE OR REPLACE FUNCTION r_norm(n integer, mean float8,
   std_dev float8) RETURNS float8[ ] AS
 $$
   x&lt;-rnorm(n,mean,std_dev)
@@ -257,10 +257,10 @@ $$
 $$
 LANGUAGE 'plr';
 
---Run modeling plr function and store model results in a 
+--Run modeling plr function and store model results in a
 --table
 DROP TABLE IF EXISTS wj_model_results_roi;
-CREATE TABLE wj_model_results_roi AS SELECT * 
+CREATE TABLE wj_model_results_roi AS SELECT *
   FROM wj_plr_RE((SELECT wj_droi2_array),
   (SELECT cs FROM wj_droi2_array));</codeblock>
         </body>
@@ -352,7 +352,7 @@ LANGUAGE 'plr';</codeblock><p>This
         <p>Any package that does not appear in the installed packages matrix must be installed and
           loaded before its functions can be used. </p>
         <p>An R package can be installed with <codeph>install.packages()</codeph>:</p>
-        <codeblock>&gt; install.packages("<varname>package_name</varname>") 
+        <codeblock>&gt; install.packages("<varname>package_name</varname>")
 &gt; install.packages("mypkg", dependencies = TRUE, type="source")</codeblock>
         <p>Load a package from the R command
           line.<codeblock>&gt; library(" <varname>package_name</varname> ") </codeblock></p>
