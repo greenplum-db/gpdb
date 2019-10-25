@@ -9,7 +9,8 @@
 #include "utilities/test-helpers.h"
 #include "bdd-library/bdd.h"
 
-static void setDataChecksum(char *binaryDirectory, char *dataDirectory, int checksumValue)
+static void
+setDataChecksum(char *binaryDirectory, char *dataDirectory, int checksumValue)
 {
 	char buffer[500];
 
@@ -28,13 +29,16 @@ upgradeCheckFailsType2()
 {
 	performUpgradeCheckFailsWithError("old cluster does not use data checksums but the new one does\n");
 }
-static void aFiveClusterWithoutChecksumsAndASixClusterWithChecksums()
+
+static void
+aFiveClusterWithoutChecksumsAndASixClusterWithChecksums()
 {
 	setDataChecksum("./gpdb5/bin", "./gpdb5-data/qddir/demoDataDir-1", 1);
 	setDataChecksum("./gpdb6/bin", "./gpdb6-data/qddir/demoDataDir-1", 0);
 }
 
-static void aFiveClusterWithChecksumsAndASixClusterWithoutChecksums()
+static void
+aFiveClusterWithChecksumsAndASixClusterWithoutChecksums()
 {
 	setDataChecksum("./gpdb5/bin", "./gpdb5-data/qddir/demoDataDir-1", 0);
 	setDataChecksum("./gpdb6/bin", "./gpdb6-data/qddir/demoDataDir-1", 1);
