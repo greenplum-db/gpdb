@@ -36,3 +36,15 @@ DROP PROTOCOL IF EXISTS demoprot_untrusted2;
 -- we need to drop this view.
 DROP VIEW IF EXISTS nums CASCADE;
 DROP VIEW IF EXISTS sums_1_100 CASCADE;
+
+-- Following tables are flavors of partition table mismatch between root/child
+-- partitions.  An interesting case is parttest_t, where it seems possible to
+-- upgrade the table in spite of mismatch partitions. However, this is a
+-- special case where the mismatched colums are dropped columns the end of the
+-- row. If an add column is executed on this table then the table will be
+-- broken to upgrade. If we want to support this special case then we will need
+-- to update pg_upgrade's check check_heterogeneous_partition accordingly.
+DROP TABLE IF EXISTS public.returning_parttab;
+DROP TABLE IF EXISTS public.parttest_t;
+DROP TABLE IF EXISTS public.pt_dropped_col_distkey;
+DROP TABLE IF EXISTS partition_pruning.sales;
