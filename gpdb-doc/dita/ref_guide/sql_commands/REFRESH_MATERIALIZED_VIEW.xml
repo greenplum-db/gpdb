@@ -33,9 +33,10 @@
               least one <codeph>UNIQUE</codeph> index on the materialized view which uses only
               column names and includes all rows; that is, it must not index on any expressions nor
               include a <codeph>WHERE</codeph> clause.</p><p>This option cannot be used when the
-              materialized view is not already populated and cannot be used with the <codeph>WITH NO
-                DATA</codeph> clause.</p><p>Even with this option, only one <codeph>REFRESH</codeph>
-              at a time may run against any one materialized view.</p></pd>
+              materialized view is not already populated, and it cannot be used with the
+                <codeph>WITH NO DATA</codeph> clause.</p><p>Even with this option, only one
+                <codeph>REFRESH</codeph> at a time may run against any one materialized
+            view.</p></pd>
         </plentry>
         <plentry>
           <pt><varname>name</varname></pt>

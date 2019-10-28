@@ -10,7 +10,23 @@
       underlying tables directly or through a view, the data is not always current. </p>
     <p>The materialized view data cannot be directly updated. To refresh the materialized view data,
       use the <codeph>REFRESH MATERIALIZED VIEW</codeph> command. The query used to create the
-      materialized view is stored in exactly the same way that a view's query is stored.</p>
+      materialized view is stored in exactly the same way that a view's query is stored. For
+      example, you can create a materialized view that quickly displays a summary of historical
+      sales data for situations where having incomplete data for the current date would be
+      acceptable.</p>
+    <codeblock>CREATE MATERIALIZED VIEW sales_summary AS
+  SELECT seller_no, invoice_date, sum(invoice_amt)::numeric(13,2) as sales_amt
+    FROM invoice
+    WHERE invoice_date &lt; CURRENT_DATE
+    GROUP BY seller_no, invoice_date
+    ORDER BY seller_no, invoice_date;
+
+CREATE UNIQUE INDEX sales_summary_seller
+  ON sales_summary (seller_no, invoice_date);</codeblock>
+    <p>The materialized view might be useful for displaying a graph in the dashboard created for
+      sales people. You could schedule a job to update the summary information each night using this
+      command.</p>
+    <codeblock>REFRESH MATERIALIZED VIEW sales_summary;</codeblock>
     <p>The information about a materialized view in the Greenplum Database system catalogs is
       exactly the same as it is for a table or view. A materialized view is a relation, just like a
       table or a view. When a materialized view is referenced in a query, the data is returned
@@ -19,9 +35,9 @@
     <p>If you can tolerate periodic updates of materialized view data, the performance benefit can
       be substantial.</p>
     <p>One use of a materialized view is to allow faster access to data brought in from an external
-      data source such as external table or a foreign data wrapper. Also, an index can be defined on
-      a materialized view, foreign data wrappers do not support indexes; this advantage might not
-      apply for other types of external data access.</p>
+      data source such as external table or a foreign data wrapper. Also, you can define indexes on
+      a materialized view, whereas foreign data wrappers do not support indexes; this advantage
+      might not apply for other types of external data access.</p>
     <p>If a subquery is associated with a single query, consider using the <codeph>WITH</codeph>
       clause of the <codeph>SELECT</codeph> command instead of creating a seldom-used materialized
       view.</p>
@@ -40,7 +56,7 @@
     </body>
   </topic>
   <topic xml:lang="en" id="topic_vwd_zy5_kjb">
-    <title>Refreshing Materialized Views</title>
+    <title>Refreshing or Disabling Materialized Views</title>
     <body>
       <p>The <codeph>REFRESH MATERIALIZED VIEW</codeph> command updates the materialized view
         data.</p>

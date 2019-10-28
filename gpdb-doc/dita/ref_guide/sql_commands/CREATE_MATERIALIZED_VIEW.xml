@@ -13,7 +13,7 @@
     [ TABLESPACE <varname>tablespace_name</varname> ]
     AS <varname>query</varname>
     [ WITH [ NO ] DATA ]
-    [DISTRIBUTED {| BY column [opclass], [ ... ] | RANDOMLY | REPLICATED }]</codeblock>
+    [DISTRIBUTED {| BY <varname>column</varname> [<varname>opclass</varname>], [ ... ] | RANDOMLY | REPLICATED }]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -23,9 +23,10 @@
           MATERIALIZED VIEW</codeph>.</p>
       <p><codeph>CREATE MATERIALIZED VIEW</codeph> is similar to <codeph>CREATE TABLE AS</codeph>,
         except that it also remembers the query used to initialize the view, so that it can be
-        refreshed later upon demand. A materialized view has many of the same properties as a table,
-        but there is no support for temporary materialized views or automatic generation of
-        OIDs.</p>
+        refreshed later upon demand. To refresh materialized view data, use the <codeph>REFRESH
+          MATERIALIZED VIEW</codeph> command. A materialized view has many of the same properties as
+        a table, but there is no support for temporary materialized views or automatic generation of
+        OIDs. </p>
     </section>
     <section id="section4">
       <title>Parameters</title>
