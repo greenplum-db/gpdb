@@ -155,16 +155,16 @@ In this procedure, you name and add a PXF server configuration in the `$PXF_CONF
 
 2. Choose a name for the server. You will provide the name to end users that need to reference files in the object store.
 
-3. Create the `$PXF_CONF/servers/<server_name>` directory. For example, use the following command to create a server configuration for an S3 server named `s3_user1cfg`:
+3. Create the `$PXF_CONF/servers/<server_name>` directory. For example, use the following command to create a server configuration for an S3 server named `s3srvcfg`:
 
     ``` shell
-    gpadmin@gpmaster$ mkdir $PXF_CONF/servers/s3_user1cfg
+    gpadmin@gpmaster$ mkdir $PXF_CONF/servers/s3srvcfg
     ````
 
 3. Copy the PXF template file for S3 to the server configuration directory. For example:
 
     ``` shell
-    gpadmin@gpmaster$ cp $PXF_CONF/templates/s3-site.xml $PXF_CONF/servers/s3_user1cfg/
+    gpadmin@gpmaster$ cp $PXF_CONF/templates/s3-site.xml $PXF_CONF/servers/s3srvcfg/
     ```
         
 4. Open the template server configuration file in the editor of your choice, and provide appropriate property values for your environment. For example:
