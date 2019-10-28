@@ -4,8 +4,8 @@
 <topic id="topic1" xml:lang="en">
   <title id="gi143896">pg_rules</title>
   <body>
-    <p>The view <codeph>pg_matviews</codeph> provides access to useful information about query
-      rewrite rules.</p>
+    <p>The view <codeph>pg_rules</codeph> provides access to useful information about query rewrite
+      rules.</p>
     <p>The <codeph>pg_rules</codeph> view excludes the <codeph>ON SELECT</codeph> rules of views and
       materialized views; those can be seen in <codeph>pg_views</codeph> and
         <codeph>pg_matviews</codeph>.</p>

@@ -38,8 +38,8 @@
           <pt><varname>column_name</varname></pt>
           <pd>The name of a column in the materialized view. The column names are assigned based on
             position. The first column name is assigned to the first column of the query result, and
-            so on. If a column name is not provided, it are taken from the output column names of
-            the query.</pd>
+            so on. If a column name is not provided, it is taken from the output column names of the
+            query.</pd>
         </plentry>
         <plentry>
           <pt>WITH ( <varname>storage_parameter</varname> [= <varname>value</varname>] [, ... ]
@@ -108,7 +108,7 @@ names, rank WHERE rank &lt; '11' AND names.id=rank.id;</codeblock>
     <section id="section7">
       <title>Compatibility</title>
       <p><codeph>CREATE MATERIALIZED VIEW</codeph> is a Greenplum Database extension of the SQL
-        standard..</p>
+        standard.</p>
     </section>
     <section id="section8">
       <title>See Also</title>

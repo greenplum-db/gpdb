@@ -35,7 +35,7 @@
         <codeblock>CREATE MATERIALIZED VIEW us_users AS SELECT u.id, u.name, a.zone FROM users u, address a WHERE a.country = 'USA';</codeblock>
       </p>
       <p>If a materialized view query contains an <codeph>ORDER BY</codeph> or <codeph>SORT</codeph>
-        clause, the clause is ignored when the a <codeph>SELECT</codeph> is performed on the
+        clause, the clause is ignored when a <codeph>SELECT</codeph> is performed on the
         materialized query.</p>
     </body>
   </topic>
@@ -50,7 +50,7 @@
       <p>With the <codeph>WITH NO DATA</codeph> clause, the current data is removed, no new data is
         generated, and the materialized view is left in an unscannable state. An error is returned
         if a query attempts to access an unscannable materialized view.</p>
-      <codeblock>REFRESH MATERIALIZED VIEW us_users WITH NO NEW DATA;</codeblock>
+      <codeblock>REFRESH MATERIALIZED VIEW us_users WITH NO DATA;</codeblock>
     </body>
   </topic>
   <topic xml:lang="en" id="topic_in3_xy5_kjb">
