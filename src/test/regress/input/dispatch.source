@@ -19,6 +19,28 @@ select gp_inject_fault_infinite('fts_probe', 'skip', 1);
 select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
+-- Test cdbdisp_getDispatchResults() fail in CdbDispatchCopyStart()
+
+create table dispatch_tbl (a int) distributed by (a);
+insert into dispatch_tbl values (2),(1),(5);
+
+-- fault on seg1 to block insert command into the dispatch_tbl table
+select gp_inject_fault('DoCopyToFail', 'error', '', '', '',
+   1, 1, 0, dbid) from gp_segment_configuration
+   where content = 1 and role = 'p';
+
+copy dispatch_tbl to stdout;
+
+--select gp_wait_until_triggered_fault('DoCopyToFail', 1, dbid)
+--  from gp_segment_configuration where content = 1 and role = 'p';
+
+select gp_inject_fault('DoCopyToFail', 'reset', dbid)
+   from gp_segment_configuration
+   where content = 1 and role = 'p';
+
+select * from dispatch_tbl;
+drop table dispatch_tbl;
+
 -- Test quoting of GUC values and database names when they're sent to segments
 set client_min_messages='warning';
 DROP DATABASE IF EXISTS "funny""db'with\\quotes";
