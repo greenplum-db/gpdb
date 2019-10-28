@@ -408,3 +408,27 @@ z(i) as (
 (select * from y limit 5)
 union
 (select * from z limit 10);
+
+-- WTIH RECURSIVE and replicated table
+create table t_rep_test_rcte(c int) distributed replicated;
+create table t_rand_test_rcte(c int) distributed by (c);
+insert into t_rep_test_rcte values (1);
+insert into t_rand_test_rcte values (1), (2), (3);
+
+analyze t_rep_test_rcte;
+analyze t_rand_test_rcte;
+
+explain
+with recursive the_cte_here(n) as (
+  select * from t_rep_test_rcte
+  union all
+  select n+1 from the_cte_here join t_rand_test_rcte
+	              on t_rand_test_rcte.c = the_cte_here.n)
+select * from the_cte_here;
+
+with recursive the_cte_here(n) as (
+  select * from t_rep_test_rcte
+  union all
+  select n+1 from the_cte_here join t_rand_test_rcte
+	              on t_rand_test_rcte.c = the_cte_here.n)
+select * from the_cte_here;
