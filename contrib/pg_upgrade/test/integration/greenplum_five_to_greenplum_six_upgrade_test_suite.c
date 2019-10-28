@@ -12,6 +12,7 @@
 #include "scenarios/subpartitioned_heap_table.h"
 #include "scenarios/ao_table.h"
 #include "scenarios/aocs_table.h"
+#include "scenarios/plpgsql_function.h"
 
 #include "utilities/gpdb5-cluster.h"
 #include "utilities/gpdb6-cluster.h"
@@ -50,6 +51,7 @@ main(int argc, char *argv[])
 		unit_test_setup_teardown(test_a_partitioned_ao_table_with_data_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_an_exchange_partitioned_heap_table_cannot_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_plpgsql_function_can_be_upgraded, setup, teardown),
 	};
 
 	return run_tests(tests);
