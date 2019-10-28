@@ -1849,7 +1849,26 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	 */
 	required_outer = rel->lateral_relids;
 
-	ctelocus = cteplan->flow->locustype;
+	/*
+	 * Between Recursive union plannode node and WorkTableScan plannode
+	 * there must be no Motion nodes because the execution of WorkTableScan
+	 * depends on the Recursive union's data structure.
+	 *
+	 * And the logic here is always use cteplan's locus as WTS's locus.
+	 * Remember WTS path cannot be turned to replicated(means broadcast)
+	 * when dealing with join. Most of the cases, it is OK. But for
+	 * replicated table whose locus is CdbLocusType_SegmentGeneral,
+	 * it can not be taken as everywhere, we will gather it to singleQE
+	 * or redistribute it when joining.
+	 *
+	 * To avoid such case, if cteplan's locus is CdbLocusType_SegmentGeneral,
+	 * we build WTS path using singlQE, and later in the function
+	 * `set_recursive_union_flow` to add a gather on the top of cteplan.
+	 */
+	if (cteplan->flow->locustype == CdbLocusType_SegmentGeneral)
+		ctelocus = CdbLocusType_SingleQE;
+	else
+		ctelocus = cteplan->flow->locustype;
 
 	/* Generate appropriate path */
 	add_path(rel, create_worktablescan_path(root, rel, ctelocus, required_outer));
