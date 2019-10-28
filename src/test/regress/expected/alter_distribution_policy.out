@@ -1365,8 +1365,6 @@ ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
 HINT:  The DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX "idx1_t_dist2" columns.
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2);
-ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
-HINT:  The DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX "idx1_t_dist2" columns.
+ALTER TABLE
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2, col1);
-ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
-HINT:  The DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX "idx1_t_dist2" columns.
+ALTER TABLE
