@@ -64,30 +64,13 @@ typedef struct HostSegsEntry
 	int  segmentCount;
 } HostSegsEntry;
 
-/*
- * getCdbComponentDatabases
- *
- *
- * Storage for the SegmentInstances block and all subsidiary
- * strucures are allocated from the caller's context.
- */
-CdbComponentDatabases *
-getCdbComponentInfo(bool DNSLookupAsError)
+static CdbComponentDatabases *
+readCdbComponentInfo(bool DNSLookupAsError, HTAB *hostSegsHash)
 {
-	CdbComponentDatabaseInfo *pOld = NULL;
-	CdbComponentDatabaseInfo *cdbInfo;
-	CdbComponentDatabases *component_databases = NULL;
-
 	Relation gp_seg_config_rel;
 	HeapTuple gp_seg_config_tuple = NULL;
 	HeapScanDesc gp_seg_config_scan;
-
-	/*
-	 * Initial size for info arrays.
-	 */
-	int			segment_array_size = 500;
-	int			entry_array_size = 4; /* we currently support a max of 2 */
-
+	CdbComponentDatabaseInfo *pOld = NULL;
 	/*
 	 * isNull and attr are used when getting the data for a specific column from a HeapTuple
 	 */
@@ -99,18 +82,20 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	 */
 	int			dbid;
 	int			content;
-
 	char		role;
 	char		preferred_role;
 	char		mode = 0;
 	char		status = 0;
-
-	int			i;
-	int			x = 0;
-
-	bool		found;
 	HostSegsEntry *hsEntry;
-	HTAB		*hostSegsHash = hostSegsHashTableInit();
+	bool		found;
+
+	CdbComponentDatabases *component_databases;
+
+	/*
+	 * Initial size for info arrays.
+	 */
+	int segment_array_size = 500;
+	int entry_array_size = 4; /* we currently support a max of 2 */
 
 	/*
 	 * Allocate component_databases return structure and
@@ -120,19 +105,16 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	 * doubling each time we run out.
 	 */
 	component_databases = palloc0(sizeof(CdbComponentDatabases));
-
 	component_databases->segment_db_info =
 		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * segment_array_size);
-
 	component_databases->entry_db_info =
 		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * entry_array_size);
 
 	gp_seg_config_rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
-
 	gp_seg_config_scan = heap_beginscan(gp_seg_config_rel, SnapshotNow, 0, NULL);
-
-	while (HeapTupleIsValid(gp_seg_config_tuple = heap_getnext(gp_seg_config_scan, ForwardScanDirection)))
-	{
+	while (HeapTupleIsValid(gp_seg_config_tuple =
+							heap_getnext(gp_seg_config_scan, ForwardScanDirection)))
+    {
 		/*
 		 * Grab the fields that we need from gp_configuration.  We do
 		 * this first, because until we read them, we don't know
@@ -280,7 +262,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 			hsEntry->segmentCount++;
 		else
 			hsEntry->segmentCount = 1;
-	}
+    }
 
 	/*
 	 * We're done with the catalog entries, cleanup them up, closing
@@ -288,6 +270,32 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	 */
 	heap_endscan(gp_seg_config_scan);
 	heap_close(gp_seg_config_rel, AccessShareLock);
+
+	return component_databases;
+}
+
+/*
+ * getCdbComponentDatabases
+ *
+ *
+ * Storage for the SegmentInstances block and all subsidiary
+ * strucures are allocated from the caller's context.
+ */
+CdbComponentDatabases *
+getCdbComponentInfo(bool DNSLookupAsError)
+{
+	CdbComponentDatabaseInfo *cdbInfo;
+	CdbComponentDatabases *component_databases = NULL;
+	int			i;
+	int			x = 0;
+	HostSegsEntry *hsEntry;
+	HTAB		*hostSegsHash = hostSegsHashTableInit();
+	int			num_retries = 5;
+
+retry:
+	component_databases = readCdbComponentInfo(DNSLookupAsError, hostSegsHash);
+
+	Assert(component_databases != NULL);
 
 	/*
 	 * Validate that there exists at least one entry and one segment
@@ -327,6 +335,33 @@ getCdbComponentInfo(bool DNSLookupAsError)
 			(component_databases->segment_db_info[i].segindex != component_databases->segment_db_info[i - 1].segindex))
 		{
 			component_databases->total_segments++;
+		}
+
+		/*
+		 * SnapshotNow with AccessShareLock is used to scan
+		 * gp_segment_configuration table for
+		 * getCdbComponentInfo(). SnapshotNow scans have the undesirable
+		 * property that, in the face of concurrent updates, the scan can fail
+		 * to see either the old or the new versions of the row. As a result,
+		 * getCdbComponentInfo() may see duplicate entries for dbid, if
+		 * concurrent updates are performed mostly by FTS. This is rare
+		 * scenario and happens occassionaly. Instead of elevating
+		 * RowExclusiveLock to AccessExclusiveLock in FTS, we check and retry
+		 * the gp_segment_configuration scan, if duplicates are detected. We
+		 * retry for N times and ERROR out if continue to see the duplicates.
+		 */
+		if (i != 0 &&
+			(component_databases->segment_db_info[i].dbid ==
+			 component_databases->segment_db_info[i - 1].dbid))
+		{
+			int dbid = component_databases->segment_db_info[i].dbid;
+			freeCdbComponentDatabases(component_databases);
+			component_databases = NULL;
+			num_retries--;
+			if (num_retries == 0)
+				elog(ERROR, "duplicate entries encountered on gp_segment_configuration scan for dbid = %d, even after retries",
+					 dbid);
+			goto retry;
 		}
 	}
 
@@ -397,6 +432,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 
 	for (i = 0; i < component_databases->total_segment_dbs; i++)
 	{
+		bool found;
 		cdbInfo = &component_databases->segment_db_info[i];
 
 		if (cdbInfo->role != SEGMENT_ROLE_PRIMARY || cdbInfo->hostip == NULL)
@@ -409,6 +445,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 
 	for (i = 0; i < component_databases->total_entry_dbs; i++)
 	{
+		bool found;
 		cdbInfo = &component_databases->entry_db_info[i];
 
 		if (cdbInfo->role != SEGMENT_ROLE_PRIMARY || cdbInfo->hostip == NULL)
