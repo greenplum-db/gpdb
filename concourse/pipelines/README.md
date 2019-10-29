@@ -89,14 +89,20 @@ fly -t gpdb-prod \
     -p gpdb_master \
     -c gpdb_master-generated.yml \
     -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.prod.yml
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.prod.yml \
+    -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
+    -v gpdb-git-branch=master \
+    -v pipeline-name=gpdb_master
 
 fly -t gpdb-prod \
     set-pipeline \
     -p gpdb_master_without_asserts \
     -c gpdb_master-generated.yml \
     -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml \
+    -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
+    -v gpdb-git-branch=master \
+    -v pipeline-name=gpdb_master_without_asserts
 ```
 
 The generated pipeline file `gpdb_master-generated.yml` will be set,
