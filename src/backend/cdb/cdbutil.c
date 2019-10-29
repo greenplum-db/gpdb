@@ -41,6 +41,7 @@
 #include "libpq-int.h"
 #include "libpq/ip.h"
 #include "cdb/cdbfts.h"
+#include "postmaster/fts.h"
 
 /*
  * Helper Functions
@@ -270,6 +271,43 @@ readCdbComponentInfo(bool DNSLookupAsError, HTAB *hostSegsHash)
 	 */
 	heap_endscan(gp_seg_config_scan);
 	heap_close(gp_seg_config_rel, AccessShareLock);
+
+#ifdef FAULT_INJECTOR
+	/* If skip fault set, duplicate first primary entry */
+	if (!am_ftsprobe && FaultInjector_InjectFaultIfSet(
+			AddDuplicateSegmentComponentDBEntry,
+			DDLNotSpecified, "", "") == FaultInjectorTypeSkip)
+	{
+		for (int i = 0; i < component_databases->total_segment_dbs; i++)
+		{
+			CdbComponentDatabaseInfo *pRow_duplicate;
+			CdbComponentDatabaseInfo *cdbInfo;
+
+			cdbInfo = &component_databases->segment_db_info[i];
+			if (cdbInfo->role != SEGMENT_ROLE_PRIMARY)
+				continue;
+
+			/*
+			 * if this assert can't hold true for testing we can add the logic
+			 * to repalloc. Given current initial value being so high and demo
+			 * cluster is created with only 3 primaries and 3 mirrors. Seems
+			 * we will never hit the limit.
+			 */
+			Assert(component_databases->total_segment_dbs < segment_array_size);
+
+			pRow_duplicate = &component_databases->segment_db_info[component_databases->total_segment_dbs];
+			component_databases->total_segment_dbs++;
+
+			pRow_duplicate->dbid = cdbInfo->dbid;
+			pRow_duplicate->segindex = cdbInfo->segindex;
+			pRow_duplicate->role = cdbInfo->role;
+			pRow_duplicate->preferred_role = cdbInfo->preferred_role;
+			pRow_duplicate->mode = cdbInfo->mode;
+			pRow_duplicate->status = cdbInfo->status;
+			break;
+		}
+	}
+#endif
 
 	return component_databases;
 }

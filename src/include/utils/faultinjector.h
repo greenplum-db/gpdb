@@ -250,6 +250,8 @@ typedef enum FaultInjectorIdentifier_e {
 
 	DecreaseToastMaxChunkSize,
 
+	AddDuplicateSegmentComponentDBEntry,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

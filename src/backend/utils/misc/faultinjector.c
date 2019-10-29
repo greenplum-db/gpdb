@@ -369,6 +369,9 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault during gang creation, before check for interrupts */
 	_("decrease_toast_max_chunk_size"),
 		/* inject fault when creating new TOAST tables, to modify the chunk size */
+
+	_("add_duplicate_segment_component_db_entry"),
+	/* injecting this fault creates in-memory duplicate entry for segment */
 	_("not recognized"),
 };
 
@@ -1079,6 +1082,7 @@ FaultInjector_NewHashEntry(
 
 			case DecreaseToastMaxChunkSize:
 			case ProcessStartupPacketFault:
+			case AddDuplicateSegmentComponentDBEntry:
 
 				break;
 			default:

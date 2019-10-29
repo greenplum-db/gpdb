@@ -16,6 +16,7 @@
 #ifndef FTS_H
 #define FTS_H
 
+extern bool am_ftsprobe;
 
 /*
  * ENUMS
