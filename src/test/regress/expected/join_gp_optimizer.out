@@ -1347,6 +1347,34 @@ select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.rel
  pg_class | contains all relations
 (1 row)
 
+explain verbose select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from (select oid, relname from pg_class offset 0) c where relname = 'pg_class';
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Subquery Scan on c  (cost=10000000000.00..20000000097.20 rows=1 width=64)
+   Output: c.relname, (SubPlan 1)
+   Filter: (c.relname = 'pg_class'::name)
+   ->  Seq Scan on pg_catalog.pg_class  (cost=10000000000.00..10000000064.97 rows=2497 width=68)
+         Output: pg_class.oid, pg_class.relname
+   SubPlan 1  (slice0)
+     ->  Result  (cost=10000000000.00..10000000001.02 rows=1 width=23)
+           Output: rep_tbl.explanation
+           Filter: (rep_tbl.tablename = (c.relname)::text)
+           ->  Materialize  (cost=10000000000.00..10000000001.02 rows=1 width=23)
+                 Output: rep_tbl.explanation, rep_tbl.tablename
+                 ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000000.00..10000000001.01 rows=1 width=23)
+                       Output: rep_tbl.explanation, rep_tbl.tablename
+                       ->  Seq Scan on public.rep_tbl  (cost=10000000000.00..10000000001.01 rows=1 width=23)
+                             Output: rep_tbl.explanation, rep_tbl.tablename
+ Optimizer: Postgres query optimizer
+ Settings: enable_mergejoin=on, enable_seqscan=off
+(17 rows)
+
+select c.relname, (select explanation from rep_tbl where rep_tbl.tablename=c.relname ) from (select oid, relname from pg_class offset 0) c where relname = 'pg_class';
+ relname  |      explanation       
+----------+------------------------
+ pg_class | contains all relations
+(1 row)
+
 --- The PlaceholderVar case
 explain verbose select t1.relname, ss.x from
   pg_class t1 left join (select relisshared as x, coalesce(t2.relname, 'dummy') y from pg_class t2) ss

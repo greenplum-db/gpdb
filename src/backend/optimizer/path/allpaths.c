@@ -43,6 +43,7 @@
 #include "rewrite/rewriteManip.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
+#include "utils/syscache.h"
 
 #include "cdb/cdbmutate.h"		/* cdbmutate_warn_ctid_without_segid */
 #include "cdb/cdbpath.h"		/* cdbpath_rows() */
@@ -584,40 +585,52 @@ set_plain_rel_size(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 }
 
 /*
- * is_rte_system_table
- *	  Does a range table entry refer to a system table?
+ * is_table_distributed
+ *	  Is the table distributed?
  */
 static bool
-is_rte_system_table(PlannerInfo *root, Index rtindex)
+is_table_distributed(Oid relid)
 {
-	RangeTblEntry *rte;
+	HeapTuple	gp_policy_tuple;
 
-	rte = rt_fetch(rtindex, root->parse->rtable);
-
-	if (rte->rtekind == RTE_RELATION)
+	gp_policy_tuple = SearchSysCache1(GPPOLICYID, ObjectIdGetDatum(relid));
+	if (HeapTupleIsValid(gp_policy_tuple))
 	{
-		Relation rel = try_heap_open(rte->relid, NoLock, true);
-
-		if (!rel)
-			elog(ERROR, "open relation(oid: %u) fail", rte->relid);
-		if (IsSystemRelation(rel))
-		{
-			heap_close(rel, NoLock);
-			return true;
-		}
-		else
-			heap_close(rel, NoLock);
+		ReleaseSysCache(gp_policy_tuple);
+		return true;
 	}
 
 	return false;
 }
 
 /*
- * is_param_systemtable
- *	  Does a Param refer to a system table?
+ * maybe_rte_non_distributed
+ *	  Is a range table entry non-distributed possibly?
  */
 static bool
-is_param_systemtable(PlannerInfo *root, Param *param)
+maybe_rte_non_distributed(List *rtable, Index rtindex)
+{
+	RangeTblEntry *rte;
+
+	rte = rt_fetch(rtindex, rtable);
+
+	if (rte->rtekind == RTE_RELATION)
+		return !is_table_distributed(rte->relid);
+
+	/*
+	 * For other rte kind e.g. RTE_SUBQUERY or RTE_FUNCTION, we may
+	 * not be able to know the locus of its path at this moment so
+	 * set it as true.
+	 */
+	return true;
+}
+
+/*
+ * maybe_param_non_distributed
+ *	  Is a Param related to a non-distributed table possibly?
+ */
+static bool
+maybe_param_non_distributed(PlannerInfo *root, Param *param)
 {
 	Index rtindex;
 
@@ -636,14 +649,14 @@ is_param_systemtable(PlannerInfo *root, Param *param)
 					Var *v = (Var *) pitem->item;
 					rtindex = v->varno;
 
-					return is_rte_system_table(root, rtindex);
+					return maybe_rte_non_distributed(root->parse->rtable, rtindex);
 				}
 				else if (IsA(pitem->item, PlaceHolderVar))
 				{
 					PlaceHolderVar *phv = (PlaceHolderVar *) pitem->item;
 					rtindex = bms_singleton_member(phv->phrels);
 
-					return is_rte_system_table(root, rtindex);
+					return maybe_rte_non_distributed(root->parse->rtable, rtindex);
 				}
 			}
 		}
@@ -653,29 +666,29 @@ is_param_systemtable(PlannerInfo *root, Param *param)
 }
 
 /*
- * contain_param_system_table_walker
- *	  Does an expression contain a system table?
+ * maybe_contain_non_distributed_param_walker
+ *	  Does a Param contain a non-distributed table possibly?
  */
 static bool
-contain_param_system_table_walker(Node *node, void *context)
+maybe_contain_non_distributed_param_walker(Node *node, void *context)
 {
 	PlannerInfo *root =  (PlannerInfo *) context;
 
 	if (node == NULL)
 		return false;
 
-	if (IsA(node, Param) && is_param_systemtable(root, (Param *) node))
+	if (IsA(node, Param) && maybe_param_non_distributed(root, (Param *) node))
 		return true;
 
-	return expression_tree_walker(node, contain_param_system_table_walker, context);
+	return expression_tree_walker(node, maybe_contain_non_distributed_param_walker, context);
 }
 
 /*
- * is_param_systemtable_restrictclauses
- *	  Does a RestrictInfo list contain a system table?
+ * maybe_restrictclauses_include_non_distributed_param
+ *	  Does a RestrictInfo list contain param with non distributed table possibly?
  */
 static bool
-is_param_systemtable_restrictclauses(PlannerInfo *root, List *clauses)
+maybe_restrictclauses_include_non_distributed_param(PlannerInfo *root, List *clauses)
 {
 	ListCell   *l;
 
@@ -686,7 +699,7 @@ is_param_systemtable_restrictclauses(PlannerInfo *root, List *clauses)
 
 		expr = (Node *) c->clause;
 
-		if (contain_param_system_table_walker(expr, root))
+		if (maybe_contain_non_distributed_param_walker(expr, root))
 			return true;
 	}
 
@@ -710,9 +723,9 @@ plain_allow_indexpath_under_subplan(PlannerInfo *root, RelOptInfo *rel)
 
 	if (GpPolicyIsReplicated(rel->cdbpolicy))
 	{
-		if (is_param_systemtable_restrictclauses(root, rel->baserestrictinfo))
+		if (maybe_restrictclauses_include_non_distributed_param(root, rel->baserestrictinfo))
 			return false;
-		if (is_param_systemtable_restrictclauses(root, rel->joininfo))
+		if (maybe_restrictclauses_include_non_distributed_param(root, rel->joininfo))
 			return false;
 	}
 
