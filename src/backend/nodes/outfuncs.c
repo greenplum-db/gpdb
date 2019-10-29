@@ -4828,6 +4828,7 @@ _outAlterExtensionStmt(StringInfo str, const AlterExtensionStmt *node)
 
 	WRITE_STRING_FIELD(extname);
 	WRITE_NODE_FIELD(options);
+	WRITE_ENUM_FIELD(update_ext_state, UpdateExtensionState);
 }
 
 static void
