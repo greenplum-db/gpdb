@@ -422,7 +422,7 @@ always [never]</codeblock></p>
 MaxSessions 200</codeblock></p>
         <p>If you specify <codeph>MaxStartups</codeph> using the
           "<varname>start:rate:full</varname>" syntax, you enable random early connection drop by
-          the SSH daemon. <varname>start</varname> identifies the maximum number of unathenticated
+          the SSH daemon. <varname>start</varname> identifies the maximum number of unauthenticated
           SSH connection attempts allowed. Once <varname>start</varname> number of unauthenticated
           connection attempts is reached, the SSH daemon refuses <varname>rate</varname> percent of
           subsequent connection attempts. <varname>full</varname> identifies the maximum number of
