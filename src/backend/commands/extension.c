@@ -2965,11 +2965,8 @@ ApplyExtensionUpdates(Oid extensionOid,
 	}
 }
 
-/*
- * Execute ALTER EXTENSION ADD/DROP
- */
-Oid
-ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt)
+static Oid
+ExecAlterExtensionContentsStmt_internal(AlterExtensionContentsStmt *stmt)
 {
 	ObjectAddress extension;
 	ObjectAddress object;
@@ -3073,6 +3070,28 @@ ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt)
 		relation_close(relation, NoLock);
 
 	return extension.objectId;
+}
+
+/*
+ * Execute ALTER EXTENSION ADD/DROP
+ */
+Oid
+ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt)
+{
+	Oid result;
+	result = ExecAlterExtensionContentsStmt_internal(stmt);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NIL,
+									NULL);
+	}
+
+	return result;
 }
 
 /*
