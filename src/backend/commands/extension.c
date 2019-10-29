@@ -2981,15 +2981,15 @@ ApplyExtensionUpdates(Oid extensionOid,
 }
 
 /*
- * Execute ALTER EXTENSION ADD/DROP
+ * Execute ALTER EXTENSION ADD/DROP on QD or QE.
  *
  * Return value is the address of the altered extension.
  *
  * objAddr is an output argument which, if not NULL, is set to the address of
  * the added/dropped object.
  */
-ObjectAddress
-ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt,
+static ObjectAddress
+ExecAlterExtensionContentsStmt_internal(AlterExtensionContentsStmt *stmt,
 							   ObjectAddress *objAddr)
 {
 	ObjectAddress extension;
@@ -3098,6 +3098,26 @@ ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt,
 		relation_close(relation, NoLock);
 
 	return extension;
+}
+
+ObjectAddress
+ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt,
+							   ObjectAddress *objAddr)
+{
+	ObjectAddress result;
+	result = ExecAlterExtensionContentsStmt_internal(stmt, objAddr);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NIL,
+									NULL);
+	}
+
+	return result;
 }
 
 /*
