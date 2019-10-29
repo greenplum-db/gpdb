@@ -411,22 +411,27 @@ always [never]</codeblock></p>
           When this occurs, you receive errors such as: <codeph>ssh_exchange_identification:
             Connection closed by remote host</codeph>.</p>
       <p>To increase this connection threshold for your Greenplum Database system, update the SSH
-          <codeph>MaxStartups</codeph> configuration parameter in one of the
-          <codeph>/etc/ssh/sshd_config</codeph> or <codeph>/etc/sshd_config</codeph> SSH daemon
-        configuration files.</p>
-      <p>If you specify <codeph>MaxStartups</codeph> using a single integer value, you identify the
-        maximum number of concurrent unauthenticated connections. For
-        example:<codeblock>MaxStartups 200</codeblock></p>
-      <p>If you specify <codeph>MaxStartups</codeph> using the "<varname>start:rate:full</varname>"
-        syntax, you enable random early connection drop by the SSH daemon. <varname>start</varname>
-        identifies the maximum number of unathenticated SSH connection attempts allowed. Once
-          <varname>start</varname> number of unauthenticated connection attempts is reached, the SSH
-        daemon refuses <varname>rate</varname> percent of subsequent connection attempts.
-          <varname>full</varname> identifies the maximum number of unauthenticated connection
-        attempts after which all attempts are refused. For
-        example:<codeblock>Max Startups 10:30:200</codeblock></p>
-      <p>Restart the SSH daemon after you update <codeph>MaxStartups</codeph>. For example, on a
-        CentOS 6 system, run the following command as the <codeph>root</codeph>
+            <codeph>MaxStartups</codeph> and <codeph>MaxSessions</codeph> configuration parameters
+          in one of the <codeph>/etc/ssh/sshd_config</codeph> or <codeph>/etc/sshd_config</codeph>
+          SSH daemon configuration files.</p>
+        <p>If you specify <codeph>MaxStartups</codeph> and <codeph>MaxSessions</codeph> using a
+          single integer value, you identify the maximum number of concurrent unauthenticated
+          connections (<codeph>MaxStartups</codeph>) and maximum number of open shell, login, or
+          subsystem sessions permitted per network connection (<codeph>MaxSessions</codeph>). For
+          example:<codeblock>MaxStartups 200
+MaxSessions 200</codeblock></p>
+        <p>If you specify <codeph>MaxStartups</codeph> using the
+          "<varname>start:rate:full</varname>" syntax, you enable random early connection drop by
+          the SSH daemon. <varname>start</varname> identifies the maximum number of unathenticated
+          SSH connection attempts allowed. Once <varname>start</varname> number of unauthenticated
+          connection attempts is reached, the SSH daemon refuses <varname>rate</varname> percent of
+          subsequent connection attempts. <varname>full</varname> identifies the maximum number of
+          unauthenticated connection attempts after which all attempts are refused. For
+          example:<codeblock>Max Startups 10:30:200
+MaxSessions 200</codeblock></p>
+        <p>Restart the SSH daemon after you update <codeph>MaxStartups</codeph> and
+            <codeph>MaxSessions</codeph>. For example, on a CentOS 6 system, run the following
+          command as the <codeph>root</codeph>
         user:<codeblock># service sshd restart</codeblock></p>
       <p>For detailed information about SSH configuration options, refer to the SSH documentation
         for your Linux distribution.</p>
