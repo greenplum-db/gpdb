@@ -1636,8 +1636,6 @@ SetupTCPInterconnect(EState *estate)
 		ML_CHECK_FOR_INTERRUPTS(estate->interconnect_context->teardownActive);
 		n = select(highsock + 1, (fd_set *)&rset, (fd_set *)&wset, (fd_set *)&eset, &timeout);
 		ML_CHECK_FOR_INTERRUPTS(estate->interconnect_context->teardownActive);
-		if (Gp_role == GP_ROLE_DISPATCH)
-			checkForCancelFromQD(estate->interconnect_context);
 
 		elapsed_ms = gp_get_elapsed_ms(&startTime);
 
@@ -1678,6 +1676,9 @@ SetupTCPInterconnect(EState *estate)
 			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 							errmsg("Interconnect error: %s: %m", "select")));
 		}
+
+		if (Gp_role == GP_ROLE_DISPATCH)
+			checkForCancelFromQD(estate->interconnect_context);
 
 		/*
 		 * check our connections that are accepted'd but no register
