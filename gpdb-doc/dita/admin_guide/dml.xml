@@ -93,7 +93,8 @@
             <row>
               <entry colname="col1">EXCLUSIVE</entry>
               <entry colname="col2"><codeph>DELETE</codeph>, <codeph>UPDATE</codeph>,
-                  <codeph>SELECT...FOR UPDATE</codeph><p>See <xref href="#topic2/lock_note"
+                  <codeph>SELECT...FOR UPDATE</codeph>, <codeph>REFRESH
+                  MATERIALIZED VIEW CONCURRENTLY</codeph><p>See <xref href="#topic2/lock_note"
                     format="dita">Note</xref>.</p></entry>
               <entry colname="col3">ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE
                 ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
@@ -102,7 +103,8 @@
               <entry colname="col1">ACCESS EXCLUSIVE</entry>
               <entry colname="col2"><codeph>ALTER TABLE</codeph>, <codeph>DROP TABLE</codeph>,
                   <codeph>TRUNCATE</codeph>, <codeph>REINDEX</codeph>, <codeph>CLUSTER</codeph>,
-                  <codeph>VACUUM FULL</codeph>
+                  <codeph>REFRESH MATERIALIZED VIEW</codeph> (without
+                <codeph>CONCURRENTLY</codeph>), <codeph>VACUUM FULL</codeph>
               </entry>
               <entry colname="col3">ACCESS SHARE, ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE,
                 SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>

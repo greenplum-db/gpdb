@@ -14,6 +14,7 @@
 #include "scenarios/ao_table.h"
 #include "scenarios/aocs_table.h"
 #include "scenarios/data_checksum_mismatch.h"
+#include "scenarios/plpgsql_function.h"
 
 #include "utilities/gpdb5-cluster.h"
 #include "utilities/gpdb6-cluster.h"
@@ -62,6 +63,7 @@ main(int argc, char *argv[])
 		unit_test_setup_teardown(test_a_partitioned_heap_table_with_differently_sized_dropped_columns_cannot_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partitioned_heap_table_with_differently_aligned_fixed_dropped_columns_cannot_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partitioned_heap_table_with_differently_aligned_varlen_dropped_columns_cannot_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_plpgsql_function_can_be_upgraded, setup, teardown),
 	};
 
 	return run_tests(tests);

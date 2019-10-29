@@ -38,6 +38,8 @@
         <xref href="./gpexpand_expansion_progress.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>
+        <xref href="./pg_matviews.xml" type="topic" format="dita"/></li>
+      <li>
         <xref href="./pg_max_external_files.xml#topic1" type="topic" format="dita"/></li>
       <li>
         <xref href="./pg_partition_columns.xml#topic1" type="topic" format="dita"/>
@@ -78,8 +80,8 @@
           scope="external" format="html">Statistics Collector Views</xref>
       </li>
       <li>
-        <xref href="https://www.postgresql.org/docs/9.4/information-schema.html"
-          scope="external" format="html">The Information Schema</xref>
+        <xref href="https://www.postgresql.org/docs/9.4/information-schema.html" scope="external"
+          format="html">The Information Schema</xref>
       </li>
     </ul>
   </body>
