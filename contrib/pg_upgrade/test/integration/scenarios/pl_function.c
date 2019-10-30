@@ -13,7 +13,7 @@
 #include "utilities/test-helpers.h"
 #include "utilities/upgrade-helpers.h"
 
-#include "plpgsql_function.h"
+#include "pl_function.h"
 
 static void
 createPlpgsqlFunctionInFiveCluster(void)
@@ -43,13 +43,41 @@ createPlpgsqlFunctionInFiveCluster(void)
 }
 
 static void
+createPlpythonFunctionInFiveCluster(void)
+{
+	PGconn	   *conn1 = connectToFive();
+	PGresult   *result;
+
+	result = executeQuery(conn1, "CREATE SCHEMA five_to_six_upgrade;");
+	PQclear(result);
+
+	result = executeQuery(conn1, "SET search_path TO five_to_six_upgrade;");
+	PQclear(result);
+
+	result = executeQuery(conn1, "CREATE LANGUAGE plpythonu");
+	PQclear(result);
+
+	result = executeQuery(conn1, "                                  \
+		CREATE FUNCTION someimmutablefunction(foo integer)          \
+		RETURNS integer                                             \
+		LANGUAGE plpythonu IMMUTABLE STRICT AS                      \
+		$$                                                          \
+			return 42 + foo;                                        \
+		$$;                                                         \
+	");
+	PQclear(result);
+
+	PQfinish(conn1);
+}
+
+static void
 anAdministratorPerformsAnUpgrade(void)
 {
 	performUpgrade();
 }
 
 static void
-thePlpgsqlFunctionIsUsable(void)
+thePlFunctionIsUsable(void)
 {
 	PGconn	   *connection = connectToSix();
 	PGresult   *result = NULL;
@@ -74,5 +102,13 @@ test_a_plpgsql_function_can_be_upgraded(void **state)
 {
 	given(withinGpdbFiveCluster(createPlpgsqlFunctionInFiveCluster));
 	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(thePlpgsqlFunctionIsUsable));
+	then(withinGpdbSixCluster(thePlFunctionIsUsable));
+}
+
+void
+test_a_plpython_function_can_be_upgraded(void **state)
+{
+	given(withinGpdbFiveCluster(createPlpythonFunctionInFiveCluster));
+	when(anAdministratorPerformsAnUpgrade);
+	then(withinGpdbSixCluster(thePlFunctionIsUsable));
 }
