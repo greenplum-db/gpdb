@@ -3151,7 +3151,26 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			(result_plan->flow->flotype == FLOW_PARTITIONED ||
 			 result_plan->flow->locustype == CdbLocusType_SegmentGeneral))
 		{
-			if (result_plan->flow->flotype == FLOW_PARTITIONED)
+			/*
+			 * If limit clause contains volatile functions, they should be
+			 * evaluated only once. For such cases, we should not push down
+			 * the limit.
+			 *
+			 * Words on multi-stage limit: current interconnect implementation
+			 * model is sender will send when buffer is full. Under such
+			 * condition, multi-stage limit might improve performance for
+			 * some cases.
+			 *
+			 * TODO: we might investigate that evaluating limit clause first,
+			 * and then doing pushdown it in future.
+			 */
+			bool        limit_contain_volatile_functions;
+
+			limit_contain_volatile_functions = (contain_volatile_functions(parse->limitCount)
+												|| contain_volatile_functions(parse->limitOffset));
+
+			if (result_plan->flow->flotype == FLOW_PARTITIONED &&
+				!limit_contain_volatile_functions)
 			{
 				/* pushdown the first phase of multi-phase limit (which takes offset into account) */
 				result_plan = pushdown_preliminary_limit(result_plan, parse->limitCount, count_est, parse->limitOffset, offset_est);
