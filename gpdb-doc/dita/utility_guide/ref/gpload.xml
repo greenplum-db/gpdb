@@ -46,9 +46,9 @@
                     the Greenplum Database major version in which it is shipped. For example, a
                         <codeph>gpfdist</codeph> utility that is installed with Greenplum Database
                     4.x cannot be used with Greenplum Database 5.x or 6.x.</note>
-                <note>The Greenplum Database 5.x <codeph>gpload</codeph> for Linux is
+                <note>The Greenplum Database 5.22 and later <codeph>gpload</codeph> for Linux is
                   compatible with Greenplum Database 6.x. The Greenplum Database 6.x
-                  <codeph>gpload</codeph> for Windows is compatible with Greenplum 5.x.</note>
+                  <codeph>gpload</codeph> for both Linux and Windows is compatible with Greenplum 5.x.</note>
                 <note id="gpload-limitation"><codeph>MERGE</codeph> and <codeph>UPDATE</codeph>
                     operations are not supported if the target table column name is a reserved
                     keyword, has capital letters, or includes any character that requires quotes ("
