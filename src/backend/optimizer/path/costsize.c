@@ -108,7 +108,7 @@ double		cpu_operator_cost = DEFAULT_CPU_OPERATOR_COST;
 
 int			effective_cache_size = DEFAULT_EFFECTIVE_CACHE_SIZE;
 
-Cost		disable_cost = 1.0e10;
+Cost		disable_cost = 1.0e40;
 
 bool		enable_seqscan = true;
 bool		enable_indexscan = true;
