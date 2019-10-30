@@ -449,11 +449,6 @@ class GpStart:
         # segments marked down
         invalid_segs = self.gparray.get_invalid_segdbs()
 
-        inactiveDbIds = {}
-        for segment in invalid_segs:
-            inactiveDbIds[segment.getSegmentDbId()] = True
-        invalid_segs = [segment for segment in invalid_segs if inactiveDbIds.get(segment.getSegmentDbId()) is None]
-
         # now produce the list of segments to actually start
         dbIdsToNotStart = {}
         for segment in invalid_segs:
