@@ -23,7 +23,7 @@ create_demo_cluster() {
 		make -C "$gpdb_source_path/gpAux/gpdemo" &&
 		source "$gpdb_source_path/gpAux/gpdemo/gpdemo-env.sh" &&
 		after_cluster_created &&
-		"./$installation_path/bin/gpstop" -a
+		"./$installation_path/bin/gpstop" -af
 }
 
 create_backup_of_data_dirs() {

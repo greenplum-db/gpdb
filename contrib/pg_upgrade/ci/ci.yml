@@ -41,6 +41,7 @@ jobs:
           trigger: true
       - task: run-test
         file: gpdb6/contrib/pg_upgrade/ci/run-test.yml
+        timeout: 1h
 
   - name: pull-request-end-to-end-test
     plan:
@@ -51,3 +52,4 @@ jobs:
         - get: gpdb5
       - task: run-test
         file: gpdb6/contrib/pg_upgrade/ci/run-test.yml
+        timeout: 1h

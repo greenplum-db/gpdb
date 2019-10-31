@@ -20,7 +20,7 @@ stopGpdbFiveCluster(void)
 		   ". $PWD/gpdb5/greenplum_path.sh; \n"
 		   "export PGPORT=50000; \n"
 		   "export MASTER_DATA_DIRECTORY=$PWD/gpdb5-data/qddir/demoDataDir-1; \n"
-		   "$PWD/gpdb5/bin/gpstop -a"
+		   "$PWD/gpdb5/bin/gpstop -af"
 		);
 }
 
