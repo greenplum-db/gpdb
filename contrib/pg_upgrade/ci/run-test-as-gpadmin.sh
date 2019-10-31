@@ -7,7 +7,7 @@ install_gpdb5() {
 
 	pushd "$gpdb5_source_path"
 
-	./configure --disable-orca --prefix="$gpdb5_installation_path" &&
+	./configure --disable-orca --prefix="$gpdb5_installation_path" --with-python &&
 		make -j 4 -l 4 &&
 		make install
 
@@ -22,7 +22,7 @@ install_gpdb6() {
 
 	pushd "$gpdb6_source_path"
 
-	./configure --disable-orca --prefix="$gpdb6_installation_path" --without-zstd &&
+	./configure --disable-orca --prefix="$gpdb6_installation_path" --without-zstd --with-python &&
 		make -j 4 -l 4 &&
 		make install
 
