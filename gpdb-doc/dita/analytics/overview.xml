@@ -8,18 +8,7 @@
       <title>Overview</title>
       <p>Greenplum offers a unique combination of a powerful MPP (Massive Parallel Processing)
         database and advanced data analytics capabilities. This architecture becomes an ideal environment for exploring artificial intelligence (AI) subsets like Machine Learning, Deep Learning, Graph analytics, and Geospatial analysis amongst others.</p>
-      <p>Using Greenplum Database for advanced analytics empowers you to:</p>
-      <ul>
-        <li>Analyze a multitude of data types - structured, text, geospatial, and graph – in a single environment, which can scale to petabytes and run algorithms designed for parallelism. </li>
-        <li>Leverage existing SQL knowledge investment on large datasets, in the same environment, which optimizes efficiency. Pivotal Greenplum can execute over 50 statistical, machine learning, and graph methods, via SQL.</li>
-        <li>Train more models in less time but taking advantage of the speed when using an MPP architecture and in-database analytics.</li>
-        <li>Access the data where it lives therefore integrate data and analytics in one place. Pivotal Greenplum is infrastructure-agnostic and available for bare metal, private cloud, and public cloud deployments. Greenplum supports Apache Kafka connector, extensions for HDFS, Hive, and HBase as well as reading/writing data from/to cloud storage, including Amazon S3 objects. </li>
-        <li>Use familiar and leading BI and advanced analytics software that are ODBC/JDBC compatible, or have native integrations, including SAS, IBM Cognos, SAP Analytics Solutions, Qlik, Tableau, Apache Zeppelin, and Jupyter.</li>
-        <li>Execute deep learning algorithms using popular frameworks like Keras and TensorFlow in an MPP relational database. </li>
-        <li>Use containers capable of isolating executors from the host OS. Greenplum PL/Container implements a trusted language execution engine which permits customized data science workloads or environments created for different end user workloads.</li>
-        <li>Use procedural languages to customize your analytics. Pivotal Greenplum supports development in R, Python, Java, and other standard languages therefore you can distribute execution across the entire cluster to take advantage of the scale and parallelism.</li>
-        <li>Support for GPUs???? </li>
-      </ul>
+
     </section>
     <p>The different Greenplum Database capabilities can be explored using different libraries and extensions.</p>
     <fig id="fig_mz4_r11_njb">
@@ -27,6 +16,7 @@
       <image placement="break" href="graphics/gp_integrated_analyticsv2.png" width="750" height="450"
         align="center" id="image_nz4_r11_njb"/>
     </fig>
+    
     <section id="pr_lang_and_ext">
       <title>Procedural Languages and Analytics Extensions</title>
       <p>This section describes the procedural languages and analytics extensions available with
@@ -54,6 +44,21 @@
         <li><xref href="madlib.xml" format="dita">MADlib</xref></li>
         <li otherprops="pivotal"><xref href="postGIS.xml" format="dita">PostGIS</xref></li>
       </ul>
+
+
+      <p>Using Greenplum Database for advanced analytics empowers you to:</p>
+      <ul>
+        <li>Analyze a multitude of data types - structured, text, geospatial, and graph – in a single environment, which can scale to petabytes and run algorithms designed for parallelism. </li>
+        <li>Leverage existing SQL knowledge investment on large datasets, in the same environment, which optimizes efficiency. Pivotal Greenplum can execute over 50 statistical, machine learning, and graph methods, via SQL.</li>
+        <li>Train more models in less time but taking advantage of the speed when using an MPP architecture and in-database analytics.</li>
+        <li>Access the data where it lives therefore integrate data and analytics in one place. Pivotal Greenplum is infrastructure-agnostic and available for bare metal, private cloud, and public cloud deployments. Greenplum supports Apache Kafka connector, extensions for HDFS, Hive, and HBase as well as reading/writing data from/to cloud storage, including Amazon S3 objects. </li>
+        <li>Use familiar and leading BI and advanced analytics software that are ODBC/JDBC compatible, or have native integrations, including SAS, IBM Cognos, SAP Analytics Solutions, Qlik, Tableau, Apache Zeppelin, and Jupyter.</li>
+        <li>Execute deep learning algorithms using popular frameworks like Keras and TensorFlow in an MPP relational database. </li>
+        <li>Use containers capable of isolating executors from the host OS. Greenplum PL/Container implements a trusted language execution engine which permits customized data science workloads or environments created for different end user workloads.</li>
+        <li>Use procedural languages to customize your analytics. Pivotal Greenplum supports development in R, Python, Java, and other standard languages therefore you can distribute execution across the entire cluster to take advantage of the scale and parallelism.</li>
+        <li>Support for GPUs???? </li>
+      </ul>
+
     </section>
   </body>
 </topic>
