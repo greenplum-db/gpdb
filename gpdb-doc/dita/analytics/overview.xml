@@ -13,10 +13,10 @@
     <p>The different Greenplum Database capabilities can be explored using different libraries and extensions.</p>
     <fig id="fig_mz4_r11_njb">
       <title>Greenplum Integrated Analytics</title>
-      <image placement="break" href="graphics/gp_integrated_analyticsv2.png" width="750" height="450"
+      <image placement="break" href="graphics/gp_integrated_analyticsv3.png" width="750" height="450"
         align="center" id="image_nz4_r11_njb"/>
     </fig>
-    
+
     <section id="pr_lang_and_ext">
       <title>Procedural Languages and Analytics Extensions</title>
       <p>This section describes the procedural languages and analytics extensions available with
