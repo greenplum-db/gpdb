@@ -1825,9 +1825,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 		}
 	}
 
-
 	*policyp = policy;
-
 
 	if (cxt && cxt->pkey)		/* Primary key	specified.	Make sure
 								 * distribution columns match */
@@ -1836,14 +1834,10 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 		IndexStmt  *index = cxt->pkey;
 		List	   *indexParams = index->indexParams;
 		ListCell   *ip;
-
+		Bitmapset  *indbm = NULL;
 		foreach(ip, indexParams)
 		{
 			IndexElem  *iparam;
-
-			if (i >= policy->nattrs)
-				break;
-
 			iparam = lfirst(ip);
 			if (iparam->name != 0)
 			{
@@ -1911,36 +1905,37 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 						}
 					}
 				}
-				if (colindex != policy->attrs[i])
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("PRIMARY KEY and DISTRIBUTED BY definitions incompatible"),
-							 errhint("When there is both a PRIMARY KEY, and a "
-									"DISTRIBUTED BY clause, the DISTRIBUTED BY "
-									"clause must be equal to or a left-subset "
-									"of the PRIMARY KEY")));
-				}
-
+				indbm = bms_add_member(indbm, colindex);
 				i++;
 			}
 		}
+		Bitmapset *polbm = NULL;
+		for (i = 0; i < policy->nattrs; i++)
+                	polbm = bms_add_member(polbm, policy->attrs[i]);
+		if (!bms_is_subset(polbm, indbm))
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("PRIMARY KEY and DISTRIBUTED BY definitions incompatible"),
+					 errhint("When there is both a PRIMARY KEY, and a "
+							"DISTRIBUTED BY clause, the DISTRIBUTED BY "
+							"clause must be equal to or a left-subset "
+							"of the PRIMARY KEY")));
+		}
+		bms_free(indbm);
+		bms_free(polbm);
 	}
 
 	if (uniqueindex)			/* UNIQUE specified.  Make sure distribution
 								 * columns match */
 	{
 		int			i = 0;
-
 		List	   *keys = uniqueindex->keys;
 		ListCell   *ip;
-
+		Bitmapset  *indbm = NULL;
 		foreach(ip, keys)
 		{
 			IndexElem  *iparam;
-
-			if (i >= policy->nattrs)
-				break;
 
 			iparam = lfirst(ip);
 			if (iparam->name != 0)
@@ -2006,21 +2001,26 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 						break;
 					}
 				}
-
-				if (colindex != policy->attrs[i])
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("UNIQUE constraint and DISTRIBUTED BY "
-									"definitions incompatible"),
-							 errhint("When there is both a UNIQUE constraint, "
-									 "and a DISTRIBUTED BY clause, the "
-									 "DISTRIBUTED BY clause must be equal to "
-									 "or a left-subset of the UNIQUE columns")));
-				}
+				indbm = bms_add_member(indbm, colindex);
 				i++;
 			}
 		}
+		Bitmapset *polbm = NULL;
+		for (i = 0; i < policy->nattrs; i++)
+                	polbm = bms_add_member(polbm, policy->attrs[i]);
+		if (!bms_is_subset(polbm, indbm))
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("UNIQUE constraint and DISTRIBUTED BY "
+							"definitions incompatible"),
+					 errhint("When there is both a UNIQUE constraint, "
+							 "and a DISTRIBUTED BY clause, the "
+							 "DISTRIBUTED BY clause must be equal to "
+							 "or a left-subset of the UNIQUE columns")));
+		}
+		bms_free(indbm);
+		bms_free(polbm);
 	}
 }
 
