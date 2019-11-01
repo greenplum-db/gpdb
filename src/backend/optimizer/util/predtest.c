@@ -110,6 +110,7 @@ static void InvalidateOprProofCacheCallBack(Datum arg, int cacheid, uint32 hashv
 
 
 static bool simple_equality_predicate_refuted(Node *clause, Node *predicate);
+static bool eval_caluse_with_eqpred(Node *clause, Node *var, Node *val);
 
 /*
  * predicate_implied_by
@@ -1291,47 +1292,8 @@ simple_equality_predicate_refuted(Node *clause, Node *predicate)
 		return false;
 
 	/* now do the evaluation */
-	{
-		Node *newClause, *reducedExpression;
-		ReplaceExpressionMutatorReplacement replacement;
-		bool				result = false;
-		MemoryContext 		old_context;
-		MemoryContext		tmp_context;
-
-		replacement.replaceThis = varExprInPredicate;
-		replacement.withThis = constExprInPredicate;
-        replacement.numReplacementsDone = 0;
-
-		tmp_context = AllocSetContextCreate(CurrentMemoryContext,
-											"Predtest",
-											ALLOCSET_DEFAULT_MINSIZE,
-											ALLOCSET_DEFAULT_INITSIZE,
-											ALLOCSET_DEFAULT_MAXSIZE);
-
-		old_context = MemoryContextSwitchTo(tmp_context);
-
-		newClause = replace_expression_mutator(clause, &replacement);
-
-        if ( replacement.numReplacementsDone > 0)
-        {
-            newClause = convertToExplicitAndsShallowly(newClause);
-            reducedExpression = eval_const_expressions(NULL, newClause);
-
-            if ( IsA(reducedExpression, Const ))
-            {
-                Const *c = (Const *) reducedExpression;
-                if ( c->consttype == BOOLOID &&
-                     ! c->constisnull )
-                {
-                	result = (DatumGetBool(c->constvalue) == false);
-                }
-            }
-        }
-
-		MemoryContextSwitchTo(old_context);
-		MemoryContextDelete(tmp_context);
-        return result;
-	}
+	return eval_caluse_with_eqpred(clause,
+								   varExprInPredicate, constExprInPredicate);
 }
 
 /*
@@ -2247,5 +2209,48 @@ DeterminePossibleValueSet(Node *clause, Node *variable)
 
 	/* can't get here */
 	elog(ERROR, "predicate_classify returned a bad value");
+	return result;
+}
+
+static bool
+eval_caluse_with_eqpred(Node *clause, Node *var, Node *val)
+{
+	Node                               *newClause;
+	Node                               *reducedExpression;
+	ReplaceExpressionMutatorReplacement replacement;
+	MemoryContext 		                old_context;
+	MemoryContext		                tmp_context;
+	bool				                result = false;
+
+	replacement.replaceThis = var;
+	replacement.withThis = val;
+	replacement.numReplacementsDone = 0;
+
+	tmp_context = AllocSetContextCreate(CurrentMemoryContext,
+										"Predtest",
+										ALLOCSET_DEFAULT_MINSIZE,
+										ALLOCSET_DEFAULT_INITSIZE,
+										ALLOCSET_DEFAULT_MAXSIZE);
+
+	old_context = MemoryContextSwitchTo(tmp_context);
+
+	newClause = replace_expression_mutator(clause, &replacement);
+
+	if (replacement.numReplacementsDone > 0)
+	{
+		newClause = convertToExplicitAndsShallowly(newClause);
+		reducedExpression = eval_const_expressions(NULL, newClause);
+
+		if (IsA(reducedExpression, Const))
+		{
+			Const *c = (Const *) reducedExpression;
+			if (c->consttype == BOOLOID &&
+				!c->constisnull)
+				result = (DatumGetBool(c->constvalue) == false);
+		}
+	}
+
+	MemoryContextSwitchTo(old_context);
+	MemoryContextDelete(tmp_context);
 	return result;
 }
