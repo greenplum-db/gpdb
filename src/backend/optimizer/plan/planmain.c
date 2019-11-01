@@ -292,7 +292,6 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->enable_hashjoin = enable_hashjoin;
 	c1->gp_enable_hashjoin_size_heuristic = gp_enable_hashjoin_size_heuristic;
 	c1->gp_enable_predicate_propagation = gp_enable_predicate_propagation;
-	c1->constraint_exclusion = constraint_exclusion;
 
 	c1->gp_enable_minmax_optimization = gp_enable_minmax_optimization;
 	c1->gp_enable_multiphase_agg = gp_enable_multiphase_agg;

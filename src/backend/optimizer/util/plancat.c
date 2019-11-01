@@ -1407,7 +1407,6 @@ relation_excluded_by_constraints(PlannerInfo *root,
 	List	   *constraint_pred;
 	List	   *safe_constraints;
 	ListCell   *lc;
-	int			constraint_exclusion = root->config->constraint_exclusion;
 
 	/* Skip the test if constraint exclusion is disabled for the rel */
 	if (constraint_exclusion == CONSTRAINT_EXCLUSION_OFF ||

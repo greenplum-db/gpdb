@@ -32,8 +32,6 @@
 #include "catalog/pg_operator.h"
 #include "optimizer/paths.h"
 
-static const bool kUseFnEvaluationForPredicates = true;
-
 /*
  * Proof attempts involving large arrays in ScalarArrayOpExpr nodes are
  * likely to require O(N^2) time, and more often than not fail anyway.
@@ -220,8 +218,6 @@ predicate_refuted_by(List *predicate_list, List *restrictinfo_list)
 	if ( predicate_refuted_by_recurse(r, p))
         return true;
 
-    if ( ! kUseFnEvaluationForPredicates )
-        return false;
     return simple_equality_predicate_refuted((Node*)restrictinfo_list, (Node*)predicate_list);
 }
 
