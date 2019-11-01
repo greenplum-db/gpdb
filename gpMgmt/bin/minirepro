@@ -133,19 +133,14 @@ def dump_query(connectionInfo, query_file):
         toolkit_f.write(query)
 
     # disable .psqlrc to prevent unexpected timing and format output
-    query_cmd = "psql %s --pset footer --no-psqlrc -Atq -h %s -p %s -U %s -f %s" % (db, host, port, user, toolkit_sql)
+    query_cmd = "psql %s --pset footer --no-psqlrc -v ON_ERROR_STOP=1 -Atq -h %s -p %s -U %s -f %s" % (db, host, port, user, toolkit_sql)
     print(query_cmd)
 
     p = subprocess.Popen(query_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ)
 
-    if p.wait() != 0:
-        errormsg = p.communicate()[1].decode('ascii')
-        sys.stderr.writelines('\nError when executing function gp_dump_query_oids.\n\n' + errormsg + '\n\n')
-        sys.exit(1)
-
     outmsg, errormsg = p.communicate()
-    if errormsg:
-        sys.stderr.writelines('\nError when executing function gp_dump_query_oids.\n\n' + errormsg + '\n\n')
+    if p.returncode != 0:
+        sys.stderr.writelines('\nError when executing function gp_dump_query_oids.\n\n' + errormsg.decode() + '\n\n')
         sys.exit(1)
     return outmsg
 
@@ -185,8 +180,9 @@ def pg_dump_object(mr_query, connectionInfo, envOpts):
         (dmp_cmd, mr_query.relids, mr_query.funcids, Escape(out_file))
     print(dmp_cmd)
     p = subprocess.Popen(dmp_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
-    if p.wait() != 0:
-        sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1].decode('ascii') + '\n\n')
+    _, errormsg = p.communicate()
+    if p.returncode != 0:
+        sys.stderr.writelines('\nError when executing pg_dump.\n\n' + errormsg.decode() + '\n\n')
         sys.exit(1)
 
 def dump_tuple_count(cur, oid_str, f_out):
