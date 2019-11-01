@@ -15,6 +15,26 @@
 #include "utilities/bdd-helpers.h"
 
 static void
+partitionedHeapTableWithDefaultPartitionSplittedShouldHaveBeenUpgraded()
+{
+	PGconn	   *connection = connectToSix();
+	PGresult   *result;
+
+	executeQuery(connection, "set search_path to five_to_six_upgrade;");
+
+	result = executeQuery(connection, "select * from p_split_partition_test;");
+	assert_int_equal(5, PQntuples(result));
+
+	result = executeQuery(connection, "select * from p_split_partition_test_1_prt_splitted;");
+	assert_int_equal(3, PQntuples(result));
+
+	result = executeQuery(connection, "select * from p_split_partition_test_1_prt_extra;");
+	assert_int_equal(1, PQntuples(result));
+
+	PQfinish(connection);
+}
+
+static void
 listPartitionedHeapTableWithAddedPartitionsShouldHaveBeenUpgraded()
 {
 	PGconn	   *connection = connectToSix();
@@ -131,6 +151,19 @@ createListPartitionedHeapTableAndAddPartitionsWithData(void)
 	PQfinish(connection);
 }
 
+static void
+createRangePartitionedHeapTableWithDefaultPartition(void)
+{
+	PGconn	   *connection = connectToFive();
+
+	executeQuery(connection, "create schema five_to_six_upgrade;");
+	executeQuery(connection, "set search_path to five_to_six_upgrade");
+	executeQuery(connection, "create table p_split_partition_test (a int, b int) partition by range(b) (start(1) end(2), default partition extra);");
+	executeQuery(connection, "insert into p_split_partition_test select i, i from generate_series(1,5)i;");
+	executeQuery(connection, "alter table p_split_partition_test split default partition start(2) end(5) into (partition splitted, partition extra);");
+	PQfinish(connection);
+}
+
 void
 test_a_partitioned_heap_table_with_data_can_be_upgraded(void **state)
 {
@@ -153,4 +186,12 @@ test_a_partition_table_with_newly_added_list_partition_can_be_upgraded(void **st
 	given(withinGpdbFiveCluster(createListPartitionedHeapTableAndAddPartitionsWithData));
 	when(anAdministratorPerformsAnUpgrade);
 	then(withinGpdbSixCluster(listPartitionedHeapTableWithAddedPartitionsShouldHaveBeenUpgraded));
+}
+
+void
+test_a_partition_table_with_default_partition_after_split_can_be_upgraded(void **state)
+{
+	given(withinGpdbFiveCluster(createRangePartitionedHeapTableWithDefaultPartition));
+	when(anAdministratorPerformsAnUpgrade);
+	then(withinGpdbSixCluster(partitionedHeapTableWithDefaultPartitionSplittedShouldHaveBeenUpgraded));
 }

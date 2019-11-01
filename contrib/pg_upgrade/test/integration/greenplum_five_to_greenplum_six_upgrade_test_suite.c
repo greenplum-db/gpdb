@@ -47,6 +47,7 @@ main(int argc, char *argv[])
 
 	const		UnitTest tests[] = {
 		unit_test_setup_teardown(test_a_readable_external_table_can_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_partition_table_with_default_partition_after_split_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partition_table_with_newly_added_range_partition_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_partition_table_with_newly_added_list_partition_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_clusters_with_different_checksum_version_cannot_be_upgraded, setup, teardown),
