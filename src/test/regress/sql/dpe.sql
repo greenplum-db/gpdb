@@ -18,8 +18,16 @@ PARTITION BY RANGE(ptid)
           )
 ;
 
+-- pt1 table is originally created distributed randomly
+-- But a random policy impacts data distribution which
+-- might lead to unstable stats info. Some test cases
+-- test plan thus become flaky. We avoid flakiness by
+-- creating the table distributed hashly and after
+-- loading all the data, changing policy to randomly without
+-- data movement. Thus every time we will have a static
+-- data distribution plus randomly policy.
 create table pt1(dist int, pt1 text, pt2 text, pt3 text, ptid int) 
-DISTRIBUTED RANDOMLY
+DISTRIBUTED BY (dist)
 PARTITION BY RANGE(ptid) 
           (
           START (0) END (5) EVERY (1),
@@ -40,6 +48,8 @@ create table t1 as select * from t;
 
 insert into pt1 select * from pt;
 insert into pt1 select dist, pt1, pt2, pt3, ptid-100 from pt;
+
+alter table pt1 set with(REORGANIZE=false) DISTRIBUTED RANDOMLY;
 
 analyze pt;
 analyze pt1;
