@@ -2200,7 +2200,6 @@ DROP TABLE IF EXISTS tc0, tc1, tc2, tc3, tc4;
 -- end_ignore
 CREATE TABLE tc0 (a int check (a = 5));
 INSERT INTO tc0 VALUES (NULL);
--- FIXME: Planner gives wrong result
 SELECT * from tc0 where a IS NULL;
 
 CREATE TABLE tc1 (a int check (a between 1 and 2 or a != 3 and a > 5));

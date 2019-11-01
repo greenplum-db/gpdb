@@ -108,9 +108,7 @@ static bool operator_same_subexprs_lookup(Oid pred_op, Oid clause_op,
 static Oid	get_btree_test_op(Oid pred_op, Oid clause_op, bool refute_it);
 static void InvalidateOprProofCacheCallBack(Datum arg, int cacheid, uint32 hashvalue);
 
-
-static bool simple_equality_predicate_refuted(Node *clause, Node *predicate);
-static bool eval_caluse_with_eqpred(Node *clause, Node *var, Node *val);
+static bool eval_clause_with_eqpred(Node *clause, Node *var, Node *val);
 
 /*
  * predicate_implied_by
@@ -216,10 +214,7 @@ predicate_refuted_by(List *predicate_list, List *restrictinfo_list)
 		r = (Node *) restrictinfo_list;
 
 	/* And away we go ... */
-	if ( predicate_refuted_by_recurse(r, p))
-        return true;
-
-    return simple_equality_predicate_refuted((Node*)restrictinfo_list, (Node*)predicate_list);
+	return predicate_refuted_by_recurse(r, p);
 }
 
 /*----------
@@ -1216,16 +1211,17 @@ convertToExplicitAndsShallowly( Node *n)
  * expression gives TRUE, we cannot conclude that (x=2) is implied by the whole expression.
  *
  */
-static bool
-simple_equality_predicate_refuted(Node *clause, Node *predicate)
+bool
+simple_equality_predicate_refuted(Node *clause, Node *predicate, bool is_leaf_part)
 {
 	OpExpr *predicateExpr;
 	Node *leftPredicateOp, *rightPredicateOp;
-    Node *constExprInPredicate, *varExprInPredicate;
+	Node *constExprInPredicate, *varExprInPredicate;
 	List *list;
 
     /* BEGIN inspecting the predicate: this only works for a simple equality predicate */
-    if ( nodeTag(predicate) != T_List )
+	if (predicate == NULL || clause == NULL ||
+		nodeTag(predicate) != T_List )
         return false;
 
     if ( clause == predicate )
@@ -1292,7 +1288,32 @@ simple_equality_predicate_refuted(Node *clause, Node *predicate)
 		return false;
 
 	/* now do the evaluation */
-	return eval_caluse_with_eqpred(clause,
+
+	/*
+	 * simple_equality_predicate_refuted is implemented by Greenplum,
+	 * Postgres does not contain such function. It is useful in GPDB
+	 * to do partition pruning. And partition key cannot be null except
+	 * default partition (which means partition table innately contain a
+	 * constrain partition_key is not null for non-default leaves.
+	 *
+	 * Also notice that constrain `a = 1` does not reject the tuple `null`.
+	 * For non partition tables, we do more test by set a to null, so that
+	 *
+	 * create table t(a int check(a = 1));
+	 * insert into t values (null);
+	 * select * from t where a is null;
+	 *
+	 * will not generate dummy plan.
+	 */
+	if (!is_leaf_part)
+	{
+		Oid      tp = ((Var *) varExprInPredicate)->vartype;
+		if (!eval_clause_with_eqpred(clause, varExprInPredicate,
+									 (Node *) makeNullConst(tp, -1, InvalidOid)))
+			return false;
+	}
+
+	return eval_clause_with_eqpred(clause,
 								   varExprInPredicate, constExprInPredicate);
 }
 
@@ -2212,8 +2233,27 @@ DeterminePossibleValueSet(Node *clause, Node *variable)
 	return result;
 }
 
+/*
+ * Table may contains constrains and query contains predicates.
+ * If they conflicts with each other, we could deduce that no tuples
+ * would be scanned so that we might build a dummy path.
+ *
+ * Simple cases are handled in the function `simple_equality_predicate_refuted`.
+ *
+ * This function `eval_clause_with_eqpred` uses constrains like `a=1` as bindings,
+ * under such bindings it tries to evaluate clause. If the evaluation gives const
+ * result of false, then we know they are conflicts.
+ *
+ * This will be useful to do partition pruning. An example is like:
+ * part_child_1 is a leaf partition with constrain `part_key = 1`,
+ * and the query is like
+ * `select * from part where case part_key = 2 then null else 2 end is null`.
+ * Then based on the bindings `part_key = 1`, we try to evalute the expression
+ * `case part_key = 2 then null else 2 end is null` and it turns out to false.
+ * Then we prune this leaf partition.
+ */
 static bool
-eval_caluse_with_eqpred(Node *clause, Node *var, Node *val)
+eval_clause_with_eqpred(Node *clause, Node *var, Node *val)
 {
 	Node                               *newClause;
 	Node                               *reducedExpression;

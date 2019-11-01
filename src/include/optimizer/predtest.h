@@ -60,6 +60,8 @@ extern void AddUnmatchingValues(PossibleValueSet *pvs, PossibleValueSet *toCheck
 extern void RemoveUnmatchingValues(PossibleValueSet *pvs, PossibleValueSet *toCheck);
 extern bool TryProcessExprForPossibleValues(Node *expr, Node *variable, PossibleValueSet *resultOut);
 
+extern bool simple_equality_predicate_refuted(Node *clause, Node *predicate, bool is_leaf_part);
+
 /**
  * END functions and structures for determining set of possible values from a clause
  ***********************************************************************************

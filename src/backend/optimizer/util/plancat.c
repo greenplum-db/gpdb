@@ -47,6 +47,7 @@
 #include "utils/snapmgr.h"
 
 #include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbpartition.h"
 #include "cdb/cdbrelsize.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_exttable.h"
@@ -1407,6 +1408,7 @@ relation_excluded_by_constraints(PlannerInfo *root,
 	List	   *constraint_pred;
 	List	   *safe_constraints;
 	ListCell   *lc;
+	bool        is_leaf_part = rel_is_leaf_partition(rte->relid);
 
 	/* Skip the test if constraint exclusion is disabled for the rel */
 	if (constraint_exclusion == CONSTRAINT_EXCLUSION_OFF ||
@@ -1499,7 +1501,9 @@ relation_excluded_by_constraints(PlannerInfo *root,
 	if (predicate_refuted_by(safe_constraints, rel->baserestrictinfo))
 		return true;
 
-	return false;
+	return simple_equality_predicate_refuted((Node *) (rel->baserestrictinfo),
+											 (Node *) safe_constraints,
+											 is_leaf_part);
 }
 
 
