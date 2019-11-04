@@ -17,6 +17,7 @@
 #include "scenarios/pl_function.h"
 #include "scenarios/user_defined_types.h"
 #include "scenarios/external_tables.h"
+#include "scenarios/user_defined_extension_type.h"
 
 #include "utilities/gpdb5-cluster.h"
 #include "utilities/gpdb6-cluster.h"
@@ -72,6 +73,7 @@ main(int argc, char *argv[])
 		unit_test_setup_teardown(test_a_plpgsql_function_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_a_plpython_function_can_be_upgraded, setup, teardown),
 		unit_test_setup_teardown(test_an_user_defined_type_extension_can_be_upgraded, setup, teardown),
+		unit_test_setup_teardown(test_a_user_defined_extension_type, setup, teardown),
 	};
 
 	return run_tests(tests);
