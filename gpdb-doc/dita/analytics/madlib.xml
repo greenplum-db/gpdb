@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="pz212122">MADlib Extension for Analytics</title>
+  <title id="pz212122">Machine and Deep Learning</title>
   <body>
     <p>This chapter includes the following information:</p>
     <ul>
@@ -31,6 +31,17 @@
           format="dita"/>.</p>
     </body>
   </topic>
+
+  <topic id="mach_learning" xml:lang="en">
+    <title>About Machine Learning</title>
+    <body>
+      <p>Machine learning is a subset of artificial intelligence (AI) that gives computers
+         the ability to learn without being explicitly and rigidly programmed. The algorithms
+        that exist in a machine learning environment enable systems that can go beyond traditional strict programming processes. </p>
+    </body>
+  </topic>
+
+
   <topic id="topic_khs_klx_g3b">
     <title>About Deep Learning</title>
     <body>
@@ -195,7 +206,7 @@ CREATE TABLE regr_example (
    x1 int,
    x2 int
 );
-INSERT INTO regr_example VALUES 
+INSERT INTO regr_example VALUES
    (1,  5, 2, 3),
    (2, 10, 7, 2),
    (3,  6, 4, 1),
@@ -207,7 +218,7 @@ INSERT INTO regr_example VALUES
         <codeblock>SELECT madlib.linregr_train (
    'regr_example',         -- source table
    'regr_example_model',   -- output model table
-   'y',                    -- dependent variable 
+   'y',                    -- dependent variable
    'ARRAY[1, x1, x2]'      -- independent variables
 );
 </codeblock>
@@ -233,7 +244,7 @@ variance_covariance      | {{2.23765432098598,-0.257201646090342,-0.437242798353
         <p>The model saved in the <codeph>regr_example_model</codeph> table can be used with the
           MADlib linear regression prediction function, <codeph>madlib.linregr_predict()</codeph>,
           to view the residuals: </p>
-        <codeblock>SELECT regr_example.*, 
+        <codeblock>SELECT regr_example.*,
         madlib.linregr_predict ( ARRAY[1, x1, x2], m.coef ) as predict,
         y - madlib.linregr_predict ( ARRAY[1, x1, x2], m.coef ) as residual
 FROM regr_example, regr_example_model m;
@@ -263,7 +274,7 @@ CREATE TABLE test_data (
    product text
 );</codeblock>
         <p>This <codeph>INSERT</codeph> command adds the data to the table.</p>
-        <codeblock>INSERT INTO test_data VALUES 
+        <codeblock>INSERT INTO test_data VALUES
    (1, 'beer'),
    (1, 'diapers'),
    (1, 'chips'),
@@ -301,12 +312,12 @@ CREATE TABLE test_data (
         <p>This is the output of the <codeph>SELECT</codeph> command. There are two rules that fit
           the characteristics.</p>
         <codeblock>
- output_schema | output_table | total_rules | total_time 
+ output_schema | output_table | total_rules | total_time
 --------------+--------------+-------------+-----------------  
-public        | assoc_rules  |           2 | 00:00:01.153283 
+public        | assoc_rules  |           2 | 00:00:01.153283
 (1 row)</codeblock>
         <p>To view the association rules, you can run this <codeph>SELECT</codeph> command.</p>
-        <codeblock>SELECT pre, post, support FROM assoc_rules 
+        <codeblock>SELECT pre, post, support FROM assoc_rules
    ORDER BY support DESC;</codeblock>
         <p>This is the output. The <codeph>pre</codeph> and <codeph>post</codeph> columns are the
           itemsets of left and right hand sides of the association rule respectively. </p>
@@ -355,7 +366,7 @@ INSERT INTO class_example VALUES
             sets.</p></li>
         <li>Train the model with the <codeph>create_nb_prepared_data_tables()</codeph>
           function.<codeblock>SELECT * FROM madlib.create_nb_prepared_data_tables (
-   'class_example',         -- name of the training table 
+   'class_example',         -- name of the training table
    'class',                 -- name of the class (dependent) column
    'attributes',            -- name of the attributes column
    3,                       -- the number of attributes
@@ -365,9 +376,9 @@ INSERT INTO class_example VALUES
 </codeblock></li>
         <li>Create a table with data to classify using the
           model.<codeblock>DROP TABLE IF EXISTS class_example_topredict;
-CREATE TABLE class_example_topredict ( 
+CREATE TABLE class_example_topredict (
    id int, attributes int[]);
-INSERT INTO class_example_topredict VALUES 
+INSERT INTO class_example_topredict VALUES
    (1, '{1, 3, 2}'),
    (2, '{4, 2, 2}'),
    (3, '{2, 1, 1}');</codeblock>
@@ -460,9 +471,9 @@ INSERT INTO weather_example VALUES
    (11, 1, '{1,2,2,1}'),
    (13, 1, '{2,1,2,2}');</codeblock></li>
         <li>Create the model from the training
-          table.<codeblock>SELECT madlib.create_nb_prepared_data_tables ( 
+          table.<codeblock>SELECT madlib.create_nb_prepared_data_tables (
    'weather_example',  -- training source table
-   'play',             -- dependent class column 
+   'play',             -- dependent class column
    'attrs',            -- attributes column
    4,                  -- number of attributes
    'weather_probs',    -- feature probabilities output table
@@ -499,7 +510,7 @@ INSERT INTO weather_example VALUES
 CREATE TABLE t1 (
    id integer,
    attributes integer[]);
-insert into t1 values 
+insert into t1 values
    (1, '{1, 2, 1, 1}'),
    (2, '{3, 3, 2, 1}'),
    (3, '{2, 1, 2, 2}'),
@@ -507,11 +518,11 @@ insert into t1 values
           </p></li>
         <li>Use the MADlib <codeph>create_nb_classify_view()</codeph> function to classify the rows
           in the
-            table.<codeblock>SELECT madlib.create_nb_classify_view ( 
+            table.<codeblock>SELECT madlib.create_nb_classify_view (
    'weather_probs',      -- feature probabilities table
    'weather_priors',     -- classPriorsName
    't1',                 -- table containing values to classify
-   'id',                 -- key column 
+   'id',                 -- key column
    'attributes',         -- attributes column
    4,                    -- number of attributes
    't1_out'              -- output table name
