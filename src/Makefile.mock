@@ -22,7 +22,7 @@ check: $(patsubst %,%-check,$(TARGETS))
 
 .PHONY:
 %-check: %.t
-	./$*.t
+	./$*.t $(CMOCKERY_TEST_FLAGS)
 
 .PHONY:
 clean: $(patsubst %,%-clean,$(TARGETS))

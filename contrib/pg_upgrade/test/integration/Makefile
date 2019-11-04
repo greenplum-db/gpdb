@@ -16,6 +16,11 @@ OBJS = bdd-library/bdd.o \
 EXS = scripts/gpdb6-cluster scripts/gpdb5-cluster
 TARGETS = greenplum_five_to_greenplum_six_upgrade_test_suite
 
+#
+# TESTING FLAGS
+#
+CMOCKERY_TEST_FLAGS+="--cmockery_output_to_file=cmockery.out"
+
 include $(top_srcdir)/src/Makefile.global
 include $(top_srcdir)/src/Makefile.mock
 

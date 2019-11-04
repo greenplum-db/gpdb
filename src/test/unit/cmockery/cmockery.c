@@ -248,6 +248,11 @@ static int abort_for_missing_check = 0;
 static int generate_suppression = 0;
 static int run_disabled_tests = 0;
 static int use_color = 0;
+static int output_to_result_file = 0;
+static struct output_to_result {
+	const char   result_filename[1024];
+	FILE        *rfp;
+} output_to_result;
 
 #ifndef _WIN32
 // Signals caught by exception_handler().
@@ -1663,6 +1668,28 @@ static void fail_if_blocks_allocated(const ListNode * const check_point,
 	}
 }
 
+static void setup_output_to_result(void)
+{
+	if (!output_to_result_file || output_to_result.rfp != NULL) {
+		return;
+	}
+
+	output_to_result.rfp = fopen(output_to_result.result_filename, "w+");
+	if (output_to_result.rfp == NULL) {
+		// disable so to not use invalid fp
+		output_to_result_file = 0;
+		assert_true(output_to_result.rfp != NULL);
+	}
+}
+
+static void cleanup_output_to_result(void) {
+	if (!output_to_result_file || output_to_result.rfp != NULL) {
+		return;
+	}
+
+	fclose(output_to_result.rfp);
+	output_to_result.rfp = NULL;
+}
 
 void _fail(const char * const file, const int line) {
 	print_error(OUTPUT_PADDING "ERROR: " SOURCE_LOCATION_FORMAT " Failure!\n", file, line);
@@ -1729,6 +1756,9 @@ void vprint_error(const char* const format, va_list args) {
 	char buffer[1024];
 	vsnprintf(buffer, sizeof(buffer), format, args);
 	fprintf(stderr, "%s%s%s", get_color(COLOR_RED), buffer, get_color(COLOR_RESET));
+	if (output_to_result_file) {
+		fprintf(output_to_result.rfp, "%s", buffer);
+	}
 #ifdef _WIN32
 	OutputDebugString(buffer);
 #endif // _WIN32
@@ -1796,11 +1826,17 @@ int _run_test(
 
 		if (function_type == UNIT_TEST_FUNCTION_TYPE_TEST) {
 			print_message(COLOR_GREEN, "[          OK ] %s\n", function_name);
+			if (output_to_result_file) {
+				fprintf(output_to_result.rfp, "[          OK ] %s\n", function_name);
+			}
 		}
 		rc = 0;
 	} else {
 		global_running_test = 0;
 		print_message(COLOR_RED, "[      FAILED ] %s\n", function_name);
+		if (output_to_result_file) {
+			fprintf(output_to_result.rfp,  "[      FAILED ] %s\n", function_name);
+		}
 	}
 	teardown_testing(function_name);
 
@@ -1850,6 +1886,8 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
 	const char** failed_names = malloc(number_of_tests *
 			sizeof(*failed_names));
 	void **current_state = NULL;
+	// Make certain that we can write to the file
+	setup_output_to_result();
 	// Make sure LargestIntegralType is at least the size of a pointer.
 	assert_true(sizeof(LargestIntegralType) >= sizeof(void*));
 
@@ -1930,12 +1968,19 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
 
 	print_message(COLOR_GREEN, "[=============] %d tests ran\n", tests_executed);
 	print_message(COLOR_GREEN, "[ PASSED      ] %d tests\n", tests_executed - total_failed);
+	if (output_to_result_file) {
+		fprintf(output_to_result.rfp, "[=============] %ld tests ran\n", tests_executed);
+		fprintf(output_to_result.rfp, "[ PASSED      ] %ld tests\n", tests_executed - total_failed);
+	}
 
 	if (total_failed) {
 		size_t i;
 		print_message(COLOR_RED, "[ FAILED      ] %d tests, listed below\n", total_failed);
 		for (i = 0; i < total_failed; i++) {
 			print_message(COLOR_RED, "[ FAILED      ] %s \n", failed_names[i]);
+			if (output_to_result_file) {
+				fprintf(output_to_result.rfp, "[ FAILED      ] %s \n", failed_names[i]);
+			}
 		}
 	}
 
@@ -1949,6 +1994,7 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
 	free((void*)failed_names);
 
 	fail_if_blocks_allocated(check_point, "run_tests");
+	cleanup_output_to_result();
 	return (int)total_failed;
 }
 
@@ -1962,6 +2008,8 @@ void cmockery_parse_arguments(int argc, char** argv)
 			cmockery_enable_generate_suppression();
 		} else if (strcmp(argv[i], "--cmockery_run_disabled_tests") == 0) {
 			cmockery_run_disabled_tests();
+		} else if (strncmp(argv[i], "--cmockery_output_to_file=", strlen("--cmockery_output_to_file")) == 0) {
+			cmockery_enable_output_to_file(argv[i]);
 		}
 	}
 }
@@ -1983,6 +2031,26 @@ void cmockery_enable_generate_suppression(void)
 	print_message(COLOR_DEFAULT, "Run cmockery with \"generate suppression\" enabled\n");
 
 	generate_suppression = 1;
+}
+
+void cmockery_enable_output_to_file(const char *arg)
+{
+#ifdef _WIN32
+	// Not supported for this OS
+#else
+	const char *s = strchr(arg, '=');
+
+	if (!s || (*++s == '\0')) {
+		print_error(OUTPUT_PADDING "Invalid argument [%s]\n", arg);
+		exit(-1);
+	}
+
+	output_to_result.rfp = fopen(s, "w");
+	snprintf((char *)output_to_result.result_filename, sizeof(output_to_result.result_filename), "%s", s);
+	output_to_result_file = 1;
+
+	print_message(COLOR_DEFAULT, "Run cmockery and output to \"%s\" enabled\n", s);
+#endif
 }
 
 int cmockery_test_deactivated_(const char * const function, const char* file, const int line)

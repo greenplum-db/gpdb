@@ -149,7 +149,18 @@ The test framework accepts command line arguments:
   and will_ calls, it is helpful to setup the test environment. This is 
   especially true, if the test only deals with a certain line in a very long 
   function.
-  
+
+- --cmockery_output_to_file=<arg>
+  In certain situations, is helpful to call the test executable with
+  --cmockery_output_to_file=<arg>. When this option is activated or if the
+  cmockery_output_to_file(arg) function is called, cmockery outputs _error and
+  _fail function outputs to the file passed. Additionally the result of a
+  specific test is added to the output as is a summary of the whole suit.
+
+  While in most cases the output of the unit tests run in a suit is
+  straightforward and easy to read, in long running suites or with verbose
+  output, it is useful to have a cleaner or permanent output.
+
 - --run_disabled_tests
   Certain test cases can be disabled with the disable_unit_test() function. 
   If cmockery is called with --run_disabled_tests, these tests are executed 
