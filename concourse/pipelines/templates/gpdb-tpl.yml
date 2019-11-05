@@ -131,7 +131,6 @@ groups:
   ## --------------------------------------------------------------------
   - gate_ud_start
   - regression_tests_gphdfs_hadoop_centos
-  - regression_tests_gphdfs_mapr_centos
   - gate_ud_end
 {% endif %}
 {% if "AA" in test_sections %}
@@ -299,7 +298,6 @@ groups:
   jobs:
   - gate_ud_start
   - regression_tests_gphdfs_hadoop_centos
-  - regression_tests_gphdfs_mapr_centos
   - gate_ud_end
 
 {% endif %}
@@ -3513,47 +3511,12 @@ jobs:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 
-- name: regression_tests_gphdfs_mapr_centos
-  ensure:
-    <<: *set_failed
-  on_success:
-    <<: *ccp_destroy
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      passed: [gate_ud_start]
-      trigger: [[ test_trigger ]]
-      resource: bin_gpdb_centos6
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        number_of_nodes: 1
-        PLATFORM: centos7
-        instance_type: n1-standard-4
-  - task: gen_and_initialize_mapr
-    file: gpdb_src/concourse/tasks/gen_mapr.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: regression_tests_gphdfs_mapr
-    file: gpdb_src/concourse/tasks/regression_tests_gphdfs_mapr.yml
-    image: centos-gpdb-dev-6
-    params:
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
 - name: gate_ud_end
   plan:
   - aggregate:
     - get: gpdb_src
       passed: &gate_ud_end
       - regression_tests_gphdfs_hadoop_centos
-      - regression_tests_gphdfs_mapr_centos
       trigger: true
     - get: bin_gpdb_centos6
       passed: *gate_ud_end
@@ -3864,7 +3827,6 @@ jobs:
       - cs_[[ test_name ]]
 {% endfor %}
       - regression_tests_gphdfs_hadoop_centos
-      - regression_tests_gphdfs_mapr_centos
       - DPM_backup-restore_ddboost_part1
       - DPM_backup-restore_ddboost_part2
       - DPM_backup-restore_ddboost_part3
