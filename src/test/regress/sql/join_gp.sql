@@ -554,3 +554,15 @@ select * from (
 join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
 
 drop table t_randomly_dist_table;
+
+-- test the query have equivalence class with const members
+CREATE TABLE gp_timestamp1 (a int, b timestamp) DISTRIBUTED BY (a, b);
+CREATE TABLE gp_timestamp2 (c int, d timestamp) DISTRIBUTED BY (c, d);
+
+
+INSERT INTO gp_timestamp1 SELECT i, timestamp '2016/11/06' + i * interval '1 day' FROM generate_series(1, 12) i;
+INSERT INTO gp_timestamp1 SELECT i, timestamp '2016/11/09' FROM generate_series(1, 12) i;
+INSERT INTO gp_timestamp2 SELECT i, timestamp '2016/11/06' + i * interval '1 day' FROM generate_series(1, 12) i;
+
+SELECT a, b FROM gp_timestamp1 JOIN gp_timestamp2 ON a = c AND b = timestamptz '2016/11/09';
+

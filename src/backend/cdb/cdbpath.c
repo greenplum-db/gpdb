@@ -493,6 +493,31 @@ cdbpath_eclass_constant_is_hashable(EquivalenceClass *ec)
 	return true;
 }
 
+/*
+ * cdbpath_eclass_sources_is_hashable
+ *
+ * Iterates through a list of ec_sources and determines if the RestrictInfo
+ * in the list are hashable. If all of them are hashable, return true. If
+ * not, return false.
+ */
+static bool
+cdbpath_eclass_sources_is_hashable(EquivalenceClass *ec)
+{
+	ListCell   *j;
+
+	foreach(j, ec->ec_sources)
+	{
+		RestrictInfo *rinfo = (RestrictInfo *) lfirst(j);
+
+		check_hashjoinable(rinfo);
+
+		if (rinfo->hashjoinoperator == InvalidOid)
+			return false;
+	}
+
+	return true;
+}
+
 static bool
 cdbpath_match_preds_to_distkey_tail(CdbpathMatchPredsContext *ctx,
 									ListCell *distkeycell)
@@ -524,7 +549,8 @@ cdbpath_match_preds_to_distkey_tail(CdbpathMatchPredsContext *ctx,
 		EquivalenceClass *ec = (EquivalenceClass *) lfirst(cell);
 
 		if (CdbEquivClassIsConstant(ec) &&
-			cdbpath_eclass_constant_is_hashable(ec))
+			cdbpath_eclass_constant_is_hashable(ec) &&
+			cdbpath_eclass_sources_is_hashable(ec))
 		{
 			codistkey = distkey;
 			break;
