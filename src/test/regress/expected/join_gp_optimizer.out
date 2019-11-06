@@ -1176,6 +1176,8 @@ CREATE TABLE gp_timestamp2 (c int, d timestamp) DISTRIBUTED BY (c, d);
 INSERT INTO gp_timestamp1 SELECT i, timestamp '2016/11/06' + i * interval '1 day' FROM generate_series(1, 12) i;
 INSERT INTO gp_timestamp1 SELECT i, timestamp '2016/11/09' FROM generate_series(1, 12) i;
 INSERT INTO gp_timestamp2 SELECT i, timestamp '2016/11/06' + i * interval '1 day' FROM generate_series(1, 12) i;
+ANALYZE gp_timestamp1;
+ANALYZE gp_timestamp2;
 SELECT a, b FROM gp_timestamp1 JOIN gp_timestamp2 ON a = c AND b = timestamptz '2016/11/09';
  a  |            b             
 ----+--------------------------
