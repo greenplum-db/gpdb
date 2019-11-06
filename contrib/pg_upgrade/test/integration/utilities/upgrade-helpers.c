@@ -154,10 +154,10 @@ void
 performUpgradeCheck(void)
 {
 	char		buffer[2000];
-	int			count = 0;
 	char	   *master_data_directory_path = "qddir/demoDataDir-1";
 	FILE	   *output_file;
 	char	   *output;
+	int 	   cmdstatus = 0;
 
 	sprintf(buffer, ""
 			"./gpdb6/bin/pg_upgrade "
@@ -173,8 +173,8 @@ performUpgradeCheck(void)
 
 	while ((output = fgets(buffer, sizeof(buffer), output_file)) != NULL)
 		appendPQExpBufferStr(&pg_upgrade_output, output);
-
-	pg_upgrade_exit_status = WEXITSTATUS(pclose(output_file));
+	cmdstatus = pclose(output_file);
+	pg_upgrade_exit_status = WEXITSTATUS(cmdstatus);
 #endif
 }
 
