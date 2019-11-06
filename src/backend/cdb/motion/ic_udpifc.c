@@ -2589,6 +2589,10 @@ getSndBuffer(MotionConn *conn)
 	{
 		if (snd_buffer_pool.count < snd_buffer_pool.maxCount)
 		{
+			MemoryContext oldContext;
+
+			oldContext = MemoryContextSwitchTo(InterconnectContext);
+
 			ret = (ICBuffer *) palloc0(Gp_max_packet_size + sizeof(ICBuffer));
 			snd_buffer_pool.count++;
 			ret->conn = NULL;
@@ -2596,6 +2600,8 @@ getSndBuffer(MotionConn *conn)
 			icBufferListInitHeadLink(&ret->primary);
 			icBufferListInitHeadLink(&ret->secondary);
 			ret->unackQueueRingSlot = 0;
+
+			MemoryContextSwitchTo(oldContext);
 		}
 		else
 		{
