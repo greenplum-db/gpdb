@@ -1,1 +1,1 @@
-void test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded(void ** state);
+void test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded(void);

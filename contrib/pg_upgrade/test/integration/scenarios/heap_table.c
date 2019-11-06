@@ -16,9 +16,10 @@
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
 #include "utilities/bdd-helpers.h"
-#include "heap_table.h"
-
 #include "utilities/row-assertions.h"
+
+#include "heap_table.h"
+#include "greenplum_five_to_greenplum_six_upgrade_test_suite.h"
 
 typedef struct UserData
 {
@@ -151,12 +152,11 @@ assertContentId2HasTableLinked(int databaseOid, int relfilenodeNumber)
 }
 
 static void
-heapTableShouldHaveDataUpgradedToSixCluster()
+heapTableShouldHaveDataUpgradedToSixCluster(void **state)
 {
 	PGconn	   *connection = connectToSix();
 
-	executeQuery(connection, "set search_path to five_to_six_upgrade;");
-	PGresult   *result = executeQuery(connection, "select * from users;");
+	PGresult   *result = executeQuery(connection, "select * from users_heap;");
 
 	Rows *rows = extract_user_rows(result);
 
@@ -177,7 +177,7 @@ heapTableShouldHaveDataUpgradedToSixCluster()
 }
 
 static void
-heapTableShouldBeHardLinked(void)
+heapTableShouldBeHardLinked(void **state)
 {
 	int			rowNumber;
 	int			databaseOid;
@@ -185,8 +185,7 @@ heapTableShouldBeHardLinked(void)
 
 	PGconn	   *connection = connectToSix();
 
-	executeQuery(connection, "set search_path to five_to_six_upgrade;");
-	PGresult   *result = executeQuery(connection, "select pg_database.oid, relfilenode from pg_class, pg_database where relname = 'users' and datname = current_database();");
+	PGresult   *result = executeQuery(connection, "select pg_database.oid, relfilenode from pg_class, pg_database where relname = 'users_heap' and datname = current_database();");
 
 	rowNumber = 0;
 	databaseOid = atoi(PQgetvalue(result, rowNumber, 0));
@@ -200,33 +199,24 @@ heapTableShouldBeHardLinked(void)
 }
 
 static void
-anAdministratorPerformsAnUpgrade()
-{
-	performUpgrade();
-}
-
-static void
-createHeapTableWithDataInFiveCluster(void)
+createHeapTableWithDataInFiveCluster(void **state)
 {
 	PGconn	   *connection = connectToFive();
 
-	executeQuery(connection, "create schema five_to_six_upgrade;");
-	executeQuery(connection, "set search_path to five_to_six_upgrade");
-	executeQuery(connection, "create table users (id integer, name text) distributed by (id);");
-	executeQuery(connection, "insert into users values (1, 'Jane')");
-	executeQuery(connection, "insert into users values (2, 'John')");
-	executeQuery(connection, "insert into users values (3, 'Joe')");
+	executeQuery(connection, "create table users_heap (id integer, name text) distributed by (id);");
+	executeQuery(connection, "insert into users_heap values (1, 'Jane')");
+	executeQuery(connection, "insert into users_heap values (2, 'John')");
+	executeQuery(connection, "insert into users_heap values (3, 'Joe')");
 	PQfinish(connection);
 }
 
 void
-test_a_heap_table_with_data_can_be_upgraded(void **state)
+test_a_heap_table_with_data_can_be_upgraded(void)
 {
 	matcher = users_match;
 	match_failed = user_match_failed;
 
-	given(withinGpdbFiveCluster(createHeapTableWithDataInFiveCluster));
-	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(heapTableShouldHaveDataUpgradedToSixCluster));
-	and(withinGpdbSixCluster(heapTableShouldBeHardLinked));
+	unit_test_given(createHeapTableWithDataInFiveCluster, "test_a_heap_table_with_data_can_be_upgraded");
+	unit_test_then(heapTableShouldHaveDataUpgradedToSixCluster, "test_a_heap_table_with_data_can_be_upgraded");
+	unit_test_then(heapTableShouldBeHardLinked, "test_a_heap_table_with_data_can_be_upgraded");
 }

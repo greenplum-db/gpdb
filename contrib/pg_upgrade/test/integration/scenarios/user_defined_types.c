@@ -12,6 +12,7 @@
 #include "utilities/upgrade-helpers.h"
 
 #include "user_defined_types.h"
+#include "greenplum_five_to_greenplum_six_upgrade_test_suite.h"
 
 #define NumberOfRows	8
 
@@ -51,32 +52,21 @@ extract_rows_from_result(PGresult *result, Rows *rows)
 }
 
 static void
-executeQueryAndClearResult(PGconn *conn, char *query)
-{
-	PGresult *result;
-
-	result = executeQuery(conn, query);
-	PQclear(result);
-}
-
-static void
-createUserDefinedTypesReferencedInTableInFiveCluster(void)
+createUserDefinedTypesReferencedInTableInFiveCluster(void **state)
 {
 	PGconn	   *conn = connectToFive();
 
-	executeQueryAndClearResult(conn, "CREATE SCHEMA five_to_six_upgrade;");
-	executeQueryAndClearResult(conn, "SET search_path TO five_to_six_upgrade;");
-	executeQueryAndClearResult(conn, "                                         \
+	executeQueryClearResult(conn, "                                         \
 		CREATE DOMAIN some_check AS text                                       \
 		CHECK (value ~ '^[1-9][0-9]-[0-9]{3}$');                               \
 	");
-	executeQueryAndClearResult(conn, "                                         \
+	executeQueryClearResult(conn, "                                         \
 		CREATE TYPE some_state AS ENUM ('warmup', 'qualify', 'race');          \
 	");
-	executeQueryAndClearResult(conn, "                                         \
+	executeQueryClearResult(conn, "                                         \
 		CREATE TABLE some_table (id integer, sc some_check, ss some_state);    \
 	");
-	executeQueryAndClearResult(conn, "                                         \
+	executeQueryClearResult(conn, "                                         \
 		INSERT INTO some_table VALUES                                          \
 			(1, '10-100', 'warmup'),                                           \
 			(2, '20-200', 'qualify'),                                          \
@@ -87,20 +77,14 @@ createUserDefinedTypesReferencedInTableInFiveCluster(void)
 }
 
 static void
-anAdministratorPerformsAnUpgrade(void)
-{
-	performUpgrade();
-}
-
-static void
-userDefinedTypesShouldBeAccessibleInTableInSixCluster(void)
+userDefinedTypesShouldBeAccessibleInTableInSixCluster(void **state)
 {
 	PGconn	   *conn = connectToSix();
 	PGresult   *result;
 	Rows		rows;
 
 	result  = executeQuery(conn, "                                             \
-		SELECT * FROM five_to_six_upgrade.some_table ORDER BY id;              \
+		SELECT * FROM some_table ORDER BY id;              \
 	");
 	extract_rows_from_result(result, &rows);
 	PQfinish(conn);
@@ -118,9 +102,8 @@ userDefinedTypesShouldBeAccessibleInTableInSixCluster(void)
 }
 
 void
-test_an_user_defined_type_extension_can_be_upgraded(void **state)
+test_an_user_defined_type_extension_can_be_upgraded(void)
 {
-	given(withinGpdbFiveCluster(createUserDefinedTypesReferencedInTableInFiveCluster));
-	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(userDefinedTypesShouldBeAccessibleInTableInSixCluster));
+	unit_test_given(createUserDefinedTypesReferencedInTableInFiveCluster, "test_an_user_defined_type_extension_can_be_upgraded");
+	unit_test_then(userDefinedTypesShouldBeAccessibleInTableInSixCluster, "test_an_user_defined_type_extension_can_be_upgraded");
 }

@@ -10,9 +10,10 @@
 #include "utilities/query-helpers.h"
 #include "utilities/bdd-helpers.h"
 #include "scenarios/external_tables.h"
+#include "greenplum_five_to_greenplum_six_upgrade_test_suite.h"
 
-static void
-readableExternalTableHaveBeenUpgraded(void)
+void
+readableExternalTableHaveBeenUpgraded(void **state)
 {
 	PGconn *connection = connectToSix();
 	PGresult *result;
@@ -23,8 +24,8 @@ readableExternalTableHaveBeenUpgraded(void)
 	PQfinish(connection);
 }
 
-static void
-createReadableExternalTable(void)
+void
+createReadableExternalTable(void **state)
 {
 	PGconn *connection = connectToFive();
 	char hostname[100];
@@ -40,16 +41,9 @@ createReadableExternalTable(void)
 	PQfinish(connection);
 }
 
-static void
-anAdministratorPerformsAnUpgrade()
-{
-	performUpgrade();
-}
-
 void
-test_a_readable_external_table_can_be_upgraded(void ** state) 
+test_a_readable_external_table_can_be_upgraded(void)
 {
-	given(withinGpdbFiveCluster(createReadableExternalTable));
-	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(readableExternalTableHaveBeenUpgraded));
+	unit_test_given(createReadableExternalTable, "test_a_readable_external_table_can_be_upgraded");
+	unit_test_then(readableExternalTableHaveBeenUpgraded, "test_a_readable_external_table_can_be_upgraded");
 }

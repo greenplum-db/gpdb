@@ -17,6 +17,7 @@
 #include "utilities/row-assertions.h"
 
 #include "subpartitioned_heap_table.h"
+#include "greenplum_five_to_greenplum_six_upgrade_test_suite.h"
 
 
 typedef struct UserData
@@ -54,7 +55,6 @@ static Rows *
 queryForRows(char *queryString)
 {
 	PGconn *connection = connectToSix();
-	executeQuery(connection, "set search_path to 'five_to_six_upgrade';");
 	PGresult *result = executeQuery(connection, queryString);
 
 	Rows *rows = extract_rows(result);
@@ -85,33 +85,25 @@ static void match_failed_for_user(void *expected_row)
 
 
 static void
-aSubpartitionedHeapTableHasDataInAGpdbFiveCluster(void)
+aSubpartitionedHeapTableHasDataInAGpdbFiveCluster(void **state)
 {
 	PGconn *connection = connectToFive();
 
-	executeQuery(connection, "create schema five_to_six_upgrade;");
-	executeQuery(connection, "set search_path to 'five_to_six_upgrade';");
-	executeQuery(connection, "create table users (id int, age int) distributed by (id) partition by range (id) subpartition by range (age) (partition partition_id start(1) end(3) ( subpartition subpartition_age_first start(1) end(20), subpartition subpartition_age_second start(20) end(30) ))");
-	executeQuery(connection, "insert into users (id, age) values (1, 10), (2, 20)");
-	executeQuery(connection, "vacuum freeze;");
+	executeQueryClearResult(connection, "create table users_multipartitioned (id int, age int) distributed by (id) partition by range (id) subpartition by range (age) (partition partition_id start(1) end(3) ( subpartition subpartition_age_first start(1) end(20), subpartition subpartition_age_second start(20) end(30) ))");
+	executeQueryClearResult(connection, "insert into users_multipartitioned (id, age) values (1, 10), (2, 20)");
+	executeQueryClearResult(connection, "vacuum freeze;");
 
 	PQfinish(connection);
 }
 
 static void
-anAdministratorPerformsAnUpgrade(void)
-{
-	performUpgrade();
-}
-
-static void
-theSubpartitionShouldExistWithDataInTheGpdbSixCluster(void)
+theSubpartitionShouldExistWithDataInTheGpdbSixCluster(void **state)
 {
 	matcher = users_match;
 	match_failed = match_failed_for_user;
 
-	Rows *rows_in_partition_a = queryForRows("select id, age from users_1_prt_partition_id_2_prt_subpartition_age_first");
-	Rows *rows_in_partition_b = queryForRows("select id, age from users_1_prt_partition_id_2_prt_subpartition_age_second");
+	Rows *rows_in_partition_a = queryForRows("select id, age from users_multipartitioned_1_prt_parti_2_prt_subpartition_age_first");
+	Rows *rows_in_partition_b = queryForRows("select id, age from users_multipartitioned_1_prt_part_2_prt_subpartition_age_second");
 
 	User expected_user = {.id = 1, .age = 10};
 	User other_expected_user = {.id = 2, .age = 20};
@@ -126,7 +118,7 @@ theSubpartitionShouldExistWithDataInTheGpdbSixCluster(void)
 		.rows = {&other_expected_user}
 	});
 
-	Rows *all_rows = queryForRows("select id, age from users;");
+	Rows *all_rows = queryForRows("select id, age from users_multipartitioned;");
 
 	assert_rows(all_rows, (Rows) {
 		.size = 2,
@@ -135,9 +127,8 @@ theSubpartitionShouldExistWithDataInTheGpdbSixCluster(void)
 }
 
 void
-test_a_subpartitioned_heap_table_with_data_can_be_upgraded(void **state)
+test_a_subpartitioned_heap_table_with_data_can_be_upgraded(void)
 {
-	given(withinGpdbFiveCluster(aSubpartitionedHeapTableHasDataInAGpdbFiveCluster));
-	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(theSubpartitionShouldExistWithDataInTheGpdbSixCluster));
+	unit_test_given(aSubpartitionedHeapTableHasDataInAGpdbFiveCluster, "test_a_subpartitioned_heap_table_with_data_can_be_upgraded");
+	unit_test_then(theSubpartitionShouldExistWithDataInTheGpdbSixCluster, "test_a_subpartitioned_heap_table_with_data_can_be_upgraded");
 }

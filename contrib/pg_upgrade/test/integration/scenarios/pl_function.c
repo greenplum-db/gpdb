@@ -14,21 +14,16 @@
 #include "utilities/upgrade-helpers.h"
 
 #include "pl_function.h"
+#include "greenplum_five_to_greenplum_six_upgrade_test_suite.h"
 
 static void
-createPlpgsqlFunctionInFiveCluster(void)
+createPlpgsqlFunctionInFiveCluster(void **state)
 {
 	PGconn	   *conn1 = connectToFive();
 	PGresult   *result;
 
-	result = executeQuery(conn1, "CREATE SCHEMA five_to_six_upgrade;");
-	PQclear(result);
-
-	result = executeQuery(conn1, "SET search_path TO five_to_six_upgrade;");
-	PQclear(result);
-
 	result = executeQuery(conn1, "                                  \
-		CREATE FUNCTION someimmutablefunction(foo integer)          \
+		CREATE FUNCTION someimmutablefunction2(foo integer)          \
 		RETURNS integer                                             \
 		LANGUAGE plpgsql IMMUTABLE STRICT AS                        \
 		$$                                                          \
@@ -43,16 +38,10 @@ createPlpgsqlFunctionInFiveCluster(void)
 }
 
 static void
-createPlpythonFunctionInFiveCluster(void)
+createPlpythonFunctionInFiveCluster(void **state)
 {
 	PGconn	   *conn1 = connectToFive();
 	PGresult   *result;
-
-	result = executeQuery(conn1, "CREATE SCHEMA five_to_six_upgrade;");
-	PQclear(result);
-
-	result = executeQuery(conn1, "SET search_path TO five_to_six_upgrade;");
-	PQclear(result);
 
 	result = executeQuery(conn1, "CREATE LANGUAGE plpythonu");
 	PQclear(result);
@@ -71,13 +60,7 @@ createPlpythonFunctionInFiveCluster(void)
 }
 
 static void
-anAdministratorPerformsAnUpgrade(void)
-{
-	performUpgrade();
-}
-
-static void
-thePlFunctionIsUsable(void)
+thePlFunctionIsUsable(void **state)
 {
 	PGconn	   *connection = connectToSix();
 	PGresult   *result = NULL;
@@ -85,7 +68,7 @@ thePlFunctionIsUsable(void)
 	int			nrows;
 	int			actual;
 
-	result = executeQuery(connection, "SELECT five_to_six_upgrade.someimmutablefunction(0) as f;");
+	result = executeQuery(connection, "SELECT someimmutablefunction2(0) as f;");
 	nrows = PQntuples(result);
 	resvalue = PQgetvalue(result, 0, PQfnumber(result, "f"));
 	actual = atoi((resvalue != NULL) ? resvalue : 0);
@@ -98,17 +81,15 @@ thePlFunctionIsUsable(void)
 }
 
 void
-test_a_plpgsql_function_can_be_upgraded(void **state)
+test_a_plpgsql_function_can_be_upgraded(void)
 {
-	given(withinGpdbFiveCluster(createPlpgsqlFunctionInFiveCluster));
-	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(thePlFunctionIsUsable));
+	unit_test_given(createPlpgsqlFunctionInFiveCluster, "test_a_plpgsql_function_can_be_upgraded");
+	unit_test_then(thePlFunctionIsUsable, "test_a_plpgsql_function_can_be_upgraded");
 }
 
 void
-test_a_plpython_function_can_be_upgraded(void **state)
+test_a_plpython_function_can_be_upgraded(void)
 {
-	given(withinGpdbFiveCluster(createPlpythonFunctionInFiveCluster));
-	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(thePlFunctionIsUsable));
+	unit_test_given(createPlpythonFunctionInFiveCluster, "test_a_plpython_function_can_be_upgraded");
+	unit_test_then(thePlFunctionIsUsable, "test_a_plpython_function_can_be_upgraded");
 }

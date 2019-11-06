@@ -12,16 +12,15 @@
 #include "utilities/upgrade-helpers.h"
 #include "utilities/query-helpers.h"
 #include "utilities/test-helpers.h"
-
 #include "utilities/bdd-helpers.h"
 
+#include "greenplum_five_to_greenplum_six_upgrade_test_suite.h"
+
 static void
-partitionedHeapTableShouldHaveDataUpgradedToSixCluster()
+partitionedHeapTableShouldHaveDataUpgradedToSixCluster(void **state)
 {
 	PGconn	   *connection = connectToSix();
 	PGresult   *result;
-
-	PQclear(executeQuery(connection, "SET search_path TO five_to_six_upgrade;"));
 
 	result = executeQuery(connection, "SELECT c, d FROM abuela WHERE a=10;");
 
@@ -35,33 +34,24 @@ partitionedHeapTableShouldHaveDataUpgradedToSixCluster()
 }
 
 static void
-anAdministratorPerformsAnUpgrade()
-{
-	performUpgrade();
-}
-
-static void
-createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster(void)
+createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster(void **state)
 {
 	PGconn	   *connection = connectToFive();
 
-	PQclear(executeQuery(connection, "CREATE SCHEMA five_to_six_upgrade;"));
-	PQclear(executeQuery(connection, "SET search_path TO five_to_six_upgrade"));
-	PQclear(executeQuery(connection,
+	executeQueryClearResult(connection,
 			"CREATE TABLE abuela (a int, b int, c int, d numeric) "
 			"  DISTRIBUTED BY (a) "
 			"    PARTITION BY range(c) "
-			"    SUBPARTITION BY range(d) (PARTITION mama START(0) END(42) (SUBPARTITION chica START(0) END(42)));"));
-	PQclear(executeQuery(connection, "INSERT INTO abuela SELECT i, i, i, i FROM generate_series(1, 10)i;"));
-	PQclear(executeQuery(connection, "ALTER TABLE abuela DROP COLUMN b;"));
+			"    SUBPARTITION BY range(d) (PARTITION mama START(0) END(42) (SUBPARTITION chica START(0) END(42)));");
+	executeQueryClearResult(connection, "INSERT INTO abuela SELECT i, i, i, i FROM generate_series(1, 10)i;");
+	executeQueryClearResult(connection, "ALTER TABLE abuela DROP COLUMN b;");
 	PQfinish(connection);
 }
 
 
 void
-test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded(void ** state)
+test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded(void)
 {
-	given(withinGpdbFiveCluster(createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster));
-	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(partitionedHeapTableShouldHaveDataUpgradedToSixCluster));
+	unit_test_given(createPartitionedHeapTableWithDroppedColumnAndDataInFiveCluster, "test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded");
+	unit_test_then(partitionedHeapTableShouldHaveDataUpgradedToSixCluster, "test_a_partitioned_heap_table_with_a_dropped_column_can_be_upgraded");
 }

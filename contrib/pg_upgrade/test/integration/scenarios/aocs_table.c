@@ -16,6 +16,7 @@
 
 #include "utilities/bdd-helpers.h"
 #include "aocs_table.h"
+#include "greenplum_five_to_greenplum_six_upgrade_test_suite.h"
 
 typedef struct UserData
 {
@@ -82,38 +83,32 @@ extract_user_rows(PGresult *result, Rows *rows)
 }
 
 
-static void anAocsTableExistsWithDataInFiveCluster(void)
+static void anAocsTableExistsWithDataInFiveCluster(void **state)
 {
 	PGconn	   *con1 = connectToFive();
 
-	executeQuery(con1, "CREATE SCHEMA five_to_six_upgrade;");
-	executeQuery(con1, "CREATE TABLE five_to_six_upgrade.aocs_users (id integer, name text) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (id);");
-	executeQuery(con1, "BEGIN;");
-	executeQuery(con1, "INSERT INTO five_to_six_upgrade.aocs_users VALUES (1, 'Jane')");
-	executeQuery(con1, "INSERT INTO five_to_six_upgrade.aocs_users VALUES (2, 'John')");
+	executeQueryClearResult(con1, "CREATE TABLE aocs_users (id integer, name text) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (id);");
+	executeQueryClearResult(con1, "BEGIN;");
+	executeQueryClearResult(con1, "INSERT INTO aocs_users VALUES (1, 'Jane')");
+	executeQueryClearResult(con1, "INSERT INTO aocs_users VALUES (2, 'John')");
 
 	PGconn	   *con2 = connectToFive();
 
-	executeQuery(con2, "BEGIN;");
-	executeQuery(con2, "INSERT INTO five_to_six_upgrade.aocs_users VALUES (3, 'Joe')");
+	executeQueryClearResult(con2, "BEGIN;");
+	executeQueryClearResult(con2, "INSERT INTO aocs_users VALUES (3, 'Joe')");
 
-	executeQuery(con1, "END;");
-	executeQuery(con2, "END;");
+	executeQueryClearResult(con1, "END;");
+	executeQueryClearResult(con2, "END;");
 
 	PQfinish(con2);
 	PQfinish(con1);
 }
 
-static void anAdministratorPerformsAnUpgrade(void)
-{
-	performUpgrade();
-}
-
 static void
-theAocsTableShouldHaveDataUpgradedToSixCluster(void)
+theAocsTableShouldHaveDataUpgradedToSixCluster(void **state)
 {
 	PGconn	   *connection = connectToSix();
-	PGresult   *result = executeQuery(connection, "SELECT * FROM five_to_six_upgrade.aocs_users;");
+	PGresult   *result = executeQuery(connection, "SELECT * FROM aocs_users;");
 
 	Rows		rows = {};
 
@@ -133,9 +128,8 @@ theAocsTableShouldHaveDataUpgradedToSixCluster(void)
 	PQfinish(connection);
 }
 
-void test_an_aocs_table_with_data_can_be_upgraded(void **state)
+void test_an_aocs_table_with_data_can_be_upgraded(void)
 {
-	given(withinGpdbFiveCluster(anAocsTableExistsWithDataInFiveCluster));
-	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(theAocsTableShouldHaveDataUpgradedToSixCluster));
+	unit_test_given(anAocsTableExistsWithDataInFiveCluster, "test_an_aocs_table_with_data_can_be_upgraded");
+	unit_test_then(theAocsTableShouldHaveDataUpgradedToSixCluster, "test_an_aocs_table_with_data_can_be_upgraded");
 }

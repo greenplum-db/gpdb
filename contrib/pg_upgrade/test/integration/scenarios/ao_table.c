@@ -16,6 +16,7 @@
 
 #include "utilities/bdd-helpers.h"
 #include "ao_table.h"
+#include "greenplum_five_to_greenplum_six_upgrade_test_suite.h"
 
 typedef struct UserData
 {
@@ -82,10 +83,10 @@ extract_user_rows(PGresult *result, Rows *rows)
 }
 
 static void
-aoTableShouldHaveDataUpgradedToSixCluster()
+aoTableShouldHaveDataUpgradedToSixCluster(void **state)
 {
 	PGconn	   *connection = connectToSix();
-	PGresult   *result = executeQuery(connection, "SELECT * FROM five_to_six_upgrade.ao_users;");
+	PGresult   *result = executeQuery(connection, "SELECT * FROM ao_users;");
 
 	Rows		rows = {};
 
@@ -106,38 +107,30 @@ aoTableShouldHaveDataUpgradedToSixCluster()
 }
 
 static void
-createAoTableWithDataInFiveCluster(void)
+createAoTableWithDataInFiveCluster(void **state)
 {
 	PGconn	   *con1 = connectToFive();
 
-	executeQuery(con1, "CREATE SCHEMA five_to_six_upgrade;");
-	executeQuery(con1, "CREATE TABLE five_to_six_upgrade.ao_users (id integer, name text) WITH (appendonly=true) DISTRIBUTED BY (id);");
-	executeQuery(con1, "BEGIN;");
-	executeQuery(con1, "INSERT INTO five_to_six_upgrade.ao_users VALUES (1, 'Jane')");
-	executeQuery(con1, "INSERT INTO five_to_six_upgrade.ao_users VALUES (2, 'John')");
+	executeQueryClearResult(con1, "CREATE TABLE ao_users (id integer, name text) WITH (appendonly=true) DISTRIBUTED BY (id);");
+	executeQueryClearResult(con1, "BEGIN;");
+	executeQueryClearResult(con1, "INSERT INTO ao_users VALUES (1, 'Jane')");
+	executeQueryClearResult(con1, "INSERT INTO ao_users VALUES (2, 'John')");
 
 	PGconn	   *con2 = connectToFive();
 
-	executeQuery(con2, "BEGIN;");
-	executeQuery(con2, "INSERT INTO five_to_six_upgrade.ao_users VALUES (3, 'Joe')");
+	executeQueryClearResult(con2, "BEGIN;");
+	executeQueryClearResult(con2, "INSERT INTO ao_users VALUES (3, 'Joe')");
 
-	executeQuery(con1, "END;");
-	executeQuery(con2, "END;");
+	executeQueryClearResult(con1, "END;");
+	executeQueryClearResult(con2, "END;");
 
 	PQfinish(con2);
 	PQfinish(con1);
 }
 
-static void
-anAdministratorPerformsAnUpgrade()
-{
-	performUpgrade();
-}
-
 void
-test_an_ao_table_with_data_can_be_upgraded(void **state)
+test_an_ao_table_with_data_can_be_upgraded(void)
 {
-	given(withinGpdbFiveCluster(createAoTableWithDataInFiveCluster));
-	when(anAdministratorPerformsAnUpgrade);
-	then(withinGpdbSixCluster(aoTableShouldHaveDataUpgradedToSixCluster));
+	unit_test_given(createAoTableWithDataInFiveCluster, "test_an_ao_table_with_data_can_be_upgraded");
+	unit_test_then(aoTableShouldHaveDataUpgradedToSixCluster, "test_an_ao_table_with_data_can_be_upgraded");
 }
