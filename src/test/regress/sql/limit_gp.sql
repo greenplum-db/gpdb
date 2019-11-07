@@ -35,7 +35,7 @@ select * from generate_series(1,10) g limit count(*);
 
 -- Check volatile limit should not pushdown.
 create table t_volatile_limit (i int4);
-insert into t_volatile_limit select generate_series(1, 100);
+create table t_volatile_limit_1 (a int, b int) distributed randomly;
 
 -- Greenplum may generate two-stage limit plan to improve performance.
 -- But for limit clause contains volatile functions, if we push them down
@@ -51,4 +51,8 @@ insert into t_volatile_limit select generate_series(1, 100);
 explain select * from t_volatile_limit order by i limit (random() * 10);
 explain select * from t_volatile_limit order by i limit 2 offset (random()*5);
 
+explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a, sum(b) limit (random()+3);
+explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a, sum(b) limit 2 offset (random()*2);
+
 drop table t_volatile_limit;
+drop table t_volatile_limit_1;
