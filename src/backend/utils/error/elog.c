@@ -617,10 +617,6 @@ errfinish(int dummy pg_attribute_unused(),...)
 	if (elevel == ERROR)
 	{
 		/*
-		 * GP: While doing local error try/catch, do not reset all these
-		 * important variables!
-		 */
-		/*
 		 * We do some minimal cleanup before longjmp'ing so that handlers can
 		 * execute in a reasonably sane state.
 		 *
@@ -776,11 +772,18 @@ errfinish_and_return(int dummy pg_attribute_unused(),...)
 	ErrorData  *edata = &errordata[errordata_stack_depth];
 	ErrorData  *edata_copy;
 	ErrorContextCallback *econtext;
+	MemoryContext oldcontext;
 	int			saved_errno;            /*CDB*/
 
 	recursion_depth++;
 	CHECK_STACK_DEPTH();
 	saved_errno = edata->saved_errno;   /*CDB*/
+
+	/*
+	 * Do processing in ErrorContext, which we hope has enough reserved space
+	 * to report an error.
+	 */
+	oldcontext = MemoryContextSwitchTo(ErrorContext);
 
 	/*
 	 * Call any context callback functions.  Errors occurring in callback
@@ -791,6 +794,8 @@ errfinish_and_return(int dummy pg_attribute_unused(),...)
 		 econtext != NULL;
 		 econtext = econtext->previous)
 		(*econtext->callback) (econtext->arg);
+
+	MemoryContextSwitchTo(oldcontext);
 
 	edata_copy = CopyErrorData();
 
@@ -805,6 +810,16 @@ errfinish_and_return(int dummy pg_attribute_unused(),...)
 		pfree(edata->hint);
 	if (edata->context)
 		pfree(edata->context);
+	if (edata->schema_name)
+		pfree(edata->schema_name);
+	if (edata->table_name)
+		pfree(edata->table_name);
+	if (edata->column_name)
+		pfree(edata->column_name);
+	if (edata->datatype_name)
+		pfree(edata->datatype_name);
+	if (edata->constraint_name)
+		pfree(edata->constraint_name);
 	if (edata->internalquery)
 		pfree(edata->internalquery);
 

@@ -1258,7 +1258,10 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 					 errdetail("QE reported error: %s", qeError->message)));
 		}
 		else
+		{
+			FlushErrorState();
 			ReThrowError(qeError);
+		}
 		return false;
 	}
 

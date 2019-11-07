@@ -146,9 +146,12 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, ErrorData **qeError)
 		 * likely to output the errors on NULL return, add an error message to
 		 * aid debugging.
 		 */
-		*qeError = ereport_and_return(ERROR,
-									  (errcode(ERRCODE_INTERNAL_ERROR),
-									   errmsg("no dispatcher state")));
+		if (errstart(ERROR, __FILE__, __LINE__, PG_FUNCNAME_MACRO, TEXTDOMAIN))
+			*qeError = errfinish_and_return(errcode(ERRCODE_INTERNAL_ERROR),
+											errmsg("no dispatcher state"));
+		else
+			pg_unreachable();
+
 		return NULL;
 	}
 
@@ -247,7 +250,10 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
 		{
 			cdbdisp_getDispatchResults(ds, &error);
 			if (error != NULL)
+			{
+				FlushErrorState();
 				ReThrowError(error);
+			}
 		}
 		PG_CATCH();
 		{

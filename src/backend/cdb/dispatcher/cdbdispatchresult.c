@@ -473,10 +473,13 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult)
 	if (dispatchResult->error_message &&
 		dispatchResult->error_message->len > 0)
 	{
+		if (errstart(ERROR, __FILE__, __LINE__, PG_FUNCNAME_MACRO, TEXTDOMAIN))
+			errdata = errfinish_and_return(errcode(ERRCODE_INTERNAL_ERROR),
+										   (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+											errmsg("%s", dispatchResult->error_message->data)));
+		else
+			pg_unreachable();
 
-		errdata = ereport_and_return(ERROR,
-									 (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-									  errmsg("%s", dispatchResult->error_message->data)));
 		return errdata;
 	}
 
@@ -546,7 +549,8 @@ cdbdisp_get_PQerror(PGresult *pgresult)
 	 * command failed. And if a QE disconnected with FATAL, or PANICed,
 	 * we don't want to do the same in the QD. So, always an ERROR.
 	 */
-	errstart(ERROR, filename, lineno, funcname, TEXTDOMAIN);
+	if (!errstart(ERROR, filename, lineno, funcname, TEXTDOMAIN))
+		pg_unreachable(); /* unexpected path. */
 
 	fld = PQresultErrorField(pgresult, PG_DIAG_SQLSTATE);
 	if (fld)
@@ -575,7 +579,6 @@ cdbdisp_get_PQerror(PGresult *pgresult)
 	if (fld)
 		errcontext("%s", fld);
 
-	Assert(TopTransactionContext);
 	oldcontext = MemoryContextSwitchTo(TopTransactionContext);
 	ErrorData *edata = errfinish_and_return(0);
 	MemoryContextSwitchTo(oldcontext);

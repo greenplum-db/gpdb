@@ -10,8 +10,8 @@
 -- m/^DETAIL:.*gid=.*/
 -- s/gid=\d+-\d+/gid DUMMY/
 --
--- m/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/
--- s/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/
+-- m/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/
+-- s/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/ERROR: server closed the connection unexpectedly (cdbdispatchresult.c:XXX)/
 --
 -- end_matchsubs
 
@@ -236,7 +236,7 @@ server started
  
 (1 row)
 12<:  <... completed>
-ERROR:  Error on receive from seg0 127.0.1.1:25432 pid=16146: server closed the connection unexpectedly
+ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=25361: server closed the connection unexpectedly (cdbdispatchresult.c:476)
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
