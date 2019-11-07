@@ -314,10 +314,20 @@ vm.dirty_ratio = 10</codeblock></p>
           <p>See the manual page (man) for the <codeph>blockdev</codeph> command for more
             information about using that command (<codeph>man blockdev</codeph> opens the man
             page).</p>
-          <note>The <codeph>blockdev --setra</codeph> command is not persistent, it needs to be run
-            every time the system reboots. How to run the command will vary based on your system,
-            but you must ensure that the read ahead setting is set every time the system
-            reboots.</note>
+            <note>The <codeph>blockdev --setra</codeph> command is not persistent, it needs to be
+              run every time the system restarts. How to run the command will vary based on your
+              system, but you must ensure that the read ahead setting is set every time the system
+              restarts.</note>
+            <p>One method to set the <codeph>blockdev</codeph> value at system startup is by adding
+              the <codeph>/sbin/blockdev --setra</codeph> command in the <codeph>rc.local</codeph>
+              file. For example, add this line to the <codeph>rc.local</codeph> file to set the
+              read-ahead value for the disk
+              <codeph>sdb</codeph>.<codeblock>/sbin/blockdev --setra 16384 /dev/sdb</codeblock></p>
+            <p>On systems that use systemd, you must also set the execute permissions on the
+                <codeph>rc.local</codeph> file to enable it to run at startup. For example, on a
+              RHEL/CentOS 7 system, this command sets execute permissions on the
+              file.<codeblock># chmod +x /etc/rc.d/rc.local</codeblock></p>
+            <p>Restart the system to have the setting take effect.</p>
         </li>
         <li>
           <p>Disk I/O scheduler</p>
