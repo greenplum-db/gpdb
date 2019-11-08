@@ -1,0 +1,11 @@
+-- This file contains global patterns of messages that should be ignored or
+-- masked out, when comparing test results with the expected output.
+-- Individual tests can contain additional patterns specific to the test.
+
+-- start_matchignore
+m/^Checking.*\s+ok$/
+-- end_matchignore
+-- start_matchsubs
+m/\d+ public.table_part_1_prt_part1/
+s/\d+ public.table_part_1_prt_part1/##### public.table_part_1_prt_part1/
+-- end_matchsubs

@@ -1,4 +1,0 @@
-void test_a_partitioned_ao_table_with_data_can_be_upgraded(void **state);
-void test_a_partitioned_ao_table_with_data_on_multiple_segfiles_can_be_upgraded(void **state);
-void test_a_partitioned_aoco_table_with_data_can_be_upgraded(void **state);
-void test_a_partitioned_aoco_table_with_data_on_multiple_segfiles_can_be_upgraded(void **state);

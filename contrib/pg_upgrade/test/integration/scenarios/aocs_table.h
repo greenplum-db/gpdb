@@ -1,1 +1,0 @@
-void test_an_aocs_table_with_data_can_be_upgraded(void **state);

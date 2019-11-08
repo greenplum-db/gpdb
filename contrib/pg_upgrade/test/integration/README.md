@@ -13,6 +13,10 @@ Step 1: setup environment
         /Users/adamberlin/workspace/gpdb5/gpAux/greenplum-db-installation \
         /Users/adamberlin/workspace/gpdb5
 
-Step 2: run tests
+Step 2a: run tests
 
-    make check
+    make installcheck
+
+Step 2b: run focused test
+
+    ./test.sh [TEST NAME]
