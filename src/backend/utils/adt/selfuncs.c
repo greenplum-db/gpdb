@@ -206,8 +206,10 @@ static Const *string_to_bytea_const(const char *str, size_t str_len);
 static List *add_predicate_to_quals(IndexOptInfo *index, List *indexQuals);
 static void try_fetch_rel_stats(RangeTblEntry *rte, const char *attname,
 								VariableStatData* vardata);
+#if 0
 static void try_fetch_largest_child_stats(PlannerInfo *root, RelOptInfo *parent_rel,
 										  const char *attname, VariableStatData* vardata);
+#endif
 
 /*
  *		eqsel			- Selectivity of "=" for any data types.
@@ -4416,48 +4418,6 @@ get_join_variables(PlannerInfo *root, List *args, SpecialJoinInfo *sjinfo,
 		*join_is_reversed = false;
 }
 
-/*
- * This method returns a pointer to the largest child relation for an inherited (incl partitioned)
- * relation. If there are multiple levels in the hierarchy, we delve down recursively till we
- * find the largest (as determined from the path structure).
- * Input: a partitioned table
- * Output: largest child partition. If there are no child partition because all of them have been eliminated, then
- *         returns NULL.
- */
-static RelOptInfo* largest_child_relation(PlannerInfo *root, RelOptInfo *rel)
-{
-	AppendPath *append_path = NULL;
-	ListCell *subpath_lc = NULL;
-	RelOptInfo *largest_child_in_subpath = NULL;
-	double max_rows = -1.0;
-
-	Assert(IsA(rel->cheapest_total_path, AppendPath));
-
-	append_path = (AppendPath *) rel->cheapest_total_path;
-
-	foreach(subpath_lc, append_path->subpaths)
-	{
-		RelOptInfo *candidate_child = NULL;
-		Path *subpath = lfirst(subpath_lc);
-
-		if (IsA(subpath, AppendPath))
-		{
-			candidate_child = largest_child_relation(root, subpath->parent);
-		}
-		else
-		{
-			candidate_child = subpath->parent;
-		}
-
-		if (candidate_child && candidate_child->rows > max_rows)
-		{
-			max_rows = candidate_child->rows;
-			largest_child_in_subpath = candidate_child;
-		}
-	}
-
-	return largest_child_in_subpath;
-}
 
 /*
  * The purpose of this method is to make the statistics (on a specific column) of a child partition
@@ -8090,6 +8050,50 @@ try_fetch_rel_stats(RangeTblEntry *rte, const char *attname, VariableStatData* v
 	vardata->freefunc = ReleaseSysCache;
 }
 
+#if 0
+/*
+ * This method returns a pointer to the largest child relation for an inherited (incl partitioned)
+ * relation. If there are multiple levels in the hierarchy, we delve down recursively till we
+ * find the largest (as determined from the path structure).
+ * Input: a partitioned table
+ * Output: largest child partition. If there are no child partition because all of them have been eliminated, then
+ *         returns NULL.
+ */
+static RelOptInfo* largest_child_relation(PlannerInfo *root, RelOptInfo *rel)
+{
+	AppendPath *append_path = NULL;
+	ListCell *subpath_lc = NULL;
+	RelOptInfo *largest_child_in_subpath = NULL;
+	double max_rows = -1.0;
+
+	Assert(IsA(rel->cheapest_total_path, AppendPath));
+
+	append_path = (AppendPath *) rel->cheapest_total_path;
+
+	foreach(subpath_lc, append_path->subpaths)
+	{
+		RelOptInfo *candidate_child = NULL;
+		Path *subpath = lfirst(subpath_lc);
+
+		if (IsA(subpath, AppendPath))
+		{
+			candidate_child = largest_child_relation(root, subpath->parent);
+		}
+		else
+		{
+			candidate_child = subpath->parent;
+		}
+
+		if (candidate_child && candidate_child->rows > max_rows)
+		{
+			max_rows = candidate_child->rows;
+			largest_child_in_subpath = candidate_child;
+		}
+	}
+
+	return largest_child_in_subpath;
+}
+
 static void
 try_fetch_largest_child_stats(PlannerInfo *root, RelOptInfo *parent_rel,
 							  const char *attname, VariableStatData* vardata)
@@ -8113,3 +8117,4 @@ try_fetch_largest_child_stats(PlannerInfo *root, RelOptInfo *parent_rel,
 		}
 	}
 }
+#endif

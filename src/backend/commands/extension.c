@@ -778,7 +778,7 @@ set_end_state(Node *stmt)
 		((AlterExtensionStmt*)stmt)->update_ext_state = UPDATE_EXTENSION_END;
 }
 
-static bool
+static bool pg_attribute_unused()
 is_begin_state(const Node *stmt)
 {
 	AssertState(stmt != NULL);

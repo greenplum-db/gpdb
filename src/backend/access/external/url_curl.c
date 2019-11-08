@@ -968,7 +968,7 @@ make_url(const char *url, char *buf, bool is_ipv6)
 
 	p = buf;
 	len = hostname_start - url;
-	strncpy(p, url, len);
+	memcpy(p, url, len);
 	p += len;
 	url += len;
 
@@ -981,7 +981,7 @@ make_url(const char *url, char *buf, bool is_ipv6)
 		*p = '[';
 		p++;
 	}
-	strncpy(p, hostip, len);
+	memcpy(p, hostip, len);
 	p += len;
 	if (domain_resolved_to_ipv6)
 	{
