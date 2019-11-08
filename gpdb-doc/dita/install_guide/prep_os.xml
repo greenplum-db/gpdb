@@ -314,10 +314,9 @@ vm.dirty_ratio = 10</codeblock></p>
           <p>See the manual page (man) for the <codeph>blockdev</codeph> command for more
             information about using that command (<codeph>man blockdev</codeph> opens the man
             page).</p>
-            <note>The <codeph>blockdev --setra</codeph> command is not persistent, it needs to be
-              run every time the system restarts. How to run the command will vary based on your
-              system, but you must ensure that the read ahead setting is set every time the system
-              restarts.</note>
+            <note>The <codeph>blockdev --setra</codeph> command is not persistent. You must ensure
+              the read-ahead value is set whenever the system restarts. How to set the value will
+              vary based on your system.</note>
             <p>One method to set the <codeph>blockdev</codeph> value at system startup is by adding
               the <codeph>/sbin/blockdev --setra</codeph> command in the <codeph>rc.local</codeph>
               file. For example, add this line to the <codeph>rc.local</codeph> file to set the
