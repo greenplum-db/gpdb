@@ -62,7 +62,7 @@ parseCommandLine(int argc, char *argv[])
 		{"progress", no_argument, NULL, 2},
 		{"add-checksum", no_argument, NULL, 3},
 		{"remove-checksum", no_argument, NULL, 4},
-
+		{"print-timing", no_argument, NULL, 5},
 		{NULL, 0, NULL, 0}
 	};
 	int			option;			/* Command line option */
@@ -73,6 +73,7 @@ parseCommandLine(int argc, char *argv[])
 	time_t		run_time = time(NULL);
 
 	user_opts.transfer_mode = TRANSFER_MODE_COPY;
+	user_opts.print_timing = false;
 
 	os_info.progname = get_progname(argv[0]);
 
@@ -227,6 +228,10 @@ parseCommandLine(int argc, char *argv[])
 
 			case 4:		/* --remove-checksum */
 				user_opts.checksum_mode = CHECKSUM_REMOVE;
+				break;
+
+			case 5:
+				user_opts.print_timing = true;
 				break;
 
 			default:

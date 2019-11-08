@@ -435,6 +435,7 @@ typedef struct
 	bool		progress;
 	segmentMode	segment_mode;
 	checksumMode checksum_mode;
+	bool print_timing;
 
 } UserOpts;
 

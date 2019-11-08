@@ -80,6 +80,22 @@ prep_status(const char *fmt,...)
 		pg_log(PG_REPORT, "%-*s", MESSAGE_WIDTH, message);
 }
 
+#include "sys/time.h"
+
+static char *
+get_time_as_string_with_milliseconds()
+{
+	struct timeval time_data;
+	gettimeofday(&time_data, NULL);
+
+	char time_as_string[32];
+	strftime(time_as_string,
+	         sizeof(time_as_string),
+	         "%Y-%m-%d %H:%M:%S",
+	         localtime(&time_data.tv_sec));
+
+	return psprintf("%s.%06d", time_as_string, time_data.tv_usec);
+}
 
 static
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 0)))
@@ -127,7 +143,16 @@ pg_log_v(eLogType type, const char *fmt, va_list ap)
 
 		case PG_REPORT:
 		case PG_WARNING:
-			printf("%s", _(message));
+			if (user_opts.print_timing)
+			{
+				char *time_in_millis = get_time_as_string_with_milliseconds();
+				printf("%s: %s", time_in_millis, _(message));
+				pfree(time_in_millis);
+			}
+			else
+			{
+				printf("%s", _(message));
+			}
 			break;
 
 		case PG_FATAL:
