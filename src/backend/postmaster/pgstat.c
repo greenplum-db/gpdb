@@ -3319,12 +3319,13 @@ pgstat_get_wait_event(uint32 wait_event_info)
 			event_name = "BufferPin";
 			break;
 		case WAIT_RESOURCE_GROUP:
-			{
-				/* GPDB_96_MERGE_FIXME: this is broken: eventId is only 16 bits wide */
-				char *groupName = GetResGroupNameForId(eventId);
-
-				event_name = groupName ? groupName : "unknown resource group";
-			}
+			/*
+			 * We don't pass details for resource groups via event id, since
+			 * it's an uint16 and resource group id is an Oid.
+			 *
+			 * Here should be never used, pg_stat_get_activity() will get the
+			 * information from backend entry.
+			 */
 			event_name = "ResourceGroup";
 			break;
 		case WAIT_RESOURCE_QUEUE:

@@ -801,8 +801,22 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 
 				raw_wait_event = UINT32_ACCESS_ONCE(proc->wait_event_info);
 				wait_event_type = pgstat_get_wait_event_type(raw_wait_event);
-				wait_event = pgstat_get_wait_event(raw_wait_event);
 
+				/*
+				 * We don't pass details for resource groups via event id,
+				 * since it's an uint16 and resource group id is an Oid.
+				 *
+				 * Get it from the backend entry, waitOnGroup() had set the
+				 * information in it.
+				 */
+				if (wait_event_type && (pg_strcasecmp(wait_event_type, "ResourceGroup") == 0))
+				{
+					wait_event = GetResGroupNameForId(beentry->st_rsgid);
+				}
+				else
+				{
+					wait_event = pgstat_get_wait_event(raw_wait_event);
+				}
 			}
 			else
 			{

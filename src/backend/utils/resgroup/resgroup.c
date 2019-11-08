@@ -2737,7 +2737,13 @@ waitOnGroup(ResGroupData *group)
 	Assert(!LWLockHeldExclusiveByMe(ResGroupLock));
 	Assert(!selfIsAssigned());
 
-	pgstat_report_wait_start(WAIT_RESOURCE_GROUP, group->groupId);
+	/*
+	 * The eventId is never used, because groupId is an Oid, but
+	 * pgstat_report_wait_start() wants an uint16 eventId.
+	 *
+	 * We set that information by the groupId via the backend entry.
+	 */
+	pgstat_report_wait_start(WAIT_RESOURCE_GROUP, 0);
 	pgstat_report_resgroup(group->groupId);
 
 	/*
