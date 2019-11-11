@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title>Graph MADlib Extension</title>
+  <title>Graph Extension</title>
   <body>
-    <p>This chapter includes the following information:</p>
+    <p>Graph Extension is part of MADLib capabilities. This chapter includes the following information:</p>
     <ul>
       <li id="pz219023"><xref href="#topic2" type="topic" format="dita"/></li>
       <li><xref href="#topic_khs_klx_g3b" format="dita"/></li>
@@ -16,7 +16,7 @@
     </ul>
   </body>
   <topic id="topic2" xml:lang="en">
-    <title id="pz217886">About MADlib</title>
+    <title id="pz217886">About Graph with MADlib</title>
     <body>
       <p>MADlib is an open-source library for scalable in-database analytics. With the Greenplum
         Database MADlib extension, you can use MADlib functionality in a Greenplum Database. </p>

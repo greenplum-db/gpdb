@@ -3,14 +3,10 @@
 <topic id="topic_khf_ltc_vbb">
   <title>Time Series</title>
   <body>
-     <p>This section describes the procedural languages and analytics extensions available
+     <p>This section describes the Time Series capabilities available
        with Greenplum Database.</p>
-     <p otherprops="oss-only">Procedural languages are typically packaged as extensions. You
-      register a language in a database using the <codeph><xref
-          href="../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1" scope="peer">CREATE
-          EXTENSION</xref></codeph> command. You remove a language from a database with
-          <codeph><xref href="../ref_guide/sql_commands/DROP_EXTENSION.xml#topic1" scope="peer">DROP
-          EXTENSION</xref></codeph>.</p>
+
+     
      <p>The Greenplum Database distribution supports the following procedural
        languages; refer to the linked language documentation for <ph otherprops="pivotal"> installation
        and </ph> usage instructions:</p>
