@@ -56,8 +56,6 @@
         reordering of all archived items, support parallel restoration, and are compressed by
         default. The <varname>directory</varname> format is the only format that supports parallel
         dumps.</p>
-      <note>The <codeph>--ignore-version</codeph> option is deprecated and will be removed in a
-        future release.</note>
     </section>
     <section id="section4">
       <title>Options</title>
@@ -159,14 +157,6 @@
               produces a valid directory-format archive. However, the tar format does not support
               compression. Also, when using tar format the
               relative order of table data items cannot be changed during restore.</pd>
-          </plentry>
-          <plentry>
-            <pt>-i | --ignore-version</pt>
-            <pd><note>This option is deprecated and will be removed in a future
-              release.</note>Ignore version mismatch between <codeph>pg_dump</codeph> and the
-              database server. <codeph>pg_dump</codeph> can dump from servers running previous
-              releases of Greenplum Database (or PostgreSQL), but very old versions may not be
-              supported anymore. Use this option if you need to override the version check.</pd>
           </plentry>
           <plentry>
             <pt>-j <varname>njobs</varname> | --jobs=<varname>njobs</varname></pt>

@@ -41,8 +41,6 @@
             <p><codeph>pg_dumpall</codeph> needs to connect several times to the Greenplum Database master server (once per database). If you use password
                 authentication it is likely to ask for a password each time. It is convenient to
                 have a <codeph>~/.pgpass</codeph> file in such cases.</p>
-            <note>The <codeph>--ignore-version</codeph> option is deprecated and will be removed in
-                a future release.</note>
         </section>
         <section id="section4">
             <title>Options</title>
@@ -72,16 +70,6 @@
                     <plentry>
                         <pt>-g | --globals-only</pt>
                         <pd>Dump only global objects (roles and tablespaces), no databases.</pd>
-                    </plentry>
-                    <plentry>
-                        <pt>-i | --ignore-version</pt>
-                        <pd><note>This option is deprecated and will be removed in a future
-                                release.</note>Ignore version mismatch between <codeph><xref
-                                    href="pg_dump.xml#topic1" type="topic" format="dita"/></codeph>
-                            and the database server. <codeph>pg_dump</codeph> can dump from servers
-                            running previous releases of Greenplum Database (or
-                            PostgreSQL), but very old versions may not be supported anymore. Use
-                            this option if you need to override the version check.</pd>
                     </plentry>
                     <plentry>
                         <pt>-o | --oids</pt>
