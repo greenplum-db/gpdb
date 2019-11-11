@@ -803,6 +803,15 @@ PGAC_ARG_BOOL(enable, debugntuplestore, no, [enable debug_ntuplestore (for debug
                          [Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore)])])
 
 #
+# Enable fault injector
+#
+PGAC_ARG_BOOL(enable, faultinjector, no, [enable fault injector],
+              [AC_DEFINE([FAULT_INJECTOR], 1,
+                         [Define to 1 to build with fault injector. (--enable-faultinjector)])])
+AC_MSG_RESULT([checking whether to build with FAULT_INJECTOR... $enable_faultinjector])
+AC_SUBST(enable_faultinjector)
+
+#
 # Enable Greenplum ORCA optimizer
 #
 PGAC_ARG_BOOL(enable, orca, yes, [disable ORCA optimizer],
