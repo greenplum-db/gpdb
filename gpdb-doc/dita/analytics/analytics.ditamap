@@ -2,7 +2,7 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map title="Greenplum Integrated Analytics">
   <topicref href="overview.xml">
-    <topicref href="ai_extensions.xml" navtitle="Machine and Deep Learning"/>
+    <topicref href="madlib.xml" navtitle="Machine and Deep Learning"/>
     <topicref href="graph.xml" navtitle="Graph"/>
     <topicref href="time_series.xml" navtitle="Time Series"/>
     <topicref href="postGIS.xml" navtitle="Geospatial" otherprops="pivotal"/>
