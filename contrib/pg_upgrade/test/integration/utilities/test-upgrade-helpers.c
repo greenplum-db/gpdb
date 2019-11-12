@@ -11,6 +11,7 @@
 /*
  * implements:
  */
+#include "gpdb5-cluster.h"
 #include "test-upgrade-helpers.h"
 #include "cluster-upgrade.h"
 #include "pg-upgrade-copy.h"
@@ -89,7 +90,8 @@ performUpgradeWithTablespaces(char *mappingFilePath)
 			true,
 			NULL,
 			old_bin_dir,
-			new_bin_dir));
+			new_bin_dir,
+			GPDB_FIVE_PORT));
 
 	for (int i = 0; i < number_of_segments; i++)
 	{
@@ -103,7 +105,8 @@ performUpgradeWithTablespaces(char *mappingFilePath)
 			false,
 			mappingFilePath,
 			old_bin_dir,
-			new_bin_dir);
+			new_bin_dir,
+			GPDB_FIVE_PORT);
 
 		PgUpgradeCopyOptions *segment_copy_options = make_copy_options(
 			master_host_username,
@@ -166,7 +169,8 @@ performUpgradeCheck(void)
 		true,
 		NULL,
 		"./gpdb5/bin",
-		"./gpdb6/bin"
+		"./gpdb6/bin",
+		GPDB_FIVE_PORT
 		);
 
 	output_file = perform_upgrade_check(options);

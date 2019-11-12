@@ -9,6 +9,7 @@ struct PgUpgradeOptionsData
 {
 	int old_gp_dbid;
 	int new_gp_dbid;
+	int old_master_port;
 	char *old_segment_path;
 	char *new_segment_path;
 	char *old_bin_dir;
@@ -27,7 +28,8 @@ make_pg_upgrade_options(
 	bool is_dispatcher,
 	char *old_tablespace_mapping_file_path,
 	char *old_bin_dir,
-	char *new_bin_dir)
+	char *new_bin_dir,
+	int old_master_port)
 {
 	char *mode = "segment";
 
@@ -44,6 +46,7 @@ make_pg_upgrade_options(
 	options->mode = mode;
 	options->old_tablespace_mapping_file_path = old_tablespace_mapping_file_path;
 	options->has_tablespaces = old_tablespace_mapping_file_path != NULL;
+	options->old_master_port = old_master_port;
 	return options;
 }
 
@@ -64,6 +67,7 @@ base_upgrade_executable_string(PgUpgradeOptions *options)
 		"--new-datadir=%s "
 		"--old-gp-dbid=%d "
 		"--new-gp-dbid=%d "
+		"--old-port=%d "
 		"--mode=%s "
 		"%s ",
 		options->new_bin_dir,
@@ -73,6 +77,7 @@ base_upgrade_executable_string(PgUpgradeOptions *options)
 		options->new_segment_path,
 		options->old_gp_dbid,
 		options->new_gp_dbid,
+		options->old_master_port,
 		options->mode,
 		tablespace_mapping_option);
 }

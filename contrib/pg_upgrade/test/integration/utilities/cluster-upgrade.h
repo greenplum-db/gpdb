@@ -8,7 +8,8 @@ PgUpgradeOptions *make_pg_upgrade_options(
 	bool is_dispatcher,
 	char *old_tablespace_mapping_file_path,
 	char *old_bin_dir,
-	char *new_bin_dir);
+	char *new_bin_dir,
+	int old_master_port);
 
 void perform_upgrade(PgUpgradeOptions *options);
 

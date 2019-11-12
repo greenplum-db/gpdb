@@ -7,6 +7,7 @@
 
 #include "scenarios/data_checksum_mismatch.h"
 #include "scenarios/filespaces_to_tablespaces.h"
+#include "scenarios/live_check.h"
 
 #include "scenarios/data_checksum_mismatch.h"
 
@@ -62,6 +63,7 @@ main(int argc, char *argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const		UnitTest tests[] = {
+		unit_test_setup_teardown(test_a_live_check_with_the_old_server_still_up_does_not_throw_error_message, setup, teardown),
 		unit_test_setup_teardown(test_a_filespace_can_be_upgraded_into_new_tablespaces, setup, teardown),
 		unit_test_setup_teardown(test_clusters_with_different_checksum_version_cannot_be_upgraded, setup, teardown),
 	};

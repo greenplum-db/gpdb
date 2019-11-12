@@ -94,15 +94,7 @@ scripts/pg-upgrade-copy-from-master: scripts/pg-upgrade-copy-from-master.o \
 #
 ## Libraries
 #
-bdd-library/bdd.o: override CPPFLAGS += -I .
-
-utilities_CPPFLAGS = -I$(pg_upgrade_directory) \
-					 -I$(libpq_srcdir) \
-					 -I .
-
-$(utilities_objs) \
-	$(scenario_objs) \
-	greenplum_five_to_greenplum_six_upgrade_test_suite.o: override CPPFLAGS += $(utilities_CPPFLAGS)
+override CPPFLAGS += -I . -I $(pg_upgrade_directory) -I$(libpq_srcdir)
 
 #
 ## Tests
