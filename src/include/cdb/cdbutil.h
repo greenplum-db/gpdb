@@ -132,6 +132,11 @@ extern void cdb_cleanup(int code, Datum arg  __attribute__((unused)) );
 extern CdbComponentDatabases *getCdbComponentDatabases(void);
 
 /*
+ * destroyCdbSegmentIPCache empties the segment IP cache
+ */
+extern void destroyCdbSegmentIPCache(void);
+
+/*
  * freeCdbComponentDatabases() releases the palloc'd storage returned by
  * getCdbComponentDatabases().
  */

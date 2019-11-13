@@ -26,10 +26,6 @@
             command displays <codeph>-No entries found</codeph> and the message indicates that a
             standby master instance is not configured.</p>
         </li>
-        <li id="ki169625">After switching to the newly active master host, run
-            <codeph>ANALYZE</codeph> on it. For
-          example:<codeblock>$ psql <codeph>dbname</codeph> -c 'ANALYZE;'</codeblock>
-        </li>
         <li id="ki155823">Optional: If you did not specify a new standby host when running the
             <codeph>gpactivatestandby</codeph> utility, use <codeph>gpinitstandby</codeph> to
           configure a new standby master at a later time. Run <codeph>gpinitstandby</codeph> on your

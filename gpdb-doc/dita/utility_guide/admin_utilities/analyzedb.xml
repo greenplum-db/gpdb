@@ -61,9 +61,9 @@
           utility collects statistics on the root partition of a partitioned table if the statistics
           do not exist. If any of the leaf partitions have stale statistics,
             <cmdname>analyzedb</cmdname> also refreshes the root partition statistics. The cost of
-          refreshing the root level statistics is comparable to analyzing one leaf partition.
-          You can specify the option <codeph>--skip_root_stats</codeph> to disable
-          collection of statistics on the root partition of a partitioned table.</p>
+          refreshing the root level statistics is comparable to analyzing one leaf partition. You
+          can specify the option <codeph>--skip_root_stats</codeph> to disable collection of
+          statistics on the root partition of a partitioned table.</p>
       </sectiondiv>
     </section>
     <section><title>Notes</title><p>The <cmdname>analyzedb</cmdname> utility updates append
@@ -178,6 +178,10 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
           <pd>For information about how statistics are collected for partitioned tables, see
                 <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"
               >ANALYZE</xref></codeph>.</pd>
+          <pd>GPORCA uses root partition statistics. If you use
+              <codeph>--skip-root-partition</codeph> option, you should ensure that root partition
+            statistics are up to date so that GPORCA does not produce inferior query plans due to
+            stale root partition statistics. </pd>
         </plentry>
         <plentry>
           <pt>-s <varname>schema</varname></pt>

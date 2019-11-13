@@ -661,3 +661,104 @@ select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t
 (4 rows)
 
 drop table t1, t2, t3;
+-- test that flow->hashExpr variables can be resolved
+CREATE TABLE hexpr_t1 (c1 int, c2 character varying(16)) DISTRIBUTED BY (c1);
+CREATE TABLE hexpr_t2 (c3 character varying(16)) DISTRIBUTED BY (c3);
+INSERT INTO hexpr_t1 SELECT i, i::character varying FROM generate_series(1,10)i;
+INSERT INTO hexpr_t2 SELECT i::character varying FROM generate_series(1,10)i;
+EXPLAIN SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..862.00 rows=5 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=14 width=2)
+         ->  Hash Left Join  (cost=0.00..862.00 rows=5 width=2)
+               Hash Cond: btrim(hexpr_t1.c2::text) = hexpr_t2.c3::text
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=2)
+                     Hash Key: btrim(hexpr_t1.c2::text)
+                     ->  Table Scan on hexpr_t1  (cost=0.00..431.00 rows=4 width=2)
+               ->  Hash  (cost=431.00..431.00 rows=4 width=2)
+                     ->  Table Scan on hexpr_t2  (cost=0.00..431.00 rows=4 width=2)
+ Optimizer status: PQO version 3.78.0
+(10 rows)
+
+EXPLAIN SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..862.00 rows=5 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=14 width=2)
+         ->  Hash Left Join  (cost=0.00..862.00 rows=5 width=2)
+               Hash Cond: btrim(hexpr_t1.c2::text) = hexpr_t2.c3::text
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=2)
+                     Hash Key: btrim(hexpr_t1.c2::text)
+                     ->  Table Scan on hexpr_t1  (cost=0.00..431.00 rows=4 width=2)
+               ->  Hash  (cost=431.00..431.00 rows=4 width=2)
+                     ->  Table Scan on hexpr_t2  (cost=0.00..431.00 rows=4 width=2)
+ Optimizer status: PQO version 3.78.0
+(10 rows)
+
+EXPLAIN SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..862.00 rows=5 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=14 width=2)
+         ->  Hash Left Join  (cost=0.00..862.00 rows=5 width=2)
+               Hash Cond: btrim(hexpr_t1.c2::text) = hexpr_t2.c3::text
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=2)
+                     Hash Key: btrim(hexpr_t1.c2::text)
+                     ->  Table Scan on hexpr_t1  (cost=0.00..431.00 rows=4 width=2)
+               ->  Hash  (cost=431.00..431.00 rows=4 width=2)
+                     ->  Table Scan on hexpr_t2  (cost=0.00..431.00 rows=4 width=2)
+ Optimizer status: PQO version 3.78.0
+(10 rows)
+
+SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+ foo 
+-----
+ 2
+ 5
+ 8
+ 3
+ 6
+ 9
+ 10
+ 1
+ 4
+ 7
+(10 rows)
+
+SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+ foo 
+-----
+ 8
+ 2
+ 5
+ 9
+ 10
+ 3
+ 6
+ 1
+ 4
+ 7
+(10 rows)
+
+SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+ foo 
+-----
+ 9
+ 10
+ 3
+ 6
+ 2
+ 8
+ 5
+ 1
+ 4
+ 7
+(10 rows)
+

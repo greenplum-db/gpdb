@@ -8,11 +8,18 @@
 #define test_with_setup_and_teardown(test_func) \
 	unit_test_setup_teardown(test_func, setup, teardown)
 
+MemoryContext *OrigMessageContext;
+
 void
 setup(void **state)
 {
 	/* reset the hook function pointer to avoid test pollution. */
 	resgroup_assign_hook = NULL;
+
+	/* initializations for shouldBypassQuery() */
+	gp_resource_group_bypass = false;
+	debug_query_string = NULL;
+	MessageContext = OrigMessageContext;
 }
 
 void
@@ -280,6 +287,66 @@ test_CpusetOperation(void **state)
 	//assert_string_equal(cpuset, "0");
 }
 
+static void
+test__shouldBypassQuery__null_query(void **state)
+{
+	assert_false(shouldBypassQuery(NULL));
+}
+
+static void
+test__shouldBypassQuery__empty_query(void **state)
+{
+	assert_false(shouldBypassQuery(""));
+}
+
+static void
+test__shouldBypassQuery__cmd_select(void **state)
+{
+	assert_false(shouldBypassQuery("select 1"));
+}
+
+static void
+test__shouldBypassQuery__cmd_set(void **state)
+{
+	assert_true(shouldBypassQuery("set enable_sort to off"));
+}
+
+static void
+test__shouldBypassQuery__cmd_reset(void **state)
+{
+	assert_true(shouldBypassQuery("reset enable_sort"));
+}
+
+static void
+test__shouldBypassQuery__cmd_show(void **state)
+{
+	assert_true(shouldBypassQuery("show enable_sort"));
+}
+
+static void
+test__shouldBypassQuery__cmd_mixed(void **state)
+{
+	assert_false(shouldBypassQuery("select 1; show enable_sort;"));
+	assert_false(shouldBypassQuery("show enable_sort; select 1;"));
+	assert_true(shouldBypassQuery("reset enable_sort; show enable_sort;"));
+}
+
+static void
+test__shouldBypassQuery__forced_bypass_mode(void **state)
+{
+	gp_resource_group_bypass = true;
+
+	assert_true(shouldBypassQuery("select 1"));
+}
+
+static void
+test__shouldBypassQuery__message_context_is_null(void **state)
+{
+	MessageContext = NULL;
+
+	assert_false(shouldBypassQuery("select 1"));
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -294,8 +361,22 @@ main(int argc, char *argv[])
 			unit_test(test__CpusetToBitset_abnormal_case),
 			unit_test(test_BitsetToCpuset),
 			unit_test(test_CpusetOperation),
+			test_with_setup_and_teardown(test__shouldBypassQuery__null_query),
+			test_with_setup_and_teardown(test__shouldBypassQuery__empty_query),
+			test_with_setup_and_teardown(test__shouldBypassQuery__cmd_select),
+			test_with_setup_and_teardown(test__shouldBypassQuery__cmd_set),
+			test_with_setup_and_teardown(test__shouldBypassQuery__cmd_reset),
+			test_with_setup_and_teardown(test__shouldBypassQuery__cmd_show),
+			test_with_setup_and_teardown(test__shouldBypassQuery__cmd_mixed),
+			test_with_setup_and_teardown(test__shouldBypassQuery__forced_bypass_mode),
+			test_with_setup_and_teardown(test__shouldBypassQuery__message_context_is_null),
 	};
 
 	MemoryContextInit();
+	OrigMessageContext = AllocSetContextCreate(TopMemoryContext,
+											   "MessageContext",
+											   ALLOCSET_DEFAULT_MINSIZE,
+											   ALLOCSET_DEFAULT_INITSIZE,
+											   ALLOCSET_DEFAULT_MAXSIZE);
 	run_tests(tests);
 }

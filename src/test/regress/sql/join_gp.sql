@@ -337,3 +337,20 @@ select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t
   join t3 t3_1 on tt1.t1b = t3_1.b and (tt1.t2a is NULL OR tt1.t1b = t3.b);
 
 drop table t1, t2, t3;
+-- test that flow->hashExpr variables can be resolved
+CREATE TABLE hexpr_t1 (c1 int, c2 character varying(16)) DISTRIBUTED BY (c1);
+CREATE TABLE hexpr_t2 (c3 character varying(16)) DISTRIBUTED BY (c3);
+INSERT INTO hexpr_t1 SELECT i, i::character varying FROM generate_series(1,10)i;
+INSERT INTO hexpr_t2 SELECT i::character varying FROM generate_series(1,10)i;
+EXPLAIN SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+EXPLAIN SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+EXPLAIN SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
+ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);

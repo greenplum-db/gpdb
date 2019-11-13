@@ -451,6 +451,17 @@ getCdbComponentDatabases(void)
 	return cdbs;
 }
 
+/*
+ * destroyCdbSegmentIPCache
+ *
+ * Empties the segment IP cache
+ */
+void
+destroyCdbSegmentIPCache(void)
+{
+	hash_destroy(segment_ip_cache_htab);
+	segment_ip_cache_htab = NULL;
+}
 
 /*
  * freeCdbComponentDatabases
@@ -466,8 +477,7 @@ freeCdbComponentDatabases(CdbComponentDatabases *pDBs)
 	if (pDBs == NULL)
 		return;
 
-	hash_destroy(segment_ip_cache_htab);
-	segment_ip_cache_htab = NULL;
+	destroyCdbSegmentIPCache();
 
 	if (pDBs->segment_db_info != NULL)
 	{

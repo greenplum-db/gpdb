@@ -3473,7 +3473,8 @@ groupWaitQueueFind(ResGroupData *group, const PGPROC *proc)
 static bool
 shouldBypassQuery(const char *query_string)
 {
-	MemoryContext oldcontext;
+	MemoryContext oldcontext = NULL;
+	MemoryContext tmpcontext = NULL;
 	List *parsetree_list; 
 	ListCell *parsetree_item;
 	Node *parsetree;
@@ -3486,8 +3487,27 @@ shouldBypassQuery(const char *query_string)
 
 	/*
 	 * Switch to appropriate context for constructing parsetrees.
+	 *
+	 * It is possible that MessageContext is NULL, for example in a bgworker:
+	 *
+	 *     debug_query_string = "select 1";
+	 *     StartTransactionCommand();
+	 *
+	 * This is not the recommended order of setting debug_query_string, but we
+	 * should not put a constraint on the order by resource group anyway.
 	 */
-	oldcontext = MemoryContextSwitchTo(MessageContext);
+	if (MessageContext)
+		oldcontext = MemoryContextSwitchTo(MessageContext);
+	else
+	{
+		/* Create a temp memory context to prevent memory leaks */
+		tmpcontext = AllocSetContextCreate(CurrentMemoryContext,
+										   "resgroup temporary context",
+										   ALLOCSET_DEFAULT_MINSIZE,
+										   ALLOCSET_DEFAULT_INITSIZE,
+										   ALLOCSET_DEFAULT_MAXSIZE);
+		oldcontext = MemoryContextSwitchTo(tmpcontext);
+	}
 
 	parsetree_list = pg_parse_query(query_string);
 
@@ -3505,6 +3525,11 @@ shouldBypassQuery(const char *query_string)
 			nodeTag(parsetree) != T_VariableShowStmt)
 			return false;
 	}
+
+	list_free_deep(parsetree_list);
+
+	if (tmpcontext)
+		MemoryContextDelete(tmpcontext);
 
 	return true;
 }

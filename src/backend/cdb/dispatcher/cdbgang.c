@@ -1207,6 +1207,7 @@ void DisconnectAndDestroyAllGangs(bool resetSession)
 	 */
 	if (NULL != GangContext)
 	{
+		destroyCdbSegmentIPCache();
 		MemoryContextReset(GangContext);
 		cdb_component_dbs = NULL;
 	}

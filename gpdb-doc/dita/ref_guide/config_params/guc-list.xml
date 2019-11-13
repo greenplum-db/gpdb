@@ -7394,7 +7394,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">integer</entry>
+              <entry colname="col1">integer &lt;= 1000</entry>
               <entry colname="col2">250 on master<p>250 on segments</p></entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
