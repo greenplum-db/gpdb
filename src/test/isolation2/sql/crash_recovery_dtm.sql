@@ -7,8 +7,8 @@
 -- m/(PANIC):.*unable to complete*/
 -- s/gid \=\s*\d+-\d+/gid \= DUMMY/gm
 --
--- m/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/
--- s/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/
+-- m/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/
+-- s/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/ERROR: server closed the connection unexpectedly (cdbdispatchresult.c:XXX)/
 --
 -- end_matchsubs
 

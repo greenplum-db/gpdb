@@ -7,8 +7,8 @@ create extension if not exists gp_inject_fault;
 CREATE
 
 -- start_matchsubs
--- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/
--- s/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/
+-- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/
+-- s/^ERROR:  Error on receive from .*: server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/ERROR: server closed the connection unexpectedly (cdbdispatchresult.c:XXX)/
 -- end_matchsubs
 
 -- to make test deterministic and fast
@@ -141,7 +141,7 @@ END
 -- session 2: in transaction, gxid is dispatched to writer gang, cann't
 --            update cdb_component_dbs, following query should fail
 2:END;
-ERROR:  Error on receive from seg0 127.0.0.1:25432 pid=30365: server closed the connection unexpectedly
+ERROR:  Error on receive from seg1 127.0.0.1:7003 pid=2406: server closed the connection unexpectedly (cdbdispatchresult.c:476)
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
@@ -152,7 +152,7 @@ DETAIL:
 ----+----
 (0 rows)
 3:END;
-ERROR:  Error on receive from seg0 127.0.0.1:25432 pid=30374: server closed the connection unexpectedly
+ERROR:  Error on receive from seg1 127.0.0.1:7003 pid=2417: server closed the connection unexpectedly (cdbdispatchresult.c:476)
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
@@ -160,7 +160,7 @@ DETAIL:
 --            cdb_component_dbs, following query should fail and session
 --            is reset
 4:select * from tmp4;
-ERROR:  Error on receive from seg0 slice1 127.0.0.1:25432 pid=30391: server closed the connection unexpectedly
+ERROR:  Error on receive from seg1 slice1 127.0.0.1:7003 pid=2432: server closed the connection unexpectedly (cdbdispatchresult.c:476)
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
@@ -171,7 +171,7 @@ LINE 1: select * from tmp4;
 -- session 5: has a subtransaction, cann't update cdb_component_dbs,
 --            following query should fail
 5:select * from tmp51;
-ERROR:  Error on receive from seg0 slice1 127.0.0.1:25432 pid=30399: server closed the connection unexpectedly
+ERROR:  Error on receive from seg1 slice1 127.0.0.1:7003 pid=2441: server closed the connection unexpectedly (cdbdispatchresult.c:476)
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.

@@ -2,8 +2,8 @@
 --
 -- # create a match/subs expression
 --
--- m/ERROR:.*server closed the connection unexpectedly/
--- s/ERROR:.*server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/gm
+-- m/ERROR:.*server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/
+-- s/ERROR:.*server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/ERROR: server closed the connection unexpectedly (cdbdispatchresult.c:XXX)/gm
 -- end_matchsubs
 include: helpers/server_helpers.sql;
 

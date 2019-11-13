@@ -316,7 +316,11 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 	cdbdisp_markNamedPortalGangsDestroyed();
 
 	if (qeError)
+	{
+
+		FlushErrorState();
 		ReThrowError(qeError);
+	}
 
 	cdbdisp_destroyDispatcherState(ds);
 }
@@ -448,7 +452,10 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	pr = cdbdisp_getDispatchResults(ds, &qeError);
 
 	if (qeError)
+	{
+		FlushErrorState();
 		ReThrowError(qeError);
+	}
 
 	cdbdisp_returnResults(pr, cdb_pgresults);
 
@@ -1189,7 +1196,10 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		cdbdisp_getDispatchResults(ds, &qeError);
 
 		if (qeError)
+		{
+			FlushErrorState();
 			ReThrowError(qeError);
+		}
 
 		/*
 		 * Wasn't an error, must have been an interrupt.
@@ -1449,7 +1459,10 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	cdbdisp_checkDispatchResult(ds, DISPATCH_WAIT_NONE);
 
 	if (!cdbdisp_getDispatchResults(ds, &error))
+	{
+		FlushErrorState();
 		ReThrowError(error);
+	}
 
 	/*
 	 * Notice: Do not call cdbdisp_finishCommand to destroy dispatcher state,

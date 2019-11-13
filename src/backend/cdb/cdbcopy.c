@@ -695,7 +695,10 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 	{
 		/* errors reported by the segments */
 		if (first_error)
+		{
+			FlushErrorState();
 			ReThrowError(first_error);
+		}
 
 		/* errors that occurred in the COPY itself */
 		if (io_errors)

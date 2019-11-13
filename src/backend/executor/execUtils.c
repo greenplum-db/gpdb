@@ -2076,6 +2076,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		if (qeError)
 		{
 			estate->dispatcherState = NULL;
+			FlushErrorState();
 			ReThrowError(qeError);
 		}
 
