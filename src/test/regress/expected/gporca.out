@@ -9866,6 +9866,57 @@ select * from orca.bm_dyn_test_onepart where i=2 and t='2';
 
 reset optimizer_enable_dynamictablescan;
 reset optimizer_enable_bitmapscan;
+-- Multi-level partition with dynamic bitmap indexes
+create table orca.bm_dyn_test_multilvl_part (id int, year int, quarter int, region text)
+distributed by (id) partition by range (year)
+  subpartition by range (quarter)
+    subpartition template (
+      start (1) end (3) every (1) )
+      subpartition by list (region)
+      subpartition template (
+      subpartition usa values ('usa'),
+      default subpartition other_regions )
+  ( start (2018) end (2020) every (1) );
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1" for table "bm_dyn_test_multilvl_part"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1" for table "bm_dyn_test_multilvl_part_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1_3_prt_usa" for table "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1_3_prt_other_regions" for table "bm_dyn_test_multilvl_part_1_prt_1_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2" for table "bm_dyn_test_multilvl_part_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2_3_prt_usa" for table "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2_3_prt_other_regions" for table "bm_dyn_test_multilvl_part_1_prt_1_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2" for table "bm_dyn_test_multilvl_part"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1" for table "bm_dyn_test_multilvl_part_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1_3_prt_usa" for table "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1_3_prt_other_regions" for table "bm_dyn_test_multilvl_part_1_prt_2_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2" for table "bm_dyn_test_multilvl_part_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2_3_prt_usa" for table "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2_3_prt_other_regions" for table "bm_dyn_test_multilvl_part_1_prt_2_2_prt_2"
+insert into orca.bm_dyn_test_multilvl_part select i, 2018 + (i%2), i%2 + 1, 'usa' from generate_series(1,100)i;
+create index bm_multi_test_idx_part on orca.bm_dyn_test_multilvl_part using bitmap(year);
+analyze orca.bm_dyn_test_multilvl_part;
+-- print name of parent index
+explain select * from orca.bm_dyn_test_multilvl_part where year = 2019;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..7.69 rows=53 width=18)
+   ->  Append  (cost=0.00..6.62 rows=18 width=18)
+         ->  Seq Scan on bm_dyn_test_multilvl_part_1_prt_2_2_prt_1_3_prt_usa  (cost=0.00..1.00 rows=1 width=44)
+               Filter: (year = 2019)
+         ->  Seq Scan on bm_dyn_test_multilvl_part_1_prt_2_2_prt_1_3_prt_other_regions  (cost=0.00..1.00 rows=1 width=44)
+               Filter: (year = 2019)
+         ->  Seq Scan on bm_dyn_test_multilvl_part_1_prt_2_2_prt_2_3_prt_usa  (cost=0.00..3.62 rows=17 width=16)
+               Filter: (year = 2019)
+         ->  Seq Scan on bm_dyn_test_multilvl_part_1_prt_2_2_prt_2_3_prt_other_regions  (cost=0.00..1.00 rows=1 width=44)
+               Filter: (year = 2019)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select count(*) from orca.bm_dyn_test_multilvl_part where year = 2019;
+ count 
+-------
+    50
+(1 row)
+
 -- More BitmapTableScan & BitmapIndexScan tests
 set optimizer_enable_bitmapscan=on;
 create schema bm;

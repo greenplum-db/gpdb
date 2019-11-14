@@ -1457,6 +1457,24 @@ select * from orca.bm_dyn_test_onepart where i=2 and t='2';
 reset optimizer_enable_dynamictablescan;
 reset optimizer_enable_bitmapscan;
 
+-- Multi-level partition with dynamic bitmap indexes
+create table orca.bm_dyn_test_multilvl_part (id int, year int, quarter int, region text)
+distributed by (id) partition by range (year)
+  subpartition by range (quarter)
+    subpartition template (
+      start (1) end (3) every (1) )
+      subpartition by list (region)
+      subpartition template (
+      subpartition usa values ('usa'),
+      default subpartition other_regions )
+  ( start (2018) end (2020) every (1) );
+insert into orca.bm_dyn_test_multilvl_part select i, 2018 + (i%2), i%2 + 1, 'usa' from generate_series(1,100)i;
+create index bm_multi_test_idx_part on orca.bm_dyn_test_multilvl_part using bitmap(year);
+analyze orca.bm_dyn_test_multilvl_part;
+-- print name of parent index
+explain select * from orca.bm_dyn_test_multilvl_part where year = 2019;
+select count(*) from orca.bm_dyn_test_multilvl_part where year = 2019;
+
 -- More BitmapTableScan & BitmapIndexScan tests
 
 set optimizer_enable_bitmapscan=on;
