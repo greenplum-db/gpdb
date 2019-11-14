@@ -22,14 +22,13 @@ s/seg\d+ [0-9.]+:\d+ pid=\d+/SEG IP:PORT pid=PID/
 m/^ERROR:  deadlock detected  (seg\d+ [0-9.]+:\d+ pid=\d+)/
 s/seg\d+ [0-9.]+:\d+ pid=\d+/SEG IP:PORT pid=PID/
 
-# (seg0 172.17.0.2:25432)
+# (slice1 172.17.0.2:25432 pid=23848)
+m/(slice\d+ [0-9.]+:\d+ pid=\d+)/
+s/(slice\d+ [0-9.]+:\d+ pid=\d+)//
 
-m/seg\d+ [0-9.]+:\d+/
-s/seg\d+ [0-9.]+:\d+//
-
-# (seg0 slice1 172.17.0.2:25432 pid=23848)
-m/(seg\d+ slice\d+ [0-9.]+:\d+ pid=\d+)/
-s/(seg\d+ slice\d+ [0-9.]+:\d+ pid=\d+)//
+# (172.17.0.2:25432 pid=23848)
+m/([0-9.]+:\d+ pid=\d+)/
+s/([0-9.]+:\d+ pid=\d+)//
 
 # requested 26376 bytes 
 
@@ -41,9 +40,6 @@ s/^DETAIL:  Process \d+ waits for ShareLock on transaction \d+; blocked by proce
 
 m/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./
 s/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./Process PID waits for ShareLock on transaction XID; blocked by process PID./
-
-m/^ERROR:  Error on receive from  pid=\d+: server closed the connection unexpectedly/
-s/^ERROR:  Error on receive from  pid=\d+: server closed the connection unexpectedly/ERROR:  Error on receive from  pid=PID: server closed the connection unexpectedly/
 
 m/available \d+ MB/
 s/available \d+ MB//
