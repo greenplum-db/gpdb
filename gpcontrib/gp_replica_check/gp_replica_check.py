@@ -59,7 +59,7 @@ Mirror Data Directory Location: %s' % (self.getName(), self.host, self.port, sel
                                           self.ploc, self.mloc)
 
     def run(self):
-        cmd = '''PGOPTIONS='-c gp_session_role=utility' psql -h %s -p %s -c "select * from gp_replica_check('%s', '%s', '%s')" %s''' % (self.host, self.port,
+        cmd = '''PGOPTIONS='-c gp_role=utility' psql -h %s -p %s -c "select * from gp_replica_check('%s', '%s', '%s')" %s''' % (self.host, self.port,
                                                                                                                                         self.ploc, self.mloc,
                                                                                                                                         self.relation_types,
                                                                                                                                         pipes.quote(self.datname))

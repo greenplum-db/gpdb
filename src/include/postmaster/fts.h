@@ -147,7 +147,6 @@ extern void probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 
 extern bool FtsProbeStartRule(Datum main_arg);
 extern void FtsProbeMain (Datum main_arg);
-extern void FtsProbeShmemInit(void);
 extern pid_t FtsProbePID(void);
 
 #endif   /* FTS_H */

@@ -315,7 +315,7 @@ def connect(user=None, password=None, host=None, port=None,
     # unset search path due to CVE-2018-1058
     options = '-c search_path='
     if utilityMode:
-        options += ' -c gp_session_role=utility'
+        options += ' -c gp_role=utility'
 
     if not user: user = GV.opt['-U']
     if not password: password = GV.opt['-P']
@@ -3189,7 +3189,7 @@ def checkSegmentRepair(maybeRemove, catmod_guc, seg):
     file.write('COMMIT;\n')
     file.close()
 
-    run_psql_script = '''{maybe}env PGOPTIONS="-c gp_session_role=utility {guc}" psql -X -a -h {hostname} -p {port} -f {fname} "{dbname}" > {fname}.out'''.format(
+    run_psql_script = '''{maybe}env PGOPTIONS="-c gp_role=utility {guc}" psql -X -a -h {hostname} -p {port} -f {fname} "{dbname}" > {fname}.out'''.format(
         maybe=maybeRemove, guc=catmod_guc,
         hostname=c['hostname'],
         port=c['port'],

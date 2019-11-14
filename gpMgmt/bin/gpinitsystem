@@ -1321,11 +1321,11 @@ UPDATE_GPCONFIG () {
 		U_ROLE=$8
 
 		U_DB=$DEFAULTDB
-		CHK_COUNT=`env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -X -A -t -c "SELECT count(*) FROM $GP_CONFIG_TBL WHERE content=${U_CONTENT} AND preferred_role='${U_ROLE}';" 2>/dev/null` >> $LOG_FILE 2>&1
+		CHK_COUNT=`env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -X -A -t -c "SELECT count(*) FROM $GP_CONFIG_TBL WHERE content=${U_CONTENT} AND preferred_role='${U_ROLE}';" 2>/dev/null` >> $LOG_FILE 2>&1
 		ERROR_CHK $? "obtain psql count Master $GP_CONFIG_TBL" 2
 		if [ $CHK_COUNT -eq 0 ]; then
 				LOG_MSG "[INFO]:-Adding $U_CONTENT on $U_HOSTNAME, path $U_DIR to Master gp_segment_configuration"
-				env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "SELECT pg_catalog.gp_add_segment(${U_DBID}::int2, ${U_CONTENT}::int2, '${U_ROLE}', '${U_ROLE}', 's', 'u', ${U_PORT}, '${U_HOSTNAME}', '${U_ADDRESS}', '${U_DIR}');" >> $LOG_FILE 2>&1
+				env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "SELECT pg_catalog.gp_add_segment(${U_DBID}::int2, ${U_CONTENT}::int2, '${U_ROLE}', '${U_ROLE}', 's', 'u', ${U_PORT}, '${U_HOSTNAME}', '${U_ADDRESS}', '${U_DIR}');" >> $LOG_FILE 2>&1
 				ERROR_CHK $? "add $U_CONTENT on $U_HOSTNAME in dir $U_DIR to Master gp_segment_configuration" 2
 		else
 				LOG_MSG "[INFO]:-Content $U_CONTENT already exists in gp_segment_configuration system table"
@@ -1439,7 +1439,7 @@ REGISTER_MIRRORS () {
 		for I in "${QE_MIRROR_ARRAY[@]}"
 		do
 			SET_VAR $I
-			dbid=`env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "${DEFAULTDB}" -X -A -t -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTNAME}', '${GP_HOSTADDRESS}', ${GP_PORT}, '${GP_DIR}');" 2>/dev/null` >> $LOG_FILE 2>&1
+			dbid=`env PGOPTIONS="-c gp_role=utility" $PSQL -p $MASTER_PORT -d "${DEFAULTDB}" -X -A -t -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTNAME}', '${GP_HOSTADDRESS}', ${GP_PORT}, '${GP_DIR}');" 2>/dev/null` >> $LOG_FILE 2>&1
 			ERROR_CHK $? "failed to register mirror for contentid=${GP_CONTENT}" 2
 			MIRRORS_UPDATED_DBID=(${MIRRORS_UPDATED_DBID[@]} ${GP_HOSTADDRESS}~${GP_PORT}~${GP_DIR}~${dbid}~${GP_CONTENT})
 		done

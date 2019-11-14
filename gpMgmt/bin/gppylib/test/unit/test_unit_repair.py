@@ -68,10 +68,10 @@ class RepairTestCase(GpTestCase):
                     "cd $(dirname $0)\n",
                     "\n",
                     "echo \"some desc\"\n",
-                    "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
+                    "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
                     "\n",
                     "echo \"some desc\"\n",
-                    "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
+                    "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n",
                     "\n",
                     "echo \"some desc\"\n",
                     "psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 15432 -c \"delete_sql\" \"somedb\" >> somedb_extra_timestamp.out 2>&1\n"]
@@ -96,13 +96,13 @@ class RepairTestCase(GpTestCase):
             "cd $(dirname $0)\n",
             "\n",
             "echo \"some desc\"\n",
-            "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -f \"0.somehost.25432.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
+            "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25432 -f \"0.somehost.25432.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
             "\n",
             "echo \"some desc\"\n",
-            "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -f \"1.somehost.25433.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
+            "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25433 -f \"1.somehost.25433.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n",
             "\n",
             "echo \"some desc\"\n",
-            "PGOPTIONS='-c gp_session_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25434 -f \"2.somehost.25434.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n"]
+            "PGOPTIONS='-c gp_role=utility' psql -X -v ON_ERROR_STOP=1 -a -h somehost -p 25434 -f \"2.somehost.25434.somedb.timestamp.sql\" \"somedb\" >> somedb_orphan_toast_tables_timestamp.out 2>&1\n"]
 
         self.verify_repair_dir_contents("runsql_timestamp.sh", bash_contents)
 

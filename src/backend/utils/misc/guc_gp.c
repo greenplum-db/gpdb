@@ -4213,25 +4213,14 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gp_session_role", PGC_BACKEND, GP_WORKER_IDENTITY,
-			gettext_noop("Reports the default role for the session."),
-			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&gp_session_role_string,
-		"dispatch",
-		check_gp_session_role, assign_gp_session_role, show_gp_session_role
-	},
-
-	{
-		{"gp_role", PGC_SUSET, CLIENT_CONN_OTHER,
+		{"gp_role", PGC_BACKEND, GP_WORKER_IDENTITY,
 			gettext_noop("Sets the role for the session."),
 			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
 			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
 		&gp_role_string,
-		"dispatch",
-		NULL, assign_gp_role, show_gp_role
+		"undefined",
+		check_gp_role, assign_gp_role, show_gp_role
 	},
 
 	{

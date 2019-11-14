@@ -1150,28 +1150,12 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("maintenance mode: connected by superuser only")));
 
-	/*
-	 * MPP:  If we were started in utility mode then we only want to allow
-	 * incoming sessions that specify gp_session_role=utility as well.  This
-	 * lets the bash scripts start the QD in utility mode and connect in but
-	 * protect ourselves from normal clients who might be trying to connect to
-	 * the system while we startup.
-	 */
-	if ((Gp_role == GP_ROLE_UTILITY) && (Gp_session_role != GP_ROLE_UTILITY) &&
-		!IsAutoVacuumWorkerProcess())
-	{
-		ereport(FATAL,
-				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-				 errmsg("System was started in master-only utility mode - only utility mode connections are allowed")));
-	}
-	else if ((Gp_session_role == GP_ROLE_DISPATCH) && !IS_QUERY_DISPATCHER())
-	{
+	if (Gp_role == GP_ROLE_EXECUTE && gp_session_id < 0)
 		ereport(FATAL,
 				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
 				 errmsg("connections to primary segments are not allowed"),
 				 errdetail("This database instance is running as a primary segment in a Greenplum cluster and does not permit direct connections."),
 				 errhint("To force a connection anyway (dangerous!), use utility mode.")));
-	}
 
 	/* Process pg_db_role_setting options */
 	process_settings(MyDatabaseId, GetSessionUserId());

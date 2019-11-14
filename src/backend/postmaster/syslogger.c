@@ -266,7 +266,7 @@ SysLoggerMain(int argc, char *argv[])
 
 	am_syslogger = true;
 
-	if (IsUnderMasterDispatchMode())
+	if (Gp_role == GP_ROLE_DISPATCH)
 		init_ps_display("master logger process", "", "", "");
 	else
 		init_ps_display("logger process", "", "", "");
@@ -1331,7 +1331,7 @@ fillinErrorDataFromSegvChunk(GpErrorData *errorData, PipeProtoChunk *chunk)
 	Assert(signalName != NULL);
 	snprintf(errorData->error_message, ERROR_MESSAGE_MAX_SIZE,
 			 "Unexpected internal error: %s received signal %s",
-			 IsUnderMasterDispatchMode() ? "Master process" : "Segment process",
+			 Gp_role == GP_ROLE_DISPATCH ? "Master process" : "Segment process",
 			 signalName);
 	
 	errorData->error_detail = NULL;

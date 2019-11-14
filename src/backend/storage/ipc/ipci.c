@@ -149,7 +149,8 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		else if (IsResGroupEnabled())
 			size = add_size(size, ResGroupShmemSize());
 		size = add_size(size, SharedSnapshotShmemSize());
-		size = add_size(size, FtsShmemSize());
+		if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
+			size = add_size(size, FtsShmemSize());
 
 		size = add_size(size, ProcGlobalShmemSize());
 		size = add_size(size, XLOGShmemSize());
@@ -268,8 +269,9 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	CommitTsShmemInit();
 	SUBTRANSShmemInit();
 	MultiXactShmemInit();
-    FtsShmemInit();
-    tmShmemInit();
+	if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
+		FtsShmemInit();
+	tmShmemInit();
 	InitBufferPool();
 
 	/*
@@ -352,8 +354,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		InstrShmemInit();
 
 	GpExpandVersionShmemInit();
-
-	FtsProbeShmemInit();
 
 #ifdef EXEC_BACKEND
 

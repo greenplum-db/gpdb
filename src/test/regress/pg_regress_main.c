@@ -127,7 +127,7 @@ psql_start_test(const char *testname,
 					   "%s \"%s%spsql\" -X -a -q -d \"%s\" > \"%s\" 2>&1 <<EOF\n"
 					   "$(cat \"%s\" \"%s\")\n"
 					   "EOF",
-					   use_utility_mode ? "env PGOPTIONS='-c gp_session_role=utility'" : "",
+					   use_utility_mode ? "env PGOPTIONS='-c gp_role=utility'" : "",
 					   bindir ? bindir : "",
 					   bindir ? "/" : "",
 					   dblist->str,

@@ -258,9 +258,9 @@ select dblink_disconnect('dblink_rg_test');
 --
 create resource group rg_test_g8 with (concurrency= 1, cpu_rate_limit=1, memory_limit=1);
 create role rg_test_r8 login resource group rg_test_g8;
-51:select dblink_connect('dblink_rg_test51', 'dbname=isolation2resgrouptest user=rg_test_r8 options=''-c gp_session_role=utility''');
-52:select dblink_connect('dblink_rg_test52', 'dbname=isolation2resgrouptest user=rg_test_r8 options=''-c gp_session_role=utility''');
-53:select dblink_connect('dblink_rg_test53', 'dbname=isolation2resgrouptest user=rg_test_r8 options=''-c gp_session_role=utility''');
+51:select dblink_connect('dblink_rg_test51', 'dbname=isolation2resgrouptest user=rg_test_r8 options=''-c gp_role=utility''');
+52:select dblink_connect('dblink_rg_test52', 'dbname=isolation2resgrouptest user=rg_test_r8 options=''-c gp_role=utility''');
+53:select dblink_connect('dblink_rg_test53', 'dbname=isolation2resgrouptest user=rg_test_r8 options=''-c gp_role=utility''');
 
 51>:select exec_commands_n('dblink_rg_test51', 'select 1', 'begin', 'end', 100, '', '', true);
 51<:

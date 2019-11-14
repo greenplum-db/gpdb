@@ -305,7 +305,7 @@ ConnectDatabase(Archive *AHX,
 		if (binary_upgrade)
 		{
 			keywords[6] = "options";
-			values[6] = "-c gp_session_role=utility";
+			values[6] = "-c gp_role=utility";
 			keywords[7] = NULL;
 			values[7] = NULL;
 		}

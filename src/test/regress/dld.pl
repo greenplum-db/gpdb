@@ -246,7 +246,7 @@ if (1)
 #        print Data::Dumper->Dump([$vv]), "\n";
         
 
-        my $psql_seg = "PGOPTIONS=\'-c gp_session_role=utility\' psql -h $rowh->{hostname} -p $rowh->{port} template1 -c $sel_str";
+        my $psql_seg = "PGOPTIONS=\'-c gp_role=utility\' psql -h $rowh->{hostname} -p $rowh->{port} template1 -c $sel_str";
 
         print $psql_seg,"\n"
             if ($glob_verbose);
@@ -302,7 +302,7 @@ if (1)
 #        print Data::Dumper->Dump([$vv]), "\n";
         
 
-            my $psql_seg = "PGOPTIONS=\'-c gp_session_role=utility\' psql -h $rowh->{hostname}  -p $rowh->{port} template1 -c $sel_str";
+            my $psql_seg = "PGOPTIONS=\'-c gp_role=utility\' psql -h $rowh->{hostname}  -p $rowh->{port} template1 -c $sel_str";
 
             my $lk1 = `$psql_seg`;
 

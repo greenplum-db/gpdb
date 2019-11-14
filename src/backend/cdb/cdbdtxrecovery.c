@@ -618,11 +618,7 @@ redoDistributedForgetCommitRecord(TMGXACT_LOG *gxact_log)
 bool
 DtxRecoveryStartRule(Datum main_arg)
 {
-	/* only start dtx recovery in dispatch mode */
-	if (IsUnderMasterDispatchMode())
-		return true;
-
-	return false;
+	return (Gp_role == GP_ROLE_DISPATCH);
 }
 
 /*

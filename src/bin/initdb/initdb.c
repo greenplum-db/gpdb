@@ -197,7 +197,7 @@ static char *authwarning = NULL;
  * (no quoting to worry about).
  */
 static const char *boot_options = "-F";
-static const char *backend_options = "--single -F -O -j -c gp_session_role=utility -c search_path=pg_catalog -c exit_on_error=true";
+static const char *backend_options = "--single -F -O -j -c gp_role=utility -c search_path=pg_catalog -c exit_on_error=true";
 
 static const char *const subdirs[] = {
 	"global",

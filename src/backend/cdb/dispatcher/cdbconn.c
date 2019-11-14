@@ -150,7 +150,9 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	/*
 	 * For entry DB connection, we make sure both "hostaddr" and "host" are
 	 * empty string. Or else, it will fall back to environment variables and
-	 * won't use domain socket in function connectDBStart.
+	 * won't use domain socket in function connectDBStart. Also we set the
+	 * connection type for entrydb connection so that QE could change Gp_role
+	 * from DISPATCH to EXECUTE.
 	 *
 	 * For other QE connections, we set "hostaddr". "host" is not used.
 	 */

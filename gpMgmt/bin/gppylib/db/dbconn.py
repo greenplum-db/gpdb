@@ -158,7 +158,7 @@ def connect(dburl, utility=False, verbose=False,
             encoding=None, allowSystemTableMods=False, logConn=True, unsetSearchPath=True):
 
     if utility:
-        options = '-c gp_session_role=utility'
+        options = '-c gp_role=utility'
     else:
         options = ''
 

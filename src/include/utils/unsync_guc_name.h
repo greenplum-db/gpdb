@@ -244,7 +244,6 @@
 		"gp_server_version",
 		"gp_server_version_num",
 		"gp_session_id",
-		"gp_session_role",
 		"gp_set_proc_affinity",
 		"gp_sort_flags",
 		"gp_sort_max_distinct",

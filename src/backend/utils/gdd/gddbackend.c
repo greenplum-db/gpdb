@@ -94,7 +94,7 @@ bool
 GlobalDeadLockDetectorStartRule(Datum main_arg)
 {
 	/* we only start gdd on master when -E is specified */
-	if (IsUnderMasterDispatchMode() &&
+	if (Gp_role == GP_ROLE_DISPATCH &&
 		gp_enable_global_deadlock_detector)
 		return true;
 

@@ -92,7 +92,7 @@ Continue only if you are certain that the standby is not acting as the master.</
                         maintenance tasks. This mode only allows connections to the master in
                         utility mode. For example:</pd>
                     <pd>
-                        <codeblock>PGOPTIONS='-c gp_session_role=utility' psql</codeblock>
+                        <codeblock>PGOPTIONS='-c gp_role=utility' psql</codeblock>
                     </pd>
                     <pd>The consistency of the heap checksum setting on master and segment instances
                         is not checked.</pd>
@@ -155,7 +155,7 @@ Continue only if you are certain that the standby is not acting as the master.</
                 connections):</p>
             <codeblock>gpstart -R</codeblock>
             <p>Start the Greenplum master instance only and connect in utility mode:</p>
-            <codeblock>gpstart -m PGOPTIONS='-c gp_session_role=utility' psql</codeblock>
+            <codeblock>gpstart -m PGOPTIONS='-c gp_role=utility' psql</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>

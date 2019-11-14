@@ -1605,7 +1605,7 @@ def impl(context, table, dbname, segid):
     source_file = os.path.join(os.environ.get('GPHOME'), 'greenplum_path.sh')
     # Yes, the below line is ugly.  It looks much uglier when done with separate strings, given the multiple levels of escaping required.
     remote_cmd = """
-ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c gp_session_role=utility\\\"; psql -d %s -c \\\"SET allow_system_table_mods=true; DELETE FROM pg_attribute where attrelid=\'%s\'::regclass::oid;\\\""
+ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c gp_role=utility\\\"; psql -d %s -c \\\"SET allow_system_table_mods=true; DELETE FROM pg_attribute where attrelid=\'%s\'::regclass::oid;\\\""
 """ % (host, source_file, user, port, dbname, table)
     run_command(context, remote_cmd.strip())
 
@@ -1615,7 +1615,7 @@ ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c g
 @given('The user runs sql "{query}" in "{dbname}" on first primary segment')
 def impl(context, query, dbname):
     host, port = get_primary_segment_host_port()
-    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
     dbname, host, port, query)
     Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
 
@@ -1629,7 +1629,7 @@ def impl(context, query, dbname):
         host = seg.getSegmentHostName()
         if seg.isSegmentPrimary() or seg.isSegmentMaster():
             port = seg.getSegmentPort()
-            psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+            psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
             dbname, host, port, query)
             Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
 
@@ -1646,7 +1646,7 @@ def impl(context, file, dbname):
         host = seg.getSegmentHostName()
         if seg.isSegmentPrimary() or seg.isSegmentMaster():
             port = seg.getSegmentPort()
-            psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+            psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
             dbname, host, port, query)
             Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
 
@@ -1654,7 +1654,7 @@ def impl(context, file, dbname):
 @when('The user runs sql "{query}" in "{dbname}" on specified segment {host}:{port} in utility mode')
 @given('The user runs sql "{query}" in "{dbname}" on specified segment {host}:{port} in utility mode')
 def impl(context, query, dbname, host, port):
-    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
     dbname, host, port, query)
     cmd = Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd)
     cmd.run(validateAfter=True)
@@ -1665,7 +1665,7 @@ def impl(context, query, dbname, host, port):
 @given('table {table_name} exists in "{dbname}" on specified segment {host}:{port}')
 def impl(context, table_name, dbname, host, port):
     query = "SELECT COUNT(*) FROM pg_class WHERE relname = '%s'" % table_name
-    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
     dbname, host, port, query)
     cmd = Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd)
     cmd.run(validateAfter=True)

@@ -22,7 +22,8 @@ void _PG_init(void);
 static void
 fts_with_panic_warning(FaultInjectorEntry_s faultEntry)
 {
-	if (Gp_role == GP_ROLE_DISPATCH && !FtsIsActive()) return;
+	if (Gp_role == GP_ROLE_DISPATCH && !FtsIsActive())
+		return;
 
 	if (faultEntry.faultInjectorType == FaultInjectorTypePanic)
 		ereport(WARNING, (

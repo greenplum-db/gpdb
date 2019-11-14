@@ -151,7 +151,7 @@ class SQLIsolationExecutor(object):
                 self.con = self.connectdb(given_dbname=self.dbname,
                                           given_host=hostname,
                                           given_port=port,
-                                          given_opt="-c gp_session_role=utility")
+                                          given_opt="-c gp_role=utility")
             elif self.mode == "standby":
                 # Connect to standby even when it's role is recorded
                 # as mirror.  This is useful for scenarios where a
@@ -196,7 +196,7 @@ class SQLIsolationExecutor(object):
             """
             query = ("SELECT hostname, port FROM gp_segment_configuration WHERE"
                      " content = %s AND role = '%s'") % (contentid, role)
-            con = self.connectdb(self.dbname, given_opt="-c gp_session_role=utility")
+            con = self.connectdb(self.dbname, given_opt="-c gp_role=utility")
             r = con.query(query).getresult()
             con.close()
             if len(r) == 0:

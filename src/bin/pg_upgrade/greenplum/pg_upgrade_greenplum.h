@@ -11,7 +11,7 @@
 #include "pg_upgrade.h"
 
 
-#define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_session_role=utility' "
+#define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_role=utility' "
 
 
 /*

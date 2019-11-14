@@ -124,7 +124,7 @@ def impl(context, segment):
         #     https://www.postgresql.org/docs/9.4/protocol-replication.html
         subprocess.check_call([
             'ssh', '-n', mirror_hostname,
-            'PGOPTIONS="-c gp_session_role=utility"',
+            'PGOPTIONS="-c gp_role=utility"',
             '{gphome}/bin/psql -h {host} -p {port} "dbname=postgres replication=database" -c "IDENTIFY_SYSTEM;"'.format(
                 gphome=os.environ['GPHOME'],
                 host=primary.address, # use the "internal" routing address

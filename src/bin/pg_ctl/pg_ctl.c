@@ -562,7 +562,7 @@ test_postmaster_connection(pgpid_t pm_pid, bool do_checkpoint)
 	PGPing		ret = PQPING_NO_RESPONSE;
 	char		connstr[MAXPGPATH * 2 + 256];
 	int			i;
-	static const char *backend_options = "'-c gp_session_role=utility'";
+	static const char *backend_options = "'-c gp_role=utility'";
 
 	/* if requested wait time is zero, return "still starting up" code */
 	if (wait_seconds <= 0)
