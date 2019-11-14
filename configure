@@ -10672,13 +10672,18 @@ done
 
 
 # Do test here with the proper thread flags
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether strerror_r returns int" >&5
+$as_echo_n "checking whether strerror_r returns int... " >&6; }
+if ${pgac_cv_func_strerror_r_int+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <string.h>
 int
 main ()
 {
-char buf100;
+char buf[100];
   switch (strerror_r(1, buf, sizeof(buf)))
   { case 0: break; default: break; }
 
@@ -10687,9 +10692,14 @@ char buf100;
 }
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
-
+  pgac_cv_func_strerror_r_int=yes
+else
+  pgac_cv_func_strerror_r_int=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $pgac_cv_func_strerror_r_int" >&5
+$as_echo "$pgac_cv_func_strerror_r_int" >&6; }
 if test x"$pgac_cv_func_strerror_r_int" = xyes ; then
 
 $as_echo "#define STRERROR_R_INT 1" >>confdefs.h

@@ -86,11 +86,13 @@ AH_VERBATIM(GETTIMEOFDAY_1ARG_,
 # The result is uncertain if strerror_r() isn't provided,
 # but we don't much care.
 AC_DEFUN([PGAC_FUNC_STRERROR_R_INT],
+[AC_CACHE_CHECK(whether strerror_r returns int,
+pgac_cv_func_strerror_r_int,
 [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <string.h>],
-[char buf[100];
+[[char buf[100];
   switch (strerror_r(1, buf, sizeof(buf)))
   { case 0: break; default: break; }
-],
+]])],
 [pgac_cv_func_strerror_r_int=yes],
 [pgac_cv_func_strerror_r_int=no])])
 if test x"$pgac_cv_func_strerror_r_int" = xyes ; then
