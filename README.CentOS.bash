@@ -4,6 +4,7 @@
 sudo yum install -y epel-release
 sudo yum install -y \
     apr-devel \
+    apr-util-devel \
     bison \
     bzip2-devel \
     cmake3 \
