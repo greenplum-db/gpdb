@@ -418,14 +418,19 @@ time dump_cluster "$old_dump"
 get_segment_datadirs > /tmp/segment_datadirs.txt
 gpinitsystem_for_upgrade
 
+segment_gp_dbid=1; # starting at one, the master value, will increment
+
 # TODO: we need to switch the mode argument according to GPDB version
 echo "Upgrading master at ${MASTER_HOST}..."
-run_upgrade ${MASTER_HOST} "${OLD_MASTER_DATA_DIRECTORY}" --mode=dispatcher
+run_upgrade ${MASTER_HOST} "${OLD_MASTER_DATA_DIRECTORY}" --mode=dispatcher \
+    --old-gp-dbid=${segment_gp_dbid} --new-gp-dbid=${segment_gp_dbid}
+
 
 while read -u30 hostname datadir; do
     echo "Upgrading segment at '$hostname' ($datadir)..."
 
     newdatadir=$(get_new_datadir "$datadir")
+    segment_gp_dbid=$((segment_gp_dbid+1))
 
     # NOTE: the trailing slash on the rsync source directory is important! It
     # means to transfer the directory's contents and not the directory itself.
@@ -438,7 +443,9 @@ while read -u30 hostname datadir; do
         --exclude /gpssh.conf \
         --exclude /gpperfmon/
 
-    run_upgrade "$hostname" "$datadir" --mode=segment
+    run_upgrade "$hostname" "$datadir" --mode=segment \
+        --old-gp-dbid=${segment_gp_dbid} --new-gp-dbid=${segment_gp_dbid}
+
 done 30< /tmp/segment_datadirs.txt
 
 start_upgraded_cluster
