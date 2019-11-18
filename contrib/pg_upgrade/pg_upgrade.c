@@ -476,7 +476,8 @@ prepare_new_cluster(void)
 	 * counter later.
 	 */
 	prep_status("Freezing all rows on the new cluster");
-	exec_prog(UTILITY_LOG_FILE, NULL, true, true
+	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
+			  "PGOPTIONS='-c gp_session_role=utility' "
 			  "\"%s/vacuumdb\" %s --all --freeze %s",
 			  new_cluster.bindir, cluster_conn_opts(&new_cluster),
 			  log_opts.verbose ? "--verbose" : "");
@@ -514,6 +515,7 @@ prepare_new_databases(void)
 	 * the template0 template.
 	 */
 	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
+			  "PGOPTIONS='-c gp_session_role=utility' "
 			  "\"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
 			  new_cluster.bindir, cluster_conn_opts(&new_cluster),
 			  GLOBALS_DUMP_FILE);
@@ -1045,7 +1047,7 @@ reset_system_identifier(void)
 	sysidentifier |= ((uint64) tv.tv_usec) << 12;
 	sysidentifier |= getpid() & 0xFFF;
 
-	exec_prog(UTILITY_LOG_FILE, NULL, true,
+	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
 			  "\"%s/pg_resetxlog\" --binary-upgrade --system-identifier " UINT64_FORMAT " \"%s\"",
 			  new_cluster.bindir, sysidentifier, new_cluster.pgdata);
 

@@ -266,7 +266,7 @@ issue_warnings_and_set_wal_level(char *sequence_script_file_name)
 		if (sequence_script_file_name)
 		{
 			prep_status("Adjusting sequences");
-			exec_prog(UTILITY_LOG_FILE, NULL, true,
+			exec_prog(UTILITY_LOG_FILE, NULL, true, true,
 					  "PGOPTIONS='-c gp_session_role=utility' "
 					  "\"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
 					  new_cluster.bindir, cluster_conn_opts(&new_cluster),
