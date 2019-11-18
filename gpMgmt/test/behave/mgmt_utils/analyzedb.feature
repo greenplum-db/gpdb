@@ -1750,4 +1750,27 @@ Feature: Incrementally analyze the database
 
         When the user runs "analyzedb -a -d incr_analyze -t public.foo"
         Then analyzedb should print "There are no tables or partitions to be analyzed. Exiting" to stdout
+        And the user runs "psql -d incr_analyze -c 'drop table foo'"
 
+    Scenario: analyzedb generates correct root statistics of partition table
+        Given no state files exist for database "incr_analyze"
+        And the user runs "psql -d incr_analyze -c 'create table foo (a int, b int) partition by range (b) (start (1) end  (4) every (1))'"
+        When the user runs "psql -d incr_analyze -c 'insert into foo values (1,1), (2,2), (3,3)'"
+        And the user runs "analyzedb -a -d incr_analyze -t public.foo"
+        And execute following sql in db "incr_analyze" and store result in the context
+            """
+            select stadistinct from pg_statistic where starelid=(select oid from pg_class where relname='foo') and staattnum=1;
+            """
+        Then validate that following rows are in the stored rows
+          |  stadistinct  |
+          |  -1.0         |
+        When the user runs "psql -d incr_analyze -c 'insert into foo values (1,1)'"
+        And the user runs "analyzedb -a -d incr_analyze -t public.foo"
+        And execute following sql in db "incr_analyze" and store result in the context
+            """
+            select stadistinct from pg_statistic where starelid=(select oid from pg_class where relname='foo') and staattnum=1;
+            """
+        Then validate that following rows are in the stored rows
+          |  stadistinct  |
+          |  -0.75         |
+        And the user runs "psql -d incr_analyze -c 'drop table foo'"
