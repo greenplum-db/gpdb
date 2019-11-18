@@ -7396,44 +7396,69 @@ DispatchSetPGVariable(const char *name, List *args, bool is_local)
 
 		appendStringInfo(&buffer, "%s TO ", quote_identifier(name));
 
-		foreach(l, args)
+		/*
+		 * GPDB: We handle the timezone GUC specially. This is because the
+		 * timezone GUC can be set with the SET TIME ZONE .. syntax which is an
+		 * alias for SET timezone. Instead of dispatching the SET TIME ZONE ..
+		 * as a special case, we dispatch the already set time zone from the QD
+		 * with the usual SET syntax flavor (SET timezone TO <>).
+		 * Please refer to Issue: #9055 for additional detail.
+		 * #9055 - https://github.com/greenplum-db/gpdb/issues/9055
+		 */
+		if (strcmp(name, "timezone") == 0)
+			appendStringInfo(&buffer, "%s",
+							 quote_literal_cstr(GetConfigOptionByName("timezone",
+																	  NULL)));
+		else
 		{
-			A_Const    *arg = (A_Const *) lfirst(l);
-			char	   *val;
-
-			if (l != list_head(args))
-				appendStringInfo(&buffer, ", ");
-
-			if (!IsA(arg, A_Const))
-				elog(ERROR, "unrecognized node type: %d", (int) nodeTag(arg));
-
-			switch (nodeTag(&arg->val))
+			foreach(l, args)
 			{
-				case T_Integer:
-					appendStringInfo(&buffer, "%ld", intVal(&arg->val));
-					break;
-				case T_Float:
-					/* represented as a string, so just copy it */
-					appendStringInfoString(&buffer, strVal(&arg->val));
-					break;
-				case T_String:
-					val = strVal(&arg->val);
+				Node	   *arg = (Node *) lfirst(l);
+				char	   *val;
+				A_Const	   *con;
 
-					/*
-					 * Plain string literal or identifier. Quote it.
-					 */
+				if (l != list_head(args))
+					appendStringInfo(&buffer, ", ");
 
-					if (val[0] != '\'')
-						appendStringInfo(&buffer, "%s", quote_literal_cstr(val));
-					else
-						appendStringInfo(&buffer, "%s",val);
+				if (IsA(arg, TypeCast))
+				{
+					TypeCast   *tc = (TypeCast *) arg;
+					arg = tc->arg;
+				}
+
+				con = (A_Const *) arg;
+
+				if (!IsA(con, A_Const))
+					elog(ERROR, "unrecognized node type: %d", (int) nodeTag(arg));
+
+				switch (nodeTag(&con->val))
+				{
+					case T_Integer:
+						appendStringInfo(&buffer, "%ld", intVal(&con->val));
+						break;
+					case T_Float:
+						/* represented as a string, so just copy it */
+						appendStringInfoString(&buffer, strVal(&con->val));
+						break;
+					case T_String:
+						val = strVal(&con->val);
+
+						/*
+						 * Plain string literal or identifier. Quote it.
+						 */
+
+						if (val[0] != '\'')
+							appendStringInfo(&buffer, "%s", quote_literal_cstr(val));
+						else
+							appendStringInfo(&buffer, "%s",val);
 
 
-					break;
-				default:
-					elog(ERROR, "unrecognized node type: %d",
-						 (int) nodeTag(&arg->val));
-					break;
+						break;
+					default:
+						elog(ERROR, "unrecognized node type: %d",
+							 (int) nodeTag(&con->val));
+						break;
+				}
 			}
 		}
 	}
