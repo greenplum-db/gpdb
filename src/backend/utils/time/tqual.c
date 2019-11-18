@@ -71,6 +71,7 @@
 #include "storage/procarray.h"
 #include "utils/builtins.h"
 #include "utils/combocid.h"
+#include "utils/faultinjector.h"
 #include "utils/snapmgr.h"
 #include "utils/tqual.h"
 
@@ -176,6 +177,15 @@ SetHintBits(HeapTupleHeader tuple, Buffer buffer, Relation rel,
 			uint16 infomask, TransactionId xid)
 {
 	bool		isXmin;
+
+#ifdef FAULT_INJECTOR
+	if (FaultInjector_InjectFaultIfSet(
+									   "set_hint_bits",
+									   DDLNotSpecified,
+									   "" /* databaseName */,
+									   "" /* tableName */) == FaultInjectorTypeSkip)
+		return;
+#endif
 
 	if (TransactionIdIsValid(xid))
 	{

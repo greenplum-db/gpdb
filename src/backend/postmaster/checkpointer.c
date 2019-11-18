@@ -111,6 +111,7 @@ typedef struct
 	ForkNumber	forknum;
 	BlockNumber segno;			/* see md.c for special values */
 	/* might add a real request-type field later; not needed yet */
+	bool		is_ao;
 } CheckpointerRequest;
 
 typedef struct
@@ -1100,7 +1101,7 @@ RequestCheckpoint(int flags)
  * let the backend know by returning false.
  */
 bool
-ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
+ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno, bool is_ao)
 {
 	CheckpointerRequest *request;
 	bool		too_full;
@@ -1141,6 +1142,7 @@ ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 	request->rnode = rnode;
 	request->forknum = forknum;
 	request->segno = segno;
+	request->is_ao = is_ao;
 
 	/* If queue is more than half full, nudge the checkpointer to empty it */
 	too_full = (CheckpointerShmem->num_requests >=
@@ -1323,7 +1325,7 @@ AbsorbFsyncRequests(void)
 	LWLockRelease(CheckpointerCommLock);
 
 	for (request = requests; n > 0; request++, n--)
-		RememberFsyncRequest(request->rnode, request->forknum, request->segno);
+		RememberFsyncRequest(request->rnode, request->forknum, request->segno, request->is_ao);
 
 	END_CRIT_SECTION();
 

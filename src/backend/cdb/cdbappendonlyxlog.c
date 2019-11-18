@@ -19,12 +19,13 @@
 #include <fcntl.h>
 #include <sys/file.h>
 
-#include "cdb/cdbappendonlyxlog.h"
-#include "storage/fd.h"
+#include "access/xlogutils.h"
 #include "catalog/catalog.h"
+#include "cdb/cdbappendonlyxlog.h"
+#include "postmaster/bgwriter.h"
+#include "storage/fd.h"
 #include "utils/faultinjector.h"
 #include "utils/faultinjector_lists.h"
-#include "access/xlogutils.h"
 
 /*
  * Insert an AO XLOG/AOCO record.
@@ -106,12 +107,13 @@ ao_insert_replay(XLogReaderState *record)
 						path)));
 	}
 
-	if (FileSync(file) != 0)
+	if (!ForwardFsyncRequest(xlrec->target.node, MAIN_FORKNUM, xlrec->target.segment_filenum, true))
 	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("failed to flush file \"%s\": %m",
-						path)));
+		if (FileSync(file) != 0)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("failed to flush file \"%s\": %m",
+							path)));
 	}
 
 	FileClose(file);
@@ -186,14 +188,6 @@ void
 appendonly_redo(XLogReaderState *record)
 {
 	uint8         info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
-
-	/*
-	 * Perform redo of AO XLOG records only for standby mode. We do
-	 * not need to replay AO XLOG records in normal mode because fsync
-	 * is performed on file close.
-	 */
-	if (!IsStandbyMode())
-		return;
 
 	switch (info)
 	{

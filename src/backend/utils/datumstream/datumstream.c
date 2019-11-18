@@ -841,7 +841,7 @@ datumstreamread_open_file(DatumStreamRead * ds, char *fn, int64 eof, int64 eofUn
 void
 datumstreamwrite_close_file(DatumStreamWrite * ds)
 {
-	AppendOnlyStorageWrite_TransactionFlushAndCloseFile(
+	AppendOnlyStorageWrite_TransactionCloseFile(
 														&ds->ao_write,
 														&ds->eof,
 														&ds->eofUncompress);

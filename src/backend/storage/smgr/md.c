@@ -155,6 +155,7 @@ typedef struct
 	Bitmapset  *requests[MAX_FORKNUM + 1];
 	/* canceled[f] is true if we canceled fsyncs for fork "recently" */
 	bool		canceled[MAX_FORKNUM + 1];
+	bool		is_ao;
 } PendingOperationEntry;
 
 typedef struct
@@ -203,7 +204,7 @@ static char *_mdfd_segpath(SMgrRelation reln, ForkNumber forknum,
 static MdfdVec *_mdfd_openseg(SMgrRelation reln, ForkNumber forkno,
 			  BlockNumber segno, int oflags);
 static MdfdVec *_mdfd_getseg(SMgrRelation reln, ForkNumber forkno,
-			 BlockNumber blkno, bool skipFsync, int behavior);
+			 BlockNumber blkno, bool skipFsync, bool is_ao, int behavior);
 static BlockNumber _mdnblocks(SMgrRelation reln, ForkNumber forknum,
 		   MdfdVec *seg);
 
@@ -448,8 +449,8 @@ mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo, char relstor
 	 * even when deleting multiple forks, since the fsync queuing code accepts
 	 * the "InvalidForkNumber = all forks" convention.
 	 */
-	if (!RelFileNodeBackendIsTemp(rnode) &&
-		!relstorage_is_ao(relstorage))
+
+	if (!RelFileNodeBackendIsTemp(rnode))
 		ForgetRelationFsyncRequests(rnode.node, forkNum);
 
 	/* Now do the per-fork work */
@@ -579,7 +580,7 @@ mdextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 						relpath(reln->smgr_rnode, forknum),
 						InvalidBlockNumber)));
 
-	v = _mdfd_getseg(reln, forknum, blocknum, skipFsync, EXTENSION_CREATE);
+	v = _mdfd_getseg(reln, forknum, blocknum, skipFsync, false, EXTENSION_CREATE);
 
 	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
 
@@ -721,7 +722,7 @@ mdprefetch(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum)
 	off_t		seekpos;
 	MdfdVec    *v;
 
-	v = _mdfd_getseg(reln, forknum, blocknum, false, EXTENSION_FAIL);
+	v = _mdfd_getseg(reln, forknum, blocknum, false, false, EXTENSION_FAIL);
 
 	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
 
@@ -753,7 +754,7 @@ mdwriteback(SMgrRelation reln, ForkNumber forknum,
 		int			segnum_start,
 					segnum_end;
 
-		v = _mdfd_getseg(reln, forknum, blocknum, true /* not used */ ,
+		v = _mdfd_getseg(reln, forknum, blocknum, true /* not used */ , false,
 						 EXTENSION_RETURN_NULL);
 
 		/*
@@ -800,7 +801,7 @@ mdread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 										reln->smgr_rnode.node.relNode,
 										reln->smgr_rnode.backend);
 
-	v = _mdfd_getseg(reln, forknum, blocknum, false,
+	v = _mdfd_getseg(reln, forknum, blocknum, false, false,
 					 EXTENSION_FAIL | EXTENSION_CREATE_RECOVERY);
 
 	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
@@ -876,7 +877,7 @@ mdwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 										 reln->smgr_rnode.node.relNode,
 										 reln->smgr_rnode.backend);
 
-	v = _mdfd_getseg(reln, forknum, blocknum, skipFsync,
+	v = _mdfd_getseg(reln, forknum, blocknum, skipFsync, false,
 					 EXTENSION_FAIL | EXTENSION_CREATE_RECOVERY);
 
 	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
@@ -1231,14 +1232,29 @@ mdsync(void)
 		if (SIMPLE_FAULT_INJECTOR("fsync_counter") == FaultInjectorTypeSkip)
 		{
 			if (MyAuxProcType == CheckpointerProcess)
-				elog(LOG, "checkpoint performing fsync for %d/%d/%d",
-					 entry->rnode.spcNode, entry->rnode.dbNode,
-					 entry->rnode.relNode);
+			{
+				if (segno == 0)
+					elog(LOG, "checkpoint performing fsync for %d/%d/%d",
+						 entry->rnode.spcNode, entry->rnode.dbNode,
+						 entry->rnode.relNode);
+				else
+					elog(LOG, "checkpoint performing fsync for %d/%d/%d.%d",
+						 entry->rnode.spcNode, entry->rnode.dbNode,
+						 entry->rnode.relNode, segno);
+			}
 			else
-				elog(ERROR, "non checkpoint process trying to fsync "
-					 "%d/%d/%d when fsync_counter fault is set",
-					 entry->rnode.spcNode, entry->rnode.dbNode,
-					 entry->rnode.relNode);
+			{
+				if (segno == 0)
+					elog(ERROR, "non checkpoint process trying to fsync "
+						 "%d/%d/%d when fsync_counter fault is set",
+						 entry->rnode.spcNode, entry->rnode.dbNode,
+						 entry->rnode.relNode);
+				else
+					elog(ERROR, "non checkpoint process trying to fsync "
+						 "%d/%d/%d.%d when fsync_counter fault is set",
+						 entry->rnode.spcNode, entry->rnode.dbNode,
+						 entry->rnode.relNode, segno);
+			}
 		}
 #endif
 				/*
@@ -1300,7 +1316,7 @@ mdsync(void)
 					/* Attempt to open and fsync the target segment */
 					seg = _mdfd_getseg(reln, forknum,
 							 (BlockNumber) segno * (BlockNumber) RELSEG_SIZE,
-									   false,
+									   false, entry->is_ao,
 									   EXTENSION_RETURN_NULL
 									   | EXTENSION_DONT_CHECK_SIZE);
 
@@ -1508,11 +1524,11 @@ register_dirty_segment(SMgrRelation reln, ForkNumber forknum, MdfdVec *seg)
 	if (pendingOpsTable)
 	{
 		/* push it into local pending-ops table */
-		RememberFsyncRequest(reln->smgr_rnode.node, forknum, seg->mdfd_segno);
+		RememberFsyncRequest(reln->smgr_rnode.node, forknum, seg->mdfd_segno, false);
 	}
 	else
 	{
-		if (ForwardFsyncRequest(reln->smgr_rnode.node, forknum, seg->mdfd_segno))
+		if (ForwardFsyncRequest(reln->smgr_rnode.node, forknum, seg->mdfd_segno, false))
 			return;				/* passed it off successfully */
 
 		ereport(DEBUG1,
@@ -1545,7 +1561,8 @@ register_unlink(RelFileNodeBackend rnode)
 	{
 		/* push it into local pending-ops table */
 		RememberFsyncRequest(rnode.node, MAIN_FORKNUM,
-							 UNLINK_RELATION_REQUEST);
+							 UNLINK_RELATION_REQUEST,
+							 false);
 	}
 	else
 	{
@@ -1558,7 +1575,7 @@ register_unlink(RelFileNodeBackend rnode)
 		 */
 		Assert(IsUnderPostmaster);
 		while (!ForwardFsyncRequest(rnode.node, MAIN_FORKNUM,
-									UNLINK_RELATION_REQUEST))
+									UNLINK_RELATION_REQUEST, false))
 			pg_usleep(10000L);	/* 10 msec seems a good number */
 	}
 }
@@ -1585,7 +1602,7 @@ register_unlink(RelFileNodeBackend rnode)
  * heavyweight operation anyhow, so we'll live with it.)
  */
 void
-RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
+RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno, bool is_ao)
 {
 	Assert(pendingOpsTable);
 
@@ -1711,6 +1728,7 @@ RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 
 		entry->requests[forknum] = bms_add_member(entry->requests[forknum],
 												  (int) segno);
+		entry->is_ao = is_ao;
 
 		MemoryContextSwitchTo(oldcxt);
 	}
@@ -1728,7 +1746,7 @@ ForgetRelationFsyncRequests(RelFileNode rnode, ForkNumber forknum)
 	if (pendingOpsTable)
 	{
 		/* standalone backend or startup process: fsync state is local */
-		RememberFsyncRequest(rnode, forknum, FORGET_RELATION_FSYNC);
+		RememberFsyncRequest(rnode, forknum, FORGET_RELATION_FSYNC, false);
 	}
 	else if (IsUnderPostmaster)
 	{
@@ -1742,7 +1760,7 @@ ForgetRelationFsyncRequests(RelFileNode rnode, ForkNumber forknum)
 		 * which would be bad, so I'm inclined to assume that the checkpointer
 		 * will always empty the queue soon.
 		 */
-		while (!ForwardFsyncRequest(rnode, forknum, FORGET_RELATION_FSYNC))
+		while (!ForwardFsyncRequest(rnode, forknum, FORGET_RELATION_FSYNC, false))
 			pg_usleep(10000L);	/* 10 msec seems a good number */
 
 		/*
@@ -1767,13 +1785,13 @@ ForgetDatabaseFsyncRequests(Oid dbid)
 	if (pendingOpsTable)
 	{
 		/* standalone backend or startup process: fsync state is local */
-		RememberFsyncRequest(rnode, InvalidForkNumber, FORGET_DATABASE_FSYNC);
+		RememberFsyncRequest(rnode, InvalidForkNumber, FORGET_DATABASE_FSYNC, false);
 	}
 	else if (IsUnderPostmaster)
 	{
 		/* see notes in ForgetRelationFsyncRequests */
 		while (!ForwardFsyncRequest(rnode, InvalidForkNumber,
-									FORGET_DATABASE_FSYNC))
+									FORGET_DATABASE_FSYNC, false))
 			pg_usleep(10000L);	/* 10 msec seems a good number */
 	}
 }
@@ -1899,7 +1917,7 @@ _mdfd_openseg(SMgrRelation reln, ForkNumber forknum, BlockNumber segno,
  */
 static MdfdVec *
 _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
-			 bool skipFsync, int behavior)
+			 bool skipFsync, bool is_ao, int behavior)
 {
 	MdfdVec    *v = mdopen(reln, forknum, behavior);
 	BlockNumber targetseg;
@@ -1913,9 +1931,9 @@ _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
 		return NULL;			/* if behavior & EXTENSION_RETURN_NULL */
 
 	targetseg = blkno / ((BlockNumber) RELSEG_SIZE);
-	for (nextsegno = 1; nextsegno <= targetseg; nextsegno++)
+	for (nextsegno = is_ao ? targetseg : 1; nextsegno <= targetseg; nextsegno++)
 	{
-		Assert(nextsegno == v->mdfd_segno + 1);
+		Assert(is_ao || (nextsegno == v->mdfd_segno + 1));
 
 		if (v->mdfd_chain == NULL)
 		{

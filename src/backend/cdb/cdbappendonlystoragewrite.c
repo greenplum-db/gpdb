@@ -31,6 +31,7 @@
 #include "cdb/cdbappendonlystoragewrite.h"
 #include "cdb/cdbappendonlyxlog.h"
 #include "common/relpath.h"
+#include "postmaster/bgwriter.h"
 #include "storage/gp_compress.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
@@ -459,7 +460,7 @@ AppendOnlyStorageWrite_DoPadOutRemainder(AppendOnlyStorageWrite *storageWrite,
  * The new EOF of the segment file is returend in *newLogicalEof.
  */
 void
-AppendOnlyStorageWrite_FlushAndCloseFile(
+AppendOnlyStorageWrite_CloseFile(
 										 AppendOnlyStorageWrite *storageWrite,
 										 int64 *newLogicalEof,
 										 int64 *fileLen_uncompressed)
@@ -490,17 +491,20 @@ AppendOnlyStorageWrite_FlushAndCloseFile(
 							   fileLen_uncompressed,
 							   storageWrite->needsWAL);
 
-	/*
-	 * We must take care of fsynching to disk ourselves since the fd API won't
-	 * do it for us.
-	 */
+	if (!ForwardFsyncRequest(storageWrite->relFileNode.node, MAIN_FORKNUM, storageWrite->segmentFileNum, true))
+	{
+		/*
+		 * We must take care of fsynching to disk ourselves since the fd API won't
+		 * do it for us.
+		 */
 
-	if (FileSync(storageWrite->file) != 0)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("Could not flush (fsync) Append-Only segment file '%s' to disk for relation '%s': %m",
-						storageWrite->segmentFileName,
-						storageWrite->relationName)));
+		if (FileSync(storageWrite->file) != 0)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("Could not flush (fsync) Append-Only segment file '%s' to disk for relation '%s': %m",
+							storageWrite->segmentFileName,
+							storageWrite->relationName)));
+	}
 
 	storageWrite->file = -1;
 	storageWrite->formatVersion = -1;
@@ -510,7 +514,7 @@ AppendOnlyStorageWrite_FlushAndCloseFile(
 }
 
 /*
- * Flush and close the current segment file under a transaction.
+ * Close the current segment file under a transaction.
  *
  * Handles mirror loss end transaction work.
  *
@@ -519,7 +523,7 @@ AppendOnlyStorageWrite_FlushAndCloseFile(
  * The new EOF of the segment file is returned in *newLogicalEof.
  */
 void
-AppendOnlyStorageWrite_TransactionFlushAndCloseFile(AppendOnlyStorageWrite *storageWrite,
+AppendOnlyStorageWrite_TransactionCloseFile(AppendOnlyStorageWrite *storageWrite,
 													int64 *newLogicalEof,
 													int64 *fileLen_uncompressed)
 {
@@ -533,7 +537,7 @@ AppendOnlyStorageWrite_TransactionFlushAndCloseFile(AppendOnlyStorageWrite *stor
 		return;
 	}
 
-	AppendOnlyStorageWrite_FlushAndCloseFile(storageWrite,
+	AppendOnlyStorageWrite_CloseFile(storageWrite,
 											 newLogicalEof,
 											 fileLen_uncompressed);
 }
