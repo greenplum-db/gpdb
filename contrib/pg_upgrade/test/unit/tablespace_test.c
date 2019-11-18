@@ -21,18 +21,17 @@ OSInfo      *test_os_info;
 bool _is_old_tablespaces_file_empty;
 bool _populate_gpdb6_cluster_tablespace_suffix_was_called;
 
-
 char **_stubbed_tablespace_paths = NULL;
 int _stubbed_number_of_tablespaces = 0;
 
-char **
-OldTablespaceFileContents_GetArrayOfTablespacePaths(OldTablespaceFileContents *contents){
-	return _stubbed_tablespace_paths;
-}
-
-
 static void stub_number_of_tablespaces(int stub_value)
 {
+	/*
+	 * given the old cluster some non-null
+	 * contents to signify that it is populated
+	 */
+	old_cluster.old_tablespace_file_contents = palloc0(sizeof(void *));
+
 	_stubbed_number_of_tablespaces = stub_value;
 }
 
@@ -41,10 +40,26 @@ static void stub_tablespace_paths(char **paths)
 	_stubbed_tablespace_paths = paths;
 }
 
+static void
+assert_contents_exist(OldTablespaceFileContents *contents)
+{
+	if (contents == NULL)
+		fail_msg("unexpected null old tablespace file contents.");
+}
+
+char **
+OldTablespaceFileContents_GetArrayOfTablespacePaths(OldTablespaceFileContents *contents)
+{
+	assert_contents_exist(contents);
+
+	return _stubbed_tablespace_paths;
+}
 
 int
 OldTablespaceFileContents_TotalNumberOfTablespaces(OldTablespaceFileContents *contents)
 {
+	assert_contents_exist(contents);
+
 	return _stubbed_number_of_tablespaces;
 }
 
@@ -151,6 +166,21 @@ test_when_postgres_version_matches_gpdb6_postgres_version_tablespace_directory_s
 }
 
 static void
+test_when_file_is_empty_populate_is_not_called(
+	void **state)
+{
+	old_cluster.gp_dbid = 999;
+	old_cluster.major_version = 80400;
+	new_cluster.major_version = 90400;
+
+	stub_is_old_tablespaces_file_empty(true);
+
+	init_tablespaces();
+
+	assert_int_equal(os_info.num_old_tablespaces, 0);
+}
+
+static void
 test_it_finds_old_tablespaces_when_provided_as_a_file(void **state)
 {
 	old_cluster.gp_dbid = 999;
@@ -199,6 +229,10 @@ main(int argc, char *argv[])
 			teardown),
 		unit_test_setup_teardown(
 			test_when_postgres_version_matches_gpdb6_postgres_version_tablespace_directory_suffix_contains_GPDB6_tablespace_layout,
+			setup,
+			teardown),
+		unit_test_setup_teardown(
+			test_when_file_is_empty_populate_is_not_called,
 			setup,
 			teardown),
 	};
