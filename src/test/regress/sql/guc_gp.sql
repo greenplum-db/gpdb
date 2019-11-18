@@ -104,13 +104,26 @@ reset work_mem;
 --
 CREATE TABLE timezone_table AS SELECT * FROM (VALUES (123,1513123564),(123,1512140765),(123,1512173164),(123,1512396441)) foo(a, b) DISTRIBUTED RANDOMLY;
 
-SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
+SELECT to_timestamp(b)::timestamp WITH TIME ZONE AS b_ts FROM timezone_table ORDER BY b_ts;
 SET timezone= 'America/New_York';
-SHOW timezone;
-SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
+-- Check if it is set correctly on QD.
+SELECT to_timestamp(1613123565)::timestamp WITH TIME ZONE;
+-- Check if it is set correctly on the QEs.
+SELECT to_timestamp(b)::timestamp WITH TIME ZONE AS b_ts FROM timezone_table ORDER BY b_ts;
 RESET timezone;
-SHOW timezone;
-SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
+-- Check if it is reset correctly on QD.
+SELECT to_timestamp(1613123565)::timestamp WITH TIME ZONE;
+-- Check if it is reset correctly on the QEs.
+SELECT to_timestamp(b)::timestamp WITH TIME ZONE AS b_ts FROM timezone_table ORDER BY b_ts;
+
+--
+-- Test if SET TIME ZONE INTERVAL is dispatched correctly to all segments
+--
+SET TIME ZONE INTERVAL '04:30:06' HOUR TO MINUTE;
+-- Check if it is set correctly on QD.
+SELECT to_timestamp(1613123565)::timestamp WITH TIME ZONE;
+-- Check if it is set correctly on the QEs.
+SELECT to_timestamp(b)::timestamp WITH TIME ZONE AS b_ts FROM timezone_table ORDER BY b_ts;
 
 -- Test default_transaction_isolation and transaction_isolation fallback from serializable to repeatable read
 CREATE TABLE test_serializable(a int);

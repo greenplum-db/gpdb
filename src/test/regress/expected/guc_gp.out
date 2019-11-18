@@ -108,43 +108,71 @@ WARNING:  "work_mem": setting is deprecated, and may be removed in a future rele
 -- Test if RESET timezone is dispatched to all slices
 --
 CREATE TABLE timezone_table AS SELECT * FROM (VALUES (123,1513123564),(123,1512140765),(123,1512173164),(123,1512396441)) foo(a, b) DISTRIBUTED RANDOMLY;
-SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
- to_timestamp 
---------------
- 12-01-2017
- 12-04-2017
- 12-12-2017
-(3 rows)
+SELECT to_timestamp(b)::timestamp WITH TIME ZONE AS b_ts FROM timezone_table ORDER BY b_ts;
+             b_ts             
+------------------------------
+ Fri Dec 01 07:06:05 2017 PST
+ Fri Dec 01 16:06:04 2017 PST
+ Mon Dec 04 06:07:21 2017 PST
+ Tue Dec 12 16:06:04 2017 PST
+(4 rows)
 
 SET timezone= 'America/New_York';
-SHOW timezone;
-     TimeZone     
-------------------
- America/New_York
+-- Check if it is set correctly on QD.
+SELECT to_timestamp(1613123565)::timestamp WITH TIME ZONE;
+         to_timestamp         
+------------------------------
+ Fri Feb 12 04:52:45 2021 EST
 (1 row)
 
-SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
- to_timestamp 
---------------
- 12-01-2017
- 12-04-2017
- 12-12-2017
-(3 rows)
+-- Check if it is set correctly on the QEs.
+SELECT to_timestamp(b)::timestamp WITH TIME ZONE AS b_ts FROM timezone_table ORDER BY b_ts;
+             b_ts             
+------------------------------
+ Fri Dec 01 10:06:05 2017 EST
+ Fri Dec 01 19:06:04 2017 EST
+ Mon Dec 04 09:07:21 2017 EST
+ Tue Dec 12 19:06:04 2017 EST
+(4 rows)
 
 RESET timezone;
-SHOW timezone;
- TimeZone 
-----------
- PST8PDT
+-- Check if it is reset correctly on QD.
+SELECT to_timestamp(1613123565)::timestamp WITH TIME ZONE;
+         to_timestamp         
+------------------------------
+ Fri Feb 12 01:52:45 2021 PST
 (1 row)
 
-SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
- to_timestamp 
---------------
- 12-01-2017
- 12-04-2017
- 12-12-2017
-(3 rows)
+-- Check if it is reset correctly on the QEs.
+SELECT to_timestamp(b)::timestamp WITH TIME ZONE AS b_ts FROM timezone_table ORDER BY b_ts;
+             b_ts             
+------------------------------
+ Fri Dec 01 07:06:05 2017 PST
+ Fri Dec 01 16:06:04 2017 PST
+ Mon Dec 04 06:07:21 2017 PST
+ Tue Dec 12 16:06:04 2017 PST
+(4 rows)
+
+--
+-- Test if SET TIME ZONE INTERVAL is dispatched correctly to all segments
+--
+SET TIME ZONE INTERVAL '04:30:06' HOUR TO MINUTE;
+-- Check if it is set correctly on QD.
+SELECT to_timestamp(1613123565)::timestamp WITH TIME ZONE;
+          to_timestamp           
+---------------------------------
+ Fri Feb 12 14:22:45 2021 +04:30
+(1 row)
+
+-- Check if it is set correctly on the QEs.
+SELECT to_timestamp(b)::timestamp WITH TIME ZONE AS b_ts FROM timezone_table ORDER BY b_ts;
+              b_ts               
+---------------------------------
+ Fri Dec 01 19:36:05 2017 +04:30
+ Sat Dec 02 04:36:04 2017 +04:30
+ Mon Dec 04 18:37:21 2017 +04:30
+ Wed Dec 13 04:36:04 2017 +04:30
+(4 rows)
 
 -- Test default_transaction_isolation and transaction_isolation fallback from serializable to repeatable read
 CREATE TABLE test_serializable(a int);
