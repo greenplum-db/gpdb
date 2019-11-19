@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+shutdown_servers() {
+	./scripts/gpdb5-cluster stop
+	./scripts/gpdb6-cluster stop
+}
+
+trap shutdown_servers EXIT
+
 main() {
 	local old_port=50000
 	local new_port=60000
