@@ -1,0 +1,22 @@
+-- given: tables with distribution column type using abstime, reltime, tinterval, money
+-- when: upgrade check is performed
+-- then: fails listing the tables which have these columns
+CREATE TABLE unsupported_dist_col_abstime(a abstime) DISTRIBUTED BY(a);
+INSERT INTO unsupported_dist_col_abstime VALUES ('1901-12-14');
+CREATE TABLE unsupported_dist_col_reltime(a reltime) DISTRIBUTED BY(a);
+INSERT INTO unsupported_dist_col_reltime VALUES ('1 year');
+CREATE TABLE unsupported_dist_col_tinterval(a tinterval) DISTRIBUTED BY(a);
+INSERT INTO unsupported_dist_col_tinterval VALUES ('["May 10, 1947 23:59:12" "Jan 14, 1973 03:14:21"]');
+CREATE TABLE unsupported_dist_col_money(a money) DISTRIBUTED BY(a);
+INSERT INTO unsupported_dist_col_money VALUES ('34.23');
+
+
+! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
+
+! /bin/cat tables_using_abstime_reltime_tinterval.txt;
+
+-- before upgrade, change the distribution policy to random distribution
+ALTER TABLE unsupported_dist_col_abstime SET DISTRIBUTED RANDOMLY;
+ALTER TABLE unsupported_dist_col_reltime SET DISTRIBUTED RANDOMLY;
+ALTER TABLE unsupported_dist_col_tinterval SET DISTRIBUTED RANDOMLY;
+ALTER TABLE unsupported_dist_col_money SET DISTRIBUTED RANDOMLY;
