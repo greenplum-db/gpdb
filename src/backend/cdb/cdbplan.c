@@ -342,6 +342,17 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
+		case T_CustomScan:
+			{
+				CustomScan    *cscan = (CustomScan *) node;
+				CustomScan    *newcscan;
+
+				FLATCOPY(newcscan, cscan, CustomScan);
+				SCANMUTATE(newcscan, cscan);
+				return (Node *) newcscan;
+			}
+			break;
+
 		case T_SeqScan:
 			{
 				SeqScan    *seqscan = (SeqScan *) node;

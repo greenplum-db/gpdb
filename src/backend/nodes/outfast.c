@@ -1220,16 +1220,7 @@ _outCustomScan(StringInfo str, const CustomScan *node)
 	WRITE_NODE_FIELD(custom_private);
 	WRITE_NODE_FIELD(custom_scan_tlist);
 	WRITE_BITMAPSET_FIELD(custom_relids);
-	
-	/* 
-	 * node->methods contain CreateCustomScanState function which is used
-	 * by ExecInitCustomScan() to allocate the CustomScanState object.
-	 *
-	 * Obviously, QEs also need this function and sending the function ptr
-	 * directly here is improper. A CustomScan depends largely on how users
-	 * implement CustomPath, let's leave node->methods empty so it can raise
-	 * an error quickly when someone actually implemented a CustomPath.
-	 */
+	WRITE_STRING_FIELD(methods->CustomName);	
 }
 
 static void

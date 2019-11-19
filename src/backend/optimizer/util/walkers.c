@@ -258,6 +258,19 @@ plan_tree_walker(Node *node,
 				return true;
 			break;
 
+		case T_CustomScan:
+			if (walk_scan_node_fields((Scan *) node, walker, context))
+				return true;
+			if (walker(((CustomScan *) node)->custom_plans, context))
+				return true;
+			if (walker(((CustomScan *) node)->custom_exprs, context))
+				return true;
+			if (walker(((CustomScan *) node)->custom_private, context))
+				return true;
+			if (walker(((CustomScan *) node)->custom_scan_tlist, context))
+				return true;
+			break;
+
 		case T_ValuesScan:
 			if (walker((Node *) ((ValuesScan *) node)->values_lists, context))
 				return true;

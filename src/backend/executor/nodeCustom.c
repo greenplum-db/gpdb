@@ -56,8 +56,12 @@ ExecInitCustomScan(CustomScan *cscan, EState *estate, int eflags)
 		ExecInitExpr((Expr *) cscan->scan.plan.qual,
 					 (PlanState *) css);
 
-	/* tuple table initialization */
-	ExecInitScanTupleSlot(estate, &css->ss);
+	/* 
+	 * tuple table initialization
+	 * CustomScan could be any executor node, hence ss_ScanTupleSlot should be
+	 * initialized using ExecInitExtraTupleSlot instead of ExecInitScanTupleSlot
+	 */
+	css->ss.ss_ScanTupleSlot = ExecInitExtraTupleSlot(estate);
 	ExecInitResultTupleSlot(estate, &css->ss.ps);
 
 	/*

@@ -1175,6 +1175,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_WorkTableScan";
 	case MEMORY_OWNER_TYPE_Exec_ForeignScan:
 		return "X_ForeignScan";
+	case MEMORY_OWNER_TYPE_Exec_CustomScan:
+		return "X_CustomScan";
 	case MEMORY_OWNER_TYPE_Exec_NestedExecutor:
 		return "X_NestedExecutor";
 	default:

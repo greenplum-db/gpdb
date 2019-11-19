@@ -1534,6 +1534,9 @@ _readExternalScan(void)
 static CustomScan *
 _readCustomScan(void)
 {
+	char	   *custom_name;
+	const CustomScanMethods *methods;
+	
 	READ_LOCALS(CustomScan);
 
 	ReadCommonScan(&local_node->scan);
@@ -1544,6 +1547,10 @@ _readCustomScan(void)
 	READ_NODE_FIELD(custom_private);
 	READ_NODE_FIELD(custom_scan_tlist);
 	READ_BITMAPSET_FIELD(custom_relids);
+	READ_STRING_VAR(custom_name);
+	/* find custom scan methods from hash table. */
+	methods = GetCustomScanMethods(custom_name, false);
+	local_node->methods = methods;
 
 	READ_DONE();
 }
