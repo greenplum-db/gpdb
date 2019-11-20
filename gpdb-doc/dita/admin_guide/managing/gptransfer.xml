@@ -42,11 +42,10 @@
           its distribution. If neither the source or destination includes
             <codeph>gptransfer</codeph>, you must upgrade one of the clusters to use
             <codeph>gptransfer</codeph>. </li>
-        <li>The <codeph>gptransfer</codeph> utility can be run from the cluster with the source or
-          destination database.</li>
+        <li>Run the <codeph>gptransfer</codeph> utility either from the source or the destination cluster.</li>
         <li>If you are transferring data between two different clusters, the number of <i>segment instances</i> in the destination cluster
          must be greater than or equal
-          to the number of <i>hosts</i> in the source cluster. The number of segment hosts in the
+          to the number of segment <i>hosts</i> in the source cluster. The number of segment hosts in the
           destination cluster may be smaller than the number of segment hosts in the source, but the data will
           transfer at a slower rate.</li>
         <li>The segment hosts in both clusters must have network connectivity with each other.</li>
