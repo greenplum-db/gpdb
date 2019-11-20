@@ -3,7 +3,7 @@
 #include <setjmp.h>
 
 #include "cmockery.h"
-#include "old_tablespace_file_parser.h"
+#include "old_tablespace_file_parser_observer.h"
 
 #include "scenarios/data_checksum_mismatch.h"
 #include "scenarios/filespaces_to_tablespaces.h"

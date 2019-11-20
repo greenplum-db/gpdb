@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "utilities/test-upgrade-helpers.h"
-#include "old_tablespace_file_parser.h"
+#include "old_tablespace_file_parser_observer.h"
 
 void
 OldTablespaceFileParser_invalid_access_error_for_field(int invalid_row_index, int invalid_field_index)

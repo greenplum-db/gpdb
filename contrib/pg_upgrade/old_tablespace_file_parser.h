@@ -43,9 +43,3 @@ int OldTablespaceFileParser_number_of_rows(OldTablespaceFileParser_Document *doc
 char *OldTablespaceFileParser_get_field_as_string(OldTablespaceFileParser_Document* document, int row_number, int field_index);
 int OldTablespaceFileParser_get_field_as_int(OldTablespaceFileParser_Document* document, int row_index, int field_index);
 Oid OldTablespaceFileParser_get_field_as_oid(OldTablespaceFileParser_Document *document, int row_index, int field_index);
-
-/*
- * Expected to be implemented by the main runner.
- */
-extern void OldTablespaceFileParser_invalid_access_error_for_row(int row_index);
-extern void OldTablespaceFileParser_invalid_access_error_for_field(int row_index, int field_index);

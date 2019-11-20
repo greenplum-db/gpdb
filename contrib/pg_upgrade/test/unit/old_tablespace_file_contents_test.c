@@ -11,6 +11,7 @@
 #include "old_tablespace_file_contents.h"
 
 #include "old_tablespace_file_parser.h"
+#include "old_tablespace_file_parser_observer.h"
 
 struct OldTablespaceFileParser_DocumentData {};
 

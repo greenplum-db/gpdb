@@ -1,5 +1,5 @@
 #include "pg_upgrade.h"
-#include "old_tablespace_file_parser.h"
+#include "old_tablespace_file_parser_observer.h"
 
 void
 OldTablespaceFileParser_invalid_access_error_for_row(int invalid_row_index)

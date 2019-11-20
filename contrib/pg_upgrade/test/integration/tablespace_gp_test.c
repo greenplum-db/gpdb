@@ -12,7 +12,7 @@
  * Production dependencies
  */
 #include "pg_upgrade.h"
-#include "old_tablespace_file_parser.h"
+#include "old_tablespace_file_parser_observer.h"
 #include "old_tablespace_file_contents.h"
 
 /*

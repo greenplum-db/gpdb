@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "old_tablespace_file_parser.h"
+#include "old_tablespace_file_parser_observer.h"
 #include "postgres_fe.h"
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
