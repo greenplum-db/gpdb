@@ -3,8 +3,8 @@
 #include <setjmp.h>
 
 #include "cmockery.h"
-#include "../check_gp.h"
-#include "../pg_upgrade.h"
+#include "check_gp.h"
+#include "pg_upgrade.h"
 
 ClusterInfo old_cluster,
 			new_cluster;

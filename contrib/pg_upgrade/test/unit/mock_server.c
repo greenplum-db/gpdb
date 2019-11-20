@@ -4,7 +4,7 @@
 
 #include "cmockery.h"
 
-#include "../pg_upgrade.h"
+#include "pg_upgrade.h"
 
 PGconn *
 connectToServer(ClusterInfo *cluster, const char *db_name)

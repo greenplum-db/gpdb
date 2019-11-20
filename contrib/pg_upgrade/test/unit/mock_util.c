@@ -4,7 +4,7 @@
 
 #include "cmockery.h"
 
-#include "../pg_upgrade.h"
+#include "pg_upgrade.h"
 
 LogOpts		log_opts;
 
@@ -42,6 +42,7 @@ pg_fatal(const char *fmt,...)
 {
 	check_expected(fmt);
 	mock();
+	exit(1);
 }
 
 void
