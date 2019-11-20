@@ -47,6 +47,7 @@ test_populates_old_tablespace_file_contents_to_have_zero_records_for_gpdb6_clust
 	cluster.port = GPDB_SIX_PORT;
 	cluster.major_version = 90400; /* a GPDB 6 cluster */
 	os_info.user = getenv("USER");
+	cluster.sockdir = NULL;
 
 	cluster.old_tablespace_file_contents = NULL;
 
@@ -87,6 +88,7 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 	cluster.major_version = 10000; /* less than gpdb 6 */
 	cluster.gp_dbid = 2;
 	os_info.user = getenv("USER");
+	cluster.sockdir = NULL;
 
 	cluster.old_tablespace_file_contents = NULL;
 
