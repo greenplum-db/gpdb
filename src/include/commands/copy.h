@@ -241,6 +241,7 @@ typedef struct CopyStateData
 	int			first_qe_processed_field;
 	List	   *qd_attnumlist;
 	List	   *qe_attnumlist;
+	bool		stopped_processing_at_delim;
 
 	PartitionNode *partitions; /* partitioning meta data from dispatcher */
 	List		  *ao_segnos;  /* AO table meta data from dispatcher */
