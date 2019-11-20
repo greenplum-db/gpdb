@@ -88,7 +88,7 @@
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
             <entry colname="col4">Status of expansion for this table. Valid values are:<p>NOT
-                STARTED</p><p>IN PROGRESS</p>FINISHED<p>NO LONGER EXISTS</p></entry>
+                STARTED</p><p>IN PROGRESS</p><p>COMPLETED</p><p>NO LONGER EXISTS</p></entry>
           </row>
           <row>
             <entry colname="col1">
