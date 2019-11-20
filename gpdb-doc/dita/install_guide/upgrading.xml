@@ -15,6 +15,11 @@
       timezone is acceptable for your deployment. See <xref href="localization.xml" format="dita"
         scope="peer">Configuring Timezone and Localization Settings</xref> for more
       information.</note>
+    <note type="note" otherprops="pivotal">Greenplum Stream Server (GPSS) and Greenplum-Kafka
+      Integration users: Do not upgrade to Greenplum Database 6.1 if you plan to
+      re-submit Kafka load jobs that you initiated with GPSS in Greenplum 6.0.x.
+      Due to a regression, GPSS may load duplicate Kafka messages into Greenplum.
+      Wait for a Greenplum release that includes GPSS v1.3.1 or later.</note>
     <section id="gpdb_prereq">
       <title>Prerequisites</title>
       <p>Before starting the upgrade process, perform the following checks. </p>
