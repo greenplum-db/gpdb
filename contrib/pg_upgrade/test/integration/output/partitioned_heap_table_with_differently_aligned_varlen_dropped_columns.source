@@ -22,10 +22,6 @@ ALTER TABLE p_diff_aligned_varlena ALTER PARTITION varlena EXCHANGE PARTITION va
 ALTER
 
 ! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
-
-*failure*
-Consult the last few lines of "pg_upgrade_server.log" for
-the probable cause of the failure.
 Performing Consistency Checks on Old Live Server
 ------------------------------------------------
 Checking for heterogeneous partitioned tables               fatal

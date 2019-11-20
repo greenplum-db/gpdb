@@ -19,11 +19,7 @@ INSERT INTO unsupported_dist_col_money VALUES ('34.23');
 INSERT 1
 
 
-! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=/Users/bhuvneshchaudhary/workspace/gpdb/contrib/pg_upgrade/test/integration/gpdb5/bin --new-bindir=/Users/bhuvneshchaudhary/workspace/gpdb/contrib/pg_upgrade/test/integration/gpdb6/bin --old-datadir=/Users/bhuvneshchaudhary/workspace/gpdb/contrib/pg_upgrade/test/integration/gpdb5-data/qddir/demoDataDir-1 --new-datadir=/Users/bhuvneshchaudhary/workspace/gpdb/contrib/pg_upgrade/test/integration/gpdb6-data/qddir/demoDataDir-1 --old-port=50000;
-
-*failure*
-Consult the last few lines of "pg_upgrade_server.log" for
-the probable cause of the failure.
+! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
 Performing Consistency Checks on Old Live Server
 ------------------------------------------------
 Checking for abstime, reltime, tinterval user data types    fatal
