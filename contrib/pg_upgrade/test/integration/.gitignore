@@ -26,18 +26,19 @@
 /sql_isolation_testcase.py
 
 /data
-
 # regress files
 /expected/exchange_partition_heap_table.out
 /expected/external_table.out
 /expected/partitioned_heap_table_with_differently_aligned_dropped_columns.out
 /expected/partitioned_heap_table_with_differently_aligned_varlen_dropped_columns.out
 /expected/partitioned_heap_table_with_differently_sized_dropped_columns.out
+/expected/unsupported_dist_coltypes.out
 /sql/exchange_partition_heap_table.sql
 /sql/external_table.sql
 /sql/partitioned_heap_table_with_differently_aligned_dropped_columns.sql
 /sql/partitioned_heap_table_with_differently_aligned_varlen_dropped_columns.sql
 /sql/partitioned_heap_table_with_differently_sized_dropped_columns.sql
+/sql/unsupported_dist_coltypes.sql
 
 # cmockery tests
 /*.t
