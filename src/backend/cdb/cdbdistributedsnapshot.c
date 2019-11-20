@@ -51,7 +51,6 @@ bool
 localXidSatisfiesAnyDistributedSnapshot(TransactionId localXid)
 {
 	DistributedSnapshotCommitted distributedSnapshotCommitted;
-	Assert(TransactionIdIsNormal(localXid));
 
 	/*
 	 * In general expect this function to be called only for normal xid, as
