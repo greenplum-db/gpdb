@@ -34,13 +34,20 @@ and restart the upgrade.  A list of the problem columns is in the file:
 Failure, exiting
 
 
-! /bin/cat tables_using_abstime_reltime_tinterval.txt;
-Database: upgradetest
-  public.unsupported_dist_col_abstime.a
-  public.unsupported_dist_col_reltime.a
-  public.unsupported_dist_col_tinterval.a
-  public.unsupported_dist_col_money.a
+CREATE TABLE problematic_tables_info (colinfo text);
+CREATE
+! /bin/cat tables_using_abstime_reltime_tinterval.txt | tail -n +2 | tr -d ' ' > @upgrade_test_path@/temp_tables_using_abstime_reltime_tinterval.txt ;
 
+COPY problematic_tables_info FROM '@upgrade_test_path@/temp_tables_using_abstime_reltime_tinterval.txt';
+COPY 4
+SELECT * FROM problematic_tables_info;
+ colinfo                                 
+-----------------------------------------
+ public.unsupported_dist_col_tinterval.a 
+ public.unsupported_dist_col_abstime.a   
+ public.unsupported_dist_col_reltime.a   
+ public.unsupported_dist_col_money.a     
+(4 rows)
 
 -- before upgrade, change the distribution policy to random distribution
 ALTER TABLE unsupported_dist_col_abstime SET DISTRIBUTED RANDOMLY;

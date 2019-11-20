@@ -13,7 +13,10 @@ INSERT INTO unsupported_dist_col_money VALUES ('34.23');
 
 ! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
 
-! /bin/cat tables_using_abstime_reltime_tinterval.txt;
+CREATE TABLE problematic_tables_info (colinfo text);
+! /bin/cat tables_using_abstime_reltime_tinterval.txt | tail -n +2 | tr -d ' ' > @upgrade_test_path@/temp_tables_using_abstime_reltime_tinterval.txt ;
+COPY problematic_tables_info FROM '@upgrade_test_path@/temp_tables_using_abstime_reltime_tinterval.txt';
+SELECT * FROM problematic_tables_info;
 
 -- before upgrade, change the distribution policy to random distribution
 ALTER TABLE unsupported_dist_col_abstime SET DISTRIBUTED RANDOMLY;
