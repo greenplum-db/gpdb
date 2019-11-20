@@ -478,41 +478,28 @@ class AnalyzeDb(Operation):
             cmd.target_schema = can_schema
             cmd.target_table = can_table
 
-        wait_count = len(ordered_candidates)
+        wait_count = num_tables = len(ordered_candidates)
         num_roots = root_pool.assigned
         start_time = time.time()
         non_root_pool.run()
         try:
             while wait_count > num_roots:
-                done_cmd = non_root_pool.completed_queue.get()
-                if done_cmd.was_successful():
-                    subject = (done_cmd.target_schema, done_cmd.target_table)
-                    self.success_list.append(subject)
-                if wait_count % 10 == 0:
-                    logger.info("progress status: completed %d out of %d tables or partitions" %
-                                (len(self.success_list), len(ordered_candidates)))
+                self.run_analyze_statements(non_root_pool, wait_count, num_tables)
                 wait_count -= 1
-
             non_root_pool.join()
             non_root_pool.haltWork()
             root_pool.run()
             while wait_count > 0:
-                done_cmd = root_pool.completed_queue.get()
-                if done_cmd.was_successful():
-                    subject = (done_cmd.target_schema, done_cmd.target_table)
-                    self.success_list.append(subject)
-                if wait_count % 10 == 0:
-                    logger.info("progress status: completed %d out of %d tables or partitions" %
-                                (len(self.success_list), len(ordered_candidates)))
+                self.run_analyze_statements(root_pool, wait_count, num_tables)
                 wait_count -= 1
-
             root_pool.join()
             root_pool.haltWork()
         except:
             non_root_pool.haltWork()
             non_root_pool.joinWorkers()
-            root_pool.haltWork()
-            root_pool.joinWorkers()
+            if non_root_pool.completed_queue.qsize() == 0:
+                root_pool.haltWork()
+                root_pool.joinWorkers()
             raise
 
         finally:
@@ -520,6 +507,15 @@ class AnalyzeDb(Operation):
             logger.info(
                         "Total elapsed time: %d seconds. Analyzed %d out of %d table(s) or partition(s) successfully."
                         % (int(end_time - start_time), len(self.success_list), len(ordered_candidates)))
+
+    def run_analyze_statements(self, pool, wait_count, total_to_analyze):
+        done_cmd = pool.completed_queue.get()
+        if done_cmd.was_successful():
+            subject = (done_cmd.target_schema, done_cmd.target_table)
+            self.success_list.append(subject)
+        if wait_count % 10 == 0:
+            logger.info("progress status: completed %d out of %d tables or partitions" %
+                        (len(self.success_list), total_to_analyze))
 
     def read_last_analyzedb_output(self):
         last_analyze_timestamp = get_lastest_analyze_timestamp(self.master_datadir, self.analyze_dir, self.dbname)
