@@ -23,7 +23,6 @@ override CPPFLAGS += -I$(pg_upgrade_directory) \
 	-I$(libpq_srcdir)
 
 test_dependencies = $(CMOCKERY_OBJS)
-check_gp_upgrade_dependencies = $(filter-out $(pg_upgrade_directory)/util.o $(pg_upgrade_directory)/server.o $(pg_upgrade_directory)/pg_upgrade.o, $(wildcard $(pg_upgrade_directory)/*.o))
 
 debugging_flags = -Og -g -fsanitize=address -Wextra -pedantic-errors -Werror
 
@@ -41,11 +40,10 @@ old_tablespace_file_parser_test.t: old_tablespace_file_parser_test.o $(pg_upgrad
 tablespace_gp_test.t: tablespace_gp_test.o $(pg_upgrade_directory)/tablespace_gp.o $(test_dependencies)
 	$(compile_test)
 
-check_gp.t: \
-	mock_util.o \
+check_gp.t: mock_util.o \
 	mock_server.o \
 	check_gp_test.o \
 	$(MOCK_DIR)/backend/libpq/fe-exec_mock.o \
-	$(CMOCKERY_OBJS) \
-	$(check_gp_upgrade_dependencies)
-	$(CC) $^ $(libpq_pgport) $(LDFLAGS) $(LIBS) $(libpq) -o $@
+	$(test_dependencies) \
+	$(pg_upgrade_directory)/check_gp.o
+	$(compile_test)

@@ -9,6 +9,7 @@
 ClusterInfo old_cluster,
 			new_cluster;
 OSInfo		os_info;
+UserOpts user_opts;
 char	   *output_files[] = {
 	SERVER_LOG_FILE,
 	UTILITY_LOG_FILE,
