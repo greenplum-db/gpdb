@@ -5224,7 +5224,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 
 		Assert(fieldno == nfields);
 	}
-	else
+	else if (attr_count)
 	{
 		/* binary */
 		int16		fld_count;
@@ -7571,39 +7571,50 @@ static void
 InitCopyFromDispatchSplit(CopyState cstate, GpDistributionData *distData,
 						  EState *estate)
 {
-	int			first_qe_processed_field;
+	int			first_qe_processed_field = 0;
 	Bitmapset  *needed_cols = NULL;
 	ListCell   *lc;
-	int			fieldno;
 
-	/*
-	 * We need all the columns that form the distribution key.
-	 */
-	if (distData->policy)
+	if (cstate->binary)
 	{
-		for (int i = 0; i < distData->policy->nattrs; i++)
-			needed_cols = bms_add_member(needed_cols, distData->policy->attrs[i]);
+		foreach(lc, cstate->attnumlist)
+		{
+			AttrNumber attnum = lfirst_int(lc);
+			needed_cols = bms_add_member(needed_cols, attnum);
+			first_qe_processed_field++;
+		}
 	}
-
-	/*
-	 * If the target is partitioned, get the columns needed for partitioning
-	 * keys, and for distribution keys of each partition.
-	 */
-	if (estate->es_result_partitions)
-		needed_cols = GetTargetKeyCols(RelationGetRelid(estate->es_result_relation_info->ri_RelationDesc),
-									   estate->es_result_partitions, needed_cols,
-									   distData->policy == NULL, estate);
-
-	/* Get the max fieldno that contains one of the needed attributes. */
-	first_qe_processed_field = 0;
-	fieldno = 0;
-	foreach(lc, cstate->attnumlist)
+	else
 	{
-		AttrNumber attnum = lfirst_int(lc);
+		int			fieldno;
+		/*
+		 * We need all the columns that form the distribution key.
+		 */
+		if (distData->policy)
+		{
+			for (int i = 0; i < distData->policy->nattrs; i++)
+				needed_cols = bms_add_member(needed_cols, distData->policy->attrs[i]);
+		}
 
-		if (bms_is_member(attnum, needed_cols))
-			first_qe_processed_field = fieldno + 1;
-		fieldno++;
+		/*
+		 * If the target is partitioned, get the columns needed for partitioning
+		 * keys, and for distribution keys of each partition.
+		 */
+		if (estate->es_result_partitions)
+			needed_cols = GetTargetKeyCols(RelationGetRelid(estate->es_result_relation_info->ri_RelationDesc),
+										   estate->es_result_partitions, needed_cols,
+										   distData->policy == NULL, estate);
+
+		/* Get the max fieldno that contains one of the needed attributes. */
+		fieldno = 0;
+		foreach(lc, cstate->attnumlist)
+		{
+			AttrNumber attnum = lfirst_int(lc);
+
+			if (bms_is_member(attnum, needed_cols))
+				first_qe_processed_field = fieldno + 1;
+			fieldno++;
+		}
 	}
 
 	/* If the file contains OIDs, it's the first field. */
