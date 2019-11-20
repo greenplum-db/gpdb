@@ -45,6 +45,10 @@ main() {
 	install_gpdb5 "$gpdb5_installation_path" "$gpdb5_source_path"
 	install_gpdb6 "$gpdb6_installation_path" "$gpdb6_source_path"
 
+	pushd "$gpdb6_source_path/contrib/pg_upgrade/test/unit"
+	make check
+	popd
+
 	pushd "$gpdb6_source_path/contrib/pg_upgrade/test/integration"
 
 	./scripts/test.bash "$gpdb5_installation_path" \
