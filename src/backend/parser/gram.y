@@ -489,7 +489,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <node>	def_arg columnElem where_clause where_or_current_clause
 				a_expr b_expr c_expr AexprConst indirection_el opt_slice_bound
 				columnref in_expr having_clause func_table array_expr
-				ExclusionWhereClause
+				ExclusionWhereClause operator_def_arg
 %type <list>	rowsfrom_item rowsfrom_list opt_col_def_list
 %type <boolean> opt_ordinality
 %type <list>	ExclusionConstraintList ExclusionConstraintElem
@@ -10790,37 +10790,22 @@ operator_def_list:	operator_def_elem								{ $$ = list_make1($1); }
 			| operator_def_list ',' operator_def_elem				{ $$ = lappend($1, $3); }
 		;
 
-/*
- * GPDB_96_MERGE_FIXME: 
- * 			The Initial Greenplum code dump contains NONE in the def_arg rule
- * 			which is a deviation from upstream. The supplied comment states that
- * 			the decision was taken in order to avoid adding a reserved word,
- * 			presumably 'none'. Unfortunately this causes reduce/reduce conflicts
- * 			since `ColLabel '=' NONE` is contained in `ColLabel '=' def_arg`.
- *			Rewrite the following rule for now until a proper fix is introduced.
- */
-/*
 operator_def_elem: ColLabel '=' NONE
 						{ $$ = makeDefElem($1, NULL); }
-				   | ColLabel '=' def_arg
+				   | ColLabel '=' operator_def_arg
 						{ $$ = makeDefElem($1, (Node *) $3); }
 		;
-*/
-operator_def_elem: ColLabel '=' def_arg
-						{
-							Node *n = $3;
-							if (IsA(n, String) && !strcmp(strVal(n), "none"))
-								$$ = makeDefElem($1, NULL);	
-							else
-								$$ = makeDefElem($1, n);
-						}
-				   | /* EMPTY */
-						{
-							ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("missing label"),
-								 parser_errposition(@0)));
-						}
+
+/*
+ * GPDB: Like def_arg but without the gpdb specific 'NONE' and 'ROW' and closer
+ * to upstream.
+ */
+operator_def_arg:
+					func_type						{ $$ = (Node *)$1; }
+					| reserved_keyword				{ $$ = (Node *)makeString(pstrdup($1)); }
+					| qual_all_Op					{ $$ = (Node *)$1; }
+					| NumericOnly					{ $$ = (Node *)$1; }
+					| Sconst						{ $$ = (Node *)makeString($1); }
 		;
 
 /*****************************************************************************
