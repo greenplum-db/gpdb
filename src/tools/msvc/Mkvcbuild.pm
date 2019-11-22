@@ -135,13 +135,13 @@ sub mkvcbuild
 	$libpgcommon->AddDefine('FRONTEND');
 	$libpgcommon->AddFiles('src/common', @pgcommonfrontendfiles);
 
-	if (!$buildclient)
-	{
 	$libpgfeutils = $solution->AddProject('libpgfeutils', 'lib', 'misc');
 	$libpgfeutils->AddDefine('FRONTEND');
 	$libpgfeutils->AddIncludeDir('src/interfaces/libpq');
 	$libpgfeutils->AddFiles('src/fe_utils', @pgfeutilsfiles);
 
+	if (!$buildclient)
+	{
 	$postgres = $solution->AddProject('postgres', 'exe', '', 'src/backend');
 	$postgres->AddIncludeDir('src/backend');
 	$postgres->AddDir('src/backend/port/win32');
