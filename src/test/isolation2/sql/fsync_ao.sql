@@ -6,15 +6,18 @@
 --   * Resume checkpointer and let it fsync the two dirty AO relations and their auxiliary tables.
 --   * Verify that 6 files (gp_fastsequence, ao data files, aoseg files) were fsync'ed by checkpointer.
 --   * Verify that those files were also fsync-ed by restartpoint on mirror.
+--   * Insert tuples, drop the tables; then run checkpoint (on all rest tests also).
+--   * Verify that the fsync mechanism works for that (FORGET_RELATION_FSYNC).
+--   * Vacuum on the tables with multiple segment files due to concurrent insert.
+--   * Verify that the fsync mechanism works for that.
+--   * Re-test by creating and dropping database.
+--   * Verify that the fsync mechanism works for that (FORGET_DATABASE_FSYNC).
 
 -- Set the GUC to perform replay of checkpoint records immediately.  It speeds up the test.
 -- Set fsync on since we need to test the fsync code logic.
-
--- start_ignore
-! gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation;
-! gpconfig -c fsync -v on --skipvalidation;
-! gpstop -u;
--- end_ignore
+!\retcode gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation;
+!\retcode gpconfig -c fsync -v on --skipvalidation;
+!\retcode gpstop -u;
 
 create table fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
 create table fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
@@ -22,14 +25,11 @@ insert into fsync_ao select i, i from generate_series(1,20)i;
 insert into fsync_co select i, i from generate_series(1,20)i;
 
 -- Reset all faults.
--- 
--- NOTICE: important.
---
--- we use gp_inject_fault_infinite here instead of
+-- Note: we use gp_inject_fault_infinite here instead of
 -- gp_inject_fault so cache of pg_proc that contains
 -- gp_inject_fault_infinite is loaded before checkpoint and
 -- the following gp_inject_fault_infinite don't dirty the
--- buffer again. TODO: gp_inject_fault_infinite vs gp_inject_fault
+-- buffer again.
 select gp_inject_fault_infinite('all', 'reset', dbid)
 	from gp_segment_configuration where content = 0;
 
@@ -125,9 +125,6 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 5, dbid)
 -- Reset all faults.
 select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where content = 0;
 
-
--- start_ignore
-! gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
-! gpconfig -r fsync --skipvalidation;
-! gpstop -u;
--- end_ignore
+!\retcode gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
+!\retcode gpconfig -r fsync --skipvalidation;
+!\retcode gpstop -u;

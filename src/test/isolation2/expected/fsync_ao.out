@@ -6,26 +6,38 @@
 --   * Resume checkpointer and let it fsync the two dirty AO relations and their auxiliary tables.
 --   * Verify that 6 files (gp_fastsequence, ao data files, aoseg files) were fsync'ed by checkpointer.
 --   * Verify that those files were also fsync-ed by restartpoint on mirror.
+--   * Insert tuples, drop the tables; then run checkpoint (on all rest tests also).
+--   * Verify that the fsync mechanism works for that (FORGET_RELATION_FSYNC).
+--   * Vacuum on the tables with multiple segment files due to concurrent insert.
+--   * Verify that the fsync mechanism works for that.
+--   * Re-test by creating and dropping database.
+--   * Verify that the fsync mechanism works for that (FORGET_DATABASE_FSYNC).
 
 -- Set the GUC to perform replay of checkpoint records immediately.  It speeds up the test.
 -- Set fsync on since we need to test the fsync code logic.
-
+!\retcode gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation;
 -- start_ignore
-! gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation;
-20191121:17:04:15:089644 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation'
-
-! gpconfig -c fsync -v on --skipvalidation;
-20191121:17:04:16:089780 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c fsync -v on --skipvalidation'
-
-! gpstop -u;
-20191121:17:04:16:089916 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
-20191121:17:04:16:089916 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
-20191121:17:04:16:089916 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
-20191121:17:04:16:089916 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
-20191121:17:04:16:089916 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5193.g47b7daada9 build dev'
-20191121:17:04:16:089916 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
+20191122:22:33:57:007304 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation'
 
 -- end_ignore
+(exited with code 0)
+!\retcode gpconfig -c fsync -v on --skipvalidation;
+-- start_ignore
+20191122:22:33:58:007440 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c fsync -v on --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
+20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
+20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
+20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
+20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5193.g47b7daada9 build dev'
+20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)
 
 create table fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
 CREATE
@@ -37,14 +49,11 @@ insert into fsync_co select i, i from generate_series(1,20)i;
 INSERT 20
 
 -- Reset all faults.
---
--- NOTICE: important.
---
--- we use gp_inject_fault_infinite here instead of
+-- Note: we use gp_inject_fault_infinite here instead of
 -- gp_inject_fault so cache of pg_proc that contains
 -- gp_inject_fault_infinite is loaded before checkpoint and
 -- the following gp_inject_fault_infinite don't dirty the
--- buffer again. TODO: gp_inject_fault_infinite vs gp_inject_fault
+-- buffer again.
 select gp_inject_fault_infinite('all', 'reset', dbid) from gp_segment_configuration where content = 0;
  gp_inject_fault_infinite 
 --------------------------
@@ -215,20 +224,26 @@ select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where
  Success:        
 (2 rows)
 
-
+!\retcode gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
 -- start_ignore
-! gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
-20191121:17:04:19:089989 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r create_restartpoint_on_ckpt_record_replay --skipvalidation'
-
-! gpconfig -r fsync --skipvalidation;
-20191121:17:04:19:090125 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r fsync --skipvalidation'
-
-! gpstop -u;
-20191121:17:04:19:090261 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
-20191121:17:04:19:090261 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
-20191121:17:04:19:090261 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
-20191121:17:04:19:090261 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
-20191121:17:04:19:090261 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5193.g47b7daada9 build dev'
-20191121:17:04:19:090261 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
+20191122:22:34:01:007650 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r create_restartpoint_on_ckpt_record_replay --skipvalidation'
 
 -- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r fsync --skipvalidation;
+-- start_ignore
+20191122:22:34:01:007786 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r fsync --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
+20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
+20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
+20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
+20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5193.g47b7daada9 build dev'
+20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)

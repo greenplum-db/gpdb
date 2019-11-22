@@ -155,7 +155,7 @@ typedef struct
 	Bitmapset  *requests[MAX_FORKNUM + 1];
 	/* canceled[f] is true if we canceled fsyncs for fork "recently" */
 	bool		canceled[MAX_FORKNUM + 1];
-	bool		is_ao;
+	bool		is_ao_segnos;	/* if the requests are for real ao/co segnos. */
 } PendingOperationEntry;
 
 typedef struct
@@ -204,7 +204,7 @@ static char *_mdfd_segpath(SMgrRelation reln, ForkNumber forknum,
 static MdfdVec *_mdfd_openseg(SMgrRelation reln, ForkNumber forkno,
 			  BlockNumber segno, int oflags);
 static MdfdVec *_mdfd_getseg(SMgrRelation reln, ForkNumber forkno,
-			 BlockNumber blkno, bool skipFsync, bool is_ao, int behavior);
+			 BlockNumber blkno, bool skipFsync, bool is_ao_segno, int behavior);
 static BlockNumber _mdnblocks(SMgrRelation reln, ForkNumber forknum,
 		   MdfdVec *seg);
 
@@ -1316,7 +1316,7 @@ mdsync(void)
 					/* Attempt to open and fsync the target segment */
 					seg = _mdfd_getseg(reln, forknum,
 							 (BlockNumber) segno * (BlockNumber) RELSEG_SIZE,
-									   false, entry->is_ao,
+									   false, entry->is_ao_segnos,
 									   EXTENSION_RETURN_NULL
 									   | EXTENSION_DONT_CHECK_SIZE);
 
@@ -1364,13 +1364,13 @@ mdsync(void)
 						failures > 0)
 						ereport(ERROR,
 								(errcode_for_file_access(),
-								 errmsg("could not fsync file \"%s\": %m",
-										path)));
+								 errmsg("could not fsync file \"%s\" (is_ao: %d): %m",
+										path, entry->is_ao_segnos)));
 					else
 						ereport(DEBUG1,
 								(errcode_for_file_access(),
-						errmsg("could not fsync file \"%s\" but retrying: %m",
-							   path)));
+						errmsg("could not fsync file \"%s\" (is_ao: %d) but retrying: %m",
+							   path, entry->is_ao_segnos)));
 					pfree(path);
 
 					/*
@@ -1602,7 +1602,7 @@ register_unlink(RelFileNodeBackend rnode)
  * heavyweight operation anyhow, so we'll live with it.)
  */
 void
-RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno, bool is_ao)
+RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno, bool is_ao_segno)
 {
 	Assert(pendingOpsTable);
 
@@ -1728,7 +1728,7 @@ RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno, b
 
 		entry->requests[forknum] = bms_add_member(entry->requests[forknum],
 												  (int) segno);
-		entry->is_ao = is_ao;
+		entry->is_ao_segnos = is_ao_segno;
 
 		MemoryContextSwitchTo(oldcxt);
 	}
@@ -1917,7 +1917,7 @@ _mdfd_openseg(SMgrRelation reln, ForkNumber forknum, BlockNumber segno,
  */
 static MdfdVec *
 _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
-			 bool skipFsync, bool is_ao, int behavior)
+			 bool skipFsync, bool is_ao_segno, int behavior)
 {
 	MdfdVec    *v = mdopen(reln, forknum, behavior);
 	BlockNumber targetseg;
@@ -1931,9 +1931,10 @@ _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
 		return NULL;			/* if behavior & EXTENSION_RETURN_NULL */
 
 	targetseg = blkno / ((BlockNumber) RELSEG_SIZE);
-	for (nextsegno = is_ao ? targetseg : 1; nextsegno <= targetseg; nextsegno++)
+	/* For ao we just need to select the target seg number. */
+	for (nextsegno = is_ao_segno ? targetseg : 1; nextsegno <= targetseg; nextsegno++)
 	{
-		Assert(is_ao || (nextsegno == v->mdfd_segno + 1));
+		Assert(is_ao_segno || (nextsegno == v->mdfd_segno + 1));
 
 		if (v->mdfd_chain == NULL)
 		{
