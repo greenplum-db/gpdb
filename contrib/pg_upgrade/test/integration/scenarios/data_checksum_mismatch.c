@@ -1,8 +1,4 @@
-#include <stdarg.h>
-#include <setjmp.h>
-#include <stdlib.h>
-
-#include "cmockery.h"
+#include "cmockery_gp.h"
 
 #include "data_checksum_mismatch.h"
 #include "utilities/test-upgrade-helpers.h"
@@ -27,7 +23,7 @@ assert_error_in_log(const char *errMsg)
 static void
 checkFailsWithError(const char* errMsg)
 {
-	assert_int_not_equal(0, upgradeCheckStatus());
+	assert_false(upgradeReturnedSuccess());
 	assert_error_in_log(errMsg);
 }
 

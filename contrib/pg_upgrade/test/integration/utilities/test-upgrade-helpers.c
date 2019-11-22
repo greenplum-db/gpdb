@@ -1,11 +1,10 @@
-#include <setjmp.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "cmockery.h"
+#include "cmockery_gp.h"
+
 #include "postgres_fe.h"
 
 /*
@@ -15,10 +14,9 @@
 #include "test-upgrade-helpers.h"
 #include "cluster-upgrade.h"
 #include "pg-upgrade-copy.h"
-#include "pqexpbuffer.h"
 
-PQExpBufferData pg_upgrade_output;
-int pg_upgrade_exit_status;
+static char *_pg_upgrade_output;
+static int _pg_upgrade_exit_status;
 
 typedef struct SegmentConfiguration
 {
@@ -81,7 +79,7 @@ performUpgradeWithTablespaces(char *mappingFilePath)
 		}
 	};
 
-	perform_upgrade(
+	PgUpgradeResponse *response = perform_upgrade(
 		make_pg_upgrade_options(
 			old_master_data_directory,
 			master_segment.new_data_directory,
@@ -92,6 +90,13 @@ performUpgradeWithTablespaces(char *mappingFilePath)
 			old_bin_dir,
 			new_bin_dir,
 			GPDB_FIVE_PORT));
+
+	_pg_upgrade_exit_status = pg_upgrade_exit_status(response);
+
+	if (_pg_upgrade_exit_status != 0)
+		return;
+
+	PgUpgradeResponse *segment_response;
 
 	for (int i = 0; i < number_of_segments; i++)
 	{
@@ -119,7 +124,13 @@ performUpgradeWithTablespaces(char *mappingFilePath)
 			mappingFilePath);
 
 		prepare_segment_for_upgrade(segment_copy_options);
-		perform_upgrade(segment_upgrade_options);
+		segment_response = perform_upgrade(segment_upgrade_options);
+
+		_pg_upgrade_exit_status = pg_upgrade_exit_status(segment_response);
+
+		if (_pg_upgrade_exit_status != 0)
+			return;
+
 		enable_segment_after_upgrade(segment_copy_options);
 	}
 }
@@ -127,39 +138,34 @@ performUpgradeWithTablespaces(char *mappingFilePath)
 char *
 upgradeCheckOutput(void)
 {
-	return pg_upgrade_output.data;
+	return _pg_upgrade_output;
 }
 
-int
-upgradeCheckStatus(void)
+bool
+upgradeReturnedSuccess(void)
 {
-	return pg_upgrade_exit_status;
+	return _pg_upgrade_exit_status == 0;
 }
 
 void
 initializePgUpgradeStatus(void)
 {
-	initPQExpBuffer(&pg_upgrade_output);
-	pg_upgrade_exit_status = 0;
+	_pg_upgrade_exit_status = 0;
 }
 
 void
 resetPgUpgradeStatus(void)
 {
-	termPQExpBuffer(&pg_upgrade_output);
+	_pg_upgrade_output = NULL;
 }
 
 void
 performUpgradeCheck(void)
 {
-	char		buffer[2000];
 	char	   *old_master_data_directory_path = "./gpdb5-data/qddir/demoDataDir-1";
 	char	   *new_master_data_directory_path = "./gpdb6-data/qddir/demoDataDir-1";
 	int         old_master_gp_dbid = 1;
 	int         new_master_gp_dbid = 1;
-	FILE	   *output_file;
-	char	   *output;
-	int 	   cmdstatus = 0;
 
 	PgUpgradeOptions *options = make_pg_upgrade_options(
 		old_master_data_directory_path,
@@ -173,14 +179,7 @@ performUpgradeCheck(void)
 		GPDB_FIVE_PORT
 		);
 
-	output_file = perform_upgrade_check(options);
-
-#ifndef WIN32
-	while ((output = fgets(buffer, sizeof(buffer), output_file)) != NULL)
-		appendPQExpBufferStr(&pg_upgrade_output, output);
-
-	cmdstatus = pclose(output_file);
-	pg_upgrade_exit_status = WEXITSTATUS(cmdstatus);
-#endif
+	PgUpgradeResponse *response = perform_upgrade_check(options);
+	_pg_upgrade_output = pg_upgrade_output(response);
+	_pg_upgrade_exit_status = pg_upgrade_exit_status(response);
 }
-

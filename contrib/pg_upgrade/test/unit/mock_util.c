@@ -1,8 +1,4 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-
-#include "cmockery.h"
+#include "cmockery_gp.h"
 
 #include "pg_upgrade.h"
 

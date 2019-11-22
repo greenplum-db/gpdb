@@ -1,10 +1,8 @@
-#include "stdbool.h"
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
+#include <stdbool.h>
 #include <stdio.h>
 
-#include "cmockery.h"
+#include "cmockery_gp.h"
+
 #include "row-assertions.h"
 
 bool (*matcher)(void *expected, void*actual);

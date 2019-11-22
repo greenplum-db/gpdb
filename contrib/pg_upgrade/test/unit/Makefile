@@ -8,13 +8,15 @@ OBJS = tablespace_test.o \
 	old_tablespace_file_parser_test.o \
 	check_gp_test.o \
 	mock_server.o \
-	mock_util.o
+	mock_util.o \
+	info_gp_test.o
 
 TARGETS = tablespace_test \
 	old_tablespace_file_contents_test \
 	old_tablespace_file_parser_test \
 	tablespace_gp_test \
-	check_gp
+	check_gp \
+	info_gp_test
 
 include $(top_srcdir)/src/Makefile.global
 include $(top_srcdir)/src/Makefile.mock
@@ -38,6 +40,9 @@ old_tablespace_file_parser_test.t: old_tablespace_file_parser_test.o $(pg_upgrad
 	$(compile_test)
 
 tablespace_gp_test.t: tablespace_gp_test.o $(pg_upgrade_directory)/tablespace_gp.o $(test_dependencies)
+	$(compile_test)
+
+info_gp_test.t: info_gp_test.o $(pg_upgrade_directory)/info_gp.o $(test_dependencies)
 	$(compile_test)
 
 check_gp.t: mock_util.o \

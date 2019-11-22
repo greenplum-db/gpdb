@@ -1,8 +1,5 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
+#include "cmockery_gp.h"
 
-#include "cmockery.h"
 #include "old_tablespace_file_parser_observer.h"
 
 #include "scenarios/data_checksum_mismatch.h"

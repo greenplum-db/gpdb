@@ -1,9 +1,4 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <stdbool.h>
-
-#include "cmockery.h"
+#include "cmockery_gp.h"
 
 #include "old_tablespace_file_parser.h"
 #include "old_tablespace_file_parser_observer.h"

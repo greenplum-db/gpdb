@@ -1,12 +1,8 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "cmockery.h"
+#include "cmockery_gp.h"
 
 #include "old_tablespace_file_contents.h"
 

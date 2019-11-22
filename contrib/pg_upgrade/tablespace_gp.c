@@ -23,7 +23,7 @@ get_generated_old_tablespaces_file_path(void)
 	return psprintf("%s/%s", current_working_directory, OLD_TABLESPACES_FILE);
 }
 
-static inline bool
+bool
 is_gpdb_version_with_filespaces(ClusterInfo *cluster)
 {
 	return GET_MAJOR_VERSION(cluster->major_version) < 904;

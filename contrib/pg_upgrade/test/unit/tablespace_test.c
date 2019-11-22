@@ -1,9 +1,6 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
 #include <stdbool.h>
 
-#include "cmockery.h"
+#include "cmockery_gp.h"
 
 #include "pg_upgrade.h"
 #include "pg_upgrade_dummies.c"

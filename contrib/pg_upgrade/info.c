@@ -13,6 +13,7 @@
 
 #include "access/transam.h"
 #include "catalog/pg_class.h"
+#include "info_gp.h"
 
 
 static void create_rel_filename_map(const char *old_data, const char *new_data,
@@ -414,6 +415,28 @@ get_db_infos(ClusterInfo *cluster)
 	cluster->dbarr.ndbs = ntups;
 }
 
+static char *
+get_tablespace_path_for_old_cluster(OldTablespaceFileContents *contents, Oid tablespace_oid)
+{
+	GetTablespacePathResponse response = gp_get_tablespace_path(
+		old_cluster.old_tablespace_file_contents, tablespace_oid);
+
+	switch (response.code)
+	{
+		case GetTablespacePathResponse_FOUND:
+			return pg_strdup(response.tablespace_path);
+		case GetTablespacePathResponse_MISSING_FILE:
+			pg_fatal("expected pg_upgrade to receive an "
+			         "old-tablespaces-file argument in order to "
+			         "determine GPDB5 tablespace locations\n");
+		case GetTablespacePathResponse_NOT_FOUND_IN_FILE:
+			pg_fatal("expected the old tablespace file to "
+			         "contain a tablespace entry for tablespace oid = %u\n",
+			         tablespace_oid);
+		default:
+			pg_fatal("unknown get tablespace path response\n");
+	}
+}
 
 /*
  * get_rel_infos()
@@ -674,20 +697,11 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 		{
 			bool is_old_cluster = old_cluster.major_version == cluster->major_version;
 
-			if (is_old_cluster &&
-				!is_old_tablespaces_file_empty(old_cluster.old_tablespace_file_contents))
+			if (is_old_cluster && is_gpdb_version_with_filespaces(&old_cluster))
 			{
-				char tablespace_path[MAXPGPATH];
-
-				char *tablespace_location = old_tablespace_file_get_tablespace_path_for_oid(
-					old_cluster.old_tablespace_file_contents, tablespace_oid);
-
-				snprintf(tablespace_path, sizeof(tablespace_path), "%s/%u",
-						 tablespace_location, 
-						 tablespace_oid);
-
-				tablespace = tablespace_path;
-				Assert(tablespace != NULL);
+				tablespace = get_tablespace_path_for_old_cluster(
+					old_cluster.old_tablespace_file_contents,
+					tablespace_oid);
 			}
 			else {
 				/*

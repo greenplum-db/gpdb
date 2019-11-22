@@ -1,13 +1,11 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
 #include <string.h>
+#include <stdbool.h>
+#include <sys/stat.h>
+#include <stdlib.h>
 
-#include "cmockery.h"
+#include "cmockery_gp.h"
+
 #include "libpq-fe.h"
-#include "stdbool.h"
-#include "stdlib.h"
-#include "sys/stat.h"
 
 #include "utilities/gpdb5-cluster.h"
 #include "utilities/gpdb6-cluster.h"

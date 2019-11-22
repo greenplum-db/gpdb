@@ -1,10 +1,6 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
+#include "cmockery_gp.h"
 
 #include "bdd-library/bdd.h"
-
-#include "cmockery.h"
 
 #include "live_check.h"
 #include "utilities/gpdb5-cluster.h"
@@ -40,8 +36,7 @@ static void
 noWarningMessagesShouldBeOutputThatTheServerIsStillRunning(void)
 {
 	assert_string_does_not_contain("*failure*", upgradeCheckOutput());
-	assert_int_equal(upgradeCheckStatus(), 0);
-
+	assert_true(upgradeReturnedSuccess());
 }
 
 void

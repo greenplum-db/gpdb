@@ -14,7 +14,8 @@ OBJS = check.o controldata.o dump.o exec.o file.o function.o info.o \
 OBJS += aotable.o gpdb4_heap_convert.o version_gp.o \
         check_gp.o file_gp.o reporting.o aomd_filehandler.o \
         old_tablespace_file_contents.o old_tablespace_file_parser.o \
-        tablespace_gp.o old_tablespace_file_parser_observer.o
+        tablespace_gp.o old_tablespace_file_parser_observer.o \
+        info_gp.o
 
 PG_CPPFLAGS  = -DFRONTEND -DDLSUFFIX=\"$(DLSUFFIX)\" -I$(srcdir) -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)
