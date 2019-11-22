@@ -5665,6 +5665,9 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 	int			i_ptcname;
 	int			i_rolname;
 	int			i_ptcacl;
+	int			i_ptcracl;
+	int			i_ptcinitacl;
+	int			i_ptcinitracl;
 	int			i_ptctrusted;
 	int 		i_ptcreadid;
 	int			i_ptcwriteid;
@@ -5672,17 +5675,63 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 
 	/* find all user-defined external protocol */
 
-	appendPQExpBuffer(query, "SELECT ptc.tableoid as tableoid, "
-							 "       ptc.oid as oid, "
-							 "       ptc.ptcname as ptcname, "
-							 "       ptcreadfn as ptcreadoid, "
-							 "       ptcwritefn as ptcwriteoid, "
-							 "		 ptcvalidatorfn as ptcvaloid, "
-							 "       (%s ptc.ptcowner) as rolname, "
-							 "       ptc.ptctrusted as ptctrusted, "
-							 "       ptc.ptcacl as ptcacl "
-							 "FROM   pg_extprotocol ptc",
-									 username_subquery);
+
+	if (fout->remoteVersion >= 90600)
+	{
+		PQExpBuffer acl_subquery = createPQExpBuffer();
+		PQExpBuffer racl_subquery = createPQExpBuffer();
+		PQExpBuffer initacl_subquery = createPQExpBuffer();
+		PQExpBuffer initracl_subquery = createPQExpBuffer();
+
+		buildACLQueries(acl_subquery, racl_subquery, initacl_subquery,
+						initracl_subquery, "ptc.ptcacl", "ptc.ptcowner", "'E'",
+						fout->dopt->binary_upgrade);
+
+		appendPQExpBuffer(query, "SELECT ptc.tableoid as tableoid, "
+								 "       ptc.oid as oid, "
+								 "       ptc.ptcname as ptcname, "
+								 "       ptcreadfn as ptcreadoid, "
+								 "       ptcwritefn as ptcwriteoid, "
+								 "		 ptcvalidatorfn as ptcvaloid, "
+								 "       (%s ptc.ptcowner) as rolname, "
+								 "       ptc.ptctrusted as ptctrusted, "
+								 "       %s AS ptcacl, "
+								 "       %s AS ptcracl, "
+								 "       %s AS ptcinitacl, "
+								 "       %s AS ptcinitracl "
+								 "FROM   pg_extprotocol ptc "
+								 "LEFT JOIN pg_init_privs pip ON "
+								 "		 (ptc.oid = pip.objoid "
+								 "		 AND pip.classoid = 'pg_extprotocol'::regclass "
+								 "		 AND pip.objsubid = 0)",
+										 username_subquery,
+										 acl_subquery->data,
+										 racl_subquery->data,
+										 initacl_subquery->data,
+										 initracl_subquery->data);
+
+		destroyPQExpBuffer(acl_subquery);
+		destroyPQExpBuffer(racl_subquery);
+		destroyPQExpBuffer(initacl_subquery);
+		destroyPQExpBuffer(initracl_subquery);
+	}
+	else
+	{
+		appendPQExpBuffer(query, "SELECT ptc.tableoid as tableoid, "
+								 "       ptc.oid as oid, "
+								 "       ptc.ptcname as ptcname, "
+								 "       ptcreadfn as ptcreadoid, "
+								 "       ptcwritefn as ptcwriteoid, "
+								 "		 ptcvalidatorfn as ptcvaloid, "
+								 "       (%s ptc.ptcowner) as rolname, "
+								 "       ptc.ptctrusted as ptctrusted, "
+								 "       ptc.ptcacl as ptcacl, "
+								 "       NULL as ptcracl, "
+								 "       NULL as ptcinitacl, "
+								 "       NULL as ptcinitracl "
+								 "FROM   pg_extprotocol ptc",
+										 username_subquery);
+	}
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -5696,6 +5745,9 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 	i_ptcname = PQfnumber(res, "ptcname");
 	i_rolname = PQfnumber(res, "rolname");
 	i_ptcacl = PQfnumber(res, "ptcacl");
+	i_ptcracl = PQfnumber(res, "ptcracl");
+	i_ptcinitacl = PQfnumber(res, "ptcinitacl");
+	i_ptcinitracl = PQfnumber(res, "ptcinitracl");
 	i_ptctrusted = PQfnumber(res, "ptctrusted");
 	i_ptcreadid = PQfnumber(res, "ptcreadoid");
 	i_ptcwriteid = PQfnumber(res, "ptcwriteoid");
@@ -5730,6 +5782,9 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 			ptcinfo[i].ptcvalidid = atooid(PQgetvalue(res, i, i_ptcvalidid));
 
 		ptcinfo[i].ptcacl = pg_strdup(PQgetvalue(res, i, i_ptcacl));
+		ptcinfo[i].rproacl = pg_strdup(PQgetvalue(res, i, i_ptcracl));
+		ptcinfo[i].initproacl = pg_strdup(PQgetvalue(res, i, i_ptcinitacl));
+		ptcinfo[i].initrproacl = pg_strdup(PQgetvalue(res, i, i_ptcinitracl));
 		ptcinfo[i].ptctrusted = *(PQgetvalue(res, i, i_ptctrusted)) == 't';
 
 		/* Decide whether we want to dump it */
@@ -14463,14 +14518,12 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 
 	/* Handle the ACL */
 	namecopy = pg_strdup(fmtId(ptcinfo->dobj.name));
-#if 0
-	/* GPDB_96_MERGE_FIXME: missing acl related parameters */
 	dumpACL(fout, ptcinfo->dobj.catId, ptcinfo->dobj.dumpId,
 			"PROTOCOL",
 			namecopy, NULL,
 			NULL, ptcinfo->ptcowner,
-			ptcinfo->ptcacl);
-#endif
+			ptcinfo->ptcacl, ptcinfo->rproacl,
+			ptcinfo->initproacl, ptcinfo->initrproacl);
 	free(namecopy);
 
 	destroyPQExpBuffer(q);

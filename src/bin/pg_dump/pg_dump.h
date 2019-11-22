@@ -255,6 +255,9 @@ typedef struct _ptcInfo
 	char	   *ptcwritefn;
 	char	   *ptcowner;
 	char	   *ptcacl;
+	char	   *rproacl;
+	char	   *initproacl;
+	char	   *initrproacl;
 	bool	   ptctrusted;
 	Oid		   ptcreadid;
 	Oid		   ptcwriteid;
