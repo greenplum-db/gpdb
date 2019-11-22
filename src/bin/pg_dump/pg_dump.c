@@ -111,10 +111,6 @@ int			postDataSchemaOnly;
 /* subquery used to convert user ID (eg, datdba) to user name */
 static const char *username_subquery;
 
-/* GPDB_96_MERGE_FIXME: is the following still needed? */
-/* obsolete as of 7.3: */
-static Oid	g_last_builtin_oid pg_attribute_unused(); /* value of the last builtin oid */
-
 /* The specified names/patterns should to match at least one entity */
 static int	strict_names = 0;
 
@@ -10049,8 +10045,8 @@ dumpExtension(Archive *fout, ExtensionInfo *extinfo)
 		/*
 		 * We unconditionally create the extension, so we must drop it if it
 		 * exists.  This could happen if the user deleted 'plpgsql' and then
-		 * readded it, causing its oid to be greater than g_last_builtin_oid.
-		 * The g_last_builtin_oid test was kept to avoid repeatedly dropping
+		 * readded it, causing its oid to be greater than FirstNormalObjectId.
+		 * The FirstNormalObjectId test was kept to avoid repeatedly dropping
 		 * and recreating extensions like 'plpgsql'.
 		 */
 		appendPQExpBuffer(q, "DROP EXTENSION IF EXISTS %s;\n", qextname);
