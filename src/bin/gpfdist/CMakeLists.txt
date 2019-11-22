@@ -3,11 +3,8 @@ project(gpfdist)
 
 set(GPDB_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../)
 
-add_definitions("/D FRONTEND")
-
 set (CPPFLAGS "/MP /wd4996 /wd4018 /wd4090 /wd4102 /wd4244 /wd4267 /wd4273 /wd4715")
 add_definitions("${CPPFLAGS}")
-
 
 set(HEADER_DIRS
     ${GPDB_SRC_DIR}/src/include
@@ -32,6 +29,8 @@ add_executable(gpfdist gpfdist.c gpfdist_helper.c
     ${GPDB_SRC_DIR}/src/backend/utils/misc/fstream/gfile.c
     ${GPDB_SRC_DIR}/src/backend/utils/misc/fstream/fstream.c
     ${GPDB_SRC_DIR}/src/port/glob.c)
+
+SET_SOURCE_FILES_PROPERTIES(gpfdist.c ${GPDB_SRC_DIR}/src/backend/utils/misc/fstream/gfile.c PROPERTIES COMPILE_DEFINITIONS "FRONTEND")
 
 include(FindOpenSSL)
 if (OPENSSL_FOUND)
