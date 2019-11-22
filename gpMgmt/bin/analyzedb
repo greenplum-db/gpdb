@@ -1015,8 +1015,11 @@ def construct_entries_from_dict_colstate(prev_col_dict):
 def compare_metadata(old_pgstatoperations, cur_pgstatoperations):
     diffs = set()
     for operation in cur_pgstatoperations:
-        if (operation[2], operation[3]) not in old_pgstatoperations \
-                or old_pgstatoperations[(operation[2], operation[3])] != operation:
+        # operation[0] and [1] give the schema and table name respectively
+        # operation[3] gives the staactionname
+        # all three are required to create a unique key for a specific operation
+        if (operation[0], operation[1], operation[3]) not in old_pgstatoperations \
+                or old_pgstatoperations[(operation[0], operation[1], operation[3])] != operation:
             diffs.add((operation[0], operation[1]))
     return diffs
 
@@ -1024,7 +1027,7 @@ def compare_metadata(old_pgstatoperations, cur_pgstatoperations):
 def get_pgstatlastoperations_dict(last_operations):
     last_operations_dict = {}
     for operation in last_operations:
-        last_operations_dict[(str(operation[2]), operation[3])] = operation
+        last_operations_dict[(operation[0], operation[1], operation[3])] = operation
     return last_operations_dict
 
 

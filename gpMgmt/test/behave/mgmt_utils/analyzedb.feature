@@ -1774,3 +1774,18 @@ Feature: Incrementally analyze the database
           |  stadistinct  |
           |  -0.75         |
         And the user runs "psql -d incr_analyze -c 'drop table foo'"
+
+    Scenario: analyzedb correctly identifies dirty tables after a rename
+        Given no state files exist for database "incr_analyze"
+        And the user runs "psql -d incr_analyze -c 'create table foo (a int, b int) with (appendonly=true)'"
+        And the user runs "psql -d incr_analyze -c 'truncate table foo'"
+        And the user runs "analyzedb -a -d incr_analyze -t public.foo"
+        Then analyzedb should print "-public.foo" to stdout
+        And the user runs "psql -d incr_analyze -c 'alter table foo rename to jazz'"
+        And the user runs "psql -d incr_analyze -c 'truncate table jazz'"
+        And the user runs "analyzedb -a -d incr_analyze -t public.jazz"
+        Then analyzedb should print "-public.jazz" to stdout
+        And "public.jazz" should appear in the latest state files
+        When the user runs "analyzedb -a -d incr_analyze -t public.jazz"
+        Then analyzedb should print "There are no tables or partitions to be analyzed" to stdout
+        And the user runs "psql -d incr_analyze -c 'drop table jazz'"
