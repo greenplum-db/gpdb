@@ -300,10 +300,10 @@ parseCommandLine(int argc, char *argv[])
 		pg_log(PG_FATAL, "Adding and removing checksums only supported in copy mode.\n");
 
 	if (old_cluster.gp_dbid == GP_DBID_NOT_SET)
-		pg_fatal("--old-gp-dbid must be set");
+		pg_fatal("--old-gp-dbid must be set\n");
 
 	if (new_cluster.gp_dbid == GP_DBID_NOT_SET)
-		pg_fatal("--new-gp-dbid must be set");
+		pg_fatal("--new-gp-dbid must be set\n");
 
 	if (user_opts.old_tablespace_file_path) {
 		populate_old_cluster_with_old_tablespaces(
