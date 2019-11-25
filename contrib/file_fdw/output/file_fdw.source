@@ -50,7 +50,7 @@ ERROR:  COPY delimiter must not appear in the NULL specification
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '-', quote '-');    -- ERROR
 ERROR:  delimiter and quote must be different
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '---');     -- ERROR
-ERROR:  COPY delimiter must be a single one-byte character
+ERROR:  delimiter must be a single one-byte character, or 'off'
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', quote '---');         -- ERROR
 ERROR:  quote must be a single one-byte character
 CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', escape '---');        -- ERROR
