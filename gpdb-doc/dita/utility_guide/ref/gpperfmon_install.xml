@@ -211,15 +211,6 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
             corresponding history files. The default is 120. The minimum value is 30. </stentry>
         </strow>
         <strow>
-          <stentry>ignore_qexec_packet</stentry>
-          <stentry>(Deprecated) When set to true, data collection agents do not collect performance
-            data in the <codeph>gpperfmon</codeph> database <codeph>queries_*</codeph> tables:
-              <codeph>rows_out</codeph>, <codeph>cpu_elapsed</codeph>, <codeph>cpu_currpct</codeph>,
-              <codeph>skew_cpu</codeph>, and <codeph>skew_rows</codeph>. The default setting, true,
-            reduces the amount of memory consumed by the <codeph>gpmmon</codeph> process. Set this
-            parameter to false if you require this additional performance data.</stentry>
-        </strow>
-        <strow>
           <stentry>smdw_aliases</stentry>
           <stentry>This parameter allows you to specify additional host names for the standby
             master. For example, if the standby master has two NICs, you can
