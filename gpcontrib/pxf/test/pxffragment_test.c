@@ -5,6 +5,7 @@
 
 #include "postgres.h"
 #include "utils/memutils.h"
+#include "cdb/cdbvars.h"
 
 /* Define UNIT_TESTING so that the extension can skip declaring PG_MODULE_MAGIC */
 #define UNIT_TESTING
@@ -23,7 +24,7 @@
 
 /* helper functions */
 static List *prepare_fragment_list(int fragtotal, int sefgindex, int segtotal, int xid);
-static void test_list(int segindex, int segtotal, int xid, int fragtotal, char *expected[], int expected_total);
+static void test_list(int segindex, int segtotal, int session_id, int fragtotal, char *expected[], int expected_total);
 static FragmentData *buildFragment(char *index, char *source, char *userdata, char *metadata, char *profile);
 static bool compareLists(List *list1, List *list2, bool (*compareType) (void *, void *));
 static bool compareString(char *str1, char *str2);
@@ -37,9 +38,9 @@ test_filter_fragments_for_segment(void **state)
 
 	/* 1 fragment */
 	test_list(0, 1, 1, 1, expected_1_1_0, ARRSIZE(expected_1_1_0));
-	/* xid = 1 */
+	/* session_id = 1 */
 	test_list(0, 1, 2, 1, expected_1_1_0, ARRSIZE(expected_1_1_0));
-	/* xid = 2 */
+	/* session_id = 2 */
 
 	char	   *expected_1_2_0[2] = {"0", "1"};
 
@@ -163,36 +164,18 @@ test_filter_fragments_for_segment(void **state)
 		pfree(expected_message);
 	}
 	PG_END_TRY();
-
-	/* special case -- invalid transaction id */
-	old_context = CurrentMemoryContext;
-	PG_TRY();
-	{
-		test_list(0, 1, 0, 1, NULL, 0);
-		assert_false("Expected Exception");
-	}
-	PG_CATCH();
-	{
-		MemoryContextSwitchTo(old_context);
-		ErrorData  *edata = CopyErrorData();
-
-		assert_true(edata->elevel == ERROR);
-		char	   *expected_message = pstrdup("Cannot get distributed transaction identifier in filter_fragments_for_segment");
-
-		assert_string_equal(edata->message, expected_message);
-		pfree(expected_message);
-	}
-	PG_END_TRY();
 }
 
 static void
-test_list(int segindex, int segtotal, int xid, int fragtotal, char *expected[], int expected_total)
+test_list(int segindex, int segtotal, int session_id, int fragtotal, char *expected[], int expected_total)
 {
 	/* prepare the input list */
-	List	   *list = prepare_fragment_list(fragtotal, segindex, segtotal, xid);
+	List	   *list = prepare_fragment_list(fragtotal, segindex, segtotal, session_id);
 
-	if (list && xid != InvalidDistributedTransactionId)
+	if (list)
+	{
 		will_return(getgpsegmentCount, segtotal);
+	}
 
 	/* filter the list */
 	List	   *filtered = filter_fragments_for_segment(list);
@@ -218,12 +201,11 @@ test_list(int segindex, int segtotal, int xid, int fragtotal, char *expected[], 
 }
 
 static List *
-prepare_fragment_list(int fragtotal, int segindex, int segtotal, int xid)
+prepare_fragment_list(int fragtotal, int segindex, int segtotal, int session_id)
 {
 	GpIdentity.segindex = segindex;
-
-	if (fragtotal > 0)
-		will_return(getDistributedTransactionId, xid);
+	gp_session_id = session_id;
+	gp_command_count = 0;
 
 	List	   *result = NIL;
 

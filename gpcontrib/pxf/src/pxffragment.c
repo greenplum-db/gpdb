@@ -109,7 +109,6 @@ assign_pxf_location_to_fragments(List *fragments)
 		FragmentData *fragment = (FragmentData *) lfirst(frag_c);
 		fragment->authority = get_authority();
 	}
-	return;
 }
 
 /*
@@ -356,20 +355,15 @@ filter_fragments_for_segment(List *list)
 	if (!list)
 		elog(ERROR, "Parameter list is null in filter_fragments_for_segment");
 
-	DistributedTransactionId xid = getDistributedTransactionId();
-
-	if (xid == InvalidDistributedTransactionId)
-		elog(ERROR, "Cannot get distributed transaction identifier in filter_fragments_for_segment");
-
 	/*
 	 * to determine which segment S should process an element at a given index
 	 * I, use a randomized MOD function
 	 *
-	 * S = MOD(I + MOD(XID, N), N)
+	 * S = MOD(I + MOD(gp_session_id, N) + gp_command_count, N)
 	 *
 	 * which ensures more fair work distribution for small lists of just a few
-	 * elements across N segments global transaction ID is used as a
-	 * randomizer, as it is different for every query while being the same
+	 * elements across N segments global session ID and command count is used
+	 * as a randomizer, as it is different for every query while being the same
 	 * across all segments for a given query
 	 */
 
@@ -380,11 +374,11 @@ filter_fragments_for_segment(List *list)
 	int			index = 0;
 	int			frag_index = 1;
 	int			numsegments = getgpsegmentCount();
-	int32		shift = xid % numsegments;
+	int			shift = gp_session_id % numsegments;
 
 	for (current = list_head(list); current != NULL; index++)
 	{
-		if (GpIdentity.segindex == (index + shift) % numsegments)
+		if (GpIdentity.segindex == (index + shift + gp_command_count) % numsegments)
 		{
 			/*
 			 * current segment is the one that should process, keep the
