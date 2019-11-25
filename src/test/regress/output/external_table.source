@@ -4798,3 +4798,6 @@ select numsegments from gp_distribution_policy where localoid = 'ext_w_expand'::
 (1 row)
 
 drop external table ext_w_expand;
+-- Test delimiter off
+CREATE EXTERNAL TABLE test_delimiter(data text) LOCATION('gpfdist://127.0.0.1/test_delimiter.txt') FORMAT 'text' (DELIMITER 'off');
+DROP EXTERNAL TABLE test_delimiter;
