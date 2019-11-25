@@ -9,11 +9,11 @@
 
 
 PGconn *
-connectTo(int port)
+connectTo(int port, char *database_name)
 {
 	char		buffer[1000];
 
-	snprintf(buffer, sizeof(buffer), "dbname=postgres port=%d", port);
+	snprintf(buffer, sizeof(buffer), "dbname=%s port=%d", database_name, port);
 	PGconn	   *connection = PQconnectdb(buffer);
 
 	if (PQstatus(connection) != CONNECTION_OK)

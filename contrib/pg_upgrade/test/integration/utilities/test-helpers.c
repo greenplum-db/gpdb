@@ -23,11 +23,23 @@ resetGpdbSixDataDirectories(void)
 PGconn *
 connectToFive()
 {
-	return connectTo(50000);
+	return connectToFiveOnDatabase("postgres");
+}
+
+PGconn *
+connectToFiveOnDatabase(char *database_name)
+{
+	return connectTo(50000, database_name);
 }
 
 PGconn *
 connectToSix()
 {
-	return connectTo(60000);
+	return connectToSixOnDatabase("postgres");
+}
+
+PGconn *
+connectToSixOnDatabase(char *database_name)
+{
+	return connectTo(60000, database_name);
 }
