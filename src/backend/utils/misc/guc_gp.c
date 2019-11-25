@@ -4763,8 +4763,9 @@ void gpdb_assign_sync_flag(struct config_generic **guc_variables, int size, bool
 			{
 				ereport(ERROR,
 				        (errcode(ERRCODE_INTERNAL_ERROR),
-						 errmsg("predefined guc name: %s contain neither "
-						 "sync_guc_names_array nor unsync_guc_names_array", var->name)));
+						 errmsg("Neither sync_guc_names_array nor "
+								"unsync_guc_names_array contains predefined "
+								"guc name: %s", var->name)));
 			}
 
 			var->flags |= GUC_GPDB_NO_SYNC;
