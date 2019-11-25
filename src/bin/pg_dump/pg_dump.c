@@ -1568,8 +1568,6 @@ expand_table_name_patterns(Archive *fout,
 		 * would be unnecessary given a pg_table_is_visible() variant taking a
 		 * search_path argument.
 		 */
-		if (cell != patterns->head)
-			appendPQExpBufferStr(query, "UNION ALL\n");
 		appendPQExpBuffer(query,
 						  "SELECT c.oid"
 						  "\nFROM pg_catalog.pg_class c"
