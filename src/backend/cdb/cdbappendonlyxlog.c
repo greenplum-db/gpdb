@@ -107,6 +107,7 @@ ao_insert_replay(XLogReaderState *record)
 						path)));
 	}
 
+	/* Temp table should not have xlog so there is no need to check that. */
 	if (!ForwardFsyncRequest(xlrec->target.node, MAIN_FORKNUM, xlrec->target.segment_filenum, true))
 	{
 		if (FileSync(file) != 0)

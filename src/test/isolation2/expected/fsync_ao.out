@@ -1,6 +1,7 @@
 -- This test validates that AO tables are sync'ed by checkpoint.
 -- It simulates the following scenario.
 --
+--   * Quickly test temp table should work fine with the fsync mechanism on ao/co (ignored).
 --   * Start with a clean slate - ensure that all files are flushed by checkpointer.
 --   * Write two tables (one is ao and another is aoco).
 --   * Resume checkpointer and let it fsync the two dirty AO relations and their auxiliary tables.
@@ -17,36 +18,56 @@
 -- Set fsync on since we need to test the fsync code logic.
 !\retcode gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation;
 -- start_ignore
-20191122:22:33:57:007304 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation'
+20191125:15:13:39:014921 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation'
 
 -- end_ignore
 (exited with code 0)
 !\retcode gpconfig -c fsync -v on --skipvalidation;
 -- start_ignore
-20191122:22:33:58:007440 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c fsync -v on --skipvalidation'
+20191125:15:13:39:015057 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-c fsync -v on --skipvalidation'
 
 -- end_ignore
 (exited with code 0)
 !\retcode gpstop -u;
 -- start_ignore
-20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
-20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
-20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
-20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
-20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5193.g47b7daada9 build dev'
-20191122:22:33:58:007576 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
+20191125:15:13:39:015193 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
+20191125:15:13:39:015193 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
+20191125:15:13:39:015193 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
+20191125:15:13:39:015193 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
+20191125:15:13:40:015193 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5194.gdf0771325b build dev'
+20191125:15:13:40:015193 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
 
 -- end_ignore
 (exited with code 0)
+
+-- Quicly test that temp table should work fine with the fsync mechanism on ao/co.
+create temp table t_fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
+CREATE
+create temp table t_fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
+CREATE
+insert into t_fsync_ao select i, i from generate_series(1,10)i;
+INSERT 10
+insert into t_fsync_co select i, i from generate_series(1,10)i;
+INSERT 10
+checkpoint;
+CHECKPOINT
+drop table t_fsync_ao;
+DROP
+drop table t_fsync_co;
+DROP
+checkpoint;
+CHECKPOINT
+
+-- Below are all tests for normal tables.
 
 create table fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
 CREATE
 create table fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
 CREATE
-insert into fsync_ao select i, i from generate_series(1,20)i;
-INSERT 20
-insert into fsync_co select i, i from generate_series(1,20)i;
-INSERT 20
+insert into fsync_ao select i, i from generate_series(1,10)i;
+INSERT 10
+insert into fsync_co select i, i from generate_series(1,10)i;
+INSERT 10
 
 -- Reset all faults.
 -- Note: we use gp_inject_fault_infinite here instead of
@@ -93,10 +114,10 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 1, dbid) from gp_segme
 
 -- Write ao and co data files including aoseg & gp_fastsequence.
 -- These should be fsync-ed by checkpoint & restartpoint.
-insert into fsync_ao select i, i from generate_series(1,20)i;
-INSERT 20
-insert into fsync_co select i, i from generate_series(1,20)i;
-INSERT 20
+insert into fsync_ao select i, i from generate_series(1,10)i;
+INSERT 10
+insert into fsync_co select i, i from generate_series(1,10)i;
+INSERT 10
 
 -- Inject fault to count relfiles fsync'ed by checkpointer on primary as well
 -- as mirror.
@@ -132,8 +153,8 @@ select gp_inject_fault('fsync_counter', 'status', dbid) from gp_segment_configur
 -- Checkpoint after drop table should be successful. It validates that the drop
 -- removed the fsync requests enqued by the previous insert from
 -- pendingOpsTable.
-insert into fsync_co select i, i from generate_series(1,20)i;
-INSERT 20
+insert into fsync_co select i, i from generate_series(1,10)i;
+INSERT 10
 drop table fsync_co;
 DROP
 checkpoint;
@@ -153,14 +174,14 @@ create table fsync_co(a int, b int) with (appendoptimized = true, orientation = 
 CREATE
 1: begin;
 BEGIN
-1: insert into fsync_ao select i, i from generate_series(1,20)i;
-INSERT 20
-1: insert into fsync_co select i, i from generate_series(1,20)i;
-INSERT 20
-insert into fsync_ao select i, i from generate_series(1,20)i;
-INSERT 20
-insert into fsync_co select i, i from generate_series(1,20)i;
-INSERT 20
+1: insert into fsync_ao select i, i from generate_series(1,10)i;
+INSERT 10
+1: insert into fsync_co select i, i from generate_series(1,10)i;
+INSERT 10
+insert into fsync_ao select i, i from generate_series(1,10)i;
+INSERT 10
+insert into fsync_co select i, i from generate_series(1,10)i;
+INSERT 10
 1: end;
 END
 -- expect two segment files for each table (ao table) or each column (co table).
@@ -200,10 +221,10 @@ CREATE
 CREATE
 2:@db_name fsync_ao_db: create table fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
 CREATE
-2:@db_name fsync_ao_db: insert into fsync_ao select i, i from generate_series(1,20)i;
-INSERT 20
-2:@db_name fsync_ao_db: insert into fsync_co select i, i from generate_series(1,20)i;
-INSERT 20
+2:@db_name fsync_ao_db: insert into fsync_ao select i, i from generate_series(1,10)i;
+INSERT 10
+2:@db_name fsync_ao_db: insert into fsync_co select i, i from generate_series(1,10)i;
+INSERT 10
 2q: ... <quitting>
 drop database fsync_ao_db;
 DROP
@@ -226,24 +247,24 @@ select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where
 
 !\retcode gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
 -- start_ignore
-20191122:22:34:01:007650 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r create_restartpoint_on_ckpt_record_replay --skipvalidation'
+20191125:15:13:43:015266 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r create_restartpoint_on_ckpt_record_replay --skipvalidation'
 
 -- end_ignore
 (exited with code 0)
 !\retcode gpconfig -r fsync --skipvalidation;
 -- start_ignore
-20191122:22:34:01:007786 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r fsync --skipvalidation'
+20191125:15:13:43:015402 gpconfig:host67:pguo-[INFO]:-completed successfully with parameters '-r fsync --skipvalidation'
 
 -- end_ignore
 (exited with code 0)
 !\retcode gpstop -u;
 -- start_ignore
-20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
-20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
-20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
-20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
-20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5193.g47b7daada9 build dev'
-20191122:22:34:01:007922 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
+20191125:15:13:44:015538 gpstop:host67:pguo-[INFO]:-Starting gpstop with args: -u
+20191125:15:13:44:015538 gpstop:host67:pguo-[INFO]:-Gathering information and validating the environment...
+20191125:15:13:44:015538 gpstop:host67:pguo-[INFO]:-Obtaining Greenplum Master catalog information
+20191125:15:13:44:015538 gpstop:host67:pguo-[INFO]:-Obtaining Segment details from master...
+20191125:15:13:44:015538 gpstop:host67:pguo-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5194.gdf0771325b build dev'
+20191125:15:13:44:015538 gpstop:host67:pguo-[INFO]:-Signalling all postmaster processes to reload
 
 -- end_ignore
 (exited with code 0)

@@ -491,7 +491,9 @@ AppendOnlyStorageWrite_CloseFile(
 							   fileLen_uncompressed,
 							   storageWrite->needsWAL);
 
-	if (!ForwardFsyncRequest(storageWrite->relFileNode.node, MAIN_FORKNUM, storageWrite->segmentFileNum, true))
+	if (!RelFileNodeBackendIsTemp(storageWrite->relFileNode) &&
+		!ForwardFsyncRequest(storageWrite->relFileNode.node, MAIN_FORKNUM,
+							storageWrite->segmentFileNum, true))
 	{
 		/*
 		 * We must take care of fsynching to disk ourselves since the fd API won't
