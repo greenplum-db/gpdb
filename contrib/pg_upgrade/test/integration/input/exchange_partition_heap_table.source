@@ -5,7 +5,7 @@ CREATE TABLE replacement(LIKE table_part) DISTRIBUTED BY (a);
 ALTER TABLE table_part EXCHANGE PARTITION part1 WITH TABLE replacement;
 CREATE TABLE dependant(d table_part_1_prt_part1[]);
 
-! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
+! ./gpdb6/bin/pg_upgrade --mode=dispatcher --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
 -- start_ignore
 -- end_ignore
 

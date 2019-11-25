@@ -23,9 +23,10 @@ INSERT 2
 ALTER TABLE p_different_aligned_column ALTER PARTITION p_part_with_different_alignedd_dropped_columns EXCHANGE PARTITION subpart_differnt_aligned_column WITH TABLE subpart_differnt_aligned_column;
 ALTER
 
-! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
+! ./gpdb6/bin/pg_upgrade --mode=dispatcher --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
 Performing Consistency Checks on Old Live Server
 ------------------------------------------------
+Creating a dump of all tablespace metadata.                 ok
 Checking for heterogeneous partitioned tables               fatal
 
 | Your installation contains heterogenous partitioned tables

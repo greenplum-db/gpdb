@@ -596,7 +596,6 @@ void populate_gpdb6_cluster_tablespace_suffix(ClusterInfo *cluster);
 bool is_gpdb_version_with_filespaces(ClusterInfo *cluster);
 
 
-
 /* server.c */
 
 PGconn	   *connectToServer(ClusterInfo *cluster, const char *db_name);

@@ -9,7 +9,7 @@ ALTER TABLE p_different_size_column DROP COLUMN b;
 ALTER TABLE subpart_differnt_size_column DROP COLUMN b;
 ALTER TABLE p_different_size_column ALTER PARTITION p_part_with_different_sized_dropped_columns EXCHANGE PARTITION subpart_differnt_size_column WITH TABLE subpart_differnt_size_column;
 
-! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
+! ./gpdb6/bin/pg_upgrade --mode=dispatcher --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
 -- start_ignore
 -- end_ignore
 

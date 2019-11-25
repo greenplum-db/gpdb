@@ -13,72 +13,80 @@
 static char *
 get_generated_old_tablespaces_file_path(void)
 {
-	char current_working_directory[MAXPGPATH];
+    char current_working_directory[MAXPGPATH];
 
-	char *result = getcwd(current_working_directory, sizeof(current_working_directory));
+    char *result = getcwd(current_working_directory,
+                          sizeof(current_working_directory));
 
-	if (result == NULL)
-		pg_fatal("could not determine current working directory");
+    if (result == NULL)
+        pg_fatal("could not determine current working directory");
 
-	return psprintf("%s/%s", current_working_directory, OLD_TABLESPACES_FILE);
-}
-
-bool
-is_gpdb_version_with_filespaces(ClusterInfo *cluster)
-{
-	return GET_MAJOR_VERSION(cluster->major_version) < 904;
+    return psprintf("%s/%s", current_working_directory, OLD_TABLESPACES_FILE);
 }
 
 static void
-dump_old_tablespaces(ClusterInfo *oldCluster, char *generated_old_tablespaces_file_path)
+dump_old_tablespaces(ClusterInfo *oldCluster,
+                     char *generated_old_tablespaces_file_path)
 {
-	if (!is_gpdb_version_with_filespaces(oldCluster))
-		return;
+    if (!is_gpdb_version_with_filespaces(oldCluster))
+        return;
 
-	prep_status("Creating a dump of all tablespace metadata.");
+    prep_status("Creating a dump of all tablespace metadata.");
 
-	PGconn *connection = connectToServer(oldCluster, "template1");
+    PGconn *connection = connectToServer(oldCluster, "template1");
 
-	PGresult *result = executeQueryOrDie(connection, "copy ("
-	                                                 "    select fsedbid, pg_tablespace.oid, spcname, fselocation "
-	                                                 "    from pg_filespace_entry "
-	                                                 "    inner join pg_tablespace on fsefsoid = spcfsoid "
-	                                                 "    where spcname not in ("
-	                                                 "        'pg_default', 'pg_global') "
-	                                                 ") to '%s' WITH CSV", generated_old_tablespaces_file_path);
-	PQclear(result);
+    PGresult *result = executeQueryOrDie(connection,
+                                         "copy ("
+                                         "    select fsedbid, pg_tablespace.oid as tablespace_oid, spcname, fselocation "
+                                         "    from pg_filespace_entry "
+                                         "    inner join pg_tablespace on fsefsoid = spcfsoid "
+                                         "    where spcname not in ("
+                                         "        'pg_default', 'pg_global') "
+                                         ") to '%s' WITH CSV",
+                                         generated_old_tablespaces_file_path);
+    PQclear(result);
 
-	PQfinish(connection);
+    PQfinish(connection);
 
-	check_ok();
+    check_ok();
 }
 
 void
 generate_old_tablespaces_file(ClusterInfo *oldCluster)
 {
-	char *generated_old_tablespaces_file_path = get_generated_old_tablespaces_file_path();
-	dump_old_tablespaces(oldCluster, generated_old_tablespaces_file_path);
-	populate_old_cluster_with_old_tablespaces(oldCluster, generated_old_tablespaces_file_path);
-	pfree(generated_old_tablespaces_file_path);
+    char *generated_old_tablespaces_file_path =
+                 get_generated_old_tablespaces_file_path();
+    dump_old_tablespaces(oldCluster, generated_old_tablespaces_file_path);
+    populate_old_cluster_with_old_tablespaces(oldCluster,
+                                              generated_old_tablespaces_file_path);
+    pfree(generated_old_tablespaces_file_path);
 }
 
 void
-populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster, const char *const file_path)
+populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster,
+                                          const char *const file_path)
 {
-	OldTablespaceFileContents *contents = parse_old_tablespace_file_contents(
-		file_path);
+    OldTablespaceFileContents *contents = parse_old_tablespace_file_contents(
+            file_path);
 
-	oldCluster->old_tablespace_file_contents = filter_old_tablespace_file_for_dbid(
-		contents,
-		oldCluster->gp_dbid);
+    oldCluster->old_tablespace_file_contents =
+            filter_old_tablespace_file_for_dbid(
+                    contents,
+                    oldCluster->gp_dbid);
 
-	clear_old_tablespace_file_contents(contents);
+    clear_old_tablespace_file_contents(contents);
 }
 
 void
 populate_gpdb6_cluster_tablespace_suffix(ClusterInfo *cluster)
 {
-	cluster->tablespace_suffix = psprintf("/%d/GPDB_6_%d",
-	                                      cluster->gp_dbid,
-	                                      cluster->controldata.cat_ver);
+    cluster->tablespace_suffix = psprintf("/%d/GPDB_6_%d",
+                                          cluster->gp_dbid,
+                                          cluster->controldata.cat_ver);
+}
+
+bool
+is_gpdb_version_with_filespaces(ClusterInfo *cluster)
+{
+    return GET_MAJOR_VERSION(cluster->major_version) < 904;
 }

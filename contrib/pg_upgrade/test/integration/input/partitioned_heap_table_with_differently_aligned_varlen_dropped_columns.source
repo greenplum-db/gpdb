@@ -13,7 +13,7 @@ INSERT INTO varlena_first VALUES (1, 1.987654321, 1), (2, 2.3456789, 2);
 ALTER TABLE varlena_first DROP COLUMN b;
 ALTER TABLE p_diff_aligned_varlena ALTER PARTITION varlena EXCHANGE PARTITION varlena_first WITH TABLE varlena_first;
 
-! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
+! ./gpdb6/bin/pg_upgrade --mode=dispatcher --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
 -- start_ignore
 -- end_ignore
 

@@ -76,7 +76,7 @@ parseCommandLine(int argc, char *argv[])
 
 	user_opts.transfer_mode = TRANSFER_MODE_COPY;
 	user_opts.old_tablespace_file_path = NULL;
-	
+
 	old_cluster.gp_dbid = GP_DBID_NOT_SET;
 	new_cluster.gp_dbid = GP_DBID_NOT_SET;
 	old_cluster.old_tablespace_file_contents = NULL;

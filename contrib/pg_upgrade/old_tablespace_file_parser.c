@@ -78,6 +78,14 @@ make_document(int number_of_rows)
 	return document;
 }
 
+/*
+ * OldTablespaceFileParser_parse_file
+ *
+ * expects file to have the fields without a header:
+ *
+ * [dbid],[tablespace oid],[tablespace name],[path]
+ *
+ */
 OldTablespaceFileParser_Document *
 OldTablespaceFileParser_parse_file(FILE *file)
 {

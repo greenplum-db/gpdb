@@ -145,12 +145,6 @@ OldTablespaceFileContents_GetTablespaceRecord(OldTablespaceFileContents *content
 	return NULL;
 }
 
-/*
- * expects file to have the fields:
- * 
- * [dbid],[tablespace oid],[tablespace name],[path]
- * 
- */
 OldTablespaceFileContents *
 parse_old_tablespace_file_contents(const char *const file_path)
 {

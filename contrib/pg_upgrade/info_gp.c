@@ -59,3 +59,4 @@ gp_get_tablespace_path(OldTablespaceFileContents *oldTablespaceFileContents, Oid
 
 	return found_in_file(tablespace_path, tablespace_oid);
 }
+
