@@ -690,7 +690,8 @@ SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('segment_reject
           relname          |            filename            | bytenum |                     errmsg                      
 ---------------------------+--------------------------------+---------+-------------------------------------------------
  segment_reject_limit_from | /tmp/segment_reject_limit1.csv |         | invalid input syntax for integer: "a", column b
-(1 row)
+ segment_reject_limit_from | /tmp/segment_reject_limit1.csv |         | invalid input syntax for integer: "b", column b
+(2 rows)
 
 -- not exceed reject limit on segment
 COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 3 rows;

@@ -144,13 +144,6 @@ HandleSingleRowError(CdbSreh *cdbsreh)
 	cdbsreh->rejectcount++;
 
 	/*
-	 * if reached the segment reject limit don't do anything. (this will get
-	 * checked and handled later on by the caller).
-	 */
-	if (IsRejectLimitReached(cdbsreh))
-		return;
-
-	/*
 	 * If not specified table or file, do nothing.  Otherwise, record the
 	 * error: QD - send the bad data row to a random QE (via roundrobin). QE -
 	 * log the error in the error log file.
@@ -162,8 +155,6 @@ HandleSingleRowError(CdbSreh *cdbsreh)
 
 		ErrorLogWrite(cdbsreh);
 	}
-
-	return;						/* OK */
 }
 
 /*

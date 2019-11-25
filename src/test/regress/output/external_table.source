@@ -715,7 +715,7 @@ SELECT * from exttab_insert_1 order by i;
 SELECT count(*) from gp_read_error_log('exttab_basic_5');
  count 
 -------
-     4
+     5
 (1 row)
 
 -- CTAS
@@ -772,7 +772,7 @@ LINE 1: SELECT * from exttab_ctas_2 order by i;
 SELECT count(*) from gp_read_error_log('exttab_basic_7');
  count 
 -------
-     4
+     5
 (1 row)
 
 -- Drop external table gets rid off error logs
@@ -856,7 +856,7 @@ CONTEXT:  External table exttab_cte_2, line 7 of file://@hostname@@abs_srcdir@/d
 select count(*) from gp_read_error_log('exttab_cte_2');
  count 
 -------
-     1
+     2
 (1 row)
 
 -- start_ignore
@@ -940,7 +940,7 @@ SET ROLE exttab_superuser;
 SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_2');
  count 
 -------
-     1
+     2
 (1 row)
 
 SELECT gp_truncate_error_log('*');
@@ -2353,7 +2353,7 @@ CONTEXT:  External table exttab_limit_2, line 7 of file://@hostname@@abs_srcdir@
 SELECT count(*) FROM gp_read_error_log('exttab_limit_2');
  count 
 -------
-     1
+     2
 (1 row)
 
 SELECT gp_truncate_error_log('exttab_limit_1');
