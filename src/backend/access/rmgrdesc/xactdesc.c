@@ -366,12 +366,18 @@ xact_desc_assignment(StringInfo buf, xl_xact_assignment *xlrec)
 static void
 xact_desc_prepare(StringInfo buf, uint8 info, TwoPhaseFileHeader *tpfh)
 {
+	const char *gid;
 	Assert(info == XLOG_XACT_PREPARE);
 
 	appendStringInfo(buf, "at = %s", timestamptz_to_str(tpfh->prepared_at));
 
-	// GPDB_96_MERGE_FIXME: 'gid' is no longer fixed width, got to extract it from after the header
-	//appendStringInfo(buf, "; gid = %s", tpfh->gid);
+	if (tpfh->gidlen > 0)
+	{
+		gid = (const char *)tpfh + MAXALIGN(sizeof(*tpfh));
+		Assert(strlen(gid) == (tpfh->gidlen -1));
+
+		appendStringInfo(buf, "; gid = %*s", tpfh->gidlen - 1, gid);
+	}
 
 	if (tpfh->tablespace_oid_to_delete_on_commit != InvalidOid)
 		appendStringInfo(buf, "; tablespace_oid_to_delete_on_commit = %u", tpfh->tablespace_oid_to_delete_on_commit);
