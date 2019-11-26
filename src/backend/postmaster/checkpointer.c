@@ -110,8 +110,13 @@ typedef struct
 	RelFileNode rnode;
 	ForkNumber	forknum;
 	BlockNumber segno;			/* see md.c for special values */
+	/*
+	 * Is segno a real ao segno but not specially ones like
+	 * FORGET_RELATION_FSYNC. For example for a real relfile like
+	 * /base/16384/50237.129, it should be true and segno should be 129.
+	 */
+	bool		is_ao_segno;
 	/* might add a real request-type field later; not needed yet */
-	bool		is_ao_segno;	/* Is segno a real (i.e. >= 1) ao segno */
 } CheckpointerRequest;
 
 typedef struct
