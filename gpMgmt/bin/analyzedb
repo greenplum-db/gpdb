@@ -672,8 +672,8 @@ class AnalyzeDb(Operation):
                 fp.write("\nanalyzedb finished successfully.\n")
 
     def _get_dirty_lastop_tables(self, curr_last_op, prev_last_op):
-        old_pgstatoperations_dict = get_pgstatlastoperations_dict(prev_last_op)
-        dirty_tables = compare_metadata(old_pgstatoperations_dict, curr_last_op)
+        old_pgstatlastoperation_dict = get_pgstatlastoperation_dict(prev_last_op)
+        dirty_tables = compare_metadata(old_pgstatlastoperation_dict, curr_last_op)
         return dirty_tables
 
     def _get_dirty_ao_state_tables(self, curr_ao_state, prev_ao_state):
@@ -931,17 +931,17 @@ def get_prev_ao_state(timestamp, master_datadir, analyze_dir, dbname):
 
 def get_prev_last_op(timestamp, master_datadir, analyze_dir, dbname):
     logger.debug("getting previous last operation...")
-    old_pgstatoperations_file = generate_statefile_name('lastop', master_datadir, analyze_dir, dbname, timestamp)
-    if not os.path.isfile(old_pgstatoperations_file):
-        old_pgstatoperations = []
+    old_pgstatlastoperation_file = generate_statefile_name('lastop', master_datadir, analyze_dir, dbname, timestamp)
+    if not os.path.isfile(old_pgstatlastoperation_file):
+        old_pgstatlastoperation = []
     else:
-        old_pgstatoperations = get_lines_from_file(old_pgstatoperations_file)
+        old_pgstatlastoperation = get_lines_from_file(old_pgstatlastoperation_file)
     # Parse the lines into tuples like:
     # [('public', 'ao_tab', 67468, 'ALTER', 'ADD COLUMN', '2014-10-15 14:49:27.658777-07'), ...]
     # Each line is a comma-separated string. XXX: This file format cannot deal with names
     # with commas.
     ret = []
-    for l in old_pgstatoperations:
+    for l in old_pgstatlastoperation:
         r = l.split(',')
         tup = (r[0], r[1], r[2], r[3], r[4], r[5])
         ret.append(tup)
@@ -1012,19 +1012,19 @@ def construct_entries_from_dict_colstate(prev_col_dict):
     return ret
 
 
-def compare_metadata(old_pgstatoperations, cur_pgstatoperations):
+def compare_metadata(old_pgstatlastoperation, cur_pgstatlastoperation):
     diffs = set()
-    for operation in cur_pgstatoperations:
+    for operation in cur_pgstatlastoperation:
         # operation[0] and [1] give the schema and table name respectively
         # operation[3] gives the staactionname
         # all three are required to create a unique key for a specific operation
-        if (operation[0], operation[1], operation[3]) not in old_pgstatoperations \
-                or old_pgstatoperations[(operation[0], operation[1], operation[3])] != operation:
+        if (operation[0], operation[1], operation[3]) not in old_pgstatlastoperation \
+                or old_pgstatlastoperation[(operation[0], operation[1], operation[3])] != operation:
             diffs.add((operation[0], operation[1]))
     return diffs
 
 
-def get_pgstatlastoperations_dict(last_operations):
+def get_pgstatlastoperation_dict(last_operations):
     last_operations_dict = {}
     for operation in last_operations:
         last_operations_dict[(operation[0], operation[1], operation[3])] = operation
