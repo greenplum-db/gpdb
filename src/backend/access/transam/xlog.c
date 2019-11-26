@@ -6282,18 +6282,6 @@ StartupXLOG(void)
 		SyncDataDirectory();
 
 	/*
-	 * If we previously crashed, there might be data which we had written,
-	 * intending to fsync it, but which we had not actually fsync'd yet.
-	 * Therefore, a power failure in the near future might cause earlier
-	 * unflushed writes to be lost, even though more recent data written to
-	 * disk from here on would be persisted.  To avoid that, fsync the entire
-	 * data directory.
-	 */
-	if (ControlFile->state != DB_SHUTDOWNED &&
-		ControlFile->state != DB_SHUTDOWNED_IN_RECOVERY)
-		SyncDataDirectory();
-
-	/*
 	 * Initialize on the assumption we want to recover to the latest timeline
 	 * that's active according to pg_control.
 	 */

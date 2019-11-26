@@ -53,8 +53,6 @@ extern int read_local_xlog_page(XLogReaderState *state,
 					 TimeLineID *pageTLI);
 
 extern void XLogAOSegmentFile(RelFileNode rnode, uint32 segmentFileNum);
-extern int read_local_xlog_page(XLogReaderState *state, XLogRecPtr targetPagePtr,
-	int reqLen, XLogRecPtr targetRecPtr, char *cur_page, TimeLineID *pageTLI);
 
 extern void XLogReadDetermineTimeline(XLogReaderState *state,
 					XLogRecPtr wantPage, uint32 wantLength);
