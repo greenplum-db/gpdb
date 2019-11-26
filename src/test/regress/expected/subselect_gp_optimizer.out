@@ -824,7 +824,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..5172.20 rows=1 width=17)
    ->  Result  (cost=0.00..5172.20 rows=1 width=17)
          Filter: (1 = (SubPlan 1))
-         ->  Seq Scan on csq_pullup  (cost=0.00..5172.19 rows=334 width=36)
+         ->  Table Scan on csq_pullup  (cost=0.00..5172.19 rows=334 width=36)
          SubPlan 1
            ->  Limit  (cost=0.00..431.00 rows=1 width=8)
                  ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
@@ -832,7 +832,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                              Filter: (csq_pullup.t = csq_pullup_1.t)
                              ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                                    ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                         ->  Seq Scan on csq_pullup csq_pullup_1  (cost=0.00..431.00 rows=1 width=4)
+                                         ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (13 rows)
 
@@ -854,7 +854,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
          ->  Result  (cost=0.00..862.00 rows=1 width=36)
                ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=25)
                      Hash Cond: (csq_pullup.t = csq_pullup_1.t)
-                     ->  Seq Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=17)
+                     ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=17)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=12)
                            ->  Result  (cost=0.00..431.00 rows=1 width=12)
                                  Filter: ((count()) < 10)
@@ -862,7 +862,7 @@ explain select * from csq_pullup t0 where 1= (select count(*) from csq_pullup t1
                                        Group Key: csq_pullup_1.t
                                        ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                                              Sort Key: csq_pullup_1.t
-                                             ->  Seq Scan on csq_pullup csq_pullup_1  (cost=0.00..431.00 rows=1 width=4)
+                                             ->  Table Scan on csq_pullup  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (16 rows)
 
