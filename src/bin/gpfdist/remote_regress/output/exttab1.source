@@ -614,7 +614,7 @@ domain_name			varchar(350)
 )
 location ('gpfdist://@hostname@:7070/exttab1/whois.csv' )
 format 'csv' ( header quote as 'ggg');
-ERROR:  quote must be a single one-byte character
+ERROR:  COPY quote must be a single one-byte character
 select count(*) from bad_whois;
 ERROR:  relation "bad_whois" does not exist
 LINE 1: select count(*) from bad_whois;

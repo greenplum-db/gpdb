@@ -891,7 +891,7 @@ FORMAT 'text'
         FORCE NOT NULL L_COMMENT
 )
 ;
-ERROR:  force not null available only in CSV mode
+ERROR:  COPY force not null available only in CSV mode
 SELECT count(*) FROM ext_lineitem;
 ERROR:  relation "ext_lineitem" does not exist
 LINE 1: SELECT count(*) FROM ext_lineitem;
