@@ -58,6 +58,13 @@
  * fsync request from the queue if an identical, subsequent request is found.
  * See comments there before making changes here.
  */
+/*
+ * GPDB:
+ * For AO/CO tables, the max segno should be
+ * MAX_AOREL_CONCURRENCY (128) * MaxTupleAttributeNumber (1664),
+ * which will not cause overflow and thus will not cause confusion with the
+ * below special segnos.
+ */
 #define FORGET_RELATION_FSYNC	(InvalidBlockNumber)
 #define FORGET_DATABASE_FSYNC	(InvalidBlockNumber-1)
 #define UNLINK_RELATION_REQUEST (InvalidBlockNumber-2)
@@ -204,7 +211,7 @@ static char *_mdfd_segpath(SMgrRelation reln, ForkNumber forknum,
 static MdfdVec *_mdfd_openseg(SMgrRelation reln, ForkNumber forkno,
 			  BlockNumber segno, int oflags);
 static MdfdVec *_mdfd_getseg(SMgrRelation reln, ForkNumber forkno,
-			 BlockNumber blkno, bool skipFsync, bool is_ao_segno, int behavior);
+			 BlockNumber blkno, bool skipFsync, bool is_appendoptimized, int behavior);
 static BlockNumber _mdnblocks(SMgrRelation reln, ForkNumber forknum,
 		   MdfdVec *seg);
 
@@ -1543,6 +1550,25 @@ register_dirty_segment(SMgrRelation reln, ForkNumber forknum, MdfdVec *seg)
 }
 
 /*
+ * register_dirty_segment_ao()
+ *
+ * Similar to register_dirty_segment() but it is for the appendoptimized table.
+ * The API definition is a bit different. Specially this function returns a
+ * value.
+ */
+bool
+register_dirty_segment_ao(RelFileNode rnode, ForkNumber forknum, int segno)
+{
+	if (pendingOpsTable)
+	{
+		RememberFsyncRequest(rnode, forknum, segno, true);
+		return true;
+	}
+	else
+		return ForwardFsyncRequest(rnode, forknum, segno, true);
+}
+
+/*
  * register_unlink() -- Schedule a file to be deleted after next checkpoint
  *
  * We don't bother passing in the fork number, because this is only used
@@ -1917,7 +1943,7 @@ _mdfd_openseg(SMgrRelation reln, ForkNumber forknum, BlockNumber segno,
  */
 static MdfdVec *
 _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
-			 bool skipFsync, bool is_ao_segno, int behavior)
+			 bool skipFsync, bool is_appendoptimized, int behavior)
 {
 	MdfdVec    *v = mdopen(reln, forknum, behavior);
 	BlockNumber targetseg;
@@ -1932,9 +1958,9 @@ _mdfd_getseg(SMgrRelation reln, ForkNumber forknum, BlockNumber blkno,
 
 	targetseg = blkno / ((BlockNumber) RELSEG_SIZE);
 	/* For ao we just need to select the target seg number. */
-	for (nextsegno = is_ao_segno ? targetseg : 1; nextsegno <= targetseg; nextsegno++)
+	for (nextsegno = is_appendoptimized ? targetseg : 1; nextsegno <= targetseg; nextsegno++)
 	{
-		Assert(is_ao_segno || (nextsegno == v->mdfd_segno + 1));
+		Assert(is_appendoptimized || (nextsegno == v->mdfd_segno + 1));
 
 		if (v->mdfd_chain == NULL)
 		{
