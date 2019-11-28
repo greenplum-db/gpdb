@@ -1077,8 +1077,8 @@ check_for_tables_with_oids(ClusterInfo *cluster)
 	{
 		pg_log(PG_REPORT, "fatal\n");
 		gp_fatal_log(
-				"| Your installation contains tables declared WITH OIDS, which is not supported\n"
-				"| anymore. Consider removing the oid column using\n"
+				"| Your installation contains tables declared WITH OIDS, which is not\n"
+				"| supported anymore. Consider removing the oid column using\n"
 				"|     ALTER TABLE ... SET WITHOUT OIDS;\n"
 				"| A list of tables with the problem is in the file:\n"
 				"|     %s\n\n", output_path);
@@ -1197,8 +1197,8 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 				"| Your installation contains one of the reg* data types in user tables.\n"
 				"| These data types reference system OIDs that are not preserved by\n"
 				"| pg_upgrade, so this cluster cannot currently be upgraded.  You can\n"
-				"| remove the problem tables and restart the upgrade.  A list of the problem\n"
-				"| columns is in the file:\n"
+				"| remove the problem tables and restart the upgrade.  A list of the\n"
+				"| problem columns is in the file:\n"
 				"|     %s\n\n", output_path);
 	}
 	else
@@ -1225,9 +1225,10 @@ check_for_jsonb_9_4_usage(ClusterInfo *cluster)
 		pg_log(PG_REPORT, "fatal\n");
 		gp_fatal_log(
 				"| Your installation contains the \"jsonb\" data type in user tables.\n"
-				"| The internal format of \"jsonb\" changed during 9.4 beta so this cluster cannot currently\n"
-				"| be upgraded.  You can remove the problem tables and restart the upgrade.  A list\n"
-				"| of the problem columns is in the file:\n"
+				"| The internal format of \"jsonb\" changed during 9.4 beta so this\n"
+				"| cluster cannot currently be upgraded.  You can remove the problem\n"
+				"| tables and restart the upgrade. A list of the problem columns is\n"
+				"| in the file:\n"
 				"|     %s\n\n", output_path);
 	}
 	else
