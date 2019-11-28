@@ -251,7 +251,6 @@ transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
  * file (the one without an extent suffix) for a relation is also fatal, since
  * we expect that to exist for both heap and AO tables in any case.
  *
- * TODO: verify that AO tables must always have a segment zero.
  */
 static bool
 transfer_relfile_segment(int segno, pageCnvCtx *pageConverter, FileNameMap *map,
@@ -262,6 +261,7 @@ transfer_relfile_segment(int segno, pageCnvCtx *pageConverter, FileNameMap *map,
 	char		new_file[MAXPGPATH * 3];
 	int			fd;
 	char		extent_suffix[65];
+	bool is_ao_or_aocs = (map->type == AO || map->type == AOCS);
 
 	/*
 	 * Extra indentation is on purpose, to reduce merge conflicts with upstream.
@@ -287,15 +287,36 @@ transfer_relfile_segment(int segno, pageCnvCtx *pageConverter, FileNameMap *map,
 				 type_suffix,
 				 extent_suffix);
 
-		/* Is it an extent, fsm, or vm file? */
-		if (type_suffix[0] != '\0' || segno != 0)
+		/* Is it an extent, fsm, or vm file?
+		 */
+		if (type_suffix[0] != '\0' || segno != 0  || is_ao_or_aocs)
 		{
 			/* Did file open fail? */
 			if ((fd = open(old_file, O_RDONLY, 0)) == -1)
 			{
-				/* File does not exist?  That's OK, just return */
 				if (errno == ENOENT)
-					return false;
+				{
+					if (is_ao_or_aocs && segno == 0)
+					{
+						/*
+						 * In GPDB 5, an AO table's baserelfilenode may not exists
+						 * after vacuum.  However, in GPDB 6 this is not the case as
+						 * baserelfilenode is expected to always exist.  In order to
+						 * align with GPDB 6 expectations we copy an empty
+						 * baserelfilenode in the scenario where it didn't exist in
+						 * GPDB 5.
+						 */
+						Assert(GET_MAJOR_VERSION(old_cluster.major_version) <= 803);
+						fd = open(new_file, O_CREAT, S_IRUSR|S_IWUSR);
+						if (fd == -1)
+							pg_fatal("error while creating empty file \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
+									 map->nspname, map->relname, old_file, new_file,
+									 getErrorText());
+						return true;
+					}
+					else
+						return false;
+				}
 				else
 					pg_fatal("error while checking for file existence \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
 							 map->nspname, map->relname, old_file, new_file,
