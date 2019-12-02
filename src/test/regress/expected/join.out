@@ -2497,18 +2497,18 @@ set enable_mergejoin to off;
 explain (costs off)
 select count(*) from tenk1 a, tenk1 b
   where a.hundred = b.thousand and (b.fivethous % 10) < 10;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice2; segments: 3)
          ->  Partial Aggregate
                ->  Hash Join
-                     Hash Cond: (a.hundred = b.thousand)
-                     ->  Seq Scan on tenk1 a
+                     Hash Cond: (b.thousand = a.hundred)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                           ->  Seq Scan on tenk1 b
+                                 Filter: ((fivethous % 10) < 10)
                      ->  Hash
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3)
-                                 ->  Seq Scan on tenk1 b
-                                       Filter: ((fivethous % 10) < 10)
+                           ->  Seq Scan on tenk1 a
  Optimizer: Postgres query optimizer
 (11 rows)
 
