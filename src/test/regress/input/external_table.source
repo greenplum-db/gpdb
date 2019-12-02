@@ -3500,3 +3500,12 @@ alter external table ext_w_expand expand table;
 select numsegments from gp_distribution_policy where localoid = 'ext_w_expand'::regclass;
 
 drop external table ext_w_expand;
+
+
+--
+-- Test host name cannot be resolved
+--
+CREATE READABLE EXTERNAL TABLE ext_invalid_host() LOCATION ('gpfdist://not-exist-host/data.csv') FORMAT 'CSV' ( DELIMITER AS ',');
+
+SELECT * from ext_invalid_host;
+

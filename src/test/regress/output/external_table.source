@@ -4798,3 +4798,12 @@ select numsegments from gp_distribution_policy where localoid = 'ext_w_expand'::
 (1 row)
 
 drop external table ext_w_expand;
+--
+-- Test host name cannot be resolved
+--
+CREATE READABLE EXTERNAL TABLE ext_invalid_host() LOCATION ('gpfdist://not-exist-host/data.csv') FORMAT 'CSV' ( DELIMITER AS ',');
+SELECT * from ext_invalid_host;
+WARNING:  could not translate host name "not-exist-host", port "8080" to address: Name or service not known  (seg0 slice1 127.0.0.1:5434 pid=181826)
+WARNING:  could not translate host name "not-exist-host", port "8080" to address: Name or service not known  (seg1 slice1 127.0.0.1:5435 pid=181824)
+WARNING:  could not translate host name "not-exist-host", port "8080" to address: Name or service not known  (seg2 slice1 127.0.0.1:5436 pid=181825)
+ERROR:  hostname cannot be resolved 'gpfdist://not-exist-host:8080/data.csv'  (seg0 slice1 127.0.0.1:5434 pid=181826)

@@ -949,6 +949,11 @@ make_url(const char *url, char *buf, bool is_ipv6)
 
 	hostip = getDnsAddress(hostname, port, ERROR);
 
+	if (hostip == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_CONNECTION_FAILURE),
+				 errmsg("hostname cannot be resolved '%s'", url)));
+
 	/*
 	 * test for the case where the URL originaly contained a domain name
 	 * (so is_ipv6 was set to false) but the DNS resolution in getDnsAddress
