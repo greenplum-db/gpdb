@@ -411,6 +411,7 @@ svec_count(PG_FUNCTION_ARGS)
 			 * beginning of the accumulation of the correct dimension.
 			 */
 			left = makeSparseDataFromDouble(0.,right->total_value_count);
+			/* FALLTHROUGH */
 
 		case 0: 		//neither arg is scalar
 		case 2:			//right arg is scalar

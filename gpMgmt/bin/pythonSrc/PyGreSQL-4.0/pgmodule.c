@@ -1995,6 +1995,7 @@ pgquery_getresult(pgqueryobject * self, PyObject * args)
 						}
 						cashbuf[k] = 0;
 						s = cashbuf;
+						/* FALLTHROUGH */
 
 					case 4:
 						if (decimal)
@@ -2119,6 +2120,7 @@ pgquery_dictresult(pgqueryobject * self, PyObject * args)
 						}
 						cashbuf[k] = 0;
 						s = cashbuf;
+						/* FALLTHROUGH */
 
 					case 4:
 						if (decimal)
