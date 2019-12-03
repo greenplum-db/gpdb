@@ -263,6 +263,8 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN, bool commit)
 			break;
 		}
 
+		SIMPLE_FAULT_INJECTOR("sync_rep_query_die");
+
 		/*
 		 * If a wait for synchronous replication is pending, we can neither
 		 * acknowledge the commit nor raise ERROR or FATAL.  The latter would
@@ -278,13 +280,14 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN, bool commit)
 		if (ProcDiePending)
 		{
 			/*
-			 * FATAL only for QE's which use 2PC and hence can handle the
-			 * FATAL and retry.
+			 * For QE we should have done FATAL here so that 2PC can retry, but
+			 * FATAL here makes some shm exit callback functions panic or
+			 * assert fail because the transaction is still not finished, so
+			 * let's defer the quitting to exec_mpp_dtx_protocol_command().
 			 */
-			ereport(IS_QUERY_DISPATCHER() ? WARNING:FATAL,
+			ereport(WARNING,
 					(errcode(ERRCODE_ADMIN_SHUTDOWN),
-					 errmsg("canceling the wait for synchronous replication and terminating connection due to administrator command"),
-					 errdetail("The transaction has already committed locally, but might not have been replicated to the standby.")));
+					 errmsg("canceling the wait for synchronous replication and terminating connection due to administrator command")));
 			whereToSendOutput = DestNone;
 			SyncRepCancelWait();
 			break;
@@ -320,6 +323,9 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN, bool commit)
 		if (!PostmasterIsAlive())
 		{
 			ProcDiePending = true;
+			ereport(WARNING,
+				(errcode(ERRCODE_ADMIN_SHUTDOWN),
+				 errmsg("canceling the wait for synchronous replication and terminating connection due to postmaster death")));
 			whereToSendOutput = DestNone;
 			SyncRepCancelWait();
 			break;

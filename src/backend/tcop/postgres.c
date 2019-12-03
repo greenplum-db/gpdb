@@ -1523,6 +1523,16 @@ exec_mpp_dtx_protocol_command(DtxProtocolCommand dtxProtocolCommand,
 						Debug_dtm_action, DtxProtocolCommandToString(dtxProtocolCommand))));
 	}
 
+	/*
+	 * GPDB: There is a corner case that we need to delay connection
+	 * termination to here. see SyncRepWaitForLSN() for details.
+	 * */
+	if (ProcDiePending)
+		ereport(FATAL,
+				(errcode(ERRCODE_ADMIN_SHUTDOWN),
+				errmsg("Terminating the connection (DTM protocol command '%s' "
+					   "for gid=%s", loggingStr, gid)));
+
 	EndCommand(commandTag, dest);
 }
 

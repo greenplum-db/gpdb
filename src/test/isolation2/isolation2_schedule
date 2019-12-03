@@ -179,6 +179,8 @@ test: uao/insert_should_not_use_awaiting_drop_column
 test: add_column_after_vacuum_skip_drop_column
 test: vacuum_after_vacuum_skip_drop_column
 
+test: segwalrep/die_commit_pending_replication
+
 # Tests for FTS
 test: fts_errors
 test: segwalrep/commit_blocking
