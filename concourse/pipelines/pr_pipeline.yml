@@ -79,36 +79,56 @@ jobs:
           TASK_OS: centos
           TASK_OS_VERSION: 6
 
-      - task: compile_gpdb
-        input_mapping:
-          gpdb_src: gpdb_pr
-        file: gpdb_pr/concourse/tasks/compile_gpdb.yml
-        image: centos-gpdb-dev-6
+      - put: gpdb_pr
         params:
-          CONFIGURE_FLAGS: {{configure_flags}}
-          TARGET_OS: centos
-          TARGET_OS_VERSION: 6
-          BLD_TARGETS: "clients loaders"
-
-      - in_parallel:
-        - put: gpdb_pr
+          path: gpdb_pr
+          status: pending
+      - # "do" the remaining steps with these hooks:
+        on_failure:
+          put: gpdb_pr
           params:
             path: gpdb_pr
-            status: pending
+            status: failure
+        on_success:
+          put: report_pr_success
+          resource: gpdb_pr
+          params:
+            path: gpdb_pr
+            status: success
+        do:
+        # Fetch tags and submodules, because the PR resource doesn't.
+        # gpdb_src is to be used by compile_gpdb and ic_gpdb.
+        - task: init gpdb_src
+          image: centos-gpdb-dev-6
+          config:
+            platform: linux
+            run:
+              path: bash
+              args:
+                - -c
+                - |
+                  git clone gpdb_pr gpdb_src &&
+                  cd gpdb_src &&
+                  git fetch https://github.com/greenplum-db/gpdb.git --tags &&
+                  git submodule update --init --recursive
+            inputs: [{ name: gpdb_pr }]
+            outputs: [{ name: gpdb_src }]
+        - task: compile_gpdb
+          file: gpdb_src/concourse/tasks/compile_gpdb.yml
+          image: centos-gpdb-dev-6
+          params:
+            CONFIGURE_FLAGS: {{configure_flags}}
+            TARGET_OS: centos
+            TARGET_OS_VERSION: 6
+            BLD_TARGETS: "clients loaders"
+
         - task: ic_gpdb
-          file: gpdb_pr/concourse/tasks/ic_gpdb_binary_swap.yml
+          file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
           image: centos-gpdb-dev-6
           input_mapping:
-            gpdb_src: gpdb_pr
             bin_gpdb: gpdb_artifacts
           params:
             MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
             BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
             TEST_OS: centos
             CONFIGURE_FLAGS: {{configure_flags}}
-
-      - put: report_pr_success
-        resource: gpdb_pr
-        params:
-          path: gpdb_pr
-          status: success
