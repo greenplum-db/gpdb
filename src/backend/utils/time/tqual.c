@@ -1050,6 +1050,7 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 	HeapTupleHeader tuple = htup->t_data;
 	bool inSnapshot = false;
 	bool setDistributedSnapshotIgnore = false;
+	bool xidKnownToHaveCommitted = false;
 
 	Assert(ItemPointerIsValid(&htup->t_self));
 #if 0
@@ -1068,9 +1069,9 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 
 			if (TransactionIdIsCurrentTransactionId(xvac))
 				return false;
-			if (!XidInMVCCSnapshot(xvac, snapshot, true, &setDistributedSnapshotIgnore))
+			if (!XidInMVCCSnapshot(xvac, snapshot, true, &setDistributedSnapshotIgnore, &xidKnownToHaveCommitted))
 			{
-				if (TransactionIdDidCommit(xvac))
+				if (xidKnownToHaveCommitted || TransactionIdDidCommit(xvac))
 				{
 					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
 								InvalidTransactionId);
@@ -1087,9 +1088,9 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 
 			if (!TransactionIdIsCurrentTransactionId(xvac))
 			{
-				if (XidInMVCCSnapshot(xvac, snapshot, true, &setDistributedSnapshotIgnore))
+				if (XidInMVCCSnapshot(xvac, snapshot, true, &setDistributedSnapshotIgnore, &xidKnownToHaveCommitted))
 					return false;
-				if (TransactionIdDidCommit(xvac))
+				if (xidKnownToHaveCommitted || TransactionIdDidCommit(xvac))
 					SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
 								InvalidTransactionId);
 				else
@@ -1153,7 +1154,8 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 			inSnapshot =
 				XidInMVCCSnapshot(HeapTupleHeaderGetRawXmin(tuple), snapshot,
 								  ((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-								  &setDistributedSnapshotIgnore);
+								  &setDistributedSnapshotIgnore,
+								  &xidKnownToHaveCommitted);
 			if (setDistributedSnapshotIgnore)
 			{
 				tuple->t_infomask2 |= HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE;
@@ -1161,7 +1163,7 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 			}
 			if (inSnapshot)
 				return false;
-			else if (TransactionIdDidCommit(HeapTupleHeaderGetRawXmin(tuple)))
+			else if (xidKnownToHaveCommitted || TransactionIdDidCommit(HeapTupleHeaderGetRawXmin(tuple)))
 				SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
 							HeapTupleHeaderGetRawXmin(tuple));
 			else
@@ -1181,7 +1183,8 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 			inSnapshot =
 				XidInMVCCSnapshot(HeapTupleHeaderGetRawXmin(tuple), snapshot,
 								  ((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-								  &setDistributedSnapshotIgnore);
+								  &setDistributedSnapshotIgnore,
+								  &xidKnownToHaveCommitted);
 			if (setDistributedSnapshotIgnore)
 			{
 				tuple->t_infomask2 |= HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE;
@@ -1222,7 +1225,8 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 
 		inSnapshot = XidInMVCCSnapshot(xmax, snapshot,
 									   ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-									   &setDistributedSnapshotIgnore);
+									   &setDistributedSnapshotIgnore,
+									   &xidKnownToHaveCommitted);
 		if (setDistributedSnapshotIgnore)
 		{
 			tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
@@ -1230,7 +1234,7 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 		}
 		if (inSnapshot)
 			return true;	/* treat as still in progress */
-		if (TransactionIdDidCommit(xmax))
+		if (xidKnownToHaveCommitted || TransactionIdDidCommit(xmax))
 			return false;		/* updating transaction committed */
 		/* it must have aborted or crashed */
 		return true;
@@ -1248,7 +1252,8 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 
 		inSnapshot = XidInMVCCSnapshot(HeapTupleHeaderGetRawXmax(tuple), snapshot,
 									   ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-									   &setDistributedSnapshotIgnore);
+									   &setDistributedSnapshotIgnore,
+									   &xidKnownToHaveCommitted);
 		if (setDistributedSnapshotIgnore)
 		{
 			tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
@@ -1257,7 +1262,7 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 		if (inSnapshot)
 			return true;
 
-		if (!TransactionIdDidCommit(HeapTupleHeaderGetRawXmax(tuple)))
+		if (!(xidKnownToHaveCommitted || TransactionIdDidCommit(HeapTupleHeaderGetRawXmax(tuple))))
 		{
 			/* it must have aborted or crashed */
 			SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
@@ -1275,7 +1280,8 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 		inSnapshot =
 			XidInMVCCSnapshot(HeapTupleHeaderGetRawXmax(tuple), snapshot,
 							  ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-							  &setDistributedSnapshotIgnore);
+							  &setDistributedSnapshotIgnore,
+							  &xidKnownToHaveCommitted);
 		if (setDistributedSnapshotIgnore)
 		{
 			tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
@@ -1600,10 +1606,12 @@ HeapTupleIsSurelyDead(HeapTuple htup, TransactionId OldestXmin)
  */
 bool
 XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
-				  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore)
+				  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore,
+				  bool *xidKnownToHaveCommitted)
 {
 	Assert (setDistributedSnapshotIgnore != NULL);
 	*setDistributedSnapshotIgnore = false;
+	*xidKnownToHaveCommitted      = false;
 
 	/*
 	 * If we have a distributed snapshot, it takes precedence over the local
@@ -1649,13 +1657,7 @@ XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
 				return true;
 
 			case DISTRIBUTEDSNAPSHOT_COMMITTED_VISIBLE:
-				/*
-				 * GPDB_96_MERGE_FIXME: Many of the callers will call
-				 * TransactionIdDidCommit() after this, but if we get here, we
-				 * know that it committed. If we could somehow communicate it
-				 * to the caller, we could skip the TransactionIdDidCommit()
-				 * call.
-				 */
+				*xidKnownToHaveCommitted = true;
 				return false;
 
 			case DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE:

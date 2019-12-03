@@ -81,7 +81,8 @@ extern HTSV_Result HeapTupleSatisfiesVacuum(Relation relation, HeapTuple htup,
 extern bool HeapTupleIsSurelyDead(HeapTuple htup,
 					  TransactionId OldestXmin);
 extern bool XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
-							  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore);
+							  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore,
+							  bool *xidKnownToHaveCommitted);
 extern bool XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot);
 
 extern void HeapTupleSetHintBits(HeapTupleHeader tuple, Buffer buffer, Relation rel,
