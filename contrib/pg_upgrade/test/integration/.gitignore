@@ -33,12 +33,20 @@
 /expected/partitioned_heap_table_with_differently_aligned_varlen_dropped_columns.out
 /expected/partitioned_heap_table_with_differently_sized_dropped_columns.out
 /expected/unsupported_dist_coltypes.out
+/expected/gphdfs.out
+/expected/mismatched_aopartition_indexes.out
+/expected/unsupported_name_col.out
+/expected/unsupported_tsquery_col.out
 /sql/exchange_partition_heap_table.sql
 /sql/external_table.sql
 /sql/partitioned_heap_table_with_differently_aligned_dropped_columns.sql
 /sql/partitioned_heap_table_with_differently_aligned_varlen_dropped_columns.sql
 /sql/partitioned_heap_table_with_differently_sized_dropped_columns.sql
 /sql/unsupported_dist_coltypes.sql
+/sql/gphdfs.sql
+/sql/mismatched_aopartition_indexes.sql
+/sql/unsupported_name_col.sql
+/sql/unsupported_tsquery_col.sql
 
 # cmockery tests
 /*.t
