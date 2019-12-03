@@ -1173,12 +1173,7 @@ pg_get_indexdef_worker(Oid indexrelid, int colno,
 	{
 		if (missing_ok)
 			return NULL;
-
-		/* GPDB_96_MERGE_FIXME: This function got the 'missing_ok' argument in 9.6.
-		 * Should we put the elog() back? */
-		/* Was: elog(ERROR, "cache lookup failed for index %u", indexrelid); */
-		/* See: MPP-10387. */
-		return pstrdup("Not an index");
+		elog(ERROR, "cache lookup failed for index %u", indexrelid);
 	}
 	idxrec = (Form_pg_index) GETSTRUCT(ht_idx);
 
