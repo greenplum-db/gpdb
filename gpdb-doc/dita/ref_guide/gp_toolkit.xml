@@ -121,6 +121,10 @@
       <body class="- topic/body ">
         <p>This view shows tables that do not have statistics and therefore may require an <codeph
             class="+ topic/ph pr-d/codeph ">ANALYZE</codeph> be run on the table.</p>
+        <note>By default, <codeph>gp_stats_missing</codeph> does not display data for
+          materialized views. Refer to
+          <xref href="#topic_matview" type="topic" format="dita"/> for instructions on
+          adding this data to the <codeph>gp_stats_missing*</codeph> view output.</note>
         <table id="ie194266" class="- topic/table ">
           <title class="- topic/title ">gp_stats_missing view</title>
           <tgroup cols="2" class="- topic/tgroup ">
@@ -2608,6 +2612,10 @@
         to determine the disk space usage for a distributed Greenplum Database, schema, table, or
         index. The following views calculate the total size of an object across all primary segments
         (mirrors are not included in the size calculations).</p>
+      <note>By default, the <codeph>gp_size_*</codeph> views do not display data for
+        materialized views. Refer to
+        <xref href="#topic_matview" type="topic" format="dita"/> for instructions on
+        adding this data to <codeph>gp_size_*</codeph> view output.</note>
       <ul class="- topic/ul " id="ul_jyr_wk5_vp">
         <li id="ie192740" class="- topic/li ">
           <xref href="#topic39" type="topic" format="dita" class="- topic/xref "/>
@@ -3135,6 +3143,10 @@ WHERE sotd.sotdoid=pg_class.oid ORDER BY relname;</codeblock>
           <xref href="#topic51" type="topic" format="dita" class="- topic/xref "/>
         </li>
       </ul>
+      <note>By default, the <codeph>gp_skew_*</codeph> views do not display data for
+        materialized views. Refer to
+        <xref href="#topic_matview" type="topic" format="dita"/> for instructions
+        on adding this data to <codeph>gp_skew_*</codeph> view output.</note>
     </body>
     <topic id="topic50" xml:lang="en" ditaarch:DITAArchVersion="1.1"
       domains="(topic ui-d) (topic hi-d) (topic pr-d) (topic sw-d)                          (topic ut-d) (topic indexing-d)"
@@ -3228,5 +3240,40 @@ WHERE sotd.sotdoid=pg_class.oid ORDER BY relname;</codeblock>
         </table>
       </body>
     </topic>
+  </topic>
+  <topic id="topic_matview">
+    <title>Including Data for Materialized Views</title>
+    <body>
+      <p>You must update a <codeph>gp_toolkit</codeph> internal view if you want
+        data about materialized views to be included in the output of relevant
+        <codeph>gp_toolkit</codeph> views.</p>
+      <p>Run the following SQL commands as the Greenplum Database administrator
+        to update the internal view:</p>
+      <codeblock>CREATE or REPLACE VIEW gp_toolkit.__gp_user_tables
+AS
+    SELECT
+        fn.fnnspname as autnspname,
+        fn.fnrelname as autrelname,
+        relkind as autrelkind,
+        reltuples as autreltuples,
+        relpages as autrelpages,
+        relacl as autrelacl,
+        pgc.oid as autoid,
+        pgc.reltoastrelid as auttoastoid,
+        pgc.relstorage as autrelstorage
+    FROM
+        pg_catalog.pg_class pgc,
+        gp_toolkit.__gp_fullname fn
+    WHERE pgc.relnamespace IN
+    (
+        SELECT aunoid
+        FROM gp_toolkit.__gp_user_namespaces
+    )
+    AND (pgc.relkind = 'r' OR pgc.relkind = 'm')
+    AND pgc.relispopulated = 't'
+    AND pgc.oid = fn.fnoid;
+
+GRANT SELECT ON TABLE gp_toolkit.__gp_user_tables TO public;</codeblock>
+    </body>
   </topic>
 </topic>
