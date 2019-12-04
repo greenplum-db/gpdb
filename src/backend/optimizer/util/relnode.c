@@ -172,11 +172,14 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptKind reloptkind)
 
 			if ((root->parse->commandType == CMD_UPDATE ||
 				 root->parse->commandType == CMD_DELETE) &&
-				root->parse->resultRelation == relid &&
-				GpPolicyIsReplicated(rel->cdbpolicy))
+				root->parse->resultRelation == relid)
 			{
-				root->upd_del_replicated_table = relid;
+				root->resultRelations = bms_make_singleton(relid);
+
+				if (GpPolicyIsReplicated(rel->cdbpolicy))
+					root->upd_del_replicated_table = relid;
 			}
+
 			break;
 		case RTE_SUBQUERY:
 		case RTE_FUNCTION:
@@ -224,6 +227,12 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptKind reloptkind)
 			/* append_rel_list contains all append rels; ignore others */
 			if (appinfo->parent_relid != relid)
 				continue;
+
+			if (root->resultRelations != NULL)
+			{
+				root->resultRelations = bms_add_member(root->resultRelations,
+													   appinfo->child_relid);
+			}
 
 			(void) build_simple_rel(root, appinfo->child_relid,
 									RELOPT_OTHER_MEMBER_REL);

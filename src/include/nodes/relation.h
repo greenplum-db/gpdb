@@ -367,6 +367,8 @@ typedef struct PlannerInfo
 	bool		is_split_update;	/* true if UPDATE that modifies
 									 * distribution key columns */
 	bool		is_correlated_subplan; /* true for correlated subqueries nested within subplans */
+
+	Bitmapset  *resultRelations; /* all relids that are result relation of delete|update */
 } PlannerInfo;
 
 /*
