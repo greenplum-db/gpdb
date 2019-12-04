@@ -149,20 +149,12 @@ xidneq(PG_FUNCTION_ARGS)
 
 /*
  *		xid_age			- compute age of an XID (relative to latest stable xid)
- *
- * ReadNewTransactionId() is used here instead of GetTopTransactionId(), as
- * this function may be called on QE Reader and with laxy XID try to allocate
- * XID as QE Reader which is not allowed.
- *
- * GPDB_96_MERGE_FIXME: Upstream uses GetStableLatestTransactionId() nowadays,
- * and looking at what it does, I think it should work. Try reverting this to
- * upstream version and see if it works.
  */
 Datum
 xid_age(PG_FUNCTION_ARGS)
 {
 	TransactionId xid = PG_GETARG_TRANSACTIONID(0);
-	TransactionId now = ReadNewTransactionId();
+	TransactionId now = GetStableLatestTransactionId();
 
 	/* Permanent XIDs are always infinitely old */
 	if (!TransactionIdIsNormal(xid))
