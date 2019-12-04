@@ -2019,11 +2019,13 @@ performDtxProtocolCommitOnePhase(const char *gid)
 }
 
 /**
- * On the QD, run the Commit Prepared operation.
+ * On the QE, run the Commit Prepared operation.
  */
 static void
 performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfNotFound)
 {
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+
 	elog(DTM_DEBUG5,
 		 "performDtxProtocolCommitPrepared going to call FinishPreparedTransaction for distributed transaction %s", gid);
 
@@ -2053,11 +2055,13 @@ performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfNotFound)
 }
 
 /**
- * On the QD, run the Abort Prepared operation.
+ * On the QE, run the Abort Prepared operation.
  */
 static void
 performDtxProtocolAbortPrepared(const char *gid, bool raiseErrorIfNotFound)
 {
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+
 	elog(DTM_DEBUG5, "performDtxProtocolAbortPrepared going to call FinishPreparedTransaction for distributed transaction %s", gid);
 
 	StartTransactionCommand();
@@ -2071,7 +2075,7 @@ performDtxProtocolAbortPrepared(const char *gid, bool raiseErrorIfNotFound)
 	}
 	PG_CATCH();
 	{
-		finishDistributedTransactionContext("performDtxProtocolAbortPrepared -- Commit Prepared (error case)", true);
+		finishDistributedTransactionContext("performDtxProtocolAbortPrepared -- Abort Prepared (error case)", true);
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -2082,7 +2086,7 @@ performDtxProtocolAbortPrepared(const char *gid, bool raiseErrorIfNotFound)
 	 */
 	CommitTransactionCommand();
 
-	finishDistributedTransactionContext("performDtxProtocolAbortPrepared -- Commit Prepared", true);
+	finishDistributedTransactionContext("performDtxProtocolAbortPrepared -- Abort Prepared", true);
 }
 
 /**
