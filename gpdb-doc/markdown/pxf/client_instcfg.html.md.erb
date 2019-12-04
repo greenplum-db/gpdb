@@ -83,14 +83,14 @@ In this procedure, you use the `default`, or create a new, PXF server configurat
 
     <div class="note"> In previous versions of Greenplum Database, user impersonation was a global setting, and it was enabled by default for Hadoop.</div>
 
-    If you want PXF to access Hadoop as a different user, follow procedures in [Configuring the Hadoop User, User Impersonation, and Proxying](pxfuserimpers.html).
+    If you want PXF to access Hadoop as a different user, follow the procedures in [Configuring the Hadoop User, User Impersonation, and Proxying](pxfuserimpers.html).
 
 5. Grant read permission to the HDFS files and directories that will be accessed as external tables in Greenplum Database. If user impersonation is enabled (the default), you must grant this permission to each Greenplum Database user/role name that will use external tables that reference the HDFS files. If user impersonation is not enabled, you must grant this permission to the `gpadmin` user.
 
 6. If your Hadoop cluster is secured with Kerberos, you must configure PXF and generate Kerberos principals and keytabs for each segment host as described in [Configuring PXF for Secure HDFS](pxf_kerbhdfs.html).
 
 
-## <a id="client-cfg-update"></a>About Updating Hadoop Configuration
+## <a id="client-cfg-update"></a>About Updating the Hadoop Configuration
 
 If you update your Hadoop, Hive, or HBase configuration while the PXF service is running, you must copy the updated configuration to the `$PXF_CONF/servers/<server_name>` directory and re-sync the PXF configuration to your Greenplum Database cluster. For example:
 

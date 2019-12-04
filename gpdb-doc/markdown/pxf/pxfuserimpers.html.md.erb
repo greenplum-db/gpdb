@@ -16,7 +16,7 @@ You configure the Hadoop user and PXF user impersonation setting for a server vi
 
 The following table describes some of the PXF configuration scenarios for Hadoop access:
 
-| Scenario | pxf-site.xml Required  | Impersonation Setting |  Discussion |
+| Scenario | pxf-site.xml Required  | Impersonation Setting |  Required Configuration |
 |----------------|--------------|---------|---------------|
 | PXF accessess Hadoop using the identity of the operating system user that started the PXF process. | no | n/a  | No additional configuration is required. |
 | PXF accesses Hadoop using a user identity that you specify. | yes | false | Disable user impersonation and identify the Hadoop user identity in the `pxf.service.user.name` property setting.  |
@@ -114,7 +114,7 @@ By default, PXF user impersonation is disabled. You can configure PXF user imper
 
 ## <a id="hadoop"></a>Configure Hadoop Proxying
 
-When PXF user personation is enabled for a Hadoop server configuration, you must configure the Hadoop `core-site.xml` configuration file to permit PXF to proxy Greenplum users. This configuration involves setting certain `hadoop.proxyuser.*` properties. Follow these steps to set up PXF Hadoop proxy users:
+When PXF user impersonation is enabled for a Hadoop server configuration, you must configure the Hadoop `core-site.xml` configuration file to permit PXF to proxy Greenplum users. This configuration involves setting certain `hadoop.proxyuser.*` properties. Follow these steps to set up PXF Hadoop proxy users:
 
 1. Log in to your Hadoop cluster and open the `core-site.xml` configuration file using a text editor, or use Ambari or another Hadoop cluster manager to add or edit the Hadoop property values described in this procedure.
 
