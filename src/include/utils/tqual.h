@@ -80,9 +80,15 @@ extern HTSV_Result HeapTupleSatisfiesVacuum(Relation relation, HeapTuple htup,
 						 TransactionId OldestXmin, Buffer buffer);
 extern bool HeapTupleIsSurelyDead(HeapTuple htup,
 					  TransactionId OldestXmin);
-extern bool XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
-							  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore,
-							  bool *xidKnownToHaveCommitted);
+
+typedef enum
+{
+	XID_NOT_IN_SNAPSHOT,
+	XID_IN_SNAPSHOT,
+	XID_SURELY_COMMITTED
+} XidInMVCCSnapshotCheckResult;
+extern XidInMVCCSnapshotCheckResult XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
+							  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore);
 extern bool XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot);
 
 extern void HeapTupleSetHintBits(HeapTupleHeader tuple, Buffer buffer, Relation rel,

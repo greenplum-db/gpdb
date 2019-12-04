@@ -1048,9 +1048,8 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 					   Buffer buffer)
 {
 	HeapTupleHeader tuple = htup->t_data;
-	bool inSnapshot = false;
 	bool setDistributedSnapshotIgnore = false;
-	bool xidKnownToHaveCommitted = false;
+	XidInMVCCSnapshotCheckResult snapshotCheckResult;
 
 	Assert(ItemPointerIsValid(&htup->t_self));
 #if 0
@@ -1069,9 +1068,13 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 
 			if (TransactionIdIsCurrentTransactionId(xvac))
 				return false;
-			if (!XidInMVCCSnapshot(xvac, snapshot, true, &setDistributedSnapshotIgnore, &xidKnownToHaveCommitted))
+			snapshotCheckResult = XidInMVCCSnapshot(xvac,
+													snapshot,
+													true,
+													&setDistributedSnapshotIgnore);
+			if (snapshotCheckResult == XID_NOT_IN_SNAPSHOT)
 			{
-				if (xidKnownToHaveCommitted || TransactionIdDidCommit(xvac))
+				if (snapshotCheckResult == XID_SURELY_COMMITTED || TransactionIdDidCommit(xvac))
 				{
 					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
 								InvalidTransactionId);
@@ -1088,9 +1091,13 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 
 			if (!TransactionIdIsCurrentTransactionId(xvac))
 			{
-				if (XidInMVCCSnapshot(xvac, snapshot, true, &setDistributedSnapshotIgnore, &xidKnownToHaveCommitted))
+				snapshotCheckResult = XidInMVCCSnapshot(xvac,
+														snapshot,
+														true,
+														&setDistributedSnapshotIgnore);
+				if (snapshotCheckResult == XID_IN_SNAPSHOT)
 					return false;
-				if (xidKnownToHaveCommitted || TransactionIdDidCommit(xvac))
+				if (snapshotCheckResult == XID_SURELY_COMMITTED || TransactionIdDidCommit(xvac))
 					SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
 								InvalidTransactionId);
 				else
@@ -1151,19 +1158,18 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 		}
 		else
 		{
-			inSnapshot =
+			snapshotCheckResult =
 				XidInMVCCSnapshot(HeapTupleHeaderGetRawXmin(tuple), snapshot,
 								  ((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-								  &setDistributedSnapshotIgnore,
-								  &xidKnownToHaveCommitted);
+								  &setDistributedSnapshotIgnore);
 			if (setDistributedSnapshotIgnore)
 			{
 				tuple->t_infomask2 |= HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE;
 				markDirty(buffer, relation, tuple, /* isXmin */ true);
 			}
-			if (inSnapshot)
+			if (snapshotCheckResult == XID_IN_SNAPSHOT)
 				return false;
-			else if (xidKnownToHaveCommitted || TransactionIdDidCommit(HeapTupleHeaderGetRawXmin(tuple)))
+			else if (snapshotCheckResult == XID_SURELY_COMMITTED || TransactionIdDidCommit(HeapTupleHeaderGetRawXmin(tuple)))
 				SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
 							HeapTupleHeaderGetRawXmin(tuple));
 			else
@@ -1180,17 +1186,16 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 		/* xmin is committed, but maybe not according to our snapshot */
 		if (!HeapTupleHeaderXminFrozen(tuple))
 		{
-			inSnapshot =
+			snapshotCheckResult =
 				XidInMVCCSnapshot(HeapTupleHeaderGetRawXmin(tuple), snapshot,
 								  ((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-								  &setDistributedSnapshotIgnore,
-								  &xidKnownToHaveCommitted);
+								  &setDistributedSnapshotIgnore);
 			if (setDistributedSnapshotIgnore)
 			{
 				tuple->t_infomask2 |= HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE;
 				markDirty(buffer, relation, tuple, /* isXmin */ true);
 			}
-			if (inSnapshot)
+			if (snapshotCheckResult == XID_IN_SNAPSHOT)
 				return false;			/* treat as still in progress */
 		}
 	}
@@ -1223,18 +1228,17 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 				return false;	/* deleted before scan started */
 		}
 
-		inSnapshot = XidInMVCCSnapshot(xmax, snapshot,
+		snapshotCheckResult = XidInMVCCSnapshot(xmax, snapshot,
 									   ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-									   &setDistributedSnapshotIgnore,
-									   &xidKnownToHaveCommitted);
+									   &setDistributedSnapshotIgnore);
 		if (setDistributedSnapshotIgnore)
 		{
 			tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
 			markDirty(buffer, relation, tuple, /* isXmin */ false);
 		}
-		if (inSnapshot)
+		if (snapshotCheckResult == XID_IN_SNAPSHOT)
 			return true;	/* treat as still in progress */
-		if (xidKnownToHaveCommitted || TransactionIdDidCommit(xmax))
+		if (snapshotCheckResult == XID_SURELY_COMMITTED || TransactionIdDidCommit(xmax))
 			return false;		/* updating transaction committed */
 		/* it must have aborted or crashed */
 		return true;
@@ -1250,19 +1254,18 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 				return false;	/* deleted before scan started */
 		}
 
-		inSnapshot = XidInMVCCSnapshot(HeapTupleHeaderGetRawXmax(tuple), snapshot,
+		snapshotCheckResult = XidInMVCCSnapshot(HeapTupleHeaderGetRawXmax(tuple), snapshot,
 									   ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-									   &setDistributedSnapshotIgnore,
-									   &xidKnownToHaveCommitted);
+									   &setDistributedSnapshotIgnore);
 		if (setDistributedSnapshotIgnore)
 		{
 			tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
 			markDirty(buffer, relation, tuple, /* isXmin */ false);
 		}
-		if (inSnapshot)
+		if (snapshotCheckResult == XID_IN_SNAPSHOT)
 			return true;
 
-		if (!(xidKnownToHaveCommitted || TransactionIdDidCommit(HeapTupleHeaderGetRawXmax(tuple))))
+		if (!(snapshotCheckResult == XID_SURELY_COMMITTED || TransactionIdDidCommit(HeapTupleHeaderGetRawXmax(tuple))))
 		{
 			/* it must have aborted or crashed */
 			SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
@@ -1277,18 +1280,17 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 	else
 	{
 		/* xmax is committed, but maybe not according to our snapshot */
-		inSnapshot =
+		snapshotCheckResult =
 			XidInMVCCSnapshot(HeapTupleHeaderGetRawXmax(tuple), snapshot,
 							  ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-							  &setDistributedSnapshotIgnore,
-							  &xidKnownToHaveCommitted);
+							  &setDistributedSnapshotIgnore);
 		if (setDistributedSnapshotIgnore)
 		{
 			tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
 			markDirty(buffer, relation, tuple, /* isXmin */ false);
 		}
 
-		if (inSnapshot)
+		if (snapshotCheckResult == XID_IN_SNAPSHOT)
 			return true;			/* treat as still in progress */
 	}
 	/* xmax transaction committed */
@@ -1603,15 +1605,16 @@ HeapTupleIsSurelyDead(HeapTuple htup, TransactionId OldestXmin)
  * XidInMVCCSnapshot
  *		Is the given XID still-in-progress according to the distributed
  *      and local snapshots?
+ *      GPDB: We have extended the return values to accommodate the case where
+ *      we know for sure that the passed in xid has surely committed. This is
+ *      to reduce subsequent calls to TransactionIdDidCommit()
  */
-bool
+XidInMVCCSnapshotCheckResult
 XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
-				  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore,
-				  bool *xidKnownToHaveCommitted)
+				  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore)
 {
 	Assert (setDistributedSnapshotIgnore != NULL);
 	*setDistributedSnapshotIgnore = false;
-	*xidKnownToHaveCommitted      = false;
 
 	/*
 	 * If we have a distributed snapshot, it takes precedence over the local
@@ -1629,7 +1632,7 @@ XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
 
 		/* Special XIDs don't belong to snapshots, distributed or not. */
 		if (!TransactionIdIsNormal(xid))
-			return false;
+			return XID_NOT_IN_SNAPSHOT;
 
 		/*
 		 * A transaction's distributed snapshot always "lags behind" its local
@@ -1639,7 +1642,7 @@ XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
 		 * expensive distributed snapshot check, if possible.
 		 */
 		if (TransactionIdFollowsOrEquals(xid, snapshot->xmax))
-			return true;
+			return XID_IN_SNAPSHOT;
 
 		/*
 		 * Check if this committed transaction is a distributed committed
@@ -1654,11 +1657,10 @@ XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
 		switch (distributedSnapshotCommitted)
 		{
 			case DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS:
-				return true;
+				return XID_IN_SNAPSHOT;
 
 			case DISTRIBUTEDSNAPSHOT_COMMITTED_VISIBLE:
-				*xidKnownToHaveCommitted = true;
-				return false;
+				return XID_SURELY_COMMITTED;
 
 			case DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE:
 				/*
@@ -1683,7 +1685,7 @@ XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
 		}
 	}
 
-	return XidInMVCCSnapshot_Local(xid, snapshot);
+	return XidInMVCCSnapshot_Local(xid, snapshot) ? XID_IN_SNAPSHOT : XID_NOT_IN_SNAPSHOT;
 }
 
 /*
