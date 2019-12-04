@@ -1,0 +1,41 @@
+CREATE TABLE table_with_unique_constraint (a INT, b INT, UNIQUE (a,b));
+CREATE
+INSERT INTO table_with_unique_constraint SELECT i,i FROM generate_series(1,10)i;
+INSERT 10
+ALTER TABLE table_with_unique_constraint RENAME TO table_with_unique_constraint_renamed;
+ALTER
+INSERT INTO table_with_unique_constraint_renamed SELECT i,i FROM generate_series(20,30)i;
+INSERT 11
+
+CREATE TABLE table_with_pk (a INT, b INT, PRIMARY KEY (a,b));
+CREATE
+INSERT INTO table_with_pk SELECT i,i FROM generate_series(1,10)i;
+INSERT 10
+ALTER TABLE table_with_pk RENAME TO table_with_pk_renamed;
+ALTER
+ALTER INDEX table_with_pk_pkey RENAME TO table_with_pk_pkey_renamed;
+ALTER
+
+-- for partition table, pg_upgrade check should fail
+CREATE TABLE part_table_with_pk (a INT, b INT, PRIMARY KEY (a,b)) PARTITION BY RANGE(b) (START(1) END(3) EVERY(1));
+CREATE
+INSERT INTO part_table_with_pk VALUES (1,1), (2,2), (2,1), (1,2);
+INSERT 4
+ALTER TABLE part_table_with_pk RENAME TO part_table_with_pk_renamed;
+ALTER
+! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=/Users/bhuvneshchaudhary/workspace/gpdb/contrib/pg_upgrade/test/integration/gpdb5/bin --new-bindir=/Users/bhuvneshchaudhary/workspace/gpdb/contrib/pg_upgrade/test/integration/gpdb6/bin --old-datadir=/Users/bhuvneshchaudhary/workspace/gpdb/contrib/pg_upgrade/test/integration/gpdb5-data/qddir/demoDataDir-1 --new-datadir=/Users/bhuvneshchaudhary/workspace/gpdb/contrib/pg_upgrade/test/integration/gpdb6-data/qddir/demoDataDir-1 --old-port=50000;
+Performing Consistency Checks on Old Live Server
+------------------------------------------------
+Checking for indexes on partitioned tables                  fatal
+
+| Your installation contains partitioned tables with
+| indexes defined on them.  Indexes on partition parents,
+| as well as children, must be dropped before upgrade.
+| A list of the problem tables is in the file:
+| 	partitioned_tables_indexes.txt
+
+Failure, exiting
+
+-- drop the index on the partition and child tables before upgrading
+ALTER TABLE part_table_with_pk_renamed DROP CONSTRAINT part_table_with_pk_pkey;
+ALTER

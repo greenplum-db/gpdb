@@ -1,0 +1,17 @@
+CREATE TABLE table_with_unique_constraint (a INT, b INT, UNIQUE (a,b));
+INSERT INTO table_with_unique_constraint SELECT i,i FROM generate_series(1,10)i;
+ALTER TABLE table_with_unique_constraint RENAME TO table_with_unique_constraint_renamed;
+INSERT INTO table_with_unique_constraint_renamed SELECT i,i FROM generate_series(20,30)i;
+
+CREATE TABLE table_with_pk (a INT, b INT, PRIMARY KEY (a,b));
+INSERT INTO table_with_pk SELECT i,i FROM generate_series(1,10)i;
+ALTER TABLE table_with_pk RENAME TO table_with_pk_renamed;
+ALTER INDEX table_with_pk_pkey RENAME TO table_with_pk_pkey_renamed;
+
+-- for partition table, pg_upgrade check should fail
+CREATE TABLE part_table_with_pk (a INT, b INT, PRIMARY KEY (a,b)) PARTITION BY RANGE(b) (START(1) END(3) EVERY(1));
+INSERT INTO part_table_with_pk VALUES (1,1), (2,2), (2,1), (1,2);
+ALTER TABLE part_table_with_pk RENAME TO part_table_with_pk_renamed;
+! ./gpdb6/bin/pg_upgrade --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
+-- drop the index on the partition and child tables before upgrading
+ALTER TABLE part_table_with_pk_renamed DROP CONSTRAINT part_table_with_pk_pkey;

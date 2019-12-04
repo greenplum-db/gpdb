@@ -1,0 +1,51 @@
+set enable_seqscan=off;
+SET
+EXPLAIN SELECT * FROM table_with_unique_constraint_renamed WHERE a = 1;
+ QUERY PLAN                                                                                               
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.83..1485.30 rows=87 width=8)                         
+   ->  Bitmap Heap Scan on table_with_unique_constraint_renamed  (cost=100.83..1485.30 rows=29 width=8)   
+         Recheck Cond: (a = 1)                                                                            
+         ->  Bitmap Index Scan on table_with_unique_constraint_a_key  (cost=0.00..100.81 rows=29 width=0) 
+               Index Cond: (a = 1)                                                                        
+ Optimizer: Postgres query optimizer                                                                      
+(6 rows)
+SELECT * FROM table_with_unique_constraint_renamed WHERE a = 1;
+ a | b 
+---+---
+ 1 | 1 
+(1 row)
+-- insert should error out due to unique constraint
+INSERT INTO table_with_unique_constraint_renamed VALUES (1,1);
+ERROR:  duplicate key value violates unique constraint "table_with_unique_constraint_a_key"  (seg1 127.0.0.1:60003 pid=76691)
+DETAIL:  Key (a, b)=(1, 1) already exists.
+
+EXPLAIN SELECT * FROM table_with_pk_renamed WHERE a = 1;
+ QUERY PLAN                                                                                       
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.83..1485.30 rows=87 width=8)                 
+   ->  Bitmap Heap Scan on table_with_pk_renamed  (cost=100.83..1485.30 rows=29 width=8)          
+         Recheck Cond: (a = 1)                                                                    
+         ->  Bitmap Index Scan on table_with_pk_pkey_renamed  (cost=0.00..100.81 rows=29 width=0) 
+               Index Cond: (a = 1)                                                                
+ Optimizer: Postgres query optimizer                                                              
+(6 rows)
+SELECT * FROM table_with_pk_renamed WHERE a = 1;
+ a | b 
+---+---
+ 1 | 1 
+(1 row)
+-- insert should error out due to primary key constraint
+INSERT INTO table_with_pk_renamed VALUES (1,1);
+ERROR:  duplicate key value violates unique constraint "table_with_pk_pkey_renamed"  (seg1 127.0.0.1:60003 pid=76691)
+DETAIL:  Key (a, b)=(1, 1) already exists.
+
+-- for partitioned table indexes were already dropped
+SELECT * FROM part_table_with_pk_renamed;
+ a | b 
+---+---
+ 2 | 1 
+ 1 | 1 
+ 2 | 2 
+ 1 | 2 
+(4 rows)
