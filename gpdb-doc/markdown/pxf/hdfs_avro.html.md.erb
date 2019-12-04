@@ -1,5 +1,5 @@
 ---
-title: Reading Avro Data from HDFS
+title: Reading and Writing HDFS Avro Data
 ---
 
 <!--
@@ -22,7 +22,9 @@ under the License.
 -->
 
 
-Use the PXF HDFS Connector to read Avro-format data. This section describes how to use PXF to access Avro data in HDFS, including how to create and query an external table that references an Avro file in the HDFS data store.
+Use the PXF HDFS Connector to read and write Avro-format data. This section describes how to use PXF to read and write Avro data in HDFS, including how to create, query, and insert into an external table that references an Avro file in the HDFS data store.
+
+**Note**: PXF does not support reading or writing compressed Avro files.
 
 ## <a id="prereq"></a>Prerequisites
 
@@ -54,8 +56,8 @@ The following table summarizes external mapping rules for Avro data.
 | long | bigint |
 | string | text |
 | Complex type: Array, Map, Record, or Enum                         | text, with delimiters inserted between collection items, mapped key-value pairs, and record data.                                                                                           |
-| Complex type: Fixed                                               | bytea                                                                                                                                                                                               |
-| Union                                                             | Follows the above conventions for primitive or complex data types, depending on the union; supports Null values.                                                                     |
+| Complex type: Fixed                                               | bytea (supported for read operations only).                                                                                                                                                                                 |
+| Union                                                             | Follows the above conventions for primitive or complex data types, depending on the union; must contain 2 elements, only one of which must be null.                                                                     |
 
 
 ### <a id="topic_tr3_dpg_ts__section_m2p_ztg_ts"></a>Avro Schemas and Data
@@ -64,16 +66,33 @@ Avro schemas are defined using JSON, and composed of the same primitive and comp
 
 Fields in an Avro schema file are defined via an array of objects, each of which is specified by a name and a type.
 
+You can specify an Avro schema on both read and write operations to HDFS. 
+
+| External Table Type  | Schema Specified? | Description
+|-------|--------------------------|-----------|
+| readable   | yes | PXF uses the specified schema; this overrides a schema in the `.avro` data file. |
+| readable   | no | PXF uses the schema in the `.avro` data file. |
+| writable   | yes | PXF uses the specified schema. |
+| writable   | no | PXF creates the Avro schema based on the external table definition. |
+
+When you provide the Avro schema file to PXF, the file must reside in the same location on each Greenplum Database segment host **or** the file may reside on the Hadoop file system. PXF first searches for an absolute or relative (to the PXF classpath) Avro file path on the Greenplum segment hosts. If PXF cannot find the schema file locally, it searches for the file on HDFS.
+
+The `$PXF_CONF/conf` directory is in the PXF classpath. PXF can locate an Avro schema file that you add to this directory on every Greenplum Database segment host.
+
+An Avro data file contains the schema and a compact binary representation of the data. Avro data files typically have the `.avro` suffix.
+
+See [Writing Avro Data](#topic_avro_writedata) for additional schema considerations when writing Avro data to HDFS.
 
 ## <a id="profile_cet"></a>Creating the External Table
 
 Use the `hdfs:avro` profile to read Avro-format data in HDFS. The following syntax creates a Greenplum Database readable external table that references such a file:
 
 ``` sql
-CREATE EXTERNAL TABLE <table_name>
+CREATE [WRITABLE] EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION ('pxf://<path-to-hdfs-file>?PROFILE=hdfs:avro[&SERVER=<server_name>][&<custom-option>=<value>[...]]')
-FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
+[DISTRIBUTED BY (<column_name> [, ... ] ) | DISTRIBUTED RANDOMLY];
 ```
 
 The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command are described in the table below.
@@ -84,18 +103,22 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:avro`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | \<custom&#8209;option\>  | \<custom-option\>s are discussed below.|
-| FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `hdfs:avro` profile. The `CUSTOM` `FORMAT` requires that you specify `(FORMATTER='pxfwritable_import')`. |
+| FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
+| DISTRIBUTED BY | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
 
 <a id="customopts"></a>
-For complex types, the PXF `hdfs:avro` profile inserts default delimiters between collection items and values. You can use non-default delimiter characters by identifying values for specific `hdfs:avro` custom options in the `CREATE EXTERNAL TABLE` command. 
+
+
+For complex types, the PXF `hdfs:avro` profile inserts default delimiters between collection items and values before display. You can use non-default delimiter characters by identifying values for specific `hdfs:avro` custom options in the `CREATE EXTERNAL TABLE` command. 
 
 The `hdfs:avro` profile supports the following \<custom-option\>s:
 
 | Option Keyword   | Description       
 |---------------|--------------------|                                                                                        
-| COLLECTION_DELIM | The delimiter character(s) to place between entries in a top-level array, map, or record field when PXF maps an Avro complex data type to a text column. The default is the comma `,` character. |
-| MAPKEY_DELIM | The delimiter character(s) to place between the key and value of a map entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. |
-| RECORDKEY_DELIM | The delimiter character(s) to place between the field name and value of a record entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. |
+| COLLECTION_DELIM | The delimiter character(s) to place between entries in a top-level array, map, or record field when PXF maps an Avro complex data type to a text column. The default is the comma `,` character. (Read)|
+| MAPKEY_DELIM | The delimiter character(s) to place between the key and value of a map entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. (Read)|
+| RECORDKEY_DELIM | The delimiter character(s) to place between the field name and value of a record entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. (Read)|
+| SCHEMA | The absolute path to the Avro schema file on the segment host or on HDFS, or the relative path to the schema file on the segment host. (Read and Write)|
 
 
 ## <a id="avro_example"></a>Example: Reading Avro Data
@@ -108,6 +131,8 @@ The examples in this section will operate on Avro data with the following field 
 - fmap - map of long
 - relationship - enumerated type
 - address - record comprised of street number (int), street name (string), and city (string)
+
+You create an Avro schema and data file, and then create a readable external table to read the data.
 
 
 ### <a id="topic_tr3_dpg_ts__section_m2p_ztg_ts_99"></a>Create Schema
@@ -198,7 +223,7 @@ Perform the following steps to create a sample Avro data file conforming to the 
     $ hdfs dfs -put /tmp/pxf_avro.avro /data/pxf_examples/
     ```
     
-### <a id="topic_avro_querydata"></a>Query With hdfs:avro Profile
+### <a id="topic_avro_querydata"></a>Reading Avro Data
 
 Perform the following operations to create and query an external table that references the `pxf_avro.avro` file that you added to HDFS in the previous section. When creating the table:
 
@@ -253,4 +278,76 @@ Perform the following operations to create and query an external table that refe
     ----------+---------------------------------------------
      jim      | {number:9,street:deer creek,city:palo alto}
     ```
+
+## <a id="topic_avro_writedata"></a>Writing Avro Data
+
+When you create a writable external table to write data to an Avro file, each table row is an Avro record and each table column is an Avro field.
+
+If you do not specify a `SCHEMA` file, PXF generates a schema for the Avro file based on the Greenplum Database external table definition. PXF assigns the name of the external table column to the Avro field name. Because Avro has a `null` type and Greenplum external tables do not support the `NOT NULL` column qualifier, PXF wraps each data type in an Avro `union` of the mapped type and `null`. For example, for a writable external table column that you define with the Greenplum Database `text` data type, PXF generates the following schema element:
+
+``` pre
+["string", "null"]
+```
+
+PXF returns an error if you provide a schema, the schema does not include a `union` of the field data type with `null`, and PXF encounters a NULL data field.
+
+PXF supports writing only Avro primitive data types. It does not support writing complex types to Avro:
+
+- When you specify a `SCHEMA` file in the `LOCATION`, the schema must include only primitive data types.
+- When PXF generates the schema, it writes any complex type that you specify in the writable external table column definition to the Avro file as a single Avro `string` type. For example, if you write an array of integers, PXF converts the array to a `string`, and you must read this data with a Greenplum `text`-type column.
+
+
+### <a id="topic_avrowrite_example"></a>Example: Writing Avro Data
+
+In this example, you create an external table that writes to an Avro file on HDFS, letting PXF generate the Avro schema. After you insert some data into the file, you create a readable external data to query the Avro data.
+
+The Avro file that you create and read in this example includes the following fields:
+
+- id:  `int`
+- username:  `text`
+- followers:  `text[]`
+
+Example procedure:
+
+1. Create the writable external table:
+
+    ``` sql
+    postgres=# CREATE WRITABLE EXTERNAL TABLE pxf_avrowrite(id int, username text, followers text[])
+                LOCATION ('pxf://data/pxf_examples/pxfwrite.avro?PROFILE=hdfs:avro')
+              FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export');
+
+2. Insert some data into the `pxf_avrowrite` table:
+
+    ``` sql
+    postgres=# INSERT INTO pxf_avrowrite VALUES (33, 'oliver', ARRAY['alex','frank']);
+    postgres=# INSERT INTO pxf_avrowrite VALUES (77, 'lisa', ARRAY['tom','mary']);
+    ```
+
+    PXF uses the external table definition to generate the Avro schema.
+
+3. Create an external table to read the Avro data you just inserted` table:
+
+    ``` sql
+    postgres=# CREATE EXTERNAL TABLE read_pxfwrite(id int, username text, followers text)
+                LOCATION ('pxf://data/pxf_examples/pxfwrite.avro?PROFILE=hdfs:avro')
+              FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+    ```
+
+    Notice that the `followers` column is of type `text`.
+
+4. Read the Avro data by querying the `read_avrowrite` table:
+
+    ``` sql
+    postgres=# SELECT * FROM read_avrowrite;
+    ```
+
+    ``` pre
+     id | username |  followers   
+    ----+----------+--------------
+     77 | lisa     | {tom,mary}
+     33 | oliver   | {alex,frank}
+    (2 rows)
+    ```
+
+    `followers` is a single string comprised of the `text` array elements that you inserted into the table.
 
