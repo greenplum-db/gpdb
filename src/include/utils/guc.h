@@ -426,6 +426,7 @@ extern bool gp_encoding_check_locale_compatibility;
 extern int	gp_connection_send_timeout;
 
 extern bool create_restartpoint_on_ckpt_record_replay;
+extern bool forward_ao_fsync_on_primary;
 
 /* ORCA related definitions */
 #define OPTIMIZER_XFORMS_COUNT 400 /* number of transformation rules */

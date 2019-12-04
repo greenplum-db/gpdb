@@ -39,6 +39,7 @@
 #include "storage/bufmgr.h"
 #include "storage/relfilenode.h"
 #include "storage/smgr.h"
+#include "utils/guc.h"
 #include "utils/hsearch.h"
 #include "utils/memutils.h"
 #include "pg_trace.h"
@@ -455,9 +456,13 @@ mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo, char relstor
 	 * requests for a temp relation, though.  We can send just one request
 	 * even when deleting multiple forks, since the fsync queuing code accepts
 	 * the "InvalidForkNumber = all forks" convention.
+	 *
+	 * When fowarding of fsync requests is enabled for AO, we must also be
+	 * able to forget them.
 	 */
 	if (!RelFileNodeBackendIsTemp(rnode) &&
-		!relstorage_is_ao(relstorage))
+		(forward_ao_fsync_on_primary ||
+		 !relstorage_is_ao(relstorage)))
 		ForgetRelationFsyncRequests(rnode.node, forkNum);
 
 	/* Now do the per-fork work */
@@ -1213,6 +1218,14 @@ mdsync(void)
 		Assert((CycleCtr) (entry->cycle_ctr + 1) == mdsync_cycle_ctr);
 
 		/*
+		 * An entry for append-optimized segment file should exist only when
+		 * the fsync forward GUC is turned on.  This is applicable only to
+		 * primary, so don't check the GUC when during recovery.
+		 */
+		AssertImply(entry->is_ao_segnos && !RecoveryInProgress(),
+					forward_ao_fsync_on_primary);
+
+		/*
 		 * Scan over the forks and segments represented by the entry.
 		 *
 		 * The bitmap manipulations are slightly tricky, because we can call
@@ -1561,6 +1574,15 @@ register_dirty_segment(SMgrRelation reln, ForkNumber forknum, MdfdVec *seg)
 bool
 register_dirty_segment_ao(RelFileNode rnode, ForkNumber forknum, int segno)
 {
+	/*
+	 * On primary segment, backends perform fsync of append-optimized tables
+	 * by default.  The fsync requests are forwarded to checkpointer only when
+	 * the GUC is turned on.  The GUC only applies to primary, mirror replay
+	 * process always forwards the request to checkpointer.
+	 */
+	if (!IsStandbyMode() && !forward_ao_fsync_on_primary)
+		return false;
+
 	if (pendingOpsTable)
 	{
 		RememberFsyncRequest(rnode, forknum, segno, true);

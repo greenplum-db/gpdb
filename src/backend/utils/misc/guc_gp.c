@@ -201,6 +201,7 @@ bool		gp_encoding_check_locale_compatibility;
 int			gp_connection_send_timeout;
 
 bool create_restartpoint_on_ckpt_record_replay = false;
+bool forward_ao_fsync_on_primary = false;
 
 /*
  * This variable is a dummy that doesn't do anything, except in some
@@ -2932,6 +2933,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&create_restartpoint_on_ckpt_record_replay,
+		false, NULL, NULL
+	},
+
+	{
+		{"forward_ao_fsync_on_primary", PGC_SIGHUP, DEVELOPER_OPTIONS,
+			gettext_noop("forward fsync operations of appendoptimized tables to checkpointer."),
+			NULL
+		},
+		&forward_ao_fsync_on_primary,
 		false, NULL, NULL
 	},
 

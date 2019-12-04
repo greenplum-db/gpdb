@@ -197,10 +197,10 @@ extern void AppendOnlyStorageWrite_OpenFile(AppendOnlyStorageWrite *storageWrite
 								int64 fileLen_uncompressed,
 								RelFileNodeBackend *relFileNode,
 								int32 segmentFileNum);
-extern void AppendOnlyStorageWrite_FlushAndCloseFile(AppendOnlyStorageWrite *storageWrite,
+extern void AppendOnlyStorageWrite_CloseFile(AppendOnlyStorageWrite *storageWrite,
 											 int64 *newLogicalEof,
 											 int64 *fileLen_uncompressed);
-extern void AppendOnlyStorageWrite_TransactionFlushAndCloseFile(AppendOnlyStorageWrite *storageWrite,
+extern void AppendOnlyStorageWrite_TransactionCloseFile(AppendOnlyStorageWrite *storageWrite,
 													int64 *newLogicalEof,
 												int64 *fileLen_uncompressed);
 

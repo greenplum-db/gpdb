@@ -10,36 +10,27 @@
 -- Set fsync on since we need to test the fsync code logic.
 !\retcode gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation;
 -- start_ignore
-20191204:17:12:45:024661 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation'
+20191204:20:22:37:017158 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation'
 
 -- end_ignore
 (exited with code 0)
 !\retcode gpconfig -c fsync -v on --skipvalidation;
 -- start_ignore
-20191204:17:12:58:024716 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-c fsync -v on --skipvalidation'
+20191204:20:22:49:017216 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-c fsync -v on --skipvalidation'
 
 -- end_ignore
 (exited with code 0)
 !\retcode gpstop -u;
 -- start_ignore
-20191204:17:12:58:024772 gpstop:asimmac:apraveen-[INFO]:-Starting gpstop with args: -u
-20191204:17:12:58:024772 gpstop:asimmac:apraveen-[INFO]:-Gathering information and validating the environment...
-20191204:17:12:58:024772 gpstop:asimmac:apraveen-[INFO]:-Obtaining Greenplum Master catalog information
-20191204:17:12:58:024772 gpstop:asimmac:apraveen-[INFO]:-Obtaining Segment details from master...
-20191204:17:12:58:024772 gpstop:asimmac:apraveen-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5242.gb96afb4d9fa build dev'
-20191204:17:12:58:024772 gpstop:asimmac:apraveen-[INFO]:-Signalling all postmaster processes to reload
+20191204:20:22:49:017270 gpstop:asimmac:apraveen-[INFO]:-Starting gpstop with args: -u
+20191204:20:22:49:017270 gpstop:asimmac:apraveen-[INFO]:-Gathering information and validating the environment...
+20191204:20:22:49:017270 gpstop:asimmac:apraveen-[INFO]:-Obtaining Greenplum Master catalog information
+20191204:20:22:49:017270 gpstop:asimmac:apraveen-[INFO]:-Obtaining Segment details from master...
+20191204:20:22:49:017270 gpstop:asimmac:apraveen-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5242.gb96afb4d9fa build dev'
+20191204:20:22:49:017270 gpstop:asimmac:apraveen-[INFO]:-Signalling all postmaster processes to reload
 
 -- end_ignore
 (exited with code 0)
-
-create table fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
-CREATE
-create table fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
-CREATE
-insert into fsync_ao select i, i from generate_series(1,10)i;
-INSERT 10
-insert into fsync_co select i, i from generate_series(1,10)i;
-INSERT 10
 
 -- Reset all faults.
 select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where content = 0;
@@ -60,6 +51,10 @@ select gp_inject_fault_infinite('restartpoint_guts', 'skip', dbid) from gp_segme
 checkpoint;
 CHECKPOINT
 
+-- We have just created a checkpoint.  The next checkpoint will be triggered
+-- only after 5 minutes or after CheckPointSegments wal segments.  Neither of
+-- that can happen until this test calls explicit checkpoint.
+
 -- Wait until restartpoint flush happens.
 select gp_wait_until_triggered_fault('restartpoint_guts', 1, dbid) from gp_segment_configuration where content=0 and role='m';
  gp_wait_until_triggered_fault 
@@ -67,23 +62,39 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 1, dbid) from gp_segme
  Success:                      
 (1 row)
 
--- We have just created a checkpoint.  The next checkpoint will be triggered
--- only after 5 minutes or after CheckPointSegments wal segments.  Neither of
--- that can happen until this test calls explicit checkpoint.
+-- Validate that fsync is performed only on the primary when the GUC
+-- to do so is not set.  Also validate that on the mirror, the
+-- checkpointer process performs fsync for AO, regardless of the GUC.
 
--- Write ao and co data files including aoseg & gp_fastsequence.
--- These should be fsync-ed by checkpoint & restartpoint.
+-- Expect the GUC to be off by default.
+show forward_ao_fsync_on_primary;
+ forward_ao_fsync_on_primary 
+-----------------------------
+ off                         
+(1 row)
+
+create table fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
+CREATE
+create table fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
+CREATE
+-- Temp table segment files should never be fsync'ed.
+create temp table no_fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
+CREATE
 insert into fsync_ao select i, i from generate_series(1,20)i;
 INSERT 20
 insert into fsync_co select i, i from generate_series(1,20)i;
 INSERT 20
+insert into no_fsync_ao select i, i from generate_series(1,20)i;
+INSERT 20
 
--- Inject fault to count relfiles fsync'ed by checkpointer on mirror.
-select gp_inject_fault_infinite('ao_fsync_counter', 'skip', dbid) from gp_segment_configuration where content=0 and role='m';
+-- Inject fault to count relfiles fsync'ed by checkpointer on primary
+-- as well as on mirror.
+select gp_inject_fault_infinite('ao_fsync_counter', 'skip', dbid) from gp_segment_configuration where content=0;
  gp_inject_fault_infinite 
 --------------------------
  Success:                 
-(1 row)
+ Success:                 
+(2 rows)
 
 checkpoint;
 CHECKPOINT
@@ -95,15 +106,77 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 2, dbid) from gp_segme
  Success:                      
 (1 row)
 
--- Validate that the number of files fsync'ed by checkpointer.
--- `num times hit` is corresponding to the number of files synced by
--- `ao_fsync_counter` fault.
+-- Validate that the number of files fsync'ed by checkpointer on
+-- primary.  `num times hit` is corresponding to the number of files
+-- noticed by `ao_fsync_counter` fault.  It should be 0 because by
+-- default, fsync of AO data files should be performed by the backend
+-- processes writing to them on primary.
+select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault                                                                                                                                                                                                  
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'set'  num times hit:'0' 
+ 
+(1 row)
+-- Checkpointer on mirror should perfrom fsync for three AO segment
+-- files.
 select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0 and role='m';
  gp_inject_fault                                                                                                                                                                                                        
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'3' 
  
 (1 row)
+
+-- Enable fsync forward GUC so that fsync requests for
+-- append-optimized tables are forwarded to checkpointer on primary.
+!\retcode gpconfig -c forward_ao_fsync_on_primary -v on --skipvalidation;
+-- start_ignore
+20191204:20:23:02:017300 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-c forward_ao_fsync_on_primary -v on --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -au;
+-- start_ignore
+20191204:20:23:03:017354 gpstop:asimmac:apraveen-[INFO]:-Starting gpstop with args: -au
+20191204:20:23:03:017354 gpstop:asimmac:apraveen-[INFO]:-Gathering information and validating the environment...
+20191204:20:23:03:017354 gpstop:asimmac:apraveen-[INFO]:-Obtaining Greenplum Master catalog information
+20191204:20:23:03:017354 gpstop:asimmac:apraveen-[INFO]:-Obtaining Segment details from master...
+20191204:20:23:03:017354 gpstop:asimmac:apraveen-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5242.gb96afb4d9fa build dev'
+20191204:20:23:03:017354 gpstop:asimmac:apraveen-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)
+
+-- Write ao and co data files including temp ao table.  Only the
+-- non-temp files should be fsync-ed by checkpoint & restartpoint.
+insert into fsync_ao select i, i from generate_series(1,20)i;
+INSERT 20
+insert into fsync_co select i, i from generate_series(1,20)i;
+INSERT 20
+insert into no_fsync_ao select i, i from generate_series(1,20)i;
+INSERT 20
+
+checkpoint;
+CHECKPOINT
+
+-- Wait until restartpoint happens again.
+select gp_wait_until_triggered_fault('restartpoint_guts', 3, dbid) from gp_segment_configuration where content=0 and role='m';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- Validate that the number of files fsync'ed by checkpointer.  `num
+-- times hit` is corresponding to the number of files synced by
+-- `ao_fsync_counter` fault.  It should be non-zero on both, primary
+-- and mirror.
+select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0;
+ gp_inject_fault                                                                                                                                                                                                        
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'3' 
+ 
+ Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'6' 
+ 
+(2 rows)
 
 -- Test vacuum compaction with more than one segment file per table.  Perform
 -- concurrent inserts before vacuum to get multiple segment files.  Validation
@@ -126,7 +199,7 @@ END
 delete from fsync_ao where a > 20;
 DELETE 20
 update fsync_co set b = -a;
-UPDATE 70
+UPDATE 80
 -- Expect two segment files for each table (ao table) or each column (co table).
 select segno, state from gp_toolkit.__gp_aoseg('fsync_ao');
  segno | state 
@@ -149,18 +222,63 @@ VACUUM
 checkpoint;
 CHECKPOINT
 -- Wait until restartpoint happens again.
-select gp_wait_until_triggered_fault('restartpoint_guts', 3, dbid) from gp_segment_configuration where content=0 and role='m';
+select gp_wait_until_triggered_fault('restartpoint_guts', 4, dbid) from gp_segment_configuration where content=0 and role='m';
  gp_wait_until_triggered_fault 
 -------------------------------
  Success:                      
 (1 row)
 
 -- Expect the segment files that were updated by vacuum to be fsync'ed.
-select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0 and role='m';
+select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0;
  gp_inject_fault                                                                                                                                                                                                         
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'14' 
  
+ Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'17' 
+ 
+(2 rows)
+
+-- Checkpoint after drop table should be successful. It validates that the drop
+-- removed the fsync requests enqued by the previous insert from
+-- pendingOpsTable.
+insert into fsync_co select i, i from generate_series(1,20)i;
+INSERT 20
+drop table fsync_co;
+DROP
+checkpoint;
+CHECKPOINT
+-- Wait until restartpoint happens again.
+select gp_wait_until_triggered_fault('restartpoint_guts', 4, dbid) from gp_segment_configuration where content=0 and role='m';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- Checkpoint after drop database should be successful. It validates that the drop
+-- removed the fsync requests enqued by the previous insert from
+-- pendingOpsTable.
+create database fsync_ao_db;
+CREATE
+2:@db_name fsync_ao_db: create table fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
+CREATE
+2:@db_name fsync_ao_db: create table fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
+CREATE
+2:@db_name fsync_ao_db: insert into fsync_ao select i, i from generate_series(1,20)i;
+INSERT 20
+2:@db_name fsync_ao_db: insert into fsync_co select i, i from generate_series(1,20)i;
+INSERT 20
+2q: ... <quitting>
+drop database fsync_ao_db;
+DROP
+checkpoint;
+CHECKPOINT
+-- Wait until restartpoint happens again.  Create database creates two
+-- and drop database creates one checkpoint.  So wait until the
+-- restartpoint happens three times on mirror.
+select gp_wait_until_triggered_fault('restartpoint_guts', 7, dbid) from gp_segment_configuration where content=0 and role='m';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
 (1 row)
 
 -- Reset all faults.
@@ -173,24 +291,30 @@ select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where
 
 !\retcode gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation;
 -- start_ignore
-20191204:17:13:13:024809 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-r create_restartpoint_on_ckpt_record_replay --skipvalidation'
+20191204:20:23:18:017390 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-r create_restartpoint_on_ckpt_record_replay --skipvalidation'
 
 -- end_ignore
 (exited with code 0)
 !\retcode gpconfig -r fsync --skipvalidation;
 -- start_ignore
-20191204:17:13:27:024868 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-r fsync --skipvalidation'
+20191204:20:23:30:017445 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-r fsync --skipvalidation'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpconfig -r forward_ao_fsync_on_primary --skipvalidation;
+-- start_ignore
+20191204:20:23:42:017499 gpconfig:asimmac:apraveen-[INFO]:-completed successfully with parameters '-r forward_ao_fsync_on_primary --skipvalidation'
 
 -- end_ignore
 (exited with code 0)
 !\retcode gpstop -u;
 -- start_ignore
-20191204:17:13:27:024927 gpstop:asimmac:apraveen-[INFO]:-Starting gpstop with args: -u
-20191204:17:13:27:024927 gpstop:asimmac:apraveen-[INFO]:-Gathering information and validating the environment...
-20191204:17:13:27:024927 gpstop:asimmac:apraveen-[INFO]:-Obtaining Greenplum Master catalog information
-20191204:17:13:27:024927 gpstop:asimmac:apraveen-[INFO]:-Obtaining Segment details from master...
-20191204:17:13:27:024927 gpstop:asimmac:apraveen-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5242.gb96afb4d9fa build dev'
-20191204:17:13:27:024927 gpstop:asimmac:apraveen-[INFO]:-Signalling all postmaster processes to reload
+20191204:20:23:43:017553 gpstop:asimmac:apraveen-[INFO]:-Starting gpstop with args: -u
+20191204:20:23:43:017553 gpstop:asimmac:apraveen-[INFO]:-Gathering information and validating the environment...
+20191204:20:23:43:017553 gpstop:asimmac:apraveen-[INFO]:-Obtaining Greenplum Master catalog information
+20191204:20:23:43:017553 gpstop:asimmac:apraveen-[INFO]:-Obtaining Segment details from master...
+20191204:20:23:43:017553 gpstop:asimmac:apraveen-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5242.gb96afb4d9fa build dev'
+20191204:20:23:43:017553 gpstop:asimmac:apraveen-[INFO]:-Signalling all postmaster processes to reload
 
 -- end_ignore
 (exited with code 0)

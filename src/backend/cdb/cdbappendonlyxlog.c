@@ -26,6 +26,7 @@
 #include "storage/fd.h"
 #include "utils/faultinjector.h"
 #include "utils/faultinjector_lists.h"
+#include "utils/guc.h"
 
 /*
  * Insert an AO XLOG/AOCO record.
@@ -193,8 +194,12 @@ appendonly_redo(XLogReaderState *record)
 	 * Perform redo of AO XLOG records only for standby mode. We do
 	 * not need to replay AO XLOG records in normal mode because fsync
 	 * is performed on file close.
+	 *
+	 * However, if the GUC to forward fsync requests is on, the AO XLOG
+	 * records must be replayed because it means fsync was not performed
+	 * by the backend process.
 	 */
-	if (!IsStandbyMode())
+	if (!IsStandbyMode() && !forward_ao_fsync_on_primary)
 		return;
 
 	switch (info)

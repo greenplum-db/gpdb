@@ -533,7 +533,7 @@ CloseWritableFileSeg(AppendOnlyInsertDesc aoInsertDesc)
 	int64		fileLen;
 	int64		fileLen_uncompressed;
 
-	AppendOnlyStorageWrite_TransactionFlushAndCloseFile(&aoInsertDesc->storageWrite,
+	AppendOnlyStorageWrite_TransactionCloseFile(&aoInsertDesc->storageWrite,
 														&fileLen,
 														&fileLen_uncompressed);
 

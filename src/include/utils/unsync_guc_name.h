@@ -43,6 +43,7 @@
 		"cpu_operator_cost",
 		"cpu_tuple_cost",
 		"create_restartpoint_on_ckpt_record_replay",
+		"forward_ao_fsync_on_primary",
 		"cursor_tuple_fraction",
 		"cursor_tuple_fraction",
 		"data_checksums",
