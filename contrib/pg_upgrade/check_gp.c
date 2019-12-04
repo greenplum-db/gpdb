@@ -24,6 +24,7 @@ static void check_orphaned_toastrels(void);
 static void check_online_expansion(void);
 static void check_gphdfs_external_tables(void);
 static void check_gphdfs_user_roles(void);
+static void check_unique_primary_constraint(void);
 
 /*
  *	check_greenplum
@@ -44,6 +45,7 @@ check_greenplum(void)
 	check_orphaned_toastrels();
 	check_gphdfs_external_tables();
 	check_gphdfs_user_roles();
+	check_unique_primary_constraint();
 }
 
 /*
@@ -114,6 +116,88 @@ check_online_expansion(void)
 		check_ok();
 }
 
+/*
+ *	check_unique_primary_constraint
+ *
+ *  For unique or primary key constraint, the index name is auto generated,
+ *  and if the default index name is already taken by other objects, an incremental
+ *  number is appended to the index name.
+ *  This means that pg_upgrade cannot upgrade a cluster containing indexes of such
+ *  type, they must be handled manually before/after the upgrade. Although, the issue
+ *  exists only with such indexes, but we wholesale ban upgrading of unique or
+ *  primary key constraints. Such, constraints must be dropped before the upgrade,
+ *  and can be recreated after the upgrade.
+ *
+ *	Check for the existence of unique or primary key constraint and refuse the upgrade if
+ *	found.
+ */
+static void
+check_unique_primary_constraint(void)
+{
+	char		output_path[MAXPGPATH];
+	FILE	   *script = NULL;
+	bool		found = false;
+	int			dbnum;
+
+	prep_status("Checking for unique or primary key constraints");
+
+	snprintf(output_path, sizeof(output_path), "unique_primary_key_constraint.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		bool		db_used = false;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn;
+
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		res = executeQueryOrDie(conn,
+								"SELECT conname constrant_name, conrelid::regclass tablename "
+								"FROM   pg_constraint pc, pg_namespace pn where pc.connamespace=pn.oid "
+								"       and contype in ('u', 'p');");
+
+		ntups = PQntuples(res);
+
+		if (ntups > 0)
+		{
+			found = true;
+
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_log(PG_FATAL, "Could not create necessary upgrade report file:  %s\n",
+					   output_path);
+
+			for (rowno = 0; rowno < ntups; rowno++)
+			{
+				if (!db_used)
+				{
+					fprintf(script, "Database:  %s\n", active_db->db_name);
+					db_used = true;
+				}
+				fprintf(script, "Constraint \"%s\" on relation \"%s\"\n",
+						PQgetvalue(res, rowno, PQfnumber(res, "constrant_name")),
+						PQgetvalue(res, rowno, PQfnumber(res, "tablename")));
+			}
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+	if (found)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
+			   "| Your installation contains unique or primary key constraints\n"
+			   "| on tables.  These constraints need to be removed\n"
+			   "| from the tables before the upgrade.  A list of\n"
+			   "| constraints to remove is in the file:\n"
+			   "| \t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
 /*
  *	check_external_partition
  *
