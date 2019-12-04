@@ -88,6 +88,12 @@
 #define CP_SMALL_TLIST		0x0002		/* Prefer narrower tlists */
 #define CP_LABEL_TLIST		0x0004		/* tlist must contain sortgrouprefs */
 
+struct ResultRelationScanSearchCtx
+{
+	plan_tree_base_prefix    base; /* this will be set PlannerInfo root */
+};
+
+typedef struct ResultRelationScanSearchCtx ResultRelationScanSearchCtx;
 
 static Plan *create_scan_plan(PlannerInfo *root, Path *best_path,
 				 int flags);
@@ -280,6 +286,10 @@ static TargetEntry *find_junk_tle(List *targetList, const char *junkAttrName);
 static Motion *cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 								 CdbMotionPath *path,
 								 Plan *subplan);
+static bool has_motion_above_result_relation(PlannerInfo *root, Plan *plan);
+static bool motion_above_result_relation_walk(Node *node, void *context);
+static bool has_scan_result_relation(PlannerInfo *root, Plan *plan);
+static bool scan_result_relation_walk(Node *node, void *context);
 
 /*
  * create_plan
@@ -2483,18 +2493,12 @@ create_motion_plan(PlannerInfo *root, CdbMotionPath *path)
 	root->plan_params = NIL;
 
 	/*
-	 * Elide explicit motion, if the subplan doesn't contain any motions.
-	 *
-	 * The idea is that if an Explicit Motion has no Motions underneath it,
-	 * then the row to update must originate from the same segment, and no
-	 * Motion is needed. This is quite conservative, we could elide the motion
-	 * even if there are Motions, as long as they are not between the scan
-	 * on the target table and the ModifyTable.
-	 *
-	 * A SplitUpdate also computes the target segment ID, based on other columns,
-	 * so we treat it the same as a Motion node for this purpose.
+	 * Elide explicit motion, if the subplan doesn't add motion above
+	 * result relations.
 	 */
-	if (root->numMotions == before_numMotions && path->is_explicit_motion)
+	if (path->is_explicit_motion &&
+		!root->is_split_update &&
+		!has_motion_above_result_relation(root, subplan))
 	{
 		/* GPDB_96_MERGE_FIXME: does this set the locus correctly? */
 		root->curOuterRels = save_curOuterRels;
@@ -8280,3 +8284,79 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 
 	return motion;
 }								/* cdbpathtoplan_create_motion_plan */
+
+/*
+ * has_motion_above_result_relation
+ *   return true if the plan add motion above result relations
+ */
+static bool
+has_motion_above_result_relation(PlannerInfo *root, Plan *plan)
+{
+	ResultRelationScanSearchCtx ctx;
+
+	Assert(root->resultRelations != NULL);
+	ctx.base.node = (Node *) root;
+
+	return motion_above_result_relation_walk((Node *) plan, &ctx);
+}
+
+static bool
+motion_above_result_relation_walk(Node *node, void *context)
+{
+	ResultRelationScanSearchCtx *ctx = (ResultRelationScanSearchCtx *) context;
+
+	Assert(ctx);
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Motion))
+	{
+		/*
+		 * Now we meet a motion node, then we
+		 * try to find if there exists scannode
+		 * of result relations.
+		 */
+		Plan *plan = outerPlan(node);
+		return has_scan_result_relation((PlannerInfo *) (ctx->base.node),
+										plan);
+	}
+
+	return plan_tree_walker((Node *) node,
+							motion_above_result_relation_walk,
+							ctx,
+							true);
+}
+
+static bool
+has_scan_result_relation(PlannerInfo *root, Plan *plan)
+{
+	ResultRelationScanSearchCtx ctx;
+	ctx.base.node = (Node *) root;
+	return scan_result_relation_walk((Node *) plan, &ctx);
+}
+
+static bool
+scan_result_relation_walk(Node *node, void *context)
+{
+	PlannerInfo *root;
+	ResultRelationScanSearchCtx *ctx = (ResultRelationScanSearchCtx *) context;
+	Assert(ctx);
+
+	root = (PlannerInfo *) (ctx->base.node);
+
+	if (node == NULL)
+		return false;
+
+	switch(node->type)
+	{
+		case T_SeqScan:
+			return bms_is_member(((SeqScan *)node)->scanrelid,
+								 root->resultRelations);
+		default:
+			return plan_tree_walker((Node*)node,
+									scan_result_relation_walk,
+									ctx,
+									true);
+	}
+}
