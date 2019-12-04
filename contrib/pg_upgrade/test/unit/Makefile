@@ -15,7 +15,7 @@ TARGETS = tablespace_test \
 	old_tablespace_file_contents_test \
 	old_tablespace_file_parser_test \
 	tablespace_gp_test \
-	check_gp \
+	check_gp_test \
 	info_gp_test
 
 include $(top_srcdir)/src/Makefile.global
@@ -45,10 +45,13 @@ tablespace_gp_test.t: tablespace_gp_test.o $(pg_upgrade_directory)/tablespace_gp
 info_gp_test.t: info_gp_test.o $(pg_upgrade_directory)/info_gp.o $(test_dependencies)
 	$(compile_test)
 
-check_gp.t: mock_util.o \
+check_gp_test.t: mock_util.o \
 	mock_server.o \
 	check_gp_test.o \
 	$(MOCK_DIR)/backend/libpq/fe-exec_mock.o \
 	$(test_dependencies) \
 	$(pg_upgrade_directory)/check_gp.o
 	$(compile_test)
+
+clean:
+	rm -f *.t *.o
