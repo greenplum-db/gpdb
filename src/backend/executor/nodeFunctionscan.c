@@ -133,6 +133,16 @@ FunctionNext_guts(FunctionScanState *node)
 									   ScanDirectionIsForward(direction),
 									   false,
 									   scanslot);
+
+		/*
+		 * CDB: Label each row with a synthetic ctid if needed for subquery dedup.
+		 */
+		if (node->cdb_want_ctid &&
+			!TupIsNull(scanslot))
+		{
+			slot_set_ctid_from_fake(scanslot, &node->cdb_fake_ctid);
+		}
+
 		return scanslot;
 	}
 

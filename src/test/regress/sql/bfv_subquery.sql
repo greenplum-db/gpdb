@@ -291,3 +291,13 @@ SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
 EXPLAIN SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
 
 DROP TABLE A;
+
+--
+-- Test the ctid in function scan
+--
+
+create table t1(a int) ;
+insert into t1 select i from generate_series(1, 100000) i;
+analyze t1;
+select count(*) from pg_backend_pid() b(a) where b.a % 100000 in (select a from t1);
+drop table t1;
