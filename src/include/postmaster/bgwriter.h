@@ -32,7 +32,7 @@ extern void RequestCheckpoint(int flags);
 extern void CheckpointWriteDelay(int flags, double progress);
 
 extern bool ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum,
-					BlockNumber segno);
+					BlockNumber segno, bool is_ao_segno);
 extern void AbsorbFsyncRequests(void);
 
 extern Size CheckpointerShmemSize(void);

@@ -9334,6 +9334,8 @@ CreateRestartPoint(int flags)
 
 	CheckPointGuts(lastCheckPoint.redo, flags);
 
+	SIMPLE_FAULT_INJECTOR("restartpoint_guts");
+
 	/*
 	 * Remember the prior checkpoint's redo pointer, used later to determine
 	 * the point at which we can truncate the log.
