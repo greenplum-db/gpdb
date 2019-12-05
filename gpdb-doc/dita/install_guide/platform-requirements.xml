@@ -391,7 +391,7 @@
       <body>
         <p>
           <ul id="ul_ckf_sfc_hbb">
-            <li>Greenplum Platform Extension Framework (PXF) v5.8.1 - PXF, integrated with Greenplum
+            <li>Greenplum Platform Extension Framework (PXF) v5.10.0 - PXF, integrated with Greenplum
               Database 6, provides access to Hadoop, object store, and SQL external data stores.
               Refer to <xref scope="peer" href="../admin_guide/external/pxf-overview.xml">Accessing
                 External Data with PXF</xref> in the <cite>Greenplum Database Administrator
@@ -462,7 +462,7 @@
     <title id="pm357649">Hadoop Distributions</title>
     <body>
       <p>Greenplum Database provides access to HDFS with the Greenplum Platform Extension Framework
-          (PXF).<ph otherprops="oss-only"> PXF v5.8.1 is integrated with Greenplum Database 6, and
+          (PXF).<ph otherprops="oss-only"> PXF v5.10.0 is integrated with Greenplum Database 6, and
           provides access to Hadoop, object store, and SQL external data stores. Refer to <xref
             scope="peer" href="../admin_guide/external/pxf-overview.xml">Accessing External Data
             with PXF</xref> in the <cite>Greenplum Database Administrator Guide</cite> for PXF
@@ -470,11 +470,44 @@
       <p>PXF can use Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop
         distributions. PXF bundles all of the JAR files on which it depends, including the following
         Hadoop libraries:</p>
-      <ul id="ul_sh2_141_djb">
-        <li>Hadoop version 2.9.2</li>
-        <li>Hive version 1.2.2</li>
-        <li>HBase version 1.3.2</li>
-      </ul>
+
+      <table>
+        <title>PXF Hadoop Supported Platforms</title>
+        <tgroup cols="4">
+          <colspec colnum="1" colname="col1" colwidth="131pt"/>
+          <colspec colnum="2" colname="col2" colwidth="97pt"/>
+          <colspec colnum="3" colname="col3" colwidth="82pt"/>
+          <colspec colnum="4" colname="col4" colwidth="138pt"/>
+          <thead>
+            <row>
+              <entry colname="col1">PXF Version</entry>
+              <entry colname="col2">Hadoop Version</entry>
+              <entry colname="col3">Hive Server Version</entry>
+              <entry colname="col4">HBase Server Version</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">5.10.0</entry>
+              <entry colname="col2">2.x, 3.1+</entry>
+              <entry colname="col3">1.x, 2.x, 3.1+</entry>
+              <entry colname="col4">1.3.2</entry>
+            </row>
+            <row>
+              <entry colname="col1">5.8.2</entry>
+              <entry colname="col2">2.x</entry>
+              <entry colname="col3">1.x</entry>
+              <entry colname="col4">1.3.2</entry>
+            </row>
+            <row>
+              <entry colname="col1">5.8.1</entry>
+              <entry colname="col2">2.x</entry>
+              <entry colname="col3">1.x</entry>
+              <entry colname="col4">1.3.2</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
       <note>If you plan to access JSON format data stored in a Cloudera Hadoop cluster, PXF requires
         a Cloudera version 5.8 or later Hadoop distribution.</note>
     </body>
