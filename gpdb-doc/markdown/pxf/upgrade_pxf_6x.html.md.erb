@@ -38,40 +38,9 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Identify the filesystem location of your PXF user configuration directory, `$PXF_CONF`.
-
 2. Initialize PXF on each segment host as described in [Initializing PXF](init_pxf.html). You may choose to use your existing `$PXF_CONF` for the initialization.
 
-2. **If you are upgrading from Greenplum Database version 6.1.x or earlier**:
-
-    1. Save a copy of your server configurations. For example:
-
-        ``` shell
-        gpadmin@gpmaster$ cp -r $PXF_CONF ./pxf_conf_save
-        ```
-    
-    1. PXF user impersonation for Hadoop can be configured on a per-Hadoop-server basis, and **is now disabled by default**. PXF uses the server-specific `pxf-site.xml` file to determine impersonation settings, and deprecates the `PXF_USER_IMPERSONATION` property found in the `$PXF_CONF/conf/pxf-env.sh` file. Perform the following to migrate to the new impersonation property:
-
-        1. View the `pxf-env.sh` file and identify the current `PXF_USER_IMPERSONATION` setting.
-        2. Identify and note the name of each affected server configuration.
-        3. For each server configuration, enable or disable (per the `PXF_USER_IMPERSONATION` setting) user impersonation for the Hadoop server config as described in [Configure PXF User Impersonation](pxfuserimpers.html#pxf_cfg_impers). If user impersonation is enabled for the server configuration, your Hadoop proxy user should already be configured. No action should be necessary there.
-        4. Open the `pxf-env.sh` file in the editor of your choice and comment out the `PXF_USER_IMPERSONATION` setting. Save the file and exit the editor.
-
-    2. PXF now supports simultaneous access to multiple Kerberized Hadoop clusters. PXF uses the server-specific `pxf-site.xml` file for Kerberos configuration, and deprecates the `PXF_PRINCIPAL` and `PXF_KEYTAB` properties found in the `pxf-env.sh` file. If your `default` PXF server configuration accesses a Hadoop cluster secured with Kerberos authentication, you must:
-    
-        1. View the `pxf-env.sh` file and note the current `PXF_PRINCIPAL` and `PXF_KEYTAB` settings.
-        2. Re-configure the Kerberos principal and keytab for the `default` server as described in the **Perform the following steps on the Greenplum Database master host** section of [this procedure](pxf_kerbhdfs.html#proc_mit). Specify the principal and keytab settings that you noted from the `pxf-env.sh` file.
-        3. Open the `pxf-env.sh` file in the editor of your choice and comment out the `PXF_PRINCIPAL` and `PXF_KEYTAB` settings. Save the file and exit the editor.
-
-    3. PXF deprecates the JDBC connector `pxf.impersonation.jdbc` property. You now configure per-server user impersonation via a `pxf.service.user.impersonation` property in the `pxf-site.xml` file. If you have any JDBC server configurations that specified the `pxf.impersonation.jdbc` property, perform the following on each server config to migrate to the new impersonation property:
-
-        1. Identify and note the name of the server configuration.
-        2. Navigate to the server configuration directory.
-        3. View the `jdbc-site.xml` file and note the `pxf.impersonation.jdbc` property setting.
-        4. Enable/disable user impersonation (per the `pxf.impersonation.jdbc` setting) for the JDBC server configuration as described in the JDBC [Example Configuration Procedure](jdbc_cfg.html#jdbc-impers-cfg).
-        5. Open the `jdbc-site.xml` file in the editor of your choice and remove the `pxf.impersonation.jdbc` property block from the file. Save the file and exit the editor.
-
-    4. If you have any JDBC server configurations that access Hive secured with Kerberos authentication, you must now add the `hadoop.security.authentication` property to the `jdbc-site.xml` file to explicitly identify use of the Kerberos authentication method. Perform the following on each of these server configs:
+3. **If you are upgrading from Greenplum Database version 6.1.x or earlier** and you have configured any JDBC servers that access Kerberos-secured Hive, you must now add the `hadoop.security.authentication` property to the `jdbc-site.xml` file to explicitly identify use of the Kerberos authentication method. Perform the following for each of these server configs:
 
         1. Navigate to the server configuration directory.
         2. Open the `jdbc-site.xml` file in the editor of your choice and add the following property block to the file:
