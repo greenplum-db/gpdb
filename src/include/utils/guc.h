@@ -390,6 +390,7 @@ extern int	tcp_keepalives_count;
 extern int	gp_connection_send_timeout;
 
 extern bool create_restartpoint_on_ckpt_record_replay;
+extern bool forward_ao_fsync_on_primary;
 
 extern char  *data_directory;
 
