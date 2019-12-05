@@ -42,16 +42,16 @@ After you upgrade to the new version of Greenplum Database, perform the followin
 
 3. **If you are upgrading from Greenplum Database version 6.1.x or earlier** and you have configured any JDBC servers that access Kerberos-secured Hive, you must now add the `hadoop.security.authentication` property to the `jdbc-site.xml` file to explicitly identify use of the Kerberos authentication method. Perform the following for each of these server configs:
 
-        1. Navigate to the server configuration directory.
-        2. Open the `jdbc-site.xml` file in the editor of your choice and add the following property block to the file:
+    1. Navigate to the server configuration directory.
+    2. Open the `jdbc-site.xml` file in the editor of your choice and add the following property block to the file:
 
-            ```xml
-            <property>
-                <name>hadoop.security.authentication</name>
-                <value>kerberos</value>
-            </property>
-            ```
-        3. Save the file and exit the editor.
+        ```xml
+        <property>
+            <name>hadoop.security.authentication</name>
+            <value>kerberos</value>
+        </property>
+        ```
+    3. Save the file and exit the editor.
 
 3. Synchronize the PXF configuration from the master host to the standby master and each Greenplum Database segment host. For example:
 
