@@ -103,7 +103,7 @@ You configure properties in the `pxf-site.xml` file for a PXF server when one or
 | pxf.service.kerberos.principal | The Kerberos principal name. | gpadmin/\_HOST@EXAMPLE.COM |
 | pxf.service.kerberos.keytab | The file system path to the Kerberos keytab file. | $PXF_CONF/keytabs/pxf.service.keytab |
 | pxf.service.user.name | The log in user for the remote system. | The operating system user that starts the pxf process, typically `gpadmin`. |
-| pxf.service.user.impersonation | Enables/disables user impersonation on the remote system. | `false`; ignored for the `default` server when `PXF_USER_IMPERSONATION` is set. |
+| pxf.service.user.impersonation | Enables/disables user impersonation on the remote system. | The value of the (deprecated) `PXF_USER_IMPERSONATION` property when that property is set. If the `PXF_USER_IMPERSONATION` property does not exist and the `pxf.service.user.impersonation` property is missing from `pxf-site.xml`, the default is `false`, user impersonation is disabled on the remote system. |
 
 Refer to [Configuring PXF Hadoop Connectors ](client_instcfg.html) and [Configuring the JDBC Connector ](jdbc_cfg.html) for information about relevant `pxf-site.xml` property settings for Hadoop and JDBC server configurations, respectively.
 

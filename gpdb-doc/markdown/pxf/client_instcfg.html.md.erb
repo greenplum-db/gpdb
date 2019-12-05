@@ -79,11 +79,7 @@ In this procedure, you use the `default`, or create a new, PXF server configurat
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
     ```
 
-4. PXF accesses Hadoop services on behalf of Greenplum Database end users. By default, PXF tries to access HDFS, Hive, and HBase using the identity of the operating system user that starts the PXF process. 
-
-    <div class="note"> In previous versions of Greenplum Database, user impersonation was a global setting, and it was enabled by default for Hadoop.</div>
-
-    If you want PXF to access Hadoop as a different user, follow the procedures in [Configuring the Hadoop User, User Impersonation, and Proxying](pxfuserimpers.html).
+4. PXF accesses Hadoop services on behalf of Greenplum Database end users. By default, PXF tries to access HDFS, Hive, and HBase using the identity of the Greenplum Database user account that logs into Greenplum Database. In order to support this functionality, you must configure proxy settings for Hadoop, as well as for Hive and HBase if you intend to use those PXF connectors. Follow procedures in [Configuring User Impersonation and Proxying](pxfuserimpers.html) to configure user impersonation and proxying for Hadoop services, or to turn off PXF user impersonation.
 
 5. Grant read permission to the HDFS files and directories that will be accessed as external tables in Greenplum Database. If user impersonation is enabled (the default), you must grant this permission to each Greenplum Database user/role name that will use external tables that reference the HDFS files. If user impersonation is not enabled, you must grant this permission to the `gpadmin` user.
 

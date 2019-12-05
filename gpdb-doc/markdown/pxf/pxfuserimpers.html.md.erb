@@ -4,28 +4,26 @@ title: Configuring the Hadoop User, User Impersonation, and Proxying
 
 PXF accesses Hadoop services on behalf of Greenplum Database end users.
 
-When user impersonation is disabled (the default), PXF executes all Hadoop service requests as the PXF process owner (usually `gpadmin`) or the Hadoop user identity that you specify.
+When user impersonation is enabled (the default), PXF accesses Hadoop services using the identity of the Greenplum Database user account that logs in to Greenplum and performs an operation that uses a PXF connector. Keep in mind that PXF uses only the _login_ identity of the user when accessing Hadoop services. For example, if a user logs in to Greenplum Database as the user `jane` and then execute `SET ROLE` or `SET SESSION AUTHORIZATION` to assume a different user identity, all PXF requests still use the identity `jane` to access Hadoop services. When user impersonation is enabled, you must explicitly configure each Hadoop data source (HDFS, Hive, HBase) to allow PXF to act as a proxy for impersonating specific Hadoop users or groups.
 
-<div class="note"> In previous versions of Greenplum Database, user impersonation was a global setting, and it was enabled by default for Hadoop.</div>
+When user impersonation is disabled, PXF executes all Hadoop service requests as the PXF process owner (usually `gpadmin`) or the Hadoop user identity that you specify. This behavior provides no means to control access to Hadoop services for different Greenplum Database users. It requires that this user have access to all files and directories in HDFS, and all tables in Hive and HBase that are referenced in PXF external table definitions.
 
-This behavior provides no means to control access to Hadoop services for different Greenplum Database users. It requires that this user have access to all files and directories in HDFS, and all tables in Hive and HBase that are referenced in PXF external table definitions.
-
-When you enable user impersonation, PXF accesses Hadoop services using the identity of the Greenplum Database user account that logs in to Greenplum and performs an operation that uses a PXF connector. Keep in mind that PXF uses only the _login_ identity of the user when accessing Hadoop services. For example, if a user logs in to Greenplum Database as the user `jane` and then execute `SET ROLE` or `SET SESSION AUTHORIZATION` to assume a different user identity, all PXF requests still use the identity `jane` to access Hadoop services. When user impersonation is enabled, you must explicitly configure each Hadoop data source (HDFS, Hive, HBase) to allow PXF to act as a proxy for impersonating specific Hadoop users or groups.
-
-You configure the Hadoop user and PXF user impersonation setting for a server via the `pxf-site.xml` server configuration file. Refer to [About the pxf-site.xml Template File](cfg_server.html#pxf-site) for more information about the configuration properties in this file.
+You configure the Hadoop user and PXF user impersonation setting for a server via the `pxf-site.xml` server configuration file. Refer to [About Kerberos and User Impersonation Configuration (pxf-site.xml)](cfg_server.html#pxf-site) for more information about the configuration properties in this file.
 
 The following table describes some of the PXF configuration scenarios for Hadoop access:
 
 | Scenario | pxf-site.xml Required  | Impersonation Setting |  Required Configuration |
 |----------------|--------------|---------|---------------|
-| PXF accessess Hadoop using the identity of the operating system user that started the PXF process. | no | n/a  | No additional configuration is required. |
-| PXF accesses Hadoop using a user identity that you specify. | yes | false | Disable user impersonation and identify the Hadoop user identity in the `pxf.service.user.name` property setting.  |
 | PXF accesses Hadoop using the identity of the Greenplum Database user. | yes | true  | Enable user impersonation, identify the Hadoop proxy user in the `pxf.service.user.name`, and configure Hadoop proxying for this Hadoop user identity. |
+| PXF accesses Hadoop using the identity of the operating system user that started the PXF process. | yes | false | Disable user impersonation. |
+| PXF accesses Hadoop using a user identity that you specify. | yes | false | Disable user impersonation and identify the Hadoop user identity in the `pxf.service.user.name` property setting.  |
 
 
 ## <a id="pxf_cfg_user"></a>Configure the Hadoop User
 
-By default, PXF accesses Hadoop using the identity of the operating system user that started the PXF process, usually `gpadmin`. You can configure a different Hadoop user on a per-server basis. Perform the following procedure to configure the Hadoop user:
+By default, PXF accesses Hadoop using the identity of the Greenplum Database user, and you are required to set up a proxy Hadoop user. You can configure PXF to access Hadoop as a different user on a per-server basis.
+
+Perform the following procedure to configure the Hadoop user:
 
 1. Log in to your Greenplum Database master node as the administrative user:
 
@@ -67,7 +65,7 @@ By default, PXF accesses Hadoop using the identity of the operating system user 
 
 ## <a id="pxf_cfg_impers"></a>Configure PXF User Impersonation
 
-By default, PXF user impersonation is disabled. You can configure PXF user impersonation on a per-server basis. Perform the following procedure to turn PXF user impersonation on or off for the Hadoop server configuration:
+PXF user impersonation is enabled by default for Hadoop servers. You can configure PXF user impersonation on a per-server basis. Perform the following procedure to turn PXF user impersonation on or off for the Hadoop server configuration:
 
 <div class="note"> In previous versions of Greenplum Database, you configured user impersonation globally for Hadoop clusters via the now deprecated <code>PXF_USER_IMPERSONATION</code> setting in the <code>pxf-env.sh</code> configuration file.</div>
 
@@ -114,7 +112,7 @@ By default, PXF user impersonation is disabled. You can configure PXF user imper
 
 ## <a id="hadoop"></a>Configure Hadoop Proxying
 
-When PXF user impersonation is enabled for a Hadoop server configuration, you must configure the Hadoop `core-site.xml` configuration file to permit PXF to proxy Greenplum users. This configuration involves setting certain `hadoop.proxyuser.*` properties. Follow these steps to set up PXF Hadoop proxy users:
+When PXF user impersonation is enabled for a Hadoop server configuration, you must configure Hadoop to permit PXF to proxy Greenplum users. This configuration involves setting certain `hadoop.proxyuser.*` properties. Follow these steps to set up PXF Hadoop proxy users:
 
 1. Log in to your Hadoop cluster and open the `core-site.xml` configuration file using a text editor, or use Ambari or another Hadoop cluster manager to add or edit the Hadoop property values described in this procedure.
 

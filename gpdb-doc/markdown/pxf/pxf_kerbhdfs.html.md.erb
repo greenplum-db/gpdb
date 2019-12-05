@@ -4,13 +4,15 @@ title: Configuring PXF for Secure HDFS
 
 When Kerberos is enabled for your HDFS filesystem, PXF, as an HDFS client, requires a principal and keytab file to authenticate access to HDFS. To read or write files on a secure HDFS, you must create and deploy Kerberos principals and keytabs for PXF, and ensure that Kerberos authentication is enabled and functioning.
 
-<div class="note">In previous versions of Greenplum Database, you configured the PXF Kerberos principal and keytab via the now deprecated <code>PXF_PRINCIPAL</code> and <code>PXF_KEYTAB</code> settings in the <code>pxf-env.sh</code> configuration file.</div>
+PXF supports simultaneous access to multiple Kerberos-secured Hadoop clusters.
+
+<div class="note">In previous versions of Greenplum Database, you configured the PXF Kerberos principal and keytab for the <codeph>default</codeph> Hadoop server via the now deprecated <code>PXF_PRINCIPAL</code> and <code>PXF_KEYTAB</code> settings in the <code>pxf-env.sh</code> configuration file.</div>
 
 When Kerberos is enabled, you access Hadoop with the PXF principal and keytab. You can also choose to access Hadoop using the identity of the Greenplum Database user.
 
 You configure the impersonation setting and the Kerberos principal and keytab for a Hadoop server via the `pxf-site.xml` server-specific configuration file. Refer to [About Kerberos and User Impersonation Configuration (pxf-site.xml)](cfg_server.html#pxf-site) for more information about the configuration properties in this file.
 
-You configure the Kerberos principal and keytab using the following `pxf-site.xml` properties:
+Configure the Kerberos principal and keytab using the following `pxf-site.xml` properties:
 
 | Property       | Description                                | Default Value |
 |----------------|--------------------------------------------|---------------|

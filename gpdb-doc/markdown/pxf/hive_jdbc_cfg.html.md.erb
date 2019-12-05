@@ -76,7 +76,7 @@ Perform the following procedure to configure a PXF JDBC server for Hive:
     gpadmin@gpmaster$ cp $PXF_CONF/templates/jdbc-site.xml .
     ```
         
-4. When you access Hive secured with Kerberos, you also need to copy the `pxf-site.xml` template file to the server configuration directory. For example:
+4. When you access Hive secured with Kerberos, you also need to specify configuration properties in the `pxf-site.xml` file. *If this file does not yet exist in your server configuration*, copy the `pxf-site.xml` template file to the server config directory. For example:
 
     ``` shell
     gpadmin@gpmaster$ cp $PXF_CONF/templates/pxf-site.xml .
@@ -133,8 +133,8 @@ Perform the following procedure to configure a PXF JDBC server for Hive:
     3. If `hive.server2.enable.doAs` is set to `FALSE`, Hive runs Hadoop operations as the user who started the HiveServer2 process, usually the user `hive`. PXF ignores the `jdbc.user` setting in this circumstance.
 
 9. If the `hive.server2.authentication` property in `hive-site.xml` is set to `KERBEROS`:
-    1. Ensure that you have enabled Kerberos authentication for PXF as described in [Configuring PXF for Secure HDFS](pxf_kerbhdfs.html).
-    2. Identify the name of the server configuration for the  Hadoop cluster.
+    1. Identify the name of the server configuration.
+    2. Ensure that you have configured Kerberos authentication for PXF as described in [Configuring PXF for Secure HDFS](pxf_kerbhdfs.html), and that you have specified the Kerberos principal and keytab in the `pxf-site.xml` properties as described in the procedure.
     3. Uncomment the `hadoop.security.authentication` setting in `$PXF_CONF/servers/<name>/jdbc-site.xml`:
 
         ``` xml
