@@ -9334,6 +9334,8 @@ CreateRestartPoint(int flags)
 
 	CheckPointGuts(lastCheckPoint.redo, flags);
 
+	SIMPLE_FAULT_INJECTOR("restartpoint_guts");
+
 	/*
 	 * Select point at which we can truncate the xlog, which we base on the
 	 * prior checkpoint's earliest info.

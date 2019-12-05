@@ -114,6 +114,12 @@ typedef struct
 	RelFileNode rnode;
 	ForkNumber	forknum;
 	BlockNumber segno;			/* see md.c for special values */
+	/*
+	 * Is segno a real ao segno but not specially ones like
+	 * FORGET_RELATION_FSYNC. For example for a real relfile like
+	 * /base/16384/50237.129, it should be true and segno should be 129.
+	 */
+	bool		is_ao_segno;
 	/* might add a real request-type field later; not needed yet */
 } CheckpointerRequest;
 
@@ -1115,6 +1121,9 @@ RequestCheckpoint(int flags)
  * use high values for special flags; that's all internal to md.c, which
  * see for details.)
  *
+ * is_ao_segno means the segno is a real segno (i.e. not FORGET_RELATION_FSYNC,
+ * etc) of ao relation.
+ *
  * To avoid holding the lock for longer than necessary, we normally write
  * to the requests[] queue without checking for duplicates.  The checkpointer
  * will have to eliminate dups internally anyway.  However, if we discover
@@ -1126,7 +1135,7 @@ RequestCheckpoint(int flags)
  * let the backend know by returning false.
  */
 bool
-ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
+ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno, bool is_ao_segno)
 {
 	CheckpointerRequest *request;
 	bool		too_full;
@@ -1167,6 +1176,7 @@ ForwardFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 	request->rnode = rnode;
 	request->forknum = forknum;
 	request->segno = segno;
+	request->is_ao_segno = is_ao_segno;
 
 	/* If queue is more than half full, nudge the checkpointer to empty it */
 	too_full = (CheckpointerShmem->num_requests >=
@@ -1350,7 +1360,7 @@ AbsorbFsyncRequests(void)
 	LWLockRelease(CheckpointerCommLock);
 
 	for (request = requests; n > 0; request++, n--)
-		RememberFsyncRequest(request->rnode, request->forknum, request->segno);
+		RememberFsyncRequest(request->rnode, request->forknum, request->segno, request->is_ao_segno);
 
 	if (requests)
 		pfree(requests);

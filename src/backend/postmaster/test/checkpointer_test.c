@@ -40,7 +40,7 @@ test__ForwardFsyncRequest_enqueue(void **state)
 	expect_value(LWLockRelease, l, CheckpointerCommLock);
 	will_be_called(LWLockRelease);
 	/* basic enqueue */
-	ret = ForwardFsyncRequest(dummy, MAIN_FORKNUM, 1);
+	ret = ForwardFsyncRequest(dummy, MAIN_FORKNUM, 1, false);
 	assert_true(ret);
 	assert_true(CheckpointerShmem->num_requests == 1);
 	/* fill up the queue */
@@ -51,7 +51,7 @@ test__ForwardFsyncRequest_enqueue(void **state)
 		will_return(LWLockAcquire, true);
 		expect_value(LWLockRelease, l, CheckpointerCommLock);
 		will_be_called(LWLockRelease);
-		ret = ForwardFsyncRequest(dummy, MAIN_FORKNUM, i);
+		ret = ForwardFsyncRequest(dummy, MAIN_FORKNUM, i, false);
 		assert_true(ret);
 	}
 	expect_value(LWLockAcquire, l, CheckpointerCommLock);
@@ -68,7 +68,7 @@ test__ForwardFsyncRequest_enqueue(void **state)
 	 * duplicates are in the queue.  So the queue should remain
 	 * full.
 	 */
-	ret = ForwardFsyncRequest(dummy, MAIN_FORKNUM, 0);
+	ret = ForwardFsyncRequest(dummy, MAIN_FORKNUM, 0, false);
 	assert_false(ret);
 	assert_true(CheckpointerShmem->num_requests == CheckpointerShmem->max_requests);
 	free(CheckpointerShmem);
