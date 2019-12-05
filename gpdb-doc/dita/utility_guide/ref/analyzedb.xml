@@ -57,13 +57,12 @@
         <p>For a partitioned, append-optimized table, <cmdname>analyzedb</cmdname> checks the
           partitioned table root partition and leaf partitions. If needed, the utility updates
           statistics for non-current partitions and the root partition. </p>
-        <p dir="ltr">The root partition statistics is required by GPORCA. By default, the
+        <p dir="ltr">The root partition statistics is required by GPORCA. The
             <cmdname>analyzedb</cmdname> utility collects statistics on the root partition of a
           partitioned table if the statistics do not exist. If any of the leaf partitions have stale
           statistics, <cmdname>analyzedb</cmdname> also refreshes the root partition statistics. The
           cost of refreshing the root level statistics is comparable to analyzing one leaf
-          partition. You can specify the option <codeph>--skip_root_stats</codeph> to disable
-          collection of statistics on the root partition of a partitioned table.</p>
+          partition.</p>
       </sectiondiv>
     </section>
     <section><title>Notes</title><p>The <cmdname>analyzedb</cmdname> utility updates append
@@ -170,17 +169,14 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
         </plentry>
         <plentry>
           <pt>--skip_root_stats</pt>
-          <pd>For a partitioned table, skip refreshing root partition statistics if only some of the
-            leaf partitions statistics require updating. </pd>
-          <pd>When updating statistics for a partitioned table and you know which leaf partition
-            statistics require updating, you can specify those partitions and this option to improve
-            performance.</pd>
-          <pd>For information about how statistics are collected for partitioned tables, see
-                <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"
-              >ANALYZE</xref></codeph>.</pd>
-          <pd>GPORCA uses root partition statistics. If you use <codeph>--skip_root_stats</codeph>
-            option, you should ensure that root partition statistics are up to date so that GPORCA
-            does not produce inferior query plans due to stale root partition statistics. </pd>
+          <pd>
+            <note>This option is deprecated and will be removed in a future release.</note>
+          </pd>
+          <pd>If the option is specified, a warning is issued stating that the option will be
+            ignored.</pd>
+          <pd>GPORCA uses root partition statistics. For information about how statistics are
+            collected for partitioned tables, see <codeph><xref
+                href="../../ref_guide/sql_commands/ANALYZE.xml">ANALYZE</xref></codeph>.</pd>
         </plentry>
         <plentry>
           <pt>-s <varname>schema</varname></pt>
