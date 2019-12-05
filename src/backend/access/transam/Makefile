@@ -19,6 +19,8 @@ OBJS = clog.o commit_ts.o generic_xlog.o multixact.o parallel.o rmgr.o slru.o \
 
 OBJS +=  distributedlog.o gp_transaction_log.o gp_distributed_log.o xlogfuncs_gp.o
 
+override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
+
 include $(top_srcdir)/src/backend/common.mk
 
 # ensure that version checks in xlog.c get recompiled when catversion.h changes

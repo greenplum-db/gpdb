@@ -6,7 +6,7 @@ CREATE TABLE gpdb_two_phase_commit_after_acquire_share_lock(num int);
 CREATE
 CREATE TABLE gpdb_one_phase_commit(num int);
 CREATE
-CREATE TABLE gpdb_restore_points(rpname text);
+CREATE TABLE gpdb_two_phase_commit_after_restore_point(num int);
 CREATE
 INSERT INTO gpdb_two_phase_commit_before_acquire_share_lock SELECT generate_series(1, 10);
 INSERT 10
@@ -47,7 +47,11 @@ DELETE 10
 -- TwophaseCommit lwlock in EXCLUSIVE mode until the fault is
 -- released. The inserted row will be recorded after the restore point
 -- so it will not show up later during PITR.
-4&: INSERT INTO gpdb_restore_points SELECT 'test_restore_point' FROM gp_create_restore_point('test_restore_point');  <waiting ...>
+4: BEGIN;
+BEGIN
+4: INSERT INTO gpdb_two_phase_commit_after_restore_point SELECT generate_series(1, 10);
+INSERT 10
+4&: SELECT segment_id, count(*) FROM gp_create_restore_point('test_restore_point') AS r(segment_id smallint, restore_lsn pg_lsn) GROUP BY segment_id ORDER BY segment_id;  <waiting ...>
 1: SELECT gp_wait_until_triggered_fault('gp_create_restore_point_acquired_lock', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -93,7 +97,15 @@ INSERT 1
  Success:        
 (1 row)
 4<:  <... completed>
-INSERT 1
+ segment_id | count 
+------------+-------
+ -1         | 1     
+ 0          | 1     
+ 1          | 1     
+ 2          | 1     
+(4 rows)
+4: COMMIT;
+COMMIT
 3<:  <... completed>
 COMMIT
 1: SELECT gp_inject_fault('dtm_broadcast_prepare', 'reset', 1);
@@ -119,11 +131,20 @@ SELECT * FROM gpdb_one_phase_commit;
  1   
  2   
 (2 rows)
-SELECT * FROM gpdb_restore_points;
- rpname             
---------------------
- test_restore_point 
-(1 row)
+SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
+ num 
+-----
+ 1   
+ 2   
+ 3   
+ 4   
+ 5   
+ 6   
+ 7   
+ 8   
+ 9   
+ 10  
+(10 rows)
 
 -- Run pg_switch_xlog() so that the WAL segment files with the restore
 -- points are archived to the WAL Archive directories.

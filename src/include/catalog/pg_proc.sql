@@ -432,4 +432,4 @@ CREATE FUNCTION cdblegacyhash_complex(complex) RETURNS int4 LANGUAGE internal IM
 CREATE FUNCTION cdblegacyhash_uuid(uuid) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT PARALLEL SAFE AS 'cdblegacyhash_uuid' WITH (OID=6170, DESCRIPTION="Legacy cdbhash function");
 CREATE FUNCTION cdblegacyhash_anyenum(anyenum) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT PARALLEL SAFE AS 'cdblegacyhash_anyenum' WITH (OID=6171, DESCRIPTION="Legacy cdbhash function");
 
-CREATE FUNCTION gp_create_restore_point(text) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'gp_create_restore_point' WITH (OID=6998,  DESCRIPTION="Create a named restore point on all segments");
+CREATE FUNCTION gp_create_restore_point(text) RETURNS SETOF record LANGUAGE internal IMMUTABLE STRICT AS 'gp_create_restore_point' WITH (OID=6998,  DESCRIPTION="Create a named restore point on all segments");

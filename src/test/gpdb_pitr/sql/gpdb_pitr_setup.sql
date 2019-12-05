@@ -3,7 +3,7 @@
 CREATE TABLE gpdb_two_phase_commit_before_acquire_share_lock(num int);
 CREATE TABLE gpdb_two_phase_commit_after_acquire_share_lock(num int);
 CREATE TABLE gpdb_one_phase_commit(num int);
-CREATE TABLE gpdb_restore_points(rpname text);
+CREATE TABLE gpdb_two_phase_commit_after_restore_point(num int);
 INSERT INTO gpdb_two_phase_commit_before_acquire_share_lock SELECT generate_series(1, 10);
 INSERT INTO gpdb_two_phase_commit_after_acquire_share_lock SELECT generate_series(1, 10);
 INSERT INTO gpdb_one_phase_commit VALUES (1);
@@ -27,7 +27,9 @@ INSERT INTO gpdb_one_phase_commit VALUES (1);
 -- TwophaseCommit lwlock in EXCLUSIVE mode until the fault is
 -- released. The inserted row will be recorded after the restore point
 -- so it will not show up later during PITR.
-4&: INSERT INTO gpdb_restore_points SELECT 'test_restore_point' FROM gp_create_restore_point('test_restore_point');
+4: BEGIN;
+4: INSERT INTO gpdb_two_phase_commit_after_restore_point SELECT generate_series(1, 10);
+4&: SELECT segment_id, count(*) FROM gp_create_restore_point('test_restore_point') AS r(segment_id smallint, restore_lsn pg_lsn) GROUP BY segment_id ORDER BY segment_id;
 1: SELECT gp_wait_until_triggered_fault('gp_create_restore_point_acquired_lock', 1, 1);
 
 -- Distributed commit record will not be written; commit blocked by
@@ -47,6 +49,7 @@ INSERT INTO gpdb_one_phase_commit VALUES (1);
 -- the restore points which will release the TwophaseCommit lwlock.
 1: SELECT gp_inject_fault('gp_create_restore_point_acquired_lock', 'reset', 1);
 4<:
+4: COMMIT;
 3<:
 1: SELECT gp_inject_fault('dtm_broadcast_prepare', 'reset', 1);
 2<:
@@ -55,7 +58,7 @@ INSERT INTO gpdb_one_phase_commit VALUES (1);
 SELECT * FROM gpdb_two_phase_commit_before_acquire_share_lock;
 SELECT * FROM gpdb_two_phase_commit_after_acquire_share_lock;
 SELECT * FROM gpdb_one_phase_commit;
-SELECT * FROM gpdb_restore_points;
+SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
 
 -- Run pg_switch_xlog() so that the WAL segment files with the restore
 -- points are archived to the WAL Archive directories.

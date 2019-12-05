@@ -6,7 +6,7 @@ SELECT * FROM gpdb_two_phase_commit_after_acquire_share_lock;
 
 -- The INSERT happened after the restore point was created
 -- so this table should be empty.
-SELECT * FROM gpdb_restore_points;
+SELECT * FROM gpdb_two_phase_commit_after_restore_point;
 
 -- The one-phase commit should have gone through before the restore
 -- point was created so it should show up.
