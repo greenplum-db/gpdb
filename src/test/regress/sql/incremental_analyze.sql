@@ -797,3 +797,17 @@ INSERT INTO incr_analyze_test SELECT s, md5(s::varchar), '2018-01-02' FROM gener
 ANALYZE incr_analyze_test_1_prt_2;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'incr_analyze_test%' ORDER BY attname,tablename;
 SELECT relname, relpages, reltuples FROM pg_class WHERE relname LIKE 'incr_analyze_test%' ORDER BY relname;
+-- Test merging of stats if an empty partition contains relpages > 0
+-- Do not collect samples while merging stats
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+INSERT INTO foo SELECT i,i%3 FROM generate_series(1,10)i;
+ANALYZE foo_1_prt_1;
+ANALYZE foo_1_prt_2;
+SET allow_system_table_mods = on;
+UPDATE pg_class set relpages=3 WHERE relname='foo_1_prt_2';
+RESET allow_system_table_mods;
+analyze verbose rootpartition foo;
+-- ensure relpages is correctly set after analyzing
+analyze foo_1_prt_2;
+select reltuples, relpages from pg_class where relname ='foo_1_prt_2';

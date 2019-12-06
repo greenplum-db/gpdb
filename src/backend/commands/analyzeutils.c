@@ -1092,7 +1092,7 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 		int32		relpages = get_rel_relpages(partRelid);
 
 		/* Partition is analyzed and we detect it is empty */
-		if (relTuples == 0.0 && relpages == 1)
+		if (relTuples == 0.0 && relpages > 0)
 			continue;
 
 		all_parts_empty = false;
