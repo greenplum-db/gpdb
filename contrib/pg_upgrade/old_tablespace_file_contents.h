@@ -57,6 +57,9 @@ OldTablespaceRecord_GetTablespaceName(OldTablespaceRecord *record);
 char *
 OldTablespaceRecord_GetDirectoryPath(OldTablespaceRecord *record);
 
+bool
+OldTablespaceRecord_GetIsUserDefinedTablespace(OldTablespaceRecord *record);
+
 /*
  * free memory allocated for OldTablespaceFileContents
  */
@@ -67,7 +70,7 @@ bool is_old_tablespaces_file_empty(OldTablespaceFileContents *contents);
 /*
  * Get the file path for a given old tablespace for the given tablespace oid
  */
-char *old_tablespace_file_get_tablespace_path_for_oid(
+OldTablespaceRecord *old_tablespace_file_get_record(
 	OldTablespaceFileContents *contents, Oid oid);
 
 #endif /* OLD_TABLESPACE_FILE_CONTENTS_H */

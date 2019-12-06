@@ -16,8 +16,9 @@
 
 typedef enum GetTablespacePathResponseCodes {
 	GetTablespacePathResponse_MISSING_FILE,
-	GetTablespacePathResponse_FOUND,
 	GetTablespacePathResponse_NOT_FOUND_IN_FILE,
+	GetTablespacePathResponse_FOUND_USER_DEFINED_TABLESPACE,
+	GetTablespacePathResponse_FOUND_SYSTEM_TABLESPACE,
 } GetTablespacePathResponseCodes;
 
 typedef struct GetTablespacePathResponse {

@@ -4,10 +4,23 @@
 #include "info_gp.h"
 
 char *_stubbed_tablespace_path;
+bool _stubbed_is_user_defined_tablespace;
+
+struct OldTablespaceRecordData
+{
+	char *path;
+	bool is_user_defined;
+};
+
 
 static void stub_old_tablespace_file_get_tablespace_path_for_oid(char *value)
 {
 	_stubbed_tablespace_path = value;
+}
+
+static void stub_is_user_defined_tablespace(bool value)
+{
+	_stubbed_is_user_defined_tablespace = value;
 }
 
 /*
@@ -19,9 +32,27 @@ is_old_tablespaces_file_empty(OldTablespaceFileContents *contents)
 	return true;
 }
 
-char *old_tablespace_file_get_tablespace_path_for_oid(OldTablespaceFileContents *contents, Oid oid)
+OldTablespaceRecord *
+old_tablespace_file_get_record(OldTablespaceFileContents *contents, Oid oid)
 {
-	return _stubbed_tablespace_path;
+	if (_stubbed_tablespace_path == NULL) return NULL;
+
+	OldTablespaceRecord *record = palloc0(sizeof(OldTablespaceRecord));
+	record->path = _stubbed_tablespace_path;
+	record->is_user_defined = _stubbed_is_user_defined_tablespace;
+	return record;
+}
+
+char *
+OldTablespaceRecord_GetDirectoryPath(OldTablespaceRecord *record)
+{
+	return record->path;
+}
+
+bool
+OldTablespaceRecord_GetIsUserDefinedTablespace(OldTablespaceRecord *record)
+{
+	return record->is_user_defined;
 }
 
 static void *
@@ -61,7 +92,7 @@ test_it_returns_tablespace_path_when_tablespace_found_by_oid(void **state)
 
 	GetTablespacePathResponse response = gp_get_tablespace_path(make_fake_old_tablespace_file_contents(), tablespace_oid);
 
-	assert_int_equal(response.code, GetTablespacePathResponse_FOUND);
+	assert_int_equal(response.code, GetTablespacePathResponse_FOUND_USER_DEFINED_TABLESPACE);
 	assert_string_equal(response.tablespace_path, "some_path_to_tablespace/1234");
 }
 
@@ -79,9 +110,25 @@ test_it_returns_tablespace_path_not_found_in_file_when_not_found(void **state)
 }
 
 static void
+test_it_returns_default_tablespace_when_record_is_default(void **state)
+{
+	Oid tablespace_oid = 1234;
+
+	stub_old_tablespace_file_get_tablespace_path_for_oid("some/path");
+	stub_is_user_defined_tablespace(false);
+
+	GetTablespacePathResponse response = gp_get_tablespace_path(
+		make_fake_old_tablespace_file_contents(),
+		tablespace_oid);
+
+	assert_int_equal(response.code, GetTablespacePathResponse_FOUND_SYSTEM_TABLESPACE);
+}
+
+static void
 setup(void **state)
 {
 	_stubbed_tablespace_path = NULL;
+	_stubbed_is_user_defined_tablespace = true;
 }
 
 static void
@@ -98,6 +145,7 @@ main(int argc, char *argv[])
 		unit_test_setup_teardown(test_it_returns_no_contents_in_file_when_there_is_a_file_and_there_are_no_contents, setup, teardown),
 		unit_test_setup_teardown(test_it_returns_tablespace_path_when_tablespace_found_by_oid, setup, teardown),
 		unit_test_setup_teardown(test_it_returns_tablespace_path_not_found_in_file_when_not_found, setup, teardown),
+		unit_test_setup_teardown(test_it_returns_default_tablespace_when_record_is_default, setup, teardown),
 	};
 
 	return run_tests(tests);

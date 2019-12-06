@@ -83,7 +83,7 @@ make_document(int number_of_rows)
  *
  * expects file to have the fields without a header:
  *
- * [dbid],[tablespace oid],[tablespace name],[path]
+ * [dbid],[tablespace oid],[tablespace name],[path],[is user defined tablespace (0 or 1)]
  *
  */
 OldTablespaceFileParser_Document *

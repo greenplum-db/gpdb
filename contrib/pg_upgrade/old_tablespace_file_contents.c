@@ -18,6 +18,7 @@ struct OldTablespaceRecordData {
 	Oid tablespace_oid;
 	char *tablespace_name;
 	int dbid;
+	bool is_user_defined;
 };
 
 struct OldTablespaceFileContentsData {
@@ -50,6 +51,7 @@ copy_tablespace_record(OldTablespaceRecord *originalRecord, OldTablespaceRecord 
 	newRecord->tablespace_oid  = originalRecord->tablespace_oid;
 	newRecord->tablespace_name = originalRecord->tablespace_name;
 	newRecord->tablespace_path = originalRecord->tablespace_path;
+	newRecord->is_user_defined = originalRecord->is_user_defined;
 }
 
 static void
@@ -63,6 +65,8 @@ populate_record_from_csv(OldTablespaceRecord *record, OldTablespaceFileParser_Do
 		OldTablespaceFileParser_get_field_as_string(document, row_index, 2));
 	record->tablespace_path = pg_strdup(
 		OldTablespaceFileParser_get_field_as_string(document, row_index, 3));
+	record->is_user_defined =
+		OldTablespaceFileParser_get_field_as_int(document, row_index, 4) != 0;
 }
 
 static void
@@ -184,8 +188,8 @@ filter_old_tablespace_file_for_dbid(OldTablespaceFileContents *originalContents,
 	return result;
 }
 
-char *
-old_tablespace_file_get_tablespace_path_for_oid(OldTablespaceFileContents *contents, Oid tablespace_oid)
+OldTablespaceRecord *
+old_tablespace_file_get_record(OldTablespaceFileContents *contents, Oid tablespace_oid)
 {
 	OldTablespaceRecord *currentRecord;
 
@@ -194,7 +198,7 @@ old_tablespace_file_get_tablespace_path_for_oid(OldTablespaceFileContents *conte
 		currentRecord = contents->old_tablespace_records[i];
 
 		if (currentRecord->tablespace_oid == tablespace_oid)
-			return currentRecord->tablespace_path;
+			return currentRecord;
 	}
 
 	return NULL;
@@ -216,4 +220,10 @@ char *
 OldTablespaceRecord_GetDirectoryPath(OldTablespaceRecord *record)
 {
 	return record->tablespace_path;
+}
+
+bool
+OldTablespaceRecord_GetIsUserDefinedTablespace(OldTablespaceRecord *record)
+{
+	return record->is_user_defined;
 }

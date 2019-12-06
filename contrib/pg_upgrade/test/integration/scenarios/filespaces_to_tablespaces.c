@@ -103,13 +103,22 @@ aDatabaseInAFilespaceExistsInTheFiveClusterWithATableAndData(void)
 
 	connection5 = connectToFiveOnDatabase("database_in_filespace"); 
 
+	assert_true(connection5 != NULL);
+
 	PQclear(executeQuery(connection5, "CREATE SCHEMA five_to_six_upgrade;"));
 	PQclear(executeQuery(connection5, "set search_path to five_to_six_upgrade;"));
-	result5 = executeQuery(connection5, "CREATE TABLE users (id integer, name text);");
-	result5 = executeQuery(connection5, "insert into users VALUES (1, 'Joe');");
-	result5 = executeQuery(connection5, "insert into users VALUES (2, 'Janet');");
-	result5 = executeQuery(connection5, "insert into users VALUES (3, 'James');");
-	PQclear(result5);
+	PQclear(executeQuery(connection5, "CREATE TABLE users (id integer, name text);"));
+	PQclear(executeQuery(connection5, "insert into users VALUES (1, 'Joe');"));
+	PQclear(executeQuery(connection5, "insert into users VALUES (2, 'Janet');"));
+	PQclear(executeQuery(connection5, "insert into users VALUES (3, 'James');"));
+
+	/*
+	 * Create a similar table in the default tablespace
+	 */
+	PQclear(executeQuery(connection5, "CREATE TABLE users_in_default (id integer, name text) TABLESPACE pg_default;"));
+	PQclear(executeQuery(connection5, "insert into users_in_default VALUES (1, 'Aaron');"));
+	PQclear(executeQuery(connection5, "insert into users_in_default VALUES (2, 'Alex');"));
+	PQclear(executeQuery(connection5, "insert into users_in_default VALUES (3, 'Alice');"));
 
 	PQfinish(connection5);
 }
@@ -195,12 +204,8 @@ aTablespaceShouldHaveBeenCreatedOnSixCluster(void)
 }
 
 static void
-theDatabaseShouldBeInTheTablespaceOnTheNewCluster(void)
-{
-	matcher = users_match;
-	match_failed = match_failed_for_user;
-
-	PGconn *connection = connectToSixOnDatabase("database_in_filespace");
+test_users_in_database_with_tablespace(char *database_name){
+	PGconn *connection = connectToSixOnDatabase(database_name);
 	PGresult *result = executeQuery(connection, "select * from five_to_six_upgrade.users;");
 
 	Rows *rows = extract_rows(result);
@@ -214,6 +219,35 @@ theDatabaseShouldBeInTheTablespaceOnTheNewCluster(void)
 		.size = 3,
 		.rows = {&joe, &janet, &james}
 	});
+}
+
+static void
+test_users_in_database_with_table_in_default_tablespace(char *database_name)
+{
+	PGconn *connection = connectToSixOnDatabase(database_name);
+	PGresult *result = executeQuery(connection, "select * from five_to_six_upgrade.users_in_default;");
+
+	Rows *rows = extract_rows(result);
+	PQfinish(connection);
+
+	User joe = {.id = 1, .name = "Aaron"};
+	User janet = {.id = 2, .name = "Alex"};
+	User james = {.id = 3, .name = "Alice"};
+
+	assert_rows(rows, (Rows) {
+		.size = 3,
+		.rows = {&joe, &janet, &james}
+	});
+}
+
+static void
+theDatabaseShouldBeInTheTablespaceOnTheNewCluster(void)
+{
+	matcher = users_match;
+	match_failed = match_failed_for_user;
+
+	test_users_in_database_with_tablespace("database_in_filespace");
+	test_users_in_database_with_table_in_default_tablespace("database_in_filespace");
 }
 
 static void

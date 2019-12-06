@@ -88,11 +88,13 @@ test_it_finds_old_tablespaces_when_provided_as_a_file(void **state)
 	stub_field(0, 1, "456");
 	stub_field(0, 2, "some_space_name");
 	stub_field(0, 3, "/some/directory/for/999");
+	stub_field(0, 4, "0");
 
 	stub_field(1, 0, "888");
 	stub_field(1, 1, "777");
 	stub_field(1, 2, "some_other_space_name");
 	stub_field(1, 3, "/some/other/directory/for/999");
+	stub_field(1, 4, "0");
 
 	char *path = "/tmp/some/path";
 	OldTablespaceFileContents *contents = parse_old_tablespace_file_contents(path);
@@ -128,11 +130,13 @@ test_it_can_filter_old_contents_by_dbid(void **state)
 	stub_field(0, 1, "123");
 	stub_field(0, 2, "some_space_name");
 	stub_field(0, 3, "/some/directory/for/123");
+	stub_field(0, 4, "0");
 
 	stub_field(1, 0, "2");
 	stub_field(1, 1, "456");
 	stub_field(1, 2, "some_other_space_name");
 	stub_field(1, 3, "/some/other/directory/for/456");
+	stub_field(1, 4, "0");
 
 	OldTablespaceFileContents *contents = parse_old_tablespace_file_contents("some path");
 
@@ -155,28 +159,34 @@ test_it_can_return_the_path_of_a_tablespace_for_a_given_oid(void **state)
 	stub_field(0, 1, "123");
 	stub_field(0, 2, "some_space_name");
 	stub_field(0, 3, "some path");
+	stub_field(0, 4, "0");
 
 	stub_field(1, 0, "1");
 	stub_field(1, 1, "456");
 	stub_field(1, 2, "some_space_name");
 	stub_field(1, 3, "some other path");
+	stub_field(1, 4, "0");
 
 	stub_field(2, 0, "2");
 	stub_field(2, 1, "123");
 	stub_field(2, 2, "some_space_name");
 	stub_field(2, 3, "some random path");
+	stub_field(2, 4, "0");
 
 	OldTablespaceFileContents *contents = parse_old_tablespace_file_contents("/some/path");
 
 	char *found_path = "";
+	OldTablespaceRecord *record;
 
 	Oid current_oid = 123;
-	found_path = old_tablespace_file_get_tablespace_path_for_oid(contents, current_oid);
+	record     = old_tablespace_file_get_record(contents, current_oid);
+	found_path = OldTablespaceRecord_GetDirectoryPath(record);
 	assert_int_not_equal((void *)found_path, NULL);
 	assert_string_equal("some path", found_path);
 
 	current_oid = 456;
-	found_path = old_tablespace_file_get_tablespace_path_for_oid(contents, current_oid);
+	record     = old_tablespace_file_get_record(contents, current_oid);
+	found_path = OldTablespaceRecord_GetDirectoryPath(record);
 	assert_int_not_equal((void *)found_path, NULL);
 	assert_string_equal("some other path", found_path);
 }
@@ -184,12 +194,19 @@ test_it_can_return_the_path_of_a_tablespace_for_a_given_oid(void **state)
 static void
 test_it_can_get_segment_records_from_contents(void **state)
 {
-	stub_number_of_rows(1);
+	stub_number_of_rows(2);
 
 	stub_field(0, 0, "1");
 	stub_field(0, 1, "123");
 	stub_field(0, 2, "some_space_name");
 	stub_field(0, 3, "some path");
+	stub_field(0, 4, "1");
+
+	stub_field(1, 0, "2");
+	stub_field(1, 1, "456");
+	stub_field(1, 2, "some_space_name");
+	stub_field(1, 3, "some path");
+	stub_field(1, 4, "0");
 
 	OldTablespaceFileContents *contents = parse_old_tablespace_file_contents("/some/path");
 
@@ -197,6 +214,9 @@ test_it_can_get_segment_records_from_contents(void **state)
 
 	assert_string_equal(OldTablespaceRecord_GetTablespaceName(records[0]), "some_space_name");
 	assert_string_equal(OldTablespaceRecord_GetDirectoryPath(records[0]), "some path");
+
+	assert_true(OldTablespaceRecord_GetIsUserDefinedTablespace(records[0]));
+	assert_false(OldTablespaceRecord_GetIsUserDefinedTablespace(records[1]));
 }
 
 static void
@@ -208,16 +228,19 @@ test_it_can_return_a_specific_tablespace_record_by_tablespace_name_and_dbid(void
 	stub_field(0, 1, "123");
 	stub_field(0, 2, "some_space_name");
 	stub_field(0, 3, "some path for 123");
+	stub_field(0, 4, "0");
 
 	stub_field(1, 0, "2");
 	stub_field(1, 1, "456");
 	stub_field(1, 2, "some_space_name");
 	stub_field(1, 3, "some path for 456");
+	stub_field(1, 4, "0");
 
 	stub_field(2, 0, "2");
 	stub_field(2, 1, "789");
 	stub_field(2, 2, "some_other_space_name");
 	stub_field(2, 3, "some path for 789");
+	stub_field(2, 4, "0");
 
 	OldTablespaceFileContents *contents = parse_old_tablespace_file_contents("/some/path");
 

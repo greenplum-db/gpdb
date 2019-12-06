@@ -79,7 +79,7 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 	                                    "8: '/tmp/tablespace-gp-test/fsdummy4/' );");
 	PQclear(result5);
 
-	result5 = executeQuery(connection, "CREATE TABLESPACE my_fast_tablespace FILESPACE my_fast_locations;");
+	PQclear(executeQuery(connection, "CREATE TABLESPACE my_fast_tablespace FILESPACE my_fast_locations;"));
 
 	PQfinish(connection);
 	
@@ -98,14 +98,25 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 
 	assert_int_equal(
 		OldTablespaceFileContents_TotalNumberOfTablespaces(cluster.old_tablespace_file_contents),
-		1);
+		3);
 
 	char **results = OldTablespaceFileContents_GetArrayOfTablespacePaths(
 		cluster.old_tablespace_file_contents);
 
 	assert_string_equal(
-		results[0],
+		results[2],
 		"/tmp/tablespace-gp-test/fsseg0");
+
+	OldTablespaceRecord **records = OldTablespaceFileContents_GetTablespaceRecords(
+		cluster.old_tablespace_file_contents
+		);
+
+	assert_false(
+		OldTablespaceRecord_GetIsUserDefinedTablespace(records[0]));
+	assert_false(
+		OldTablespaceRecord_GetIsUserDefinedTablespace(records[1]));
+	assert_true(
+		OldTablespaceRecord_GetIsUserDefinedTablespace(records[2]));
 }
 
 static void

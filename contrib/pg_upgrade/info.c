@@ -359,23 +359,39 @@ get_db_and_rel_infos(ClusterInfo *cluster)
 }
 
 /*
+ * Determine if we need to look up the tablespace path in the old tablespace
+ * file and do so. We only need to look in the old tablespaces file when the
+ * gpdb version has filespaces and tablespaces.
+ *
  * Look in the old tablespace file for the tablespace path of the given tablepace oid,
  * and return the result to the user.
+ *
+ * For system defined tablespaces, upgrade expects to use its own
+ * spclocation information
  *
  * Upon a failure, raise an error to the user, as these are unexpected/exceptional
  * situations.
  *
  */
 static char *
-get_tablespace_path_for_old_cluster(OldTablespaceFileContents *contents, Oid tablespace_oid)
+determine_db_tablespace_path(ClusterInfo *currentCluster,
+                             char *spclocation,
+                             Oid tablespace_oid)
 {
+	if (currentCluster != &old_cluster ||
+		!is_gpdb_version_with_filespaces(currentCluster))
+		return spclocation;
+
 	GetTablespacePathResponse response = gp_get_tablespace_path(
-		contents, tablespace_oid);
+		currentCluster->old_tablespace_file_contents,
+		tablespace_oid);
 
 	switch (response.code)
 	{
-		case GetTablespacePathResponse_FOUND:
+		case GetTablespacePathResponse_FOUND_USER_DEFINED_TABLESPACE:
 			return pg_strdup(response.tablespace_path);
+		case GetTablespacePathResponse_FOUND_SYSTEM_TABLESPACE:
+			return spclocation;
 		case GetTablespacePathResponse_MISSING_FILE:
 			pg_fatal("expected pg_upgrade to receive an "
 			         "old-tablespaces-file argument in order to "
@@ -387,32 +403,6 @@ get_tablespace_path_for_old_cluster(OldTablespaceFileContents *contents, Oid tab
 		default:
 			pg_fatal("unknown get tablespace path response\n");
 	}
-}
-
-/*
- * Determine if we need to look up the tablespace path in the old tablespace
- * file and do so. Otherwise, return what we received.
- *
- * We don't expect pg_default or pg_global tablespaces (the default tablespaces)
- * to be in the old tablespaces file
- *
- * We only need to look in the old tablespaces file when the gpdb version has
- * filespaces and tablespaces.
- */
-static char *
-determine_db_tablespace_path(ClusterInfo *currentCluster,
-                             char *spclocation,
-                             Oid tablespace_oid,
-                             int is_user_defined_tablespace)
-{
-    if (currentCluster != &old_cluster
-            || !is_gpdb_version_with_filespaces(currentCluster)
-            || !is_user_defined_tablespace)
-        return spclocation;
-
-    return get_tablespace_path_for_old_cluster(
-            currentCluster->old_tablespace_file_contents,
-            tablespace_oid);
 }
 
 /*
@@ -438,10 +428,9 @@ get_db_infos(ClusterInfo *cluster)
 	 * greenplum specific indexes
 	 */
 	int         i_tablespace_oid;
-	int         i_is_user_defined_tablespace;
 
 	snprintf(query, sizeof(query),
-			 "SELECT d.oid, d.datname, t.oid as tablespace_oid, (t.spcname NOT IN ('pg_default', 'pg_global'))::int as is_user_defined_tablespace, %s "
+			 "SELECT d.oid, d.datname, t.oid as tablespace_oid, %s "
 			 "FROM pg_catalog.pg_database d "
 			 " LEFT OUTER JOIN pg_catalog.pg_tablespace t "
 			 " ON d.dattablespace = t.oid "
@@ -459,7 +448,6 @@ get_db_infos(ClusterInfo *cluster)
 	i_datname = PQfnumber(res, "datname");
 	i_spclocation = PQfnumber(res, "spclocation");
 	i_tablespace_oid = PQfnumber(res, "tablespace_oid");
-	i_is_user_defined_tablespace = PQfnumber(res, "is_user_defined_tablespace");
 
 	ntups = PQntuples(res);
 	dbinfos = (DbInfo *) pg_malloc(sizeof(DbInfo) * ntups);
@@ -472,8 +460,7 @@ get_db_infos(ClusterInfo *cluster)
 		         determine_db_tablespace_path(
 		                 cluster,
 		                 PQgetvalue(res, tupnum, i_spclocation),
-                         atooid(PQgetvalue(res, tupnum, i_tablespace_oid)),
-                         atoi(PQgetvalue(res, tupnum, i_is_user_defined_tablespace))));
+                         atooid(PQgetvalue(res, tupnum, i_tablespace_oid))));
 	}
 	PQclear(res);
 
@@ -740,20 +727,9 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 		/* Is the tablespace oid non-zero? */
 		if (tablespace_oid != 0)
 		{
-            if (cluster == &old_cluster
-                    && is_gpdb_version_with_filespaces(cluster))
-            {
-                tablespace = get_tablespace_path_for_old_cluster(
-                        old_cluster.old_tablespace_file_contents,
-                        tablespace_oid);
-            }
-			else {
-				/*
-				 * The tablespace location might be "", meaning the cluster
-				 * default location, i.e. pg_default or pg_global.
-				 */
-				tablespace = PQgetvalue(res, relnum, i_spclocation);
-			}
+			tablespace = determine_db_tablespace_path(cluster,
+			                                          PQgetvalue(res, relnum, i_spclocation),
+			                                          tablespace_oid);
 
 			/* Can we reuse the previous string allocation? */
 			if (last_tablespace && strcmp(tablespace, last_tablespace) == 0)

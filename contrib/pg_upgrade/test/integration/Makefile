@@ -6,8 +6,9 @@
 subdir = contrib/pg_upgrade/test/integration
 top_builddir = ../../../..
 pg_upgrade_directory=../..
-TARGETS = greenplum_five_to_greenplum_six_upgrade_test_suite \
-	  tablespace_gp_test
+TARGETS = tablespace_gp_test \
+	greenplum_five_to_greenplum_six_upgrade_test_suite
+
 
 include $(top_builddir)/src/Makefile.global
 include $(top_builddir)/src/Makefile.mock
