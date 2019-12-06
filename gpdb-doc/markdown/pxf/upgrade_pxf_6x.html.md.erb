@@ -40,10 +40,10 @@ After you upgrade to the new version of Greenplum Database, perform the followin
 
 2. Initialize PXF on each segment host as described in [Initializing PXF](init_pxf.html). You may choose to use your existing `$PXF_CONF` for the initialization.
 
-3. **If you are upgrading from Greenplum Database version 6.1.x or earlier** and you have configured any JDBC servers that access Kerberos-secured Hive, you must now add the `hadoop.security.authentication` property to the `jdbc-site.xml` file to explicitly identify use of the Kerberos authentication method. Perform the following for each of these server configs:
+3. **If you are upgrading from Greenplum Database version 6.1.x or earlier** and you have configured any JDBC servers that access Kerberos-secured Hive, you must now set the `hadoop.security.authentication` property to the `jdbc-site.xml` file to explicitly identify use of the Kerberos authentication method. Perform the following for each of these server configs:
 
     1. Navigate to the server configuration directory.
-    2. Open the `jdbc-site.xml` file in the editor of your choice and add the following property block to the file:
+    2. Open the `jdbc-site.xml` file in the editor of your choice and uncomment or add the following property block to the file:
 
         ```xml
         <property>
