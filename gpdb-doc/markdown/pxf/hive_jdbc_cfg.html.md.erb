@@ -135,6 +135,7 @@ Perform the following procedure to configure a PXF JDBC server for Hive:
 9. If the `hive.server2.authentication` property in `hive-site.xml` is set to `KERBEROS`:
     1. Identify the name of the server configuration.
     2. Ensure that you have configured Kerberos authentication for PXF as described in [Configuring PXF for Secure HDFS](pxf_kerbhdfs.html), and that you have specified the Kerberos principal and keytab in the `pxf-site.xml` properties as described in the procedure.
+    3. Comment out the `pxf.service.user.impersonation` property in the `pxf-site.xml` file. If you require user impersonation, you will uncomment and set the property in an upcoming step.)
     3. Uncomment the `hadoop.security.authentication` setting in `$PXF_CONF/servers/<name>/jdbc-site.xml`:
 
         ``` xml
@@ -168,7 +169,7 @@ Perform the following procedure to configure a PXF JDBC server for Hive:
         jdbc:hive2://hs2server:10000/default;principal=hive/hs2server@REALM;saslQop=auth-conf;<b>hive.server2.proxy.user=integration</b>
         </pre>
 
-        **Or**, enable PXF JDBC impersonation in the `pxf-site.xml` file so that PXF automatically uses the Greenplum Database user name to connect to Hive. For example:
+        **Or**, enable PXF JDBC impersonation in the `pxf-site.xml` file so that PXF automatically uses the Greenplum Database user name to connect to Hive. Add or uncomment the `pxf.service.user.impersonation` property and set the value to `true`. For example:
 
         ``` xml
         <property>
