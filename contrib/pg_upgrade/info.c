@@ -405,17 +405,19 @@ determine_db_tablespace_path(ClusterInfo *currentCluster,
                              Oid tablespace_oid,
                              int is_user_defined_tablespace)
 {
-    if (currentCluster != &old_cluster
-            || !is_gpdb_version_with_filespaces(currentCluster)
-            || !is_user_defined_tablespace)
-        return spclocation;
+	if (currentCluster != &old_cluster
+		|| !is_gpdb_version_with_filespaces(currentCluster)
+		|| !is_user_defined_tablespace)
+	{
+		return spclocation;
+	}
 
 	GreenplumClusterInfo *greenplumClusterInfo =
 		(GreenplumClusterInfo*)currentCluster->extraClusterInfo;
 
-    return get_tablespace_path_for_old_cluster(
-	    greenplumClusterInfo->old_tablespace_file_contents,
-            tablespace_oid);
+	return get_tablespace_path_for_old_cluster(
+		greenplumClusterInfo->old_tablespace_file_contents,
+		tablespace_oid);
 }
 
 /*

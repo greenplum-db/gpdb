@@ -127,6 +127,7 @@ tablespace_gp_test.t: tablespace_gp_test.o $(test_dependencies) \
 	$(pg_upgrade_directory)/exec.o \
 	$(pg_upgrade_greenplum_directory)/tablespace_gp.o \
 	$(pg_upgrade_greenplum_directory)/reporting.o \
+	$(pg_upgrade_greenplum_directory)/server_gp.o \
 	$(CMOCKERY_OBJS)
 	$(compile_test)
 
