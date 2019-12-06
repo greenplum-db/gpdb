@@ -27,5 +27,5 @@ OldTablespaceFileParser_invalid_access_error_for_row(int invalid_row_index)
 int
 main(int argc, char *argv[])
 {
-	performUpgrade();
+	performUpgradeWithTablespaces("./old_tablespaces.txt");
 }
