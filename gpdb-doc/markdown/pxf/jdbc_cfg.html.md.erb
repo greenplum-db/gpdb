@@ -188,9 +188,10 @@ When you enable PXF JDBC user impersonation, the PXF JDBC Connector accesses the
 
 When you enable JDBC user impersonation for a PXF server, PXF overrides the value of a `jdbc.user` property setting defined in either `jdbc-site.xml` or `<greenplum_user_name>-user.xml`, or specified in the external table DDL, with the Greenplum Database user name. For user impersonation to work effectively when the external data store requires passwords to authenticate connecting users, you must specify the `jdbc.password` setting for each user that can be impersonated in that user's `<greenplum_user_name>-user.xml` property override file. Refer to [Configuring a PXF User](cfg_server.html#usercfg) for more information about per-server, per-Greenplum-user configuration.
 
+The `pxf.service.user.impersonation` property in the `jdbc-site.xml` configuration file governs JDBC user impersonation.
+
 <div class="note"> In previous versions of Greenplum Database, you configured JDBC user impersonation via the now deprecated <code>pxf.impersonation.jdbc</code> property setting in the <code>jdbc-site.xml</code> configuration file.</div>
 
-The `pxf.service.user.impersonation` property in the `jdbc-site.xml` configuration file governs JDBC user impersonation.
 
 ### <a id="jdbc-impers-cfg"></a>Example Configuration Procedure
 

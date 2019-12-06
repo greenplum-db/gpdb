@@ -37,11 +37,11 @@ Table heading key:
 |------------------|---------------|----------------|-------------------|
 | `NOSASL` | n/a | No authentication | Must set `jdbc.connection.property.auth` = `noSasl`.  |
 | `NONE`, or not specified | `TRUE` | User name that you provide | Set `jdbc.user`. |
-| `NONE`, or not specified | `TRUE` | Greenplum user name | Uncomment and set `pxf.service.user.impersonation` to `true` in `jdbc-site.xml`. |
+| `NONE`, or not specified | `TRUE` | Greenplum user name | Set `pxf.service.user.impersonation` to `true` in `jdbc-site.xml`. |
 | `NONE`, or not specified | `FALSE` | Name of the user who started Hive, typically `hive`  | None |
 | `KERBEROS` | `TRUE` | Identity provided in the PXF Kerberos principal, typically `gpadmin` | Must set `hadoop.security.authentication` to `kerberos` in `jdbc-site.xml`. |
 | `KERBEROS` | `TRUE` | User name that you provide  | Set `hive.server2.proxy.user` in `jdbc.url` and set `hadoop.security.authentication` to `kerberos` in `jdbc-site.xml`.  |
-| `KERBEROS` | `TRUE` | Greenplum user name  | Uncomment and set `pxf.service.user.impersonation` to `true` and `hadoop.security.authentication` to `kerberos` in `jdbc-site.xml`. |
+| `KERBEROS` | `TRUE` | Greenplum user name  | Set `pxf.service.user.impersonation` to `true` and `hadoop.security.authentication` to `kerberos` in `jdbc-site.xml`. |
 | `KERBEROS` | `FALSE` | Identity provided in the `jdbc.url` `principal` parameter, typically `hive` |  Must set `hadoop.security.authentication` to `kerberos` in `jdbc-site.xml`. |
 
 **Note**: There are additional configuration steps required when Hive utilizes Kerberos authentication.
