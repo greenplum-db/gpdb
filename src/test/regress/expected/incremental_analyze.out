@@ -1970,6 +1970,29 @@ SELECT relname, relpages, reltuples FROM pg_class WHERE relname LIKE 'incr_analy
  incr_analyze_test_1_prt_6 |        1 |         0
 (7 rows)
 
+-- Test merging of stats if an empty partition contains relpages > 0
+-- Do not collect samples while merging stats
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) PARTITION BY RANGE (b) (START (0) END (6) EVERY (3));
+INSERT INTO foo SELECT i,i%3 FROM generate_series(1,10)i;
+ANALYZE foo_1_prt_1;
+ANALYZE foo_1_prt_2;
+SET allow_system_table_mods = 'DML';
+UPDATE pg_class set relpages=3 WHERE relname='foo_1_prt_2';
+RESET allow_system_table_mods;
+SET client_min_messages = 'log';
+analyze rootpartition foo;
+LOG:  Merging leaf partition stats to calculate root partition stats : column a
+LOG:  Merging leaf partition stats to calculate root partition stats : column b
+reset client_min_messages;
+-- ensure relpages is correctly set after analyzing
+analyze foo_1_prt_2;
+select reltuples, relpages from pg_class where relname ='foo_1_prt_2';
+ reltuples | relpages 
+-----------+----------
+         0 |        1
+(1 row)
+
 INSERT INTO t900c SELECT i%130, i%8, 'something'||i::text FROM generate_series(1,100)i;
 ANALYZE t900c;
 INSERT INTO foo_900_numeric_cols SELECT i,i FROM generate_series(1,100)i;
