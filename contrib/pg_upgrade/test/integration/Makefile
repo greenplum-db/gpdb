@@ -2,10 +2,10 @@
 # Makefile for upgrade regress tests
 #
 
-
 subdir = contrib/pg_upgrade/test/integration
 top_builddir = ../../../..
 pg_upgrade_directory=../..
+pg_upgrade_greenplum_directory=../../greenplum
 TARGETS = greenplum_five_to_greenplum_six_upgrade_test_suite \
 	  tablespace_gp_test
 
@@ -80,7 +80,13 @@ scripts_objs := $(patsubst %.c,%.o,$(wildcard scripts/*.c))
 $(scripts_objs): override CPPFLAGS += -I .
 scripts/gpdb5-cluster: scripts/gpdb5-cluster.o utilities/gpdb5-cluster.o
 scripts/gpdb6-cluster: scripts/gpdb6-cluster.o utilities/gpdb6-cluster.o
-scripts/upgrade-cluster: utilities/cluster-upgrade.o scripts/upgrade-cluster.o $(pg_upgrade_directory)/old_tablespace_file_parser.o $(pg_upgrade_directory)/old_tablespace_file_contents.o utilities/pg-upgrade-copy.o utilities/test-upgrade-helpers.o
+scripts/upgrade-cluster: utilities/cluster-upgrade.o \
+	scripts/upgrade-cluster.o \
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_parser.o \
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_contents.o \
+	utilities/pg-upgrade-copy.o \
+	utilities/test-upgrade-helpers.o
+
 scripts/reset-cluster: scripts/reset-cluster.o utilities/test-helpers.o utilities/query-helpers.o
 #override LDFLAGS += -lasan $(libpq_pgport)
 override CPPFLAGS += -I $(pg_upgrade_directory) -I$(libpq_srcdir)
@@ -88,8 +94,8 @@ override CPPFLAGS += -I $(pg_upgrade_directory) -I$(libpq_srcdir)
 scripts/pg-upgrade-copy-from-master.o: override CPPFLAGS += -I $(pg_upgrade_directory)
 scripts/pg-upgrade-copy-from-master: scripts/pg-upgrade-copy-from-master.o \
 	utilities/pg-upgrade-copy.o \
-	$(pg_upgrade_directory)/old_tablespace_file_contents.o \
-	$(pg_upgrade_directory)/old_tablespace_file_parser.o
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_contents.o \
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_parser.o
 
 #
 ## Libraries
@@ -103,19 +109,19 @@ test_dependencies = bdd-library/bdd.o \
 	$(utilities_objs) \
 	$(scenario_objs) \
 	$(CMOCKERY_OBJS) \
-	$(pg_upgrade_directory)/old_tablespace_file_contents.o \
-	$(pg_upgrade_directory)/old_tablespace_file_parser.o 
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_contents.o \
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_parser.o
 
 debugging_flags = -Og -g
 
 compile_test = $(CC) $(CFLAGS) $(debugging_flags) $^ $(libpq_pgport) $(LDFLAGS) -o $@
 
 tablespace_gp_test.t: tablespace_gp_test.o $(test_dependencies) \
-	$(pg_upgrade_directory)/tablespace_gp.o \
 	$(pg_upgrade_directory)/util.o \
 	$(pg_upgrade_directory)/server.o \
 	$(pg_upgrade_directory)/exec.o \
-	$(pg_upgrade_directory)/reporting.o \
+	$(pg_upgrade_greenplum_directory)/tablespace_gp.o \
+	$(pg_upgrade_greenplum_directory)/reporting.o \
 	$(CMOCKERY_OBJS)
 	$(compile_test)
 

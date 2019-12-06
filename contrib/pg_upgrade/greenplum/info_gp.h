@@ -12,7 +12,7 @@
 #ifndef PG_UPGRADE_INFO_GP_H
 #define PG_UPGRADE_INFO_GP_H
 
-#include "old_tablespace_file_contents.h"
+#include "greenplum/old_tablespace_file_contents.h"
 
 typedef enum GetTablespacePathResponseCodes {
 	GetTablespacePathResponse_MISSING_FILE,

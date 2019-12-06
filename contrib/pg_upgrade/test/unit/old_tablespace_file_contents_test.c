@@ -4,10 +4,10 @@
 
 #include "cmockery_gp.h"
 
-#include "old_tablespace_file_contents.h"
+#include "greenplum/old_tablespace_file_contents.h"
 
-#include "old_tablespace_file_parser.h"
-#include "old_tablespace_file_parser_observer.h"
+#include "greenplum/old_tablespace_file_parser.h"
+#include "greenplum/old_tablespace_file_parser_observer.h"
 
 struct OldTablespaceFileParser_DocumentData {};
 

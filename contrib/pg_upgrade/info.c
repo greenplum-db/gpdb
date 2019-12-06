@@ -13,7 +13,7 @@
 
 #include "access/transam.h"
 #include "catalog/pg_class.h"
-#include "info_gp.h"
+#include "greenplum/info_gp.h"
 
 
 static void create_rel_filename_map(const char *old_data, const char *new_data,

@@ -15,7 +15,7 @@
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
 
-#include "old_tablespace_file_contents.h"
+#include "greenplum/old_tablespace_file_contents.h"
 
 /* Use port in the private/dynamic port number range */
 #define DEF_PGUPORT			50432
