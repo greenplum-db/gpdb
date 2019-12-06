@@ -9,6 +9,8 @@
  *
  */
 #include "pg_upgrade.h"
+#include "pg_upgrade_greenplum.h"
+
 
 static char *
 get_generated_old_tablespaces_file_path(void)
@@ -57,22 +59,24 @@ generate_old_tablespaces_file(ClusterInfo *oldCluster)
 	char *generated_old_tablespaces_file_path =
 		     get_generated_old_tablespaces_file_path();
 	dump_old_tablespaces(oldCluster, generated_old_tablespaces_file_path);
-	populate_old_cluster_with_old_tablespaces(oldCluster,
+	populate_old_cluster_with_old_tablespaces(oldCluster->extraClusterInfo,
 	                                          generated_old_tablespaces_file_path);
 	pfree(generated_old_tablespaces_file_path);
 }
 
 void
-populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster,
+populate_old_cluster_with_old_tablespaces(ExtraClusterInfo *oldCluster,
                                           const char *const file_path)
 {
 	OldTablespaceFileContents *contents = parse_old_tablespace_file_contents(
 		file_path);
 
-	oldCluster->old_tablespace_file_contents =
+	GreenplumClusterInfo *oldGreenplumCluster = (GreenplumClusterInfo *)oldCluster;
+
+	oldGreenplumCluster->old_tablespace_file_contents =
 		filter_old_tablespace_file_for_dbid(
 			contents,
-			oldCluster->gp_dbid);
+			oldGreenplumCluster->gp_dbid);
 
 	clear_old_tablespace_file_contents(contents);
 }
@@ -80,8 +84,11 @@ populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster,
 void
 populate_gpdb6_cluster_tablespace_suffix(ClusterInfo *cluster)
 {
+	GreenplumClusterInfo *greenplumCluster =
+		(GreenplumClusterInfo *)cluster->extraClusterInfo;
+
 	cluster->tablespace_suffix = psprintf("/%d/GPDB_6_%d",
-	                                      cluster->gp_dbid,
+	                                      greenplumCluster->gp_dbid,
 	                                      cluster->controldata.cat_ver);
 }
 

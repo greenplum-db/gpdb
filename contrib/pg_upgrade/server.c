@@ -11,6 +11,7 @@
 
 #include "fe_utils/connect.h"
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 
 
 static PGconn *get_db_conn(ClusterInfo *cluster, const char *db_name);
@@ -251,7 +252,8 @@ start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error)
 	}
 	else
 	{
-		gp_dbid = cluster->gp_dbid;
+		GreenplumClusterInfo *greenplumClusterInfo = (GreenplumClusterInfo *)cluster->extraClusterInfo;
+		gp_dbid = greenplumClusterInfo->gp_dbid;
 		gp_content_id = 0;
 	}
 

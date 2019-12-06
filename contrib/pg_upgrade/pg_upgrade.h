@@ -15,7 +15,7 @@
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
 
-#include "greenplum/old_tablespace_file_contents.h"
+#include "extra_cluster_info.h"
 
 /* Use port in the private/dynamic port number range */
 #define DEF_PGUPORT			50432
@@ -383,7 +383,6 @@ typedef enum
 
 typedef long pgpid_t;
 
-
 /*
  * cluster
  *
@@ -410,9 +409,7 @@ typedef struct
 	const char *tablespace_suffix;		/* directory specification */
 
 	char	   *global_reserved_oids; /* OID preassign calls for shared objects */
-	int gp_dbid; /* greenplum database id of the cluster */
-
-	OldTablespaceFileContents *old_tablespace_file_contents;
+	ExtraClusterInfo *extraClusterInfo;
 } ClusterInfo;
 
 
@@ -590,11 +587,10 @@ void transfer_all_new_dbs(DbInfoArr *old_db_arr,
 void		init_tablespaces(void);
 
 /* tablespace_gp.c */
-void populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster, const char *file_path);
+void populate_old_cluster_with_old_tablespaces(ExtraClusterInfo *oldCluster, const char *file_path);
 void generate_old_tablespaces_file(ClusterInfo *oldCluster);
 void populate_gpdb6_cluster_tablespace_suffix(ClusterInfo *cluster);
 bool is_gpdb_version_with_filespaces(ClusterInfo *cluster);
-
 
 /* server.c */
 

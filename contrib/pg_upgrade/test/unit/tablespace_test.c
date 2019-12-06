@@ -3,6 +3,7 @@
 #include "cmockery_gp.h"
 
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 #include "pg_upgrade_dummies.c"
 
 /* 
@@ -27,7 +28,9 @@ static void stub_number_of_tablespaces(int stub_value)
 	 * given the old cluster some non-null
 	 * contents to signify that it is populated
 	 */
-	old_cluster.old_tablespace_file_contents = palloc0(sizeof(void *));
+	GreenplumClusterInfo *greenplumClusterInfo = palloc0(sizeof(GreenplumClusterInfo));
+	greenplumClusterInfo->old_tablespace_file_contents = palloc0(sizeof(void *));
+	old_cluster.extraClusterInfo = (ExtraClusterInfo *)greenplumClusterInfo;
 
 	_stubbed_number_of_tablespaces = stub_value;
 }
@@ -95,12 +98,15 @@ stub_is_old_tablespaces_file_empty(bool value)
 static void
 setup(void **state)
 {
-	test_cluster = malloc(sizeof(ClusterInfo));
-	test_os_info = malloc(sizeof(OSInfo));
+	test_cluster = palloc0(sizeof(ClusterInfo));
+	test_os_info = palloc0(sizeof(OSInfo));
+	test_cluster->extraClusterInfo = palloc0(sizeof(GreenplumClusterInfo));
+
 	old_cluster  = *test_cluster;
 	os_info = *test_os_info;
 
-	old_cluster.old_tablespace_file_contents = NULL;
+	GreenplumClusterInfo *greenplumClusterInfo = (GreenplumClusterInfo*)old_cluster.extraClusterInfo;
+	greenplumClusterInfo->old_tablespace_file_contents = NULL;
 	stub_is_old_tablespaces_file_empty(true);
 
 	_populate_gpdb6_cluster_tablespace_suffix_was_called = false;
@@ -166,7 +172,9 @@ static void
 test_when_file_is_empty_populate_is_not_called(
 	void **state)
 {
-	old_cluster.gp_dbid = 999;
+	GreenplumClusterInfo* oldGreenplumClusterInfo = (GreenplumClusterInfo*)old_cluster.extraClusterInfo;
+
+	oldGreenplumClusterInfo->gp_dbid = 999;
 	old_cluster.major_version = 80400;
 	new_cluster.major_version = 90400;
 
@@ -180,7 +188,9 @@ test_when_file_is_empty_populate_is_not_called(
 static void
 test_it_finds_old_tablespaces_when_provided_as_a_file(void **state)
 {
-	old_cluster.gp_dbid = 999;
+	GreenplumClusterInfo* oldGreenplumClusterInfo = (GreenplumClusterInfo*)old_cluster.extraClusterInfo;
+	oldGreenplumClusterInfo->gp_dbid = 999;
+
 	old_cluster.major_version = 80400;
 	new_cluster.major_version = 90400;
 

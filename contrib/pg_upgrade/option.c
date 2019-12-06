@@ -13,6 +13,7 @@
 #include "getopt_long.h"
 
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 
 #include <time.h>
 #include <sys/types.h>
@@ -77,9 +78,14 @@ parseCommandLine(int argc, char *argv[])
 	user_opts.transfer_mode = TRANSFER_MODE_COPY;
 	user_opts.old_tablespace_file_path = NULL;
 
-	old_cluster.gp_dbid = GP_DBID_NOT_SET;
-	new_cluster.gp_dbid = GP_DBID_NOT_SET;
-	old_cluster.old_tablespace_file_contents = NULL;
+	GreenplumClusterInfo *oldExtraClusterInfo = palloc0(sizeof(GreenplumClusterInfo));
+	GreenplumClusterInfo *newExtraClusterInfo = palloc0(sizeof(GreenplumClusterInfo));
+	old_cluster.extraClusterInfo = (ExtraClusterInfo *)oldExtraClusterInfo;
+	new_cluster.extraClusterInfo = (ExtraClusterInfo *)newExtraClusterInfo;
+	oldExtraClusterInfo->gp_dbid = GP_DBID_NOT_SET;
+	newExtraClusterInfo->gp_dbid = GP_DBID_NOT_SET;
+	oldExtraClusterInfo->old_tablespace_file_contents = NULL;
+	newExtraClusterInfo->old_tablespace_file_contents = NULL;
 
 	os_info.progname = get_progname(argv[0]);
 
@@ -237,11 +243,11 @@ parseCommandLine(int argc, char *argv[])
 				break;
 				
 			case 5: /* --old-gp-dbid */
-				old_cluster.gp_dbid = atoi(optarg);
+				oldExtraClusterInfo->gp_dbid = atoi(optarg);
 				break;
 
 			case 6: /* --new-gp-dbid */
-				new_cluster.gp_dbid = atoi(optarg);
+				newExtraClusterInfo->gp_dbid = atoi(optarg);
 				break;
 
 			case 7: /* --old-tablespaces-file */
@@ -299,15 +305,15 @@ parseCommandLine(int argc, char *argv[])
 		user_opts.checksum_mode != CHECKSUM_NONE)
 		pg_log(PG_FATAL, "Adding and removing checksums only supported in copy mode.\n");
 
-	if (old_cluster.gp_dbid == GP_DBID_NOT_SET)
+	if (oldExtraClusterInfo->gp_dbid == GP_DBID_NOT_SET)
 		pg_fatal("--old-gp-dbid must be set\n");
 
-	if (new_cluster.gp_dbid == GP_DBID_NOT_SET)
+	if (newExtraClusterInfo->gp_dbid == GP_DBID_NOT_SET)
 		pg_fatal("--new-gp-dbid must be set\n");
 
 	if (user_opts.old_tablespace_file_path) {
 		populate_old_cluster_with_old_tablespaces(
-			&old_cluster,
+			old_cluster.extraClusterInfo,
 			user_opts.old_tablespace_file_path);
 	}
 }

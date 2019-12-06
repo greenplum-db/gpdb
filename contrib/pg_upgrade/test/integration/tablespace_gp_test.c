@@ -40,23 +40,27 @@ OldTablespaceFileParser_invalid_access_error_for_row(int row_index)
 	
 }
 
+#include "greenplum/pg_upgrade_greenplum.h"
+
 static void
 test_populates_old_tablespace_file_contents_to_have_zero_records_for_gpdb6_cluster(void **state)
 {
 	ClusterInfo cluster;
+	GreenplumClusterInfo *greenplumClusterInfo = palloc0(sizeof(GreenplumClusterInfo));
+	cluster.extraClusterInfo = (ExtraClusterInfo *)greenplumClusterInfo;
 	cluster.port = GPDB_SIX_PORT;
 	cluster.major_version = 90400; /* a GPDB 6 cluster */
 	os_info.user = getenv("USER");
 	cluster.sockdir = NULL;
 
-	cluster.old_tablespace_file_contents = NULL;
+	greenplumClusterInfo->old_tablespace_file_contents = NULL;
 
 	generate_old_tablespaces_file(&cluster);
 
-	assert_false(cluster.old_tablespace_file_contents == NULL);
+	assert_false(greenplumClusterInfo->old_tablespace_file_contents == NULL);
 
 	assert_int_equal(
-		OldTablespaceFileContents_TotalNumberOfTablespaces(cluster.old_tablespace_file_contents),
+		OldTablespaceFileContents_TotalNumberOfTablespaces(greenplumClusterInfo->old_tablespace_file_contents),
 		0);
 }
 
@@ -84,24 +88,26 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 	PQfinish(connection);
 	
 	ClusterInfo cluster;
+	GreenplumClusterInfo *greenplumClusterInfo = palloc0(sizeof(GreenplumClusterInfo));
+	cluster.extraClusterInfo = (ExtraClusterInfo *)greenplumClusterInfo;
 	cluster.port = GPDB_FIVE_PORT;
 	cluster.major_version = 10000; /* less than gpdb 6 */
-	cluster.gp_dbid = 2;
+	greenplumClusterInfo->gp_dbid = 2;
 	os_info.user = getenv("USER");
 	cluster.sockdir = NULL;
 
-	cluster.old_tablespace_file_contents = NULL;
+	greenplumClusterInfo->old_tablespace_file_contents = NULL;
 
 	generate_old_tablespaces_file(&cluster);
 
-	assert_false(cluster.old_tablespace_file_contents == NULL);
+	assert_false(greenplumClusterInfo->old_tablespace_file_contents == NULL);
 
 	assert_int_equal(
-		OldTablespaceFileContents_TotalNumberOfTablespaces(cluster.old_tablespace_file_contents),
+		OldTablespaceFileContents_TotalNumberOfTablespaces(greenplumClusterInfo->old_tablespace_file_contents),
 		1);
 
 	char **results = OldTablespaceFileContents_GetArrayOfTablespacePaths(
-		cluster.old_tablespace_file_contents);
+		greenplumClusterInfo->old_tablespace_file_contents);
 
 	assert_string_equal(
 		results[0],

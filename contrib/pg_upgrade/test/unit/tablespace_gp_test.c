@@ -3,6 +3,7 @@
 #include "cmockery_gp.h"
 
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 #include "pg_upgrade_dummies.c"
 
 /*
@@ -35,10 +36,13 @@ static void
 test_it_populates_using_gpdb6_tablespace_layout(
         void **state)
 {
+	GreenplumClusterInfo *oldGreenplumClusterInfo = palloc0(sizeof(GreenplumClusterInfo));
     ClusterInfo clusterInfo;
+
     strcpy(clusterInfo.major_version_str, "-SOME_MAJOR_VERSION_STRING-");
     clusterInfo.controldata.cat_ver = 12345;
-    clusterInfo.gp_dbid             = 999;
+	oldGreenplumClusterInfo->gp_dbid             = 999;
+	clusterInfo.extraClusterInfo = (ExtraClusterInfo *)oldGreenplumClusterInfo;
 
     populate_gpdb6_cluster_tablespace_suffix(&clusterInfo);
 

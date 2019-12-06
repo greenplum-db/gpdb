@@ -12,7 +12,8 @@
 #include "pg_upgrade.h"
 
 #include <sys/types.h>
-#include "greenplum/old_tablespace_file_contents.h"
+#include "greenplum/pg_upgrade_greenplum.h"
+
 
 static void get_tablespace_paths(void);
 static void set_tablespace_directory_suffix(ClusterInfo *cluster);
@@ -81,9 +82,12 @@ verify_old_tablespace_paths(void)
 static void
 get_tablespace_paths(void)
 {
-	if (old_cluster.old_tablespace_file_contents &&
-		!is_old_tablespaces_file_empty(old_cluster.old_tablespace_file_contents)) {
-		populate_os_info_with_file_contents(old_cluster.old_tablespace_file_contents);
+	GreenplumClusterInfo *greenplumClusterInfo =
+		(GreenplumClusterInfo*) old_cluster.extraClusterInfo;
+
+	if (greenplumClusterInfo->old_tablespace_file_contents &&
+		!is_old_tablespaces_file_empty(greenplumClusterInfo->old_tablespace_file_contents)) {
+		populate_os_info_with_file_contents(greenplumClusterInfo->old_tablespace_file_contents);
 		verify_old_tablespace_paths();
 		return;
 	}

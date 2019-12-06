@@ -14,7 +14,7 @@
 #include "access/transam.h"
 #include "catalog/pg_class.h"
 #include "greenplum/info_gp.h"
-
+#include "greenplum/pg_upgrade_greenplum.h"
 
 static void create_rel_filename_map(const char *old_data, const char *new_data,
 						const DbInfo *old_db, const DbInfo *new_db,
@@ -410,8 +410,11 @@ determine_db_tablespace_path(ClusterInfo *currentCluster,
             || !is_user_defined_tablespace)
         return spclocation;
 
+	GreenplumClusterInfo *greenplumClusterInfo =
+		(GreenplumClusterInfo*)currentCluster->extraClusterInfo;
+
     return get_tablespace_path_for_old_cluster(
-            currentCluster->old_tablespace_file_contents,
+	    greenplumClusterInfo->old_tablespace_file_contents,
             tablespace_oid);
 }
 
@@ -743,8 +746,11 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
             if (cluster == &old_cluster
                     && is_gpdb_version_with_filespaces(cluster))
             {
+	            GreenplumClusterInfo *greenplumClusterInfo =
+	            	(GreenplumClusterInfo*)old_cluster.extraClusterInfo;
+
                 tablespace = get_tablespace_path_for_old_cluster(
-                        old_cluster.old_tablespace_file_contents,
+	                greenplumClusterInfo->old_tablespace_file_contents,
                         tablespace_oid);
             }
 			else {
