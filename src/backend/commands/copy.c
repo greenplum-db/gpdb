@@ -169,8 +169,8 @@ static void CopyFromInsertBatch(CopyState cstate, EState *estate,
 					uint64 firstBufferedLineNo);
 static bool CopyReadLine(CopyState cstate);
 static bool CopyReadLineText(CopyState cstate);
-static int	CopyReadAttributesText(CopyState cstate, int stop_processing_at_field);
-static int	CopyReadAttributesCSV(CopyState cstate, int stop_processing_at_field);
+static int	CopyReadAttributesText(CopyState cstate);
+static int	CopyReadAttributesCSV(CopyState cstate);
 static Datum CopyReadBinaryAttribute(CopyState cstate,
 						int column_no, FmgrInfo *flinfo,
 						Oid typioparam, int32 typmod,
@@ -205,18 +205,17 @@ static void SendCopyFromForwardedTuple(CopyState cstate,
 						   Oid tuple_oid,
 						   Datum *values,
 						   bool *nulls);
-static void SendCopyFromForwardedHeader(CopyState cstate, CdbCopy *cdbCopy);
+static void SendCopyFromForwardedHeader(CopyState cstate, CdbCopy *cdbCopy, bool file_has_oids);
 static void SendCopyFromForwardedError(CopyState cstate, CdbCopy *cdbCopy, char *errmsg);
 
 static bool NextCopyFromDispatch(CopyState cstate, ExprContext *econtext,
 								 Datum *values, bool *nulls, Oid *tupleOid);
 static TupleTableSlot *NextCopyFromExecute(CopyState cstate, ExprContext *econtext, EState *estate,
 								Oid *tupleOid);
-static bool NextCopyFromRawFieldsX(CopyState cstate, char ***fields, int *nfields, int stop_processing_at_field);
 static bool NextCopyFromX(CopyState cstate, ExprContext *econtext,
-			  Datum *values, bool *nulls, Oid *tupleOid);
+						  Datum *values, bool *nulls, Oid *tupleOid);
 static void HandleCopyError(CopyState cstate);
-static void HandleQDErrorFrame(CopyState cstate, char *p, int len);
+static void HandleQDErrorFrame(CopyState cstate);
 
 static void CopyInitDataParser(CopyState cstate);
 static void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable);
@@ -224,8 +223,6 @@ static void CopyEolStrToType(CopyState cstate);
 
 static GpDistributionData *InitDistributionData(CopyState cstate, EState *estate);
 static void FreeDistributionData(GpDistributionData *distData);
-static void InitCopyFromDispatchSplit(CopyState cstate, GpDistributionData *distData, EState *estate);
-static Bitmapset *GetTargetKeyCols(Oid relid, PartitionNode *children, Bitmapset *needed_cols, bool distkeys, EState *estate);
 static GpDistributionData *GetDistributionPolicyForPartition(CopyState cstate,
 								  EState *estate,
 								  GpDistributionData *mainDistData,
@@ -277,40 +274,44 @@ static volatile CopyState glob_cstate = NULL;
 /* GPDB_91_MERGE_FIXME: passing through a global variable like this is ugly */
 static CopyStmt *glob_copystmt = NULL;
 
-/*
- * Testing GUC: When enabled, COPY FROM prints an INFO line to indicate which
- * fields are processed in the QD, and which in the QE.
- */
-extern bool Test_copy_qd_qe_split;
 
 /*
  * When doing a COPY FROM through the dispatcher, the QD reads the input from
  * the input file (or stdin or program), and forwards the data to the QE nodes,
- * where they will actually be inserted.
+ * where they will actually be inserted
  *
- * Ideally, the QD would just pass through each line to the QE as is, and let
- * the QEs to do all the processing. Because the more processing the QD has
- * to do, the more likely it is to become a bottleneck.
+ * - Ideally, the QD would just pass through each line to the QE as is, and let
+ *   the QEs to do all the processing. Because the more processing the QD has
+ *   to do, the more likely it is to become a bottleneck.
  *
- * However, the QD needs to figure out which QE to send each row to. For that,
- * it needs to at least parse the distribution key. The distribution key might
- * also be a DEFAULTed column, in which case the DEFAULT value needs to be
- * evaluated in the QD. In that case, the QD must send the computed value
- * to the QE - we cannot assume that the QE can re-evaluate the expression and
- * arrive at the same value, at least not if the DEFAULT expression is volatile.
+ * - However, the QD needs to figure out which QE to send each row to. For that,
+ *   it needs to at least parse the distribution key. The distribution key might
+ *   also be a DEFAULTed column, in which case the DEFAULT value needs to be
+ *   evaluated in the QD. In that case, the QD must send the computed value
+ *   to the QE - we cannot assume that the QE can re-evaluate the expression and
+ *   arrive at the same value, at least not if the DEFAULT expression is volatile.
  *
- * Therefore, we need a flexible format between the QD and QE, where the QD
- * processes just enough of each input line to figure out where to send it.
- * It must send the values it had to parse and evaluate to the QE, as well
- * as the rest of the original input line, so that the QE can parse the rest
- * of it.
+ * - Therefore, we need a flexible format between the QD and QE, where the QD
+ *   processes just enough of each input line to figure out where to send it.
+ *   It must send the values it had to parse and evaluate to the QE, as well
+ *   as the rest of the original input line, so that the QE can parse the rest
+ *   of it.
  *
- * The 'copy_from_dispatch_*' structs are used in the QD->QE stream. For each
- * input line, the QD constructs a 'copy_from_dispatch_row' struct, and sends
+ * GPDB_91_MERGE_FIXME: that's a nice theory, but the current implementation
+ * is a lot more dumb: The QD parses every row fully, and sends all
+ * precomputed values to each QE. Therefore, with the current implementation,
+ * the QD will easily become a bottleneck, if the input functions are
+ * expensive. Before the refactoring during the 9.1 merge, there was no
+ * special QD->QE protocol. Instead, the QD reconstructed each line in the
+ * same format as the original file had, interjecting any DEFAULT values into
+ * it. That was fast when only a few columns needed to be evaluated in the QD,
+ * but it was not optimal, but it was pretty complicated, and required some
+ * majore surgery to the upstream NextCopyFrom and other functions.
+ *
+ * The 'copy_from_dispatch_frame' struct is used in the QD->QE stream. For each
+ * input line, the QD constructs a 'copy_from_dispatch_frame' struct, and sends
  * it to the QE. Before any rows, a QDtoQESignature is sent first, followed by
- * a 'copy_from_dispatch_header'. When QD encounters a recoverable error that
- * needs to be logged in the error log (LOG ERRORS SEGMENT REJECT LIMIT), it
- * sends the erroneous raw to a QE, in a 'copy_from_dispatch_error' struct.
+ * a 'copy_from_dispatch_header'.
  *
  *
  * COPY TO is simpler: The QEs form the output rows in the final form, and the QD
@@ -319,83 +320,49 @@ extern bool Test_copy_qd_qe_split;
  */
 static const char QDtoQESignature[] = "PGCOPY-QD-TO-QE\n\377\r\n";
 
-/* Header contains information that applies to all the rows that follow. */
 typedef struct
 {
-	/*
-	 * First field that should be processed in the QE. Any fields before
-	 * this will be included as Datums in the rows that follow.
-	 */
-	int16		first_qe_processed_field;
 	bool		file_has_oids;
 } copy_from_dispatch_header;
 
 typedef struct
 {
 	/*
-	 * Information about this input line.
-	 *
-	 * 'relid' is the target relation's OID. Normally, the same as
-	 * cstate->relid, but for a partitioned relation, it indicates the target
-	 * partition. Note: this must be the first field, because InvalidOid means
-	 * that this is actually a 'copy_from_dispatch_error' struct.
-	 *
-	 * 'lineno' is the input line number, for error reporting.
+	 * target relation OID. Normally, the same as cstate->relid, but for
+	 * a partitioned relation, it indicate the target partition.
 	 */
-	int64		lineno;
 	Oid			relid;
-
-	uint32		line_len;			/* size of the included input line */
-	uint32		residual_off;		/* offset in the line, where QE should
-									 * process remaining fields */
-	bool		delim_seen_at_end;  /* conveys to QE if QD saw a delim at end
-									 * of its processing */
-	uint16		fld_count;			/* # of fields that were processed in the
-									 * QD. */
-
-	/* If 'file_has_oids' was true, a tuple OID follows. */
-
-	/* The input line follows. */
+	Oid			loaded_oid;
+	int64		lineno;
+	int16		fld_count;
 
 	/*
-	 * For each field that was parsed in the QD already, the following data follows:
-	 *
-	 * int16	fieldnum;
+	 * Default values. For each default value:
 	 * <data>
 	 *
-	 * NULL values are not included, any attributes that are not included in
-	 * the message are implicitly NULL.
-	 *
-	 * For pass-by-value datatypes, the <data> is the raw Datum. For
-	 * simplicity, it is always sent as a full-width 8-byte Datum, regardless
-	 * of the datatype's length.
-	 *
-	 * For other fixed width datatypes, <data> is the datatype's value.
-	 *
-	 * For variable-length datatypes, <data> begins with a 4-byte length field,
-	 * followed by the data. Cstrings (typlen = -2) are also sent in this
-	 * format.
+	 * The data is the raw Datum.
 	 */
-} copy_from_dispatch_row;
 
-/* Size of the struct, without padding at the end. */
-#define SizeOfCopyFromDispatchRow (offsetof(copy_from_dispatch_row, fld_count) + sizeof(uint16))
+	/* data follows */
+} copy_from_dispatch_row;
 
 typedef struct
 {
-	int64		error_marker;	/* constant -1, to mark that this is an error
-								 * frame rather than 'copy_from_dispatch_row' */
+	/*
+	 * target relation OID. Normally, the same as cstate->relid, but for
+	 * a partitioned relation, it indicate the target partition.
+	 */
+	Oid			error_marker;		/* InvalidOid, to distinguish this from row. */
 	int64		lineno;
+	bool		line_buf_converted;
 	uint32		errmsg_len;
 	uint32		line_len;
-	bool		line_buf_converted;
 
 	/* 'errmsg' follows */
 	/* 'line' follows */
 } copy_from_dispatch_error;
 
-/* Size of the struct, without padding at the end. */
-#define SizeOfCopyFromDispatchError (offsetof(copy_from_dispatch_error, line_buf_converted) + sizeof(bool))
+
 
 
 /*
@@ -3710,41 +3677,6 @@ CopyFrom(CopyState cstate)
 			is_check_distkey = false;
 	}
 
-	/* Determine which fields we need to parse in the QD. */
-	if (cstate->dispatch_mode == COPY_DISPATCH)
-		InitCopyFromDispatchSplit(cstate, distData, estate);
-
-	if (cstate->dispatch_mode == COPY_DISPATCH ||
-		cstate->dispatch_mode == COPY_EXECUTOR)
-	{
-		/*
-		 * Now split the attnumlist into the parts that are parsed in the QD, and
-		 * in QE.
-		 */
-		ListCell   *lc;
-		int			i = 0;
-		List	   *qd_attnumlist = NIL;
-		List	   *qe_attnumlist = NIL;
-		int			first_qe_processed_field;
-
-		first_qe_processed_field = cstate->first_qe_processed_field;
-		if (cstate->file_has_oids)
-			first_qe_processed_field--;
-
-		foreach(lc, cstate->attnumlist)
-		{
-			int			attnum = lfirst_int(lc);
-
-			if (i < first_qe_processed_field)
-				qd_attnumlist = lappend_int(qd_attnumlist, attnum);
-			else
-				qe_attnumlist = lappend_int(qe_attnumlist, attnum);
-			i++;
-		}
-		cstate->qd_attnumlist = qd_attnumlist;
-		cstate->qe_attnumlist = qe_attnumlist;
-	}
-
 	if (cstate->dispatch_mode == COPY_DISPATCH)
 	{
 		/*
@@ -3758,7 +3690,7 @@ CopyFrom(CopyState cstate)
 		 * pre-allocate buffer for constructing a message.
 		 */
 		cstate->dispatch_msgbuf = makeStringInfo();
-		enlargeStringInfo(cstate->dispatch_msgbuf, SizeOfCopyFromDispatchRow);
+		enlargeStringInfo(cstate->dispatch_msgbuf, sizeof(copy_from_dispatch_row));
 
 		/*
 		 * prepare to COPY data into segDBs:
@@ -3802,7 +3734,9 @@ CopyFrom(CopyState cstate)
 			 * dummy file on master for COPY FROM ON SEGMENT
 			 */
 			if (!cstate->on_segment)
-				SendCopyFromForwardedHeader(cstate, cdbCopy);
+			{
+				SendCopyFromForwardedHeader(cstate, cdbCopy, cstate->file_has_oids);
+			}
 		}
 	}
 
@@ -4471,12 +4405,10 @@ BeginCopyFrom(Relation rel,
 	/*
 	 * Determine the mode
 	 */
-	if (cstate->on_segment || data_source_cb)
-		cstate->dispatch_mode = COPY_DIRECT;
-	else if (Gp_role == GP_ROLE_DISPATCH &&
-			 cstate->rel && cstate->rel->rd_cdbpolicy)
+	if (Gp_role == GP_ROLE_DISPATCH && !cstate->on_segment &&
+		cstate->rel && cstate->rel->rd_cdbpolicy)
 		cstate->dispatch_mode = COPY_DISPATCH;
-	else if (Gp_role == GP_ROLE_EXECUTE)
+	else if (Gp_role == GP_ROLE_EXECUTE && !cstate->on_segment)
 		cstate->dispatch_mode = COPY_EXECUTOR;
 	else
 		cstate->dispatch_mode = COPY_DIRECT;
@@ -4719,7 +4651,6 @@ BeginCopyFrom(Relation rel,
 					errmsg("invalid QD->QD COPY communication header")));
 
 		cstate->file_has_oids = header_frame.file_has_oids;
-		cstate->first_qe_processed_field = header_frame.first_qe_processed_field;
 	}
 	else if (!cstate->binary)
 	{
@@ -4801,13 +4732,6 @@ BeginCopyFrom(Relation rel,
 bool
 NextCopyFromRawFields(CopyState cstate, char ***fields, int *nfields)
 {
-	return NextCopyFromRawFieldsX(cstate, fields, nfields, -1);
-}
-
-static bool
-NextCopyFromRawFieldsX(CopyState cstate, char ***fields, int *nfields,
-					   int stop_processing_at_field)
-{
 	int			fldct;
 	bool		done;
 
@@ -4837,9 +4761,9 @@ NextCopyFromRawFieldsX(CopyState cstate, char ***fields, int *nfields,
 
 	/* Parse the line into de-escaped field values */
 	if (cstate->csv_mode)
-		fldct = CopyReadAttributesCSV(cstate, stop_processing_at_field);
+		fldct = CopyReadAttributesCSV(cstate);
 	else
-		fldct = CopyReadAttributesText(cstate, stop_processing_at_field);
+		fldct = CopyReadAttributesText(cstate);
 
 	*fields = cstate->raw_fields;
 	*nfields = fldct;
@@ -4926,7 +4850,7 @@ HandleCopyError(CopyState cstate)
 		 * ErrorIfRejectLimit() below will use this information in the error message,
 		 * if the error count is reached.
 		 */
-		cdbsreh->rawdata = cstate->line_buf.data;
+		cdbsreh->rawdata = cstate->line_buf.data + cstate->line_buf.cursor;
 
 		cdbsreh->is_server_enc = cstate->line_buf_converted;
 		cdbsreh->linenumber = cstate->cur_lineno;
@@ -4949,7 +4873,7 @@ HandleCopyError(CopyState cstate)
 
 				SendCopyFromForwardedError(cstate, cstate->cdbCopy, errormsg);
 			}
-			else
+			else 
 			{
 				/* after all the prep work let cdbsreh do the real work */
 				if (Gp_role == GP_ROLE_DISPATCH)
@@ -4984,7 +4908,7 @@ HandleCopyError(CopyState cstate)
  * relation passed to BeginCopyFrom. This function fills the arrays.
  * Oid of the tuple is returned with 'tupleOid' separately.
  */
-static bool
+bool
 NextCopyFromX(CopyState cstate, ExprContext *econtext,
 			 Datum *values, bool *nulls, Oid *tupleOid)
 {
@@ -4998,46 +4922,14 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 	int			i;
 	int			nfields;
 	bool		isnull;
+	bool		file_has_oids = cstate->file_has_oids;
 	int		   *defmap = cstate->defmap;
 	ExprState **defexprs = cstate->defexprs;
-	List	   *attnumlist;
-	bool		file_has_oids;
-	int			stop_processing_at_field;
-
-	/*
-	 * Figure out what fields we're going to process in this process.
-	 *
-	 * In the QD, set 'stop_processing_at_field' so that we only those
-	 * fields that are needed in the QD.
-	 */
-	switch (cstate->dispatch_mode)
-	{
-		case COPY_DIRECT:
-			stop_processing_at_field = -1;
-			attnumlist = cstate->attnumlist;
-			file_has_oids = cstate->file_has_oids;
-			break;
-
-		case COPY_DISPATCH:
-			stop_processing_at_field = cstate->first_qe_processed_field;
-			attnumlist = cstate->qd_attnumlist;
-			file_has_oids = cstate->file_has_oids;
-			break;
-
-		case COPY_EXECUTOR:
-			stop_processing_at_field = -1;
-			attnumlist = cstate->qe_attnumlist;
-			file_has_oids = false;	/* already handled in QD. */
-			break;
-
-		default:
-			elog(ERROR, "unexpected COPY dispatch mode %d", cstate->dispatch_mode);
-	}
 
 	tupDesc = RelationGetDescr(cstate->rel);
 	attr = tupDesc->attrs;
 	num_phys_attrs = tupDesc->natts;
-	attr_count = list_length(attnumlist);
+	attr_count = list_length(cstate->attnumlist);
 	nfields = file_has_oids ? (attr_count + 1) : attr_count;
 
 	/* Initialize all values for row to NULL */
@@ -5053,30 +4945,8 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 		char	   *string;
 
 		/* read raw fields in the next line */
-		if (cstate->dispatch_mode != COPY_EXECUTOR)
-		{
-			if (!NextCopyFromRawFieldsX(cstate, &field_strings, &fldct,
-										stop_processing_at_field))
-				return false;
-		}
-		else
-		{
-			/*
-			 * We have received the raw line from the QD, and we just
-			 * need to split it into raw fields.
-			 */
-			if (cstate->stopped_processing_at_delim &&
-				cstate->line_buf.cursor <= cstate->line_buf.len)
-			{
-				if (cstate->csv_mode)
-					fldct = CopyReadAttributesCSV(cstate, -1);
-				else
-					fldct = CopyReadAttributesText(cstate, -1);
-			}
-			else
-				fldct = 0;
-			field_strings = cstate->raw_fields;
-		}
+		if (!NextCopyFromRawFields(cstate, &field_strings, &fldct))
+			return false;
 
 		/* check for overflowing fields */
 		if (nfields > 0 && fldct > nfields)
@@ -5131,7 +5001,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 		}
 
 		/* Loop to read the user attributes on the line. */
-		foreach(cur, attnumlist)
+		foreach(cur, cstate->attnumlist)
 		{
 			int			attnum = lfirst_int(cur);
 			int			m = attnum - 1;
@@ -5198,7 +5068,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 
 		Assert(fieldno == nfields);
 	}
-	else if (attr_count)
+	else
 	{
 		/* binary */
 		int16		fld_count;
@@ -5265,7 +5135,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 		}
 
 		i = 0;
-		foreach(cur, attnumlist)
+		foreach(cur, cstate->attnumlist)
 		{
 			int			attnum = lfirst_int(cur);
 			int			m = attnum - 1;
@@ -5287,15 +5157,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 	 * Now compute and insert any defaults available for the columns not
 	 * provided by the input data.  Anything not processed here or above will
 	 * remain NULL.
-	 *
-	 * GPDB: The defaults are always computed in the QD, and are included
-	 * in the QD->QE stream as pre-computed Datums. Funny indentation, to
-	 * keep the indentation of the code inside the same as in upstream.
-	 * (We could improve this, and compute immutable defaults that don't
-	 * affect which segment the row belongs to, in the QE.)
 	 */
-  if (cstate->dispatch_mode != COPY_EXECUTOR)
-  {
 	for (i = 0; i < num_defaults; i++)
 	{
 		/*
@@ -5308,7 +5170,6 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 		values[defmap[i]] = ExecEvalExpr(defexprs[i], econtext,
 										 &nulls[defmap[i]], NULL);
 	}
-  }
 
 	return true;
 }
@@ -5318,14 +5179,21 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
  * Like NextCopyFrom(), but used in the QD, when we want to parse the
  * input line only partially. We only want to parse enough fields needed
  * to determine which target segment to forward the row to.
- *
- * (The logic is actually within NextCopyFrom(). This is a separate
- * function just for symmetry with NextCopyFromExecute()).
  */
 static bool
 NextCopyFromDispatch(CopyState cstate, ExprContext *econtext,
 					 Datum *values, bool *nulls, Oid *tupleOid)
 {
+	/*
+	 * GPDB_91_MERGE_FIXME: The idea here would be to only call the
+	 * input function for the fields we need in the QD. But for now,
+	 * screw performance.
+	 *
+	 * Note: There used to be code in InitDistributionData(), to compute
+	 * the last field number that's needed for to determine which partition
+	 * a row belongs to. If you resurrect this optimization, you'll probably
+	 * need to resurrect that, too.
+	 */
 	return NextCopyFrom(cstate, econtext, values, nulls, tupleOid);
 }
 
@@ -5344,58 +5212,61 @@ NextCopyFromExecute(CopyState cstate, ExprContext *econtext,
 	AttrNumber	num_phys_attrs;
 	copy_from_dispatch_row frame;
 	int			r;
+	Oid			header;
 	ResultRelInfo *resultRelInfo;
-	TupleTableSlot *baseSlot;
 	TupleTableSlot *slot;
-	Datum	   *baseValues;
-	bool	   *baseNulls;
 	Datum	   *values;
 	bool	   *nulls;
-	bool		got_error;
+	MemoryContext oldcxt;
 
-	/*
-	 * The code below reads the 'copy_from_dispatch_row' struct, and only
-	 * then checks if it was actually a 'copy_from_dispatch_error' struct.
-	 * That only works when 'copy_from_dispatch_error' is larger than
-	 *'copy_from_dispatch_row'.
-	 */
-	StaticAssertStmt(SizeOfCopyFromDispatchError >= SizeOfCopyFromDispatchRow,
-					 "copy_from_dispatch_error must be larger than copy_from_dispatch_row");
-
-	/*
-	 * If we encounter an error while parsing the row (or we receive a row from
-	 * the QD that was already marked as an erroneous row), we loop back here
-	 * until we get a good row.
-	 */
 retry:
-	got_error = false;
-
-	r = CopyGetData(cstate, (char *) &frame, SizeOfCopyFromDispatchRow);
+	/* sneak peek at the first Oid field to see if it's a row or an error */
+	r = CopyGetData(cstate, &header, sizeof(Oid));
 	if (r == 0)
 		return NULL;
-	if (r != SizeOfCopyFromDispatchRow)
+	if (r != sizeof(Oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 				 errmsg("unexpected EOF in COPY data")));
-	if (frame.lineno == -1)
+
+	if (header == InvalidOid)
 	{
-		HandleQDErrorFrame(cstate, (char *) &frame, SizeOfCopyFromDispatchRow);
+		HandleQDErrorFrame(cstate);
 		goto retry;
 	}
 
-	/* Prepare for parsing the input line */
+	frame.relid = header;
+	r = CopyGetData(cstate, ((char *) &frame) + sizeof(Oid), sizeof(frame) - sizeof(Oid));
+	if (r != sizeof(frame) - sizeof(Oid))
+		ereport(ERROR,
+				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+				 errmsg("unexpected EOF in COPY data")));
+
+	if (!OidIsValid(frame.relid))
+		elog(ERROR, "invalid target relation id in tuple frame received from QD");
+
+	/*
+	 * Look up the correct partition
+	 */
+	oldcxt = MemoryContextSwitchTo(estate->es_query_cxt);
+
 	resultRelInfo = estate->es_result_relation_info;
-	baseSlot = resultRelInfo->ri_resultSlot;
+	if (frame.relid != RelationGetRelid(resultRelInfo->ri_RelationDesc))
+	{
+		resultRelInfo = targetid_get_partition(frame.relid, estate, true);
+		estate->es_result_relation_info = resultRelInfo;
+	}
+
+	if (!resultRelInfo->ri_resultSlot)
+		resultRelInfo->ri_resultSlot =
+			MakeSingleTupleTableSlot(resultRelInfo->ri_RelationDesc->rd_att);
+	slot = resultRelInfo->ri_resultSlot;
+
 	tupDesc = RelationGetDescr(resultRelInfo->ri_RelationDesc);
 	attr = tupDesc->attrs;
 	num_phys_attrs = tupDesc->natts;
 
-	/* Initialize all values for row to NULL */
-	ExecClearTuple(baseSlot);
-	baseValues = slot_get_values(baseSlot);
-	baseNulls = slot_get_isnull(baseSlot);
-	MemSet(baseValues, 0, num_phys_attrs * sizeof(Datum));
-	MemSet(baseNulls, true, num_phys_attrs * sizeof(bool));
+	MemoryContextSwitchTo(oldcxt);
 
 	/* check for overflowing fields */
 	if (frame.fld_count < 0 || frame.fld_count > num_phys_attrs)
@@ -5403,15 +5274,17 @@ retry:
 				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 				 errmsg("extra data after last expected column")));
 
-	/* Read the OID field, if present */
+	/* Initialize all values for row to NULL */
+	ExecClearTuple(slot);
+	values = slot_get_values(resultRelInfo->ri_resultSlot);
+	nulls = slot_get_isnull(resultRelInfo->ri_resultSlot);
+	MemSet(values, 0, num_phys_attrs * sizeof(Datum));
+	MemSet(nulls, true, num_phys_attrs * sizeof(bool));
+
+	/* Read the OID field if present */
 	if (file_has_oids)
 	{
-		Oid			loaded_oid;
-
-		if (CopyGetData(cstate, &loaded_oid, sizeof(Oid)) != sizeof(Oid))
-			ereport(ERROR,
-					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-					 errmsg("unexpected EOF in COPY data")));
+		Oid			loaded_oid = frame.loaded_oid;
 
 		if (loaded_oid == InvalidOid)
 		{
@@ -5422,92 +5295,13 @@ retry:
 		}
 		*tupleOid = loaded_oid;
 	}
-
-	/*
-	 * Read the input line into 'line_buf'.
-	 */
-	resetStringInfo(&cstate->line_buf);
-	enlargeStringInfo(&cstate->line_buf, frame.line_len);
-	if (CopyGetData(cstate, cstate->line_buf.data, frame.line_len) != frame.line_len)
-		ereport(ERROR,
-				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-				 errmsg("unexpected EOF in COPY data")));
-	cstate->line_buf.data[frame.line_len] = '\0';
-	cstate->line_buf.len = frame.line_len;
-	cstate->line_buf.cursor = frame.residual_off;
-	cstate->line_buf_valid = true;
-	cstate->line_buf_converted = true;
-	cstate->cur_lineno = frame.lineno;
-	cstate->stopped_processing_at_delim = frame.delim_seen_at_end;
-
-	/*
-	 * Parse any fields from the input line that were not processed in the
-	 * QD already.
-	 */
-	if (!cstate->cdbsreh)
-	{
-		if (!NextCopyFromX(cstate, econtext, baseValues, baseNulls, NULL))
-		{
+	else if (frame.loaded_oid != InvalidOid)
 			ereport(ERROR,
 					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-					 errmsg("unexpected EOF in COPY data")));
-		}
-	}
-	else
-	{
-		MemoryContext oldcontext = CurrentMemoryContext;
-		bool		result;
+					 errmsg("unexpected OID received in COPY data")));
 
-		PG_TRY();
-		{
-			result = NextCopyFromX(cstate, econtext,
-								   baseValues, baseNulls, tupleOid);
+	cstate->cur_lineno = frame.lineno;
 
-			if (!result)
-				ereport(ERROR,
-						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-						 errmsg("unexpected EOF in COPY data")));
-		}
-		PG_CATCH();
-		{
-			HandleCopyError(cstate);
-			got_error = true;
-			MemoryContextSwitchTo(oldcontext);
-		}
-		PG_END_TRY();
-	}
-
-	ExecStoreVirtualTuple(baseSlot);
-
-	/*
-	 * Remap the values to the form expected by the target partition.
-	 */
-	if (frame.relid != RelationGetRelid(resultRelInfo->ri_RelationDesc))
-	{
-		MemoryContext oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
-
-		resultRelInfo = targetid_get_partition(frame.relid, estate, true);
-		estate->es_result_relation_info = resultRelInfo;
-
-		MemoryContextSwitchTo(oldcontext);
-
-		slot = reconstructMatchingTupleSlot(baseSlot, resultRelInfo);
-
-		/* since resultRelInfo has changed, refresh these values */
-		tupDesc = RelationGetDescr(resultRelInfo->ri_RelationDesc);
-		attr = tupDesc->attrs;
-		num_phys_attrs = tupDesc->natts;
-	}
-	else
-		slot = baseSlot;
-
-	/*
-	 * Read any attributes that were processed in the QD already. The attribute
-	 * numbers in the message are already in terms of the target partition, so
-	 * we do this after remapping and switching to the partition slot.
-	 */
-	values = slot_get_values(slot);
-	nulls = slot_get_isnull(slot);
 	for (i = 0; i < frame.fld_count; i++)
 	{
 		int16		attnum;
@@ -5519,10 +5313,8 @@ retry:
 			ereport(ERROR,
 					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 					 errmsg("unexpected EOF in COPY data")));
-
 		if (attnum < 1 || attnum > num_phys_attrs)
-			elog(ERROR, "invalid attnum received from QD: %d (num physical attributes: %d)",
-				 attnum, num_phys_attrs);
+			elog(ERROR, "invalid attnum received from QD: %d", attnum);
 		m = attnum - 1;
 
 		cstate->cur_attname = NameStr(attr[m]->attname);
@@ -5593,13 +5385,9 @@ retry:
 		cstate->cur_attname = NULL;
 
 		values[m] = value;
+		/* NULLs are currently not transmitted */
 		nulls[m] = false;
 	}
-
-	if (got_error)
-		goto retry;
-
-	ExecStoreVirtualTuple(slot);
 
 	/*
 	 * Here we should compute defaults for any columns for which we didn't
@@ -5607,17 +5395,13 @@ retry:
 	 * in the QD.
 	 */
 
+	ExecStoreVirtualTuple(slot);
+
 	return slot;
 }
 
-/*
- * Parse and handle an "error frame" from QD.
- *
- * The caller has already read part of the frame; 'p' points to that part,
- * of length 'len'.
- */
 static void
-HandleQDErrorFrame(CopyState cstate, char *p, int len)
+HandleQDErrorFrame(CopyState cstate)
 {
 	CdbSreh *cdbsreh = cstate->cdbsreh;
 	MemoryContext oldcontext;
@@ -5626,20 +5410,12 @@ HandleQDErrorFrame(CopyState cstate, char *p, int len)
 	char	   *line;
 	int			r;
 
-	Assert(len <= SizeOfCopyFromDispatchError);
-
 	Assert(Gp_role == GP_ROLE_EXECUTE);
 
 	oldcontext = MemoryContextSwitchTo(cdbsreh->badrowcontext);
 
-	/*
-	 * Copy the part of the struct that the caller had already read, and
-	 * read the rest.
-	 */
-	memcpy(&errframe, p, len);
-
-	r = CopyGetData(cstate, ((char *) &errframe) + len, SizeOfCopyFromDispatchError - len);
-	if (r != SizeOfCopyFromDispatchError - len)
+	r = CopyGetData(cstate, ((char *) &errframe) + sizeof(Oid), sizeof(errframe) - sizeof(Oid));
+	if (r != sizeof(errframe) - sizeof(Oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 				 errmsg("unexpected EOF in COPY data")));
@@ -5663,8 +5439,8 @@ HandleQDErrorFrame(CopyState cstate, char *p, int len)
 
 	cdbsreh->linenumber = errframe.lineno;
 	cdbsreh->rawdata = line;
-	cdbsreh->errmsg = errormsg;
 	cdbsreh->is_server_enc = errframe.line_buf_converted;
+	cdbsreh->errmsg = errormsg;
 
 	HandleSingleRowError(cdbsreh);
 
@@ -5732,25 +5508,11 @@ SendCopyFromForwardedTuple(CopyState cstate,
 	num_phys_attrs = tupDesc->natts;
 
 	/*
-	 * Reset the message buffer, and reserve enough space for the header,
-	 * the OID if any, and the residual line.
+	 * Reset the message buffer, and reserve space for the frame header.
 	 */
 	msgbuf = cstate->dispatch_msgbuf;
-	ENLARGE_MSGBUF(msgbuf, SizeOfCopyFromDispatchRow + sizeof(Oid) + cstate->line_buf.len);
-
-	/* the header goes to the beginning of the struct, but it will be filled in later. */
-	msgbuf->len = SizeOfCopyFromDispatchRow;
-
-	/*
-	 * After the header, the OID from the input row, if any.
-	 */
-	if (cstate->file_has_oids)
-		APPEND_MSGBUF_NOCHECK(msgbuf, &tuple_oid, sizeof(Oid));
-
-	/*
-	 * Next, any residual text that we didn't process in the QD.
-	 */
-	APPEND_MSGBUF_NOCHECK(msgbuf, cstate->line_buf.data, cstate->line_buf.len);
+	Assert(msgbuf->maxlen >= sizeof(copy_from_dispatch_row));
+	msgbuf->len = sizeof(copy_from_dispatch_row);
 
 	/*
 	 * Append attributes to the buffer.
@@ -5840,12 +5602,10 @@ SendCopyFromForwardedTuple(CopyState cstate,
 	 * buffer.
 	 */
 	frame = (copy_from_dispatch_row *) msgbuf->data;
-	frame->lineno = lineno;
 	frame->relid = RelationGetRelid(rel);
-	frame->line_len = cstate->line_buf.len;
-	frame->residual_off = cstate->line_buf.cursor;
+	frame->loaded_oid = tuple_oid;
+	frame->lineno = lineno;
 	frame->fld_count = num_sent_fields;
-	frame->delim_seen_at_end = cstate->stopped_processing_at_delim;
 
 	if (toAll)
 		cdbCopySendDataToAll(cdbCopy, msgbuf->data, msgbuf->len);
@@ -5854,15 +5614,14 @@ SendCopyFromForwardedTuple(CopyState cstate,
 }
 
 static void
-SendCopyFromForwardedHeader(CopyState cstate, CdbCopy *cdbCopy)
+SendCopyFromForwardedHeader(CopyState cstate, CdbCopy *cdbCopy, bool file_has_oids)
 {
 	copy_from_dispatch_header header_frame;
 
 	cdbCopySendDataToAll(cdbCopy, QDtoQESignature, sizeof(QDtoQESignature));
 
 	memset(&header_frame, 0, sizeof(header_frame));
-	header_frame.file_has_oids = cstate->file_has_oids;
-	header_frame.first_qe_processed_field = cstate->first_qe_processed_field;
+	header_frame.file_has_oids = file_has_oids;
 
 	cdbCopySendDataToAll(cdbCopy, (char *) &header_frame, sizeof(header_frame));
 }
@@ -5877,27 +5636,27 @@ SendCopyFromForwardedError(CopyState cstate, CdbCopy *cdbCopy, char *errormsg)
 
 	msgbuf = cstate->dispatch_msgbuf;
 	resetStringInfo(msgbuf);
-	enlargeStringInfo(msgbuf, SizeOfCopyFromDispatchError);
+	enlargeStringInfo(msgbuf, sizeof(copy_from_dispatch_error));
 	/* allocate space for the header (we'll fill it in last). */
-	msgbuf->len = SizeOfCopyFromDispatchError;
+	msgbuf->len = sizeof(copy_from_dispatch_error);
 
 	appendBinaryStringInfo(msgbuf, errormsg, errormsg_len);
 	appendBinaryStringInfo(msgbuf, cstate->line_buf.data, cstate->line_buf.len);
 
 	errframe = (copy_from_dispatch_error *) msgbuf->data;
 
-	errframe->error_marker = -1;
+	errframe->error_marker = InvalidOid;
 	errframe->lineno = cstate->cur_lineno;
+	errframe->line_buf_converted = cstate->line_buf_converted;
 	errframe->line_len = cstate->line_buf.len;
 	errframe->errmsg_len = errormsg_len;
-	errframe->line_buf_converted = cstate->line_buf_converted;
 
 	/* send the bad data row to a random QE (via roundrobin) */
 	if (cstate->lastsegid == cdbCopy->total_segs)
 		cstate->lastsegid = 0; /* start over from first segid */
 
 	target_seg = (cstate->lastsegid++ % cdbCopy->total_segs);
-
+	
 	cdbCopySendData(cdbCopy, target_seg, msgbuf->data, msgbuf->len);
 }
 
@@ -6434,7 +6193,7 @@ GetDecimalFromHex(char hex)
  * The return value is the number of fields actually read.
  */
 static int
-CopyReadAttributesText(CopyState cstate, int stop_processing_at_field)
+CopyReadAttributesText(CopyState cstate)
 {
 	char		delimc = cstate->delim[0];
 	char		escapec = cstate->escape_off ? delimc : cstate->escape[0];
@@ -6470,7 +6229,7 @@ CopyReadAttributesText(CopyState cstate, int stop_processing_at_field)
 	output_ptr = cstate->attribute_buf.data;
 
 	/* set pointer variables for loop */
-	cur_ptr = cstate->line_buf.data + cstate->line_buf.cursor;
+	cur_ptr = cstate->line_buf.data;
 	line_end_ptr = cstate->line_buf.data + cstate->line_buf.len;
 
 	/* Outer loop iterates over fields */
@@ -6482,15 +6241,6 @@ CopyReadAttributesText(CopyState cstate, int stop_processing_at_field)
 		char	   *end_ptr;
 		int			input_len;
 		bool		saw_non_ascii = false;
-
-		/*
-		 * In QD, stop once we have processed the last field we need in the QD.
-		 */
-		if (fieldno == stop_processing_at_field)
-		{
-			cstate->stopped_processing_at_delim = true;
-			break;
-		}
 
 		/* Make sure there is enough space for the next value */
 		if (fieldno >= cstate->max_fields)
@@ -6654,17 +6404,8 @@ CopyReadAttributesText(CopyState cstate, int stop_processing_at_field)
 		fieldno++;
 		/* Done if we hit EOL instead of a delim */
 		if (!found_delim)
-		{
-			cstate->stopped_processing_at_delim = false;
 			break;
-		}
 	}
-
-	/*
-	 * Make note of the stopping point in 'line_buf.cursor', so that we
-	 * can send the rest to the QE later.
-	 */
-	cstate->line_buf.cursor = cur_ptr - cstate->line_buf.data;
 
 	/* Clean up state of attribute_buf */
 	output_ptr--;
@@ -6681,7 +6422,7 @@ CopyReadAttributesText(CopyState cstate, int stop_processing_at_field)
  * "standard" (i.e. common) CSV usage.
  */
 static int
-CopyReadAttributesCSV(CopyState cstate, int stop_processing_at_field)
+CopyReadAttributesCSV(CopyState cstate)
 {
 	char		delimc = cstate->delim[0];
 	char		quotec = cstate->quote[0];
@@ -6718,7 +6459,7 @@ CopyReadAttributesCSV(CopyState cstate, int stop_processing_at_field)
 	output_ptr = cstate->attribute_buf.data;
 
 	/* set pointer variables for loop */
-	cur_ptr = cstate->line_buf.data + cstate->line_buf.cursor;
+	cur_ptr = cstate->line_buf.data;
 	line_end_ptr = cstate->line_buf.data + cstate->line_buf.len;
 
 	/* Outer loop iterates over fields */
@@ -6730,15 +6471,6 @@ CopyReadAttributesCSV(CopyState cstate, int stop_processing_at_field)
 		char	   *start_ptr;
 		char	   *end_ptr;
 		int			input_len;
-
-		/*
-		 * In QD, stop once we have processed the last field we need in the QD.
-		 */
-		if (fieldno == stop_processing_at_field)
-		{
-			cstate->stopped_processing_at_delim = true;
-			break;
-		}
 
 		/* Make sure there is enough space for the next value */
 		if (fieldno >= cstate->max_fields)
@@ -6843,17 +6575,8 @@ endfield:
 		fieldno++;
 		/* Done if we hit EOL instead of a delim */
 		if (!found_delim)
-		{
-			cstate->stopped_processing_at_delim = false;
 			break;
-		}
 	}
-
-	/*
-	 * Make note of the stopping point in 'line_buf.cursor', so that we
-	 * can send the rest to the QE later.
-	 */
-	cstate->line_buf.cursor = cur_ptr - cstate->line_buf.data;
 
 	/* Clean up state of attribute_buf */
 	output_ptr--;
@@ -7537,162 +7260,6 @@ FreeDistributionData(GpDistributionData *distData)
 	}
 }
 
-/*
- * Compute which fields need to be processed in the QD, and which ones can
- * be delayed to the QE.
- */
-static void
-InitCopyFromDispatchSplit(CopyState cstate, GpDistributionData *distData,
-						  EState *estate)
-{
-	int			first_qe_processed_field = 0;
-	Bitmapset  *needed_cols = NULL;
-	ListCell   *lc;
-
-	if (cstate->binary)
-	{
-		foreach(lc, cstate->attnumlist)
-		{
-			AttrNumber attnum = lfirst_int(lc);
-			needed_cols = bms_add_member(needed_cols, attnum);
-			first_qe_processed_field++;
-		}
-	}
-	else
-	{
-		int			fieldno;
-		/*
-		 * We need all the columns that form the distribution key.
-		 */
-		if (distData->policy)
-		{
-			for (int i = 0; i < distData->policy->nattrs; i++)
-				needed_cols = bms_add_member(needed_cols, distData->policy->attrs[i]);
-		}
-
-		/*
-		 * If the target is partitioned, get the columns needed for partitioning
-		 * keys, and for distribution keys of each partition.
-		 */
-		if (estate->es_result_partitions)
-			needed_cols = GetTargetKeyCols(RelationGetRelid(estate->es_result_relation_info->ri_RelationDesc),
-										   estate->es_result_partitions, needed_cols,
-										   distData->policy == NULL, estate);
-
-		/* Get the max fieldno that contains one of the needed attributes. */
-		fieldno = 0;
-		foreach(lc, cstate->attnumlist)
-		{
-			AttrNumber attnum = lfirst_int(lc);
-
-			if (bms_is_member(attnum, needed_cols))
-				first_qe_processed_field = fieldno + 1;
-			fieldno++;
-		}
-	}
-
-	/* If the file contains OIDs, it's the first field. */
-	if (cstate->file_has_oids)
-		first_qe_processed_field++;
-
-	cstate->first_qe_processed_field = first_qe_processed_field;
-
-	if (Test_copy_qd_qe_split)
-	{
-		if (first_qe_processed_field ==
-			list_length(cstate->attnumlist) + (cstate->file_has_oids ? 1 : 0))
-			elog(INFO, "all fields will be processed in the QD");
-		else
-			elog(INFO, "first field processed in the QE: %d", first_qe_processed_field);
-	}
-}
-
-/*
- * Recursive helper function for InitCopyFromDispatchSplit(), to get
- * the columns needed in QD for a partition and its subpartitions.
- */
-static Bitmapset *
-GetTargetKeyCols(Oid relid, PartitionNode *children, Bitmapset *needed_cols,
-				 bool distkeys, EState *estate)
-{
-	int			i;
-	ListCell   *lc;
-
-	/*
-	 * Partition key columns.
-	 *
-	 * Note: paratts[] stores the attribute numbers, in terms of the root
-	 * partition. That's exactly what we want.
-	 */
-	if (children)
-	{
-		for (i = 0; i < children->part->parnatts; i++)
-			needed_cols = bms_add_member(needed_cols, children->part->paratts[i]);
-	}
-
-	/*
-	 * Distribution key columns
-	 *
-	 * These are in terms of the partition itself! We need to map them to
-	 * the root partition's attribute numbers.
-	 *
-	 * (At the moment, this is more complicated than necessary, because GPDB
-	 * doesn't support partitions that have differing distribution policies,
-	 * except that child partitions can be randomly distributed, even though
-	 * the parent is hash distributed.)
-	 */
-	if (distkeys)
-	{
-		ResultRelInfo *partrr;
-		GpPolicy *partPolicy;
-		AttrMap	   *map;
-
-		partrr = targetid_get_partition(relid, estate, false);
-		map = partrr->ri_partInsertMap;
-		partPolicy = partrr->ri_RelationDesc->rd_cdbpolicy;
-
-		if (partPolicy)
-		{
-			for (i = 0; i < partPolicy->nattrs; i++)
-			{
-				AttrNumber	partAttNum = partPolicy->attrs[i];
-				AttrNumber	parentAttNum;
-
-				/* Map this partition's attribute number to the parent's. */
-				if (map)
-				{
-					for (parentAttNum = 1; parentAttNum <= map->attr_count; parentAttNum++)
-					{
-						if (map->attr_map[parentAttNum] == partAttNum)
-							break;
-					}
-					if (parentAttNum > map->attr_count)
-						elog(ERROR, "could not find mapping partition distribution key column %d in parent relation",
-							 partAttNum);
-				}
-				else
-					parentAttNum = partAttNum;
-
-				needed_cols = bms_add_member(needed_cols, parentAttNum);
-			}
-		}
-	}
-
-	/* Recurse to subpartitions */
-	if (children)
-	{
-		foreach(lc, children->rules)
-		{
-			PartitionRule *pr = (PartitionRule *) lfirst(lc);
-
-			needed_cols = GetTargetKeyCols(pr->parchildrelid, pr->children,
-										   needed_cols, distkeys, estate);
-		}
-	}
-
-	return needed_cols;
-}
-
 /* Get distribution policy for specific part */
 static GpDistributionData *
 GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
@@ -7723,8 +7290,10 @@ GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
 		d = hash_search(mainDistData->hashmap, &(relid), HASH_ENTER, &found);
 		if (!found)
 		{
-			Relation rel = resultRelInfo->ri_RelationDesc;
+			Relation rel;
 			MemoryContext oldcontext;
+
+			rel = heap_open(relid, NoLock);
 
 			/*
 			 * Make sure this all persists the current iteration.
@@ -7735,6 +7304,8 @@ GetDistributionPolicyForPartition(CopyState cstate, EState *estate,
 			d->policy = GpPolicyCopy(rel->rd_cdbpolicy);
 
 			MemoryContextSwitchTo(oldcontext);
+
+			heap_close(rel, NoLock);
 		}
 
 		return d;
