@@ -30,7 +30,9 @@ override LDLIBS := $(libpq_pgport) $(LDLIBS)
 all: pg_upgrade_regress$(X) all-lib data scripts/gpdb5-cluster scripts/gpdb6-cluster scripts/upgrade-cluster scripts/reset-cluster scripts/pg-upgrade-copy-from-master
 
 utilities_CPPFLAGS = -I$(pg_upgrade_directory) \
-	-I .
+	-I . \
+	-I $(pg_upgrade_greenplum_directory)
+
 
 pg_regress.o:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o
@@ -100,7 +102,10 @@ scripts/pg-upgrade-copy-from-master: scripts/pg-upgrade-copy-from-master.o \
 #
 ## Libraries
 #
-override CPPFLAGS += -I . -I $(pg_upgrade_directory) -I$(libpq_srcdir)
+override CPPFLAGS += -I. \
+	-I$(pg_upgrade_directory) \
+	-I$(libpq_srcdir) \
+	-I$(pg_upgrade_greenplum_directory)
 
 #
 ## Tests

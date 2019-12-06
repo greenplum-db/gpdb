@@ -11,7 +11,7 @@ OBJS = check.o controldata.o dump.o exec.o file.o function.o info.o \
        tablespace.o util.o version.o version_old_8_3.o $(WIN32RES)
 
 # Source files specific to Greenplum
-OBJS += aomd_filehandler.o
+OBJS += greenplum/aomd_filehandler.o
 OBJS += greenplum/aotable.o greenplum/gpdb4_heap_convert.o greenplum/version_gp.o \
         greenplum/check_gp.o greenplum/file_gp.o greenplum/reporting.o \
         greenplum/old_tablespace_file_contents.o greenplum/old_tablespace_file_parser.o \
@@ -38,8 +38,8 @@ include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
-aomd_filehandler.c: % : $(top_srcdir)/src/backend/access/appendonly/%
-	rm -f $@ && $(LN_S) $< .
+greenplum/aomd_filehandler.c: $(top_srcdir)/src/backend/access/appendonly/aomd_filehandler.c
+	rm -f $@ && $(LN_S) ../$< %
 
 check: test_gpdb.sh all
 	bash $< -C -r -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)

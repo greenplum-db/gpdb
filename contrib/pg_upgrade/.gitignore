@@ -1,6 +1,6 @@
 /pg_upgrade
 
-/aomd_filehandler.c
+/greenplum/aomd_filehandler.c
 /lalshell
 /clusterConfigFile
 /clusterConfigPostgresAddonsFile

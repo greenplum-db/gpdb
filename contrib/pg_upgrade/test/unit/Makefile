@@ -31,7 +31,7 @@ debugging_flags = -Og -g -fsanitize=address -Wextra -pedantic-errors -Werror
 
 compile_test = $(CC) $(CFLAGS) $(debugging_flags) $^ $(libpq_pgport) $(LDFLAGS) -o $@ 
 
-tablespace_test.t: tablespace_test.o $(pg_upgrade_greenplum_directory)/tablespace.o $(test_dependencies)
+tablespace_test.t: tablespace_test.o $(pg_upgrade_directory)/tablespace.o $(test_dependencies)
 	$(compile_test)
 
 old_tablespace_file_contents_test.t: old_tablespace_file_contents_test.o $(pg_upgrade_greenplum_directory)/old_tablespace_file_contents.o $(test_dependencies)
