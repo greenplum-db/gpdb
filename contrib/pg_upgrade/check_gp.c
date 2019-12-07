@@ -153,10 +153,13 @@ check_unique_primary_constraint(void)
 		PGconn	   *conn;
 
 		conn = connectToServer(&old_cluster, active_db->db_name);
+
+		/* set search path to avoid adding '.public' in cast regclass to text */
+		PQclear(executeQueryOrDie(conn, "SELECT pg_catalog.set_config('search_path', 'public', false)"));
 		res = executeQueryOrDie(conn,
-								"SELECT conname constrant_name, conrelid::regclass tablename "
-								"FROM   pg_constraint pc, pg_namespace pn where pc.connamespace=pn.oid "
-								"       and contype in ('u', 'p');");
+								"SELECT conname constraint_name, conrelid::regclass tablename "
+								"FROM   pg_depend pd, pg_constraint pc where pd.refobjid=pc.oid "
+								"       and contype in ('u', 'p') and pd.objid::regclass::text != pc.conname::text;");
 
 		ntups = PQntuples(res);
 
@@ -176,7 +179,7 @@ check_unique_primary_constraint(void)
 					db_used = true;
 				}
 				fprintf(script, "Constraint \"%s\" on relation \"%s\"\n",
-						PQgetvalue(res, rowno, PQfnumber(res, "constrant_name")),
+						PQgetvalue(res, rowno, PQfnumber(res, "constraint_name")),
 						PQgetvalue(res, rowno, PQfnumber(res, "tablename")));
 			}
 		}

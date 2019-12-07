@@ -8,6 +8,8 @@ CREATE TABLE table_with_unique_constraint (author int, title int, CONSTRAINT tab
 CREATE
 DROP TYPE table_with_unique_constraint_author_key, table_with_unique_constraint_author_key1;
 DROP
+ALTER TABLE table_with_unique_constraint ADD PRIMARY KEY (author, title);
+ALTER
 INSERT INTO table_with_unique_constraint VALUES(1, 1);
 INSERT 1
 INSERT INTO table_with_unique_constraint VALUES(2, 2);
@@ -21,6 +23,8 @@ CREATE TABLE table_with_primary_constraint (author int, title int, CONSTRAINT ta
 CREATE
 DROP TYPE table_with_primary_constraint_pkey, table_with_primary_constraint_pkey1;
 DROP
+ALTER TABLE table_with_primary_constraint ADD UNIQUE (author, title);
+ALTER
 INSERT INTO table_with_primary_constraint VALUES(1, 1);
 INSERT 1
 INSERT INTO table_with_primary_constraint VALUES(2, 2);
@@ -47,10 +51,10 @@ CREATE
 COPY problematic_constraint_tables_info FROM '@upgrade_test_path@/temp_tables_with_unique_or_primary_constraints.txt';
 COPY 2
 SELECT * FROM problematic_constraint_tables_info;
- colinfo                                                                                                
---------------------------------------------------------------------------------------------------------
- Constraint "table_with_primary_constraint_au_ti" on relation "public.table_with_primary_constraint"    
- Constraint "table_with_unique_constraint_uniq_au_ti" on relation "public.table_with_unique_constraint" 
+ colinfo                                                                                         
+-------------------------------------------------------------------------------------------------
+ Constraint "table_with_primary_constraint_au_ti" on relation "table_with_primary_constraint"    
+ Constraint "table_with_unique_constraint_uniq_au_ti" on relation "table_with_unique_constraint" 
 (2 rows)
 
 -- Workaround for above issue is to drop the constraint before upgrade.
