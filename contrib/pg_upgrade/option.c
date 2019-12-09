@@ -58,13 +58,7 @@ parseCommandLine(int argc, char *argv[])
 		{"verbose", no_argument, NULL, 'v'},
 
 		/* Greenplum specific parameters */
-		{"mode", required_argument, NULL, 1},
-		{"progress", no_argument, NULL, 2},
-		{"add-checksum", no_argument, NULL, 3},
-		{"remove-checksum", no_argument, NULL, 4},
-		{"old-gp-dbid", required_argument, NULL, 5},
-		{"new-gp-dbid", required_argument, NULL, 6},
-		{"old-tablespaces-file", required_argument, NULL, 7},
+		GREENPLUM_OPTIONS
 
 		{NULL, 0, NULL, 0}
 	};
@@ -90,7 +84,7 @@ parseCommandLine(int argc, char *argv[])
 
 	os_user_effective_id = get_user_info(&os_info.user);
 
-	greenplum_user_opts.segment_mode = SEGMENT;
+	initialize_greenplum_user_options();
 
 	/* we override just the database user name;  we got the OS id above */
 	if (getenv("PGUSER"))
@@ -208,50 +202,10 @@ parseCommandLine(int argc, char *argv[])
 				log_opts.verbose = true;
 				break;
 
-			/*
-			 * Greenplum specific parameters
-			 */
-
-			case 1:		/* --mode={dispatcher|segment} */
-				if (pg_strcasecmp("dispatcher", optarg) == 0)
-					greenplum_user_opts.segment_mode = DISPATCHER;
-				else if (pg_strcasecmp("segment", optarg) == 0)
-					greenplum_user_opts.segment_mode = SEGMENT;
-				else
-				{
-					pg_log(PG_FATAL, "invalid segment configuration\n");
-					exit(1);
-				}
-
-				break;
-
-			case 2:		/* --progress */
-				greenplum_user_opts.progress = true;
-				break;
-
-			case 3:		/* --add-checksum */
-				greenplum_user_opts.checksum_mode = CHECKSUM_ADD;
-				break;
-
-			case 4:		/* --remove-checksum */
-				greenplum_user_opts.checksum_mode = CHECKSUM_REMOVE;
-				break;
-				
-			case 5: /* --old-gp-dbid */
-				old_cluster.gp_dbid = atoi(optarg);
-				break;
-
-			case 6: /* --new-gp-dbid */
-				new_cluster.gp_dbid = atoi(optarg);
-				break;
-
-			case 7: /* --old-tablespaces-file */
-				user_opts.old_tablespace_file_path = pg_strdup(optarg);
-				break;
-
 			default:
-				pg_fatal("Try \"%s --help\" for more information.\n",
-						 os_info.progname);
+				if (!process_greenplum_option(option, pg_strdup(optarg)))
+					pg_fatal("Try \"%s --help\" for more information.\n",
+							 os_info.progname);
 				break;
 		}
 	}
@@ -338,13 +292,7 @@ Options:\n\
   -U, --username=NAME           cluster superuser (default \"%s\")\n\
   -v, --verbose                 enable verbose internal logging\n\
   -V, --version                 display version information, then exit\n\
-      --mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
-      --progress                enable progress reporting\n\
-      --remove-checksum         remove data checksums when creating new cluster\n\
-      --add-checksum            add data checksumming to the new cluster\n\
-      --old-gp-dbid             greenplum database id of the old segment\n\
-      --new-gp-dbid             greenplum database id of the new segment\n\
-      --old-tablespaces-file    file containing the tablespaces from an old gpdb five cluster\n\
+%s\
   -?, --help                    show this help, then exit\n\
 \n\
 Before running pg_upgrade you must:\n\
@@ -360,7 +308,7 @@ When you run pg_upgrade, you must provide the following information:\n\
 \n\
 For example:\n\
   pg_upgrade -d oldCluster/data -D newCluster/data -b oldCluster/bin -B newCluster/bin\n\
-or\n"), old_cluster.port, new_cluster.port, os_info.user);
+or\n"), old_cluster.port, new_cluster.port, os_info.user, GREENPLUM_USAGE);
 #ifndef WIN32
 	printf(_("\
   $ export PGDATAOLD=oldCluster/data\n\

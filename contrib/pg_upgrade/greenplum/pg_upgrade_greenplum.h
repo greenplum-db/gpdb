@@ -12,13 +12,46 @@
 
 #define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_session_role=utility' "
 
+
 typedef struct {
 	bool progress;
 	segmentMode segment_mode;
 	checksumMode checksum_mode;
+	char *old_tablespace_file_path;
 } GreenplumUserOpts;
 
+#define GREENPLUM_MODE_OPTION 1
+#define GREENPLUM_PROGRESS_OPTION 2
+#define GREENPLUM_ADD_CHECKSUM_OPTION 3
+#define GREENPLUM_REMOVE_CHECKSUM_OPTION 4
+#define GREENPLUM_OLD_GP_DBID 5
+#define GREENPLUM_NEW_GP_DBID 6
+#define GREENPLUM_OLD_TABLESPACES_FILE 7
+
+
+#define GREENPLUM_OPTIONS \
+	{"mode", required_argument, NULL, GREENPLUM_MODE_OPTION}, \
+	{"progress", no_argument, NULL, GREENPLUM_PROGRESS_OPTION}, \
+	{"add-checksum", no_argument, NULL, GREENPLUM_ADD_CHECKSUM_OPTION}, \
+	{"remove-checksum", no_argument, NULL, GREENPLUM_REMOVE_CHECKSUM_OPTION},
+	{"old-gp-dbid", required_argument, NULL, 5},
+	{"new-gp-dbid", required_argument, NULL, 6},
+	{"old-tablespaces-file", required_argument, NULL, 7},
+
+#define GREENPLUM_USAGE "\
+      --mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
+      --progress                enable progress reporting\n\
+      --remove-checksum         remove data checksums when creating new cluster\n\
+      --add-checksum            add data checksumming to the new cluster\n\
+      --old-gp-dbid             greenplum database id of the old segment\n\
+      --new-gp-dbid             greenplum database id of the new segment\n\
+      --old-tablespaces-file    file containing the tablespaces from an old gpdb five cluster\n\
+"
+
+/* option_gp.c */
 extern GreenplumUserOpts greenplum_user_opts;
+void initialize_greenplum_user_options(void);
+bool process_greenplum_option(int option, char *option_value);
 
 /* aotable.c */
 
