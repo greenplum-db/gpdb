@@ -70,7 +70,7 @@ check_online_expansion(void)
 	 * We only need to check the cluster expansion status on master.
 	 * On the other hand the status can not be detected correctly on segments.
 	 */
-	if (user_opts.segment_mode == SEGMENT)
+	if (greenplum_user_opts.segment_mode == SEGMENT)
 		return;
 
 	prep_status("Checking for online expansion status");

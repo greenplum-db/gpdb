@@ -76,7 +76,7 @@ report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...)
 	char			filename[MAXPGPATH];
 	unsigned long	ts;
 
-	if (!user_opts.progress)
+	if (!greenplum_user_opts.progress)
 		return;
 
 	ts = epoch_us();
@@ -113,7 +113,7 @@ close_progress(void)
 	char	old[MAXPGPATH];
 	char	new[MAXPGPATH];
 
-	if (!user_opts.progress || !progress_file)
+	if (!greenplum_user_opts.progress || !progress_file)
 		return;
 
 	snprintf(old, sizeof(old), "%d.inprogress", progress_id);

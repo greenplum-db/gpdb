@@ -12,11 +12,11 @@ OBJS = check.o controldata.o dump.o exec.o file.o function.o info.o \
 
 # Source files specific to Greenplum
 OBJS += greenplum/aotable.o greenplum/gpdb4_heap_convert.o greenplum/version_gp.o \
-        greenplum/check_gp.o greenplum/file_gp.o greenplum/reporting.o \
-		greenplum/aomd_filehandler.o \
-        old_tablespace_file_contents.o old_tablespace_file_parser.o \
-        tablespace_gp.o old_tablespace_file_parser_observer.o \
-        info_gp.o
+		greenplum/check_gp.o greenplum/file_gp.o greenplum/reporting.o \
+		greenplum/aomd_filehandler.o greenplum/option_gp.o \
+		old_tablespace_file_contents.o old_tablespace_file_parser.o \
+		tablespace_gp.o old_tablespace_file_parser_observer.o \
+		info_gp.o
 
 PG_CPPFLAGS  = -DFRONTEND -DDLSUFFIX=\"$(DLSUFFIX)\" -I$(srcdir) -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)

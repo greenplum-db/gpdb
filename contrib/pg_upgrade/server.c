@@ -242,10 +242,10 @@ start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error)
 	else
 		version_opts = "-c gp_num_contents_in_cluster=1";
 
-	int gp_dbid; 
+	int gp_dbid;
 	int gp_content_id;
 
-	if (user_opts.segment_mode == DISPATCHER)
+	if (greenplum_user_opts.segment_mode == DISPATCHER)
 	{
 		gp_dbid = 1;
 		gp_content_id = -1;
@@ -264,7 +264,7 @@ start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error)
 			 " -c autovacuum=off -c autovacuum_freeze_max_age=2000000000",
 			 (cluster == &new_cluster) ?
 	  " -c synchronous_commit=off -c fsync=off -c full_page_writes=off" : "",
-			 cluster->pgopts ? cluster->pgopts : "", socket_string, version_opts, 
+			 cluster->pgopts ? cluster->pgopts : "", socket_string, version_opts,
 			 gp_dbid, gp_content_id);
 	/*
 	 * Don't throw an error right away, let connecting throw the error because

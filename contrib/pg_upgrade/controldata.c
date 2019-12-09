@@ -10,6 +10,7 @@
 #include "postgres_fe.h"
 
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 
 #include <ctype.h>
 
@@ -725,20 +726,20 @@ check_control_data(ControlData *oldctrl,
 	 */
 	if (oldctrl->data_checksum_version == 0 &&
 		newctrl->data_checksum_version != 0 &&
-		user_opts.checksum_mode != CHECKSUM_ADD)
+		greenplum_user_opts.checksum_mode != CHECKSUM_ADD)
 		pg_fatal("old cluster does not use data checksums but the new one does\n");
 	else if (oldctrl->data_checksum_version != 0 &&
 			 newctrl->data_checksum_version == 0 &&
-			 user_opts.checksum_mode != CHECKSUM_REMOVE)
+			 greenplum_user_opts.checksum_mode != CHECKSUM_REMOVE)
 		pg_fatal("old cluster uses data checksums but the new one does not\n");
 	else if (oldctrl->data_checksum_version == newctrl->data_checksum_version &&
-			 user_opts.checksum_mode != CHECKSUM_NONE)
+			 greenplum_user_opts.checksum_mode != CHECKSUM_NONE)
 		pg_fatal("old and new cluster data checksum configuration match, cannot %s data checksums\n",
-				 (user_opts.checksum_mode == CHECKSUM_ADD ? "add" : "remove"));
-	else if (oldctrl->data_checksum_version != 0 && user_opts.checksum_mode == CHECKSUM_ADD)
+				 (greenplum_user_opts.checksum_mode == CHECKSUM_ADD ? "add" : "remove"));
+	else if (oldctrl->data_checksum_version != 0 && greenplum_user_opts.checksum_mode == CHECKSUM_ADD)
 		pg_fatal("--add-checksum option not supported for old cluster which uses data checksums\n");
 	else if (oldctrl->data_checksum_version != newctrl->data_checksum_version
-			 && user_opts.checksum_mode == CHECKSUM_NONE)
+			 && greenplum_user_opts.checksum_mode == CHECKSUM_NONE)
 		pg_fatal("old and new cluster pg_controldata checksum versions do not match\n");
 }
 

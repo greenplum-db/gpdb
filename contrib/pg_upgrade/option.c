@@ -13,6 +13,7 @@
 #include "getopt_long.h"
 
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 
 #include <time.h>
 #include <sys/types.h>
@@ -89,7 +90,7 @@ parseCommandLine(int argc, char *argv[])
 
 	os_user_effective_id = get_user_info(&os_info.user);
 
-	user_opts.segment_mode = SEGMENT;
+	greenplum_user_opts.segment_mode = SEGMENT;
 
 	/* we override just the database user name;  we got the OS id above */
 	if (getenv("PGUSER"))
@@ -213,9 +214,9 @@ parseCommandLine(int argc, char *argv[])
 
 			case 1:		/* --mode={dispatcher|segment} */
 				if (pg_strcasecmp("dispatcher", optarg) == 0)
-					user_opts.segment_mode = DISPATCHER;
+					greenplum_user_opts.segment_mode = DISPATCHER;
 				else if (pg_strcasecmp("segment", optarg) == 0)
-					user_opts.segment_mode = SEGMENT;
+					greenplum_user_opts.segment_mode = SEGMENT;
 				else
 				{
 					pg_log(PG_FATAL, "invalid segment configuration\n");
@@ -225,15 +226,15 @@ parseCommandLine(int argc, char *argv[])
 				break;
 
 			case 2:		/* --progress */
-				user_opts.progress = true;
+				greenplum_user_opts.progress = true;
 				break;
 
 			case 3:		/* --add-checksum */
-				user_opts.checksum_mode = CHECKSUM_ADD;
+				greenplum_user_opts.checksum_mode = CHECKSUM_ADD;
 				break;
 
 			case 4:		/* --remove-checksum */
-				user_opts.checksum_mode = CHECKSUM_REMOVE;
+				greenplum_user_opts.checksum_mode = CHECKSUM_REMOVE;
 				break;
 				
 			case 5: /* --old-gp-dbid */
@@ -296,7 +297,7 @@ parseCommandLine(int argc, char *argv[])
 
 	/* Ensure we are only adding checksums in copy mode */
 	if (user_opts.transfer_mode != TRANSFER_MODE_COPY &&
-		user_opts.checksum_mode != CHECKSUM_NONE)
+		greenplum_user_opts.checksum_mode != CHECKSUM_NONE)
 		pg_log(PG_FATAL, "Adding and removing checksums only supported in copy mode.\n");
 
 	if (old_cluster.gp_dbid == GP_DBID_NOT_SET)

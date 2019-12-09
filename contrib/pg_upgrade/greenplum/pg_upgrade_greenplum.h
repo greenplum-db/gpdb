@@ -12,6 +12,14 @@
 
 #define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_session_role=utility' "
 
+typedef struct {
+	bool progress;
+	segmentMode segment_mode;
+	checksumMode checksum_mode;
+} GreenplumUserOpts;
+
+extern GreenplumUserOpts greenplum_user_opts;
+
 /* aotable.c */
 
 void		restore_aosegment_tables(void);

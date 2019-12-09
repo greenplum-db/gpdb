@@ -278,7 +278,7 @@ flush_overflow_page(void)
 {
 	if (!PageIsNew(overflow_buf))
 	{
-		if (user_opts.checksum_mode == CHECKSUM_ADD)
+		if (greenplum_user_opts.checksum_mode == CHECKSUM_ADD)
 			((PageHeader) overflow_buf)->pd_checksum =
 				pg_checksum_page(overflow_buf, overflow_blkno);
 
@@ -481,7 +481,7 @@ convert_gpdb4_heap_file(const char *src, const char *dst,
 		 * retaining an existing checksum like for upgrades from 5.x. If we're
 		 * not adding them we want a zeroed out portion in the header
 		 */
-		if (user_opts.checksum_mode == CHECKSUM_ADD)
+		if (greenplum_user_opts.checksum_mode == CHECKSUM_ADD)
 			((PageHeader) buf)->pd_checksum = pg_checksum_page(buf, blkno);
 		else
 			memset(&(((PageHeader) buf)->pd_checksum), 0, sizeof(uint16));

@@ -359,7 +359,7 @@ transfer_relfile_segment(int segno, pageCnvCtx *pageConverter, FileNameMap *map,
 
 		if (user_opts.transfer_mode == TRANSFER_MODE_COPY)
 		{
-			if (user_opts.checksum_mode != CHECKSUM_NONE && map->type == HEAP)
+			if (greenplum_user_opts.checksum_mode != CHECKSUM_NONE && map->type == HEAP)
 			{
 				pg_log(PG_VERBOSE, "copying and checksumming \"%s\" to \"%s\"\n", old_file, new_file);
 				if ((msg = rewriteHeapPageChecksum(old_file, new_file, map->nspname, map->relname)))

@@ -440,11 +440,7 @@ typedef struct
 	int			jobs;			/* number of processes/threads to use */
 	char	   *socketdir;		/* directory to use for Unix sockets */
 
-	bool		progress;
-	segmentMode	segment_mode;
-	checksumMode checksum_mode;
 	char *old_tablespace_file_path;
-
 } UserOpts;
 
 
@@ -473,7 +469,6 @@ extern UserOpts user_opts;
 extern ClusterInfo old_cluster,
 			new_cluster;
 extern OSInfo os_info;
-
 
 /* check.c */
 

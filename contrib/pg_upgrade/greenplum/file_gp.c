@@ -42,7 +42,7 @@ rewriteHeapPageChecksum(const char *fromfile, const char *tofile,
 	 * transfer_relfile() should never call us unless requested by the data
 	 * checksum option but better doublecheck before we start rewriting data.
 	 */
-	if (user_opts.checksum_mode == CHECKSUM_NONE)
+	if (greenplum_user_opts.checksum_mode == CHECKSUM_NONE)
 		return "incorrect checksum configuration detected.\n";
 
 	if ((src_fd = open(fromfile, O_RDONLY | PG_BINARY, 0)) < 0)
@@ -78,7 +78,7 @@ rewriteHeapPageChecksum(const char *fromfile, const char *tofile,
 
 		if (!PageIsNew(buf))
 		{
-			if (user_opts.checksum_mode == CHECKSUM_ADD)
+			if (greenplum_user_opts.checksum_mode == CHECKSUM_ADD)
 				((PageHeader) buf)->pd_checksum = pg_checksum_page(buf, blkno);
 			else
 				memset(&(((PageHeader) buf)->pd_checksum), 0, sizeof(uint16));
