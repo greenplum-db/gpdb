@@ -1,6 +1,6 @@
 /pg_upgrade
 
-/aomd_filehandler.c
+/greenplum/aomd_filehandler.c
 /lalshell
 /clusterConfigFile
 /clusterConfigPostgresAddonsFile
@@ -13,3 +13,5 @@
 /delete_old_cluster.bat
 /log/
 /tmp_check/
+
+# GPDB files
