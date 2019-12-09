@@ -104,7 +104,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | \<custom&#8209;option\>  | \<custom-option\>s are discussed below.|
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
-| DISTRIBUTED BY | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
+| DISTRIBUTED BY | If you want to load data from an existing Greenplum Database table into the writable external table, consider specifying the same distribution policy or \<column_name\> on both tables. Doing so will avoid extra motion of data between segments on the load operation. |
 
 <a id="customopts"></a>
 
@@ -115,9 +115,9 @@ The `hdfs:avro` profile supports the following \<custom-option\>s:
 
 | Option Keyword   | Description       
 |---------------|--------------------|                                                                                        
-| COLLECTION_DELIM | The delimiter character(s) to place between entries in a top-level array, map, or record field when PXF maps an Avro complex data type to a text column. The default is the comma `,` character. (Read)|
-| MAPKEY_DELIM | The delimiter character(s) to place between the key and value of a map entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. (Read)|
-| RECORDKEY_DELIM | The delimiter character(s) to place between the field name and value of a record entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. (Read)|
+| COLLECTION_DELIM | The delimiter character(s) placed between entries in a top-level array, map, or record field when PXF maps an Avro complex data type to a text column. The default is the comma `,` character. (Read)|
+| MAPKEY_DELIM | The delimiter character(s) placed between the key and value of a map entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. (Read)|
+| RECORDKEY_DELIM | The delimiter character(s) placed between the field name and value of a record entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. (Read)|
 | SCHEMA | The absolute path to the Avro schema file on the segment host or on HDFS, or the relative path to the schema file on the segment host. (Read and Write)|
 
 
@@ -335,10 +335,10 @@ Example procedure:
 
     Notice that the `followers` column is of type `text`.
 
-4. Read the Avro data by querying the `read_avrowrite` table:
+4. Read the Avro data by querying the `read_pxfwrite` table:
 
     ``` sql
-    postgres=# SELECT * FROM read_avrowrite;
+    postgres=# SELECT * FROM read_pxfwrite;
     ```
 
     ``` pre

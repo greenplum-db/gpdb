@@ -30,6 +30,13 @@ To migrate your `gphdfs` external tables to use the `pxf` external table protoco
 <li>Migrate Greenplum 4 data to Greenplum 6.</li></ol></div>
 
 
+## <a id="limits"></a>Limitations
+
+Keep the following in mind as you plan for the migration:
+
+- PXF does not support reading or writing compressed Avro files on HDFS.
+
+
 ## <a id="prepare"></a>Preparing for the Migration
 
 As you prepare for migrating from `gphdfs` to PXF:

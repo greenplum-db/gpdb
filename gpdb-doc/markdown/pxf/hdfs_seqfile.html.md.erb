@@ -53,7 +53,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. Optional; PXF uses the `default` server if not specified. |
 | \<custom&#8209;option\>  | \<custom-option\>s are described below.|
 | FORMAT | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
-| DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
+| DISTRIBUTED BY    | If you want to load data from an existing Greenplum Database table into the writable external table, consider specifying the same distribution policy or \<column_name\> on both tables. Doing so will avoid extra motion of data between segments on the load operation. |
 
 <a id="customopts"></a>
 SequenceFile format data can optionally employ record or block compression. The PXF `hdfs:SequenceFile` profile supports the following compression codecs:

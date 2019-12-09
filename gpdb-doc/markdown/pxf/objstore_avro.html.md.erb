@@ -39,7 +39,7 @@ When you read or write Avro data in an object store:
 - If the Avro schema file resides in the object store:
 
     - You must include the bucket in the schema file path. This bucket need not specify the same bucket as the Avro data file.
-    - The secrets the you specify in the `SERVER` configuration must provide access to both the data file and schema file buckets.
+    - The secrets that you specify in the `SERVER` configuration must provide access to both the data file and schema file buckets.
 - The schema file path must not include spaces.
 
 ## <a id="avro_cet"></a>Creating the External Table
@@ -93,5 +93,5 @@ Refer to [Example: Reading Avro Data](hdfs_avro.html#avro_example) in the PXF HD
     FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
 
-You make similar modifications to run the [Example: Writing Avro Data](hdfs_avro.html#topic_avro_writedata).
+You make similar modifications to follow the steps in [Example: Writing Avro Data](hdfs_avro.html#topic_avro_writedata).
 
