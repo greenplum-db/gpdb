@@ -7,8 +7,10 @@
  */
 #include "postgres_fe.h"
 
-#include "pg_upgrade.h"
+#include "pg_upgrade_greenplum.h"
+
 #include "pqexpbuffer.h"
+
 
 /*
  * We cannot use executeQueryOrDie for the INSERTs below, because it has a size

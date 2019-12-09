@@ -8,9 +8,10 @@
  */
 #include "postgres_fe.h"
 
-#include "pg_upgrade.h"
+#include "pg_upgrade_greenplum.h"
 
 #include "access/transam.h"
+
 
 /*
  * old_8_3_check_for_money_data_type_usage()

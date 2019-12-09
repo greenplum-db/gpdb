@@ -6,9 +6,10 @@
  *	Copyright (c) 2017-Present, Pivotal Software Inc.
  */
 
-#include "pg_upgrade.h"
+#include "pg_upgrade_greenplum.h"
 
 #include <time.h>
+
 
 static FILE			   *progress_file = NULL;
 static int				progress_id = 0;

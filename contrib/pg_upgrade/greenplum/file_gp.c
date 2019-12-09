@@ -9,11 +9,12 @@
  */
 #include "postgres_fe.h"
 
-#include "pg_upgrade.h"
+#include "pg_upgrade_greenplum.h"
 
 #include "storage/bufpage.h"
 #include "storage/checksum.h"
 #include "storage/checksum_impl.h"
+
 
 /*
  * rewriteHeapPageWithChecksum

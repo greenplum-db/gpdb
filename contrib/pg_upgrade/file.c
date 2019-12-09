@@ -13,7 +13,7 @@
 
 #include <fcntl.h>
 
-
+#include "greenplum/pg_upgrade_greenplum.h"
 
 #ifndef WIN32
 static int	copy_file(const char *fromfile, const char *tofile, bool force);

@@ -11,7 +11,7 @@
 
 #include "mb/pg_wchar.h"
 #include "pg_upgrade.h"
-
+#include "greenplum/pg_upgrade_greenplum.h"
 
 static void set_locale_and_encoding(ClusterInfo *cluster);
 static void check_new_cluster_is_empty(void);

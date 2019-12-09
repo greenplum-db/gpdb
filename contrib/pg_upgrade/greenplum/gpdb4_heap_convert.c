@@ -5,12 +5,13 @@
  */
 #include "postgres_fe.h"
 
-#include "pg_upgrade.h"
+#include "pg_upgrade_greenplum.h"
 
 #include "access/htup_details.h"
 #include "access/xlogdefs.h"
 #include "storage/bufpage.h"
 #include "storage/checksum.h"
+
 
 /*
  * GPDB_94_MERGE_FIXME: VARSIZE_ANY_EXHDR() contains a TrapMacro, with

@@ -43,6 +43,8 @@
 #include <langinfo.h>
 #endif
 
+#include "greenplum/pg_upgrade_greenplum.h"
+
 static void prepare_new_cluster(void);
 static void prepare_new_databases(void);
 static void create_new_objects(void);

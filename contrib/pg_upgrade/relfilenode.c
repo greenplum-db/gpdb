@@ -17,6 +17,7 @@
 #include "access/htup_details.h"
 #include "access/transam.h"
 
+#include "greenplum/pg_upgrade_greenplum.h"
 
 static void transfer_single_new_db(pageCnvCtx *pageConverter,
 					   FileNameMap *maps, int size, char *old_tablespace);
