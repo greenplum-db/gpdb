@@ -121,7 +121,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802)
 	{
 		old_8_3_check_for_name_data_type_usage(&old_cluster);
-	
+
 		old_GPDB4_check_for_money_data_type_usage();
 		old_GPDB4_check_no_free_aoseg();
 		check_hash_partition_usage();
@@ -267,7 +267,7 @@ issue_warnings_and_set_wal_level(char *sequence_script_file_name)
 		{
 			prep_status("Adjusting sequences");
 			exec_prog(UTILITY_LOG_FILE, NULL, true, true,
-					  "PGOPTIONS='-c gp_session_role=utility' "
+					  PG_OPTIONS_UTILITY_MODE
 					  "\"%s/psql\" " EXEC_PSQL_ARGS " %s -f \"%s\"",
 					  new_cluster.bindir, cluster_conn_opts(&new_cluster),
 					  sequence_script_file_name);
