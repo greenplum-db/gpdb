@@ -153,13 +153,15 @@ check_unique_primary_constraint(void)
 		PGconn	   *conn;
 
 		conn = connectToServer(&old_cluster, active_db->db_name);
-
-		/* set search path to avoid adding '.public' in cast regclass to text */
-		PQclear(executeQueryOrDie(conn, "SELECT pg_catalog.set_config('search_path', 'public', false)"));
 		res = executeQueryOrDie(conn,
-								"SELECT conname constraint_name, conrelid::regclass tablename "
-								"FROM   pg_depend pd, pg_constraint pc where pd.refobjid=pc.oid "
-								"       and contype in ('u', 'p') and pd.objid::regclass::text != pc.conname::text;");
+			"SELECT conname constraint_name, c.relname index_name, objsubid "
+			"FROM pg_constraint con "
+			"    JOIN pg_depend dep ON (refclassid, classid, objsubid) = "
+			"                               ('pg_constraint'::regclass, 'pg_class'::regclass, 0) "
+			"    AND refobjid = con.oid AND deptype = 'i' AND "
+			"                               contype IN ('u', 'p') "
+			"    JOIN pg_class c ON objid = c.oid AND relkind = 'i' "
+			"WHERE conname <> relname;");
 
 		ntups = PQntuples(res);
 
@@ -178,9 +180,9 @@ check_unique_primary_constraint(void)
 					fprintf(script, "Database:  %s\n", active_db->db_name);
 					db_used = true;
 				}
-				fprintf(script, "Constraint \"%s\" on relation \"%s\"\n",
+				fprintf(script, "Constraint name \"%s\" does not match index name \"%s\"\n",
 						PQgetvalue(res, rowno, PQfnumber(res, "constraint_name")),
-						PQgetvalue(res, rowno, PQfnumber(res, "tablename")));
+						PQgetvalue(res, rowno, PQfnumber(res, "index_name")));
 			}
 		}
 

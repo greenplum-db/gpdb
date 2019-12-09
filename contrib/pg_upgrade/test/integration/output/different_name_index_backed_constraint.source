@@ -51,10 +51,10 @@ CREATE
 COPY problematic_constraint_tables_info FROM '@upgrade_test_path@/temp_tables_with_unique_or_primary_constraints.txt';
 COPY 2
 SELECT * FROM problematic_constraint_tables_info;
- colinfo                                                                                         
--------------------------------------------------------------------------------------------------
- Constraint "table_with_primary_constraint_au_ti" on relation "table_with_primary_constraint"    
- Constraint "table_with_unique_constraint_uniq_au_ti" on relation "table_with_unique_constraint" 
+ colinfo                                                                                                                        
+--------------------------------------------------------------------------------------------------------------------------------
+ Constraint name "table_with_unique_constraint_uniq_au_ti" does not match index name "table_with_unique_constraint_author_key2" 
+ Constraint name "table_with_primary_constraint_au_ti" does not match index name "table_with_primary_constraint_pkey2"          
 (2 rows)
 
 -- Workaround for above issue is to drop the constraint before upgrade.
