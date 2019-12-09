@@ -12,6 +12,21 @@
 
 #define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_session_role=utility' "
 
+/*
+ * Enumeration for operations in the progress report
+ */
+typedef enum
+{
+	CHECK,
+	SCHEMA_DUMP,
+	SCHEMA_RESTORE,
+	FILE_MAP,
+	FILE_COPY,
+	FIXUP,
+	ABORT,
+	DONE
+} progress_type;
+
 typedef enum
 {
 	CHECKSUM_NONE = 0,

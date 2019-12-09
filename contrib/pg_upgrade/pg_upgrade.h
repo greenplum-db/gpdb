@@ -352,21 +352,6 @@ typedef enum
 	PG_FATAL
 } eLogType;
 
-/*
- * Enumeration for operations in the progress report
- */
-typedef enum
-{
-	CHECK,
-	SCHEMA_DUMP,
-	SCHEMA_RESTORE,
-	FILE_MAP,
-	FILE_COPY,
-	FIXUP,
-	ABORT,
-	DONE
-} progress_type;
-
 typedef long pgpid_t;
 
 
