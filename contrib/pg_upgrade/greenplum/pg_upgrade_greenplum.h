@@ -12,6 +12,18 @@
 
 #define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_session_role=utility' "
 
+typedef enum
+{
+	CHECKSUM_NONE = 0,
+	CHECKSUM_ADD,
+	CHECKSUM_REMOVE
+} checksumMode;
+
+typedef enum
+{
+	DISPATCHER = 0,
+	SEGMENT
+} segmentMode;
 
 typedef struct {
 	bool progress;

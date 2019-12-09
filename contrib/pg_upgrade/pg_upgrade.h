@@ -341,22 +341,6 @@ typedef enum
 } transferMode;
 
 /*
- * Enumeration to denote checksum modes
- */
-typedef enum
-{
-	CHECKSUM_NONE = 0,
-	CHECKSUM_ADD,
-	CHECKSUM_REMOVE
-} checksumMode;
-
-typedef enum
-{
-	DISPATCHER = 0,
-	SEGMENT
-} segmentMode;
-
-/*
  * Enumeration to denote pg_log modes
  */
 typedef enum
