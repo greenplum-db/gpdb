@@ -57,7 +57,7 @@ The following table summarizes external mapping rules for Avro data.
 | string | text |
 | Complex type: Array, Map, Record, or Enum                         | text, with delimiters inserted between collection items, mapped key-value pairs, and record data.                                                                                           |
 | Complex type: Fixed                                               | bytea (supported for read operations only).                                                                                                                                                                                 |
-| Union                                                             | Follows the above conventions for primitive or complex data types, depending on the union; must contain 2 elements, only one of which must be null.                                                                     |
+| Union                                                             | Follows the above conventions for primitive or complex data types, depending on the union; must contain 2 elements, one of which must be null.                                                                     |
 
 
 ### <a id="topic_tr3_dpg_ts__section_m2p_ztg_ts"></a>Avro Schemas and Data
@@ -66,26 +66,26 @@ Avro schemas are defined using JSON, and composed of the same primitive and comp
 
 Fields in an Avro schema file are defined via an array of objects, each of which is specified by a name and a type.
 
-You can specify an Avro schema on both read and write operations to HDFS. 
+An Avro data file contains the schema and a compact binary representation of the data. Avro data files typically have the `.avro` suffix.
+
+You can specify an Avro schema on both read and write operations to HDFS. You can provide either a binary `*.avro` file or a JSON-format `*.avsc` file for the schema file:
 
 | External Table Type  | Schema Specified? | Description
 |-------|--------------------------|-----------|
-| readable   | yes | PXF uses the specified schema; this overrides a schema in the `.avro` data file. |
-| readable   | no | PXF uses the schema in the `.avro` data file. |
+| readable   | yes | PXF uses the specified schema; this overrides the schema embedded in the Avro data file. |
+| readable   | no | PXF uses the schema embedded in the Avro data file. |
 | writable   | yes | PXF uses the specified schema. |
 | writable   | no | PXF creates the Avro schema based on the external table definition. |
 
-When you provide the Avro schema file to PXF, the file must reside in the same location on each Greenplum Database segment host **or** the file may reside on the Hadoop file system. PXF first searches for an absolute or relative (to the PXF classpath) Avro file path on the Greenplum segment hosts. If PXF cannot find the schema file locally, it searches for the file on HDFS.
+When you provide the Avro schema file to PXF, the file must reside in the same location on each Greenplum Database segment host **or** the file may reside on the Hadoop file system. PXF first searches for an absolute file path on the Greenplum segment hosts. If PXF does not find the schema file there, it searches for the file relative to the PXF classpath. If PXF cannot find the schema file locally, it searches for the file on HDFS.
 
 The `$PXF_CONF/conf` directory is in the PXF classpath. PXF can locate an Avro schema file that you add to this directory on every Greenplum Database segment host.
-
-An Avro data file contains the schema and a compact binary representation of the data. Avro data files typically have the `.avro` suffix.
 
 See [Writing Avro Data](#topic_avro_writedata) for additional schema considerations when writing Avro data to HDFS.
 
 ## <a id="profile_cet"></a>Creating the External Table
 
-Use the `hdfs:avro` profile to read Avro-format data in HDFS. The following syntax creates a Greenplum Database readable external table that references such a file:
+Use the `hdfs:avro` profile to read or write Avro-format data in HDFS. The following syntax creates a Greenplum Database readable external table that references such a file:
 
 ``` sql
 CREATE [WRITABLE] EXTERNAL TABLE <table_name>
@@ -209,10 +209,10 @@ Perform the following steps to create a sample Avro data file conforming to the 
 
     The sample data uses a comma `,` to separate top level records and a colon `:` to separate map/key values and record field name/values.
 
-3. Convert the text file to Avro format. There are various ways to perform the conversion, both programmatically and via the command line. In this example, we use the [Java Avro tools](http://avro.apache.org/releases.html); the jar `avro-tools-1.8.1.jar` file resides in the current directory:
+3. Convert the text file to Avro format. There are various ways to perform the conversion, both programmatically and via the command line. In this example, we use the [Java Avro tools](http://avro.apache.org/releases.html); the jar `avro-tools-1.9.1.jar` file resides in the current directory:
 
     ``` shell
-    $ java -jar ./avro-tools-1.8.1.jar fromjson --schema-file /tmp/avro_schema.avsc /tmp/pxf_avro.txt > /tmp/pxf_avro.avro
+    $ java -jar ./avro-tools-1.9.1.jar fromjson --schema-file /tmp/avro_schema.avsc /tmp/pxf_avro.txt > /tmp/pxf_avro.avro
     ```
 
     The generated Avro binary data file is written to `/tmp/pxf_avro.avro`. 
@@ -289,7 +289,7 @@ If you do not specify a `SCHEMA` file, PXF generates a schema for the Avro file 
 ["string", "null"]
 ```
 
-PXF returns an error if you provide a schema, the schema does not include a `union` of the field data type with `null`, and PXF encounters a NULL data field.
+PXF returns an error if you provide a schema that does not include a `union` of the field data type with `null`, and PXF encounters a NULL data field.
 
 PXF supports writing only Avro primitive data types. It does not support writing complex types to Avro:
 
@@ -299,7 +299,7 @@ PXF supports writing only Avro primitive data types. It does not support writing
 
 ### <a id="topic_avrowrite_example"></a>Example: Writing Avro Data
 
-In this example, you create an external table that writes to an Avro file on HDFS, letting PXF generate the Avro schema. After you insert some data into the file, you create a readable external data to query the Avro data.
+In this example, you create an external table that writes to an Avro file on HDFS, letting PXF generate the Avro schema. After you insert some data into the file, you create a readable external table to query the Avro data.
 
 The Avro file that you create and read in this example includes the following fields:
 
@@ -325,7 +325,7 @@ Example procedure:
 
     PXF uses the external table definition to generate the Avro schema.
 
-3. Create an external table to read the Avro data you just inserted` table:
+3. Create an external table to read the Avro data that you just inserted into the table:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE read_pxfwrite(id int, username text, followers text)
