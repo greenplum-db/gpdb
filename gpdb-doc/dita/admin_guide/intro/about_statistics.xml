@@ -366,12 +366,16 @@
           with the saved state and skips analyzing a table or partition if it is unchanged. Heap
           tables are always analyzed. </p>
         <p>If GPORCA is enabled (the default), you also need to run <codeph>ANALYZE</codeph> or
-            <codeph>ANALYZE ROOTPARTITION</codeph> to refresh the root partition statistics. GPORCA
-          requires statistics at the root level for partitioned tables. The Postgres Planner does
-          not use these statistics. </p>
+            <codeph>ANALYZE ROOTPARTITION</codeph> on the root partition of a partitioned table (not
+          a leaf partition) to refresh the root partition statistics. GPORCA requires statistics at
+          the root level for partitioned tables. The Postgres Planner does not use these statistics. </p>
         <p>The time to analyze a partitioned table is similar to the time to analyze a
-          non-partitioned table with the same data since <codeph>ANALYZE ROOTPARTITION</codeph> does
-          not collect statistics on the leaf partitions (the data is only sampled). </p>
+          non-partitioned table with the same data. The time to perform <codeph>ANALYZE
+            ROOTPARTITION</codeph> depends on whether all leaf partitions have statistics. If they
+          do, <codeph>ANALYZE ROOTPARTITION</codeph> should be quick (in general, take no more than
+          a few seconds). If not all leaf partitions have statistics, <codeph>ANALYZE
+            ROOTPARTITION</codeph> generates statistics for all the leaf partitions before updating
+          the root partition statistics.</p>
         <p>The Greenplum Database server configuration parameter <codeph><xref
               href="../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
               >optimizer_analyze_root_partition</xref></codeph> affects when statistics are
