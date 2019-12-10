@@ -45,6 +45,7 @@ select gp_inject_fault_infinite('transaction_start_under_entry_db_singleton', 's
 --------------------------
  Success:                 
 (1 row)
+2&: select gp_wait_until_triggered_fault('transaction_start_under_entry_db_singleton', 1, 1);  <waiting ...>
 
 -- The QD should already hold RowExclusiveLock and ExclusiveLock on
 -- deadlock_entry_db_singleton_table and the QE ENTRY_DB_SINGLETON
@@ -52,11 +53,10 @@ select gp_inject_fault_infinite('transaction_start_under_entry_db_singleton', 's
 1&:UPDATE deadlock_entry_db_singleton_table set d = d + 1 FROM (select 1 from deadlock_entry_db_singleton_table, function_volatile(5)) t;  <waiting ...>
 
 -- verify the fault hit
-select gp_inject_fault('transaction_start_under_entry_db_singleton', 'status', 1);
- gp_inject_fault                                                                                                                                                                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'transaction_start_under_entry_db_singleton' fault type:'suspend' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1' 
- 
+2<:  <... completed>
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
 (1 row)
 
 -- This session will wait for ExclusiveLock on
