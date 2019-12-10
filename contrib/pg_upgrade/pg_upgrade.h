@@ -280,8 +280,6 @@ typedef struct
 	char		db_tablespace[MAXPGPATH];		/* database default tablespace
 												 * path */
 	RelInfoArr	rel_arr;		/* array of all user relinfos */
-
-	char	   *reserved_oids;	/* as a string */
 } DbInfo;
 
 typedef struct
@@ -371,7 +369,6 @@ typedef struct
 	Oid			role_count;		/* number of roles defined in the cluster */
 	const char *tablespace_suffix;		/* directory specification */
 
-	char	   *global_reserved_oids; /* OID preassign calls for shared objects */
 	int gp_dbid; /* greenplum database id of the cluster */
 
 	OldTablespaceFileContents *old_tablespace_file_contents;
