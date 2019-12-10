@@ -354,12 +354,6 @@ currentAOStorageOptions(void)
 void
 setDefaultAOStorageOpts(StdRdOptions *copy)
 {
-	if (ao_storage_opts.compresstype)
-		ao_storage_opts.compresstype[0] = '\0';
-
-	if (ao_storage_opts.orientation)
-		ao_storage_opts.orientation[0] = '\0';
-
 	memcpy(&ao_storage_opts, copy, sizeof(ao_storage_opts));
 	if (pg_strcasecmp(copy->compresstype, "none") == 0)
 	{
