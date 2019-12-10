@@ -214,7 +214,10 @@ extern void CpusetDifference(char *cpuset1, const char *cpuset2, int len);
 extern bool CpusetIsEmpty(const char *cpuset);
 extern void SetCpusetEmpty(char *cpuset, int cpusetSize);
 extern bool EnsureCpusetIsAvailable(int elevel);
-
+extern bool IsGroupInRedZone(void);
+extern void ResGroupGetMemoryInfo(StringInfo str);
+extern Oid SessionGetGroupId(void *slot);
+extern Oid FindGroupUseMostGlobalMem(void);
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);
 

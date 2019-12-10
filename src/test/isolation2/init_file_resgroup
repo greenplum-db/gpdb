@@ -1,5 +1,6 @@
 -- start_matchignore
 m/^CONTEXT:  SQL function ".+" statement \d+$/
+m/^ERROR:  Canceling query because of high VMEM .+/
 -- end_matchignore
 
 -- start_matchsubs
