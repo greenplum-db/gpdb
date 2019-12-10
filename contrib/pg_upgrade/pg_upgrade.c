@@ -605,21 +605,7 @@ create_new_objects(void)
 
 	uninstall_support_functions_from_new_cluster();
 
-	/*
-	 * If we're upgrading from GPDB4, mark all indexes as invalid.
-	 * The page format is incompatible, and while convert heap
-	 * and AO tables automatically, we don't have similar code for
-	 * indexes. Also, the heap conversion relocates tuples, so
-	 * any indexes on heaps would need to be rebuilt for that
-	 * reason, anyway.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802)
-		new_gpdb5_0_invalidate_indexes();
-	else
-	{
-		/* TODO: Bitmap indexes are not supported, so mark them as invalid. */
-		new_gpdb_invalidate_bitmap_indexes();
-	}
+	after_create_new_objects_greenplum();
 }
 
 
