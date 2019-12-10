@@ -48,9 +48,9 @@
         errors.</note>
       <p>For readable external tables, if load files are compressed using <codeph>gzip</codeph> or
           <codeph>bzip2</codeph> (have a <codeph>.gz</codeph> or <codeph>.bz2</codeph> file
-        extension), <codeph>gpfdist</codeph> uncompresses the files before loading. For writable
-        external tables, <codeph>gpfdist</codeph> compresses the data using <codeph>gzip</codeph> if
-        the target file has a <codeph>.gz</codeph> extension.</p>
+        extension), <codeph>gpfdist</codeph> uncompresses the data while loading the data (on the
+        fly). For writable external tables, <codeph>gpfdist</codeph> compresses the data using
+          <codeph>gzip</codeph> if the target file has a <codeph>.gz</codeph> extension.</p>
       <note type="note">Compression is not supported for readable and writeable external tables when
         the <codeph>gpfdist</codeph> utility runs on Windows platforms.</note>
       <p>When reading or writing data with the <codeph>gpfdist</codeph> or <codeph>gpfdists</codeph>
