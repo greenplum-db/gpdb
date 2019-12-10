@@ -245,7 +245,7 @@ start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error)
 	int gp_dbid;
 	int gp_content_id;
 
-	if (greenplum_user_opts.segment_mode == DISPATCHER)
+	if (is_greenplum_dispatcher_mode())
 	{
 		gp_dbid = 1;
 		gp_content_id = -1;

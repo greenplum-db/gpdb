@@ -151,7 +151,7 @@ main(int argc, char **argv)
 	/* -- NEW -- */
 	start_postmaster(&new_cluster, true);
 
-	if (greenplum_user_opts.segment_mode == DISPATCHER)
+	if (is_greenplum_dispatcher_mode())
 	{
 		prepare_new_databases();
 
@@ -168,7 +168,7 @@ main(int argc, char **argv)
 	 */
 	restore_aosegment_tables();
 
-	if (greenplum_user_opts.segment_mode == DISPATCHER)
+	if (is_greenplum_dispatcher_mode())
 	{
 		/* freeze master data *right before* stopping */
 		freeze_master_data();
@@ -202,7 +202,7 @@ main(int argc, char **argv)
 	check_ok();
 
 	/* For non-master segments, uniquify the system identifier. */
-	if (greenplum_user_opts.segment_mode != DISPATCHER)
+	if (!is_greenplum_dispatcher_mode())
 		reset_system_identifier();
 
 	prep_status("Sync data directory to disk");
@@ -461,7 +461,7 @@ prepare_new_cluster(void)
 	 * AO tables can't be analyzed because their aoseg tuple counts don't match
 	 * those on disk. We therefore skip this step for segments.
 	 */
-	if (greenplum_user_opts.segment_mode == DISPATCHER)
+	if (is_greenplum_dispatcher_mode())
 	{
 		prep_status("Analyzing all rows in the new cluster");
 		exec_prog(UTILITY_LOG_FILE, NULL, true, true,

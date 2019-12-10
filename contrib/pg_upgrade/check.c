@@ -86,7 +86,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 
 	get_pg_database_relfilenode(&old_cluster);
 
-	if (user_opts.segment_mode == DISPATCHER)
+	if (is_greenplum_dispatcher_mode())
 		generate_old_tablespaces_file(&old_cluster);
 
 	/* Extract a list of databases and tables from the old cluster */
@@ -173,7 +173,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	 * While not a check option, we do this now because this is the only time
 	 * the old server is running.
 	 */
-	if (!user_opts.check && greenplum_user_opts.segment_mode == DISPATCHER)
+	if (!user_opts.check && is_greenplum_dispatcher_mode())
 		generate_old_dump();
 
 	if (!live_check)
@@ -217,7 +217,7 @@ check_new_cluster(void)
 	 * Greenplum cluster upgrade scheme will overwrite the QE's schema
  	 * with the QD's schema, making this check inappropriate for a QE upgrade.
 	 */
-	if (user_opts.segment_mode == DISPATCHER)
+	if (is_greenplum_dispatcher_mode())
 	{
 		if (new_cluster.role_count != 1)
 			pg_fatal("Only the install user can be defined in the new cluster.\n");
@@ -571,7 +571,7 @@ check_new_cluster_is_empty(void)
 	 * place from the QD at this point, so the cluster cannot be tested for
 	 * being empty.
 	 */
-	if (greenplum_user_opts.segment_mode == SEGMENT)
+	if (!is_greenplum_dispatcher_mode())
 		return;
 
 	for (dbnum = 0; dbnum < new_cluster.dbarr.ndbs; dbnum++)

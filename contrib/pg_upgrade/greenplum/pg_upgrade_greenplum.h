@@ -79,6 +79,7 @@ typedef struct {
 extern GreenplumUserOpts greenplum_user_opts;
 void initialize_greenplum_user_options(void);
 bool process_greenplum_option(int option, char *option_value);
+bool is_greenplum_dispatcher_mode(void);
 
 /* aotable.c */
 
