@@ -778,6 +778,7 @@ set_end_state(Node *stmt)
 		((AlterExtensionStmt*)stmt)->update_ext_state = UPDATE_EXTENSION_END;
 }
 
+#ifdef USE_ASSERT_CHECKING
 static bool
 is_begin_state(const Node *stmt)
 {
@@ -790,6 +791,7 @@ is_begin_state(const Node *stmt)
 	else
 		return false;  /* unreachable */
 }
+#endif
 
 /*
  * Execute the appropriate script file for installing or updating the extension

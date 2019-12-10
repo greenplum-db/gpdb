@@ -757,6 +757,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		else
 			exec_identity = GP_IGNORE;
 
+#ifdef USE_ASSERT_CHECKING
 		/* non-root on QE */
 		if (exec_identity == GP_NON_ROOT_ON_QE)
 		{
@@ -766,7 +767,9 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 			Assert(IsA(motionState->ps.plan, Motion));
 		}
-		else if (exec_identity == GP_ROOT_SLICE)
+		else
+#endif
+		if (exec_identity == GP_ROOT_SLICE)
 		{
 			/* Run a root slice. */
 			if (queryDesc->planstate != NULL &&
