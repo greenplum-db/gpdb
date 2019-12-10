@@ -303,16 +303,14 @@ cdbpathlocus_for_insert(PlannerInfo *root, GpPolicy *policy,
 }
 
 /*
- * cdbpathlocus_from_baserel
+ * cdbpathlocus_from_policy
  *
- * Returns a locus describing the distribution of a base relation.
+ * Returns a locus describing the distribution of a policy
  */
 CdbPathLocus
-cdbpathlocus_from_baserel(struct PlannerInfo *root,
-						  struct RelOptInfo *rel)
+cdbpathlocus_from_policy(struct PlannerInfo *root, Index rti, GpPolicy *policy)
 {
 	CdbPathLocus result;
-	GpPolicy   *policy = rel->cdbpolicy;
 
 	if (Gp_role != GP_ROLE_DISPATCH)
 	{
@@ -326,7 +324,7 @@ cdbpathlocus_from_baserel(struct PlannerInfo *root,
 		if (policy->nattrs > 0)
 		{
 			List	   *distkeys = cdb_build_distribution_keys(root,
-															   rel->relid,
+															   rti,
 															   policy);
 
 			if (distkeys)
@@ -354,6 +352,18 @@ cdbpathlocus_from_baserel(struct PlannerInfo *root,
 		CdbPathLocus_MakeEntry(&result);
 
 	return result;
+}								/* cdbpathlocus_from_baserel */
+
+/*
+ * cdbpathlocus_from_baserel
+ *
+ * Returns a locus describing the distribution of a base relation.
+ */
+CdbPathLocus
+cdbpathlocus_from_baserel(struct PlannerInfo *root,
+						  struct RelOptInfo *rel)
+{
+	return cdbpathlocus_from_policy(root, rel->relid, rel->cdbpolicy);
 }								/* cdbpathlocus_from_baserel */
 
 

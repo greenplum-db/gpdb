@@ -4734,7 +4734,7 @@ adjust_modifytable_subpaths(PlannerInfo *root, CmdType operation,
 		}
 		else if (operation == CMD_DELETE)
 		{
-			subpath = create_motion_path_for_delete(root, targetPolicy, subpath);
+			subpath = create_motion_path_for_upddel(root, rti, targetPolicy, subpath);
 		}
 		else if (operation == CMD_UPDATE)
 		{
@@ -4745,7 +4745,7 @@ adjust_modifytable_subpaths(PlannerInfo *root, CmdType operation,
 			if (is_split_update)
 				subpath = create_split_update_path(root, rti, targetPolicy, subpath);
 			else
-				subpath = create_motion_path_for_update(root, targetPolicy, subpath);
+				subpath = create_motion_path_for_upddel(root, rti, targetPolicy, subpath);
 
 			lci = lnext(lci);
 		}

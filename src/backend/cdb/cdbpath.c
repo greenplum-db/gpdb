@@ -60,10 +60,9 @@ typedef struct
 static bool try_redistribute(PlannerInfo *root, CdbpathMfjRel *g,
 							 CdbpathMfjRel *o, List *redistribution_clauses);
 
-
 static SplitUpdatePath *make_splitupdate_path(PlannerInfo *root, Path *subpath, Index rti);
 
-
+static bool can_elide_explicit_motion(PlannerInfo *root, Index rti, Path *subpath, GpPolicy *policy);
 /*
  * cdbpath_cost_motion
  *    Fills in the cost estimate fields in a MotionPath node.
@@ -2606,10 +2605,12 @@ create_motion_path_for_insert(PlannerInfo *root, GpPolicy *policy,
 }
 
 /*
- * Add a suitable Motion Path for deletion.
+ * Add a suitable Motion Path for delete and update. If the UPDATE
+ * modifies the distribution key columns, use create_split_update_path()
+ * instead.
  */
 Path *
-create_motion_path_for_delete(PlannerInfo *root, GpPolicy *policy,
+create_motion_path_for_upddel(PlannerInfo *root, Index rti, GpPolicy *policy,
 							  Path *subpath)
 {
 	GpPolicyType	policyType = policy->ptype;
@@ -2617,16 +2618,21 @@ create_motion_path_for_delete(PlannerInfo *root, GpPolicy *policy,
 
 	if (policyType == POLICYTYPE_PARTITIONED)
 	{
-		/* GPDB_96_MERGE_FIXME: avoid creating the Explicit Motion in
-		 * simple cases, where all the input data is already on the
-		 * same segment.
-		 *
-		 * Is "strewn" correct here? Can we do better?
-		 */
-		CdbPathLocus_MakeStrewn(&targetLocus, policy->numsegments);
-		subpath = cdbpath_create_explicit_motion_path(root,
-													  subpath,
-													  targetLocus);
+		if (can_elide_explicit_motion(root, rti, subpath, policy))
+			return subpath;
+		else
+		{
+			/* GPDB_96_MERGE_FIXME: avoid creating the Explicit Motion in
+			 * simple cases, where all the input data is already on the
+			 * same segment.
+			 *
+			 * Is "strewn" correct here? Can we do better?
+			 */
+			CdbPathLocus_MakeStrewn(&targetLocus, policy->numsegments);
+			subpath = cdbpath_create_explicit_motion_path(root,
+														  subpath,
+														  targetLocus);
+		}
 	}
 	else if (policyType == POLICYTYPE_ENTRY)
 	{
@@ -2642,39 +2648,6 @@ create_motion_path_for_delete(PlannerInfo *root, GpPolicy *policy,
 
 	return subpath;
 }
-
-/*
- * Add a suitable Motion Path for Update. If the UPDATE modifies the
- * distribution key columns, use create_split_update_path() instead.
- */
-Path *
-create_motion_path_for_update(PlannerInfo *root, GpPolicy *policy,
-							  Path *subpath)
-{
-	GpPolicyType	policyType = policy->ptype;
-	CdbPathLocus	targetLocus;
-
-	if (policyType == POLICYTYPE_PARTITIONED)
-	{
-		CdbPathLocus_MakeStrewn(&targetLocus, policy->numsegments);
-		subpath = cdbpath_create_explicit_motion_path(root,
-													  subpath,
-													  targetLocus);
-	}
-	else if (policyType == POLICYTYPE_ENTRY)
-	{
-		/* Master-only table */
-		CdbPathLocus_MakeEntry(&targetLocus);
-		subpath = cdbpath_create_motion_path(root, subpath, NIL, false, targetLocus);
-	}
-	else if (policyType == POLICYTYPE_REPLICATED)
-	{
-	}
-	else
-		elog(ERROR, "unrecognized policy type %u", policyType);
-	return subpath;
-}
-
 
 /*
  * In Postgres planner, we add a SplitUpdate node at top so that updating on
@@ -2814,4 +2787,24 @@ make_splitupdate_path(PlannerInfo *root, Path *subpath, Index rti)
 	splitupdatepath->resultRelation = rti;
 
 	return splitupdatepath;
+}
+
+static bool
+can_elide_explicit_motion(PlannerInfo *root, Index rti, Path *subpath,
+						  GpPolicy *policy)
+{
+	/*
+	 * If there are no Motions between scan of the target relation and here,
+	 * no motion is required.
+	 */
+	if (bms_is_member(rti, subpath->sameslice_relids))
+		return true;
+
+	if (!CdbPathLocus_IsStrewn(subpath->locus))
+	{
+		CdbPathLocus    resultrelation_locus = cdbpathlocus_from_policy(root, rti, policy);
+		return cdbpathlocus_equal(subpath->locus, resultrelation_locus);
+	}
+
+	return false;
 }

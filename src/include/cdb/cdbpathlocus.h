@@ -267,6 +267,8 @@ extern CdbPathLocus cdbpathlocus_for_insert(struct PlannerInfo *root,
 											struct PathTarget *pathtarget);
 
 CdbPathLocus
+cdbpathlocus_from_policy(struct PlannerInfo *root, Index rti, struct GpPolicy *policy);
+CdbPathLocus
 cdbpathlocus_from_baserel(struct PlannerInfo   *root,
                           struct RelOptInfo    *rel);
 CdbPathLocus
