@@ -12,6 +12,7 @@
 
 #include "access/transam.h"
 
+#define NUMERIC_ALLOC 100
 
 /*
  * old_8_3_check_for_money_data_type_usage()

@@ -29,8 +29,6 @@
 #define LINE_ALLOC			4096
 #define QUERY_ALLOC			8192
 
-#define NUMERIC_ALLOC 100
-
 #define MIGRATOR_API_VERSION	1
 
 #define MESSAGE_WIDTH		60
