@@ -749,11 +749,11 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 		relkind = PQgetvalue(res, relnum, i_relkind) [0];
 
 		/*
-		 * RELSTORAGE_AOROWS and RELSTORAGE_AOCOLS. The structure of append
+		 * The structure of append
 		 * optimized tables is similar enough for row and column oriented
 		 * tables so we can handle them both here.
 		 */
-		if (relstorage == RELSTORAGE_AOROWS || relstorage == RELSTORAGE_AOCOLS)
+		if (is_appendonly(relstorage))
 		{
 			char	   *segrel;
 			char	   *visimaprel;

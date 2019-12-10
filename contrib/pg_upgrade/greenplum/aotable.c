@@ -11,6 +11,9 @@
 
 #include "pqexpbuffer.h"
 
+/* needs to be kept in sync with pg_class.h */
+#define RELSTORAGE_AOROWS	'a'
+#define RELSTORAGE_AOCOLS	'c'
 
 /*
  * We cannot use executeQueryOrDie for the INSERTs below, because it has a size
@@ -267,8 +270,7 @@ restore_aosegment_tables(void)
 		{
 			RelInfo		*rel = &olddb->rel_arr.rels[relnum];
 
-			if (rel->relstorage == RELSTORAGE_AOROWS ||
-				rel->relstorage == RELSTORAGE_AOCOLS)
+			if (is_appendonly(rel->relstorage))
 				restore_aosegment_table(conn, rel);
 		}
 
@@ -276,4 +278,10 @@ restore_aosegment_tables(void)
 	}
 
 	check_ok();
+}
+
+bool
+is_appendonly(char relstorage)
+{
+	return relstorage == RELSTORAGE_AOROWS || relstorage == RELSTORAGE_AOCOLS;
 }
