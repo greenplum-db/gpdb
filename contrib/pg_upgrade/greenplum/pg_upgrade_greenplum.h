@@ -34,36 +34,25 @@ typedef enum
 	CHECKSUM_REMOVE
 } checksumMode;
 
-typedef enum
-{
-	DISPATCHER = 0,
-	SEGMENT
-} segmentMode;
-
-typedef struct {
-	bool progress;
-	segmentMode segment_mode;
-	checksumMode checksum_mode;
-	char *old_tablespace_file_path;
-} GreenplumUserOpts;
-
-#define GREENPLUM_MODE_OPTION 1
-#define GREENPLUM_PROGRESS_OPTION 2
-#define GREENPLUM_ADD_CHECKSUM_OPTION 3
-#define GREENPLUM_REMOVE_CHECKSUM_OPTION 4
-#define GREENPLUM_OLD_GP_DBID 5
-#define GREENPLUM_NEW_GP_DBID 6
-#define GREENPLUM_OLD_TABLESPACES_FILE 7
+typedef enum {
+	GREENPLUM_MODE_OPTION = 1,
+	GREENPLUM_PROGRESS_OPTION = 2,
+	GREENPLUM_ADD_CHECKSUM_OPTION = 3,
+	GREENPLUM_REMOVE_CHECKSUM_OPTION = 4,
+	GREENPLUM_OLD_GP_DBID = 5,
+	GREENPLUM_NEW_GP_DBID = 6,
+	GREENPLUM_OLD_TABLESPACES_FILE = 7
+} greenplumOption;
 
 
 #define GREENPLUM_OPTIONS \
 	{"mode", required_argument, NULL, GREENPLUM_MODE_OPTION}, \
 	{"progress", no_argument, NULL, GREENPLUM_PROGRESS_OPTION}, \
 	{"add-checksum", no_argument, NULL, GREENPLUM_ADD_CHECKSUM_OPTION}, \
-	{"remove-checksum", no_argument, NULL, GREENPLUM_REMOVE_CHECKSUM_OPTION},
-	{"old-gp-dbid", required_argument, NULL, 5},
-	{"new-gp-dbid", required_argument, NULL, 6},
-	{"old-tablespaces-file", required_argument, NULL, 7},
+	{"remove-checksum", no_argument, NULL, GREENPLUM_REMOVE_CHECKSUM_OPTION}, \
+	{"old-gp-dbid", required_argument, NULL, GREENPLUM_OLD_GP_DBID}, \
+	{"new-gp-dbid", required_argument, NULL, GREENPLUM_NEW_GP_DBID}, \
+	{"old-tablespaces-file", required_argument, NULL, GREENPLUM_OLD_TABLESPACES_FILE},
 
 #define GREENPLUM_USAGE "\
       --mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
@@ -75,11 +64,16 @@ typedef struct {
       --old-tablespaces-file    file containing the tablespaces from an old gpdb five cluster\n\
 "
 
+#define GP_DBID_NOT_SET -1
+
+
 /* option_gp.c */
-extern GreenplumUserOpts greenplum_user_opts;
 void initialize_greenplum_user_options(void);
-bool process_greenplum_option(int option, char *option_value);
+bool process_greenplum_option(greenplumOption option, char *option_value);
 bool is_greenplum_dispatcher_mode(void);
+bool is_checksum_mode(checksumMode mode);
+bool is_show_progress_mode(void);
+void validate_greenplum_options(void);
 
 /* aotable.c */
 

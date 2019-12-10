@@ -27,7 +27,6 @@ static void check_required_directory(char **dirpath,
 						 const char *envVarName, bool useCwd,
 						 const char *cmdLineOption, const char *description);
 #define FIX_DEFAULT_READ_ONLY "-c default_transaction_read_only=false"
-#define GP_DBID_NOT_SET -1
 
 UserOpts	user_opts;
 
@@ -70,8 +69,6 @@ parseCommandLine(int argc, char *argv[])
 	time_t		run_time = time(NULL);
 
 	user_opts.transfer_mode = TRANSFER_MODE_COPY;
-	user_opts.old_tablespace_file_path = NULL;
-
 	old_cluster.gp_dbid = GP_DBID_NOT_SET;
 	new_cluster.gp_dbid = GP_DBID_NOT_SET;
 	old_cluster.old_tablespace_file_contents = NULL;
@@ -251,20 +248,10 @@ parseCommandLine(int argc, char *argv[])
 
 	/* Ensure we are only adding checksums in copy mode */
 	if (user_opts.transfer_mode != TRANSFER_MODE_COPY &&
-		greenplum_user_opts.checksum_mode != CHECKSUM_NONE)
+		!is_checksum_mode(CHECKSUM_NONE))
 		pg_log(PG_FATAL, "Adding and removing checksums only supported in copy mode.\n");
 
-	if (old_cluster.gp_dbid == GP_DBID_NOT_SET)
-		pg_fatal("--old-gp-dbid must be set\n");
-
-	if (new_cluster.gp_dbid == GP_DBID_NOT_SET)
-		pg_fatal("--new-gp-dbid must be set\n");
-
-	if (user_opts.old_tablespace_file_path) {
-		populate_old_cluster_with_old_tablespaces(
-			&old_cluster,
-			user_opts.old_tablespace_file_path);
-	}
+	validate_greenplum_options();
 }
 
 
