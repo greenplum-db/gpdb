@@ -707,7 +707,7 @@ forwardQENotices(void)
 
 	while (qeNotices_head)
 	{
-		QENotice *notice;;
+		QENotice *notice;
 		StringInfoData msgbuf;
 
 		notice = qeNotices_head;
@@ -768,7 +768,7 @@ forwardQENotices(void)
 					pq_sendstring(&msgbuf, notice->file);
 				}
 
-				if (notice->line)
+				if (notice->line[0])
 				{
 					pq_sendbyte(&msgbuf,PG_DIAG_SOURCE_LINE);
 					pq_sendstring(&msgbuf, notice->line);
