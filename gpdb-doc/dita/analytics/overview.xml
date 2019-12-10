@@ -2,11 +2,12 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="gp_integrated_analytics">
   <title>Greenplum Database Integrated Analytics</title>
-
-  <body>
-    <section>
+  <body></body>
+    
+    <topic id="analytics_overview">
       <title>Overview</title>
-      <p>Greenplum offers a unique combination of a powerful massively parallel processing (MPP)
+      <body>
+        <p>Greenplum offers a unique combination of a powerful massively parallel processing (MPP)
         database and advanced data analytics. This combination creates an ideal framework for data
         scientists, data architects and business decision makers to explore artificial intelligence
         (AI), machine learning, deep learning, graph analytics, and geospatial.</p>
@@ -16,7 +17,8 @@
       <li>Tools in the Greenplum Database advanced analytics ecosystem</li>
       <li>Why use Greenplum Database for integrated analytics.</li>
      </ul>
-    </section>
+      </body>
+    </topic>
     
     <topic id="gp_ecosystem">
       <title>Greenplum Database Integrated Analytics Ecosystem</title>
@@ -28,7 +30,6 @@
       </fig>
       <p>The following Greenplum Database analytics extensions are explored in different
         documentation sections, with installation and usage instructions:</p>
-    
     
     <section>
       <title>Machine Learning and Deep Learning</title>
@@ -55,22 +56,21 @@
     </section>
     
     <section id="pr_lang_and_ext">
-      <title>Programming Language Extensions</title>
-      <p>The Greenplum Database distribution supports the following procedural languages:</p> 
-      <xref href="pl_container.xml">PL/Container</xref>, 
-      <xref href="pl_java.xml" format="dita">PL/Java</xref>, 
-      <xref href="pl_perl.xml" format="dita">PL/Perl</xref>,
-       <xref href="pl_sql.xml" format="dita">PL/pgSQL</xref>, 
-       <xref href="pl_python.xml" format="dita">PL/Python</xref>, 
-       <xref href="pl_r.xml" format="dita">PL/R</xref>.
-      <p>Refer to the linked documentation for <ph otherprops="pivotal"> installation and </ph> usage
-      instructions.</p> 
-    </section>
-      </body>
+          <title>Programming Language Extensions</title><p>The Greenplum Database distribution
+            supports the following procedural languages:</p>
+          <xref href="pl_container.xml">PL/Container</xref>, <xref href="pl_java.xml" format="dita"
+            >PL/Java</xref>, <xref href="pl_perl.xml" format="dita">PL/Perl</xref>, <xref
+            href="pl_sql.xml" format="dita">PL/pgSQL</xref>, <xref href="pl_python.xml"
+            format="dita">PL/Python</xref>, <xref href="pl_r.xml" format="dita">PL/R</xref>.
+            <p>Refer to the linked documentation for <ph otherprops="pivotal"> installation and
+            </ph> usage instructions.</p>
+        </section>
+   </body>
     </topic>
     
+    
     <topic id="why_gp_analytics">
-      <title>Why Greenplum Database in Advanced Analytics</title>
+      <title>Why Greenplum Database in Integrated Analytics</title>
       <body>
       <p>Advanced analytics in its various forms is rapidly growing in importance in enterprise computing. 
         Key enterprise data typically resides in relational and document form, and it is inefficient to copy 
@@ -109,9 +109,7 @@
        <li>Use procedural languages to customize your analytics. Pivotal Greenplum supports development in R, 
          Python, Java, and other standard languages allowing you to distribute execution across the entire cluster
          to take advantage of the scale and parallelism.</li>
-    </ul>
+        </ul>
       </body>
-    </topic>
-    
-  </body>
+     </topic>
 </topic>
