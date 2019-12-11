@@ -66,7 +66,7 @@ groups:
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
   - icw_planner_centos6
-  - icw_planner_ictcp_centos6
+  - icw_gporca_ictcp_centos6
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
   - gpexpand
@@ -172,7 +172,7 @@ groups:
 {% if "centos6" in os_types %}
   - icw_gporca_centos6
   - icw_planner_centos6
-  - icw_planner_ictcp_centos6
+  - icw_gporca_ictcp_centos6
   - compile_gpdb_centos6
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
@@ -1139,7 +1139,7 @@ jobs:
     params:
       file: sqldump/dump.sql.xz
 
-- name: icw_planner_ictcp_centos6
+- name: icw_gporca_ictcp_centos6
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1153,7 +1153,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on' installcheck-world
       TEST_OS: centos
 
 {% endif %}
@@ -1241,7 +1241,7 @@ jobs:
       passed:
       - icw_gporca_centos6
       - icw_planner_centos6
-      - icw_planner_ictcp_centos6
+      - icw_gporca_ictcp_centos6
 {% if "Extensions" in test_sections %}
       - icw_extensions_gpcloud_centos6
 {% endif %}
@@ -1256,7 +1256,7 @@ jobs:
 {% if "centos6" in os_types %}
       - icw_gporca_centos6
       - icw_planner_centos6
-      - icw_planner_ictcp_centos6
+      - icw_gporca_ictcp_centos6
 {% if "Extensions" in test_sections %}
       - icw_extensions_gpcloud_centos6
 {% endif %}
@@ -2010,7 +2010,7 @@ jobs:
       - icw_planner_centos7
       - icw_gporca_ubuntu18.04
       - icw_planner_ubuntu18.04
-      - icw_planner_ictcp_centos6
+      - icw_gporca_ictcp_centos6
       - icw_extensions_gpcloud_centos6
       - resource_group_centos6
       - resource_group_centos7
@@ -2036,7 +2036,7 @@ jobs:
       - compile_gpdb_centos6
       - icw_planner_centos6
       - icw_gporca_centos6
-      - icw_planner_ictcp_centos6
+      - icw_gporca_ictcp_centos6
       - icw_extensions_gpcloud_centos6
       - resource_group_centos6
 {% for test in CLI_BEHAVE_TESTS %}

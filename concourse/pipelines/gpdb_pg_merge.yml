@@ -40,7 +40,7 @@ groups:
   - icw_gporca_centos6
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
-  - icw_planner_ictcp_centos6
+  - icw_gporca_ictcp_centos6
   - gpexpand
   - pg_upgrade
   - icw_gporca_centos7
@@ -119,7 +119,7 @@ groups:
   - icw_gporca_centos6
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
-  - icw_planner_ictcp_centos6
+  - icw_gporca_ictcp_centos6
   - compile_gpdb_centos6
   - pg_upgrade
   - icw_gporca_centos7
@@ -1004,7 +1004,7 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 
-- name: icw_planner_ictcp_centos6
+- name: icw_gporca_ictcp_centos6
   plan:
   - in_parallel:
     - get: gpdb_src
@@ -1109,7 +1109,7 @@ jobs:
       - icw_gporca_centos6
       - icw_gporca_centos6_gpos_memory
       - icw_planner_centos6
-      - icw_planner_ictcp_centos6
+      - icw_gporca_ictcp_centos6
       - icw_extensions_gpcloud_centos6
     - get: icw_gporca_centos6_dump
       passed:
@@ -1119,7 +1119,7 @@ jobs:
       - icw_gporca_centos6
       - icw_gporca_centos6_gpos_memory
       - icw_planner_centos6
-      - icw_planner_ictcp_centos6
+      - icw_gporca_ictcp_centos6
       - icw_extensions_gpcloud_centos6
       - icw_gporca_centos7
       trigger: true
@@ -3105,7 +3105,7 @@ jobs:
       - icw_planner_centos7
       - icw_gporca_ubuntu18.04
       - icw_planner_ubuntu18.04
-      - icw_planner_ictcp_centos6
+      - icw_gporca_ictcp_centos6
       - icw_extensions_gpcloud_centos6
       - resource_group_centos6
       - resource_group_centos7
@@ -3155,7 +3155,7 @@ jobs:
       - compile_gpdb_centos6
       - icw_planner_centos6
       - icw_gporca_centos6
-      - icw_planner_ictcp_centos6
+      - icw_gporca_ictcp_centos6
       - icw_extensions_gpcloud_centos6
       - resource_group_centos6
       - gpmovemirrors
