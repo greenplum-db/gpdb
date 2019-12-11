@@ -6,6 +6,7 @@
 subdir = contrib/pg_upgrade/test/integration
 top_builddir = ../../../..
 pg_upgrade_directory=../..
+pg_upgrade_greenplum_directory=../../greenplum
 TARGETS = tablespace_gp_test \
 	greenplum_five_to_greenplum_six_upgrade_test_suite
 
@@ -81,16 +82,23 @@ scripts_objs := $(patsubst %.c,%.o,$(wildcard scripts/*.c))
 $(scripts_objs): override CPPFLAGS += -I .
 scripts/gpdb5-cluster: scripts/gpdb5-cluster.o utilities/gpdb5-cluster.o
 scripts/gpdb6-cluster: scripts/gpdb6-cluster.o utilities/gpdb6-cluster.o
-scripts/upgrade-cluster: utilities/cluster-upgrade.o scripts/upgrade-cluster.o $(pg_upgrade_directory)/old_tablespace_file_parser.o $(pg_upgrade_directory)/old_tablespace_file_contents.o utilities/pg-upgrade-copy.o utilities/test-upgrade-helpers.o
+
+scripts/upgrade-cluster: utilities/cluster-upgrade.o \
+	scripts/upgrade-cluster.o \
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_parser.o \
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_contents.o \
+	utilities/pg-upgrade-copy.o \
+	utilities/test-upgrade-helpers.o
+
 scripts/reset-cluster: scripts/reset-cluster.o utilities/test-helpers.o utilities/query-helpers.o
-#override LDFLAGS += -lasan $(libpq_pgport)
+
 override CPPFLAGS += -I $(pg_upgrade_directory) -I$(libpq_srcdir)
 
 scripts/pg-upgrade-copy-from-master.o: override CPPFLAGS += -I $(pg_upgrade_directory)
 scripts/pg-upgrade-copy-from-master: scripts/pg-upgrade-copy-from-master.o \
 	utilities/pg-upgrade-copy.o \
-	$(pg_upgrade_directory)/old_tablespace_file_contents.o \
-	$(pg_upgrade_directory)/old_tablespace_file_parser.o
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_contents.o \
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_parser.o
 
 #
 ## Libraries
@@ -104,15 +112,16 @@ test_dependencies = bdd-library/bdd.o \
 	$(utilities_objs) \
 	$(scenario_objs) \
 	$(CMOCKERY_OBJS) \
-	$(pg_upgrade_directory)/old_tablespace_file_contents.o \
-	$(pg_upgrade_directory)/old_tablespace_file_parser.o 
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_contents.o \
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_parser.o
 
 debugging_flags = -Og -g
 
 compile_test = $(CC) $(CFLAGS) $(debugging_flags) $^ $(libpq_pgport) $(LDFLAGS) -o $@
 
 tablespace_gp_test.t: tablespace_gp_test.o $(test_dependencies) \
-	$(pg_upgrade_directory)/tablespace_gp.o \
+	$(pg_upgrade_greenplum_directory)/tablespace_gp.o \
+	$(pg_upgrade_greenplum_directory)/option_gp.o \
 	$(pg_upgrade_directory)/util.o \
 	$(pg_upgrade_directory)/server.o \
 	$(pg_upgrade_directory)/exec.o \
@@ -125,7 +134,7 @@ greenplum_five_to_greenplum_six_upgrade_test_suite.t: greenplum_five_to_greenplu
 	$(compile_test)
 
 clean distclean:
-	rm -f upgrade_regress.so pg_upgrade_regress$(X) $(OBJS) isolation2_main.o *.o
+	rm -f upgrade_regress.so pg_upgrade_regress$(X) $(OBJS) isolation2_main.o *.o *.t
 	rm -f pg_regress.o
 	rm -f gpstringsubs.pl gpdiff.pl atmsort.pm explain.pm
 	rm -f data

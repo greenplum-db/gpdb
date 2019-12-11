@@ -17,7 +17,7 @@
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
 
-#include "old_tablespace_file_contents.h"
+#include "greenplum/old_tablespace_file_contents.h"
 
 /* Use port in the private/dynamic port number range */
 #define DEF_PGUPORT			50432
@@ -541,13 +541,6 @@ void transfer_all_new_dbs(DbInfoArr *old_db_arr,
 
 void		init_tablespaces(void);
 
-/* tablespace_gp.c */
-void populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster, const char *file_path);
-void generate_old_tablespaces_file(ClusterInfo *oldCluster);
-void populate_gpdb6_cluster_tablespace_suffix(ClusterInfo *cluster);
-bool is_gpdb_version_with_filespaces(ClusterInfo *cluster);
-
-
 /* server.c */
 
 PGconn	   *connectToServer(ClusterInfo *cluster, const char *db_name);
@@ -628,13 +621,5 @@ bool		reap_child(bool wait_for_child);
 #undef Assert
 #endif
 #define Assert(condition) ((void) (true || (condition)))
-
-void copy_distributedlog(void);
-
-static inline bool
-is_gpdb6(ClusterInfo *cluster)
-{
-	return GET_MAJOR_VERSION(cluster->major_version) == 904;
-}
 
 #endif /* PG_UPGRADE_H */

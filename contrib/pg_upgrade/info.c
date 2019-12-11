@@ -13,7 +13,7 @@
 
 #include "access/transam.h"
 #include "catalog/pg_class.h"
-#include "info_gp.h"
+#include "greenplum/info_gp.h"
 
 #include "greenplum/pg_upgrade_greenplum.h"
 

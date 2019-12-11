@@ -12,8 +12,8 @@
  * Production dependencies
  */
 #include "pg_upgrade.h"
-#include "old_tablespace_file_parser_observer.h"
-#include "old_tablespace_file_contents.h"
+#include "greenplum/old_tablespace_file_parser_observer.h"
+#include "greenplum/old_tablespace_file_contents.h"
 
 /*
  * Test dependencies
@@ -57,7 +57,7 @@ test_populates_old_tablespace_file_contents_to_have_zero_records_for_gpdb6_clust
 
 	assert_int_equal(
 		OldTablespaceFileContents_TotalNumberOfTablespaces(cluster.old_tablespace_file_contents),
-		0);
+		2);
 }
 
 static void

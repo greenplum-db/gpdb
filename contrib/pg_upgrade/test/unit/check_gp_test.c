@@ -1,6 +1,6 @@
 #include "cmockery_gp.h"
 
-#include "check_gp.h"
+#include "greenplum/check_gp.h"
 #include "pg_upgrade.h"
 
 ClusterInfo old_cluster,
@@ -13,6 +13,12 @@ char	   *output_files[] = {
 	INTERNAL_LOG_FILE,
 	NULL
 };
+
+void
+populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster, const char *file_path)
+{
+
+}
 
 static void
 test_check_with_no_databases(void **state)

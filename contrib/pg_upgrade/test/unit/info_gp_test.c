@@ -1,7 +1,7 @@
 #include "cmockery_gp.h"
 
-#include "old_tablespace_file_contents.h"
-#include "info_gp.h"
+#include "greenplum/old_tablespace_file_contents.h"
+#include "greenplum/info_gp.h"
 
 char *_stubbed_tablespace_path;
 bool _stubbed_is_user_defined_tablespace;

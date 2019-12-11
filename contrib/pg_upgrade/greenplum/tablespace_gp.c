@@ -8,7 +8,7 @@
  * Copyright (c) 2019-Present Pivotal Software, Inc.
  *
  */
-#include "pg_upgrade.h"
+#include "pg_upgrade_greenplum.h"
 
 static char *
 get_generated_old_tablespaces_file_path(void)

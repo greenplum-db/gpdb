@@ -1,6 +1,6 @@
 #include "cmockery_gp.h"
 
-#include "old_tablespace_file_parser_observer.h"
+#include "greenplum/old_tablespace_file_parser_observer.h"
 
 #include "scenarios/data_checksum_mismatch.h"
 #include "scenarios/filespaces_to_tablespaces.h"
