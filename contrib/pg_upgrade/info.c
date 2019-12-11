@@ -379,6 +379,7 @@ determine_db_tablespace_path(ClusterInfo *currentCluster,
                              Oid tablespace_oid)
 {
 	if (currentCluster != &old_cluster ||
+		currentCluster->old_tablespace_file_contents == NULL ||
 		!is_gpdb_version_with_filespaces(currentCluster))
 		return spclocation;
 
@@ -392,10 +393,6 @@ determine_db_tablespace_path(ClusterInfo *currentCluster,
 			return pg_strdup(response.tablespace_path);
 		case GetTablespacePathResponse_FOUND_SYSTEM_TABLESPACE:
 			return spclocation;
-		case GetTablespacePathResponse_MISSING_FILE:
-			pg_fatal("expected pg_upgrade to receive an "
-			         "old-tablespaces-file argument in order to "
-			         "determine GPDB5 tablespace locations\n");
 		case GetTablespacePathResponse_NOT_FOUND_IN_FILE:
 			pg_fatal("expected the old tablespace file to "
 			         "contain a tablespace entry for tablespace oid = %u\n",

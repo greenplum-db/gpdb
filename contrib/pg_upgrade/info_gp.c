@@ -19,14 +19,6 @@ make_response(GetTablespacePathResponseCodes code, char *path)
 }
 
 static GetTablespacePathResponse
-missing_file(void)
-{
-	return make_response(
-		GetTablespacePathResponse_MISSING_FILE,
-		EMPTY_TABLESPACE_PATH);
-}
-
-static GetTablespacePathResponse
 not_found_in_file(void)
 {
 	return make_response(
@@ -55,9 +47,6 @@ found_in_file(char *tablespace_path, Oid tablespace_oid)
 GetTablespacePathResponse
 gp_get_tablespace_path(OldTablespaceFileContents *oldTablespaceFileContents, Oid tablespace_oid)
 {
-	if (oldTablespaceFileContents == NULL)
-		return missing_file();
-
 	OldTablespaceRecord *record = old_tablespace_file_get_record(
 		oldTablespaceFileContents,
 		tablespace_oid);
