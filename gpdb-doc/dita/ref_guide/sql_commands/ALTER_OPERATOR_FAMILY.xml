@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="as20941">ALTER OPERATOR FAMILY</title><body><p id="sql_command_desc">Changes the definition of an operator family.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> ADD
+<topic id="topic1">
+  <title id="as20941">ALTER OPERATOR FAMILY</title>
+  <body>
+    <p id="sql_command_desc">Changes the definition of an operator family.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> ADD
   {  OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) [ RECHECK ]
     | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) ] <varname>funcname</varname> ( <varname>argument_type</varname> [, ...] )
   } [, ... ]
@@ -12,16 +18,20 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
 
 ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> RENAME TO <varname>newname</varname>
 
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> OWNER TO <varname>newowner</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR FAMILY</codeph> changes the definition of an operator family. You can add
-        operators and support functions to the family, remove them from the family, or change the
-        family's name or owner.</p>
+ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> OWNER TO <varname>newowner</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>ALTER OPERATOR FAMILY</codeph> changes the definition of an operator family. You
+        can add operators and support functions to the family, remove them from the family, or
+        change the family's name or owner.</p>
       <p>When operators and support functions are added to a family with <codeph>ALTER OPERATOR
           FAMILY</codeph>, they are not part of any specific operator class within the family, but
         are just "loose" within the family. This indicates that these operators and functions are
         compatible with the family's semantics, but are not required for correct functioning of any
         specific index. (Operators and functions that are so required should be declared as part of
         an operator class, instead; see <xref href="CREATE_OPERATOR_CLASS.xml#topic1" type="topic"
-          format="dita"/>.) You can drop loose members of a family  from the family at any time, but
+          format="dita"/>.) You can drop loose members of a family from the family at any time, but
         members of an operator class cannot be dropped without dropping the whole class and any
         indexes that depend on it. Typically, single-data-type operators and functions are part of
         operator classes because they are needed to support an index on that specific data type,
@@ -34,7 +44,19 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
         whether the operators and functions form a self-consistent set. It is the user's
         responsibility to define a valid operator family.</p>
       <p><codeph>OPERATOR</codeph> and <codeph>FUNCTION</codeph> clauses can appear in any
-        order.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing operator family. </pd></plentry><plentry><pt><varname>index_method</varname></pt><pd>The name of the index method this operator family is for. </pd></plentry>
+        order.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt><varname>name</varname></pt>
+          <pd>The name (optionally schema-qualified) of an existing operator family. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>index_method</varname></pt>
+          <pd>The name of the index method this operator family is for. </pd>
+        </plentry>
         <plentry>
           <pt><varname>strategy_number</varname></pt>
           <pd>The index method's strategy number for an operator associated with the operator
@@ -47,15 +69,15 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
         </plentry>
         <plentry>
           <pt>op_type</pt>
-          <pd>In an  <codeph>OPERATOR</codeph> clause, the operand data type(s) of the operator, or
+          <pd>In an <codeph>OPERATOR</codeph> clause, the operand data type(s) of the operator, or
               <codeph>NONE</codeph> to signify a left-unary or right-unary operator. Unlike the
             comparable syntax in <codeph>CREATE OPERATOR CLASS</codeph>, the operand data types must
             always be specified.In an <codeph>ADD FUNCTION</codeph> clause, the operand data type(s)
             the function is intended to support, if different from the input data type(s) of the
-            function. For B-tree and hash indexes it is not necessary to specify op_type since the
-            function's input data type(s) are always the correct ones to use. For
-              <codeph>GIN</codeph> and <codeph>GiST</codeph> indexes it is necessary to specify the
-            input data type the function is to be used with.In a <codeph>DROP FUNCTION</codeph>
+            function. For B-tree and hash indexes it is not necessary to specify
+              <varname>op_type</varname> since the function's input data type(s) are always the
+            correct ones to use. For <codeph>GiST</codeph> indexes it is necessary to specify the
+            input data type the function is to be used with. In a <codeph>DROP FUNCTION</codeph>
             clause, the operand data type(s) the function is intended to support must be
             specified.</pd>
         </plentry>
@@ -78,15 +100,29 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
         <plentry>
           <pt>argument_types</pt>
           <pd>The parameter data type(s) of the function.</pd>
-        </plentry><plentry><pt><varname>newname</varname></pt><pd>The new name of the operator family. </pd></plentry><plentry><pt><varname>newowner</varname></pt><pd>The new owner of the operator family. </pd></plentry></parml></section><section id="section5"><title>Compatibility</title><p>There is no <codeph>ALTER OPERATOR FAMILY</codeph> statement in the SQL standard. </p></section>
+        </plentry>
+        <plentry>
+          <pt><varname>newname</varname></pt>
+          <pd>The new name of the operator family. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>newowner</varname></pt>
+          <pd>The new owner of the operator family. </pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Compatibility</title>
+      <p>There is no <codeph>ALTER OPERATOR FAMILY</codeph> statement in the SQL standard. </p>
+    </section>
     <section id="section6">
       <title>Notes</title>
       <p>Notice that the <codeph>DROP</codeph> syntax only specifies the "slot" in the operator
         family, by strategy or support number and input data type(s). The name of the operator or
         function occupying the slot is not mentioned. Also, for <codeph>DROP FUNCTION</codeph> the
         type(s) to specify are the input data type(s) the function is intended to support; for
-          <codeph>GIN</codeph> and <codeph>GiST</codeph> indexes this might have nothing to do with
-        the actual input argument types of the function. </p>
+          <codeph>GiST</codeph> indexes this might have nothing to do with the actual input argument
+        types of the function. </p>
       <p>Because the index machinery does not check access permissions on functions before using
         them, including a function or operator in an operator family is tantamount to granting
         public execute permission on it. This is usually not an issue for the sorts of functions
@@ -134,9 +170,16 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
   OPERATOR 3 (int2, int4) ,
   OPERATOR 4 (int2, int4) ,
   OPERATOR 5 (int2, int4) ,
-  FUNCTION 1 (int2, int4) ;</codeblock></p><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="ALTER_OPERATOR_CLASS.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="CREATE_OPERATOR_CLASS.xml#topic1"
+  FUNCTION 1 (int2, int4) ;</codeblock></p>
+    <section id="section8">
+      <title>See Also</title>
+      <p><codeph><xref href="./CREATE_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"
+          /></codeph>, <codeph><xref href="./DROP_OPERATOR_FAMILY.xml#topic1" type="topic"
+            format="dita"/></codeph>, <codeph><xref href="ALTER_OPERATOR_CLASS.xml#topic1"
             type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+            href="CREATE_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"
+          /></codeph></p>
+    </section>
+  </body>
+</topic>
