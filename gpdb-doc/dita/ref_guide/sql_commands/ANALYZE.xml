@@ -93,13 +93,12 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
           <pd>The <codeph>ROOTPARTITION</codeph> clause is not valid with <codeph>VACUUM
               ANALYZE</codeph>. The command <codeph>VACUUM ANALYZE ROOTPARTITION</codeph> returns an
             error. </pd>
-          <pd>The time to perform <codeph>ANALYZE ROOTPARTITION</codeph> depends on whether all leaf
-            partitions have statistics. If all leaf partitions have statistics, those statistics are
-            used are used to generate root partition statistics. If a leaf partitions does not have
-            statistics, leaf partition data is sampled for all leaf partitions (statistics are not
-            added to leaf partitions without statistics). Using leaf partition statistics to
-            generate root partition statistics is much quicker than sampling leaf partition
-            data.</pd>
+          <pd>If all the leaf partitions have statistics, performing <codeph>ANALYZE
+              ROOTPARTITION</codeph> to generate root partition statistics should be quick (a few
+            seconds depending on the number of partitions and table columns). If some of the leaf
+            partitions do not have statistics, then all the table data is sampled to generate root
+            partition statistics. Sampling table data takes longer and results in lower quality root
+            partition statistics.</pd>
           <pd>For the partitioned table <i>sales_curr_yr</i>, this example command collects
             statistics only on the root partition of the partitioned table. <codeph>ANALYZE
               ROOTPARTITION sales_curr_yr; </codeph></pd>

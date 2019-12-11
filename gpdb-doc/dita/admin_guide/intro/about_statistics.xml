@@ -370,13 +370,12 @@
           a leaf partition) to refresh the root partition statistics. GPORCA requires statistics at
           the root level for partitioned tables. The Postgres Planner does not use these statistics. </p>
         <p>The time to analyze a partitioned table is similar to the time to analyze a
-          non-partitioned table with the same data. The time to perform <codeph>ANALYZE
-            ROOTPARTITION</codeph> depends on whether all leaf partitions have statistics. If all
-          leaf partitions have statistics, those statistics are used are used to generate root
-          partition statistics. If a leaf partitions does not have statistics, leaf partition data
-          is sampled for all leaf partitions (statistics are not added to leaf partitions without
-          statistics). Using leaf partition statistics to generate root partition statistics is much
-          quicker than sampling leaf partition data.</p>
+          non-partitioned table with the same data. When all the leaf partitions have statistics,
+          performing <codeph>ANALYZE ROOTPARTITION</codeph> to generate root partition statistics
+          should be quick (a few seconds depending on the number of partitions and table columns).
+          If some of the leaf partitions do not have statistics, then all the table data is sampled
+          to generate root partition statistics. Sampling table data takes longer and results in
+          lower quality root partition statistics.</p>
         <p>The Greenplum Database server configuration parameter <codeph><xref
               href="../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
               >optimizer_analyze_root_partition</xref></codeph> affects when statistics are
