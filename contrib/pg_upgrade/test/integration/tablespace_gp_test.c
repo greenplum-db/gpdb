@@ -12,6 +12,7 @@
  * Production dependencies
  */
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 #include "greenplum/old_tablespace_file_parser_observer.h"
 #include "greenplum/old_tablespace_file_contents.h"
 
@@ -27,6 +28,7 @@ ClusterInfo old_cluster;
 ClusterInfo new_cluster;
 OSInfo os_info;
 UserOpts user_opts;
+OldTablespaceFileContents *old_tablespace_file_contents;
 
 void 
 OldTablespaceFileParser_invalid_access_error_for_field(int row_index, int field_index)
@@ -49,14 +51,14 @@ test_populates_old_tablespace_file_contents_to_have_zero_records_for_gpdb6_clust
 	os_info.user = getenv("USER");
 	cluster.sockdir = NULL;
 
-	cluster.old_tablespace_file_contents = NULL;
+	old_tablespace_file_contents = NULL;
 
 	generate_old_tablespaces_file(&cluster);
 
-	assert_false(cluster.old_tablespace_file_contents == NULL);
+	assert_false(old_tablespace_file_contents == NULL);
 
 	assert_int_equal(
-		OldTablespaceFileContents_TotalNumberOfTablespaces(cluster.old_tablespace_file_contents),
+		OldTablespaceFileContents_TotalNumberOfTablespaces(old_tablespace_file_contents),
 		2);
 }
 
@@ -90,25 +92,25 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 	os_info.user = getenv("USER");
 	cluster.sockdir = NULL;
 
-	cluster.old_tablespace_file_contents = NULL;
+	old_tablespace_file_contents = NULL;
 
 	generate_old_tablespaces_file(&cluster);
 
-	assert_false(cluster.old_tablespace_file_contents == NULL);
+	assert_false(old_tablespace_file_contents == NULL);
 
 	assert_int_equal(
-		OldTablespaceFileContents_TotalNumberOfTablespaces(cluster.old_tablespace_file_contents),
+		OldTablespaceFileContents_TotalNumberOfTablespaces(old_tablespace_file_contents),
 		3);
 
 	char **results = OldTablespaceFileContents_GetArrayOfTablespacePaths(
-		cluster.old_tablespace_file_contents);
+		old_tablespace_file_contents);
 
 	assert_string_equal(
 		results[2],
 		"/tmp/tablespace-gp-test/fsseg0");
 
 	OldTablespaceRecord **records = OldTablespaceFileContents_GetTablespaceRecords(
-		cluster.old_tablespace_file_contents
+		old_tablespace_file_contents
 		);
 
 	assert_false(

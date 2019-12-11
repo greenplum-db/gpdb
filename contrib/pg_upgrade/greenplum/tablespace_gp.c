@@ -70,7 +70,7 @@ populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster,
 	OldTablespaceFileContents *contents = parse_old_tablespace_file_contents(
 		file_path);
 
-	oldCluster->old_tablespace_file_contents =
+	old_tablespace_file_contents =
 		filter_old_tablespace_file_for_dbid(
 			contents,
 			oldCluster->gp_dbid);

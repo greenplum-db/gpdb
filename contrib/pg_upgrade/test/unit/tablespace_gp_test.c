@@ -3,7 +3,10 @@
 #include "cmockery_gp.h"
 
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 #include "pg_upgrade_dummies.c"
+
+OldTablespaceFileContents *old_tablespace_file_contents;
 
 /*
  * Test dummies

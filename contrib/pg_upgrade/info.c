@@ -380,12 +380,12 @@ determine_db_tablespace_path(ClusterInfo *currentCluster,
                              Oid tablespace_oid)
 {
 	if (currentCluster != &old_cluster ||
-		currentCluster->old_tablespace_file_contents == NULL ||
+		old_tablespace_file_contents == NULL ||
 		!is_gpdb_version_with_filespaces(currentCluster))
 		return spclocation;
 
 	GetTablespacePathResponse response = gp_get_tablespace_path(
-		currentCluster->old_tablespace_file_contents,
+		old_tablespace_file_contents,
 		tablespace_oid);
 
 	switch (response.code)

@@ -15,6 +15,8 @@ ClusterInfo *test_cluster;
 OSInfo      os_info;
 OSInfo      *test_os_info;
 
+OldTablespaceFileContents *old_tablespace_file_contents;
+
 bool _is_old_tablespaces_file_empty;
 bool _populate_gpdb6_cluster_tablespace_suffix_was_called;
 
@@ -27,7 +29,7 @@ static void stub_number_of_tablespaces(int stub_value)
 	 * given the old cluster some non-null
 	 * contents to signify that it is populated
 	 */
-	old_cluster.old_tablespace_file_contents = palloc0(sizeof(void *));
+	old_tablespace_file_contents = palloc0(sizeof(void *));
 
 	_stubbed_number_of_tablespaces = stub_value;
 }
@@ -100,7 +102,7 @@ setup(void **state)
 	old_cluster  = *test_cluster;
 	os_info = *test_os_info;
 
-	old_cluster.old_tablespace_file_contents = NULL;
+	old_tablespace_file_contents = NULL;
 	stub_is_old_tablespaces_file_empty(true);
 
 	_populate_gpdb6_cluster_tablespace_suffix_was_called = false;

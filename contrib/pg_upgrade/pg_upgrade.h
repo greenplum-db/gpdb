@@ -370,10 +370,7 @@ typedef struct
 	const char *tablespace_suffix;		/* directory specification */
 
 	int gp_dbid; /* greenplum database id of the cluster */
-
-	OldTablespaceFileContents *old_tablespace_file_contents;
 } ClusterInfo;
-
 
 /*
  *	LogOpts
@@ -424,6 +421,7 @@ extern UserOpts user_opts;
 extern ClusterInfo old_cluster,
 			new_cluster;
 extern OSInfo os_info;
+extern OldTablespaceFileContents *old_tablespace_file_contents;
 
 /* check.c */
 
