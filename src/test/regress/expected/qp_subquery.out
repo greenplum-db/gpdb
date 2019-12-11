@@ -1071,18 +1071,17 @@ create table TabDel4(a int not null, b int not null);
 insert into TabDel4 values(1,2);
 commit;
 explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- do not support this because we produce NLASJ
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Delete on tabdel1  (cost=1.09..3.17 rows=2 width=16)
-   ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.09..3.17 rows=2 width=10)
-         ->  Hash Left Anti Semi (Not-In) Join  (cost=1.09..3.17 rows=2 width=10)
-               Hash Cond: tabdel1.a = tabdel3.a
-               ->  Seq Scan on tabdel1  (cost=0.00..2.03 rows=1 width=14)
-               ->  Hash  (cost=1.05..1.05 rows=1 width=4)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=1 width=4)
-                           ->  Seq Scan on tabdel3  (cost=0.00..1.01 rows=1 width=4)
- Optimizer status: Postgres query optimizer
-(9 rows)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Delete on tabdel1  (cost=1.09..4.16 rows=2 width=16)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=1.09..4.16 rows=2 width=16)
+         Hash Cond: (tabdel1.a = tabdel3.a)
+         ->  Seq Scan on tabdel1  (cost=0.00..3.03 rows=1 width=14)
+         ->  Hash  (cost=1.05..1.05 rows=1 width=10)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=1 width=10)
+                     ->  Seq Scan on tabdel3  (cost=0.00..1.01 rows=1 width=10)
+ Optimizer: Postgres query optimizer
+(8 rows)
 
 explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- support this
                                  QUERY PLAN                                 
