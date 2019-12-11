@@ -513,14 +513,7 @@ static void copy_append_only_segment_file(
 							  &mirroredDstOpen,
 							  buffer,
 							  bufferLen,
-							  &primaryError,
 							  &mirrorDataLossOccurred);
-		if (primaryError != 0)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not write file \"%s\": %s",
-							dstFileName,
-							strerror(primaryError))));
 		
 		readOffset += bufferLen;
 		
