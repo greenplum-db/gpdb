@@ -4,10 +4,11 @@
 <topic id="topic1" xml:lang="en">
   <title id="pz212122">Machine Learning and Deep Learning</title>
   <body>
+    <p>With Greenplum Database, the Apache MADlib extension provides the ability to run machine
+      learning and deep learning workloads.</p>
     <p>This chapter includes the following information:</p>
     <ul>
       <li id="pz219023"><xref href="#topic2" type="topic" format="dita"/></li>
-      <li><xref href="#topic_khs_klx_g3b" format="dita"/></li>
       <li id="pz213664" otherprops="pivotal"><xref href="#topic3" type="topic" format="dita"/></li>
       <li otherprops="pivotal"><xref href="#topic_eqm_klx_hw" format="dita"/></li>
       <li id="pz213668" otherprops="pivotal"><xref href="#topic6" type="topic" format="dita"/></li>
@@ -16,60 +17,85 @@
     </ul>
   </body>
   <topic id="topic2" xml:lang="en">
-    <title id="pz217886">About MADlib</title>
+    <title id="pz217886">Apache MADlib</title>
     <body>
-      <p>MADlib is an open-source library for scalable in-database analytics. With the Greenplum
-        Database MADlib extension, you can use MADlib functionality in a Greenplum Database. </p>
-      <p>MADlib provides data-parallel implementations of mathematical, statistical and
-        machine-learning methods for structured and unstructured data. It provides an suite of
-        SQL-based algorithms for machine learning, data mining and statistics that run at scale
-        within a database engine, with no need for transferring data between Greenplum Database and
-        other tools. </p>
-      <p>MADlib requires the <codeph>m4</codeph> macro processor version 1.4.13 or later.</p>
-      <p>MADlib can be used with PivotalR, an R package that enables users to interact with data
-        resident in Greenplum Database using the R client. See <xref href="#topic_dxp_vq2_sv"
-          format="dita"/>.</p>
-    </body>
-  </topic>
-
-  <topic id="mach_learning" xml:lang="en">
-    <title>About Machine Learning</title>
-    <body>
-      <p>Machine learning is a subset of artificial intelligence (AI) that gives computers
-         the ability to learn without being explicitly and rigidly programmed. The algorithms
-        that exist in a machine learning environment enable systems that can go beyond traditional strict programming processes. </p>
-    </body>
-  </topic>
-
-
-  <topic id="topic_khs_klx_g3b">
-    <title>About Deep Learning</title>
-    <body>
-      <p>Deep learning is a type of machine learning, originally inspired by biology of the brain,
-        that uses a class of algorithms called artificial neural networks. Given the important use
-        cases that can be effectively addressed with deep learning, it is starting to become a more
-        important part of enterprise computing. </p>
-      <p>Deep learning support for Keras and TensorFlow was added to Apache MADlib starting with the
-        1.16 release. Refer to the following documents for more information about deep learning on
-        Greenplum using Apache MADlib:<ul id="ul_kyh_rlx_g3b">
-          <li><xref href="http://madlib.apache.org/docs/latest/group__grp__dl.html" format="html"
-              scope="external">MADlib user documentation</xref></li>
-          <li><xref href="https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning"
-              format="html" scope="external">Supported libraries and configuration
-              instructions</xref></li>
-        </ul></p>
+      <p>Apache MADlib is an open-source library for scalable in-database analytics. You can install
+        it as an extension in a Greenplum Database system you can run data-parallel implementations
+        of mathematical, statistical, graph, machine learning, and deep learning methods on
+        structured and unstructured data.  For Greenplum and MADlib version compatibility, refer to
+          <xref
+          href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?"
+          format="html" scope="external">MADbib FAQ</xref>.</p>
+      <p>MADlib’s suite of SQL-based algorithms run at scale within a single Greenplum Database
+        engine without needing to transfer data between the database and other tools.</p>
+      <p>MADlib is part of the database fabric with no changes to the Greenplum architecture. This
+        makes it easy for database administrators to deploy and manage since it is not a separate
+        daemon or separate software running outside the database.</p>
+      <fig id="madlib_architecture">
+        <title>Greenplum MADlib Analytics Architecture</title>
+        <image placement="break" href="graphics/gp_greenplum_diagram.png" width="750"
+          height="450" align="center"/>
+      </fig>
+      <section>
+        <title>Machine Learning</title>
+        <p dir="ltr">Apache MADlib consists of methods to support the full spectrum of data science
+          activities. This includes data transformation and feature engineering, using methods in
+          descriptive and inferential statistics, pivoting, sessionization and encoding categorical
+          variables. There is also a comprehensive library of graph, supervised learning and
+          unsupervised learning methods. </p>
+        <p dir="ltr">In the area of model selection, MADlib supports cross validation and the most
+          common prediction metrics for evaluating the quality of predictions of a model. Please
+          refer the the <xref href="http://madlib.apache.org/docs/latest/index.html" format="html"
+            scope="external">MADlib user guide</xref> for more information on these methods.</p>
+        <p> </p>
+      </section>
+      <section>
+        <title> Deep Learning</title>
+        <p dir="ltr">Starting in Apache MADlib release 1.16, Greenplum Database supports using Keras
+          and TensorFlow for deep learning. You can review the <xref
+            href="https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning" format="html"
+            scope="external">supported libraries and configuration instructions</xref> on the Apache
+          MADlib pages as well as user documentation for <xref
+            href="http://madlib.apache.org/docs/latest/group__grp__dl.html" format="html"
+            scope="external">Keras API </xref>using the Tensorflow backend.</p>
+        <p dir="ltr">MADlib supports Keras with a TensorFlow backend, with or without Graphics
+          Processing Units (GPUs). GPUs can significantly accelerate the training of deep neural
+          networks so they are typically used for enterprise level workloads. For further GPU
+          information, visit the MADlib wiki, <xref
+            href="https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning" format="html"
+            scope="external"
+          >https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning</xref>. </p>
+      </section>
+      <section>
+        <title>PivotalR</title>
+        <p>MADlib can be used with PivotalR, an R client package that enables users to interact with
+          data resident in the Greenplum Database. PivotalR can be considered as a wrapper around
+          MADlib that translates R code into SQL to run on MPP databases and is designed for users
+          familiar with R but with data sets that are too large for R.  For more details see <xref
+            href="#topic_dxp_vq2_sv" format="dita"/>.</p>
+      </section>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en" otherprops="pivotal">
     <title id="pz214493">Installing MADlib</title>
     <body>
+      <p><b>Note</b>: MADlib requires the <codeph>m4</codeph> macro processor version 1.4.13 or
+        later.</p>
       <p>To install MADlib on Greenplum Database, you first install a compatible Greenplum MADlib
         package and then install the MADlib function libraries on all databases that will use
         MADlib.</p>
-      <p>The <codeph><xref href="../../utility_guide/ref/gppkg.xml#topic1"
-          >gppkg</xref></codeph> utility installs Greenplum Database extensions, along with any
-        dependencies, on all hosts across a cluster. It also automatically installs extensions on
-        new hosts in the case of system expansion segment recovery. </p>
+      <p>The <codeph><xref href="../utility_guide/ref/gppkg.xml#topic1">gppkg</xref></codeph>
+        utility installs Greenplum Database extensions, along with any dependencies, on all hosts
+        across a cluster. It also automatically installs extensions on new hosts in the case of
+        system expansion segment recovery. </p>
+      <p dir="ltr">If you have GPUs installed on some or across all hosts in the cluster, then the
+        segments residing on those hosts can benefit from GPU acceleration. GPUs and deep learning
+        libraries such as Keras, TensorFlow, cudNN, and CUDA are managed separately from MADlib. For
+        more information see the <xref
+          href="https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning" format="html"
+          scope="external">MADlib wiki instructions for deep learning </xref> and the <xref
+          href="http://madlib.apache.org/docs/latest/group__grp__dl.html" format="html"
+          scope="external">MADlib user documentation for deep learning</xref> .</p>
     </body>
     <topic id="topic4" xml:lang="en">
       <title>Installing the Greenplum Database MADlib Package</title>
