@@ -371,13 +371,12 @@
           the root level for partitioned tables. The Postgres Planner does not use these statistics. </p>
         <p>The time to analyze a partitioned table is similar to the time to analyze a
           non-partitioned table with the same data. The time to perform <codeph>ANALYZE
-            ROOTPARTITION</codeph> depends on whether leaf partitions have statistics.
-            <codeph>ANALYZE ROOTPARTITION</codeph> uses statistics from all leaf partitions to
-          generate root partition statistics. For leaf partitions with statistics, those statistics
-          are used. For leaf partitions without statistics, leaf partition data is sampled
-          (statistics are not added to leaf partitions without statistics). Using leaf partition
-          statistics to generate root partition statistics is much quicker than sampling leaf
-          partition data.</p>
+            ROOTPARTITION</codeph> depends on whether all leaf partitions have statistics. If all
+          leaf partitions have statistics, those statistics are used are used to generate root
+          partition statistics. If a leaf partitions does not have statistics, leaf partition data
+          is sampled for all leaf partitions (statistics are not added to leaf partitions without
+          statistics). Using leaf partition statistics to generate root partition statistics is much
+          quicker than sampling leaf partition data.</p>
         <p>The Greenplum Database server configuration parameter <codeph><xref
               href="../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
               >optimizer_analyze_root_partition</xref></codeph> affects when statistics are
