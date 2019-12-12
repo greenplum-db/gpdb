@@ -1,3 +1,10 @@
+/*
+ *	greenplum/greenplum_cluster_info_internal.h
+ *
+ *	Portions Copyright (c) 2019-Present, Pivotal Software Inc
+ *	contrib/pg_upgrade/greenplum/greenplum_cluster_info_internal.h
+ */
+
 #include "postgres_fe.h"
 #include "greenplum_cluster_info.h"
 

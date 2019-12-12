@@ -1,3 +1,9 @@
+/*
+ *	greenplum/check_gp.h
+ *
+ *	Portions Copyright (c) 2019-Present, Pivotal Software Inc
+ *	contrib/pg_upgrade/greenplum/check_gp.h
+ */
 void check_heterogeneous_partition(void);
 
 #define CHECK_PARTITION_TABLE_MATCHES_COLUMN_COUNT \
