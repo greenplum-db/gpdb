@@ -138,7 +138,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	 * of CREATE and ALTER
 	 */
 	pg_resgroupcapability_rel = heap_open(ResGroupCapabilityRelationId, AccessExclusiveLock);
-	pg_resgroup_rel = heap_open(ResGroupRelationId, RowExclusiveLock);
+	pg_resgroup_rel = heap_open(ResGroupRelationId, AccessExclusiveLock);
 
 	/* Check if MaxResourceGroups limit is reached */
 	sscan = systable_beginscan(pg_resgroup_rel, ResGroupRsgnameIndexId, false,
@@ -282,7 +282,7 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 	 * Check the pg_resgroup relation to be certain the resource group already
 	 * exists.
 	 */
-	pg_resgroup_rel = heap_open(ResGroupRelationId, RowExclusiveLock);
+	pg_resgroup_rel = heap_open(ResGroupRelationId, AccessExclusiveLock);
 
 	ScanKeyInit(&scankey,
 				Anum_pg_resgroup_rsgname,

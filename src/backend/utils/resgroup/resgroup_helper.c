@@ -245,7 +245,7 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 			 * block until creating/dropping finish to avoid inconsistent
 			 * resource group metadata
 			 */
-			pg_resgroup_rel = heap_open(ResGroupRelationId, ExclusiveLock);
+			pg_resgroup_rel = heap_open(ResGroupRelationId, AccessShareLock);
 
 			sscan = systable_beginscan(pg_resgroup_rel, InvalidOid, false,
 									   NULL, 0, NULL);
