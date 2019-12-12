@@ -1,3 +1,4 @@
+#include "postgres_fe.h"
 #include "pg_upgrade_greenplum.h"
 
 typedef enum
