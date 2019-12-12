@@ -1,6 +1,6 @@
 #include "postgres_fe.h"
 #include "pg_upgrade_greenplum.h"
-#include "greenplum_cluster_info.h"
+#include "tablespace_gp_internal.h"
 #include "greenplum_cluster_info_internal.h"
 
 typedef enum

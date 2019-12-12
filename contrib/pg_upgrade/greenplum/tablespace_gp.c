@@ -10,6 +10,7 @@
  */
 #include "pg_upgrade_greenplum.h"
 #include "old_tablespace_file_gp.h"
+#include "tablespace_gp_internal.h"
 #include "greenplum_cluster_info_internal.h"
 
 static char *
