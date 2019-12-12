@@ -125,7 +125,6 @@ void generate_old_tablespaces_file(ClusterInfo *oldCluster);
 void populate_gpdb6_cluster_tablespace_suffix(ClusterInfo *cluster);
 bool is_gpdb_version_with_filespaces(ClusterInfo *cluster);
 
-
 static inline bool
 is_gpdb6(ClusterInfo *cluster)
 {

@@ -122,6 +122,7 @@ compile_test = $(CC) $(CFLAGS) $(debugging_flags) $^ $(libpq_pgport) $(LDFLAGS) 
 tablespace_gp_test.t: tablespace_gp_test.o $(test_dependencies) \
 	$(pg_upgrade_greenplum_directory)/tablespace_gp.o \
 	$(pg_upgrade_greenplum_directory)/option_gp.o \
+	$(pg_upgrade_greenplum_directory)/old_tablespace_file_gp.o \
 	$(pg_upgrade_directory)/util.o \
 	$(pg_upgrade_directory)/server.o \
 	$(pg_upgrade_directory)/exec.o \

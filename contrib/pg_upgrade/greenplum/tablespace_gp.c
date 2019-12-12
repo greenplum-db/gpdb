@@ -9,6 +9,7 @@
  *
  */
 #include "pg_upgrade_greenplum.h"
+#include "old_tablespace_file_gp.h"
 
 static char *
 get_generated_old_tablespaces_file_path(void)
@@ -70,10 +71,10 @@ populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster,
 	OldTablespaceFileContents *contents = parse_old_tablespace_file_contents(
 		file_path);
 
-	old_tablespace_file_contents =
+	set_old_tablespace_file_contents(
 		filter_old_tablespace_file_for_dbid(
 			contents,
-			oldCluster->gp_dbid);
+			oldCluster->gp_dbid));
 
 	clear_old_tablespace_file_contents(contents);
 }

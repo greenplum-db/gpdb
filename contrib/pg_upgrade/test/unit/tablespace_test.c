@@ -3,6 +3,10 @@
 #include "cmockery_gp.h"
 
 #include "pg_upgrade.h"
+
+#include "greenplum/old_tablespace_file_gp.h"
+#include "greenplum/pg_upgrade_greenplum.h"
+
 #include "pg_upgrade_dummies.c"
 
 /* 
@@ -16,6 +20,18 @@ OSInfo      os_info;
 OSInfo      *test_os_info;
 
 OldTablespaceFileContents *old_tablespace_file_contents;
+
+OldTablespaceFileContents *
+get_old_tablespace_file_contents(void)
+{
+	return old_tablespace_file_contents;
+}
+
+bool
+old_tablespace_file_contents_exists(void)
+{
+	return get_old_tablespace_file_contents() != NULL;
+}
 
 bool _is_old_tablespaces_file_empty;
 bool _populate_gpdb6_cluster_tablespace_suffix_was_called;

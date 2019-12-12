@@ -85,7 +85,6 @@ static char *restrict_env;
 ClusterInfo old_cluster,
 			new_cluster;
 OSInfo		os_info;
-OldTablespaceFileContents *old_tablespace_file_contents;
 
 int
 main(int argc, char **argv)

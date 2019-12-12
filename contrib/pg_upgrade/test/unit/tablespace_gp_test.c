@@ -4,9 +4,18 @@
 
 #include "pg_upgrade.h"
 #include "greenplum/pg_upgrade_greenplum.h"
+#include "greenplum/old_tablespace_file_gp.h"
 #include "pg_upgrade_dummies.c"
 
 OldTablespaceFileContents *old_tablespace_file_contents;
+
+void
+set_old_tablespace_file_contents(
+	OldTablespaceFileContents *new_value
+	)
+{
+	old_tablespace_file_contents = new_value;
+}
 
 /*
  * Test dummies

@@ -421,7 +421,6 @@ extern UserOpts user_opts;
 extern ClusterInfo old_cluster,
 			new_cluster;
 extern OSInfo os_info;
-extern OldTablespaceFileContents *old_tablespace_file_contents;
 
 /* check.c */
 

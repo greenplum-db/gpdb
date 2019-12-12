@@ -17,7 +17,7 @@ OBJS += greenplum/aotable.o greenplum/gpdb4_heap_convert.o greenplum/version_gp.
 		greenplum/controldata_gp.o \
 		greenplum/old_tablespace_file_contents.o greenplum/old_tablespace_file_parser.o \
 		greenplum/tablespace_gp.o greenplum/old_tablespace_file_parser_observer.o \
-		greenplum/info_gp.o
+		greenplum/info_gp.o greenplum/old_tablespace_file_gp.o
 
 PG_CPPFLAGS  = -DFRONTEND -DDLSUFFIX=\"$(DLSUFFIX)\" -I$(srcdir) -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)

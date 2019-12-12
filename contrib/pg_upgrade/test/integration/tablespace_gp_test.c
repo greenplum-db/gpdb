@@ -1,20 +1,16 @@
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <stdbool.h>
-
 /*
  * External dependencies
  */
-#include "cmockery.h"
+#include "cmockery_gp.h"
 
 /*
  * Production dependencies
  */
 #include "pg_upgrade.h"
 #include "greenplum/pg_upgrade_greenplum.h"
-#include "greenplum/old_tablespace_file_parser_observer.h"
+#include "greenplum/old_tablespace_file_gp.h"
 #include "greenplum/old_tablespace_file_contents.h"
+#include "greenplum/old_tablespace_file_parser_observer.h"
 
 /*
  * Test dependencies
@@ -28,7 +24,6 @@ ClusterInfo old_cluster;
 ClusterInfo new_cluster;
 OSInfo os_info;
 UserOpts user_opts;
-OldTablespaceFileContents *old_tablespace_file_contents;
 
 void 
 OldTablespaceFileParser_invalid_access_error_for_field(int row_index, int field_index)
@@ -43,22 +38,20 @@ OldTablespaceFileParser_invalid_access_error_for_row(int row_index)
 }
 
 static void
-test_populates_old_tablespace_file_contents_to_have_zero_records_for_gpdb6_cluster(void **state)
+test_populates_old_tablespace_file_contents_to_have_default_tablespace_records_for_gpdb6_cluster(void **state)
 {
 	ClusterInfo cluster;
-	cluster.port = GPDB_SIX_PORT;
-	cluster.major_version = 90400; /* a GPDB 6 cluster */
+	cluster.port = GPDB_FIVE_PORT;
+	cluster.major_version = 80300; /* a GPDB 5 cluster */
 	os_info.user = getenv("USER");
 	cluster.sockdir = NULL;
 
-	old_tablespace_file_contents = NULL;
-
 	generate_old_tablespaces_file(&cluster);
 
-	assert_false(old_tablespace_file_contents == NULL);
+	assert_false(get_old_tablespace_file_contents() == NULL);
 
 	assert_int_equal(
-		OldTablespaceFileContents_TotalNumberOfTablespaces(old_tablespace_file_contents),
+		OldTablespaceFileContents_TotalNumberOfTablespaces(get_old_tablespace_file_contents()),
 		2);
 }
 
@@ -92,25 +85,23 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 	os_info.user = getenv("USER");
 	cluster.sockdir = NULL;
 
-	old_tablespace_file_contents = NULL;
-
 	generate_old_tablespaces_file(&cluster);
 
-	assert_false(old_tablespace_file_contents == NULL);
+	assert_false(get_old_tablespace_file_contents() == NULL);
 
 	assert_int_equal(
-		OldTablespaceFileContents_TotalNumberOfTablespaces(old_tablespace_file_contents),
+		OldTablespaceFileContents_TotalNumberOfTablespaces(get_old_tablespace_file_contents()),
 		3);
 
 	char **results = OldTablespaceFileContents_GetArrayOfTablespacePaths(
-		old_tablespace_file_contents);
+		get_old_tablespace_file_contents());
 
 	assert_string_equal(
 		results[2],
 		"/tmp/tablespace-gp-test/fsseg0");
 
 	OldTablespaceRecord **records = OldTablespaceFileContents_GetTablespaceRecords(
-		old_tablespace_file_contents
+		get_old_tablespace_file_contents()
 		);
 
 	assert_false(
@@ -122,22 +113,11 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 }
 
 static void
-setup_gpdb6(void **state)
-{
-	resetGpdbSixDataDirectories();
-	startGpdbSixCluster();
-}
-
-static void
-teardown_gpdb6(void **state)
-{
-	stopGpdbSixCluster();
-	resetGpdbSixDataDirectories();
-}
-
-static void
 setup_gpdb5(void **state)
 {
+	system("rm old_tablespaces.txt");
+
+	stopGpdbFiveCluster();
 	resetGpdbFiveDataDirectories();
 	startGpdbFiveCluster();
 }
@@ -155,8 +135,8 @@ main(int argc, char *argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const		UnitTest tests[] = {
-		unit_test_setup_teardown(test_populates_old_tablespace_file_contents_to_have_zero_records_for_gpdb6_cluster, setup_gpdb6, teardown_gpdb6),
 		unit_test_setup_teardown(test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_contents, setup_gpdb5, teardown_gpdb5),
+		unit_test_setup_teardown(test_populates_old_tablespace_file_contents_to_have_default_tablespace_records_for_gpdb6_cluster, setup_gpdb5, teardown_gpdb5),
 	};
 
 	return run_tests(tests);

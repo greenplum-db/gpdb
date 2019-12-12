@@ -2,6 +2,8 @@
 
 #include "greenplum/check_gp.h"
 #include "pg_upgrade.h"
+#include "greenplum/old_tablespace_file_gp.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 
 ClusterInfo old_cluster,
 			new_cluster;
@@ -18,6 +20,12 @@ void
 populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster, const char *file_path)
 {
 
+}
+
+OldTablespaceFileContents *
+get_old_tablespace_file_contents(void)
+{
+	return NULL;
 }
 
 static void

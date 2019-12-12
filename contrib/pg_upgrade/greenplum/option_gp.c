@@ -103,4 +103,3 @@ is_show_progress_mode(void)
 {
 	return greenplum_user_opts.progress;
 }
-
