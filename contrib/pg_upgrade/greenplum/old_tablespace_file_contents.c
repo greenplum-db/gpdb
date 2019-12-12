@@ -102,12 +102,6 @@ get_parser_document(const char *const file_path)
 	return document;
 }
 
-bool
-is_old_tablespaces_file_empty(OldTablespaceFileContents *contents)
-{
-	return contents && contents->number_of_tablespaces == 0;
-}
-
 void
 clear_old_tablespace_file_contents(OldTablespaceFileContents *contents)
 {
