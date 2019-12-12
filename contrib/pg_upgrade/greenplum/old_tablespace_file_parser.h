@@ -13,13 +13,6 @@
 
 typedef struct OldTablespaceFileParser_DocumentData OldTablespaceFileParser_Document;
 
-enum OldTablespaceFileParser_Field {
-	OldTablespace_gp_dbid,
-	OldTablespace_tablespace_oid,
-	OldTablespace_tablespace_name,
-	OldTablespace_tablespace_path
-};
-
 /*
  * Read through file and present contents as rows:
  * 
