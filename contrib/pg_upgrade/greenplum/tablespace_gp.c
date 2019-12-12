@@ -13,6 +13,8 @@
 #include "tablespace_gp_internal.h"
 #include "greenplum_cluster_info_internal.h"
 
+#define OLD_TABLESPACES_FILE    "old_tablespaces.txt"
+
 static char *
 get_generated_old_tablespaces_file_path(void)
 {
