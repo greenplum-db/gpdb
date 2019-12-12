@@ -12,6 +12,7 @@
 #include "old_tablespace_file_gp.h"
 #include "tablespace_gp_internal.h"
 #include "greenplum_cluster_info_internal.h"
+#include "old_tablespace_file_gp_internal.h"
 
 #define OLD_TABLESPACES_FILE    "old_tablespaces.txt"
 
@@ -95,4 +96,14 @@ bool
 is_gpdb_version_with_filespaces(ClusterInfo *cluster)
 {
 	return GET_MAJOR_VERSION(cluster->major_version) < 904;
+}
+
+void
+populate_os_info_with_file_contents(void)
+{
+	OldTablespaceFileContents *contents = get_old_tablespace_file_contents();
+	os_info.num_old_tablespaces = OldTablespaceFileContents_TotalNumberOfTablespaces(
+		contents);
+	os_info.old_tablespaces = OldTablespaceFileContents_GetArrayOfTablespacePaths(
+		contents);
 }

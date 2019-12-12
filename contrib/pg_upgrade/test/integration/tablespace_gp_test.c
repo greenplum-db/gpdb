@@ -9,6 +9,7 @@
 #include "pg_upgrade.h"
 #include "greenplum/pg_upgrade_greenplum.h"
 #include "greenplum/old_tablespace_file_gp.h"
+#include "greenplum/old_tablespace_file_gp_internal.h"
 #include "greenplum/old_tablespace_file_contents.h"
 #include "greenplum/old_tablespace_file_parser_observer.h"
 #include "greenplum/greenplum_cluster_info_internal.h"

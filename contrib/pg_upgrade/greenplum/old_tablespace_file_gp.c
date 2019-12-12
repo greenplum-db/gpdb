@@ -11,6 +11,7 @@
 
 #include "old_tablespace_file_contents.h"
 #include "old_tablespace_file_gp.h"
+#include "old_tablespace_file_gp_internal.h"
 
 static OldTablespaceFileContents *old_tablespace_file_contents;
 

@@ -2,9 +2,34 @@
 
 #include "greenplum/old_tablespace_file_contents.h"
 #include "greenplum/info_gp.h"
+#include "greenplum/info_gp_internal.h"
 
 char *_stubbed_tablespace_path;
 bool _stubbed_is_user_defined_tablespace;
+ClusterInfo old_cluster;
+
+bool old_tablespace_file_contents_exists(void)
+{
+	return false;
+}
+
+bool
+is_gpdb_version_with_filespaces(ClusterInfo *cluster)
+{
+	return true;
+}
+
+void
+pg_fatal(const char *fmt,...)
+{
+	exit(1);
+}
+
+OldTablespaceFileContents *
+get_old_tablespace_file_contents()
+{
+	return NULL;
+}
 
 struct OldTablespaceRecordData
 {

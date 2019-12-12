@@ -3,7 +3,9 @@
 #include "greenplum/check_gp.h"
 #include "pg_upgrade.h"
 #include "greenplum/old_tablespace_file_gp.h"
+#include "greenplum/old_tablespace_file_gp_internal.h"
 #include "greenplum/pg_upgrade_greenplum.h"
+#include "greenplum/tablespace_gp_internal.h"
 #include "greenplum/greenplum_cluster_info_internal.h"
 
 ClusterInfo old_cluster,
@@ -39,7 +41,7 @@ populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster, const char *f
 bool
 is_gp_dbid_set(GreenplumClusterInfo *info)
 {
-
+	return false;
 }
 
 OldTablespaceFileContents *

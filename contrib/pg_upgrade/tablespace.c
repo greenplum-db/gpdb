@@ -33,16 +33,6 @@ init_tablespaces(void)
 }
 
 static void
-populate_os_info_with_file_contents()
-{
-	OldTablespaceFileContents *contents = get_old_tablespace_file_contents();
-	os_info.num_old_tablespaces = OldTablespaceFileContents_TotalNumberOfTablespaces(
-		contents);
-	os_info.old_tablespaces = OldTablespaceFileContents_GetArrayOfTablespacePaths(
-		contents);
-}
-
-static void
 verify_old_tablespace_paths(void)
 {
 	for (int tblnum = 0; tblnum < os_info.num_old_tablespaces; tblnum++)

@@ -12,23 +12,11 @@
 #ifndef PG_UPGRADE_INFO_GP_H
 #define PG_UPGRADE_INFO_GP_H
 
-#include "old_tablespace_file_contents.h"
+#include "pg_upgrade_greenplum.h"
+#include "old_tablespace_file_gp.h"
 
-typedef enum GetTablespacePathResponseCodes {
-	GetTablespacePathResponse_NOT_FOUND_IN_FILE,
-	GetTablespacePathResponse_FOUND_USER_DEFINED_TABLESPACE,
-	GetTablespacePathResponse_FOUND_SYSTEM_TABLESPACE,
-} GetTablespacePathResponseCodes;
-
-typedef struct GetTablespacePathResponse {
-	GetTablespacePathResponseCodes code;
-	char *tablespace_path;
-} GetTablespacePathResponse;
-
-/*
- * Return the Tablespace OID specific tablespace path to an GDPB 5 tablespace
- */
-GetTablespacePathResponse
-gp_get_tablespace_path(OldTablespaceFileContents *contents, Oid tablespace_oid);
+char *determine_db_tablespace_path(ClusterInfo *currentCluster,
+	char *spclocation,
+	Oid tablespace_oid);
 
 #endif /* PG_UPGRADE_INFO_GP_H */
