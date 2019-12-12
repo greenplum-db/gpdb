@@ -1269,6 +1269,40 @@ PREPARE plan5 AS delete from sales_par where region='asia' and id in (select b f
 EXECUTE plan5;
 select * from sales_par where region='asia' and id in (select b from m where a = 2);
 
+-- ----------------------------------------------------------------------
+-- Test: Explicit redistributed motion may be removed.
+-- ----------------------------------------------------------------------
+create table tab1(a int, b int) distributed by (a);
+create table tab2(a int, b int) distributed by (a);
+
+analyze tab1;
+analyze tab2;
+
+-- colocate, no motion, thus no explicit redistributed motion
+explain (costs off) delete from tab1 using tab2 where tab1.a = tab2.a;
+-- redistribtued tab2, no motion above result relation, thus no explicit
+-- redistributed motion
+explain (costs off) delete from tab1 using tab2 where tab1.a = tab2.b;
+-- redistributed motion table, has to add explicit redistributed motion
+explain (costs off) delete from tab1 using tab2 where tab1.b = tab2.b;
+
+alter table tab1 set distributed by (b);
+create table tab3 (a int, b int) distributed by (b);
+
+insert into tab1 values (1, 1);
+insert into tab2 values (1, 1);
+insert into tab3 values (1, 1);
+
+set allow_system_table_mods=true;
+update pg_class set relpages = 10000 where relname='tab2';
+update pg_class set reltuples = 100000000 where relname='tab2';
+update pg_class set relpages = 100000000 where relname='tab3';
+update pg_class set reltuples = 100000 where relname='tab3';
+
+-- Planner: there is redistribute motion above tab1, however, we can also
+-- remove the explicit redistribute motion here because the final join
+-- co-locate with the result relation tab1.
+explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
