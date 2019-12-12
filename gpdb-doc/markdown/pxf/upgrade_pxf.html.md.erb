@@ -86,6 +86,19 @@ After you upgrade to the new version of Greenplum Database, perform the followin
 
 5. **If you are upgrading from Greenplum Database version 5.21.1 or earlier**: The PXF Hive connector no longer supports providing a `DELIMITER=<delim>` option in the `LOCATION` URI when you create an external table that specifies the `HiveText` or `HiveRC` profiles. If you have previously created an external table that specified a `DELIMITER` in the `LOCATION` URI, you must drop the table, and recreate it omitting the `DELIMITER` from the `LOCATION`. You are still required to provide a non-default delimiter in the external table formatting options.
 
+5. **If you are upgrading from Greenplum Database version 5.23 or earlier** and you have configured any JDBC servers that access Kerberos-secured Hive, you must now set the `hadoop.security.authentication` property in the `jdbc-site.xml` file to explicitly identify use of the Kerberos authentication method. Perform the following for each of these server configs:
+
+    1. Navigate to the server configuration directory.
+    2. Open the `jdbc-site.xml` file in the editor of your choice and uncomment or add the following property block to the file:
+
+        ```xml
+        <property>
+            <name>hadoop.security.authentication</name>
+            <value>kerberos</value>
+        </property>
+        ```
+    3. Save the file and exit the editor.
+
 5. Synchronize the PXF configuration from the master host to the standby master and each Greenplum Database segment host. For example:
 
     ``` shell
