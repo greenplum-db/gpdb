@@ -27,6 +27,7 @@
 
 /data
 # regress files
+/expected/different_name_index_backed_constraint.out
 /expected/exchange_partition_heap_table.out
 /expected/external_table.out
 /expected/partitioned_heap_table_with_differently_aligned_dropped_columns.out
@@ -37,6 +38,8 @@
 /expected/mismatched_aopartition_indexes.out
 /expected/unsupported_name_col.out
 /expected/unsupported_tsquery_col.out
+/expected/upgraded_ao_table_without_base_relfilenode.out
+/sql/different_name_index_backed_constraint.sql
 /sql/exchange_partition_heap_table.sql
 /sql/external_table.sql
 /sql/partitioned_heap_table_with_differently_aligned_dropped_columns.sql
@@ -47,6 +50,7 @@
 /sql/mismatched_aopartition_indexes.sql
 /sql/unsupported_name_col.sql
 /sql/unsupported_tsquery_col.sql
+/sql/upgraded_ao_table_without_base_relfilenode.sql
 
 # cmockery tests
 /*.t
