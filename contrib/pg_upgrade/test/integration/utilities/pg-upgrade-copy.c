@@ -1,5 +1,5 @@
 #include "postgres_fe.h"
-#include "old_tablespace_file_contents.h"
+#include "greenplum/old_tablespace_file_contents.h"
 
 /* 
  * Implements
@@ -125,10 +125,11 @@ copy_tablespaces_from_the_master(PgUpgradeCopyOptions *copy_options)
 		char *master_tablespace_location_directory = OldTablespaceRecord_GetDirectoryPath(master_segment_record);
 		char *segment_tablespace_location_directory = OldTablespaceRecord_GetDirectoryPath(current_segment_record);
 
-		copy_tablespace_from(
-			master_tablespace_location_directory,
-			segment_tablespace_location_directory,
-			copy_options);
+		if (OldTablespaceRecord_GetIsUserDefinedTablespace(current_segment_record))
+			copy_tablespace_from(
+				master_tablespace_location_directory,
+				segment_tablespace_location_directory,
+				copy_options);
 
 		char *segment_tablespace_location_directory_with_gp_dbid = psprintf("%s/%d",
 			segment_tablespace_location_directory,
