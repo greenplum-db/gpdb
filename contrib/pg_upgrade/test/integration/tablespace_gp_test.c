@@ -11,6 +11,7 @@
 #include "greenplum/old_tablespace_file_gp.h"
 #include "greenplum/old_tablespace_file_contents.h"
 #include "greenplum/old_tablespace_file_parser_observer.h"
+#include "greenplum/greenplum_cluster_info_internal.h"
 
 /*
  * Test dependencies
@@ -43,6 +44,8 @@ test_populates_old_tablespace_file_contents_to_have_default_tablespace_records_f
 	ClusterInfo cluster;
 	cluster.port = GPDB_FIVE_PORT;
 	cluster.major_version = 80300; /* a GPDB 5 cluster */
+	cluster.greenplum_cluster_info = make_cluster_info();
+	set_gp_dbid(cluster.greenplum_cluster_info, 1);
 	os_info.user = getenv("USER");
 	cluster.sockdir = NULL;
 
@@ -81,7 +84,8 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 	ClusterInfo cluster;
 	cluster.port = GPDB_FIVE_PORT;
 	cluster.major_version = 10000; /* less than gpdb 6 */
-	cluster.gp_dbid = 2;
+	cluster.greenplum_cluster_info = make_cluster_info();
+	set_gp_dbid(cluster.greenplum_cluster_info, 2);
 	os_info.user = getenv("USER");
 	cluster.sockdir = NULL;
 

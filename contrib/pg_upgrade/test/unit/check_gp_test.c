@@ -4,6 +4,7 @@
 #include "pg_upgrade.h"
 #include "greenplum/old_tablespace_file_gp.h"
 #include "greenplum/pg_upgrade_greenplum.h"
+#include "greenplum/greenplum_cluster_info_internal.h"
 
 ClusterInfo old_cluster,
 			new_cluster;
@@ -16,8 +17,27 @@ char	   *output_files[] = {
 	NULL
 };
 
+
+GreenplumClusterInfo *make_cluster_info(void){
+	return NULL;
+}
+
+int get_gp_dbid(GreenplumClusterInfo *info){
+	return -1;
+}
+
+void set_gp_dbid(GreenplumClusterInfo *info, int gp_dbid){
+
+}
+
 void
 populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster, const char *file_path)
+{
+
+}
+
+bool
+is_gp_dbid_set(GreenplumClusterInfo *info)
 {
 
 }

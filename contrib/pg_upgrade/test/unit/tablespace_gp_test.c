@@ -5,6 +5,8 @@
 #include "pg_upgrade.h"
 #include "greenplum/pg_upgrade_greenplum.h"
 #include "greenplum/old_tablespace_file_gp.h"
+#include "greenplum/greenplum_cluster_info_internal.h"
+
 #include "pg_upgrade_dummies.c"
 
 OldTablespaceFileContents *old_tablespace_file_contents;
@@ -42,6 +44,10 @@ parse_old_tablespace_file_contents(const char *path)
 /*
  * Tests
  */
+int get_gp_dbid(GreenplumClusterInfo *info)
+{
+	return 999;
+}
 
 static void
 test_it_populates_using_gpdb6_tablespace_layout(
@@ -50,7 +56,6 @@ test_it_populates_using_gpdb6_tablespace_layout(
     ClusterInfo clusterInfo;
     strcpy(clusterInfo.major_version_str, "-SOME_MAJOR_VERSION_STRING-");
     clusterInfo.controldata.cat_ver = 12345;
-    clusterInfo.gp_dbid             = 999;
 
     populate_gpdb6_cluster_tablespace_suffix(&clusterInfo);
 

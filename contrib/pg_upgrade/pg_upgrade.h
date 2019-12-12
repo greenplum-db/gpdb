@@ -17,6 +17,8 @@
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
 
+#include "greenplum/greenplum_cluster_info.h"
+
 /* Use port in the private/dynamic port number range */
 #define DEF_PGUPORT			50432
 
@@ -339,6 +341,7 @@ typedef enum
 	PG_FATAL
 } eLogType;
 
+
 typedef long pgpid_t;
 
 
@@ -367,7 +370,7 @@ typedef struct
 	Oid			role_count;		/* number of roles defined in the cluster */
 	const char *tablespace_suffix;		/* directory specification */
 
-	int gp_dbid; /* greenplum database id of the cluster */
+	GreenplumClusterInfo *greenplum_cluster_info;
 } ClusterInfo;
 
 /*

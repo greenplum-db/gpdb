@@ -1,5 +1,7 @@
 #include "postgres_fe.h"
 #include "pg_upgrade_greenplum.h"
+#include "greenplum_cluster_info.h"
+#include "greenplum_cluster_info_internal.h"
 
 typedef enum
 {
@@ -21,6 +23,9 @@ initialize_greenplum_user_options(void)
 {
 	greenplum_user_opts.segment_mode = SEGMENT;
 	greenplum_user_opts.old_tablespace_file_path = NULL;
+
+	old_cluster.greenplum_cluster_info = make_cluster_info();
+	new_cluster.greenplum_cluster_info = make_cluster_info();
 }
 
 bool
@@ -53,11 +58,11 @@ process_greenplum_option(greenplumOption option, char *option_value)
 			break;
 
 		case GREENPLUM_OLD_GP_DBID: /* --old-gp-dbid */
-			old_cluster.gp_dbid = atoi(optarg);
+			set_gp_dbid(old_cluster.greenplum_cluster_info, atoi(optarg));
 			break;
 
 		case GREENPLUM_NEW_GP_DBID: /* --new-gp-dbid */
-			new_cluster.gp_dbid = atoi(optarg);
+			set_gp_dbid(new_cluster.greenplum_cluster_info, atoi(optarg));
 			break;
 
 		case GREENPLUM_OLD_TABLESPACES_FILE: /* --old-tablespaces-file */
@@ -74,10 +79,11 @@ process_greenplum_option(greenplumOption option, char *option_value)
 void
 validate_greenplum_options(void)
 {
-	if (old_cluster.gp_dbid == GP_DBID_NOT_SET)
+
+	if (!is_gp_dbid_set(old_cluster.greenplum_cluster_info))
 		pg_fatal("--old-gp-dbid must be set\n");
 
-	if (new_cluster.gp_dbid == GP_DBID_NOT_SET)
+	if (!is_gp_dbid_set(new_cluster.greenplum_cluster_info))
 		pg_fatal("--new-gp-dbid must be set\n");
 
 	if (greenplum_user_opts.old_tablespace_file_path) {

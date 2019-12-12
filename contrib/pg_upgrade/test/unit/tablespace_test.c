@@ -184,7 +184,6 @@ static void
 test_when_file_is_empty_populate_is_not_called(
 	void **state)
 {
-	old_cluster.gp_dbid = 999;
 	old_cluster.major_version = 80400;
 	new_cluster.major_version = 90400;
 
@@ -198,7 +197,6 @@ test_when_file_is_empty_populate_is_not_called(
 static void
 test_it_finds_old_tablespaces_when_provided_as_a_file(void **state)
 {
-	old_cluster.gp_dbid = 999;
 	old_cluster.major_version = 80400;
 	new_cluster.major_version = 90400;
 

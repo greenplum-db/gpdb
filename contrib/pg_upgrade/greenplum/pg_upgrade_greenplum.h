@@ -66,9 +66,6 @@ typedef enum {
       --old-tablespaces-file    file containing the tablespaces from an old gpdb five cluster\n\
 "
 
-#define GP_DBID_NOT_SET -1
-
-
 /* option_gp.c */
 void initialize_greenplum_user_options(void);
 bool process_greenplum_option(greenplumOption option, char *option_value);
@@ -124,6 +121,9 @@ void populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster, const ch
 void generate_old_tablespaces_file(ClusterInfo *oldCluster);
 void populate_gpdb6_cluster_tablespace_suffix(ClusterInfo *cluster);
 bool is_gpdb_version_with_filespaces(ClusterInfo *cluster);
+
+/* server_gp.c */
+char *greenplum_extra_pg_ctl_flags(GreenplumClusterInfo *info);
 
 static inline bool
 is_gpdb6(ClusterInfo *cluster)

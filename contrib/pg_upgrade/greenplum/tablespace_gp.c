@@ -10,6 +10,7 @@
  */
 #include "pg_upgrade_greenplum.h"
 #include "old_tablespace_file_gp.h"
+#include "greenplum_cluster_info_internal.h"
 
 static char *
 get_generated_old_tablespaces_file_path(void)
@@ -74,7 +75,7 @@ populate_old_cluster_with_old_tablespaces(ClusterInfo *oldCluster,
 	set_old_tablespace_file_contents(
 		filter_old_tablespace_file_for_dbid(
 			contents,
-			oldCluster->gp_dbid));
+			get_gp_dbid(oldCluster->greenplum_cluster_info)));
 
 	clear_old_tablespace_file_contents(contents);
 }
@@ -83,7 +84,7 @@ void
 populate_gpdb6_cluster_tablespace_suffix(ClusterInfo *cluster)
 {
 	cluster->tablespace_suffix = psprintf("/%d/GPDB_6_%d",
-	                                      cluster->gp_dbid,
+	                                      get_gp_dbid(cluster->greenplum_cluster_info),
 	                                      cluster->controldata.cat_ver);
 }
 

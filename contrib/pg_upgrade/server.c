@@ -242,22 +242,10 @@ start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error)
 	else
 		version_opts = "-c gp_num_contents_in_cluster=1";
 
-	int gp_dbid;
-	int gp_content_id;
-
-	if (is_greenplum_dispatcher_mode())
-	{
-		gp_dbid = 1;
-		gp_content_id = -1;
-	}
-	else
-	{
-		gp_dbid = cluster->gp_dbid;
-		gp_content_id = 0;
-	}
+	char *extra_pg_ctl_flags = greenplum_extra_pg_ctl_flags(cluster->greenplum_cluster_info);
 
 	snprintf(cmd, sizeof(cmd),
-		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d -c gp_role=utility %s%s %s%s %s --gp_dbid=%d --gp_contentid=%d \" start",
+		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d -c gp_role=utility %s%s %s%s %s %s\" start",
 		  cluster->bindir, SERVER_LOG_FILE, cluster->pgconfig, cluster->port,
 			 (cluster->controldata.cat_ver >=
 			  BINARY_UPGRADE_SERVER_FLAG_CAT_VER) ? " -b" :
@@ -265,7 +253,7 @@ start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error)
 			 (cluster == &new_cluster) ?
 	  " -c synchronous_commit=off -c fsync=off -c full_page_writes=off" : "",
 			 cluster->pgopts ? cluster->pgopts : "", socket_string, version_opts,
-			 gp_dbid, gp_content_id);
+			 extra_pg_ctl_flags);
 	/*
 	 * Don't throw an error right away, let connecting throw the error because
 	 * it might supply a reason for the failure.

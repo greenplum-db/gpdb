@@ -1,0 +1,1 @@
+typedef struct GreenplumClusterInfoData GreenplumClusterInfo;

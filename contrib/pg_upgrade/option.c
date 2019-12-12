@@ -69,8 +69,6 @@ parseCommandLine(int argc, char *argv[])
 	time_t		run_time = time(NULL);
 
 	user_opts.transfer_mode = TRANSFER_MODE_COPY;
-	old_cluster.gp_dbid = GP_DBID_NOT_SET;
-	new_cluster.gp_dbid = GP_DBID_NOT_SET;
 
 	os_info.progname = get_progname(argv[0]);
 
