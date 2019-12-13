@@ -51,13 +51,11 @@ install: all installdirs
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(bindir)'
 
-# GPDB_96_MERGE_FIXME: these tests are currently not working on GPDB.
-# Fix and re-enable.
-#check:
-#	$(prove_check)
-#
-#installcheck:
-#	$(prove_installcheck)
+check:
+	$(prove_check)
+
+installcheck:
+	$(prove_installcheck)
 
 uninstall:
 	rm -f $(addprefix '$(DESTDIR)$(bindir)'/, pg_dump$(X) pg_restore$(X) pg_dumpall$(X))

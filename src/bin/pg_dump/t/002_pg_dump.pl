@@ -2152,7 +2152,6 @@ my %tests = (
 		regexp => qr/^DROP /m,
 		like   => {},            # use more-specific options above
 		unlike => {
-			binary_upgrade           => 1,
 			column_inserts           => 1,
 			createdb                 => 1,
 			data_only                => 1,
