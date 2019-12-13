@@ -261,8 +261,8 @@ $ gpconfig -c TimeZone -v 'US/Pacific'</codeblock>You
       <p>You must set environment variables in the Greenplum Database user
         (<codeph>gpadmin</codeph>) environment that runs Greenplum Database on the Greenplum
         Database master and standby master hosts. A <codeph>greenplum_path.sh</codeph> file is
-        provided in your <codeph>$GPHOME</codeph> directory with environment variable settings for
-        Greenplum Database. </p>
+        provided in the Greenplum Database installation directory with environment variable settings
+        for Greenplum Database. </p>
       <p>The Greenplum Database management utilities also require that the
           <codeph>MASTER_DATA_DIRECTORY</codeph> environment variable be set. This should point to
         the directory created by the <codeph>gpinitsystem</codeph> utility in the master data
