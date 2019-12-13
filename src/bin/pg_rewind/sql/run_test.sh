@@ -39,6 +39,7 @@ shared_buffers = 1MB
 max_connections = 50
 listen_addresses = '$LISTEN_ADDRESSES'
 port = $PORT_MASTER
+wal_keep_segments=5
 EOF
 
 # Accept replication connections on master
@@ -71,6 +72,7 @@ rm -rf $TEST_STANDBY
 pg_basebackup -D $TEST_STANDBY -p $PORT_MASTER -x --target-gp-dbid $STANDBY_DBID --verbose >>$log_path 2>&1
 
 echo "port = $PORT_STANDBY" >> $TEST_STANDBY/postgresql.conf
+echo "wal_keep_segments = 5" >> $TEST_STANDBY/postgresql.conf
 
 cat > $TEST_STANDBY/recovery.conf <<EOF
 primary_conninfo='port=$PORT_MASTER'
