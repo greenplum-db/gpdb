@@ -2,16 +2,16 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map title="Greenplum Integrated Analytics">
   <topicref href="overview.xml">
-    <topicref href="madlib.xml" navtitle="Machine and Deep Learning"/>
-    <topicref href="postGIS.xml" navtitle="Geospatial" otherprops="pivotal"/>
-    <topicref href="http://gptext.docs.pivotal.io/330/topics/intro.html" navtitle="Pivotal GPText" otherprops="pivotal"/>
-    <topicref href="intro.xml" navtitle="Procedural Languages">
-          <topicref href="pl_container.xml" navtitle="PL/Container" linking="none"/>
-          <topicref href="pl_java.xml" linking="none"/>
-          <topicref href="pl_perl.xml" linking="none"/>
-          <topicref href="pl_sql.xml" linking="none"/>
-          <topicref href="pl_python.xml" linking="none"/>
-          <topicref href="pl_r.xml" linking="none"/>
+    <topicref href="madlib.xml" navtitle="Machine Learning and Deep Learning" linking="none"/>
+    <topicref href="postGIS.xml" navtitle="Geospatial Analytics" otherprops="pivotal" linking="none"/>
+    <topicref href="text.xml" navtitle="Text Analytics and Search" otherprops="pivotal" linking="none"/>
+    <topicref href="intro.xml" navtitle="Procedural Languages" linking="none">
+      <topicref href="pl_container.xml" navtitle="PL/Container" linking="none"/>
+      <topicref href="pl_java.xml" linking="none"/>
+      <topicref href="pl_perl.xml" linking="none"/>
+      <topicref href="pl_sql.xml" linking="none"/>
+      <topicref href="pl_python.xml" linking="none"/>
+      <topicref href="pl_r.xml" linking="none"/>
     </topicref>
   </topicref>
 </map>

@@ -2,29 +2,23 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="gp_integrated_analytics">
   <title>Greenplum Database Integrated Analytics</title>
-  <body></body>
-    
-    <topic id="analytics_overview">
-      <title>Overview</title>
-      <body>
+  <body>
         <p>Greenplum offers a unique combination of a powerful massively parallel processing (MPP)
-        database and advanced data analytics. This combination creates an ideal framework for data
-        scientists, data architects and business decision makers to explore artificial intelligence
-        (AI), machine learning, deep learning, graph analytics, and geospatial.</p>
+      database and advanced data analytics. This combination creates an ideal framework for data
+      scientists, data architects and business decision makers to explore artificial intelligence
+      (AI), machine learning, deep learning, text analytics, and geospatial.</p>
     
-    <p>This topic covers an overview summary of:</p>
+    <p>This topic covers:</p>
     <ul>
-      <li>Tools in the Greenplum Database advanced analytics ecosystem</li>
+      <li>The Greenplum Database integrated analytics ecosystem.</li>
       <li>Why use Greenplum Database for integrated analytics.</li>
      </ul>
-      </body>
-    </topic>
+  </body>
     
     <topic id="gp_ecosystem">
-      <title>Greenplum Database Integrated Analytics Ecosystem</title>
+      <title>The Greenplum Database Integrated Analytics Ecosystem</title>
       <body>
       <fig id="fig_mz4_r11_njb">
-        <title>Greenplum Integrated Analytics</title>
         <image placement="break" href="graphics/gp_integrated_analyticsv3.png" width="750"
           height="450" align="center" id="image_nz4_r11_njb"/>
       </fig>
@@ -56,15 +50,14 @@
     </section>
     
     <section id="pr_lang_and_ext">
-          <title>Programming Language Extensions</title><p>The Greenplum Database distribution
-            supports the following procedural languages:</p>
-          <xref href="pl_container.xml">PL/Container</xref>, <xref href="pl_java.xml" format="dita"
-            >PL/Java</xref>, <xref href="pl_perl.xml" format="dita">PL/Perl</xref>, <xref
-            href="pl_sql.xml" format="dita">PL/pgSQL</xref>, <xref href="pl_python.xml"
-            format="dita">PL/Python</xref>, <xref href="pl_r.xml" format="dita">PL/R</xref>.
-            <p>Refer to the linked documentation for <ph otherprops="pivotal"> installation and
-            </ph> usage instructions.</p>
-        </section>
+        <title>Programming Language Extensions</title>The Greenplum Database distribution supports
+        the following procedural languages. Refer to the linked documentation for installation and
+        usage instructions.<p><xref href="pl_container.xml">PL/Container</xref>, <xref
+            href="pl_java.xml" format="dita">PL/Java</xref>, <xref href="pl_perl.xml" format="dita"
+            >PL/Perl</xref>, <xref href="pl_sql.xml" format="dita">PL/pgSQL</xref>, <xref
+            href="pl_python.xml" format="dita">PL/Python</xref>, <xref href="pl_r.xml" format="dita"
+            >PL/R</xref>.</p>
+      </section>
    </body>
     </topic>
     
@@ -72,16 +65,16 @@
     <topic id="why_gp_analytics">
       <title>Why Greenplum Database in Integrated Analytics</title>
       <body>
-      <p>Advanced analytics in its various forms is rapidly growing in importance in enterprise computing. 
-        Key enterprise data typically resides in relational and document form, and it is inefficient to copy 
-        data between systems to perform analytical operations.</p>
-        <p>Greenplum is able to run both traditional and advanced analytics workloads in-database. 
-        This integrated capability greatly reduces the cost, and the silos, created by procuring and 
-        maintaining multiple tools and libraries.</p>
-        <p>Advanced analytics on Greenplum Database is general in the sense that it can be used to address 
-          problems in a wide variety of verticals including automotive, finance, manufacturing, energy,  
-          government, education, telecommunications, on-line and traditional retail and more.</p>
-        <p>Capabilities include:</p>
+      <p>The importance of advanced analytics in its various forms is growing rapidly in enterprise
+        computing. Key enterprise data typically resides in relational and document form and it is
+        inefficient to copy data between systems to perform analytical operations. Greenplum is able
+        to run both traditional and advanced analytics workloads in-database. This integrated
+        capability greatly reduces the cost and the silos created by procuring and maintaining
+        multiple tools and libraries.</p>
+        <p>Greenplum Database advanced analytics can be used to address a wide variety of problems
+        in many verticals including automotive, finance, manufacturing, energy, government,
+        education, telecommunications, on-line and traditional retail.</p>
+        <p>The Greenplum analytics capabilities allow you to:</p>
     <ul id="ul_o3q_5n4_yjb">
       <li>Analyze a multitude of data types – structured, text, geospatial, and graph – in a single environment, 
         which can scale to petabytes and run algorithms designed for parallelism.  </li>
@@ -92,17 +85,17 @@
       <li>Access the data where it lives, therefore integrate data and analytics in one place. 
         Pivotal Greenplum is infrastructure-agnostic and runs on  bare metal, private cloud, and public 
         cloud deployments.</li>
-      <li>Greenplum supports Apache Kafka connector, extensions for HDFS, Hive, and HBase as well as
-            reading/writing data from/to cloud storage, including Amazon S3 objects. Review the
-            capabilities of Greenplum <xref
-              href="https://gpdb.docs.pivotal.io/6-1/pxf/intro_pxf.html" format="html"
-              scope="external">Platform Extension Framework (PXF)</xref>, which provides
-              <i>connectors</i> that enable you to access data stored in sources external to your
-            Greenplum Database deployment.</li>
+      <li>Use a multitude of data extensions. Greenplum supports Apache Kafka connector, extensions
+          for HDFS, Hive, and HBase as well as reading/writing data from/to cloud storage, including
+          Amazon S3 objects. Review the capabilities of Greenplum <xref
+            href="https://gpdb.docs.pivotal.io/6-1/pxf/intro_pxf.html" format="html"
+            scope="external">Platform Extension Framework (PXF)</xref>, which provides
+            <i>connectors</i> that enable you to access data stored in sources external to your
+          Greenplum Database deployment.</li>
       <li>Use familiar and leading BI and advanced analytics software that are ODBC/JDBC compatible, or have native integrations,
         including SAS, IBM Cognos, SAP Analytics Solutions, Qlik, Tableau, Apache Zeppelin, and Jupyter.</li>
-      <li>Execute deep learning algorithms using popular frameworks like Keras and TensorFlow in an MPP relational
-        database, with GPU acceleration.</li>
+      <li>Execute deep learning algorithms using popular frameworks like Keras and TensorFlow in an
+          MPP relational database, with GPU (Graphical Processing Unit) acceleration.</li>
       <li>Use containers capable of isolating executors from the host OS. Greenplum PL/Container implements
         a trusted language execution engine which permits customized data science workloads or environments created
         for different end user workloads.</li>
