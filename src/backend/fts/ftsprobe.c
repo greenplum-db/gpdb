@@ -254,7 +254,7 @@ checkIfFailedDueToRecoveryInProgress(fts_segment_info *ftsInfo)
 				   (uint32) (tmpptr >> 32),
 				   (uint32) tmpptr,
 				   ftsInfo->primary_cdbinfo->config->segindex,
-				   ftsInfo->mirror_cdbinfo->config->dbid,
+				   ftsInfo->primary_cdbinfo->config->dbid,
 				   ftsInfo->mirror_cdbinfo->config->dbid);
 		}
 	}
