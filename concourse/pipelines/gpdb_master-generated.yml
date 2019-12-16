@@ -981,7 +981,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on' installcheck-world
       TEST_OS: centos
 
 - name: icw_gporca_centos7
