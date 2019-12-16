@@ -127,8 +127,7 @@ Type "help" for help.</codeblock>
         utility <codeph>ktab</codeph>. If you use AES256-CTS-HMAC-SHA1-96
               encryption, you need to download and install the Java extension <cite>Java
                 Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files for
-                JDK/JRE</cite> from Oracle. This command creates the keytab file
-                <codeph>svcPostgresProd1.keytab</codeph>.</p>
+                JDK/JRE</cite> from Oracle.</p>
       <note>You must enter the password to create a keytab file. The password is visible
          onscreen as you enter it.</note>
       <p>This example runs the Java <codeph>ktab.exe</codeph> program to create a keytab file
