@@ -16,7 +16,8 @@ xact.t: \
 	$(MOCK_DIR)/backend/access/transam/subtrans_mock.o
 
 xlog.t: \
-    $(MOCK_DIR)/backend/replication/walsender_mock.o
+	$(MOCK_DIR)/backend/replication/walsender_mock.o \
+	$(MOCK_DIR)/backend/utils/misc/faultinjector_mock.o
 
 varsup.t: \
 	$(MOCK_DIR)/backend/access/transam/clog_mock.o \

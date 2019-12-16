@@ -6,6 +6,19 @@
 #include "../xlog.c"
 
 static void
+KeepLogSeg_wrapper(XLogRecPtr recptr, XLogSegNo *logSegNo)
+{
+#ifdef FAULT_INJECTOR
+	expect_value(FaultInjector_InjectFaultIfSet, faultName, "keep_log_seg");
+	expect_value(FaultInjector_InjectFaultIfSet, ddlStatement, DDLNotSpecified);
+	expect_value(FaultInjector_InjectFaultIfSet, databaseName, "");
+	expect_value(FaultInjector_InjectFaultIfSet, tableName, "");
+	will_be_called(FaultInjector_InjectFaultIfSet);
+#endif
+	KeepLogSeg(recptr, logSegNo);
+}
+
+static void
 test_KeepLogSeg(void **state)
 {
 	XLogRecPtr recptr;
@@ -35,7 +48,7 @@ test_KeepLogSeg(void **state)
 	 */
 	recptr = ((uint64) 4) << 32 | (XLogSegSize * 1);
 
-	KeepLogSeg(recptr, &_logSegNo);
+	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 63);
 	/************************************************/
 
@@ -53,7 +66,7 @@ test_KeepLogSeg(void **state)
 	 */
 	recptr = ((uint64) 4) << 32 | (XLogSegSize * 1);
 
-	KeepLogSeg(recptr, &_logSegNo);
+	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 60);
 	/************************************************/
 
@@ -71,7 +84,7 @@ test_KeepLogSeg(void **state)
 	 */
 	recptr = ((uint64) 5) << 32 | (XLogSegSize * 8);
 
-	KeepLogSeg(recptr, &_logSegNo);
+	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 1 * XLogSegmentsPerXLogId + 60);
 	/************************************************/
 
@@ -87,7 +100,7 @@ test_KeepLogSeg(void **state)
 	 */
 	recptr = ((uint64) 3) << 32 | (XLogSegSize * 1);
 
-	KeepLogSeg(recptr, &_logSegNo);
+	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 1);
 	/************************************************/
 
@@ -103,7 +116,7 @@ test_KeepLogSeg(void **state)
 	 */
 	recptr = ((uint64) 5) << 32 | (XLogSegSize * 8);
 
-	KeepLogSeg(recptr, &_logSegNo);
+	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 2*XLogSegmentsPerXLogId + 6);
 	/************************************************/
 
@@ -114,12 +127,12 @@ test_KeepLogSeg(void **state)
 	wal_keep_segments = 0;
 	_logSegNo = 9 * XLogSegmentsPerXLogId + 45;
 
-	KeepLogSeg(recptr, &_logSegNo);
+	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 9*XLogSegmentsPerXLogId + 45);
 
 	wal_keep_segments = -1;
 
-	KeepLogSeg(recptr, &_logSegNo);
+	KeepLogSeg_wrapper(recptr, &_logSegNo);
 	assert_int_equal(_logSegNo, 9*XLogSegmentsPerXLogId + 45);
 	/************************************************/
 }

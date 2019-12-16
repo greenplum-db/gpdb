@@ -9509,6 +9509,17 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 	XLByteToSeg(recptr, segno);
 	keep = XLogGetReplicationSlotMinimumLSN();
 
+#ifdef FAULT_INJECTOR
+	/*
+	 * Ignore the replication slot's LSN and let the WAL still needed by the
+	 * replication slot to be removed.  This is used to test if WAL sender can
+	 * recognize that an incremental recovery has failed when the WAL
+	 * requested by a mirror no longer exists.
+	 */
+	if (SIMPLE_FAULT_INJECTOR("keep_log_seg") == FaultInjectorTypeSkip)
+		keep = GetXLogWriteRecPtr();
+#endif
+
 	/* compute limit for wal_keep_segments first */
 	if (wal_keep_segments > 0)
 	{
