@@ -10,7 +10,7 @@
  * Portions Copyright (c) 1996-2016, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * src/backend/access/transam/xlogfuncs.c
+ * src/backend/access/transam/xlogfuncs_gp.c
  *
  *-------------------------------------------------------------------------
  */
@@ -97,7 +97,7 @@ gp_create_restore_point(PG_FUNCTION_ARGS)
 						   DF_NEED_TWO_PHASE | DF_CANCEL_ON_ERROR,
 						   &context->cdb_pgresults);
 		context->qd_restorepoint_lsn = DirectFunctionCall1(pg_create_restore_point,
-														   CStringGetDatum(restore_name));
+														   PointerGetDatum(restore_name));
 		LWLockRelease(TwophaseCommitLock);
 
 		pfree(restore_command);
@@ -154,7 +154,7 @@ gp_create_restore_point(PG_FUNCTION_ARGS)
 		MemSet(nulls, false, sizeof(nulls));
 
 		values[0] = Int16GetDatum(seg_index);
-		values[1] = CStringGetDatum(restore_ptr);
+		values[1] = PointerGetDatum(restore_ptr);
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);
 
