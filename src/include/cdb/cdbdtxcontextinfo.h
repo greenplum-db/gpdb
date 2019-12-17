@@ -15,7 +15,7 @@
 #define CDBDTXCONTEXTINFO_H
 #include "utils/tqual.h"
 
-#define DtxContextInfo_StaticInit {0,InvalidDistributedTransactionId,0,false,false,DistributedSnapshot_StaticInit,0,0}
+#define DtxContextInfo_StaticInit {0,0,false,false,DistributedSnapshot_StaticInit,0,0,InvalidDistributedTransactionId}
 
 typedef struct DtxContextInfo
 {
@@ -34,7 +34,7 @@ typedef struct DtxContextInfo
 	uint32							nestingLevel;
 
 	/* currentCommandId of QD, for debugging only */
-	CommandId				 		curcid;	
+	CommandId				 		curcid;
 } DtxContextInfo;
 
 extern DtxContextInfo QEDtxContextInfo;	
