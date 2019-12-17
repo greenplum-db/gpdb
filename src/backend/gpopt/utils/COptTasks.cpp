@@ -325,7 +325,11 @@ COptTasks::ConvertToPlanStmtFromDXL
 	GPOS_ASSERT(NULL != md_accessor);
 	GPOS_ASSERT(NULL != dxlnode);
 
-	CIdGenerator plan_id_generator(1 /* ulStartId */);
+	/*
+	 * Since GPDB 7 (commit 0ae9004), plan node IDs start from 0 in GPDB.
+	 * GPDB 6 and lower had plan node IDs starting from 0.
+	 */
+	CIdGenerator plan_id_generator(0 /* ulStartId */);
 	CIdGenerator motion_id_generator(1 /* ulStartId */);
 	CIdGenerator param_id_generator(0 /* ulStartId */);
 
