@@ -42,7 +42,10 @@ endif
 greenplum/aomd_filehandler.c: $(top_srcdir)/src/backend/access/appendonly/aomd_filehandler.c
 	rm -f $@ && $(LN_S) ../$< $@
 
-check: test_gpdb.sh all
+unittest-check:
+	make -C test/unit check
+
+check: test_gpdb.sh all unittest-check
 	bash $< -C -r -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
 
 installcheck: test_gpdb.sh all
