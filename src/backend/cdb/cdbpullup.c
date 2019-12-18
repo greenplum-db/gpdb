@@ -15,15 +15,19 @@
 
 #include "postgres.h"
 
+#include "access/hash.h"				/* HashEqualStrategyNumber */
 #include "nodes/makefuncs.h"            /* makeVar() */
 #include "nodes/plannodes.h"            /* Plan */
 #include "optimizer/clauses.h"          /* expression_tree_walker/mutator */
 #include "optimizer/tlist.h"            /* tlist_member() */
 #include "parser/parse_expr.h"          /* exprType() and exprTypmod() */
 #include "parser/parsetree.h"           /* get_tle_by_resno() */
+#include "utils/lsyscache.h"			/* get_opfamily_member() */
 
 #include "cdb/cdbpullup.h"              /* me */
 
+#define IS_INTEGER_TYPE(type)                             \
+    (type == INT2OID || type == INT4OID || type == INT8OID)
 
 /*
  * cdbpullup_colIdx
@@ -383,11 +387,28 @@ cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 {
 	ListCell *lc;
 	EquivalenceClass *eclass = item->pk_eclass;
+	Oid ec_type = InvalidOid;
+
+	/* firstly get the non const em's data type */
+	foreach(lc, eclass->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
+
+		if (em->em_is_const)
+			continue;
+
+		ec_type = em->em_datatype;
+	}
 
 	foreach(lc, eclass->ec_members)
 	{
 		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
 		Expr	   *key = (Expr *) em->em_expr;
+
+		if (OidIsValid(ec_type)
+				&& (em->em_datatype != ec_type)
+				&& (!IS_INTEGER_TYPE(em->em_datatype) || !IS_INTEGER_TYPE(em->em_datatype)))
+			continue;
 
 		/* A constant is OK regardless of the target list */
 		if (em->em_is_const)

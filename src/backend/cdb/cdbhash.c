@@ -60,6 +60,9 @@
 /* Fast mod using a bit mask, assuming that y is a power of 2 */
 #define FASTMOD(x,y)		((x) & ((y)-1))
 
+#define IS_INTEGER_TYPE(type)                             \
+    (type == INT2OID || type == INT4OID || type == INT8OID)
+
 /* local function declarations */
 static uint32 fnv1_32_buf(void *buf, size_t len, uint32 hashval);
 static int	inet_getkey(inet *addr, unsigned char *inet_key, int key_size);
@@ -841,6 +844,63 @@ bool isGreenplumDbOprRedistributable(Oid oprid)
 		default:
 			return false;
 	}
+}
+
+bool
+isGreenplumDbPathkeyDistCompatible(PathKey *pathkey)
+{
+	ListCell			*j;
+	EquivalenceClass	*ec;
+	Oid					non_const_ec_type = InvalidOid;
+
+
+	ec = pathkey->pk_eclass;
+	/*
+	 * Values of diffrent type(float4, float8) could be in the same EC.
+	 * But they may have different hash value to do Motion.
+	 * In GPDB5 cdbhash treat all integers have the same hash values
+	 * But other type, e.g. float4 and float8 have different hash values.
+	 * This function checks whether items in an EC have the same cdbhash value.
+	 */
+	foreach(j, ec->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+		
+		/* 
+		 * the first loop only check non-const items in EC
+		 * non-const items must have the same data type.
+		 */
+		if (em->em_is_const)
+			continue;
+
+		if (non_const_ec_type == InvalidOid)
+			non_const_ec_type = em->em_datatype;
+		else if (non_const_ec_type == em->em_datatype || (IS_INTEGER_TYPE(em->em_datatype) && IS_INTEGER_TYPE(non_const_ec_type)))
+			continue;
+		else
+			return false;
+	}
+	
+	/* no non-const items in EC */
+	if(non_const_ec_type == InvalidOid)
+		return false;
+
+	foreach(j, ec->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+
+		/* 
+		 * the second loop only check const items in EC 
+		 * one of the const_items matches the non_const_ec_type is enough
+		 */
+		if (!em->em_is_const)
+			continue;
+
+		if (non_const_ec_type == em->em_datatype || (IS_INTEGER_TYPE(em->em_datatype) && IS_INTEGER_TYPE(non_const_ec_type)))
+			return true;
+	}
+
+	return false;
 }
 
 /*

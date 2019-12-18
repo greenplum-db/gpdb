@@ -15,6 +15,8 @@
 #ifndef CDBHASH_H
 #define CDBHASH_H
 
+#include "nodes/relation.h"
+
 /*
  * hashing algorithms.
  */
@@ -92,6 +94,11 @@ extern bool isGreenplumDbHashable(Oid typid);
  * Return true if the operator Oid is hashable internally in Greenplum Database.
  */
 extern bool isGreenplumDbOprRedistributable(Oid oprid);
+
+/*
+ * Return true if pathkey's distribeted locations are compatible in Greenplum Database.
+ */
+extern bool isGreenplumDbPathkeyDistCompatible(PathKey *pathkey);
 
 /*
  * Return true if the Oid is an array type.  This can be used prior

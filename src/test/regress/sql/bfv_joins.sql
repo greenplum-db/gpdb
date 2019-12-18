@@ -246,3 +246,39 @@ DROP TABLE member;
 DROP TABLE member_group;
 DROP TABLE member_subgroup;
 DROP TABLE region;
+
+-- test the query have equivalence class with const members
+CREATE TABLE gp_timestamp1 (a int, b timestamp) DISTRIBUTED BY (a, b);
+CREATE TABLE gp_timestamp2 (c int, d timestamp) DISTRIBUTED BY (c, d);
+
+
+INSERT INTO gp_timestamp1 SELECT i, timestamp '2016/11/06' + i * interval '1 day' FROM generate_series(1, 12) i;
+INSERT INTO gp_timestamp1 SELECT i, timestamp '2016/11/09' FROM generate_series(1, 12) i;
+INSERT INTO gp_timestamp2 SELECT i, timestamp '2016/11/06' + i * interval '1 day' FROM generate_series(1, 12) i;
+
+ANALYZE gp_timestamp1;
+ANALYZE gp_timestamp2;
+
+SELECT a, b FROM gp_timestamp1 JOIN gp_timestamp2 ON a = c AND b = timestamptz '2016/11/09' order by a;
+SELECT a, b FROM gp_timestamp1 JOIN gp_timestamp2 ON a = c AND b = timestamp '2016/11/09' order by a;
+SELECT a, b FROM gp_timestamp1 JOIN gp_timestamp2 ON a = c AND b = timestamptz '2016/11/09' AND b = timestamp '2016/11/09' order by a;
+
+CREATE TABLE gp_f1 (a int, b float4) DISTRIBUTED BY (a, b);
+CREATE TABLE gp_f2 (c int, d float4) DISTRIBUTED BY (c, d);
+
+
+INSERT INTO gp_f1 SELECT i, i FROM generate_series(1, 12) i;
+INSERT INTO gp_f1 SELECT i, 3 FROM generate_series(1, 12) i;
+INSERT INTO gp_f2 SELECT i, i FROM generate_series(1, 12) i;
+
+ANALYZE gp_f1;
+ANALYZE gp_f2;
+
+SELECT a, b FROM gp_f1 JOIN gp_f2 ON a = c AND b = 3.0::float8 order by a;
+SELECT a, b FROM gp_f1 JOIN gp_f2 ON a = c AND b = 3.0::float4 order by a;
+SELECT a, b FROM gp_f1 JOIN gp_f2 ON a = c AND b = 3.0::float8 AND b = 3.0::float4 order by a;
+
+DROP TABLE gp_timestamp1;
+DROP TABLE gp_timestamp2;
+DROP TABLE gp_f1;
+DROP TABLE gp_f2;
