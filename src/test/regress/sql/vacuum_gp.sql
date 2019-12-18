@@ -208,3 +208,27 @@ CREATE SEQUENCE s_serial START 100;
 VACUUM (ANALYZE, VERBOSE) s_serial;
 DROP SEQUENCE s_serial;
 VACUUM gp_toolkit.__gp_log_master_ext;
+
+-- Vacuum related access control tests (Issue: #9001)
+-- Given a non-super-user role
+CREATE ROLE non_super_user_vacuum;
+-- And a heap table with auxiliary relations under the pg_toast namespace.
+CREATE TABLE vac_acl_heap(i int, j text);
+-- And an AO table with auxiliary relations under the pg_aoseg namespace.
+CREATE TABLE vac_acl_ao(i int, j text) with (appendonly=true);
+-- And an AOCS table with auxiliary relations under the pg_aocsseg namespace.
+CREATE TABLE vac_acl_aocs(i int, j text) with (appendonly=true, orientation=column);
+-- And all the tables belong to the non-super-user role.
+ALTER TABLE vac_acl_heap OWNER TO non_super_user_vacuum;
+ALTER TABLE vac_acl_ao OWNER TO non_super_user_vacuum;
+ALTER TABLE vac_acl_aocs OWNER TO non_super_user_vacuum;
+-- We can vacuum each table as the non-super-user
+SET ROLE TO non_super_user_vacuum;
+VACUUM vac_acl_heap;
+VACUUM vac_acl_ao;
+VACUUM vac_acl_aocs;
+\c
+DROP TABLE vac_acl_heap;
+DROP TABLE vac_acl_ao;
+DROP TABLE vac_acl_aocs;
+DROP ROLE non_super_user_vacuum;

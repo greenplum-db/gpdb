@@ -157,6 +157,9 @@ static void vacuum_appendonly_index(Relation indexRelation,
 						AppendOnlyIndexVacuumState *vacuumIndexState,
 						double rel_tuple_count, int elevel);
 
+static void
+vac_update_relstats_from_list(List *updated_stats);
+
 /*
  * Primary entry point for manual VACUUM and ANALYZE commands
  *
@@ -851,6 +854,17 @@ vacuumStatement_Relation(Oid relid, List *relations, BufferAccessStrategy bstrat
 
 		vacuum_rel(relid, relation, options, params, skip_twophase,
 				   ao_vacuum_phase_config, onerel, lmode);
+
+		/*
+		 * Complete the transaction and free all temporary memory used.
+		 */
+		PopActiveSnapshot();
+		/*
+		 * Transaction commit is always executed on QD.
+		 */
+		if (Gp_role != GP_ROLE_EXECUTE)
+			CommitTransactionCommand();
+
 		onerel = NULL;
 	}
 	else
@@ -2236,6 +2250,16 @@ vacuum_rel_ao_phase(Oid relid, RangeVar *relation, int options, VacuumParams *pa
 
 	vacuum_rel(relid, relation, options, params, skip_twophase,
 			   ao_vacuum_phase_config, onerel, lmode);
+
+	/*
+	 * Complete the transaction and free all temporary memory used.
+	 */
+	PopActiveSnapshot();
+	/*
+	 * Transaction commit is always executed on QD.
+	 */
+	if (Gp_role != GP_ROLE_EXECUTE)
+		CommitTransactionCommand();
 }
 
 
@@ -2271,25 +2295,17 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 	int			save_sec_context;
 	int			save_nestlevel;
 	MemoryContext oldcontext;
+	bool		dispatch;
 
 	Assert(params != NULL);
 
+	if (Gp_role == GP_ROLE_DISPATCH && onerel)
+		dispatch = true;
+	else
+		dispatch = false;
+
 	if (!onerel)
 	{
-		/*
-		 * For each iteration we start/commit our own transactions,
-		 * so that we can release resources such as locks and memories,
-		 * and we can also safely perform non-transactional work
-		 * along with transactional work.
-		 */
-		StartTransactionCommand();
-
-		/*
-		 * Functions in indexes may want a snapshot set. Also, setting
-		 * a snapshot ensures that RecentGlobalXmin is kept truly recent.
-		 */
-		PushActiveSnapshot(GetTransactionSnapshot());
-
 		if (!(options & VACOPT_FULL))
 		{
 			/*
@@ -2357,8 +2373,6 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 
 		if (!onerel)
 		{
-			PopActiveSnapshot();
-			CommitTransactionCommand();
 			return false;
 		}
 	}
@@ -2399,8 +2413,9 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 										  get_rel_name(aovisimap_relid),
 										  -1);
 		MemoryContextSwitchTo(oldcontext);
-		ao_vacuum_phase_config->appendonly_relation_empty =
-			AppendOnlyCompaction_IsRelationEmpty(onerel);
+		if (Gp_role == GP_ROLE_DISPATCH)
+			ao_vacuum_phase_config->appendonly_relation_empty =
+				AppendOnlyCompaction_IsRelationEmpty(onerel);
 	}
 
 	/*
@@ -2412,7 +2427,6 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 	SetUserIdAndSecContext(onerel->rd_rel->relowner,
 						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 	save_nestlevel = NewGUCNestLevel();
-
 
 	/*
 	 * If we are in the dispatch mode, dispatch this modified
@@ -2468,45 +2482,10 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 		cluster_rel(relid, InvalidOid, false,
 					(options & VACOPT_VERBOSE) != 0,
 					true /* printError */);
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			VacuumStatsContext stats_context;
-
-			stats_context.updated_stats = NIL;
-			/*
-			 * Revert back to original userid before dispatching vacuum to QEs.
-			 * Dispatcher includes CurrentUserId in the serialized dispatch
-			 * command (see buildGpQueryString()).  QEs assume this userid
-			 * before starting to execute the dispatched command.  If the
-			 * original userid has superuser privileges and owner of the table
-			 * being vacuumed does not, and if the command is dispatched with
-			 * owner's userid, it may lead to spurious permission denied error
-			 * on QE even when a super user is running the vacuum.
-			 */
-			SetUserIdAndSecContext(
-								   save_userid,
-								   save_sec_context | SECURITY_RESTRICTED_OPERATION);
-			dispatchVacuum(options, relation, skip_twophase, NULL, &stats_context);
-
-			vac_update_relstats_from_list(stats_context.updated_stats);
-		}
 	}
 	else
 	{
 		lazy_vacuum_rel(onerel, options, params, vac_strategy, ao_vacuum_phase_config);
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			VacuumStatsContext stats_context;
-
-			stats_context.updated_stats = NIL;
-			SetUserIdAndSecContext(
-								   save_userid,
-								   save_sec_context | SECURITY_RESTRICTED_OPERATION);
-			dispatchVacuum(options, relation, skip_twophase, ao_vacuum_phase_config, &stats_context);
-			vac_update_relstats_from_list(stats_context.updated_stats);
-		}
 	}
 
 	/* Roll back any GUC changes executed by index functions */
@@ -2514,6 +2493,86 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 
 	/* Restore userid and security context */
 	SetUserIdAndSecContext(save_userid, save_sec_context);
+
+	/*
+	 * If the relation has a secondary toast rel, vacuum that too while we
+	 * still hold the session lock on the master table.  We do this in
+	 * cleanup phase when it's AO table or in prepare phase if it's an
+	 * empty AO table.
+	 *
+	 * A VacuumStmt object for secondary toast relation is constructed and
+	 * dispatched separately by the QD, when vacuuming the master relation.  A
+	 * backend executing dispatched VacuumStmt (GP_ROLE_EXECUTE), therefore,
+	 * should not execute this block of code.
+	 */
+	if (is_heap ||
+		(!is_heap && (ao_vacuum_phase_config->appendonly_phase == AOVAC_CLEANUP ||
+					  ao_vacuum_phase_config->appendonly_relation_empty)))
+	{
+		if (toast_relid != InvalidOid && toast_rangevar != NULL)
+			vacuum_rel(toast_relid, toast_rangevar, options, params,
+					   skip_twophase, NULL, NULL, lmode);
+	}
+
+	/*
+	 * If an AO/CO table is empty on a segment,
+	 * ao_vacuum_phase_config->appendonly_relation_empty will get set to true even in
+	 * the compaction phase. In such a case, we end up updating the auxiliary
+	 * tables and try to vacuum them all in the same transaction. This causes
+	 * the auxiliary relation to not get vacuumed and it generates a notice to
+	 * the user saying that transaction is already in progress. Hence we want
+	 * to vacuum the auxliary relations only in cleanup phase or if we are in
+	 * the prepare phase and the AO/CO table is empty.
+	 *
+	 * We alter the vacuum statement here since the AO auxiliary tables
+	 * vacuuming will be dispatched to the primaries.
+	 *
+	 * Similar to toast, a VacuumStmt object for each AO auxiliary relation is
+	 * constructed and dispatched separately by the QD, when vacuuming the
+	 * base AO relation.  A backend executing dispatched VacuumStmt
+	 * (GP_ROLE_EXECUTE), therefore, should not execute this block of code.
+	 */
+	if (ao_vacuum_phase_config != NULL &&
+		(ao_vacuum_phase_config->appendonly_phase == AOVAC_CLEANUP ||
+		 (ao_vacuum_phase_config->appendonly_relation_empty &&
+		  ao_vacuum_phase_config->appendonly_phase == AOVAC_PREPARE)))
+	{
+		/* do the same for an AO segments table, if any */
+		if (aoseg_relid != InvalidOid && aoseg_rangevar != NULL)
+			vacuum_rel(aoseg_relid, aoseg_rangevar, options, params,
+					   skip_twophase, NULL, NULL, lmode);
+
+		/* do the same for an AO block directory table, if any */
+		if (aoblkdir_relid != InvalidOid && aoblkdir_rangevar != NULL)
+			vacuum_rel(aoblkdir_relid, aoblkdir_rangevar, options, params,
+					   skip_twophase, NULL, NULL, lmode);
+
+		/* do the same for an AO visimap, if any */
+		if (aovisimap_relid != InvalidOid && aovisimap_rangevar != NULL)
+			vacuum_rel(aovisimap_relid, aovisimap_rangevar, options, params,
+					   skip_twophase, NULL, NULL, lmode);
+	}
+
+	if (dispatch)
+	{
+		Oid			save_userid;
+		int			save_sec_context;
+
+		VacuumStatsContext stats_context;
+
+		stats_context.updated_stats = NIL;
+		GetUserIdAndSecContext(&save_userid, &save_sec_context);
+
+		SetUserIdAndSecContext(
+				save_userid,
+				save_sec_context | SECURITY_RESTRICTED_OPERATION);
+
+		dispatchVacuum(options, relation, skip_twophase, ao_vacuum_phase_config, &stats_context);
+		vac_update_relstats_from_list(stats_context.updated_stats);
+
+		/* Restore userid and security context */
+		SetUserIdAndSecContext(save_userid, save_sec_context);
+	}
 
 	/*
 	 * Update ao master tupcount the hard way after the compaction and
@@ -2548,76 +2607,6 @@ vacuum_rel(Oid relid, RangeVar *relation, int options, VacuumParams *params,
 	/* all done with this class, but hold lock until commit */
 	if (onerel)
 		relation_close(onerel, NoLock);
-
-	/*
-	 * Complete the transaction and free all temporary memory used.
-	 */
-	PopActiveSnapshot();
-	/*
-	 * Transaction commit is always executed on QD.
-	 */
-	if (Gp_role != GP_ROLE_EXECUTE)
-		CommitTransactionCommand();
-
-	/*
-	 * If the relation has a secondary toast rel, vacuum that too while we
-	 * still hold the session lock on the master table.  We do this in
-	 * cleanup phase when it's AO table or in prepare phase if it's an
-	 * empty AO table.
-	 *
-	 * A VacuumStmt object for secondary toast relation is constructed and
-	 * dispatched separately by the QD, when vacuuming the master relation.  A
-	 * backend executing dispatched VacuumStmt (GP_ROLE_EXECUTE), therefore,
-	 * should not execute this block of code.
-	 */
-	if (Gp_role != GP_ROLE_EXECUTE && (is_heap ||
-		(!is_heap && (ao_vacuum_phase_config->appendonly_phase == AOVAC_CLEANUP ||
-					  ao_vacuum_phase_config->appendonly_relation_empty))))
-	{
-		if (toast_relid != InvalidOid && toast_rangevar != NULL)
-			vacuum_rel(toast_relid, toast_rangevar, options, params,
-					   skip_twophase, NULL, NULL, lmode);
-	}
-
-	/*
-	 * If an AO/CO table is empty on a segment,
-	 * ao_vacuum_phase_config->appendonly_relation_empty will get set to true even in
-	 * the compaction phase. In such a case, we end up updating the auxiliary
-	 * tables and try to vacuum them all in the same transaction. This causes
-	 * the auxiliary relation to not get vacuumed and it generates a notice to
-	 * the user saying that transaction is already in progress. Hence we want
-	 * to vacuum the auxliary relations only in cleanup phase or if we are in
-	 * the prepare phase and the AO/CO table is empty.
-	 *
-	 * We alter the vacuum statement here since the AO auxiliary tables
-	 * vacuuming will be dispatched to the primaries.
-	 *
-	 * Similar to toast, a VacuumStmt object for each AO auxiliary relation is
-	 * constructed and dispatched separately by the QD, when vacuuming the
-	 * base AO relation.  A backend executing dispatched VacuumStmt
-	 * (GP_ROLE_EXECUTE), therefore, should not execute this block of code.
-	 */
-	if (Gp_role != GP_ROLE_EXECUTE &&
-		ao_vacuum_phase_config != NULL &&
-		(ao_vacuum_phase_config->appendonly_phase == AOVAC_CLEANUP ||
-		 (ao_vacuum_phase_config->appendonly_relation_empty &&
-		  ao_vacuum_phase_config->appendonly_phase == AOVAC_PREPARE)))
-	{
-		/* do the same for an AO segments table, if any */
-		if (aoseg_relid != InvalidOid && aoseg_rangevar != NULL)
-			vacuum_rel(aoseg_relid, aoseg_rangevar, options, params,
-					   skip_twophase, NULL, NULL, lmode);
-
-		/* do the same for an AO block directory table, if any */
-		if (aoblkdir_relid != InvalidOid && aoblkdir_rangevar != NULL)
-			vacuum_rel(aoblkdir_relid, aoblkdir_rangevar, options, params,
-					   skip_twophase, NULL, NULL, lmode);
-
-		/* do the same for an AO visimap, if any */
-		if (aovisimap_relid != InvalidOid && aovisimap_rangevar != NULL)
-			vacuum_rel(aovisimap_relid, aovisimap_rangevar, options, params,
-					   skip_twophase, NULL, NULL, lmode);
-	}
 
 	/* Report that we really did it. */
 	return true;
