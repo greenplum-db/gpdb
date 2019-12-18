@@ -3446,10 +3446,10 @@ set enable_seqscan = off;
 set enable_bitmapscan = off;
 analyze t_9427;
 explain (costs off) select * from t_9427 where a in (select a from t_9427 where c < 100 ) and a < 200;
-                                                               QUERY PLAN                                                                
------------------------------------------------------------------------------------------------------------------------------------------
+                                                                  QUERY PLAN                                                                   
+-----------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Merge Semi Join
+   ->  Merge Join
          Merge Cond: (t_9427_1_prt_default_part.a = t_9427_1_prt_default_part_1.a)
          ->  Merge Append
                Sort Key: t_9427_1_prt_default_part.a
@@ -3469,18 +3469,20 @@ explain (costs off) select * from t_9427 where a in (select a from t_9427 where 
                Sort Key: t_9427_1_prt_default_part_1.a
                ->  Partition Selector for t_9427 (dynamic scan id: 1)
                      Filter: t_9427_1_prt_default_part_1.a
-                     ->  Append
-                           ->  Index Scan using t_9427_1_prt_default_part_c_idx on t_9427_1_prt_default_part t_9427_1_prt_default_part_1
-                                 Index Cond: (c < 100)
-                                 Filter: (a < 200)
-                           ->  Index Scan using t_9427_1_prt_p1_c_idx on t_9427_1_prt_p1 t_9427_1_prt_p1_1
-                                 Index Cond: (c < 100)
-                                 Filter: (a < 200)
-                           ->  Index Scan using t_9427_1_prt_p2_c_idx on t_9427_1_prt_p2 t_9427_1_prt_p2_1
-                                 Index Cond: (c < 100)
-                                 Filter: (a < 200)
+                     ->  HashAggregate
+                           Group Key: t_9427_1_prt_default_part_1.a
+                           ->  Append
+                                 ->  Index Scan using t_9427_1_prt_default_part_c_idx on t_9427_1_prt_default_part t_9427_1_prt_default_part_1
+                                       Index Cond: (c < 100)
+                                       Filter: (a < 200)
+                                 ->  Index Scan using t_9427_1_prt_p1_c_idx on t_9427_1_prt_p1 t_9427_1_prt_p1_1
+                                       Index Cond: (c < 100)
+                                       Filter: (a < 200)
+                                 ->  Index Scan using t_9427_1_prt_p2_c_idx on t_9427_1_prt_p2 t_9427_1_prt_p2_1
+                                       Index Cond: (c < 100)
+                                       Filter: (a < 200)
  Optimizer: Postgres query optimizer
-(32 rows)
+(34 rows)
 
 drop table t_9427;
 reset optimizer;

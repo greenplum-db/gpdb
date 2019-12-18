@@ -6044,7 +6044,7 @@ add_agg_cost(PlannerInfo *root, Plan *plan,
 		/* The following estimate is very rough but good enough for planning. */
 		entrywidth = agg_hash_entrywidth(aggcosts->numAggs,
 								   sizeof(HeapTupleData) + sizeof(HeapTupleHeaderData) + plan->plan_width,
-										 0 /* FIXME: was transspace */);
+										 aggcosts->transitionSpace);
 		if (!calcHashAggTableSizes((double) planner_work_mem * 1024L,
 								   numGroups,
 								   entrywidth,

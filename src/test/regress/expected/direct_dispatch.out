@@ -749,16 +749,16 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 (3 rows)
 
 explain (costs off) select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test_dd_via_segid t2 where t1.gp_segment_id=t2.id;
-                         QUERY PLAN                         
-------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Join
-         Hash Cond: (t1.gp_segment_id = t2.id)
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               Hash Key: t1.gp_segment_id
-               ->  Seq Scan on t_test_dd_via_segid t1
+         Hash Cond: (t2.id = t1.gp_segment_id)
+         ->  Seq Scan on t_test_dd_via_segid t2
          ->  Hash
-               ->  Seq Scan on t_test_dd_via_segid t2
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Hash Key: t1.gp_segment_id
+                     ->  Seq Scan on t_test_dd_via_segid t1
  Optimizer: Postgres query optimizer
 (9 rows)
 

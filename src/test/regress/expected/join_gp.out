@@ -640,16 +640,16 @@ select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t
 
 -- ensure plan has two inner joins with the where clause & join predicates ANDed
 explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a = t3.a);
-                      QUERY PLAN                      
-------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: ((t1.a = t2.a) AND (t1.b = t3.b))
-         ->  Seq Scan on t1
+         Hash Cond: (t2.a = t1.a)
+         ->  Seq Scan on t2
          ->  Hash
                ->  Hash Join
-                     Hash Cond: (t2.a = t3.a)
-                     ->  Seq Scan on t2
+                     Hash Cond: ((t1.a = t3.a) AND (t1.b = t3.b))
+                     ->  Seq Scan on t1
                      ->  Hash
                            ->  Seq Scan on t3
  Optimizer: Postgres query optimizer
@@ -715,36 +715,43 @@ explain select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 lef
   join t3 on tt.t1b = t3.b 
   join (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t2 on t1.a = t2.a) tt1 on tt1.t1b = t3.b 
   join t3 t3_1 on tt1.t1b = t3_1.b and (tt1.t2a is NULL OR tt1.t1b = t3.b);
-                                                                    QUERY PLAN                                                                    
---------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice4; segments: 3)  (cost=61.48..78.25 rows=4 width=56)
-   ->  Hash Right Join  (cost=61.48..78.25 rows=2 width=56)
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice7; segments: 3)  (cost=53.13..69.98 rows=4 width=56)
+   ->  Hash Right Join  (cost=53.13..69.91 rows=2 width=56)
          Hash Cond: (t2_1.a = t1_1.a)
          Filter: ((t2_1.a IS NULL) OR (t1_1.b = t3.b))
          ->  Seq Scan on t2 t2_1  (cost=0.00..12.99 rows=333 width=8)
-         ->  Hash  (cost=61.43..61.43 rows=2 width=48)
-               ->  Hash Join  (cost=44.65..61.43 rows=2 width=48)
-                     Hash Cond: (t1_1.b = t1.b)
-                     ->  Seq Scan on t1 t1_1  (cost=0.00..13.00 rows=334 width=8)
-                     ->  Hash  (cost=44.53..44.53 rows=4 width=40)
-                           ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=27.62..44.53 rows=4 width=40)
-                                 ->  Hash Right Join  (cost=27.62..44.39 rows=2 width=40)
-                                       Hash Cond: (t2.a = t1.a)
-                                       ->  Seq Scan on t2  (cost=0.00..12.99 rows=333 width=8)
-                                       ->  Hash  (cost=27.58..27.58 rows=2 width=32)
-                                             ->  Hash Join  (cost=4.35..27.58 rows=2 width=32)
-                                                   Hash Cond: (t1.b = t3_1.b)
-                                                   ->  Hash Join  (cost=2.18..25.27 rows=4 width=20)
-                                                         Hash Cond: (t1.b = t3.b)
+         ->  Hash  (cost=53.09..53.09 rows=2 width=48)
+               ->  Redistribute Motion 3:3  (slice6; segments: 3)  (cost=36.25..53.09 rows=2 width=48)
+                     Hash Key: t1_1.a
+                     ->  Hash Right Join  (cost=36.25..53.02 rows=2 width=48)
+                           Hash Cond: (t2.a = t1.a)
+                           ->  Seq Scan on t2  (cost=0.00..12.99 rows=333 width=8)
+                           ->  Hash  (cost=36.21..36.21 rows=2 width=40)
+                                 ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=20.28..36.21 rows=2 width=40)
+                                       Hash Key: t1.a
+                                       ->  Hash Join  (cost=20.28..36.15 rows=2 width=40)
+                                             Hash Cond: (t1.b = t3.b)
+                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=2.18..17.98 rows=4 width=20)
+                                                   Hash Key: t1.b
+                                                   ->  Hash Join  (cost=2.18..17.78 rows=4 width=20)
+                                                         Hash Cond: (t1.b = t3_1.b)
                                                          ->  Seq Scan on t1  (cost=0.00..13.00 rows=334 width=8)
                                                          ->  Hash  (cost=2.10..2.10 rows=2 width=12)
                                                                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.10 rows=2 width=12)
-                                                                     ->  Seq Scan on t3  (cost=0.00..2.02 rows=1 width=12)
-                                                   ->  Hash  (cost=2.10..2.10 rows=2 width=12)
-                                                         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.10 rows=2 width=12)
-                                                               ->  Seq Scan on t3 t3_1  (cost=0.00..2.02 rows=1 width=12)
+                                                                     ->  Seq Scan on t3 t3_1  (cost=0.00..2.02 rows=1 width=12)
+                                             ->  Hash  (cost=17.98..17.98 rows=4 width=20)
+                                                   ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=2.18..17.98 rows=4 width=20)
+                                                         Hash Key: t3.b
+                                                         ->  Hash Join  (cost=2.18..17.78 rows=4 width=20)
+                                                               Hash Cond: (t1_1.b = t3.b)
+                                                               ->  Seq Scan on t1 t1_1  (cost=0.00..13.00 rows=334 width=8)
+                                                               ->  Hash  (cost=2.10..2.10 rows=2 width=12)
+                                                                     ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..2.10 rows=2 width=12)
+                                                                           ->  Seq Scan on t3  (cost=0.00..2.02 rows=1 width=12)
  Optimizer: Postgres query optimizer
-(27 rows)
+(34 rows)
 
 select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t2 on t1.a = t2.a) tt 
   join t3 on tt.t1b = t3.b 

@@ -4851,16 +4851,16 @@ explain (costs off)
    ->  Gather Motion 3:1  (slice3; segments: 3)
          ->  Aggregate
                ->  Hash Join
-                     Hash Cond: ("*VALUES*".column1 = b.unique2)
+                     Hash Cond: (b.unique2 = "*VALUES*".column1)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                           Hash Key: "*VALUES*".column1
-                           ->  Nested Loop
-                                 ->  Seq Scan on tenk1 a
-                                 ->  Values Scan on "*VALUES*"
+                           Hash Key: b.unique2
+                           ->  Seq Scan on tenk1 b
                      ->  Hash
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: b.unique2
-                                 ->  Seq Scan on tenk1 b
+                                 Hash Key: "*VALUES*".column1
+                                 ->  Nested Loop
+                                       ->  Seq Scan on tenk1 a
+                                       ->  Values Scan on "*VALUES*"
  Optimizer: Postgres query optimizer
 (15 rows)
 

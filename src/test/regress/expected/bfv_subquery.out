@@ -512,14 +512,14 @@ explain
 select count(*) from pg_backend_pid() b(a) where b.a % 100000 in (select a from t1);
                                                  QUERY PLAN                                                 
 ------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=537.33..537.34 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=537.27..537.32 rows=1 width=8)
-         ->  Aggregate  (cost=537.27..537.28 rows=1 width=8)
-               ->  HashAggregate  (cost=537.20..537.25 rows=6 width=6)
+ Aggregate  (cost=454.00..454.01 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=453.93..453.98 rows=1 width=8)
+         ->  Aggregate  (cost=453.93..453.94 rows=1 width=8)
+               ->  HashAggregate  (cost=453.87..453.92 rows=6 width=6)
                      Group Key: b.ctid
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.02..537.19 rows=6 width=6)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.02..453.86 rows=6 width=6)
                            Hash Key: b.ctid
-                           ->  Hash Join  (cost=0.02..537.08 rows=6 width=6)
+                           ->  Hash Join  (cost=0.02..453.75 rows=6 width=6)
                                  Hash Cond: (t1.a = (b.a % 100000))
                                  ->  Seq Scan on t1  (cost=0.00..370.33 rows=33333 width=4)
                                  ->  Hash  (cost=0.01..0.01 rows=1 width=10)
