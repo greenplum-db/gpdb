@@ -110,7 +110,7 @@ test: namespace
 # ----------
 # Another group of parallel tests
 # ----------
-test: privileges security_label collate lock replica_identity
+test: privileges security_label collate lock replica_identity join_hash
 
 # MATERIALIZED_VIEW_FIXME : matview is not supported on greenplum. Enable the test when the feature is ready.
 test: matview

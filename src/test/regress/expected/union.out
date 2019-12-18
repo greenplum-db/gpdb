@@ -714,17 +714,17 @@ explain (costs off)
 select * from
   (select * from t3 a union all select * from t3 b) ss
   join int4_tbl on f1 = expensivefunc(x);
-                       QUERY PLAN                        
----------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Join
-         Hash Cond: (int4_tbl.f1 = expensivefunc(a.x))
-         ->  Broadcast Motion 3:3  (slice1; segments: 3)
-               ->  Seq Scan on int4_tbl
+         Hash Cond: (expensivefunc(a.x) = int4_tbl.f1)
+         ->  Append
+               ->  Seq Scan on t3 a
+               ->  Seq Scan on t3 b
          ->  Hash
-               ->  Append
-                     ->  Seq Scan on t3 a
-                     ->  Seq Scan on t3 b
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Seq Scan on int4_tbl
  Optimizer: Postgres query optimizer
 (10 rows)
 

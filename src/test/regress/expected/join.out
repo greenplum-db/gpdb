@@ -3079,21 +3079,21 @@ select * from
   int4(sin(1)) q1,
   int4(sin(0)) q2
 where thousand = (q1 + q2);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Join
-         Hash Cond: (tenk1.twothousand = int4_tbl.f1)
+         Hash Cond: (tenk1.thousand = (q1.q1 + q2.q2))
          ->  Hash Join
-               Hash Cond: (tenk1.thousand = (q1.q1 + q2.q2))
+               Hash Cond: (tenk1.twothousand = int4_tbl.f1)
                ->  Seq Scan on tenk1
                ->  Hash
-                     ->  Nested Loop
-                           ->  Function Scan on q1
-                           ->  Function Scan on q2
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                           ->  Seq Scan on int4_tbl
          ->  Hash
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)
-                     ->  Seq Scan on int4_tbl
+               ->  Nested Loop
+                     ->  Function Scan on q1
+                     ->  Function Scan on q2
  Optimizer: Postgres query optimizer
 (14 rows)
 
