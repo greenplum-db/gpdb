@@ -1707,22 +1707,22 @@ update pg_class set reltuples = 100000 where relname='tab3';
 -- remove the explicit redistribute motion here because the final join
 -- co-locate with the result relation tab1.
 explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
  Delete on tab1
    ->  Hash Join
-         Hash Cond: (tab1.b = tab3.b)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: tab1.b
-               ->  Hash Join
-                     Hash Cond: (tab2.a = tab1.a)
-                     ->  Seq Scan on tab2
-                     ->  Hash
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                 Hash Key: tab1.a
-                                 ->  Seq Scan on tab1
+         Hash Cond: (tab3.b = tab1.b)
+         ->  Seq Scan on tab3
          ->  Hash
-               ->  Seq Scan on tab3
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: tab1.b
+                     ->  Hash Join
+                           Hash Cond: (tab2.a = tab1.a)
+                           ->  Seq Scan on tab2
+                           ->  Hash
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                       Hash Key: tab1.a
+                                       ->  Seq Scan on tab1
  Optimizer: Postgres query optimizer
 (15 rows)
 
