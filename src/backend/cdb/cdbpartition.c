@@ -1700,10 +1700,17 @@ add_partition_rule(PartitionRule *rule)
 	values[Anum_pg_partition_rule_parlistvalues - 1] =
 			CStringGetTextDatum(nodeToString(rule->parlistvalues));
 
-	if (rule->parreloptions)
-		values[Anum_pg_partition_rule_parreloptions - 1] =
-			transformRelOptions((Datum) 0, rule->parreloptions, NULL, NULL, true, false);
-	else
+	/*
+	 * If rule->parreloptions is NIL, the function `transformRelOptions`
+	 * will return the first argument.
+	 */
+	values[Anum_pg_partition_rule_parreloptions - 1] =
+		transformRelOptions((Datum) 0, rule->parreloptions, NULL, NULL, true, false);
+	/*
+	 * There some cases that transformRelOptions in the above will return a NULL.
+	 * Add a check here.
+	 */
+	if (!values[Anum_pg_partition_rule_parreloptions - 1])
 		isnull[Anum_pg_partition_rule_parreloptions - 1] = true;
 
 	values[Anum_pg_partition_rule_partemplatespace - 1] =
