@@ -1021,6 +1021,36 @@ drop table if exists s1;
 drop table if exists s2;
 -- end_ignore
 
+-- the following case is to test when we have a template
+-- we can correct add new subpartition with relation options.
+create table test_part_relops_tmpl (id int,  p1 text, p2 text, count int)
+distributed by (id)
+partition by list (p1)
+subpartition by list (p2)
+(
+  partition m1 values ('m1')
+  (subpartition l1 values ('l1'),
+   subpartition l2 values ('l2')),
+  partition m2 values ('m2')
+  (subpartition l1 values ('l1'),
+   subpartition l2 values ('l2'))
+);
+
+alter table test_part_relops_tmpl
+set subpartition template
+(
+   subpartition l1 values('l1')
+);
+
+-- previously, we do wrong in the function of `add_partition_rule`
+-- which invokes `transformRelOptions`, and transformRelOptions
+-- may return NULL in some cases. For example, the invokation of
+-- transformRelOptions in add_partition_rule set ignoreOids = true,
+-- so the following statement creates such senario by passing oids options,
+-- then transformRelOptions return NULL and we should correctly handle
+-- null pointers.
+alter table test_part_relops_tmpl alter partition for ('m1') add partition l3 values ('l3')
+with (oids=false);
 
 create table mpp_2914A(id int,  buyDate date, kind char(1))
 DISTRIBUTED BY (id)
