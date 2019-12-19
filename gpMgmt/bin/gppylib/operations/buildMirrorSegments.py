@@ -304,6 +304,7 @@ class GpMirrorListToBuild:
 
         # Disable Ctrl-C, going to save metadata in database and transition segments
         signal.signal(signal.SIGINT, signal.SIG_IGN)
+        rewindFailedSegments = []
         try:
             self.__logger.info("Updating configuration with new mirrors")
             configInterface.getConfigurationProvider().updateSystemConfig(
@@ -328,6 +329,9 @@ class GpMirrorListToBuild:
         finally:
             # Re-enable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
+
+        if len(rewindFailedSegments) != 0:
+            return False
 
         return start_all_successful
 
