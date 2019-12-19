@@ -62,8 +62,21 @@ test_populates_old_tablespace_file_contents_to_have_default_tablespace_records_f
 static void
 test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_contents(void **state)
 {
-	system("rm -rf /tmp/tablespace-gp-test");
-	system("mkdir /tmp/tablespace-gp-test");
+	int result;
+
+	result = system("rm -rf /tmp/tablespace-gp-test");
+
+	if (result == -1)
+	{
+		printf("failed to remove tablespace directory /tmp/tablespace-gp-test");
+	}
+
+	result = system("mkdir /tmp/tablespace-gp-test");
+
+	if (result == -1)
+	{
+		printf("make tablespace directory /tmp/tablespace-gp-test");
+	}
 
 	PGconn *connection = connectToFive();
 
@@ -120,7 +133,12 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 static void
 setup_gpdb5(void **state)
 {
-	system("rm old_tablespaces.txt");
+	int result = system("rm old_tablespaces.txt");
+
+	if (result == -1)
+	{
+		printf("Failed to remove old_tablespaces.txt");
+	}
 
 	stopGpdbFiveCluster();
 	resetGpdbFiveDataDirectories();
