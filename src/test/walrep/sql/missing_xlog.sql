@@ -78,6 +78,9 @@ $$ language plpgsql;
 -- start_ignore
 -- let the mirror be marked as 'down' quickly
 \! gpconfig -c gp_fts_mark_mirror_down_grace_period -v 2
+-- since setting wal_keep_segments to 0 is not safe for master/standby,
+-- we are not going to set wal_keep_segments to 0 now, to avoid flaky tests
+\! gpconfig -c wal_keep_segments -v 1
 \! gpstop -u
 -- end_ignore
 -- stop a mirror
@@ -153,5 +156,6 @@ select wait_for_mirror_sync(0::smallint);
 select role, preferred_role, content, mode, status from gp_segment_configuration;
 -- start_ignore
 \! gpconfig -c gp_fts_mark_mirror_down_grace_period -v 30
+\! gpconfig -r wal_keep_segments
 \! gpstop -u
 -- end_ignore
