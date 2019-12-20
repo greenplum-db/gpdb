@@ -121,8 +121,8 @@ select reinitialize_standby();
 -- end_ignore
 
 -- Sync state between master and standby must be restored at the end.
-select application_name, state, sync_state from pg_stat_replication;
- application_name | state     | sync_state 
-------------------+-----------+------------
- gp_walreceiver   | streaming | sync       
+select application_name, state from pg_stat_replication;
+ application_name | state     
+------------------+-----------
+ gp_walreceiver   | streaming 
 (1 row)
