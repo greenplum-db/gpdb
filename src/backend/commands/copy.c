@@ -1846,7 +1846,7 @@ BeginCopy(bool is_from,
 	 * Since external scan calls BeginCopyFrom to init CopyStateData.
 	 * Current relation may be an external relation.
 	 */
-	if (RelationIsExternal(rel))
+	if (rel != NULL && RelationIsExternal(rel))
 	{
 		is_copy = false;
 		num_columns = rel->rd_att->natts;
