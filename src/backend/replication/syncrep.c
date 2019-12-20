@@ -314,7 +314,7 @@ SyncRepWaitForLSN(XLogRecPtr lsn, bool commit)
 		 * failover. Then the syncrep will be turned off by the FTS to unblock
 		 * backends waiting here.
 		 */
-		if (QueryCancelPending)
+		if (QueryCancelPending && commit)
 		{
 			QueryCancelPending = false;
 			ereport(WARNING,
