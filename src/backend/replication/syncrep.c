@@ -96,7 +96,7 @@ static bool SyncRepQueueIsOrderedByLSN(int mode);
  * This backend then resets its state to SYNC_REP_NOT_WAITING.
  */
 void
-SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
+SyncRepWaitForLSN(XLogRecPtr XactCommitLSN, bool commit)
 {
 	char	   *new_status = NULL;
 	const char *old_status;
@@ -303,7 +303,7 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 		 * failover. Then the syncrep will be turned off by the FTS to unblock
 		 * backends waiting here.
 		 */
-		if (QueryCancelPending)
+		if (QueryCancelPending && commit)
 		{
 			QueryCancelPending = false;
 			ereport(WARNING,

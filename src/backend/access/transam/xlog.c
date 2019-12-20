@@ -12282,7 +12282,7 @@ wait_to_avoid_large_repl_lag(void)
 		wal_bytes_written > (rep_lag_avoidance_threshold * 1024))
 	{
 		/* we use local cached copy of LogwrtResult here */
-		SyncRepWaitForLSN(LogwrtResult.Flush);
+		SyncRepWaitForLSN(LogwrtResult.Flush, false);
 		wal_bytes_written = 0;
 	}
 }
@@ -12298,7 +12298,7 @@ wait_for_mirror()
     tmpLogwrtResult = xlogctl->LogwrtResult;
     SpinLockRelease(&xlogctl->info_lck);
 
-    SyncRepWaitForLSN(tmpLogwrtResult.Flush);
+	SyncRepWaitForLSN(tmpLogwrtResult.Flush, false);
 }
 
 /*

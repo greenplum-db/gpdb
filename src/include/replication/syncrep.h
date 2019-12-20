@@ -35,7 +35,7 @@
 extern char *SyncRepStandbyNames;
 
 /* called by user backend */
-extern void SyncRepWaitForLSN(XLogRecPtr XactCommitLSN);
+extern void SyncRepWaitForLSN(XLogRecPtr XactCommitLSN, bool commit);
 
 /* called at backend exit */
 extern void SyncRepCleanupAtProcExit(void);
