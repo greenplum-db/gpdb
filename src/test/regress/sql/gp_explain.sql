@@ -147,7 +147,9 @@ explain (format yaml, costs off) SELECT * FROM dummy_aotab;
 explain (format xml, costs off) insert into dummy_aotab values (1);
 
 -- github issues 5795. explain fails previously.
+--start_ignore
 explain SELECT * from information_schema.key_column_usage;
+--end_ignore
 
 -- github issue 5794.
 set gp_enable_explain_allstat=on;
