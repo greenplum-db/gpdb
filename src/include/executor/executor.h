@@ -192,48 +192,6 @@ extern TupleTableSlot *ExecFilterJunk(JunkFilter *junkfilter,
 /*
  * prototypes from functions in execMain.c
  */
-
-/* AttrMap	
- *
- * A mapping of attribute numbers from one relation to another.
- * Both relations must have the same number of live (non-dropped)
- * attributes in the same order, but both may have holes (dropped
- * attributes) mixed in.  This structure maps live attributes in
- * the "base" relation to live attributes in the "other" relation.
- *
- * AttrMap is used for partitioned table processing because the
- * part relations that hold the data may have different "hole
- * patterns" than the partitioned relation as a whole.  But some
- * cataloged information refers only to the whole and, thus,
- * must be remapped to be used.
- *
- * live_count	number of live attributes in the "base" relation
- *				(and in the "other" relation)
- * attr_max		maximum attribute number in map; live attribute
- *				numbers in "other" range from 1 to attr_max.
- *				This is less than or equal to the number of 
- *              attributes in "other" which may have any number
- *				of trailing holes.
- * attr_count	number of attributes (live or holes) in "base".
- *				One less than the number elements in attr_map,
- *				since attr_map[0]is always 0.
- * attr_map[i]	attr number in "other" corresponding to attr 
- *				number i in "base", or 0 if the attribute is
- *				a hole.  (Note, however, attr_map[0] == 0.  
- *				It is wasted to allow us to use attr numbers
- *				as indexes.  Zero in attr_map stands for "no 
- *				live attribute".)
- *
- * To discard an AttrMap, just pfree it.
- */
-typedef struct AttrMap 
-{
-	int live_count;
-	int attr_max;
-	int attr_count;
-	AttrNumber attr_map[1];
-} AttrMap;
-
 extern void ExecutorStart(QueryDesc *queryDesc, int eflags);
 extern void standard_ExecutorStart(QueryDesc *queryDesc, int eflags);
 extern void ExecutorRun(QueryDesc *queryDesc,
@@ -283,10 +241,8 @@ extern void EvalPlanQualEnd(EPQState *epqstate);
 
 extern Oid GetIntoRelOid(QueryDesc *queryDesc);
 
-extern AttrMap *makeAttrMap(int base_count, AttrNumber *base_map);
-extern AttrNumber attrMap(AttrMap *map, AttrNumber anum);
-extern Node *attrMapExpr(AttrMap *map, Node *expr);
-extern bool map_part_attrs(Relation base, Relation part, AttrMap **map_ptr, bool throwerror);
+extern bool map_part_attrs(Relation base, Relation part, TupleConversionMap **map_ptr, bool throwerror);
+extern Node *attrMapExpr(TupleConversionMap *map, Node *expr);
 extern PartitionState *createPartitionState(PartitionNode *partsAndRules, int resultPartSize);
 extern List *InitializePartsMetadata(Oid rootOid);
 

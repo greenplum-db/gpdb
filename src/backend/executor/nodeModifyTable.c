@@ -38,6 +38,7 @@
 #include "postgres.h"
 
 #include "access/htup_details.h"
+#include "access/tupconvert.h"
 #include "access/xact.h"
 #include "commands/trigger.h"
 #include "executor/executor.h"
@@ -399,7 +400,7 @@ ExecInsert(ModifyTableState *mtstate,
 		}
 	}
 
-	slot = reconstructMatchingTupleSlot(parentslot, resultRelInfo);
+	slot = reconstructPartitionTupleSlot(parentslot, resultRelInfo);
 
 	if (RelationIsExternal(resultRelationDesc) &&
 		estate->es_result_partitions &&
@@ -1105,10 +1106,10 @@ checkPartitionUpdate(EState *estate, TupleTableSlot *partslot,
 {
 	Relation	resultRelationDesc = resultRelInfo->ri_RelationDesc;
 	AttrNumber	max_attr;
-	Datum	   *values = NULL;
-	bool	   *nulls = NULL;
-	TupleDesc	tupdesc = NULL;
-	Oid			parentRelid;
+	TupleTableSlot *parentslot = NULL;
+	Datum	   *values;
+	bool	   *nulls;
+	TupleDesc	tupdesc;
 	Oid			targetid;
 
 	Assert(estate->es_partition_state != NULL &&
@@ -1126,56 +1127,41 @@ checkPartitionUpdate(EState *estate, TupleTableSlot *partslot,
 	 * has physically-different attribute numbers due to dropped columns,
 	 * we should map the child attribute numbers to the parent's attribute
 	 * numbers to perform the partition selection.
-	 * EState doesn't have the parent relation information at the moment,
-	 * so we have to do a hard job here by opening it and compare the
+	 *
+	 * To determine whether we need to remap, or if the child partition
+	 * has compatible physical shape with the parent, we compare the
 	 * tuple descriptors.  If we find we need to map attribute numbers,
 	 * max_partition_attr could also be bogus for this child part,
 	 * so we end up materializing the whole columns using slot_getallattrs().
 	 * The purpose of this code is just to prevent the tuple from
 	 * incorrectly staying in default partition that has no constraint
 	 * (parts with constraint will throw an error if the tuple is changing
-	 * partition keys to out of part value anyway.)  It's a bit overkill
-	 * to do this complicated logic just for this purpose, which is necessary
-	 * with our current partitioning design, but I hope some day we can
-	 * change this so that we disallow phyisically-different tuple descriptor
-	 * across partition.
+	 * partition keys to out of part value anyway.)
 	 */
-	parentRelid = estate->es_result_partitions->part->parrelid;
 
 	/*
-	 * I don't believe this is the case currently, but we check the parent relid
-	 * in case the updating partition has changed since the last time we opened it.
+	 * Check this at the first pass only to avoid repeated tupledesc
+	 * comparisons.
 	 */
-	if (resultRelInfo->ri_PartitionParent &&
-		parentRelid != RelationGetRelid(resultRelInfo->ri_PartitionParent))
+	if (resultRelInfo->ri_PartCheckTupDescMatch == 0)
 	{
-		resultRelInfo->ri_PartCheckTupDescMatch = 0;
-		if (resultRelInfo->ri_PartCheckMap != NULL)
-			pfree(resultRelInfo->ri_PartCheckMap);
-		if (resultRelInfo->ri_PartitionParent)
-			relation_close(resultRelInfo->ri_PartitionParent, AccessShareLock);
-	}
-
-	/*
-	 * Check this at the first pass only to avoid repeated catalog access.
-	 */
-	if (resultRelInfo->ri_PartCheckTupDescMatch == 0 &&
-		parentRelid != RelationGetRelid(resultRelInfo->ri_RelationDesc))
-	{
-		Relation	parentRel;
 		TupleDesc	resultTupdesc, parentTupdesc;
+		Oid			parentRelid;
+		Relation	parentRel;
 
 		/*
 		 * We are on a child part, let's see the tuple descriptor looks like
 		 * the parent's one.  Probably this won't cause deadlock because
 		 * DML should have opened the parent table with appropriate lock.
 		 */
+
+		parentRelid = estate->es_result_partitions->part->parrelid;
 		parentRel = relation_open(parentRelid, AccessShareLock);
 		resultTupdesc = RelationGetDescr(resultRelationDesc);
 		parentTupdesc = RelationGetDescr(parentRel);
 		if (!equalTupleDescs(resultTupdesc, parentTupdesc, false))
 		{
-			AttrMap		   *map;
+			TupleConversionMap *map;
 			MemoryContext	oldcontext;
 
 			/* Tuple looks different.  Construct attribute mapping. */
@@ -1185,47 +1171,29 @@ checkPartitionUpdate(EState *estate, TupleTableSlot *partslot,
 
 			/* And save it for later use. */
 			resultRelInfo->ri_PartCheckMap = map;
-
+			resultRelInfo->ri_PartitionParentSlot = MakeSingleTupleTableSlot(parentTupdesc);
 			resultRelInfo->ri_PartCheckTupDescMatch = -1;
 		}
 		else
 			resultRelInfo->ri_PartCheckTupDescMatch = 1;
 
-		resultRelInfo->ri_PartitionParent = parentRel;
-		/* parentRel will be closed as part of ResultRelInfo cleanup */
+		relation_close(parentRel, NoLock);
 	}
 
 	if (resultRelInfo->ri_PartCheckMap != NULL)
 	{
-		Datum	   *parent_values;
-		bool	   *parent_nulls;
-		Relation	parentRel = resultRelInfo->ri_PartitionParent;
-		TupleDesc	parentTupdesc;
-		AttrMap	   *map;
-
-		Assert(parentRel != NULL);
-		parentTupdesc = RelationGetDescr(parentRel);
-
 		/*
 		 * We need to map the attribute numbers to parent's one, to
 		 * select the would-be destination relation, since all partition
 		 * rules are based on the parent relation's tuple descriptor.
 		 * max_partition_attr can be bogus as well, so don't use it.
 		 */
-		slot_getallattrs(partslot);
-		values = slot_get_values(partslot);
-		nulls = slot_get_isnull(partslot);
-		parent_values = palloc(parentTupdesc->natts * sizeof(Datum));
-		parent_nulls = palloc0(parentTupdesc->natts * sizeof(bool));
-
-		map = resultRelInfo->ri_PartCheckMap;
-		reconstructTupleValues(map, values, nulls, partslot->tts_tupleDescriptor->natts,
-							   parent_values, parent_nulls, parentTupdesc->natts);
+		parentslot = execute_attr_map_slot(resultRelInfo->ri_PartCheckMap->attrMap,
+										   partslot,
+										   resultRelInfo->ri_PartitionParentSlot);
 
 		/* Now we have values/nulls in parent's view. */
-		values = parent_values;
-		nulls = parent_nulls;
-		tupdesc = RelationGetDescr(parentRel);
+		slot_getallattrs(parentslot);
 	}
 	else
 	{
@@ -1233,27 +1201,18 @@ checkPartitionUpdate(EState *estate, TupleTableSlot *partslot,
 		 * map == NULL means we can just fetch values/nulls from the
 		 * current slot.
 		 */
-		Assert(nulls == NULL && tupdesc == NULL);
+		parentslot = partslot;
 		max_attr = estate->es_partition_state->max_partition_attr;
 		slot_getsomeattrs(partslot, max_attr);
-		/* values/nulls pointing to partslot's array. */
-		values = slot_get_values(partslot);
-		nulls = slot_get_isnull(partslot);
-		tupdesc = partslot->tts_tupleDescriptor;
 	}
 
 	/* And select the destination relation that this tuple would go to. */
+	values = slot_get_values(parentslot);
+	nulls = slot_get_isnull(parentslot);
+	tupdesc = parentslot->tts_tupleDescriptor;
 	targetid = selectPartition(estate->es_result_partitions, values,
 							   nulls, tupdesc,
 							   estate->es_partition_state->accessMethods);
-
-	/* Free up if we allocated mapped attributes. */
-	if (values != slot_get_values(partslot))
-	{
-		Assert(nulls != slot_get_isnull(partslot));
-		pfree(values);
-		pfree(nulls);
-	}
 
 	if (!OidIsValid(targetid))
 		ereport(ERROR,
@@ -1342,7 +1301,7 @@ ExecUpdate(ItemPointer tupleid,
 		 * columns, and MemTuple cannot deal with cases without converting
 		 * the target list back into the original relation's tuple desc.
 		 */
-		slot = reconstructMatchingTupleSlot(slot, resultRelInfo);
+		slot = reconstructPartitionTupleSlot(slot, resultRelInfo);
 	}
 
 	/* see if this update would move the tuple to a different partition */

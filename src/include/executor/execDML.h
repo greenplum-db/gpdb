@@ -16,14 +16,9 @@
 #ifndef EXECDML_H
 #define EXECDML_H
 
-extern void
-reconstructTupleValues(AttrMap *map,
-					   Datum *oldValues, bool *oldIsnull, int oldNumAttrs,
-					   Datum *newValues, bool *newIsnull, int newNumAttrs);
-
-
 extern TupleTableSlot *
-reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo);
+reconstructPartitionTupleSlot(TupleTableSlot *parentSlot,
+							  ResultRelInfo *childInfo);
 
 #endif   /* EXECDML_H */
 

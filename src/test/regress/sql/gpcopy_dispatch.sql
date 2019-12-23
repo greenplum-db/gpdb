@@ -127,10 +127,7 @@ ALTER TABLE partdisttest ADD PARTITION primero START(0) END(5);
 -- crash. This test exposed the bug and now validates the fix.
 COPY (
     SELECT 2,1
-    FROM (
-        SELECT generate_series(1, MAX_BUFFERED_TUPLES + 1)
-        FROM (VALUES (10000)) t(MAX_BUFFERED_TUPLES)
-        ) t
+    FROM generate_series(1, 10001)
     ) TO '/tmp/ten-thousand-and-one-lines.txt';
 COPY partdisttest FROM '/tmp/ten-thousand-and-one-lines.txt';
 

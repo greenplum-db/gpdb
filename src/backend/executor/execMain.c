@@ -2581,13 +2581,15 @@ CloseResultRelInfo(ResultRelInfo *resultRelInfo)
 
 	if (resultRelInfo->ri_resultSlot)
 	{
-		Assert(resultRelInfo->ri_resultSlot->tts_tupleDescriptor);
-		ReleaseTupleDesc(resultRelInfo->ri_resultSlot->tts_tupleDescriptor);
-		ExecClearTuple(resultRelInfo->ri_resultSlot);
+		ExecDropSingleTupleTableSlot(resultRelInfo->ri_resultSlot);
+		resultRelInfo->ri_resultSlot = NULL;
 	}
 
-	if (resultRelInfo->ri_PartitionParent)
-		relation_close(resultRelInfo->ri_PartitionParent, AccessShareLock);
+	if (resultRelInfo->ri_PartitionParentSlot)
+	{
+		ExecDropSingleTupleTableSlot(resultRelInfo->ri_PartitionParentSlot);
+		resultRelInfo->ri_PartitionParentSlot = NULL;
+	}
 
 	/* Close indices and then the relation itself */
 	ExecCloseIndices(resultRelInfo);
@@ -4580,10 +4582,9 @@ targetid_get_partition(Oid targetid, EState *estate, bool openIndices)
 		if (openIndices)
 			ExecOpenIndices(childInfo, false);
 
-		map_part_attrs(parentInfo->ri_RelationDesc,
-					   childInfo->ri_RelationDesc,
-					   &(childInfo->ri_partInsertMap),
-					   TRUE); /* throw on error, so result not needed */
+		childInfo->ri_partInsertMap =
+			convert_tuples_by_name(RelationGetDescr(parentInfo->ri_RelationDesc),
+								   RelationGetDescr(childInfo->ri_RelationDesc));
 	}
 	return childInfo;
 }
@@ -4627,53 +4628,26 @@ slot_get_partition(TupleTableSlot *slot, EState *estate)
 	return resultRelInfo;
 }
 
-/* Wrap an attribute map (presumably from base partitioned table to part
- * as created by map_part_attrs in execMain.c) with an AttrMap. The new
- * AttrMap will contain a copy of the argument map.  The caller retains
- * the responsibility to dispose of the argument map eventually.
- *
- * If the input AttrNumber vector is empty or null, it is taken as an
- * identity map, i.e., a null AttrMap.
- */
-AttrMap *makeAttrMap(int base_count, AttrNumber *base_map)
-{
-	int i, n, p;
-	AttrMap *map;
-	
-	if ( base_count < 1 || base_map == NULL )
-		return NULL;
-	
-	map = palloc0(sizeof(AttrMap) + base_count * sizeof(AttrNumber));
-	
-	for ( i = n = p = 0; i <= base_count; i++ )
-	{
-		map->attr_map[i] = base_map[i];
-		
-		if ( map->attr_map[i] != 0 ) 
-		{
-			if ( map->attr_map[i] > p ) p = map->attr_map[i];
-			n++;
-		}
-	}	
-	
-	map->live_count = n;
-	map->attr_max = p;
-	map->attr_count = base_count;
-	
-	return map;
-}
 
 /* Use the given attribute map to convert an attribute number in the
  * base relation to an attribute number in the other relation.  Forgive
  * out-of-range attributes by mapping them to zero.  Treat null as
  * the identity map.
  */
-AttrNumber attrMap(AttrMap *map, AttrNumber anum)
+AttrNumber
+attrMap(TupleConversionMap *map, AttrNumber anum)
 {
-	if ( map == NULL )
+	if (map == NULL)
 		return anum;
-	if ( 0 < anum && anum <= map->attr_count )
-		return map->attr_map[anum];
+
+	if (0 < anum && anum <= map->indesc->natts)
+	{
+		for (int i = 0; i < map->outdesc->natts; i++)
+		{
+			if (map->attrMap[i] == anum)
+				return i + 1;
+		}
+	}
 	return 0;
 }
 
@@ -4683,36 +4657,37 @@ AttrNumber attrMap(AttrMap *map, AttrNumber anum)
  * Insist the Var nodes have varno == 1 and the that the mapping
  * yields a live attribute number (non-zero).
  */
-static Node *apply_attrmap_mutator(Node *node, AttrMap *map)
+static Node *apply_attrmap_mutator(Node *node, TupleConversionMap *map)
 {
 	if ( node == NULL )
 		return NULL;
 	
 	if (IsA(node, Var) )
 	{
-		AttrNumber anum = 0;
-		Var *var = (Var*)node;
+		Var		   *var = (Var *) node;
+		AttrNumber anum;
+
 		Assert(var->varno == 1); /* in CHECK constraints */
 		anum = attrMap(map, var->varattno);
-		
-		if ( anum == 0 )
+
+		if (anum == 0)
 		{
 			/* Should never happen, but best caught early. */
 			elog(ERROR, "attribute map discrepancy");
 		}
-		else if ( anum != var->varattno )
+		else if (anum != var->varattno)
 		{
 			var = copyObject(var);
 			var->varattno = anum;
 		}
-		return (Node *)var;
+		return (Node *) var;
 	}
-	return expression_tree_mutator(node, apply_attrmap_mutator, (void *)map);
+	return expression_tree_mutator(node, apply_attrmap_mutator, (void *) map);
 }
 
-/* Apply attrMap over the Var nodes in an expression.
- */
-Node *attrMapExpr(AttrMap *map, Node *expr)
+/* Apply attrMap over the Var nodes in an expression. */
+Node *
+attrMapExpr(TupleConversionMap *map, Node *expr)
 {
 	return apply_attrmap_mutator(expr, map);
 }
@@ -4724,37 +4699,20 @@ Node *attrMapExpr(AttrMap *map, Node *expr)
  * Don't use any partitioning catalogs, because this must run
  * on the segment databases as well as on the entry database.
  *
- * If requested and needed, make a vector mapping the attribute
+ * Also make a vector mapping the attribute
  * numbers of the partitioned table to corresponding attribute 
  * numbers in the part.  Represent the "unneeded" identity map
  * as null.
  *
  * base -- the partitioned table
  * part -- the part table
- * map_ptr -- where to store a pointer to the result, or NULL
+ * map_ptr -- where to store a pointer to the result.
  * throw -- whether to throw an error in case of incompatibility
  *
- * The implicit result is a vector one longer than the number
- * of attributes (existing or not) in the base relation.
- * It is returned through the map_ptr argument, if that argument
- * is non-null.
- *
- * The explicit result indicates whether the part is compatible
+ * The return value indicates whether the part is compatible
  * with the base relation.  If the throw argument is true, however,
  * an error is issued rather than returning false.
  *
- * Note that, in the map, element 0 is wasted and is always zero, 
- * so the vector is indexed by attribute number (origin 1).
- *
- * The i-th element of the map is the attribute number in 
- * the part relation that corresponds to attribute i of the  
- * base relation, or it is zero to indicate that attribute 
- * i of the base relation doesn't exist (has been dropped).
- *
- * This is a handy map for renumbering attributes for use with
- * part relations that may have a different configuration of 
- * "holes" than the partitioned table in which they occur.
- * 
  * Be sure to call this in the memory context in which the result
  * vector ought to be stored.
  *
@@ -4770,8 +4728,8 @@ Node *attrMapExpr(AttrMap *map, Node *expr)
  * position in tuple, etc.
  */
 bool 
-map_part_attrs(Relation base, Relation part, AttrMap **map_ptr, bool throw)
-{	
+map_part_attrs(Relation base, Relation part, TupleConversionMap **map_ptr, bool throw)
+{
 	AttrNumber i = 1;
 	AttrNumber n = base->rd_att->natts;
 	FormData_pg_attribute *battr = NULL;
@@ -4779,16 +4737,7 @@ map_part_attrs(Relation base, Relation part, AttrMap **map_ptr, bool throw)
 	AttrNumber j = 1;
 	AttrNumber m = part->rd_att->natts;
 	FormData_pg_attribute *pattr = NULL;
-	
-	AttrNumber *v = NULL;
-	
-	/* If we might want a map, allocate one. */
-	if ( map_ptr != NULL )
-	{
-		v = palloc0(sizeof(AttrNumber)*(n+1));
-		*map_ptr = NULL;
-	}
-	
+
 	bool is_identical = TRUE;
 	bool is_compatible = TRUE;
 	
@@ -4864,15 +4813,11 @@ map_part_attrs(Relation base, Relation part, AttrMap **map_ptr, bool throw)
 		/* Note any attribute number difference. */
 		if ( i != j )
 			is_identical = FALSE;
-		
-		/* If we're building a map, update it. */
-		if ( v != NULL )
-			v[i] = j;
-		
+
 		i++;
 		j++;
 	}
-	
+
 	if ( is_compatible )
 	{
 		/* Any excess attributes in parent better be marked dropped */
@@ -4913,27 +4858,15 @@ map_part_attrs(Relation base, Relation part, AttrMap **map_ptr, bool throw)
 	{
 		is_identical = FALSE;
 	}
-	
+
 	if ( !is_compatible )
 	{
 		Assert( !throw );
-		if ( v != NULL )
-			pfree(v);
 		return FALSE;
 	}
 
-	/* If parent and part are the same, don't use a map */
-	if ( is_identical && v != NULL )
-	{
-		pfree(v);
-		v = NULL;
-	}
-	
-	if ( map_ptr != NULL && v != NULL )
-	{
-		*map_ptr = makeAttrMap(n, v);
-		pfree(v);
-	}
+	*map_ptr = convert_tuples_by_name(RelationGetDescr(base),
+									  RelationGetDescr(part));
 	return TRUE;
 }
 

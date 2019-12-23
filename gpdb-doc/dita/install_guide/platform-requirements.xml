@@ -318,8 +318,10 @@
     <topic id="topic_eyc_l2h_zz">
       <title>Extensions</title>
       <body>
+        <p>This table lists the versions of the Pivotal Greenplum Extensions that are compatible
+          with this release of Greenplum Database 6.</p>
         <table class="- topic/table " id="table_b1q_m2h_zz">
-          <title class="- topic/title ">Pivotal Greenplum 6.0.0 Extensions Compatibility</title>
+          <title class="- topic/title ">Pivotal Greenplum 6 Extensions Compatibility</title>
           <tgroup cols="2" class="- topic/tgroup ">
             <colspec colnum="1" colname="col1" colwidth="297pt" class="- topic/colspec "/>
             <colspec colnum="2" colname="col3" colwidth="117.58pt" class="- topic/colspec "/>
@@ -337,7 +339,7 @@
               </row>
               <row>
                 <entry>PL/Java</entry>
-                <entry>2.0.1</entry>
+                <entry>2.0.2</entry>
               </row>
               <row>
                 <entry>PL/R<sup>2</sup></entry>
@@ -391,11 +393,11 @@
       <body>
         <p>
           <ul id="ul_ckf_sfc_hbb">
-            <li>Greenplum Platform Extension Framework (PXF) v5.10.0 - PXF, integrated with Greenplum
-              Database 6, provides access to Hadoop, object store, and SQL external data stores.
-              Refer to <xref scope="peer" href="../admin_guide/external/pxf-overview.xml">Accessing
-                External Data with PXF</xref> in the <cite>Greenplum Database Administrator
-                Guide</cite> for PXF configuration and usage
+            <li>Greenplum Platform Extension Framework (PXF) v5.10.0 - PXF, integrated with
+              Greenplum Database 6, provides access to Hadoop, object store, and SQL external data
+              stores. Refer to <xref scope="peer" href="../admin_guide/external/pxf-overview.xml"
+                >Accessing External Data with PXF</xref> in the <cite>Greenplum Database
+                Administrator Guide</cite> for PXF configuration and usage
               information.<!--Also check OSS information in Hadoop section--></li>
             <li>Greenplum-Kafka Integration - The Pivotal Greenplum-Kafka Integration provides high
               speed, parallel data transfer from a Kafka cluster to a Pivotal Greenplum Database
@@ -470,7 +472,6 @@
       <p>PXF can use Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop
         distributions. PXF bundles all of the JAR files on which it depends, including the following
         Hadoop libraries:</p>
-
       <table>
         <title>PXF Hadoop Supported Platforms</title>
         <tgroup cols="4">

@@ -844,7 +844,7 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 	char	   *conBin;
 	bool		conbinIsNull = false;
 	bool		conKeyIsNull = false;
-	AttrMap    *map;
+	TupleConversionMap *map;
 
 	/* create the map needed for mapping attnums */
 	Relation	rootRel = heap_open(rootOid, AccessShareLock);

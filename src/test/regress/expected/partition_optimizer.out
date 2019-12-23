@@ -947,7 +947,7 @@ ERROR:  validation of external tables not supported
 HINT:  Use WITHOUT VALIDATION.
 alter table foo_p exchange partition for(rank(3)) with table bar_p without validation;
 truncate foo_p;
-ERROR:  "foo_p_1_prt_3" is an external relation and can't be truncated
+ERROR:  cannot truncate table having external partition: "foo_p_1_prt_3"
 drop table foo_p;
 drop table bar_p;
 -- Check for overflow of circular data types like time

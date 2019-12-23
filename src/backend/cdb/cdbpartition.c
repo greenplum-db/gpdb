@@ -207,7 +207,7 @@ static List *get_partition_rules(PartitionNode *pn);
 static bool
 			relation_has_supers(Oid relid);
 
-static NewConstraint *constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
+static NewConstraint *constraint_apply_mapped(HeapTuple tuple, TupleConversionMap *map, Relation cand,
 						bool validate, Relation pgcon);
 
 static char *ChooseConstraintNameForPartitionCreate(const char *rname,
@@ -956,8 +956,8 @@ cdb_exchange_part_constraints(Relation table,
 	MemoryContext context;
 	MemoryContext oldcontext;
 	ConstraintEntry *entry;
-	AttrMap    *p2t = NULL;
-	AttrMap    *c2t = NULL;
+	TupleConversionMap *p2t = NULL;
+	TupleConversionMap *c2t = NULL;
 
 	HeapTuple	tuple;
 	Form_pg_constraint con;
@@ -1297,7 +1297,7 @@ cdb_exchange_part_constraints(Relation table,
 			 * We need a constraint like the missing one for the part, but
 			 * translated for the candidate.
 			 */
-			AttrMap    *map;
+			TupleConversionMap *map;
 			struct NewConstraint *nc;
 			Form_pg_constraint mcon = (Form_pg_constraint) GETSTRUCT(missing_part_constraint);
 
@@ -1320,7 +1320,7 @@ cdb_exchange_part_constraints(Relation table,
 		 * We need constraints like the missing ones for the whole, but
 		 * translated for the candidate.
 		 */
-		AttrMap    *map;
+		TupleConversionMap *map;
 		struct NewConstraint *nc;
 		ListCell   *lc;
 
@@ -2821,7 +2821,7 @@ getPartConstraintsContainsKeys(Oid partOid, Oid rootOid, List *partKey)
 	char	   *conBin;
 	bool		conbinIsNull = false;
 	bool		conKeyIsNull = false;
-	AttrMap    *map;
+	TupleConversionMap *map;
 
 	/* create the map needed for mapping attnums */
 	Relation	rootRel = heap_open(rootOid, AccessShareLock);
@@ -7717,8 +7717,8 @@ can_implement_dist_on_part(Relation rel, DistributedBy *dist)
 bool
 is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 {
-	AttrMap    *map_new = NULL;
-	AttrMap    *map_old = NULL;
+	TupleConversionMap *map_new = NULL;
+	TupleConversionMap *map_old = NULL;
 	bool		congruent = TRUE;
 
 	/* Both parts must be relations. */
@@ -7948,7 +7948,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
  * be supplied via this argument.
  */
 static NewConstraint *
-constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
+constraint_apply_mapped(HeapTuple tuple, TupleConversionMap *map, Relation cand,
 						bool validate, Relation pgcon)
 {
 	Datum		val;

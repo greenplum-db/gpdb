@@ -3330,8 +3330,7 @@ ExecEvalConvertRowtype(ConvertRowtypeExprState *cstate,
 
 		/* prepare map from old to new attribute numbers */
 		cstate->map = convert_tuples_by_name(cstate->indesc,
-											 cstate->outdesc,
-								 gettext_noop("could not convert row type"));
+											 cstate->outdesc);
 		cstate->initialized = true;
 
 		MemoryContextSwitchTo(old_cxt);
@@ -3349,7 +3348,7 @@ ExecEvalConvertRowtype(ConvertRowtypeExprState *cstate,
 	tmptup.t_len = HeapTupleHeaderGetDatumLength(tuple);
 	tmptup.t_data = tuple;
 
-	result = do_convert_tuple(&tmptup, cstate->map);
+	result = execute_attr_map_tuple(&tmptup, cstate->map);
 
 	return HeapTupleGetDatum(result);
 }

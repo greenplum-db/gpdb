@@ -503,7 +503,7 @@ plpgsql_exec_function(PLpgSQL_function *func, FunctionCallInfo fcinfo,
 														gettext_noop("returned record type does not match expected record type"));
 					/* it might need conversion */
 					if (tupmap)
-						rettup = do_convert_tuple(rettup, tupmap);
+						rettup = execute_attr_map_tuple(rettup, tupmap);
 					/* no need to free map, we're about to return anyway */
 					break;
 				case TYPEFUNC_RECORD:
@@ -820,7 +820,7 @@ plpgsql_exec_trigger(PLpgSQL_function *func,
 											gettext_noop("returned row structure does not match the structure of the triggering table"));
 		/* it might need conversion */
 		if (tupmap)
-			rettup = do_convert_tuple(rettup, tupmap);
+			rettup = execute_attr_map_tuple(rettup, tupmap);
 		/* no need to free map, we're about to return anyway */
 
 		/* Copy tuple to upper executor memory */
@@ -2723,7 +2723,7 @@ exec_stmt_return_next(PLpgSQL_execstate *estate,
 					/* it might need conversion */
 					if (tupmap)
 					{
-						tuple = do_convert_tuple(tuple, tupmap);
+						tuple = execute_attr_map_tuple(tuple, tupmap);
 						free_conversion_map(tupmap);
 						free_tuple = true;
 					}
@@ -2785,7 +2785,7 @@ exec_stmt_return_next(PLpgSQL_execstate *estate,
 				{
 					HeapTuple	newtuple;
 
-					newtuple = do_convert_tuple(tuple, tupmap);
+					newtuple = execute_attr_map_tuple(tuple, tupmap);
 					free_conversion_map(tupmap);
 					heap_freetuple(tuple);
 					tuple = newtuple;
@@ -2902,7 +2902,7 @@ exec_stmt_return_query(PLpgSQL_execstate *estate,
 			HeapTuple	tuple = SPI_tuptable->vals[i];
 
 			if (tupmap)
-				tuple = do_convert_tuple(tuple, tupmap);
+				tuple = execute_attr_map_tuple(tuple, tupmap);
 			tuplestore_puttuple(estate->tuple_store, tuple);
 			if (tupmap)
 				heap_freetuple(tuple);
