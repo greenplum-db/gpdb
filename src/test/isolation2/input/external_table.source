@@ -113,3 +113,14 @@ SELECT gp_inject_fault('interconnect_setup_palloc', 'reset', dbid)
 10: FETCH exttab_cur1;
 10: FETCH exttab_cur1;
 10: COMMIT;
+
+
+-- start_ignore
+DROP EXTERNAL WEB TABLE IF EXISTS ext_delim_off;
+-- end_ignore
+
+-- Create external table with delimiter off
+CREATE EXTERNAL WEB TABLE ext_delim_off ( junk text) execute 'echo hi' on master FORMAT 'text' (delimiter 'OFF' null E'\\N' escape E'\\');
+
+-- Query the ext_delim_off table
+SELECT * FROM ext_delim_off;

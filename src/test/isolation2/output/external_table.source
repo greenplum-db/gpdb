@@ -187,3 +187,20 @@ DECLARE
 (0 rows)
 10: COMMIT;
 COMMIT
+
+
+GP_IGNORE:-- start_ignore
+GP_IGNORE:DROP EXTERNAL WEB TABLE IF EXISTS ext_delim_off;
+GP_IGNORE:DROP
+GP_IGNORE:-- end_ignore
+
+-- Create external table with delimiter off
+CREATE EXTERNAL WEB TABLE ext_delim_off ( junk text) execute 'echo hi' on master FORMAT 'text' (delimiter 'OFF' null E'\\N' escape E'\\');
+CREATE
+
+-- Query the ext_delim_off table
+SELECT * FROM ext_delim_off;
+ junk 
+------
+ hi   
+(1 row)

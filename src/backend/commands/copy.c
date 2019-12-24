@@ -1719,6 +1719,8 @@ BeginCopy(bool is_from,
 	CopyState	cstate;
 	int			num_phys_attrs;
 	MemoryContext oldcontext;
+	bool is_copy = true;
+	int num_columns = 0;
 
 	/* Allocate workspace and zero all fields */
 	cstate = (CopyStateData *) palloc0(sizeof(CopyStateData));
@@ -1737,10 +1739,20 @@ BeginCopy(bool is_from,
 
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
+	/*
+	 * Since external scan calls BeginCopyFrom to init CopyStateData.
+	 * Current relation may be an external relation.
+	 */
+	if (rel != NULL && RelationIsExternal(rel))
+	{
+		is_copy = false;
+		num_columns = rel->rd_att->natts;
+	}
+
 	/* Extract options from the statement node tree */
 	ProcessCopyOptions(cstate, is_from, options,
-					   0, /* pass correct value when COPY supports no delim */
-					   true);
+					   num_columns, /* pass correct value when COPY supports no delim */
+					   is_copy);
 
 
 	/* Process the source/target relation or query */
