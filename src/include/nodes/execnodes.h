@@ -510,6 +510,12 @@ typedef struct EState
 
 	/* If query can insert/delete tuples, the command ID to mark them with */
 	CommandId	es_output_cid;
+	/*
+	 * Set when initplan, Update, Delete, or DML plans
+	 * the field gpsegid_attno is the index in the tupleslot which save
+	 * the gp_segment_id sys column.
+	 */
+	AttrNumber      gpsegid_attno;
 
 	/* Info about target table for insert/update/delete queries: */
 	ResultRelInfo *es_result_relations; /* array of ResultRelInfos */

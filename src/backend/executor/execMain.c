@@ -174,6 +174,8 @@ typedef struct CopyDirectDispatchToSliceContext
 } CopyDirectDispatchToSliceContext;
 
 static bool CopyDirectDispatchFromPlanToSliceTableWalker( Node *node, CopyDirectDispatchToSliceContext *context);
+static void set_gp_segment_id_colidx(PlannedStmt *stmt, EState *estate, CmdType operation);
+static void check_tuple_locality(TupleTableSlot *slot, EState *estate);
 
 static void
 CopyDirectDispatchToSlice( Plan *ddPlan, int sliceId, CopyDirectDispatchToSliceContext *context)
@@ -1745,6 +1747,11 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 * contain OIDs or not.
 	 */
 	InitializeResultRelations(plannedstmt, estate, operation);
+
+	/*
+	 * Set gp_segment_id col index for Delete|Update|DML plan.
+	 */
+	set_gp_segment_id_colidx(plannedstmt, estate, operation);
 
 	/*
 	 * If there are partitions involved in the query, initialize partitioning metadata.
@@ -3376,6 +3383,8 @@ ExecDelete(ItemPointer tupleid,
 	ItemPointerData update_ctid;
 	TransactionId update_xmax = InvalidTransactionId;
 
+	check_tuple_locality(planSlot, estate);
+
 	/*
 	 * get information on the (current) result relation
 	 */
@@ -3793,6 +3802,7 @@ ExecUpdate(TupleTableSlot *slot,
 	ItemPointerData lastTid;
 	bool		wasHotUpdate;
 
+	check_tuple_locality(planSlot, estate);
 	/*
 	 * abort the operation if not running transactions
 	 */
@@ -5801,4 +5811,56 @@ FillSliceTable(EState *estate, PlannedStmt *stmt)
 	 * SubPlan nodes.
 	 */
 	FillSliceTable_walker((Node *) stmt->planTree, &cxt);
+}
+
+static void
+set_gp_segment_id_colidx(PlannedStmt *stmt, EState *estate, CmdType operation)
+{
+	ListCell *lc;
+	Plan     *plan = stmt->planTree;
+	if (operation != CMD_UPDATE && operation != CMD_DELETE)
+		return;
+	if (IsA(plan, DML))
+		plan = outerPlan(plan);
+
+	estate->gpsegid_attno = InvalidAttrNumber;
+	foreach(lc, plan->targetlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+		if (tle->resname && (strcmp(tle->resname, "gp_segment_id") == 0))
+		{
+			estate->gpsegid_attno = tle->resno;
+			return;
+		}
+	}
+}
+
+static void
+check_tuple_locality(TupleTableSlot *slot, EState *estate)
+{
+	if (AttributeNumberIsValid(estate->gpsegid_attno))
+	{
+		Datum gpsegid;
+		bool  isnull;
+		int   segid;
+
+		gpsegid = slot_getattr(slot, estate->gpsegid_attno, &isnull);
+		Assert(!isnull);
+
+		segid = DatumGetInt32(gpsegid);
+		/*
+		 * gp_segment_id in the slot is filled using the GUC
+		 * Gp_segment, and its default value is -999. When we
+		 * are building the cluster (yet not finished), segid
+		 * may be -999, we ignore such case here.
+		 */
+		if (segid < MASTER_CONTENT_ID)
+			return;
+
+		if (segid != GpIdentity.segindex)
+		{
+			elog(ERROR, "distribution key of the tuple doesn't belong to "
+				"current segment (actually from seg%d)", DatumGetInt32(gpsegid));
+		}
+	}
 }
