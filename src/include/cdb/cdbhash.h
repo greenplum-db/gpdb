@@ -100,6 +100,9 @@ extern bool isGreenplumDbOprRedistributable(Oid oprid);
  */
 extern bool isGreenplumDbPathkeyDistCompatible(PathKey *pathkey);
 
+/* check whether two types are cdbhash compatible. */
+extern bool cdbhash_type_compatible(Oid ltypid, Oid rtypeid);
+
 /*
  * Return true if the Oid is an array type.  This can be used prior
  *   to hashing the datum because array typeoids are expected to

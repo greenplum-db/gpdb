@@ -16,6 +16,7 @@
 #include "postgres.h"
 
 #include "access/hash.h"				/* HashEqualStrategyNumber */
+#include "cdb/cdbhash.h"              	/* cdbhash_type_compatible() */
 #include "nodes/makefuncs.h"            /* makeVar() */
 #include "nodes/plannodes.h"            /* Plan */
 #include "optimizer/clauses.h"          /* expression_tree_walker/mutator */
@@ -25,9 +26,6 @@
 #include "utils/lsyscache.h"			/* get_opfamily_member() */
 
 #include "cdb/cdbpullup.h"              /* me */
-
-#define IS_INTEGER_TYPE(type)                             \
-    (type == INT2OID || type == INT4OID || type == INT8OID)
 
 /*
  * cdbpullup_colIdx
@@ -386,33 +384,23 @@ Expr *
 cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 {
 	ListCell *lc;
+	List	 *nonConstTypeList = NIL;
 	EquivalenceClass *eclass = item->pk_eclass;
-	Oid ec_type = InvalidOid;
-
-	/* firstly get the non const em's data type */
-	foreach(lc, eclass->ec_members)
-	{
-		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
-
-		if (em->em_is_const)
-			continue;
-
-		ec_type = em->em_datatype;
-	}
 
 	foreach(lc, eclass->ec_members)
 	{
 		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
 		Expr	   *key = (Expr *) em->em_expr;
 
-		if (OidIsValid(ec_type)
-				&& (em->em_datatype != ec_type)
-				&& (!IS_INTEGER_TYPE(em->em_datatype) || !IS_INTEGER_TYPE(em->em_datatype)))
+		/*
+		 * Don't process constant now
+		 * Since constants in EC may has different types, it may choose
+		 * a wrong type as the distkey.
+		 */
+		if (em->em_is_const)
 			continue;
 
-		/* A constant is OK regardless of the target list */
-		if (em->em_is_const)
-			return key;
+		nonConstTypeList = lappend_oid(nonConstTypeList, em->em_datatype);
 
 		if (targetlist)
 		{
@@ -454,6 +442,27 @@ cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 			}
 		}
 	}
+
+	/*
+	 * If there is no non const candidate, then it's OK to return
+	 * the constant regardless of the target list.
+	 */
+	foreach(lc, eclass->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
+		Expr	   *key = (Expr *) em->em_expr;
+		if (em->em_is_const)
+		{
+			ListCell   *cell;
+			foreach(cell, nonConstTypeList)
+			{
+				if(cdbhash_type_compatible(lfirst_oid(cell), em->em_datatype))
+					return key;
+			}
+		}
+	}
+
+	list_free(nonConstTypeList);
 
 	return NULL;
 }
