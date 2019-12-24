@@ -301,8 +301,15 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	/*
 	 * The stored query was rewritten at the time of the MV definition, but
 	 * has not been scribbled on by the planner.
+	 *
+	 * GPDB: using original query directly may cause dangling pointers if
+	 * shared-inval-queue is overflow, which will cause rebuild the matview
+	 * relation. when rebuilding matview relation(relcache), it is found
+	 * that oldRel->rule(parentStmtType = PARENTSTMTTYPE_REFRESH_MATVIEW)
+	 * is not equal to newRel->rule(parentStmtType = PARENTSTMTTYPE_NONE),
+	 * caused oldRel->rule(dataQuery) to be released
 	 */
-	dataQuery = (Query *) linitial(actions);
+	dataQuery = copyObject((Query *) linitial(actions));
 	Assert(IsA(dataQuery, Query));
 
 	dataQuery->parentStmtType = PARENTSTMTTYPE_REFRESH_MATVIEW;
