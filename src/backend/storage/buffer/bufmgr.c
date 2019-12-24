@@ -865,7 +865,7 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 			if (!isLocalBuf)
 			{
 				if (mode == RBM_ZERO_AND_LOCK)
-					LWLockAcquire(BufferDescriptorGetContentLock(bufHdr),
+					AcquireContentLock(bufHdr,
 								  LW_EXCLUSIVE);
 				else if (mode == RBM_ZERO_AND_CLEANUP_LOCK)
 					LockBufferForCleanup(BufferDescriptorGetBuffer(bufHdr));
@@ -1025,7 +1025,7 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 	if ((mode == RBM_ZERO_AND_LOCK || mode == RBM_ZERO_AND_CLEANUP_LOCK) &&
 		!isLocalBuf)
 	{
-		LWLockAcquire(BufferDescriptorGetContentLock(bufHdr), LW_EXCLUSIVE);
+		AcquireContentLock(bufHdr, LW_EXCLUSIVE);
 	}
 
 	if (isLocalBuf)
@@ -1217,7 +1217,7 @@ BufferAlloc(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 						StrategyRejectBuffer(strategy, buf))
 					{
 						/* Drop lock/pin and loop around for another buffer */
-						LWLockRelease(BufferDescriptorGetContentLock(buf));
+						ReleaseContentLock(buf);
 						UnpinBuffer(buf, true);
 						continue;
 					}
@@ -3415,9 +3415,9 @@ FlushDatabaseBuffers(Oid dbid)
 			(buf_state & (BM_VALID | BM_DIRTY)) == (BM_VALID | BM_DIRTY))
 		{
 			PinBuffer_Locked(bufHdr);
-			LWLockAcquire(BufferDescriptorGetContentLock(bufHdr), LW_SHARED);
+			AcquireContentLock(bufHdr, LW_SHARED);
 			FlushBuffer(bufHdr, NULL);
-			LWLockRelease(BufferDescriptorGetContentLock(bufHdr));
+			ReleaseContentLock(bufHdr);
 			UnpinBuffer(bufHdr, true);
 		}
 		else
@@ -4063,7 +4063,7 @@ TerminateBufferIO(BufferDesc *buf, bool clear_dirty, uint32 set_flag_bits)
 
 #ifdef MPROTECT_BUFFERS
 	/* XXX: should this be PROT_NONE if called from AbortBufferIO? */
-	if (!LWLockHeldByMe(buf->content_lock))
+	if (!LWLockHeldByMe(BufferDescriptorGetContentLock(buf)))
 		BufferMProtect(buf, PROT_READ);
 #endif
 	LWLockRelease(BufferDescriptorGetIOLock(buf));
