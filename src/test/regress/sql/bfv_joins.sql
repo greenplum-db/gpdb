@@ -247,7 +247,13 @@ DROP TABLE member_group;
 DROP TABLE member_subgroup;
 DROP TABLE region;
 
--- test the query have equivalence class with const members
+--
+-- Test the query have equivalence class with const members.
+-- Mix timestamp and timestamptz in a join. We cannot use a Redistribute
+-- Motion, because the cross-datatype = operator between them doesn't belong
+-- to any hash operator class. We cannot hash rows in a way that matches would
+-- land on the same segment in that case.
+--
 CREATE TABLE gp_timestamp1 (a int, b timestamp) DISTRIBUTED BY (a, b);
 CREATE TABLE gp_timestamp2 (c int, d timestamp) DISTRIBUTED BY (c, d);
 
