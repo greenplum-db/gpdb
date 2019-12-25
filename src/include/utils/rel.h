@@ -24,6 +24,7 @@
 #include "catalog/pg_publication.h"
 #include "fmgr.h"
 #include "nodes/bitmapset.h"
+#include "partitioning/partdefs.h"
 #include "rewrite/prs2lock.h"
 #include "storage/block.h"
 #include "storage/relfilenode.h"
@@ -107,9 +108,9 @@ typedef struct RelationData
 	List	   *rd_fkeylist;	/* list of ForeignKeyCacheInfo (see below) */
 	bool		rd_fkeyvalid;	/* true if list has been computed */
 
-	struct PartitionKeyData *rd_partkey;	/* partition key, or NULL */
+	PartitionKey rd_partkey;	/* partition key, or NULL */
 	MemoryContext rd_partkeycxt;	/* private context for rd_partkey, if any */
-	struct PartitionDescData *rd_partdesc;	/* partitions, or NULL */
+	PartitionDesc rd_partdesc;	/* partition descriptor, or NULL */
 	MemoryContext rd_pdcxt;		/* private context for rd_partdesc, if any */
 	List	   *rd_partcheck;	/* partition CHECK quals */
 	bool		rd_partcheckvalid;	/* true if list has been computed */
@@ -700,18 +701,6 @@ typedef struct ViewOptions
 	(XLogLogicalInfoActive() && \
 	 RelationNeedsWAL(relation) && \
 	 !IsCatalogRelation(relation))
-
-/*
- * RelationGetPartitionKey
- *		Returns the PartitionKey of a relation
- */
-#define RelationGetPartitionKey(relation) ((relation)->rd_partkey)
-
-/*
- * RelationGetPartitionDesc
- *		Returns partition descriptor for a relation.
- */
-#define RelationGetPartitionDesc(relation) ((relation)->rd_partdesc)
 
 /* routines in utils/cache/relcache.c */
 extern void RelationIncrementReferenceCount(Relation rel);
