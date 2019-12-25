@@ -33,6 +33,7 @@
 #include "access/transam.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
+#include "port/atomics.h"
 #include "storage/shmem.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
@@ -88,7 +89,7 @@ typedef struct DistributedLogShmem
 	 * distributed snapshot from the QD (or in the QD itself, whenever
 	 * we compute a new snapshot).
 	 */
-	TransactionId	oldestXmin;
+	volatile TransactionId	oldestXmin;
 
 } DistributedLogShmem;
 
@@ -144,7 +145,7 @@ DistributedLog_InitOldestXmin(void)
 		oldestXmin = xid;
 	}
 
-	DistributedLogShared->oldestXmin = oldestXmin;
+	pg_atomic_write_u32((pg_atomic_uint32 *)&DistributedLogShared->oldestXmin, oldestXmin);
 }
 /*
  * Advance the "oldest xmin" among distributed snapshots.
@@ -177,6 +178,7 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 	TransactionId oldOldestXmin;
 	int			currPage;
 	int			slotno;
+	bool		DistributedLogControlLockHeldByMe = false;
 	DistributedLogEntry *entries = NULL;
 
 	Assert(!IS_QUERY_DISPATCHER());
@@ -192,8 +194,8 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 #endif
 
 	LWLockAcquire(DistributedLogTruncateLock, LW_SHARED);
-	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
-	oldestXmin = oldOldestXmin = DistributedLogShared->oldestXmin;
+	oldestXmin = (TransactionId)pg_atomic_read_u32((pg_atomic_uint32 *)&DistributedLogShared->oldestXmin);
+	oldOldestXmin = oldestXmin;
 	Assert(oldestXmin != InvalidTransactionId);
 
 	/*
@@ -214,13 +216,27 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 
 		if (page != currPage)
 		{
-			slotno = SimpleLruReadPage(DistributedLogCtl, page, true, oldestXmin);
+			/*
+			 * SimpleLruReadPage_ReadOnly will acquire a lwlock, it is the
+			 * caller's responsibility to release this lock.
+			 * But we cannot release the lock immediately in one run of the
+			 * loop, since the entries of current buffer will still be used
+			 * by other items in the same page.
+			 * So we release the lock when encountering a new page.
+			 */
+			if (DistributedLogControlLockHeldByMe)
+			{
+				Assert(LWLockHeldByMe(DistributedLogControlLock));
+				LWLockRelease(DistributedLogControlLock);
+			}
+			slotno = SimpleLruReadPage_ReadOnly(DistributedLogCtl, page, oldestXmin);
+			DistributedLogControlLockHeldByMe = true;
 			currPage = page;
+			/* entries is protected by the DistributedLogControl shared lock */
 			entries = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
 		}
 
 		ptr = &entries[entryno];
-
 		/*
 		 * If this XID is already visible to all distributed snapshots, we can
 		 * advance past it. Otherwise stop here. (Local-only transactions will
@@ -228,14 +244,18 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 		 * skip over those.)
 		 */
 		if (ptr->distribTimeStamp == distribTransactionTimeStamp &&
-			!TransactionIdPrecedes(ptr->distribXid, xminAllDistributedSnapshots))
+				!TransactionIdPrecedes(ptr->distribXid, xminAllDistributedSnapshots))
 			break;
 
 		TransactionIdAdvance(oldestXmin);
 	}
+	if (DistributedLogControlLockHeldByMe)
+	{
+		Assert(LWLockHeldByMe(DistributedLogControlLock));
+		LWLockRelease(DistributedLogControlLock);
+	}
 
-	DistributedLogShared->oldestXmin = oldestXmin;
-	LWLockRelease(DistributedLogControlLock);
+	pg_atomic_write_u32((pg_atomic_uint32 *)&DistributedLogShared->oldestXmin, oldestXmin);
 	LWLockRelease(DistributedLogTruncateLock);
 
 	if (TransactionIdToSegment(oldOldestXmin) < TransactionIdToSegment(oldestXmin))
@@ -251,7 +271,8 @@ TransactionId
 DistributedLog_GetOldestXmin(TransactionId oldestLocalXmin)
 {
 	TransactionId result;
-	result = DistributedLogShared->oldestXmin;
+
+	result = (TransactionId)pg_atomic_read_u32((pg_atomic_uint32 *)&DistributedLogShared->oldestXmin);
 
 	Assert(!IS_QUERY_DISPATCHER());
 	elogif(Debug_print_full_dtm, LOG, "distributed oldestXmin is '%u'", result);
@@ -420,22 +441,20 @@ DistributedLog_CommittedCheck(
 	DistributedLogEntry *ptr;
 	TransactionId oldestXmin;
 
-	LWLockAcquire(DistributedLogTruncateLock, LW_SHARED);
-	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
-	oldestXmin = DistributedLogShared->oldestXmin;
+	oldestXmin = (TransactionId)pg_atomic_read_u32((pg_atomic_uint32 *)&DistributedLogShared->oldestXmin);
 	if (oldestXmin == InvalidTransactionId)
 		elog(PANIC, "DistributedLog's OldestXmin not initialized yet");
 
 	if (TransactionIdPrecedes(localXid, oldestXmin))
 	{
-		LWLockRelease(DistributedLogControlLock);
-		LWLockRelease(DistributedLogTruncateLock);
-
 		*distribTimeStamp = 0;	// Set it to something.
 		*distribXid = 0;
 		return false;
 	}
+
+	LWLockAcquire(DistributedLogTruncateLock, LW_SHARED);
+	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
 	slotno = SimpleLruReadPage(DistributedLogCtl, page, true, localXid);
 	ptr = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
