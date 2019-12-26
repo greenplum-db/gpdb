@@ -522,8 +522,15 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             level can be an integer value from 1 (fastest compression) to 4 (highest compression
             ratio). </pd>
           <pd>The <codeph>compresslevel</codeph> option is valid only if <codeph>appendoptimized=TRUE</codeph>.</pd>
-          <pd><b>fillfactor</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
-                format="dita"/></codeph> for more information about this index storage parameter. </pd>
+          <pd><b>fillfactor</b> — The fillfactor for a table is a percentage between 10 and 100.
+            100 (complete packing) is the default. When a smaller fillfactor is specified,
+            <codeph>INSERT</codeph> operations pack table pages only to the indicated percentage;
+            the remaining space on each page is reserved for updating rows on that page. This
+             gives <codeph>UPDATE</codeph> a chance to place the updated copy of a row on the
+             same page as the original, which is more efficient than placing it on a different
+             page. For a table whose entries are never updated, complete packing is the best
+             choice, but in heavily updated tables smaller fillfactors are appropriate. This
+             parameter cannot be set for TOAST tables.</pd>
           <pd><b>oids=FALSE</b> — This setting is the default, and it ensures that rows do not have
             object identifiers assigned to them. <ph otherprops="pivotal">Pivotal does not support
               using <codeph>WITH OIDS</codeph> or <codeph>oids=TRUE</codeph> to assign an OID system
