@@ -474,9 +474,8 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult *dispatchResult)
 		dispatchResult->error_message->len > 0)
 	{
 		if (errstart(ERROR, __FILE__, __LINE__, PG_FUNCNAME_MACRO, TEXTDOMAIN))
-			errdata = errfinish_and_return(errcode(ERRCODE_INTERNAL_ERROR),
-										   (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-											errmsg("%s", dispatchResult->error_message->data)));
+			errdata = errfinish_and_return(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+											errmsg("%s", dispatchResult->error_message->data));
 		else
 			pg_unreachable();
 
