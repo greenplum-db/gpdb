@@ -192,7 +192,7 @@ RunawayCleaner_StartCleanup()
 				initStringInfo(&str);
 			
 				LWLockAcquire(ResGroupLock, LW_SHARED);
-				ResGroupGetMemoryInfo(&str);
+				ResGroupGetMemoryRunawayInfo(&str);
 				LWLockRelease(ResGroupLock);
 				ereport(ERROR, (errmsg("Canceling query because of high VMEM usage. %s", str.data)));
 			}

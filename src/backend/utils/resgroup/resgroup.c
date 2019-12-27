@@ -4296,7 +4296,7 @@ IsGroupInRedZone(void)
  * This is the output of resource group runaway.
  */
 void
-ResGroupGetMemoryInfo(StringInfo str)
+ResGroupGetMemoryRunawayInfo(StringInfo str)
 {
 	ResGroupSlotData	*slot = self->slot;
 	ResGroupData		*group = self->group;
@@ -4311,26 +4311,27 @@ ResGroupGetMemoryInfo(StringInfo str)
 		safeChunksThreshold = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold);
 
 		appendStringInfo(str,
-				  "current group id is %u, "
-				  "group memory usage %d MB, "
-				  "group shared memory quota is %d MB, "
-				  "slot memory quota is %d MB, "
-				  "global freechunks memory is %u MB, "
-				  "global safe memory threshold is %u MB",
-				  group->groupId,
-				  VmemTracker_ConvertVmemChunksToMB(group->memUsage),
-				  VmemTracker_ConvertVmemChunksToMB(group->memSharedGranted),
-				  VmemTracker_ConvertVmemChunksToMB(slot->memQuota),
-				  VmemTracker_ConvertVmemChunksToMB(remainGlobalSharedMem),
-				  VmemTracker_ConvertVmemChunksToMB(safeChunksThreshold));
+						 "current group id is %u, "
+						 "group memory usage %d MB, "
+						 "group shared memory quota is %d MB, "
+						 "slot memory quota is %d MB, "
+						 "global freechunks memory is %u MB, "
+						 "global safe memory threshold is %u MB",
+						 group->groupId,
+						 VmemTracker_ConvertVmemChunksToMB(group->memUsage),
+						 VmemTracker_ConvertVmemChunksToMB(group->memSharedGranted),
+						 VmemTracker_ConvertVmemChunksToMB(slot->memQuota),
+						 VmemTracker_ConvertVmemChunksToMB(remainGlobalSharedMem),
+						 VmemTracker_ConvertVmemChunksToMB(safeChunksThreshold));
 	}
 	else
 	{
 		Assert(!selfIsAssigned());
 
-		write_log("Resource group memory information: "
-				  "memory usage in current proc is %d MB",
-				  VmemTracker_ConvertVmemChunksToMB(self->memUsage));
+		appendStringInfo(str,
+						 "Resource group memory information: "
+						 "memory usage in current proc is %d MB",
+						 VmemTracker_ConvertVmemChunksToMB(self->memUsage));
 	}
 }
 
