@@ -1,3 +1,4 @@
+test: modify_table_data_corrupt
 test: setup
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation

@@ -2996,11 +2996,13 @@ lnext:	;
 
 			/*
 			 * extract the 'ctid' junk attribute.
+			 * extract the 'gp_segment_id' and do tuple locality check.
 			 */
 			if (operation == CMD_UPDATE || operation == CMD_DELETE)
 			{
 				Datum		datum;
 				bool		isNull;
+				AttrNumber      segno;
 
 				datum = ExecGetJunkAttribute(slot, junkfilter->jf_junkAttNo,
 											 &isNull);
@@ -3011,6 +3013,26 @@ lnext:	;
 				tupleid = (ItemPointer) DatumGetPointer(datum);
 				tuple_ctid = *tupleid;	/* make sure we don't free the ctid!! */
 				tupleid = &tuple_ctid;
+
+				segno = ExecFindJunkAttribute(junkfilter, "gp_segment_id");
+				if (AttributeNumberIsValid(segno))
+				{
+					  int32 segid;
+					  datum = ExecGetJunkAttribute(slot, segno, &isNull);
+					  /* shouldn't ever get a null result... */
+					  if (isNull)
+					    elog(ERROR, "gp_segment_id is NULL");
+					  /*
+					   * Sanity check the distribution of the tuple to prevent
+					   * potential data corruption in case users manipulate data
+					   * incorrectly (e.g. insert data on incorrect segment through
+					   * utility mode) or there is bug in code, etc.
+					   */
+					  segid = DatumGetInt32(datum);
+					  if (segid >= MASTER_CONTENT_ID && segid != GpIdentity.segindex)
+					    elog(ERROR, "distribution key of the tuple doesn't belong to "
+						 "current segment (actually from seg%d)", segid);
+				}
 			}
 
 			/*
