@@ -204,7 +204,6 @@ struct ResGroupData
 	 */
 	volatile int32	memUsage;
 	volatile int32	memSharedUsage;
-	volatile int32	memGlobalSharedUsage;
 
 	volatile int			nRunning;		/* number of running trans */
 	volatile int	nRunningBypassed;		/* number of running trans in bypass mode */
@@ -1337,7 +1336,6 @@ createGroup(Oid groupId, const ResGroupCaps *caps)
 	group->memGap = 0;
 	group->memUsage = 0;
 	group->memSharedUsage = 0;
-	group->memGlobalSharedUsage = 0;
 	group->memQuotaUsed = 0;
 	group->groupMemOps = NULL;
 	group->totalQueuedTimeMs = 0;
@@ -1408,10 +1406,6 @@ groupIncMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 		/* Calculate the global over used chunks */
 		int32 deltaGlobalSharedMemUsage = Max(0, deltaSharedMemUsage - oldSharedFree);
 
-		/* Add these chunks to memGlobalSharedUsage in group */
-		pg_atomic_fetch_add_u32((pg_atomic_uint32 *)&group->memGlobalSharedUsage,
-								deltaGlobalSharedMemUsage);
-
 		/* freeChunks -= deltaGlobalSharedMemUsage and get the new value */
 		int32 newFreeChunks = pg_atomic_sub_fetch_u32(&pResGroupControl->freeChunks,
 													  deltaGlobalSharedMemUsage);
@@ -1463,9 +1457,6 @@ groupDecMemUsage(ResGroupData *group, ResGroupSlotData *slot, int32 chunks)
 		int32 grpTotalGlobalUsage = Max(0, oldSharedUsage - group->memSharedGranted);
 		/* calculate the global share usage of current release */
 		int32 deltaGlobalSharedMemUsage = Min(grpTotalGlobalUsage, deltaSharedMemUsage);
-		/* Add these chunks to memGlobalSharedUsage in group */
-		pg_atomic_fetch_sub_u32((pg_atomic_uint32 *)&group->memGlobalSharedUsage,
-								deltaGlobalSharedMemUsage);
 		/* add chunks to global shared memory */
 		pg_atomic_add_fetch_u32(&pResGroupControl->freeChunks,
 								deltaGlobalSharedMemUsage);
