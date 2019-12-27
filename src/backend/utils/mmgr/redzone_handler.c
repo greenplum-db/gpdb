@@ -156,7 +156,7 @@ RedZoneHandler_FlagTopConsumer()
 
 	Assert(NULL != MySessionState);
 
-	Oid groupId = InvalidOid;
+	Oid resGroupId = InvalidOid;
 	uint32 expected = 0;
 	bool success = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) isRunawayDetector, &expected, 1);
 
@@ -173,12 +173,6 @@ RedZoneHandler_FlagTopConsumer()
 	}
 
 	/*
-	 * Find resource group which uses the most of the global shared memory.
-	 */
-	if (IsResGroupEnabled())
-		groupId = FindGroupUseMostGlobalMem();
-
-	/*
 	 * Grabbing a shared lock prevents others to modify the SessionState
 	 * data structure, therefore ensuring that we don't flag someone
 	 * who was already dying. A shared lock is enough as we access the
@@ -193,14 +187,47 @@ RedZoneHandler_FlagTopConsumer()
 
 	SessionState *curSessionState = AllSessionStateEntries->usedList;
 
+	/*
+	 * Find the group which used the most of global memory in resgroup mode.
+	 * Since there exists concurrent DDLs to drop resource group and it is
+	 * not safe to acquire resgroup lock in redzone. We access ResGroupData
+	 * in a lock free way, and using SessionStateLock to ensure the groups with
+	 * sessions will not be dropped.
+	 */
+	if (IsResGroupEnabled())
+	{
+		int32	maxGlobalShareMem = INT_MIN;
+		Oid		sessionGroupId = InvalidOid;
+		int32	sessionGroupGSMem;
+
+		while (curSessionState != NULL)
+		{
+			Assert(INVALID_SESSION_ID != curSessionState->sessionId);
+
+			sessionGroupId = SessionGetResGroupId(curSessionState);
+			sessionGroupGSMem = SessionGetResGroupGlobalShareMemUsage(curSessionState);
+
+			if (sessionGroupId != InvalidOid && sessionGroupGSMem > maxGlobalShareMem)
+			{
+				maxGlobalShareMem = sessionGroupGSMem;
+				resGroupId = sessionGroupId;
+			}
+
+			curSessionState = curSessionState->next;
+		}
+	}
+
+	curSessionState = AllSessionStateEntries->usedList;
+
 	while (curSessionState != NULL)
 	{
 		Assert(INVALID_SESSION_ID != curSessionState->sessionId);
 
-		/* in resgroup mode, we should only flag top consumer in group which uses
+		/* 
+		 * in resgroup mode, we should only flag top consumer in group which uses
 		 * the most of the global shared memory
 		 */
-		if (IsResGroupEnabled() && SessionGetGroupId(curSessionState->resGroupSlot) != groupId)
+		if (IsResGroupEnabled() && SessionGetResGroupId(curSessionState) != resGroupId)
 		{
 			curSessionState = curSessionState->next;	
 			continue;

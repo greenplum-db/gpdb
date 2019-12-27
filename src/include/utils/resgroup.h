@@ -18,6 +18,7 @@
 
 #include "cdb/memquota.h"
 #include "catalog/pg_resgroup.h"
+#include "utils/session_state.h"
 
 /*
  * The max number of resource groups.
@@ -216,7 +217,8 @@ extern void SetCpusetEmpty(char *cpuset, int cpusetSize);
 extern bool EnsureCpusetIsAvailable(int elevel);
 extern bool IsGroupInRedZone(void);
 extern void ResGroupGetMemoryInfo(StringInfo str);
-extern Oid SessionGetGroupId(void *slot);
+extern Oid SessionGetResGroupId(SessionState *session);
+extern int32 SessionGetResGroupGlobalShareMemUsage(SessionState *session);
 extern Oid FindGroupUseMostGlobalMem(void);
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);

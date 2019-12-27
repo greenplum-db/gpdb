@@ -132,13 +132,6 @@ struct ResGroupProcData
 	 */
 	int32	bypassMemoryLimit;
 	
-	/* 
-	 * Safe memory threshold:
-	 * if remained global shared memory is less than this threshold,
-	 * then the memory usage of current resource group is in red zone.
-	 */
-	uint32	safeChunksThreshold;
-
 	ResGroupData		*group;
 	ResGroupSlotData	*slot;
 
@@ -156,6 +149,7 @@ struct ResGroupProcData
 struct ResGroupSlotData
 {
 	Oid				groupId;
+	ResGroupData	*group;		/* pointer to the group */
 
 	int32			memQuota;	/* memory quota of current slot */
 	int32			memUsage;	/* total memory usage of procs belongs to this slot */
@@ -231,11 +225,18 @@ struct ResGroupData
 
 struct ResGroupControl
 {
-	int32			totalChunks;	/* total memory chunks on this segment */
-	pg_atomic_uint32 sharedChunks;	/* global share memory chunks on this segment */
-	pg_atomic_uint32 freeChunks;	/* memory chunks not allocated to any group,
-									will be used for the query which group share
-									memory is not enough*/
+	int32			totalChunks;			/* total memory chunks on this segment */
+	pg_atomic_uint32 sharedChunks;			/* global share memory chunks on this segment */
+
+	/* 
+	 * Safe memory threshold:
+	 * if remained global shared memory is less than this threshold,
+	 * then the memory usage of current resource group is in red zone.
+	 */
+	pg_atomic_uint32 safeChunksThreshold;
+	pg_atomic_uint32 freeChunks;			/* memory chunks not allocated to any group,
+											will be used for the query which group share
+											memory is not enough*/
 
 	int32			chunkSizeInBits;
 	int 			segmentsOnMaster;
@@ -339,7 +340,6 @@ static char *groupDumpMemUsage(ResGroupData *group);
 static void selfValidateResGroupInfo(void);
 static bool selfIsAssigned(void);
 static void selfSetGroup(ResGroupData *group);
-static void selfSetRedZone(void);
 static void selfUnsetGroup(void);
 static void selfSetSlot(ResGroupSlotData *slot);
 static void selfUnsetSlot(void);
@@ -490,6 +490,7 @@ ResGroupControlInit(void)
     pResGroupControl->nGroups = MaxResourceGroups;
 	pResGroupControl->totalChunks = 0;
 	pg_atomic_init_u32(&pResGroupControl->sharedChunks, 0);
+	pg_atomic_init_u32(&pResGroupControl->safeChunksThreshold, 0);
 	pg_atomic_init_u32(&pResGroupControl->freeChunks, 0);
 	pResGroupControl->chunkSizeInBits = BITS_IN_MB;
 
@@ -575,6 +576,8 @@ InitResGroups(void)
 	decideTotalChunks(&pResGroupControl->totalChunks, &pResGroupControl->chunkSizeInBits);
 	pg_atomic_write_u32(&pResGroupControl->freeChunks, pResGroupControl->totalChunks);
 	pg_atomic_write_u32(&pResGroupControl->sharedChunks, pResGroupControl->totalChunks);
+	pg_atomic_write_u32(&pResGroupControl->safeChunksThreshold,
+						pResGroupControl->totalChunks * (100 - runaway_detector_activation_percent) / 100);
 	if (pResGroupControl->totalChunks == 0)
 		ereport(PANIC,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
@@ -695,9 +698,6 @@ InitResGroups(void)
 
 		ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, cpuset);
 	}
-	
-	/* set global shared chunks */
-	//pResGroupControl->sharedChunks = pg_atomic_read_u32(&pResGroupControl->freeChunks);
 
 	pResGroupControl->loaded = true;
 	LOG_RESGROUP_DEBUG(LOG, "initialized %d resource groups", numGroups);
@@ -1486,9 +1486,6 @@ selfAttachResGroup(ResGroupData *group, ResGroupSlotData *slot)
 
 	groupIncMemUsage(group, slot, self->memUsage);
 	pg_atomic_add_fetch_u32((pg_atomic_uint32*) &slot->nProcs, 1);
-	
-	/* set redzone chunk for this process */
-	selfSetRedZone();
 }
 
 /*
@@ -1513,6 +1510,7 @@ initSlot(ResGroupSlotData *slot, ResGroupData *group, int32 slotMemQuota)
 	Assert(!slotIsInUse(slot));
 	Assert(group->groupId != InvalidOid);
 
+	slot->group = group;
 	slot->groupId = group->groupId;
 	slot->caps = group->caps;
 	slot->memQuota = slotMemQuota;
@@ -1546,6 +1544,7 @@ slotpoolInit(void)
 	{
 		slot = &pResGroupControl->slots[i];
 
+		slot->group = NULL;
 		slot->groupId = InvalidOid;
 		slot->memQuota = -1;
 		slot->memUsage = 0;
@@ -1586,6 +1585,7 @@ slotpoolFreeSlot(ResGroupSlotData *slot)
 	Assert(slotIsInUse(slot));
 	Assert(slot->nProcs == 0);
 
+	slot->group = NULL;
 	slot->groupId = InvalidOid;
 	slot->memQuota = -1;
 	slot->memUsage = 0;
@@ -1941,7 +1941,6 @@ mempoolReserve(Oid groupId, int32 chunks)
 {
 	int32 oldFreeChunks;
 	int32 newFreeChunks;
-	int32 oldSharedChunks = 0;
 	int32 newSharedChunks = 0;
 	int32 reserved = 0;
 
@@ -1964,15 +1963,12 @@ mempoolReserve(Oid groupId, int32 chunks)
 	/* also update the global shared chunks */
 	if (reserved != 0)
 	{
-		oldSharedChunks = pg_atomic_read_u32(&pResGroupControl->sharedChunks);
-		newSharedChunks = oldSharedChunks - reserved;
-		while (true)
-		{
-			if (pg_atomic_compare_exchange_u32(&pResGroupControl->sharedChunks,
-						(uint32 *) &oldSharedChunks,
-						(uint32) newSharedChunks))
-				break;
-		}
+		newSharedChunks = pg_atomic_sub_fetch_u32(&pResGroupControl->sharedChunks,
+								reserved);
+
+		/* also update the safeChunksThreshold which is used in runaway detector */
+		pg_atomic_sub_fetch_u32(&pResGroupControl->safeChunksThreshold,
+								reserved * (100 - runaway_detector_activation_percent) / 100);
 	}
 	LOG_RESGROUP_DEBUG(LOG, "allocate %u out of %u chunks to group %d",
 					   reserved, oldFreeChunks, groupId);
@@ -1997,9 +1993,13 @@ mempoolRelease(Oid groupId, int32 chunks)
 
 	newFreeChunks = pg_atomic_add_fetch_u32(&pResGroupControl->freeChunks,
 											chunks);
-	
+
 	newSharedChunks = pg_atomic_add_fetch_u32(&pResGroupControl->sharedChunks,
-											chunks);
+											  chunks);
+
+	/* also update the safeChunksThreshold which is used in runaway detector */
+	pg_atomic_add_fetch_u32(&pResGroupControl->safeChunksThreshold,
+							chunks * (100 - runaway_detector_activation_percent) / 100);
 
 	LOG_RESGROUP_DEBUG(LOG, "free %u to pool(%u) chunks from group %d",
 					   chunks, newFreeChunks - chunks, groupId);
@@ -2558,6 +2558,7 @@ AssignResGroupOnMaster(void)
 		pgstat_report_resgroup(bypassedGroup->groupId);
 
 		/* Initialize the fake slot */
+		bypassedSlot.group = groupInfo.group;
 		bypassedSlot.groupId = groupInfo.groupId;
 		bypassedSlot.memQuota = 0;
 		bypassedSlot.memUsage = 0;
@@ -2631,6 +2632,7 @@ UnassignResGroup(void)
 		groupDecMemUsage(bypassedGroup, &bypassedSlot, self->memUsage);
 
 		/* Reset the fake slot */
+		bypassedSlot.group = NULL;
 		bypassedSlot.groupId = InvalidOid;
 		bypassedGroup = NULL;
 
@@ -3140,16 +3142,6 @@ selfSetGroup(ResGroupData *group)
 
 	self->group = group;
 	self->groupId = group->groupId;
-}
-
-/*
- * Calculate safe threshold of global shared memory
- */
-static void
-selfSetRedZone(void)
-{
-	self->safeChunksThreshold = (uint32)((uint32) pg_atomic_read_u32(&pResGroupControl->sharedChunks)) *
-							(1.0 - ((float) runaway_detector_activation_percent) / 100.0);
 }
 
 /*
@@ -4290,10 +4282,23 @@ bool
 IsGroupInRedZone(void)
 {
 	uint32				remainGlobalSharedMem;
+	uint32				safeChunksThreshold;
 	ResGroupSlotData	*slot = self->slot;
 	ResGroupData		*group = self->group;
-	
-	if (!slot || !group)
+
+	/*
+	 * IsGroupInRedZone is called frequently, we should put the
+	 * condition which returns with higher probability in front.
+	 * 
+	 * safe: global shared memory is not in redzone
+	 */
+	remainGlobalSharedMem = (uint32) pg_atomic_read_u32(&pResGroupControl->freeChunks);
+	safeChunksThreshold = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold);
+	if (remainGlobalSharedMem >= safeChunksThreshold)
+		return false;
+
+	AssertImply(slot != NULL, group != NULL);
+	if (!slot)
 		return false;
 
 	/* safe: slot memory is not used up */
@@ -4301,12 +4306,7 @@ IsGroupInRedZone(void)
 		return false;
 
 	/* safe: group shared memory is not in redzone */
-	if ( group->memSharedGranted > group->memSharedUsage)
-		return false;
-	
-	/* safe: global shared memory is not in redzone */
-	remainGlobalSharedMem = (uint32) pg_atomic_read_u32(&pResGroupControl->freeChunks);
-	if (remainGlobalSharedMem >= self->safeChunksThreshold)
+	if (group->memSharedGranted > group->memSharedUsage)
 		return false;
 
 	/* memory usage in this group is in RedZone */
@@ -4324,14 +4324,15 @@ ResGroupGetMemoryInfo(StringInfo str)
 {
 	ResGroupSlotData	*slot = self->slot;
 	ResGroupData		*group = self->group;
+	uint32				remainGlobalSharedMem = 0;
+	uint32				safeChunksThreshold = 0;
 
 	if (group)
 	{
 		Assert(selfIsAssigned());
 
-		uint32 remainGlobalSharedMem;
-
 		remainGlobalSharedMem = (uint32) pg_atomic_read_u32(&pResGroupControl->freeChunks);
+		safeChunksThreshold = (uint32) pg_atomic_read_u32(&pResGroupControl->safeChunksThreshold);
 
 		appendStringInfo(str,
 				  "current group id is %u, "
@@ -4345,7 +4346,7 @@ ResGroupGetMemoryInfo(StringInfo str)
 				  VmemTracker_ConvertVmemChunksToMB(group->memSharedGranted),
 				  VmemTracker_ConvertVmemChunksToMB(slot->memQuota),
 				  VmemTracker_ConvertVmemChunksToMB(remainGlobalSharedMem),
-				  VmemTracker_ConvertVmemChunksToMB(self->safeChunksThreshold));
+				  VmemTracker_ConvertVmemChunksToMB(safeChunksThreshold));
 	}
 	else
 	{
@@ -4361,35 +4362,31 @@ ResGroupGetMemoryInfo(StringInfo str)
  * Return group id for a session
  */
 Oid
-SessionGetGroupId(void *slot)
+SessionGetResGroupId(SessionState *session)
 {
-	ResGroupSlotData *myslot = (ResGroupSlotData *)slot;
-	if (myslot)
-		return myslot->groupId;
+	ResGroupSlotData	*sessionSlot = (ResGroupSlotData *)session->resGroupSlot;
+	if (sessionSlot)
+		return sessionSlot->groupId;
 	else
 		return InvalidOid;
 }
 
 /*
- * Find a resource group which uses the most of the
- * global shared meomry.
- * This is used by runaway to kill a top memory consumer session.
+ * Return group global share memory for a session
  */
-Oid
-FindGroupUseMostGlobalMem(void)
+int32
+SessionGetResGroupGlobalShareMemUsage(SessionState *session)
 {
-	int i;
-	Oid groupId = InvalidOid;
-	int32 maxGlobalShareMem = INT_MIN;
-
-	for (i = 0; i < pResGroupControl->nGroups; i++)
+	ResGroupSlotData	*sessionSlot = (ResGroupSlotData *)session->resGroupSlot;
+	if (sessionSlot)
 	{
-		ResGroupData	*group = &pResGroupControl->groups[i];
-		if (group->memGlobalSharedUsage > maxGlobalShareMem)
-		{
-			maxGlobalShareMem = group->memGlobalSharedUsage;
-			groupId = group->groupId;
-		}
+		/* lock not needed here, we just need esimated result */
+		ResGroupData	*group = (ResGroupData*)sessionSlot->group;
+		return group->memSharedUsage - group->memSharedGranted;
 	}
-	return groupId;
+	else
+	{
+		/* session doesnot have group slot */
+		return -1;
+	}
 }
