@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map title="Greenplum Integrated Analytics">
-  <topicref href="overview.xml">
+    <topicref href="overview.xml" linking="none"/>
     <topicref href="madlib.xml" navtitle="Machine Learning and Deep Learning" linking="none"/>
     <topicref href="postGIS.xml" navtitle="Geospatial Analytics" otherprops="pivotal" linking="none"/>
     <topicref href="text.xml" navtitle="Text Analytics and Search" otherprops="pivotal" linking="none"/>
@@ -13,5 +13,4 @@
       <topicref href="pl_python.xml" linking="none"/>
       <topicref href="pl_r.xml" linking="none"/>
     </topicref>
-  </topicref>
 </map>
