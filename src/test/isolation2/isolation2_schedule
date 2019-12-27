@@ -1,3 +1,5 @@
+test: modify_table_data_corrupt
+
 test: setup
 
 test: lockmodes
