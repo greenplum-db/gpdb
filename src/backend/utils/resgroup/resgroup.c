@@ -131,7 +131,7 @@ struct ResGroupProcData
 	 * So should limit the memory usage for each query instead of the whole session.
 	 */
 	int32	bypassMemoryLimit;
-	
+
 	ResGroupData		*group;
 	ResGroupSlotData	*slot;
 
@@ -225,8 +225,6 @@ struct ResGroupData
 struct ResGroupControl
 {
 	int32			totalChunks;			/* total memory chunks on this segment */
-	pg_atomic_uint32 sharedChunks;			/* global share memory chunks on this segment */
-
 	/* 
 	 * Safe memory threshold:
 	 * if remained global shared memory is less than this threshold,
@@ -488,7 +486,6 @@ ResGroupControlInit(void)
     pResGroupControl->loaded = false;
     pResGroupControl->nGroups = MaxResourceGroups;
 	pResGroupControl->totalChunks = 0;
-	pg_atomic_init_u32(&pResGroupControl->sharedChunks, 0);
 	pg_atomic_init_u32(&pResGroupControl->safeChunksThreshold, 0);
 	pg_atomic_init_u32(&pResGroupControl->freeChunks, 0);
 	pResGroupControl->chunkSizeInBits = BITS_IN_MB;
@@ -574,7 +571,6 @@ InitResGroups(void)
 	/* These initialization must be done before createGroup() */
 	decideTotalChunks(&pResGroupControl->totalChunks, &pResGroupControl->chunkSizeInBits);
 	pg_atomic_write_u32(&pResGroupControl->freeChunks, pResGroupControl->totalChunks);
-	pg_atomic_write_u32(&pResGroupControl->sharedChunks, pResGroupControl->totalChunks);
 	pg_atomic_write_u32(&pResGroupControl->safeChunksThreshold,
 						pResGroupControl->totalChunks * (100 - runaway_detector_activation_percent) / 100);
 	if (pResGroupControl->totalChunks == 0)
@@ -1932,7 +1928,6 @@ mempoolReserve(Oid groupId, int32 chunks)
 {
 	int32 oldFreeChunks;
 	int32 newFreeChunks;
-	int32 newSharedChunks = 0;
 	int32 reserved = 0;
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
@@ -1951,13 +1946,9 @@ mempoolReserve(Oid groupId, int32 chunks)
 			break;
 	}
 
-	/* also update the global shared chunks */
+	/* also update the safeChunksThreshold which is used in runaway detector */
 	if (reserved != 0)
 	{
-		newSharedChunks = pg_atomic_sub_fetch_u32(&pResGroupControl->sharedChunks,
-								reserved);
-
-		/* also update the safeChunksThreshold which is used in runaway detector */
 		pg_atomic_sub_fetch_u32(&pResGroupControl->safeChunksThreshold,
 								reserved * (100 - runaway_detector_activation_percent) / 100);
 	}
@@ -1965,7 +1956,6 @@ mempoolReserve(Oid groupId, int32 chunks)
 					   reserved, oldFreeChunks, groupId);
 
 	Assert(newFreeChunks <= pResGroupControl->totalChunks);
-	Assert(newSharedChunks <= pResGroupControl->totalChunks);
 
 	return reserved;
 }
@@ -1977,16 +1967,12 @@ static void
 mempoolRelease(Oid groupId, int32 chunks)
 {
 	int32 newFreeChunks;
-	int32 newSharedChunks;
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 	Assert(chunks >= 0);
 
 	newFreeChunks = pg_atomic_add_fetch_u32(&pResGroupControl->freeChunks,
 											chunks);
-
-	newSharedChunks = pg_atomic_add_fetch_u32(&pResGroupControl->sharedChunks,
-											  chunks);
 
 	/* also update the safeChunksThreshold which is used in runaway detector */
 	pg_atomic_add_fetch_u32(&pResGroupControl->safeChunksThreshold,
@@ -1996,7 +1982,6 @@ mempoolRelease(Oid groupId, int32 chunks)
 					   chunks, newFreeChunks - chunks, groupId);
 
 	Assert(newFreeChunks <= pResGroupControl->totalChunks);
-	Assert(newSharedChunks <= pResGroupControl->totalChunks);
 }
 
 /*
