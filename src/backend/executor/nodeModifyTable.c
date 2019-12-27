@@ -1254,6 +1254,7 @@ ExecUpdate(ItemPointer tupleid,
 		   HeapTuple oldtuple,
 		   TupleTableSlot *slot,
 		   TupleTableSlot *planSlot,
+		   int32 segid, /* gpdb specific parameter, check if tuple to update is from local */
 		   EPQState *epqstate,
 		   EState *estate,
 		   bool canSetTag)
@@ -1271,6 +1272,16 @@ ExecUpdate(ItemPointer tupleid,
 	 */
 	if (IsBootstrapProcessingMode())
 		elog(ERROR, "cannot UPDATE during bootstrap");
+
+	/*
+	 * Sanity check the distribution of the tuple to prevent
+	 * potential data corruption in case users manipulate data
+	 * incorrectly (e.g. insert data on incorrect segment through
+	 * utility mode) or there is bug in code, etc.
+	 */
+	if (segid != GpIdentity.segindex)
+		elog(ERROR, "distribution key of the tuple doesn't belong to "
+			 "current segment (actually from seg%d)", segid);
 
 	/*
 	 * get information on the (current) result relation
@@ -1733,6 +1744,7 @@ ExecOnConflictUpdate(ModifyTableState *mtstate,
 	/* Execute UPDATE with projection */
 	*returning = ExecUpdate(&tuple.t_self, NULL,
 							mtstate->mt_conflproj, planSlot,
+							GpIdentity.segindex,
 							&mtstate->mt_epqstate, mtstate->ps.state,
 							canSetTag);
 
@@ -2062,7 +2074,7 @@ ExecModifyTable(ModifyTableState *node)
 				if (!AttributeNumberIsValid(action_attno))
 				{
 					/* normal non-split UPDATE */
-					slot = ExecUpdate(tupleid, oldtuple, slot, planSlot,
+					slot = ExecUpdate(tupleid, oldtuple, slot, planSlot, segid,
 									  &node->mt_epqstate, estate,
 									  node->canSetTag);
 				}
