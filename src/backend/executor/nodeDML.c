@@ -125,6 +125,7 @@ ExecDML(DMLState *node)
 	}
 	else /* DML_DELETE */
 	{
+		int32 segid = GpIdentity.segindex;
 		Datum ctid = slot_getattr(slot, plannode->ctidColIdx, &isnull);
 
 		Assert(!isnull);
@@ -133,24 +134,15 @@ ExecDML(DMLState *node)
 		ItemPointerData tuple_ctid = *tupleid;
 		tupleid = &tuple_ctid;
 
-		/*
-		 * Sanity check the distribution of the tuple to prevent potential
-		 * data corruption in case users manipulate data incorrectly (e.g.
-		 * insert data on incorrect segments through utility mode) or there is
-		 * bug in code, etc.
-		 */
 		if (AttributeNumberIsValid(node->segid_attno))
 		{
-			int32 segid = DatumGetInt32(slot_getattr(slot, node->segid_attno, &isnull));
+			segid = DatumGetInt32(slot_getattr(slot, node->segid_attno, &isnull));
 			Assert(!isnull);
-
-			if (segid != GpIdentity.segindex)
-				elog(ERROR, "distribution key of the tuple doesn't belong to "
-					 "current segment (actually from seg%d)", segid);
 		}
 
 		/* Correct tuple count by ignoring deletes when splitting tuples. */
 		ExecDelete(tupleid,
+				   segid,
 				   NULL, /* GPDB_91_MERGE_FIXME: oldTuple? */
 				   node->cleanedUpSlot,
 				   NULL /* DestReceiver */,

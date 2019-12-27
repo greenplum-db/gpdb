@@ -576,6 +576,7 @@ ExecInsert(TupleTableSlot *parentslot,
  */
 TupleTableSlot *
 ExecDelete(ItemPointer tupleid,
+		   int32 segid,
 		   HeapTuple oldtuple,
 		   TupleTableSlot *planSlot,
 		   EPQState *epqstate,
@@ -589,6 +590,16 @@ ExecDelete(ItemPointer tupleid,
 	HTSU_Result result;
 	HeapUpdateFailureData hufd;
 	TupleTableSlot *slot = NULL;
+
+	/*
+	 * Sanity check the distribution of the tuple to prevent
+	 * potential data corruption in case users manipulate data
+	 * incorrectly (e.g. insert data on incorrect segment through
+	 * utility mode) or there is bug in code, etc.
+	 */
+	if (segid != GpIdentity.segindex)
+		elog(ERROR, "distribution key of the tuple doesn't belong to "
+			 "current segment (actually from seg%d)", segid);
 
 	/*
 	 * get information on the (current) result relation
@@ -1201,6 +1212,7 @@ checkPartitionUpdate(EState *estate, TupleTableSlot *partslot,
  */
 TupleTableSlot *
 ExecUpdate(ItemPointer tupleid,
+		   int32 segid,
 		   HeapTuple oldtuple,
 		   TupleTableSlot *slot,
 		   TupleTableSlot *planSlot,
@@ -1215,6 +1227,16 @@ ExecUpdate(ItemPointer tupleid,
 	List	   *recheckIndexes = NIL;
 	ItemPointerData lastTid;
 	bool		wasHotUpdate;
+
+	/*
+	 * Sanity check the distribution of the tuple to prevent
+	 * potential data corruption in case users manipulate data
+	 * incorrectly (e.g. insert data on incorrect segment through
+	 * utility mode) or there is bug in code, etc.
+	 */
+	if (segid != GpIdentity.segindex)
+		elog(ERROR, "distribution key of the tuple doesn't belong to "
+			 "current segment (actually from seg%d)", segid);
 
 	/*
 	 * abort the operation if not running transactions
@@ -1817,7 +1839,8 @@ ExecModifyTable(ModifyTableState *node)
 					/* It is planned as not split update mode */
 					if (actionColIdx <= 0)
 					{
-						slot = ExecUpdate(tupleid, oldtuple, slot, planSlot,
+						slot = ExecUpdate(tupleid, segid,
+										  oldtuple, slot, planSlot,
 										  &node->mt_epqstate, estate,
 										  node->canSetTag);
 						break;
@@ -1845,33 +1868,14 @@ ExecModifyTable(ModifyTableState *node)
 					}
 					else /* DML_DELETE */
 					{
-							/*
-							 * Sanity check the distribution of the tuple to prevent
-							 * potential data corruption in case users manipulate data
-							 * incorrectly (e.g. insert data on incorrect segment through
-							 * utility mode) or there is bug in code, etc.
-							 */
-							if (segid != GpIdentity.segindex)
-								elog(ERROR, "distribution key of the tuple doesn't belong to "
-									 "current segment (actually from seg%d)", segid);
-							slot = ExecDelete(tupleid, oldtuple, planSlot,
-											  &node->mt_epqstate, estate, false,
-											  PLANGEN_PLANNER, true /* isUpdate */);
+						slot = ExecDelete(tupleid, segid, oldtuple, planSlot,
+										  &node->mt_epqstate, estate, false,
+										  PLANGEN_PLANNER, true /* isUpdate */);
 					}
 				}
 				break;
 			case CMD_DELETE:
-				/*
-				 * Sanity check the distribution of the tuple to prevent
-				 * potential data corruption in case users manipulate data
-				 * incorrectly (e.g. insert data on incorrect segment through
-				 * utility mode) or there is bug in code, etc.
-				 */
-				if (segid != GpIdentity.segindex)
-					elog(ERROR, "distribution key of the tuple doesn't belong to "
-						 "current segment (actually from seg%d)", segid);
-
-				slot = ExecDelete(tupleid, oldtuple, planSlot,
+				slot = ExecDelete(tupleid, segid, oldtuple, planSlot,
 								  &node->mt_epqstate, estate, node->canSetTag,
 								  PLANGEN_PLANNER, false /* isUpdate */);
 				break;

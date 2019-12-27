@@ -1,0 +1,193 @@
+-- start_matchsubs
+-- m/nodeModifyTable.c:\d+/
+-- s/nodeModifyTable.c:\d+/nodeModifyTable.c:XXX/
+-- end_matchsubs
+
+-- start_ignore
+drop table tab1;
+ERROR:  table "tab1" does not exist
+drop table tab2;
+ERROR:  table "tab2" does not exist
+drop table tab3;
+ERROR:  table "tab3" does not exist
+drop table tmp_save_dist_info;
+ERROR:  table "tmp_save_dist_info" does not exist
+-- end_ignore
+
+-- We do some check to verify the tuple to delete|update
+-- is from the segment it scans out. This case is to test
+-- such check.
+-- We build a plan that will add motion above result relation,
+-- however, does not contain explicit motion to send tuples back,
+-- and then login in segment using utility mode to insert some
+-- bad data.
+
+create table tab1(a int, b int) distributed by (b);
+CREATE
+create table tab2(a int, b int) distributed by (a);
+CREATE
+create table tab3 (a int, b int) distributed by (b);
+CREATE
+
+insert into tab1 values (1, 1);
+INSERT 1
+insert into tab2 values (1, 1);
+INSERT 1
+insert into tab3 values (1, 1);
+INSERT 1
+
+set allow_system_table_mods=true;
+SET
+update pg_class set relpages = 10000 where relname='tab2';
+UPDATE 1
+update pg_class set reltuples = 100000000 where relname='tab2';
+UPDATE 1
+update pg_class set relpages = 100000000 where relname='tab3';
+UPDATE 1
+update pg_class set reltuples = 100000 where relname='tab3';
+UPDATE 1
+
+-- 6X code does not insert wrong data in utility mode
+-- the following hack to build a wrong data senario is:
+--   1. save the tab1's policy info into a tmp table
+--   2. change tab1 to randomly distribtued without reorganization
+--   3. use utility mode to login in seg0 and insert a wrong data(under
+--      the hash policy)
+--   4. restore tab1's policy directly using DML statements
+create table tmp_save_dist_info as select * from gp_distribution_policy where localoid = 'tab1'::regclass::oid;
+CREATE 1
+alter table tab1 set with(reorganize=false) distributed randomly;
+ALTER
+0U: insert into tab1 values (1, 1);
+INSERT 1
+delete from gp_distribution_policy where localoid = 'tab1'::regclass::oid;
+DELETE 1
+insert into gp_distribution_policy select * from tmp_save_dist_info;
+INSERT 1
+
+
+select gp_segment_id, * from tab1;
+ gp_segment_id | a | b 
+---------------+---+---
+ 0             | 1 | 1 
+ 1             | 1 | 1 
+(2 rows)
+
+-- For planner, this will error out
+explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
+ QUERY PLAN                                                                
+---------------------------------------------------------------------------
+ Delete                                                                    
+   ->  Result                                                              
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)                
+               Hash Key: tab1.b                                            
+               ->  Hash Join                                               
+                     Hash Cond: (tab2.a = tab1.a)                          
+                     ->  Seq Scan on tab2                                  
+                     ->  Hash                                              
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3) 
+                                 ->  Hash Join                             
+                                       Hash Cond: (tab3.b = tab1.b)        
+                                       ->  Seq Scan on tab3                
+                                       ->  Hash                            
+                                             ->  Seq Scan on tab1          
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                      
+(15 rows)
+begin;
+BEGIN
+delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
+DELETE 1
+abort;
+ABORT
+
+-- For planner, this will error out
+explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
+ QUERY PLAN                                                                
+---------------------------------------------------------------------------
+ Delete                                                                    
+   ->  Result                                                              
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)                
+               Hash Key: tab1.b                                            
+               ->  Hash Join                                               
+                     Hash Cond: (tab2.a = tab1.a)                          
+                     ->  Seq Scan on tab2                                  
+                     ->  Hash                                              
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3) 
+                                 ->  Hash Join                             
+                                       Hash Cond: (tab3.b = tab1.b)        
+                                       ->  Seq Scan on tab3                
+                                       ->  Hash                            
+                                             ->  Seq Scan on tab1          
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                      
+(15 rows)
+begin;
+BEGIN
+update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
+UPDATE 1
+abort;
+ABORT
+
+-- For orca, this will error out
+explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+ QUERY PLAN                                                                                  
+---------------------------------------------------------------------------------------------
+ Delete                                                                                      
+   ->  Result                                                                                
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)                                  
+               Hash Key: tab1.b                                                              
+               ->  Hash Join                                                                 
+                     Hash Cond: (tab3.a = tab1.b)                                            
+                     ->  Seq Scan on tab3                                                    
+                     ->  Hash                                                                
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
+                                 ->  Hash Join                                               
+                                       Hash Cond: (tab2.a = tab1.a)                          
+                                       ->  Seq Scan on tab2                                  
+                                       ->  Hash                                              
+                                             ->  Broadcast Motion 3:3  (slice1; segments: 3) 
+                                                   ->  Seq Scan on tab1                      
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                        
+(16 rows)
+begin;
+BEGIN
+delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=86447) (nodeModifyTable.c:602)
+abort;
+ABORT
+
+-- For orca, this will error out
+explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+ QUERY PLAN                                                                                  
+---------------------------------------------------------------------------------------------
+ Delete                                                                                      
+   ->  Result                                                                                
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)                                  
+               Hash Key: tab1.b                                                              
+               ->  Hash Join                                                                 
+                     Hash Cond: (tab3.a = tab1.b)                                            
+                     ->  Seq Scan on tab3                                                    
+                     ->  Hash                                                                
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
+                                 ->  Hash Join                                               
+                                       Hash Cond: (tab2.a = tab1.a)                          
+                                       ->  Seq Scan on tab2                                  
+                                       ->  Hash                                              
+                                             ->  Broadcast Motion 3:3  (slice1; segments: 3) 
+                                                   ->  Seq Scan on tab1                      
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                        
+(16 rows)
+begin;
+BEGIN
+update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=86447) (nodeModifyTable.c:602)
+abort;
+ABORT
+
+drop table tab1;
+DROP
+drop table tab2;
+DROP
+drop table tab3;
+DROP
+drop table tmp_save_dist_info;
+DROP
