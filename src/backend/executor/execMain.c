@@ -3015,7 +3015,7 @@ lnext:	;
 				tupleid = &tuple_ctid;
 
 				segno = ExecFindJunkAttribute(junkfilter, "gp_segment_id");
-				if (AttributeNumberIsValid(segno))
+				if (AttributeNumberIsValid(segno) && Gp_role != GP_ROLE_UTILITY)
 				{
 					  int32 segid;
 					  datum = ExecGetJunkAttribute(slot, segno, &isNull);

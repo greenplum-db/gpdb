@@ -126,7 +126,7 @@ ExecDML(DMLState *node)
 		 * insert data on incorrect segments through utility mode) or there is
 		 * bug in code, etc.
 		 */
-		if (AttributeNumberIsValid(node->segid_attno))
+		if (AttributeNumberIsValid(node->segid_attno) && Gp_role != GP_ROLE_UTILITY)
 		{
 			int32 segid = DatumGetInt32(slot_getattr(slot, node->segid_attno, &isnull));
 			Assert(!isnull);
