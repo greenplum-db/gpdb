@@ -52,11 +52,7 @@ dbid|content
 2   |0      
 3   |1      
 4   |2      
-5   |0      
-6   |1      
-7   |2      
-8   |-1     
-(8 rows)
+(4 rows)
 -- 5x's islation2 framework use dbid to specify utility target
 -- 3 should be the seg1 for demo cluster with mirrors
 3U: insert into tab1 values (1, 1);
@@ -95,42 +91,62 @@ Optimizer status: PQO version 3.86.0
 begin;
 BEGIN
 delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=54040) (cdbdisp.c:254)
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=100384) (cdbdisp.c:254)
 abort;
 ABORT
 
 -- For orca, this will error out
-explain delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-QUERY PLAN                                                                                                                         
------------------------------------------------------------------------------------------------------------------------------------
-Delete  (cost=0.00..8119.05 rows=1 width=1)                                                                                        
-  ->  Result  (cost=0.00..8119.02 rows=1 width=22)                                                                                 
-        ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..8119.02 rows=1 width=18)                                   
-              Hash Key: public.tab1.b                                                                                              
-              ->  Hash Join  (cost=0.00..8119.02 rows=1 width=18)                                                                  
-                    Hash Cond: tab3.a = public.tab1.b                                                                              
-                    ->  Table Scan on tab3  (cost=0.00..431.70 rows=33334 width=4)                                                 
-                    ->  Hash  (cost=7681.20..7681.20 rows=1 width=18)                                                              
-                          ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..7681.20 rows=1 width=18)                    
-                                ->  Hash Join  (cost=0.00..7681.20 rows=1 width=18)                                                
-                                      Hash Cond: tab2.a = public.tab1.a                                                            
-                                      ->  Table Scan on tab2  (cost=0.00..1127.67 rows=33333334 width=4)                           
-                                      ->  Hash  (cost=431.00..431.00 rows=1 width=18)                                              
-                                            ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
-                                                  Hash Key: public.tab1.a                                                          
-                                                  ->  Table Scan on tab1  (cost=0.00..431.00 rows=1 width=18)                      
-Optimizer status: PQO version 3.86.0                                                                                               
-(17 rows)
+explain update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+QUERY PLAN                                                                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------
+Update  (cost=0.00..8119.09 rows=1 width=1)                                                                                                    
+  ->  Result  (cost=0.00..8119.02 rows=1 width=26)                                                                                             
+        ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..8119.02 rows=1 width=22)                                               
+              Hash Key: public.tab1.b                                                                                                          
+              ->  Split  (cost=0.00..8119.02 rows=1 width=22)                                                                                  
+                    ->  Result  (cost=0.00..8119.02 rows=1 width=22)                                                                           
+                          ->  Hash Join  (cost=0.00..8119.02 rows=1 width=18)                                                                  
+                                Hash Cond: tab3.a = public.tab1.b                                                                              
+                                ->  Table Scan on tab3  (cost=0.00..431.70 rows=33334 width=4)                                                 
+                                ->  Hash  (cost=7681.20..7681.20 rows=1 width=18)                                                              
+                                      ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..7681.20 rows=1 width=18)                    
+                                            ->  Hash Join  (cost=0.00..7681.20 rows=1 width=18)                                                
+                                                  Hash Cond: tab2.a = public.tab1.a                                                            
+                                                  ->  Table Scan on tab2  (cost=0.00..1127.67 rows=33333334 width=4)                           
+                                                  ->  Hash  (cost=431.00..431.00 rows=1 width=18)                                              
+                                                        ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+                                                              Hash Key: public.tab1.a                                                          
+                                                              ->  Table Scan on tab1  (cost=0.00..431.00 rows=1 width=18)                      
+Optimizer status: PQO version 3.86.0                                                                                                           
+(19 rows)
 begin;
 BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=54040) (cdbdisp.c:254)
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=100384) (cdbdisp.c:254)
 abort;
 ABORT
 
-drop table tab1;
-DROP
-drop table tab2;
-DROP
-drop table tab3;
-DROP
+-- Test splitupdate, 5x planner does not support splitupdate
+-- if orca enabled, the following split update will error out
+explain update tab1 set b = 999;
+QUERY PLAN                                                                                     
+-----------------------------------------------------------------------------------------------
+Update  (cost=0.00..431.07 rows=1 width=1)                                                     
+  ->  Result  (cost=0.00..431.00 rows=1 width=26)                                              
+        ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=22)
+              Hash Key: public.tab1.b                                                          
+              ->  Split  (cost=0.00..431.00 rows=1 width=22)                                   
+                    ->  Result  (cost=0.00..431.00 rows=1 width=22)                            
+                          ->  Table Scan on tab1  (cost=0.00..431.00 rows=1 width=18)          
+Optimizer status: PQO version 3.86.0                                                           
+(8 rows)
+begin;
+BEGIN
+update tab1 set b = 999;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=100384) (cdbdisp.c:254)
+abort;
+ABORT
+
+-- drop table tab1;
+-- drop table tab2;
+-- drop table tab3;

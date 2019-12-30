@@ -52,11 +52,7 @@ dbid|content
 2   |0      
 3   |1      
 4   |2      
-5   |0      
-6   |1      
-7   |2      
-8   |-1     
-(8 rows)
+(4 rows)
 -- 5x's islation2 framework use dbid to specify utility target
 -- 3 should be the seg1 for demo cluster with mirrors
 3U: insert into tab1 values (1, 1);
@@ -99,12 +95,12 @@ abort;
 ABORT
 
 -- For orca, this will error out
-explain delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+explain update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 QUERY PLAN                                                                                                                 
 ---------------------------------------------------------------------------------------------------------------------------
-Delete (slice0; segments: 3)  (rows=9 width=10)                                                                            
-  ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)  (cost=1260003.37..101261253.84 rows=9 width=10)             
-        ->  Hash Join  (cost=1260003.37..101261253.84 rows=9 width=10)                                                     
+Update (slice0; segments: 3)  (rows=9 width=14)                                                                            
+  ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)  (cost=1260003.37..101261253.84 rows=9 width=14)             
+        ->  Hash Join  (cost=1260003.37..101261253.84 rows=9 width=14)                                                     
               Hash Cond: tab3.a = tab1.b                                                                                   
               ->  Seq Scan on tab3  (cost=0.00..100001000.00 rows=33334 width=4)                                           
               ->  Hash  (cost=1260002.37..1260002.37 rows=27 width=14)                                                     
@@ -126,9 +122,17 @@ UPDATE 2
 abort;
 ABORT
 
-drop table tab1;
-DROP
-drop table tab2;
-DROP
-drop table tab3;
-DROP
+-- Test splitupdate, 5x planner does not support splitupdate
+-- if orca enabled, the following split update will error out
+explain update tab1 set b = 999;
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+begin;
+BEGIN
+update tab1 set b = 999;
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+abort;
+ABORT
+
+-- drop table tab1;
+-- drop table tab2;
+-- drop table tab3;

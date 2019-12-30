@@ -46,11 +46,18 @@ delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 abort;
 
 -- For orca, this will error out
-explain delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+explain update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 begin;
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 abort;
 
-drop table tab1;
-drop table tab2;
-drop table tab3;
+-- Test splitupdate, 5x planner does not support splitupdate
+-- if orca enabled, the following split update will error out
+explain update tab1 set b = 999;
+begin;
+update tab1 set b = 999;
+abort;
+
+-- drop table tab1;
+-- drop table tab2;
+-- drop table tab3;
