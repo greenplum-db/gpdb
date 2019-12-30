@@ -52,7 +52,11 @@ dbid|content
 2   |0      
 3   |1      
 4   |2      
-(4 rows)
+5   |0      
+6   |1      
+7   |2      
+8   |-1     
+(8 rows)
 -- 5x's islation2 framework use dbid to specify utility target
 -- 3 should be the seg1 for demo cluster with mirrors
 3U: insert into tab1 values (1, 1);

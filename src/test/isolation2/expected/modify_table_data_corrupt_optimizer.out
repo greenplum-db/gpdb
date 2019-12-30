@@ -52,7 +52,11 @@ dbid|content
 2   |0      
 3   |1      
 4   |2      
-(4 rows)
+5   |0      
+6   |1      
+7   |2      
+8   |-1     
+(8 rows)
 -- 5x's islation2 framework use dbid to specify utility target
 -- 3 should be the seg1 for demo cluster with mirrors
 3U: insert into tab1 values (1, 1);
@@ -61,8 +65,8 @@ INSERT 1
 select gp_segment_id, * from tab1;
 gp_segment_id|a|b
 -------------+-+-
-0            |1|1
 1            |1|1
+0            |1|1
 (2 rows)
 
 -- planner does not error out because it will add explicit motion
@@ -91,7 +95,7 @@ Optimizer status: PQO version 3.86.0
 begin;
 BEGIN
 delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=100384) (cdbdisp.c:254)
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=127638) (cdbdisp.c:254)
 abort;
 ABORT
 
@@ -122,7 +126,7 @@ Optimizer status: PQO version 3.86.0
 begin;
 BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=100384) (cdbdisp.c:254)
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=127638) (cdbdisp.c:254)
 abort;
 ABORT
 
@@ -143,7 +147,7 @@ Optimizer status: PQO version 3.86.0
 begin;
 BEGIN
 update tab1 set b = 999;
-ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=100384) (cdbdisp.c:254)
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg1) (nodeDML.c:136)  (seg0 127.0.1.1:25432 pid=127638) (cdbdisp.c:254)
 abort;
 ABORT
 
