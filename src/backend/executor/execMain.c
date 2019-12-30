@@ -3029,7 +3029,7 @@ lnext:	;
 					   * utility mode) or there is bug in code, etc.
 					   */
 					  segid = DatumGetInt32(datum);
-					  if (segid >= MASTER_CONTENT_ID && segid != GpIdentity.segindex)
+					  if (segid != GpIdentity.segindex)
 					    elog(ERROR, "distribution key of the tuple doesn't belong to "
 						 "current segment (actually from seg%d)", segid);
 				}
