@@ -17,6 +17,9 @@ drop table tmp_save_dist_info;
 -- however, does not contain explicit motion to send tuples back,
 -- and then login in segment using utility mode to insert some
 -- bad data.
+-- Then we carefully build some plans for orca and planner,
+-- when reading these test cases, pay attention to the bad tuple
+-- and see if it is motioned to other segments.
 
 create table tab1(a int, b int) distributed by (b);
 create table tab2(a int, b int) distributed by (a);
@@ -48,14 +51,16 @@ insert into gp_distribution_policy select * from tmp_save_dist_info;
 
 select gp_segment_id, * from tab1;
 
--- For planner, this will error out
+-- TODO: this case is for planner, it will not error out on 6X now,
+--       because 6x does not remove explicit motion yet.
 explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 begin;
 delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 abort;
 
--- For planner, this will error out
-explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
+-- TODO: this case is for planner, it will not error out on 6X now,
+--       because 6x does not remove explicit motion yet.
+explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 begin;
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 abort;
@@ -67,9 +72,16 @@ delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 abort;
 
 -- For orca, this will error out
-explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 begin;
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+abort;
+
+-- test splitupdate. 6X code, both orca and planner generate splitupdate with redistribute motion
+-- so they will both error out.
+explain (costs off) update tab1 set b = b + 1;
+begin;
+update tab1 set b = b + 1;
 abort;
 
 drop table tab1;

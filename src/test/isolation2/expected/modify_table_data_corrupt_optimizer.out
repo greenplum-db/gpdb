@@ -21,6 +21,9 @@ ERROR:  table "tmp_save_dist_info" does not exist
 -- however, does not contain explicit motion to send tuples back,
 -- and then login in segment using utility mode to insert some
 -- bad data.
+-- Then we carefully build some plans for orca and planner,
+-- when reading these test cases, pay attention to the bad tuple
+-- and see if it is motioned to other segments.
 
 create table tab1(a int, b int) distributed by (b);
 CREATE
@@ -73,7 +76,8 @@ select gp_segment_id, * from tab1;
  1             | 1 | 1 
 (2 rows)
 
--- For planner, this will error out
+-- TODO: this case is for planner, it will not error out on 6X now,
+--       because 6x does not remove explicit motion yet.
 explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
  QUERY PLAN                                                                
 ---------------------------------------------------------------------------
@@ -100,26 +104,29 @@ DELETE 1
 abort;
 ABORT
 
--- For planner, this will error out
-explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
- QUERY PLAN                                                                
----------------------------------------------------------------------------
- Delete                                                                    
-   ->  Result                                                              
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)                
-               Hash Key: tab1.b                                            
-               ->  Hash Join                                               
-                     Hash Cond: (tab2.a = tab1.a)                          
-                     ->  Seq Scan on tab2                                  
-                     ->  Hash                                              
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3) 
-                                 ->  Hash Join                             
-                                       Hash Cond: (tab3.b = tab1.b)        
-                                       ->  Seq Scan on tab3                
-                                       ->  Hash                            
-                                             ->  Seq Scan on tab1          
- Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                      
-(15 rows)
+-- TODO: this case is for planner, it will not error out on 6X now,
+--       because 6x does not remove explicit motion yet.
+explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
+ QUERY PLAN                                                                            
+---------------------------------------------------------------------------------------
+ Update                                                                                
+   ->  Result                                                                          
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)                            
+               Hash Key: tab1.b                                                        
+               ->  Split                                                               
+                     ->  Result                                                        
+                           ->  Hash Join                                               
+                                 Hash Cond: (tab2.a = tab1.a)                          
+                                 ->  Seq Scan on tab2                                  
+                                 ->  Hash                                              
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3) 
+                                             ->  Hash Join                             
+                                                   Hash Cond: (tab3.b = tab1.b)        
+                                                   ->  Seq Scan on tab3                
+                                                   ->  Hash                            
+                                                         ->  Seq Scan on tab1          
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                  
+(17 rows)
 begin;
 BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
@@ -156,30 +163,53 @@ abort;
 ABORT
 
 -- For orca, this will error out
-explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
- QUERY PLAN                                                                                  
----------------------------------------------------------------------------------------------
- Delete                                                                                      
-   ->  Result                                                                                
-         ->  Redistribute Motion 3:3  (slice3; segments: 3)                                  
-               Hash Key: tab1.b                                                              
-               ->  Hash Join                                                                 
-                     Hash Cond: (tab3.a = tab1.b)                                            
-                     ->  Seq Scan on tab3                                                    
-                     ->  Hash                                                                
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
-                                 ->  Hash Join                                               
-                                       Hash Cond: (tab2.a = tab1.a)                          
-                                       ->  Seq Scan on tab2                                  
-                                       ->  Hash                                              
-                                             ->  Broadcast Motion 3:3  (slice1; segments: 3) 
-                                                   ->  Seq Scan on tab1                      
- Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                        
-(16 rows)
+explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+ QUERY PLAN                                                                                              
+---------------------------------------------------------------------------------------------------------
+ Update                                                                                                  
+   ->  Result                                                                                            
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)                                              
+               Hash Key: tab1.b                                                                          
+               ->  Split                                                                                 
+                     ->  Result                                                                          
+                           ->  Hash Join                                                                 
+                                 Hash Cond: (tab3.a = tab1.b)                                            
+                                 ->  Seq Scan on tab3                                                    
+                                 ->  Hash                                                                
+                                       ->  Broadcast Motion 3:3  (slice2; segments: 3)                   
+                                             ->  Hash Join                                               
+                                                   Hash Cond: (tab2.a = tab1.a)                          
+                                                   ->  Seq Scan on tab2                                  
+                                                   ->  Hash                                              
+                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3) 
+                                                               ->  Seq Scan on tab1                      
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0                                                    
+(18 rows)
 begin;
 BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
-ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=86447) (nodeModifyTable.c:602)
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=78344) (nodeModifyTable.c:602)
+abort;
+ABORT
+
+-- test splitupdate. 6X code, both orca and planner generate splitupdate with redistribute motion
+-- so they will both error out.
+explain (costs off) update tab1 set b = b + 1;
+ QUERY PLAN                                                 
+------------------------------------------------------------
+ Update                                                     
+   ->  Result                                               
+         ->  Redistribute Motion 3:3  (slice1; segments: 3) 
+               Hash Key: tab1.b                             
+               ->  Split                                    
+                     ->  Result                             
+                           ->  Seq Scan on tab1             
+ Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0       
+(8 rows)
+begin;
+BEGIN
+update tab1 set b = b + 1;
+ERROR:  distribution key of the tuple doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:602)  (seg1 127.0.1.1:6003 pid=78344) (nodeModifyTable.c:602)
 abort;
 ABORT
 

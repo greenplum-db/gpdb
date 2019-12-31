@@ -1,5 +1,3 @@
-test: modify_table_data_corrupt
-
 test: setup
 
 test: ao_partition_lock
@@ -41,6 +39,8 @@ test: gdd/dml_locks_only_targeted_table_in_query
 test: gdd/local-deadlock-03
 # gdd end
 test: gdd/end
+
+test: modify_table_data_corrupt
 
 # The following test injects a fault at a generic location
 # (StartTransaction).  The fault can be easily triggered by a
