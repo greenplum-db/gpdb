@@ -59,6 +59,17 @@ begin;
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 abort;
 
+-- test splitupdate.
+-- For orca, the plan contains a redistribute motion, so that
+-- this following statement will error out.
+-- For planner, the plan is using explicit redistribute motion,
+-- the to-delete tuple is set to send back where it is from, so
+-- it will not error out.
+explain (costs off) update tab1 set b = b + 1;
+begin;
+update tab1 set b = b + 1;
+abort;
+
 drop table tab1;
 drop table tab2;
 drop table tab3;

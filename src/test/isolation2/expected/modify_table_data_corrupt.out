@@ -163,6 +163,28 @@ UPDATE 2
 abort;
 ABORT
 
+-- test splitupdate.
+-- For orca, the plan contains a redistribute motion, so that
+-- this following statement will error out.
+-- For planner, the plan is using explicit redistribute motion,
+-- the to-delete tuple is set to send back where it is from, so
+-- it will not error out.
+explain (costs off) update tab1 set b = b + 1;
+ QUERY PLAN                                                    
+---------------------------------------------------------------
+ Update on tab1                                                
+   ->  Explicit Redistribute Motion 3:3  (slice1; segments: 3) 
+         ->  Split                                             
+               ->  Seq Scan on tab1                            
+ Optimizer: Postgres query optimizer                           
+(5 rows)
+begin;
+BEGIN
+update tab1 set b = b + 1;
+UPDATE 2
+abort;
+ABORT
+
 drop table tab1;
 DROP
 drop table tab2;
