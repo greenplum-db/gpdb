@@ -301,6 +301,9 @@ class CheckFilespaceConsistency(Operation):
             dbid = seg.getSegmentDbId()
             flat_file_location = os.path.join(pg_system_fs_entries[dbid][2],
                                               flat_file)
+            if seg.isSegmentDown():
+                logger.warning("Segment with DBID %s on host %s is down, skipping checking the filespace info file %s." % (dbid, seg.getSegmentHostName(), flat_file_location))
+                continue
             logger.debug('flat file location = %s' % flat_file_location)
             operations.append(RemoteOperation(CheckFilespaceOidLocally(flat_file_location),
                                               seg.getSegmentHostName(), "dbid %d"%dbid
@@ -337,6 +340,9 @@ class CheckFilespaceConsistency(Operation):
         operation_list = []
         for seg in self.gparray.getDbList():
             dbid = seg.getSegmentDbId()
+            if seg.isSegmentDown():
+                logger.warning("Segment with DBID %s on host %s is down, skipping verifying the filespace entries with the corresponding primary segment." % (dbid, seg.getSegmentHostName()))
+                continue
             cur_filespace_entry = cur_filespace_entries[dbid]
             peer_filespace_entry = get_peer_filespace_entry(cur_filespace_entries, dbid,
                                                             seg.getSegmentContentId(), self.gparray.getDbList())
