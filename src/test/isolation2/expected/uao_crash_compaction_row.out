@@ -2,8 +2,8 @@
 --
 -- # create a match/subs expression
 --
--- m/ERROR:.*server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/
--- s/ERROR:.*server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/ERROR: server closed the connection unexpectedly (cdbdispatchresult.c:XXX)/gm
+-- m/ERROR:.*server closed the connection unexpectedly/
+-- s/ERROR:.*server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/gm
 -- end_matchsubs
 3:CREATE extension if NOT EXISTS gp_inject_fault;
 CREATE
@@ -102,12 +102,12 @@ UPDATE 10
 3:VACUUM crash_vacuum_in_appendonly_insert;
 ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic'  (seg0 127.0.0.1:25432 pid=21369)
 1<:  <... completed>
-ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=24819: server closed the connection unexpectedly (cdbdispatchresult.c:476)
+ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=24819: server closed the connection unexpectedly
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.
 2<:  <... completed>
-ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=24830: server closed the connection unexpectedly (cdbdispatchresult.c:476)
+ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=24830: server closed the connection unexpectedly
 DETAIL:  
 	This probably means the server terminated abnormally
 	before or while processing the request.

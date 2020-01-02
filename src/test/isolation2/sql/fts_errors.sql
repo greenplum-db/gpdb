@@ -6,8 +6,8 @@
 create extension if not exists gp_inject_fault;
 
 -- start_matchsubs
--- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/
--- s/^ERROR:  Error on receive from .*: server closed the connection unexpectedly (cdbdispatchresult.c:\d+)/ERROR: server closed the connection unexpectedly (cdbdispatchresult.c:XXX)/
+-- m/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/
+-- s/^ERROR:  Error on receive from .*: server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/
 -- end_matchsubs
 
 -- to make test deterministic and fast

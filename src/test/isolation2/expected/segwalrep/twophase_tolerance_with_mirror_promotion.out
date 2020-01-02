@@ -88,7 +88,7 @@ SET
  t                         
 (1 row)
 1<:  <... completed>
-ERROR:  FTS detected connection lost during dispatch to seg0 127.0.0.1:7002 pid=5106: (cdbdispatchresult.c:476)
+ERROR:  FTS detected connection lost during dispatch to seg0 127.0.0.1:7002 pid=5106:
 
 1:SELECT gp_inject_fault('start_prepare', 'reset', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
  gp_inject_fault 
