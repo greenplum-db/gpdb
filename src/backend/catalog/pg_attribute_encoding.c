@@ -230,7 +230,7 @@ AddDefaultRelationAttributeOptions(Relation rel, List *options)
 	if (!RelationIsAoCols(rel))
 		return;
 
- 	ce = form_default_storage_directive(options);
+	ce = form_default_storage_directive(options);
 	if (!ce)
 		ce = default_column_encoding_clause();
 

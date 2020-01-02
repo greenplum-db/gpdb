@@ -592,7 +592,7 @@ init_execution_state(List *queryTree_list,
 						  fcache->readonly_func ? CURSOR_OPT_PARALLEL_OK : 0,
 											  NULL);
 
-	 		if (IsA(stmt, PlannedStmt))
+			if (IsA(stmt, PlannedStmt))
 				((PlannedStmt*)stmt)->metricsQueryType = FUNCTION_INNER_QUERY;
 
 			/*

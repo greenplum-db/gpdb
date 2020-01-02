@@ -315,7 +315,7 @@ tlist_matches_tupdesc(PlanState *ps, List *tlist, Index varno, TupleDesc tupdesc
 	 * If the plan context requires a particular hasoid setting, then that has
 	 * to match, too.
 	 */
- 	{
+	{
 		bool forceOids = ExecContextForcesOids(ps, &hasoid);
 
 		/* If Oid matters, and there are different requirement, then does not match */

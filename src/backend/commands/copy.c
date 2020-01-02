@@ -2153,22 +2153,22 @@ BeginCopy(bool is_from,
 	 *
 	 * In COPY_EXECUTE mode, the dispatcher has already done the conversion.
 	 */
-  if (cstate->dispatch_mode != COPY_DISPATCH)
-  {
-	cstate->need_transcoding =
-		((cstate->file_encoding != GetDatabaseEncoding() ||
-		  pg_database_encoding_max_length() > 1));
-	/* See Multibyte encoding comment above */
-	cstate->encoding_embeds_ascii = PG_ENCODING_IS_CLIENT_ONLY(cstate->file_encoding);
-	setEncodingConversionProc(cstate, cstate->file_encoding, !is_from);
-  }
-  else
-  {
-	  cstate->need_transcoding = false;
-	  cstate->encoding_embeds_ascii = PG_ENCODING_IS_CLIENT_ONLY(cstate->file_encoding);
-  }
+	if (cstate->dispatch_mode != COPY_DISPATCH)
+	{
+		cstate->need_transcoding =
+			((cstate->file_encoding != GetDatabaseEncoding() ||
+			  pg_database_encoding_max_length() > 1));
+		/* See Multibyte encoding comment above */
+		cstate->encoding_embeds_ascii = PG_ENCODING_IS_CLIENT_ONLY(cstate->file_encoding);
+		setEncodingConversionProc(cstate, cstate->file_encoding, !is_from);
+	}
+	else
+	{
+		cstate->need_transcoding = false;
+		cstate->encoding_embeds_ascii = PG_ENCODING_IS_CLIENT_ONLY(cstate->file_encoding);
+	}
 
-	cstate->copy_dest = COPY_FILE;		/* default */
+	cstate->copy_dest = COPY_FILE;	/* default */
 
 	MemoryContextSwitchTo(oldcontext);
 
