@@ -817,7 +817,7 @@ gangTypeToString(GangType type)
 bool
 GangOK(Gang *gp)
 {
-	int			i;
+	int i;
 
 	if (gp == NULL)
 		return false;
@@ -860,4 +860,11 @@ RecycleGang(Gang *gp, bool forceDestroy)
 
 		cdbcomponent_recycleIdleQE(segdbDesc, forceDestroy);
 	}
+}
+
+void
+ResetAllGangs(void)
+{
+	DisconnectAndDestroyAllGangs(true);
+	CheckForResetSession();
 }

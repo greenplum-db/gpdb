@@ -545,6 +545,7 @@ InitProcess(void)
 	MyProc->queryCommandId = -1;
 
 	/* Init gxact */
+	MyTmGxact->gxid = InvalidDistributedTransactionId;
 	resetGxact();
 
 	/*

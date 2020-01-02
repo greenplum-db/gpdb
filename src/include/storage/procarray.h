@@ -29,8 +29,8 @@ extern Size ProcArrayShmemSize(void);
 extern void CreateSharedProcArray(void);
 extern void ProcArrayAdd(PGPROC *proc);
 extern void ProcArrayRemove(PGPROC *proc, TransactionId latestXid);
-extern void ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool lockHeld);
-extern void ProcArrayEndGxact(void);
+extern void ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid);
+extern void ProcArrayEndGxact(TMGXACT *gxact);
 extern void ProcArrayClearTransaction(PGPROC *proc);
 
 extern void ProcArrayInitRecovery(TransactionId initializedUptoXID);

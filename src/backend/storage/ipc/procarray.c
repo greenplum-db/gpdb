@@ -410,15 +410,21 @@ ProcArrayRemove(PGPROC *proc, TransactionId latestXid)
 
 
 void
-ProcArrayEndGxact(void)
+ProcArrayEndGxact(TMGXACT *gxact)
 {
-	Assert(LWLockHeldByMe(ProcArrayLock));
-	DistributedTransactionId gxid = MyTmGxact->gxid;
+	DistributedTransactionId gxid = gxact->gxid;
+
+	AssertImply(Gp_role == GP_ROLE_DISPATCH && gxid != InvalidDistributedTransactionId,
+				LWLockHeldByMe(ProcArrayLock));
+	gxact->gxid = InvalidDistributedTransactionId;
+	gxact->distribTimeStamp = 0;
+	gxact->xminDistributedSnapshot = InvalidDistributedTransactionId;
+	gxact->includeInCkpt = false;
+	gxact->sessionId = 0;
 
 	if (InvalidDistributedTransactionId != gxid &&
 		TransactionIdPrecedes(ShmemVariableCache->latestCompletedDxid, gxid))
 		ShmemVariableCache->latestCompletedDxid = gxid;
-	resetGxact();
 }
 
 /*
@@ -441,11 +447,12 @@ ProcArrayEndGxact(void)
  * clears the PGPROC entry.
  */
 void
-ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool lockHeld)
+ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid)
 {
 	PGXACT	   *pgxact = &allPgXact[proc->pgprocno];
+	TMGXACT	   *gxact = &allTmGxact[proc->pgprocno];
 
-	if (TransactionIdIsValid(latestXid))
+	if (TransactionIdIsValid(latestXid) || TransactionIdIsValid(gxact->gxid))
 	{
 		/*
 		 * We must lock ProcArrayLock while clearing our advertised XID, so
@@ -454,6 +461,7 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool lockHeld)
 		 * src/backend/access/transam/README.
 		 */
 		Assert(TransactionIdIsValid(allPgXact[proc->pgprocno].xid) ||
+			   TransactionIdIsValid(gxact->gxid) ||
 			   (IsBootstrapProcessingMode() && latestXid == BootstrapTransactionId));
 
 		/*
@@ -461,41 +469,46 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool lockHeld)
 		 * and release the lock.  If not, use group XID clearing to improve
 		 * efficiency.
 		 */
-		if (lockHeld || LWLockConditionalAcquire(ProcArrayLock, LW_EXCLUSIVE))
+		if (LWLockConditionalAcquire(ProcArrayLock, LW_EXCLUSIVE))
 		{
-			ProcArrayEndTransactionInternal(proc, pgxact, latestXid);
-			if (!lockHeld)
-				LWLockRelease(ProcArrayLock);
+			if (TransactionIdIsValid(latestXid))
+				ProcArrayEndTransactionInternal(proc, pgxact, latestXid);
+
+			if (TransactionIdIsValid(gxact->gxid))
+				ProcArrayEndGxact(gxact);
+
+			LWLockRelease(ProcArrayLock);
 		}
 		else
 			ProcArrayGroupClearXid(proc, latestXid);
 	}
-	else
-	{
-		/*
-		 * If we have no XID, we don't need to lock, since we won't affect
-		 * anyone else's calculation of a snapshot.  We might change their
-		 * estimate of global xmin, but that's OK.
-		 */
-		Assert(!TransactionIdIsValid(allPgXact[proc->pgprocno].xid));
 
-		proc->lxid = InvalidLocalTransactionId;
-		pgxact->xmin = InvalidTransactionId;
-		/* must be cleared with xid/xmin: */
-		pgxact->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
-		pgxact->delayChkpt = false;		/* be sure this is cleared in abort */
-		proc->recoveryConflictPending = false;
-		proc->serializableIsoLevel = false;
+	/*
+	 * If we have no XID, we don't need to lock, since we won't affect
+	 * anyone else's calculation of a snapshot.  We might change their
+	 * estimate of global xmin, but that's OK.
+	 *
+	 * NB: this may reset the pgxact and gxact twice (not including the xid
+	 * and gxid), it should be no harm to the correctness, just an easy way to
+	 * handle the cases like: there's a valid distributed XID but no local XID.
+	 */
+	Assert(!TransactionIdIsValid(allPgXact[proc->pgprocno].xid));
+	Assert(!TransactionIdIsValid(allTmGxact[proc->pgprocno].gxid));
 
-		Assert(pgxact->nxids == 0);
-		Assert(pgxact->overflowed == false);
+	proc->lxid = InvalidLocalTransactionId;
+	pgxact->xmin = InvalidTransactionId;
+	/* must be cleared with xid/xmin: */
+	pgxact->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
+	pgxact->delayChkpt = false;		/* be sure this is cleared in abort */
+	proc->recoveryConflictPending = false;
+	proc->serializableIsoLevel = false;
 
-		proc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
-	}
+	Assert(pgxact->nxids == 0);
+	Assert(pgxact->overflowed == false);
 
-	/* Clear distributed transaction status for one-phase commit transaction */
-	if (Gp_role == GP_ROLE_EXECUTE)
-		resetGxact();
+	proc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
+
+	resetGxact();
 }
 
 /*
@@ -547,7 +560,8 @@ ProcArrayGroupClearXid(PGPROC *proc, TransactionId latestXid)
 	int			extraWaits = -1;
 
 	/* We should definitely have an XID to clear. */
-	Assert(TransactionIdIsValid(allPgXact[proc->pgprocno].xid));
+	Assert(TransactionIdIsValid(allPgXact[proc->pgprocno].xid) ||
+		   TransactionIdIsValid(allTmGxact[proc->pgprocno].gxid));
 
 	/* Add ourselves to the list of processes needing a group XID clear. */
 	proc->procArrayGroupMember = true;
@@ -614,8 +628,13 @@ ProcArrayGroupClearXid(PGPROC *proc, TransactionId latestXid)
 	{
 		PGPROC	   *proc = &allProcs[nextidx];
 		PGXACT	   *pgxact = &allPgXact[nextidx];
+		TMGXACT	   *gxact = &allTmGxact[nextidx];
 
-		ProcArrayEndTransactionInternal(proc, pgxact, proc->procArrayGroupMemberXid);
+		if (TransactionIdIsValid(proc->procArrayGroupMemberXid))
+			ProcArrayEndTransactionInternal(proc, pgxact, proc->procArrayGroupMemberXid);
+
+		if (TransactionIdIsValid(gxact->gxid))
+			ProcArrayEndGxact(gxact);
 
 		/* Move to next proc in list. */
 		nextidx = pg_atomic_read_u32(&proc->procArrayGroupNext);

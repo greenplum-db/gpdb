@@ -70,7 +70,6 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 							  char *gid,
 							  ErrorData **qeError,
 							  int *numresults,
-							  bool *badGangs,
 							  List *twophaseSegments,
 							  char *serializedDtxContextInfo,
 							  int serializedDtxContextInfoLen)
@@ -120,14 +119,6 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 
 	if (!pr)
 	{
-		if (!GangOK(primaryGang) && badGangs != NULL)
-		{
-			*badGangs = true;
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-				 "CdbDispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
-				 dtxProtocolCommandLoggingStr, gid);
-		}
-
 		cdbdisp_destroyDispatcherState(ds);
 		return NULL;
 	}

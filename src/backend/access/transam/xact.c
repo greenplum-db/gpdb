@@ -1913,8 +1913,13 @@ RecordTransactionAbort(bool isSubXact)
 	 * we had already decided that we are going to commit this transaction and
 	 * wrote a commit record for it, there's no turning back. The Distributed
 	 * Transaction Manager will take care of completing the transaction for us.
+	 *
+	 * If the distributed transaction has started rolling back, it means we already
+	 * wrote the abort record, skip it. 
 	 */
-	if (isQEReader || getCurrentDtxState() == DTX_STATE_NOTIFYING_COMMIT_PREPARED)
+	if (isQEReader ||
+		getCurrentDtxState() == DTX_STATE_NOTIFYING_COMMIT_PREPARED ||
+		CurrentDtxIsRollingback())
 		xid = InvalidTransactionId;
 	else
 		xid = GetCurrentTransactionIdIfAny();
@@ -2768,39 +2773,31 @@ CommitTransaction(void)
 
 	EndLocalDistribXact(true);
 
+	/*
+	 * Do 2nd phase of commit to all QE. NOTE: we can't process
+	 * signals (which may attempt to abort our now partially-completed
+	 * transaction) until we've notified the QEs.
+	 *
+	 * Very important that PGPROC still thinks the transaction is still in progress so
+	 * SnapshotNow reader don't jump to the conclusion this distributed transaction is
+	 * finished.  So, notifyCommittedDtxTransaction will take responsbility to clear
+	 * PGPROC under the ProcArrayLock after the broadcast.  MPP-16087.
+	 *
+	 * And, that we have not master released locks, yet, too.
+	 *
+	 * Note:  do this BEFORE clearing the resource owner, as the dispatch
+	 * routines might want to use them.  Plus, we want AtCommit_Memory to
+	 * happen after using the dispatcher.
+	 */
 	if (notifyCommittedDtxTransactionIsNeeded())
-	{
-		/*
-		 * Do 2nd phase of commit to all QE. NOTE: we can't process
-		 * signals (which may attempt to abort our now partially-completed
-		 * transaction) until we've notified the QEs.
-		 *
-		 * Very important that PGPROC still thinks the transaction is still in progress so
-		 * SnapshotNow reader don't jump to the conclusion this distributed transaction is
-		 * finished.  So, notifyCommittedDtxTransaction will take responsbility to clear
-		 * PGPROC under the ProcArrayLock after the broadcast.  MPP-16087.
-		 *
-		 * And, that we have not master released locks, yet, too.
-		 *
-		 * Note:  do this BEFORE clearing the resource owner, as the dispatch
-		 * routines might want to use them.  Plus, we want AtCommit_Memory to 
-		 * happen after using the dispatcher.
-		 */
 		notifyCommittedDtxTransaction();
-		/*
-		 * Clear both local and distributed transaction states.
-		 */
-		ClearTransactionState(latestXid);
-	}
-	else
-	{
-		/*
-		 * Let others know about no transaction in progress by me. Note that this
-		 * must be done _before_ releasing locks we hold and _after_
-		 * RecordTransactionCommit.
-		 */
-		ProcArrayEndTransaction(MyProc, latestXid, false);
-	}
+
+	/*
+	 * Let others know about no transaction in progress by me. Note that this
+	 * must be done _before_ releasing locks we hold and _after_
+	 * RecordTransactionCommit.
+	 */
+	ProcArrayEndTransaction(MyProc, latestXid);
 
 	/*
 	 * This is all post-commit cleanup.  Note that if an error is raised here,
@@ -3386,12 +3383,19 @@ AbortTransaction(void)
 	TRACE_POSTGRESQL_TRANSACTION_ABORT(MyProc->lxid);
 
 	EndLocalDistribXact(false);
+
+	/*
+	 * Do abort to all QE. NOTE: we don't process
+	 * signals to prevent recursion until we've notified the QEs.
+	 */
+	rollbackDtxTransaction();
+
 	/*
 	 * Let others know about no transaction in progress by me. Note that this
 	 * must be done _before_ releasing locks we hold and _after_
 	 * RecordTransactionAbort.
 	 */
-	ProcArrayEndTransaction(MyProc, latestXid, false);
+	ProcArrayEndTransaction(MyProc, latestXid);
 
 	/*
 	 * Post-abort cleanup.  See notes in CommitTransaction() concerning
@@ -3450,9 +3454,6 @@ AbortTransaction(void)
 	AtEOXact_Snapshot(false);	/* and release the transaction's snapshots */
 
 	/*
-	 * Do abort to all QE. NOTE: we don't process
-	 * signals to prevent recursion until we've notified the QEs.
-	 *
 	 * If something goes wrong after this, we might recurse back to
 	 * AbortTransaction(). To avoid creating another Abort WAL record
 	 * and failing assertion in ProcArrayEndTransaction because MyProc->xid
@@ -3461,9 +3462,6 @@ AbortTransaction(void)
 	 * CleanupTransaction().
 	 */
 	TopTransactionStateData.transactionId = InvalidTransactionId;
-
-	rollbackDtxTransaction();
-
 	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
 
 	/*

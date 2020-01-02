@@ -522,10 +522,7 @@ AtAbort_DispatcherState(void)
 	 * reset session and drop temp files
 	 */
 	if (currentGxactWriterGangLost())
-	{
-		DisconnectAndDestroyAllGangs(true);
-		CheckForResetSession();
-	}
+		ResetAllGangs();
 }
 
 void

@@ -75,7 +75,7 @@ doNotifyCommittedInDoubt(char *gid)
 	/* UNDONE: Pass real gxid instead of InvalidDistributedTransactionId. */
 	succeeded = doDispatchDtxProtocolCommand(DTX_PROTOCOL_COMMAND_RECOVERY_COMMIT_PREPARED,
 											 gid,
-											 NULL, /* raiseError */ false,
+											 /* raiseError */ false,
 											 cdbcomponent_getCdbComponentsList(), NULL, 0);
 	if (!succeeded)
 		elog(FATAL, "Crash recovery broadcast of the distributed transaction "
@@ -95,7 +95,7 @@ doAbortInDoubt(char *gid)
 	/* UNDONE: Pass real gxid instead of InvalidDistributedTransactionId. */
 	succeeded = doDispatchDtxProtocolCommand(DTX_PROTOCOL_COMMAND_RECOVERY_ABORT_PREPARED,
 											 gid,
-											 NULL, /* raiseError */ false,
+											 /* raiseError */ false,
 											 cdbcomponent_getCdbComponentsList(), NULL, 0);
 	if (!succeeded)
 		elog(FATAL, "Crash recovery retry of the distributed transaction "

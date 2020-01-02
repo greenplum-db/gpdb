@@ -36,7 +36,6 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 							  char	*gid,
 							  ErrorData **qeError,
 							  int *resultCount,
-							  bool* badGangs,
 							  List *twophaseSegments,
 							  char *serializedDtxContextInfo,
 							  int serializedDtxContextInfoLen);

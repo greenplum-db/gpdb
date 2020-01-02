@@ -712,8 +712,8 @@ ALTER DATABASE alter_db SET TABLESPACE adst_destination_tablespace;
 -- Then the tablespace for the database remains to be the source tablespace in all segments and the master.
 SELECT * FROM list_db_tablespace('alter_db', 'adst_source_tablespace');
 
--- Ensure that the mirrors including the standby master have removed the dboid dir under the target tablespace, except the mirror of the panicked primary.
-SELECT gp_wait_until_triggered_fault('after_drop_database_directories', 1, dbid) FROM gp_segment_configuration WHERE role='m' AND content!=0;
+-- Ensure that the mirrors including the standby master have removed the dboid dir under the target tablespace
+SELECT gp_wait_until_triggered_fault('after_drop_database_directories', 1, dbid) FROM gp_segment_configuration WHERE role='m';
 
 -- Then all the files of the database should remain in the dboid directory in the source tablespace directory for all database instances.
 -- Note: Sometimes the pg_internal.init is not yet formed on the recovering primary. It is not important for our test.
