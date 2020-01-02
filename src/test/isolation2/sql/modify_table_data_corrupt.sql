@@ -16,6 +16,9 @@ drop table tab3;
 -- however, does not contain explicit motion to send tuples back,
 -- and then login in segment using utility mode to insert some
 -- bad data.
+-- Then we carefully build some plans for orca and planner,
+-- when reading these test cases, pay attention to the bad tuple
+-- and see if it is motioned to other segments.
 
 create table tab1(a int, b int) distributed by (b);
 create table tab2(a int, b int) distributed by (a);
@@ -42,7 +45,7 @@ delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 abort;
 
 -- For planner, this will error out
-explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
+explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 begin;
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 abort;
@@ -54,7 +57,7 @@ delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 abort;
 
 -- For orca, this will error out
-explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
+explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 begin;
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 abort;
