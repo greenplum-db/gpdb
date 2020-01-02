@@ -452,3 +452,22 @@ SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOI
 ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
 SELECT btrim(hexpr_t1.c2::text)::character varying AS foo FROM hexpr_t1 LEFT JOIN hexpr_t2
 ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
+
+-- test if subquery locus is general, then
+-- we should keep it general
+set enable_hashjoin to on;
+set enable_mergejoin to off;
+set enable_nestloop to off;
+create table t_randomly_dist_table(c int) distributed randomly;
+-- the following plan should not contain redistributed motion (for planner)
+explain
+select * from (
+  select a from generate_series(1, 10)a
+  union all
+  select a from generate_series(1, 10)a
+) t_subquery_general
+join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
+
+reset enable_hashjoin;
+reset enable_mergejoin;
+reset enable_nestloop;

@@ -3368,25 +3368,25 @@ PL/pgSQL function func2_mod_int_stb(integer) line 3 at SQL statement
 rollback;
 -- @description function_in_subqry_withfunc2_110.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg0 slice1 127.0.1.1:6002 pid=24740)
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_113.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg0 slice1 127.0.1.1:6002 pid=24740)
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_116.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_read_int_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg0 slice1 127.0.1.1:6002 pid=24740)
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_118.sql
 begin;
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_mod_int_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg0 slice1 127.0.1.1:6002 pid=24740)
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 rollback;
 -- @description function_in_subqry_withfunc2_119.sql
 begin;
@@ -3397,9 +3397,9 @@ PL/pgSQL function func2_mod_int_stb(integer) line 3 at SQL statement
 rollback;
 -- @description function_in_subqry_withfunc2_120.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg0 slice1 127.0.1.1:6002 pid=24740)
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_121.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_stb(5))) r order by 1,2,3;
 ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg1 slice1 172.17.0.6:25433 pid=118087)
@@ -3412,9 +3412,9 @@ CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_123.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg0 slice1 127.0.1.1:6002 pid=24740)
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_124.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_stb(5))) r order by 1,2,3;
 ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg1 slice1 172.17.0.6:25433 pid=118087)
@@ -3427,9 +3427,9 @@ CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_126.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_read_int_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg0 slice1 127.0.1.1:6002 pid=24740)
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_withfunc2_127.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_read_int_stb(5))) r order by 1,2,3;
 ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg1 slice1 172.17.0.6:25433 pid=118087)
@@ -3438,9 +3438,9 @@ PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT r
 -- @description function_in_subqry_withfunc2_128.sql
 begin;
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_mod_int_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
-CONTEXT:  PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery.bar"  (seg0 slice1 127.0.1.1:6002 pid=24740)
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
+PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 rollback;
 -- @description function_in_subqry_withfunc2_129.sql
 begin;
@@ -3691,32 +3691,28 @@ rollback;
 -- @description function_in_subqry_withfunc2_150.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_vol(func2_nosql_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice1 127.0.1.1:6002 pid=24740)
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c > $1"
 PL/pgSQL function func1_mod_setint_vol(integer) line 5 at SQL statement
 rollback;
 -- @description function_in_subqry_withfunc2_153.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_vol(func2_sql_int_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice1 127.0.1.1:6002 pid=24740)
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c > $1"
 PL/pgSQL function func1_mod_setint_vol(integer) line 5 at SQL statement
 rollback;
 -- @description function_in_subqry_withfunc2_156.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_vol(func2_read_int_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice1 127.0.1.1:6002 pid=24740)
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c > $1"
 PL/pgSQL function func1_mod_setint_vol(integer) line 5 at SQL statement
 rollback;
 -- @description function_in_subqry_withfunc2_158.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_vol(func2_mod_int_vol(5))) r order by 1,2,3;
-ERROR:  query plan with multiple segworker groups is not supported
-HINT:  likely caused by a function that reads or modifies data in a distributed table
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice1 127.0.1.1:6002 pid=24740)
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c > $1"
 PL/pgSQL function func1_mod_setint_vol(integer) line 5 at SQL statement
 rollback;
@@ -3730,7 +3726,7 @@ rollback;
 -- @description function_in_subqry_withfunc2_160.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_stb(func2_nosql_vol(5))) r order by 1,2,3;
-ERROR:  UPDATE is not allowed in a non-volatile function
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice1 127.0.1.1:6002 pid=24740)
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c > $1"
 PL/pgSQL function func1_mod_setint_stb(integer) line 5 at SQL statement
 rollback;
@@ -3751,7 +3747,7 @@ rollback;
 -- @description function_in_subqry_withfunc2_163.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_stb(func2_sql_int_vol(5))) r order by 1,2,3;
-ERROR:  UPDATE is not allowed in a non-volatile function
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice1 127.0.1.1:6002 pid=24740)
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c > $1"
 PL/pgSQL function func1_mod_setint_stb(integer) line 5 at SQL statement
 rollback;
@@ -3772,7 +3768,7 @@ rollback;
 -- @description function_in_subqry_withfunc2_166.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_stb(func2_read_int_vol(5))) r order by 1,2,3;
-ERROR:  UPDATE is not allowed in a non-volatile function
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice1 127.0.1.1:6002 pid=24740)
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c > $1"
 PL/pgSQL function func1_mod_setint_stb(integer) line 5 at SQL statement
 rollback;
@@ -3786,7 +3782,7 @@ rollback;
 -- @description function_in_subqry_withfunc2_168.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_stb(func2_mod_int_vol(5))) r order by 1,2,3;
-ERROR:  UPDATE is not allowed in a non-volatile function
+ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 slice1 127.0.1.1:6002 pid=24740)
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c > $1"
 PL/pgSQL function func1_mod_setint_stb(integer) line 5 at SQL statement
 rollback;

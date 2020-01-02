@@ -5483,12 +5483,12 @@ select * from
     lateral (select q1, coalesce(ss1.x,q2) as y from int8_tbl d) ss2
   ) on c.q2 = ss2.q1,
   lateral (select ss2.y) ss3;
-                                                                                  QUERY PLAN                                                                                  
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Nested Loop
+                                                                                     QUERY PLAN                                                                                     
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
    Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint)), d.q1, (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
-   ->  Gather Motion 3:1  (slice4; segments: 3)
-         Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+   ->  Nested Loop
+         Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint)), d.q1, (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
          ->  Hash Right Join
                Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
                Hash Cond: (d.q1 = c.q2)
@@ -5517,13 +5517,12 @@ select * from
                            Hash Key: c.q2
                            ->  Seq Scan on public.int8_tbl c
                                  Output: c.q1, c.q2
-   ->  Materialize
-         Output: ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
-         ->  Result
-               Output: (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+         ->  Materialize
+               Output: ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
+               ->  Result
+                     Output: (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(38 rows)
+(37 rows)
 
 -- case that breaks the old ph_may_need optimization
 explain (verbose, costs off)
@@ -5588,8 +5587,7 @@ select c.*,a.*,ss1.q1,ss2.q1,ss3.* from
                      ->  Seq Scan on public.int4_tbl i
                            Output: i.f1
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(50 rows)
+(49 rows)
 
 -- check processing of postponed quals (bug #9041)
 explain (verbose, costs off)
