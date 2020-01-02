@@ -762,3 +762,34 @@ ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
  7
 (10 rows)
 
+-- test if subquery locus is general, then
+-- we should keep it general
+set enable_hashjoin to on;
+set enable_mergejoin to off;
+set enable_nestloop to off;
+create table t_randomly_dist_table(c int) distributed randomly;
+-- the following plan should not contain redistributed motion (for planner)
+explain
+select * from (
+  select a from length('123')a
+  union all
+  select a from length('123')a
+) t_subquery_general
+join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.08..1304.99 rows=193 width=8)
+   ->  Hash Join  (cost=0.08..1304.99 rows=65 width=8)
+         Hash Cond: t_randomly_dist_table.c = a.a
+         ->  Seq Scan on t_randomly_dist_table  (cost=0.00..1062.00 rows=32067 width=4)
+         ->  Hash  (cost=0.06..0.06 rows=1 width=4)
+               ->  Append  (cost=0.00..0.04 rows=1 width=4)
+                     ->  Function Scan on a  (cost=0.00..0.01 rows=1 width=4)
+                     ->  Function Scan on a  (cost=0.00..0.01 rows=1 width=4)
+ Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=off
+ Optimizer status: legacy query optimizer
+(10 rows)
+
+reset enable_hashjoin;
+reset enable_mergejoin;
+reset enable_nestloop;

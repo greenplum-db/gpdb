@@ -762,3 +762,45 @@ ON hexpr_t2.c3::text = btrim(hexpr_t1.c2::text);
  7
 (10 rows)
 
+-- test if subquery locus is general, then
+-- we should keep it general
+set enable_hashjoin to on;
+set enable_mergejoin to off;
+set enable_nestloop to off;
+create table t_randomly_dist_table(c int) distributed randomly;
+-- the following plan should not contain redistributed motion (for planner)
+explain
+select * from (
+  select a from length('123')a
+  union all
+  select a from length('123')a
+) t_subquery_general
+join t_randomly_dist_table on t_subquery_general.a = t_randomly_dist_table.c;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+   ->  Hash Join  (cost=0.00..431.00 rows=1 width=8)
+         Hash Cond: a = c
+         ->  Append  (cost=0.00..0.00 rows=1 width=4)
+               ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                           Filter: a = 3
+                           ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                                 ->  Result  (cost=0.00..0.00 rows=1 width=1)
+               ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                           Filter: a = 3
+                           ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                                 ->  Result  (cost=0.00..0.00 rows=1 width=1)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     Hash Key: c
+                     ->  Table Scan on t_randomly_dist_table  (cost=0.00..431.00 rows=1 width=4)
+                           Filter: c = 3
+ Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=on
+ Optimizer status: PQO version 3.86.0
+(21 rows)
+
+reset enable_hashjoin;
+reset enable_mergejoin;
+reset enable_nestloop;
