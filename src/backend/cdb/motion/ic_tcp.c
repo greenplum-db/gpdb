@@ -1322,6 +1322,7 @@ SetupTCPInterconnect(EState *estate)
 
 	estate->interconnect_context->teardownActive = false;
 	estate->interconnect_context->activated = false;
+	estate->interconnect_context->networkTimeoutIsLogged = false;
 	estate->interconnect_context->incompleteConns = NIL;
 	estate->interconnect_context->sliceTable = NULL;
 	estate->interconnect_context->sliceId = -1;
