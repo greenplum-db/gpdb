@@ -1409,8 +1409,6 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	gxact = LockGXact(gid, GetUserId(), raiseErrorIfNotFound);
 	if (gxact == NULL)
 	{
-		/* GPDB_96_MERGE_FIXME: understand this comment, and figure out if
-		 * this block is still needed. */
 		/*
 		 * We can be here for commit-prepared and abort-prepared. Incase of
 		 * commit-prepared not able to find the gxact clearly means we already
