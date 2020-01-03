@@ -125,10 +125,10 @@ tablespace_gp_test.t: tablespace_gp_test.o $(test_dependencies) \
 	$(pg_upgrade_greenplum_directory)/old_tablespace_file_gp.o \
 	$(pg_upgrade_greenplum_directory)/server_gp.o \
 	$(pg_upgrade_greenplum_directory)/greenplum_cluster_info.o \
+	$(pg_upgrade_greenplum_directory)/reporting.o \
 	$(pg_upgrade_directory)/util.o \
 	$(pg_upgrade_directory)/server.o \
 	$(pg_upgrade_directory)/exec.o \
-	$(pg_upgrade_directory)/reporting.o \
 	$(CMOCKERY_OBJS)
 	$(compile_test)
 
