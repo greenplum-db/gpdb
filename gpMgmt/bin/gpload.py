@@ -48,6 +48,7 @@ except Exception, e:
     sys.stderr.write(str(errorMsg))
     sys.exit(2)
 
+import contextlib
 import hashlib
 import datetime,getpass,os,signal,socket,threading,time,traceback,re
 try:
@@ -1825,6 +1826,17 @@ class gpload:
                            , user=self.options.U
                            , passwd=self.options.password
                            )
+
+            # unset search path due to CVE-2018-1058, and save the original path
+            # and current_schema for later use
+            results = self.db.query("SELECT pg_catalog.current_setting('search_path')").getresult()
+            self.original_search_path = results[0][0]
+            results = self.db.query("SELECT pg_catalog.current_schema()").getresult()
+            self.original_schema = results[0][0]
+
+            ALWAYS_SECURE_SEARCH_PATH_SQL = "SELECT pg_catalog.set_config('search_path', '', false)"
+            self.db.query(ALWAYS_SECURE_SEARCH_PATH_SQL)
+
             self.log(self.DEBUG, "Successfully connected to database")
 
             if noGpVersion == False:
@@ -1892,6 +1904,29 @@ class gpload:
             self.log(self.DEBUG, '%s: %s'%(name,typ))
 
 
+    @contextlib.contextmanager
+    def _temporary_search_path(self, search_path):
+        """
+        A context manager (for use in a with block) that temporarily sets the
+        search path on the self.db connection to a different value, then clears
+        it when the block is exited.
+
+        Callers must ensure that any queries performed within the temporary
+        search_path context have fully schema-qualified identifiers, to avoid
+        CVE-2018-1058.
+        """
+        # A simpler solution would start a transaction and then perform a
+        # SELECT set_config(..., true) so that the search_path setting was
+        # automatically reverted once the transaction finished. Unfortunately,
+        # this interferes with the automatic outer transaction added by gpload,
+        # so we do two manual set_config() calls.
+        self.db.query("SELECT pg_catalog.set_config('search_path', '%s', false)"
+                      % pg.escape_string(search_path))
+        try:
+            yield
+        finally:
+            self.db.query("SELECT pg_catalog.set_config('search_path', '', false)")
+
 
     def read_table_metadata(self):
         # KAS Note to self. If schema is specified, then probably should use PostgreSQL rules for defining it.
@@ -1899,14 +1934,18 @@ class gpload:
         # find the shema name for this table (according to search_path)
         # if it was not explicitly specified in the configuration file.
         if self.schema is None:
+            # We temporarily restore the original search_path of the connection
+            # for a single transaction in order to perform this lookup. Be sure
+            # all identifiers in this lookup query are fully qualified to avoid
+            # a recurrence of CVE-2018-1058!
             queryString = """SELECT n.nspname
                              FROM pg_catalog.pg_class c
                              LEFT JOIN pg_catalog.pg_namespace n
-                             ON n.oid = c.relnamespace
-                             WHERE c.relname = '%s'
+                             ON n.oid OPERATOR(pg_catalog.=) c.relnamespace
+                             WHERE c.relname OPERATOR(pg_catalog.=) '%s'
                              AND pg_catalog.pg_table_is_visible(c.oid);""" % quote_unident(self.table)
-
-            resultList = self.db.query(queryString.encode('utf-8')).getresult()
+            with self._temporary_search_path(self.original_search_path):
+                resultList = self.db.query(queryString.encode('utf-8')).getresult()
 
             if len(resultList) > 0:
                 self.schema = (resultList[0])[0]
@@ -2013,48 +2052,49 @@ class gpload:
     # This function will return the SQL to run in order to find out whether
     # such a table exists.
     #
+    # NOTE: because this query runs under an unsanitized search_path due to the
+    # use of pg_table_is_visible(), all identifiers must be fully
+    # schema-qualified to avoid a recurrence of CVE-2018-1058!
     def get_reuse_exttable_query(self, formatType, formatOpts, limitStr, from_cols, schemaName, log_errors, encodingCode):
-        sqlFormat = """select attrelid::regclass
+        sqlFormat = """select nspname, relname
                  from (
                         select
                             attrelid,
-                            row_number() over (partition by attrelid order by attnum) as attord,
+                            pg_catalog.row_number() over (partition by attrelid order by attnum) as attord,
                             attnum,
                             attname,
-                            atttypid::regtype
+                            atttypid::regtype,
+                            pgns.nspname,
+                            pg_class.relname
                         from
-                            pg_attribute
+                            pg_catalog.pg_attribute
                             join
-                            pg_class
-                            on (pg_class.oid = attrelid)
-                            %s
+                            pg_catalog.pg_class
+                            on (pg_class.oid operator(pg_catalog.=) attrelid)
+                            join
+                            pg_catalog.pg_namespace pgns
+                            on (pg_class.relnamespace operator(pg_catalog.=) pgns.oid)
                         where
-                            relstorage = 'x' and
+                            relstorage operator(pg_catalog.=) 'x' and
                             relname like 'ext_gpload_reusable_%%' and
-                            attnum > 0 and
+                            attnum operator(pg_catalog.>) 0 and
                             not attisdropped and %s
                     ) pgattr
                     join
-                    pg_exttable pgext
-                    on(pgattr.attrelid = pgext.reloid)
+                    pg_catalog.pg_exttable pgext
+                    on(pgattr.attrelid operator(pg_catalog.=) pgext.reloid)
                     """
-        joinStr = ""
         conditionStr = ""
 
         # if schemaName is None, find the resuable ext table which is visible to
         # current search path. Else find the resuable ext table under the specific
-        # schema, and this needs to join pg_namespace.
+        # schema.
         if schemaName is None:
-            joinStr = ""
-            conditionStr = "pg_table_is_visible(pg_class.oid)"
+            conditionStr = "pg_catalog.pg_table_is_visible(pg_class.oid)"
         else:
-            joinStr = """join
-                         pg_namespace pgns
-                         on(pg_class.relnamespace = pgns.oid)
-                      """
-            conditionStr = "pgns.nspname = '%s'" % schemaName
+            conditionStr = "pgns.nspname operator(pg_catalog.=) '%s'" % schemaName
 
-        sql = sqlFormat % (joinStr, conditionStr)
+        sql = sqlFormat % conditionStr
 
         if noGpVersion or self.gpdb_version < "6.0.0":
             if log_errors:
@@ -2068,30 +2108,30 @@ class gpload:
                 sql += " WHERE NOT pgext.logerrors "
 
         for i, l in enumerate(self.locations):
-            sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
+            sql += " and pgext.urilocation[%s] operator(pg_catalog.=) %s\n" % (i + 1, quote(l))
 
-        sql+= """and pgext.fmttype = %s
-                 and pgext.writable = false
+        sql+= """and pgext.fmttype operator(pg_catalog.=) %s
+                 and pgext.writable operator(pg_catalog.=) false
                  and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
 
         if limitStr:
-            sql += "and pgext.rejectlimit = %s " % limitStr
+            sql += "and pgext.rejectlimit operator(pg_catalog.=) %s " % limitStr
         else:
             sql += "and pgext.rejectlimit IS NULL "
 
         if encodingCode:
-            sql += "and pgext.encoding = %s " % encodingCode
+            sql += "and pgext.encoding operator(pg_catalog.=) %s " % encodingCode
 
-        sql+= "group by attrelid "
+        sql+= "group by attrelid, nspname, relname "
 
         sql+= """having
-                    count(*) = %s and
-                    bool_and(case """ % len(from_cols)
+                    pg_catalog.count(*) operator(pg_catalog.=) %s and
+                    pg_catalog.bool_and(case """ % len(from_cols)
 
         for i, c in enumerate(from_cols):
             name = c[0]
             typ = c[1]
-            sql+= "when attord = %s then atttypid = %s::regtype and attname = %s\n" % (i+1, quote(typ), quote(quote_unident(name)))
+            sql+= "when attord operator(pg_catalog.=) %s then atttypid operator(pg_catalog.=) %s::regtype and attname operator(pg_catalog.=) %s\n" % (i+1, quote(typ), quote(quote_unident(name)))
 
         sql+= """else true
                  end)
@@ -2108,35 +2148,36 @@ class gpload:
     # This function will return the SQL to run in order to find out whether
     # such a table exists. The results of this SQl are table names without schema
     #
+    # NOTE: because this query runs under an unsanitized search_path due to the
+    # use of pg_table_is_visible(), all identifiers must be fully
+    # schema-qualified to avoid a recurrence of CVE-2018-1058!
+    #
     def get_fast_match_exttable_query(self, formatType, formatOpts, limitStr, schemaName, log_errors, encodingCode):
 
-        sqlFormat = """select relname from pg_class
+        sqlFormat = """select nspname, relname from pg_catalog.pg_class
                     join
-                    pg_exttable pgext
-                    on(pg_class.oid = pgext.reloid)
-                    %s
+                    pg_catalog.pg_exttable pgext
+                    on(pg_class.oid operator(pg_catalog.=) pgext.reloid)
+                    join
+                    pg_catalog.pg_namespace pgns
+                    on(pg_class.relnamespace operator(pg_catalog.=) pgns.oid)
                     where
-                    relstorage = 'x' and
+                    relstorage operator(pg_catalog.=) 'x' and
                     relname like 'ext_gpload_reusable_%%' and
 		    %s
                     """
 
-        joinStr = ""
         conditionStr = ""
 
         # if schemaName is None, find the resuable ext table which is visible to
         # current search path. Else find the resuable ext table under the specific
         # schema, and this needs to join pg_namespace.
         if schemaName is None:
-            joinStr = ""
-            conditionStr = "pg_table_is_visible(pg_class.oid)"
+            conditionStr = "pg_catalog.pg_table_is_visible(pg_class.oid)"
         else:
-            joinStr = """join
-                    pg_namespace pgns
-                    on(pg_class.relnamespace = pgns.oid)"""
-            conditionStr = "pgns.nspname = '%s'" % schemaName
+            conditionStr = "pgns.nspname operator(pg_catalog.=) '%s'" % schemaName
 
-        sql = sqlFormat % (joinStr, conditionStr)
+        sql = sqlFormat % conditionStr
 
         if noGpVersion or self.gpdb_version < "6.0.0":
             if log_errors:
@@ -2150,19 +2191,19 @@ class gpload:
                 sql += " and NOT pgext.logerrors "
 
         for i, l in enumerate(self.locations):
-            sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
+            sql += " and pgext.urilocation[%s] operator(pg_catalog.=) %s\n" % (i + 1, quote(l))
 
-        sql+= """and pgext.fmttype = %s
-                 and pgext.writable = false
+        sql+= """and pgext.fmttype operator(pg_catalog.=) %s
+                 and pgext.writable operator(pg_catalog.=) false
                  and pgext.fmtopts like %s """ % (quote(formatType[0]),quote("%" + quote_unident(formatOpts.rstrip()) +"%"))
 
         if limitStr:
-            sql += "and pgext.rejectlimit = %s " % limitStr
+            sql += "and pgext.rejectlimit operator(pg_catalog.=) %s " % limitStr
         else:
             sql += "and pgext.rejectlimit IS NULL "
 
         if encodingCode:
-            sql += "and pgext.encoding = %s " % encodingCode
+            sql += "and pgext.encoding operator(pg_catalog.=) %s " % encodingCode
 
         sql+= "limit 1;"
 
@@ -2215,11 +2256,16 @@ class gpload:
         return None
 
     def get_ext_schematable(self, schemaName, tableName):
+        """
+        Returns a fully-qualified table name by combining the given schema and
+        table names. If schemaName is None, the connection's original
+        current_schema will be used.
+        """
         if schemaName is None:
-            return tableName
-        else:
-            schemaTable = "%s.%s" % (schemaName, tableName)
-            return schemaTable
+            schemaName = self.original_schema
+
+        schemaTable = "%s.%s" % (schemaName, tableName)
+        return schemaTable
 
     def get_external_table_formatOpts(self, option, specify=''):
 
@@ -2361,6 +2407,11 @@ class gpload:
                 if '.' in self.staging_table:
                     self.log(self.ERROR, "Character '.' is not allowed in staging_table parameter. Please use EXTERNAL->SCHEMA to set the schema of external table")
                 self.extTableName = quote_unident(self.staging_table) 
+
+                # We temporarily restore the original search_path of the connection
+                # for a single transaction in order to perform this lookup. Be sure
+                # all identifiers in this lookup query are fully qualified to avoid
+                # a recurrence of CVE-2018-1058!
                 if self.extSchemaName is None:
                     sql = """SELECT n.nspname as Schema,
                             c.relname as Name
@@ -2368,15 +2419,18 @@ class gpload:
                             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
                         WHERE c.relkind IN ('r','v','S','')
                             AND c.relstorage IN ('h', 'a', 'c','x','v','')
-                            AND n.nspname <> 'pg_catalog'
-                            AND n.nspname <> 'information_schema'
-                            AND n.nspname !~ '^pg_toast'
-                            AND c.relname = '%s'
+                            AND n.nspname operator(pg_catalog.<>) 'pg_catalog'
+                            AND n.nspname operator(pg_catalog.<>) 'information_schema'
+                            AND n.nspname operator(pg_catalog.!~) '^pg_toast'
+                            AND c.relname operator(pg_catalog.=) '%s'
                             AND pg_catalog.pg_table_is_visible(c.oid)
                         ORDER BY 1,2;""" % self.extTableName
                 else:
-                    sql = "select * from pg_catalog.pg_tables where schemaname = '%s' and tablename = '%s'" % (quote_unident(self.extSchemaName),  self.extTableName)
-                result = self.db.query(sql.encode('utf-8')).getresult()
+                    sql = "select * from pg_catalog.pg_tables where schemaname operator(pg_catalog.=) '%s' and tablename operator(pg_catalog.=) '%s'" % (quote_unident(self.extSchemaName),  self.extTableName)
+
+                with self._temporary_search_path(self.original_search_path):
+                    result = self.db.query(sql.encode('utf-8')).getresult()
+
                 if len(result) > 0:
                     self.extSchemaTable = self.get_ext_schematable(quote_unident(self.extSchemaName), self.extTableName)
                     self.log(self.INFO, "reusing external staging table %s" % self.extSchemaTable)
@@ -2384,6 +2438,11 @@ class gpload:
             else:
                 # process the single quotes in order to successfully find an existing external table to reuse.
                 self.formatOpts = self.formatOpts.replace("E'\\''","'\''")
+
+                # We temporarily restore the original search_path of the connection
+                # for a single transaction in order to perform this lookup. Be sure
+                # all identifiers in this lookup query are fully qualified to avoid
+                # a recurrence of CVE-2018-1058!
                 if self.fast_match:
                     sql = self.get_fast_match_exttable_query(formatType, self.formatOpts,
                         limitStr, self.extSchemaName, self.log_errors, encodingCode)
@@ -2391,15 +2450,14 @@ class gpload:
                     sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
                         limitStr, from_cols, self.extSchemaName, self.log_errors, encodingCode)
 
-                resultList = self.db.query(sql.encode('utf-8')).getresult()
+                with self._temporary_search_path(self.original_search_path):
+                    resultList = self.db.query(sql.encode('utf-8')).getresult()
+
                 if len(resultList) > 0:
                     # found an external table to reuse. no need to create one. we're done here.
-                    self.extTableName = (resultList[0])[0]
-                    # fast match result is only table name, so we need add schema info
-                    if self.fast_match:
-                        self.extSchemaTable = self.get_ext_schematable(quote_unident(self.extSchemaName), self.extTableName)
-                    else:
-                        self.extSchemaTable = self.extTableName
+                    schema, table = resultList[0]
+                    self.extTableName = table
+                    self.extSchemaTable = "%s.%s" % (schema, self.extTableName)
                     self.log(self.INFO, "reusing external table %s" % self.extSchemaTable)
                     return
 
@@ -2494,7 +2552,7 @@ class gpload:
             # next time around
             # we no longer need the timestamp, since we will never want to create few
             # tables with same encoding_conditions
-            self.staging_table_name = "staging_gpload_reusable_%s" % (encoding_conditions)
+            self.staging_table_name = "%s.staging_gpload_reusable_%s" % (self.original_schema, encoding_conditions)
             self.log(self.INFO, "did not find a staging table to reuse. creating %s" % self.staging_table_name)
 		
         # MPP-14667 - self.reuse_tables should change one, and only one, aspect of how we build the following table,
@@ -2809,7 +2867,9 @@ class gpload:
             self.log(self.LOG, "Pre-SQL from user: %s" % before)
             if not self.options.D:
                 try:
-                    self.db.query(before.encode('utf-8'))
+                    # Run pre- and post-scripts with the original search_path.
+                    with self._temporary_search_path(self.original_search_path):
+                        self.db.query(before.encode('utf-8'))
                 except Exception, e:
                     self.log(self.ERROR, 'could not execute SQL in sql:before "%s": %s' %
                              (before, str(e)))
@@ -2832,7 +2892,9 @@ class gpload:
             self.log(self.LOG, "Post-SQL from user: %s" % after)
             if not self.options.D:
                 try:
-                    self.db.query(after.encode('utf-8'))
+                    # Run pre- and post-scripts with the original search_path.
+                    with self._temporary_search_path(self.original_search_path):
+                        self.db.query(after.encode('utf-8'))
                 except Exception, e:
                     self.log(self.ERROR, 'could not execute SQL in sql:after "%s": %s' %
                              (after, str(e)))
