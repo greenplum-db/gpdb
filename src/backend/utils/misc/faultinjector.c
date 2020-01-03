@@ -368,6 +368,8 @@ FaultInjectorIdentifierEnumToString[] = {
 	_("create_gang_in_progress"),
 		/* inject fault during gang creation, before check for interrupts */
 	_("decrease_toast_max_chunk_size"),
+		/* inject fault inside dynamic index scan after context reset */
+	_("dynamic_index_scan_context_reset"),
 		/* inject fault when creating new TOAST tables, to modify the chunk size */
 	_("not recognized"),
 };
@@ -1079,6 +1081,7 @@ FaultInjector_NewHashEntry(
 
 			case DecreaseToastMaxChunkSize:
 			case ProcessStartupPacketFault:
+			case DynamicIndexScanContextReset:
 
 				break;
 			default:

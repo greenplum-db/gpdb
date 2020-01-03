@@ -31,6 +31,7 @@
 #include "parser/parsetree.h"
 #include "access/genam.h"
 #include "nodes/nodeFuncs.h"
+#include "utils/faultinjector.h"
 #include "utils/memutils.h"
 #include "cdb/cdbvars.h"
 
@@ -193,7 +194,6 @@ initNextIndexToScan(DynamicIndexScanState *node)
 		 * Initialize result tuple type and projection info.
 		 */
 		ExecAssignResultTypeFromTL(&indexState->ss.ps);
-		ExecAssignScanProjectionInfo(&indexState->ss);
 
 		MemoryContextReset(node->partitionMemoryContext);
 		MemoryContext oldCxt = MemoryContextSwitchTo(node->partitionMemoryContext);
@@ -201,6 +201,25 @@ initNextIndexToScan(DynamicIndexScanState *node)
 		/* Initialize child expressions */
 		indexState->ss.ps.qual = (List *) ExecInitExpr((Expr *) indexState->ss.ps.plan->qual, (PlanState *) indexState);
 		indexState->ss.ps.targetlist = (List *) ExecInitExpr((Expr *) indexState->ss.ps.plan->targetlist, (PlanState *) indexState);
+		indexState->ss.ps.ps_ProjInfo = NULL;
+		ExecAssignScanProjectionInfo(&indexState->ss);
+
+#ifdef FAULT_INJECTOR
+		/*
+		 * There was bug where ExecAssignProjectionInfo() was called before
+		 * reset of partitionMemoryContext. Issue is if `ps.targetlist` exists
+		 * in the reset context then `ps.ps_ProjInfo->pi_targetlist` becomes a
+		 * stale pointer after the reset.
+		 *
+		 * `CLOBBER_FREED_MEMORY` is not enough to reliably uncover this issue.
+		 * If allocator reuses address of the stale targetlist, then the stale
+		 * pointer becomes valid afer `ps.targetlist` is initialized.  In
+		 * testing we prevent this by allocating additional memory so that next
+		 * reset/allocate will pick from a different block.
+		 */
+		if (SIMPLE_FAULT_INJECTOR(DynamicIndexScanContextReset) == FaultInjectorTypeSkip)
+			palloc(ALLOC_CHUNK_LIMIT*3+1);
+#endif
 
 		Oid pindex = getPhysicalIndexRelid(currentRelation, dynamicIndexScan->logicalIndexInfo);
 
