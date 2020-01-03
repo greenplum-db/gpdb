@@ -290,12 +290,12 @@ vm.dirty_ratio = 10</codeblock></p>
       <title>XFS Mount Options</title>
       <p>XFS is the preferred data storage file system on Linux platforms. Use the
             <codeph>mount</codeph> command with the following recommended XFS mount
-          options:<codeblock>rw,nodev,noatime,nobarrier,inode64</codeblock></p>
+          options:<codeblock>rw,nodev,noatime,inode64</codeblock></p>
       <p>See the <codeph>mount</codeph> manual page (<codeph>man mount</codeph> opens the man page)
           for more information about using this command.</p>
       <p>The XFS options can also be set in the <codeph>/etc/fstab</codeph> file. This example entry
         from an <codeph>fstab</codeph> file specifies the XFS options.</p>
-      <codeblock>/dev/data /data xfs nodev,noatime,nobarrier,inode64 0 0</codeblock>
+      <codeblock>/dev/data /data xfs nodev,noatime,inode64 0 0</codeblock>
     </section>
     <section id="disk_io_settings">
       <title>Disk I/O Settings</title>
