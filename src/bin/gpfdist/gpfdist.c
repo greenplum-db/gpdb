@@ -2327,16 +2327,16 @@ print_addrinfo_list(struct addrinfo *head)
 static void
 signal_register()
 {
-    /* when SIGTERM raised invoke process_term_signal */
-    signal_set(&gcb.signal_event,SIGTERM,process_term_signal,0);
+	/* when SIGTERM raised invoke process_term_signal */
+	signal_set(&gcb.signal_event, SIGTERM, process_term_signal, 0);
 
-    /* high priority so we accept as fast as possible */
-    if(event_priority_set(&gcb.signal_event, 0))
-        gwarning(NULL,"signal event priority set failed");
+	/* high priority so we accept as fast as possible */
+	if (event_priority_set(&gcb.signal_event, 0))
+		gwarning(NULL, "signal event priority set failed");
 
-    /* start watching this event */
-	if(signal_add(&gcb.signal_event, 0))
-        gfatal(NULL,"cannot set up event on signal register");
+	/* start watching this event */
+	if (signal_add(&gcb.signal_event, 0))
+		gfatal(NULL, "cannot set up event on signal register");
 
 }
 
