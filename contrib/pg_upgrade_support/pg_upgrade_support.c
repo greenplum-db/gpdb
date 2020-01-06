@@ -19,6 +19,7 @@
 #include "catalog/pg_class.h"
 #include "catalog/pg_enum.h"
 #include "catalog/pg_namespace.h"
+#include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbvars.h"
 #include "commands/extension.h"
@@ -54,6 +55,7 @@ PG_FUNCTION_INFO_V1(create_empty_extension);
 PG_FUNCTION_INFO_V1(set_next_pg_namespace_oid);
 
 PG_FUNCTION_INFO_V1(set_preassigned_oids);
+PG_FUNCTION_INFO_V1(set_next_preassigned_tablespace_oid);
 
 Datum
 set_next_pg_type_oid(PG_FUNCTION_ARGS)
@@ -254,3 +256,19 @@ set_preassigned_oids(PG_FUNCTION_ARGS)
 
 	PG_RETURN_VOID();
 }
+
+Datum
+set_next_preassigned_tablespace_oid(PG_FUNCTION_ARGS)
+{
+	Oid			tsoid = PG_GETARG_OID(0);
+	char	   *objname = GET_STR(PG_GETARG_TEXT_P(1));
+
+	if (Gp_role == GP_ROLE_UTILITY)
+	{
+		AddPreassignedOidFromBinaryUpgrade(tsoid, TableSpaceRelationId, objname,
+		                                   InvalidOid, InvalidOid, InvalidOid);
+	}
+
+	PG_RETURN_VOID();
+}
+

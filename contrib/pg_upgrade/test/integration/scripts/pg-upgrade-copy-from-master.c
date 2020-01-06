@@ -6,7 +6,7 @@
 
 #include "postgres_fe.h"
 #include "utilities/pg-upgrade-copy.h"
-#include "old_tablespace_file_parser_observer.h"
+#include "greenplum/old_tablespace_file_parser_observer.h"
 
 static void
 print_usage_header(char *message)

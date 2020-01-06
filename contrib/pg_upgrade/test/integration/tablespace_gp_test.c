@@ -27,6 +27,22 @@ ClusterInfo new_cluster;
 OSInfo os_info;
 UserOpts user_opts;
 
+static char * original_tablespace_oid = NULL;
+
+static char *
+get_tablespace_oid(PGconn *connection, char *tablespace_name)
+{
+	PGresult *response = executeQuery(
+		connection,
+		psprintf("select oid from pg_tablespace where spcname = '%s';", tablespace_name));
+
+	char *result = pg_strdup(PQgetvalue(response, 0, 0));
+
+	PQclear(response);
+
+	return result;
+}
+
 void 
 OldTablespaceFileParser_invalid_access_error_for_field(int row_index, int field_index)
 {
@@ -79,7 +95,7 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 	PQclear(result5);
 
 	PQclear(executeQuery(connection, "CREATE TABLESPACE my_fast_tablespace FILESPACE my_fast_locations;"));
-
+	original_tablespace_oid = get_tablespace_oid(connection, "my_fast_tablespace");
 	PQfinish(connection);
 	
 	ClusterInfo cluster;
@@ -103,7 +119,7 @@ test_filespaces_on_a_gpdb_five_cluster_are_loaded_as_old_tablespace_file_content
 
 	assert_string_equal(
 		results[2],
-		"/tmp/tablespace-gp-test/fsseg0");
+		psprintf("/tmp/tablespace-gp-test/fsseg0/%s", original_tablespace_oid));
 
 	OldTablespaceRecord **records = OldTablespaceFileContents_GetTablespaceRecords(
 		get_old_tablespace_file_contents()

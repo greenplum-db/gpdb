@@ -57,6 +57,9 @@ OldTablespaceRecord_GetTablespaceName(OldTablespaceRecord *record);
 char *
 OldTablespaceRecord_GetDirectoryPath(OldTablespaceRecord *record);
 
+Oid
+OldTablespaceRecord_GetOid(OldTablespaceRecord *record);
+
 bool
 OldTablespaceRecord_GetIsUserDefinedTablespace(OldTablespaceRecord *record);
 

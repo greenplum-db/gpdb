@@ -30,12 +30,20 @@ get_generated_old_tablespaces_file_path(void)
 	return psprintf("%s/%s", current_working_directory, OLD_TABLESPACES_FILE);
 }
 
-static char *const OLD_TABLESPACE_QUERY = ""
-"copy ("
-"    select fsedbid, pg_tablespace.oid as tablespace_oid, spcname, fselocation, (spcname not in ('pg_default', 'pg_global')::int) as is_user_defined_tablespace"
-"    from pg_filespace_entry "
-"    inner join pg_tablespace on fsefsoid = spcfsoid "
-") to '%s' WITH CSV";
+static char *const OLD_TABLESPACE_QUERY = "copy ( "
+                                          "    select fsedbid, "
+                                          "    upgrade_tablespace.oid as tablespace_oid, "
+                                          "    spcname, "
+                                          "    case when is_user_defined_tablespace then location_with_oid else fselocation end, "
+                                          "    (is_user_defined_tablespace::int) as is_user_defined_tablespace "
+                                          "    from ( "
+                                          "        select pg_tablespace.oid, *, "
+                                          "        (fselocation || '/' || pg_tablespace.oid) as location_with_oid, "
+                                          "        (spcname not in ('pg_default', 'pg_global'))  as is_user_defined_tablespace "
+                                          "        from pg_tablespace "
+                                          "        inner join pg_filespace_entry on fsefsoid = spcfsoid "
+                                          "    ) upgrade_tablespace "
+                                          ") to '%s' WITH CSV;";
 
 static void
 dump_old_tablespaces(ClusterInfo *oldCluster,

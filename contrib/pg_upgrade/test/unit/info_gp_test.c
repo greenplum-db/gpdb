@@ -108,7 +108,7 @@ test_it_returns_tablespace_path_when_tablespace_found_by_oid(void **state)
 	GetTablespacePathResponse response = gp_get_tablespace_path(make_fake_old_tablespace_file_contents(), tablespace_oid);
 
 	assert_int_equal(response.code, GetTablespacePathResponse_FOUND_USER_DEFINED_TABLESPACE);
-	assert_string_equal(response.tablespace_path, "some_path_to_tablespace/1234");
+	assert_string_equal(response.tablespace_path, "some_path_to_tablespace");
 }
 
 static void

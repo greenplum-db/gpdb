@@ -17,6 +17,22 @@
 
 #include "filespaces_to_tablespaces.h"
 
+static char * original_tablespace_oid = NULL;
+
+static char *
+get_tablespace_oid(PGconn *connection, char *tablespace_name)
+{
+	PGresult *response = executeQuery(
+		connection,
+		psprintf("select oid from pg_tablespace where spcname = '%s';", tablespace_name));
+
+	char *result = pg_strdup(PQgetvalue(response, 0, 0));
+
+	PQclear(response);
+
+	return result;
+}
+
 static void
 aFilespaceExistsInTheFiveClusterWithATableAndData(void)
 {
@@ -51,14 +67,23 @@ aFilespaceExistsInTheFiveClusterWithATableAndData(void)
 	                                               "8: '/tmp/gpdb-filespaces/fsdummy4/' );");
 	PQclear(result5);
 
-	result5 = executeQuery(connection5, "CREATE TABLESPACE some_tablespace FILESPACE some_filespace;");
+	/*
+	 * Populate a tablespace within the filespace
+	 */
+	PQclear(executeQuery(connection5, "CREATE TABLESPACE some_tablespace FILESPACE some_filespace;"));
 	PQclear(executeQuery(connection5, "CREATE SCHEMA five_to_six_upgrade;"));
 	PQclear(executeQuery(connection5, "set search_path to five_to_six_upgrade;"));
-	result5 = executeQuery(connection5, "CREATE TABLE users (id integer, name text) TABLESPACE some_tablespace;");
-	result5 = executeQuery(connection5, "insert into users VALUES (1, 'Joe');");
-	result5 = executeQuery(connection5, "insert into users VALUES (2, 'Janet');");
-	result5 = executeQuery(connection5, "insert into users VALUES (3, 'James');");
-	PQclear(result5);
+	PQclear(executeQuery(connection5, "CREATE TABLE users (id integer, name text) TABLESPACE some_tablespace;"));
+	PQclear(executeQuery(connection5, "insert into users VALUES (1, 'Joe');"));
+	PQclear(executeQuery(connection5, "insert into users VALUES (2, 'Janet');"));
+	PQclear(executeQuery(connection5, "insert into users VALUES (3, 'James');"));
+
+	original_tablespace_oid = get_tablespace_oid(connection5, "some_tablespace");
+
+	/*
+	 * Create another tablespace within the same filespace
+	 */
+	PQclear(executeQuery(connection5, "CREATE TABLESPACE some_other_tablespace FILESPACE some_filespace;"));
 
 	PQfinish(connection5);
 }
@@ -75,7 +100,6 @@ aDatabaseInAFilespaceExistsInTheFiveClusterWithATableAndData(void)
 	system("mkdir /tmp/gpdb-filespaces");
 
 	PGconn *connection5 = connectToFive();
-	PGresult *result5;
 
 	/*
 	* Create filespace and tablespace within the filespace.
@@ -86,7 +110,7 @@ aDatabaseInAFilespaceExistsInTheFiveClusterWithATableAndData(void)
 	* map. Thus, we supply dummy directories here just to make the syntax
 	* check happy.
 	*/
-	result5 = executeQuery(connection5, "CREATE FILESPACE some_filespace ( \n"
+	PQclear(executeQuery(connection5, "CREATE FILESPACE some_filespace ( \n"
 	                                               "1: '/tmp/gpdb-filespaces/fsseg-1/', \n"
 	                                               "2: '/tmp/gpdb-filespaces/fsseg0/', \n"
 	                                               "3: '/tmp/gpdb-filespaces/fsseg1/', \n"
@@ -94,11 +118,10 @@ aDatabaseInAFilespaceExistsInTheFiveClusterWithATableAndData(void)
 	                                               "5: '/tmp/gpdb-filespaces/fsdummy1/', \n"
 	                                               "6: '/tmp/gpdb-filespaces/fsdummy2/', \n"
 	                                               "7: '/tmp/gpdb-filespaces/fsdummy3/', \n"
-	                                               "8: '/tmp/gpdb-filespaces/fsdummy4/' );");
-	PQclear(result5);
+	                                               "8: '/tmp/gpdb-filespaces/fsdummy4/' );"));
 
-	result5 = executeQuery(connection5, "CREATE TABLESPACE some_tablespace FILESPACE some_filespace;");
-	executeQuery(connection5, "CREATE DATABASE database_in_filespace TABLESPACE some_tablespace;");
+	PQclear(executeQuery(connection5, "CREATE TABLESPACE some_tablespace FILESPACE some_filespace;"));
+	PQclear(executeQuery(connection5, "CREATE DATABASE database_in_filespace TABLESPACE some_tablespace;"));
 	PQfinish(connection5);
 
 	connection5 = connectToFiveOnDatabase("database_in_filespace"); 
@@ -266,10 +289,10 @@ expectTablespaceDirectoryToExist(char *directory_path)
 static void
 theTablespacesInTheNewClusterShouldBeCreatedInTheSameLocationAsTheOldClustersTablespaces(void)
 {
-	expectTablespaceDirectoryToExist("/tmp/gpdb-filespaces/fsseg-1/1");
-	expectTablespaceDirectoryToExist("/tmp/gpdb-filespaces/fsseg0/2");
-	expectTablespaceDirectoryToExist("/tmp/gpdb-filespaces/fsseg1/3");
-	expectTablespaceDirectoryToExist("/tmp/gpdb-filespaces/fsseg2/4");
+	expectTablespaceDirectoryToExist(psprintf("/tmp/gpdb-filespaces/fsseg-1/%s/1", original_tablespace_oid));
+	expectTablespaceDirectoryToExist(psprintf("/tmp/gpdb-filespaces/fsseg0/%s/2", original_tablespace_oid));
+	expectTablespaceDirectoryToExist(psprintf("/tmp/gpdb-filespaces/fsseg1/%s/3", original_tablespace_oid));
+	expectTablespaceDirectoryToExist(psprintf("/tmp/gpdb-filespaces/fsseg2/%s/4", original_tablespace_oid));
 }
 
 void

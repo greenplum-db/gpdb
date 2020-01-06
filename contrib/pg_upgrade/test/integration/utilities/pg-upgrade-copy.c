@@ -93,10 +93,11 @@ backup_configuration_files(PgUpgradeCopyOptions *options)
 }
 
 static void
-update_symlinks_for_tablespaces_from(char *segment_path, char *new_tablespace_path)
+update_symlinks_for_tablespaces_from(char *segment_path, Oid tablespace_oid, char *new_tablespace_path)
 {
-	system(psprintf("find %s/pg_tblspc/* | xargs -I '{}' ln -sfn %s '{}'",
+	system(psprintf("find %s/pg_tblspc/%u | xargs -I '{}' ln -sfn %s '{}'",
 	                segment_path,
+	                tablespace_oid,
 	                new_tablespace_path));
 }
 
@@ -137,6 +138,7 @@ copy_tablespaces_from_the_master(PgUpgradeCopyOptions *copy_options)
 
 		update_symlinks_for_tablespaces_from(
 			copy_options->new_segment_path,
+			OldTablespaceRecord_GetOid(current_segment_record),
 			segment_tablespace_location_directory_with_gp_dbid);
 	}
 }

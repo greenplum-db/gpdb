@@ -1454,6 +1454,15 @@ dropTablespaces(PGconn *conn)
 	fprintf(OPF, "\n\n");
 }
 
+static void
+append_preassign_tablespace_oid(PQExpBuffer buffer, Oid tablespace_oid, char *tablespace_name)
+{
+	appendPQExpBuffer(buffer,
+	                  "select binary_upgrade.set_next_preassigned_tablespace_oid(%u, '%s');\n",
+	                  tablespace_oid,
+	                  tablespace_name);
+}
+
 /*
  * Dump tablespaces.
  */
@@ -1493,7 +1502,7 @@ dumpTablespaces(PGconn *conn)
 				       "join (SELECT ts.oid                                  AS oid, "
 				                    "ts.spcname                              AS spcname, "
 				                    "pg_catalog.Pg_get_userbyid(ts.spcowner) AS spcowner, "
-				                    "fs.fselocation                          AS location, "
+									"fs.fselocation || '/' || ts.oid         AS location, "
 				                    "ts.spcacl                               AS spcacl, "
 				                    "NULL                                    AS spcoptions, "
 				                    "pg_catalog.Shobj_description(ts.oid, 'pg_tablespace'), "
@@ -1551,6 +1560,8 @@ dumpTablespaces(PGconn *conn)
 		char	   *spcoptions = PQgetvalue(res, i, 5);
 		char	   *spccomment = PQgetvalue(res, i, 6);
 		char	   *fspcname;
+
+		append_preassign_tablespace_oid(buf, spcoid, spcname);
 
 		/* needed for buildACLCommands() */
 		fspcname = pg_strdup(fmtId(spcname));

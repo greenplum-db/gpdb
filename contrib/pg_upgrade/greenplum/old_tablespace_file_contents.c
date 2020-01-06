@@ -221,3 +221,9 @@ OldTablespaceRecord_GetIsUserDefinedTablespace(OldTablespaceRecord *record)
 {
 	return record->is_user_defined;
 }
+
+Oid
+OldTablespaceRecord_GetOid(OldTablespaceRecord *record)
+{
+	return record->tablespace_oid;
+}

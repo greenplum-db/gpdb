@@ -37,13 +37,11 @@ system_tablespace(void)
 }
 
 static GetTablespacePathResponse
-found_in_file(char *tablespace_path, Oid tablespace_oid)
+found_in_file(char *tablespace_path)
 {
 	return make_response(
 		GetTablespacePathResponse_FOUND_USER_DEFINED_TABLESPACE,
-		psprintf("%s/%u",
-			tablespace_path,
-			tablespace_oid));
+		tablespace_path);
 }
 
 GetTablespacePathResponse
@@ -60,8 +58,7 @@ gp_get_tablespace_path(OldTablespaceFileContents *oldTablespaceFileContents, Oid
 		return system_tablespace();
 
 	return found_in_file(
-		OldTablespaceRecord_GetDirectoryPath(record),
-		tablespace_oid);
+		OldTablespaceRecord_GetDirectoryPath(record));
 }
 
 /*
