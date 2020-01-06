@@ -3,8 +3,13 @@
 <topic id="topic_khf_ltc_vbb">
   <title>Procedural Languages</title>
   <body>
-     <p>This section describes the procedural languages  available with Greenplum Database.</p>
-     <p otherprops="oss-only">Procedural languages are typically packaged as extensions. You
+      <p>Greenplum supports a pluggable procedural language architecture by virtue of its PostgreSQL heritage.
+          This allows user-defined functions to be written in languages other than SQL and C.  It
+          may be more convenient to develop analytics functions in a familiar procedural language compared to using only SQL constructs.
+          For example, suppose you have existing Python code that you want to use on data in Greenplum,
+          you can wrap this code in a PL/Python function and call it from SQL.
+          </p>
+     <p>The available Greenplum procedural languages are typically packaged as extensions. You
       register a language in a database using the <codeph><xref
           href="../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1" scope="peer">CREATE
           EXTENSION</xref></codeph> command. You remove a language from a database with
