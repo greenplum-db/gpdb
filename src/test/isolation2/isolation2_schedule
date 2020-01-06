@@ -48,7 +48,11 @@ test: modify_table_data_corrupt
 # concurrent test, so run the test by itself.
 test: deadlock_under_entry_db_singleton
 
-test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue misc
+#  this case creates table & index in utility mode, which may cause oid
+#  conflict when running in parallel with other cases.
+test: misc
+
+test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
 test: vacuum_drop_phase_ao
 
 # below test(s) inject faults so each of them need to be in a separate group
