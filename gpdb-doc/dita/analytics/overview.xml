@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="gp_integrated_analytics">
-  <title>Greenplum Database Integrated Analytics</title>
+  <title>Overview of Greenplum Database Integrated Analytics</title>
   <body>
         <p>Greenplum offers a unique combination of a powerful massively parallel processing (MPP)
       database and advanced data analytics. This combination creates an ideal framework for data
