@@ -138,8 +138,12 @@
                   3</entry>
               </row>
               <row>
-                <entry colname="col1"> Gensim </entry>
+                <entry colname="col1">Gensim </entry>
                 <entry colname="col2">Topic modeling and document indexing</entry>
+              </row>
+              <row>
+                <entry>GluonTS (Python 3 only)</entry>
+                <entry>Probabilistic time series modeling</entry>
               </row>
               <row>
                 <entry>h5py</entry>
@@ -170,7 +174,7 @@
                 <entry>JSON Schema validation</entry>
               </row>
               <row>
-                <entry colname="col1"> Keras (RHEL/CentOS 7 only) </entry>
+                <entry colname="col1">Keras (RHEL/CentOS 7 only) </entry>
                 <entry colname="col2">Deep learning</entry>
               </row>
               <row>
@@ -187,11 +191,11 @@
                 <entry>A fast implementation of the Cassowary constraint solver</entry>
               </row>
               <row>
-                <entry colname="col1"> Lifelines </entry>
+                <entry colname="col1">Lifelines </entry>
                 <entry colname="col2">Survival analysis</entry>
               </row>
               <row>
-                <entry colname="col1"> lxml </entry>
+                <entry colname="col1">lxml </entry>
                 <entry colname="col2">XML and HTML processing</entry>
               </row>
               <row>
@@ -223,7 +227,7 @@
                 <entry>Fast numerical expression evaluator for NumPy</entry>
               </row>
               <row>
-                <entry colname="col1"> NumPy </entry>
+                <entry colname="col1">NumPy </entry>
                 <entry colname="col2">Scientific computing</entry>
               </row>
               <row>
@@ -244,7 +248,7 @@
                   matrices</entry>
               </row>
               <row>
-                <entry colname="col1"> Pattern-en </entry>
+                <entry colname="col1">Pattern-en </entry>
                 <entry colname="col2">Part-of-speech tagging</entry>
               </row>
               <row>
@@ -272,11 +276,11 @@
                 <entry>Cross-python path, ini-parsing, io, code, log facilities</entry>
               </row>
               <row>
-                <entry colname="col1"> pyLDAvis </entry>
+                <entry colname="col1">pyLDAvis </entry>
                 <entry colname="col2">Interactive topic model visualization</entry>
               </row>
               <row>
-                <entry colname="col1"> PyMC3 </entry>
+                <entry colname="col1">PyMC3 </entry>
                 <entry colname="col2">Statistical modeling and probabilistic machine
                   learning</entry>
               </row>
@@ -313,11 +317,11 @@
                 <entry>Directory iteration function</entry>
               </row>
               <row>
-                <entry colname="col1"> scikit-learn </entry>
+                <entry colname="col1">scikit-learn </entry>
                 <entry colname="col2">Machine learning data mining and analysis</entry>
               </row>
               <row>
-                <entry colname="col1"> SciPy </entry>
+                <entry colname="col1">SciPy </entry>
                 <entry colname="col2">Scientific computing</entry>
               </row>
               <row>
@@ -334,7 +338,7 @@
                   forth)</entry>
               </row>
               <row>
-                <entry colname="col1"> spaCy </entry>
+                <entry colname="col1">spaCy </entry>
                 <entry colname="col2">Large scale natural language processing</entry>
               </row>
               <row>
@@ -342,7 +346,7 @@
                 <entry>Modern high-performance serialization utilities for Python</entry>
               </row>
               <row>
-                <entry colname="col1"> StatsModels </entry>
+                <entry colname="col1">StatsModels </entry>
                 <entry colname="col2">Statistical modeling</entry>
               </row>
               <row>
@@ -350,7 +354,7 @@
                 <entry>Backport of the subprocess module from Python 3</entry>
               </row>
               <row>
-                <entry colname="col1"> Tensorflow (RHEL/CentOS 7 only) </entry>
+                <entry colname="col1">Tensorflow (RHEL/CentOS 7 only) </entry>
                 <entry colname="col2">Numerical computation using data flow graphs</entry>
               </row>
               <row>
@@ -387,7 +391,7 @@
                 <entry>A built-package format for Python</entry>
               </row>
               <row>
-                <entry colname="col1"> XGBoost </entry>
+                <entry colname="col1">XGBoost </entry>
                 <entry colname="col2">Gradient boosting, classifying, ranking </entry>
               </row>
               <row>
