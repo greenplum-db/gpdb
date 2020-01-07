@@ -196,7 +196,7 @@ RedZoneHandler_FlagTopConsumer()
 	 */
 	if (IsResGroupEnabled())
 	{
-		int32	maxGlobalShareMem = INT_MIN;
+		int32	maxGlobalShareMem = 0;
 		Oid		sessionGroupId = InvalidOid;
 		int32	sessionGroupGSMem;
 
@@ -204,12 +204,14 @@ RedZoneHandler_FlagTopConsumer()
 		{
 			Assert(INVALID_SESSION_ID != curSessionState->sessionId);
 
-			sessionGroupId = SessionGetResGroupId(curSessionState);
 			sessionGroupGSMem = SessionGetResGroupGlobalShareMemUsage(curSessionState);
 
-			if (sessionGroupId != InvalidOid && sessionGroupGSMem > maxGlobalShareMem)
+			if (sessionGroupGSMem > maxGlobalShareMem)
 			{
 				maxGlobalShareMem = sessionGroupGSMem;
+				sessionGroupId = SessionGetResGroupId(curSessionState);
+
+				Assert(INVALID_OID != sessionGroupId);
 				resGroupId = sessionGroupId;
 			}
 

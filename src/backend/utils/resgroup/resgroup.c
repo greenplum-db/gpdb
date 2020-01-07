@@ -228,7 +228,7 @@ struct ResGroupControl
 	/* 
 	 * Safe memory threshold:
 	 * if remained global shared memory is less than this threshold,
-	 * then the memory usage of current resource group is in red zone.
+	 * then the resource group memory usage is in red zone.
 	 */
 	pg_atomic_uint32 safeChunksThreshold;
 	pg_atomic_uint32 freeChunks;			/* memory chunks not allocated to any group,
@@ -4358,12 +4358,12 @@ SessionGetResGroupGlobalShareMemUsage(SessionState *session)
 	if (sessionSlot)
 	{
 		/* lock not needed here, we just need esimated result */
-		ResGroupData	*group = (ResGroupData*)sessionSlot->group;
+		ResGroupData	*group = sessionSlot->group;
 		return group->memSharedUsage - group->memSharedGranted;
 	}
 	else
 	{
 		/* session doesnot have group slot */
-		return -1;
+		return 0;
 	}
 }

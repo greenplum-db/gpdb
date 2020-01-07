@@ -219,6 +219,7 @@ extern bool IsGroupInRedZone(void);
 extern void ResGroupGetMemoryRunawayInfo(StringInfo str);
 extern Oid SessionGetResGroupId(SessionState *session);
 extern int32 SessionGetResGroupGlobalShareMemUsage(SessionState *session);
+
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);
 
