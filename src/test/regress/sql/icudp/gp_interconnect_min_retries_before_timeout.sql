@@ -19,6 +19,11 @@ SELECT ROUND(foo.rval * foo.rval)::INT % 30 AS rval2, COUNT(*) AS count, SUM(len
   GROUP BY rval2
   ORDER BY rval2;
 
+-- start_ignore
+-- Set client_min_messages to error to avoid warning message printed by network jitter
+set client_min_messages='ERROR';
+-- end_ignore
+
 -- Set GUC value to its min value 
 SET gp_interconnect_min_retries_before_timeout = 1;
 SHOW gp_interconnect_min_retries_before_timeout;
