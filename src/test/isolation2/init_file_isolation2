@@ -45,3 +45,8 @@ m/available \d+ MB/
 s/available \d+ MB//
 
 -- end_matchsubs
+
+
+-- start_matchignore
+m/^ Optimizer: Pivotal Optimizer \(GPORCA\) version .*/
+-- end_matchignore
