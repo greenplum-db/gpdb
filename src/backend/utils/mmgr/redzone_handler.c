@@ -211,7 +211,7 @@ RedZoneHandler_FlagTopConsumer()
 				maxGlobalShareMem = sessionGroupGSMem;
 				sessionGroupId = SessionGetResGroupId(curSessionState);
 
-				Assert(INVALID_OID != sessionGroupId);
+				Assert(InvalidOid != sessionGroupId);
 				resGroupId = sessionGroupId;
 			}
 
