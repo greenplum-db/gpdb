@@ -1,0 +1,259 @@
+-- start_ignore
+DROP ROLE IF EXISTS role1_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+ERROR:  resource group "rg1_memory_test" does not exist
+DROP RESOURCE GROUP rg2_memory_test;
+ERROR:  resource group "rg2_memory_test" does not exist
+-- end_ignore
+
+CREATE OR REPLACE FUNCTION resGroupPalloc(float) RETURNS int AS '@abs_builddir@/../regress/regress@DLSUFFIX@', 'resGroupPalloc' LANGUAGE C READS SQL DATA;
+CREATE
+
+CREATE OR REPLACE FUNCTION hold_memory_by_percent(float) RETURNS int AS $$ SELECT * FROM resGroupPalloc($1) $$ LANGUAGE sql;
+CREATE
+
+CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test' ORDER BY groupid;
+CREATE
+
+CREATE OR REPLACE VIEW memory_result AS SELECT rsgname, memory_usage from gp_toolkit.gp_resgroup_status;
+CREATE
+
+-- start_ignore
+! gpconfig -c runaway_detector_activation_percent -v 50;
+20191213:05:03:47:014263 gpconfig:hubert-gp-centos:huanzhang-[INFO]:-completed successfully with parameters '-c runaway_detector_activation_percent -v 50'
+
+! gpstop -ari;
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Starting gpstop with args: -ari
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Gathering information and validating the environment...
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Obtaining Greenplum Master catalog information
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Obtaining Segment details from master...
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5211.gf5c0dd1 build dev'
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Master segment instance directory=/home/huanzhang/workspace/gpdb7/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Attempting forceful termination of any leftover master process
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Terminating processes for segment /home/huanzhang/workspace/gpdb7/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Stopping master standby host hubert-gp-centos mode=immediate
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Successfully shutdown standby process on hubert-gp-centos
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20191213:05:03:48:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-0.00% of jobs completed
+20191213:05:03:49:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-100.00% of jobs completed
+20191213:05:03:49:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20191213:05:03:49:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-0.00% of jobs completed
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-100.00% of jobs completed
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-----------------------------------------------------
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-   Segments stopped successfully      = 6
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-   Segments with errors during stop   = 0
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-----------------------------------------------------
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Database successfully shutdown with no errors reported
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Cleaning up leftover gpmmon process
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-No leftover gpmmon process found
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Cleaning up leftover gpsmon processes
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Cleaning up leftover shared memory
+20191213:05:03:50:014419 gpstop:hubert-gp-centos:huanzhang-[INFO]:-Restarting System...
+
+-- end_ignore
+
+-- after the restart we need a new connection to run the queries
+--	1) single allocation
+--	Group Share Quota = 0
+--	Global Share Quota > 0
+--	Slot Quota > 0
+--	-----------------------
+
+--	we assume system total chunks is 100%
+--	rg1's expected: 100% * 20% => 20%
+--	rg1's slot quota: 20% / 2 * 2 => 20%
+--	rg1's single slot quota: 20% / 2 => 10%
+--	rg1's shared quota: 20% - 20% => %0
+--	system free chunks: 100% - 10% - 30% - 20% => 40%
+--  global area safe threshold: 40% / 2 = 20%
+1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=0);
+CREATE
+1: CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+--	1a) on QD
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(1.0);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+1: SELECT hold_memory_by_percent(0.3);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+1: SELECT hold_memory_by_percent(0.3);
+ERROR:  Canceling query because of high VMEM usage. current group id is 806868, group memory usage 218 MB, group shared memory quota is 0 MB, slot memory quota is 68 MB, global freechunks memory is 124 MB, global safe memory threshold is 137 MB (runaway_cleaner.c:197)
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+--	1b) on QEs
+2: SELECT pg_sleep(1);
+ pg_sleep 
+----------
+          
+(1 row)
+2: SET ROLE TO role1_memory_test;
+SET
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(1.0)=0;
+ count 
+-------
+ 0     
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.3)=0;
+ count 
+-------
+ 0     
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.3)=0;
+ERROR:  Canceling query because of high VMEM usage. current group id is 806868, group memory usage 218 MB, group shared memory quota is 0 MB, slot memory quota is 68 MB, global freechunks memory is 124 MB, global safe memory threshold is 137 MB (runaway_cleaner.c:197)  (seg0 slice1 10.146.0.4:7002 pid=10883) (runaway_cleaner.c:197)
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+2q: ... <quitting>
+
+0: DROP ROLE role1_memory_test;
+DROP
+0: DROP RESOURCE GROUP rg1_memory_test;
+DROP
+0q: ... <quitting>
+
+
+--	we assume system total chunks is 100%
+--	rg1's expected: 100% * 20% => 20%
+--	rg1's slot quota: 20% / 2  => 10%
+--	rg1's single slot quota: 10% / 2 => 5%
+--	rg1's shared quota: %20 - %10 => %10
+--	system free chunks: 100% - 10% - 30% - 20% => 40%
+--  safe threshold: 40% / 2 = 20%
+1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=50);
+CREATE
+1: CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+--	1a) on QD
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(1.0);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+1: SELECT hold_memory_by_percent(0.3);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+1: SELECT hold_memory_by_percent(0.3);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+1: SELECT hold_memory_by_percent(0.3);
+ERROR:  Canceling query because of high VMEM usage. current group id is 806877, group memory usage 259 MB, group shared memory quota is 68 MB, slot memory quota is 34 MB, global freechunks memory is 117 MB, global safe memory threshold is 137 MB (runaway_cleaner.c:197)
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+--	1b) on QEs
+2: SELECT pg_sleep(1);
+ pg_sleep 
+----------
+          
+(1 row)
+2: SET ROLE TO role1_memory_test;
+SET
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(1.0)=0;
+ count 
+-------
+ 0     
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.3)=0;
+ count 
+-------
+ 0     
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.3)=0;
+ count 
+-------
+ 0     
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.3)=0;
+ERROR:  Canceling query because of high VMEM usage. current group id is 806877, group memory usage 259 MB, group shared memory quota is 68 MB, slot memory quota is 34 MB, global freechunks memory is 117 MB, global safe memory threshold is 137 MB (runaway_cleaner.c:197)  (seg0 slice1 10.146.0.4:7002 pid=10918) (runaway_cleaner.c:197)
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+2q: ... <quitting>
+
+0: DROP ROLE role1_memory_test;
+DROP
+0: DROP RESOURCE GROUP rg1_memory_test;
+DROP
+0q: ... <quitting>
+
+
+
+--	we assume system total chunks is 100%
+--	rg1's expected: 100% * 20% => 20%
+--	rg1's slot quota: 20% / 2  => 10%
+--	rg1's single slot quota: 10% / 2 => 5%
+--	rg1's shared quota: %20 - %10 => %10
+--	rg2's expected: 100% * 20% => 20%
+--	system free chunks: 100% - 10% - 30% - 20% - 20%=> 20%
+--  safe threshold: 20% / 2 = 10%
+1: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=50);
+CREATE
+1: CREATE RESOURCE GROUP rg2_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20, memory_shared_quota=0);
+CREATE
+1: CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+--	1a) on QD
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(1.0);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+1: SELECT hold_memory_by_percent(0.15);
+ hold_memory_by_percent 
+------------------------
+ 0                      
+(1 row)
+1: SELECT hold_memory_by_percent(0.15);
+ERROR:  Canceling query because of high VMEM usage. current group id is 806886, group memory usage 178 MB, group shared memory quota is 68 MB, slot memory quota is 34 MB, global freechunks memory is 62 MB, global safe memory threshold is 69 MB (runaway_cleaner.c:197)
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+--	1b) on QEs
+2: SELECT pg_sleep(1);
+ pg_sleep 
+----------
+          
+(1 row)
+2: SET ROLE TO role1_memory_test;
+SET
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(1.0)=0;
+ count 
+-------
+ 0     
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.15)=0;
+ count 
+-------
+ 0     
+(1 row)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.15)=0;
+ERROR:  Canceling query because of high VMEM usage. current group id is 806886, group memory usage 178 MB, group shared memory quota is 68 MB, slot memory quota is 34 MB, global freechunks memory is 62 MB, global safe memory threshold is 69 MB (runaway_cleaner.c:197)  (seg0 slice1 10.146.0.4:7002 pid=10952) (runaway_cleaner.c:197)
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+2q: ... <quitting>
+
+0: DROP ROLE role1_memory_test;
+DROP
+0: DROP RESOURCE GROUP rg1_memory_test;
+DROP
+0: DROP RESOURCE GROUP rg2_memory_test;
+DROP
+0q: ... <quitting>
+
+
