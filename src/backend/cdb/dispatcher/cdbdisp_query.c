@@ -265,7 +265,6 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 {
 	CdbDispatcherState *ds;
 	DispatchCommandQueryParms *pQueryParms;
-	Gang *primaryGang;
 	char	   *queryText;
 	int		queryTextLength;
 	ListCell   *le;
@@ -281,7 +280,7 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 	queryText = buildGpQueryString(pQueryParms, &queryTextLength);
 
-	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbcomponent_getCdbComponentsList());
+	AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbcomponent_getCdbComponentsList());
 
 	/* put all idle segment to a gang so QD can send SET command to them */
 	AllocateGang(ds, GANGTYPE_PRIMARY_READER, formIdleSegmentIdList());
@@ -295,8 +294,6 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 		cdbdisp_dispatchToGang(ds, rg, -1);
 	}
-	addToGxactTwophaseSegments(primaryGang);
-
 	/*
 	 * No need for two-phase commit, so no need to call
 	 * addToGxactTwophaseSegments.
