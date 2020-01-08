@@ -247,12 +247,12 @@ For example, to switch the effective DB2 user to the user named `bill`, you conf
 After establishing the database connection, PXF implicitly runs the following command to set the `session_user` DB2 session variable to the value that you configured:
 
 ``` sql
-SET session_user = bill
+SET SESSION_USER = bill
 ```
 
 PXF recognizes a synthetic property value, `${pxf.session.user}`, that identifies the Greenplum Database user name. You may choose to use this value when you configure a property that requires a value that changes based on the Greenplum user running the session.
 
-Scenario where you might use `${pxf.session.user}`: when you authenticate to the remote SQL database with Kerberos, the primary component of the Kerberos principal identifies the Greenplum Database user name, and you want to run queries in the remote database using this effective user name. For example, if you are accessing DB2, you would configure your `jdbc-site.xml` to specify the Kerberos `securityMechanism` and `KerberosServerPrincipal`, and then set the `session_user` variable as follows:
+A scenario where you might use `${pxf.session.user}` is when you authenticate to the remote SQL database with Kerberos, the primary component of the Kerberos principal identifies the Greenplum Database user name, and you want to run queries in the remote database using this effective user name. For example, if you are accessing DB2, you would configure your `jdbc-site.xml` to specify the Kerberos `securityMechanism` and `KerberosServerPrincipal`, and then set the `session_user` variable as follows:
 
 ``` xml
 <property>
@@ -267,7 +267,7 @@ With this configuration, PXF `SET`s the DB2 `session_user` variable to the curre
 
 When PXF performs session authorization on your behalf and JDBC connection pooling is enabled (the default), you may choose to set the `jdbc.pool.qualifier` property. Setting this property instructs PXF to include the property value in the criteria that it uses to create and reuse connection pools. In practice, you would not set this to a fixed value, but rather to a value that changes based on the user/session/transaction, etc. When you set this property to `${pxf.session.user}`, PXF includes the Greenplum Database user name in the criteria that it uses to create and re-use connection pools. The default setting is no qualifier.
 
-To make use of this feature, add or uncomment the following property block in `jdbc-site.sml` to prompt PXF to include the Greenplum user name in connection pool creation/reuse criteria:
+To make use of this feature, add or uncomment the following property block in `jdbc-site.xml` to prompt PXF to include the Greenplum user name in connection pool creation/reuse criteria:
 
 ``` xml
 <property>
