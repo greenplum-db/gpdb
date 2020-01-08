@@ -299,9 +299,6 @@
               <xref href="#join_collapse_limit"/>
             </li>
             <li>
-              <xref href="#keep_wal_segments"/>
-            </li>
-            <li>
               <xref href="#krb_caseins_users"/>
             </li>
             <li>
@@ -630,6 +627,12 @@
             <li><xref href="#verify_gpfdists_cert"/></li>
             <li><xref href="#vmem_process_interrupt" type="section"
               >vmem_process_interrupt</xref></li>
+            <li>
+              <xref href="#wait_for_replication_threshold"/>
+            </li>
+            <li>
+              <xref href="#wal_keep_segments"/>
+            </li>
             <li>
               <xref href="#wal_receiver_status_interval"/>
             </li>
@@ -5244,36 +5247,6 @@
       </table>
     </body>
   </topic>
-  <topic id="keep_wal_segments">
-    <title>keep_wal_segments</title>
-    <body>
-      <p>For Greenplum Database master mirroring, sets the maximum number of processed WAL segment
-        files that are saved by the by the active Greenplum Database master if a checkpoint
-        operation occurs.</p>
-      <p>The segment files are used to sycnronize the active master on the standby master. </p>
-      <table id="keep_wal_segments_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">integer</entry>
-              <entry colname="col2">5</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="krb_caseins_users">
     <title>krb_caseins_users</title>
     <body>
@@ -9285,6 +9258,71 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="wait_for_replication_threshold">
+    <title>wait_for_replication_threshold</title>
+    <body>
+      <p>Controls when data is transferred between master and standby or primary and mirror segment
+        instances for high availability. As the default, Greenplum Database stores Write-Ahead
+        Logging (WAL)-based records on the master or primary instance until a checkpoint occurs or
+        until the amount of records reaches the <codeph>wait_for_replication_threshold</codeph>
+        value (in KB), then the records are transferred the standby or mirror instances. </p>
+      <p>A value of 0 disables the check for the amount of records. The records are transferred only
+        after a checkpoint occurs.</p>
+      <p>If you set the value to 0, database performance issues might occur under heavy loads that
+        perform a large number of database changes such as inserts, updated or deletes</p>
+      <table id="table_mw3_krz_hkb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - MAX-INT / 1024</entry>
+              <entry colname="col2">1024</entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="wal_keep_segments">
+    <title>wal_keep_segments</title>
+    <body>
+      <p>For Greenplum Database master mirroring, sets the maximum number of processed WAL segment
+        files that are saved by the by the active Greenplum Database master if a checkpoint
+        operation occurs.</p>
+      <p>The segment files are used to synchronize the active master on the standby master. </p>
+      <table id="keep_wal_segments_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">integer</entry>
+              <entry colname="col2">5</entry>
+              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
             </row>
           </tbody>
         </tgroup>

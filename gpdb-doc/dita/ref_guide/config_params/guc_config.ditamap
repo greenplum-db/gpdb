@@ -170,7 +170,6 @@
             <topicref href="guc-list.xml#integer_datetimes"/>
             <topicref href="guc-list.xml#IntervalStyle"/>
             <topicref href="guc-list.xml#join_collapse_limit"/>
-            <topicref href="guc-list.xml#keep_wal_segments"/>
             <topicref href="guc-list.xml#krb_caseins_users"/>
             <topicref href="guc-list.xml#krb_server_keyfile"/>
             <topicref href="guc-list.xml#lc_collate"/>
@@ -293,6 +292,8 @@
             <topicref href="guc-list.xml#validate_previous_free_tid"/>
             <topicref href="guc-list.xml#verify_gpfdists_cert"/>
             <topicref href="guc-list.xml#vmem_process_interrupt"/>
+            <topicref href="guc-list.xml#wait_for_replication_threshold"/>
+            <topicref href="guc-list.xml#wal_keep_segments"/>
             <topicref href="guc-list.xml#wal_receiver_status_interval"/>
             <topicref href="guc-list.xml#writable_external_table_bufsize"/>
             <topicref href="guc-list.xml#xid_stop_limit"/>
