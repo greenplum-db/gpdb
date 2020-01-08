@@ -444,8 +444,8 @@ cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 	}
 
 	/*
-	 * If there is no non const candidate, then it's OK to return
-	 * the constant regardless of the target list.
+	 * It's OK to return a constant member, as long as it's
+	 * compatible with all the non-Const members.
 	 */
 	foreach(lc, eclass->ec_members)
 	{

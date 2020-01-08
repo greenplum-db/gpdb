@@ -83,7 +83,7 @@ static const Oid cdbhash_type_compatibility_table[COMPAT_TABLE_LENGTH] =
 	BITOID, VARBITOID,
 	InvalidOid,
 
-	/* object identidier types */
+	/* object identifier types */
 	OIDOID, REGPROCOID, REGPROCEDUREOID, REGOPEROID,
 	REGOPERATOROID, REGCLASSOID, REGTYPEOID, ANYENUMOID,
 	InvalidOid
@@ -875,7 +875,7 @@ bool isGreenplumDbOprRedistributable(Oid oprid)
 /*
  * isGreenplumDbPathkeyDistCompatible
  *
- * Return true if there exists one const type and one non-const
+ * Return true if there exists one const type and one non-Const
  * type in an EC of pathkey have the compatible hash value.
  * 
  * This is used check whether we could redistribute single rel in
@@ -892,8 +892,8 @@ isGreenplumDbPathkeyDistCompatible(PathKey *pathkey)
 
 	ec = pathkey->pk_eclass;
 	/*
-	 * Values of diffrent type(float4, float8) could be in the same EC.
-	 * But they may have different hash value to do Motion.
+	 * Values of different types(float4, float8) could be in the same EC.
+	 * But they may have different hash values to do Motion.
 	 * In GPDB5 cdbhash treat some types, e.g. all integers, have the same
 	 * hash values. But other types, e.g. float4 and float8, have different
 	 * hash values. See cdbhash_type_compatibility_table for details.
@@ -904,8 +904,8 @@ isGreenplumDbPathkeyDistCompatible(PathKey *pathkey)
 		EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
 		
 		/* 
-		 * the first loop only check non-const items in EC
-		 * non-const items must have the same data type.
+		 * the first loop only check non-Const items in EC
+		 * non-Const items must have the compatible data type.
 		 */
 		if (em->em_is_const)
 			continue;
@@ -918,7 +918,7 @@ isGreenplumDbPathkeyDistCompatible(PathKey *pathkey)
 			return false;
 	}
 	
-	/* no non-const items in EC */
+	/* no non-Const items in EC */
 	if(non_const_ec_type == InvalidOid)
 		return false;
 
