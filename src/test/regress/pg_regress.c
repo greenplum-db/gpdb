@@ -90,6 +90,7 @@ static _stringlist *loadlanguage = NULL;
 static _stringlist *loadextension = NULL;
 static int	max_connections = 0;
 static char *encoding = NULL;
+static _stringlist *init_file_list = NULL;
 static _stringlist *schedulelist = NULL;
 static _stringlist *exclude_tests = NULL;
 static _stringlist *extra_tests = NULL;
@@ -104,7 +105,6 @@ static char *dlpath = PKGLIBDIR;
 static char *user = NULL;
 static _stringlist *extraroles = NULL;
 static char *config_auth_datadir = NULL;
-static char *initfile = NULL;
 static bool  ignore_plans = false;
 
 /* internal variables */
@@ -1719,14 +1719,19 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 	char		diff[MAXPGPATH];
 	char		cmd[MAXPGPATH * 3];
 	char		best_expect_file[MAXPGPATH];
-    char        diff_opts[MAXPGPATH];
-    char        m_pretty_diff_opts[MAXPGPATH];
+    char		diff_opts[MAXPGPATH];
+	char	   *diff_opts_st = diff_opts;
+	char	   *diff_opts_en = diff_opts + sizeof(diff_opts);
+    char		m_pretty_diff_opts[MAXPGPATH];
+    char	   *pretty_diff_opts_st = m_pretty_diff_opts;
+    char	   *pretty_diff_opts_en = m_pretty_diff_opts + sizeof(m_pretty_diff_opts);
 	FILE	   *difffile;
 	int			best_line_count;
 	int			i;
 	int			l;
 	const char *platform_expectfile;
 	const char *ignore_plans_opts;
+	_stringlist *sl;
 
 	/*
 	 * We can pass either the resultsfile or the expectfile, they should have
@@ -1748,21 +1753,23 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 	snprintf(diff, sizeof(diff), "%s.diff", resultsfile);
     
 	/* Add init file arguments if provided via commandline */
-	if (initfile)
-	{
-	  snprintf(diff_opts, sizeof(diff_opts),
-			   "%s%s --gpd_init %s", basic_diff_opts, ignore_plans_opts, initfile);
+	diff_opts_st += snprintf(diff_opts_st,
+							 diff_opts_en - diff_opts_st,
+							 "%s%s", basic_diff_opts, ignore_plans_opts);
 
-	  snprintf(m_pretty_diff_opts, sizeof(m_pretty_diff_opts),
-			   "%s%s --gpd_init %s", pretty_diff_opts, ignore_plans_opts, initfile);
-	}
-	else
-	{
-		snprintf(diff_opts, sizeof(diff_opts),
-			   "%s%s", basic_diff_opts, ignore_plans_opts);
+	pretty_diff_opts_st += snprintf(pretty_diff_opts_st,
+									pretty_diff_opts_en - pretty_diff_opts_st,
+									"%s%s", pretty_diff_opts, ignore_plans_opts);
 
-		snprintf(m_pretty_diff_opts, sizeof(m_pretty_diff_opts),
-				 "%s%s", pretty_diff_opts, ignore_plans_opts);
+	for (sl = init_file_list; sl != NULL; sl = sl->next)
+	{
+		diff_opts_st += snprintf(diff_opts_st,
+								 diff_opts_en - diff_opts_st,
+								 " --gpd_init %s", sl->str);
+
+		pretty_diff_opts_st += snprintf(pretty_diff_opts_st,
+										pretty_diff_opts_en - pretty_diff_opts_st,
+										" --gpd_init %s", sl->str);
 	}
 
 	/* OK, run the diff */
@@ -2576,7 +2583,7 @@ help(void)
 	printf(_("  --use-existing            use an existing installation\n"));
 	/* Please put GPDB specific options at the end */
 	printf(_("  --exclude-tests=TEST      command or space delimited tests to exclude from running\n"));
-    printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff\n"));
+    printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff (could be used multiple times)\n"));
 	printf(_("  --ignore-plans            ignore any explain plan diffs\n"));
 	printf(_("  --print-failure-diffs     Print the diff file to standard out after a failure\n"));
 	printf(_("  --tablespace-dir=DIR      place tablespace files in DIR/testtablespace (default \"./testtablespace\")\n"));
@@ -2744,7 +2751,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				config_auth_datadir = pstrdup(optarg);
 				break;
             case 25:
-                initfile = strdup(optarg);
+				add_stringlist_item(&init_file_list, optarg);
                 break;
             case 26:
                 split_to_stringlist(strdup(optarg), ", ", &exclude_tests);
