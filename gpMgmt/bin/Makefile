@@ -28,7 +28,7 @@ installprograms: installdirs
 	done
 	# Symlink gpcheckcat from bin to bin/lib to maintain backward compatibility
 	if [ ! -L $(DESTDIR)$(bindir)/lib/gpcheckcat  ]; then \
-		$(LN_S) ../gpcheckcat $(DESTDIR)$(bindir)/lib/gpcheckcat; \
+		cd $(DESTDIR)$(bindir)/lib/ && $(LN_S) ../gpcheckcat gpcheckcat; \
 	fi
 	$(INSTALL_DATA) gpload.bat '$(DESTDIR)$(bindir)/gpload.bat'
 
