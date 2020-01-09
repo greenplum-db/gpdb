@@ -149,6 +149,9 @@ static void vacuum_appendonly_index(Relation indexRelation,
 						AppendOnlyIndexVacuumState *vacuumIndexState,
 						double rel_tuple_count, int elevel);
 
+static void
+vac_update_relstats_from_list(List *updated_stats);
+
 /*
  * Primary entry point for VACUUM and ANALYZE commands.
  *
@@ -796,6 +799,18 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		}
 
 		vacuum_rel(onerel, relid, vacstmt, lmode, for_wraparound);
+
+
+		/*
+		 * Complete the transaction and free all temporary memory used.
+		 */
+		PopActiveSnapshot();
+		/*
+		 * Transaction commit is always executed on QD.
+		 */
+		if (Gp_role != GP_ROLE_EXECUTE)
+			CommitTransactionCommand();
+
 		onerel = NULL;
 	}
 	else
@@ -815,6 +830,11 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 							NIL,
 							NIL,
 							AOVAC_PREPARE);
+
+		PopActiveSnapshot();
+		if (Gp_role != GP_ROLE_EXECUTE)
+			CommitTransactionCommand();
+
 		onerel = NULL;
 
 		/*
@@ -864,6 +884,10 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 									list_make1_int(insertSegNo),
 									compactNowList,
 									AOVAC_COMPACT);
+				PopActiveSnapshot();
+				if (Gp_role != GP_ROLE_EXECUTE)
+					CommitTransactionCommand();
+
 				onerel = NULL;
 			}
 
@@ -941,6 +965,10 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 								NIL,	/* insert segno */
 								compactNowList,
 								AOVAC_DROP);
+			PopActiveSnapshot();
+			if (Gp_role != GP_ROLE_EXECUTE)
+				CommitTransactionCommand();
+
 			onerel = NULL;
 
 			if (!gp_appendonly_compaction)
@@ -962,6 +990,10 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 								insertedSegmentFileList,
 								compactedSegmentFileList,
 								AOVAC_CLEANUP);
+			PopActiveSnapshot();
+			if (Gp_role != GP_ROLE_EXECUTE)
+				CommitTransactionCommand();
+
 			onerel = NULL;
 		}
 	}
@@ -2182,22 +2214,15 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 	int			save_sec_context;
 	int			save_nestlevel;
 	MemoryContext oldcontext;
+	bool		dispatch;
+
+	if (Gp_role == GP_ROLE_DISPATCH && onerel)
+		dispatch = true;
+	else
+		dispatch = false;
 
 	if (!onerel)
 	{
-		/*
-		 * For each iteration we start/commit our own transactions,
-		 * so that we can release resources such as locks and memories,
-		 * and we can also safely perform non-transactional work
-		 * along with transactional work.
-		 */
-		StartTransactionCommand();
-
-		/*
-		 * Functions in indexes may want a snapshot set. Also, setting
-		 * a snapshot ensures that RecentGlobalXmin is kept truly recent.
-		 */
-		PushActiveSnapshot(GetTransactionSnapshot());
 
 		if (!(vacstmt->options & VACOPT_FULL))
 		{
@@ -2266,8 +2291,6 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 
 		if (!onerel)
 		{
-			PopActiveSnapshot();
-			CommitTransactionCommand();
 			return false;
 		}
 	}
@@ -2302,7 +2325,8 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 										  get_rel_name(aovisimap_relid),
 										  -1);
 		MemoryContextSwitchTo(oldcontext);
-		vacstmt->appendonly_relation_empty =
+		if (Gp_role == GP_ROLE_DISPATCH)
+			vacstmt->appendonly_relation_empty =
 				AppendOnlyCompaction_IsRelationEmpty(onerel);
 	}
 
@@ -2315,7 +2339,6 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 	SetUserIdAndSecContext(onerel->rd_rel->relowner,
 						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 	save_nestlevel = NewGUCNestLevel();
-
 
 	/*
 	 * If we are in the dispatch mode, dispatch this modified
@@ -2371,45 +2394,10 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 		cluster_rel(relid, InvalidOid, false,
 					(vacstmt->options & VACOPT_VERBOSE) != 0,
 					true /* printError */);
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			VacuumStatsContext stats_context;
-
-			stats_context.updated_stats = NIL;
-			/*
-			 * Revert back to original userid before dispatching vacuum to QEs.
-			 * Dispatcher includes CurrentUserId in the serialized dispatch
-			 * command (see buildGpQueryString()).  QEs assume this userid
-			 * before starting to execute the dispatched command.  If the
-			 * original userid has superuser privileges and owner of the table
-			 * being vacuumed does not, and if the command is dispatched with
-			 * owner's userid, it may lead to spurious permission denied error
-			 * on QE even when a super user is running the vacuum.
-			 */
-			SetUserIdAndSecContext(
-								   save_userid,
-								   save_sec_context | SECURITY_RESTRICTED_OPERATION);
-			dispatchVacuum(vacstmt, &stats_context);
-
-			vac_update_relstats_from_list(stats_context.updated_stats);
-		}
 	}
 	else
 	{
 		lazy_vacuum_rel(onerel, vacstmt, vac_strategy);
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			VacuumStatsContext stats_context;
-
-			stats_context.updated_stats = NIL;
-			SetUserIdAndSecContext(
-								   save_userid,
-								   save_sec_context | SECURITY_RESTRICTED_OPERATION);
-			dispatchVacuum(vacstmt, &stats_context);
-			vac_update_relstats_from_list(stats_context.updated_stats);
-		}
 	}
 
 	/* Roll back any GUC changes executed by index functions */
@@ -2417,6 +2405,88 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 
 	/* Restore userid and security context */
 	SetUserIdAndSecContext(save_userid, save_sec_context);
+
+	/*
+	 * If the relation has a secondary toast rel, vacuum that too while we
+	 * still hold the session lock on the master table.  We do this in
+	 * cleanup phase when it's AO table or in prepare phase if it's an
+	 * empty AO table.
+	 */
+	if (is_heap ||
+		(!is_heap && (vacstmt->appendonly_phase == AOVAC_CLEANUP ||
+					  vacstmt->appendonly_relation_empty)))
+	{
+		if (toast_relid != InvalidOid && toast_rangevar != NULL)
+		{
+			VacuumStmt *vacstmt_toast = makeNode(VacuumStmt);
+			vacstmt_toast->options = vacstmt->options;
+			vacstmt_toast->freeze_min_age = vacstmt->freeze_min_age;
+			vacstmt_toast->freeze_table_age = vacstmt->freeze_table_age;
+			vacstmt_toast->skip_twophase = vacstmt->skip_twophase;
+
+			vacstmt_toast->relation = toast_rangevar;
+			vacuum_rel(NULL, toast_relid, vacstmt_toast, lmode, for_wraparound);
+		}
+	}
+
+	/*
+	 * If an AO/CO table is empty on a segment,
+	 * vacstmt->appendonly_relation_empty will get set to true even in the
+	 * compaction phase. In such a case, we end up updating the auxiliary
+	 * tables and try to vacuum them all in the same transaction. This causes
+	 * the auxiliary relation to not get vacuumed and it generates a notice to
+	 * the user saying that transaction is already in progress. Hence we want
+	 * to vacuum the auxliary relations only in cleanup phase or if we are in
+	 * the prepare phase and the AO/CO table is empty.
+	 */
+	if (vacstmt->appendonly_phase == AOVAC_CLEANUP ||
+		 (vacstmt->appendonly_relation_empty &&
+		  vacstmt->appendonly_phase == AOVAC_PREPARE))
+	{
+		VacuumStmt *vacstmt_ao_aux = makeNode(VacuumStmt);
+		vacstmt_ao_aux->options = vacstmt->options;
+		vacstmt_ao_aux->freeze_min_age = vacstmt->freeze_min_age;
+		vacstmt_ao_aux->freeze_table_age = vacstmt->freeze_table_age;
+
+		/* do the same for an AO segments table, if any */
+		if (aoseg_relid != InvalidOid && aoseg_rangevar != NULL)
+		{
+			vacstmt_ao_aux->relation = aoseg_rangevar;
+			vacuum_rel(NULL, aoseg_relid, vacstmt_ao_aux, lmode, for_wraparound);
+		}
+
+		/* do the same for an AO block directory table, if any */
+		if (aoblkdir_relid != InvalidOid && aoblkdir_rangevar != NULL)
+		{
+			vacstmt_ao_aux->relation = aoblkdir_rangevar;
+			vacuum_rel(NULL, aoblkdir_relid, vacstmt_ao_aux, lmode, for_wraparound);
+		}
+
+		/* do the same for an AO visimap, if any */
+		if (aovisimap_relid != InvalidOid && aovisimap_rangevar != NULL)
+		{
+			vacstmt_ao_aux->relation = aovisimap_rangevar;
+			vacuum_rel(NULL, aovisimap_relid, vacstmt_ao_aux, lmode, for_wraparound);
+		}
+	}
+
+	if (dispatch)
+	{
+		VacuumStatsContext stats_context;
+
+		stats_context.updated_stats = NIL;
+		GetUserIdAndSecContext(&save_userid, &save_sec_context);
+
+		SetUserIdAndSecContext(
+				save_userid,
+				save_sec_context | SECURITY_RESTRICTED_OPERATION);
+
+		dispatchVacuum(vacstmt, &stats_context);
+		vac_update_relstats_from_list(stats_context.updated_stats);
+
+		/* Restore userid and security context */
+		SetUserIdAndSecContext(save_userid, save_sec_context);
+	}
 
 	/*
 	 * Update ao master tupcount the hard way after the compaction and
@@ -2450,94 +2520,6 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 	/* all done with this class, but hold lock until commit */
 	if (onerel)
 		relation_close(onerel, NoLock);
-
-	/*
-	 * Complete the transaction and free all temporary memory used.
-	 */
-	PopActiveSnapshot();
-	/*
-	 * Transaction commit is always executed on QD.
-	 */
-	if (Gp_role != GP_ROLE_EXECUTE)
-		CommitTransactionCommand();
-
-	/*
-	 * If the relation has a secondary toast rel, vacuum that too while we
-	 * still hold the session lock on the master table.  We do this in
-	 * cleanup phase when it's AO table or in prepare phase if it's an
-	 * empty AO table.
-	 *
-	 * A VacuumStmt object for secondary toast relation is constructed and
-	 * dispatched separately by the QD, when vacuuming the master relation.  A
-	 * backend executing dispatched VacuumStmt (GP_ROLE_EXECUTE), therefore,
-	 * should not execute this block of code.
-	 */
-	if (Gp_role != GP_ROLE_EXECUTE && (is_heap ||
-		(!is_heap && (vacstmt->appendonly_phase == AOVAC_CLEANUP ||
-					  vacstmt->appendonly_relation_empty))))
-	{
-		if (toast_relid != InvalidOid && toast_rangevar != NULL)
-		{
-			VacuumStmt *vacstmt_toast = makeNode(VacuumStmt);
-			vacstmt_toast->options = vacstmt->options;
-			vacstmt_toast->freeze_min_age = vacstmt->freeze_min_age;
-			vacstmt_toast->freeze_table_age = vacstmt->freeze_table_age;
-			vacstmt_toast->skip_twophase = vacstmt->skip_twophase;
-
-			vacstmt_toast->relation = toast_rangevar;
-			vacuum_rel(NULL, toast_relid, vacstmt_toast, lmode, for_wraparound);
-		}
-	}
-
-	/*
-	 * If an AO/CO table is empty on a segment,
-	 * vacstmt->appendonly_relation_empty will get set to true even in the
-	 * compaction phase. In such a case, we end up updating the auxiliary
-	 * tables and try to vacuum them all in the same transaction. This causes
-	 * the auxiliary relation to not get vacuumed and it generates a notice to
-	 * the user saying that transaction is already in progress. Hence we want
-	 * to vacuum the auxliary relations only in cleanup phase or if we are in
-	 * the prepare phase and the AO/CO table is empty.
-	 *
-	 * We alter the vacuum statement here since the AO auxiliary tables
-	 * vacuuming will be dispatched to the primaries.
-	 *
-	 * Similar to toast, a VacuumStmt object for each AO auxiliary relation is
-	 * constructed and dispatched separately by the QD, when vacuuming the
-	 * base AO relation.  A backend executing dispatched VacuumStmt
-	 * (GP_ROLE_EXECUTE), therefore, should not execute this block of code.
-	 */
-	if (Gp_role != GP_ROLE_EXECUTE &&
-		(vacstmt->appendonly_phase == AOVAC_CLEANUP ||
-		 (vacstmt->appendonly_relation_empty &&
-		  vacstmt->appendonly_phase == AOVAC_PREPARE)))
-	{
-		VacuumStmt *vacstmt_ao_aux = makeNode(VacuumStmt);
-		vacstmt_ao_aux->options = vacstmt->options;
-		vacstmt_ao_aux->freeze_min_age = vacstmt->freeze_min_age;
-		vacstmt_ao_aux->freeze_table_age = vacstmt->freeze_table_age;
-
-		/* do the same for an AO segments table, if any */
-		if (aoseg_relid != InvalidOid && aoseg_rangevar != NULL)
-		{
-			vacstmt_ao_aux->relation = aoseg_rangevar;
-			vacuum_rel(NULL, aoseg_relid, vacstmt_ao_aux, lmode, for_wraparound);
-		}
-
-		/* do the same for an AO block directory table, if any */
-		if (aoblkdir_relid != InvalidOid && aoblkdir_rangevar != NULL)
-		{
-			vacstmt_ao_aux->relation = aoblkdir_rangevar;
-			vacuum_rel(NULL, aoblkdir_relid, vacstmt_ao_aux, lmode, for_wraparound);
-		}
-
-		/* do the same for an AO visimap, if any */
-		if (aovisimap_relid != InvalidOid && aovisimap_rangevar != NULL)
-		{
-			vacstmt_ao_aux->relation = aovisimap_rangevar;
-			vacuum_rel(NULL, aovisimap_relid, vacstmt_ao_aux, lmode, for_wraparound);
-		}
-	}
 
 	/* Report that we really did it. */
 	return true;
