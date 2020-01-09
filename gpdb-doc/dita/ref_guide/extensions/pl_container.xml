@@ -69,32 +69,25 @@
         <ul id="ul_ztj_kzp_dw">
           <li>PL/Container is supported with these Greenplum Database releases:<ul
               id="ul_ccm_fqf_hkb">
-              <li>PL/Container 1.x and 2.x is supported on Greenplum Database 5.2.x and later on Red
-                Hat Enterprise Linux (RHEL) 7.x (or later) and CentOS 7.x (or later).
-                <note>PL/Container 1.x and 2.x has not been tested for compatibility with Greenplum
-                  Database 5.1.0 or 5.0.0. </note></li>
-              <li>PL/Container 3.x is supported on Greenplum Database 6 on CentOS 7.x (or later),
-                RHEL 7.x (or later), or Ubuntu 18.04</li>
+              <li>PL/Container 1.x and 2.0.x is supported on Greenplum Database 5.2.x and later on
+                Red Hat Enterprise Linux (RHEL) 7.x (or later) and CentOS 7.x (or later). </li>
+              <li>PL/Container 2.1.0 and later is supported on Greenplum Database 6 on CentOS 7.x
+                (or later), RHEL 7.x (or later), or Ubuntu 18.04.
+                <note>PL/Container 2.1.0 and later supports Docker images with Python 3
+                  installed.</note></li>
             </ul>
             <note type="warning">PL/Container is not supported when Greenplum Database is run within
-              a Docker container.</note>
-            <note id="plc-issue">PL/Container is not supported on RHEL or CentOS 6.x systems,
-              because those platforms do not officially support Docker.</note>
-          </li>
+              a Docker container. </note></li>
           <li>For the Docker host RHEL 7.x and CentOS 7.x operating system, the minimum supported
             Linux OS kernel version is 3.10.<p>You can check your kernel version with the command
-                <codeph>uname -r</codeph>.</p>
-            <note>The Red Hat provided, maintained, and supported version of Docker is only
-              available on RHEL 7. Docker feature developments are tied to RHEL7.x infrastructure
-              components for kernel, devicemapper (thin provisioning, direct lvm), sVirt and
-              systemd.</note></li>
+                <codeph>uname -r</codeph>.</p></li>
         </ul>
         <ul id="ul_b5j_kzp_dw">
           <li>These are the minimum Docker versions that must be installed on Greenplum Database
             hosts (master, primary and all standby hosts):<ul id="ul_z2t_bxd_rbb">
-              <li>For PL/Container 1.x or 2.x on RHEL or CentOS 7.x - Docker 17.05</li>
+              <li>For PL/Container 1.x or 2.0.x on RHEL or CentOS 7.x - Docker 17.05</li>
               <li>
-                <p>For PL/Container 3.x on CentOS or RHEL 7.x, or Ubuntu 18.04 - Docker 19.03</p>
+                <p>For PL/Container 2.1.x on CentOS or RHEL 7.x, or Ubuntu 18.04 - Docker 19.03</p>
               </li>
             </ul><p>See <xref href="#topic_ydt_rtc_rbb" format="dita"/>.</p></li>
           <li>On each Greenplum Database host, the <codeph>gpadmin</codeph> user should be part of
@@ -115,17 +108,17 @@
             is not supported.</li>
           <li>Greenplum Database domains are not supported.</li>
           <li>The <codeph>DO</codeph> command is not supported.</li>
-          <li>PL/Container 1.2 and later can be managed by Greenplum Database resource groups.
-            Resource Groups are available in Greenplum Database 5.8.0 and later. See <xref
+          <li>Only PL/Container 1.2.x and later can be managed by Greenplum Database resource
+            groups. Resource Groups are available in Greenplum Database 5.8.0 and later. See <xref
               href="#topic_resmgmt" format="dita"/>.</li>
           <li><codeph>OUT</codeph> parameters are not supported.</li>
           <li>The Python <codeph>dict</codeph> type cannot be returned from a PL/Python UDF. When
             returning the Python <codeph>dict</codeph> type from a UDF, you can convert the
               <codeph>dict</codeph> type to a Greenplum Database user-defined data type (UDT).</li>
-          <li otherprops="pivotal"><!--Pivotal only -->To upgrade from PL/Container 1.0 to
-            PL/Container 1.1or later, You cannot upgrade from version 1.0 to 1.1 or later with the
-              <codeph>gppkg</codeph> utility <codeph>-u</codeph> option. You uninstall version 1.0
-            and install the new version. See <xref href="#topic_qbl_dkq_vcb" format="dita"/>.</li>
+          <li otherprops="pivotal"><!--Pivotal only -->You cannot upgrade from version 1.0 to 1.1 or
+            later with the <codeph>gppkg</codeph> utility <codeph>-u</codeph> option. You uninstall
+            version 1.0 and install the new version. See <xref href="#topic_qbl_dkq_vcb"
+              format="dita"/>.</li>
         </ul>
       </section>
     </body>
@@ -284,19 +277,20 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
   <topic id="topic_tcm_htd_gw">
     <title>PL/Container Docker Images</title>
     <body>
-      <p>PL/Python images and a PL/R image are available from the Greenplum Database product
-        download site of Pivotal Network at <xref
-          href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
-          >https://network.pivotal.io/</xref>.<ul id="ul_epg_t2v_qbb">
+      <p>PL/Python and PL/R image are available from the Greenplum Database product download site of
+        Pivotal Network at <xref href="https://network.pivotal.io/products/pivotal-gpdb"
+          format="html" scope="external">https://network.pivotal.io/</xref>.<ul id="ul_epg_t2v_qbb">
           <li>PL/Container for Python 3 - Docker image with Python 3.7 and the Python Data Science
-            Module package installed.</li>
+            Module package installed.
+            <note>PL/Container 2.1.0 and later supports Docker images with Python 3
+              installed.</note></li>
           <li>PL/Container for Python 2 - Docker image with Python 2.7.12 and the Python Data
             Science Module package installed.</li>
           <li>PL/Container for R - A Docker image with container with R-3.3.3 and the R Data Science
             Library package installed. </li>
         </ul></p>
-      <p>The Data Science packages contain a set Python modules or R functions and data sets related
-        to data science. For information about the packages, see <xref
+      <p>The Data Science packages contain a set of Python modules or R functions and data sets
+        related to data science. For information about the packages, see <xref
           href="../../install_guide/install_python_dsmod.xml" format="dita">Python Data Science
           Module Package</xref> and <xref href="../../install_guide/install_r_dslib.xml"
           format="dita">R Data Science Library Package</xref>.</p>
@@ -335,7 +329,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           <li>Make sure Greenplum Database is up and running. If not, bring it up with this
             command.<codeblock>gpstart -a</codeblock></li>
           <li>Run the package installation
-            command.<codeblock>gppkg -i plcontainer-2.0.2-rhel7-x86_64.gppkg</codeblock></li>
+            command.<codeblock>gppkg -i plcontainer-2.1.0-rhel7-x86_64.gppkg</codeblock></li>
           <li>Source the file
             <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
           <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
@@ -399,7 +393,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
               system.<codeblock>$ gppkg -r plcontainer-1.0.0</codeblock></li>
             <li>Run the package installation command. This example installs the PL/Container 2.0.2
               language extension on a Linux
-              system.<codeblock>gppkg -i plcontainer-2.0.2-rhel7-x86_64.gppkg</codeblock></li>
+              system.<codeblock>gppkg -i plcontainer-2.1.0-rhel7-x86_64.gppkg</codeblock></li>
             <li>Source the file
               <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
             <li>Update the PL/Container configuration. This command restores the saved
