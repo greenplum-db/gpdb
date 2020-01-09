@@ -111,3 +111,37 @@ COPY (SELECT 1 INTO frak UNION SELECT 2) TO 'blob';
 SELECT * FROM (SELECT 1 INTO f) bar;
 CREATE VIEW foo AS SELECT 1 INTO b;
 INSERT INTO b SELECT 1 INTO f;
+
+-- Github Issue 9365: https://github.com/greenplum-db/gpdb/pull/9391
+-- Previously, the following CTAS case miss dispatching OIDs to QEs, which leads to
+-- errors.
+CREATE OR REPLACE FUNCTION array_unnest_2d_to_1d(
+  x ANYARRAY,
+  OUT unnest_row_id INT,
+  OUT unnest_result ANYARRAY
+)
+RETURNS SETOF RECORD
+AS
+$BODY$
+  SELECT t2.r::int, array_agg($1[t2.r][t2.c] order by t2.c) FROM
+  (
+    SELECT generate_series(array_lower($1,2),array_upper($1,2)) as c, t1.r
+    FROM
+    (
+      SELECT generate_series(array_lower($1,1),array_upper($1,1)) as r
+    ) t1
+  ) t2
+GROUP BY t2.r
+$BODY$ LANGUAGE SQL IMMUTABLE
+;
+
+DROP TABLE IF EXISTS unnest_2d_tbl01;
+CREATE TABLE unnest_2d_tbl01 (id INT, val DOUBLE PRECISION[][]);
+INSERT INTO unnest_2d_tbl01 VALUES
+  (1, ARRAY[[1::float8,2],[3::float8,4],[5::float8,6],[7::float8,8]]),
+  (2, ARRAY[[101::float8,202],[303::float8,404],[505::float8,606]])
+;
+DROP TABLE IF EXISTS unnest_2d_tbl01_out;
+-- The following CTAS fails previously, see Github Issue 9365
+CREATE TABLE unnest_2d_tbl01_out AS
+  SELECT id, (array_unnest_2d_to_1d(val)).* FROM unnest_2d_tbl01;

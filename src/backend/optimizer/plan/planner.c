@@ -264,6 +264,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	instr_time		endtime;
 	MemoryAccountIdType curMemoryAccountId;
 	bool		needToAssignDirectDispatchContentIds = false;
+	DispatchMethod saved_plan_dispatch = DISPATCH_UNDETERMINED;
 
 	/*
 	 * Use ORCA only if it is enabled and we are in a master QD process.
@@ -591,7 +592,13 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		glob->subplan_initPlanParallel = palloc0((list_length(glob->subplans) + 1) * sizeof(bool));
 	}
 
+	/*
+	 * top_plan->dispatch is set correctly in the function cdbparallelize above,
+	 * set_plan_references may lose this information. So save and restore it.
+	 */
+	saved_plan_dispatch = top_plan->dispatch;
 	top_plan = set_plan_references(root, top_plan);
+	top_plan->dispatch = saved_plan_dispatch;
 	/* ... and the subplans (both regular subplans and initplans) */
 	Assert(list_length(glob->subplans) == list_length(glob->subroots));
 	forboth(lp, glob->subplans, lr, glob->subroots)
