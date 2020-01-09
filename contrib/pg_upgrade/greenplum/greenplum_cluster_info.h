@@ -1,3 +1,5 @@
+#ifndef GREENPLUM_GREENPLUM_CLUSTER_INFO_H
+#define GREENPLUM_GREENPLUM_CLUSTER_INFO_H
 /*
  *	greenplum/greenplum_cluster_info.h
  *
@@ -6,3 +8,5 @@
  */
 
 typedef struct GreenplumClusterInfoData GreenplumClusterInfo;
+
+#endif
