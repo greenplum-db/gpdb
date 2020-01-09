@@ -9267,15 +9267,16 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
   <topic id="wait_for_replication_threshold">
     <title>wait_for_replication_threshold</title>
     <body>
-      <p>Controls when data is transferred between master and standby or primary and mirror segment
-        instances for high availability. As the default, Greenplum Database stores Write-Ahead
-        Logging (WAL)-based records on the master or primary instance until a checkpoint occurs or
-        until the amount of records reaches the <codeph>wait_for_replication_threshold</codeph>
-        value (in KB), then the records are transferred the standby or mirror instances. </p>
-      <p>A value of 0 disables the check for the amount of records. The records are transferred only
-        after a checkpoint occurs.</p>
+      <p>When Greenplum Database segment mirroring is enabled, specifies the maximum amount of
+        Write-Ahead Logging (WAL)-based records (in KB) written by a transaction on the primary
+        segment instance before the records are written to the mirror segment instance for
+        replication. As the default, Greenplum Database writes the records to the mirror segment
+        instance when a checkpoint occurs or the <codeph>wait_for_replication_threshold</codeph>
+        value is reached. </p>
+      <p>A value of 0 disables the check for the amount of records. The records are written to the
+        mirror segment instance only after a checkpoint occurs.</p>
       <p>If you set the value to 0, database performance issues might occur under heavy loads that
-        perform a large number of database changes such as inserts, updated or deletes</p>
+        perform long transactions that do not perform a checkpoint operation.</p>
       <table id="table_mw3_krz_hkb">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
