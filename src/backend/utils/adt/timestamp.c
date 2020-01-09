@@ -3857,7 +3857,7 @@ interval_mul(PG_FUNCTION_ARGS)
 	result->day += (int32) month_remainder_days;
 #ifdef HAVE_INT64_TIMESTAMP
 	result_double = rint(span->time * factor + sec_remainder * USECS_PER_SEC);
-	if (result_double > PG_INT64_MAX || result_double < PG_INT64_MIN)
+	if (isnan(result_double) || !FLOAT8_FITS_IN_INT64(result_double))
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 				 errmsg("interval out of range")));
@@ -3891,26 +3891,26 @@ interval_li_fraction(Interval *x, Interval *x0, Interval *x1,
 	float8 result;
 	Interval diffx;
 	Interval diffx1;
-	
+
 	Assert(eq_bounds && eq_abscissas);
 	*eq_bounds = false;
 	*eq_abscissas = false;
-	
+
 	diffx.month = x->month - x0->month;
 	diffx.day = x->day - x0->day;
 	diffx.time = x->time - x0->time;
-	
+
 	diffx1.month = x1->month - x0->month;
 	diffx1.day = x1->day - x0->day;
 	diffx1.time = x1->time - x0->time;
-	
+
 	if ( ! interval_div_internal(&diffx, &diffx1, &result, NULL) )
 	{
 		*eq_bounds = true;
 		*eq_abscissas = (interval_cmp_internal(x, x0) == 0);
 		result = NAN;
 	}
-	
+
 	return result;
 }
 
@@ -3918,8 +3918,8 @@ interval_li_fraction(Interval *x, Interval *x0, Interval *x1,
  * interval_li_value
  *
  * What interval value lies fraction <f> of the way into interval
- * <y0, y1>? 
- * 
+ * <y0, y1>?
+ *
  * Note
  *		li_value(0.0, y0, y1) --> y0
  *		li_value(1.0, y0, y1) --> y1
@@ -3929,18 +3929,18 @@ interval_li_value(float8 f, Interval *y0, Interval *y1)
 {
 	Interval diffy;
 	Interval *y;
-	
+
 	diffy.month = y1->month - y0->month;
 	diffy.day = y1->day - y0->day;
 	diffy.time = y1->time - y0->time;
-	
+
 	y = DatumGetIntervalP(DirectFunctionCall2(interval_mul, IntervalPGetDatum(&diffy),
 								Float8GetDatum(f)));
-	
+
 	y->month += y0->month;
 	y->day += y0->day;
 	y->time += y0->time;
-	
+
 	return y;
 }
 
@@ -4452,41 +4452,41 @@ timestamptz_age(PG_FUNCTION_ARGS)
  * What fraction of interval <x0, x1> does <x0, x> represent?
  */
 float8
-timestamp_li_fraction(Timestamp x, Timestamp x0, Timestamp x1, 
+timestamp_li_fraction(Timestamp x, Timestamp x0, Timestamp x1,
 					  bool *eq_bounds, bool *eq_abscissas)
 {
 	float8 result;
 	Interval diffx;
 	Interval diffx1;
-	
+
 	Assert(eq_bounds && eq_abscissas);
 	*eq_bounds = false;
 	*eq_abscissas = false;
-	
+
 	if (TIMESTAMP_NOT_FINITE(x) || TIMESTAMP_NOT_FINITE(x0) || TIMESTAMP_NOT_FINITE(x1))
 	{
 		*eq_bounds = true; /* simulate divide by zero */
 		*eq_abscissas = false; /* no equality in this situation */
 		return NAN;
 	}
-	
+
 	/* We do it this way to conserve precision and semantics. */
-	
+
 	diffx.time = x - x0;
 	diffx.month = 0;
 	diffx.day = 0;
-	
+
 	diffx1.time = x1 - x0;
 	diffx1.month = 0;
 	diffx1.day = 0;
-	
+
 	if ( ! interval_div_internal(&diffx, &diffx1, &result, NULL) )
 	{
 		*eq_bounds = true;
 		*eq_abscissas = (timestamp_cmp_internal(x, x0) == 0);
 		result = NAN;
 	}
-	
+
 	return result;
 }
 
@@ -4494,8 +4494,8 @@ timestamp_li_fraction(Timestamp x, Timestamp x0, Timestamp x1,
  * timestamp_li_value
  *
  * What interval value lies fraction <f> of the way into interval
- * <y0, y1>? 
- * 
+ * <y0, y1>?
+ *
  * Note
  *		li_value(0.0, y0, y1) --> y0
  *		li_value(1.0, y0, y1) --> y1
@@ -4506,16 +4506,16 @@ timestamp_li_value(float8 f, Timestamp y0, Timestamp y1)
 	Timestamp y;
 	Interval diffy;
 	Interval *offset;
-	
+
 	diffy.month = 0;
 	diffy.day = 0;
 	diffy.time = y1 - y0;
-	
+
 	offset = DatumGetIntervalP(DirectFunctionCall2(interval_mul, IntervalPGetDatum(&diffy),
 									Float8GetDatum(f)));
 	y = timestamp_offset_internal(y0, offset);
 	pfree(offset);
-	
+
 	return y;
 }
 
@@ -4525,7 +4525,7 @@ timestamp_li_value(float8 f, Timestamp y0, Timestamp y1)
  * What fraction of interval <x0, x1> does <x0, x> represent?
  */
 float8
-timestamptz_li_fraction(TimestampTz x, TimestampTz x0, TimestampTz x1, 
+timestamptz_li_fraction(TimestampTz x, TimestampTz x0, TimestampTz x1,
 						bool *eq_bounds, bool *eq_abscissas)
 {
 	/* Internally identical to Timestamp */
@@ -4536,8 +4536,8 @@ timestamptz_li_fraction(TimestampTz x, TimestampTz x0, TimestampTz x1,
  * timestamptz_li_value
  *
  * What interval value lies fraction <f> of the way into interval
- * <y0, y1>? 
- * 
+ * <y0, y1>?
+ *
  * Note
  *		li_value(0.0, y0, y1) --> y0
  *		li_value(1.0, y0, y1) --> y1

@@ -341,7 +341,7 @@ SELECT * FROM base_tbl;
 (6 rows)
 
 EXPLAIN (costs off) UPDATE rw_view1 SET a=6 WHERE a=5;
-                      QUERY PLAN                      
+                      QUERY PLAN
 ------------------------------------------------------
  Update on base_tbl
    ->  Redistribute Motion 1:3  (slice1; segments: 1)
@@ -353,7 +353,7 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a=6 WHERE a=5;
 (7 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view1 WHERE a=5;
-              QUERY PLAN               
+              QUERY PLAN
 ---------------------------------------
  Delete on base_tbl
    ->  Seq Scan on base_tbl
@@ -416,7 +416,7 @@ SELECT * FROM rw_view2;
 (3 rows)
 
 EXPLAIN (costs off) UPDATE rw_view2 SET aaa=5 WHERE aaa=4;
-                           QUERY PLAN                           
+                           QUERY PLAN
 ----------------------------------------------------------------
  Update on base_tbl
    ->  Redistribute Motion 1:3  (slice1; segments: 1)
@@ -428,7 +428,7 @@ EXPLAIN (costs off) UPDATE rw_view2 SET aaa=5 WHERE aaa=4;
 (7 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view2 WHERE aaa=4;
-                     QUERY PLAN                     
+                     QUERY PLAN
 ----------------------------------------------------
  Delete on base_tbl
    ->  Seq Scan on base_tbl
@@ -613,7 +613,7 @@ SELECT * FROM rw_view2;
 (2 rows)
 
 EXPLAIN (costs off) UPDATE rw_view2 SET a=3 WHERE a=2;
-                              QUERY PLAN                              
+                              QUERY PLAN
 ----------------------------------------------------------------------
  Update on base_tbl
    ->  Nested Loop
@@ -628,7 +628,7 @@ EXPLAIN (costs off) UPDATE rw_view2 SET a=3 WHERE a=2;
 (10 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view2 WHERE a=2;
-                              QUERY PLAN                              
+                              QUERY PLAN
 ----------------------------------------------------------------------
  Delete on base_tbl
    ->  Nested Loop
@@ -822,7 +822,7 @@ ERROR:  cannot update view "rw_view1"
 DETAIL:  Views containing LIMIT or OFFSET are not automatically updatable.
 HINT:  To make the view updatable, provide an unconditional ON UPDATE DO INSTEAD rule or an INSTEAD OF UPDATE trigger.
 SELECT * FROM rw_view2;
- a |   b   
+ a |   b
 ---+-------
  1 | Row 1
  2 | Row 2
@@ -878,7 +878,7 @@ SELECT * FROM base_tbl;
 EXPLAIN (costs off)
 UPDATE rw_view1 v SET bb='Updated row 2' WHERE rw_view1_aa(v)=2
   RETURNING rw_view1_aa(v), v.bb;
-                QUERY PLAN                
+                QUERY PLAN
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Update on base_tbl
@@ -1076,7 +1076,7 @@ SELECT * FROM rw_view1;
 (4 rows)
 
 EXPLAIN (verbose, costs off) UPDATE rw_view1 SET b = b + 1 RETURNING *;
-                                        QUERY PLAN                                         
+                                        QUERY PLAN
 -------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: base_tbl.a, base_tbl.b
@@ -1606,12 +1606,12 @@ ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
 DETAIL:  Failing row contains (15).
 --end_ignore
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
-                   QUERY PLAN                    
--------------------------------------------------
+                       QUERY PLAN
+---------------------------------------------------------
  Insert on base_tbl b
    ->  Result
          SubPlan 1  (slice0; segments: 1)
-           ->  Result
+     ->  Result
                  Filter: (r.a = b.a)
                  ->  Materialize
                        ->  Seq Scan on ref_tbl r
@@ -1622,8 +1622,8 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
 (11 rows)
 
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
-                      QUERY PLAN                      
-------------------------------------------------------
+                        QUERY PLAN
+-----------------------------------------------------------
  Update on base_tbl b
    ->  Redistribute Motion 3:3  (slice1; segments: 3)
          Hash Key: ((b.a + 5))
@@ -1634,8 +1634,8 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
                      ->  Hash
                            ->  Seq Scan on base_tbl b
          SubPlan 1  (slice1; segments: 3)
-           ->  Result
-                 Filter: (r_1.a = b.a)
+     ->  Result
+           Filter: (r_1.a = b.a)
                  ->  Materialize
                        ->  Seq Scan on ref_tbl r_1
          SubPlan 2  (slice1; segments: 3)
@@ -1702,10 +1702,10 @@ INSERT INTO rw_view2 VALUES (5); -- ok
 INSERT INTO rw_view2 VALUES (50); -- ok, but not in view
 UPDATE rw_view2 SET a = a - 10; -- should fail
 SELECT * FROM base_tbl;
- a  | b 
+ a  | b
 ----+---
-  5 |  
- 50 |  
+  5 |
+ 50 |
 (2 rows)
 
 -- Check option won't cascade down to base view with INSTEAD OF triggers
@@ -1715,10 +1715,10 @@ ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
 DETAIL:  Failing row contains (100, null).
 UPDATE rw_view2 SET a = 200 WHERE a = 5; -- ok, but not in view (doesn't fail rw_view1's check)
 SELECT * FROM base_tbl;
- a  | b 
+ a  | b
 ----+---
-  5 |  
- 50 |  
+  5 |
+ 50 |
 (2 rows)
 
 -- Neither local nor cascaded check options work with INSTEAD rules
@@ -1857,7 +1857,7 @@ DELETE FROM rw_view1 WHERE NOT snoop(person);
 NOTICE:  snooped value: Tom
 NOTICE:  snooped value: Harry
 EXPLAIN (costs off) SELECT * FROM rw_view1 WHERE snoop(person);
-                     QUERY PLAN                      
+                     QUERY PLAN
 -----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on rw_view1
@@ -1939,7 +1939,7 @@ NOTICE:  snooped value: Tom  (seg0 127.0.0.1:40000 pid=26896)
 NOTICE:  snooped value: Harry  (seg0 127.0.0.1:40000 pid=26896)
 NOTICE:  snooped value: Harry  (seg0 127.0.0.1:40000 pid=26896)
 EXPLAIN (costs off) SELECT * FROM rw_view2 WHERE snoop(person);
-                        QUERY PLAN                         
+                        QUERY PLAN
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on rw_view2
@@ -2000,7 +2000,7 @@ SELECT * FROM rw_view1;
 (1 row)
 
 EXPLAIN (costs off) DELETE FROM rw_view1 WHERE id = 1 AND snoop(data);
-                           QUERY PLAN                           
+                           QUERY PLAN
 ----------------------------------------------------------------
  Update on base_tbl base_tbl_1
    ->  Nested Loop
@@ -2017,7 +2017,7 @@ EXPLAIN (costs off) DELETE FROM rw_view1 WHERE id = 1 AND snoop(data);
 DELETE FROM rw_view1 WHERE id = 1 AND snoop(data);
 NOTICE:  snooped value: Row 1
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
-                       QUERY PLAN                       
+                       QUERY PLAN
 --------------------------------------------------------
  Insert on base_tbl
    InitPlan 1 (returns $0)  (slice2)
@@ -2027,7 +2027,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
    ->  Result
          One-Time Filter: ($0 IS NOT TRUE)
  Optimizer: Postgres query optimizer
- 
+
  Update on base_tbl
    InitPlan 1 (returns $0)  (slice2)
      ->  Limit
@@ -2096,7 +2096,7 @@ SELECT * FROM v1 WHERE a=8;
 
 EXPLAIN (VERBOSE, COSTS OFF)
 UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a = 3;
-                            QUERY PLAN                            
+                            QUERY PLAN
 ------------------------------------------------------------------
  Update on public.t1
    ->  Result
@@ -2118,7 +2118,7 @@ SELECT * FROM t1 WHERE a=100; -- Nothing should have been changed to 100
 
 EXPLAIN (VERBOSE, COSTS OFF)
 UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
-                                                                              QUERY PLAN                                                                              
+                                                                              QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Update on public.t1 t1_4
    ->  Redistribute Motion 3:3  (slice1; segments: 3)
@@ -2488,14 +2488,14 @@ select * from base_tab_def order by a;
   4 | Table default | Table default |              | 
   5 | Table default | Table default |              | 
   6 | Table default | Table default |              | 
- 11 | View default  | Table default | View default | 
- 12 | View default  | Table default | View default | 
- 13 | View default  | Table default | View default | 
- 14 | View default  | Table default | View default | 
- 15 | View default  | Table default | View default | 
- 16 | View default  | Table default | View default | 
- 17 | View default  | Table default | View default | 
-    | View default  | Table default | View default | 
+ 11 | View default  | Table default | View default |
+ 12 | View default  | Table default | View default |
+ 13 | View default  | Table default | View default |
+ 14 | View default  | Table default | View default |
+ 15 | View default  | Table default | View default |
+ 16 | View default  | Table default | View default |
+ 17 | View default  | Table default | View default |
+    | View default  | Table default | View default |
 (14 rows)
 
 -- Using an unconditional DO INSTEAD rule should also cause NULLs to be

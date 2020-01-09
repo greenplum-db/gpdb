@@ -17,6 +17,7 @@
 #include "access/gist_private.h"
 #include "access/gistscan.h"
 #include "access/relscan.h"
+#include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
 
@@ -36,8 +37,23 @@ GISTSearchTreeItemComparator(const RBNode *a, const RBNode *b, void *arg)
 	/* Order according to distance comparison */
 	for (i = 0; i < scan->numberOfOrderBys; i++)
 	{
-		if (sa->distances[i] != sb->distances[i])
-			return (sa->distances[i] > sb->distances[i]) ? 1 : -1;
+		if (sa->distances[i].isnull)
+		{
+			if (!sb->distances[i].isnull)
+				return 1;
+		}
+		else if (sb->distances[i].isnull)
+		{
+			return -1;
+		}
+		else
+		{
+			int			cmp = float8_cmp_internal(sa->distances[i].value,
+												  sb->distances[i].value);
+
+			if (cmp != 0)
+				return cmp;
+		}
 	}
 
 	return 0;
@@ -83,7 +99,7 @@ GISTSearchTreeItemAllocator(void *arg)
 {
 	IndexScanDesc scan = (IndexScanDesc) arg;
 
-	return palloc(GSTIHDRSZ + sizeof(double) * scan->numberOfOrderBys);
+	return palloc(SizeOfGISTSearchTreeItem(scan->numberOfOrderBys));
 }
 
 static void
@@ -127,8 +143,8 @@ gistbeginscan(PG_FUNCTION_ARGS)
 	so->queueCxt = giststate->scanCxt;	/* see gistrescan */
 
 	/* workspaces with size dependent on numberOfOrderBys: */
-	so->tmpTreeItem = palloc(GSTIHDRSZ + sizeof(double) * scan->numberOfOrderBys);
-	so->distances = palloc(sizeof(double) * scan->numberOfOrderBys);
+	so->tmpTreeItem = palloc(SizeOfGISTSearchTreeItem(scan->numberOfOrderBys));
+	so->distances = palloc(sizeof(so->distances[0]) * scan->numberOfOrderBys);
 	so->qual_ok = true;			/* in case there are zero keys */
 
 	scan->opaque = so;
@@ -188,7 +204,7 @@ gistrescan(PG_FUNCTION_ARGS)
 
 	/* create new, empty RBTree for search queue */
 	oldCxt = MemoryContextSwitchTo(so->queueCxt);
-	so->queue = rb_create(GSTIHDRSZ + sizeof(double) * scan->numberOfOrderBys,
+	so->queue = rb_create(SizeOfGISTSearchTreeItem(scan->numberOfOrderBys),
 						  GISTSearchTreeItemComparator,
 						  GISTSearchTreeItemCombiner,
 						  GISTSearchTreeItemAllocator,

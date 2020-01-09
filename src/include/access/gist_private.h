@@ -14,6 +14,7 @@
 #ifndef GIST_PRIVATE_H
 #define GIST_PRIVATE_H
 
+#include "access/genam.h"
 #include "access/gist.h"
 #include "access/itup.h"
 #include "fmgr.h"
@@ -144,10 +145,14 @@ typedef struct GISTSearchTreeItem
 	RBNode		rbnode;			/* this is an RBTree item */
 	GISTSearchItem *head;		/* first chain member */
 	GISTSearchItem *lastHeap;	/* last heap-tuple member, if any */
-	double		distances[1];	/* array with numberOfOrderBys entries */
+
+	/* numberOfOrderBys entries */
+	IndexOrderByDistance distances[FLEXIBLE_ARRAY_MEMBER];
 } GISTSearchTreeItem;
 
-#define GSTIHDRSZ offsetof(GISTSearchTreeItem, distances)
+#define SizeOfGISTSearchTreeItem(n_distances) \
+	(offsetof(GISTSearchTreeItem, distances) + \
+	 sizeof(IndexOrderByDistance) * (n_distances))
 
 /*
  * GISTScanOpaqueData: private state for a scan of a GiST index
@@ -164,7 +169,7 @@ typedef struct GISTScanOpaqueData
 
 	/* pre-allocated workspace arrays */
 	GISTSearchTreeItem *tmpTreeItem;	/* workspace to pass to rb_insert */
-	double	   *distances;		/* output area for gistindex_keytest */
+	IndexOrderByDistance *distances;	/* output area for gistindex_keytest */
 
 	/* In a non-ordered search, returnable heap items are stored here: */
 	GISTSearchHeapItem pageData[BLCKSZ / sizeof(IndexTupleData)];

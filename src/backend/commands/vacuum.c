@@ -1305,6 +1305,7 @@ vacuum_set_xid_limits(Relation rel,
 	int			effective_multixact_freeze_max_age;
 	TransactionId limit;
 	TransactionId safeLimit;
+	MultiXactId oldestMxact;
 	MultiXactId mxactLimit;
 	MultiXactId safeMxactLimit;
 
@@ -1380,7 +1381,8 @@ vacuum_set_xid_limits(Relation rel,
 	Assert(mxid_freezemin >= 0);
 
 	/* compute the cutoff multi, being careful to generate a valid value */
-	mxactLimit = GetOldestMultiXactId() - mxid_freezemin;
+	oldestMxact = GetOldestMultiXactId();
+	mxactLimit = oldestMxact - mxid_freezemin;
 	if (mxactLimit < FirstMultiXactId)
 		mxactLimit = FirstMultiXactId;
 
@@ -1394,7 +1396,11 @@ vacuum_set_xid_limits(Relation rel,
 		ereport(WARNING,
 				(errmsg("oldest multixact is far in the past"),
 				 errhint("Close open transactions with multixacts soon to avoid wraparound problems.")));
-		mxactLimit = safeMxactLimit;
+		/* Use the safe limit, unless an older mxact is still running */
+		if (MultiXactIdPrecedes(oldestMxact, safeMxactLimit))
+			mxactLimit = oldestMxact;
+		else
+			mxactLimit = safeMxactLimit;
 	}
 
 	*multiXactCutoff = mxactLimit;
@@ -2789,7 +2795,7 @@ scan_index(Relation indrel, double num_tuples, bool check_stats, int elevel)
 			  pg_rusage_show(&ru0))));
 
 	/* GPDB_91_MERGE_FIXME: vac_is_partial_index() doesn't work. Do we need this sanity check? */
-#if 0 	
+#if 0
 	/*
 	 * Check for tuple count mismatch.	If the index is partial, then it's OK
 	 * for it to have fewer tuples than the heap; else we got trouble.

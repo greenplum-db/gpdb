@@ -2560,7 +2560,9 @@ ExecBRUpdateTriggers(EState *estate, EPQState *epqstate,
 									   relinfo->ri_TrigFunctions,
 									   relinfo->ri_TrigInstrument,
 									   GetPerTupleMemoryContext(estate));
-		if (oldtuple != newtuple && oldtuple != slottuple)
+		if (oldtuple != newtuple &&
+			oldtuple != slottuple &&
+			oldtuple != trigtuple)
 			heap_freetuple(oldtuple);
 		if (newtuple == NULL)
 		{
