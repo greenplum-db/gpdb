@@ -22,8 +22,9 @@ The disk settings for cloud deployments are the same as on-premise with a few mo
 
 -  Mount options:
    ```
-   rw,noatime,nodev,inode64
+   rw,noatime,nobarrier,nodev,inode64
    ```
+    <br/>**Note:** The `nobarrier` option is not supported on Ubuntu nodes.
 -  Use mq-deadline instead of the deadline scheduler for the R5 series instance type in AWS
 -  For clusters requiring software RAID, use level 0 and chunk size of 256
 -  Use a swap disk per VM (32GB size works well)
