@@ -577,6 +577,8 @@ SELECT current_user = 'temp_reset_user';
 
 -- discard everything
 DISCARD ALL;
+NOTICE:  command without clusterwide effect
+HINT:  Concider alternatives as DEALLOCATE ALL, or DISCARD TEMP if a clusterwide effect is desired.
 -- look again
 SELECT pg_listening_channels();
  pg_listening_channels 

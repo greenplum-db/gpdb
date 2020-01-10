@@ -168,5 +168,7 @@ COMMIT;
 INSERT INTO reset_test VALUES (2);
 SELECT * FROM reset_test;
 
+-- Also DISCARD ALL does not have cluster wide effects. CREATE will fail as the
+-- table will not be dropped in the segments.
 DISCARD ALL;
 CREATE TEMP TABLE reset_test ( data text ) ON COMMIT PRESERVE ROWS;
