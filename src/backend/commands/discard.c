@@ -41,11 +41,11 @@ DiscardCommand(DiscardStmt *stmt, bool isTopLevel)
 			DiscardAll(isTopLevel);
 
 			/*
-			 * DISCARD ALL is not allowed in a transaction block, so no
-			 * two-phase commit required.
+			 * DISCARD ALL is not allowed in a transaction block. It is not
+			 * currently possible to safeguard from side-effecs of errors.
+			 *
+			 * Do not dispatch.
 			 */
-			if (Gp_role == GP_ROLE_DISPATCH)
-				CdbDispatchCommand("DISCARD ALL", 0, NULL);
 			break;
 
 		case DISCARD_PLANS:
@@ -80,6 +80,21 @@ DiscardAll(bool isTopLevel)
 	 * still uncommitted.
 	 */
 	PreventTransactionChain(isTopLevel, "DISCARD ALL");
+
+	/*
+	 * GPDB: It is not possible to safely dispatch DISCARD ALL and safe guard
+	 * from errors. Advice users (very frequently connection pooling
+	 * applications e.g. pgbouncer) to use a lighter and safer version e.g.
+	 * DEALLOCATE ALL, or DISCARD TEMP
+	 *
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		ereport(NOTICE,
+				(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+				 errmsg("command without clusterwide effect"),
+				 errhint("Consider alternatives as DEALLOCATE ALL, or DISCARD TEMP if a clusterwide effect is desired.")));
+	}
 
 	SetPGVariable("session_authorization", NIL, false);
 	ResetAllOptions();
