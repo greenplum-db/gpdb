@@ -35,9 +35,11 @@
 
     <section id="file_system">
       <title>File System</title>
-      <p>XFS is the file system used for Greenplum Database data directories. XFS should be mounted
-        with the following mount options:
-        <codeblock>rw,nodev,noatime,inode64</codeblock></p>
+      <p>XFS is the file system used for Greenplum Database data directories. On RHEL/CentOS
+        systems, mount XFS volumes with the following mount options:
+        <codeblock>rw,nodev,noatime,nobarrier,inode64</codeblock></p>
+      <p>The <codeph>nobarrier</codeph> option is not supported on Ubuntu systems. Use only the
+        options:<codeblock>rw,nodev,noatime,inode64</codeblock></p>
     </section>
     <section id="port_config"><p>See the <xref href="../install_guide/prep_os.html#topic3"
           format="dita" scope="peer">recommended OS parameter settings</xref> in the <cite>Greenplum
