@@ -14,6 +14,9 @@
 #ifndef SESSIONSTATE_H
 #define SESSIONSTATE_H
 
+#include "storage/spin.h"
+#include "utils/timestamp.h"
+
 /* The runaway status of a session based on vmem usage */
 typedef enum RunawayStatus
 {
