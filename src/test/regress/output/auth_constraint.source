@@ -964,7 +964,6 @@ create role abc deny day 1;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 alter role abc superuser;
 SELECT check_auth_time_constraints('abc', '2011-08-29 12:00:00');
-WARNING:  time constraints added on superuser role
  check_auth_time_constraints 
 -----------------------------
  t

@@ -2940,6 +2940,8 @@ check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp)
 	HeapTuple		tuple;
 	authPoint 		now;
 	int				status;
+	bool			isRoleSuperuser;
+	bool			found = false;
 
 	timestamptz_to_point(timestamp, &now);
 
@@ -2961,10 +2963,7 @@ check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp)
 		return STATUS_OK;
 	}
 
-	if (((Form_pg_authid) GETSTRUCT(roleTup))->rolsuper)
-		ereport(WARNING,
-				(errmsg("time constraints added on superuser role")));
-
+	isRoleSuperuser = ((Form_pg_authid) GETSTRUCT(roleTup))->rolsuper;
 	roleId = HeapTupleGetOid(roleTup);
 
 	ReleaseSysCache(roleTup);
@@ -2997,6 +2996,9 @@ check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp)
 		bool			isnull;
 		authInterval	given;
 
+		/* Record that we found constraints regardless if they apply now */
+		found = true;
+
 		constraint_tuple = (Form_pg_auth_time_constraint) GETSTRUCT(tuple);
 		Assert(constraint_tuple->authid == roleId);
 
@@ -3026,6 +3028,11 @@ check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp)
 	/* Clean up. */
 	systable_endscan(scan);
 	heap_close(reltimeconstr, AccessShareLock);
+
+	/* Time constraints shouldn't be added to superuser roles */
+	if (found && isRoleSuperuser)
+		ereport(WARNING,
+				(errmsg("time constraints added on superuser role")));
 
 	/* Re-enable immediate response to SIGTERM/SIGINT/timeout interrupts */
 	ImmediateInterruptOK = true;
