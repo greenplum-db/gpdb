@@ -290,10 +290,10 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
             Library package installed. </li>
         </ul></p>
       <p>The Data Science packages contain a set of Python modules or R functions and data sets
-        related to data science. For information about the packages, see <xref
-          href="../../install_guide/install_python_dsmod.xml" format="dita">Python Data Science
-          Module Package</xref> and <xref href="../../install_guide/install_r_dslib.xml"
-          format="dita">R Data Science Library Package</xref>.</p>
+        related to data science. <ph otherprops="pivotal ">For information about the packages, see
+            <xref href="../install_guide/install_python_dsmod.xml" format="dita">Python Data Science
+            Module Package</xref> and <xref href="../install_guide/install_r_dslib.xml"
+            format="dita">R Data Science Library Package</xref>.</ph></p>
       <p>The Docker image tag represents the PL/Container release version (for example, 2.0.2). For
         example, the full Docker image name for the PL/Container for Python Docker image is similar
         to <codeph>pivotaldata/plc_python_shared:2.0.2</codeph>. This is the name that is referred
