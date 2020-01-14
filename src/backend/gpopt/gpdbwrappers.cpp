@@ -2567,6 +2567,29 @@ gpdb::IsCompositeType
 	return false;
 }
 
+bool
+gpdb::IsTextRelatedType
+	(
+	Oid typid
+	)
+{
+	GP_WRAP_START;
+	{
+		if (TEXTOID == typid
+			|| BPCHAROID == typid
+			|| VARCHAROID == typid
+			|| CASHOID == typid
+			|| UUIDOID == typid
+			|| NAMEOID == typid)
+		{
+			return true;
+		}
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+
 int
 gpdb::GetIntFromValue
 	(
@@ -3133,6 +3156,16 @@ gpdb::IsAbortRequested
 }
 
 uint32
+gpdb::HashChar(Datum d)
+{
+	GP_WRAP_START;
+	{
+		return DatumGetUInt32(DirectFunctionCall1(hashchar, d));
+	}
+	GP_WRAP_END;
+}
+
+uint32
 gpdb::HashBpChar(Datum d)
 {
 	GP_WRAP_START;
@@ -3148,6 +3181,16 @@ gpdb::HashText(Datum d)
 	GP_WRAP_START;
 	{
 		return DatumGetUInt32(DirectFunctionCall1(hashtext, d));
+	}
+	GP_WRAP_END;
+}
+
+uint32
+gpdb::HashName(Datum d)
+{
+	GP_WRAP_START;
+	{
+		return DatumGetUInt32(DirectFunctionCall1(hashname, d));
 	}
 	GP_WRAP_END;
 }

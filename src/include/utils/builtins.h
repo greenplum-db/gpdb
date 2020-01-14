@@ -689,12 +689,14 @@ extern Datum bpchar_larger(PG_FUNCTION_ARGS);
 extern Datum bpchar_smaller(PG_FUNCTION_ARGS);
 extern Datum bpcharlen(PG_FUNCTION_ARGS);
 extern Datum bpcharoctetlen(PG_FUNCTION_ARGS);
+extern Datum hashchar(PG_FUNCTION_ARGS);
 extern Datum hashbpchar(PG_FUNCTION_ARGS);
 extern Datum bpchar_pattern_lt(PG_FUNCTION_ARGS);
 extern Datum bpchar_pattern_le(PG_FUNCTION_ARGS);
 extern Datum bpchar_pattern_gt(PG_FUNCTION_ARGS);
 extern Datum bpchar_pattern_ge(PG_FUNCTION_ARGS);
 extern Datum btbpchar_pattern_cmp(PG_FUNCTION_ARGS);
+extern Datum hashname(PG_FUNCTION_ARGS);
 extern Datum hashtext(PG_FUNCTION_ARGS);
 extern Datum hashvarlena(PG_FUNCTION_ARGS);
 
