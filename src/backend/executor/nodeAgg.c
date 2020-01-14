@@ -959,6 +959,7 @@ advance_combine_function(AggState *aggstate,
 {
 	MemoryContext oldContext;
 	Datum		newVal;
+	MemoryManagerContainer *mem_manager = &(aggstate->mem_manager);
 
 	if (pertrans->transfn.fn_strict)
 	{
@@ -1023,8 +1024,11 @@ advance_combine_function(AggState *aggstate,
 							   pertrans->transtypeByVal,
 							   pertrans->transtypeLen);
 		}
-		if (!pergroupstate->transValueIsNull)
-			pfree(DatumGetPointer(pergroupstate->transValue));
+		if (!pergroupstate->transValueIsNull && mem_manager->free)
+		{
+			(*(mem_manager->free))(mem_manager->manager,DatumGetPointer(pergroupstate->transValue));
+		}
+			//pfree(DatumGetPointer(pergroupstate->transValue));
 	}
 
 	pergroupstate->transValue = newVal;
