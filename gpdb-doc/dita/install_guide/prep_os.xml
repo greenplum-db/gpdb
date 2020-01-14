@@ -160,9 +160,9 @@ SELinuxstatus: disabled</codeblock></li>
             <codeph>sysctl -p</codeph>: </p>
         <codeblock>
 # kernel.shmall = _PHYS_PAGES / 2 # <b>See <xref href="#topic3/shared_memory_pages" format="dita">Shared Memory Pages</xref></b>
-kernel.shmall = 4000000000
+kernel.shmall = 197951838
 # kernel.shmmax = kernel.shmall * PAGE_SIZE 
-kernel.shmmax = 500000000
+kernel.shmmax = 810810728448
 kernel.shmmni = 4096
 vm.overcommit_memory = 2 # <b>See <xref href="#topic3/segment_host_memory" format="dita">Segment Host Memory</xref></b>
 vm.overcommit_ratio = 95 # <b>See <xref href="#topic3/segment_host_memory" format="dita">Segment Host Memory</xref></b>
@@ -209,10 +209,16 @@ kernel.shmmax = ( _PHYS_PAGES / 2) * PAGE_SIZE</codeblock>
         <codeblock>$ echo $(expr $(getconf _PHYS_PAGES) / 2) 
 $ echo $(expr $(getconf _PHYS_PAGES) / 2 \* $(getconf PAGE_SIZE))</codeblock>
         <p>As best practice, we recommend you set the following values in the
-            <codeph>/etc/sysctl.conf</codeph> file:</p>
-        <codeblock>kernel.shmmax = 500000000
-kernel.shmmni = 4096
-kernel.shmall = 4000000000</codeblock>
+            <codeph>/etc/sysctl.conf</codeph> file using calculated values. For example, a host
+          system has 1583 GB of memory installed and returns these values: _PHYS_PAGES = 395903676
+          and PAGE_SIZE = 4096. These would be the <codeph>kernel.shmall</codeph> and
+            <codeph>kernel.shmmax</codeph> values:</p>
+        <codeblock>kernel.shmall = 197951838
+kernel.shmmax = 810810728448</codeblock>
+        <p>If the Greeplum Database master the has a different shared memory configuration than the
+          segment hosts, the _PHYS_PAGES and PAGE_SIZE values might differ, and the
+            <codeph>kernel.shmall</codeph> and <codeph>kernel.shmax</codeph> values on the master
+          host will differ from those on the segment hosts.</p>
         <p id="segment_host_memory"><b>Segment Host Memory</b></p>
         <p>The <codeph>vm.overcommit_memory</codeph> Linux kernel parameter is used by the OS to
           determine how much memory can be allocated to processes. For Greenplum Database, this
