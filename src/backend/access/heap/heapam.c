@@ -114,7 +114,7 @@ static bool heap_acquire_tuplock(Relation relation, ItemPointer tid,
 					 bool *have_tuple_lock);
 static void compute_new_xmax_infomask(TransactionId xmax, uint16 old_infomask,
 						  uint16 old_infomask2, TransactionId add_to_xmax,
-						  LockTupleMode mode, bool is_update,
+						  LockTupleMode mode, bool is_update, bool is_splitupdate,
 						  TransactionId *result_xmax, uint16 *result_infomask,
 						  uint16 *result_infomask2);
 static HTSU_Result heap_lock_updated_tuple(Relation rel, HeapTuple tuple,
@@ -3378,7 +3378,7 @@ xmax_infomask_changed(uint16 new_infomask, uint16 old_infomask)
  */
 HTSU_Result
 heap_delete(Relation relation, ItemPointer tid,
-			CommandId cid, Snapshot crosscheck, bool wait,
+			CommandId cid, Snapshot crosscheck, bool wait, bool is_splitupdate,
 			HeapUpdateFailureData *hufd)
 {
 	HTSU_Result result;
@@ -3560,6 +3560,15 @@ l1:
 			result = HeapTupleUpdated;
 	}
 
+	if (result == HeapTupleUpdated &&
+		HeapTupleHeaderSplitUpdateIsSet(tp.t_data))
+	{
+		elog(ERROR,
+			 "the tuple is deleted by a split update, "
+			 "concurrently update or delete with splitupdate "
+			 "is not allowed in Greenplum.");
+	}
+
 	if (crosscheck != InvalidSnapshot && result == HeapTupleMayBeUpdated)
 	{
 		/* Perform additional check for transaction-snapshot mode RI updates */
@@ -3619,7 +3628,7 @@ l1:
 
 	compute_new_xmax_infomask(HeapTupleHeaderGetRawXmax(tp.t_data),
 							  tp.t_data->t_infomask, tp.t_data->t_infomask2,
-							  xid, LockTupleExclusive, true,
+							  xid, LockTupleExclusive, true, is_splitupdate,
 							  &new_xmax, &new_infomask, &new_infomask2);
 
 	START_CRIT_SECTION();
@@ -3777,6 +3786,7 @@ simple_heap_delete(Relation relation, ItemPointer tid)
 	result = heap_delete(relation, tid,
 						 GetCurrentCommandId(true), InvalidSnapshot,
 						 true /* wait for commit */ ,
+						 false /* cannot be split update */,
 						 &hufd);
 	switch (result)
 	{
@@ -4240,7 +4250,7 @@ l2:
 	compute_new_xmax_infomask(HeapTupleHeaderGetRawXmax(oldtup.t_data),
 							  oldtup.t_data->t_infomask,
 							  oldtup.t_data->t_infomask2,
-							  xid, *lockmode, true,
+							  xid, *lockmode, true, false,
 							  &xmax_old_tuple, &infomask_old_tuple,
 							  &infomask2_old_tuple);
 
@@ -4357,7 +4367,7 @@ l2:
 		compute_new_xmax_infomask(HeapTupleHeaderGetRawXmax(oldtup.t_data),
 								  oldtup.t_data->t_infomask,
 								  oldtup.t_data->t_infomask2,
-								  xid, *lockmode, false,
+								  xid, *lockmode, false, false,
 							  &xmax_lock_old_tuple, &infomask_lock_old_tuple,
 								  &infomask2_lock_old_tuple);
 
@@ -5539,7 +5549,7 @@ failed:
 	 * state if multixact.c elogs.
 	 */
 	compute_new_xmax_infomask(xmax, old_infomask, tuple->t_data->t_infomask2,
-							  GetCurrentTransactionId(), mode, false,
+							  GetCurrentTransactionId(), mode, false, false,
 							  &xid, &new_infomask, &new_infomask2);
 
 	START_CRIT_SECTION();
@@ -5705,7 +5715,7 @@ heap_acquire_tuplock(Relation relation, ItemPointer tid, LockTupleMode mode,
 static void
 compute_new_xmax_infomask(TransactionId xmax, uint16 old_infomask,
 						  uint16 old_infomask2, TransactionId add_to_xmax,
-						  LockTupleMode mode, bool is_update,
+						  LockTupleMode mode, bool is_update, bool is_splitupdate,
 						  TransactionId *result_xmax, uint16 *result_infomask,
 						  uint16 *result_infomask2)
 {
@@ -5718,6 +5728,10 @@ compute_new_xmax_infomask(TransactionId xmax, uint16 old_infomask,
 l5:
 	new_infomask = 0;
 	new_infomask2 = 0;
+
+	if (is_splitupdate)
+		new_infomask2 |= HEAP_IS_SPLIT_UPDATE;
+
 	if (old_infomask & HEAP_XMAX_INVALID)
 	{
 		/*
@@ -6307,7 +6321,7 @@ l4:
 
 		/* compute the new Xmax and infomask values for the tuple ... */
 		compute_new_xmax_infomask(xmax, old_infomask, mytup.t_data->t_infomask2,
-								  xid, mode, false,
+								  xid, mode, false, false,
 								  &new_xmax, &new_infomask, &new_infomask2);
 
 		if (PageIsAllVisible(BufferGetPage(buf)) &&

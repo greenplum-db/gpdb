@@ -1,0 +1,26 @@
+create table t_concurrent_splitupdate_with_norm_upddel (a int, b int) distributed by (a);
+CREATE
+
+insert into t_concurrent_splitupdate_with_norm_upddel values (1, 1);
+INSERT 1
+
+1: begin;
+BEGIN
+1: update t_concurrent_splitupdate_with_norm_upddel set a = 2 where b = 1;
+UPDATE 1
+
+2: begin;
+BEGIN
+2&: delete from t_concurrent_splitupdate_with_norm_upddel;  <waiting ...>
+
+1: end;
+END
+2<:  <... completed>
+ERROR:  the tuple is deleted by a split update, concurrently update or delete with splitupdate is not allowed in Greenplum. (heapam.c:3569)  (seg1 127.0.1.1:7003 pid=73840) (heapam.c:3569)
+
+1q: ... <quitting>
+2:abort;
+ABORT
+2q: ... <quitting>
+
+

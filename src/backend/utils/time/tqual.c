@@ -1158,9 +1158,14 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 		}
 		else
 		{
+			bool distributedSnapshotIgnore = false;
+
+			if (!HeapTupleHeaderSplitUpdateIsSet(tuple))
+				distributedSnapshotIgnore = ((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0);
+
 			snapshotCheckResult =
 				XidInMVCCSnapshot(HeapTupleHeaderGetRawXmin(tuple), snapshot,
-								  ((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
+								  distributedSnapshotIgnore,
 								  &setDistributedSnapshotIgnore);
 			if (setDistributedSnapshotIgnore)
 			{
@@ -1186,9 +1191,14 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 		/* xmin is committed, but maybe not according to our snapshot */
 		if (!HeapTupleHeaderXminFrozen(tuple))
 		{
+			bool distributedSnapshotIgnore = false;
+
+			if (!HeapTupleHeaderSplitUpdateIsSet(tuple))
+				distributedSnapshotIgnore = ((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0);
+
 			snapshotCheckResult =
 				XidInMVCCSnapshot(HeapTupleHeaderGetRawXmin(tuple), snapshot,
-								  ((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
+								  distributedSnapshotIgnore,
 								  &setDistributedSnapshotIgnore);
 			if (setDistributedSnapshotIgnore)
 			{
@@ -1228,9 +1238,14 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 				return false;	/* deleted before scan started */
 		}
 
+		bool distributedSnapshotIgnore = false;
+
+		if (!HeapTupleHeaderSplitUpdateIsSet(tuple))
+			distributedSnapshotIgnore = ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0);
+
 		snapshotCheckResult = XidInMVCCSnapshot(xmax, snapshot,
-									   ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-									   &setDistributedSnapshotIgnore);
+												distributedSnapshotIgnore,
+												&setDistributedSnapshotIgnore);
 		if (setDistributedSnapshotIgnore)
 		{
 			tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
@@ -1254,9 +1269,14 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 				return false;	/* deleted before scan started */
 		}
 
+		bool distributedSnapshotIgnore = false;
+
+		if (!HeapTupleHeaderSplitUpdateIsSet(tuple))
+			distributedSnapshotIgnore = ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0);
+
 		snapshotCheckResult = XidInMVCCSnapshot(HeapTupleHeaderGetRawXmax(tuple), snapshot,
-									   ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-									   &setDistributedSnapshotIgnore);
+												distributedSnapshotIgnore,
+												&setDistributedSnapshotIgnore);
 		if (setDistributedSnapshotIgnore)
 		{
 			tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
@@ -1280,9 +1300,14 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 	else
 	{
 		/* xmax is committed, but maybe not according to our snapshot */
+		bool distributedSnapshotIgnore = false;
+
+		if (!HeapTupleHeaderSplitUpdateIsSet(tuple))
+			distributedSnapshotIgnore = ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0);
+
 		snapshotCheckResult =
 			XidInMVCCSnapshot(HeapTupleHeaderGetRawXmax(tuple), snapshot,
-							  ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
+							  distributedSnapshotIgnore,
 							  &setDistributedSnapshotIgnore);
 		if (setDistributedSnapshotIgnore)
 		{

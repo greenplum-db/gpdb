@@ -165,7 +165,7 @@ extern Oid heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 extern void heap_multi_insert(Relation relation, HeapTuple *tuples, int ntuples,
 				  CommandId cid, int options, BulkInsertState bistate, TransactionId xid);
 extern HTSU_Result heap_delete(Relation relation, ItemPointer tid,
-			CommandId cid, Snapshot crosscheck, bool wait,
+							   CommandId cid, Snapshot crosscheck, bool wait, bool is_splitupdate,
 			HeapUpdateFailureData *hufd);
 extern void heap_finish_speculative(Relation relation, HeapTuple tuple);
 extern void heap_abort_speculative(Relation relation, HeapTuple tuple);

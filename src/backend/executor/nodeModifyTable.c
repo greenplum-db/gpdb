@@ -2885,6 +2885,7 @@ table_delete(ResultRelInfo *resultRelInfo, EState *estate, bool isUpdate,
 							 cid,
 							 crosscheck_snapshot,
 							 wait,
+							 isUpdate,
 							 hufd);
 	}
 	else if (RelationIsAoRows(resultRelationDesc))

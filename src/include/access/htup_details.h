@@ -277,6 +277,15 @@ struct HeapTupleHeaderData
 #define HEAP2_XACT_MASK			0xE000	/* visibility-related bits */
 
 /*
+ * The two bits HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE and
+ * HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE is introduced by Greenplum.
+ * They have their own usage. Here we combine them to use the two
+ * bits as a flag for the tuple is deleted by a splitupdate if they are
+ * both set.
+ */
+#define HEAP_IS_SPLIT_UPDATE (HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE|HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE)
+
+/*
  * HEAP_TUPLE_HAS_MATCH is a temporary flag used during hash joins.  It is
  * only used in tuples that are in the hash table, and those don't need
  * any visibility information, so we can overlay it on a visibility flag
@@ -355,6 +364,12 @@ struct HeapTupleHeaderData
 ( \
 	AssertMacro(!HeapTupleHeaderXminInvalid(tup)), \
 	((tup)->t_infomask |= HEAP_XMIN_FROZEN) \
+)
+
+#define HeapTupleHeaderSplitUpdateIsSet(tup) \
+( \
+ (((tup)->t_infomask2) & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) && \
+ (((tup)->t_infomask2) & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE)	   \
 )
 
 /*
