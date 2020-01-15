@@ -615,7 +615,10 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>DISCARD</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"/>
+              <entry colname="col3">
+                <p><b>Limitation:</b>
+                  <codeph>DISCARD ALL</codeph> is not supported.</p>
+              </entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DO</codeph></entry>
