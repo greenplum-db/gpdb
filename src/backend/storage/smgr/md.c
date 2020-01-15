@@ -459,9 +459,17 @@ mdunlink(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo, char relstor
 	 * the "InvalidForkNumber = all forks" convention.
 	 *
 	 * On the mirror, AO fsync requests are always forwarded.
+	 *
+	 * On crash recovery clean out any pending fsync requests for AO. This
+	 * acts as defensive code to avoid mdsync() failures for AO in-case of any
+	 * bugs the fsync request was queued. Also, file truncate WAL record
+	 * (emitted by TRUNCATE command when issued in same transaction as create
+	 * table) can't differentiate between heap or ao during replay, always
+	 * registers fsync request. Hence need to clean out pending AO fsync
+	 * requests before unlink.
 	 */
 	if (!RelFileNodeBackendIsTemp(rnode) &&
-		(IsStandbyMode() ||
+		(IsStandbyMode() || InRecovery ||
 		 !relstorage_is_ao(relstorage)))
 		ForgetRelationFsyncRequests(rnode.node, forkNum);
 
