@@ -51,7 +51,7 @@
       <dependency org="junit"                 name="junit"                 rev="4.10"   conf="ut->*"/>
 
       <dependency org="org.apache.avro" name="avro" rev="1.7.7" conf="ut->*"/>
-      <dependency org="org.apache.avro" name="avro-mapred" rev="1.7.7" conf="ut->*"/>
+      <dependency org="org.apache.avro" name="avro-mapred" rev="1.7.7" conf="ut->*" transitive="false"/>
 
       <dependency org="org.apache.parquet" name="parquet-column"        rev="1.7.0"               conf="ut->*"/>
       <dependency org="org.apache.parquet" name="parquet-common"        rev="1.7.0"               conf="ut->*"/>

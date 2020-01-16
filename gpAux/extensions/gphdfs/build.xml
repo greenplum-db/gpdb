@@ -21,7 +21,7 @@
   <loadproperties srcfile="${basedir}/ivy/libraries.properties" />
   <property name="build.ivy.lib.dir" value="${build.dir}/lib" />
   <property name="ivy.artifact.retrieve.pattern" value="[artifact]-[revision](-[classifier]).[ext]" />
-  <property name="ivy.install.version" value="2.2.0" />
+  <property name="ivy.install.version" value="2.5.0" />
   <condition property="ivy.home" value="${env.IVY_HOME}">
     <isset property="env.IVY_HOME" />
   </condition>
@@ -90,7 +90,7 @@
 
   <target name="download-ivy" unless="offline">
     <mkdir dir="${ivy.jar.dir}" />
-    <get src="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar"
+    <get src="https://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar"
          dest="${ivy.jar.file}" usetimestamp="true" />
   </target>
 
