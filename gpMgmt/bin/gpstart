@@ -265,8 +265,11 @@ class GpStart:
         else:
             controldata = PgControlData("Latest checkpoint's TimeLineID", data_dir_path, REMOTE, remoteHost)
 
-        controldata.run(validateAfter=True)
-        return int(controldata.get_value("Latest checkpoint's TimeLineID"))
+        try:
+            controldata.run(validateAfter=True)
+            return int(controldata.get_value("Latest checkpoint's TimeLineID"))
+        except: # Can't access the standby, so return a value that won't lead to standby promotion
+            return 0
 
     def _check_standby_activated(self):
         logger.debug("Checking if standby has been activated...")

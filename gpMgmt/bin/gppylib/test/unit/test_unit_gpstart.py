@@ -9,6 +9,8 @@ from gparray import GpDB, GpArray
 from gppylib.operations.startSegments import StartSegmentsResult
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 from gppylib.commands import gp
+from gppylib.commands.base import ExecutionError
+from gppylib.commands.pg import PgControlData
 
 
 class GpStart(GpTestCase):
@@ -56,7 +58,6 @@ class GpStart(GpTestCase):
             patch("gpstart.gp.MasterStart.local"),
             patch("gpstart.pg.DbStatus.local"),
             patch("gpstart.TableLogger"),
-            patch('gpstart.PgControlData'),
         ])
 
         self.mockFilespaceConsistency = self.get_mock_from_apply_patch("CheckFilespaceConsistency")
@@ -199,6 +200,24 @@ class GpStart(GpTestCase):
         # The master and standby should not be accounted for in these lists.
         self.assertItemsEqual(up, [primary1, mirror0])
         self.assertItemsEqual(down, [primary0, mirror1])
+
+    @patch("gppylib.commands.pg.PgControlData.run")
+    @patch("gppylib.commands.pg.PgControlData.get_value", return_value="2")
+    def test_fetch_tli_when_standby_is_accessible(self, mock1, mock2):
+        parser = self.subject.GpStart.createParser()
+        options, args = parser.parse_args()
+        gpstart = self.subject.GpStart.createProgram(options, args)
+
+        self.assertEqual(gpstart.fetch_tli("", "foo"), 2)
+
+    @patch("gppylib.commands.pg.PgControlData.run")
+    @patch("gppylib.commands.pg.PgControlData.get_value", side_effect=ExecutionError("foobar", None))
+    def test_fetch_tli_when_standby_is_not_accessible(self, mock1, mock2):
+        parser = self.subject.GpStart.createParser()
+        options, args = parser.parse_args()
+        gpstart = self.subject.GpStart.createProgram(options, args)
+
+        self.assertEqual(gpstart.fetch_tli("", "foo"), 0)
 
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = GpDB.initFromString(
