@@ -455,7 +455,8 @@ db = ...
                   <codeph>server_reset_query</codeph> should be empty, as clients should not use any
                 session features. If clients do use session features, they will be broken because
                 transaction pooling does not guarantee that the next query will run on the same
-                connection.</p><p>Default: <codeph>DISCARD ALL;</codeph></p></pd>
+                connection.</p><p>Default: <codeph>DISCARD ALL;</codeph> (Not supported by Greenplum
+                Database.)</p></pd>
           </plentry>
           <plentry>
             <pt>server_reset_query_always</pt>

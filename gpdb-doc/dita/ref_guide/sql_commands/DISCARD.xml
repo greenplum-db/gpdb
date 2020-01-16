@@ -13,8 +13,8 @@
       <title>Description</title>
       <p><codeph>DISCARD</codeph> releases internal resources associated with a database session.
         This command is useful for partially or fully resetting the session's state. There are
-        several subcommands to release different types of resources; the <codeph>DISCARD
-          ALL</codeph> variant subsumes all the others, and also resets additional state. </p>
+        several subcommands to release different types of resources. <codeph>DISCARD ALL</codeph> is
+        not supported by Greenplum Database. </p>
     </section>
     <section id="section4">
       <title>Parameters</title>
