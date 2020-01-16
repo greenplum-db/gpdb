@@ -232,3 +232,61 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql volatile;
 SELECT trigger_unique();
+
+-- test CTAS select * from f()
+
+set optimizer=off;
+
+CREATE OR REPLACE FUNCTION get_country()
+ RETURNS TABLE (
+  country_id integer,
+  country character varying(50)
+  )
+
+AS $$
+  begin
+  drop table if exists public.country;
+  create table public.country( country_id integer,
+    country character varying(50));
+  insert into public.country
+  (country_id, country)
+  select 111,'INDIA'
+  union all select 222,'CANADA'
+  union all select 333,'USA' ;
+  RETURN QUERY
+  SELECT
+  c.country_id,
+  c.country
+  FROM
+  public.country c;
+  end; $$
+LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
+
+CREATE TEMP TABLE t1 AS SELECT * FROM get_country();
+INSERT INTO t1 SELECT * FROM get_country();
+INSERT INTO t1 SELECT * FROM get_country();
+SELECT count(*) FROM t1;
+
+CREATE TABLE ti (id int, val int);
+INSERT INTO ti SELECT k, k+1 FROM generate_series(1,100000) AS k;
+
+CREATE OR REPLACE FUNCTION get_id()
+ RETURNS TABLE (
+  id integer,
+  val integer
+  )
+AS $$
+  begin
+  RETURN QUERY
+  SELECT * FROM ti;
+  END; $$
+LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
+
+CREATE TEMP TABLE t2 AS SELECT * FROM get_id();
+SELECT count(*) FROM t2;
+
+DROP FUNCTION get_country();
+DROP FUNCTION get_id();
+DROP TABLE ti;
+
+reset optimizer;

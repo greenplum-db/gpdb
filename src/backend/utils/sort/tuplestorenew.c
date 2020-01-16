@@ -744,9 +744,10 @@ ntuplestore_create_common(int64 maxBytes, char *operation_name)
  *
  *   filename must be a unique name that identifies the share.
  *   filename does not include the pgsql_tmp/ prefix
+ *   useWorkFile specify whether to use workfile for tuplestore
  */
 NTupleStore *
-ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWriter)
+ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWriter, bool useWorkFile)
 {
 	NTupleStore* store = NULL;
 	char filenamelob[MAXPGPATH];
@@ -758,7 +759,9 @@ ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWri
 		store = ntuplestore_create_common(maxBytes, "SharedTupleStore");
 		store->rwflag = NTS_IS_WRITER;
 		store->lobbytes = 0;
-		store->work_set = workfile_mgr_create_set(store->operation_name, filename);
+		store->work_set = NULL;
+		if (useWorkFile)
+			store->work_set = workfile_mgr_create_set(store->operation_name, filename);
 		store->pfile = BufFileCreateNamedTemp(filename,
 											  false /* interXact */,
 											  store->work_set);
@@ -1392,6 +1395,16 @@ ntuplestore_create_spill_files(NTupleStore *nts)
 
 	if (nts->instrument)
 		nts->instrument->workfileCreated = true;
+}
+
+/*
+ * Specify whether to delete the file when close it explicitly
+ */
+void
+ntuplestore_delete_file_on_close(NTupleStore *ts, bool isDelete)
+{	
+	BufFileDeleteFileOnClose(ts->pfile, isDelete);
+	BufFileDeleteFileOnClose(ts->plobfile, isDelete);
 }
 
 /* EOF */

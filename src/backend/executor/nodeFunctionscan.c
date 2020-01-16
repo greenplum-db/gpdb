@@ -24,12 +24,15 @@
  */
 #include "postgres.h"
 
+#include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "executor/nodeFunctionscan.h"
 #include "funcapi.h"
 #include "nodes/nodeFuncs.h"
 #include "utils/builtins.h"
+#include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/tuplestorenew.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
@@ -82,6 +85,50 @@ FunctionNext_guts(FunctionScanState *node)
 	estate = node->ss.ps.state;
 	direction = estate->es_direction;
 	scanslot = node->ss.ss_ScanTupleSlot;
+
+	/*
+	 * FunctionNext read tuple from tuplestore instead
+	 * of executing the real function.
+	 * Tuplestore is filled by the FunctionScan's initplan.
+	 */
+	if(node->param && Gp_role != GP_ROLE_DISPATCH)
+	{
+		bool gotOK = false;
+		bool forward = true;
+
+		/*
+		 * setup tuplestore reader for the firstly time
+		 */
+		if (!node->ts_state->matstore)
+		{
+
+			char rwfile_prefix[100];
+			function_scan_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix));
+
+			node->ts_state->matstore = ntuplestore_create_readerwriter(rwfile_prefix, 0, false, false);
+			/*
+			 * delete file when close tuplestore reader
+			 * tuplestore writer is created in initplan, so it needs to keep
+			 * the file even if initplan ended. 
+			 * we should let the reader to delete it when reader's job finished.
+			 */
+			ntuplestore_delete_file_on_close(node->ts_state->matstore, true);
+			
+			node->ts_pos = (NTupleStoreAccessor *) ntuplestore_create_accessor(node->ts_state->matstore, false);
+			ntuplestore_acc_seek_bof((NTupleStoreAccessor *) node->ts_pos);
+		}
+
+		ntuplestore_acc_advance((NTupleStoreAccessor *) node->ts_pos, forward ? 1 : -1);
+		gotOK = ntuplestore_acc_current_tupleslot((NTupleStoreAccessor *) node->ts_pos, scanslot);
+
+		if(!gotOK)
+		{
+			ntuplestore_destroy_accessor((NTupleStoreAccessor *) node->ts_pos);
+			ntuplestore_destroy(node->ts_state->matstore);
+			return NULL;
+		}
+		return scanslot;
+	}
 
 	if (node->simple)
 	{
@@ -368,7 +415,9 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	scanstate->ss.ps.plan = (Plan *) node;
 	scanstate->ss.ps.state = estate;
 	scanstate->eflags = eflags;
-
+	scanstate->param = node->param;
+	scanstate->ts_state = palloc0(sizeof(GenericTupStore));
+	scanstate->ts_pos = NULL;
 	/*
 	 * are we adding an ordinality column?
 	 */
@@ -758,4 +807,11 @@ void
 ExecSquelchFunctionScan(FunctionScanState *node)
 {
 	ExecEagerFreeFunctionScan(node);
+}
+
+void
+function_scan_create_bufname_prefix(char* p, int size)
+{
+	snprintf(p, size, "FUNCTION_SCAN_%d",
+			 gp_session_id);
 }

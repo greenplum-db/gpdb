@@ -24,6 +24,8 @@
 #include "access/stratnum.h"
 #include "access/sysattr.h"
 #include "catalog/pg_class.h"
+#include "catalog/pg_exttable.h"
+#include "catalog/pg_proc.h"
 #include "foreign/fdwapi.h"
 #include "miscadmin.h"
 #include "nodes/extensible.h"
@@ -49,6 +51,7 @@
 #include "parser/parse_clause.h"
 #include "parser/parsetree.h"
 #include "parser/parse_oper.h"	/* ordering_oper_opid */
+#include "rewrite/rewriteManip.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/uri.h"
@@ -268,6 +271,7 @@ static TargetEntry *find_junk_tle(List *targetList, const char *junkAttrName);
 static Motion *cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 								 CdbMotionPath *path,
 								 Plan *subplan);
+static void append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan * plan);
 
 /*
  * create_plan
@@ -656,6 +660,7 @@ create_scan_plan(PlannerInfo *root, Path *best_path, int flags)
 													 best_path,
 													 tlist,
 													 scan_clauses);
+			append_initplan_for_function_scan(root, best_path, plan);
 			break;
 
 		case T_TableFunctionScan:
@@ -1975,7 +1980,7 @@ create_minmaxagg_plan(PlannerInfo *root, MinMaxAggPath *best_path)
 		plan->parallel_aware = false;
 
 		/* Convert the plan into an InitPlan in the outer query. */
-		SS_make_initplan_from_plan(root, subroot, plan, root->curSlice, mminfo->param);
+		SS_make_initplan_from_plan(root, subroot, plan, root->curSlice, mminfo->param, false);
 	}
 
 	/* Generate the output plan --- basically just a Result */
@@ -7578,3 +7583,95 @@ cdbpathtoplan_create_motion_plan(PlannerInfo *root,
 
 	return motion;
 }								/* cdbpathtoplan_create_motion_plan */
+
+/*
+ * append_initplan_for_function_scan
+ *
+ * CDB: gpdb specific function to append an initplan node for function scan.
+ * Note that for function including DDLs, they cannot run on QEs
+ * But for query like 'create table t as select * from f();' QD needs to do
+ * the CTAS work and function f() will be run on EntryDB, which is also a QE.
+ * To support this kind of query in GPDB, we run the function scan on initplan
+ * firstly, and store the results into tuplestore, later the function scan
+ * on EnrtyDB could fetch tuple from tuplestore instead of executing the real
+ * fucntion.
+ */
+static void
+append_initplan_for_function_scan(PlannerInfo *root, Path *best_path, Plan *plan)
+{
+	FunctionScan *fsplan = (FunctionScan *)plan;
+	char	exec_location;
+	RangeTblFunction	*rtfunc;
+	FuncExpr	*funcexpr;
+	
+	/* ORCA doesn't support this feature */
+	if (optimizer)
+		return;
+
+	/* Currently we limit function number is one */
+	if (list_length(fsplan->functions) != 1)
+		return;
+
+	rtfunc = (RangeTblFunction *) linitial(fsplan->functions);
+	
+	if (!IsA(rtfunc->funcexpr, FuncExpr))
+		return;
+
+	/* function must be specified EXECUTE ON INITPLAN */
+	funcexpr = (FuncExpr *) rtfunc->funcexpr;
+	exec_location = func_exec_location(funcexpr->funcid);
+	if (exec_location != PROEXECLOCATION_INITPLAN)
+		return;
+
+	/* 
+	 * create a copied FunctionScan plan as a initplan
+	 * Initplan is responsible to run the real function
+	 * and store the result into tuplestore.
+	 * Original FunctionScan just read the tuple store
+	 * (indicated by Param) and return the result to upper plan node.
+	 */
+	Param	   *prm;
+	prm = makeNode(Param);
+	prm->paramkind = PARAM_EXEC;
+	prm->paramid = root->glob->nParamExec++;
+	prm->paramtype = 0;
+	prm->paramtypmod = 0;
+	prm->paramcollid = 0;
+	prm->location = -1;
+	fsplan->param = prm;
+
+	/*
+	 * We are going to construct what is effectively a sub-SELECT query, so
+	 * clone the current query level's state and adjust it to make it look
+	 * like a subquery.  Any outer references will now be one level higher
+	 * than before.  (This means that when we are done, there will be no Vars
+	 * of level 1, which is why the subquery can become an initplan.)
+	 */
+	PlannerInfo *subroot;
+	Query	   *parse;
+	subroot = (PlannerInfo *) palloc(sizeof(PlannerInfo));
+	memcpy(subroot, root, sizeof(PlannerInfo));
+	subroot->query_level++;
+	subroot->parent_root = root;
+	/* reset subplan-related stuff */
+	subroot->plan_params = NIL;
+	subroot->outer_params = NULL;
+	subroot->init_plans = NIL;
+	subroot->cte_plan_ids = NIL;
+
+	subroot->parse = parse = (Query *) copyObject(root->parse);
+	IncrementVarSublevelsUp((Node *) parse, 1, 1);
+
+	/* append_rel_list might contain outer Vars? */
+	subroot->append_rel_list = (List *) copyObject(root->append_rel_list);
+	IncrementVarSublevelsUp((Node *) subroot->append_rel_list, 1, 1);
+
+	/* create initplan for this FunctionScan plan */
+	FunctionScan* initplan =(FunctionScan*) copyObject(plan);
+	SS_make_initplan_from_plan(root, subroot, (Plan *)initplan, root->curSlice, prm, true);
+	SS_attach_initplans(root, plan);
+	root->init_plans = NIL;
+
+	/* Decorate the top node of the plan with a Flow node. */
+	initplan->scan.plan.flow = cdbpathtoplan_create_flow(root, best_path->locus);
+}

@@ -2826,6 +2826,7 @@ _readFunctionScan(void)
 
 	READ_NODE_FIELD(functions);
 	READ_BOOL_FIELD(funcordinality);
+	READ_NODE_FIELD(param);
 
 	READ_DONE();
 }

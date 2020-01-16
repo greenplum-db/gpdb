@@ -60,5 +60,6 @@ extern void BufFileResume(BufFile *buffile);
 
 extern bool gp_workfile_compression;
 extern void BufFilePledgeSequential(BufFile *buffile);
+extern void BufFileDeleteFileOnClose(BufFile *file, bool isDelete);
 
 #endif   /* BUFFILE_H */

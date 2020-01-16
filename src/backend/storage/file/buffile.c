@@ -331,6 +331,18 @@ BufFileClose(BufFile *file)
 }
 
 /*
+ * BufFileDeleteFileOnClose
+ *
+ * Specify whether to delete the file
+ * when close it explicitly
+ */
+void 
+BufFileDeleteFileOnClose(BufFile *file, bool isDelete)
+{
+	FileDeleteOnClose(file->file, isDelete);
+}
+
+/*
  * BufFileLoadBuffer
  *
  * Load some data into buffer, if possible, starting from curOffset.

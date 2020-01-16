@@ -3543,3 +3543,16 @@ FileSetIsWorkfile(File file)
 {
 	VfdCache[file].fdstate |= FD_WORKFILE;
 }
+
+/*
+ * Specify whether to delete the file
+ * when close it explicitly
+ */
+void
+FileDeleteOnClose(File file, bool isDelete)
+{
+	if (isDelete)
+		VfdCache[file].fdstate |= FD_TEMPORARY;
+	else
+		VfdCache[file].fdstate &= ~FD_TEMPORARY;
+}

@@ -146,5 +146,6 @@ extern char *GetTempFilePath(const char *filename, bool createdir);
 extern const char *FileGetFilename(File file);
 
 extern void FileSetIsWorkfile(File file);
+extern void FileDeleteOnClose(File file, bool isDelete);
 
 #endif   /* FD_H */

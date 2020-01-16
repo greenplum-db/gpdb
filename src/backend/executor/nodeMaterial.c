@@ -96,7 +96,7 @@ ExecMaterial(MaterialState *node)
 			shareinput_create_bufname_prefix(rwfile_prefix, sizeof(rwfile_prefix), ma->share_id);
 			elog(DEBUG1, "Material node creates shareinput rwfile %s", rwfile_prefix);
 
-			ts = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)node) * 1024, true);
+			ts = ntuplestore_create_readerwriter(rwfile_prefix, PlanStateOperatorMemKB((PlanState *)node) * 1024, true, true);
 			tsa = ntuplestore_create_accessor(ts, true);
 		}
 		else
