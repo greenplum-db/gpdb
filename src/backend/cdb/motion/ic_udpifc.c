@@ -5446,7 +5446,7 @@ SendChunkUDPIFC(ChunkTransportState *transportStates,
 	{
 		int			timeout = (doCheckExpiration ? 0 : computeTimeout(conn, retry));
 
-		if (QueryFinishPending)
+		if (transportStates->sliceId == transportStates->sliceTable->slices->length-1 && QueryFinishPending)
 		{
 			conn->stillActive = false;
 			return false;
@@ -5598,7 +5598,7 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 				retry = 0;
 				ic_control_info.lastPacketSendTime = 0;
 
-				if (QueryFinishPending)
+				if (transportStates->sliceId == transportStates->sliceTable->slices->length-1 && QueryFinishPending)
 				{
 					conn->stillActive = false;
 					continue;
