@@ -103,7 +103,7 @@ BuildHttpHeaders(CHURL_HEADERS headers,
 	AddOptionsToHttpHeader(headers, options->copy_options);
 
 	/* filters */
-	if (filter_string != NULL)
+	if (filter_string && strcmp(filter_string, "") != 0)
 	{
 		churl_headers_append(headers, "X-GP-FILTER", filter_string);
 		churl_headers_append(headers, "X-GP-HAS-FILTER", "1");

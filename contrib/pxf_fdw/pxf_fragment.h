@@ -75,8 +75,34 @@ extern List *GetFragmentList(PxfOptions *options,
 							 List *retrieved_attrs);
 
 /*
+ * Takes a list of fragments and determines which ones need to be processed
+ * by the given segment based on MOD function. Removes the elements which will
+ * not be processed from the list and frees up their memory.
+ * Returns the resulting list, or NIL if no elements satisfy the condition.
+ */
+extern List *FilterFragmentsForSegment(List *list);
+
+/*
+ * Serializes a List of FragmentData such that it can be transmitted
+ * via the interconnect, and the list can be passed from master to
+ * segments
+ */
+extern List * SerializeFragmentList(List *fragments);
+
+/*
+ * Deserializes a List of FragmentData received from the interconnect
+ */
+extern List * DeserializeFragmentList(List *serializedFragmentList);
+
+/*
+ * Assign PXF Host for each Data Fragment
+ * Will use the same host as the existing segment as the PXF host.
+ */
+extern void AssignPxfLocationToFragments(PxfOptions *options, List *fragments);
+
+/*
  * Frees the given fragment
  */
-extern void free_fragment(FragmentData *data);
+extern void FreeFragment(FragmentData *data);
 
 #endif							/* GPDB_PXFFRAGMENT_H */

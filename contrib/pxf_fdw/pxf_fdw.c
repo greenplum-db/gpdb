@@ -13,12 +13,7 @@
 #include "pxf_filter.h"
 #include "pxf_fragment.h"
 
-#include "access/sysattr.h"
 #include "access/reloptions.h"
-#include "catalog/pg_foreign_server.h"
-#include "catalog/pg_foreign_table.h"
-#include "catalog/pg_user_mapping.h"
-#include "catalog/pg_type.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
@@ -27,7 +22,6 @@
 #include "foreign/fdwapi.h"
 #include "foreign/foreign.h"
 #include "nodes/pg_list.h"
-#include "nodes/makefuncs.h"
 #include "optimizer/paths.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
@@ -176,7 +170,9 @@ enum FdwScanPrivateIndex
 	/* WHERE clauses to be sent to PXF (as a String node) */
 	FdwScanPrivateWhereClauses,
 	/* Integer list of attribute numbers retrieved by the SELECT */
-	FdwScanPrivateRetrievedAttrs
+	FdwScanPrivateRetrievedAttrs,
+	/* List of fragments to be processed by the segments */
+	FdwScanPrivateFragmentList
 };
 
 /*
@@ -319,7 +315,6 @@ pxfGetForeignPlan(PlannerInfo *root,
 	 * Items in the list must match enum FdwScanPrivateIndex, above.
 	 */
 
-
 	/* here we serialize the WHERE clauses */
 	char	   *where_clauses_str = SerializePxfFilterQuals(fpinfo->remote_conds);
 
@@ -372,11 +367,61 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
 		return;
 
-	List	   *quals = node->ss.ps.qual;
+	List* serializedFragmentList;
+	List*	 fragments;
+	ForeignTable *rel = GetForeignTable(RelationGetRelid(node->ss.ss_currentRelation));
+
+	List	   *quals             = node->ss.ps.qual;
 	Oid			foreigntableid = RelationGetRelid(node->ss.ss_currentRelation);
-	PxfFdwScanState *pxfsstate = NULL;
-	Relation	relation = node->ss.ss_currentRelation;
-	ForeignScan *foreignScan = (ForeignScan *) node->ss.ps.plan;
+	PxfFdwScanState *pxfsstate    = NULL;
+	Relation	relation          = node->ss.ss_currentRelation;
+	ForeignScan *foreignScan      = (ForeignScan *) node->ss.ps.plan;
+	PxfOptions *options           = PxfGetOptions(foreigntableid);
+
+	/* retrieve fdw-private information from pxfGetForeignPlan() */
+	char *filter_str              = strVal(list_nth(foreignScan->fdw_private, FdwScanPrivateWhereClauses));
+	List *retrieved_attrs = (List *) list_nth(foreignScan->fdw_private, FdwScanPrivateRetrievedAttrs);
+
+	/*
+	 * When running queries on all segments, master makes the fragmenter call
+	 * and segments receive a List of FragmentData from master. When the query
+	 * only runs on master or any, the fragment list is retrieved by the
+	 * executing process.
+	 */
+	if (rel->exec_location != FTEXECLOCATION_ALL_SEGMENTS || Gp_role == GP_ROLE_DISPATCH)
+	{
+		fragments = GetFragmentList(options,
+									relation,
+									filter_str,
+									retrieved_attrs);
+
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			/*
+			 * serialize fragment list and pass it down to segments
+			 * by appending it to foreignScan->fdw_private
+			 */
+			serializedFragmentList = SerializeFragmentList(fragments);
+			foreignScan->fdw_private = lappend(foreignScan->fdw_private, serializedFragmentList);
+
+			/* master does not process any fragments */
+			return;
+		}
+	}
+	else
+	{
+		serializedFragmentList = (List *) list_nth(foreignScan->fdw_private, FdwScanPrivateFragmentList);
+		fragments = DeserializeFragmentList(serializedFragmentList);
+
+		/*
+		 * Call the work allocation algorithm when execution happens on all
+		 * segments
+		 */
+		fragments = FilterFragmentsForSegment(fragments);
+	}
+
+	/* Assign PXF location for the allocated fragments */
+	AssignPxfLocationToFragments(options, fragments);
 
 	/*
 	 * Save state in node->fdw_state.  We must save enough information to call
@@ -385,18 +430,12 @@ pxfBeginForeignScan(ForeignScanState *node, int eflags)
 	pxfsstate = (PxfFdwScanState *) palloc(sizeof(PxfFdwScanState));
 	initStringInfo(&pxfsstate->uri);
 
-	pxfsstate->options = PxfGetOptions(foreigntableid);
-
-	/* retrieve fdw-private stuff from pxfGetForeignPlan() */
-	pxfsstate->filter_str = strVal(list_nth(foreignScan->fdw_private, FdwScanPrivateWhereClauses));
-	pxfsstate->retrieved_attrs = (List *) list_nth(foreignScan->fdw_private, FdwScanPrivateRetrievedAttrs);
-
+	pxfsstate->filter_str = filter_str;
+	pxfsstate->fragments = fragments;
+	pxfsstate->options = options;
 	pxfsstate->quals = quals;
 	pxfsstate->relation = relation;
-	pxfsstate->fragments = GetFragmentList(pxfsstate->options,
-										   pxfsstate->relation,
-										   pxfsstate->filter_str,
-										   pxfsstate->retrieved_attrs);
+	pxfsstate->retrieved_attrs = retrieved_attrs;
 
 	InitCopyState(pxfsstate);
 	node->fdw_state = (void *) pxfsstate;
@@ -421,7 +460,6 @@ pxfIterateForeignScan(ForeignScanState *node)
 	TupleTableSlot *slot = node->ss.ss_ScanTupleSlot;
 	ErrorContextCallback errcallback;
 	bool		found;
-
 
 	/* Set up callback to identify error line number. */
 	errcallback.callback = CopyFromErrorCallback;

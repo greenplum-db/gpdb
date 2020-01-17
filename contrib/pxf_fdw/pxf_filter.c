@@ -1401,9 +1401,7 @@ SerializePxfFilterQuals(List *quals)
 	char	   *result = NULL;
 
 	if (quals == NULL)
-	{
 		return result;
-	}
 
 	List	   *clauses = NULL;
 	ListCell   *lc;
