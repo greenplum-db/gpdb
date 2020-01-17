@@ -94,7 +94,7 @@
          dest="${ivy.jar.file}" usetimestamp="true" />
   </target>
 
-  <target name="ivy-init" depends="download-ivy">
+  <target name="ivy-init">
     <path id="ivy.lib.path">
       <fileset dir="${ivy.jar.dir}" includes="*.jar" />
     </path>

@@ -21,11 +21,13 @@ endif
 JAR_FILES = dist/hadoop-gnet-1.2.0.0.jar
 JAVADOC_TARS = gnet-1.2-javadoc.tar
 
-all: $(JAR_FILES) unittest $(JAVADOC_TARS)
+all: $(JAR_FILES)
+
+.PHONY: dist
+dist: $(JAR_FILES) $(JAVADOC_TARS)
 
 dist/hadoop-gnet-1.2.0.0.jar:
 	$(ANT) clean
-	$(ANT) download-ivy
 	ANT_OPTS=$(ANT_OPTS) $(ANT) dist -Dgphdgnet.version=hadoop-gnet-1.2.0.0 \
                 -Dgpgnet.src=1.2 -Dgpgnet.configuration=hadoop2
 	cp dist/hadoop-gnet-1.2.0.0.jar dist/hdp-gnet-1.2.0.0.jar
