@@ -187,3 +187,54 @@ Future improvements
   pass each tuple's TID.  For instance we might need a callback that passes a
   block number instead of a TID.  That would help determine when to re-run
   summarization on blocks that have seen lots of tuple deletions.
+
+
+BRIN on append only tables
+--------------------------
+
+Greenplum has a new kind of table - append only table. BRIN needs special
+handling for append-optimized tables. The revmap relies on the assumption
+that block numbers are consecutive, there are no gaps in the sequence of block
+numbers for a given relation. This assumption does not hold for append-optimized
+tables. The AO tid is comprised of <segment file number, row number>. Concurrent
+inserts into an AO table result in multiple segment files, one per insert, being
+populated. When mapped to heap TIDs, there is a large gap between the block
+number of the last TID on segment number 1 and the first TID on segment
+number 2. If we continue to represent this using just the revmap, we will have
+to create revmap entries for all the nonexistent TIDs in this gap, leading to
+large amount of wasted space.The structure of revmap has been improved to adapt
+to append only table. An upper block on top of revmap is introduced to avoid
+wasting space due to non-existent AO TIDs.
+
+The Ao table is logically composed of 128 aosegs to support concurrent inserts.
+Each tuple in the Ao table corresponds to a virtual tid. The virtual tid of
+the first tuple of each Aoseg is equal to (248/128)*segnum, then the first
+virtual block number of each Aoseg is equal to (232/128) * segnum.
+
+If there are three blocks in aoseg0, aoseg1, and aoseg127, their block numbers
+are 0x0000 0000 0x0000 0001 0x0000 0002, 0x0200 0000 0x0200 0001 0x0200 0002,
+0xFE00 0000 0xFE00 0001 0xFE00 0002. Then the largest index in the revmap array
+is 0xFE00 0002. In this way, the revmap array contains 4,261,412,866 tids,
+taking up 24GB of space. This is clearly unacceptable.
+
+So we added an extra upper level on top of the revmap. In this way, at the
+level of revmap, tid and the corresponding block are initialized only when
+the corresponding block number has data. The upper level block stores the
+revmap level block number. In this way, the revmap level will only store the
+tid corresponding to the block that has been filled with data. The upper
+level will initialize all the blocks corresponding to the block number at
+one time. But because the upper level only stores the block number of the
+revmap, the number of records in the upper level is 232/TidNumPerPage which
+is approximately equal to 800,000. Takes up 3.2MB of space.
+
+The corresponding relationship between the block number and the upper level
+array index is:
+upper_index=blocknum/TidNumPerPage
+Stored in the upper level array is the block number of the revmap, and the
+offset in the block of the revmap tid is:
+revmap_offset=blocknum%TidNumPerPage
+TidNumPerPage: The number of tids that each revmap page can hold.
+All the discussions above have ignored the pagesPerRange variable.
+
+
+

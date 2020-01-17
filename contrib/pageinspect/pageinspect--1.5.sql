@@ -214,6 +214,15 @@ AS 'MODULE_PATHNAME', 'brin_revmap_data'
 LANGUAGE C STRICT PARALLEL SAFE;
 
 --
+-- brin_upper_data()
+--
+CREATE FUNCTION brin_upper_data(IN page bytea,
+    OUT pages tid)
+    RETURNS SETOF tid
+AS 'MODULE_PATHNAME', 'brin_upper_data'
+LANGUAGE C STRICT PARALLEL SAFE;
+
+--
 -- brin_page_items()
 --
 CREATE FUNCTION brin_page_items(IN page bytea, IN index_oid regclass,

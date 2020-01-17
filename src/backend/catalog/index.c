@@ -3170,6 +3170,113 @@ IndexBuildAppendOnlyRowScan(Relation parentRelation,
 }
 
 /*
+ * IndexBuildAppendOnlyRowRangeScan - scan the appendonly row relation
+ * between start_blockno and start_blockno + numblocks. And call the callback
+ * function on each tuple.
+ */
+double
+IndexBuildAppendOnlyRowRangeScan(Relation parentRelation,
+								 Relation indexRelation,
+								 struct IndexInfo *indexInfo,
+								 BlockNumber start_blockno,
+								 BlockNumber numblocks,
+								 EState *estate,
+								 Snapshot snapshot,
+								 IndexBuildCallback callback,
+								 void *callback_state)
+{
+	Snapshot	appendOnlyMetaDataSnapshot;
+
+	ItemPointerData heapTid;
+	BlockNumber curBlk;
+	OffsetNumber curOffset;
+	AppendOnlyFetchDesc aoFetchDesc;
+	TupleTableSlot *slot;
+	ExprContext *econtext;
+	double reltuples = 0;
+
+	/*
+	 * Need an EState for evaluation of index expressions and partial-index
+	 * predicates.  Also a slot to hold the current tuple.
+	 */
+	Assert(estate->es_per_tuple_exprcontext != NULL);
+	econtext = estate->es_per_tuple_exprcontext;
+	slot = econtext->ecxt_scantuple;
+
+	List *predicate = NIL;
+	Datum		values[INDEX_MAX_KEYS];
+	bool		isnull[INDEX_MAX_KEYS];
+
+	/* Set up execution state for predicate, if any */
+	predicate = (List *)
+			ExecPrepareExpr((Expr *)indexInfo->ii_Predicate, estate);
+
+	appendOnlyMetaDataSnapshot = snapshot;
+	if (appendOnlyMetaDataSnapshot == SnapshotAny)
+	{
+		/*
+		 * the append-only meta data should never be fetched with
+		 * SnapshotAny as bogus results are returned.
+		 */
+		appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
+	}
+
+	aoFetchDesc = appendonly_fetch_init(parentRelation, snapshot, appendOnlyMetaDataSnapshot);
+
+	for (curBlk = start_blockno; curBlk < start_blockno + numblocks; ++curBlk)
+	{
+		for (curOffset = 1; curOffset <= AO_MAX_OFFSET; ++curOffset)
+		{
+			ItemPointerSet(&heapTid, curBlk, curOffset);
+
+			/*
+			 * The ItemPointerData can be used as AOTupleId directly. Both
+			 * ItemPointerData and AOTupleId are composed of three uint16 in the
+			 * same order. So we can give a ItemPointerData to the
+			 * appendonly_fetch directly.
+			 */
+			appendonly_fetch(aoFetchDesc, (AOTupleId*)&heapTid, slot);
+
+			if (TupIsNull(slot))
+				continue;
+
+			if (predicate != NIL)
+			{
+				if (!ExecQual(predicate, econtext, false))
+					continue;
+			}
+
+			/*
+			 * For the current heap tuple, extract all the attributes we use in
+			 * this index, and note which are null.  This also performs evaluation
+			 * of any expressions needed.
+			 */
+			FormIndexDatum(indexInfo,
+						   slot,
+						   estate,
+						   values,
+						   isnull);
+
+			/*
+			 * You'd think we should go ahead and build the index tuple here, but
+			 * some index AMs want to do further processing on the data first.	So
+			 * pass the values[] and isnull[] arrays, instead.
+			 */
+			Assert(ItemPointerIsValid(slot_get_ctid(slot)));
+
+			/* Call the AM's callback routine to process the tuple */
+			callback(indexRelation, slot_get_ctid(slot),
+					 values, isnull, true, callback_state);
+			reltuples++;
+		}
+	}
+
+	appendonly_fetch_finish(aoFetchDesc);
+	pfree(aoFetchDesc);
+	return reltuples;
+}
+
+/*
  * IndexBuildAppendOnlyColScan - scan the appendonly columnar relation to
  * find tuples to be indexed.
  *
@@ -3302,6 +3409,128 @@ IndexBuildAppendOnlyColScan(Relation parentRelation,
 
 	return reltuples;
 }
+
+/*
+ * IndexBuildAppendOnlyColRangeScan - scan the appendonly columnar relation
+ * between start_blockno and start_blockno + numblocks. And call the callback
+ * function on each tuple.
+ */
+double
+IndexBuildAppendOnlyColRangeScan(Relation parentRelation,
+								 Relation indexRelation,
+								 struct IndexInfo *indexInfo,
+								 BlockNumber start_blockno,
+								 BlockNumber numblocks,
+								 EState *estate,
+								 Snapshot snapshot,
+								 IndexBuildCallback callback,
+								 void *callback_state)
+{
+	Snapshot	appendOnlyMetaDataSnapshot;
+	bool	   *proj;
+	int attno;
+
+	AOTupleId aoTid;
+	ItemPointerData heapTid;
+	BlockNumber curBlk;
+	OffsetNumber curOffset;
+	AOCSFetchDesc aocsFetchDesc;
+	TupleTableSlot *slot;
+	ExprContext *econtext;
+	double reltuples = 0;
+
+	/*
+	 * Need an EState for evaluation of index expressions and partial-index
+	 * predicates.  Also a slot to hold the current tuple.
+	 */
+	Assert(estate->es_per_tuple_exprcontext != NULL);
+	econtext = estate->es_per_tuple_exprcontext;
+	slot = econtext->ecxt_scantuple;
+
+	List *predicate = NIL;
+	Datum		values[INDEX_MAX_KEYS];
+	bool		isnull[INDEX_MAX_KEYS];
+
+	/* Set up execution state for predicate, if any */
+	predicate = (List *)
+			ExecPrepareExpr((Expr *)indexInfo->ii_Predicate, estate);
+
+	appendOnlyMetaDataSnapshot = snapshot;
+	if (appendOnlyMetaDataSnapshot == SnapshotAny)
+	{
+		/*
+		 * the append-only meta data should never be fetched with
+		 * SnapshotAny as bogus results are returned.
+		 */
+		appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
+	}
+
+	proj = (bool *) palloc0(parentRelation->rd_att->natts * sizeof(bool));
+
+	for (attno = 0; attno < indexInfo->ii_NumIndexAttrs; attno++)
+	{
+		Assert(indexInfo->ii_KeyAttrNumbers[attno] <= parentRelation->rd_att->natts);
+		/* Skip expression */
+		if (indexInfo->ii_KeyAttrNumbers[attno] > 0)
+			proj[indexInfo->ii_KeyAttrNumbers[attno] - 1] = true;
+	}
+
+	GetNeededColumnsForScan((Node *)indexInfo->ii_Expressions,
+							proj,
+							parentRelation->rd_att->natts);
+	GetNeededColumnsForScan((Node *)indexInfo->ii_Predicate,
+							proj,
+							parentRelation->rd_att->natts);
+
+	aocsFetchDesc = aocs_fetch_init(parentRelation, snapshot, appendOnlyMetaDataSnapshot, proj);
+
+	for (curBlk = start_blockno; curBlk < start_blockno + numblocks; ++curBlk)
+	{
+		for (curOffset = 1; curOffset <= AO_MAX_OFFSET; ++curOffset)
+		{
+			ItemPointerSet(&heapTid, curBlk, curOffset);
+			tbm_convert_appendonly_tid_out(&heapTid, &aoTid);
+			aocs_fetch(aocsFetchDesc, &aoTid, slot);
+
+			if (TupIsNull(slot))
+				continue;
+
+			if (predicate != NIL)
+			{
+				if (!ExecQual(predicate, econtext, false))
+					continue;
+			}
+
+			/*
+			 * For the current heap tuple, extract all the attributes we use in
+			 * this index, and note which are null.  This also performs evaluation
+			 * of any expressions needed.
+			 */
+			FormIndexDatum(indexInfo,
+						   slot,
+						   estate,
+						   values,
+						   isnull);
+
+			/*
+			 * You'd think we should go ahead and build the index tuple here, but
+			 * some index AMs want to do further processing on the data first.	So
+			 * pass the values[] and isnull[] arrays, instead.
+			 */
+			Assert(ItemPointerIsValid(slot_get_ctid(slot)));
+
+			/* Call the AM's callback routine to process the tuple */
+			callback(indexRelation, slot_get_ctid(slot),
+					 values, isnull, true, callback_state);
+			reltuples++;
+		}
+	}
+
+	aocs_fetch_finish(aocsFetchDesc);
+	pfree(aocsFetchDesc);
+	return reltuples;
+}
+
 
 /*
  * IndexCheckExclusion - verify that a new exclusion constraint is satisfied

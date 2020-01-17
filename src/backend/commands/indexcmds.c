@@ -676,15 +676,6 @@ DefineIndex(Oid relationId,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 		errmsg("access method \"%s\" does not support exclusion constraints",
 			   accessMethodName)));
-	/*
-	 * GPDB_95_MERGE_FIXME: In order to support brin indexes on AO/AOCO tables
-	 * there needs to be a way to expose block range metadata. In AO/AOCO what
-	 * would that even look like?
-	 */
-	if (strcmp(accessMethodName, "brin") == 0 && RelationIsAppendOptimized(rel))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		errmsg("append-only tables do not support brin indexes")));
 
     if  (stmt->unique && RelationIsAppendOptimized(rel))
         ereport(ERROR,

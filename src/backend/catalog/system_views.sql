@@ -1639,3 +1639,9 @@ REVOKE EXECUTE ON FUNCTION pg_stat_reset() FROM public;
 REVOKE EXECUTE ON FUNCTION pg_stat_reset_shared(text) FROM public;
 REVOKE EXECUTE ON FUNCTION pg_stat_reset_single_table_counters(oid) FROM public;
 REVOKE EXECUTE ON FUNCTION pg_stat_reset_single_function_counters(oid) FROM public;
+
+create or replace function brin_summarize_new_values(t regclass) returns bigint as
+$$
+select sum(t.n) from (select brin_summarize_new_values_internal(t) as n from gp_dist_random('gp_id')) t;
+$$
+LANGUAGE sql READS SQL DATA EXECUTE ON MASTER;
