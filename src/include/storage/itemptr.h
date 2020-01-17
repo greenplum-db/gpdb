@@ -52,6 +52,22 @@ ItemPointerData;
 typedef ItemPointerData *ItemPointer;
 
 /* ----------------
+ *		special values used in heap tuples (t_ctid)
+ * ----------------
+ */
+
+/*
+ * Greenplum specific behavior:
+ * When a tuple is moved to a different segment by UPDATE on distkeys
+ * (greenplum implements this using split update techniques), the t_ctid
+ * of the deleted tuple is set to this magic value.
+ *
+ * NB: later version of Postgres use 0xfffc and 0xfffe.
+ */
+#define SplitUpdateOffsetNumber 0xffff
+#define SplitUpdateBlockNumber	InvalidBlockNumber
+
+/* ----------------
  *		support macros
  * ----------------
  */
@@ -62,6 +78,15 @@ typedef ItemPointerData *ItemPointer;
  */
 #define ItemPointerIsValid(pointer) \
 	((bool) (PointerIsValid(pointer) && ((pointer)->ip_posid != 0)))
+
+/*
+ * ItemPointerGetBlockNumberNoCheck
+ *		Returns the block number of a disk item pointer.
+ */
+#define ItemPointerGetBlockNumberNoCheck(pointer) \
+( \
+	BlockIdGetBlockNumber(&(pointer)->ip_blkid) \
+)
 
 /*
  * ItemPointerGetBlockNumber
@@ -138,6 +163,23 @@ typedef ItemPointerData *ItemPointer;
 	BlockIdSet(&((pointer)->ip_blkid), InvalidBlockNumber), \
 	(pointer)->ip_posid = InvalidOffsetNumber \
 )
+
+/*
+ * ItemPointerIndicatesSplitUpdate
+ *		True iff the block number indicates the tuple has moved to another
+ *		partition.
+ */
+#define ItemPointerIndicatesSplitUpdate(pointer) \
+	!BlockNumberIsValid(ItemPointerGetBlockNumberNoCheck(pointer))
+
+/*
+ * ItemPointerSetMovedPartitions
+ *		Indicate that the item referenced by the itempointer has moved into a
+ *		different partition.
+ */
+#define ItemPointerSetSplitUpdate(pointer) \
+	ItemPointerSetBlockNumber((pointer), InvalidBlockNumber)
+
 
 /* ----------------
  *		externs

@@ -88,6 +88,67 @@
 2q:
 0q:
 
+-- split update is to implement updating on hash keys,
+-- it deletes the tuple and insert a new tuple in a
+-- new segment, so it is not easy for other transaction
+-- to follow the update link to fetch the new tuple. The
+-- other transaction should raise error for such case.
+-- the following case should be tested with GDD enabled.
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/8919
+
+create table t_splitupdate_raise_error (a int, b int) distributed by (a);
+insert into t_splitupdate_raise_error values (1, 1);
+
+-- test delete will throw error
+1: begin;
+1: update t_splitupdate_raise_error set a = a + 1;
+
+2: begin;
+2&: delete from t_splitupdate_raise_error;
+
+1: end;
+2<:
+
+2: abort;
+1q:
+2q:
+
+-- test norm update will throw error
+1: begin;
+1: update t_splitupdate_raise_error set a = a + 1;
+
+2: begin;
+2&: update t_splitupdate_raise_error set b = 999;
+
+1: end;
+2<:
+
+2: abort;
+1q:
+2q:
+
+-- select for update might lock tuples on segments,
+-- and wait for the XID lock held by splitupdate transaction,
+-- it should also raise an error because it is not easy to
+-- follow the update link to a new segment.
+-- set optimizer off for this case is because orca does not
+-- generate lockrows plannode.
+1: begin;
+1: update t_splitupdate_raise_error set a = a + 1;
+
+2: begin;
+2: set optimizer = off;
+2&: select * from t_splitupdate_raise_error for update;
+
+1: end;
+2<:
+
+2: abort;
+1q:
+2q:
+
+drop table t_splitupdate_raise_error;
+
 -- disable gdd
 -- start_ignore
 ! gpconfig -c gp_enable_global_deadlock_detector -v off;
