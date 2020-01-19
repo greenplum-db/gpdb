@@ -97,11 +97,14 @@ SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, cc
 3&:SET OPTIMIZER TO off;EXPLAIN ANALYZE INSERT INTO QUERY_METRICS.a SELECT *, pg_sleep(1) FROM generate_series(1,10);
 
 -- validate plan nodes exist in instrument solts
+SELECT count(*) FROM pg_sleep(1);
 SELECT ro, CASE WHEN max(nid) > 2 THEN 'ok' ELSE 'wrong' END isok FROM (
   SELECT CASE WHEN segid >= 0 THEN 's' ELSE 'm' END ro, nid FROM gp_instrument_shmem_detail
   WHERE ssid <> (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int AND nid > 0
 ) dt
 GROUP BY (ro) ORDER BY ro;
+-- validate no different tmid across segments
+SELECT count(*) FROM (SELECT DISTINCT tmid FROM gp_instrument_shmem_detail) t;
 -- cancel the query
 SELECT pg_cancel_backend(pid, 'test DML')
 FROM pg_stat_activity WHERE query LIKE 'SET OPTIMIZER TO off;EXPLAIN ANALYZE INSERT INTO QUERY_METRICS.a SELECT%' ORDER BY pid LIMIT 1;
@@ -130,11 +133,14 @@ SELECT NULL, NULL, array_dims(array_agg(x)) FROM QUERY_METRICS.mergeappend_test 
 ORDER BY 1,2;
 
 -- validate plan nodes exist in instrument solts
+SELECT count(*) FROM pg_sleep(1);
 SELECT ro, CASE WHEN max(nid) > 5 THEN 'ok' ELSE 'wrong' END isok FROM (
   SELECT CASE WHEN segid >= 0 THEN 's' ELSE 'm' END ro, nid FROM gp_instrument_shmem_detail
   WHERE ssid <> (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int AND nid > 0
 ) dt
 GROUP BY (ro) ORDER BY ro;
+-- validate no different tmid across segments
+SELECT count(*) FROM (SELECT DISTINCT tmid FROM gp_instrument_shmem_detail) t;
 -- cancel the query
 SELECT pg_cancel_backend(pid, 'test MergeAppend')
 FROM pg_stat_activity WHERE query LIKE 'SET OPTIMIZER TO off;SELECT a, b, array_dims(array_agg(x)) FROM QUERY_METRICS.mergeappend_test%' ORDER BY pid LIMIT 1;
@@ -142,6 +148,33 @@ FROM pg_stat_activity WHERE query LIKE 'SET OPTIMIZER TO off;SELECT a, b, array_
 -- start_ignore
 4<:
 4q:
+-- end_ignore
+
+-- query backend to ensure no PANIC on postmaster and wait cleanup done
+SELECT count(*) FROM foo, pg_sleep(2);
+
+-- test 5: entrydb
+-- Expected result is 1 row, means only current query in instrument slots,
+-- If more than one row returned, means previous test has leaked slots.
+SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, ccnt) t;
+
+-- this query will be cancelled by 'test pg_cancel_backend'
+5&:SET OPTIMIZER TO off;EXPLAIN ANALYZE INSERT INTO QUERY_METRICS.a(id) SELECT oid FROM pg_class, pg_sleep(10);
+
+-- validate QD and entrydb have instrumentations on each backend process
+SELECT count(*) FROM pg_sleep(1);
+SELECT count(DISTINCT pid) FROM gp_instrument_shmem_detail
+WHERE ssid <> (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int
+ AND segid < 0 AND nid >= 5;
+-- validate no different tmid across segments
+SELECT count(*) FROM (SELECT DISTINCT tmid FROM gp_instrument_shmem_detail) t;
+-- cancel the query
+SELECT pg_cancel_backend(pid, 'test entrydb')
+FROM pg_stat_activity WHERE query LIKE 'SET OPTIMIZER TO off;EXPLAIN ANALYZE INSERT INTO QUERY_METRICS.a(id) SELECT%' ORDER BY pid LIMIT 1;
+
+-- start_ignore
+5<:
+5q:
 -- end_ignore
 
 -- query backend to ensure no PANIC on postmaster and wait cleanup done
