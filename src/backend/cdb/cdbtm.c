@@ -486,6 +486,8 @@ doNotifyingCommitPrepared(void)
 	int			retry = 0;
 	volatile int savedInterruptHoldoffCount;
 	MemoryContext oldcontext = CurrentMemoryContext;;
+	time_t		retry_time_start;
+	bool		retry_timedout;
 
 	elog(DTM_DEBUG5, "doNotifyingCommitPrepared entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
 
@@ -532,15 +534,19 @@ doNotifyingCommitPrepared(void)
 		setDistributedTransactionContext(DTX_CONTEXT_QD_RETRY_PHASE_2);
 	}
 
-	while (!succeeded && dtx_phase2_retry_count > retry++)
+	retry_timedout = (dtx_phase2_retry_second == 0) ? true : false;
+	retry_time_start = time(NULL);
+
+	while (!succeeded && !retry_timedout)
 	{
+		retry++;
 		/*
-		 * sleep for brief duration before retry, to increase chances of
-		 * success if first try failed due to segment panic/restart. Otherwise
-		 * all the retries complete in less than a sec, defeating the purpose
-		 * of the retry.
+		 * Sleep for some time before retry to avoid too many reries for some
+		 * scenarios that retry completes soon. Also delay for longer when
+		 * retry fails more and more times.
 		 */
-		pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000);
+		pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000 *
+				  Min(Max(retry - 10, 1), 50));
 
 		ereport(WARNING,
 				(errmsg("the distributed transaction 'Commit Prepared' broadcast "
@@ -570,6 +576,9 @@ doNotifyingCommitPrepared(void)
 			FlushErrorState();
 		}
 		PG_END_TRY();
+
+		if ((time(NULL) - retry_time_start) > dtx_phase2_retry_second)
+			retry_timedout = true;
 	}
 
 	if (!succeeded)
@@ -598,9 +607,15 @@ retryAbortPrepared(void)
 	bool		succeeded = false;
 	volatile int savedInterruptHoldoffCount;
 	MemoryContext oldcontext = CurrentMemoryContext;;
+	time_t 		retry_time_start;
+	bool		retry_timedout;
 
-	while (!succeeded && dtx_phase2_retry_count > retry++)
+	retry_timedout = (dtx_phase2_retry_second == 0) ? true : false;
+	retry_time_start = time(NULL);
+
+	while (!succeeded && !retry_timedout)
 	{
+		retry++;
 		/*
 		 * By deallocating the gang, we will force a new gang to connect to
 		 * all the segment instances.  And, we will abort the transactions in
@@ -610,12 +625,12 @@ retryAbortPrepared(void)
 		{
 			elog(NOTICE, "Releasing segworker groups to retry broadcast.");
 			/*
-			 * sleep for brief duration before retry, to increase chances of
-			 * success if first try failed due to segment panic/restart. Otherwise
-			 * all the retries complete in less than a sec, defeating the purpose
-			 * of the retry.
+			 * Sleep for some time before retry to avoid too many reries for
+			 * some scenarios that retry completes soon. Also delay for longer
+			 * when retry fails more and more times.
 			 */
-			pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000);
+			pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000 *
+					  Min(Max(retry - 10, 1), 50));
 		}
 
 		ResetAllGangs();
@@ -642,6 +657,9 @@ retryAbortPrepared(void)
 			FlushErrorState();
 		}
 		PG_END_TRY();
+
+		if ((time(NULL) - retry_time_start) > dtx_phase2_retry_second)
+			retry_timedout = true;
 	}
 
 	if (!succeeded)

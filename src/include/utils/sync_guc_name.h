@@ -5,7 +5,6 @@
 		"DateStyle",
 		"default_tablespace",
 		"dml_ignore_target_partition_check",
-		"dtx_phase2_retry_count",
 		"execute_pruned_plan",
 		"explain_memory_verbosity",
 		"force_parallel_mode",

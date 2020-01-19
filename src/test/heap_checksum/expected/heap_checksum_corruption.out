@@ -299,7 +299,6 @@ WARNING:  consider disabling FTS probes while injecting a panic.
 (4 rows)
 
 set client_min_messages='ERROR';
-set dtx_phase2_retry_count=10;
 create table trigger_recovery_on_primaries(c int);
 reset client_min_messages;
 -- reconnect to the database after restart

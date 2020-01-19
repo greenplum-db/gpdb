@@ -152,7 +152,7 @@ bool		Debug_datumstream_write_use_small_initial_buffers = false;
 bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
 bool		gp_enable_exchange_default_partition = false;
-int			dtx_phase2_retry_count = 0;
+int			dtx_phase2_retry_second = 0;
 
 bool		log_dispatch_stats = false;
 
@@ -3981,15 +3981,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"dtx_phase2_retry_count", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Maximum number of retries during two phase commit after which master PANICs."),
+		{"dtx_phase2_retry_second", PGC_SUSET, GP_ARRAY_TUNING,
+			gettext_noop("Maximum number of timeout during two phase commit after which master PANICs."),
 			NULL,
-			GUC_SUPERUSER_ONLY |  GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_SUPERUSER_ONLY |  GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_UNIT_S
 		},
-		&dtx_phase2_retry_count,
-		10, 0, INT_MAX,
+		&dtx_phase2_retry_second,
+		60, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
+
 
 	{
 		/* Can't be set in postgresql.conf */

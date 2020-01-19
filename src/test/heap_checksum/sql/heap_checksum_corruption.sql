@@ -175,7 +175,6 @@ select count(*) from mark_buffer_dirty_hint;
 -- trigger recovery on primaries with multiple retries and ignore warning/notice messages
 select gp_inject_fault_infinite('finish_prepared_after_record_commit_prepared', 'panic', dbid) from gp_segment_configuration where role = 'p';
 set client_min_messages='ERROR';
-set dtx_phase2_retry_count=10;
 create table trigger_recovery_on_primaries(c int);
 reset client_min_messages;
 -- reconnect to the database after restart

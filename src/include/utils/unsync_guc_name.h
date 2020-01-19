@@ -105,6 +105,7 @@
 		"default_transaction_isolation",
 		"default_transaction_read_only",
 		"default_with_oids",
+		"dtx_phase2_retry_second",
 		"dynamic_library_path",
 		"dynamic_shared_memory_type",
 		"effective_cache_size",
