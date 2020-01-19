@@ -25,6 +25,7 @@
 #include "storage/lmgr.h"
 #include "storage/procarray.h"
 #include "utils/inval.h"
+#include "utils/guc.h"
 
 #include "access/heapam.h"
 #include "catalog/namespace.h"
@@ -1072,12 +1073,15 @@ LockTagIsTemp(const LOCKTAG *tag)
  * we have to keep upgrading locks for AO table.
  */
 bool
-CondUpgradeRelLock(Oid relid)
+CondUpgradeRelLock(Oid relid, bool noWait)
 {
 	Relation rel;
 	bool upgrade = false;
 
-	rel = try_relation_open(relid, NoLock, true);
+	if (!gp_enable_global_deadlock_detector)
+		return true;
+
+	rel = try_relation_open(relid, NoLock, noWait);
 
 	if (!rel)
 		elog(ERROR, "Relation open failed!");

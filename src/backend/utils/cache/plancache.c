@@ -1553,7 +1553,7 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 				if (rte->relid >= FirstNormalObjectId &&
 					(plannedstmt->commandType == CMD_UPDATE ||
 					 plannedstmt->commandType == CMD_DELETE) &&
-					CondUpgradeRelLock(rte->relid))
+					CondUpgradeRelLock(rte->relid, false))
 					lockmode = ExclusiveLock;
 				else
 					lockmode = RowExclusiveLock;
@@ -1643,7 +1643,7 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					if (rte->relid >= FirstNormalObjectId &&
 						(parsetree->commandType == CMD_UPDATE ||
 						 parsetree->commandType == CMD_DELETE) &&
-						CondUpgradeRelLock(rte->relid))
+						CondUpgradeRelLock(rte->relid, false))
 						lockmode = ExclusiveLock;
 					else
 						lockmode = RowExclusiveLock;
