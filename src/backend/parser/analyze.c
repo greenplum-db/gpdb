@@ -576,6 +576,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 
 	qry->commandType = CMD_INSERT;
 	pstate->p_is_insert = true;
+	pstate->p_is_on_conflict_update = false;
 
 	/* process the WITH clause independently of all else */
 	if (stmt->withClause)
@@ -637,6 +638,14 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 		sub_rtable = NIL;		/* not used, but keep compiler quiet */
 		sub_namespace = NIL;
 	}
+
+	/*
+	 * Greenplum specific behavior.
+	 * conflict update may lock tuples on segments and behaves like
+	 * update. So we might consider if to upgrade lockmode for this
+	 * case.
+	 */
+	pstate->p_is_on_conflict_update = isOnConflictUpdate;
 
 	/*
 	 * Must get write lock on INSERT target table before scanning SELECT, else
@@ -3265,6 +3274,7 @@ transformUpdateStmt(ParseState *pstate, UpdateStmt *stmt)
 
 	qry->commandType = CMD_UPDATE;
 	pstate->p_is_insert = false;
+	pstate->p_is_on_conflict_update = false;
 
 	/* process the WITH clause independently of all else */
 	if (stmt->withClause)
@@ -3476,6 +3486,8 @@ static Query *
 transformDeclareCursorStmt(ParseState *pstate, DeclareCursorStmt *stmt)
 {
 	Query	   *result;
+
+	pstate->p_is_on_conflict_update = false;
 
 	/*
 	 * Don't allow both SCROLL and NO SCROLL to be specified

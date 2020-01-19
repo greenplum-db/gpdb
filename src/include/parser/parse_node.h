@@ -158,6 +158,7 @@ struct ParseState
 	bool		p_hasSubLinks;
 	bool		p_hasModifyingCTE;
 	bool		p_is_insert;
+	bool        p_is_on_conflict_update;
 	bool        p_canOptSelectLockingClause; /* Whether can do some optimization on select with locking clause */
 	LockingClause *p_lockclause_from_parent;
 	bool		p_locked_from_parent;

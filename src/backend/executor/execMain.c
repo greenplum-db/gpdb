@@ -1645,6 +1645,9 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		int			numResultRelations = list_length(resultRelations);
 		ResultRelInfo *resultRelInfos;
 		ResultRelInfo *resultRelInfo;
+		bool        is_conflict_update;
+
+		is_conflict_update = IsOnConflictUpdate(plannedstmt);
 
 		/*
 		 * MPP-2879: The QEs don't pass their MPPEXEC statements through
@@ -1679,7 +1682,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			Relation	resultRelation;
 
 			resultRelationOid = getrelid(resultRelationIndex, rangeTable);
-			if (operation == CMD_UPDATE || operation == CMD_DELETE)
+			if (operation == CMD_UPDATE || operation == CMD_DELETE ||
+				(operation == CMD_INSERT && is_conflict_update)) /* conflictUpdate should be treated as update */
 			{
 				/*
 				 * On QD, the lock on the table has already been taken during parsing, so if it's a child

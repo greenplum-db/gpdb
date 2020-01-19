@@ -19,6 +19,7 @@
 
 #include "catalog/gp_segment_config.h"
 #include "nodes/pg_list.h"
+#include "nodes/plannodes.h"
 
 struct SegmentDatabaseDescriptor;
 
@@ -208,6 +209,8 @@ extern int numsegmentsFromQD;
  * Returns the number of segments
  */
 extern int getgpsegmentCount(void);
+
+extern bool IsOnConflictUpdate(PlannedStmt *ps);
 
 #define ELOG_DISPATCHER_DEBUG(...) do { \
        if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG) elog(LOG, __VA_ARGS__); \

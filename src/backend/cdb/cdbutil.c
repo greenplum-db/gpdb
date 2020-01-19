@@ -1697,3 +1697,26 @@ getgpsegmentCount(void)
 
 	return numsegments;
 }
+
+/*
+ * IsOnConflictUpdate
+ * Return true if a plannedstmt is an upsert: insert ... on conflict do update
+ */
+bool
+IsOnConflictUpdate(PlannedStmt *ps)
+{
+	Plan      *plan;
+
+	if (ps == NULL || ps->commandType != CMD_INSERT)
+		return false;
+
+	plan = ps->planTree;
+
+	if (plan && IsA(plan, Motion))
+		plan = outerPlan(plan);
+
+	if (plan == NULL || !IsA(plan, ModifyTable))
+		return false;
+
+	return ((ModifyTable *)plan)->onConflictAction == ONCONFLICT_UPDATE;
+}
