@@ -1966,9 +1966,7 @@ upsert_cte AS (
 INSERT INTO z VALUES(2, 'Red') ON CONFLICT (k) DO
 UPDATE SET (k, v) = (SELECT k, v FROM upsert_cte WHERE upsert_cte.k = z.k)
 RETURNING k, v;
-ERROR:  writable CTE queries cannot be themselves writable
-DETAIL:  Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context.
-HINT:  Rewrite the query to only include one writable clause.
+ERROR:  modification of distribution columns in OnConflictUpdate is not supported
 DROP TABLE z;
 -- check that run to completion happens in proper ordering
 TRUNCATE TABLE y;

@@ -282,6 +282,29 @@ FROM   update_gp_foo1;
 
 SELECT * from update_gp_foo;
 
+-- Test insert on conflict do update
+-- Insert on conflict do update is an insert statement but might
+-- invoke ExecUpdate on segments, but updating distkeys of a table
+-- may lead to wrong data distribution. We will check this before
+-- planning, if a `insert on conflict do update` statement set the
+-- dist keys of the table, it will raise an error.
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/9444
+create table t_insert_on_conflict_update_distkey(a int, b int) distributed by (a);
+create unique index uidx_t_insert_on_conflict_update_distkey on t_insert_on_conflict_update_distkey(a, b);
+
+-- the following statement should error out because the on conflict update want to
+-- modify the tuple's distkey which might lead to wrong data distribution
+insert into t_insert_on_conflict_update_distkey values (1, 1) on conflict(a, b) do update set a = 1;
+
+drop index uidx_t_insert_on_conflict_update_distkey;
+drop table t_insert_on_conflict_update_distkey;
+-- randomly distributed table cannot add unique constrain, so next we test replicated table
+
+create table t_insert_on_conflict_update_distkey(a int, b int) distributed replicated;
+create unique index uidx_t_insert_on_conflict_update_distkey on t_insert_on_conflict_update_distkey(a, b);
+-- the following statement should succeed because replicated table does not contain distkey
+insert into t_insert_on_conflict_update_distkey values (1, 1) on conflict(a, b) do update set a = 1;
+
 -- start_ignore
 drop table r;
 drop table s;

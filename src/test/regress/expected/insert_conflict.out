@@ -265,6 +265,7 @@ insert into insertconflicttest values (2, 'Orange') on conflict (key, key, key) 
 insert into insertconflicttest
 values (1, 'Apple'), (2, 'Orange')
 on conflict (key) do update set (fruit, key) = (excluded.fruit, excluded.key);
+ERROR:  modification of distribution columns in OnConflictUpdate is not supported
 -- Give good diagnostic message when EXCLUDED.* spuriously referenced from
 -- RETURNING:
 insert into insertconflicttest values (1, 'Apple') on conflict (key) do update set fruit = excluded.fruit RETURNING excluded.fruit;
