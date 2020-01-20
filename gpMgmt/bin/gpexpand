@@ -10,6 +10,7 @@ import copy
 import datetime
 import os
 import random
+import re
 import sys
 import json
 import shutil
@@ -626,8 +627,9 @@ class SegmentTemplate:
         """Builds segment template tar file"""
         self.statusLogger.set_status('BUILD_SEGMENT_TEMPLATE_STARTED', self.tempDir)
         # build segment template should consider tablespace files
-        self._create_template(newTableSpaceInfo)
-        self._fixup_template()
+        excludes = self._list_master_only_files()
+        self._create_template(newTableSpaceInfo, excludes=excludes)
+        self._fixup_template(excludes=excludes)
         self._tar_template()
         self.statusLogger.set_status('BUILD_SEGMENT_TEMPLATE_DONE')
 
@@ -640,7 +642,72 @@ class SegmentTemplate:
         numNewSegments = len(self.gparray.getExpansionSegDbList())
         self.statusLogger.set_status('BUILD_SEGMENTS_DONE', numNewSegments)
 
-    def _create_template(self, newTableSpaceInfo=None):
+    def _list_master_only_files(self):
+        """Build a list of files of master only tables and their indexes.
+
+        The content of master only tables should be cleared or refilled on the
+        new segments, by including an empty copy of the heap & index files less
+        data is transferred via network and there is no need to delete the
+        content on the segments explicitly.
+
+        However empty index files are actually invalid, we still need to
+        reindex the master only tables on the new segments to rebuild the index
+        files, this is fast as the heap files are all empty.
+
+        One exception is pg_auth_time_constraint, the segment cannot start if
+        the index of this table is invalid, so we have to copy the content of
+        this table, both heap and index, from master to the new segments, then
+        delete from it on the segments explicitly.
+        """
+
+        self.logger.info("Building the file list of master only tables")
+
+        self.conn = dbconn.connect(self.dburl, encoding='UTF8')
+
+        master_only_tables = copy.copy(MASTER_ONLY_TABLES)
+        master_only_tables.remove('pg_auth_time_constraint')
+
+        fake_oids = ["'%s'::regclass::oid" % tab
+                     for tab in master_only_tables]
+        fake_oids = "(" + ", ".join(fake_oids) + ")"
+        self.logger.debug("master only tables: %s" % fake_oids)
+
+        sql = "SELECT oid FROM pg_catalog.pg_class WHERE oid IN %s" % fake_oids
+        table_oids = [str(row[0])
+                      for row in dbconn.execSQL(self.conn, sql).fetchall()]
+        self.logger.debug("table oids of master only tables: %s" % table_oids)
+
+        sql = "SELECT indexrelid FROM pg_catalog.pg_index WHERE indrelid IN %s" % fake_oids
+        index_oids = [str(row[0])
+                      for row in dbconn.execSQL(self.conn, sql).fetchall()]
+        self.logger.debug("index oids of master only tables: %s" % index_oids)
+
+        # ${oid}: the relation file itself
+        # ${oid}_vm: the visibility map
+        # ${oid}_fsm: the free space map
+        # ${oid}.[1-9][0-9]*: the seg files; we use [0-9]+ for simplify
+        oids = table_oids + index_oids
+        pattern = '^(%s)(|_vm|_vsm|\\.\d+)$' % '|'.join(oids)
+        reprog = re.compile(pattern)
+        self.logger.debug("regex pattern of master only tables: %s" % pattern)
+
+        result = []
+
+        # the file list will be passed to pg_basebackup as the exclude list,
+        # it expects the paths are like "./global/1234", so we must chdir to
+        # the master data dir.
+        oldcwd = os.getcwd()
+        os.chdir(self.masterDataDirectory)
+        for root, dirs, files in os.walk(".", followlinks=False):
+            for fname in files:
+                if reprog.match(fname):
+                    result.append(os.path.join(root, fname))
+        os.chdir(oldcwd)
+        self.logger.debug("files of master only tables: %s" % result)
+
+        return result
+
+    def _create_template(self, newTableSpaceInfo=None, excludes=[]):
         """Creates the schema template that is used by new segments"""
         self.logger.info('Creating segment template')
 
@@ -663,6 +730,7 @@ class SegmentTemplate:
                                host=masterSeg.getSegmentHostName(),
                                port=str(masterSeg.getSegmentPort()),
                                recovery_mode=False,
+                               excludePaths=excludes,
                                target_gp_dbid=dummyDBID)
             cmd.run(validateAfter=True)
         except Exception, msg:
@@ -847,7 +915,7 @@ class SegmentTemplate:
         self._start_new_primary_segments()
         self._stop_new_primary_segments()
 
-    def _fixup_template(self):
+    def _fixup_template(self, excludes=[]):
         """Copies postgresql.conf and pg_hba.conf files from a valid segment on the system.
         Then modifies the template copy of pg_hba.conf"""
 
@@ -868,6 +936,24 @@ class SegmentTemplate:
                     dstFile=self.tempDir, dstHost=localHostname,ctxt=REMOTE,
                     remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
+
+        # the files of the master only tables are already deleted, now add an
+        # empty copy of them, so they are seen as empty on the new segments,
+        # and we do not need to delete them via sql separately.
+        if excludes:
+            self.logger.info('Creating an empty copy of excluded files')
+            for pathname in excludes:
+                fullname = os.path.join(self.tempDir, pathname)
+                filename = os.path.basename(fullname)
+                dirname = os.path.dirname(fullname)
+                if '.' in filename:
+                    # ignore seg files
+                    continue
+                # the template dir is not expected to be updated concurrently,
+                # so it is safe to use a check-and-create style to create dirs.
+                if not os.path.isdir(dirname):
+                    os.makedirs(dirname)
+                open(fullname, 'wb')
 
     def _tar_template(self):
         """Tars up the template files"""
@@ -1392,10 +1478,14 @@ class gpexpand:
         self.pool.check_results()
 
         """
-        Build the list of delete statements based on the MASTER_ONLY_TABLES
-        defined in gpcatalog.py
+        Build the list of reindex and delete statements based on the
+        MASTER_ONLY_TABLES defined in gpcatalog.py
         """
-        statements = ["delete from pg_catalog.%s" % tab for tab in MASTER_ONLY_TABLES]
+        statements = ["REINDEX TABLE pg_catalog.%s" % tab
+                      for tab in MASTER_ONLY_TABLES]
+
+        # refer to _list_master_only_files() on why we have to do so
+        statements.append("DELETE FROM pg_catalog.pg_auth_time_constraint")
 
         """
           Connect to each database in the new segments, and clean up the catalog tables.
