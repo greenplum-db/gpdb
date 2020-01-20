@@ -165,7 +165,7 @@ SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, cc
 SELECT count(*) FROM pg_sleep(1);
 SELECT count(DISTINCT pid) FROM gp_instrument_shmem_detail
 WHERE ssid <> (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int
- AND segid < 0 AND nid >= 5;
+ AND segid < 0 AND nid >= 4;
 -- validate no different tmid across segments
 SELECT count(*) FROM (SELECT DISTINCT tmid FROM gp_instrument_shmem_detail) t;
 -- cancel the query

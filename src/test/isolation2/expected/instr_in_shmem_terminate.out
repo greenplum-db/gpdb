@@ -229,7 +229,7 @@ SELECT count(*) FROM pg_sleep(1);
 -------
  1     
 (1 row)
-SELECT count(DISTINCT pid) FROM gp_instrument_shmem_detail WHERE ssid <> (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int AND segid < 0 AND nid >= 5;
+SELECT count(DISTINCT pid) FROM gp_instrument_shmem_detail WHERE ssid <> (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int AND segid < 0 AND nid >= 4;
  count 
 -------
  2     
