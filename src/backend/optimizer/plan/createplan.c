@@ -2442,7 +2442,9 @@ create_modifytable_plan(PlannerInfo *root, ModifyTablePath *best_path)
 			else
 			{
 				if (policy->ptype != policyType)
-					elog(ERROR, "ModifyTable mixes distributed and entry-only tables");
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							 errmsg("ModifyTable mixes distributed and entry-only tables")));
 			}
 
 			if (policyType != POLICYTYPE_ENTRY)

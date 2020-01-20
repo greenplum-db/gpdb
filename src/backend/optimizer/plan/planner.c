@@ -1645,7 +1645,7 @@ inheritance_planner(PlannerInfo *root)
 				 */
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("incompatible loci in target inheritance set")));
+						 errmsg("ModifyTable mixes distributed and entry-only tables")));
 			}
 		}
 
