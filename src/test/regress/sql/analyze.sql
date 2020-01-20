@@ -459,3 +459,17 @@ insert into analyze_dropped_col values('a','bbb', repeat('x', 5000), 'dddd');
 alter table analyze_dropped_col drop column b;
 analyze analyze_dropped_col;
 select attname, null_frac, avg_width, n_distinct from pg_stats where tablename ='analyze_dropped_col';
+-- Test analyze without USAGE privilege on schema
+create schema test_ns;
+revoke all on schema test_ns from public;
+create role nsuser1;
+grant create on schema test_ns to nsuser1;
+set search_path to 'test_ns';
+create extension citext;
+create table testid (id int , test citext);
+alter table testid owner to nsuser1;
+analyze testid;
+drop table testid;
+drop extension citext;
+drop schema test_ns;
+drop role nsuser1;
