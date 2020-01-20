@@ -975,12 +975,11 @@ advance_combine_function(AggState *aggstate,
 			 */
 			if (!pertrans->transtypeByVal)
 			{
-				oldContext = MemoryContextSwitchTo(
-												   aggstate->aggcontexts[aggstate->current_set]->ecxt_per_tuple_memory);
-				pergroupstate->transValue = datumCopy(fcinfo->arg[1],
-													pertrans->transtypeByVal,
-													  pertrans->transtypeLen);
-				MemoryContextSwitchTo(oldContext);
+				pergroupstate->transValue = datumCopyWithMemManager(pergroupstate->transValue,
+											 fcinfo->arg[1],
+											 pertrans->transtypeByVal,
+											 pertrans->transtypeLen,
+											 &aggstate->mem_manager);
 			}
 			else
 				pergroupstate->transValue = fcinfo->arg[1];
@@ -1018,13 +1017,12 @@ advance_combine_function(AggState *aggstate,
 	{
 		if (!fcinfo->isnull)
 		{
-			MemoryContextSwitchTo(aggstate->aggcontexts[aggstate->current_set]->ecxt_per_tuple_memory);
-			newVal = datumCopy(newVal,
-							   pertrans->transtypeByVal,
-							   pertrans->transtypeLen);
+			newVal = datumCopyWithMemManager(pergroupstate->transValue,
+											 newVal,
+											 pertrans->transtypeByVal,
+											 pertrans->transtypeLen,
+											 &aggstate->mem_manager);
 		}
-		if (!pergroupstate->transValueIsNull)
-			pfree(DatumGetPointer(pergroupstate->transValue));
 	}
 
 	pergroupstate->transValue = newVal;
