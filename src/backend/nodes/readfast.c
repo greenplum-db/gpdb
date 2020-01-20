@@ -2569,6 +2569,9 @@ readNodeBinary(void)
 				return_value = _readLockStmt();
 				break;
 
+			case T_RestrictInfo:
+				return_value = _readRestrictInfo();
+				break;
 			case T_ExtensibleNode:
 				return_value = _readExtensibleNode();
 				break;

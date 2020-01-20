@@ -2875,6 +2875,7 @@ _outParamPathInfo(StringInfo str, const ParamPathInfo *node)
 	WRITE_FLOAT_FIELD(ppi_rows, "%.0f");
 	WRITE_NODE_FIELD(ppi_clauses);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outRestrictInfo(StringInfo str, const RestrictInfo *node)
@@ -2907,6 +2908,7 @@ _outRestrictInfo(StringInfo str, const RestrictInfo *node)
 	WRITE_OID_FIELD(hashjoinoperator);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outPlaceHolderVar(StringInfo str, const PlaceHolderVar *node)
 {
