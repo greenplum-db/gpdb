@@ -71,7 +71,7 @@ static pg_time_t last_progress_report = 0;
 static int32 maxrate = 0;		/* no limit by default */
 
 static bool forceoverwrite = false;
-#define MAX_EXCLUDE 255
+#define MAX_EXCLUDE 65535
 static int	num_exclude = 0;
 static char *excludes[MAX_EXCLUDE];
 static int target_gp_dbid = 0;
