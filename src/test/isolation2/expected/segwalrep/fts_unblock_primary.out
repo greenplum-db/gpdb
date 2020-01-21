@@ -1,5 +1,16 @@
 -- This test assumes 3 primaries and 3 mirrors from a gpdemo segwalrep cluster
 
+-- Set this to cut down test time.
+alter system set gp_fts_probe_interval to 10;
+ALTER
+alter system set gp_fts_probe_retries to 1;
+ALTER
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
+
 -- function to wait for mirror to come up in sync (1 minute timeout)
 create or replace function wait_for_streaming(contentid smallint) returns void as $$ declare updated bool; /* in func */ begin /* in func */ for i in 1 .. 120 loop /* in func */ perform gp_request_fts_probe_scan(); /* in func */ select (mode = 's' and status = 'u') into updated /* in func */ from gp_segment_configuration /* in func */ where content = contentid and role = 'm'; /* in func */ exit when updated; /* in func */ perform pg_sleep(0.5); /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE

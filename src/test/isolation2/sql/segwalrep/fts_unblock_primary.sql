@@ -1,5 +1,10 @@
 -- This test assumes 3 primaries and 3 mirrors from a gpdemo segwalrep cluster
 
+-- Set this to cut down test time.
+alter system set gp_fts_probe_interval to 10;
+alter system set gp_fts_probe_retries to 1;
+select pg_reload_conf();
+
 -- function to wait for mirror to come up in sync (1 minute timeout)
 create or replace function wait_for_streaming(contentid smallint)
 returns void as $$
