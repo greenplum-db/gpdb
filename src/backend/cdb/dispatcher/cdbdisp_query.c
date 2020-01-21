@@ -682,19 +682,6 @@ compare_slice_order(const void *aa, const void *bb)
 		return -1;
 	}
 
-	/*
-	 * sort the writer gang slice first, because he sets the shared snapshot
-	 */
-	if (a->slice->primaryGang->gang_id == 1)
-	{
-		Assert(b->slice->primaryGang->gang_id != 1);
-		return -1;
-	}
-	if (b->slice->primaryGang->gang_id == 1)
-	{
-		return 1;
-	}
-
 	/* sort slice with larger size first because it has a bigger chance to contain writers */
 	if (a->slice->primaryGang->size > b->slice->primaryGang->size)
 		return -1;

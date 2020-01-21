@@ -32,7 +32,7 @@ struct CdbDispatcherState;
 typedef struct Gang
 {
 	GangType type;
-	int	gang_id;
+
 	int	size;
 
 	/*
