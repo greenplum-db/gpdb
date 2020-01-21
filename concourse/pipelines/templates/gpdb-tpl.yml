@@ -528,7 +528,6 @@ resources:
 {% endif %}
 
 {% endif %}
-{% endif %}
 {% if pipeline_configuration == "prod" %}
 - name: bin_gpdb_centos6_icw_green
   type: s3
@@ -616,7 +615,6 @@ resources:
 {% endif %}
 
 {% endif %}
-{% endif %}
 {% if "ubuntu18.04" in os_types %}
 - name: bin_gpdb_ubuntu18.04
   type: gcs
@@ -641,7 +639,6 @@ resources:
     regexp: server/published/master/server-build-(.*)-ubuntu18.04_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
-{% endif %}
 {% endif %}
 {% if "win" in os_types %}
 - name: terraform_windows
