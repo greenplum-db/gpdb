@@ -1851,7 +1851,7 @@ create_groupingsets_plan(PlannerInfo *root, GroupingSetsPath *best_path)
 			agg_plan = (Plan *) make_agg(NIL,
 										 NIL,
 										 AGG_SORTED,
-										 AGGSPLIT_SIMPLE,
+										 best_path->aggsplit,
 										 false, /* streaming */
 									   list_length((List *) linitial(gsets)),
 										 new_grpColIdx,
@@ -1887,7 +1887,7 @@ create_groupingsets_plan(PlannerInfo *root, GroupingSetsPath *best_path)
 		plan = make_agg(build_path_tlist(root, &best_path->path),
 						best_path->qual,
 						(numGroupCols > 0) ? AGG_SORTED : AGG_PLAIN,
-						AGGSPLIT_SIMPLE,
+						best_path->aggsplit,
 						false, /* streaming */
 						numGroupCols,
 						top_grpColIdx,

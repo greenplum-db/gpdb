@@ -28,7 +28,9 @@ CATALOG(pg_partition_encoding,9903) BKI_WITHOUT_OIDS
 {
 	Oid		parencoid;				
 	int16	parencattnum;			
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	text	parencattoptions[1];	
+#endif
 } FormData_pg_partition_encoding;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

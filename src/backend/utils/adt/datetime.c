@@ -4247,41 +4247,6 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, bool print_tz, int tz, const char
 		case USE_ISO_DATES:
 		case USE_XSD_DATES:
 			/* Compatible with ISO-8601 date formats */
-
-			/* GPDB_96_MERGE_FIXME: We had this faster version in GPDB. PostgreSQL
-			 * also added faster versions in commit aa2387e2fd. Performance test is
-			 * the old GPDB variants are even faster, or if we could drop the diff
-			 * and just use upstream code. For now, the GPDB version is disabled
-			 * and we use the upstream code.
-			 */
-#if 0
-
-			{
-                int j = 0;
-				/*
-				 * sprintf is very slow so we just convert the numbers to
-				 * a string manually. Since we allow dates in the range
-				 * 4713 BC to 5874897 AD, we have to check for years
-				 * with 7, 6 and 5 digits, being careful to not add
-				 * leading zeros for those. We only zero pad to four digits.
-				 */
-				fast_encode_date(tm, str, &j);
-				if (style == USE_ISO_DATES)
-					str[j++] = ' ';
-				else
-					str[j++] = 'T';	// XSD uses a T between date and time
-				
-				str[j++] = tm->tm_hour/10 + '0';
-				str[j++] = tm->tm_hour % 10 + '0';
-				str[j++] = ':';
-				str[j++] = tm->tm_min/10 + '0';
-				str[j++] = tm->tm_min % 10 + '0';
-				str[j++] = ':';
-				str[j] = '\0';
-			}
-
-			AppendTimestampSeconds(str + strlen(str), tm, fsec);
-#else
 			str = pg_ltostr_zeropad(str,
 					(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1), 4);
 			*str++ = '-';
@@ -4294,7 +4259,6 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, bool print_tz, int tz, const char
 			str = pg_ltostr_zeropad(str, tm->tm_min, 2);
 			*str++ = ':';
 			str = AppendTimestampSeconds(str, tm, fsec);
-#endif
 			if (print_tz)
 				str = EncodeTimezone(str, tz, style);
 			break;

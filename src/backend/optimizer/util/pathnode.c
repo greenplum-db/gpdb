@@ -4116,6 +4116,7 @@ create_groupingsets_path(PlannerInfo *root,
 						 RelOptInfo *rel,
 						 Path *subpath,
 						 PathTarget *target,
+						 AggSplit aggsplit,
 						 List *having_qual,
 						 List *rollup_lists,
 						 List *rollup_groupclauses,
@@ -4147,6 +4148,7 @@ create_groupingsets_path(PlannerInfo *root,
 	else
 		pathnode->path.pathkeys = NIL;
 
+	pathnode->aggsplit = aggsplit;
 	pathnode->rollup_groupclauses = rollup_groupclauses;
 	pathnode->rollup_lists = rollup_lists;
 	pathnode->qual = having_qual;

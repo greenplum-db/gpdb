@@ -34,7 +34,9 @@ CATALOG(pg_extprotocol,7175)
 	Oid			ptcvalidatorfn;	
 	Oid			ptcowner;		
 	bool		ptctrusted;		
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	aclitem		ptcacl[1];		
+#endif
 } FormData_pg_extprotocol;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

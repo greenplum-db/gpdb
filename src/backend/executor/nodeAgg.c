@@ -1453,6 +1453,7 @@ prepare_projection_slot(AggState *aggstate, TupleTableSlot *slot, int currentSet
 
 		aggstate->grouped_cols = grouped_cols;
 		aggstate->group_id = aggstate->phase->group_id[currentSet];
+		aggstate->gset_id = aggstate->phase->gset_id[currentSet];
 
 		if (TupIsNull(slot))
 		{
@@ -2292,6 +2293,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	aggstate->aggs = NIL;
 	aggstate->numaggs = 0;
 	aggstate->numtrans = 0;
+	aggstate->numgsets = 0;
 	aggstate->aggsplit = node->aggsplit;
 	aggstate->maxsets = 0;
 	aggstate->hashfunctions = NULL;
@@ -2464,6 +2466,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 		{
 			phasedata->gset_lengths = palloc(num_sets * sizeof(int));
 			phasedata->grouped_cols = palloc(num_sets * sizeof(Bitmapset *));
+			phasedata->gset_id 	= palloc(num_sets * sizeof(int));
 
 			i = 0;
 			foreach(l, aggnode->groupingSets)
@@ -2477,6 +2480,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 
 				phasedata->grouped_cols[i] = cols;
 				phasedata->gset_lengths[i] = current_length;
+				phasedata->gset_id[i] = aggstate->numgsets++;
 				++i;
 			}
 
@@ -2507,16 +2511,12 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 		phasedata->sortnode = sortnode;
 
 		/* Compute group_ids */
+		phasedata->group_id = palloc0(numGroupingSets * sizeof(int));
+
+		for (int setno = 1; setno < num_sets; setno++)
 		{
-			int			setno;
-
-			phasedata->group_id = palloc0(numGroupingSets * sizeof(int));
-
-			for (setno = 1; setno < num_sets; setno++)
-			{
-				if (bms_equal(phasedata->grouped_cols[setno], phasedata->grouped_cols[setno - 1]))
-					phasedata->group_id[setno] = phasedata->group_id[setno - 1] + 1;
-			}
+			if (bms_equal(phasedata->grouped_cols[setno], phasedata->grouped_cols[setno - 1]))
+				phasedata->group_id[setno] = phasedata->group_id[setno - 1] + 1;
 		}
 	}
 

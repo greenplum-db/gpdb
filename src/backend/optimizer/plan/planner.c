@@ -4089,10 +4089,6 @@ create_grouping_paths(PlannerInfo *root,
 	{
 		try_mpp_multistage_aggregation = false;
 	}
-	else if (parse->groupingSets)
-	{
-		try_mpp_multistage_aggregation = false;
-	}
 	else if (agg_costs->hasNonCombine || agg_costs->hasNonSerial)
 	{
 		try_mpp_multistage_aggregation = false;
@@ -4335,6 +4331,7 @@ create_grouping_paths(PlannerInfo *root,
 													  grouped_rel,
 													  path,
 													  target,
+													  AGGSPLIT_SIMPLE,
 												  (List *) parse->havingQual,
 													  rollup_lists,
 													  rollup_groupclauses,
@@ -4562,7 +4559,9 @@ create_grouping_paths(PlannerInfo *root,
 										   dNumGroups,
 										   agg_costs,
 										   &agg_partial_costs,
-										   &agg_final_costs);
+										   &agg_final_costs,
+										   rollup_lists,
+										   rollup_groupclauses);
 
 	/*
 	 * If there is an FDW that's responsible for all baserels of the query,

@@ -23,6 +23,7 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "executor/execHHashagg.h"
+#include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
@@ -45,7 +46,13 @@ typedef struct
 	const AggClauseCosts *agg_costs;
 	const AggClauseCosts *agg_partial_costs;
 	const AggClauseCosts *agg_final_costs;
+	List *rollup_lists;
+	List *rollup_groupclauses;
 } cdb_agg_planning_context;
+
+static Index add_gsetid_tlist(List *tlist);
+
+static List *add_gsetid_groupclause(List *groupClause, Index groupref);
 
 static void add_twostage_group_agg_path(PlannerInfo *root,
 										Path *path,
@@ -87,7 +94,9 @@ cdb_create_twostage_grouping_paths(PlannerInfo *root,
 								   double dNumGroups,
 								   const AggClauseCosts *agg_costs,
 								   const AggClauseCosts *agg_partial_costs,
-								   const AggClauseCosts *agg_final_costs)
+								   const AggClauseCosts *agg_final_costs,
+								   List *rollup_lists,
+								   List *rollup_groupclauses)
 {
 	Query	   *parse = root->parse;
 	Path	   *cheapest_path = input_rel->cheapest_total_path;
@@ -128,6 +137,8 @@ cdb_create_twostage_grouping_paths(PlannerInfo *root,
 	cxt.agg_costs = agg_costs;
 	cxt.agg_partial_costs = agg_partial_costs;
 	cxt.agg_final_costs = agg_final_costs;
+	cxt.rollup_lists = rollup_lists;
+	cxt.rollup_groupclauses = rollup_groupclauses;
 
 	/*
 	 * Consider 2-phase aggs
@@ -178,6 +189,62 @@ cdb_create_twostage_grouping_paths(PlannerInfo *root,
 	 */
 }
 
+/*
+ * Add a TargetEntry node of type GroupingSetId to the tlist.
+ * Return its ressortgroupref.
+ */
+static Index
+add_gsetid_tlist(List *tlist)
+{
+	TargetEntry *tle;
+	GroupingSetId *gsetid;
+	ListCell *lc;
+
+	foreach(lc, tlist)
+	{
+		tle = lfirst_node(TargetEntry, lc);
+		if (IsA(tle->expr, GroupingSetId))
+			elog(ERROR, "GROUPINGSET_ID already exists in tlist");
+	}
+
+	gsetid = makeNode(GroupingSetId);
+	tle = makeTargetEntry((Expr *)gsetid, list_length(tlist) + 1,
+			"GROUPINGSET_ID", true);
+	assignSortGroupRef(tle, tlist);
+	tlist = lappend(tlist, tle);
+
+	return tle->ressortgroupref;
+}
+
+/*
+ * Add a SortGroupClause node to the groupClause representing the GroupingSetId.
+ * Note we insert the new node to the head of groupClause.
+ */
+static List *
+add_gsetid_groupclause(List *groupClause, Index groupref)
+{
+	SortGroupClause *gc;
+	Oid         sortop;
+	Oid         eqop;
+	bool        hashable;
+
+	get_sort_group_operators(INT4OID,
+			false, true, false,
+			&sortop, &eqop, NULL,
+			&hashable);
+
+	gc = makeNode(SortGroupClause);
+	gc->tleSortGroupRef = groupref;
+	gc->eqop = eqop;
+	gc->sortop = sortop;
+	gc->nulls_first = false;
+	gc->hashable = hashable;
+
+	groupClause = lcons(gc, groupClause);
+
+	return groupClause;
+}
+
 static void
 add_twostage_group_agg_path(PlannerInfo *root,
 							Path *path,
@@ -187,13 +254,89 @@ add_twostage_group_agg_path(PlannerInfo *root,
 {
 	Query	   *parse = root->parse;
 	CdbPathLocus singleQE_locus;
-	Path	   *initial_agg_path;
+	Path	   *initial_agg_path = NULL;
 	CdbPathLocus group_locus;
 	bool		need_redistribute;
 	int			extra_aggsplitops = 0;
+	List		*motion_pathkeys = NIL;
+	List		*grouping_sets_tlist = NIL;
+	List		*grouping_sets_groupClause = NIL;
+	PathTarget	*grouping_sets_partial_target = NULL;
+
+	/*
+	 * For twostage grouping sets, we perform grouping sets aggregation in
+	 * partial stage and normal aggregation in final stage.
+	 *
+	 * With this method, there is a problem, i.e., in the final stage of
+	 * aggregation, we don't have a way to distinguish which tuple comes from
+	 * which grouping set, which turns out to be needed for merging the partial
+	 * results.
+	 *
+	 * For instance, suppose we have a table t(c1, c2, c3) containing one row
+	 * (1, NULL, 3), and we are selecting agg(c3) group by grouping sets
+	 * ((c1,c2), (c1)). Then there would be two tuples as partial results for
+	 * that row, both are (1, NULL, agg(3)), one is from group by (c1,c2) and
+	 * one is from group by (c1). If we cannot tell that the two tuples are
+	 * from two different grouping sets, we will merge them incorrectly.
+	 *
+	 * So we add a hidden column 'GROUPINGSET_ID', representing grouping set
+	 * id, to the targetlist of Partial Aggregate node, as well as to the sort
+	 * keys and group keys for Finalize Aggregate node. So only tuples coming
+	 * from the same grouping set can get merged in the final stage of
+	 * aggregation. Note that we need to keep 'GROUPINGSET_ID' at the head of
+	 * sort keys in final stage to ensure correctness.
+	 *
+	 *
+	 * Below is a plan to illustrate this idea:
+	 *
+	 * # explain (costs off, verbose)
+	 * select c1, c2, c3, avg(c3) from gstest group by grouping sets((c1,c2),(c1),(c2,c3));
+	 *                                 QUERY PLAN
+	 * ---------------------------------------------------------------------------
+	 *  Finalize GroupAggregate
+	 *    Output: c1, c2, c3, avg(c3)
+	 *    Group Key: (GROUPINGSET_ID()), gstest.c1, gstest.c2, gstest.c3
+	 *    ->  Sort
+	 *          Output: c1, c2, c3, (PARTIAL avg(c3)), (GROUPINGSET_ID())
+	 *          Sort Key: (GROUPINGSET_ID()), gstest.c1, gstest.c2, gstest.c3
+	 *          ->  Gather Motion 3:1  (slice1; segments: 3)
+	 *                Output: c1, c2, c3, (PARTIAL avg(c3)), (GROUPINGSET_ID())
+	 *                ->  Partial GroupAggregate
+	 *                      Output: c1, c2, c3, PARTIAL avg(c3), GROUPINGSET_ID()
+	 *                      Group Key: gstest.c1, gstest.c2
+	 *                      Group Key: gstest.c1
+	 *                      Sort Key: gstest.c2, gstest.c3
+	 *                        Group Key: gstest.c2, gstest.c3
+	 *                      ->  Sort
+	 *                            Output: c1, c2, c3
+	 *                            Sort Key: gstest.c1, gstest.c2
+	 *                            ->  Seq Scan on public.gstest
+	 *                                  Output: c1, c2, c3
+	 *  Optimizer: Postgres query optimizer
+	 * (20 rows)
+	 *
+	 */
+	if (parse->groupingSets)
+	{
+		Index groupref;
+		GroupingSetId *gsetid = makeNode(GroupingSetId);
+
+		grouping_sets_tlist = copyObject(root->processed_tlist);
+		groupref = add_gsetid_tlist(grouping_sets_tlist);
+
+		grouping_sets_groupClause =
+			add_gsetid_groupclause(copyObject(parse->groupClause), groupref);
+
+		grouping_sets_partial_target = copyObject(ctx->partial_grouping_target);
+		if (!list_member(grouping_sets_partial_target->exprs, gsetid))
+			add_column_to_pathtarget(grouping_sets_partial_target,
+									 (Expr *)gsetid, groupref);
+	}
 
 	group_locus = cdb_choose_grouping_locus(root, path, ctx->target,
-											parse->groupClause, NIL, NIL,
+											parse->groupClause,
+											ctx->rollup_lists,
+											ctx->rollup_groupclauses,
 											&need_redistribute);
 	/*
 	 * If the distribution of this path is suitable, two-stage aggregation
@@ -235,18 +378,49 @@ add_twostage_group_agg_path(PlannerInfo *root,
 										 -1.0);
 	}
 
-	initial_agg_path = (Path *) create_agg_path(root,
-												output_rel,
-												path,
-												ctx->partial_grouping_target,
-												parse->groupClause ? AGG_SORTED : AGG_PLAIN,
-												AGGSPLIT_INITIAL_SERIAL,
-												false, /* streaming */
-												parse->groupClause,
-												NIL,
-												ctx->agg_partial_costs,
-												ctx->dNumGroups * getgpsegmentCount(),
-												NULL);
+	if (parse->groupingSets)
+	{
+		/*
+		 * We have grouping sets, possibly with aggregation.  Make
+		 * a GroupingSetsPath.
+		 */
+		initial_agg_path =
+			(Path *) create_groupingsets_path(root,
+											  output_rel,
+											  path,
+											  grouping_sets_partial_target,
+											  AGGSPLIT_INITIAL_SERIAL,
+											  (List *) parse->havingQual,
+											  ctx->rollup_lists,
+											  ctx->rollup_groupclauses,
+											  ctx->agg_partial_costs,
+											  ctx->dNumGroups * getgpsegmentCount());
+
+		motion_pathkeys = NIL;
+	}
+	else if (parse->hasAggs || parse->groupClause)
+	{
+
+		initial_agg_path =
+			(Path *) create_agg_path(root,
+									 output_rel,
+									 path,
+									 ctx->partial_grouping_target,
+									 parse->groupClause ? AGG_SORTED : AGG_PLAIN,
+									 AGGSPLIT_INITIAL_SERIAL,
+									 false, /* streaming */
+									 parse->groupClause,
+									 NIL,
+									 ctx->agg_partial_costs,
+									 ctx->dNumGroups * getgpsegmentCount(),
+									 NULL);
+
+		motion_pathkeys = initial_agg_path->pathkeys;
+	}
+	else
+	{
+		Assert(false);
+	}
 
 	/*
 	 * GroupAgg -> GATHER MOTION -> GroupAgg.
@@ -265,22 +439,58 @@ add_twostage_group_agg_path(PlannerInfo *root,
 	CdbPathLocus_MakeSingleQE(&singleQE_locus, getgpsegmentCount());
 	path = cdbpath_create_motion_path(root,
 									  initial_agg_path,
-									  initial_agg_path->pathkeys,
+									  motion_pathkeys,
 									  false,
 									  singleQE_locus);
 
-	path = (Path *) create_agg_path(root,
-									output_rel,
-									path,
-									ctx->target,
-									parse->groupClause ? AGG_SORTED : AGG_PLAIN,
-									AGGSPLIT_FINAL_DESERIAL,
-									false, /* streaming */
-									parse->groupClause,
-									(List *) parse->havingQual,
-									ctx->agg_final_costs,
-									ctx->dNumGroups,
-									NULL);
+	if (parse->groupingSets)
+	{
+
+		List		*pathkeys;
+
+		pathkeys = make_pathkeys_for_sortclauses(root,
+												 grouping_sets_groupClause,
+												 grouping_sets_tlist);
+
+		path = (Path *) create_sort_path(root,
+										 output_rel,
+										 path,
+										 pathkeys,
+										 -1.0);
+
+		path = (Path *) create_agg_path(root,
+										output_rel,
+										path,
+										ctx->target,
+										AGG_SORTED,
+										AGGSPLIT_FINAL_DESERIAL,
+										false, /* streaming */
+										grouping_sets_groupClause,
+										(List *) parse->havingQual,
+										ctx->agg_final_costs,
+										ctx->dNumGroups,
+										NULL);
+	}
+	else if (parse->hasAggs || parse->groupClause)
+	{
+		path = (Path *) create_agg_path(root,
+										output_rel,
+										path,
+										ctx->target,
+										parse->groupClause ? AGG_SORTED : AGG_PLAIN,
+										AGGSPLIT_FINAL_DESERIAL,
+										false, /* streaming */
+										parse->groupClause,
+										(List *) parse->havingQual,
+										ctx->agg_final_costs,
+										ctx->dNumGroups,
+										NULL);
+	}
+	else
+	{
+		Assert(false);
+	}
+
 	add_path(output_rel, path);
 }
 

@@ -4672,13 +4672,6 @@ PostgresMain(int argc, char *argv[],
 	PG_SETMASK(&UnBlockSig);
 
 	/*
-	 * We need to allow SIGINT, etc during the initial transaction.
-	 * Also, currently if this is the Master with standby support
-	 * we need to allow SIGUSR1 for performing sync replication (used by latch).
-	 */
-	PG_SETMASK(&UnBlockSig);
-
-	/*
 	 * General initialization.
 	 *
 	 * NOTE: if you are tempted to add code in this vicinity, consider putting

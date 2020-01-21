@@ -108,7 +108,6 @@ static void PlanCacheRelCallback(Datum arg, Oid relid);
 static void PlanCacheFuncCallback(Datum arg, int cacheid, uint32 hashvalue);
 static void PlanCacheSysCallback(Datum arg, int cacheid, uint32 hashvalue);
 
-
 /*
  * InitPlanCache: initialize module during InitPostgres.
  *
@@ -1631,7 +1630,8 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 				 * the GDD is enabled, we could acquire RowExclusiveLock here.
 				 */
 				if ((plannedstmt->commandType == CMD_UPDATE ||
-					 plannedstmt->commandType == CMD_DELETE) &&
+					 plannedstmt->commandType == CMD_DELETE ||
+					 IsOnConflictUpdate(plannedstmt)) &&
 					CondUpgradeRelLock(rte->relid, false))
 					lockmode = ExclusiveLock;
 				else
@@ -1736,7 +1736,9 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					 * the GDD is enabled, we could acquire RowExclusiveLock here.
 					 */
 					if ((parsetree->commandType == CMD_UPDATE ||
-						 parsetree->commandType == CMD_DELETE) &&
+						 parsetree->commandType == CMD_DELETE ||
+						 (parsetree->onConflict &&
+						  parsetree->onConflict->action == ONCONFLICT_UPDATE)) &&
 						CondUpgradeRelLock(rte->relid, false))
 						lockmode = ExclusiveLock;
 					else

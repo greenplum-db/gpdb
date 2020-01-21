@@ -166,29 +166,17 @@ INSERT INTO upsert_test VALUES(1, 'Boo');
 WITH aaa AS (SELECT 1 AS a, 'Foo' AS b) INSERT INTO upsert_test
   VALUES (1, 'Bar') ON CONFLICT(a)
   DO UPDATE SET (b, a) = (SELECT b, a FROM aaa) RETURNING *;
- a |  b  
----+-----
- 1 | Foo
-(1 row)
-
+ERROR:  modification of distribution columns in OnConflictUpdate is not supported
 -- correlated sub-select:
 INSERT INTO upsert_test VALUES (1, 'Baz') ON CONFLICT(a)
   DO UPDATE SET (b, a) = (SELECT b || ', Correlated', a from upsert_test i WHERE i.a = upsert_test.a)
   RETURNING *;
- a |        b        
----+-----------------
- 1 | Foo, Correlated
-(1 row)
-
+ERROR:  modification of distribution columns in OnConflictUpdate is not supported
 -- correlated sub-select (EXCLUDED.* alias):
 INSERT INTO upsert_test VALUES (1, 'Bat') ON CONFLICT(a)
   DO UPDATE SET (b, a) = (SELECT b || ', Excluded', a from upsert_test i WHERE i.a = excluded.a)
   RETURNING *;
- a |             b             
----+---------------------------
- 1 | Foo, Correlated, Excluded
-(1 row)
-
+ERROR:  modification of distribution columns in OnConflictUpdate is not supported
 DROP TABLE update_test;
 DROP TABLE upsert_test;
 --

@@ -26,7 +26,9 @@ extern void cdb_create_twostage_grouping_paths(PlannerInfo *root,
 											   double dNumGroups,
 											   const AggClauseCosts *agg_costs,
 											   const AggClauseCosts *agg_partial_costs,
-											   const AggClauseCosts *agg_final_costs);
+											   const AggClauseCosts *agg_final_costs,
+											   List *rollup_lists,
+											   List *rollup_groupclauses);
 
 extern CdbPathLocus cdb_choose_grouping_locus(PlannerInfo *root, Path *path,
 											  PathTarget *target,

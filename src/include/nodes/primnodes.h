@@ -367,6 +367,15 @@ typedef struct GroupId
 } GroupId;
 
 /*
+ * GroupingSetId
+ */
+typedef struct GroupingSetId
+{
+	Expr		xpr;
+	int			location;		/* token location */
+} GroupingSetId;
+
+/*
  * GroupingFunc
  *
  * A GroupingFunc is a GROUPING(...) expression, which behaves in many ways

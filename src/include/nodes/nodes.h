@@ -237,6 +237,7 @@ typedef enum NodeTag
 	T_RefreshClause,
 	T_Flow,
 	T_GroupId,
+	T_GroupingSetId,
 	T_DistributedBy,
 	T_DMLActionExpr,
 	T_PartSelectedExpr,

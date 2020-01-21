@@ -462,7 +462,7 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	/* apply final path target */
         newSubqueryScanPath = (SubqueryScanPath *)apply_projection_to_path(root,
                                                                            subqueryScanPath->path.parent,
-                                                                           newSubqueryScanPath,
+                                                                           (Path *) newSubqueryScanPath,
                                                                            subqueryScanPath->path.pathtarget);
 
         return (Path *) newSubqueryScanPath;

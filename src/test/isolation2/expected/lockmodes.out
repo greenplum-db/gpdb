@@ -26,6 +26,17 @@ CREATE
 create table t_lockmods_rep(c int) distributed replicated;
 CREATE
 
+-- See github issue: https://github.com/greenplum-db/gpdb/issues/9449
+-- upsert may lock tuples on segment, so we should upgrade lock level
+-- on QD if GDD is disabled.
+create table t_lockmods_upsert(a int, b int) distributed by (a);
+CREATE
+create unique index uidx_t_lockmodes_upsert on t_lockmods_upsert(a, b);
+CREATE
+-- add analyze to avoid auto vacuum when executing first insert
+analyze t_lockmods_upsert;
+ANALYZE
+
 -- 1.1.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
 BEGIN
@@ -285,7 +296,20 @@ INSERT 5
 1: abort;
 ABORT
 
--- 1.1.4 use cached plan should be consistent with no cached plan
+-- 1.1.4 upsert should hold ExclusiveLock on result relations
+1: begin;
+BEGIN
+1: insert into t_lockmods_upsert values (1, 1) on conflict(a, b) do update set b = 99;
+INSERT 1
+2: select * from show_locks_lockmodes;
+ locktype | mode          | granted | relation          
+----------+---------------+---------+-------------------
+ relation | ExclusiveLock | t       | t_lockmods_upsert 
+(1 row)
+1: abort;
+ABORT
+
+-- 1.1.5 use cached plan should be consistent with no cached plan
 1: prepare select_for_update as select * from t_lockmods for update;
 PREPARE
 1: prepare select_for_nokeyupdate as select * from t_lockmods for no key update;
@@ -299,6 +323,8 @@ PREPARE
 1: prepare delete_tlockmods as delete from t_lockmods;
 PREPARE
 1: prepare insert_tlockmods as insert into t_lockmods select * from generate_series(1, 5);
+PREPARE
+1: prepare upsert_tlockmods as insert into t_lockmods_upsert values (1, 1) on conflict(a, b) do update set b = 99;
 PREPARE
 
 1: begin;
@@ -410,6 +436,19 @@ EXECUTE 5
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute upsert_tlockmods;
+EXECUTE 1
+2: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation          
+----------+-----------------+---------+-------------------
+ relation | AccessShareLock | t       | t_lockmods_upsert 
+ relation | ExclusiveLock   | t       | t_lockmods_upsert 
+(2 rows)
 1: abort;
 ABORT
 
@@ -907,7 +946,7 @@ BEGIN
  4 
  5 
 (5 rows)
-1: select * from show_locks_lockmodes;
+2: select * from show_locks_lockmodes;
  locktype | mode            | granted | relation   
 ----------+-----------------+---------+------------
  relation | AccessShareLock | t       | t_lockmods 
@@ -1238,7 +1277,20 @@ INSERT 5
 1: abort;
 ABORT
 
--- 2.1.4 use cached plan should be consistent with no cached plan
+-- 2.1.4 upsert should hold RowExclusiveLock on result relations
+1: begin;
+BEGIN
+1: insert into t_lockmods_upsert values (1, 1) on conflict(a, b) do update set b = 99;
+INSERT 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation          
+----------+------------------+---------+-------------------
+ relation | RowExclusiveLock | t       | t_lockmods_upsert 
+(1 row)
+1: abort;
+ABORT
+
+-- 2.1.5 use cached plan should be consistent with no cached plan
 1: prepare select_for_update as select * from t_lockmods for update;
 PREPARE
 1: prepare select_for_nokeyupdate as select * from t_lockmods for no key update;
@@ -1252,6 +1304,8 @@ PREPARE
 1: prepare delete_tlockmods as delete from t_lockmods;
 PREPARE
 1: prepare insert_tlockmods as insert into t_lockmods select * from generate_series(1, 5);
+PREPARE
+1: prepare upsert_tlockmods as insert into t_lockmods_upsert values (1, 1) on conflict(a, b) do update set b = 99;
 PREPARE
 
 1: begin;
@@ -1363,6 +1417,19 @@ EXECUTE 5
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
+1: abort;
+ABORT
+
+1: begin;
+BEGIN
+1: execute upsert_tlockmods;
+EXECUTE 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation          
+----------+------------------+---------+-------------------
+ relation | AccessShareLock  | t       | t_lockmods_upsert 
+ relation | RowExclusiveLock | t       | t_lockmods_upsert 
+(2 rows)
 1: abort;
 ABORT
 
@@ -1857,7 +1924,7 @@ BEGIN
 -- GPDB_96_MERGE_FIXME: this test had indeterministic row order differences,
 -- because of the "LockRows loses sort order" issue.
 --1: select * from t_lockmods order by c for update;
-1: select * from show_locks_lockmodes;
+2: select * from show_locks_lockmodes;
  locktype | mode            | granted | relation   
 ----------+-----------------+---------+------------
  relation | AccessShareLock | t       | t_lockmods 

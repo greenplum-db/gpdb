@@ -485,6 +485,10 @@ contain_agg_clause_walker(Node *node, void *context)
 		Assert(((GroupId *) node)->agglevelsup == 0);
 		return true;			/* abort the tree traversal and return true */
 	}
+	if (IsA(node, GroupingSetId))
+	{
+		return true;			/* abort the tree traversal and return true */
+	}
 
 	Assert(!IsA(node, SubLink));
 	return expression_tree_walker(node, contain_agg_clause_walker, context);

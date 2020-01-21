@@ -1724,6 +1724,7 @@ typedef struct GroupingSetsPath
 {
 	Path		path;
 	Path	   *subpath;		/* path representing input source */
+	AggSplit	aggsplit;		/* agg-splitting mode, see nodes.h */
 	List	   *rollup_groupclauses;	/* list of lists of SortGroupClause's */
 	List	   *rollup_lists;	/* parallel list of lists of grouping sets */
 	List	   *qual;			/* quals (HAVING quals), if any */

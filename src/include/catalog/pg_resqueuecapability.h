@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * pg_resqueuecapabiltiy.h
+ * pg_resqueuecapability.h
  *	  definition of the system "pg_resqueuecapability" relation.
  *
  *
@@ -32,7 +32,9 @@ CATALOG(pg_resqueuecapability,6060) BKI_SHARED_RELATION
 {
 	Oid		resqueueid;	/* OID of the queue with this capability  */
 	int16	restypid;	/* resource type id (key to pg_resourcetype)  */
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	text	ressetting;	/* resource setting (opaque type)  */
+#endif
 } FormData_pg_resqueuecapability;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

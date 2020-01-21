@@ -1746,6 +1746,19 @@ _copyGroupId(const GroupId *from)
 }
 
 /*
+ * _copyGroupingSetId
+ */
+static GroupingSetId *
+_copyGroupingSetId(const GroupingSetId *from)
+{
+	GroupingSetId	   *newnode = makeNode(GroupingSetId);
+
+	COPY_LOCATION_FIELD(location);
+
+	return newnode;
+}
+
+/*
  * _copyWindowFunc
  */
 static WindowFunc *
@@ -2508,6 +2521,27 @@ _copyPathKey(const PathKey *from)
 	COPY_SCALAR_FIELD(pk_opfamily);
 	COPY_SCALAR_FIELD(pk_strategy);
 	COPY_SCALAR_FIELD(pk_nulls_first);
+
+	return newnode;
+}
+
+/*
+ * _copyPathTarget
+ */
+static PathTarget *
+_copyPathTarget(const PathTarget *from)
+{
+	PathTarget    *newnode = makeNode(PathTarget);
+
+	COPY_NODE_FIELD(exprs);
+	if (from->sortgrouprefs)
+	{
+		int numCols = list_length(from->exprs);
+		if (numCols > 0)
+			COPY_POINTER_FIELD(sortgrouprefs, numCols * sizeof(Index));
+	}
+	COPY_SCALAR_FIELD(cost);
+	COPY_SCALAR_FIELD(width);
 
 	return newnode;
 }
@@ -5652,6 +5686,9 @@ copyObject(const void *from)
 		case T_GroupId:
 			retval = _copyGroupId(from);
 			break;
+		case T_GroupingSetId:
+			retval = _copyGroupingSetId(from);
+			break;
 		case T_WindowFunc:
 			retval = _copyWindowFunc(from);
 			break;
@@ -5784,6 +5821,9 @@ copyObject(const void *from)
 			break;
 		case T_PathKey:
 			retval = _copyPathKey(from);
+			break;
+		case T_PathTarget:
+			retval = _copyPathTarget(from);
 			break;
 		case T_DistributionKey:
 			retval = _copyDistributionKey(from);

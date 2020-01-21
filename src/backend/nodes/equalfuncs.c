@@ -261,6 +261,15 @@ _equalGroupId(const GroupId *a, const GroupId *b)
 }
 
 static bool
+_equalGroupingSetId(const GroupingSetId *a, const GroupingSetId *b)
+{
+
+	COMPARE_LOCATION_FIELD(location);
+
+	return true;
+}
+
+static bool
 _equalWindowFunc(const WindowFunc *a, const WindowFunc *b)
 {
 	COMPARE_SCALAR_FIELD(winfnoid);
@@ -3062,6 +3071,9 @@ equal(const void *a, const void *b)
 			break;
 		case T_GroupId:
 			retval = _equalGroupId(a, b);
+			break;
+		case T_GroupingSetId:
+			retval = _equalGroupingSetId(a, b);
 			break;
 		case T_WindowFunc:
 			retval = _equalWindowFunc(a, b);

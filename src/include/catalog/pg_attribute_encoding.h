@@ -32,7 +32,9 @@ CATALOG(pg_attribute_encoding,6231) BKI_WITHOUT_OIDS
 {
 	Oid		attrelid;		
 	int16	attnum;			
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	text	attoptions[1];	
+#endif
 } FormData_pg_attribute_encoding;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

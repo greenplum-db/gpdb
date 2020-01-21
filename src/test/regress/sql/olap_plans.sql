@@ -7,7 +7,7 @@ analyze olap_test;
 
 create table olap_test_single(a int4, b int4, c int4, d int4) distributed by (a);
 insert into olap_test_single select g / 5000, g / 1000, g / 500, g from generate_series(1, 10000) g;
-analyze olap_test;
+analyze olap_test_single;
 
 -- If the GROUP BY is a superset of the table's distribution keys, the
 -- aggregation can be independently in segments, and just gather the
@@ -41,3 +41,17 @@ select sum(distinct a) from olap_test_single;
 explain select sum(distinct b) from olap_test_single;
 select sum(distinct b) from olap_test_single;
 
+
+--
+-- GROUPING SETS
+--
+
+-- If the query produces a relatively small number of groups in comparison to
+-- the number of input rows, two-stage aggregation will be picked.
+explain select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c));
+select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c));
+
+-- If the query produces a relatively large number of groups in comparison to
+-- the number of input rows, one-stage aggregation will be picked.
+explain select a, b, d, sum(d) from olap_test group by grouping sets((a, b), (a), (b, d));
+-- do not execute this query as it would produce too many tuples.

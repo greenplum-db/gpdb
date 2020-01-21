@@ -155,6 +155,7 @@ static char *generate_positional_name(AttrNumber attrno);
 static List*generate_alternate_vars(Var *var, grouped_window_ctx *ctx);
 static bool checkCanOptSelectLockingClause(SelectStmt *stmt);
 static bool queryNodeSearch(Node *node, void *context);
+static void sanity_check_on_conflict_update_set_distkey(Oid relid, List *onconflict_set);
 
 /*
  * parse_analyze
@@ -576,6 +577,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 
 	qry->commandType = CMD_INSERT;
 	pstate->p_is_insert = true;
+	pstate->p_is_on_conflict_update = false;
 
 	/* process the WITH clause independently of all else */
 	if (stmt->withClause)
@@ -637,6 +639,14 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 		sub_rtable = NIL;		/* not used, but keep compiler quiet */
 		sub_namespace = NIL;
 	}
+
+	/*
+	 * Greenplum specific behavior.
+	 * conflict update may lock tuples on segments and behaves like
+	 * update. So we might consider if to upgrade lockmode for this
+	 * case.
+	 */
+	pstate->p_is_on_conflict_update = isOnConflictUpdate;
 
 	/*
 	 * Must get write lock on INSERT target table before scanning SELECT, else
@@ -911,6 +921,17 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 	if (stmt->onConflictClause)
 		qry->onConflict = transformOnConflictClause(pstate,
 													stmt->onConflictClause);
+
+	/*
+	 * Greenplum specific behavior.
+	 * OnConflictUpdate may modify the distkey of the table,
+	 * this can lead to wrong data distribution. Add a check
+	 * here and raise error for such case.
+	 * This fixes the github issue: https://github.com/greenplum-db/gpdb/issues/9444
+	 */
+	if (isOnConflictUpdate)
+		sanity_check_on_conflict_update_set_distkey(rte->relid,
+													qry->onConflict->onConflictSet);
 
 	/*
 	 * If we have a RETURNING clause, we need to add the target relation to
@@ -3265,6 +3286,7 @@ transformUpdateStmt(ParseState *pstate, UpdateStmt *stmt)
 
 	qry->commandType = CMD_UPDATE;
 	pstate->p_is_insert = false;
+	pstate->p_is_on_conflict_update = false;
 
 	/* process the WITH clause independently of all else */
 	if (stmt->withClause)
@@ -3476,6 +3498,8 @@ static Query *
 transformDeclareCursorStmt(ParseState *pstate, DeclareCursorStmt *stmt)
 {
 	Query	   *result;
+
+	pstate->p_is_on_conflict_update = false;
 
 	/*
 	 * Don't allow both SCROLL and NO SCROLL to be specified
@@ -4186,4 +4210,30 @@ queryNodeSearch(Node *node, void *context)
 	}
 
 	return true;
+}
+
+static void
+sanity_check_on_conflict_update_set_distkey(Oid relid, List *onconflict_set)
+{
+	ListCell  *lc;
+	Bitmapset *dist_cols = NULL;
+	Bitmapset *conflict_update_cols = NULL;
+	GpPolicy  *policy = GpPolicyFetch(relid);
+
+	for (int i = 0; i < policy->nattrs; i++)
+		dist_cols = bms_add_member(dist_cols, policy->attrs[i]);
+
+	foreach(lc, onconflict_set)
+	{
+		TargetEntry *te = lfirst(lc);
+		conflict_update_cols = bms_add_member(conflict_update_cols,
+											  te->resno);
+	}
+
+	if (!bms_is_empty(bms_intersect(dist_cols, conflict_update_cols)))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("modification of distribution columns in OnConflictUpdate is not supported")));
+	}
 }

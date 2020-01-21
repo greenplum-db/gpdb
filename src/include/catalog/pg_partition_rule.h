@@ -35,12 +35,14 @@ CATALOG(pg_partition_rule,5011)
 	int16		parruleord;			
 	bool		parrangestartincl;	
 	bool		parrangeendincl;	
+#ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	pg_node_tree parrangestart;
 	pg_node_tree parrangeend;
 	pg_node_tree parrangeevery;
 	pg_node_tree parlistvalues;
 	text		parreloptions[1];	
 	Oid			partemplatespace;	
+#endif
 } FormData_pg_partition_rule;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
