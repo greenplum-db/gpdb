@@ -543,7 +543,7 @@ check_heterogeneous_partition(void)
 				}
 				else
 				{
-					fprintf(script, "  column %s of parent table %s has type %s of length %s and alignment '%s', but it is has type %s of length %s and alignment '%s' in child table %s\n",
+					fprintf(script, "  column %s of parent table %s has type %s of length %s and alignment '%s', but it is type %s of length %s and alignment '%s' in child table %s\n",
 							PQgetvalue(res, rowno, PQfnumber(res, "attname1")),
 							PQgetvalue(res, rowno, PQfnumber(res, "parrelid")),
 							PQgetvalue(res, rowno, PQfnumber(res, "atttypid1")),
