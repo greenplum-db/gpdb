@@ -291,3 +291,33 @@ reset check_function_bodies;
 
 SET "request.header.user-agent" = 'curl/7.29.0';
 SHOW "request.header.user-agent";
+
+-- Test function with SET search_path
+create schema n1;
+create type ty1 as (i int);
+
+CREATE OR REPLACE FUNCTION n1.drop_table(v_schema character varying, v_table character varying) RETURNS text
+AS $$
+BEGIN
+    EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(v_schema) || '.' || quote_ident(v_table) || ';';
+    RETURN '0';
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN SQLSTATE;
+END;
+$$ LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = n1, pg_temp;
+
+-- Destroy the QD-QE libpq connections.
+select cleanupAllGangs();
+
+select n1.drop_table('public','t1');
+
+-- After funtion drop table, public schema is still in search_path
+create table public.t1(i ty1);
+
+drop table public.t1;
+drop type public.ty1;
+drop function n1.drop_table(v_schema character varying, v_table character varying);
+drop schema n1;

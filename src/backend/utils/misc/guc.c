@@ -5497,12 +5497,12 @@ AtEOXact_GUC(bool isCommit, int nestLevel)
 			if (changed && (gconf->flags & GUC_REPORT))
 				ReportGUCOption(gconf);
 
-			/* if a guc restore in QD, record it and restore QE before next query start */
+			/*
+			 * If a guc's value changed on QD,
+			 * record it and restore QE before next query start
+			 */
 			if (Gp_role == GP_ROLE_DISPATCH
-					&& !IsTransactionBlock()
-					&& changed
-					&& !isCommit
-					&& gp_guc_need_restore
+					&& (changed || gp_guc_need_restore)
 					&& (gconf->flags & GUC_GPDB_NEED_SYNC))
 			{
 				MemoryContext oldcontext = MemoryContextSwitchTo(TopMemoryContext);
