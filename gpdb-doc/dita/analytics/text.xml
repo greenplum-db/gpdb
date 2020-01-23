@@ -8,15 +8,15 @@
         Database full text search</b> and <b>Pivotal GPText</b>.</p>
     <section>
       <title>Greenplum Database Full Text Search</title>
-    </section>
     <p>Greenplum Database text search is PostgreSQL text search ported to the Greenplum Database MPP
       platform.  Greenplum Database text search is immediately available to you, with no need to
       install and maintain additional software. For full details on this topic, see <xref
         href="../admin_guide/textsearch/intro.xml" format="dita" scope="peer">Greenplum Database
         text search</xref>.</p>
-    <section>
-      <title>Pivotal GPText</title>
     </section>
+    <section otherprops="Pivotal">
+      <title>Pivotal GPText</title>
+    
     <p>For advanced text analysis applications, Pivotal also offers <xref
         href="http://gptext.docs.pivotal.io/330/topics/intro.html" format="html" scope="external"
           ><b>Pivotal GPText</b></xref>, which integrates Greenplum Database with the Apache Solr
@@ -24,10 +24,11 @@
       cluster and provides Greenplum Database functions you can use to create Solr indexes, query
       them, and receive results in the database session.</p>
     <p>Both of these systems provide powerful, enterprise-quality document indexing and searching
-      services.  GPText, with Solr, has many capabilities that are not available with Greenplum
+      services. GPText, with Solr, has many capabilities that are not available with Greenplum
       Database text search. In particular, GPText is better for advanced text analysis applications.
-      For a comparative between the two methods, see <xref
+      For a comparative between these methods, see <xref
         href="../admin_guide/textsearch/full-text-search.xml#full-text-search">Comparing Greenplum
         Database Text Search with Pivotal GPText</xref>.</p>
+    </section>
   </body>
 </topic>

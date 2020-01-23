@@ -3,16 +3,10 @@
 <topic id="gp_integrated_analytics">
   <title>Overview of Greenplum Database Integrated Analytics</title>
   <body>
-        <p>Greenplum offers a unique combination of a powerful massively parallel processing (MPP)
+    <p>Greenplum offers a unique combination of a powerful, massively parallel processing (MPP)
       database and advanced data analytics. This combination creates an ideal framework for data
       scientists, data architects and business decision makers to explore artificial intelligence
-      (AI), machine learning, deep learning, text analytics, and geospatial.</p>
-    
-    <p>This topic covers:</p>
-    <ul>
-      <li>The Greenplum Database integrated analytics ecosystem.</li>
-      <li>Why use Greenplum Database for integrated analytics.</li>
-     </ul>
+      (AI), machine learning, deep learning, text analytics, and geospatial analytics.</p>
   </body>
     
     <topic id="gp_ecosystem">
@@ -50,13 +44,18 @@
     </section>
     
     <section id="pr_lang_and_ext">
-        <title>Programming Language Extensions</title>The Greenplum Database distribution supports
-        the following procedural languages. Refer to the linked documentation for installation and
-        usage instructions.<p><xref href="pl_container.xml">PL/Container</xref>, <xref
-            href="pl_java.xml" format="dita">PL/Java</xref>, <xref href="pl_perl.xml" format="dita"
-            >PL/Perl</xref>, <xref href="pl_sql.xml" format="dita">PL/pgSQL</xref>, <xref
-            href="pl_python.xml" format="dita">PL/Python</xref>, <xref href="pl_r.xml" format="dita"
-            >PL/R</xref>.</p>
+        <title>Programming Language Extensions</title>
+        <p>Greenplum database supports a variety of procedural languages that you can use for
+          programming database analytics. Refer to the linked documentation for installation and
+          usage instructions.</p>
+       <ul>
+         <li><xref href="pl_container.xml">PL/Container</xref></li>
+         <li><xref href="pl_java.xml" format="dita">PL/Java</xref></li>
+         <li><xref href="pl_perl.xml" format="dita">PL/Perl</xref></li>
+         <li><xref href="pl_sql.xml" format="dita">PL/pgSQL</xref></li>
+         <li><xref href="pl_python.xml" format="dita">PL/Python</xref></li>
+         <li><xref href="pl_r.xml" format="dita">PL/R</xref></li>
+       </ul>
       </section>
    </body>
     </topic>
@@ -92,7 +91,7 @@
             scope="external">Platform Extension Framework (PXF)</xref>, which provides
             <i>connectors</i> that enable you to access data stored in sources external to your
           Greenplum Database deployment.</li>
-      <li>Use familiar and leading BI and advanced analytics software that are ODBC/JDBC compatible, or have native integrations,
+      <li otherprops="Pivotal">Use familiar and leading BI and advanced analytics software that are ODBC/JDBC compatible, or have native integrations,
         including SAS, IBM Cognos, SAP Analytics Solutions, Qlik, Tableau, Apache Zeppelin, and Jupyter.</li>
       <li>Execute deep learning algorithms using popular frameworks like Keras and TensorFlow in an
           MPP relational database, with GPU (Graphical Processing Unit) acceleration.</li>
