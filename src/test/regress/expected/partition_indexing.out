@@ -235,57 +235,26 @@ NOTICE:  building index for child partition "mpp3033a_1_prt_aa"
 NOTICE:  building index for child partition "mpp3033a_1_prt_bb"
 NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
 CREATE UNIQUE INDEX mpp3033a_unique2 ON mpp3033a (unique2);
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa"
-NOTICE:  building index for child partition "mpp3033a_1_prt_bb"
-NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033a"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033a_hundred ON mpp3033a (hundred);
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa"
-NOTICE:  building index for child partition "mpp3033a_1_prt_bb"
-NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033a"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033a_stringu1 ON mpp3033a (stringu1);
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa"
-NOTICE:  building index for child partition "mpp3033a_1_prt_bb"
-NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033a"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033b_unique1 ON mpp3033b (unique1);
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb"
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa_2_prt_cc"
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa_2_prt_dd"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_cc"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_dd"
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033b"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033b_unique2 ON mpp3033b (unique2);
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb"
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa_2_prt_cc"
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa_2_prt_dd"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_cc"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_dd"
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033b"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033b_hundred ON mpp3033b (hundred);
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb"
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa_2_prt_cc"
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa_2_prt_dd"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_cc"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_dd"
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033b"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033b_stringu1 ON mpp3033b (stringu1);
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb"
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa_2_prt_cc"
-NOTICE:  building index for child partition "mpp3033b_1_prt_aa_2_prt_dd"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_cc"
-NOTICE:  building index for child partition "mpp3033b_1_prt_bb_2_prt_dd"
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033b"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 select count(*) from mpp3033a;
  count 
 -------
@@ -306,6 +275,7 @@ ERROR:  relation "mpp3033a_hundred" does not exist
 reindex index mpp3033a_stringu1;
 ERROR:  relation "mpp3033a_stringu1" does not exist
 reindex index mpp3033b_unique1;
+ERROR:  relation "mpp3033b_unique1" does not exist
 reindex index mpp3033b_unique2;
 ERROR:  relation "mpp3033b_unique2" does not exist
 reindex index mpp3033b_hundred;
@@ -326,6 +296,7 @@ ERROR:  index "mpp3033a_hundred" does not exist
 drop index mpp3033a_stringu1;
 ERROR:  index "mpp3033a_stringu1" does not exist
 drop index mpp3033b_unique1;
+ERROR:  index "mpp3033b_unique1" does not exist
 drop index mpp3033b_unique2;
 ERROR:  index "mpp3033b_unique2" does not exist
 drop index mpp3033b_hundred;
@@ -840,129 +811,26 @@ NOTICE:  building index for child partition "mpp3033a_1_prt_aa_8"
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa_9"
 NOTICE:  building index for child partition "mpp3033a_1_prt_aa_10"
 CREATE UNIQUE INDEX mpp3033a_unique2 ON mpp3033a (unique2);
-NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_1"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_2"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_3"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_4"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_5"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_6"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_7"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_8"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_9"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_10"
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033a"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033a_hundred ON mpp3033a (hundred);
-NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_1"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_2"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_3"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_4"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_5"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_6"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_7"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_8"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_9"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_10"
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033a"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033a_stringu1 ON mpp3033a (stringu1);
-NOTICE:  building index for child partition "mpp3033a_1_prt_default_part"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_1"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_2"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_3"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_4"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_5"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_6"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_7"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_8"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_9"
-NOTICE:  building index for child partition "mpp3033a_1_prt_aa_10"
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033a"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033b_unique1 ON mpp3033b (unique1);
-NOTICE:  building index for child partition "mpp3033b_1_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part"
-NOTICE:  building index for child partition "mpp3033b_1_prt_2_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_2_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_2"
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033b"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033b_unique2 ON mpp3033b (unique2);
-NOTICE:  building index for child partition "mpp3033b_1_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part"
-NOTICE:  building index for child partition "mpp3033b_1_prt_2_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_2_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_2"
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033b"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033b_hundred ON mpp3033b (hundred);
-NOTICE:  building index for child partition "mpp3033b_1_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part"
-NOTICE:  building index for child partition "mpp3033b_1_prt_2_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_2_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_2"
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033b"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 CREATE UNIQUE INDEX mpp3033b_stringu1 ON mpp3033b (stringu1);
-NOTICE:  building index for child partition "mpp3033b_1_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part"
-NOTICE:  building index for child partition "mpp3033b_1_prt_2_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_2_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_4_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_3_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_1_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_5_2_prt_2"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_1"
-NOTICE:  building index for child partition "mpp3033b_1_prt_default_part_2_prt_2"
-DETAIL:  Distribution key column "unique1" is not included in the constraint.
-ERROR:  UNIQUE index must contain all columns in the table's distribution key
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "mpp3033b"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 select count(*) from mpp3033a;
  count 
 -------
@@ -983,6 +851,7 @@ ERROR:  relation "mpp3033a_hundred" does not exist
 reindex index mpp3033a_stringu1;
 ERROR:  relation "mpp3033a_stringu1" does not exist
 reindex index mpp3033b_unique1;
+ERROR:  relation "mpp3033b_unique1" does not exist
 reindex index mpp3033b_unique2;
 ERROR:  relation "mpp3033b_unique2" does not exist
 reindex index mpp3033b_hundred;
@@ -1009,6 +878,7 @@ ERROR:  index "mpp3033a_hundred" does not exist
 drop index mpp3033a_stringu1;
 ERROR:  index "mpp3033a_stringu1" does not exist
 drop index mpp3033b_unique1;
+ERROR:  index "mpp3033b_unique1" does not exist
 drop index mpp3033b_unique2;
 ERROR:  index "mpp3033b_unique2" does not exist
 drop index mpp3033b_hundred;

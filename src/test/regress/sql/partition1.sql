@@ -1488,3 +1488,50 @@ SELECT user_name FROM users_test_1_prt_p2019;
 SELECT user_name FROM users_test_1_prt_p2020;
 -- Expect C
 SELECT user_name FROM users_test_1_prt_extra;
+
+-- Github issue: https://github.com/greenplum-db/gpdb/issues/9460
+-- When creating unique or primary key index on Partition table,
+-- the cols in index must contain all partition keys.
+CREATE TABLE t_idx_col_contain_partkey(a int, b int) DISTRIBUTED BY (a)
+PARTITION BY list (b)
+(PARTITION t1 values (1),
+ PARTITION t2 values (2));
+
+-- the following statement should fail because index cols does not contain part key
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a);
+-- the following statement should work
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a, b);
+DROP INDEX uidx_t_idx_col_contain_partkey;
+DROP TABLE t_idx_col_contain_partkey;
+
+-- test unique index for multi level partition table
+CREATE TABLE t_idx_col_contain_partkey
+(
+        r_regionkey integer not null,
+        r_name char(25),
+        r_comment varchar(152)
+)
+DISTRIBUTED BY (r_regionkey)
+PARTITION BY RANGE (r_regionkey)
+SUBPARTITION BY LIST (r_name) SUBPARTITION TEMPLATE
+(
+        SUBPARTITION africa VALUES ('AFRICA'),
+        SUBPARTITION america VALUES ('AMERICA'),
+        SUBPARTITION asia VALUES ('ASIA'),
+        SUBPARTITION europe VALUES ('EUROPE'),
+        SUBPARTITION mideast VALUES ('MIDDLE EAST'),
+        SUBPARTITION australia VALUES ('AUSTRALIA'),
+        SUBPARTITION antarctica VALUES ('ANTARCTICA')
+)
+(
+        PARTITION region1 start (0),
+        PARTITION region2 start (3),
+        PARTITION region3 start (5) end (8)
+);
+
+-- should fail, must contain all the partition keys of all levels
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey);
+-- should work
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey, r_name);
+DROP INDEX uidx_t_idx_col_contain_partkey;
+DROP TABLE t_idx_col_contain_partkey;

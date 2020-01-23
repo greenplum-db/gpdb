@@ -2894,3 +2894,76 @@ SELECT user_name FROM users_test_1_prt_extra;
  C
 (1 row)
 
+-- Github issue: https://github.com/greenplum-db/gpdb/issues/9460
+-- When creating unique or primary key index on Partition table,
+-- the cols in index must contain all partition keys.
+CREATE TABLE t_idx_col_contain_partkey(a int, b int) DISTRIBUTED BY (a)
+PARTITION BY list (b)
+(PARTITION t1 values (1),
+ PARTITION t2 values (2));
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_t1" for table "t_idx_col_contain_partkey"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_t2" for table "t_idx_col_contain_partkey"
+-- the following statement should fail because index cols does not contain part key
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a);
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "t_idx_col_contain_partkey"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
+-- the following statement should work
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(a, b);
+DROP INDEX uidx_t_idx_col_contain_partkey;
+DROP TABLE t_idx_col_contain_partkey;
+-- test unique index for multi level partition table
+CREATE TABLE t_idx_col_contain_partkey
+(
+        r_regionkey integer not null,
+        r_name char(25),
+        r_comment varchar(152)
+)
+DISTRIBUTED BY (r_regionkey)
+PARTITION BY RANGE (r_regionkey)
+SUBPARTITION BY LIST (r_name) SUBPARTITION TEMPLATE
+(
+        SUBPARTITION africa VALUES ('AFRICA'),
+        SUBPARTITION america VALUES ('AMERICA'),
+        SUBPARTITION asia VALUES ('ASIA'),
+        SUBPARTITION europe VALUES ('EUROPE'),
+        SUBPARTITION mideast VALUES ('MIDDLE EAST'),
+        SUBPARTITION australia VALUES ('AUSTRALIA'),
+        SUBPARTITION antarctica VALUES ('ANTARCTICA')
+)
+(
+        PARTITION region1 start (0),
+        PARTITION region2 start (3),
+        PARTITION region3 start (5) end (8)
+);
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1" for table "t_idx_col_contain_partkey"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_africa" for table "t_idx_col_contain_partkey_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_america" for table "t_idx_col_contain_partkey_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_asia" for table "t_idx_col_contain_partkey_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_europe" for table "t_idx_col_contain_partkey_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_mideast" for table "t_idx_col_contain_partkey_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_australia" for table "t_idx_col_contain_partkey_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region1_2_prt_antarctica" for table "t_idx_col_contain_partkey_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2" for table "t_idx_col_contain_partkey"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_africa" for table "t_idx_col_contain_partkey_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_america" for table "t_idx_col_contain_partkey_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_asia" for table "t_idx_col_contain_partkey_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_europe" for table "t_idx_col_contain_partkey_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_mideast" for table "t_idx_col_contain_partkey_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_australia" for table "t_idx_col_contain_partkey_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region2_2_prt_antarctica" for table "t_idx_col_contain_partkey_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3" for table "t_idx_col_contain_partkey"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_africa" for table "t_idx_col_contain_partkey_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_america" for table "t_idx_col_contain_partkey_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_asia" for table "t_idx_col_contain_partkey_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_europe" for table "t_idx_col_contain_partkey_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_mideast" for table "t_idx_col_contain_partkey_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_australia" for table "t_idx_col_contain_partkey_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "t_idx_col_contain_partkey_1_prt_region3_2_prt_antarctica" for table "t_idx_col_contain_partkey_1_prt_region3"
+-- should fail, must contain all the partition keys of all levels
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey);
+ERROR:  UNIQUE constraint must contain all columns in the partition key of relation "t_idx_col_contain_partkey"
+HINT:  Include the partition key or create a part-wise UNIQUE index instead.
+-- should work
+CREATE UNIQUE INDEX uidx_t_idx_col_contain_partkey on t_idx_col_contain_partkey(r_regionkey, r_name);
+DROP INDEX uidx_t_idx_col_contain_partkey;
+DROP TABLE t_idx_col_contain_partkey;
