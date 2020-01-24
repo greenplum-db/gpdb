@@ -294,9 +294,9 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           href="../../install_guide/install_python_dsmod.xml" format="dita">Python Data Science
           Module Package</xref> and <xref href="../../install_guide/install_r_dslib.xml"
           format="dita">R Data Science Library Package</xref>.</p>
-      <p>The Docker image tag represents the PL/Container release version (for example, 2.0.2). For
+      <p>The Docker image tag represents the PL/Container release version (for example, 2.1.0). For
         example, the full Docker image name for the PL/Container for Python Docker image is similar
-        to <codeph>pivotaldata/plc_python_shared:2.0.2</codeph>. This is the name that is referred
+        to <codeph>pivotaldata/plc_python_shared:2.1.0</codeph>. This is the name that is referred
         to in the default PL/Container configuration. Also, you can create custom Docker images,
         install the image and add the image to the PL/Container configuration. </p>
     </body>
@@ -391,9 +391,9 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
                 <codeph>-r</codeph> option to uninstall the PL/Container language extension. This
               example uninstalls the PL/Container language extension on a Linux
               system.<codeblock>$ gppkg -r plcontainer-1.0.0</codeblock></li>
-            <li>Run the package installation command. This example installs the PL/Container 2.0.2
+            <li>Run the package installation command. This example installs the PL/Container 2.1.0
               language extension on a Linux
-              system.<codeblock>gppkg -i plcontainer-2.1.0-rhel7-x86_64.gppkg</codeblock></li>
+              system.<codeblock>gppkg -i plcontainer-2.1.0-gp6-rhel7_x86_64.gppkg</codeblock></li>
             <li>Source the file
               <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
             <li>Update the PL/Container configuration. This command restores the saved
@@ -431,8 +431,8 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
             <li>Use the Greenplum Database <codeph>gppkg</codeph> utility with the
                 <codeph>-u</codeph> option to update the PL/Container language extension. For
               example, the following command updates the PL/Container language extension to version
-              2.0.2 on a Linux
-              system:<codeblock>$ gppkg -u plcontainer-2.0.2-rhel7-x86_64.gppkg</codeblock></li>
+              2.1.0 on a Linux
+              system:<codeblock>$ gppkg -u plcontainer-2.1.0-gp6-rhel7_x86_64.gppkg</codeblock></li>
             <li>Source the Greenplum Database environment file
                 <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>$ source $GPHOME/greenplum_path.sh</codeblock></li>
             <li>Restore the PL/Container configuration. For example, this command restores the
@@ -477,9 +477,9 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
       <p otherprops="pivotal">Download the <codeph>tar.gz</codeph> file that contains the Docker
         images from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
           format="html" class="- topic/xref ">Pivotal Network</xref>. <ul id="ul_vsj_pxb_tbb">
-          <li><codeph>plcontainer-python3-images-&lt;version>.tar.gz</codeph></li>
-          <li><codeph>plcontainer-python-images-&lt;version>.tar.gz</codeph></li>
-          <li><codeph>plcontainer-r-images-&lt;version>.tar.gz</codeph></li>
+          <li><codeph>plcontainer-python3-image-&lt;version>.tar.gz</codeph></li>
+          <li><codeph>plcontainer-python-image-&lt;version>.tar.gz</codeph></li>
+          <li><codeph>plcontainer-r-image-&lt;version>.tar.gz</codeph></li>
         </ul></p>
       <!--oss only conent-->
       <p otherprops="oss-only">The PL/Container open source module contains dockerfiles to build
@@ -491,16 +491,20 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           <codeph>plcontainer</codeph> utility to install a Docker image for Python and to update
         the PL/Container configuration. The example assumes the Docker image to be installed is in a
         file in <codeph>/home/gpadmin</codeph>.</p>
-      <p>This <codeph>plcontainer</codeph> command installs the Docker image for PL/Python from a
-        Docker image file.
-        <codeblock>plcontainer image-add -f /home/gpadmin/plcontainer-python-images-2.0.2.tar.gz</codeblock></p>
+      <p>This <codeph>plcontainer</codeph> command installs the Docker image for PL/Python that
+        contains Python 2 from a Docker image file.
+        <pre>plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.1.0-gp6.tar.gz</pre></p>
       <p>The utility displays progress information as it installs the Docker image on the Greenplum
         Database hosts. </p>
       <p>Use the <codeph>plcontainer image-list</codeph> command to display the installed Docker
         images on the local host.</p>
       <p>This command adds information to the PL/Container configuration file so that PL/Container
-        can access the Docker image that contains Python 2 to create a Docker
-        container.<codeblock>plcontainer runtime-add -r plc_py -i pivotaldata/plcontainer_python_shared:devel -l python</codeblock></p>
+        can access the Docker image that contains Python 2 to create a Docker container. The option
+          <codeph>-l python</codeph> is used for a docker image that contains Python 2.
+        <codeblock>plcontainer runtime-add -r plc_py -i pivotaldata/plcontainer_python_shared:devel -l python</codeblock></p>
+      <p>If you installed the Docker image that contains Python 3 that is available with
+        PL/Container 2.1.0 and later, use the option <codeph>-l python3</codeph>.
+        <codeblock>plcontainer runtime-add -r plc_py3 -i pivotaldata/plcontainer_python3_shared:devel -l python3</codeblock></p>
       <p>The utility displays progress information as it updates the PL/Container configuration file
         on the Greenplum Database instances.</p>
       <p>You can view the PL/Container configuration information with the <codeph>plcontainer
@@ -573,7 +577,7 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           <li>Use the Greenplum Database <codeph>gppkg</codeph> utility with the <codeph>-r</codeph>
             option to uninstall the PL/Container language extension. This example uninstalls the
             PL/Container language extension on a Linux
-              system:<codeblock>$ gppkg -r plcontainer-2.0.2</codeblock><p>You can run the
+              system:<codeblock>$ gppkg -r plcontainer-2.1.0</codeblock><p>You can run the
                 <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
               the installed extensions and their versions.</p></li>
           <li>Reload
@@ -847,7 +851,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
   image-list
 
   runtime-add {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
-     {<b>-i</b> | <b>--image</b>} <varname>image_name</varname> {<b>-l | --language</b>} {python | r}
+     {<b>-i</b> | <b>--image</b>} <varname>image_name</varname> {<b>-l | --language</b>} {python | python3 | r}
      [{<b>-v</b> | <b>--volume</b>} <varname>shared_volume</varname> [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname>...]]
      [{<b>-s</b> | <b>--setting</b>} <varname>param=value</varname> [{<b>-s</b> | <b>--setting</b>} <varname>param=value</varname> ...]]
   runtime-replace {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
