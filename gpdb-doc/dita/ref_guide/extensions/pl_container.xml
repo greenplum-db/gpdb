@@ -487,29 +487,38 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
         PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub
         repository at <xref href="https://github.com/greenplum-db/plcontainer" format="html"
           scope="external">https://github.com/greenplum-db/plcontainer</xref>.</p>
-      <p>Install the Docker images on the Greenplum Database hosts. This example uses the
-          <codeph>plcontainer</codeph> utility to install a Docker image for Python and to update
-        the PL/Container configuration. The example assumes the Docker image to be installed is in a
-        file in <codeph>/home/gpadmin</codeph>.</p>
-      <p>This <codeph>plcontainer</codeph> command installs the Docker image for PL/Python that
-        contains Python 2 from a Docker image file.
-        <pre>plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.1.0-gp6.tar.gz</pre></p>
+      <p>Install Docker images on all the Greenplum Database hosts with the <codeph>plcontainer
+          image-add</codeph> command. These examples assume that the Docker images are in files
+        located in <codeph>/home/gpadmin</codeph>.
+        <codeblock># Install a Python 2 based Docker image
+plcontainer image-add -f /home/gpadmin/plcontainer-python-image-2.1.0-gp6.tar.gz
+
+# Install a Python 3 based Docker image
+plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-2.1.0-gp6.tar.gz
+
+# Install an R based Docker image
+plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.0-gp6.tar.gz</codeblock></p>
       <p>The utility displays progress information as it installs the Docker image on the Greenplum
         Database hosts. </p>
       <p>Use the <codeph>plcontainer image-list</codeph> command to display the installed Docker
         images on the local host.</p>
-      <p>This command adds information to the PL/Container configuration file so that PL/Container
-        can access the Docker image that contains Python 2 to create a Docker container. The option
-          <codeph>-l python</codeph> is used for a docker image that contains Python 2.
-        <codeblock>plcontainer runtime-add -r plc_py -i pivotaldata/plcontainer_python_shared:devel -l python</codeblock></p>
-      <p>If you installed the Docker image that contains Python 3 that is available with
-        PL/Container 2.1.0 and later, use the option <codeph>-l python3</codeph>.
-        <codeblock>plcontainer runtime-add -r plc_py3 -i pivotaldata/plcontainer_python3_shared:devel -l python3</codeblock></p>
+      <p>Use the <codeph>plcontainer runtime-add</codeph> command to add information to the
+        PL/Container configuration file so that PL/Container can access the Docker image. The
+          <codeph>-r</codeph> option specifies is the runtime ID that you choose. The
+          <codeph>-l</codeph> option specifies the language that is contained in the Docker image.
+        <codeblock># Add a Python 2 based runtime
+plcontainer runtime-add -r plc_py -i pivotaldata/plcontainer_python_shared:devel -l python
+
+# Add a Python 3 based runtime that is supported with PL/Container 2.1.0 and later
+plcontainer runtime-add -r plc_py3 -i pivotaldata/plcontainer_python3_shared:devel -l python3
+
+# Add an R based runtime
+plcontainer runtime-add -r plc_r -i pivotaldata/plcontainer_r_shared:devel -l r</codeblock></p>
       <p>The utility displays progress information as it updates the PL/Container configuration file
         on the Greenplum Database instances.</p>
       <p>You can view the PL/Container configuration information with the <codeph>plcontainer
-          runtime-show -r plc_py</codeph> command. You can view the PL/Container configuration XML
-        file with the <codeph>plcontainer runtime-edit</codeph> command. </p>
+          runtime-show -r &lt;runtime_id></codeph> command. You can view the PL/Container
+        configuration XML file with the <codeph>plcontainer runtime-edit</codeph> command. </p>
     </body>
   </topic>
   <topic id="topic6" xml:lang="en">
