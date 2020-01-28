@@ -2992,7 +2992,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		 */
 		Assert(itemPtr == NULL);
 		Assert(!need_toast);
-		Assert(instup == tup);
+		Assert(relation->rd_rel->relhasoids || instup == tup);
 
 		/*
 		 * "Cancel" the last block allocation, if one.
