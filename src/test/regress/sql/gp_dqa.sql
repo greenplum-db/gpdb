@@ -68,7 +68,6 @@ select sum(distinct d), count(distinct i), count(distinct c),i,c from dqa_t1 gro
 explain (costs off) select sum(distinct d), count(distinct i), count(distinct c),i,c from dqa_t1 group by i,c order by i,c;
 
 -- multi args singledqa
--- FIXME: orca result is incorrect. recorde in issue #9374
 select corr(distinct d, i) from dqa_t1;
 explain (costs off) select corr(distinct d, i) from dqa_t1;
 

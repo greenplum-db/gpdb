@@ -1417,6 +1417,12 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Aggregate functions with FILTER"));
 	}
 
+	// ORCA doesn't support DISTINCT with multiple arguments yet.
+	if (gpdb::ListLength(aggref->aggdistinct) > 1)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Aggregate functions with multiple DISTINCT arguments"));
+	}
+
 	IMDId *mdid_return_type = CScalarAggFunc::PmdidLookupReturnType(agg_mdid, (EdxlaggstageNormal == agg_stage), m_md_accessor);
 	IMDId *resolved_ret_type = NULL;
 	if (m_md_accessor->RetrieveType(mdid_return_type)->IsAmbiguous())

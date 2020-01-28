@@ -777,24 +777,27 @@ explain (costs off) select sum(distinct d), count(distinct i), count(distinct c)
 (18 rows)
 
 -- multi args singledqa
--- FIXME: orca result is incorrect. recorde in issue #9374
 select corr(distinct d, i) from dqa_t1;
- corr 
-------
-     
+        corr        
+--------------------
+ 0.0824013341460019
 (1 row)
 
 explain (costs off) select corr(distinct d, i) from dqa_t1;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: ((d)::double precision)
-                     ->  Seq Scan on dqa_t1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.88.0
-(7 rows)
+               ->  HashAggregate
+                     Group Key: ((d)::double precision), ((i)::double precision)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: ((d)::double precision), ((i)::double precision)
+                           ->  Streaming HashAggregate
+                                 Group Key: (d)::double precision, (i)::double precision
+                                 ->  Seq Scan on dqa_t1
+ Optimizer: Postgres query optimizer
+(11 rows)
 
 -- multi args singledqa with group by
 select corr(distinct d, i) from dqa_t1 group by d;
@@ -826,15 +829,15 @@ select corr(distinct d, i) from dqa_t1 group by d;
 (23 rows)
 
 explain (costs off) select corr(distinct d, i) from dqa_t1 group by d;
-                      QUERY PLAN                      
-------------------------------------------------------
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
+   ->  HashAggregate
          Group Key: d
-         ->  Sort
-               Sort Key: d
+         ->  HashAggregate
+               Group Key: d, (d)::double precision, (i)::double precision
                ->  Seq Scan on dqa_t1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.88.0
+ Optimizer: Postgres query optimizer
 (7 rows)
 
 select corr(distinct d, i) from dqa_t1 group by c;
@@ -853,18 +856,20 @@ select corr(distinct d, i) from dqa_t1 group by c;
 (10 rows)
 
 explain (costs off) select corr(distinct d, i) from dqa_t1 group by c;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
+   ->  HashAggregate
          Group Key: c
-         ->  Sort
-               Sort Key: c
+         ->  HashAggregate
+               Group Key: c, ((d)::double precision), ((i)::double precision)
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: c
-                     ->  Seq Scan on dqa_t1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.88.0
-(9 rows)
+                     ->  Streaming HashAggregate
+                           Group Key: c, (d)::double precision, (i)::double precision
+                           ->  Seq Scan on dqa_t1
+ Optimizer: Postgres query optimizer
+(11 rows)
 
 -- multi args multidqa
 select count(distinct c), corr(distinct d, i) from dqa_t1;

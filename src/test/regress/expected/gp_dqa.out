@@ -784,7 +784,6 @@ explain (costs off) select sum(distinct d), count(distinct i), count(distinct c)
 (18 rows)
 
 -- multi args singledqa
--- FIXME: orca result is incorrect. recorde in issue #9374
 select corr(distinct d, i) from dqa_t1;
         corr        
 --------------------
