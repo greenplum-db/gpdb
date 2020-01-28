@@ -107,6 +107,8 @@ for inc_dir in inc_dirs:
 missing = False
 keys = fileset.keys()
 keys.sort()
+pg_sysroot = os.environ.get('PG_SYSROOT')
+
 for f in keys:
     for i in filter(lambda(x): None == fileset.get(x), fileset[f]):
         # There are a couple reasons an included file might not be listed:
@@ -117,6 +119,10 @@ for f in keys:
 
         # 2. It might be a system include
         if os.path.exists(os.path.join('/usr/include',i)):
+            continue
+
+        # 3. It might be an include from PG_SYSROOT
+        if os.path.exists(os.path.join(pg_sysroot, 'usr/include', i)):
             continue
 
         # 3. It might not have been well qualified
