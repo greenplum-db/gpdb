@@ -13,10 +13,10 @@ CFLAGS=-Werror -Wall -g -O2
 all: gpnetbenchServer gpnetbenchClient
 
 gpnetbenchServer: $(SERVER_OBJS)
-	$(CC) -o gpnetbenchServer $(SERVER_OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o gpnetbenchServer $(SERVER_OBJS)
 
 gpnetbenchClient: $(CLIENT_OBJS)
-	$(CC) -o gpnetbenchClient $(CLIENT_OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o gpnetbenchClient $(CLIENT_OBJS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
