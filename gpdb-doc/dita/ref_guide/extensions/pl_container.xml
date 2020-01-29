@@ -504,7 +504,7 @@ plcontainer image-add -f /home/gpadmin/plcontainer-r-image-2.1.0-gp6.tar.gz</cod
         images on the local host.</p>
       <p>Use the <codeph>plcontainer runtime-add</codeph> command to add information to the
         PL/Container configuration file so that PL/Container can access the Docker image. The
-          <codeph>-r</codeph> option specifies is the runtime ID that you choose. The
+          <codeph>-r</codeph> option specifies the runtime ID that you choose. The
           <codeph>-l</codeph> option specifies the language that is contained in the Docker image.
         <codeblock># Add a Python 2 based runtime
 plcontainer runtime-add -r plc_py -i pivotaldata/plcontainer_python_shared:devel -l python
