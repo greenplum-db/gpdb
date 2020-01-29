@@ -8006,9 +8006,9 @@
         determines when Greenplum Database terminates running queries based on the amount of memory
         the queries are using. A value of 0 disables the automatic termination of queries based on
         the percentage of memory that is utilized.</p>
-      <p>Either resource queue or resource group management scheme can be active in Greenplum
-        Database; both schemes cannot be active at the same time. The server configuration parameter
-            <codeph><xref href="#gp_resource_manager"/></codeph> controls which scheme is
+      <p>Either the resource queue or the resource group management scheme can be active in
+        Greenplum Database; both schemes cannot be active at the same time. The server configuration
+        parameter <codeph><xref href="#gp_resource_manager"/></codeph> controls which scheme is
         active.</p>
       <p><b>When resource queues are enabled -</b> This parameter sets the percentage of Greenplum
         Database vmem memory that triggers the termination of queries. If the percentage of vmem
