@@ -1081,7 +1081,6 @@ restore_command = '$copy_command'
 
 =pod
 
-
 =item $node->set_recovery_mode()
 
 Place recovery.signal file.
