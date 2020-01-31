@@ -8004,18 +8004,18 @@
     <body>
       <p>For queries that are managed by resource queues or resource groups, this parameter
         determines when Greenplum Database terminates running queries based on the amount of memory
-        the queries are using. A value of 0 disables the automatic termination of queries based on
+        the queries are using. A value of 100 disables the automatic termination of queries based on
         the percentage of memory that is utilized.</p>
       <p>Either the resource queue or the resource group management scheme can be active in
         Greenplum Database; both schemes cannot be active at the same time. The server configuration
         parameter <codeph><xref href="#gp_resource_manager"/></codeph> controls which scheme is
         active.</p>
-      <p><b>When resource queues are enabled -</b> This parameter sets the percentage of Greenplum
-        Database vmem memory that triggers the termination of queries. If the percentage of vmem
-        memory that is utilized for a Greenplum Database segment exceeds the specified value,
-        Greenplum Database terminates queries managed by resource queues based on memory usage,
-        starting with the query consuming the largest amount of memory. Queries are terminated until
-        the percentage of utilized vmem is below the specified percentage.</p>
+      <p><b>When resource queues are enabled -</b> This parameter sets the percent of utilized
+        Greenplum Database vmem memory that triggers the termination of queries. If the percentage
+        of vmem memory that is utilized for a Greenplum Database segment exceeds the specified
+        value, Greenplum Database terminates queries managed by resource queues based on memory
+        usage, starting with the query consuming the largest amount of memory. Queries are
+        terminated until the percentage of utilized vmem is below the specified percentage.</p>
       <p>Specify the maximum vmem value for active Greenplum Database segment instances with the
         server configuration parameter <codeph><xref href="#gp_vmem_protect_limit" format="dita"
           /></codeph>.</p>
@@ -8023,19 +8023,23 @@
         Database starts terminating queries when the utilized vmem memory exceeds 9 GB.</p>
       <p>For information about resource queues, see <xref href="../../admin_guide/workload_mgmt.xml"
         />.</p>
-      <p><b>When resource groups are enabled -</b> For resource groups that are defined to use
-        resource group global shared memory (the default), this parameter sets the amount of
-        resource group global shared memory that triggers the termination of queries. If the
-        percentage of global shared memory that is utilized exceeds the specified value, Greenplum
-        Database terminates queries managed by the resource groups based on memory usage, starting
-        with the query consuming the largest amount of memory. Queries are terminated until the
-        percentage of utilized global shared memory is below the specified percentage. For
-        information about managing resource group memory limits, see <xref
-          href="../../admin_guide/workload_mgmt_resgroups.xml#topic8339717"/>.</p>
-      <p>If a resource group is not defined to use global shared memory, the automatic query
-        termination feature is not enabled for the resource group. When defining a resource group,
-        the <codeph>MEMORY_AUDITOR</codeph> attribute controls using global shared memory. The
-        default, <codeph>MEMORY_AUDITOR=vmtracker</codeph>, enables using global shared memory. </p>
+      <p><b>When resource groups are enabled -</b> This parameter sets the percent of utilized
+        resource group global shared memory that triggers the termination of queries. Resource
+        groups have a global shared memory pool when the following are true:<ul id="ul_hc3_tfl_4kb">
+          <li>At least one resource group is defined to use the <codeph>vmtracker</codeph> memory
+            auditor. If no resource groups use the <codeph>vmtracker</codeph> memory auditor, global
+            shared memory is not enabled. For information about memory auditors, see <xref
+              href="../../admin_guide/workload_mgmt_resgroups.xml#topic8339777"/>. </li>
+          <li>The sum of the <codeph>MEMORY_LIMIT</codeph> attribute values configured for all
+            resource groups is less than 100. See <xref
+              href="../../admin_guide/workload_mgmt_resgroups.xml#topic833glob"/>. </li>
+        </ul></p>
+      <p>If the percentage of utilized global shared memory exceeds the specified value, Greenplum
+        Database terminates queries based on memory usage, selecting from queries managed by the
+        resource groups that are configured to use the <codeph>vmtracker</codeph> memory auditor.
+        Greenplum Database starts with the query consuming the largest amount of memory. Queries are
+        terminated until the percentage of utilized global shared memory is below the specified
+        percentage. </p>
       <p>For example, if global shared memory is 10GB, and this parameter is 90 (90%), Greenplum
         Database starts terminating queries when the utilized global shared memory exceeds 9 GB.</p>
       <p>For information about resource groups, see <xref

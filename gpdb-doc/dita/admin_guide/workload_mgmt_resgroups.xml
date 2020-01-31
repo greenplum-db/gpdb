@@ -555,7 +555,7 @@ SET statement_mem='10 MB';</codeblock></p>
     </body>
   </topic>
   <topic id="topic71717999" xml:lang="en">
-    <title>Configuring Resource Groups</title>
+    <title>Configuring and Using Resource Groups</title>
     <body>
       <note type="important">Significant Greenplum Database performance degradation has been
         observed when enabling resource group-based workload management on RedHat 6.x and CentOS 6.x
