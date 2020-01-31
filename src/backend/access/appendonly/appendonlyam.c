@@ -826,10 +826,13 @@ AppendOnlyExecutorReadBlock_Init(AppendOnlyExecutorReadBlock *executorReadBlock,
 {
 	MemoryContext oldcontext;
 
+	AssertArg(MemoryContextIsValid(memoryContext));
+
 	oldcontext = MemoryContextSwitchTo(memoryContext);
 	executorReadBlock->uncompressedBuffer = (uint8 *) palloc(usableBlockSize * sizeof(uint8));
 
 	executorReadBlock->storageRead = storageRead;
+	executorReadBlock->memoryContext = memoryContext;
 
 	MemoryContextSwitchTo(oldcontext);
 }
