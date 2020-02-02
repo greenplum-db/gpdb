@@ -616,13 +616,9 @@ UPDATE 10
 CHECKPOINT
 -- Restart the primary to interrupt vacuum at that exact point.
 5:select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'restart');
- pg_ctl                                                                                               
-------------------------------------------------------------------------------------------------------
- waiting for server to shut down done
-server stopped
-waiting for server to start done
-server started
- 
+ pg_ctl 
+--------
+ OK     
 (1 row)
 4<:  <... completed>
 ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=29553: server closed the connection unexpectedly

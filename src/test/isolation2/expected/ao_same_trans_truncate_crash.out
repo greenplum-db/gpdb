@@ -55,23 +55,11 @@ TRUNCATE
 ABORT
 -- restart (immediate) to invoke crash recovery
 1: SELECT pg_ctl(datadir, 'restart') FROM gp_segment_configuration WHERE role = 'p' AND content <> -1;
- pg_ctl                                                                                               
-------------------------------------------------------------------------------------------------------
- waiting for server to shut down done
-server stopped
-waiting for server to start done
-server started
- 
- waiting for server to shut down done
-server stopped
-waiting for server to start done
-server started
- 
- waiting for server to shut down done
-server stopped
-waiting for server to start done
-server started
- 
+ pg_ctl 
+--------
+ OK     
+ OK     
+ OK     
 (3 rows)
 -- validate the segments recovered fine and able to serve queries
 2: SELECT oid from gp_dist_random('pg_class') WHERE relname='ao_same_trans_truncate';
