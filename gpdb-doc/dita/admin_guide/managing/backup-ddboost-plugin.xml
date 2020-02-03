@@ -10,8 +10,7 @@
           <codeph><xref href="../../utility_guide/ref/gprestore.xml">gprestore</xref></codeph>
       utilities to perform faster backups to the Dell EMC Data Domain storage appliance. You can
       also replicate a backup on a separate, remote Data Domain system for disaster recovery with
-      gpbackup or <xref href="../../utility_guide/ref/gpbackup_manager.xml"
-      >gpbackup_manager</xref>.
+      gpbackup or <xref href="../../utility_guide/ref/gpbackup_manager.xml">gpbackup_manager</xref>.
       For information about replication, see <xref href="replication-ddb.xml"/>.</p>
     <p>To use the DD Boost storage plugin application, you first create a configuration file to
       specify the location of the plugin, the DD Boost login, and the backup location. When you run
@@ -185,8 +184,8 @@
         </plentry>
       </parml>
     </section>
-    <section>
-      <title>Example</title>
+    <section id="ddb_examples">
+      <title>Examples</title>
       <p>This is an example DD Boost storage plugin configuration file that is used in the next
           <codeph>gpbackup</codeph> example command. The name of the file is
           <codeph>ddboost-test-config.yaml</codeph>.</p>
