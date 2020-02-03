@@ -2192,6 +2192,12 @@ acquire_index_number_of_blocks(Relation indexrel, Relation tablerel)
 	}
 }
 
+/*
+ * parse_record_to_string
+ *
+ * CDB: a copy of record_in, but only parse the record string
+ * into separate strs for each column.
+ */
 static void
 parse_record_to_string(char *string, TupleDesc tupdesc, char** values, bool *nulls)
 {
@@ -2199,9 +2205,12 @@ parse_record_to_string(char *string, TupleDesc tupdesc, char** values, bool *nul
 	int	ncolumns;
 	int	i;
 	bool	needComma;
-
 	StringInfoData	buf;
 
+	Assert(string != NULL);
+	Assert(values != NULL);
+	Assert(nulls != NULL);
+	
 	ncolumns = tupdesc->natts;
 	needComma = false;
 
