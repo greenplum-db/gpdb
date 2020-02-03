@@ -50,6 +50,7 @@
           <li id="im16806f">
             <xref href="#topic10" type="topic" format="dita"/>
           </li>
+          <li><xref href="#topic_jlz_hzg_pkb" format="dita"/></li>
           <li id="im16806g">
             <xref href="#topic17" type="topic" format="dita"/>
           </li>
@@ -828,6 +829,24 @@ gpstart
       <p>
         <codeblock>=# DROP RESOURCE GROUP <i>exec</i>; </codeblock>
       </p>
+    </body>
+  </topic>
+  <topic id="topic_jlz_hzg_pkb">
+    <title>Configuring Automatic Query Termination</title>
+    <body>
+      <p>When resource groups have a global shared memory pool, the server configuration parameter
+            <codeph><xref
+            href="../ref_guide/config_params/guc-list.xml#runaway_detector_activation_percent"
+            type="section"/></codeph> sets the percent of utilized global shared memory that
+        triggers the termination of queries that are managed by resource groups that are configured
+        to use the <codeph>vmtracker</codeph> memory auditor, such as <codeph>admin_group</codeph>
+        and <codeph>default_group</codeph>. </p>
+      <p>Resource groups have a global shared memory pool when the sum of the
+          <codeph>MEMORY_LIMIT</codeph> attribute values configured for all resource groups is less
+        than 100. For example, if you have 3 resource groups configured with
+          <codeph>MEMORY_LIMIT</codeph> values of 10 , 20, and 30, then global shared memory is 40%
+        = 100% - (10% - 20% - 30%). </p>
+      <p>For information about global shared memory, see <xref href="#topic833glob"/>.</p>
     </body>
   </topic>
   <topic id="topic17" xml:lang="en">
