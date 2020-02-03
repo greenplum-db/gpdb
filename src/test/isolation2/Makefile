@@ -50,6 +50,7 @@ data:
 .PHONY: scan_flaky_fault_injectors
 scan_flaky_fault_injectors:
 	$(top_builddir)/src/test/regress/scan_flaky_fault_injectors.sh
+	enable_faultinjector=$(enable_faultinjector) $(top_builddir)/src/test/regress/ignore_fault_injectors.sh
 
 pg_isolation2_regress$(X): isolation2_main.o pg_regress.o submake-libpq submake-libpgport
 	$(CC) $(CFLAGS) $(filter %.o,$^) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@

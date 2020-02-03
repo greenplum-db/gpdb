@@ -61,6 +61,7 @@ regress_gp.o: override LDFLAGS += -L$(top_builddir)/src/interfaces/libpq
 .PHONY: scan_flaky_fault_injectors
 scan_flaky_fault_injectors:
 	$(top_builddir)/src/test/regress/scan_flaky_fault_injectors.sh
+	enable_faultinjector=$(enable_faultinjector) $(top_builddir)/src/test/regress/ignore_fault_injectors.sh
 
 twophase_pqexecparams: twophase_pqexecparams.c
 	$(CC) $(CPPFLAGS) -I$(top_builddir)/src/interfaces/libpq -L$(GPHOME)/lib -L$(top_builddir)/src/interfaces/libpq  -o $@ $< -lpq
