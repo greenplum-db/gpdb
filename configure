@@ -744,6 +744,7 @@ HAVE_CXX11
 enable_gpcloud
 enable_mapreduce
 enable_orca
+enable_faultinjector
 autodepend
 TAS
 GCC
@@ -858,6 +859,7 @@ with_wal_segsize
 with_CC
 enable_depend
 enable_cassert
+enable_faultinjector
 enable_orca
 enable_mapreduce
 enable_gpcloud
@@ -1541,6 +1543,7 @@ Optional Features:
   --enable-tap-tests      enable TAP tests (requires Perl and IPC::Run)
   --enable-depend         turn on automatic dependency tracking
   --enable-cassert        enable assertion checks (for debugging)
+  --enable-faultinjector  enable fault injector
   --disable-orca          disable ORCA optimizer
   --enable-mapreduce      enable Greenplum Mapreduce support
   --disable-gpcloud       disable gpcloud support
@@ -6454,6 +6457,38 @@ else
 
 fi
 
+
+
+#
+# Enable fault injector
+#
+
+
+# Check whether --enable-faultinjector was given.
+if test "${enable_faultinjector+set}" = set; then :
+  enableval=$enable_faultinjector;
+  case $enableval in
+    yes)
+
+$as_echo "#define FAULT_INJECTOR 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-faultinjector option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_faultinjector=no
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with FAULT_INJECTOR... $enable_faultinjector" >&5
+$as_echo "checking whether to build with FAULT_INJECTOR... $enable_faultinjector" >&6; }
 
 
 #

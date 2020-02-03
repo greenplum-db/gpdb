@@ -209,6 +209,7 @@ enable_rpath	= @enable_rpath@
 enable_debug	= @enable_debug@
 enable_dtrace	= @enable_dtrace@
 enable_coverage	= @enable_coverage@
+enable_faultinjector	= @enable_faultinjector@
 enable_tap_tests	= @enable_tap_tests@
 enable_thread_safety	= @enable_thread_safety@
 enable_strong_random	= @enable_strong_random@

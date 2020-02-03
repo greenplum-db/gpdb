@@ -800,6 +800,15 @@ PGAC_ARG_BOOL(enable, cassert, no, [enable assertion checks (for debugging)],
                          [Define to 1 to build with assertion checks. (--enable-cassert)])])
 
 #
+# Enable fault injector
+#
+PGAC_ARG_BOOL(enable, faultinjector, no, [enable fault injector],
+              [AC_DEFINE([FAULT_INJECTOR], 1,
+                         [Define to 1 to build with fault injector. (--enable-faultinjector)])])
+AC_MSG_RESULT([checking whether to build with FAULT_INJECTOR... $enable_faultinjector])
+AC_SUBST(enable_faultinjector)
+
+#
 # Enable GPORCA optimizer
 #
 PGAC_ARG_BOOL(enable, orca, yes, [disable ORCA optimizer],

@@ -17,12 +17,15 @@ ifeq "$(enable_debug_extensions)" "yes"
                gp_distribution_policy \
                gp_internal_tools \
                gp_debug_numsegments \
-               gp_inject_fault \
                gp_replica_check
 else
 	recurse_targets = gp_sparse_vector \
                gp_distribution_policy \
                gp_internal_tools
+endif
+
+ifeq "$(enable_faultinjector)" "yes"
+	recurse_targets += gp_inject_fault
 endif
 
 ifeq "$(with_zstd)" "yes"

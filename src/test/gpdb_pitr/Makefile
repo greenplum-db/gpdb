@@ -12,7 +12,9 @@ install: sql_isolation_testcase.py
 	$(MAKE) -C $(top_builddir)/src/test/isolation2 install
 
 installcheck: install
+ifeq ($(enable_faultinjector),yes)
 	./test_gpdb_pitr.sh
+endif
 
 clean:
 	./test_gpdb_pitr_cleanup.sh
