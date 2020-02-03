@@ -72,11 +72,9 @@ select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- stop a mirror
 -1U: select pg_ctl((select get_data_directory_for(2, 'm')), 'stop');
- pg_ctl                                               
-------------------------------------------------------
- waiting for server to shut down done
-server stopped
- 
+ pg_ctl 
+--------
+ OK     
 (1 row)
 
 -- this should block since mirror is not up and sync replication is on

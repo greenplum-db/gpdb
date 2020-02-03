@@ -51,11 +51,9 @@ CHECKPOINT
 -- checkpoint otherwise we would undo all of our previous work to ensure that
 -- checkpoint record has redo record on another wal segment.
 -1U: SELECT pg_ctl((SELECT datadir FROM gp_segment_configuration c WHERE c.role='p' AND c.content=1), 'stop', 'immediate');
- pg_ctl                                               
-------------------------------------------------------
- waiting for server to shut down done
-server stopped
- 
+ pg_ctl 
+--------
+ OK     
 (1 row)
 
 -- Make sure we see the segment is down before trying to recover...

@@ -31,11 +31,9 @@ SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration
 (8 rows)
 -- stop a primary in order to trigger a mirror promotion
 select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
- pg_ctl                                               
-------------------------------------------------------
- waiting for server to shut down done
-server stopped
- 
+ pg_ctl 
+--------
+ OK     
 (1 row)
 
 -- trigger failover
