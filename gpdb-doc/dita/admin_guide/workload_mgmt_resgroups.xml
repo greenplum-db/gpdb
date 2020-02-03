@@ -845,7 +845,7 @@ gpstart
           <codeph>MEMORY_LIMIT</codeph> attribute values configured for all resource groups is less
         than 100. For example, if you have 3 resource groups configured with
           <codeph>MEMORY_LIMIT</codeph> values of 10 , 20, and 30, then global shared memory is 40%
-        = 100% - (10% - 20% - 30%). </p>
+        = 100% - (10% + 20% + 30%). </p>
       <p>For information about global shared memory, see <xref href="#topic833glob"/>.</p>
     </body>
   </topic>

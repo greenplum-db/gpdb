@@ -8033,7 +8033,7 @@
           <codeph>MEMORY_LIMIT</codeph> attribute values configured for all resource groups is less
         than 100. For example, if you have 3 resource groups configured with
           <codeph>memory_limit</codeph> values of 10 , 20, and 30, then global shared memory is 40%
-        = 100% - (10% - 20% - 30%). See <xref
+        = 100% - (10% + 20% + 30%). See <xref
           href="../../admin_guide/workload_mgmt_resgroups.xml#topic833glob"/>.</p>
       <p>If the percentage of utilized global shared memory exceeds the specified value, Greenplum
         Database terminates queries based on memory usage, selecting from queries managed by the
