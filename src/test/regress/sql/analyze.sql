@@ -450,6 +450,11 @@ select relname, reltuples from pg_class where relname like 'aocs_analyze_test%' 
 
 reset default_statistics_target;
 
+-- Test column name called totalrows
+create table test_tr (totalrows int4);
+analyze test_tr;
+drop table test_tr;
+
 --
 -- Test with both a dropped column and an oversized column
 -- (github issue https://github.com/greenplum-db/gpdb/issues/9503)
