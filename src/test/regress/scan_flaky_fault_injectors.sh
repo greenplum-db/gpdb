@@ -12,7 +12,7 @@ parallel_tests=$(mktemp parallel_tests.XXX)
 retcode=0
 
 # list the tests that inject faults
-grep -ERIli '(select|perform)\s+gp_inject_fault' sql input \
+grep -ERIli '\s+gp_inject_fault' sql input \
 | sed 's,^[^/]*/\(.*\)\.[^.]*$,\1,' \
 | sort -u \
 > $fault_injection_tests
