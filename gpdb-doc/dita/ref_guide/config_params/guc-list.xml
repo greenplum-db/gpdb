@@ -8024,16 +8024,17 @@
       <p>For information about resource queues, see <xref href="../../admin_guide/workload_mgmt.xml"
         />.</p>
       <p><b>When resource groups are enabled -</b> This parameter sets the percent of utilized
-        resource group global shared memory that triggers the termination of queries. Resource
-        groups have a global shared memory pool when the following are true:<ul id="ul_hc3_tfl_4kb">
-          <li>At least one resource group is defined to use the <codeph>vmtracker</codeph> memory
-            auditor. If no resource groups use the <codeph>vmtracker</codeph> memory auditor, global
-            shared memory is not enabled. For information about memory auditors, see <xref
-              href="../../admin_guide/workload_mgmt_resgroups.xml#topic8339777"/>. </li>
-          <li>The sum of the <codeph>MEMORY_LIMIT</codeph> attribute values configured for all
-            resource groups is less than 100. See <xref
-              href="../../admin_guide/workload_mgmt_resgroups.xml#topic833glob"/>. </li>
-        </ul></p>
+        resource group global shared memory that triggers the termination of queries that are
+        managed by resource groups that are configured to use the <codeph>vmtracker</codeph> memory
+        auditor, such as <codeph>admin_group</codeph> and <codeph>default_group</codeph>. For
+        information about memory auditors, see <xref
+          href="../../admin_guide/workload_mgmt_resgroups.xml#topic8339777"/>.</p>
+      <p>Resource groups have a global shared memory pool when the sum of the
+          <codeph>MEMORY_LIMIT</codeph> attribute values configured for all resource groups is less
+        than 100. For example, if you have 3 resource groups configured with
+          <codeph>memory_limit</codeph> values of 10 , 20, and 30, then global shared memory is 40%
+        = 100% - (10% - 20% - 30%). See <xref
+          href="../../admin_guide/workload_mgmt_resgroups.xml#topic833glob"/>.</p>
       <p>If the percentage of utilized global shared memory exceeds the specified value, Greenplum
         Database terminates queries based on memory usage, selecting from queries managed by the
         resource groups that are configured to use the <codeph>vmtracker</codeph> memory auditor.
