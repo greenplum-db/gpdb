@@ -2514,6 +2514,10 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 			 * NULLs are not allowed in data columns.
 			 */
 			char * rowStr = PQgetvalue(pgresult, rowno, 0);
+
+			if (rowStr == NULL)
+				elog(ERROR, "got NULL pointer from return value of gp_acquire_sample_rows");
+
 			parse_record_to_string(rowStr, funcTupleDesc, funcRetValues, funcRetNulls);
 
 			if (!funcRetNulls[0])
