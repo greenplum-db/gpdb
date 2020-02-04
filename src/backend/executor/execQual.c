@@ -6806,11 +6806,12 @@ neededColumnContextWalker(Node *node, neededColumnContext *c)
 	{
 		Var *var = (Var *)node;
 
-		if (var->varattno > 0)
-		{
-			Assert(var->varattno <= c->n);
+		if (IS_SPECIAL_VARNO(var->varno))
+			return false;
+
+		if (var->varattno > 0 && var->varattno <= c->n)
 			c->mask[var->varattno - 1] = true;
-		}
+
 		/*
 		 * If all attributes are included,
 		 * set all entries in mask to true.

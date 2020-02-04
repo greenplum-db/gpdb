@@ -2528,4 +2528,25 @@ WHERE tq.sym = tt.symbol AND
 GROUP BY 1
 ORDER BY 1 asc ;
 
-set optimizer_enable_hashjoin = on;
+-- Test Index Scan on CO table as the right tree of a NestLoop join.
+create table no_index_table(fake_col1 int, fake_col2 int, fake_col3 int, a int, b int) distributed by (a, b);
+insert into no_index_table values (1,1,1,1,1);
+
+create table with_index_table(x int, y int) with (appendonly=true, orientation=column);
+create index with_index_table_index on with_index_table (x);
+insert into with_index_table select i, 1 from generate_series(1, 20)i;
+
+set enable_material to off;
+set enable_seqscan to off;
+set enable_mergejoin to off;
+set enable_hashjoin to off;
+set enable_nestloop to on;
+
+set optimizer_enable_materialize to off;
+set optimizer_enable_hashjoin to off;
+
+explain (costs off)
+SELECT * from with_index_table td JOIN no_index_table ro ON td.y = ro.a AND td.x = ro.b;
+SELECT * from with_index_table td JOIN no_index_table ro ON td.y = ro.a AND td.x = ro.b;
+
+reset all;
