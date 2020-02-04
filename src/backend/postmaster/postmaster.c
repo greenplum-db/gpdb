@@ -2368,22 +2368,14 @@ retry1:
 					am_ftshandler = true;
 
 #ifdef FAULT_INJECTOR
-					if (FaultInjector_InjectFaultIfSet(
-							"fts_conn_startup_packet",
-							DDLNotSpecified,
-							"" /* databaseName */,
-							"" /* tableName */) == FaultInjectorTypeSkip)
+					if (SIMPLE_FAULT_INJECTOR("fts_conn_startup_packet") == FaultInjectorTypeSkip)
 					{
 						/*
 						 * If this fault is set to skip, report recovery is
 						 * hung. Without this fault recovery is reported as
 						 * progressing.
 						 */
-						if (FaultInjector_InjectFaultIfSet(
-							"fts_recovery_in_progress",
-							DDLNotSpecified,
-							"" /* databaseName */,
-							"" /* tableName */) == FaultInjectorTypeSkip)
+						if (SIMPLE_FAULT_INJECTOR("fts_recovery_in_progress") == FaultInjectorTypeSkip)
 						{
 							recptr = last_xlog_replay_location();
 						}
@@ -2589,10 +2581,7 @@ retry1:
 
 #ifdef FAULT_INJECTOR
 	if (!am_ftshandler && !IsFaultHandler && !am_walsender &&
-		FaultInjector_InjectFaultIfSet("process_startup_packet",
-									   DDLNotSpecified,
-									   port->database_name /* databaseName */,
-									   "" /* tableName */) == FaultInjectorTypeSkip)
+		FAULT_INJECTOR_DATABASE("process_startup_packet", port->database_name) == FaultInjectorTypeSkip)
 	{
 		ereport(FATAL,
 				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
