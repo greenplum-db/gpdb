@@ -123,6 +123,7 @@ class Global():
 
         self.opt['-E'] = False
 
+        self.master_dbid = None
         self.cfg = None
         self.dbname = None
         self.firstdb = None
@@ -475,12 +476,12 @@ def checkDistribPolicy():
     where pk.contype in('p', 'u') and d.policytype = 'p' and d.distkey = ''
     '''
 
-    db = connect2(GV.cfg[1])
+    db = connect2(GV.cfg[GV.master_dbid])
     try:
         curs = db.query(qry)
         err = []
         for row in curs.dictresult():
-            err.append([GV.cfg[1], ('nspname', 'relname', 'constraint'), row])
+            err.append([GV.cfg[GV.master_dbid], ('nspname', 'relname', 'constraint'), row])
 
         if not err:
             logger.info('[OK] randomly distributed tables')
@@ -521,7 +522,7 @@ def checkDistribPolicy():
 
         err = []
         for row in curs.dictresult():
-            err.append([GV.cfg[1], ('nspname', 'relname', 'constraint'), row])
+            err.append([GV.cfg[GV.master_dbid], ('nspname', 'relname', 'constraint'), row])
 
         if not err:
             logger.info('[OK] unique constraints')
@@ -603,7 +604,7 @@ def checkPartitionIntegrity():
         curs = db.query(qry)
         err = []
         for row in curs.dictresult():
-            err.append([GV.cfg[1], ('nspname', 'relname', 'oid'), row])
+            err.append([GV.cfg[GV.master_dbid], ('nspname', 'relname', 'oid'), row])
 
         if not err:
             logger.info('[OK] partition with oids check')
@@ -708,7 +709,7 @@ def checkPartitionIntegrity():
 
         err = []
         for row in curs.dictresult():
-            err.append([GV.cfg[1], cols, row])
+            err.append([GV.cfg[GV.master_dbid], cols, row])
 
         if not err:
             logger.info('[OK] partition distribution policy check')
@@ -1910,7 +1911,7 @@ def checkDepend():
     logger.info('-----------------------------------')
     logger.info('Checking Object Dependencies')
 
-    db = connect2(GV.cfg[1], utilityMode=False)
+    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
 
     # Catalogs that link up to pg_depend/pg_shdepend
     qry = "select relname from pg_class where relnamespace=%d and relhasoids" % PG_CATALOG_OID
@@ -2072,7 +2073,7 @@ def checkOwners():
     #
     #  - Between 3.3 and 4.0 the ao segment columns migrated from pg_class
     #    to pg_appendonly.
-    db = connect2(GV.cfg[1], utilityMode=False)
+    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
     qry = '''
     select distinct n.nspname, coalesce(o.relname, c.relname) as relname,
                     a.rolname, m.rolname as master_rolname
@@ -2126,7 +2127,7 @@ def checkOwners():
     #  - Ignore implementation types of pg_class entries - they should be
     #    in the check above since ALTER TABLE is required to fix them, not
     #    ALTER TYPE.
-    db = connect2(GV.cfg[1], utilityMode=False)
+    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
     qry = '''
     select distinct n.nspname, t.typname, a.rolname, m.rolname as master_rolname
     from gp_dist_random('pg_type') r
@@ -2189,7 +2190,7 @@ def closeDbs():
 
 # -------------------------------------------------------------------------------
 def getCatObj(namestr):
-    db = connect2(GV.cfg[1], utilityMode=False)
+    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
     try:
         cat = GV.catalog.getCatalogTable(namestr)
     except Exception, e:
@@ -2259,7 +2260,7 @@ def checkTableACL(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[1], utilityMode=False)
+        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
         curs = db.query(qry)
         nrows = curs.ntuples()
 
@@ -2298,7 +2299,7 @@ def checkForeignKey(cat_tables=None):
     if not cat_tables:
         cat_tables = GV.catalog.getCatalogTables()
 
-    db_connection = connect2(GV.cfg[1], utilityMode=False)
+    db_connection = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
     try:
         foreign_key_check = ForeignKeyCheck(db_connection, logger, GV.opt['-S'], autoCast)
         foreign_key_issues = foreign_key_check.runCheck(cat_tables)
@@ -2386,7 +2387,7 @@ def checkTableMissingEntry(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[1], utilityMode=False)
+        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
         curs = db.query(qry)
         nrows = curs.ntuples()
 
@@ -2546,7 +2547,7 @@ def checkTableInconsistentEntry(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[1], utilityMode=False)
+        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
         curs = db.query(qry)
         nrows = curs.ntuples()
 
@@ -2686,7 +2687,7 @@ def checkTableDuplicateEntry(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[1], utilityMode=False)
+        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
         curs = db.query(qry)
         nrows = curs.ntuples()
 
@@ -2749,7 +2750,7 @@ def duplicateEntryQuery(catname, pkey):
 def checkUniqueIndexViolation():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for violated unique indexes')
-    db_connection = connect2(GV.cfg[1], utilityMode=False)
+    db_connection = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
 
     violations = UniqueIndexViolationCheck().runCheck(db_connection)
 
@@ -2788,7 +2789,7 @@ def checkOrphanedToastTables():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for orphaned TOAST tables')
 
-    db_connection = connect2(GV.cfg[1], utilityMode=False)
+    db_connection = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
     checker = OrphanedToastTablesCheck()
     check_passed = checker.runCheck(db_connection)
 
@@ -3201,7 +3202,7 @@ def checkSegmentRepair(maybeRemove, catmod_guc, seg):
 # -------------------------------------------------------------------------------
 def getCatalog():
     # Establish a connection to the master & looks up info in the catalog
-    db = connect2(GV.cfg[1], utilityMode=False)
+    db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
     return GPCatalog(db)
 
 
@@ -3308,7 +3309,7 @@ def getOidFromPK(catname, pkeys):
                      pkeystr=pkeystr)
 
     try:
-        db = connect2(GV.cfg[1], utilityMode=False)
+        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
         curs = db.query(qry)
         if (len(curs.dictresult()) == 0):
             raise QueryException("No such entry '%s' in %s" % (pkeystr, catname))
@@ -3923,7 +3924,7 @@ class GPObject:
 
         # Collect all tables with missing issues for later reporting
         if len(self.missingIssues):
-            db = connect2(GV.cfg[1], utilityMode=False)
+            db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
             oid_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where oid=%d"
             type_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where reltype=%d"
             for issues in self.missingIssues.values() :
@@ -4092,7 +4093,7 @@ def getRelInfo(objects):
           """.format(oids=','.join(map(str, oids)))
 
     try:
-        db = connect2(GV.cfg[1], utilityMode=False)
+        db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
         curs = db.query(qry)
         for row in curs.getresult():
             (oid, relname, nspname, relkind, paroid) = row
@@ -4177,7 +4178,7 @@ def checkcatReport():
         # Report tables with missing attributes in a more usable format
         if len(GV.missing_attr_tables) or len(GV.extra_attr_tables):
             # Expand partition tables
-            db = connect2(GV.cfg[1], utilityMode=False)
+            db = connect2(GV.cfg[GV.master_dbid], utilityMode=False)
             parent_tables = [t[0] for t in db.query("SELECT DISTINCT (schemaname || '.' || tablename) FROM pg_partitions").getresult()]
             partition_leaves_sql = """
             SELECT x.partitionschemaname || '.' || x.partitiontablename
@@ -4284,6 +4285,17 @@ def main():
 
     GV.report_cfg = getReportConfiguration()
     GV.max_content = max([GV.cfg[dbid]['content'] for dbid in GV.cfg])
+
+    for dbid in GV.cfg:
+        if (GV.cfg[dbid]['content'] == -1):
+            GV.master_dbid = dbid
+            break
+
+    if GV.master_dbid is None:
+        myprint("Error: master configuration info not found in gp_segment_configuration\n")
+        setError(ERROR_NOREPAIR)
+        sys.exit(GV.retcode)
+
     GV.catalog = getCatalog()
     leaked_schema_dropper = LeakedSchemaDropper()
 
