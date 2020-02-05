@@ -76,12 +76,6 @@ addPadding(TupleChunkList tcList, TupleChunkListCache *cache, int size)
 		addCharToChunkList(tcList, 0, cache);
 }
 
-static inline void
-skipPadding(StringInfo serialTup)
-{
-	serialTup->cursor = TYPEALIGN(TUPLE_CHUNK_ALIGN, serialTup->cursor);
-}
-
 /* Look up all of the information that SerializeTuple() and DeserializeTuple()
  * need to perform their jobs quickly.	Also, scratchpad space is allocated
  * for serialization and desrialization of datum values, and for formation/
