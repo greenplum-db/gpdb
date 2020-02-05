@@ -3446,6 +3446,8 @@ create_subqueryscan_plan(PlannerInfo *root, SubqueryScanPath *best_path,
 	 */
 	subplan = create_plan(rel->subroot, best_path->subpath, root->curSlice);
 
+	root->numMotions += rel->subroot->numMotions;
+
 	/* Sort clauses into best execution order */
 	scan_clauses = order_qual_clauses(root, scan_clauses);
 
