@@ -79,9 +79,6 @@
 /* Ideally this would be in a .h file, but it hardly seems worth the trouble */
 extern const char *select_default_timezone(const char *share_path);
 
-/* version string we expect back from postgres */
-#define PG_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
-
 static const char *const auth_methods_host[] = {
 	"trust", "reject", "md5", "password", "ident", "radius",
 #ifdef ENABLE_GSS
@@ -143,11 +140,6 @@ static bool debug = false;
 static bool noclean = false;
 static char *backend_output = DEVNULL;
 
-/**
- * Build the minimal set of files needed for a mirror db.  Note that this could be removed
- *  eventually if we do a smarter copy of files from primary (with postgresql.conf updates)
- */
-static bool forMirrorOnly = false;
 static bool do_sync = true;
 static bool sync_only = false;
 static bool show_setting = false;
@@ -2957,7 +2949,6 @@ usage(const char *progname)
 	printf(_("  -N, --nosync              do not wait for changes to be written safely to disk\n"));
 	printf(_("  -s, --show                show internal settings\n"));
 	printf(_("  -S, --sync-only           only sync data directory\n"));
-	printf(_("  -m, --formirror           only create data needed to start the backend in mirror mode\n"));
 	printf(_("\nOther options:\n"));
 	printf(_("  -V, --version             output version information, then exit\n"));
 	printf(_("      --gp-version          output Greenplum version information, then exit\n"));
@@ -3556,67 +3547,64 @@ initialize_data_directory(void)
 	/* Now create all the text config files */
 	setup_config();
 
-	if ( ! forMirrorOnly)
-	{
-		/* Bootstrap template1 */
-		bootstrap_template1();
+	/* Bootstrap template1 */
+	bootstrap_template1();
 
-		/*
-		 * Make the per-database PG_VERSION for template1 only after init'ing it
-		 */
-		write_version_file("base/1");
+	/*
+	 * Make the per-database PG_VERSION for template1 only after init'ing it
+	 */
+	write_version_file("base/1");
 
-		/*
-		 * Create the stuff we don't need to use bootstrap mode for, using a
-		 * backend running in simple standalone mode.
-		 */
-		fputs(_("performing post-bootstrap initialization ... "), stdout);
-		fflush(stdout);
-	
-		snprintf(cmd, sizeof(cmd),
-				 "\"%s\" %s template1 >%s",
-				 backend_exec, backend_options,
-				 backend_output);
-	
-		PG_CMD_OPEN;
-	
-		setup_auth(cmdfd);
-		if (pwprompt || pwfilename)
-			get_set_pwd(cmdfd);
-	
-		setup_depend(cmdfd);
-	
-		setup_sysviews(cmdfd);
-	
-		setup_description(cmdfd);
-	
+	/*
+	 * Create the stuff we don't need to use bootstrap mode for, using a
+	 * backend running in simple standalone mode.
+	 */
+	fputs(_("performing post-bootstrap initialization ... "), stdout);
+	fflush(stdout);
+
+	snprintf(cmd, sizeof(cmd),
+			 "\"%s\" %s template1 >%s",
+			 backend_exec, backend_options,
+			 backend_output);
+
+	PG_CMD_OPEN;
+
+	setup_auth(cmdfd);
+	if (pwprompt || pwfilename)
+		get_set_pwd(cmdfd);
+
+	setup_depend(cmdfd);
+
+	setup_sysviews(cmdfd);
+
+	setup_description(cmdfd);
+
 #if 0
 		setup_collation(cmdfd);
 #endif
 
-		setup_conversion(cmdfd);
-	
-		setup_dictionary(cmdfd);
+	setup_conversion(cmdfd);
 
-		setup_privileges(cmdfd);
+	setup_dictionary(cmdfd);
 
-		setup_schema(cmdfd);
-	
-		load_plpgsql(cmdfd);
-	
-		/* sets up the Greenplum Database admin schema */
-		setup_cdb_schema(cmdfd);
-	
-		vacuum_db(cmdfd);
-	
-		make_template0(cmdfd);
-	
-		make_postgres(cmdfd);
-	
-		PG_CMD_CLOSE;
-	
-		check_ok();
-	}
+	setup_privileges(cmdfd);
+
+	setup_schema(cmdfd);
+
+	load_plpgsql(cmdfd);
+
+	/* sets up the Greenplum Database admin schema */
+	setup_cdb_schema(cmdfd);
+
+	vacuum_db(cmdfd);
+
+	make_template0(cmdfd);
+
+	make_postgres(cmdfd);
+
+	PG_CMD_CLOSE;
+
+	check_ok();
 }
 
 
@@ -3755,9 +3743,6 @@ main(int argc, char *argv[])
 			case 'd':
 				debug = true;
 				printf(_("Running in debug mode.\n"));
-				break;
-			case 'm':
-				forMirrorOnly = true;
 				break;
 			case 'n':
 				noclean = true;
