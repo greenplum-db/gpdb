@@ -379,7 +379,7 @@ class ExecutionError(Exception):
 
     def __str__(self):
         # TODO: improve dumping of self.cmd
-        return "ExecutionError: '%s' occured.  Details: '%s'  %s" % \
+        return "ExecutionError: '%s' occurred.  Details: '%s'  %s" % \
                (self.summary, self.cmd.cmdStr, self.cmd.get_results().printResult())
 
 
