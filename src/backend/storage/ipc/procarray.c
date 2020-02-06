@@ -2114,7 +2114,7 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 	 * Copy the information we just captured under lock and then sorted into
 	 * the distributed snapshot.
 	 */
-	ds->distribTransactionTimeStamp = getDtxStartTime();
+	ds->distribTransactionTimeStamp = getDtmStartTime();
 	ds->xminAllDistributedSnapshots = globalXminDistributedSnapshots;
 	ds->distribSnapshotId = distribSnapshotId;
 	ds->xmin = xmin;

@@ -51,7 +51,7 @@ test__CreateDistributedSnapshot(void **state)
 	expect_value_count(LWLockHeldByMe, l, ProcArrayLock, -1);
 	will_return_count(LWLockHeldByMe, true, -1);
 #endif
-	will_return_count(getDtxStartTime, 0, -1);
+	will_return_count(getDtmStartTime, 0, -1);
 
 	ShmemVariableCache->latestCompletedDxid = 24;
 

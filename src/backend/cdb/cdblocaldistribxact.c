@@ -197,9 +197,7 @@ static struct LocalDistribXactCache
 
 
 bool
-LocalDistribXactCache_CommittedFind(
-									TransactionId localXid,
-									DistributedTransactionTimeStamp distribTransactionTimeStamp,
+LocalDistribXactCache_CommittedFind(TransactionId localXid,
 									DistributedTransactionId *distribXid)
 {
 	LocalDistribXactCacheEntry *entry;
@@ -265,9 +263,7 @@ LocalDistribXactCache_CommittedFind(
 }
 
 void
-LocalDistribXactCache_AddCommitted(
-								   TransactionId localXid,
-								   DistributedTransactionTimeStamp distribTransactionTimeStamp,
+LocalDistribXactCache_AddCommitted(TransactionId localXid,
 								   DistributedTransactionId distribXid)
 {
 	LocalDistribXactCacheEntry *entry;

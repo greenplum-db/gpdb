@@ -1010,7 +1010,7 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
 	ArrayBuildState *astate pg_attribute_unused() = NULL;
 	Size		savepeakspace = MemoryContextGetPeakSpace(planstate->state->es_query_cxt);
 
-	bool		needDtxTwoPhase;
+	bool		needDtx;
 	bool		shouldDispatch = false;
 	volatile bool explainRecvStats = false;
 
@@ -1044,14 +1044,14 @@ PG_TRY();
 {
 	if (shouldDispatch)
 	{			
-		needDtxTwoPhase = isCurrentDtxTwoPhaseActivated();
+		needDtx = isCurrentDtxActivated();
 
 		/*
 		 * This call returns after launching the threads that send the
 		 * command to the appropriate segdbs.  It does not wait for them
 		 * to finish unless an error is detected before all are dispatched.
 		 */
-		CdbDispatchPlan(queryDesc, needDtxTwoPhase, true);
+		CdbDispatchPlan(queryDesc, needDtx, true);
 
 		/*
 		 * Set up the interconnect for execution of the initplan root slice.

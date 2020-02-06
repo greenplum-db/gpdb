@@ -220,7 +220,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	MemoryContext oldcontext;
 	GpExecIdentity exec_identity;
 	bool		shouldDispatch;
-	bool		needDtxTwoPhase;
+	bool		needDtx;
 
 	/* sanity checks: queryDesc must not be started already */
 	Assert(queryDesc != NULL);
@@ -576,9 +576,9 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 * ExecutorSaysTransactionDoesWrites() before any dispatch
 			 * work for this query.
 			 */
-			needDtxTwoPhase = ExecutorSaysTransactionDoesWrites();
-			if (needDtxTwoPhase)
-				setupTwoPhaseTransaction();
+			needDtx = ExecutorSaysTransactionDoesWrites();
+			if (needDtx)
+				setupDtxTransaction();
 
 			if (queryDesc->ddesc != NULL)
 			{
@@ -632,7 +632,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 */
 			if (estate->es_sliceTable->slices[0].gangType != GANGTYPE_UNALLOCATED ||
 				estate->es_sliceTable->slices[0].children)
-				CdbDispatchPlan(queryDesc, needDtxTwoPhase, true);
+				CdbDispatchPlan(queryDesc, needDtx, true);
 		}
 
 		/*
