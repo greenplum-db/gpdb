@@ -1206,7 +1206,7 @@ CREATE_QD_DB () {
 		LC_ALL_SETTINGS=" $LC_COLLATE_SETTING $LC_CTYPE_SETTING $LC_MESSAGES_SETTING $LC_MONETARY_SETTING $LC_NUMERIC_SETTING $LC_TIME_SETTING"
 
 
-		# build initdb command, capturing output in ${GP_DIR}.initdb
+		# build initdb command
 		cmd="$INITDB"
 		cmd="$cmd -E $ENCODING"
 		cmd="$cmd -D $GP_DIR"
@@ -1217,17 +1217,10 @@ CREATE_QD_DB () {
 		if [ x"$HEAP_CHECKSUM" == x"on" ]; then
 			cmd="$cmd --data-checksums"
 		fi
-		cmd="$cmd --backend_output=$GP_DIR.initdb"
-
 		LOG_MSG "[INFO]:-Commencing local $cmd"
 		$cmd >> $LOG_FILE 2>&1
 		RETVAL=$?
 
-		# if there was an error, copy ${GP_DIR}.initdb to the log
-		if [ $RETVAL -ne 0 ]; then
-		    $CAT ${GP_DIR}.initdb >> $LOG_FILE
-		fi    
-		$RM -f ${GP_DIR}.initdb
 		if [ $RETVAL -ne 0 ]; then
 		    ERROR_EXIT "[FATAL]:- Command $cmd failed with error status $RETVAL, see log file $LOG_FILE for more detail"
 		fi
