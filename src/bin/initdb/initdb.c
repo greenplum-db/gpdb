@@ -1135,7 +1135,6 @@ test_config_settings(void)
 	printf(_("selecting default max_connections ... "));
 	fflush(stdout);
 
-	status = 0;
 	for (i = 0; i < connslen; i++)
 	{
 		test_conns = trial_conns[i];
@@ -1316,10 +1315,44 @@ setup_config(void)
 	conflines = replace_token(conflines, "#dynamic_shared_memory_type = posix",
 							  repltok);
 
+#if DEFAULT_BACKEND_FLUSH_AFTER > 0
+	snprintf(repltok, sizeof(repltok), "#backend_flush_after = %dkB",
+			 DEFAULT_BACKEND_FLUSH_AFTER * (BLCKSZ / 1024));
+	conflines = replace_token(conflines, "#backend_flush_after = 0",
+							  repltok);
+#endif
+
+#if 0
+/*
+ * GPDB_12_MERGE_FIXME: the bgwriter section is missing from the sample
+ * configuration used for this, should we keep that off the default config
+ * or was it all an omission?
+ */
+#if DEFAULT_BGWRITER_FLUSH_AFTER > 0
+	snprintf(repltok, sizeof(repltok), "#bgwriter_flush_after = %dkB",
+			 DEFAULT_BGWRITER_FLUSH_AFTER * (BLCKSZ / 1024));
+	conflines = replace_token(conflines, "#bgwriter_flush_after = 0",
+							  repltok);
+#endif
+#endif
+
+#if DEFAULT_CHECKPOINT_FLUSH_AFTER > 0
+	snprintf(repltok, sizeof(repltok), "#checkpoint_flush_after = %dkB",
+			 DEFAULT_CHECKPOINT_FLUSH_AFTER * (BLCKSZ / 1024));
+	conflines = replace_token(conflines, "#checkpoint_flush_after = 0",
+							  repltok);
+#endif
+
 #ifndef USE_PREFETCH
 	conflines = replace_token(conflines,
 							  "#effective_io_concurrency = 1",
 							  "#effective_io_concurrency = 0");
+#endif
+
+#ifdef WIN32
+	conflines = replace_token(conflines,
+							  "#update_process_title = on",
+							  "#update_process_title = off");
 #endif
 
 	snprintf(repltok, sizeof(repltok), "include = '%s'",
@@ -2976,9 +3009,9 @@ setup_bin_paths(const char *argv0)
 		if (ret == -1)
 			fprintf(stderr,
 					_("The program \"postgres\" is needed by %s "
-					  "but was either not found in the "
-					  "same directory as \"%s\" or failed unexpectedly.\n"
-					  "Check your installation; \"postgres -V\" may have more information.\n"),
+					  "but was not found in the\n"
+					  "same directory as \"%s\".\n"
+					  "Check your installation.\n"),
 					progname, full_path);
 		else
 			fprintf(stderr,
@@ -3355,7 +3388,6 @@ create_xlog_or_symlink(void)
 							  "remove or empty the directory \"%s\".\n"),
 							xlog_dir);
 				exit_nicely();
-				break;
 
 			default:
 				/* Trouble accessing directory */
@@ -3372,7 +3404,7 @@ create_xlog_or_symlink(void)
 			exit_nicely();
 		}
 #else
-		fprintf(stderr, _("%s: symlinks are not supported on this platform"));
+		fprintf(stderr, _("%s: symlinks are not supported on this platform\n"), progname);
 		exit_nicely();
 #endif
 	}
