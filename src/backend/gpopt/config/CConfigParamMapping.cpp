@@ -568,6 +568,11 @@ CConfigParamMapping::PackConfigParamInBitset
 		traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::ExfJoinAssociativity));
 	}
 
+	if (OPTIMIZER_GPDB_EXPERIMENTAL == optimizer_cost_model)
+	{
+		traceflag_bitset->ExchangeSet(EopttraceCalibratedBitmapIndexCostModel);
+	}
+
 	// enable nested loop index plans using nest params
 	// instead of outer reference as in the case with GPDB 4/5
 	traceflag_bitset->ExchangeSet(EopttraceIndexedNLJOuterRefAsParams);

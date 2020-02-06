@@ -470,6 +470,7 @@ static const struct config_enum_entry optimizer_minidump_options[] = {
 static const struct config_enum_entry optimizer_cost_model_options[] = {
 	{"legacy", OPTIMIZER_GPDB_LEGACY},
 	{"calibrated", OPTIMIZER_GPDB_CALIBRATED},
+	{"experimental", OPTIMIZER_GPDB_EXPERIMENTAL},
 	{NULL, 0}
 };
 
@@ -4394,7 +4395,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	{
 		{"optimizer_cost_model", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set optimizer cost model."),
-			gettext_noop("Valid values are legacy, calibrated"),
+			gettext_noop("Valid values are legacy, calibrated, experimental"),
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_cost_model,

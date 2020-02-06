@@ -468,7 +468,7 @@ COptTasks::SetCostModelParams
 	{
 		// change NLJ cost factor
 		ICostModelParams::SCostParam *cost_param = NULL;
-		if (OPTIMIZER_GPDB_CALIBRATED == optimizer_cost_model)
+		if (OPTIMIZER_GPDB_CALIBRATED >= optimizer_cost_model)
 		{
 			cost_param = cost_model->GetCostModelParams()->PcpLookup(CCostModelParamsGPDB::EcpNLJFactor);
 		}
@@ -484,7 +484,7 @@ COptTasks::SetCostModelParams
 	{
 		// change sort cost factor
 		ICostModelParams::SCostParam *cost_param = NULL;
-		if (OPTIMIZER_GPDB_CALIBRATED == optimizer_cost_model)
+		if (OPTIMIZER_GPDB_CALIBRATED >= optimizer_cost_model)
 		{
 			cost_param = cost_model->GetCostModelParams()->PcpLookup(CCostModelParamsGPDB::EcpSortTupWidthCostUnit);
 
@@ -511,7 +511,7 @@ COptTasks::GetCostModel
 	)
 {
 	ICostModel *cost_model = NULL;
-	if (OPTIMIZER_GPDB_CALIBRATED == optimizer_cost_model)
+	if (OPTIMIZER_GPDB_CALIBRATED >= optimizer_cost_model)
 	{
 		cost_model = GPOS_NEW(mp) CCostModelGPDB(mp, num_segments);
 	}
