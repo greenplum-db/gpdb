@@ -5125,7 +5125,7 @@ struct config_string ConfigureNamesString_gp[] =
 	{
 		{"optimizer_cost_model", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set optimizer cost model."),
-			gettext_noop("Valid values are legacy, calibrated"),
+			gettext_noop("Valid values are legacy, calibrated, experimental"),
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_cost_model_str,
@@ -5836,6 +5836,10 @@ assign_optimizer_cost_model(const char *val, bool assign, GucSource source)
 	else if (pg_strcasecmp(val, "calibrated") == 0 && assign)
 	{
 		optimizer_cost_model = OPTIMIZER_GPDB_CALIBRATED;
+	}
+	else if (pg_strcasecmp(val, "experimental") == 0 && assign)
+	{
+		optimizer_cost_model = OPTIMIZER_GPDB_EXPERIMENTAL;
 	}
 	else
 	{

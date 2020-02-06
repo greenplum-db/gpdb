@@ -389,6 +389,7 @@ extern char  *data_directory;
 /* optimizer cost model */
 #define OPTIMIZER_GPDB_LEGACY           0       /* GPDB's legacy cost model */
 #define OPTIMIZER_GPDB_CALIBRATED       1       /* GPDB's calibrated cost model */
+#define OPTIMIZER_GPDB_EXPERIMENTAL     2       /* GPDB's experimental cost model */
 
 /* Optimizer related gucs */
 extern bool	optimizer;

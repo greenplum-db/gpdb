@@ -549,6 +549,11 @@ CConfigParamMapping::PackConfigParamInBitset
 		traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::ExfExpandFullOuterJoin));
 	}
 
+	if (OPTIMIZER_GPDB_EXPERIMENTAL == optimizer_cost_model)
+	{
+		traceflag_bitset->ExchangeSet(EopttraceCalibratedBitmapIndexCostModel);
+	}
+
 	return traceflag_bitset;
 }
 
